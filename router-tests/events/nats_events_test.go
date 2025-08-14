@@ -57,6 +57,11 @@ func assertNatsMultipartValueEventually(t *testing.T, reader *bufio.Reader, expe
 	}, NatsWaitTimeout, time.Millisecond*100)
 }
 
+type natsSubscriptionArgs struct {
+	dataValue []byte
+	errValue  error
+}
+
 func TestNatsEvents(t *testing.T) {
 	t.Parallel()
 

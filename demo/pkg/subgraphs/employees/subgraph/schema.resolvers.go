@@ -255,16 +255,11 @@ func (r *subscriptionResolver) CountEmp2(ctx context.Context, max int, intervalM
 		defer close(ch)
 
 		for i := 0; i <= max; i++ {
-			fmt.Println("EE")
 			select {
 			case <-ctx.Done():
 				return
 			case ch <- i:
 				time.Sleep(time.Duration(intervalMilliseconds) * time.Millisecond)
-				fmt.Println("Dobne")
-				if i == 2 {
-					//panic("panicing")
-				}
 			}
 		}
 	}()

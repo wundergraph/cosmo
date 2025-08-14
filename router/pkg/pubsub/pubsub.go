@@ -60,10 +60,9 @@ func BuildProvidersAndDataSources(ctx context.Context, config config.EventsConfi
 	kafkaBuilder := kafka.NewProviderBuilder(ctx, logger, hostName, routerListenAddr)
 	kafkaDsConfsWithEvents := []dsConfAndEvents[*nodev1.KafkaEventConfiguration]{}
 	for _, dsConf := range dsConfs {
-		getKafka := dsConf.Configuration.GetCustomEvents().GetKafka()
 		kafkaDsConfsWithEvents = append(kafkaDsConfsWithEvents, dsConfAndEvents[*nodev1.KafkaEventConfiguration]{
 			dsConf: &dsConf,
-			events: getKafka,
+			events: dsConf.Configuration.GetCustomEvents().GetKafka(),
 		})
 	}
 	kafkaPubSubProviders, kafkaOuts, err := build(ctx, kafkaBuilder, config.Providers.Kafka, kafkaDsConfsWithEvents, store)

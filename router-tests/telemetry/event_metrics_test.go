@@ -26,7 +26,7 @@ type subscriptionArgs struct {
 
 const WaitTimeout = time.Second * 30
 
-func TestOTLEventMetrics(t *testing.T) {
+func TestFlakyEventMetrics(t *testing.T) {
 	t.Run("kafka", func(t *testing.T) {
 		t.Run("publish", func(t *testing.T) {
 			metricReader := metric.NewManualReader()
@@ -54,19 +54,23 @@ func TestOTLEventMetrics(t *testing.T) {
 				sum, ok := metric.Data.(metricdata.Sum[int64])
 				require.True(t, ok)
 
-				dataPoint := sum.DataPoints[0]
-				attrs := dataPoint.Attributes
+				var matched *metricdata.DataPoint[int64]
+				for i := range sum.DataPoints {
+					attrs := sum.DataPoints[i].Attributes
 
-				eventProviderId, _ := attrs.Value(otelattrs.WgEventProviderID)
-				require.Equal(t, "my-kafka", eventProviderId.AsString())
+					eventProviderId, _ := attrs.Value(otelattrs.WgEventProviderID)
+					eventProviderType, _ := attrs.Value(otelattrs.WgEventProviderType)
+					kafkaTopic, _ := attrs.Value(otelattrs.WgKafkaTopic)
 
-				eventProviderType, _ := attrs.Value(otelattrs.WgEventProviderType)
-				require.Equal(t, "kafka", eventProviderType.AsString())
-
-				kafkaTopic, _ := attrs.Value(otelattrs.WgKafkaTopic)
-				require.True(t, strings.HasSuffix(kafkaTopic.AsString(), "employeeUpdated"))
-
-				require.Equal(t, int64(2), dataPoint.Value)
+					if eventProviderId.AsString() == "my-kafka" &&
+						eventProviderType.AsString() == "kafka" &&
+						strings.HasSuffix(kafkaTopic.AsString(), "employeeUpdated") {
+						matched = &sum.DataPoints[i]
+						break
+					}
+				}
+				require.NotNil(t, matched)
+				require.Equal(t, int64(2), matched.Value)
 			})
 		})
 
@@ -123,19 +127,23 @@ func TestOTLEventMetrics(t *testing.T) {
 					sum, ok := metric.Data.(metricdata.Sum[int64])
 					require.True(t, ok)
 
-					dataPoint := sum.DataPoints[0]
-					attrs := dataPoint.Attributes
+					var matched *metricdata.DataPoint[int64]
+					for i := range sum.DataPoints {
+						attrs := sum.DataPoints[i].Attributes
 
-					eventProviderId, _ := attrs.Value(otelattrs.WgEventProviderID)
-					require.Equal(t, "my-kafka", eventProviderId.AsString())
+						eventProviderId, _ := attrs.Value(otelattrs.WgEventProviderID)
+						eventProviderType, _ := attrs.Value(otelattrs.WgEventProviderType)
+						kafkaTopic, _ := attrs.Value(otelattrs.WgKafkaTopic)
 
-					eventProviderType, _ := attrs.Value(otelattrs.WgEventProviderType)
-					require.Equal(t, "kafka", eventProviderType.AsString())
-
-					kafkaTopic, _ := attrs.Value(otelattrs.WgKafkaTopic)
-					require.True(t, strings.HasSuffix(kafkaTopic.AsString(), "employeeUpdated"))
-
-					require.Equal(t, int64(1), dataPoint.Value)
+						if eventProviderId.AsString() == "my-kafka" &&
+							eventProviderType.AsString() == "kafka" &&
+							strings.HasSuffix(kafkaTopic.AsString(), "employeeUpdated") {
+							matched = &sum.DataPoints[i]
+							break
+						}
+					}
+					require.NotNil(t, matched)
+					require.Equal(t, int64(1), matched.Value)
 				})
 
 				require.NoError(t, client.Close())
@@ -173,19 +181,23 @@ func TestOTLEventMetrics(t *testing.T) {
 				sum, ok := metric.Data.(metricdata.Sum[int64])
 				require.True(t, ok)
 
-				dataPoint := sum.DataPoints[0]
-				attrs := dataPoint.Attributes
+				var matched *metricdata.DataPoint[int64]
+				for i := range sum.DataPoints {
+					attrs := sum.DataPoints[i].Attributes
 
-				eventProviderId, _ := attrs.Value(otelattrs.WgEventProviderID)
-				require.Equal(t, "my-nats", eventProviderId.AsString())
+					eventProviderId, _ := attrs.Value(otelattrs.WgEventProviderID)
+					eventProviderType, _ := attrs.Value(otelattrs.WgEventProviderType)
+					natsSubject, _ := attrs.Value(otelattrs.WgNatsSubject)
 
-				eventProviderType, _ := attrs.Value(otelattrs.WgEventProviderType)
-				require.Equal(t, "nats", eventProviderType.AsString())
-
-				natsSubject, _ := attrs.Value(otelattrs.WgNatsSubject)
-				require.True(t, strings.HasSuffix(natsSubject.AsString(), "employeeUpdatedMyNats.12"))
-
-				require.Equal(t, int64(2), dataPoint.Value)
+					if eventProviderId.AsString() == "my-nats" &&
+						eventProviderType.AsString() == "nats" &&
+						strings.HasSuffix(natsSubject.AsString(), "employeeUpdatedMyNats.12") {
+						matched = &sum.DataPoints[i]
+						break
+					}
+				}
+				require.NotNil(t, matched)
+				require.Equal(t, int64(2), matched.Value)
 			})
 		})
 
@@ -218,16 +230,21 @@ func TestOTLEventMetrics(t *testing.T) {
 				sum, ok := metric.Data.(metricdata.Sum[int64])
 				require.True(t, ok)
 
-				dataPoint := sum.DataPoints[0]
-				attrs := dataPoint.Attributes
+				var matched *metricdata.DataPoint[int64]
+				for i := range sum.DataPoints {
+					attrs := sum.DataPoints[i].Attributes
 
-				eventProviderId, _ := attrs.Value(otelattrs.WgEventProviderID)
-				require.Equal(t, "my-nats", eventProviderId.AsString())
+					eventProviderId, _ := attrs.Value(otelattrs.WgEventProviderID)
+					natsSubject, _ := attrs.Value(otelattrs.WgNatsSubject)
 
-				natsSubject, _ := attrs.Value(otelattrs.WgNatsSubject)
-				require.True(t, strings.HasSuffix(natsSubject.AsString(), "getEmployeeMyNats.12"))
-
-				require.Equal(t, int64(1), dataPoint.Value)
+					if eventProviderId.AsString() == "my-nats" &&
+						strings.HasSuffix(natsSubject.AsString(), "getEmployeeMyNats.12") {
+						matched = &sum.DataPoints[i]
+						break
+					}
+				}
+				require.NotNil(t, matched)
+				require.Equal(t, int64(1), matched.Value)
 			})
 		})
 
@@ -298,19 +315,23 @@ func TestOTLEventMetrics(t *testing.T) {
 					sum, ok := metric.Data.(metricdata.Sum[int64])
 					require.True(t, ok)
 
-					dataPoint := sum.DataPoints[0]
-					attrs := dataPoint.Attributes
+					var matched *metricdata.DataPoint[int64]
+					for i := range sum.DataPoints {
+						attrs := sum.DataPoints[i].Attributes
 
-					eventProviderId, _ := attrs.Value(otelattrs.WgEventProviderID)
-					require.Equal(t, "default", eventProviderId.AsString())
+						eventProviderId, _ := attrs.Value(otelattrs.WgEventProviderID)
+						eventProviderType, _ := attrs.Value(otelattrs.WgEventProviderType)
+						natsSubject, _ := attrs.Value(otelattrs.WgNatsSubject)
 
-					eventProviderType, _ := attrs.Value(otelattrs.WgEventProviderType)
-					require.Equal(t, "nats", eventProviderType.AsString())
-
-					natsSubject, _ := attrs.Value(otelattrs.WgNatsSubject)
-					require.True(t, strings.HasSuffix(natsSubject.AsString(), "employeeUpdated.3"))
-
-					require.Equal(t, int64(2), dataPoint.Value)
+						if eventProviderId.AsString() == "default" &&
+							eventProviderType.AsString() == "nats" &&
+							strings.HasSuffix(natsSubject.AsString(), "employeeUpdated.3") {
+							matched = &sum.DataPoints[i]
+							break
+						}
+					}
+					require.NotNil(t, matched)
+					require.Equal(t, int64(2), matched.Value)
 				})
 
 				require.NoError(t, client.Close())
@@ -350,19 +371,23 @@ func TestOTLEventMetrics(t *testing.T) {
 				sum, ok := metric.Data.(metricdata.Sum[int64])
 				require.True(t, ok)
 
-				dataPoint := sum.DataPoints[0]
-				attrs := dataPoint.Attributes
+				var matched *metricdata.DataPoint[int64]
+				for i := range sum.DataPoints {
+					attrs := sum.DataPoints[i].Attributes
 
-				eventProviderId, _ := attrs.Value(otelattrs.WgEventProviderID)
-				require.Equal(t, "my-redis", eventProviderId.AsString())
+					eventProviderId, _ := attrs.Value(otelattrs.WgEventProviderID)
+					eventProviderType, _ := attrs.Value(otelattrs.WgEventProviderType)
+					redisChannel, _ := attrs.Value(otelattrs.WgRedisChannel)
 
-				eventProviderType, _ := attrs.Value(otelattrs.WgEventProviderType)
-				require.Equal(t, "redis", eventProviderType.AsString())
-
-				redisChannel, _ := attrs.Value(otelattrs.WgRedisChannel)
-				require.True(t, strings.HasSuffix(redisChannel.AsString(), "employeeUpdatedMyRedis"))
-
-				require.Equal(t, int64(2), dataPoint.Value)
+					if eventProviderId.AsString() == "my-redis" &&
+						eventProviderType.AsString() == "redis" &&
+						strings.HasSuffix(redisChannel.AsString(), "employeeUpdatedMyRedis") {
+						matched = &sum.DataPoints[i]
+						break
+					}
+				}
+				require.NotNil(t, matched)
+				require.Equal(t, int64(2), matched.Value)
 			})
 		})
 
@@ -418,19 +443,23 @@ func TestOTLEventMetrics(t *testing.T) {
 					sum, ok := metric.Data.(metricdata.Sum[int64])
 					require.True(t, ok)
 
-					dataPoint := sum.DataPoints[0]
-					attrs := dataPoint.Attributes
+					var matched *metricdata.DataPoint[int64]
+					for i := range sum.DataPoints {
+						attrs := sum.DataPoints[i].Attributes
 
-					eventProviderId, _ := attrs.Value(otelattrs.WgEventProviderID)
-					require.Equal(t, "my-redis", eventProviderId.AsString())
+						eventProviderId, _ := attrs.Value(otelattrs.WgEventProviderID)
+						eventProviderType, _ := attrs.Value(otelattrs.WgEventProviderType)
+						redisChannel, _ := attrs.Value(otelattrs.WgRedisChannel)
 
-					eventProviderType, _ := attrs.Value(otelattrs.WgEventProviderType)
-					require.Equal(t, "redis", eventProviderType.AsString())
-
-					redisChannel, _ := attrs.Value(otelattrs.WgRedisChannel)
-					require.True(t, strings.HasSuffix(redisChannel.AsString(), "employeeUpdatedMyRedis"))
-
-					require.Equal(t, int64(1), dataPoint.Value)
+						if eventProviderId.AsString() == "my-redis" &&
+							eventProviderType.AsString() == "redis" &&
+							strings.HasSuffix(redisChannel.AsString(), "employeeUpdatedMyRedis") {
+							matched = &sum.DataPoints[i]
+							break
+						}
+					}
+					require.NotNil(t, matched)
+					require.Equal(t, int64(1), matched.Value)
 				})
 
 				require.NoError(t, client.Close())

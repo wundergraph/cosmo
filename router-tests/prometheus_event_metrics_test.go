@@ -23,7 +23,7 @@ type subscriptionArgs struct {
 
 const WaitTimeout = time.Second * 30
 
-func TestEventMetrics(t *testing.T) {
+func TestFlakyEventMetrics(t *testing.T) {
 	t.Run("kafka", func(t *testing.T) {
 		t.Run("publish", func(t *testing.T) {
 			metricReader := metric.NewManualReader()
