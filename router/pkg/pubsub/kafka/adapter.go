@@ -91,6 +91,7 @@ func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, u
 				r := iter.Next()
 
 				p.logger.Debug("subscription update", zap.String("topic", r.Topic), zap.ByteString("data", r.Value))
+				p.eventMetricStore.KafkaMessageReceived(p.ctx)
 				updater.Update(r.Value)
 			}
 		}
@@ -181,10 +182,11 @@ func (p *ProviderAdapter) Publish(ctx context.Context, event PublishEventConfigu
 
 	if pErr != nil {
 		log.Error("publish error", zap.Error(pErr))
+		p.eventMetricStore.KafkaPublishFailure(ctx)
 		return datasource.NewError(fmt.Sprintf("error publishing to Kafka topic %s", event.Topic), pErr)
+	} else {
+		p.eventMetricStore.KafkaPublish(ctx)
 	}
-
-	p.eventMetricStore.KafkaPublish(ctx)
 
 	return nil
 }

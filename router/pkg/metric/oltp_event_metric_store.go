@@ -77,6 +77,14 @@ func (o *otlpEventMetrics) NatsMessageReceived(ctx context.Context, opts ...otel
 	o.instruments.natsMessagesReceived.Add(ctx, 1, opts...)
 }
 
+func (o *otlpEventMetrics) NatsRequest(ctx context.Context, opts ...otelmetric.AddOption) {
+	o.instruments.natsRequests.Add(ctx, 1, opts...)
+}
+
+func (o *otlpEventMetrics) NatsRequestFailure(ctx context.Context, opts ...otelmetric.AddOption) {
+	o.instruments.natsRequestFailures.Add(ctx, 1, opts...)
+}
+
 func (o *otlpEventMetrics) Flush(ctx context.Context) error {
 	return o.meterProvider.ForceFlush(ctx)
 }

@@ -19,6 +19,8 @@ const (
 	natsPublishMessages  = "router.nats.publish.messages"
 	natsPublishFailures  = "router.nats.publish.fail"
 	natsMessagesReceived = "router.nats.messages.received"
+	natsRequests         = "router.nats.request"
+	natsRequestFailures  = "router.nats.request.fail"
 )
 
 var (
@@ -51,6 +53,14 @@ var (
 	natsMessagesReceivedOptions = []otelmetric.Int64CounterOption{
 		otelmetric.WithDescription("Number of NATS messages received"),
 	}
+
+	// New NATS request counter options
+	natsRequestsOptions = []otelmetric.Int64CounterOption{
+		otelmetric.WithDescription("Number of NATS requests"),
+	}
+	natsRequestFailuresOptions = []otelmetric.Int64CounterOption{
+		otelmetric.WithDescription("Number of NATS request failures"),
+	}
 )
 
 type eventInstruments struct {
@@ -65,6 +75,10 @@ type eventInstruments struct {
 	natsPublishMessages  otelmetric.Int64Counter
 	natsPublishFailures  otelmetric.Int64Counter
 	natsMessagesReceived otelmetric.Int64Counter
+
+	// New NATS request instruments
+	natsRequests        otelmetric.Int64Counter
+	natsRequestFailures otelmetric.Int64Counter
 }
 
 func newEventInstruments(meter otelmetric.Meter) (*eventInstruments, error) {
@@ -140,6 +154,23 @@ func newEventInstruments(meter otelmetric.Meter) (*eventInstruments, error) {
 		return nil, fmt.Errorf("failed to create nats messages received counter: %w", err)
 	}
 
+	// New NATS request counters
+	natsRequestsCounter, err := meter.Int64Counter(
+		natsRequests,
+		natsRequestsOptions...,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create nats requests counter: %w", err)
+	}
+
+	natsRequestFailuresCounter, err := meter.Int64Counter(
+		natsRequestFailures,
+		natsRequestFailuresOptions...,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create nats request failures counter: %w", err)
+	}
+
 	return &eventInstruments{
 		kafkaPublishMessages:  kafkaPublishMessagesCounter,
 		kafkaPublishFailures:  kafkaPublishFailuresCounter,
@@ -152,5 +183,9 @@ func newEventInstruments(meter otelmetric.Meter) (*eventInstruments, error) {
 		natsPublishMessages:  natsPublishMessagesCounter,
 		natsPublishFailures:  natsPublishFailuresCounter,
 		natsMessagesReceived: natsMessagesReceivedCounter,
+
+		// NATS request instruments
+		natsRequests:        natsRequestsCounter,
+		natsRequestFailures: natsRequestFailuresCounter,
 	}, nil
 }

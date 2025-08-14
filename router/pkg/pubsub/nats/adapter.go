@@ -218,10 +218,11 @@ func (p *ProviderAdapter) Publish(ctx context.Context, event PublishAndRequestEv
 	err := p.client.Publish(event.Subject, event.Data)
 	if err != nil {
 		log.Error("publish error", zap.Error(err))
+		p.eventMetricStore.NatsPublishFailure(ctx)
 		return datasource.NewError(fmt.Sprintf("error publishing to NATS subject %s", event.Subject), err)
+	} else {
+		p.eventMetricStore.NatsPublish(ctx)
 	}
-
-	p.eventMetricStore.NatsPublish(ctx)
 
 	return nil
 }
@@ -242,9 +243,13 @@ func (p *ProviderAdapter) Request(ctx context.Context, event PublishAndRequestEv
 	msg, err := p.client.RequestWithContext(ctx, event.Subject, event.Data)
 	if err != nil {
 		log.Error("request error", zap.Error(err))
+		p.eventMetricStore.NatsRequestFailure(ctx)
 		return datasource.NewError(fmt.Sprintf("error requesting from NATS subject %s", event.Subject), err)
+	} else {
+		p.eventMetricStore.NatsRequest(ctx)
 	}
 
+	// We don't collect metrics on err here as it's an error related to the writer
 	_, err = w.Write(msg.Data)
 	if err != nil {
 		log.Error("error writing response to writer", zap.Error(err))

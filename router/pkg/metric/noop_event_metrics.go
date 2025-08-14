@@ -24,5 +24,9 @@ func (n *noopEventMetricProvider) NatsPublishFailure(ctx context.Context, opts .
 }
 func (n *noopEventMetricProvider) NatsMessageReceived(ctx context.Context, opts ...otelmetric.AddOption) {
 }
+
+func (n *noopEventMetricProvider) NatsRequest(ctx context.Context, opts ...otelmetric.AddOption) {}
+func (n *noopEventMetricProvider) NatsRequestFailure(ctx context.Context, opts ...otelmetric.AddOption) {
+}
 func (n *noopEventMetricProvider) Flush(ctx context.Context) error { return nil }
 func (n *noopEventMetricProvider) Shutdown() error                 { return nil }

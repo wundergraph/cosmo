@@ -32,6 +32,8 @@ type EventMetricProvider interface {
 	NatsPublish(ctx context.Context, opts ...otelmetric.AddOption)
 	NatsPublishFailure(ctx context.Context, opts ...otelmetric.AddOption)
 	NatsMessageReceived(ctx context.Context, opts ...otelmetric.AddOption)
+	NatsRequest(ctx context.Context, opts ...otelmetric.AddOption)
+	NatsRequestFailure(ctx context.Context, opts ...otelmetric.AddOption)
 
 	Flush(ctx context.Context) error
 	Shutdown() error
@@ -130,6 +132,18 @@ func (e *EventMetrics) NatsMessageReceived(ctx context.Context, attrs ...attribu
 	opts := e.withAttrs(attrs...)
 	e.otlpMetrics.NatsMessageReceived(ctx, opts)
 	e.promMetrics.NatsMessageReceived(ctx, opts)
+}
+
+func (e *EventMetrics) NatsRequest(ctx context.Context, attrs ...attribute.KeyValue) {
+	opts := e.withAttrs(attrs...)
+	e.otlpMetrics.NatsRequest(ctx, opts)
+	e.promMetrics.NatsRequest(ctx, opts)
+}
+
+func (e *EventMetrics) NatsRequestFailure(ctx context.Context, attrs ...attribute.KeyValue) {
+	opts := e.withAttrs(attrs...)
+	e.otlpMetrics.NatsRequestFailure(ctx, opts)
+	e.promMetrics.NatsRequestFailure(ctx, opts)
 }
 
 // Flush flushes the metrics to the backend synchronously.
