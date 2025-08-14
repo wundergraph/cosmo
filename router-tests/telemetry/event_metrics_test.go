@@ -27,8 +27,14 @@ type subscriptionArgs struct {
 const WaitTimeout = time.Second * 30
 
 func TestFlakyEventMetrics(t *testing.T) {
+	t.Parallel()
+
 	t.Run("kafka", func(t *testing.T) {
+		t.Parallel()
+
 		t.Run("publish", func(t *testing.T) {
+			t.Parallel()
+
 			metricReader := metric.NewManualReader()
 
 			testenv.Run(t, &testenv.Config{
@@ -48,33 +54,29 @@ func TestFlakyEventMetrics(t *testing.T) {
 
 				scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.event")
 				require.NotNil(t, scope)
-				metric := integration.GetMetricByName(scope, "router.events.publish.messages")
-				require.NotNil(t, metric)
+				metricEntry := integration.GetMetricByName(scope, "router.events.publish.messages")
+				require.NotNil(t, metricEntry)
 
-				sum, ok := metric.Data.(metricdata.Sum[int64])
-				require.True(t, ok)
+				sum, _ := metricEntry.Data.(metricdata.Sum[int64])
+				require.Len(t, sum.DataPoints, 1)
 
-				var matched *metricdata.DataPoint[int64]
-				for i := range sum.DataPoints {
-					attrs := sum.DataPoints[i].Attributes
+				attrs := sum.DataPoints[0].Attributes
 
-					eventProviderId, _ := attrs.Value(otelattrs.WgEventProviderID)
-					eventProviderType, _ := attrs.Value(otelattrs.WgEventProviderType)
-					kafkaTopic, _ := attrs.Value(otelattrs.WgKafkaTopic)
+				eventProviderId, _ := attrs.Value(otelattrs.WgEventProviderID)
+				eventProviderType, _ := attrs.Value(otelattrs.WgEventProviderType)
+				kafkaTopic, _ := attrs.Value(otelattrs.WgKafkaTopic)
 
-					if eventProviderId.AsString() == "my-kafka" &&
-						eventProviderType.AsString() == "kafka" &&
-						strings.HasSuffix(kafkaTopic.AsString(), "employeeUpdated") {
-						matched = &sum.DataPoints[i]
-						break
-					}
-				}
-				require.NotNil(t, matched)
-				require.Equal(t, int64(2), matched.Value)
+				require.Equal(t, "my-kafka", eventProviderId.AsString())
+				require.Equal(t, "kafka", eventProviderType.AsString())
+				require.True(t, strings.HasSuffix(kafkaTopic.AsString(), "employeeUpdated"))
+
+				require.Equal(t, int64(2), sum.DataPoints[0].Value)
 			})
 		})
 
 		t.Run("subscribe", func(t *testing.T) {
+			t.Parallel()
+
 			metricReader := metric.NewManualReader()
 			topic := "employeeUpdated"
 
@@ -153,7 +155,11 @@ func TestFlakyEventMetrics(t *testing.T) {
 	})
 
 	t.Run("nats", func(t *testing.T) {
+		t.Parallel()
+
 		t.Run("publish", func(t *testing.T) {
+			t.Parallel()
+
 			metricReader := metric.NewManualReader()
 			testenv.Run(t, &testenv.Config{
 				MetricReader:             metricReader,
@@ -202,6 +208,8 @@ func TestFlakyEventMetrics(t *testing.T) {
 		})
 
 		t.Run("request", func(t *testing.T) {
+			t.Parallel()
+
 			metricReader := metric.NewManualReader()
 			testenv.Run(t, &testenv.Config{
 				MetricReader:             metricReader,
@@ -249,6 +257,8 @@ func TestFlakyEventMetrics(t *testing.T) {
 		})
 
 		t.Run("subscribe", func(t *testing.T) {
+			t.Parallel()
+
 			metricReader := metric.NewManualReader()
 			testenv.Run(t, &testenv.Config{
 				MetricReader:                       metricReader,
@@ -346,7 +356,11 @@ func TestFlakyEventMetrics(t *testing.T) {
 	})
 
 	t.Run("redis", func(t *testing.T) {
+		t.Parallel()
+
 		t.Run("publish", func(t *testing.T) {
+			t.Parallel()
+
 			metricReader := metric.NewManualReader()
 
 			testenv.Run(t, &testenv.Config{
@@ -392,6 +406,8 @@ func TestFlakyEventMetrics(t *testing.T) {
 		})
 
 		t.Run("subscribe", func(t *testing.T) {
+			t.Parallel()
+
 			metricReader := metric.NewManualReader()
 
 			testenv.Run(t, &testenv.Config{

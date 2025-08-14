@@ -3,6 +3,7 @@ package pubsub
 import (
 	"context"
 	"errors"
+	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -65,7 +66,7 @@ func TestBuild_OK(t *testing.T) {
 
 	// ctx, kafkaBuilder, config.Providers.Kafka, kafkaDsConfsWithEvents
 	// Execute the function
-	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs)
+	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, rmetric.NewNoopEventMetricStore())
 
 	// Assertions
 	assert.NoError(t, err)
@@ -121,7 +122,7 @@ func TestBuild_ProviderError(t *testing.T) {
 	mockBuilder.On("BuildProvider", natsEventSources[0]).Return(nil, errors.New("provider error"))
 
 	// Execute the function
-	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs)
+	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, rmetric.NewNoopEventMetricStore())
 
 	// Assertions
 	assert.Error(t, err)
@@ -176,7 +177,7 @@ func TestBuild_ShouldGetAnErrorIfProviderIsNotDefined(t *testing.T) {
 	mockBuilder.On("TypeID").Return("nats")
 
 	// Execute the function
-	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs)
+	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, rmetric.NewNoopEventMetricStore())
 
 	// Assertions
 	assert.Error(t, err)
@@ -239,7 +240,7 @@ func TestBuild_ShouldNotInitializeProviderIfNotUsed(t *testing.T) {
 	mockBuilder.On("BuildProvider", natsEventSources[1]).Return(mockPubSubUsedProvider, nil)
 
 	// Execute the function
-	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs)
+	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, rmetric.NewNoopEventMetricStore())
 
 	// Assertions
 	assert.NoError(t, err)

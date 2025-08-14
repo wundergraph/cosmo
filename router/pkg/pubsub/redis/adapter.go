@@ -152,9 +152,8 @@ func (p *ProviderAdapter) Publish(ctx context.Context, event PublishEventConfigu
 		log.Error("publish error", zap.Error(intCmd.Err()))
 		p.eventMetricStore.RedisPublishFailure(ctx, event.ProviderID, event.Channel)
 		return datasource.NewError(fmt.Sprintf("error publishing to Redis PubSub channel %s", event.Channel), intCmd.Err())
-	} else {
-		p.eventMetricStore.RedisPublish(ctx, event.ProviderID, event.Channel)
 	}
-
+	
+	p.eventMetricStore.RedisPublish(ctx, event.ProviderID, event.Channel)
 	return nil
 }

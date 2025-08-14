@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -21,7 +22,9 @@ func TestBuildRedisOptions(t *testing.T) {
 		logger := zaptest.NewLogger(t)
 		ctx := context.Background()
 		builder := NewProviderBuilder(ctx, logger, "host", "addr")
-		provider, err := builder.BuildProvider(cfg)
+		provider, err := builder.BuildProvider(cfg, datasource.ProviderOpts{
+			EventMetricStore: rmetric.NewNoopEventMetricStore(),
+		})
 
 		require.NoError(t, err)
 		require.NotNil(t, provider)
@@ -39,7 +42,9 @@ func TestBuildRedisOptions(t *testing.T) {
 		logger := zaptest.NewLogger(t)
 		ctx := context.Background()
 		builder := NewProviderBuilder(ctx, logger, "host", "addr")
-		provider, err := builder.BuildProvider(cfg)
+		provider, err := builder.BuildProvider(cfg, datasource.ProviderOpts{
+			EventMetricStore: rmetric.NewNoopEventMetricStore(),
+		})
 
 		require.NoError(t, err)
 		require.NotNil(t, provider)
@@ -63,7 +68,9 @@ func TestPubSubProviderBuilderFactory(t *testing.T) {
 
 		builder := NewProviderBuilder(ctx, logger, "host", "addr")
 		require.NotNil(t, builder)
-		provider, err := builder.BuildProvider(cfg)
+		provider, err := builder.BuildProvider(cfg, datasource.ProviderOpts{
+			EventMetricStore: rmetric.NewNoopEventMetricStore(),
+		})
 		require.NoError(t, err)
 
 		// Check the returned provider

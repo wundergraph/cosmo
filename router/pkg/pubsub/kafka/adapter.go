@@ -184,10 +184,9 @@ func (p *ProviderAdapter) Publish(ctx context.Context, event PublishEventConfigu
 		log.Error("publish error", zap.Error(pErr))
 		p.eventMetricStore.KafkaPublishFailure(ctx, event.ProviderID, event.Topic)
 		return datasource.NewError(fmt.Sprintf("error publishing to Kafka topic %s", event.Topic), pErr)
-	} else {
-		p.eventMetricStore.KafkaPublish(ctx, event.ProviderID, event.Topic)
 	}
 
+	p.eventMetricStore.KafkaPublish(ctx, event.ProviderID, event.Topic)
 	return nil
 }
 

@@ -2,6 +2,7 @@ package nats
 
 import (
 	"context"
+	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -82,7 +83,9 @@ func TestPubSubProviderBuilderFactory(t *testing.T) {
 
 		builder := NewProviderBuilder(ctx, logger, "host", "addr")
 		require.NotNil(t, builder)
-		provider, err := builder.BuildProvider(cfg)
+		provider, err := builder.BuildProvider(cfg, datasource.ProviderOpts{
+			EventMetricStore: rmetric.NewNoopEventMetricStore(),
+		})
 		require.NoError(t, err)
 
 		// Check the returned provider

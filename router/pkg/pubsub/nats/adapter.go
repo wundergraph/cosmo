@@ -245,9 +245,9 @@ func (p *ProviderAdapter) Request(ctx context.Context, event PublishAndRequestEv
 		log.Error("request error", zap.Error(err))
 		p.eventMetricStore.NatsRequestFailure(ctx, event.ProviderID, event.Subject)
 		return datasource.NewError(fmt.Sprintf("error requesting from NATS subject %s", event.Subject), err)
-	} else {
-		p.eventMetricStore.NatsRequest(ctx, event.ProviderID, event.Subject)
 	}
+
+	p.eventMetricStore.NatsRequest(ctx, event.ProviderID, event.Subject)
 
 	// We don't collect metrics on err here as it's an error related to the writer
 	_, err = w.Write(msg.Data)

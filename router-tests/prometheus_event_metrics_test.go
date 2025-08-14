@@ -24,8 +24,14 @@ type subscriptionArgs struct {
 const WaitTimeout = time.Second * 30
 
 func TestFlakyEventMetrics(t *testing.T) {
+	t.Parallel()
+
 	t.Run("kafka", func(t *testing.T) {
+		t.Parallel()
+
 		t.Run("publish", func(t *testing.T) {
+			t.Parallel()
+
 			metricReader := metric.NewManualReader()
 			promRegistry := prometheus.NewRegistry()
 
@@ -63,6 +69,8 @@ func TestFlakyEventMetrics(t *testing.T) {
 		})
 
 		t.Run("subscribe", func(t *testing.T) {
+			t.Parallel()
+
 			metricReader := metric.NewManualReader()
 			promRegistry := prometheus.NewRegistry()
 			topic := "employeeUpdated"
@@ -132,7 +140,11 @@ func TestFlakyEventMetrics(t *testing.T) {
 	})
 
 	t.Run("nats", func(t *testing.T) {
+		t.Parallel()
+
 		t.Run("publish", func(t *testing.T) {
+			t.Parallel()
+
 			metricReader := metric.NewManualReader()
 			promRegistry := prometheus.NewRegistry()
 			testenv.Run(t, &testenv.Config{
@@ -172,6 +184,8 @@ func TestFlakyEventMetrics(t *testing.T) {
 		})
 
 		t.Run("request", func(t *testing.T) {
+			t.Parallel()
+
 			metricReader := metric.NewManualReader()
 			promRegistry := prometheus.NewRegistry()
 			testenv.Run(t, &testenv.Config{
@@ -209,6 +223,8 @@ func TestFlakyEventMetrics(t *testing.T) {
 		})
 
 		t.Run("subscribe", func(t *testing.T) {
+			t.Parallel()
+
 			metricReader := metric.NewManualReader()
 			promRegistry := prometheus.NewRegistry()
 			testenv.Run(t, &testenv.Config{
@@ -296,7 +312,11 @@ func TestFlakyEventMetrics(t *testing.T) {
 	})
 
 	t.Run("redis", func(t *testing.T) {
+		t.Parallel()
+
 		t.Run("publish", func(t *testing.T) {
+			t.Parallel()
+
 			metricReader := metric.NewManualReader()
 			promRegistry := prometheus.NewRegistry()
 
@@ -333,6 +353,8 @@ func TestFlakyEventMetrics(t *testing.T) {
 		})
 
 		t.Run("subscribe", func(t *testing.T) {
+			t.Parallel()
+			
 			metricReader := metric.NewManualReader()
 			promRegistry := prometheus.NewRegistry()
 
