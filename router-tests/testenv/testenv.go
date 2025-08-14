@@ -408,7 +408,7 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	)
 
 	if cfg.EnableKafka {
-		cfg.KafkaSeeds = []string{"localhost:9095"}
+		cfg.KafkaSeeds = []string{"localhost:9092"}
 
 		client, err := kgo.NewClient(
 			kgo.SeedBrokers(cfg.KafkaSeeds...),
@@ -835,7 +835,7 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	)
 
 	if cfg.EnableKafka {
-		cfg.KafkaSeeds = []string{"localhost:9095"}
+		cfg.KafkaSeeds = []string{"localhost:9092"}
 		client, err := kgo.NewClient(
 			kgo.SeedBrokers(cfg.KafkaSeeds...),
 			kgo.FetchMaxWait(time.Millisecond*100),
