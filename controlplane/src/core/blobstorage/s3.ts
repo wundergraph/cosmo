@@ -147,7 +147,7 @@ export class S3BlobStorage implements BlobStorage {
       throw new Error(`Could not delete files: ${JSON.stringify(deleted.Errors)}`);
     }
 
-    return objectsToDelete.length;
+    return deleted.Deleted?.length ?? 0;
   }
 
   /**
