@@ -5,6 +5,7 @@ import {
   GraphQLEnumType,
   GraphQLEnumValue,
   GraphQLField,
+  GraphQLInputField,
   GraphQLInputObjectType,
   GraphQLInterfaceType,
   GraphQLList,
@@ -1192,7 +1193,7 @@ Example:
    * @param field - The GraphQL field to handle directives for
    */
   private fieldIsDeprecated(
-    field: GraphQLField<any, any>,
+    field: GraphQLField<any, any> | GraphQLInputField,
     interfaces: GraphQLInterfaceType[],
   ): { deprecated: boolean; reason?: string } {
     const allFieldsRefs = [
@@ -1285,6 +1286,7 @@ Example:
       const field = fields[fieldName];
       const fieldType = this.getProtoTypeFromGraphQL(field.type);
       const protoFieldName = graphqlFieldToProtoField(fieldName);
+      const deprecationInfo = this.fieldIsDeprecated(field, []);
 
       // Get the appropriate field number, respecting the lock
       const fieldNumber = this.getFieldNumber(type.name, protoFieldName, this.getNextAvailableFieldNumber(type.name));
@@ -1294,10 +1296,21 @@ Example:
         this.protoText.push(...this.formatComment(field.description, 1)); // Field comment, indent 1 level
       }
 
+      if (deprecationInfo.deprecated && deprecationInfo.reason && deprecationInfo.reason.length > 0) {
+        this.protoText.push(...this.formatComment(`Deprecated: ${deprecationInfo.reason}`, 1));
+      }
+
+      const fieldOptions = [];
+      if (deprecationInfo.deprecated) {
+        fieldOptions.push(` [deprecated = true]`);
+      }
+
       if (fieldType.isRepeated) {
-        this.protoText.push(`  repeated ${fieldType.typeName} ${protoFieldName} = ${fieldNumber};`);
+        this.protoText.push(
+          `  repeated ${fieldType.typeName} ${protoFieldName} = ${fieldNumber}${fieldOptions.join(' ')};`,
+        );
       } else {
-        this.protoText.push(`  ${fieldType.typeName} ${protoFieldName} = ${fieldNumber};`);
+        this.protoText.push(`  ${fieldType.typeName} ${protoFieldName} = ${fieldNumber}${fieldOptions.join(' ')};`);
       }
 
       // Queue complex field types for processing
