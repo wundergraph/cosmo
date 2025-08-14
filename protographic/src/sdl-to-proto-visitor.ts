@@ -1,5 +1,6 @@
 import {
   ArgumentNode,
+  ConstValueNode,
   DirectiveNode,
   getNamedType,
   GraphQLEnumType,
@@ -1190,9 +1191,11 @@ Example:
   }
 
   /**
-   * Handle field directives
-   *
+   * Resolve deprecation for a field (optionally considering interface fields)
+   * Field-level reason takes precedence; otherwise the first interface with a non-empty reason wins.
    * @param field - The GraphQL field to handle directives for
+   * @param interfaces - The GraphQL interfaces that the field implements
+   * @returns An object with the deprecated flag and the reason for deprecation
    */
   private fieldIsDeprecated(
     field: GraphQLField<any, any> | GraphQLInputField,
@@ -1211,18 +1214,17 @@ Example:
       return { deprecated: false };
     }
 
-    // search for the first reason that is not empty string
-    const lastDirective = deprecatedDirectives.find((d) => {
-      const reason = d.arguments?.find((a) => a.name.value === 'reason')?.value;
-      return reason?.kind === Kind.STRING && reason?.value.length > 0;
-    });
+    // Find the first directive with a non-empty (trimmed) reason: field first, then interfaces
+    const firstWithReason = deprecatedDirectives.find(
+      (d) => d.arguments?.find((a) => a.name.value === 'reason')?.value,
+    );
 
-    if (!lastDirective) {
+    if (!firstWithReason) {
       return { deprecated: true };
     }
 
-    const reason = lastDirective.arguments?.find((a) => a.name.value === 'reason')?.value;
-    if (reason?.kind === Kind.STRING) {
+    const reason = firstWithReason.arguments?.find((a) => a.name.value === 'reason')?.value;
+    if (this.isNonEmptyStringValueNode(reason)) {
       return { deprecated: true, reason: reason.value };
     }
 
@@ -1234,13 +1236,21 @@ Example:
     if (!deprecatedDirective) {
       return { deprecated: false };
     }
-
-    const reason = deprecatedDirective.arguments?.find((a) => a.name.value === 'reason')?.value;
-    if (reason?.kind === Kind.STRING) {
-      return { deprecated: true, reason: reason.value };
+    const reasonNode = deprecatedDirective.arguments?.find((a) => a.name.value === 'reason')?.value;
+    if (this.isNonEmptyStringValueNode(reasonNode)) {
+      return { deprecated: true, reason: reasonNode.value.trim() };
     }
 
     return { deprecated: true };
+  }
+
+  /**
+   * Check if a node is a non-empty string value node
+   * @param node - The node to check
+   * @returns True if the node is a non-empty string value node, false otherwise
+   */
+  private isNonEmptyStringValueNode(node: ConstValueNode | undefined): node is StringValueNode {
+    return node?.kind === Kind.STRING && node.value.trim().length > 0;
   }
 
   /**
