@@ -1160,7 +1160,9 @@ Example:
       }
 
       if (deprecationInfo.deprecated && deprecationInfo.reason && deprecationInfo.reason.length > 0) {
-        this.protoText.push(...this.formatComment(`Deprecated: ${deprecationInfo.reason}`, 1));
+        this.protoText.push(
+          ...this.formatComment(`Field ${protoFieldName} is deprecated: ${deprecationInfo.reason}`, 1),
+        );
       }
 
       const fieldOptions = [];
@@ -1297,7 +1299,9 @@ Example:
       }
 
       if (deprecationInfo.deprecated && deprecationInfo.reason && deprecationInfo.reason.length > 0) {
-        this.protoText.push(...this.formatComment(`Deprecated: ${deprecationInfo.reason}`, 1));
+        this.protoText.push(
+          ...this.formatComment(`Field ${protoFieldName} is deprecated: ${deprecationInfo.reason}`, 1),
+        );
       }
 
       const fieldOptions = [];
@@ -1505,7 +1509,9 @@ Example:
       }
 
       if (deprecationInfo.deprecated && (deprecationInfo.reason?.length ?? 0) > 0) {
-        this.protoText.push(...this.formatComment(`Deprecated: ${deprecationInfo.reason}`, 1));
+        this.protoText.push(
+          ...this.formatComment(`Enum value ${protoEnumValue} is deprecated: ${deprecationInfo.reason}`, 1),
+        );
       }
 
       // Get value number from lock data
