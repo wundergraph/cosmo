@@ -9,8 +9,7 @@ import {
 } from '@aws-sdk/client-s3';
 import { BlobNotFoundError, BlobObject, type BlobStorage } from './index.js';
 
-const maxConcurrency = 10; // Maximum number of concurrent operations (conservative for GCS compatibility)
-const batchDelayMs = 200; // Delay between batches in milliseconds (balance between throughput and rate limiting)
+const maxConcurrency = 10; // Maximum number of concurrent operations
 
 /**
  * Configuration options for S3BlobStorage
@@ -39,14 +38,8 @@ export class S3BlobStorage implements BlobStorage {
   }
 
   /**
-   * Sleep for the specified number of milliseconds
-   */
-  private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
-
-  /**
    * Execute promises with limited concurrency and delays between batches
+   * Retries are handled by AWS SDK internally using exponential backoff. Default 3 retries.
    */
   private async executeWithConcurrency<T>(tasks: (() => Promise<T>)[], concurrency: number): Promise<T[]> {
     const results: T[] = [];
@@ -55,11 +48,6 @@ export class S3BlobStorage implements BlobStorage {
       const batch = tasks.slice(i, i + concurrency);
       const batchResults = await Promise.all(batch.map((task) => task()));
       results.push(...batchResults);
-
-      // Add delay between batches (except for the last batch)
-      if (i + concurrency < tasks.length) {
-        await this.sleep(batchDelayMs);
-      }
     }
 
     return results;
@@ -199,7 +187,7 @@ export class S3BlobStorage implements BlobStorage {
 
       if (entries.Contents && entries.Contents.length > 0) {
         if (this.useIndividualDeletes) {
-          // Use individual deletes for GCS compatibility
+          // Use individual deletes for S3 implementation without DeleteObjectsCommand
           totalDeleted += await this.deleteObjectsIndividually(entries.Contents, data.abortSignal);
         } else {
           // Use bulk delete for better S3 performance
