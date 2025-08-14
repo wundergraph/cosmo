@@ -10,6 +10,7 @@ import (
 )
 
 const KafkaWaitTimeout = time.Second * 30
+const NatsWaitTimeout = time.Second * 30
 
 func ProduceKafkaMessage(t *testing.T, xEnv *testenv.Environment, topicName string, message string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

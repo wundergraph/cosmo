@@ -26,8 +26,6 @@ import (
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 )
 
-const NatsWaitTimeout = time.Second * 30
-
 func assertNatsLineEquals(t *testing.T, reader *bufio.Reader, expected string) {
 	t.Helper()
 	line, _, err := reader.ReadLine()
@@ -55,11 +53,6 @@ func assertNatsMultipartValueEventually(t *testing.T, reader *bufio.Reader, expe
 		assert.Equal(t, expected, string(line))
 		return true
 	}, NatsWaitTimeout, time.Millisecond*100)
-}
-
-type natsSubscriptionArgs struct {
-	dataValue []byte
-	errValue  error
 }
 
 func TestNatsEvents(t *testing.T) {
