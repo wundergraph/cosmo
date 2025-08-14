@@ -3,6 +3,7 @@ import {
   DirectiveNode,
   getNamedType,
   GraphQLEnumType,
+  GraphQLEnumValue,
   GraphQLField,
   GraphQLInputObjectType,
   GraphQLInterfaceType,
@@ -21,6 +22,7 @@ import {
   isObjectType,
   isScalarType,
   isUnionType,
+  Kind,
   StringValueNode,
 } from 'graphql';
 import {
@@ -1146,6 +1148,7 @@ Example:
       const field = fields[fieldName];
       const fieldType = this.getProtoTypeFromGraphQL(field.type);
       const protoFieldName = graphqlFieldToProtoField(fieldName);
+      const deprecationInfo = this.fieldIsDeprecated(field, [...type.getInterfaces()]);
 
       // Get the appropriate field number, respecting the lock
       const fieldNumber = this.getFieldNumber(type.name, protoFieldName, this.getNextAvailableFieldNumber(type.name));
@@ -1155,10 +1158,21 @@ Example:
         this.protoText.push(...this.formatComment(field.description, 1)); // Field comment, indent 1 level
       }
 
+      if (deprecationInfo.deprecated && deprecationInfo.reason && deprecationInfo.reason.length > 0) {
+        this.protoText.push(...this.formatComment(`Deprecated: ${deprecationInfo.reason}`, 1));
+      }
+
+      const fieldOptions = [];
+      if (deprecationInfo.deprecated) {
+        fieldOptions.push(` [deprecated = true]`);
+      }
+
       if (fieldType.isRepeated) {
-        this.protoText.push(`  repeated ${fieldType.typeName} ${protoFieldName} = ${fieldNumber};`);
+        this.protoText.push(
+          `  repeated ${fieldType.typeName} ${protoFieldName} = ${fieldNumber}${fieldOptions.join(' ')};`,
+        );
       } else {
-        this.protoText.push(`  ${fieldType.typeName} ${protoFieldName} = ${fieldNumber};`);
+        this.protoText.push(`  ${fieldType.typeName} ${protoFieldName} = ${fieldNumber}${fieldOptions.join(' ')};`);
       }
 
       // Queue complex field types for processing
@@ -1170,6 +1184,60 @@ Example:
 
     this.indent--;
     this.protoText.push('}');
+  }
+
+  /**
+   * Handle field directives
+   *
+   * @param field - The GraphQL field to handle directives for
+   */
+  private fieldIsDeprecated(
+    field: GraphQLField<any, any>,
+    interfaces: GraphQLInterfaceType[],
+  ): { deprecated: boolean; reason?: string } {
+    const allFieldsRefs = [
+      field,
+      ...interfaces.map((iface) => iface.getFields()[field.name]).filter((f) => f !== undefined),
+    ];
+
+    const deprecatedDirectives = allFieldsRefs
+      .map((f) => f.astNode?.directives?.find((d) => d.name.value === 'deprecated'))
+      .filter((d) => d !== undefined);
+
+    if (deprecatedDirectives.length === 0) {
+      return { deprecated: false };
+    }
+
+    // search for the first reason that is not empty string
+    const lastDirective = deprecatedDirectives.find((d) => {
+      const reason = d.arguments?.find((a) => a.name.value === 'reason')?.value;
+      return reason?.kind === Kind.STRING && reason?.value.length > 0;
+    });
+
+    if (!lastDirective) {
+      return { deprecated: true };
+    }
+
+    const reason = lastDirective.arguments?.find((a) => a.name.value === 'reason')?.value;
+    if (reason?.kind === Kind.STRING) {
+      return { deprecated: true, reason: reason.value };
+    }
+
+    return { deprecated: true };
+  }
+
+  private enumValueIsDeprecated(value: GraphQLEnumValue): { deprecated: boolean; reason?: string } {
+    const deprecatedDirective = value.astNode?.directives?.find((d) => d.name.value === 'deprecated');
+    if (!deprecatedDirective) {
+      return { deprecated: false };
+    }
+
+    const reason = deprecatedDirective.arguments?.find((a) => a.name.value === 'reason')?.value;
+    if (reason?.kind === Kind.STRING) {
+      return { deprecated: true, reason: reason.value };
+    }
+
+    return { deprecated: true };
   }
 
   /**
@@ -1416,9 +1484,15 @@ Example:
 
       const protoEnumValue = graphqlEnumValueToProtoEnumValue(type.name, value.name);
 
+      const deprecationInfo = this.enumValueIsDeprecated(value);
+
       // Add enum value description as comment
       if (value.description) {
         this.protoText.push(...this.formatComment(value.description, 1)); // Field comment, indent 1 level
+      }
+
+      if (deprecationInfo.deprecated && (deprecationInfo.reason?.length ?? 0) > 0) {
+        this.protoText.push(...this.formatComment(`Deprecated: ${deprecationInfo.reason}`, 1));
       }
 
       // Get value number from lock data
@@ -1433,7 +1507,13 @@ Example:
         continue;
       }
 
-      this.protoText.push(`  ${protoEnumValue} = ${valueNumber};`);
+      const fieldOptions = [];
+      if (deprecationInfo.deprecated) {
+        fieldOptions.push(` [deprecated = true]`);
+      }
+      
+
+      this.protoText.push(`  ${protoEnumValue} = ${valueNumber}${fieldOptions.join(" ")};`);
     }
 
     this.indent--;
