@@ -41,43 +41,40 @@ func newOtlpEventMetrics(logger *zap.Logger, meterProvider *metric.MeterProvider
 	}, nil
 }
 
-func (o *otlpEventMetrics) Publish(ctx context.Context, backend string, count int64, opts ...otelmetric.AddOption) {
-	switch backend {
-	case EventBackendKafka:
-		o.instruments.kafkaPublishMessages.Add(ctx, count, opts...)
-	case EventBackendRedis:
-		o.instruments.redisPublishMessages.Add(ctx, count, opts...)
-	case EventBackendNats:
-		o.instruments.natsPublishMessages.Add(ctx, count, opts...)
-	default:
-		o.instruments.kafkaPublishMessages.Add(ctx, count, opts...)
-	}
+func (o *otlpEventMetrics) KafkaPublish(ctx context.Context, opts ...otelmetric.AddOption) {
+	o.instruments.kafkaPublishMessages.Add(ctx, 1, opts...)
 }
 
-func (o *otlpEventMetrics) PublishFailure(ctx context.Context, backend string, count int64, opts ...otelmetric.AddOption) {
-	switch backend {
-	case EventBackendKafka:
-		o.instruments.kafkaPublishFailures.Add(ctx, count, opts...)
-	case EventBackendRedis:
-		o.instruments.redisPublishFailures.Add(ctx, count, opts...)
-	case EventBackendNats:
-		o.instruments.natsPublishFailures.Add(ctx, count, opts...)
-	default:
-		o.instruments.kafkaPublishFailures.Add(ctx, count, opts...)
-	}
+func (o *otlpEventMetrics) KafkaPublishFailure(ctx context.Context, opts ...otelmetric.AddOption) {
+	o.instruments.kafkaPublishFailures.Add(ctx, 1, opts...)
 }
 
-func (o *otlpEventMetrics) MessageReceived(ctx context.Context, backend string, count int64, opts ...otelmetric.AddOption) {
-	switch backend {
-	case EventBackendKafka:
-		o.instruments.kafkaMessagesReceived.Add(ctx, count, opts...)
-	case EventBackendRedis:
-		o.instruments.redisMessagesReceived.Add(ctx, count, opts...)
-	case EventBackendNats:
-		o.instruments.natsMessagesReceived.Add(ctx, count, opts...)
-	default:
-		o.instruments.kafkaMessagesReceived.Add(ctx, count, opts...)
-	}
+func (o *otlpEventMetrics) KafkaMessageReceived(ctx context.Context, opts ...otelmetric.AddOption) {
+	o.instruments.kafkaMessagesReceived.Add(ctx, 1, opts...)
+}
+
+func (o *otlpEventMetrics) RedisPublish(ctx context.Context, opts ...otelmetric.AddOption) {
+	o.instruments.redisPublishMessages.Add(ctx, 1, opts...)
+}
+
+func (o *otlpEventMetrics) RedisPublishFailure(ctx context.Context, opts ...otelmetric.AddOption) {
+	o.instruments.redisPublishFailures.Add(ctx, 1, opts...)
+}
+
+func (o *otlpEventMetrics) RedisMessageReceived(ctx context.Context, opts ...otelmetric.AddOption) {
+	o.instruments.redisMessagesReceived.Add(ctx, 1, opts...)
+}
+
+func (o *otlpEventMetrics) NatsPublish(ctx context.Context, opts ...otelmetric.AddOption) {
+	o.instruments.natsPublishMessages.Add(ctx, 1, opts...)
+}
+
+func (o *otlpEventMetrics) NatsPublishFailure(ctx context.Context, opts ...otelmetric.AddOption) {
+	o.instruments.natsPublishFailures.Add(ctx, 1, opts...)
+}
+
+func (o *otlpEventMetrics) NatsMessageReceived(ctx context.Context, opts ...otelmetric.AddOption) {
+	o.instruments.natsMessagesReceived.Add(ctx, 1, opts...)
 }
 
 func (o *otlpEventMetrics) Flush(ctx context.Context) error {

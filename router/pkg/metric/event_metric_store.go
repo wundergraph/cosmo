@@ -21,9 +21,18 @@ const (
 // EventMetricProvider is the interface that wraps the basic Event metric methods.
 // We maintain two providers, one for OTEL and one for Prometheus.
 type EventMetricProvider interface {
-	Publish(ctx context.Context, backend string, count int64, opts ...otelmetric.AddOption)
-	PublishFailure(ctx context.Context, backend string, count int64, opts ...otelmetric.AddOption)
-	MessageReceived(ctx context.Context, backend string, count int64, opts ...otelmetric.AddOption)
+	KafkaPublish(ctx context.Context, opts ...otelmetric.AddOption)
+	KafkaPublishFailure(ctx context.Context, opts ...otelmetric.AddOption)
+	KafkaMessageReceived(ctx context.Context, opts ...otelmetric.AddOption)
+
+	RedisPublish(ctx context.Context, opts ...otelmetric.AddOption)
+	RedisPublishFailure(ctx context.Context, opts ...otelmetric.AddOption)
+	RedisMessageReceived(ctx context.Context, opts ...otelmetric.AddOption)
+
+	NatsPublish(ctx context.Context, opts ...otelmetric.AddOption)
+	NatsPublishFailure(ctx context.Context, opts ...otelmetric.AddOption)
+	NatsMessageReceived(ctx context.Context, opts ...otelmetric.AddOption)
+
 	Flush(ctx context.Context) error
 	Shutdown() error
 }
@@ -64,25 +73,63 @@ func NewEventMetricStore(logger *zap.Logger, baseAttributes []attribute.KeyValue
 	return store, nil
 }
 
-func (e *EventMetrics) Publish(ctx context.Context, backend string, count int64, attrs ...attribute.KeyValue) {
+func (e *EventMetrics) withAttrs(attrs ...attribute.KeyValue) otelmetric.AddOption {
 	copied := append([]attribute.KeyValue{}, e.baseAttributes...)
-	opts := otelmetric.WithAttributes(append(copied, attrs...)...)
-	e.otlpMetrics.Publish(ctx, backend, count, opts)
-	e.promMetrics.Publish(ctx, backend, count, opts)
+	return otelmetric.WithAttributes(append(copied, attrs...)...)
 }
 
-func (e *EventMetrics) PublishFailure(ctx context.Context, backend string, count int64, attrs ...attribute.KeyValue) {
-	copied := append([]attribute.KeyValue{}, e.baseAttributes...)
-	opts := otelmetric.WithAttributes(append(copied, attrs...)...)
-	e.otlpMetrics.PublishFailure(ctx, backend, count, opts)
-	e.promMetrics.PublishFailure(ctx, backend, count, opts)
+func (e *EventMetrics) KafkaPublish(ctx context.Context, attrs ...attribute.KeyValue) {
+	opts := e.withAttrs(attrs...)
+	e.otlpMetrics.KafkaPublish(ctx, opts)
+	e.promMetrics.KafkaPublish(ctx, opts)
 }
 
-func (e *EventMetrics) MessageReceived(ctx context.Context, backend string, count int64, attrs ...attribute.KeyValue) {
-	copied := append([]attribute.KeyValue{}, e.baseAttributes...)
-	opts := otelmetric.WithAttributes(append(copied, attrs...)...)
-	e.otlpMetrics.MessageReceived(ctx, backend, count, opts)
-	e.promMetrics.MessageReceived(ctx, backend, count, opts)
+func (e *EventMetrics) KafkaPublishFailure(ctx context.Context, attrs ...attribute.KeyValue) {
+	opts := e.withAttrs(attrs...)
+	e.otlpMetrics.KafkaPublishFailure(ctx, opts)
+	e.promMetrics.KafkaPublishFailure(ctx, opts)
+}
+
+func (e *EventMetrics) KafkaMessageReceived(ctx context.Context, attrs ...attribute.KeyValue) {
+	opts := e.withAttrs(attrs...)
+	e.otlpMetrics.KafkaMessageReceived(ctx, opts)
+	e.promMetrics.KafkaMessageReceived(ctx, opts)
+}
+
+func (e *EventMetrics) RedisPublish(ctx context.Context, attrs ...attribute.KeyValue) {
+	opts := e.withAttrs(attrs...)
+	e.otlpMetrics.RedisPublish(ctx, opts)
+	e.promMetrics.RedisPublish(ctx, opts)
+}
+
+func (e *EventMetrics) RedisPublishFailure(ctx context.Context, attrs ...attribute.KeyValue) {
+	opts := e.withAttrs(attrs...)
+	e.otlpMetrics.RedisPublishFailure(ctx, opts)
+	e.promMetrics.RedisPublishFailure(ctx, opts)
+}
+
+func (e *EventMetrics) RedisMessageReceived(ctx context.Context, attrs ...attribute.KeyValue) {
+	opts := e.withAttrs(attrs...)
+	e.otlpMetrics.RedisMessageReceived(ctx, opts)
+	e.promMetrics.RedisMessageReceived(ctx, opts)
+}
+
+func (e *EventMetrics) NatsPublish(ctx context.Context, attrs ...attribute.KeyValue) {
+	opts := e.withAttrs(attrs...)
+	e.otlpMetrics.NatsPublish(ctx, opts)
+	e.promMetrics.NatsPublish(ctx, opts)
+}
+
+func (e *EventMetrics) NatsPublishFailure(ctx context.Context, attrs ...attribute.KeyValue) {
+	opts := e.withAttrs(attrs...)
+	e.otlpMetrics.NatsPublishFailure(ctx, opts)
+	e.promMetrics.NatsPublishFailure(ctx, opts)
+}
+
+func (e *EventMetrics) NatsMessageReceived(ctx context.Context, attrs ...attribute.KeyValue) {
+	opts := e.withAttrs(attrs...)
+	e.otlpMetrics.NatsMessageReceived(ctx, opts)
+	e.promMetrics.NatsMessageReceived(ctx, opts)
 }
 
 // Flush flushes the metrics to the backend synchronously.

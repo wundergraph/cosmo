@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/pkg/metric"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/pkg/metric"
 
 	"github.com/twmb/franz-go/pkg/kerr"
 	"github.com/twmb/franz-go/pkg/kgo"
@@ -183,7 +184,7 @@ func (p *ProviderAdapter) Publish(ctx context.Context, event PublishEventConfigu
 		return datasource.NewError(fmt.Sprintf("error publishing to Kafka topic %s", event.Topic), pErr)
 	}
 
-	p.eventMetricStore.Publish(ctx, "nats", 1)
+	p.eventMetricStore.KafkaPublish(ctx)
 
 	return nil
 }

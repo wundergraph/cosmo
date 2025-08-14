@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/pkg/metric"
 	"io"
 	"sync"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/pkg/metric"
 
 	"github.com/cespare/xxhash/v2"
 	"github.com/nats-io/nats.go"
@@ -134,7 +135,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 					for msg := range msgBatch.Messages() {
 						log.Debug("subscription update", zap.String("message_subject", msg.Subject()), zap.ByteString("data", msg.Data()))
 
-						p.eventMetricStore.MessageReceived(p.ctx, "nats", 1)
+						p.eventMetricStore.NatsMessageReceived(p.ctx)
 						updater.Update(msg.Data())
 
 						// Acknowledge the message after it has been processed
@@ -172,7 +173,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 			select {
 			case msg := <-msgChan:
 				log.Debug("subscription update", zap.String("message_subject", msg.Subject), zap.ByteString("data", msg.Data))
-				p.eventMetricStore.MessageReceived(p.ctx, "nats", 1)
+				p.eventMetricStore.NatsMessageReceived(p.ctx)
 				updater.Update(msg.Data)
 			case <-p.ctx.Done():
 				// When the application context is done, we stop the subscriptions
@@ -220,7 +221,7 @@ func (p *ProviderAdapter) Publish(ctx context.Context, event PublishAndRequestEv
 		return datasource.NewError(fmt.Sprintf("error publishing to NATS subject %s", event.Subject), err)
 	}
 
-	p.eventMetricStore.Publish(ctx, "nats", 1)
+	p.eventMetricStore.NatsPublish(ctx)
 
 	return nil
 }
