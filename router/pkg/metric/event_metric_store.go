@@ -13,6 +13,12 @@ import (
 	otelattrs "github.com/wundergraph/cosmo/router/pkg/otel"
 )
 
+const (
+	ProviderTypeKafka = "kafka"
+	ProviderTypeNats  = "nats"
+	ProviderTypeRedis = "redis"
+)
+
 // EventMetricProvider is the interface that wraps the basic Event metric methods.
 // We maintain two providers, one for OTEL and one for Prometheus.
 type EventMetricProvider interface {
@@ -91,7 +97,7 @@ func (e *EventMetrics) withAttrs(attrs ...attribute.KeyValue) otelmetric.AddOpti
 
 func (e *EventMetrics) KafkaPublish(ctx context.Context, providerID string, topic string) {
 	opts := e.withAttrs(
-		otelattrs.WgEventProviderType.String("kafka"),
+		otelattrs.WgEventProviderType.String(ProviderTypeKafka),
 		otelattrs.WgEventProviderID.String(providerID),
 		otelattrs.WgKafkaTopic.String(topic),
 	)
@@ -101,7 +107,7 @@ func (e *EventMetrics) KafkaPublish(ctx context.Context, providerID string, topi
 
 func (e *EventMetrics) KafkaPublishFailure(ctx context.Context, providerID string, topic string) {
 	opts := e.withAttrs(
-		otelattrs.WgEventProviderType.String("kafka"),
+		otelattrs.WgEventProviderType.String(ProviderTypeKafka),
 		otelattrs.WgEventProviderID.String(providerID),
 		otelattrs.WgKafkaTopic.String(topic),
 	)
@@ -111,7 +117,7 @@ func (e *EventMetrics) KafkaPublishFailure(ctx context.Context, providerID strin
 
 func (e *EventMetrics) KafkaMessageReceived(ctx context.Context, providerID string, topic string) {
 	opts := e.withAttrs(
-		otelattrs.WgEventProviderType.String("kafka"),
+		otelattrs.WgEventProviderType.String(ProviderTypeKafka),
 		otelattrs.WgEventProviderID.String(providerID),
 		otelattrs.WgKafkaTopic.String(topic),
 	)
@@ -121,7 +127,7 @@ func (e *EventMetrics) KafkaMessageReceived(ctx context.Context, providerID stri
 
 func (e *EventMetrics) RedisPublish(ctx context.Context, providerID string, channel string) {
 	opts := e.withAttrs(
-		otelattrs.WgEventProviderType.String("redis"),
+		otelattrs.WgEventProviderType.String(ProviderTypeRedis),
 		otelattrs.WgEventProviderID.String(providerID),
 		otelattrs.WgRedisChannel.String(channel),
 	)
@@ -131,7 +137,7 @@ func (e *EventMetrics) RedisPublish(ctx context.Context, providerID string, chan
 
 func (e *EventMetrics) RedisPublishFailure(ctx context.Context, providerID string, channel string) {
 	opts := e.withAttrs(
-		otelattrs.WgEventProviderType.String("redis"),
+		otelattrs.WgEventProviderType.String(ProviderTypeRedis),
 		otelattrs.WgEventProviderID.String(providerID),
 		otelattrs.WgRedisChannel.String(channel),
 	)
@@ -141,7 +147,7 @@ func (e *EventMetrics) RedisPublishFailure(ctx context.Context, providerID strin
 
 func (e *EventMetrics) RedisMessageReceived(ctx context.Context, providerID string, channel string) {
 	opts := e.withAttrs(
-		otelattrs.WgEventProviderType.String("redis"),
+		otelattrs.WgEventProviderType.String(ProviderTypeRedis),
 		otelattrs.WgEventProviderID.String(providerID),
 		otelattrs.WgRedisChannel.String(channel),
 	)
@@ -151,7 +157,7 @@ func (e *EventMetrics) RedisMessageReceived(ctx context.Context, providerID stri
 
 func (e *EventMetrics) NatsPublish(ctx context.Context, providerID string, subject string) {
 	opts := e.withAttrs(
-		otelattrs.WgEventProviderType.String("nats"),
+		otelattrs.WgEventProviderType.String(ProviderTypeNats),
 		otelattrs.WgEventProviderID.String(providerID),
 		otelattrs.WgNatsSubject.String(subject),
 	)
@@ -161,7 +167,7 @@ func (e *EventMetrics) NatsPublish(ctx context.Context, providerID string, subje
 
 func (e *EventMetrics) NatsPublishFailure(ctx context.Context, providerID string, subject string) {
 	opts := e.withAttrs(
-		otelattrs.WgEventProviderType.String("nats"),
+		otelattrs.WgEventProviderType.String(ProviderTypeNats),
 		otelattrs.WgEventProviderID.String(providerID),
 		otelattrs.WgNatsSubject.String(subject),
 	)
@@ -171,7 +177,7 @@ func (e *EventMetrics) NatsPublishFailure(ctx context.Context, providerID string
 
 func (e *EventMetrics) NatsMessageReceived(ctx context.Context, providerID string, subject string) {
 	opts := e.withAttrs(
-		otelattrs.WgEventProviderType.String("nats"),
+		otelattrs.WgEventProviderType.String(ProviderTypeNats),
 		otelattrs.WgEventProviderID.String(providerID),
 		otelattrs.WgNatsSubject.String(subject),
 	)
@@ -180,13 +186,21 @@ func (e *EventMetrics) NatsMessageReceived(ctx context.Context, providerID strin
 }
 
 func (e *EventMetrics) NatsRequest(ctx context.Context, providerID string, subject string) {
-	opts := e.withAttrs(otelattrs.WgEventProviderID.String(providerID), otelattrs.WgNatsSubject.String(subject))
+	opts := e.withAttrs(
+		otelattrs.WgEventProviderID.String(providerID),
+		otelattrs.WgEventProviderType.String(ProviderTypeNats),
+		otelattrs.WgNatsSubject.String(subject),
+	)
 	e.otlpMetrics.NatsRequest(ctx, opts)
 	e.promMetrics.NatsRequest(ctx, opts)
 }
 
 func (e *EventMetrics) NatsRequestFailure(ctx context.Context, providerID string, subject string) {
-	opts := e.withAttrs(otelattrs.WgEventProviderID.String(providerID), otelattrs.WgNatsSubject.String(subject))
+	opts := e.withAttrs(
+		otelattrs.WgEventProviderID.String(providerID),
+		otelattrs.WgEventProviderType.String(ProviderTypeNats),
+		otelattrs.WgNatsSubject.String(subject),
+	)
 	e.otlpMetrics.NatsRequestFailure(ctx, opts)
 	e.promMetrics.NatsRequestFailure(ctx, opts)
 }

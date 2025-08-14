@@ -38,7 +38,7 @@ func EnsureTopicExists(t *testing.T, xEnv *testenv.Environment, topics ...string
 	// Delete topic for idempotency
 	deleteCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	prefixedTopics := make([]string, len(topics))
+	prefixedTopics := make([]string, 0, len(topics))
 	for _, topic := range topics {
 		prefixedTopics = append(prefixedTopics, xEnv.GetPubSubName(topic))
 	}
@@ -71,6 +71,10 @@ func ProduceRedisMessage(t *testing.T, xEnv *testenv.Environment, topicName stri
 			Addrs: []string{parsedURL.Host},
 		})
 	}
+
+	defer func() {
+		_ = redisConn.Close()
+	}()
 
 	intCmd := redisConn.Publish(ctx, xEnv.GetPubSubName(topicName), message)
 	require.NoError(t, intCmd.Err())

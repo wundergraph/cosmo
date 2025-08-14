@@ -234,12 +234,19 @@ func NewProviderAdapter(ctx context.Context, logger *zap.Logger, opts []kgo.Opt,
 		logger = zap.NewNop()
 	}
 
+	var store metric.EventMetricStore
+	if providerOpts.EventMetricStore != nil {
+		store = providerOpts.EventMetricStore
+	} else {
+		store = metric.NewNoopEventMetricStore()
+	}
+
 	return &ProviderAdapter{
 		ctx:              ctx,
 		logger:           logger.With(zap.String("pubsub", "kafka")),
 		opts:             opts,
 		closeWg:          sync.WaitGroup{},
 		cancel:           cancel,
-		eventMetricStore: providerOpts.EventMetricStore,
+		eventMetricStore: store,
 	}, nil
 }
