@@ -9,14 +9,49 @@ import {
 } from '@aws-sdk/client-s3';
 import { BlobNotFoundError, BlobObject, type BlobStorage } from './index.js';
 
+const maxConcurrency = 10; // Maximum number of concurrent operations
+
+/**
+ * Configuration options for S3BlobStorage
+ */
+export interface S3BlobStorageConfig {
+  /**
+   * Use individual delete operations instead of bulk delete.
+   * Set to true for GCS compatibility, false for better S3 performance.
+   * @default false
+   */
+  useIndividualDeletes?: boolean;
+}
+
 /**
  * Stores objects in S3 given an S3Client and a bucket name
  */
 export class S3BlobStorage implements BlobStorage {
+  private readonly useIndividualDeletes: boolean;
+
   constructor(
     private s3Client: S3Client,
     private bucketName: string,
-  ) {}
+    config: S3BlobStorageConfig = {},
+  ) {
+    this.useIndividualDeletes = config.useIndividualDeletes ?? false;
+  }
+
+  /**
+   * Execute promises with limited concurrency and delays between batches
+   * Retries are handled by AWS SDK internally using exponential backoff. Default 3 retries.
+   */
+  private async executeWithConcurrency<T>(tasks: (() => Promise<T>)[], concurrency: number): Promise<T[]> {
+    const results: T[] = [];
+
+    for (let i = 0; i < tasks.length; i += concurrency) {
+      const batch = tasks.slice(i, i + concurrency);
+      const batchResults = await Promise.all(batch.map((task) => task()));
+      results.push(...batchResults);
+    }
+
+    return results;
+  }
 
   async putObject<Metadata extends Record<string, string>>({
     key,
@@ -88,28 +123,81 @@ export class S3BlobStorage implements BlobStorage {
     }
   }
 
-  async removeDirectory(data: { key: string; abortSignal?: AbortSignal }): Promise<number> {
-    const listCommand = new ListObjectsV2Command({
-      Bucket: this.bucketName,
-      Prefix: data.key,
-    });
-    const entries = await this.s3Client.send(listCommand, {
-      abortSignal: data.abortSignal,
-    });
-    const objectsToDelete = entries.Contents?.map((item) => ({ Key: item.Key }));
-    if (objectsToDelete && objectsToDelete.length > 0) {
-      const deleteCommand = new DeleteObjectsCommand({
-        Bucket: this.bucketName,
-        Delete: {
-          Objects: objectsToDelete,
-          Quiet: false,
-        },
-      });
-      const deleted = await this.s3Client.send(deleteCommand);
-      if (deleted.Errors) {
-        throw new Error(`could not delete files: ${deleted.Errors}`);
-      }
+  /**
+   * Delete objects using bulk DeleteObjectsCommand (efficient for S3)
+   */
+  private async deleteObjectsBulk(objects: { Key?: string }[], abortSignal?: AbortSignal): Promise<number> {
+    const objectsToDelete = objects.filter((item) => item.Key).map((item) => ({ Key: item.Key! }));
+
+    if (objectsToDelete.length === 0) {
+      return 0;
     }
-    return objectsToDelete?.length ?? 0;
+
+    const deleteCommand = new DeleteObjectsCommand({
+      Bucket: this.bucketName,
+      Delete: {
+        Objects: objectsToDelete,
+        Quiet: false,
+      },
+    });
+
+    const deleted = await this.s3Client.send(deleteCommand, { abortSignal });
+
+    if (deleted.Errors && deleted.Errors.length > 0) {
+      throw new Error(`Could not delete files: ${JSON.stringify(deleted.Errors)}`);
+    }
+
+    return deleted.Deleted?.length ?? 0;
+  }
+
+  /**
+   * Delete objects individually with limited concurrency (for GCS compatibility)
+   */
+  private async deleteObjectsIndividually(objects: { Key?: string }[], abortSignal?: AbortSignal): Promise<number> {
+    const deleteTasks = objects.map((item) => async () => {
+      if (item.Key) {
+        const deleteCommand = new DeleteObjectCommand({
+          Bucket: this.bucketName,
+          Key: item.Key,
+        });
+        await this.s3Client.send(deleteCommand, { abortSignal });
+        return 1;
+      }
+      return 0;
+    });
+
+    const deletedCounts = await this.executeWithConcurrency(deleteTasks, maxConcurrency);
+    return deletedCounts.reduce((sum: number, count: number) => sum + count, 0);
+  }
+
+  async removeDirectory(data: { key: string; abortSignal?: AbortSignal }): Promise<number> {
+    let totalDeleted = 0;
+    let continuationToken: string | undefined;
+
+    do {
+      const listCommand = new ListObjectsV2Command({
+        Bucket: this.bucketName,
+        Prefix: data.key,
+        ContinuationToken: continuationToken,
+      });
+
+      const entries = await this.s3Client.send(listCommand, {
+        abortSignal: data.abortSignal,
+      });
+
+      if (entries.Contents && entries.Contents.length > 0) {
+        if (this.useIndividualDeletes) {
+          // Use individual deletes for S3 implementation without DeleteObjectsCommand
+          totalDeleted += await this.deleteObjectsIndividually(entries.Contents, data.abortSignal);
+        } else {
+          // Use bulk delete for better S3 performance
+          totalDeleted += await this.deleteObjectsBulk(entries.Contents, data.abortSignal);
+        }
+      }
+
+      continuationToken = entries.IsTruncated ? entries.NextContinuationToken : undefined;
+    } while (continuationToken);
+
+    return totalDeleted;
   }
 }

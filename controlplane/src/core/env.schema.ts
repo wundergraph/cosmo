@@ -143,6 +143,13 @@ export const envVariables = z
       .transform((val) => val === 'true')
       .default('true'),
     /**
+     * Whether to use individual deletes for S3 objects instead of bulking them.
+     */
+    S3_USE_INDIVIDUAL_DELETES: z
+      .string()
+      .transform((val) => val === 'true')
+      .optional(),
+    /**
      * Email
      */
     SMTP_ENABLED: z
