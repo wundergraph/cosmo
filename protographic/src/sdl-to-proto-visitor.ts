@@ -1511,9 +1511,8 @@ Example:
       if (deprecationInfo.deprecated) {
         fieldOptions.push(` [deprecated = true]`);
       }
-      
 
-      this.protoText.push(`  ${protoEnumValue} = ${valueNumber}${fieldOptions.join(" ")};`);
+      this.protoText.push(`  ${protoEnumValue} = ${valueNumber}${fieldOptions.join(' ')};`);
     }
 
     this.indent--;

@@ -169,7 +169,6 @@ describe('SDL to Proto Directive', () => {
     `);
   });
 
-
   it('should correctly include a deprecation option on an enum element', () => {
     const sdl = `
             enum UserRole {
