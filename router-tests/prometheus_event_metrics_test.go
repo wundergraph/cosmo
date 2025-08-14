@@ -21,6 +21,8 @@ type subscriptionArgs struct {
 	errValue  error
 }
 
+const WaitTimeout = time.Second * 30
+
 func TestEventMetrics(t *testing.T) {
 	t.Run("kafka", func(t *testing.T) {
 		t.Run("publish", func(t *testing.T) {
@@ -43,12 +45,15 @@ func TestEventMetrics(t *testing.T) {
 				mf, err := promRegistry.Gather()
 				require.NoError(t, err)
 
-				family := findMetricFamilyByName(mf, "router_kafka_publish_messages_total")
+				family := findMetricFamilyByName(mf, "router_events_publish_messages_total")
 				metrics := family.GetMetric()
 				require.Len(t, metrics, 1)
 
 				eventProvider := findMetricLabelByName(metrics, "wg_event_provider_id")
 				require.Equal(t, "my-kafka", eventProvider.GetValue())
+
+				providerType := findMetricLabelByName(metrics, "wg_event_provider_type")
+				require.Equal(t, "kafka", providerType.GetValue())
 
 				topic := findMetricLabelByName(metrics, "wg_kafka_topic")
 				require.True(t, strings.HasSuffix(topic.GetValue(), "employeeUpdated"))
@@ -93,23 +98,26 @@ func TestEventMetrics(t *testing.T) {
 				require.NotEmpty(t, subscriptionOneID)
 				clientRunCh := make(chan error)
 				go func() { clientRunCh <- client.Run() }()
-				xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
+				xEnv.WaitForSubscriptionCount(1, WaitTimeout)
 
 				events.ProduceKafkaMessage(t, xEnv, topic, `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
-				testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionArgsCh, func(t *testing.T, args subscriptionArgs) {
+				testenv.AwaitChannelWithT(t, WaitTimeout, subscriptionArgsCh, func(t *testing.T, args subscriptionArgs) {
 					require.NoError(t, args.errValue)
 					require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
 
 					mf, err := promRegistry.Gather()
 					require.NoError(t, err)
 
-					family := findMetricFamilyByName(mf, "router_kafka_messages_received_total")
+					family := findMetricFamilyByName(mf, "router_events_messages_received_total")
 					metrics := family.GetMetric()
 					require.Len(t, metrics, 1)
 
 					eventProvider := findMetricLabelByName(metrics, "wg_event_provider_id")
 					require.Equal(t, "my-kafka", eventProvider.GetValue())
+
+					providerType := findMetricLabelByName(metrics, "wg_event_provider_type")
+					require.Equal(t, "kafka", providerType.GetValue())
 
 					topic := findMetricLabelByName(metrics, "wg_kafka_topic")
 					require.True(t, strings.HasSuffix(topic.GetValue(), "employeeUpdated"))
@@ -118,7 +126,7 @@ func TestEventMetrics(t *testing.T) {
 				})
 
 				require.NoError(t, client.Close())
-				testenv.AwaitChannelWithT(t, KafkaWaitTimeout, clientRunCh, func(t *testing.T, err error) { require.NoError(t, err) })
+				testenv.AwaitChannelWithT(t, WaitTimeout, clientRunCh, func(t *testing.T, err error) { require.NoError(t, err) })
 			})
 		})
 	})
@@ -146,12 +154,15 @@ func TestEventMetrics(t *testing.T) {
 				mf, err := promRegistry.Gather()
 				require.NoError(t, err)
 
-				family := findMetricFamilyByName(mf, "router_nats_publish_messages_total")
+				family := findMetricFamilyByName(mf, "router_events_publish_messages_total")
 				metrics := family.GetMetric()
 				require.Len(t, metrics, 1)
 
 				eventProvider := findMetricLabelByName(metrics, "wg_event_provider_id")
 				require.Equal(t, "my-nats", eventProvider.GetValue())
+
+				providerType := findMetricLabelByName(metrics, "wg_event_provider_type")
+				require.Equal(t, "nats", providerType.GetValue())
 
 				subject := findMetricLabelByName(metrics, "wg_nats_subject")
 				require.True(t, strings.HasSuffix(subject.GetValue(), "employeeUpdatedMyNats.12"))
@@ -236,7 +247,7 @@ func TestEventMetrics(t *testing.T) {
 					clientRunErrCh <- client.Run()
 				}()
 
-				xEnv.WaitForSubscriptionCount(1, events.NatsWaitTimeout)
+				xEnv.WaitForSubscriptionCount(1, WaitTimeout)
 
 				// Send a mutation to trigger the first subscription
 				resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -251,18 +262,21 @@ func TestEventMetrics(t *testing.T) {
 				err = xEnv.NatsConnectionDefault.Flush()
 				require.NoError(t, err)
 
-				testenv.AwaitChannelWithT(t, events.NatsWaitTimeout, subscriptionArgsCh, func(t *testing.T, args subscriptionArgs) {
+				testenv.AwaitChannelWithT(t, WaitTimeout, subscriptionArgsCh, func(t *testing.T, args subscriptionArgs) {
 					require.NoError(t, args.errValue)
 					require.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(args.dataValue))
 
 					mf, err := promRegistry.Gather()
 					require.NoError(t, err)
 
-					family := findMetricFamilyByName(mf, "router_nats_messages_received_total")
+					family := findMetricFamilyByName(mf, "router_events_messages_received_total")
 					metrics := family.GetMetric()
 
 					eventProviderId := findMetricLabelByName(metrics, "wg_event_provider_id").GetValue()
 					require.Equal(t, "default", eventProviderId)
+
+					providerType := findMetricLabelByName(metrics, "wg_event_provider_type")
+					require.Equal(t, "nats", providerType.GetValue())
 
 					subject := findMetricLabelByName(metrics, "wg_nats_subject")
 					require.True(t, strings.HasSuffix(subject.GetValue(), "employeeUpdated.3"))
@@ -271,12 +285,12 @@ func TestEventMetrics(t *testing.T) {
 				})
 
 				require.NoError(t, client.Close())
-				testenv.AwaitChannelWithT(t, events.NatsWaitTimeout, clientRunErrCh, func(t *testing.T, err error) {
+				testenv.AwaitChannelWithT(t, WaitTimeout, clientRunErrCh, func(t *testing.T, err error) {
 					require.NoError(t, err)
 				}, "unable to close client before timeout")
 
-				xEnv.WaitForSubscriptionCount(0, events.NatsWaitTimeout)
-				xEnv.WaitForConnectionCount(0, events.NatsWaitTimeout)
+				xEnv.WaitForSubscriptionCount(0, WaitTimeout)
+				xEnv.WaitForConnectionCount(0, WaitTimeout)
 			})
 		})
 	})
@@ -301,12 +315,15 @@ func TestEventMetrics(t *testing.T) {
 				mf, err := promRegistry.Gather()
 				require.NoError(t, err)
 
-				family := findMetricFamilyByName(mf, "router_redis_publish_messages_total")
+				family := findMetricFamilyByName(mf, "router_events_publish_messages_total")
 				metrics := family.GetMetric()
 				require.Len(t, metrics, 1)
 
 				eventProvider := findMetricLabelByName(metrics, "wg_event_provider_id")
 				require.Equal(t, "my-redis", eventProvider.GetValue())
+
+				providerType := findMetricLabelByName(metrics, "wg_event_provider_type")
+				require.Equal(t, "redis", providerType.GetValue())
 
 				channel := findMetricLabelByName(metrics, "wg_redis_channel")
 				require.True(t, strings.HasSuffix(channel.GetValue(), "employeeUpdatedMyRedis"))
@@ -351,22 +368,25 @@ func TestEventMetrics(t *testing.T) {
 				runCh := make(chan error)
 				go func() { runCh <- client.Run() }()
 
-				xEnv.WaitForSubscriptionCount(1, events.RedisWaitTimeout)
+				xEnv.WaitForSubscriptionCount(1, WaitTimeout)
 				events.ProduceRedisMessage(t, xEnv, topic, `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
-				testenv.AwaitChannelWithT(t, events.RedisWaitTimeout, subscriptionArgsCh, func(t *testing.T, args subscriptionArgs) {
+				testenv.AwaitChannelWithT(t, WaitTimeout, subscriptionArgsCh, func(t *testing.T, args subscriptionArgs) {
 					require.NoError(t, args.errValue)
 					require.JSONEq(t, `{"employeeUpdates":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
 
 					mf, err := promRegistry.Gather()
 					require.NoError(t, err)
 
-					family := findMetricFamilyByName(mf, "router_redis_messages_received_total")
+					family := findMetricFamilyByName(mf, "router_events_messages_received_total")
 					metrics := family.GetMetric()
 					require.Len(t, metrics, 1)
 
 					eventProvider := findMetricLabelByName(metrics, "wg_event_provider_id")
 					require.Equal(t, "my-redis", eventProvider.GetValue())
+
+					providerType := findMetricLabelByName(metrics, "wg_event_provider_type")
+					require.Equal(t, "redis", providerType.GetValue())
 
 					channel := findMetricLabelByName(metrics, "wg_redis_channel")
 					require.True(t, strings.HasSuffix(channel.GetValue(), "employeeUpdatedMyRedis"))
@@ -374,10 +394,8 @@ func TestEventMetrics(t *testing.T) {
 				})
 
 				require.NoError(t, client.Close())
-				testenv.AwaitChannelWithT(t, KafkaWaitTimeout, runCh, func(t *testing.T, err error) { require.NoError(t, err) })
+				testenv.AwaitChannelWithT(t, WaitTimeout, runCh, func(t *testing.T, err error) { require.NoError(t, err) })
 			})
 		})
 	})
 }
-
-const KafkaWaitTimeout = time.Second * 30

@@ -62,10 +62,11 @@ const (
 
 // Event metrics attributes
 const (
-	WgEventProviderID = attribute.Key("wg.event.provider.id")
-	WgKafkaTopic      = attribute.Key("wg.kafka.topic")
-	WgNatsSubject     = attribute.Key("wg.nats.subject")
-	WgRedisChannel    = attribute.Key("wg.redis.channel")
+	WgEventProviderID   = attribute.Key("wg.event.provider.id")
+	WgEventProviderType = attribute.Key("wg.event.provider.type")
+	WgKafkaTopic        = attribute.Key("wg.kafka.topic")
+	WgNatsSubject       = attribute.Key("wg.nats.subject")
+	WgRedisChannel      = attribute.Key("wg.redis.channel")
 )
 
 const (

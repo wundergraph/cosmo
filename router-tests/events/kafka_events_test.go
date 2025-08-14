@@ -21,6 +21,8 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
+const KafkaWaitTimeout = time.Second * 30
+
 func assertKafkaLineEquals(t *testing.T, reader *bufio.Reader, expected string) {
 	t.Helper()
 	line, _, err := reader.ReadLine()

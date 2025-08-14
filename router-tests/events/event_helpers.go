@@ -11,9 +11,7 @@ import (
 	"time"
 )
 
-const KafkaWaitTimeout = time.Second * 30
-const NatsWaitTimeout = time.Second * 30
-const RedisWaitTimeout = time.Second * 30
+const waitTimeout = time.Second * 30
 
 func ProduceKafkaMessage(t *testing.T, xEnv *testenv.Environment, topicName string, message string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -28,7 +26,7 @@ func ProduceKafkaMessage(t *testing.T, xEnv *testenv.Environment, topicName stri
 		pErrCh <- err
 	})
 
-	testenv.AwaitChannelWithT(t, KafkaWaitTimeout, pErrCh, func(t *testing.T, pErr error) {
+	testenv.AwaitChannelWithT(t, waitTimeout, pErrCh, func(t *testing.T, pErr error) {
 		require.NoError(t, pErr)
 	})
 

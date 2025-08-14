@@ -26,6 +26,8 @@ import (
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 )
 
+const NatsWaitTimeout = time.Second * 30
+
 func assertNatsLineEquals(t *testing.T, reader *bufio.Reader, expected string) {
 	t.Helper()
 	line, _, err := reader.ReadLine()
