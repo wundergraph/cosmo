@@ -2,15 +2,18 @@ package events
 
 import (
 	"context"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"net/url"
 	"testing"
 	"time"
 )
 
 const KafkaWaitTimeout = time.Second * 30
 const NatsWaitTimeout = time.Second * 30
+const RedisWaitTimeout = time.Second * 30
 
 func ProduceKafkaMessage(t *testing.T, xEnv *testenv.Environment, topicName string, message string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -50,4 +53,27 @@ func EnsureTopicExists(t *testing.T, xEnv *testenv.Environment, topics ...string
 
 	_, err = xEnv.KafkaAdminClient.CreateTopics(ctx, 1, 1, nil, prefixedTopics...)
 	require.NoError(t, err)
+}
+
+func ProduceRedisMessage(t *testing.T, xEnv *testenv.Environment, topicName string, message string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	parsedURL, err := url.Parse(xEnv.RedisHosts[0])
+	if err != nil {
+		t.Fatalf("Failed to parse Redis URL: %v", err)
+	}
+	var redisConn redis.UniversalClient
+	if !xEnv.RedisWithClusterMode {
+		redisConn = redis.NewClient(&redis.Options{
+			Addr: parsedURL.Host,
+		})
+	} else {
+		redisConn = redis.NewClusterClient(&redis.ClusterOptions{
+			Addrs: []string{parsedURL.Host},
+		})
+	}
+
+	intCmd := redisConn.Publish(ctx, xEnv.GetPubSubName(topicName), message)
+	require.NoError(t, intCmd.Err())
 }
