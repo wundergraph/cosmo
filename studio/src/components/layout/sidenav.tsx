@@ -41,6 +41,7 @@ const isActive = (path: string, currentPath: string, exact = true) => {
 };
 
 const MobileNav = () => {
+  const user = useUser();
   return (
     <div
       className={cn(
@@ -54,10 +55,12 @@ const MobileNav = () => {
             className="flex justify-center items-center gap-x-2"
           >
             Invitations
-            <div className="relative">
-              <div className="absolute size-2 animate-ping rounded-full bg-blue-400" />
-              <div className="size-2 rounded-full bg-blue-400" />
-            </div>
+            {user?.invitations?.length && (
+              <div className="relative">
+                <div className="absolute size-2 animate-ping rounded-full bg-blue-400" />
+                <div className="size-2 rounded-full bg-blue-400" />
+              </div>
+            )}
           </Link>
 
           <Link
