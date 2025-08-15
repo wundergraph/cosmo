@@ -1020,17 +1020,6 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 
 	requestContext.telemetry.ReleaseAttributes(&planningAttrs)
 
-	if requestContext.operation.planningTime > 4*time.Second {
-		h.log.Warn("Planning time exceeded threshold",
-			zap.Duration("planning_time", requestContext.operation.planningTime),
-			zap.String("operation_id", requestContext.operation.name),
-			zap.String("operation_type", requestContext.operation.opType),
-			zap.String("operation_client", requestContext.operation.clientInfo.Name),
-			zap.String("operation_client_version", requestContext.operation.clientInfo.Version),
-			zap.String("operation_content", requestContext.operation.content),
-		)
-	}
-
 	// we could log the query plan only if query plans are calculated
 	if (h.queryPlansEnabled && requestContext.operation.executionOptions.IncludeQueryPlanInResponse) ||
 		h.alwaysIncludeQueryPlan {
