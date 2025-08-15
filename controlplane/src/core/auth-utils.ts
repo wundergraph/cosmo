@@ -317,10 +317,17 @@ export default class AuthUtils {
         throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Refresh token expired');
       }
 
-      // The session expiration should be relative to the creation time, if the session doesn't have an
-      // expiration date, we use the default expiration date
-      const sessionExpiresIn = DEFAULT_SESSION_MAX_AGE_SEC;
-      const sessionExpiresDate = new Date((userSession.createdAt?.getTime() ?? Date.now()) + 1000 * sessionExpiresIn);
+      // The session expiration is relative to the creation time.
+      // If the session doesn't have a creation timestamp, fall back to "now".
+      const baseMs = userSession.createdAt?.getTime() ?? Date.now();
+      const expiresAtMs = baseMs + DEFAULT_SESSION_MAX_AGE_SEC * 1000;
+      const sessionExpiresDate = new Date(expiresAtMs);
+      const remainingSeconds = Math.max(0, Math.floor((expiresAtMs - Date.now()) / 1000));
+
+      if (remainingSeconds <= 0) {
+        // Absolute session lifetime has elapsed; do not renew.
+        throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Session expired');
+      }
 
       // Refresh the access token with the refresh token
       // The method will throw an error if the request fails
@@ -347,7 +354,7 @@ export default class AuthUtils {
       const newUserSession = updatedSessions[0];
 
       const jwt = await encrypt<UserSession>({
-        maxAgeInSeconds: sessionExpiresIn,
+        maxAgeInSeconds: remainingSeconds,
         token: {
           iss: userSession.userId,
           sessionId: newUserSession.id,
