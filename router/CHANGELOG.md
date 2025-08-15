@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.243.1](https://github.com/wundergraph/cosmo/compare/router@0.243.0...router@0.243.1) (2025-08-15)
+
+### Bug Fixes
+
+* **router:** record operation planning time correctly in plan error case ([#2070](https://github.com/wundergraph/cosmo/issues/2070)) ([efbd9f6](https://github.com/wundergraph/cosmo/commit/efbd9f650b620d714a2fea1683b447c7bb5ca36d)) (@endigma)
+
 # [0.243.0](https://github.com/wundergraph/cosmo/compare/router@0.242.0...router@0.243.0) (2025-08-13)
 
 ### Features
