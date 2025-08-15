@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
@@ -3075,6 +3076,157 @@ func TestFlakyAccessLogs(t *testing.T) {
 
 	})
 
+	t.Run("verify ignore list", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("without any ignored values", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				variables := `{"criteria":  {"nationality":  "GERMAN"   }}`
+				persistedQueries := `{"persistedQuery": {"version": 1, "sha256Hash": "e33580cf6276de9a75fb3b1c4b7580fec2a1c8facd13f3487bf6c7c3f854f7e3"}}`
+				operationName := `Find`
+
+				header := make(http.Header)
+				header.Add("graphql-client-name", "my-client")
+				res, err := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
+					OperationName: []byte(operationName),
+					Variables:     []byte(variables),
+					Extensions:    []byte(persistedQueries),
+					Header:        header,
+				})
+				require.NoError(t, err)
+				require.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, res.Body)
+
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				require.Equal(t, 1, requestLog.Len())
+				requestContext := requestLog.All()[0].ContextMap()
+
+				query := requestContext["query"].(string)
+
+				rawQueryString := fmt.Sprintf("extensions=%s&operationName=%s&variables=%s",
+					url.QueryEscape(persistedQueries),
+					url.QueryEscape(operationName),
+					url.QueryEscape(variables))
+				require.Equal(t, rawQueryString, query)
+
+				parseQuery, err := url.ParseQuery(query)
+				require.NoError(t, err)
+
+				require.Equal(t, variables, parseQuery.Get("variables"))
+				require.Equal(t, operationName, parseQuery.Get("operationName"))
+				require.Equal(t, persistedQueries, parseQuery.Get("extensions"))
+			})
+		})
+
+		t.Run("with ignored values", func(t *testing.T) {
+			t.Parallel()
+
+			ignoreList := []string{
+				"operationName",
+				"variables",
+			}
+
+			testenv.Run(t, &testenv.Config{
+				IgnoreQueryParamsList: ignoreList,
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				variables := `{"criteria":  {"nationality":  "GERMAN"   }}`
+				persistedQueries := `{"persistedQuery": {"version": 1, "sha256Hash": "e33580cf6276de9a75fb3b1c4b7580fec2a1c8facd13f3487bf6c7c3f854f7e3"}}`
+				operationName := `Find`
+
+				header := make(http.Header)
+				header.Add("graphql-client-name", "my-client")
+				res, err := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
+					OperationName: []byte(operationName),
+					Variables:     []byte(variables),
+					Extensions:    []byte(persistedQueries),
+					Header:        header,
+				})
+				require.NoError(t, err)
+				require.Equal(t, `{"data":{"findEmployees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}}]}}`, res.Body)
+
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				require.Equal(t, 1, requestLog.Len())
+				requestContext := requestLog.All()[0].ContextMap()
+
+				query := requestContext["query"].(string)
+
+				rawQueryString := "extensions=" + url.QueryEscape(persistedQueries)
+
+				require.Equal(t, rawQueryString, query)
+
+				parseQuery, err := url.ParseQuery(query)
+				require.NoError(t, err)
+
+				require.Empty(t, parseQuery.Get("variables"))
+				require.Empty(t, parseQuery.Get("operationName"))
+				require.Equal(t, persistedQueries, parseQuery.Get("extensions"))
+			})
+		})
+
+		t.Run("with POST while including query params", func(t *testing.T) {
+			t.Parallel()
+
+			customQueryParamHeaderName := "somekey"
+			customQueryParamHeaderValue := "somevalue"
+
+			ignoreList := []string{
+				customQueryParamHeaderName,
+			}
+
+			testenv.Run(t, &testenv.Config{
+				IgnoreQueryParamsList: ignoreList,
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				request := testenv.GraphQLRequest{
+					Query: `{ employees { id } }`,
+				}
+				data, err := json.Marshal(request)
+				require.NoError(t, err)
+				req, err := http.NewRequestWithContext(xEnv.Context, http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(data))
+				require.NoError(t, err)
+				req.Header.Set("Accept-Encoding", "identity")
+
+				additionalKey := "anothervariable"
+				additionalValue := "anothervalue"
+
+				q := req.URL.Query()
+				q.Add(customQueryParamHeaderName, customQueryParamHeaderValue)
+				q.Add(additionalKey, additionalValue)
+				req.URL.RawQuery = q.Encode()
+
+				res, err := xEnv.MakeGraphQLRequestRaw(req)
+				require.NoError(t, err)
+				require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				require.Equal(t, 1, requestLog.Len())
+				requestContext := requestLog.All()[0].ContextMap()
+
+				query := requestContext["query"].(string)
+
+				rawQueryString := fmt.Sprintf("%s=%s", additionalKey, url.QueryEscape(additionalValue))
+				require.Equal(t, rawQueryString, query)
+
+				parseQuery, err := url.ParseQuery(query)
+				require.NoError(t, err)
+
+				require.Empty(t, parseQuery.Get(customQueryParamHeaderName))
+			})
+		})
+	})
 }
 
 func checkValues(t *testing.T, requestContext map[string]interface{}, expectedValues map[string]interface{}, additionalExpectedKeys []string) {

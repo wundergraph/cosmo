@@ -415,6 +415,9 @@
             "Expression": "request.error ?? 'success'"
           }
         }
+      ],
+      "IgnoreQueryParamsList": [
+        "variables"
       ]
     },
     "Subgraphs": {
