@@ -35,6 +35,7 @@ type PrometheusConfig struct {
 	ExcludeScopeInfo bool
 	// Prometheus schema field usage configuration
 	PromSchemaFieldUsage PrometheusSchemaFieldUsage
+	EventMetrics         bool
 }
 
 type PrometheusSchemaFieldUsage struct {
@@ -78,7 +79,8 @@ type OpenTelemetry struct {
 	// Metric labels to exclude from the OTLP exporter.
 	ExcludeMetricLabels []*regexp.Regexp
 	// TestReader is used for testing purposes. If set, the reader will be used instead of the configured exporters.
-	TestReader sdkmetric.Reader
+	TestReader   sdkmetric.Reader
+	EventMetrics bool
 }
 
 func GetDefaultExporter(cfg *Config) *OpenTelemetryExporter {

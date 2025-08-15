@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/wundergraph/cosmo/router/pkg/metric"
+
 	"github.com/twmb/franz-go/pkg/kerr"
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
@@ -33,16 +35,17 @@ type Adapter interface {
 // It uses a single write client to produce messages and a client per topic to consume messages.
 // Each client polls the Kafka topic for new records and updates the subscriptions with the new data.
 type ProviderAdapter struct {
-	ctx         context.Context
-	opts        []kgo.Opt
-	logger      *zap.Logger
-	writeClient *kgo.Client
-	closeWg     sync.WaitGroup
-	cancel      context.CancelFunc
+	ctx              context.Context
+	opts             []kgo.Opt
+	logger           *zap.Logger
+	writeClient      *kgo.Client
+	closeWg          sync.WaitGroup
+	cancel           context.CancelFunc
+	eventMetricStore metric.EventMetricStore
 }
 
 // topicPoller polls the Kafka topic for new records and calls the updateTriggers function.
-func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, updater resolve.SubscriptionUpdater) error {
+func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, updater resolve.SubscriptionUpdater, providerId string) error {
 	for {
 		select {
 		case <-p.ctx.Done(): // Close the poller if the application context was canceled
@@ -88,6 +91,7 @@ func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, u
 				r := iter.Next()
 
 				p.logger.Debug("subscription update", zap.String("topic", r.Topic), zap.ByteString("data", r.Value))
+				p.eventMetricStore.KafkaMessageReceived(p.ctx, providerId, r.Topic)
 				updater.Update(r.Value)
 			}
 		}
@@ -128,7 +132,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 
 		defer p.closeWg.Done()
 
-		err := p.topicPoller(ctx, client, updater)
+		err := p.topicPoller(ctx, client, updater, event.ProviderID)
 		if err != nil {
 			if errors.Is(err, errClientClosed) || errors.Is(err, context.Canceled) {
 				log.Debug("poller canceled", zap.Error(err))
@@ -178,9 +182,11 @@ func (p *ProviderAdapter) Publish(ctx context.Context, event PublishEventConfigu
 
 	if pErr != nil {
 		log.Error("publish error", zap.Error(pErr))
+		p.eventMetricStore.KafkaPublishFailure(ctx, event.ProviderID, event.Topic)
 		return datasource.NewError(fmt.Sprintf("error publishing to Kafka topic %s", event.Topic), pErr)
 	}
 
+	p.eventMetricStore.KafkaPublish(ctx, event.ProviderID, event.Topic)
 	return nil
 }
 
@@ -222,17 +228,25 @@ func (p *ProviderAdapter) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func NewProviderAdapter(ctx context.Context, logger *zap.Logger, opts []kgo.Opt) (*ProviderAdapter, error) {
+func NewProviderAdapter(ctx context.Context, logger *zap.Logger, opts []kgo.Opt, providerOpts datasource.ProviderOpts) (*ProviderAdapter, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	if logger == nil {
 		logger = zap.NewNop()
 	}
 
+	var store metric.EventMetricStore
+	if providerOpts.EventMetricStore != nil {
+		store = providerOpts.EventMetricStore
+	} else {
+		store = metric.NewNoopEventMetricStore()
+	}
+
 	return &ProviderAdapter{
-		ctx:     ctx,
-		logger:  logger.With(zap.String("pubsub", "kafka")),
-		opts:    opts,
-		closeWg: sync.WaitGroup{},
-		cancel:  cancel,
+		ctx:              ctx,
+		logger:           logger.With(zap.String("pubsub", "kafka")),
+		opts:             opts,
+		closeWg:          sync.WaitGroup{},
+		cancel:           cancel,
+		eventMetricStore: store,
 	}, nil
 }

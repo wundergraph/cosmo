@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/wundergraph/cosmo/router/pkg/metric"
+
 	rd "github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -23,25 +25,27 @@ type Adapter interface {
 	Shutdown(ctx context.Context) error
 }
 
-func NewProviderAdapter(ctx context.Context, logger *zap.Logger, urls []string, clusterEnabled bool) Adapter {
+func NewProviderAdapter(ctx context.Context, logger *zap.Logger, urls []string, clusterEnabled bool, opts datasource.ProviderOpts) Adapter {
 	ctx, cancel := context.WithCancel(ctx)
 	return &ProviderAdapter{
-		ctx:            ctx,
-		cancel:         cancel,
-		logger:         logger,
-		urls:           urls,
-		clusterEnabled: clusterEnabled,
+		ctx:              ctx,
+		cancel:           cancel,
+		logger:           logger,
+		urls:             urls,
+		clusterEnabled:   clusterEnabled,
+		eventMetricStore: opts.EventMetricStore,
 	}
 }
 
 type ProviderAdapter struct {
-	ctx            context.Context
-	cancel         context.CancelFunc
-	conn           rd.RDCloser
-	logger         *zap.Logger
-	closeWg        sync.WaitGroup
-	urls           []string
-	clusterEnabled bool
+	ctx              context.Context
+	cancel           context.CancelFunc
+	conn             rd.RDCloser
+	logger           *zap.Logger
+	closeWg          sync.WaitGroup
+	urls             []string
+	clusterEnabled   bool
+	eventMetricStore metric.EventMetricStore
 }
 
 func (p *ProviderAdapter) Startup(ctx context.Context) error {
@@ -107,6 +111,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 					return
 				}
 				log.Debug("subscription update", zap.String("message_channel", msg.Channel), zap.String("data", msg.Payload))
+				p.eventMetricStore.RedisMessageReceived(ctx, event.ProviderID, msg.Channel)
 				updater.Update([]byte(msg.Payload))
 			case <-p.ctx.Done():
 				// When the application context is done, we stop the subscription if it is not already done
@@ -145,8 +150,10 @@ func (p *ProviderAdapter) Publish(ctx context.Context, event PublishEventConfigu
 	intCmd := p.conn.Publish(ctx, event.Channel, data)
 	if intCmd.Err() != nil {
 		log.Error("publish error", zap.Error(intCmd.Err()))
+		p.eventMetricStore.RedisPublishFailure(ctx, event.ProviderID, event.Channel)
 		return datasource.NewError(fmt.Sprintf("error publishing to Redis PubSub channel %s", event.Channel), intCmd.Err())
 	}
-
+	
+	p.eventMetricStore.RedisPublish(ctx, event.ProviderID, event.Channel)
 	return nil
 }

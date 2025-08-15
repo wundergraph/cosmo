@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"io"
 	"log"
 	"math/rand"
@@ -269,8 +270,10 @@ type MetricOptions struct {
 	PrometheusSchemaFieldUsage            PrometheusSchemaFieldUsage
 	EnableOTLPConnectionMetrics           bool
 	EnableOTLPCircuitBreakerMetrics       bool
+	EnableOTLPEventMetrics                bool
 	EnablePrometheusConnectionMetrics     bool
 	EnablePrometheusCircuitBreakerMetrics bool
+	EnablePrometheusEventMetrics          bool
 }
 
 type PrometheusSchemaFieldUsage struct {
@@ -1502,6 +1505,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			CircuitBreaker:      testConfig.MetricOptions.EnablePrometheusCircuitBreakerMetrics,
 			ExcludeMetrics:      testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetrics,
 			ExcludeMetricLabels: testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetricLabels,
+			EventMetrics:        testConfig.MetricOptions.EnablePrometheusEventMetrics,
 			ExcludeScopeInfo:    testConfig.MetricOptions.MetricExclusions.ExcludeScopeInfo,
 			PromSchemaFieldUsage: rmetric.PrometheusSchemaFieldUsage{
 				Enabled:             testConfig.MetricOptions.PrometheusSchemaFieldUsage.Enabled,
@@ -1524,6 +1528,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 					Enabled:         true,
 					RouterRuntime:   testConfig.MetricOptions.EnableRuntimeMetrics,
 					GraphqlCache:    testConfig.MetricOptions.EnableOTLPRouterCache,
+					EventMetrics:    testConfig.MetricOptions.EnableOTLPEventMetrics,
 					ConnectionStats: testConfig.MetricOptions.EnableOTLPConnectionMetrics,
 					EngineStats: config.EngineStats{
 						Subscriptions: testConfig.MetricOptions.OTLPEngineStatsOptions.EnableSubscription,
@@ -2817,7 +2822,9 @@ func subgraphOptions(ctx context.Context, t testing.TB, logger *zap.Logger, nats
 	}
 	natsPubSubByProviderID := make(map[string]pubsubNats.Adapter, len(DemoNatsProviders))
 	for _, sourceName := range DemoNatsProviders {
-		adapter, err := pubsubNats.NewAdapter(ctx, logger, natsData.Params[0].Url, natsData.Params[0].Opts, "hostname", "listenaddr")
+		adapter, err := pubsubNats.NewAdapter(ctx, logger, natsData.Params[0].Url, natsData.Params[0].Opts, "hostname", "listenaddr", datasource.ProviderOpts{
+			EventMetricStore: rmetric.NewNoopEventMetricStore(),
+		})
 		require.NoError(t, err)
 		require.NoError(t, adapter.Startup(ctx))
 		t.Cleanup(func() {

@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/wundergraph/cosmo/router/pkg/metric"
+
 	"github.com/cespare/xxhash/v2"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
@@ -42,6 +44,7 @@ type ProviderAdapter struct {
 	url              string
 	opts             []nats.Option
 	flushTimeout     time.Duration
+	eventMetricStore metric.EventMetricStore
 }
 
 // getInstanceIdentifier returns an identifier for the current instance.
@@ -132,6 +135,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 					for msg := range msgBatch.Messages() {
 						log.Debug("subscription update", zap.String("message_subject", msg.Subject()), zap.ByteString("data", msg.Data()))
 
+						p.eventMetricStore.NatsMessageReceived(p.ctx, event.ProviderID, msg.Subject())
 						updater.Update(msg.Data())
 
 						// Acknowledge the message after it has been processed
@@ -169,6 +173,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 			select {
 			case msg := <-msgChan:
 				log.Debug("subscription update", zap.String("message_subject", msg.Subject), zap.ByteString("data", msg.Data))
+				p.eventMetricStore.NatsMessageReceived(p.ctx, event.ProviderID, msg.Subject)
 				updater.Update(msg.Data)
 			case <-p.ctx.Done():
 				// When the application context is done, we stop the subscriptions
@@ -197,7 +202,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 	return nil
 }
 
-func (p *ProviderAdapter) Publish(_ context.Context, event PublishAndRequestEventConfiguration) error {
+func (p *ProviderAdapter) Publish(ctx context.Context, event PublishAndRequestEventConfiguration) error {
 	log := p.logger.With(
 		zap.String("provider_id", event.ProviderID),
 		zap.String("method", "publish"),
@@ -213,7 +218,10 @@ func (p *ProviderAdapter) Publish(_ context.Context, event PublishAndRequestEven
 	err := p.client.Publish(event.Subject, event.Data)
 	if err != nil {
 		log.Error("publish error", zap.Error(err))
+		p.eventMetricStore.NatsPublishFailure(ctx, event.ProviderID, event.Subject)
 		return datasource.NewError(fmt.Sprintf("error publishing to NATS subject %s", event.Subject), err)
+	} else {
+		p.eventMetricStore.NatsPublish(ctx, event.ProviderID, event.Subject)
 	}
 
 	return nil
@@ -235,9 +243,13 @@ func (p *ProviderAdapter) Request(ctx context.Context, event PublishAndRequestEv
 	msg, err := p.client.RequestWithContext(ctx, event.Subject, event.Data)
 	if err != nil {
 		log.Error("request error", zap.Error(err))
+		p.eventMetricStore.NatsRequestFailure(ctx, event.ProviderID, event.Subject)
 		return datasource.NewError(fmt.Sprintf("error requesting from NATS subject %s", event.Subject), err)
 	}
 
+	p.eventMetricStore.NatsRequest(ctx, event.ProviderID, event.Subject)
+
+	// We don't collect metrics on err here as it's an error related to the writer
 	_, err = w.Write(msg.Data)
 	if err != nil {
 		log.Error("error writing response to writer", zap.Error(err))
@@ -303,7 +315,15 @@ func (p *ProviderAdapter) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func NewAdapter(ctx context.Context, logger *zap.Logger, url string, opts []nats.Option, hostName string, routerListenAddr string) (Adapter, error) {
+func NewAdapter(
+	ctx context.Context,
+	logger *zap.Logger,
+	url string,
+	opts []nats.Option,
+	hostName string,
+	routerListenAddr string,
+	providerOpts datasource.ProviderOpts,
+) (Adapter, error) {
 	if logger == nil {
 		logger = zap.NewNop()
 	}
@@ -317,5 +337,6 @@ func NewAdapter(ctx context.Context, logger *zap.Logger, url string, opts []nats
 		url:              url,
 		opts:             opts,
 		flushTimeout:     10 * time.Second,
+		eventMetricStore: providerOpts.EventMetricStore,
 	}, nil
 }
