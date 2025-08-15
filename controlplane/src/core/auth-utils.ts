@@ -317,8 +317,10 @@ export default class AuthUtils {
         throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Refresh token expired');
       }
 
+      // The session expiration should be relative to the creation time, if the session doesn't have an
+      // expiration date, we use the default expiration date
       const sessionExpiresIn = DEFAULT_SESSION_MAX_AGE_SEC;
-      const sessionExpiresDate = new Date(Date.now() + 1000 * sessionExpiresIn);
+      const sessionExpiresDate = new Date((userSession.createdAt?.getTime() ?? Date.now()) + 1000 * sessionExpiresIn);
 
       // Refresh the access token with the refresh token
       // The method will throw an error if the request fails
