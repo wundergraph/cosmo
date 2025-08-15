@@ -238,7 +238,8 @@ func TestBuild_ShouldNotInitializeProviderIfNotUsed(t *testing.T) {
 	mockPubSubUsedProvider.On("ID").Return("provider-2")
 
 	mockBuilder.On("TypeID").Return("nats")
-	mockBuilder.On("BuildProvider", natsEventSources[1]).Return(mockPubSubUsedProvider, nil)
+	mockBuilder.On("BuildProvider", natsEventSources[1], mock.Anything).
+		Return(mockPubSubUsedProvider, nil)
 
 	// Execute the function
 	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, rmetric.NewNoopEventMetricStore())
