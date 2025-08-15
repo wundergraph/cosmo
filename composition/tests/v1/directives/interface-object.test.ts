@@ -1,18 +1,23 @@
 import { describe, expect, test } from 'vitest';
 import {
   ConfigurationData,
+  EntityInterfaceFederationData,
+  EntityInterfaceSubgraphData,
   FieldData,
   FieldName,
   ImplementationErrors,
   INTERFACE,
+  InvalidEntityInterface,
   InvalidFieldImplementation,
   invalidFieldShareabilityError,
   invalidInterfaceImplementationError,
   invalidInterfaceObjectImplementationDefinitionsError,
   ObjectDefinitionData,
   ROUTER_COMPATIBILITY_VERSION_ONE,
+  SimpleFieldData,
   Subgraph,
   SubgraphName,
+  undefinedEntityInterfaceImplementationsError,
 } from '../../../src';
 import { parse } from 'graphql';
 import {
@@ -675,6 +680,237 @@ describe('@interfaceObject tests', () => {
       ),
     );
   });
+
+  test('that @external fields to satisfy an entity Interface are propagated from Interface Object to implementations', () => {
+    const { federatedGraphSchema } = federateSubgraphsSuccess([fda, fdb], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+      normalizeString(
+        versionTwoRouterDefinitions +
+          `
+      type Entity implements EntityInterfaceA & EntityInterfaceB {
+        id: ID!
+        name: String!
+        newField: String!
+      }
+      
+      interface EntityInterfaceA {
+        id: ID!
+        name: String!
+      }
+      
+      interface EntityInterfaceB implements EntityInterfaceA {
+        id: ID!
+        name: String!
+        newField: String!
+      }
+      
+      type Query {
+        interfacesA: [EntityInterfaceA]
+        interfacesB: [EntityInterfaceB]
+      }
+      
+      scalar openfed__Scope
+      `,
+      ),
+    );
+  });
+
+  test('that @external fields to satisfy an Interface are propagated from Interface Object to implementations', () => {
+    const { federatedGraphSchema } = federateSubgraphsSuccess([fda, fdc], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+      normalizeString(
+        versionTwoRouterDefinitions +
+          `
+      type Entity implements EntityInterfaceA & EntityInterfaceB {
+        id: ID!
+        name: String!
+        newField: String!
+      }
+      
+      interface EntityInterfaceA {
+        id: ID!
+        name: String!
+      }
+      
+      interface EntityInterfaceB implements EntityInterfaceA {
+        id: ID!
+        name: String!
+        newField: String!
+      }
+      
+      type Query {
+        interfacesA: [EntityInterfaceA]
+        interfacesB: [EntityInterfaceB]
+      }
+      
+      scalar openfed__Scope
+      `,
+      ),
+    );
+  });
+
+  test('that an error is returned if implementations of an entity Interface are not included in the graph or through an Interface Object', () => {
+    const { errors } = federateSubgraphsFailure([fea, feb], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
+      undefinedEntityInterfaceImplementationsError(
+        new Map<string, InvalidEntityInterface[]>([
+          [
+            'EntityInterfaceA',
+            [
+              {
+                subgraphName: feb.name,
+                definedConcreteTypeNames: new Set<string>(['EntityA']),
+                requiredConcreteTypeNames: new Set<string>(['EntityA', 'EntityB']),
+              },
+            ],
+          ],
+        ]),
+        new Map<string, EntityInterfaceFederationData>([
+          [
+            'EntityInterfaceA',
+            {
+              concreteTypeNames: new Set<string>(['EntityA', 'EntityB']),
+              fieldDatasBySubgraphName: new Map<string, Array<SimpleFieldData>>(),
+              interfaceFieldNames: new Set<string>(['id', 'name']),
+              interfaceObjectFieldNames: new Set<string>(),
+              interfaceObjectSubgraphs: new Set<string>(),
+              subgraphDataByTypeName: new Map<string, EntityInterfaceSubgraphData>(),
+              typeName: 'EntityInterfaceA',
+            },
+          ],
+        ]),
+      ),
+    );
+  });
+
+  test('that multiple Interface Objects can provide the implementations for an entity Interface', () => {
+    const { federatedGraphSchema } = federateSubgraphsSuccess([ffa, ffb], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+      normalizeString(
+        versionTwoRouterDefinitions +
+          `
+      type EntityA implements EntityInterfaceA & EntityInterfaceB {
+        id: ID!
+        name: String!
+      }
+      
+      type EntityB implements EntityInterfaceA {
+        id: ID!
+        name: String!
+      }
+      
+      type EntityC implements EntityInterfaceA {
+        id: ID!
+        name: String!
+      }
+      
+      type EntityD implements EntityInterfaceC {
+        id: ID!
+        name: String!
+      }
+      
+      type EntityE implements EntityInterfaceA & EntityInterfaceC {
+        id: ID!
+        name: String!
+      }
+        
+      interface EntityInterfaceA {
+        id: ID!
+        name: String!
+      }
+      
+      interface EntityInterfaceB implements EntityInterfaceA {
+        id: ID!
+        name: String!
+      }
+      
+      interface EntityInterfaceC {
+        id: ID!
+        name: String!
+      }
+      
+      type Query {
+        interfacesA: [EntityInterfaceA]
+        interfacesB: [EntityInterfaceB]
+        interfacesC: [EntityInterfaceC]
+      }
+      
+      scalar openfed__Scope
+      `,
+      ),
+    );
+  });
+
+  test('that an error is returned if implementations of an entity Interface are not included in the graph or through Interface Objects', () => {
+    const { errors } = federateSubgraphsFailure([ffa, ffc], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
+      undefinedEntityInterfaceImplementationsError(
+        new Map<string, InvalidEntityInterface[]>([
+          [
+            'EntityInterfaceA',
+            [
+              {
+                subgraphName: ffc.name,
+                definedConcreteTypeNames: new Set<string>(['EntityA', 'EntityC', 'EntityE']),
+                requiredConcreteTypeNames: new Set<string>(['EntityA', 'EntityB', 'EntityC', 'EntityE']),
+              },
+            ],
+          ],
+        ]),
+        new Map<string, EntityInterfaceFederationData>([
+          [
+            'EntityInterfaceA',
+            {
+              concreteTypeNames: new Set<string>(['EntityA', 'EntityB', 'EntityC', 'EntityE']),
+              fieldDatasBySubgraphName: new Map<string, Array<SimpleFieldData>>(),
+              interfaceFieldNames: new Set<string>(['id', 'name']),
+              interfaceObjectFieldNames: new Set<string>(),
+              interfaceObjectSubgraphs: new Set<string>(),
+              subgraphDataByTypeName: new Map<string, EntityInterfaceSubgraphData>(),
+              typeName: 'EntityInterfaceA',
+            },
+          ],
+        ]),
+      ),
+    );
+  });
+
+  test('that an error is returned if implementations of an entity Interface are included without explicit implementation of the entity Interface', () => {
+    const { errors } = federateSubgraphsFailure([ffa, ffd], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
+      undefinedEntityInterfaceImplementationsError(
+        new Map<string, InvalidEntityInterface[]>([
+          [
+            'EntityInterfaceA',
+            [
+              {
+                subgraphName: ffd.name,
+                definedConcreteTypeNames: new Set<string>(['EntityA', 'EntityB', 'EntityE']),
+                requiredConcreteTypeNames: new Set<string>(['EntityA', 'EntityB', 'EntityC', 'EntityE']),
+              },
+            ],
+          ],
+        ]),
+        new Map<string, EntityInterfaceFederationData>([
+          [
+            'EntityInterfaceA',
+            {
+              concreteTypeNames: new Set<string>(['EntityA', 'EntityB', 'EntityC', 'EntityE']),
+              fieldDatasBySubgraphName: new Map<string, Array<SimpleFieldData>>(),
+              interfaceFieldNames: new Set<string>(['id', 'name']),
+              interfaceObjectFieldNames: new Set<string>(),
+              interfaceObjectSubgraphs: new Set<string>(),
+              subgraphDataByTypeName: new Map<string, EntityInterfaceSubgraphData>(),
+              typeName: 'EntityInterfaceA',
+            },
+          ],
+        ]),
+      ),
+    );
+  });
 });
 
 const faa: Subgraph = {
@@ -895,6 +1131,240 @@ const fcf: Subgraph = {
     type EntityInterfaceB @key(fields: "id") @interfaceObject{
       id: ID!
       name: String! @shareable
+    }
+  `),
+};
+
+const fda: Subgraph = {
+  name: 'fda',
+  url: '',
+  definitions: parse(`
+    type Entity implements EntityInterfaceA & EntityInterfaceB @key(fields: "id") {
+      id: ID!
+      name: String!
+    }
+    
+    interface EntityInterfaceA @key(fields: "id") {
+      id: ID!
+      name: String!
+    }
+    
+    interface EntityInterfaceB implements EntityInterfaceA @key(fields: "id") {
+      id: ID!
+      name: String!
+    }
+    
+    type Query {
+      interfacesA: [EntityInterfaceA]
+      interfacesB: [EntityInterfaceB]
+    }
+  `),
+};
+
+const fdb: Subgraph = {
+  name: 'fdb',
+  url: '',
+  definitions: parse(`
+    interface EntityInterfaceA @key(fields: "id") {
+      id: ID!
+      name: String!
+    }
+    
+    type EntityInterfaceB implements EntityInterfaceA @key(fields: "id") @interfaceObject {
+      id: ID!
+      name: String! @external
+      newField: String!
+    }
+  `),
+};
+
+const fdc: Subgraph = {
+  name: 'fdc',
+  url: '',
+  definitions: parse(`
+    interface EntityInterfaceA {
+      id: ID!
+      name: String!
+    }
+    
+    type EntityInterfaceB implements EntityInterfaceA @key(fields: "id") @interfaceObject {
+      id: ID!
+      name: String! @external
+      newField: String!
+    }
+  `),
+};
+
+const fea: Subgraph = {
+  name: 'fea',
+  url: '',
+  definitions: parse(`
+    type EntityA implements EntityInterfaceA & EntityInterfaceB @key(fields: "id") {
+      id: ID!
+      name: String!
+    }
+    
+    type EntityB implements EntityInterfaceA @key(fields: "id") {
+      id: ID!
+      name: String!
+    }
+    
+    interface EntityInterfaceA @key(fields: "id") {
+      id: ID!
+      name: String!
+    }
+    
+    interface EntityInterfaceB implements EntityInterfaceA @key(fields: "id") {
+      id: ID!
+      name: String!
+    }
+    
+    type Query {
+      interfacesA: [EntityInterfaceA]
+      interfacesB: [EntityInterfaceB]
+    }
+  `),
+};
+
+const feb: Subgraph = {
+  name: 'feb',
+  url: '',
+  definitions: parse(`
+    interface EntityInterfaceA @key(fields: "id") {
+      id: ID!
+      name: String!
+    }
+    
+    type EntityInterfaceB implements EntityInterfaceA @key(fields: "id") @interfaceObject {
+      id: ID!
+      name: String! @external
+      newField: String!
+    }
+  `),
+};
+
+const ffa: Subgraph = {
+  name: 'ffa',
+  url: '',
+  definitions: parse(`
+    type EntityA implements EntityInterfaceA & EntityInterfaceB @key(fields: "id") {
+      id: ID!
+      name: String!
+    }
+    
+    type EntityB implements EntityInterfaceA @key(fields: "id") {
+      id: ID!
+      name: String!
+    }
+    
+    type EntityC implements EntityInterfaceA @key(fields: "id") {
+      id: ID!
+      name: String!
+    }
+    
+    type EntityD implements EntityInterfaceC @key(fields: "id") {
+      id: ID!
+      name: String!
+    }
+    
+    type EntityE implements EntityInterfaceA & EntityInterfaceC @key(fields: "id") {
+      id: ID!
+      name: String!
+    }
+    
+    interface EntityInterfaceA @key(fields: "id") {
+      id: ID!
+      name: String!
+    }
+    
+    interface EntityInterfaceB implements EntityInterfaceA @key(fields: "id") {
+      id: ID!
+      name: String!
+    }
+    
+    interface EntityInterfaceC @key(fields: "id") {
+      id: ID!
+      name: String!
+    }
+    
+    type Query {
+      interfacesA: [EntityInterfaceA]
+      interfacesB: [EntityInterfaceB]
+      interfacesC: [EntityInterfaceC]
+    }
+  `),
+};
+
+const ffb: Subgraph = {
+  name: 'ffb',
+  url: '',
+  definitions: parse(`
+    type EntityB implements EntityInterfaceA @key(fields: "id") {
+      id: ID!
+    }
+    
+    type EntityC implements EntityInterfaceA @key(fields: "id") {
+      id: ID!
+    }
+    
+    interface EntityInterfaceA @key(fields: "id") {
+      id: ID!
+    }
+    
+    type EntityInterfaceB @key(fields: "id") @interfaceObject {
+      id: ID!
+    }
+    
+    type EntityInterfaceC @key(fields: "id") @interfaceObject {
+      id: ID!
+    }
+  `),
+};
+
+const ffc: Subgraph = {
+  name: 'ffc',
+  url: '',
+  definitions: parse(`
+    type EntityC implements EntityInterfaceA @key(fields: "id") {
+      id: ID!
+    }
+    
+    interface EntityInterfaceA @key(fields: "id") {
+      id: ID!
+    }
+    
+    type EntityInterfaceB @key(fields: "id") @interfaceObject {
+      id: ID!
+    }
+    
+    type EntityInterfaceC @key(fields: "id") @interfaceObject {
+      id: ID!
+    }
+  `),
+};
+
+const ffd: Subgraph = {
+  name: 'ffd',
+  url: '',
+  definitions: parse(`
+    type EntityB implements EntityInterfaceA @key(fields: "id") {
+      id: ID!
+    }
+    
+    type EntityC @key(fields: "id") {
+      id: ID!
+    }
+    
+    interface EntityInterfaceA @key(fields: "id") {
+      id: ID!
+    }
+    
+    type EntityInterfaceB @key(fields: "id") @interfaceObject {
+      id: ID!
+    }
+    
+    type EntityInterfaceC @key(fields: "id") @interfaceObject {
+      id: ID!
     }
   `),
 };

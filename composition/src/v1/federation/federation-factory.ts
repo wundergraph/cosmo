@@ -230,7 +230,7 @@ import {
   InvalidRequiredInputValueData,
 } from '../../utils/types';
 import { FederateSubgraphsContractV1Params, FederateSubgraphsWithContractsV1Params, FederationParams } from './types';
-import { ContractName, FieldCoords, TypeName } from '../../types/types';
+import { ContractName, FieldCoords, SubgraphName, TypeName } from '../../types/types';
 
 export class FederationFactory {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
@@ -1617,7 +1617,7 @@ export class FederationFactory {
           if (!isObjectDefinitionData(concreteTypeData)) {
             continue;
           }
-          // The subgraph locations of the interface object must be added to the concrete types that implement it
+          // The subgraph locations of the Interface Object must be added to the concrete types that implement it
           const entityData = getOrThrowError(this.entityDataByTypeName, concreteTypeName, 'entityDataByTypeName');
           entityData.subgraphNames.add(subgraphName);
           const configurationData = configurationDataByTypeName.get(concreteTypeName);
@@ -1673,10 +1673,16 @@ export class FederationFactory {
               }
             }
             const existingFieldData = concreteTypeData.fieldDataByName.get(fieldName);
+            // @shareable and @external need to be propagated (e.g., to satisfy interfaces)
             if (existingFieldData) {
               const isShareable = fieldData.isShareableBySubgraphName.get(subgraphName) ?? false;
               existingFieldData.isShareableBySubgraphName.set(subgraphName, isShareable);
               existingFieldData.subgraphNames.add(subgraphName);
+              const externalData = fieldData.externalFieldDataBySubgraphName.get(subgraphName);
+              if (!externalData) {
+                continue;
+              }
+              existingFieldData.externalFieldDataBySubgraphName.set(subgraphName, { ...externalData });
               continue;
             }
             const isInaccessible =
@@ -3061,18 +3067,31 @@ function initializeFederationFactory({
     }
   }
   const entityInterfaceErrors = new Array<Error>();
+  const definedConcreteTypeNamesBySubgraphName = new Map<SubgraphName, Set<TypeName>>();
   for (const [typeName, entityInterfaceData] of entityInterfaceFederationDataByTypeName) {
     const implementations = entityInterfaceData.concreteTypeNames.size;
     for (const [subgraphName, subgraphData] of entityInterfaceData.subgraphDataByTypeName) {
+      const definedConcreteTypeNames = getValueOrDefault(
+        definedConcreteTypeNamesBySubgraphName,
+        subgraphName,
+        () => new Set<TypeName>(),
+      );
+      addIterableValuesToSet(subgraphData.concreteTypeNames, definedConcreteTypeNames);
       if (!subgraphData.isInterfaceObject) {
         if (subgraphData.resolvable && subgraphData.concreteTypeNames.size !== implementations) {
-          getValueOrDefault(invalidEntityInterfacesByTypeName, typeName, () => []).push({
+          getValueOrDefault(
+            invalidEntityInterfacesByTypeName,
+            typeName,
+            () => new Array<InvalidEntityInterface>(),
+          ).push({
             subgraphName,
-            concreteTypeNames: subgraphData.concreteTypeNames,
+            definedConcreteTypeNames: new Set<TypeName>(subgraphData.concreteTypeNames),
+            requiredConcreteTypeNames: new Set<TypeName>(entityInterfaceData.concreteTypeNames),
           });
         }
         continue;
       }
+      addIterableValuesToSet(entityInterfaceData.concreteTypeNames, definedConcreteTypeNames);
       const { parentDefinitionDataByTypeName } = getOrThrowError(
         result.internalSubgraphBySubgraphName,
         subgraphName,
@@ -3090,6 +3109,26 @@ function initializeFederationFactory({
         );
       }
     }
+  }
+  for (const [typeName, invalidInterfaces] of invalidEntityInterfacesByTypeName) {
+    const checkedInvalidInterfaces = new Array<InvalidEntityInterface>();
+    for (const invalidInterface of invalidInterfaces) {
+      const validTypeNames = definedConcreteTypeNamesBySubgraphName.get(invalidInterface.subgraphName);
+      if (!validTypeNames) {
+        checkedInvalidInterfaces.push(invalidInterface);
+        continue;
+      }
+      const definedTypeNames = invalidInterface.requiredConcreteTypeNames.intersection(validTypeNames);
+      if (invalidInterface.requiredConcreteTypeNames.size !== definedTypeNames.size) {
+        invalidInterface.definedConcreteTypeNames = definedTypeNames;
+        checkedInvalidInterfaces.push(invalidInterface);
+      }
+    }
+    if (checkedInvalidInterfaces.length > 0) {
+      invalidEntityInterfacesByTypeName.set(typeName, checkedInvalidInterfaces);
+      continue;
+    }
+    invalidEntityInterfacesByTypeName.delete(typeName);
   }
   if (invalidEntityInterfacesByTypeName.size > 0) {
     entityInterfaceErrors.push(
