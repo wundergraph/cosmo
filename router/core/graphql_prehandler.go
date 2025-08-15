@@ -966,6 +966,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	if !requestContext.operation.traceOptions.ExcludePlannerStats {
 		httpOperation.traceTimings.StartPlanning()
 	}
+
 	startPlanning := time.Now()
 
 	_, enginePlanSpan := h.tracer.Start(req.Context(), "Operation - Plan",
@@ -984,22 +985,26 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	err = h.planner.plan(requestContext.operation, planOptions)
 	if err != nil {
 		httpOperation.requestLogger.Debug("failed to plan operation", zap.Error(err))
-		rtrace.AttachErrToSpan(enginePlanSpan, err)
 
 		if !requestContext.operation.traceOptions.ExcludePlannerStats {
 			httpOperation.traceTimings.EndPlanning()
 		}
 
+		requestContext.operation.planningTime = time.Since(startPlanning)
+
+		rtrace.AttachErrToSpan(enginePlanSpan, err)
 		enginePlanSpan.End()
 
 		return err
 	}
 
-	enginePlanSpan.SetAttributes(otel.WgEnginePlanCacheHit.Bool(requestContext.operation.planCacheHit))
+	if !requestContext.operation.traceOptions.ExcludePlannerStats {
+		httpOperation.traceTimings.EndPlanning()
+	}
 
 	requestContext.operation.planningTime = time.Since(startPlanning)
-	httpOperation.traceTimings.EndPlanning()
 
+	enginePlanSpan.SetAttributes(otel.WgEnginePlanCacheHit.Bool(requestContext.operation.planCacheHit))
 	enginePlanSpan.End()
 
 	planningAttrs := *requestContext.telemetry.AcquireAttributes()
