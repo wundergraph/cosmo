@@ -132,7 +132,7 @@ type Task implements Node & Assignable @key(fields: "id") {
   description: String
   priority: TaskPriority!
   status: TaskStatus!
-  estimatedHours: Float
+  estimatedHours: Float @deprecated(reason: "No more estimations!")
   actualHours: Float
   createdAt: String   # ISO date
   completedAt: String # ISO date
