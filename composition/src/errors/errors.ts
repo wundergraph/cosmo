@@ -848,8 +848,8 @@ export function undefinedEntityInterfaceImplementationsError(
 ): Error {
   let message =
     `Federation was unsuccessful because any one subgraph that defines a specific entity Interface` +
-    ` must also define each and every entity Object that implements that entity Interface.\n
-    Each entity Object must also explicitly define its implementation of the entity Interface.\n`;
+    ` must also define each and every entity Object that implements that entity Interface.\n` +
+    `Each entity Object must also explicitly define its implementation of the entity Interface.\n`;
   for (const [typeName, undefinedImplementations] of invalidEntityInterfacesByTypeName) {
     const entityInterfaceDatas = getOrThrowError(
       entityInterfaceFederationDataByTypeName,
