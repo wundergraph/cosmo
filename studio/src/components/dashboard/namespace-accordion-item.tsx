@@ -15,7 +15,6 @@ type NamespaceAccordionProps = {
 
 export function NamespaceAccordionItem({ namespace, graphs, setNamespace }: NamespaceAccordionProps) {
   const currentOrg = useCurrentOrganization();
-  const numberOfSubgraphs = graphs.map((v) => v.subgraphs.length).reduce((a, b) => a + b, 0);
 
   return (
     <AccordionItem key={`namespace-${namespace}`} value={namespace} className="last:border-b-0">
@@ -30,11 +29,6 @@ export function NamespaceAccordionItem({ namespace, graphs, setNamespace }: Name
               setNamespace={setNamespace}
               className="text-sm font-medium"
             />
-
-            <div className="text-muted-foreground w-full text-right">
-              {graphs.length} graph{graphs.length === 1 ? "" : "s"},{" "}
-              {numberOfSubgraphs} subgraph{numberOfSubgraphs === 1 ? "" : "s"}
-            </div>
           </div>
         </AccordionPrimitive.Trigger>
       </AccordionPrimitive.Header>

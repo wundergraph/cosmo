@@ -7,12 +7,16 @@ import { CaretSortIcon, } from "@radix-ui/react-icons";
 import * as React from "react";
 import { useWorkspace } from "@/hooks/use-workspace";
 import { Command, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { NamespaceBadge } from "./namespace-badge";
 import { Accordion } from "@/components/ui/accordion";
 import { PopoverAnchor } from "@radix-ui/react-popover";
 import Fuse from "fuse.js"
 import { WorkspaceFederatedGraph } from "@/components/dashboard/workspace-provider";
+import { useSubgraph } from "@/hooks/use-subgraph";
+import { Link } from "@/components/ui/link";
+
 import { NamespaceAccordionItem } from "./namespace-accordion-item";
+import { NamespaceBadge } from "./namespace-badge";
+import { FederatedGraphBadge } from "./federated-graph-badge";
 
 export interface WorkspaceSelectorProps {
   children?: React.ReactNode;
@@ -22,21 +26,34 @@ export interface WorkspaceSelectorProps {
 export function WorkspaceSelector({ children, truncateNamespace = true }: WorkspaceSelectorProps) {
   const router = useRouter();
 
+  const subgraphContext = useSubgraph();
   const { namespace, graphs, setNamespace } = useWorkspace();
   const [filter, setFilter] = useState('');
   const [isOpen, setOpen] = useState(false);
 
+  const routeSegment = router.pathname.split("/")[3]?.toLowerCase();
   const currentSlug = router.query.slug as string;
   const setNamespaceCallback = useCallback((ns: string) => {
     setNamespace(ns, false);
     setOpen(false);
   }, [setNamespace]);
 
-  const routeSegment = router.pathname.split("/")[3]?.toLowerCase();
-  const namespaceGraphs = graphs.get(namespace) ?? [];
-  const activeGraph = routeSegment === "graph"
-    ? namespaceGraphs.find((g) => g.graph.name.toLowerCase() === currentSlug?.toLowerCase())
-    : undefined;
+  const namespaceGraphs = useMemo(() => graphs.get(namespace) ?? [], [graphs, namespace]);
+  const namespaceSubgraphs = useMemo(() => namespaceGraphs.flatMap((g) => g.subgraphs), [namespaceGraphs]);
+
+  const activeSubgraph = useMemo(
+    () => routeSegment === "subgraph" && subgraphContext?.subgraph?.id
+      ? namespaceSubgraphs.find((sg) => sg.id === subgraphContext.subgraph?.id)
+      : undefined,
+    [namespaceSubgraphs, routeSegment, subgraphContext],
+  );
+
+  const activeGraph = useMemo(
+    () => routeSegment === "graph"
+      ? namespaceGraphs.find((g) => g.graph.name.toLowerCase() === currentSlug?.toLowerCase())
+      : undefined,
+    [currentSlug, namespaceGraphs, routeSegment],
+  );
 
   const filteredGraphs = useMemo<[string, WorkspaceFederatedGraph[]][]>(() => {
     const filterValue = filter?.trim().toLowerCase() ?? '';
@@ -106,10 +123,17 @@ export function WorkspaceSelector({ children, truncateNamespace = true }: Worksp
           className={truncateNamespace ? "max-w-[180px] lg:max-w-xs truncate" : undefined}
         />
 
-        {(activeGraph) && (
+        {activeGraph && (
           <>
             <span className="text-muted-foreground">/</span>
-            <span className="text-sm">{activeGraph?.graph.name}</span>
+            <FederatedGraphBadge graph={activeGraph.graph} />
+          </>
+        )}
+
+        {activeSubgraph && (
+          <>
+            <span className="text-muted-foreground">/</span>
+            <span className="text-sm">{activeSubgraph.name}</span>
           </>
         )}
 
@@ -135,8 +159,8 @@ export function WorkspaceSelector({ children, truncateNamespace = true }: Worksp
                   {filteredGraphs.map(([ns, data]) => (
                     <NamespaceAccordionItem
                       key={`namespace-${ns}`}
-                      namespace={ns}
                       graphs={data}
+                      namespace={ns}
                       setNamespace={setNamespaceCallback}
                     />
                   ))}
