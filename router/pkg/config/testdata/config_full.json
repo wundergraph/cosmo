@@ -672,8 +672,8 @@
     },
     "DepthLimit": null,
     "ParserLimits": {
-      "ApproximateDepthLimit": 100,
-      "TotalFieldsLimit": 500
+      "ApproximateDepthLimit": 200,
+      "TotalFieldsLimit": 3500
     },
     "OperationNameLengthLimit": 2000
   },
@@ -891,7 +891,10 @@
   },
   "Plugins": {
     "Enabled": true,
-    "Path": "some/path/to/plugins"
+    "Path": "some/path/to/plugins",
+    "Registry": {
+      "URL": "cosmo-registry.wundergraph.com"
+    }
   },
   "WatchConfig": {
     "Enabled": true,

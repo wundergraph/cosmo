@@ -1,4 +1,4 @@
-package grpcconnector
+package grpccommon
 
 import (
 	"io"

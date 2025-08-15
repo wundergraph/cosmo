@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.116.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.115.2...@wundergraph/cosmo-connect@0.116.0) (2025-08-12)
+
+### Features
+
+* add support for plugins ([#2079](https://github.com/wundergraph/cosmo/issues/2079)) ([05c923a](https://github.com/wundergraph/cosmo/commit/05c923aaa09a898a1662fc40d0e5751dfa5b8fe1)) (@JivusAyrus)
+
+## [0.115.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.115.1...@wundergraph/cosmo-connect@0.115.2) (2025-08-08)
+
+### Bug Fixes
+
+* use federated graph id and org id to fetch operation content ([#2107](https://github.com/wundergraph/cosmo/issues/2107)) ([cfe1036](https://github.com/wundergraph/cosmo/commit/cfe10361e0d756f803ef4210b5efa46c3f16d8bb)) (@JivusAyrus)
+
 ## [0.115.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.115.0...@wundergraph/cosmo-connect@0.115.1) (2025-07-31)
 
 ### Bug Fixes

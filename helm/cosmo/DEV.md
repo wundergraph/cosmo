@@ -1,11 +1,10 @@
 # Cosmo Helm Chart
 
 Navigating the stars with the Cosmo Helm Chart. This chart is a collection of subcharts that make up the Cosmo stack.
-You can use it to deploy a fully functional Cosmo stack for development or production use.
+You can use it to deploy a fully functional Cosmo stack for development or evaluation purposes.
 
 > [!TIP]
-> As part of an enterprise subscription, we provide exclusive documentation on how to effectively operate and run WunderGraph Cosmo on all common container platforms such as EKS, GKE, AKS, Fargate, and Google Cloud Run. This includes migration support and configuration guidance. Don't spend time tinkering with its internals; let us do the heavy lifting for you.
-> [Contact us](https://wundergraph.com/contact/sales) for more information.
+> As part of an enterprise subscription, we provide exclusive documentation on how to effectively operate and run WunderGraph Cosmo on all common container platforms such as EKS, GKE, AKS, Fargate, and Google Cloud Run. This includes migration support and configuration guidance. It's recommended to [contact us](https://wundergraph.com/contact/sales) before going live; let us do the heavy lifting for you.
 
 ## Getting started
 

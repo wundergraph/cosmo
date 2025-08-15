@@ -38,6 +38,7 @@ export type AuthUtilsOptions = {
   };
 };
 
+const tokenExpirationWindowSkew = 60 * 5;
 const pkceMaxAgeSec = 60 * 15; // 15 minutes
 const pkceCodeAlgorithm = 'S256';
 const scope = 'openid profile email';
@@ -306,10 +307,13 @@ export default class AuthUtils {
 
     // Check if the access token is expired
     const parsedAccessToken = decodeJWT(userSession.accessToken);
-    if (parsedAccessToken.exp && parsedAccessToken.exp < Date.now() / 1000) {
-      const parsedRefreshToken = decodeJWT(userSession.accessToken);
+    if (parsedAccessToken.exp && parsedAccessToken.exp < Date.now() / 1000 + tokenExpirationWindowSkew) {
+      if (!userSession.refreshToken) {
+        throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'No refresh token');
+      }
 
       // Check if the refresh token is valid to issue a new access token
+      const parsedRefreshToken = decodeJWT(userSession.refreshToken);
       if (parsedRefreshToken.exp && parsedRefreshToken.exp < Date.now() / 1000) {
         throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Refresh token expired');
       }
@@ -344,6 +348,7 @@ export default class AuthUtils {
       const jwt = await encrypt<UserSession>({
         maxAgeInSeconds: sessionExpiresIn,
         token: {
+          iss: userSession.userId,
           sessionId: newUserSession.id,
         },
         secret: this.opts.jwtSecret,

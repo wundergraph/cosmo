@@ -7,6 +7,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -20,6 +21,15 @@ func getTestDataDir() string {
 }
 
 func TestPlanGenerator(t *testing.T) {
+	entries, _ := os.ReadDir(path.Join(getTestDataDir(), "queries", "base"))
+	allFiles := make([]string, 0, len(entries))
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".graphql") {
+			allFiles = append(allFiles, e.Name())
+		}
+	}
+	filtered := "1.graphql"
+
 	t.Run("checks queries path exists", func(t *testing.T) {
 		tempDir, err := os.MkdirTemp("", "plans-")
 		require.NoError(t, err)
@@ -139,19 +149,19 @@ func TestPlanGenerator(t *testing.T) {
 
 		queries, err := os.ReadDir(tempDir)
 		assert.NoError(t, err)
-		assert.Len(t, queries, 2)
+		assert.Len(t, queries, len(allFiles))
 
-		queryPlan1, err := os.ReadFile(path.Join(tempDir, "1.graphql"))
-		assert.NoError(t, err)
-		queryPlan1Expected, err := os.ReadFile(path.Join(getTestDataDir(), "plans", "base", "1.graphql"))
-		assert.NoError(t, err)
-		assert.Equal(t, string(queryPlan1Expected), string(queryPlan1))
+		for _, fn := range allFiles {
+			filename := fn
+			t.Run(filename, func(t *testing.T) {
+				queryPlan, err := os.ReadFile(path.Join(tempDir, filename))
+				assert.NoError(t, err)
+				expected, err := os.ReadFile(path.Join(getTestDataDir(), "plans", "base", filename))
+				assert.NoError(t, err)
+				assert.Equal(t, string(expected), string(queryPlan))
+			})
+		}
 
-		queryPlan2, err := os.ReadFile(path.Join(tempDir, "2.graphql"))
-		assert.NoError(t, err)
-		queryPlan2Expected, err := os.ReadFile(path.Join(getTestDataDir(), "plans", "base", "2.graphql"))
-		assert.NoError(t, err)
-		assert.Equal(t, string(queryPlan2Expected), string(queryPlan2))
 	})
 
 	t.Run("generates a plan for every file filtered", func(t *testing.T) {
@@ -175,9 +185,9 @@ func TestPlanGenerator(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, queries, 1)
 
-		queryPlan1, err := os.ReadFile(path.Join(tempDir, "1.graphql"))
+		queryPlan1, err := os.ReadFile(path.Join(tempDir, filtered))
 		assert.NoError(t, err)
-		queryPlan1Expected, err := os.ReadFile(path.Join(getTestDataDir(), "plans", "base", "1.graphql"))
+		queryPlan1Expected, err := os.ReadFile(path.Join(getTestDataDir(), "plans", "base", filtered))
 		assert.NoError(t, err)
 		assert.Equal(t, string(queryPlan1Expected), string(queryPlan1))
 	})
@@ -202,11 +212,10 @@ func TestPlanGenerator(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, queries, 1)
 
-		_, err = os.Stat(path.Join(tempDir, "1.graphql"))
-		assert.Error(t, err)
-
-		_, err = os.Stat(path.Join(tempDir, "2.graphql"))
-		assert.Error(t, err)
+		for _, filename := range allFiles {
+			_, err = os.Stat(path.Join(tempDir, filename))
+			assert.Error(t, err)
+		}
 
 		results, err := os.ReadFile(path.Join(tempDir, ReportFileName))
 		assert.NoError(t, err)
@@ -236,11 +245,10 @@ func TestPlanGenerator(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, queries, 1)
 
-		_, err = os.Stat(path.Join(tempDir, "1.graphql"))
-		assert.Error(t, err)
-
-		_, err = os.Stat(path.Join(tempDir, "2.graphql"))
-		assert.Error(t, err)
+		for _, filename := range allFiles {
+			_, err = os.Stat(path.Join(tempDir, filename))
+			assert.Error(t, err)
+		}
 
 		results, err := os.ReadFile(path.Join(tempDir, ReportFileName))
 		assert.NoError(t, err)
@@ -268,19 +276,18 @@ func TestPlanGenerator(t *testing.T) {
 
 		queries, err := os.ReadDir(tempDir)
 		assert.NoError(t, err)
-		assert.Len(t, queries, 2)
+		assert.Len(t, queries, len(allFiles))
 
-		queryPlan1, err := os.ReadFile(path.Join(tempDir, "1.graphql"))
-		assert.NoError(t, err)
-		queryPlan1Expected, err := os.ReadFile(path.Join(getTestDataDir(), "plans", "base", "1.graphql"))
-		assert.NoError(t, err)
-		assert.Equal(t, string(queryPlan1Expected), string(queryPlan1))
-
-		queryPlan2, err := os.ReadFile(path.Join(tempDir, "2.graphql"))
-		assert.NoError(t, err)
-		queryPlan2Expected, err := os.ReadFile(path.Join(getTestDataDir(), "plans", "base", "2.graphql"))
-		assert.NoError(t, err)
-		assert.Equal(t, string(queryPlan2Expected), string(queryPlan2))
+		for _, fn := range allFiles {
+			filename := fn
+			t.Run(filename, func(t *testing.T) {
+				queryPlan, err := os.ReadFile(path.Join(tempDir, filename))
+				assert.NoError(t, err)
+				expected, err := os.ReadFile(path.Join(getTestDataDir(), "plans", "base", filename))
+				assert.NoError(t, err)
+				assert.Equal(t, string(expected), string(queryPlan))
+			})
+		}
 	})
 
 	t.Run("when reaching timeout an error should be returned", func(t *testing.T) {
