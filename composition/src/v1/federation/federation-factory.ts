@@ -1682,7 +1682,7 @@ export class FederationFactory {
               if (!externalData) {
                 continue;
               }
-              existingFieldData.externalFieldDataBySubgraphName.set(subgraphName, externalData);
+              existingFieldData.externalFieldDataBySubgraphName.set(subgraphName, { ...externalData });
               continue;
             }
             const isInaccessible =
