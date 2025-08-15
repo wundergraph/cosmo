@@ -97,7 +97,8 @@ public class SSOCookieAuthenticator implements Authenticator {
     private static String composeLoginUrl(
         RealmModel realm,
         IdentityProviderModel idpModel,
-        AuthenticationFlowContext authenticationFlowContext) {
+        AuthenticationFlowContext authenticationFlowContext)
+    {
         KeycloakSession session = authenticationFlowContext.getSession();
         AuthenticationSessionModel authSession = authenticationFlowContext.getAuthenticationSession();
         UriInfo uriInfo = authenticationFlowContext.getUriInfo();

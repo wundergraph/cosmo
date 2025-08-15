@@ -20,8 +20,6 @@ public class SSOCookieAuthenticatorFactory implements AuthenticatorFactory {
     private static final List<ProviderConfigProperty> configProperties;
 
     static {
-        List<ProviderConfigProperty> props = new ArrayList<>();
-
         ProviderConfigProperty prop = new ProviderConfigProperty();
         prop.setName(SSO_COOKIE_CONFIG_NAME);
         prop.setLabel("Cookie Name");
@@ -30,8 +28,7 @@ public class SSOCookieAuthenticatorFactory implements AuthenticatorFactory {
         prop.setRequired(true);
         prop.setType(ProviderConfigProperty.STRING_TYPE);
 
-        props.add(prop);
-        configProperties = Collections.unmodifiableList(props);
+        configProperties = List.of(prop);
     }
 
     @Override
