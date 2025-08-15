@@ -57,8 +57,8 @@ const MobileNav = () => {
             Invitations
             {user?.invitations?.length && (
               <div className="relative">
-                <div className="absolute size-2 animate-ping rounded-full bg-blue-400" />
-                <div className="size-2 rounded-full bg-blue-400" />
+                <div aria-hidden="true" className="absolute h-2 w-2 animate-ping rounded-full bg-blue-400" />
+                <div aria-hidden="true" className="h-2 w-2 rounded-full bg-blue-400" />
               </div>
             )}
           </Link>

@@ -252,8 +252,8 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
             Invitations
             {user?.invitations?.length ? (
               <div className="relative ml-auto">
-                <div className="absolute h-2 w-2 animate-ping rounded-full bg-blue-400" />
-                <div className="h-2 w-2 rounded-full bg-blue-400" />
+                <div aria-hidden="true" className="absolute h-2 w-2 animate-ping rounded-full bg-blue-400" />
+                <div aria-hidden="true" className="h-2 w-2 rounded-full bg-blue-400" />
               </div>
             ) : null}
           </>
@@ -276,6 +276,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
     user?.currentOrganization.slug,
     isAdmin,
     isAdminOrDeveloper,
+    user?.invitations,
   ]);
 
   return (
