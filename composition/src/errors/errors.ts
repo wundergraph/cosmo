@@ -848,7 +848,8 @@ export function undefinedEntityInterfaceImplementationsError(
 ): Error {
   let message =
     `Federation was unsuccessful because any one subgraph that defines a specific entity interface` +
-    ` must also define each and every entity object that implements that entity interface.\n`;
+    ` must also define each and every entity object that implements that entity interface.\n
+    Each entity object must also each explicitly define the implementation of the entity interface.\n`;
   for (const [typeName, undefinedImplementations] of invalidEntityInterfacesByTypeName) {
     const entityInterfaceDatas = getOrThrowError(
       entityInterfaceFederationDataByTypeName,
@@ -864,8 +865,8 @@ export function undefinedEntityInterfaceImplementationsError(
       `"\n` +
       ` However, the definition of at least one of these implementations is missing in a subgraph that` +
       ` defines the entity interface "${typeName}":\n`;
-    for (const { subgraphName, concreteTypeNames } of undefinedImplementations) {
-      const disparities = getEntriesNotInHashSet(implementedConcreteTypeNames, concreteTypeNames);
+    for (const { subgraphName, definedConcreteTypeNames } of undefinedImplementations) {
+      const disparities = getEntriesNotInHashSet(implementedConcreteTypeNames, definedConcreteTypeNames);
       message +=
         `  Subgraph "${subgraphName}" does not define the following implementations: "` +
         disparities.join(QUOTATION_JOIN) +
