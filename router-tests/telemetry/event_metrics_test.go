@@ -54,7 +54,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 
 				scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.event")
 				require.NotNil(t, scope)
-				metricEntry := integration.GetMetricByName(scope, "router.events.publish.messages")
+				metricEntry := integration.GetMetricByName(scope, "messaging.client.sent.messages")
 				require.NotNil(t, metricEntry)
 
 				sum, _ := metricEntry.Data.(metricdata.Sum[int64])
@@ -62,13 +62,14 @@ func TestFlakyEventMetrics(t *testing.T) {
 
 				attrs := sum.DataPoints[0].Attributes
 
-				eventProviderId, _ := attrs.Value(otelattrs.WgEventProviderID)
-				eventProviderType, _ := attrs.Value(otelattrs.WgEventProviderType)
-				kafkaTopic, _ := attrs.Value(otelattrs.WgKafkaTopic)
+				operation, _ := attrs.Value(otelattrs.MessagingOperationName)
+				require.Equal(t, "send", operation.AsString())
 
-				require.Equal(t, "my-kafka", eventProviderId.AsString())
-				require.Equal(t, "kafka", eventProviderType.AsString())
-				require.True(t, strings.HasSuffix(kafkaTopic.AsString(), "employeeUpdated"))
+				system, _ := attrs.Value(otelattrs.MessagingSystem)
+				require.Equal(t, "kafka", system.AsString())
+
+				destination, _ := attrs.Value(otelattrs.MessagingDestinationName)
+				require.True(t, strings.HasSuffix(destination.AsString(), "employeeUpdated"))
 
 				require.Equal(t, int64(2), sum.DataPoints[0].Value)
 			})
@@ -123,7 +124,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 
 					scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.event")
 					require.NotNil(t, scope)
-					metricEntry := integration.GetMetricByName(scope, "router.events.messages.received")
+					metricEntry := integration.GetMetricByName(scope, "messaging.client.consumed.messages")
 					require.NotNil(t, metricEntry)
 
 					sum, _ := metricEntry.Data.(metricdata.Sum[int64])
@@ -131,14 +132,11 @@ func TestFlakyEventMetrics(t *testing.T) {
 					require.Len(t, sum.DataPoints, 1)
 					attrs := sum.DataPoints[0].Attributes
 
-					eventProviderId, _ := attrs.Value(otelattrs.WgEventProviderID)
-					require.Equal(t, "my-kafka", eventProviderId.AsString())
+					system, _ := attrs.Value(otelattrs.MessagingSystem)
+					require.Equal(t, "kafka", system.AsString())
 
-					eventProviderType, _ := attrs.Value(otelattrs.WgEventProviderType)
-					require.Equal(t, "kafka", eventProviderType.AsString())
-
-					kafkaTopic, _ := attrs.Value(otelattrs.WgKafkaTopic)
-					require.True(t, strings.HasSuffix(kafkaTopic.AsString(), "employeeUpdated"))
+					destination, _ := attrs.Value(otelattrs.MessagingDestinationName)
+					require.True(t, strings.HasSuffix(destination.AsString(), "employeeUpdated"))
 
 					require.Equal(t, int64(1), sum.DataPoints[0].Value)
 				})
@@ -176,21 +174,18 @@ func TestFlakyEventMetrics(t *testing.T) {
 
 				scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.event")
 				require.NotNil(t, scope)
-				metricEntry := integration.GetMetricByName(scope, "router.events.publish.messages")
+				metricEntry := integration.GetMetricByName(scope, "messaging.client.sent.messages")
 				require.NotNil(t, metricEntry)
 
 				sum, _ := metricEntry.Data.(metricdata.Sum[int64])
 				require.Len(t, sum.DataPoints, 1)
 				attrs := sum.DataPoints[0].Attributes
 
-				eventProviderId, _ := attrs.Value(otelattrs.WgEventProviderID)
-				require.Equal(t, "my-nats", eventProviderId.AsString())
+				system, _ := attrs.Value(otelattrs.MessagingSystem)
+				require.Equal(t, "nats", system.AsString())
 
-				eventProviderType, _ := attrs.Value(otelattrs.WgEventProviderType)
-				require.Equal(t, "nats", eventProviderType.AsString())
-
-				natsSubject, _ := attrs.Value(otelattrs.WgNatsSubject)
-				require.True(t, strings.HasSuffix(natsSubject.AsString(), "employeeUpdatedMyNats.12"))
+				destination, _ := attrs.Value(otelattrs.MessagingDestinationName)
+				require.True(t, strings.HasSuffix(destination.AsString(), "employeeUpdatedMyNats.12"))
 
 				require.Equal(t, int64(2), sum.DataPoints[0].Value)
 			})
@@ -221,18 +216,21 @@ func TestFlakyEventMetrics(t *testing.T) {
 
 				scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.event")
 				require.NotNil(t, scope)
-				metricEntry := integration.GetMetricByName(scope, "router.nats.request")
+				metricEntry := integration.GetMetricByName(scope, "messaging.client.sent.messages")
 				require.NotNil(t, metricEntry)
 
 				sum, _ := metricEntry.Data.(metricdata.Sum[int64])
 				require.Len(t, sum.DataPoints, 1)
 				attrs := sum.DataPoints[0].Attributes
 
-				eventProviderId, _ := attrs.Value(otelattrs.WgEventProviderID)
-				require.Equal(t, "my-nats", eventProviderId.AsString())
+				operation, _ := attrs.Value(otelattrs.MessagingOperationName)
+				require.Equal(t, "request", operation.AsString())
 
-				natsSubject, _ := attrs.Value(otelattrs.WgNatsSubject)
-				require.True(t, strings.HasSuffix(natsSubject.AsString(), "getEmployeeMyNats.12"))
+				system, _ := attrs.Value(otelattrs.MessagingSystem)
+				require.Equal(t, "nats", system.AsString())
+
+				destination, _ := attrs.Value(otelattrs.MessagingDestinationName)
+				require.True(t, strings.HasSuffix(destination.AsString(), "getEmployeeMyNats.12"))
 
 				require.Equal(t, int64(1), sum.DataPoints[0].Value)
 			})
@@ -301,7 +299,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 
 					scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.event")
 					require.NotNil(t, scope)
-					metricEntry := integration.GetMetricByName(scope, "router.events.messages.received")
+					metricEntry := integration.GetMetricByName(scope, "messaging.client.consumed.messages")
 					require.NotNil(t, metricEntry)
 
 					sum, _ := metricEntry.Data.(metricdata.Sum[int64])
@@ -309,14 +307,11 @@ func TestFlakyEventMetrics(t *testing.T) {
 					require.Len(t, sum.DataPoints, 1)
 					attrs := sum.DataPoints[0].Attributes
 
-					eventProviderId, _ := attrs.Value(otelattrs.WgEventProviderID)
-					require.Equal(t, "default", eventProviderId.AsString())
+					system, _ := attrs.Value(otelattrs.MessagingSystem)
+					require.Equal(t, "nats", system.AsString())
 
-					eventProviderType, _ := attrs.Value(otelattrs.WgEventProviderType)
-					require.Equal(t, "nats", eventProviderType.AsString())
-
-					natsSubject, _ := attrs.Value(otelattrs.WgNatsSubject)
-					require.True(t, strings.HasSuffix(natsSubject.AsString(), "employeeUpdated.3"))
+					destination, _ := attrs.Value(otelattrs.MessagingDestinationName)
+					require.True(t, strings.HasSuffix(destination.AsString(), "employeeUpdated.3"))
 
 					require.Equal(t, int64(2), sum.DataPoints[0].Value)
 				})
@@ -356,7 +351,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 
 				scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.event")
 				require.NotNil(t, scope)
-				metricEntry := integration.GetMetricByName(scope, "router.events.publish.messages")
+				metricEntry := integration.GetMetricByName(scope, "messaging.client.sent.messages")
 				require.NotNil(t, metricEntry)
 
 				sum, _ := metricEntry.Data.(metricdata.Sum[int64])
@@ -364,14 +359,11 @@ func TestFlakyEventMetrics(t *testing.T) {
 				require.Len(t, sum.DataPoints, 1)
 				attrs := sum.DataPoints[0].Attributes
 
-				eventProviderId, _ := attrs.Value(otelattrs.WgEventProviderID)
-				require.Equal(t, "my-redis", eventProviderId.AsString())
+				system, _ := attrs.Value(otelattrs.MessagingSystem)
+				require.Equal(t, "redis", system.AsString())
 
-				eventProviderType, _ := attrs.Value(otelattrs.WgEventProviderType)
-				require.Equal(t, "redis", eventProviderType.AsString())
-
-				redisChannel, _ := attrs.Value(otelattrs.WgRedisChannel)
-				require.True(t, strings.HasSuffix(redisChannel.AsString(), "employeeUpdatedMyRedis"))
+				destination, _ := attrs.Value(otelattrs.MessagingDestinationName)
+				require.True(t, strings.HasSuffix(destination.AsString(), "employeeUpdatedMyRedis"))
 
 				require.Equal(t, int64(2), sum.DataPoints[0].Value)
 			})
@@ -425,7 +417,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 
 					scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.event")
 					require.NotNil(t, scope)
-					metricEntry := integration.GetMetricByName(scope, "router.events.messages.received")
+					metricEntry := integration.GetMetricByName(scope, "messaging.client.consumed.messages")
 					require.NotNil(t, metricEntry)
 
 					sum, _ := metricEntry.Data.(metricdata.Sum[int64])
@@ -433,14 +425,11 @@ func TestFlakyEventMetrics(t *testing.T) {
 					require.Len(t, sum.DataPoints, 1)
 					attrs := sum.DataPoints[0].Attributes
 
-					eventProviderId, _ := attrs.Value(otelattrs.WgEventProviderID)
-					require.Equal(t, "my-redis", eventProviderId.AsString())
+					system, _ := attrs.Value(otelattrs.MessagingSystem)
+					require.Equal(t, "redis", system.AsString())
 
-					eventProviderType, _ := attrs.Value(otelattrs.WgEventProviderType)
-					require.Equal(t, "redis", eventProviderType.AsString())
-
-					redisChannel, _ := attrs.Value(otelattrs.WgRedisChannel)
-					require.True(t, strings.HasSuffix(redisChannel.AsString(), "employeeUpdatedMyRedis"))
+					destination, _ := attrs.Value(otelattrs.MessagingDestinationName)
+					require.True(t, strings.HasSuffix(destination.AsString(), "employeeUpdatedMyRedis"))
 					require.Equal(t, int64(1), sum.DataPoints[0].Value)
 				})
 

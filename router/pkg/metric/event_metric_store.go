@@ -35,7 +35,6 @@ type EventMetricProvider interface {
 	Consume(ctx context.Context, opts ...otelmetric.AddOption)
 
 	Flush(ctx context.Context) error
-	Shutdown() error
 }
 
 type EventMetricStore interface {
@@ -141,14 +140,6 @@ func (e *EventMetrics) Shutdown(ctx context.Context) error {
 
 	if errFlush := e.Flush(ctx); errFlush != nil {
 		err = errors.Join(err, fmt.Errorf("failed to flush metrics: %w", errFlush))
-	}
-
-	if errProm := e.promMetrics.Shutdown(); errProm != nil {
-		err = errors.Join(err, fmt.Errorf("failed to shutdown prom metrics: %w", errProm))
-	}
-
-	if errOtlp := e.otlpMetrics.Shutdown(); errOtlp != nil {
-		err = errors.Join(err, fmt.Errorf("failed to shutdown otlp metrics: %w", errOtlp))
 	}
 
 	return err

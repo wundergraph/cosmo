@@ -12,7 +12,6 @@ type noopEventMetricProvider struct{}
 func (n *noopEventMetricProvider) Produce(ctx context.Context, opts ...otelmetric.AddOption) {}
 func (n *noopEventMetricProvider) Consume(ctx context.Context, opts ...otelmetric.AddOption) {}
 func (n *noopEventMetricProvider) Flush(ctx context.Context) error                           { return nil }
-func (n *noopEventMetricProvider) Shutdown() error                                           { return nil }
 
 type NoopEventMetricStore struct{}
 

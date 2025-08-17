@@ -51,18 +51,18 @@ func TestFlakyEventMetrics(t *testing.T) {
 				mf, err := promRegistry.Gather()
 				require.NoError(t, err)
 
-				family := findMetricFamilyByName(mf, "router_events_publish_messages_total")
+				family := findMetricFamilyByName(mf, "messaging_client_sent_messages_total")
 				metrics := family.GetMetric()
 				require.Len(t, metrics, 1)
 
-				eventProvider := findMetricLabelByName(metrics, "wg_event_provider_id")
-				require.Equal(t, "my-kafka", eventProvider.GetValue())
+				operation := findMetricLabelByName(metrics, "messaging_operation_name")
+				require.Equal(t, "send", operation.GetValue())
 
-				providerType := findMetricLabelByName(metrics, "wg_event_provider_type")
-				require.Equal(t, "kafka", providerType.GetValue())
+				system := findMetricLabelByName(metrics, "messaging_system")
+				require.Equal(t, "kafka", system.GetValue())
 
-				topic := findMetricLabelByName(metrics, "wg_kafka_topic")
-				require.True(t, strings.HasSuffix(topic.GetValue(), "employeeUpdated"))
+				destination := findMetricLabelByName(metrics, "messaging_destination_name")
+				require.True(t, strings.HasSuffix(destination.GetValue(), "employeeUpdated"))
 
 				require.Equal(t, float64(2), metrics[0].Counter.GetValue())
 			})
@@ -117,18 +117,18 @@ func TestFlakyEventMetrics(t *testing.T) {
 					mf, err := promRegistry.Gather()
 					require.NoError(t, err)
 
-					family := findMetricFamilyByName(mf, "router_events_messages_received_total")
+					family := findMetricFamilyByName(mf, "messaging_client_consumed_messages_total")
 					metrics := family.GetMetric()
 					require.Len(t, metrics, 1)
 
-					eventProvider := findMetricLabelByName(metrics, "wg_event_provider_id")
-					require.Equal(t, "my-kafka", eventProvider.GetValue())
+					operation := findMetricLabelByName(metrics, "messaging_operation_name")
+					require.Equal(t, "receive", operation.GetValue())
 
-					providerType := findMetricLabelByName(metrics, "wg_event_provider_type")
-					require.Equal(t, "kafka", providerType.GetValue())
+					system := findMetricLabelByName(metrics, "messaging_system")
+					require.Equal(t, "kafka", system.GetValue())
 
-					topic := findMetricLabelByName(metrics, "wg_kafka_topic")
-					require.True(t, strings.HasSuffix(topic.GetValue(), "employeeUpdated"))
+					destination := findMetricLabelByName(metrics, "messaging_destination_name")
+					require.True(t, strings.HasSuffix(destination.GetValue(), "employeeUpdated"))
 
 					require.Equal(t, float64(1), metrics[0].Counter.GetValue())
 				})
@@ -166,18 +166,15 @@ func TestFlakyEventMetrics(t *testing.T) {
 				mf, err := promRegistry.Gather()
 				require.NoError(t, err)
 
-				family := findMetricFamilyByName(mf, "router_events_publish_messages_total")
+				family := findMetricFamilyByName(mf, "messaging_client_sent_messages_total")
 				metrics := family.GetMetric()
 				require.Len(t, metrics, 1)
 
-				eventProvider := findMetricLabelByName(metrics, "wg_event_provider_id")
-				require.Equal(t, "my-nats", eventProvider.GetValue())
+				system := findMetricLabelByName(metrics, "messaging_system")
+				require.Equal(t, "nats", system.GetValue())
 
-				providerType := findMetricLabelByName(metrics, "wg_event_provider_type")
-				require.Equal(t, "nats", providerType.GetValue())
-
-				subject := findMetricLabelByName(metrics, "wg_nats_subject")
-				require.True(t, strings.HasSuffix(subject.GetValue(), "employeeUpdatedMyNats.12"))
+				destination := findMetricLabelByName(metrics, "messaging_destination_name")
+				require.True(t, strings.HasSuffix(destination.GetValue(), "employeeUpdatedMyNats.12"))
 
 				require.Equal(t, float64(2), metrics[0].Counter.GetValue())
 			})
@@ -208,15 +205,18 @@ func TestFlakyEventMetrics(t *testing.T) {
 				mf, err := promRegistry.Gather()
 				require.NoError(t, err)
 
-				family := findMetricFamilyByName(mf, "router_nats_request_total")
+				family := findMetricFamilyByName(mf, "messaging_client_sent_messages_total")
 				metrics := family.GetMetric()
 				require.Len(t, metrics, 1)
 
-				eventProvider := findMetricLabelByName(metrics, "wg_event_provider_id")
-				require.Equal(t, "my-nats", eventProvider.GetValue())
+				operation := findMetricLabelByName(metrics, "messaging_operation_name")
+				require.Equal(t, "request", operation.GetValue())
 
-				subject := findMetricLabelByName(metrics, "wg_nats_subject")
-				require.True(t, strings.HasSuffix(subject.GetValue(), "getEmployeeMyNats.12"))
+				system := findMetricLabelByName(metrics, "messaging_system")
+				require.Equal(t, "nats", system.GetValue())
+
+				destination := findMetricLabelByName(metrics, "messaging_destination_name")
+				require.True(t, strings.HasSuffix(destination.GetValue(), "getEmployeeMyNats.12"))
 
 				require.Equal(t, float64(1), metrics[0].Counter.GetValue())
 			})
@@ -285,17 +285,14 @@ func TestFlakyEventMetrics(t *testing.T) {
 					mf, err := promRegistry.Gather()
 					require.NoError(t, err)
 
-					family := findMetricFamilyByName(mf, "router_events_messages_received_total")
+					family := findMetricFamilyByName(mf, "messaging_client_consumed_messages_total")
 					metrics := family.GetMetric()
 
-					eventProviderId := findMetricLabelByName(metrics, "wg_event_provider_id").GetValue()
-					require.Equal(t, "default", eventProviderId)
+					system := findMetricLabelByName(metrics, "messaging_system")
+					require.Equal(t, "nats", system.GetValue())
 
-					providerType := findMetricLabelByName(metrics, "wg_event_provider_type")
-					require.Equal(t, "nats", providerType.GetValue())
-
-					subject := findMetricLabelByName(metrics, "wg_nats_subject")
-					require.True(t, strings.HasSuffix(subject.GetValue(), "employeeUpdated.3"))
+					destination := findMetricLabelByName(metrics, "messaging_destination_name")
+					require.True(t, strings.HasSuffix(destination.GetValue(), "employeeUpdated.3"))
 
 					require.Equal(t, float64(2), metrics[0].Counter.GetValue())
 				})
@@ -335,18 +332,15 @@ func TestFlakyEventMetrics(t *testing.T) {
 				mf, err := promRegistry.Gather()
 				require.NoError(t, err)
 
-				family := findMetricFamilyByName(mf, "router_events_publish_messages_total")
+				family := findMetricFamilyByName(mf, "messaging_client_sent_messages_total")
 				metrics := family.GetMetric()
 				require.Len(t, metrics, 1)
 
-				eventProvider := findMetricLabelByName(metrics, "wg_event_provider_id")
-				require.Equal(t, "my-redis", eventProvider.GetValue())
+				system := findMetricLabelByName(metrics, "messaging_system")
+				require.Equal(t, "redis", system.GetValue())
 
-				providerType := findMetricLabelByName(metrics, "wg_event_provider_type")
-				require.Equal(t, "redis", providerType.GetValue())
-
-				channel := findMetricLabelByName(metrics, "wg_redis_channel")
-				require.True(t, strings.HasSuffix(channel.GetValue(), "employeeUpdatedMyRedis"))
+				destination := findMetricLabelByName(metrics, "messaging_destination_name")
+				require.True(t, strings.HasSuffix(destination.GetValue(), "employeeUpdatedMyRedis"))
 
 				require.Equal(t, float64(2), metrics[0].Counter.GetValue())
 			})
@@ -354,7 +348,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 
 		t.Run("subscribe", func(t *testing.T) {
 			t.Parallel()
-			
+
 			metricReader := metric.NewManualReader()
 			promRegistry := prometheus.NewRegistry()
 
@@ -400,18 +394,15 @@ func TestFlakyEventMetrics(t *testing.T) {
 					mf, err := promRegistry.Gather()
 					require.NoError(t, err)
 
-					family := findMetricFamilyByName(mf, "router_events_messages_received_total")
+					family := findMetricFamilyByName(mf, "messaging_client_consumed_messages_total")
 					metrics := family.GetMetric()
 					require.Len(t, metrics, 1)
 
-					eventProvider := findMetricLabelByName(metrics, "wg_event_provider_id")
-					require.Equal(t, "my-redis", eventProvider.GetValue())
+					system := findMetricLabelByName(metrics, "messaging_system")
+					require.Equal(t, "redis", system.GetValue())
 
-					providerType := findMetricLabelByName(metrics, "wg_event_provider_type")
-					require.Equal(t, "redis", providerType.GetValue())
-
-					channel := findMetricLabelByName(metrics, "wg_redis_channel")
-					require.True(t, strings.HasSuffix(channel.GetValue(), "employeeUpdatedMyRedis"))
+					destination := findMetricLabelByName(metrics, "messaging_destination_name")
+					require.True(t, strings.HasSuffix(destination.GetValue(), "employeeUpdatedMyRedis"))
 					require.Equal(t, float64(1), metrics[0].Counter.GetValue())
 				})
 

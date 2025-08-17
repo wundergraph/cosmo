@@ -41,7 +41,7 @@ func newOtlpEventMetrics(logger *zap.Logger, meterProvider *metric.MeterProvider
 
 // Unified methods
 func (o *otlpEventMetrics) Produce(ctx context.Context, opts ...otelmetric.AddOption) {
-	o.instruments.sentMessages.Add(ctx, 1, opts...)
+	o.instruments.producedMessages.Add(ctx, 1, opts...)
 }
 
 func (o *otlpEventMetrics) Consume(ctx context.Context, opts ...otelmetric.AddOption) {
@@ -51,5 +51,3 @@ func (o *otlpEventMetrics) Consume(ctx context.Context, opts ...otelmetric.AddOp
 func (o *otlpEventMetrics) Flush(ctx context.Context) error {
 	return o.meterProvider.ForceFlush(ctx)
 }
-
-func (o *otlpEventMetrics) Shutdown() error { return nil }

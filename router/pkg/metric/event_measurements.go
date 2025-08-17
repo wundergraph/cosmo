@@ -24,12 +24,12 @@ var (
 
 type eventInstruments struct {
 	// instruments following messaging semantic conventions
-	sentMessages     otelmetric.Int64Counter
+	producedMessages otelmetric.Int64Counter
 	consumedMessages otelmetric.Int64Counter
 }
 
 func newEventInstruments(meter otelmetric.Meter) (*eventInstruments, error) {
-	sentCounter, err := meter.Int64Counter(
+	producedCounter, err := meter.Int64Counter(
 		messagingClientSentMessages,
 		messagingClientSentMessagesOptions...,
 	)
@@ -46,7 +46,7 @@ func newEventInstruments(meter otelmetric.Meter) (*eventInstruments, error) {
 	}
 
 	return &eventInstruments{
-		sentMessages:     sentCounter,
+		producedMessages: producedCounter,
 		consumedMessages: consumedCounter,
 	}, nil
 }

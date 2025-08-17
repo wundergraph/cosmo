@@ -41,7 +41,7 @@ func newPromEventMetrics(logger *zap.Logger, meterProvider *metric.MeterProvider
 
 // Unified methods
 func (p *promEventMetrics) Produce(ctx context.Context, opts ...otelmetric.AddOption) {
-	p.instruments.sentMessages.Add(ctx, 1, opts...)
+	p.instruments.producedMessages.Add(ctx, 1, opts...)
 }
 
 func (p *promEventMetrics) Consume(ctx context.Context, opts ...otelmetric.AddOption) {
@@ -49,4 +49,3 @@ func (p *promEventMetrics) Consume(ctx context.Context, opts ...otelmetric.AddOp
 }
 
 func (p *promEventMetrics) Flush(ctx context.Context) error { return p.meterProvider.ForceFlush(ctx) }
-func (p *promEventMetrics) Shutdown() error                 { return nil }
