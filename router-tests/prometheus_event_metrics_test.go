@@ -57,6 +57,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 
 				operation := findMetricLabelByName(metrics, "messaging_operation_name")
 				require.Equal(t, "send", operation.GetValue())
+				require.Nil(t, findMetricLabelByName(metrics, "error_type"))
 
 				system := findMetricLabelByName(metrics, "messaging_system")
 				require.Equal(t, "kafka", system.GetValue())
@@ -123,6 +124,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 
 					operation := findMetricLabelByName(metrics, "messaging_operation_name")
 					require.Equal(t, "receive", operation.GetValue())
+					require.Nil(t, findMetricLabelByName(metrics, "error_type"))
 
 					system := findMetricLabelByName(metrics, "messaging_system")
 					require.Equal(t, "kafka", system.GetValue())
@@ -170,6 +172,9 @@ func TestFlakyEventMetrics(t *testing.T) {
 				metrics := family.GetMetric()
 				require.Len(t, metrics, 1)
 
+				operation := findMetricLabelByName(metrics, "messaging_operation_name")
+				require.Equal(t, "send", operation.GetValue())
+				require.Nil(t, findMetricLabelByName(metrics, "error_type"))
 				system := findMetricLabelByName(metrics, "messaging_system")
 				require.Equal(t, "nats", system.GetValue())
 
@@ -211,6 +216,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 
 				operation := findMetricLabelByName(metrics, "messaging_operation_name")
 				require.Equal(t, "request", operation.GetValue())
+				require.Nil(t, findMetricLabelByName(metrics, "error_type"))
 
 				system := findMetricLabelByName(metrics, "messaging_system")
 				require.Equal(t, "nats", system.GetValue())
@@ -288,6 +294,10 @@ func TestFlakyEventMetrics(t *testing.T) {
 					family := findMetricFamilyByName(mf, "messaging_client_consumed_messages_total")
 					metrics := family.GetMetric()
 
+					require.Nil(t, findMetricLabelByName(metrics, "error_type"))
+					operation := findMetricLabelByName(metrics, "messaging_operation_name")
+					require.Equal(t, "receive", operation.GetValue())
+
 					system := findMetricLabelByName(metrics, "messaging_system")
 					require.Equal(t, "nats", system.GetValue())
 
@@ -336,6 +346,9 @@ func TestFlakyEventMetrics(t *testing.T) {
 				metrics := family.GetMetric()
 				require.Len(t, metrics, 1)
 
+				operation := findMetricLabelByName(metrics, "messaging_operation_name")
+				require.Equal(t, "send", operation.GetValue())
+				require.Nil(t, findMetricLabelByName(metrics, "error_type"))
 				system := findMetricLabelByName(metrics, "messaging_system")
 				require.Equal(t, "redis", system.GetValue())
 
@@ -397,6 +410,10 @@ func TestFlakyEventMetrics(t *testing.T) {
 					family := findMetricFamilyByName(mf, "messaging_client_consumed_messages_total")
 					metrics := family.GetMetric()
 					require.Len(t, metrics, 1)
+
+					require.Nil(t, findMetricLabelByName(metrics, "error_type"))
+					operation := findMetricLabelByName(metrics, "messaging_operation_name")
+					require.Equal(t, "receive", operation.GetValue())
 
 					system := findMetricLabelByName(metrics, "messaging_system")
 					require.Equal(t, "redis", system.GetValue())
