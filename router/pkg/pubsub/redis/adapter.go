@@ -111,7 +111,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 					return
 				}
 				log.Debug("subscription update", zap.String("message_channel", msg.Channel), zap.String("data", msg.Payload))
-				p.eventMetricStore.RedisMessageReceived(ctx, event.ProviderID, msg.Channel)
+				p.eventMetricStore.Consume(ctx, metric.MessagingEvent{OperationName: "receive", MessagingSystem: metric.ProviderTypeRedis, DestinationName: msg.Channel})
 				updater.Update([]byte(msg.Payload))
 			case <-p.ctx.Done():
 				// When the application context is done, we stop the subscription if it is not already done
@@ -150,10 +150,10 @@ func (p *ProviderAdapter) Publish(ctx context.Context, event PublishEventConfigu
 	intCmd := p.conn.Publish(ctx, event.Channel, data)
 	if intCmd.Err() != nil {
 		log.Error("publish error", zap.Error(intCmd.Err()))
-		p.eventMetricStore.RedisPublishFailure(ctx, event.ProviderID, event.Channel)
+		p.eventMetricStore.Produce(ctx, metric.MessagingEvent{OperationName: "send", MessagingSystem: metric.ProviderTypeRedis, ErrorType: "error", DestinationName: event.Channel})
 		return datasource.NewError(fmt.Sprintf("error publishing to Redis PubSub channel %s", event.Channel), intCmd.Err())
 	}
-	
-	p.eventMetricStore.RedisPublish(ctx, event.ProviderID, event.Channel)
+
+	p.eventMetricStore.Produce(ctx, metric.MessagingEvent{OperationName: "send", MessagingSystem: metric.ProviderTypeRedis, DestinationName: event.Channel})
 	return nil
 }

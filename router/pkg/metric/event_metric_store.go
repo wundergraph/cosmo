@@ -10,7 +10,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.uber.org/zap"
 
-	otelattrs "github.com/wundergraph/cosmo/router/pkg/otel"
+	otel "github.com/wundergraph/cosmo/router/pkg/otel"
 )
 
 const (
@@ -19,36 +19,29 @@ const (
 	ProviderTypeRedis = "redis"
 )
 
+// MessagingEvent carries the values for messaging metrics attributes.
+type MessagingEvent struct {
+	OperationName   string
+	MessagingSystem string
+	ErrorType       string
+	DestinationName string
+}
+
 // EventMetricProvider is the interface that wraps the basic Event metric methods.
 // We maintain two providers, one for OTEL and one for Prometheus.
 type EventMetricProvider interface {
-	// unified publish/receive for brokers (kafka, redis, nats)
-	Publish(ctx context.Context, opts ...otelmetric.AddOption)
-	PublishFailure(ctx context.Context, opts ...otelmetric.AddOption)
-	MessagesReceived(ctx context.Context, opts ...otelmetric.AddOption)
-
-	// keep NATS request separate
-	NatsRequest(ctx context.Context, opts ...otelmetric.AddOption)
-	NatsRequestFailure(ctx context.Context, opts ...otelmetric.AddOption)
+	// unified produce/consume for brokers (kafka, redis, nats)
+	Produce(ctx context.Context, opts ...otelmetric.AddOption)
+	Consume(ctx context.Context, opts ...otelmetric.AddOption)
 
 	Flush(ctx context.Context) error
 	Shutdown() error
 }
 
 type EventMetricStore interface {
-	KafkaPublish(ctx context.Context, providerID string, topic string)
-	KafkaPublishFailure(ctx context.Context, providerID string, topic string)
-	KafkaMessageReceived(ctx context.Context, providerID string, topic string)
-
-	RedisPublish(ctx context.Context, providerID string, channel string)
-	RedisPublishFailure(ctx context.Context, providerID string, channel string)
-	RedisMessageReceived(ctx context.Context, providerID string, channel string)
-
-	NatsPublish(ctx context.Context, providerID string, subject string)
-	NatsPublishFailure(ctx context.Context, providerID string, subject string)
-	NatsMessageReceived(ctx context.Context, providerID string, subject string)
-	NatsRequest(ctx context.Context, providerID string, subject string)
-	NatsRequestFailure(ctx context.Context, providerID string, subject string)
+	// Generic produce/consume with explicit parameters per semantic conventions
+	Produce(ctx context.Context, event MessagingEvent)
+	Consume(ctx context.Context, event MessagingEvent)
 
 	Flush(ctx context.Context) error
 	Shutdown(ctx context.Context) error
@@ -95,114 +88,36 @@ func (e *EventMetrics) withAttrs(attrs ...attribute.KeyValue) otelmetric.AddOpti
 	return otelmetric.WithAttributes(append(copied, attrs...)...)
 }
 
-func (e *EventMetrics) KafkaPublish(ctx context.Context, providerID string, topic string) {
-	opts := e.withAttrs(
-		otelattrs.WgEventProviderType.String(ProviderTypeKafka),
-		otelattrs.WgEventProviderID.String(providerID),
-		otelattrs.WgKafkaTopic.String(topic),
-	)
-	e.otlpMetrics.Publish(ctx, opts)
-	e.promMetrics.Publish(ctx, opts)
+func (e *EventMetrics) Produce(ctx context.Context, event MessagingEvent) {
+	attrs := []attribute.KeyValue{
+		otel.MessagingOperationName.String(event.OperationName),
+		otel.MessagingSystem.String(event.MessagingSystem),
+	}
+	if event.ErrorType != "" {
+		attrs = append(attrs, otel.MessagingErrorType.String(event.ErrorType))
+	}
+	if event.DestinationName != "" {
+		attrs = append(attrs, otel.MessagingDestinationName.String(event.DestinationName))
+	}
+	opt := e.withAttrs(attrs...)
+	e.otlpMetrics.Produce(ctx, opt)
+	e.promMetrics.Produce(ctx, opt)
 }
 
-func (e *EventMetrics) KafkaPublishFailure(ctx context.Context, providerID string, topic string) {
-	opts := e.withAttrs(
-		otelattrs.WgEventProviderType.String(ProviderTypeKafka),
-		otelattrs.WgEventProviderID.String(providerID),
-		otelattrs.WgKafkaTopic.String(topic),
-	)
-	e.otlpMetrics.PublishFailure(ctx, opts)
-	e.promMetrics.PublishFailure(ctx, opts)
-}
-
-func (e *EventMetrics) KafkaMessageReceived(ctx context.Context, providerID string, topic string) {
-	opts := e.withAttrs(
-		otelattrs.WgEventProviderType.String(ProviderTypeKafka),
-		otelattrs.WgEventProviderID.String(providerID),
-		otelattrs.WgKafkaTopic.String(topic),
-	)
-	e.otlpMetrics.MessagesReceived(ctx, opts)
-	e.promMetrics.MessagesReceived(ctx, opts)
-}
-
-func (e *EventMetrics) RedisPublish(ctx context.Context, providerID string, channel string) {
-	opts := e.withAttrs(
-		otelattrs.WgEventProviderType.String(ProviderTypeRedis),
-		otelattrs.WgEventProviderID.String(providerID),
-		otelattrs.WgRedisChannel.String(channel),
-	)
-	e.otlpMetrics.Publish(ctx, opts)
-	e.promMetrics.Publish(ctx, opts)
-}
-
-func (e *EventMetrics) RedisPublishFailure(ctx context.Context, providerID string, channel string) {
-	opts := e.withAttrs(
-		otelattrs.WgEventProviderType.String(ProviderTypeRedis),
-		otelattrs.WgEventProviderID.String(providerID),
-		otelattrs.WgRedisChannel.String(channel),
-	)
-	e.otlpMetrics.PublishFailure(ctx, opts)
-	e.promMetrics.PublishFailure(ctx, opts)
-}
-
-func (e *EventMetrics) RedisMessageReceived(ctx context.Context, providerID string, channel string) {
-	opts := e.withAttrs(
-		otelattrs.WgEventProviderType.String(ProviderTypeRedis),
-		otelattrs.WgEventProviderID.String(providerID),
-		otelattrs.WgRedisChannel.String(channel),
-	)
-	e.otlpMetrics.MessagesReceived(ctx, opts)
-	e.promMetrics.MessagesReceived(ctx, opts)
-}
-
-func (e *EventMetrics) NatsPublish(ctx context.Context, providerID string, subject string) {
-	opts := e.withAttrs(
-		otelattrs.WgEventProviderType.String(ProviderTypeNats),
-		otelattrs.WgEventProviderID.String(providerID),
-		otelattrs.WgNatsSubject.String(subject),
-	)
-	e.otlpMetrics.Publish(ctx, opts)
-	e.promMetrics.Publish(ctx, opts)
-}
-
-func (e *EventMetrics) NatsPublishFailure(ctx context.Context, providerID string, subject string) {
-	opts := e.withAttrs(
-		otelattrs.WgEventProviderType.String(ProviderTypeNats),
-		otelattrs.WgEventProviderID.String(providerID),
-		otelattrs.WgNatsSubject.String(subject),
-	)
-	e.otlpMetrics.PublishFailure(ctx, opts)
-	e.promMetrics.PublishFailure(ctx, opts)
-}
-
-func (e *EventMetrics) NatsMessageReceived(ctx context.Context, providerID string, subject string) {
-	opts := e.withAttrs(
-		otelattrs.WgEventProviderType.String(ProviderTypeNats),
-		otelattrs.WgEventProviderID.String(providerID),
-		otelattrs.WgNatsSubject.String(subject),
-	)
-	e.otlpMetrics.MessagesReceived(ctx, opts)
-	e.promMetrics.MessagesReceived(ctx, opts)
-}
-
-func (e *EventMetrics) NatsRequest(ctx context.Context, providerID string, subject string) {
-	opts := e.withAttrs(
-		otelattrs.WgEventProviderID.String(providerID),
-		otelattrs.WgEventProviderType.String(ProviderTypeNats),
-		otelattrs.WgNatsSubject.String(subject),
-	)
-	e.otlpMetrics.NatsRequest(ctx, opts)
-	e.promMetrics.NatsRequest(ctx, opts)
-}
-
-func (e *EventMetrics) NatsRequestFailure(ctx context.Context, providerID string, subject string) {
-	opts := e.withAttrs(
-		otelattrs.WgEventProviderID.String(providerID),
-		otelattrs.WgEventProviderType.String(ProviderTypeNats),
-		otelattrs.WgNatsSubject.String(subject),
-	)
-	e.otlpMetrics.NatsRequestFailure(ctx, opts)
-	e.promMetrics.NatsRequestFailure(ctx, opts)
+func (e *EventMetrics) Consume(ctx context.Context, event MessagingEvent) {
+	attrs := []attribute.KeyValue{
+		otel.MessagingOperationName.String(event.OperationName),
+		otel.MessagingSystem.String(event.MessagingSystem),
+	}
+	if event.ErrorType != "" {
+		attrs = append(attrs, otel.MessagingErrorType.String(event.ErrorType))
+	}
+	if event.DestinationName != "" {
+		attrs = append(attrs, otel.MessagingDestinationName.String(event.DestinationName))
+	}
+	opt := e.withAttrs(attrs...)
+	e.otlpMetrics.Consume(ctx, opt)
+	e.promMetrics.Consume(ctx, opt)
 }
 
 // Flush flushes the metrics to the backend synchronously.

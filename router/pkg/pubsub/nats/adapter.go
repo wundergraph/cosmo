@@ -135,7 +135,11 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 					for msg := range msgBatch.Messages() {
 						log.Debug("subscription update", zap.String("message_subject", msg.Subject()), zap.ByteString("data", msg.Data()))
 
-						p.eventMetricStore.NatsMessageReceived(p.ctx, event.ProviderID, msg.Subject())
+						p.eventMetricStore.Consume(p.ctx, metric.MessagingEvent{
+							OperationName:   "receive",
+							MessagingSystem: metric.ProviderTypeNats,
+							DestinationName: msg.Subject(),
+						})
 						updater.Update(msg.Data())
 
 						// Acknowledge the message after it has been processed
@@ -173,7 +177,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 			select {
 			case msg := <-msgChan:
 				log.Debug("subscription update", zap.String("message_subject", msg.Subject), zap.ByteString("data", msg.Data))
-				p.eventMetricStore.NatsMessageReceived(p.ctx, event.ProviderID, msg.Subject)
+				p.eventMetricStore.Consume(p.ctx, metric.MessagingEvent{OperationName: "receive", MessagingSystem: metric.ProviderTypeNats, DestinationName: msg.Subject})
 				updater.Update(msg.Data)
 			case <-p.ctx.Done():
 				// When the application context is done, we stop the subscriptions
@@ -218,10 +222,10 @@ func (p *ProviderAdapter) Publish(ctx context.Context, event PublishAndRequestEv
 	err := p.client.Publish(event.Subject, event.Data)
 	if err != nil {
 		log.Error("publish error", zap.Error(err))
-		p.eventMetricStore.NatsPublishFailure(ctx, event.ProviderID, event.Subject)
+		p.eventMetricStore.Produce(ctx, metric.MessagingEvent{OperationName: "send", MessagingSystem: metric.ProviderTypeNats, ErrorType: "error", DestinationName: event.Subject})
 		return datasource.NewError(fmt.Sprintf("error publishing to NATS subject %s", event.Subject), err)
 	} else {
-		p.eventMetricStore.NatsPublish(ctx, event.ProviderID, event.Subject)
+		p.eventMetricStore.Produce(ctx, metric.MessagingEvent{OperationName: "send", MessagingSystem: metric.ProviderTypeNats, DestinationName: event.Subject})
 	}
 
 	return nil
@@ -243,11 +247,11 @@ func (p *ProviderAdapter) Request(ctx context.Context, event PublishAndRequestEv
 	msg, err := p.client.RequestWithContext(ctx, event.Subject, event.Data)
 	if err != nil {
 		log.Error("request error", zap.Error(err))
-		p.eventMetricStore.NatsRequestFailure(ctx, event.ProviderID, event.Subject)
+		p.eventMetricStore.Produce(ctx, metric.MessagingEvent{OperationName: "request", MessagingSystem: metric.ProviderTypeNats, ErrorType: "error", DestinationName: event.Subject})
 		return datasource.NewError(fmt.Sprintf("error requesting from NATS subject %s", event.Subject), err)
 	}
 
-	p.eventMetricStore.NatsRequest(ctx, event.ProviderID, event.Subject)
+	p.eventMetricStore.Produce(ctx, metric.MessagingEvent{OperationName: "request", MessagingSystem: metric.ProviderTypeNats, DestinationName: event.Subject})
 
 	// We don't collect metrics on err here as it's an error related to the writer
 	_, err = w.Write(msg.Data)

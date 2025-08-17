@@ -40,25 +40,12 @@ func newPromEventMetrics(logger *zap.Logger, meterProvider *metric.MeterProvider
 }
 
 // Unified methods
-func (p *promEventMetrics) Publish(ctx context.Context, opts ...otelmetric.AddOption) {
-	p.instruments.publishMessages.Add(ctx, 1, opts...)
+func (p *promEventMetrics) Produce(ctx context.Context, opts ...otelmetric.AddOption) {
+	p.instruments.sentMessages.Add(ctx, 1, opts...)
 }
 
-func (p *promEventMetrics) PublishFailure(ctx context.Context, opts ...otelmetric.AddOption) {
-	p.instruments.publishFailures.Add(ctx, 1, opts...)
-}
-
-func (p *promEventMetrics) MessagesReceived(ctx context.Context, opts ...otelmetric.AddOption) {
-	p.instruments.messagesReceived.Add(ctx, 1, opts...)
-}
-
-// NATS request methods remain
-func (p *promEventMetrics) NatsRequest(ctx context.Context, opts ...otelmetric.AddOption) {
-	p.instruments.natsRequests.Add(ctx, 1, opts...)
-}
-
-func (p *promEventMetrics) NatsRequestFailure(ctx context.Context, opts ...otelmetric.AddOption) {
-	p.instruments.natsRequestFailures.Add(ctx, 1, opts...)
+func (p *promEventMetrics) Consume(ctx context.Context, opts ...otelmetric.AddOption) {
+	p.instruments.consumedMessages.Add(ctx, 1, opts...)
 }
 
 func (p *promEventMetrics) Flush(ctx context.Context) error { return p.meterProvider.ForceFlush(ctx) }

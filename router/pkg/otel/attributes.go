@@ -69,6 +69,14 @@ const (
 	WgRedisChannel      = attribute.Key("wg.redis.channel")
 )
 
+// Messaging metrics attributes
+const (
+	MessagingOperationName   = attribute.Key("messaging.operation.name")
+	MessagingSystem          = attribute.Key("messaging.system")
+	MessagingErrorType       = attribute.Key("error.type")
+	MessagingDestinationName = attribute.Key("messaging.destination.name")
+)
+
 const (
 	CacheMetricsOperationTypeAdded   = "added"
 	CacheMetricsOperationTypeUpdated = "updated"
