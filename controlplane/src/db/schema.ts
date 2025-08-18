@@ -213,6 +213,8 @@ export const websocketSubprotocolEnum = pgEnum('websocket_subprotocol', [
   'graphql-transport-ws',
 ] as const);
 
+export const subgraphTypeEnum = pgEnum('subgraph_type', ['standard', 'grpc_plugin', 'grpc_service'] as const);
+
 export const subgraphs = pgTable(
   'subgraphs', // subgraphs
   {
@@ -232,6 +234,7 @@ export const subgraphs = pgTable(
       }),
     isFeatureSubgraph: boolean('is_feature_subgraph').notNull().default(false),
     isEventDrivenGraph: boolean('is_event_driven_graph').notNull().default(false),
+    type: subgraphTypeEnum('type').notNull().default('standard'),
   },
   (t) => {
     return {
@@ -2465,5 +2468,40 @@ export const schemaCheckProposalMatchRelations = relations(schemaCheckProposalMa
   proposal: one(proposals, {
     fields: [schemaCheckProposalMatch.proposalId],
     references: [proposals.id],
+  }),
+}));
+
+export const protobufSchemaVersions = pgTable('protobuf_schema_versions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  schemaVersionId: uuid('schema_version_id')
+    .notNull()
+    .references(() => schemaVersion.id, { onDelete: 'cascade' }),
+  protoSchema: text('proto_schema').notNull(),
+  protoMappings: text('proto_mappings').notNull(),
+  protoLock: text('proto_lock').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const protobufSchemaVersionsRelations = relations(protobufSchemaVersions, ({ one }) => ({
+  schemaVersion: one(schemaVersion, {
+    fields: [protobufSchemaVersions.schemaVersionId],
+    references: [schemaVersion.id],
+  }),
+}));
+
+export const pluginImageVersions = pgTable('plugin_image_versions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  schemaVersionId: uuid('schema_version_id')
+    .notNull()
+    .references(() => schemaVersion.id, { onDelete: 'cascade' }),
+  version: text('version').notNull(),
+  platform: text('platform').array().notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const pluginImageVersionsRelations = relations(pluginImageVersions, ({ one }) => ({
+  schemaVersion: one(schemaVersion, {
+    fields: [pluginImageVersions.schemaVersionId],
+    references: [schemaVersion.id],
   }),
 }));

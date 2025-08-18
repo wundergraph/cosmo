@@ -1365,6 +1365,7 @@ export class OrganizationRepository {
       'federated-graphs': 30,
       'feature-flags': 0,
       'field-pruning-grace-period': 0,
+      plugins: 0,
       users: 25,
       requests: 30,
       rbac: false,
