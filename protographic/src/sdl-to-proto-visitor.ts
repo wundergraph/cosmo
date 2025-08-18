@@ -520,7 +520,7 @@ export class GraphQLToProtoTextVisitor {
     protoContent = this.trimEmptyLines(protoContent);
     this.protoText = this.trimEmptyLines(this.protoText);
 
-    this.protoText.find
+    this.protoText.find;
 
     if (this.protoText.length > 0) {
       protoContent.push('');
@@ -540,19 +540,19 @@ export class GraphQLToProtoTextVisitor {
    */
   private trimEmptyLines(data: string[]): string[] {
     // Find the first non-empty line index
-    const firstNonEmpty = data.findIndex(line => line.trim() !== '');
-    
+    const firstNonEmpty = data.findIndex((line) => line.trim() !== '');
+
     // If no non-empty lines found, return empty array
     if (firstNonEmpty === -1) {
       return [];
     }
-    
+
     // Find the last non-empty line index by searching backwards
     let lastNonEmpty = data.length - 1;
     while (lastNonEmpty >= 0 && data[lastNonEmpty].trim() === '') {
       lastNonEmpty--;
     }
-    
+
     // Return slice from first to last non-empty line (inclusive)
     return data.slice(firstNonEmpty, lastNonEmpty + 1);
   }
