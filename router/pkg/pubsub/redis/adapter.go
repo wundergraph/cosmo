@@ -150,10 +150,10 @@ func (p *ProviderAdapter) Publish(ctx context.Context, event PublishEventConfigu
 	intCmd := p.conn.Publish(ctx, event.Channel, data)
 	if intCmd.Err() != nil {
 		log.Error("publish error", zap.Error(intCmd.Err()))
-		p.eventMetricStore.Produce(ctx, metric.MessagingEvent{OperationName: "send", MessagingSystem: metric.ProviderTypeRedis, ErrorType: "error", DestinationName: event.Channel})
+		p.eventMetricStore.Produce(ctx, metric.MessagingEvent{OperationName: "publish", MessagingSystem: metric.ProviderTypeRedis, ErrorType: "error", DestinationName: event.Channel})
 		return datasource.NewError(fmt.Sprintf("error publishing to Redis PubSub channel %s", event.Channel), intCmd.Err())
 	}
 
-	p.eventMetricStore.Produce(ctx, metric.MessagingEvent{OperationName: "send", MessagingSystem: metric.ProviderTypeRedis, DestinationName: event.Channel})
+	p.eventMetricStore.Produce(ctx, metric.MessagingEvent{OperationName: "publish", MessagingSystem: metric.ProviderTypeRedis, DestinationName: event.Channel})
 	return nil
 }

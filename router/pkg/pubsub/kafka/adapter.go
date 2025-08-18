@@ -183,11 +183,11 @@ func (p *ProviderAdapter) Publish(ctx context.Context, event PublishEventConfigu
 	if pErr != nil {
 		log.Error("publish error", zap.Error(pErr))
 		// failure emission: include error.type generic
-		p.eventMetricStore.Produce(ctx, metric.MessagingEvent{OperationName: "send", MessagingSystem: metric.ProviderTypeKafka, ErrorType: "error", DestinationName: event.Topic})
+		p.eventMetricStore.Produce(ctx, metric.MessagingEvent{OperationName: "produce", MessagingSystem: metric.ProviderTypeKafka, ErrorType: "error", DestinationName: event.Topic})
 		return datasource.NewError(fmt.Sprintf("error publishing to Kafka topic %s", event.Topic), pErr)
 	}
 
-	p.eventMetricStore.Produce(ctx, metric.MessagingEvent{OperationName: "send", MessagingSystem: metric.ProviderTypeKafka, DestinationName: event.Topic})
+	p.eventMetricStore.Produce(ctx, metric.MessagingEvent{OperationName: "produce", MessagingSystem: metric.ProviderTypeKafka, DestinationName: event.Topic})
 	return nil
 }
 

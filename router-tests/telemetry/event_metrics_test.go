@@ -63,7 +63,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 				attrs := sum.DataPoints[0].Attributes
 
 				operation, _ := attrs.Value(otelattrs.MessagingOperationName)
-				require.Equal(t, "send", operation.AsString())
+				require.Equal(t, "produce", operation.AsString())
 
 				system, _ := attrs.Value(otelattrs.MessagingSystem)
 				require.Equal(t, "kafka", system.AsString())
@@ -191,7 +191,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 				attrs := sum.DataPoints[0].Attributes
 
 				operation, _ := attrs.Value(otelattrs.MessagingOperationName)
-				require.Equal(t, "send", operation.AsString())
+				require.Equal(t, "publish", operation.AsString())
 
 				system, _ := attrs.Value(otelattrs.MessagingSystem)
 				require.Equal(t, "nats", system.AsString())
@@ -384,7 +384,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 				attrs := sum.DataPoints[0].Attributes
 
 				operation, _ := attrs.Value(otelattrs.MessagingOperationName)
-				require.Equal(t, "send", operation.AsString())
+				require.Equal(t, "publish", operation.AsString())
 
 				system, _ := attrs.Value(otelattrs.MessagingSystem)
 				require.Equal(t, "redis", system.AsString())

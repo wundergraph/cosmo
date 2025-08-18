@@ -222,10 +222,10 @@ func (p *ProviderAdapter) Publish(ctx context.Context, event PublishAndRequestEv
 	err := p.client.Publish(event.Subject, event.Data)
 	if err != nil {
 		log.Error("publish error", zap.Error(err))
-		p.eventMetricStore.Produce(ctx, metric.MessagingEvent{OperationName: "send", MessagingSystem: metric.ProviderTypeNats, ErrorType: "error", DestinationName: event.Subject})
+		p.eventMetricStore.Produce(ctx, metric.MessagingEvent{OperationName: "publish", MessagingSystem: metric.ProviderTypeNats, ErrorType: "error", DestinationName: event.Subject})
 		return datasource.NewError(fmt.Sprintf("error publishing to NATS subject %s", event.Subject), err)
 	} else {
-		p.eventMetricStore.Produce(ctx, metric.MessagingEvent{OperationName: "send", MessagingSystem: metric.ProviderTypeNats, DestinationName: event.Subject})
+		p.eventMetricStore.Produce(ctx, metric.MessagingEvent{OperationName: "publish", MessagingSystem: metric.ProviderTypeNats, DestinationName: event.Subject})
 	}
 
 	return nil

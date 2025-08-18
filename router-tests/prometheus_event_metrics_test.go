@@ -56,7 +56,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 				require.Len(t, metrics, 1)
 
 				operation := findMetricLabelByName(metrics, "messaging_operation_name")
-				require.Equal(t, "send", operation.GetValue())
+				require.Equal(t, "produce", operation.GetValue())
 				require.Nil(t, findMetricLabelByName(metrics, "error_type"))
 
 				system := findMetricLabelByName(metrics, "messaging_system")
@@ -173,7 +173,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 				require.Len(t, metrics, 1)
 
 				operation := findMetricLabelByName(metrics, "messaging_operation_name")
-				require.Equal(t, "send", operation.GetValue())
+				require.Equal(t, "publish", operation.GetValue())
 				require.Nil(t, findMetricLabelByName(metrics, "error_type"))
 				system := findMetricLabelByName(metrics, "messaging_system")
 				require.Equal(t, "nats", system.GetValue())
@@ -347,7 +347,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 				require.Len(t, metrics, 1)
 
 				operation := findMetricLabelByName(metrics, "messaging_operation_name")
-				require.Equal(t, "send", operation.GetValue())
+				require.Equal(t, "publish", operation.GetValue())
 				require.Nil(t, findMetricLabelByName(metrics, "error_type"))
 				system := findMetricLabelByName(metrics, "messaging_system")
 				require.Equal(t, "redis", system.GetValue())
