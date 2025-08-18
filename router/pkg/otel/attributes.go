@@ -60,15 +60,6 @@ const (
 	WgGraphQLParentType = attribute.Key("wg.graphql.parent_type")
 )
 
-// Event metrics attributes
-const (
-	WgEventProviderID   = attribute.Key("wg.event.provider.id")
-	WgEventProviderType = attribute.Key("wg.event.provider.type")
-	WgKafkaTopic        = attribute.Key("wg.kafka.topic")
-	WgNatsSubject       = attribute.Key("wg.nats.subject")
-	WgRedisChannel      = attribute.Key("wg.redis.channel")
-)
-
 // Messaging metrics attributes
 const (
 	MessagingOperationName   = attribute.Key("messaging.operation.name")
