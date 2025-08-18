@@ -325,7 +325,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 
 					provider := findMetricLabelByName(metrics, "wg_provider_id")
 					require.NotNil(t, provider)
-					require.Equal(t, "my-nats", provider.GetValue())
+					require.Equal(t, "default", provider.GetValue())
 
 					require.Equal(t, float64(1), metrics[0].Counter.GetValue())
 				})

@@ -350,7 +350,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 
 					provider, hasProvider := attrs.Value(otelattrs.ProviderId)
 					require.True(t, hasProvider)
-					require.Equal(t, "my-nats", provider.AsString())
+					require.Equal(t, "default", provider.AsString())
 
 					errVal, hasErr := attrs.Value(otelattrs.MessagingError)
 					require.True(t, hasErr)
