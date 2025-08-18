@@ -71,6 +71,10 @@ func TestFlakyEventMetrics(t *testing.T) {
 				destination, _ := attrs.Value(otelattrs.MessagingDestinationName)
 				require.True(t, strings.HasSuffix(destination.AsString(), "employeeUpdated"))
 
+				provider, hasProvider := attrs.Value(otelattrs.ProviderId)
+				require.True(t, hasProvider)
+				require.Equal(t, "my-kafka", provider.AsString())
+
 				errVal, hasErr := attrs.Value(otelattrs.MessagingError)
 				require.True(t, hasErr)
 				require.False(t, errVal.AsBool())
@@ -145,6 +149,10 @@ func TestFlakyEventMetrics(t *testing.T) {
 					destination, _ := attrs.Value(otelattrs.MessagingDestinationName)
 					require.True(t, strings.HasSuffix(destination.AsString(), "employeeUpdated"))
 
+					provider, hasProvider := attrs.Value(otelattrs.ProviderId)
+					require.True(t, hasProvider)
+					require.Equal(t, "my-kafka", provider.AsString())
+
 					errVal, hasErr := attrs.Value(otelattrs.MessagingError)
 					require.True(t, hasErr)
 					require.False(t, errVal.AsBool())
@@ -201,6 +209,10 @@ func TestFlakyEventMetrics(t *testing.T) {
 				destination, _ := attrs.Value(otelattrs.MessagingDestinationName)
 				require.True(t, strings.HasSuffix(destination.AsString(), "employeeUpdatedMyNats.12"))
 
+				provider, hasProvider := attrs.Value(otelattrs.ProviderId)
+				require.True(t, hasProvider)
+				require.Equal(t, "my-nats", provider.AsString())
+
 				errVal, hasErr := attrs.Value(otelattrs.MessagingError)
 				require.True(t, hasErr)
 				require.False(t, errVal.AsBool())
@@ -249,6 +261,10 @@ func TestFlakyEventMetrics(t *testing.T) {
 
 				destination, _ := attrs.Value(otelattrs.MessagingDestinationName)
 				require.True(t, strings.HasSuffix(destination.AsString(), "getEmployeeMyNats.12"))
+
+				provider, hasProvider := attrs.Value(otelattrs.ProviderId)
+				require.True(t, hasProvider)
+				require.Equal(t, "my-nats", provider.AsString())
 
 				errVal, hasErr := attrs.Value(otelattrs.MessagingError)
 				require.True(t, hasErr)
@@ -332,6 +348,10 @@ func TestFlakyEventMetrics(t *testing.T) {
 					destination, _ := attrs.Value(otelattrs.MessagingDestinationName)
 					require.True(t, strings.HasSuffix(destination.AsString(), "employeeUpdated.3"))
 
+					provider, hasProvider := attrs.Value(otelattrs.ProviderId)
+					require.True(t, hasProvider)
+					require.Equal(t, "my-nats", provider.AsString())
+
 					errVal, hasErr := attrs.Value(otelattrs.MessagingError)
 					require.True(t, hasErr)
 					require.False(t, errVal.AsBool())
@@ -390,6 +410,10 @@ func TestFlakyEventMetrics(t *testing.T) {
 
 				destination, _ := attrs.Value(otelattrs.MessagingDestinationName)
 				require.True(t, strings.HasSuffix(destination.AsString(), "employeeUpdatedMyRedis"))
+
+				provider, hasProvider := attrs.Value(otelattrs.ProviderId)
+				require.True(t, hasProvider)
+				require.Equal(t, "my-redis", provider.AsString())
 
 				errVal, hasErr := attrs.Value(otelattrs.MessagingError)
 				require.True(t, hasErr)
@@ -463,6 +487,10 @@ func TestFlakyEventMetrics(t *testing.T) {
 
 					destination, _ := attrs.Value(otelattrs.MessagingDestinationName)
 					require.True(t, strings.HasSuffix(destination.AsString(), "employeeUpdatedMyRedis"))
+
+					provider, hasProvider := attrs.Value(otelattrs.ProviderId)
+					require.True(t, hasProvider)
+					require.Equal(t, "my-redis", provider.AsString())
 
 					errVal, hasErr := attrs.Value(otelattrs.MessagingError)
 					require.True(t, hasErr)

@@ -67,6 +67,10 @@ func TestFlakyEventMetrics(t *testing.T) {
 				destination := findMetricLabelByName(metrics, "wg_messaging_destination_name")
 				require.True(t, strings.HasSuffix(destination.GetValue(), "employeeUpdated"))
 
+				provider := findMetricLabelByName(metrics, "wg_provider_id")
+				require.NotNil(t, provider)
+				require.Equal(t, "my-kafka", provider.GetValue())
+
 				require.Equal(t, float64(2), metrics[0].Counter.GetValue())
 			})
 		})
@@ -136,6 +140,10 @@ func TestFlakyEventMetrics(t *testing.T) {
 					destination := findMetricLabelByName(metrics, "wg_messaging_destination_name")
 					require.True(t, strings.HasSuffix(destination.GetValue(), "employeeUpdated"))
 
+					provider := findMetricLabelByName(metrics, "wg_provider_id")
+					require.NotNil(t, provider)
+					require.Equal(t, "my-kafka", provider.GetValue())
+
 					require.Equal(t, float64(1), metrics[0].Counter.GetValue())
 				})
 
@@ -187,6 +195,10 @@ func TestFlakyEventMetrics(t *testing.T) {
 				destination := findMetricLabelByName(metrics, "wg_messaging_destination_name")
 				require.True(t, strings.HasSuffix(destination.GetValue(), "employeeUpdatedMyNats.12"))
 
+				provider := findMetricLabelByName(metrics, "wg_provider_id")
+				require.NotNil(t, provider)
+				require.Equal(t, "my-nats", provider.GetValue())
+
 				require.Equal(t, float64(2), metrics[0].Counter.GetValue())
 			})
 		})
@@ -231,6 +243,10 @@ func TestFlakyEventMetrics(t *testing.T) {
 
 				destination := findMetricLabelByName(metrics, "wg_messaging_destination_name")
 				require.True(t, strings.HasSuffix(destination.GetValue(), "getEmployeeMyNats.12"))
+
+				provider := findMetricLabelByName(metrics, "wg_provider_id")
+				require.NotNil(t, provider)
+				require.Equal(t, "my-nats", provider.GetValue())
 
 				require.Equal(t, float64(1), metrics[0].Counter.GetValue())
 			})
@@ -307,6 +323,10 @@ func TestFlakyEventMetrics(t *testing.T) {
 					destination := findMetricLabelByName(metrics, "wg_messaging_destination_name")
 					require.True(t, strings.HasSuffix(destination.GetValue(), "employeeUpdated.3"))
 
+					provider := findMetricLabelByName(metrics, "wg_provider_id")
+					require.NotNil(t, provider)
+					require.Equal(t, "my-nats", provider.GetValue())
+
 					require.Equal(t, float64(1), metrics[0].Counter.GetValue())
 				})
 
@@ -360,6 +380,10 @@ func TestFlakyEventMetrics(t *testing.T) {
 
 				destination := findMetricLabelByName(metrics, "wg_messaging_destination_name")
 				require.True(t, strings.HasSuffix(destination.GetValue(), "employeeUpdatedMyRedis"))
+
+				provider := findMetricLabelByName(metrics, "wg_provider_id")
+				require.NotNil(t, provider)
+				require.Equal(t, "my-redis", provider.GetValue())
 
 				require.Equal(t, float64(2), metrics[0].Counter.GetValue())
 			})
@@ -428,6 +452,10 @@ func TestFlakyEventMetrics(t *testing.T) {
 
 					destination := findMetricLabelByName(metrics, "wg_messaging_destination_name")
 					require.True(t, strings.HasSuffix(destination.GetValue(), "employeeUpdatedMyRedis"))
+
+					provider := findMetricLabelByName(metrics, "wg_provider_id")
+					require.NotNil(t, provider)
+					require.Equal(t, "my-redis", provider.GetValue())
 					require.Equal(t, float64(1), metrics[0].Counter.GetValue())
 				})
 
