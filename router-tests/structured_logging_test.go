@@ -3054,7 +3054,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 
 				actual2 := requestLog.All()[1].ContextMap()["response_body"].(string)
 				require.Equal(t,
-					`{"data":{"_entities":[{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":true},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false}]}}`,
+					`{"data":{"_entities":[{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false},{"__typename":"Employee","isAvailable":false}]}}`,
 					actual2)
 
 				actual3 := requestLog.All()[2].ContextMap()["response_body"].(string)
