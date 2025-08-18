@@ -319,15 +319,7 @@ func (p *ProviderAdapter) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func NewAdapter(
-	ctx context.Context,
-	logger *zap.Logger,
-	url string,
-	opts []nats.Option,
-	hostName string,
-	routerListenAddr string,
-	providerOpts datasource.ProviderOpts,
-) (Adapter, error) {
+func NewAdapter(ctx context.Context, logger *zap.Logger, url string, opts []nats.Option, hostName string, routerListenAddr string, providerOpts datasource.ProviderOpts) (Adapter, error) {
 	if logger == nil {
 		logger = zap.NewNop()
 	}
