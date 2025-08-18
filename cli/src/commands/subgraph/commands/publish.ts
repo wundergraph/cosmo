@@ -11,6 +11,7 @@ import {
   parseGraphQLWebsocketSubprotocol,
   splitLabel,
 } from '@wundergraph/cosmo-shared';
+import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { getBaseHeaders } from '../../../core/config.js';
 import { validateSubscriptionProtocols } from '../../../utils.js';
@@ -116,6 +117,7 @@ export default (opts: BaseCommandOptions) => {
           ? parseGraphQLWebsocketSubprotocol(options.websocketSubprotocol)
           : undefined,
         labels: options.label.map((label: string) => splitLabel(label)),
+        type: SubgraphType.STANDARD,
       },
       {
         headers: getBaseHeaders(),

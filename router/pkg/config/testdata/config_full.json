@@ -893,7 +893,10 @@
   },
   "Plugins": {
     "Enabled": true,
-    "Path": "some/path/to/plugins"
+    "Path": "some/path/to/plugins",
+    "Registry": {
+      "URL": "cosmo-registry.wundergraph.com"
+    }
   },
   "WatchConfig": {
     "Enabled": true,

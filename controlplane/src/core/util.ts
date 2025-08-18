@@ -19,6 +19,7 @@ import {
   LATEST_ROUTER_COMPATIBILITY_VERSION,
   newContractTagOptionsFromArrays,
 } from '@wundergraph/composition';
+import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { MemberRole, WebsocketSubprotocol } from '../db/models.js';
 import {
   AuthContext,
@@ -39,6 +40,7 @@ const organizationSlugRegex = /^[\da-z]+(?:-[\da-z]+)*$/;
 const namespaceRegex = /^[\da-z]+(?:[_-][\da-z]+)*$/;
 const schemaTagRegex = /^(?![/-])[\d/A-Za-z-]+(?<![/-])$/;
 const graphNameRegex = /^[\dA-Za-z]+(?:[./@_-][\dA-Za-z]+)*$/;
+const pluginVersionRegex = /^v\d+$/;
 
 /**
  * Wraps a function with a try/catch block and logs any errors that occur.
@@ -337,6 +339,10 @@ export const isValidOrganizationName = (name: string): boolean => {
   return true;
 };
 
+export const isValidPluginVersion = (version: string): boolean => {
+  return pluginVersionRegex.test(version);
+};
+
 export const validateDateRanges = ({
   limit,
   range,
@@ -396,6 +402,29 @@ export function getValueOrDefault<K, V>(map: Map<K, V>, key: K, constructor: () 
 // HTTP methods including POST, PUT, DELETE, etc.
 export function webhookAxiosRetryCond(err: AxiosError) {
   return isNetworkError(err) || isRetryableError(err);
+}
+
+/**
+ * Determines whether the given string is a Google Cloud Storage address by checking whether the hostname is
+ * `storage.googleapis.com` or the protocol is `gs:`.
+ */
+export function isGoogleCloudStorageUrl(s: string): boolean {
+  if (!s) {
+    return false;
+  }
+
+  try {
+    const url = new URL(s);
+    const hostname = url.hostname.toLowerCase();
+
+    return (
+      url.protocol === 'gs:' || hostname === 'storage.googleapis.com' || hostname.endsWith('.storage.googleapis.com')
+    );
+  } catch {
+    // ignore
+  }
+
+  return false;
 }
 
 export function createS3ClientConfig(bucketName: string, opts: S3StorageOptions): S3ClientConfig {
@@ -572,6 +601,40 @@ export const flipDateRangeValuesIfNeeded = (dateRange?: { start: number; end: nu
   const tmp = dateRange.start;
   dateRange.start = dateRange.end;
   dateRange.end = tmp;
+};
+
+export const formatSubgraphType = (type: SubgraphType) => {
+  switch (type) {
+    case SubgraphType.STANDARD: {
+      return 'standard';
+    }
+    case SubgraphType.GRPC_PLUGIN: {
+      return 'grpc_plugin';
+    }
+    case SubgraphType.GRPC_SERVICE: {
+      return 'grpc_service';
+    }
+    default: {
+      throw new Error(`Unknown subgraph type: ${type}`);
+    }
+  }
+};
+
+export const convertToSubgraphType = (type: string) => {
+  switch (type) {
+    case 'standard': {
+      return SubgraphType.STANDARD;
+    }
+    case 'grpc_plugin': {
+      return SubgraphType.GRPC_PLUGIN;
+    }
+    case 'grpc_service': {
+      return SubgraphType.GRPC_SERVICE;
+    }
+    default: {
+      throw new Error(`Unknown subgraph type: ${type}`);
+    }
+  }
 };
 
 export function newCompositionOptions(disableResolvabilityValidation?: boolean): CompositionOptions | undefined {

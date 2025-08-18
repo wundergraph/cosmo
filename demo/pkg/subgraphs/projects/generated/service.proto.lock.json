@@ -92,7 +92,8 @@
         "tasksByPriority": 12,
         "resourceMatrix": 13,
         "killService": 14,
-        "panic": 15
+        "panic": 15,
+        "nodesById": 16
       }
     },
     "QueryProjectsResponse": {
@@ -487,6 +488,39 @@
       "fields": {
         "Task": 1
       }
+    },
+    "QueryNodesByIdRequest": {
+      "fields": {
+        "id": 1
+      }
+    },
+    "QueryNodesById": {
+      "fields": {
+        "id": 1
+      }
+    },
+    "QueryNodesByIdResponse": {
+      "fields": {
+        "nodes_by_id": 1
+      }
+    },
+    "QueryProjectsRequest": {
+      "fields": {}
+    },
+    "QueryProjectStatusesRequest": {
+      "fields": {}
+    },
+    "QueryProjectTagsRequest": {
+      "fields": {}
+    },
+    "QueryArchivedProjectsRequest": {
+      "fields": {}
+    },
+    "QueryKillServiceRequest": {
+      "fields": {}
+    },
+    "QueryPanicRequest": {
+      "fields": {}
     }
   },
   "enums": {
