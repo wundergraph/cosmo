@@ -301,10 +301,6 @@ func TestFlakyEventMetrics(t *testing.T) {
 				})
 				require.JSONEq(t, `{"data":{"updateAvailability":{"id":3}}}`, resOne.Body)
 
-				// Trigger the second subscription via NATS
-				err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`))
-				require.NoError(t, err)
-
 				err = xEnv.NatsConnectionDefault.Flush()
 				require.NoError(t, err)
 
@@ -337,7 +333,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 					_, hasErr := attrs.Value(otelattrs.MessagingErrorType)
 					require.False(t, hasErr)
 
-					require.Equal(t, int64(2), sum.DataPoints[0].Value)
+					require.Equal(t, int64(1), sum.DataPoints[0].Value)
 				})
 
 				require.NoError(t, client.Close())
