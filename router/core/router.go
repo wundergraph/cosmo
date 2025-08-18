@@ -161,10 +161,11 @@ type (
 	}
 
 	AccessLogsConfig struct {
-		Attributes         []config.CustomAttribute
-		Logger             *zap.Logger
-		SubgraphEnabled    bool
-		SubgraphAttributes []config.CustomAttribute
+		Attributes            []config.CustomAttribute
+		Logger                *zap.Logger
+		SubgraphEnabled       bool
+		SubgraphAttributes    []config.CustomAttribute
+		IgnoreQueryParamsList []string
 	}
 
 	// Option defines the method to customize server.

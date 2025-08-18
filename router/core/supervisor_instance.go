@@ -67,9 +67,10 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 
 	if cfg.AccessLogs.Enabled {
 		c := &AccessLogsConfig{
-			Attributes:         cfg.AccessLogs.Router.Fields,
-			SubgraphEnabled:    cfg.AccessLogs.Subgraphs.Enabled,
-			SubgraphAttributes: cfg.AccessLogs.Subgraphs.Fields,
+			Attributes:            cfg.AccessLogs.Router.Fields,
+			IgnoreQueryParamsList: cfg.AccessLogs.Router.IgnoreQueryParamsList,
+			SubgraphEnabled:       cfg.AccessLogs.Subgraphs.Enabled,
+			SubgraphAttributes:    cfg.AccessLogs.Subgraphs.Fields,
 		}
 
 		if cfg.AccessLogs.Output.File.Enabled {

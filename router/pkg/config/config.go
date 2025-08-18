@@ -891,7 +891,8 @@ type AccessLogsFileOutputConfig struct {
 }
 
 type AccessLogsRouterConfig struct {
-	Fields []CustomAttribute `yaml:"fields,omitempty" env:"ACCESS_LOGS_ROUTER_FIELDS"`
+	Fields                []CustomAttribute `yaml:"fields,omitempty" env:"ACCESS_LOGS_ROUTER_FIELDS"`
+	IgnoreQueryParamsList []string          `yaml:"ignore_query_params_list,omitempty" env:"ACCESS_LOGS_ROUTER_IGNORE_QUERY_PARAMS_LIST" envDefault:"variables"`
 }
 
 type AccessLogsSubgraphsConfig struct {
