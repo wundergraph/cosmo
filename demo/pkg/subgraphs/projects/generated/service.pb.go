@@ -3931,7 +3931,7 @@ type Task struct {
 	Description *wrapperspb.StringValue `protobuf:"bytes,6,opt,name=description,proto3" json:"description,omitempty"`
 	Priority    TaskPriority            `protobuf:"varint,7,opt,name=priority,proto3,enum=service.TaskPriority" json:"priority,omitempty"`
 	Status      TaskStatus              `protobuf:"varint,8,opt,name=status,proto3,enum=service.TaskStatus" json:"status,omitempty"`
-	// Field estimated_hours is deprecated: No more estimations!
+	// Deprecation notice: No more estimations!
 	//
 	// Deprecated: Marked as deprecated in generated/service.proto.
 	EstimatedHours *wrapperspb.DoubleValue `protobuf:"bytes,9,opt,name=estimated_hours,json=estimatedHours,proto3" json:"estimated_hours,omitempty"`

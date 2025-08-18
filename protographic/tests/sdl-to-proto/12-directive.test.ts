@@ -26,7 +26,7 @@ describe('SDL to Proto Directive', () => {
 
       message User {
         string id = 1;
-        // Field first_name is deprecated: This field is deprecated
+        // Deprecation notice: This field is deprecated
         string first_name = 2 [deprecated = true];
         string last_name = 3;
       }"
@@ -70,7 +70,7 @@ describe('SDL to Proto Directive', () => {
 
       message User {
         string id = 1;
-        // Field created_at is deprecated: This field is deprecated
+        // Deprecation notice: This field is deprecated
         string created_at = 2 [deprecated = true];
         string updated_at = 3;
       }"
@@ -114,7 +114,7 @@ describe('SDL to Proto Directive', () => {
 
       message User {
         string id = 1;
-        // Field created_at is deprecated: This field is deprecated on the field
+        // Deprecation notice: This field is deprecated on the field
         string created_at = 2 [deprecated = true];
         string updated_at = 3;
       }"
@@ -158,7 +158,7 @@ describe('SDL to Proto Directive', () => {
 
       message User {
         string id = 1;
-        // Field created_at is deprecated: This field is deprecated on the interface
+        // Deprecation notice: This field is deprecated on the interface
         string created_at = 2 [deprecated = true];
         string updated_at = 3;
       }"
@@ -188,10 +188,10 @@ describe('SDL to Proto Directive', () => {
 
       enum UserRole {
         USER_ROLE_UNSPECIFIED = 0;
-        // Enum value USER_ROLE_ADMIN is deprecated: This role is deprecated
+        // Deprecation notice: This role is deprecated
         USER_ROLE_ADMIN = 1 [deprecated = true];
         USER_ROLE_USER = 2;
-        // Enum value USER_ROLE_GUEST is deprecated: This role is deprecated
+        // Deprecation notice: This role is deprecated
         USER_ROLE_GUEST = 3 [deprecated = true];
       }"
     `);
@@ -220,7 +220,7 @@ describe('SDL to Proto Directive', () => {
 
       enum UserRole {
         USER_ROLE_UNSPECIFIED = 0;
-        // Enum value USER_ROLE_ADMIN is deprecated: This role is deprecated
+        // Deprecation notice: This role is deprecated
         USER_ROLE_ADMIN = 1 [deprecated = true];
         USER_ROLE_USER = 2;
         USER_ROLE_GUEST = 3 [deprecated = true];
@@ -250,7 +250,7 @@ describe('SDL to Proto Directive', () => {
 
       message UserInput {
         string id = 1;
-        // Field name is deprecated: This field is deprecated
+        // Deprecation notice: This field is deprecated
         string name = 2 [deprecated = true];
       }"
     `);
@@ -342,12 +342,12 @@ describe('SDL to Proto Directive', () => {
 
       message UserInput {
         string id = 1;
-        // Field first_name is deprecated: Use fullName instead
+        // Deprecation notice: Use fullName instead
         string first_name = 2 [deprecated = true];
-        // Field last_name is deprecated: Use fullName instead
+        // Deprecation notice: Use fullName instead
         string last_name = 3 [deprecated = true];
         string full_name = 4;
-        // Field age is deprecated: This field will be removed
+        // Deprecation notice: This field will be removed
         google.protobuf.Int32Value age = 5 [deprecated = true];
         string email = 6;
       }"
@@ -386,7 +386,7 @@ describe('SDL to Proto Directive', () => {
       message AddressInput {
         string street = 1;
         string city = 2;
-        // Field zip_code is deprecated: Use postalCode instead
+        // Deprecation notice: Use postalCode instead
         string zip_code = 3 [deprecated = true];
         string postal_code = 4;
       }
@@ -395,7 +395,7 @@ describe('SDL to Proto Directive', () => {
         string id = 1;
         string name = 2;
         AddressInput address = 3;
-        // Field old_address is deprecated: This field is no longer needed
+        // Deprecation notice: This field is no longer needed
         AddressInput old_address = 4 [deprecated = true];
       }"
     `);
@@ -443,12 +443,12 @@ describe('SDL to Proto Directive', () => {
       message UserInput {
         string id = 1;
         string name = 2;
-        // Field role is deprecated: Use roles array instead
+        // Deprecation notice: Use roles array instead
         UserRole role = 3 [deprecated = true];
         repeated UserRole roles = 4;
-        // Field is_active is deprecated: Use status field instead
+        // Deprecation notice: Use status field instead
         bool is_active = 5 [deprecated = true];
-        // Field metadata is deprecated: This field is deprecated
+        // Deprecation notice: This field is deprecated
         google.protobuf.StringValue metadata = 6 [deprecated = true];
       }"
     `);
