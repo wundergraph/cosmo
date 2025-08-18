@@ -24,7 +24,6 @@ describe('SDL to Proto Directive', () => {
       service DefaultService {
       }
 
-
       message User {
         string id = 1;
         // Field first_name is deprecated: This field is deprecated
@@ -62,7 +61,6 @@ describe('SDL to Proto Directive', () => {
       // Service definition for DefaultService
       service DefaultService {
       }
-
 
       message Node {
         oneof instance {
@@ -108,7 +106,6 @@ describe('SDL to Proto Directive', () => {
       service DefaultService {
       }
 
-
       message Node {
         oneof instance {
         User user = 1;
@@ -153,7 +150,6 @@ describe('SDL to Proto Directive', () => {
       service DefaultService {
       }
 
-
       message Node {
         oneof instance {
         User user = 1;
@@ -190,7 +186,6 @@ describe('SDL to Proto Directive', () => {
       service DefaultService {
       }
 
-
       enum UserRole {
         USER_ROLE_UNSPECIFIED = 0;
         // Enum value USER_ROLE_ADMIN is deprecated: This role is deprecated
@@ -223,7 +218,6 @@ describe('SDL to Proto Directive', () => {
       service DefaultService {
       }
 
-
       enum UserRole {
         USER_ROLE_UNSPECIFIED = 0;
         // Enum value USER_ROLE_ADMIN is deprecated: This role is deprecated
@@ -254,7 +248,6 @@ describe('SDL to Proto Directive', () => {
       service DefaultService {
       }
 
-
       message UserInput {
         string id = 1;
         // Field name is deprecated: This field is deprecated
@@ -284,7 +277,6 @@ describe('SDL to Proto Directive', () => {
       service DefaultService {
       }
 
-
       message UserInput {
         string id = 1;
         string name = 2 [deprecated = true];
@@ -313,7 +305,6 @@ describe('SDL to Proto Directive', () => {
       // Service definition for DefaultService
       service DefaultService {
       }
-
 
       message UserInput {
         string id = 1;
@@ -348,7 +339,6 @@ describe('SDL to Proto Directive', () => {
       // Service definition for DefaultService
       service DefaultService {
       }
-
 
       message UserInput {
         string id = 1;
@@ -392,7 +382,6 @@ describe('SDL to Proto Directive', () => {
       // Service definition for DefaultService
       service DefaultService {
       }
-
 
       message AddressInput {
         string street = 1;
@@ -443,7 +432,6 @@ describe('SDL to Proto Directive', () => {
       // Service definition for DefaultService
       service DefaultService {
       }
-
 
       enum UserRole {
         USER_ROLE_UNSPECIFIED = 0;

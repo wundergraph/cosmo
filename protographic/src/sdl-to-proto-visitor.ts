@@ -463,7 +463,7 @@ export class GraphQLToProtoTextVisitor {
     }
 
     // Build the complete proto file
-    const protoContent: string[] = [];
+    let protoContent: string[] = [];
 
     // Add the header (syntax, package, imports, options)
     protoContent.push(...this.buildProtoHeader());
@@ -517,6 +517,15 @@ export class GraphQLToProtoTextVisitor {
       protoContent.push(messageDef);
     }
 
+    protoContent = this.trimEmptyLines(protoContent);
+    this.protoText = this.trimEmptyLines(this.protoText);
+
+    this.protoText.find
+
+    if (this.protoText.length > 0) {
+      protoContent.push('');
+    }
+
     // Add all processed types from protoText (populated by processMessageQueue)
     protoContent.push(...this.protoText);
 
@@ -524,6 +533,28 @@ export class GraphQLToProtoTextVisitor {
     this.generatedLockData = this.lockManager.getLockData();
 
     return protoContent.join('\n');
+  }
+
+  /**
+   * Trim empty lines from the beginning and end of the array
+   */
+  private trimEmptyLines(data: string[]): string[] {
+    // Find the first non-empty line index
+    const firstNonEmpty = data.findIndex(line => line.trim() !== '');
+    
+    // If no non-empty lines found, return empty array
+    if (firstNonEmpty === -1) {
+      return [];
+    }
+    
+    // Find the last non-empty line index by searching backwards
+    let lastNonEmpty = data.length - 1;
+    while (lastNonEmpty >= 0 && data[lastNonEmpty].trim() === '') {
+      lastNonEmpty--;
+    }
+    
+    // Return slice from first to last non-empty line (inclusive)
+    return data.slice(firstNonEmpty, lastNonEmpty + 1);
   }
 
   /**
