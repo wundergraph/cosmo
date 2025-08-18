@@ -52,7 +52,7 @@ func (e *ProviderNotDefinedError) Error() string {
 
 // BuildProvidersAndDataSources is a generic function that builds providers and data sources for the given
 // EventsConfiguration and DataSourceConfigurationWithMetadata
-func BuildProvidersAndDataSources(ctx context.Context, config config.EventsConfiguration, store metric.EventMetricStore, logger *zap.Logger, dsConfs []DataSourceConfigurationWithMetadata, hostName string, routerListenAddr string) ([]pubsub_datasource.Provider, []plan.DataSource, error) {
+func BuildProvidersAndDataSources(ctx context.Context, config config.EventsConfiguration, store metric.MessagingEventMetricStore, logger *zap.Logger, dsConfs []DataSourceConfigurationWithMetadata, hostName string, routerListenAddr string) ([]pubsub_datasource.Provider, []plan.DataSource, error) {
 	if store == nil {
 		store = metric.NewNoopEventMetricStore()
 	}
@@ -116,7 +116,7 @@ func build[P GetID, E GetEngineEventConfiguration](
 	builder pubsub_datasource.ProviderBuilder[P, E],
 	providersData []P,
 	dsConfs []dsConfAndEvents[E],
-	store metric.EventMetricStore,
+	store metric.MessagingEventMetricStore,
 ) ([]pubsub_datasource.Provider, []plan.DataSource, error) {
 	var pubSubProviders []pubsub_datasource.Provider
 	var outs []plan.DataSource
@@ -138,7 +138,7 @@ func build[P GetID, E GetEngineEventConfiguration](
 			continue
 		}
 		provider, err := builder.BuildProvider(providerData, pubsub_datasource.ProviderOpts{
-			EventMetricStore: store,
+			MessagingEventMetricStore: store,
 		})
 		if err != nil {
 			return nil, nil, err

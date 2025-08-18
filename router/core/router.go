@@ -2238,11 +2238,11 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			EngineStats: rmetric.EngineStatsConfig{
 				Subscription: cfg.Metrics.OTLP.EngineStats.Subscriptions,
 			},
-			Exporters:           openTelemetryExporters,
-			CircuitBreaker:      cfg.Metrics.OTLP.CircuitBreaker,
-			EventMetrics:        cfg.Metrics.OTLP.EventMetrics,
-			ExcludeMetrics:      cfg.Metrics.OTLP.ExcludeMetrics,
-			ExcludeMetricLabels: cfg.Metrics.OTLP.ExcludeMetricLabels,
+			Exporters:             openTelemetryExporters,
+			CircuitBreaker:        cfg.Metrics.OTLP.CircuitBreaker,
+			MessagingEventMetrics: cfg.Metrics.OTLP.MessagingEventMetrics,
+			ExcludeMetrics:        cfg.Metrics.OTLP.ExcludeMetrics,
+			ExcludeMetricLabels:   cfg.Metrics.OTLP.ExcludeMetricLabels,
 		},
 		Prometheus: rmetric.PrometheusConfig{
 			Enabled:         cfg.Metrics.Prometheus.Enabled,
@@ -2253,11 +2253,11 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			EngineStats: rmetric.EngineStatsConfig{
 				Subscription: cfg.Metrics.Prometheus.EngineStats.Subscriptions,
 			},
-			CircuitBreaker:      cfg.Metrics.Prometheus.CircuitBreaker,
-			ExcludeMetrics:      cfg.Metrics.Prometheus.ExcludeMetrics,
-			ExcludeMetricLabels: cfg.Metrics.Prometheus.ExcludeMetricLabels,
-			EventMetrics:        cfg.Metrics.Prometheus.EventMetrics,
-			ExcludeScopeInfo:    cfg.Metrics.Prometheus.ExcludeScopeInfo,
+			CircuitBreaker:        cfg.Metrics.Prometheus.CircuitBreaker,
+			ExcludeMetrics:        cfg.Metrics.Prometheus.ExcludeMetrics,
+			ExcludeMetricLabels:   cfg.Metrics.Prometheus.ExcludeMetricLabels,
+			MessagingEventMetrics: cfg.Metrics.Prometheus.MessagingEventMetrics,
+			ExcludeScopeInfo:      cfg.Metrics.Prometheus.ExcludeScopeInfo,
 			PromSchemaFieldUsage: rmetric.PrometheusSchemaFieldUsage{
 				Enabled:             cfg.Metrics.Prometheus.SchemaFieldUsage.Enabled,
 				IncludeOperationSha: cfg.Metrics.Prometheus.SchemaFieldUsage.IncludeOperationSha,

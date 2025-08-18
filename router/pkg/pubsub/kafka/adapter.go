@@ -21,6 +21,11 @@ var (
 	errClientClosed = errors.New("client closed")
 )
 
+const (
+	kafkaReceive = "receive"
+	kafkaProduce = "produce"
+)
+
 // Adapter defines the interface for Kafka adapter operations
 type Adapter interface {
 	Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error
@@ -35,17 +40,21 @@ type Adapter interface {
 // It uses a single write client to produce messages and a client per topic to consume messages.
 // Each client polls the Kafka topic for new records and updates the subscriptions with the new data.
 type ProviderAdapter struct {
-	ctx              context.Context
-	opts             []kgo.Opt
-	logger           *zap.Logger
-	writeClient      *kgo.Client
-	closeWg          sync.WaitGroup
-	cancel           context.CancelFunc
-	eventMetricStore metric.EventMetricStore
+	ctx                       context.Context
+	opts                      []kgo.Opt
+	logger                    *zap.Logger
+	writeClient               *kgo.Client
+	closeWg                   sync.WaitGroup
+	cancel                    context.CancelFunc
+	messagingEventMetricStore metric.MessagingEventMetricStore
+}
+
+type PollerOpts struct {
+	providerId string
 }
 
 // topicPoller polls the Kafka topic for new records and calls the updateTriggers function.
-func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, updater resolve.SubscriptionUpdater, providerId string) error {
+func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, updater resolve.SubscriptionUpdater, pollerOpts PollerOpts) error {
 	for {
 		select {
 		case <-p.ctx.Done(): // Close the poller if the application context was canceled
@@ -91,7 +100,12 @@ func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, u
 				r := iter.Next()
 
 				p.logger.Debug("subscription update", zap.String("topic", r.Topic), zap.ByteString("data", r.Value))
-				p.eventMetricStore.Consume(p.ctx, metric.MessagingEvent{OperationName: "receive", MessagingSystem: metric.ProviderTypeKafka, DestinationName: r.Topic})
+				p.messagingEventMetricStore.Consume(p.ctx, metric.MessagingEvent{
+					ProviderId:      pollerOpts.providerId,
+					OperationName:   kafkaReceive,
+					MessagingSystem: metric.ProviderTypeKafka,
+					DestinationName: r.Topic,
+				})
 				updater.Update(r.Value)
 			}
 		}
@@ -132,7 +146,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 
 		defer p.closeWg.Done()
 
-		err := p.topicPoller(ctx, client, updater, event.ProviderID)
+		err := p.topicPoller(ctx, client, updater, PollerOpts{providerId: event.ProviderID})
 		if err != nil {
 			if errors.Is(err, errClientClosed) || errors.Is(err, context.Canceled) {
 				log.Debug("poller canceled", zap.Error(err))
@@ -183,11 +197,22 @@ func (p *ProviderAdapter) Publish(ctx context.Context, event PublishEventConfigu
 	if pErr != nil {
 		log.Error("publish error", zap.Error(pErr))
 		// failure emission: include error.type generic
-		p.eventMetricStore.Produce(ctx, metric.MessagingEvent{OperationName: "produce", MessagingSystem: metric.ProviderTypeKafka, ErrorType: "error", DestinationName: event.Topic})
+		p.messagingEventMetricStore.Produce(ctx, metric.MessagingEvent{
+			ProviderId:      event.ProviderID,
+			OperationName:   kafkaProduce,
+			MessagingSystem: metric.ProviderTypeKafka,
+			Error:           true,
+			DestinationName: event.Topic,
+		})
 		return datasource.NewError(fmt.Sprintf("error publishing to Kafka topic %s", event.Topic), pErr)
 	}
 
-	p.eventMetricStore.Produce(ctx, metric.MessagingEvent{OperationName: "produce", MessagingSystem: metric.ProviderTypeKafka, DestinationName: event.Topic})
+	p.messagingEventMetricStore.Produce(ctx, metric.MessagingEvent{
+		ProviderId:      event.ProviderID,
+		OperationName:   kafkaProduce,
+		MessagingSystem: metric.ProviderTypeKafka,
+		DestinationName: event.Topic,
+	})
 	return nil
 }
 
@@ -235,19 +260,19 @@ func NewProviderAdapter(ctx context.Context, logger *zap.Logger, opts []kgo.Opt,
 		logger = zap.NewNop()
 	}
 
-	var store metric.EventMetricStore
-	if providerOpts.EventMetricStore != nil {
-		store = providerOpts.EventMetricStore
+	var store metric.MessagingEventMetricStore
+	if providerOpts.MessagingEventMetricStore != nil {
+		store = providerOpts.MessagingEventMetricStore
 	} else {
 		store = metric.NewNoopEventMetricStore()
 	}
 
 	return &ProviderAdapter{
-		ctx:              ctx,
-		logger:           logger.With(zap.String("pubsub", "kafka")),
-		opts:             opts,
-		closeWg:          sync.WaitGroup{},
-		cancel:           cancel,
-		eventMetricStore: store,
+		ctx:                       ctx,
+		logger:                    logger.With(zap.String("pubsub", "kafka")),
+		opts:                      opts,
+		closeWg:                   sync.WaitGroup{},
+		cancel:                    cancel,
+		messagingEventMetricStore: store,
 	}, nil
 }

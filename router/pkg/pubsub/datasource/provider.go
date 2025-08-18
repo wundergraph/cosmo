@@ -34,5 +34,5 @@ type ProviderBuilder[P, E any] interface {
 }
 
 type ProviderOpts struct {
-	EventMetricStore metric.EventMetricStore
+	MessagingEventMetricStore metric.MessagingEventMetricStore
 }

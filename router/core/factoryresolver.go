@@ -208,11 +208,11 @@ func (l *Loader) LoadInternedString(engineConfig *nodev1.EngineConfiguration, st
 }
 
 type RouterEngineConfiguration struct {
-	Execution                config.EngineExecutionConfiguration
-	Headers                  *config.HeaderRules
-	Events                   config.EventsConfiguration
-	SubgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
-	EventMetricStore         rmetric.EventMetricStore
+	Execution                 config.EngineExecutionConfiguration
+	Headers                   *config.HeaderRules
+	Events                    config.EventsConfiguration
+	SubgraphErrorPropagation  config.SubgraphErrorPropagationConfiguration
+	MessagingEventMetricStore rmetric.MessagingEventMetricStore
 }
 
 func mapProtoFilterToPlanFilter(input *nodev1.SubscriptionFilterCondition, output *plan.SubscriptionFilterCondition) *plan.SubscriptionFilterCondition {
@@ -472,7 +472,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 	factoryProviders, factoryDataSources, err := pubsub.BuildProvidersAndDataSources(
 		l.ctx,
 		routerEngineConfig.Events,
-		routerEngineConfig.EventMetricStore,
+		routerEngineConfig.MessagingEventMetricStore,
 		l.logger,
 		pubSubDS,
 		l.resolver.InstanceData().HostName,

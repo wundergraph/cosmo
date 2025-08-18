@@ -9,29 +9,29 @@ import (
 )
 
 const (
-	cosmoRouterEventPromMeterName    = "cosmo.router.event.prometheus"
+	cosmoRouterEventPromMeterName    = "cosmo.router.messaging.event.prometheus"
 	cosmoRouterEventPromMeterVersion = "0.0.1"
 )
 
-type promEventMetrics struct {
+type promMessagingEventMetrics struct {
 	instruments   *eventInstruments
 	meterProvider *metric.MeterProvider
 	logger        *zap.Logger
 	meter         otelmetric.Meter
 }
 
-func newPromEventMetrics(logger *zap.Logger, meterProvider *metric.MeterProvider) (*promEventMetrics, error) {
+func newPromMessagingEventMetrics(logger *zap.Logger, meterProvider *metric.MeterProvider) (*promMessagingEventMetrics, error) {
 	meter := meterProvider.Meter(
 		cosmoRouterEventPromMeterName,
 		otelmetric.WithInstrumentationVersion(cosmoRouterEventPromMeterVersion),
 	)
 
-	instruments, err := newEventInstruments(meter)
+	instruments, err := newMessagingEventInstruments(meter)
 	if err != nil {
 		return nil, err
 	}
 
-	return &promEventMetrics{
+	return &promMessagingEventMetrics{
 		instruments:   instruments,
 		meterProvider: meterProvider,
 		logger:        logger,
@@ -39,13 +39,14 @@ func newPromEventMetrics(logger *zap.Logger, meterProvider *metric.MeterProvider
 	}, nil
 }
 
-// Unified methods
-func (p *promEventMetrics) Produce(ctx context.Context, opts ...otelmetric.AddOption) {
+func (p *promMessagingEventMetrics) Produce(ctx context.Context, opts ...otelmetric.AddOption) {
 	p.instruments.producedMessages.Add(ctx, 1, opts...)
 }
 
-func (p *promEventMetrics) Consume(ctx context.Context, opts ...otelmetric.AddOption) {
+func (p *promMessagingEventMetrics) Consume(ctx context.Context, opts ...otelmetric.AddOption) {
 	p.instruments.consumedMessages.Add(ctx, 1, opts...)
 }
 
-func (p *promEventMetrics) Flush(ctx context.Context) error { return p.meterProvider.ForceFlush(ctx) }
+func (p *promMessagingEventMetrics) Flush(ctx context.Context) error {
+	return p.meterProvider.ForceFlush(ctx)
+}

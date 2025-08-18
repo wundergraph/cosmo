@@ -71,7 +71,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 				destination, _ := attrs.Value(otelattrs.MessagingDestinationName)
 				require.True(t, strings.HasSuffix(destination.AsString(), "employeeUpdated"))
 
-				_, hasErr := attrs.Value(otelattrs.MessagingErrorType)
+				_, hasErr := attrs.Value(otelattrs.MessagingError)
 				require.False(t, hasErr)
 
 				require.Equal(t, int64(2), sum.DataPoints[0].Value)
@@ -144,7 +144,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 					destination, _ := attrs.Value(otelattrs.MessagingDestinationName)
 					require.True(t, strings.HasSuffix(destination.AsString(), "employeeUpdated"))
 
-					_, hasErr := attrs.Value(otelattrs.MessagingErrorType)
+					_, hasErr := attrs.Value(otelattrs.MessagingError)
 					require.False(t, hasErr)
 
 					require.Equal(t, int64(1), sum.DataPoints[0].Value)
@@ -199,7 +199,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 				destination, _ := attrs.Value(otelattrs.MessagingDestinationName)
 				require.True(t, strings.HasSuffix(destination.AsString(), "employeeUpdatedMyNats.12"))
 
-				_, hasErr := attrs.Value(otelattrs.MessagingErrorType)
+				_, hasErr := attrs.Value(otelattrs.MessagingError)
 				require.False(t, hasErr)
 
 				require.Equal(t, int64(2), sum.DataPoints[0].Value)
@@ -247,7 +247,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 				destination, _ := attrs.Value(otelattrs.MessagingDestinationName)
 				require.True(t, strings.HasSuffix(destination.AsString(), "getEmployeeMyNats.12"))
 
-				_, hasErr := attrs.Value(otelattrs.MessagingErrorType)
+				_, hasErr := attrs.Value(otelattrs.MessagingError)
 				require.False(t, hasErr)
 
 				require.Equal(t, int64(1), sum.DataPoints[0].Value)
@@ -328,7 +328,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 					destination, _ := attrs.Value(otelattrs.MessagingDestinationName)
 					require.True(t, strings.HasSuffix(destination.AsString(), "employeeUpdated.3"))
 
-					_, hasErr := attrs.Value(otelattrs.MessagingErrorType)
+					_, hasErr := attrs.Value(otelattrs.MessagingError)
 					require.False(t, hasErr)
 
 					require.Equal(t, int64(1), sum.DataPoints[0].Value)
@@ -386,7 +386,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 				destination, _ := attrs.Value(otelattrs.MessagingDestinationName)
 				require.True(t, strings.HasSuffix(destination.AsString(), "employeeUpdatedMyRedis"))
 
-				_, hasErr := attrs.Value(otelattrs.MessagingErrorType)
+				_, hasErr := attrs.Value(otelattrs.MessagingError)
 				require.False(t, hasErr)
 
 				require.Equal(t, int64(2), sum.DataPoints[0].Value)
@@ -458,7 +458,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 					destination, _ := attrs.Value(otelattrs.MessagingDestinationName)
 					require.True(t, strings.HasSuffix(destination.AsString(), "employeeUpdatedMyRedis"))
 
-					_, hasErr := attrs.Value(otelattrs.MessagingErrorType)
+					_, hasErr := attrs.Value(otelattrs.MessagingError)
 					require.False(t, hasErr)
 
 					require.Equal(t, int64(1), sum.DataPoints[0].Value)

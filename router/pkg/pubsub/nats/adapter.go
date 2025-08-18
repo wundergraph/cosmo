@@ -18,6 +18,12 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	natsRequest = "request"
+	natsPublish = "publish"
+	natsReceive = "receive"
+)
+
 // Adapter defines the methods that a NATS adapter should implement
 type Adapter interface {
 	// Subscribe subscribes to the given events and sends updates to the updater
@@ -34,17 +40,17 @@ type Adapter interface {
 
 // ProviderAdapter implements the AdapterInterface for NATS pub/sub
 type ProviderAdapter struct {
-	ctx              context.Context
-	client           *nats.Conn
-	js               jetstream.JetStream
-	logger           *zap.Logger
-	closeWg          sync.WaitGroup
-	hostName         string
-	routerListenAddr string
-	url              string
-	opts             []nats.Option
-	flushTimeout     time.Duration
-	eventMetricStore metric.EventMetricStore
+	ctx                       context.Context
+	client                    *nats.Conn
+	js                        jetstream.JetStream
+	logger                    *zap.Logger
+	closeWg                   sync.WaitGroup
+	hostName                  string
+	routerListenAddr          string
+	url                       string
+	opts                      []nats.Option
+	flushTimeout              time.Duration
+	messagingEventMetricStore metric.MessagingEventMetricStore
 }
 
 // getInstanceIdentifier returns an identifier for the current instance.
@@ -135,8 +141,9 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 					for msg := range msgBatch.Messages() {
 						log.Debug("subscription update", zap.String("message_subject", msg.Subject()), zap.ByteString("data", msg.Data()))
 
-						p.eventMetricStore.Consume(p.ctx, metric.MessagingEvent{
-							OperationName:   "receive",
+						p.messagingEventMetricStore.Consume(p.ctx, metric.MessagingEvent{
+							ProviderId:      event.ProviderID,
+							OperationName:   natsReceive,
 							MessagingSystem: metric.ProviderTypeNats,
 							DestinationName: msg.Subject(),
 						})
@@ -177,7 +184,12 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 			select {
 			case msg := <-msgChan:
 				log.Debug("subscription update", zap.String("message_subject", msg.Subject), zap.ByteString("data", msg.Data))
-				p.eventMetricStore.Consume(p.ctx, metric.MessagingEvent{OperationName: "receive", MessagingSystem: metric.ProviderTypeNats, DestinationName: msg.Subject})
+				p.messagingEventMetricStore.Consume(p.ctx, metric.MessagingEvent{
+					ProviderId:      event.ProviderID,
+					OperationName:   natsReceive,
+					MessagingSystem: metric.ProviderTypeNats,
+					DestinationName: msg.Subject,
+				})
 				updater.Update(msg.Data)
 			case <-p.ctx.Done():
 				// When the application context is done, we stop the subscriptions
@@ -222,10 +234,21 @@ func (p *ProviderAdapter) Publish(ctx context.Context, event PublishAndRequestEv
 	err := p.client.Publish(event.Subject, event.Data)
 	if err != nil {
 		log.Error("publish error", zap.Error(err))
-		p.eventMetricStore.Produce(ctx, metric.MessagingEvent{OperationName: "publish", MessagingSystem: metric.ProviderTypeNats, ErrorType: "error", DestinationName: event.Subject})
+		p.messagingEventMetricStore.Produce(ctx, metric.MessagingEvent{
+			ProviderId:      event.ProviderID,
+			OperationName:   natsPublish,
+			MessagingSystem: metric.ProviderTypeNats,
+			Error:           true,
+			DestinationName: event.Subject,
+		})
 		return datasource.NewError(fmt.Sprintf("error publishing to NATS subject %s", event.Subject), err)
 	} else {
-		p.eventMetricStore.Produce(ctx, metric.MessagingEvent{OperationName: "publish", MessagingSystem: metric.ProviderTypeNats, DestinationName: event.Subject})
+		p.messagingEventMetricStore.Produce(ctx, metric.MessagingEvent{
+			ProviderId:      event.ProviderID,
+			OperationName:   natsPublish,
+			MessagingSystem: metric.ProviderTypeNats,
+			DestinationName: event.Subject,
+		})
 	}
 
 	return nil
@@ -247,11 +270,22 @@ func (p *ProviderAdapter) Request(ctx context.Context, event PublishAndRequestEv
 	msg, err := p.client.RequestWithContext(ctx, event.Subject, event.Data)
 	if err != nil {
 		log.Error("request error", zap.Error(err))
-		p.eventMetricStore.Produce(ctx, metric.MessagingEvent{OperationName: "request", MessagingSystem: metric.ProviderTypeNats, ErrorType: "error", DestinationName: event.Subject})
+		p.messagingEventMetricStore.Produce(ctx, metric.MessagingEvent{
+			ProviderId:      event.ProviderID,
+			OperationName:   natsRequest,
+			MessagingSystem: metric.ProviderTypeNats,
+			Error:           true,
+			DestinationName: event.Subject,
+		})
 		return datasource.NewError(fmt.Sprintf("error requesting from NATS subject %s", event.Subject), err)
 	}
 
-	p.eventMetricStore.Produce(ctx, metric.MessagingEvent{OperationName: "request", MessagingSystem: metric.ProviderTypeNats, DestinationName: event.Subject})
+	p.messagingEventMetricStore.Produce(ctx, metric.MessagingEvent{
+		ProviderId:      event.ProviderID,
+		OperationName:   natsRequest,
+		MessagingSystem: metric.ProviderTypeNats,
+		DestinationName: event.Subject,
+	})
 
 	// We don't collect metrics on err here as it's an error related to the writer
 	_, err = w.Write(msg.Data)
@@ -325,14 +359,14 @@ func NewAdapter(ctx context.Context, logger *zap.Logger, url string, opts []nats
 	}
 
 	return &ProviderAdapter{
-		ctx:              ctx,
-		logger:           logger.With(zap.String("pubsub", "nats")),
-		closeWg:          sync.WaitGroup{},
-		hostName:         hostName,
-		routerListenAddr: routerListenAddr,
-		url:              url,
-		opts:             opts,
-		flushTimeout:     10 * time.Second,
-		eventMetricStore: providerOpts.EventMetricStore,
+		ctx:                       ctx,
+		logger:                    logger.With(zap.String("pubsub", "nats")),
+		closeWg:                   sync.WaitGroup{},
+		hostName:                  hostName,
+		routerListenAddr:          routerListenAddr,
+		url:                       url,
+		opts:                      opts,
+		flushTimeout:              10 * time.Second,
+		messagingEventMetricStore: providerOpts.MessagingEventMetricStore,
 	}, nil
 }

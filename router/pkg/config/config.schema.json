@@ -1066,10 +1066,10 @@
                   "default": false,
                   "description": "Enable the collection of connection stats. The default value is false."
                 },
-                "event_metrics": {
+                "messaging_event_metrics": {
                   "type": "boolean",
                   "default": false,
-                  "description": "Enable the collection of event metrics. The default value is false."
+                  "description": "Enable the collection of messaging event metrics. The default value is false."
                 },
                 "circuit_breaker": {
                   "type": "boolean",

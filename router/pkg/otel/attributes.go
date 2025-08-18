@@ -62,10 +62,11 @@ const (
 
 // Messaging metrics attributes
 const (
-	MessagingOperationName   = attribute.Key("messaging.operation.name")
-	MessagingSystem          = attribute.Key("messaging.system")
-	MessagingErrorType       = attribute.Key("error.type")
-	MessagingDestinationName = attribute.Key("messaging.destination.name")
+	MessagingOperationName   = attribute.Key("wg.messaging.operation.name")
+	MessagingSystem          = attribute.Key("wg.messaging.system")
+	MessagingError           = attribute.Key("wg.messaging.error")
+	MessagingDestinationName = attribute.Key("wg.messaging.destination.name")
+	ProviderId               = attribute.Key("wg.provider.id")
 )
 
 const (

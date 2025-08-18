@@ -9,29 +9,29 @@ import (
 )
 
 const (
-	cosmoRouterEventMeterName    = "cosmo.router.event"
+	cosmoRouterEventMeterName    = "cosmo.router.messaging.event"
 	cosmoRouterEventMeterVersion = "0.0.1"
 )
 
-type otlpEventMetrics struct {
+type otlpMessagingEventMetrics struct {
 	instruments   *eventInstruments
 	meterProvider *metric.MeterProvider
 	logger        *zap.Logger
 	meter         otelmetric.Meter
 }
 
-func newOtlpEventMetrics(logger *zap.Logger, meterProvider *metric.MeterProvider) (*otlpEventMetrics, error) {
+func newOtlpMessagingEventMetrics(logger *zap.Logger, meterProvider *metric.MeterProvider) (*otlpMessagingEventMetrics, error) {
 	meter := meterProvider.Meter(
 		cosmoRouterEventMeterName,
 		otelmetric.WithInstrumentationVersion(cosmoRouterEventMeterVersion),
 	)
 
-	instruments, err := newEventInstruments(meter)
+	instruments, err := newMessagingEventInstruments(meter)
 	if err != nil {
 		return nil, err
 	}
 
-	return &otlpEventMetrics{
+	return &otlpMessagingEventMetrics{
 		instruments:   instruments,
 		meterProvider: meterProvider,
 		logger:        logger,
@@ -39,15 +39,14 @@ func newOtlpEventMetrics(logger *zap.Logger, meterProvider *metric.MeterProvider
 	}, nil
 }
 
-// Unified methods
-func (o *otlpEventMetrics) Produce(ctx context.Context, opts ...otelmetric.AddOption) {
+func (o *otlpMessagingEventMetrics) Produce(ctx context.Context, opts ...otelmetric.AddOption) {
 	o.instruments.producedMessages.Add(ctx, 1, opts...)
 }
 
-func (o *otlpEventMetrics) Consume(ctx context.Context, opts ...otelmetric.AddOption) {
+func (o *otlpMessagingEventMetrics) Consume(ctx context.Context, opts ...otelmetric.AddOption) {
 	o.instruments.consumedMessages.Add(ctx, 1, opts...)
 }
 
-func (o *otlpEventMetrics) Flush(ctx context.Context) error {
+func (o *otlpMessagingEventMetrics) Flush(ctx context.Context) error {
 	return o.meterProvider.ForceFlush(ctx)
 }
