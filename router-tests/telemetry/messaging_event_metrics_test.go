@@ -62,20 +62,20 @@ func TestFlakyEventMetrics(t *testing.T) {
 
 				attrs := sum.DataPoints[0].Attributes
 
-				operation, _ := attrs.Value(otelattrs.MessagingOperationName)
+				operation, _ := attrs.Value(otelattrs.WgMessagingOperationName)
 				require.Equal(t, "produce", operation.AsString())
 
-				system, _ := attrs.Value(otelattrs.MessagingSystem)
+				system, _ := attrs.Value(otelattrs.WgMessagingSystem)
 				require.Equal(t, "kafka", system.AsString())
 
-				destination, _ := attrs.Value(otelattrs.MessagingDestinationName)
+				destination, _ := attrs.Value(otelattrs.WgMessagingDestinationName)
 				require.True(t, strings.HasSuffix(destination.AsString(), "employeeUpdated"))
 
-				provider, hasProvider := attrs.Value(otelattrs.ProviderId)
+				provider, hasProvider := attrs.Value(otelattrs.WgProviderId)
 				require.True(t, hasProvider)
 				require.Equal(t, "my-kafka", provider.AsString())
 
-				errVal, hasErr := attrs.Value(otelattrs.MessagingError)
+				errVal, hasErr := attrs.Value(otelattrs.WgMessagingError)
 				require.True(t, hasErr)
 				require.False(t, errVal.AsBool())
 
@@ -140,20 +140,20 @@ func TestFlakyEventMetrics(t *testing.T) {
 					require.Len(t, sum.DataPoints, 1)
 					attrs := sum.DataPoints[0].Attributes
 
-					operation, _ := attrs.Value(otelattrs.MessagingOperationName)
+					operation, _ := attrs.Value(otelattrs.WgMessagingOperationName)
 					require.Equal(t, "receive", operation.AsString())
 
-					system, _ := attrs.Value(otelattrs.MessagingSystem)
+					system, _ := attrs.Value(otelattrs.WgMessagingSystem)
 					require.Equal(t, "kafka", system.AsString())
 
-					destination, _ := attrs.Value(otelattrs.MessagingDestinationName)
+					destination, _ := attrs.Value(otelattrs.WgMessagingDestinationName)
 					require.True(t, strings.HasSuffix(destination.AsString(), "employeeUpdated"))
 
-					provider, hasProvider := attrs.Value(otelattrs.ProviderId)
+					provider, hasProvider := attrs.Value(otelattrs.WgProviderId)
 					require.True(t, hasProvider)
 					require.Equal(t, "my-kafka", provider.AsString())
 
-					errVal, hasErr := attrs.Value(otelattrs.MessagingError)
+					errVal, hasErr := attrs.Value(otelattrs.WgMessagingError)
 					require.True(t, hasErr)
 					require.False(t, errVal.AsBool())
 
@@ -200,20 +200,20 @@ func TestFlakyEventMetrics(t *testing.T) {
 				require.Len(t, sum.DataPoints, 1)
 				attrs := sum.DataPoints[0].Attributes
 
-				operation, _ := attrs.Value(otelattrs.MessagingOperationName)
+				operation, _ := attrs.Value(otelattrs.WgMessagingOperationName)
 				require.Equal(t, "publish", operation.AsString())
 
-				system, _ := attrs.Value(otelattrs.MessagingSystem)
+				system, _ := attrs.Value(otelattrs.WgMessagingSystem)
 				require.Equal(t, "nats", system.AsString())
 
-				destination, _ := attrs.Value(otelattrs.MessagingDestinationName)
+				destination, _ := attrs.Value(otelattrs.WgMessagingDestinationName)
 				require.True(t, strings.HasSuffix(destination.AsString(), "employeeUpdatedMyNats.12"))
 
-				provider, hasProvider := attrs.Value(otelattrs.ProviderId)
+				provider, hasProvider := attrs.Value(otelattrs.WgProviderId)
 				require.True(t, hasProvider)
 				require.Equal(t, "my-nats", provider.AsString())
 
-				errVal, hasErr := attrs.Value(otelattrs.MessagingError)
+				errVal, hasErr := attrs.Value(otelattrs.WgMessagingError)
 				require.True(t, hasErr)
 				require.False(t, errVal.AsBool())
 
@@ -253,20 +253,20 @@ func TestFlakyEventMetrics(t *testing.T) {
 				require.Len(t, sum.DataPoints, 1)
 				attrs := sum.DataPoints[0].Attributes
 
-				operation, _ := attrs.Value(otelattrs.MessagingOperationName)
+				operation, _ := attrs.Value(otelattrs.WgMessagingOperationName)
 				require.Equal(t, "request", operation.AsString())
 
-				system, _ := attrs.Value(otelattrs.MessagingSystem)
+				system, _ := attrs.Value(otelattrs.WgMessagingSystem)
 				require.Equal(t, "nats", system.AsString())
 
-				destination, _ := attrs.Value(otelattrs.MessagingDestinationName)
+				destination, _ := attrs.Value(otelattrs.WgMessagingDestinationName)
 				require.True(t, strings.HasSuffix(destination.AsString(), "getEmployeeMyNats.12"))
 
-				provider, hasProvider := attrs.Value(otelattrs.ProviderId)
+				provider, hasProvider := attrs.Value(otelattrs.WgProviderId)
 				require.True(t, hasProvider)
 				require.Equal(t, "my-nats", provider.AsString())
 
-				errVal, hasErr := attrs.Value(otelattrs.MessagingError)
+				errVal, hasErr := attrs.Value(otelattrs.WgMessagingError)
 				require.True(t, hasErr)
 				require.False(t, errVal.AsBool())
 
@@ -339,20 +339,20 @@ func TestFlakyEventMetrics(t *testing.T) {
 					require.Len(t, sum.DataPoints, 1)
 					attrs := sum.DataPoints[0].Attributes
 
-					operation, _ := attrs.Value(otelattrs.MessagingOperationName)
+					operation, _ := attrs.Value(otelattrs.WgMessagingOperationName)
 					require.Equal(t, "receive", operation.AsString())
 
-					system, _ := attrs.Value(otelattrs.MessagingSystem)
+					system, _ := attrs.Value(otelattrs.WgMessagingSystem)
 					require.Equal(t, "nats", system.AsString())
 
-					destination, _ := attrs.Value(otelattrs.MessagingDestinationName)
+					destination, _ := attrs.Value(otelattrs.WgMessagingDestinationName)
 					require.True(t, strings.HasSuffix(destination.AsString(), "employeeUpdated.3"))
 
-					provider, hasProvider := attrs.Value(otelattrs.ProviderId)
+					provider, hasProvider := attrs.Value(otelattrs.WgProviderId)
 					require.True(t, hasProvider)
 					require.Equal(t, "default", provider.AsString())
 
-					errVal, hasErr := attrs.Value(otelattrs.MessagingError)
+					errVal, hasErr := attrs.Value(otelattrs.WgMessagingError)
 					require.True(t, hasErr)
 					require.False(t, errVal.AsBool())
 
@@ -402,20 +402,20 @@ func TestFlakyEventMetrics(t *testing.T) {
 				require.Len(t, sum.DataPoints, 1)
 				attrs := sum.DataPoints[0].Attributes
 
-				operation, _ := attrs.Value(otelattrs.MessagingOperationName)
+				operation, _ := attrs.Value(otelattrs.WgMessagingOperationName)
 				require.Equal(t, "publish", operation.AsString())
 
-				system, _ := attrs.Value(otelattrs.MessagingSystem)
+				system, _ := attrs.Value(otelattrs.WgMessagingSystem)
 				require.Equal(t, "redis", system.AsString())
 
-				destination, _ := attrs.Value(otelattrs.MessagingDestinationName)
+				destination, _ := attrs.Value(otelattrs.WgMessagingDestinationName)
 				require.True(t, strings.HasSuffix(destination.AsString(), "employeeUpdatedMyRedis"))
 
-				provider, hasProvider := attrs.Value(otelattrs.ProviderId)
+				provider, hasProvider := attrs.Value(otelattrs.WgProviderId)
 				require.True(t, hasProvider)
 				require.Equal(t, "my-redis", provider.AsString())
 
-				errVal, hasErr := attrs.Value(otelattrs.MessagingError)
+				errVal, hasErr := attrs.Value(otelattrs.WgMessagingError)
 				require.True(t, hasErr)
 				require.False(t, errVal.AsBool())
 
@@ -479,20 +479,20 @@ func TestFlakyEventMetrics(t *testing.T) {
 					require.Len(t, sum.DataPoints, 1)
 					attrs := sum.DataPoints[0].Attributes
 
-					operation, _ := attrs.Value(otelattrs.MessagingOperationName)
+					operation, _ := attrs.Value(otelattrs.WgMessagingOperationName)
 					require.Equal(t, "receive", operation.AsString())
 
-					system, _ := attrs.Value(otelattrs.MessagingSystem)
+					system, _ := attrs.Value(otelattrs.WgMessagingSystem)
 					require.Equal(t, "redis", system.AsString())
 
-					destination, _ := attrs.Value(otelattrs.MessagingDestinationName)
+					destination, _ := attrs.Value(otelattrs.WgMessagingDestinationName)
 					require.True(t, strings.HasSuffix(destination.AsString(), "employeeUpdatedMyRedis"))
 
-					provider, hasProvider := attrs.Value(otelattrs.ProviderId)
+					provider, hasProvider := attrs.Value(otelattrs.WgProviderId)
 					require.True(t, hasProvider)
 					require.Equal(t, "my-redis", provider.AsString())
 
-					errVal, hasErr := attrs.Value(otelattrs.MessagingError)
+					errVal, hasErr := attrs.Value(otelattrs.WgMessagingError)
 					require.True(t, hasErr)
 					require.False(t, errVal.AsBool())
 

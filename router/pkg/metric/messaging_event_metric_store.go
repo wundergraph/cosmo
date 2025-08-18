@@ -87,15 +87,15 @@ func (e *MessagingEventMetrics) withAttrs(attrs ...attribute.KeyValue) otelmetri
 
 func (e *MessagingEventMetrics) Produce(ctx context.Context, event MessagingEvent) {
 	attrs := []attribute.KeyValue{
-		otel.MessagingOperationName.String(event.OperationName),
-		otel.MessagingSystem.String(string(event.MessagingSystem)),
-		otel.MessagingError.Bool(event.Error),
+		otel.WgMessagingOperationName.String(event.OperationName),
+		otel.WgMessagingSystem.String(string(event.MessagingSystem)),
+		otel.WgMessagingError.Bool(event.Error),
 	}
 	if event.ProviderId != "" {
-		attrs = append(attrs, otel.ProviderId.String(event.ProviderId))
+		attrs = append(attrs, otel.WgProviderId.String(event.ProviderId))
 	}
 	if event.DestinationName != "" {
-		attrs = append(attrs, otel.MessagingDestinationName.String(event.DestinationName))
+		attrs = append(attrs, otel.WgMessagingDestinationName.String(event.DestinationName))
 	}
 	opt := e.withAttrs(attrs...)
 
@@ -106,15 +106,15 @@ func (e *MessagingEventMetrics) Produce(ctx context.Context, event MessagingEven
 
 func (e *MessagingEventMetrics) Consume(ctx context.Context, event MessagingEvent) {
 	attrs := []attribute.KeyValue{
-		otel.MessagingOperationName.String(event.OperationName),
-		otel.MessagingSystem.String(string(event.MessagingSystem)),
-		otel.MessagingError.Bool(event.Error),
+		otel.WgMessagingOperationName.String(event.OperationName),
+		otel.WgMessagingSystem.String(string(event.MessagingSystem)),
+		otel.WgMessagingError.Bool(event.Error),
 	}
 	if event.ProviderId != "" {
-		attrs = append(attrs, otel.ProviderId.String(event.ProviderId))
+		attrs = append(attrs, otel.WgProviderId.String(event.ProviderId))
 	}
 	if event.DestinationName != "" {
-		attrs = append(attrs, otel.MessagingDestinationName.String(event.DestinationName))
+		attrs = append(attrs, otel.WgMessagingDestinationName.String(event.DestinationName))
 	}
 
 	opt := e.withAttrs(attrs...)
