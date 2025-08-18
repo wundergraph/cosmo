@@ -271,11 +271,8 @@ func TestFlakyEventMetrics(t *testing.T) {
 
 				xEnv.WaitForSubscriptionCount(1, WaitTimeout)
 
-				// Send a mutation to trigger the first subscription
-				resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-					Query: `mutation { updateAvailability(employeeID: 3, isAvailable: true) { id } }`,
-				})
-				require.JSONEq(t, `{"data":{"updateAvailability":{"id":3}}}`, resOne.Body)
+				err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename":"Employee"}`))
+				require.NoError(t, err)
 
 				err = xEnv.NatsConnectionDefault.Flush()
 				require.NoError(t, err)
