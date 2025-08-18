@@ -86,6 +86,7 @@ access_logs:
           expression: "request.error ?? 'success'"
     ignore_query_params_list:
       - variables
+      - anothervalue
   subgraphs:
     enabled: true
     fields:

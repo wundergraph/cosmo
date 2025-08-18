@@ -198,7 +198,9 @@
     },
     "Router": {
       "Fields": null,
-      "IgnoreQueryParamsList": null
+      "IgnoreQueryParamsList": [
+        "variables"
+      ]
     },
     "Subgraphs": {
       "Enabled": false,
