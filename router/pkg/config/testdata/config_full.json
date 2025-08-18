@@ -417,6 +417,10 @@
             "Expression": "request.error ?? 'success'"
           }
         }
+      ],
+      "IgnoreQueryParamsList": [
+        "variables",
+        "anothervalue"
       ]
     },
     "Subgraphs": {

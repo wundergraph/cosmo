@@ -336,6 +336,7 @@ type Config struct {
 	EnableRedisCluster                 bool
 	Plugins                            PluginConfig
 	EnableGRPC                         bool
+	IgnoreQueryParamsList              []string
 }
 
 type PluginConfig struct {
@@ -1392,10 +1393,11 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		core.WithDisableUsageTracking(),
 		core.WithLogger(testConfig.Logger),
 		core.WithAccessLogs(&core.AccessLogsConfig{
-			Logger:             testConfig.AccessLogger,
-			Attributes:         testConfig.AccessLogFields,
-			SubgraphEnabled:    testConfig.SubgraphAccessLogsEnabled,
-			SubgraphAttributes: testConfig.SubgraphAccessLogFields,
+			Logger:                testConfig.AccessLogger,
+			Attributes:            testConfig.AccessLogFields,
+			IgnoreQueryParamsList: testConfig.IgnoreQueryParamsList,
+			SubgraphEnabled:       testConfig.SubgraphAccessLogsEnabled,
+			SubgraphAttributes:    testConfig.SubgraphAccessLogFields,
 		}),
 		core.WithGraphApiToken(graphApiToken),
 		core.WithDevelopmentMode(true),

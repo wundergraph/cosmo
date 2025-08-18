@@ -1077,6 +1077,7 @@ func (s *graphServer) buildGraphMux(
 			requestlogger.WithAttributes(accessLogAttributes),
 			requestlogger.WithExprAttributes(exprAttributes),
 			requestlogger.WithFieldsHandler(RouterAccessLogsFieldHandler),
+			requestlogger.WithIgnoreQueryParamsList(s.accessLogsConfig.IgnoreQueryParamsList),
 		}
 
 		var ipAnonConfig *requestlogger.IPAnonymizationConfig
