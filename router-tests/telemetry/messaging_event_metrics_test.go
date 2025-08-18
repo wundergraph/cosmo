@@ -52,9 +52,9 @@ func TestFlakyEventMetrics(t *testing.T) {
 				rm := metricdata.ResourceMetrics{}
 				require.NoError(t, metricReader.Collect(context.Background(), &rm))
 
-				scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.messaging.event")
+				scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.messaging.events")
 				require.NotNil(t, scope)
-				metricEntry := integration.GetMetricByName(scope, "messaging.event.sent.messages")
+				metricEntry := integration.GetMetricByName(scope, "messaging.events.sent.messages")
 				require.NotNil(t, metricEntry)
 
 				sum, _ := metricEntry.Data.(metricdata.Sum[int64])
@@ -130,9 +130,9 @@ func TestFlakyEventMetrics(t *testing.T) {
 					rm := metricdata.ResourceMetrics{}
 					require.NoError(t, metricReader.Collect(context.Background(), &rm))
 
-					scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.messaging.event")
+					scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.messaging.events")
 					require.NotNil(t, scope)
-					metricEntry := integration.GetMetricByName(scope, "messaging.event.received.messages")
+					metricEntry := integration.GetMetricByName(scope, "messaging.events.received.messages")
 					require.NotNil(t, metricEntry)
 
 					sum, _ := metricEntry.Data.(metricdata.Sum[int64])
@@ -191,9 +191,9 @@ func TestFlakyEventMetrics(t *testing.T) {
 				rm := metricdata.ResourceMetrics{}
 				require.NoError(t, metricReader.Collect(context.Background(), &rm))
 
-				scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.messaging.event")
+				scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.messaging.events")
 				require.NotNil(t, scope)
-				metricEntry := integration.GetMetricByName(scope, "messaging.event.sent.messages")
+				metricEntry := integration.GetMetricByName(scope, "messaging.events.sent.messages")
 				require.NotNil(t, metricEntry)
 
 				sum, _ := metricEntry.Data.(metricdata.Sum[int64])
@@ -244,9 +244,9 @@ func TestFlakyEventMetrics(t *testing.T) {
 				rm := metricdata.ResourceMetrics{}
 				require.NoError(t, metricReader.Collect(context.Background(), &rm))
 
-				scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.messaging.event")
+				scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.messaging.events")
 				require.NotNil(t, scope)
-				metricEntry := integration.GetMetricByName(scope, "messaging.event.sent.messages")
+				metricEntry := integration.GetMetricByName(scope, "messaging.events.sent.messages")
 				require.NotNil(t, metricEntry)
 
 				sum, _ := metricEntry.Data.(metricdata.Sum[int64])
@@ -329,9 +329,9 @@ func TestFlakyEventMetrics(t *testing.T) {
 					rm := metricdata.ResourceMetrics{}
 					require.NoError(t, metricReader.Collect(context.Background(), &rm))
 
-					scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.messaging.event")
+					scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.messaging.events")
 					require.NotNil(t, scope)
-					metricEntry := integration.GetMetricByName(scope, "messaging.event.received.messages")
+					metricEntry := integration.GetMetricByName(scope, "messaging.events.received.messages")
 					require.NotNil(t, metricEntry)
 
 					sum, _ := metricEntry.Data.(metricdata.Sum[int64])
@@ -392,9 +392,9 @@ func TestFlakyEventMetrics(t *testing.T) {
 				rm := metricdata.ResourceMetrics{}
 				require.NoError(t, metricReader.Collect(context.Background(), &rm))
 
-				scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.messaging.event")
+				scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.messaging.events")
 				require.NotNil(t, scope)
-				metricEntry := integration.GetMetricByName(scope, "messaging.event.sent.messages")
+				metricEntry := integration.GetMetricByName(scope, "messaging.events.sent.messages")
 				require.NotNil(t, metricEntry)
 
 				sum, _ := metricEntry.Data.(metricdata.Sum[int64])
@@ -469,9 +469,9 @@ func TestFlakyEventMetrics(t *testing.T) {
 					rm := metricdata.ResourceMetrics{}
 					require.NoError(t, metricReader.Collect(context.Background(), &rm))
 
-					scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.messaging.event")
+					scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.messaging.events")
 					require.NotNil(t, scope)
-					metricEntry := integration.GetMetricByName(scope, "messaging.event.received.messages")
+					metricEntry := integration.GetMetricByName(scope, "messaging.events.received.messages")
 					require.NotNil(t, metricEntry)
 
 					sum, _ := metricEntry.Data.(metricdata.Sum[int64])

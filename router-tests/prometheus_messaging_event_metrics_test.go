@@ -51,7 +51,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 				mf, err := promRegistry.Gather()
 				require.NoError(t, err)
 
-				family := findMetricFamilyByName(mf, "messaging_event_sent_messages_total")
+				family := findMetricFamilyByName(mf, "messaging_events_sent_messages_total")
 				metrics := family.GetMetric()
 				require.Len(t, metrics, 1)
 
@@ -124,7 +124,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 					mf, err := promRegistry.Gather()
 					require.NoError(t, err)
 
-					family := findMetricFamilyByName(mf, "messaging_event_received_messages_total")
+					family := findMetricFamilyByName(mf, "messaging_events_received_messages_total")
 					metrics := family.GetMetric()
 					require.Len(t, metrics, 1)
 
@@ -180,7 +180,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 				mf, err := promRegistry.Gather()
 				require.NoError(t, err)
 
-				family := findMetricFamilyByName(mf, "messaging_event_sent_messages_total")
+				family := findMetricFamilyByName(mf, "messaging_events_sent_messages_total")
 				metrics := family.GetMetric()
 				require.Len(t, metrics, 1)
 
@@ -228,7 +228,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 				mf, err := promRegistry.Gather()
 				require.NoError(t, err)
 
-				family := findMetricFamilyByName(mf, "messaging_event_sent_messages_total")
+				family := findMetricFamilyByName(mf, "messaging_events_sent_messages_total")
 				metrics := family.GetMetric()
 				require.Len(t, metrics, 1)
 
@@ -308,7 +308,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 					mf, err := promRegistry.Gather()
 					require.NoError(t, err)
 
-					family := findMetricFamilyByName(mf, "messaging_event_received_messages_total")
+					family := findMetricFamilyByName(mf, "messaging_events_received_messages_total")
 					metrics := family.GetMetric()
 
 					errLabel := findMetricLabelByName(metrics, "wg_messaging_error")
@@ -365,7 +365,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 				mf, err := promRegistry.Gather()
 				require.NoError(t, err)
 
-				family := findMetricFamilyByName(mf, "messaging_event_sent_messages_total")
+				family := findMetricFamilyByName(mf, "messaging_events_sent_messages_total")
 				metrics := family.GetMetric()
 				require.Len(t, metrics, 1)
 
@@ -437,7 +437,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 					mf, err := promRegistry.Gather()
 					require.NoError(t, err)
 
-					family := findMetricFamilyByName(mf, "messaging_event_received_messages_total")
+					family := findMetricFamilyByName(mf, "messaging_events_received_messages_total")
 					metrics := family.GetMetric()
 					require.Len(t, metrics, 1)
 

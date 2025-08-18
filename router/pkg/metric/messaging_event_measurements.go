@@ -7,8 +7,8 @@ import (
 )
 
 const (
-	messagingSentMessages     = "messaging.event.sent.messages"
-	messagingConsumedMessages = "messaging.event.received.messages"
+	messagingSentMessages     = "messaging.events.sent.messages"
+	messagingConsumedMessages = "messaging.events.received.messages"
 )
 
 var (

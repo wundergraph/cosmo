@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	cosmoRouterEventMeterName    = "cosmo.router.messaging.event"
+	cosmoRouterEventMeterName    = "cosmo.router.messaging.events"
 	cosmoRouterEventMeterVersion = "0.0.1"
 )
 

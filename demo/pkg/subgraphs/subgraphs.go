@@ -6,8 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"io"
 	"log"
 	"net/http"
@@ -23,6 +21,8 @@ import (
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
+	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	natsPubsub "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 	"golang.org/x/sync/errgroup"
 
