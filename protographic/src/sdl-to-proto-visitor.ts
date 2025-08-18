@@ -520,8 +520,6 @@ export class GraphQLToProtoTextVisitor {
     protoContent = this.trimEmptyLines(protoContent);
     this.protoText = this.trimEmptyLines(this.protoText);
 
-    this.protoText.find;
-
     if (this.protoText.length > 0) {
       protoContent.push('');
     }
