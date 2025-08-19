@@ -3,21 +3,13 @@ import { cn } from "@/lib/utils";
 import {
   CaretSortIcon,
   Cross2Icon,
-  EnvelopeClosedIcon,
   HamburgerMenuIcon,
 } from "@radix-ui/react-icons";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { ReactNode, useContext, useMemo, useState } from "react";
+import { ReactNode, useContext, useState } from "react";
 import { UserContext } from "../app-provider";
 import { Logo } from "../logo";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select";
 import { Separator } from "../ui/separator";
 import { UserMenu, UserMenuMobile } from "../user-menu";
 import { LayoutProps } from "./layout";
@@ -36,7 +28,8 @@ import {
 } from "../ui/dropdown-menu";
 
 export type NavLink = {
-  title: string;
+  title: ReactNode;
+  className?: string;
   href: string;
   matchExact?: boolean;
   icon: ReactNode;
@@ -48,6 +41,7 @@ const isActive = (path: string, currentPath: string, exact = true) => {
 };
 
 const MobileNav = () => {
+  const user = useUser();
   return (
     <div
       className={cn(
@@ -56,7 +50,18 @@ const MobileNav = () => {
     >
       <div className="relative z-20 grid gap-6 rounded-md p-4 text-popover-foreground">
         <nav className="grid grid-flow-row auto-rows-max items-center justify-center space-y-2 text-center text-sm">
-          <Link href="/account/invitations">Invitations</Link>
+          <Link
+            href="/account/invitations"
+            className="flex justify-center items-center gap-x-2"
+          >
+            Invitations
+            {user?.invitations?.length && (
+              <div className="relative">
+                <div aria-hidden="true" className="absolute h-2 w-2 animate-ping rounded-full bg-blue-400" />
+                <div aria-hidden="true" className="h-2 w-2 rounded-full bg-blue-400" />
+              </div>
+            )}
+          </Link>
 
           <Link
             href={docsBaseURL}
@@ -205,7 +210,7 @@ export const SideNav = (props: SideNavLayoutProps) => {
                     >
                       {item.icon}
 
-                      <span className="whitespace-nowrap">{item.title}</span>
+                      <span className={cn("whitespace-nowrap", item.className)}>{item.title}</span>
                     </Link>
                   ) : (
                     <h4 className="hidden px-3 py-2 text-sm text-muted-foreground lg:block">
