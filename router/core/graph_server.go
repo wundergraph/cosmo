@@ -518,7 +518,7 @@ type graphMux struct {
 	metricStore                rmetric.Store
 	prometheusCacheMetrics     *rmetric.CacheMetrics
 	otelCacheMetrics           *rmetric.CacheMetrics
-	messagingEventMetricStore  rmetric.MessagingEventMetricStore
+	streamMetricStore          rmetric.StreamMetricStore
 }
 
 // buildOperationCaches creates the caches for the graph mux.
@@ -760,8 +760,8 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 		}
 	}
 
-	if s.messagingEventMetricStore != nil {
-		if aErr := s.messagingEventMetricStore.Shutdown(ctx); aErr != nil {
+	if s.streamMetricStore != nil {
+		if aErr := s.streamMetricStore.Shutdown(ctx); aErr != nil {
 			err = errors.Join(err, aErr)
 		}
 	}
@@ -781,8 +781,8 @@ func (s *graphServer) buildGraphMux(
 	opts BuildGraphMuxOptions,
 ) (*graphMux, error) {
 	gm := &graphMux{
-		metricStore:               rmetric.NewNoopMetrics(),
-		messagingEventMetricStore: rmetric.NewNoopEventMetricStore(),
+		metricStore:       rmetric.NewNoopMetrics(),
+		streamMetricStore: rmetric.NewNoopStreamMetricStore(),
 	}
 
 	httpRouter := chi.NewRouter()
@@ -880,8 +880,8 @@ func (s *graphServer) buildGraphMux(
 		}
 	}
 
-	if s.metricConfig.OpenTelemetry.MessagingEventMetrics || s.metricConfig.Prometheus.MessagingEventMetrics {
-		store, err := rmetric.NewMessagingEventMetricStore(
+	if s.metricConfig.OpenTelemetry.Stream || s.metricConfig.Prometheus.Streams {
+		store, err := rmetric.NewStreamMetricStore(
 			s.logger,
 			baseMetricAttributes,
 			s.otlpMeterProvider,
@@ -890,7 +890,7 @@ func (s *graphServer) buildGraphMux(
 		if err != nil {
 			return nil, err
 		}
-		gm.messagingEventMetricStore = store
+		gm.streamMetricStore = store
 	}
 
 	subgraphs, err := configureSubgraphOverwrites(
@@ -1132,11 +1132,11 @@ func (s *graphServer) buildGraphMux(
 	}
 
 	routerEngineConfig := &RouterEngineConfiguration{
-		Execution:                 s.engineExecutionConfiguration,
-		Headers:                   s.headerRules,
-		Events:                    s.eventsConfig,
-		SubgraphErrorPropagation:  s.subgraphErrorPropagation,
-		MessagingEventMetricStore: gm.messagingEventMetricStore,
+		Execution:                s.engineExecutionConfiguration,
+		Headers:                  s.headerRules,
+		Events:                   s.eventsConfig,
+		SubgraphErrorPropagation: s.subgraphErrorPropagation,
+		StreamMetricStore:        gm.streamMetricStore,
 	}
 
 	// map[string]*http.Transport cannot be coerced into map[string]http.RoundTripper, unfortunately

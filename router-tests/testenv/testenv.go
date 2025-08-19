@@ -1504,11 +1504,11 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			EngineStats: rmetric.EngineStatsConfig{
 				Subscription: testConfig.MetricOptions.PrometheusEngineStatsOptions.EnableSubscription,
 			},
-			CircuitBreaker:        testConfig.MetricOptions.EnablePrometheusCircuitBreakerMetrics,
-			ExcludeMetrics:        testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetrics,
-			ExcludeMetricLabels:   testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetricLabels,
-			MessagingEventMetrics: testConfig.MetricOptions.EnablePrometheusEventMetrics,
-			ExcludeScopeInfo:      testConfig.MetricOptions.MetricExclusions.ExcludeScopeInfo,
+			CircuitBreaker:      testConfig.MetricOptions.EnablePrometheusCircuitBreakerMetrics,
+			ExcludeMetrics:      testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetrics,
+			ExcludeMetricLabels: testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetricLabels,
+			Streams:             testConfig.MetricOptions.EnablePrometheusEventMetrics,
+			ExcludeScopeInfo:    testConfig.MetricOptions.MetricExclusions.ExcludeScopeInfo,
 			PromSchemaFieldUsage: rmetric.PrometheusSchemaFieldUsage{
 				Enabled:             testConfig.MetricOptions.PrometheusSchemaFieldUsage.Enabled,
 				IncludeOperationSha: testConfig.MetricOptions.PrometheusSchemaFieldUsage.IncludeOperationSha,
@@ -1527,11 +1527,11 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 					Enabled: true,
 				},
 				OTLP: config.MetricsOTLP{
-					Enabled:               true,
-					RouterRuntime:         testConfig.MetricOptions.EnableRuntimeMetrics,
-					GraphqlCache:          testConfig.MetricOptions.EnableOTLPRouterCache,
-					MessagingEventMetrics: testConfig.MetricOptions.EnableOTLPEventMetrics,
-					ConnectionStats:       testConfig.MetricOptions.EnableOTLPConnectionMetrics,
+					Enabled:         true,
+					RouterRuntime:   testConfig.MetricOptions.EnableRuntimeMetrics,
+					GraphqlCache:    testConfig.MetricOptions.EnableOTLPRouterCache,
+					Streams:         testConfig.MetricOptions.EnableOTLPEventMetrics,
+					ConnectionStats: testConfig.MetricOptions.EnableOTLPConnectionMetrics,
 					EngineStats: config.EngineStats{
 						Subscriptions: testConfig.MetricOptions.OTLPEngineStatsOptions.EnableSubscription,
 					},
@@ -2825,7 +2825,7 @@ func subgraphOptions(ctx context.Context, t testing.TB, logger *zap.Logger, nats
 	natsPubSubByProviderID := make(map[string]pubsubNats.Adapter, len(DemoNatsProviders))
 	for _, sourceName := range DemoNatsProviders {
 		adapter, err := pubsubNats.NewAdapter(ctx, logger, natsData.Params[0].Url, natsData.Params[0].Opts, "hostname", "listenaddr", datasource.ProviderOpts{
-			MessagingEventMetricStore: rmetric.NewNoopEventMetricStore(),
+			StreamMetricStore: rmetric.NewNoopStreamMetricStore(),
 		})
 		require.NoError(t, err)
 		require.NoError(t, adapter.Startup(ctx))

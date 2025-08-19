@@ -1066,10 +1066,10 @@
                   "default": false,
                   "description": "Enable the collection of connection stats. The default value is false."
                 },
-                "messaging_event_metrics": {
+                "stream": {
                   "type": "boolean",
                   "default": false,
-                  "description": "Enable the collection of messaging event metrics. The default value is false."
+                  "description": "Enable the collection of stream metrics. The default value is false."
                 },
                 "circuit_breaker": {
                   "type": "boolean",
@@ -1176,10 +1176,10 @@
                   "default": false,
                   "description": "Enable the collection of connection stats. The default value is false."
                 },
-                "messaging_event_metrics": {
+                "stream": {
                   "type": "boolean",
                   "default": false,
-                  "description": "Enable the collection of messaging event metrics. The default value is false."
+                  "description": "Enable the collection of stream metrics. The default value is false."
                 },
                 "circuit_breaker": {
                   "type": "boolean",

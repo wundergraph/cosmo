@@ -67,7 +67,7 @@ func TestBuild_OK(t *testing.T) {
 
 	// ctx, kafkaBuilder, config.Providers.Kafka, kafkaDsConfsWithEvents
 	// Execute the function
-	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, rmetric.NewNoopEventMetricStore())
+	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, rmetric.NewNoopStreamMetricStore())
 
 	// Assertions
 	assert.NoError(t, err)
@@ -123,7 +123,7 @@ func TestBuild_ProviderError(t *testing.T) {
 	mockBuilder.On("BuildProvider", natsEventSources[0], mock.Anything).Return(nil, errors.New("provider error"))
 
 	// Execute the function
-	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, rmetric.NewNoopEventMetricStore())
+	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, rmetric.NewNoopStreamMetricStore())
 
 	// Assertions
 	assert.Error(t, err)
@@ -178,7 +178,7 @@ func TestBuild_ShouldGetAnErrorIfProviderIsNotDefined(t *testing.T) {
 	mockBuilder.On("TypeID").Return("nats")
 
 	// Execute the function
-	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, rmetric.NewNoopEventMetricStore())
+	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, rmetric.NewNoopStreamMetricStore())
 
 	// Assertions
 	assert.Error(t, err)
@@ -242,7 +242,7 @@ func TestBuild_ShouldNotInitializeProviderIfNotUsed(t *testing.T) {
 		Return(mockPubSubUsedProvider, nil)
 
 	// Execute the function
-	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, rmetric.NewNoopEventMetricStore())
+	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, rmetric.NewNoopStreamMetricStore())
 
 	// Assertions
 	assert.NoError(t, err)

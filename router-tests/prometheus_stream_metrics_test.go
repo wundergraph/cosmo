@@ -1,7 +1,6 @@
-package telemetry
+package integration
 
 import (
-	"context"
 	"encoding/json"
 	"strings"
 	"testing"
@@ -9,14 +8,12 @@ import (
 
 	"github.com/hasura/go-graphql-client"
 	"github.com/nats-io/nats.go"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
-	integration "github.com/wundergraph/cosmo/router-tests"
 	"github.com/wundergraph/cosmo/router-tests/events"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/pkg/config"
-	otelattrs "github.com/wundergraph/cosmo/router/pkg/otel"
 	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 type subscriptionArgs struct {
@@ -36,49 +33,45 @@ func TestFlakyEventMetrics(t *testing.T) {
 			t.Parallel()
 
 			metricReader := metric.NewManualReader()
+			promRegistry := prometheus.NewRegistry()
 
 			testenv.Run(t, &testenv.Config{
 				MetricReader:             metricReader,
+				PrometheusRegistry:       promRegistry,
 				RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 				EnableKafka:              true,
 				MetricOptions: testenv.MetricOptions{
-					EnableOTLPEventMetrics: true,
+					EnablePrometheusEventMetrics: true,
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				events.EnsureTopicExists(t, xEnv, "employeeUpdated")
 				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: `mutation { updateEmployeeMyKafka(employeeID: 3, update: {name: "name test"}) { success } }`})
 				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: `mutation { updateEmployeeMyKafka(employeeID: 3, update: {name: "name test"}) { success } }`})
 
-				rm := metricdata.ResourceMetrics{}
-				require.NoError(t, metricReader.Collect(context.Background(), &rm))
+				mf, err := promRegistry.Gather()
+				require.NoError(t, err)
 
-				scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.messaging.events")
-				require.NotNil(t, scope)
-				metricEntry := integration.GetMetricByName(scope, "messaging.event.sent.messages")
-				require.NotNil(t, metricEntry)
+				family := findMetricFamilyByName(mf, "streams_sent_messages_total")
+				metrics := family.GetMetric()
+				require.Len(t, metrics, 1)
 
-				sum, _ := metricEntry.Data.(metricdata.Sum[int64])
-				require.Len(t, sum.DataPoints, 1)
+				operation := findMetricLabelByName(metrics, "wg_stream_operation_name")
+				require.Equal(t, "produce", operation.GetValue())
 
-				attrs := sum.DataPoints[0].Attributes
+				errLabel := findMetricLabelByName(metrics, "wg_error_type")
+				require.Nil(t, errLabel)
 
-				operation, _ := attrs.Value(otelattrs.WgMessagingOperationName)
-				require.Equal(t, "produce", operation.AsString())
+				system := findMetricLabelByName(metrics, "wg_provider_type")
+				require.Equal(t, "kafka", system.GetValue())
 
-				system, _ := attrs.Value(otelattrs.WgMessagingSystem)
-				require.Equal(t, "kafka", system.AsString())
+				destination := findMetricLabelByName(metrics, "wg_destination_name")
+				require.True(t, strings.HasSuffix(destination.GetValue(), "employeeUpdated"))
 
-				destination, _ := attrs.Value(otelattrs.WgMessagingDestinationName)
-				require.True(t, strings.HasSuffix(destination.AsString(), "employeeUpdated"))
+				provider := findMetricLabelByName(metrics, "wg_provider_id")
+				require.NotNil(t, provider)
+				require.Equal(t, "my-kafka", provider.GetValue())
 
-				provider, hasProvider := attrs.Value(otelattrs.WgProviderId)
-				require.True(t, hasProvider)
-				require.Equal(t, "my-kafka", provider.AsString())
-
-				_, hasErr := attrs.Value(otelattrs.WgErrorType)
-				require.False(t, hasErr)
-
-				require.Equal(t, int64(2), sum.DataPoints[0].Value)
+				require.Equal(t, float64(2), metrics[0].Counter.GetValue())
 			})
 		})
 
@@ -86,14 +79,16 @@ func TestFlakyEventMetrics(t *testing.T) {
 			t.Parallel()
 
 			metricReader := metric.NewManualReader()
+			promRegistry := prometheus.NewRegistry()
 			topic := "employeeUpdated"
 
 			testenv.Run(t, &testenv.Config{
 				MetricReader:             metricReader,
+				PrometheusRegistry:       promRegistry,
 				RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 				EnableKafka:              true,
 				MetricOptions: testenv.MetricOptions{
-					EnableOTLPEventMetrics: true,
+					EnablePrometheusEventMetrics: true,
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				events.EnsureTopicExists(t, xEnv, topic)
@@ -126,36 +121,30 @@ func TestFlakyEventMetrics(t *testing.T) {
 					require.NoError(t, args.errValue)
 					require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
 
-					rm := metricdata.ResourceMetrics{}
-					require.NoError(t, metricReader.Collect(context.Background(), &rm))
+					mf, err := promRegistry.Gather()
+					require.NoError(t, err)
 
-					scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.messaging.events")
-					require.NotNil(t, scope)
-					metricEntry := integration.GetMetricByName(scope, "messaging.event.received.messages")
-					require.NotNil(t, metricEntry)
+					family := findMetricFamilyByName(mf, "streams_received_messages_total")
+					metrics := family.GetMetric()
+					require.Len(t, metrics, 1)
 
-					sum, _ := metricEntry.Data.(metricdata.Sum[int64])
+					operation := findMetricLabelByName(metrics, "wg_stream_operation_name")
+					require.Equal(t, "receive", operation.GetValue())
 
-					require.Len(t, sum.DataPoints, 1)
-					attrs := sum.DataPoints[0].Attributes
+					errLabel := findMetricLabelByName(metrics, "wg_error_type")
+					require.Nil(t, errLabel)
 
-					operation, _ := attrs.Value(otelattrs.WgMessagingOperationName)
-					require.Equal(t, "receive", operation.AsString())
+					system := findMetricLabelByName(metrics, "wg_provider_type")
+					require.Equal(t, "kafka", system.GetValue())
 
-					system, _ := attrs.Value(otelattrs.WgMessagingSystem)
-					require.Equal(t, "kafka", system.AsString())
+					destination := findMetricLabelByName(metrics, "wg_destination_name")
+					require.True(t, strings.HasSuffix(destination.GetValue(), "employeeUpdated"))
 
-					destination, _ := attrs.Value(otelattrs.WgMessagingDestinationName)
-					require.True(t, strings.HasSuffix(destination.AsString(), "employeeUpdated"))
+					provider := findMetricLabelByName(metrics, "wg_provider_id")
+					require.NotNil(t, provider)
+					require.Equal(t, "my-kafka", provider.GetValue())
 
-					provider, hasProvider := attrs.Value(otelattrs.WgProviderId)
-					require.True(t, hasProvider)
-					require.Equal(t, "my-kafka", provider.AsString())
-
-					_, hasErr := attrs.Value(otelattrs.WgErrorType)
-					require.False(t, hasErr)
-
-					require.Equal(t, int64(1), sum.DataPoints[0].Value)
+					require.Equal(t, float64(1), metrics[0].Counter.GetValue())
 				})
 
 				require.NoError(t, client.Close())
@@ -171,12 +160,14 @@ func TestFlakyEventMetrics(t *testing.T) {
 			t.Parallel()
 
 			metricReader := metric.NewManualReader()
+			promRegistry := prometheus.NewRegistry()
 			testenv.Run(t, &testenv.Config{
 				MetricReader:             metricReader,
+				PrometheusRegistry:       promRegistry,
 				RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 				EnableNats:               true,
 				MetricOptions: testenv.MetricOptions{
-					EnableOTLPEventMetrics: true,
+					EnablePrometheusEventMetrics: true,
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: `mutation UpdateEmployeeNats($update: UpdateEmployeeInput!) {
@@ -186,35 +177,30 @@ func TestFlakyEventMetrics(t *testing.T) {
 					updateEmployeeMyNats(id: 12, update: $update) {success}
 				}`, Variables: json.RawMessage(`{"update":{"name":"n2"}}`)})
 
-				rm := metricdata.ResourceMetrics{}
-				require.NoError(t, metricReader.Collect(context.Background(), &rm))
+				mf, err := promRegistry.Gather()
+				require.NoError(t, err)
 
-				scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.messaging.events")
-				require.NotNil(t, scope)
-				metricEntry := integration.GetMetricByName(scope, "messaging.event.sent.messages")
-				require.NotNil(t, metricEntry)
+				family := findMetricFamilyByName(mf, "streams_sent_messages_total")
+				metrics := family.GetMetric()
+				require.Len(t, metrics, 1)
 
-				sum, _ := metricEntry.Data.(metricdata.Sum[int64])
-				require.Len(t, sum.DataPoints, 1)
-				attrs := sum.DataPoints[0].Attributes
+				operation := findMetricLabelByName(metrics, "wg_stream_operation_name")
+				require.Equal(t, "publish", operation.GetValue())
 
-				operation, _ := attrs.Value(otelattrs.WgMessagingOperationName)
-				require.Equal(t, "publish", operation.AsString())
+				errLabel := findMetricLabelByName(metrics, "wg_error_type")
+				require.Nil(t, errLabel)
 
-				system, _ := attrs.Value(otelattrs.WgMessagingSystem)
-				require.Equal(t, "nats", system.AsString())
+				system := findMetricLabelByName(metrics, "wg_provider_type")
+				require.Equal(t, "nats", system.GetValue())
 
-				destination, _ := attrs.Value(otelattrs.WgMessagingDestinationName)
-				require.True(t, strings.HasSuffix(destination.AsString(), "employeeUpdatedMyNats.12"))
+				destination := findMetricLabelByName(metrics, "wg_destination_name")
+				require.True(t, strings.HasSuffix(destination.GetValue(), "employeeUpdatedMyNats.12"))
 
-				provider, hasProvider := attrs.Value(otelattrs.WgProviderId)
-				require.True(t, hasProvider)
-				require.Equal(t, "my-nats", provider.AsString())
+				provider := findMetricLabelByName(metrics, "wg_provider_id")
+				require.NotNil(t, provider)
+				require.Equal(t, "my-nats", provider.GetValue())
 
-				_, hasErr := attrs.Value(otelattrs.WgErrorType)
-				require.False(t, hasErr)
-
-				require.Equal(t, int64(2), sum.DataPoints[0].Value)
+				require.Equal(t, float64(2), metrics[0].Counter.GetValue())
 			})
 		})
 
@@ -222,12 +208,14 @@ func TestFlakyEventMetrics(t *testing.T) {
 			t.Parallel()
 
 			metricReader := metric.NewManualReader()
+			promRegistry := prometheus.NewRegistry()
 			testenv.Run(t, &testenv.Config{
 				MetricReader:             metricReader,
+				PrometheusRegistry:       promRegistry,
 				RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 				EnableNats:               true,
 				MetricOptions: testenv.MetricOptions{
-					EnableOTLPEventMetrics: true,
+					EnablePrometheusEventMetrics: true,
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				sub, err := xEnv.NatsConnectionMyNats.Subscribe(xEnv.GetPubSubName("getEmployeeMyNats.12"), func(msg *nats.Msg) { _ = msg.Respond([]byte(`{"id": 12, "__typename": "Employee"}`)) })
@@ -238,35 +226,30 @@ func TestFlakyEventMetrics(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: `query { employeeFromEventMyNats(employeeID: 12) { id details { forename } }}`})
 				require.JSONEq(t, `{"data":{"employeeFromEventMyNats": {"id": 12, "details": {"forename": "David"}}}}`, res.Body)
 
-				rm := metricdata.ResourceMetrics{}
-				require.NoError(t, metricReader.Collect(context.Background(), &rm))
+				mf, err := promRegistry.Gather()
+				require.NoError(t, err)
 
-				scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.messaging.events")
-				require.NotNil(t, scope)
-				metricEntry := integration.GetMetricByName(scope, "messaging.event.sent.messages")
-				require.NotNil(t, metricEntry)
+				family := findMetricFamilyByName(mf, "streams_sent_messages_total")
+				metrics := family.GetMetric()
+				require.Len(t, metrics, 1)
 
-				sum, _ := metricEntry.Data.(metricdata.Sum[int64])
-				require.Len(t, sum.DataPoints, 1)
-				attrs := sum.DataPoints[0].Attributes
+				operation := findMetricLabelByName(metrics, "wg_stream_operation_name")
+				require.Equal(t, "request", operation.GetValue())
 
-				operation, _ := attrs.Value(otelattrs.WgMessagingOperationName)
-				require.Equal(t, "request", operation.AsString())
+				errLabel := findMetricLabelByName(metrics, "wg_error_type")
+				require.Nil(t, errLabel)
 
-				system, _ := attrs.Value(otelattrs.WgMessagingSystem)
-				require.Equal(t, "nats", system.AsString())
+				system := findMetricLabelByName(metrics, "wg_provider_type")
+				require.Equal(t, "nats", system.GetValue())
 
-				destination, _ := attrs.Value(otelattrs.WgMessagingDestinationName)
-				require.True(t, strings.HasSuffix(destination.AsString(), "getEmployeeMyNats.12"))
+				destination := findMetricLabelByName(metrics, "wg_destination_name")
+				require.True(t, strings.HasSuffix(destination.GetValue(), "getEmployeeMyNats.12"))
 
-				provider, hasProvider := attrs.Value(otelattrs.WgProviderId)
-				require.True(t, hasProvider)
-				require.Equal(t, "my-nats", provider.AsString())
+				provider := findMetricLabelByName(metrics, "wg_provider_id")
+				require.NotNil(t, provider)
+				require.Equal(t, "my-nats", provider.GetValue())
 
-				_, hasErr := attrs.Value(otelattrs.WgErrorType)
-				require.False(t, hasErr)
-
-				require.Equal(t, int64(1), sum.DataPoints[0].Value)
+				require.Equal(t, float64(1), metrics[0].Counter.GetValue())
 			})
 		})
 
@@ -274,12 +257,14 @@ func TestFlakyEventMetrics(t *testing.T) {
 			t.Parallel()
 
 			metricReader := metric.NewManualReader()
+			promRegistry := prometheus.NewRegistry()
 			testenv.Run(t, &testenv.Config{
 				MetricReader:                       metricReader,
+				PrometheusRegistry:                 promRegistry,
 				RouterConfigJSONTemplate:           testenv.ConfigWithEdfsNatsJSONTemplate,
 				EnableNats:                         true,
 				ModifyEngineExecutionConfiguration: func(ec *config.EngineExecutionConfiguration) { ec.WebSocketClientReadTimeout = time.Second },
-				MetricOptions:                      testenv.MetricOptions{EnableOTLPEventMetrics: true},
+				MetricOptions:                      testenv.MetricOptions{EnablePrometheusEventMetrics: true},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				var subscriptionOne struct {
 					employeeUpdated struct {
@@ -311,7 +296,6 @@ func TestFlakyEventMetrics(t *testing.T) {
 
 				xEnv.WaitForSubscriptionCount(1, WaitTimeout)
 
-				// Send a mutation to trigger the first subscription
 				err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename":"Employee"}`))
 				require.NoError(t, err)
 
@@ -322,36 +306,29 @@ func TestFlakyEventMetrics(t *testing.T) {
 					require.NoError(t, args.errValue)
 					require.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(args.dataValue))
 
-					rm := metricdata.ResourceMetrics{}
-					require.NoError(t, metricReader.Collect(context.Background(), &rm))
+					mf, err := promRegistry.Gather()
+					require.NoError(t, err)
 
-					scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.messaging.events")
-					require.NotNil(t, scope)
-					metricEntry := integration.GetMetricByName(scope, "messaging.event.received.messages")
-					require.NotNil(t, metricEntry)
+					family := findMetricFamilyByName(mf, "streams_received_messages_total")
+					metrics := family.GetMetric()
 
-					sum, _ := metricEntry.Data.(metricdata.Sum[int64])
+					errLabel := findMetricLabelByName(metrics, "wg_error_type")
+					require.Nil(t, errLabel)
 
-					require.Len(t, sum.DataPoints, 1)
-					attrs := sum.DataPoints[0].Attributes
+					operation := findMetricLabelByName(metrics, "wg_stream_operation_name")
+					require.Equal(t, "receive", operation.GetValue())
 
-					operation, _ := attrs.Value(otelattrs.WgMessagingOperationName)
-					require.Equal(t, "receive", operation.AsString())
+					system := findMetricLabelByName(metrics, "wg_provider_type")
+					require.Equal(t, "nats", system.GetValue())
 
-					system, _ := attrs.Value(otelattrs.WgMessagingSystem)
-					require.Equal(t, "nats", system.AsString())
+					destination := findMetricLabelByName(metrics, "wg_destination_name")
+					require.True(t, strings.HasSuffix(destination.GetValue(), "employeeUpdated.3"))
 
-					destination, _ := attrs.Value(otelattrs.WgMessagingDestinationName)
-					require.True(t, strings.HasSuffix(destination.AsString(), "employeeUpdated.3"))
+					provider := findMetricLabelByName(metrics, "wg_provider_id")
+					require.NotNil(t, provider)
+					require.Equal(t, "default", provider.GetValue())
 
-					provider, hasProvider := attrs.Value(otelattrs.WgProviderId)
-					require.True(t, hasProvider)
-					require.Equal(t, "default", provider.AsString())
-
-					_, hasErr := attrs.Value(otelattrs.WgErrorType)
-					require.False(t, hasErr)
-
-					require.Equal(t, int64(1), sum.DataPoints[0].Value)
+					require.Equal(t, float64(1), metrics[0].Counter.GetValue())
 				})
 
 				require.NoError(t, client.Close())
@@ -372,48 +349,44 @@ func TestFlakyEventMetrics(t *testing.T) {
 			t.Parallel()
 
 			metricReader := metric.NewManualReader()
+			promRegistry := prometheus.NewRegistry()
 
 			testenv.Run(t, &testenv.Config{
 				MetricReader:             metricReader,
+				PrometheusRegistry:       promRegistry,
 				RouterConfigJSONTemplate: testenv.ConfigWithEdfsRedisJSONTemplate,
 				EnableRedis:              true,
 				MetricOptions: testenv.MetricOptions{
-					EnableOTLPEventMetrics: true,
+					EnablePrometheusEventMetrics: true,
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: `mutation { updateEmployeeMyRedis(id: 3, update: {name: "r1"}) { success } }`})
 				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: `mutation { updateEmployeeMyRedis(id: 3, update: {name: "r2"}) { success } }`})
 
-				rm := metricdata.ResourceMetrics{}
-				require.NoError(t, metricReader.Collect(context.Background(), &rm))
+				mf, err := promRegistry.Gather()
+				require.NoError(t, err)
 
-				scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.messaging.events")
-				require.NotNil(t, scope)
-				metricEntry := integration.GetMetricByName(scope, "messaging.event.sent.messages")
-				require.NotNil(t, metricEntry)
+				family := findMetricFamilyByName(mf, "streams_sent_messages_total")
+				metrics := family.GetMetric()
+				require.Len(t, metrics, 1)
 
-				sum, _ := metricEntry.Data.(metricdata.Sum[int64])
+				operation := findMetricLabelByName(metrics, "wg_stream_operation_name")
+				require.Equal(t, "publish", operation.GetValue())
 
-				require.Len(t, sum.DataPoints, 1)
-				attrs := sum.DataPoints[0].Attributes
+				errLabel := findMetricLabelByName(metrics, "wg_error_type")
+				require.Nil(t, errLabel)
 
-				operation, _ := attrs.Value(otelattrs.WgMessagingOperationName)
-				require.Equal(t, "publish", operation.AsString())
+				system := findMetricLabelByName(metrics, "wg_provider_type")
+				require.Equal(t, "redis", system.GetValue())
 
-				system, _ := attrs.Value(otelattrs.WgMessagingSystem)
-				require.Equal(t, "redis", system.AsString())
+				destination := findMetricLabelByName(metrics, "wg_destination_name")
+				require.True(t, strings.HasSuffix(destination.GetValue(), "employeeUpdatedMyRedis"))
 
-				destination, _ := attrs.Value(otelattrs.WgMessagingDestinationName)
-				require.True(t, strings.HasSuffix(destination.AsString(), "employeeUpdatedMyRedis"))
+				provider := findMetricLabelByName(metrics, "wg_provider_id")
+				require.NotNil(t, provider)
+				require.Equal(t, "my-redis", provider.GetValue())
 
-				provider, hasProvider := attrs.Value(otelattrs.WgProviderId)
-				require.True(t, hasProvider)
-				require.Equal(t, "my-redis", provider.AsString())
-
-				_, hasErr := attrs.Value(otelattrs.WgErrorType)
-				require.False(t, hasErr)
-
-				require.Equal(t, int64(2), sum.DataPoints[0].Value)
+				require.Equal(t, float64(2), metrics[0].Counter.GetValue())
 			})
 		})
 
@@ -421,12 +394,14 @@ func TestFlakyEventMetrics(t *testing.T) {
 			t.Parallel()
 
 			metricReader := metric.NewManualReader()
+			promRegistry := prometheus.NewRegistry()
 
 			testenv.Run(t, &testenv.Config{
 				MetricReader:             metricReader,
+				PrometheusRegistry:       promRegistry,
 				RouterConfigJSONTemplate: testenv.ConfigWithEdfsRedisJSONTemplate,
 				EnableRedis:              true,
-				MetricOptions:            testenv.MetricOptions{EnableOTLPEventMetrics: true},
+				MetricOptions:            testenv.MetricOptions{EnablePrometheusEventMetrics: true},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				topic := "employeeUpdatedMyRedis"
 
@@ -460,36 +435,29 @@ func TestFlakyEventMetrics(t *testing.T) {
 					require.NoError(t, args.errValue)
 					require.JSONEq(t, `{"employeeUpdates":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
 
-					rm := metricdata.ResourceMetrics{}
-					require.NoError(t, metricReader.Collect(context.Background(), &rm))
+					mf, err := promRegistry.Gather()
+					require.NoError(t, err)
 
-					scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.messaging.events")
-					require.NotNil(t, scope)
-					metricEntry := integration.GetMetricByName(scope, "messaging.event.received.messages")
-					require.NotNil(t, metricEntry)
+					family := findMetricFamilyByName(mf, "streams_received_messages_total")
+					metrics := family.GetMetric()
+					require.Len(t, metrics, 1)
 
-					sum, _ := metricEntry.Data.(metricdata.Sum[int64])
+					errLabel := findMetricLabelByName(metrics, "wg_error_type")
+					require.Nil(t, errLabel)
 
-					require.Len(t, sum.DataPoints, 1)
-					attrs := sum.DataPoints[0].Attributes
+					operation := findMetricLabelByName(metrics, "wg_stream_operation_name")
+					require.Equal(t, "receive", operation.GetValue())
 
-					operation, _ := attrs.Value(otelattrs.WgMessagingOperationName)
-					require.Equal(t, "receive", operation.AsString())
+					system := findMetricLabelByName(metrics, "wg_provider_type")
+					require.Equal(t, "redis", system.GetValue())
 
-					system, _ := attrs.Value(otelattrs.WgMessagingSystem)
-					require.Equal(t, "redis", system.AsString())
+					destination := findMetricLabelByName(metrics, "wg_destination_name")
+					require.True(t, strings.HasSuffix(destination.GetValue(), "employeeUpdatedMyRedis"))
 
-					destination, _ := attrs.Value(otelattrs.WgMessagingDestinationName)
-					require.True(t, strings.HasSuffix(destination.AsString(), "employeeUpdatedMyRedis"))
-
-					provider, hasProvider := attrs.Value(otelattrs.WgProviderId)
-					require.True(t, hasProvider)
-					require.Equal(t, "my-redis", provider.AsString())
-
-					_, hasErr := attrs.Value(otelattrs.WgErrorType)
-					require.False(t, hasErr)
-
-					require.Equal(t, int64(1), sum.DataPoints[0].Value)
+					provider := findMetricLabelByName(metrics, "wg_provider_id")
+					require.NotNil(t, provider)
+					require.Equal(t, "my-redis", provider.GetValue())
+					require.Equal(t, float64(1), metrics[0].Counter.GetValue())
 				})
 
 				require.NoError(t, client.Close())

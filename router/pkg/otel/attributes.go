@@ -62,12 +62,11 @@ const (
 
 // Messaging metrics attributes
 const (
-	WgMessagingOperationName   = attribute.Key("wg.messaging.operation.name")
-	WgMessagingSystem          = attribute.Key("wg.messaging.system")
-	WgMessagingError           = attribute.Key("wg.messaging.error")
-	WgMessagingDestinationName = attribute.Key("wg.messaging.destination.name")
-	WgProviderId               = attribute.Key("wg.provider.id")
-	WgErrorType                = attribute.Key("wg.error.type")
+	WgStreamOperationName = attribute.Key("wg.stream.operation.name")
+	WgProviderType        = attribute.Key("wg.provider.type")
+	WgDestinationName     = attribute.Key("wg.destination.name")
+	WgProviderId          = attribute.Key("wg.provider.id")
+	WgErrorType           = attribute.Key("wg.error.type")
 )
 
 const (

@@ -36,32 +36,32 @@ func NewProviderAdapter(ctx context.Context, logger *zap.Logger, urls []string, 
 		logger = zap.NewNop()
 	}
 
-	var store metric.MessagingEventMetricStore
-	if opts.MessagingEventMetricStore != nil {
-		store = opts.MessagingEventMetricStore
+	var store metric.StreamMetricStore
+	if opts.StreamMetricStore != nil {
+		store = opts.StreamMetricStore
 	} else {
-		store = metric.NewNoopEventMetricStore()
+		store = metric.NewNoopStreamMetricStore()
 	}
 
 	return &ProviderAdapter{
-		ctx:                       ctx,
-		cancel:                    cancel,
-		logger:                    logger,
-		urls:                      urls,
-		clusterEnabled:            clusterEnabled,
-		messagingEventMetricStore: store,
+		ctx:               ctx,
+		cancel:            cancel,
+		logger:            logger,
+		urls:              urls,
+		clusterEnabled:    clusterEnabled,
+		streamMetricStore: store,
 	}
 }
 
 type ProviderAdapter struct {
-	ctx                       context.Context
-	cancel                    context.CancelFunc
-	conn                      rd.RDCloser
-	logger                    *zap.Logger
-	closeWg                   sync.WaitGroup
-	urls                      []string
-	clusterEnabled            bool
-	messagingEventMetricStore metric.MessagingEventMetricStore
+	ctx               context.Context
+	cancel            context.CancelFunc
+	conn              rd.RDCloser
+	logger            *zap.Logger
+	closeWg           sync.WaitGroup
+	urls              []string
+	clusterEnabled    bool
+	streamMetricStore metric.StreamMetricStore
 }
 
 func (p *ProviderAdapter) Startup(ctx context.Context) error {
@@ -127,11 +127,11 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 					return
 				}
 				log.Debug("subscription update", zap.String("message_channel", msg.Channel), zap.String("data", msg.Payload))
-				p.messagingEventMetricStore.Consume(ctx, metric.MessagingEvent{
-					ProviderId:      event.ProviderID,
-					OperationName:   redisReceive,
-					MessagingSystem: metric.ProviderTypeRedis,
-					DestinationName: msg.Channel,
+				p.streamMetricStore.Consume(ctx, metric.StreamsEvent{
+					ProviderId:          event.ProviderID,
+					StreamOperationName: redisReceive,
+					ProviderType:        metric.ProviderTypeRedis,
+					DestinationName:     msg.Channel,
 				})
 				updater.Update([]byte(msg.Payload))
 			case <-p.ctx.Done():
@@ -171,21 +171,21 @@ func (p *ProviderAdapter) Publish(ctx context.Context, event PublishEventConfigu
 	intCmd := p.conn.Publish(ctx, event.Channel, data)
 	if intCmd.Err() != nil {
 		log.Error("publish error", zap.Error(intCmd.Err()))
-		p.messagingEventMetricStore.Produce(ctx, metric.MessagingEvent{
-			ProviderId:      event.ProviderID,
-			OperationName:   redisPublish,
-			MessagingSystem: metric.ProviderTypeRedis,
-			ErrorType:       "publish_error",
-			DestinationName: event.Channel,
+		p.streamMetricStore.Produce(ctx, metric.StreamsEvent{
+			ProviderId:          event.ProviderID,
+			StreamOperationName: redisPublish,
+			ProviderType:        metric.ProviderTypeRedis,
+			ErrorType:           "publish_error",
+			DestinationName:     event.Channel,
 		})
 		return datasource.NewError(fmt.Sprintf("error publishing to Redis PubSub channel %s", event.Channel), intCmd.Err())
 	}
 
-	p.messagingEventMetricStore.Produce(ctx, metric.MessagingEvent{
-		ProviderId:      event.ProviderID,
-		OperationName:   redisPublish,
-		MessagingSystem: metric.ProviderTypeRedis,
-		DestinationName: event.Channel,
+	p.streamMetricStore.Produce(ctx, metric.StreamsEvent{
+		ProviderId:          event.ProviderID,
+		StreamOperationName: redisPublish,
+		ProviderType:        metric.ProviderTypeRedis,
+		DestinationName:     event.Channel,
 	})
 	return nil
 }

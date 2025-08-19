@@ -256,7 +256,7 @@ func (pg *PlanGenerator) buildRouterConfig(configFilePath string) (*nodev1.Route
 
 func (pg *PlanGenerator) loadConfiguration(routerConfig *nodev1.RouterConfig, logger *zap.Logger, maxDataSourceCollectorsConcurrency uint) error {
 	routerEngineConfig := RouterEngineConfiguration{
-		MessagingEventMetricStore: metric.NewNoopEventMetricStore(),
+		StreamMetricStore: metric.NewNoopStreamMetricStore(),
 	}
 	natSources := map[string]*nats.ProviderAdapter{}
 	kafkaSources := map[string]*kafka.ProviderAdapter{}

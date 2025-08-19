@@ -2,6 +2,7 @@ package datasource
 
 import (
 	"context"
+
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 )
 
@@ -34,5 +35,5 @@ type ProviderBuilder[P, E any] interface {
 }
 
 type ProviderOpts struct {
-	MessagingEventMetricStore metric.MessagingEventMetricStore
+	StreamMetricStore metric.StreamMetricStore
 }

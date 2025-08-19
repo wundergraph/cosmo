@@ -3,9 +3,10 @@ package pubsub
 import (
 	"context"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/pkg/metric"
 	"slices"
 	"strconv"
+
+	"github.com/wundergraph/cosmo/router/pkg/metric"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -52,9 +53,9 @@ func (e *ProviderNotDefinedError) Error() string {
 
 // BuildProvidersAndDataSources is a generic function that builds providers and data sources for the given
 // EventsConfiguration and DataSourceConfigurationWithMetadata
-func BuildProvidersAndDataSources(ctx context.Context, config config.EventsConfiguration, store metric.MessagingEventMetricStore, logger *zap.Logger, dsConfs []DataSourceConfigurationWithMetadata, hostName string, routerListenAddr string) ([]pubsub_datasource.Provider, []plan.DataSource, error) {
+func BuildProvidersAndDataSources(ctx context.Context, config config.EventsConfiguration, store metric.StreamMetricStore, logger *zap.Logger, dsConfs []DataSourceConfigurationWithMetadata, hostName string, routerListenAddr string) ([]pubsub_datasource.Provider, []plan.DataSource, error) {
 	if store == nil {
-		store = metric.NewNoopEventMetricStore()
+		store = metric.NewNoopStreamMetricStore()
 	}
 
 	var pubSubProviders []pubsub_datasource.Provider
@@ -116,7 +117,7 @@ func build[P GetID, E GetEngineEventConfiguration](
 	builder pubsub_datasource.ProviderBuilder[P, E],
 	providersData []P,
 	dsConfs []dsConfAndEvents[E],
-	store metric.MessagingEventMetricStore,
+	store metric.StreamMetricStore,
 ) ([]pubsub_datasource.Provider, []plan.DataSource, error) {
 	var pubSubProviders []pubsub_datasource.Provider
 	var outs []plan.DataSource
@@ -138,7 +139,7 @@ func build[P GetID, E GetEngineEventConfiguration](
 			continue
 		}
 		provider, err := builder.BuildProvider(providerData, pubsub_datasource.ProviderOpts{
-			MessagingEventMetricStore: store,
+			StreamMetricStore: store,
 		})
 		if err != nil {
 			return nil, nil, err

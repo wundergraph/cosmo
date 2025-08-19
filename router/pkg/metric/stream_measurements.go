@@ -7,16 +7,16 @@ import (
 )
 
 const (
-	messagingSentMessages     = "messaging.event.sent.messages"
-	messagingConsumedMessages = "messaging.event.received.messages"
+	messagingSentMessages     = "streams.sent.messages"
+	messagingConsumedMessages = "streams.received.messages"
 )
 
 var (
 	messagingSentMessagesOptions = []otelmetric.Int64CounterOption{
-		otelmetric.WithDescription("Number of messaging event sent messages"),
+		otelmetric.WithDescription("Number of stream sent messages"),
 	}
 	messagingConsumedMessagesOptions = []otelmetric.Int64CounterOption{
-		otelmetric.WithDescription("Number of messaging event consumed messages"),
+		otelmetric.WithDescription("Number of stream consumed messages"),
 	}
 )
 
@@ -25,7 +25,7 @@ type eventInstruments struct {
 	consumedMessages otelmetric.Int64Counter
 }
 
-func newMessagingEventInstruments(meter otelmetric.Meter) (*eventInstruments, error) {
+func newStreamEventInstruments(meter otelmetric.Meter) (*eventInstruments, error) {
 	producedCounter, err := meter.Int64Counter(
 		messagingSentMessages,
 		messagingSentMessagesOptions...,

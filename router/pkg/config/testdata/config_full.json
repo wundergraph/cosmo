@@ -61,7 +61,7 @@
           "Subscriptions": true
         },
         "CircuitBreaker": false,
-        "MessagingEventMetrics": false,
+        "Streams": false,
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
         "Exporters": [
@@ -81,7 +81,7 @@
         "ListenAddr": "127.0.0.1:8088",
         "GraphqlCache": true,
         "ConnectionStats": true,
-        "MessagingEventMetrics": false,
+        "StreamsMetrics": false,
         "EngineStats": {
           "Subscriptions": true
         },
