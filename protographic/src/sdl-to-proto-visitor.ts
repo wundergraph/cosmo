@@ -1,9 +1,12 @@
 import {
   ArgumentNode,
+  ConstValueNode,
   DirectiveNode,
   getNamedType,
   GraphQLEnumType,
+  GraphQLEnumValue,
   GraphQLField,
+  GraphQLInputField,
   GraphQLInputObjectType,
   GraphQLInterfaceType,
   GraphQLList,
@@ -21,6 +24,7 @@ import {
   isObjectType,
   isScalarType,
   isUnionType,
+  Kind,
   StringValueNode,
 } from 'graphql';
 import {
@@ -459,7 +463,7 @@ export class GraphQLToProtoTextVisitor {
     }
 
     // Build the complete proto file
-    const protoContent: string[] = [];
+    let protoContent: string[] = [];
 
     // Add the header (syntax, package, imports, options)
     protoContent.push(...this.buildProtoHeader());
@@ -513,6 +517,13 @@ export class GraphQLToProtoTextVisitor {
       protoContent.push(messageDef);
     }
 
+    protoContent = this.trimEmptyLines(protoContent);
+    this.protoText = this.trimEmptyLines(this.protoText);
+
+    if (this.protoText.length > 0) {
+      protoContent.push('');
+    }
+
     // Add all processed types from protoText (populated by processMessageQueue)
     protoContent.push(...this.protoText);
 
@@ -520,6 +531,28 @@ export class GraphQLToProtoTextVisitor {
     this.generatedLockData = this.lockManager.getLockData();
 
     return protoContent.join('\n');
+  }
+
+  /**
+   * Trim empty lines from the beginning and end of the array
+   */
+  private trimEmptyLines(data: string[]): string[] {
+    // Find the first non-empty line index
+    const firstNonEmpty = data.findIndex((line) => line.trim() !== '');
+
+    // If no non-empty lines found, return empty array
+    if (firstNonEmpty === -1) {
+      return [];
+    }
+
+    // Find the last non-empty line index by searching backwards
+    let lastNonEmpty = data.length - 1;
+    while (lastNonEmpty >= 0 && data[lastNonEmpty].trim() === '') {
+      lastNonEmpty--;
+    }
+
+    // Return slice from first to last non-empty line (inclusive)
+    return data.slice(firstNonEmpty, lastNonEmpty + 1);
   }
 
   /**
@@ -1146,6 +1179,7 @@ Example:
       const field = fields[fieldName];
       const fieldType = this.getProtoTypeFromGraphQL(field.type);
       const protoFieldName = graphqlFieldToProtoField(fieldName);
+      const deprecationInfo = this.fieldIsDeprecated(field, [...type.getInterfaces()]);
 
       // Get the appropriate field number, respecting the lock
       const fieldNumber = this.getFieldNumber(type.name, protoFieldName, this.getNextAvailableFieldNumber(type.name));
@@ -1155,10 +1189,21 @@ Example:
         this.protoText.push(...this.formatComment(field.description, 1)); // Field comment, indent 1 level
       }
 
+      if (deprecationInfo.deprecated && deprecationInfo.reason && deprecationInfo.reason.length > 0) {
+        this.protoText.push(...this.formatComment(`Deprecation notice: ${deprecationInfo.reason}`, 1));
+      }
+
+      const fieldOptions = [];
+      if (deprecationInfo.deprecated) {
+        fieldOptions.push(` [deprecated = true]`);
+      }
+
       if (fieldType.isRepeated) {
-        this.protoText.push(`  repeated ${fieldType.typeName} ${protoFieldName} = ${fieldNumber};`);
+        this.protoText.push(
+          `  repeated ${fieldType.typeName} ${protoFieldName} = ${fieldNumber}${fieldOptions.join(' ')};`,
+        );
       } else {
-        this.protoText.push(`  ${fieldType.typeName} ${protoFieldName} = ${fieldNumber};`);
+        this.protoText.push(`  ${fieldType.typeName} ${protoFieldName} = ${fieldNumber}${fieldOptions.join(' ')};`);
       }
 
       // Queue complex field types for processing
@@ -1170,6 +1215,63 @@ Example:
 
     this.indent--;
     this.protoText.push('}');
+  }
+
+  /**
+   * Resolve deprecation for a field (optionally considering interface fields)
+   * Field-level reason takes precedence; otherwise the first interface with a non-empty reason wins.
+   * @param field - The GraphQL field to handle directives for
+   * @param interfaces - The GraphQL interfaces that the field implements
+   * @returns An object with the deprecated flag and the reason for deprecation
+   */
+  private fieldIsDeprecated(
+    field: GraphQLField<any, any> | GraphQLInputField,
+    interfaces: GraphQLInterfaceType[],
+  ): { deprecated: boolean; reason?: string } {
+    const allFieldsRefs = [
+      field,
+      ...interfaces.map((iface) => iface.getFields()[field.name]).filter((f) => f !== undefined),
+    ];
+
+    const deprecatedDirectives = allFieldsRefs
+      .map((f) => f.astNode?.directives?.find((d) => d.name.value === 'deprecated'))
+      .filter((d) => d !== undefined);
+
+    if (deprecatedDirectives.length === 0) {
+      return { deprecated: false };
+    }
+
+    const reasons = deprecatedDirectives
+      .map((d) => d.arguments?.find((a) => a.name.value === 'reason')?.value)
+      .filter((r) => r !== undefined && this.isNonEmptyStringValueNode(r));
+
+    if (reasons.length === 0) {
+      return { deprecated: true };
+    }
+
+    return { deprecated: true, reason: reasons[0]?.value };
+  }
+
+  private enumValueIsDeprecated(value: GraphQLEnumValue): { deprecated: boolean; reason?: string } {
+    const deprecatedDirective = value.astNode?.directives?.find((d) => d.name.value === 'deprecated');
+    if (!deprecatedDirective) {
+      return { deprecated: false };
+    }
+    const reasonNode = deprecatedDirective.arguments?.find((a) => a.name.value === 'reason')?.value;
+    if (this.isNonEmptyStringValueNode(reasonNode)) {
+      return { deprecated: true, reason: reasonNode.value.trim() };
+    }
+
+    return { deprecated: true };
+  }
+
+  /**
+   * Check if a node is a non-empty string value node
+   * @param node - The node to check
+   * @returns True if the node is a non-empty string value node, false otherwise
+   */
+  private isNonEmptyStringValueNode(node: ConstValueNode | undefined): node is StringValueNode {
+    return node?.kind === Kind.STRING && node.value.trim().length > 0;
   }
 
   /**
@@ -1217,6 +1319,7 @@ Example:
       const field = fields[fieldName];
       const fieldType = this.getProtoTypeFromGraphQL(field.type);
       const protoFieldName = graphqlFieldToProtoField(fieldName);
+      const deprecationInfo = this.fieldIsDeprecated(field, []);
 
       // Get the appropriate field number, respecting the lock
       const fieldNumber = this.getFieldNumber(type.name, protoFieldName, this.getNextAvailableFieldNumber(type.name));
@@ -1226,10 +1329,21 @@ Example:
         this.protoText.push(...this.formatComment(field.description, 1)); // Field comment, indent 1 level
       }
 
+      if (deprecationInfo.deprecated && deprecationInfo.reason && deprecationInfo.reason.length > 0) {
+        this.protoText.push(...this.formatComment(`Deprecation notice: ${deprecationInfo.reason}`, 1));
+      }
+
+      const fieldOptions = [];
+      if (deprecationInfo.deprecated) {
+        fieldOptions.push(` [deprecated = true]`);
+      }
+
       if (fieldType.isRepeated) {
-        this.protoText.push(`  repeated ${fieldType.typeName} ${protoFieldName} = ${fieldNumber};`);
+        this.protoText.push(
+          `  repeated ${fieldType.typeName} ${protoFieldName} = ${fieldNumber}${fieldOptions.join(' ')};`,
+        );
       } else {
-        this.protoText.push(`  ${fieldType.typeName} ${protoFieldName} = ${fieldNumber};`);
+        this.protoText.push(`  ${fieldType.typeName} ${protoFieldName} = ${fieldNumber}${fieldOptions.join(' ')};`);
       }
 
       // Queue complex field types for processing
@@ -1416,9 +1530,15 @@ Example:
 
       const protoEnumValue = graphqlEnumValueToProtoEnumValue(type.name, value.name);
 
+      const deprecationInfo = this.enumValueIsDeprecated(value);
+
       // Add enum value description as comment
       if (value.description) {
         this.protoText.push(...this.formatComment(value.description, 1)); // Field comment, indent 1 level
+      }
+
+      if (deprecationInfo.deprecated && (deprecationInfo.reason?.length ?? 0) > 0) {
+        this.protoText.push(...this.formatComment(`Deprecation notice: ${deprecationInfo.reason}`, 1));
       }
 
       // Get value number from lock data
@@ -1433,7 +1553,12 @@ Example:
         continue;
       }
 
-      this.protoText.push(`  ${protoEnumValue} = ${valueNumber};`);
+      const fieldOptions = [];
+      if (deprecationInfo.deprecated) {
+        fieldOptions.push(` [deprecated = true]`);
+      }
+
+      this.protoText.push(`  ${protoEnumValue} = ${valueNumber}${fieldOptions.join(' ')};`);
     }
 
     this.indent--;
