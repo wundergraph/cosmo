@@ -9696,31 +9696,34 @@ func TestFlakyTelemetry(t *testing.T) {
 						}
 					}
 
-					require.True(t, engineSpanDetected)
+					require.EventuallyWithT(t, func(c *assert.CollectT) {
+						require.True(c, engineSpanDetected)
 
-					rm := metricdata.ResourceMetrics{}
-					err := metricReader.Collect(context.Background(), &rm)
-					require.NoError(t, err)
+						rm := metricdata.ResourceMetrics{}
+						err := metricReader.Collect(context.Background(), &rm)
+						require.NoError(c, err)
 
-					scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
-					require.Greater(t, len(rm.ScopeMetrics), 0)
-					require.Greater(t, len(scopeMetric.Metrics), 0)
+						scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+						require.Greater(c, len(rm.ScopeMetrics), 0)
+						require.Greater(t, len(scopeMetric.Metrics), 0)
 
-					httpRequestsMetric := scopeMetric.Metrics[0]
-					require.Equal(t, "router.http.requests", httpRequestsMetric.Name)
-					require.IsType(t, metricdata.Sum[int64]{}, httpRequestsMetric.Data)
+						httpRequestsMetric := scopeMetric.Metrics[0]
+						require.Equal(c, "router.http.requests", httpRequestsMetric.Name)
+						require.IsType(c, metricdata.Sum[int64]{}, httpRequestsMetric.Data)
 
-					atts := httpRequestsMetric.Data.(metricdata.Sum[int64]).DataPoints[0].Attributes
-					val, ok := atts.Value(attribute.Key(key))
-					require.True(t, ok)
-					require.Equal(t, expectedValue, val.AsString())
+						atts := httpRequestsMetric.Data.(metricdata.Sum[int64]).DataPoints[0].Attributes
+						val, ok := atts.Value(attribute.Key(key))
+						require.True(c, ok)
+						require.Equal(c, expectedValue, val.AsString())
 
-					subgraphNonMetric := scopeMetric.Metrics[5]
-					require.Equal(t, "router.graphql.operation.planning_time", subgraphNonMetric.Name)
-					require.IsType(t, metricdata.Histogram[float64]{}, subgraphNonMetric.Data)
-					atts = subgraphNonMetric.Data.(metricdata.Histogram[float64]).DataPoints[0].Attributes
-					_, ok = atts.Value(attribute.Key(key))
-					require.False(t, ok)
+						subgraphNonMetric := scopeMetric.Metrics[5]
+						require.Equal(c, "router.graphql.operation.planning_time", subgraphNonMetric.Name)
+						require.IsType(c, metricdata.Histogram[float64]{}, subgraphNonMetric.Data)
+						atts = subgraphNonMetric.Data.(metricdata.Histogram[float64]).DataPoints[0].Attributes
+						_, ok = atts.Value(attribute.Key(key))
+						require.False(c, ok)
+
+					}, 10*time.Second, 100*time.Millisecond)
 				})
 			})
 
@@ -9756,30 +9759,32 @@ func TestFlakyTelemetry(t *testing.T) {
 						assert.NotContains(t, attributes, subgraphTraceAttribute)
 					}
 
-					rm := metricdata.ResourceMetrics{}
-					err := metricReader.Collect(context.Background(), &rm)
-					require.NoError(t, err)
+					require.EventuallyWithT(t, func(c *assert.CollectT) {
+						rm := metricdata.ResourceMetrics{}
+						err := metricReader.Collect(context.Background(), &rm)
+						require.NoError(c, err)
 
-					scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
-					require.Greater(t, len(rm.ScopeMetrics), 0)
-					require.Greater(t, len(scopeMetric.Metrics), 0)
+						scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+						require.Greater(c, len(rm.ScopeMetrics), 0)
+						require.Greater(c, len(scopeMetric.Metrics), 0)
 
-					httpRequestsMetric := scopeMetric.Metrics[0]
-					require.Equal(t, "router.http.requests", httpRequestsMetric.Name)
-					require.IsType(t, metricdata.Sum[int64]{}, httpRequestsMetric.Data)
+						httpRequestsMetric := scopeMetric.Metrics[0]
+						require.Equal(c, "router.http.requests", httpRequestsMetric.Name)
+						require.IsType(c, metricdata.Sum[int64]{}, httpRequestsMetric.Data)
 
-					data2 := httpRequestsMetric.Data.(metricdata.Sum[int64])
-					atts := data2.DataPoints[0].Attributes
-					val, ok := atts.Value(attribute.Key(key))
-					require.True(t, ok)
-					require.Equal(t, expectedValue, val.AsString())
+						data2 := httpRequestsMetric.Data.(metricdata.Sum[int64])
+						atts := data2.DataPoints[0].Attributes
+						val, ok := atts.Value(attribute.Key(key))
+						require.True(c, ok)
+						require.Equal(c, expectedValue, val.AsString())
 
-					subgraphNonMetric := scopeMetric.Metrics[5]
-					require.Equal(t, "router.graphql.operation.planning_time", subgraphNonMetric.Name)
-					require.IsType(t, metricdata.Histogram[float64]{}, subgraphNonMetric.Data)
-					atts = subgraphNonMetric.Data.(metricdata.Histogram[float64]).DataPoints[0].Attributes
-					_, ok = atts.Value(attribute.Key(key))
-					require.False(t, ok)
+						subgraphNonMetric := scopeMetric.Metrics[5]
+						require.Equal(c, "router.graphql.operation.planning_time", subgraphNonMetric.Name)
+						require.IsType(c, metricdata.Histogram[float64]{}, subgraphNonMetric.Data)
+						atts = subgraphNonMetric.Data.(metricdata.Histogram[float64]).DataPoints[0].Attributes
+						_, ok = atts.Value(attribute.Key(key))
+						require.False(c, ok)
+					}, 10*time.Second, 100*time.Millisecond)
 				})
 			})
 		})
@@ -9825,37 +9830,38 @@ func TestFlakyTelemetry(t *testing.T) {
 					}
 				}
 
-				require.True(t, attributeDetected)
+				require.EventuallyWithT(t, func(c *assert.CollectT) {
+					require.True(c, attributeDetected)
 
-				rm := metricdata.ResourceMetrics{}
-				err := metricReader.Collect(context.Background(), &rm)
-				require.NoError(t, err)
+					rm := metricdata.ResourceMetrics{}
+					err := metricReader.Collect(context.Background(), &rm)
+					require.NoError(c, err)
 
-				scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
-				require.Greater(t, len(rm.ScopeMetrics), 0)
-				require.Greater(t, len(scopeMetric.Metrics), 0)
+					scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+					require.Greater(c, len(rm.ScopeMetrics), 0)
+					require.Greater(c, len(scopeMetric.Metrics), 0)
 
-				httpRequestsMetric := scopeMetric.Metrics[0]
-				require.Equal(t, "router.http.requests", httpRequestsMetric.Name)
-				require.IsType(t, metricdata.Sum[int64]{}, httpRequestsMetric.Data)
+					httpRequestsMetric := scopeMetric.Metrics[0]
+					require.Equal(c, "router.http.requests", httpRequestsMetric.Name)
+					require.IsType(c, metricdata.Sum[int64]{}, httpRequestsMetric.Data)
 
-				atts := httpRequestsMetric.Data.(metricdata.Sum[int64]).DataPoints[0].Attributes
-				val, ok := atts.Value("custom.subgraph")
-				require.True(t, ok)
-				floatValue, err := strconv.ParseFloat(val.AsString(), 64)
-				require.NoError(t, err)
-				require.Greater(t, floatValue, 0.0)
+					atts := httpRequestsMetric.Data.(metricdata.Sum[int64]).DataPoints[0].Attributes
+					val, ok := atts.Value("custom.subgraph")
+					require.True(c, ok)
+					floatValue, err := strconv.ParseFloat(val.AsString(), 64)
+					require.NoError(c, err)
+					require.Greater(c, floatValue, 0.0)
 
-				subgraphNonMetric := scopeMetric.Metrics[5]
-				require.Equal(t, "router.graphql.operation.planning_time", subgraphNonMetric.Name)
-				require.IsType(t, metricdata.Histogram[float64]{}, subgraphNonMetric.Data)
-				atts = subgraphNonMetric.Data.(metricdata.Histogram[float64]).DataPoints[0].Attributes
-				_, ok = atts.Value("custom.subgraph")
-				require.False(t, ok)
+					subgraphNonMetric := scopeMetric.Metrics[5]
+					require.Equal(t, "router.graphql.operation.planning_time", subgraphNonMetric.Name)
+					require.IsType(c, metricdata.Histogram[float64]{}, subgraphNonMetric.Data)
+					atts = subgraphNonMetric.Data.(metricdata.Histogram[float64]).DataPoints[0].Attributes
+					_, ok = atts.Value("custom.subgraph")
+					require.False(c, ok)
+				}, 10*time.Second, 100*time.Millisecond)
 			})
 		})
 	})
-
 }
 
 func TestExcludeAttributesWithCustomExporter(t *testing.T) {
