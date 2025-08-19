@@ -1,8 +1,6 @@
 package core
 
 import (
-	"errors"
-
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -117,7 +115,7 @@ func NewPubSubSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHookContext
 		return nil
 	}
 
-	return func(resolveCtx *resolve.Context, subConf datasource.SubscriptionEventConfiguration) (bool, error) {
+	return func(resolveCtx *resolve.Context, subConf datasource.SubscriptionEventConfiguration) (error) {
 		requestContext := getRequestContext(resolveCtx.Context())
 		hookCtx := &pubSubSubscriptionOnStartHookContext{
 			requestContext:                 requestContext,
@@ -125,16 +123,7 @@ func NewPubSubSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHookContext
 			writeEventHook:                 resolveCtx.TryEmitSubscriptionUpdate,
 		}
 
-		err := fn(hookCtx)
-
-		// Check if the error is a StreamHookError and should close the connection
-		var streamHookErr *StreamHookError
-		close := false
-		if errors.As(err, &streamHookErr) {
-			close = streamHookErr.CloseSubscription()
-		}
-
-		return close, err
+		return fn(hookCtx)
 	}
 }
 
@@ -144,22 +133,13 @@ func NewEngineSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHookContext
 		return nil
 	}
 
-	return func(resolveCtx *resolve.Context, input []byte) (bool, error) {
+	return func(resolveCtx *resolve.Context, input []byte) (error) {
 		requestContext := getRequestContext(resolveCtx.Context())
 		hookCtx := &engineSubscriptionOnStartHookContext{
 			requestContext: requestContext,
 			writeEventHook: resolveCtx.TryEmitSubscriptionUpdate,
 		}
 
-		err := fn(hookCtx)
-
-		// Check if the error is a StreamHookError and should close the connection
-		var streamHookErr *StreamHookError
-		close := false
-		if errors.As(err, &streamHookErr) {
-			close = streamHookErr.CloseSubscription()
-		}
-
-		return close, err
+		return fn(hookCtx)
 	}
 }
