@@ -7,8 +7,8 @@ import (
 )
 
 const (
-	messagingSentMessages     = "streams.sent.messages"
-	messagingConsumedMessages = "streams.received.messages"
+	messagingSentMessages     = "router.streams.sent.messages"
+	messagingConsumedMessages = "router.streams.received.messages"
 )
 
 var (
