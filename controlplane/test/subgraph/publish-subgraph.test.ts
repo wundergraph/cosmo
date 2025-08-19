@@ -12,7 +12,7 @@ import {
   genID,
   genUniqueLabel,
 } from '../../src/core/test-util.js';
-import { createEventDrivenGraph, createSubgraph, eventDrivenGraphSDL, SetupTest, subgraphSDL } from '../test-util.js';
+import { createEventDrivenGraph, createSubgraph, DEFAULT_NAMESPACE, eventDrivenGraphSDL, SetupTest, subgraphSDL } from '../test-util.js';
 
 // Read the actual proto, mapping and lock files
 const testDataPath = path.join(process.cwd(), 'test/test-data/plugin');
@@ -476,14 +476,29 @@ describe('Publish subgraph tests', () => {
     test('Should enforce plugin limits when creating plugin via publish', async () => {
       const { client, server } = await SetupTest({
         dbname,
-        setupBilling: { plan: 'developer@1' }, // Developer plan has 0 plugin limit
+        setupBilling: { plan: 'developer@1' }, // Developer plan has 3 plugin limit
       });
 
-      const pluginName = genID('plugin');
+      // Create 3 plugins successfully
+      for (let i = 1; i <= 3; i++) {
+        const pluginName = genID(`plugin-${i}`);
+        const pluginLabel = genUniqueLabel(`team-${i}`);
+
+        const createPluginSubgraphResp = await client.createFederatedSubgraph({
+          name: pluginName,
+          namespace: DEFAULT_NAMESPACE,
+          type: SubgraphType.GRPC_PLUGIN,
+          labels: [pluginLabel],
+        });
+
+        expect(createPluginSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+      }
+
+      const fourthPluginName = genID('plugin-4');
 
       // Try to publish to a non-existent plugin subgraph on developer plan
       const publishResponse = await client.publishFederatedSubgraph({
-        name: pluginName,
+        name: fourthPluginName,
         namespace: 'default',
         schema: pluginSDL,
         type: SubgraphType.GRPC_PLUGIN,
