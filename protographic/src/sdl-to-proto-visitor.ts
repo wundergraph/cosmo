@@ -86,6 +86,8 @@ export interface GraphQLToProtoTextVisitorOptions {
   lockData?: ProtoLock;
   /** Whether to include descriptions/comments from GraphQL schema */
   includeComments?: boolean;
+  /** Whether to include required annotations */
+  includeRequiredAnnotations?: boolean;
 }
 
 /**
@@ -94,6 +96,24 @@ export interface GraphQLToProtoTextVisitorOptions {
 interface ProtoType {
   typeName: string;
   isRepeated: boolean;
+}
+
+enum OptionType {
+  STRING = 'string',
+  NUMBER = 'number',
+  BOOLEAN = 'bool',
+}
+
+interface CustomMessageOption {
+  name: string;
+  type: OptionType;
+}
+
+interface FieldOption {
+  name: string;
+  value: string;
+  valueType: OptionType;
+  isCustom: boolean;
 }
 
 /**
@@ -154,6 +174,12 @@ export class GraphQLToProtoTextVisitor {
   /** Track whether wrapper types are used (for conditional import) */
   private usesWrapperTypes = false;
 
+  /** Whether to include required annotations */
+  private includeRequiredAnnotations = false;
+
+  /** Track custom message options */
+  private customMessageOptions: CustomMessageOption[] = [];
+
   /**
    * Map of message names to their field numbers for tracking deleted fields
    * This maintains field numbers even when fields are removed from the schema
@@ -173,6 +199,7 @@ export class GraphQLToProtoTextVisitor {
       goPackage,
       lockData,
       includeComments = true,
+      includeRequiredAnnotations = false,
     } = options;
 
     this.schema = schema;
@@ -180,6 +207,7 @@ export class GraphQLToProtoTextVisitor {
     this.packageName = packageName;
     this.lockManager = new ProtoLockManager(lockData);
     this.includeComments = includeComments;
+    this.includeRequiredAnnotations = includeRequiredAnnotations;
 
     // If we have lock data, initialize the field numbers map
     if (lockData) {
@@ -462,11 +490,21 @@ export class GraphQLToProtoTextVisitor {
       this.addImport('google/protobuf/wrappers.proto');
     }
 
+    if (this.includeRequiredAnnotations) {
+      this.addImport('google/protobuf/descriptor.proto');
+      this.addCustomMessageOption({
+        name: 'is_required',
+        type: OptionType.BOOLEAN,
+      });
+    }
+
     // Build the complete proto file
     let protoContent: string[] = [];
 
     // Add the header (syntax, package, imports, options)
     protoContent.push(...this.buildProtoHeader());
+
+    protoContent.push(...this.formatCustomMessageOptions());
 
     // Add a service description comment
     if (this.includeComments) {
@@ -531,6 +569,39 @@ export class GraphQLToProtoTextVisitor {
     this.generatedLockData = this.lockManager.getLockData();
 
     return protoContent.join('\n');
+  }
+
+  /**
+   * Add a custom message option to the proto file
+   */
+  private addCustomMessageOption(option: CustomMessageOption): void {
+    this.customMessageOptions.push(option);
+  }
+
+  /**
+   * Format the custom message options into a string array
+   */
+  private formatCustomMessageOptions(): string[] {
+    if (this.customMessageOptions.length === 0) {
+      return [];
+    }
+
+    const options: string[] = [];
+
+    options.push('extend google.protobuf.MessageOptions {');
+
+    // The protobuf spec defines that the number range of 50000 to 99999 is reserved for
+    // internal use within individual organizations.
+    // See https://protobuf.dev/programming-guides/proto2/#customoptions
+    let fieldNumber = 50000;
+    for (const option of this.customMessageOptions) {
+      options.push(this.formatIndent(1, `optional ${option.type} ${option.name} = ${fieldNumber};`));
+      fieldNumber++;
+    }
+
+    options.push('}', '');
+
+    return options;
   }
 
   /**
@@ -1179,7 +1250,31 @@ Example:
       const field = fields[fieldName];
       const fieldType = this.getProtoTypeFromGraphQL(field.type);
       const protoFieldName = graphqlFieldToProtoField(fieldName);
+
+      const fieldOptions: FieldOption[] = [];
       const deprecationInfo = this.fieldIsDeprecated(field, [...type.getInterfaces()]);
+      // Add deprecated option if the field is deprecated
+      if (deprecationInfo.deprecated) {
+        fieldOptions.push({
+          name: 'deprecated',
+          value: 'true',
+          valueType: OptionType.BOOLEAN,
+          isCustom: false,
+        });
+      }
+
+      if (this.includeRequiredAnnotations) {
+        // Add required option if the field is non-nullable
+        const required = isNonNullType(field.type);
+        if (required) {
+          fieldOptions.push({
+            name: 'is_required',
+            value: 'true',
+            valueType: OptionType.BOOLEAN,
+            isCustom: true,
+          });
+        }
+      }
 
       // Get the appropriate field number, respecting the lock
       const fieldNumber = this.getFieldNumber(type.name, protoFieldName, this.getNextAvailableFieldNumber(type.name));
@@ -1193,17 +1288,16 @@ Example:
         this.protoText.push(...this.formatComment(`Deprecation notice: ${deprecationInfo.reason}`, 1));
       }
 
-      const fieldOptions = [];
-      if (deprecationInfo.deprecated) {
-        fieldOptions.push(` [deprecated = true]`);
-      }
-
       if (fieldType.isRepeated) {
         this.protoText.push(
-          `  repeated ${fieldType.typeName} ${protoFieldName} = ${fieldNumber}${fieldOptions.join(' ')};`,
+          `  repeated ${fieldType.typeName} ${protoFieldName} = ${fieldNumber}${this.formatFieldOptions(
+            fieldOptions,
+          )};`,
         );
       } else {
-        this.protoText.push(`  ${fieldType.typeName} ${protoFieldName} = ${fieldNumber}${fieldOptions.join(' ')};`);
+        this.protoText.push(
+          `  ${fieldType.typeName} ${protoFieldName} = ${fieldNumber}${this.formatFieldOptions(fieldOptions)};`,
+        );
       }
 
       // Queue complex field types for processing
@@ -1215,6 +1309,32 @@ Example:
 
     this.indent--;
     this.protoText.push('}');
+  }
+
+  private formatFieldOptions(fieldOptions: FieldOption[]): string {
+    if (fieldOptions.length === 0) {
+      return '';
+    }
+
+    const elements: string[] = [' ['];
+
+    for (let index = 0; index < fieldOptions.length; index++) {
+      const option = fieldOptions[index];
+      const value = option.valueType === OptionType.STRING ? `"${option.value}"` : option.value;
+      if (option.isCustom) {
+        elements.push('(', option.name, ')', ' = ', value);
+      } else {
+        elements.push(`${option.name} = ${value}`);
+      }
+
+      if (index < fieldOptions.length - 1) {
+        elements.push(', ');
+      }
+    }
+
+    elements.push(']');
+
+    return elements.join('');
   }
 
   /**
@@ -1319,7 +1439,30 @@ Example:
       const field = fields[fieldName];
       const fieldType = this.getProtoTypeFromGraphQL(field.type);
       const protoFieldName = graphqlFieldToProtoField(fieldName);
+
+      const fieldOptions: FieldOption[] = [];
+
+      if (this.includeRequiredAnnotations) {
+        const required = isNonNullType(field.type);
+        if (required) {
+          fieldOptions.push({
+            name: 'is_required',
+            value: 'true',
+            valueType: OptionType.BOOLEAN,
+            isCustom: true,
+          });
+        }
+      }
+
       const deprecationInfo = this.fieldIsDeprecated(field, []);
+      if (deprecationInfo.deprecated) {
+        fieldOptions.push({
+          name: 'deprecated',
+          value: 'true',
+          valueType: OptionType.BOOLEAN,
+          isCustom: false,
+        });
+      }
 
       // Get the appropriate field number, respecting the lock
       const fieldNumber = this.getFieldNumber(type.name, protoFieldName, this.getNextAvailableFieldNumber(type.name));
@@ -1333,17 +1476,12 @@ Example:
         this.protoText.push(...this.formatComment(`Deprecation notice: ${deprecationInfo.reason}`, 1));
       }
 
-      const fieldOptions = [];
-      if (deprecationInfo.deprecated) {
-        fieldOptions.push(` [deprecated = true]`);
-      }
-
       if (fieldType.isRepeated) {
         this.protoText.push(
-          `  repeated ${fieldType.typeName} ${protoFieldName} = ${fieldNumber}${fieldOptions.join(' ')};`,
+          `  repeated ${fieldType.typeName} ${protoFieldName} = ${fieldNumber}${this.formatFieldOptions(fieldOptions)};`,
         );
       } else {
-        this.protoText.push(`  ${fieldType.typeName} ${protoFieldName} = ${fieldNumber}${fieldOptions.join(' ')};`);
+        this.protoText.push(`  ${fieldType.typeName} ${protoFieldName} = ${fieldNumber}${this.formatFieldOptions(fieldOptions)};`);
       }
 
       // Queue complex field types for processing
@@ -1746,10 +1884,6 @@ Example:
       lines.push(...this.formatComment(`Wrapper message for a list of ${baseType.name}.`, 0));
     }
 
-    const formatIndent = (indent: number, content: string) => {
-      return '  '.repeat(indent) + content;
-    };
-
     lines.push(`message ${wrapperName} {`);
     let innerWrapperName = '';
     if (level > 1) {
@@ -1759,14 +1893,21 @@ Example:
     }
 
     lines.push(
-      formatIndent(1, `message List {`),
-      formatIndent(2, `repeated ${innerWrapperName} items = 1;`),
-      formatIndent(1, `}`),
-      formatIndent(1, `List list = 1;`),
-      formatIndent(0, `}`),
+      this.formatIndent(1, `message List {`),
+      this.formatIndent(2, `repeated ${innerWrapperName} items = 1;`),
+      this.formatIndent(1, `}`),
+      this.formatIndent(1, `List list = 1;`),
+      this.formatIndent(0, `}`),
     );
 
     return lines;
+  }
+
+  /**
+   * Format a string with the given indent
+   */
+  private formatIndent(indent: number, content: string): string {
+    return '  '.repeat(indent) + content;
   }
 
   /**

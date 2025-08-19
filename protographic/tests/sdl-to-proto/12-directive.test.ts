@@ -497,4 +497,43 @@ describe('SDL to Proto Directive', () => {
       }"
     `);
   });
+
+  it('should correctly apply both deprecated and required annotations to a field', () => {
+    const sdl = `
+      type User {
+        id: ID!
+        name: String! @deprecated(reason: "This field is deprecated but still required")
+        email: String
+      }
+    `;
+
+    const { proto: protoText } = compileGraphQLToProto(sdl, {
+      includeRequiredAnnotations: true
+    });
+
+    expectValidProto(protoText);
+
+    expect(protoText).toMatchInlineSnapshot(`
+      "syntax = "proto3";
+      package service.v1;
+
+      import "google/protobuf/descriptor.proto";
+      import "google/protobuf/wrappers.proto";
+
+      extend google.protobuf.MessageOptions {
+        optional bool is_required = 50000;
+      }
+
+      // Service definition for DefaultService
+      service DefaultService {
+      }
+
+      message User {
+        string id = 1 [(is_required) = true];
+        // Deprecation notice: This field is deprecated but still required
+        string name = 2 [deprecated = true, (is_required) = true];
+        google.protobuf.StringValue email = 3;
+      }"
+    `);
+  });
 });

@@ -1,5 +1,6 @@
 import * as protobufjs from 'protobufjs';
 import { expect } from 'vitest';
+import * as path from 'path'
 
 /**
  * Validates a Protocol Buffer text definition using protobufjs
@@ -8,17 +9,23 @@ import { expect } from 'vitest';
  * @throws Error if the protocol buffer definition is invalid
  */
 export function validateProtoDefinition(protoText: string): void {
-  // Create a root instance
-  const root = new protobufjs.Root();
+  try {
+    // Create a root instance
+    const root = new protobufjs.Root();
 
-  // Load the common wrappers into the root
-  root.loadSync('google/protobuf/wrappers.proto');
+    // Load the common wrappers into the root
+    root.loadSync(path.join(__dirname, 'google/protobuf/descriptor.proto'));
+    root.loadSync('google/protobuf/wrappers.proto');
 
-  // Use protobufjs to parse the text without writing to a file
-  const parsedRoot = protobufjs.parse(protoText, root).root;
+    // Use protobufjs to parse the text without writing to a file
+    const parsedRoot = protobufjs.parse(protoText, root).root;
 
-  // Verify the root is loaded by forcing resolution
-  parsedRoot.resolveAll();
+    // Verify the root is loaded by forcing resolution
+    parsedRoot.resolveAll();
+  } catch (error) {
+    console.error(`Error validating proto definition:`, error);
+    throw error;
+  }
 }
 
 /**

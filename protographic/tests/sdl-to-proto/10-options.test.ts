@@ -74,4 +74,119 @@ describe('SDL to Proto Options', () => {
       }"
     `);
   });
+
+  it('should generate proto with required option', () => {
+    const sdl = `
+      type Query {
+        stringField: String
+        intField: Int
+        floatField: Float
+        booleanField: Boolean
+        idField: ID
+      }
+    `;
+
+    const { proto: protoText } = compileGraphQLToProto(sdl, {
+      includeRequiredAnnotations: true,
+    });
+
+    expectValidProto(protoText);
+
+    expect(protoText).toMatchInlineSnapshot(`
+      "syntax = "proto3";
+      package service.v1;
+
+      import "google/protobuf/descriptor.proto";
+      import "google/protobuf/wrappers.proto";
+
+      extend google.protobuf.MessageOptions {
+        optional bool is_required = 50000;
+      }
+
+      // Service definition for DefaultService
+      service DefaultService {
+        rpc QueryBooleanField(QueryBooleanFieldRequest) returns (QueryBooleanFieldResponse) {}
+        rpc QueryFloatField(QueryFloatFieldRequest) returns (QueryFloatFieldResponse) {}
+        rpc QueryIdField(QueryIdFieldRequest) returns (QueryIdFieldResponse) {}
+        rpc QueryIntField(QueryIntFieldRequest) returns (QueryIntFieldResponse) {}
+        rpc QueryStringField(QueryStringFieldRequest) returns (QueryStringFieldResponse) {}
+      }
+
+      // Request message for stringField operation.
+      message QueryStringFieldRequest {
+      }
+      // Response message for stringField operation.
+      message QueryStringFieldResponse {
+        google.protobuf.StringValue string_field = 1;
+      }
+      // Request message for intField operation.
+      message QueryIntFieldRequest {
+      }
+      // Response message for intField operation.
+      message QueryIntFieldResponse {
+        google.protobuf.Int32Value int_field = 1;
+      }
+      // Request message for floatField operation.
+      message QueryFloatFieldRequest {
+      }
+      // Response message for floatField operation.
+      message QueryFloatFieldResponse {
+        google.protobuf.DoubleValue float_field = 1;
+      }
+      // Request message for booleanField operation.
+      message QueryBooleanFieldRequest {
+      }
+      // Response message for booleanField operation.
+      message QueryBooleanFieldResponse {
+        google.protobuf.BoolValue boolean_field = 1;
+      }
+      // Request message for idField operation.
+      message QueryIdFieldRequest {
+      }
+      // Response message for idField operation.
+      message QueryIdFieldResponse {
+        google.protobuf.StringValue id_field = 1;
+      }"
+    `);
+  });
+
+  it('should generate proto with required option for input types', () => {
+    const sdl = `
+      input UserInput {
+        id: ID!
+        name: String!
+        email: String
+        age: Int
+      }
+    `;
+
+    const { proto: protoText } = compileGraphQLToProto(sdl, {
+      includeRequiredAnnotations: true,
+    });
+
+    expectValidProto(protoText);
+
+    expect(protoText).toMatchInlineSnapshot(`
+      "syntax = "proto3";
+      package service.v1;
+
+      import "google/protobuf/descriptor.proto";
+      import "google/protobuf/wrappers.proto";
+
+      extend google.protobuf.MessageOptions {
+        optional bool is_required = 50000;
+      }
+
+      // Service definition for DefaultService
+      service DefaultService {
+      }
+
+      message UserInput {
+        string id = 1 [(is_required) = true];
+        string name = 2 [(is_required) = true];
+        google.protobuf.StringValue email = 3;
+        google.protobuf.Int32Value age = 4;
+      }"
+    `);
+  });
 });
