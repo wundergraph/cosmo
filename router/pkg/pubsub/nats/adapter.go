@@ -238,7 +238,7 @@ func (p *ProviderAdapter) Publish(ctx context.Context, event PublishAndRequestEv
 			ProviderId:      event.ProviderID,
 			OperationName:   natsPublish,
 			MessagingSystem: metric.ProviderTypeNats,
-			Error:           true,
+			ErrorType:       "publish_error",
 			DestinationName: event.Subject,
 		})
 		return datasource.NewError(fmt.Sprintf("error publishing to NATS subject %s", event.Subject), err)
@@ -274,7 +274,7 @@ func (p *ProviderAdapter) Request(ctx context.Context, event PublishAndRequestEv
 			ProviderId:      event.ProviderID,
 			OperationName:   natsRequest,
 			MessagingSystem: metric.ProviderTypeNats,
-			Error:           true,
+			ErrorType:       "publish_error",
 			DestinationName: event.Subject,
 		})
 		return datasource.NewError(fmt.Sprintf("error requesting from NATS subject %s", event.Subject), err)
@@ -358,6 +358,13 @@ func NewAdapter(ctx context.Context, logger *zap.Logger, url string, opts []nats
 		logger = zap.NewNop()
 	}
 
+	var store metric.MessagingEventMetricStore
+	if providerOpts.MessagingEventMetricStore != nil {
+		store = providerOpts.MessagingEventMetricStore
+	} else {
+		store = metric.NewNoopEventMetricStore()
+	}
+
 	return &ProviderAdapter{
 		ctx:                       ctx,
 		logger:                    logger.With(zap.String("pubsub", "nats")),
@@ -367,6 +374,6 @@ func NewAdapter(ctx context.Context, logger *zap.Logger, url string, opts []nats
 		url:                       url,
 		opts:                      opts,
 		flushTimeout:              10 * time.Second,
-		messagingEventMetricStore: providerOpts.MessagingEventMetricStore,
+		messagingEventMetricStore: store,
 	}, nil
 }

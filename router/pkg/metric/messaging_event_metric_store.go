@@ -26,7 +26,7 @@ type MessagingEvent struct {
 	ProviderId      string       // The id of the provider defined in the configuration
 	OperationName   string       // The operation name that is specific to the messaging system
 	MessagingSystem ProviderType // The messaging system type that are supported
-	Error           bool         // Indicates if the operation resulted in an error or not (true or false)
+	ErrorType       string       // Optional error type, e.g., "publish_error" or "receive_error". If empty, the attribute is not set
 	DestinationName string       // The name of the destination queue / topic / channel
 }
 
@@ -89,7 +89,9 @@ func (e *MessagingEventMetrics) Produce(ctx context.Context, event MessagingEven
 	attrs := []attribute.KeyValue{
 		otel.WgMessagingOperationName.String(event.OperationName),
 		otel.WgMessagingSystem.String(string(event.MessagingSystem)),
-		otel.WgMessagingError.Bool(event.Error),
+	}
+	if event.ErrorType != "" {
+		attrs = append(attrs, otel.WgErrorType.String(event.ErrorType))
 	}
 	if event.ProviderId != "" {
 		attrs = append(attrs, otel.WgProviderId.String(event.ProviderId))
@@ -108,7 +110,9 @@ func (e *MessagingEventMetrics) Consume(ctx context.Context, event MessagingEven
 	attrs := []attribute.KeyValue{
 		otel.WgMessagingOperationName.String(event.OperationName),
 		otel.WgMessagingSystem.String(string(event.MessagingSystem)),
-		otel.WgMessagingError.Bool(event.Error),
+	}
+	if event.ErrorType != "" {
+		attrs = append(attrs, otel.WgErrorType.String(event.ErrorType))
 	}
 	if event.ProviderId != "" {
 		attrs = append(attrs, otel.WgProviderId.String(event.ProviderId))

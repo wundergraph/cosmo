@@ -67,6 +67,7 @@ const (
 	WgMessagingError           = attribute.Key("wg.messaging.error")
 	WgMessagingDestinationName = attribute.Key("wg.messaging.destination.name")
 	WgProviderId               = attribute.Key("wg.provider.id")
+	WgErrorType                = attribute.Key("wg.error.type")
 )
 
 const (

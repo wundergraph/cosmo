@@ -54,7 +54,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 
 				scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.messaging.events")
 				require.NotNil(t, scope)
-				metricEntry := integration.GetMetricByName(scope, "messaging.events.sent.messages")
+				metricEntry := integration.GetMetricByName(scope, "messaging.event.sent.messages")
 				require.NotNil(t, metricEntry)
 
 				sum, _ := metricEntry.Data.(metricdata.Sum[int64])
@@ -75,9 +75,8 @@ func TestFlakyEventMetrics(t *testing.T) {
 				require.True(t, hasProvider)
 				require.Equal(t, "my-kafka", provider.AsString())
 
-				errVal, hasErr := attrs.Value(otelattrs.WgMessagingError)
-				require.True(t, hasErr)
-				require.False(t, errVal.AsBool())
+				_, hasErr := attrs.Value(otelattrs.WgErrorType)
+				require.False(t, hasErr)
 
 				require.Equal(t, int64(2), sum.DataPoints[0].Value)
 			})
@@ -132,7 +131,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 
 					scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.messaging.events")
 					require.NotNil(t, scope)
-					metricEntry := integration.GetMetricByName(scope, "messaging.events.received.messages")
+					metricEntry := integration.GetMetricByName(scope, "messaging.event.received.messages")
 					require.NotNil(t, metricEntry)
 
 					sum, _ := metricEntry.Data.(metricdata.Sum[int64])
@@ -153,9 +152,8 @@ func TestFlakyEventMetrics(t *testing.T) {
 					require.True(t, hasProvider)
 					require.Equal(t, "my-kafka", provider.AsString())
 
-					errVal, hasErr := attrs.Value(otelattrs.WgMessagingError)
-					require.True(t, hasErr)
-					require.False(t, errVal.AsBool())
+					_, hasErr := attrs.Value(otelattrs.WgErrorType)
+					require.False(t, hasErr)
 
 					require.Equal(t, int64(1), sum.DataPoints[0].Value)
 				})
@@ -193,7 +191,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 
 				scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.messaging.events")
 				require.NotNil(t, scope)
-				metricEntry := integration.GetMetricByName(scope, "messaging.events.sent.messages")
+				metricEntry := integration.GetMetricByName(scope, "messaging.event.sent.messages")
 				require.NotNil(t, metricEntry)
 
 				sum, _ := metricEntry.Data.(metricdata.Sum[int64])
@@ -213,9 +211,8 @@ func TestFlakyEventMetrics(t *testing.T) {
 				require.True(t, hasProvider)
 				require.Equal(t, "my-nats", provider.AsString())
 
-				errVal, hasErr := attrs.Value(otelattrs.WgMessagingError)
-				require.True(t, hasErr)
-				require.False(t, errVal.AsBool())
+				_, hasErr := attrs.Value(otelattrs.WgErrorType)
+				require.False(t, hasErr)
 
 				require.Equal(t, int64(2), sum.DataPoints[0].Value)
 			})
@@ -246,7 +243,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 
 				scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.messaging.events")
 				require.NotNil(t, scope)
-				metricEntry := integration.GetMetricByName(scope, "messaging.events.sent.messages")
+				metricEntry := integration.GetMetricByName(scope, "messaging.event.sent.messages")
 				require.NotNil(t, metricEntry)
 
 				sum, _ := metricEntry.Data.(metricdata.Sum[int64])
@@ -266,9 +263,8 @@ func TestFlakyEventMetrics(t *testing.T) {
 				require.True(t, hasProvider)
 				require.Equal(t, "my-nats", provider.AsString())
 
-				errVal, hasErr := attrs.Value(otelattrs.WgMessagingError)
-				require.True(t, hasErr)
-				require.False(t, errVal.AsBool())
+				_, hasErr := attrs.Value(otelattrs.WgErrorType)
+				require.False(t, hasErr)
 
 				require.Equal(t, int64(1), sum.DataPoints[0].Value)
 			})
@@ -331,7 +327,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 
 					scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.messaging.events")
 					require.NotNil(t, scope)
-					metricEntry := integration.GetMetricByName(scope, "messaging.events.received.messages")
+					metricEntry := integration.GetMetricByName(scope, "messaging.event.received.messages")
 					require.NotNil(t, metricEntry)
 
 					sum, _ := metricEntry.Data.(metricdata.Sum[int64])
@@ -352,9 +348,8 @@ func TestFlakyEventMetrics(t *testing.T) {
 					require.True(t, hasProvider)
 					require.Equal(t, "default", provider.AsString())
 
-					errVal, hasErr := attrs.Value(otelattrs.WgMessagingError)
-					require.True(t, hasErr)
-					require.False(t, errVal.AsBool())
+					_, hasErr := attrs.Value(otelattrs.WgErrorType)
+					require.False(t, hasErr)
 
 					require.Equal(t, int64(1), sum.DataPoints[0].Value)
 				})
@@ -394,7 +389,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 
 				scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.messaging.events")
 				require.NotNil(t, scope)
-				metricEntry := integration.GetMetricByName(scope, "messaging.events.sent.messages")
+				metricEntry := integration.GetMetricByName(scope, "messaging.event.sent.messages")
 				require.NotNil(t, metricEntry)
 
 				sum, _ := metricEntry.Data.(metricdata.Sum[int64])
@@ -415,9 +410,8 @@ func TestFlakyEventMetrics(t *testing.T) {
 				require.True(t, hasProvider)
 				require.Equal(t, "my-redis", provider.AsString())
 
-				errVal, hasErr := attrs.Value(otelattrs.WgMessagingError)
-				require.True(t, hasErr)
-				require.False(t, errVal.AsBool())
+				_, hasErr := attrs.Value(otelattrs.WgErrorType)
+				require.False(t, hasErr)
 
 				require.Equal(t, int64(2), sum.DataPoints[0].Value)
 			})
@@ -471,7 +465,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 
 					scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.messaging.events")
 					require.NotNil(t, scope)
-					metricEntry := integration.GetMetricByName(scope, "messaging.events.received.messages")
+					metricEntry := integration.GetMetricByName(scope, "messaging.event.received.messages")
 					require.NotNil(t, metricEntry)
 
 					sum, _ := metricEntry.Data.(metricdata.Sum[int64])
@@ -492,9 +486,8 @@ func TestFlakyEventMetrics(t *testing.T) {
 					require.True(t, hasProvider)
 					require.Equal(t, "my-redis", provider.AsString())
 
-					errVal, hasErr := attrs.Value(otelattrs.WgMessagingError)
-					require.True(t, hasErr)
-					require.False(t, errVal.AsBool())
+					_, hasErr := attrs.Value(otelattrs.WgErrorType)
+					require.False(t, hasErr)
 
 					require.Equal(t, int64(1), sum.DataPoints[0].Value)
 				})

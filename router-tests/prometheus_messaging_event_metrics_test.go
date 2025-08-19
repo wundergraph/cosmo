@@ -51,15 +51,15 @@ func TestFlakyEventMetrics(t *testing.T) {
 				mf, err := promRegistry.Gather()
 				require.NoError(t, err)
 
-				family := findMetricFamilyByName(mf, "messaging_events_sent_messages_total")
+				family := findMetricFamilyByName(mf, "messaging_event_sent_messages_total")
 				metrics := family.GetMetric()
 				require.Len(t, metrics, 1)
 
 				operation := findMetricLabelByName(metrics, "wg_messaging_operation_name")
 				require.Equal(t, "produce", operation.GetValue())
-				errLabel := findMetricLabelByName(metrics, "wg_messaging_error")
-				require.NotNil(t, errLabel)
-				require.Equal(t, "false", errLabel.GetValue())
+
+				errLabel := findMetricLabelByName(metrics, "wg_error_type")
+				require.Nil(t, errLabel)
 
 				system := findMetricLabelByName(metrics, "wg_messaging_system")
 				require.Equal(t, "kafka", system.GetValue())
@@ -124,15 +124,15 @@ func TestFlakyEventMetrics(t *testing.T) {
 					mf, err := promRegistry.Gather()
 					require.NoError(t, err)
 
-					family := findMetricFamilyByName(mf, "messaging_events_received_messages_total")
+					family := findMetricFamilyByName(mf, "messaging_event_received_messages_total")
 					metrics := family.GetMetric()
 					require.Len(t, metrics, 1)
 
 					operation := findMetricLabelByName(metrics, "wg_messaging_operation_name")
 					require.Equal(t, "receive", operation.GetValue())
-					errLabel := findMetricLabelByName(metrics, "wg_messaging_error")
-					require.NotNil(t, errLabel)
-					require.Equal(t, "false", errLabel.GetValue())
+
+					errLabel := findMetricLabelByName(metrics, "wg_error_type")
+					require.Nil(t, errLabel)
 
 					system := findMetricLabelByName(metrics, "wg_messaging_system")
 					require.Equal(t, "kafka", system.GetValue())
@@ -180,15 +180,16 @@ func TestFlakyEventMetrics(t *testing.T) {
 				mf, err := promRegistry.Gather()
 				require.NoError(t, err)
 
-				family := findMetricFamilyByName(mf, "messaging_events_sent_messages_total")
+				family := findMetricFamilyByName(mf, "messaging_event_sent_messages_total")
 				metrics := family.GetMetric()
 				require.Len(t, metrics, 1)
 
 				operation := findMetricLabelByName(metrics, "wg_messaging_operation_name")
 				require.Equal(t, "publish", operation.GetValue())
-				errLabel := findMetricLabelByName(metrics, "wg_messaging_error")
-				require.NotNil(t, errLabel)
-				require.Equal(t, "false", errLabel.GetValue())
+
+				errLabel := findMetricLabelByName(metrics, "wg_error_type")
+				require.Nil(t, errLabel)
+
 				system := findMetricLabelByName(metrics, "wg_messaging_system")
 				require.Equal(t, "nats", system.GetValue())
 
@@ -228,15 +229,15 @@ func TestFlakyEventMetrics(t *testing.T) {
 				mf, err := promRegistry.Gather()
 				require.NoError(t, err)
 
-				family := findMetricFamilyByName(mf, "messaging_events_sent_messages_total")
+				family := findMetricFamilyByName(mf, "messaging_event_sent_messages_total")
 				metrics := family.GetMetric()
 				require.Len(t, metrics, 1)
 
 				operation := findMetricLabelByName(metrics, "wg_messaging_operation_name")
 				require.Equal(t, "request", operation.GetValue())
-				errLabel := findMetricLabelByName(metrics, "wg_messaging_error")
-				require.NotNil(t, errLabel)
-				require.Equal(t, "false", errLabel.GetValue())
+
+				errLabel := findMetricLabelByName(metrics, "wg_error_type")
+				require.Nil(t, errLabel)
 
 				system := findMetricLabelByName(metrics, "wg_messaging_system")
 				require.Equal(t, "nats", system.GetValue())
@@ -308,12 +309,12 @@ func TestFlakyEventMetrics(t *testing.T) {
 					mf, err := promRegistry.Gather()
 					require.NoError(t, err)
 
-					family := findMetricFamilyByName(mf, "messaging_events_received_messages_total")
+					family := findMetricFamilyByName(mf, "messaging_event_received_messages_total")
 					metrics := family.GetMetric()
 
-					errLabel := findMetricLabelByName(metrics, "wg_messaging_error")
-					require.NotNil(t, errLabel)
-					require.Equal(t, "false", errLabel.GetValue())
+					errLabel := findMetricLabelByName(metrics, "wg_error_type")
+					require.Nil(t, errLabel)
+
 					operation := findMetricLabelByName(metrics, "wg_messaging_operation_name")
 					require.Equal(t, "receive", operation.GetValue())
 
@@ -365,15 +366,15 @@ func TestFlakyEventMetrics(t *testing.T) {
 				mf, err := promRegistry.Gather()
 				require.NoError(t, err)
 
-				family := findMetricFamilyByName(mf, "messaging_events_sent_messages_total")
+				family := findMetricFamilyByName(mf, "messaging_event_sent_messages_total")
 				metrics := family.GetMetric()
 				require.Len(t, metrics, 1)
 
 				operation := findMetricLabelByName(metrics, "wg_messaging_operation_name")
 				require.Equal(t, "publish", operation.GetValue())
-				errLabel := findMetricLabelByName(metrics, "wg_messaging_error")
-				require.NotNil(t, errLabel)
-				require.Equal(t, "false", errLabel.GetValue())
+
+				errLabel := findMetricLabelByName(metrics, "wg_error_type")
+				require.Nil(t, errLabel)
 
 				system := findMetricLabelByName(metrics, "wg_messaging_system")
 				require.Equal(t, "redis", system.GetValue())
@@ -437,13 +438,13 @@ func TestFlakyEventMetrics(t *testing.T) {
 					mf, err := promRegistry.Gather()
 					require.NoError(t, err)
 
-					family := findMetricFamilyByName(mf, "messaging_events_received_messages_total")
+					family := findMetricFamilyByName(mf, "messaging_event_received_messages_total")
 					metrics := family.GetMetric()
 					require.Len(t, metrics, 1)
 
-					errLabel := findMetricLabelByName(metrics, "wg_messaging_error")
-					require.NotNil(t, errLabel)
-					require.Equal(t, "false", errLabel.GetValue())
+					errLabel := findMetricLabelByName(metrics, "wg_error_type")
+					require.Nil(t, errLabel)
+
 					operation := findMetricLabelByName(metrics, "wg_messaging_operation_name")
 					require.Equal(t, "receive", operation.GetValue())
 

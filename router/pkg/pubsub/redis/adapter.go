@@ -32,13 +32,24 @@ type Adapter interface {
 
 func NewProviderAdapter(ctx context.Context, logger *zap.Logger, urls []string, clusterEnabled bool, opts datasource.ProviderOpts) Adapter {
 	ctx, cancel := context.WithCancel(ctx)
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+
+	var store metric.MessagingEventMetricStore
+	if opts.MessagingEventMetricStore != nil {
+		store = opts.MessagingEventMetricStore
+	} else {
+		store = metric.NewNoopEventMetricStore()
+	}
+
 	return &ProviderAdapter{
 		ctx:                       ctx,
 		cancel:                    cancel,
 		logger:                    logger,
 		urls:                      urls,
 		clusterEnabled:            clusterEnabled,
-		messagingEventMetricStore: opts.MessagingEventMetricStore,
+		messagingEventMetricStore: store,
 	}
 }
 
@@ -164,7 +175,7 @@ func (p *ProviderAdapter) Publish(ctx context.Context, event PublishEventConfigu
 			ProviderId:      event.ProviderID,
 			OperationName:   redisPublish,
 			MessagingSystem: metric.ProviderTypeRedis,
-			Error:           true,
+			ErrorType:       "publish_error",
 			DestinationName: event.Channel,
 		})
 		return datasource.NewError(fmt.Sprintf("error publishing to Redis PubSub channel %s", event.Channel), intCmd.Err())

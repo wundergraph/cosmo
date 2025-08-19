@@ -201,7 +201,7 @@ func (p *ProviderAdapter) Publish(ctx context.Context, event PublishEventConfigu
 			ProviderId:      event.ProviderID,
 			OperationName:   kafkaProduce,
 			MessagingSystem: metric.ProviderTypeKafka,
-			Error:           true,
+			ErrorType:       "publish_error",
 			DestinationName: event.Topic,
 		})
 		return datasource.NewError(fmt.Sprintf("error publishing to Kafka topic %s", event.Topic), pErr)
