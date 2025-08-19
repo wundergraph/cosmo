@@ -41,7 +41,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 				RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 				EnableKafka:              true,
 				MetricOptions: testenv.MetricOptions{
-					EnablePrometheusEventMetrics: true,
+					EnablePrometheusStreamMetrics: true,
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				events.EnsureTopicExists(t, xEnv, "employeeUpdated")
@@ -88,7 +88,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 				RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 				EnableKafka:              true,
 				MetricOptions: testenv.MetricOptions{
-					EnablePrometheusEventMetrics: true,
+					EnablePrometheusStreamMetrics: true,
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				events.EnsureTopicExists(t, xEnv, topic)
@@ -167,7 +167,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 				RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 				EnableNats:               true,
 				MetricOptions: testenv.MetricOptions{
-					EnablePrometheusEventMetrics: true,
+					EnablePrometheusStreamMetrics: true,
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: `mutation UpdateEmployeeNats($update: UpdateEmployeeInput!) {
@@ -215,7 +215,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 				RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 				EnableNats:               true,
 				MetricOptions: testenv.MetricOptions{
-					EnablePrometheusEventMetrics: true,
+					EnablePrometheusStreamMetrics: true,
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				sub, err := xEnv.NatsConnectionMyNats.Subscribe(xEnv.GetPubSubName("getEmployeeMyNats.12"), func(msg *nats.Msg) { _ = msg.Respond([]byte(`{"id": 12, "__typename": "Employee"}`)) })
@@ -264,7 +264,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 				RouterConfigJSONTemplate:           testenv.ConfigWithEdfsNatsJSONTemplate,
 				EnableNats:                         true,
 				ModifyEngineExecutionConfiguration: func(ec *config.EngineExecutionConfiguration) { ec.WebSocketClientReadTimeout = time.Second },
-				MetricOptions:                      testenv.MetricOptions{EnablePrometheusEventMetrics: true},
+				MetricOptions:                      testenv.MetricOptions{EnablePrometheusStreamMetrics: true},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				var subscriptionOne struct {
 					employeeUpdated struct {
@@ -357,7 +357,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 				RouterConfigJSONTemplate: testenv.ConfigWithEdfsRedisJSONTemplate,
 				EnableRedis:              true,
 				MetricOptions: testenv.MetricOptions{
-					EnablePrometheusEventMetrics: true,
+					EnablePrometheusStreamMetrics: true,
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: `mutation { updateEmployeeMyRedis(id: 3, update: {name: "r1"}) { success } }`})
@@ -401,7 +401,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 				PrometheusRegistry:       promRegistry,
 				RouterConfigJSONTemplate: testenv.ConfigWithEdfsRedisJSONTemplate,
 				EnableRedis:              true,
-				MetricOptions:            testenv.MetricOptions{EnablePrometheusEventMetrics: true},
+				MetricOptions:            testenv.MetricOptions{EnablePrometheusStreamMetrics: true},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				topic := "employeeUpdatedMyRedis"
 
