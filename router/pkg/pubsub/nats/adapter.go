@@ -274,7 +274,7 @@ func (p *ProviderAdapter) Request(ctx context.Context, event PublishAndRequestEv
 			ProviderId:      event.ProviderID,
 			OperationName:   natsRequest,
 			MessagingSystem: metric.ProviderTypeNats,
-			ErrorType:       "publish_error",
+			ErrorType:       "request_error",
 			DestinationName: event.Subject,
 		})
 		return datasource.NewError(fmt.Sprintf("error requesting from NATS subject %s", event.Subject), err)
