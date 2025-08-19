@@ -1069,7 +1069,7 @@
                 "streams": {
                   "type": "boolean",
                   "default": false,
-                  "description": "Enable the collection of stream metrics. The default value is false."
+                  "description": "Enable the collection of stream metrics. This contains metrics related to EDFS. The default value is false."
                 },
                 "circuit_breaker": {
                   "type": "boolean",
@@ -1179,7 +1179,7 @@
                 "streams": {
                   "type": "boolean",
                   "default": false,
-                  "description": "Enable the collection of stream metrics. The default value is false."
+                  "description": "Enable the collection of stream metrics. This contains metrics related to EDFS. The default value is false."
                 },
                 "circuit_breaker": {
                   "type": "boolean",
