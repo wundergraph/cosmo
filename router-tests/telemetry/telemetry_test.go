@@ -9705,7 +9705,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 						scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 						require.Greater(c, len(rm.ScopeMetrics), 0)
-						require.Greater(t, len(scopeMetric.Metrics), 0)
+						require.Greater(c, len(scopeMetric.Metrics), 0)
 
 						httpRequestsMetric := scopeMetric.Metrics[0]
 						require.Equal(c, "router.http.requests", httpRequestsMetric.Name)
@@ -9846,7 +9846,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					require.IsType(c, metricdata.Sum[int64]{}, httpRequestsMetric.Data)
 
 					atts := httpRequestsMetric.Data.(metricdata.Sum[int64]).DataPoints[0].Attributes
-					val, ok := atts.Value("custom.subgraph")
+					val, ok := atts.Value(attribute.Key("custom.subgraph"))
 					require.True(c, ok)
 					floatValue, err := strconv.ParseFloat(val.AsString(), 64)
 					require.NoError(c, err)
@@ -9856,7 +9856,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					require.Equal(t, "router.graphql.operation.planning_time", subgraphNonMetric.Name)
 					require.IsType(c, metricdata.Histogram[float64]{}, subgraphNonMetric.Data)
 					atts = subgraphNonMetric.Data.(metricdata.Histogram[float64]).DataPoints[0].Attributes
-					_, ok = atts.Value("custom.subgraph")
+					_, ok = atts.Value(attribute.Key("custom.subgraph"))
 					require.False(c, ok)
 				}, 10*time.Second, 100*time.Millisecond)
 			})
