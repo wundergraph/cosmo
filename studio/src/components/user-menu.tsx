@@ -52,8 +52,9 @@ export const UserMenu = () => {
             </AvatarFallback>
           </Avatar>
           {hasInvitations ? (
-            <div className="absolute right-0 top-0 -translate-x-0.5 -translate-y-0.5 rounded-full border-2 border-background">
-              <div className="h-2 w-2 rounded-full bg-blue-400" />
+            <div className="absolute right-0 top-0 -translate-x-0.5 -translate-y-0.5 rounded-full border-2 border-background pointer-events-none">
+              <div className="absolute size-2 animate-ping rounded-full bg-blue-400" />
+              <div className="size-2 rounded-full bg-blue-400" />
             </div>
           ) : null}
         </div>
@@ -67,8 +68,8 @@ export const UserMenu = () => {
             Invitations
             {hasInvitations ? (
               <div className="relative ml-auto">
-                <div className="absolute h-2 w-2 animate-ping rounded-full bg-blue-400" />
-                <div className="h-2 w-2 rounded-full bg-blue-400" />
+                <div className="absolute size-2 animate-ping rounded-full bg-blue-400" />
+                <div className="size-2 rounded-full bg-blue-400" />
               </div>
             ) : null}
           </DropdownMenuItem>
