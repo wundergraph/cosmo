@@ -417,7 +417,8 @@ func TestStartSubscriptionHook(t *testing.T) {
 				clientRunCh <- client.Run()
 			}()
 
-			xEnv.WaitForSubscriptionCount(1, time.Second*10)
+			// Wait for the subscription to be closed
+			xEnv.WaitForSubscriptionCount(0, time.Second*10)
 
 			testenv.AwaitChannelWithT(t, time.Second*10, subscriptionOneArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
 				var graphqlErrs graphql.Errors
