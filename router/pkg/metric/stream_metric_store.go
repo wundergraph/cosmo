@@ -56,7 +56,7 @@ type StreamMetrics struct {
 func NewStreamMetricStore(logger *zap.Logger, baseAttributes []attribute.KeyValue, otelProvider, promProvider *metric.MeterProvider, metricsConfig *Config) (*StreamMetrics, error) {
 	providers := make([]StreamMetricProvider, 0)
 
-	if metricsConfig.OpenTelemetry.Stream {
+	if metricsConfig.OpenTelemetry.Streams {
 		otlpMetrics, err := newOtlpStreamEventMetrics(logger, otelProvider)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create otlp stream event metrics: %w", err)

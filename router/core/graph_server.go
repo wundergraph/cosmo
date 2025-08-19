@@ -880,7 +880,7 @@ func (s *graphServer) buildGraphMux(
 		}
 	}
 
-	if s.metricConfig.OpenTelemetry.Stream || s.metricConfig.Prometheus.Streams {
+	if s.metricConfig.OpenTelemetry.Streams || s.metricConfig.Prometheus.Streams {
 		store, err := rmetric.NewStreamMetricStore(
 			s.logger,
 			baseMetricAttributes,

@@ -81,7 +81,7 @@
         "ListenAddr": "127.0.0.1:8088",
         "GraphqlCache": true,
         "ConnectionStats": true,
-        "StreamsMetrics": false,
+        "Streams": false,
         "EngineStats": {
           "Subscriptions": true
         },

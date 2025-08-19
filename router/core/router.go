@@ -2240,7 +2240,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			},
 			Exporters:           openTelemetryExporters,
 			CircuitBreaker:      cfg.Metrics.OTLP.CircuitBreaker,
-			Stream:              cfg.Metrics.OTLP.Streams,
+			Streams:             cfg.Metrics.OTLP.Streams,
 			ExcludeMetrics:      cfg.Metrics.OTLP.ExcludeMetrics,
 			ExcludeMetricLabels: cfg.Metrics.OTLP.ExcludeMetricLabels,
 		},

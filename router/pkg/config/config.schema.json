@@ -1066,7 +1066,7 @@
                   "default": false,
                   "description": "Enable the collection of connection stats. The default value is false."
                 },
-                "stream": {
+                "streams": {
                   "type": "boolean",
                   "default": false,
                   "description": "Enable the collection of stream metrics. The default value is false."
@@ -1176,7 +1176,7 @@
                   "default": false,
                   "description": "Enable the collection of connection stats. The default value is false."
                 },
-                "stream": {
+                "streams": {
                   "type": "boolean",
                   "default": false,
                   "description": "Enable the collection of stream metrics. The default value is false."

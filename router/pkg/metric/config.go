@@ -80,7 +80,7 @@ type OpenTelemetry struct {
 	ExcludeMetricLabels []*regexp.Regexp
 	// TestReader is used for testing purposes. If set, the reader will be used instead of the configured exporters.
 	TestReader sdkmetric.Reader
-	Stream     bool
+	Streams    bool
 }
 
 func GetDefaultExporter(cfg *Config) *OpenTelemetryExporter {
