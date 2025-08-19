@@ -1,4 +1,4 @@
-package events_test
+package events
 
 import (
 	"bufio"
@@ -104,7 +104,7 @@ func TestRedisEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
 
 			// produce a message
-			produceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+			ProduceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
 			// process the message
 			select {
@@ -170,7 +170,7 @@ func TestRedisEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
 
 			// produce an empty message
-			produceRedisMessage(t, xEnv, topics[0], ``)
+			ProduceRedisMessage(t, xEnv, topics[0], ``)
 			// process the message
 			select {
 			case subscriptionArgs := <-subscriptionArgsCh:
@@ -181,7 +181,7 @@ func TestRedisEvents(t *testing.T) {
 				t.Fatal("timeout waiting for first message error")
 			}
 
-			produceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`) // Correct message
+			ProduceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`) // Correct message
 			select {
 			case subscriptionArgs := <-subscriptionArgsCh:
 				require.NoError(t, subscriptionArgs.errValue)
@@ -191,7 +191,7 @@ func TestRedisEvents(t *testing.T) {
 			}
 
 			// Missing entity = Resolver error
-			produceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","update":{"name":"foo"}}`)
+			ProduceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","update":{"name":"foo"}}`)
 			select {
 			case subscriptionArgs := <-subscriptionArgsCh:
 				var gqlErr graphql.Errors
@@ -202,7 +202,7 @@ func TestRedisEvents(t *testing.T) {
 			}
 
 			// Correct message
-			produceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+			ProduceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 			select {
 			case subscriptionArgs := <-subscriptionArgsCh:
 				require.NoError(t, subscriptionArgs.errValue)
@@ -273,7 +273,7 @@ func TestRedisEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(2, RedisWaitTimeout)
 
 			// produce a message
-			produceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+			ProduceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
 			// read the message from the first subscription
 			select {
@@ -354,7 +354,7 @@ func TestRedisEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(2, RedisWaitTimeout)
 
 			// produce a message
-			produceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+			ProduceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
 			// read the message from the first subscription
 			select {
@@ -375,7 +375,7 @@ func TestRedisEvents(t *testing.T) {
 			}
 
 			// produce a message
-			produceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 2,"update":{"name":"foo"}}`)
+			ProduceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 2,"update":{"name":"foo"}}`)
 
 			// read the message from the first subscription
 			select {
@@ -451,7 +451,7 @@ func TestRedisEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
 
 			// produce a message
-			produceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+			ProduceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
 			// read the message from the subscription
 			select {
@@ -509,12 +509,12 @@ func TestRedisEvents(t *testing.T) {
 				xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
 
 				// produce a message
-				produceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+				ProduceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 				// read the message from the subscription
 				assertRedisMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"employeeUpdates\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
 
 				// produce a message
-				produceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+				ProduceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 				// read the message from the subscription
 				assertRedisMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"employeeUpdates\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
 			})
@@ -590,7 +590,7 @@ func TestRedisEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
 
 			// produce a message so that the subscription is triggered
-			produceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+			ProduceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
 			// get the client response
 			var clientRet struct {
@@ -663,7 +663,7 @@ func TestRedisEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
 
 			// produce a message so that the subscription is triggered
-			produceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+			ProduceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
 			// get the client response
 			var clientRet struct {
@@ -792,7 +792,7 @@ func TestRedisEvents(t *testing.T) {
 
 			// Events 1, 3, 4, 7, and 11 should be included
 			for i := MsgCount; i > 0; i-- {
-				produceRedisMessage(t, xEnv, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
+				ProduceRedisMessage(t, xEnv, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
 
 				if i == 11 || i == 7 || i == 4 || i == 3 || i == 1 {
 					gErr := conn.ReadJSON(&msg)
@@ -853,7 +853,7 @@ func TestRedisEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
 
 			// produce an invalid message
-			produceRedisMessage(t, xEnv, topics[0], `{asas`)
+			ProduceRedisMessage(t, xEnv, topics[0], `{asas`)
 			// get the client response
 			select {
 			case args := <-subscriptionOneArgsCh:
@@ -865,7 +865,7 @@ func TestRedisEvents(t *testing.T) {
 			}
 
 			// produce a correct message
-			produceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id":1}`)
+			ProduceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id":1}`)
 			// get the client response
 			select {
 			case args := <-subscriptionOneArgsCh:
@@ -876,7 +876,7 @@ func TestRedisEvents(t *testing.T) {
 			}
 
 			// produce a message with a missing entity
-			produceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","update":{"name":"foo"}}`)
+			ProduceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","update":{"name":"foo"}}`)
 			// get the client response
 			select {
 			case args := <-subscriptionOneArgsCh:
@@ -888,7 +888,7 @@ func TestRedisEvents(t *testing.T) {
 			}
 
 			// produce a correct message
-			produceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+			ProduceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 			// get the client response
 			select {
 			case args := <-subscriptionOneArgsCh:
@@ -991,7 +991,7 @@ func TestRedisClusterEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
 
 			// produce a message
-			produceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+			ProduceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
 			// read the message
 			select {
@@ -1045,29 +1045,6 @@ func TestRedisClusterEvents(t *testing.T) {
 		})
 	})
 
-}
-
-func produceRedisMessage(t *testing.T, xEnv *testenv.Environment, topicName string, message string) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	parsedURL, err := url.Parse(xEnv.RedisHosts[0])
-	if err != nil {
-		t.Fatalf("Failed to parse Redis URL: %v", err)
-	}
-	var redisConn redis.UniversalClient
-	if !xEnv.RedisWithClusterMode {
-		redisConn = redis.NewClient(&redis.Options{
-			Addr: parsedURL.Host,
-		})
-	} else {
-		redisConn = redis.NewClusterClient(&redis.ClusterOptions{
-			Addrs: []string{parsedURL.Host},
-		})
-	}
-
-	intCmd := redisConn.Publish(ctx, xEnv.GetPubSubName(topicName), message)
-	require.NoError(t, intCmd.Err())
 }
 
 func readRedisMessages(t *testing.T, xEnv *testenv.Environment, channelName string) (<-chan *redis.Message, error) {

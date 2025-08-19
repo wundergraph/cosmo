@@ -6,6 +6,8 @@ import (
 	"slices"
 	"strconv"
 
+	"github.com/wundergraph/cosmo/router/pkg/metric"
+
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	pubsub_datasource "github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
@@ -51,14 +53,11 @@ func (e *ProviderNotDefinedError) Error() string {
 
 // BuildProvidersAndDataSources is a generic function that builds providers and data sources for the given
 // EventsConfiguration and DataSourceConfigurationWithMetadata
-func BuildProvidersAndDataSources(
-	ctx context.Context,
-	config config.EventsConfiguration,
-	logger *zap.Logger,
-	dsConfs []DataSourceConfigurationWithMetadata,
-	hostName string,
-	routerListenAddr string,
-) ([]pubsub_datasource.Provider, []plan.DataSource, error) {
+func BuildProvidersAndDataSources(ctx context.Context, config config.EventsConfiguration, store metric.StreamMetricStore, logger *zap.Logger, dsConfs []DataSourceConfigurationWithMetadata, hostName string, routerListenAddr string) ([]pubsub_datasource.Provider, []plan.DataSource, error) {
+	if store == nil {
+		store = metric.NewNoopStreamMetricStore()
+	}
+
 	var pubSubProviders []pubsub_datasource.Provider
 	var outs []plan.DataSource
 
@@ -71,7 +70,7 @@ func BuildProvidersAndDataSources(
 			events: dsConf.Configuration.GetCustomEvents().GetKafka(),
 		})
 	}
-	kafkaPubSubProviders, kafkaOuts, err := build(ctx, kafkaBuilder, config.Providers.Kafka, kafkaDsConfsWithEvents)
+	kafkaPubSubProviders, kafkaOuts, err := build(ctx, kafkaBuilder, config.Providers.Kafka, kafkaDsConfsWithEvents, store)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -87,7 +86,7 @@ func BuildProvidersAndDataSources(
 			events: dsConf.Configuration.GetCustomEvents().GetNats(),
 		})
 	}
-	natsPubSubProviders, natsOuts, err := build(ctx, natsBuilder, config.Providers.Nats, natsDsConfsWithEvents)
+	natsPubSubProviders, natsOuts, err := build(ctx, natsBuilder, config.Providers.Nats, natsDsConfsWithEvents, store)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -103,7 +102,7 @@ func BuildProvidersAndDataSources(
 			events: dsConf.Configuration.GetCustomEvents().GetRedis(),
 		})
 	}
-	redisPubSubProviders, redisOuts, err := build(ctx, redisBuilder, config.Providers.Redis, redisDsConfsWithEvents)
+	redisPubSubProviders, redisOuts, err := build(ctx, redisBuilder, config.Providers.Redis, redisDsConfsWithEvents, store)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -113,7 +112,13 @@ func BuildProvidersAndDataSources(
 	return pubSubProviders, outs, nil
 }
 
-func build[P GetID, E GetEngineEventConfiguration](ctx context.Context, builder pubsub_datasource.ProviderBuilder[P, E], providersData []P, dsConfs []dsConfAndEvents[E]) ([]pubsub_datasource.Provider, []plan.DataSource, error) {
+func build[P GetID, E GetEngineEventConfiguration](
+	ctx context.Context,
+	builder pubsub_datasource.ProviderBuilder[P, E],
+	providersData []P,
+	dsConfs []dsConfAndEvents[E],
+	store metric.StreamMetricStore,
+) ([]pubsub_datasource.Provider, []plan.DataSource, error) {
 	var pubSubProviders []pubsub_datasource.Provider
 	var outs []plan.DataSource
 
@@ -133,7 +138,9 @@ func build[P GetID, E GetEngineEventConfiguration](ctx context.Context, builder 
 		if !slices.Contains(usedProviderIds, providerData.GetID()) {
 			continue
 		}
-		provider, err := builder.BuildProvider(providerData)
+		provider, err := builder.BuildProvider(providerData, pubsub_datasource.ProviderOpts{
+			StreamMetricStore: store,
+		})
 		if err != nil {
 			return nil, nil, err
 		}

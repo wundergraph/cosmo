@@ -64,8 +64,8 @@ func (p *ProviderBuilder) BuildEngineDataSourceFactory(data *nodev1.NatsEventCon
 	return dataSourceFactory, nil
 }
 
-func (p *ProviderBuilder) BuildProvider(provider config.NatsEventSource) (datasource.Provider, error) {
-	adapter, pubSubProvider, err := buildProvider(p.ctx, provider, p.logger, p.hostName, p.routerListenAddr)
+func (p *ProviderBuilder) BuildProvider(provider config.NatsEventSource, providerOpts datasource.ProviderOpts) (datasource.Provider, error) {
+	adapter, pubSubProvider, err := buildProvider(p.ctx, provider, p.logger, p.hostName, p.routerListenAddr, providerOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -118,12 +118,12 @@ func buildNatsOptions(eventSource config.NatsEventSource, logger *zap.Logger) ([
 	return opts, nil
 }
 
-func buildProvider(ctx context.Context, provider config.NatsEventSource, logger *zap.Logger, hostName string, routerListenAddr string) (Adapter, datasource.Provider, error) {
+func buildProvider(ctx context.Context, provider config.NatsEventSource, logger *zap.Logger, hostName string, routerListenAddr string, providerOpts datasource.ProviderOpts) (Adapter, datasource.Provider, error) {
 	options, err := buildNatsOptions(provider, logger)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to build options for Nats provider with ID \"%s\": %w", provider.ID, err)
 	}
-	adapter, err := NewAdapter(ctx, logger, provider.URL, options, hostName, routerListenAddr)
+	adapter, err := NewAdapter(ctx, logger, provider.URL, options, hostName, routerListenAddr, providerOpts)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create adapter for Nats provider with ID \"%s\": %w", provider.ID, err)
 	}

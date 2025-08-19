@@ -1066,6 +1066,11 @@
                   "default": false,
                   "description": "Enable the collection of connection stats. The default value is false."
                 },
+                "streams": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the collection of stream metrics. This contains metrics related to EDFS. The default value is false."
+                },
                 "circuit_breaker": {
                   "type": "boolean",
                   "default": false,
@@ -1170,6 +1175,11 @@
                   "type": "boolean",
                   "default": false,
                   "description": "Enable the collection of connection stats. The default value is false."
+                },
+                "streams": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the collection of stream metrics. This contains metrics related to EDFS. The default value is false."
                 },
                 "circuit_breaker": {
                   "type": "boolean",
