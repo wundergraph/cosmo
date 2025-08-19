@@ -9852,7 +9852,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					require.NoError(c, err)
 					require.Greater(c, floatValue, 0.0)
 
-					subgraphNonMetric := scopeMetric.Metrics[5]
+					subgraphNonMetric := *integration.GetMetricByName(&scopeMetric, "router.graphql.operation.planning_time")
 					require.Equal(t, "router.graphql.operation.planning_time", subgraphNonMetric.Name)
 					require.IsType(c, metricdata.Histogram[float64]{}, subgraphNonMetric.Data)
 					atts = subgraphNonMetric.Data.(metricdata.Histogram[float64]).DataPoints[0].Attributes
