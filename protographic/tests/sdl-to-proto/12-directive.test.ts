@@ -165,6 +165,50 @@ describe('SDL to Proto Directive', () => {
     `);
   });
 
+  it('should should ignore empty reason on field when interface has a reason', () => {
+    const sdl = `
+            scalar DateTime
+
+            interface Node {
+                id: ID!
+                createdAt: DateTime! @deprecated(reason: "This field is deprecated on the interface")
+                updatedAt: DateTime!
+            }
+
+            type User implements Node {
+                id: ID!
+                createdAt: DateTime! @deprecated(reason: "    ")
+                updatedAt: DateTime!
+            }
+        `;
+
+    const { proto: protoText } = compileGraphQLToProto(sdl);
+
+    expectValidProto(protoText);
+
+    expect(protoText).toMatchInlineSnapshot(`
+      "syntax = "proto3";
+      package service.v1;
+
+      // Service definition for DefaultService
+      service DefaultService {
+      }
+
+      message Node {
+        oneof instance {
+        User user = 1;
+        }
+      }
+
+      message User {
+        string id = 1;
+        // Deprecation notice: This field is deprecated on the interface
+        string created_at = 2 [deprecated = true];
+        string updated_at = 3;
+      }"
+    `);
+  });
+
   it('should correctly include a deprecation option on an enum element', () => {
     const sdl = `
             enum UserRole {

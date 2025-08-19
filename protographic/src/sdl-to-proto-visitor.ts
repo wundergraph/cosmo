@@ -1241,21 +1241,15 @@ Example:
       return { deprecated: false };
     }
 
-    // Find the first directive with a non-empty (trimmed) reason: field first, then interfaces
-    const firstWithReason = deprecatedDirectives.find(
-      (d) => d.arguments?.find((a) => a.name.value === 'reason')?.value,
-    );
+    const reasons = deprecatedDirectives
+      .map((d) => d.arguments?.find((a) => a.name.value === 'reason')?.value)
+      .filter((r) => r !== undefined && this.isNonEmptyStringValueNode(r));
 
-    if (!firstWithReason) {
+    if (reasons.length === 0) {
       return { deprecated: true };
     }
 
-    const reason = firstWithReason.arguments?.find((a) => a.name.value === 'reason')?.value;
-    if (this.isNonEmptyStringValueNode(reason)) {
-      return { deprecated: true, reason: reason.value };
-    }
-
-    return { deprecated: true };
+    return { deprecated: true, reason: reasons[0]?.value };
   }
 
   private enumValueIsDeprecated(value: GraphQLEnumValue): { deprecated: boolean; reason?: string } {
