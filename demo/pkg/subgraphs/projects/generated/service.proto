@@ -501,7 +501,8 @@ message Task {
   google.protobuf.StringValue description = 6;
   TaskPriority priority = 7;
   TaskStatus status = 8;
-  google.protobuf.DoubleValue estimated_hours = 9;
+  // Deprecation notice: No more estimations!
+  google.protobuf.DoubleValue estimated_hours = 9 [deprecated = true];
   google.protobuf.DoubleValue actual_hours = 10;
   google.protobuf.StringValue created_at = 11;
   google.protobuf.StringValue completed_at = 12;
