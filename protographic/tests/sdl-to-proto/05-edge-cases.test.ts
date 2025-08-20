@@ -107,7 +107,12 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/descriptor.proto";
       import "google/protobuf/wrappers.proto";
+
+      extend google.protobuf.FieldOptions {
+        optional bool is_required = 50000;
+      }
 
       // Service definition for DefaultService
       service DefaultService {
@@ -142,13 +147,13 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
       }
 
       message MessageType {
-        string id = 1;
-        string content = 2;
+        string id = 1 [(is_required) = true];
+        string content = 2 [(is_required) = true];
       }
 
       message ServiceType {
-        string id = 1;
-        string name = 2;
+        string id = 1 [(is_required) = true];
+        string name = 2 [(is_required) = true];
       }
 
       enum EnumValues {
@@ -188,7 +193,12 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/descriptor.proto";
       import "google/protobuf/wrappers.proto";
+
+      extend google.protobuf.FieldOptions {
+        optional bool is_required = 50000;
+      }
 
       // Service definition for DefaultService
       service DefaultService {
@@ -205,7 +215,7 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
       }
 
       message User {
-        string id = 1;
+        string id = 1 [(is_required) = true];
         google.protobuf.StringValue message = 2;
         google.protobuf.StringValue service = 3;
         google.protobuf.StringValue enum = 4;
@@ -341,7 +351,12 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/descriptor.proto";
       import "google/protobuf/wrappers.proto";
+
+      extend google.protobuf.FieldOptions {
+        optional bool is_required = 50000;
+      }
 
       // Service definition for DefaultService
       service DefaultService {
@@ -567,39 +582,39 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
       }
 
       message User {
-        string id = 1;
-        string name = 2;
-        string email = 3;
-        string created_at = 4;
+        string id = 1 [(is_required) = true];
+        string name = 2 [(is_required) = true];
+        string email = 3 [(is_required) = true];
+        string created_at = 4 [(is_required) = true];
         google.protobuf.StringValue metadata = 5;
-        UserStatus status = 6;
+        UserStatus status = 6 [(is_required) = true];
         ListOfPost posts = 7;
         UserProfile profile = 8;
       }
 
       message Post {
-        string id = 1;
-        string title = 2;
-        string content = 3;
-        User author = 4;
+        string id = 1 [(is_required) = true];
+        string title = 2 [(is_required) = true];
+        string content = 3 [(is_required) = true];
+        User author = 4 [(is_required) = true];
         ListOfString tags = 5;
-        string created_at = 6;
+        string created_at = 6 [(is_required) = true];
         google.protobuf.StringValue updated_at = 7;
-        PostStatus status = 8;
+        PostStatus status = 8 [(is_required) = true];
         ListOfComment comments = 9;
       }
 
       message Comment {
-        string id = 1;
-        Post post = 2;
-        User author = 3;
-        string content = 4;
-        string created_at = 5;
+        string id = 1 [(is_required) = true];
+        Post post = 2 [(is_required) = true];
+        User author = 3 [(is_required) = true];
+        string content = 4 [(is_required) = true];
+        string created_at = 5 [(is_required) = true];
         google.protobuf.StringValue updated_at = 6;
       }
 
       message SearchInput {
-        string query = 1;
+        string query = 1 [(is_required) = true];
         google.protobuf.Int32Value limit = 2;
         google.protobuf.Int32Value offset = 3;
         ListOfString types = 4;
@@ -622,20 +637,20 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
       }
 
       message UserInput {
-        string name = 1;
-        string email = 2;
+        string name = 1 [(is_required) = true];
+        string email = 2 [(is_required) = true];
       }
 
       message PostInput {
-        string title = 1;
-        string content = 2;
+        string title = 1 [(is_required) = true];
+        string content = 2 [(is_required) = true];
         ListOfString tags = 3;
         PostStatus status = 4;
       }
 
       message CommentInput {
-        string post_id = 1;
-        string content = 2;
+        string post_id = 1 [(is_required) = true];
+        string content = 2 [(is_required) = true];
       }
 
       enum UserStatus {

@@ -96,12 +96,7 @@ describe('SDL to Proto Options', () => {
       "syntax = "proto3";
       package service.v1;
 
-      import "google/protobuf/descriptor.proto";
       import "google/protobuf/wrappers.proto";
-
-      extend google.protobuf.MessageOptions {
-        optional bool is_required = 50000;
-      }
 
       // Service definition for DefaultService
       service DefaultService {
@@ -173,7 +168,7 @@ describe('SDL to Proto Options', () => {
       import "google/protobuf/descriptor.proto";
       import "google/protobuf/wrappers.proto";
 
-      extend google.protobuf.MessageOptions {
+      extend google.protobuf.FieldOptions {
         optional bool is_required = 50000;
       }
 

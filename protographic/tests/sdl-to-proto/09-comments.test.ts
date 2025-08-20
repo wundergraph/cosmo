@@ -82,7 +82,12 @@ describe('SDL to Proto Comments', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/descriptor.proto";
       import "google/protobuf/wrappers.proto";
+
+      extend google.protobuf.FieldOptions {
+        optional bool is_required = 50000;
+      }
 
       // Service definition for DefaultService
       service DefaultService {
@@ -136,7 +141,7 @@ describe('SDL to Proto Comments', () => {
        */
       message User {
         // Single line description for id field
-        string id = 1;
+        string id = 1 [(is_required) = true];
         /*
          * Multi-line description for the name field.
          * Second line of the description.
@@ -163,9 +168,9 @@ describe('SDL to Proto Comments', () => {
        */
       message CreateUserInput {
         // User's name
-        string name = 1;
+        string name = 1 [(is_required) = true];
         // User's email address
-        string email = 2;
+        string email = 2 [(is_required) = true];
       }"
     `);
   });
@@ -233,7 +238,12 @@ describe('SDL to Proto Comments', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/descriptor.proto";
       import "google/protobuf/wrappers.proto";
+
+      extend google.protobuf.FieldOptions {
+        optional bool is_required = 50000;
+      }
 
       // Service definition for DefaultService
       service DefaultService {
@@ -299,17 +309,17 @@ describe('SDL to Proto Comments', () => {
        */
       message Person {
         // Unique identifier
-        string id = 1;
+        string id = 1 [(is_required) = true];
         // Person's full name
-        string name = 2;
+        string name = 2 [(is_required) = true];
       }
 
       // Organization entity
       message Organization {
         // Unique identifier
-        string id = 1;
+        string id = 1 [(is_required) = true];
         // Organization name
-        string name = 2;
+        string name = 2 [(is_required) = true];
         // Organization description
         google.protobuf.StringValue description = 3;
       }"
@@ -376,7 +386,12 @@ describe('SDL to Proto Comments', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/descriptor.proto";
       import "google/protobuf/wrappers.proto";
+
+      extend google.protobuf.FieldOptions {
+        optional bool is_required = 50000;
+      }
 
       // Service definition for DefaultService
       service DefaultService {
@@ -489,11 +504,11 @@ describe('SDL to Proto Comments', () => {
        */
       message User {
         // Unique user identifier
-        string id = 1;
+        string id = 1 [(is_required) = true];
         // User's full name
-        string name = 2;
+        string name = 2 [(is_required) = true];
         // User's email address
-        string email = 3;
+        string email = 3 [(is_required) = true];
       }
 
       /*
@@ -502,11 +517,11 @@ describe('SDL to Proto Comments', () => {
        */
       message Product {
         // Universal Product Code
-        string upc = 1;
+        string upc = 1 [(is_required) = true];
         // Product name
-        string name = 2;
+        string name = 2 [(is_required) = true];
         // Product price in cents
-        int32 price = 3;
+        int32 price = 3 [(is_required) = true];
         // Optional product description
         google.protobuf.StringValue description = 4;
       }"

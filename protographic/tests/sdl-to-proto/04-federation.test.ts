@@ -38,6 +38,12 @@ describe('SDL to Proto - Federation and Special Types', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/descriptor.proto";
+
+      extend google.protobuf.FieldOptions {
+        optional bool is_required = 50000;
+      }
+
       // Service definition for DefaultService
       service DefaultService {
         // Lookup Product entity by id
@@ -125,15 +131,15 @@ describe('SDL to Proto - Federation and Special Types', () => {
       }
 
       message Product {
-        string id = 1;
-        string name = 2;
-        double price = 3;
+        string id = 1 [(is_required) = true];
+        string name = 2 [(is_required) = true];
+        double price = 3 [(is_required) = true];
       }
 
       message User {
-        string id = 1;
-        string name = 2;
-        string email = 3;
+        string id = 1 [(is_required) = true];
+        string name = 2 [(is_required) = true];
+        string email = 3 [(is_required) = true];
       }"
     `);
   });
@@ -163,6 +169,12 @@ describe('SDL to Proto - Federation and Special Types', () => {
     expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
       package service.v1;
+
+      import "google/protobuf/descriptor.proto";
+
+      extend google.protobuf.FieldOptions {
+        optional bool is_required = 50000;
+      }
 
       // Service definition for DefaultService
       service DefaultService {
@@ -218,10 +230,10 @@ describe('SDL to Proto - Federation and Special Types', () => {
       }
 
       message OrderItem {
-        string order_id = 1;
-        string item_id = 2;
-        int32 quantity = 3;
-        double price = 4;
+        string order_id = 1 [(is_required) = true];
+        string item_id = 2 [(is_required) = true];
+        int32 quantity = 3 [(is_required) = true];
+        double price = 4 [(is_required) = true];
       }"
     `);
   });
@@ -263,6 +275,12 @@ describe('SDL to Proto - Federation and Special Types', () => {
     expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
       package service.v1;
+
+      import "google/protobuf/descriptor.proto";
+
+      extend google.protobuf.FieldOptions {
+        optional bool is_required = 50000;
+      }
 
       // Service definition for DefaultService
       service DefaultService {
@@ -351,14 +369,14 @@ describe('SDL to Proto - Federation and Special Types', () => {
       }
 
       message User {
-        string id = 1;
-        string name = 2;
+        string id = 1 [(is_required) = true];
+        string name = 2 [(is_required) = true];
       }
 
       message Product {
-        string id = 1;
-        string name = 2;
-        double price = 3;
+        string id = 1 [(is_required) = true];
+        string name = 2 [(is_required) = true];
+        double price = 3 [(is_required) = true];
       }
 
       message Node {
@@ -401,7 +419,12 @@ describe('SDL to Proto - Federation and Special Types', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/descriptor.proto";
       import "google/protobuf/wrappers.proto";
+
+      extend google.protobuf.FieldOptions {
+        optional bool is_required = 50000;
+      }
 
       // Service definition for DefaultService
       service DefaultService {
@@ -426,9 +449,9 @@ describe('SDL to Proto - Federation and Special Types', () => {
       }
 
       message Event {
-        string id = 1;
-        string name = 2;
-        string start_time = 3;
+        string id = 1 [(is_required) = true];
+        string name = 2 [(is_required) = true];
+        string start_time = 3 [(is_required) = true];
         google.protobuf.StringValue end_time = 4;
         google.protobuf.StringValue metadata = 5;
         google.protobuf.StringValue attachment = 6;
@@ -461,6 +484,12 @@ describe('SDL to Proto - Federation and Special Types', () => {
     expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
       package service.v1;
+
+      import "google/protobuf/descriptor.proto";
+
+      extend google.protobuf.FieldOptions {
+        optional bool is_required = 50000;
+      }
 
       // Service definition for DefaultService
       service DefaultService {
@@ -548,10 +577,10 @@ describe('SDL to Proto - Federation and Special Types', () => {
       }
 
       message Product {
-        string id = 1;
-        string upc = 2;
-        string name = 3;
-        double price = 4;
+        string id = 1 [(is_required) = true];
+        string upc = 2 [(is_required) = true];
+        string name = 3 [(is_required) = true];
+        double price = 4 [(is_required) = true];
       }"
     `);
   });
@@ -582,6 +611,12 @@ describe('SDL to Proto - Federation and Special Types', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/descriptor.proto";
+
+      extend google.protobuf.FieldOptions {
+        optional bool is_required = 50000;
+      }
+
       // Service definition for DefaultService
       service DefaultService {
         // Lookup OrderItem entity by itemId and orderId
@@ -634,10 +669,10 @@ describe('SDL to Proto - Federation and Special Types', () => {
       }
 
       message OrderItem {
-        string order_id = 1;
-        string item_id = 2;
-        int32 quantity = 3;
-        double price = 4;
+        string order_id = 1 [(is_required) = true];
+        string item_id = 2 [(is_required) = true];
+        int32 quantity = 3 [(is_required) = true];
+        double price = 4 [(is_required) = true];
       }"
     `);
   });
@@ -668,6 +703,12 @@ describe('SDL to Proto - Federation and Special Types', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/descriptor.proto";
+
+      extend google.protobuf.FieldOptions {
+        optional bool is_required = 50000;
+      }
+
       // Service definition for DefaultService
       service DefaultService {
         // Lookup OrderItem entity by itemId and orderId
@@ -720,10 +761,10 @@ describe('SDL to Proto - Federation and Special Types', () => {
       }
 
       message OrderItem {
-        string order_id = 1;
-        string item_id = 2;
-        int32 quantity = 3;
-        double price = 4;
+        string order_id = 1 [(is_required) = true];
+        string item_id = 2 [(is_required) = true];
+        int32 quantity = 3 [(is_required) = true];
+        double price = 4 [(is_required) = true];
       }"
     `);
   });
@@ -754,6 +795,12 @@ describe('SDL to Proto - Federation and Special Types', () => {
     expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
       package service.v1;
+
+      import "google/protobuf/descriptor.proto";
+
+      extend google.protobuf.FieldOptions {
+        optional bool is_required = 50000;
+      }
 
       // Service definition for DefaultService
       service DefaultService {
@@ -843,11 +890,11 @@ describe('SDL to Proto - Federation and Special Types', () => {
       }
 
       message Product {
-        string id = 1;
-        string manufacturer_id = 2;
-        string product_code = 3;
-        string name = 4;
-        double price = 5;
+        string id = 1 [(is_required) = true];
+        string manufacturer_id = 2 [(is_required) = true];
+        string product_code = 3 [(is_required) = true];
+        string name = 4 [(is_required) = true];
+        double price = 5 [(is_required) = true];
       }"
     `);
   });

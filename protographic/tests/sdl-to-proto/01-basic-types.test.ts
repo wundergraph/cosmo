@@ -194,7 +194,12 @@ describe('SDL to Proto - Basic Types', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/descriptor.proto";
       import "google/protobuf/wrappers.proto";
+
+      extend google.protobuf.FieldOptions {
+        optional bool is_required = 50000;
+      }
 
       // Service definition for DefaultService
       service DefaultService {
@@ -210,8 +215,8 @@ describe('SDL to Proto - Basic Types', () => {
       }
 
       message User {
-        string id = 1;
-        string name = 2;
+        string id = 1 [(is_required) = true];
+        string name = 2 [(is_required) = true];
         google.protobuf.Int32Value age = 3;
       }"
     `);
@@ -239,7 +244,12 @@ describe('SDL to Proto - Basic Types', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/descriptor.proto";
       import "google/protobuf/wrappers.proto";
+
+      extend google.protobuf.FieldOptions {
+        optional bool is_required = 50000;
+      }
 
       // Service definition for DefaultService
       service DefaultService {
@@ -274,8 +284,8 @@ describe('SDL to Proto - Basic Types', () => {
       }
 
       message User {
-        string id = 1;
-        string name = 2;
+        string id = 1 [(is_required) = true];
+        string name = 2 [(is_required) = true];
       }"
     `);
   });
@@ -404,6 +414,12 @@ describe('SDL to Proto - Basic Types', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/descriptor.proto";
+
+      extend google.protobuf.FieldOptions {
+        optional bool is_required = 50000;
+      }
+
       // Service definition for DefaultService
       service DefaultService {
         rpc QueryCategoriesByKinds(QueryCategoriesByKindsRequest) returns (QueryCategoriesByKindsResponse) {}
@@ -429,9 +445,9 @@ describe('SDL to Proto - Basic Types', () => {
       }
 
       message Category {
-        string id = 1;
-        string name = 2;
-        CategoryKind kind = 3;
+        string id = 1 [(is_required) = true];
+        string name = 2 [(is_required) = true];
+        CategoryKind kind = 3 [(is_required) = true];
       }
 
       enum CategoryKind {
@@ -472,6 +488,12 @@ describe('SDL to Proto - Basic Types', () => {
     expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
       package service.v1;
+
+      import "google/protobuf/descriptor.proto";
+
+      extend google.protobuf.FieldOptions {
+        optional bool is_required = 50000;
+      }
 
       // Service definition for DefaultService
       service DefaultService {
@@ -554,13 +576,13 @@ describe('SDL to Proto - Basic Types', () => {
       }
 
       message Matrix {
-        ListOfListOfInt values = 1;
-        repeated string labels = 2;
+        ListOfListOfInt values = 1 [(is_required) = true];
+        repeated string labels = 2 [(is_required) = true];
       }
 
       message Point {
-        double x = 1;
-        double y = 2;
+        double x = 1 [(is_required) = true];
+        double y = 2 [(is_required) = true];
       }"
     `);
   });
@@ -700,7 +722,12 @@ describe('SDL to Proto - Basic Types', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/descriptor.proto";
       import "google/protobuf/wrappers.proto";
+
+      extend google.protobuf.FieldOptions {
+        optional bool is_required = 50000;
+      }
 
       // Service definition for DefaultService
       service DefaultService {
@@ -760,24 +787,24 @@ describe('SDL to Proto - Basic Types', () => {
       }
 
       message User {
-        string id = 1;
-        string name = 2;
+        string id = 1 [(is_required) = true];
+        string name = 2 [(is_required) = true];
         google.protobuf.StringValue email = 3;
         UserProfile profile = 4;
         ListOfUser friends = 5;
       }
 
       message TreeNode {
-        string id = 1;
+        string id = 1 [(is_required) = true];
         google.protobuf.StringValue value = 2;
         google.protobuf.DoubleValue weight = 3;
-        bool is_leaf = 4;
+        bool is_leaf = 4 [(is_required) = true];
         ListOfTreeNode children = 5;
         TreeNode parent = 6;
       }
 
       message UserInput {
-        string name = 1;
+        string name = 1 [(is_required) = true];
         google.protobuf.StringValue email = 2;
         UserProfileInput profile = 3;
       }

@@ -37,6 +37,12 @@ describe('SDL to Proto - Interfaces and Unions', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/descriptor.proto";
+
+      extend google.protobuf.FieldOptions {
+        optional bool is_required = 50000;
+      }
+
       // Service definition for DefaultService
       service DefaultService {
         rpc QueryNode(QueryNodeRequest) returns (QueryNodeResponse) {}
@@ -67,15 +73,15 @@ describe('SDL to Proto - Interfaces and Unions', () => {
       }
 
       message User {
-        string id = 1;
-        string name = 2;
-        string email = 3;
+        string id = 1 [(is_required) = true];
+        string name = 2 [(is_required) = true];
+        string email = 3 [(is_required) = true];
       }
 
       message Product {
-        string id = 1;
-        string name = 2;
-        double price = 3;
+        string id = 1 [(is_required) = true];
+        string name = 2 [(is_required) = true];
+        double price = 3 [(is_required) = true];
       }"
     `);
   });
@@ -115,6 +121,12 @@ describe('SDL to Proto - Interfaces and Unions', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/descriptor.proto";
+
+      extend google.protobuf.FieldOptions {
+        optional bool is_required = 50000;
+      }
+
       // Service definition for DefaultService
       service DefaultService {
         rpc QueryActivity(QueryActivityRequest) returns (QueryActivityResponse) {}
@@ -150,11 +162,11 @@ describe('SDL to Proto - Interfaces and Unions', () => {
       }
 
       message User {
-        string id = 1;
-        string name = 2;
-        string email = 3;
-        string created_at = 4;
-        string updated_at = 5;
+        string id = 1 [(is_required) = true];
+        string name = 2 [(is_required) = true];
+        string email = 3 [(is_required) = true];
+        string created_at = 4 [(is_required) = true];
+        string updated_at = 5 [(is_required) = true];
       }"
     `);
   });
@@ -195,6 +207,12 @@ describe('SDL to Proto - Interfaces and Unions', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/descriptor.proto";
+
+      extend google.protobuf.FieldOptions {
+        optional bool is_required = 50000;
+      }
+
       // Service definition for DefaultService
       service DefaultService {
         rpc QuerySearch(QuerySearchRequest) returns (QuerySearchResponse) {}
@@ -218,20 +236,20 @@ describe('SDL to Proto - Interfaces and Unions', () => {
       }
 
       message User {
-        string id = 1;
-        string name = 2;
+        string id = 1 [(is_required) = true];
+        string name = 2 [(is_required) = true];
       }
 
       message Product {
-        string id = 1;
-        string name = 2;
-        double price = 3;
+        string id = 1 [(is_required) = true];
+        string name = 2 [(is_required) = true];
+        double price = 3 [(is_required) = true];
       }
 
       message Article {
-        string id = 1;
-        string title = 2;
-        string body = 3;
+        string id = 1 [(is_required) = true];
+        string title = 2 [(is_required) = true];
+        string body = 3 [(is_required) = true];
       }"
     `);
   });
@@ -262,6 +280,12 @@ describe('SDL to Proto - Interfaces and Unions', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/descriptor.proto";
+
+      extend google.protobuf.FieldOptions {
+        optional bool is_required = 50000;
+      }
+
       // Service definition for DefaultService
       service DefaultService {
         rpc QuerySomething(QuerySomethingRequest) returns (QuerySomethingResponse) {}
@@ -276,8 +300,8 @@ describe('SDL to Proto - Interfaces and Unions', () => {
       }
 
       message Something {
-        string id = 1;
-        string name = 2;
+        string id = 1 [(is_required) = true];
+        string name = 2 [(is_required) = true];
       }
 
       message Empty {

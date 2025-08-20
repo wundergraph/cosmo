@@ -104,7 +104,7 @@ enum OptionType {
   BOOLEAN = 'bool',
 }
 
-interface CustomMessageOption {
+interface CustomFieldOption {
   name: string;
   type: OptionType;
 }
@@ -175,10 +175,13 @@ export class GraphQLToProtoTextVisitor {
   private usesWrapperTypes = false;
 
   /** Whether to include required annotations */
-  private includeRequiredAnnotations = false;
+  private includeRequiredAnnotations: boolean;
+
+  /** Tracks whether required annotations have been added to the proto file */
+  private hasRequiredAnnotations: boolean = false;
 
   /** Track custom message options */
-  private customMessageOptions: CustomMessageOption[] = [];
+  private customMessageOptions: CustomFieldOption[] = [];
 
   /**
    * Map of message names to their field numbers for tracking deleted fields
@@ -199,7 +202,7 @@ export class GraphQLToProtoTextVisitor {
       goPackage,
       lockData,
       includeComments = true,
-      includeRequiredAnnotations = false,
+      includeRequiredAnnotations = true,
     } = options;
 
     this.schema = schema;
@@ -490,9 +493,9 @@ export class GraphQLToProtoTextVisitor {
       this.addImport('google/protobuf/wrappers.proto');
     }
 
-    if (this.includeRequiredAnnotations) {
+    if (this.includeRequiredAnnotations && this.hasRequiredAnnotations) {
       this.addImport('google/protobuf/descriptor.proto');
-      this.addCustomMessageOption({
+      this.addCustomFieldOption({
         name: 'is_required',
         type: OptionType.BOOLEAN,
       });
@@ -503,8 +506,7 @@ export class GraphQLToProtoTextVisitor {
 
     // Add the header (syntax, package, imports, options)
     protoContent.push(...this.buildProtoHeader());
-
-    protoContent.push(...this.formatCustomMessageOptions());
+    protoContent.push(...this.formatCustomFieldOptions());
 
     // Add a service description comment
     if (this.includeComments) {
@@ -574,21 +576,21 @@ export class GraphQLToProtoTextVisitor {
   /**
    * Add a custom message option to the proto file
    */
-  private addCustomMessageOption(option: CustomMessageOption): void {
+  private addCustomFieldOption(option: CustomFieldOption): void {
     this.customMessageOptions.push(option);
   }
 
   /**
    * Format the custom message options into a string array
    */
-  private formatCustomMessageOptions(): string[] {
-    if (this.customMessageOptions.length === 0) {
+  private formatCustomFieldOptions(): string[] {
+    if (this.customMessageOptions.length === 0 || !this.hasRequiredAnnotations) {
       return [];
     }
 
     const options: string[] = [];
 
-    options.push('extend google.protobuf.MessageOptions {');
+    options.push('extend google.protobuf.FieldOptions {');
 
     // The protobuf spec defines that the number range of 50000 to 99999 is reserved for
     // internal use within individual organizations.
@@ -1274,6 +1276,8 @@ Example:
             isCustom: true,
           });
         }
+
+        this.hasRequiredAnnotations = true;
       }
 
       // Get the appropriate field number, respecting the lock
@@ -1452,6 +1456,7 @@ Example:
             isCustom: true,
           });
         }
+        this.hasRequiredAnnotations = true;
       }
 
       const deprecationInfo = this.fieldIsDeprecated(field, []);
@@ -1478,10 +1483,14 @@ Example:
 
       if (fieldType.isRepeated) {
         this.protoText.push(
-          `  repeated ${fieldType.typeName} ${protoFieldName} = ${fieldNumber}${this.formatFieldOptions(fieldOptions)};`,
+          `  repeated ${fieldType.typeName} ${protoFieldName} = ${fieldNumber}${this.formatFieldOptions(
+            fieldOptions,
+          )};`,
         );
       } else {
-        this.protoText.push(`  ${fieldType.typeName} ${protoFieldName} = ${fieldNumber}${this.formatFieldOptions(fieldOptions)};`);
+        this.protoText.push(
+          `  ${fieldType.typeName} ${protoFieldName} = ${fieldNumber}${this.formatFieldOptions(fieldOptions)};`,
+        );
       }
 
       // Queue complex field types for processing

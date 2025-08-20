@@ -22,12 +22,7 @@
                   "id": 1
                 }
               },
-              "extensions": [
-                [
-                  536000000,
-                  536000000
-                ]
-              ]
+              "extensions": [[536000000, 536000000]]
             },
             "Edition": {
               "edition": "proto2",
@@ -231,12 +226,7 @@
                   }
                 }
               },
-              "extensions": [
-                [
-                  1000,
-                  536870911
-                ]
-              ],
+              "extensions": [[1000, 536870911]],
               "nested": {
                 "Declaration": {
                   "fields": {
@@ -261,12 +251,7 @@
                       "id": 6
                     }
                   },
-                  "reserved": [
-                    [
-                      4,
-                      4
-                    ]
-                  ]
+                  "reserved": [[4, 4]]
                 },
                 "VerificationState": {
                   "values": {
@@ -577,23 +562,8 @@
                   "id": 999
                 }
               },
-              "extensions": [
-                [
-                  1000,
-                  536870911
-                ]
-              ],
-              "reserved": [
-                [
-                  42,
-                  42
-                ],
-                [
-                  38,
-                  38
-                ],
-                "php_generic_services"
-              ],
+              "extensions": [[1000, 536870911]],
+              "reserved": [[42, 42], [38, 38], "php_generic_services"],
               "nested": {
                 "OptimizeMode": {
                   "values": {
@@ -640,33 +610,13 @@
                   "id": 999
                 }
               },
-              "extensions": [
-                [
-                  1000,
-                  536870911
-                ]
-              ],
+              "extensions": [[1000, 536870911]],
               "reserved": [
-                [
-                  4,
-                  4
-                ],
-                [
-                  5,
-                  5
-                ],
-                [
-                  6,
-                  6
-                ],
-                [
-                  8,
-                  8
-                ],
-                [
-                  9,
-                  9
-                ]
+                [4, 4],
+                [5, 5],
+                [6, 6],
+                [8, 8],
+                [9, 9]
               ]
             },
             "FieldOptions": {
@@ -741,21 +691,10 @@
                   "id": 999
                 }
               },
-              "extensions": [
-                [
-                  1000,
-                  536870911
-                ]
-              ],
+              "extensions": [[1000, 536870911]],
               "reserved": [
-                [
-                  4,
-                  4
-                ],
-                [
-                  18,
-                  18
-                ]
+                [4, 4],
+                [18, 18]
               ],
               "nested": {
                 "CType": {
@@ -840,12 +779,7 @@
                   "id": 999
                 }
               },
-              "extensions": [
-                [
-                  1000,
-                  536870911
-                ]
-              ]
+              "extensions": [[1000, 536870911]]
             },
             "EnumOptions": {
               "edition": "proto2",
@@ -875,18 +809,8 @@
                   "id": 999
                 }
               },
-              "extensions": [
-                [
-                  1000,
-                  536870911
-                ]
-              ],
-              "reserved": [
-                [
-                  5,
-                  5
-                ]
-              ]
+              "extensions": [[1000, 536870911]],
+              "reserved": [[5, 5]]
             },
             "EnumValueOptions": {
               "edition": "proto2",
@@ -913,12 +837,7 @@
                   "id": 999
                 }
               },
-              "extensions": [
-                [
-                  1000,
-                  536870911
-                ]
-              ]
+              "extensions": [[1000, 536870911]]
             },
             "ServiceOptions": {
               "edition": "proto2",
@@ -937,12 +856,7 @@
                   "id": 999
                 }
               },
-              "extensions": [
-                [
-                  1000,
-                  536870911
-                ]
-              ]
+              "extensions": [[1000, 536870911]]
             },
             "MethodOptions": {
               "edition": "proto2",
@@ -968,12 +882,7 @@
                   "id": 999
                 }
               },
-              "extensions": [
-                [
-                  1000,
-                  536870911
-                ]
-              ],
+              "extensions": [[1000, 536870911]],
               "nested": {
                 "IdempotencyLevel": {
                   "values": {
@@ -1127,25 +1036,11 @@
                 }
               },
               "extensions": [
-                [
-                  1000,
-                  9994
-                ],
-                [
-                  9995,
-                  9999
-                ],
-                [
-                  10000,
-                  10000
-                ]
+                [1000, 9994],
+                [9995, 9999],
+                [10000, 10000]
               ],
-              "reserved": [
-                [
-                  999,
-                  999
-                ]
-              ],
+              "reserved": [[999, 999]],
               "nested": {
                 "FieldPresence": {
                   "values": {
@@ -1199,12 +1094,7 @@
                 },
                 "VisibilityFeature": {
                   "fields": {},
-                  "reserved": [
-                    [
-                      1,
-                      536870911
-                    ]
-                  ],
+                  "reserved": [[1, 536870911]],
                   "nested": {
                     "DefaultSymbolVisibility": {
                       "values": {
@@ -1252,17 +1142,7 @@
                       "id": 5
                     }
                   },
-                  "reserved": [
-                    [
-                      1,
-                      1
-                    ],
-                    [
-                      2,
-                      2
-                    ],
-                    "features"
-                  ]
+                  "reserved": [[1, 1], [2, 2], "features"]
                 }
               }
             },
@@ -1275,12 +1155,7 @@
                   "id": 1
                 }
               },
-              "extensions": [
-                [
-                  536000000,
-                  536000000
-                ]
-              ],
+              "extensions": [[536000000, 536000000]],
               "nested": {
                 "Location": {
                   "fields": {

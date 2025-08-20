@@ -20,15 +20,21 @@ describe('SDL to Proto Directive', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/descriptor.proto";
+
+      extend google.protobuf.FieldOptions {
+        optional bool is_required = 50000;
+      }
+
       // Service definition for DefaultService
       service DefaultService {
       }
 
       message User {
-        string id = 1;
+        string id = 1 [(is_required) = true];
         // Deprecation notice: This field is deprecated
-        string first_name = 2 [deprecated = true];
-        string last_name = 3;
+        string first_name = 2 [deprecated = true, (is_required) = true];
+        string last_name = 3 [(is_required) = true];
       }"
     `);
   });
@@ -58,6 +64,12 @@ describe('SDL to Proto Directive', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/descriptor.proto";
+
+      extend google.protobuf.FieldOptions {
+        optional bool is_required = 50000;
+      }
+
       // Service definition for DefaultService
       service DefaultService {
       }
@@ -69,10 +81,10 @@ describe('SDL to Proto Directive', () => {
       }
 
       message User {
-        string id = 1;
+        string id = 1 [(is_required) = true];
         // Deprecation notice: This field is deprecated
-        string created_at = 2 [deprecated = true];
-        string updated_at = 3;
+        string created_at = 2 [deprecated = true, (is_required) = true];
+        string updated_at = 3 [(is_required) = true];
       }"
     `);
   });
@@ -99,26 +111,32 @@ describe('SDL to Proto Directive', () => {
     expectValidProto(protoText);
 
     expect(protoText).toMatchInlineSnapshot(`
-      "syntax = "proto3";
-      package service.v1;
+              "syntax = "proto3";
+              package service.v1;
 
-      // Service definition for DefaultService
-      service DefaultService {
-      }
+              import "google/protobuf/descriptor.proto";
 
-      message Node {
-        oneof instance {
-        User user = 1;
-        }
-      }
+              extend google.protobuf.FieldOptions {
+                optional bool is_required = 50000;
+              }
 
-      message User {
-        string id = 1;
-        // Deprecation notice: This field is deprecated on the field
-        string created_at = 2 [deprecated = true];
-        string updated_at = 3;
-      }"
-    `);
+              // Service definition for DefaultService
+              service DefaultService {
+              }
+
+              message Node {
+                oneof instance {
+                User user = 1;
+                }
+              }
+
+              message User {
+                string id = 1 [(is_required) = true];
+                // Deprecation notice: This field is deprecated on the field
+                string created_at = 2 [deprecated = true, (is_required) = true];
+                string updated_at = 3 [(is_required) = true];
+              }"
+            `);
   });
 
   it('should write a comment when the reason on the field is empty but the interface has a reason', () => {
@@ -143,26 +161,32 @@ describe('SDL to Proto Directive', () => {
     expectValidProto(protoText);
 
     expect(protoText).toMatchInlineSnapshot(`
-      "syntax = "proto3";
-      package service.v1;
+              "syntax = "proto3";
+              package service.v1;
 
-      // Service definition for DefaultService
-      service DefaultService {
-      }
+              import "google/protobuf/descriptor.proto";
 
-      message Node {
-        oneof instance {
-        User user = 1;
-        }
-      }
+              extend google.protobuf.FieldOptions {
+                optional bool is_required = 50000;
+              }
 
-      message User {
-        string id = 1;
-        // Deprecation notice: This field is deprecated on the interface
-        string created_at = 2 [deprecated = true];
-        string updated_at = 3;
-      }"
-    `);
+              // Service definition for DefaultService
+              service DefaultService {
+              }
+
+              message Node {
+                oneof instance {
+                User user = 1;
+                }
+              }
+
+              message User {
+                string id = 1 [(is_required) = true];
+                // Deprecation notice: This field is deprecated on the interface
+                string created_at = 2 [deprecated = true, (is_required) = true];
+                string updated_at = 3 [(is_required) = true];
+              }"
+            `);
   });
 
   it('should should ignore empty reason on field when interface has a reason', () => {
@@ -187,26 +211,32 @@ describe('SDL to Proto Directive', () => {
     expectValidProto(protoText);
 
     expect(protoText).toMatchInlineSnapshot(`
-      "syntax = "proto3";
-      package service.v1;
+    "syntax = "proto3";
+    package service.v1;
 
-      // Service definition for DefaultService
-      service DefaultService {
+    import "google/protobuf/descriptor.proto";
+
+    extend google.protobuf.FieldOptions {
+      optional bool is_required = 50000;
+    }
+
+    // Service definition for DefaultService
+    service DefaultService {
+    }
+
+    message Node {
+      oneof instance {
+      User user = 1;
       }
+    }
 
-      message Node {
-        oneof instance {
-        User user = 1;
-        }
-      }
-
-      message User {
-        string id = 1;
-        // Deprecation notice: This field is deprecated on the interface
-        string created_at = 2 [deprecated = true];
-        string updated_at = 3;
-      }"
-    `);
+    message User {
+      string id = 1 [(is_required) = true];
+      // Deprecation notice: This field is deprecated on the interface
+      string created_at = 2 [deprecated = true, (is_required) = true];
+      string updated_at = 3 [(is_required) = true];
+    }"
+  `);
   });
 
   it('should correctly include a deprecation option on an enum element', () => {
@@ -288,14 +318,20 @@ describe('SDL to Proto Directive', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/descriptor.proto";
+
+      extend google.protobuf.FieldOptions {
+        optional bool is_required = 50000;
+      }
+
       // Service definition for DefaultService
       service DefaultService {
       }
 
       message UserInput {
-        string id = 1;
+        string id = 1 [(is_required) = true];
         // Deprecation notice: This field is deprecated
-        string name = 2 [deprecated = true];
+        string name = 2 [(is_required) = true, deprecated = true];
       }"
     `);
   });
@@ -317,14 +353,20 @@ describe('SDL to Proto Directive', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/descriptor.proto";
+
+      extend google.protobuf.FieldOptions {
+        optional bool is_required = 50000;
+      }
+
       // Service definition for DefaultService
       service DefaultService {
       }
 
       message UserInput {
-        string id = 1;
-        string name = 2 [deprecated = true];
-        string email = 3;
+        string id = 1 [(is_required) = true];
+        string name = 2 [(is_required) = true, deprecated = true];
+        string email = 3 [(is_required) = true];
       }"
     `);
   });
@@ -346,14 +388,20 @@ describe('SDL to Proto Directive', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/descriptor.proto";
+
+      extend google.protobuf.FieldOptions {
+        optional bool is_required = 50000;
+      }
+
       // Service definition for DefaultService
       service DefaultService {
       }
 
       message UserInput {
-        string id = 1;
-        string name = 2 [deprecated = true];
-        string email = 3;
+        string id = 1 [(is_required) = true];
+        string name = 2 [(is_required) = true, deprecated = true];
+        string email = 3 [(is_required) = true];
       }"
     `);
   });
@@ -378,22 +426,27 @@ describe('SDL to Proto Directive', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/descriptor.proto";
       import "google/protobuf/wrappers.proto";
+
+      extend google.protobuf.FieldOptions {
+        optional bool is_required = 50000;
+      }
 
       // Service definition for DefaultService
       service DefaultService {
       }
 
       message UserInput {
-        string id = 1;
+        string id = 1 [(is_required) = true];
         // Deprecation notice: Use fullName instead
-        string first_name = 2 [deprecated = true];
+        string first_name = 2 [(is_required) = true, deprecated = true];
         // Deprecation notice: Use fullName instead
-        string last_name = 3 [deprecated = true];
-        string full_name = 4;
+        string last_name = 3 [(is_required) = true, deprecated = true];
+        string full_name = 4 [(is_required) = true];
         // Deprecation notice: This field will be removed
         google.protobuf.Int32Value age = 5 [deprecated = true];
-        string email = 6;
+        string email = 6 [(is_required) = true];
       }"
     `);
   });
@@ -423,22 +476,28 @@ describe('SDL to Proto Directive', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/descriptor.proto";
+
+      extend google.protobuf.FieldOptions {
+        optional bool is_required = 50000;
+      }
+
       // Service definition for DefaultService
       service DefaultService {
       }
 
       message AddressInput {
-        string street = 1;
-        string city = 2;
+        string street = 1 [(is_required) = true];
+        string city = 2 [(is_required) = true];
         // Deprecation notice: Use postalCode instead
-        string zip_code = 3 [deprecated = true];
-        string postal_code = 4;
+        string zip_code = 3 [(is_required) = true, deprecated = true];
+        string postal_code = 4 [(is_required) = true];
       }
 
       message UserInput {
-        string id = 1;
-        string name = 2;
-        AddressInput address = 3;
+        string id = 1 [(is_required) = true];
+        string name = 2 [(is_required) = true];
+        AddressInput address = 3 [(is_required) = true];
         // Deprecation notice: This field is no longer needed
         AddressInput old_address = 4 [deprecated = true];
       }"
@@ -471,7 +530,12 @@ describe('SDL to Proto Directive', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/descriptor.proto";
       import "google/protobuf/wrappers.proto";
+
+      extend google.protobuf.FieldOptions {
+        optional bool is_required = 50000;
+      }
 
       // Service definition for DefaultService
       service DefaultService {
@@ -485,13 +549,13 @@ describe('SDL to Proto Directive', () => {
       }
 
       message UserInput {
-        string id = 1;
-        string name = 2;
+        string id = 1 [(is_required) = true];
+        string name = 2 [(is_required) = true];
         // Deprecation notice: Use roles array instead
-        UserRole role = 3 [deprecated = true];
-        repeated UserRole roles = 4;
+        UserRole role = 3 [(is_required) = true, deprecated = true];
+        repeated UserRole roles = 4 [(is_required) = true];
         // Deprecation notice: Use status field instead
-        bool is_active = 5 [deprecated = true];
+        bool is_active = 5 [(is_required) = true, deprecated = true];
         // Deprecation notice: This field is deprecated
         google.protobuf.StringValue metadata = 6 [deprecated = true];
       }"
@@ -508,7 +572,7 @@ describe('SDL to Proto Directive', () => {
     `;
 
     const { proto: protoText } = compileGraphQLToProto(sdl, {
-      includeRequiredAnnotations: true
+      includeRequiredAnnotations: true,
     });
 
     expectValidProto(protoText);
@@ -520,7 +584,7 @@ describe('SDL to Proto Directive', () => {
       import "google/protobuf/descriptor.proto";
       import "google/protobuf/wrappers.proto";
 
-      extend google.protobuf.MessageOptions {
+      extend google.protobuf.FieldOptions {
         optional bool is_required = 50000;
       }
 

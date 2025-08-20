@@ -31,6 +31,12 @@ describe('SDL to Proto - Complex Types', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/descriptor.proto";
+
+      extend google.protobuf.FieldOptions {
+        optional bool is_required = 50000;
+      }
+
       // Service definition for DefaultService
       service DefaultService {
         rpc QueryUsersByRole(QueryUsersByRoleRequest) returns (QueryUsersByRoleResponse) {}
@@ -53,8 +59,8 @@ describe('SDL to Proto - Complex Types', () => {
       }
 
       message User {
-        string id = 1;
-        UserRole role = 2;
+        string id = 1 [(is_required) = true];
+        UserRole role = 2 [(is_required) = true];
       }
 
       enum UserRole {
@@ -100,7 +106,12 @@ describe('SDL to Proto - Complex Types', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/descriptor.proto";
       import "google/protobuf/wrappers.proto";
+
+      extend google.protobuf.FieldOptions {
+        optional bool is_required = 50000;
+      }
 
       // Service definition for DefaultService
       service DefaultService {
@@ -125,15 +136,15 @@ describe('SDL to Proto - Complex Types', () => {
       }
 
       message UserInput {
-        string name = 1;
-        string email = 2;
+        string name = 1 [(is_required) = true];
+        string email = 2 [(is_required) = true];
         google.protobuf.Int32Value age = 3;
       }
 
       message User {
-        string id = 1;
-        string name = 2;
-        string email = 3;
+        string id = 1 [(is_required) = true];
+        string name = 2 [(is_required) = true];
+        string email = 3 [(is_required) = true];
         google.protobuf.Int32Value age = 4;
       }"
     `);
@@ -170,6 +181,12 @@ describe('SDL to Proto - Complex Types', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/descriptor.proto";
+
+      extend google.protobuf.FieldOptions {
+        optional bool is_required = 50000;
+      }
+
       // Service definition for DefaultService
       service DefaultService {
         rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
@@ -185,17 +202,17 @@ describe('SDL to Proto - Complex Types', () => {
       }
 
       message User {
-        string id = 1;
-        string name = 2;
-        Address home_address = 3;
+        string id = 1 [(is_required) = true];
+        string name = 2 [(is_required) = true];
+        Address home_address = 3 [(is_required) = true];
         Address work_address = 4;
       }
 
       message Address {
-        string street = 1;
-        string city = 2;
-        string country = 3;
-        string zip_code = 4;
+        string street = 1 [(is_required) = true];
+        string city = 2 [(is_required) = true];
+        string country = 3 [(is_required) = true];
+        string zip_code = 4 [(is_required) = true];
       }"
     `);
   });
@@ -224,6 +241,12 @@ describe('SDL to Proto - Complex Types', () => {
     expect(protoText).toMatchInlineSnapshot(`
       "syntax = "proto3";
       package service.v1;
+
+      import "google/protobuf/descriptor.proto";
+
+      extend google.protobuf.FieldOptions {
+        optional bool is_required = 50000;
+      }
 
       // Service definition for DefaultService
       service DefaultService {
@@ -255,8 +278,8 @@ describe('SDL to Proto - Complex Types', () => {
       }
 
       message TreeNode {
-        string id = 1;
-        string value = 2;
+        string id = 1 [(is_required) = true];
+        string value = 2 [(is_required) = true];
         TreeNode parent = 3;
         ListOfTreeNode children = 4;
       }"
@@ -300,7 +323,12 @@ describe('SDL to Proto - Complex Types', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/descriptor.proto";
       import "google/protobuf/wrappers.proto";
+
+      extend google.protobuf.FieldOptions {
+        optional bool is_required = 50000;
+      }
 
       // Service definition for DefaultService
       service DefaultService {
@@ -338,15 +366,15 @@ describe('SDL to Proto - Complex Types', () => {
       }
 
       message User {
-        string id = 1;
-        string name = 2;
-        int32 age = 3;
+        string id = 1 [(is_required) = true];
+        string name = 2 [(is_required) = true];
+        int32 age = 3 [(is_required) = true];
       }
 
       message AddressInput {
-        string street = 1;
-        string city = 2;
-        string country = 3;
+        string street = 1 [(is_required) = true];
+        string city = 2 [(is_required) = true];
+        string country = 3 [(is_required) = true];
         google.protobuf.StringValue zip_code = 4;
       }"
     `);

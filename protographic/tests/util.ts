@@ -1,6 +1,6 @@
 import * as protobufjs from 'protobufjs';
 import { expect } from 'vitest';
-import * as path from 'path'
+import * as path from 'path';
 
 /**
  * Validates a Protocol Buffer text definition using protobufjs
