@@ -621,7 +621,7 @@ describe('Link/Unlink Subgraph tests', () => {
       });
       expect(link2AgainResponse.response?.code).toBe(EnumStatusCode.ERR);
       expect(link2AgainResponse.response?.details).toBe(
-        `The source subgraph "${sourceSubgraph2}" is already linked to the target subgraph "${targetSubgraph2}" in the namespace "prod". Unlink the existing link first.`,
+        `The source subgraph "${sourceSubgraph2}" is already linked to the target subgraph "${targetSubgraph2}" in the namespace "staging". Unlink the existing link first.`,
       );
 
       // Unlink second one
