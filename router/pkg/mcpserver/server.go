@@ -300,6 +300,7 @@ func (s *GraphQLSchemaServer) Serve() (*server.StreamableHTTPServer, error) {
 		server.WithLogger(NewZapAdapter(s.logger.With(zap.String("component", "mcp-server")))),
 		server.WithStateLess(s.stateless),
 		server.WithHTTPContextFunc(authFromRequest),
+		server.WithHeartbeatInterval(10*time.Second),
 	)
 
 	corsMiddleware := WithCORS("GET", "POST", "PUT", "DELETE")
