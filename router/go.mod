@@ -72,7 +72,7 @@ require (
 	github.com/hashicorp/go-plugin v1.6.3
 	github.com/iancoleman/strcase v0.3.0
 	github.com/klauspost/compress v1.18.0
-	github.com/mark3labs/mcp-go v0.38.0
+	github.com/mark3labs/mcp-go v0.36.0
 	github.com/minio/minio-go/v7 v7.0.74
 	github.com/posthog/posthog-go v1.5.5
 	github.com/pquerna/cachecontrol v0.2.0

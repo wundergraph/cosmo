@@ -5,6 +5,20 @@
 
 version: "1"
 
+mcp:
+  enabled: true
+  server:
+    listen_addr: localhost:5025
+  session:
+    stateless: false
+  storage:
+    provider_id: "mcp"
+
+storage_providers:
+  file_system:
+    - id: "mcp"
+      path: "operations"
+
 events:
   providers:
     nats:
