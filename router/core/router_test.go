@@ -232,6 +232,7 @@ func TestOverridesPriority(t *testing.T) {
 func TestTrafficShapingRules(t *testing.T) {
 	allRequestTimeout := 10 * time.Second
 	allDialTimeout := 0 * time.Second
+	allMaxConnsPerHost := 1024
 	subgraphRequestTimeout := 15 * time.Second
 	subgraphDialTimeout := 0 * time.Second
 
@@ -239,8 +240,9 @@ func TestTrafficShapingRules(t *testing.T) {
 
 	config := config.TrafficShapingRules{
 		All: config.GlobalSubgraphRequestRule{
-			RequestTimeout: &allRequestTimeout,
-			DialTimeout:    &allDialTimeout,
+			RequestTimeout:  &allRequestTimeout,
+			DialTimeout:     &allDialTimeout,
+			MaxConnsPerHost: &allMaxConnsPerHost,
 		},
 		Subgraphs: map[string]*config.GlobalSubgraphRequestRule{
 			"some-subgraph": {
@@ -259,11 +261,20 @@ func TestTrafficShapingRules(t *testing.T) {
 	// Assert that configs are loaded for real, zero and absent values.
 	assert.Equal(t, allRequestTimeout, router.subgraphTransportOptions.RequestTimeout)
 	assert.Equal(t, allDialTimeout, router.subgraphTransportOptions.DialTimeout)
+	assert.Equal(t, allMaxConnsPerHost, router.subgraphTransportOptions.MaxConnsPerHost)
 	assert.Equal(t, defaults.MaxIdleConns, router.subgraphTransportOptions.MaxIdleConns)
 
-	assert.Equal(t, subgraphRequestTimeout, router.subgraphTransportOptions.SubgraphMap["some-subgraph"].RequestTimeout)
-	assert.Equal(t, subgraphDialTimeout, router.subgraphTransportOptions.SubgraphMap["some-subgraph"].DialTimeout)
-	assert.Equal(t, defaults.MaxIdleConns, router.subgraphTransportOptions.SubgraphMap["some-subgraph"].MaxIdleConns)
+	subgraphRequestOptions := router.subgraphTransportOptions.SubgraphMap["some-subgraph"]
+
+	// Subgraph specific configurations
+	assert.Equal(t, subgraphRequestTimeout, subgraphRequestOptions.RequestTimeout)
+	assert.Equal(t, subgraphDialTimeout, subgraphRequestOptions.DialTimeout)
+
+	// Inherit from `all`
+	assert.Equal(t, allMaxConnsPerHost, subgraphRequestOptions.MaxConnsPerHost)
+
+	// Inherit from global defaults
+	assert.Equal(t, defaults.MaxIdleConns, subgraphRequestOptions.MaxIdleConns)
 }
 
 // Confirms that defaults and fallthrough works properly
@@ -278,7 +289,7 @@ func TestNewTransportRequestOptions(t *testing.T) {
 	}
 
 	// Test that the defaults are set properly
-	transportCfg := NewTransportRequestOptions(*subgraphConfig)
+	transportCfg := NewTransportRequestOptions(*subgraphConfig, nil)
 
 	// The two set values are preserved, including the manually specified zero
 	assert.Equal(t, subgraphRequestTimeout, transportCfg.RequestTimeout)
