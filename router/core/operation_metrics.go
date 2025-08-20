@@ -19,6 +19,7 @@ type OperationProtocol string
 
 const (
 	OperationProtocolHTTP = OperationProtocol("http")
+	OperationProtocolGRPC = OperationProtocol("grpc")
 	OperationProtocolWS   = OperationProtocol("ws")
 )
 
