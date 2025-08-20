@@ -418,7 +418,7 @@ describe('Create feature subgraph tests', () => {
   test('that creating a feature subgraph from a plugin base fails when plugin limit is reached', async () => {
     const { client, server } = await SetupTest({
       dbname,
-      setupBilling: { plan: 'launch@1' }, // Launch plan allows max 3 plugins
+      setupBilling: { plan: 'developer@1' }, // Developer plan allows max 3 plugins
     });
 
     const basePluginName = genID('basePlugin');

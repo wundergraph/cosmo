@@ -43,7 +43,11 @@ func newOtlpConnectionMetrics(logger *zap.Logger, meterProvider *metric.MeterPro
 		meter:         meter,
 	}
 
-	metrics.startInitMetrics(stats, baseAttributes)
+	err = metrics.startInitMetrics(stats, baseAttributes)
+	if err != nil {
+		return nil, err
+	}
+
 	return metrics, nil
 }
 
