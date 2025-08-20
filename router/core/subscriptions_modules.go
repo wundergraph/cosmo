@@ -55,7 +55,7 @@ type SubscriptionOnStartHookContext interface {
 type pubSubSubscriptionOnStartHookContext struct {
 	requestContext                 RequestContext
 	subscriptionEventConfiguration datasource.SubscriptionEventConfiguration
-	writeEventHook                 func(data []byte) bool
+	writeEventHook                 func(data []byte)
 }
 
 func (c *pubSubSubscriptionOnStartHookContext) RequestContext() RequestContext {
@@ -67,7 +67,9 @@ func (c *pubSubSubscriptionOnStartHookContext) SubscriptionEventConfiguration() 
 }
 
 func (c *pubSubSubscriptionOnStartHookContext) WriteEvent(event datasource.StreamEvent) bool {
-	return c.writeEventHook(event.GetData())
+	c.writeEventHook(event.GetData())
+
+	return true
 }
 
 // EngineEvent is the event used to write to the engine subscription
@@ -81,7 +83,7 @@ func (e *EngineEvent) GetData() []byte {
 
 type engineSubscriptionOnStartHookContext struct {
 	requestContext RequestContext
-	writeEventHook func(data []byte) bool
+	writeEventHook func(data []byte)
 }
 
 func (c *engineSubscriptionOnStartHookContext) RequestContext() RequestContext {
@@ -89,7 +91,9 @@ func (c *engineSubscriptionOnStartHookContext) RequestContext() RequestContext {
 }
 
 func (c *engineSubscriptionOnStartHookContext) WriteEvent(event datasource.StreamEvent) bool {
-	return c.writeEventHook(event.GetData())
+	c.writeEventHook(event.GetData())
+
+	return true
 }
 
 func (c *engineSubscriptionOnStartHookContext) SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration {
@@ -113,7 +117,7 @@ func NewPubSubSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHookContext
 		hookCtx := &pubSubSubscriptionOnStartHookContext{
 			requestContext:                 requestContext,
 			subscriptionEventConfiguration: subConf,
-			writeEventHook:                 resolveCtx.TryEmitSubscriptionUpdate,
+			writeEventHook:                 resolveCtx.EmitSubscriptionUpdate,
 		}
 
 		return fn(hookCtx)
@@ -130,7 +134,7 @@ func NewEngineSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHookContext
 		requestContext := getRequestContext(resolveCtx.Context())
 		hookCtx := &engineSubscriptionOnStartHookContext{
 			requestContext: requestContext,
-			writeEventHook: resolveCtx.TryEmitSubscriptionUpdate,
+			writeEventHook: resolveCtx.EmitSubscriptionUpdate,
 		}
 
 		return fn(hookCtx)
