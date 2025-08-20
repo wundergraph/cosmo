@@ -181,7 +181,7 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)
 		Logger:         zap.NewNop(),
 		RequestTimeout: 30 * time.Second,
 		ExposeSchema:   true,
-		Stateless:      true, // Default to stateless for backward compatibility
+		Stateless:      true,
 	}
 
 	// Apply all option functions
