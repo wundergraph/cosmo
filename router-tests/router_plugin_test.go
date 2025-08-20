@@ -171,8 +171,8 @@ func TestVerifyTelemetryForRouterPluginRequests(t *testing.T) {
 				span2 := snapshots[6]
 				require.Equal(t, "GRPC Plugin Client - Invoke", span2.Name())
 				require.Contains(t, span2.Attributes(), otel.WgOperationProtocol.String("grpc"))
-				require.Contains(t, span1.Attributes(), otel.WgOperationType.String("query"))
-				require.Contains(t, span1.Attributes(), otel.WgOperationName.String("projects"))
+				require.Contains(t, span2.Attributes(), otel.WgOperationType.String("query"))
+				require.Contains(t, span2.Attributes(), otel.WgOperationName.String("projects"))
 				require.Len(t, span2.Attributes(), 10)
 			})
 	})

@@ -153,11 +153,13 @@ func (g *GRPCPluginClient) Invoke(ctx context.Context, method string, args any, 
 
 	if g.IsPluginProcessExited() {
 		if err := g.waitForPluginToBeActive(); err != nil {
+			span.RecordError(err)
 			return err
 		}
 	}
 
 	if g.isClosed.Load() {
+		span.RecordError(errors.New("plugin is not active"))
 		return status.Error(codes.Unavailable, "plugin is not active")
 	}
 
