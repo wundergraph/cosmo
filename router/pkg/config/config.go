@@ -167,7 +167,7 @@ type TrafficShapingRules struct {
 	// Apply to requests from clients to the router
 	Router RouterTrafficConfiguration `yaml:"router"`
 	// Subgraphs is a set of rules that apply to requests from the router to subgraphs. The key is the subgraph name.
-	Subgraphs map[string]*GlobalSubgraphRequestRule `yaml:"subgraphs,omitempty"`
+	Subgraphs map[string]GlobalSubgraphRequestRule `yaml:"subgraphs,omitempty"`
 }
 
 type FileUpload struct {

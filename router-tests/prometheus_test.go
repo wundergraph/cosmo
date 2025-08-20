@@ -4,14 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
-	"github.com/wundergraph/cosmo/router/pkg/otel"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"net/http"
 	"regexp"
 	"strings"
 	"testing"
 	"time"
+
+	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
@@ -4645,7 +4646,7 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 			All: config.GlobalSubgraphRequestRule{
 				RequestTimeout: PointerOf(200 * time.Millisecond),
 			},
-			Subgraphs: map[string]*config.GlobalSubgraphRequestRule{
+			Subgraphs: map[string]config.GlobalSubgraphRequestRule{
 				"availability": {
 					RequestTimeout: PointerOf(300 * time.Millisecond),
 				},

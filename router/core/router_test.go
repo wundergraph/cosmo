@@ -244,7 +244,7 @@ func TestTrafficShapingRules(t *testing.T) {
 			DialTimeout:     &allDialTimeout,
 			MaxConnsPerHost: &allMaxConnsPerHost,
 		},
-		Subgraphs: map[string]*config.GlobalSubgraphRequestRule{
+		Subgraphs: map[string]config.GlobalSubgraphRequestRule{
 			"some-subgraph": {
 				RequestTimeout: &subgraphRequestTimeout,
 				DialTimeout:    &subgraphDialTimeout,
@@ -283,13 +283,13 @@ func TestNewTransportRequestOptions(t *testing.T) {
 
 	subgraphRequestTimeout := 10 * time.Second
 	subgraphDialTimeout := 0 * time.Second
-	subgraphConfig := &config.GlobalSubgraphRequestRule{
+	subgraphConfig := config.GlobalSubgraphRequestRule{
 		RequestTimeout: &subgraphRequestTimeout,
 		DialTimeout:    &subgraphDialTimeout,
 	}
 
 	// Test that the defaults are set properly
-	transportCfg := NewTransportRequestOptions(*subgraphConfig, nil)
+	transportCfg := NewTransportRequestOptions(subgraphConfig, nil)
 
 	// The two set values are preserved, including the manually specified zero
 	assert.Equal(t, subgraphRequestTimeout, transportCfg.RequestTimeout)

@@ -1862,7 +1862,7 @@ func NewSubgraphTransportOptions(cfg config.TrafficShapingRules) *SubgraphTransp
 	}
 
 	for k, v := range cfg.Subgraphs {
-		base.SubgraphMap[k] = NewTransportRequestOptions(*v, allRequestOptions)
+		base.SubgraphMap[k] = NewTransportRequestOptions(v, allRequestOptions)
 	}
 
 	return base
@@ -1878,9 +1878,8 @@ func NewSubgraphCircuitBreakerOptions(cfg config.TrafficShapingRules) *SubgraphC
 	}
 	// Subgraph specific circuit breakers
 	for k, v := range cfg.Subgraphs {
-		if v != nil {
-			entry.SubgraphMap[k] = newCircuitBreakerConfig(v.CircuitBreaker)
-		}
+		entry.SubgraphMap[k] = newCircuitBreakerConfig(v.CircuitBreaker)
+
 	}
 
 	return entry
