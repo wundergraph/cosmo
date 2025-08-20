@@ -326,8 +326,6 @@ func (s *GraphQLSchemaServer) Serve() (*server.StreamableHTTPServer, error) {
 
 	s.logger.Info("MCP server started", logger...)
 
-	s.logger.Info("MCP server started", logger...)
-
 	go func() {
 		defer s.logger.Info("MCP server stopped")
 
