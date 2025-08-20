@@ -4,8 +4,7 @@ CREATE TABLE IF NOT EXISTS "linked_subgraphs" (
 	"target_subgraph_id" uuid NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"created_by_id" uuid,
-	CONSTRAINT "linked_subgraphs_source_subgraph_id_unique" UNIQUE("source_subgraph_id"),
-	CONSTRAINT "unique_source_subgraph" UNIQUE("source_subgraph_id")
+	CONSTRAINT "linked_subgraphs_source_subgraph_id_unique" UNIQUE("source_subgraph_id")
 );
 --> statement-breakpoint
 DO $$ BEGIN

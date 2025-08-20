@@ -268,7 +268,6 @@ export const linkedSubgraphs = pgTable(
   },
   (t) => {
     return {
-      uniqueSourceSubgraph: unique('unique_source_subgraph').on(t.sourceSubgraphId),
       sourceSubgraphIdIndex: index('ls_source_subgraph_id_idx').on(t.sourceSubgraphId),
       targetSubgraphIdIndex: index('ls_target_subgraph_id_idx').on(t.targetSubgraphId),
       createdByIdIndex: index('ls_created_by_id_idx').on(t.createdById),

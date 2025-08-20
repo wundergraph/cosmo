@@ -1,5 +1,5 @@
 {
-  "id": "3231c1e1-aaa2-44d6-9210-04797f7e9f8e",
+  "id": "a5be4cf9-fd10-4436-8fcb-aae72427bda3",
   "prevId": "e8d72d6a-3744-48e9-88a2-d8617e9a867c",
   "version": "7",
   "dialect": "postgresql",
@@ -2902,13 +2902,6 @@
       "uniqueConstraints": {
         "linked_subgraphs_source_subgraph_id_unique": {
           "name": "linked_subgraphs_source_subgraph_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "source_subgraph_id"
-          ]
-        },
-        "unique_source_subgraph": {
-          "name": "unique_source_subgraph",
           "nullsNotDistinct": false,
           "columns": [
             "source_subgraph_id"
