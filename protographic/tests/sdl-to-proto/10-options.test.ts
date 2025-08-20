@@ -113,7 +113,7 @@ describe('SDL to Proto Options', () => {
       import "google/protobuf/wrappers.proto";
 
       extend google.protobuf.FieldOptions {
-        optional bool is_required = 50000;
+        bool is_required = 50000;
       }
 
       // Service definition for DefaultService
@@ -205,7 +205,7 @@ describe('SDL to Proto Options', () => {
       import "google/protobuf/wrappers.proto";
 
       extend google.protobuf.FieldOptions {
-        optional bool is_required = 50000;
+        bool is_required = 50000;
       }
 
       // Service definition for DefaultService

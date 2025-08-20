@@ -198,7 +198,7 @@ describe('SDL to Proto - Basic Types', () => {
       import "google/protobuf/wrappers.proto";
 
       extend google.protobuf.FieldOptions {
-        optional bool is_required = 50000;
+        bool is_required = 50000;
       }
 
       // Service definition for DefaultService
@@ -248,7 +248,7 @@ describe('SDL to Proto - Basic Types', () => {
       import "google/protobuf/wrappers.proto";
 
       extend google.protobuf.FieldOptions {
-        optional bool is_required = 50000;
+        bool is_required = 50000;
       }
 
       // Service definition for DefaultService
@@ -417,7 +417,7 @@ describe('SDL to Proto - Basic Types', () => {
       import "google/protobuf/descriptor.proto";
 
       extend google.protobuf.FieldOptions {
-        optional bool is_required = 50000;
+        bool is_required = 50000;
       }
 
       // Service definition for DefaultService
@@ -492,7 +492,7 @@ describe('SDL to Proto - Basic Types', () => {
       import "google/protobuf/descriptor.proto";
 
       extend google.protobuf.FieldOptions {
-        optional bool is_required = 50000;
+        bool is_required = 50000;
       }
 
       // Service definition for DefaultService
@@ -726,7 +726,7 @@ describe('SDL to Proto - Basic Types', () => {
       import "google/protobuf/wrappers.proto";
 
       extend google.protobuf.FieldOptions {
-        optional bool is_required = 50000;
+        bool is_required = 50000;
       }
 
       // Service definition for DefaultService

@@ -597,7 +597,7 @@ export class GraphQLToProtoTextVisitor {
     // See https://protobuf.dev/programming-guides/proto2/#customoptions
     let fieldNumber = 50000;
     for (const option of this.customMessageOptions) {
-      options.push(this.formatIndent(1, `optional ${option.type} ${option.name} = ${fieldNumber};`));
+      options.push(this.formatIndent(1, `${option.type} ${option.name} = ${fieldNumber};`));
       fieldNumber++;
     }
 
