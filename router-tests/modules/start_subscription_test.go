@@ -91,6 +91,9 @@ func TestStartSubscriptionHook(t *testing.T) {
 			Modules: map[string]interface{}{
 				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
 					Callback: func(ctx core.SubscriptionOnStartHookContext) error {
+						if ctx.SubscriptionEventConfiguration().RootFieldName() != "employeeUpdatedMyKafka" {
+							return nil
+						}
 						ctx.WriteEvent(&kafka.Event{
 							Key:  []byte("1"),
 							Data: []byte(`{"id": 1, "__typename": "Employee"}`),
@@ -178,7 +181,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
 					Callback: func(ctx core.SubscriptionOnStartHookContext) error {
 						callbackCalled <- true
-						return core.NewStreamHookError(nil, "subscription closed", http.StatusOK, "", true)
+						return core.NewStreamHookError(nil, "subscription closed", http.StatusOK, "")
 					},
 				},
 			},
@@ -363,7 +366,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 			Modules: map[string]interface{}{
 				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
 					Callback: func(ctx core.SubscriptionOnStartHookContext) error {
-						return core.NewStreamHookError(errors.New("test error"), "test error", http.StatusLoopDetected, http.StatusText(http.StatusLoopDetected), false)
+						return core.NewStreamHookError(errors.New("test error"), "test error", http.StatusLoopDetected, http.StatusText(http.StatusLoopDetected))
 					},
 				},
 			},
@@ -591,7 +594,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 			Modules: map[string]interface{}{
 				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
 					Callback: func(ctx core.SubscriptionOnStartHookContext) error {
-						return core.NewStreamHookError(errors.New("subscription closed"), "subscription closed", http.StatusOK, "NotFound", true)
+						return core.NewStreamHookError(errors.New("subscription closed"), "subscription closed", http.StatusOK, "NotFound")
 					},
 					CallbackOnOriginResponse: func(response *http.Response, ctx core.RequestContext) *http.Response {
 						originResponseCalled <- response

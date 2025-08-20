@@ -12,7 +12,6 @@ type StreamHookError struct {
 	message         string
 	statusCode      int
 	code            string
-	closeSubscription bool
 }
 
 func (e *StreamHookError) Error() string {
@@ -34,17 +33,12 @@ func (e *StreamHookError) Code() string {
 	return e.code
 }
 
-func (e *StreamHookError) CloseSubscription() bool {
-	return e.closeSubscription
-}
-
-func NewStreamHookError(err error, message string, statusCode int, code string, closeSubscription bool) *StreamHookError {
+func NewStreamHookError(err error, message string, statusCode int, code string) *StreamHookError {
 	return &StreamHookError{
 		err:             err,
 		message:         message,
 		statusCode:      statusCode,
 		code:            code,
-		closeSubscription: closeSubscription,
 	}
 }
 
@@ -104,7 +98,6 @@ func (c *engineSubscriptionOnStartHookContext) SubscriptionEventConfiguration() 
 
 type SubscriptionOnStartHandler interface {
 	// SubscriptionOnStart is called once at subscription start
-	// If the error is a StreamHookError and CloseSubscription is true, the subscription is closed.
 	// The error is propagated to the client.
 	SubscriptionOnStart(ctx SubscriptionOnStartHookContext) error
 }
