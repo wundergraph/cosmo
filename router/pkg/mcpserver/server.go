@@ -297,7 +297,7 @@ func (s *GraphQLSchemaServer) Serve() (*server.StreamableHTTPServer, error) {
 
 	streamableHTTPServer := server.NewStreamableHTTPServer(s.server,
 		server.WithStreamableHTTPServer(httpServer),
-		server.WithLogger(NewZapAdapter(s.logger)),
+		server.WithLogger(NewZapAdapter(s.logger.With(zap.String("component", "mcp-server")))),
 		server.WithStateLess(s.stateless),
 		server.WithHTTPContextFunc(authFromRequest),
 	)
