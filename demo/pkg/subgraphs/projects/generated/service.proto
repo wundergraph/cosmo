@@ -3,7 +3,12 @@ package service;
 
 option go_package = "github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects";
 
+import "google/protobuf/descriptor.proto";
 import "google/protobuf/wrappers.proto";
+
+extend google.protobuf.FieldOptions {
+  optional bool is_required = 50000;
+}
 
 // Service definition for ProjectsService
 service ProjectsService {
@@ -457,50 +462,50 @@ message MutationUpdateProjectStatusResponse {
 }
 
 message Project {
-  string id = 1;
-  string name = 2;
+  string id = 1 [(is_required) = true];
+  string name = 2 [(is_required) = true];
   google.protobuf.StringValue description = 3;
   google.protobuf.StringValue start_date = 4;
   google.protobuf.StringValue end_date = 5;
-  ProjectStatus status = 6;
-  repeated Employee team_members = 7;
-  repeated Product related_products = 8;
+  ProjectStatus status = 6 [(is_required) = true];
+  repeated Employee team_members = 7 [(is_required) = true];
+  repeated Product related_products = 8 [(is_required) = true];
   ListOfString milestone_ids = 9;
-  repeated Milestone milestones = 10;
-  repeated Task tasks = 11;
+  repeated Milestone milestones = 10 [(is_required) = true];
+  repeated Task tasks = 11 [(is_required) = true];
   google.protobuf.DoubleValue progress = 12;
   ListOfString tags = 13;
   ListOfProject alternative_projects = 14;
   ListOfProject dependencies = 15;
-  ListOfListOfProjectResource resource_groups = 16;
-  ListOfListOfTask tasks_by_phase = 17;
+  ListOfListOfProjectResource resource_groups = 16 [(is_required) = true];
+  ListOfListOfTask tasks_by_phase = 17 [(is_required) = true];
   ListOfListOfMilestone milestone_groups = 18;
   ListOfListOfListOfTask priority_matrix = 19;
 }
 
 message Milestone {
-  string id = 1;
-  string project_id = 2;
-  string name = 3;
+  string id = 1 [(is_required) = true];
+  string project_id = 2 [(is_required) = true];
+  string name = 3 [(is_required) = true];
   google.protobuf.StringValue description = 4;
   google.protobuf.StringValue start_date = 5;
   google.protobuf.StringValue end_date = 6;
-  MilestoneStatus status = 7;
+  MilestoneStatus status = 7 [(is_required) = true];
   google.protobuf.DoubleValue completion_percentage = 8;
-  repeated Milestone dependencies = 9;
+  repeated Milestone dependencies = 9 [(is_required) = true];
   ListOfTask subtasks = 10;
   ListOfEmployee reviewers = 11;
 }
 
 message Task {
-  string id = 1;
-  string project_id = 2;
+  string id = 1 [(is_required) = true];
+  string project_id = 2 [(is_required) = true];
   google.protobuf.StringValue milestone_id = 3;
   google.protobuf.Int32Value assignee_id = 4;
-  string name = 5;
+  string name = 5 [(is_required) = true];
   google.protobuf.StringValue description = 6;
-  TaskPriority priority = 7;
-  TaskStatus status = 8;
+  TaskPriority priority = 7 [(is_required) = true];
+  TaskStatus status = 8 [(is_required) = true];
   // Deprecation notice: No more estimations!
   google.protobuf.DoubleValue estimated_hours = 9 [deprecated = true];
   google.protobuf.DoubleValue actual_hours = 10;
@@ -508,23 +513,23 @@ message Task {
   google.protobuf.StringValue completed_at = 12;
   ListOfString labels = 13;
   ListOfTask subtasks = 14;
-  repeated Task dependencies = 15;
-  repeated string attachment_urls = 16;
+  repeated Task dependencies = 15 [(is_required) = true];
+  repeated string attachment_urls = 16 [(is_required) = true];
   ListOfInt reviewer_ids = 17;
 }
 
 message Employee {
-  int32 id = 1;
+  int32 id = 1 [(is_required) = true];
   ListOfProject projects = 2;
-  repeated Task assigned_tasks = 3;
-  repeated Task completed_tasks = 4;
+  repeated Task assigned_tasks = 3 [(is_required) = true];
+  repeated Task completed_tasks = 4 [(is_required) = true];
   ListOfString skills = 5;
   ListOfString certifications = 6;
-  ListOfListOfProject project_history = 7;
+  ListOfListOfProject project_history = 7 [(is_required) = true];
 }
 
 message Product {
-  string upc = 1;
+  string upc = 1 [(is_required) = true];
   ListOfProject projects = 2;
   ListOfListOfString feature_matrix = 3;
 }
@@ -572,38 +577,38 @@ message Node {
 }
 
 message ProjectInput {
-  string name = 1;
+  string name = 1 [(is_required) = true];
   google.protobuf.StringValue description = 2;
   google.protobuf.StringValue start_date = 3;
   google.protobuf.StringValue end_date = 4;
-  ProjectStatus status = 5;
+  ProjectStatus status = 5 [(is_required) = true];
 }
 
 message MilestoneInput {
-  string project_id = 1;
-  string name = 2;
+  string project_id = 1 [(is_required) = true];
+  string name = 2 [(is_required) = true];
   google.protobuf.StringValue description = 3;
   google.protobuf.StringValue due_date = 4;
-  MilestoneStatus status = 5;
+  MilestoneStatus status = 5 [(is_required) = true];
 }
 
 message TaskInput {
-  string project_id = 1;
+  string project_id = 1 [(is_required) = true];
   google.protobuf.Int32Value assignee_id = 2;
-  string name = 3;
+  string name = 3 [(is_required) = true];
   google.protobuf.StringValue description = 4;
-  TaskPriority priority = 5;
-  TaskStatus status = 6;
+  TaskPriority priority = 5 [(is_required) = true];
+  TaskStatus status = 6 [(is_required) = true];
   google.protobuf.DoubleValue estimated_hours = 7;
 }
 
 message ProjectUpdate {
-  string id = 1;
-  string project_id = 2;
-  int32 updated_by_id = 3;
-  ProjectUpdateType update_type = 4;
-  string description = 5;
-  string timestamp = 6;
+  string id = 1 [(is_required) = true];
+  string project_id = 2 [(is_required) = true];
+  int32 updated_by_id = 3 [(is_required) = true];
+  ProjectUpdateType update_type = 4 [(is_required) = true];
+  string description = 5 [(is_required) = true];
+  string timestamp = 6 [(is_required) = true];
   google.protobuf.StringValue metadata = 7;
 }
 
