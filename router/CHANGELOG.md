@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.245.0](https://github.com/wundergraph/cosmo/compare/router@0.244.0...router@0.245.0) (2025-08-20)
+
+### Features
+
+* **router:** more intuitive subgraph traffic shaping config inheritance ([#2155](https://github.com/wundergraph/cosmo/issues/2155)) ([c922e10](https://github.com/wundergraph/cosmo/commit/c922e1071d120f773b6143998128c08f8a51aa1a)) (@endigma)
+
 # [0.244.0](https://github.com/wundergraph/cosmo/compare/router@0.243.1...router@0.244.0) (2025-08-19)
 
 ### Features
