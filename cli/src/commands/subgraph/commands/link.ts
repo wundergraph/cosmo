@@ -10,8 +10,8 @@ export default (opts: BaseCommandOptions) => {
   command.description('Links a subgraph to another subgraph on the control plane.');
   command.argument('<source-subgraph-name>', 'The name of the subgraph to link.');
   command.option('-n, --namespace [string]', 'The namespace of the source subgraph.', 'default');
-  command.requiredOption('--ts, --target-subgraph-name [string]', 'The name of the subgraph to link to.');
-  command.requiredOption('--tn, --target-namespace [string]', 'The namespace of the target subgraph.');
+  command.requiredOption('-t, --target-subgraph-name [string]', 'The name of the subgraph to link to.');
+  command.requiredOption('-tn, --target-namespace [string]', 'The namespace of the target subgraph.');
 
   command.action(async (name, options) => {
     const spinner = ora(`The subgraph "${name}" is being linked to "${options.targetSubgraphName}"...`).start();
