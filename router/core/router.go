@@ -1816,8 +1816,12 @@ func DefaultFileUploadConfig() *config.FileUpload {
 	}
 }
 
-func NewTransportRequestOptions(cfg config.GlobalSubgraphRequestRule) *TransportRequestOptions {
-	defaults := DefaultTransportRequestOptions()
+// NewTransportRequestOptions creates a new TransportRequestOptions instance with the given configuration and defaults.
+// If defaults is nil, it uses the global default values.
+func NewTransportRequestOptions(cfg config.GlobalSubgraphRequestRule, defaults *TransportRequestOptions) *TransportRequestOptions {
+	if defaults == nil {
+		defaults = DefaultTransportRequestOptions()
+	}
 
 	return &TransportRequestOptions{
 		RequestTimeout:         or(cfg.RequestTimeout, defaults.RequestTimeout),
@@ -1850,13 +1854,15 @@ func DefaultTransportRequestOptions() *TransportRequestOptions {
 }
 
 func NewSubgraphTransportOptions(cfg config.TrafficShapingRules) *SubgraphTransportOptions {
+	allRequestOptions := NewTransportRequestOptions(cfg.All, nil)
+
 	base := &SubgraphTransportOptions{
-		TransportRequestOptions: NewTransportRequestOptions(cfg.All),
+		TransportRequestOptions: allRequestOptions,
 		SubgraphMap:             map[string]*TransportRequestOptions{},
 	}
 
 	for k, v := range cfg.Subgraphs {
-		base.SubgraphMap[k] = NewTransportRequestOptions(*v)
+		base.SubgraphMap[k] = NewTransportRequestOptions(v, allRequestOptions)
 	}
 
 	return base
@@ -1872,9 +1878,8 @@ func NewSubgraphCircuitBreakerOptions(cfg config.TrafficShapingRules) *SubgraphC
 	}
 	// Subgraph specific circuit breakers
 	for k, v := range cfg.Subgraphs {
-		if v != nil {
-			entry.SubgraphMap[k] = newCircuitBreakerConfig(v.CircuitBreaker)
-		}
+		entry.SubgraphMap[k] = newCircuitBreakerConfig(v.CircuitBreaker)
+
 	}
 
 	return entry

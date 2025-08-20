@@ -3639,7 +3639,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						All: config.GlobalSubgraphRequestRule{
 							RequestTimeout: integration.ToPtr(10 * time.Second),
 						},
-						Subgraphs: map[string]*config.GlobalSubgraphRequestRule{
+						Subgraphs: map[string]config.GlobalSubgraphRequestRule{
 							"hobbies": {
 								RequestTimeout: integration.ToPtr(3 * time.Second),
 							},
