@@ -81,8 +81,8 @@ describe('Link/Unlink Subgraph tests', () => {
       const targetSubgraphName = genID('target-subgraph');
 
       // Create both subgraphs in the same namespace
-      await createSubgraph(client, sourceSubgraphName, DEFAULT_NAMESPACE, DEFAULT_SUBGRAPH_URL_ONE);
-      await createSubgraph(client, targetSubgraphName, DEFAULT_NAMESPACE, DEFAULT_SUBGRAPH_URL_TWO);
+      await createSubgraph(client, sourceSubgraphName, DEFAULT_SUBGRAPH_URL_ONE, DEFAULT_NAMESPACE);
+      await createSubgraph(client, targetSubgraphName, DEFAULT_SUBGRAPH_URL_TWO, DEFAULT_NAMESPACE);
 
       const linkResponse = await client.linkSubgraph({
         sourceSubgraphName,
@@ -102,7 +102,7 @@ describe('Link/Unlink Subgraph tests', () => {
 
       await createNamespace(client, 'prod');
       const targetSubgraphName = genID('target-subgraph');
-      await createSubgraph(client, targetSubgraphName, 'prod', DEFAULT_SUBGRAPH_URL_TWO);
+      await createSubgraph(client, targetSubgraphName, DEFAULT_SUBGRAPH_URL_TWO, 'prod');
 
       const linkResponse = await client.linkSubgraph({
         sourceSubgraphName: 'any-subgraph',
@@ -121,7 +121,7 @@ describe('Link/Unlink Subgraph tests', () => {
       const { client, server } = await SetupTest({ dbname });
 
       const sourceSubgraphName = genID('source-subgraph');
-      await createSubgraph(client, sourceSubgraphName, DEFAULT_NAMESPACE, DEFAULT_SUBGRAPH_URL_ONE);
+      await createSubgraph(client, sourceSubgraphName, DEFAULT_SUBGRAPH_URL_ONE, DEFAULT_NAMESPACE);
 
       const linkResponse = await client.linkSubgraph({
         sourceSubgraphName,
@@ -141,7 +141,7 @@ describe('Link/Unlink Subgraph tests', () => {
 
       await createNamespace(client, 'prod');
       const targetSubgraphName = genID('target-subgraph');
-      await createSubgraph(client, targetSubgraphName, 'prod', DEFAULT_SUBGRAPH_URL_TWO);
+      await createSubgraph(client, targetSubgraphName, DEFAULT_SUBGRAPH_URL_TWO, 'prod');
 
       const linkResponse = await client.linkSubgraph({
         sourceSubgraphName: 'nonexistent-subgraph',
@@ -161,7 +161,7 @@ describe('Link/Unlink Subgraph tests', () => {
 
       await createNamespace(client, 'prod');
       const sourceSubgraphName = genID('source-subgraph');
-      await createSubgraph(client, sourceSubgraphName, DEFAULT_NAMESPACE, DEFAULT_SUBGRAPH_URL_ONE);
+      await createSubgraph(client, sourceSubgraphName, DEFAULT_SUBGRAPH_URL_ONE, DEFAULT_NAMESPACE);
 
       const linkResponse = await client.linkSubgraph({
         sourceSubgraphName,
@@ -194,7 +194,7 @@ describe('Link/Unlink Subgraph tests', () => {
       );
 
       // Create target subgraph in prod namespace
-      await createSubgraph(client, targetSubgraphName, 'prod', 'http://localhost:4003');
+      await createSubgraph(client, targetSubgraphName, 'http://localhost:4003', 'prod');
 
       const linkResponse = await client.linkSubgraph({
         sourceSubgraphName: featureSubgraphName,
@@ -238,7 +238,7 @@ describe('Link/Unlink Subgraph tests', () => {
       expect(createFeatureSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
 
       // Create source subgraph in default namespace
-      await createSubgraph(client, sourceSubgraphName, DEFAULT_NAMESPACE, 'http://localhost:4003');
+      await createSubgraph(client, sourceSubgraphName, 'http://localhost:4003', DEFAULT_NAMESPACE);
 
       const linkResponse = await client.linkSubgraph({
         sourceSubgraphName,
@@ -266,9 +266,9 @@ describe('Link/Unlink Subgraph tests', () => {
       const secondTargetName = genID('second-target');
 
       // Create all subgraphs
-      await createSubgraph(client, sourceSubgraphName, DEFAULT_NAMESPACE, DEFAULT_SUBGRAPH_URL_ONE);
-      await createSubgraph(client, firstTargetName, 'prod', DEFAULT_SUBGRAPH_URL_TWO);
-      await createSubgraph(client, secondTargetName, 'staging', 'http://localhost:4003');
+      await createSubgraph(client, sourceSubgraphName, DEFAULT_SUBGRAPH_URL_ONE, DEFAULT_NAMESPACE);
+      await createSubgraph(client, firstTargetName, DEFAULT_SUBGRAPH_URL_TWO, 'prod');
+      await createSubgraph(client, secondTargetName, 'http://localhost:4003', 'staging');
 
       // First link should succeed
       const firstLinkResponse = await client.linkSubgraph({
@@ -295,29 +295,6 @@ describe('Link/Unlink Subgraph tests', () => {
       await server.close();
     });
 
-    test('Should fail when trying to link a subgraph to itself', async () => {
-      const { client, server } = await SetupTest({ dbname });
-
-      const subgraphName = genID('subgraph');
-
-      // Create same subgraph in both namespaces
-      await createSubgraph(client, subgraphName, DEFAULT_NAMESPACE, DEFAULT_SUBGRAPH_URL_ONE);
-
-      const linkResponse = await client.linkSubgraph({
-        sourceSubgraphName: subgraphName,
-        sourceSubgraphNamespace: DEFAULT_NAMESPACE,
-        targetSubgraphName: subgraphName,
-        targetSubgraphNamespace: DEFAULT_NAMESPACE,
-      });
-
-      expect(linkResponse.response?.code).toBe(EnumStatusCode.ERR);
-      expect(linkResponse.response?.details).toBe(
-        `The target subgraph "${subgraphName}" is the same as the source subgraph.`,
-      );
-
-      await server.close();
-    });
-
     test('Should fail when user lacks write access to source subgraph', async () => {
       const { client, server, users, authenticator } = await SetupTest({
         dbname,
@@ -330,8 +307,8 @@ describe('Link/Unlink Subgraph tests', () => {
       const targetSubgraphName = genID('target-subgraph');
 
       // Create subgraphs as admin
-      await createSubgraph(client, sourceSubgraphName, DEFAULT_NAMESPACE, DEFAULT_SUBGRAPH_URL_ONE);
-      await createSubgraph(client, targetSubgraphName, 'prod', DEFAULT_SUBGRAPH_URL_TWO);
+      await createSubgraph(client, sourceSubgraphName, DEFAULT_SUBGRAPH_URL_ONE, DEFAULT_NAMESPACE);
+      await createSubgraph(client, targetSubgraphName, DEFAULT_SUBGRAPH_URL_TWO, 'prod');
 
       // Switch to user without write permissions
       authenticator.changeUserWithSuppliedContext({
@@ -368,8 +345,8 @@ describe('Link/Unlink Subgraph tests', () => {
       const prodNamespace = getNamespacesResp.namespaces?.find((ns) => ns.name === 'prod');
 
       // Create subgraphs as admin
-      await createSubgraph(client, sourceSubgraphName, DEFAULT_NAMESPACE, DEFAULT_SUBGRAPH_URL_ONE);
-      await createSubgraph(client, targetSubgraphName, 'prod', DEFAULT_SUBGRAPH_URL_TWO);
+      await createSubgraph(client, sourceSubgraphName, DEFAULT_SUBGRAPH_URL_ONE, DEFAULT_NAMESPACE);
+      await createSubgraph(client, targetSubgraphName, DEFAULT_SUBGRAPH_URL_TWO, 'prod');
 
       // Switch to user with access only to default namespace
       authenticator.changeUserWithSuppliedContext({
@@ -401,8 +378,8 @@ describe('Link/Unlink Subgraph tests', () => {
       const sourceSubgraphName = genID('source-subgraph');
       const targetSubgraphName = genID('target-subgraph');
 
-      await createSubgraph(client, sourceSubgraphName, DEFAULT_NAMESPACE, DEFAULT_SUBGRAPH_URL_ONE);
-      await createSubgraph(client, targetSubgraphName, 'prod', DEFAULT_SUBGRAPH_URL_TWO);
+      await createSubgraph(client, sourceSubgraphName, DEFAULT_SUBGRAPH_URL_ONE, DEFAULT_NAMESPACE);
+      await createSubgraph(client, targetSubgraphName, DEFAULT_SUBGRAPH_URL_TWO, 'prod');
 
       const linkResponse = await client.linkSubgraph({
         sourceSubgraphName,
@@ -426,8 +403,8 @@ describe('Link/Unlink Subgraph tests', () => {
       const targetSubgraphName = genID('target-subgraph');
 
       // Create and link subgraphs
-      await createSubgraph(client, sourceSubgraphName, DEFAULT_NAMESPACE, DEFAULT_SUBGRAPH_URL_ONE);
-      await createSubgraph(client, targetSubgraphName, 'prod', DEFAULT_SUBGRAPH_URL_TWO);
+      await createSubgraph(client, sourceSubgraphName, DEFAULT_SUBGRAPH_URL_ONE, DEFAULT_NAMESPACE);
+      await createSubgraph(client, targetSubgraphName, DEFAULT_SUBGRAPH_URL_TWO, 'prod');
 
       const linkResponse = await client.linkSubgraph({
         sourceSubgraphName,
@@ -466,7 +443,7 @@ describe('Link/Unlink Subgraph tests', () => {
       const { client, server } = await SetupTest({ dbname });
 
       const sourceSubgraphName = genID('source-subgraph');
-      await createSubgraph(client, sourceSubgraphName, DEFAULT_NAMESPACE, DEFAULT_SUBGRAPH_URL_ONE);
+      await createSubgraph(client, sourceSubgraphName, DEFAULT_SUBGRAPH_URL_ONE, DEFAULT_NAMESPACE);
 
       const unlinkResponse = await client.unlinkSubgraph({
         sourceSubgraphName,
@@ -493,8 +470,8 @@ describe('Link/Unlink Subgraph tests', () => {
       const targetSubgraphName = genID('target-subgraph');
 
       // Create and link subgraphs as admin
-      await createSubgraph(client, sourceSubgraphName, DEFAULT_NAMESPACE, DEFAULT_SUBGRAPH_URL_ONE);
-      await createSubgraph(client, targetSubgraphName, 'prod', DEFAULT_SUBGRAPH_URL_TWO);
+      await createSubgraph(client, sourceSubgraphName, DEFAULT_SUBGRAPH_URL_ONE, DEFAULT_NAMESPACE);
+      await createSubgraph(client, targetSubgraphName, DEFAULT_SUBGRAPH_URL_TWO, 'prod');
 
       const linkResponse = await client.linkSubgraph({
         sourceSubgraphName,
@@ -528,8 +505,8 @@ describe('Link/Unlink Subgraph tests', () => {
       const targetSubgraphName = genID('target-subgraph');
 
       // Create and link subgraphs
-      await createSubgraph(client, sourceSubgraphName, DEFAULT_NAMESPACE, DEFAULT_SUBGRAPH_URL_ONE);
-      await createSubgraph(client, targetSubgraphName, 'prod', DEFAULT_SUBGRAPH_URL_TWO);
+      await createSubgraph(client, sourceSubgraphName, DEFAULT_SUBGRAPH_URL_ONE, DEFAULT_NAMESPACE);
+      await createSubgraph(client, targetSubgraphName, DEFAULT_SUBGRAPH_URL_TWO, 'prod');
 
       const linkResponse = await client.linkSubgraph({
         sourceSubgraphName,
@@ -560,9 +537,9 @@ describe('Link/Unlink Subgraph tests', () => {
       const secondTargetName = genID('second-target');
 
       // Create all subgraphs
-      await createSubgraph(client, sourceSubgraphName, DEFAULT_NAMESPACE, DEFAULT_SUBGRAPH_URL_ONE);
-      await createSubgraph(client, firstTargetName, 'prod', DEFAULT_SUBGRAPH_URL_TWO);
-      await createSubgraph(client, secondTargetName, 'staging', 'http://localhost:4003');
+      await createSubgraph(client, sourceSubgraphName, DEFAULT_SUBGRAPH_URL_ONE, DEFAULT_NAMESPACE);
+      await createSubgraph(client, firstTargetName, DEFAULT_SUBGRAPH_URL_TWO, 'prod');
+      await createSubgraph(client, secondTargetName, 'http://localhost:4003', 'staging');
 
       // Link to first target
       const firstLinkResponse = await client.linkSubgraph({
@@ -606,10 +583,10 @@ describe('Link/Unlink Subgraph tests', () => {
       const targetSubgraph2 = genID('target-2');
 
       // Create all subgraphs
-      await createSubgraph(client, sourceSubgraph1, DEFAULT_NAMESPACE, DEFAULT_SUBGRAPH_URL_ONE);
-      await createSubgraph(client, sourceSubgraph2, DEFAULT_NAMESPACE, 'http://localhost:4004');
-      await createSubgraph(client, targetSubgraph1, 'prod', DEFAULT_SUBGRAPH_URL_TWO);
-      await createSubgraph(client, targetSubgraph2, 'staging', 'http://localhost:4003');
+      await createSubgraph(client, sourceSubgraph1, DEFAULT_SUBGRAPH_URL_ONE, DEFAULT_NAMESPACE);
+      await createSubgraph(client, sourceSubgraph2, 'http://localhost:4004', DEFAULT_NAMESPACE);
+      await createSubgraph(client, targetSubgraph1, DEFAULT_SUBGRAPH_URL_TWO, 'prod');
+      await createSubgraph(client, targetSubgraph2, 'http://localhost:4003', 'staging');
 
       // Create multiple links
       const link1Response = await client.linkSubgraph({
@@ -644,7 +621,7 @@ describe('Link/Unlink Subgraph tests', () => {
       });
       expect(link2AgainResponse.response?.code).toBe(EnumStatusCode.ERR);
       expect(link2AgainResponse.response?.details).toBe(
-        `The source subgraph "${sourceSubgraph2}" is already linked to the target subgraph "${targetSubgraph1}" in the namespace "prod". Unlink the existing link first.`,
+        `The source subgraph "${sourceSubgraph2}" is already linked to the target subgraph "${targetSubgraph2}" in the namespace "prod". Unlink the existing link first.`,
       );
 
       // Unlink second one

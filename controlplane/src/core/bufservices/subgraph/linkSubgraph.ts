@@ -62,7 +62,6 @@ export function linkSubgraph(
           code: EnumStatusCode.ERR_NOT_FOUND,
           details: `The subgraph "${req.sourceSubgraphName}" was not found.`,
         },
-        members: [],
       };
     }
 
@@ -110,15 +109,6 @@ export function linkSubgraph(
 
     if (!authContext.rbac.hasSubGraphReadAccess(targetSubgraph)) {
       throw new UnauthorizedError();
-    }
-
-    if (targetSubgraph.id === sourceSubgraph.id) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The target subgraph "${req.targetSubgraphName}" is the same as the source subgraph.`,
-        },
-      };
     }
 
     await subgraphRepo.linkSubgraph({

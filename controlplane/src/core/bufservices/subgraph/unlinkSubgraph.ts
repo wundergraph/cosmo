@@ -32,7 +32,6 @@ export function unlinkSubgraph(
           code: EnumStatusCode.ERR_NOT_FOUND,
           details: `The subgraph "${req.sourceSubgraphName}" was not found.`,
         },
-        members: [],
       };
     }
 
