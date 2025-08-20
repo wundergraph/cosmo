@@ -91,7 +91,9 @@ export type AuditLogAction =
   | 'disabled'
   | 'enabled'
   | 'added'
-  | 'removed';
+  | 'removed'
+  | 'linked'
+  | 'unlinked';
 
 export type AuditLogFullAction =
   | 'namespace.created'
@@ -117,6 +119,8 @@ export type AuditLogFullAction =
   | 'subgraph.deleted'
   | 'subgraph.updated'
   | 'subgraph.moved'
+  | 'subgraph.linked'
+  | 'subgraph.unlinked'
   | 'feature_flag.created'
   | 'feature_flag.deleted'
   | 'feature_flag.disabled'

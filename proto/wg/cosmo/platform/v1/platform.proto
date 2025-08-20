@@ -2856,6 +2856,26 @@ message ValidateAndFetchPluginDataResponse {
   string reference = 4;
 }
 
+message LinkSubgraphRequest {
+  string sourceSubgraphName = 1;
+  string sourceSubgraphNamespace = 2;
+  string targetSubgraphName = 3;
+  string targetSubgraphNamespace = 4;
+}
+
+message LinkSubgraphResponse {
+  Response response = 1;
+}
+
+message UnlinkSubgraphRequest {
+  string sourceSubgraphName = 1;
+  string sourceSubgraphNamespace = 2;
+}
+
+message UnlinkSubgraphResponse {
+  Response response = 1;
+}
+
 service PlatformService {
   // PlaygroundScripts
   rpc CreatePlaygroundScript(CreatePlaygroundScriptRequest) returns (CreatePlaygroundScriptResponse) {}
@@ -3222,4 +3242,9 @@ service PlatformService {
 
   // ValidateAndFetchPluginData validates the limit of plugins and returns the latest version and token
   rpc ValidateAndFetchPluginData(ValidateAndFetchPluginDataRequest) returns (ValidateAndFetchPluginDataResponse) {}
+
+  // LinkSubgraph links one subgraph to another
+  rpc LinkSubgraph(LinkSubgraphRequest) returns (LinkSubgraphResponse) {}
+  // UnlinkSubgraph unlinks one subgraph from another
+  rpc UnlinkSubgraph(UnlinkSubgraphRequest) returns (UnlinkSubgraphResponse) {}
 }

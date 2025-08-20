@@ -16,6 +16,7 @@ import {
   fieldGracePeriod,
   graphCompositions,
   graphCompositionSubgraphs,
+  linkedSubgraphs,
   schemaChecks,
   schemaVersion,
   subgraphMembers,
@@ -1704,5 +1705,38 @@ export class SubgraphRepository {
     }
 
     await this.deleteExpiredGracePeriodFields({ subgraphId, namespaceId });
+  }
+
+  public async linkSubgraph({
+    sourceSubgraphId,
+    targetSubgraphId,
+    createdById,
+  }: {
+    sourceSubgraphId: string;
+    targetSubgraphId: string;
+    createdById: string;
+  }) {
+    await this.db.insert(linkedSubgraphs).values({ sourceSubgraphId, targetSubgraphId, createdById });
+  }
+
+  public async unlinkSubgraph({ sourceSubgraphId }: { sourceSubgraphId: string }) {
+    await this.db.delete(linkedSubgraphs).where(and(eq(linkedSubgraphs.sourceSubgraphId, sourceSubgraphId)));
+  }
+
+  public getLinkedSubgraph({ sourceSubgraphId }: { sourceSubgraphId: string }) {
+    return this.db
+      .select({
+        targetSubgraphId: linkedSubgraphs.targetSubgraphId,
+        targetSubgraphName: targets.name,
+        targetSubgraphNamespace: schema.namespaces.name,
+      })
+      .from(linkedSubgraphs)
+      .innerJoin(subgraphs, eq(linkedSubgraphs.targetSubgraphId, subgraphs.id))
+      .innerJoin(targets, eq(subgraphs.targetId, targets.id))
+      .innerJoin(schema.namespaces, eq(targets.namespaceId, schema.namespaces.id))
+      .where(
+        and(eq(linkedSubgraphs.sourceSubgraphId, sourceSubgraphId), eq(targets.organizationId, this.organizationId)),
+      )
+      .execute();
   }
 }

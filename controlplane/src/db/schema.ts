@@ -244,6 +244,38 @@ export const subgraphs = pgTable(
   },
 );
 
+// The link is a one way link from source to target.
+// The source subgraph can be linked only to one target subgraph, thats why we have a unique constraint on the source subgraph.
+export const linkedSubgraphs = pgTable(
+  'linked_subgraphs', // ls
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    sourceSubgraphId: uuid('source_subgraph_id')
+      .notNull()
+      .references(() => subgraphs.id, {
+        onDelete: 'cascade',
+      })
+      .unique(),
+    targetSubgraphId: uuid('target_subgraph_id')
+      .notNull()
+      .references(() => subgraphs.id, {
+        onDelete: 'cascade',
+      }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    createdById: uuid('created_by_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+  },
+  (t) => {
+    return {
+      uniqueSourceSubgraph: unique('unique_source_subgraph').on(t.sourceSubgraphId),
+      sourceSubgraphIdIndex: index('ls_source_subgraph_id_idx').on(t.sourceSubgraphId),
+      targetSubgraphIdIndex: index('ls_target_subgraph_id_idx').on(t.targetSubgraphId),
+      createdByIdIndex: index('ls_created_by_id_idx').on(t.createdById),
+    };
+  },
+);
+
 export const featureSubgraphsToBaseSubgraphs = pgTable(
   'feature_subgraphs_to_base_subgraphs', // fsbs
   {
