@@ -24,7 +24,6 @@ export function linkSubgraph(
 
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
-    const auditLogRepo = new AuditLogRepository(opts.db);
 
     if (req.sourceSubgraphNamespace === req.targetSubgraphNamespace) {
       return {
@@ -111,25 +110,30 @@ export function linkSubgraph(
       throw new UnauthorizedError();
     }
 
-    await subgraphRepo.linkSubgraph({
-      sourceSubgraphId: sourceSubgraph.id,
-      targetSubgraphId: targetSubgraph.id,
-      createdById: authContext.userId,
-    });
+    await opts.db.transaction(async (tx) => {
+      const txSubgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
+      const txAuditLogRepo = new AuditLogRepository(tx);
 
-    await auditLogRepo.addAuditLog({
-      organizationId: authContext.organizationId,
-      organizationSlug: authContext.organizationSlug,
-      auditAction: 'subgraph.linked',
-      action: 'linked',
-      actorId: authContext.userId,
-      auditableType: 'subgraph',
-      auditableDisplayName: sourceSubgraph.name,
-      actorDisplayName: authContext.userDisplayName,
-      apiKeyName: authContext.apiKeyName,
-      actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
-      targetNamespaceId: sourceSubgraph.namespaceId,
-      targetNamespaceDisplayName: sourceSubgraph.namespace,
+      await txSubgraphRepo.linkSubgraph({
+        sourceSubgraphId: sourceSubgraph.id,
+        targetSubgraphId: targetSubgraph.id,
+        createdById: authContext.userId,
+      });
+
+      await txAuditLogRepo.addAuditLog({
+        organizationId: authContext.organizationId,
+        organizationSlug: authContext.organizationSlug,
+        auditAction: 'subgraph.linked',
+        action: 'linked',
+        actorId: authContext.userId,
+        auditableType: 'subgraph',
+        auditableDisplayName: sourceSubgraph.name,
+        actorDisplayName: authContext.userDisplayName,
+        apiKeyName: authContext.apiKeyName,
+        actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+        targetNamespaceId: sourceSubgraph.namespaceId,
+        targetNamespaceDisplayName: sourceSubgraph.namespace,
+      });
     });
 
     return {
