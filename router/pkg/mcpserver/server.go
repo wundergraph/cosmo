@@ -795,6 +795,6 @@ func WithCORS(allowedMethods ...string) func(http.Handler) http.Handler {
 func setCORSHeaders(w http.ResponseWriter, allowedMethods []string) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", strings.Join(append(allowedMethods, "OPTIONS"), ", "))
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, mcp-protocol-version")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Accept, Authorization, Last-Event-ID, Mcp-Protocol-Version, Mcp-Session-Id")
 	w.Header().Set("Access-Control-Max-Age", "86400") // 24 hours
 }

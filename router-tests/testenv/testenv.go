@@ -1798,6 +1798,14 @@ func (e *Environment) Observer() *observer.ObservedLogs {
 	return e.logObserver
 }
 
+// GetMCPServerAddr returns the MCP server address for testing
+func (e *Environment) GetMCPServerAddr() string {
+	if e.cfg.MCP.Enabled {
+		return fmt.Sprintf("http://%s/mcp", e.cfg.MCP.Server.ListenAddr)
+	}
+	return ""
+}
+
 // Shutdown closes all resources associated with the test environment. Can be called multiple times but will only
 // shut down resources once.
 func (e *Environment) Shutdown() {
