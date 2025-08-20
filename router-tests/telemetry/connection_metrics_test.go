@@ -161,7 +161,7 @@ func TestConnectionMetrics(t *testing.T) {
 			All: config.GlobalSubgraphRequestRule{
 				RequestTimeout: integration.ToPtr(200 * time.Millisecond),
 			},
-			Subgraphs: map[string]*config.GlobalSubgraphRequestRule{
+			Subgraphs: map[string]config.GlobalSubgraphRequestRule{
 				"availability": {
 					RequestTimeout: integration.ToPtr(300 * time.Millisecond),
 				},
