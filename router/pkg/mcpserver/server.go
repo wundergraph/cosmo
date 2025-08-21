@@ -68,6 +68,8 @@ type Options struct {
 	EnableArbitraryOperations bool
 	// ExposeSchema determines whether the GraphQL schema is exposed
 	ExposeSchema bool
+	// Stateless determines whether the MCP server should be stateless
+	Stateless bool
 }
 
 // GraphQLSchemaServer represents an MCP server that works with GraphQL schemas and operations
@@ -81,10 +83,11 @@ type GraphQLSchemaServer struct {
 	httpClient                *http.Client
 	requestTimeout            time.Duration
 	routerGraphQLEndpoint     string
-	sseServer                 *server.SSEServer
+	httpServer                *server.StreamableHTTPServer
 	excludeMutations          bool
 	enableArbitraryOperations bool
 	exposeSchema              bool
+	stateless                 bool
 	operationsManager         *OperationsManager
 	schemaCompiler            *SchemaCompiler
 	registeredTools           []string
@@ -178,6 +181,7 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)
 		Logger:         zap.NewNop(),
 		RequestTimeout: 30 * time.Second,
 		ExposeSchema:   true,
+		Stateless:      true,
 	}
 
 	// Apply all option functions
@@ -212,6 +216,7 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)
 		excludeMutations:          options.ExcludeMutations,
 		enableArbitraryOperations: options.EnableArbitraryOperations,
 		exposeSchema:              options.ExposeSchema,
+		stateless:                 options.Stateless,
 		baseURL:                   options.BaseURL,
 	}
 
@@ -273,15 +278,42 @@ func WithExposeSchema(exposeSchema bool) func(*Options) {
 	}
 }
 
-// ServeSSE starts the server with SSE transport
-func (s *GraphQLSchemaServer) ServeSSE() (*server.SSEServer, error) {
-	sseServer := server.NewSSEServer(s.server,
-		server.WithBaseURL(s.baseURL),
-		server.WithSSEEndpoint("/mcp"),
-		server.WithSSEContextFunc(authFromRequest),
-		server.WithKeepAlive(true),
-		server.WithKeepAliveInterval(10*time.Second),
+// WithStateless sets the stateless option
+func WithStateless(stateless bool) func(*Options) {
+	return func(o *Options) {
+		o.Stateless = stateless
+	}
+}
+
+// Serve starts the server with the configured options and returns a streamable HTTP server.
+func (s *GraphQLSchemaServer) Serve() (*server.StreamableHTTPServer, error) {
+	// Create custom HTTP server
+	httpServer := &http.Server{
+		Addr:         s.listenAddr,
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+
+	streamableHTTPServer := server.NewStreamableHTTPServer(s.server,
+		server.WithStreamableHTTPServer(httpServer),
+		server.WithLogger(NewZapAdapter(s.logger.With(zap.String("component", "mcp-server")))),
+		server.WithStateLess(s.stateless),
+		server.WithHTTPContextFunc(authFromRequest),
+		server.WithHeartbeatInterval(10*time.Second),
 	)
+
+	corsMiddleware := WithCORS("GET", "POST", "PUT", "DELETE")
+
+	mux := http.NewServeMux()
+
+	// No OAuth protection - original behavior
+	mux.Handle("/mcp", corsMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		streamableHTTPServer.ServeHTTP(w, r)
+	})))
+
+	// Set the handler for the custom HTTP server
+	httpServer.Handler = mux
 
 	logger := []zap.Field{
 		zap.String("listen_addr", s.listenAddr),
@@ -298,24 +330,24 @@ func (s *GraphQLSchemaServer) ServeSSE() (*server.SSEServer, error) {
 	go func() {
 		defer s.logger.Info("MCP server stopped")
 
-		err := sseServer.Start(s.listenAddr)
+		err := httpServer.ListenAndServe()
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			s.logger.Error("failed to start SSE server", zap.Error(err))
+			s.logger.Error("failed to start HTTP server", zap.Error(err))
 		}
 	}()
 
-	return sseServer, nil
+	return streamableHTTPServer, nil
 }
 
 // Start loads operations and starts the server
 func (s *GraphQLSchemaServer) Start() error {
 
-	sseServer, err := s.ServeSSE()
+	ss, err := s.Serve()
 	if err != nil {
-		return fmt.Errorf("failed to create SSE server: %w", err)
+		return fmt.Errorf("failed to create HTTP server: %w", err)
 	}
 
-	s.sseServer = sseServer
+	s.httpServer = ss
 
 	return nil
 }
@@ -347,14 +379,18 @@ func (s *GraphQLSchemaServer) Reload(schema *ast.Document) error {
 
 // Stop gracefully shuts down the MCP server
 func (s *GraphQLSchemaServer) Stop(ctx context.Context) error {
-	s.logger.Debug("Shutting down MCP server")
+	if s.httpServer == nil {
+		return fmt.Errorf("server is not started")
+	}
+
+	s.logger.Debug("shutting down MCP server")
 
 	// Create a shutdown context with timeout
 	shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	if err := s.sseServer.Shutdown(shutdownCtx); err != nil {
-		return fmt.Errorf("failed to gracefully shutdown SSE server: %w", err)
+	if err := s.httpServer.Shutdown(shutdownCtx); err != nil {
+		return fmt.Errorf("failed to gracefully shutdown MCP server: %w", err)
 	}
 
 	return nil
@@ -724,4 +760,44 @@ func (s *GraphQLSchemaServer) handleGetGraphQLSchema() func(ctx context.Context,
 
 		return mcp.NewToolResultText(schemaStr), nil
 	}
+}
+
+// WithCORS creates a reusable CORS middleware that can be used with any HTTP handler.
+// It handles preflight OPTIONS requests and sets appropriate CORS headers.
+//
+// Example usage:
+//
+//	corsMiddleware := WithCORS("GET", "POST", "PUT", "DELETE")
+//	http.Handle("/api/", corsMiddleware(apiHandler))
+//
+// The middleware sets the following CORS headers:
+//   - Access-Control-Allow-Origin: *
+//   - Access-Control-Allow-Methods: specified methods + OPTIONS
+//   - Access-Control-Allow-Headers: Content-Type, Authorization
+//   - Access-Control-Max-Age: 86400 (24 hours)
+func WithCORS(allowedMethods ...string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			// Set CORS headers for all requests
+			setCORSHeaders(w, allowedMethods)
+
+			// Handle preflight OPTIONS requests
+			if req.Method == http.MethodOptions {
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+
+			// Call the next handler
+			next.ServeHTTP(w, req)
+		})
+	}
+}
+
+// setCORSHeaders sets common CORS headers
+// Only used for web browsers, not for API clients
+func setCORSHeaders(w http.ResponseWriter, allowedMethods []string) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", strings.Join(append(allowedMethods, "OPTIONS"), ", "))
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Accept, Authorization, Last-Event-ID, Mcp-Protocol-Version, Mcp-Session-Id")
+	w.Header().Set("Access-Control-Max-Age", "86400") // 24 hours
 }

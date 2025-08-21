@@ -809,7 +809,7 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	if cfg.MCP.Enabled {
 		// Create MCP client connecting to the MCP server
 		mcpAddr := fmt.Sprintf("http://%s/mcp", cfg.MCP.Server.ListenAddr)
-		client, err := mcpclient.NewSSEMCPClient(mcpAddr)
+		client, err := mcpclient.NewStreamableHttpClient(mcpAddr)
 		if err != nil {
 			t.Fatalf("Failed to create MCP client: %v", err)
 		}
@@ -1234,7 +1234,7 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	if cfg.MCP.Enabled {
 		// Create MCP client connecting to the MCP server
 		mcpAddr := fmt.Sprintf("http://%s/mcp", cfg.MCP.Server.ListenAddr)
-		client, err := mcpclient.NewSSEMCPClient(mcpAddr)
+		client, err := mcpclient.NewStreamableHttpClient(mcpAddr)
 		if err != nil {
 			t.Fatalf("Failed to create MCP client: %v", err)
 		}
@@ -1796,6 +1796,14 @@ func (e *Environment) Observer() *observer.ObservedLogs {
 	}
 
 	return e.logObserver
+}
+
+// GetMCPServerAddr returns the MCP server address for testing
+func (e *Environment) GetMCPServerAddr() string {
+	if e.cfg.MCP.Enabled {
+		return fmt.Sprintf("http://%s/mcp", e.cfg.MCP.Server.ListenAddr)
+	}
+	return ""
 }
 
 // Shutdown closes all resources associated with the test environment. Can be called multiple times but will only

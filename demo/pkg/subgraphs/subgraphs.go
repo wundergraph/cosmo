@@ -14,6 +14,8 @@ import (
 
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/products_fg"
 	"github.com/wundergraph/cosmo/router/core"
+	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"go.uber.org/zap"
 
 	"github.com/99designs/gqlgen/graphql"
@@ -21,8 +23,6 @@ import (
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
-	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	natsPubsub "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 	"golang.org/x/sync/errgroup"
 
