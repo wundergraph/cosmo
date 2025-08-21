@@ -1066,6 +1066,11 @@
                   "default": false,
                   "description": "Enable the collection of connection stats. The default value is false."
                 },
+                "streams": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the collection of stream metrics. This contains metrics related to EDFS. The default value is false."
+                },
                 "circuit_breaker": {
                   "type": "boolean",
                   "default": false,
@@ -1170,6 +1175,11 @@
                   "type": "boolean",
                   "default": false,
                   "description": "Enable the collection of connection stats. The default value is false."
+                },
+                "streams": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the collection of stream metrics. This contains metrics related to EDFS. The default value is false."
                 },
                 "circuit_breaker": {
                   "type": "boolean",
@@ -1976,6 +1986,18 @@
             }
           },
           "required": ["provider_id"]
+        },
+        "session": {
+          "type": "object",
+          "description": "Session configuration for the MCP server. This controls how the MCP server handles client sessions.",
+          "additionalProperties": false,
+          "properties": {
+            "stateless": {
+              "type": "boolean",
+              "default": true,
+              "description": "Whether the MCP server should operate in stateless mode. When true, the server does not maintain session state between requests. When false, the server maintains session state, which can be useful for certain AI model integrations."
+            }
+          }
         },
         "graph_name": {
           "type": "string",
