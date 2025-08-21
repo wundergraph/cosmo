@@ -83,7 +83,7 @@ type GraphQLSchemaServer struct {
 	httpClient                *http.Client
 	requestTimeout            time.Duration
 	routerGraphQLEndpoint     string
-	sseServer                 *server.StreamableHTTPServer
+	httpServer                *server.StreamableHTTPServer
 	excludeMutations          bool
 	enableArbitraryOperations bool
 	exposeSchema              bool
@@ -285,7 +285,7 @@ func WithStateless(stateless bool) func(*Options) {
 	}
 }
 
-// Serve starts the server with the configured options and returns an SSE server.
+// Serve starts the server with the configured options and returns a streamable HTTP server.
 func (s *GraphQLSchemaServer) Serve() (*server.StreamableHTTPServer, error) {
 	// Create custom HTTP server
 	httpServer := &http.Server{
@@ -344,10 +344,10 @@ func (s *GraphQLSchemaServer) Start() error {
 
 	ss, err := s.Serve()
 	if err != nil {
-		return fmt.Errorf("failed to create SSE server: %w", err)
+		return fmt.Errorf("failed to create HTTP server: %w", err)
 	}
 
-	s.sseServer = ss
+	s.httpServer = ss
 
 	return nil
 }
@@ -385,8 +385,8 @@ func (s *GraphQLSchemaServer) Stop(ctx context.Context) error {
 	shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	if err := s.sseServer.Shutdown(shutdownCtx); err != nil {
-		return fmt.Errorf("failed to gracefully shutdown SSE server: %w", err)
+	if err := s.httpServer.Shutdown(shutdownCtx); err != nil {
+		return fmt.Errorf("failed to gracefully shutdown MCP server: %w", err)
 	}
 
 	return nil
