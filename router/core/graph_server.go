@@ -518,6 +518,7 @@ type graphMux struct {
 	metricStore                rmetric.Store
 	prometheusCacheMetrics     *rmetric.CacheMetrics
 	otelCacheMetrics           *rmetric.CacheMetrics
+	streamMetricStore          rmetric.StreamMetricStore
 }
 
 // buildOperationCaches creates the caches for the graph mux.
@@ -759,6 +760,12 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 		}
 	}
 
+	if s.streamMetricStore != nil {
+		if aErr := s.streamMetricStore.Shutdown(ctx); aErr != nil {
+			err = errors.Join(err, aErr)
+		}
+	}
+
 	if err != nil {
 		return fmt.Errorf("shutdown graph mux: %w", err)
 	}
@@ -774,7 +781,8 @@ func (s *graphServer) buildGraphMux(
 	opts BuildGraphMuxOptions,
 ) (*graphMux, error) {
 	gm := &graphMux{
-		metricStore: rmetric.NewNoopMetrics(),
+		metricStore:       rmetric.NewNoopMetrics(),
+		streamMetricStore: rmetric.NewNoopStreamMetricStore(),
 	}
 
 	httpRouter := chi.NewRouter()
@@ -870,6 +878,19 @@ func (s *graphServer) buildGraphMux(
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	if s.metricConfig.OpenTelemetry.Streams || s.metricConfig.Prometheus.Streams {
+		store, err := rmetric.NewStreamMetricStore(
+			s.logger,
+			baseMetricAttributes,
+			s.otlpMeterProvider,
+			s.promMeterProvider,
+			s.metricConfig)
+		if err != nil {
+			return nil, err
+		}
+		gm.streamMetricStore = store
 	}
 
 	subgraphs, err := configureSubgraphOverwrites(
@@ -1056,6 +1077,7 @@ func (s *graphServer) buildGraphMux(
 			requestlogger.WithAttributes(accessLogAttributes),
 			requestlogger.WithExprAttributes(exprAttributes),
 			requestlogger.WithFieldsHandler(RouterAccessLogsFieldHandler),
+			requestlogger.WithIgnoreQueryParamsList(s.accessLogsConfig.IgnoreQueryParamsList),
 		}
 
 		var ipAnonConfig *requestlogger.IPAnonymizationConfig
@@ -1114,6 +1136,7 @@ func (s *graphServer) buildGraphMux(
 		Headers:                  s.headerRules,
 		Events:                   s.eventsConfig,
 		SubgraphErrorPropagation: s.subgraphErrorPropagation,
+		StreamMetricStore:        gm.streamMetricStore,
 	}
 
 	// map[string]*http.Transport cannot be coerced into map[string]http.RoundTripper, unfortunately

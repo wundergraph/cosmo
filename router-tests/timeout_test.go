@@ -47,7 +47,7 @@ func TestFlakyTimeouts(t *testing.T) {
 			All: config.GlobalSubgraphRequestRule{
 				RequestTimeout: ToPtr(500 * time.Millisecond),
 			},
-			Subgraphs: map[string]*config.GlobalSubgraphRequestRule{
+			Subgraphs: map[string]config.GlobalSubgraphRequestRule{
 				"test1": {
 					ResponseHeaderTimeout: ToPtr(100 * time.Millisecond),
 				},
@@ -181,7 +181,7 @@ func TestFlakyTimeouts(t *testing.T) {
 			All: config.GlobalSubgraphRequestRule{
 				RequestTimeout: ToPtr(200 * time.Millisecond),
 			},
-			Subgraphs: map[string]*config.GlobalSubgraphRequestRule{
+			Subgraphs: map[string]config.GlobalSubgraphRequestRule{
 				"hobbies": {
 					RequestTimeout: ToPtr(300 * time.Millisecond),
 				},
@@ -297,7 +297,7 @@ func TestFlakyTimeouts(t *testing.T) {
 			All: config.GlobalSubgraphRequestRule{
 				RequestTimeout: ToPtr(500 * time.Millisecond),
 			},
-			Subgraphs: map[string]*config.GlobalSubgraphRequestRule{
+			Subgraphs: map[string]config.GlobalSubgraphRequestRule{
 				"hobbies": {
 					ResponseHeaderTimeout: ToPtr(100 * time.Millisecond),
 				},

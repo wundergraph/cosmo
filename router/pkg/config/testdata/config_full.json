@@ -61,6 +61,7 @@
           "Subscriptions": true
         },
         "CircuitBreaker": false,
+        "Streams": false,
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
         "Exporters": [
@@ -80,6 +81,7 @@
         "ListenAddr": "127.0.0.1:8088",
         "GraphqlCache": true,
         "ConnectionStats": true,
+        "Streams": false,
         "EngineStats": {
           "Subscriptions": true
         },
@@ -155,6 +157,9 @@
     },
     "Storage": {
       "ProviderID": "mcp"
+    },
+    "Session": {
+      "Stateless": true
     },
     "GraphName": "cosmo",
     "ExcludeMutations": false,
@@ -415,6 +420,10 @@
             "Expression": "request.error ?? 'success'"
           }
         }
+      ],
+      "IgnoreQueryParamsList": [
+        "variables",
+        "anothervalue"
       ]
     },
     "Subgraphs": {
