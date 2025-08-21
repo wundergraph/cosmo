@@ -379,11 +379,11 @@ func (s *GraphQLSchemaServer) Reload(schema *ast.Document) error {
 
 // Stop gracefully shuts down the MCP server
 func (s *GraphQLSchemaServer) Stop(ctx context.Context) error {
-	s.logger.Debug("shutting down MCP server")
-
 	if s.httpServer == nil {
 		return fmt.Errorf("server is not started")
 	}
+
+	s.logger.Debug("shutting down MCP server")
 
 	// Create a shutdown context with timeout
 	shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
