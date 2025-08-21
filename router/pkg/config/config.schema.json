@@ -1987,6 +1987,18 @@
           },
           "required": ["provider_id"]
         },
+        "session": {
+          "type": "object",
+          "description": "Session configuration for the MCP server. This controls how the MCP server handles client sessions.",
+          "additionalProperties": false,
+          "properties": {
+            "stateless": {
+              "type": "boolean",
+              "default": true,
+              "description": "Whether the MCP server should operate in stateless mode. When true, the server does not maintain session state between requests. When false, the server maintains session state, which can be useful for certain AI model integrations."
+            }
+          }
+        },
         "graph_name": {
           "type": "string",
           "default": "mygraph",
