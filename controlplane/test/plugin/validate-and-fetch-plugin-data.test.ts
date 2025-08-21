@@ -137,13 +137,28 @@ describe('ValidateAndFetchPluginData', () => {
       setupBilling: { plan: 'developer@1' }, // Developer plan has 0 plugin limit
     });
 
-    const pluginName = genID('plugin');
-    const label = genUniqueLabel('test');
+    // Create 3 plugins successfully
+    for (let i = 1; i <= 3; i++) {
+      const pluginName = genID(`plugin-${i}`);
+      const pluginLabel = genUniqueLabel(`team-${i}`);
+
+      const createPluginSubgraphResp = await client.createFederatedSubgraph({
+        name: pluginName,
+        namespace: DEFAULT_NAMESPACE,
+        type: SubgraphType.GRPC_PLUGIN,
+        labels: [pluginLabel],
+      });
+
+      expect(createPluginSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+    }
+
+    const fourthPluginName = genID('plugin-4');
+    const fourthPluginLabel = genUniqueLabel('team-4');
 
     const response = await client.validateAndFetchPluginData({
-      name: pluginName,
+      name: fourthPluginName,
       namespace: DEFAULT_NAMESPACE,
-      labels: [label],
+      labels: [fourthPluginLabel],
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.ERR_LIMIT_REACHED);
