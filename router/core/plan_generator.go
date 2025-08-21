@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/wundergraph/cosmo/router/pkg/metric"
+
 	log "github.com/jensneuse/abstractlogger"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
@@ -253,7 +255,9 @@ func (pg *PlanGenerator) buildRouterConfig(configFilePath string) (*nodev1.Route
 }
 
 func (pg *PlanGenerator) loadConfiguration(routerConfig *nodev1.RouterConfig, logger *zap.Logger, maxDataSourceCollectorsConcurrency uint) error {
-	routerEngineConfig := RouterEngineConfiguration{}
+	routerEngineConfig := RouterEngineConfiguration{
+		StreamMetricStore: metric.NewNoopStreamMetricStore(),
+	}
 	natSources := map[string]*nats.ProviderAdapter{}
 	kafkaSources := map[string]*kafka.ProviderAdapter{}
 	for _, ds := range routerConfig.GetEngineConfig().GetDatasourceConfigurations() {

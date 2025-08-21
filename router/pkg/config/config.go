@@ -100,6 +100,7 @@ type Prometheus struct {
 	ListenAddr          string      `yaml:"listen_addr" envDefault:"127.0.0.1:8088" env:"PROMETHEUS_LISTEN_ADDR"`
 	GraphqlCache        bool        `yaml:"graphql_cache" envDefault:"false" env:"PROMETHEUS_GRAPHQL_CACHE"`
 	ConnectionStats     bool        `yaml:"connection_stats" envDefault:"false" env:"PROMETHEUS_CONNECTION_STATS"`
+	Streams             bool        `yaml:"streams" envDefault:"false" env:"PROMETHEUS_STREAM"`
 	EngineStats         EngineStats `yaml:"engine_stats" envPrefix:"PROMETHEUS_"`
 	CircuitBreaker      bool        `yaml:"circuit_breaker" envDefault:"false" env:"PROMETHEUS_CIRCUIT_BREAKER"`
 	ExcludeMetrics      RegExArray  `yaml:"exclude_metrics,omitempty" env:"PROMETHEUS_EXCLUDE_METRICS"`
@@ -137,6 +138,7 @@ type MetricsOTLP struct {
 	ConnectionStats     bool                  `yaml:"connection_stats" envDefault:"false" env:"METRICS_OTLP_CONNECTION_STATS"`
 	EngineStats         EngineStats           `yaml:"engine_stats" envPrefix:"METRICS_OTLP_"`
 	CircuitBreaker      bool                  `yaml:"circuit_breaker" envDefault:"false" env:"METRICS_OTLP_CIRCUIT_BREAKER"`
+	Streams             bool                  `yaml:"streams" envDefault:"false" env:"METRICS_OTLP_STREAM"`
 	ExcludeMetrics      RegExArray            `yaml:"exclude_metrics,omitempty" env:"METRICS_OTLP_EXCLUDE_METRICS"`
 	ExcludeMetricLabels RegExArray            `yaml:"exclude_metric_labels,omitempty" env:"METRICS_OTLP_EXCLUDE_METRIC_LABELS"`
 	Exporters           []MetricsOTLPExporter `yaml:"exporters"`
@@ -165,7 +167,7 @@ type TrafficShapingRules struct {
 	// Apply to requests from clients to the router
 	Router RouterTrafficConfiguration `yaml:"router"`
 	// Subgraphs is a set of rules that apply to requests from the router to subgraphs. The key is the subgraph name.
-	Subgraphs map[string]*GlobalSubgraphRequestRule `yaml:"subgraphs,omitempty"`
+	Subgraphs map[string]GlobalSubgraphRequestRule `yaml:"subgraphs,omitempty"`
 }
 
 type FileUpload struct {
@@ -891,7 +893,8 @@ type AccessLogsFileOutputConfig struct {
 }
 
 type AccessLogsRouterConfig struct {
-	Fields []CustomAttribute `yaml:"fields,omitempty" env:"ACCESS_LOGS_ROUTER_FIELDS"`
+	Fields                []CustomAttribute `yaml:"fields,omitempty" env:"ACCESS_LOGS_ROUTER_FIELDS"`
+	IgnoreQueryParamsList []string          `yaml:"ignore_query_params_list,omitempty" env:"ACCESS_LOGS_ROUTER_IGNORE_QUERY_PARAMS_LIST" envDefault:"variables"`
 }
 
 type AccessLogsSubgraphsConfig struct {
@@ -947,11 +950,16 @@ type MCPConfiguration struct {
 	Enabled                   bool             `yaml:"enabled" envDefault:"false" env:"MCP_ENABLED"`
 	Server                    MCPServer        `yaml:"server,omitempty"`
 	Storage                   MCPStorageConfig `yaml:"storage,omitempty"`
+	Session                   MCPSessionConfig `yaml:"session,omitempty"`
 	GraphName                 string           `yaml:"graph_name" envDefault:"mygraph" env:"MCP_GRAPH_NAME"`
 	ExcludeMutations          bool             `yaml:"exclude_mutations" envDefault:"false" env:"MCP_EXCLUDE_MUTATIONS"`
 	EnableArbitraryOperations bool             `yaml:"enable_arbitrary_operations" envDefault:"false" env:"MCP_ENABLE_ARBITRARY_OPERATIONS"`
 	ExposeSchema              bool             `yaml:"expose_schema" envDefault:"false" env:"MCP_EXPOSE_SCHEMA"`
 	RouterURL                 string           `yaml:"router_url,omitempty" env:"MCP_ROUTER_URL"`
+}
+
+type MCPSessionConfig struct {
+	Stateless bool `yaml:"stateless" envDefault:"true" env:"MCP_SESSION_STATELESS"`
 }
 
 type MCPStorageConfig struct {
