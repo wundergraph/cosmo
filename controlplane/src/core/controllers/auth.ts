@@ -18,7 +18,6 @@ import { AuthenticationError } from '../errors/errors.js';
 import { OrganizationInvitationRepository } from '../repositories/OrganizationInvitationRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../repositories/NamespaceRepository.js';
 import { OrganizationGroupRepository } from '../repositories/OrganizationGroupRepository.js';
-import { runLocking } from '../util.js';
 
 export type AuthControllerOptions = {
   db: PostgresJsDatabase<typeof schema>;
@@ -262,7 +261,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
 
           // First, we need to create the organization and add the user as an organization member
           const [insertedOrg, orgMember] = await opts.db.transaction(async (tx) => {
-            const orgRepo = new OrganizationRepository(req.log, opts.db, opts.defaultBillingPlanId);
+            const orgRepo = new OrganizationRepository(req.log, tx, opts.defaultBillingPlanId);
 
             // Create the organization...
             const inserted = await orgRepo.createOrganization({
