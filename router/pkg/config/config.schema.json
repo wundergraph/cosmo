@@ -2780,6 +2780,11 @@
           "default": false,
           "description": "Disables variables renaming during normalization. This option could have a negative impact on planner cache hits."
         },
+        "propagate_who_requested_fields": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enables sending to upstream subgraphs (only) the \"whoRequestedFields\" extension that explains why each field was requested. This flag does not expose the data to clients."
+        },
         "subscription_fetch_timeout": {
           "type": "string",
           "format": "go-duration",
