@@ -18,6 +18,7 @@ import { AuthenticationError } from '../errors/errors.js';
 import { OrganizationInvitationRepository } from '../repositories/OrganizationInvitationRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../repositories/NamespaceRepository.js';
 import { OrganizationGroupRepository } from '../repositories/OrganizationGroupRepository.js';
+import { runLocking } from '../util.js';
 
 export type AuthControllerOptions = {
   db: PostgresJsDatabase<typeof schema>;
@@ -255,11 +256,15 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
           return insertedSessions[0];
         });
 
-        const orgs = await opts.organizationRepository.memberships({
-          userId,
-        });
+        const userOrganizations = await runLocking(userId, async () => {
+          const orgs = await opts.organizationRepository.memberships({
+            userId,
+          });
 
-        if (orgs.length === 0) {
+          if (orgs.length > 0) {
+            return orgs;
+          }
+
           await opts.keycloakClient.authenticateClient();
 
           const organizationSlug = uid(8);
@@ -319,7 +324,9 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
             user_first_name: firstName,
             user_last_name: lastName,
           });
-        }
+
+          return [];
+        });
 
         // Create a JWT token containing the session id and user id.
         const jwt = await encrypt<UserSession>({
@@ -343,7 +350,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
           } else {
             res.redirect(opts.webBaseUrl);
           }
-        } else if (orgs.length === 0) {
+        } else if (userOrganizations.length === 0) {
           res.redirect(opts.webBaseUrl + '?migrate=true');
         } else {
           res.redirect(opts.webBaseUrl);
