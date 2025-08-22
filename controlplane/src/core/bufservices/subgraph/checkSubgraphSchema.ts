@@ -132,6 +132,24 @@ export function checkSubgraphSchema(
       };
     }
 
+    let linkedSubgraph:
+      | {
+          id: string;
+          name: string;
+          namespace: string;
+        }
+      | undefined;
+    if (subgraph) {
+      const linkedSubgraphResult = await subgraphRepo.getLinkedSubgraph({ sourceSubgraphId: subgraph.id });
+      if (linkedSubgraphResult) {
+        linkedSubgraph = {
+          id: linkedSubgraphResult.targetSubgraphId,
+          name: linkedSubgraphResult.targetSubgraphName,
+          namespace: linkedSubgraphResult.targetSubgraphNamespace,
+        };
+      }
+    }
+
     if (subgraph && !authContext.rbac.hasSubGraphWriteAccess(subgraph)) {
       throw new UnauthorizedError();
     } else if (!subgraph) {
@@ -253,6 +271,7 @@ export function checkSubgraphSchema(
       lintSkipped: !namespace.enableLinting,
       graphPruningSkipped: !namespace.enableGraphPruning,
       vcsContext: req.vcsContext,
+      isSubgraphLinked: !!linkedSubgraph,
     });
 
     const schemaCheckSubgraphId = await schemaCheckRepo.createSchemaCheckSubgraph({
@@ -459,31 +478,65 @@ export function checkSubgraphSchema(
         continue;
       }
 
-      const result = await trafficInspector.inspect(inspectorChanges, {
-        daysToConsider: limit,
-        federatedGraphId: composedGraph.id,
-        organizationId: authContext.organizationId,
-        subgraphId: subgraph.id,
-      });
+      if (!linkedSubgraph) {
+        const result = await trafficInspector.inspect(inspectorChanges, {
+          daysToConsider: limit,
+          federatedGraphId: composedGraph.id,
+          organizationId: authContext.organizationId,
+          subgraphId: subgraph.id,
+        });
 
-      if (result.size === 0) {
-        continue;
+        if (result.size === 0) {
+          continue;
+        }
+
+        const overrideCheck = await schemaCheckRepo.checkClientTrafficAgainstOverrides({
+          changes: storedBreakingChanges,
+          inspectorResultsByChangeId: result,
+          namespaceId: namespace.id,
+        });
+
+        hasClientTraffic = overrideCheck.hasUnsafeClientTraffic;
+
+        // Store operation usage
+        await schemaCheckRepo.createOperationUsage(overrideCheck.result, composedGraph.id);
+
+        // Collect all inspected operations for later aggregation
+        for (const resultElement of overrideCheck.result.values()) {
+          inspectedOperations.push(...resultElement);
+        }
       }
+    }
 
-      const overrideCheck = await schemaCheckRepo.checkClientTrafficAgainstOverrides({
-        changes: storedBreakingChanges,
-        inspectorResultsByChangeId: result,
-        namespaceId: namespace.id,
-      });
+    if (linkedSubgraph) {
+      const federatedGraphs = await fedGraphRepo.bySubgraphId(linkedSubgraph.id);
+      for (const federatedGraph of federatedGraphs) {
+        const result = await trafficInspector.inspect(inspectorChanges, {
+          daysToConsider: limit,
+          federatedGraphId: federatedGraph.id,
+          organizationId: authContext.organizationId,
+          subgraphId: linkedSubgraph.id,
+        });
 
-      hasClientTraffic = overrideCheck.hasUnsafeClientTraffic;
+        if (result.size === 0) {
+          continue;
+        }
 
-      // Store operation usage
-      await schemaCheckRepo.createOperationUsage(overrideCheck.result, composedGraph.id);
+        const overrideCheck = await schemaCheckRepo.checkClientTrafficAgainstOverrides({
+          changes: storedBreakingChanges,
+          inspectorResultsByChangeId: result,
+          namespaceId: namespace.id,
+        });
 
-      // Collect all inspected operations for later aggregation
-      for (const resultElement of overrideCheck.result.values()) {
-        inspectedOperations.push(...resultElement);
+        hasClientTraffic = overrideCheck.hasUnsafeClientTraffic;
+
+        // Store operation usage
+        await schemaCheckRepo.createOperationUsage(overrideCheck.result, federatedGraph.id);
+
+        // Collect all inspected operations for later aggregation
+        for (const resultElement of overrideCheck.result.values()) {
+          inspectedOperations.push(...resultElement);
+        }
       }
     }
 

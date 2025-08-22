@@ -783,6 +783,28 @@ export class FederatedGraphRepository {
   }
 
   /**
+   * bySubgraphId returns the federated graphs that the given subgraph is linked to.
+   */
+  public async bySubgraphId(subgraphId: string): Promise<FederatedGraphDTO[]> {
+    const res = await this.db.query.subgraphsToFederatedGraph.findMany({
+      where: eq(schema.subgraphsToFederatedGraph.subgraphId, subgraphId),
+    });
+
+    const federatedGraphs: FederatedGraphDTO[] = [];
+
+    for (const fedGraph of res) {
+      const fg = await this.byId(fedGraph.federatedGraphId);
+      if (fg === undefined) {
+        continue;
+      }
+
+      federatedGraphs.push(fg);
+    }
+
+    return federatedGraphs;
+  }
+
+  /**
    * addSchemaVersion adds a new schema version to the given federated graph. When
    * the schema version is not composable the errors are stored in the compositionErrors
    * but the composedSchemaVersionId is not updated.

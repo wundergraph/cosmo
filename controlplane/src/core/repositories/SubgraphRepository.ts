@@ -1723,8 +1723,8 @@ export class SubgraphRepository {
     await this.db.delete(linkedSubgraphs).where(and(eq(linkedSubgraphs.sourceSubgraphId, sourceSubgraphId)));
   }
 
-  public getLinkedSubgraph({ sourceSubgraphId }: { sourceSubgraphId: string }) {
-    return this.db
+  public async getLinkedSubgraph({ sourceSubgraphId }: { sourceSubgraphId: string }) {
+    const linkedSubgraph = await this.db
       .select({
         targetSubgraphId: linkedSubgraphs.targetSubgraphId,
         targetSubgraphName: targets.name,
@@ -1738,5 +1738,11 @@ export class SubgraphRepository {
         and(eq(linkedSubgraphs.sourceSubgraphId, sourceSubgraphId), eq(targets.organizationId, this.organizationId)),
       )
       .execute();
+
+    if (linkedSubgraph.length === 0) {
+      return undefined;
+    }
+
+    return linkedSubgraph[0];
   }
 }

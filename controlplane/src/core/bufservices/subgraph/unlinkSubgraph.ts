@@ -40,7 +40,7 @@ export function unlinkSubgraph(
     }
 
     const linkedSubgraph = await subgraphRepo.getLinkedSubgraph({ sourceSubgraphId: sourceSubgraph.id });
-    if (linkedSubgraph.length === 0) {
+    if (!linkedSubgraph) {
       return {
         response: {
           code: EnumStatusCode.ERR,

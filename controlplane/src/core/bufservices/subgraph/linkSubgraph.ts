@@ -78,11 +78,11 @@ export function linkSubgraph(
     }
 
     const linkedSubgraph = await subgraphRepo.getLinkedSubgraph({ sourceSubgraphId: sourceSubgraph.id });
-    if (linkedSubgraph.length > 0) {
+    if (linkedSubgraph) {
       return {
         response: {
           code: EnumStatusCode.ERR,
-          details: `The source subgraph "${req.sourceSubgraphName}" is already linked to the target subgraph "${linkedSubgraph[0].targetSubgraphName}" in the namespace "${linkedSubgraph[0].targetSubgraphNamespace}". Unlink the existing link first.`,
+          details: `The source subgraph "${req.sourceSubgraphName}" is already linked to the target subgraph "${linkedSubgraph.targetSubgraphName}" in the namespace "${linkedSubgraph.targetSubgraphNamespace}". Unlink the existing link first.`,
         },
       };
     }

@@ -818,6 +818,7 @@ export const schemaChecks = pgTable(
     }>(),
     // this is used to store the error message of a non check policy
     errorMessage: text('error_message'),
+    isSubgraphLinked: boolean('is_subgraph_linked').default(false),
   },
   (t) => {
     return {
