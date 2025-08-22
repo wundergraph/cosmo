@@ -282,7 +282,6 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
 
           // Finalize the organization setup by seeding the Keycloak group structure
           await opts.keycloakClient.authenticateClient();
-          await new Promise((resolve) => setTimeout(resolve, 10_000));
           const [kcRootGroupId, kcCreatedGroups] = await opts.keycloakClient.seedGroup({
             userID: userId,
             organizationSlug,
