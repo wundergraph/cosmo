@@ -5,7 +5,11 @@ import { docsBaseURL } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@connectrpc/connect-query";
 import { ChartBarIcon, CommandLineIcon } from "@heroicons/react/24/outline";
-import { Component1Icon, Component2Icon, InfoCircledIcon } from "@radix-ui/react-icons";
+import {
+  Component1Icon,
+  Component2Icon,
+  InfoCircledIcon,
+} from "@radix-ui/react-icons";
 import {
   getOrganizationMembers,
   getSubgraphMembers,
@@ -14,6 +18,7 @@ import {
   FederatedGraph,
   Subgraph,
   SubgraphMember,
+  SubgraphType,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
@@ -131,7 +136,11 @@ export const Empty = ({
   );
 };
 
-export const AddSubgraphUsersContent = ({ subgraphMembers }: { subgraphMembers: SubgraphMember[]; }) => {
+export const AddSubgraphUsersContent = ({
+  subgraphMembers,
+}: {
+  subgraphMembers: SubgraphMember[];
+}) => {
   return (
     <div className="flex flex-col gap-y-6">
       <Alert>
@@ -236,7 +245,9 @@ const AddSubgraphUsers = ({
               subgraph
             </DialogTitle>
           </DialogHeader>
-          <AddSubgraphUsersContent subgraphMembers={subgraphMembersData?.members || []} />
+          <AddSubgraphUsersContent
+            subgraphMembers={subgraphMembersData?.members || []}
+          />
         </DialogContent>
       </Dialog>
     </div>
@@ -325,6 +336,7 @@ export const SubgraphsTable = ({
               >
                 {tab === "featureSubgraphs" ? "Base Subgraph Name" : "Labels"}
               </TableHead>
+              <TableHead className="w-2/12 px-4">Type</TableHead>
               <TableHead className="w-2/12 px-4">Last Published</TableHead>
               {rbac?.enabled && <TableHead className="w-1/12"></TableHead>}
             </TableRow>
@@ -337,9 +349,9 @@ export const SubgraphsTable = ({
                 routingURL,
                 lastUpdatedAt,
                 labels,
-                creatorUserId,
                 namespace,
                 baseSubgraphName,
+                type,
               }) => {
                 const path = `/${organizationSlug}/${namespace}/subgraph/${name}`;
                 let analyticsPath = `${path}/analytics`;
@@ -374,7 +386,7 @@ export const SubgraphsTable = ({
                     </TableCell>
                     <TableCell className="px-4 font-medium">{name}</TableCell>
                     <TableCell className="px-4 text-muted-foreground">
-                      {routingURL}
+                      {routingURL || "-"}
                     </TableCell>
                     <TableCell className="px-4">
                       {tab !== "featureSubgraphs" ? (
@@ -400,6 +412,15 @@ export const SubgraphsTable = ({
                         <>{baseSubgraphName}</>
                       )}
                     </TableCell>
+                    <TableCell className="px-4 text-muted-foreground ">
+                      {type === SubgraphType.GRPC_PLUGIN ? (
+                        <Badge variant="outline">GRPC_Plugin</Badge>
+                      ) : type === SubgraphType.GRPC_SERVICE ? (
+                        <Badge variant="outline">GRPC_Service</Badge>
+                      ) : (
+                        <Badge variant="outline">Standard</Badge>
+                      )}
+                    </TableCell>
                     <TableCell className="px-4 text-muted-foreground">
                       {lastUpdatedAt
                         ? formatDistanceToNow(new Date(lastUpdatedAt), {
@@ -408,13 +429,6 @@ export const SubgraphsTable = ({
                         : "Never"}
                     </TableCell>
                     <TableCell className="flex justify-end gap-2">
-                      {rbac?.enabled && (
-                        <AddSubgraphUsers
-                          subgraphName={name}
-                          namespace={namespace}
-                          creatorUserId={creatorUserId}
-                        />
-                      )}
                       <Tooltip delayDuration={200}>
                         <TooltipTrigger asChild>
                           <Button

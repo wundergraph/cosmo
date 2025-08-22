@@ -24,6 +24,7 @@ service ProjectsService {
   rpc QueryArchivedProjects(QueryArchivedProjectsRequest) returns (QueryArchivedProjectsResponse) {}
   rpc QueryKillService(QueryKillServiceRequest) returns (QueryKillServiceResponse) {}
   rpc QueryMilestones(QueryMilestonesRequest) returns (QueryMilestonesResponse) {}
+  rpc QueryNodesById(QueryNodesByIdRequest) returns (QueryNodesByIdResponse) {}
   rpc QueryPanic(QueryPanicRequest) returns (QueryPanicResponse) {}
   rpc QueryProject(QueryProjectRequest) returns (QueryProjectResponse) {}
   rpc QueryProjectActivities(QueryProjectActivitiesRequest) returns (QueryProjectActivitiesResponse) {}
@@ -413,6 +414,14 @@ message QueryPanicRequest {
 message QueryPanicResponse {
   bool panic = 1;
 }
+// Request message for nodesById operation.
+message QueryNodesByIdRequest {
+  string id = 1;
+}
+// Response message for nodesById operation.
+message QueryNodesByIdResponse {
+  repeated Node nodes_by_id = 1;
+}
 // Request message for addProject operation.
 message MutationAddProjectRequest {
   ProjectInput project = 1;
@@ -492,7 +501,8 @@ message Task {
   google.protobuf.StringValue description = 6;
   TaskPriority priority = 7;
   TaskStatus status = 8;
-  google.protobuf.DoubleValue estimated_hours = 9;
+  // Deprecation notice: No more estimations!
+  google.protobuf.DoubleValue estimated_hours = 9 [deprecated = true];
   google.protobuf.DoubleValue actual_hours = 10;
   google.protobuf.StringValue created_at = 11;
   google.protobuf.StringValue completed_at = 12;
@@ -552,6 +562,15 @@ message ProjectActivity {
   }
 }
 
+message Node {
+  oneof instance {
+  Project project = 1;
+  Milestone milestone = 2;
+  Task task = 3;
+  ProjectUpdate project_update = 4;
+  }
+}
+
 message ProjectInput {
   string name = 1;
   google.protobuf.StringValue description = 2;
@@ -586,15 +605,6 @@ message ProjectUpdate {
   string description = 5;
   string timestamp = 6;
   google.protobuf.StringValue metadata = 7;
-}
-
-message Node {
-  oneof instance {
-  Project project = 1;
-  Milestone milestone = 2;
-  Task task = 3;
-  ProjectUpdate project_update = 4;
-  }
 }
 
 message Timestamped {

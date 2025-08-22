@@ -33,13 +33,6 @@ func (p *Planner[PB, P, E]) DownstreamResponseFieldAlias(downstreamFieldRef int)
 	return
 }
 
-func (p *Planner[PB, P, E]) DataSourcePlanningBehavior() plan.DataSourcePlanningBehavior {
-	return plan.DataSourcePlanningBehavior{
-		MergeAliasedRootNodes:      false,
-		OverrideFieldPathFromAlias: false,
-	}
-}
-
 func (p *Planner[PB, P, E]) Register(visitor *plan.Visitor, configuration plan.DataSourceConfiguration[*PlannerConfig[PB, P, E]], _ plan.DataSourcePlannerConfiguration) error {
 	p.visitor = visitor
 	visitor.Walker.RegisterEnterFieldVisitor(p)

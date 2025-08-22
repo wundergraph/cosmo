@@ -208,11 +208,17 @@ message GRPCConfiguration {
   PluginConfiguration plugin = 3;
 }
 
+message ImageReference {
+  string repository = 1; // {organization_id}/{subgraph_id}
+  string reference = 2; // v1
+}
+
 message PluginConfiguration {
   // Plugin name
   string name = 1;
   // Plugin version
   string version = 2;
+  optional ImageReference image_reference = 3;
 }
 
 message SSLConfiguration {

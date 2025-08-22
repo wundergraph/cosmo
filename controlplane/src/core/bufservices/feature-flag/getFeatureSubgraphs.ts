@@ -8,7 +8,7 @@ import {
 import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { convertToSubgraphType, enrichLogger, getLogger, handleError } from '../../util.js';
 
 export function getFeatureSubgraphs(
   opts: RouterOptions,
@@ -74,6 +74,7 @@ export function getFeatureSubgraphs(
         isFeatureSubgraph: g.isFeatureSubgraph,
         baseSubgraphName: g.baseSubgraphName,
         baseSubgraphId: g.baseSubgraphId,
+        type: convertToSubgraphType(g.type),
       })),
       count,
       response: {
