@@ -663,8 +663,6 @@ export function runLocking<TResult>(key: string, action: () => Promise<TResult>)
       // Remove only if we're still pointing at the same promise (avoid race).
       lockedPromises.delete(key);
     }
-
-    console.log(lockedPromises);
   });
 
   return promise;
