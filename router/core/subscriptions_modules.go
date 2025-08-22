@@ -1,9 +1,12 @@
 package core
 
 import (
+	"net/http"
+
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"go.uber.org/zap"
 )
 
 // StreamHookError is used to customize the error messages and the behavior
@@ -43,8 +46,12 @@ func NewStreamHookError(err error, message string, statusCode int, code string) 
 }
 
 type SubscriptionOnStartHookContext interface {
-	// the request context
-	RequestContext() RequestContext
+	// Request is the original request received by the router.
+	Request() *http.Request
+	// Logger is the logger for the request
+	Logger() *zap.Logger
+	// Operation is the GraphQL operation
+	Operation() OperationContext
 	// the subscription event configuration (will return nil for engine subscription)
 	SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration
 	// write an event to the stream of the current subscription
@@ -53,13 +60,23 @@ type SubscriptionOnStartHookContext interface {
 }
 
 type pubSubSubscriptionOnStartHookContext struct {
-	requestContext                 RequestContext
+	request                 *http.Request
+	logger                    *zap.Logger
+	operation                 OperationContext
 	subscriptionEventConfiguration datasource.SubscriptionEventConfiguration
 	writeEventHook                 func(data []byte)
 }
 
-func (c *pubSubSubscriptionOnStartHookContext) RequestContext() RequestContext {
-	return c.requestContext
+func (c *pubSubSubscriptionOnStartHookContext) Request() *http.Request {
+	return c.request
+}
+
+func (c *pubSubSubscriptionOnStartHookContext) Logger() *zap.Logger {
+	return c.logger
+}
+
+func (c *pubSubSubscriptionOnStartHookContext) Operation() OperationContext {
+	return c.operation
 }
 
 func (c *pubSubSubscriptionOnStartHookContext) SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration {
@@ -82,12 +99,22 @@ func (e *EngineEvent) GetData() []byte {
 }
 
 type engineSubscriptionOnStartHookContext struct {
-	requestContext RequestContext
+	request                 *http.Request
+	logger                    *zap.Logger
+	operation                 OperationContext
 	writeEventHook func(data []byte)
 }
 
-func (c *engineSubscriptionOnStartHookContext) RequestContext() RequestContext {
-	return c.requestContext
+func (c *engineSubscriptionOnStartHookContext) Request() *http.Request {
+	return c.request
+}
+
+func (c *engineSubscriptionOnStartHookContext) Logger() *zap.Logger {
+	return c.logger
+}
+
+func (c *engineSubscriptionOnStartHookContext) Operation() OperationContext {
+	return c.operation
 }
 
 func (c *engineSubscriptionOnStartHookContext) WriteEvent(event datasource.StreamEvent) bool {
@@ -112,12 +139,14 @@ func NewPubSubSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHookContext
 		return nil
 	}
 
-	return func(resolveCtx *resolve.Context, subConf datasource.SubscriptionEventConfiguration) (error) {
-		requestContext := getRequestContext(resolveCtx.Context())
+	return func(resolveCtx resolve.StartupHookContext, subConf datasource.SubscriptionEventConfiguration) error {
+		requestContext := getRequestContext(resolveCtx.Context)
 		hookCtx := &pubSubSubscriptionOnStartHookContext{
-			requestContext:                 requestContext,
+			request:                 requestContext.Request(),
+			logger:                    requestContext.Logger(),
+			operation:                 requestContext.Operation(),
 			subscriptionEventConfiguration: subConf,
-			writeEventHook:                 resolveCtx.EmitSubscriptionUpdate,
+			writeEventHook:                 resolveCtx.Updater,
 		}
 
 		return fn(hookCtx)
@@ -130,11 +159,13 @@ func NewEngineSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHookContext
 		return nil
 	}
 
-	return func(resolveCtx *resolve.Context, input []byte) (error) {
-		requestContext := getRequestContext(resolveCtx.Context())
+	return func(resolveCtx resolve.StartupHookContext, input []byte) error {
+		requestContext := getRequestContext(resolveCtx.Context)
 		hookCtx := &engineSubscriptionOnStartHookContext{
-			requestContext: requestContext,
-			writeEventHook: resolveCtx.EmitSubscriptionUpdate,
+			request: requestContext.Request(),
+			logger:  requestContext.Logger(),
+			operation: requestContext.Operation(),
+			writeEventHook: resolveCtx.Updater,
 		}
 
 		return fn(hookCtx)

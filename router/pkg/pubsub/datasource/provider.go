@@ -59,7 +59,7 @@ type StreamEvent interface {
 	GetData() []byte
 }
 
-type SubscriptionOnStartFn func(ctx *resolve.Context, subConf SubscriptionEventConfiguration) error
+type SubscriptionOnStartFn func(ctx resolve.StartupHookContext, subConf SubscriptionEventConfiguration) error
 
 // SubscriptionEventConfiguration is the interface that all subscription event configurations must implement
 type SubscriptionEventConfiguration interface {

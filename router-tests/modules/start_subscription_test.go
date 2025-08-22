@@ -262,7 +262,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 			Modules: map[string]interface{}{
 				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
 					Callback: func(ctx core.SubscriptionOnStartHookContext) error {
-						employeeId := ctx.RequestContext().Operation().Variables().GetInt64("employeeID")
+						employeeId := ctx.Operation().Variables().GetInt64("employeeID")
 						if employeeId != 1 {
 							return nil
 						}

@@ -42,7 +42,7 @@ func (s *PubSubSubscriptionDataSource[C]) Start(ctx *resolve.Context, input []by
 	return s.pubSub.Subscribe(ctx.Context(), conf, NewSubscriptionEventUpdater(updater))
 }
 
-func (s *PubSubSubscriptionDataSource[C]) SubscriptionOnStart(ctx *resolve.Context, input []byte) (err error) {
+func (s *PubSubSubscriptionDataSource[C]) SubscriptionOnStart(ctx resolve.StartupHookContext, input []byte) (err error) {
 	for _, fn := range s.subscriptionOnStartFns {
 		conf, errConf := s.SubscriptionEventConfiguration(input)
 		if errConf != nil {

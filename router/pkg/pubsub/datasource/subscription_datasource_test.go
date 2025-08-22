@@ -187,7 +187,10 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnStart_Success(t *testing.T) 
 	input, err := json.Marshal(testConfig)
 	assert.NoError(t, err)
 
-	ctx := &resolve.Context{}
+	ctx := resolve.StartupHookContext{
+		Context: context.Background(),
+		Updater: func(data []byte) {},
+	}
 
 	err = dataSource.SubscriptionOnStart(ctx, input)
 	assert.NoError(t, err)
@@ -205,12 +208,12 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnStart_WithHooks(t *testing.T
 	hook1Called := false
 	hook2Called := false
 
-	hook1 := func(ctx *resolve.Context, config SubscriptionEventConfiguration) (error) {
+	hook1 := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration) error {
 		hook1Called = true
 		return nil
 	}
 
-	hook2 := func(ctx *resolve.Context, config SubscriptionEventConfiguration) (error) {
+	hook2 := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration) error {
 		hook2Called = true
 		return nil
 	}
@@ -224,7 +227,10 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnStart_WithHooks(t *testing.T
 	input, err := json.Marshal(testConfig)
 	assert.NoError(t, err)
 
-	ctx := &resolve.Context{}
+	ctx := resolve.StartupHookContext{
+		Context: context.Background(),
+		Updater: func(data []byte) {},
+	}
 
 	err = dataSource.SubscriptionOnStart(ctx, input)
 	assert.NoError(t, err)
@@ -242,7 +248,7 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnStart_HookReturnsError(t *te
 
 	expectedError := errors.New("hook error")
 	// Add hook that returns an error
-	hook := func(ctx *resolve.Context, config SubscriptionEventConfiguration) (error) {
+	hook := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration) error {
 		return expectedError
 	}
 
@@ -255,7 +261,10 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnStart_HookReturnsError(t *te
 	input, err := json.Marshal(testConfig)
 	assert.NoError(t, err)
 
-	ctx := &resolve.Context{}
+	ctx := resolve.StartupHookContext{
+		Context: context.Background(),
+		Updater: func(data []byte) {},
+	}
 
 	err = dataSource.SubscriptionOnStart(ctx, input)
 	assert.Error(t, err)
@@ -274,10 +283,10 @@ func TestPubSubSubscriptionDataSource_SetSubscriptionOnStartFns(t *testing.T) {
 	assert.Len(t, dataSource.subscriptionOnStartFns, 0)
 
 	// Add hooks
-	hook1 := func(ctx *resolve.Context, config SubscriptionEventConfiguration) (error) {
+	hook1 := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration) error {
 		return nil
 	}
-	hook2 := func(ctx *resolve.Context, config SubscriptionEventConfiguration) (error) {
+	hook2 := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration) error {
 		return nil
 	}
 
