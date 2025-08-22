@@ -256,19 +256,33 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
           return insertedSessions[0];
         });
 
-        const userOrganizations = await runLocking(userId, async () => {
-          const orgs = await opts.organizationRepository.memberships({
-            userId,
-          });
-
-          if (orgs.length > 0) {
-            return orgs;
-          }
-
-          await opts.keycloakClient.authenticateClient();
-
+        const orgs = await opts.organizationRepository.memberships({ userId });
+        if (orgs.length === 0) {
           const organizationSlug = uid(8);
 
+          // First, we need to create the organization and add the user as an organization member
+          const [insertedOrg, orgMember] = await opts.db.transaction(async (tx) => {
+            const orgRepo = new OrganizationRepository(req.log, opts.db, opts.defaultBillingPlanId);
+
+            // Create the organization...
+            const inserted = await orgRepo.createOrganization({
+              organizationName: userEmail.split('@')[0],
+              organizationSlug,
+              ownerID: userId,
+            });
+
+            // ...and add the user as an organization member.
+            const orgMember = await orgRepo.addOrganizationMember({
+              organizationID: inserted.id,
+              userID: userId,
+            });
+
+            return [inserted, orgMember];
+          });
+
+          // Finalize the organization setup by seeding the Keycloak group structure
+          await opts.keycloakClient.authenticateClient();
+          await new Promise((resolve) => setTimeout(resolve, 10_000));
           const [kcRootGroupId, kcCreatedGroups] = await opts.keycloakClient.seedGroup({
             userID: userId,
             organizationSlug,
@@ -279,16 +293,9 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
             const orgRepo = new OrganizationRepository(req.log, tx, opts.defaultBillingPlanId);
             const orgGroupRepo = new OrganizationGroupRepository(tx);
 
-            const insertedOrg = await orgRepo.createOrganization({
-              organizationName: userEmail.split('@')[0],
-              organizationSlug,
-              ownerID: userId,
+            await orgRepo.updateOrganization({
+              id: insertedSession.id,
               kcGroupId: kcRootGroupId,
-            });
-
-            const orgMember = await orgRepo.addOrganizationMember({
-              organizationID: insertedOrg.id,
-              userID: userId,
             });
 
             await orgGroupRepo.importKeycloakGroups({
@@ -324,9 +331,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
             user_first_name: firstName,
             user_last_name: lastName,
           });
-
-          return [];
-        });
+        }
 
         // Create a JWT token containing the session id and user id.
         const jwt = await encrypt<UserSession>({
@@ -350,7 +355,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
           } else {
             res.redirect(opts.webBaseUrl);
           }
-        } else if (userOrganizations.length === 0) {
+        } else if (orgs.length === 0) {
           res.redirect(opts.webBaseUrl + '?migrate=true');
         } else {
           res.redirect(opts.webBaseUrl);

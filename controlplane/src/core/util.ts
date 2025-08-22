@@ -42,8 +42,6 @@ const schemaTagRegex = /^(?![/-])[\d/A-Za-z-]+(?<![/-])$/;
 const graphNameRegex = /^[\dA-Za-z]+(?:[./@_-][\dA-Za-z]+)*$/;
 const pluginVersionRegex = /^v\d+$/;
 
-const lockedPromises = new Map<string, Promise<unknown>>();
-
 /**
  * Wraps a function with a try/catch block and logs any errors that occur.
  * If the error is a public error, it is returned as a response message.
@@ -646,24 +644,4 @@ export function newCompositionOptions(disableResolvabilityValidation?: boolean):
   return {
     disableResolvabilityValidation,
   };
-}
-
-export function runLocking<TResult>(key: string, action: () => Promise<TResult>): Promise<TResult> {
-  const existingPromise = lockedPromises.get(key);
-  if (existingPromise) {
-    return existingPromise as Promise<TResult>;
-  }
-
-  const promise = (async () => await action())();
-  lockedPromises.set(key, promise);
-
-  promise.finally(() => {
-    const other = lockedPromises.get(key);
-    if (other === promise) {
-      // Remove only if we're still pointing at the same promise (avoid race).
-      lockedPromises.delete(key);
-    }
-  });
-
-  return promise;
 }

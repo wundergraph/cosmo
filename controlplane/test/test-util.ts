@@ -975,17 +975,3 @@ export const resolvabilitySDLTwo = `
     name: String!
   }
 `;
-
-export function deferred<T = void>() {
-  let resolve!: (v: T | PromiseLike<T>) => void;
-  let reject!: (e?: unknown) => void;
-
-  const promise = new Promise<T>((_resolve, _reject) => { resolve = _resolve; reject = _reject; });
-  return { promise, resolve, reject };
-}
-
-export async function expectPending(p: Promise<unknown>) {
-  const timeout = new Promise((resolve) => setTimeout(() => resolve("timeout"), 20));
-  const race = await Promise.race([p.then(() => "resolved" as const), timeout]);
-  expect(race).toBe("timeout");
-}
