@@ -6,17 +6,13 @@ import { Button } from "@/components/ui/button";
 import { CaretSortIcon, } from "@radix-ui/react-icons";
 import * as React from "react";
 import { useWorkspace } from "@/hooks/use-workspace";
-import { Command, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Accordion } from "@/components/ui/accordion";
-import { PopoverAnchor } from "@radix-ui/react-popover";
+import { Command, CommandInput } from "@/components/ui/command";
 import Fuse from "fuse.js"
 import { WorkspaceFederatedGraph } from "@/components/dashboard/workspace-provider";
 import { useSubgraph } from "@/hooks/use-subgraph";
-import { Link } from "@/components/ui/link";
 
-import { NamespaceAccordionItem } from "./namespace-accordion-item";
+import { GraphCommandGroup } from "./graph-command-group";
 import { NamespaceBadge } from "./namespace-badge";
-import { FederatedGraphBadge } from "./federated-graph-badge";
 
 export interface WorkspaceSelectorProps {
   children?: React.ReactNode;
@@ -70,7 +66,7 @@ export function WorkspaceSelector({ children, truncateNamespace = true }: Worksp
 
     // Perform a fuzzy search on all the graphs in the current workspace
     const graphFuse = new Fuse(allWorkspaceFederatedGraphs, {
-      keys: ['graph.name', 'graph.namespace'],
+      keys: ['graph.name'],
       threshold: 0.3,
     });
 
@@ -116,34 +112,35 @@ export function WorkspaceSelector({ children, truncateNamespace = true }: Worksp
           }
         }}
       >
-        <PopoverAnchor />
         <NamespaceBadge
           value={namespace}
           setNamespace={setNamespace}
           className={truncateNamespace ? "max-w-[180px] lg:max-w-xs truncate" : undefined}
         />
 
-        {activeGraph && (
-          <>
-            <span className="text-muted-foreground">/</span>
-            <FederatedGraphBadge graph={activeGraph.graph} />
-          </>
-        )}
-
-        {activeSubgraph && (
-          <>
-            <span className="text-muted-foreground">/</span>
-            <span className="text-sm">{activeSubgraph.name}</span>
-          </>
+        {(activeGraph || activeSubgraph) && (
+          <span className="text-muted-foreground">/</span>
         )}
 
         <PopoverTrigger asChild className="h-auto p-2">
-          <Button variant="ghost">
+          <Button variant="ghost" className="px-3 py-1 gap-x-4 min-h-7">
+            {(activeGraph || activeSubgraph) && (
+              <>
+                {activeGraph?.graph.name ?? activeSubgraph?.name}
+              </>
+            )}
             <CaretSortIcon className="h-4 w-4 flex-shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContentWithScrollableContent align="start" className="p-0 w-72 lg:w-96 mt-4">
-          <Command>
+
+        <PopoverContentWithScrollableContent
+          className="p-0 w-72 lg:w-96 mt-4"
+        >
+          <Command
+            loop
+            shouldFilter={false}
+            className="max-h-[calc(var(--radix-popover-content-available-height)_-32px)]"
+          >
             <CommandInput
               value={filter}
               onValueChange={setFilter}
@@ -155,16 +152,20 @@ export function WorkspaceSelector({ children, truncateNamespace = true }: Worksp
                   No namespace or graph found.
                 </div>
               ) : (
-                <Accordion type="single" defaultValue={namespace}>
-                  {filteredGraphs.map(([ns, data]) => (
-                    <NamespaceAccordionItem
+                <div className="scrollbar-custom h-full overflow-y-auto">
+                  {filteredGraphs.map(([ns, data], index) => (
+                    <GraphCommandGroup
                       key={`namespace-${ns}`}
-                      graphs={data}
+                      isLastGroup={index === filteredGraphs.length - 1}
+                      isFiltering={!!filter?.trim().length}
+                      data={data}
+                      activeGraphId={activeGraph?.graph.id}
+                      activeSubgraphId={activeSubgraph?.id}
                       namespace={ns}
                       setNamespace={setNamespaceCallback}
                     />
                   ))}
-                </Accordion>
+                </div>
               )}
           </Command>
         </PopoverContentWithScrollableContent>

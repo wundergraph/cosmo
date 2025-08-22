@@ -1,7 +1,8 @@
 import Link from "next/link";
 import * as React from "react";
-import { useCurrentOrganization } from "@/hooks/use-current-organization";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/router";
+import { useMemo } from "react";
 
 export interface NamespaceBadgeProps {
   value: string;
@@ -10,11 +11,19 @@ export interface NamespaceBadgeProps {
 }
 
 export function NamespaceBadge({ value, setNamespace, className }: NamespaceBadgeProps) {
-  const currentOrg = useCurrentOrganization();
+  const router = useRouter();
+  const { organizationSlug } = router.query;
+  const pathname = useMemo(
+    () => router.pathname.split('/').length === 3 ? router.pathname : '/[organizationSlug]/graphs',
+    [router.pathname]
+  );
 
   return (
     <Link
-      href={`/${currentOrg?.slug}/graphs?namespace=${value}`}
+      href={{
+        pathname,
+        query: { organizationSlug, namespace: value },
+      }}
       className={cn(
         "bg-primary/15 hover:bg-primary/30 text-primary transition-colors duration-150 px-3 py-1 rounded-lg text-sm flex-shrink-0 max-w-[180px] lg:max-w-sm truncate",
         className,
