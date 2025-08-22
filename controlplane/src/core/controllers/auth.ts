@@ -294,7 +294,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
             const orgGroupRepo = new OrganizationGroupRepository(tx);
 
             await orgRepo.updateOrganization({
-              id: insertedSession.id,
+              id: insertedOrg.id,
               kcGroupId: kcRootGroupId,
             });
 
