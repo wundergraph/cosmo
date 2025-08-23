@@ -281,7 +281,7 @@ Plugin structure:
 
 For more information about Cosmo and building router plugins:
 - [Cosmo Documentation](https://cosmo-docs.wundergraph.com/)
-- [Cosmo Router Plugins Guide](https://cosmo-docs.wundergraph.com/router/plugins)
+- [Cosmo Router Plugins Guide](https://cosmo-docs.wundergraph.com/connect/plugins)
 
 ---
 
