@@ -8,7 +8,7 @@ release/
 `;
 
 const makefile = `
-.PHONY: build download start compose install-wgc
+.PHONY: install-wgc build download start compose
 
 make: install-wgc download build compose start
 
