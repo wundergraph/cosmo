@@ -28,7 +28,8 @@ func (m *SubscriptionModule) Provision(ctx *core.ModuleContext) error {
 
 func (m *SubscriptionModule) SubscriptionOnStart(ctx core.SubscriptionOnStartHookContext) error {
 	m.Logger.Info("SubscriptionOnStart")
-	return core.NewStreamHookError(nil, "test", 200, "test")
+
+	return nil
 }
 
 func (m *SubscriptionModule) Module() core.ModuleInfo {
