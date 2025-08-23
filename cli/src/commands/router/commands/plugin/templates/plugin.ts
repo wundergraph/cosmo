@@ -17,21 +17,24 @@ require (
 `;
 
 const makefile = `
-.PHONY: build test generate
+.PHONY: build test generate install-wgc
+
+install-wgc:
+\t@which wgc > /dev/null 2>&1 || npm install -g wgc@latest
 
 make: build
 
-test:
-	npx wgc@latest router plugin test .
+test: install-wgc
+\twgc router plugin test .
 
-generate:
-	npx wgc@latest router plugin generate .
+generate: install-wgc
+\twgc router plugin generate .
 
 publish: generate
-	npx wgc@latest router plugin publish .
+\twgc router plugin publish .
 
-build:
-	npx wgc@latest router plugin build . --debug
+build: install-wgc
+\twgc router plugin build . --debug
 `;
 
 const mainGo = `package main
@@ -253,7 +256,20 @@ The plugin demonstrates:
 
 ## Getting Started
 
-For plugin structure and detailed workflow see the [Plugin Development Guide] in the Cursor Rules tab.
+Plugin structure:
+
+   \`\`\`
+    plugins/{originalPluginName}/
+    ├── go.mod                # Go module file with dependencies
+    ├── go.sum                # Go checksums file
+    ├── src/
+    │   ├── main.go           # Main plugin implementation
+    │   ├── main_test.go      # Tests for the plugin
+    │   └── schema.graphql    # GraphQL schema defining the API
+    ├── generated/            # Generated code (created during build)
+    └── bin/                  # Compiled binaries (created during build)
+        └── plugin            # The compiled plugin binary
+   \`\`\`
 
 ## 🔧 Customizing Your Plugin
 
