@@ -8,25 +8,28 @@ release/
 `;
 
 const makefile = `
-.PHONY: build download start compose
+.PHONY: install-wgc build download start compose
 
-make: download build compose start
+make: install-wgc download build compose start
+
+install-wgc:
+\t@which wgc > /dev/null 2>&1 || npm install -g wgc@latest
 
 start:
-	./release/router
+\t./release/router
 
-compose:
-	npx wgc@latest router compose -i graph.yaml -o config.json
+compose: install-wgc
+\twgc router compose -i graph.yaml -o config.json
 
-download:
-	@if [ ! -f release/router ]; then \\
-		rm -rf release && npx wgc@latest router download-binary -o release && chmod +x release/router; \\
-	else \\
-		echo "Router binary already exists, skipping download"; \\
-	fi
+download: install-wgc
+\t@if [ ! -f release/router ]; then \\
+\t\trm -rf release && wgc router download-binary -o release && chmod +x release/router; \\
+\telse \\
+\t\techo "Router binary already exists, skipping download"; \\
+\tfi
 
 build:
-	cd plugins/{originalPluginName} && make build
+\tcd plugins/{originalPluginName} && make build
 `;
 
 const graphConfig = `version: 1
@@ -140,7 +143,7 @@ query {
 
 For more information about Cosmo and building router plugins:
 - [Cosmo Documentation](https://cosmo-docs.wundergraph.com/)
-- [Cosmo Router Plugins Guide](https://cosmo-docs.wundergraph.com/router/plugins)
+- [Cosmo Router Plugins Guide](https://cosmo-docs.wundergraph.com/connect/plugins)
 
 ---
 
@@ -192,7 +195,7 @@ Plugin structure:
 
 For more information about Cosmo and building router plugins:
 - [Cosmo Documentation](https://cosmo-docs.wundergraph.com/)
-- [Cosmo Router Plugins Guide](https://cosmo-docs.wundergraph.com/router/plugins)
+- [Cosmo Router Plugins Guide](https://cosmo-docs.wundergraph.com/connect/plugins)
 
 ---
 
