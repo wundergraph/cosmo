@@ -63,6 +63,7 @@ export class SchemaCheckRepository {
     lintSkipped?: boolean;
     graphPruningSkipped?: boolean;
     vcsContext?: VCSContext;
+    isSubgraphLinked?: boolean;
   }): Promise<string> {
     const insertedSchemaCheck = await this.db
       .insert(schemaChecks)
@@ -81,6 +82,7 @@ export class SchemaCheckRepository {
               branch: data.vcsContext.branch,
             }
           : null,
+        isSubgraphLinked: data.isSubgraphLinked || false,
       })
       .returning()
       .execute();
