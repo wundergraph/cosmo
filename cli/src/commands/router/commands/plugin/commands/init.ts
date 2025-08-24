@@ -163,7 +163,7 @@ export default (opts: BaseCommandOptions) => {
       console.log(
         `  For more information, checkout the ${pc.bold(pc.italic('README.md'))} file for instructions on how to build and run your plugin.`,
       );
-      console.log(`  Go to https://cosmo-docs.wundergraph.com/router/plugins to learn more about it.`);
+      console.log(`  Go to https://cosmo-docs.wundergraph.com/connect/plugins to learn more about it.`);
       console.log('');
     } catch (error: any) {
       // Clean up the temp directory in case of error
