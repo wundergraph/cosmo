@@ -255,15 +255,32 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
           return insertedSessions[0];
         });
 
-        const orgs = await opts.organizationRepository.memberships({
-          userId,
-        });
-
+        const orgs = await opts.organizationRepository.memberships({ userId });
         if (orgs.length === 0) {
-          await opts.keycloakClient.authenticateClient();
-
           const organizationSlug = uid(8);
 
+          // First, we need to create the organization and add the user as an organization member
+          const [insertedOrg, orgMember] = await opts.db.transaction(async (tx) => {
+            const orgRepo = new OrganizationRepository(req.log, tx, opts.defaultBillingPlanId);
+
+            // Create the organization...
+            const inserted = await orgRepo.createOrganization({
+              organizationName: userEmail.split('@')[0],
+              organizationSlug,
+              ownerID: userId,
+            });
+
+            // ...and add the user as an organization member.
+            const orgMember = await orgRepo.addOrganizationMember({
+              organizationID: inserted.id,
+              userID: userId,
+            });
+
+            return [inserted, orgMember];
+          });
+
+          // Finalize the organization setup by seeding the Keycloak group structure
+          await opts.keycloakClient.authenticateClient();
           const [kcRootGroupId, kcCreatedGroups] = await opts.keycloakClient.seedGroup({
             userID: userId,
             organizationSlug,
@@ -274,16 +291,9 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
             const orgRepo = new OrganizationRepository(req.log, tx, opts.defaultBillingPlanId);
             const orgGroupRepo = new OrganizationGroupRepository(tx);
 
-            const insertedOrg = await orgRepo.createOrganization({
-              organizationName: userEmail.split('@')[0],
-              organizationSlug,
-              ownerID: userId,
+            await orgRepo.updateOrganization({
+              id: insertedOrg.id,
               kcGroupId: kcRootGroupId,
-            });
-
-            const orgMember = await orgRepo.addOrganizationMember({
-              organizationID: insertedOrg.id,
-              userID: userId,
             });
 
             await orgGroupRepo.importKeycloakGroups({
