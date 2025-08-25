@@ -54,7 +54,7 @@ jobs:
         working-directory: router
         run: |
           current_engine_version=$(go list -f '{{.Sum}}' -m github.com/wundergraph/graphql-go-tools/v2)
-          git -C "$GITHUB_WORKSPACE" show ${{ github.event.pull_request.base.sha }}:router/go.mod > /tmp/base.go.mod
+          git show ${{ github.event.pull_request.base.sha }}:router/go.mod > /tmp/base.go.mod
           previous_engine_version=$(go list -f '{{.Sum}}' -modfile /tmp/base.go.mod -m github.com/wundergraph/graphql-go-tools/v2)
           if [ "$current_engine_version" != "$previous_engine_version" ]; then
             echo "engine_changed=true" >> $GITHUB_OUTPUT
