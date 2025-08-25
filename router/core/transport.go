@@ -468,7 +468,7 @@ func CreateGRPCTraceGetter(
 	telemetryAttributeExpressions *attributeExpressions,
 	tracingAttributeExpressions *attributeExpressions,
 ) func(context.Context) (string, otrace.SpanStartEventOption) {
-	traceFunc := func(ctx context.Context) (string, otrace.SpanStartEventOption) {
+	return func(ctx context.Context) (string, otrace.SpanStartEventOption) {
 		reqCtx := getRequestContext(ctx)
 		if reqCtx == nil {
 			return "GRPC Plugin Client - Invoke", otrace.WithAttributes()
@@ -504,5 +504,4 @@ func CreateGRPCTraceGetter(
 		spanName := SpanNameFormatter("", reqCtx.request)
 		return spanName, otrace.WithAttributes(attrs...)
 	}
-	return traceFunc
 }
