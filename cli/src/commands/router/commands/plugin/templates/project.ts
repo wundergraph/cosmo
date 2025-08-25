@@ -29,7 +29,7 @@ download: install-wgc
 \tfi
 
 build:
-\tcd plugins/{originalPluginName} && make build
+\tcd {originalPluginName} && make build
 `;
 
 const graphConfig = `version: 1
@@ -37,7 +37,7 @@ subgraphs:
   # Add your other subgraphs here
   - plugin:
       version: 0.0.1
-      path: plugins/{originalPluginName}
+      path: {originalPluginName}
 `;
 
 const routerConfig = `# yaml-language-server: $schema=https://raw.githubusercontent.com/wundergraph/cosmo/main/router/pkg/config/config.schema.json
@@ -54,7 +54,7 @@ execution_config:
 
 plugins:
   enabled: true
-  path: plugins
+  path: .
 `;
 
 const projectReadme = `# {name} - Cosmo Router Plugin Project
@@ -74,13 +74,13 @@ This project sets up a complete environment for developing and testing Cosmo Rou
 
 \`\`\`
 project-root/
-├── plugins/          # Contains all the plugins
-├── graph.yaml        # Supergraph configuration
-├── config.json       # Composed supergraph (generated)
-├── config.yaml       # Router configuration
-├── release/          # Router binary location
-│   └── router        # Router binary
-└── Makefile          # Automation scripts
+├── {pluginFolders...}  # The current directory will contain all the plugins
+├── graph.yaml          # Supergraph configuration
+├── config.json         # Composed supergraph (generated)
+├── config.yaml         # Router configuration
+├── release/            # Router binary location
+│   └── router          # Router binary
+└── Makefile            # Automation scripts
 \`\`\`
 
 ## 🚀 Getting Started
@@ -173,7 +173,7 @@ The plugin demonstrates:
 Plugin structure:
 
    \`\`\`
-    plugins/{originalPluginName}/
+    {originalPluginName}/
     ├── go.mod                # Go module file with dependencies
     ├── go.sum                # Go checksums file
     ├── src/
