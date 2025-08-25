@@ -31,7 +31,12 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          fetch-depth: 0
+      - name: Setup Go  
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: router/go.mod
+          cache: true
       - name: Check for query-planner label
         id: check_label
         uses: actions/github-script@v6
@@ -48,9 +53,9 @@ jobs:
         id: check_engine_changes
         working-directory: router
         run: |
-          current_engine_version=$(go list -json -m github.com/wundergraph/graphql-go-tools/v2 | jq .Sum)
-          git checkout ${{ github.event.pull_request.base.sha }} -- go.mod
-          previous_engine_version=$(go list -json -m github.com/wundergraph/graphql-go-tools/v2 | jq .Sum)
+          current_engine_version=$(go list -f '{{.Sum}}' -m github.com/wundergraph/graphql-go-tools/v2)
+          git -C "$GITHUB_WORKSPACE" show ${{ github.event.pull_request.base.sha }}:router/go.mod > /tmp/base.go.mod
+          previous_engine_version=$(go list -f '{{.Sum}}' -modfile /tmp/base.go.mod -m github.com/wundergraph/graphql-go-tools/v2)
           if [ "$current_engine_version" != "$previous_engine_version" ]; then
             echo "engine_changed=true" >> $GITHUB_OUTPUT
           else
