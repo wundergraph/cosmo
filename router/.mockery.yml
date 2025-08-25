@@ -13,10 +13,11 @@ template-schema: '{{.Template}}.schema.json'
 packages:
   github.com/wundergraph/cosmo/router/pkg/pubsub/datasource:
     interfaces:
-      ProviderLifecycle:
+      Lifecycle:
       ProviderBuilder:
       EngineDataSourceFactory:
       Provider:
+      SubscriptionEventUpdater:
   github.com/wundergraph/cosmo/router/pkg/pubsub/nats:
     interfaces:
       Adapter:
