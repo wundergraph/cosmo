@@ -4,7 +4,6 @@ import (
 	"os"
 
 	routercmd "github.com/wundergraph/cosmo/router/cmd"
-	_ "github.com/wundergraph/cosmo/router/cmd/router/start-subscription"
 )
 
 func main() {
