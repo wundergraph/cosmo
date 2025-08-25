@@ -27,9 +27,7 @@ export default (opts: BaseCommandOptions) => {
 
     const projectDir = resolve(cwd, options.directory, options.project);
 
-    const pluginDir = (options.project)
-      ? resolve(cwd, projectDir, 'plugins', name)
-      : resolve(cwd, projectDir, name);
+    const pluginDir = options.project ? resolve(cwd, projectDir, 'plugins', name) : resolve(cwd, projectDir, name);
 
     const originalPluginName = name;
 
@@ -101,6 +99,7 @@ export default (opts: BaseCommandOptions) => {
 
         // Create a project directory structure
         await mkdir(projectDir, { recursive: true });
+        await mkdir(resolve(projectDir, 'plugins'), { recursive: true });
 
         // Write router config to the project root
         await writeFile(resolve(projectDir, 'config.yaml'), ProjectTemplates.routerConfig);
