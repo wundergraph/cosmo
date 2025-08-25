@@ -156,7 +156,7 @@ jobs:
           client_payload: >-
             {
               "branch": "query-plan/pr-${{ github.event.pull_request.number }}",
-              "router": "${{ needs.build-router.outputs.image_ref || 'ghcr.io/wundergraph/router:latest' }}",
+              "router": "${{ needs.build-router.outputs.image_ref || 'ghcr.io/wundergraph/cosmo/router:latest' }}",
               "wgc": "${{ needs.build-cli.outputs.wgc || needs.cli-release-url.outputs.wgc }}"
             }
   get_pr_url:
