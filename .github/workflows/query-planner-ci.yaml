@@ -28,6 +28,8 @@ jobs:
       has_label: ${{ steps.check_label.outputs.has_label }}
       engine_changed: ${{ steps.check_engine_changes.outputs.engine_changed }}
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
       - name: Check for query-planner label
         id: check_label
         uses: actions/github-script@v6
