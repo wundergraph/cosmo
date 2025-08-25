@@ -260,11 +260,16 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
 
           const orgRepo = new OrganizationRepository(req.log, tx, opts.defaultBillingPlanId);
 
-          // Retrieve all the organizations the user is a member of
-          const memberships = await orgRepo.memberships({ userId });
-          if (memberships.length > 0) {
-            // The user is already part of at least one organization
-            return memberships;
+          // Check if the user is already a member of at least one organization
+          const existingMemberships = await tx
+            .select({ one: sql<number>`1`.as('one') })
+            .from(organizationsMembers)
+            .where(eq(organizationsMembers.userId, userId))
+            .limit(1)
+            .execute();
+
+          if (existingMemberships.length > 0) {
+            return existingMemberships.length;
           }
 
           // Authenticate on Keycloak and create the organization group
@@ -323,10 +328,10 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
 
           // We return an empty even when we just created the organization, that way we can still send the
           // user registered webhook and prompt the user to migrate
-          return [];
+          return 0;
         });
 
-        if (orgs.length === 0) {
+        if (orgs === 0) {
           // Send a notification to the platform that a new user has been created
           opts.platformWebhooks.send(PlatformEventName.USER_REGISTER_SUCCESS, {
             user_id: userId,
@@ -358,7 +363,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
           } else {
             res.redirect(opts.webBaseUrl);
           }
-        } else if (orgs.length === 0) {
+        } else if (orgs === 0) {
           res.redirect(opts.webBaseUrl + '?migrate=true');
         } else {
           res.redirect(opts.webBaseUrl);
