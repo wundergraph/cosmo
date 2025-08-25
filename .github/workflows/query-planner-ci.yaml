@@ -30,6 +30,8 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
       - name: Check for query-planner label
         id: check_label
         uses: actions/github-script@v6
