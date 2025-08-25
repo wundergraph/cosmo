@@ -44,7 +44,7 @@ jobs:
             core.setOutput('has_label', hasLabel ? 'true' : 'false');
       - name: Check for changes of engine
         id: check_engine_changes
-        working-directory: cosmo
+        working-directory: router
         run: |
           current_engine_version=$(go list -json -m github.com/wundergraph/graphql-go-tools/v2 | jq .Sum)
           git checkout HEAD^ -- go.mod
