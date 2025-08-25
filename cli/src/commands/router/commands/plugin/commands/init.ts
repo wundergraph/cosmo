@@ -26,7 +26,11 @@ export default (opts: BaseCommandOptions) => {
     const cwd = process.cwd();
 
     const projectDir = resolve(cwd, options.directory, options.project);
-    const pluginDir = resolve(cwd, projectDir, name);
+
+    const pluginDir = (options.project)
+      ? resolve(cwd, projectDir, 'plugins', name)
+      : resolve(cwd, projectDir, name);
+
     const originalPluginName = name;
 
     name = upperFirst(camelCase(name));
