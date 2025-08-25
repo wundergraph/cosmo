@@ -495,7 +495,7 @@ func CreateGRPCTraceGetter(
 		}
 
 		// Override http operation protocol with grpc
-		traceAttrs = append(traceAttrs, otel.WgOperationProtocol.String(OperationProtocolGRPC.String()))
+		traceAttrs = append(traceAttrs, otel.EngineTransportAttribute, otel.WgOperationProtocol.String(OperationProtocolGRPC.String()))
 
 		spanName := SpanNameFormatter("", reqCtx.request)
 		return spanName, otrace.WithAttributes(traceAttrs...)
