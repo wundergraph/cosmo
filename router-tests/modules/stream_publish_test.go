@@ -115,7 +115,7 @@ func TestPublishHook(t *testing.T) {
 			Modules: map[string]interface{}{
 				"publishModule": stream_publish.PublishModule{
 					Callback: func(ctx core.StreamPublishEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
-						return events, core.NewStreamHookError(errors.New("test"), "test", 500, "INTERNAL_SERVER_ERROR", false)
+						return events, core.NewStreamHookError(errors.New("test"), "test", 500, "INTERNAL_SERVER_ERROR")
 					},
 				},
 			},
@@ -159,7 +159,7 @@ func TestPublishHook(t *testing.T) {
 			Modules: map[string]interface{}{
 				"publishModule": stream_publish.PublishModule{
 					Callback: func(ctx core.StreamPublishEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
-						return events, core.NewStreamHookError(errors.New("test"), "test", 500, "INTERNAL_SERVER_ERROR", false)
+						return events, core.NewStreamHookError(errors.New("test"), "test", 500, "INTERNAL_SERVER_ERROR")
 					},
 				},
 			},
@@ -213,7 +213,7 @@ func TestPublishHook(t *testing.T) {
 			Modules: map[string]interface{}{
 				"publishModule": stream_publish.PublishModule{
 					Callback: func(ctx core.StreamPublishEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
-						return events, core.NewStreamHookError(errors.New("test"), "test", 500, "INTERNAL_SERVER_ERROR", false)
+						return events, core.NewStreamHookError(errors.New("test"), "test", 500, "INTERNAL_SERVER_ERROR")
 					},
 				},
 			},

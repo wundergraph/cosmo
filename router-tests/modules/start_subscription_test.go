@@ -91,6 +91,9 @@ func TestStartSubscriptionHook(t *testing.T) {
 			Modules: map[string]interface{}{
 				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
 					Callback: func(ctx core.SubscriptionOnStartHookContext) error {
+						if ctx.SubscriptionEventConfiguration().RootFieldName() != "employeeUpdatedMyKafka" {
+							return nil
+						}
 						ctx.WriteEvent(&kafka.Event{
 							Key:  []byte("1"),
 							Data: []byte(`{"id": 1, "__typename": "Employee"}`),
@@ -178,7 +181,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
 					Callback: func(ctx core.SubscriptionOnStartHookContext) error {
 						callbackCalled <- true
-						return core.NewStreamHookError(nil, "subscription closed", http.StatusOK, "", true)
+						return core.NewStreamHookError(nil, "subscription closed", http.StatusOK, "")
 					},
 				},
 			},
@@ -259,7 +262,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 			Modules: map[string]interface{}{
 				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
 					Callback: func(ctx core.SubscriptionOnStartHookContext) error {
-						employeeId := ctx.RequestContext().Operation().Variables().GetInt64("employeeID")
+						employeeId := ctx.Operation().Variables().GetInt64("employeeID")
 						if employeeId != 1 {
 							return nil
 						}
@@ -363,7 +366,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 			Modules: map[string]interface{}{
 				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
 					Callback: func(ctx core.SubscriptionOnStartHookContext) error {
-						return core.NewStreamHookError(errors.New("test error"), "test error", http.StatusLoopDetected, http.StatusText(http.StatusLoopDetected), false)
+						return core.NewStreamHookError(errors.New("test error"), "test error", http.StatusLoopDetected, http.StatusText(http.StatusLoopDetected))
 					},
 				},
 			},
@@ -417,7 +420,8 @@ func TestStartSubscriptionHook(t *testing.T) {
 				clientRunCh <- client.Run()
 			}()
 
-			xEnv.WaitForSubscriptionCount(1, time.Second*10)
+			// Wait for the subscription to be closed
+			xEnv.WaitForSubscriptionCount(0, time.Second*10)
 
 			testenv.AwaitChannelWithT(t, time.Second*10, subscriptionOneArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
 				var graphqlErrs graphql.Errors
@@ -581,7 +585,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 		})
 	})
 
-	t.Run("Test StartSubscription hook is called, return StreamHookError with CloseConnection true, response on OnOriginResponse should still be set", func(t *testing.T) {
+	t.Run("Test StartSubscription hook is called, return StreamHookError, response on OnOriginResponse should still be set", func(t *testing.T) {
 		t.Parallel()
 		originResponseCalled := make(chan *http.Response, 1)
 
@@ -590,7 +594,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 			Modules: map[string]interface{}{
 				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
 					Callback: func(ctx core.SubscriptionOnStartHookContext) error {
-						return core.NewStreamHookError(errors.New("subscription closed"), "subscription closed", http.StatusOK, "NotFound", true)
+						return core.NewStreamHookError(errors.New("subscription closed"), "subscription closed", http.StatusOK, "NotFound")
 					},
 					CallbackOnOriginResponse: func(response *http.Response, ctx core.RequestContext) *http.Response {
 						originResponseCalled <- response

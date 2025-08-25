@@ -44,19 +44,19 @@ func (s *PubSubSubscriptionDataSource[C]) Start(ctx *resolve.Context, input []by
 	return s.pubSub.Subscribe(ctx.Context(), conf, NewSubscriptionEventUpdater(ctx.Context(), conf, s.hooks, updater, s.logger))
 }
 
-func (s *PubSubSubscriptionDataSource[C]) SubscriptionOnStart(ctx *resolve.Context, input []byte) (close bool, err error) {
+func (s *PubSubSubscriptionDataSource[C]) SubscriptionOnStart(ctx resolve.StartupHookContext, input []byte) (err error) {
 	for _, fn := range s.hooks.SubscriptionOnStart {
 		conf, errConf := s.SubscriptionEventConfiguration(input)
 		if errConf != nil {
-			return true, err
+			return err
 		}
-		close, err = fn(ctx, conf)
-		if err != nil || close {
-			return
+		err = fn(ctx, conf)
+		if err != nil {
+			return err
 		}
 	}
 
-	return
+	return nil
 }
 
 func (s *PubSubSubscriptionDataSource[C]) SetHooks(hooks Hooks) {

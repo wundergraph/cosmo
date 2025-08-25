@@ -2,20 +2,21 @@ package core
 
 import (
 	"context"
-	"errors"
+	"net/http"
 
+	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"go.uber.org/zap"
 )
 
 // StreamHookError is used to customize the error messages and the behavior
 type StreamHookError struct {
-	err               error
-	message           string
-	statusCode        int
-	code              string
-	closeSubscription bool
+	err        error
+	message    string
+	statusCode int
+	code       string
 }
 
 func (e *StreamHookError) Error() string {
@@ -37,27 +38,28 @@ func (e *StreamHookError) Code() string {
 	return e.code
 }
 
-func (e *StreamHookError) CloseSubscription() bool {
-	return e.closeSubscription
-}
-
-func NewStreamHookError(err error, message string, statusCode int, code string, closeSubscription bool) *StreamHookError {
+func NewStreamHookError(err error, message string, statusCode int, code string) *StreamHookError {
 	return &StreamHookError{
-		err:               err,
-		message:           message,
-		statusCode:        statusCode,
-		code:              code,
-		closeSubscription: closeSubscription,
+		err:        err,
+		message:    message,
+		statusCode: statusCode,
+		code:       code,
 	}
 }
 
 type SubscriptionOnStartHookContext interface {
-	// the request context
-	RequestContext() RequestContext
-	// the subscription event configuration (will return nil for engine subscription)
+	// Request is the original request received by the router.
+	Request() *http.Request
+	// Logger is the logger for the request
+	Logger() *zap.Logger
+	// Operation is the GraphQL operation
+	Operation() OperationContext
+	// Authentication is the authentication for the request
+	Authentication() authentication.Authentication
+	// SubscriptionEventConfiguration is the subscription event configuration (will return nil for engine subscription)
 	SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration
-	// write an event to the stream of the current subscription
-	// returns true if the event was written to the stream, false if the event was dropped
+	// WriteEvent writes an event to the stream of the current subscription
+	// It returns true if the event was written to the stream, false if the event was dropped
 	WriteEvent(event datasource.StreamEvent) bool
 }
 
@@ -75,13 +77,28 @@ func (c *pubSubPublishEventHookContext) PublishEventConfiguration() datasource.P
 }
 
 type pubSubSubscriptionOnStartHookContext struct {
-	requestContext                 RequestContext
+	request                        *http.Request
+	logger                         *zap.Logger
+	operation                      OperationContext
+	authentication                 authentication.Authentication
 	subscriptionEventConfiguration datasource.SubscriptionEventConfiguration
-	writeEventHook                 func(data []byte) bool
+	writeEventHook                 func(data []byte)
 }
 
-func (c *pubSubSubscriptionOnStartHookContext) RequestContext() RequestContext {
-	return c.requestContext
+func (c *pubSubSubscriptionOnStartHookContext) Request() *http.Request {
+	return c.request
+}
+
+func (c *pubSubSubscriptionOnStartHookContext) Logger() *zap.Logger {
+	return c.logger
+}
+
+func (c *pubSubSubscriptionOnStartHookContext) Operation() OperationContext {
+	return c.operation
+}
+
+func (c *pubSubSubscriptionOnStartHookContext) Authentication() authentication.Authentication {
+	return c.authentication
 }
 
 func (c *pubSubSubscriptionOnStartHookContext) SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration {
@@ -89,7 +106,9 @@ func (c *pubSubSubscriptionOnStartHookContext) SubscriptionEventConfiguration() 
 }
 
 func (c *pubSubSubscriptionOnStartHookContext) WriteEvent(event datasource.StreamEvent) bool {
-	return c.writeEventHook(event.GetData())
+	c.writeEventHook(event.GetData())
+
+	return true
 }
 
 // EngineEvent is the event used to write to the engine subscription
@@ -102,16 +121,33 @@ func (e *EngineEvent) GetData() []byte {
 }
 
 type engineSubscriptionOnStartHookContext struct {
-	requestContext RequestContext
-	writeEventHook func(data []byte) bool
+	request        *http.Request
+	logger         *zap.Logger
+	operation      OperationContext
+	authentication authentication.Authentication
+	writeEventHook func(data []byte)
 }
 
-func (c *engineSubscriptionOnStartHookContext) RequestContext() RequestContext {
-	return c.requestContext
+func (c *engineSubscriptionOnStartHookContext) Request() *http.Request {
+	return c.request
+}
+
+func (c *engineSubscriptionOnStartHookContext) Logger() *zap.Logger {
+	return c.logger
+}
+
+func (c *engineSubscriptionOnStartHookContext) Operation() OperationContext {
+	return c.operation
+}
+
+func (c *engineSubscriptionOnStartHookContext) Authentication() authentication.Authentication {
+	return c.authentication
 }
 
 func (c *engineSubscriptionOnStartHookContext) WriteEvent(event datasource.StreamEvent) bool {
-	return c.writeEventHook(event.GetData())
+	c.writeEventHook(event.GetData())
+
+	return true
 }
 
 func (c *engineSubscriptionOnStartHookContext) SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration {
@@ -120,7 +156,6 @@ func (c *engineSubscriptionOnStartHookContext) SubscriptionEventConfiguration() 
 
 type SubscriptionOnStartHandler interface {
 	// SubscriptionOnStart is called once at subscription start
-	// If the error is a StreamHookError and CloseSubscription is true, the subscription is closed.
 	// The error is propagated to the client.
 	SubscriptionOnStart(ctx SubscriptionOnStartHookContext) error
 }
@@ -131,24 +166,18 @@ func NewPubSubSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHookContext
 		return nil
 	}
 
-	return func(resolveCtx *resolve.Context, subConf datasource.SubscriptionEventConfiguration) (bool, error) {
-		requestContext := getRequestContext(resolveCtx.Context())
+	return func(resolveCtx resolve.StartupHookContext, subConf datasource.SubscriptionEventConfiguration) error {
+		requestContext := getRequestContext(resolveCtx.Context)
 		hookCtx := &pubSubSubscriptionOnStartHookContext{
-			requestContext:                 requestContext,
+			request:                        requestContext.Request(),
+			logger:                         requestContext.Logger(),
+			operation:                      requestContext.Operation(),
+			authentication:                 requestContext.Authentication(),
 			subscriptionEventConfiguration: subConf,
-			writeEventHook:                 resolveCtx.TryEmitSubscriptionUpdate,
+			writeEventHook:                 resolveCtx.Updater,
 		}
 
-		err := fn(hookCtx)
-
-		// Check if the error is a StreamHookError and should close the connection
-		var streamHookErr *StreamHookError
-		close := false
-		if errors.As(err, &streamHookErr) {
-			close = streamHookErr.CloseSubscription()
-		}
-
-		return close, err
+		return fn(hookCtx)
 	}
 }
 
@@ -158,23 +187,17 @@ func NewEngineSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHookContext
 		return nil
 	}
 
-	return func(resolveCtx *resolve.Context, input []byte) (bool, error) {
-		requestContext := getRequestContext(resolveCtx.Context())
+	return func(resolveCtx resolve.StartupHookContext, input []byte) error {
+		requestContext := getRequestContext(resolveCtx.Context)
 		hookCtx := &engineSubscriptionOnStartHookContext{
-			requestContext: requestContext,
-			writeEventHook: resolveCtx.TryEmitSubscriptionUpdate,
+			request:        requestContext.Request(),
+			logger:         requestContext.Logger(),
+			operation:      requestContext.Operation(),
+			authentication: requestContext.Authentication(),
+			writeEventHook: resolveCtx.Updater,
 		}
 
-		err := fn(hookCtx)
-
-		// Check if the error is a StreamHookError and should close the connection
-		var streamHookErr *StreamHookError
-		close := false
-		if errors.As(err, &streamHookErr) {
-			close = streamHookErr.CloseSubscription()
-		}
-
-		return close, err
+		return fn(hookCtx)
 	}
 }
 

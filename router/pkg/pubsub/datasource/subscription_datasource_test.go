@@ -188,11 +188,13 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnStart_Success(t *testing.T) 
 	input, err := json.Marshal(testConfig)
 	assert.NoError(t, err)
 
-	ctx := &resolve.Context{}
+	ctx := resolve.StartupHookContext{
+		Context: context.Background(),
+		Updater: func(data []byte) {},
+	}
 
-	close, err := dataSource.SubscriptionOnStart(ctx, input)
+	err = dataSource.SubscriptionOnStart(ctx, input)
 	assert.NoError(t, err)
-	assert.False(t, close)
 }
 
 func TestPubSubSubscriptionDataSource_SubscriptionOnStart_WithHooks(t *testing.T) {
@@ -207,14 +209,14 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnStart_WithHooks(t *testing.T
 	hook1Called := false
 	hook2Called := false
 
-	hook1 := func(ctx *resolve.Context, config SubscriptionEventConfiguration) (bool, error) {
+	hook1 := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration) error {
 		hook1Called = true
-		return false, nil
+		return nil
 	}
 
-	hook2 := func(ctx *resolve.Context, config SubscriptionEventConfiguration) (bool, error) {
+	hook2 := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration) error {
 		hook2Called = true
-		return false, nil
+		return nil
 	}
 
 	dataSource.SetHooks(Hooks{
@@ -228,11 +230,13 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnStart_WithHooks(t *testing.T
 	input, err := json.Marshal(testConfig)
 	assert.NoError(t, err)
 
-	ctx := &resolve.Context{}
+	ctx := resolve.StartupHookContext{
+		Context: context.Background(),
+		Updater: func(data []byte) {},
+	}
 
-	close, err := dataSource.SubscriptionOnStart(ctx, input)
+	err = dataSource.SubscriptionOnStart(ctx, input)
 	assert.NoError(t, err)
-	assert.False(t, close)
 	assert.True(t, hook1Called)
 	assert.True(t, hook2Called)
 }
@@ -246,8 +250,8 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnStart_HookReturnsClose(t *te
 	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop())
 
 	// Add hook that returns close=true
-	hook := func(ctx *resolve.Context, config SubscriptionEventConfiguration) (bool, error) {
-		return true, nil
+	hook := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration) error {
+		return nil
 	}
 
 	dataSource.SetHooks(Hooks{
@@ -261,11 +265,13 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnStart_HookReturnsClose(t *te
 	input, err := json.Marshal(testConfig)
 	assert.NoError(t, err)
 
-	ctx := &resolve.Context{}
+	ctx := resolve.StartupHookContext{
+		Context: context.Background(),
+		Updater: func(data []byte) {},
+	}
 
-	close, err := dataSource.SubscriptionOnStart(ctx, input)
-	assert.NoError(t, err)
-	assert.True(t, close)
+	errSubStart := dataSource.SubscriptionOnStart(ctx, input)
+	assert.NoError(t, errSubStart)
 }
 
 func TestPubSubSubscriptionDataSource_SubscriptionOnStart_HookReturnsError(t *testing.T) {
@@ -278,8 +284,8 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnStart_HookReturnsError(t *te
 
 	expectedError := errors.New("hook error")
 	// Add hook that returns an error
-	hook := func(ctx *resolve.Context, config SubscriptionEventConfiguration) (bool, error) {
-		return false, expectedError
+	hook := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration) error {
+		return expectedError
 	}
 
 	dataSource.SetHooks(Hooks{
@@ -293,12 +299,14 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnStart_HookReturnsError(t *te
 	input, err := json.Marshal(testConfig)
 	assert.NoError(t, err)
 
-	ctx := &resolve.Context{}
+	ctx := resolve.StartupHookContext{
+		Context: context.Background(),
+		Updater: func(data []byte) {},
+	}
 
-	close, err := dataSource.SubscriptionOnStart(ctx, input)
+	err = dataSource.SubscriptionOnStart(ctx, input)
 	assert.Error(t, err)
 	assert.Equal(t, expectedError, err)
-	assert.False(t, close)
 }
 
 func TestPubSubSubscriptionDataSource_SetSubscriptionOnStartFns(t *testing.T) {
@@ -313,11 +321,11 @@ func TestPubSubSubscriptionDataSource_SetSubscriptionOnStartFns(t *testing.T) {
 	assert.Len(t, dataSource.hooks.SubscriptionOnStart, 0)
 
 	// Add hooks
-	hook1 := func(ctx *resolve.Context, config SubscriptionEventConfiguration) (bool, error) {
-		return false, nil
+	hook1 := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration) error {
+		return nil
 	}
-	hook2 := func(ctx *resolve.Context, config SubscriptionEventConfiguration) (bool, error) {
-		return false, nil
+	hook2 := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration) error {
+		return nil
 	}
 
 	dataSource.SetHooks(Hooks{

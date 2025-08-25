@@ -6,7 +6,7 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
-type SubscriptionOnStartFn func(ctx *resolve.Context, subConf SubscriptionEventConfiguration) (bool, error)
+type SubscriptionOnStartFn func(ctx resolve.StartupHookContext, subConf SubscriptionEventConfiguration) (error)
 
 type OnPublishEventsFn func(ctx context.Context, pubConf PublishEventConfiguration, evts []StreamEvent) ([]StreamEvent, error)
 
