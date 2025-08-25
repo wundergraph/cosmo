@@ -115,14 +115,14 @@ func TestVerifyTelemetryForRouterPluginRequests(t *testing.T) {
 			func(t *testing.T, xEnv *testenv.Environment) {
 				queryName := "query sample"
 				response := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-					Query: fmt.Sprintf(`%s { projects { id name } }`, queryName),
+					Query: fmt.Sprintf(`%s { a:projects { id name }, e:projects { id name } }`, queryName),
 				})
 
-				expected := `{"data":{"projects":[{"id":"1","name":"Cloud Migration Overhaul"},{"id":"2","name":"Microservices Revolution"},{"id":"3","name":"AI-Powered Analytics"},{"id":"4","name":"DevOps Transformation"},{"id":"5","name":"Security Overhaul"},{"id":"6","name":"Mobile App Development"},{"id":"7","name":"Data Lake Implementation"}]}}`
+				expected := `{"data":{"a":[{"id":"1","name":"Cloud Migration Overhaul"},{"id":"2","name":"Microservices Revolution"},{"id":"3","name":"AI-Powered Analytics"},{"id":"4","name":"DevOps Transformation"},{"id":"5","name":"Security Overhaul"},{"id":"6","name":"Mobile App Development"},{"id":"7","name":"Data Lake Implementation"}],"e":[{"id":"1","name":"Cloud Migration Overhaul"},{"id":"2","name":"Microservices Revolution"},{"id":"3","name":"AI-Powered Analytics"},{"id":"4","name":"DevOps Transformation"},{"id":"5","name":"Security Overhaul"},{"id":"6","name":"Mobile App Development"},{"id":"7","name":"Data Lake Implementation"}]}}`
 				require.Equal(t, expected, response.Body)
 
 				snapshots := exporter.GetSpans().Snapshots()
-				require.Len(t, snapshots, 9)
+				require.Len(t, snapshots, 10)
 
 				queryNameInstances := 0
 				for _, sn := range snapshots {
@@ -131,8 +131,7 @@ func TestVerifyTelemetryForRouterPluginRequests(t *testing.T) {
 					}
 				}
 
-				// Normal http spans would have query sample twice
-				require.Equal(t, queryNameInstances, 1)
+				require.Equal(t, queryNameInstances, 3)
 			})
 	})
 
@@ -162,18 +161,18 @@ func TestVerifyTelemetryForRouterPluginRequests(t *testing.T) {
 				require.Len(t, snapshots, 10)
 
 				span1 := snapshots[5]
-				require.Equal(t, "GRPC Plugin Client - Invoke", span1.Name())
+				require.Equal(t, "query projects", span1.Name())
 				require.Contains(t, span1.Attributes(), otel.WgOperationProtocol.String("grpc"))
 				require.Contains(t, span1.Attributes(), otel.WgOperationType.String("query"))
 				require.Contains(t, span1.Attributes(), otel.WgOperationName.String("projects"))
-				require.Len(t, span1.Attributes(), 10)
+				require.Len(t, span1.Attributes(), 11)
 
 				span2 := snapshots[6]
-				require.Equal(t, "GRPC Plugin Client - Invoke", span2.Name())
+				require.Equal(t, "query projects", span2.Name())
 				require.Contains(t, span2.Attributes(), otel.WgOperationProtocol.String("grpc"))
 				require.Contains(t, span2.Attributes(), otel.WgOperationType.String("query"))
 				require.Contains(t, span2.Attributes(), otel.WgOperationName.String("projects"))
-				require.Len(t, span2.Attributes(), 10)
+				require.Len(t, span2.Attributes(), 11)
 			})
 	})
 }
