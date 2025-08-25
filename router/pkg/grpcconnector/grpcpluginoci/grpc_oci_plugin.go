@@ -26,7 +26,7 @@ type GRPCPluginConfig struct {
 	RegistryToken      string
 	StartupConfig      grpccommon.GRPCStartupParams
 	Tracer             trace.Tracer
-	GetTraceAttributes grpccommon.TraceAttributeGetter
+	GetTraceAttributes grpccommon.GRPCTraceAttributeGetter
 }
 
 type GRPCPlugin struct {
@@ -50,7 +50,7 @@ type GRPCPlugin struct {
 	startupConfig grpccommon.GRPCStartupParams
 
 	tracer             trace.Tracer
-	getTraceAttributes grpccommon.TraceAttributeGetter
+	getTraceAttributes grpccommon.GRPCTraceAttributeGetter
 }
 
 func NewGRPCOCIPlugin(config GRPCPluginConfig) (*GRPCPlugin, error) {

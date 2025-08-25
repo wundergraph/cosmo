@@ -1545,36 +1545,10 @@ func (s *graphServer) setupConnector(
 
 		tracer := s.tracerProvider.Tracer("wundergraph/cosmo/router/engine/grpc", oteltrace.WithInstrumentationVersion("0.0.1"))
 
-		getTracingAttributes := func(ctx context.Context) []attribute.KeyValue {
-			reqCtx := getRequestContext(ctx)
-			if reqCtx == nil {
-				return []attribute.KeyValue{}
-			}
-
-			traceAttrs := *reqCtx.telemetry.AcquireAttributes()
-			defer reqCtx.telemetry.ReleaseAttributes(&traceAttrs)
-			traceAttrs = append(traceAttrs, reqCtx.telemetry.traceAttrs...)
-
-			if telemetryAttributeExpressions != nil {
-				telemetryValues, err := telemetryAttributeExpressions.expressionsAttributesWithSubgraph(&reqCtx.expressionContext)
-				if err != nil {
-					reqCtx.Logger().Warn("failed to resolve grpc plugin expression for telemetry", zap.Error(err))
-				}
-				traceAttrs = append(traceAttrs, telemetryValues...)
-			}
-
-			if tracingAttributeExpressions != nil {
-				tracingValues, err := tracingAttributeExpressions.expressionsAttributesWithSubgraph(&reqCtx.expressionContext)
-				if err != nil {
-					reqCtx.Logger().Warn("failed to resolve grpc plugin expression for tracing", zap.Error(err))
-				}
-				traceAttrs = append(traceAttrs, tracingValues...)
-			}
-
-			// Override http operation protocol with grpc
-			traceAttrs = append(traceAttrs, otel.WgOperationProtocol.String(OperationProtocolGRPC.String()))
-			return traceAttrs
-		}
+		getTraceAttributes := CreateGRPCTraceGetter(
+			telemetryAttributeExpressions,
+			tracingAttributeExpressions,
+		)
 
 		if imgRef := pluginConfig.GetImageReference(); imgRef != nil {
 			ref := fmt.Sprintf("%s/%s:%s",
@@ -1589,7 +1563,7 @@ func (s *graphServer) setupConnector(
 				RegistryToken:      s.graphApiToken,
 				StartupConfig:      startupConfig,
 				Tracer:             tracer,
-				GetTraceAttributes: getTracingAttributes,
+				GetTraceAttributes: getTraceAttributes,
 			})
 			if err != nil {
 				return fmt.Errorf("failed to create grpc oci plugin for subgraph %s: %w", dsConfig.Id, err)
@@ -1611,7 +1585,7 @@ func (s *graphServer) setupConnector(
 				PluginPath:         pluginPath,
 				StartupConfig:      startupConfig,
 				Tracer:             tracer,
-				GetTraceAttributes: getTracingAttributes,
+				GetTraceAttributes: getTraceAttributes,
 			})
 			if err != nil {
 				return fmt.Errorf("failed to create grpc plugin for subgraph %s: %w", dsConfig.Id, err)

@@ -3,7 +3,6 @@ package grpccommon
 import (
 	"context"
 	"errors"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 	"io"
 
@@ -31,7 +30,7 @@ type GRPCPluginClient struct {
 	mu sync.RWMutex
 
 	tracer             trace.Tracer
-	getTraceAttributes TraceAttributeGetter
+	getTraceAttributes GRPCTraceAttributeGetter
 }
 
 type GRPCPluginClientConfig struct {
@@ -55,10 +54,11 @@ func WithReconnectConfig(reconnectTimeout time.Duration, pingInterval time.Durat
 
 var _ grpc.ClientConnInterface = &GRPCPluginClient{}
 
-type TraceAttributeGetter func(context.Context) []attribute.KeyValue
+type GRPCTraceAttributeGetter func(context.Context) (string, trace.SpanStartEventOption)
+
 type GRPCPluginClientOpts struct {
 	Tracer             trace.Tracer
-	GetTraceAttributes TraceAttributeGetter
+	GetTraceAttributes GRPCTraceAttributeGetter
 }
 
 func NewGRPCPluginClient(pc *plugin.Client, cc grpc.ClientConnInterface, clientOpts GRPCPluginClientOpts, options ...GRPCPluginClientOption) (*GRPCPluginClient, error) {
@@ -146,9 +146,8 @@ func (g *GRPCPluginClient) SetClients(pluginClient *plugin.Client, clientConn gr
 
 // Invoke implements grpc.ClientConnInterface.
 func (g *GRPCPluginClient) Invoke(ctx context.Context, method string, args any, reply any, opts ...grpc.CallOption) error {
-	ctx, span := g.tracer.Start(ctx,
-		"GRPC Plugin Client - Invoke",
-		trace.WithAttributes(g.getTraceAttributes(ctx)...))
+	spanName, traceAttributes := g.getTraceAttributes(ctx)
+	ctx, span := g.tracer.Start(ctx, spanName, traceAttributes)
 	defer span.End()
 
 	if g.IsPluginProcessExited() {

@@ -24,7 +24,7 @@ type GRPCPluginConfig struct {
 	PluginName         string
 	StartupConfig      grpccommon.GRPCStartupParams
 	Tracer             trace.Tracer
-	GetTraceAttributes grpccommon.TraceAttributeGetter
+	GetTraceAttributes grpccommon.GRPCTraceAttributeGetter
 }
 
 type GRPCPlugin struct {
@@ -41,7 +41,7 @@ type GRPCPlugin struct {
 	startupConfig grpccommon.GRPCStartupParams
 	tracer        trace.Tracer
 
-	getTraceAttributes grpccommon.TraceAttributeGetter
+	getTraceAttributes grpccommon.GRPCTraceAttributeGetter
 }
 
 var _ grpcconnector.ClientProvider = (*GRPCPlugin)(nil)

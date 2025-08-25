@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/circuit"
 	"io"
 	"net/http"
 	"net/url"
@@ -12,6 +11,8 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/internal/circuit"
 
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/internal/traceclient"
@@ -461,4 +462,43 @@ func GetSpanName(operationName string, operationType string) string {
 		return fmt.Sprintf("%s %s", operationType, operationName)
 	}
 	return fmt.Sprintf("%s %s", operationType, "unnamed")
+}
+
+func CreateGRPCTraceGetter(
+	telemetryAttributeExpressions *attributeExpressions,
+	tracingAttributeExpressions *attributeExpressions,
+) func(context.Context) (string, otrace.SpanStartEventOption) {
+	traceFunc := func(ctx context.Context) (string, otrace.SpanStartEventOption) {
+		reqCtx := getRequestContext(ctx)
+		if reqCtx == nil {
+			return "GRPC Plugin Client - Invoke", otrace.WithAttributes()
+		}
+
+		traceAttrs := *reqCtx.telemetry.AcquireAttributes()
+		defer reqCtx.telemetry.ReleaseAttributes(&traceAttrs)
+		traceAttrs = append(traceAttrs, reqCtx.telemetry.traceAttrs...)
+
+		if telemetryAttributeExpressions != nil {
+			telemetryValues, err := telemetryAttributeExpressions.expressionsAttributesWithSubgraph(&reqCtx.expressionContext)
+			if err != nil {
+				reqCtx.Logger().Warn("failed to resolve grpc plugin expression for telemetry", zap.Error(err))
+			}
+			traceAttrs = append(traceAttrs, telemetryValues...)
+		}
+
+		if tracingAttributeExpressions != nil {
+			tracingValues, err := tracingAttributeExpressions.expressionsAttributesWithSubgraph(&reqCtx.expressionContext)
+			if err != nil {
+				reqCtx.Logger().Warn("failed to resolve grpc plugin expression for tracing", zap.Error(err))
+			}
+			traceAttrs = append(traceAttrs, tracingValues...)
+		}
+
+		// Override http operation protocol with grpc
+		traceAttrs = append(traceAttrs, otel.WgOperationProtocol.String(OperationProtocolGRPC.String()))
+
+		spanName := SpanNameFormatter("", reqCtx.request)
+		return spanName, otrace.WithAttributes(traceAttrs...)
+	}
+	return traceFunc
 }
