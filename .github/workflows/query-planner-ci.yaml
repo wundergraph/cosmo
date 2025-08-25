@@ -53,9 +53,9 @@ jobs:
         id: check_engine_changes
         working-directory: router
         run: |
-          current_engine_version=$(go list -f '{{.Sum}}' -m github.com/wundergraph/graphql-go-tools/v2)
+          current_engine_version=$(go list -f '{{.Version}}' -m github.com/wundergraph/graphql-go-tools/v2)
           git show ${{ github.event.pull_request.base.sha }}:router/go.mod > base.go.mod
-          previous_engine_version=$(go list -f '{{.Sum}}' -modfile base.go.mod -m github.com/wundergraph/graphql-go-tools/v2)
+          previous_engine_version=$(go list -f '{{.Version}}' -modfile base.go.mod -m github.com/wundergraph/graphql-go-tools/v2)
           if [ "$current_engine_version" != "$previous_engine_version" ]; then
             echo "engine_changed=true" >> $GITHUB_OUTPUT
             echo "Engine has been changed from $previous_engine_version to $current_engine_version"
