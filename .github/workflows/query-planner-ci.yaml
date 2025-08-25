@@ -58,8 +58,10 @@ jobs:
           previous_engine_version=$(go list -f '{{.Sum}}' -modfile /tmp/base.go.mod -m github.com/wundergraph/graphql-go-tools/v2)
           if [ "$current_engine_version" != "$previous_engine_version" ]; then
             echo "engine_changed=true" >> $GITHUB_OUTPUT
+            echo "Engine has been changed from $previous_engine_version to $current_engine_version"
           else
             echo "engine_changed=false" >> $GITHUB_OUTPUT
+            echo "Engine has not been changed"
           fi
 
   filter-changes:
