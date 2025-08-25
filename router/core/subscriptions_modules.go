@@ -3,6 +3,7 @@ package core
 import (
 	"net/http"
 
+	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -52,10 +53,12 @@ type SubscriptionOnStartHookContext interface {
 	Logger() *zap.Logger
 	// Operation is the GraphQL operation
 	Operation() OperationContext
-	// the subscription event configuration (will return nil for engine subscription)
+	// Authentication is the authentication for the request
+	Authentication() authentication.Authentication
+	// SubscriptionEventConfiguration is the subscription event configuration (will return nil for engine subscription)
 	SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration
-	// write an event to the stream of the current subscription
-	// returns true if the event was written to the stream, false if the event was dropped
+	// WriteEvent writes an event to the stream of the current subscription
+	// It returns true if the event was written to the stream, false if the event was dropped
 	WriteEvent(event datasource.StreamEvent) bool
 }
 
@@ -63,6 +66,7 @@ type pubSubSubscriptionOnStartHookContext struct {
 	request                 *http.Request
 	logger                    *zap.Logger
 	operation                 OperationContext
+	authentication            authentication.Authentication
 	subscriptionEventConfiguration datasource.SubscriptionEventConfiguration
 	writeEventHook                 func(data []byte)
 }
@@ -77,6 +81,10 @@ func (c *pubSubSubscriptionOnStartHookContext) Logger() *zap.Logger {
 
 func (c *pubSubSubscriptionOnStartHookContext) Operation() OperationContext {
 	return c.operation
+}
+
+func (c *pubSubSubscriptionOnStartHookContext) Authentication() authentication.Authentication {
+	return c.authentication
 }
 
 func (c *pubSubSubscriptionOnStartHookContext) SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration {
@@ -102,6 +110,7 @@ type engineSubscriptionOnStartHookContext struct {
 	request                 *http.Request
 	logger                    *zap.Logger
 	operation                 OperationContext
+	authentication            authentication.Authentication
 	writeEventHook func(data []byte)
 }
 
@@ -115,6 +124,10 @@ func (c *engineSubscriptionOnStartHookContext) Logger() *zap.Logger {
 
 func (c *engineSubscriptionOnStartHookContext) Operation() OperationContext {
 	return c.operation
+}
+
+func (c *engineSubscriptionOnStartHookContext) Authentication() authentication.Authentication {
+	return c.authentication
 }
 
 func (c *engineSubscriptionOnStartHookContext) WriteEvent(event datasource.StreamEvent) bool {
@@ -145,6 +158,7 @@ func NewPubSubSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHookContext
 			request:                 requestContext.Request(),
 			logger:                    requestContext.Logger(),
 			operation:                 requestContext.Operation(),
+			authentication:            requestContext.Authentication(),
 			subscriptionEventConfiguration: subConf,
 			writeEventHook:                 resolveCtx.Updater,
 		}
@@ -165,6 +179,7 @@ func NewEngineSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHookContext
 			request: requestContext.Request(),
 			logger:  requestContext.Logger(),
 			operation: requestContext.Operation(),
+			authentication: requestContext.Authentication(),
 			writeEventHook: resolveCtx.Updater,
 		}
 
