@@ -17,17 +17,13 @@ import (
 
 // Adapter defines the methods that a NATS adapter should implement
 type Adapter interface {
-	// Subscribe subscribes to the given events and sends updates to the updater
-	Subscribe(ctx context.Context, event datasource.SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater) error
-	// Publish publishes the given event to the specified subject
-	Publish(ctx context.Context, event PublishAndRequestEventConfiguration) error
+	datasource.Adapter
 	// Request sends a request to the specified subject and writes the response to the given writer
-	Request(ctx context.Context, event PublishAndRequestEventConfiguration, w io.Writer) error
-	// Startup initializes the adapter
-	Startup(ctx context.Context) error
-	// Shutdown gracefully shuts down the adapter
-	Shutdown(ctx context.Context) error
+	Request(ctx context.Context, cfg datasource.PublishEventConfiguration, event datasource.StreamEvent, w io.Writer) error
 }
+
+// Ensure ProviderAdapter implements ProviderSubscriptionHooks
+var _ datasource.Adapter = (*ProviderAdapter)(nil)
 
 // ProviderAdapter implements the AdapterInterface for NATS pub/sub
 type ProviderAdapter struct {
@@ -71,11 +67,12 @@ func (p *ProviderAdapter) getDurableConsumerName(durableName string, subjects []
 	return fmt.Sprintf("%s-%x", durableName, subjHash.Sum64()), nil
 }
 
-func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater) error {
-	subConf, ok := conf.(*SubscriptionEventConfiguration)
+func (p *ProviderAdapter) Subscribe(ctx context.Context, cfg datasource.SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater) error {
+	subConf, ok := cfg.(*SubscriptionEventConfiguration)
 	if !ok {
-		return datasource.NewError("invalid event type for Kafka adapter", nil)
+		return datasource.NewError("subscription event not support by nats provider", nil)
 	}
+
 	log := p.logger.With(
 		zap.String("provider_id", subConf.ProviderID()),
 		zap.String("method", "subscribe"),
@@ -135,10 +132,22 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 					for msg := range msgBatch.Messages() {
 						log.Debug("subscription update", zap.String("message_subject", msg.Subject()), zap.ByteString("data", msg.Data()))
 
-						updater.Update(&Event{
+						updateErr := updater.Update([]datasource.StreamEvent{&Event{
 							Data:    msg.Data(),
 							Headers: msg.Headers(),
-						})
+						}})
+						if updateErr != nil {
+							// If the update fails, we do not acknowledge the message
+							log.Error(
+								"error updating subscription, stopping subscription",
+								zap.Error(updateErr),
+								zap.String("message_subject", msg.Subject()),
+								zap.String("provider_id", subConf.ProviderID()),
+								zap.String("provider_type", string(subConf.ProviderType())),
+								zap.String("field_name", subConf.RootFieldName()),
+							)
+							return
+						}
 
 						// Acknowledge the message after it has been processed
 						ackErr := msg.Ack()
@@ -175,10 +184,29 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 			select {
 			case msg := <-msgChan:
 				log.Debug("subscription update", zap.String("message_subject", msg.Subject), zap.ByteString("data", msg.Data))
-				updater.Update(&Event{
+				updateErr := updater.Update([]datasource.StreamEvent{&Event{
 					Data:    msg.Data,
 					Headers: msg.Header,
-				})
+				}})
+				if updateErr != nil {
+					// If the update fails, we log the error and unsubscribe from all subscriptions
+					log.Error(
+						"error updating subscription, stopping subscription",
+						zap.Error(updateErr),
+						zap.String("message_subject", msg.Subject),
+						zap.String("provider_id", subConf.ProviderID()),
+						zap.String("provider_type", string(subConf.ProviderType())),
+						zap.String("field_name", subConf.RootFieldName()),
+					)
+					for _, subscription := range subscriptions {
+						if err := subscription.Unsubscribe(); err != nil {
+							log.Error("unsubscribing from NATS subject after an error on updating subscription",
+								zap.Error(err), zap.String("subject", subscription.Subject),
+							)
+						}
+					}
+					return
+				}
 			case <-p.ctx.Done():
 				// When the application context is done, we stop the subscriptions
 				for _, subscription := range subscriptions {
@@ -206,45 +234,83 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 	return nil
 }
 
-func (p *ProviderAdapter) Publish(_ context.Context, event PublishAndRequestEventConfiguration) error {
+func (p *ProviderAdapter) Publish(_ context.Context, conf datasource.PublishEventConfiguration, events []datasource.StreamEvent) error {
+	pubConf, ok := conf.(*PublishAndRequestEventConfiguration)
+	if !ok {
+		return datasource.NewError("publish event not support by nats provider", nil)
+	}
+
 	log := p.logger.With(
-		zap.String("provider_id", event.ProviderID()),
+		zap.String("provider_id", pubConf.ProviderID()),
 		zap.String("method", "publish"),
-		zap.String("subject", event.Subject),
+		zap.String("subject", pubConf.Subject),
 	)
 
 	if p.client == nil {
 		return datasource.NewError("nats client not initialized", nil)
 	}
 
-	log.Debug("publish", zap.ByteString("data", event.Event.Data))
+	if len(events) == 0 {
+		return nil
+	}
 
-	err := p.client.Publish(event.Subject, event.Event.Data)
-	if err != nil {
-		log.Error("publish error", zap.Error(err))
-		return datasource.NewError(fmt.Sprintf("error publishing to NATS subject %s", event.Subject), err)
+	log.Debug("publish", zap.Int("event_count", len(events)))
+
+	for _, streamEvent := range events {
+		natsEvent, ok := streamEvent.(*Event)
+		if !ok {
+			return datasource.NewError("invalid event type for NATS adapter", nil)
+		}
+
+		err := p.client.Publish(pubConf.Subject, natsEvent.Data)
+		if err != nil {
+			log.Error(
+				"publish error",
+				zap.Error(err),
+				zap.String("provider_id", pubConf.ProviderID()),
+				zap.String("provider_type", string(pubConf.ProviderType())),
+				zap.String("field_name", pubConf.RootFieldName()),
+			)
+			return datasource.NewError(fmt.Sprintf("error publishing to NATS subject %s", pubConf.Subject), err)
+		}
 	}
 
 	return nil
 }
 
-func (p *ProviderAdapter) Request(ctx context.Context, event PublishAndRequestEventConfiguration, w io.Writer) error {
+func (p *ProviderAdapter) Request(ctx context.Context, cfg datasource.PublishEventConfiguration, event datasource.StreamEvent, w io.Writer) error {
+	reqConf, ok := cfg.(*PublishAndRequestEventConfiguration)
+	if !ok {
+		return datasource.NewError("publish event not support by nats provider", nil)
+	}
+
 	log := p.logger.With(
-		zap.String("provider_id", event.ProviderID()),
+		zap.String("provider_id", cfg.ProviderID()),
 		zap.String("method", "request"),
-		zap.String("subject", event.Subject),
+		zap.String("subject", reqConf.Subject),
 	)
 
 	if p.client == nil {
 		return datasource.NewError("nats client not initialized", nil)
 	}
 
-	log.Debug("request", zap.ByteString("data", event.Event.Data))
+	natsEvent, ok := event.(*Event)
+	if !ok {
+		return datasource.NewError("invalid event type for NATS adapter", nil)
+	}
 
-	msg, err := p.client.RequestWithContext(ctx, event.Subject, event.Event.Data)
+	log.Debug("request", zap.ByteString("data", natsEvent.Data))
+
+	msg, err := p.client.RequestWithContext(ctx, reqConf.Subject, natsEvent.Data)
 	if err != nil {
-		log.Error("request error", zap.Error(err))
-		return datasource.NewError(fmt.Sprintf("error requesting from NATS subject %s", event.Subject), err)
+		log.Error(
+			"request error",
+			zap.Error(err),
+			zap.String("provider_id", reqConf.ProviderID()),
+			zap.String("provider_type", string(reqConf.ProviderType())),
+			zap.String("field_name", reqConf.RootFieldName()),
+		)
+		return datasource.NewError(fmt.Sprintf("error requesting from NATS subject %s", reqConf.Subject), err)
 	}
 
 	_, err = w.Write(msg.Data)
