@@ -476,14 +476,18 @@ func CreateGRPCTraceGetter(
 
 		traceAttrs := *reqCtx.telemetry.AcquireAttributes()
 		defer reqCtx.telemetry.ReleaseAttributes(&traceAttrs)
-		traceAttrs = append(traceAttrs, reqCtx.telemetry.traceAttrs...)
+
+		attrs := make([]attribute.KeyValue, 0, len(reqCtx.telemetry.traceAttrs))
+
+		attrs = append(attrs, traceAttrs...)
+		attrs = append(attrs, reqCtx.telemetry.traceAttrs...)
 
 		if telemetryAttributeExpressions != nil {
 			telemetryValues, err := telemetryAttributeExpressions.expressionsAttributesWithSubgraph(&reqCtx.expressionContext)
 			if err != nil {
 				reqCtx.Logger().Warn("failed to resolve grpc plugin expression for telemetry", zap.Error(err))
 			}
-			traceAttrs = append(traceAttrs, telemetryValues...)
+			attrs = append(attrs, telemetryValues...)
 		}
 
 		if tracingAttributeExpressions != nil {
@@ -491,14 +495,14 @@ func CreateGRPCTraceGetter(
 			if err != nil {
 				reqCtx.Logger().Warn("failed to resolve grpc plugin expression for tracing", zap.Error(err))
 			}
-			traceAttrs = append(traceAttrs, tracingValues...)
+			attrs = append(attrs, tracingValues...)
 		}
 
 		// Override http operation protocol with grpc
-		traceAttrs = append(traceAttrs, otel.EngineTransportAttribute, otel.WgOperationProtocol.String(OperationProtocolGRPC.String()))
+		attrs = append(attrs, otel.EngineTransportAttribute, otel.WgOperationProtocol.String(OperationProtocolGRPC.String()))
 
 		spanName := SpanNameFormatter("", reqCtx.request)
-		return spanName, otrace.WithAttributes(traceAttrs...)
+		return spanName, otrace.WithAttributes(attrs...)
 	}
 	return traceFunc
 }
