@@ -158,6 +158,9 @@
     "Storage": {
       "ProviderID": "mcp"
     },
+    "Session": {
+      "Stateless": true
+    },
     "GraphName": "cosmo",
     "ExcludeMutations": false,
     "EnableArbitraryOperations": false,

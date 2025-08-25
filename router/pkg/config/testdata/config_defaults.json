@@ -123,6 +123,9 @@
     "Storage": {
       "ProviderID": ""
     },
+    "Session": {
+      "Stateless": true
+    },
     "GraphName": "mygraph",
     "ExcludeMutations": false,
     "EnableArbitraryOperations": false,
