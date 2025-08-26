@@ -834,10 +834,13 @@ export const linkedSchemaChecks = pgTable(
       .references(() => schemaChecks.id, {
         onDelete: 'cascade',
       })
+      .notNull()
       .unique(),
-    linkedSchemaCheckId: uuid('linked_schema_check_id').references(() => schemaChecks.id, {
-      onDelete: 'cascade',
-    }),
+    linkedSchemaCheckId: uuid('linked_schema_check_id')
+      .references(() => schemaChecks.id, {
+        onDelete: 'cascade',
+      })
+      .notNull(),
   },
   (t) => {
     return {
