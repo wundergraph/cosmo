@@ -1779,7 +1779,6 @@ export class SubgraphRepository {
     federatedGraphs,
     skipTrafficCheck,
     vcsContext,
-    isSubgraphLinked,
     isDeleted,
     labels,
     isTargetCheck,
@@ -1796,7 +1795,6 @@ export class SubgraphRepository {
     federatedGraphs: FederatedGraphDTO[];
     skipTrafficCheck?: boolean;
     vcsContext?: VCSContext;
-    isSubgraphLinked: boolean;
     isDeleted: boolean;
     labels?: Label[];
     // If true, it means the check is being performed for a target subgraph
@@ -1823,7 +1821,6 @@ export class SubgraphRepository {
       lintSkipped: !namespace.enableLinting,
       graphPruningSkipped: !namespace.enableGraphPruning,
       vcsContext,
-      isSubgraphLinked,
     });
 
     const schemaCheckSubgraphId = await schemaCheckRepo.createSchemaCheckSubgraph({

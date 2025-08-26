@@ -266,7 +266,6 @@ export function checkSubgraphSchema(
       federatedGraphs,
       skipTrafficCheck: req.skipTrafficCheck,
       vcsContext: req.vcsContext,
-      isSubgraphLinked: !!linkedSubgraph,
       isDeleted: !!req.delete,
       labels: subgraph?.labels,
       isTargetCheck: false,
@@ -296,6 +295,42 @@ export function checkSubgraphSchema(
         compositionWarnings,
         proposalMatchMessage,
       };
+    }
+
+    if (linkedSubgraph) {
+      const targetSubgraph = await subgraphRepo.byName(linkedSubgraph.name, linkedSubgraph.namespace);
+      if (!targetSubgraph) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR_NOT_FOUND,
+            details: `The target subgraph "${linkedSubgraph.name}" was not found.`,
+          },
+          breakingChanges: [],
+          nonBreakingChanges: [],
+          compositionErrors: [],
+          checkId: '',
+          checkedFederatedGraphs: [],
+          lintWarnings: [],
+          lintErrors: [],
+          graphPruneWarnings: [],
+          graphPruneErrors: [],
+          compositionWarnings: [],
+        };
+      }
+
+      const targetFederatedGraphs = await fedGraphRepo.bySubgraphLabels({
+        labels: targetSubgraph.labels,
+        namespaceId: namespace.id,
+        excludeContracts: true,
+      });
+
+      // const targetCheckResult = await subgraphRepo.performSchemaCheck({
+      //   organizationSlug: authContext.organizationSlug,
+      //   namespace,
+      //   subgraphName: targetSubgraph.name,
+      //   newSchemaSDL,
+      //   subgraph: targetSubgraph,
+      // });
     }
 
     if (req.gitInfo && opts.githubApp) {

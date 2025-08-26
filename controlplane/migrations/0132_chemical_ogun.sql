@@ -1,0 +1,1 @@
+ALTER TABLE "schema_checks" DROP COLUMN IF EXISTS "is_subgraph_linked";
