@@ -84,14 +84,13 @@ func (ctx RetryContext) Is5xxError() bool {
 }
 
 // IsRetryableStatusCode returns true if the HTTP status code is generally
-// considered retryable, including 500, 502, 503, 504, and 429.
+// considered retryable, including 500, 502, 503, and 504.
 func (ctx RetryContext) IsRetryableStatusCode() bool {
 	switch ctx.StatusCode {
 	case http.StatusInternalServerError,
 		http.StatusBadGateway,
 		http.StatusServiceUnavailable,
-		http.StatusGatewayTimeout,
-		http.StatusTooManyRequests:
+		http.StatusGatewayTimeout:
 		return true
 	default:
 		return false

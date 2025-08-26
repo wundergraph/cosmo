@@ -98,7 +98,7 @@ func TestRetryExpressionManager(t *testing.T) {
 			name:       "isRetryableStatusCode helper",
 			expression: "IsRetryableStatusCode()",
 			ctx:        RetryContext{StatusCode: 429},
-			expected:   true,
+			expected:   false,
 		},
 		{
 			name:       "range check",

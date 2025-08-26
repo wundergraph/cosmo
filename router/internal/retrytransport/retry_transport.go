@@ -3,6 +3,7 @@ package retrytransport
 import (
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -28,6 +29,47 @@ type RetryHTTPTransport struct {
 	RoundTripper     http.RoundTripper
 	RetryOptions     RetryOptions
 	getRequestLogger requestLoggerGetter
+}
+
+// parseRetryAfterHeader parses the Retry-After header value according to RFC 7231.
+// It supports both delay-seconds and HTTP-date formats.
+// Returns the duration to wait before retrying, or 0 if parsing fails.
+func parseRetryAfterHeader(retryAfter string) time.Duration {
+	if retryAfter == "" {
+		return 0
+	}
+
+	// Try parsing as delay-seconds (integer)
+	if seconds, err := strconv.Atoi(retryAfter); err == nil && seconds >= 0 {
+		return time.Duration(seconds) * time.Second
+	}
+
+	// Try parsing as HTTP-date
+	if t, err := http.ParseTime(retryAfter); err == nil {
+		duration := time.Until(t)
+		// Only return positive durations
+		if duration > 0 {
+			return duration
+		}
+	}
+
+	// If parsing fails, return 0 to fall back to normal backoff
+	return 0
+}
+
+// shouldUseRetryAfter determines if we should use Retry-After header for 429 responses
+func shouldUseRetryAfter(resp *http.Response) (time.Duration, bool) {
+	if resp == nil || resp.StatusCode != http.StatusTooManyRequests {
+		return 0, false
+	}
+
+	retryAfter := resp.Header.Get("Retry-After")
+	if retryAfter == "" {
+		return 0, false
+	}
+
+	duration := parseRetryAfterHeader(retryAfter)
+	return duration, duration > 0
 }
 
 func NewRetryHTTPTransport(
@@ -63,16 +105,26 @@ func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, erro
 
 		retries++
 
-		// Wait for the specified backoff period
-		sleepDuration := b.Duration()
+		// Check if we should use Retry-After header for 429 responses
+		var sleepDuration time.Duration
+		if retryAfterDuration, useRetryAfter := shouldUseRetryAfter(resp); useRetryAfter {
+			sleepDuration = retryAfterDuration
+			requestLogger.Debug("Using Retry-After header for 429 response",
+				zap.Int("retry", retries),
+				zap.String("url", req.URL.String()),
+				zap.Duration("retry-after", sleepDuration),
+			)
+		} else {
+			// Use normal backoff for non-429 or 429 without valid Retry-After
+			sleepDuration = b.Duration()
+			requestLogger.Debug("Retrying request",
+				zap.Int("retry", retries),
+				zap.String("url", req.URL.String()),
+				zap.Duration("sleep", sleepDuration),
+			)
+		}
 
-		requestLogger.Debug("Retrying request",
-			zap.Int("retry", retries),
-			zap.String("url", req.URL.String()),
-			zap.Duration("sleep", sleepDuration),
-		)
-
-		// Wait for the specified backoff period
+		// Wait for the specified duration
 		time.Sleep(sleepDuration)
 
 		// drain the previous response before retrying
