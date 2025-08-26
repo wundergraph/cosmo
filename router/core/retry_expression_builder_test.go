@@ -5,6 +5,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"io"
 	"net/http"
+	"reflect"
 	"syscall"
 	"testing"
 
@@ -55,7 +56,10 @@ func TestBuildRetryFunction(t *testing.T) {
 			Expression: "invalid expression ++++++",
 		})
 		assert.NoError(t, err)
-		assert.Nil(t, fn)
+		assert.Equal(t,
+			reflect.ValueOf(noopRetryFunc).Pointer(),
+			reflect.ValueOf(fn).Pointer(),
+		)
 	})
 
 	t.Run("default expression behavior", func(t *testing.T) {
