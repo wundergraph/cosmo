@@ -27,7 +27,7 @@ func TestShutdownGoroutineLeaks(t *testing.T) {
 
 		RouterOptions: []core.Option{
 			core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(config.TrafficShapingRules{
-				Subgraphs: map[string]*config.GlobalSubgraphRequestRule{
+				Subgraphs: map[string]config.GlobalSubgraphRequestRule{
 					"employees": {
 						MaxIdleConns: integration.ToPtr(10),
 					},

@@ -4,6 +4,37 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.246.2](https://github.com/wundergraph/cosmo/compare/router@0.246.1...router@0.246.2) (2025-08-26)
+
+### Bug Fixes
+
+* don't log graceful watcher shutdown as error ([#2168](https://github.com/wundergraph/cosmo/issues/2168)) ([52804d3](https://github.com/wundergraph/cosmo/commit/52804d3749980148dc87ea7fc0ad3f7c6cb2cf42)) (@endigma)
+
+## [0.246.1](https://github.com/wundergraph/cosmo/compare/router@0.246.0...router@0.246.1) (2025-08-24)
+
+### Bug Fixes
+
+* **cli:** fix link in plugin docs and npm workspace issue ([#2164](https://github.com/wundergraph/cosmo/issues/2164)) ([1a6b4f2](https://github.com/wundergraph/cosmo/commit/1a6b4f26063e6d8a642d68b0f96963367a592dfb)) (@StarpTech)
+
+# [0.246.0](https://github.com/wundergraph/cosmo/compare/router@0.245.0...router@0.246.0) (2025-08-21)
+
+### Features
+
+* **mcp:** streamable HTTP support ([#2157](https://github.com/wundergraph/cosmo/issues/2157)) ([adf9d03](https://github.com/wundergraph/cosmo/commit/adf9d039e3661de3a167f4a73644676160fc115b)) (@StarpTech)
+
+# [0.245.0](https://github.com/wundergraph/cosmo/compare/router@0.244.0...router@0.245.0) (2025-08-20)
+
+### Features
+
+* **router:** more intuitive subgraph traffic shaping config inheritance ([#2155](https://github.com/wundergraph/cosmo/issues/2155)) ([c922e10](https://github.com/wundergraph/cosmo/commit/c922e1071d120f773b6143998128c08f8a51aa1a)) (@endigma)
+
+# [0.244.0](https://github.com/wundergraph/cosmo/compare/router@0.243.1...router@0.244.0) (2025-08-19)
+
+### Features
+
+* edfs stream metrics ([#2137](https://github.com/wundergraph/cosmo/issues/2137)) ([49df81f](https://github.com/wundergraph/cosmo/commit/49df81f9cf48366dcfb3393cdf4c8be98f24bbf9)) (@SkArchon)
+* option to redact query param variables in access logs ([#2130](https://github.com/wundergraph/cosmo/issues/2130)) ([49637ab](https://github.com/wundergraph/cosmo/commit/49637abd0af0ea9cdf00d74f97969eba194afff8)) (@SkArchon)
+
 ## [0.243.1](https://github.com/wundergraph/cosmo/compare/router@0.243.0...router@0.243.1) (2025-08-15)
 
 ### Bug Fixes

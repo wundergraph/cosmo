@@ -575,28 +575,6 @@ describe('Create subgraph tests', () => {
         setupBilling: { plan: 'developer@1' },
       });
 
-      const pluginName = genID('plugin');
-      const pluginLabel = genUniqueLabel('env');
-
-      const createPluginSubgraphResp = await client.createFederatedSubgraph({
-        name: pluginName,
-        namespace: DEFAULT_NAMESPACE,
-        type: SubgraphType.GRPC_PLUGIN,
-        labels: [pluginLabel],
-      });
-
-      expect(createPluginSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_LIMIT_REACHED);
-      expect(createPluginSubgraphResp.response?.details).toBe('The organization reached the limit of plugins');
-
-      await server.close();
-    });
-
-    test('Should enforce plugin limit on launch plan (max 3 plugins)', async () => {
-      const { client, server } = await SetupTest({
-        dbname,
-        setupBilling: { plan: 'launch@1' },
-      });
-
       // Create 3 plugins successfully
       for (let i = 1; i <= 3; i++) {
         const pluginName = genID(`plugin-${i}`);
@@ -612,19 +590,56 @@ describe('Create subgraph tests', () => {
         expect(createPluginSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
       }
 
-      // The 4th plugin should fail due to limit
       const fourthPluginName = genID('plugin-4');
       const fourthPluginLabel = genUniqueLabel('team-4');
 
-      const createFourthPluginResp = await client.createFederatedSubgraph({
+      const createFourthPluginResponse = await client.createFederatedSubgraph({
         name: fourthPluginName,
         namespace: DEFAULT_NAMESPACE,
         type: SubgraphType.GRPC_PLUGIN,
         labels: [fourthPluginLabel],
       });
 
-      expect(createFourthPluginResp.response?.code).toBe(EnumStatusCode.ERR_LIMIT_REACHED);
-      expect(createFourthPluginResp.response?.details).toBe('The organization reached the limit of plugins');
+      expect(createFourthPluginResponse.response?.code).toBe(EnumStatusCode.ERR_LIMIT_REACHED);
+      expect(createFourthPluginResponse.response?.details).toBe('The organization reached the limit of plugins');
+
+      await server.close();
+    });
+
+    test('Should enforce plugin limit on launch plan (max 10 plugins)', async () => {
+      const { client, server } = await SetupTest({
+        dbname,
+        setupBilling: { plan: 'launch@1' },
+      });
+
+      // Create 10 plugins successfully
+      for (let i = 1; i <= 10; i++) {
+        const pluginName = genID(`plugin-${i}`);
+        const pluginLabel = genUniqueLabel(`team-${i}`);
+
+        const createPluginSubgraphResp = await client.createFederatedSubgraph({
+          name: pluginName,
+          namespace: DEFAULT_NAMESPACE,
+          type: SubgraphType.GRPC_PLUGIN,
+          labels: [pluginLabel],
+        });
+
+        expect(createPluginSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+      }
+
+      // The 11th plugin should fail due to limit
+      const eleventhPluginName = genID('plugin-11');
+      const eleventhPluginLabel = genUniqueLabel('team-11');
+
+      const createEleventhPluginResp = await client.createFederatedSubgraph({
+        name: eleventhPluginName,
+        namespace: DEFAULT_NAMESPACE,
+        type: SubgraphType.GRPC_PLUGIN,
+        labels: [eleventhPluginLabel],
+      });
+
+      expect(createEleventhPluginResp.response?.code).toBe(EnumStatusCode.ERR_LIMIT_REACHED);
+      expect(createEleventhPluginResp.response?.details).toBe('The organization reached the limit of plugins');
 
       await server.close();
     });
@@ -798,8 +813,8 @@ describe('Create subgraph tests', () => {
         setupBilling: { plan: 'launch@1' },
       });
 
-      // First, create the maximum number of plugins (3 for launch plan)
-      for (let i = 1; i <= 3; i++) {
+      // First, create the maximum number of plugins (10 for launch plan)
+      for (let i = 1; i <= 10; i++) {
         const pluginName = genID(`plugin-${i}`);
         const pluginLabel = genUniqueLabel(`plugin-${i}`);
 

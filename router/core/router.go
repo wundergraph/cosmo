@@ -862,6 +862,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			mcpserver.WithExcludeMutations(r.mcp.ExcludeMutations),
 			mcpserver.WithEnableArbitraryOperations(r.mcp.EnableArbitraryOperations),
 			mcpserver.WithExposeSchema(r.mcp.ExposeSchema),
+			mcpserver.WithStateless(r.mcp.Session.Stateless),
 		}
 
 		// Determine the router GraphQL endpoint
@@ -1200,8 +1201,11 @@ func (r *Router) Start(ctx context.Context) error {
 
 			go func() {
 				if err := w(ctx); err != nil {
-					r.logger.Error("Error watching execution config", zap.Error(err))
-					return
+					if !errors.Is(err, context.Canceled) {
+						ll.Error("Error watching execution config", zap.Error(err))
+					} else {
+						ll.Debug("Watcher context cancelled, shutting down")
+					}
 				}
 			}()
 
@@ -1816,8 +1820,12 @@ func DefaultFileUploadConfig() *config.FileUpload {
 	}
 }
 
-func NewTransportRequestOptions(cfg config.GlobalSubgraphRequestRule) *TransportRequestOptions {
-	defaults := DefaultTransportRequestOptions()
+// NewTransportRequestOptions creates a new TransportRequestOptions instance with the given configuration and defaults.
+// If defaults is nil, it uses the global default values.
+func NewTransportRequestOptions(cfg config.GlobalSubgraphRequestRule, defaults *TransportRequestOptions) *TransportRequestOptions {
+	if defaults == nil {
+		defaults = DefaultTransportRequestOptions()
+	}
 
 	return &TransportRequestOptions{
 		RequestTimeout:         or(cfg.RequestTimeout, defaults.RequestTimeout),
@@ -1850,13 +1858,15 @@ func DefaultTransportRequestOptions() *TransportRequestOptions {
 }
 
 func NewSubgraphTransportOptions(cfg config.TrafficShapingRules) *SubgraphTransportOptions {
+	allRequestOptions := NewTransportRequestOptions(cfg.All, nil)
+
 	base := &SubgraphTransportOptions{
-		TransportRequestOptions: NewTransportRequestOptions(cfg.All),
+		TransportRequestOptions: allRequestOptions,
 		SubgraphMap:             map[string]*TransportRequestOptions{},
 	}
 
 	for k, v := range cfg.Subgraphs {
-		base.SubgraphMap[k] = NewTransportRequestOptions(*v)
+		base.SubgraphMap[k] = NewTransportRequestOptions(v, allRequestOptions)
 	}
 
 	return base
@@ -1872,9 +1882,8 @@ func NewSubgraphCircuitBreakerOptions(cfg config.TrafficShapingRules) *SubgraphC
 	}
 	// Subgraph specific circuit breakers
 	for k, v := range cfg.Subgraphs {
-		if v != nil {
-			entry.SubgraphMap[k] = newCircuitBreakerConfig(v.CircuitBreaker)
-		}
+		entry.SubgraphMap[k] = newCircuitBreakerConfig(v.CircuitBreaker)
+
 	}
 
 	return entry
@@ -2240,6 +2249,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			},
 			Exporters:           openTelemetryExporters,
 			CircuitBreaker:      cfg.Metrics.OTLP.CircuitBreaker,
+			Streams:             cfg.Metrics.OTLP.Streams,
 			ExcludeMetrics:      cfg.Metrics.OTLP.ExcludeMetrics,
 			ExcludeMetricLabels: cfg.Metrics.OTLP.ExcludeMetricLabels,
 		},
@@ -2255,6 +2265,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			CircuitBreaker:      cfg.Metrics.Prometheus.CircuitBreaker,
 			ExcludeMetrics:      cfg.Metrics.Prometheus.ExcludeMetrics,
 			ExcludeMetricLabels: cfg.Metrics.Prometheus.ExcludeMetricLabels,
+			Streams:             cfg.Metrics.Prometheus.Streams,
 			ExcludeScopeInfo:    cfg.Metrics.Prometheus.ExcludeScopeInfo,
 			PromSchemaFieldUsage: rmetric.PrometheusSchemaFieldUsage{
 				Enabled:             cfg.Metrics.Prometheus.SchemaFieldUsage.Enabled,
