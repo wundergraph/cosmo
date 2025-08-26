@@ -832,14 +832,14 @@ func TestVariablesRemapping(t *testing.T) {
 	})
 }
 
-func TestPropagateWhoRequestedFields(t *testing.T) {
+func TestPropagateFieldsRequestedBy(t *testing.T) {
 	t.Parallel()
 
 	// Simple test to verify that the configuration switch works.
 	// Multi subgraphs calls are tested in the engine.
 	testenv.Run(t, &testenv.Config{
 		ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-			cfg.PropagateWhoRequestedFields = true
+			cfg.PropagateFieldsRequestedBy = true
 		},
 		Subgraphs: testenv.SubgraphsConfig{
 			Employees: testenv.SubgraphConfig{
@@ -850,7 +850,7 @@ func TestPropagateWhoRequestedFields(t *testing.T) {
 						require.NoError(t, json.Unmarshal(body, &req))
 
 						require.Equal(t, `query($a: Int!){employee(id: $a){id}}`, req.Query)
-						require.Equal(t, `{"whoRequestedFields":[{"typeName":"Employee","fieldName":"id","requestedByUser":true},{"typeName":"Query","fieldName":"employee","requestedByUser":true}]}`, string(req.Extensions))
+						require.Equal(t, `{"FieldsRequestedBy":[{"typeName":"Employee","fieldName":"id","requestedByUser":true},{"typeName":"Query","fieldName":"employee","requestedByUser":true}]}`, string(req.Extensions))
 
 						w.WriteHeader(http.StatusOK)
 						_, _ = w.Write([]byte(`{"data":{"employee":{"id":1}}}`))
