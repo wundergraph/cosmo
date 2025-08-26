@@ -8706,7 +8706,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					},
 				},
 				RouterOptions: []core.Option{
-					core.WithSubgraphRetryOptions(false, 0, 0, 0),
+					core.WithSubgraphRetryOptions(false, 0, 0, 0, ""),
 				},
 				Subgraphs: testenv.SubgraphsConfig{
 					Products: testenv.SubgraphConfig{

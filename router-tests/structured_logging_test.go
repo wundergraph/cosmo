@@ -709,7 +709,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 					EnableSingleFlight:     true,
 					MaxConcurrentResolvers: 1,
 				}),
-				core.WithSubgraphRetryOptions(false, 0, 0, 0),
+				core.WithSubgraphRetryOptions(false, 0, 0, 0, ""),
 			},
 			LogObservation: testenv.LogObservationConfig{
 				Enabled:  true,
@@ -828,7 +828,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 					EnableSingleFlight:     true,
 					MaxConcurrentResolvers: 1,
 				}),
-				core.WithSubgraphRetryOptions(false, 0, 0, 0),
+				core.WithSubgraphRetryOptions(false, 0, 0, 0, ""),
 			},
 			LogObservation: testenv.LogObservationConfig{
 				Enabled:  true,
@@ -960,7 +960,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 					EnableSingleFlight:     true,
 					MaxConcurrentResolvers: 1,
 				}),
-				core.WithSubgraphRetryOptions(false, 0, 0, 0),
+				core.WithSubgraphRetryOptions(false, 0, 0, 0, ""),
 			},
 			LogObservation: testenv.LogObservationConfig{
 				Enabled:  true,
@@ -1096,7 +1096,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 					EnableSingleFlight:     true,
 					MaxConcurrentResolvers: 1,
 				}),
-				core.WithSubgraphRetryOptions(false, 0, 0, 0),
+				core.WithSubgraphRetryOptions(false, 0, 0, 0, ""),
 			},
 			LogObservation: testenv.LogObservationConfig{
 				Enabled:  true,
@@ -2211,7 +2211,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 						EnableSingleFlight:     true,
 						MaxConcurrentResolvers: 1,
 					}),
-					core.WithSubgraphRetryOptions(false, 0, 0, 0),
+					core.WithSubgraphRetryOptions(false, 0, 0, 0, ""),
 				},
 				LogObservation: testenv.LogObservationConfig{
 					Enabled:  true,
