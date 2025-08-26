@@ -827,6 +827,27 @@ export const schemaChecks = pgTable(
   },
 );
 
+export const linkedSchemaChecks = pgTable(
+  'linked_schema_checks', // lsc
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    schemaCheckId: uuid('schema_check_id')
+      .references(() => schemaChecks.id, {
+        onDelete: 'cascade',
+      })
+      .unique(),
+    linkedSchemaCheckId: uuid('linked_schema_check_id').references(() => schemaChecks.id, {
+      onDelete: 'cascade',
+    }),
+  },
+  (t) => {
+    return {
+      schemaCheckIdIndex: index('lsc_schema_check_id_idx').on(t.schemaCheckId),
+      linkedSchemaCheckIdIndex: index('lsc_linked_schema_check_id_idx').on(t.linkedSchemaCheckId),
+    };
+  },
+);
+
 export const schemaCheckSubgraphs = pgTable(
   'schema_check_subgraphs', // scs
   {

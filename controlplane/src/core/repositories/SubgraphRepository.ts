@@ -1,14 +1,18 @@
 import { PlainMessage } from '@bufbuild/protobuf';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
+  CheckSubgraphSchemaResponse,
   CompositionError,
   CompositionWarning,
   DeploymentError,
+  VCSContext,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, normalizeURL, splitLabel } from '@wundergraph/cosmo-shared';
 import { addDays } from 'date-fns';
 import { and, asc, count, desc, eq, getTableName, gt, inArray, like, lt, notInArray, or, SQL, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
+import { GraphQLSchema } from 'graphql';
 import { DBSubgraphType, WebsocketSubprotocol } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
@@ -30,23 +34,43 @@ import {
   FederatedGraphDTO,
   GetChecksResponse,
   Label,
+  NamespaceDTO,
   ProtoSubgraph,
   SchemaCheckDetailsDTO,
   SchemaCheckSummaryDTO,
   SchemaGraphPruningDTO,
+  SchemaGraphPruningIssues,
+  SchemaLintIssues,
   SubgraphDTO,
   SubgraphListFilterOptions,
   SubgraphMemberDTO,
 } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
-import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
-import { getFederatedGraphRouterCompatibilityVersion, hasLabelsChanged, normalizeLabels } from '../util.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
+import { CheckSubgraph, Composer } from '../composition/composer.js';
+import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
 import { RBACEvaluator } from '../services/RBACEvaluator.js';
+import {
+  collectOperationUsageStats,
+  InspectorOperationResult,
+  InspectorSchemaChange,
+  SchemaUsageTrafficInspector,
+} from '../services/SchemaUsageTrafficInspector.js';
+import {
+  getFederatedGraphRouterCompatibilityVersion,
+  hasLabelsChanged,
+  newCompositionOptions,
+  normalizeLabels,
+} from '../util.js';
+import { ContractRepository } from './ContractRepository.js';
 import { FeatureFlagRepository } from './FeatureFlagRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
-import { TargetRepository } from './TargetRepository.js';
+import { GraphCompositionRepository } from './GraphCompositionRepository.js';
+import { ProposalRepository } from './ProposalRepository.js';
 import { SchemaCheckRepository } from './SchemaCheckRepository.js';
+import { SchemaGraphPruningRepository } from './SchemaGraphPruningRepository.js';
+import { SchemaLintRepository } from './SchemaLintRepository.js';
+import { TargetRepository } from './TargetRepository.js';
 
 type SubscriptionProtocol = 'ws' | 'sse' | 'sse_post';
 
@@ -1744,5 +1768,359 @@ export class SubgraphRepository {
     }
 
     return linkedSubgraph[0];
+  }
+
+  public async performSchemaCheck({
+    organizationSlug,
+    namespace,
+    subgraphName,
+    newSchemaSDL,
+    subgraph,
+    federatedGraphs,
+    skipTrafficCheck,
+    vcsContext,
+    isSubgraphLinked,
+    isDeleted,
+    labels,
+    isTargetCheck,
+    limit,
+    chClient,
+    newGraphQLSchema,
+    disableResolvabilityValidation,
+  }: {
+    organizationSlug: string;
+    namespace: NamespaceDTO;
+    subgraphName: string;
+    newSchemaSDL: string;
+    subgraph?: SubgraphDTO;
+    federatedGraphs: FederatedGraphDTO[];
+    skipTrafficCheck?: boolean;
+    vcsContext?: VCSContext;
+    isSubgraphLinked: boolean;
+    isDeleted: boolean;
+    labels?: Label[];
+    // If true, it means the check is being performed for a target subgraph
+    isTargetCheck: boolean;
+    limit: number;
+    chClient?: ClickHouseClient;
+    newGraphQLSchema?: GraphQLSchema;
+    disableResolvabilityValidation?: boolean;
+  }): Promise<PlainMessage<CheckSubgraphSchemaResponse> & { hasClientTraffic: boolean }> {
+    const schemaCheckRepo = new SchemaCheckRepository(this.db);
+    const proposalRepo = new ProposalRepository(this.db);
+    const fedGraphRepo = new FederatedGraphRepository(this.logger, this.db, this.organizationId);
+    const subgraphRepo = new SubgraphRepository(this.logger, this.db, this.organizationId);
+    const schemaLintRepo = new SchemaLintRepository(this.db);
+    const schemaGraphPruningRepo = new SchemaGraphPruningRepository(this.db);
+    const contractRepo = new ContractRepository(this.logger, this.db, this.organizationId);
+    const graphCompostionRepo = new GraphCompositionRepository(this.logger, this.db);
+
+    const routerCompatibilityVersion = getFederatedGraphRouterCompatibilityVersion(federatedGraphs);
+
+    const schemaCheckID = await schemaCheckRepo.create({
+      proposedSubgraphSchemaSDL: '',
+      trafficCheckSkipped: skipTrafficCheck,
+      lintSkipped: !namespace.enableLinting,
+      graphPruningSkipped: !namespace.enableGraphPruning,
+      vcsContext,
+      isSubgraphLinked,
+    });
+
+    const schemaCheckSubgraphId = await schemaCheckRepo.createSchemaCheckSubgraph({
+      data: {
+        schemaCheckId: schemaCheckID,
+        subgraphId: subgraph?.id,
+        subgraphName,
+        proposedSubgraphSchemaSDL: newSchemaSDL,
+        isDeleted,
+        isNew: !subgraph,
+        namespaceId: namespace.id,
+        labels: subgraph ? undefined : labels,
+      },
+    });
+
+    for (const graph of federatedGraphs) {
+      const checkFederatedGraphId = await schemaCheckRepo.createCheckedFederatedGraph(schemaCheckID, graph.id, limit);
+      await schemaCheckRepo.createSchemaCheckSubgraphFederatedGraphs({
+        schemaCheckFederatedGraphId: checkFederatedGraphId,
+        checkSubgraphIds: [schemaCheckSubgraphId],
+      });
+    }
+
+    let proposalMatchMessage: string | undefined;
+    if (namespace.enableProposals && !isTargetCheck) {
+      const proposalConfig = await proposalRepo.getProposalConfig({ namespaceId: namespace.id });
+      if (proposalConfig) {
+        const match = await proposalRepo.matchSchemaWithProposal({
+          subgraphName,
+          namespaceId: namespace.id,
+          schemaSDL: newSchemaSDL,
+          routerCompatibilityVersion,
+          schemaCheckId: schemaCheckID,
+          isDeleted,
+        });
+
+        await schemaCheckRepo.update({
+          schemaCheckID,
+          proposalMatch: match ? 'success' : proposalConfig.checkSeverityLevel === 'warn' ? 'warn' : 'error',
+        });
+        if (!match) {
+          const message = isDeleted
+            ? `The subgraph ${subgraphName} is not proposed to be deleted in any of the approved proposals.`
+            : `The subgraph ${subgraphName}'s schema does not match to this subgraph's schema in any approved proposal.`;
+          if (proposalConfig.checkSeverityLevel === 'warn') {
+            proposalMatchMessage = message;
+          } else {
+            await schemaCheckRepo.update({
+              schemaCheckID,
+              compositionSkipped: true,
+              breakingChangesSkipped: true,
+              trafficCheckSkipped: true,
+              graphPruningSkipped: true,
+              lintSkipped: true,
+            });
+
+            return {
+              response: {
+                code: EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL,
+                details: message,
+              },
+              breakingChanges: [],
+              nonBreakingChanges: [],
+              compositionErrors: [],
+              checkId: '',
+              checkedFederatedGraphs: [],
+              lintWarnings: [],
+              lintErrors: [],
+              graphPruneWarnings: [],
+              graphPruneErrors: [],
+              compositionWarnings: [],
+              proposalMatchMessage: message,
+              hasClientTraffic: false,
+            };
+          }
+        }
+      }
+    }
+
+    const schemaChanges = await getDiffBetweenGraphs(
+      subgraph?.schemaSDL || '',
+      newSchemaSDL,
+      routerCompatibilityVersion,
+    );
+    if (schemaChanges.kind === 'failure') {
+      this.logger.warn(`Error finding diff between graphs: ${schemaChanges.error}`);
+      await schemaCheckRepo.update({
+        schemaCheckID,
+        compositionSkipped: true,
+        breakingChangesSkipped: true,
+        trafficCheckSkipped: true,
+        graphPruningSkipped: true,
+        lintSkipped: true,
+        errorMessage: `Breaking change detection failed for the subgraph '${subgraphName}'`,
+      });
+      return {
+        response: {
+          code: schemaChanges.errorCode,
+          details: schemaChanges.errorMessage,
+        },
+        breakingChanges: [],
+        nonBreakingChanges: [],
+        compositionErrors: [],
+        checkId: schemaCheckID,
+        checkedFederatedGraphs: [],
+        lintWarnings: [],
+        lintErrors: [],
+        graphPruneWarnings: [],
+        graphPruneErrors: [],
+        compositionWarnings: [],
+        proposalMatchMessage,
+        hasClientTraffic: false,
+      };
+    }
+
+    const hasBreakingChanges = schemaChanges.breakingChanges.length > 0;
+
+    await schemaCheckRepo.createSchemaCheckChanges({
+      changes: schemaChanges.nonBreakingChanges,
+      schemaCheckID,
+      schemaCheckSubgraphId,
+    });
+
+    const storedBreakingChanges = await schemaCheckRepo.createSchemaCheckChanges({
+      changes: schemaChanges.breakingChanges,
+      schemaCheckID,
+      schemaCheckSubgraphId,
+    });
+
+    const composer = new Composer(
+      this.logger,
+      this.db,
+      fedGraphRepo,
+      subgraphRepo,
+      contractRepo,
+      graphCompostionRepo,
+      chClient,
+    );
+
+    const checkSubgraphs = new Map<string, CheckSubgraph>();
+    checkSubgraphs.set(subgraphName, {
+      subgraph,
+      checkSubgraphId: schemaCheckSubgraphId,
+      newSchemaSDL,
+      newGraphQLSchema,
+      schemaChanges,
+      storedBreakingChanges,
+      inspectorChanges: [],
+      routerCompatibilityVersion,
+      labels: subgraph ? undefined : labels,
+    });
+
+    const { composedGraphs } = await composer.composeWithProposedSchemas({
+      compositionOptions: newCompositionOptions(disableResolvabilityValidation),
+      graphs: federatedGraphs,
+      inputSubgraphs: checkSubgraphs,
+    });
+
+    await schemaCheckRepo.createSchemaCheckCompositions({
+      schemaCheckID,
+      compositions: composedGraphs,
+    });
+
+    let hasClientTraffic = false;
+
+    const trafficInspector = new SchemaUsageTrafficInspector(chClient!);
+    const inspectedOperations: InspectorOperationResult[] = [];
+    const compositionErrors: PlainMessage<CompositionError>[] = [];
+    const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
+
+    let inspectorChanges: InspectorSchemaChange[] = [];
+
+    // For operations checks we only consider breaking changes
+    inspectorChanges = trafficInspector.schemaChangesToInspectorChanges(
+      schemaChanges.breakingChanges,
+      storedBreakingChanges,
+    );
+
+    for (const composedGraph of composedGraphs) {
+      for (const error of composedGraph.errors) {
+        compositionErrors.push({
+          message: error.message,
+          federatedGraphName: composedGraph.name,
+          namespace: composedGraph.namespace,
+          featureFlag: '',
+        });
+      }
+
+      for (const warning of composedGraph.warnings) {
+        compositionWarnings.push({
+          message: warning.message,
+          federatedGraphName: composedGraph.name,
+          namespace: composedGraph.namespace,
+          featureFlag: '',
+        });
+      }
+
+      /*
+          We don't collect operation usage when
+          1. we have composition errors
+          2. when we don't have any inspectable changes.
+          3. When user wants to skip the traffic check altogether
+          That means any breaking change is really breaking
+          */
+      if (composedGraph.errors.length > 0 || inspectorChanges.length === 0 || skipTrafficCheck || !subgraph) {
+        continue;
+      }
+
+      const result = await trafficInspector.inspect(inspectorChanges, {
+        daysToConsider: limit,
+        federatedGraphId: composedGraph.id,
+        organizationId: this.organizationId,
+        subgraphId: subgraph.id,
+      });
+
+      if (result.size === 0) {
+        continue;
+      }
+
+      const overrideCheck = await schemaCheckRepo.checkClientTrafficAgainstOverrides({
+        changes: storedBreakingChanges,
+        inspectorResultsByChangeId: result,
+        namespaceId: namespace.id,
+      });
+
+      hasClientTraffic = overrideCheck.hasUnsafeClientTraffic;
+
+      // Store operation usage
+      await schemaCheckRepo.createOperationUsage(overrideCheck.result, composedGraph.id);
+
+      // Collect all inspected operations for later aggregation
+      for (const resultElement of overrideCheck.result.values()) {
+        inspectedOperations.push(...resultElement);
+      }
+    }
+
+    const lintIssues: SchemaLintIssues = await schemaLintRepo.performSchemaLintCheck({
+      schemaCheckID,
+      newSchemaSDL,
+      namespaceId: namespace.id,
+      isLintingEnabled: namespace.enableLinting,
+      schemaCheckSubgraphId,
+    });
+
+    let graphPruningIssues: SchemaGraphPruningIssues = {
+      warnings: [],
+      errors: [],
+    };
+
+    if (subgraph) {
+      graphPruningIssues = await schemaGraphPruningRepo.performSchemaGraphPruningCheck({
+        newGraphQLSchema,
+        schemaCheckID,
+        subgraph,
+        namespaceID: namespace.id,
+        organizationID: this.organizationId,
+        isGraphPruningEnabled: namespace.enableGraphPruning,
+        schemaChanges,
+        chClient,
+        fedGraphRepo,
+        subgraphRepo,
+        rangeInDays: limit,
+        schemaCheckSubgraphId,
+      });
+    }
+
+    // Update the overall schema check with the results
+    await schemaCheckRepo.update({
+      schemaCheckID,
+      hasClientTraffic,
+      hasBreakingChanges,
+      hasLintErrors: lintIssues.errors.length > 0,
+      hasGraphPruningErrors: graphPruningIssues.errors.length > 0,
+    });
+
+    return {
+      response: {
+        code: EnumStatusCode.OK,
+      },
+      checkId: schemaCheckID,
+      breakingChanges: schemaChanges.breakingChanges,
+      nonBreakingChanges: schemaChanges.nonBreakingChanges,
+      operationUsageStats: collectOperationUsageStats(inspectedOperations),
+      compositionErrors,
+      checkedFederatedGraphs: composedGraphs.map((c) => ({
+        id: c.id,
+        name: c.name,
+        namespace: c.namespace,
+        organizationSlug,
+      })),
+      lintWarnings: lintIssues.warnings,
+      lintErrors: lintIssues.errors,
+      graphPruneWarnings: graphPruningIssues.warnings,
+      graphPruneErrors: graphPruningIssues.errors,
+      compositionWarnings,
+      proposalMatchMessage,
+      hasClientTraffic,
+    };
   }
 }
