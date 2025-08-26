@@ -39,7 +39,7 @@ export function linkSubgraph(
       return {
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
-          details: `The sourcenamespace "${req.sourceSubgraphNamespace}" was not found.`,
+          details: `The source namespace "${req.sourceSubgraphNamespace}" was not found.`,
         },
       };
     }
