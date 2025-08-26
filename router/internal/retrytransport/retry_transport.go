@@ -23,8 +23,7 @@ type RetryOptions struct {
 	ShouldRetry   ShouldRetryFunc
 
 	// Test specific only
-	OnRetry           OnRetryFunc
-	RoundTripOverride http.RoundTripper
+	OnRetry OnRetryFunc
 }
 
 type requestLoggerGetter func(req *http.Request) *zap.Logger
@@ -138,6 +137,7 @@ func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, erro
 			)
 		}
 
+		// Test Specific
 		if rt.RetryOptions.OnRetry != nil {
 			rt.RetryOptions.OnRetry(retries, req, resp, sleepDuration, err)
 		}

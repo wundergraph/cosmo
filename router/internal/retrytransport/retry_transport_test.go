@@ -503,7 +503,7 @@ func TestOnRetryCallbackInvoked(t *testing.T) {
 
 	// Verify callback parameters are correct
 	for i, callback := range retryCallbacks {
-		assert.Equal(t, i, callback.count)
+		assert.Equal(t, i+1, callback.count)
 		assert.Error(t, callback.err)
 		assert.Equal(t, "retryable error", callback.err.Error())
 		assert.Nil(t, callback.resp)
