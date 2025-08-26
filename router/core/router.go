@@ -1749,7 +1749,14 @@ func WithSubgraphCircuitBreakerOptions(opts *SubgraphCircuitBreakerOptions) Opti
 	}
 }
 
-func WithSubgraphRetryOptions(enabled bool, maxRetryCount int, retryMaxDuration, retryInterval time.Duration, expression string) Option {
+func WithSubgraphRetryOptions(
+	enabled bool,
+	maxRetryCount int,
+	retryMaxDuration, retryInterval time.Duration,
+	expression string,
+	onRetryFunc retrytransport.OnRetryFunc,
+	roundTripOverride http.RoundTripper,
+) Option {
 	return func(r *Router) {
 		r.retryOptions = retrytransport.RetryOptions{
 			Enabled:       enabled,
@@ -1757,6 +1764,10 @@ func WithSubgraphRetryOptions(enabled bool, maxRetryCount int, retryMaxDuration,
 			MaxDuration:   retryMaxDuration,
 			Interval:      retryInterval,
 			Expression:    expression,
+
+			// Test case overrides
+			OnRetry:           onRetryFunc,
+			RoundTripOverride: roundTripOverride,
 		}
 	}
 }

@@ -1157,11 +1157,12 @@ func (s *graphServer) buildGraphMux(
 	}
 
 	// Build retry options and handle any expression compilation errors
-	shouldRetryFunc, err := BuildRetryFunction(s.retryOptions.Expression)
+	shouldRetryFunc, err := BuildRetryFunction(s.retryOptions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build retry function: %w", err)
 	}
 
+	// Create copy to not mutate the original reference
 	retryOptions := retrytransport.RetryOptions{
 		Enabled:       s.retryOptions.Enabled,
 		MaxRetryCount: s.retryOptions.MaxRetryCount,
@@ -1169,6 +1170,9 @@ func (s *graphServer) buildGraphMux(
 		Interval:      s.retryOptions.Interval,
 		Expression:    s.retryOptions.Expression,
 		ShouldRetry:   shouldRetryFunc,
+
+		OnRetry:           s.retryOptions.OnRetry,
+		RoundTripOverride: s.retryOptions.RoundTripOverride,
 	}
 
 	ecb := &ExecutorConfigurationBuilder{

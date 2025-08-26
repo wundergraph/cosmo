@@ -12,6 +12,7 @@ import (
 )
 
 type ShouldRetryFunc func(err error, req *http.Request, resp *http.Response) bool
+type OnRetryFunc func(count int, req *http.Request, resp *http.Response, err error)
 
 type RetryOptions struct {
 	Enabled       bool
@@ -19,8 +20,11 @@ type RetryOptions struct {
 	Interval      time.Duration
 	MaxDuration   time.Duration
 	Expression    string
-	OnRetry       func(count int, req *http.Request, resp *http.Response, err error)
 	ShouldRetry   ShouldRetryFunc
+
+	// Test specific only
+	OnRetry           OnRetryFunc
+	RoundTripOverride http.RoundTripper
 }
 
 type requestLoggerGetter func(req *http.Request) *zap.Logger
@@ -77,6 +81,10 @@ func NewRetryHTTPTransport(
 	retryOptions RetryOptions,
 	getRequestLogger requestLoggerGetter,
 ) *RetryHTTPTransport {
+	if retryOptions.RoundTripOverride != nil {
+		roundTripper = retryOptions.RoundTripOverride
+	}
+
 	return &RetryHTTPTransport{
 		RoundTripper:     roundTripper,
 		RetryOptions:     retryOptions,

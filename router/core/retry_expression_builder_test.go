@@ -2,6 +2,7 @@ package core
 
 import (
 	"errors"
+	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"net/http"
 	"syscall"
 	"testing"
@@ -47,10 +48,21 @@ func createRequestWithContext(opType string) (*http.Request, *requestContext) {
 }
 
 func TestBuildRetryFunction(t *testing.T) {
+	t.Run("build function when retry is disabled", func(t *testing.T) {
+		fn, err := BuildRetryFunction(retrytransport.RetryOptions{
+			Enabled:    false,
+			Expression: "invalid expression ++++++",
+		})
+		assert.NoError(t, err)
+		assert.Nil(t, fn)
+	})
 
 	t.Run("default expression behavior", func(t *testing.T) {
 		// Use the default expression that would be in the config
-		fn, err := BuildRetryFunction(DefaultRetryExpression)
+		fn, err := BuildRetryFunction(retrytransport.RetryOptions{
+			Enabled:    true,
+			Expression: DefaultRetryExpression,
+		})
 		assert.NoError(t, err)
 		assert.NotNil(t, fn)
 
@@ -74,7 +86,10 @@ func TestBuildRetryFunction(t *testing.T) {
 
 	t.Run("expression-based retry", func(t *testing.T) {
 		expression := "statusCode == 500 || statusCode == 503"
-		fn, err := BuildRetryFunction(expression)
+		fn, err := BuildRetryFunction(retrytransport.RetryOptions{
+			Enabled:    true,
+			Expression: expression,
+		})
 		assert.NoError(t, err)
 		assert.NotNil(t, fn)
 
@@ -96,7 +111,10 @@ func TestBuildRetryFunction(t *testing.T) {
 
 	t.Run("expression with error conditions", func(t *testing.T) {
 		expression := "IsTimeout() || statusCode == 503"
-		fn, err := BuildRetryFunction(expression)
+		fn, err := BuildRetryFunction(retrytransport.RetryOptions{
+			Enabled:    true,
+			Expression: expression,
+		})
 		assert.NoError(t, err)
 		assert.NotNil(t, fn)
 
@@ -118,14 +136,20 @@ func TestBuildRetryFunction(t *testing.T) {
 
 	t.Run("invalid expression returns error", func(t *testing.T) {
 		expression := "invalid syntax +++"
-		fn, err := BuildRetryFunction(expression)
+		fn, err := BuildRetryFunction(retrytransport.RetryOptions{
+			Enabled:    true,
+			Expression: expression,
+		})
 		assert.Error(t, err)
 		assert.Nil(t, fn)
 		assert.Contains(t, err.Error(), "failed to compile retry expression")
 	})
 
 	t.Run("empty expression uses default", func(t *testing.T) {
-		fn, err := BuildRetryFunction("")
+		fn, err := BuildRetryFunction(retrytransport.RetryOptions{
+			Enabled:    true,
+			Expression: "",
+		})
 		assert.NoError(t, err)
 		assert.NotNil(t, fn)
 
@@ -151,7 +175,10 @@ func TestBuildRetryFunction(t *testing.T) {
 
 	t.Run("expression that always returns true", func(t *testing.T) {
 		expression := "true" // Always retry
-		fn, err := BuildRetryFunction(expression)
+		fn, err := BuildRetryFunction(retrytransport.RetryOptions{
+			Enabled:    true,
+			Expression: expression,
+		})
 		assert.NoError(t, err)
 		assert.NotNil(t, fn)
 
@@ -169,7 +196,10 @@ func TestBuildRetryFunction(t *testing.T) {
 
 	t.Run("complex expression", func(t *testing.T) {
 		expression := "(statusCode >= 500 && statusCode < 600) || IsConnectionError()"
-		fn, err := BuildRetryFunction(expression)
+		fn, err := BuildRetryFunction(retrytransport.RetryOptions{
+			Enabled:    true,
+			Expression: expression,
+		})
 		assert.NoError(t, err)
 		assert.NotNil(t, fn)
 
@@ -193,7 +223,10 @@ func TestBuildRetryFunction(t *testing.T) {
 	t.Run("mutation never retries with proper context", func(t *testing.T) {
 		// Use expression that would normally retry on 500 errors
 		expression := "statusCode >= 500 || IsTimeout() || IsConnectionError()"
-		fn, err := BuildRetryFunction(expression)
+		fn, err := BuildRetryFunction(retrytransport.RetryOptions{
+			Enabled:    true,
+			Expression: expression,
+		})
 		assert.NoError(t, err)
 		assert.NotNil(t, fn)
 
@@ -211,14 +244,20 @@ func TestBuildRetryFunction(t *testing.T) {
 		assert.False(t, fn(errors.New("connection refused"), req, nil))
 
 		// Test with expression that always returns true - should still NOT retry
-		alwaysRetryFn, err := BuildRetryFunction("true")
+		alwaysRetryFn, err := BuildRetryFunction(retrytransport.RetryOptions{
+			Enabled:    true,
+			Expression: "true",
+		})
 		assert.NoError(t, err)
 		assert.False(t, alwaysRetryFn(nil, req, resp))
 	})
 
 	t.Run("query retries with proper context", func(t *testing.T) {
 		expression := "statusCode >= 500 || IsTimeout()"
-		fn, err := BuildRetryFunction(expression)
+		fn, err := BuildRetryFunction(retrytransport.RetryOptions{
+			Enabled:    true,
+			Expression: expression,
+		})
 		assert.NoError(t, err)
 		assert.NotNil(t, fn)
 
@@ -239,7 +278,10 @@ func TestBuildRetryFunction(t *testing.T) {
 
 	t.Run("subscription retries with proper context", func(t *testing.T) {
 		expression := "statusCode >= 500"
-		fn, err := BuildRetryFunction(expression)
+		fn, err := BuildRetryFunction(retrytransport.RetryOptions{
+			Enabled:    true,
+			Expression: expression,
+		})
 		assert.NoError(t, err)
 		assert.NotNil(t, fn)
 
@@ -258,7 +300,10 @@ func TestBuildRetryFunction(t *testing.T) {
 	t.Run("error logging with proper context", func(t *testing.T) {
 		// Test that error logging works with proper request context
 		expression := "statusCode >= 500"
-		fn, err := BuildRetryFunction(expression)
+		fn, err := BuildRetryFunction(retrytransport.RetryOptions{
+			Enabled:    true,
+			Expression: expression,
+		})
 		assert.NoError(t, err)
 		assert.NotNil(t, fn)
 
@@ -275,7 +320,10 @@ func TestBuildRetryFunction(t *testing.T) {
 
 	t.Run("request context with query operation", func(t *testing.T) {
 		expression := "statusCode >= 500"
-		fn, err := BuildRetryFunction(expression)
+		fn, err := BuildRetryFunction(retrytransport.RetryOptions{
+			Enabled:    true,
+			Expression: expression,
+		})
 		assert.NoError(t, err)
 		assert.NotNil(t, fn)
 
@@ -293,7 +341,10 @@ func TestBuildRetryFunction(t *testing.T) {
 	t.Run("complex expression with mutation context", func(t *testing.T) {
 		// Complex expression that would normally retry in many cases
 		expression := "(statusCode >= 500 && statusCode < 600) || IsConnectionError() || IsTimeout() || statusCode == 429"
-		fn, err := BuildRetryFunction(expression)
+		fn, err := BuildRetryFunction(retrytransport.RetryOptions{
+			Enabled:    true,
+			Expression: expression,
+		})
 		assert.NoError(t, err)
 		assert.NotNil(t, fn)
 
@@ -317,7 +368,10 @@ func TestBuildRetryFunction(t *testing.T) {
 	t.Run("new operation with comprehensive retry conditions", func(t *testing.T) {
 		// Create a new comprehensive operation to test all retry scenarios
 		expression := "statusCode >= 500 || statusCode == 429 || IsTimeout() || IsConnectionError()"
-		fn, err := BuildRetryFunction(expression)
+		fn, err := BuildRetryFunction(retrytransport.RetryOptions{
+			Enabled:    true,
+			Expression: expression,
+		})
 		assert.NoError(t, err)
 		assert.NotNil(t, fn)
 

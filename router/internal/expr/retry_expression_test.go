@@ -70,6 +70,13 @@ func TestRetryExpressionManager(t *testing.T) {
 			expected:   true,
 		},
 		{
+			name:       "IsTimeout helper function wrapped",
+			expression: "IsTimeout()",
+			ctx: LoadRetryContext(
+				fmt.Errorf("wrapped error: %w", &mockTimeoutError{msg: "net timeout", timeout: true}), nil),
+			expected: true,
+		},
+		{
 			name:       "complex expression with helpers",
 			expression: "statusCode == 500 || IsTimeout()",
 			ctx:        LoadRetryContext(&mockTimeoutError{msg: "net timeout", timeout: true}, &http.Response{StatusCode: 200}),

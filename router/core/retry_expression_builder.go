@@ -12,8 +12,15 @@ import (
 const DefaultRetryExpression = "IsRetryableStatusCode() || IsConnectionError() || IsTimeout()"
 
 // BuildRetryFunction creates a ShouldRetry function based on the provided expression
-func BuildRetryFunction(expression string) (retrytransport.ShouldRetryFunc, error) {
+func BuildRetryFunction(retryOpts retrytransport.RetryOptions) (retrytransport.ShouldRetryFunc, error) {
+	// We do not need to build a retry function if retries are disabled
+	// This means that any bad expressions are ignored if retries are disabled
+	if !retryOpts.Enabled {
+		return nil, nil
+	}
+
 	// Use default expression if empty string is passed
+	expression := retryOpts.Expression
 	if expression == "" {
 		expression = DefaultRetryExpression
 	}
