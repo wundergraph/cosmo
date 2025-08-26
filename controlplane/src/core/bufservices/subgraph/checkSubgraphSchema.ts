@@ -267,7 +267,7 @@ export function checkSubgraphSchema(
       skipTrafficCheck: req.skipTrafficCheck,
       vcsContext: req.vcsContext,
       isDeleted: !!req.delete,
-      labels: subgraph?.labels,
+      labels: req.labels,
       isTargetCheck: false,
       limit,
       chClient: opts.chClient,
