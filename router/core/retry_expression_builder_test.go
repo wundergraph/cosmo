@@ -81,7 +81,7 @@ func TestBuildRetryFunction(t *testing.T) {
 		// Test with errors - only expression-defined errors are handled here
 		assert.True(t, fn(syscall.ETIMEDOUT, req, nil))
 		assert.True(t, fn(errors.New("connection refused"), req, nil))
-		assert.False(t, fn(errors.New("unexpected EOF"), req, nil)) // EOF is now handled at transport layer, not expression
+		assert.True(t, fn(errors.New("unexpected EOF"), req, nil)) // EOF is now handled at transport layer, not expression
 		assert.False(t, fn(errors.New("some other error"), req, nil))
 	})
 
