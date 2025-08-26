@@ -10,7 +10,7 @@ go 1.24.1
 
 require (
   github.com/stretchr/testify v1.10.0
-  github.com/wundergraph/cosmo/router-plugin v0.0.0-20250519204649-84818397f974 // v0.1.0
+  github.com/wundergraph/cosmo/router-plugin v0.0.0-20250824152218-8eebc34c4995 // v0.4.1
   google.golang.org/grpc v1.68.1
   google.golang.org/protobuf v1.36.5
 )
@@ -55,7 +55,7 @@ func main() {
     s.RegisterService(&service.{serviceName}_ServiceDesc, &{serviceName}{
       nextID: 1,
     })
-  })
+  }, routerplugin.WithTracing())
 
   if err != nil {
     log.Fatalf("failed to create router plugin: %v", err)
