@@ -1,10 +1,10 @@
 package retrytransport
 
 import (
+	"errors"
 	"io"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/cloudflare/backoff"
@@ -12,7 +12,7 @@ import (
 )
 
 type ShouldRetryFunc func(err error, req *http.Request, resp *http.Response) bool
-type OnRetryFunc func(count int, req *http.Request, resp *http.Response, err error)
+type OnRetryFunc func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error)
 
 type RetryOptions struct {
 	Enabled       bool
@@ -38,31 +38,41 @@ type RetryHTTPTransport struct {
 // parseRetryAfterHeader parses the Retry-After header value according to RFC 7231.
 // It supports both delay-seconds and HTTP-date formats.
 // Returns the duration to wait before retrying, or 0 if parsing fails.
-func parseRetryAfterHeader(retryAfter string) time.Duration {
+func parseRetryAfterHeader(logger *zap.Logger, retryAfter string) time.Duration {
 	if retryAfter == "" {
 		return 0
 	}
 
-	// Try parsing as delay-seconds (integer)
-	if seconds, err := strconv.Atoi(retryAfter); err == nil && seconds >= 0 {
-		return time.Duration(seconds) * time.Second
+	var errJoin error
+
+	seconds, err := strconv.Atoi(retryAfter)
+	if err != nil {
+		errJoin = errors.Join(errJoin, err)
+	} else {
+		if seconds >= 0 {
+			return time.Duration(seconds) * time.Second
+		}
 	}
 
-	// Try parsing as HTTP-date
-	if t, err := http.ParseTime(retryAfter); err == nil {
-		duration := time.Until(t)
-		// Only return positive durations
-		if duration > 0 {
+	t, err := http.ParseTime(retryAfter)
+	if err != nil {
+		errJoin = errors.Join(errJoin, err)
+	} else {
+		if duration := time.Until(t); duration > 0 {
 			return duration
 		}
 	}
 
-	// If parsing fails, return 0 to fall back to normal backoff
+	// Collect and print the error in case of a malformed header
+	if errJoin != nil {
+		logger.Error("Failed to parse Retry-After header", zap.String("retry-after", retryAfter), zap.Error(errJoin))
+	}
+
 	return 0
 }
 
 // shouldUseRetryAfter determines if we should use Retry-After header for 429 responses
-func shouldUseRetryAfter(resp *http.Response) (time.Duration, bool) {
+func shouldUseRetryAfter(logger *zap.Logger, resp *http.Response, maxDuration time.Duration) (time.Duration, bool) {
 	if resp == nil || resp.StatusCode != http.StatusTooManyRequests {
 		return 0, false
 	}
@@ -72,7 +82,11 @@ func shouldUseRetryAfter(resp *http.Response) (time.Duration, bool) {
 		return 0, false
 	}
 
-	duration := parseRetryAfterHeader(retryAfter)
+	duration := parseRetryAfterHeader(logger, retryAfter)
+	if duration > maxDuration {
+		duration = maxDuration
+	}
+
 	return duration, duration > 0
 }
 
@@ -81,10 +95,6 @@ func NewRetryHTTPTransport(
 	retryOptions RetryOptions,
 	getRequestLogger requestLoggerGetter,
 ) *RetryHTTPTransport {
-	if retryOptions.RoundTripOverride != nil {
-		roundTripper = retryOptions.RoundTripOverride
-	}
-
 	return &RetryHTTPTransport{
 		RoundTripper:     roundTripper,
 		RetryOptions:     retryOptions,
@@ -106,16 +116,12 @@ func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, erro
 
 	// Retry logic
 	retries := 0
-	for (isDefaultRetryableError(err) || rt.RetryOptions.ShouldRetry(err, req, resp)) && retries < rt.RetryOptions.MaxRetryCount {
-		if rt.RetryOptions.OnRetry != nil {
-			rt.RetryOptions.OnRetry(retries, req, resp, err)
-		}
-
+	for (rt.RetryOptions.ShouldRetry(err, req, resp)) && retries < rt.RetryOptions.MaxRetryCount {
 		retries++
 
 		// Check if we should use Retry-After header for 429 responses
 		var sleepDuration time.Duration
-		if retryAfterDuration, useRetryAfter := shouldUseRetryAfter(resp); useRetryAfter {
+		if retryAfterDuration, useRetryAfter := shouldUseRetryAfter(requestLogger, resp, rt.RetryOptions.MaxDuration); useRetryAfter {
 			sleepDuration = retryAfterDuration
 			requestLogger.Debug("Using Retry-After header for 429 response",
 				zap.Int("retry", retries),
@@ -130,6 +136,10 @@ func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, erro
 				zap.String("url", req.URL.String()),
 				zap.Duration("sleep", sleepDuration),
 			)
+		}
+
+		if rt.RetryOptions.OnRetry != nil {
+			rt.RetryOptions.OnRetry(retries, req, resp, sleepDuration, err)
 		}
 
 		// Wait for the specified duration
@@ -175,16 +185,4 @@ func isResponseOK(resp *http.Response) bool {
 	// Ensure we don't wait for no reason when subgraphs don't behave
 	// spec-compliant and returns a different status code than 200.
 	return resp.StatusCode >= 200 && resp.StatusCode < 300
-}
-
-// isDefaultRetryableError checks for errors that should always be retryable
-// regardless of the configured retry expression
-func isDefaultRetryableError(err error) bool {
-	if err == nil {
-		return false
-	}
-
-	errStr := strings.ToLower(err.Error())
-	// EOF errors are always retryable as they indicate connection issues
-	return strings.Contains(errStr, "unexpected eof")
 }

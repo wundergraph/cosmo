@@ -3,6 +3,7 @@ package core
 import (
 	"errors"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
+	"io"
 	"net/http"
 	"syscall"
 	"testing"
@@ -171,6 +172,21 @@ func TestBuildRetryFunction(t *testing.T) {
 		// Test with non-retryable error
 		err = errors.New("some other error")
 		assert.False(t, fn(err, req, nil))
+	})
+
+	t.Run("expression that always returns false but the error is an eof error", func(t *testing.T) {
+		expression := "false" // Don't retry
+		fn, err := BuildRetryFunction(retrytransport.RetryOptions{
+			Enabled:    true,
+			Expression: expression,
+		})
+		assert.NoError(t, err)
+		assert.NotNil(t, fn)
+
+		// Create a request with proper query context
+		req, _ := createRequestWithContext(OperationTypeQuery)
+
+		assert.True(t, fn(io.ErrUnexpectedEOF, req, nil))
 	})
 
 	t.Run("expression that always returns true", func(t *testing.T) {

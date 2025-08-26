@@ -17,6 +17,8 @@ import (
 	"go.uber.org/zap"
 )
 
+const defaultMaxDuration = 100 * time.Second
+
 // simpleShouldRetry provides simple retry logic for testing the transport implementation
 func simpleShouldRetry(err error, req *http.Request, resp *http.Response) bool {
 	// Simple logic for testing - retry on 5xx status codes or any error
@@ -78,7 +80,7 @@ func TestRetryOnHTTP5xx(t *testing.T) {
 			Interval:      1 * time.Millisecond,
 			MaxDuration:   10 * time.Millisecond,
 			ShouldRetry:   simpleShouldRetry,
-			OnRetry: func(count int, req *http.Request, resp *http.Response, err error) {
+			OnRetry: func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
 				retries++
 			},
 		},
@@ -122,7 +124,7 @@ func TestRetryOnErrors(t *testing.T) {
 			Interval:      1 * time.Millisecond,
 			MaxDuration:   10 * time.Millisecond,
 			ShouldRetry:   simpleShouldRetry,
-			OnRetry: func(count int, req *http.Request, resp *http.Response, err error) {
+			OnRetry: func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
 				retries++
 			},
 		},
@@ -179,7 +181,7 @@ func TestDoNotRetryWhenShouldRetryReturnsFalse(t *testing.T) {
 			Interval:      1 * time.Millisecond,
 			MaxDuration:   10 * time.Millisecond,
 			ShouldRetry:   shouldRetry,
-			OnRetry: func(count int, req *http.Request, resp *http.Response, err error) {
+			OnRetry: func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
 				retries++
 			},
 		},
@@ -249,7 +251,7 @@ func TestShortCircuitOnSuccess(t *testing.T) {
 			Interval:      1 * time.Millisecond,
 			MaxDuration:   10 * time.Millisecond,
 			ShouldRetry:   simpleShouldRetry,
-			OnRetry: func(count int, req *http.Request, resp *http.Response, err error) {
+			OnRetry: func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
 				t.Error("OnRetry should not be called when first request succeeds")
 			},
 		},
@@ -290,7 +292,7 @@ func TestMaxRetryCountRespected(t *testing.T) {
 			Interval:      1 * time.Millisecond,
 			MaxDuration:   10 * time.Millisecond,
 			ShouldRetry:   simpleShouldRetry,
-			OnRetry: func(count int, req *http.Request, resp *http.Response, err error) {
+			OnRetry: func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
 				retries++
 			},
 		},
@@ -346,7 +348,7 @@ func TestResponseBodyDraining(t *testing.T) {
 			Interval:      1 * time.Millisecond,
 			MaxDuration:   10 * time.Millisecond,
 			ShouldRetry:   simpleShouldRetry,
-			OnRetry: func(count int, req *http.Request, resp *http.Response, err error) {
+			OnRetry: func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
 				actualRetries++
 			},
 		},
@@ -421,7 +423,7 @@ func TestRequestLoggerIsUsed(t *testing.T) {
 			Interval:      1 * time.Millisecond,
 			MaxDuration:   10 * time.Millisecond,
 			ShouldRetry:   simpleShouldRetry,
-			OnRetry: func(count int, req *http.Request, resp *http.Response, err error) {
+			OnRetry: func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
 				actualRetries++
 			},
 		},
@@ -478,7 +480,7 @@ func TestOnRetryCallbackInvoked(t *testing.T) {
 			Interval:      1 * time.Millisecond,
 			MaxDuration:   10 * time.Millisecond,
 			ShouldRetry:   simpleShouldRetry,
-			OnRetry: func(count int, req *http.Request, resp *http.Response, err error) {
+			OnRetry: func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
 				retries++
 				retryCallbacks = append(retryCallbacks, struct {
 					count int
@@ -530,7 +532,7 @@ func TestRetryOn429WithDelaySeconds(t *testing.T) {
 					resp.Header.Set("Retry-After", fmt.Sprintf("%d", retryAfterSeconds))
 
 					// Verify the header is parsed correctly
-					duration, useRetryAfter := shouldUseRetryAfter(resp)
+					duration, useRetryAfter := shouldUseRetryAfter(zap.NewNop(), resp, defaultMaxDuration)
 					retryAfterUsed = append(retryAfterUsed, useRetryAfter)
 					assert.True(t, useRetryAfter, "Should use Retry-After header for 429")
 					assert.Equal(t, time.Duration(retryAfterSeconds)*time.Second, duration)
@@ -551,7 +553,71 @@ func TestRetryOn429WithDelaySeconds(t *testing.T) {
 			Interval:      100 * time.Millisecond, // This should be ignored for 429
 			MaxDuration:   10 * time.Second,
 			ShouldRetry:   shouldRetryWith429,
-			OnRetry: func(count int, req *http.Request, resp *http.Response, err error) {
+			OnRetry: func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
+				retries++
+			},
+		},
+	}
+
+	req := httptest.NewRequest("GET", "http://localhost:3000/graphql", nil)
+	resp, err := tr.RoundTrip(req)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, maxRetries, retries)
+	assert.Equal(t, maxRetries+1, attemptCount)
+	// Verify that Retry-After was detected and used
+	assert.Len(t, retryAfterUsed, maxRetries)
+	for i, used := range retryAfterUsed {
+		assert.True(t, used, "Retry %d should have used Retry-After header", i)
+	}
+}
+
+func TestRetryOn429WithDelaySecondsLargerThanMaxDuration(t *testing.T) {
+	retries := 0
+	attemptCount := 0
+	maxRetries := 2
+	retryAfterSeconds := 1 // Use 1 second to keep test fast
+	maxDuration := 500 * time.Millisecond
+
+	// Track what retry duration was requested to verify Retry-After is parsed correctly
+	var retryAfterUsed []bool
+
+	tr := RetryHTTPTransport{
+		RoundTripper: &MockTransport{
+			handler: func(req *http.Request) (*http.Response, error) {
+				attemptCount++
+				if attemptCount <= maxRetries {
+					// Return 429 with Retry-After header in seconds
+					resp := &http.Response{
+						StatusCode: http.StatusTooManyRequests,
+						Header:     make(http.Header),
+					}
+					resp.Header.Set("Retry-After", fmt.Sprintf("%d", retryAfterSeconds))
+
+					// Verify the header is parsed correctly
+					duration, useRetryAfter := shouldUseRetryAfter(zap.NewNop(), resp, maxDuration)
+					retryAfterUsed = append(retryAfterUsed, useRetryAfter)
+					assert.True(t, useRetryAfter, "Should use Retry-After header for 429")
+					assert.Equal(t, maxDuration, duration)
+
+					return resp, nil
+				}
+				// Finally return success
+				return &http.Response{
+					StatusCode: http.StatusOK,
+				}, nil
+			},
+		},
+		getRequestLogger: func(req *http.Request) *zap.Logger {
+			return zap.NewNop()
+		},
+		RetryOptions: RetryOptions{
+			MaxRetryCount: maxRetries,
+			Interval:      100 * time.Millisecond, // This should be ignored for 429
+			MaxDuration:   10 * time.Second,
+			ShouldRetry:   shouldRetryWith429,
+			OnRetry: func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
 				retries++
 			},
 		},
@@ -601,7 +667,7 @@ func TestRetryOn429WithoutRetryAfter(t *testing.T) {
 			Interval:      1 * time.Millisecond,
 			MaxDuration:   10 * time.Millisecond,
 			ShouldRetry:   shouldRetryWith429,
-			OnRetry: func(count int, req *http.Request, resp *http.Response, err error) {
+			OnRetry: func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
 				retries++
 			},
 		},
@@ -641,7 +707,7 @@ func TestRetryOn429WithHTTPDate(t *testing.T) {
 					resp.Header.Set("Retry-After", futureTime.Format(http.TimeFormat))
 
 					// Verify the header is parsed correctly
-					duration, useRetryAfter := shouldUseRetryAfter(resp)
+					duration, useRetryAfter := shouldUseRetryAfter(zap.NewNop(), resp, defaultMaxDuration)
 					retryAfterUsed = append(retryAfterUsed, useRetryAfter)
 					assert.True(t, useRetryAfter, "Should use Retry-After header for 429")
 					// Allow reasonable tolerance for execution delay between time creation and parsing
@@ -664,7 +730,7 @@ func TestRetryOn429WithHTTPDate(t *testing.T) {
 			Interval:      100 * time.Millisecond, // This should be ignored for 429
 			MaxDuration:   10 * time.Second,
 			ShouldRetry:   shouldRetryWith429,
-			OnRetry: func(count int, req *http.Request, resp *http.Response, err error) {
+			OnRetry: func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
 				retries++
 			},
 		},
@@ -716,7 +782,7 @@ func TestRetryOn429WithInvalidRetryAfterHeader(t *testing.T) {
 			Interval:      1 * time.Millisecond,
 			MaxDuration:   10 * time.Millisecond,
 			ShouldRetry:   shouldRetryWith429,
-			OnRetry: func(count int, req *http.Request, resp *http.Response, err error) {
+			OnRetry: func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
 				retries++
 			},
 		},
@@ -765,7 +831,7 @@ func TestRetryOn429WithNegativeDelaySeconds(t *testing.T) {
 			Interval:      1 * time.Millisecond,
 			MaxDuration:   10 * time.Millisecond,
 			ShouldRetry:   shouldRetryWith429,
-			OnRetry: func(count int, req *http.Request, resp *http.Response, err error) {
+			OnRetry: func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
 				retries++
 			},
 		},
@@ -803,7 +869,7 @@ func TestRetryMixed429AndOtherErrors(t *testing.T) {
 					resp.Header.Set("Retry-After", "1")
 
 					// Verify this should use Retry-After
-					_, useRetryAfter := shouldUseRetryAfter(resp)
+					_, useRetryAfter := shouldUseRetryAfter(zap.NewNop(), resp, defaultMaxDuration)
 					retryAfterUsedPerAttempt = append(retryAfterUsedPerAttempt, useRetryAfter)
 
 					return resp, nil
@@ -816,7 +882,7 @@ func TestRetryMixed429AndOtherErrors(t *testing.T) {
 					resp := &http.Response{
 						StatusCode: http.StatusInternalServerError,
 					}
-					_, useRetryAfter := shouldUseRetryAfter(resp)
+					_, useRetryAfter := shouldUseRetryAfter(zap.NewNop(), resp, defaultMaxDuration)
 					retryAfterUsedPerAttempt = append(retryAfterUsedPerAttempt, useRetryAfter)
 					return resp, nil
 				case 4:
@@ -825,7 +891,7 @@ func TestRetryMixed429AndOtherErrors(t *testing.T) {
 						StatusCode: http.StatusTooManyRequests,
 						Header:     make(http.Header),
 					}
-					_, useRetryAfter := shouldUseRetryAfter(resp)
+					_, useRetryAfter := shouldUseRetryAfter(zap.NewNop(), resp, defaultMaxDuration)
 					retryAfterUsedPerAttempt = append(retryAfterUsedPerAttempt, useRetryAfter)
 					return resp, nil
 				default:
@@ -844,7 +910,7 @@ func TestRetryMixed429AndOtherErrors(t *testing.T) {
 			Interval:      10 * time.Millisecond, // Should be used for non-429-with-Retry-After cases
 			MaxDuration:   10 * time.Second,
 			ShouldRetry:   shouldRetryWith429,
-			OnRetry: func(count int, req *http.Request, resp *http.Response, err error) {
+			OnRetry: func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
 				retries++
 			},
 		},
@@ -900,7 +966,7 @@ func TestNoRetryOn429WhenShouldRetryReturnsFalse(t *testing.T) {
 			Interval:      1 * time.Millisecond,
 			MaxDuration:   10 * time.Millisecond,
 			ShouldRetry:   shouldNotRetry429,
-			OnRetry: func(count int, req *http.Request, resp *http.Response, err error) {
+			OnRetry: func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
 				retries++
 			},
 		},
@@ -962,8 +1028,7 @@ func TestParseRetryAfterHeader(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := parseRetryAfterHeader(tt.header)
-
+			result := parseRetryAfterHeader(zap.NewNop(), tt.header)
 			if tt.name == "HTTP date in future" {
 				// For HTTP date tests, allow reasonable tolerance for timing variations
 				assert.True(t, result >= tt.expected-1*time.Second && result <= tt.expected+1*time.Second,
@@ -981,6 +1046,7 @@ func TestShouldUseRetryAfter(t *testing.T) {
 		resp        *http.Response
 		expectedDur time.Duration
 		expectedUse bool
+		maxDuration time.Duration
 	}{
 		{
 			name:        "nil response",
@@ -1020,6 +1086,20 @@ func TestShouldUseRetryAfter(t *testing.T) {
 			expectedUse: false,
 		},
 		{
+			name: "429 with Retry-After seconds larger than allowed",
+			resp: func() *http.Response {
+				resp := &http.Response{
+					StatusCode: http.StatusTooManyRequests,
+					Header:     make(http.Header),
+				}
+				resp.Header.Set("Retry-After", "30")
+				return resp
+			}(),
+			expectedDur: 20 * time.Second,
+			maxDuration: 20 * time.Second,
+			expectedUse: true,
+		},
+		{
 			name: "429 with valid Retry-After seconds",
 			resp: func() *http.Response {
 				resp := &http.Response{
@@ -1049,7 +1129,11 @@ func TestShouldUseRetryAfter(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dur, use := shouldUseRetryAfter(tt.resp)
+			maxDuration := defaultMaxDuration
+			if tt.maxDuration > 0 {
+				maxDuration = tt.maxDuration
+			}
+			dur, use := shouldUseRetryAfter(zap.NewNop(), tt.resp, maxDuration)
 			assert.Equal(t, tt.expectedDur, dur)
 			assert.Equal(t, tt.expectedUse, use)
 		})

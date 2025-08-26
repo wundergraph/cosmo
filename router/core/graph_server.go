@@ -1171,8 +1171,7 @@ func (s *graphServer) buildGraphMux(
 		Expression:    s.retryOptions.Expression,
 		ShouldRetry:   shouldRetryFunc,
 
-		OnRetry:           s.retryOptions.OnRetry,
-		RoundTripOverride: s.retryOptions.RoundTripOverride,
+		OnRetry: s.retryOptions.OnRetry,
 	}
 
 	ecb := &ExecutorConfigurationBuilder{

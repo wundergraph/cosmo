@@ -3,6 +3,7 @@ package core
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
@@ -40,8 +41,12 @@ func BuildRetryFunction(retryOpts retrytransport.RetryOptions) (retrytransport.S
 		}
 
 		// Never retry mutations, regardless of expression result
-		if reqContext.Operation().Type() == "mutation" {
+		if strings.ToLower(reqContext.Operation().Type()) == "mutation" {
 			return false
+		}
+
+		if isDefaultRetryableError(err) {
+			return true
 		}
 
 		// Create retry context
@@ -61,4 +66,16 @@ func BuildRetryFunction(retryOpts retrytransport.RetryOptions) (retrytransport.S
 
 		return shouldRetry
 	}, nil
+}
+
+// isDefaultRetryableError checks for errors that should always be retryable
+// regardless of the configured retry expression
+func isDefaultRetryableError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	errStr := strings.ToLower(err.Error())
+	// EOF errors are always retryable as they indicate connection issues
+	return strings.Contains(errStr, "unexpected eof")
 }
