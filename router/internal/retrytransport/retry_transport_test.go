@@ -4,16 +4,30 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"go.uber.org/zap/zapcore"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
+
+	"go.uber.org/zap/zapcore"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 )
+
+// simpleShouldRetry provides simple retry logic for testing the transport implementation
+func simpleShouldRetry(err error, req *http.Request, resp *http.Response) bool {
+	// Simple logic for testing - retry on 5xx status codes or any error
+	if err != nil {
+		return true
+	}
+	if resp != nil && resp.StatusCode >= 500 {
+		return true
+	}
+	return false
+}
 
 type MockTransport struct {
 	handler func(req *http.Request) (*http.Response, error)
@@ -25,33 +39,33 @@ func (dt *MockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 
 func TestRetryOnHTTP5xx(t *testing.T) {
 	retries := 0
-	index := -1
+	attemptCount := 0
+	maxRetries := 3
 
 	tr := RetryHTTPTransport{
 		RoundTripper: &MockTransport{
 			handler: func(req *http.Request) (*http.Response, error) {
-				if index < len(defaultRetryableStatusCodes)-1 {
-					index++
+				attemptCount++
+				if attemptCount <= maxRetries {
+					// Return 500 to trigger retry
 					return &http.Response{
-						StatusCode: defaultRetryableStatusCodes[index],
-					}, nil
-				} else {
-					return &http.Response{
-						StatusCode: http.StatusOK,
+						StatusCode: http.StatusInternalServerError,
 					}, nil
 				}
+				// Finally return success
+				return &http.Response{
+					StatusCode: http.StatusOK,
+				}, nil
 			},
 		},
 		getRequestLogger: func(req *http.Request) *zap.Logger {
 			return zap.NewNop()
 		},
 		RetryOptions: RetryOptions{
-			MaxRetryCount: len(defaultRetryableStatusCodes),
+			MaxRetryCount: maxRetries,
 			Interval:      1 * time.Millisecond,
 			MaxDuration:   10 * time.Millisecond,
-			ShouldRetry: func(err error, req *http.Request, resp *http.Response) bool {
-				return IsRetryableError(err, resp)
-			},
+			ShouldRetry:   simpleShouldRetry,
 			OnRetry: func(count int, req *http.Request, resp *http.Response, err error) {
 				retries++
 			},
@@ -62,41 +76,40 @@ func TestRetryOnHTTP5xx(t *testing.T) {
 
 	resp, err := tr.RoundTrip(req)
 	assert.Nil(t, err)
-
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
-
-	assert.Equal(t, len(defaultRetryableStatusCodes), retries)
-
+	// Should have retried exactly maxRetries times
+	assert.Equal(t, maxRetries, retries)
+	// Should have made maxRetries + 1 total attempts
+	assert.Equal(t, maxRetries+1, attemptCount)
 }
 
-func TestRetryOnNetErrors(t *testing.T) {
+func TestRetryOnErrors(t *testing.T) {
 	retries := 0
-	index := -1
+	attemptCount := 0
+	maxRetries := 3
 
 	tr := RetryHTTPTransport{
 		RoundTripper: &MockTransport{
 			handler: func(req *http.Request) (*http.Response, error) {
-
-				if index < len(defaultRetryableErrors)-1 {
-					index++
-					return nil, defaultRetryableErrors[index]
-				} else {
-					return &http.Response{
-						StatusCode: http.StatusOK,
-					}, nil
+				attemptCount++
+				if attemptCount <= maxRetries {
+					// Return any error to trigger retry
+					return nil, errors.New("some network error")
 				}
+				// Finally return success
+				return &http.Response{
+					StatusCode: http.StatusOK,
+				}, nil
 			},
 		},
 		getRequestLogger: func(req *http.Request) *zap.Logger {
 			return zap.NewNop()
 		},
 		RetryOptions: RetryOptions{
-			MaxRetryCount: len(defaultRetryableErrors),
+			MaxRetryCount: maxRetries,
 			Interval:      1 * time.Millisecond,
 			MaxDuration:   10 * time.Millisecond,
-			ShouldRetry: func(err error, req *http.Request, resp *http.Response) bool {
-				return IsRetryableError(err, resp)
-			},
+			ShouldRetry:   simpleShouldRetry,
 			OnRetry: func(count int, req *http.Request, resp *http.Response, err error) {
 				retries++
 			},
@@ -107,35 +120,42 @@ func TestRetryOnNetErrors(t *testing.T) {
 
 	resp, err := tr.RoundTrip(req)
 	assert.Nil(t, err)
-
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
-
-	assert.Equal(t, len(defaultRetryableErrors), retries)
-
+	// Should have retried exactly maxRetries times
+	assert.Equal(t, maxRetries, retries)
+	// Should have made maxRetries + 1 total attempts
+	assert.Equal(t, maxRetries+1, attemptCount)
 }
 
-func TestDoNotRetryWhenErrorIsNotRetryableAndResponseIsNil(t *testing.T) {
-	finalError := errors.New("some error")
+func TestDoNotRetryWhenShouldRetryReturnsFalse(t *testing.T) {
+	nonRetryableError := errors.New("non-retryable error")
 
-	expectedRetries := 2
 	retries := 0
-	index := -1
-	maxRetryCount := 7
+	attemptCount := 0
+	maxRetryCount := 5
+
+	// Custom ShouldRetry that returns false for our specific non-retryable error
+	shouldRetry := func(err error, req *http.Request, resp *http.Response) bool {
+		if err != nil && err.Error() == "non-retryable error" {
+			return false
+		}
+		return simpleShouldRetry(err, req, resp)
+	}
 
 	tr := RetryHTTPTransport{
 		RoundTripper: &MockTransport{
 			handler: func(req *http.Request) (*http.Response, error) {
-				index++
-				switch index {
-				case 0:
-					// The first retry we return a retryable error
-					return &http.Response{StatusCode: defaultRetryableStatusCodes[0]}, nil
+				attemptCount++
+				switch attemptCount {
 				case 1:
-					// The second retry we return a retryable status code
-					return nil, defaultRetryableErrors[index]
+					// First attempt: return retryable error
+					return nil, errors.New("retryable error")
+				case 2:
+					// Second attempt: return retryable status code
+					return &http.Response{StatusCode: http.StatusInternalServerError}, nil
 				default:
-					// The third retry we return a nil response as well as a non-retryable error
-					return nil, finalError
+					// Third attempt: return non-retryable error (should stop retrying)
+					return nil, nonRetryableError
 				}
 			},
 		},
@@ -146,9 +166,7 @@ func TestDoNotRetryWhenErrorIsNotRetryableAndResponseIsNil(t *testing.T) {
 			MaxRetryCount: maxRetryCount,
 			Interval:      1 * time.Millisecond,
 			MaxDuration:   10 * time.Millisecond,
-			ShouldRetry: func(err error, req *http.Request, resp *http.Response) bool {
-				return IsRetryableError(err, resp)
-			},
+			ShouldRetry:   shouldRetry,
 			OnRetry: func(count int, req *http.Request, resp *http.Response, err error) {
 				retries++
 			},
@@ -158,10 +176,14 @@ func TestDoNotRetryWhenErrorIsNotRetryableAndResponseIsNil(t *testing.T) {
 	req := httptest.NewRequest("GET", "http://localhost:3000/graphql", nil)
 
 	resp, err := tr.RoundTrip(req)
-	assert.Error(t, finalError, err)
+	assert.Error(t, err)
+	assert.Equal(t, nonRetryableError, err)
 	assert.Nil(t, resp)
 
-	assert.Equal(t, expectedRetries, retries)
+	// Should have retried exactly 2 times before encountering non-retryable error
+	assert.Equal(t, 2, retries)
+	assert.Equal(t, 3, attemptCount)
+	// Should not have exhausted max retry count
 	assert.NotEqual(t, maxRetryCount, retries)
 }
 
@@ -193,6 +215,95 @@ func (b *TrackableBody) Close() error {
 	return nil
 }
 
+func TestShortCircuitOnSuccess(t *testing.T) {
+	attemptCount := 0
+
+	tr := RetryHTTPTransport{
+		RoundTripper: &MockTransport{
+			handler: func(req *http.Request) (*http.Response, error) {
+				attemptCount++
+				// Always return success
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(strings.NewReader("success")),
+				}, nil
+			},
+		},
+		getRequestLogger: func(req *http.Request) *zap.Logger {
+			return zap.NewNop()
+		},
+		RetryOptions: RetryOptions{
+			MaxRetryCount: 5,
+			Interval:      1 * time.Millisecond,
+			MaxDuration:   10 * time.Millisecond,
+			ShouldRetry:   simpleShouldRetry,
+			OnRetry: func(count int, req *http.Request, resp *http.Response, err error) {
+				t.Error("OnRetry should not be called when first request succeeds")
+			},
+		},
+	}
+
+	req := httptest.NewRequest("GET", "http://localhost:3000/graphql", nil)
+	resp, err := tr.RoundTrip(req)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	// Should only make one attempt since first attempt succeeds
+	assert.Equal(t, 1, attemptCount)
+
+	body, err := io.ReadAll(resp.Body)
+	assert.NoError(t, err)
+	assert.Equal(t, "success", string(body))
+	resp.Body.Close()
+}
+
+// Mock round tripper for testing
+type mockRoundTripper struct {
+	roundTripFunc func(req *http.Request) (*http.Response, error)
+}
+
+func (m *mockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	return m.roundTripFunc(req)
+}
+
+func TestMaxRetryCountRespected(t *testing.T) {
+	maxRetries := 2
+	retries := 0
+	attemptCount := 0
+
+	tr := RetryHTTPTransport{
+		RoundTripper: &MockTransport{
+			handler: func(req *http.Request) (*http.Response, error) {
+				attemptCount++
+				// Always return retryable error to test max retry limit
+				return nil, errors.New("always fail")
+			},
+		},
+		getRequestLogger: func(req *http.Request) *zap.Logger {
+			return zap.NewNop()
+		},
+		RetryOptions: RetryOptions{
+			MaxRetryCount: maxRetries,
+			Interval:      1 * time.Millisecond,
+			MaxDuration:   10 * time.Millisecond,
+			ShouldRetry:   simpleShouldRetry,
+			OnRetry: func(count int, req *http.Request, resp *http.Response, err error) {
+				retries++
+			},
+		},
+	}
+
+	req := httptest.NewRequest("GET", "http://localhost:3000/graphql", nil)
+	resp, err := tr.RoundTrip(req)
+
+	assert.Error(t, err)
+	assert.Nil(t, resp)
+	// Should have retried exactly maxRetries times
+	assert.Equal(t, maxRetries, retries)
+	// Should have made maxRetries + 1 total attempts
+	assert.Equal(t, maxRetries+1, attemptCount)
+}
+
 func TestResponseBodyDraining(t *testing.T) {
 	actualRetries := 0
 	index := -1
@@ -213,7 +324,7 @@ func TestResponseBodyDraining(t *testing.T) {
 				index++
 				if index < retryCount {
 					return &http.Response{
-						StatusCode: defaultRetryableStatusCodes[0],
+						StatusCode: http.StatusInternalServerError,
 						Body:       bodies[index],
 					}, nil
 				} else {
@@ -231,9 +342,7 @@ func TestResponseBodyDraining(t *testing.T) {
 			MaxRetryCount: retryCount,
 			Interval:      1 * time.Millisecond,
 			MaxDuration:   10 * time.Millisecond,
-			ShouldRetry: func(err error, req *http.Request, resp *http.Response) bool {
-				return IsRetryableError(err, resp)
-			},
+			ShouldRetry:   simpleShouldRetry,
 			OnRetry: func(count int, req *http.Request, resp *http.Response, err error) {
 				actualRetries++
 			},
@@ -290,7 +399,7 @@ func TestRequestLoggerIsUsed(t *testing.T) {
 				index++
 				if index < retryCount {
 					return &http.Response{
-						StatusCode: defaultRetryableStatusCodes[0],
+						StatusCode: http.StatusInternalServerError,
 						Body:       bodies[index],
 					}, nil
 				} else {
@@ -308,9 +417,7 @@ func TestRequestLoggerIsUsed(t *testing.T) {
 			MaxRetryCount: retryCount,
 			Interval:      1 * time.Millisecond,
 			MaxDuration:   10 * time.Millisecond,
-			ShouldRetry: func(err error, req *http.Request, resp *http.Response) bool {
-				return IsRetryableError(err, resp)
-			},
+			ShouldRetry:   simpleShouldRetry,
 			OnRetry: func(count int, req *http.Request, resp *http.Response, err error) {
 				actualRetries++
 			},
@@ -336,4 +443,64 @@ func createTestLogger(t *testing.T) (*bytes.Buffer, *zap.Logger) {
 	)
 	unusedLogger := zap.New(core)
 	return &buf, unusedLogger
+}
+
+func TestOnRetryCallbackInvoked(t *testing.T) {
+	maxRetries := 3
+	retries := 0
+	var retryCallbacks []struct {
+		count int
+		err   error
+		resp  *http.Response
+	}
+
+	tr := RetryHTTPTransport{
+		RoundTripper: &MockTransport{
+			handler: func(req *http.Request) (*http.Response, error) {
+				if retries < maxRetries {
+					// Return retryable error
+					return nil, errors.New("retryable error")
+				}
+				// Finally return success
+				return &http.Response{
+					StatusCode: http.StatusOK,
+				}, nil
+			},
+		},
+		getRequestLogger: func(req *http.Request) *zap.Logger {
+			return zap.NewNop()
+		},
+		RetryOptions: RetryOptions{
+			MaxRetryCount: maxRetries,
+			Interval:      1 * time.Millisecond,
+			MaxDuration:   10 * time.Millisecond,
+			ShouldRetry:   simpleShouldRetry,
+			OnRetry: func(count int, req *http.Request, resp *http.Response, err error) {
+				retries++
+				retryCallbacks = append(retryCallbacks, struct {
+					count int
+					err   error
+					resp  *http.Response
+				}{count: count, err: err, resp: resp})
+			},
+		},
+	}
+
+	req := httptest.NewRequest("GET", "http://localhost:3000/graphql", nil)
+	resp, err := tr.RoundTrip(req)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	// Verify OnRetry was called the right number of times
+	assert.Equal(t, maxRetries, retries)
+	assert.Len(t, retryCallbacks, maxRetries)
+
+	// Verify callback parameters are correct
+	for i, callback := range retryCallbacks {
+		assert.Equal(t, i, callback.count)
+		assert.Error(t, callback.err)
+		assert.Equal(t, "retryable error", callback.err.Error())
+		assert.Nil(t, callback.resp)
+	}
 }

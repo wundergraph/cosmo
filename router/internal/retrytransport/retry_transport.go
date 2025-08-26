@@ -1,36 +1,14 @@
 package retrytransport
 
 import (
-	"errors"
-	"github.com/cloudflare/backoff"
-	"go.uber.org/zap"
 	"io"
 	"net/http"
 	"strings"
-	"syscall"
 	"time"
+
+	"github.com/cloudflare/backoff"
+	"go.uber.org/zap"
 )
-
-var defaultRetryableErrors = []error{
-	syscall.ECONNREFUSED, // "connection refused"
-	syscall.ECONNRESET,   // "connection reset by peer"
-	syscall.ETIMEDOUT,    // "operation timed out"
-	errors.New("i/o timeout"),
-	errors.New("no such host"),
-	errors.New("handshake failure"),
-	errors.New("handshake timeout"),
-	errors.New("timeout awaiting response headers"),
-	errors.New("unexpected EOF"),
-	errors.New("unexpected EOF reading trailer"),
-}
-
-var defaultRetryableStatusCodes = []int{
-	http.StatusInternalServerError,
-	http.StatusBadGateway,
-	http.StatusServiceUnavailable,
-	http.StatusGatewayTimeout,
-	http.StatusTooManyRequests,
-}
 
 type ShouldRetryFunc func(err error, req *http.Request, resp *http.Response) bool
 
@@ -39,6 +17,7 @@ type RetryOptions struct {
 	MaxRetryCount int
 	Interval      time.Duration
 	MaxDuration   time.Duration
+	Expression    string
 	OnRetry       func(count int, req *http.Request, resp *http.Response, err error)
 	ShouldRetry   ShouldRetryFunc
 }
@@ -77,7 +56,7 @@ func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, erro
 
 	// Retry logic
 	retries := 0
-	for rt.RetryOptions.ShouldRetry(err, req, resp) && retries < rt.RetryOptions.MaxRetryCount {
+	for (isDefaultRetryableError(err) || rt.RetryOptions.ShouldRetry(err, req, resp)) && retries < rt.RetryOptions.MaxRetryCount {
 		if rt.RetryOptions.OnRetry != nil {
 			rt.RetryOptions.OnRetry(retries, req, resp, err)
 		}
@@ -138,28 +117,14 @@ func isResponseOK(resp *http.Response) bool {
 	return resp.StatusCode >= 200 && resp.StatusCode < 300
 }
 
-func IsRetryableError(err error, resp *http.Response) bool {
-
-	if err != nil {
-		// Network
-		s := err.Error()
-		for _, retryableError := range defaultRetryableErrors {
-			if strings.HasSuffix(
-				strings.ToLower(s),
-				strings.ToLower(retryableError.Error())) {
-				return true
-			}
-		}
+// isDefaultRetryableError checks for errors that should always be retryable
+// regardless of the configured retry expression
+func isDefaultRetryableError(err error) bool {
+	if err == nil {
+		return false
 	}
 
-	if resp != nil {
-		// HTTP
-		for _, retryableStatusCode := range defaultRetryableStatusCodes {
-			if resp.StatusCode == retryableStatusCode {
-				return true
-			}
-		}
-	}
-
-	return false
+	errStr := strings.ToLower(err.Error())
+	// EOF errors are always retryable as they indicate connection issues
+	return strings.Contains(errStr, "unexpected eof")
 }

@@ -198,6 +198,7 @@ func optionsFromResources(logger *zap.Logger, config *config.Config) []Option {
 			config.TrafficShaping.All.BackoffJitterRetry.MaxAttempts,
 			config.TrafficShaping.All.BackoffJitterRetry.MaxDuration,
 			config.TrafficShaping.All.BackoffJitterRetry.Interval,
+			config.TrafficShaping.All.BackoffJitterRetry.Expression,
 		),
 		WithCors(&cors.Config{
 			Enabled:          config.CORS.Enabled,

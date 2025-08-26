@@ -234,6 +234,7 @@ type BackoffJitterRetry struct {
 	MaxAttempts int           `yaml:"max_attempts" envDefault:"5"`
 	MaxDuration time.Duration `yaml:"max_duration" envDefault:"10s"`
 	Interval    time.Duration `yaml:"interval" envDefault:"3s"`
+	Expression  string        `yaml:"expression,omitempty" env:"RETRY_EXPRESSION" envDefault:"IsRetryableStatusCode() || IsConnectionError() || IsTimeout()"`
 }
 
 type SubgraphCacheControlRule struct {

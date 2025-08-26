@@ -1156,6 +1156,21 @@ func (s *graphServer) buildGraphMux(
 		baseConnMetricStore = s.connectionMetrics
 	}
 
+	// Build retry options and handle any expression compilation errors
+	shouldRetryFunc, err := BuildRetryFunction(s.retryOptions.Expression, s.logger)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build retry function: %w", err)
+	}
+
+	retryOptions := retrytransport.RetryOptions{
+		Enabled:       s.retryOptions.Enabled,
+		MaxRetryCount: s.retryOptions.MaxRetryCount,
+		MaxDuration:   s.retryOptions.MaxDuration,
+		Interval:      s.retryOptions.Interval,
+		Expression:    s.retryOptions.Expression,
+		ShouldRetry:   shouldRetryFunc,
+	}
+
 	ecb := &ExecutorConfigurationBuilder{
 		introspection:    s.introspection,
 		baseURL:          s.baseURL,
@@ -1171,20 +1186,12 @@ func (s *graphServer) buildGraphMux(
 			FrameTimeout: s.engineExecutionConfiguration.WebSocketClientFrameTimeout,
 		},
 		transportOptions: &TransportOptions{
-			SubgraphTransportOptions: s.subgraphTransportOptions,
-			PreHandlers:              s.preOriginHandlers,
-			PostHandlers:             s.postOriginHandlers,
-			MetricStore:              gm.metricStore,
-			ConnectionMetricStore:    baseConnMetricStore,
-			RetryOptions: retrytransport.RetryOptions{
-				Enabled:       s.retryOptions.Enabled,
-				MaxRetryCount: s.retryOptions.MaxRetryCount,
-				MaxDuration:   s.retryOptions.MaxDuration,
-				Interval:      s.retryOptions.Interval,
-				ShouldRetry: func(err error, req *http.Request, resp *http.Response) bool {
-					return retrytransport.IsRetryableError(err, resp) && !isMutationRequest(req.Context())
-				},
-			},
+			SubgraphTransportOptions:      s.subgraphTransportOptions,
+			PreHandlers:                   s.preOriginHandlers,
+			PostHandlers:                  s.postOriginHandlers,
+			MetricStore:                   gm.metricStore,
+			ConnectionMetricStore:         baseConnMetricStore,
+			RetryOptions:                  retryOptions,
 			TracerProvider:                s.tracerProvider,
 			TracePropagators:              s.compositePropagator,
 			LocalhostFallbackInsideDocker: s.localhostFallbackInsideDocker,
