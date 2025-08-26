@@ -12,12 +12,16 @@ import (
 
 const DefaultRetryExpression = "IsRetryableStatusCode() || IsConnectionError() || IsTimeout()"
 
+var noopRetryFunc = func(err error, req *http.Request, resp *http.Response) bool {
+	return false
+}
+
 // BuildRetryFunction creates a ShouldRetry function based on the provided expression
 func BuildRetryFunction(retryOpts retrytransport.RetryOptions) (retrytransport.ShouldRetryFunc, error) {
 	// We do not need to build a retry function if retries are disabled
 	// This means that any bad expressions are ignored if retries are disabled
 	if !retryOpts.Enabled {
-		return nil, nil
+		return noopRetryFunc, nil
 	}
 
 	// Use default expression if empty string is passed
