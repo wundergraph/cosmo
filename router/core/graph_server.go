@@ -1157,7 +1157,7 @@ func (s *graphServer) buildGraphMux(
 	}
 
 	// Build retry options and handle any expression compilation errors
-	shouldRetryFunc, err := BuildRetryFunction(s.retryOptions.Expression, s.logger)
+	shouldRetryFunc, err := BuildRetryFunction(s.retryOptions.Expression)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build retry function: %w", err)
 	}

@@ -12,7 +12,7 @@ import (
 const DefaultRetryExpression = "IsRetryableStatusCode() || IsConnectionError() || IsTimeout()"
 
 // BuildRetryFunction creates a ShouldRetry function based on the provided expression
-func BuildRetryFunction(expression string, logger *zap.Logger) (retrytransport.ShouldRetryFunc, error) {
+func BuildRetryFunction(expression string) (retrytransport.ShouldRetryFunc, error) {
 	// Use default expression if empty string is passed
 	if expression == "" {
 		expression = DefaultRetryExpression
@@ -26,8 +26,14 @@ func BuildRetryFunction(expression string, logger *zap.Logger) (retrytransport.S
 
 	// Return expression-based retry function
 	return func(err error, req *http.Request, resp *http.Response) bool {
+		reqContext := getRequestContext(req.Context())
+
+		if reqContext == nil {
+			return false
+		}
+
 		// Never retry mutations, regardless of expression result
-		if isMutationRequest(req.Context()) {
+		if reqContext.Operation().Type() == "mutation" {
 			return false
 		}
 
@@ -37,10 +43,12 @@ func BuildRetryFunction(expression string, logger *zap.Logger) (retrytransport.S
 		// Evaluate the expression
 		shouldRetry, evalErr := manager.ShouldRetry(ctx)
 		if evalErr != nil {
-			logger.Error("Failed to evaluate retry expression",
+
+			reqContext.logger.Error("Failed to evaluate retry expression",
 				zap.Error(evalErr),
 				zap.String("expression", expression),
 			)
+
 			// Disable retries on evaluation error
 			return false
 		}
