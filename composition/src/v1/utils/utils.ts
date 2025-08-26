@@ -437,10 +437,6 @@ export function isNodeKindObject(kind: Kind) {
   return kind === Kind.OBJECT_TYPE_DEFINITION || kind === Kind.OBJECT_TYPE_EXTENSION;
 }
 
-export function isInterfaceDefinitionData(data: ParentDefinitionData): data is InterfaceDefinitionData {
-  return data.kind === Kind.INTERFACE_TYPE_DEFINITION;
-}
-
 export function isObjectDefinitionData(data?: ParentDefinitionData): data is ObjectDefinitionData {
   if (!data) {
     return false;

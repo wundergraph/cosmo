@@ -98,6 +98,7 @@ import {
   EDFS_REDIS_SUBSCRIBE,
   CHANNEL,
   CHANNELS,
+  PROTECTED,
 } from '../../utils/string-constants';
 
 export const REQUIRED_STRING_TYPE_NODE: TypeNode = {
@@ -512,6 +513,7 @@ export const ALL_IN_BUILT_DIRECTIVE_NAMES = new Set<string>([
   LINK,
   OVERRIDE,
   PROVIDES,
+  PROTECTED,
   REQUIRES,
   REQUIRES_SCOPES,
   SHAREABLE,
@@ -655,6 +657,14 @@ export const OVERRIDE_DEFINITION: DirectiveDefinitionNode = {
   locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER]),
   name: stringToNameNode(OVERRIDE),
   repeatable: false,
+};
+
+// directive @openfed__protected repeatable on FIELD_DEFINITION | OBJECT_DEFINITION
+export const PROTECTED_DEFINITION: DirectiveDefinitionNode = {
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER, OBJECT_UPPER]),
+  name: stringToNameNode(PROTECTED),
+  repeatable: true,
 };
 
 // @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR

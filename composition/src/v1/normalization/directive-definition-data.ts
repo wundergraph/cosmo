@@ -19,6 +19,7 @@ import {
   KEY_DEFINITION,
   LINK_DEFINITION,
   OVERRIDE_DEFINITION,
+  PROTECTED_DEFINITION,
   PROVIDES_DEFINITION,
   REQUIRED_FIELDSET_TYPE_NODE,
   REQUIRED_STRING_TYPE_NODE,
@@ -98,6 +99,7 @@ import {
   CHANNELS,
   EDFS_REDIS_PUBLISH,
   EDFS_REDIS_SUBSCRIBE,
+  PROTECTED,
 } from '../../utils/string-constants';
 
 export const AUTHENTICATED_DEFINITION_DATA: DirectiveDefinitionData = {
@@ -437,6 +439,16 @@ export const NATS_SUBSCRIBE_DEFINITION_DATA: DirectiveDefinitionData = {
   node: EDFS_NATS_SUBSCRIBE_DEFINITION,
   optionalArgumentNames: new Set<string>([PROVIDER_ID]),
   requiredArgumentNames: new Set<string>([SUBJECTS]),
+};
+
+export const PROTECTED_DEFINITION_DATA: DirectiveDefinitionData = {
+  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>(),
+  isRepeatable: true,
+  locations: new Set<string>([FIELD_DEFINITION_UPPER, OBJECT_UPPER]),
+  name: PROTECTED,
+  node: PROTECTED_DEFINITION,
+  optionalArgumentNames: new Set<string>(),
+  requiredArgumentNames: new Set<string>(),
 };
 
 export const REDIS_PUBLISH_DEFINITION_DATA: DirectiveDefinitionData = {
