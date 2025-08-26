@@ -41,7 +41,8 @@ func (ctx RetryContext) IsTimeout() bool {
 
 	// Check for net package timeout errors using the standard Go method
 	if ctx.originalError != nil {
-		if netErr, ok := ctx.originalError.(net.Error); ok && netErr.Timeout() {
+		var netErr net.Error
+		if errors.As(ctx.originalError, &netErr) && netErr.Timeout() {
 			return true
 		}
 		// Check for deadline exceeded errors

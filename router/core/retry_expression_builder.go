@@ -43,7 +43,6 @@ func BuildRetryFunction(expression string) (retrytransport.ShouldRetryFunc, erro
 		// Evaluate the expression
 		shouldRetry, evalErr := manager.ShouldRetry(ctx)
 		if evalErr != nil {
-
 			reqContext.logger.Error("Failed to evaluate retry expression",
 				zap.Error(evalErr),
 				zap.String("expression", expression),

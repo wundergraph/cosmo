@@ -269,15 +269,6 @@ func TestShortCircuitOnSuccess(t *testing.T) {
 	resp.Body.Close()
 }
 
-// Mock round tripper for testing
-type mockRoundTripper struct {
-	roundTripFunc func(req *http.Request) (*http.Response, error)
-}
-
-func (m *mockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	return m.roundTripFunc(req)
-}
-
 func TestMaxRetryCountRespected(t *testing.T) {
 	maxRetries := 2
 	retries := 0
@@ -884,11 +875,8 @@ func TestNoRetryOn429WhenShouldRetryReturnsFalse(t *testing.T) {
 	// ShouldRetry function that excludes 429 responses
 	shouldNotRetry429 := func(err error, req *http.Request, resp *http.Response) bool {
 		// Only retry on errors, not on 429 responses
-		if err != nil {
-			return true
-		}
 		// Do not retry on any HTTP status codes (including 429)
-		return false
+		return err != nil
 	}
 
 	tr := RetryHTTPTransport{
