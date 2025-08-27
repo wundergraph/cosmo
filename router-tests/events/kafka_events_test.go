@@ -428,7 +428,7 @@ func TestKafkaEvents(t *testing.T) {
 				RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 				EnableKafka:              true,
 				RouterOptions: []core.Option{
-					core.WithSubscriptionHeartbeatInterval(interval time.Duration)tHeartbeatInterval(multipartHeartbeatInterval),
+					core.WithSubscriptionHeartbeatInterval(subscriptionHeartbeatInterval),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				EnsureTopicExists(t, xEnv, topics...)
