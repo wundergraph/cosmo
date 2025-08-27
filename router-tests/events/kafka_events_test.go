@@ -417,7 +417,7 @@ func TestKafkaEvents(t *testing.T) {
 	t.Run("multipart", func(t *testing.T) {
 		t.Parallel()
 
-		multipartHeartbeatInterval := time.Second * 5
+		subscriptionHeartbeatInterval := time.Second * 5
 
 		t.Run("subscribe sync", func(t *testing.T) {
 			t.Parallel()
@@ -428,7 +428,7 @@ func TestKafkaEvents(t *testing.T) {
 				RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 				EnableKafka:              true,
 				RouterOptions: []core.Option{
-					core.WithMultipartHeartbeatInterval(multipartHeartbeatInterval),
+					core.WithSubscriptionHeartbeatInterval(interval time.Duration)tHeartbeatInterval(multipartHeartbeatInterval),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				EnsureTopicExists(t, xEnv, topics...)

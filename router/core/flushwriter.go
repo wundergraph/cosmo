@@ -84,7 +84,7 @@ func (f *HttpFlushWriter) Heartbeat() error {
 
 	var heartbeat []byte
 	if f.sse {
-		heartbeat = []byte(":\n\n")
+		heartbeat = []byte(":heartbeat\n\n")
 
 		if _, err := f.writer.Write(heartbeat); err != nil {
 			return err
