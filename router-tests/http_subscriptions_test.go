@@ -54,30 +54,6 @@ func readMultipartPrefix(reader *bufio.Reader) error {
 	return nil
 }
 
-func readSSEPrefix(reader *bufio.Reader) error {
-	eventNext, _, err := reader.ReadLine()
-	if err != nil {
-		return err
-	}
-
-	switch string(eventNext) {
-	case "event: next":
-	case ":heartbeat":
-		blankFollower, _, err := reader.ReadLine()
-		if err != nil {
-			return err
-		}
-
-		if len(blankFollower) != 0 {
-			return fmt.Errorf("expected blank follower, got %q", blankFollower)
-		}
-	default:
-		return fmt.Errorf("expected event: next or comment, got %q", eventNext)
-	}
-
-	return nil
-}
-
 func TestHeartbeats(t *testing.T) {
 	subscriptionHeartbeatInterval := time.Millisecond * 300
 
