@@ -53,7 +53,7 @@ func (f *HttpFlushWriter) Complete() {
 		return
 	}
 	if f.sse {
-		_, _ = f.writer.Write([]byte("event: complete"))
+		_, _ = f.writer.Write([]byte("event: complete\ndata: \n\n"))
 	} else if f.multipart {
 		// Write the final boundary in the multipart response
 		if f.apolloSubscriptionMultipartPrintBoundary {
