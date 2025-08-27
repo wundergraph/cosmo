@@ -2878,16 +2878,6 @@ export class NormalizationFactory {
       definitions.push(EDFS_NATS_STREAM_CONFIGURATION_DEFINITION);
     }
 
-    if (this.referencedDirectiveNames.has(LINK)) {
-      definitions.push(LINK_DEFINITION);
-      definitions.push(LINK_IMPORT_DEFINITION);
-      definitions.push(LINK_PURPOSE_DEFINITION);
-    }
-
-    if (this.referencedDirectiveNames.has(PROTECTED)) {
-      definitions.push(PROTECTED_DEFINITION);
-    }
-
     if (invalidEventsDirectiveDataByRootFieldPath.size > 0) {
       errorMessages.push(invalidRootTypeFieldEventsDirectivesErrorMessage(invalidEventsDirectiveDataByRootFieldPath));
     }
@@ -3334,6 +3324,12 @@ export class NormalizationFactory {
       definitions.push(SUBSCRIPTION_FILTER_CONDITION_DEFINITION);
       definitions.push(SUBSCRIPTION_FIELD_CONDITION_DEFINITION);
       definitions.push(SUBSCRIPTION_FILTER_VALUE_DEFINITION);
+    }
+
+    if (this.referencedDirectiveNames.has(LINK)) {
+      definitions.push(LINK_DEFINITION);
+      definitions.push(LINK_IMPORT_DEFINITION);
+      definitions.push(LINK_PURPOSE_DEFINITION);
     }
     if (this.referencedDirectiveNames.has(CONFIGURE_DESCRIPTION)) {
       definitions.push(CONFIGURE_DESCRIPTION_DEFINITION);
