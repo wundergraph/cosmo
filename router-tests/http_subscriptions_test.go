@@ -186,6 +186,11 @@ func TestHeartbeats(t *testing.T) {
 				assert.Equal(t, "event: complete", line)
 			})
 
+			// Expect empty data line event
+			testenv.AwaitChannelWithT(t, 5*time.Second, lines, func(t *testing.T, line string) {
+				assert.Equal(t, "data: ", line)
+			})
+
 			// Expect blank line after complete
 			testenv.AwaitChannelWithT(t, 5*time.Second, lines, func(t *testing.T, line string) {
 				assert.Equal(t, "", line)
