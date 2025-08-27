@@ -730,7 +730,7 @@
     "ResolverMaxRecyclableParserSize": 4096,
     "EnableSubgraphFetchOperationName": true,
     "DisableVariablesRemapping": false,
-    "PropagateWhoRequestedFields": false,
+    "PropagateFieldsRequestedBy": false,
     "SubscriptionFetchTimeout": 30000000000
   },
   "WebSocket": {
