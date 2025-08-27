@@ -2,6 +2,8 @@ package core
 
 import (
 	"errors"
+	"fmt"
+	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"io"
 	"net/http"
@@ -433,5 +435,303 @@ func TestBuildRetryFunction(t *testing.T) {
 		assert.False(t, fn(nil, mutationReq, resp))
 		assert.False(t, fn(syscall.ETIMEDOUT, mutationReq, nil))
 		assert.False(t, fn(errors.New("connection refused"), mutationReq, nil))
+	})
+}
+
+// This test is used to cross-check error detection behaviour
+// from before the change and after the change
+func TestRetriesForMigration(t *testing.T) {
+	function, err := BuildRetryFunction(retrytransport.RetryOptions{
+		Enabled:    true,
+		Expression: defaultRetryExpression,
+	})
+	require.NoError(t, err)
+
+	wrapperFunc := func(err error, resp *http.Response) bool {
+		req, _ := createRequestWithContext(OperationTypeQuery)
+		return function(err, req, resp)
+	}
+
+	t.Run("on syscall.ECONNREFUSED", func(t *testing.T) {
+		t.Run("unwrapped", func(t *testing.T) {
+			err := syscall.ECONNREFUSED
+			result := wrapperFunc(err, nil)
+			require.Equal(t, true, result)
+		})
+		t.Run("wrapped", func(t *testing.T) {
+			err := fmt.Errorf("failed to connect: %w", syscall.ECONNREFUSED)
+			result := wrapperFunc(err, nil)
+			require.Equal(t, true, result)
+		})
+		t.Run("deeply nested", func(t *testing.T) {
+			err := fmt.Errorf("layer5: %w",
+				fmt.Errorf("layer4: %w",
+					fmt.Errorf("layer3: %w",
+						fmt.Errorf("layer2: %w",
+							fmt.Errorf("layer1: %w", syscall.ECONNREFUSED)))))
+			result := wrapperFunc(err, nil)
+			require.Equal(t, true, result)
+		})
+	})
+
+	t.Run("on syscall.ECONNRESET", func(t *testing.T) {
+		t.Run("unwrapped", func(t *testing.T) {
+			err := syscall.ECONNRESET
+			result := wrapperFunc(err, nil)
+			require.Equal(t, true, result)
+		})
+		t.Run("wrapped", func(t *testing.T) {
+			err := fmt.Errorf("connection lost: %w", syscall.ECONNRESET)
+			result := wrapperFunc(err, nil)
+			require.Equal(t, true, result)
+		})
+		t.Run("deeply nested", func(t *testing.T) {
+			err := fmt.Errorf("http client error: %w",
+				fmt.Errorf("connection error: %w",
+					fmt.Errorf("transport error: %w",
+						fmt.Errorf("network error: %w",
+							fmt.Errorf("system error: %w", syscall.ECONNRESET)))))
+			result := wrapperFunc(err, nil)
+			require.Equal(t, true, result)
+		})
+	})
+
+	t.Run("on syscall.ETIMEDOUT", func(t *testing.T) {
+		t.Run("unwrapped", func(t *testing.T) {
+			err := syscall.ETIMEDOUT
+			result := wrapperFunc(err, nil)
+			require.Equal(t, true, result)
+		})
+		t.Run("wrapped", func(t *testing.T) {
+			err := fmt.Errorf("operation failed: %w", syscall.ETIMEDOUT)
+			result := wrapperFunc(err, nil)
+			require.Equal(t, true, result)
+		})
+		t.Run("deeply nested", func(t *testing.T) {
+			err := fmt.Errorf("request failed: %w",
+				fmt.Errorf("client timeout: %w",
+					fmt.Errorf("operation cancelled: %w",
+						fmt.Errorf("deadline exceeded: %w",
+							fmt.Errorf("system timeout: %w", syscall.ETIMEDOUT)))))
+			result := wrapperFunc(err, nil)
+			require.Equal(t, true, result)
+		})
+	})
+
+	t.Run("on i/o timeout", func(t *testing.T) {
+		t.Skip("The following tests don't work anymore, as we rely on the net.Error timeout interface now")
+
+		t.Run("unwrapped", func(t *testing.T) {
+			err := errors.New("i/o timeout")
+			result := wrapperFunc(err, nil)
+			require.Equal(t, true, result)
+		})
+		t.Run("wrapped", func(t *testing.T) {
+			err := fmt.Errorf("request failed: %w", errors.New("i/o timeout"))
+			result := wrapperFunc(err, nil)
+			require.Equal(t, true, result)
+		})
+		t.Run("deeply nested", func(t *testing.T) {
+			err := fmt.Errorf("http error: %w",
+				fmt.Errorf("client error: %w",
+					fmt.Errorf("transport error: %w",
+						fmt.Errorf("connection error: %w",
+							fmt.Errorf("io error: %w", errors.New("i/o timeout"))))))
+			result := wrapperFunc(err, nil)
+			require.Equal(t, true, result)
+		})
+	})
+
+	t.Run("on no such host", func(t *testing.T) {
+		t.Run("unwrapped", func(t *testing.T) {
+			err := errors.New("no such host")
+			result := wrapperFunc(err, nil)
+			require.Equal(t, true, result)
+		})
+		t.Run("wrapped", func(t *testing.T) {
+			err := fmt.Errorf("dns lookup failed: %w", errors.New("no such host"))
+			result := wrapperFunc(err, nil)
+			require.Equal(t, true, result)
+		})
+		t.Run("deeply nested", func(t *testing.T) {
+			err := fmt.Errorf("request error: %w",
+				fmt.Errorf("client error: %w",
+					fmt.Errorf("dns error: %w",
+						fmt.Errorf("lookup error: %w",
+							fmt.Errorf("resolution error: %w", errors.New("no such host"))))))
+			result := wrapperFunc(err, nil)
+			require.Equal(t, true, result)
+		})
+	})
+
+	t.Run("on handshake failure", func(t *testing.T) {
+		t.Run("unwrapped", func(t *testing.T) {
+			err := errors.New("handshake failure")
+			result := wrapperFunc(err, nil)
+			require.Equal(t, true, result)
+		})
+		t.Run("wrapped", func(t *testing.T) {
+			err := fmt.Errorf("tls error: %w", errors.New("handshake failure"))
+			result := wrapperFunc(err, nil)
+			require.Equal(t, true, result)
+		})
+		t.Run("deeply nested", func(t *testing.T) {
+			err := fmt.Errorf("connection error: %w",
+				fmt.Errorf("tls error: %w",
+					fmt.Errorf("crypto error: %w",
+						fmt.Errorf("certificate error: %w",
+							fmt.Errorf("validation error: %w", errors.New("handshake failure"))))))
+			result := wrapperFunc(err, nil)
+			require.Equal(t, true, result)
+		})
+	})
+
+	t.Run("on handshake timeout", func(t *testing.T) {
+		t.Run("unwrapped", func(t *testing.T) {
+			err := errors.New("handshake timeout")
+			result := wrapperFunc(err, nil)
+			require.Equal(t, true, result)
+		})
+		t.Run("wrapped", func(t *testing.T) {
+			err := fmt.Errorf("tls error: %w", errors.New("handshake timeout"))
+			result := wrapperFunc(err, nil)
+			require.Equal(t, true, result)
+		})
+		t.Run("deeply nested", func(t *testing.T) {
+			err := fmt.Errorf("connection error: %w",
+				fmt.Errorf("tls error: %w",
+					fmt.Errorf("crypto error: %w",
+						fmt.Errorf("certificate error: %w",
+							fmt.Errorf("timing error: %w", errors.New("handshake timeout"))))))
+			result := wrapperFunc(err, nil)
+			require.Equal(t, true, result)
+		})
+	})
+
+	t.Run("on timeout awaiting response headers", func(t *testing.T) {
+		t.Run("unwrapped", func(t *testing.T) {
+			err := errors.New("timeout awaiting response headers")
+			result := wrapperFunc(err, nil)
+			require.Equal(t, true, result)
+		})
+		t.Run("wrapped", func(t *testing.T) {
+			err := fmt.Errorf("request failed: %w", errors.New("timeout awaiting response headers"))
+			result := wrapperFunc(err, nil)
+			require.Equal(t, true, result)
+		})
+		t.Run("deeply nested", func(t *testing.T) {
+			err := fmt.Errorf("http error: %w",
+				fmt.Errorf("client error: %w",
+					fmt.Errorf("transport error: %w",
+						fmt.Errorf("protocol error: %w",
+							fmt.Errorf("response error: %w", errors.New("timeout awaiting response headers"))))))
+			result := wrapperFunc(err, nil)
+			require.Equal(t, true, result)
+		})
+	})
+
+	t.Run("on unexpected EOF", func(t *testing.T) {
+		t.Run("unwrapped", func(t *testing.T) {
+			err := errors.New("unexpected EOF")
+			result := wrapperFunc(err, nil)
+			require.Equal(t, true, result)
+		})
+		t.Run("wrapped", func(t *testing.T) {
+			err := fmt.Errorf("read failed: %w", errors.New("unexpected EOF"))
+			result := wrapperFunc(err, nil)
+			require.Equal(t, true, result)
+		})
+		t.Run("deeply nested", func(t *testing.T) {
+			err := fmt.Errorf("http error: %w",
+				fmt.Errorf("client error: %w",
+					fmt.Errorf("transport error: %w",
+						fmt.Errorf("stream error: %w",
+							fmt.Errorf("read error: %w", errors.New("unexpected EOF"))))))
+			result := wrapperFunc(err, nil)
+			require.Equal(t, true, result)
+		})
+	})
+
+	t.Run("on unexpected EOF reading trailer", func(t *testing.T) {
+		t.Run("unwrapped", func(t *testing.T) {
+			err := errors.New("unexpected EOF reading trailer")
+			result := wrapperFunc(err, nil)
+			require.Equal(t, true, result)
+		})
+		t.Run("wrapped", func(t *testing.T) {
+			err := fmt.Errorf("read failed: %w", errors.New("unexpected EOF reading trailer"))
+			result := wrapperFunc(err, nil)
+			require.Equal(t, true, result)
+		})
+		t.Run("deeply nested", func(t *testing.T) {
+			err := fmt.Errorf("http error: %w",
+				fmt.Errorf("client error: %w",
+					fmt.Errorf("transport error: %w",
+						fmt.Errorf("stream error: %w",
+							fmt.Errorf("trailer error: %w", errors.New("unexpected EOF reading trailer"))))))
+			result := wrapperFunc(err, nil)
+			require.Equal(t, true, result)
+		})
+	})
+
+	t.Run("on non-retryable error", func(t *testing.T) {
+		t.Run("unwrapped", func(t *testing.T) {
+			err := errors.New("some random error")
+			result := wrapperFunc(err, nil)
+			require.Equal(t, false, result)
+		})
+		t.Run("wrapped", func(t *testing.T) {
+			err := fmt.Errorf("operation failed: %w", errors.New("some random error"))
+			result := wrapperFunc(err, nil)
+			require.Equal(t, false, result)
+		})
+		t.Run("deeply nested", func(t *testing.T) {
+			err := fmt.Errorf("application error: %w",
+				fmt.Errorf("service error: %w",
+					fmt.Errorf("handler error: %w",
+						fmt.Errorf("processing error: %w",
+							fmt.Errorf("validation error: %w", errors.New("some random error"))))))
+			result := wrapperFunc(err, nil)
+			require.Equal(t, false, result)
+		})
+	})
+
+	// Test HTTP status code retries
+	t.Run("on HTTP 429 Too Many Requests", func(t *testing.T) {
+		t.Skip("Expected to fail as this is a known change")
+
+		resp := &http.Response{StatusCode: http.StatusTooManyRequests}
+		result := wrapperFunc(nil, resp)
+		require.Equal(t, true, result)
+	})
+
+	t.Run("on HTTP 500 Internal Server Error", func(t *testing.T) {
+		resp := &http.Response{StatusCode: http.StatusInternalServerError}
+		result := wrapperFunc(nil, resp)
+		require.Equal(t, true, result)
+	})
+
+	t.Run("on HTTP 502 Bad Gateway", func(t *testing.T) {
+		resp := &http.Response{StatusCode: http.StatusBadGateway}
+		result := wrapperFunc(nil, resp)
+		require.Equal(t, true, result)
+	})
+
+	t.Run("on HTTP 503 Service Unavailable", func(t *testing.T) {
+		resp := &http.Response{StatusCode: http.StatusServiceUnavailable}
+		result := wrapperFunc(nil, resp)
+		require.Equal(t, true, result)
+	})
+
+	t.Run("on HTTP 504 Gateway Timeout", func(t *testing.T) {
+		resp := &http.Response{StatusCode: http.StatusGatewayTimeout}
+		result := wrapperFunc(nil, resp)
+		require.Equal(t, true, result)
+	})
+
+	t.Run("on non-retryable status code", func(t *testing.T) {
+		resp := &http.Response{StatusCode: http.StatusBadRequest}
+		result := wrapperFunc(nil, resp)
+		require.Equal(t, false, result)
 	})
 }
