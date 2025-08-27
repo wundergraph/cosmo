@@ -1,3 +1,4 @@
+import { docsBaseURL } from "@/lib/constants";
 import { nsToTime } from "@/lib/insights-helpers";
 import {
   Service,
@@ -12,9 +13,10 @@ import {
   MinusIcon,
   PlusIcon,
 } from "@heroicons/react/24/outline";
-import clsx from "clsx";
 import { Span } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import clsx from "clsx";
 import { useCallback, useEffect, useState } from "react";
+import { BsFillLightningChargeFill } from "react-icons/bs";
 import { useMovable } from "react-move-hook";
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
@@ -24,7 +26,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "../ui/tooltip";
-import { docsBaseURL } from "@/lib/constants";
 
 interface SpanNode extends Span {
   children?: SpanNode[];
@@ -207,7 +208,13 @@ function Node({
                           <ExclamationTriangleIcon className="mt-1 h-4 w-4 text-destructive" />
                         )}
                         <div className="flex flex-1 items-center gap-x-1.5 truncate font-medium">
-                          <div>{service?.name}</div>{" "}
+                          <div className="flex items-center gap-x-1">
+                            {span.attributes?.operationProtocol === "grpc" && (
+                              <BsFillLightningChargeFill className="h-[14px] w-[14px] flex-shrink-0 text-primary" />
+                            )}
+                            <div>{service?.name}</div>{" "}
+                          </div>
+
                           <div className="text-xs text-muted-foreground">
                             {mapSpanKind[span.spanKind]}
                           </div>
@@ -224,8 +231,13 @@ function Node({
                     </div>
                   </TooltipTrigger>
                   <TooltipContent className="max-w-lg">
-                    <div className="flex flex-col space-y-3">
+                    <div className="flex flex-col space-y-1">
                       <div>{span.spanName}</div>
+                      {span.attributes?.operationProtocol === "grpc" && (
+                        <div className="text-xs text-secondary">
+                          <span>Cosmo Connect</span>{" "}
+                        </div>
+                      )}
                     </div>
                   </TooltipContent>
                 </Tooltip>

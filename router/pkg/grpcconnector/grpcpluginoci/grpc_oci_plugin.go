@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"go.opentelemetry.io/otel/trace"
 	"os"
 	"runtime"
 	"sync"
@@ -20,10 +21,12 @@ import (
 )
 
 type GRPCPluginConfig struct {
-	Logger        *zap.Logger
-	ImageRef      string
-	RegistryToken string
-	StartupConfig grpccommon.GRPCStartupParams
+	Logger             *zap.Logger
+	ImageRef           string
+	RegistryToken      string
+	StartupConfig      grpccommon.GRPCStartupParams
+	Tracer             trace.Tracer
+	GetTraceAttributes grpccommon.GRPCTraceAttributeGetter
 }
 
 type GRPCPlugin struct {
@@ -45,6 +48,9 @@ type GRPCPlugin struct {
 	client *grpccommon.GRPCPluginClient
 
 	startupConfig grpccommon.GRPCStartupParams
+
+	tracer             trace.Tracer
+	getTraceAttributes grpccommon.GRPCTraceAttributeGetter
 }
 
 func NewGRPCOCIPlugin(config GRPCPluginConfig) (*GRPCPlugin, error) {
@@ -71,6 +77,9 @@ func NewGRPCOCIPlugin(config GRPCPluginConfig) (*GRPCPlugin, error) {
 
 		registryUsername: "router",
 		registryPassword: config.RegistryToken,
+
+		tracer:             config.Tracer,
+		getTraceAttributes: config.GetTraceAttributes,
 	}, nil
 }
 
@@ -136,7 +145,10 @@ func (p *GRPCPlugin) startPluginProcess() error {
 
 	if p.client == nil {
 		// first time we start the plugin, we need to create a new client
-		p.client, err = grpccommon.NewGRPCPluginClient(pluginClient, grpcClient)
+		p.client, err = grpccommon.NewGRPCPluginClient(pluginClient, grpcClient, grpccommon.GRPCPluginClientOpts{
+			Tracer:             p.tracer,
+			GetTraceAttributes: p.getTraceAttributes,
+		})
 		if err != nil {
 			return fmt.Errorf("failed to create grpc plugin client: %w", err)
 		}
