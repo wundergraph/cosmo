@@ -562,7 +562,7 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 			}
 		}
 
-		out.FederationMetaData.Keys = append(out.FederationMetaData.Keys, plan.FederationFieldConfiguration{
+		out.Keys = append(out.Keys, plan.FederationFieldConfiguration{
 			TypeName:              keyConfiguration.TypeName,
 			FieldName:             keyConfiguration.FieldName,
 			SelectionSet:          keyConfiguration.SelectionSet,
@@ -571,30 +571,37 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 		})
 	}
 	for _, providesConfiguration := range in.Provides {
-		out.FederationMetaData.Provides = append(out.FederationMetaData.Provides, plan.FederationFieldConfiguration{
+		out.Provides = append(out.Provides, plan.FederationFieldConfiguration{
 			TypeName:     providesConfiguration.TypeName,
 			FieldName:    providesConfiguration.FieldName,
 			SelectionSet: providesConfiguration.SelectionSet,
 		})
 	}
 	for _, requiresConfiguration := range in.Requires {
-		out.FederationMetaData.Requires = append(out.FederationMetaData.Requires, plan.FederationFieldConfiguration{
+		out.Requires = append(out.Requires, plan.FederationFieldConfiguration{
 			TypeName:     requiresConfiguration.TypeName,
 			FieldName:    requiresConfiguration.FieldName,
 			SelectionSet: requiresConfiguration.SelectionSet,
 		})
 	}
 	for _, entityInterfacesConfiguration := range in.EntityInterfaces {
-		out.FederationMetaData.EntityInterfaces = append(out.FederationMetaData.EntityInterfaces, plan.EntityInterfaceConfiguration{
+		out.EntityInterfaces = append(out.EntityInterfaces, plan.EntityInterfaceConfiguration{
 			InterfaceTypeName: entityInterfacesConfiguration.InterfaceTypeName,
 			ConcreteTypeNames: entityInterfacesConfiguration.ConcreteTypeNames,
 		})
 	}
 	for _, interfaceObjectConfiguration := range in.InterfaceObjects {
-		out.FederationMetaData.InterfaceObjects = append(out.FederationMetaData.InterfaceObjects, plan.EntityInterfaceConfiguration{
+		out.InterfaceObjects = append(out.InterfaceObjects, plan.EntityInterfaceConfiguration{
 			InterfaceTypeName: interfaceObjectConfiguration.InterfaceTypeName,
 			ConcreteTypeNames: interfaceObjectConfiguration.ConcreteTypeNames,
 		})
+	}
+	out.ProtectedFields = make(map[plan.ProtectedTypeField]struct{})
+	for _, protected := range in.ProtectedFields {
+		for _, field := range protected.FieldNames {
+			key := plan.ProtectedTypeField{TypeName: protected.TypeName, FieldName: field}
+			out.ProtectedFields[key] = struct{}{}
+		}
 	}
 
 	return out
