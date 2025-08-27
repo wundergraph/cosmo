@@ -33,7 +33,7 @@ func BuildRetryFunction(retryOpts retrytransport.RetryOptions) (retrytransport.S
 	// Create the retry expression manager
 	manager, err := expr.NewRetryExpressionManager(expression)
 	if err != nil {
-		return nil, fmt.Errorf("failed to compile retry expression: %w", err)
+		return nil, fmt.Errorf("failed to create expression manager: %w", err)
 	}
 
 	// Return expression-based retry function
