@@ -659,7 +659,7 @@ export const OVERRIDE_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-// directive @openfed__protected repeatable on FIELD_DEFINITION | OBJECT_DEFINITION
+// directive @openfed__protected repeatable on FIELD_DEFINITION | OBJECT
 export const PROTECTED_DEFINITION: DirectiveDefinitionNode = {
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER, OBJECT_UPPER]),
