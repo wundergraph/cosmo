@@ -1201,8 +1201,11 @@ func (r *Router) Start(ctx context.Context) error {
 
 			go func() {
 				if err := w(ctx); err != nil {
-					r.logger.Error("Error watching execution config", zap.Error(err))
-					return
+					if !errors.Is(err, context.Canceled) {
+						ll.Error("Error watching execution config", zap.Error(err))
+					} else {
+						ll.Debug("Watcher context cancelled, shutting down")
+					}
 				}
 			}()
 
