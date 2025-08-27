@@ -1,7 +1,6 @@
 package core
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -10,36 +9,14 @@ import (
 	"go.uber.org/zap"
 )
 
-const DefaultRetryExpression = "IsRetryableStatusCode() || IsConnectionError() || IsTimeout()"
-
 var noopRetryFunc = func(err error, req *http.Request, resp *http.Response) bool {
 	return false
 }
 
 // BuildRetryFunction creates a ShouldRetry function based on the provided expression
-func BuildRetryFunction(retryOpts retrytransport.RetryOptions) (retrytransport.ShouldRetryFunc, error) {
-	// We do not need to build a retry function if retries are disabled
-	// This means that any bad expressions are ignored if retries are disabled
-	if !retryOpts.Enabled {
-		return noopRetryFunc, nil
-	}
-
-	// Use default expression if empty string is passed
-	expression := retryOpts.Expression
-	if expression == "" {
-		expression = DefaultRetryExpression
-	}
-
-	// Create the retry expression manager
-	manager, err := expr.NewRetryExpressionManager(expression)
-	if err != nil {
-		return nil, fmt.Errorf("failed to compile retry expression: %w", err)
-	}
-
-	// Return expression-based retry function
-	return func(err error, req *http.Request, resp *http.Response) bool {
+func BuildRetryFunction(manager *expr.RetryExpressionManager) (retrytransport.ShouldRetryFunc, error) {
+	return func(err error, req *http.Request, resp *http.Response, expression string) bool {
 		reqContext := getRequestContext(req.Context())
-
 		if reqContext == nil {
 			return false
 		}
@@ -57,7 +34,7 @@ func BuildRetryFunction(retryOpts retrytransport.RetryOptions) (retrytransport.S
 		ctx := expr.LoadRetryContext(err, resp)
 
 		// Evaluate the expression
-		shouldRetry, evalErr := manager.ShouldRetry(ctx)
+		shouldRetry, evalErr := manager.ShouldRetry(ctx, expression)
 		if evalErr != nil {
 			reqContext.logger.Error("Failed to evaluate retry expression",
 				zap.Error(evalErr),
