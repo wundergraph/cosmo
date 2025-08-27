@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.246.2](https://github.com/wundergraph/cosmo/compare/router@0.246.1...router@0.246.2) (2025-08-26)
+
+### Bug Fixes
+
+* don't log graceful watcher shutdown as error ([#2168](https://github.com/wundergraph/cosmo/issues/2168)) ([52804d3](https://github.com/wundergraph/cosmo/commit/52804d3749980148dc87ea7fc0ad3f7c6cb2cf42)) (@endigma)
+
 ## [0.246.1](https://github.com/wundergraph/cosmo/compare/router@0.246.0...router@0.246.1) (2025-08-24)
 
 ### Bug Fixes
