@@ -66,7 +66,7 @@ func TestBuildRetryFunction(t *testing.T) {
 		// Use the default expression that would be in the config
 		fn, err := BuildRetryFunction(retrytransport.RetryOptions{
 			Enabled:    true,
-			Expression: DefaultRetryExpression,
+			Expression: defaultRetryExpression,
 		})
 		assert.NoError(t, err)
 		assert.NotNil(t, fn)

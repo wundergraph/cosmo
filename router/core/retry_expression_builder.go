@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
-const DefaultRetryExpression = "IsRetryableStatusCode() || IsConnectionError() || IsTimeout()"
+const defaultRetryExpression = "IsRetryableStatusCode() || IsConnectionError() || IsTimeout()"
 
 var noopRetryFunc = func(err error, req *http.Request, resp *http.Response) bool {
 	return false
@@ -27,7 +27,7 @@ func BuildRetryFunction(retryOpts retrytransport.RetryOptions) (retrytransport.S
 	// Use default expression if empty string is passed
 	expression := retryOpts.Expression
 	if expression == "" {
-		expression = DefaultRetryExpression
+		expression = defaultRetryExpression
 	}
 
 	// Create the retry expression manager
