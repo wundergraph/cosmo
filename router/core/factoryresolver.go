@@ -522,16 +522,18 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 
 	for _, node := range in.RootNodes {
 		out.RootNodes = append(out.RootNodes, plan.TypeField{
-			TypeName:           node.TypeName,
-			FieldNames:         node.FieldNames,
-			ExternalFieldNames: node.ExternalFieldNames,
+			TypeName:            node.TypeName,
+			FieldNames:          node.FieldNames,
+			ExternalFieldNames:  node.ExternalFieldNames,
+			ProtectedFieldNames: node.ProtectedFieldNames,
 		})
 	}
 	for _, node := range in.ChildNodes {
 		out.ChildNodes = append(out.ChildNodes, plan.TypeField{
-			TypeName:           node.TypeName,
-			FieldNames:         node.FieldNames,
-			ExternalFieldNames: node.ExternalFieldNames,
+			TypeName:            node.TypeName,
+			FieldNames:          node.FieldNames,
+			ExternalFieldNames:  node.ExternalFieldNames,
+			ProtectedFieldNames: node.ProtectedFieldNames,
 		})
 	}
 	for _, directive := range in.Directives {
@@ -595,13 +597,6 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 			InterfaceTypeName: interfaceObjectConfiguration.InterfaceTypeName,
 			ConcreteTypeNames: interfaceObjectConfiguration.ConcreteTypeNames,
 		})
-	}
-	out.ProtectedFields = make(map[plan.ProtectedTypeField]struct{})
-	for _, protected := range in.ProtectedFields {
-		for _, field := range protected.FieldNames {
-			key := plan.ProtectedTypeField{TypeName: protected.TypeName, FieldName: field}
-			out.ProtectedFields[key] = struct{}{}
-		}
 	}
 
 	return out
