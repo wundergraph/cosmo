@@ -125,9 +125,12 @@ export function configurationDatasToDataSourceConfiguration(
   for (const data of dataByTypeName.values()) {
     const typeName = data.typeName;
     const fieldNames: string[] = [...data.fieldNames];
-    const typeField = new TypeField({ typeName, fieldNames });
+    const typeField = new TypeField({ fieldNames, typeName });
     if (data.externalFieldNames && data.externalFieldNames.size > 0) {
       typeField.externalFieldNames = [...data.externalFieldNames];
+    }
+    if (data.protectedFieldNames && data.protectedFieldNames.length > 0) {
+      typeField.protectedFieldNames = [...data.protectedFieldNames];
     }
     if (data.isRootNode) {
       output.rootNodes.push(typeField);
