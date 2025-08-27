@@ -86,6 +86,14 @@ func checkContentAndErrors(t *testing.T, expectedContent string, expectedErrors 
 	require.Equal(t, expectedContent, string(content))
 }
 
+func updateOptions(opts []core.Option) []core.Option {
+	return append(opts, core.WithSubgraphRetryOptions(core.NewSubgraphRetryOptions(config.TrafficShapingRules{
+		All: config.GlobalSubgraphRequestRule{
+			BackoffJitterRetry: config.BackoffJitterRetry{Enabled: false},
+		},
+	})))
+}
+
 func TestFallbackErrors(t *testing.T) {
 	t.Parallel()
 
@@ -1380,7 +1388,11 @@ func TestErrorPropagation(t *testing.T) {
 					EnableSingleFlight:     true,
 					MaxConcurrentResolvers: 1,
 				}),
-				core.WithSubgraphRetryOptions(false, 0, 0, 0, "", nil),
+				core.WithSubgraphRetryOptions(core.NewSubgraphRetryOptions(config.TrafficShapingRules{
+					All: config.GlobalSubgraphRequestRule{
+						BackoffJitterRetry: config.BackoffJitterRetry{Enabled: false},
+					},
+				})),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			resp, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
@@ -1412,7 +1424,11 @@ func TestErrorPropagation(t *testing.T) {
 					EnableSingleFlight:     true,
 					MaxConcurrentResolvers: 1,
 				}),
-				core.WithSubgraphRetryOptions(false, 0, 0, 0, "", nil),
+				core.WithSubgraphRetryOptions(core.NewSubgraphRetryOptions(config.TrafficShapingRules{
+					All: config.GlobalSubgraphRequestRule{
+						BackoffJitterRetry: config.BackoffJitterRetry{Enabled: false},
+					},
+				})),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			resp, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
@@ -1444,7 +1460,11 @@ func TestErrorPropagation(t *testing.T) {
 					EnableSingleFlight:     true,
 					MaxConcurrentResolvers: 1,
 				}),
-				core.WithSubgraphRetryOptions(false, 0, 0, 0, "", nil),
+				core.WithSubgraphRetryOptions(core.NewSubgraphRetryOptions(config.TrafficShapingRules{
+					All: config.GlobalSubgraphRequestRule{
+						BackoffJitterRetry: config.BackoffJitterRetry{Enabled: false},
+					},
+				})),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			resp, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
@@ -1476,7 +1496,11 @@ func TestErrorPropagation(t *testing.T) {
 					EnableSingleFlight:     true,
 					MaxConcurrentResolvers: 1,
 				}),
-				core.WithSubgraphRetryOptions(false, 0, 0, 0, "", nil),
+				core.WithSubgraphRetryOptions(core.NewSubgraphRetryOptions(config.TrafficShapingRules{
+					All: config.GlobalSubgraphRequestRule{
+						BackoffJitterRetry: config.BackoffJitterRetry{Enabled: false},
+					},
+				})),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			resp, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{

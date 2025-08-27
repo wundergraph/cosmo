@@ -101,6 +101,7 @@ type (
 		traceDialer             *TraceDialer
 		connector               *grpcconnector.Connector
 		circuitBreakerManager   *circuit.Manager
+		retryManager            *retrytransport.Manager
 	}
 )
 
@@ -260,6 +261,28 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 			return nil, err
 		}
 		s.circuitBreakerManager = manager
+	}
+
+	if s.retryOptions.IsEnabled() {
+		retryExprManager := expr.NewRetryExpressionManager()
+		// Build retry options and handle any expression compilation errors
+		shouldRetryFunc, err := BuildRetryFunction(retryExprManager)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build retry function: %w", err)
+		}
+
+		retryManager := retrytransport.NewManager(retryExprManager, shouldRetryFunc, s.retryOptions.OnRetryFunc)
+
+		err = retryManager.Initialize(
+			s.retryOptions.All,
+			s.retryOptions.SubgraphMap,
+			routerConfig.GetSubgraphs(),
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		s.retryManager = retryManager
 	}
 
 	routingUrlGroupings, err := getRoutingUrlGroupingForCircuitBreakers(routerConfig, s.overrideRoutingURLConfiguration, s.overrides)
@@ -1156,24 +1179,6 @@ func (s *graphServer) buildGraphMux(
 		baseConnMetricStore = s.connectionMetrics
 	}
 
-	// Build retry options and handle any expression compilation errors
-	shouldRetryFunc, err := BuildRetryFunction(s.retryOptions)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build retry function: %w", err)
-	}
-
-	// Create copy to not mutate the original reference
-	retryOptions := retrytransport.RetryOptions{
-		Enabled:       s.retryOptions.Enabled,
-		MaxRetryCount: s.retryOptions.MaxRetryCount,
-		MaxDuration:   s.retryOptions.MaxDuration,
-		Interval:      s.retryOptions.Interval,
-		Expression:    s.retryOptions.Expression,
-		ShouldRetry:   shouldRetryFunc,
-
-		OnRetry: s.retryOptions.OnRetry,
-	}
-
 	ecb := &ExecutorConfigurationBuilder{
 		introspection:    s.introspection,
 		baseURL:          s.baseURL,
@@ -1194,13 +1199,13 @@ func (s *graphServer) buildGraphMux(
 			PostHandlers:                  s.postOriginHandlers,
 			MetricStore:                   gm.metricStore,
 			ConnectionMetricStore:         baseConnMetricStore,
-			RetryOptions:                  retryOptions,
 			TracerProvider:                s.tracerProvider,
 			TracePropagators:              s.compositePropagator,
 			LocalhostFallbackInsideDocker: s.localhostFallbackInsideDocker,
 			Logger:                        s.logger,
 			EnableTraceClient:             enableTraceClient,
 			CircuitBreaker:                s.circuitBreakerManager,
+			RetryManager:                  s.retryManager,
 		},
 	}
 
