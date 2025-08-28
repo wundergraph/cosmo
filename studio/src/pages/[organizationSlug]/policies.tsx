@@ -1,4 +1,3 @@
-import { NamespaceSelector } from "@/components/dashboard/NamespaceSelector";
 import { EmptyState } from "@/components/empty-state";
 import { getDashboardLayout } from "@/components/layout/dashboard-layout";
 import { Button } from "@/components/ui/button";
@@ -19,6 +18,7 @@ import {
 import { useRouter } from "next/router";
 import { ProposalConfig } from "@/components/proposal/proposal-config";
 import { useFeature } from "@/hooks/use-feature";
+import { WorkspaceSelector } from "@/components/dashboard/workspace-selector";
 
 const PoliciesPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -141,7 +141,7 @@ PoliciesPage.getLayout = (page) => {
     "Configure various policies for subgraphs in the namespace.",
     undefined,
     undefined,
-    [<NamespaceSelector key="0" />],
+    [<WorkspaceSelector key="0" />],
   );
 };
 
