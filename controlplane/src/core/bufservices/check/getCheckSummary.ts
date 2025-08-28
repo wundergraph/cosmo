@@ -136,6 +136,9 @@ export function getCheckSummary(
       });
       hasAffectedOperations = affectedOperations.length > 0;
     }
+
+    const linkedCheck = await schemaCheckRepo.getLinkedSchemaCheck({ schemaCheckID: req.checkId });
+
     affectedGraphs.push(
       new GetCheckSummaryResponse_AffectedGraph({
         ...currentAffectedGraph,
@@ -148,6 +151,8 @@ export function getCheckSummary(
           hasGraphPruningErrors: graphPruningIssues.some((issue) => issue.severity === LintSeverity.error),
           clientTrafficCheckSkipped: check.clientTrafficCheckSkipped,
           hasProposalMatchError: check.proposalMatch === 'error',
+          isLinkedTrafficCheckFailed: linkedCheck?.hasClientTraffic,
+          isLinkedGraphPruningFailed: linkedCheck?.hasGraphPruningErrors,
         }),
       }),
     );
@@ -190,6 +195,8 @@ export function getCheckSummary(
             hasGraphPruningErrors: graphPruningIssues.some((issue) => issue.severity === LintSeverity.error),
             clientTrafficCheckSkipped: check.clientTrafficCheckSkipped,
             hasProposalMatchError: check.proposalMatch === 'error',
+            isLinkedTrafficCheckFailed: linkedCheck?.hasClientTraffic,
+            isLinkedGraphPruningFailed: linkedCheck?.hasGraphPruningErrors,
           }),
         }),
       );
@@ -218,6 +225,7 @@ export function getCheckSummary(
       proposalName: proposal?.proposalName,
       proposalMatches: proposalSchemaMatches,
       isProposalsEnabled: namespace.enableProposals,
+      linkedCheck,
     };
   });
 }
