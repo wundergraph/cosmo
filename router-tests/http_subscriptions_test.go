@@ -108,8 +108,9 @@ func TestHeartbeats(t *testing.T) {
 			}
 
 			// Channel should be closed after all heartbeats are received
-			_, ok := <-messages
-			require.False(t, ok, "channel should be closed")
+			testenv.AwaitChannelWithCloseWithT(t, 5*time.Second, messages, func(t *testing.T, _ string, ok bool) {
+				require.False(t, ok, "channel should be closed")
+			})
 		})
 	})
 
