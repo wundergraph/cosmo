@@ -12,7 +12,7 @@ COPY ./theme .
 
 RUN ./build.sh
 
-FROM --platform=${BUILDPLATFORM} bitnami/keycloak:26.2.5
+FROM --platform=${BUILDPLATFORM} bitnamilegacy/keycloak:26.2.5
 
 COPY --from=0 /app/target/*.jar /opt/bitnami/keycloak/providers/
 
