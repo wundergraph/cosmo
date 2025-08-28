@@ -449,6 +449,15 @@ func TestProcessRetryOptions(t *testing.T) {
 		assert.ErrorContains(t, err, expectedError)
 	})
 
+	t.Run("process invalid algorithm when retries are disabled", func(t *testing.T) {
+		algorithm := "abcdee"
+		_, err := ProcessRetryOptions(retrytransport.RetryOptions{
+			Enabled:   false,
+			Algorithm: algorithm,
+		})
+		assert.NoError(t, err)
+	})
+
 	t.Run("process invalid expression", func(t *testing.T) {
 		_, err := ProcessRetryOptions(retrytransport.RetryOptions{
 			Enabled:    true,

@@ -21,7 +21,8 @@ var noopRetryFunc = func(err error, req *http.Request, resp *http.Response) bool
 }
 
 func ProcessRetryOptions(retryOpts retrytransport.RetryOptions) (*retrytransport.RetryOptions, error) {
-	if retryOpts.Algorithm != backoffJitter {
+	// We skip validating the algorithm if retries are disabled
+	if retryOpts.Enabled && retryOpts.Algorithm != backoffJitter {
 		return nil, fmt.Errorf("unsupported retry algorithm: %s", retryOpts.Algorithm)
 	}
 
