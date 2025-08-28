@@ -10,14 +10,45 @@ import (
 	"go.uber.org/zap"
 )
 
-const defaultRetryExpression = "IsRetryableStatusCode() || IsConnectionError() || IsTimeout()"
+const (
+	defaultRetryExpression = "IsRetryableStatusCode() || IsConnectionError() || IsTimeout()"
+
+	backoffJitter = "backoff_jitter"
+)
 
 var noopRetryFunc = func(err error, req *http.Request, resp *http.Response) bool {
 	return false
 }
 
+func ProcessRetryOptions(retryOpts retrytransport.RetryOptions) (*retrytransport.RetryOptions, error) {
+	if retryOpts.Algorithm != backoffJitter {
+		return nil, fmt.Errorf("unsupported retry algorithm: %s", retryOpts.Algorithm)
+	}
+
+	shouldRetryFunc, err := buildRetryFunction(retryOpts)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build retry function: %w", err)
+	}
+
+	// Create copy to not mutate the original reference
+	retryOptions := retrytransport.RetryOptions{
+		Enabled:       retryOpts.Enabled,
+		Algorithm:     retryOpts.Algorithm,
+		MaxRetryCount: retryOpts.MaxRetryCount,
+		MaxDuration:   retryOpts.MaxDuration,
+		Interval:      retryOpts.Interval,
+		Expression:    retryOpts.Expression,
+
+		OnRetry: retryOpts.OnRetry,
+
+		ShouldRetry: shouldRetryFunc,
+	}
+
+	return &retryOptions, nil
+}
+
 // BuildRetryFunction creates a ShouldRetry function based on the provided expression
-func BuildRetryFunction(retryOpts retrytransport.RetryOptions) (retrytransport.ShouldRetryFunc, error) {
+func buildRetryFunction(retryOpts retrytransport.RetryOptions) (retrytransport.ShouldRetryFunc, error) {
 	// We do not need to build a retry function if retries are disabled
 	// This means that any bad expressions are ignored if retries are disabled
 	if !retryOpts.Enabled {

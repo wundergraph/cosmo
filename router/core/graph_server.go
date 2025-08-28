@@ -40,7 +40,6 @@ import (
 	rmiddleware "github.com/wundergraph/cosmo/router/internal/middleware"
 	"github.com/wundergraph/cosmo/router/internal/recoveryhandler"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
-	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
@@ -1157,21 +1156,9 @@ func (s *graphServer) buildGraphMux(
 	}
 
 	// Build retry options and handle any expression compilation errors
-	shouldRetryFunc, err := BuildRetryFunction(s.retryOptions)
+	processedRetryOptions, err := ProcessRetryOptions(s.retryOptions)
 	if err != nil {
-		return nil, fmt.Errorf("failed to build retry function: %w", err)
-	}
-
-	// Create copy to not mutate the original reference
-	retryOptions := retrytransport.RetryOptions{
-		Enabled:       s.retryOptions.Enabled,
-		MaxRetryCount: s.retryOptions.MaxRetryCount,
-		MaxDuration:   s.retryOptions.MaxDuration,
-		Interval:      s.retryOptions.Interval,
-		Expression:    s.retryOptions.Expression,
-		ShouldRetry:   shouldRetryFunc,
-
-		OnRetry: s.retryOptions.OnRetry,
+		return nil, fmt.Errorf("failed to process retry options: %w", err)
 	}
 
 	ecb := &ExecutorConfigurationBuilder{
@@ -1194,7 +1181,7 @@ func (s *graphServer) buildGraphMux(
 			PostHandlers:                  s.postOriginHandlers,
 			MetricStore:                   gm.metricStore,
 			ConnectionMetricStore:         baseConnMetricStore,
-			RetryOptions:                  retryOptions,
+			RetryOptions:                  *processedRetryOptions,
 			TracerProvider:                s.tracerProvider,
 			TracePropagators:              s.compositePropagator,
 			LocalhostFallbackInsideDocker: s.localhostFallbackInsideDocker,

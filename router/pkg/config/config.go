@@ -230,7 +230,7 @@ type GraphqlMetrics struct {
 
 type BackoffJitterRetry struct {
 	Enabled     bool          `yaml:"enabled" envDefault:"true" env:"RETRY_ENABLED"`
-	Algorithm   string        `yaml:"algorithm" envDefault:"backoff_jitter"`
+	Algorithm   string        `yaml:"algorithm" envDefault:"backoff_jitter" env:"RETRY_ALGORITHM"`
 	MaxAttempts int           `yaml:"max_attempts" envDefault:"5" env:"RETRY_MAX_ATTEMPTS"`
 	MaxDuration time.Duration `yaml:"max_duration" envDefault:"10s" env:"RETRY_MAX_DURATION"`
 	Interval    time.Duration `yaml:"interval" envDefault:"3s" env:"RETRY_INTERVAL"`

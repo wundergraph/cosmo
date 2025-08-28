@@ -34,7 +34,7 @@ func TestRetry(t *testing.T) {
 		maxRetryCount := 3
 		expression := "true"
 
-		options := core.WithSubgraphRetryOptions(true, maxRetryCount, 10*time.Second, 200*time.Millisecond, expression, retryCounterFunc)
+		options := core.WithSubgraphRetryOptions(true, "", maxRetryCount, 10*time.Second, 200*time.Millisecond, expression, retryCounterFunc)
 
 		testenv.Run(t, &testenv.Config{
 			NoRetryClient:   true,
@@ -76,7 +76,7 @@ func TestRetry(t *testing.T) {
 		maxRetryCount := 3
 		expression := "false"
 
-		options := core.WithSubgraphRetryOptions(true, maxRetryCount, 10*time.Second, 200*time.Millisecond, expression, retryCounterFunc)
+		options := core.WithSubgraphRetryOptions(true, "", maxRetryCount, 10*time.Second, 200*time.Millisecond, expression, retryCounterFunc)
 
 		testenv.Run(t, &testenv.Config{
 			NoRetryClient:   true,
@@ -117,7 +117,7 @@ func TestRetry(t *testing.T) {
 		maxRetryCount := 3
 		expression := "true"
 
-		options := core.WithSubgraphRetryOptions(true, maxRetryCount, 10*time.Second, 200*time.Millisecond, expression, retryCounterFunc)
+		options := core.WithSubgraphRetryOptions(true, "", maxRetryCount, 10*time.Second, 200*time.Millisecond, expression, retryCounterFunc)
 
 		testenv.Run(t, &testenv.Config{
 			NoRetryClient:   true,
@@ -159,7 +159,7 @@ func TestRetry(t *testing.T) {
 		maxAttemptsBeforeServiceSucceeds := 2
 		expression := "true"
 
-		options := core.WithSubgraphRetryOptions(true, maxRetryCount, 10*time.Second, 200*time.Millisecond, expression, retryCounterFunc)
+		options := core.WithSubgraphRetryOptions(true, "", maxRetryCount, 10*time.Second, 200*time.Millisecond, expression, retryCounterFunc)
 
 		testenv.Run(t, &testenv.Config{
 			NoRetryClient:   true,
@@ -208,7 +208,7 @@ func TestRetry(t *testing.T) {
 		expression := "statusCode == 429"
 		headerRetryIntervalInSeconds := 1
 
-		options := core.WithSubgraphRetryOptions(true, maxRetryCount, 2000*time.Second, 100*time.Millisecond, expression, retryCounterFunc)
+		options := core.WithSubgraphRetryOptions(true, "", maxRetryCount, 2000*time.Second, 100*time.Millisecond, expression, retryCounterFunc)
 
 		testenv.Run(t, &testenv.Config{
 			NoRetryClient:   true,
@@ -260,7 +260,7 @@ func TestFlakyRetry(t *testing.T) {
 		maxDuration := 100 * time.Millisecond
 		expression := "true"
 
-		options := core.WithSubgraphRetryOptions(true, maxRetryCount, maxDuration, retryInterval, expression, retryCounterFunc)
+		options := core.WithSubgraphRetryOptions(true, "", maxRetryCount, maxDuration, retryInterval, expression, retryCounterFunc)
 
 		testenv.Run(t, &testenv.Config{
 			NoRetryClient:   true,
@@ -315,7 +315,7 @@ func TestFlakyRetry(t *testing.T) {
 			maxRetryCount := 3
 			expression := "statusCode == 429"
 
-			options := core.WithSubgraphRetryOptions(true, maxRetryCount, 1000*time.Millisecond, retryInterval, expression, retryCounterFunc)
+			options := core.WithSubgraphRetryOptions(true, "", maxRetryCount, 1000*time.Millisecond, retryInterval, expression, retryCounterFunc)
 
 			testenv.Run(t, &testenv.Config{
 				NoRetryClient:   true,
@@ -363,7 +363,7 @@ func TestFlakyRetry(t *testing.T) {
 			emptyRetryInterval := 0
 			retryInterval := 300 * time.Millisecond
 
-			options := core.WithSubgraphRetryOptions(true, maxRetryCount, 1000*time.Millisecond, retryInterval, expression, retryCounterFunc)
+			options := core.WithSubgraphRetryOptions(true, "", maxRetryCount, 1000*time.Millisecond, retryInterval, expression, retryCounterFunc)
 
 			testenv.Run(t, &testenv.Config{
 				NoRetryClient:   true,

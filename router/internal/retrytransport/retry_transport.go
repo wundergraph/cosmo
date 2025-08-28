@@ -16,6 +16,7 @@ type OnRetryFunc func(count int, req *http.Request, resp *http.Response, sleepDu
 
 type RetryOptions struct {
 	Enabled       bool
+	Algorithm     string
 	MaxRetryCount int
 	Interval      time.Duration
 	MaxDuration   time.Duration
