@@ -1975,7 +1975,7 @@ export class SubgraphRepository {
 
     const { composedGraphs } = await composer.composeWithProposedSchemas({
       compositionOptions: newCompositionOptions(disableResolvabilityValidation),
-      graphs: federatedGraphs,
+      graphs: federatedGraphs.filter((g) => !g.contract),
       inputSubgraphs: checkSubgraphs,
     });
 

@@ -748,41 +748,6 @@ const CheckDetails = ({
             </dd>
           </div>
 
-          {data.affectedGraphs.length > 1 && (
-            <div className="flex-start flex flex-col gap-1">
-              <dt className="mb-2 text-sm text-muted-foreground">
-                Other Affected Graphs
-              </dt>
-              <dd className="flex flex-row flex-wrap gap-2 lg:flex lg:flex-col">
-                {data.affectedGraphs.map((ag) => {
-                  if (ag.id === graphContext.graph?.id) {
-                    return null;
-                  }
-                  return (
-                    <Badge
-                      key={ag.id}
-                      variant="outline"
-                      className="flex items-center space-x-2 py-2"
-                    >
-                      {getCheckIcon(ag.isCheckSuccessful)}
-                      <Link
-                        href={`/${organizationSlug}/${namespace}/graph/${ag.name}/checks/${id}`}
-                        className=" flex-1 truncate hover:underline"
-                      >
-                        <span>{ag.name}</span>
-                      </Link>
-                      <InfoTooltip>
-                        {ag.isCheckSuccessful
-                          ? "Check successful"
-                          : "Check failed"}
-                      </InfoTooltip>
-                    </Badge>
-                  );
-                })}
-              </dd>
-            </div>
-          )}
-
           {changeCounts && (
             <div className="flex flex-col">
               <dt className="mb-2 text-sm text-muted-foreground">Changes</dt>
@@ -970,7 +935,8 @@ const CheckDetails = ({
                         variant="muted"
                         className="bg-white px-1.5 text-current dark:bg-gray-900/60"
                       >
-                        {data.changes.length}
+                        {data.compositionErrors.length +
+                          data.compositionWarnings.length}
                       </Badge>
                     ) : null}
                   </Link>
@@ -1090,11 +1056,6 @@ const CheckDetails = ({
               >
                 <div className="space-y-4">
                   <div className="flex flex-col space-y-4">
-                    <div className="flex items-center space-x-4">
-                      <h3 className="text-lg font-semibold">Check Status</h3>
-                      {getCheckBadge(isSuccessful, data.check.isForcedSuccess)}
-                    </div>
-
                     <Alert variant={isSuccessful ? "default" : "destructive"}>
                       {isSuccessful ? (
                         <CheckCircledIcon className="h-4 w-4" />
@@ -1108,92 +1069,287 @@ const CheckDetails = ({
                     </Alert>
                   </div>
 
-                  {data.linkedCheck && (
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold">Linked Check</h3>
+                  {data.affectedGraphs.length > 1 && (
+                    <div className="space-y-4 pt-4">
+                      <h3 className="text-lg font-semibold">Affected Graphs</h3>
                       <TableWrapper>
                         <Table>
                           <TableHeader>
                             <TableRow>
-                              <TableHead>Check ID</TableHead>
                               <TableHead>Status</TableHead>
-                              <TableHead>Operations</TableHead>
-                              <TableHead>Graph Pruning</TableHead>
+                              <TableHead>FederatedGraph</TableHead>
+                              <TableHead>Tasks</TableHead>
+                              <TableHead></TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            <TableRow className="hover:bg-muted/30">
-                              <TableCell>
-                                <Link
-                                  href={`${
-                                    router.asPath.split("/checks/")[0]
-                                  }/checks/${data.linkedCheck.id}`}
-                                  className="font-medium text-primary hover:underline"
-                                >
-                                  {data.linkedCheck.id}
-                                </Link>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  {data.linkedCheck.hasClientTraffic ||
-                                  data.linkedCheck.hasGraphPruningErrors ? (
-                                    <Badge
-                                      variant="destructive"
-                                      className="gap-1"
-                                    >
-                                      <CrossCircledIcon className="h-3 w-3" />
-                                      Failed
-                                    </Badge>
-                                  ) : (
-                                    <Badge variant="success" className="gap-1">
-                                      <CheckCircledIcon className="h-3 w-3" />
-                                      Passed
-                                    </Badge>
-                                  )}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <Badge
-                                  variant="outline"
-                                  className={cn("gap-2", {
-                                    "text-destructive":
-                                      data.linkedCheck.hasClientTraffic,
-                                  })}
-                                >
-                                  {data.linkedCheck.hasClientTraffic ? (
-                                    <CrossCircledIcon className="h-3 w-3" />
-                                  ) : (
-                                    <CheckCircledIcon className="h-3 w-3" />
-                                  )}
-                                  {data.linkedCheck.hasClientTraffic
-                                    ? "Has Traffic"
-                                    : "No Traffic"}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                <Badge
-                                  variant="outline"
-                                  className={cn("gap-2", {
-                                    "text-destructive":
-                                      data.linkedCheck.hasGraphPruningErrors,
-                                  })}
-                                >
-                                  {data.linkedCheck.hasGraphPruningErrors ? (
-                                    <CrossCircledIcon className="h-3 w-3" />
-                                  ) : (
-                                    <CheckCircledIcon className="h-3 w-3" />
-                                  )}
-                                  {data.linkedCheck.hasGraphPruningErrors
-                                    ? "Has Errors"
-                                    : "No Errors"}
-                                </Badge>
-                              </TableCell>
-                            </TableRow>
+                            {data.affectedGraphs.map(
+                              ({
+                                id: federatedGraphId,
+                                name,
+                                hasClientTraffic,
+                                hasGraphPruningErrors,
+                                isComposable,
+                                isBreaking,
+                                hasLintErrors,
+                                isCheckSuccessful,
+                              }) => {
+                                if (
+                                  federatedGraphId === graphContext.graph?.id
+                                ) {
+                                  return null;
+                                }
+
+                                const path = `/${organizationSlug}/${namespace}/graph/${name}/checks/${id}`;
+                                const compositionSkipped =
+                                  data.check?.compositionSkipped;
+                                const breakingChangesSkipped =
+                                  data.check?.breakingChangesSkipped;
+                                const clientTrafficCheckSkipped =
+                                  data.check?.clientTrafficCheckSkipped;
+                                const lintSkipped = data.check?.lintSkipped;
+                                const graphPruningSkipped =
+                                  data.check?.graphPruningSkipped;
+                                const proposalMatch = data.check?.proposalMatch;
+
+                                return (
+                                  <TableRow
+                                    key={federatedGraphId}
+                                    className="group cursor-pointer hover:bg-secondary/30"
+                                    onClick={() => router.push(path)}
+                                  >
+                                    <TableCell>
+                                      {getCheckBadge(
+                                        isCheckSuccessful,
+                                        data.check?.isForcedSuccess || false,
+                                      )}
+                                    </TableCell>
+                                    <TableCell>{name}</TableCell>
+                                    <TableCell>
+                                      <div className="flex flex-wrap items-start gap-2">
+                                        <Badge
+                                          variant="outline"
+                                          className={cn(
+                                            "gap-2 py-1.5",
+                                            compositionSkipped &&
+                                              "text-muted-foreground",
+                                          )}
+                                        >
+                                          {compositionSkipped ? (
+                                            <NoSymbolIcon className="h-4 w-4" />
+                                          ) : (
+                                            getCheckIcon(isComposable)
+                                          )}
+                                          <span>Composes</span>
+                                        </Badge>
+                                        <Badge
+                                          variant="outline"
+                                          className={cn(
+                                            "gap-2 py-1.5",
+                                            breakingChangesSkipped &&
+                                              "text-muted-foreground",
+                                          )}
+                                        >
+                                          {breakingChangesSkipped ? (
+                                            <NoSymbolIcon className="h-4 w-4" />
+                                          ) : (
+                                            getCheckIcon(!isBreaking)
+                                          )}
+                                          <span>Breaking changes</span>
+                                        </Badge>
+                                        <Badge
+                                          variant="outline"
+                                          className={cn(
+                                            "gap-2 py-1.5",
+                                            clientTrafficCheckSkipped &&
+                                              "text-muted-foreground",
+                                          )}
+                                        >
+                                          {clientTrafficCheckSkipped ? (
+                                            <NoSymbolIcon className="h-4 w-4" />
+                                          ) : (
+                                            getCheckIcon(!hasClientTraffic)
+                                          )}
+                                          <span>Operations</span>
+                                        </Badge>
+                                        <Badge
+                                          variant="outline"
+                                          className={cn(
+                                            "gap-2 py-1.5",
+                                            lintSkipped &&
+                                              "text-muted-foreground",
+                                          )}
+                                        >
+                                          {lintSkipped ? (
+                                            <NoSymbolIcon className="h-4 w-4" />
+                                          ) : (
+                                            getCheckIcon(!hasLintErrors)
+                                          )}
+                                          <span>Lint Errors</span>
+                                        </Badge>
+                                        <Badge
+                                          variant="outline"
+                                          className={cn(
+                                            "gap-2 py-1.5",
+                                            graphPruningSkipped &&
+                                              "text-muted-foreground",
+                                          )}
+                                        >
+                                          {graphPruningSkipped ? (
+                                            <NoSymbolIcon className="h-4 w-4" />
+                                          ) : (
+                                            getCheckIcon(!hasGraphPruningErrors)
+                                          )}
+                                          <span className="flex-1 truncate">
+                                            Pruning Errors
+                                          </span>
+                                        </Badge>
+                                        {proposalsFeature?.enabled && (
+                                          <Badge
+                                            variant="outline"
+                                            className={cn(
+                                              "gap-2 py-1.5",
+                                              !proposalMatch &&
+                                                "text-muted-foreground",
+                                            )}
+                                          >
+                                            {!proposalMatch ? (
+                                              <NoSymbolIcon className="h-4 w-4" />
+                                            ) : (
+                                              getCheckIcon(
+                                                proposalMatch !== "error",
+                                              )
+                                            )}
+                                            <span className="flex-1 truncate">
+                                              Proposal Match
+                                            </span>
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      <div className="flex items-center justify-end gap-2">
+                                        <Button
+                                          asChild
+                                          variant="ghost"
+                                          size="sm"
+                                          className="table-action"
+                                        >
+                                          <Link href={path}>View</Link>
+                                        </Button>
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              },
+                            )}
                           </TableBody>
                         </Table>
                       </TableWrapper>
                     </div>
                   )}
+
+                  {data.linkedCheck &&
+                    data.linkedCheck.affectedGraphNames.length > 0 && (
+                      <div className="space-y-4 pt-4">
+                        <h3 className="text-lg font-semibold">Linked Check</h3>
+                        <TableWrapper>
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Status</TableHead>
+                                <TableHead>Check ID</TableHead>
+                                <TableHead>Subgraph</TableHead>
+                                <TableHead>Tasks</TableHead>
+                                <TableHead></TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              <TableRow
+                                key={data.linkedCheck.id}
+                                className="group cursor-pointer hover:bg-secondary/30"
+                                onClick={() =>
+                                  router.push(
+                                    `/${organizationSlug}/${data.linkedCheck?.namespace}/graph/${data.linkedCheck?.affectedGraphNames[0]}/checks/${data.linkedCheck?.id}`,
+                                  )
+                                }
+                              >
+                                <TableCell>
+                                  {getCheckBadge(isSuccessful, false)}
+                                </TableCell>
+                                <TableCell>{data.linkedCheck.id}</TableCell>
+                                <TableCell>
+                                  {data.linkedCheck.subgraphNames.length > 1
+                                    ? "Multiple Subgraphs"
+                                    : data.linkedCheck.subgraphNames.length > 0
+                                    ? data.linkedCheck.subgraphNames[0]
+                                    : "Subgraph"}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge
+                                    variant="outline"
+                                    className={cn(
+                                      "gap-2 py-1.5",
+                                      data.linkedCheck
+                                        .clientTrafficCheckSkipped &&
+                                        "text-muted-foreground",
+                                    )}
+                                  >
+                                    {data.linkedCheck
+                                      .clientTrafficCheckSkipped ? (
+                                      <NoSymbolIcon className="h-4 w-4" />
+                                    ) : (
+                                      getCheckIcon(
+                                        !data.linkedCheck.hasClientTraffic,
+                                      )
+                                    )}
+                                    <span>Operations</span>
+                                  </Badge>
+                                  <Badge
+                                    variant="outline"
+                                    className={cn(
+                                      "gap-2 py-1.5",
+                                      data.linkedCheck
+                                        .graphPruningCheckSkipped &&
+                                        "text-muted-foreground",
+                                    )}
+                                  >
+                                    {data.linkedCheck
+                                      .graphPruningCheckSkipped ? (
+                                      <NoSymbolIcon className="h-4 w-4" />
+                                    ) : (
+                                      getCheckIcon(
+                                        !data.linkedCheck.hasGraphPruningErrors,
+                                      )
+                                    )}
+                                    <span className="flex-1 truncate">
+                                      Pruning Errors
+                                    </span>
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <div className="flex items-center justify-end gap-2">
+                                    <Button
+                                      asChild
+                                      variant="ghost"
+                                      size="sm"
+                                      className="table-action"
+                                    >
+                                      <Link
+                                        href={`/${organizationSlug}/${data.linkedCheck?.namespace}/graph/${data.linkedCheck?.affectedGraphNames[0]}/checks/${data.linkedCheck?.id}`}
+                                        target="_blank"
+                                      >
+                                        View
+                                      </Link>
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            </TableBody>
+                          </Table>
+                        </TableWrapper>
+                      </div>
+                    )}
                 </div>
               </TabsContent>
 

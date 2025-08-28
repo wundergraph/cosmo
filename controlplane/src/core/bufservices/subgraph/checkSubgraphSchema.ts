@@ -178,7 +178,6 @@ export function checkSubgraphSchema(
     const federatedGraphs = await fedGraphRepo.bySubgraphLabels({
       labels: subgraph ? subgraph.labels : req.labels,
       namespaceId: namespace.id,
-      excludeContracts: true,
     });
     /*
      * If there are any federated graphs for which the subgraph is a constituent, the subgraph will be validated
@@ -331,7 +330,6 @@ export function checkSubgraphSchema(
       const targetFederatedGraphs = await fedGraphRepo.bySubgraphLabels({
         labels: targetSubgraph.labels,
         namespaceId: targetSubgraph.namespaceId,
-        excludeContracts: true,
       });
 
       const targetNamespace = await namespaceRepo.byId(targetSubgraph.namespaceId);

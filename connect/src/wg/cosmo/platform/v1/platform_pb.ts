@@ -4379,6 +4379,31 @@ export class GetCheckSummaryResponse_AffectedGraph extends Message<GetCheckSumma
    */
   isCheckSuccessful = false;
 
+  /**
+   * @generated from field: bool isComposable = 5;
+   */
+  isComposable = false;
+
+  /**
+   * @generated from field: bool isBreaking = 6;
+   */
+  isBreaking = false;
+
+  /**
+   * @generated from field: bool hasClientTraffic = 7;
+   */
+  hasClientTraffic = false;
+
+  /**
+   * @generated from field: bool hasLintErrors = 8;
+   */
+  hasLintErrors = false;
+
+  /**
+   * @generated from field: bool hasGraphPruningErrors = 9;
+   */
+  hasGraphPruningErrors = false;
+
   constructor(data?: PartialMessage<GetCheckSummaryResponse_AffectedGraph>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4391,6 +4416,11 @@ export class GetCheckSummaryResponse_AffectedGraph extends Message<GetCheckSumma
     { no: 2, name: "traffic_check_days", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "isCheckSuccessful", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 5, name: "isComposable", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 6, name: "isBreaking", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 7, name: "hasClientTraffic", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 8, name: "hasLintErrors", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 9, name: "hasGraphPruningErrors", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCheckSummaryResponse_AffectedGraph {
@@ -4469,19 +4499,44 @@ export class GetCheckSummaryResponse_LinkedCheck extends Message<GetCheckSummary
   id = "";
 
   /**
-   * @generated from field: repeated string affected_graph_ids = 2;
+   * @generated from field: repeated string affectedGraphNames = 2;
    */
-  affectedGraphIds: string[] = [];
+  affectedGraphNames: string[] = [];
 
   /**
-   * @generated from field: bool hasClientTraffic = 3;
+   * @generated from field: bool isCheckSuccessful = 3;
+   */
+  isCheckSuccessful = false;
+
+  /**
+   * @generated from field: bool hasClientTraffic = 4;
    */
   hasClientTraffic = false;
 
   /**
-   * @generated from field: bool hasGraphPruningErrors = 4;
+   * @generated from field: bool hasGraphPruningErrors = 5;
    */
   hasGraphPruningErrors = false;
+
+  /**
+   * @generated from field: bool clientTrafficCheckSkipped = 6;
+   */
+  clientTrafficCheckSkipped = false;
+
+  /**
+   * @generated from field: bool graphPruningCheckSkipped = 7;
+   */
+  graphPruningCheckSkipped = false;
+
+  /**
+   * @generated from field: repeated string subgraphNames = 8;
+   */
+  subgraphNames: string[] = [];
+
+  /**
+   * @generated from field: string namespace = 9;
+   */
+  namespace = "";
 
   constructor(data?: PartialMessage<GetCheckSummaryResponse_LinkedCheck>) {
     super();
@@ -4492,9 +4547,14 @@ export class GetCheckSummaryResponse_LinkedCheck extends Message<GetCheckSummary
   static readonly typeName = "wg.cosmo.platform.v1.GetCheckSummaryResponse.LinkedCheck";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "affected_graph_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 3, name: "hasClientTraffic", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 4, name: "hasGraphPruningErrors", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 2, name: "affectedGraphNames", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 3, name: "isCheckSuccessful", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "hasClientTraffic", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 5, name: "hasGraphPruningErrors", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 6, name: "clientTrafficCheckSkipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 7, name: "graphPruningCheckSkipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 8, name: "subgraphNames", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 9, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCheckSummaryResponse_LinkedCheck {

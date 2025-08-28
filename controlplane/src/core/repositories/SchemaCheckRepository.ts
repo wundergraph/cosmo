@@ -11,7 +11,7 @@ import {
   VCSContext,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
-import { and, eq, ilike, inArray, or, SQL, sql } from 'drizzle-orm';
+import { and, eq, ilike, inArray, is, or, SQL, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { GraphQLSchema, parse } from 'graphql';
@@ -43,7 +43,12 @@ import {
   InspectorSchemaChange,
   SchemaUsageTrafficInspector,
 } from '../services/SchemaUsageTrafficInspector.js';
-import { createBatches, getFederatedGraphRouterCompatibilityVersion, normalizeLabels } from '../util.js';
+import {
+  createBatches,
+  getFederatedGraphRouterCompatibilityVersion,
+  isCheckSuccessful,
+  normalizeLabels,
+} from '../util.js';
 import { FederatedGraphConfig, FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { OrganizationRepository } from './OrganizationRepository.js';
 import { ProposalRepository } from './ProposalRepository.js';
@@ -660,7 +665,6 @@ export class SchemaCheckRepository {
       const graphs = await fedGraphRepo.bySubgraphLabels({
         labels: subgraph?.labels || s.labels,
         namespaceId: namespace.id,
-        excludeContracts: true,
       });
 
       const schemaCheckSubgraphId = await this.createSchemaCheckSubgraph({
@@ -976,7 +980,7 @@ export class SchemaCheckRepository {
 
     const { composedGraphs } = await composer.composeWithProposedSchemas({
       inputSubgraphs: checkSubgraphs,
-      graphs: federatedGraphs,
+      graphs: federatedGraphs.filter((g) => !g.contract),
     });
 
     await this.createSchemaCheckCompositions({
@@ -1112,19 +1116,56 @@ export class SchemaCheckRepository {
     const check = await this.db.query.schemaChecks.findFirst({
       where: eq(schema.schemaChecks.id, linkedSchemaCheck[0].linkedSchemaCheckId),
       with: {
-        affectedGraphs: true,
+        affectedGraphs: {
+          with: {
+            federatedGraph: {
+              with: {
+                target: {
+                  columns: {
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        subgraphs: {
+          columns: {
+            subgraphName: true,
+          },
+          with: {
+            namespace: {
+              columns: {
+                name: true,
+              },
+            },
+          },
+        },
       },
     });
 
-    if (!check) {
+    if (!check || check.subgraphs.length === 0 || !check.subgraphs[0].namespace) {
       return undefined;
     }
 
     return {
       id: check.id,
-      affectedGraphIds: check.affectedGraphs.map(({ federatedGraphId }) => federatedGraphId),
+      affectedGraphNames: check.affectedGraphs.map(({ federatedGraph }) => federatedGraph.target.name),
+      subgraphNames: check.subgraphs.map(({ subgraphName }) => subgraphName),
+      namespace: check.subgraphs[0].namespace.name,
       hasClientTraffic: check.hasClientTraffic ?? false,
       hasGraphPruningErrors: check.hasGraphPruningErrors ?? false,
+      isCheckSuccessful: isCheckSuccessful({
+        isComposable: !!check.isComposable,
+        isBreaking: !!check.hasBreakingChanges,
+        hasClientTraffic: !!check.hasClientTraffic,
+        hasLintErrors: !!check.hasLintErrors,
+        hasGraphPruningErrors: !!check.hasGraphPruningErrors,
+        clientTrafficCheckSkipped: !!check.clientTrafficCheckSkipped,
+        hasProposalMatchError: check.proposalMatch === 'error',
+      }),
+      clientTrafficCheckSkipped: !!check.clientTrafficCheckSkipped,
+      graphPruningCheckSkipped: !!check.graphPruningSkipped,
     };
   }
 }

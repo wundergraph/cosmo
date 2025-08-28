@@ -552,6 +552,11 @@ message GetCheckSummaryResponse {
     int32 traffic_check_days = 2;
     string name = 3;
     bool isCheckSuccessful = 4;
+    bool isComposable = 5;
+    bool isBreaking = 6;
+    bool hasClientTraffic = 7;
+    bool hasLintErrors = 8;
+    bool hasGraphPruningErrors = 9;
   }
 
   message ProposalSchemaMatch {
@@ -562,9 +567,14 @@ message GetCheckSummaryResponse {
 
   message LinkedCheck {
     string id = 1;
-    repeated string affected_graph_ids = 2;
-    bool hasClientTraffic = 3;
-    bool hasGraphPruningErrors = 4;
+    repeated string affectedGraphNames = 2;
+    bool isCheckSuccessful = 3;
+    bool hasClientTraffic = 4;
+    bool hasGraphPruningErrors = 5;
+    bool clientTrafficCheckSkipped = 6;
+    bool graphPruningCheckSkipped = 7;
+    repeated string subgraphNames = 8;
+    string namespace = 9;
   }
 
   Response response = 1;

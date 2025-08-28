@@ -124,6 +124,27 @@ export function getCheckSummary(
     });
 
     const currentAffectedGraph = check.affectedGraphs.find((ag) => ag.id === graph.id);
+    if (!currentAffectedGraph) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: 'Check not found for the current graph',
+        },
+        compositionErrors: [],
+        compositionWarnings: [],
+        changes: [],
+        affectedGraphs: [],
+        trafficCheckDays: 0,
+        lintIssues: [],
+        graphPruningIssues: [],
+        isGraphPruningEnabled: false,
+        isLintingEnabled: false,
+        checkedSubgraphs: [],
+        proposalMatches: [],
+        isProposalsEnabled: false,
+      };
+    }
+
     const affectedGraphs: GetCheckSummaryResponse_AffectedGraph[] = [];
 
     const hasLintErrors = lintIssues.some((issue) => issue.severity === LintSeverity.error);
@@ -154,6 +175,11 @@ export function getCheckSummary(
           isLinkedTrafficCheckFailed: linkedCheck?.hasClientTraffic,
           isLinkedPruningCheckFailed: linkedCheck?.hasGraphPruningErrors,
         }),
+        isComposable: checkDetails.compositionErrors.length === 0,
+        isBreaking: checkDetails.changes.some((change) => change.isBreaking),
+        hasClientTraffic: hasAffectedOperations,
+        hasLintErrors,
+        hasGraphPruningErrors: graphPruningIssues.some((issue) => issue.severity === LintSeverity.error),
       }),
     );
 
@@ -198,6 +224,11 @@ export function getCheckSummary(
             isLinkedTrafficCheckFailed: linkedCheck?.hasClientTraffic,
             isLinkedPruningCheckFailed: linkedCheck?.hasGraphPruningErrors,
           }),
+          isComposable: checkDetails.compositionErrors.length === 0,
+          isBreaking: checkDetails.changes.some((change) => change.isBreaking),
+          hasClientTraffic: hasAffectedOperations,
+          hasLintErrors,
+          hasGraphPruningErrors: graphPruningIssues.some((issue) => issue.severity === LintSeverity.error),
         }),
       );
     }

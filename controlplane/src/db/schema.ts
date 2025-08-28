@@ -879,6 +879,17 @@ export const schemaCheckSubgraphs = pgTable(
   },
 );
 
+export const schemaCheckSubgraphRelations = relations(schemaCheckSubgraphs, ({ one }) => ({
+  schemaCheck: one(schemaChecks, {
+    fields: [schemaCheckSubgraphs.schemaCheckId],
+    references: [schemaChecks.id],
+  }),
+  namespace: one(namespaces, {
+    fields: [schemaCheckSubgraphs.namespaceId],
+    references: [namespaces.id],
+  }),
+}));
+
 export const schemaCheckChangeActionOperationUsage = pgTable(
   'schema_check_change_operation_usage', // sccou
   {
