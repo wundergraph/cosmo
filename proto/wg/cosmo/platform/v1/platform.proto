@@ -278,7 +278,9 @@ message CheckSubgraphSchemaResponse {
   optional bool client_traffic_check_skipped = 12;
   repeated CompositionWarning compositionWarnings = 13;
   optional string proposalMatchMessage = 14;
+  // If true, it means the traffic check failed for the linked check
   optional bool isLinkedTrafficCheckFailed = 15;
+  // If true, it means the graph pruning check failed for the linked check
   optional bool isLinkedPruningCheckFailed = 16;
 }
 
