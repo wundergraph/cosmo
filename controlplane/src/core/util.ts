@@ -574,7 +574,7 @@ export const isCheckSuccessful = ({
   clientTrafficCheckSkipped,
   hasProposalMatchError,
   isLinkedTrafficCheckFailed,
-  isLinkedGraphPruningFailed,
+  isLinkedPruningCheckFailed,
 }: {
   isComposable: boolean;
   isBreaking: boolean;
@@ -584,9 +584,9 @@ export const isCheckSuccessful = ({
   clientTrafficCheckSkipped: boolean;
   hasProposalMatchError: boolean;
   isLinkedTrafficCheckFailed?: boolean;
-  isLinkedGraphPruningFailed?: boolean;
+  isLinkedPruningCheckFailed?: boolean;
 }) => {
-  if (isLinkedTrafficCheckFailed || isLinkedGraphPruningFailed) {
+  if (isLinkedTrafficCheckFailed || isLinkedPruningCheckFailed) {
     return false;
   }
 

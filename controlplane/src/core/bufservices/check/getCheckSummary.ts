@@ -152,7 +152,7 @@ export function getCheckSummary(
           clientTrafficCheckSkipped: check.clientTrafficCheckSkipped,
           hasProposalMatchError: check.proposalMatch === 'error',
           isLinkedTrafficCheckFailed: linkedCheck?.hasClientTraffic,
-          isLinkedGraphPruningFailed: linkedCheck?.hasGraphPruningErrors,
+          isLinkedPruningCheckFailed: linkedCheck?.hasGraphPruningErrors,
         }),
       }),
     );
@@ -196,7 +196,7 @@ export function getCheckSummary(
             clientTrafficCheckSkipped: check.clientTrafficCheckSkipped,
             hasProposalMatchError: check.proposalMatch === 'error',
             isLinkedTrafficCheckFailed: linkedCheck?.hasClientTraffic,
-            isLinkedGraphPruningFailed: linkedCheck?.hasGraphPruningErrors,
+            isLinkedPruningCheckFailed: linkedCheck?.hasGraphPruningErrors,
           }),
         }),
       );
