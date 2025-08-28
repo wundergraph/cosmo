@@ -112,7 +112,7 @@ describe('Link/Unlink Subgraph tests', () => {
       });
 
       expect(linkResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
-      expect(linkResponse.response?.details).toBe('The sourcenamespace "nonexistent" was not found.');
+      expect(linkResponse.response?.details).toBe('The source namespace "nonexistent" was not found.');
 
       await server.close();
     });
