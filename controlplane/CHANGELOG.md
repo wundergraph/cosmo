@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.159.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.158.0...controlplane@0.159.0) (2025-08-28)
+
+### Features
+
+* add span for each grpc invocation ([#2158](https://github.com/wundergraph/cosmo/issues/2158)) ([4f0383f](https://github.com/wundergraph/cosmo/commit/4f0383f780371b0f3549f94a2e85312178f0dfaa)) (@SkArchon)
+
 # [0.158.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.157.0...controlplane@0.158.0) (2025-08-24)
 
 ### Features
