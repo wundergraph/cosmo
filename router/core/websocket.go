@@ -627,6 +627,11 @@ func (rw *websocketResponseWriter) Complete() {
 	}
 }
 
+// Heartbeat is a no-op function for WebSocket subscriptions.
+func (rw *websocketResponseWriter) Heartbeat() error {
+	return nil
+}
+
 func (rw *websocketResponseWriter) Close(kind resolve.SubscriptionCloseKind) {
 	err := rw.protocol.Close(kind.WSCode, kind.Reason)
 	if err != nil {
