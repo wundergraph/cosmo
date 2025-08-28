@@ -4,6 +4,20 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.9.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.8.3...@wundergraph/protographic@0.9.0) (2025-08-19)
+
+### Features
+
+* add support for [@deprecated](https://github.com/deprecated) directive ([#2140](https://github.com/wundergraph/cosmo/issues/2140)) ([dd88043](https://github.com/wundergraph/cosmo/commit/dd880432f03aa1493129588468ae0d05e7b99184)) (@Noroth)
+
+## [0.8.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.8.2...@wundergraph/protographic@0.8.3) (2025-08-12)
+
+**Note:** Version bump only for package @wundergraph/protographic
+
+## [0.8.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.8.1...@wundergraph/protographic@0.8.2) (2025-08-08)
+
+**Note:** Version bump only for package @wundergraph/protographic
+
 ## [0.8.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.8.0...@wundergraph/protographic@0.8.1) (2025-08-07)
 
 **Note:** Version bump only for package @wundergraph/protographic

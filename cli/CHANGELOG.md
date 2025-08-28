@@ -4,6 +4,48 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.90.6](https://github.com/wundergraph/cosmo/compare/wgc@0.90.5...wgc@0.90.6) (2025-08-25)
+
+### Bug Fixes
+
+* add tracing by default and fix bugs ([#2166](https://github.com/wundergraph/cosmo/issues/2166)) ([fa4a94c](https://github.com/wundergraph/cosmo/commit/fa4a94cf9d04b3c179c30a0bb857caf6f5a118c3)) (@SkArchon)
+
+## [0.90.5](https://github.com/wundergraph/cosmo/compare/wgc@0.90.4...wgc@0.90.5) (2025-08-24)
+
+### Bug Fixes
+
+* **cli:** fix link in plugin docs and npm workspace issue ([#2164](https://github.com/wundergraph/cosmo/issues/2164)) ([1a6b4f2](https://github.com/wundergraph/cosmo/commit/1a6b4f26063e6d8a642d68b0f96963367a592dfb)) (@StarpTech)
+
+## [0.90.4](https://github.com/wundergraph/cosmo/compare/wgc@0.90.3...wgc@0.90.4) (2025-08-19)
+
+**Note:** Version bump only for package wgc
+
+## [0.90.3](https://github.com/wundergraph/cosmo/compare/wgc@0.90.2...wgc@0.90.3) (2025-08-18)
+
+### Bug Fixes
+
+* check auth in the cli for a few plugin commands ([#2147](https://github.com/wundergraph/cosmo/issues/2147)) ([88f6b63](https://github.com/wundergraph/cosmo/commit/88f6b63b6efbece0474bce68a8c36eb2fb555c51)) (@JivusAyrus)
+
+## [0.90.2](https://github.com/wundergraph/cosmo/compare/wgc@0.90.1...wgc@0.90.2) (2025-08-15)
+
+**Note:** Version bump only for package wgc
+
+## [0.90.1](https://github.com/wundergraph/cosmo/compare/wgc@0.90.0...wgc@0.90.1) (2025-08-12)
+
+### Bug Fixes
+
+* update the registry url in the cli ([#2134](https://github.com/wundergraph/cosmo/issues/2134)) ([063de73](https://github.com/wundergraph/cosmo/commit/063de738d4c29b86149301f93bb61c775687919b)) (@JivusAyrus)
+
+# [0.90.0](https://github.com/wundergraph/cosmo/compare/wgc@0.89.3...wgc@0.90.0) (2025-08-12)
+
+### Features
+
+* add support for plugins ([#2079](https://github.com/wundergraph/cosmo/issues/2079)) ([05c923a](https://github.com/wundergraph/cosmo/commit/05c923aaa09a898a1662fc40d0e5751dfa5b8fe1)) (@JivusAyrus)
+
+## [0.89.3](https://github.com/wundergraph/cosmo/compare/wgc@0.89.2...wgc@0.89.3) (2025-08-08)
+
+**Note:** Version bump only for package wgc
+
 ## [0.89.2](https://github.com/wundergraph/cosmo/compare/wgc@0.89.1...wgc@0.89.2) (2025-08-07)
 
 **Note:** Version bump only for package wgc

@@ -18,6 +18,7 @@ type accessLogger struct {
 	baseFields            []zapcore.Field
 	attributes            []config.CustomAttribute
 	exprAttributes        []ExpressionAttribute
+	ignoreQueryParamsList []string
 }
 
 type SubgraphAccessLogger struct {
@@ -52,7 +53,7 @@ func (h *SubgraphAccessLogger) RequestFields(respInfo *resolve.ResponseInfo, ove
 		return []zap.Field{}
 	}
 
-	fields := h.accessLogger.getRequestFields(respInfo.Request)
+	fields := h.accessLogger.getRequestFields(respInfo.Request, h.logger)
 	if respInfo.Request != nil && respInfo.Request.URL != nil {
 		fields = append(fields, zap.String("url", respInfo.Request.URL.String()))
 	}

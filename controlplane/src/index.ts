@@ -46,6 +46,7 @@ const {
   S3_ACCESS_KEY_ID,
   S3_SECRET_ACCESS_KEY,
   S3_FORCE_PATH_STYLE,
+  S3_USE_INDIVIDUAL_DELETES,
   SMTP_ENABLED,
   SMTP_HOST,
   SMTP_PORT,
@@ -128,6 +129,7 @@ const options: BuildConfig = {
     username: S3_ACCESS_KEY_ID,
     password: S3_SECRET_ACCESS_KEY,
     forcePathStyle: S3_FORCE_PATH_STYLE,
+    useIndividualDeletes: S3_USE_INDIVIDUAL_DELETES,
   },
   mailer: {
     smtpEnabled: SMTP_ENABLED,

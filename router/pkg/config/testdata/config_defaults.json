@@ -40,6 +40,7 @@
           "Subscriptions": false
         },
         "CircuitBreaker": false,
+        "Streams": false,
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
         "Exporters": null
@@ -50,6 +51,7 @@
         "ListenAddr": "127.0.0.1:8088",
         "GraphqlCache": false,
         "ConnectionStats": false,
+        "Streams": false,
         "EngineStats": {
           "Subscriptions": false
         },
@@ -120,6 +122,9 @@
     },
     "Storage": {
       "ProviderID": ""
+    },
+    "Session": {
+      "Stateless": true
     },
     "GraphName": "mygraph",
     "ExcludeMutations": false,
@@ -197,7 +202,10 @@
       }
     },
     "Router": {
-      "Fields": null
+      "Fields": null,
+      "IgnoreQueryParamsList": [
+        "variables"
+      ]
     },
     "Subgraphs": {
       "Enabled": false,
@@ -507,7 +515,10 @@
   },
   "Plugins": {
     "Enabled": false,
-    "Path": "plugins"
+    "Path": "plugins",
+    "Registry": {
+      "URL": "cosmo-registry.wundergraph.com"
+    }
   },
   "WatchConfig": {
     "Enabled": false,

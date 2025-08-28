@@ -8,12 +8,12 @@ import {
   ROUTER_COMPATIBILITY_VERSIONS,
   SupportedRouterCompatibilityVersion,
 } from '@wundergraph/composition';
-import { GraphQLSchema, lexicographicSortSchema } from 'graphql';
 import {
   GraphQLSubscriptionProtocol,
   GraphQLWebsocketSubprotocol,
 } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-
+import { GraphQLSchema, lexicographicSortSchema } from 'graphql';
+import { PartialMessage } from '@bufbuild/protobuf';
 import {
   ConfigurationVariable,
   ConfigurationVariableKind,
@@ -26,14 +26,14 @@ import {
   GRPCConfiguration,
   GRPCMapping,
   HTTPMethod,
+  ImageReference,
   InternedString,
   PluginConfiguration,
   RouterConfig,
   TypeField,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import { PartialMessage } from '@bufbuild/protobuf';
-import { configurationDatasToDataSourceConfiguration, generateFieldConfigurations } from './graphql-configuration.js';
 import { invalidRouterCompatibilityVersion, normalizationFailureError } from './errors.js';
+import { configurationDatasToDataSourceConfiguration, generateFieldConfigurations } from './graphql-configuration.js';
 
 export interface Input {
   federatedClientSDL: string;
@@ -68,7 +68,6 @@ export interface ComposedSubgraph {
   name: string;
   sdl: string;
   url: string;
-  schemaVersionId?: string;
   subscriptionUrl: string;
   subscriptionProtocol?: SubscriptionProtocol | undefined;
   websocketSubprotocol?: WebsocketSubprotocol | undefined;
@@ -91,6 +90,7 @@ export interface ComposedSubgraphPlugin {
   configurationDataByTypeName?: Map<string, ConfigurationData>;
   // The normalized GraphQL schema for the subgraph
   schema?: GraphQLSchema;
+  imageReference?: ImageReference;
 }
 
 export interface ComposedSubgraphGRPC {
@@ -200,6 +200,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
           plugin: new PluginConfiguration({
             name: subgraph.name,
             version: subgraph.version,
+            imageReference: subgraph.imageReference,
           }),
         });
 

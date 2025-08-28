@@ -128,6 +128,41 @@ func TestGRPCSubgraph(t *testing.T) {
 				query:    `query { projects { id tasks { id subtasks { id name } } } }`,
 				expected: `{"data":{"projects":[{"id":"1","tasks":[{"id":"1","subtasks":[{"id":"1a","name":"Server Inventory"},{"id":"1b","name":"Database Inventory"},{"id":"","name":""}]},{"id":"2","subtasks":null},{"id":"3","subtasks":[{"id":"3a","name":"VPC Configuration"},{"id":"3b","name":"Security Groups"},{"id":"","name":""}]},{"id":"14","subtasks":[]}]},{"id":"2","tasks":[{"id":"4","subtasks":[]},{"id":"5","subtasks":[]}]},{"id":"3","tasks":[{"id":"6","subtasks":null},{"id":"7","subtasks":[]}]},{"id":"4","tasks":[{"id":"8","subtasks":[]}]},{"id":"5","tasks":[{"id":"9","subtasks":[]}]},{"id":"6","tasks":[{"id":"10","subtasks":null},{"id":"11","subtasks":[]}]},{"id":"7","tasks":[{"id":"12","subtasks":[]},{"id":"13","subtasks":[]}]}]}}`,
 			},
+			{
+				name:     "query project with nullable fields and aliases",
+				query:    `query { project(id: "1") { id name myDescription: description myStartDate: startDate myEndDate: endDate } }`,
+				expected: `{"data":{"project":{"id":"1","name":"Cloud Migration Overhaul","myDescription":"Migrate legacy systems to cloud-native architecture","myStartDate":"2021-01-01","myEndDate":"2025-08-20"}}}`,
+			},
+			{
+				name: "query projects on inline fragments with interfaces",
+				query: `
+				query {
+					nodesById(id: 1) {
+                        __typename
+						... on Project {
+							id
+						}
+						... on Milestone {
+							id
+						}
+						... on Task {
+							id
+						}
+						... on ProjectUpdate {
+							id
+						}
+						... on Timestamped {
+							... on Project {
+								name
+							}
+							... on Milestone {
+								name
+							}
+						}
+					}
+				}`,
+				expected: `{"data":{"nodesById":[{"__typename":"Project","id":"1","name":"Cloud Migration Overhaul"},{"__typename":"Milestone","id":"1","name":"Infrastructure Assessment"},{"__typename":"Task","id":"1"},{"__typename":"ProjectUpdate","id":"1"}]}}`,
+			},
 		}
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: testenv.ConfigWithGRPCJSONTemplate,

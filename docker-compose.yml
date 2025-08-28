@@ -165,7 +165,7 @@ services:
       - dev
 
   minio:
-    image: bitnami/minio:${DC_MINIO_VERSION:-2024.7.16-debian-12-r0}
+    image: bitnamilegacy/minio:${DC_MINIO_VERSION:-2024.7.16-debian-12-r0}
     environment:
       - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minio}
       - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-changeme}
@@ -188,7 +188,7 @@ services:
     environment:
       PORT: 11000
       NODE_ENV: development
-      AUTH_JWT_SECRET: fkczyomvdprgvtmvkuhvprxuggkbgwld
+      AUTH_JWT_SECRET: ${CDN_AUTH_JWT_SECRET:-fkczyomvdprgvtmvkuhvprxuggkbgwld}
       AUTH_ADMISSION_JWT_SECRET: uXDxJLEvrw4aafPfrf3rRotCoBzRfPEW
       S3_STORAGE_URL: ${S3_STORAGE_URL:-http://${MINIO_ROOT_USER:-minio}:${MINIO_ROOT_PASSWORD:-changeme}@minio:9000/cosmo}
       S3_REGION: ${S3_REGION_CDN:-${S3_REGION:-auto}}
@@ -324,7 +324,7 @@ services:
       - dev
 
   kafka:
-    image: bitnami/kafka:3.7.0
+    image: bitnamilegacy/kafka:3.7.0
     ports:
       - '9092:9092'
     environment:

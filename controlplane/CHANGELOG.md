@@ -4,6 +4,56 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.158.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.157.0...controlplane@0.158.0) (2025-08-24)
+
+### Features
+
+* expire session relative to creation ([#2144](https://github.com/wundergraph/cosmo/issues/2144)) ([fb585be](https://github.com/wundergraph/cosmo/commit/fb585bed2ac27a7cdb7b7e730918f7ce208723b8)) (@wilsonrivera)
+
+# [0.157.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.156.5...controlplane@0.157.0) (2025-08-20)
+
+### Features
+
+* update the limits of plugins ([#2153](https://github.com/wundergraph/cosmo/issues/2153)) ([dfe6ad7](https://github.com/wundergraph/cosmo/commit/dfe6ad7165e6848cd53c7ee0d51a920f7a9164a1)) (@JivusAyrus)
+
+## [0.156.5](https://github.com/wundergraph/cosmo/compare/controlplane@0.156.4...controlplane@0.156.5) (2025-08-19)
+
+**Note:** Version bump only for package controlplane
+
+## [0.156.4](https://github.com/wundergraph/cosmo/compare/controlplane@0.156.3...controlplane@0.156.4) (2025-08-18)
+
+**Note:** Version bump only for package controlplane
+
+## [0.156.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.156.2...controlplane@0.156.3) (2025-08-15)
+
+**Note:** Version bump only for package controlplane
+
+## [0.156.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.156.1...controlplane@0.156.2) (2025-08-14)
+
+### Bug Fixes
+
+* **s3:** allow to delete objects individually ([#2131](https://github.com/wundergraph/cosmo/issues/2131)) ([d8bac2a](https://github.com/wundergraph/cosmo/commit/d8bac2a5f25c70dd614bd23fc09e893adc830b7d)) (@StarpTech)
+
+## [0.156.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.156.0...controlplane@0.156.1) (2025-08-13)
+
+### Bug Fixes
+
+* make the session cookie last as long as Keycloak's ([#2135](https://github.com/wundergraph/cosmo/issues/2135)) ([589bbc9](https://github.com/wundergraph/cosmo/commit/589bbc9c778c21879ddf088a38f419fb0b909219)) (@wilsonrivera)
+
+# [0.156.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.155.3...controlplane@0.156.0) (2025-08-12)
+
+### Features
+
+* add support for plugins ([#2079](https://github.com/wundergraph/cosmo/issues/2079)) ([05c923a](https://github.com/wundergraph/cosmo/commit/05c923aaa09a898a1662fc40d0e5751dfa5b8fe1)) (@JivusAyrus)
+
+## [0.155.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.155.2...controlplane@0.155.3) (2025-08-08)
+
+### Bug Fixes
+
+* encode and validate client name ([#2124](https://github.com/wundergraph/cosmo/issues/2124)) ([d137aee](https://github.com/wundergraph/cosmo/commit/d137aeed780528d7244453c39408de6faeed37a2)) (@StarpTech)
+* prevent feature subgraphs from using other feature subgraphs as base subgraphs ([#2122](https://github.com/wundergraph/cosmo/issues/2122)) ([b41a1d8](https://github.com/wundergraph/cosmo/commit/b41a1d8e7c2915b23df6289fdda3d73db548e100)) (@JivusAyrus)
+* use federated graph id and org id to fetch operation content ([#2107](https://github.com/wundergraph/cosmo/issues/2107)) ([cfe1036](https://github.com/wundergraph/cosmo/commit/cfe10361e0d756f803ef4210b5efa46c3f16d8bb)) (@JivusAyrus)
+
 ## [0.155.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.155.1...controlplane@0.155.2) (2025-08-07)
 
 **Note:** Version bump only for package controlplane

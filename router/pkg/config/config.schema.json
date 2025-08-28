@@ -694,6 +694,14 @@
           "properties": {
             "fields": {
               "$ref": "#/$defs/context_fields"
+            },
+            "ignore_query_params_list": {
+              "type": "array",
+              "description": "List of query params to be ignored from being logged in the query field.",
+              "default": ["variables"],
+              "items": {
+                "type": "string"
+              }
             }
           }
         },
@@ -1058,6 +1066,11 @@
                   "default": false,
                   "description": "Enable the collection of connection stats. The default value is false."
                 },
+                "streams": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the collection of stream metrics. This contains metrics related to EDFS. The default value is false."
+                },
                 "circuit_breaker": {
                   "type": "boolean",
                   "default": false,
@@ -1162,6 +1175,11 @@
                   "type": "boolean",
                   "default": false,
                   "description": "Enable the collection of connection stats. The default value is false."
+                },
+                "streams": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the collection of stream metrics. This contains metrics related to EDFS. The default value is false."
                 },
                 "circuit_breaker": {
                   "type": "boolean",
@@ -1663,11 +1681,7 @@
                   "symmetric_algorithm": {
                     "type": "string",
                     "description": "The symmetric algorithm used",
-                    "enum": [
-                      "HS256",
-                      "HS384",
-                      "HS512"
-                    ]
+                    "enum": ["HS256", "HS384", "HS512"]
                   },
                   "header_key_id": {
                     "type": "string",
@@ -1707,11 +1721,35 @@
                 "oneOf": [
                   {
                     "required": ["url"],
-                    "not": { "anyOf": [{ "required": ["secret"] }, { "required": ["symmetric_algorithm"] }, { "required": ["header_key_id"] }] }
+                    "not": {
+                      "anyOf": [
+                        {
+                          "required": ["secret"]
+                        },
+                        {
+                          "required": ["symmetric_algorithm"]
+                        },
+                        {
+                          "required": ["header_key_id"]
+                        }
+                      ]
+                    }
                   },
                   {
                     "required": ["secret", "symmetric_algorithm", "header_key_id"],
-                    "not": { "anyOf": [{ "required": ["url"] }, { "required": ["algorithms"] }, { "required": ["refresh_interval"] }] }
+                    "not": {
+                      "anyOf": [
+                        {
+                          "required": ["url"]
+                        },
+                        {
+                          "required": ["algorithms"]
+                        },
+                        {
+                          "required": ["refresh_interval"]
+                        }
+                      ]
+                    }
                   }
                 ]
               }
@@ -1948,6 +1986,18 @@
             }
           },
           "required": ["provider_id"]
+        },
+        "session": {
+          "type": "object",
+          "description": "Session configuration for the MCP server. This controls how the MCP server handles client sessions.",
+          "additionalProperties": false,
+          "properties": {
+            "stateless": {
+              "type": "boolean",
+              "default": true,
+              "description": "Whether the MCP server should operate in stateless mode. When true, the server does not maintain session state between requests. When false, the server maintains session state, which can be useful for certain AI model integrations."
+            }
+          }
         },
         "graph_name": {
           "type": "string",
@@ -2925,6 +2975,18 @@
           "type": "string",
           "description": "The path to the plugins directory. The plugins directory is used to load the plugins.",
           "default": "plugins"
+        },
+        "registry": {
+          "type": "object",
+          "description": "Configuration for the plugin registry.",
+          "additionalProperties": false,
+          "properties": {
+            "url": {
+              "type": "string",
+              "default": "cosmo-registry.wundergraph.com",
+              "description": "The URL of the plugin registry."
+            }
+          }
         }
       }
     },

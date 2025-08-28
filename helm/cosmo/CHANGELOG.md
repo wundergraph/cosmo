@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.2](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.13.1...helm-cosmo@0.13.2) (2025-08-15)
+
+
+### Bug Fixes
+
+* make the session cookie last as long as Keycloak's ([#2135](https://github.com/wundergraph/cosmo/issues/2135)) ([589bbc9](https://github.com/wundergraph/cosmo/commit/589bbc9c778c21879ddf088a38f419fb0b909219))
+
 ## [0.13.1](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.13.0...helm-cosmo@0.13.1) (2025-04-14)
 
 

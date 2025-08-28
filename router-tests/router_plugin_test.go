@@ -2,6 +2,7 @@ package integration
 
 import (
 	"fmt"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"testing"
 	"time"
 
@@ -95,31 +96,33 @@ func TestRouterPlugin(t *testing.T) {
 }
 
 func TestVerifyTelemetryForRouterPluginRequests(t *testing.T) {
-	exporter := tracetest.NewInMemoryExporter(t)
+	t.Parallel()
 
-	testenv.Run(t,
-		&testenv.Config{
-			TraceExporter:            exporter,
-			RouterConfigJSONTemplate: testenv.ConfigWithPluginsJSONTemplate,
-			Plugins: testenv.PluginConfig{
-				Enabled: true,
-				Path:    "../router/plugins",
+	t.Run("query projects simple", func(t *testing.T) {
+		t.Parallel()
+
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		testenv.Run(t,
+			&testenv.Config{
+				TraceExporter:            exporter,
+				RouterConfigJSONTemplate: testenv.ConfigWithPluginsJSONTemplate,
+				Plugins: testenv.PluginConfig{
+					Enabled: true,
+					Path:    "../router/plugins",
+				},
 			},
-		},
-		func(t *testing.T, xEnv *testenv.Environment) {
-			t.Run("query projects simple", func(t *testing.T) {
-				t.Parallel()
-
+			func(t *testing.T, xEnv *testenv.Environment) {
 				queryName := "query sample"
 				response := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-					Query: fmt.Sprintf(`%s { projects { id name } }`, queryName),
+					Query: fmt.Sprintf(`%s { a:projects { id name }, e:projects { id name } }`, queryName),
 				})
 
-				expected := `{"data":{"projects":[{"id":"1","name":"Cloud Migration Overhaul"},{"id":"2","name":"Microservices Revolution"},{"id":"3","name":"AI-Powered Analytics"},{"id":"4","name":"DevOps Transformation"},{"id":"5","name":"Security Overhaul"},{"id":"6","name":"Mobile App Development"},{"id":"7","name":"Data Lake Implementation"}]}}`
+				expected := `{"data":{"a":[{"id":"1","name":"Cloud Migration Overhaul"},{"id":"2","name":"Microservices Revolution"},{"id":"3","name":"AI-Powered Analytics"},{"id":"4","name":"DevOps Transformation"},{"id":"5","name":"Security Overhaul"},{"id":"6","name":"Mobile App Development"},{"id":"7","name":"Data Lake Implementation"}],"e":[{"id":"1","name":"Cloud Migration Overhaul"},{"id":"2","name":"Microservices Revolution"},{"id":"3","name":"AI-Powered Analytics"},{"id":"4","name":"DevOps Transformation"},{"id":"5","name":"Security Overhaul"},{"id":"6","name":"Mobile App Development"},{"id":"7","name":"Data Lake Implementation"}]}}`
 				require.Equal(t, expected, response.Body)
 
 				snapshots := exporter.GetSpans().Snapshots()
-				require.Len(t, snapshots, 8)
+				require.Len(t, snapshots, 10)
 
 				queryNameInstances := 0
 				for _, sn := range snapshots {
@@ -128,10 +131,50 @@ func TestVerifyTelemetryForRouterPluginRequests(t *testing.T) {
 					}
 				}
 
-				// Normal http spans would have query sample twice
-				require.Equal(t, queryNameInstances, 1)
+				require.Equal(t, queryNameInstances, 3)
 			})
-		})
+	})
+
+	t.Run("verify each invocation having its span", func(t *testing.T) {
+		t.Parallel()
+
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		testenv.Run(t,
+			&testenv.Config{
+				TraceExporter:            exporter,
+				RouterConfigJSONTemplate: testenv.ConfigWithPluginsJSONTemplate,
+				Plugins: testenv.PluginConfig{
+					Enabled: true,
+					Path:    "../router/plugins",
+				},
+			},
+			func(t *testing.T, xEnv *testenv.Environment) {
+				response := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query projects { a: projects { id name } b:project(id: 2) { id } }`,
+				})
+
+				expected := `{"data":{"a":[{"id":"1","name":"Cloud Migration Overhaul"},{"id":"2","name":"Microservices Revolution"},{"id":"3","name":"AI-Powered Analytics"},{"id":"4","name":"DevOps Transformation"},{"id":"5","name":"Security Overhaul"},{"id":"6","name":"Mobile App Development"},{"id":"7","name":"Data Lake Implementation"}],"b":{"id":"2"}}}`
+				require.Equal(t, expected, response.Body)
+
+				snapshots := exporter.GetSpans().Snapshots()
+				require.Len(t, snapshots, 10)
+
+				span1 := snapshots[5]
+				require.Equal(t, "query projects", span1.Name())
+				require.Contains(t, span1.Attributes(), otel.WgOperationProtocol.String("grpc"))
+				require.Contains(t, span1.Attributes(), otel.WgOperationType.String("query"))
+				require.Contains(t, span1.Attributes(), otel.WgOperationName.String("projects"))
+				require.Len(t, span1.Attributes(), 11)
+
+				span2 := snapshots[6]
+				require.Equal(t, "query projects", span2.Name())
+				require.Contains(t, span2.Attributes(), otel.WgOperationProtocol.String("grpc"))
+				require.Contains(t, span2.Attributes(), otel.WgOperationType.String("query"))
+				require.Contains(t, span2.Attributes(), otel.WgOperationName.String("projects"))
+				require.Len(t, span2.Attributes(), 11)
+			})
+	})
 }
 
 func TestRouterPluginRequests(t *testing.T) {
@@ -250,6 +293,11 @@ func TestRouterPluginRequests(t *testing.T) {
 			name:     "query project subtasks for empty and nullable lists",
 			query:    `query { projects { id tasks { id subtasks { id name } } } }`,
 			expected: `{"data":{"projects":[{"id":"1","tasks":[{"id":"1","subtasks":[{"id":"1a","name":"Server Inventory"},{"id":"1b","name":"Database Inventory"},{"id":"","name":""}]},{"id":"2","subtasks":null},{"id":"3","subtasks":[{"id":"3a","name":"VPC Configuration"},{"id":"3b","name":"Security Groups"},{"id":"","name":""}]},{"id":"14","subtasks":[]}]},{"id":"2","tasks":[{"id":"4","subtasks":[]},{"id":"5","subtasks":[]}]},{"id":"3","tasks":[{"id":"6","subtasks":null},{"id":"7","subtasks":[]}]},{"id":"4","tasks":[{"id":"8","subtasks":[]}]},{"id":"5","tasks":[{"id":"9","subtasks":[]}]},{"id":"6","tasks":[{"id":"10","subtasks":null},{"id":"11","subtasks":[]}]},{"id":"7","tasks":[{"id":"12","subtasks":[]},{"id":"13","subtasks":[]}]}]}}`,
+		},
+		{
+			name:     "query project with nullable fields and aliases",
+			query:    `query { project(id: "1") { id name myDescription: description myStartDate: startDate myEndDate: endDate } }`,
+			expected: `{"data":{"project":{"id":"1","name":"Cloud Migration Overhaul","myDescription":"Migrate legacy systems to cloud-native architecture","myStartDate":"2021-01-01","myEndDate":"2025-08-20"}}}`,
 		},
 	}
 	testenv.Run(t, &testenv.Config{

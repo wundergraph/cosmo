@@ -1,8 +1,9 @@
 package otel
 
 import (
-	"go.opentelemetry.io/otel/attribute"
 	"net"
+
+	"go.opentelemetry.io/otel/attribute"
 )
 
 const (
@@ -57,6 +58,15 @@ const (
 	WgOperationSha256   = attribute.Key("wg.operation.sha256")
 	WgGraphQLFieldName  = attribute.Key("wg.graphql.field.name")
 	WgGraphQLParentType = attribute.Key("wg.graphql.parent_type")
+)
+
+// Messaging metrics attributes
+const (
+	WgStreamOperationName = attribute.Key("wg.stream.operation.name")
+	WgProviderType        = attribute.Key("wg.provider.type")
+	WgDestinationName     = attribute.Key("wg.destination.name")
+	WgProviderId          = attribute.Key("wg.provider.id")
+	WgErrorType           = attribute.Key("wg.error.type")
 )
 
 const (

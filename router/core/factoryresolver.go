@@ -8,6 +8,8 @@ import (
 	"net/url"
 	"slices"
 
+	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
+
 	"github.com/buger/jsonparser"
 	"github.com/wundergraph/cosmo/router/pkg/grpcconnector"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub"
@@ -211,6 +213,7 @@ type RouterEngineConfiguration struct {
 	Headers                  *config.HeaderRules
 	Events                   config.EventsConfiguration
 	SubgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
+	StreamMetricStore        rmetric.StreamMetricStore
 }
 
 func mapProtoFilterToPlanFilter(input *nodev1.SubscriptionFilterCondition, output *plan.SubscriptionFilterCondition) *plan.SubscriptionFilterCondition {
@@ -470,6 +473,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 	factoryProviders, factoryDataSources, err := pubsub.BuildProvidersAndDataSources(
 		l.ctx,
 		routerEngineConfig.Events,
+		routerEngineConfig.StreamMetricStore,
 		l.logger,
 		pubSubDS,
 		l.resolver.InstanceData().HostName,
@@ -627,7 +631,7 @@ func toGRPCConfiguration(config *nodev1.GRPCConfiguration, pluginsEnabled bool) 
 		QueryRPCs:        make(grpcdatasource.RPCConfigMap),
 		MutationRPCs:     make(grpcdatasource.RPCConfigMap),
 		SubscriptionRPCs: make(grpcdatasource.RPCConfigMap),
-		EntityRPCs:       make(map[string]grpcdatasource.EntityRPCConfig),
+		EntityRPCs:       make(map[string][]grpcdatasource.EntityRPCConfig),
 		Fields:           make(map[string]grpcdatasource.FieldMap),
 		EnumValues:       make(map[string][]grpcdatasource.EnumValueMapping),
 	}
@@ -649,14 +653,14 @@ func toGRPCConfiguration(config *nodev1.GRPCConfiguration, pluginsEnabled bool) 
 	}
 
 	for _, entity := range in.EntityMappings {
-		result.EntityRPCs[entity.Key] = grpcdatasource.EntityRPCConfig{
+		result.EntityRPCs[entity.TypeName] = append(result.EntityRPCs[entity.TypeName], grpcdatasource.EntityRPCConfig{
 			Key: entity.Key,
 			RPCConfig: grpcdatasource.RPCConfig{
 				RPC:      entity.Rpc,
 				Request:  entity.Request,
 				Response: entity.Response,
 			},
-		}
+		})
 	}
 
 	for _, field := range in.TypeFieldMappings {

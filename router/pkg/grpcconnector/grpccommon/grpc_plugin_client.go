@@ -1,13 +1,17 @@
-package grpcconnector
+package grpccommon
 
 import (
 	"context"
 	"errors"
-	"go.opentelemetry.io/otel"
-	"google.golang.org/grpc/metadata"
+	"go.opentelemetry.io/otel/trace"
+	"io"
+
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"go.opentelemetry.io/otel"
+	"google.golang.org/grpc/metadata"
 
 	"github.com/hashicorp/go-plugin"
 	"google.golang.org/grpc"
@@ -24,6 +28,9 @@ type GRPCPluginClient struct {
 	config GRPCPluginClientConfig
 
 	mu sync.RWMutex
+
+	tracer             trace.Tracer
+	getTraceAttributes GRPCTraceAttributeGetter
 }
 
 type GRPCPluginClientConfig struct {
@@ -47,7 +54,14 @@ func WithReconnectConfig(reconnectTimeout time.Duration, pingInterval time.Durat
 
 var _ grpc.ClientConnInterface = &GRPCPluginClient{}
 
-func newGRPCPluginClient(pc *plugin.Client, cc grpc.ClientConnInterface, options ...GRPCPluginClientOption) (*GRPCPluginClient, error) {
+type GRPCTraceAttributeGetter func(context.Context) (string, trace.SpanStartEventOption)
+
+type GRPCPluginClientOpts struct {
+	Tracer             trace.Tracer
+	GetTraceAttributes GRPCTraceAttributeGetter
+}
+
+func NewGRPCPluginClient(pc *plugin.Client, cc grpc.ClientConnInterface, clientOpts GRPCPluginClientOpts, options ...GRPCPluginClientOption) (*GRPCPluginClient, error) {
 	if pc == nil || cc == nil {
 		return nil, errors.New("plugin client or grpc client conn is nil")
 	}
@@ -59,9 +73,11 @@ func newGRPCPluginClient(pc *plugin.Client, cc grpc.ClientConnInterface, options
 	}
 
 	return &GRPCPluginClient{
-		pc:     pc,
-		cc:     cc,
-		config: config,
+		pc:                 pc,
+		cc:                 cc,
+		config:             config,
+		tracer:             clientOpts.Tracer,
+		getTraceAttributes: clientOpts.GetTraceAttributes,
 	}, nil
 }
 
@@ -106,24 +122,43 @@ func (g *GRPCPluginClient) isPluginActive() (bool, error) {
 	return true, nil
 }
 
-func (g *GRPCPluginClient) setClients(pluginClient *plugin.Client, clientConn grpc.ClientConnInterface) {
+func (g *GRPCPluginClient) SetClients(pluginClient *plugin.Client, clientConn grpc.ClientConnInterface) {
 	// We need to lock here to avoid race conditions
 	// We potentially access the plugin clients during invokes
 	g.mu.Lock()
 	defer g.mu.Unlock()
+
+	// Kill the previous plugin client if it exists
+	if g.pc != nil {
+		g.pc.Kill()
+	}
+
+	// Close the previous client connection if it exists
+	if g.cc != nil {
+		if closer, ok := g.cc.(io.Closer); ok {
+			closer.Close()
+		}
+	}
+
 	g.pc = pluginClient
 	g.cc = clientConn
 }
 
 // Invoke implements grpc.ClientConnInterface.
 func (g *GRPCPluginClient) Invoke(ctx context.Context, method string, args any, reply any, opts ...grpc.CallOption) error {
+	spanName, traceAttributes := g.getTraceAttributes(ctx)
+	ctx, span := g.tracer.Start(ctx, spanName, traceAttributes)
+	defer span.End()
+
 	if g.IsPluginProcessExited() {
 		if err := g.waitForPluginToBeActive(); err != nil {
+			span.RecordError(err)
 			return err
 		}
 	}
 
 	if g.isClosed.Load() {
+		span.RecordError(errors.New("plugin is not active"))
 		return status.Error(codes.Unavailable, "plugin is not active")
 	}
 
@@ -151,6 +186,10 @@ func (g *GRPCPluginClient) IsPluginProcessExited() bool {
 }
 
 func (g *GRPCPluginClient) Close() error {
+	if g.pc == nil {
+		return nil
+	}
+
 	if g.pc.Exited() || g.isClosed.Load() {
 		return nil
 	}
