@@ -2230,11 +2230,15 @@ export class CheckSubgraphSchemaResponse extends Message<CheckSubgraphSchemaResp
   proposalMatchMessage?: string;
 
   /**
+   * If true, it means the traffic check failed for the linked check
+   *
    * @generated from field: optional bool isLinkedTrafficCheckFailed = 15;
    */
   isLinkedTrafficCheckFailed?: boolean;
 
   /**
+   * If true, it means the graph pruning check failed for the linked check
+   *
    * @generated from field: optional bool isLinkedPruningCheckFailed = 16;
    */
   isLinkedPruningCheckFailed?: boolean;

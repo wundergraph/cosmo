@@ -2917,18 +2917,20 @@ type CheckSubgraphSchemaResponse struct {
 	NonBreakingChanges []*SchemaChange     `protobuf:"bytes,3,rep,name=nonBreakingChanges,proto3" json:"nonBreakingChanges,omitempty"`
 	CompositionErrors  []*CompositionError `protobuf:"bytes,4,rep,name=compositionErrors,proto3" json:"compositionErrors,omitempty"`
 	// Contains the operation usage stats for the operations that are impacted by the schema changes.
-	OperationUsageStats        *CheckOperationUsageStats `protobuf:"bytes,5,opt,name=operationUsageStats,proto3" json:"operationUsageStats,omitempty"`
-	CheckId                    string                    `protobuf:"bytes,6,opt,name=check_id,json=checkId,proto3" json:"check_id,omitempty"`
-	CheckedFederatedGraphs     []*CheckedFederatedGraphs `protobuf:"bytes,7,rep,name=checked_federated_graphs,json=checkedFederatedGraphs,proto3" json:"checked_federated_graphs,omitempty"`
-	LintWarnings               []*LintIssue              `protobuf:"bytes,8,rep,name=lintWarnings,proto3" json:"lintWarnings,omitempty"`
-	LintErrors                 []*LintIssue              `protobuf:"bytes,9,rep,name=lintErrors,proto3" json:"lintErrors,omitempty"`
-	GraphPruneWarnings         []*GraphPruningIssue      `protobuf:"bytes,10,rep,name=graphPruneWarnings,proto3" json:"graphPruneWarnings,omitempty"`
-	GraphPruneErrors           []*GraphPruningIssue      `protobuf:"bytes,11,rep,name=graphPruneErrors,proto3" json:"graphPruneErrors,omitempty"`
-	ClientTrafficCheckSkipped  *bool                     `protobuf:"varint,12,opt,name=client_traffic_check_skipped,json=clientTrafficCheckSkipped,proto3,oneof" json:"client_traffic_check_skipped,omitempty"`
-	CompositionWarnings        []*CompositionWarning     `protobuf:"bytes,13,rep,name=compositionWarnings,proto3" json:"compositionWarnings,omitempty"`
-	ProposalMatchMessage       *string                   `protobuf:"bytes,14,opt,name=proposalMatchMessage,proto3,oneof" json:"proposalMatchMessage,omitempty"`
-	IsLinkedTrafficCheckFailed *bool                     `protobuf:"varint,15,opt,name=isLinkedTrafficCheckFailed,proto3,oneof" json:"isLinkedTrafficCheckFailed,omitempty"`
-	IsLinkedPruningCheckFailed *bool                     `protobuf:"varint,16,opt,name=isLinkedPruningCheckFailed,proto3,oneof" json:"isLinkedPruningCheckFailed,omitempty"`
+	OperationUsageStats       *CheckOperationUsageStats `protobuf:"bytes,5,opt,name=operationUsageStats,proto3" json:"operationUsageStats,omitempty"`
+	CheckId                   string                    `protobuf:"bytes,6,opt,name=check_id,json=checkId,proto3" json:"check_id,omitempty"`
+	CheckedFederatedGraphs    []*CheckedFederatedGraphs `protobuf:"bytes,7,rep,name=checked_federated_graphs,json=checkedFederatedGraphs,proto3" json:"checked_federated_graphs,omitempty"`
+	LintWarnings              []*LintIssue              `protobuf:"bytes,8,rep,name=lintWarnings,proto3" json:"lintWarnings,omitempty"`
+	LintErrors                []*LintIssue              `protobuf:"bytes,9,rep,name=lintErrors,proto3" json:"lintErrors,omitempty"`
+	GraphPruneWarnings        []*GraphPruningIssue      `protobuf:"bytes,10,rep,name=graphPruneWarnings,proto3" json:"graphPruneWarnings,omitempty"`
+	GraphPruneErrors          []*GraphPruningIssue      `protobuf:"bytes,11,rep,name=graphPruneErrors,proto3" json:"graphPruneErrors,omitempty"`
+	ClientTrafficCheckSkipped *bool                     `protobuf:"varint,12,opt,name=client_traffic_check_skipped,json=clientTrafficCheckSkipped,proto3,oneof" json:"client_traffic_check_skipped,omitempty"`
+	CompositionWarnings       []*CompositionWarning     `protobuf:"bytes,13,rep,name=compositionWarnings,proto3" json:"compositionWarnings,omitempty"`
+	ProposalMatchMessage      *string                   `protobuf:"bytes,14,opt,name=proposalMatchMessage,proto3,oneof" json:"proposalMatchMessage,omitempty"`
+	// If true, it means the traffic check failed for the linked check
+	IsLinkedTrafficCheckFailed *bool `protobuf:"varint,15,opt,name=isLinkedTrafficCheckFailed,proto3,oneof" json:"isLinkedTrafficCheckFailed,omitempty"`
+	// If true, it means the graph pruning check failed for the linked check
+	IsLinkedPruningCheckFailed *bool `protobuf:"varint,16,opt,name=isLinkedPruningCheckFailed,proto3,oneof" json:"isLinkedPruningCheckFailed,omitempty"`
 }
 
 func (x *CheckSubgraphSchemaResponse) Reset() {
