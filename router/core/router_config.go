@@ -106,18 +106,18 @@ type Config struct {
 	// should be removed once the users have migrated to the new overrides config
 	overrideRoutingURLConfiguration config.OverrideRoutingURLConfiguration
 	// the new overrides config
-	overrides                  config.OverridesConfiguration
-	authorization              *config.AuthorizationConfiguration
-	rateLimit                  *config.RateLimitConfiguration
-	webSocketConfiguration     *config.WebSocketConfiguration
-	subgraphErrorPropagation   config.SubgraphErrorPropagationConfiguration
-	clientHeader               config.ClientHeader
-	cacheWarmup                *config.CacheWarmupConfiguration
-	multipartHeartbeatInterval time.Duration
-	hostName                   string
-	mcp                        config.MCPConfiguration
-	plugins                    config.PluginsConfiguration
-	tracingAttributes          []config.CustomAttribute
+	overrides                     config.OverridesConfiguration
+	authorization                 *config.AuthorizationConfiguration
+	rateLimit                     *config.RateLimitConfiguration
+	webSocketConfiguration        *config.WebSocketConfiguration
+	subgraphErrorPropagation      config.SubgraphErrorPropagationConfiguration
+	clientHeader                  config.ClientHeader
+	cacheWarmup                   *config.CacheWarmupConfiguration
+	subscriptionHeartbeatInterval time.Duration
+	hostName                      string
+	mcp                           config.MCPConfiguration
+	plugins                       config.PluginsConfiguration
+	tracingAttributes             []config.CustomAttribute
 }
 
 // Usage returns an anonymized version of the config for usage tracking

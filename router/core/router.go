@@ -1541,10 +1541,10 @@ func WithCors(corsOpts *cors.Config) Option {
 	}
 }
 
-// WithMultipartHeartbeatInterval sets the interval for the engine to send heartbeats for multipart subscriptions.
-func WithMultipartHeartbeatInterval(interval time.Duration) Option {
+// WithSubscriptionHeartbeatInterval sets the interval for the engine to send heartbeats for multipart subscriptions.
+func WithSubscriptionHeartbeatInterval(interval time.Duration) Option {
 	return func(r *Router) {
-		r.multipartHeartbeatInterval = interval
+		r.subscriptionHeartbeatInterval = interval
 	}
 }
 

@@ -1203,7 +1203,7 @@ func (s *graphServer) buildGraphMux(
 			Reporter:                       s.engineStats,
 			ApolloCompatibilityFlags:       s.apolloCompatibilityFlags,
 			ApolloRouterCompatibilityFlags: s.apolloRouterCompatibilityFlags,
-			HeartbeatInterval:              s.multipartHeartbeatInterval,
+			HeartbeatInterval:              s.subscriptionHeartbeatInterval,
 			PluginsEnabled:                 s.plugins.Enabled,
 			InstanceData:                   s.instanceData,
 		},
