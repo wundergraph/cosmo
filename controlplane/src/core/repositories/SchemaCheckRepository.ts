@@ -43,11 +43,7 @@ import {
   InspectorSchemaChange,
   SchemaUsageTrafficInspector,
 } from '../services/SchemaUsageTrafficInspector.js';
-import {
-  createBatches,
-  getFederatedGraphRouterCompatibilityVersion,
-  normalizeLabels
-} from '../util.js';
+import { createBatches, getFederatedGraphRouterCompatibilityVersion, normalizeLabels } from '../util.js';
 import { FederatedGraphConfig, FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { OrganizationRepository } from './OrganizationRepository.js';
 import { ProposalRepository } from './ProposalRepository.js';
