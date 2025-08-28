@@ -78,12 +78,6 @@ func (ctx RetryContext) IsConnectionError() bool {
 	return false
 }
 
-// Is5xxError returns true if the HTTP status code is in the 5xx range,
-// indicating a server error.
-func (ctx RetryContext) Is5xxError() bool {
-	return ctx.StatusCode >= 500 && ctx.StatusCode < 600
-}
-
 // IsRetryableStatusCode returns true if the HTTP status code is generally
 // considered retryable, including 500, 502, 503, and 504.
 func (ctx RetryContext) IsRetryableStatusCode() bool {

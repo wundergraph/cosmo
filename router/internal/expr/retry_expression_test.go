@@ -83,18 +83,6 @@ func TestRetryExpressionManager(t *testing.T) {
 			expected:   true,
 		},
 		{
-			name:       "is5xxError helper",
-			expression: "Is5xxError()",
-			ctx:        RetryContext{StatusCode: 503},
-			expected:   true,
-		},
-		{
-			name:       "is5xxError with non-5xx",
-			expression: "Is5xxError()",
-			ctx:        RetryContext{StatusCode: 404},
-			expected:   false,
-		},
-		{
 			name:       "isConnectionError helper",
 			expression: "IsConnectionError()",
 			ctx:        RetryContext{Error: "connection refused"},
