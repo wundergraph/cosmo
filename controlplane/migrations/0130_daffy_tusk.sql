@@ -1,1 +1,0 @@
-ALTER TABLE "schema_checks" ADD COLUMN "is_subgraph_linked" boolean DEFAULT false;

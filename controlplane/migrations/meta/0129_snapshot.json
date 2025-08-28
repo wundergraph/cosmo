@@ -1,5 +1,5 @@
 {
-  "id": "a5be4cf9-fd10-4436-8fcb-aae72427bda3",
+  "id": "1bb12880-ed57-4cad-b9aa-dcd0a3d08f67",
   "prevId": "e8d72d6a-3744-48e9-88a2-d8617e9a867c",
   "version": "7",
   "dialect": "postgresql",
@@ -2768,6 +2768,102 @@
           "nullsNotDistinct": false,
           "columns": [
             "publicKey"
+          ]
+        }
+      },
+      "checkConstraints": {}
+    },
+    "public.linked_schema_checks": {
+      "name": "linked_schema_checks",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "schema_check_id": {
+          "name": "schema_check_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "linked_schema_check_id": {
+          "name": "linked_schema_check_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "lsc_schema_check_id_idx": {
+          "name": "lsc_schema_check_id_idx",
+          "columns": [
+            {
+              "expression": "schema_check_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "lsc_linked_schema_check_id_idx": {
+          "name": "lsc_linked_schema_check_id_idx",
+          "columns": [
+            {
+              "expression": "linked_schema_check_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "linked_schema_checks_schema_check_id_schema_checks_id_fk": {
+          "name": "linked_schema_checks_schema_check_id_schema_checks_id_fk",
+          "tableFrom": "linked_schema_checks",
+          "tableTo": "schema_checks",
+          "columnsFrom": [
+            "schema_check_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "linked_schema_checks_linked_schema_check_id_schema_checks_id_fk": {
+          "name": "linked_schema_checks_linked_schema_check_id_schema_checks_id_fk",
+          "tableFrom": "linked_schema_checks",
+          "tableTo": "schema_checks",
+          "columnsFrom": [
+            "linked_schema_check_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "linked_schema_checks_schema_check_id_unique": {
+          "name": "linked_schema_checks_schema_check_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "schema_check_id"
           ]
         }
       },
