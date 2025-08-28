@@ -13,6 +13,7 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { GitHubRepository } from '../../repositories/GitHubRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
+import { SchemaCheckRepository } from '../../repositories/SchemaCheckRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import {
@@ -40,6 +41,7 @@ export function checkSubgraphSchema(
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
     const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+    const schemaCheckRepo = new SchemaCheckRepository(opts.db);
 
     req.namespace = req.namespace || DefaultNamespace;
 
@@ -297,6 +299,9 @@ export function checkSubgraphSchema(
       };
     }
 
+    let isLinkedTrafficCheckFailed = false;
+    let isLinkedPruningCheckFailed = false;
+
     if (linkedSubgraph) {
       const targetSubgraph = await subgraphRepo.byName(linkedSubgraph.name, linkedSubgraph.namespace);
       if (!targetSubgraph) {
@@ -315,22 +320,67 @@ export function checkSubgraphSchema(
           graphPruneWarnings: [],
           graphPruneErrors: [],
           compositionWarnings: [],
+          proposalMatchMessage,
+          operationUsageStats,
+          clientTrafficCheckSkipped: req.skipTrafficCheck,
+          isLinkedTrafficCheckFailed: false,
+          isLinkedPruningCheckFailed: false,
         };
       }
 
       const targetFederatedGraphs = await fedGraphRepo.bySubgraphLabels({
         labels: targetSubgraph.labels,
-        namespaceId: namespace.id,
+        namespaceId: targetSubgraph.namespaceId,
         excludeContracts: true,
       });
 
-      // const targetCheckResult = await subgraphRepo.performSchemaCheck({
-      //   organizationSlug: authContext.organizationSlug,
-      //   namespace,
-      //   subgraphName: targetSubgraph.name,
-      //   newSchemaSDL,
-      //   subgraph: targetSubgraph,
-      // });
+      const targetCheckResult = await subgraphRepo.performSchemaCheck({
+        organizationSlug: authContext.organizationSlug,
+        namespace,
+        subgraphName: targetSubgraph.name,
+        newSchemaSDL,
+        subgraph: targetSubgraph,
+        federatedGraphs: targetFederatedGraphs,
+        skipTrafficCheck: req.skipTrafficCheck,
+        isDeleted: !!req.delete,
+        isTargetCheck: true,
+        limit,
+        chClient: opts.chClient,
+        newGraphQLSchema,
+        disableResolvabilityValidation: req.disableResolvabilityValidation,
+      });
+
+      await schemaCheckRepo.addLinkedSchemaCheck({
+        schemaCheckID,
+        linkedSchemaCheckID: targetCheckResult.checkId,
+      });
+
+      if (targetCheckResult.response && targetCheckResult.response.code !== EnumStatusCode.OK) {
+        return {
+          response: {
+            code: targetCheckResult.response.code,
+            details: targetCheckResult.response.details,
+          },
+          breakingChanges: [],
+          nonBreakingChanges: [],
+          compositionErrors: [],
+          checkId: '',
+          checkedFederatedGraphs: [],
+          lintWarnings: [],
+          lintErrors: [],
+          graphPruneWarnings: [],
+          graphPruneErrors: [],
+          compositionWarnings: [],
+          proposalMatchMessage,
+          operationUsageStats,
+          clientTrafficCheckSkipped: req.skipTrafficCheck,
+          isLinkedTrafficCheckFailed: false,
+          isLinkedPruningCheckFailed: false,
+        };
+      }
+
+      isLinkedTrafficCheckFailed = targetCheckResult.hasClientTraffic;
+      isLinkedPruningCheckFailed = targetCheckResult.graphPruneErrors.length > 0;
     }
 
     if (req.gitInfo && opts.githubApp) {
@@ -370,6 +420,8 @@ export function checkSubgraphSchema(
       clientTrafficCheckSkipped: req.skipTrafficCheck,
       compositionWarnings,
       proposalMatchMessage,
+      isLinkedTrafficCheckFailed,
+      isLinkedPruningCheckFailed,
     };
   });
 }

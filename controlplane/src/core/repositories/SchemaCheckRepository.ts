@@ -1082,4 +1082,11 @@ export class SchemaCheckRepository {
       proposalId: proposalID,
     });
   }
+
+  public async addLinkedSchemaCheck(data: { schemaCheckID: string; linkedSchemaCheckID: string }) {
+    await this.db.insert(schema.linkedSchemaChecks).values({
+      schemaCheckId: data.schemaCheckID,
+      linkedSchemaCheckId: data.linkedSchemaCheckID,
+    });
+  }
 }

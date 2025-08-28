@@ -1885,7 +1885,7 @@ export class SubgraphRepository {
               breakingChanges: [],
               nonBreakingChanges: [],
               compositionErrors: [],
-              checkId: '',
+              checkId: schemaCheckID,
               checkedFederatedGraphs: [],
               lintWarnings: [],
               lintErrors: [],
