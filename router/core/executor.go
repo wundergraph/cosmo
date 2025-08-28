@@ -83,7 +83,7 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 		AllowedSubgraphErrorFields:         opts.RouterEngineConfig.SubgraphErrorPropagation.AllowedFields,
 		AllowAllErrorExtensionFields:       opts.RouterEngineConfig.SubgraphErrorPropagation.AllowAllExtensionFields,
 		MaxRecyclableParserSize:            opts.RouterEngineConfig.Execution.ResolverMaxRecyclableParserSize,
-		MultipartSubHeartbeatInterval:      opts.HeartbeatInterval,
+		SubscriptionHeartbeatInterval:      opts.HeartbeatInterval,
 		MaxSubscriptionFetchTimeout:        opts.RouterEngineConfig.Execution.SubscriptionFetchTimeout,
 	}
 
