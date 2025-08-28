@@ -1088,10 +1088,14 @@ export class SchemaCheckRepository {
       throw new Error('schemaCheckID and linkedSchemaCheckID must differ');
     }
 
-    await this.db.insert(schema.linkedSchemaChecks).values({
-      schemaCheckId: data.schemaCheckID,
-      linkedSchemaCheckId: data.linkedSchemaCheckID,
-    });
+    await this.db
+      .insert(schema.linkedSchemaChecks)
+      .values({
+        schemaCheckId: data.schemaCheckID,
+        linkedSchemaCheckId: data.linkedSchemaCheckID,
+      })
+      .onConflictDoNothing()
+      .execute();
   }
 
   public async getLinkedSchemaCheck({ schemaCheckID }: { schemaCheckID: string }) {
