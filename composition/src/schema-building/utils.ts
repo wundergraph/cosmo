@@ -258,8 +258,8 @@ export function isParentDataRootType(parentData: ParentDefinitionData): boolean 
   return parentData.isRootType;
 }
 
-export function isParentDataInterfaceType(parentData: ParentDefinitionData): boolean {
-  return parentData.kind === Kind.INTERFACE_TYPE_DEFINITION;
+export function isInterfaceDefinitionData(data: ParentDefinitionData): data is InterfaceDefinitionData {
+  return data.kind === Kind.INTERFACE_TYPE_DEFINITION;
 }
 
 export function setParentDataExtensionType(existingData: ParentDefinitionData, incomingData: ParentDefinitionData) {
