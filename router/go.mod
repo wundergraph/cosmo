@@ -64,7 +64,7 @@ require (
 	github.com/caarlos0/env/v11 v11.3.1
 	github.com/cep21/circuit/v4 v4.0.0
 	github.com/dgraph-io/ristretto/v2 v2.1.0
-	github.com/expr-lang/expr v1.17.3
+	github.com/expr-lang/expr v1.17.6
 	github.com/goccy/go-json v0.10.3
 	github.com/google/go-containerregistry v0.20.3
 	github.com/google/uuid v1.6.0
