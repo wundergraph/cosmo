@@ -851,4 +851,230 @@ describe('SDL to Proto - Federation and Special Types', () => {
       }"
     `);
   });
+  test('should not generate lookup methods for non-resolvable keys', () => {
+    const sdl = `
+      scalar openfed__FieldSet
+      directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
+      
+      type Product @key(fields: "id", resolvable: false) @key(fields: "manufacturerId productCode", resolvable: false) {
+        id: ID!
+        manufacturerId: ID!
+        productCode: String!
+        name: String!
+        price: Float!
+      }
+      
+      type Query {
+        products: [Product!]!
+      }
+    `;
+
+    const { proto: protoText } = compileGraphQLToProto(sdl);
+
+    // Validate Proto definition
+    expectValidProto(protoText);
+
+    // Check that no lookup methods are generated for non-resolvable keys
+    expect(protoText).toMatchInlineSnapshot(`
+      "syntax = "proto3";
+      package service.v1;
+
+      // Service definition for DefaultService
+      service DefaultService {
+        rpc QueryProducts(QueryProductsRequest) returns (QueryProductsResponse) {}
+      }
+
+      // Request message for products operation.
+      message QueryProductsRequest {
+      }
+      // Response message for products operation.
+      message QueryProductsResponse {
+        repeated Product products = 1;
+      }
+
+      message Product {
+        string id = 1;
+        string manufacturer_id = 2;
+        string product_code = 3;
+        string name = 4;
+        double price = 5;
+      }"
+    `);
+  });
+  test('should generate lookup methods for resolvable keys', () => {
+    const sdl = `
+      scalar openfed__FieldSet
+      directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
+      
+      type Product @key(fields: "id", resolvable: false) @key(fields: "manufacturerId productCode", resolvable: true) {
+        id: ID!
+        manufacturerId: ID!
+        productCode: String!
+        name: String!
+        price: Float!
+      }
+      
+      type Query {
+        products: [Product!]!
+      }
+    `;
+
+    const { proto: protoText } = compileGraphQLToProto(sdl);
+
+    // Validate Proto definition
+    expectValidProto(protoText);
+
+    // Expect that only the resolvable key is generated
+    expect(protoText).toMatchInlineSnapshot(`
+      "syntax = "proto3";
+      package service.v1;
+
+      // Service definition for DefaultService
+      service DefaultService {
+        // Lookup Product entity by manufacturerId and productCode
+        rpc LookupProductByManufacturerIdAndProductCode(LookupProductByManufacturerIdAndProductCodeRequest) returns (LookupProductByManufacturerIdAndProductCodeResponse) {}
+        rpc QueryProducts(QueryProductsRequest) returns (QueryProductsResponse) {}
+      }
+
+      // Key message for Product entity lookup
+      message LookupProductByManufacturerIdAndProductCodeRequestKey {
+        // Key field for Product entity lookup.
+        string manufacturer_id = 1;
+        // Key field for Product entity lookup.
+        string product_code = 2;
+      }
+
+      // Request message for Product entity lookup.
+      message LookupProductByManufacturerIdAndProductCodeRequest {
+        /*
+         * List of keys to look up Product entities.
+         * Order matters - each key maps to one entity in LookupProductByManufacturerIdAndProductCodeResponse.
+         */
+        repeated LookupProductByManufacturerIdAndProductCodeRequestKey keys = 1;
+      }
+
+      // Response message for Product entity lookup.
+      message LookupProductByManufacturerIdAndProductCodeResponse {
+        /*
+         * List of Product entities in the same order as the keys in LookupProductByManufacturerIdAndProductCodeRequest.
+         * Always return the same number of entities as keys. Use null for entities that cannot be found.
+         * 
+         * Example:
+         *   LookupUserByIdRequest:
+         *     keys:
+         *       - id: 1
+         *       - id: 2
+         *   LookupUserByIdResponse:
+         *     result:
+         *       - id: 1 # User with id 1 found
+         *       - null  # User with id 2 not found
+         */
+        repeated Product result = 1;
+      }
+
+      // Request message for products operation.
+      message QueryProductsRequest {
+      }
+      // Response message for products operation.
+      message QueryProductsResponse {
+        repeated Product products = 1;
+      }
+
+      message Product {
+        string id = 1;
+        string manufacturer_id = 2;
+        string product_code = 3;
+        string name = 4;
+        double price = 5;
+      }"
+    `);
+  });
+  test('should generate lookup method when resolvable is not specified', () => {
+    const sdl = `
+      scalar openfed__FieldSet
+      directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
+      
+      type Product @key(fields: "id", resolvable: false) @key(fields: "manufacturerId productCode") {
+        id: ID!
+        manufacturerId: ID!
+        productCode: String!
+        name: String!
+        price: Float!
+      }
+      
+      type Query {
+        products: [Product!]!
+      }
+    `;
+
+    const { proto: protoText } = compileGraphQLToProto(sdl);
+
+    // Validate Proto definition
+    expectValidProto(protoText);
+
+    // Expect that only the resolvable key is generated
+    expect(protoText).toMatchInlineSnapshot(`
+      "syntax = "proto3";
+      package service.v1;
+
+      // Service definition for DefaultService
+      service DefaultService {
+        // Lookup Product entity by manufacturerId and productCode
+        rpc LookupProductByManufacturerIdAndProductCode(LookupProductByManufacturerIdAndProductCodeRequest) returns (LookupProductByManufacturerIdAndProductCodeResponse) {}
+        rpc QueryProducts(QueryProductsRequest) returns (QueryProductsResponse) {}
+      }
+
+      // Key message for Product entity lookup
+      message LookupProductByManufacturerIdAndProductCodeRequestKey {
+        // Key field for Product entity lookup.
+        string manufacturer_id = 1;
+        // Key field for Product entity lookup.
+        string product_code = 2;
+      }
+
+      // Request message for Product entity lookup.
+      message LookupProductByManufacturerIdAndProductCodeRequest {
+        /*
+         * List of keys to look up Product entities.
+         * Order matters - each key maps to one entity in LookupProductByManufacturerIdAndProductCodeResponse.
+         */
+        repeated LookupProductByManufacturerIdAndProductCodeRequestKey keys = 1;
+      }
+
+      // Response message for Product entity lookup.
+      message LookupProductByManufacturerIdAndProductCodeResponse {
+        /*
+         * List of Product entities in the same order as the keys in LookupProductByManufacturerIdAndProductCodeRequest.
+         * Always return the same number of entities as keys. Use null for entities that cannot be found.
+         * 
+         * Example:
+         *   LookupUserByIdRequest:
+         *     keys:
+         *       - id: 1
+         *       - id: 2
+         *   LookupUserByIdResponse:
+         *     result:
+         *       - id: 1 # User with id 1 found
+         *       - null  # User with id 2 not found
+         */
+        repeated Product result = 1;
+      }
+
+      // Request message for products operation.
+      message QueryProductsRequest {
+      }
+      // Response message for products operation.
+      message QueryProductsResponse {
+        repeated Product products = 1;
+      }
+
+      message Product {
+        string id = 1;
+        string manufacturer_id = 2;
+        string product_code = 3;
+        string name = 4;
+        double price = 5;
+      }"
+    `);
+  });
 });
