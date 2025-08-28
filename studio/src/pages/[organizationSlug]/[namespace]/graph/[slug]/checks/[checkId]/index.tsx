@@ -38,6 +38,15 @@ import { Button } from "@/components/ui/button";
 import { Link } from "@/components/ui/link";
 import { Loader } from "@/components/ui/loader";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableWrapper,
+} from "@/components/ui/table";
+import {
   Select,
   SelectContent,
   SelectGroup,
@@ -490,7 +499,7 @@ const CheckDetails = ({
       tab,
     };
 
-    if (tab === "changes") {
+    if (tab === "overview") {
       delete query.tab;
     }
 
@@ -929,11 +938,21 @@ const CheckDetails = ({
         </dl>
         <div className="scrollbar-custom h-full flex-1 overflow-auto">
           <Tabs
-            value={tab ?? "composition"}
+            value={tab ?? "overview"}
             className="flex h-full min-h-0 flex-col"
           >
             <div className="flex flex-row px-4 py-4 lg:px-6">
               <TabsList className="justify-start overflow-x-auto scrollbar-none">
+                <TabsTrigger
+                  value="overview"
+                  className="flex items-center gap-x-2"
+                  asChild
+                >
+                  <Link href={{ query: { ...router.query, tab: "overview" } }}>
+                    <CheckCircleIcon className="h-4 w-4 flex-shrink-0" />
+                    Overview
+                  </Link>
+                </TabsTrigger>
                 <TabsTrigger
                   value="composition"
                   className="flex items-center gap-x-2"
@@ -1065,6 +1084,119 @@ const CheckDetails = ({
               </TabsList>
             </div>
             <div className="flex min-h-0 flex-1">
+              <TabsContent
+                value="overview"
+                className="w-full space-y-4 px-4 lg:px-6"
+              >
+                <div className="space-y-4">
+                  <div className="flex flex-col space-y-4">
+                    <div className="flex items-center space-x-4">
+                      <h3 className="text-lg font-semibold">Check Status</h3>
+                      {getCheckBadge(isSuccessful, data.check.isForcedSuccess)}
+                    </div>
+
+                    <Alert variant={isSuccessful ? "default" : "destructive"}>
+                      {isSuccessful ? (
+                        <CheckCircledIcon className="h-4 w-4" />
+                      ) : (
+                        <CrossCircledIcon className="h-4 w-4" />
+                      )}
+                      <AlertTitle>
+                        {isSuccessful ? "Check Passed" : "Check Failed"}
+                      </AlertTitle>
+                      <AlertDescription>{reason}</AlertDescription>
+                    </Alert>
+                  </div>
+
+                  {data.linkedCheck && (
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold">Linked Check</h3>
+                      <TableWrapper>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Check ID</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead>Operations</TableHead>
+                              <TableHead>Graph Pruning</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow className="hover:bg-muted/30">
+                              <TableCell>
+                                <Link
+                                  href={`${
+                                    router.asPath.split("/checks/")[0]
+                                  }/checks/${data.linkedCheck.id}`}
+                                  className="font-medium text-primary hover:underline"
+                                >
+                                  {data.linkedCheck.id}
+                                </Link>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  {data.linkedCheck.hasClientTraffic ||
+                                  data.linkedCheck.hasGraphPruningErrors ? (
+                                    <Badge
+                                      variant="destructive"
+                                      className="gap-1"
+                                    >
+                                      <CrossCircledIcon className="h-3 w-3" />
+                                      Failed
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="success" className="gap-1">
+                                      <CheckCircledIcon className="h-3 w-3" />
+                                      Passed
+                                    </Badge>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant="outline"
+                                  className={cn("gap-2", {
+                                    "text-destructive":
+                                      data.linkedCheck.hasClientTraffic,
+                                  })}
+                                >
+                                  {data.linkedCheck.hasClientTraffic ? (
+                                    <CrossCircledIcon className="h-3 w-3" />
+                                  ) : (
+                                    <CheckCircledIcon className="h-3 w-3" />
+                                  )}
+                                  {data.linkedCheck.hasClientTraffic
+                                    ? "Has Traffic"
+                                    : "No Traffic"}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge
+                                  variant="outline"
+                                  className={cn("gap-2", {
+                                    "text-destructive":
+                                      data.linkedCheck.hasGraphPruningErrors,
+                                  })}
+                                >
+                                  {data.linkedCheck.hasGraphPruningErrors ? (
+                                    <CrossCircledIcon className="h-3 w-3" />
+                                  ) : (
+                                    <CheckCircledIcon className="h-3 w-3" />
+                                  )}
+                                  {data.linkedCheck.hasGraphPruningErrors
+                                    ? "Has Errors"
+                                    : "No Errors"}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </TableWrapper>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+
               <TabsContent
                 value="composition"
                 className="w-full space-y-4 px-4 lg:px-6"
@@ -1270,7 +1402,7 @@ const CheckDetails = ({
                   />
                 </TabsContent>
               )}
-              
+
               <TabsContent value="schema" className="relative w-full flex-1">
                 <ProposedSchemas
                   checkId={id}
