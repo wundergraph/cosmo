@@ -40,7 +40,6 @@ import (
 	rmiddleware "github.com/wundergraph/cosmo/router/internal/middleware"
 	"github.com/wundergraph/cosmo/router/internal/recoveryhandler"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
-	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
@@ -1156,6 +1155,12 @@ func (s *graphServer) buildGraphMux(
 		baseConnMetricStore = s.connectionMetrics
 	}
 
+	// Build retry options and handle any expression compilation errors
+	processedRetryOptions, err := ProcessRetryOptions(s.retryOptions)
+	if err != nil {
+		return nil, fmt.Errorf("failed to process retry options: %w", err)
+	}
+
 	ecb := &ExecutorConfigurationBuilder{
 		introspection:    s.introspection,
 		baseURL:          s.baseURL,
@@ -1171,20 +1176,12 @@ func (s *graphServer) buildGraphMux(
 			FrameTimeout: s.engineExecutionConfiguration.WebSocketClientFrameTimeout,
 		},
 		transportOptions: &TransportOptions{
-			SubgraphTransportOptions: s.subgraphTransportOptions,
-			PreHandlers:              s.preOriginHandlers,
-			PostHandlers:             s.postOriginHandlers,
-			MetricStore:              gm.metricStore,
-			ConnectionMetricStore:    baseConnMetricStore,
-			RetryOptions: retrytransport.RetryOptions{
-				Enabled:       s.retryOptions.Enabled,
-				MaxRetryCount: s.retryOptions.MaxRetryCount,
-				MaxDuration:   s.retryOptions.MaxDuration,
-				Interval:      s.retryOptions.Interval,
-				ShouldRetry: func(err error, req *http.Request, resp *http.Response) bool {
-					return retrytransport.IsRetryableError(err, resp) && !isMutationRequest(req.Context())
-				},
-			},
+			SubgraphTransportOptions:      s.subgraphTransportOptions,
+			PreHandlers:                   s.preOriginHandlers,
+			PostHandlers:                  s.postOriginHandlers,
+			MetricStore:                   gm.metricStore,
+			ConnectionMetricStore:         baseConnMetricStore,
+			RetryOptions:                  *processedRetryOptions,
 			TracerProvider:                s.tracerProvider,
 			TracePropagators:              s.compositePropagator,
 			LocalhostFallbackInsideDocker: s.localhostFallbackInsideDocker,
