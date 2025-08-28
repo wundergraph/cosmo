@@ -23,7 +23,7 @@ import { EVENT_DIRECTIVE_NAMES } from '../utils/string-constants';
 import {
   getRenamedRootTypeName,
   isParentDataCompositeOutputType,
-  isParentDataInterfaceType,
+  isInterfaceDefinitionData,
   isTypeNameRootType,
   newPersistedDirectivesData,
 } from '../../schema-building/utils';
@@ -39,6 +39,7 @@ import {
   EXTERNAL,
   IGNORED_FIELDS,
   PARENT_DEFINITION_DATA,
+  PROTECTED,
   PROVIDES,
   REQUIRES,
   SERVICE_OBJECT,
@@ -362,10 +363,13 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
         const directivesByDirectiveName = nf.extractDirectives(node, new Map<string, ConstDirectiveNode[]>());
         const inheritedDirectiveNames = new Set<string>();
         // Add parent-level shareable and external to the field extraction and repeatable validation
-        if (!isParentDataInterfaceType(parentData)) {
+        if (!isInterfaceDefinitionData(parentData)) {
           nf.addInheritedDirectivesToFieldData(directivesByDirectiveName, inheritedDirectiveNames);
           if (directivesByDirectiveName.has(EXTERNAL)) {
             nf.unvalidatedExternalFieldCoords.add(`${nf.originalParentTypeName}.${fieldName}`);
+          }
+          if (nf.isParentObjectProtected || directivesByDirectiveName.has(PROTECTED)) {
+            parentData.protectedFieldNames.add(fieldName);
           }
         }
         const fieldData = nf.addFieldDataByNode(
@@ -521,6 +525,7 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
         nf.renamedParentTypeName = '';
         nf.lastParentNodeKind = Kind.NULL;
         nf.isParentObjectExternal = false;
+        nf.isParentObjectProtected = false;
         nf.isParentObjectShareable = false;
       },
     },
@@ -546,6 +551,7 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
         nf.renamedParentTypeName = '';
         nf.lastParentNodeKind = Kind.NULL;
         nf.isParentObjectExternal = false;
+        nf.isParentObjectProtected = false;
         nf.isParentObjectShareable = false;
       },
     },
