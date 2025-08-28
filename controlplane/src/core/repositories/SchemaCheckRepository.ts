@@ -43,7 +43,11 @@ import {
   InspectorSchemaChange,
   SchemaUsageTrafficInspector,
 } from '../services/SchemaUsageTrafficInspector.js';
-import { createBatches, getFederatedGraphRouterCompatibilityVersion, normalizeLabels } from '../util.js';
+import {
+  createBatches,
+  getFederatedGraphRouterCompatibilityVersion,
+  normalizeLabels
+} from '../util.js';
 import { FederatedGraphConfig, FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { OrganizationRepository } from './OrganizationRepository.js';
 import { ProposalRepository } from './ProposalRepository.js';
@@ -1084,9 +1088,43 @@ export class SchemaCheckRepository {
   }
 
   public async addLinkedSchemaCheck(data: { schemaCheckID: string; linkedSchemaCheckID: string }) {
+    if (data.schemaCheckID === data.linkedSchemaCheckID) {
+      throw new Error('schemaCheckID and linkedSchemaCheckID must differ');
+    }
+
     await this.db.insert(schema.linkedSchemaChecks).values({
       schemaCheckId: data.schemaCheckID,
       linkedSchemaCheckId: data.linkedSchemaCheckID,
     });
+  }
+
+  public async getLinkedSchemaCheck({ schemaCheckID }: { schemaCheckID: string }) {
+    const linkedSchemaCheck = await this.db
+      .select({
+        linkedSchemaCheckId: schema.linkedSchemaChecks.linkedSchemaCheckId,
+      })
+      .from(schema.linkedSchemaChecks)
+      .where(eq(schema.linkedSchemaChecks.schemaCheckId, schemaCheckID));
+    if (linkedSchemaCheck.length === 0) {
+      return undefined;
+    }
+
+    const check = await this.db.query.schemaChecks.findFirst({
+      where: eq(schema.schemaChecks.id, linkedSchemaCheck[0].linkedSchemaCheckId),
+      with: {
+        affectedGraphs: true,
+      },
+    });
+
+    if (!check) {
+      return undefined;
+    }
+
+    return {
+      id: check.id,
+      affectedGraphIds: check.affectedGraphs.map(({ federatedGraphId }) => federatedGraphId),
+      hasClientTraffic: check.hasClientTraffic ?? false,
+      hasGraphPruningErrors: check.hasGraphPruningErrors ?? false,
+    };
   }
 }

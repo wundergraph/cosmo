@@ -558,6 +558,13 @@ message GetCheckSummaryResponse {
     bool proposalMatch = 3;
   }
 
+  message LinkedCheck {
+    string id = 1;
+    repeated string affected_graph_ids = 2;
+    bool hasClientTraffic = 3;
+    bool hasGraphPruningErrors = 4;
+  }
+
   Response response = 1;
   SchemaCheck check = 2;
   repeated AffectedGraph affected_graphs = 3;
@@ -572,6 +579,7 @@ message GetCheckSummaryResponse {
   optional string proposalName = 13;
   repeated ProposalSchemaMatch proposalMatches = 14;
   bool isProposalsEnabled = 15;
+  optional LinkedCheck linkedCheck = 16;
 }
 
 message GetCheckOperationsRequest {

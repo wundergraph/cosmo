@@ -4304,6 +4304,11 @@ export class GetCheckSummaryResponse extends Message<GetCheckSummaryResponse> {
    */
   isProposalsEnabled = false;
 
+  /**
+   * @generated from field: optional wg.cosmo.platform.v1.GetCheckSummaryResponse.LinkedCheck linkedCheck = 16;
+   */
+  linkedCheck?: GetCheckSummaryResponse_LinkedCheck;
+
   constructor(data?: PartialMessage<GetCheckSummaryResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4326,6 +4331,7 @@ export class GetCheckSummaryResponse extends Message<GetCheckSummaryResponse> {
     { no: 13, name: "proposalName", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 14, name: "proposalMatches", kind: "message", T: GetCheckSummaryResponse_ProposalSchemaMatch, repeated: true },
     { no: 15, name: "isProposalsEnabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 16, name: "linkedCheck", kind: "message", T: GetCheckSummaryResponse_LinkedCheck, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCheckSummaryResponse {
@@ -4446,6 +4452,61 @@ export class GetCheckSummaryResponse_ProposalSchemaMatch extends Message<GetChec
 
   static equals(a: GetCheckSummaryResponse_ProposalSchemaMatch | PlainMessage<GetCheckSummaryResponse_ProposalSchemaMatch> | undefined, b: GetCheckSummaryResponse_ProposalSchemaMatch | PlainMessage<GetCheckSummaryResponse_ProposalSchemaMatch> | undefined): boolean {
     return proto3.util.equals(GetCheckSummaryResponse_ProposalSchemaMatch, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetCheckSummaryResponse.LinkedCheck
+ */
+export class GetCheckSummaryResponse_LinkedCheck extends Message<GetCheckSummaryResponse_LinkedCheck> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: repeated string affected_graph_ids = 2;
+   */
+  affectedGraphIds: string[] = [];
+
+  /**
+   * @generated from field: bool hasClientTraffic = 3;
+   */
+  hasClientTraffic = false;
+
+  /**
+   * @generated from field: bool hasGraphPruningErrors = 4;
+   */
+  hasGraphPruningErrors = false;
+
+  constructor(data?: PartialMessage<GetCheckSummaryResponse_LinkedCheck>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetCheckSummaryResponse.LinkedCheck";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "affected_graph_ids", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 3, name: "hasClientTraffic", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "hasGraphPruningErrors", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCheckSummaryResponse_LinkedCheck {
+    return new GetCheckSummaryResponse_LinkedCheck().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCheckSummaryResponse_LinkedCheck {
+    return new GetCheckSummaryResponse_LinkedCheck().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCheckSummaryResponse_LinkedCheck {
+    return new GetCheckSummaryResponse_LinkedCheck().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetCheckSummaryResponse_LinkedCheck | PlainMessage<GetCheckSummaryResponse_LinkedCheck> | undefined, b: GetCheckSummaryResponse_LinkedCheck | PlainMessage<GetCheckSummaryResponse_LinkedCheck> | undefined): boolean {
+    return proto3.util.equals(GetCheckSummaryResponse_LinkedCheck, a, b);
   }
 }
 
