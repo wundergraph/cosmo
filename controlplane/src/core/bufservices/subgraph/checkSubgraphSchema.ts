@@ -360,6 +360,15 @@ export function checkSubgraphSchema(
       let targetLimit = changeRetention?.limit ?? 7;
       targetLimit = clamp(targetNamespace?.checksTimeframeInDays ?? targetLimit, 1, targetLimit);
 
+      let targetNewGraphQLSchema = newGraphQLSchema;
+      // If the graph pruning is disabled in the source namespace, the graphql schema is not computed,
+      // so here we need to check if the target subgraph has graph pruning enabled and if so, we need to compute the graphql schema
+      if (!targetNewGraphQLSchema && targetNamespace.enableGraphPruning) {
+        const parsedSchema = parse(targetSubgraph.schemaSDL);
+        // this new GraphQL schema conatins the location info
+        targetNewGraphQLSchema = buildASTSchema(parsedSchema, { assumeValid: true, assumeValidSDL: true });
+      }
+
       const targetCheckResult = await subgraphRepo.performSchemaCheck({
         organizationSlug: authContext.organizationSlug,
         namespace: targetNamespace,
@@ -372,7 +381,7 @@ export function checkSubgraphSchema(
         isTargetCheck: true,
         limit: targetLimit,
         chClient: opts.chClient,
-        newGraphQLSchema,
+        newGraphQLSchema: targetNewGraphQLSchema,
         disableResolvabilityValidation: req.disableResolvabilityValidation,
       });
 
