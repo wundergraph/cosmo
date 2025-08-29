@@ -357,6 +357,9 @@ export function checkSubgraphSchema(
         };
       }
 
+      let targetLimit = changeRetention?.limit ?? 7;
+      targetLimit = clamp(targetNamespace?.checksTimeframeInDays ?? targetLimit, 1, targetLimit);
+
       const targetCheckResult = await subgraphRepo.performSchemaCheck({
         organizationSlug: authContext.organizationSlug,
         namespace: targetNamespace,
@@ -367,7 +370,7 @@ export function checkSubgraphSchema(
         skipTrafficCheck: req.skipTrafficCheck,
         isDeleted: !!req.delete,
         isTargetCheck: true,
-        limit,
+        limit: targetLimit,
         chClient: opts.chClient,
         newGraphQLSchema,
         disableResolvabilityValidation: req.disableResolvabilityValidation,
