@@ -2049,7 +2049,7 @@ export class SubgraphRepository {
         namespaceId: namespace.id,
       });
 
-      hasClientTraffic = overrideCheck.hasUnsafeClientTraffic;
+      hasClientTraffic = hasClientTraffic || overrideCheck.hasUnsafeClientTraffic;
 
       // Store operation usage
       await schemaCheckRepo.createOperationUsage(overrideCheck.result, composedGraph.id);
