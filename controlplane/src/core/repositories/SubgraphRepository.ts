@@ -1180,7 +1180,10 @@ export class SubgraphRepository {
           federatedGraphId,
         });
 
-        const linkedCheck = await schemaCheckRepo.getLinkedSchemaCheck({ schemaCheckID: c.id });
+        const linkedCheck = await schemaCheckRepo.getLinkedSchemaCheck({
+          schemaCheckID: c.id,
+          organizationId: this.organizationId,
+        });
 
         return {
           id: c.id,
