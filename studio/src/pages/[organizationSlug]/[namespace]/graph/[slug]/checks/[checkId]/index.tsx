@@ -462,6 +462,8 @@ const CheckDetails = ({
     data.check.hasGraphPruningErrors,
     data.check.clientTrafficCheckSkipped,
     data.check.proposalMatch === "error",
+    data.linkedCheck?.hasClientTraffic,
+    data.linkedCheck?.hasGraphPruningErrors,
   );
 
   const currentAffectedGraph = data.affectedGraphs.find(
@@ -1065,7 +1067,44 @@ const CheckDetails = ({
                       <AlertTitle>
                         {isSuccessful ? "Check Passed" : "Check Failed"}
                       </AlertTitle>
-                      <AlertDescription>{reason}</AlertDescription>
+                      <AlertDescription>
+                        {(() => {
+                          const linkedCheckFailures = [];
+                          if (data.linkedCheck?.hasClientTraffic) {
+                            linkedCheckFailures.push(
+                              "client traffic check failures",
+                            );
+                          }
+                          if (data.linkedCheck?.hasGraphPruningErrors) {
+                            linkedCheckFailures.push("graph pruning errors");
+                          }
+
+                          // If reason is "All tasks were successful" but check failed, it's due to linked check
+                          if (
+                            reason === "All tasks were successful" &&
+                            !isSuccessful
+                          ) {
+                            if (linkedCheckFailures.length > 0) {
+                              return `Check failed because the linked check failed due to ${linkedCheckFailures.join(
+                                " and ",
+                              )}.`;
+                            }
+
+                            return "Check failed because the linked check failed.";
+                          }
+
+                          // If there are linked check failures and other reasons
+                          if (linkedCheckFailures.length > 0) {
+                            const linkedCheckMessage = `The linked check failed due to ${linkedCheckFailures.join(
+                              " and ",
+                            )}, which is one of the reasons for this check to fail.`;
+                            return `${reason} ${linkedCheckMessage}`;
+                          }
+
+                          // Default case - just show the reason
+                          return reason;
+                        })()}
+                      </AlertDescription>
                     </Alert>
                   </div>
 
@@ -1337,7 +1376,6 @@ const CheckDetails = ({
                                     >
                                       <Link
                                         href={`/${organizationSlug}/${data.linkedCheck?.namespace}/graph/${data.linkedCheck?.affectedGraphNames[0]}/checks/${data.linkedCheck?.id}`}
-                                        target="_blank"
                                       >
                                         View
                                       </Link>
