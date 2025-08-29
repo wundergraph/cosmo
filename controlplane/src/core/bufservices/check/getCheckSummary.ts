@@ -243,7 +243,10 @@ export function getCheckSummary(
       response: {
         code: EnumStatusCode.OK,
       },
-      check,
+      check: {
+        ...check,
+        linkedCheck,
+      },
       affectedGraphs,
       proposedSubgraphSchemaSDL: check.proposedSubgraphSchemaSDL,
       changes: checkDetails.changes,
@@ -256,7 +259,6 @@ export function getCheckSummary(
       proposalName: proposal?.proposalName,
       proposalMatches: proposalSchemaMatches,
       isProposalsEnabled: namespace.enableProposals,
-      linkedCheck,
     };
   });
 }

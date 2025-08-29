@@ -506,6 +506,18 @@ message SchemaCheck {
     repeated Label labels = 6;
   }
 
+  message LinkedCheck {
+    string id = 1;
+    repeated string affectedGraphNames = 2;
+    bool isCheckSuccessful = 3;
+    bool hasClientTraffic = 4;
+    bool hasGraphPruningErrors = 5;
+    bool clientTrafficCheckSkipped = 6;
+    bool graphPruningCheckSkipped = 7;
+    repeated string subgraphNames = 8;
+    string namespace = 9;
+  }
+
   string id = 1;
   optional string targetID = 2;
   optional string subgraphName = 3;
@@ -527,6 +539,7 @@ message SchemaCheck {
   bool composition_skipped = 19;
   bool breaking_changes_skipped = 20;
   optional string errorMessage = 21;
+  optional LinkedCheck linkedCheck = 22;
 }
 
 message GetChecksByFederatedGraphNameResponse {
@@ -565,18 +578,6 @@ message GetCheckSummaryResponse {
     bool proposalMatch = 3;
   }
 
-  message LinkedCheck {
-    string id = 1;
-    repeated string affectedGraphNames = 2;
-    bool isCheckSuccessful = 3;
-    bool hasClientTraffic = 4;
-    bool hasGraphPruningErrors = 5;
-    bool clientTrafficCheckSkipped = 6;
-    bool graphPruningCheckSkipped = 7;
-    repeated string subgraphNames = 8;
-    string namespace = 9;
-  }
-
   Response response = 1;
   SchemaCheck check = 2;
   repeated AffectedGraph affected_graphs = 3;
@@ -591,7 +592,6 @@ message GetCheckSummaryResponse {
   optional string proposalName = 13;
   repeated ProposalSchemaMatch proposalMatches = 14;
   bool isProposalsEnabled = 15;
-  optional LinkedCheck linkedCheck = 16;
 }
 
 message GetCheckOperationsRequest {

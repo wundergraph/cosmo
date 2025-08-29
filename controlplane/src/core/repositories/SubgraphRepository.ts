@@ -1180,6 +1180,8 @@ export class SubgraphRepository {
           federatedGraphId,
         });
 
+        const linkedCheck = await schemaCheckRepo.getLinkedSchemaCheck({ schemaCheckID: c.id });
+
         return {
           id: c.id,
           targetID: c.targetId || undefined,
@@ -1208,6 +1210,7 @@ export class SubgraphRepository {
           compositionSkipped: c.compositionSkipped ?? false,
           breakingChangesSkipped: c.breakingChangesSkipped ?? false,
           errorMessage: c.errorMessage || undefined,
+          linkedCheck,
         };
       }),
     );

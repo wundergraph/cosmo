@@ -3925,6 +3925,11 @@ export class SchemaCheck extends Message<SchemaCheck> {
    */
   errorMessage?: string;
 
+  /**
+   * @generated from field: optional wg.cosmo.platform.v1.SchemaCheck.LinkedCheck linkedCheck = 22;
+   */
+  linkedCheck?: SchemaCheck_LinkedCheck;
+
   constructor(data?: PartialMessage<SchemaCheck>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3954,6 +3959,7 @@ export class SchemaCheck extends Message<SchemaCheck> {
     { no: 19, name: "composition_skipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 20, name: "breaking_changes_skipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 21, name: "errorMessage", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 22, name: "linkedCheck", kind: "message", T: SchemaCheck_LinkedCheck, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SchemaCheck {
@@ -4090,6 +4096,91 @@ export class SchemaCheck_CheckedSubgraph extends Message<SchemaCheck_CheckedSubg
 
   static equals(a: SchemaCheck_CheckedSubgraph | PlainMessage<SchemaCheck_CheckedSubgraph> | undefined, b: SchemaCheck_CheckedSubgraph | PlainMessage<SchemaCheck_CheckedSubgraph> | undefined): boolean {
     return proto3.util.equals(SchemaCheck_CheckedSubgraph, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.SchemaCheck.LinkedCheck
+ */
+export class SchemaCheck_LinkedCheck extends Message<SchemaCheck_LinkedCheck> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: repeated string affectedGraphNames = 2;
+   */
+  affectedGraphNames: string[] = [];
+
+  /**
+   * @generated from field: bool isCheckSuccessful = 3;
+   */
+  isCheckSuccessful = false;
+
+  /**
+   * @generated from field: bool hasClientTraffic = 4;
+   */
+  hasClientTraffic = false;
+
+  /**
+   * @generated from field: bool hasGraphPruningErrors = 5;
+   */
+  hasGraphPruningErrors = false;
+
+  /**
+   * @generated from field: bool clientTrafficCheckSkipped = 6;
+   */
+  clientTrafficCheckSkipped = false;
+
+  /**
+   * @generated from field: bool graphPruningCheckSkipped = 7;
+   */
+  graphPruningCheckSkipped = false;
+
+  /**
+   * @generated from field: repeated string subgraphNames = 8;
+   */
+  subgraphNames: string[] = [];
+
+  /**
+   * @generated from field: string namespace = 9;
+   */
+  namespace = "";
+
+  constructor(data?: PartialMessage<SchemaCheck_LinkedCheck>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.SchemaCheck.LinkedCheck";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "affectedGraphNames", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 3, name: "isCheckSuccessful", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "hasClientTraffic", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 5, name: "hasGraphPruningErrors", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 6, name: "clientTrafficCheckSkipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 7, name: "graphPruningCheckSkipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 8, name: "subgraphNames", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 9, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SchemaCheck_LinkedCheck {
+    return new SchemaCheck_LinkedCheck().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SchemaCheck_LinkedCheck {
+    return new SchemaCheck_LinkedCheck().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SchemaCheck_LinkedCheck {
+    return new SchemaCheck_LinkedCheck().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SchemaCheck_LinkedCheck | PlainMessage<SchemaCheck_LinkedCheck> | undefined, b: SchemaCheck_LinkedCheck | PlainMessage<SchemaCheck_LinkedCheck> | undefined): boolean {
+    return proto3.util.equals(SchemaCheck_LinkedCheck, a, b);
   }
 }
 
@@ -4308,11 +4399,6 @@ export class GetCheckSummaryResponse extends Message<GetCheckSummaryResponse> {
    */
   isProposalsEnabled = false;
 
-  /**
-   * @generated from field: optional wg.cosmo.platform.v1.GetCheckSummaryResponse.LinkedCheck linkedCheck = 16;
-   */
-  linkedCheck?: GetCheckSummaryResponse_LinkedCheck;
-
   constructor(data?: PartialMessage<GetCheckSummaryResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4335,7 +4421,6 @@ export class GetCheckSummaryResponse extends Message<GetCheckSummaryResponse> {
     { no: 13, name: "proposalName", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 14, name: "proposalMatches", kind: "message", T: GetCheckSummaryResponse_ProposalSchemaMatch, repeated: true },
     { no: 15, name: "isProposalsEnabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 16, name: "linkedCheck", kind: "message", T: GetCheckSummaryResponse_LinkedCheck, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCheckSummaryResponse {
@@ -4486,91 +4571,6 @@ export class GetCheckSummaryResponse_ProposalSchemaMatch extends Message<GetChec
 
   static equals(a: GetCheckSummaryResponse_ProposalSchemaMatch | PlainMessage<GetCheckSummaryResponse_ProposalSchemaMatch> | undefined, b: GetCheckSummaryResponse_ProposalSchemaMatch | PlainMessage<GetCheckSummaryResponse_ProposalSchemaMatch> | undefined): boolean {
     return proto3.util.equals(GetCheckSummaryResponse_ProposalSchemaMatch, a, b);
-  }
-}
-
-/**
- * @generated from message wg.cosmo.platform.v1.GetCheckSummaryResponse.LinkedCheck
- */
-export class GetCheckSummaryResponse_LinkedCheck extends Message<GetCheckSummaryResponse_LinkedCheck> {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id = "";
-
-  /**
-   * @generated from field: repeated string affectedGraphNames = 2;
-   */
-  affectedGraphNames: string[] = [];
-
-  /**
-   * @generated from field: bool isCheckSuccessful = 3;
-   */
-  isCheckSuccessful = false;
-
-  /**
-   * @generated from field: bool hasClientTraffic = 4;
-   */
-  hasClientTraffic = false;
-
-  /**
-   * @generated from field: bool hasGraphPruningErrors = 5;
-   */
-  hasGraphPruningErrors = false;
-
-  /**
-   * @generated from field: bool clientTrafficCheckSkipped = 6;
-   */
-  clientTrafficCheckSkipped = false;
-
-  /**
-   * @generated from field: bool graphPruningCheckSkipped = 7;
-   */
-  graphPruningCheckSkipped = false;
-
-  /**
-   * @generated from field: repeated string subgraphNames = 8;
-   */
-  subgraphNames: string[] = [];
-
-  /**
-   * @generated from field: string namespace = 9;
-   */
-  namespace = "";
-
-  constructor(data?: PartialMessage<GetCheckSummaryResponse_LinkedCheck>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.GetCheckSummaryResponse.LinkedCheck";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "affectedGraphNames", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 3, name: "isCheckSuccessful", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 4, name: "hasClientTraffic", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 5, name: "hasGraphPruningErrors", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 6, name: "clientTrafficCheckSkipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 7, name: "graphPruningCheckSkipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 8, name: "subgraphNames", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 9, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCheckSummaryResponse_LinkedCheck {
-    return new GetCheckSummaryResponse_LinkedCheck().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetCheckSummaryResponse_LinkedCheck {
-    return new GetCheckSummaryResponse_LinkedCheck().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetCheckSummaryResponse_LinkedCheck {
-    return new GetCheckSummaryResponse_LinkedCheck().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: GetCheckSummaryResponse_LinkedCheck | PlainMessage<GetCheckSummaryResponse_LinkedCheck> | undefined, b: GetCheckSummaryResponse_LinkedCheck | PlainMessage<GetCheckSummaryResponse_LinkedCheck> | undefined): boolean {
-    return proto3.util.equals(GetCheckSummaryResponse_LinkedCheck, a, b);
   }
 }
 

@@ -462,8 +462,8 @@ const CheckDetails = ({
     data.check.hasGraphPruningErrors,
     data.check.clientTrafficCheckSkipped,
     data.check.proposalMatch === "error",
-    data.linkedCheck?.hasClientTraffic,
-    data.linkedCheck?.hasGraphPruningErrors,
+    data.check.linkedCheck?.hasClientTraffic,
+    data.check.linkedCheck?.hasGraphPruningErrors,
   );
 
   const currentAffectedGraph = data.affectedGraphs.find(
@@ -1069,13 +1069,14 @@ const CheckDetails = ({
                       </AlertTitle>
                       <AlertDescription>
                         {(() => {
+                          const linkedCheck = data.check.linkedCheck;
                           const linkedCheckFailures = [];
-                          if (data.linkedCheck?.hasClientTraffic) {
+                          if (linkedCheck?.hasClientTraffic) {
                             linkedCheckFailures.push(
                               "client traffic check failures",
                             );
                           }
-                          if (data.linkedCheck?.hasGraphPruningErrors) {
+                          if (linkedCheck?.hasGraphPruningErrors) {
                             linkedCheckFailures.push("graph pruning errors");
                           }
 
@@ -1288,8 +1289,8 @@ const CheckDetails = ({
                     </div>
                   )}
 
-                  {data.linkedCheck &&
-                    data.linkedCheck.affectedGraphNames.length > 0 && (
+                  {data.check.linkedCheck &&
+                    data.check.linkedCheck.affectedGraphNames.length > 0 && (
                       <div className="space-y-4 pt-4">
                         <h3 className="text-lg font-semibold">Linked Checks</h3>
                         <TableWrapper>
@@ -1305,23 +1306,23 @@ const CheckDetails = ({
                             </TableHeader>
                             <TableBody>
                               <TableRow
-                                key={data.linkedCheck.id}
+                                key={data.check.linkedCheck.id}
                                 className="group cursor-pointer hover:bg-secondary/30"
                                 onClick={() =>
                                   router.push(
-                                    `/${organizationSlug}/${data.linkedCheck?.namespace}/graph/${data.linkedCheck?.affectedGraphNames[0]}/checks/${data.linkedCheck?.id}`,
+                                    `/${organizationSlug}/${data.check?.linkedCheck?.namespace}/graph/${data.check?.linkedCheck?.affectedGraphNames[0]}/checks/${data.check?.linkedCheck?.id}`,
                                   )
                                 }
                               >
                                 <TableCell>
                                   {getCheckBadge(isSuccessful, false)}
                                 </TableCell>
-                                <TableCell>{data.linkedCheck.id}</TableCell>
+                                <TableCell>{data.check.linkedCheck.id}</TableCell>
                                 <TableCell>
-                                  {data.linkedCheck.subgraphNames.length > 1
+                                  {data.check.linkedCheck.subgraphNames.length > 1
                                     ? "Multiple Subgraphs"
-                                    : data.linkedCheck.subgraphNames.length > 0
-                                    ? data.linkedCheck.subgraphNames[0]
+                                    : data.check.linkedCheck.subgraphNames.length > 0
+                                    ? data.check.linkedCheck.subgraphNames[0]
                                     : "Subgraph"}
                                 </TableCell>
                                 <TableCell>
@@ -1329,17 +1330,17 @@ const CheckDetails = ({
                                     variant="outline"
                                     className={cn(
                                       "gap-2 py-1.5",
-                                      data.linkedCheck
+                                      data.check.linkedCheck
                                         .clientTrafficCheckSkipped &&
                                         "text-muted-foreground",
                                     )}
                                   >
-                                    {data.linkedCheck
+                                    {data.check.linkedCheck
                                       .clientTrafficCheckSkipped ? (
                                       <NoSymbolIcon className="h-4 w-4" />
                                     ) : (
                                       getCheckIcon(
-                                        !data.linkedCheck.hasClientTraffic,
+                                        !data.check.linkedCheck.hasClientTraffic,
                                       )
                                     )}
                                     <span>Operations</span>
@@ -1348,17 +1349,17 @@ const CheckDetails = ({
                                     variant="outline"
                                     className={cn(
                                       "gap-2 py-1.5",
-                                      data.linkedCheck
+                                      data.check.linkedCheck
                                         .graphPruningCheckSkipped &&
                                         "text-muted-foreground",
                                     )}
                                   >
-                                    {data.linkedCheck
+                                    {data.check.linkedCheck
                                       .graphPruningCheckSkipped ? (
                                       <NoSymbolIcon className="h-4 w-4" />
                                     ) : (
                                       getCheckIcon(
-                                        !data.linkedCheck.hasGraphPruningErrors,
+                                        !data.check.linkedCheck.hasGraphPruningErrors,
                                       )
                                     )}
                                     <span className="flex-1 truncate">
@@ -1375,7 +1376,7 @@ const CheckDetails = ({
                                       className="table-action"
                                     >
                                       <Link
-                                        href={`/${organizationSlug}/${data.linkedCheck?.namespace}/graph/${data.linkedCheck?.affectedGraphNames[0]}/checks/${data.linkedCheck?.id}`}
+                                        href={`/${organizationSlug}/${data.check.linkedCheck?.namespace}/graph/${data.check.linkedCheck?.affectedGraphNames[0]}/checks/${data.check.linkedCheck?.id}`}
                                       >
                                         View
                                       </Link>
