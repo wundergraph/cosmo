@@ -1291,7 +1291,7 @@ const CheckDetails = ({
                   {data.linkedCheck &&
                     data.linkedCheck.affectedGraphNames.length > 0 && (
                       <div className="space-y-4 pt-4">
-                        <h3 className="text-lg font-semibold">Linked Check</h3>
+                        <h3 className="text-lg font-semibold">Linked Checks</h3>
                         <TableWrapper>
                           <Table>
                             <TableHeader>
