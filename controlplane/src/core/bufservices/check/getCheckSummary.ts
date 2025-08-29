@@ -124,6 +124,27 @@ export function getCheckSummary(
     });
 
     const currentAffectedGraph = check.affectedGraphs.find((ag) => ag.id === graph.id);
+    if (!currentAffectedGraph) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: 'Check not found for the current graph',
+        },
+        compositionErrors: [],
+        compositionWarnings: [],
+        changes: [],
+        affectedGraphs: [],
+        trafficCheckDays: 0,
+        lintIssues: [],
+        graphPruningIssues: [],
+        isGraphPruningEnabled: false,
+        isLintingEnabled: false,
+        checkedSubgraphs: [],
+        proposalMatches: [],
+        isProposalsEnabled: false,
+      };
+    }
+
     const affectedGraphs: GetCheckSummaryResponse_AffectedGraph[] = [];
 
     const hasLintErrors = lintIssues.some((issue) => issue.severity === LintSeverity.error);
@@ -136,6 +157,9 @@ export function getCheckSummary(
       });
       hasAffectedOperations = affectedOperations.length > 0;
     }
+
+    const linkedCheck = await schemaCheckRepo.getLinkedSchemaCheck({ schemaCheckID: req.checkId });
+
     affectedGraphs.push(
       new GetCheckSummaryResponse_AffectedGraph({
         ...currentAffectedGraph,
@@ -148,7 +172,14 @@ export function getCheckSummary(
           hasGraphPruningErrors: graphPruningIssues.some((issue) => issue.severity === LintSeverity.error),
           clientTrafficCheckSkipped: check.clientTrafficCheckSkipped,
           hasProposalMatchError: check.proposalMatch === 'error',
+          isLinkedTrafficCheckFailed: linkedCheck?.hasClientTraffic,
+          isLinkedPruningCheckFailed: linkedCheck?.hasGraphPruningErrors,
         }),
+        isComposable: checkDetails.compositionErrors.length === 0,
+        isBreaking: checkDetails.changes.some((change) => change.isBreaking),
+        hasClientTraffic: hasAffectedOperations,
+        hasLintErrors,
+        hasGraphPruningErrors: graphPruningIssues.some((issue) => issue.severity === LintSeverity.error),
       }),
     );
 
@@ -190,7 +221,14 @@ export function getCheckSummary(
             hasGraphPruningErrors: graphPruningIssues.some((issue) => issue.severity === LintSeverity.error),
             clientTrafficCheckSkipped: check.clientTrafficCheckSkipped,
             hasProposalMatchError: check.proposalMatch === 'error',
+            isLinkedTrafficCheckFailed: linkedCheck?.hasClientTraffic,
+            isLinkedPruningCheckFailed: linkedCheck?.hasGraphPruningErrors,
           }),
+          isComposable: checkDetails.compositionErrors.length === 0,
+          isBreaking: checkDetails.changes.some((change) => change.isBreaking),
+          hasClientTraffic: hasAffectedOperations,
+          hasLintErrors,
+          hasGraphPruningErrors: graphPruningIssues.some((issue) => issue.severity === LintSeverity.error),
         }),
       );
     }
@@ -205,7 +243,10 @@ export function getCheckSummary(
       response: {
         code: EnumStatusCode.OK,
       },
-      check,
+      check: {
+        ...check,
+        linkedCheck,
+      },
       affectedGraphs,
       proposedSubgraphSchemaSDL: check.proposedSubgraphSchemaSDL,
       changes: checkDetails.changes,

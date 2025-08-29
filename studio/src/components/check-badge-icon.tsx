@@ -9,7 +9,13 @@ const isCheckSuccessful = (
   hasGraphPruningErrors: boolean,
   clientTrafficCheckSkipped: boolean,
   hasProposalMatchError: boolean,
+  isLinkedTrafficCheckFailed?: boolean,
+  isLinkedPruningCheckFailed?: boolean,
 ) => {
+  if (isLinkedTrafficCheckFailed || isLinkedPruningCheckFailed) {
+    return false;
+  }
+
   return (
     isComposable &&
     // If no breaking changes found
