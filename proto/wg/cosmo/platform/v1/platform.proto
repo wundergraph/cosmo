@@ -446,9 +446,16 @@ message GetSubgraphByNameRequest {
 }
 
 message GetSubgraphByNameResponse {
+  message LinkedSubgraph{
+    string id = 1;
+    string name = 2;
+    string namespace = 3;
+  }
+
   Response response = 1;
   Subgraph graph = 2;
   repeated SubgraphMember members = 3;
+  optional LinkedSubgraph linkedSubgraph = 4;
 }
 
 message GetSubgraphSDLFromLatestCompositionRequest {
