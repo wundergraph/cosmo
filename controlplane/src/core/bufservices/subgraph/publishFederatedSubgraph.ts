@@ -191,7 +191,7 @@ export function publishFederatedSubgraph(
                 ? `Subgraph ${subgraph.name} is a plugin. Please use the 'wgc router plugin publish' command to publish the plugin.`
                 : subgraph.type === 'grpc_service'
                   ? `Subgraph ${subgraph.name} is a grpc service. Please use the 'wgc grpc-service publish' command to publish the grpc service.`
-                : `Subgraph ${subgraph.name} is not of type ${formatSubgraphType(req.type)}.`,
+                  : `Subgraph ${subgraph.name} is not of type ${formatSubgraphType(req.type)}.`,
           },
           compositionErrors: [],
           deploymentErrors: [],
