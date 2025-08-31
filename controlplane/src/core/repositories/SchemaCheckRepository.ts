@@ -1102,7 +1102,13 @@ export class SchemaCheckRepository {
       .execute();
   }
 
-  public async getLinkedSchemaCheck({ schemaCheckID }: { schemaCheckID: string }) {
+  public async getLinkedSchemaCheck({
+    schemaCheckID,
+    organizationId,
+  }: {
+    schemaCheckID: string;
+    organizationId: string;
+  }) {
     const linkedSchemaCheck = await this.db
       .select({
         linkedSchemaCheckId: schema.linkedSchemaChecks.linkedSchemaCheckId,
@@ -1137,6 +1143,7 @@ export class SchemaCheckRepository {
             namespace: {
               columns: {
                 name: true,
+                organizationId: true,
               },
             },
           },
@@ -1145,6 +1152,11 @@ export class SchemaCheckRepository {
     });
 
     if (!check || check.subgraphs.length === 0 || !check.subgraphs[0].namespace) {
+      return undefined;
+    }
+
+    // Validate that the check belongs to the correct organization
+    if (check.subgraphs[0].namespace.organizationId !== organizationId) {
       return undefined;
     }
 

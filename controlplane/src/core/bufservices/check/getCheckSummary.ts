@@ -158,7 +158,10 @@ export function getCheckSummary(
       hasAffectedOperations = affectedOperations.length > 0;
     }
 
-    const linkedCheck = await schemaCheckRepo.getLinkedSchemaCheck({ schemaCheckID: req.checkId });
+    const linkedCheck = await schemaCheckRepo.getLinkedSchemaCheck({
+      schemaCheckID: check.id,
+      organizationId: authContext.organizationId,
+    });
 
     affectedGraphs.push(
       new GetCheckSummaryResponse_AffectedGraph({
