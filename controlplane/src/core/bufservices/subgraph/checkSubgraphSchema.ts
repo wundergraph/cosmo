@@ -212,7 +212,7 @@ export function checkSubgraphSchema(
         }
         if (namespace.enableGraphPruning) {
           const parsedSchema = parse(newSchemaSDL);
-          // this new GraphQL schema conatins the location info
+          // this new GraphQL schema contains the location info
           newGraphQLSchema = buildASTSchema(parsedSchema, { assumeValid: true, assumeValidSDL: true });
         }
       } catch (e: any) {
@@ -365,7 +365,7 @@ export function checkSubgraphSchema(
       // so here we need to check if the target subgraph has graph pruning enabled and if so, we need to compute the graphql schema
       if (!targetNewGraphQLSchema && targetNamespace.enableGraphPruning) {
         const parsedSchema = parse(targetSubgraph.schemaSDL);
-        // this new GraphQL schema conatins the location info
+        // this new GraphQL schema contains the location info
         targetNewGraphQLSchema = buildASTSchema(parsedSchema, { assumeValid: true, assumeValidSDL: true });
       }
 
