@@ -189,6 +189,8 @@ export function publishFederatedSubgraph(
             details:
               subgraph.type === 'grpc_plugin'
                 ? `Subgraph ${subgraph.name} is a plugin. Please use the 'wgc router plugin publish' command to publish the plugin.`
+                : subgraph.type === 'grpc_service'
+                  ? `Subgraph ${subgraph.name} is a grpc service. Please use the 'wgc grpc-service publish' command to publish the grpc service.`
                 : `Subgraph ${subgraph.name} is not of type ${formatSubgraphType(req.type)}.`,
           },
           compositionErrors: [],
@@ -469,7 +471,7 @@ export function publishFederatedSubgraph(
         return {
           response: {
             code: EnumStatusCode.ERR,
-            details: `The proto is required for plugin subgraphs.`,
+            details: `The proto is required for plugin and grpc subgraphs.`,
           },
           compositionErrors: [],
           deploymentErrors: [],
@@ -510,7 +512,7 @@ export function publishFederatedSubgraph(
         return {
           response: {
             code: EnumStatusCode.ERR,
-            details: `The schema, mappings, and lock are required for plugin subgraphs.`,
+            details: `The schema, mappings, and lock are required for plugin and grpc subgraphs.`,
           },
           compositionErrors: [],
           deploymentErrors: [],
@@ -541,7 +543,13 @@ export function publishFederatedSubgraph(
                     version: req.proto?.version || '',
                   },
                 }
-              : undefined,
+              : subgraph.type === 'grpc_service'
+                ? {
+                    schema: req.proto?.schema || '',
+                    mappings: req.proto?.mappings || '',
+                    lock: req.proto?.lock || '',
+                  }
+                : undefined,
         },
         opts.blobStorage,
         {
