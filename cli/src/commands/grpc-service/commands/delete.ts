@@ -9,17 +9,17 @@ import { getBaseHeaders } from '../../../core/config.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('delete');
-  command.description('Deletes a grpc subgraph on the control plane.');
-  command.argument('<name>', 'The name of the grpc subgraph to delete.');
-  command.option('-n, --namespace [string]', 'The namespace of the grpc subgraph.');
-  command.option('-f --force', 'Flag to force the deletion (skip confirmation).');
+  command.description('Deletes a gRPC subgraph on the control plane.');
+  command.argument('<name>', 'The name of the gRPC subgraph to delete.');
+  command.option('-n, --namespace [string]', 'The namespace of the gRPC subgraph.');
+  command.option('-f, --force', 'Flag to force the deletion (skip confirmation).');
   command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
   command.action(async (name, options) => {
     if (!options.force) {
       const deletionConfirmed = await inquirer.prompt({
         name: 'confirmDeletion',
         type: 'confirm',
-        message: `Are you sure you want to delete the plugin subgraph "${name}"?`,
+        message: `Are you sure you want to delete the gRPC subgraph "${name}"?`,
       });
       if (!deletionConfirmed.confirmDeletion) {
         process.exitCode = 1;
@@ -27,7 +27,7 @@ export default (opts: BaseCommandOptions) => {
       }
     }
 
-    const spinner = ora(`The grpc subgraph "${name}" is being deleted...`).start();
+    const spinner = ora(`The gRPC subgraph "${name}" is being deleted...`).start();
 
     const resp = await opts.client.platform.deleteFederatedSubgraph(
       {
@@ -41,7 +41,7 @@ export default (opts: BaseCommandOptions) => {
 
     switch (resp.response?.code) {
       case EnumStatusCode.OK: {
-        spinner.succeed(`The grpc subgraph "${name}" was deleted successfully.`);
+        spinner.succeed(`The gRPC subgraph "${name}" was deleted successfully.`);
         if (resp.proposalMatchMessage) {
           console.log(pc.yellow(`Warning: Proposal match failed`));
           console.log(pc.yellow(resp.proposalMatchMessage));
@@ -49,13 +49,13 @@ export default (opts: BaseCommandOptions) => {
         break;
       }
       case EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL: {
-        spinner.fail(`Failed to delete grpc subgraph "${name}".`);
+        spinner.fail(`Failed to delete gRPC subgraph "${name}".`);
         console.log(pc.red(`Error: Proposal match failed`));
         console.log(pc.red(resp.proposalMatchMessage));
         break;
       }
       case EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED: {
-        spinner.fail(`The grpc subgraph "${name}" was deleted but with composition errors.`);
+        spinner.fail(`The gRPC subgraph "${name}" was deleted but with composition errors.`);
 
         const compositionErrorsTable = new Table({
           head: [
@@ -71,7 +71,7 @@ export default (opts: BaseCommandOptions) => {
         console.log(
           pc.red(
             `There were composition errors when composing at least one federated graph related to the` +
-              ` grpc subgraph "${name}".\nThe router will continue to work with the latest valid schema.` +
+              ` gRPC subgraph "${name}".\nThe router will continue to work with the latest valid schema.` +
               `\n${pc.bold('Please check the errors below:')}`,
           ),
         );
@@ -90,7 +90,7 @@ export default (opts: BaseCommandOptions) => {
       }
       case EnumStatusCode.ERR_DEPLOYMENT_FAILED: {
         spinner.warn(
-          `The grpc subgraph "${name}" was deleted, but the updated composition could not be deployed.` +
+          `The gRPC subgraph "${name}" was deleted, but the updated composition could not be deployed.` +
             `\nThis means the updated composition is not accessible to the router.` +
             `\n${pc.bold('Please check the errors below:')}`,
         );
@@ -118,7 +118,7 @@ export default (opts: BaseCommandOptions) => {
         break;
       }
       default: {
-        spinner.fail(`Failed to delete the grpc subgraph "${name}".`);
+        spinner.fail(`Failed to delete the gRPC subgraph "${name}".`);
         if (resp.response?.details) {
           console.log(pc.red(pc.bold(resp.response?.details)));
         }

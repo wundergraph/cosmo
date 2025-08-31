@@ -14,20 +14,20 @@ import { BaseCommandOptions } from '../../../core/types/types.js';
 export default (opts: BaseCommandOptions) => {
   const command = new Command('publish');
   command.description(
-    "Publishes a grpc subgraph on the control plane. If the grpc subgraph doesn't exists, it will be created.\nIf the publication leads to composition errors, the errors will be visible in the Studio.\nThe router will continue to work with the latest valid schema.\nConsider using the 'wgc subgraph check' command to check for composition errors before publishing.",
+    "Publishes a gRPC subgraph on the control plane. If the gRPC subgraph doesn't exists, it will be created.\nIf the publication leads to composition errors, the errors will be visible in the Studio.\nThe router will continue to work with the latest valid schema.\nConsider using the 'wgc subgraph check' command to check for composition errors before publishing.",
   );
-  command.argument('[directory]', 'The path to the grpc subgraph directory.', '.');
-  command.option('--name [string]', 'The name of the grpc subgraph.');
-  command.option('-n, --namespace [string]', 'The namespace of the grpc subgraph.');
+  command.argument('[directory]', 'The path to the gRPC subgraph directory.', '.');
+  command.option('--name [string]', 'The name of the gRPC subgraph.');
+  command.option('-n, --namespace [string]', 'The namespace of the gRPC subgraph.');
   command.option(
     '-r, --routing-url <url>',
-    'The routing URL of the grpc subgraph. This is the URL at which the grpc subgraph will be accessible.' +
+    'The routing URL of the gRPC subgraph. This is the URL at which the gRPC subgraph will be accessible.' +
       ' This parameter is always ignored if the subgraph has already been created.',
   );
   command.option(
     '--label [labels...]',
-    'The labels to apply to the grpc subgraph. The labels are passed in the format <key>=<value> <key>=<value>.' +
-      ' This parameter is always ignored if the grpc subgraph has already been created.',
+    'The labels to apply to the gRPC subgraph. The labels are passed in the format <key>=<value> <key>=<value>.' +
+      ' This parameter is always ignored if the gRPC subgraph has already been created.',
     [],
   );
   command.option(
@@ -48,7 +48,7 @@ export default (opts: BaseCommandOptions) => {
       program.error(
         pc.red(
           pc.bold(
-            `The grpc subgraph directory '${pc.bold(grpcSubgraphDir)}' does not exist. Please check the path and try again.`,
+            `The gRPC subgraph directory '${pc.bold(grpcSubgraphDir)}' does not exist. Please check the path and try again.`,
           ),
         ),
       );
@@ -157,11 +157,11 @@ export default (opts: BaseCommandOptions) => {
         spinner.succeed(
           resp?.hasChanged === false
             ? 'No new changes to publish.'
-            : `Plugin ${pc.bold(grpcSubgraphName)} published successfully.`,
+            : `The gRPC subgraph ${pc.bold(grpcSubgraphName)} published successfully.`,
         );
         console.log('');
         console.log(
-          'To apply any new changes after this publication, update your plugin by modifying your schema (remember to generate), updating your implementation and then publishing again.',
+          'To apply any new changes after this publication, update your gRPC subgraph by modifying your schema (remember to generate), updating your implementation and then publishing again.',
         );
         if (resp.proposalMatchMessage) {
           console.log(pc.yellow(`Warning: Proposal match failed`));
@@ -170,13 +170,13 @@ export default (opts: BaseCommandOptions) => {
         break;
       }
       case EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL: {
-        spinner.fail(`Failed to publish plugin "${grpcSubgraphName}".`);
+        spinner.fail(`Failed to publish gRPC subgraph "${grpcSubgraphName}".`);
         console.log(pc.red(`Error: Proposal match failed`));
         console.log(pc.red(resp.proposalMatchMessage));
         break;
       }
       case EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED: {
-        spinner.warn('Plugin published but with composition errors.');
+        spinner.warn('The gRPC subgraph was published but with composition errors.');
         if (resp.proposalMatchMessage) {
           console.log(pc.yellow(`Warning: Proposal match failed`));
           console.log(pc.yellow(resp.proposalMatchMessage));
@@ -219,7 +219,7 @@ export default (opts: BaseCommandOptions) => {
       }
       case EnumStatusCode.ERR_DEPLOYMENT_FAILED: {
         spinner.warn(
-          "Plugin was published, but the updated composition hasn't been deployed, so it's not accessible to the router. Check the errors listed below for details.",
+          "The gRPC subgraph was published, but the updated composition hasn't been deployed, so it's not accessible to the router. Check the errors listed below for details.",
         );
 
         const deploymentErrorsTable = new Table({
@@ -249,7 +249,7 @@ export default (opts: BaseCommandOptions) => {
         break;
       }
       default: {
-        spinner.fail(`Failed to publish plugin "${grpcSubgraphName}".`);
+        spinner.fail(`Failed to publish gRPC subgraph "${grpcSubgraphName}".`);
         if (resp.response?.details) {
           console.error(pc.red(pc.bold(resp.response?.details)));
         }
