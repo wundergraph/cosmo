@@ -1099,7 +1099,7 @@ const CheckDetails = ({
                             const linkedCheckMessage = `The linked check failed due to ${linkedCheckFailures.join(
                               " and ",
                             )}, which is one of the reasons for this check to fail.`;
-                            return `${reason} ${linkedCheckMessage}`;
+                            return `${reason}. ${linkedCheckMessage}`;
                           }
 
                           // Default case - just show the reason
