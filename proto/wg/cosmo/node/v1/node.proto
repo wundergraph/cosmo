@@ -141,6 +141,7 @@ message TypeField {
   string type_name = 1;
   repeated string field_names = 2;
   repeated string external_field_names = 3;
+  repeated string require_fetch_reasons_field_names = 4;
 }
 
 message FieldCoordinates {
