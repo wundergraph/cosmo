@@ -530,6 +530,33 @@ func TestRetryPerSubgraph(t *testing.T) {
 		require.ErrorContains(t, err, "unsupported retry algorithm")
 	})
 
+	t.Run("invalid algorithm is ignored when retries are disabled (base)", func(t *testing.T) {
+		t.Parallel()
+
+		opts := core.NewSubgraphRetryOptions(config.TrafficShapingRules{
+			All: config.GlobalSubgraphRequestRule{
+				BackoffJitterRetry: config.BackoffJitterRetry{
+					Enabled:     false,
+					Algorithm:   "invalid_algorithm",
+					MaxAttempts: 2,
+					MaxDuration: 2 * time.Second,
+					Interval:    10 * time.Millisecond,
+					Expression:  "true",
+				},
+			},
+		})
+		options := core.WithSubgraphRetryOptions(opts)
+
+		err := testenv.RunWithError(t, &testenv.Config{
+			NoRetryClient: true,
+			RouterOptions: []core.Option{
+				options,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {})
+
+		require.NoError(t, err)
+	})
+
 	t.Run("verify invalid algorithm is detected for per subgraphs", func(t *testing.T) {
 		t.Parallel()
 
