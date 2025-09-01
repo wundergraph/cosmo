@@ -469,6 +469,29 @@ func NewRouter(opts ...Option) (*Router, error) {
 		return nil, errors.New("automatic persisted queries and safelist cannot be enabled at the same time (as APQ would permit queries that are not in the safelist)")
 	}
 
+	if r.securityConfiguration.BlockPersistedOperations.Enabled &&
+		r.securityConfiguration.BlockNonPersistedOperations.Enabled {
+
+		// Both have no condition, unusable state
+		if r.securityConfiguration.BlockPersistedOperations.Condition == "" &&
+			r.securityConfiguration.BlockNonPersistedOperations.Condition == "" {
+			return nil, errors.New("persisted and non-persisted operations are both unconditionally blocked")
+		}
+
+		// One or both have a condition, could be intentional for edge cases
+		r.logger.Warn("The security configuration fields 'block_persisted_operations' and 'block_non_persisted_operations' are both enabled. Take care to ensure this is intentional.")
+	}
+
+	if r.persistedOperationsConfig.Safelist.Enabled && r.securityConfiguration.BlockPersistedOperations.Enabled {
+		// Both have no condition, unusable state
+		if r.securityConfiguration.BlockPersistedOperations.Condition == "" {
+			return nil, errors.New("safelist cannot be enabled while persisted operations are unconditionally blocked")
+		}
+
+		// Has a condition, could be intentional for edge cases
+		r.logger.Warn("The security configuration field 'block_persisted_operations' is enabled alongside the persisted operations safelist. Take care to ensure this is intentional. Misconfiguration will result in safelisted queries being blocked.")
+	}
+
 	if r.securityConfiguration.DepthLimit != nil {
 		r.logger.Warn("The security configuration field 'depth_limit' is deprecated, and will be removed. Use 'security.complexity_limits.depth' instead.")
 
