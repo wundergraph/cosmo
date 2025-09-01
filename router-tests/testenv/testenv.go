@@ -91,8 +91,8 @@ var (
 	ConfigWithPluginsJSONTemplate string
 	//go:embed testdata/configWithGRPC.json
 	ConfigWithGRPCJSONTemplate string
-	//go:embed testdata/configWithProtected.json
-	ConfigWithProtectedJSONTemplate string
+	//go:embed testdata/configWithRequireFetchReasons.json
+	ConfigWithRequireFetchReasonsJSONTemplate string
 
 	DemoNatsProviders  = []string{natsDefaultSourceName, myNatsProviderID}
 	DemoKafkaProviders = []string{myKafkaProviderID}

@@ -525,7 +525,7 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 			TypeName:           node.TypeName,
 			FieldNames:         node.FieldNames,
 			ExternalFieldNames: node.ExternalFieldNames,
-			FetchReasonFields:  node.ProtectedFieldNames,
+			FetchReasonFields:  node.RequireFetchReasonsFieldNames,
 		})
 	}
 	for _, node := range in.ChildNodes {
@@ -533,7 +533,7 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 			TypeName:           node.TypeName,
 			FieldNames:         node.FieldNames,
 			ExternalFieldNames: node.ExternalFieldNames,
-			FetchReasonFields:  node.ProtectedFieldNames,
+			FetchReasonFields:  node.RequireFetchReasonsFieldNames,
 		})
 	}
 	for _, directive := range in.Directives {

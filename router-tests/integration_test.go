@@ -838,7 +838,7 @@ func TestPropagateFieldsRequestedBy(t *testing.T) {
 	// Simple test to verify that the configuration switch works.
 	// Multi subgraphs calls are tested in the engine.
 	testenv.Run(t, &testenv.Config{
-		RouterConfigJSONTemplate: testenv.ConfigWithProtectedJSONTemplate,
+		RouterConfigJSONTemplate: testenv.ConfigWithRequireFetchReasonsJSONTemplate,
 		ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 			cfg.PropagateFieldsRequestedBy = true
 		},
