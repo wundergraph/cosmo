@@ -4,6 +4,14 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.247.0](https://github.com/wundergraph/cosmo/compare/router@0.246.2...router@0.247.0) (2025-08-28)
+
+### Features
+
+* add span for each grpc invocation ([#2158](https://github.com/wundergraph/cosmo/issues/2158)) ([4f0383f](https://github.com/wundergraph/cosmo/commit/4f0383f780371b0f3549f94a2e85312178f0dfaa)) (@SkArchon)
+* expression support for retry condition ([#2167](https://github.com/wundergraph/cosmo/issues/2167)) ([c1236f5](https://github.com/wundergraph/cosmo/commit/c1236f587fa4e623e965b241a56559edf1c55025)) (@StarpTech)
+* **router:** improved heartbeats for subscriptions ([#2141](https://github.com/wundergraph/cosmo/issues/2141)) ([ca1861b](https://github.com/wundergraph/cosmo/commit/ca1861baa52df152824b8892366568e6384e507f)) (@endigma)
+
 ## [0.246.2](https://github.com/wundergraph/cosmo/compare/router@0.246.1...router@0.246.2) (2025-08-26)
 
 ### Bug Fixes

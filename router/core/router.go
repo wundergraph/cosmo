@@ -1541,10 +1541,10 @@ func WithCors(corsOpts *cors.Config) Option {
 	}
 }
 
-// WithMultipartHeartbeatInterval sets the interval for the engine to send heartbeats for multipart subscriptions.
-func WithMultipartHeartbeatInterval(interval time.Duration) Option {
+// WithSubscriptionHeartbeatInterval sets the interval for the engine to send heartbeats for multipart subscriptions.
+func WithSubscriptionHeartbeatInterval(interval time.Duration) Option {
 	return func(r *Router) {
-		r.multipartHeartbeatInterval = interval
+		r.subscriptionHeartbeatInterval = interval
 	}
 }
 
@@ -1752,13 +1752,25 @@ func WithSubgraphCircuitBreakerOptions(opts *SubgraphCircuitBreakerOptions) Opti
 	}
 }
 
-func WithSubgraphRetryOptions(enabled bool, maxRetryCount int, retryMaxDuration, retryInterval time.Duration) Option {
+func WithSubgraphRetryOptions(
+	enabled bool,
+	algorithm string,
+	maxRetryCount int,
+	retryMaxDuration, retryInterval time.Duration,
+	expression string,
+	onRetryFunc retrytransport.OnRetryFunc,
+) Option {
 	return func(r *Router) {
 		r.retryOptions = retrytransport.RetryOptions{
 			Enabled:       enabled,
+			Algorithm:     algorithm,
 			MaxRetryCount: maxRetryCount,
 			MaxDuration:   retryMaxDuration,
 			Interval:      retryInterval,
+			Expression:    expression,
+
+			// Test case overrides
+			OnRetry: onRetryFunc,
 		}
 	}
 }
