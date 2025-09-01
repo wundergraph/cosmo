@@ -193,15 +193,7 @@ func optionsFromResources(logger *zap.Logger, config *config.Config) []Option {
 		WithFileUploadConfig(&config.FileUpload),
 		WithSubgraphTransportOptions(NewSubgraphTransportOptions(config.TrafficShaping)),
 		WithSubgraphCircuitBreakerOptions(NewSubgraphCircuitBreakerOptions(config.TrafficShaping)),
-		WithSubgraphRetryOptions(
-			config.TrafficShaping.All.BackoffJitterRetry.Enabled,
-			config.TrafficShaping.All.BackoffJitterRetry.Algorithm,
-			config.TrafficShaping.All.BackoffJitterRetry.MaxAttempts,
-			config.TrafficShaping.All.BackoffJitterRetry.MaxDuration,
-			config.TrafficShaping.All.BackoffJitterRetry.Interval,
-			config.TrafficShaping.All.BackoffJitterRetry.Expression,
-			nil,
-		),
+		WithSubgraphRetryOptions(NewSubgraphRetryOptions(config.TrafficShaping)),
 		WithCors(&cors.Config{
 			Enabled:          config.CORS.Enabled,
 			AllowOrigins:     config.CORS.AllowOrigins,

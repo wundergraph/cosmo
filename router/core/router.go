@@ -184,6 +184,27 @@ func (r *SubgraphCircuitBreakerOptions) IsEnabled() bool {
 	return r.CircuitBreaker.Enabled || len(r.SubgraphMap) > 0
 }
 
+type SubgraphRetryOptions struct {
+	All         retrytransport.RetryOptions
+	SubgraphMap map[string]retrytransport.RetryOptions
+	OnRetryFunc retrytransport.OnRetryFunc
+}
+
+func (r *SubgraphRetryOptions) IsEnabled() bool {
+	if r == nil {
+		return false
+	}
+	if r.All.Enabled {
+		return true
+	}
+	for _, cfg := range r.SubgraphMap {
+		if cfg.Enabled {
+			return true
+		}
+	}
+	return false
+}
+
 // NewRouter creates a new Router instance. Router.Start() must be called to start the server.
 // Alternatively, use Router.NewServer() to create a new server instance without starting it.
 func NewRouter(opts ...Option) (*Router, error) {
@@ -1752,26 +1773,9 @@ func WithSubgraphCircuitBreakerOptions(opts *SubgraphCircuitBreakerOptions) Opti
 	}
 }
 
-func WithSubgraphRetryOptions(
-	enabled bool,
-	algorithm string,
-	maxRetryCount int,
-	retryMaxDuration, retryInterval time.Duration,
-	expression string,
-	onRetryFunc retrytransport.OnRetryFunc,
-) Option {
+func WithSubgraphRetryOptions(opts *SubgraphRetryOptions) Option {
 	return func(r *Router) {
-		r.retryOptions = retrytransport.RetryOptions{
-			Enabled:       enabled,
-			Algorithm:     algorithm,
-			MaxRetryCount: maxRetryCount,
-			MaxDuration:   retryMaxDuration,
-			Interval:      retryInterval,
-			Expression:    expression,
-
-			// Test case overrides
-			OnRetry: onRetryFunc,
-		}
+		r.retryOptions = opts
 	}
 }
 
@@ -1899,6 +1903,37 @@ func NewSubgraphCircuitBreakerOptions(cfg config.TrafficShapingRules) *SubgraphC
 	}
 
 	return entry
+}
+
+func NewSubgraphRetryOptions(cfg config.TrafficShapingRules) *SubgraphRetryOptions {
+	entry := &SubgraphRetryOptions{
+		SubgraphMap: map[string]retrytransport.RetryOptions{},
+	}
+	// If we have a global default
+	if cfg.All.BackoffJitterRetry.Enabled {
+		entry.All = newRetryConfig(cfg.All.BackoffJitterRetry)
+	}
+	// Subgraph specific circuit breakers
+	for k, v := range cfg.Subgraphs {
+		entry.SubgraphMap[k] = newRetryConfig(v.BackoffJitterRetry)
+	}
+
+	return entry
+}
+
+func newRetryConfig(config config.BackoffJitterRetry) retrytransport.RetryOptions {
+	algorithm := config.Algorithm
+	if algorithm == "" {
+		algorithm = retrytransport.BackoffJitter
+	}
+	return retrytransport.RetryOptions{
+		Enabled:       config.Enabled,
+		Algorithm:     algorithm,
+		MaxRetryCount: config.MaxAttempts,
+		MaxDuration:   config.MaxDuration,
+		Interval:      config.Interval,
+		Expression:    config.Expression,
+	}
 }
 
 func newCircuitBreakerConfig(cb config.CircuitBreaker) circuit.CircuitBreakerConfig {

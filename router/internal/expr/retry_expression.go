@@ -10,13 +10,27 @@ import (
 
 // RetryExpressionManager handles compilation and evaluation of retry expressions
 type RetryExpressionManager struct {
-	program *vm.Program
+	expressionMap map[string]*vm.Program
 }
 
-// NewRetryExpressionManager creates a new RetryExpressionManager with the given expression
-func NewRetryExpressionManager(expression string) (*RetryExpressionManager, error) {
+const defaultRetryExpression = "IsRetryableStatusCode() || IsConnectionError() || IsTimeout()"
+
+// NewRetryExpressionManager creates a new RetryExpressionManager
+func NewRetryExpressionManager() *RetryExpressionManager {
+	return &RetryExpressionManager{
+		expressionMap: make(map[string]*vm.Program),
+	}
+}
+
+func (c *RetryExpressionManager) AddExpression(exprString string) error {
+	expression := exprString
 	if expression == "" {
-		return nil, nil
+		expression = defaultRetryExpression
+	}
+
+	// The expression has already been processed, skip recompilation
+	if _, ok := c.expressionMap[expression]; ok {
+		return nil
 	}
 
 	// Compile the expression with retry context
@@ -27,22 +41,32 @@ func NewRetryExpressionManager(expression string) (*RetryExpressionManager, erro
 
 	program, err := expr.Compile(expression, options...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to compile retry expression: %w", handleExpressionError(err))
+		return fmt.Errorf("failed to compile retry expression: %w", handleExpressionError(err))
 	}
 
-	return &RetryExpressionManager{
-		program: program,
-	}, nil
+	// Use the normalized expression string as the key for deduplication
+	c.expressionMap[expression] = program
+	return nil
 }
 
 // ShouldRetry evaluates the retry expression with the given context
-func (m *RetryExpressionManager) ShouldRetry(ctx RetryContext) (bool, error) {
-	if m == nil || m.program == nil {
-		// Use default behavior if no expression is configured
+func (m *RetryExpressionManager) ShouldRetry(ctx RetryContext, expressionString string) (bool, error) {
+	if m == nil {
 		return false, nil
 	}
 
-	result, err := expr.Run(m.program, ctx)
+	expression := expressionString
+	if expression == "" {
+		expression = defaultRetryExpression
+	}
+
+	program, ok := m.expressionMap[expression]
+	if !ok {
+		// If the expression wasn't pre-compiled, do not retry by default
+		return false, nil
+	}
+
+	result, err := expr.Run(program, ctx)
 	if err != nil {
 		return false, fmt.Errorf("failed to evaluate retry expression: %w", handleExpressionError(err))
 	}

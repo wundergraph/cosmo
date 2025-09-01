@@ -7,32 +7,16 @@ import (
 	"strconv"
 	"time"
 
+	rcontext "github.com/wundergraph/cosmo/router/internal/context"
+
 	"github.com/cloudflare/backoff"
 	"go.uber.org/zap"
 )
 
-type ShouldRetryFunc func(err error, req *http.Request, resp *http.Response) bool
-type OnRetryFunc func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error)
-
-type RetryOptions struct {
-	Enabled       bool
-	Algorithm     string
-	MaxRetryCount int
-	Interval      time.Duration
-	MaxDuration   time.Duration
-	Expression    string
-	ShouldRetry   ShouldRetryFunc
-
-	// Test specific only
-	OnRetry OnRetryFunc
-}
-
-type requestLoggerGetter func(req *http.Request) *zap.Logger
-
 type RetryHTTPTransport struct {
-	RoundTripper     http.RoundTripper
-	RetryOptions     RetryOptions
+	roundTripper     http.RoundTripper
 	getRequestLogger requestLoggerGetter
+	retryManager     *Manager
 }
 
 // parseRetryAfterHeader parses the Retry-After header value according to RFC 7231.
@@ -92,36 +76,50 @@ func shouldUseRetryAfter(logger *zap.Logger, resp *http.Response, maxDuration ti
 
 func NewRetryHTTPTransport(
 	roundTripper http.RoundTripper,
-	retryOptions RetryOptions,
 	getRequestLogger requestLoggerGetter,
+	retryManager *Manager,
 ) *RetryHTTPTransport {
 	return &RetryHTTPTransport{
-		RoundTripper:     roundTripper,
-		RetryOptions:     retryOptions,
+		roundTripper:     roundTripper,
 		getRequestLogger: getRequestLogger,
+		retryManager:     retryManager,
 	}
 }
 
 func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	resp, err := rt.RoundTripper.RoundTrip(req)
+	resp, err := rt.roundTripper.RoundTrip(req)
 	// Short circuit if the request was successful.
 	if err == nil && isResponseOK(resp) {
 		return resp, nil
 	}
 
-	b := backoff.New(rt.RetryOptions.MaxDuration, rt.RetryOptions.Interval)
+	var subgraph string
+	subgraphCtxVal := req.Context().Value(rcontext.CurrentSubgraphContextKey{})
+	if subgraphCtxVal != nil {
+		if sg, ok := subgraphCtxVal.(string); ok {
+			subgraph = sg
+		}
+	}
+
+	// If there is no option defined for this subgraph
+	retryOptions := rt.retryManager.GetSubgraphOptions(subgraph)
+	if retryOptions == nil {
+		return rt.roundTripper.RoundTrip(req)
+	}
+
+	b := backoff.New(retryOptions.MaxDuration, retryOptions.Interval)
 	defer b.Reset()
 
 	requestLogger := rt.getRequestLogger(req)
 
 	// Retry logic
 	retries := 0
-	for (rt.RetryOptions.ShouldRetry(err, req, resp)) && retries < rt.RetryOptions.MaxRetryCount {
+	for (rt.retryManager.Retry(err, req, resp, retryOptions.Expression)) && retries < retryOptions.MaxRetryCount {
 		retries++
 
 		// Check if we should use Retry-After header for 429 responses
 		var sleepDuration time.Duration
-		if retryAfterDuration, useRetryAfter := shouldUseRetryAfter(requestLogger, resp, rt.RetryOptions.MaxDuration); useRetryAfter {
+		if retryAfterDuration, useRetryAfter := shouldUseRetryAfter(requestLogger, resp, retryOptions.MaxDuration); useRetryAfter {
 			sleepDuration = retryAfterDuration
 			requestLogger.Debug("Using Retry-After header for 429 response",
 				zap.Int("retry", retries),
@@ -138,10 +136,8 @@ func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, erro
 			)
 		}
 
-		// Test Specific
-		if rt.RetryOptions.OnRetry != nil {
-			rt.RetryOptions.OnRetry(retries, req, resp, sleepDuration, err)
-		}
+		// Notify hook before sleeping
+		rt.retryManager.OnRetryHook(retries, err, req, resp, sleepDuration)
 
 		// Wait for the specified duration
 		time.Sleep(sleepDuration)
@@ -150,7 +146,7 @@ func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, erro
 		rt.drainBody(resp, requestLogger)
 
 		// Retry the request
-		resp, err = rt.RoundTripper.RoundTrip(req)
+		resp, err = rt.roundTripper.RoundTrip(req)
 
 		// Short circuit if the request was successful
 		if err == nil && isResponseOK(resp) {
