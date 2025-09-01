@@ -19,8 +19,8 @@ import {
   KEY_DEFINITION,
   LINK_DEFINITION,
   OVERRIDE_DEFINITION,
-  PROTECTED_DEFINITION,
   PROVIDES_DEFINITION,
+  REQUIRE_FETCH_REASONS_DEFINITION,
   REQUIRED_FIELDSET_TYPE_NODE,
   REQUIRED_STRING_TYPE_NODE,
   REQUIRES_DEFINITION,
@@ -37,6 +37,8 @@ import {
   AS,
   AUTHENTICATED,
   BOOLEAN_SCALAR,
+  CHANNEL,
+  CHANNELS,
   COMPOSE_DIRECTIVE,
   CONDITION,
   CONFIGURE_CHILD_DESCRIPTIONS,
@@ -50,6 +52,8 @@ import {
   EDFS_NATS_REQUEST,
   EDFS_NATS_STREAM_CONFIGURATION,
   EDFS_NATS_SUBSCRIBE,
+  EDFS_REDIS_PUBLISH,
+  EDFS_REDIS_SUBSCRIBE,
   ENUM_UPPER,
   ENUM_VALUE_UPPER,
   EXTENDS,
@@ -75,6 +79,7 @@ import {
   PROVIDER_ID,
   PROVIDES,
   REASON,
+  REQUIRE_FETCH_REASONS,
   REQUIRES,
   REQUIRES_SCOPES,
   RESOLVABLE,
@@ -95,11 +100,6 @@ import {
   TOPICS,
   UNION_UPPER,
   URL_LOWER,
-  CHANNEL,
-  CHANNELS,
-  EDFS_REDIS_PUBLISH,
-  EDFS_REDIS_SUBSCRIBE,
-  PROTECTED,
 } from '../../utils/string-constants';
 
 export const AUTHENTICATED_DEFINITION_DATA: DirectiveDefinitionData = {
@@ -441,12 +441,12 @@ export const NATS_SUBSCRIBE_DEFINITION_DATA: DirectiveDefinitionData = {
   requiredArgumentNames: new Set<string>([SUBJECTS]),
 };
 
-export const PROTECTED_DEFINITION_DATA: DirectiveDefinitionData = {
+export const REQUIRE_FETCH_REASONS_DEFINITION_DATA: DirectiveDefinitionData = {
   argumentTypeNodeByArgumentName: new Map<string, ArgumentData>(),
   isRepeatable: true,
   locations: new Set<string>([FIELD_DEFINITION_UPPER, OBJECT_UPPER]),
-  name: PROTECTED,
-  node: PROTECTED_DEFINITION,
+  name: REQUIRE_FETCH_REASONS,
+  node: REQUIRE_FETCH_REASONS_DEFINITION,
   optionalArgumentNames: new Set<string>(),
   requiredArgumentNames: new Set<string>(),
 };

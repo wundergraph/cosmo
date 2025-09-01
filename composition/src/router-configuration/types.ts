@@ -88,8 +88,8 @@ export type ConfigurationData = {
   events?: EventConfiguration[];
   externalFieldNames?: Set<FieldName>;
   isInterfaceObject?: boolean;
-  protectedFieldNames?: Array<FieldName>;
   provides?: RequiredFieldConfiguration[];
   keys?: RequiredFieldConfiguration[];
+  requireFetchReasonsFieldNames?: Array<FieldName>;
   requires?: RequiredFieldConfiguration[];
 };

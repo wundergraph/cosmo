@@ -22,8 +22,8 @@ import { extractFieldSetValue, newFieldSetData } from './utils';
 import { EVENT_DIRECTIVE_NAMES } from '../utils/string-constants';
 import {
   getRenamedRootTypeName,
-  isParentDataCompositeOutputType,
   isInterfaceDefinitionData,
+  isParentDataCompositeOutputType,
   isTypeNameRootType,
   newPersistedDirectivesData,
 } from '../../schema-building/utils';
@@ -39,8 +39,8 @@ import {
   EXTERNAL,
   IGNORED_FIELDS,
   PARENT_DEFINITION_DATA,
-  PROTECTED,
   PROVIDES,
+  REQUIRE_FETCH_REASONS,
   REQUIRES,
   SERVICE_OBJECT,
   SUBSCRIPTION_FILTER,
@@ -368,8 +368,8 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           if (directivesByDirectiveName.has(EXTERNAL)) {
             nf.unvalidatedExternalFieldCoords.add(`${nf.originalParentTypeName}.${fieldName}`);
           }
-          if (nf.isParentObjectProtected || directivesByDirectiveName.has(PROTECTED)) {
-            parentData.protectedFieldNames.add(fieldName);
+          if (nf.doesParentObjectRequireFetchReasons || directivesByDirectiveName.has(REQUIRE_FETCH_REASONS)) {
+            parentData.requireFetchReasonsFieldNames.add(fieldName);
           }
         }
         const fieldData = nf.addFieldDataByNode(
@@ -525,7 +525,7 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
         nf.renamedParentTypeName = '';
         nf.lastParentNodeKind = Kind.NULL;
         nf.isParentObjectExternal = false;
-        nf.isParentObjectProtected = false;
+        nf.doesParentObjectRequireFetchReasons = false;
         nf.isParentObjectShareable = false;
       },
     },
@@ -551,7 +551,7 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
         nf.renamedParentTypeName = '';
         nf.lastParentNodeKind = Kind.NULL;
         nf.isParentObjectExternal = false;
-        nf.isParentObjectProtected = false;
+        nf.doesParentObjectRequireFetchReasons = false;
         nf.isParentObjectShareable = false;
       },
     },
