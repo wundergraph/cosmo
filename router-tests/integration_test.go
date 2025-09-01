@@ -832,7 +832,7 @@ func TestVariablesRemapping(t *testing.T) {
 	})
 }
 
-func TestPropagateFieldsRequestedBy(t *testing.T) {
+func TestEnableRequireFetchReasons(t *testing.T) {
 	t.Parallel()
 
 	// Simple test to verify that the configuration switch works.
