@@ -85,7 +85,7 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 		MaxRecyclableParserSize:            opts.RouterEngineConfig.Execution.ResolverMaxRecyclableParserSize,
 		SubscriptionHeartbeatInterval:      opts.HeartbeatInterval,
 		MaxSubscriptionFetchTimeout:        opts.RouterEngineConfig.Execution.SubscriptionFetchTimeout,
-		PropagateFetchReasons:              opts.RouterEngineConfig.Execution.PropagateFieldsRequestedBy,
+		PropagateFetchReasons:              opts.RouterEngineConfig.Execution.EnableRequireFetchReasons,
 	}
 
 	if opts.ApolloCompatibilityFlags.ValueCompletion.Enabled {

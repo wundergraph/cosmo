@@ -840,7 +840,7 @@ func TestPropagateFieldsRequestedBy(t *testing.T) {
 	testenv.Run(t, &testenv.Config{
 		RouterConfigJSONTemplate: testenv.ConfigWithRequireFetchReasonsJSONTemplate,
 		ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-			cfg.PropagateFieldsRequestedBy = true
+			cfg.EnableRequireFetchReasons = true
 		},
 		Subgraphs: testenv.SubgraphsConfig{
 			Employees: testenv.SubgraphConfig{
