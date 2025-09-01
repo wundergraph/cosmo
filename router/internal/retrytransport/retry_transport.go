@@ -104,7 +104,7 @@ func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, erro
 	// If there is no option defined for this subgraph
 	retryOptions := rt.retryManager.GetSubgraphOptions(subgraph)
 	if retryOptions == nil {
-		return resp, nil
+		return resp, err
 	}
 
 	b := backoff.New(retryOptions.MaxDuration, retryOptions.Interval)
@@ -136,8 +136,10 @@ func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, erro
 			)
 		}
 
-		// Notify hook before sleeping
-		rt.retryManager.OnRetryHook(retries, err, req, resp, sleepDuration)
+		// A hook used for testing
+		if rt.retryManager.OnRetry != nil {
+			rt.retryManager.OnRetry(retries, req, resp, sleepDuration, err)
+		}
 
 		// Wait for the specified duration
 		time.Sleep(sleepDuration)

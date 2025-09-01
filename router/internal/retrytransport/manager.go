@@ -148,10 +148,3 @@ func (m *Manager) Retry(err error, req *http.Request, resp *http.Response, exprS
 	}
 	return m.retryFunc(err, req, resp, exprString)
 }
-
-// OnRetryHook triggers the configured OnRetry callback, if any.
-func (m *Manager) OnRetryHook(count int, err error, req *http.Request, resp *http.Response, sleepDuration time.Duration) {
-	if m.OnRetry != nil {
-		m.OnRetry(count, req, resp, sleepDuration, err)
-	}
-}
