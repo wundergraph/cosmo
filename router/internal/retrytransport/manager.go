@@ -53,6 +53,9 @@ func (m *Manager) Initialize(
 	subgraphRetryOptions map[string]RetryOptions,
 	subgraphs []*nodev1.Subgraph,
 ) error {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
 	var joinErr error
 
 	defaultSgNames := make([]string, 0, len(subgraphs))
@@ -95,7 +98,8 @@ func (m *Manager) Initialize(
 			continue
 		}
 
-		m.retries[sgName] = &entry
+		opts := entry
+		m.retries[sgName] = &opts
 
 		err := m.exprManager.AddExpression(entry.Expression)
 		if err != nil {
@@ -107,38 +111,41 @@ func (m *Manager) Initialize(
 	return joinErr
 }
 
-func (c *Manager) GetSubgraphOptions(name string) *RetryOptions {
-	if c == nil {
+func (m *Manager) GetSubgraphOptions(name string) *RetryOptions {
+	if m == nil {
 		return nil
 	}
 
-	c.lock.RLock()
-	defer c.lock.RUnlock()
+	m.lock.RLock()
+	defer m.lock.RUnlock()
 
-	if circuitBreaker, ok := c.retries[name]; ok {
+	if circuitBreaker, ok := m.retries[name]; ok {
 		return circuitBreaker
 	}
 	return nil
 }
 
-func (c *Manager) IsEnabled() bool {
-	if c == nil {
+func (m *Manager) IsEnabled() bool {
+	if m == nil {
 		return false
 	}
 
-	c.lock.RLock()
-	defer c.lock.RUnlock()
+	m.lock.RLock()
+	defer m.lock.RUnlock()
 
-	return len(c.retries) > 0
+	return len(m.retries) > 0
 }
 
-func (c *Manager) Retry(err error, req *http.Request, resp *http.Response, exprString string) bool {
-	return c.retryFunc(err, req, resp, exprString)
+func (m *Manager) Retry(err error, req *http.Request, resp *http.Response, exprString string) bool {
+	if m.retryFunc == nil {
+		return false
+	}
+	return m.retryFunc(err, req, resp, exprString)
 }
 
 // OnRetryHook triggers the configured OnRetry callback, if any.
-func (c *Manager) OnRetryHook(count int, err error, req *http.Request, resp *http.Response, sleepDuration time.Duration) {
-	if c.OnRetry != nil {
-		c.OnRetry(count, req, resp, sleepDuration, err)
+func (m *Manager) OnRetryHook(count int, err error, req *http.Request, resp *http.Response, sleepDuration time.Duration) {
+	if m.OnRetry != nil {
+		m.OnRetry(count, req, resp, sleepDuration, err)
 	}
 }

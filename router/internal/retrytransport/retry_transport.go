@@ -104,7 +104,7 @@ func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, erro
 	// If there is no option defined for this subgraph
 	retryOptions := rt.retryManager.GetSubgraphOptions(subgraph)
 	if retryOptions == nil {
-		return rt.roundTripper.RoundTrip(req)
+		return resp, nil
 	}
 
 	b := backoff.New(retryOptions.MaxDuration, retryOptions.Interval)
