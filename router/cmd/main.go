@@ -183,7 +183,7 @@ func Main() {
 			)
 		}
 
-		watchFunc, err := watcher.New(watcher.Options{
+		w, err := watcher.New(watcher.Options{
 			Interval: result.Config.WatchConfig.Interval,
 			Logger:   ll,
 			Paths:    *configPathFlag,
@@ -203,9 +203,9 @@ func Main() {
 			// different instances of the router
 			time.Sleep(startupDelay)
 
-			if err := watchFunc(rootCtx); err != nil {
+			if err := w(rootCtx); err != nil {
 				if !errors.Is(err, context.Canceled) {
-					ll.Error("Error watching execution config", zap.Error(err))
+					ll.Error("Error watching router config", zap.Error(err))
 				} else {
 					ll.Debug("Watcher context cancelled, shutting down")
 				}

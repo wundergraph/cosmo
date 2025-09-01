@@ -3239,6 +3239,11 @@
               "format": "go-duration",
               "default": "10s",
               "description": "The maximum allowable duration between retries (random). The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+            },
+            "expression": {
+              "type": "string",
+              "description": "The expression used to determine if a request should be retried. The expression can reference status codes, error messages, and helper functions like IsRetryableStatusCode(), IsConnectionError(), IsHttpReadTimeout(), IsTimeout() (includes HTTP read timeouts). See https://expr-lang.org/ for expression syntax. Note: Mutations are never retried regardless of this expression. EOF errors are always retried at the transport layer regardless of this expression.",
+              "default": "IsRetryableStatusCode() || IsConnectionError() || IsTimeout()"
             }
           }
         }
