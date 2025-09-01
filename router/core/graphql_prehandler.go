@@ -592,13 +592,6 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	)
 
 	if h.shouldFetchPersistedOperation(operationKit) {
-		if h.operationBlocker.persistedOperationsDisabled {
-			return &httpGraphqlError{
-				message:    "persisted operations are disabled",
-				statusCode: http.StatusBadRequest,
-			}
-		}
-
 		ctx, span := h.tracer.Start(req.Context(), "Load Persisted Operation",
 			trace.WithSpanKind(trace.SpanKindClient),
 			trace.WithAttributes(requestContext.telemetry.traceAttrs...),

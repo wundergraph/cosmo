@@ -980,69 +980,71 @@ func (r *Router) buildClients() error {
 
 	var pClient persistedoperation.Client
 
-	if provider, ok := cdnProviders[r.persistedOperationsConfig.Storage.ProviderID]; ok {
-		if r.graphApiToken == "" {
-			return errors.New("graph token is required to fetch persisted operations from CDN")
+	if !r.persistedOperationsConfig.Disabled {
+		if provider, ok := cdnProviders[r.persistedOperationsConfig.Storage.ProviderID]; ok {
+			if r.graphApiToken == "" {
+				return errors.New("graph token is required to fetch persisted operations from CDN")
+			}
+
+			c, err := cdn.NewClient(provider.URL, r.graphApiToken, cdn.Options{
+				Logger: r.logger,
+			})
+			if err != nil {
+				return err
+			}
+			pClient = c
+
+			r.logger.Info("Use CDN as storage provider for persisted operations",
+				zap.String("provider_id", provider.ID),
+			)
+		} else if provider, ok := s3Providers[r.persistedOperationsConfig.Storage.ProviderID]; ok {
+
+			c, err := s3.NewClient(provider.Endpoint, &s3.Options{
+				AccessKeyID:      provider.AccessKey,
+				SecretAccessKey:  provider.SecretKey,
+				Region:           provider.Region,
+				UseSSL:           provider.Secure,
+				BucketName:       provider.Bucket,
+				ObjectPathPrefix: r.persistedOperationsConfig.Storage.ObjectPrefix,
+				TraceProvider:    r.tracerProvider,
+			})
+			if err != nil {
+				return err
+			}
+			pClient = c
+
+			r.logger.Info("Use S3 as storage provider for persisted operations",
+				zap.String("provider_id", provider.ID),
+			)
+		} else if provider, ok := fileSystemProviders[r.persistedOperationsConfig.Storage.ProviderID]; ok {
+			c, err := fs.NewClient(provider.Path, &fs.Options{
+				ObjectPathPrefix: r.persistedOperationsConfig.Storage.ObjectPrefix,
+			})
+			if err != nil {
+				return err
+			}
+			pClient = c
+
+			r.logger.Info("Use file system as storage provider for persisted operations",
+				zap.String("provider_id", provider.ID),
+			)
+		} else if r.graphApiToken != "" {
+			if r.persistedOperationsConfig.Storage.ProviderID != "" {
+				return fmt.Errorf("unknown storage provider id '%s' for persisted operations", r.persistedOperationsConfig.Storage.ProviderID)
+			}
+
+			c, err := cdn.NewClient(r.cdnConfig.URL, r.graphApiToken, cdn.Options{
+				Logger: r.logger,
+			})
+			if err != nil {
+				return err
+			}
+			pClient = c
+
+			r.logger.Debug("Default to Cosmo CDN as persisted operations provider",
+				zap.String("url", r.cdnConfig.URL),
+			)
 		}
-
-		c, err := cdn.NewClient(provider.URL, r.graphApiToken, cdn.Options{
-			Logger: r.logger,
-		})
-		if err != nil {
-			return err
-		}
-		pClient = c
-
-		r.logger.Info("Use CDN as storage provider for persisted operations",
-			zap.String("provider_id", provider.ID),
-		)
-	} else if provider, ok := s3Providers[r.persistedOperationsConfig.Storage.ProviderID]; ok {
-
-		c, err := s3.NewClient(provider.Endpoint, &s3.Options{
-			AccessKeyID:      provider.AccessKey,
-			SecretAccessKey:  provider.SecretKey,
-			Region:           provider.Region,
-			UseSSL:           provider.Secure,
-			BucketName:       provider.Bucket,
-			ObjectPathPrefix: r.persistedOperationsConfig.Storage.ObjectPrefix,
-			TraceProvider:    r.tracerProvider,
-		})
-		if err != nil {
-			return err
-		}
-		pClient = c
-
-		r.logger.Info("Use S3 as storage provider for persisted operations",
-			zap.String("provider_id", provider.ID),
-		)
-	} else if provider, ok := fileSystemProviders[r.persistedOperationsConfig.Storage.ProviderID]; ok {
-		c, err := fs.NewClient(provider.Path, &fs.Options{
-			ObjectPathPrefix: r.persistedOperationsConfig.Storage.ObjectPrefix,
-		})
-		if err != nil {
-			return err
-		}
-		pClient = c
-
-		r.logger.Info("Use file system as storage provider for persisted operations",
-			zap.String("provider_id", provider.ID),
-		)
-	} else if r.graphApiToken != "" {
-		if r.persistedOperationsConfig.Storage.ProviderID != "" {
-			return fmt.Errorf("unknown storage provider id '%s' for persisted operations", r.persistedOperationsConfig.Storage.ProviderID)
-		}
-
-		c, err := cdn.NewClient(r.cdnConfig.URL, r.graphApiToken, cdn.Options{
-			Logger: r.logger,
-		})
-		if err != nil {
-			return err
-		}
-		pClient = c
-
-		r.logger.Debug("Default to Cosmo CDN as persisted operations provider",
-			zap.String("url", r.cdnConfig.URL),
-		)
 	}
 
 	var kvClient apq.KVClient
