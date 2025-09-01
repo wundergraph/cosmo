@@ -851,7 +851,7 @@ func TestPropagateFieldsRequestedBy(t *testing.T) {
 						require.NoError(t, json.Unmarshal(body, &req))
 
 						require.Equal(t, `query($a: Int!){employee(id: $a){id}}`, req.Query)
-						require.Equal(t, `{"FieldsRequestedBy":[{"__typename":"Employee","field":"id","byUser":true},{"__typename":"Query","field":"employee","byUser":true}]}`, string(req.Extensions))
+						require.Equal(t, `{"fetch_reasons":[{"typename":"Employee","field":"id","by_user":true},{"typename":"Query","field":"employee","by_user":true}]}`, string(req.Extensions))
 
 						w.WriteHeader(http.StatusOK)
 						_, _ = w.Write([]byte(`{"data":{"employee":{"id":1}}}`))

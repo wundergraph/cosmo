@@ -522,18 +522,18 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 
 	for _, node := range in.RootNodes {
 		out.RootNodes = append(out.RootNodes, plan.TypeField{
-			TypeName:            node.TypeName,
-			FieldNames:          node.FieldNames,
-			ExternalFieldNames:  node.ExternalFieldNames,
-			ProtectedFieldNames: node.ProtectedFieldNames,
+			TypeName:           node.TypeName,
+			FieldNames:         node.FieldNames,
+			ExternalFieldNames: node.ExternalFieldNames,
+			FetchReasonFields:  node.ProtectedFieldNames,
 		})
 	}
 	for _, node := range in.ChildNodes {
 		out.ChildNodes = append(out.ChildNodes, plan.TypeField{
-			TypeName:            node.TypeName,
-			FieldNames:          node.FieldNames,
-			ExternalFieldNames:  node.ExternalFieldNames,
-			ProtectedFieldNames: node.ProtectedFieldNames,
+			TypeName:           node.TypeName,
+			FieldNames:         node.FieldNames,
+			ExternalFieldNames: node.ExternalFieldNames,
+			FetchReasonFields:  node.ProtectedFieldNames,
 		})
 	}
 	for _, directive := range in.Directives {
