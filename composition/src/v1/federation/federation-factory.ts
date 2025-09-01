@@ -1132,7 +1132,7 @@ export class FederationFactory {
             kind: sourceData.kind,
             name: stringToNameNode(sourceData.renamedTypeName || sourceData.name),
           },
-          protectedFieldNames: new Set<FieldName>(),
+          requireFetchReasonsFieldNames: new Set<FieldName>(),
           renamedTypeName: sourceData.renamedTypeName,
           subgraphNames: new Set(sourceData.subgraphNames),
         };

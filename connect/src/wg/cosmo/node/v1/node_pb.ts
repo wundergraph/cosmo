@@ -3,9 +3,16 @@
 /* eslint-disable */
 // @ts-nocheck
 
-import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialMessage, PlainMessage } from "@bufbuild/protobuf";
-import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
-import { EnumStatusCode, GraphQLSubscriptionProtocol, GraphQLWebsocketSubprotocol } from "../../common/common_pb.js";
+import type {
+  BinaryReadOptions,
+  FieldList,
+  JsonReadOptions,
+  JsonValue,
+  PartialMessage,
+  PlainMessage
+} from '@bufbuild/protobuf';
+import { Message, proto3, protoInt64 } from '@bufbuild/protobuf';
+import { EnumStatusCode, GraphQLSubscriptionProtocol, GraphQLWebsocketSubprotocol } from '../../common/common_pb.js';
 
 /**
  * @generated from enum wg.cosmo.node.v1.ArgumentRenderConfiguration
@@ -1099,9 +1106,9 @@ export class TypeField extends Message<TypeField> {
   externalFieldNames: string[] = [];
 
   /**
-   * @generated from field: repeated string protected_field_names = 4;
+   * @generated from field: repeated string require_fetch_reasons_field_names = 4;
    */
-  protectedFieldNames: string[] = [];
+  requireFetchReasonsFieldNames: string[] = [];
 
   constructor(data?: PartialMessage<TypeField>) {
     super();
@@ -1114,7 +1121,7 @@ export class TypeField extends Message<TypeField> {
     { no: 1, name: "type_name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "field_names", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 3, name: "external_field_names", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 4, name: "protected_field_names", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 4, name: "require_fetch_reasons_field_names", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): TypeField {
@@ -2776,7 +2783,7 @@ export class GraphQLSubscriptionConfiguration extends Message<GraphQLSubscriptio
   url?: ConfigurationVariable;
 
   /**
-   * @deprecated - Kept for backwards compatibility when decoding. Use protocol instead. 
+   * @deprecated - Kept for backwards compatibility when decoding. Use protocol instead.
    *
    * @generated from field: optional bool useSSE = 3;
    */

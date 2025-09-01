@@ -10,13 +10,13 @@ import {
 import { parse } from 'graphql';
 import { federateSubgraphsSuccess, normalizeString, schemaToSortedNormalizedString } from '../../utils/utils';
 import {
-  baseDirectiveDefinitionsWithProtected,
+  baseDirectiveDefinitionsWithRequireFetchReasons,
   schemaQueryDefinition,
   versionOneRouterDefinitions,
 } from '../utils/utils';
 
-describe('@openfed__protected tests', () => {
-  test('that @openfed__protected is propagated into the router configuration from the field level', () => {
+describe('@openfed__requireFetchReasons tests', () => {
+  test('that @openfed__requireFetchReasons is propagated into the router configuration from the field level', () => {
     const { federatedGraphSchema, subgraphConfigBySubgraphName } = federateSubgraphsSuccess(
       [naaa],
       ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -39,7 +39,7 @@ describe('@openfed__protected tests', () => {
           {
             isRootNode: true,
             fieldNames: new Set<FieldName>(['a']),
-            protectedFieldNames: ['a'],
+            requireFetchReasonsFieldNames: ['a'],
             typeName: QUERY,
           },
         ],
@@ -47,7 +47,7 @@ describe('@openfed__protected tests', () => {
     );
   });
 
-  test('that multiple @openfed__protected fields are propagated in the router configuration', () => {
+  test('that multiple @openfed__requireFetchReasons fields are propagated in the router configuration', () => {
     const { federatedGraphSchema, subgraphConfigBySubgraphName } = federateSubgraphsSuccess(
       [nbaa],
       ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -73,7 +73,7 @@ describe('@openfed__protected tests', () => {
           {
             isRootNode: true,
             fieldNames: new Set<FieldName>(['a', 'b', 'c', 'd']),
-            protectedFieldNames: ['a', 'd'],
+            requireFetchReasonsFieldNames: ['a', 'd'],
             typeName: QUERY,
           },
         ],
@@ -81,7 +81,7 @@ describe('@openfed__protected tests', () => {
     );
   });
 
-  test('that @openfed__protected is propagated into the router configuration from the Object level', () => {
+  test('that @openfed__requireFetchReasons is propagated into the router configuration from the Object level', () => {
     const { federatedGraphSchema, subgraphConfigBySubgraphName } = federateSubgraphsSuccess(
       [ncaa],
       ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -107,7 +107,7 @@ describe('@openfed__protected tests', () => {
           {
             isRootNode: true,
             fieldNames: new Set<FieldName>(['a', 'b', 'c', 'd']),
-            protectedFieldNames: ['a', 'b', 'c', 'd'],
+            requireFetchReasonsFieldNames: ['a', 'b', 'c', 'd'],
             typeName: QUERY,
           },
         ],
@@ -115,7 +115,7 @@ describe('@openfed__protected tests', () => {
     );
   });
 
-  test('that @openfed__protected propagation is scoped by Object, extension, and field #1', () => {
+  test('that @openfed__requireFetchReasons propagation is scoped by Object, extension, and field #1', () => {
     const { federatedGraphSchema, subgraphConfigBySubgraphName } = federateSubgraphsSuccess(
       [ndaa],
       ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -141,7 +141,7 @@ describe('@openfed__protected tests', () => {
           {
             isRootNode: true,
             fieldNames: new Set<FieldName>(['a', 'b', 'c', 'd']),
-            protectedFieldNames: ['a'],
+            requireFetchReasonsFieldNames: ['a'],
             typeName: QUERY,
           },
         ],
@@ -149,7 +149,7 @@ describe('@openfed__protected tests', () => {
     );
   });
 
-  test('that @openfed__protected propagation is scoped by Object, extension, and field #2', () => {
+  test('that @openfed__requireFetchReasons propagation is scoped by Object, extension, and field #2', () => {
     const { federatedGraphSchema, subgraphConfigBySubgraphName } = federateSubgraphsSuccess(
       [neaa],
       ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -175,7 +175,7 @@ describe('@openfed__protected tests', () => {
           {
             isRootNode: true,
             fieldNames: new Set<FieldName>(['a', 'b', 'c', 'd']),
-            protectedFieldNames: ['a', 'd'],
+            requireFetchReasonsFieldNames: ['a', 'd'],
             typeName: QUERY,
           },
         ],
@@ -183,7 +183,7 @@ describe('@openfed__protected tests', () => {
     );
   });
 
-  test('that @openfed__protected propagation is scoped by Object, extension, and field #3', () => {
+  test('that @openfed__requireFetchReasons propagation is scoped by Object, extension, and field #3', () => {
     const { federatedGraphSchema, subgraphConfigBySubgraphName } = federateSubgraphsSuccess(
       [nfaa],
       ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -209,7 +209,7 @@ describe('@openfed__protected tests', () => {
           {
             isRootNode: true,
             fieldNames: new Set<FieldName>(['a', 'b', 'c', 'd']),
-            protectedFieldNames: ['a', 'b', 'c'],
+            requireFetchReasonsFieldNames: ['a', 'b', 'c'],
             typeName: QUERY,
           },
         ],
@@ -217,7 +217,7 @@ describe('@openfed__protected tests', () => {
     );
   });
 
-  test('that @openfed__protected propagation is scoped by Object, extension, and field #4', () => {
+  test('that @openfed__requireFetchReasons propagation is scoped by Object, extension, and field #4', () => {
     const { federatedGraphSchema, subgraphConfigBySubgraphName } = federateSubgraphsSuccess(
       [ngaa],
       ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -243,7 +243,7 @@ describe('@openfed__protected tests', () => {
           {
             isRootNode: true,
             fieldNames: new Set<FieldName>(['a', 'b', 'c', 'd']),
-            protectedFieldNames: ['a', 'b', 'c'],
+            requireFetchReasonsFieldNames: ['a', 'b', 'c'],
             typeName: QUERY,
           },
         ],
@@ -251,7 +251,7 @@ describe('@openfed__protected tests', () => {
     );
   });
 
-  test('that @openfed__protected is propagated in the router configuration by multiple subgraphs successfully', () => {
+  test('that @openfed__requireFetchReasons is propagated in the router configuration by multiple subgraphs successfully', () => {
     const { federatedGraphSchema, subgraphConfigBySubgraphName } = federateSubgraphsSuccess(
       [nhaa, nhab],
       ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -276,13 +276,13 @@ describe('@openfed__protected tests', () => {
     expect(schemaToSortedNormalizedString(nhaaSchema)).toBe(
       normalizeString(
         schemaQueryDefinition +
-          baseDirectiveDefinitionsWithProtected +
+          baseDirectiveDefinitionsWithRequireFetchReasons +
           `
         type Query {
           a: ID
-          b: ID @openfed__protected
-          c: ID @openfed__protected
-          d: ID @openfed__protected
+          b: ID @openfed__requireFetchReasons
+          c: ID @openfed__requireFetchReasons
+          d: ID @openfed__requireFetchReasons
         }
         
         scalar openfed__FieldSet
@@ -296,7 +296,7 @@ describe('@openfed__protected tests', () => {
           {
             isRootNode: true,
             fieldNames: new Set<FieldName>(['a', 'b', 'c', 'd']),
-            protectedFieldNames: ['b', 'c', 'd'],
+            requireFetchReasonsFieldNames: ['b', 'c', 'd'],
             typeName: QUERY,
           },
         ],
@@ -308,14 +308,14 @@ describe('@openfed__protected tests', () => {
     expect(schemaToSortedNormalizedString(nhabSchema)).toBe(
       normalizeString(
         schemaQueryDefinition +
-          baseDirectiveDefinitionsWithProtected +
+          baseDirectiveDefinitionsWithRequireFetchReasons +
           `
         type Query {
-          a: ID @openfed__protected
-          b: ID @openfed__protected
-          c: ID @openfed__protected
-          d: ID @openfed__protected
-          e: ID @openfed__protected
+          a: ID @openfed__requireFetchReasons
+          b: ID @openfed__requireFetchReasons
+          c: ID @openfed__requireFetchReasons
+          d: ID @openfed__requireFetchReasons
+          e: ID @openfed__requireFetchReasons
         }
         
         scalar openfed__FieldSet
@@ -329,7 +329,7 @@ describe('@openfed__protected tests', () => {
           {
             isRootNode: true,
             fieldNames: new Set<FieldName>(['a', 'b', 'c', 'd', 'e']),
-            protectedFieldNames: ['a', 'b', 'c', 'd', 'e'],
+            requireFetchReasonsFieldNames: ['a', 'b', 'c', 'd', 'e'],
             typeName: QUERY,
           },
         ],
@@ -343,7 +343,7 @@ const naaa: Subgraph = {
   url: '',
   definitions: parse(`
     type Query {
-      a: ID @openfed__protected
+      a: ID @openfed__requireFetchReasons
     }
   `),
 };
@@ -353,10 +353,10 @@ const nbaa: Subgraph = {
   url: '',
   definitions: parse(`
     type Query {
-      a: ID @openfed__protected
+      a: ID @openfed__requireFetchReasons
       b: ID
       c: ID
-      d: ID @openfed__protected
+      d: ID @openfed__requireFetchReasons
     }
   `),
 };
@@ -365,7 +365,7 @@ const ncaa: Subgraph = {
   name: 'ncaa',
   url: '',
   definitions: parse(`
-    type Query @openfed__protected {
+    type Query @openfed__requireFetchReasons {
       a: ID
       b: ID
       c: ID
@@ -378,7 +378,7 @@ const ndaa: Subgraph = {
   name: 'ndaa',
   url: '',
   definitions: parse(`
-    type Query @openfed__protected {
+    type Query @openfed__requireFetchReasons {
       a: ID
     }
     
@@ -394,14 +394,14 @@ const neaa: Subgraph = {
   name: 'neaa',
   url: '',
   definitions: parse(`
-    type Query @openfed__protected {
+    type Query @openfed__requireFetchReasons {
       a: ID
     }
     
     extend type Query {
       b: ID
       c: ID
-      d: ID @openfed__protected
+      d: ID @openfed__requireFetchReasons
     }
   `),
 };
@@ -410,11 +410,11 @@ const nfaa: Subgraph = {
   name: 'nfaa',
   url: '',
   definitions: parse(`
-    type Query @openfed__protected {
+    type Query @openfed__requireFetchReasons {
       a: ID
     }
     
-    extend type Query @openfed__protected {
+    extend type Query @openfed__requireFetchReasons {
       b: ID
       c: ID
     }
@@ -429,13 +429,13 @@ const ngaa: Subgraph = {
   name: 'ngaa',
   url: '',
   definitions: parse(`
-    type Query @openfed__protected {
+    type Query @openfed__requireFetchReasons {
       a: ID
     }
     
-    extend type Query @openfed__protected {
+    extend type Query @openfed__requireFetchReasons {
       b: ID
-      c: ID @openfed__protected
+      c: ID @openfed__requireFetchReasons
     }
     
     extend type Query {
@@ -452,13 +452,13 @@ const nhaa: Subgraph = {
       a: ID
     }
     
-    extend type Query @openfed__protected {
+    extend type Query @openfed__requireFetchReasons {
       b: ID
       c: ID
     }
     
     extend type Query {
-      d: ID @openfed__protected
+      d: ID @openfed__requireFetchReasons
     }
   `),
 };
@@ -468,16 +468,16 @@ const nhab: Subgraph = {
   url: '',
   definitions: parse(`
     type Query {
-      a: ID @openfed__protected
+      a: ID @openfed__requireFetchReasons
     }
     
     extend type Query {
-      b: ID @openfed__protected
-      c: ID @openfed__protected
+      b: ID @openfed__requireFetchReasons
+      c: ID @openfed__requireFetchReasons
     }
     
-    extend type Query @openfed__protected {
-      d: ID @openfed__protected
+    extend type Query @openfed__requireFetchReasons {
+      d: ID @openfed__requireFetchReasons
       e: ID
     }
   `),

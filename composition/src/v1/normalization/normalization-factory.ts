@@ -64,7 +64,7 @@ import {
   LINK_IMPORT_DEFINITION,
   LINK_PURPOSE_DEFINITION,
   MAX_OR_SCOPES,
-  PROTECTED_DEFINITION,
+  REQUIRE_FETCH_REASONS_DEFINITION,
   SCOPE_SCALAR_DEFINITION,
   SUBSCRIPTION_FIELD_CONDITION_DEFINITION,
   SUBSCRIPTION_FILTER_CONDITION_DEFINITION,
@@ -304,7 +304,6 @@ import {
   OPERATION_TO_DEFAULT,
   OVERRIDE,
   PROPAGATE,
-  PROTECTED,
   PROVIDER_ID,
   PROVIDER_TYPE_KAFKA,
   PROVIDER_TYPE_NATS,
@@ -312,6 +311,7 @@ import {
   PUBLISH,
   QUERY,
   REQUEST,
+  REQUIRE_FETCH_REASONS,
   REQUIRES_SCOPES,
   RESOLVABLE,
   ROOT_TYPE_NAMES,
@@ -388,6 +388,7 @@ export class NormalizationFactory {
   definedDirectiveNames = new Set<string>();
   directiveDefinitionByDirectiveName = new Map<string, DirectiveDefinitionNode>();
   directiveDefinitionDataByDirectiveName = initializeDirectiveDefinitionDatas();
+  doesParentObjectRequireFetchReasons = false;
   edfsDirectiveReferences = new Set<string>();
   errors: Error[] = [];
   entityDataByTypeName = new Map<string, EntityData>();
@@ -400,7 +401,6 @@ export class NormalizationFactory {
   invalidRepeatedDirectiveNameByCoords = new Map<string, Set<string>>();
   isCurrentParentExtension = false;
   isParentObjectExternal = false;
-  isParentObjectProtected = false;
   isParentObjectShareable = false;
   isSubgraphEventDrivenGraph = false;
   isSubgraphVersionTwo = false;
@@ -563,9 +563,9 @@ export class NormalizationFactory {
       fieldDirectivesByDirectiveName.set(EXTERNAL, [generateSimpleDirective(EXTERNAL)]);
       inheritedDirectiveNames.add(EXTERNAL);
     }
-    if (this.isParentObjectProtected && !fieldDirectivesByDirectiveName.has(PROTECTED)) {
-      fieldDirectivesByDirectiveName.set(PROTECTED, [generateSimpleDirective(PROTECTED)]);
-      inheritedDirectiveNames.add(PROTECTED);
+    if (this.doesParentObjectRequireFetchReasons && !fieldDirectivesByDirectiveName.has(REQUIRE_FETCH_REASONS)) {
+      fieldDirectivesByDirectiveName.set(REQUIRE_FETCH_REASONS, [generateSimpleDirective(REQUIRE_FETCH_REASONS)]);
+      inheritedDirectiveNames.add(REQUIRE_FETCH_REASONS);
     }
     if (this.isParentObjectShareable && !fieldDirectivesByDirectiveName.has(SHAREABLE)) {
       fieldDirectivesByDirectiveName.set(SHAREABLE, [generateSimpleDirective(SHAREABLE)]);
@@ -599,7 +599,7 @@ export class NormalizationFactory {
         continue;
       }
       this.isParentObjectExternal ||= directiveName === EXTERNAL;
-      this.isParentObjectProtected ||= directiveName === PROTECTED;
+      this.doesParentObjectRequireFetchReasons ||= directiveName === REQUIRE_FETCH_REASONS;
       this.isParentObjectShareable ||= directiveName === SHAREABLE;
     }
     return directivesByDirectiveName;
@@ -1299,7 +1299,7 @@ export class NormalizationFactory {
       name: typeName,
       node: getMutableObjectNode(node.name),
       persistedDirectivesData: newPersistedDirectivesData(),
-      protectedFieldNames: new Set<FieldName>(),
+      requireFetchReasonsFieldNames: new Set<FieldName>(),
       renamedTypeName: this.getRenamedRootTypeName(typeName),
       subgraphNames: new Set<string>([this.subgraphName]),
       description: formatDescription('description' in node ? node.description : undefined),
@@ -2878,16 +2878,6 @@ export class NormalizationFactory {
       definitions.push(EDFS_NATS_STREAM_CONFIGURATION_DEFINITION);
     }
 
-    if (this.referencedDirectiveNames.has(LINK)) {
-      definitions.push(LINK_DEFINITION);
-      definitions.push(LINK_IMPORT_DEFINITION);
-      definitions.push(LINK_PURPOSE_DEFINITION);
-    }
-
-    if (this.referencedDirectiveNames.has(PROTECTED)) {
-      definitions.push(PROTECTED_DEFINITION);
-    }
-
     if (invalidEventsDirectiveDataByRootFieldPath.size > 0) {
       errorMessages.push(invalidRootTypeFieldEventsDirectivesErrorMessage(invalidEventsDirectiveDataByRootFieldPath));
     }
@@ -3335,14 +3325,20 @@ export class NormalizationFactory {
       definitions.push(SUBSCRIPTION_FIELD_CONDITION_DEFINITION);
       definitions.push(SUBSCRIPTION_FILTER_VALUE_DEFINITION);
     }
+
+    if (this.referencedDirectiveNames.has(LINK)) {
+      definitions.push(LINK_DEFINITION);
+      definitions.push(LINK_IMPORT_DEFINITION);
+      definitions.push(LINK_PURPOSE_DEFINITION);
+    }
     if (this.referencedDirectiveNames.has(CONFIGURE_DESCRIPTION)) {
       definitions.push(CONFIGURE_DESCRIPTION_DEFINITION);
     }
     if (this.referencedDirectiveNames.has(CONFIGURE_CHILD_DESCRIPTIONS)) {
       definitions.push(CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION);
     }
-    if (this.referencedDirectiveNames.has(PROTECTED)) {
-      definitions.push(PROTECTED_DEFINITION);
+    if (this.referencedDirectiveNames.has(REQUIRE_FETCH_REASONS)) {
+      definitions.push(REQUIRE_FETCH_REASONS_DEFINITION);
     }
     for (const directiveDefinition of this.customDirectiveDefinitions.values()) {
       definitions.push(directiveDefinition);
@@ -3476,8 +3472,8 @@ export class NormalizationFactory {
           if (parentData.fieldDataByName.size < 1 && !isNodeQuery(parentTypeName, operationTypeNode)) {
             this.errors.push(noFieldDefinitionsError(kindToNodeType(parentData.kind), parentTypeName));
           }
-          if (isObject && parentData.protectedFieldNames.size > 0) {
-            configurationData.protectedFieldNames = [...parentData.protectedFieldNames];
+          if (isObject && parentData.requireFetchReasonsFieldNames.size > 0) {
+            configurationData.requireFetchReasonsFieldNames = [...parentData.requireFetchReasonsFieldNames];
           }
           break;
         case Kind.SCALAR_TYPE_DEFINITION:
