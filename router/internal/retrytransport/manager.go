@@ -71,6 +71,7 @@ func (m *Manager) Initialize(
 		}
 	}
 
+	// First validate and add expressions for base retry options if needed
 	if len(defaultSgNames) > 0 && baseRetryOptions.Enabled {
 		if baseRetryOptions.Algorithm != BackoffJitter {
 			joinErr = errors.Join(joinErr, fmt.Errorf("unsupported retry algorithm: %s", baseRetryOptions.Algorithm))
@@ -78,14 +79,17 @@ func (m *Manager) Initialize(
 			err := m.exprManager.AddExpression(baseRetryOptions.Expression)
 			if err != nil {
 				joinErr = errors.Join(joinErr, fmt.Errorf("failed to add base retry expression: %w", err))
+			} else {
+				// Only assign default options if validation succeeds
+				for _, sgName := range defaultSgNames {
+					opts := baseRetryOptions
+					m.retries[sgName] = &opts
+				}
 			}
 		}
 	}
 
-	for _, sgName := range defaultSgNames {
-		m.retries[sgName] = &baseRetryOptions
-	}
-
+	// Process custom retry options
 	for _, sgName := range customSgNames {
 		entry, ok := subgraphRetryOptions[sgName]
 		if !ok {
@@ -94,18 +98,20 @@ func (m *Manager) Initialize(
 		}
 
 		if entry.Algorithm != BackoffJitter {
-			joinErr = errors.Join(joinErr, fmt.Errorf("unsupported retry algorithm: %s", baseRetryOptions.Algorithm))
+			joinErr = errors.Join(joinErr, fmt.Errorf("unsupported retry algorithm: %s", entry.Algorithm))
 			continue
 		}
 
-		opts := entry
-		m.retries[sgName] = &opts
-
+		// Validate expression before assigning options
 		err := m.exprManager.AddExpression(entry.Expression)
 		if err != nil {
-			joinErr = errors.Join(joinErr, errors.New("retry expression did not get added "+sgName))
+			joinErr = errors.Join(joinErr, fmt.Errorf("failed to add retry expression for subgraph %s: %w", sgName, err))
 			continue
 		}
+
+		// Create a new copy of the options
+		opts := entry
+		m.retries[sgName] = &opts
 	}
 
 	return joinErr
