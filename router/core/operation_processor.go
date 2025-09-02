@@ -426,7 +426,7 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 		}
 	}
 	if fromCache {
-		if isApq, _ := o.persistedOperationCacheKeyHasTtl(clientInfo.Name, includeOperationName); isApq {
+		if fromCacheHasTTL, _ := o.persistedOperationCacheKeyHasTtl(clientInfo.Name, includeOperationName); fromCacheHasTTL {
 			// if it is an APQ request, we need to save it again to renew the TTL expiration
 			if err = o.operationProcessor.persistedOperationClient.SaveOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, o.parsedOperation.NormalizedRepresentation); err != nil {
 				return false, false, err
@@ -445,10 +445,15 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 			return false, true, err
 		}
 	} else {
-		persistedOperationData, isAPQ, err := o.operationProcessor.persistedOperationClient.PersistedOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
+		var persistedOperationData []byte
+		var err error
+
+		persistedOperationData, isAPQ, err = o.operationProcessor.persistedOperationClient.PersistedOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
 		if err != nil {
 			return false, isAPQ, err
-		} else if isAPQ && persistedOperationData == nil && o.parsedOperation.Request.Query == "" {
+		}
+
+		if isAPQ && persistedOperationData == nil && o.parsedOperation.Request.Query == "" {
 			// If the client has APQ enabled, throw an error if the operation wasn't attached to the request
 			return false, isAPQ, &persistedoperation.PersistentOperationNotFoundError{
 				ClientName: clientInfo.Name,
