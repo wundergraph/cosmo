@@ -205,7 +205,6 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 			zap.String("subgraph_id", ds.ID),
 			zap.Int("status", responseInfo.StatusCode),
 			zap.Duration("latency", latency),
-			zap.Duration("fetch_latency", latency),
 		}
 		path := ds.Name
 		if responseInfo.Request != nil {
