@@ -2,11 +2,12 @@ package traceclient
 
 import (
 	"context"
-	rcontext "github.com/wundergraph/cosmo/router/internal/context"
-	"github.com/wundergraph/cosmo/router/internal/expr"
 	"net/http"
 	"net/http/httptrace"
 	"time"
+
+	rcontext "github.com/wundergraph/cosmo/router/internal/context"
+	"github.com/wundergraph/cosmo/router/internal/expr"
 
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
@@ -115,7 +116,7 @@ func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Contex
 		duration := trace.ConnectionAcquired.Time.Sub(trace.ConnectionGet.Time)
 		connAcquireTime := float64(duration) / float64(time.Millisecond)
 
-		exprContext.Subgraph.Request.ClientTrace.ConnectionAcquireDuration = connAcquireTime
+		exprContext.Subgraph.Request.ClientTrace.ConnectionAcquireDuration = duration
 
 		serverAttributes := rotel.GetServerAttributes(trace.ConnectionGet.HostPort)
 		serverAttributes = append(

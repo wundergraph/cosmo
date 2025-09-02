@@ -1,11 +1,12 @@
 package trace
 
 import (
-	"github.com/wundergraph/cosmo/router/internal/context"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"net/http"
 	"sync/atomic"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/internal/context"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 type TransportOption func(svr *transport)
