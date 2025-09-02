@@ -826,6 +826,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 			metricdatatest.AssertEqual(t, maxCostMetrics, *integration.GetMetricByName(cacheScope, "router.graphql.cache.cost.max"), metricdatatest.IgnoreTimestamp())
 		})
 	})
+
 	t.Run("Validate operation cache telemetry for persisted and non persisted operations", func(t *testing.T) {
 		t.Parallel()
 		metricReader := metric.NewManualReader()
@@ -1203,6 +1204,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 			metricdatatest.AssertEqual(t, maxCostMetrics, *integration.GetMetricByName(cacheScope, "router.graphql.cache.cost.max"), metricdatatest.IgnoreTimestamp())
 		})
 	})
+
 	t.Run("Validate operation cache telemetry when prometheus is also enabled", func(t *testing.T) {
 		t.Parallel()
 		metricReader := metric.NewManualReader()
@@ -1544,6 +1546,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 			metricdatatest.AssertEqual(t, maxCostMetrics, *integration.GetMetricByName(cacheScope, "router.graphql.cache.cost.max"), metricdatatest.IgnoreTimestamp())
 		})
 	})
+
 	t.Run("Validate key and cost eviction metrics with small validation cache size without feature flags", func(t *testing.T) {
 		t.Parallel()
 		metricReader := metric.NewManualReader()
@@ -1887,6 +1890,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 			metricdatatest.AssertEqual(t, maxCostMetrics, *integration.GetMetricByName(cacheScope, "router.graphql.cache.cost.max"), metricdatatest.IgnoreTimestamp())
 		})
 	})
+
 	t.Run("Validate operation cache telemetry for default configuration including feature flags", func(t *testing.T) {
 		t.Parallel()
 		metricReader := metric.NewManualReader()
@@ -3558,6 +3562,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					},
 				},
 			}
+
 			want := metricdata.ScopeMetrics{
 				Scope: instrumentation.Scope{
 					Name:      "cosmo.router",
@@ -4082,6 +4087,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, sn[1].Attributes(), otel.WgEnginePersistedOperationCacheHit.Bool(true))
 		})
 	})
+
 	t.Run("Should exclude high cardinality attributes only from metrics if custom exporter is defined", func(t *testing.T) {
 		t.Parallel()
 
@@ -4729,6 +4735,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.name", "cosmo-router"))
 
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
+
 			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
 
@@ -5099,6 +5106,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 		})
 	})
+
 	t.Run("Should remap metric name to configured value", func(t *testing.T) {
 		t.Parallel()
 
@@ -5439,6 +5447,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 		})
 	})
+
 	t.Run("Custom span and resource attributes are attached to all metrics and spans / from header", func(t *testing.T) {
 		t.Parallel()
 
@@ -5870,6 +5879,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 		})
 	})
+
 	t.Run("Custom span and resource attributes are attached to all metrics and spans / static", func(t *testing.T) {
 		t.Parallel()
 
@@ -6299,6 +6309,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 		})
 	})
+
 	t.Run("Requesting a feature flags will emit different router config version and add the feature flag attribute", func(t *testing.T) {
 		t.Parallel()
 
@@ -6939,6 +6950,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[8].Status())
 		})
 	})
+
 	t.Run("Origin connectivity issue is traced", func(t *testing.T) {
 		t.Parallel()
 
@@ -7520,6 +7532,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			integration.AssertAttributeNotInSet(t, resClFiltered.DataPoints[1].Attributes, otel.WgOperationName.String(""))
 		})
 	})
+
 	t.Run("Custom Metric Attributes", func(t *testing.T) {
 		t.Parallel()
 
@@ -8091,6 +8104,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 			})
 		})
+
 		t.Run("should not remap high cardinality fields when using cloud exporter but include custom metric attributes", func(t *testing.T) {
 			t.Parallel()
 
@@ -8732,6 +8746,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				require.True(t, found, "expected to find a datapoint with subgraph name and id in the metrics")
 			})
 		})
+
 		t.Run("Tracing is not affected by custom metric attributes", func(t *testing.T) {
 			t.Parallel()
 
@@ -9176,6 +9191,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			assert.ErrorAs(t, err, &expectedErr)
 		})
 	})
+
 	t.Run("custom trace metrics with expression", func(t *testing.T) {
 		t.Parallel()
 
@@ -9580,6 +9596,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			})
 		})
 	})
+
 	t.Run("verify attribute expressions with subgraph in the expression", func(t *testing.T) {
 		t.Run("verify subgraph expression should only be present for engine fetch", func(t *testing.T) {
 			t.Parallel()
@@ -9637,8 +9654,8 @@ func TestFlakyTelemetry(t *testing.T) {
 					require.IsType(t, metricdata.Sum[int64]{}, httpRequestsMetric.Data)
 
 					data2 := httpRequestsMetric.Data.(metricdata.Sum[int64])
-					atts := data2.DataPoints[0].Attributes
-					_, ok := atts.Value(attribute.Key(key))
+					attrs := data2.DataPoints[0].Attributes
+					_, ok := attrs.Value(attribute.Key(key))
 					require.False(t, ok)
 				})
 			})
@@ -10191,6 +10208,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 					metricdatatest.AssertEqual(t, connectionMetrics, *integration.GetMetricByName(engineScope, "router.engine.connections"), metricdatatest.IgnoreTimestamp())
 				})
 			})
+
 			t.Run(fmt.Sprintf("cache metrics for %s", usingCustomExporter), func(t *testing.T) {
 				t.Parallel()
 				metricReader := metric.NewManualReader()
