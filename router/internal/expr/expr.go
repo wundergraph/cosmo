@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/expr-lang/expr/file"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
@@ -132,7 +133,8 @@ type SubgraphResponse struct {
 }
 
 type ClientTrace struct {
-	ConnectionAcquireDuration float64 `expr:"connAcquireDuration"`
+	FetchDuration             time.Duration `expr:"fetchDuration"`
+	ConnectionAcquireDuration float64       `expr:"connAcquireDuration"`
 }
 
 // Subgraph Related

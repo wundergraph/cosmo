@@ -1,9 +1,11 @@
 package trace
 
 import (
-	"net/http"
-
+	"github.com/wundergraph/cosmo/router/internal/context"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"net/http"
+	"sync/atomic"
+	"time"
 )
 
 type TransportOption func(svr *transport)
@@ -36,7 +38,15 @@ func (t *transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		t.handler(r)
 	}
 
+	startTime := time.Now()
+
 	res, err := t.rt.RoundTrip(r)
+
+	if value := r.Context().Value(context.FetchTimingKey); value != nil {
+		if fetchTiming, ok := value.(*atomic.Int64); ok {
+			fetchTiming.Add(int64(time.Since(startTime)))
+		}
+	}
 
 	// In case of a roundtrip error the span status is set to error by the otelhttp.RoundTrip function.
 	// Also, status code >= 500 is considered an error

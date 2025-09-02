@@ -3,6 +3,7 @@ package grpccommon
 import (
 	"context"
 	"errors"
+	rcontext "github.com/wundergraph/cosmo/router/internal/context"
 	"go.opentelemetry.io/otel/trace"
 	"io"
 
@@ -147,8 +148,20 @@ func (g *GRPCPluginClient) SetClients(pluginClient *plugin.Client, clientConn gr
 // Invoke implements grpc.ClientConnInterface.
 func (g *GRPCPluginClient) Invoke(ctx context.Context, method string, args any, reply any, opts ...grpc.CallOption) error {
 	spanName, traceAttributes := g.getTraceAttributes(ctx)
+
 	ctx, span := g.tracer.Start(ctx, spanName, traceAttributes)
 	defer span.End()
+
+	startTime := time.Now()
+	defer func() {
+		// In case of GRPC Clients there will be multiple invocations
+		// so adding is required
+		if value := ctx.Value(rcontext.FetchTimingKey); value != nil {
+			if fetchTiming, ok := value.(*atomic.Int64); ok {
+				fetchTiming.Add(int64(time.Since(startTime)))
+			}
+		}
+	}()
 
 	if g.IsPluginProcessExited() {
 		if err := g.waitForPluginToBeActive(); err != nil {
