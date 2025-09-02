@@ -100,7 +100,7 @@ var (
 type OperationProcessorOptions struct {
 	Executor                            *Executor
 	MaxOperationSizeInBytes             int64
-	PersistedOperationClient            persistedoperation.SaveClient
+	PersistedOperationClient            *persistedoperation.Client
 	AutomaticPersistedOperationCacheTtl int
 
 	EnablePersistedOperationsCache                   bool
@@ -124,7 +124,7 @@ type OperationProcessorOptions struct {
 type OperationProcessor struct {
 	executor                 *Executor
 	maxOperationSizeInBytes  int64
-	persistedOperationClient persistedoperation.SaveClient
+	persistedOperationClient *persistedoperation.Client
 	operationCache           *OperationCache
 	parseKits                map[int]*parseKit
 	parseKitSemaphore        chan int
@@ -435,12 +435,12 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 		return true, false, nil
 	}
 
-	// Short-circuit if the query is present in the request
-	if o.parsedOperation.Request.Query != "" {
+	// If APQ is enabled and the query body is in the request, short-circuit
+	if o.parsedOperation.Request.Query != "" && o.operationProcessor.persistedOperationClient.APQEnabled() {
 		// If the operation was fetched with APQ, save it again to renew the TTL
 		err := o.operationProcessor.persistedOperationClient.SaveOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, o.parsedOperation.Request.Query)
 		if err != nil {
-			return false, true, err
+			return false, false, err
 		}
 	} else {
 		persistedOperationData, isAPQ, err := o.operationProcessor.persistedOperationClient.PersistedOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)

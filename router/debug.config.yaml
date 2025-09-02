@@ -8,9 +8,17 @@ version: '1'
 execution_config:
   file:
     path: './__schemas/config.json'
-    watch: true
+    # watch: true
 
 log_level: debug
+
+# automatic_persisted_queries:
+#   enabled: true
+
+persisted_operations:
+  disabled: false
+  safelist:
+    enabled: true
 
 watch_config:
   enabled: true

@@ -36,8 +36,8 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/apq"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/cdn"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/fs"
-	rd "github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/s3"
+	rd "github.com/wundergraph/cosmo/router/internal/rdcloser"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/internal/stringsx"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -1001,7 +1001,7 @@ func (r *Router) buildClients() error {
 		fileSystemProviders[provider.ID] = provider
 	}
 
-	var pClient persistedoperation.Client
+	var pClient persistedoperation.StorageClient
 
 	if !r.persistedOperationsConfig.Disabled {
 		if provider, ok := cdnProviders[r.persistedOperationsConfig.Storage.ProviderID]; ok {
