@@ -133,7 +133,7 @@ type SubgraphResponse struct {
 }
 
 type ClientTrace struct {
-	FetchDuration             time.Duration `expr:"fetchDuration"`
+	DataSourceFetchDuration   time.Duration `expr:"dataSourceFetchDuration"`
 	ConnectionAcquireDuration time.Duration `expr:"connAcquireDuration"`
 }
 

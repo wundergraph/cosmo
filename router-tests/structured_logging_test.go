@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -2867,6 +2868,121 @@ func TestFlakyAccessLogs(t *testing.T) {
 	})
 
 	t.Run("verify subgraph expressions", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("verify data source fetch duration value is attached", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				SubgraphAccessLogsEnabled: true,
+				SubgraphAccessLogFields: []config.CustomAttribute{
+					{
+						Key: "data_source_fetch_duration",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "subgraph.request.clientTrace.dataSourceFetchDuration",
+						},
+					},
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employees { id } }`,
+				})
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				requestLogAll := requestLog.All()
+				requestContextMap := requestLogAll[0].ContextMap()
+
+				dataSourceFetchDuration, ok := requestContextMap["data_source_fetch_duration"].(time.Duration)
+				require.True(t, ok)
+				require.Greater(t, int(dataSourceFetchDuration), 0)
+			})
+		})
+
+		t.Run("verify data source fetch duration value is attached for multiple subgraph calls", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				SubgraphAccessLogsEnabled: true,
+				SubgraphAccessLogFields: []config.CustomAttribute{
+					{
+						Key: "data_source_fetch_duration",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "subgraph.request.clientTrace.dataSourceFetchDuration",
+						},
+					},
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employees { id isAvailable } }`,
+				})
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				requestLogAll := requestLog.All()
+
+				employeeSubgraphLogs := requestLogAll[0]
+				dataSourceFetchDuration1, ok := employeeSubgraphLogs.ContextMap()["data_source_fetch_duration"].(time.Duration)
+				require.True(t, ok)
+				require.Greater(t, int(dataSourceFetchDuration1), 0)
+
+				availabilitySubgraphLogs := requestLogAll[1]
+				dataSourceFetchDuration2, ok := availabilitySubgraphLogs.ContextMap()["data_source_fetch_duration"].(time.Duration)
+				require.True(t, ok)
+				require.Greater(t, int(dataSourceFetchDuration2), 0)
+			})
+		})
+
+		t.Run("verify data source fetch duration in conditional expression", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				SubgraphAccessLogsEnabled: true,
+				SubgraphAccessLogFields: []config.CustomAttribute{
+					{
+						Key: "data_source_fetch_duration",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "subgraph.request.error != nil ? subgraph.request.clientTrace.dataSourceFetchDuration : ''",
+						},
+					},
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+				Subgraphs: testenv.SubgraphsConfig{
+					Availability: testenv.SubgraphConfig{
+						Middleware: func(_ http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+								w.Header().Set("Content-Type", "application/json")
+								w.WriteHeader(http.StatusForbidden)
+								_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}]}`))
+							})
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employees { id isAvailable } }`,
+				})
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				requestLogAll := requestLog.All()
+
+				employeeSubgraphLogs := requestLogAll[0]
+				_, ok := employeeSubgraphLogs.ContextMap()["data_source_fetch_duration"]
+				require.False(t, ok)
+
+				availabilitySubgraphLogs := requestLogAll[1]
+				dataSourceFetchDuration2, ok := availabilitySubgraphLogs.ContextMap()["data_source_fetch_duration"].(float64)
+				require.True(t, ok)
+				require.Greater(t, int(dataSourceFetchDuration2), 0)
+			})
+		})
+
 		t.Run("verify connAcquireDuration value is attached", func(t *testing.T) {
 			t.Parallel()
 

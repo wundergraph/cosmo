@@ -159,7 +159,7 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 
 	if value := ctx.Value(rcontext.FetchTimingKey); value != nil {
 		if fetchTiming, ok := value.(*atomic.Int64); ok {
-			exprCtx.Subgraph.Request.ClientTrace.FetchDuration = time.Duration(fetchTiming.Load())
+			exprCtx.Subgraph.Request.ClientTrace.DataSourceFetchDuration = time.Duration(fetchTiming.Load())
 		}
 	}
 
