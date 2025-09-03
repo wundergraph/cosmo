@@ -26,6 +26,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
+import NewFeaturesPopup from "../dashboard/NewFeaturesPopup";
 
 export type NavLink = {
   title: ReactNode;
@@ -52,13 +53,19 @@ const MobileNav = () => {
         <nav className="grid grid-flow-row auto-rows-max items-center justify-center space-y-2 text-center text-sm">
           <Link
             href="/account/invitations"
-            className="flex justify-center items-center gap-x-2"
+            className="flex items-center justify-center gap-x-2"
           >
             Invitations
             {user?.invitations?.length && (
               <div className="relative">
-                <div aria-hidden="true" className="absolute h-2 w-2 animate-ping rounded-full bg-blue-400" />
-                <div aria-hidden="true" className="h-2 w-2 rounded-full bg-blue-400" />
+                <div
+                  aria-hidden="true"
+                  className="absolute h-2 w-2 animate-ping rounded-full bg-blue-400"
+                />
+                <div
+                  aria-hidden="true"
+                  className="h-2 w-2 rounded-full bg-blue-400"
+                />
               </div>
             )}
           </Link>
@@ -144,7 +151,7 @@ export const SideNav = (props: SideNavLayoutProps) => {
     <div className="lg:grid lg:grid-cols-[auto_1fr] lg:divide-x">
       <aside
         className={cn(
-          "z-40 flex min-w-[210px] flex-shrink-0 flex-col bg-background pt-4 lg:px-3 lg:pb-4",
+          "relative z-40 flex min-w-[210px] flex-shrink-0 flex-col bg-background pt-4 lg:px-3 lg:pb-4",
           {
             "lg:h-[calc(100vh-32px)]": props.isBannerDisplayed,
             "lg:h-screen": !props.isBannerDisplayed,
@@ -210,7 +217,9 @@ export const SideNav = (props: SideNavLayoutProps) => {
                     >
                       {item.icon}
 
-                      <span className={cn("whitespace-nowrap", item.className)}>{item.title}</span>
+                      <span className={cn("whitespace-nowrap", item.className)}>
+                        {item.title}
+                      </span>
                     </Link>
                   ) : (
                     <h4 className="hidden px-3 py-2 text-sm text-muted-foreground lg:block">
@@ -240,6 +249,9 @@ export const SideNav = (props: SideNavLayoutProps) => {
             Documentation
           </Link>
           <UserMenu />
+        </div>
+        <div className="absolute bottom-3 left-3 z-50 hidden lg:block">
+          <NewFeaturesPopup />
         </div>
       </aside>
     </div>
