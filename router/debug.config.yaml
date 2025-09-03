@@ -12,14 +12,6 @@ execution_config:
 
 log_level: debug
 
-# automatic_persisted_queries:
-#   enabled: true
-
-persisted_operations:
-  disabled: false
-  safelist:
-    enabled: true
-
 watch_config:
   enabled: true
   interval: '10s'
