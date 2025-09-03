@@ -1,7 +1,6 @@
 package retrytransport
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"sync"
@@ -56,8 +55,6 @@ func (m *Manager) Initialize(
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	var joinErr error
-
 	defaultSgNames := make([]string, 0, len(subgraphs))
 	customSgNames := make([]string, 0, len(subgraphs))
 
@@ -74,11 +71,11 @@ func (m *Manager) Initialize(
 	// First validate and add expressions for base retry options if needed
 	if len(defaultSgNames) > 0 && baseRetryOptions.Enabled {
 		if baseRetryOptions.Algorithm != BackoffJitter {
-			joinErr = errors.Join(joinErr, fmt.Errorf("unsupported retry algorithm: %s", baseRetryOptions.Algorithm))
+			return fmt.Errorf("unsupported retry algorithm: %s", baseRetryOptions.Algorithm)
 		} else {
 			err := m.exprManager.AddExpression(baseRetryOptions.Expression)
 			if err != nil {
-				joinErr = errors.Join(joinErr, fmt.Errorf("failed to add base retry expression: %w", err))
+				return fmt.Errorf("failed to add base retry expression: %w", err)
 			} else {
 				// Only assign default options if validation succeeds
 				for _, sgName := range defaultSgNames {
@@ -93,20 +90,17 @@ func (m *Manager) Initialize(
 	for _, sgName := range customSgNames {
 		entry, ok := subgraphRetryOptions[sgName]
 		if !ok {
-			joinErr = errors.Join(joinErr, errors.New("retry config not found for subgraph "+sgName))
-			continue
+			return fmt.Errorf("failed to add base retry expression: %s", sgName)
 		}
 
 		if entry.Algorithm != BackoffJitter {
-			joinErr = errors.Join(joinErr, fmt.Errorf("unsupported retry algorithm: %s", entry.Algorithm))
-			continue
+			return fmt.Errorf("unsupported retry algorithm for subgraph %s: %s", sgName, baseRetryOptions.Algorithm)
 		}
 
 		// Validate expression before assigning options
 		err := m.exprManager.AddExpression(entry.Expression)
 		if err != nil {
-			joinErr = errors.Join(joinErr, fmt.Errorf("failed to add retry expression for subgraph %s: %w", sgName, err))
-			continue
+			return fmt.Errorf("failed to add retry expression for subgraph %s: %w", sgName, err)
 		}
 
 		// Create a new copy of the options
@@ -114,7 +108,7 @@ func (m *Manager) Initialize(
 		m.retries[sgName] = &opts
 	}
 
-	return joinErr
+	return nil
 }
 
 func (m *Manager) GetSubgraphOptions(name string) *RetryOptions {
