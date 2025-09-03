@@ -9795,7 +9795,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					{
 						Key: "custom.subgraph",
 						ValueFrom: &config.CustomDynamicAttribute{
-							Expression: "string(subgraph.request.clientTrace.connAcquireDuration)",
+							Expression: "string(subgraph.request.clientTrace.connAcquireDuration.Seconds())",
 						},
 					},
 				},
