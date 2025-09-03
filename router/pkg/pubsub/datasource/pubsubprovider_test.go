@@ -10,7 +10,7 @@ import (
 )
 
 func TestProvider_Startup_Success(t *testing.T) {
-	mockAdapter := NewMockProviderLifecycle(t)
+	mockAdapter := NewMockProvider(t)
 	mockAdapter.On("Startup", mock.Anything).Return(nil)
 
 	provider := PubSubProvider{
@@ -22,7 +22,7 @@ func TestProvider_Startup_Success(t *testing.T) {
 }
 
 func TestProvider_Startup_Error(t *testing.T) {
-	mockAdapter := NewMockProviderLifecycle(t)
+	mockAdapter := NewMockProvider(t)
 	mockAdapter.On("Startup", mock.Anything).Return(errors.New("connect error"))
 
 	provider := PubSubProvider{
@@ -34,7 +34,7 @@ func TestProvider_Startup_Error(t *testing.T) {
 }
 
 func TestProvider_Shutdown_Success(t *testing.T) {
-	mockAdapter := NewMockProviderLifecycle(t)
+	mockAdapter := NewMockProvider(t)
 	mockAdapter.On("Shutdown", mock.Anything).Return(nil)
 
 	provider := PubSubProvider{
@@ -46,7 +46,7 @@ func TestProvider_Shutdown_Success(t *testing.T) {
 }
 
 func TestProvider_Shutdown_Error(t *testing.T) {
-	mockAdapter := NewMockProviderLifecycle(t)
+	mockAdapter := NewMockProvider(t)
 	mockAdapter.On("Shutdown", mock.Anything).Return(errors.New("close error"))
 
 	provider := PubSubProvider{
