@@ -9865,9 +9865,9 @@ func TestFlakyTelemetry(t *testing.T) {
 				MetricReader:  metricReader,
 				CustomTelemetryAttributes: []config.CustomAttribute{
 					{
-						Key: "data_source_fetch_duration.subgraph",
+						Key: "fetch_duration.subgraph",
 						ValueFrom: &config.CustomDynamicAttribute{
-							Expression: "string(subgraph.request.clientTrace.dataSourceFetchDuration.Seconds())",
+							Expression: "string(subgraph.request.clientTrace.fetchDuration.Seconds())",
 						},
 					},
 				},
@@ -9886,7 +9886,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 					if slices.Contains([]string{"Engine - Fetch"}, sn[i].Name()) {
 						for _, attributeEntry := range attributes {
-							if attributeEntry.Key == "data_source_fetch_duration.subgraph" {
+							if attributeEntry.Key == "fetch_duration.subgraph" {
 								attributesDetected++
 								valueString := attributeEntry.Value.AsString()
 								floatValue, err := strconv.ParseFloat(valueString, 64)
@@ -9896,8 +9896,8 @@ func TestFlakyTelemetry(t *testing.T) {
 						}
 					} else {
 						for _, attributeEntry := range attributes {
-							if attributeEntry.Key == "data_source_fetch_duration.subgraph" {
-								require.Fail(t, "data_source_fetch_duration.subgraph should not be present on non engine fetch spans")
+							if attributeEntry.Key == "fetch_duration.subgraph" {
+								require.Fail(t, "fetch_duration.subgraph should not be present on non engine fetch spans")
 							}
 						}
 					}

@@ -2877,9 +2877,9 @@ func TestFlakyAccessLogs(t *testing.T) {
 				SubgraphAccessLogsEnabled: true,
 				SubgraphAccessLogFields: []config.CustomAttribute{
 					{
-						Key: "data_source_fetch_duration",
+						Key: "fetch_duration",
 						ValueFrom: &config.CustomDynamicAttribute{
-							Expression: "subgraph.request.clientTrace.dataSourceFetchDuration",
+							Expression: "subgraph.request.clientTrace.fetchDuration",
 						},
 					},
 				},
@@ -2895,9 +2895,9 @@ func TestFlakyAccessLogs(t *testing.T) {
 				requestLogAll := requestLog.All()
 				requestContextMap := requestLogAll[0].ContextMap()
 
-				dataSourceFetchDuration, ok := requestContextMap["data_source_fetch_duration"].(time.Duration)
+				fetchDuration, ok := requestContextMap["fetch_duration"].(time.Duration)
 				require.True(t, ok)
-				require.Greater(t, int(dataSourceFetchDuration), 0)
+				require.Greater(t, int(fetchDuration), 0)
 			})
 		})
 
@@ -2908,9 +2908,9 @@ func TestFlakyAccessLogs(t *testing.T) {
 				SubgraphAccessLogsEnabled: true,
 				SubgraphAccessLogFields: []config.CustomAttribute{
 					{
-						Key: "data_source_fetch_duration",
+						Key: "fetch_duration",
 						ValueFrom: &config.CustomDynamicAttribute{
-							Expression: "subgraph.request.clientTrace.dataSourceFetchDuration",
+							Expression: "subgraph.request.clientTrace.fetchDuration",
 						},
 					},
 				},
@@ -2926,14 +2926,14 @@ func TestFlakyAccessLogs(t *testing.T) {
 				requestLogAll := requestLog.All()
 
 				employeeSubgraphLogs := requestLogAll[0]
-				dataSourceFetchDuration1, ok := employeeSubgraphLogs.ContextMap()["data_source_fetch_duration"].(time.Duration)
+				fetchDuration1, ok := employeeSubgraphLogs.ContextMap()["fetch_duration"].(time.Duration)
 				require.True(t, ok)
-				require.Greater(t, int(dataSourceFetchDuration1), 0)
+				require.Greater(t, int(fetchDuration1), 0)
 
 				availabilitySubgraphLogs := requestLogAll[1]
-				dataSourceFetchDuration2, ok := availabilitySubgraphLogs.ContextMap()["data_source_fetch_duration"].(time.Duration)
+				fetchDuration2, ok := availabilitySubgraphLogs.ContextMap()["fetch_duration"].(time.Duration)
 				require.True(t, ok)
-				require.Greater(t, int(dataSourceFetchDuration2), 0)
+				require.Greater(t, int(fetchDuration2), 0)
 			})
 		})
 
@@ -2944,9 +2944,9 @@ func TestFlakyAccessLogs(t *testing.T) {
 				SubgraphAccessLogsEnabled: true,
 				SubgraphAccessLogFields: []config.CustomAttribute{
 					{
-						Key: "data_source_fetch_duration",
+						Key: "fetch_duration",
 						ValueFrom: &config.CustomDynamicAttribute{
-							Expression: "subgraph.request.error != nil ? subgraph.request.clientTrace.dataSourceFetchDuration : ''",
+							Expression: "subgraph.request.error != nil ? subgraph.request.clientTrace.fetchDuration : ''",
 						},
 					},
 				},
@@ -2973,13 +2973,13 @@ func TestFlakyAccessLogs(t *testing.T) {
 				requestLogAll := requestLog.All()
 
 				employeeSubgraphLogs := requestLogAll[0]
-				_, ok := employeeSubgraphLogs.ContextMap()["data_source_fetch_duration"]
+				_, ok := employeeSubgraphLogs.ContextMap()["fetch_duration"]
 				require.False(t, ok)
 
 				availabilitySubgraphLogs := requestLogAll[1]
-				dataSourceFetchDuration2, ok := availabilitySubgraphLogs.ContextMap()["data_source_fetch_duration"].(time.Duration)
+				fetchDuration2, ok := availabilitySubgraphLogs.ContextMap()["fetch_duration"].(time.Duration)
 				require.True(t, ok)
-				require.Greater(t, int(dataSourceFetchDuration2), 0)
+				require.Greater(t, int(fetchDuration2), 0)
 			})
 		})
 
