@@ -53,7 +53,7 @@ func (copyCtx Context) Clone() *Context {
 
 	query := make(map[string]string, len(copyCtx.Request.URL.Query))
 	for k, v := range copyCtx.Request.URL.Query {
-		claims[k] = v
+		query[k] = v
 	}
 	copyCtx.Request.URL.Query = query
 
