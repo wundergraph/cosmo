@@ -520,11 +520,6 @@ const CheckDetails = ({
             <dd>{getCheckBadge(isSuccessful, data.check.isForcedSuccess)}</dd>
           </div>
 
-          <div className="flex-start flex-1 flex-col gap-1 lg:flex">
-            <dt className="text-sm text-muted-foreground">Reason</dt>
-            <dd className="whitespace-nowrap">{reason}</dd>
-          </div>
-
           <div className="flex-start flex max-w-[200px] flex-1 flex-col gap-1">
             <dt className="text-sm text-muted-foreground">Action</dt>
             <dd className="whitespace-nowrap">
