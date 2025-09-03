@@ -9854,6 +9854,58 @@ func TestFlakyTelemetry(t *testing.T) {
 				require.False(t, ok)
 			})
 		})
+
+		t.Run("verify data source fetch duration value is attached for multiple subgraph calls", func(t *testing.T) {
+			t.Parallel()
+
+			exporter := tracetest.NewInMemoryExporter(t)
+			metricReader := metric.NewManualReader()
+			testenv.Run(t, &testenv.Config{
+				TraceExporter: exporter,
+				MetricReader:  metricReader,
+				CustomTelemetryAttributes: []config.CustomAttribute{
+					{
+						Key: "data_source_fetch_duration.subgraph",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "string(subgraph.request.clientTrace.dataSourceFetchDuration.Seconds())",
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employees { id isAvailable } }`,
+				})
+
+				sn := exporter.GetSpans().Snapshots()
+				require.Len(t, sn, 11)
+
+				var attributesDetected int
+
+				for i := 0; i < len(sn); i++ {
+					attributes := sn[i].Attributes()
+
+					if slices.Contains([]string{"Engine - Fetch"}, sn[i].Name()) {
+						for _, attributeEntry := range attributes {
+							if attributeEntry.Key == "data_source_fetch_duration.subgraph" {
+								attributesDetected++
+								valueString := attributeEntry.Value.AsString()
+								floatValue, err := strconv.ParseFloat(valueString, 64)
+								require.NoError(t, err)
+								require.Greater(t, floatValue, 0.0)
+							}
+						}
+					} else {
+						for _, attributeEntry := range attributes {
+							if attributeEntry.Key == "data_source_fetch_duration.subgraph" {
+								require.Fail(t, "data_source_fetch_duration.subgraph should not be present on non engine fetch spans")
+							}
+						}
+					}
+				}
+
+				require.Equal(t, 2, attributesDetected)
+			})
+		})
 	})
 
 }
