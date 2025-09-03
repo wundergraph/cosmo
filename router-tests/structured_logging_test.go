@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -2867,6 +2868,121 @@ func TestFlakyAccessLogs(t *testing.T) {
 	})
 
 	t.Run("verify subgraph expressions", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("verify subgraph fetch duration value is attached", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				SubgraphAccessLogsEnabled: true,
+				SubgraphAccessLogFields: []config.CustomAttribute{
+					{
+						Key: "fetch_duration",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "subgraph.request.clientTrace.fetchDuration",
+						},
+					},
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employees { id } }`,
+				})
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				requestLogAll := requestLog.All()
+				requestContextMap := requestLogAll[0].ContextMap()
+
+				fetchDuration, ok := requestContextMap["fetch_duration"].(time.Duration)
+				require.True(t, ok)
+				require.Greater(t, int(fetchDuration), 0)
+			})
+		})
+
+		t.Run("verify subgraph fetch duration value is attached for multiple subgraph calls", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				SubgraphAccessLogsEnabled: true,
+				SubgraphAccessLogFields: []config.CustomAttribute{
+					{
+						Key: "fetch_duration",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "subgraph.request.clientTrace.fetchDuration",
+						},
+					},
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employees { id isAvailable } }`,
+				})
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				requestLogAll := requestLog.All()
+
+				employeeSubgraphLogs := requestLogAll[0]
+				fetchDuration1, ok := employeeSubgraphLogs.ContextMap()["fetch_duration"].(time.Duration)
+				require.True(t, ok)
+				require.Greater(t, int(fetchDuration1), 0)
+
+				availabilitySubgraphLogs := requestLogAll[1]
+				fetchDuration2, ok := availabilitySubgraphLogs.ContextMap()["fetch_duration"].(time.Duration)
+				require.True(t, ok)
+				require.Greater(t, int(fetchDuration2), 0)
+			})
+		})
+
+		t.Run("verify subgraph fetch duration in conditional expression", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				SubgraphAccessLogsEnabled: true,
+				SubgraphAccessLogFields: []config.CustomAttribute{
+					{
+						Key: "fetch_duration",
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "subgraph.request.error != nil ? subgraph.request.clientTrace.fetchDuration : ''",
+						},
+					},
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+				Subgraphs: testenv.SubgraphsConfig{
+					Availability: testenv.SubgraphConfig{
+						Middleware: func(_ http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+								w.Header().Set("Content-Type", "application/json")
+								w.WriteHeader(http.StatusForbidden)
+								_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}]}`))
+							})
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employees { id isAvailable } }`,
+				})
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				requestLogAll := requestLog.All()
+
+				employeeSubgraphLogs := requestLogAll[0]
+				_, ok := employeeSubgraphLogs.ContextMap()["fetch_duration"]
+				require.False(t, ok)
+
+				availabilitySubgraphLogs := requestLogAll[1]
+				fetchDuration2, ok := availabilitySubgraphLogs.ContextMap()["fetch_duration"].(time.Duration)
+				require.True(t, ok)
+				require.Greater(t, int(fetchDuration2), 0)
+			})
+		})
+
 		t.Run("verify connAcquireDuration value is attached", func(t *testing.T) {
 			t.Parallel()
 
@@ -2892,10 +3008,10 @@ func TestFlakyAccessLogs(t *testing.T) {
 				requestLogAll := requestLog.All()
 				requestContextMap := requestLogAll[0].ContextMap()
 
-				connAcquireDuration, ok := requestContextMap["conn_acquire_duration"].(float64)
+				connAcquireDuration, ok := requestContextMap["conn_acquire_duration"].(time.Duration)
 				require.True(t, ok)
 
-				require.Greater(t, connAcquireDuration, 0.0)
+				require.Greater(t, int(connAcquireDuration), 0)
 			})
 		})
 
@@ -2924,14 +3040,14 @@ func TestFlakyAccessLogs(t *testing.T) {
 				requestLogAll := requestLog.All()
 
 				employeeSubgraphLogs := requestLogAll[0]
-				connAcquireDuration1, ok := employeeSubgraphLogs.ContextMap()["conn_acquire_duration"].(float64)
+				connAcquireDuration1, ok := employeeSubgraphLogs.ContextMap()["conn_acquire_duration"].(time.Duration)
 				require.True(t, ok)
-				require.Greater(t, connAcquireDuration1, 0.0)
+				require.Greater(t, int(connAcquireDuration1), 0)
 
 				availabilitySubgraphLogs := requestLogAll[1]
-				connAcquireDuration2, ok := availabilitySubgraphLogs.ContextMap()["conn_acquire_duration"].(float64)
+				connAcquireDuration2, ok := availabilitySubgraphLogs.ContextMap()["conn_acquire_duration"].(time.Duration)
 				require.True(t, ok)
-				require.Greater(t, connAcquireDuration2, 0.0)
+				require.Greater(t, int(connAcquireDuration2), 0)
 			})
 		})
 
@@ -2975,9 +3091,9 @@ func TestFlakyAccessLogs(t *testing.T) {
 				require.False(t, ok)
 
 				availabilitySubgraphLogs := requestLogAll[1]
-				connAcquireDuration2, ok := availabilitySubgraphLogs.ContextMap()["conn_acquire_duration"].(float64)
+				connAcquireDuration2, ok := availabilitySubgraphLogs.ContextMap()["conn_acquire_duration"].(time.Duration)
 				require.True(t, ok)
-				require.Greater(t, connAcquireDuration2, 0.0)
+				require.Greater(t, int(connAcquireDuration2), 0)
 			})
 		})
 
@@ -3018,9 +3134,9 @@ func TestFlakyAccessLogs(t *testing.T) {
 				// There should  only be one instance of the key
 				require.Equal(t, 1, keyCount)
 
-				connAcquireDuration, ok := requestContextMap["conn_acquire_duration"].(float64)
+				connAcquireDuration, ok := requestContextMap["conn_acquire_duration"].(time.Duration)
 				require.True(t, ok)
-				require.Greater(t, connAcquireDuration, 0.0)
+				require.Greater(t, int(connAcquireDuration), 0)
 			})
 		})
 
