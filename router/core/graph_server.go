@@ -40,6 +40,7 @@ import (
 	rmiddleware "github.com/wundergraph/cosmo/router/internal/middleware"
 	"github.com/wundergraph/cosmo/router/internal/recoveryhandler"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
+	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
@@ -100,6 +101,7 @@ type (
 		traceDialer             *TraceDialer
 		connector               *grpcconnector.Connector
 		circuitBreakerManager   *circuit.Manager
+		retryManager            *retrytransport.Manager
 	}
 )
 
@@ -259,6 +261,28 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 			return nil, err
 		}
 		s.circuitBreakerManager = manager
+	}
+
+	if s.retryOptions.IsEnabled() {
+		retryExprManager := expr.NewRetryExpressionManager()
+		// Build retry options and handle any expression compilation errors
+		shouldRetryFunc, err := BuildRetryFunction(retryExprManager)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build retry function: %w", err)
+		}
+
+		retryManager := retrytransport.NewManager(retryExprManager, shouldRetryFunc, s.retryOptions.OnRetryFunc)
+
+		err = retryManager.Initialize(
+			s.retryOptions.All,
+			s.retryOptions.SubgraphMap,
+			routerConfig.GetSubgraphs(),
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		s.retryManager = retryManager
 	}
 
 	routingUrlGroupings, err := getRoutingUrlGroupingForCircuitBreakers(routerConfig, s.overrideRoutingURLConfiguration, s.overrides)
@@ -1155,12 +1179,6 @@ func (s *graphServer) buildGraphMux(
 		baseConnMetricStore = s.connectionMetrics
 	}
 
-	// Build retry options and handle any expression compilation errors
-	processedRetryOptions, err := ProcessRetryOptions(s.retryOptions)
-	if err != nil {
-		return nil, fmt.Errorf("failed to process retry options: %w", err)
-	}
-
 	ecb := &ExecutorConfigurationBuilder{
 		introspection:    s.introspection,
 		baseURL:          s.baseURL,
@@ -1181,13 +1199,13 @@ func (s *graphServer) buildGraphMux(
 			PostHandlers:                  s.postOriginHandlers,
 			MetricStore:                   gm.metricStore,
 			ConnectionMetricStore:         baseConnMetricStore,
-			RetryOptions:                  *processedRetryOptions,
 			TracerProvider:                s.tracerProvider,
 			TracePropagators:              s.compositePropagator,
 			LocalhostFallbackInsideDocker: s.localhostFallbackInsideDocker,
 			Logger:                        s.logger,
 			EnableTraceClient:             enableTraceClient,
 			CircuitBreaker:                s.circuitBreakerManager,
+			RetryManager:                  s.retryManager,
 		},
 	}
 

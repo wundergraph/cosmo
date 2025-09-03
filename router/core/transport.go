@@ -66,11 +66,11 @@ type sfCacheItem struct {
 
 func NewCustomTransport(
 	baseRoundTripper http.RoundTripper,
-	retryOptions retrytransport.RetryOptions,
 	metricStore metric.Store,
 	connectionMetricStore metric.ConnectionMetricStore,
 	enableSingleFlight bool,
 	breaker *circuit.Manager,
+	retryManager *retrytransport.Manager,
 	enableTraceClient bool,
 ) *CustomTransport {
 	ct := &CustomTransport{
@@ -102,8 +102,8 @@ func NewCustomTransport(
 		baseRoundTripper = circuit.NewCircuitTripper(baseRoundTripper, breaker, getRequestContextLogger)
 	}
 
-	if retryOptions.Enabled {
-		ct.roundTripper = retrytransport.NewRetryHTTPTransport(baseRoundTripper, retryOptions, getRequestContextLogger)
+	if retryManager.IsEnabled() {
+		ct.roundTripper = retrytransport.NewRetryHTTPTransport(baseRoundTripper, getRequestContextLogger, retryManager)
 	} else {
 		ct.roundTripper = baseRoundTripper
 	}
@@ -339,11 +339,11 @@ func (ct *CustomTransport) singleFlightKey(req *http.Request) uint64 {
 type TransportFactory struct {
 	preHandlers                   []TransportPreHandler
 	postHandlers                  []TransportPostHandler
-	retryOptions                  retrytransport.RetryOptions
 	localhostFallbackInsideDocker bool
 	metricStore                   metric.Store
 	connectionMetricStore         metric.ConnectionMetricStore
 	circuitBreaker                *circuit.Manager
+	retryManager                  *retrytransport.Manager
 	logger                        *zap.Logger
 	tracerProvider                *sdktrace.TracerProvider
 	tracePropagators              propagation.TextMapPropagator
@@ -356,7 +356,6 @@ type TransportOptions struct {
 	PreHandlers                   []TransportPreHandler
 	PostHandlers                  []TransportPostHandler
 	SubgraphTransportOptions      *SubgraphTransportOptions
-	RetryOptions                  retrytransport.RetryOptions
 	LocalhostFallbackInsideDocker bool
 	MetricStore                   metric.Store
 	ConnectionMetricStore         metric.ConnectionMetricStore
@@ -365,6 +364,7 @@ type TransportOptions struct {
 	TracerProvider                *sdktrace.TracerProvider
 	TracePropagators              propagation.TextMapPropagator
 	EnableTraceClient             bool
+	RetryManager                  *retrytransport.Manager
 }
 
 type SubscriptionClientOptions struct {
@@ -378,7 +378,6 @@ func NewTransport(opts *TransportOptions) *TransportFactory {
 	return &TransportFactory{
 		preHandlers:                   opts.PreHandlers,
 		postHandlers:                  opts.PostHandlers,
-		retryOptions:                  opts.RetryOptions,
 		localhostFallbackInsideDocker: opts.LocalhostFallbackInsideDocker,
 		metricStore:                   opts.MetricStore,
 		connectionMetricStore:         opts.ConnectionMetricStore,
@@ -386,6 +385,7 @@ func NewTransport(opts *TransportOptions) *TransportFactory {
 		tracerProvider:                opts.TracerProvider,
 		tracePropagators:              opts.TracePropagators,
 		circuitBreaker:                opts.CircuitBreaker,
+		retryManager:                  opts.RetryManager,
 		enableTraceClient:             opts.EnableTraceClient,
 	}
 }
@@ -427,11 +427,11 @@ func (t TransportFactory) RoundTripper(enableSingleFlight bool, baseTransport ht
 	)
 	tp := NewCustomTransport(
 		traceTransport,
-		t.retryOptions,
 		t.metricStore,
 		t.connectionMetricStore,
 		enableSingleFlight,
 		t.circuitBreaker,
+		t.retryManager,
 		t.enableTraceClient,
 	)
 
