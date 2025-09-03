@@ -1371,7 +1371,11 @@ func (s *graphServer) buildGraphMux(
 			Enabled:   s.securityConfiguration.BlockNonPersistedOperations.Enabled,
 			Condition: s.securityConfiguration.BlockNonPersistedOperations.Condition,
 		},
-		PersistedOperationsDisabled: s.persistedOperationsConfig.Disabled,
+		BlockPersisted: BlockPersistedOptions{
+			Enabled:   s.securityConfiguration.BlockPersistedOperations.Enabled,
+			Condition: s.securityConfiguration.BlockPersistedOperations.Condition,
+		},
+
 		SafelistEnabled:             s.persistedOperationsConfig.Safelist.Enabled,
 		LogUnknownOperationsEnabled: s.persistedOperationsConfig.LogUnknown,
 		exprManager:                 exprManager,
