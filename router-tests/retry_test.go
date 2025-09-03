@@ -589,7 +589,6 @@ func TestRetryPerSubgraph(t *testing.T) {
 	t.Run("verify invalid algorithm is detected for per subgraphs", func(t *testing.T) {
 		t.Parallel()
 
-		// Configure per-subgraph retry: employees gets 3 retries, test1 gets 1 retry
 		opts := core.NewSubgraphRetryOptions(config.TrafficShapingRules{
 			Subgraphs: map[string]config.GlobalSubgraphRequestRule{
 				"employees": {
@@ -616,6 +615,94 @@ func TestRetryPerSubgraph(t *testing.T) {
 		})
 
 		require.ErrorContains(t, err, "unsupported retry algorithm")
+	})
+
+	t.Run("verify invalid expression is detected for base", func(t *testing.T) {
+		t.Parallel()
+
+		opts := core.NewSubgraphRetryOptions(config.TrafficShapingRules{
+			All: config.GlobalSubgraphRequestRule{
+				BackoffJitterRetry: config.BackoffJitterRetry{
+					Enabled:     true,
+					MaxAttempts: 2,
+					MaxDuration: 2 * time.Second,
+					Interval:    10 * time.Millisecond,
+					Expression:  "truethere",
+				},
+			},
+		})
+		options := core.WithSubgraphRetryOptions(opts)
+
+		err := testenv.RunWithError(t, &testenv.Config{
+			NoRetryClient: true,
+			RouterOptions: []core.Option{
+				options,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			require.Fail(t, "expected initialization to fail due to invalid algorithm")
+		})
+
+		require.ErrorContains(t, err, "failed to add base retry expression: failed to compile retry expression: line 1, column 0: unknown name truethere")
+	})
+
+	t.Run("verify invalid expression is detected per subgraphs", func(t *testing.T) {
+		t.Parallel()
+
+		opts := core.NewSubgraphRetryOptions(config.TrafficShapingRules{
+			Subgraphs: map[string]config.GlobalSubgraphRequestRule{
+				"employees": {
+					BackoffJitterRetry: config.BackoffJitterRetry{
+						Enabled:     true,
+						MaxAttempts: 2,
+						MaxDuration: 2 * time.Second,
+						Interval:    10 * time.Millisecond,
+						Expression:  "truethere",
+					},
+				},
+			},
+		})
+		options := core.WithSubgraphRetryOptions(opts)
+
+		err := testenv.RunWithError(t, &testenv.Config{
+			NoRetryClient: true,
+			RouterOptions: []core.Option{
+				options,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			require.Fail(t, "expected initialization to fail due to invalid algorithm")
+		})
+
+		require.ErrorContains(t, err, "failed to add retry expression for subgraph employees: failed to compile retry expression: line 1, column 0: unknown name truethere")
+	})
+
+	t.Run("verify valid expression and algorithm", func(t *testing.T) {
+		t.Parallel()
+
+		opts := core.NewSubgraphRetryOptions(config.TrafficShapingRules{
+			Subgraphs: map[string]config.GlobalSubgraphRequestRule{
+				"employees": {
+					BackoffJitterRetry: config.BackoffJitterRetry{
+						Enabled:     true,
+						Algorithm:   "backoff_jitter",
+						MaxAttempts: 2,
+						MaxDuration: 2 * time.Second,
+						Interval:    10 * time.Millisecond,
+						Expression:  "true",
+					},
+				},
+			},
+		})
+		options := core.WithSubgraphRetryOptions(opts)
+
+		err := testenv.RunWithError(t, &testenv.Config{
+			NoRetryClient: true,
+			RouterOptions: []core.Option{
+				options,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+		})
+
+		require.NoError(t, err)
 	})
 
 	t.Run("verify retries are applied per subgraph", func(t *testing.T) {
@@ -690,7 +777,7 @@ func TestRetryPerSubgraph(t *testing.T) {
 			})
 
 			require.NoError(t, err)
-			require.Contains(t, resTest1.Body, `"statusCode":502`)
+			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'test1', Reason: empty response.","extensions":{"statusCode":502}}],"data":{"floatField":null}}`, resTest1.Body)
 			require.Equal(t, int32(employeesMax+1), employeesCalls.Load())
 			require.Equal(t, int32(test1Max+1), test1Calls.Load())
 		})
@@ -768,9 +855,75 @@ func TestRetryPerSubgraph(t *testing.T) {
 			})
 
 			require.NoError(t, err)
-			require.Contains(t, resTest1.Body, `"statusCode":502`)
+			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'test1', Reason: empty response.","extensions":{"statusCode":502}}],"data":{"floatField":null}}`, resTest1.Body)
 			require.Equal(t, int32(employeesMax+1), employeesCalls.Load())
 			require.Equal(t, int32(test1Max+1), test1Calls.Load())
+		})
+	})
+
+	t.Run("verify retries are applied when only all and no subgraph specific overrides are present", func(t *testing.T) {
+		t.Parallel()
+
+		employeesCalls := atomic.Int32{}
+		test1Calls := atomic.Int32{}
+
+		// Configure per-subgraph retry: employees gets 3 retries, test1 gets 1 retry
+		generalMax := 3
+		opts := core.NewSubgraphRetryOptions(config.TrafficShapingRules{
+			All: config.GlobalSubgraphRequestRule{
+				BackoffJitterRetry: config.BackoffJitterRetry{
+					Enabled:     true,
+					MaxAttempts: generalMax,
+					MaxDuration: 2 * time.Second,
+					Interval:    10 * time.Millisecond,
+					Expression:  "true",
+				},
+			},
+		})
+		options := core.WithSubgraphRetryOptions(opts)
+
+		testenv.Run(t, &testenv.Config{
+			NoRetryClient: true,
+			RouterOptions: []core.Option{
+				options,
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(_ http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+							w.WriteHeader(http.StatusBadGateway)
+							employeesCalls.Add(1)
+						})
+					},
+				},
+				Test1: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							w.WriteHeader(http.StatusBadGateway)
+							test1Calls.Add(1)
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// 1) Call employees-only query; expect employees subgraph to be retried generalMax times (attempts = retries + 1)
+			resEmp, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `query employees { employees { id } }`,
+			})
+			require.NoError(t, err)
+			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees', Reason: empty response.","extensions":{"statusCode":502}}],"data":{"employees":null}}`, resEmp.Body)
+			require.Equal(t, int32(generalMax+1), employeesCalls.Load())
+			require.Equal(t, int32(0), test1Calls.Load())
+
+			// 2) Call test1-only query; expect test subgraph to be retried test1Max times (attempts = retries + 1)
+			resTest1, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `query { floatField(arg: 1.5) }`,
+			})
+
+			require.NoError(t, err)
+			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'test1', Reason: empty response.","extensions":{"statusCode":502}}],"data":{"floatField":null}}`, resTest1.Body)
+			require.Equal(t, int32(generalMax+1), employeesCalls.Load())
+			require.Equal(t, int32(generalMax+1), test1Calls.Load())
 		})
 	})
 }
