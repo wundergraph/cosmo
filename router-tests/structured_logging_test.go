@@ -2977,7 +2977,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				require.False(t, ok)
 
 				availabilitySubgraphLogs := requestLogAll[1]
-				dataSourceFetchDuration2, ok := availabilitySubgraphLogs.ContextMap()["data_source_fetch_duration"].(float64)
+				dataSourceFetchDuration2, ok := availabilitySubgraphLogs.ContextMap()["data_source_fetch_duration"].(time.Duration)
 				require.True(t, ok)
 				require.Greater(t, int(dataSourceFetchDuration2), 0)
 			})
