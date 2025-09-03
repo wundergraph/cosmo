@@ -472,8 +472,8 @@ func TestFlakyRetry(t *testing.T) {
 					Employees: testenv.SubgraphConfig{
 						Middleware: func(_ http.Handler) http.Handler {
 							return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-								w.WriteHeader(http.StatusTooManyRequests)
 								w.Header().Set("Retry-After", strconv.Itoa(emptyRetryInterval))
+								w.WriteHeader(http.StatusTooManyRequests)
 								serviceCallsCounter.Add(1)
 							})
 						},
