@@ -52,9 +52,6 @@ func (m *Manager) Initialize(
 	subgraphRetryOptions map[string]RetryOptions,
 	subgraphs []*nodev1.Subgraph,
 ) error {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-
 	defaultSgNames := make([]string, 0, len(subgraphs))
 	customSgNames := make([]string, 0, len(subgraphs))
 
@@ -119,8 +116,8 @@ func (m *Manager) GetSubgraphOptions(name string) *RetryOptions {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
-	if circuitBreaker, ok := m.retries[name]; ok {
-		return circuitBreaker
+	if retryOptions, ok := m.retries[name]; ok {
+		return retryOptions
 	}
 	return nil
 }

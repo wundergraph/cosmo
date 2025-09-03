@@ -1913,7 +1913,7 @@ func NewSubgraphRetryOptions(cfg config.TrafficShapingRules) *SubgraphRetryOptio
 	if cfg.All.BackoffJitterRetry.Enabled {
 		entry.All = newRetryConfig(cfg.All.BackoffJitterRetry)
 	}
-	// Subgraph specific circuit breakers
+	// Subgraph specific retry configs
 	for k, v := range cfg.Subgraphs {
 		entry.SubgraphMap[k] = newRetryConfig(v.BackoffJitterRetry)
 	}
