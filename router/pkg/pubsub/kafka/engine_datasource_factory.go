@@ -8,6 +8,7 @@ import (
 	"github.com/cespare/xxhash/v2"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"go.uber.org/zap"
 )
 
 type EventType int
@@ -22,8 +23,9 @@ type EngineDataSourceFactory struct {
 	eventType  EventType
 	topics     []string
 	providerId string
+	logger     *zap.Logger
 
-	KafkaAdapter Adapter
+	KafkaAdapter datasource.Adapter
 }
 
 func (c *EngineDataSourceFactory) GetFieldName() string {
@@ -50,7 +52,7 @@ func (c *EngineDataSourceFactory) ResolveDataSourceInput(eventData []byte) (stri
 		return "", fmt.Errorf("publish events should define one topic but received %d", len(c.topics))
 	}
 
-	evtCfg := PublishEventConfiguration{
+	evtCfg := publishData{
 		Provider:  c.providerId,
 		Topic:     c.topics[0],
 		Event:     Event{Data: eventData},
@@ -81,7 +83,7 @@ func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (datasource.Su
 
 			_, err = xxh.Write(val)
 			return err
-		}), nil
+		}, c.logger), nil
 }
 
 func (c *EngineDataSourceFactory) ResolveDataSourceSubscriptionInput() (string, error) {
