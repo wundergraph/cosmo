@@ -3,6 +3,7 @@ package grpccommon
 import (
 	"context"
 	"errors"
+	"go.opentelemetry.io/otel/trace"
 	"io"
 
 	"sync"
@@ -27,6 +28,9 @@ type GRPCPluginClient struct {
 	config GRPCPluginClientConfig
 
 	mu sync.RWMutex
+
+	tracer             trace.Tracer
+	getTraceAttributes GRPCTraceAttributeGetter
 }
 
 type GRPCPluginClientConfig struct {
@@ -50,7 +54,14 @@ func WithReconnectConfig(reconnectTimeout time.Duration, pingInterval time.Durat
 
 var _ grpc.ClientConnInterface = &GRPCPluginClient{}
 
-func NewGRPCPluginClient(pc *plugin.Client, cc grpc.ClientConnInterface, options ...GRPCPluginClientOption) (*GRPCPluginClient, error) {
+type GRPCTraceAttributeGetter func(context.Context) (string, trace.SpanStartEventOption)
+
+type GRPCPluginClientOpts struct {
+	Tracer             trace.Tracer
+	GetTraceAttributes GRPCTraceAttributeGetter
+}
+
+func NewGRPCPluginClient(pc *plugin.Client, cc grpc.ClientConnInterface, clientOpts GRPCPluginClientOpts, options ...GRPCPluginClientOption) (*GRPCPluginClient, error) {
 	if pc == nil || cc == nil {
 		return nil, errors.New("plugin client or grpc client conn is nil")
 	}
@@ -62,9 +73,11 @@ func NewGRPCPluginClient(pc *plugin.Client, cc grpc.ClientConnInterface, options
 	}
 
 	return &GRPCPluginClient{
-		pc:     pc,
-		cc:     cc,
-		config: config,
+		pc:                 pc,
+		cc:                 cc,
+		config:             config,
+		tracer:             clientOpts.Tracer,
+		getTraceAttributes: clientOpts.GetTraceAttributes,
 	}, nil
 }
 
@@ -133,13 +146,19 @@ func (g *GRPCPluginClient) SetClients(pluginClient *plugin.Client, clientConn gr
 
 // Invoke implements grpc.ClientConnInterface.
 func (g *GRPCPluginClient) Invoke(ctx context.Context, method string, args any, reply any, opts ...grpc.CallOption) error {
+	spanName, traceAttributes := g.getTraceAttributes(ctx)
+	ctx, span := g.tracer.Start(ctx, spanName, traceAttributes)
+	defer span.End()
+
 	if g.IsPluginProcessExited() {
 		if err := g.waitForPluginToBeActive(); err != nil {
+			span.RecordError(err)
 			return err
 		}
 	}
 
 	if g.isClosed.Load() {
+		span.RecordError(errors.New("plugin is not active"))
 		return status.Error(codes.Unavailable, "plugin is not active")
 	}
 

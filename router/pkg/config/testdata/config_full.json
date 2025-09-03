@@ -311,7 +311,8 @@
         "Algorithm": "backoff_jitter",
         "MaxAttempts": 5,
         "MaxDuration": 10000000000,
-        "Interval": 3000000000
+        "Interval": 3000000000,
+        "Expression": "IsRetryableStatusCode() || IsConnectionError() || IsTimeout()"
       },
       "CircuitBreaker": {
         "Enabled": false,
@@ -349,7 +350,8 @@
           "Algorithm": "",
           "MaxAttempts": 0,
           "MaxDuration": 0,
-          "Interval": 0
+          "Interval": 0,
+          "Expression": ""
         },
         "CircuitBreaker": {
           "Enabled": false,
@@ -650,6 +652,10 @@
       "Condition": ""
     },
     "BlockNonPersistedOperations": {
+      "Enabled": false,
+      "Condition": ""
+    },
+    "BlockPersistedOperations": {
       "Enabled": false,
       "Condition": ""
     },

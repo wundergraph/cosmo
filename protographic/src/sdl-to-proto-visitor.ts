@@ -97,6 +97,14 @@ interface ProtoType {
 }
 
 /**
+ * Data structure for key directive
+ */
+interface KeyDirective {
+  keyString: string;
+  resolvable: boolean;
+}
+
+/**
  * Visitor that converts GraphQL SDL to Protocol Buffer text definition
  *
  * This visitor traverses a GraphQL schema and generates a Protocol Buffer
@@ -592,8 +600,11 @@ export class GraphQLToProtoTextVisitor {
 
           const normalizedKeysSet = new Set<string>();
           for (const keyDirective of keyDirectives) {
-            const keyString = this.getKeyFromDirective(keyDirective);
-            if (!keyString) continue;
+            const keyInfo = this.getKeyInfoFromDirective(keyDirective);
+            if (!keyInfo) continue;
+
+            const { keyString, resolvable } = keyInfo;
+            if (!resolvable) continue;
 
             const normalizedKey = keyString
               .split(/[,\s]+/)
@@ -1039,21 +1050,37 @@ Example:
   }
 
   /**
-   * Extract key fields from a directive
+   * Extract key info from a directive
    *
    * The @key directive specifies which fields form the entity's primary key.
    * We extract these for creating appropriate lookup methods.
    *
    * @param directive - The @key directive from the GraphQL AST
-   * @returns Array of field names that form the key
+   * @returns An object with the key fields and whether it is resolvable
    */
-  private getKeyFromDirective(directive: DirectiveNode): string | null {
-    const fieldsArg = directive.arguments?.find((arg: ArgumentNode) => arg.name.value === 'fields');
-    if (fieldsArg && fieldsArg.value.kind === 'StringValue') {
-      const stringValue = fieldsArg.value as StringValueNode;
-      return stringValue.value;
+  private getKeyInfoFromDirective(directive: DirectiveNode): KeyDirective | null {
+    const fieldsArgs = directive.arguments?.find((arg: ArgumentNode) => arg.name.value === 'fields');
+    const resolvableArg = directive.arguments?.find((arg: ArgumentNode) => arg.name.value === 'resolvable');
+
+    if (!fieldsArgs && !resolvableArg) {
+      return null;
     }
-    return null;
+
+    const result: KeyDirective = {
+      keyString: '',
+      resolvable: true,
+    };
+
+    if (fieldsArgs && fieldsArgs.value.kind === 'StringValue') {
+      const stringValue = fieldsArgs.value as StringValueNode;
+      result.keyString = stringValue.value;
+    }
+
+    if (resolvableArg && resolvableArg.value.kind === 'BooleanValue') {
+      result.resolvable = resolvableArg.value.value;
+    }
+
+    return result;
   }
 
   /**
