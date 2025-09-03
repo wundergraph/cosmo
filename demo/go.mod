@@ -11,7 +11,7 @@ require (
 	github.com/rs/cors v1.11.0
 	github.com/vektah/gqlparser/v2 v2.5.30
 	github.com/wundergraph/cosmo/composition-go v0.0.0-20240124120900-5effe48a4a1d
-	github.com/wundergraph/cosmo/router v0.0.0-20250903132058-4a4fdd0a3c37
+	github.com/wundergraph/cosmo/router v0.0.0-20250903140828-bd4263aa7119
 	github.com/wundergraph/cosmo/router-tests v0.0.0-20250718080012-21acbd83c77f
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.opentelemetry.io/otel v1.28.0
@@ -135,7 +135,7 @@ require (
 	github.com/urfave/cli/v2 v2.27.7 // indirect
 	github.com/wundergraph/astjson v0.0.0-20250106123708-be463c97e083 // indirect
 	github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects v0.0.0-20250715110703-10f2e5f9c79e // indirect
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.213.0.20250903131833-6234791bbf3c // indirect
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.213.0.20250903140441-8df1b67bce1d // indirect
 	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
