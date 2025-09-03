@@ -349,14 +349,11 @@ github.com/wundergraph/cosmo/composition-go v0.0.0-20240124120900-5effe48a4a1d h
 github.com/wundergraph/cosmo/composition-go v0.0.0-20240124120900-5effe48a4a1d/go.mod h1:9I3gPMAlAY+m1/cFL20iN7XHTyuZd3VT5ijccdU/FsI=
 github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects v0.0.0-20250715110703-10f2e5f9c79e h1:VdJNlsiyWYxJzAD3jEe+DAQdzxkf9btD8qQNYNU+xQU=
 github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects v0.0.0-20250715110703-10f2e5f9c79e/go.mod h1:WZ0yBeaDSGHqDMcQrP1JRYgCj9atF7ORXF8srnd2Sro=
-github.com/wundergraph/cosmo/router v0.0.0-20250825095900-31d35e99379a h1:pxpUrzOSSfqsDL+NqoCtxonHvroSCJMtZYTcNBUo6mA=
-github.com/wundergraph/cosmo/router v0.0.0-20250825095900-31d35e99379a/go.mod h1:+RsJfcGuc+9hczpy1F1XqPQ23l4ifFwTrKk1v6lSmvY=
 github.com/wundergraph/cosmo/router v0.0.0-20250903132058-4a4fdd0a3c37 h1:6YOv22fKi3mPk87cd4Np/1JLSxOpxe7iXgS/k+76jiU=
 github.com/wundergraph/cosmo/router v0.0.0-20250903132058-4a4fdd0a3c37/go.mod h1:IuFXTDd6INokZgeD1WhqAgsK49la9kfkpC9kBRlypJM=
 github.com/wundergraph/cosmo/router-tests v0.0.0-20250718080012-21acbd83c77f h1:AB3PcgliYMtTInM1Tz1uBbL9eTnGagdiFdyQilJiAIA=
 github.com/wundergraph/cosmo/router-tests v0.0.0-20250718080012-21acbd83c77f/go.mod h1:ESnTrSqgo+ZcJhB7dFEI3A7T/KaTuA61HLerhcQOXy4=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.213.0.20250825082842-0efce3cfd008 h1:v/YrpaN3MdJmS/E9jH4P62oL12shYPqgjoG0/RkLbXU=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.213.0.20250825082842-0efce3cfd008/go.mod h1:DnYY1alnsgzkanSwbFiFIdXKOuf8dHQWQ2P4BzTc6aI=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.213.0.20250903131833-6234791bbf3c h1:2jZX/dpnP5S3i0rHB1o0Vmt0QDEID2W3B5QWuhRvago=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.213.0.20250903131833-6234791bbf3c/go.mod h1:DnYY1alnsgzkanSwbFiFIdXKOuf8dHQWQ2P4BzTc6aI=
 github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 h1:gEOO8jv9F4OT7lGCjxCBTO/36wtF6j2nSip77qHd4x4=
 github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1/go.mod h1:Ohn+xnUBiLI6FVj/9LpzZWtj1/D6lUovWYBkxHVV3aM=
