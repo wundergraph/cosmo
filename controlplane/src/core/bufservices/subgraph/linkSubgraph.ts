@@ -24,16 +24,7 @@ export function linkSubgraph(
 
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
-
-    if (req.sourceSubgraphNamespace === req.targetSubgraphNamespace) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `The source and target subgraphs cannot be in the same namespace.`,
-        },
-      };
-    }
-
+    
     const sourceNamespace = await namespaceRepo.byName(req.sourceSubgraphNamespace);
     if (!sourceNamespace) {
       return {
