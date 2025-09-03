@@ -147,7 +147,6 @@ func (g *GRPCPluginClient) SetClients(pluginClient *plugin.Client, clientConn gr
 // Invoke implements grpc.ClientConnInterface.
 func (g *GRPCPluginClient) Invoke(ctx context.Context, method string, args any, reply any, opts ...grpc.CallOption) error {
 	spanName, traceAttributes := g.getTraceAttributes(ctx)
-
 	ctx, span := g.tracer.Start(ctx, spanName, traceAttributes)
 	defer span.End()
 
