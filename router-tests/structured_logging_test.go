@@ -2870,7 +2870,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 	t.Run("verify subgraph expressions", func(t *testing.T) {
 		t.Parallel()
 
-		t.Run("verify data source fetch duration value is attached", func(t *testing.T) {
+		t.Run("verify subgraph fetch duration value is attached", func(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
@@ -2901,7 +2901,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			})
 		})
 
-		t.Run("verify data source fetch duration value is attached for multiple subgraph calls", func(t *testing.T) {
+		t.Run("verify subgraph fetch duration value is attached for multiple subgraph calls", func(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
@@ -2937,7 +2937,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			})
 		})
 
-		t.Run("verify data source fetch duration in conditional expression", func(t *testing.T) {
+		t.Run("verify subgraph fetch duration in conditional expression", func(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{

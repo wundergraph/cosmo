@@ -9855,7 +9855,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			})
 		})
 
-		t.Run("verify data source fetch duration value is attached for multiple subgraph calls", func(t *testing.T) {
+		t.Run("verify subgraph fetch duration value is attached for multiple subgraph calls", func(t *testing.T) {
 			t.Parallel()
 
 			exporter := tracetest.NewInMemoryExporter(t)
