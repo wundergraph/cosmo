@@ -1,4 +1,4 @@
-package rdcloser
+package rediscloser
 
 import (
 	"context"

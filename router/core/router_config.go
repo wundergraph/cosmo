@@ -8,7 +8,7 @@ import (
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
-	rd "github.com/wundergraph/cosmo/router/internal/rdcloser"
+	rd "github.com/wundergraph/cosmo/router/internal/rediscloser"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"

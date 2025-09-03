@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
-	rd "github.com/wundergraph/cosmo/router/internal/rdcloser"
+	rd "github.com/wundergraph/cosmo/router/internal/rediscloser"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"go.uber.org/zap"
 )

@@ -37,7 +37,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/cdn"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/fs"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/s3"
-	rd "github.com/wundergraph/cosmo/router/internal/rdcloser"
+	rd "github.com/wundergraph/cosmo/router/internal/rediscloser"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/internal/stringsx"
 	"github.com/wundergraph/cosmo/router/pkg/config"
