@@ -3008,10 +3008,10 @@ func TestFlakyAccessLogs(t *testing.T) {
 				requestLogAll := requestLog.All()
 				requestContextMap := requestLogAll[0].ContextMap()
 
-				connAcquireDuration, ok := requestContextMap["conn_acquire_duration"].(float64)
+				connAcquireDuration, ok := requestContextMap["conn_acquire_duration"].(time.Duration)
 				require.True(t, ok)
 
-				require.Greater(t, connAcquireDuration, 0.0)
+				require.Greater(t, int(connAcquireDuration), 0)
 			})
 		})
 
@@ -3040,14 +3040,14 @@ func TestFlakyAccessLogs(t *testing.T) {
 				requestLogAll := requestLog.All()
 
 				employeeSubgraphLogs := requestLogAll[0]
-				connAcquireDuration1, ok := employeeSubgraphLogs.ContextMap()["conn_acquire_duration"].(float64)
+				connAcquireDuration1, ok := employeeSubgraphLogs.ContextMap()["conn_acquire_duration"].(time.Duration)
 				require.True(t, ok)
-				require.Greater(t, connAcquireDuration1, 0.0)
+				require.Greater(t, int(connAcquireDuration1), 0)
 
 				availabilitySubgraphLogs := requestLogAll[1]
-				connAcquireDuration2, ok := availabilitySubgraphLogs.ContextMap()["conn_acquire_duration"].(float64)
+				connAcquireDuration2, ok := availabilitySubgraphLogs.ContextMap()["conn_acquire_duration"].(time.Duration)
 				require.True(t, ok)
-				require.Greater(t, connAcquireDuration2, 0.0)
+				require.Greater(t, int(connAcquireDuration2), 0)
 			})
 		})
 
@@ -3091,9 +3091,9 @@ func TestFlakyAccessLogs(t *testing.T) {
 				require.False(t, ok)
 
 				availabilitySubgraphLogs := requestLogAll[1]
-				connAcquireDuration2, ok := availabilitySubgraphLogs.ContextMap()["conn_acquire_duration"].(float64)
+				connAcquireDuration2, ok := availabilitySubgraphLogs.ContextMap()["conn_acquire_duration"].(time.Duration)
 				require.True(t, ok)
-				require.Greater(t, connAcquireDuration2, 0.0)
+				require.Greater(t, int(connAcquireDuration2), 0)
 			})
 		})
 
@@ -3134,9 +3134,9 @@ func TestFlakyAccessLogs(t *testing.T) {
 				// There should  only be one instance of the key
 				require.Equal(t, 1, keyCount)
 
-				connAcquireDuration, ok := requestContextMap["conn_acquire_duration"].(float64)
+				connAcquireDuration, ok := requestContextMap["conn_acquire_duration"].(time.Duration)
 				require.True(t, ok)
-				require.Greater(t, connAcquireDuration, 0.0)
+				require.Greater(t, int(connAcquireDuration), 0)
 			})
 		})
 
