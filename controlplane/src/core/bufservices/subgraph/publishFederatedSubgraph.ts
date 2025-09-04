@@ -190,8 +190,8 @@ export function publishFederatedSubgraph(
               subgraph.type === 'grpc_plugin'
                 ? `Subgraph ${subgraph.name} is a plugin. Please use the 'wgc router plugin publish' command to publish the plugin.`
                 : subgraph.type === 'grpc_service'
-                ? `Subgraph ${subgraph.name} is a grpc service. Please use the 'wgc grpc-service publish' command to publish the grpc service.`
-                : `Subgraph ${subgraph.name} is not of type ${formatSubgraphType(req.type)}.`,
+                  ? `Subgraph ${subgraph.name} is a grpc service. Please use the 'wgc grpc-service publish' command to publish the grpc service.`
+                  : `Subgraph ${subgraph.name} is not of type ${formatSubgraphType(req.type)}.`,
           },
           compositionErrors: [],
           deploymentErrors: [],
@@ -377,8 +377,8 @@ export function publishFederatedSubgraph(
               details: routingUrl
                 ? `Routing URL "${routingUrl}" is not a valid URL.`
                 : req.isFeatureSubgraph
-                ? `A valid, non-empty routing URL is required to create and publish a feature subgraph.`
-                : `A valid, non-empty routing URL is required to create and publish a non-Event-Driven subgraph.`,
+                  ? `A valid, non-empty routing URL is required to create and publish a feature subgraph.`
+                  : `A valid, non-empty routing URL is required to create and publish a non-Event-Driven subgraph.`,
             },
             compositionErrors: [],
             deploymentErrors: [],
@@ -557,12 +557,12 @@ export function publishFederatedSubgraph(
                   },
                 }
               : subgraph.type === 'grpc_service'
-              ? {
-                  schema: req.proto?.schema || '',
-                  mappings: req.proto?.mappings || '',
-                  lock: req.proto?.lock || '',
-                }
-              : undefined,
+                ? {
+                    schema: req.proto?.schema || '',
+                    mappings: req.proto?.mappings || '',
+                    lock: req.proto?.lock || '',
+                  }
+                : undefined,
         },
         opts.blobStorage,
         {
