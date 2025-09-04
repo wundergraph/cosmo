@@ -7,7 +7,7 @@ import (
 
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 
-	rd "github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
+	rd "github.com/wundergraph/cosmo/router/internal/rediscloser"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
