@@ -26,6 +26,11 @@ export default (opts: BaseCommandOptions) => {
 
     const targetSubgraphName = rest.join('/');
 
+    // Prevent self-linking
+    if (options.namespace === targetNamespace && name === targetSubgraphName) {
+      program.error('The source and target subgraphs cannot be the same subgraphs.');
+    }
+
     const spinner = ora(`The subgraph "${name}" is being linked to "${targetSubgraphName}"...`).start();
 
     const resp = await opts.client.platform.linkSubgraph(
