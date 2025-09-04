@@ -20,7 +20,7 @@ export default (opts: BaseCommandOptions) => {
   command.action(async (name, options) => {
     // Split on all slashes, take first as namespace, join rest as subgraph name
     const [targetNamespace, ...rest] = options.targetSubgraph.split('/');
-    if (rest.length === 0) {
+    if (!targetNamespace || rest.length === 0) {
       program.error('Target subgraph must be in the format <namespace>/<subgraph-name>');
     }
 
