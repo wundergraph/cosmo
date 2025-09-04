@@ -1053,7 +1053,7 @@ const CheckDetails = ({
               >
                 <div className="space-y-4">
                   <div className="flex flex-col space-y-4">
-                    <Alert variant={isSuccessful ? "default" : "destructive"}>
+                    <Alert variant={isSuccessful ? "success" : "destructive"}>
                       {isSuccessful ? (
                         <CheckCircledIcon className="h-4 w-4" />
                       ) : (
@@ -1106,7 +1106,17 @@ const CheckDetails = ({
 
                   {data.affectedGraphs.length > 1 && (
                     <div className="space-y-4 pt-4">
-                      <h3 className="text-lg font-semibold">Affected Graphs</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-lg font-semibold">
+                          Other affected graphs
+                        </h3>
+                        <InfoTooltip tooltipContentClassName="w-96">
+                          These are other federated graphs that also contain the
+                          subgraph being checked. Since they share the same
+                          subgraph, the schema changes impact these graphs too,
+                          and this check applies to them as well.
+                        </InfoTooltip>
+                      </div>
                       <TableWrapper>
                         <Table>
                           <TableHeader>
@@ -1287,7 +1297,19 @@ const CheckDetails = ({
                   {data.check.linkedCheck &&
                     data.check.linkedCheck.affectedGraphNames.length > 0 && (
                       <div className="space-y-4 pt-4">
-                        <h3 className="text-lg font-semibold">Linked Checks</h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-lg font-semibold">
+                            Linked Checks
+                          </h3>
+                          <InfoTooltip tooltipContentClassName="w-96">
+                            These are checks performed on subgraphs that are
+                            linked to the current subgraph. The traffic and
+                            pruning checks of these linked subgraphs influence
+                            the result of the current check. These checks are
+                            automatically run whenever the current subgraph is
+                            checked.
+                          </InfoTooltip>
+                        </div>
                         <TableWrapper>
                           <Table>
                             <TableHeader>
@@ -1312,11 +1334,15 @@ const CheckDetails = ({
                                 <TableCell>
                                   {getCheckBadge(isSuccessful, false)}
                                 </TableCell>
-                                <TableCell>{data.check.linkedCheck.id}</TableCell>
                                 <TableCell>
-                                  {data.check.linkedCheck.subgraphNames.length > 1
+                                  {data.check.linkedCheck.id}
+                                </TableCell>
+                                <TableCell>
+                                  {data.check.linkedCheck.subgraphNames.length >
+                                  1
                                     ? "Multiple Subgraphs"
-                                    : data.check.linkedCheck.subgraphNames.length > 0
+                                    : data.check.linkedCheck.subgraphNames
+                                        .length > 0
                                     ? data.check.linkedCheck.subgraphNames[0]
                                     : "Subgraph"}
                                 </TableCell>
@@ -1335,7 +1361,8 @@ const CheckDetails = ({
                                       <NoSymbolIcon className="h-4 w-4" />
                                     ) : (
                                       getCheckIcon(
-                                        !data.check.linkedCheck.hasClientTraffic,
+                                        !data.check.linkedCheck
+                                          .hasClientTraffic,
                                       )
                                     )}
                                     <span>Operations</span>
@@ -1354,7 +1381,8 @@ const CheckDetails = ({
                                       <NoSymbolIcon className="h-4 w-4" />
                                     ) : (
                                       getCheckIcon(
-                                        !data.check.linkedCheck.hasGraphPruningErrors,
+                                        !data.check.linkedCheck
+                                          .hasGraphPruningErrors,
                                       )
                                     )}
                                     <span className="flex-1 truncate">
