@@ -125,7 +125,7 @@ func (c *configPoller) Subscribe(ctx context.Context, handler func(newConfig *no
 
 func (c *configPoller) getRouterConfig(ctx context.Context) (*routerconfig.Response, error) {
 	if c.configClient == nil && c.demoMode {
-		c.logger.Warn("The router is running in demo mode and no config client has been found. Router is using a demo execution config that can be used for testing purposes.")
+		c.logger.Warn("The router is running in demo mode without a execution configuration source. Using a default demo execution config for testing purposes.")
 		return &routerconfig.Response{Config: routerconfig.GetDefaultConfig()}, nil
 	}
 
@@ -143,7 +143,7 @@ func (c *configPoller) getRouterConfig(ctx context.Context) (*routerconfig.Respo
 	}
 
 	if c.demoMode && c.fallbackConfigClient == nil && errors.Is(err, ErrConfigNotFound) {
-		c.logger.Warn("The router is running in demo mode and no config has been found. Router is using a demo execution config that can be used for testing purposes.")
+		c.logger.Warn("The router is running in demo mode and no execution config has been found. Router is using a demo execution config that can be used for testing purposes.")
 		return &routerconfig.Response{Config: routerconfig.GetDefaultConfig()}, nil
 	}
 
