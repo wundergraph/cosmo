@@ -1,12 +1,13 @@
-package rd
+package rediscloser
 
 import (
 	"context"
 	"fmt"
-	"github.com/redis/go-redis/v9"
-	"go.uber.org/zap"
 	"net/url"
 	"strings"
+
+	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
 )
 
 // RDCloser is an interface that combines the redis.Cmdable and io.Closer interfaces, ensuring that we can close the
