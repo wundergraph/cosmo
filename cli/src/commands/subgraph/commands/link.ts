@@ -8,7 +8,7 @@ import { BaseCommandOptions } from '../../../core/types/types.js';
 export default (opts: BaseCommandOptions) => {
   const command = new Command('link');
   command.description(
-    'Links a subgraph to another subgraph on the control plane. When performing schema checks on the source subgraph, traffic and pruning checks will also be performed on the target subgraph. This is useful for linking dev subgraphs to their production counterparts to use real traffic data for checks.',
+    'Links a subgraph to another subgraph on the control plane. When performing schema checks on the source subgraph, traffic and pruning checks will also be performed on the target subgraph. This is useful for verifying the impact of the schema changes before they are propogated to the next environment.',
   );
   command.argument('<source-subgraph-name>', 'The name of the subgraph to link.');
   command.option('-n, --namespace [string]', 'The namespace of the source subgraph.', 'default');
