@@ -153,6 +153,27 @@ describe('Link/Unlink Subgraph tests', () => {
       await server.close();
     });
 
+    test('Should fail when source and target subgraphs are the same', async () => {
+      const { client, server } = await SetupTest({ dbname });
+
+      const sourceSubgraphName = genID('source-subgraph');
+
+      // Create both subgraphs in the same namespace
+      await createSubgraph(client, sourceSubgraphName, DEFAULT_SUBGRAPH_URL_ONE, DEFAULT_NAMESPACE);
+
+      const linkResponse = await client.linkSubgraph({
+        sourceSubgraphName,
+        sourceSubgraphNamespace: DEFAULT_NAMESPACE,
+        targetSubgraphName: sourceSubgraphName,
+        targetSubgraphNamespace: DEFAULT_NAMESPACE,
+      });
+
+      expect(linkResponse.response?.code).toBe(EnumStatusCode.ERR);
+      expect(linkResponse.response?.details).toBe('The source and target subgraphs cannot be the same subgraphs.');
+
+      await server.close();
+    });
+
     test('Should fail when source subgraph is a feature subgraph', async () => {
       const { client, server } = await SetupTest({ dbname });
 
