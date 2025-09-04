@@ -15,7 +15,7 @@ export default (opts: BaseCommandOptions) => {
   command.description('Creates a federated grpc subgraph on the control plane.');
   command.argument(
     '<name>',
-    'The name of the grpc subgraph to create. It is usually in the format of <org>.<service.name> and is used to uniquely identify your grpc subgraph.',
+    'The name of the grpc subgraph to create. It is used to uniquely identify your grpc subgraph.',
   );
   command.option('-n, --namespace [string]', 'The namespace of the grpc subgraph.');
   command.requiredOption(

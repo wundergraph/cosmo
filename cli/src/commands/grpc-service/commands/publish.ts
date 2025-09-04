@@ -6,7 +6,7 @@ import { splitLabel } from '@wundergraph/cosmo-shared';
 import Table from 'cli-table3';
 import { Command, program } from 'commander';
 import ora from 'ora';
-import path, { resolve } from 'pathe';
+import { resolve } from 'pathe';
 import pc from 'picocolors';
 import { getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
@@ -16,8 +16,12 @@ export default (opts: BaseCommandOptions) => {
   command.description(
     "Publishes a gRPC subgraph on the control plane. If the gRPC subgraph doesn't exists, it will be created.\nIf the publication leads to composition errors, the errors will be visible in the Studio.\nThe router will continue to work with the latest valid schema.\nConsider using the 'wgc subgraph check' command to check for composition errors before publishing.",
   );
-  command.argument('[directory]', 'The path to the gRPC subgraph directory.', '.');
-  command.option('--name [string]', 'The name of the gRPC subgraph.');
+  command.argument('<name>', 'The name of the gRPC subgraph.');
+  command.requiredOption('--schema <path-to-schema>', 'The schema file to upload to the subgraph.');
+  command.requiredOption(
+    '--generated <path-to-generated-folder>',
+    'The path to the generated folder which contains the proto schema, mapping and lock files.',
+  );
   command.option('-n, --namespace [string]', 'The namespace of the gRPC subgraph.');
   command.option(
     '-r, --routing-url <url>',
@@ -42,25 +46,8 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
 
-  command.action(async (directory, options) => {
-    const grpcSubgraphDir = resolve(directory);
-    if (!existsSync(grpcSubgraphDir)) {
-      program.error(
-        pc.red(
-          pc.bold(
-            `The gRPC subgraph directory '${pc.bold(grpcSubgraphDir)}' does not exist. Please check the path and try again.`,
-          ),
-        ),
-      );
-    }
-
-    const grpcSubgraphName = options.name || path.basename(grpcSubgraphDir);
-
-    const schemaFile = resolve(grpcSubgraphDir, 'src', 'schema.graphql');
-    const protoSchemaFile = resolve(grpcSubgraphDir, 'generated', 'service.proto');
-    const protoMappingFile = resolve(grpcSubgraphDir, 'generated', 'mapping.json');
-    const protoLockFile = resolve(grpcSubgraphDir, 'generated', 'service.proto.lock.json');
-
+  command.action(async (options) => {
+    const schemaFile = resolve(options.schema);
     if (!existsSync(schemaFile)) {
       program.error(
         pc.red(
@@ -76,6 +63,21 @@ export default (opts: BaseCommandOptions) => {
         pc.red(pc.bold(`The schema file '${pc.bold(schemaFile)}' is empty. Please provide a valid schema.`)),
       );
     }
+
+    const grpcSubgraphGeneratedDir = resolve(options.generated);
+    if (!existsSync(grpcSubgraphGeneratedDir)) {
+      program.error(
+        pc.red(
+          pc.bold(
+            `The gRPC subgraph generated directory '${pc.bold(grpcSubgraphGeneratedDir)}' does not exist. Please check the path and try again.`,
+          ),
+        ),
+      );
+    }
+
+    const protoSchemaFile = resolve(grpcSubgraphGeneratedDir, 'service.proto');
+    const protoMappingFile = resolve(grpcSubgraphGeneratedDir, 'mapping.json');
+    const protoLockFile = resolve(grpcSubgraphGeneratedDir, 'service.proto.lock.json');
 
     if (!existsSync(protoSchemaFile)) {
       program.error(
@@ -134,7 +136,7 @@ export default (opts: BaseCommandOptions) => {
 
     const resp = await opts.client.platform.publishFederatedSubgraph(
       {
-        name: grpcSubgraphName,
+        name: options.name,
         namespace: options.namespace,
         schema,
         // Optional when subgraph does not exist yet
@@ -157,7 +159,7 @@ export default (opts: BaseCommandOptions) => {
         spinner.succeed(
           resp?.hasChanged === false
             ? 'No new changes to publish.'
-            : `The gRPC subgraph ${pc.bold(grpcSubgraphName)} published successfully.`,
+            : `The gRPC subgraph ${pc.bold(options.name)} published successfully.`,
         );
         console.log('');
         console.log(
@@ -170,7 +172,7 @@ export default (opts: BaseCommandOptions) => {
         break;
       }
       case EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL: {
-        spinner.fail(`Failed to publish gRPC subgraph "${grpcSubgraphName}".`);
+        spinner.fail(`Failed to publish gRPC subgraph "${options.name}".`);
         console.log(pc.red(`Error: Proposal match failed`));
         console.log(pc.red(resp.proposalMatchMessage));
         break;
@@ -249,7 +251,7 @@ export default (opts: BaseCommandOptions) => {
         break;
       }
       default: {
-        spinner.fail(`Failed to publish gRPC subgraph "${grpcSubgraphName}".`);
+        spinner.fail(`Failed to publish gRPC subgraph "${options.name}".`);
         if (resp.response?.details) {
           console.error(pc.red(pc.bold(resp.response?.details)));
         }

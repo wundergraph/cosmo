@@ -459,14 +459,53 @@ describe('Publish feature subgraph tests', () => {
     await server.close();
   });
 
-  test('that a feature subgraph can be created and published inheriting GRPC_SERVICE type from base subgraph', async () => {
+    test('that publishFederatedSubgraph works with namespace parameter', async () => {
+      const { client, server } = await SetupTest({ dbname });
+
+      const baseSubgraphName = genID('baseSubgraph');
+      const featureSubgraphName = genID('featureSubgraph');
+      const namespace = genID('namespace').toLowerCase();
+
+      // Create namespace
+      await createNamespace(client, namespace);
+
+      // Create base subgraph in the namespace
+      await createSubgraph(client, baseSubgraphName, DEFAULT_SUBGRAPH_URL_ONE, namespace);
+
+      // Create feature subgraph in the same namespace (replicating CLI call)
+      const publishFeatureSubgraphResponse = await client.publishFederatedSubgraph({
+        baseSubgraphName,
+        disableResolvabilityValidation: false,
+        isFeatureSubgraph: true,
+        labels: [],
+        name: featureSubgraphName,
+        namespace,
+        routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+        schema: 'type Query { hello: String }',
+        type: SubgraphType.STANDARD,
+      });
+
+      expect(publishFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+
+      // Verify the feature subgraph was created in the correct namespace
+      const getFeatureSubgraphResponse = await client.getSubgraphByName({
+        name: featureSubgraphName,
+        namespace,
+      });
+      expect(getFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+      expect(getFeatureSubgraphResponse.graph?.namespace).toBe(namespace);
+
+      await server.close();
+    });
+
+  test('that creating and publishing a feature subgraph in one step fails when base subgraph is a grpc service - replicating fs publish command', async () => {
     const { client, server } = await SetupTest({ dbname });
 
     const baseGrpcServiceName = genID('baseGrpcService');
-    const featureSubgraphName = genID('featureGrpcService');
+    const featureSubgraphName = genID('featureSubgraph');
     const grpcServiceLabel = genUniqueLabel('grpc-service');
 
-    // Create a gRPC service base subgraph
+    // Create a GRPC service base subgraph
     const createBaseGrpcServiceResponse = await client.createFederatedSubgraph({
       name: baseGrpcServiceName,
       type: SubgraphType.GRPC_SERVICE,
@@ -482,315 +521,30 @@ describe('Publish feature subgraph tests', () => {
     expect(getBaseSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
     expect(getBaseSubgraphResponse.graph?.type).toBe(SubgraphType.GRPC_SERVICE);
 
-    // Create and publish feature subgraph in one command - replicating CLI call
-    const validGrpcProtoRequest = {
-      schema: grpcProtoSchema,
-      mappings: grpcProtoMappings,
-      lock: grpcProtoLock,
-    };
-
+    // Try to create and publish feature subgraph in one command - replicating CLI `wgc feature-subgraph publish` call
+    // This should fail because the base subgraph is a GRPC service and the feature subgraph doesn't exist yet
     const publishFeatureSubgraphResponse = await client.publishFederatedSubgraph({
-      baseSubgraphName: baseGrpcServiceName,
-      disableResolvabilityValidation: false,
-      isFeatureSubgraph: true,
-      name: featureSubgraphName,
-      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
-      schema: 'type Query { grpcServiceHello: String }',
-      type: SubgraphType.GRPC_SERVICE,
-      proto: validGrpcProtoRequest,
-    });
-    expect(publishFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
-
-    // Verify the feature subgraph was created and inherited the GRPC_SERVICE type
-    const getFeatureSubgraphResponse = await client.getSubgraphByName({
-      name: featureSubgraphName,
-    });
-    expect(getFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
-    expect(getFeatureSubgraphResponse.graph?.name).toBe(featureSubgraphName);
-    expect(getFeatureSubgraphResponse.graph?.isFeatureSubgraph).toBe(true);
-    expect(getFeatureSubgraphResponse.graph?.type).toBe(SubgraphType.GRPC_SERVICE);
-    expect(getFeatureSubgraphResponse.graph?.routingURL).toBe(DEFAULT_SUBGRAPH_URL_TWO);
-
-    await server.close();
-  });
-
-  test('that a feature subgraph can be created and published with a gRPC service base subgraph using wgc fs publish with STANDARD type', async () => {
-    const { client, server } = await SetupTest({ dbname });
-
-    const baseGrpcServiceName = genID('baseGrpcService');
-    const featureSubgraphName = genID('featureSubgraph');
-    const grpcServiceLabel = genUniqueLabel('grpc-service');
-
-    // Create a gRPC service base subgraph
-    const createBaseGrpcServiceResponse = await client.createFederatedSubgraph({
-      name: baseGrpcServiceName,
-      type: SubgraphType.GRPC_SERVICE,
-      routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
-      labels: [grpcServiceLabel],
-    });
-    expect(createBaseGrpcServiceResponse.response?.code).toBe(EnumStatusCode.OK);
-
-    const validGrpcProtoRequest = {
-      schema: grpcProtoSchema,
-      mappings: grpcProtoMappings,
-      lock: grpcProtoLock,
-    };
-
-    // Try to create and publish feature subgraph based on gRPC service with STANDARD type - should fail (replicating CLI call)
-    const publishFeatureSubgraphResponse = await client.publishFederatedSubgraph({
-      baseSubgraphName: baseGrpcServiceName,
+      baseSubgraphName: baseGrpcServiceName, // This triggers creation of feature subgraph
       disableResolvabilityValidation: false,
       isFeatureSubgraph: true,
       labels: [],
-      name: featureSubgraphName,
+      name: featureSubgraphName, // Feature subgraph doesn't exist yet
       routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
       schema: 'type Query { hello: String }',
-      proto: validGrpcProtoRequest,
-      // this is fine as the feature subgraph would be based on the type of the base subgraph
-      type: SubgraphType.STANDARD,
+      type: SubgraphType.STANDARD, // This is what the CLI passes regardless of base type
     });
 
-    expect(publishFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
-
-    // Verify the feature subgraph was created and inherited the GRPC_SERVICE type
-    const getFeatureSubgraphResponse = await client.getSubgraphByName({
-      name: featureSubgraphName,
-    });
-    expect(getFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
-    expect(getFeatureSubgraphResponse.graph?.name).toBe(featureSubgraphName);
-    expect(getFeatureSubgraphResponse.graph?.isFeatureSubgraph).toBe(true);
-    expect(getFeatureSubgraphResponse.graph?.type).toBe(SubgraphType.GRPC_SERVICE);
-    expect(getFeatureSubgraphResponse.graph?.routingURL).toBe(DEFAULT_SUBGRAPH_URL_TWO);
-
-    await server.close();
-  });
-
-  test('that publishFederatedSubgraph requires routing URL for feature subgraphs based on gRPC service subgraphs', async () => {
-    const { client, server } = await SetupTest({ dbname });
-
-    const baseGrpcServiceName = genID('baseGrpcService');
-    const featureSubgraphName = genID('featureSubgraph');
-    const grpcServiceLabel = genUniqueLabel('grpc-service');
-
-    // Create a gRPC service base subgraph
-    const createBaseGrpcServiceResponse = await client.createFederatedSubgraph({
-      name: baseGrpcServiceName,
-      type: SubgraphType.GRPC_SERVICE,
-      routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
-      labels: [grpcServiceLabel],
-    });
-    expect(createBaseGrpcServiceResponse.response?.code).toBe(EnumStatusCode.OK);
-
-    // Try to create feature subgraph without routing URL (replicating CLI call)
-    const validGrpcProtoRequest = {
-      schema: grpcProtoSchema,
-      mappings: grpcProtoMappings,
-      lock: grpcProtoLock,
-    };
-
-    const publishFeatureSubgraphResponse = await client.publishFederatedSubgraph({
-      baseSubgraphName: baseGrpcServiceName,
-      disableResolvabilityValidation: false,
-      isFeatureSubgraph: true,
-      labels: [],
-      name: featureSubgraphName,
-      schema: 'type Query { hello: String }',
-      type: SubgraphType.GRPC_SERVICE,
-      proto: validGrpcProtoRequest,
-    });
-
+    // Should fail with specific error about GRPC services
     expect(publishFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR);
     expect(publishFeatureSubgraphResponse.response?.details).toBe(
-      'A valid, non-empty routing URL is required to create and publish a feature subgraph.',
+      `Cannot create a feature subgraph with a grpc service base subgraph using this command. Since the base subgraph "${baseGrpcServiceName}" is a grpc service, please use the 'wgc feature-subgraph create' command to create the feature subgraph first, then publish it using the 'wgc grpc-service publish' command.`,
     );
 
-    await server.close();
-  });
-
-  test('that publishFederatedSubgraph validates invalid routing URL for gRPC service feature subgraphs', async () => {
-    const { client, server } = await SetupTest({ dbname });
-
-    const baseGrpcServiceName = genID('baseGrpcService');
-    const featureSubgraphName = genID('featureSubgraph');
-    const grpcServiceLabel = genUniqueLabel('grpc-service');
-
-    // Create a gRPC service base subgraph
-    const createBaseGrpcServiceResponse = await client.createFederatedSubgraph({
-      name: baseGrpcServiceName,
-      type: SubgraphType.GRPC_SERVICE,
-      routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
-      labels: [grpcServiceLabel],
-    });
-    expect(createBaseGrpcServiceResponse.response?.code).toBe(EnumStatusCode.OK);
-
-    // Try to create feature subgraph with invalid routing URL (replicating CLI call)
-    const validGrpcProtoRequest = {
-      schema: grpcProtoSchema,
-      mappings: grpcProtoMappings,
-      lock: grpcProtoLock,
-    };
-
-    const publishFeatureSubgraphResponse = await client.publishFederatedSubgraph({
-      baseSubgraphName: baseGrpcServiceName,
-      disableResolvabilityValidation: false,
-      isFeatureSubgraph: true,
-      labels: [],
-      name: featureSubgraphName,
-      routingUrl: 'invalid-url',
-      schema: 'type Query { hello: String }',
-      type: SubgraphType.GRPC_SERVICE,
-      proto: validGrpcProtoRequest,
-    });
-
-    expect(publishFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR);
-    expect(publishFeatureSubgraphResponse.response?.details).toBe('Routing URL "invalid-url" is not a valid URL.');
-
-    await server.close();
-  });
-
-  test('that multiple feature subgraphs can be created and published from the same gRPC service base', async () => {
-    const { client, server } = await SetupTest({ dbname });
-
-    const baseGrpcServiceName = genID('baseGrpcService');
-    const featureSubgraphName1 = genID('featureGrpcService1');
-    const featureSubgraphName2 = genID('featureGrpcService2');
-    const grpcServiceLabel = genUniqueLabel('grpc-service');
-
-    // Create a gRPC service base subgraph
-    const createBaseGrpcServiceResponse = await client.createFederatedSubgraph({
-      name: baseGrpcServiceName,
-      type: SubgraphType.GRPC_SERVICE,
-      routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
-      labels: [grpcServiceLabel],
-    });
-    expect(createBaseGrpcServiceResponse.response?.code).toBe(EnumStatusCode.OK);
-
-    const validGrpcProtoRequest = {
-      schema: grpcProtoSchema,
-      mappings: grpcProtoMappings,
-      lock: grpcProtoLock,
-    };
-
-    // Create first feature subgraph (replicating CLI call)
-    const publishFeatureSubgraph1Response = await client.publishFederatedSubgraph({
-      baseSubgraphName: baseGrpcServiceName,
-      disableResolvabilityValidation: false,
-      isFeatureSubgraph: true,
-      labels: [],
-      name: featureSubgraphName1,
-      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
-      schema: 'type Query { hello1: String }',
-      type: SubgraphType.GRPC_SERVICE,
-      proto: validGrpcProtoRequest,
-    });
-    expect(publishFeatureSubgraph1Response.response?.code).toBe(EnumStatusCode.OK);
-
-    // Create second feature subgraph (replicating CLI call)
-    const publishFeatureSubgraph2Response = await client.publishFederatedSubgraph({
-      baseSubgraphName: baseGrpcServiceName,
-      disableResolvabilityValidation: false,
-      isFeatureSubgraph: true,
-      labels: [],
-      name: featureSubgraphName2,
-      routingUrl: 'http://localhost:4003',
-      schema: 'type Query { hello2: String }',
-      type: SubgraphType.GRPC_SERVICE,
-      proto: validGrpcProtoRequest,
-    });
-    expect(publishFeatureSubgraph2Response.response?.code).toBe(EnumStatusCode.OK);
-
-    // Verify both feature subgraphs were created with correct type
-    const getFeatureSubgraph1Response = await client.getSubgraphByName({
-      name: featureSubgraphName1,
-    });
-    expect(getFeatureSubgraph1Response.response?.code).toBe(EnumStatusCode.OK);
-    expect(getFeatureSubgraph1Response.graph?.type).toBe(SubgraphType.GRPC_SERVICE);
-    expect(getFeatureSubgraph1Response.graph?.isFeatureSubgraph).toBe(true);
-    expect(getFeatureSubgraph1Response.graph?.routingURL).toBe(DEFAULT_SUBGRAPH_URL_TWO);
-
-    const getFeatureSubgraph2Response = await client.getSubgraphByName({
-      name: featureSubgraphName2,
-    });
-    expect(getFeatureSubgraph2Response.response?.code).toBe(EnumStatusCode.OK);
-    expect(getFeatureSubgraph2Response.graph?.type).toBe(SubgraphType.GRPC_SERVICE);
-    expect(getFeatureSubgraph2Response.graph?.isFeatureSubgraph).toBe(true);
-    expect(getFeatureSubgraph2Response.graph?.routingURL).toBe('http://localhost:4003');
-
-    await server.close();
-  });
-
-  test('that publishFederatedSubgraph fails to publish gRPC service feature subgraph without required proto information', async () => {
-    const { client, server } = await SetupTest({ dbname });
-
-    const baseGrpcServiceName = genID('baseGrpcService');
-    const featureSubgraphName = genID('featureGrpcService');
-    const grpcServiceLabel = genUniqueLabel('grpc-service');
-
-    // Create a gRPC service base subgraph
-    const createBaseGrpcServiceResponse = await client.createFederatedSubgraph({
-      name: baseGrpcServiceName,
-      type: SubgraphType.GRPC_SERVICE,
-      routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
-      labels: [grpcServiceLabel],
-    });
-    expect(createBaseGrpcServiceResponse.response?.code).toBe(EnumStatusCode.OK);
-
-    // Try to publish feature subgraph without proto information
-    const publishFeatureSubgraphResponse = await client.publishFederatedSubgraph({
-      baseSubgraphName: baseGrpcServiceName,
-      disableResolvabilityValidation: false,
-      isFeatureSubgraph: true,
-      labels: [],
-      name: featureSubgraphName,
-      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
-      schema: 'type Query { hello: String }',
-      type: SubgraphType.GRPC_SERVICE,
-      // Note: proto is missing - should fail
-    });
-
-    expect(publishFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR);
-    expect(publishFeatureSubgraphResponse.response?.details).toBe(
-      'The proto is required for plugin and grpc subgraphs.',
-    );
-
-    await server.close();
-  });
-
-  test('that publishFederatedSubgraph works with namespace parameter', async () => {
-    const { client, server } = await SetupTest({ dbname });
-
-    const baseSubgraphName = genID('baseSubgraph');
-    const featureSubgraphName = genID('featureSubgraph');
-    const namespace = genID('namespace').toLowerCase();
-
-    // Create namespace
-    await createNamespace(client, namespace);
-
-    // Create base subgraph in the namespace
-    await createSubgraph(client, baseSubgraphName, DEFAULT_SUBGRAPH_URL_ONE, namespace);
-
-    // Create feature subgraph in the same namespace (replicating CLI call)
-    const publishFeatureSubgraphResponse = await client.publishFederatedSubgraph({
-      baseSubgraphName,
-      disableResolvabilityValidation: false,
-      isFeatureSubgraph: true,
-      labels: [],
-      name: featureSubgraphName,
-      namespace,
-      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
-      schema: 'type Query { hello: String }',
-      type: SubgraphType.STANDARD,
-    });
-
-    expect(publishFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
-
-    // Verify the feature subgraph was created in the correct namespace
+    // Verify the feature subgraph was NOT created
     const getFeatureSubgraphResponse = await client.getSubgraphByName({
       name: featureSubgraphName,
-      namespace,
     });
-    expect(getFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
-    expect(getFeatureSubgraphResponse.graph?.namespace).toBe(namespace);
+    expect(getFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
 
     await server.close();
   });
@@ -834,6 +588,191 @@ describe('Publish feature subgraph tests', () => {
     expect(publishFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR);
     expect(publishFeatureSubgraphResponse.response?.details).toBe(
       `Subgraph ${featureSubgraphName} is a grpc service. Please use the 'wgc grpc-service publish' command to publish the grpc service.`,
+    );
+
+    await server.close();
+  });
+
+  test('that a feature subgraph can be created and published inheriting GRPC_SERVICE type from base subgraph', async () => {
+    const { client, server } = await SetupTest({ dbname });
+
+    const baseGrpcServiceName = genID('baseGrpcService');
+    const featureSubgraphName = genID('featureGrpcService');
+    const grpcServiceLabel = genUniqueLabel('grpc-service');
+
+    // Create a gRPC service base subgraph
+    const createBaseGrpcServiceResponse = await client.createFederatedSubgraph({
+      name: baseGrpcServiceName,
+      type: SubgraphType.GRPC_SERVICE,
+      routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+      labels: [grpcServiceLabel],
+    });
+    expect(createBaseGrpcServiceResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Verify the base subgraph is GRPC_SERVICE type
+    const getBaseSubgraphResponse = await client.getSubgraphByName({
+      name: baseGrpcServiceName,
+    });
+    expect(getBaseSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(getBaseSubgraphResponse.graph?.type).toBe(SubgraphType.GRPC_SERVICE);
+
+    // Create feature subgraph based on GRPC service (replicating wgc feature-subgraph create)
+    const createFeatureSubgraphResponse = await client.createFederatedSubgraph({
+      name: featureSubgraphName,
+      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      labels: [],
+      isFeatureSubgraph: true,
+      baseSubgraphName: baseGrpcServiceName,
+    });
+    expect(createFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Create and publish feature subgraph in one command - replicating CLI call
+    const validGrpcProtoRequest = {
+      schema: grpcProtoSchema,
+      mappings: grpcProtoMappings,
+      lock: grpcProtoLock,
+    };
+
+    // replicating wgc grpc-service publish
+    const publishFeatureSubgraphResponse = await client.publishFederatedSubgraph({
+      name: featureSubgraphName,
+      schema: 'type Query { grpcServiceHello: String }',
+      proto: validGrpcProtoRequest,
+      type: SubgraphType.GRPC_SERVICE,
+    });
+    expect(publishFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Verify the feature subgraph was created and inherited the GRPC_SERVICE type
+    const getFeatureSubgraphResponse = await client.getSubgraphByName({
+      name: featureSubgraphName,
+    });
+    expect(getFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(getFeatureSubgraphResponse.graph?.name).toBe(featureSubgraphName);
+    expect(getFeatureSubgraphResponse.graph?.isFeatureSubgraph).toBe(true);
+    expect(getFeatureSubgraphResponse.graph?.type).toBe(SubgraphType.GRPC_SERVICE);
+    expect(getFeatureSubgraphResponse.graph?.routingURL).toBe(DEFAULT_SUBGRAPH_URL_TWO);
+
+    await server.close();
+  });
+
+  test('that multiple feature subgraphs can be created and published from the same gRPC service base', async () => {
+    const { client, server } = await SetupTest({ dbname });
+
+    const baseGrpcServiceName = genID('baseGrpcService');
+    const featureSubgraphName1 = genID('featureGrpcService1');
+    const featureSubgraphName2 = genID('featureGrpcService2');
+    const grpcServiceLabel = genUniqueLabel('grpc-service');
+
+    // Create a gRPC service base subgraph
+    const createBaseGrpcServiceResponse = await client.createFederatedSubgraph({
+      name: baseGrpcServiceName,
+      type: SubgraphType.GRPC_SERVICE,
+      routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+      labels: [grpcServiceLabel],
+    });
+    expect(createBaseGrpcServiceResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const validGrpcProtoRequest = {
+      schema: grpcProtoSchema,
+      mappings: grpcProtoMappings,
+      lock: grpcProtoLock,
+    };
+
+    // Create feature subgraph based on GRPC service (replicating wgc feature-subgraph create)
+    const createFeatureSubgraph1Response = await client.createFederatedSubgraph({
+      name: featureSubgraphName1,
+      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      labels: [],
+      isFeatureSubgraph: true,
+      baseSubgraphName: baseGrpcServiceName,
+    });
+    expect(createFeatureSubgraph1Response.response?.code).toBe(EnumStatusCode.OK);
+
+    // replicating wgc grpc-service publish
+    const publishFeatureSubgraph1Response = await client.publishFederatedSubgraph({
+      name: featureSubgraphName1,
+      schema: 'type Query { hello1: String }',
+      proto: validGrpcProtoRequest,
+      type: SubgraphType.GRPC_SERVICE,
+    });
+    expect(publishFeatureSubgraph1Response.response?.code).toBe(EnumStatusCode.OK);
+
+    // Create feature subgraph based on GRPC service (replicating wgc feature-subgraph create)
+    const createFeatureSubgraph2Response = await client.createFederatedSubgraph({
+      name: featureSubgraphName2,
+      routingUrl: 'http://localhost:4003',
+      labels: [],
+      isFeatureSubgraph: true,
+      baseSubgraphName: baseGrpcServiceName,
+    });
+    expect(createFeatureSubgraph2Response.response?.code).toBe(EnumStatusCode.OK);
+
+    // Create second feature subgraph (replicating CLI call)
+    const publishFeatureSubgraph2Response = await client.publishFederatedSubgraph({
+      name: featureSubgraphName2,
+      schema: 'type Query { hello2: String }',
+      type: SubgraphType.GRPC_SERVICE,
+      proto: validGrpcProtoRequest,
+    });
+    expect(publishFeatureSubgraph2Response.response?.code).toBe(EnumStatusCode.OK);
+
+    // Verify both feature subgraphs were created with correct type
+    const getFeatureSubgraph1Response = await client.getSubgraphByName({
+      name: featureSubgraphName1,
+    });
+    expect(getFeatureSubgraph1Response.response?.code).toBe(EnumStatusCode.OK);
+    expect(getFeatureSubgraph1Response.graph?.type).toBe(SubgraphType.GRPC_SERVICE);
+    expect(getFeatureSubgraph1Response.graph?.isFeatureSubgraph).toBe(true);
+    expect(getFeatureSubgraph1Response.graph?.routingURL).toBe(DEFAULT_SUBGRAPH_URL_TWO);
+
+    const getFeatureSubgraph2Response = await client.getSubgraphByName({
+      name: featureSubgraphName2,
+    });
+    expect(getFeatureSubgraph2Response.response?.code).toBe(EnumStatusCode.OK);
+    expect(getFeatureSubgraph2Response.graph?.type).toBe(SubgraphType.GRPC_SERVICE);
+    expect(getFeatureSubgraph2Response.graph?.isFeatureSubgraph).toBe(true);
+    expect(getFeatureSubgraph2Response.graph?.routingURL).toBe('http://localhost:4003');
+
+    await server.close();
+  });
+
+  test('that publishFederatedSubgraph fails to publish gRPC service feature subgraph without required proto information', async () => {
+    const { client, server } = await SetupTest({ dbname });
+
+    const baseGrpcServiceName = genID('baseGrpcService');
+    const featureSubgraphName = genID('featureGrpcService');
+    const grpcServiceLabel = genUniqueLabel('grpc-service');
+
+    // Create a gRPC service base subgraph
+    const createBaseGrpcServiceResponse = await client.createFederatedSubgraph({
+      name: baseGrpcServiceName,
+      type: SubgraphType.GRPC_SERVICE,
+      routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+      labels: [grpcServiceLabel],
+    });
+    expect(createBaseGrpcServiceResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Create feature subgraph based on GRPC service (replicating wgc feature-subgraph create)
+    const createFeatureSubgraphResponse = await client.createFederatedSubgraph({
+      name: featureSubgraphName,
+      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      labels: [],
+      isFeatureSubgraph: true,
+      baseSubgraphName: baseGrpcServiceName,
+    });
+    expect(createFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Try to publish feature subgraph without proto information
+    const publishFeatureSubgraphResponse = await client.publishFederatedSubgraph({
+      name: featureSubgraphName,
+      schema: 'type Query { hello: String }',
+      type: SubgraphType.GRPC_SERVICE,
+      // Note: proto is missing - should fail
+    });
+
+    expect(publishFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR);
+    expect(publishFeatureSubgraphResponse.response?.details).toBe(
+      'The proto is required for plugin and grpc subgraphs.',
     );
 
     await server.close();
