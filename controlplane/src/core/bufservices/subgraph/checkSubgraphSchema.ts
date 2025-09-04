@@ -364,7 +364,7 @@ export function checkSubgraphSchema(
       // If the graph pruning is disabled in the source namespace, the graphql schema is not computed,
       // so here we need to check if the target subgraph has graph pruning enabled and if so, we need to compute the graphql schema
       if (!targetNewGraphQLSchema && targetNamespace.enableGraphPruning) {
-        const parsedSchema = parse(targetSubgraph.schemaSDL);
+        const parsedSchema = parse(newSchemaSDL);
         // this new GraphQL schema contains the location info
         targetNewGraphQLSchema = buildASTSchema(parsedSchema, { assumeValid: true, assumeValidSDL: true });
       }
