@@ -46,7 +46,7 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
 
-  command.action(async (options) => {
+  command.action(async (name, options) => {
     const schemaFile = resolve(options.schema);
     if (!existsSync(schemaFile)) {
       program.error(
@@ -136,7 +136,7 @@ export default (opts: BaseCommandOptions) => {
 
     const resp = await opts.client.platform.publishFederatedSubgraph(
       {
-        name: options.name,
+        name,
         namespace: options.namespace,
         schema,
         // Optional when subgraph does not exist yet
@@ -159,7 +159,7 @@ export default (opts: BaseCommandOptions) => {
         spinner.succeed(
           resp?.hasChanged === false
             ? 'No new changes to publish.'
-            : `The gRPC subgraph ${pc.bold(options.name)} published successfully.`,
+            : `The gRPC subgraph ${pc.bold(name)} published successfully.`,
         );
         console.log('');
         console.log(
@@ -172,7 +172,7 @@ export default (opts: BaseCommandOptions) => {
         break;
       }
       case EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL: {
-        spinner.fail(`Failed to publish gRPC subgraph "${options.name}".`);
+        spinner.fail(`Failed to publish gRPC subgraph "${name}".`);
         console.log(pc.red(`Error: Proposal match failed`));
         console.log(pc.red(resp.proposalMatchMessage));
         break;
@@ -251,7 +251,7 @@ export default (opts: BaseCommandOptions) => {
         break;
       }
       default: {
-        spinner.fail(`Failed to publish gRPC subgraph "${options.name}".`);
+        spinner.fail(`Failed to publish gRPC subgraph "${name}".`);
         if (resp.response?.details) {
           console.error(pc.red(pc.bold(resp.response?.details)));
         }
