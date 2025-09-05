@@ -1,4 +1,4 @@
-FROM --platform=${BUILDPLATFORM} golang:1.23 AS builder
+FROM --platform=${BUILDPLATFORM} golang:1.25 AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -16,7 +16,7 @@ RUN ./ocb --config otelcol-builder.yaml \
     && chmod +x /app/otelcol-dev/otelcol \
     && /app/otelcol-dev/otelcol --version
 
-FROM --platform=${BUILDPLATFORM} golang:1.23
+FROM --platform=${BUILDPLATFORM} golang:1.25
 
 COPY ./otel-config.yaml /etc/otel-config.yaml
 COPY --from=builder /app/otelcol-dev/otelcol /otelcol
