@@ -6,7 +6,7 @@
 const goMod = `
 module {modulePath}
 
-go 1.24.1
+go 1.25.1
 
 require (
   github.com/stretchr/testify v1.10.0
@@ -402,7 +402,7 @@ generated/service.proto
 bin/
 `;
 
-const dockerfile = `FROM --platform=$BUILDPLATFORM golang:1.24-alpine AS builder
+const dockerfile = `FROM --platform=$BUILDPLATFORM golang:1.25-alpine AS builder
 
 # Multi-platform build arguments
 ARG TARGETOS

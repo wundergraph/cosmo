@@ -1,6 +1,6 @@
 module github.com/wundergraph/cosmo/router-tests
 
-go 1.23.0
+go 1.25
 
 require (
 	github.com/MicahParks/jwkset v0.9.0
