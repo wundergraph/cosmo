@@ -18,6 +18,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/nats-io/nuid"
 	"github.com/wundergraph/cosmo/router/internal/track"
+	"github.com/wundergraph/cosmo/router/pkg/json_rpc_server"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
@@ -818,6 +819,71 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		}
 	}
 
+	if r.jsonRPC.Enabled {
+		var operationsDir string
+
+		// If storage provider ID is set, resolve it to a directory path
+		if r.jsonRPC.StorageProviderID != "" {
+			r.logger.Debug("Resolving storage provider for JSON-RPC operations",
+				zap.String("provider_id", r.jsonRPC.StorageProviderID))
+
+			// Find the provider in storage_providers
+			found := false
+
+			// Check for file_system providers
+			for _, provider := range r.storageProviders.FileSystem {
+				if provider.ID == r.jsonRPC.StorageProviderID {
+					r.logger.Debug("Found file_system storage provider for JSON-RPC",
+						zap.String("id", provider.ID),
+						zap.String("path", provider.Path))
+
+					// Use the resolved file system path
+					operationsDir = provider.Path
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				return fmt.Errorf("storage provider with id '%s' for json-rpc server not found", r.jsonRPC.StorageProviderID)
+			}
+		} else {
+			// Use the configured operations directory
+			operationsDir = r.jsonRPC.OperationsDir
+		}
+
+		// Determine the router GraphQL endpoint
+		var routerGraphQLEndpoint string
+		if r.jsonRPC.RouterGraphQLEndpoint != "" {
+			routerGraphQLEndpoint = r.jsonRPC.RouterGraphQLEndpoint
+		} else {
+			routerGraphQLEndpoint = fmt.Sprintf("http://%s%s", r.listenAddr, r.graphqlPath)
+		}
+
+		// Create JSON-RPC server configuration
+		jsonRPCConfig := &json_rpc_server.JSONRPCServerConfig{
+			ListenAddr:            r.jsonRPC.ListenAddr,
+			OperationsDir:         operationsDir,
+			RouterGraphQLEndpoint: routerGraphQLEndpoint,
+			RequestTimeout:        r.jsonRPC.RequestTimeout,
+			Logger:                r.logger.With(zap.String("component", "json_rpc_server")),
+			HTTPClient:            http.DefaultClient,
+		}
+
+		// Create and start JSON-RPC server
+		jsonRPCServer := json_rpc_server.NewJSONRPCServer(jsonRPCConfig)
+		if err := jsonRPCServer.Start(ctx); err != nil {
+			return fmt.Errorf("failed to start JSON-RPC server: %w", err)
+		}
+
+		r.jsonRPCServer = jsonRPCServer
+
+		r.logger.Info("JSON-RPC server started",
+			zap.String("listen_addr", r.jsonRPC.ListenAddr),
+			zap.String("operations_dir", operationsDir),
+			zap.String("router_endpoint", routerGraphQLEndpoint))
+	}
+
 	if r.mcp.Enabled {
 		var operationsDir string
 
@@ -1410,6 +1476,16 @@ func (r *Router) Shutdown(ctx context.Context) error {
 			defer wg.Done()
 			if subErr := r.mcpServer.Stop(ctx); subErr != nil {
 				err.Append(fmt.Errorf("failed to shutdown mcp server: %w", subErr))
+			}
+		}()
+	}
+
+	if r.jsonRPCServer != nil {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if subErr := r.jsonRPCServer.Stop(ctx); subErr != nil {
+				err.Append(fmt.Errorf("failed to shutdown json-rpc server: %w", subErr))
 			}
 		}()
 	}
@@ -2076,6 +2152,12 @@ func WithCacheWarmupConfig(cfg *config.CacheWarmupConfiguration) Option {
 func WithMCP(cfg config.MCPConfiguration) Option {
 	return func(r *Router) {
 		r.mcp = cfg
+	}
+}
+
+func WithJSONRPC(cfg config.JSONRPCConfiguration) Option {
+	return func(r *Router) {
+		r.jsonRPC = cfg
 	}
 }
 

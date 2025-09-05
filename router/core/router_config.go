@@ -15,6 +15,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/selfregister"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/health"
+	"github.com/wundergraph/cosmo/router/pkg/json_rpc_server"
 	"github.com/wundergraph/cosmo/router/pkg/mcpserver"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
@@ -84,7 +85,6 @@ type Config struct {
 	accessController                *AccessController
 	retryOptions                    retrytransport.RetryOptions
 	redisClient                     rd.RDCloser
-	mcpServer                       *mcpserver.GraphQLSchemaServer
 	processStartTime                time.Time
 	developmentMode                 bool
 	healthcheck                     health.Checker
@@ -116,6 +116,9 @@ type Config struct {
 	subscriptionHeartbeatInterval time.Duration
 	hostName                      string
 	mcp                           config.MCPConfiguration
+	mcpServer                     *mcpserver.GraphQLSchemaServer
+	jsonRPC                       config.JSONRPCConfiguration
+	jsonRPCServer                 *json_rpc_server.JSONRPCServer
 	plugins                       config.PluginsConfiguration
 	tracingAttributes             []config.CustomAttribute
 }
@@ -301,6 +304,8 @@ func (c *Config) Usage() map[string]any {
 	usage["mcp_enable_arbitrary_operations"] = c.mcp.EnableArbitraryOperations
 	usage["mcp_exclude_mutations"] = c.mcp.ExcludeMutations
 	usage["mcp_expose_schema"] = c.mcp.ExposeSchema
+
+	usage["json_rpc"] = c.jsonRPC.Enabled
 
 	usage["cosmo_cdn"] = c.cdnConfig.URL == "https://cosmo-cdn.wundergraph.com"
 
