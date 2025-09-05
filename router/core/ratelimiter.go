@@ -6,10 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	rd "github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
 	"io"
 	"reflect"
 	"sync"
+
+	rd "github.com/wundergraph/cosmo/router/internal/rediscloser"
 
 	"github.com/expr-lang/expr/vm"
 	"github.com/go-redis/redis_rate/v10"

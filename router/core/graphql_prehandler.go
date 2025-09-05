@@ -472,14 +472,25 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 }
 
 func (h *PreHandler) shouldComputeOperationSha256(operationKit *OperationKit) bool {
+	// If forced, always compute the hash
 	if h.computeOperationSha256 {
 		return true
 	}
 
 	hasPersistedHash := operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash()
+
+	// If it has a hash already AND a body, we need to compute the hash again to ensure it matches the persisted hash
+	if hasPersistedHash && operationKit.parsedOperation.Request.Query != "" {
+		return true
+	}
+
 	// If it already has a persisted hash attached to the request, then there is no need for us to compute it anew.
 	// Otherwise, we only want to compute the hash (an expensive operation) if we're safelisting or logging unknown persisted operations
-	return !hasPersistedHash && (h.operationBlocker.safelistEnabled || h.operationBlocker.logUnknownOperationsEnabled)
+	if !hasPersistedHash && (h.operationBlocker.safelistEnabled || h.operationBlocker.logUnknownOperationsEnabled) {
+		return true
+	}
+
+	return false
 }
 
 // shouldFetchPersistedOperation determines if we should fetch a persisted operation. The most intuitive case is if the
@@ -556,6 +567,16 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		}
 	}
 
+	// Ensure if request has both hash and query, that the hash matches the query
+	if operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() && operationKit.parsedOperation.Request.Query != "" {
+		if operationKit.parsedOperation.Sha256Hash != operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash {
+			return &httpGraphqlError{
+				message:    "persistedQuery sha256 hash does not match query body",
+				statusCode: http.StatusBadRequest,
+			}
+		}
+	}
+
 	requestContext.operation.extensions = operationKit.parsedOperation.Request.Extensions
 	requestContext.operation.variables, err = variablesParser.ParseBytes(operationKit.parsedOperation.Request.Variables)
 	if err != nil {
@@ -571,13 +592,6 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	)
 
 	if h.shouldFetchPersistedOperation(operationKit) {
-		if h.operationBlocker.persistedOperationsDisabled {
-			return &httpGraphqlError{
-				message:    "persisted operations are disabled",
-				statusCode: http.StatusBadRequest,
-			}
-		}
-
 		ctx, span := h.tracer.Start(req.Context(), "Load Persisted Operation",
 			trace.WithSpanKind(trace.SpanKindClient),
 			trace.WithAttributes(requestContext.telemetry.traceAttrs...),
