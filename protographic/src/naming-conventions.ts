@@ -1,4 +1,4 @@
-import { camelCase, snakeCase, upperFirst } from 'lodash-es';
+import { camelCase, lowerFirst, snakeCase, upperFirst } from 'lodash-es';
 
 /**
  * Shared naming conventions for converting GraphQL to Protocol Buffers
@@ -31,6 +31,10 @@ export function graphqlArgumentToProtoField(argName: string): string {
  */
 export function createOperationMethodName(operationType: OperationTypeName, fieldName: string): string {
   return `${operationType}${upperFirst(camelCase(fieldName))}`;
+}
+
+export function createResolverMethodName(parentTypeName: string, fieldName: string): string {
+  return `Resolve${upperFirst(camelCase(parentTypeName))}${upperFirst(camelCase(fieldName))}`;
 }
 
 /**
@@ -73,4 +77,43 @@ export function graphqlEnumValueToProtoEnumValue(enumTypeName: string, enumValue
  */
 export function createEnumUnspecifiedValue(enumTypeName: string): string {
   return `${snakeCase(enumTypeName).toUpperCase()}_UNSPECIFIED`;
+}
+
+/**
+ * Creates a operation arguments name for an operation
+ * @param operationName - The name of the operation
+ * @param fieldName - The name of the field
+ * @returns The name of the operation arguments
+ */
+export function resolverRequestKeyName(requestName: string): string {
+  return `${upperFirst(camelCase(requestName))}Key`;
+}
+
+/**
+ * Creates a response result name for a resolver response
+ * @param responseName - The name of the response
+ * @returns The name of the response result
+ */
+export function resolverResponseResultName(responseName: string): string {
+  return `${upperFirst(camelCase(responseName))}Result`;
+}
+
+/**
+ * Creates a type field arguments name for a type field
+ * @param typeName - The name of the type
+ * @param fieldName - The name of the field
+ * @returns The name of the type field arguments
+ */
+export function typeFieldArgsName(typeName: string, fieldName: string): string {
+  return `${upperFirst(camelCase(typeName))}${upperFirst(camelCase(fieldName))}Args`;
+}
+
+/**
+ * Creates a proto field name that combines the parent type name and field name
+ * @param parentTypeName - The name of the parent type
+ * @param fieldName - The name of the field
+ * @returns The name of the proto field
+ */
+export function parentTypeNameProtoField(parentTypeName: string, fieldName: string): string {
+  return snakeCase(`${upperFirst(camelCase(parentTypeName))}${upperFirst(camelCase(fieldName))}`);
 }
