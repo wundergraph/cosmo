@@ -1749,7 +1749,7 @@ func TestNatsEvents(t *testing.T) {
 		})
 	})
 
-	t.Run("start multiple subscriptions and hot reload", func(t *testing.T) {
+	t.Run("start multiple subscriptions and hot reload should stop all the subscriptions", func(t *testing.T) {
 		pm := ConfigPollerMock{
 			ready: make(chan struct{}),
 		}
@@ -1783,29 +1783,20 @@ func TestNatsEvents(t *testing.T) {
 
 			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client1 := graphql.NewSubscriptionClient(surl)
-			// client1DisconnectedCh := make(chan struct{})
-			client1 = client1.WithRetryTimeout(0)
-			client1 = client1.WithRetryDelay(0)
-			client1 = client1.WithRetryStatusCodes()
-			// client1.OnDisconnected(func() {
-			// 	client1DisconnectedCh <- struct{}{}
-			// })
+			client1.OnError(func(client *graphql.SubscriptionClient, err error) error {
+				// avoid retry on error
+				return err
+			})
 			client2 := graphql.NewSubscriptionClient(surl)
-			// client2DisconnectedCh := make(chan struct{})
-			client2 = client2.WithRetryTimeout(0)
-			client2 = client2.WithRetryDelay(0)
-			client2 = client2.WithRetryStatusCodes()
-			// client2.OnDisconnected(func() {
-			// 	client2DisconnectedCh <- struct{}{}
-			// })
+			client2.OnError(func(client *graphql.SubscriptionClient, err error) error {
+				// avoid retry on error
+				return err
+			})
 			client3 := graphql.NewSubscriptionClient(surl)
-			// client3DisconnectedCh := make(chan struct{})
-			client3 = client3.WithRetryTimeout(0)
-			client3 = client3.WithRetryDelay(0)
-			client3 = client3.WithRetryStatusCodes()
-			// client3.OnDisconnected(func() {
-			// 	client3DisconnectedCh <- struct{}{}
-			// })
+			client3.OnError(func(client *graphql.SubscriptionClient, err error) error {
+				// avoid retry on error
+				return err
+			})
 			subOneDataCh := make(chan []byte)
 			subscriptionOneID, err := client1.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
 				subOneDataCh <- dataValue
@@ -1856,17 +1847,6 @@ func TestNatsEvents(t *testing.T) {
 			
 			xEnv.WaitForSubscriptionCount(0, NatsWaitTimeout)
 
-			// // Wait for the clients to be disconnected
-			// testenv.AwaitChannelWithT(t, NatsWaitTimeout, client1DisconnectedCh, func(t *testing.T, client1Disconnected struct{}) {
-			// 	return
-			// })
-			// testenv.AwaitChannelWithT(t, NatsWaitTimeout, client2DisconnectedCh, func(t *testing.T, client2Disconnected struct{}) {
-			// 	return
-			// })
-			// testenv.AwaitChannelWithT(t, NatsWaitTimeout, client3DisconnectedCh, func(t *testing.T, client3Disconnected struct{}) {
-			// 	return
-			// })
-
 			errUnsubscribeOne := client1.Unsubscribe(subscriptionOneID)
 			require.NoError(t, errUnsubscribeOne)
 			errUnsubscribeTwo := client2.Unsubscribe(subscriptionTwoID)
@@ -1874,55 +1854,27 @@ func TestNatsEvents(t *testing.T) {
 			errUnsubscribeThree := client3.Unsubscribe(subscriptionThreeID)
 			require.NoError(t, errUnsubscribeThree)
 
-			// err = xEnv.NatsConnectionMyNats.Publish(xEnv.GetPubSubName("employeeUpdatedMyNats.1"), []byte(`{"id":3,"__typename": "Employee"}`))
-			// require.NoError(t, err)
 
-			// err = xEnv.NatsConnectionMyNats.Flush()
-			// require.NoError(t, err)
+			// close the first client
+			errClose1 := client1.Close()
+			require.NoError(t, errClose1)
+			testenv.AwaitChannelWithT(t, NatsWaitTimeout, client1RunCh, func(t *testing.T, client1RunErr error) {
+				require.Error(t, client1RunErr)
+			})
 
-			// // Check that the data is received by the subscriptios
-			// testenv.AwaitChannelWithT(t, NatsWaitTimeout, subOneDataCh, func(t *testing.T, subOneData []byte) {
-			// 	require.JSONEq(t, `{"employeeUpdatedMyNats": {"id":3,"details": {"surname": "Avram"}}}`, string(subOneData))
-			// })
-			// testenv.AwaitChannelWithT(t, NatsWaitTimeout, subTwoDataCh, func(t *testing.T, subTwoData []byte) {
-			// 	require.JSONEq(t, `{"employeeUpdatedMyNats": {"id":3,"details": {"surname": "Avram"}}}`, string(subTwoData))
-			// })
-			// testenv.AwaitChannelWithT(t, NatsWaitTimeout, subThreeDataCh, func(t *testing.T, subThreeData []byte) {
-			// 	require.JSONEq(t, `{"employeeUpdatedMyNats": {"id":3,"details": {"surname": "Avram"}}}`, string(subThreeData))
-			// })
+			// close the second client
+			errClose2 := client2.Close()
+			require.NoError(t, errClose2)
+			testenv.AwaitChannelWithT(t, NatsWaitTimeout, client2RunCh, func(t *testing.T, client2RunErr error) {
+				require.Error(t, client2RunErr)
+			})
 
-			// Unsubscribe from the first subscription
-			// errUnsubscribeOne := client1.Unsubscribe(subscriptionOneID)
-			// require.NoError(t, errUnsubscribeOne)
-			// xEnv.WaitForSubscriptionCount(2, NatsWaitTimeout)
-
-			// // Unsubscribe from the second subscription
-			// errUnsubscribeTwo := client2.Unsubscribe(subscriptionTwoID)
-			// require.NoError(t, errUnsubscribeTwo)
-			// errUnsubscribeThree := client3.Unsubscribe(subscriptionThreeID)
-			// require.NoError(t, errUnsubscribeThree)
-			// xEnv.WaitForSubscriptionCount(0, NatsWaitTimeout)
-
-			// // close the first client
-			// errClose1 := client1.Close()
-			// require.NoError(t, errClose1)
-			// testenv.AwaitChannelWithT(t, NatsWaitTimeout, client1RunCh, func(t *testing.T, client1RunErr error) {
-			// 	require.NoError(t, client1RunErr)
-			// })
-
-			// // close the second client
-			// errClose2 := client2.Close()
-			// require.NoError(t, errClose2)
-			// testenv.AwaitChannelWithT(t, NatsWaitTimeout, client2RunCh, func(t *testing.T, client2RunErr error) {
-			// 	require.NoError(t, client2RunErr)
-			// })
-
-			// // close the third client
-			// errClose3 := client3.Close()
-			// require.NoError(t, errClose3)
-			// testenv.AwaitChannelWithT(t, NatsWaitTimeout, client3RunCh, func(t *testing.T, client3RunErr error) {
-			// 	require.NoError(t, client3RunErr)
-			// })
+			// close the third client
+			errClose3 := client3.Close()
+			require.NoError(t, errClose3)
+			testenv.AwaitChannelWithT(t, NatsWaitTimeout, client3RunCh, func(t *testing.T, client3RunErr error) {
+				require.Error(t, client3RunErr)
+			})
 		})
 	})
 }
