@@ -6,6 +6,7 @@ import {
   GraphQLEnumType,
   GraphQLEnumValue,
   GraphQLField,
+  GraphQLID,
   GraphQLInputField,
   GraphQLInputObjectType,
   GraphQLInterfaceType,
@@ -20,6 +21,7 @@ import {
   isInputObjectType,
   isInterfaceType,
   isListType,
+  isNamedType,
   isNonNullType,
   isObjectType,
   isScalarType,
@@ -32,9 +34,14 @@ import {
   createEnumUnspecifiedValue,
   createOperationMethodName,
   createRequestMessageName,
+  createResolverMethodName,
   createResponseMessageName,
   graphqlEnumValueToProtoEnumValue,
   graphqlFieldToProtoField,
+  parentTypeNameProtoField,
+  resolverRequestKeyName,
+  resolverResponseResultName,
+  typeFieldArgsName,
 } from './naming-conventions.js';
 import { camelCase } from 'lodash-es';
 import { ProtoLock, ProtoLockManager } from './proto-lock.js';
@@ -102,6 +109,20 @@ interface ProtoType {
 interface KeyDirective {
   keyString: string;
   resolvable: boolean;
+}
+
+interface ProtoMessageField {
+  fieldName: string;
+  typeName: string;
+  fieldNumber: number;
+  isRepeated?: boolean;
+  description?: string;
+}
+
+interface ProtoMessage {
+  messageName: string;
+  reservedNumbers?: string;
+  fields: ProtoMessageField[];
 }
 
 /**
@@ -445,18 +466,20 @@ export class GraphQLToProtoTextVisitor {
    */
   public visit(): string {
     // Collect RPC methods and message definitions from all sources
+    const resolverResult = this.collectResolverRpcMethods();
     const entityResult = this.collectEntityRpcMethods();
     const queryResult = this.collectQueryRpcMethods();
     const mutationResult = this.collectMutationRpcMethods();
 
     // Combine all RPC methods and message definitions
-    const allRpcMethods = [...entityResult.rpcMethods, ...queryResult.rpcMethods, ...mutationResult.rpcMethods];
-    const allMethodNames = [...entityResult.methodNames, ...queryResult.methodNames, ...mutationResult.methodNames];
+    const allRpcMethods = [...entityResult.rpcMethods, ...queryResult.rpcMethods, ...mutationResult.rpcMethods, ...resolverResult.rpcMethods];
+    const allMethodNames = [...entityResult.methodNames, ...queryResult.methodNames, ...mutationResult.methodNames, ...resolverResult.methodNames];
 
     const allMessageDefinitions = [
       ...entityResult.messageDefinitions,
       ...queryResult.messageDefinitions,
       ...mutationResult.messageDefinitions,
+      ...resolverResult.messageDefinitions,
     ];
 
     // Add all types from the schema to the queue that weren't already queued
@@ -1083,6 +1106,274 @@ Example:
     return result;
   }
 
+  private collectResolverRpcMethods(): CollectionResult {
+    const typeMap = this.schema.getTypeMap();
+    const result: CollectionResult = { rpcMethods: [], methodNames: [], messageDefinitions: [] };
+
+    Object.entries(typeMap).forEach(([_, type]) => {
+      if (!isObjectType(type) || this.isOperationType(type)) {
+        return;
+      }
+
+      const fields = type.getFields();
+
+      Object.entries(fields).forEach(([_, field]) => {
+        if (field.args.length === 0) {
+          return;
+        }
+
+        const mappedName = createResolverMethodName(type.name, field.name);
+        const requestName = createRequestMessageName(mappedName);
+        const responseName = createResponseMessageName(mappedName);
+
+        // Add method name and RPC method with the field description
+        result.methodNames.push(mappedName);
+        result.rpcMethods.push(this.createRpcMethod(mappedName, requestName, responseName, field.description));
+
+        result.messageDefinitions.push(...this.createResolverRequestMessage(requestName, type, field));
+        result.messageDefinitions.push(...this.createResolverResponseMessage(responseName, type, field));
+      });
+    });
+
+    return result;
+  }
+
+  private getFieldContext(parent: GraphQLObjectType, field: GraphQLField<any, any>): { context: string, error: string | undefined } {
+    const resolvedDirective = this.findResolvedDirective(field);
+    if (resolvedDirective) {
+      const valueNode = resolvedDirective.arguments?.find((arg) => arg.name.value === 'context')?.value;
+      const context = (() => {
+        if (!valueNode || valueNode.kind !== 'StringValue') {
+          return '';
+        }
+
+        return valueNode.value.trim();
+      })();
+
+      if (context.length > 0) {
+        return { context, error: undefined };
+      }
+    }
+
+    const idFields = this.getIDFields(parent, field.name);
+    switch (idFields.length) {
+      case 0:
+        return { context: '', error: 'No fields with type ID found' };
+      case 1:
+        return { context: idFields[0].name, error: undefined };
+      default:
+        return { context: '', error: 'Multiple fields with type ID found - provide a context with the fields you want to use in the @resolved directive' };
+    }
+  }
+
+  private getIDFields(type: GraphQLObjectType, currentFieldName: string): GraphQLField<any, any>[] {
+    const fields = type.getFields();
+    const result = Object.entries(fields)
+      .map(([_, field]) => {
+        const underlyingType = this.getUnderlyingType(field.type);
+        if (underlyingType.name === GraphQLID.name && field.name !== currentFieldName) {
+          return field;
+        }
+
+        return undefined;
+      })
+      .filter((f) => f !== undefined);
+
+    return result;
+  }
+
+  private getUnderlyingType(type: GraphQLType): GraphQLNamedType {
+    while (!isNamedType(type)) {
+      type = type.ofType;
+    }
+
+    return type;
+  }
+
+  private findResolvedDirective(field: GraphQLField<any, any>): DirectiveNode | undefined {
+    const directives = field.astNode?.directives;
+    if (!directives) {
+      return undefined;
+    }
+
+    return directives.find((d) => d.name.value === 'resolved');
+  }
+
+  /**
+   * Creates a request message for a resolver field. This message is used to
+   * pass the arguments to the resolver method.
+   * 
+   * @example
+   * ```protobuf
+      message UserPostArgs {
+        bool upper = 1;
+      }
+
+      message ResolveUserPostRequestKey {
+        string user_id = 1;
+        UserPostArgs user_post_args = 2;
+      }
+
+      message ResolveUserPostRequest {
+        repeated ResolveUserPostRequestKey key = 1;
+      }
+   * 
+   * ```
+   * @param requestName - The name of the request message
+   * @param field 
+   * @returns 
+   */
+  private createResolverRequestMessage(
+    requestName: string,
+    parent: GraphQLObjectType,
+    field: GraphQLField<any, any>,
+  ): string[] {
+    const messageLines: string[] = [];
+    const {context, error} = this.getFieldContext(parent, field);
+
+    if (error) {
+      throw new Error(
+        `Invalid field context for resolver. ${error}`,
+      );
+    }
+
+    const argsMessageName = typeFieldArgsName(parent.name, field.name);
+
+    // Build the arguments message
+    let fieldNumber = 0;
+    messageLines.push(
+      ...this.buildMessage({
+        messageName: argsMessageName,
+        fields: field.args.map((arg) => ({
+          fieldName: graphqlFieldToProtoField(arg.name),
+          typeName: this.getProtoTypeFromGraphQL(arg.type).typeName,
+          fieldNumber: ++fieldNumber,
+        })),
+      }),
+    );
+
+
+    // build the key message
+    const searchFields = context.split(/[,\s]+/).filter((field) => field.length > 0);
+    const fieldFilter = Object.entries(parent.getFields())
+      .filter(([_, field]) => searchFields.includes(field.name))
+      .map(([_, field]) => field);
+    if (searchFields.length !== fieldFilter.length) {
+      throw new Error(
+        `Invalid field context for resolver. Could not find all fields in the parent type: ${context}`,
+      );
+    }
+
+    fieldNumber = 0;
+    let keyMessageFields: ProtoMessageField[] = fieldFilter.map((field) => ({
+      fieldName: parentTypeNameProtoField(parent.name, field.name),
+      typeName: this.getProtoTypeFromGraphQL(field.type).typeName,
+      fieldNumber: ++fieldNumber,
+    }));
+
+    // add the args message to the key message
+    keyMessageFields.push({
+      fieldName: graphqlFieldToProtoField(argsMessageName),
+      typeName: argsMessageName,
+      fieldNumber: ++fieldNumber,
+    });
+
+    const keyMessageName = resolverRequestKeyName(requestName);
+    messageLines.push(
+      ...this.buildMessage({
+        messageName: keyMessageName,
+        fields: keyMessageFields,
+      }),
+    );
+
+    // build the actual request message
+
+    messageLines.push(
+      ...this.buildMessage({
+        messageName: requestName,
+        fields: [
+          {
+            fieldName: 'key',
+            typeName: keyMessageName,
+            fieldNumber: 1,
+            isRepeated: true,
+          },
+        ],
+      }),
+    );
+
+    this.processedTypes.add(argsMessageName);
+    this.processedTypes.add(keyMessageName);
+    this.processedTypes.add(requestName);
+
+    return messageLines;
+  }
+
+  /**
+   * Creates a response message for a resolver field. This message is used to
+   * pass the response from the resolver method.
+   * 
+   * @example
+   * ```protobuf
+      message ResolveUserPostsResult {
+        string user_id = 1;
+        ListOfPost posts = 2;
+      }
+
+      message ResolveUserPostsResponse {
+        repeated ResolveUserPostsResult result = 1;
+      }      
+
+   * ```
+   * @param responseName
+   * @param fieldName
+   * @param field
+   * @returns string[] - The protobuf text generated for the response message
+   */
+  private createResolverResponseMessage(
+    responseName: string,
+    parent: GraphQLObjectType,
+    field: GraphQLField<any, any>,
+  ): string[] {
+    console.log('createResolverResponseMessage', responseName, parent, field);
+    const messageLines: string[] = [];
+
+
+    // CreateResultMessage
+    const resultMessageName = resolverResponseResultName(responseName);
+    const protoType = this.getProtoTypeFromGraphQL(field.type);
+
+    messageLines.push(...this.buildMessage({
+      messageName: resultMessageName,
+      fields: [{
+        fieldName: graphqlFieldToProtoField(field.name),
+        typeName: protoType.typeName,
+        fieldNumber: 1,
+      }]
+    }))
+
+    messageLines.push(...this.buildMessage({
+      messageName: responseName,
+      fields: [{
+        fieldName: 'result',
+        typeName: resultMessageName,
+        fieldNumber: 1,
+        isRepeated: true,
+      }]
+    }))
+
+
+    return messageLines;
+  }
+
+  private isOperationType(type: GraphQLObjectType): boolean {
+    if (type.name.startsWith('__') || type.name === '_Entity') {
+      return true;
+    }
+
+    return type.name === 'Query' || type.name === 'Mutation' || type.name === 'Subscription';
+  }
+
   /**
    * Queue all types from the schema that need processing
    */
@@ -1170,11 +1461,13 @@ Example:
       return;
     }
 
+    const fieldsWithoutArguments = Object.values(type.getFields()).filter((field) => field.args.length === 0);
+
     // Check for field removals if lock data exists for this type
     const lockData = this.lockManager.getLockData();
     if (lockData.messages[type.name]) {
       const originalFieldNames = Object.keys(lockData.messages[type.name].fields);
-      const currentFieldNames = Object.keys(type.getFields());
+      const currentFieldNames = fieldsWithoutArguments.map((field) => field.name);
       this.trackRemovedFields(type.name, originalFieldNames, currentFieldNames);
     }
 
@@ -1203,7 +1496,12 @@ Example:
     for (const fieldName of orderedFieldNames) {
       if (!fields[fieldName]) continue;
 
+      // ignore fields with arguments as those are handled in separate resolver rpcs
       const field = fields[fieldName];
+      if (field.args.length > 0) {
+        continue;
+      }
+
       const fieldType = this.getProtoTypeFromGraphQL(field.type);
       const protoFieldName = graphqlFieldToProtoField(fieldName);
       const deprecationInfo = this.fieldIsDeprecated(field, [...type.getInterfaces()]);
@@ -1888,5 +2186,38 @@ Example:
     } else {
       return [`${indent}/*`, ...lines.map((line) => `${indent} * ${line}`), `${indent} */`];
     }
+  }
+
+  /**
+   * Builds a message definition from a ProtoMessage object
+   * @param message - The ProtoMessage object
+   * @returns The message definition
+   */
+  private buildMessage(message: ProtoMessage): string[] {
+    const messageLines: string[] = [];
+    messageLines.push(`message ${message.messageName} {`);
+    if (message.reservedNumbers && message.reservedNumbers.length > 0) {
+      messageLines.push(this.formatIndent(1, `reserved ${message.reservedNumbers};`));
+    }
+
+    message.fields.forEach((field) => {
+      let repeated = field.isRepeated ? 'repeated ' : '';
+
+      messageLines.push(
+        this.formatIndent(1, `${repeated}${field.typeName} ${field.fieldName} = ${field.fieldNumber};`),
+      );
+    });
+    messageLines.push('}', '');
+    return messageLines;
+  }
+
+  /**
+   * Formats the indent for the content
+   * @param indent - The indent level
+   * @param content - The content to format
+   * @returns The formatted content
+   */
+  private formatIndent(indent: number, content: string): string {
+    return '  '.repeat(indent) + content;
   }
 }

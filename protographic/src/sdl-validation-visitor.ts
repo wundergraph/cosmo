@@ -10,7 +10,24 @@ import {
   visit,
   FieldDefinitionNode,
   ObjectTypeDefinitionNode,
+  NamedTypeNode,
+  GraphQLID,
+  ConstArgumentNode,
 } from 'graphql';
+
+/**
+ * Type mapping from Kind enum values to their corresponding AST node types
+ */
+type KindToNodeTypeMap = {
+  [Kind.LIST_TYPE]: ListTypeNode;
+  [Kind.OBJECT_TYPE_DEFINITION]: ObjectTypeDefinitionNode;
+  [Kind.FIELD_DEFINITION]: FieldDefinitionNode;
+};
+
+/**
+ * Helper type to get the AST node type for a given Kind
+ */
+type NodeTypeForKind<K extends keyof KindToNodeTypeMap> = KindToNodeTypeMap[K];
 
 /**
  * Result of SDL validation containing categorized issues
@@ -25,7 +42,7 @@ export interface ValidationResult {
 /**
  * Configuration for a specific validation rule with feature gate support
  */
-interface FeatureGate {
+interface LintingRule<K extends keyof KindToNodeTypeMap = keyof KindToNodeTypeMap> {
   /** Unique identifier for the validation rule */
   name: string;
   /** Human-readable description of what this rule validates */
@@ -33,15 +50,25 @@ interface FeatureGate {
   /** Whether this validation rule is currently active */
   enabled: boolean;
   /** The AST node kind this rule applies to */
-  nodeKind: Kind;
+  nodeKind: K;
   /** The validation function to execute for matching nodes */
-  validationFunction: ValidationFunction;
+  validationFunction: ValidationFunction<K>;
 }
+
+type VisitContext<T extends ASTNode> = {
+  node: T;
+  key: string | number | undefined;
+  parent: ASTNode | ReadonlyArray<ASTNode> | undefined;
+  path: ReadonlyArray<string | number>;
+  ancestors: ReadonlyArray<ASTNode | ReadonlyArray<ASTNode>>;
+};
 
 /**
  * Function signature for validation rules that process AST nodes
  */
-type ValidationFunction = (node: ASTNode) => void;
+type ValidationFunction<K extends keyof KindToNodeTypeMap = keyof KindToNodeTypeMap> = (
+  ctx: VisitContext<NodeTypeForKind<K>>,
+) => void;
 
 /**
  * Additional context information for validation messages
@@ -59,7 +86,8 @@ interface MessageContext {
 export class SDLValidationVisitor {
   private readonly schema: string;
   private readonly validationResult: ValidationResult;
-  private featureGates: FeatureGate[] = [];
+  private lintingRules: LintingRule<any>[] = [];
+  private visitor: ASTVisitor;
 
   /**
    * Creates a new SDL validation visitor for the given GraphQL schema
@@ -72,7 +100,8 @@ export class SDLValidationVisitor {
       warnings: [],
     };
 
-    this.initializeFeatureGates();
+    this.initializeLintingRules();
+    this.visitor = this.createASTVisitor();
   }
 
   /**
@@ -80,36 +109,40 @@ export class SDLValidationVisitor {
    * Each rule validates a specific aspect of the GraphQL schema
    * @private
    */
-  private initializeFeatureGates(): void {
-    this.featureGates = [
-      {
-        name: 'nested-key-directives',
-        description: 'Validates that @key directives do not contain nested field selections',
-        enabled: true,
-        nodeKind: Kind.OBJECT_TYPE_DEFINITION,
-        validationFunction: (node: ASTNode) => {
-          return this.validateObjectTypeKeyDirectives(node as ObjectTypeDefinitionNode);
-        },
-      },
-      {
-        name: 'nullable-items-in-list-types',
-        description: 'Validates that list types do not contain nullable items',
-        enabled: true,
-        nodeKind: Kind.LIST_TYPE,
-        validationFunction: (node: ASTNode) => {
-          return this.validateListTypeNullability(node as ListTypeNode);
-        },
-      },
-      {
-        name: 'use-of-requires',
-        description: 'Validates usage of @requires directive which is not yet supported',
-        enabled: true,
-        nodeKind: Kind.FIELD_DEFINITION,
-        validationFunction: (node: ASTNode) => {
-          return this.validateRequiresDirective(node as FieldDefinitionNode);
-        },
-      },
-    ];
+  private initializeLintingRules(): void {
+    const objectTypeRule: LintingRule<Kind.OBJECT_TYPE_DEFINITION> = {
+      name: 'nested-key-directives',
+      description: 'Validates that @key directives do not contain nested field selections',
+      enabled: true,
+      nodeKind: Kind.OBJECT_TYPE_DEFINITION,
+      validationFunction: (ctx) => this.validateObjectTypeKeyDirectives(ctx),
+    };
+
+    const listTypeRule: LintingRule<Kind.LIST_TYPE> = {
+      name: 'nullable-items-in-list-types',
+      description: 'Validates that list types do not contain nullable items',
+      enabled: true,
+      nodeKind: Kind.LIST_TYPE,
+      validationFunction: (ctx) => this.validateListTypeNullability(ctx),
+    };
+
+    const requiresRule: LintingRule<Kind.FIELD_DEFINITION> = {
+      name: 'use-of-requires',
+      description: 'Validates usage of @requires directive which is not yet supported',
+      enabled: true,
+      nodeKind: Kind.FIELD_DEFINITION,
+      validationFunction: (ctx) => this.validateRequiresDirective(ctx),
+    };
+
+    const resolverContextRule: LintingRule<Kind.FIELD_DEFINITION> = {
+      name: 'use-of-invalid-resolver-context',
+      description: 'Validates whether a resolver context can be extracted from a type',
+      enabled: true,
+      nodeKind: Kind.FIELD_DEFINITION,
+      validationFunction: (ctx) => this.validateInvalidResolverContext(ctx),
+    };
+
+    this.lintingRules = [objectTypeRule, listTypeRule, requiresRule, resolverContextRule];
   }
 
   /**
@@ -124,8 +157,7 @@ export class SDLValidationVisitor {
         throw new Error('Schema parsing resulted in null AST');
       }
 
-      const visitor = this.createASTVisitor();
-      visit(astNode, visitor);
+      visit(astNode, this.visitor);
 
       return this.validationResult;
     } catch (error) {
@@ -151,24 +183,24 @@ export class SDLValidationVisitor {
       /**
        * Handle list type nodes - validate nullability rules
        */
-      ListType: (node) => {
-        this.executeValidationRules(node);
+      ListType: (node, key, parent, path, ancestors) => {
+        this.executeValidationRules({ node, key, parent, path, ancestors });
         return node;
       },
 
       /**
        * Handle object type definition nodes - validate directives
        */
-      ObjectTypeDefinition: (node) => {
-        this.executeValidationRules(node);
+      ObjectTypeDefinition: (node, key, parent, path, ancestors) => {
+        this.executeValidationRules({ node: node, key, parent, path, ancestors });
         return node;
       },
 
       /**
        * Handle field definition nodes - validate field-level directives
        */
-      FieldDefinition: (node) => {
-        this.executeValidationRules(node);
+      FieldDefinition: (node, key, parent, path, ancestors) => {
+        this.executeValidationRules({ node, key, parent, path, ancestors });
         return node;
       },
     };
@@ -176,23 +208,25 @@ export class SDLValidationVisitor {
 
   /**
    * Execute all enabled validation rules that apply to the given AST node
-   * @param node - The AST node to validate
+   * @param ctx - The AST node context to validate
    * @private
    */
-  private executeValidationRules(node: ASTNode): void {
-    const applicableRules = this.getApplicableValidationRules(node);
-    for (const validationRule of applicableRules) {
-      validationRule(node);
+  private executeValidationRules(ctx: VisitContext<ASTNode>): void {
+    const applicableRules = this.lintingRules.filter((rule) => rule.nodeKind === ctx.node.kind && rule.enabled);
+
+    for (const rule of applicableRules) {
+      // Type assertion is safe here because we've filtered by nodeKind
+      (rule.validationFunction as any)(ctx);
     }
   }
 
   /**
    * Validate list type nodes to ensure they don't contain nullable items
-   * @param node - The ListTypeNode to validate
+   * @param ctx - The VisitContext containing the ListTypeNode to validate
    * @private
    */
-  private validateListTypeNullability(node: ListTypeNode): void {
-    let currentNode: TypeNode = node;
+  private validateListTypeNullability(ctx: VisitContext<ListTypeNode>): void {
+    let currentNode: TypeNode = ctx.node;
 
     // Traverse nested list types to find the innermost type.
     while (currentNode.kind === Kind.LIST_TYPE) {
@@ -213,34 +247,22 @@ export class SDLValidationVisitor {
 
     // If the innermost type is a named type (not wrapped in NonNull), it's nullable
     if (currentNode.kind === Kind.NAMED_TYPE) {
-      const sourceText = this.extractSourceText(node);
-      this.addWarning(`Nullable items are not supported in list types: ${sourceText}`, node.loc);
+      const sourceText = this.extractSourceText(ctx.node);
+      this.addWarning(`Nullable items are not supported in list types: ${sourceText}`, ctx.node.loc);
     }
-  }
-
-  /**
-   * Get all validation rules that apply to the given AST node
-   * @param node - The AST node to check
-   * @returns Array of validation functions that should be executed for this node
-   * @private
-   */
-  private getApplicableValidationRules(node: ASTNode): ValidationFunction[] {
-    return this.featureGates
-      .filter((gate) => gate.nodeKind === node.kind && gate.enabled)
-      .map((gate) => gate.validationFunction);
   }
 
   /**
    * Validate @key directives on object type definitions
-   * @param node - The object type definition node to validate
+   * @param ctx - The VisitContext containing the object type definition node to validate
    * @private
    */
-  private validateObjectTypeKeyDirectives(node: ObjectTypeDefinitionNode): void {
-    if (!node.directives) {
+  private validateObjectTypeKeyDirectives(ctx: VisitContext<ObjectTypeDefinitionNode>): void {
+    if (!ctx.node.directives) {
       return;
     }
 
-    for (const directive of node.directives) {
+    for (const directive of ctx.node.directives) {
       this.validateKeyDirectives(directive);
     }
   }
@@ -269,15 +291,161 @@ export class SDLValidationVisitor {
 
   /**
    * Validate @requires directive usage (currently not supported)
-   * @param node - The field definition node to check for @requires directive
+   * @param ctx - The VisitContext containing the field definition node to check for @requires directive
    * @private
    */
-  private validateRequiresDirective(node: FieldDefinitionNode): void {
-    const hasRequiresDirective = node.directives?.some((directive) => directive.name.value === 'requires');
+  private validateRequiresDirective(ctx: VisitContext<FieldDefinitionNode>): void {
+    const hasRequiresDirective = ctx.node.directives?.some((directive) => directive.name.value === 'requires');
 
     if (hasRequiresDirective) {
-      this.addWarning('Use of requires is not supported yet', node.loc);
+      this.addWarning('Use of requires is not supported yet', ctx.node.loc);
     }
+  }
+
+  /**
+   * Validate invalid resolver context usage
+   * @param ctx - The VisitContext containing the field definition node to check for invalid resolver context
+   * @private
+   */
+  private validateInvalidResolverContext(ctx: VisitContext<FieldDefinitionNode>): void {
+    if (ctx.node.name.value.startsWith('_') || ctx.node.arguments?.length === 0) {
+      return;
+    }
+
+    const parent = ctx.ancestors[ctx.ancestors.length - 1];
+    // If the parent is not an object type definition node, we don't need to continue with the validation
+    if (!this.isASTObjectTypeNode(parent)) {
+      return;
+    }
+
+    if (parent.name.value === 'Query' || parent.name.value === 'Mutation' || parent.name.value === 'Subscription') {
+      return;
+    }
+
+    const resolverContext = ctx.node.directives
+      ?.find((directive) => directive.name.value === 'resolved')
+      ?.arguments?.find((arg) => arg.name.value === 'context');
+
+    // If the context is invalid, we don't need to continue with the validation
+    if (!this.validateResolvedDirectiveContext(ctx, parent, resolverContext)) {
+      return;
+    }
+
+    this.addWarning(
+      `No @resolved directive found on the field ${ctx.node.name.value} - falling back to ID field`,
+      ctx.node.loc,
+    );
+    const idFields = parent.fields?.filter((field) => this.getUnderlyingType(field.type).name.value === GraphQLID.name);
+    switch (idFields?.length) {
+      case 1:
+        return;
+      case 0:
+        this.addError('Invalid context provided for resolver. No fields with type ID found', ctx.node.loc);
+        return;
+      default:
+        this.addError(
+          'Invalid context provided for resolver. Multiple fields with type ID found - provide a context with the fields you want to use in the @resolved directive',
+          ctx.node.loc,
+        );
+    }
+  }
+
+  /**
+   * Validate the context provided for the @resolved directive
+   * @param ctx - The VisitContext containing the field definition node to check for @resolved directive
+   * @param parent - The parent object type definition node
+   * @param node - The argument node for the @resolved directive
+   * @returns true if we need to continue with the validation, false otherwise
+   * @private
+   */
+  private validateResolvedDirectiveContext(
+    ctx: VisitContext<FieldDefinitionNode>,
+    parent: ObjectTypeDefinitionNode,
+    node: ConstArgumentNode | undefined,
+  ): boolean {
+    const contextValue = node?.value.kind === Kind.STRING ? node.value.value.trim() : '';
+    if (contextValue.length > 0) {
+      if (!parent) {
+        this.addError('Invalid context provided for resolver. Could not determine parent type', ctx.node.loc);
+        return false;
+      }
+
+      const fieldNames = contextValue.split(/[,\s]+/).filter((field) => field.length > 0);
+      const parentFields = this.getParentFields(parent);
+
+      if (parentFields.error) {
+        this.addError(parentFields.error, ctx.node.loc);
+        return false;
+      }
+
+      let invalidFields: string[] = [];
+      invalidFields = fieldNames.filter((field) => !parentFields.fields.includes(field));
+      if (invalidFields.length > 0) {
+        this.addError(
+          `Invalid context provided for resolver. Context contains invalid fields: ${invalidFields.join(', ')}`,
+          ctx.node.loc,
+        );
+        return false;
+      }
+
+      if (fieldNames.includes(ctx.node.name.value)) {
+        this.addError(
+          'Invalid context provided for resolver. Cannot contain resolver field in the context',
+          ctx.node.loc,
+        );
+      }
+
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Get the underlying NamedTypeNode of a TypeNode
+   * @param type - The type node to get the underlying NamedTypeNode of
+   * @returns The underlying NamedTypeNode of the TypeNode
+   * @private
+   */
+  private getUnderlyingType(type: TypeNode): NamedTypeNode {
+    while (type.kind !== Kind.NAMED_TYPE) {
+      type = type.type;
+    }
+
+    return type;
+  }
+
+  /**
+   * Get the fields of the parent object type definition
+   * @param parent - The parent object type definition node
+   * @returns The fields of the parent object type definition
+   * @private
+   */
+  private getParentFields(parent: ASTNode | ReadonlyArray<ASTNode>): { fields: string[]; error: string } {
+    const result: { fields: string[]; error: string } = { fields: [], error: '' };
+
+    if (!this.isASTObjectTypeNode(parent)) {
+      result.error = 'Invalid context provided for resolver. Could not determine parent type';
+      return result;
+    }
+
+    if (!parent.fields || parent.fields.length === 0) {
+      result.error = 'Invalid context provided for resolver. Parent type has no fields';
+      return result;
+    }
+
+    result.fields = parent.fields.map((field) => field.name.value);
+    return result;
+  }
+
+  /**
+   * Check if the node is an AST object type definition node
+   * @param node - The node to check
+   * @returns true if the node is an AST object type definition node, false otherwise
+   * @private
+   */
+  private isASTObjectTypeNode(node: ASTNode | ReadonlyArray<ASTNode>): node is ObjectTypeDefinitionNode {
+    return !Array.isArray(node) && 'kind' in node && node.kind === Kind.OBJECT_TYPE_DEFINITION;
   }
 
   /**
@@ -287,7 +455,7 @@ export class SDLValidationVisitor {
    * @returns true if the rule was found and configured, false otherwise
    */
   public configureRule(ruleName: string, enabled: boolean): boolean {
-    const rule = this.featureGates.find((gate) => gate.name === ruleName);
+    const rule = this.lintingRules.find((gate) => gate.name === ruleName);
     if (rule) {
       rule.enabled = enabled;
       return true;
@@ -299,8 +467,8 @@ export class SDLValidationVisitor {
    * Get information about all available validation rules
    * @returns Array of rule configurations
    */
-  public getAvailableRules(): Readonly<FeatureGate[]> {
-    return Object.freeze([...this.featureGates]);
+  public getAvailableRules(): Readonly<LintingRule<any>[]> {
+    return Object.freeze([...this.lintingRules]);
   }
 
   /**
