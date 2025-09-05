@@ -66,7 +66,7 @@ func (l *OpenAPILoader) LoadFromOpenAPI() ([]RouteOperationMap, error) {
 			// Continue with partial model if possible
 		}
 
-		if model == nil || model.Model == nil {
+		if model == nil {
 			l.logger.Warn("Empty OpenAPI model", zap.String("file", path))
 			return nil
 		}
@@ -90,7 +90,7 @@ func (l *OpenAPILoader) LoadFromOpenAPI() ([]RouteOperationMap, error) {
 }
 
 // convertOpenAPIToMappings converts an OpenAPI v3 model to route mappings
-func (l *OpenAPILoader) convertOpenAPIToMappings(model *v3high.Document, filePath string) ([]RouteOperationMap, error) {
+func (l *OpenAPILoader) convertOpenAPIToMappings(model v3high.Document, filePath string) ([]RouteOperationMap, error) {
 	var mappings []RouteOperationMap
 
 	if model.Paths == nil || model.Paths.PathItems == nil {
@@ -98,7 +98,7 @@ func (l *OpenAPILoader) convertOpenAPIToMappings(model *v3high.Document, filePat
 	}
 
 	// Iterate through all paths
-	for pathPattern, pathItem := range model.Paths.PathItems {
+	for pathPattern, pathItem := range model.Paths.PathItems.FromOldest() {
 		if pathItem == nil {
 			continue
 		}
@@ -216,7 +216,7 @@ func (l *OpenAPILoader) extractGraphQLConfig(operation *v3high.Operation) (*Grap
 	}
 
 	// Look for x-graphql vendor extension
-	gqlExtension, exists := operation.Extensions["x-graphql"]
+	gqlExtension, exists := operation.Extensions.Get("x-graphql")
 	if !exists {
 		return nil, nil
 	}
@@ -307,12 +307,18 @@ func (l *OpenAPILoader) convertParamValue(value string, operation *v3high.Operat
 			continue
 		}
 
-		if param.Schema == nil || param.Schema.Type == nil {
+		if param.Schema == nil {
 			return value, nil
 		}
 
-		// Convert based on schema type
-		switch strings.ToLower(*param.Schema.Type) {
+		// Get the actual schema from the proxy
+		schema := param.Schema.Schema()
+		if schema == nil || len(schema.Type) == 0 {
+			return value, nil
+		}
+
+		// Convert based on schema type (use first type if multiple)
+		switch strings.ToLower(schema.Type[0]) {
 		case "integer":
 			if intVal, err := strconv.Atoi(value); err == nil {
 				return intVal, nil
