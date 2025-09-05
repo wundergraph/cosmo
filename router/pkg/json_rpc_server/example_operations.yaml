@@ -1,0 +1,81 @@
+name: "User Operations"
+description: "Example operations for user management"
+operations:
+  - method: "GET"
+    path: "/api/users/{id}"
+    operation_id: "getUser"
+    gql_operation: |
+      query GetUser($id: ID!) {
+        user(id: $id) {
+          id
+          name
+          email
+          createdAt
+        }
+      }
+    variables:
+      path_params:
+        id: "id"
+
+  - method: "POST"
+    path: "/api/users"
+    operation_id: "createUser"
+    gql_operation: |
+      mutation CreateUser($input: CreateUserInput!) {
+        createUser(input: $input) {
+          id
+          name
+          email
+          createdAt
+        }
+      }
+    variables:
+      body: "input"
+
+  - method: "GET"
+    path: "/api/users"
+    operation_id: "listUsers"
+    gql_operation: |
+      query ListUsers($limit: Int, $offset: Int) {
+        users(limit: $limit, offset: $offset) {
+          id
+          name
+          email
+          createdAt
+        }
+      }
+    variables:
+      query_params:
+        limit: "limit"
+        offset: "offset"
+
+  - method: "PUT"
+    path: "/api/users/{id}"
+    operation_id: "updateUser"
+    gql_operation: |
+      mutation UpdateUser($id: ID!, $input: UpdateUserInput!) {
+        updateUser(id: $id, input: $input) {
+          id
+          name
+          email
+          updatedAt
+        }
+      }
+    variables:
+      path_params:
+        id: "id"
+      body: "input"
+
+  - method: "DELETE"
+    path: "/api/users/{id}"
+    operation_id: "deleteUser"
+    gql_operation: |
+      mutation DeleteUser($id: ID!) {
+        deleteUser(id: $id) {
+          success
+          message
+        }
+      }
+    variables:
+      path_params:
+        id: "id"

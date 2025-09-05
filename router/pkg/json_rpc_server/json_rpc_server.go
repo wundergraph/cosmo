@@ -27,7 +27,7 @@ type JSONRPCServer struct {
 	config        *JSONRPCServerConfig
 	server        *http.Server
 	router        *chi.Mux
-	mappingLoader *MappingLoader
+	openAPILoader *OpenAPILoader
 	routes        []RouteOperationMap
 }
 
@@ -47,7 +47,7 @@ func NewJSONRPCServer(config *JSONRPCServerConfig) *JSONRPCServer {
 			Handler: r,
 		},
 		router:        r,
-		mappingLoader: NewMappingLoader(config.OperationsDir),
+		openAPILoader: NewOpenAPILoader(config.OperationsDir, config.Logger),
 	}
 }
 
@@ -55,7 +55,7 @@ func NewJSONRPCServer(config *JSONRPCServerConfig) *JSONRPCServer {
 func (s *JSONRPCServer) Start(ctx context.Context) error {
 	s.config.Logger.Info("Starting JSON-RPC server", zap.String("addr", s.config.ListenAddr))
 
-	// Load operation mappings
+	// Load operation mappings from OpenAPI documents
 	if err := s.loadMappings(); err != nil {
 		return fmt.Errorf("failed to load operation mappings: %w", err)
 	}
@@ -82,15 +82,19 @@ func (s *JSONRPCServer) Stop(ctx context.Context) error {
 	return s.server.Shutdown(ctx)
 }
 
-// loadMappings loads all operation mappings from YAML files
+// loadMappings loads all operation mappings from OpenAPI documents
 func (s *JSONRPCServer) loadMappings() error {
-	routes, err := s.mappingLoader.LoadMappings()
+	routes, err := s.openAPILoader.LoadFromOpenAPI()
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load OpenAPI documents: %w", err)
+	}
+
+	if len(routes) == 0 {
+		s.config.Logger.Warn("No operation mappings found in OpenAPI documents")
 	}
 
 	s.routes = routes
-	s.config.Logger.Info("Loaded operation mappings", zap.Int("count", len(routes)))
+	s.config.Logger.Info("Loaded operation mappings from OpenAPI documents", zap.Int("count", len(routes)))
 	return nil
 }
 
@@ -99,7 +103,49 @@ func (s *JSONRPCServer) registerRoutes() error {
 	// Create GraphQL client with the configured HTTP client and endpoint
 	gqlClient := NewGraphQLClient(s.config.HTTPClient, s.config.RouterGraphQLEndpoint)
 
-	// Use the upgraded RegisterRoutes function from operation_mapper.go
+	// Register routes
 	RegisterRoutes(s.router, s.routes, gqlClient)
+
+	s.config.Logger.Info("Registered routes from OpenAPI documents", zap.Int("count", len(s.routes)))
 	return nil
+}
+
+// Reload reloads the OpenAPI documents and re-registers routes
+func (s *JSONRPCServer) Reload() error {
+	s.config.Logger.Info("Reloading OpenAPI documents")
+
+	// Create new router
+	newRouter := chi.NewRouter()
+	newRouter.Use(middleware.Logger)
+	newRouter.Use(middleware.Recoverer)
+	newRouter.Use(middleware.Timeout(s.config.RequestTimeout))
+
+	// Temporarily store old router
+	oldRouter := s.router
+	s.router = newRouter
+
+	// Reload OpenAPI documents
+	if err := s.loadMappings(); err != nil {
+		// Restore old router on error
+		s.router = oldRouter
+		return fmt.Errorf("failed to reload OpenAPI documents: %w", err)
+	}
+
+	// Register routes on new router
+	if err := s.registerRoutes(); err != nil {
+		// Restore old router on error
+		s.router = oldRouter
+		return fmt.Errorf("failed to register routes: %w", err)
+	}
+
+	// Update server handler
+	s.server.Handler = newRouter
+
+	s.config.Logger.Info("Successfully reloaded OpenAPI documents", zap.Int("count", len(s.routes)))
+	return nil
+}
+
+// GetRoutes returns the currently loaded routes (for debugging/monitoring)
+func (s *JSONRPCServer) GetRoutes() []RouteOperationMap {
+	return s.routes
 }
