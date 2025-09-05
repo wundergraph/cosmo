@@ -137,7 +137,7 @@ func TestWebSockets(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(core.NewAccessController(authenticators, false, false, "")),
 				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
 					RejectOperationIfUnauthorized: true,
 				}),
@@ -186,7 +186,7 @@ func TestWebSockets(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(core.NewAccessController(authenticators, false, false, "")),
 				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
 					RejectOperationIfUnauthorized: false,
 				}),
@@ -237,7 +237,7 @@ func TestWebSockets(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 			EnableNats:               true,
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(core.NewAccessController(authenticators, false, false, "")),
 				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
 					RejectOperationIfUnauthorized: false,
 				}),
@@ -296,7 +296,7 @@ func TestWebSockets(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 			EnableNats:               true,
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(core.NewAccessController(authenticators, false, false, "")),
 				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
 					RejectOperationIfUnauthorized: true,
 				}),
@@ -358,7 +358,7 @@ func TestWebSockets(t *testing.T) {
 				cfg.Enabled = true
 			},
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, true)),
+				core.WithAccessController(core.NewAccessController(authenticators, true, false, "")),
 				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
 					RejectOperationIfUnauthorized: true,
 				}),
@@ -418,7 +418,7 @@ func TestWebSockets(t *testing.T) {
 				cfg.Enabled = true
 			},
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, true)),
+				core.WithAccessController(core.NewAccessController(authenticators, true, false, "")),
 				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
 					RejectOperationIfUnauthorized: true,
 				}),
@@ -467,7 +467,7 @@ func TestWebSockets(t *testing.T) {
 				cfg.Enabled = true
 			},
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, true)),
+				core.WithAccessController(core.NewAccessController(authenticators, true, false, "")),
 				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
 					RejectOperationIfUnauthorized: false,
 				}),
@@ -882,7 +882,7 @@ func TestWebSockets(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(headerRules),
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(core.NewAccessController(authenticators, false, false, "")),
 			},
 			Subgraphs: testenv.SubgraphsConfig{
 				GlobalMiddleware: func(next http.Handler) http.Handler {

@@ -4128,7 +4128,7 @@ func TestPrometheus(t *testing.T) {
 			MetricReader:       metricReader,
 			PrometheusRegistry: promRegistry,
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, true)),
+				core.WithAccessController(core.NewAccessController(authenticators, true, false, "")),
 			},
 			CustomMetricAttributes: []config.CustomAttribute{
 				{

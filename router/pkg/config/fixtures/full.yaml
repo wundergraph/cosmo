@@ -20,6 +20,10 @@ playground:
   path: '/my-playground'
   concurrency_limit: 1500
 introspection_enabled: true
+introspection:
+  enabled: true
+  skip_authentication: false
+  token: 'aTLQw7rckY3N19Fo7ynYgbwaJFKMrXxI'
 json_log: true
 shutdown_delay: 15s
 grace_period: 20s

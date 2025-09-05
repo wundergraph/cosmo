@@ -272,7 +272,7 @@ func TestRateLimit(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(core.NewAccessController(authenticators, false, false, "")),
 				core.WithRateLimitConfig(&config.RateLimitConfiguration{
 					Enabled:  true,
 					Strategy: "simple",

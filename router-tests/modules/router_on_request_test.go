@@ -2,10 +2,11 @@ package module_test
 
 import (
 	"encoding/json"
-	"github.com/wundergraph/cosmo/router-tests/modules/router-on-request"
-	"go.uber.org/zap/zapcore"
 	"net/http"
 	"testing"
+
+	router_on_request "github.com/wundergraph/cosmo/router-tests/modules/router-on-request"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -71,7 +72,7 @@ func TestRouterOnRequestHook(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, true)),
+				core.WithAccessController(core.NewAccessController(authenticators, true, false, "")),
 				core.WithModulesConfig(cfg.Modules),
 				core.WithCustomModules(&router_on_request.RouterOnRequestModule{}),
 			},

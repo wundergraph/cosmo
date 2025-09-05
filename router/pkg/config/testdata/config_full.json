@@ -459,6 +459,11 @@
   },
   "PlaygroundEnabled": true,
   "IntrospectionEnabled": true,
+  "IntrospectionConfig": {
+    "Enabled": true,
+    "SkipAuthentication": false,
+    "Token": "aTLQw7rckY3N19Fo7ynYgbwaJFKMrXxI"
+  },
   "QueryPlansEnabled": true,
   "LogLevel": "info",
   "JSONLog": true,

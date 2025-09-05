@@ -360,29 +360,33 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				trace.WithAttributes(requestContext.telemetry.traceAttrs...),
 			)
 
-			validatedReq, err := h.accessController.Access(w, r)
-			if err != nil {
-				requestContext.SetError(err)
-				requestLogger.Debug("Failed to authenticate request", zap.Error(err))
+			bypassAuth := h.accessController.BypassAuthIfIntrospection(r, h.operationProcessor, body)
 
-				// Mark the root span of the router as failed, so we can easily identify failed requests
-				rtrace.AttachErrToSpan(routerSpan, err)
-				rtrace.AttachErrToSpan(authenticateSpan, err)
+			if !bypassAuth {
+				validatedReq, err := h.accessController.Access(w, r)
+				if err != nil {
+					requestContext.SetError(err)
+					requestLogger.Debug("Failed to authenticate request", zap.Error(err))
+
+					// Mark the root span of the router as failed, so we can easily identify failed requests
+					rtrace.AttachErrToSpan(routerSpan, err)
+					rtrace.AttachErrToSpan(authenticateSpan, err)
+
+					authenticateSpan.End()
+
+					writeOperationError(r, w, requestLogger, &httpGraphqlError{
+						message:    err.Error(),
+						statusCode: http.StatusUnauthorized,
+					})
+					return
+				}
 
 				authenticateSpan.End()
 
-				writeOperationError(r, w, requestLogger, &httpGraphqlError{
-					message:    err.Error(),
-					statusCode: http.StatusUnauthorized,
-				})
-				return
+				r = validatedReq
+
+				requestContext.expressionContext.Request.Auth = expr.LoadAuth(r.Context())
 			}
-
-			authenticateSpan.End()
-
-			r = validatedReq
-
-			requestContext.expressionContext.Request.Auth = expr.LoadAuth(r.Context())
 		}
 
 		if requestContext.telemetry.telemetryAttributeExpressions != nil {

@@ -337,7 +337,7 @@ func TestBatch(t *testing.T) {
 		testenv.Run(t,
 			&testenv.Config{
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, false)),
+					core.WithAccessController(core.NewAccessController(authenticators, false, false, "")),
 				},
 				BatchingConfig: config.BatchingConfig{
 					Enabled:            true,
@@ -745,7 +745,7 @@ func TestBatch(t *testing.T) {
 				MaxEntriesPerBatch: 100,
 			},
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(core.NewAccessController(authenticators, false, false, "")),
 				core.WithRouterTrafficConfig(&config.RouterTrafficConfiguration{
 					MaxRequestBodyBytes:  5 << 20, // 5MiB
 					DecompressionEnabled: true,

@@ -129,7 +129,7 @@ func TestBlockOperations(t *testing.T) {
 			authenticators, authServer := ConfigureAuth(t)
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, false)),
+					core.WithAccessController(core.NewAccessController(authenticators, false, false, "")),
 				},
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 					securityConfiguration.BlockMutations = config.BlockOperationConfiguration{
@@ -283,7 +283,7 @@ func TestBlockOperations(t *testing.T) {
 
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, false)),
+					core.WithAccessController(core.NewAccessController(authenticators, false, false, "")),
 					core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
 						RejectOperationIfUnauthorized: false,
 					}),
@@ -379,7 +379,7 @@ func TestBlockOperations(t *testing.T) {
 					cfg.Enabled = true
 				},
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, false)),
+					core.WithAccessController(core.NewAccessController(authenticators, false, false, "")),
 					core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
 						RejectOperationIfUnauthorized: false,
 					}),

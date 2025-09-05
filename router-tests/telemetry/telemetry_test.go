@@ -9041,7 +9041,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					},
 				},
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, false)),
+					core.WithAccessController(core.NewAccessController(authenticators, false, false, "")),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				// Operations with a token should succeed
@@ -9090,7 +9090,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					},
 				},
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, false)),
+					core.WithAccessController(core.NewAccessController(authenticators, false, false, "")),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				// Operations with a token should succeed
@@ -9137,7 +9137,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					},
 				},
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, false)),
+					core.WithAccessController(core.NewAccessController(authenticators, false, false, "")),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				// Operations with a token should succeed
@@ -9221,7 +9221,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					},
 				},
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, false)),
+					core.WithAccessController(core.NewAccessController(authenticators, false, false, "")),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				// Operations with a token should succeed
@@ -9288,7 +9288,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					},
 				},
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, false)),
+					core.WithAccessController(core.NewAccessController(authenticators, false, false, "")),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				// Operations with a token should succeed
@@ -9344,7 +9344,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					},
 				},
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, false)),
+					core.WithAccessController(core.NewAccessController(authenticators, false, false, "")),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				// Operations with a token should succeed
@@ -9551,7 +9551,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					},
 				},
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, false)),
+					core.WithAccessController(core.NewAccessController(authenticators, false, false, "")),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				// Operations with a token should succeed

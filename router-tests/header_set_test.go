@@ -281,7 +281,7 @@ func TestHeaderSetWithExpression(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: append(
 				global(customHeader, `request.auth.claims.user_id`),
-				core.WithAccessController(core.NewAccessController([]authentication.Authenticator{authenticator}, true)),
+				core.WithAccessController(core.NewAccessController([]authentication.Authenticator{authenticator}, true, false, "")),
 			),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{

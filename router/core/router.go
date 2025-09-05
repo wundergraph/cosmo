@@ -222,6 +222,13 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.playgroundConfig.Path = "/"
 	}
 
+	// handle introspection config deprecation
+	// this is set via the deprecated method
+	if !r.introspection {
+		r.introspectionConfig.Enabled = r.introspection
+		r.logger.Warn("The introspection_enabled option is deprecated. Use the introspection.enabled option in the config instead.")
+	}
+
 	if r.instanceID == "" {
 		r.instanceID = nuid.Next()
 	}
@@ -1520,6 +1527,12 @@ func WithPlayground(enable bool) Option {
 func WithIntrospection(enable bool) Option {
 	return func(r *Router) {
 		r.introspection = enable
+	}
+}
+
+func WithIntrospectionConfig(config config.IntrospectionConfiguration) Option {
+	return func(r *Router) {
+		r.introspectionConfig = config
 	}
 }
 
