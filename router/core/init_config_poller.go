@@ -87,7 +87,14 @@ func getConfigClient(r *Router, cdnProviders map[string]config.CDNStorageProvide
 		return nil, fmt.Errorf("unknown storage provider id '%s' for execution config", providerID)
 	}
 
+
 	if r.graphApiToken == "" {
+		// If the router is running in demo mode, we don't need a graph token
+		// but the router will just never poll for execution config
+		if r.demoMode {
+			return nil, nil
+		}
+
 		return nil, errors.New(
 			"graph token is required to fetch execution config from CDN. " +
 				"Alternatively, configure a custom storage provider or specify a static execution config",
@@ -125,7 +132,7 @@ func InitializeConfigPoller(r *Router, cdnProviders map[string]config.CDNStorage
 		return nil, err
 	}
 
-	if primaryClient == nil {
+	if primaryClient == nil && !r.demoMode {
 		return nil, nil
 	}
 
@@ -140,14 +147,17 @@ func InitializeConfigPoller(r *Router, cdnProviders map[string]config.CDNStorage
 			return nil, err
 		}
 	}
-
-	configPoller := configpoller.New(r.graphApiToken,
+	opts := []configpoller.Option{
 		configpoller.WithLogger(r.logger),
 		configpoller.WithPolling(r.routerConfigPollerConfig.PollInterval, r.routerConfigPollerConfig.PollJitter),
-		configpoller.WithClient(*primaryClient),
 		configpoller.WithFallbackClient(fallbackClient),
 		configpoller.WithDemoMode(r.demoMode),
-	)
+	}
+	if primaryClient != nil {
+		opts = append(opts, configpoller.WithClient(*primaryClient))
+	}
+
+	configPoller := configpoller.New(r.graphApiToken, opts...)
 
 	return &configPoller, nil
 }
