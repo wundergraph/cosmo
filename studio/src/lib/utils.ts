@@ -12,6 +12,19 @@ export function clamp(value: number, min: number, max: number): number {
   return Number.isNaN(result) ? min : result;
 }
 
+export function distinctBy<T, TKey>(source: T[], keySelector: (item: T) => TKey) {
+  const keys = new Set<TKey>();
+  return source.filter((item) => {
+    const key = keySelector(item);
+    if (keys.has(key)) {
+      return false;
+    }
+
+    keys.add(key);
+    return true;
+  });
+}
+
 export const checkUserAccess = ({
   rolesToBe,
   userRoles,
