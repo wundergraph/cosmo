@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'vitest';
-import { isValidLabelMatchers, mergeUrls, normalizeLabelMatchers, isGoogleCloudStorageUrl } from '../src/core/util.js';
+import {
+  isValidLabelMatchers,
+  mergeUrls,
+  normalizeLabelMatchers,
+  isGoogleCloudStorageUrl,
+} from '../src/core/util.js';
 
 describe('Utils', () => {
   test('isValidLabelMatchers', () => {
