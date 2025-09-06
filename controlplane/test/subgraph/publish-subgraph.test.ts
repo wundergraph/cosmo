@@ -12,7 +12,14 @@ import {
   genID,
   genUniqueLabel,
 } from '../../src/core/test-util.js';
-import { createEventDrivenGraph, createSubgraph, DEFAULT_NAMESPACE, eventDrivenGraphSDL, SetupTest, subgraphSDL } from '../test-util.js';
+import {
+  createEventDrivenGraph,
+  createSubgraph,
+  DEFAULT_NAMESPACE,
+  eventDrivenGraphSDL,
+  SetupTest,
+  subgraphSDL,
+} from '../test-util.js';
 
 // Read the actual proto, mapping and lock files
 const testDataPath = path.join(process.cwd(), 'test/test-data/plugin');
@@ -29,6 +36,19 @@ async function createPluginSubgraph(client: any, name: string, namespace = 'defa
     namespace,
     type: SubgraphType.GRPC_PLUGIN,
     labels: [pluginLabel],
+  });
+  expect(response.response?.code).toBe(EnumStatusCode.OK);
+  return response;
+}
+
+async function createGrpcServiceSubgraph(client: any, name: string, routingUrl: string, namespace = 'default') {
+  const grpcServiceLabel = genUniqueLabel('grpc-service');
+  const response = await client.createFederatedSubgraph({
+    name,
+    namespace,
+    type: SubgraphType.GRPC_SERVICE,
+    routingUrl,
+    labels: [grpcServiceLabel],
   });
   expect(response.response?.code).toBe(EnumStatusCode.OK);
   return response;
@@ -583,7 +603,7 @@ describe('Publish subgraph tests', () => {
       });
 
       expect(publishResponse.response?.code).toBe(EnumStatusCode.ERR);
-      expect(publishResponse.response?.details).toBe('The proto is required for plugin subgraphs.');
+      expect(publishResponse.response?.details).toBe('The proto is required for plugin and grpc subgraphs.');
 
       await server.close();
     });
@@ -768,6 +788,343 @@ describe('Publish subgraph tests', () => {
           schema: pluginSDL,
           type: SubgraphType.GRPC_PLUGIN,
           proto: validProtoRequest,
+        });
+
+        expect(publishResponse.response?.code).toBe(EnumStatusCode.OK);
+
+        await server.close();
+      },
+    );
+  });
+
+  describe('GRPC Service subgraph publish tests', () => {
+    const grpcServiceSDL = `
+      type Query {
+        grpcServiceHello: String!
+      }
+    `;
+
+    const validGrpcProtoRequest = {
+      schema: pluginSchema,
+      mappings: pluginMappings,
+      lock: pluginLock,
+    };
+
+    test('Should be able to publish an existing GRPC service subgraph', async () => {
+      const { client, server } = await SetupTest({
+        dbname,
+      });
+
+      const grpcServiceName = genID('grpc-service');
+      const routingUrl = 'http://localhost:4001';
+
+      // First create the GRPC service subgraph
+      await createGrpcServiceSubgraph(client, grpcServiceName, routingUrl);
+
+      // Then publish to it
+      const publishResponse = await client.publishFederatedSubgraph({
+        name: grpcServiceName,
+        namespace: 'default',
+        schema: grpcServiceSDL,
+        type: SubgraphType.GRPC_SERVICE,
+        proto: validGrpcProtoRequest,
+      });
+
+      expect(publishResponse.response?.code).toBe(EnumStatusCode.OK);
+
+      // Validate by fetching the subgraph and checking type
+      const getSubgraphResponse = await client.getSubgraphByName({
+        name: grpcServiceName,
+        namespace: 'default',
+      });
+
+      expect(getSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+      expect(getSubgraphResponse.graph?.type).toBe(SubgraphType.GRPC_SERVICE);
+      expect(getSubgraphResponse.graph?.routingURL).toBe(routingUrl);
+
+      await server.close();
+    });
+
+    test('Should be able to create and publish a GRPC service subgraph in one step when service does not exist', async () => {
+      const { client, server } = await SetupTest({
+        dbname,
+      });
+
+      const grpcServiceName = genID('grpc-service');
+      const routingUrl = 'http://localhost:4001';
+
+      // Publish to a non-existent GRPC service subgraph (should create and publish)
+      const publishResponse = await client.publishFederatedSubgraph({
+        name: grpcServiceName,
+        namespace: 'default',
+        schema: grpcServiceSDL,
+        type: SubgraphType.GRPC_SERVICE,
+        routingUrl,
+        proto: validGrpcProtoRequest,
+        labels: [genUniqueLabel('grpc-service')],
+      });
+
+      expect(publishResponse.response?.code).toBe(EnumStatusCode.OK);
+
+      // Validate by fetching the subgraph and checking type and routing URL
+      const getSubgraphResponse = await client.getSubgraphByName({
+        name: grpcServiceName,
+        namespace: 'default',
+      });
+
+      expect(getSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+      expect(getSubgraphResponse.graph?.type).toBe(SubgraphType.GRPC_SERVICE);
+      expect(getSubgraphResponse.graph?.routingURL).toBe(routingUrl);
+
+      await server.close();
+    });
+
+    test('Should fail when trying to publish a GRPC service with same name as existing regular subgraph', async () => {
+      const { client, server } = await SetupTest({
+        dbname,
+      });
+
+      const subgraphName = genID('subgraph');
+
+      // First create a regular subgraph
+      await createSubgraph(client, subgraphName, 'http://localhost:4001');
+
+      // Try to publish a GRPC service with the same name
+      const publishResponse = await client.publishFederatedSubgraph({
+        name: subgraphName,
+        namespace: 'default',
+        schema: grpcServiceSDL,
+        type: SubgraphType.GRPC_SERVICE,
+        routingUrl: 'http://localhost:4002',
+        proto: validGrpcProtoRequest,
+        labels: [genUniqueLabel('grpc-service')],
+      });
+
+      expect(publishResponse.response?.code).toBe(EnumStatusCode.ERR);
+      expect(publishResponse.response?.details).toContain(`Subgraph ${subgraphName} is not of type grpc_service`);
+
+      await server.close();
+    });
+
+    test('Should fail when trying to publish a GRPC service with same name as existing plugin', async () => {
+      const { client, server } = await SetupTest({
+        dbname,
+        setupBilling: { plan: 'launch@1' },
+      });
+
+      const pluginName = genID('plugin');
+
+      // First create a plugin subgraph
+      await createPluginSubgraph(client, pluginName);
+
+      // Try to publish a GRPC service with the same name
+      const publishResponse = await client.publishFederatedSubgraph({
+        name: pluginName,
+        namespace: 'default',
+        schema: grpcServiceSDL,
+        type: SubgraphType.GRPC_SERVICE,
+        routingUrl: 'http://localhost:4001',
+        proto: validGrpcProtoRequest,
+        labels: [genUniqueLabel('grpc-service')],
+      });
+
+      expect(publishResponse.response?.code).toBe(EnumStatusCode.ERR);
+      expect(publishResponse.response?.details).toContain(`Subgraph ${pluginName} is a plugin. Please use the 'wgc router plugin publish' command to publish the plugin.`);
+
+      await server.close();
+    });
+
+    test('Should fail when trying to publish a GRPC service with STANDARD type', async () => {
+      const { client, server } = await SetupTest({
+        dbname,
+      });
+
+      const grpcServiceName = genID('grpc-service');
+      const routingUrl = 'http://localhost:4001';
+
+      // First create a GRPC service subgraph
+      await createGrpcServiceSubgraph(client, grpcServiceName, routingUrl);
+
+      const publishResponse = await client.publishFederatedSubgraph({
+        name: grpcServiceName,
+        namespace: 'default',
+        schema: subgraphSDL,
+        routingUrl,
+        type: SubgraphType.STANDARD,
+      });
+
+      expect(publishResponse.response?.code).toBe(EnumStatusCode.ERR);
+      expect(publishResponse.response?.details).toContain(
+        `Subgraph ${grpcServiceName} is a grpc service. Please use the 'wgc grpc-service publish' command to publish the grpc service.`,
+      );
+
+      await server.close();
+    });
+
+    test('Should fail to publish GRPC service without required proto information', async () => {
+      const { client, server } = await SetupTest({
+        dbname,
+      });
+
+      const grpcServiceName = genID('grpc-service');
+      const routingUrl = 'http://localhost:4001';
+
+      // Try to publish without proto
+      const publishResponse = await client.publishFederatedSubgraph({
+        name: grpcServiceName,
+        namespace: 'default',
+        schema: grpcServiceSDL,
+        type: SubgraphType.GRPC_SERVICE,
+        routingUrl,
+      });
+
+      expect(publishResponse.response?.code).toBe(EnumStatusCode.ERR);
+      expect(publishResponse.response?.details).toBe('The proto is required for plugin and grpc subgraphs.');
+
+      await server.close();
+    });
+
+    test('Should fail to create and publish GRPC service without routing URL', async () => {
+      const { client, server } = await SetupTest({
+        dbname,
+      });
+
+      const grpcServiceName = genID('grpc-service');
+
+      // Try to publish without routing URL
+      const publishResponse = await client.publishFederatedSubgraph({
+        name: grpcServiceName,
+        namespace: 'default',
+        schema: grpcServiceSDL,
+        type: SubgraphType.GRPC_SERVICE,
+        proto: validGrpcProtoRequest,
+        labels: [genUniqueLabel('grpc-service')],
+      });
+
+      expect(publishResponse.response?.code).toBe(EnumStatusCode.ERR);
+      expect(publishResponse.response?.details).toBe(
+        'A valid, non-empty routing URL is required to create and publish a non-Event-Driven subgraph.',
+      );
+
+      await server.close();
+    });
+
+    test('Should fail to create and publish GRPC service with invalid routing URL', async () => {
+      const { client, server } = await SetupTest({
+        dbname,
+      });
+
+      const grpcServiceName = genID('grpc-service');
+
+      // Try to publish with invalid routing URL
+      const publishResponse = await client.publishFederatedSubgraph({
+        name: grpcServiceName,
+        namespace: 'default',
+        schema: grpcServiceSDL,
+        type: SubgraphType.GRPC_SERVICE,
+        routingUrl: 'invalid-url',
+        proto: validGrpcProtoRequest,
+        labels: [genUniqueLabel('grpc-service')],
+      });
+
+      expect(publishResponse.response?.code).toBe(EnumStatusCode.ERR);
+      expect(publishResponse.response?.details).toBe('Routing URL "invalid-url" is not a valid URL.');
+
+      await server.close();
+    });
+
+    test.each(['organization-admin', 'organization-developer', 'subgraph-admin'])(
+      '%s should be able to create and publish GRPC service subgraph',
+      async (role) => {
+        const { client, server, authenticator, users } = await SetupTest({
+          dbname,
+        });
+
+        const grpcServiceName = genID('grpc-service');
+        const routingUrl = 'http://localhost:4001';
+
+        authenticator.changeUserWithSuppliedContext({
+          ...users.adminAliceCompanyA,
+          rbac: createTestRBACEvaluator(createTestGroup({ role })),
+        });
+
+        const publishResponse = await client.publishFederatedSubgraph({
+          name: grpcServiceName,
+          namespace: 'default',
+          schema: grpcServiceSDL,
+          type: SubgraphType.GRPC_SERVICE,
+          routingUrl,
+          proto: validGrpcProtoRequest,
+          labels: [genUniqueLabel('grpc-service')],
+        });
+
+        expect(publishResponse.response?.code).toBe(EnumStatusCode.OK);
+
+        await server.close();
+      },
+    );
+
+    test.each([
+      'organization-apikey-manager',
+      'organization-viewer',
+      'namespace-admin',
+      'namespace-viewer',
+      'graph-admin',
+      'graph-viewer',
+      'subgraph-publisher',
+      'subgraph-viewer',
+    ])('%s should not be able to create and publish GRPC service subgraph', async (role) => {
+      const { client, server, authenticator, users } = await SetupTest({
+        dbname,
+      });
+
+      const grpcServiceName = genID('grpc-service');
+      const routingUrl = 'http://localhost:4001';
+
+      authenticator.changeUserWithSuppliedContext({
+        ...users.adminAliceCompanyA,
+        rbac: createTestRBACEvaluator(createTestGroup({ role })),
+      });
+
+      const publishResponse = await client.publishFederatedSubgraph({
+        name: grpcServiceName,
+        namespace: 'default',
+        schema: grpcServiceSDL,
+        type: SubgraphType.GRPC_SERVICE,
+        routingUrl,
+        proto: validGrpcProtoRequest,
+        labels: [genUniqueLabel('grpc-service')],
+      });
+
+      expect(publishResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
+
+      await server.close();
+    });
+
+    test.each(['organization-admin', 'organization-developer', 'subgraph-admin', 'subgraph-publisher'])(
+      '%s should be able to publish to existing GRPC service subgraph',
+      async (role) => {
+        const { client, server, authenticator, users } = await SetupTest({
+          dbname,
+        });
+
+        const grpcServiceName = genID('grpc-service');
+        const routingUrl = 'http://localhost:4001';
+
+        // First create the GRPC service subgraph
+        await createGrpcServiceSubgraph(client, grpcServiceName, routingUrl);
+
+        authenticator.changeUserWithSuppliedContext({
+          ...users.adminAliceCompanyA,
+          rbac: createTestRBACEvaluator(createTestGroup({ role })),
+        });
+
+        const publishResponse = await client.publishFederatedSubgraph({
+          name: grpcServiceName,
+          namespace: 'default',
+          schema: grpcServiceSDL,
+          type: SubgraphType.GRPC_SERVICE,
+          proto: validGrpcProtoRequest,
         });
 
         expect(publishResponse.response?.code).toBe(EnumStatusCode.OK);

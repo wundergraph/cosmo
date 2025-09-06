@@ -1,0 +1,85 @@
+{
+  "version": "1.0.0",
+  "messages": {
+    "LookupUserByIdRequestKey": {
+      "fields": {
+        "id": 1
+      }
+    },
+    "LookupUserByIdRequest": {
+      "fields": {
+        "keys": 1
+      }
+    },
+    "LookupUserByIdResponse": {
+      "fields": {
+        "result": 1
+      }
+    },
+    "QueryUsersResponse": {
+      "fields": {
+        "users": 1
+      }
+    },
+    "QueryUserRequest": {
+      "fields": {
+        "id": 1
+      }
+    },
+    "QueryUserResponse": {
+      "fields": {
+        "user": 1
+      }
+    },
+    "MutationCreateUserRequest": {
+      "fields": {
+        "user": 1
+      }
+    },
+    "MutationCreateUserResponse": {
+      "fields": {
+        "create_user": 1
+      }
+    },
+    "MutationUpdateUserRequest": {
+      "fields": {
+        "id": 1,
+        "user": 2
+      }
+    },
+    "MutationUpdateUserResponse": {
+      "fields": {
+        "update_user": 1
+      }
+    },
+    "User": {
+      "fields": {
+        "id": 1,
+        "name": 2,
+        "email": 3,
+        "phone": 4,
+        "status": 5,
+        "bio": 6,
+        "tags": 7
+      }
+    },
+    "UserInput": {
+      "fields": {
+        "name": 1,
+        "email": 2,
+        "phone": 3,
+        "status": 4,
+        "bio": 5
+      }
+    }
+  },
+  "enums": {
+    "UserStatus": {
+      "fields": {
+        "ACTIVE": 1,
+        "INACTIVE": 2,
+        "SUSPENDED": 3
+      }
+    }
+  }
+}
