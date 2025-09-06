@@ -11,6 +11,8 @@ import ListSubgraphs from './commands/list.js';
 import IntrospectSubgraph from './commands/introspect.js';
 import MoveSubgraph from './commands/move.js';
 import FetchSubgraph from './commands/fetch.js';
+import LinkSubgraph from './commands/link.js';
+import UnlinkSubgraph from './commands/unlink.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('subgraph');
@@ -25,6 +27,8 @@ export default (opts: BaseCommandOptions) => {
   command.addCommand(IntrospectSubgraph(opts));
   command.addCommand(MoveSubgraph(opts));
   command.addCommand(FetchSubgraph(opts));
+  command.addCommand(LinkSubgraph(opts));
+  command.addCommand(UnlinkSubgraph(opts));
 
   command.hook('preAction', async (thisCmd) => {
     await checkAuth();

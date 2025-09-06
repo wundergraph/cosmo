@@ -11,7 +11,7 @@ import {
   VCSContext,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
-import { and, eq, ilike, inArray, or, SQL, sql } from 'drizzle-orm';
+import { and, eq, ilike, inArray, is, or, SQL, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { GraphQLSchema, parse } from 'graphql';
@@ -43,7 +43,12 @@ import {
   InspectorSchemaChange,
   SchemaUsageTrafficInspector,
 } from '../services/SchemaUsageTrafficInspector.js';
-import { createBatches, getFederatedGraphRouterCompatibilityVersion, normalizeLabels } from '../util.js';
+import {
+  createBatches,
+  getFederatedGraphRouterCompatibilityVersion,
+  isCheckSuccessful,
+  normalizeLabels,
+} from '../util.js';
 import { FederatedGraphConfig, FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { OrganizationRepository } from './OrganizationRepository.js';
 import { ProposalRepository } from './ProposalRepository.js';
@@ -660,7 +665,6 @@ export class SchemaCheckRepository {
       const graphs = await fedGraphRepo.bySubgraphLabels({
         labels: subgraph?.labels || s.labels,
         namespaceId: namespace.id,
-        excludeContracts: true,
       });
 
       const schemaCheckSubgraphId = await this.createSchemaCheckSubgraph({
@@ -976,7 +980,7 @@ export class SchemaCheckRepository {
 
     const { composedGraphs } = await composer.composeWithProposedSchemas({
       inputSubgraphs: checkSubgraphs,
-      graphs: federatedGraphs,
+      graphs: federatedGraphs.filter((g) => !g.contract),
     });
 
     await this.createSchemaCheckCompositions({
@@ -1081,5 +1085,99 @@ export class SchemaCheckRepository {
       schemaCheckId: schemaCheckID,
       proposalId: proposalID,
     });
+  }
+
+  public async addLinkedSchemaCheck(data: { schemaCheckID: string; linkedSchemaCheckID: string }) {
+    if (data.schemaCheckID === data.linkedSchemaCheckID) {
+      throw new Error('schemaCheckID and linkedSchemaCheckID must differ');
+    }
+
+    await this.db
+      .insert(schema.linkedSchemaChecks)
+      .values({
+        schemaCheckId: data.schemaCheckID,
+        linkedSchemaCheckId: data.linkedSchemaCheckID,
+      })
+      .onConflictDoNothing()
+      .execute();
+  }
+
+  public async getLinkedSchemaCheck({
+    schemaCheckID,
+    organizationId,
+  }: {
+    schemaCheckID: string;
+    organizationId: string;
+  }) {
+    const linkedSchemaCheck = await this.db
+      .select({
+        linkedSchemaCheckId: schema.linkedSchemaChecks.linkedSchemaCheckId,
+      })
+      .from(schema.linkedSchemaChecks)
+      .where(eq(schema.linkedSchemaChecks.schemaCheckId, schemaCheckID));
+    if (linkedSchemaCheck.length === 0) {
+      return undefined;
+    }
+
+    const check = await this.db.query.schemaChecks.findFirst({
+      where: eq(schema.schemaChecks.id, linkedSchemaCheck[0].linkedSchemaCheckId),
+      with: {
+        affectedGraphs: {
+          with: {
+            federatedGraph: {
+              with: {
+                target: {
+                  columns: {
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        subgraphs: {
+          columns: {
+            subgraphName: true,
+          },
+          with: {
+            namespace: {
+              columns: {
+                name: true,
+                organizationId: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!check || check.subgraphs.length === 0 || !check.subgraphs[0].namespace) {
+      return undefined;
+    }
+
+    // Validate that the check belongs to the correct organization
+    if (check.subgraphs[0].namespace.organizationId !== organizationId) {
+      return undefined;
+    }
+
+    return {
+      id: check.id,
+      affectedGraphNames: check.affectedGraphs.map(({ federatedGraph }) => federatedGraph.target.name),
+      subgraphNames: check.subgraphs.map(({ subgraphName }) => subgraphName),
+      namespace: check.subgraphs[0].namespace.name,
+      hasClientTraffic: check.hasClientTraffic ?? false,
+      hasGraphPruningErrors: check.hasGraphPruningErrors ?? false,
+      isCheckSuccessful: isCheckSuccessful({
+        isComposable: !!check.isComposable,
+        isBreaking: !!check.hasBreakingChanges,
+        hasClientTraffic: !!check.hasClientTraffic,
+        hasLintErrors: !!check.hasLintErrors,
+        hasGraphPruningErrors: !!check.hasGraphPruningErrors,
+        clientTrafficCheckSkipped: !!check.clientTrafficCheckSkipped,
+        hasProposalMatchError: check.proposalMatch === 'error',
+      }),
+      clientTrafficCheckSkipped: !!check.clientTrafficCheckSkipped,
+      graphPruningCheckSkipped: !!check.graphPruningSkipped,
+    };
   }
 }
