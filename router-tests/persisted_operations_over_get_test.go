@@ -173,7 +173,7 @@ func TestAutomatedPersistedQueriesOverGET(t *testing.T) {
   }
 }`,
 				Variables:  []byte(`{"criteria":  {"nationality":  "GERMAN"   }}`),
-				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "f74d2ed949afd9f9567805c22e7f927745494cb1a469425cf65064283251cb42"}}`),
+				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "e33580cf6276de9a75fb3b1c4b7580fec2a1c8facd13f3487bf6c7c3f854f7e3"}}`),
 				Header:     header,
 			})
 			require.NoError(t, err)
@@ -182,7 +182,7 @@ func TestAutomatedPersistedQueriesOverGET(t *testing.T) {
 
 			res2, err2 := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
 				Variables:  []byte(`{"criteria":  {"nationality":  "GERMAN"   }}`),
-				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "f74d2ed949afd9f9567805c22e7f927745494cb1a469425cf65064283251cb42"}}`),
+				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "e33580cf6276de9a75fb3b1c4b7580fec2a1c8facd13f3487bf6c7c3f854f7e3"}}`),
 				Header:     header,
 			})
 			require.NoError(t, err2)
@@ -210,7 +210,7 @@ func TestAutomatedPersistedQueriesOverGET(t *testing.T) {
     id
   }
 }`,
-				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "51804ed57938b6104d812ca352741ff69d7a8a30d67f240fba2b5a1e97793f9e"}}`),
+				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "49a2f7dd56b06f620c7d040dd9d562a1c16eadf7c149be5decdd62cfc92e1b12"}}`),
 				Header:     header,
 			})
 			require.NoError(t, err)

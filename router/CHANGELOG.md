@@ -4,6 +4,30 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.250.0](https://github.com/wundergraph/cosmo/compare/router@0.249.0...router@0.250.0) (2025-09-06)
+
+### Features
+
+* demo_mode should work also when no graph api token is set ([#2185](https://github.com/wundergraph/cosmo/issues/2185)) ([cad81fc](https://github.com/wundergraph/cosmo/commit/cad81fcb14087fdf25100d0bc585f57d7115cabf)) (@alepane21)
+* upgrade all components to go 1.25 ([#2187](https://github.com/wundergraph/cosmo/issues/2187)) ([49c35ed](https://github.com/wundergraph/cosmo/commit/49c35ede5ab5873ee163815a047797429a63e3d1)) (@miklosbarabas)
+
+# [0.249.0](https://github.com/wundergraph/cosmo/compare/router@0.248.0...router@0.249.0) (2025-09-03)
+
+### Features
+
+* **router:** block/disable persisted operations ([#2181](https://github.com/wundergraph/cosmo/issues/2181)) ([24fafa7](https://github.com/wundergraph/cosmo/commit/24fafa7e3b5f6975725963ba48c9e1dce359544f)) (@endigma)
+
+# [0.248.0](https://github.com/wundergraph/cosmo/compare/router@0.247.0...router@0.248.0) (2025-09-03)
+
+### Bug Fixes
+
+* bug where query clone params are assigned to claim params ([#2184](https://github.com/wundergraph/cosmo/issues/2184)) ([6375c4b](https://github.com/wundergraph/cosmo/commit/6375c4b0d757f6663cce0debf3b3e12c8427a808)) (@SkArchon)
+
+### Features
+
+* add timings per client fetch for GraphQL http ([#2183](https://github.com/wundergraph/cosmo/issues/2183)) ([7c764de](https://github.com/wundergraph/cosmo/commit/7c764de2a0ecc95e3fc3e86555f775250a774221)) (@SkArchon)
+* engine order header ordering for regex configurations ([#2180](https://github.com/wundergraph/cosmo/issues/2180)) ([0f15d1e](https://github.com/wundergraph/cosmo/commit/0f15d1e1364904d7c5be1f86749a8d1ae4c6562a)) (@SkArchon)
+
 # [0.247.0](https://github.com/wundergraph/cosmo/compare/router@0.246.2...router@0.247.0) (2025-08-28)
 
 ### Features

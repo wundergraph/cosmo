@@ -1,6 +1,6 @@
 module github.com/wundergraph/cosmo/demo
 
-go 1.23.0
+go 1.25
 
 require (
 	github.com/99designs/gqlgen v0.17.76
@@ -92,7 +92,7 @@ require (
 	github.com/klauspost/cpuid/v2 v2.2.8 // indirect
 	github.com/logrusorgru/aurora/v4 v4.0.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
-	github.com/mark3labs/mcp-go v0.30.0 // indirect
+	github.com/mark3labs/mcp-go v0.36.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/minio/md5-simd v1.1.2 // indirect
