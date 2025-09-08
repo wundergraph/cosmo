@@ -427,7 +427,7 @@ export function checkSubgraphSchema(
           gitInfo: req.gitInfo,
           compositionErrors,
           breakingChangesCount: breakingChanges.length,
-          hasClientTraffic,
+          hasClientTraffic: hasClientTraffic || isLinkedTrafficCheckFailed,
           subgraphName,
           organizationSlug: org.slug,
           webBaseUrl: opts.webBaseUrl,
