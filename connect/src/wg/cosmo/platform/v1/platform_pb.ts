@@ -3981,9 +3981,9 @@ export class SchemaCheck extends Message<SchemaCheck> {
   errorMessage?: string;
 
   /**
-   * @generated from field: optional wg.cosmo.platform.v1.SchemaCheck.LinkedCheck linkedCheck = 22;
+   * @generated from field: repeated wg.cosmo.platform.v1.SchemaCheck.LinkedCheck linkedChecks = 22;
    */
-  linkedCheck?: SchemaCheck_LinkedCheck;
+  linkedChecks: SchemaCheck_LinkedCheck[] = [];
 
   constructor(data?: PartialMessage<SchemaCheck>) {
     super();
@@ -4014,7 +4014,7 @@ export class SchemaCheck extends Message<SchemaCheck> {
     { no: 19, name: "composition_skipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 20, name: "breaking_changes_skipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 21, name: "errorMessage", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
-    { no: 22, name: "linkedCheck", kind: "message", T: SchemaCheck_LinkedCheck, opt: true },
+    { no: 22, name: "linkedChecks", kind: "message", T: SchemaCheck_LinkedCheck, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SchemaCheck {

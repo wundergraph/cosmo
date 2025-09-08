@@ -186,8 +186,14 @@ const ChecksPage: NextPageWithLayout = () => {
                   proposalMatch,
                   compositionSkipped,
                   breakingChangesSkipped,
-                  linkedCheck,
+                  linkedChecks,
                 }) => {
+                  const isLinkedTrafficCheckFailed = linkedChecks.some(
+                    (linkedCheck) => linkedCheck.hasClientTraffic,
+                  );
+                  const isLinkedPruningCheckFailed = linkedChecks.some(
+                    (linkedCheck) => linkedCheck.hasGraphPruningErrors,
+                  );
                   const isSuccessful = isCheckSuccessful(
                     isComposable,
                     isBreaking,
@@ -196,8 +202,8 @@ const ChecksPage: NextPageWithLayout = () => {
                     hasGraphPruningErrors,
                     clientTrafficCheckSkipped,
                     proposalMatch === "error",
-                    linkedCheck?.hasClientTraffic,
-                    linkedCheck?.hasGraphPruningErrors,
+                    isLinkedTrafficCheckFailed,
+                    isLinkedPruningCheckFailed,
                   );
 
                   const path = `${router.asPath.split("?")[0]}/${id}`;

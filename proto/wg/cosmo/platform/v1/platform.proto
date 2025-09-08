@@ -546,7 +546,7 @@ message SchemaCheck {
   bool composition_skipped = 19;
   bool breaking_changes_skipped = 20;
   optional string errorMessage = 21;
-  optional LinkedCheck linkedCheck = 22;
+  repeated LinkedCheck linkedChecks = 22;
 }
 
 message GetChecksByFederatedGraphNameResponse {

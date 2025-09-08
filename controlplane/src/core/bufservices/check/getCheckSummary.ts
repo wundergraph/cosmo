@@ -158,10 +158,8 @@ export function getCheckSummary(
       hasAffectedOperations = affectedOperations.length > 0;
     }
 
-    const linkedCheck = await schemaCheckRepo.getLinkedSchemaCheck({
-      schemaCheckID: check.id,
-      organizationId: authContext.organizationId,
-    });
+    const isLinkedTrafficCheckFailed = check.linkedChecks.some((linkedCheck) => linkedCheck.hasClientTraffic);
+    const isLinkedPruningCheckFailed = check.linkedChecks.some((linkedCheck) => linkedCheck.hasGraphPruningErrors);
 
     affectedGraphs.push(
       new GetCheckSummaryResponse_AffectedGraph({
@@ -175,8 +173,8 @@ export function getCheckSummary(
           hasGraphPruningErrors: graphPruningIssues.some((issue) => issue.severity === LintSeverity.error),
           clientTrafficCheckSkipped: check.clientTrafficCheckSkipped,
           hasProposalMatchError: check.proposalMatch === 'error',
-          isLinkedTrafficCheckFailed: linkedCheck?.hasClientTraffic,
-          isLinkedPruningCheckFailed: linkedCheck?.hasGraphPruningErrors,
+          isLinkedTrafficCheckFailed,
+          isLinkedPruningCheckFailed,
         }),
         isComposable: checkDetails.compositionErrors.length === 0,
         isBreaking: checkDetails.changes.some((change) => change.isBreaking),
@@ -224,8 +222,8 @@ export function getCheckSummary(
             hasGraphPruningErrors: graphPruningIssues.some((issue) => issue.severity === LintSeverity.error),
             clientTrafficCheckSkipped: check.clientTrafficCheckSkipped,
             hasProposalMatchError: check.proposalMatch === 'error',
-            isLinkedTrafficCheckFailed: linkedCheck?.hasClientTraffic,
-            isLinkedPruningCheckFailed: linkedCheck?.hasGraphPruningErrors,
+            isLinkedTrafficCheckFailed,
+            isLinkedPruningCheckFailed,
           }),
           isComposable: checkDetails.compositionErrors.length === 0,
           isBreaking: checkDetails.changes.some((change) => change.isBreaking),
@@ -246,10 +244,7 @@ export function getCheckSummary(
       response: {
         code: EnumStatusCode.OK,
       },
-      check: {
-        ...check,
-        linkedCheck,
-      },
+      check,
       affectedGraphs,
       proposedSubgraphSchemaSDL: check.proposedSubgraphSchemaSDL,
       changes: checkDetails.changes,

@@ -1180,7 +1180,7 @@ export class SubgraphRepository {
           federatedGraphId,
         });
 
-        const linkedCheck = await schemaCheckRepo.getLinkedSchemaCheck({
+        const linkedChecks = await schemaCheckRepo.getLinkedSchemaChecks({
           schemaCheckID: c.id,
           organizationId: this.organizationId,
         });
@@ -1213,7 +1213,7 @@ export class SubgraphRepository {
           compositionSkipped: c.compositionSkipped ?? false,
           breakingChangesSkipped: c.breakingChangesSkipped ?? false,
           errorMessage: c.errorMessage || undefined,
-          linkedCheck,
+          linkedChecks,
         };
       }),
     );
@@ -1249,6 +1249,11 @@ export class SubgraphRepository {
     const checkedSubgraphs = await schemaCheckRepo.getCheckedSubgraphsForCheckIdAndFederatedGraphId({
       checkId: check.id,
       federatedGraphId: data.federatedGraphId,
+    });
+
+    const linkedChecks = await schemaCheckRepo.getLinkedSchemaChecks({
+      schemaCheckID: check.id,
+      organizationId: this.organizationId,
     });
 
     return {
@@ -1291,6 +1296,7 @@ export class SubgraphRepository {
       compositionSkipped: check.compositionSkipped ?? false,
       breakingChangesSkipped: check.breakingChangesSkipped ?? false,
       errorMessage: check.errorMessage || undefined,
+      linkedChecks,
     };
   }
 

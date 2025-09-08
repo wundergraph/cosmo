@@ -215,7 +215,7 @@ export interface SchemaCheckDTO {
   compositionSkipped: boolean;
   breakingChangesSkipped: boolean;
   errorMessage?: string;
-  linkedCheck?: LinkedCheckDTO;
+  linkedChecks: LinkedCheckDTO[];
 }
 
 export interface SchemaCheckSummaryDTO extends SchemaCheckDTO {

@@ -442,6 +442,7 @@ export function updateProposal(
         operationUsageStats,
       } = await schemaCheckRepo.checkMultipleSchemas({
         organizationId: authContext.organizationId,
+        organizationSlug: authContext.organizationSlug,
         orgRepo,
         subgraphRepo,
         fedGraphRepo,

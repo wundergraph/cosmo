@@ -454,6 +454,13 @@ const CheckDetails = ({
 
   const sdl = data.proposedSubgraphSchemaSDL ?? "";
 
+  const isLinkedTrafficCheckFailed = data.check.linkedChecks.some(
+    (linkedCheck) => linkedCheck.hasClientTraffic,
+  );
+  const isLinkedPruningCheckFailed = data.check.linkedChecks.some(
+    (linkedCheck) => linkedCheck.hasGraphPruningErrors,
+  );
+
   const isSuccessful = isCheckSuccessful(
     data.check.isComposable,
     data.check.isBreaking,
@@ -462,8 +469,8 @@ const CheckDetails = ({
     data.check.hasGraphPruningErrors,
     data.check.clientTrafficCheckSkipped,
     data.check.proposalMatch === "error",
-    data.check.linkedCheck?.hasClientTraffic,
-    data.check.linkedCheck?.hasGraphPruningErrors,
+    isLinkedTrafficCheckFailed,
+    isLinkedPruningCheckFailed,
   );
 
   const currentAffectedGraph = data.affectedGraphs.find(
@@ -1064,14 +1071,13 @@ const CheckDetails = ({
                       </AlertTitle>
                       <AlertDescription>
                         {(() => {
-                          const linkedCheck = data.check.linkedCheck;
                           const linkedCheckFailures = [];
-                          if (linkedCheck?.hasClientTraffic) {
+                          if (isLinkedTrafficCheckFailed) {
                             linkedCheckFailures.push(
                               "client traffic check failures",
                             );
                           }
-                          if (linkedCheck?.hasGraphPruningErrors) {
+                          if (isLinkedPruningCheckFailed) {
                             linkedCheckFailures.push("graph pruning errors");
                           }
 
@@ -1091,7 +1097,7 @@ const CheckDetails = ({
 
                           // If there are linked check failures and other reasons
                           if (linkedCheckFailures.length > 0) {
-                            const linkedCheckMessage = `The linked check failed due to ${linkedCheckFailures.join(
+                            const linkedCheckMessage = `The linked check(s) failed due to ${linkedCheckFailures.join(
                               " and ",
                             )}, which is one of the reasons for this check to fail.`;
                             return `${reason}. ${linkedCheckMessage}`;
@@ -1294,124 +1300,118 @@ const CheckDetails = ({
                     </div>
                   )}
 
-                  {data.check.linkedCheck &&
-                    data.check.linkedCheck.affectedGraphNames.length > 0 && (
-                      <div className="space-y-4 pt-4">
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-lg font-semibold">
-                            Linked Checks
-                          </h3>
-                          <InfoTooltip tooltipContentClassName="w-96">
-                            These are checks performed on subgraphs that are
-                            linked to the current subgraph. The traffic and
-                            pruning checks of these linked subgraphs influence
-                            the result of the current check. These checks are
-                            automatically run whenever the current subgraph is
-                            checked.
-                          </InfoTooltip>
-                        </div>
-                        <TableWrapper>
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Check ID</TableHead>
-                                <TableHead>Subgraph</TableHead>
-                                <TableHead>Tasks</TableHead>
-                                <TableHead></TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              <TableRow
-                                key={data.check.linkedCheck.id}
-                                className="group cursor-pointer hover:bg-secondary/30"
-                                onClick={() =>
-                                  router.push(
-                                    `/${organizationSlug}/${data.check?.linkedCheck?.namespace}/graph/${data.check?.linkedCheck?.affectedGraphNames[0]}/checks/${data.check?.linkedCheck?.id}`,
-                                  )
-                                }
-                              >
-                                <TableCell>
-                                  {getCheckBadge(isSuccessful, false)}
-                                </TableCell>
-                                <TableCell>
-                                  {data.check.linkedCheck.id}
-                                </TableCell>
-                                <TableCell>
-                                  {data.check.linkedCheck.subgraphNames.length >
-                                  1
-                                    ? "Multiple Subgraphs"
-                                    : data.check.linkedCheck.subgraphNames
-                                        .length > 0
-                                    ? data.check.linkedCheck.subgraphNames[0]
-                                    : "Subgraph"}
-                                </TableCell>
-                                <TableCell>
-                                  <Badge
-                                    variant="outline"
-                                    className={cn(
-                                      "gap-2 py-1.5",
-                                      data.check.linkedCheck
-                                        .clientTrafficCheckSkipped &&
-                                        "text-muted-foreground",
-                                    )}
-                                  >
-                                    {data.check.linkedCheck
-                                      .clientTrafficCheckSkipped ? (
-                                      <NoSymbolIcon className="h-4 w-4" />
-                                    ) : (
-                                      getCheckIcon(
-                                        !data.check.linkedCheck
-                                          .hasClientTraffic,
-                                      )
-                                    )}
-                                    <span>Operations</span>
-                                  </Badge>
-                                  <Badge
-                                    variant="outline"
-                                    className={cn(
-                                      "gap-2 py-1.5",
-                                      data.check.linkedCheck
-                                        .graphPruningCheckSkipped &&
-                                        "text-muted-foreground",
-                                    )}
-                                  >
-                                    {data.check.linkedCheck
-                                      .graphPruningCheckSkipped ? (
-                                      <NoSymbolIcon className="h-4 w-4" />
-                                    ) : (
-                                      getCheckIcon(
-                                        !data.check.linkedCheck
-                                          .hasGraphPruningErrors,
-                                      )
-                                    )}
-                                    <span className="flex-1 truncate">
-                                      Pruning Errors
-                                    </span>
-                                  </Badge>
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  <div className="flex items-center justify-end gap-2">
-                                    <Button
-                                      asChild
-                                      variant="ghost"
-                                      size="sm"
-                                      className="table-action"
-                                    >
-                                      <Link
-                                        href={`/${organizationSlug}/${data.check.linkedCheck?.namespace}/graph/${data.check.linkedCheck?.affectedGraphNames[0]}/checks/${data.check.linkedCheck?.id}`}
-                                      >
-                                        View
-                                      </Link>
-                                    </Button>
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            </TableBody>
-                          </Table>
-                        </TableWrapper>
+                  {data.check.linkedChecks.length > 0 && (
+                    <div className="space-y-4 pt-4">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-lg font-semibold">Linked Checks</h3>
+                        <InfoTooltip tooltipContentClassName="w-96">
+                          These are checks performed on subgraphs that are
+                          linked to the current subgraph. The traffic and
+                          pruning checks of these linked subgraphs influence the
+                          result of the current check. These checks are
+                          automatically run whenever the current subgraph is
+                          checked.
+                        </InfoTooltip>
                       </div>
-                    )}
+                      <TableWrapper>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Status</TableHead>
+                              <TableHead>Check ID</TableHead>
+                              <TableHead>Subgraph</TableHead>
+                              <TableHead>Tasks</TableHead>
+                              <TableHead></TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {data.check.linkedChecks.map((linkedCheck) => {
+                              if (linkedCheck.affectedGraphNames.length === 0) {
+                                return <></>;
+                              }
+                              return (
+                                <TableRow
+                                  key={linkedCheck.id}
+                                  className="group cursor-pointer hover:bg-secondary/30"
+                                  onClick={() =>
+                                    router.push(
+                                      `/${organizationSlug}/${linkedCheck.namespace}/graph/${linkedCheck.affectedGraphNames[0]}/checks/${linkedCheck.id}`,
+                                    )
+                                  }
+                                >
+                                  <TableCell>
+                                    {getCheckBadge(isSuccessful, false)}
+                                  </TableCell>
+                                  <TableCell>{linkedCheck.id}</TableCell>
+                                  <TableCell>
+                                    {linkedCheck.subgraphNames.length > 1
+                                      ? "Multiple Subgraphs"
+                                      : linkedCheck.subgraphNames.length > 0
+                                      ? linkedCheck.subgraphNames[0]
+                                      : "Subgraph"}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge
+                                      variant="outline"
+                                      className={cn(
+                                        "gap-2 py-1.5",
+                                        linkedCheck.clientTrafficCheckSkipped &&
+                                          "text-muted-foreground",
+                                      )}
+                                    >
+                                      {linkedCheck.clientTrafficCheckSkipped ? (
+                                        <NoSymbolIcon className="h-4 w-4" />
+                                      ) : (
+                                        getCheckIcon(
+                                          !linkedCheck.hasClientTraffic,
+                                        )
+                                      )}
+                                      <span>Operations</span>
+                                    </Badge>
+                                    <Badge
+                                      variant="outline"
+                                      className={cn(
+                                        "gap-2 py-1.5",
+                                        linkedCheck.graphPruningCheckSkipped &&
+                                          "text-muted-foreground",
+                                      )}
+                                    >
+                                      {linkedCheck.graphPruningCheckSkipped ? (
+                                        <NoSymbolIcon className="h-4 w-4" />
+                                      ) : (
+                                        getCheckIcon(
+                                          !linkedCheck.hasGraphPruningErrors,
+                                        )
+                                      )}
+                                      <span className="flex-1 truncate">
+                                        Pruning Errors
+                                      </span>
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <div className="flex items-center justify-end gap-2">
+                                      <Button
+                                        asChild
+                                        variant="ghost"
+                                        size="sm"
+                                        className="table-action"
+                                      >
+                                        <Link
+                                          href={`/${organizationSlug}/${linkedCheck.namespace}/graph/${linkedCheck.affectedGraphNames[0]}/checks/${linkedCheck.id}`}
+                                        >
+                                          View
+                                        </Link>
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </TableWrapper>
+                    </div>
+                  )}
                 </div>
               </TabsContent>
 

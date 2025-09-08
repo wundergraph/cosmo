@@ -565,6 +565,7 @@ export class ProposalRepository {
   public async getChecksByProposalId({
     proposalId,
     federatedGraphId,
+    organizationId,
     limit,
     offset,
     startDate,
@@ -572,6 +573,7 @@ export class ProposalRepository {
   }: {
     proposalId: string;
     federatedGraphId: string;
+    organizationId: string;
     limit: number;
     offset: number;
     startDate?: string;
@@ -639,6 +641,11 @@ export class ProposalRepository {
           federatedGraphId,
         });
 
+        const linkedChecks = await schemaCheckRepo.getLinkedSchemaChecks({
+          schemaCheckID: c.id,
+          organizationId,
+        });
+
         return {
           id: c.id,
           timestamp: c.createdAt.toISOString(),
@@ -665,6 +672,7 @@ export class ProposalRepository {
           compositionSkipped: c.compositionSkipped ?? false,
           breakingChangesSkipped: c.breakingChangesSkipped ?? false,
           errorMessage: c.errorMessage || undefined,
+          linkedChecks,
         };
       }),
     );
