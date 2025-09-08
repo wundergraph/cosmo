@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.250.0](https://github.com/wundergraph/cosmo/compare/router@0.249.0...router@0.250.0) (2025-09-06)
+
+### Features
+
+* demo_mode should work also when no graph api token is set ([#2185](https://github.com/wundergraph/cosmo/issues/2185)) ([cad81fc](https://github.com/wundergraph/cosmo/commit/cad81fcb14087fdf25100d0bc585f57d7115cabf)) (@alepane21)
+* upgrade all components to go 1.25 ([#2187](https://github.com/wundergraph/cosmo/issues/2187)) ([49c35ed](https://github.com/wundergraph/cosmo/commit/49c35ede5ab5873ee163815a047797429a63e3d1)) (@miklosbarabas)
+
 # [0.249.0](https://github.com/wundergraph/cosmo/compare/router@0.248.0...router@0.249.0) (2025-09-03)
 
 ### Features
