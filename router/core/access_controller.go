@@ -86,13 +86,7 @@ func (a *AccessController) BypassAuthIfIntrospection(r *http.Request, operationP
 		return false
 	}
 
-	if isIntrospection {
-		if a.isValidIntrospectionToken(r) {
-			return true
-		}
-	}
-
-	return false
+	return isIntrospection && a.isValidIntrospectionToken(r)
 }
 
 // isValidIntrospectionToken safely validates the configured introspection token
