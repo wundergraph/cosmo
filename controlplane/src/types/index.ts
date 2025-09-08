@@ -182,6 +182,7 @@ export interface LinkedCheckDTO {
   hasGraphPruningErrors: boolean;
   clientTrafficCheckSkipped: boolean;
   graphPruningCheckSkipped: boolean;
+  isForcedSuccess: boolean;
 }
 
 export interface SchemaCheckDTO {

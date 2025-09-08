@@ -1340,7 +1340,10 @@ const CheckDetails = ({
                                   }
                                 >
                                   <TableCell>
-                                    {getCheckBadge(isSuccessful, false)}
+                                    {getCheckBadge(
+                                      linkedCheck.isCheckSuccessful,
+                                      linkedCheck.isForcedSuccess,
+                                    )}
                                   </TableCell>
                                   <TableCell>{linkedCheck.id}</TableCell>
                                   <TableCell>

@@ -1272,6 +1272,7 @@ export class SchemaCheckRepository {
         }),
         clientTrafficCheckSkipped: !!check.clientTrafficCheckSkipped,
         graphPruningCheckSkipped: !!check.graphPruningSkipped,
+        isForcedSuccess: check.forcedSuccess ?? false,
       });
     }
 

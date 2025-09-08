@@ -4203,6 +4203,11 @@ export class SchemaCheck_LinkedCheck extends Message<SchemaCheck_LinkedCheck> {
    */
   namespace = "";
 
+  /**
+   * @generated from field: bool isForcedSuccess = 10;
+   */
+  isForcedSuccess = false;
+
   constructor(data?: PartialMessage<SchemaCheck_LinkedCheck>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4220,6 +4225,7 @@ export class SchemaCheck_LinkedCheck extends Message<SchemaCheck_LinkedCheck> {
     { no: 7, name: "graphPruningCheckSkipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 8, name: "subgraphNames", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 9, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 10, name: "isForcedSuccess", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SchemaCheck_LinkedCheck {

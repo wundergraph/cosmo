@@ -523,6 +523,7 @@ message SchemaCheck {
     bool graphPruningCheckSkipped = 7;
     repeated string subgraphNames = 8;
     string namespace = 9;
+    bool isForcedSuccess = 10;
   }
 
   string id = 1;
