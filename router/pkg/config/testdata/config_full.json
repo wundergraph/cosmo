@@ -660,6 +660,10 @@
       "Enabled": false,
       "Condition": ""
     },
+    "BlockPersistedOperations": {
+      "Enabled": false,
+      "Condition": ""
+    },
     "ComplexityCalculationCache": {
       "Enabled": true,
       "CacheSize": 1024

@@ -323,6 +323,10 @@
       "Enabled": false,
       "Condition": ""
     },
+    "BlockPersistedOperations": {
+      "Enabled": false,
+      "Condition": ""
+    },
     "ComplexityCalculationCache": null,
     "ComplexityLimits": null,
     "DepthLimit": null,

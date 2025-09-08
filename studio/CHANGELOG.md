@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.127.0](https://github.com/wundergraph/cosmo/compare/studio@0.126.0...studio@0.127.0) (2025-09-03)
+
+### Features
+
+* add a popup about new features on the dashboard ([#2182](https://github.com/wundergraph/cosmo/issues/2182)) ([fb0c48f](https://github.com/wundergraph/cosmo/commit/fb0c48f32c969cbe1e5dca129f8a905fa604f8e0)) (@JivusAyrus)
+
 # [0.126.0](https://github.com/wundergraph/cosmo/compare/studio@0.125.0...studio@0.126.0) (2025-08-28)
 
 ### Features
