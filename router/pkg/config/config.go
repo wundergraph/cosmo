@@ -1015,7 +1015,7 @@ type Config struct {
 	ControlplaneURL               string                      `yaml:"controlplane_url" envDefault:"https://cosmo-cp.wundergraph.com" env:"CONTROLPLANE_URL"`
 	PlaygroundConfig              PlaygroundConfig            `yaml:"playground,omitempty"`
 	PlaygroundEnabled             bool                        `yaml:"playground_enabled" envDefault:"true" env:"PLAYGROUND_ENABLED"`
-	IntrospectionEnabled          bool                        `yaml:"introspection_enabled" envDefault:"true" env:"INTROSPECTION_ENABLED"` // deprecated, use IntrospectionConfiguration instead
+	IntrospectionEnabled          bool                        `yaml:"introspection_enabled" envDefault:"true"` // deprecated, use IntrospectionConfiguration instead
 	IntrospectionConfig           IntrospectionConfiguration  `yaml:"introspection,omitempty"`
 	QueryPlansEnabled             bool                        `yaml:"query_plans_enabled" envDefault:"true" env:"QUERY_PLANS_ENABLED"`
 	LogLevel                      zapcore.Level               `yaml:"log_level" envDefault:"info" env:"LOG_LEVEL"`
