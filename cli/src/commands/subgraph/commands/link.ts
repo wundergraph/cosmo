@@ -13,7 +13,7 @@ export default (opts: BaseCommandOptions) => {
   command.argument('<source-subgraph-name>', 'The name of the subgraph to link.');
   command.option('-n, --namespace [string]', 'The namespace of the source subgraph.', 'default');
   command.requiredOption(
-    '-t, --target-subgraph [string]',
+    '-t, --target-subgraph <string>',
     'The name of the subgraph to link to. Format: <namespace>/<subgraph-name>',
   );
 
