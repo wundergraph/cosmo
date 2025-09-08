@@ -43,13 +43,13 @@ jobs:
           kbld version
 
       - name: start minikube
-        if: github.event_name == 'push' && !startsWith(github.ref, 'refs/heads/release-please--')
+        if: github.event_name == 'pull_request' && !startsWith(github.head_ref, 'release-please--')
         id: minikube
         uses: medyagh/setup-minikube@v0.0.18
         with:
           addons: ingress
 
       - name: Deploy to minikube
-        if: github.event_name == 'push' && !startsWith(github.ref, 'refs/heads/release-please--')
+        if: github.event_name == 'pull_request' && !startsWith(github.head_ref, 'release-please--')
         working-directory: ./helm
         run: make deploy KAPP_ARGS="-y --logs-all"
