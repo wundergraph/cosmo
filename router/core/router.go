@@ -223,10 +223,12 @@ func NewRouter(opts ...Option) (*Router, error) {
 	}
 
 	// handle introspection config deprecation
-	// this is set via the deprecated method
+	// if either the old deprecated or the new config is set to false, introspection is disabled
 	if !r.introspection {
 		r.introspectionConfig.Enabled = r.introspection
 		r.logger.Warn("The introspection_enabled option is deprecated. Use the introspection.enabled option in the config instead.")
+	} else if !r.introspectionConfig.Enabled {
+		r.introspection = r.introspectionConfig.Enabled
 	}
 
 	if r.instanceID == "" {
