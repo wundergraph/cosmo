@@ -462,7 +462,7 @@
   "IntrospectionConfig": {
     "Enabled": true,
     "SkipAuthentication": false,
-    "Token": "aTLQw7rckY3N19Fo7ynYgbwaJFKMrXxI"
+    "Token": "AN_EXAMPLE_PLACEHOLDER_TOKEN_ONLY"
   },
   "QueryPlansEnabled": true,
   "LogLevel": "info",

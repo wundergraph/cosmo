@@ -23,7 +23,7 @@ introspection_enabled: true
 introspection:
   enabled: true
   skip_authentication: false
-  token: 'aTLQw7rckY3N19Fo7ynYgbwaJFKMrXxI'
+  token: 'AN_EXAMPLE_PLACEHOLDER_TOKEN_ONLY'
 json_log: true
 shutdown_delay: 15s
 grace_period: 20s
