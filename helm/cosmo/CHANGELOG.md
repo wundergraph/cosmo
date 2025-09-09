@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.13.2...helm-cosmo@0.14.0) (2025-09-09)
+
+
+### Features
+
+* update images in values for bitnami helm charts ([#2190](https://github.com/wundergraph/cosmo/issues/2190)) ([a52c215](https://github.com/wundergraph/cosmo/commit/a52c2153304610e116274752a8269e41be887359))
+
 ## [0.13.2](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.13.1...helm-cosmo@0.13.2) (2025-08-15)
 
 
