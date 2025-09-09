@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.5.0](https://github.com/wundergraph/cosmo/compare/router-plugin@0.4.1...router-plugin@0.5.0) (2025-09-06)
+
+### Features
+
+* upgrade all components to go 1.25 ([#2187](https://github.com/wundergraph/cosmo/issues/2187)) ([49c35ed](https://github.com/wundergraph/cosmo/commit/49c35ede5ab5873ee163815a047797429a63e3d1)) (@miklosbarabas)
+
+## [0.4.1](https://github.com/wundergraph/cosmo/compare/router-plugin@0.4.0...router-plugin@0.4.1) (2025-08-24)
+
+### Bug Fixes
+
+* **cli:** fix link in plugin docs and npm workspace issue ([#2164](https://github.com/wundergraph/cosmo/issues/2164)) ([1a6b4f2](https://github.com/wundergraph/cosmo/commit/1a6b4f26063e6d8a642d68b0f96963367a592dfb)) (@StarpTech)
+
 # [0.4.0](https://github.com/wundergraph/cosmo/compare/router-plugin@0.3.1...router-plugin@0.4.0) (2025-08-13)
 
 ### Features

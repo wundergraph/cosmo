@@ -40,7 +40,6 @@ import (
 	rmiddleware "github.com/wundergraph/cosmo/router/internal/middleware"
 	"github.com/wundergraph/cosmo/router/internal/recoveryhandler"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
-	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
@@ -1145,7 +1144,7 @@ func (s *graphServer) buildGraphMux(
 		subgraphTippers[subgraph] = subgraphTransport
 	}
 
-	if err := s.setupConnector(ctx, opts.EngineConfig, opts.ConfigSubgraphs); err != nil {
+	if err := s.setupConnector(ctx, opts.EngineConfig, opts.ConfigSubgraphs, telemetryAttExpressions, tracingAttExpressions); err != nil {
 		return nil, fmt.Errorf("failed to setup plugin host: %w", err)
 	}
 
@@ -1154,6 +1153,12 @@ func (s *graphServer) buildGraphMux(
 	var baseConnMetricStore rmetric.ConnectionMetricStore = &rmetric.NoopConnectionMetricStore{}
 	if s.connectionMetrics != nil {
 		baseConnMetricStore = s.connectionMetrics
+	}
+
+	// Build retry options and handle any expression compilation errors
+	processedRetryOptions, err := ProcessRetryOptions(s.retryOptions)
+	if err != nil {
+		return nil, fmt.Errorf("failed to process retry options: %w", err)
 	}
 
 	ecb := &ExecutorConfigurationBuilder{
@@ -1171,20 +1176,12 @@ func (s *graphServer) buildGraphMux(
 			FrameTimeout: s.engineExecutionConfiguration.WebSocketClientFrameTimeout,
 		},
 		transportOptions: &TransportOptions{
-			SubgraphTransportOptions: s.subgraphTransportOptions,
-			PreHandlers:              s.preOriginHandlers,
-			PostHandlers:             s.postOriginHandlers,
-			MetricStore:              gm.metricStore,
-			ConnectionMetricStore:    baseConnMetricStore,
-			RetryOptions: retrytransport.RetryOptions{
-				Enabled:       s.retryOptions.Enabled,
-				MaxRetryCount: s.retryOptions.MaxRetryCount,
-				MaxDuration:   s.retryOptions.MaxDuration,
-				Interval:      s.retryOptions.Interval,
-				ShouldRetry: func(err error, req *http.Request, resp *http.Response) bool {
-					return retrytransport.IsRetryableError(err, resp) && !isMutationRequest(req.Context())
-				},
-			},
+			SubgraphTransportOptions:      s.subgraphTransportOptions,
+			PreHandlers:                   s.preOriginHandlers,
+			PostHandlers:                  s.postOriginHandlers,
+			MetricStore:                   gm.metricStore,
+			ConnectionMetricStore:         baseConnMetricStore,
+			RetryOptions:                  *processedRetryOptions,
 			TracerProvider:                s.tracerProvider,
 			TracePropagators:              s.compositePropagator,
 			LocalhostFallbackInsideDocker: s.localhostFallbackInsideDocker,
@@ -1203,7 +1200,7 @@ func (s *graphServer) buildGraphMux(
 			Reporter:                       s.engineStats,
 			ApolloCompatibilityFlags:       s.apolloCompatibilityFlags,
 			ApolloRouterCompatibilityFlags: s.apolloRouterCompatibilityFlags,
-			HeartbeatInterval:              s.multipartHeartbeatInterval,
+			HeartbeatInterval:              s.subscriptionHeartbeatInterval,
 			PluginsEnabled:                 s.plugins.Enabled,
 			InstanceData:                   s.instanceData,
 		},
@@ -1374,7 +1371,11 @@ func (s *graphServer) buildGraphMux(
 			Enabled:   s.securityConfiguration.BlockNonPersistedOperations.Enabled,
 			Condition: s.securityConfiguration.BlockNonPersistedOperations.Condition,
 		},
-		PersistedOperationsDisabled: s.persistedOperationsConfig.Disabled,
+		BlockPersisted: BlockPersistedOptions{
+			Enabled:   s.securityConfiguration.BlockPersistedOperations.Enabled,
+			Condition: s.securityConfiguration.BlockPersistedOperations.Condition,
+		},
+
 		SafelistEnabled:             s.persistedOperationsConfig.Safelist.Enabled,
 		LogUnknownOperationsEnabled: s.persistedOperationsConfig.LogUnknown,
 		exprManager:                 exprManager,
@@ -1484,7 +1485,13 @@ func (s *graphServer) buildGraphMux(
 	return gm, nil
 }
 
-func (s *graphServer) setupConnector(ctx context.Context, config *nodev1.EngineConfiguration, configSubgraphs []*nodev1.Subgraph) error {
+func (s *graphServer) setupConnector(
+	ctx context.Context,
+	config *nodev1.EngineConfiguration,
+	configSubgraphs []*nodev1.Subgraph,
+	telemetryAttributeExpressions *attributeExpressions,
+	tracingAttributeExpressions *attributeExpressions,
+) error {
 	s.connector = grpcconnector.NewConnector()
 
 	for _, dsConfig := range config.DatasourceConfigurations {
@@ -1537,6 +1544,13 @@ func (s *graphServer) setupConnector(ctx context.Context, config *nodev1.EngineC
 
 		startupConfig := newGRPCStartupParams(s.traceConfig, s.ipAnonymization)
 
+		tracer := s.tracerProvider.Tracer("wundergraph/cosmo/router/engine/grpc", oteltrace.WithInstrumentationVersion("0.0.1"))
+
+		getTraceAttributes := CreateGRPCTraceGetter(
+			telemetryAttributeExpressions,
+			tracingAttributeExpressions,
+		)
+
 		if imgRef := pluginConfig.GetImageReference(); imgRef != nil {
 			ref := fmt.Sprintf("%s/%s:%s",
 				s.plugins.Registry.URL,
@@ -1545,10 +1559,12 @@ func (s *graphServer) setupConnector(ctx context.Context, config *nodev1.EngineC
 			)
 
 			grpcPlugin, err := grpcpluginoci.NewGRPCOCIPlugin(grpcpluginoci.GRPCPluginConfig{
-				Logger:        s.logger,
-				ImageRef:      ref,
-				RegistryToken: s.graphApiToken,
-				StartupConfig: startupConfig,
+				Logger:             s.logger,
+				ImageRef:           ref,
+				RegistryToken:      s.graphApiToken,
+				StartupConfig:      startupConfig,
+				Tracer:             tracer,
+				GetTraceAttributes: getTraceAttributes,
 			})
 			if err != nil {
 				return fmt.Errorf("failed to create grpc oci plugin for subgraph %s: %w", dsConfig.Id, err)
@@ -1565,10 +1581,12 @@ func (s *graphServer) setupConnector(ctx context.Context, config *nodev1.EngineC
 			}
 
 			grpcPlugin, err := grpcplugin.NewGRPCPlugin(grpcplugin.GRPCPluginConfig{
-				Logger:        s.logger,
-				PluginName:    pluginConfig.GetName(),
-				PluginPath:    pluginPath,
-				StartupConfig: startupConfig,
+				Logger:             s.logger,
+				PluginName:         pluginConfig.GetName(),
+				PluginPath:         pluginPath,
+				StartupConfig:      startupConfig,
+				Tracer:             tracer,
+				GetTraceAttributes: getTraceAttributes,
 			})
 			if err != nil {
 				return fmt.Errorf("failed to create grpc plugin for subgraph %s: %w", dsConfig.Id, err)

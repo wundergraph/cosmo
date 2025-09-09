@@ -47,6 +47,7 @@ export class TraceRepository {
         SpanAttributes['wg.router.version'] as attrRouterVersion,
         SpanAttributes['wg.operation.persisted_id'] as attrOperationPersistedId,
         SpanAttributes['wg.federated_graph.id'] as attrFederatedGraphId,
+        SpanAttributes['wg.operation.protocol'] as attrOperationProtocol,
         SpanAttributes['wg.operation.batching.is_batched'] as attrIsBatched,
         SpanAttributes['wg.operation.batching.operations_count'] as attrBatchedOperationsCount,
         SpanAttributes['wg.operation.batching.operation_index'] as attrWgBatchedOperationIndex
@@ -136,6 +137,7 @@ export class TraceRepository {
         operationPersistedID: result.attrOperationPersistedId,
         federatedGraphID: result.attrFederatedGraphId,
         isBatched: result.attrIsBatched,
+        operationProtocol: result.attrOperationProtocol,
         batchedOperationsCount: result.attrBatchedOperationsCount,
         batchedOperationIndex: result.attrWgBatchedOperationIndex,
       },

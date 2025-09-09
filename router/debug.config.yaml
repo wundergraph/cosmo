@@ -5,9 +5,10 @@
 
 version: '1'
 
-# execution_config:
-#   file:
-#     path: './__schemas/config.json'
+execution_config:
+  file:
+    path: './__schemas/config.json'
+    # watch: true
 
 log_level: debug
 

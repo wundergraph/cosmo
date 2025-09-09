@@ -4,6 +4,28 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.91.0](https://github.com/wundergraph/cosmo/compare/wgc@0.90.7...wgc@0.91.0) (2025-09-06)
+
+### Features
+
+* upgrade all components to go 1.25 ([#2187](https://github.com/wundergraph/cosmo/issues/2187)) ([49c35ed](https://github.com/wundergraph/cosmo/commit/49c35ede5ab5873ee163815a047797429a63e3d1)) (@miklosbarabas)
+
+## [0.90.7](https://github.com/wundergraph/cosmo/compare/wgc@0.90.6...wgc@0.90.7) (2025-09-03)
+
+**Note:** Version bump only for package wgc
+
+## [0.90.6](https://github.com/wundergraph/cosmo/compare/wgc@0.90.5...wgc@0.90.6) (2025-08-25)
+
+### Bug Fixes
+
+* add tracing by default and fix bugs ([#2166](https://github.com/wundergraph/cosmo/issues/2166)) ([fa4a94c](https://github.com/wundergraph/cosmo/commit/fa4a94cf9d04b3c179c30a0bb857caf6f5a118c3)) (@SkArchon)
+
+## [0.90.5](https://github.com/wundergraph/cosmo/compare/wgc@0.90.4...wgc@0.90.5) (2025-08-24)
+
+### Bug Fixes
+
+* **cli:** fix link in plugin docs and npm workspace issue ([#2164](https://github.com/wundergraph/cosmo/issues/2164)) ([1a6b4f2](https://github.com/wundergraph/cosmo/commit/1a6b4f26063e6d8a642d68b0f96963367a592dfb)) (@StarpTech)
+
 ## [0.90.4](https://github.com/wundergraph/cosmo/compare/wgc@0.90.3...wgc@0.90.4) (2025-08-19)
 
 **Note:** Version bump only for package wgc

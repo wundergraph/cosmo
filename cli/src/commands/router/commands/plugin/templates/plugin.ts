@@ -6,32 +6,35 @@
 const goMod = `
 module {modulePath}
 
-go 1.24.1
+go 1.25.1
 
 require (
   github.com/stretchr/testify v1.10.0
-  github.com/wundergraph/cosmo/router-plugin v0.0.0-20250519204649-84818397f974 // v0.1.0
+  github.com/wundergraph/cosmo/router-plugin v0.0.0-20250824152218-8eebc34c4995 // v0.4.1
   google.golang.org/grpc v1.68.1
   google.golang.org/protobuf v1.36.5
 )
 `;
 
 const makefile = `
-.PHONY: build test generate
+.PHONY: build test generate install-wgc
+
+install-wgc:
+\t@which wgc > /dev/null 2>&1 || npm install -g wgc@latest
 
 make: build
 
-test:
-	npx wgc@latest router plugin test .
+test: install-wgc
+\twgc router plugin test .
 
-generate:
-	npx wgc@latest router plugin generate .
+generate: install-wgc
+\twgc router plugin generate .
 
 publish: generate
-	npx wgc@latest router plugin publish .
+\twgc router plugin publish .
 
-build:
-	npx wgc@latest router plugin build . --debug
+build: install-wgc
+\twgc router plugin build . --debug
 `;
 
 const mainGo = `package main
@@ -52,7 +55,7 @@ func main() {
     s.RegisterService(&service.{serviceName}_ServiceDesc, &{serviceName}{
       nextID: 1,
     })
-  })
+  }, routerplugin.WithTracing())
 
   if err != nil {
     log.Fatalf("failed to create router plugin: %v", err)
@@ -253,7 +256,20 @@ The plugin demonstrates:
 
 ## Getting Started
 
-For plugin structure and detailed workflow see the [Plugin Development Guide] in the Cursor Rules tab.
+Plugin structure:
+
+   \`\`\`
+    plugins/{originalPluginName}/
+    ├── go.mod                # Go module file with dependencies
+    ├── go.sum                # Go checksums file
+    ├── src/
+    │   ├── main.go           # Main plugin implementation
+    │   ├── main_test.go      # Tests for the plugin
+    │   └── schema.graphql    # GraphQL schema defining the API
+    ├── generated/            # Generated code (created during build)
+    └── bin/                  # Compiled binaries (created during build)
+        └── plugin            # The compiled plugin binary
+   \`\`\`
 
 ## 🔧 Customizing Your Plugin
 
@@ -265,7 +281,7 @@ For plugin structure and detailed workflow see the [Plugin Development Guide] in
 
 For more information about Cosmo and building router plugins:
 - [Cosmo Documentation](https://cosmo-docs.wundergraph.com/)
-- [Cosmo Router Plugins Guide](https://cosmo-docs.wundergraph.com/router/plugins)
+- [Cosmo Router Plugins Guide](https://cosmo-docs.wundergraph.com/connect/plugins)
 
 ---
 
@@ -386,7 +402,7 @@ generated/service.proto
 bin/
 `;
 
-const dockerfile = `FROM --platform=$BUILDPLATFORM golang:1.24-alpine AS builder
+const dockerfile = `FROM --platform=$BUILDPLATFORM golang:1.25-alpine AS builder
 
 # Multi-platform build arguments
 ARG TARGETOS
