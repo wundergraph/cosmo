@@ -8,7 +8,7 @@ import (
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
-	rd "github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
+	rd "github.com/wundergraph/cosmo/router/internal/rediscloser"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
@@ -59,7 +59,7 @@ type Config struct {
 	cacheControlPolicy              config.CacheControlPolicy
 	routerConfigPollerConfig        *RouterConfigPollerConfig
 	cdnConfig                       config.CDNConfiguration
-	persistedOperationClient        persistedoperation.SaveClient
+	persistedOperationClient        *persistedoperation.Client
 	persistedOperationsConfig       config.PersistedOperationsConfig
 	automaticPersistedQueriesConfig config.AutomaticPersistedQueriesConfig
 	apolloCompatibilityFlags        config.ApolloCompatibilityFlags
@@ -106,18 +106,18 @@ type Config struct {
 	// should be removed once the users have migrated to the new overrides config
 	overrideRoutingURLConfiguration config.OverrideRoutingURLConfiguration
 	// the new overrides config
-	overrides                  config.OverridesConfiguration
-	authorization              *config.AuthorizationConfiguration
-	rateLimit                  *config.RateLimitConfiguration
-	webSocketConfiguration     *config.WebSocketConfiguration
-	subgraphErrorPropagation   config.SubgraphErrorPropagationConfiguration
-	clientHeader               config.ClientHeader
-	cacheWarmup                *config.CacheWarmupConfiguration
-	multipartHeartbeatInterval time.Duration
-	hostName                   string
-	mcp                        config.MCPConfiguration
-	plugins                    config.PluginsConfiguration
-	tracingAttributes          []config.CustomAttribute
+	overrides                     config.OverridesConfiguration
+	authorization                 *config.AuthorizationConfiguration
+	rateLimit                     *config.RateLimitConfiguration
+	webSocketConfiguration        *config.WebSocketConfiguration
+	subgraphErrorPropagation      config.SubgraphErrorPropagationConfiguration
+	clientHeader                  config.ClientHeader
+	cacheWarmup                   *config.CacheWarmupConfiguration
+	subscriptionHeartbeatInterval time.Duration
+	hostName                      string
+	mcp                           config.MCPConfiguration
+	plugins                       config.PluginsConfiguration
+	tracingAttributes             []config.CustomAttribute
 }
 
 // Usage returns an anonymized version of the config for usage tracking
