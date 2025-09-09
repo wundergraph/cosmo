@@ -408,6 +408,7 @@ type SecurityConfiguration struct {
 	BlockMutations              BlockOperationConfiguration `yaml:"block_mutations" envPrefix:"SECURITY_BLOCK_MUTATIONS_"`
 	BlockSubscriptions          BlockOperationConfiguration `yaml:"block_subscriptions" envPrefix:"SECURITY_BLOCK_SUBSCRIPTIONS_"`
 	BlockNonPersistedOperations BlockOperationConfiguration `yaml:"block_non_persisted_operations" envPrefix:"SECURITY_BLOCK_NON_PERSISTED_OPERATIONS_"`
+	BlockPersistedOperations    BlockOperationConfiguration `yaml:"block_persisted_operations" envPrefix:"SECURITY_BLOCK_PERSISTED_OPERATIONS_"`
 	ComplexityCalculationCache  *ComplexityCalculationCache `yaml:"complexity_calculation_cache"`
 	ComplexityLimits            *ComplexityLimits           `yaml:"complexity_limits"`
 	DepthLimit                  *QueryDepthConfiguration    `yaml:"depth_limit"`

@@ -6,6 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+
 	"github.com/wundergraph/cosmo/router/internal/httpclient"
 	"github.com/wundergraph/cosmo/router/internal/jwt"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
@@ -14,14 +18,13 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
-	"io"
-	"net/http"
-	"net/url"
 )
 
 type Options struct {
 	Logger *zap.Logger
 }
+
+var _ persistedoperation.StorageClient = (*client)(nil)
 
 type client struct {
 	cdnURL              *url.URL
@@ -36,13 +39,13 @@ type client struct {
 	logger         *zap.Logger
 }
 
-func (cdn *client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, bool, error) {
+func (cdn *client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error) {
 	content, err := cdn.persistedOperation(ctx, clientName, sha256Hash)
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
-	return content, false, nil
+	return content, nil
 }
 
 func (cdn *client) persistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error) {
@@ -124,7 +127,7 @@ func (cdn *client) persistedOperation(ctx context.Context, clientName string, sh
 
 // NewClient creates a new CDN client. URL is the URL of the CDN.
 // Token is the token used to authenticate with the CDN, the same as the GRAPH_API_TOKEN
-func NewClient(endpoint string, token string, opts Options) (persistedoperation.Client, error) {
+func NewClient(endpoint string, token string, opts Options) (*client, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("invalid CDN URL %q: %w", endpoint, err)

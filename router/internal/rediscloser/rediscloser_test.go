@@ -1,11 +1,12 @@
-package rd
+package rediscloser
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/alicebob/miniredis/v2"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest"
-	"testing"
 )
 
 func TestRedisCloser(t *testing.T) {
