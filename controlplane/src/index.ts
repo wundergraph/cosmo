@@ -170,6 +170,14 @@ if (STRIPE_SECRET_KEY) {
   };
 }
 
+if (process.env.SENTRY_ENABLED === 'true') {
+  if (process.env.SENTRY_DSN) {
+    await import('./core/sentry.config.js');
+  } else {
+    throw new Error('SENTRY_ENABLED is set but SENTRY_DSN is not');
+  }
+}
+
 const app = await build(options);
 
 await app.listen({
