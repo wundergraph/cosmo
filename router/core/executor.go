@@ -237,5 +237,7 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 
 	planConfig.EnableOperationNamePropagation = routerEngineCfg.Execution.EnableSubgraphFetchOperationName
 
+	planConfig.BuildFetchReasons = routerEngineCfg.Execution.EnableRequireFetchReasons
+
 	return planConfig, providers, nil
 }

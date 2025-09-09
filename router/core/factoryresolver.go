@@ -549,9 +549,9 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 		if len(keyConfiguration.Conditions) > 0 {
 			conditions = make([]plan.KeyCondition, 0, len(keyConfiguration.Conditions))
 			for _, condition := range keyConfiguration.Conditions {
-				coordinates := make([]plan.KeyConditionCoordinate, 0, len(condition.FieldCoordinatesPath))
+				coordinates := make([]plan.FieldCoordinate, 0, len(condition.FieldCoordinatesPath))
 				for _, coordinate := range condition.FieldCoordinatesPath {
-					coordinates = append(coordinates, plan.KeyConditionCoordinate{
+					coordinates = append(coordinates, plan.FieldCoordinate{
 						TypeName:  coordinate.TypeName,
 						FieldName: coordinate.FieldName,
 					})
