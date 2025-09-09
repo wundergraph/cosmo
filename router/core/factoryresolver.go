@@ -514,9 +514,11 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 		ChildNodes: make([]plan.TypeField, 0, len(in.ChildNodes)),
 		Directives: &d,
 		FederationMetaData: plan.FederationMetaData{
-			Keys:     make([]plan.FederationFieldConfiguration, 0, len(in.Keys)),
-			Requires: make([]plan.FederationFieldConfiguration, 0, len(in.Requires)),
-			Provides: make([]plan.FederationFieldConfiguration, 0, len(in.Provides)),
+			Keys:             make([]plan.FederationFieldConfiguration, 0, len(in.Keys)),
+			Requires:         make([]plan.FederationFieldConfiguration, 0, len(in.Requires)),
+			Provides:         make([]plan.FederationFieldConfiguration, 0, len(in.Provides)),
+			EntityInterfaces: make([]plan.EntityInterfaceConfiguration, 0, len(in.EntityInterfaces)),
+			InterfaceObjects: make([]plan.EntityInterfaceConfiguration, 0, len(in.InterfaceObjects)),
 		},
 	}
 
