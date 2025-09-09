@@ -117,8 +117,7 @@ export class RBACEvaluator {
 
   canCreateFederatedGraph(namespace: Namespace) {
     return (
-      this.isOrganizationAdminOrDeveloper ||
-      this.hasRoleWithAccessToAllOrGivenNamespace('graph-admin', namespace.id)
+      this.isOrganizationAdminOrDeveloper || this.hasRoleWithAccessToAllOrGivenNamespace('graph-admin', namespace.id)
     );
   }
 
@@ -144,8 +143,7 @@ export class RBACEvaluator {
 
   canCreateSubGraph(namespace: Namespace) {
     return (
-      this.isOrganizationAdminOrDeveloper ||
-      this.hasRoleWithAccessToAllOrGivenNamespace('subgraph-admin', namespace.id)
+      this.isOrganizationAdminOrDeveloper || this.hasRoleWithAccessToAllOrGivenNamespace('subgraph-admin', namespace.id)
     );
   }
 
@@ -163,8 +161,7 @@ export class RBACEvaluator {
 
   hasSubGraphWriteAccess(graph: Target) {
     return (
-      this.isOrganizationAdminOrDeveloper ||
-      this.checkTargetAccess(graph, ['subgraph-admin', 'subgraph-publisher'])
+      this.isOrganizationAdminOrDeveloper || this.checkTargetAccess(graph, ['subgraph-admin', 'subgraph-publisher'])
     );
   }
 
@@ -183,13 +180,12 @@ export class RBACEvaluator {
   private hasRoleWithAccessToAllOrGivenNamespace(role: OrganizationRole, namespaceId: string) {
     const rule = this.ruleFor(role);
     return (
-      !!rule && (
-        // The rule has access to every namespace
-        (rule.namespaces.length === 0 && rule.resources.length === 0) ||
+      !!rule &&
+      // The rule has access to every namespace
+      ((rule.namespaces.length === 0 && rule.resources.length === 0) ||
         // The rule has access to the given namespace
-        (rule.namespaces.length > 0 && rule.namespaces.includes(namespaceId))
-      )
-    )
+        (rule.namespaces.length > 0 && rule.namespaces.includes(namespaceId)))
+    );
   }
 
   private checkNamespaceAccess(ns: Namespace, requiredRoles: OrganizationRole[]) {
@@ -218,9 +214,7 @@ export class RBACEvaluator {
   }
 
   private isTargetOwnedByUser(target: Target) {
-    return (
-      !this.isApiKey && target.creatorUserId && this.userId && target.creatorUserId === this.userId
-    );
+    return !this.isApiKey && target.creatorUserId && this.userId && target.creatorUserId === this.userId;
   }
 
   private checkTargetAccess(target: Target, requiredRoles: OrganizationRole[]) {
