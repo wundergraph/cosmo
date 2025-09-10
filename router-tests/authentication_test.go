@@ -2822,7 +2822,7 @@ func TestIntrospectionAuthentication(t *testing.T) {
 		// a dedicated token for introspection queries, this query must succeed
 
 		authenticators, _ := ConfigureAuth(t)
-		token := "0aG3TVhkZ2lPy8ULUPQLXZ4JFPfpxk"
+		token := "wg_test_introspection_token"
 		accessController, err := core.NewAccessController(authenticators, true, core.IntrospectionAuthModeSkip, token)
 		require.NoError(t, err)
 
@@ -2852,7 +2852,7 @@ func TestIntrospectionAuthentication(t *testing.T) {
 		// since we have configured a token and the introspection query does not match it, this query must fail
 
 		authenticators, _ := ConfigureAuth(t)
-		token := "0aG3TVhkZ2lPy8ULUPQLXZ4JFPfpxk"
+		token := "wg_test_introspection_token"
 		accessController, err := core.NewAccessController(authenticators, true, core.IntrospectionAuthModeToken, token)
 		require.NoError(t, err)
 
