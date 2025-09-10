@@ -49,7 +49,7 @@ export function getProposal(
       };
     }
 
-    const latestCheck = await proposalRepo.getLatestCheckForProposal(proposal.proposal.id);
+    const latestCheck = await proposalRepo.getLatestCheckForProposal(proposal.proposal.id, authContext.organizationId);
 
     const currentSubgraphs = [];
     for (const subgraph of proposal.proposalSubgraphs) {

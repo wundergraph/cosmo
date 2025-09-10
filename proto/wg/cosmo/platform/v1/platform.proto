@@ -2728,6 +2728,10 @@ message CreateProposalResponse {
   string checkUrl = 15;
   string proposalUrl = 16;
   string proposalName = 17;
+   // If true, it means the traffic check failed for the linked check
+  optional bool isLinkedTrafficCheckFailed = 18;
+  // If true, it means the graph pruning check failed for the linked check
+  optional bool isLinkedPruningCheckFailed = 19;
 }
 
 message GetProposalRequest {
@@ -2802,6 +2806,10 @@ message UpdateProposalResponse {
   bool lintingSkipped = 12;
   bool graphPruningSkipped = 13;
   string checkUrl = 14;
+   // If true, it means the traffic check failed for the linked check
+  optional bool isLinkedTrafficCheckFailed = 15;
+  // If true, it means the graph pruning check failed for the linked check
+  optional bool isLinkedPruningCheckFailed = 16;
 }
 
 message EnableProposalsForNamespaceRequest {

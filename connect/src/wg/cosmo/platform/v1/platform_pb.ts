@@ -21369,6 +21369,20 @@ export class CreateProposalResponse extends Message<CreateProposalResponse> {
    */
   proposalName = "";
 
+  /**
+   * If true, it means the traffic check failed for the linked check
+   *
+   * @generated from field: optional bool isLinkedTrafficCheckFailed = 18;
+   */
+  isLinkedTrafficCheckFailed?: boolean;
+
+  /**
+   * If true, it means the graph pruning check failed for the linked check
+   *
+   * @generated from field: optional bool isLinkedPruningCheckFailed = 19;
+   */
+  isLinkedPruningCheckFailed?: boolean;
+
   constructor(data?: PartialMessage<CreateProposalResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -21394,6 +21408,8 @@ export class CreateProposalResponse extends Message<CreateProposalResponse> {
     { no: 15, name: "checkUrl", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 16, name: "proposalUrl", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 17, name: "proposalName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 18, name: "isLinkedTrafficCheckFailed", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 19, name: "isLinkedPruningCheckFailed", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateProposalResponse {
@@ -21947,6 +21963,20 @@ export class UpdateProposalResponse extends Message<UpdateProposalResponse> {
    */
   checkUrl = "";
 
+  /**
+   * If true, it means the traffic check failed for the linked check
+   *
+   * @generated from field: optional bool isLinkedTrafficCheckFailed = 15;
+   */
+  isLinkedTrafficCheckFailed?: boolean;
+
+  /**
+   * If true, it means the graph pruning check failed for the linked check
+   *
+   * @generated from field: optional bool isLinkedPruningCheckFailed = 16;
+   */
+  isLinkedPruningCheckFailed?: boolean;
+
   constructor(data?: PartialMessage<UpdateProposalResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -21969,6 +21999,8 @@ export class UpdateProposalResponse extends Message<UpdateProposalResponse> {
     { no: 12, name: "lintingSkipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 13, name: "graphPruningSkipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 14, name: "checkUrl", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 15, name: "isLinkedTrafficCheckFailed", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 16, name: "isLinkedPruningCheckFailed", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateProposalResponse {

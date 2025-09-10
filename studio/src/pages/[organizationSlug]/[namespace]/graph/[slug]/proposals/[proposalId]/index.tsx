@@ -559,6 +559,7 @@ export const ProposalDetails = ({
                               graphPruningSkipped,
                               checkedSubgraphs,
                               proposalMatch,
+                              linkedChecks,
                             }) => {
                               const isSuccessful = isCheckSuccessful(
                                 isComposable,
@@ -568,6 +569,8 @@ export const ProposalDetails = ({
                                 hasGraphPruningErrors,
                                 clientTrafficCheckSkipped,
                                 proposalMatch === "error",
+                                linkedChecks.some((linkedCheck) => linkedCheck.hasClientTraffic),
+                                linkedChecks.some((linkedCheck) => linkedCheck.hasGraphPruningErrors),
                               );
 
                               const path = `/${user?.currentOrganization.slug}/${graphData?.graph?.namespace}/graph/${graphData?.graph?.name}/checks/${id}`;
