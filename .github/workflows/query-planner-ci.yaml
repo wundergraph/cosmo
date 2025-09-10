@@ -10,6 +10,7 @@ on:
       - 'router/**/*'
       - 'connect/**/*'
       - '.github/workflows/router-ci.yaml'
+      - '.github/workflows/query-planner-ci.yaml'
 env:
   CI: true
   DO_NOT_TRACK: '1'
@@ -21,11 +22,21 @@ concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}
   cancel-in-progress: true
 jobs:
-  check-label:
+  check-label-and-engine-changes:
     runs-on: ubuntu-latest
     outputs:
       has_label: ${{ steps.check_label.outputs.has_label }}
+      engine_changed: ${{ steps.check_engine_changes.outputs.engine_changed }}
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup Go  
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: router/go.mod
+          cache: true
       - name: Check for query-planner label
         id: check_label
         uses: actions/github-script@v6
@@ -38,6 +49,21 @@ jobs:
             });
             const hasLabel = labels.data.some(label => label.name === 'query-planner');
             core.setOutput('has_label', hasLabel ? 'true' : 'false');
+      - name: Check for changes of engine
+        id: check_engine_changes
+        working-directory: router
+        run: |
+          current_engine_version=$(go list -f '{{.Version}}' -m github.com/wundergraph/graphql-go-tools/v2)
+          git show ${{ github.event.pull_request.base.sha }}:router/go.mod > base.go.mod
+          previous_engine_version=$(go list -f '{{.Version}}' -modfile base.go.mod -m github.com/wundergraph/graphql-go-tools/v2)
+          if [ "$current_engine_version" != "$previous_engine_version" ]; then
+            echo "engine_changed=true" >> $GITHUB_OUTPUT
+            echo "Engine has been changed from $previous_engine_version to $current_engine_version"
+          else
+            echo "engine_changed=false" >> $GITHUB_OUTPUT
+            echo "Engine has not been changed"
+          fi
+
   filter-changes:
     runs-on: ubuntu-latest
     outputs:
@@ -113,13 +139,13 @@ jobs:
   build_test: # This job is use to lock the merge of the PR if anything fails in the query planner
     runs-on: ubuntu-latest
     if: ${{ always() }}
-    needs: [ build-router, build-cli, cli-release-url, check-label ]
+    needs: [ build-router, build-cli, cli-release-url, check-label-and-engine-changes ]
     outputs:
       workflow_url: ${{ steps.trigger_workflow.outputs.workflow_url }}
       workflow_id: ${{ steps.trigger_workflow.outputs.workflow_id }}
     steps:
       - uses: convictional/trigger-workflow-and-wait@v1.6.5
-        if: ${{ needs.check-label.outputs.has_label == 'true' }}
+        if: ${{ needs.check-label-and-engine-changes.outputs.has_label == 'true' || needs.check-label-and-engine-changes.outputs.engine_changed == 'true' }}
         id: trigger_workflow
         name: Trigger Query Planner CI
         with:
@@ -132,13 +158,13 @@ jobs:
           client_payload: >-
             {
               "branch": "query-plan/pr-${{ github.event.pull_request.number }}",
-              "router": "${{ needs.build-router.outputs.image_ref || 'ghcr.io/wundergraph/router:latest' }}",
+              "router": "${{ needs.build-router.outputs.image_ref || 'ghcr.io/wundergraph/cosmo/router:latest' }}",
               "wgc": "${{ needs.build-cli.outputs.wgc || needs.cli-release-url.outputs.wgc }}"
             }
   get_pr_url:
-    needs: [ build_test, check-label ]
+    needs: [ build_test, check-label-and-engine-changes ]
     runs-on: ubuntu-latest
-    if: ${{ always() && needs.check-label.outputs.has_label == 'true' }}
+    if: ${{ always() && (needs.check-label-and-engine-changes.outputs.has_label == 'true' || needs.check-label-and-engine-changes.outputs.engine_changed == 'true') }}
     outputs:
       pullrequest_url: ${{ steps.get_url.outputs.pr_url }}
     steps:
@@ -174,8 +200,8 @@ jobs:
           pr_url=$(cat pr-url.txt)
           echo "pr_url=$pr_url" >> $GITHUB_OUTPUT
   comment-on-failure:
-    needs: [build_test, get_pr_url, check-label]
-    if: ${{ needs.check-label.outputs.has_label == 'true' && failure() }}
+    needs: [build_test, get_pr_url, check-label-and-engine-changes]
+    if: ${{ (needs.check-label-and-engine-changes.outputs.has_label == 'true' || needs.check-label-and-engine-changes.outputs.engine_changed == 'true') && failure() }}
     runs-on: ubuntu-latest
     steps:
       - name: Comment PR on failure
@@ -193,8 +219,8 @@ jobs:
             The Internal Query Planner CI checks failed in the celestial repository, and this is going to stop the merge of this PR.
             If you are part of the WunderGraph organization, you can [see the PR with more details](${{ needs.get_pr_url.outputs.pullrequest_url }}).
   comment-on-success:
-    needs: [build_test, get_pr_url, check-label]
-    if: ${{ needs.check-label.outputs.has_label == 'true' && success() }}
+    needs: [build_test, get_pr_url, check-label-and-engine-changes]
+    if: ${{ (needs.check-label-and-engine-changes.outputs.has_label == 'true' || needs.check-label-and-engine-changes.outputs.engine_changed == 'true') && success() }}
     runs-on: ubuntu-latest
     steps:
       - name: Comment PR on failure
