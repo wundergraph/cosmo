@@ -20,6 +20,8 @@ import {
   AS,
   AUTHENTICATED,
   BOOLEAN_SCALAR,
+  CHANNEL,
+  CHANNELS,
   COMPOSE_DIRECTIVE,
   CONDITION,
   CONFIGURE_CHILD_DESCRIPTIONS,
@@ -35,6 +37,8 @@ import {
   EDFS_NATS_REQUEST,
   EDFS_NATS_STREAM_CONFIGURATION,
   EDFS_NATS_SUBSCRIBE,
+  EDFS_REDIS_PUBLISH,
+  EDFS_REDIS_SUBSCRIBE,
   ENUM_UPPER,
   ENUM_VALUE_UPPER,
   EXECUTION,
@@ -69,6 +73,7 @@ import {
   PROVIDER_ID,
   PROVIDES,
   REASON,
+  REQUIRE_FETCH_REASONS,
   REQUIRES,
   REQUIRES_SCOPES,
   RESOLVABLE,
@@ -94,10 +99,6 @@ import {
   UNION_UPPER,
   URL_LOWER,
   VALUES,
-  EDFS_REDIS_PUBLISH,
-  EDFS_REDIS_SUBSCRIBE,
-  CHANNEL,
-  CHANNELS,
 } from '../../utils/string-constants';
 
 export const REQUIRED_STRING_TYPE_NODE: TypeNode = {
@@ -512,6 +513,7 @@ export const ALL_IN_BUILT_DIRECTIVE_NAMES = new Set<string>([
   LINK,
   OVERRIDE,
   PROVIDES,
+  REQUIRE_FETCH_REASONS,
   REQUIRES,
   REQUIRES_SCOPES,
   SHAREABLE,
@@ -655,6 +657,14 @@ export const OVERRIDE_DEFINITION: DirectiveDefinitionNode = {
   locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER]),
   name: stringToNameNode(OVERRIDE),
   repeatable: false,
+};
+
+// directive @openfed__requireFetchReasons repeatable on FIELD_DEFINITION | OBJECT
+export const REQUIRE_FETCH_REASONS_DEFINITION: DirectiveDefinitionNode = {
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER, OBJECT_UPPER]),
+  name: stringToNameNode(REQUIRE_FETCH_REASONS),
+  repeatable: true,
 };
 
 // @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
