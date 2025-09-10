@@ -38,11 +38,13 @@ export function getWorkspace(
 
     // Initialize the response
     const result = namespaces
-      .map((ns) => WorkspaceNamespace.fromJson({
-        id: ns.id,
-        name: ns.name,
-        graphs: [],
-      } satisfies PlainMessage<WorkspaceNamespace>))
+      .map((ns) =>
+        WorkspaceNamespace.fromJson({
+          id: ns.id,
+          name: ns.name,
+          graphs: [],
+        } satisfies PlainMessage<WorkspaceNamespace>),
+      )
       .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
 
     // Step 2 - Retrieve all the federated graphs the actor have access to based on the namespaces
@@ -78,19 +80,24 @@ export function getWorkspace(
         });
 
         //
-        namespace.graphs.push(WorkspaceFederatedGraph.fromJson({
-          id: graph.id,
-          targetId: graph.targetId,
-          name: graph.name,
-          isContract: !!graph.contract?.id,
-          subgraphs: subgraphsForFederatedGraph
-            .map((subgraph) => ({
-              id: subgraph.id,
-              targetId: subgraph.targetId,
-              name: subgraph.name,
-            } satisfies PlainMessage<WorkspaceSubgraph>))
-            .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' })),
-        } satisfies PlainMessage<WorkspaceFederatedGraph>));
+        namespace.graphs.push(
+          WorkspaceFederatedGraph.fromJson({
+            id: graph.id,
+            targetId: graph.targetId,
+            name: graph.name,
+            isContract: !!graph.contract?.id,
+            subgraphs: subgraphsForFederatedGraph
+              .map(
+                (subgraph) =>
+                  ({
+                    id: subgraph.id,
+                    targetId: subgraph.targetId,
+                    name: subgraph.name,
+                  }) satisfies PlainMessage<WorkspaceSubgraph>,
+              )
+              .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' })),
+          } satisfies PlainMessage<WorkspaceFederatedGraph>),
+        );
       }),
     );
 
