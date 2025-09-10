@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuTrigger
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { Loader } from "@/components/ui/loader";
@@ -559,6 +559,7 @@ export const ProposalDetails = ({
                               graphPruningSkipped,
                               checkedSubgraphs,
                               proposalMatch,
+                              linkedChecks,
                             }) => {
                               const isSuccessful = isCheckSuccessful(
                                 isComposable,
@@ -568,6 +569,16 @@ export const ProposalDetails = ({
                                 hasGraphPruningErrors,
                                 clientTrafficCheckSkipped,
                                 proposalMatch === "error",
+                                linkedChecks.some(
+                                  (linkedCheck) =>
+                                    linkedCheck.hasClientTraffic &&
+                                    !linkedCheck.isForcedSuccess,
+                                ),
+                                linkedChecks.some(
+                                  (linkedCheck) =>
+                                    linkedCheck.hasGraphPruningErrors &&
+                                    !linkedCheck.isForcedSuccess,
+                                ),
                               );
 
                               const path = `/${user?.currentOrganization.slug}/${graphData?.graph?.namespace}/graph/${graphData?.graph?.name}/checks/${id}`;

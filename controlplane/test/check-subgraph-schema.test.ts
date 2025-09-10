@@ -15,7 +15,7 @@ import {
   createTestGroup,
   createTestRBACEvaluator,
   genID,
-  genUniqueLabel
+  genUniqueLabel,
 } from '../src/core/test-util.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import { SchemaChangeType } from '../src/types/index.js';
@@ -49,63 +49,61 @@ describe('CheckSubgraphSchema', (ctx) => {
     await afterAllSetup(dbname);
   });
 
-  test.each([
-    'organization-admin',
-    'organization-developer',
-    'subgraph-admin',
-    'subgraph-publisher',
-  ])('%s should be able to create a subgraph, publish the schema and then check with new schema', async (role) => {
-    const { client, server, authenticator, users } = await SetupTest({ dbname, chClient });
+  test.each(['organization-admin', 'organization-developer', 'subgraph-admin', 'subgraph-publisher'])(
+    '%s should be able to create a subgraph, publish the schema and then check with new schema',
+    async (role) => {
+      const { client, server, authenticator, users } = await SetupTest({ dbname, chClient });
 
-    const subgraphName = genID('subgraph1');
-    const label = genUniqueLabel();
+      const subgraphName = genID('subgraph1');
+      const label = genUniqueLabel();
 
-    let resp = await client.createFederatedSubgraph({
-      name: subgraphName,
-      namespace: 'default',
-      labels: [label],
-      routingUrl: 'http://localhost:8080',
-    });
+      let resp = await client.createFederatedSubgraph({
+        name: subgraphName,
+        namespace: 'default',
+        labels: [label],
+        routingUrl: 'http://localhost:8080',
+      });
 
-    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+      expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
-    resp = await client.publishFederatedSubgraph({
-      name: subgraphName,
-      namespace: 'default',
-      schema: 'type Query { hello: String! }',
-    });
+      resp = await client.publishFederatedSubgraph({
+        name: subgraphName,
+        namespace: 'default',
+        schema: 'type Query { hello: String! }',
+      });
 
-    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+      expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
-    authenticator.changeUserWithSuppliedContext({
-      ...users.adminAliceCompanyA,
-      rbac: createTestRBACEvaluator(createTestGroup({ role }))
-    });
+      authenticator.changeUserWithSuppliedContext({
+        ...users.adminAliceCompanyA,
+        rbac: createTestRBACEvaluator(createTestGroup({ role })),
+      });
 
-    // test for no changes in schema
-    let checkResp = await client.checkSubgraphSchema({
-      subgraphName,
-      namespace: 'default',
-      schema: Uint8Array.from(Buffer.from('type Query { hello: String! }')),
-    });
-    expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
-    expect(checkResp.breakingChanges.length).toBe(0);
-    expect(checkResp.nonBreakingChanges.length).toBe(0);
+      // test for no changes in schema
+      let checkResp = await client.checkSubgraphSchema({
+        subgraphName,
+        namespace: 'default',
+        schema: Uint8Array.from(Buffer.from('type Query { hello: String! }')),
+      });
+      expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(checkResp.breakingChanges.length).toBe(0);
+      expect(checkResp.nonBreakingChanges.length).toBe(0);
 
-    // test for breaking changes in schema
-    checkResp = await client.checkSubgraphSchema({
-      subgraphName,
-      namespace: 'default',
-      schema: Uint8Array.from(Buffer.from('type Query { name: String! }')),
-    });
-    expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
-    expect(checkResp.breakingChanges.length).not.toBe(0);
-    expect(checkResp.breakingChanges[0].changeType).toBe(SchemaChangeType.FIELD_REMOVED);
-    expect(checkResp.nonBreakingChanges.length).not.toBe(0);
-    expect(checkResp.nonBreakingChanges[0].changeType).toBe(SchemaChangeType.FIELD_ADDED);
+      // test for breaking changes in schema
+      checkResp = await client.checkSubgraphSchema({
+        subgraphName,
+        namespace: 'default',
+        schema: Uint8Array.from(Buffer.from('type Query { name: String! }')),
+      });
+      expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(checkResp.breakingChanges.length).not.toBe(0);
+      expect(checkResp.breakingChanges[0].changeType).toBe(SchemaChangeType.FIELD_REMOVED);
+      expect(checkResp.nonBreakingChanges.length).not.toBe(0);
+      expect(checkResp.nonBreakingChanges[0].changeType).toBe(SchemaChangeType.FIELD_ADDED);
 
-    await server.close();
-  });
+      await server.close();
+    },
+  );
 
   test('Should allow legacy fallback when checking graph', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname, chClient });
@@ -132,7 +130,7 @@ describe('CheckSubgraphSchema', (ctx) => {
 
     authenticator.changeUserWithSuppliedContext({
       ...users.adminAliceCompanyA,
-      rbac: createAPIKeyTestRBACEvaluator()
+      rbac: createAPIKeyTestRBACEvaluator(),
     });
 
     // test for no changes in schema
@@ -160,83 +158,87 @@ describe('CheckSubgraphSchema', (ctx) => {
     await server.close();
   });
 
-  test.each([
-    'subgraph-admin',
-    'subgraph-publisher',
-  ])('%s should be able to check with new schema on allowed namespaces', async (role) => {
-    const { client, server, authenticator, users } = await SetupTest({ dbname, chClient });
+  test.each(['subgraph-admin', 'subgraph-publisher'])(
+    '%s should be able to check with new schema on allowed namespaces',
+    async (role) => {
+      const { client, server, authenticator, users } = await SetupTest({ dbname, chClient });
 
-    const subgraphName = genID('subgraph1');
-    const label = genUniqueLabel();
+      const subgraphName = genID('subgraph1');
+      const label = genUniqueLabel();
 
-    const getNamespaceResponse = await client.getNamespace({ name: DEFAULT_NAMESPACE });
-    expect(getNamespaceResponse.response?.code).toBe(EnumStatusCode.OK);
+      const getNamespaceResponse = await client.getNamespace({ name: DEFAULT_NAMESPACE });
+      expect(getNamespaceResponse.response?.code).toBe(EnumStatusCode.OK);
 
-    let resp = await client.createFederatedSubgraph({
-      name: subgraphName,
-      namespace: 'default',
-      labels: [label],
-      routingUrl: 'http://localhost:8080',
-    });
+      let resp = await client.createFederatedSubgraph({
+        name: subgraphName,
+        namespace: 'default',
+        labels: [label],
+        routingUrl: 'http://localhost:8080',
+      });
 
-    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+      expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
-    resp = await client.publishFederatedSubgraph({
-      name: subgraphName,
-      namespace: 'default',
-      schema: 'type Query { hello: String! }',
-    });
+      resp = await client.publishFederatedSubgraph({
+        name: subgraphName,
+        namespace: 'default',
+        schema: 'type Query { hello: String! }',
+      });
 
-    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+      expect(resp.response?.code).toBe(EnumStatusCode.OK);
 
-    // test for no changes in schema
-    let checkResp = await client.checkSubgraphSchema({
-      subgraphName,
-      namespace: 'default',
-      schema: Uint8Array.from(Buffer.from('type Query { hello: String! }')),
-    });
-    expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
-    expect(checkResp.breakingChanges.length).toBe(0);
-    expect(checkResp.nonBreakingChanges.length).toBe(0);
+      // test for no changes in schema
+      let checkResp = await client.checkSubgraphSchema({
+        subgraphName,
+        namespace: 'default',
+        schema: Uint8Array.from(Buffer.from('type Query { hello: String! }')),
+      });
+      expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(checkResp.breakingChanges.length).toBe(0);
+      expect(checkResp.nonBreakingChanges.length).toBe(0);
 
-    authenticator.changeUserWithSuppliedContext({
-      ...users.adminAliceCompanyA,
-      rbac: createTestRBACEvaluator(createTestGroup({
-        role,
-        namespaces: [getNamespaceResponse.namespace!.id],
-      }))
-    });
+      authenticator.changeUserWithSuppliedContext({
+        ...users.adminAliceCompanyA,
+        rbac: createTestRBACEvaluator(
+          createTestGroup({
+            role,
+            namespaces: [getNamespaceResponse.namespace!.id],
+          }),
+        ),
+      });
 
-    // test for breaking changes in schema
-    checkResp = await client.checkSubgraphSchema({
-      subgraphName,
-      namespace: 'default',
-      schema: Uint8Array.from(Buffer.from('type Query { name: String! }')),
-    });
-    expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
-    expect(checkResp.breakingChanges.length).not.toBe(0);
-    expect(checkResp.breakingChanges[0].changeType).toBe(SchemaChangeType.FIELD_REMOVED);
-    expect(checkResp.nonBreakingChanges.length).not.toBe(0);
-    expect(checkResp.nonBreakingChanges[0].changeType).toBe(SchemaChangeType.FIELD_ADDED);
+      // test for breaking changes in schema
+      checkResp = await client.checkSubgraphSchema({
+        subgraphName,
+        namespace: 'default',
+        schema: Uint8Array.from(Buffer.from('type Query { name: String! }')),
+      });
+      expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(checkResp.breakingChanges.length).not.toBe(0);
+      expect(checkResp.breakingChanges[0].changeType).toBe(SchemaChangeType.FIELD_REMOVED);
+      expect(checkResp.nonBreakingChanges.length).not.toBe(0);
+      expect(checkResp.nonBreakingChanges[0].changeType).toBe(SchemaChangeType.FIELD_ADDED);
 
-    authenticator.changeUserWithSuppliedContext({
-      ...users.adminAliceCompanyA,
-      rbac: createTestRBACEvaluator(createTestGroup({
-        role,
-        namespaces: [randomUUID()],
-      }))
-    });
+      authenticator.changeUserWithSuppliedContext({
+        ...users.adminAliceCompanyA,
+        rbac: createTestRBACEvaluator(
+          createTestGroup({
+            role,
+            namespaces: [randomUUID()],
+          }),
+        ),
+      });
 
-    // test for breaking changes in schema
-    checkResp = await client.checkSubgraphSchema({
-      subgraphName,
-      namespace: 'default',
-      schema: Uint8Array.from(Buffer.from('type Query { name: String! }')),
-    });
-    expect(checkResp.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
+      // test for breaking changes in schema
+      checkResp = await client.checkSubgraphSchema({
+        subgraphName,
+        namespace: 'default',
+        schema: Uint8Array.from(Buffer.from('type Query { name: String! }')),
+      });
+      expect(checkResp.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
 
-    await server.close();
-  });
+      await server.close();
+    },
+  );
 
   test.each([
     'organization-apikey-manager',
@@ -271,7 +273,7 @@ describe('CheckSubgraphSchema', (ctx) => {
 
     authenticator.changeUserWithSuppliedContext({
       ...users.adminAliceCompanyA,
-      rbac: createTestRBACEvaluator(createTestGroup({ role }))
+      rbac: createTestRBACEvaluator(createTestGroup({ role })),
     });
 
     // test for no changes in schema
@@ -1218,5 +1220,551 @@ type Category {
 
     // Cleanup
     await server.close();
+  });
+
+  describe('Schema check with linked subgraphs', () => {
+    test('Should perform schema check on both source and target linked subgraphs', async () => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+
+      // Create target namespace (source will use default)
+      const targetNamespace = 'prod';
+      const createNamespaceResp = await client.createNamespace({
+        name: targetNamespace,
+      });
+      expect(createNamespaceResp.response?.code).toBe(EnumStatusCode.OK);
+
+      // Generate unique IDs and labels
+      const sourceSubgraphName = genID('source-subgraph');
+      const targetSubgraphName = genID('target-subgraph');
+      const fedGraphName = genID('fedGraph');
+      const sourceLabel = genUniqueLabel('source');
+      const targetLabel = genUniqueLabel('target');
+
+      // Create federated graphs for both source and target
+      const sourceFedGraphResp = await client.createFederatedGraph({
+        name: fedGraphName + '-source',
+        namespace: 'default',
+        labelMatchers: [joinLabel(sourceLabel)],
+        routingUrl: 'http://localhost:8081',
+      });
+      expect(sourceFedGraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+      const targetFedGraphResp = await client.createFederatedGraph({
+        name: fedGraphName + '-target',
+        namespace: targetNamespace,
+        labelMatchers: [joinLabel(targetLabel)],
+        routingUrl: 'http://localhost:8082',
+      });
+      expect(targetFedGraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+      // Create source subgraph in default namespace
+      const createSourceSubgraphResp = await client.createFederatedSubgraph({
+        name: sourceSubgraphName,
+        namespace: 'default',
+        routingUrl: 'http://localhost:8091',
+        labels: [sourceLabel],
+      });
+      expect(createSourceSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+      // Create target subgraph in target namespace
+      const createTargetSubgraphResp = await client.createFederatedSubgraph({
+        name: targetSubgraphName,
+        namespace: targetNamespace,
+        routingUrl: 'http://localhost:8092',
+        labels: [targetLabel],
+      });
+      expect(createTargetSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+      // Publish initial schemas for both subgraphs
+      const publishSourceResp = await client.publishFederatedSubgraph({
+        name: sourceSubgraphName,
+        namespace: 'default',
+        schema: 'type Query { field: String! }',
+      });
+      expect(publishSourceResp.response?.code).toBe(EnumStatusCode.OK);
+
+      const publishTargetResp = await client.publishFederatedSubgraph({
+        name: targetSubgraphName,
+        namespace: targetNamespace,
+        schema: 'type Query { field: String! }',
+      });
+      expect(publishTargetResp.response?.code).toBe(EnumStatusCode.OK);
+
+      // Link the subgraphs (source in default, target in prod)
+      const linkResponse = await client.linkSubgraph({
+        sourceSubgraphName,
+        sourceSubgraphNamespace: 'default',
+        targetSubgraphName,
+        targetSubgraphNamespace: targetNamespace,
+      });
+      expect(linkResponse.response?.code).toBe(EnumStatusCode.OK);
+
+      // Mock traffic for both subgraphs
+      (chClient.queryPromise as Mock)
+        .mockResolvedValueOnce([
+          {
+            operationHash: 'source-hash1',
+            operationName: 'sourceOp1',
+            operationType: 'query',
+            firstSeen: Date.now() / 1000,
+            lastSeen: Date.now() / 1000,
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            operationHash: 'target-hash1',
+            operationName: 'targetOp1',
+            operationType: 'query',
+            firstSeen: Date.now() / 1000,
+            lastSeen: Date.now() / 1000,
+          },
+        ]);
+
+      // Perform schema check on source subgraph (which should also check target)
+      const checkResp = await client.checkSubgraphSchema({
+        subgraphName: sourceSubgraphName,
+        namespace: 'default',
+        schema: Buffer.from('type Query { field: String }'), // Breaking change
+      });
+
+      expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(checkResp.breakingChanges.length).toBe(1);
+      expect(checkResp.operationUsageStats?.totalOperations).toBe(1);
+      expect(checkResp.isLinkedTrafficCheckFailed).toBe(true);
+      expect(checkResp.isLinkedPruningCheckFailed).toBe(false);
+
+      await server.close();
+    });
+
+    test('Should handle linked subgraph with no traffic', async () => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+
+      // Create target namespace
+      const targetNamespace = 'prod';
+      await client.createNamespace({ name: targetNamespace });
+
+      const sourceSubgraphName = genID('source-subgraph');
+      const targetSubgraphName = genID('target-subgraph');
+      const fedGraphName = genID('fedGraph');
+      const sourceLabel = genUniqueLabel('source');
+      const targetLabel = genUniqueLabel('target');
+
+      // Create federated graphs
+      await client.createFederatedGraph({
+        name: fedGraphName + '-source',
+        namespace: 'default',
+        labelMatchers: [joinLabel(sourceLabel)],
+        routingUrl: 'http://localhost:8081',
+      });
+
+      await client.createFederatedGraph({
+        name: fedGraphName + '-target',
+        namespace: targetNamespace,
+        labelMatchers: [joinLabel(targetLabel)],
+        routingUrl: 'http://localhost:8082',
+      });
+
+      // Create and publish subgraphs
+      await client.createFederatedSubgraph({
+        name: sourceSubgraphName,
+        namespace: 'default',
+        routingUrl: 'http://localhost:8091',
+        labels: [sourceLabel],
+      });
+
+      await client.createFederatedSubgraph({
+        name: targetSubgraphName,
+        namespace: targetNamespace,
+        routingUrl: 'http://localhost:8092',
+        labels: [targetLabel],
+      });
+
+      await client.publishFederatedSubgraph({
+        name: sourceSubgraphName,
+        namespace: 'default',
+        schema: 'type Query { field: String! }',
+      });
+
+      await client.publishFederatedSubgraph({
+        name: targetSubgraphName,
+        namespace: targetNamespace,
+        schema: 'type Query { field: String! }',
+      });
+
+      // Link the subgraphs
+      await client.linkSubgraph({
+        sourceSubgraphName,
+        sourceSubgraphNamespace: 'default',
+        targetSubgraphName,
+        targetSubgraphNamespace: targetNamespace,
+      });
+
+      // Mock no traffic
+      (chClient.queryPromise as Mock).mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+
+      // Perform schema check with breaking changes
+      const checkResp = await client.checkSubgraphSchema({
+        subgraphName: sourceSubgraphName,
+        namespace: 'default',
+        schema: Buffer.from('type Query { updatedSourceField: String! }'),
+      });
+
+      expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(checkResp.breakingChanges.length).toBeGreaterThan(0);
+      expect(checkResp.isLinkedTrafficCheckFailed).toBe(false); // No traffic, so no failure
+      expect(checkResp.isLinkedPruningCheckFailed).toBe(false);
+
+      await server.close();
+    });
+
+    test('Should skip traffic check for both source and linked subgraphs when skipTrafficCheck is true', async () => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+
+      // Create target namespace
+      const targetNamespace = 'prod';
+      await client.createNamespace({ name: targetNamespace });
+
+      const sourceSubgraphName = genID('source-subgraph');
+      const targetSubgraphName = genID('target-subgraph');
+      const fedGraphName = genID('fedGraph');
+      const sourceLabel = genUniqueLabel('source');
+      const targetLabel = genUniqueLabel('target');
+
+      // Create federated graphs
+      await client.createFederatedGraph({
+        name: fedGraphName + '-source',
+        namespace: 'default',
+        labelMatchers: [joinLabel(sourceLabel)],
+        routingUrl: 'http://localhost:8081',
+      });
+
+      await client.createFederatedGraph({
+        name: fedGraphName + '-target',
+        namespace: targetNamespace,
+        labelMatchers: [joinLabel(targetLabel)],
+        routingUrl: 'http://localhost:8082',
+      });
+
+      // Create and publish subgraphs
+      await client.createFederatedSubgraph({
+        name: sourceSubgraphName,
+        namespace: 'default',
+        routingUrl: 'http://localhost:8091',
+        labels: [sourceLabel],
+      });
+
+      await client.createFederatedSubgraph({
+        name: targetSubgraphName,
+        namespace: targetNamespace,
+        routingUrl: 'http://localhost:8092',
+        labels: [targetLabel],
+      });
+
+      await client.publishFederatedSubgraph({
+        name: sourceSubgraphName,
+        namespace: 'default',
+        schema: 'type Query { field: String! }',
+      });
+
+      await client.publishFederatedSubgraph({
+        name: targetSubgraphName,
+        namespace: targetNamespace,
+        schema: 'type Query { field: String! }',
+      });
+
+      // Link the subgraphs
+      await client.linkSubgraph({
+        sourceSubgraphName,
+        sourceSubgraphNamespace: 'default',
+        targetSubgraphName,
+        targetSubgraphNamespace: targetNamespace,
+      });
+
+      // Mock traffic for both subgraphs
+      (chClient.queryPromise as Mock)
+        .mockResolvedValueOnce([
+          {
+            operationHash: 'source-hash1',
+            operationName: 'sourceOp1',
+            operationType: 'query',
+            firstSeen: Date.now() / 1000,
+            lastSeen: Date.now() / 1000,
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            operationHash: 'target-hash1',
+            operationName: 'targetOp1',
+            operationType: 'query',
+            firstSeen: Date.now() / 1000,
+            lastSeen: Date.now() / 1000,
+          },
+        ]);
+
+      // Perform schema check with skipTrafficCheck enabled
+      const checkResp = await client.checkSubgraphSchema({
+        subgraphName: sourceSubgraphName,
+        namespace: 'default',
+        schema: Buffer.from('type Query { updatedSourceField: String! }'),
+        skipTrafficCheck: true,
+      });
+
+      expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(checkResp.clientTrafficCheckSkipped).toBe(true);
+      expect(checkResp.isLinkedTrafficCheckFailed).toBe(false);
+      expect(checkResp.operationUsageStats?.totalOperations).toBe(0);
+
+      await server.close();
+    });
+
+    test('Should handle linked subgraph deletion check', async () => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+
+      // Create target namespace
+      const targetNamespace = 'prod';
+      await client.createNamespace({ name: targetNamespace });
+
+      const sourceSubgraphName = genID('source-subgraph');
+      const targetSubgraphName = genID('target-subgraph');
+      const fedGraphName = genID('fedGraph');
+      const sourceLabel = genUniqueLabel('source');
+      const targetLabel = genUniqueLabel('target');
+
+      // Create federated graphs
+      await client.createFederatedGraph({
+        name: fedGraphName + '-source',
+        namespace: 'default',
+        labelMatchers: [joinLabel(sourceLabel)],
+        routingUrl: 'http://localhost:8081',
+      });
+
+      await client.createFederatedGraph({
+        name: fedGraphName + '-target',
+        namespace: targetNamespace,
+        labelMatchers: [joinLabel(targetLabel)],
+        routingUrl: 'http://localhost:8082',
+      });
+
+      // Create and publish subgraphs
+      await client.createFederatedSubgraph({
+        name: sourceSubgraphName,
+        namespace: 'default',
+        routingUrl: 'http://localhost:8091',
+        labels: [sourceLabel],
+      });
+
+      await client.createFederatedSubgraph({
+        name: sourceSubgraphName + '2',
+        namespace: 'default',
+        routingUrl: 'http://localhost:8091',
+        labels: [sourceLabel],
+      });
+
+      await client.createFederatedSubgraph({
+        name: targetSubgraphName,
+        namespace: targetNamespace,
+        routingUrl: 'http://localhost:8092',
+        labels: [targetLabel],
+      });
+
+      await client.createFederatedSubgraph({
+        name: targetSubgraphName + '2',
+        namespace: targetNamespace,
+        routingUrl: 'http://localhost:8092',
+        labels: [targetLabel],
+      });
+
+      await client.publishFederatedSubgraph({
+        name: sourceSubgraphName,
+        namespace: 'default',
+        schema: 'type Query { field: String! }',
+      });
+
+      await client.publishFederatedSubgraph({
+        name: sourceSubgraphName + '2',
+        namespace: 'default',
+        schema: 'type Query { field2: String! }',
+      });
+
+      await client.publishFederatedSubgraph({
+        name: targetSubgraphName,
+        namespace: targetNamespace,
+        schema: 'type Query { field: String! }',
+      });
+
+      await client.publishFederatedSubgraph({
+        name: targetSubgraphName + '2',
+        namespace: targetNamespace,
+        schema: 'type Query { field2: String! }',
+      });
+
+      // Link the subgraphs
+      await client.linkSubgraph({
+        sourceSubgraphName,
+        sourceSubgraphNamespace: 'default',
+        targetSubgraphName,
+        targetSubgraphNamespace: targetNamespace,
+      });
+
+      // Mock traffic - 8 calls for source subgraphs and 8 calls for target subgraphs
+      (chClient.queryPromise as Mock)
+        .mockResolvedValueOnce([
+          {
+            operationHash: 'hash1',
+            operationName: 'op1',
+            operationType: 'query',
+            firstSeen: Date.now() / 1000,
+            lastSeen: Date.now() / 1000,
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            operationHash: 'hash1',
+            operationName: 'op1',
+            operationType: 'query',
+            firstSeen: Date.now() / 1000,
+            lastSeen: Date.now() / 1000,
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            operationHash: 'hash1',
+            operationName: 'op1',
+            operationType: 'query',
+            firstSeen: Date.now() / 1000,
+            lastSeen: Date.now() / 1000,
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            operationHash: 'hash1',
+            operationName: 'op1',
+            operationType: 'query',
+            firstSeen: Date.now() / 1000,
+            lastSeen: Date.now() / 1000,
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            operationHash: 'hash1',
+            operationName: 'op1',
+            operationType: 'query',
+            firstSeen: Date.now() / 1000,
+            lastSeen: Date.now() / 1000,
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            operationHash: 'hash1',
+            operationName: 'op1',
+            operationType: 'query',
+            firstSeen: Date.now() / 1000,
+            lastSeen: Date.now() / 1000,
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            operationHash: 'hash1',
+            operationName: 'op1',
+            operationType: 'query',
+            firstSeen: Date.now() / 1000,
+            lastSeen: Date.now() / 1000,
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            operationHash: 'hash1',
+            operationName: 'op1',
+            operationType: 'query',
+            firstSeen: Date.now() / 1000,
+            lastSeen: Date.now() / 1000,
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            operationHash: 'hash1',
+            operationName: 'op1',
+            operationType: 'query',
+            firstSeen: Date.now() / 1000,
+            lastSeen: Date.now() / 1000,
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            operationHash: 'hash1',
+            operationName: 'op1',
+            operationType: 'query',
+            firstSeen: Date.now() / 1000,
+            lastSeen: Date.now() / 1000,
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            operationHash: 'hash1',
+            operationName: 'op1',
+            operationType: 'query',
+            firstSeen: Date.now() / 1000,
+            lastSeen: Date.now() / 1000,
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            operationHash: 'hash1',
+            operationName: 'op1',
+            operationType: 'query',
+            firstSeen: Date.now() / 1000,
+            lastSeen: Date.now() / 1000,
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            operationHash: 'hash1',
+            operationName: 'op1',
+            operationType: 'query',
+            firstSeen: Date.now() / 1000,
+            lastSeen: Date.now() / 1000,
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            operationHash: 'hash1',
+            operationName: 'op1',
+            operationType: 'query',
+            firstSeen: Date.now() / 1000,
+            lastSeen: Date.now() / 1000,
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            operationHash: 'hash1',
+            operationName: 'op1',
+            operationType: 'query',
+            firstSeen: Date.now() / 1000,
+            lastSeen: Date.now() / 1000,
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            operationHash: 'hash1',
+            operationName: 'op1',
+            operationType: 'query',
+            firstSeen: Date.now() / 1000,
+            lastSeen: Date.now() / 1000,
+          },
+        ]);
+
+      // Perform deletion check
+      const checkResp = await client.checkSubgraphSchema({
+        subgraphName: sourceSubgraphName,
+        namespace: 'default',
+        delete: true,
+      });
+
+      expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(checkResp.breakingChanges.length).toBeGreaterThan(0); // Deletion causes breaking changes
+      expect(checkResp.isLinkedTrafficCheckFailed).toBe(true);
+
+      await server.close();
+    });
   });
 });
