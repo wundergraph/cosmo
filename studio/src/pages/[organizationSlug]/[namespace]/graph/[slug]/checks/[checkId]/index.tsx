@@ -38,6 +38,15 @@ import { Button } from "@/components/ui/button";
 import { Link } from "@/components/ui/link";
 import { Loader } from "@/components/ui/loader";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableWrapper,
+} from "@/components/ui/table";
+import {
   Select,
   SelectContent,
   SelectGroup,
@@ -445,6 +454,15 @@ const CheckDetails = ({
 
   const sdl = data.proposedSubgraphSchemaSDL ?? "";
 
+  const isLinkedTrafficCheckFailed = data.check.linkedChecks.some(
+    (linkedCheck) =>
+      linkedCheck.hasClientTraffic && !linkedCheck.isForcedSuccess,
+  );
+  const isLinkedPruningCheckFailed = data.check.linkedChecks.some(
+    (linkedCheck) =>
+      linkedCheck.hasGraphPruningErrors && !linkedCheck.isForcedSuccess,
+  );
+
   const isSuccessful = isCheckSuccessful(
     data.check.isComposable,
     data.check.isBreaking,
@@ -453,6 +471,8 @@ const CheckDetails = ({
     data.check.hasGraphPruningErrors,
     data.check.clientTrafficCheckSkipped,
     data.check.proposalMatch === "error",
+    isLinkedTrafficCheckFailed,
+    isLinkedPruningCheckFailed,
   );
 
   const currentAffectedGraph = data.affectedGraphs.find(
@@ -490,7 +510,7 @@ const CheckDetails = ({
       tab,
     };
 
-    if (tab === "changes") {
+    if (tab === "overview") {
       delete query.tab;
     }
 
@@ -507,11 +527,6 @@ const CheckDetails = ({
           <div className="flex-start flex max-w-[100px] flex-1 flex-col gap-1">
             <dt className="text-sm text-muted-foreground">Status</dt>
             <dd>{getCheckBadge(isSuccessful, data.check.isForcedSuccess)}</dd>
-          </div>
-
-          <div className="flex-start flex-1 flex-col gap-1 lg:flex">
-            <dt className="text-sm text-muted-foreground">Reason</dt>
-            <dd className="whitespace-nowrap">{reason}</dd>
           </div>
 
           <div className="flex-start flex max-w-[200px] flex-1 flex-col gap-1">
@@ -739,41 +754,6 @@ const CheckDetails = ({
             </dd>
           </div>
 
-          {data.affectedGraphs.length > 1 && (
-            <div className="flex-start flex flex-col gap-1">
-              <dt className="mb-2 text-sm text-muted-foreground">
-                Other Affected Graphs
-              </dt>
-              <dd className="flex flex-row flex-wrap gap-2 lg:flex lg:flex-col">
-                {data.affectedGraphs.map((ag) => {
-                  if (ag.id === graphContext.graph?.id) {
-                    return null;
-                  }
-                  return (
-                    <Badge
-                      key={ag.id}
-                      variant="outline"
-                      className="flex items-center space-x-2 py-2"
-                    >
-                      {getCheckIcon(ag.isCheckSuccessful)}
-                      <Link
-                        href={`/${organizationSlug}/${namespace}/graph/${ag.name}/checks/${id}`}
-                        className=" flex-1 truncate hover:underline"
-                      >
-                        <span>{ag.name}</span>
-                      </Link>
-                      <InfoTooltip>
-                        {ag.isCheckSuccessful
-                          ? "Check successful"
-                          : "Check failed"}
-                      </InfoTooltip>
-                    </Badge>
-                  );
-                })}
-              </dd>
-            </div>
-          )}
-
           {changeCounts && (
             <div className="flex flex-col">
               <dt className="mb-2 text-sm text-muted-foreground">Changes</dt>
@@ -929,11 +909,21 @@ const CheckDetails = ({
         </dl>
         <div className="scrollbar-custom h-full flex-1 overflow-auto">
           <Tabs
-            value={tab ?? "composition"}
+            value={tab ?? "overview"}
             className="flex h-full min-h-0 flex-col"
           >
             <div className="flex flex-row px-4 py-4 lg:px-6">
               <TabsList className="justify-start overflow-x-auto scrollbar-none">
+                <TabsTrigger
+                  value="overview"
+                  className="flex items-center gap-x-2"
+                  asChild
+                >
+                  <Link href={{ query: { ...router.query, tab: "overview" } }}>
+                    <CheckCircleIcon className="h-4 w-4 flex-shrink-0" />
+                    Overview
+                  </Link>
+                </TabsTrigger>
                 <TabsTrigger
                   value="composition"
                   className="flex items-center gap-x-2"
@@ -951,7 +941,8 @@ const CheckDetails = ({
                         variant="muted"
                         className="bg-white px-1.5 text-current dark:bg-gray-900/60"
                       >
-                        {data.changes.length}
+                        {data.compositionErrors.length +
+                          data.compositionWarnings.length}
                       </Badge>
                     ) : null}
                   </Link>
@@ -1065,6 +1056,370 @@ const CheckDetails = ({
               </TabsList>
             </div>
             <div className="flex min-h-0 flex-1">
+              <TabsContent
+                value="overview"
+                className="w-full space-y-4 px-4 lg:px-6"
+              >
+                <div className="space-y-4">
+                  <div className="flex flex-col space-y-4">
+                    <Alert variant={isSuccessful ? "success" : "destructive"}>
+                      {isSuccessful ? (
+                        <CheckCircledIcon className="h-4 w-4" />
+                      ) : (
+                        <CrossCircledIcon className="h-4 w-4" />
+                      )}
+                      <AlertTitle>
+                        {isSuccessful ? "Check Passed" : "Check Failed"}
+                      </AlertTitle>
+                      <AlertDescription>
+                        {(() => {
+                          const linkedCheckFailures = [];
+                          if (isLinkedTrafficCheckFailed) {
+                            linkedCheckFailures.push(
+                              "client traffic check failures",
+                            );
+                          }
+                          if (isLinkedPruningCheckFailed) {
+                            linkedCheckFailures.push("graph pruning errors");
+                          }
+
+                          // If reason is "All tasks were successful" but check failed, it's due to linked check
+                          if (
+                            reason === "All tasks were successful" &&
+                            !isSuccessful
+                          ) {
+                            if (linkedCheckFailures.length > 0) {
+                              return `Check failed because the linked check failed due to ${linkedCheckFailures.join(
+                                " and ",
+                              )}.`;
+                            }
+
+                            return "Check failed because the linked check failed.";
+                          }
+
+                          // If there are linked check failures and other reasons
+                          if (linkedCheckFailures.length > 0) {
+                            const linkedCheckMessage = `The linked check(s) failed due to ${linkedCheckFailures.join(
+                              " and ",
+                            )}, which is one of the reasons for this check to fail.`;
+                            return `${reason}. ${linkedCheckMessage}`;
+                          }
+
+                          // Default case - just show the reason
+                          return reason;
+                        })()}
+                      </AlertDescription>
+                    </Alert>
+                  </div>
+
+                  {data.affectedGraphs.length > 1 && (
+                    <div className="space-y-4 pt-4">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-lg font-semibold">
+                          Other affected graphs
+                        </h3>
+                        <InfoTooltip tooltipContentClassName="w-96">
+                          These are other federated graphs that also contain the
+                          subgraph being checked. Since they share the same
+                          subgraph, the schema changes impact these graphs too,
+                          and this check applies to them as well.
+                        </InfoTooltip>
+                      </div>
+                      <TableWrapper>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Status</TableHead>
+                              <TableHead>FederatedGraph</TableHead>
+                              <TableHead>Tasks</TableHead>
+                              <TableHead></TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {data.affectedGraphs.map(
+                              ({
+                                id: federatedGraphId,
+                                name,
+                                hasClientTraffic,
+                                hasGraphPruningErrors,
+                                isComposable,
+                                isBreaking,
+                                hasLintErrors,
+                                isCheckSuccessful,
+                              }) => {
+                                if (
+                                  federatedGraphId === graphContext.graph?.id
+                                ) {
+                                  return null;
+                                }
+
+                                const path = `/${organizationSlug}/${namespace}/graph/${name}/checks/${id}`;
+                                const compositionSkipped =
+                                  data.check?.compositionSkipped;
+                                const breakingChangesSkipped =
+                                  data.check?.breakingChangesSkipped;
+                                const clientTrafficCheckSkipped =
+                                  data.check?.clientTrafficCheckSkipped;
+                                const lintSkipped = data.check?.lintSkipped;
+                                const graphPruningSkipped =
+                                  data.check?.graphPruningSkipped;
+                                const proposalMatch = data.check?.proposalMatch;
+
+                                return (
+                                  <TableRow
+                                    key={federatedGraphId}
+                                    className="group cursor-pointer hover:bg-secondary/30"
+                                    onClick={() => router.push(path)}
+                                  >
+                                    <TableCell>
+                                      {getCheckBadge(
+                                        isCheckSuccessful,
+                                        data.check?.isForcedSuccess || false,
+                                      )}
+                                    </TableCell>
+                                    <TableCell>{name}</TableCell>
+                                    <TableCell>
+                                      <div className="flex flex-wrap items-start gap-2">
+                                        <Badge
+                                          variant="outline"
+                                          className={cn(
+                                            "gap-2 py-1.5",
+                                            compositionSkipped &&
+                                              "text-muted-foreground",
+                                          )}
+                                        >
+                                          {compositionSkipped ? (
+                                            <NoSymbolIcon className="h-4 w-4" />
+                                          ) : (
+                                            getCheckIcon(isComposable)
+                                          )}
+                                          <span>Composes</span>
+                                        </Badge>
+                                        <Badge
+                                          variant="outline"
+                                          className={cn(
+                                            "gap-2 py-1.5",
+                                            breakingChangesSkipped &&
+                                              "text-muted-foreground",
+                                          )}
+                                        >
+                                          {breakingChangesSkipped ? (
+                                            <NoSymbolIcon className="h-4 w-4" />
+                                          ) : (
+                                            getCheckIcon(!isBreaking)
+                                          )}
+                                          <span>Breaking changes</span>
+                                        </Badge>
+                                        <Badge
+                                          variant="outline"
+                                          className={cn(
+                                            "gap-2 py-1.5",
+                                            clientTrafficCheckSkipped &&
+                                              "text-muted-foreground",
+                                          )}
+                                        >
+                                          {clientTrafficCheckSkipped ? (
+                                            <NoSymbolIcon className="h-4 w-4" />
+                                          ) : (
+                                            getCheckIcon(!hasClientTraffic)
+                                          )}
+                                          <span>Operations</span>
+                                        </Badge>
+                                        <Badge
+                                          variant="outline"
+                                          className={cn(
+                                            "gap-2 py-1.5",
+                                            lintSkipped &&
+                                              "text-muted-foreground",
+                                          )}
+                                        >
+                                          {lintSkipped ? (
+                                            <NoSymbolIcon className="h-4 w-4" />
+                                          ) : (
+                                            getCheckIcon(!hasLintErrors)
+                                          )}
+                                          <span>Lint Errors</span>
+                                        </Badge>
+                                        <Badge
+                                          variant="outline"
+                                          className={cn(
+                                            "gap-2 py-1.5",
+                                            graphPruningSkipped &&
+                                              "text-muted-foreground",
+                                          )}
+                                        >
+                                          {graphPruningSkipped ? (
+                                            <NoSymbolIcon className="h-4 w-4" />
+                                          ) : (
+                                            getCheckIcon(!hasGraphPruningErrors)
+                                          )}
+                                          <span className="flex-1 truncate">
+                                            Pruning Errors
+                                          </span>
+                                        </Badge>
+                                        {proposalsFeature?.enabled && (
+                                          <Badge
+                                            variant="outline"
+                                            className={cn(
+                                              "gap-2 py-1.5",
+                                              !proposalMatch &&
+                                                "text-muted-foreground",
+                                            )}
+                                          >
+                                            {!proposalMatch ? (
+                                              <NoSymbolIcon className="h-4 w-4" />
+                                            ) : (
+                                              getCheckIcon(
+                                                proposalMatch !== "error",
+                                              )
+                                            )}
+                                            <span className="flex-1 truncate">
+                                              Proposal Match
+                                            </span>
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      <div className="flex items-center justify-end gap-2">
+                                        <Button
+                                          asChild
+                                          variant="ghost"
+                                          size="sm"
+                                          className="table-action"
+                                        >
+                                          <Link href={path}>View</Link>
+                                        </Button>
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              },
+                            )}
+                          </TableBody>
+                        </Table>
+                      </TableWrapper>
+                    </div>
+                  )}
+
+                  {data.check.linkedChecks.length > 0 && (
+                    <div className="space-y-4 pt-4">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-lg font-semibold">Linked Checks</h3>
+                        <InfoTooltip tooltipContentClassName="w-96">
+                          These are checks performed on subgraphs that are
+                          linked to the current subgraph. The traffic and
+                          pruning checks of these linked subgraphs influence the
+                          result of the current check. These checks are
+                          automatically run whenever the current subgraph is
+                          checked.
+                        </InfoTooltip>
+                      </div>
+                      <TableWrapper>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Status</TableHead>
+                              <TableHead>Check ID</TableHead>
+                              <TableHead>Subgraph</TableHead>
+                              <TableHead>Tasks</TableHead>
+                              <TableHead></TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {data.check.linkedChecks.map((linkedCheck) => {
+                              if (linkedCheck.affectedGraphNames.length === 0) {
+                                return <></>;
+                              }
+                              return (
+                                <TableRow
+                                  key={linkedCheck.id}
+                                  className="group cursor-pointer hover:bg-secondary/30"
+                                  onClick={() =>
+                                    router.push(
+                                      `/${organizationSlug}/${linkedCheck.namespace}/graph/${linkedCheck.affectedGraphNames[0]}/checks/${linkedCheck.id}`,
+                                    )
+                                  }
+                                >
+                                  <TableCell>
+                                    {getCheckBadge(
+                                      linkedCheck.isCheckSuccessful,
+                                      linkedCheck.isForcedSuccess,
+                                    )}
+                                  </TableCell>
+                                  <TableCell>{linkedCheck.id}</TableCell>
+                                  <TableCell>
+                                    {linkedCheck.subgraphNames.length > 1
+                                      ? "Multiple Subgraphs"
+                                      : linkedCheck.subgraphNames.length > 0
+                                      ? linkedCheck.subgraphNames[0]
+                                      : "Subgraph"}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge
+                                      variant="outline"
+                                      className={cn(
+                                        "gap-2 py-1.5",
+                                        linkedCheck.clientTrafficCheckSkipped &&
+                                          "text-muted-foreground",
+                                      )}
+                                    >
+                                      {linkedCheck.clientTrafficCheckSkipped ? (
+                                        <NoSymbolIcon className="h-4 w-4" />
+                                      ) : (
+                                        getCheckIcon(
+                                          !linkedCheck.hasClientTraffic,
+                                        )
+                                      )}
+                                      <span>Operations</span>
+                                    </Badge>
+                                    <Badge
+                                      variant="outline"
+                                      className={cn(
+                                        "gap-2 py-1.5",
+                                        linkedCheck.graphPruningCheckSkipped &&
+                                          "text-muted-foreground",
+                                      )}
+                                    >
+                                      {linkedCheck.graphPruningCheckSkipped ? (
+                                        <NoSymbolIcon className="h-4 w-4" />
+                                      ) : (
+                                        getCheckIcon(
+                                          !linkedCheck.hasGraphPruningErrors,
+                                        )
+                                      )}
+                                      <span className="flex-1 truncate">
+                                        Pruning Errors
+                                      </span>
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <div className="flex items-center justify-end gap-2">
+                                      <Button
+                                        asChild
+                                        variant="ghost"
+                                        size="sm"
+                                        className="table-action"
+                                      >
+                                        <Link
+                                          href={`/${organizationSlug}/${linkedCheck.namespace}/graph/${linkedCheck.affectedGraphNames[0]}/checks/${linkedCheck.id}`}
+                                        >
+                                          View
+                                        </Link>
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </TableWrapper>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+
               <TabsContent
                 value="composition"
                 className="w-full space-y-4 px-4 lg:px-6"
@@ -1270,7 +1625,7 @@ const CheckDetails = ({
                   />
                 </TabsContent>
               )}
-              
+
               <TabsContent value="schema" className="relative w-full flex-1">
                 <ProposedSchemas
                   checkId={id}
