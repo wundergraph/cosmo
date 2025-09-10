@@ -87,7 +87,7 @@ func (a *AccessController) SkipAuthIfIntrospection(r *http.Request, operationPro
 		return false
 	}
 
-	if !isIntrospectionQuery(operationProcessor, body) {
+	if !isIntrospectionQuery(operationProcessor, r, body) {
 		return false
 	}
 
@@ -100,8 +100,8 @@ func (a *AccessController) SkipAuthIfIntrospection(r *http.Request, operationPro
 
 // isIntrospectionQuery checks if the operation in body is an introspection query.
 // It returns false if the operation is not an introspection query or we cannot parse it.
-func isIntrospectionQuery(operationProcessor *OperationProcessor, body []byte) bool {
-	if operationProcessor == nil || body == nil {
+func isIntrospectionQuery(operationProcessor *OperationProcessor, req *http.Request, body []byte) bool {
+	if operationProcessor == nil {
 		return false
 	}
 
@@ -111,9 +111,18 @@ func isIntrospectionQuery(operationProcessor *OperationProcessor, body []byte) b
 	}
 	defer operationKit.Free()
 
-	err = operationKit.UnmarshalOperationFromBody(body)
-	if err != nil {
-		return false
+	switch req.Method {
+	case http.MethodGet:
+		if err := operationKit.UnmarshalOperationFromURL(req.URL); err != nil {
+			return false
+		}
+	case http.MethodPost:
+		if body == nil {
+			return false
+		}
+		if err := operationKit.UnmarshalOperationFromBody(body); err != nil {
+			return false
+		}
 	}
 
 	err = operationKit.Parse()
@@ -134,6 +143,11 @@ func isIntrospectionQuery(operationProcessor *OperationProcessor, body []byte) b
 func (a *AccessController) isValidIntrospectionToken(r *http.Request) bool {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
+		return false
+	}
+
+	// guard to prevent bypass when token is unset
+	if a.introspectionAuthSkipToken == "" {
 		return false
 	}
 

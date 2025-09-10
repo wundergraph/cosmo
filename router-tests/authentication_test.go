@@ -2753,6 +2753,31 @@ func TestIntrospectionAuthentication(t *testing.T) {
 		})
 	})
 
+	t.Run("introspection query (http get) no token with auth skip", func(t *testing.T) {
+		t.Parallel()
+
+		// introspection queries over http get should be recognized and
+		// handled equally to introspection queries over http post.
+
+		authenticators, _ := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(authenticators, true, core.IntrospectionAuthModeSkip, "")
+		require.NoError(t, err)
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(accessController),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
+				Query: "{ __type(name: \"Query\") { name } }",
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, "", res.Response.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, simpleIntrospectionExpectedData, res.Body)
+		})
+	})
+
 	t.Run("introspection query valid token with auth skip", func(t *testing.T) {
 		t.Parallel()
 
