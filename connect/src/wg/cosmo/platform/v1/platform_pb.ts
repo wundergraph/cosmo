@@ -2229,6 +2229,20 @@ export class CheckSubgraphSchemaResponse extends Message<CheckSubgraphSchemaResp
    */
   proposalMatchMessage?: string;
 
+  /**
+   * If true, it means the traffic check failed for the linked check
+   *
+   * @generated from field: optional bool isLinkedTrafficCheckFailed = 15;
+   */
+  isLinkedTrafficCheckFailed?: boolean;
+
+  /**
+   * If true, it means the graph pruning check failed for the linked check
+   *
+   * @generated from field: optional bool isLinkedPruningCheckFailed = 16;
+   */
+  isLinkedPruningCheckFailed?: boolean;
+
   constructor(data?: PartialMessage<CheckSubgraphSchemaResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2251,6 +2265,8 @@ export class CheckSubgraphSchemaResponse extends Message<CheckSubgraphSchemaResp
     { no: 12, name: "client_traffic_check_skipped", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 13, name: "compositionWarnings", kind: "message", T: CompositionWarning, repeated: true },
     { no: 14, name: "proposalMatchMessage", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 15, name: "isLinkedTrafficCheckFailed", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 16, name: "isLinkedPruningCheckFailed", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckSubgraphSchemaResponse {
@@ -3470,6 +3486,11 @@ export class GetSubgraphByNameResponse extends Message<GetSubgraphByNameResponse
    */
   members: SubgraphMember[] = [];
 
+  /**
+   * @generated from field: optional wg.cosmo.platform.v1.GetSubgraphByNameResponse.LinkedSubgraph linkedSubgraph = 4;
+   */
+  linkedSubgraph?: GetSubgraphByNameResponse_LinkedSubgraph;
+
   constructor(data?: PartialMessage<GetSubgraphByNameResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3481,6 +3502,7 @@ export class GetSubgraphByNameResponse extends Message<GetSubgraphByNameResponse
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "graph", kind: "message", T: Subgraph },
     { no: 3, name: "members", kind: "message", T: SubgraphMember, repeated: true },
+    { no: 4, name: "linkedSubgraph", kind: "message", T: GetSubgraphByNameResponse_LinkedSubgraph, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetSubgraphByNameResponse {
@@ -3497,6 +3519,55 @@ export class GetSubgraphByNameResponse extends Message<GetSubgraphByNameResponse
 
   static equals(a: GetSubgraphByNameResponse | PlainMessage<GetSubgraphByNameResponse> | undefined, b: GetSubgraphByNameResponse | PlainMessage<GetSubgraphByNameResponse> | undefined): boolean {
     return proto3.util.equals(GetSubgraphByNameResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetSubgraphByNameResponse.LinkedSubgraph
+ */
+export class GetSubgraphByNameResponse_LinkedSubgraph extends Message<GetSubgraphByNameResponse_LinkedSubgraph> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string namespace = 3;
+   */
+  namespace = "";
+
+  constructor(data?: PartialMessage<GetSubgraphByNameResponse_LinkedSubgraph>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetSubgraphByNameResponse.LinkedSubgraph";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetSubgraphByNameResponse_LinkedSubgraph {
+    return new GetSubgraphByNameResponse_LinkedSubgraph().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetSubgraphByNameResponse_LinkedSubgraph {
+    return new GetSubgraphByNameResponse_LinkedSubgraph().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetSubgraphByNameResponse_LinkedSubgraph {
+    return new GetSubgraphByNameResponse_LinkedSubgraph().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetSubgraphByNameResponse_LinkedSubgraph | PlainMessage<GetSubgraphByNameResponse_LinkedSubgraph> | undefined, b: GetSubgraphByNameResponse_LinkedSubgraph | PlainMessage<GetSubgraphByNameResponse_LinkedSubgraph> | undefined): boolean {
+    return proto3.util.equals(GetSubgraphByNameResponse_LinkedSubgraph, a, b);
   }
 }
 
@@ -3909,6 +3980,11 @@ export class SchemaCheck extends Message<SchemaCheck> {
    */
   errorMessage?: string;
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.SchemaCheck.LinkedCheck linkedChecks = 22;
+   */
+  linkedChecks: SchemaCheck_LinkedCheck[] = [];
+
   constructor(data?: PartialMessage<SchemaCheck>) {
     super();
     proto3.util.initPartial(data, this);
@@ -3938,6 +4014,7 @@ export class SchemaCheck extends Message<SchemaCheck> {
     { no: 19, name: "composition_skipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 20, name: "breaking_changes_skipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 21, name: "errorMessage", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 22, name: "linkedChecks", kind: "message", T: SchemaCheck_LinkedCheck, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SchemaCheck {
@@ -4074,6 +4151,97 @@ export class SchemaCheck_CheckedSubgraph extends Message<SchemaCheck_CheckedSubg
 
   static equals(a: SchemaCheck_CheckedSubgraph | PlainMessage<SchemaCheck_CheckedSubgraph> | undefined, b: SchemaCheck_CheckedSubgraph | PlainMessage<SchemaCheck_CheckedSubgraph> | undefined): boolean {
     return proto3.util.equals(SchemaCheck_CheckedSubgraph, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.SchemaCheck.LinkedCheck
+ */
+export class SchemaCheck_LinkedCheck extends Message<SchemaCheck_LinkedCheck> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: repeated string affectedGraphNames = 2;
+   */
+  affectedGraphNames: string[] = [];
+
+  /**
+   * @generated from field: bool isCheckSuccessful = 3;
+   */
+  isCheckSuccessful = false;
+
+  /**
+   * @generated from field: bool hasClientTraffic = 4;
+   */
+  hasClientTraffic = false;
+
+  /**
+   * @generated from field: bool hasGraphPruningErrors = 5;
+   */
+  hasGraphPruningErrors = false;
+
+  /**
+   * @generated from field: bool clientTrafficCheckSkipped = 6;
+   */
+  clientTrafficCheckSkipped = false;
+
+  /**
+   * @generated from field: bool graphPruningCheckSkipped = 7;
+   */
+  graphPruningCheckSkipped = false;
+
+  /**
+   * @generated from field: repeated string subgraphNames = 8;
+   */
+  subgraphNames: string[] = [];
+
+  /**
+   * @generated from field: string namespace = 9;
+   */
+  namespace = "";
+
+  /**
+   * @generated from field: bool isForcedSuccess = 10;
+   */
+  isForcedSuccess = false;
+
+  constructor(data?: PartialMessage<SchemaCheck_LinkedCheck>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.SchemaCheck.LinkedCheck";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "affectedGraphNames", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 3, name: "isCheckSuccessful", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "hasClientTraffic", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 5, name: "hasGraphPruningErrors", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 6, name: "clientTrafficCheckSkipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 7, name: "graphPruningCheckSkipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 8, name: "subgraphNames", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 9, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 10, name: "isForcedSuccess", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SchemaCheck_LinkedCheck {
+    return new SchemaCheck_LinkedCheck().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SchemaCheck_LinkedCheck {
+    return new SchemaCheck_LinkedCheck().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SchemaCheck_LinkedCheck {
+    return new SchemaCheck_LinkedCheck().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SchemaCheck_LinkedCheck | PlainMessage<SchemaCheck_LinkedCheck> | undefined, b: SchemaCheck_LinkedCheck | PlainMessage<SchemaCheck_LinkedCheck> | undefined): boolean {
+    return proto3.util.equals(SchemaCheck_LinkedCheck, a, b);
   }
 }
 
@@ -4357,6 +4525,31 @@ export class GetCheckSummaryResponse_AffectedGraph extends Message<GetCheckSumma
    */
   isCheckSuccessful = false;
 
+  /**
+   * @generated from field: bool isComposable = 5;
+   */
+  isComposable = false;
+
+  /**
+   * @generated from field: bool isBreaking = 6;
+   */
+  isBreaking = false;
+
+  /**
+   * @generated from field: bool hasClientTraffic = 7;
+   */
+  hasClientTraffic = false;
+
+  /**
+   * @generated from field: bool hasLintErrors = 8;
+   */
+  hasLintErrors = false;
+
+  /**
+   * @generated from field: bool hasGraphPruningErrors = 9;
+   */
+  hasGraphPruningErrors = false;
+
   constructor(data?: PartialMessage<GetCheckSummaryResponse_AffectedGraph>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4369,6 +4562,11 @@ export class GetCheckSummaryResponse_AffectedGraph extends Message<GetCheckSumma
     { no: 2, name: "traffic_check_days", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "isCheckSuccessful", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 5, name: "isComposable", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 6, name: "isBreaking", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 7, name: "hasClientTraffic", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 8, name: "hasLintErrors", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 9, name: "hasGraphPruningErrors", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCheckSummaryResponse_AffectedGraph {
@@ -21171,6 +21369,20 @@ export class CreateProposalResponse extends Message<CreateProposalResponse> {
    */
   proposalName = "";
 
+  /**
+   * If true, it means the traffic check failed for the linked check
+   *
+   * @generated from field: optional bool isLinkedTrafficCheckFailed = 18;
+   */
+  isLinkedTrafficCheckFailed?: boolean;
+
+  /**
+   * If true, it means the graph pruning check failed for the linked check
+   *
+   * @generated from field: optional bool isLinkedPruningCheckFailed = 19;
+   */
+  isLinkedPruningCheckFailed?: boolean;
+
   constructor(data?: PartialMessage<CreateProposalResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -21196,6 +21408,8 @@ export class CreateProposalResponse extends Message<CreateProposalResponse> {
     { no: 15, name: "checkUrl", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 16, name: "proposalUrl", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 17, name: "proposalName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 18, name: "isLinkedTrafficCheckFailed", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 19, name: "isLinkedPruningCheckFailed", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateProposalResponse {
@@ -21749,6 +21963,20 @@ export class UpdateProposalResponse extends Message<UpdateProposalResponse> {
    */
   checkUrl = "";
 
+  /**
+   * If true, it means the traffic check failed for the linked check
+   *
+   * @generated from field: optional bool isLinkedTrafficCheckFailed = 15;
+   */
+  isLinkedTrafficCheckFailed?: boolean;
+
+  /**
+   * If true, it means the graph pruning check failed for the linked check
+   *
+   * @generated from field: optional bool isLinkedPruningCheckFailed = 16;
+   */
+  isLinkedPruningCheckFailed?: boolean;
+
   constructor(data?: PartialMessage<UpdateProposalResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -21771,6 +21999,8 @@ export class UpdateProposalResponse extends Message<UpdateProposalResponse> {
     { no: 12, name: "lintingSkipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 13, name: "graphPruningSkipped", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 14, name: "checkUrl", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 15, name: "isLinkedTrafficCheckFailed", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 16, name: "isLinkedPruningCheckFailed", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateProposalResponse {
@@ -22457,6 +22687,178 @@ export class ValidateAndFetchPluginDataResponse extends Message<ValidateAndFetch
 
   static equals(a: ValidateAndFetchPluginDataResponse | PlainMessage<ValidateAndFetchPluginDataResponse> | undefined, b: ValidateAndFetchPluginDataResponse | PlainMessage<ValidateAndFetchPluginDataResponse> | undefined): boolean {
     return proto3.util.equals(ValidateAndFetchPluginDataResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.LinkSubgraphRequest
+ */
+export class LinkSubgraphRequest extends Message<LinkSubgraphRequest> {
+  /**
+   * @generated from field: string sourceSubgraphName = 1;
+   */
+  sourceSubgraphName = "";
+
+  /**
+   * @generated from field: string sourceSubgraphNamespace = 2;
+   */
+  sourceSubgraphNamespace = "";
+
+  /**
+   * @generated from field: string targetSubgraphName = 3;
+   */
+  targetSubgraphName = "";
+
+  /**
+   * @generated from field: string targetSubgraphNamespace = 4;
+   */
+  targetSubgraphNamespace = "";
+
+  constructor(data?: PartialMessage<LinkSubgraphRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.LinkSubgraphRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "sourceSubgraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "sourceSubgraphNamespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "targetSubgraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "targetSubgraphNamespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): LinkSubgraphRequest {
+    return new LinkSubgraphRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): LinkSubgraphRequest {
+    return new LinkSubgraphRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): LinkSubgraphRequest {
+    return new LinkSubgraphRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: LinkSubgraphRequest | PlainMessage<LinkSubgraphRequest> | undefined, b: LinkSubgraphRequest | PlainMessage<LinkSubgraphRequest> | undefined): boolean {
+    return proto3.util.equals(LinkSubgraphRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.LinkSubgraphResponse
+ */
+export class LinkSubgraphResponse extends Message<LinkSubgraphResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<LinkSubgraphResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.LinkSubgraphResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): LinkSubgraphResponse {
+    return new LinkSubgraphResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): LinkSubgraphResponse {
+    return new LinkSubgraphResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): LinkSubgraphResponse {
+    return new LinkSubgraphResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: LinkSubgraphResponse | PlainMessage<LinkSubgraphResponse> | undefined, b: LinkSubgraphResponse | PlainMessage<LinkSubgraphResponse> | undefined): boolean {
+    return proto3.util.equals(LinkSubgraphResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.UnlinkSubgraphRequest
+ */
+export class UnlinkSubgraphRequest extends Message<UnlinkSubgraphRequest> {
+  /**
+   * @generated from field: string sourceSubgraphName = 1;
+   */
+  sourceSubgraphName = "";
+
+  /**
+   * @generated from field: string sourceSubgraphNamespace = 2;
+   */
+  sourceSubgraphNamespace = "";
+
+  constructor(data?: PartialMessage<UnlinkSubgraphRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.UnlinkSubgraphRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "sourceSubgraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "sourceSubgraphNamespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UnlinkSubgraphRequest {
+    return new UnlinkSubgraphRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UnlinkSubgraphRequest {
+    return new UnlinkSubgraphRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UnlinkSubgraphRequest {
+    return new UnlinkSubgraphRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UnlinkSubgraphRequest | PlainMessage<UnlinkSubgraphRequest> | undefined, b: UnlinkSubgraphRequest | PlainMessage<UnlinkSubgraphRequest> | undefined): boolean {
+    return proto3.util.equals(UnlinkSubgraphRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.UnlinkSubgraphResponse
+ */
+export class UnlinkSubgraphResponse extends Message<UnlinkSubgraphResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  constructor(data?: PartialMessage<UnlinkSubgraphResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.UnlinkSubgraphResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UnlinkSubgraphResponse {
+    return new UnlinkSubgraphResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): UnlinkSubgraphResponse {
+    return new UnlinkSubgraphResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): UnlinkSubgraphResponse {
+    return new UnlinkSubgraphResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: UnlinkSubgraphResponse | PlainMessage<UnlinkSubgraphResponse> | undefined, b: UnlinkSubgraphResponse | PlainMessage<UnlinkSubgraphResponse> | undefined): boolean {
+    return proto3.util.equals(UnlinkSubgraphResponse, a, b);
   }
 }
 

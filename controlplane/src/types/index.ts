@@ -172,6 +172,19 @@ export interface CheckedSubgraphDTO {
   labels: Label[];
 }
 
+export interface LinkedCheckDTO {
+  id: string;
+  affectedGraphNames: string[];
+  subgraphNames: string[];
+  namespace: string;
+  isCheckSuccessful: boolean;
+  hasClientTraffic: boolean;
+  hasGraphPruningErrors: boolean;
+  clientTrafficCheckSkipped: boolean;
+  graphPruningCheckSkipped: boolean;
+  isForcedSuccess: boolean;
+}
+
 export interface SchemaCheckDTO {
   id: string;
   targetID?: string;
@@ -203,6 +216,7 @@ export interface SchemaCheckDTO {
   compositionSkipped: boolean;
   breakingChangesSkipped: boolean;
   errorMessage?: string;
+  linkedChecks: LinkedCheckDTO[];
 }
 
 export interface SchemaCheckSummaryDTO extends SchemaCheckDTO {

@@ -17,13 +17,17 @@ import { docsBaseURL } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format-date";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@connectrpc/connect-query";
-import { CommandLineIcon } from "@heroicons/react/24/outline";
+import {
+  CommandLineIcon,
+  ArrowTopRightOnSquareIcon,
+} from "@heroicons/react/24/outline";
 import {
   getOrganizationMembers,
   getSubgraphMembers,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { SubgraphType } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { formatDistanceToNow } from "date-fns";
+import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import Markdown from "react-markdown";
@@ -60,6 +64,7 @@ export const Empty = ({ subgraphName }: { subgraphName: string }) => {
 };
 
 const SubgraphOverviewPage = () => {
+  const router = useRouter();
   const graph = useSubgraph();
   const { data } = useQuery(getOrganizationMembers);
 
@@ -91,7 +96,7 @@ const SubgraphOverviewPage = () => {
 
   if (!graph || !graph.subgraph) return null;
 
-  const { subgraph } = graph;
+  const { subgraph, linkedSubgraph } = graph;
 
   return (
     <div className="flex h-full flex-col">
@@ -151,6 +156,22 @@ const SubgraphOverviewPage = () => {
               </div>
             </dd>
           </div>
+
+          {linkedSubgraph && (
+            <div className="flex-start flex min-w-[150px] flex-col gap-2">
+              <dt className="text-sm text-muted-foreground">Linked Subgraph</dt>
+              <dd className="flex gap-x-2">
+                <Link
+                  href={`/${router.query.organizationSlug}/${linkedSubgraph.namespace}/subgraph/${linkedSubgraph.name}`}
+                  className="flex items-center gap-1 hover:underline"
+                >
+                  {`${linkedSubgraph.namespace}/${linkedSubgraph.name}`}
+                  <ArrowTopRightOnSquareIcon className="h-[14px] w-[14px]" />
+                </Link>
+              </dd>
+            </div>
+          )}
+
           {subgraph.type === SubgraphType.GRPC_PLUGIN &&
             subgraph.pluginData && (
               <>

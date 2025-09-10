@@ -11,7 +11,7 @@ import {
   VCSContext,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
-import { and, eq, ilike, inArray, or, SQL, sql } from 'drizzle-orm';
+import { and, eq, ilike, inArray, is, or, SQL, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { GraphQLSchema, parse } from 'graphql';
@@ -43,13 +43,20 @@ import {
   InspectorSchemaChange,
   SchemaUsageTrafficInspector,
 } from '../services/SchemaUsageTrafficInspector.js';
-import { createBatches, getFederatedGraphRouterCompatibilityVersion, normalizeLabels } from '../util.js';
+import {
+  clamp,
+  createBatches,
+  getFederatedGraphRouterCompatibilityVersion,
+  isCheckSuccessful,
+  normalizeLabels,
+} from '../util.js';
 import { FederatedGraphConfig, FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { OrganizationRepository } from './OrganizationRepository.js';
 import { ProposalRepository } from './ProposalRepository.js';
 import { SchemaGraphPruningRepository } from './SchemaGraphPruningRepository.js';
 import { SchemaLintRepository } from './SchemaLintRepository.js';
 import { SubgraphRepository } from './SubgraphRepository.js';
+import { NamespaceRepository } from './NamespaceRepository.js';
 
 export class SchemaCheckRepository {
   constructor(private db: PostgresJsDatabase<typeof schema>) {}
@@ -593,6 +600,7 @@ export class SchemaCheckRepository {
 
   public async checkMultipleSchemas({
     organizationId,
+    organizationSlug,
     subgraphs,
     namespace,
     orgRepo,
@@ -609,6 +617,7 @@ export class SchemaCheckRepository {
     skipProposalMatchCheck,
   }: {
     organizationId: string;
+    organizationSlug: string;
     orgRepo: OrganizationRepository;
     subgraphRepo: SubgraphRepository;
     fedGraphRepo: FederatedGraphRepository;
@@ -652,6 +661,13 @@ export class SchemaCheckRepository {
       vcsContext,
     });
 
+    const linkedSubgraphs: {
+      id: string;
+      name: string;
+      namespace: string;
+      baseSubgraphName: string;
+    }[] = [];
+
     for (const s of subgraphs) {
       const subgraph = await subgraphRepo.byName(s.name, namespace.name);
       const newSchemaSDL = s.isDeleted ? '' : s.schemaSDL;
@@ -660,7 +676,6 @@ export class SchemaCheckRepository {
       const graphs = await fedGraphRepo.bySubgraphLabels({
         labels: subgraph?.labels || s.labels,
         namespaceId: namespace.id,
-        excludeContracts: true,
       });
 
       const schemaCheckSubgraphId = await this.createSchemaCheckSubgraph({
@@ -675,6 +690,18 @@ export class SchemaCheckRepository {
           labels: subgraph ? undefined : s.labels,
         },
       });
+
+      if (subgraph) {
+        const linkedSubgraph = await subgraphRepo.getLinkedSubgraph({ sourceSubgraphId: subgraph.id });
+        if (linkedSubgraph) {
+          linkedSubgraphs.push({
+            id: linkedSubgraph.targetSubgraphId,
+            name: linkedSubgraph.targetSubgraphName,
+            namespace: linkedSubgraph.targetSubgraphNamespace,
+            baseSubgraphName: s.name,
+          });
+        }
+      }
 
       for (const graph of graphs) {
         // if the check federated graph already exists, we don't need to create a new one
@@ -976,7 +1003,7 @@ export class SchemaCheckRepository {
 
     const { composedGraphs } = await composer.composeWithProposedSchemas({
       inputSubgraphs: checkSubgraphs,
-      graphs: federatedGraphs,
+      graphs: federatedGraphs.filter((g) => !g.contract),
     });
 
     await this.createSchemaCheckCompositions({
@@ -1058,6 +1085,69 @@ export class SchemaCheckRepository {
       hasGraphPruningErrors: graphPruneErrors.length > 0,
     });
 
+    let isLinkedTrafficCheckFailed = false;
+    let isLinkedPruningCheckFailed = false;
+
+    for (const linkedSubgraph of linkedSubgraphs) {
+      const targetSubgraph = await subgraphRepo.byName(linkedSubgraph.name, linkedSubgraph.namespace);
+      if (!targetSubgraph) {
+        continue;
+      }
+
+      const targetFederatedGraphs = await fedGraphRepo.bySubgraphLabels({
+        labels: targetSubgraph.labels,
+        namespaceId: targetSubgraph.namespaceId,
+      });
+
+      const namespaceRepo = new NamespaceRepository(this.db, organizationId);
+      const targetNamespace = await namespaceRepo.byId(targetSubgraph.namespaceId);
+      if (!targetNamespace) {
+        continue;
+      }
+
+      let targetLimit = changeRetention?.limit ?? 7;
+      targetLimit = clamp(targetNamespace?.checksTimeframeInDays ?? targetLimit, 1, targetLimit);
+
+      const baseCheckSubgraph = checkSubgraphs.get(linkedSubgraph.baseSubgraphName);
+      if (!baseCheckSubgraph) {
+        continue;
+      }
+
+      const newSchemaSDL = baseCheckSubgraph.newSchemaSDL;
+      let targetNewGraphQLSchema = baseCheckSubgraph.newGraphQLSchema;
+      // If the graph pruning is disabled in the source namespace, the graphql schema is not computed,
+      // so here we need to check if the target subgraph has graph pruning enabled and if so, we need to compute the graphql schema
+      if (!targetNewGraphQLSchema && targetNamespace.enableGraphPruning && newSchemaSDL) {
+        const parsedSchema = parse(newSchemaSDL);
+        // this new GraphQL schema contains the location info
+        targetNewGraphQLSchema = buildASTSchema(parsedSchema, { assumeValid: true, assumeValidSDL: true });
+      }
+
+      const targetCheckResult = await subgraphRepo.performSchemaCheck({
+        organizationSlug,
+        namespace: targetNamespace,
+        subgraphName: targetSubgraph.name,
+        newSchemaSDL,
+        subgraph: targetSubgraph,
+        federatedGraphs: targetFederatedGraphs,
+        skipTrafficCheck: false,
+        isDeleted: !baseCheckSubgraph.newSchemaSDL,
+        isTargetCheck: true,
+        limit: targetLimit,
+        chClient,
+        newGraphQLSchema: targetNewGraphQLSchema,
+        disableResolvabilityValidation: false,
+      });
+
+      await this.addLinkedSchemaCheck({
+        schemaCheckID,
+        linkedSchemaCheckID: targetCheckResult.checkId,
+      });
+
+      isLinkedTrafficCheckFailed = isLinkedTrafficCheckFailed || targetCheckResult.hasClientTraffic;
+      isLinkedPruningCheckFailed = isLinkedPruningCheckFailed || targetCheckResult.graphPruneErrors.length > 0;
+    }
+
     return {
       response: {
         code: EnumStatusCode.OK,
@@ -1073,6 +1163,8 @@ export class SchemaCheckRepository {
       compositionWarnings,
       operationUsageStats: collectOperationUsageStats(inspectedOperations),
       proposalMatchMessage,
+      isLinkedTrafficCheckFailed,
+      isLinkedPruningCheckFailed,
     };
   }
 
@@ -1081,5 +1173,109 @@ export class SchemaCheckRepository {
       schemaCheckId: schemaCheckID,
       proposalId: proposalID,
     });
+  }
+
+  public async addLinkedSchemaCheck(data: { schemaCheckID: string; linkedSchemaCheckID: string }) {
+    if (data.schemaCheckID === data.linkedSchemaCheckID) {
+      throw new Error('schemaCheckID and linkedSchemaCheckID must differ');
+    }
+
+    await this.db
+      .insert(schema.linkedSchemaChecks)
+      .values({
+        schemaCheckId: data.schemaCheckID,
+        linkedSchemaCheckId: data.linkedSchemaCheckID,
+      })
+      .onConflictDoNothing()
+      .execute();
+  }
+
+  public async getLinkedSchemaChecks({
+    schemaCheckID,
+    organizationId,
+  }: {
+    schemaCheckID: string;
+    organizationId: string;
+  }) {
+    const linkedSchemaChecks = await this.db
+      .select({
+        linkedSchemaCheckId: schema.linkedSchemaChecks.linkedSchemaCheckId,
+      })
+      .from(schema.linkedSchemaChecks)
+      .where(eq(schema.linkedSchemaChecks.schemaCheckId, schemaCheckID));
+    if (linkedSchemaChecks.length === 0) {
+      return [];
+    }
+
+    const checks = await this.db.query.schemaChecks.findMany({
+      where: inArray(
+        schema.schemaChecks.id,
+        linkedSchemaChecks.map((l) => l.linkedSchemaCheckId),
+      ),
+      with: {
+        affectedGraphs: {
+          with: {
+            federatedGraph: {
+              with: {
+                target: {
+                  columns: {
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        subgraphs: {
+          columns: {
+            subgraphName: true,
+          },
+          with: {
+            namespace: {
+              columns: {
+                name: true,
+                organizationId: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const linkedChecks = [];
+
+    for (const check of checks) {
+      if (!check || check.subgraphs.length === 0 || !check.subgraphs[0].namespace) {
+        continue;
+      }
+
+      // Validate that the check belongs to the correct organization
+      if (check.subgraphs[0].namespace.organizationId !== organizationId) {
+        continue;
+      }
+
+      linkedChecks.push({
+        id: check.id,
+        affectedGraphNames: check.affectedGraphs.map(({ federatedGraph }) => federatedGraph.target.name),
+        subgraphNames: check.subgraphs.map(({ subgraphName }) => subgraphName),
+        namespace: check.subgraphs[0].namespace.name,
+        hasClientTraffic: check.hasClientTraffic ?? false,
+        hasGraphPruningErrors: check.hasGraphPruningErrors ?? false,
+        isCheckSuccessful: isCheckSuccessful({
+          isComposable: !!check.isComposable,
+          isBreaking: !!check.hasBreakingChanges,
+          hasClientTraffic: !!check.hasClientTraffic,
+          hasLintErrors: !!check.hasLintErrors,
+          hasGraphPruningErrors: !!check.hasGraphPruningErrors,
+          clientTrafficCheckSkipped: !!check.clientTrafficCheckSkipped,
+          hasProposalMatchError: check.proposalMatch === 'error',
+        }),
+        clientTrafficCheckSkipped: !!check.clientTrafficCheckSkipped,
+        graphPruningCheckSkipped: !!check.graphPruningSkipped,
+        isForcedSuccess: check.forcedSuccess ?? false,
+      });
+    }
+
+    return linkedChecks;
   }
 }

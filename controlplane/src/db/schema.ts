@@ -244,6 +244,37 @@ export const subgraphs = pgTable(
   },
 );
 
+// The link is a one way link from source to target.
+// The source subgraph can be linked only to one target subgraph, thats why we have a unique constraint on the source subgraph.
+export const linkedSubgraphs = pgTable(
+  'linked_subgraphs', // ls
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    sourceSubgraphId: uuid('source_subgraph_id')
+      .notNull()
+      .references(() => subgraphs.id, {
+        onDelete: 'cascade',
+      })
+      .unique(),
+    targetSubgraphId: uuid('target_subgraph_id')
+      .notNull()
+      .references(() => subgraphs.id, {
+        onDelete: 'cascade',
+      }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    createdById: uuid('created_by_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+  },
+  (t) => {
+    return {
+      sourceSubgraphIdIndex: index('ls_source_subgraph_id_idx').on(t.sourceSubgraphId),
+      targetSubgraphIdIndex: index('ls_target_subgraph_id_idx').on(t.targetSubgraphId),
+      createdByIdIndex: index('ls_created_by_id_idx').on(t.createdById),
+    };
+  },
+);
+
 export const featureSubgraphsToBaseSubgraphs = pgTable(
   'feature_subgraphs_to_base_subgraphs', // fsbs
   {
@@ -795,6 +826,33 @@ export const schemaChecks = pgTable(
   },
 );
 
+export const linkedSchemaChecks = pgTable(
+  'linked_schema_checks', // lsc
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    schemaCheckId: uuid('schema_check_id')
+      .references(() => schemaChecks.id, {
+        onDelete: 'cascade',
+      })
+      .notNull(),
+    linkedSchemaCheckId: uuid('linked_schema_check_id')
+      .references(() => schemaChecks.id, {
+        onDelete: 'cascade',
+      })
+      .notNull(),
+  },
+  (t) => {
+    return {
+      uniqueLinkedSchemaCheck: uniqueIndex('lsc_schema_check_id_linked_schema_check_id_unique').on(
+        t.schemaCheckId,
+        t.linkedSchemaCheckId,
+      ),
+      schemaCheckIdIndex: index('lsc_schema_check_id_idx').on(t.schemaCheckId),
+      linkedSchemaCheckIdIndex: index('lsc_linked_schema_check_id_idx').on(t.linkedSchemaCheckId),
+    };
+  },
+);
+
 export const schemaCheckSubgraphs = pgTable(
   'schema_check_subgraphs', // scs
   {
@@ -823,6 +881,17 @@ export const schemaCheckSubgraphs = pgTable(
     };
   },
 );
+
+export const schemaCheckSubgraphRelations = relations(schemaCheckSubgraphs, ({ one }) => ({
+  schemaCheck: one(schemaChecks, {
+    fields: [schemaCheckSubgraphs.schemaCheckId],
+    references: [schemaChecks.id],
+  }),
+  namespace: one(namespaces, {
+    fields: [schemaCheckSubgraphs.namespaceId],
+    references: [namespaces.id],
+  }),
+}));
 
 export const schemaCheckChangeActionOperationUsage = pgTable(
   'schema_check_change_operation_usage', // sccou
