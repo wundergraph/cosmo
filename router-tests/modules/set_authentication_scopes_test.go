@@ -32,9 +32,12 @@ func TestCustomModuleSetAuthenticationScopes(t *testing.T) {
 			},
 		}
 		authenticators, authServer := configureAuth(t)
+		accessController, err := core.NewAccessController(authenticators, false, core.IntrospectionAuthModeFull, "")
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false, false, "")),
+				core.WithAccessController(accessController),
 				core.WithModulesConfig(cfg.Modules),
 				core.WithCustomModules(&setScopesModule.SetAuthenticationScopesModule{}, &verifyScopes.VerifyScopesModule{}),
 			},
@@ -73,9 +76,12 @@ func TestCustomModuleSetAuthenticationScopes(t *testing.T) {
 			},
 		}
 		authenticators, authServer := configureAuth(t)
+		accessController, err := core.NewAccessController(authenticators, false, core.IntrospectionAuthModeFull, "")
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false, false, "")),
+				core.WithAccessController(accessController),
 				core.WithModulesConfig(cfg.Modules),
 				core.WithCustomModules(&setScopesModule.SetAuthenticationScopesModule{}, &verifyScopes.VerifyScopesModule{}),
 			},
@@ -116,9 +122,12 @@ func TestCustomModuleSetAuthenticationScopes(t *testing.T) {
 			},
 		}
 		authenticators, authServer := configureAuth(t)
+		accessController, err := core.NewAccessController(authenticators, false, core.IntrospectionAuthModeFull, "")
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false, false, "")),
+				core.WithAccessController(accessController),
 				core.WithModulesConfig(cfg.Modules),
 				core.WithCustomModules(&setScopesModule.SetAuthenticationScopesModule{}, &verifyScopes.VerifyScopesModule{}),
 			},

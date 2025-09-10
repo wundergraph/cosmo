@@ -270,9 +270,12 @@ func TestRateLimit(t *testing.T) {
 		require.NoError(t, err)
 		authenticators := []authentication.Authenticator{authenticator}
 
+		accessController, err := core.NewAccessController(authenticators, false, core.IntrospectionAuthModeFull, "")
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false, false, "")),
+				core.WithAccessController(accessController),
 				core.WithRateLimitConfig(&config.RateLimitConfiguration{
 					Enabled:  true,
 					Strategy: "simple",

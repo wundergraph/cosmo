@@ -70,9 +70,12 @@ func TestRouterOnRequestHook(t *testing.T) {
 			},
 		}
 
+		accessController, err := core.NewAccessController(authenticators, true, core.IntrospectionAuthModeFull, "")
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, true, false, "")),
+				core.WithAccessController(accessController),
 				core.WithModulesConfig(cfg.Modules),
 				core.WithCustomModules(&router_on_request.RouterOnRequestModule{}),
 			},

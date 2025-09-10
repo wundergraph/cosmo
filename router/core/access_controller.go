@@ -3,9 +3,24 @@ package core
 import (
 	"crypto/subtle"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
+)
+
+// IntrospectionAuthMode defines how introspection queries are authenticated.
+type IntrospectionAuthMode string
+
+const (
+	// IntrospectionAuthModeFull requires normal authentication for introspection queries.
+	IntrospectionAuthModeFull IntrospectionAuthMode = "full"
+
+	// IntrospectionAuthModeToken requires a specific introspection token for introspection queries.
+	IntrospectionAuthModeToken IntrospectionAuthMode = "token"
+
+	// IntrospectionAuthModeSkip bypasses authentication for introspection queries.
+	IntrospectionAuthModeSkip IntrospectionAuthMode = "skip"
 )
 
 var (
@@ -19,17 +34,27 @@ var (
 type AccessController struct {
 	authenticationRequired     bool
 	authenticators             []authentication.Authenticator
-	skipIntrospectionAuth      bool
+	introspectionAuthMode      IntrospectionAuthMode
 	introspectionAuthSkipToken string
 }
 
-func NewAccessController(authenticators []authentication.Authenticator, authenticationRequired bool, skipIntrospectionAuth bool, introspectionAuthSkipToken string) *AccessController {
+// NewAccessController creates a new AccessController.
+// It returns an error if the introspection auth mode is invalid.
+func NewAccessController(
+	authenticators []authentication.Authenticator,
+	authenticationRequired bool,
+	introspectionAuthMode IntrospectionAuthMode,
+	introspectionAuthSkipToken string) (*AccessController, error) {
+	if introspectionAuthMode != IntrospectionAuthModeFull && introspectionAuthMode != IntrospectionAuthModeToken && introspectionAuthMode != IntrospectionAuthModeSkip {
+		return nil, fmt.Errorf("invalid introspection auth mode: %s", introspectionAuthMode)
+	}
+
 	return &AccessController{
 		authenticationRequired:     authenticationRequired,
 		authenticators:             authenticators,
-		skipIntrospectionAuth:      skipIntrospectionAuth,
+		introspectionAuthMode:      introspectionAuthMode,
 		introspectionAuthSkipToken: introspectionAuthSkipToken,
-	}
+	}, nil
 }
 
 // Access performs authorization and authentication, returning an error if the request
@@ -51,16 +76,31 @@ func (a *AccessController) Access(w http.ResponseWriter, r *http.Request) (*http
 }
 
 // BypassAuthIfIntrospection checks if the request is an introspection query and if so,
-// bypasses the auth if configured to do so.
-// It will return false, basically fall back to authentication, in the following cases:
+// returns true to indicate that the auth should be skipped.
+// It will return false, indicating to fall back to authentication, in the following cases:
 // - introspection is disabled
+// - introspection authentication skip is not enabled
 // - cannot parse or identify the operation as introspection
 // - the provided token does not match the configured token (authentication later on will verify the token)
-func (a *AccessController) BypassAuthIfIntrospection(r *http.Request, operationProcessor *OperationProcessor, body []byte) bool {
-	if !a.skipIntrospectionAuth {
+func (a *AccessController) SkipAuthIfIntrospection(r *http.Request, operationProcessor *OperationProcessor, body []byte) bool {
+	if a.introspectionAuthMode == IntrospectionAuthModeFull {
 		return false
 	}
 
+	if !isIntrospectionQuery(operationProcessor, body) {
+		return false
+	}
+
+	if a.introspectionAuthMode == IntrospectionAuthModeToken {
+		return a.isValidIntrospectionToken(r)
+	}
+
+	return true
+}
+
+// isIntrospectionQuery checks if the operation in body is an introspection query.
+// It returns false if the operation is not an introspection query or we cannot parse it.
+func isIntrospectionQuery(operationProcessor *OperationProcessor, body []byte) bool {
 	if operationProcessor == nil || body == nil {
 		return false
 	}
@@ -86,17 +126,12 @@ func (a *AccessController) BypassAuthIfIntrospection(r *http.Request, operationP
 		return false
 	}
 
-	return isIntrospection && a.isValidIntrospectionToken(r)
+	return isIntrospection
 }
 
 // isValidIntrospectionToken safely validates the configured introspection token
 // against the Authorization header of the request.
 func (a *AccessController) isValidIntrospectionToken(r *http.Request) bool {
-	// If no token is configured, allow introspection without authentication
-	if len(a.introspectionAuthSkipToken) == 0 {
-		return true
-	}
-
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
 		return false

@@ -360,9 +360,9 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				trace.WithAttributes(requestContext.telemetry.traceAttrs...),
 			)
 
-			bypassAuth := h.accessController.BypassAuthIfIntrospection(r, h.operationProcessor, body)
+			skipAuth := h.accessController.SkipAuthIfIntrospection(r, h.operationProcessor, body)
 
-			if !bypassAuth {
+			if !skipAuth {
 				validatedReq, err := h.accessController.Access(w, r)
 				if err != nil {
 					requestContext.SetError(err)

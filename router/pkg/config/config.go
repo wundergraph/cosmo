@@ -985,7 +985,7 @@ type PluginRegistryConfiguration struct {
 
 type IntrospectionConfiguration struct {
 	Enabled            bool   `yaml:"enabled" envDefault:"true" env:"INTROSPECTION_ENABLED"`
-	SkipAuthentication bool   `yaml:"skip_authentication" envDefault:"false" env:"INTROSPECTION_SKIP_AUTHENTICATION"`
+	AuthenticationMode string `yaml:"authentication_mode" envDefault:"full" env:"INTROSPECTION_AUTHENTICATION_MODE"`
 	Token              string `yaml:"token" env:"INTROSPECTION_TOKEN"`
 }
 
