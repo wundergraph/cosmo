@@ -14,7 +14,7 @@ import { BaseCommandOptions } from '../../../core/types/types.js';
 export default (opts: BaseCommandOptions) => {
   const command = new Command('publish');
   command.description(
-    "Publishes a gRPC subgraph on the control plane. If the gRPC subgraph doesn't exists, it will be created.\nIf the publication leads to composition errors, the errors will be visible in the Studio.\nThe router will continue to work with the latest valid schema.\nConsider using the 'wgc subgraph check' command to check for composition errors before publishing.",
+    "Publishes a gRPC subgraph on the control plane. If the gRPC subgraph doesn't exist, it will be created.\nIf the publication leads to composition errors, the errors will be visible in the Studio.\nThe router will continue to work with the latest valid schema.\nConsider using the 'wgc subgraph check' command to check for composition errors before publishing.",
   );
   command.argument('<name>', 'The name of the gRPC subgraph.');
   command.requiredOption('--schema <path-to-schema>', 'The schema file to upload to the subgraph.');
@@ -51,7 +51,7 @@ export default (opts: BaseCommandOptions) => {
     if (!existsSync(schemaFile)) {
       program.error(
         pc.red(
-          pc.bold(`The schema file '${pc.bold(schemaFile)}' does not exist. Please check the path and try again.`),
+          pc.bold(`The schema file '${schemaFile}' does not exist. Please check the path and try again.`),
         ),
       );
     }
@@ -60,7 +60,7 @@ export default (opts: BaseCommandOptions) => {
     const schema = new TextDecoder().decode(schemaBuffer);
     if (schema.trim().length === 0) {
       program.error(
-        pc.red(pc.bold(`The schema file '${pc.bold(schemaFile)}' is empty. Please provide a valid schema.`)),
+        pc.red(pc.bold(`The schema file '${schemaFile}' is empty. Please provide a valid schema.`)),
       );
     }
 
@@ -69,7 +69,7 @@ export default (opts: BaseCommandOptions) => {
       program.error(
         pc.red(
           pc.bold(
-            `The gRPC subgraph generated directory '${pc.bold(grpcSubgraphGeneratedDir)}' does not exist. Please check the path and try again.`,
+            `The gRPC subgraph generated directory '${grpcSubgraphGeneratedDir}' does not exist. Please check the path and try again.`,
           ),
         ),
       );
@@ -83,7 +83,7 @@ export default (opts: BaseCommandOptions) => {
       program.error(
         pc.red(
           pc.bold(
-            `The proto schema file '${pc.bold(protoSchemaFile)}' does not exist. Please check the path and try again.`,
+            `The proto schema file '${protoSchemaFile}' does not exist. Please check the path and try again.`,
           ),
         ),
       );
@@ -92,7 +92,7 @@ export default (opts: BaseCommandOptions) => {
     const protoSchema = new TextDecoder().decode(protoSchemaBuffer);
     if (protoSchema.trim().length === 0) {
       program.error(
-        pc.red(pc.bold(`The proto schema file '${pc.bold(protoSchemaFile)}' is empty. Please provide a valid schema.`)),
+        pc.red(pc.bold(`The proto schema file '${protoSchemaFile}' is empty. Please provide a valid schema.`)),
       );
     }
 
@@ -100,7 +100,7 @@ export default (opts: BaseCommandOptions) => {
       program.error(
         pc.red(
           pc.bold(
-            `The proto mapping file '${pc.bold(protoMappingFile)}' does not exist. Please check the path and try again.`,
+            `The proto mapping file '${protoMappingFile}' does not exist. Please check the path and try again.`,
           ),
         ),
       );
@@ -110,7 +110,7 @@ export default (opts: BaseCommandOptions) => {
     if (protoMapping.trim().length === 0) {
       program.error(
         pc.red(
-          pc.bold(`The proto mapping file '${pc.bold(protoMappingFile)}' is empty. Please provide a valid mapping.`),
+          pc.bold(`The proto mapping file '${protoMappingFile}' is empty. Please provide a valid mapping.`),
         ),
       );
     }
@@ -119,7 +119,7 @@ export default (opts: BaseCommandOptions) => {
       program.error(
         pc.red(
           pc.bold(
-            `The proto lock file '${pc.bold(protoLockFile)}' does not exist. Please check the path and try again.`,
+            `The proto lock file '${protoLockFile}' does not exist. Please check the path and try again.`,
           ),
         ),
       );
@@ -128,7 +128,7 @@ export default (opts: BaseCommandOptions) => {
     const protoLock = new TextDecoder().decode(protoLockBuffer);
     if (protoLock.trim().length === 0) {
       program.error(
-        pc.red(pc.bold(`The proto lock file '${pc.bold(protoLockFile)}' is empty. Please provide a valid lock.`)),
+        pc.red(pc.bold(`The proto lock file '${protoLockFile}' is empty. Please provide a valid lock.`)),
       );
     }
 
