@@ -53,6 +53,15 @@ Additional Labels that are just rendered in metadata.labels
 {{- end }}
 
 {{/*
+Additional Pod Labels that are just rendered in metadata.labels
+*/}}
+{{- define "router.additionalPodLabels" -}}
+{{- range $key, $value := .Values.additionalPodLabels }}
+{{ $key }}: {{ quote $value }}
+{{- end }}
+{{- end }}
+
+{{/*
 Common labels
 */}}
 {{- define "router.labels" -}}

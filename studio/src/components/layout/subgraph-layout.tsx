@@ -30,6 +30,7 @@ import { useCurrentOrganization } from "@/hooks/use-current-organization";
 export interface SubgraphContextProps {
   subgraph: GetSubgraphByNameResponse["graph"];
   members: GetSubgraphByNameResponse["members"];
+  linkedSubgraph?: GetSubgraphByNameResponse["linkedSubgraph"];
 }
 
 export const SubgraphContext = createContext<SubgraphContextProps | undefined>(
@@ -54,6 +55,7 @@ export const SubgraphLayout = ({ children }: LayoutProps) => {
     return {
       subgraph: data.graph,
       members: data.members,
+      linkedSubgraph: data.linkedSubgraph,
     };
   }, [data]);
 
