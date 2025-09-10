@@ -3,6 +3,8 @@ import { GlobeIcon, ReaderIcon } from "@radix-ui/react-icons";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { Toolbar } from "../ui/toolbar";
+import { useWorkspace } from "@/hooks/use-workspace";
+import { useCurrentOrganization } from "@/hooks/use-current-organization";
 
 export const SchemaToolbar = ({
   tab,
@@ -12,10 +14,12 @@ export const SchemaToolbar = ({
   children?: React.ReactNode;
 }) => {
   const router = useRouter();
+  const { namespace: { name: namespace } } = useWorkspace();
+  const organizationSlug = useCurrentOrganization()?.slug;
 
   const query = {
-    organizationSlug: router.query.organizationSlug,
-    namespace: router.query.namespace,
+    organizationSlug,
+    namespace,
     slug: router.query.slug,
   };
 

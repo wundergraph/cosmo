@@ -24,6 +24,8 @@ import { PageHeader } from "./head";
 import { LayoutProps } from "./layout";
 import { NavLink, SideNav } from "./sidenav";
 import { WorkspaceSelector } from "@/components/dashboard/workspace-selector";
+import { useWorkspace } from "@/hooks/use-workspace";
+import { useCurrentOrganization } from "@/hooks/use-current-organization";
 
 export interface SubgraphContextProps {
   subgraph: GetSubgraphByNameResponse["graph"];
@@ -36,8 +38,8 @@ export const SubgraphContext = createContext<SubgraphContextProps | undefined>(
 
 export const SubgraphLayout = ({ children }: LayoutProps) => {
   const router = useRouter();
-  const organizationSlug = router.query.organizationSlug as string;
-  const namespace = router.query.namespace as string;
+  const { namespace: { name: namespace } } = useWorkspace();
+  const organizationSlug = useCurrentOrganization()?.slug;
   const slug = router.query.subgraphSlug as string;
 
   const { data, isLoading, error, refetch } = useQuery(getSubgraphByName, {

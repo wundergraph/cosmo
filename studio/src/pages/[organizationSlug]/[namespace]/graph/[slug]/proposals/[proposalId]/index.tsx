@@ -77,6 +77,7 @@ import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useContext, useState } from "react";
+import { useWorkspace } from "@/hooks/use-workspace";
 
 export const ProposalDetails = ({
   proposal,
@@ -91,7 +92,7 @@ export const ProposalDetails = ({
   const user = useUser();
   const graphData = useContext(GraphContext);
 
-  const namespace = router.query.namespace as string;
+  const { namespace: { name: namespace } } = useWorkspace();
   const slug = router.query.slug as string;
   const id = router.query.proposalId as string;
   const tab = router.query.tab as string;

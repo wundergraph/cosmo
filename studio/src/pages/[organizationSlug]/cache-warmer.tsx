@@ -24,18 +24,19 @@ import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { useCheckUserAccess } from "@/hooks/use-check-user-access";
 import { WorkspaceSelector } from "@/components/dashboard/workspace-selector";
+import { useWorkspace } from "@/hooks/use-workspace";
 
 const CacheWarmerPage: NextPageWithLayout = () => {
   const router = useRouter();
   const user = useUser();
   const checkUserAccess = useCheckUserAccess();
-  const namespace = router.query.namespace as string;
+  const { namespace: { name: namespace } } = useWorkspace();
   const cacheWarmerFeature = useFeature("cache-warmer");
   const { mutate } = useMutation(configureCacheWarmer);
   const { toast } = useToast();
 
   const { data, isLoading, refetch, error } = useQuery(getCacheWarmerConfig, {
-    namespace: namespace || "default",
+    namespace,
   });
 
   const [cacheWarmerEnabled, setCacheWarmerEnabled] = useState(false);
@@ -119,7 +120,7 @@ const CacheWarmerPage: NextPageWithLayout = () => {
               mutate(
                 {
                   enableCacheWarmer: checked,
-                  namespace: namespace || "default",
+                  namespace,
                   maxOperationsCount: checked ? 100 : undefined,
                 },
                 {

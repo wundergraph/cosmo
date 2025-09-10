@@ -1,16 +1,3 @@
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandSeparator,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@connectrpc/connect-query";
 import {
@@ -20,9 +7,7 @@ import {
   ServerStackIcon,
 } from "@heroicons/react/24/outline";
 import {
-  CaretSortIcon,
   CheckCircledIcon,
-  CheckIcon,
   Component2Icon,
   FileTextIcon,
   HomeIcon,
@@ -34,12 +19,11 @@ import {
   getFederatedGraphs,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import {
-  FederatedGraph,
   GetFederatedGraphByNameResponse,
   GetFederatedGraphsResponse,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { useRouter } from "next/router";
-import { Fragment, createContext, useContext, useMemo, useState } from "react";
+import { Fragment, createContext, useMemo } from "react";
 import { MdOutlineFeaturedPlayList } from "react-icons/md";
 import {
   PiBracketsCurlyBold,
@@ -49,7 +33,6 @@ import {
   PiToggleRight,
 } from "react-icons/pi";
 import { EmptyState } from "../empty-state";
-import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Loader } from "../ui/loader";
 import { PageHeader } from "./head";
@@ -57,6 +40,8 @@ import { LayoutProps } from "./layout";
 import { NavLink, SideNav } from "./sidenav";
 import { useFeature } from "@/hooks/use-feature";
 import { WorkspaceSelector } from "@/components/dashboard/workspace-selector";
+import { useWorkspace } from "@/hooks/use-workspace";
+import { useCurrentOrganization } from "@/hooks/use-current-organization";
 
 export interface GraphContextProps {
   graph: GetFederatedGraphByNameResponse["graph"];
@@ -73,8 +58,8 @@ export const GraphContext = createContext<GraphContextProps | undefined>(
 
 export const GraphLayout = ({ children }: LayoutProps) => {
   const router = useRouter();
-  const organizationSlug = router.query.organizationSlug as string;
-  const namespace = router.query.namespace as string;
+  const { namespace: { name: namespace } } = useWorkspace();
+  const organizationSlug = useCurrentOrganization()?.slug;
   const slug = router.query.slug as string;
 
   const proposalsFeature = useFeature("proposals");
@@ -227,142 +212,6 @@ export const GraphLayout = ({ children }: LayoutProps) => {
         <main className="flex-1">{render}</main>
       </div>
     </div>
-  );
-};
-
-function sortFederatedGraphs(graphs: FederatedGraph[]): FederatedGraph[] {
-  const result: FederatedGraph[] = [];
-  const contractedGraphs: FederatedGraph[] = [];
-
-  for (const graph of graphs) {
-    if (graph.contract) {
-      contractedGraphs.push(graph);
-    } else {
-      result.push(graph);
-    }
-  }
-
-  // sort source graph followed by contract graphs
-  for (let i = 0; i < result.length; i++) {
-    const sourceId = result[i].id;
-    result.splice(
-      i + 1,
-      0,
-      ...contractedGraphs.filter(
-        (graph) =>
-          graph.contract && graph.contract.sourceFederatedGraphId === sourceId,
-      ),
-    );
-    i += contractedGraphs.filter(
-      (graph) =>
-        graph.contract && graph.contract.sourceFederatedGraphId === sourceId,
-    ).length;
-  }
-
-  return result;
-}
-
-export const GraphSelect = () => {
-  const data = useContext(GraphContext);
-
-  const router = useRouter();
-  const slug = router.query.slug as string;
-  const namespace = router.query.namespace as string;
-
-  const [open, setOpen] = useState(false);
-
-  const selected = data?.graphs.find(
-    (g) => g.name === slug && g.namespace === namespace,
-  );
-
-  const sortedGraphs = sortFederatedGraphs(data?.graphs ?? []);
-
-  const groupedGraphs = sortedGraphs.reduce<Record<string, FederatedGraph[]>>(
-    (result, graph) => {
-    const { namespace, name } = graph;
-
-    if (!result[namespace]) {
-      result[namespace] = [];
-    }
-
-    result[namespace].push(graph);
-
-    return result;
-    },
-    {},
-  );
-
-  if (router.pathname.split("/")[3] !== "graph") {
-    return null;
-  }
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          role="combobox"
-          aria-expanded={open}
-          className="flex h-8 w-auto gap-x-2 border-0 bg-transparent pl-3 pr-1 text-muted-foreground shadow-none data-[state=open]:bg-accent data-[state=open]:text-accent-foreground hover:bg-accent hover:text-accent-foreground focus:ring-0"
-        >
-          {selected?.name}{" "}
-          <Badge variant="secondary">{selected?.namespace}</Badge>
-          <CaretSortIcon className="h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="min-w-[200px] p-0">
-        <Command className="max-h-[calc(var(--radix-popover-content-available-height)_-24px)]">
-          <CommandInput placeholder="Search graph..." className="h-9" />
-          <CommandEmpty>No graph found.</CommandEmpty>
-          <div className="scrollbar-custom h-full overflow-y-auto">
-            {Object.entries(groupedGraphs ?? {}).map(
-              ([namespace, graphs], index) => {
-                return (
-                  <CommandGroup key={namespace} heading={namespace}>
-                    {graphs.map(({ id, name, contract }) => {
-                      return (
-                        <CommandItem
-                          onSelect={() => {
-                            router.push({
-                              pathname: router.pathname,
-                              query: {
-                                ...router.query,
-                                namespace,
-                                slug: name,
-                              },
-                            });
-                            setOpen(false);
-                          }}
-                          className="pl-4"
-                          key={id}
-                          value={`${namespace}.${name}`}
-                        >
-                          {name}
-                          {contract && (
-                            <Badge variant="muted" className="ml-2">
-                              contract
-                            </Badge>
-                          )}
-                          <CheckIcon
-                            className={cn(
-                              "ml-auto h-4 w-4",
-                              id === selected?.id ? "opacity-100" : "opacity-0",
-                            )}
-                          />
-                        </CommandItem>
-                      );
-                    })}
-                    {index !==
-                      Object.entries(groupedGraphs ?? {}).length - 1 && (
-                      <CommandSeparator className="mt-2" />
-                    )}
-                  </CommandGroup>
-                );
-              },
-            )}
-          </div>
-        </Command>
-      </PopoverContent>
-    </Popover>
   );
 };
 

@@ -10,6 +10,7 @@ import { CheckIcon } from "@radix-ui/react-icons";
 import { CaretSortIcon } from "@radix-ui/react-icons";
 import { docsBaseURL } from "@/lib/constants";
 import { WorkspaceCommandWrapper } from "./workspace-command-wrapper"
+import { useCurrentOrganization } from "@/hooks/use-current-organization";
 
 interface NamespaceSelectorProps {
   isViewingGraphOrSubgraph: boolean;
@@ -22,7 +23,7 @@ export function NamespaceSelector({ isViewingGraphOrSubgraph, truncateNamespace 
   const { namespace, namespaceByName, setNamespace } = useWorkspace();
 
   const router = useRouter();
-  const { organizationSlug } = router.query;
+  const organizationSlug = useCurrentOrganization()?.slug;
   const pathname = useMemo(
     () => router.pathname.split('/').length === 3 ? router.pathname : '/[organizationSlug]/graphs',
     [router.pathname]

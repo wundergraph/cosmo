@@ -24,14 +24,14 @@ import {
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { SubgraphType } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { formatDistanceToNow } from "date-fns";
-import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import Markdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
+import { useWorkspace } from "@/hooks/use-workspace";
 
 export const Empty = ({ subgraphName }: { subgraphName: string }) => {
-  const router = useRouter();
+  const { namespace: { name: namespace } } = useWorkspace();
 
   return (
     <EmptyState
@@ -52,7 +52,7 @@ export const Empty = ({ subgraphName }: { subgraphName: string }) => {
       }
       actions={
         <CLI
-          command={`npx wgc subgraph update ${subgraphName} --namespace ${router.query.namespace} --readme <path-to-readme>`}
+          command={`npx wgc subgraph update ${subgraphName} --namespace ${namespace} --readme <path-to-readme>`}
         />
       }
     />

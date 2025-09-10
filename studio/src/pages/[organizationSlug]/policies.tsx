@@ -15,18 +15,17 @@ import {
   getNamespaceChecksConfig,
   getNamespaceProposalConfig,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { useRouter } from "next/router";
 import { ProposalConfig } from "@/components/proposal/proposal-config";
 import { useFeature } from "@/hooks/use-feature";
 import { WorkspaceSelector } from "@/components/dashboard/workspace-selector";
+import { useWorkspace } from "@/hooks/use-workspace";
 
 const PoliciesPage: NextPageWithLayout = () => {
-  const router = useRouter();
-  const namespace = (router.query.namespace as string) || "default";
+  const { namespace: { name: namespace } } = useWorkspace();
   const proposalsFeature = useFeature("proposals");
 
   const { data, isLoading, refetch, error } = useQuery(getNamespaceLintConfig, {
-    namespace,
+    namespace: namespace,
   });
 
   const {
@@ -34,14 +33,14 @@ const PoliciesPage: NextPageWithLayout = () => {
     isLoading: fetchingGraphPruningConfig,
     refetch: refetchGraphPruningConfig,
     error: graphPruningConfigFetchError,
-  } = useQuery(getNamespaceGraphPruningConfig, { namespace });
+  } = useQuery(getNamespaceGraphPruningConfig, { namespace: namespace });
 
   const {
     data: checksConfig,
     isLoading: isLoadingChecksConfig,
     refetch: refetchChecksConfig,
     error: checksConfigFetchError,
-  } = useQuery(getNamespaceChecksConfig, { namespace });
+  } = useQuery(getNamespaceChecksConfig, { namespace: namespace });
 
   const {
     data: proposalConfig,
@@ -51,7 +50,7 @@ const PoliciesPage: NextPageWithLayout = () => {
   } = useQuery(
     getNamespaceProposalConfig,
     {
-      namespace,
+      namespace: namespace,
     },
     {
       enabled: proposalsFeature?.enabled,

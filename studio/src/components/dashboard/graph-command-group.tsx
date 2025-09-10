@@ -1,7 +1,12 @@
 import * as React from "react";
 import { WorkspaceNamespace } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { GraphCommandItem } from "./graph-command-item"
-import { CommandGroup } from "@/components/ui/command";
+import { CommandGroup, CommandItem } from "@/components/ui/command";
+import { useRouter } from "next/router";
+import { useMemo } from "react";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { CheckIcon } from "@radix-ui/react-icons";
+import { useCurrentOrganization } from "@/hooks/use-current-organization";
 
 type GraphCommandGroupProps = {
   isFiltering: boolean;
@@ -48,5 +53,83 @@ export function GraphCommandGroup({
         </React.Fragment>
       ))}
     </CommandGroup>
+  );
+}
+
+interface GraphLinkProps {
+  name: string;
+  namespace: WorkspaceNamespace;
+  value: string;
+  isSubgraph?: boolean;
+  isContract?: boolean;
+  isActive: boolean;
+  className?: string;
+  setNamespace(namespace: string): void;
+}
+
+function GraphCommandItem({
+  name,
+  namespace,
+  value,
+  isSubgraph = false,
+  isContract = false,
+  isActive,
+  className,
+  setNamespace,
+}: GraphLinkProps) {
+  const router = useRouter();
+  const organizationSlug = useCurrentOrganization()?.slug;
+
+  const pathname = useMemo(
+    () => {
+      const segment = router.pathname.split('/')[3]?.toLowerCase();
+      if (isSubgraph) {
+        return segment === 'subgraph'
+          ? router.pathname
+          : `/[organizationSlug]/[namespace]/subgraph/[subgraphSlug]`;
+      }
+
+      return segment === 'graph'
+        ? router.pathname
+        : `/[organizationSlug]/[namespace]/graph/[slug]`;
+    },
+    [router.pathname, isSubgraph],
+  );
+
+  return (
+    <CommandItem
+      key={`graph-${namespace.name}-${name}`}
+      className={cn(
+        "cursor-pointer pl-4 gap-2 justify-between w-full",
+        className
+      )}
+      value={value}
+      onSelect={() => {
+        router.push({
+          pathname,
+          query: {
+            organizationSlug,
+            namespace: namespace.name,
+            ...(isSubgraph ? { subgraphSlug: name } : { slug: name }),
+          }
+        });
+
+        setNamespace(namespace.name);
+      }}
+    >
+      <span className="flex justify-between items-center gap-2 w-full">
+        {name}
+        {!isSubgraph && isContract && (
+          <Badge variant="muted" className="flex-shrink-0">contract</Badge>
+        )}
+      </span>
+
+      <CheckIcon
+        className={cn(
+          'w-4 h-4 flex-shrink-0',
+          isActive ? 'opacity-100' : 'opacity-0'
+        )}
+      />
+    </CommandItem>
   );
 }

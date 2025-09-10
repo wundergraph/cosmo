@@ -18,10 +18,11 @@ import { useRouter } from "next/router";
 import { useState } from "react";
 import { useDebounce } from "use-debounce";
 import { WorkspaceSelector } from "@/components/dashboard/workspace-selector";
+import { useWorkspace } from "@/hooks/use-workspace";
 
 const SubgraphsDashboardPage: NextPageWithLayout = () => {
   const router = useRouter();
-  const namespace = router.query.namespace as string;
+  const { namespace: { name: namespace } } = useWorkspace();
   const tab = router.query.tab as string;
 
   const pageNumber = router.query.page
@@ -37,7 +38,7 @@ const SubgraphsDashboardPage: NextPageWithLayout = () => {
   const applyParams = useApplyParams();
 
   const { data, isLoading, error, refetch } = useQuery(getSubgraphs, {
-    namespace: namespace || "default",
+    namespace: namespace,
     query,
     limit,
     offset,
