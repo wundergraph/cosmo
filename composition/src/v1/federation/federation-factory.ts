@@ -230,7 +230,7 @@ import {
   InvalidRequiredInputValueData,
 } from '../../utils/types';
 import { FederateSubgraphsContractV1Params, FederateSubgraphsWithContractsV1Params, FederationParams } from './types';
-import { ContractName, FieldCoords, SubgraphName, TypeName } from '../../types/types';
+import { ContractName, FieldCoords, FieldName, SubgraphName, TypeName } from '../../types/types';
 
 export class FederationFactory {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
@@ -1132,6 +1132,7 @@ export class FederationFactory {
             kind: sourceData.kind,
             name: stringToNameNode(sourceData.renamedTypeName || sourceData.name),
           },
+          requireFetchReasonsFieldNames: new Set<FieldName>(),
           renamedTypeName: sourceData.renamedTypeName,
           subgraphNames: new Set(sourceData.subgraphNames),
         };
