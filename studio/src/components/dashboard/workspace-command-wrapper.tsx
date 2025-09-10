@@ -116,7 +116,7 @@ export function WorkspaceCommandWrapper({ children, showFilter, filter, activeGr
                       activeGraphId={activeGraph?.id}
                       activeSubgraphId={activeSubgraph?.id}
                       setNamespace={(ns) => {
-                        setNamespace(ns);
+                        setNamespace(ns, false);
                         close();
                       }}
                     />

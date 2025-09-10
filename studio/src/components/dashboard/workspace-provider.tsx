@@ -3,7 +3,7 @@ import {
   getWorkspace,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { createContext, useCallback, useEffect, useMemo, useState } from "react";
-import { WorkspaceNamespace, WorkspaceFederatedGraph, WorkspaceSubgraph } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { WorkspaceNamespace } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { useRouter } from "next/router";
 import { useApplyParams } from "@/components/analytics/use-apply-params";
 import { useLocalStorage } from "@/hooks/use-local-storage";
