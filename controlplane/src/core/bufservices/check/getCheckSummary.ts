@@ -158,8 +158,8 @@ export function getCheckSummary(
       hasAffectedOperations = affectedOperations.length > 0;
     }
 
-    const isLinkedTrafficCheckFailed = check.linkedChecks.some((linkedCheck) => linkedCheck.hasClientTraffic);
-    const isLinkedPruningCheckFailed = check.linkedChecks.some((linkedCheck) => linkedCheck.hasGraphPruningErrors);
+    const isLinkedTrafficCheckFailed = check.linkedChecks.some((linkedCheck) => linkedCheck.hasClientTraffic && !linkedCheck.isForcedSuccess);
+    const isLinkedPruningCheckFailed = check.linkedChecks.some((linkedCheck) => linkedCheck.hasGraphPruningErrors && !linkedCheck.isForcedSuccess);
 
     affectedGraphs.push(
       new GetCheckSummaryResponse_AffectedGraph({

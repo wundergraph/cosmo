@@ -455,10 +455,12 @@ const CheckDetails = ({
   const sdl = data.proposedSubgraphSchemaSDL ?? "";
 
   const isLinkedTrafficCheckFailed = data.check.linkedChecks.some(
-    (linkedCheck) => linkedCheck.hasClientTraffic,
+    (linkedCheck) =>
+      linkedCheck.hasClientTraffic && !linkedCheck.isForcedSuccess,
   );
   const isLinkedPruningCheckFailed = data.check.linkedChecks.some(
-    (linkedCheck) => linkedCheck.hasGraphPruningErrors,
+    (linkedCheck) =>
+      linkedCheck.hasGraphPruningErrors && !linkedCheck.isForcedSuccess,
   );
 
   const isSuccessful = isCheckSuccessful(

@@ -189,10 +189,14 @@ const ChecksPage: NextPageWithLayout = () => {
                   linkedChecks,
                 }) => {
                   const isLinkedTrafficCheckFailed = linkedChecks.some(
-                    (linkedCheck) => linkedCheck.hasClientTraffic,
+                    (linkedCheck) =>
+                      linkedCheck.hasClientTraffic &&
+                      !linkedCheck.isForcedSuccess,
                   );
                   const isLinkedPruningCheckFailed = linkedChecks.some(
-                    (linkedCheck) => linkedCheck.hasGraphPruningErrors,
+                    (linkedCheck) =>
+                      linkedCheck.hasGraphPruningErrors &&
+                      !linkedCheck.isForcedSuccess,
                   );
                   const isSuccessful = isCheckSuccessful(
                     isComposable,

@@ -556,8 +556,8 @@ export class ProposalRepository {
       schemaCheckID: check[0].id,
       organizationId,
     });
-    const isLinkedTrafficCheckFailed = linkedChecks.some((linkedCheck) => linkedCheck.hasClientTraffic);
-    const isLinkedPruningCheckFailed = linkedChecks.some((linkedCheck) => linkedCheck.hasGraphPruningErrors);
+    const isLinkedTrafficCheckFailed = linkedChecks.some((linkedCheck) => linkedCheck.hasClientTraffic && !linkedCheck.isForcedSuccess);
+    const isLinkedPruningCheckFailed = linkedChecks.some((linkedCheck) => linkedCheck.hasGraphPruningErrors && !linkedCheck.isForcedSuccess);
 
     const isSuccessful = isCheckSuccessful({
       isComposable,
