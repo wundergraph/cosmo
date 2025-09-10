@@ -9,7 +9,7 @@ export default (opts: BaseCommandOptions) => {
   const command = new Command('unlink');
   command.description('Unlinks a subgraph from another subgraph on the control plane.');
   command.argument('<source-subgraph-name>', 'The name of the subgraph to unlink.');
-  command.option('-n, --namespace [string]', 'The namespace of the source subgraph.', 'default');
+  command.option('-n, --namespace <string>', 'The namespace of the source subgraph.', 'default');
 
   command.action(async (name, options) => {
     const spinner = ora(`The subgraph "${name}" is being unlinked...`).start();
