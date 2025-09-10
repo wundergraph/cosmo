@@ -278,6 +278,10 @@ message CheckSubgraphSchemaResponse {
   optional bool client_traffic_check_skipped = 12;
   repeated CompositionWarning compositionWarnings = 13;
   optional string proposalMatchMessage = 14;
+  // If true, it means the traffic check failed for the linked check
+  optional bool isLinkedTrafficCheckFailed = 15;
+  // If true, it means the graph pruning check failed for the linked check
+  optional bool isLinkedPruningCheckFailed = 16;
 }
 
 message FixSubgraphSchemaResponse {
@@ -442,9 +446,16 @@ message GetSubgraphByNameRequest {
 }
 
 message GetSubgraphByNameResponse {
+  message LinkedSubgraph{
+    string id = 1;
+    string name = 2;
+    string namespace = 3;
+  }
+
   Response response = 1;
   Subgraph graph = 2;
   repeated SubgraphMember members = 3;
+  optional LinkedSubgraph linkedSubgraph = 4;
 }
 
 message GetSubgraphSDLFromLatestCompositionRequest {
@@ -502,6 +513,19 @@ message SchemaCheck {
     repeated Label labels = 6;
   }
 
+  message LinkedCheck {
+    string id = 1;
+    repeated string affectedGraphNames = 2;
+    bool isCheckSuccessful = 3;
+    bool hasClientTraffic = 4;
+    bool hasGraphPruningErrors = 5;
+    bool clientTrafficCheckSkipped = 6;
+    bool graphPruningCheckSkipped = 7;
+    repeated string subgraphNames = 8;
+    string namespace = 9;
+    bool isForcedSuccess = 10;
+  }
+
   string id = 1;
   optional string targetID = 2;
   optional string subgraphName = 3;
@@ -523,6 +547,7 @@ message SchemaCheck {
   bool composition_skipped = 19;
   bool breaking_changes_skipped = 20;
   optional string errorMessage = 21;
+  repeated LinkedCheck linkedChecks = 22;
 }
 
 message GetChecksByFederatedGraphNameResponse {
@@ -548,6 +573,11 @@ message GetCheckSummaryResponse {
     int32 traffic_check_days = 2;
     string name = 3;
     bool isCheckSuccessful = 4;
+    bool isComposable = 5;
+    bool isBreaking = 6;
+    bool hasClientTraffic = 7;
+    bool hasLintErrors = 8;
+    bool hasGraphPruningErrors = 9;
   }
 
   message ProposalSchemaMatch {
@@ -2698,6 +2728,10 @@ message CreateProposalResponse {
   string checkUrl = 15;
   string proposalUrl = 16;
   string proposalName = 17;
+   // If true, it means the traffic check failed for the linked check
+  optional bool isLinkedTrafficCheckFailed = 18;
+  // If true, it means the graph pruning check failed for the linked check
+  optional bool isLinkedPruningCheckFailed = 19;
 }
 
 message GetProposalRequest {
@@ -2772,6 +2806,10 @@ message UpdateProposalResponse {
   bool lintingSkipped = 12;
   bool graphPruningSkipped = 13;
   string checkUrl = 14;
+   // If true, it means the traffic check failed for the linked check
+  optional bool isLinkedTrafficCheckFailed = 15;
+  // If true, it means the graph pruning check failed for the linked check
+  optional bool isLinkedPruningCheckFailed = 16;
 }
 
 message EnableProposalsForNamespaceRequest {
@@ -2854,6 +2892,26 @@ message ValidateAndFetchPluginDataResponse {
   string newVersion = 2;
   string pushToken = 3;
   string reference = 4;
+}
+
+message LinkSubgraphRequest {
+  string sourceSubgraphName = 1;
+  string sourceSubgraphNamespace = 2;
+  string targetSubgraphName = 3;
+  string targetSubgraphNamespace = 4;
+}
+
+message LinkSubgraphResponse {
+  Response response = 1;
+}
+
+message UnlinkSubgraphRequest {
+  string sourceSubgraphName = 1;
+  string sourceSubgraphNamespace = 2;
+}
+
+message UnlinkSubgraphResponse {
+  Response response = 1;
 }
 
 service PlatformService {
@@ -3222,4 +3280,9 @@ service PlatformService {
 
   // ValidateAndFetchPluginData validates the limit of plugins and returns the latest version and token
   rpc ValidateAndFetchPluginData(ValidateAndFetchPluginDataRequest) returns (ValidateAndFetchPluginDataResponse) {}
+
+  // LinkSubgraph links one subgraph to another
+  rpc LinkSubgraph(LinkSubgraphRequest) returns (LinkSubgraphResponse) {}
+  // UnlinkSubgraph unlinks one subgraph from another
+  rpc UnlinkSubgraph(UnlinkSubgraphRequest) returns (UnlinkSubgraphResponse) {}
 }

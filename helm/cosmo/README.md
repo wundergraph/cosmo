@@ -2,7 +2,7 @@
 
 For a detailed deployment guide of the chart, including the full documentation, see the [DEV.md](DEV.md) file.
 
-![Version: 0.14.0](https://img.shields.io/badge/Version-0.14.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
+![Version: 0.15.0](https://img.shields.io/badge/Version-0.15.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
 
 This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle GraphQL API Management Solution.
 
@@ -240,6 +240,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | redis.master.persistence.enabled | bool | `true` |  |
 | redis.master.persistence.size | string | `"1Gi"` |  |
 | redis.replica.replicaCount | int | `0` |  |
+| router.additionalPodLabels | object | `{}` | Add labels to pod resources |
 | router.commonLabels | object | `{}` | Add labels to all deployed resources |
 | router.configuration.cdnUrl | string | `"http://cosmo-cdn:8787"` | The URL of the Cosmo CDN. Should be internal to the cluster. |
 | router.configuration.controlplaneUrl | string | `"http://cosmo-controlplane:3001"` | The URL of the Cosmo Controlplane. Should be internal to the cluster. |
