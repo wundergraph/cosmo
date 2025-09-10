@@ -319,7 +319,6 @@ message GetFederatedGraphsRequest {
   bool includeMetrics = 3;
   string namespace = 4;
   optional bool supports_federation = 5;
-  bool includeSubgraphs = 6;
 }
 
 message Contract {

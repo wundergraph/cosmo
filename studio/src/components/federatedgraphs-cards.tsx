@@ -89,7 +89,7 @@ const MigrationDialog = ({
 }) => {
   const router = useRouter();
   const { namespace: { name: namespace } } = useWorkspace();
-  const currentOrg = useCurrentOrganization();
+  const organizationSlug = useCurrentOrganization()?.slug;
   const migrate = !!router.query.migrate;
 
   const migrateInputSchema = z.object({
@@ -145,7 +145,7 @@ const MigrationDialog = ({
             setIsMigrating(false);
             toast({ description: d.response.details, duration: 3000 });
           }
-          router.replace(`/${currentOrg?.name}/graphs`);
+          router.replace(`/${organizationSlug}/graphs`);
         },
         onError: (_) => {
           toast({
@@ -154,7 +154,7 @@ const MigrationDialog = ({
           });
           setOpen(false);
           setIsMigrating(false);
-          router.replace(`/${currentOrg?.name}/graphs`);
+          router.replace(`/${organizationSlug}/graphs`);
         },
       },
     );

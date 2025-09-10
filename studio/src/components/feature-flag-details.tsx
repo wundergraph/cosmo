@@ -97,7 +97,7 @@ const FeatureFlagOverview = ({
           description={
             <>
               This feature flag will be a part of compositions of this federated
-              graph. Once the feature flag is composed succesfully, you can
+              graph. Once the feature flag is composed successfully, you can
               query the feature flag in the{" "}
               <Link
                 href={`/${currentOrg?.slug}/${namespace}/graph/${slug}/playground`}

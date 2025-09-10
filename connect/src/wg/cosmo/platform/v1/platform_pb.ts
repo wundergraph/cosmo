@@ -2554,11 +2554,6 @@ export class GetFederatedGraphsRequest extends Message<GetFederatedGraphsRequest
    */
   supportsFederation?: boolean;
 
-  /**
-   * @generated from field: bool includeSubgraphs = 6;
-   */
-  includeSubgraphs = false;
-
   constructor(data?: PartialMessage<GetFederatedGraphsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2572,7 +2567,6 @@ export class GetFederatedGraphsRequest extends Message<GetFederatedGraphsRequest
     { no: 3, name: "includeMetrics", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 4, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "supports_federation", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
-    { no: 6, name: "includeSubgraphs", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetFederatedGraphsRequest {
