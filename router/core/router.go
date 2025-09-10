@@ -1551,14 +1551,9 @@ func WithPlayground(enable bool) Option {
 	}
 }
 
-func WithIntrospection(enable bool) Option {
+func WithIntrospection(enable bool, config config.IntrospectionConfiguration) Option {
 	return func(r *Router) {
 		r.introspection = enable
-	}
-}
-
-func WithIntrospectionConfig(config config.IntrospectionConfiguration) Option {
-	return func(r *Router) {
 		r.introspectionConfig = config
 	}
 }
