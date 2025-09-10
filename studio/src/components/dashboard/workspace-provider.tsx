@@ -15,7 +15,7 @@ export interface WorkspaceContextType {
   isLoading: boolean;
   namespace: WorkspaceNamespace;
   namespaceByName: ReadonlyMap<string, WorkspaceNamespace>;
-  setNamespace(namespace: string, applyParams?: boolean): void;
+  setNamespace(namespace: string, applyParams: boolean): void;
 }
 
 export const WorkspaceContext = createContext<WorkspaceContextType | null>(null);
@@ -78,7 +78,7 @@ export function WorkspaceProvider({ children }: React.PropsWithChildren) {
     [data?.namespaces],
   );
 
-  const setNamespaceCallback = useCallback((ns: string, applyRouteParams: boolean = true) => {
+  const setNamespaceCallback = useCallback((ns: string, applyRouteParams: boolean) => {
     if (!ns || namespace === ns || !namespaces.some((ns) => ns.toLowerCase() === ns.toLowerCase())) {
       return;
     }

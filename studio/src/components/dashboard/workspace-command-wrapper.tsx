@@ -22,7 +22,15 @@ interface WorkspacePopoverContentProps {
   close(): void;
 }
 
-export function WorkspaceCommandWrapper({ children, showFilter, filter, activeGraph, activeSubgraph, setFilter, close }: WorkspacePopoverContentProps) {
+export function WorkspaceCommandWrapper({
+  children,
+  showFilter,
+  filter,
+  activeGraph,
+  activeSubgraph,
+  setFilter,
+  close,
+}: WorkspacePopoverContentProps) {
   const { namespaceByName, setNamespace } = useWorkspace();
   const filteredGraphs = useMemo<WorkspaceNamespace[]>(() => {
     const filterValue = filter?.trim().toLowerCase() ?? '';

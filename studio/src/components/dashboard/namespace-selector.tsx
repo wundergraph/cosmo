@@ -43,7 +43,7 @@ export function NamespaceSelector({ isViewingGraphOrSubgraph, truncateNamespace 
             "bg-primary/15 hover:bg-primary/30 text-primary transition-colors duration-150 px-3 py-1.5 rounded-l-lg text-sm flex-shrink-0",
             truncateNamespace && "max-w-[180px] lg:max-w-xs truncate"
           )}
-          onClick={() => setNamespace(namespace.name)}
+          onClick={() => setNamespace(namespace.name, false)}
         >
           {namespace.name}
         </Link>
