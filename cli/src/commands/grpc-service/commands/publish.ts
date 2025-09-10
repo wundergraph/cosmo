@@ -50,18 +50,14 @@ export default (opts: BaseCommandOptions) => {
     const schemaFile = resolve(options.schema);
     if (!existsSync(schemaFile)) {
       program.error(
-        pc.red(
-          pc.bold(`The schema file '${schemaFile}' does not exist. Please check the path and try again.`),
-        ),
+        pc.red(pc.bold(`The schema file '${schemaFile}' does not exist. Please check the path and try again.`)),
       );
     }
 
     const schemaBuffer = await readFile(schemaFile);
     const schema = new TextDecoder().decode(schemaBuffer);
     if (schema.trim().length === 0) {
-      program.error(
-        pc.red(pc.bold(`The schema file '${schemaFile}' is empty. Please provide a valid schema.`)),
-      );
+      program.error(pc.red(pc.bold(`The schema file '${schemaFile}' is empty. Please provide a valid schema.`)));
     }
 
     const grpcSubgraphGeneratedDir = resolve(options.generated);
@@ -82,9 +78,7 @@ export default (opts: BaseCommandOptions) => {
     if (!existsSync(protoSchemaFile)) {
       program.error(
         pc.red(
-          pc.bold(
-            `The proto schema file '${protoSchemaFile}' does not exist. Please check the path and try again.`,
-          ),
+          pc.bold(`The proto schema file '${protoSchemaFile}' does not exist. Please check the path and try again.`),
         ),
       );
     }
@@ -99,9 +93,7 @@ export default (opts: BaseCommandOptions) => {
     if (!existsSync(protoMappingFile)) {
       program.error(
         pc.red(
-          pc.bold(
-            `The proto mapping file '${protoMappingFile}' does not exist. Please check the path and try again.`,
-          ),
+          pc.bold(`The proto mapping file '${protoMappingFile}' does not exist. Please check the path and try again.`),
         ),
       );
     }
@@ -109,27 +101,19 @@ export default (opts: BaseCommandOptions) => {
     const protoMapping = new TextDecoder().decode(protoMappingBuffer);
     if (protoMapping.trim().length === 0) {
       program.error(
-        pc.red(
-          pc.bold(`The proto mapping file '${protoMappingFile}' is empty. Please provide a valid mapping.`),
-        ),
+        pc.red(pc.bold(`The proto mapping file '${protoMappingFile}' is empty. Please provide a valid mapping.`)),
       );
     }
 
     if (!existsSync(protoLockFile)) {
       program.error(
-        pc.red(
-          pc.bold(
-            `The proto lock file '${protoLockFile}' does not exist. Please check the path and try again.`,
-          ),
-        ),
+        pc.red(pc.bold(`The proto lock file '${protoLockFile}' does not exist. Please check the path and try again.`)),
       );
     }
     const protoLockBuffer = await readFile(protoLockFile);
     const protoLock = new TextDecoder().decode(protoLockBuffer);
     if (protoLock.trim().length === 0) {
-      program.error(
-        pc.red(pc.bold(`The proto lock file '${protoLockFile}' is empty. Please provide a valid lock.`)),
-      );
+      program.error(pc.red(pc.bold(`The proto lock file '${protoLockFile}' is empty. Please provide a valid lock.`)));
     }
 
     const spinner = ora('GRPC Subgraph is being published...').start();
