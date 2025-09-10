@@ -349,13 +349,11 @@ message SubgraphMinimal {
   string id = 1;
   string name = 2;
   string namespace = 3;
-  string fedGraphId = 4;
 }
 
 message GetFederatedGraphsResponse {
   Response response = 1;
   repeated FederatedGraph graphs = 2;
-  repeated SubgraphMinimal subgraphs = 3;
 }
 
 message GetFederatedGraphsBySubgraphLabelsRequest {
@@ -2542,6 +2540,33 @@ message GetNamespaceResponse {
   Namespace namespace = 2;
 }
 
+message WorkspaceNamespace {
+  string id = 1;
+  string name = 2;
+  repeated WorkspaceFederatedGraph graphs = 3;
+}
+
+message WorkspaceFederatedGraph {
+  string id = 1;
+  string targetId = 2;
+  string name = 3;
+  bool isContract = 4;
+  repeated WorkspaceSubgraph subgraphs = 5;
+}
+
+message WorkspaceSubgraph {
+  string id = 1;
+  string targetId = 2;
+  string name = 3;
+}
+
+message GetWorkspaceRequest {}
+
+message GetWorkspaceResponse {
+  Response response = 1;
+  repeated WorkspaceNamespace namespaces = 2;
+}
+
 message PushCacheWarmerOperationRequest {
   string federatedGraphName = 1;
   string operationContent = 2;
@@ -2878,6 +2903,9 @@ service PlatformService {
   rpc RenameNamespace(RenameNamespaceRequest) returns (RenameNamespaceResponse) {}
   rpc GetNamespaces(GetNamespacesRequest) returns (GetNamespacesResponse) {}
   rpc GetNamespace(GetNamespaceRequest) returns (GetNamespaceResponse) {}
+
+  // Workspace
+  rpc GetWorkspace(GetWorkspaceRequest) returns (GetWorkspaceResponse) {}
 
   // Contracts
   rpc CreateContract(CreateContractRequest) returns (CreateContractResponse) {}

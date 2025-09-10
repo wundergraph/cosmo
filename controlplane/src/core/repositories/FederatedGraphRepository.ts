@@ -508,6 +508,8 @@ export class FederatedGraphRepository {
 
     if (opts.namespaceId) {
       conditions.push(eq(schema.targets.namespaceId, opts.namespaceId));
+    } else if (opts.namespaceIds && opts.namespaceIds.length > 0) {
+      conditions.push(inArray(schema.targets.namespaceId, opts.namespaceIds));
     }
 
     if (opts.supportsFederation !== undefined) {

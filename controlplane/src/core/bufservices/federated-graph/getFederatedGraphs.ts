@@ -4,18 +4,16 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import {
   GetFederatedGraphsRequest,
   GetFederatedGraphsResponse,
-  SubgraphMinimal,
   RequestSeriesItem,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { subHours } from 'date-fns';
-import { FederatedGraphDTO, SubgraphDTO } from '../../../types/index.js';
+import { FederatedGraphDTO } from '../../../types/index.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { AnalyticsDashboardViewRepository } from '../../repositories/analytics/AnalyticsDashboardViewRepository.js';
 import { parseTimeFilters } from '../../repositories/analytics/util.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
-import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 
 export function getFederatedGraphs(
   opts: RouterOptions,
@@ -42,7 +40,6 @@ export function getFederatedGraphs(
             details: `Could not find namespace ${req.namespace}`,
           },
           graphs: [],
-          subgraphs: [],
         };
       }
       namespaceId = namespace.id;
@@ -78,31 +75,6 @@ export function getFederatedGraphs(
       );
     }
 
-    const subgraphs: SubgraphMinimal[] = [];
-    if (req.includeSubgraphs) {
-      const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
-
-      await Promise.all(
-        list.map(async (g) => {
-          const subgraphsForFederatedGraph = await subgraphRepo.listByFederatedGraph({
-            federatedGraphTargetId: g.targetId,
-            rbac: authContext.rbac,
-          });
-
-          subgraphs.push(
-            ...subgraphsForFederatedGraph.map((sg) =>
-              SubgraphMinimal.fromJson({
-                id: sg.id,
-                name: sg.name,
-                namespace: sg.namespace,
-                fedGraphId: g.id,
-              }),
-            ),
-          );
-        }),
-      );
-    }
-
     return {
       graphs: list.map((g) => ({
         id: g.id,
@@ -122,7 +94,6 @@ export function getFederatedGraphs(
         admissionWebhookUrl: g.admissionWebhookURL,
         routerCompatibilityVersion: g.routerCompatibilityVersion,
       })),
-      subgraphs,
       response: {
         code: EnumStatusCode.OK,
       },

@@ -166,6 +166,7 @@ import { configureNamespaceProposalConfig } from './proposal/configureNamespaceP
 import { getOperations } from './analytics/getOperations.js';
 import { getClientsFromAnalytics } from './federated-graph/getClientsFromAnalytics.js';
 import { validateAndFetchPluginData } from './plugin/validateAndFetchPluginData.js';
+import { getWorkspace } from './workspace/getWorkspace.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -786,6 +787,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     getNamespace: (req, ctx) => {
       return getNamespace(opts, req, ctx);
+    },
+
+    getWorkspace: (req, ctx) => {
+      return getWorkspace(opts, req, ctx);
     },
 
     listRouterCompatibilityVersions: () => {

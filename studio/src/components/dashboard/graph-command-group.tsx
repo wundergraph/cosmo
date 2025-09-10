@@ -1,59 +1,52 @@
 import * as React from "react";
+import { WorkspaceNamespace } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { GraphCommandItem } from "./graph-command-item"
-import { CommandGroup, CommandSeparator } from "@/components/ui/command";
-import { WorkspaceFederatedGraph } from "@/components/dashboard/workspace-provider";
+import { CommandGroup } from "@/components/ui/command";
 
 type GraphCommandGroupProps = {
-  isLastGroup: boolean;
   isFiltering: boolean;
-  namespace: string;
-  data: WorkspaceFederatedGraph[];
+  namespace: WorkspaceNamespace;
+  namespaceIndex: number;
   activeGraphId?: string;
   activeSubgraphId?: string;
   setNamespace(namespace: string): void;
 }
 
 export function GraphCommandGroup({
-  isLastGroup,
   isFiltering,
   namespace,
-  data,
+  namespaceIndex,
   activeGraphId,
   activeSubgraphId,
   setNamespace,
 }: GraphCommandGroupProps) {
   return (
-    <CommandGroup heading={namespace}>
-      {data.map(({ graph, subgraphs }) => (
-        <>
+    <CommandGroup key={`heading-${namespaceIndex}`} heading={namespace.name}>
+      {namespace.graphs.map(({ subgraphs, ...graph }, graphIndex) => (
+        <React.Fragment key={`graph-${namespaceIndex}-${graphIndex}`}>
           <GraphCommandItem
-            key={`${namespace}.${graph.id}`}
             namespace={namespace}
             name={graph.name}
-            isContract={!!graph.contract}
+            isContract={graph.isContract}
             isActive={activeGraphId === graph.id}
-            value={`${namespace}.${graph.id}`}
+            value={`${namespace.name}.${graph.id}`}
             setNamespace={setNamespace}
           />
 
-          {(isFiltering || activeSubgraphId) && subgraphs.map((subgraph) => (
+          {(isFiltering || activeSubgraphId) && subgraphs.map((subgraph, subgraphIndex) => (
             <GraphCommandItem
-              key={`${namespace}.${graph.id}.${subgraph.id}`}
+              key={`subgraph-${namespaceIndex}-${graphIndex}-${subgraphIndex}`}
               name={subgraph.name}
               namespace={namespace}
               isActive={activeSubgraphId === subgraph.id}
-              value={`${namespace}.${graph.id}.${subgraph.id}`}
+              value={`${namespace.name}.${graph.id}.${subgraph.id}`}
               isSubgraph
               className="pl-8"
               setNamespace={setNamespace}
             />
           ))}
-        </>
+        </React.Fragment>
       ))}
-
-      {!isLastGroup && (
-        <CommandSeparator className="mt-2" />
-      )}
     </CommandGroup>
   );
 }

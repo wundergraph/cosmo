@@ -1,6 +1,7 @@
 import { useRouter } from "next/router";
 import { useMemo } from "react";
 import * as React from "react";
+import { WorkspaceNamespace } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { CommandItem } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 import { CheckIcon } from "@radix-ui/react-icons";
@@ -8,7 +9,7 @@ import { cn } from "@/lib/utils";
 
 export interface GraphLinkProps {
   name: string;
-  namespace: string;
+  namespace: WorkspaceNamespace;
   value: string;
   isSubgraph?: boolean;
   isContract?: boolean;
@@ -48,6 +49,7 @@ export function GraphCommandItem({
 
   return (
     <CommandItem
+      key={`graph-${namespace.name}-${name}`}
       className={cn(
         "cursor-pointer pl-4 gap-2 justify-between w-full",
         className
@@ -58,12 +60,12 @@ export function GraphCommandItem({
           pathname,
           query: {
             organizationSlug,
-            namespace,
+            namespace: namespace.name,
             ...(isSubgraph ? { subgraphSlug: name } : { slug: name }),
           }
         });
 
-        setNamespace(namespace);
+        setNamespace(namespace.name);
       }}
     >
       <span className="flex justify-between items-center gap-2 w-full">

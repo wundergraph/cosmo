@@ -139,8 +139,8 @@ export const SubgraphPageLayout = ({
   scrollRef,
 }: TitleLayoutProps) => {
   const breadcrumb = (
-    <div className="flex flex-row items-center space-x-2 text-sm gap-x-2">
-      <span className="text-muted-foreground ml-2">/</span>
+    <>
+      <span className="text-muted-foreground">/</span>
       {breadcrumbs?.map((b, i) => (
         <Fragment key={i}>
           <span className="text-muted-foreground hover:text-current">{b}</span>
@@ -148,7 +148,7 @@ export const SubgraphPageLayout = ({
         </Fragment>
       ))}
       <h1 className="truncate whitespace-nowrap font-medium">{title}</h1>
-    </div>
+    </>
   );
 
   return (
