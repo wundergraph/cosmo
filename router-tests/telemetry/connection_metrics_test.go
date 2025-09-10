@@ -251,6 +251,10 @@ func TestConnectionMetrics(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+			defer func() {
+				_ = conn.Close()
+			}()
+
 			err := conn.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
