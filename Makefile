@@ -159,7 +159,7 @@ docker-build-minikube: docker-build-local
 	minikube image load mk-cdn.tar
 	minikube cache reload
 
-	del mk-*.tar
+	rm -f mk-*.tar
 
 run-subgraphs-local:
 	cd demo && go run cmd/all/main.go
