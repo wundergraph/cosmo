@@ -7,11 +7,17 @@ import (
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.uber.org/zap"
+	"time"
 )
 
 const (
 	cosmoRouterPrometheusMeterName    = "cosmo.router.prometheus"
 	cosmoRouterPrometheusMeterVersion = "0.0.1"
+)
+
+const (
+	timeLimit      = float64(5*time.Second) / float64(time.Millisecond)
+	upperTimeLimit = float64(10*time.Second) / float64(time.Millisecond)
 )
 
 type PromMetricStore struct {
@@ -139,6 +145,12 @@ func (h *PromMetricStore) MeasureRequestError(ctx context.Context, opts ...otelm
 }
 
 func (h *PromMetricStore) MeasureOperationPlanningTime(ctx context.Context, planningTime float64, opts ...otelmetric.RecordOption) {
+	if planningTime >= upperTimeLimit {
+		h.logger.Info("prometheus: the operation planning time upper limit", zap.Float64("planningTime", planningTime))
+	} else if planningTime >= timeLimit {
+		h.logger.Info("prometheus: the operation planning time high", zap.Float64("planningTime", planningTime))
+	}
+
 	if c, ok := h.measurements.histograms[OperationPlanningTime]; ok {
 		c.Record(ctx, planningTime, opts...)
 	}
