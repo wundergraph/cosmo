@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.44.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.43.3...@wundergraph/composition@0.44.0) (2025-09-10)
+
+### Features
+
+* implement openfed__requireFetchReasons ([#2170](https://github.com/wundergraph/cosmo/issues/2170)) ([cfb097f](https://github.com/wundergraph/cosmo/commit/cfb097fb6ccc29a81cfca55fec6b71fdf6e1b61c)) (@Aenimus)
+
 ## [0.43.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.43.2...@wundergraph/composition@0.43.3) (2025-08-18)
 
 ### Bug Fixes
