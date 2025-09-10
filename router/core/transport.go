@@ -88,14 +88,19 @@ func NewCustomTransport(
 	}
 
 	if enableTraceClient {
-		getExprContext := func(ctx context.Context) *expr.Context {
+		getValuesFromRequest := func(ctx context.Context, req *http.Request) (*expr.Context, string) {
 			reqContext := getRequestContext(ctx)
 			if reqContext == nil {
-				return &expr.Context{}
+				return &expr.Context{}, ""
 			}
-			return &reqContext.expressionContext
+
+			var activeSubgraphName string
+			if activeSubgraph := reqContext.ActiveSubgraph(req); activeSubgraph != nil {
+				activeSubgraphName = activeSubgraph.Name
+			}
+			return &reqContext.expressionContext, activeSubgraphName
 		}
-		baseRoundTripper = traceclient.NewTraceInjectingRoundTripper(baseRoundTripper, connectionMetricStore, getExprContext)
+		baseRoundTripper = traceclient.NewTraceInjectingRoundTripper(baseRoundTripper, connectionMetricStore, getValuesFromRequest)
 	}
 
 	if breaker.HasCircuits() {
