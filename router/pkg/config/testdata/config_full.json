@@ -461,7 +461,7 @@
   "IntrospectionEnabled": true,
   "IntrospectionConfig": {
     "Enabled": true,
-    "SkipAuthentication": false,
+    "AuthenticationMode": "full",
     "Token": "AN_EXAMPLE_PLACEHOLDER_TOKEN_ONLY"
   },
   "QueryPlansEnabled": true,

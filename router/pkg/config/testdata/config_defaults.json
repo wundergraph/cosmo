@@ -230,7 +230,7 @@
   "IntrospectionEnabled": true,
   "IntrospectionConfig": {
     "Enabled": true,
-    "SkipAuthentication": false,
+    "AuthenticationMode": "full",
     "Token": ""
   },
   "QueryPlansEnabled": true,

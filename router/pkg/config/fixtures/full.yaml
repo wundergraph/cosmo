@@ -22,7 +22,7 @@ playground:
 introspection_enabled: true
 introspection:
   enabled: true
-  skip_authentication: false
+  authentication_mode: full
   token: 'AN_EXAMPLE_PLACEHOLDER_TOKEN_ONLY'
 json_log: true
 shutdown_delay: 15s

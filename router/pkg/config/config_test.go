@@ -1294,6 +1294,82 @@ authentication:
 
 }
 
+func TestValidateIntrospectionAuthConfig(t *testing.T) {
+	t.Parallel()
+
+	t.Run("valid config no token", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+introspection:
+  enabled: true
+  authentication_mode: full
+`)
+		_, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+	})
+
+	t.Run("valid config with token", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+introspection:
+  enabled: true
+  authentication_mode: token
+  token: dedicated_secret_for_introspection
+`)
+		_, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+	})
+
+	t.Run("invalid authentication mode", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+introspection:
+  enabled: true
+  authentication_mode: invalid
+`)
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, "at '/introspection/authentication_mode': value must be one of 'full', 'token', 'skip'")
+	})
+
+	t.Run("no token set when authentication mode is token", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+introspection:
+  enabled: true
+  authentication_mode: token
+`)
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, "at '/introspection': missing property 'token'")
+	})
+
+	t.Run("token too short", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+introspection:
+  enabled: true
+  authentication_mode: token
+  token: too_short_token
+`)
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, "at '/introspection/token': minLength: got 15, want 32")
+	})
+}
+
 func TestValidateAccessLogFileMode(t *testing.T) {
 	t.Parallel()
 
