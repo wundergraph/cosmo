@@ -355,14 +355,14 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		// If we have authenticators, we try to authenticate the request
 		if h.accessController != nil {
-			_, authenticateSpan := h.tracer.Start(r.Context(), "Authenticate",
-				trace.WithSpanKind(trace.SpanKindServer),
-				trace.WithAttributes(requestContext.telemetry.traceAttrs...),
-			)
-
 			skipAuth := h.accessController.SkipAuthIfIntrospection(r, h.operationProcessor, body)
 
 			if !skipAuth {
+				_, authenticateSpan := h.tracer.Start(r.Context(), "Authenticate",
+					trace.WithSpanKind(trace.SpanKindServer),
+					trace.WithAttributes(requestContext.telemetry.traceAttrs...),
+				)
+
 				validatedReq, err := h.accessController.Access(w, r)
 				if err != nil {
 					requestContext.SetError(err)
