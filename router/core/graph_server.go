@@ -130,9 +130,10 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 
 	isConnStoreEnabled := r.Config.metricConfig.OpenTelemetry.ConnectionStats || r.Config.metricConfig.Prometheus.ConnectionStats
 	var traceDialer *TraceDialer
-	if isConnStoreEnabled {
-		traceDialer = NewTraceDialer()
-	}
+	// NOTE: Temporarily enable to verify works for all tests / will revert
+	//if isConnStoreEnabled {
+	traceDialer = NewTraceDialer()
+	//}
 
 	// Base transport
 	baseTransport := newHTTPTransport(r.subgraphTransportOptions.TransportRequestOptions, proxy, traceDialer, "")
