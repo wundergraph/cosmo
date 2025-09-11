@@ -47,7 +47,7 @@ export function getWorkspace(
       )
       .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
 
-    // Step 2 - Retrieve all the federated graphs the actor have access to based on the namespaces
+    // Step 2 - Retrieve all the federated graphs the actor has access to, based on the namespaces
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
     const federatedGraphs = await fedGraphRepo.list({
       offset: 0, // From the beginning

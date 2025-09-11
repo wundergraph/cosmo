@@ -2775,55 +2775,6 @@ export class FederatedGraph extends Message<FederatedGraph> {
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.SubgraphMinimal
- */
-export class SubgraphMinimal extends Message<SubgraphMinimal> {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id = "";
-
-  /**
-   * @generated from field: string name = 2;
-   */
-  name = "";
-
-  /**
-   * @generated from field: string namespace = 3;
-   */
-  namespace = "";
-
-  constructor(data?: PartialMessage<SubgraphMinimal>) {
-    super();
-    proto3.util.initPartial(data, this);
-  }
-
-  static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.SubgraphMinimal";
-  static readonly fields: FieldList = proto3.util.newFieldList(() => [
-    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-  ]);
-
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SubgraphMinimal {
-    return new SubgraphMinimal().fromBinary(bytes, options);
-  }
-
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SubgraphMinimal {
-    return new SubgraphMinimal().fromJson(jsonValue, options);
-  }
-
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SubgraphMinimal {
-    return new SubgraphMinimal().fromJsonString(jsonString, options);
-  }
-
-  static equals(a: SubgraphMinimal | PlainMessage<SubgraphMinimal> | undefined, b: SubgraphMinimal | PlainMessage<SubgraphMinimal> | undefined): boolean {
-    return proto3.util.equals(SubgraphMinimal, a, b);
-  }
-}
-
-/**
  * @generated from message wg.cosmo.platform.v1.GetFederatedGraphsResponse
  */
 export class GetFederatedGraphsResponse extends Message<GetFederatedGraphsResponse> {

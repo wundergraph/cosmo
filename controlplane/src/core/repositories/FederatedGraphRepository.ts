@@ -506,9 +506,7 @@ export class FederatedGraphRepository {
       eq(schema.targets.organizationId, this.organizationId),
     ];
 
-    if (opts.namespaceId) {
-      conditions.push(eq(schema.targets.namespaceId, opts.namespaceId));
-    } else if (opts.namespaceIds && opts.namespaceIds.length > 0) {
+    if (opts.namespaceIds && opts.namespaceIds.length > 0) {
       conditions.push(inArray(schema.targets.namespaceId, opts.namespaceIds));
     }
 

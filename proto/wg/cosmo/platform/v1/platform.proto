@@ -348,12 +348,6 @@ message FederatedGraph {
   string router_compatibility_version = 17;
 }
 
-message SubgraphMinimal {
-  string id = 1;
-  string name = 2;
-  string namespace = 3;
-}
-
 message GetFederatedGraphsResponse {
   Response response = 1;
   repeated FederatedGraph graphs = 2;
