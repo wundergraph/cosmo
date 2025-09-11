@@ -1,6 +1,5 @@
 import { Head, Html, Main, NextScript } from "next/document";
 import Script from "next/script";
-import { OsanaScript } from "@/components/layout/analytics/osana-script";
 import { GtmNoScript, GtmScript } from "@/components/layout/analytics/gtm-script";
 import { ActiveCampaignScript } from "@/components/layout/analytics/active-campaign-script";
 
@@ -17,12 +16,38 @@ const getCustomScripts = ():
 };
 
 export default function Document() {
+  const osanoScriptId = process.env.NEXT_PUBLIC_OSANA_SCRIPT_ID;
+  const gtmId = process.env.NEXT_PUBLIC_GOOGLE_TAG_MANAGER_ID;
+  const isProduction = process.env.NODE_ENV !== 'production';
   const scripts = getCustomScripts();
 
   return (
     <Html className="antialiased [font-feature-settings:'ss01']" lang="en">
       <Head>
-        <OsanaScript />
+        {isProduction && (
+          <>
+            {osanoScriptId && (
+              <Script
+                id="osano-cmp"
+                src={`https://cmp.osano.com/${osanoScriptId}/osano.js`}
+                strategy="beforeInteractive"
+              />
+            )}
+
+            {gtmId && (
+              <Script id="gtm-default" strategy="beforeInteractive">{`window.dataLayer = window.dataLayer || [];
+function gtag(){ dataLayer.push(arguments); }
+gtag('consent', 'default', {
+  ad_storage: 'denied',
+  ad_user_data: 'denied',
+  ad_personalization: 'denied',
+  analytics_storage: 'denied',
+  functionality_storage: 'granted', // essentials
+  security_storage: 'granted'
+});`}</Script>
+            )}
+          </>
+        )}
         <GtmScript />
 
         <link

@@ -3,7 +3,7 @@ import Script from "next/script";
 export function GtmScript() {
   const gtmId = process.env.NEXT_PUBLIC_GOOGLE_TAG_MANAGER_ID;
   if (!gtmId || process.env.NODE_ENV !== 'production') {
-    return null;
+    // return null;
   }
 
   return (
