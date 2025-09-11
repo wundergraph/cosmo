@@ -1,0 +1,97 @@
+syntax = "proto3";
+package service;
+
+option go_package = "github.com/wundergraph/cosmo/test/grpc-service";
+
+import "google/protobuf/wrappers.proto";
+
+// Service definition for UserService
+service UserService {
+  // Lookup User entity by id
+  rpc LookupUserById(LookupUserByIdRequest) returns (LookupUserByIdResponse) {}
+  rpc QueryUsers(QueryUsersRequest) returns (QueryUsersResponse) {}
+  rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
+  rpc MutationCreateUser(MutationCreateUserRequest) returns (MutationCreateUserResponse) {}
+  rpc MutationUpdateUser(MutationUpdateUserRequest) returns (MutationUpdateUserResponse) {}
+}
+
+// Key message for User entity lookup
+message LookupUserByIdRequestKey {
+  // Key field for User entity lookup.
+  string id = 1;
+}
+
+// Request message for User entity lookup.
+message LookupUserByIdRequest {
+  repeated LookupUserByIdRequestKey keys = 1;
+}
+
+// Response message for User entity lookup.
+message LookupUserByIdResponse {
+  repeated User result = 1;
+}
+
+// Request message for users operation.
+message QueryUsersRequest {
+}
+
+// Response message for users operation.
+message QueryUsersResponse {
+  repeated User users = 1;
+}
+
+// Request message for user operation.
+message QueryUserRequest {
+  string id = 1;
+}
+
+// Response message for user operation.
+message QueryUserResponse {
+  User user = 1;
+}
+
+// Request message for createUser operation.
+message MutationCreateUserRequest {
+  UserInput user = 1;
+}
+
+// Response message for createUser operation.
+message MutationCreateUserResponse {
+  User create_user = 1;
+}
+
+// Request message for updateUser operation.
+message MutationUpdateUserRequest {
+  string id = 1;
+  UserInput user = 2;
+}
+
+// Response message for updateUser operation.
+message MutationUpdateUserResponse {
+  User update_user = 1;
+}
+
+message User {
+  string id = 1;
+  string name = 2;
+  string email = 3;
+  google.protobuf.StringValue phone = 4;
+  UserStatus status = 5;
+  google.protobuf.StringValue bio = 6;
+  repeated string tags = 7;
+}
+
+message UserInput {
+  string name = 1;
+  string email = 2;
+  google.protobuf.StringValue phone = 3;
+  UserStatus status = 4;
+  google.protobuf.StringValue bio = 5;
+}
+
+enum UserStatus {
+  USER_STATUS_UNSPECIFIED = 0;
+  USER_STATUS_ACTIVE = 1;
+  USER_STATUS_INACTIVE = 2;
+  USER_STATUS_SUSPENDED = 3;
+}

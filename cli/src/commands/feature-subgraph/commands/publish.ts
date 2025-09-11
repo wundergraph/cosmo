@@ -10,6 +10,7 @@ import { websocketSubprotocolDescription } from '../../../constants.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { handleCompositionResult } from '../../../handle-composition-result.js';
 import { validateSubscriptionProtocols } from '../../../utils.js';
+import { getBaseHeaders } from '../../../core/config.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('publish');
@@ -94,27 +95,32 @@ export default (opts: BaseCommandOptions) => {
       spinner.start();
     }
 
-    const resp = await opts.client.platform.publishFederatedSubgraph({
-      baseSubgraphName: options.subgraph,
-      disableResolvabilityValidation: options.disableResolvabilityValidation,
-      isFeatureSubgraph: true,
-      labels: [],
-      name,
-      namespace: options.namespace,
-      // Publish schema only
-      // Optional when feature subgraph does not exist yet
-      routingUrl: options.routingUrl,
-      schema,
-      subscriptionProtocol: options.subscriptionProtocol
-        ? parseGraphQLSubscriptionProtocol(options.subscriptionProtocol)
-        : undefined,
-      subscriptionUrl: options.subscriptionUrl,
-      websocketSubprotocol: options.websocketSubprotocol
-        ? parseGraphQLWebsocketSubprotocol(options.websocketSubprotocol)
-        : undefined,
-      // passing Standard type to the backend, because the users have to use the 'wgc router plugin publish' command to publish the plugin
-      type: SubgraphType.STANDARD,
-    });
+    const resp = await opts.client.platform.publishFederatedSubgraph(
+      {
+        baseSubgraphName: options.subgraph,
+        disableResolvabilityValidation: options.disableResolvabilityValidation,
+        isFeatureSubgraph: true,
+        labels: [],
+        name,
+        namespace: options.namespace,
+        // Publish schema only
+        // Optional when feature subgraph does not exist yet
+        routingUrl: options.routingUrl,
+        schema,
+        subscriptionProtocol: options.subscriptionProtocol
+          ? parseGraphQLSubscriptionProtocol(options.subscriptionProtocol)
+          : undefined,
+        subscriptionUrl: options.subscriptionUrl,
+        websocketSubprotocol: options.websocketSubprotocol
+          ? parseGraphQLWebsocketSubprotocol(options.websocketSubprotocol)
+          : undefined,
+        // passing Standard type to the backend, because the users have to use the 'wgc router plugin publish' command to publish the plugin
+        type: SubgraphType.STANDARD,
+      },
+      {
+        headers: getBaseHeaders(),
+      },
+    );
 
     try {
       handleCompositionResult({
