@@ -23,8 +23,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// TEST COMMENT, REMOVE ME!
-
 var (
 	overrideEnvFlag = flag.String("override-env", os.Getenv("OVERRIDE_ENV"), "Path to .env file to override environment variables")
 	routerVersion   = flag.Bool("version", false, "Prints the version and dependency information")
