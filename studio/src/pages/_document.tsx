@@ -16,7 +16,7 @@ const getCustomScripts = ():
 };
 
 export default function Document() {
-  const osanoScriptId = process.env.NEXT_PUBLIC_OSANA_SCRIPT_ID;
+  const osanoScriptId = process.env.NEXT_PUBLIC_OSANO_SCRIPT_ID;
   const gtmId = process.env.NEXT_PUBLIC_GOOGLE_TAG_MANAGER_ID;
   const isProduction = process.env.NODE_ENV !== 'production';
   const scripts = getCustomScripts();
