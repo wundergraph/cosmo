@@ -1,3 +1,5 @@
+import Script from "next/script";
+
 export function GtmScript() {
   const gtmId = process.env.NEXT_PUBLIC_GOOGLE_TAG_MANAGER_ID;
   if (!gtmId || process.env.NODE_ENV !== 'production') {
@@ -6,24 +8,19 @@ export function GtmScript() {
 
   return (
     <>
-      <script
-        id="gtm"
-        type="text/javascript"
-        async
-        defer
-        dangerouslySetInnerHTML={{
-          __html:
-            `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':` +
-            `new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],` +
-            `j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=` +
-            `'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);` +
-            `})(window,document,'script','dataLayer',${JSON.stringify(gtmId)});`,
-        }}
-      />
+      <Script id="gtm" strategy="afterInteractive">{`
+        (function(w,d,s,l,i){
+          w[l]=w[l]||[];
+          w[l].push({'gtm.start': new Date().getTime(), event:'gtm.js'});
+          var f=d.getElementsByTagName(s)[0],
+              j=d.createElement(s), dl=l!='dataLayer'?'&l='+l:'';
+          j.async=true; j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;
+          f.parentNode.insertBefore(j,f);
+        })(window,document,'script','dataLayer',${JSON.stringify(gtmId)});
+      `}</Script>
 
-      <script
-        dangerouslySetInnerHTML={{
-          __html: `(function(){
+      <Script id="gtm-consent" strategy="afterInteractive">{`
+(function(){
   function updateConsentFromOsano() {
     const consent = window.Osano && Osano.cm && Osano.cm.getConsent ? Osano.cm.getConsent() : null;
     const marketing = (consent && consent.MARKETING === 'ACCEPT' || !!(window.Osano && Osano.cm && Osano.cm.marketing));
@@ -43,8 +40,6 @@ export function GtmScript() {
   
   function onOsanoReady() {
     updateConsentFromOsano();
-    Osano.cm.addEventListener('osano-cm-marketing', loadActiveCampaign);
-    Osano.cm.addEventListener('osano-cm-analytics', loadActiveCampaign);
     Osano.cm.addEventListener('osano-cm-consent-changed', updateConsentFromOsano);
   }
   if (window.Osano && Osano.cm) {
@@ -52,9 +47,8 @@ export function GtmScript() {
   } else {
     window.addEventListener('osano-cm-initialized', onOsanoReady, { once: true });
   }
-})();`
-        }}
-      />
+})();
+      `}</Script>
     </>
   );
 }

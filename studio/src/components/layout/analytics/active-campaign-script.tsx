@@ -1,3 +1,5 @@
+import Script from "next/script";
+
 const ACTIVE_CAMPAIGN_SCRIPT_SRC = 'https://diffuser-cdn.app-us1.com/diffuser/diffuser.js';
 
 export function ActiveCampaignScript() {
@@ -7,9 +9,8 @@ export function ActiveCampaignScript() {
   }
 
   return (
-    <script
-      dangerouslySetInnerHTML={{
-        __html: `(function () {
+    <Script id="active-campaign" strategy="afterInteractive">{`
+(function () {
   let loaded = false;
   function loadActiveCampaign() {
     if (loaded) {
@@ -53,7 +54,7 @@ export function ActiveCampaignScript() {
   } else {
     window.addEventListener('osano-cm-initialized', onOsanoReady, { once: true });
   }
-})();`}}
-    />
+})();
+`}</Script>
   );
 }
