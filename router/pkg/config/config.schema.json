@@ -2798,7 +2798,7 @@
         "enable_require_fetch_reasons": {
           "type": "boolean",
           "default": false,
-          "description": "Enables sending to upstream subgraphs (only) the \"fetch_reasons\" extension that explains why each field (marked with @openfed__requireFetchReasons) was requested. This flag does not expose the data to clients."
+          "description": "Enables sending the \"fetch_reasons\" extension to upstream subgraphs (only) that explains why each field (marked with @openfed__requireFetchReasons) was requested. This flag does not expose the data to clients."
         },
         "subscription_fetch_timeout": {
           "type": "string",
