@@ -23,7 +23,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// TODO: TEST COMMENT, REMOVE ME!
+// TEST COMMENT, REMOVE ME!
 
 var (
 	overrideEnvFlag = flag.String("override-env", os.Getenv("OVERRIDE_ENV"), "Path to .env file to override environment variables")
