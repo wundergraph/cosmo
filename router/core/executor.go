@@ -85,6 +85,7 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 		MaxRecyclableParserSize:            opts.RouterEngineConfig.Execution.ResolverMaxRecyclableParserSize,
 		SubscriptionHeartbeatInterval:      opts.HeartbeatInterval,
 		MaxSubscriptionFetchTimeout:        opts.RouterEngineConfig.Execution.SubscriptionFetchTimeout,
+		PropagateFetchReasons:              opts.RouterEngineConfig.Execution.EnableRequireFetchReasons,
 	}
 
 	if opts.ApolloCompatibilityFlags.ValueCompletion.Enabled {
@@ -235,6 +236,8 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 	planConfig.MinifySubgraphOperations = routerEngineCfg.Execution.MinifySubgraphOperations
 
 	planConfig.EnableOperationNamePropagation = routerEngineCfg.Execution.EnableSubgraphFetchOperationName
+
+	planConfig.BuildFetchReasons = routerEngineCfg.Execution.EnableRequireFetchReasons
 
 	return planConfig, providers, nil
 }
