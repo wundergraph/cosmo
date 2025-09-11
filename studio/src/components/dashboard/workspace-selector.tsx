@@ -6,6 +6,7 @@ import { useSubgraph } from "@/hooks/use-subgraph";
 import { useMemo } from "react";
 import { useRouter } from "next/router";
 import { useWorkspace } from "@/hooks/use-workspace";
+import { cn } from "@/lib/utils";
 
 export interface WorkspaceSelectorProps {
   children?: React.ReactNode;
@@ -37,7 +38,10 @@ export function WorkspaceSelector({ children, truncateNamespace = true }: Worksp
 
   const isViewingGraphOrSubgraph = !!activeGraph || !!activeSubgraph;
   return (
-    <div className="h-9 flex justify-start items-center gap-x-2">
+    <div className={cn(
+      "h-9 flex justify-start items-center",
+      isViewingGraphOrSubgraph && "gap-x-2",
+    )}>
       <NamespaceSelector
         isViewingGraphOrSubgraph={isViewingGraphOrSubgraph}
         truncateNamespace={truncateNamespace}

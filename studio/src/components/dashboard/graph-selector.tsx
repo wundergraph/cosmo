@@ -33,7 +33,7 @@ export function GraphSelector({ activeGraph, activeSubgraph }: GraphSelectorProp
         }}
       >
         <PopoverTrigger asChild>
-          <Button variant="ghost" className="transition-colors duration-150 px-3 py-1.5 h-auto gap-x-3">
+          <Button variant="ghost" className="transition-colors duration-150 px-3 py-1.5 h-auto gap-x-4">
             <span>
               {activeGraph?.name ?? activeSubgraph?.name}
             </span>

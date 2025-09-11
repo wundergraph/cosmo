@@ -40,7 +40,7 @@ export function NamespaceSelector({ isViewingGraphOrSubgraph, truncateNamespace 
             query: { organizationSlug, namespace: namespace.name },
           }}
           className={cn(
-            "bg-primary/15 hover:bg-primary/30 text-primary transition-colors duration-150 px-3 py-1.5 rounded-l-lg text-sm flex-shrink-0",
+            "bg-primary/15 hover:bg-primary/30 text-primary transition-colors duration-150 pl-3 pr-2 py-1.5 rounded-l-lg text-sm flex-shrink-0",
             truncateNamespace && "max-w-[180px] lg:max-w-xs truncate"
           )}
           onClick={() => setNamespace(namespace.name, false)}
@@ -64,8 +64,10 @@ export function NamespaceSelector({ isViewingGraphOrSubgraph, truncateNamespace 
           <button
             type="button"
             className={cn(
-              "bg-primary/15 hover:bg-primary/30 text-primary transition-colors duration-150 px-3 py-2 text-sm flex-shrink-0 border-none outline-none",
-              isViewingGraphOrSubgraph ? "rounded-r-lg" : "flex justify-start items-center gap-6 rounded-lg"
+              "bg-primary/15 hover:bg-primary/30 text-primary transition-colors duration-150 text-sm flex-shrink-0 border-none outline-none",
+              isViewingGraphOrSubgraph
+                ? "rounded-r-lg pl-2 pr-3 py-2"
+                : "flex justify-start items-center gap-4 rounded-lg px-3 py-1.5"
             )}
           >
             {!isViewingGraphOrSubgraph && (
