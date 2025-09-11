@@ -6,7 +6,7 @@ export function OsanaScript() {
 
   return (
     <script
-      id="gtm"
+      id="osano"
       type="text/javascript"
       async
       defer
