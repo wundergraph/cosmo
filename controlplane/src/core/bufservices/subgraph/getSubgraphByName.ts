@@ -54,6 +54,8 @@ export function getSubgraphByName(
       }
     }
 
+    const linkedSubgraph = await subgraphRepo.getLinkedSubgraph({ sourceSubgraphId: subgraph.id });
+
     return {
       graph: {
         id: subgraph.id,
@@ -78,6 +80,13 @@ export function getSubgraphByName(
       response: {
         code: EnumStatusCode.OK,
       },
+      linkedSubgraph: linkedSubgraph
+        ? {
+            id: linkedSubgraph.targetSubgraphId,
+            name: linkedSubgraph.targetSubgraphName,
+            namespace: linkedSubgraph.targetSubgraphNamespace,
+          }
+        : undefined,
     };
   });
 }

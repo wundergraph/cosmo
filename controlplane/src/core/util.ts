@@ -573,6 +573,8 @@ export const isCheckSuccessful = ({
   hasGraphPruningErrors,
   clientTrafficCheckSkipped,
   hasProposalMatchError,
+  isLinkedTrafficCheckFailed,
+  isLinkedPruningCheckFailed,
 }: {
   isComposable: boolean;
   isBreaking: boolean;
@@ -581,7 +583,14 @@ export const isCheckSuccessful = ({
   hasGraphPruningErrors: boolean;
   clientTrafficCheckSkipped: boolean;
   hasProposalMatchError: boolean;
+  isLinkedTrafficCheckFailed?: boolean;
+  isLinkedPruningCheckFailed?: boolean;
 }) => {
+  // if a subgraph is linked to another subgraph, then the status of the check depends on the traffic and pruning check of the linked subgraph
+  if (isLinkedTrafficCheckFailed || isLinkedPruningCheckFailed) {
+    return false;
+  }
+
   return (
     isComposable &&
     // If no breaking changes found
