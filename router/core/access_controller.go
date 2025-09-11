@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 )
@@ -75,81 +76,22 @@ func (a *AccessController) Access(w http.ResponseWriter, r *http.Request) (*http
 	return r, nil
 }
 
-// BypassAuthIfIntrospection checks if the request is an introspection query and if so,
-// returns true to indicate that the auth should be skipped.
-// It will return false, indicating to fall back to authentication, in the following cases:
-// - introspection is disabled
-// - introspection authentication skip is not enabled
-// - cannot parse or identify the operation as introspection
-// - the provided token does not match the configured token (authentication later on will verify the token)
-func (a *AccessController) SkipAuthIfIntrospection(r *http.Request, operationProcessor *OperationProcessor, body []byte) bool {
-	if a.introspectionAuthMode == IntrospectionAuthModeFull {
-		return false
-	}
-
-	if !isIntrospectionQuery(operationProcessor, r, body) {
-		return false
-	}
-
+func (a *AccessController) IntrospectionTokenAccess(r *http.Request, body []byte) bool {
 	if a.introspectionAuthMode == IntrospectionAuthModeToken {
-		return a.isValidIntrospectionToken(r)
-	}
-
-	return true
-}
-
-// isIntrospectionQuery checks if the operation in body is an introspection query.
-// It returns false if the operation is not an introspection query or we cannot parse it.
-func isIntrospectionQuery(operationProcessor *OperationProcessor, req *http.Request, body []byte) bool {
-	if operationProcessor == nil {
-		return false
-	}
-
-	operationKit, err := operationProcessor.NewKit()
-	if err != nil {
-		return false
-	}
-	defer operationKit.Free()
-
-	switch req.Method {
-	case http.MethodGet:
-		if err := operationKit.UnmarshalOperationFromURL(req.URL); err != nil {
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
 			return false
 		}
-	case http.MethodPost:
-		if body == nil {
+
+		authHeader = strings.TrimSpace(authHeader)
+
+		// guard to prevent bypass when token is unset
+		if a.introspectionAuthSkipToken == "" {
 			return false
 		}
-		if err := operationKit.UnmarshalOperationFromBody(body); err != nil {
-			return false
-		}
+
+		return subtle.ConstantTimeCompare([]byte(authHeader), []byte(a.introspectionAuthSkipToken)) == 1
 	}
 
-	err = operationKit.Parse()
-	if err != nil {
-		return false
-	}
-
-	isIntrospection, err := operationKit.isIntrospectionQuery()
-	if err != nil {
-		return false
-	}
-
-	return isIntrospection
-}
-
-// isValidIntrospectionToken safely validates the configured introspection token
-// against the Authorization header of the request.
-func (a *AccessController) isValidIntrospectionToken(r *http.Request) bool {
-	authHeader := r.Header.Get("Authorization")
-	if authHeader == "" {
-		return false
-	}
-
-	// guard to prevent bypass when token is unset
-	if a.introspectionAuthSkipToken == "" {
-		return false
-	}
-
-	return subtle.ConstantTimeCompare([]byte(authHeader), []byte(a.introspectionAuthSkipToken)) == 1
+	return false
 }

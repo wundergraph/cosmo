@@ -2781,8 +2781,8 @@ func TestIntrospectionAuthentication(t *testing.T) {
 	t.Run("introspection query valid token with auth skip", func(t *testing.T) {
 		t.Parallel()
 
-		// even though a token is set, since introspection auth is bypassed,
-		// no authentication should be performed
+		// though auth skip is enabled, the introspection query is authenticated
+		// normally because it contains a valid jwt token
 
 		authenticators, authServer := ConfigureAuth(t)
 		accessController, err := core.NewAccessController(authenticators, true, core.IntrospectionAuthModeSkip, "")
@@ -2803,7 +2803,7 @@ func TestIntrospectionAuthentication(t *testing.T) {
 			defer res.Body.Close()
 
 			require.Equal(t, http.StatusOK, res.StatusCode)
-			require.Equal(t, "", res.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
 			require.Equal(t, simpleIntrospectionExpectedData, string(data))
