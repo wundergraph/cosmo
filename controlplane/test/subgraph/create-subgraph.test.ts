@@ -190,6 +190,7 @@ describe('Create subgraph tests', () => {
     'graph-admin',
     'graph-viewer',
     'subgraph-publisher',
+    'subgraph-checker',
     'subgraph-viewer',
   ])('%s should not be able to create regular subgraph', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
@@ -459,6 +460,7 @@ describe('Create subgraph tests', () => {
     'graph-admin',
     'graph-viewer',
     'subgraph-publisher',
+    'subgraph-checker',
     'subgraph-viewer',
   ])('%s should not be able to create subgraphs', async (role) => {
     const { client, server, users, authenticator } = await SetupTest({
@@ -755,6 +757,7 @@ describe('Create subgraph tests', () => {
       'graph-admin',
       'graph-viewer',
       'subgraph-publisher',
+      'subgraph-checker',
       'subgraph-viewer',
     ])('%s should not be able to create plugin subgraphs', async (role) => {
       const { client, server, users, authenticator } = await SetupTest({

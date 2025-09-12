@@ -114,6 +114,7 @@ describe('Publish subgraph tests', () => {
     'namespace-viewer',
     'graph-admin',
     'graph-viewer',
+    'subgraph-checker',
     'subgraph-viewer',
   ])('%s should not be able to publish to existing regular subgraph', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
@@ -250,6 +251,7 @@ describe('Publish subgraph tests', () => {
     'graph-admin',
     'graph-viewer',
     'subgraph-publisher',
+    'subgraph-checker',
     'subgraph-viewer',
   ])('%s should not be able to publish regular subgraph without already being created', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
@@ -716,6 +718,7 @@ describe('Publish subgraph tests', () => {
       'graph-admin',
       'graph-viewer',
       'subgraph-publisher',
+      'subgraph-checker',
       'subgraph-viewer',
     ])('%s should not be able to create and publish plugin subgraph', async (role) => {
       const { client, server, authenticator, users } = await SetupTest({
