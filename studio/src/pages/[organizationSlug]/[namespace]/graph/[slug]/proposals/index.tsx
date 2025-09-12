@@ -44,13 +44,14 @@ import { getProposalsByFederatedGraph } from "@wundergraph/cosmo-connect/dist/pl
 import { formatDistanceToNow, formatISO } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { useWorkspace } from "@/hooks/use-workspace";
 
 const ProposalsPage: NextPageWithLayout = () => {
   const router = useRouter();
   const user = useUser();
   const proposalsFeature = useFeature("proposals");
   const federatedGraphName = router.query.slug as string;
-  const namespace = router.query.namespace as string;
+  const { namespace: { name: namespace } } = useWorkspace();
   const pageNumber = router.query.page
     ? parseInt(router.query.page as string)
     : 1;

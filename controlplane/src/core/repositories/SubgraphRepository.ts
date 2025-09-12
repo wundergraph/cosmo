@@ -692,8 +692,8 @@ export class SubgraphRepository {
       eq(schema.targets.type, 'subgraph'),
     ];
 
-    if (opts.namespaceId) {
-      conditions.push(eq(schema.targets.namespaceId, opts.namespaceId));
+    if (opts.namespaceIds && opts.namespaceIds.length > 0) {
+      conditions.push(inArray(schema.targets.namespaceId, opts.namespaceIds));
     }
 
     if (opts.query) {
@@ -754,8 +754,8 @@ export class SubgraphRepository {
       eq(schema.targets.type, 'subgraph'),
     ];
 
-    if (opts.namespaceId) {
-      conditions.push(eq(schema.targets.namespaceId, opts.namespaceId));
+    if (opts.namespaceIds && opts.namespaceIds.length > 0) {
+      conditions.push(inArray(schema.targets.namespaceId, opts.namespaceIds));
     }
 
     if (opts.query) {
@@ -822,8 +822,8 @@ export class SubgraphRepository {
       eq(schema.targets.type, 'subgraph'),
     ];
 
-    if (opts.namespaceId) {
-      conditions.push(eq(schema.targets.namespaceId, opts.namespaceId));
+    if (opts.namespaceIds && opts.namespaceIds.length > 0) {
+      conditions.push(inArray(schema.targets.namespaceId, opts.namespaceIds));
     }
 
     if (opts.query) {

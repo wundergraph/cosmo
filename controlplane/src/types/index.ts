@@ -37,7 +37,7 @@ export type Feature = {
 };
 
 export interface ListFilterOptions {
-  namespaceId?: string;
+  namespaceIds?: string[];
   limit: number;
   offset: number;
   query?: string;
