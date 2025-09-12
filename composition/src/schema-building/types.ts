@@ -183,6 +183,7 @@ export type ObjectDefinitionData = {
   node: MutableObjectNode;
   persistedDirectivesData: PersistedDirectivesData;
   renamedTypeName: string;
+  requireFetchReasonsFieldNames: Set<FieldName>;
   subgraphNames: Set<string>;
   description?: StringValueNode;
 };

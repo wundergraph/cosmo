@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.42.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.42.0...@wundergraph/cosmo-shared@0.42.1) (2025-09-10)
+
+**Note:** Version bump only for package @wundergraph/cosmo-shared
+
+# [0.42.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.41.1...@wundergraph/cosmo-shared@0.42.0) (2025-09-10)
+
+### Features
+
+* implement openfed__requireFetchReasons ([#2170](https://github.com/wundergraph/cosmo/issues/2170)) ([cfb097f](https://github.com/wundergraph/cosmo/commit/cfb097fb6ccc29a81cfca55fec6b71fdf6e1b61c)) (@Aenimus)
+
 ## [0.41.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.41.0...@wundergraph/cosmo-shared@0.41.1) (2025-08-18)
 
 **Note:** Version bump only for package @wundergraph/cosmo-shared

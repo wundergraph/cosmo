@@ -186,6 +186,7 @@ func (c *Config) Usage() map[string]any {
 			usage["metrics_otel_engine_stats_enabled"] = c.metricConfig.OpenTelemetry.EngineStats.Enabled()
 			usage["metrics_otel_graphql_cache"] = c.metricConfig.OpenTelemetry.GraphqlCache
 			usage["metrics_otel_router_runtime"] = c.metricConfig.OpenTelemetry.RouterRuntime
+			usage["metrics_otel_connection_stats"] = c.metricConfig.OpenTelemetry.ConnectionStats
 		}
 		usage["metrics_prometheus_enabled"] = c.metricConfig.Prometheus.Enabled
 		if c.metricConfig.Prometheus.Enabled {
@@ -196,6 +197,7 @@ func (c *Config) Usage() map[string]any {
 			usage["metrics_prometheus_exclude_metrics_labels"] = c.metricConfig.Prometheus.ExcludeMetricLabels
 			usage["metrics_prometheus_exclude_scope_info"] = c.metricConfig.Prometheus.ExcludeScopeInfo
 			usage["metrics_prometheus_schema_field_usage_enabled"] = c.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled
+			usage["metrics_prometheus_connection_stats"] = c.metricConfig.Prometheus.ConnectionStats
 		}
 	}
 
