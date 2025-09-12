@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.252.0](https://github.com/wundergraph/cosmo/compare/router@0.251.1...router@0.252.0) (2025-09-12)
+
+### Features
+
+* send to subgraphs the "fetch_reasons" extension ([#2160](https://github.com/wundergraph/cosmo/issues/2160)) ([cd6f827](https://github.com/wundergraph/cosmo/commit/cd6f82738e6950969b0912374d0360b935345800)) (@ysmolski)
+
 ## [0.251.1](https://github.com/wundergraph/cosmo/compare/router@0.251.0...router@0.251.1) (2025-09-10)
 
 ### Bug Fixes

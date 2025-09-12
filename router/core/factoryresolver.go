@@ -514,9 +514,11 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 		ChildNodes: make([]plan.TypeField, 0, len(in.ChildNodes)),
 		Directives: &d,
 		FederationMetaData: plan.FederationMetaData{
-			Keys:     make([]plan.FederationFieldConfiguration, 0, len(in.Keys)),
-			Requires: make([]plan.FederationFieldConfiguration, 0, len(in.Requires)),
-			Provides: make([]plan.FederationFieldConfiguration, 0, len(in.Provides)),
+			Keys:             make([]plan.FederationFieldConfiguration, 0, len(in.Keys)),
+			Requires:         make([]plan.FederationFieldConfiguration, 0, len(in.Requires)),
+			Provides:         make([]plan.FederationFieldConfiguration, 0, len(in.Provides)),
+			EntityInterfaces: make([]plan.EntityInterfaceConfiguration, 0, len(in.EntityInterfaces)),
+			InterfaceObjects: make([]plan.EntityInterfaceConfiguration, 0, len(in.InterfaceObjects)),
 		},
 	}
 
@@ -525,6 +527,7 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 			TypeName:           node.TypeName,
 			FieldNames:         node.FieldNames,
 			ExternalFieldNames: node.ExternalFieldNames,
+			FetchReasonFields:  node.RequireFetchReasonsFieldNames,
 		})
 	}
 	for _, node := range in.ChildNodes {
@@ -532,6 +535,7 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 			TypeName:           node.TypeName,
 			FieldNames:         node.FieldNames,
 			ExternalFieldNames: node.ExternalFieldNames,
+			FetchReasonFields:  node.RequireFetchReasonsFieldNames,
 		})
 	}
 	for _, directive := range in.Directives {
@@ -547,9 +551,9 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 		if len(keyConfiguration.Conditions) > 0 {
 			conditions = make([]plan.KeyCondition, 0, len(keyConfiguration.Conditions))
 			for _, condition := range keyConfiguration.Conditions {
-				coordinates := make([]plan.KeyConditionCoordinate, 0, len(condition.FieldCoordinatesPath))
+				coordinates := make([]plan.FieldCoordinate, 0, len(condition.FieldCoordinatesPath))
 				for _, coordinate := range condition.FieldCoordinatesPath {
-					coordinates = append(coordinates, plan.KeyConditionCoordinate{
+					coordinates = append(coordinates, plan.FieldCoordinate{
 						TypeName:  coordinate.TypeName,
 						FieldName: coordinate.FieldName,
 					})
@@ -562,7 +566,7 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 			}
 		}
 
-		out.FederationMetaData.Keys = append(out.FederationMetaData.Keys, plan.FederationFieldConfiguration{
+		out.Keys = append(out.Keys, plan.FederationFieldConfiguration{
 			TypeName:              keyConfiguration.TypeName,
 			FieldName:             keyConfiguration.FieldName,
 			SelectionSet:          keyConfiguration.SelectionSet,
@@ -571,27 +575,27 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 		})
 	}
 	for _, providesConfiguration := range in.Provides {
-		out.FederationMetaData.Provides = append(out.FederationMetaData.Provides, plan.FederationFieldConfiguration{
+		out.Provides = append(out.Provides, plan.FederationFieldConfiguration{
 			TypeName:     providesConfiguration.TypeName,
 			FieldName:    providesConfiguration.FieldName,
 			SelectionSet: providesConfiguration.SelectionSet,
 		})
 	}
 	for _, requiresConfiguration := range in.Requires {
-		out.FederationMetaData.Requires = append(out.FederationMetaData.Requires, plan.FederationFieldConfiguration{
+		out.Requires = append(out.Requires, plan.FederationFieldConfiguration{
 			TypeName:     requiresConfiguration.TypeName,
 			FieldName:    requiresConfiguration.FieldName,
 			SelectionSet: requiresConfiguration.SelectionSet,
 		})
 	}
 	for _, entityInterfacesConfiguration := range in.EntityInterfaces {
-		out.FederationMetaData.EntityInterfaces = append(out.FederationMetaData.EntityInterfaces, plan.EntityInterfaceConfiguration{
+		out.EntityInterfaces = append(out.EntityInterfaces, plan.EntityInterfaceConfiguration{
 			InterfaceTypeName: entityInterfacesConfiguration.InterfaceTypeName,
 			ConcreteTypeNames: entityInterfacesConfiguration.ConcreteTypeNames,
 		})
 	}
 	for _, interfaceObjectConfiguration := range in.InterfaceObjects {
-		out.FederationMetaData.InterfaceObjects = append(out.FederationMetaData.InterfaceObjects, plan.EntityInterfaceConfiguration{
+		out.InterfaceObjects = append(out.InterfaceObjects, plan.EntityInterfaceConfiguration{
 			InterfaceTypeName: interfaceObjectConfiguration.InterfaceTypeName,
 			ConcreteTypeNames: interfaceObjectConfiguration.ConcreteTypeNames,
 		})

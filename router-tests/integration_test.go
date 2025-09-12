@@ -832,6 +832,42 @@ func TestVariablesRemapping(t *testing.T) {
 	})
 }
 
+func TestEnableRequireFetchReasons(t *testing.T) {
+	t.Parallel()
+
+	// Simple test to verify that the configuration switch works.
+	// Multi subgraphs calls are tested in the engine.
+	testenv.Run(t, &testenv.Config{
+		RouterConfigJSONTemplate: testenv.ConfigWithRequireFetchReasonsJSONTemplate,
+		ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+			cfg.EnableRequireFetchReasons = true
+		},
+		Subgraphs: testenv.SubgraphsConfig{
+			Employees: testenv.SubgraphConfig{
+				Middleware: func(handler http.Handler) http.Handler {
+					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						body, _ := io.ReadAll(r.Body)
+						var req core.GraphQLRequest
+						require.NoError(t, json.Unmarshal(body, &req))
+
+						require.Equal(t, `query($a: Int!){employee(id: $a){id}}`, req.Query)
+						require.Equal(t, `{"fetch_reasons":[{"typename":"Employee","field":"id","by_user":true},{"typename":"Query","field":"employee","by_user":true}]}`, string(req.Extensions))
+
+						w.WriteHeader(http.StatusOK)
+						_, _ = w.Write([]byte(`{"data":{"employee":{"id":1}}}`))
+					})
+				},
+			},
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			Query:     `query ($count:Int!) { employee(id:$count) { id } }`,
+			Variables: json.RawMessage(`{"count":1}`),
+		})
+		require.JSONEq(t, `{"data":{"employee":{"id":1}}}`, res.Body)
+	})
+}
+
 func TestAnonymousQuery(t *testing.T) {
 	t.Parallel()
 

@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.161.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.160.0...controlplane@0.161.0) (2025-09-12)
+
+### Features
+
+* add cli commands to create,publish and delete grpc subgraphs ([#2179](https://github.com/wundergraph/cosmo/issues/2179)) ([2254925](https://github.com/wundergraph/cosmo/commit/2254925681aa644119e11b8958911bf490a2e885)) (@JivusAyrus)
+
 # [0.160.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.159.2...controlplane@0.160.0) (2025-09-10)
 
 ### Features
