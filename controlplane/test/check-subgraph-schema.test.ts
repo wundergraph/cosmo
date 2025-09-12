@@ -49,7 +49,7 @@ describe('CheckSubgraphSchema', (ctx) => {
     await afterAllSetup(dbname);
   });
 
-  test.each(['organization-admin', 'organization-developer', 'subgraph-admin', 'subgraph-publisher'])(
+  test.each(['organization-admin', 'organization-developer', 'subgraph-admin', 'subgraph-publisher', 'subgraph-checker'])(
     '%s should be able to create a subgraph, publish the schema and then check with new schema',
     async (role) => {
       const { client, server, authenticator, users } = await SetupTest({ dbname, chClient });
@@ -158,7 +158,7 @@ describe('CheckSubgraphSchema', (ctx) => {
     await server.close();
   });
 
-  test.each(['subgraph-admin', 'subgraph-publisher'])(
+  test.each(['subgraph-admin', 'subgraph-publisher', 'subgraph-checker'])(
     '%s should be able to check with new schema on allowed namespaces',
     async (role) => {
       const { client, server, authenticator, users } = await SetupTest({ dbname, chClient });

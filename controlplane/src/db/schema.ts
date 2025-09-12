@@ -1418,6 +1418,7 @@ export const organizationRoleEnum = pgEnum('organization_role', [
   'graph-viewer',
   'subgraph-admin',
   'subgraph-publisher',
+  'subgraph-checker',
   'subgraph-viewer',
 ] as const);
 

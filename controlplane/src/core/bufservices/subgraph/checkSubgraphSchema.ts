@@ -129,7 +129,7 @@ export function checkSubgraphSchema(
       }
     }
 
-    if (subgraph && !authContext.rbac.hasSubGraphWriteAccess(subgraph)) {
+    if (subgraph && !authContext.rbac.hasSubGraphCheckAccess(subgraph)) {
       throw new UnauthorizedError();
     } else if (!subgraph) {
       if (!authContext.rbac.canCreateSubGraph(namespace)) {
