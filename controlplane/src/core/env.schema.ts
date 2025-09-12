@@ -178,6 +178,24 @@ export const envVariables = z
      * Admission Webhook
      */
     AUTH_ADMISSION_JWT_SECRET: z.string(),
+
+    /**
+     * Sentry
+     */
+    SENTRY_ENABLED: z
+      .string()
+      .optional()
+      .transform((val) => val === 'true')
+      .default('false'),
+    SENTRY_DSN: z.string().optional(),
+    SENTRY_SEND_DEFAULT_PII: z
+      .string()
+      .optional()
+      .transform((val) => val === 'true')
+      .default('false'),
+    SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().optional().default(1),
+    SENTRY_PROFILE_SESSION_SAMPLE_RATE: z.coerce.number().optional().default(1),
+    SENTRY_EVENT_LOOP_BLOCK_THRESHOLD_MS: z.coerce.number().optional().default(100),
   })
   .refine((input) => {
     if (input.STRIPE_WEBHOOK_SECRET && !input.STRIPE_SECRET_KEY) {
