@@ -57,7 +57,17 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 	}
 
 	if len(authenticators) > 0 {
-		options = append(options, WithAccessController(NewAccessController(authenticators, cfg.Authorization.RequireAuthentication)))
+		accessController, err := NewAccessController(
+			authenticators,
+			cfg.Authorization.RequireAuthentication,
+			IntrospectionAuthMode(cfg.IntrospectionConfig.AuthenticationMode),
+			cfg.IntrospectionConfig.Token,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("could not create access controller: %w", err)
+		}
+
+		options = append(options, WithAccessController(accessController))
 	}
 
 	// HTTP_PROXY, HTTPS_PROXY and NO_PROXY
@@ -155,7 +165,7 @@ func optionsFromResources(logger *zap.Logger, config *config.Config) []Option {
 		WithOverrideRoutingURL(config.OverrideRoutingURL),
 		WithOverrides(config.Overrides),
 		WithLogger(logger),
-		WithIntrospection(config.IntrospectionEnabled),
+		WithIntrospection(config.IntrospectionEnabled, config.IntrospectionConfig),
 		WithQueryPlans(config.QueryPlansEnabled),
 		WithPlayground(config.PlaygroundEnabled),
 		WithGraphApiToken(config.Graph.Token),

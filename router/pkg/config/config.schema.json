@@ -1362,7 +1362,42 @@
     "introspection_enabled": {
       "type": "boolean",
       "description": "Enable the GraphQL introspection. The GraphQL introspection allows you to query the schema of the GraphQL API. The default value is true. If the value is false, the GraphQL introspection is disabled. In production, it is recommended to disable the introspection.",
-      "default": true
+      "default": true,
+      "deprecated": true,
+      "deprecationMessage": "introspection_enabled is deprecated. Please use the introspection.enabled configuration instead."
+    },
+    "introspection": {
+      "type": "object",
+      "description": "",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "",
+          "default": true
+        },
+        "authentication_mode": {
+          "type": "string",
+          "enum": ["full", "token", "skip"],
+          "description": "Authentication mode for introspection queries. 'full' requires normal authentication, 'token' requires a specific introspection token, 'skip' bypasses authentication entirely.",
+          "default": "full"
+        },
+        "token": {
+          "type": "string",
+          "description": "Token to authenticate introspection requests. Required when introspection.authentication_mode is set to 'token', ignored otherwise.",
+          "minLength": 32
+        }
+      },
+      "if": {
+        "properties": {
+          "authentication_mode": {
+            "const": "token"
+          }
+        }
+      },
+      "then": {
+        "required": ["token"]
+      }
     },
     "query_plans_enabled": {
       "type": "boolean",
