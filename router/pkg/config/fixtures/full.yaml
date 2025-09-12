@@ -473,6 +473,10 @@ router_config_path: 'latest.json'
 client_header:
   name: 'Client-Name'
   version: 'Client_Version'
+  enforce:
+    on_name: false
+    on_version: false
+    response_code: 400
 
 apollo_compatibility_flags:
   enable_all: false
