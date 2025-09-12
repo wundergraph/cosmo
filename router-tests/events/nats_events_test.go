@@ -3,6 +3,7 @@ package events
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -19,12 +20,42 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
+	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 
 	"github.com/hasura/go-graphql-client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 )
+
+
+var (
+	_ configpoller.ConfigPoller = (*ConfigPollerMock)(nil)
+)
+
+type ConfigPollerMock struct {
+	initConfig   *nodev1.RouterConfig
+	updateConfig func(newConfig *nodev1.RouterConfig, oldVersion string) error
+	ready        chan struct{}
+}
+
+func (c *ConfigPollerMock) Subscribe(_ context.Context, handler func(newConfig *nodev1.RouterConfig, oldVersion string) error) {
+	c.updateConfig = handler
+	close(c.ready)
+}
+
+func (c *ConfigPollerMock) GetRouterConfig(_ context.Context) (*routerconfig.Response, error) {
+	result := &routerconfig.Response{
+		Config: c.initConfig,
+	}
+	return result, nil
+}
+
+func (c *ConfigPollerMock) Stop(_ context.Context) error {
+	return nil
+}
 
 const NatsWaitTimeout = time.Second * 30
 
@@ -1715,6 +1746,135 @@ func TestNatsEvents(t *testing.T) {
 			err = json.Unmarshal(msg.Payload, &payload)
 			require.NoError(t, err)
 			require.Equal(t, float64(99), payload.Data.EmployeeUpdatedMyNats.ID)
+		})
+	})
+
+	t.Run("start multiple subscriptions and hot reload should stop all the subscriptions", func(t *testing.T) {
+		pm := ConfigPollerMock{
+			ready: make(chan struct{}),
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               true,
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+			NoRetryClient: true,
+			RouterConfig: &testenv.RouterConfig{
+				ConfigPollerFactory: func(config *nodev1.RouterConfig) configpoller.ConfigPoller {
+					pm.initConfig = config
+					return &pm
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Wait for the config poller to be ready
+			<-pm.ready
+
+			var subscriptionOne struct {
+				employeeUpdated struct {
+					ID      float64 `graphql:"id"`
+					Details struct {
+						Surname string `graphql:"surname"`
+					} `graphql:"details"`
+				} `graphql:"employeeUpdatedMyNats(id: 1)"`
+			}
+
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
+			client1 := graphql.NewSubscriptionClient(surl)
+			client1.OnError(func(client *graphql.SubscriptionClient, err error) error {
+				// avoid retry on error
+				return err
+			})
+			client2 := graphql.NewSubscriptionClient(surl)
+			client2.OnError(func(client *graphql.SubscriptionClient, err error) error {
+				// avoid retry on error
+				return err
+			})
+			client3 := graphql.NewSubscriptionClient(surl)
+			client3.OnError(func(client *graphql.SubscriptionClient, err error) error {
+				// avoid retry on error
+				return err
+			})
+			subOneDataCh := make(chan []byte)
+			subscriptionOneID, err := client1.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
+				subOneDataCh <- dataValue
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEqual(t, "", subscriptionOneID)
+
+			client1RunCh := make(chan error)
+			go func() {
+				client1RunCh <- client1.Run()
+			}()
+
+			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
+
+			subTwoDataCh := make(chan []byte)
+			subscriptionTwoID, err := client2.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
+				subTwoDataCh <- dataValue
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEqual(t, "", subscriptionTwoID)
+
+			client2RunCh := make(chan error)
+			go func() {
+				client2RunCh <- client2.Run()
+			}()
+
+			xEnv.WaitForSubscriptionCount(2, NatsWaitTimeout)
+
+			subThreeDataCh := make(chan []byte)
+			subscriptionThreeID, err := client3.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
+				subThreeDataCh <- dataValue
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEqual(t, "", subscriptionThreeID)
+
+			client3RunCh := make(chan error)
+			go func() {
+				client3RunCh <- client3.Run()
+			}()
+
+			xEnv.WaitForSubscriptionCount(3, NatsWaitTimeout)
+
+			// Swap config
+			require.NoError(t, pm.updateConfig(pm.initConfig, "old-1"))
+			
+			xEnv.WaitForSubscriptionCount(0, NatsWaitTimeout)
+
+			errUnsubscribeOne := client1.Unsubscribe(subscriptionOneID)
+			require.NoError(t, errUnsubscribeOne)
+			errUnsubscribeTwo := client2.Unsubscribe(subscriptionTwoID)
+			require.NoError(t, errUnsubscribeTwo)
+			errUnsubscribeThree := client3.Unsubscribe(subscriptionThreeID)
+			require.NoError(t, errUnsubscribeThree)
+
+
+			// close the first client
+			errClose1 := client1.Close()
+			require.NoError(t, errClose1)
+			testenv.AwaitChannelWithT(t, NatsWaitTimeout, client1RunCh, func(t *testing.T, client1RunErr error) {
+				require.Error(t, client1RunErr)
+			})
+
+			// close the second client
+			errClose2 := client2.Close()
+			require.NoError(t, errClose2)
+			testenv.AwaitChannelWithT(t, NatsWaitTimeout, client2RunCh, func(t *testing.T, client2RunErr error) {
+				require.Error(t, client2RunErr)
+			})
+
+			// close the third client
+			errClose3 := client3.Close()
+			require.NoError(t, errClose3)
+			testenv.AwaitChannelWithT(t, NatsWaitTimeout, client3RunCh, func(t *testing.T, client3RunErr error) {
+				require.Error(t, client3RunErr)
+			})
 		})
 	})
 }
