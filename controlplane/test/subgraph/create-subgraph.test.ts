@@ -875,4 +875,284 @@ describe('Create subgraph tests', () => {
       await server.close();
     });
   });
+
+  describe('GRPC Service subgraph creation tests', () => {
+    test('Should be able to create a GRPC service subgraph', async () => {
+      const { client, server } = await SetupTest({
+        dbname,
+      });
+
+      const grpcServiceName = genID('grpc-service');
+      const grpcServiceLabel = genUniqueLabel('service');
+
+      const createGrpcServiceSubgraphResp = await client.createFederatedSubgraph({
+        name: grpcServiceName,
+        namespace: DEFAULT_NAMESPACE,
+        type: SubgraphType.GRPC_SERVICE,
+        routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+        labels: [grpcServiceLabel],
+      });
+
+      expect(createGrpcServiceSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+      // Validate that the subgraph was created with the correct type
+      const getSubgraphResp = await client.getSubgraphByName({
+        name: grpcServiceName,
+        namespace: DEFAULT_NAMESPACE,
+      });
+
+      expect(getSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(getSubgraphResp.graph).toBeDefined();
+      expect(getSubgraphResp.graph?.name).toBe(grpcServiceName);
+      expect(getSubgraphResp.graph?.type).toBe(SubgraphType.GRPC_SERVICE);
+      expect(getSubgraphResp.graph?.routingURL).toBe(DEFAULT_SUBGRAPH_URL_ONE);
+
+      await server.close();
+    });
+
+    test('Should not allow creating a GRPC service subgraph without a routing URL', async () => {
+      const { client, server } = await SetupTest({
+        dbname,
+      });
+
+      const grpcServiceName = genID('grpc-service');
+      const grpcServiceLabel = genUniqueLabel('service');
+
+      const createGrpcServiceSubgraphResp = await client.createFederatedSubgraph({
+        name: grpcServiceName,
+        namespace: DEFAULT_NAMESPACE,
+        type: SubgraphType.GRPC_SERVICE,
+        labels: [grpcServiceLabel],
+      });
+
+      expect(createGrpcServiceSubgraphResp.response?.code).toBe(EnumStatusCode.ERR);
+      expect(createGrpcServiceSubgraphResp.response?.details).toBe(
+        'A non-Event-Driven Graph must define a routing URL',
+      );
+
+      await server.close();
+    });
+
+    test('Should not allow creating a GRPC service subgraph with invalid routing URL', async () => {
+      const { client, server } = await SetupTest({
+        dbname,
+      });
+
+      const grpcServiceName = genID('grpc-service');
+      const grpcServiceLabel = genUniqueLabel('service');
+
+      const createGrpcServiceSubgraphResp = await client.createFederatedSubgraph({
+        name: grpcServiceName,
+        namespace: DEFAULT_NAMESPACE,
+        type: SubgraphType.GRPC_SERVICE,
+        routingUrl: 'invalid-url',
+        labels: [grpcServiceLabel],
+      });
+
+      expect(createGrpcServiceSubgraphResp.response?.code).toBe(EnumStatusCode.ERR);
+      expect(createGrpcServiceSubgraphResp.response?.details).toBe('Routing URL "invalid-url" is not a valid URL');
+
+      await server.close();
+    });
+
+    test('Should not allow creating a GRPC service with the same name as a regular subgraph', async () => {
+      const { client, server } = await SetupTest({
+        dbname,
+      });
+
+      const sharedName = genID('shared-subgraph');
+      const regularLabel = genUniqueLabel('backend');
+      const grpcServiceLabel = genUniqueLabel('grpc-service');
+
+      // First create a regular subgraph
+      const createRegularSubgraphResp = await client.createFederatedSubgraph({
+        name: sharedName,
+        namespace: DEFAULT_NAMESPACE,
+        routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+        labels: [regularLabel],
+      });
+
+      expect(createRegularSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+      // Try to create a GRPC service with the same name - should fail
+      const createGrpcServiceSubgraphResp = await client.createFederatedSubgraph({
+        name: sharedName,
+        namespace: DEFAULT_NAMESPACE,
+        type: SubgraphType.GRPC_SERVICE,
+        routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+        labels: [grpcServiceLabel],
+      });
+
+      expect(createGrpcServiceSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_ALREADY_EXISTS);
+      expect(createGrpcServiceSubgraphResp.response?.details).toBe(
+        `A subgraph with the name "${sharedName}" already exists in the namespace "${DEFAULT_NAMESPACE}".`,
+      );
+
+      await server.close();
+    });
+
+    test('Should not allow creating a regular subgraph with the same name as a GRPC service', async () => {
+      const { client, server } = await SetupTest({
+        dbname,
+      });
+
+      const sharedName = genID('shared-grpc-service');
+      const grpcServiceLabel = genUniqueLabel('grpc-service');
+      const regularLabel = genUniqueLabel('api');
+
+      // First create a GRPC service subgraph
+      const createGrpcServiceSubgraphResp = await client.createFederatedSubgraph({
+        name: sharedName,
+        namespace: DEFAULT_NAMESPACE,
+        type: SubgraphType.GRPC_SERVICE,
+        routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+        labels: [grpcServiceLabel],
+      });
+
+      expect(createGrpcServiceSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+      // Try to create a regular subgraph with the same name - should fail
+      const createRegularSubgraphResp = await client.createFederatedSubgraph({
+        name: sharedName,
+        namespace: DEFAULT_NAMESPACE,
+        routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+        labels: [regularLabel],
+      });
+
+      expect(createRegularSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_ALREADY_EXISTS);
+      expect(createRegularSubgraphResp.response?.details).toBe(
+        `A subgraph with the name "${sharedName}" already exists in the namespace "${DEFAULT_NAMESPACE}".`,
+      );
+
+      await server.close();
+    });
+
+    test('Should not allow creating a GRPC service with the same name as a plugin', async () => {
+      const { client, server } = await SetupTest({
+        dbname,
+        setupBilling: { plan: 'launch@1' },
+      });
+
+      const sharedName = genID('shared-plugin-grpc');
+      const pluginLabel = genUniqueLabel('plugin');
+      const grpcServiceLabel = genUniqueLabel('grpc-service');
+
+      // First create a plugin subgraph
+      const createPluginSubgraphResp = await client.createFederatedSubgraph({
+        name: sharedName,
+        namespace: DEFAULT_NAMESPACE,
+        type: SubgraphType.GRPC_PLUGIN,
+        labels: [pluginLabel],
+      });
+
+      expect(createPluginSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+      // Try to create a GRPC service with the same name - should fail
+      const createGrpcServiceSubgraphResp = await client.createFederatedSubgraph({
+        name: sharedName,
+        namespace: DEFAULT_NAMESPACE,
+        type: SubgraphType.GRPC_SERVICE,
+        routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+        labels: [grpcServiceLabel],
+      });
+
+      expect(createGrpcServiceSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_ALREADY_EXISTS);
+      expect(createGrpcServiceSubgraphResp.response?.details).toBe(
+        `A subgraph with the name "${sharedName}" already exists in the namespace "${DEFAULT_NAMESPACE}".`,
+      );
+
+      await server.close();
+    });
+
+    test.each(['organization-admin', 'organization-developer', 'subgraph-admin'])(
+      '%s should be able to create GRPC service subgraphs',
+      async (role) => {
+        const { client, server, users, authenticator } = await SetupTest({
+          dbname,
+          enableMultiUsers: true,
+          enabledFeatures: ['rbac'],
+        });
+
+        const grpcServiceName = genID('grpc-service');
+        const grpcServiceLabel = genUniqueLabel('service');
+
+        authenticator.changeUserWithSuppliedContext({
+          ...users[TestUser.adminAliceCompanyA],
+          rbac: createTestRBACEvaluator(createTestGroup({ role: role as OrganizationRole })),
+        });
+
+        const createGrpcServiceSubgraphResp = await client.createFederatedSubgraph({
+          name: grpcServiceName,
+          namespace: DEFAULT_NAMESPACE,
+          type: SubgraphType.GRPC_SERVICE,
+          routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+          labels: [grpcServiceLabel],
+        });
+
+        expect(createGrpcServiceSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+        await server.close();
+      },
+    );
+
+    test.each([
+      'organization-apikey-manager',
+      'organization-viewer',
+      'namespace-admin',
+      'namespace-viewer',
+      'graph-admin',
+      'graph-viewer',
+      'subgraph-publisher',
+      'subgraph-viewer',
+    ])('%s should not be able to create GRPC service subgraphs', async (role) => {
+      const { client, server, users, authenticator } = await SetupTest({
+        dbname,
+        enableMultiUsers: true,
+        enabledFeatures: ['rbac'],
+      });
+
+      const grpcServiceName = genID('grpc-service');
+      const grpcServiceLabel = genUniqueLabel('service');
+
+      authenticator.changeUserWithSuppliedContext({
+        ...users[TestUser.adminAliceCompanyA],
+        rbac: createTestRBACEvaluator(createTestGroup({ role: role as OrganizationRole })),
+      });
+
+      const createGrpcServiceSubgraphResp = await client.createFederatedSubgraph({
+        name: grpcServiceName,
+        namespace: DEFAULT_NAMESPACE,
+        type: SubgraphType.GRPC_SERVICE,
+        routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+        labels: [grpcServiceLabel],
+      });
+
+      expect(createGrpcServiceSubgraphResp.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
+
+      await server.close();
+    });
+
+    test('Should be able to create GRPC service subgraphs with multiple labels', async () => {
+      const { client, server } = await SetupTest({
+        dbname,
+      });
+
+      const grpcServiceName = genID('multi-label-grpc-service');
+      const envLabel = genUniqueLabel('env');
+      const teamLabel = genUniqueLabel('team');
+      const typeLabel = genUniqueLabel('type');
+
+      const createGrpcServiceSubgraphResp = await client.createFederatedSubgraph({
+        name: grpcServiceName,
+        namespace: DEFAULT_NAMESPACE,
+        type: SubgraphType.GRPC_SERVICE,
+        routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+        labels: [envLabel, teamLabel, typeLabel],
+      });
+
+      expect(createGrpcServiceSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+      await server.close();
+    });
+  });
 });

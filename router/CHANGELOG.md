@@ -4,6 +4,24 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.252.0](https://github.com/wundergraph/cosmo/compare/router@0.251.1...router@0.252.0) (2025-09-12)
+
+### Features
+
+* send to subgraphs the "fetch_reasons" extension ([#2160](https://github.com/wundergraph/cosmo/issues/2160)) ([cd6f827](https://github.com/wundergraph/cosmo/commit/cd6f82738e6950969b0912374d0360b935345800)) (@ysmolski)
+
+## [0.251.1](https://github.com/wundergraph/cosmo/compare/router@0.251.0...router@0.251.1) (2025-09-10)
+
+### Bug Fixes
+
+* connection stats being enabled break subscriptions ([#2203](https://github.com/wundergraph/cosmo/issues/2203)) ([64f87e6](https://github.com/wundergraph/cosmo/commit/64f87e665a0b36af8af392fcc41eef36f89635af)) (@SkArchon)
+
+# [0.251.0](https://github.com/wundergraph/cosmo/compare/router@0.250.0...router@0.251.0) (2025-09-10)
+
+### Features
+
+* implement openfed__requireFetchReasons ([#2170](https://github.com/wundergraph/cosmo/issues/2170)) ([cfb097f](https://github.com/wundergraph/cosmo/commit/cfb097fb6ccc29a81cfca55fec6b71fdf6e1b61c)) (@Aenimus)
+
 # [0.250.0](https://github.com/wundergraph/cosmo/compare/router@0.249.0...router@0.250.0) (2025-09-06)
 
 ### Features
