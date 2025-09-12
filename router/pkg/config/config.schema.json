@@ -3051,6 +3051,28 @@
         "version": {
           "type": "string",
           "description": "The custom client version header."
+        },
+        "enforce": {
+          "type": "object",
+          "description": "The configuration for enforcing client header requirements.",
+          "additionalProperties": false,
+          "properties": {
+            "on_name": {
+              "type": "boolean",
+              "description": "Whether to block requests that are missing the client name header.",
+              "default": false
+            },
+            "on_version": {
+              "type": "boolean",
+              "description": "Whether to block requests that are missing the client version header.",
+              "default": false
+            },  
+            "response_code": {
+              "type": "integer",
+              "description": "The HTTP response code to return when an expected header is missing.",
+              "default": 400
+            }
+          }
         }
       }
     },

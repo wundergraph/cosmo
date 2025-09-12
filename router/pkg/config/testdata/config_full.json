@@ -903,7 +903,12 @@
   },
   "ClientHeader": {
     "Name": "Client-Name",
-    "Version": "Client_Version"
+    "Version": "Client_Version",
+    "Enforce": {
+      "OnName": false,
+      "OnVersion": false,
+      "ResponseCode": 400
+    }
   },
   "Plugins": {
     "Enabled": true,

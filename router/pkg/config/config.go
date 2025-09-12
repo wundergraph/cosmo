@@ -927,8 +927,15 @@ type ApolloCompatibilityFlag struct {
 }
 
 type ClientHeader struct {
-	Name    string `yaml:"name,omitempty"`
-	Version string `yaml:"version,omitempty"`
+	Name    string                           `yaml:"name,omitempty"`
+	Version string                           `yaml:"version,omitempty"`
+	Enforce ClientHeaderEnforceConfiguration `yaml:"enforce,omitempty"`
+}
+
+type ClientHeaderEnforceConfiguration struct {
+	OnName       bool `yaml:"on_name"`
+	OnVersion    bool `yaml:"on_version"`
+	ResponseCode int  `yaml:"response_code" envDefault:"400"`
 }
 
 type CacheWarmupSource struct {
