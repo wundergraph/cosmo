@@ -192,17 +192,9 @@ export const envVariables = z
       .string()
       .optional()
       .transform((val) => val === 'true'),
-    SENTRY_TRACES_SAMPLE_RATE: z
-      .string()
-      .transform((val) => Number.parseInt(val))
-      .optional()
-      .default('0.0'),
-    SENTRY_PROFILE_SESSION_SAMPLE_RATE: z
-      .string()
-      .transform((val) => Number.parseInt(val))
-      .optional()
-      .default('0.0'),
-    SENTRY_EVENT_LOOP_BLOCK_THRESHOLD_MS: z.coerce.number().optional(),
+    SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().optional().default(1),
+    SENTRY_PROFILE_SESSION_SAMPLE_RATE: z.coerce.number().optional().default(1),
+    SENTRY_EVENT_LOOP_BLOCK_THRESHOLD_MS: z.coerce.number().optional().default(100),
   })
   .refine((input) => {
     if (input.STRIPE_WEBHOOK_SECRET && !input.STRIPE_SECRET_KEY) {
