@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # useful to test mTLS with self-signed certificates
 openssl req -newkey rsa:2048 \
