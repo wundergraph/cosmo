@@ -134,6 +134,12 @@ func (h *OtlpMetricStore) MeasureRequestError(ctx context.Context, opts ...otelm
 }
 
 func (h *OtlpMetricStore) MeasureOperationPlanningTime(ctx context.Context, planningTime float64, opts ...otelmetric.RecordOption) {
+	if planningTime >= upperTimeLimit {
+		h.logger.Info("otlp: the operation planning time upper limit", zap.Float64("planningTime", planningTime))
+	} else if planningTime >= timeLimit {
+		h.logger.Info("otlp: the operation planning time high", zap.Float64("planningTime", planningTime))
+	}
+
 	if c, ok := h.measurements.histograms[OperationPlanningTime]; ok {
 		c.Record(ctx, planningTime, opts...)
 	}
