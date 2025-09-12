@@ -191,7 +191,8 @@ export const envVariables = z
     SENTRY_SEND_DEFAULT_PII: z
       .string()
       .optional()
-      .transform((val) => val === 'true'),
+      .transform((val) => val === 'true')
+      .default('false'),
     SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().optional().default(1),
     SENTRY_PROFILE_SESSION_SAMPLE_RATE: z.coerce.number().optional().default(1),
     SENTRY_EVENT_LOOP_BLOCK_THRESHOLD_MS: z.coerce.number().optional().default(100),
