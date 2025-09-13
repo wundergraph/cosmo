@@ -5,6 +5,7 @@ import 'dotenv/config';
 
 import build, { BuildConfig } from './core/build-server.js';
 import { envVariables } from './core/env.schema.js';
+import { SentryConfig } from './core/sentry.config.js';
 
 const {
   LOG_LEVEL,
@@ -66,6 +67,12 @@ const {
   REDIS_PASSWORD,
   AUTH_ADMISSION_JWT_SECRET,
   CDN_BASE_URL,
+  SENTRY_ENABLED,
+  SENTRY_DSN,
+  SENTRY_SEND_DEFAULT_PII,
+  SENTRY_TRACES_SAMPLE_RATE,
+  SENTRY_PROFILE_SESSION_SAMPLE_RATE,
+  SENTRY_EVENT_LOOP_BLOCK_THRESHOLD_MS,
 } = envVariables.parse(process.env);
 
 const options: BuildConfig = {
@@ -168,6 +175,24 @@ if (STRIPE_SECRET_KEY) {
     webhookSecret: STRIPE_WEBHOOK_SECRET,
     defaultPlanId: DEFAULT_PLAN,
   };
+}
+
+if (SENTRY_ENABLED) {
+  if (SENTRY_DSN) {
+    const sentryConfig: SentryConfig = {
+      sentry: {
+        enabled: SENTRY_ENABLED,
+        dsn: SENTRY_DSN,
+        eventLoopBlockIntegrationThresholdMs: SENTRY_EVENT_LOOP_BLOCK_THRESHOLD_MS,
+        profileSessionSampleRate: SENTRY_PROFILE_SESSION_SAMPLE_RATE,
+        sendDefaultPii: SENTRY_SEND_DEFAULT_PII,
+        tracesSampleRate: SENTRY_TRACES_SAMPLE_RATE,
+      },
+    };
+    await import('./core/sentry.config.js').then((sentry) => sentry.init(sentryConfig));
+  } else {
+    throw new Error('SENTRY_ENABLED is set but SENTRY_DSN is not');
+  }
 }
 
 const app = await build(options);
