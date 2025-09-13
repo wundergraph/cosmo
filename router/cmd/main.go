@@ -23,6 +23,9 @@ import (
 	"go.uber.org/zap"
 )
 
+// TRIGGER WORKFLOW, REMOVE ME LATER!
+// TRIGGER WORKFLOW, REMOVE ME LATER! #2
+
 var (
 	overrideEnvFlag = flag.String("override-env", os.Getenv("OVERRIDE_ENV"), "Path to .env file to override environment variables")
 	routerVersion   = flag.Bool("version", false, "Prints the version and dependency information")
