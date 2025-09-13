@@ -24,6 +24,7 @@ import (
 )
 
 // TRIGGER WORKFLOW, REMOVE ME LATER!
+// TRIGGER WORKFLOW, REMOVE ME LATER! #2
 
 var (
 	overrideEnvFlag = flag.String("override-env", os.Getenv("OVERRIDE_ENV"), "Path to .env file to override environment variables")
