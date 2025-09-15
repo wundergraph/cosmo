@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.252.1](https://github.com/wundergraph/cosmo/compare/router@0.252.0...router@0.252.1) (2025-09-12)
+
+### Bug Fixes
+
+* fix detecting requires on interface members for abstract selection rewriter ([#2209](https://github.com/wundergraph/cosmo/issues/2209)) ([aeb0cd3](https://github.com/wundergraph/cosmo/commit/aeb0cd3202266d31c721988944b4e71f3807dbf2)) (@devsergiy)
+
 # [0.252.0](https://github.com/wundergraph/cosmo/compare/router@0.251.1...router@0.252.0) (2025-09-12)
 
 ### Features
