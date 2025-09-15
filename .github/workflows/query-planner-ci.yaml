@@ -109,8 +109,7 @@ jobs:
           token: ${{secrets.GITHUB_TOKEN}}
           image_name: router-qp
           image_description: 'Cosmo Router Query Planner'
-          image_platforms: linux/amd64
-          with_tests: "false"
+          image_platforms: 'linux/amd64,linux/arm64'
   build-cli:
     needs: filter-changes
     if: ${{ needs.filter-changes.outputs.cli_changed == 'true' }}
