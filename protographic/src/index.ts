@@ -5,6 +5,7 @@ import type { GraphQLToProtoTextVisitorOptions } from './sdl-to-proto-visitor.js
 import { GraphQLToProtoTextVisitor } from './sdl-to-proto-visitor.js';
 import type { ProtoLock } from './proto-lock.js';
 import { SDLValidationVisitor, type ValidationResult } from './sdl-validation-visitor.js';
+import {OperationInfo, OperationToProtoOptions, OperationToProtoVisitor} from "./operations-to-proto-visitor";
 
 /**
  * Compiles a GraphQL schema to a mapping structure
@@ -43,6 +44,10 @@ export interface CompileGraphQLToProtoResult {
   lockData: ProtoLock | null;
 }
 
+export interface CompileOperationsToProtoOptions extends OperationToProtoOptions {
+    lockFilePath?: string;
+}
+
 /**
  * Compiles a GraphQL schema directly to Protocol Buffer text definition
  *
@@ -79,6 +84,40 @@ export function compileGraphQLToProto(
 }
 
 /**
+ * Compiles GraphQL operations to Protocol Buffer text definition
+ * Each operation gets its own request/response message types
+ *
+ * @param operations Array of GraphQL operations
+ * @param schemaOrSDL GraphQL Schema object or SDL string
+ * @param options Optional configuration options
+ * @returns Protocol Buffer text definition and lock data
+ */
+export function compileOperationsToProto(
+    operations: OperationInfo[],
+    schemaOrSDL: GraphQLSchema | string,
+    options?: CompileOperationsToProtoOptions,
+): CompileGraphQLToProtoResult {
+    // If a string was provided, build the schema
+    const schema =
+        typeof schemaOrSDL === 'string'
+            ? buildSchema(schemaOrSDL, {
+                assumeValid: true,
+                assumeValidSDL: true,
+            })
+            : schemaOrSDL;
+
+    // Create and run the visitor
+    const visitor = new OperationToProtoVisitor(schema, operations, options);
+    const proto = visitor.visit();
+
+    // For now, return null lock data - you could extend this later
+    return {
+        proto,
+        lockData: null,
+    };
+}
+
+/**
  * Validates a GraphQL SDL schema against specific rules and constraints
  *
  * @param sdl - The GraphQL SDL string to validate
@@ -94,6 +133,8 @@ export * from './sdl-to-mapping-visitor.js';
 export { GraphQLToProtoTextVisitor } from './sdl-to-proto-visitor.js';
 export { ProtoLockManager } from './proto-lock.js';
 export { SDLValidationVisitor } from './sdl-validation-visitor.js';
+export { OperationToProtoVisitor } from './operations-to-proto-visitor.js';
+export type { OperationToProtoOptions, OperationInfo } from './operations-to-proto-visitor.js';
 
 export type { GraphQLToProtoTextVisitorOptions } from './sdl-to-proto-visitor.js';
 export type { ProtoLock } from './proto-lock.js';

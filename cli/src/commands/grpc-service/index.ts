@@ -6,11 +6,13 @@ import listTemplatesCommand from './commands/list-templates.js';
 import createCommand from './commands/create.js';
 import publishCommand from './commands/publish.js';
 import deleteCommand from './commands/delete.js';
+import generateFromOperations from "./commands/generate-from-operations.js";
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('grpc-service');
   command.description('Manage protobuf schemas for remote gRPC services');
   command.addCommand(generateCommand(opts));
+  command.addCommand(generateFromOperations(opts));
   command.addCommand(initCommand(opts));
   command.addCommand(listTemplatesCommand(opts));
   command.addCommand(createCommand(opts));
