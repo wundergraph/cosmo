@@ -100,6 +100,7 @@ type Prometheus struct {
 	ListenAddr          string      `yaml:"listen_addr" envDefault:"127.0.0.1:8088" env:"PROMETHEUS_LISTEN_ADDR"`
 	GraphqlCache        bool        `yaml:"graphql_cache" envDefault:"false" env:"PROMETHEUS_GRAPHQL_CACHE"`
 	ConnectionStats     bool        `yaml:"connection_stats" envDefault:"false" env:"PROMETHEUS_CONNECTION_STATS"`
+	Streams             bool        `yaml:"streams" envDefault:"false" env:"PROMETHEUS_STREAM"`
 	EngineStats         EngineStats `yaml:"engine_stats" envPrefix:"PROMETHEUS_"`
 	CircuitBreaker      bool        `yaml:"circuit_breaker" envDefault:"false" env:"PROMETHEUS_CIRCUIT_BREAKER"`
 	ExcludeMetrics      RegExArray  `yaml:"exclude_metrics,omitempty" env:"PROMETHEUS_EXCLUDE_METRICS"`
@@ -137,6 +138,7 @@ type MetricsOTLP struct {
 	ConnectionStats     bool                  `yaml:"connection_stats" envDefault:"false" env:"METRICS_OTLP_CONNECTION_STATS"`
 	EngineStats         EngineStats           `yaml:"engine_stats" envPrefix:"METRICS_OTLP_"`
 	CircuitBreaker      bool                  `yaml:"circuit_breaker" envDefault:"false" env:"METRICS_OTLP_CIRCUIT_BREAKER"`
+	Streams             bool                  `yaml:"streams" envDefault:"false" env:"METRICS_OTLP_STREAM"`
 	ExcludeMetrics      RegExArray            `yaml:"exclude_metrics,omitempty" env:"METRICS_OTLP_EXCLUDE_METRICS"`
 	ExcludeMetricLabels RegExArray            `yaml:"exclude_metric_labels,omitempty" env:"METRICS_OTLP_EXCLUDE_METRIC_LABELS"`
 	Exporters           []MetricsOTLPExporter `yaml:"exporters"`
@@ -165,7 +167,7 @@ type TrafficShapingRules struct {
 	// Apply to requests from clients to the router
 	Router RouterTrafficConfiguration `yaml:"router"`
 	// Subgraphs is a set of rules that apply to requests from the router to subgraphs. The key is the subgraph name.
-	Subgraphs map[string]*GlobalSubgraphRequestRule `yaml:"subgraphs,omitempty"`
+	Subgraphs map[string]GlobalSubgraphRequestRule `yaml:"subgraphs,omitempty"`
 }
 
 type FileUpload struct {
@@ -181,6 +183,8 @@ type RouterTrafficConfiguration struct {
 	MaxHeaderBytes BytesString `yaml:"max_header_bytes" envDefault:"0MiB" env:"MAX_HEADER_BYTES"`
 	// DecompressionEnabled is the configuration for request compression
 	DecompressionEnabled bool `yaml:"decompression_enabled" envDefault:"true"`
+	// ResponseCompressionMinSize is the minimum size of the response body in bytes to enable response compression
+	ResponseCompressionMinSize BytesString `yaml:"response_compression_min_size" envDefault:"4KiB" env:"RESPONSE_COMPRESSION_MIN_SIZE"`
 }
 
 type GlobalSubgraphRequestRule struct {
@@ -226,10 +230,11 @@ type GraphqlMetrics struct {
 
 type BackoffJitterRetry struct {
 	Enabled     bool          `yaml:"enabled" envDefault:"true" env:"RETRY_ENABLED"`
-	Algorithm   string        `yaml:"algorithm" envDefault:"backoff_jitter"`
-	MaxAttempts int           `yaml:"max_attempts" envDefault:"5"`
-	MaxDuration time.Duration `yaml:"max_duration" envDefault:"10s"`
-	Interval    time.Duration `yaml:"interval" envDefault:"3s"`
+	Algorithm   string        `yaml:"algorithm" envDefault:"backoff_jitter" env:"RETRY_ALGORITHM"`
+	MaxAttempts int           `yaml:"max_attempts" envDefault:"5" env:"RETRY_MAX_ATTEMPTS"`
+	MaxDuration time.Duration `yaml:"max_duration" envDefault:"10s" env:"RETRY_MAX_DURATION"`
+	Interval    time.Duration `yaml:"interval" envDefault:"3s" env:"RETRY_INTERVAL"`
+	Expression  string        `yaml:"expression,omitempty" env:"RETRY_EXPRESSION" envDefault:"IsRetryableStatusCode() || IsConnectionError() || IsTimeout()"`
 }
 
 type SubgraphCacheControlRule struct {
@@ -390,6 +395,7 @@ type EngineExecutionConfiguration struct {
 	ResolverMaxRecyclableParserSize                  int                      `envDefault:"32768" env:"ENGINE_RESOLVER_MAX_RECYCLABLE_PARSER_SIZE" yaml:"resolver_max_recyclable_parser_size,omitempty"`
 	EnableSubgraphFetchOperationName                 bool                     `envDefault:"false" env:"ENGINE_ENABLE_SUBGRAPH_FETCH_OPERATION_NAME" yaml:"enable_subgraph_fetch_operation_name"`
 	DisableVariablesRemapping                        bool                     `envDefault:"false" env:"ENGINE_DISABLE_VARIABLES_REMAPPING" yaml:"disable_variables_remapping"`
+	EnableRequireFetchReasons                        bool                     `envDefault:"false" env:"ENGINE_ENABLE_REQUIRE_FETCH_REASONS" yaml:"enable_require_fetch_reasons"`
 	SubscriptionFetchTimeout                         time.Duration            `envDefault:"30s" env:"ENGINE_SUBSCRIPTION_FETCH_TIMEOUT" yaml:"subscription_fetch_timeout,omitempty"`
 }
 
@@ -402,9 +408,17 @@ type SecurityConfiguration struct {
 	BlockMutations              BlockOperationConfiguration `yaml:"block_mutations" envPrefix:"SECURITY_BLOCK_MUTATIONS_"`
 	BlockSubscriptions          BlockOperationConfiguration `yaml:"block_subscriptions" envPrefix:"SECURITY_BLOCK_SUBSCRIPTIONS_"`
 	BlockNonPersistedOperations BlockOperationConfiguration `yaml:"block_non_persisted_operations" envPrefix:"SECURITY_BLOCK_NON_PERSISTED_OPERATIONS_"`
+	BlockPersistedOperations    BlockOperationConfiguration `yaml:"block_persisted_operations" envPrefix:"SECURITY_BLOCK_PERSISTED_OPERATIONS_"`
 	ComplexityCalculationCache  *ComplexityCalculationCache `yaml:"complexity_calculation_cache"`
 	ComplexityLimits            *ComplexityLimits           `yaml:"complexity_limits"`
 	DepthLimit                  *QueryDepthConfiguration    `yaml:"depth_limit"`
+	ParserLimits                ParserLimitsConfiguration   `yaml:"parser_limits"`
+	OperationNameLengthLimit    int                         `yaml:"operation_name_length_limit" envDefault:"512" env:"SECURITY_OPERATION_NAME_LENGTH_LIMIT"` // 0 is disabled
+}
+
+type ParserLimitsConfiguration struct {
+	ApproximateDepthLimit int `yaml:"approximate_depth_limit,omitempty" envDefault:"200"` // 0 means disabled
+	TotalFieldsLimit      int `yaml:"total_fields_limit,omitempty" envDefault:"3500"`     // 0 means disabled
 }
 
 type QueryDepthConfiguration struct {
@@ -455,6 +469,15 @@ type JWKSConfiguration struct {
 	URL             string        `yaml:"url"`
 	Algorithms      []string      `yaml:"algorithms"`
 	RefreshInterval time.Duration `yaml:"refresh_interval" envDefault:"1m"`
+
+	// For secret based where we need to create a jwk  entry with
+	// a key id and algorithm
+	Secret    string `yaml:"secret"`
+	Algorithm string `yaml:"symmetric_algorithm"`
+	KeyId     string `yaml:"header_key_id"`
+
+	// Common
+	Audiences []string `yaml:"audiences"`
 }
 
 type HeaderSource struct {
@@ -867,12 +890,14 @@ type AccessLogsStdOutOutputConfig struct {
 }
 
 type AccessLogsFileOutputConfig struct {
-	Enabled bool   `yaml:"enabled" env:"ACCESS_LOGS_OUTPUT_FILE_ENABLED" envDefault:"false"`
-	Path    string `yaml:"path" env:"ACCESS_LOGS_FILE_OUTPUT_PATH" envDefault:"access.log"`
+	Enabled bool     `yaml:"enabled" env:"ACCESS_LOGS_OUTPUT_FILE_ENABLED" envDefault:"false"`
+	Path    string   `yaml:"path" env:"ACCESS_LOGS_FILE_OUTPUT_PATH" envDefault:"access.log"`
+	Mode    FileMode `yaml:"mode" env:"ACCESS_LOGS_FILE_OUTPUT_MODE" envDefault:"0640"`
 }
 
 type AccessLogsRouterConfig struct {
-	Fields []CustomAttribute `yaml:"fields,omitempty" env:"ACCESS_LOGS_ROUTER_FIELDS"`
+	Fields                []CustomAttribute `yaml:"fields,omitempty" env:"ACCESS_LOGS_ROUTER_FIELDS"`
+	IgnoreQueryParamsList []string          `yaml:"ignore_query_params_list,omitempty" env:"ACCESS_LOGS_ROUTER_IGNORE_QUERY_PARAMS_LIST" envDefault:"variables"`
 }
 
 type AccessLogsSubgraphsConfig struct {
@@ -928,11 +953,16 @@ type MCPConfiguration struct {
 	Enabled                   bool             `yaml:"enabled" envDefault:"false" env:"MCP_ENABLED"`
 	Server                    MCPServer        `yaml:"server,omitempty"`
 	Storage                   MCPStorageConfig `yaml:"storage,omitempty"`
+	Session                   MCPSessionConfig `yaml:"session,omitempty"`
 	GraphName                 string           `yaml:"graph_name" envDefault:"mygraph" env:"MCP_GRAPH_NAME"`
 	ExcludeMutations          bool             `yaml:"exclude_mutations" envDefault:"false" env:"MCP_EXCLUDE_MUTATIONS"`
 	EnableArbitraryOperations bool             `yaml:"enable_arbitrary_operations" envDefault:"false" env:"MCP_ENABLE_ARBITRARY_OPERATIONS"`
 	ExposeSchema              bool             `yaml:"expose_schema" envDefault:"false" env:"MCP_EXPOSE_SCHEMA"`
 	RouterURL                 string           `yaml:"router_url,omitempty" env:"MCP_ROUTER_URL"`
+}
+
+type MCPSessionConfig struct {
+	Stateless bool `yaml:"stateless" envDefault:"true" env:"MCP_SESSION_STATELESS"`
 }
 
 type MCPStorageConfig struct {
@@ -945,8 +975,13 @@ type MCPServer struct {
 }
 
 type PluginsConfiguration struct {
-	Enabled bool   `yaml:"enabled" envDefault:"false" env:"ENABLED"`
-	Path    string `yaml:"path" envDefault:"plugins" env:"PATH"`
+	Enabled  bool                        `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	Path     string                      `yaml:"path" envDefault:"plugins" env:"PATH"`
+	Registry PluginRegistryConfiguration `yaml:"registry" envPrefix:"REGISTRY_"`
+}
+
+type PluginRegistryConfiguration struct {
+	URL string `yaml:"url" env:"URL" envDefault:"cosmo-registry.wundergraph.com"`
 }
 
 type Config struct {

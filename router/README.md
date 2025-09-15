@@ -9,7 +9,7 @@ The router is the component that understands the GraphQL Federation protocol. It
 
 ### Prerequisites
 
-- [Go 1.21](https://golang.org/doc/install)
+- [Go 1.25](https://golang.org/doc/install)
 
 Use the `.env.example` file to create a `.env` file with the specified environment variables.
 

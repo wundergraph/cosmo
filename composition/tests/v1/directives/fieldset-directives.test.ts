@@ -4,8 +4,6 @@ import {
   argumentsInKeyFieldSetErrorMessage,
   ConfigurationData,
   duplicateFieldInFieldSetErrorMessage,
-  federateSubgraphs,
-  FederationResultSuccess,
   FIRST_ORDINAL,
   INTERFACE,
   invalidDirectiveError,
@@ -17,8 +15,8 @@ import {
   invalidSelectionSetErrorMessage,
   KEY,
   nonExternalConditionalFieldWarning,
-  NormalizationResultFailure,
-  NormalizationResultSuccess,
+  NormalizationFailure,
+  NormalizationSuccess,
   normalizeSubgraph,
   normalizeSubgraphFromString,
   NOT_APPLICABLE,
@@ -36,7 +34,12 @@ import {
   unparsableFieldSetErrorMessage,
 } from '../../../src';
 import { schemaQueryDefinition, versionTwoDirectiveDefinitions } from '../utils/utils';
-import { normalizeString, normalizeSubgraphSuccess, schemaToSortedNormalizedString } from '../../utils/utils';
+import {
+  federateSubgraphsSuccess,
+  normalizeString,
+  normalizeSubgraphSuccess,
+  schemaToSortedNormalizedString,
+} from '../../utils/utils';
 
 describe('openfed_FieldSet tests', () => {
   describe('@key FieldSets', () => {
@@ -88,7 +91,7 @@ describe('openfed_FieldSet tests', () => {
     `,
         true,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
     });
 
@@ -101,7 +104,7 @@ describe('openfed_FieldSet tests', () => {
     `,
         true,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -120,7 +123,7 @@ describe('openfed_FieldSet tests', () => {
     `,
         true,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -139,7 +142,7 @@ describe('openfed_FieldSet tests', () => {
     `,
         true,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -156,7 +159,7 @@ describe('openfed_FieldSet tests', () => {
     `,
         true,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -172,7 +175,7 @@ describe('openfed_FieldSet tests', () => {
         subgraphL.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -201,7 +204,7 @@ describe('openfed_FieldSet tests', () => {
     `,
         true,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -220,7 +223,7 @@ describe('openfed_FieldSet tests', () => {
     `,
         true,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -243,7 +246,7 @@ describe('openfed_FieldSet tests', () => {
     `,
         true,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -266,7 +269,7 @@ describe('openfed_FieldSet tests', () => {
     `,
         true,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -285,7 +288,7 @@ describe('openfed_FieldSet tests', () => {
     `,
         true,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -308,7 +311,7 @@ describe('openfed_FieldSet tests', () => {
     `,
         true,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -339,7 +342,7 @@ describe('openfed_FieldSet tests', () => {
     `,
         true,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -366,7 +369,7 @@ describe('openfed_FieldSet tests', () => {
     `,
         true,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -397,7 +400,7 @@ describe('openfed_FieldSet tests', () => {
     `,
         true,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -445,7 +448,7 @@ describe('openfed_FieldSet tests', () => {
       `,
         true,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(2);
       expect(result.warnings[0]).toStrictEqual(requiresDefinedOnNonEntityFieldWarning(`Object.name`, NOT_APPLICABLE));
@@ -477,7 +480,7 @@ describe('openfed_FieldSet tests', () => {
       `,
         true,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(result.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
@@ -502,7 +505,7 @@ describe('openfed_FieldSet tests', () => {
         subgraphO.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -518,7 +521,7 @@ describe('openfed_FieldSet tests', () => {
         subgraphP.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(result.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
@@ -573,7 +576,7 @@ describe('openfed_FieldSet tests', () => {
       `,
         true,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(result.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
@@ -614,7 +617,7 @@ describe('openfed_FieldSet tests', () => {
         subgraphQ.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -649,7 +652,7 @@ describe('openfed_FieldSet tests', () => {
       `,
         true,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(result.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
@@ -693,7 +696,7 @@ describe('openfed_FieldSet tests', () => {
       `,
         true,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -725,7 +728,7 @@ describe('openfed_FieldSet tests', () => {
       `,
         true,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -757,7 +760,7 @@ describe('openfed_FieldSet tests', () => {
       `,
         true,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(result.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
@@ -799,7 +802,7 @@ describe('openfed_FieldSet tests', () => {
       `,
         true,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(result.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
@@ -832,7 +835,7 @@ describe('openfed_FieldSet tests', () => {
         subgraphH.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -967,10 +970,7 @@ describe('openfed_FieldSet tests', () => {
 
   describe('Router configuration tests', () => {
     test('that a field that forms part of a @requires field set cannot be used as an implicit key', () => {
-      const result = federateSubgraphs(
-        [subgraphD, subgraphE],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphD, subgraphE], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       const d = result.subgraphConfigBySubgraphName.get(subgraphD.name);
       expect(d!.configurationDataByTypeName).toStrictEqual(
@@ -1076,10 +1076,7 @@ describe('openfed_FieldSet tests', () => {
     });
 
     test('that non-external v1 fields that form part of a @requires field set are treated as non-conditional but return a warning', () => {
-      const result = federateSubgraphs(
-        [subgraphE, subgraphF],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphE, subgraphF], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(1);
       expect(result.warnings[0]).toStrictEqual(
@@ -1194,10 +1191,7 @@ describe('openfed_FieldSet tests', () => {
     });
 
     test('that non-external v1 fields that form part of a @provides field set are treated as non-conditional but return a warning', () => {
-      const result = federateSubgraphs(
-        [subgraphE, subgraphG],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphE, subgraphG], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(1);
       expect(result.warnings[0]).toStrictEqual(

@@ -6,6 +6,7 @@ on:
       - 'composition-go/**/*'
       - 'demo/**/*'
       - 'router/**/*'
+      - 'router-plugin/**/*'
       - 'router-tests/**/*'
       - 'connect/**/*'
       - '.github/workflows/router-ci.yaml'
@@ -75,6 +76,27 @@ jobs:
       - name: Build
         working-directory: ./router
         run: make build
+
+  # Runs for forks to test docker image is building
+  build_image_fork:
+    if: github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        docker_build_target: [ '', 'nonroot' ]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/build-push-image
+        with:
+          docker_context: router
+          dockerfile: router/Dockerfile
+          docker_build_target: ${{ matrix.docker_build_target }}
+          token: ${{secrets.GITHUB_TOKEN}}
+          image_name: router
+          image_description: 'Cosmo Router'
+          push: 'false'
 
   # Runs for people with write access to the repository
   # that have access to the secrets
@@ -171,7 +193,7 @@ jobs:
         ports:
           - 6379:6379
       kafka:
-        image: bitnami/kafka:3.7.0
+        image: bitnamilegacy/kafka:3.7.0
         options: >-
           --health-cmd "kafka-broker-api-versions.sh --version"
           --health-interval 10s
@@ -240,15 +262,20 @@ jobs:
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      matrix:
+        docker_build_target: [ '', 'nonroot' ]
     steps:
       - uses: actions/checkout@v4
 
       - uses: ./.github/actions/build-push-image
+        id: docker_build
         with:
           docker_username: ${{secrets.DOCKER_USERNAME}}
           docker_password: ${{secrets.DOCKER_PASSWORD}}
           docker_context: router
           dockerfile: router/Dockerfile
+          docker_build_target: ${{ matrix.docker_build_target }}
           token: ${{secrets.GITHUB_TOKEN}}
           image_name: router
           image_description: 'Cosmo Router'
@@ -258,9 +285,9 @@ jobs:
 
       - uses: ./.github/actions/image-scan
         with:
-          name: 'Router'
+          name: ${{ matrix.docker_build_target != '' && format('Router-{0}', matrix.docker_build_target) || 'Router' }}
           github_token: ${{secrets.GITHUB_TOKEN}}
-          image_ref: 'ghcr.io/wundergraph/cosmo/router:sha-${{ github.sha }}'
+          image_ref: ${{ steps.docker_build.outputs.image_ref }}${{ matrix.docker_build_target != '' && format('-{0}', matrix.docker_build_target) || '' }}
 
   build_push_image:
     # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
@@ -268,6 +295,9 @@ jobs:
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      matrix:
+        docker_build_target: [ '', 'nonroot' ]
     steps:
       - uses: actions/checkout@v4
 
@@ -277,6 +307,7 @@ jobs:
           docker_password: ${{secrets.DOCKER_PASSWORD}}
           docker_context: router
           dockerfile: router/Dockerfile
+          docker_build_target: ${{ matrix.docker_build_target }}
           token: ${{secrets.GITHUB_TOKEN}}
           image_name: router
           image_description: 'Cosmo Router'

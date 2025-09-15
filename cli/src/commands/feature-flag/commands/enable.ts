@@ -1,8 +1,6 @@
-import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { Command } from 'commander';
 import ora from 'ora';
 import pc from 'picocolors';
-import Table from 'cli-table3';
 import { getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { handleCompositionResult } from '../../../handle-composition-result.js';
@@ -13,14 +11,19 @@ export default (opts: BaseCommandOptions) => {
   command.argument('<name>', 'The name of the feature flag to enable.');
   command.option('-n, --namespace [string]', 'The namespace of the feature flag.');
   command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
+  command.option(
+    '--disable-resolvability-validation',
+    'This flag will disable the validation for whether all nodes of the federated graph are resolvable. Do NOT use unless troubleshooting.',
+  );
 
   command.action(async (name, options) => {
     const spinner = ora(`The feature flag "${name}" is being enabled...`).start();
     const resp = await opts.client.platform.enableFeatureFlag(
       {
+        disableResolvabilityValidation: options.disableResolvabilityValidation,
+        enabled: true,
         name,
         namespace: options.namespace,
-        enabled: true,
       },
       {
         headers: getBaseHeaders(),

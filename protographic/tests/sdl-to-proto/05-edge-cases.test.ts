@@ -364,6 +364,27 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
         rpc QueryUsers(QueryUsersRequest) returns (QueryUsersResponse) {}
       }
 
+      // Wrapper message for a list of Comment.
+      message ListOfComment {
+        message List {
+          repeated Comment items = 1;
+        }
+        List list = 1;
+      }
+      // Wrapper message for a list of Post.
+      message ListOfPost {
+        message List {
+          repeated Post items = 1;
+        }
+        List list = 1;
+      }
+      // Wrapper message for a list of String.
+      message ListOfString {
+        message List {
+          repeated string items = 1;
+        }
+        List list = 1;
+      }
       // Key message for User entity lookup
       message LookupUserByIdRequestKey {
         // Key field for User entity lookup.
@@ -552,7 +573,7 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
         string created_at = 4;
         google.protobuf.StringValue metadata = 5;
         UserStatus status = 6;
-        repeated Post posts = 7;
+        ListOfPost posts = 7;
         UserProfile profile = 8;
       }
 
@@ -561,11 +582,11 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
         string title = 2;
         string content = 3;
         User author = 4;
-        repeated string tags = 5;
+        ListOfString tags = 5;
         string created_at = 6;
         google.protobuf.StringValue updated_at = 7;
         PostStatus status = 8;
-        repeated Comment comments = 9;
+        ListOfComment comments = 9;
       }
 
       message Comment {
@@ -581,7 +602,7 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
         string query = 1;
         google.protobuf.Int32Value limit = 2;
         google.protobuf.Int32Value offset = 3;
-        repeated string types = 4;
+        ListOfString types = 4;
       }
 
       message SearchResult {
@@ -608,7 +629,7 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
       message PostInput {
         string title = 1;
         string content = 2;
-        repeated string tags = 3;
+        ListOfString tags = 3;
         PostStatus status = 4;
       }
 

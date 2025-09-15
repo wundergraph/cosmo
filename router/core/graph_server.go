@@ -14,8 +14,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/wundergraph/cosmo/router/internal/circuit"
-
 	"github.com/cespare/xxhash/v2"
 	"github.com/cloudflare/backoff"
 	"github.com/dgraph-io/ristretto/v2"
@@ -24,6 +22,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/klauspost/compress/gzhttp"
 	"github.com/klauspost/compress/gzip"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -35,16 +34,20 @@ import (
 
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/internal/circuit"
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	rjwt "github.com/wundergraph/cosmo/router/internal/jwt"
 	rmiddleware "github.com/wundergraph/cosmo/router/internal/middleware"
 	"github.com/wundergraph/cosmo/router/internal/recoveryhandler"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
-	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"github.com/wundergraph/cosmo/router/pkg/grpcconnector"
+	"github.com/wundergraph/cosmo/router/pkg/grpcconnector/grpccommon"
+	"github.com/wundergraph/cosmo/router/pkg/grpcconnector/grpcplugin"
+	"github.com/wundergraph/cosmo/router/pkg/grpcconnector/grpcpluginoci"
+	"github.com/wundergraph/cosmo/router/pkg/grpcconnector/grpcremote"
 	"github.com/wundergraph/cosmo/router/pkg/health"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
@@ -237,11 +240,12 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		)
 	})))
 
-	// Request traffic shaping related middlewares
-	httpRouter.Use(rmiddleware.RequestSize(int64(s.routerTrafficConfig.MaxRequestBodyBytes)))
 	if s.routerTrafficConfig.DecompressionEnabled {
 		httpRouter.Use(rmiddleware.HandleCompression(s.logger))
 	}
+
+	// Request traffic shaping related middlewares, happens after decompression to prevent unbounded decompression attacks
+	httpRouter.Use(rmiddleware.RequestSize(int64(s.routerTrafficConfig.MaxRequestBodyBytes)))
 
 	httpRouter.Use(middleware.RequestID)
 	httpRouter.Use(middleware.RealIP)
@@ -283,7 +287,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	}
 
 	wrapper, err := gzhttp.NewWrapper(
-		gzhttp.MinSize(1024*4), // 4KB
+		gzhttp.MinSize(int(s.routerTrafficConfig.ResponseCompressionMinSize)),
 		gzhttp.CompressionLevel(gzip.DefaultCompression),
 		gzhttp.ContentTypes(CompressibleContentTypes),
 	)
@@ -513,6 +517,7 @@ type graphMux struct {
 	metricStore                rmetric.Store
 	prometheusCacheMetrics     *rmetric.CacheMetrics
 	otelCacheMetrics           *rmetric.CacheMetrics
+	streamMetricStore          rmetric.StreamMetricStore
 }
 
 // buildOperationCaches creates the caches for the graph mux.
@@ -754,6 +759,12 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 		}
 	}
 
+	if s.streamMetricStore != nil {
+		if aErr := s.streamMetricStore.Shutdown(ctx); aErr != nil {
+			err = errors.Join(err, aErr)
+		}
+	}
+
 	if err != nil {
 		return fmt.Errorf("shutdown graph mux: %w", err)
 	}
@@ -769,7 +780,8 @@ func (s *graphServer) buildGraphMux(
 	opts BuildGraphMuxOptions,
 ) (*graphMux, error) {
 	gm := &graphMux{
-		metricStore: rmetric.NewNoopMetrics(),
+		metricStore:       rmetric.NewNoopMetrics(),
+		streamMetricStore: rmetric.NewNoopStreamMetricStore(),
 	}
 
 	httpRouter := chi.NewRouter()
@@ -865,6 +877,19 @@ func (s *graphServer) buildGraphMux(
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	if s.metricConfig.OpenTelemetry.Streams || s.metricConfig.Prometheus.Streams {
+		store, err := rmetric.NewStreamMetricStore(
+			s.logger,
+			baseMetricAttributes,
+			s.otlpMeterProvider,
+			s.promMeterProvider,
+			s.metricConfig)
+		if err != nil {
+			return nil, err
+		}
+		gm.streamMetricStore = store
 	}
 
 	subgraphs, err := configureSubgraphOverwrites(
@@ -1051,6 +1076,7 @@ func (s *graphServer) buildGraphMux(
 			requestlogger.WithAttributes(accessLogAttributes),
 			requestlogger.WithExprAttributes(exprAttributes),
 			requestlogger.WithFieldsHandler(RouterAccessLogsFieldHandler),
+			requestlogger.WithIgnoreQueryParamsList(s.accessLogsConfig.IgnoreQueryParamsList),
 		}
 
 		var ipAnonConfig *requestlogger.IPAnonymizationConfig
@@ -1109,6 +1135,7 @@ func (s *graphServer) buildGraphMux(
 		Headers:                  s.headerRules,
 		Events:                   s.eventsConfig,
 		SubgraphErrorPropagation: s.subgraphErrorPropagation,
+		StreamMetricStore:        gm.streamMetricStore,
 	}
 
 	// map[string]*http.Transport cannot be coerced into map[string]http.RoundTripper, unfortunately
@@ -1117,7 +1144,7 @@ func (s *graphServer) buildGraphMux(
 		subgraphTippers[subgraph] = subgraphTransport
 	}
 
-	if err := s.setupConnector(ctx, opts.EngineConfig, opts.ConfigSubgraphs); err != nil {
+	if err := s.setupConnector(ctx, opts.EngineConfig, opts.ConfigSubgraphs, telemetryAttExpressions, tracingAttExpressions); err != nil {
 		return nil, fmt.Errorf("failed to setup plugin host: %w", err)
 	}
 
@@ -1126,6 +1153,12 @@ func (s *graphServer) buildGraphMux(
 	var baseConnMetricStore rmetric.ConnectionMetricStore = &rmetric.NoopConnectionMetricStore{}
 	if s.connectionMetrics != nil {
 		baseConnMetricStore = s.connectionMetrics
+	}
+
+	// Build retry options and handle any expression compilation errors
+	processedRetryOptions, err := ProcessRetryOptions(s.retryOptions)
+	if err != nil {
+		return nil, fmt.Errorf("failed to process retry options: %w", err)
 	}
 
 	ecb := &ExecutorConfigurationBuilder{
@@ -1143,20 +1176,12 @@ func (s *graphServer) buildGraphMux(
 			FrameTimeout: s.engineExecutionConfiguration.WebSocketClientFrameTimeout,
 		},
 		transportOptions: &TransportOptions{
-			SubgraphTransportOptions: s.subgraphTransportOptions,
-			PreHandlers:              s.preOriginHandlers,
-			PostHandlers:             s.postOriginHandlers,
-			MetricStore:              gm.metricStore,
-			ConnectionMetricStore:    baseConnMetricStore,
-			RetryOptions: retrytransport.RetryOptions{
-				Enabled:       s.retryOptions.Enabled,
-				MaxRetryCount: s.retryOptions.MaxRetryCount,
-				MaxDuration:   s.retryOptions.MaxDuration,
-				Interval:      s.retryOptions.Interval,
-				ShouldRetry: func(err error, req *http.Request, resp *http.Response) bool {
-					return retrytransport.IsRetryableError(err, resp) && !isMutationRequest(req.Context())
-				},
-			},
+			SubgraphTransportOptions:      s.subgraphTransportOptions,
+			PreHandlers:                   s.preOriginHandlers,
+			PostHandlers:                  s.postOriginHandlers,
+			MetricStore:                   gm.metricStore,
+			ConnectionMetricStore:         baseConnMetricStore,
+			RetryOptions:                  *processedRetryOptions,
 			TracerProvider:                s.tracerProvider,
 			TracePropagators:              s.compositePropagator,
 			LocalhostFallbackInsideDocker: s.localhostFallbackInsideDocker,
@@ -1175,7 +1200,7 @@ func (s *graphServer) buildGraphMux(
 			Reporter:                       s.engineStats,
 			ApolloCompatibilityFlags:       s.apolloCompatibilityFlags,
 			ApolloRouterCompatibilityFlags: s.apolloRouterCompatibilityFlags,
-			HeartbeatInterval:              s.multipartHeartbeatInterval,
+			HeartbeatInterval:              s.subscriptionHeartbeatInterval,
 			PluginsEnabled:                 s.plugins.Enabled,
 			InstanceData:                   s.instanceData,
 		},
@@ -1190,21 +1215,27 @@ func (s *graphServer) buildGraphMux(
 	}
 
 	operationProcessor := NewOperationProcessor(OperationProcessorOptions{
-		Executor:                                         executor,
-		MaxOperationSizeInBytes:                          int64(s.routerTrafficConfig.MaxRequestBodyBytes),
-		PersistedOperationClient:                         s.persistedOperationClient,
-		AutomaticPersistedOperationCacheTtl:              s.automaticPersistedQueriesConfig.Cache.TTL,
-		EnablePersistedOperationsCache:                   s.engineExecutionConfiguration.EnablePersistedOperationsCache,
-		PersistedOpsNormalizationCache:                   gm.persistedOperationCache,
-		NormalizationCache:                               gm.normalizationCache,
-		ValidationCache:                                  gm.validationCache,
-		QueryDepthCache:                                  gm.complexityCalculationCache,
-		OperationHashCache:                               gm.operationHashCache,
-		ParseKitPoolSize:                                 s.engineExecutionConfiguration.ParseKitPoolSize,
-		IntrospectionEnabled:                             s.Config.introspection,
+		Executor:                            executor,
+		MaxOperationSizeInBytes:             int64(s.routerTrafficConfig.MaxRequestBodyBytes),
+		PersistedOperationClient:            s.persistedOperationClient,
+		AutomaticPersistedOperationCacheTtl: s.automaticPersistedQueriesConfig.Cache.TTL,
+		EnablePersistedOperationsCache:      s.engineExecutionConfiguration.EnablePersistedOperationsCache,
+		PersistedOpsNormalizationCache:      gm.persistedOperationCache,
+		NormalizationCache:                  gm.normalizationCache,
+		ValidationCache:                     gm.validationCache,
+		QueryDepthCache:                     gm.complexityCalculationCache,
+		OperationHashCache:                  gm.operationHashCache,
+		ParseKitPoolSize:                    s.engineExecutionConfiguration.ParseKitPoolSize,
+		IntrospectionEnabled:                s.Config.introspection,
+		ParserTokenizerLimits: astparser.TokenizerLimits{
+			MaxDepth:  s.Config.securityConfiguration.ParserLimits.ApproximateDepthLimit,
+			MaxFields: s.Config.securityConfiguration.ParserLimits.TotalFieldsLimit,
+		},
+		OperationNameLengthLimit:                         s.securityConfiguration.OperationNameLengthLimit,
 		ApolloCompatibilityFlags:                         s.apolloCompatibilityFlags,
 		ApolloRouterCompatibilityFlags:                   s.apolloRouterCompatibilityFlags,
 		DisableExposingVariablesContentOnValidationError: s.engineExecutionConfiguration.DisableExposingVariablesContentOnValidationError,
+		ComplexityLimits:                                 s.securityConfiguration.ComplexityLimits,
 	})
 	operationPlanner := NewOperationPlanner(executor, gm.planCache)
 
@@ -1340,7 +1371,11 @@ func (s *graphServer) buildGraphMux(
 			Enabled:   s.securityConfiguration.BlockNonPersistedOperations.Enabled,
 			Condition: s.securityConfiguration.BlockNonPersistedOperations.Condition,
 		},
-		PersistedOperationsDisabled: s.persistedOperationsConfig.Disabled,
+		BlockPersisted: BlockPersistedOptions{
+			Enabled:   s.securityConfiguration.BlockPersistedOperations.Enabled,
+			Condition: s.securityConfiguration.BlockPersistedOperations.Condition,
+		},
+
 		SafelistEnabled:             s.persistedOperationsConfig.Safelist.Enabled,
 		LogUnknownOperationsEnabled: s.persistedOperationsConfig.LogUnknown,
 		exprManager:                 exprManager,
@@ -1450,7 +1485,13 @@ func (s *graphServer) buildGraphMux(
 	return gm, nil
 }
 
-func (s *graphServer) setupConnector(ctx context.Context, config *nodev1.EngineConfiguration, configSubgraphs []*nodev1.Subgraph) error {
+func (s *graphServer) setupConnector(
+	ctx context.Context,
+	config *nodev1.EngineConfiguration,
+	configSubgraphs []*nodev1.Subgraph,
+	telemetryAttributeExpressions *attributeExpressions,
+	tracingAttributeExpressions *attributeExpressions,
+) error {
 	s.connector = grpcconnector.NewConnector()
 
 	for _, dsConfig := range config.DatasourceConfigurations {
@@ -1474,9 +1515,8 @@ func (s *graphServer) setupConnector(ctx context.Context, config *nodev1.EngineC
 
 		pluginConfig := grpcConfig.GetPlugin()
 		if pluginConfig == nil {
-			remoteProvider, err := grpcconnector.NewRemoteGRPCProvider(grpcconnector.RemoteGRPCProviderConfig{
+			remoteProvider, err := grpcremote.NewRemoteGRPCProvider(grpcremote.RemoteGRPCProviderConfig{
 				Logger:   s.logger,
-				Name:     sg.Name,
 				Endpoint: sg.RoutingUrl,
 			})
 
@@ -1502,23 +1542,60 @@ func (s *graphServer) setupConnector(ctx context.Context, config *nodev1.EngineC
 			basePath = s.plugins.Path
 		}
 
-		pluginPath, err := filepath.Abs(filepath.Join(basePath, pluginConfig.GetName(), "bin", fmt.Sprintf("%s_%s", runtime.GOOS, runtime.GOARCH)))
-		if err != nil {
-			return fmt.Errorf("failed to get plugin path: %w", err)
-		}
+		startupConfig := newGRPCStartupParams(s.traceConfig, s.ipAnonymization)
 
-		grpcPlugin, err := grpcconnector.NewGRPCPlugin(grpcconnector.GRPCPluginConfig{
-			Logger:     s.logger,
-			PluginName: pluginConfig.GetName(),
-			PluginPath: pluginPath,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to create grpc plugin for subgraph %s: %w", dsConfig.Id, err)
-		}
+		tracer := s.tracerProvider.Tracer("wundergraph/cosmo/router/engine/grpc", oteltrace.WithInstrumentationVersion("0.0.1"))
 
-		err = s.connector.RegisterClientProvider(sg.Name, grpcPlugin)
-		if err != nil {
-			return fmt.Errorf("failed to register grpc plugin: %w", err)
+		getTraceAttributes := CreateGRPCTraceGetter(
+			telemetryAttributeExpressions,
+			tracingAttributeExpressions,
+		)
+
+		if imgRef := pluginConfig.GetImageReference(); imgRef != nil {
+			ref := fmt.Sprintf("%s/%s:%s",
+				s.plugins.Registry.URL,
+				imgRef.GetRepository(),
+				imgRef.GetReference(),
+			)
+
+			grpcPlugin, err := grpcpluginoci.NewGRPCOCIPlugin(grpcpluginoci.GRPCPluginConfig{
+				Logger:             s.logger,
+				ImageRef:           ref,
+				RegistryToken:      s.graphApiToken,
+				StartupConfig:      startupConfig,
+				Tracer:             tracer,
+				GetTraceAttributes: getTraceAttributes,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to create grpc oci plugin for subgraph %s: %w", dsConfig.Id, err)
+			}
+
+			err = s.connector.RegisterClientProvider(sg.Name, grpcPlugin)
+			if err != nil {
+				return fmt.Errorf("failed to register grpc plugin: %w", err)
+			}
+		} else {
+			pluginPath, err := filepath.Abs(filepath.Join(basePath, pluginConfig.GetName(), "bin", fmt.Sprintf("%s_%s", runtime.GOOS, runtime.GOARCH)))
+			if err != nil {
+				return fmt.Errorf("failed to get plugin path: %w", err)
+			}
+
+			grpcPlugin, err := grpcplugin.NewGRPCPlugin(grpcplugin.GRPCPluginConfig{
+				Logger:             s.logger,
+				PluginName:         pluginConfig.GetName(),
+				PluginPath:         pluginPath,
+				StartupConfig:      startupConfig,
+				Tracer:             tracer,
+				GetTraceAttributes: getTraceAttributes,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to create grpc plugin for subgraph %s: %w", dsConfig.Id, err)
+			}
+
+			err = s.connector.RegisterClientProvider(sg.Name, grpcPlugin)
+			if err != nil {
+				return fmt.Errorf("failed to register grpc plugin: %w", err)
+			}
 		}
 	}
 
@@ -1527,6 +1604,50 @@ func (s *graphServer) setupConnector(ctx context.Context, config *nodev1.EngineC
 	}
 
 	return nil
+}
+
+func newGRPCStartupParams(traceConfig *rtrace.Config, ipAnonymization *IPAnonymizationConfig) grpccommon.GRPCStartupParams {
+	startupConfig := grpccommon.GRPCStartupParams{}
+
+	if traceConfig.Enabled && len(traceConfig.Exporters) > 0 {
+		enabledExporters := make([]grpccommon.GRPCExporter, 0)
+		for _, exporter := range traceConfig.Exporters {
+			if exporter != nil && !exporter.Disabled {
+				transformedExporter := grpccommon.GRPCExporter{
+					Endpoint:      exporter.Endpoint,
+					Exporter:      string(exporter.Exporter),
+					BatchTimeout:  exporter.BatchTimeout,
+					ExportTimeout: exporter.ExportTimeout,
+					Headers:       exporter.Headers,
+					HTTPPath:      exporter.HTTPPath,
+				}
+				enabledExporters = append(enabledExporters, transformedExporter)
+			}
+		}
+
+		// Convert to []string
+		propagators := make([]string, 0, len(traceConfig.Propagators))
+		for _, propagator := range traceConfig.Propagators {
+			propagators = append(propagators, string(propagator))
+		}
+
+		startupConfig.Telemetry = &grpccommon.GRPCTelemetry{
+			Tracing: &grpccommon.GRPCTracing{
+				Exporters:   enabledExporters,
+				Propagators: propagators,
+				Sampler:     traceConfig.Sampler,
+			},
+		}
+	}
+
+	if ipAnonymization != nil {
+		startupConfig.IPAnonymization = &grpccommon.GRPCIPAnonymization{
+			Enabled: ipAnonymization.Enabled,
+			Method:  string(ipAnonymization.Method),
+		}
+	}
+
+	return startupConfig
 }
 
 // wait waits for all in-flight requests to finish. Similar to http.Server.Shutdown we wait in intervals + jitter

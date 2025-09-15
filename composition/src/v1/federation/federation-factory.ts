@@ -92,7 +92,6 @@ import {
   newAuthorizationData,
   newEntityInterfaceFederationData,
   newFieldAuthorizationData,
-  subtractSet,
   upsertAuthorizationConfiguration,
   upsertEntityInterfaceFederationData,
   upsertFieldAuthorizationData,
@@ -175,7 +174,7 @@ import {
 } from '../schema-building/type-merging';
 import { Graph } from '../../resolvability-graph/graph';
 import { GraphNode } from '../../resolvability-graph/graph-nodes';
-import { InternalSubgraph, Subgraph, SubgraphConfig } from '../../subgraph/types';
+import { InternalSubgraph, SubgraphConfig } from '../../subgraph/types';
 import { Warning } from '../../warnings/types';
 import {
   ContractTagOptions,
@@ -230,18 +229,22 @@ import {
   InvalidFieldImplementation,
   InvalidRequiredInputValueData,
 } from '../../utils/types';
+import { FederateSubgraphsContractV1Params, FederateSubgraphsWithContractsV1Params, FederationParams } from './types';
+import { ContractName, FieldCoords, FieldName, SubgraphName, TypeName } from '../../types/types';
 
 export class FederationFactory {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
-  concreteTypeNamesByAbstractTypeName: Map<string, Set<string>>;
+  coordsByNamedTypeName = new Map<string, Set<string>>();
+  disableResolvabilityValidation: boolean = false;
   clientDefinitions: MutableTypeDefinitionNode[] = [DEPRECATED_DEFINITION];
   currentSubgraphName = '';
+  concreteTypeNamesByAbstractTypeName: Map<string, Set<string>>;
   subgraphNamesByNamedTypeNameByFieldCoords = new Map<string, Map<string, Set<string>>>();
   entityDataByTypeName: Map<string, EntityData>;
   entityInterfaceFederationDataByTypeName: Map<string, EntityInterfaceFederationData>;
   errors: Error[] = [];
   fieldConfigurationByFieldCoords = new Map<string, FieldConfiguration>();
-  fieldCoordsByNamedTypeName: Map<string, Set<string>>;
+  fieldCoordsByNamedTypeName: Map<TypeName, Set<FieldCoords>>;
   inaccessibleCoords = new Set<string>();
   inaccessibleRequiredInputValueErrorByCoords = new Map<string, Error>();
   internalGraph: Graph;
@@ -253,7 +256,6 @@ export class FederationFactory {
   namedOutputTypeNames = new Set<string>();
   parentDefinitionDataByTypeName = new Map<string, ParentDefinitionData>();
   parentTagDataByTypeName = new Map<string, ParentTagData>();
-  coordsByNamedTypeName = new Map<string, Set<string>>();
   persistedDirectiveDefinitionByDirectiveName = new Map<string, DirectiveDefinitionNode>([
     [AUTHENTICATED, AUTHENTICATED_DEFINITION],
     [DEPRECATED, DEPRECATED_DEFINITION],
@@ -268,15 +270,26 @@ export class FederationFactory {
   tagNamesByCoords = new Map<string, Set<string>>();
   warnings: Warning[];
 
-  constructor(params: FederationFactoryParams) {
-    this.authorizationDataByParentTypeName = params.authorizationDataByParentTypeName;
-    this.concreteTypeNamesByAbstractTypeName = params.concreteTypeNamesByAbstractTypeName;
-    this.entityDataByTypeName = params.entityDataByTypeName;
-    this.entityInterfaceFederationDataByTypeName = params.entityInterfaceFederationDataByTypeName;
-    this.fieldCoordsByNamedTypeName = params.fieldCoordsByNamedTypeName;
-    this.internalSubgraphBySubgraphName = params.internalSubgraphBySubgraphName;
-    this.internalGraph = params.internalGraph;
-    this.warnings = params.warnings;
+  constructor({
+    authorizationDataByParentTypeName,
+    concreteTypeNamesByAbstractTypeName,
+    disableResolvabilityValidation,
+    entityDataByTypeName,
+    entityInterfaceFederationDataByTypeName,
+    fieldCoordsByNamedTypeName,
+    internalGraph,
+    internalSubgraphBySubgraphName,
+    warnings,
+  }: FederationFactoryParams) {
+    this.authorizationDataByParentTypeName = authorizationDataByParentTypeName;
+    this.concreteTypeNamesByAbstractTypeName = concreteTypeNamesByAbstractTypeName;
+    this.disableResolvabilityValidation = disableResolvabilityValidation ?? false;
+    this.entityDataByTypeName = entityDataByTypeName;
+    this.entityInterfaceFederationDataByTypeName = entityInterfaceFederationDataByTypeName;
+    this.fieldCoordsByNamedTypeName = fieldCoordsByNamedTypeName;
+    this.internalGraph = internalGraph;
+    this.internalSubgraphBySubgraphName = internalSubgraphBySubgraphName;
+    this.warnings = warnings;
   }
 
   getValidImplementedInterfaces(data: CompositeOutputData): NamedTypeNode[] {
@@ -411,11 +424,11 @@ export class FederationFactory {
         objectData?.kind || Kind.NULL,
       );
     }
-    const configurationData = getOrThrowError(
-      internalSubgraph.configurationDataByTypeName,
-      entityData.typeName,
-      'internalSubgraph.configurationDataByTypeName',
-    );
+    const configurationData = internalSubgraph.configurationDataByTypeName.get(entityData.typeName);
+    // If all fields are overridden, there will be no configuration data.
+    if (!configurationData) {
+      return;
+    }
     const implicitKeys: RequiredFieldConfiguration[] = [];
     const graphNode = this.internalGraph.nodeByNodeName.get(`${this.currentSubgraphName}.${entityData.typeName}`);
     // Any errors in the field sets would be caught when evaluating the explicit entities, so they are ignored here
@@ -1119,6 +1132,7 @@ export class FederationFactory {
             kind: sourceData.kind,
             name: stringToNameNode(sourceData.renamedTypeName || sourceData.name),
           },
+          requireFetchReasonsFieldNames: new Set<FieldName>(),
           renamedTypeName: sourceData.renamedTypeName,
           subgraphNames: new Set(sourceData.subgraphNames),
         };
@@ -1560,13 +1574,12 @@ export class FederationFactory {
 
   handleEntityInterfaces() {
     for (const [entityInterfaceTypeName, entityInterfaceData] of this.entityInterfaceFederationDataByTypeName) {
-      subtractSet(entityInterfaceData.interfaceFieldNames, entityInterfaceData.interfaceObjectFieldNames);
-      const entityInterface = getOrThrowError(
+      const entityInterfaceFederationData = getOrThrowError(
         this.parentDefinitionDataByTypeName,
         entityInterfaceTypeName,
         PARENT_DEFINITION_DATA,
       );
-      if (entityInterface.kind !== Kind.INTERFACE_TYPE_DEFINITION) {
+      if (entityInterfaceFederationData.kind !== Kind.INTERFACE_TYPE_DEFINITION) {
         // TODO error
         continue;
       }
@@ -1591,7 +1604,9 @@ export class FederationFactory {
           // TODO no keys error
           continue;
         }
-        interfaceObjectConfiguration.entityInterfaceConcreteTypeNames = entityInterfaceData.concreteTypeNames;
+        interfaceObjectConfiguration.entityInterfaceConcreteTypeNames = new Set<TypeName>(
+          entityInterfaceData.concreteTypeNames,
+        );
         this.internalGraph.setSubgraphName(subgraphName);
         const interfaceObjectNode = this.internalGraph.addOrUpdateNode(entityInterfaceTypeName, { isAbstract: true });
         for (const concreteTypeName of concreteTypeNames) {
@@ -1603,7 +1618,7 @@ export class FederationFactory {
           if (!isObjectDefinitionData(concreteTypeData)) {
             continue;
           }
-          // The subgraph locations of the interface object must be added to the concrete types that implement it
+          // The subgraph locations of the Interface Object must be added to the concrete types that implement it
           const entityData = getOrThrowError(this.entityDataByTypeName, concreteTypeName, 'entityDataByTypeName');
           entityData.subgraphNames.add(subgraphName);
           const configurationData = configurationDataByTypeName.get(concreteTypeName);
@@ -1634,17 +1649,20 @@ export class FederationFactory {
             resolvableKeyFieldSets.add(key.selectionSet);
           }
           const interfaceAuthData = this.authorizationDataByParentTypeName.get(entityInterfaceTypeName);
-          for (const fieldName of entityInterfaceData.interfaceObjectFieldNames) {
+          const entityInterfaceSubgraphData = getOrThrowError(
+            internalSubgraph.parentDefinitionDataByTypeName,
+            entityInterfaceTypeName,
+            'internalSubgraph.parentDefinitionDataByTypeName',
+          );
+          if (!isObjectDefinitionData(entityInterfaceSubgraphData)) {
+            continue;
+          }
+          for (const [fieldName, fieldData] of entityInterfaceSubgraphData.fieldDataByName) {
             const fieldCoords = `${concreteTypeName}.${fieldName}`;
-            const interfaceFieldData = getOrThrowError(
-              entityInterface.fieldDataByName,
-              fieldName,
-              `${entityInterfaceTypeName}.fieldDataByFieldName`,
-            );
             getValueOrDefault(
               this.fieldCoordsByNamedTypeName,
-              interfaceFieldData.namedTypeName,
-              () => new Set<string>(),
+              fieldData.namedTypeName,
+              () => new Set<FieldCoords>(),
             ).add(fieldCoords);
             const interfaceFieldAuthData = interfaceAuthData?.fieldAuthDataByFieldName.get(fieldName);
             if (interfaceFieldAuthData) {
@@ -1656,13 +1674,23 @@ export class FederationFactory {
               }
             }
             const existingFieldData = concreteTypeData.fieldDataByName.get(fieldName);
+            // @shareable and @external need to be propagated (e.g., to satisfy interfaces)
             if (existingFieldData) {
-              // TODO handle shareability
+              const isShareable = fieldData.isShareableBySubgraphName.get(subgraphName) ?? false;
+              existingFieldData.isShareableBySubgraphName.set(subgraphName, isShareable);
+              existingFieldData.subgraphNames.add(subgraphName);
+              const externalData = fieldData.externalFieldDataBySubgraphName.get(subgraphName);
+              if (!externalData) {
+                continue;
+              }
+              existingFieldData.externalFieldDataBySubgraphName.set(subgraphName, { ...externalData });
               continue;
             }
             const isInaccessible =
-              entityInterface.isInaccessible || concreteTypeData.isInaccessible || interfaceFieldData.isInaccessible;
-            concreteTypeData.fieldDataByName.set(fieldName, this.copyFieldData(interfaceFieldData, isInaccessible));
+              entityInterfaceFederationData.isInaccessible ||
+              concreteTypeData.isInaccessible ||
+              fieldData.isInaccessible;
+            concreteTypeData.fieldDataByName.set(fieldName, this.copyFieldData(fieldData, isInaccessible));
           }
           this.handleInterfaceObjectForInternalGraph({
             internalSubgraph,
@@ -2660,15 +2688,15 @@ export class FederationFactory {
     /* Resolvability evaluations are not necessary for contracts because the source graph resolvability evaluations
      * must have already completed without error.
      * Resolvability evaluations are also unnecessary for a single subgraph.
+     *
+     * These checks can be disabled by setting `disableResolvabilityValidation` to true.
+     * This should only be done for troubleshooting purposes.
      * */
-    if (this.internalSubgraphBySubgraphName.size > 1) {
+    if (!this.disableResolvabilityValidation && this.internalSubgraphBySubgraphName.size > 1) {
       const resolvabilityErrors = this.internalGraph.validate();
       if (resolvabilityErrors.length > 0) {
         return { errors: resolvabilityErrors, success: false, warnings: this.warnings };
       }
-    }
-    if (this.errors.length > 0) {
-      return { errors: this.errors, success: false, warnings: this.warnings };
     }
     const newRouterAST: DocumentNode = {
       kind: Kind.DOCUMENT,
@@ -3013,7 +3041,10 @@ type FederationFactoryResultFailure = {
 
 type FederationFactoryResult = FederationFactoryResultFailure | FederationFactoryResultSuccess;
 
-function initializeFederationFactory(subgraphs: Subgraph[]): FederationFactoryResult {
+function initializeFederationFactory({
+  disableResolvabilityValidation,
+  subgraphs,
+}: FederationParams): FederationFactoryResult {
   if (subgraphs.length < 1) {
     return { errors: [minimumSubgraphRequirementError], success: false, warnings: [] };
   }
@@ -3036,24 +3067,37 @@ function initializeFederationFactory(subgraphs: Subgraph[]): FederationFactoryRe
       upsertEntityInterfaceFederationData(existingData, entityInterfaceData, subgraphName);
     }
   }
-  const entityInterfaceErrors: Array<Error> = [];
+  const entityInterfaceErrors = new Array<Error>();
+  const definedConcreteTypeNamesBySubgraphName = new Map<SubgraphName, Set<TypeName>>();
   for (const [typeName, entityInterfaceData] of entityInterfaceFederationDataByTypeName) {
     const implementations = entityInterfaceData.concreteTypeNames.size;
     for (const [subgraphName, subgraphData] of entityInterfaceData.subgraphDataByTypeName) {
+      const definedConcreteTypeNames = getValueOrDefault(
+        definedConcreteTypeNamesBySubgraphName,
+        subgraphName,
+        () => new Set<TypeName>(),
+      );
+      addIterableValuesToSet(subgraphData.concreteTypeNames, definedConcreteTypeNames);
       if (!subgraphData.isInterfaceObject) {
         if (subgraphData.resolvable && subgraphData.concreteTypeNames.size !== implementations) {
-          getValueOrDefault(invalidEntityInterfacesByTypeName, typeName, () => []).push({
+          getValueOrDefault(
+            invalidEntityInterfacesByTypeName,
+            typeName,
+            () => new Array<InvalidEntityInterface>(),
+          ).push({
             subgraphName,
-            concreteTypeNames: subgraphData.concreteTypeNames,
+            definedConcreteTypeNames: new Set<TypeName>(subgraphData.concreteTypeNames),
+            requiredConcreteTypeNames: new Set<TypeName>(entityInterfaceData.concreteTypeNames),
           });
         }
         continue;
       }
-      const parentDefinitionDataByTypeName = getOrThrowError(
+      addIterableValuesToSet(entityInterfaceData.concreteTypeNames, definedConcreteTypeNames);
+      const { parentDefinitionDataByTypeName } = getOrThrowError(
         result.internalSubgraphBySubgraphName,
         subgraphName,
         'internalSubgraphBySubgraphName',
-      ).parentDefinitionDataByTypeName;
+      );
       const invalidTypeNames: Array<string> = [];
       for (const concreteTypeName of entityInterfaceData.concreteTypeNames) {
         if (parentDefinitionDataByTypeName.has(concreteTypeName)) {
@@ -3066,6 +3110,26 @@ function initializeFederationFactory(subgraphs: Subgraph[]): FederationFactoryRe
         );
       }
     }
+  }
+  for (const [typeName, invalidInterfaces] of invalidEntityInterfacesByTypeName) {
+    const checkedInvalidInterfaces = new Array<InvalidEntityInterface>();
+    for (const invalidInterface of invalidInterfaces) {
+      const validTypeNames = definedConcreteTypeNamesBySubgraphName.get(invalidInterface.subgraphName);
+      if (!validTypeNames) {
+        checkedInvalidInterfaces.push(invalidInterface);
+        continue;
+      }
+      const definedTypeNames = invalidInterface.requiredConcreteTypeNames.intersection(validTypeNames);
+      if (invalidInterface.requiredConcreteTypeNames.size !== definedTypeNames.size) {
+        invalidInterface.definedConcreteTypeNames = definedTypeNames;
+        checkedInvalidInterfaces.push(invalidInterface);
+      }
+    }
+    if (checkedInvalidInterfaces.length > 0) {
+      invalidEntityInterfacesByTypeName.set(typeName, checkedInvalidInterfaces);
+      continue;
+    }
+    invalidEntityInterfacesByTypeName.delete(typeName);
   }
   if (invalidEntityInterfacesByTypeName.size > 0) {
     entityInterfaceErrors.push(
@@ -3086,6 +3150,7 @@ function initializeFederationFactory(subgraphs: Subgraph[]): FederationFactoryRe
     federationFactory: new FederationFactory({
       authorizationDataByParentTypeName: result.authorizationDataByParentTypeName,
       concreteTypeNamesByAbstractTypeName: result.concreteTypeNamesByAbstractTypeName,
+      disableResolvabilityValidation,
       entityDataByTypeName: result.entityDataByTypeName,
       entityInterfaceFederationDataByTypeName,
       fieldCoordsByNamedTypeName: result.fieldCoordsByNamedTypeName,
@@ -3098,8 +3163,8 @@ function initializeFederationFactory(subgraphs: Subgraph[]): FederationFactoryRe
   };
 }
 
-export function federateSubgraphs(subgraphs: Subgraph[]): FederationResult {
-  const federationFactoryResult = initializeFederationFactory(subgraphs);
+export function federateSubgraphs({ disableResolvabilityValidation, subgraphs }: FederationParams): FederationResult {
+  const federationFactoryResult = initializeFederationFactory({ subgraphs, disableResolvabilityValidation });
   if (!federationFactoryResult.success) {
     return { errors: federationFactoryResult.errors, success: false, warnings: federationFactoryResult.warnings };
   }
@@ -3107,11 +3172,12 @@ export function federateSubgraphs(subgraphs: Subgraph[]): FederationResult {
 }
 
 // the flow when publishing a subgraph that also has contracts
-export function federateSubgraphsWithContracts(
-  subgraphs: Subgraph[],
-  tagOptionsByContractName: Map<string, ContractTagOptions>,
-): FederationResultWithContracts {
-  const factoryResult = initializeFederationFactory(subgraphs);
+export function federateSubgraphsWithContracts({
+  subgraphs,
+  tagOptionsByContractName,
+  disableResolvabilityValidation,
+}: FederateSubgraphsWithContractsV1Params): FederationResultWithContracts {
+  const factoryResult = initializeFederationFactory({ subgraphs, disableResolvabilityValidation });
   if (!factoryResult.success) {
     return {
       errors: factoryResult.errors,
@@ -3127,7 +3193,7 @@ export function federateSubgraphsWithContracts(
     return { errors: federationResult.errors, success: false, warnings: federationResult.warnings };
   }
   const lastContractIndex = tagOptionsByContractName.size - 1;
-  const federationResultByContractName = new Map<string, FederationResult>();
+  const federationResultByContractName = new Map<ContractName, FederationResult>();
   let i = 0;
   for (const [contractName, tagOptions] of tagOptionsByContractName) {
     // deep copy the current FederationFactory before it is mutated if it is not the last one required
@@ -3143,11 +3209,12 @@ export function federateSubgraphsWithContracts(
 }
 
 // the flow when adding a completely new contract
-export function federateSubgraphsContract(
-  subgraphs: Subgraph[],
-  contractTagOptions: ContractTagOptions,
-): FederationResult {
-  const result = initializeFederationFactory(subgraphs);
+export function federateSubgraphsContract({
+  contractTagOptions,
+  disableResolvabilityValidation,
+  subgraphs,
+}: FederateSubgraphsContractV1Params): FederationResult {
+  const result = initializeFederationFactory({ subgraphs, disableResolvabilityValidation });
   if (!result.success) {
     return { errors: result.errors, success: false, warnings: result.warnings };
   }

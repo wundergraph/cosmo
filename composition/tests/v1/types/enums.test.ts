@@ -2,14 +2,11 @@ import {
   duplicateEnumValueDefinitionError,
   ENUM,
   EnumDefinitionData,
-  federateSubgraphs,
-  FederationResultFailure,
-  FederationResultSuccess,
   incompatibleSharedEnumError,
   noBaseDefinitionForExtensionError,
   noDefinedEnumValuesError,
-  NormalizationResultFailure,
-  NormalizationResultSuccess,
+  NormalizationFailure,
+  NormalizationSuccess,
   normalizeSubgraph,
   parse,
   ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -22,7 +19,12 @@ import {
   versionOneRouterDefinitions,
   versionTwoRouterDefinitions,
 } from '../utils/utils';
-import { normalizeString, schemaToSortedNormalizedString } from '../../utils/utils';
+import {
+  federateSubgraphsFailure,
+  federateSubgraphsSuccess,
+  normalizeString,
+  schemaToSortedNormalizedString,
+} from '../../utils/utils';
 
 describe('Enum tests', () => {
   describe('Normalization tests', () => {
@@ -32,7 +34,7 @@ describe('Enum tests', () => {
         subgraphQ.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -54,7 +56,7 @@ describe('Enum tests', () => {
         subgraphS.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -77,7 +79,7 @@ describe('Enum tests', () => {
         subgraphT.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -100,7 +102,7 @@ describe('Enum tests', () => {
         subgraphV.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -122,7 +124,7 @@ describe('Enum tests', () => {
         subgraphW.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -144,7 +146,7 @@ describe('Enum tests', () => {
         subgraphX.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -166,7 +168,7 @@ describe('Enum tests', () => {
         subgraphY.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -188,7 +190,7 @@ describe('Enum tests', () => {
         subgraphZ.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -210,7 +212,7 @@ describe('Enum tests', () => {
         subgraphAA.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -232,7 +234,7 @@ describe('Enum tests', () => {
         subgraphAB.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -254,7 +256,7 @@ describe('Enum tests', () => {
         subgraphAC.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -276,7 +278,7 @@ describe('Enum tests', () => {
         subgraphAD.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -298,7 +300,7 @@ describe('Enum tests', () => {
         subgraphI.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(noDefinedEnumValuesError(ENUM));
@@ -310,7 +312,7 @@ describe('Enum tests', () => {
         subgraphJ.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(noDefinedEnumValuesError(ENUM));
@@ -322,7 +324,7 @@ describe('Enum tests', () => {
         subgraphK.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(noDefinedEnumValuesError(ENUM));
@@ -334,7 +336,7 @@ describe('Enum tests', () => {
         subgraphL.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(noDefinedEnumValuesError(ENUM));
@@ -346,7 +348,7 @@ describe('Enum tests', () => {
         subgraphM.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(duplicateEnumValueDefinitionError(ENUM, 'A'));
@@ -358,7 +360,7 @@ describe('Enum tests', () => {
         subgraphN.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(duplicateEnumValueDefinitionError(ENUM, 'A'));
@@ -370,7 +372,7 @@ describe('Enum tests', () => {
         subgraphO.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(duplicateEnumValueDefinitionError(ENUM, 'A'));
@@ -382,7 +384,7 @@ describe('Enum tests', () => {
         subgraphP.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(duplicateEnumValueDefinitionError(ENUM, 'A'));
@@ -393,20 +395,13 @@ describe('Enum tests', () => {
     const parentName = 'Instruction';
 
     test('that an error is returned if federation results in an Enum extension orphan', () => {
-      const result = federateSubgraphs(
-        [subgraphR, subgraphQ],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
-      expect(result.success).toBe(false);
+      const result = federateSubgraphsFailure([subgraphR, subgraphQ], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(noBaseDefinitionForExtensionError(ENUM, ENUM));
     });
 
     test('that an Enum type and extension definition federate successfully #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphR, subgraphQ, subgraphU],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphR, subgraphQ, subgraphU], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -426,10 +421,7 @@ describe('Enum tests', () => {
     });
 
     test('that an Enum type and extension definition federate successfully #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphR, subgraphU, subgraphQ],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphR, subgraphU, subgraphQ], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -449,10 +441,7 @@ describe('Enum tests', () => {
     });
 
     test('that Enums merge by union if unused in Input Fields or Arguments', () => {
-      const result = federateSubgraphs(
-        [subgraphA, subgraphB],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -476,10 +465,7 @@ describe('Enum tests', () => {
     });
 
     test('that Enums merge by intersection if used as an Input Field', () => {
-      const result = federateSubgraphs(
-        [subgraphA, subgraphC],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphA, subgraphC], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -505,10 +491,7 @@ describe('Enum tests', () => {
     });
 
     test('that Enums merge by intersection if used as an Argument', () => {
-      const result = federateSubgraphs(
-        [subgraphA, subgraphF],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphA, subgraphF], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -533,10 +516,7 @@ describe('Enum tests', () => {
     });
 
     test('that Enums must be consistent if used as both an input and output', () => {
-      const result = federateSubgraphs(
-        [subgraphC, subgraphD],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphC, subgraphD], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -567,20 +547,13 @@ describe('Enum tests', () => {
     });
 
     test('that an error is returned if an inconsistent Enum is used as both input and output', () => {
-      const result = federateSubgraphs(
-        [subgraphC, subgraphE],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
-      expect(result.success).toBe(false);
+      const result = federateSubgraphsFailure([subgraphC, subgraphE], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(incompatibleSharedEnumError(parentName));
     });
 
     test('that declaring an Enum Value as inaccessible prevents an Enum inconsistency error #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphG, subgraphH],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphG, subgraphH], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -620,10 +593,7 @@ describe('Enum tests', () => {
     });
 
     test('that declaring an Enum Value as inaccessible prevents an Enum inconsistency error #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphH, subgraphG],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphH, subgraphG], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -663,10 +633,7 @@ describe('Enum tests', () => {
     });
 
     test('that an Enum has subgraphs data', () => {
-      const result = federateSubgraphs(
-        [subgraphA, subgraphC],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphA, subgraphC], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
 
       const enumDef = result.parentDefinitionDataByTypeName.get('Instruction') as EnumDefinitionData;

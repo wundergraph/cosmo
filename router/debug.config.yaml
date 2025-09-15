@@ -8,6 +8,7 @@ version: '1'
 execution_config:
   file:
     path: './__schemas/config.json'
+    # watch: true
 
 log_level: debug
 
@@ -18,6 +19,9 @@ watch_config:
   startup_delay:
     enabled: false
     maximum: '10s'
+
+plugins:
+  enabled: true
 
 engine:
   max_concurrent_resolvers: 1024

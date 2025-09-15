@@ -2,8 +2,7 @@ import {
   ConfigurationData,
   EntityInterfaceFederationData,
   EntityInterfaceSubgraphData,
-  federateSubgraphs,
-  FederationResultSuccess,
+  INTERFACE,
   InvalidEntityInterface,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   SimpleFieldData,
@@ -23,10 +22,7 @@ import {
 
 describe('Entity Interface Tests', () => {
   test('that an @interfaceObject does not need to contribute new fields', () => {
-    const result = federateSubgraphs(
-      [subgraphC, subgraphD],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphC, subgraphD], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
@@ -55,10 +51,7 @@ describe('Entity Interface Tests', () => {
   });
 
   test('that fields contributed by an interface object are added to each concrete type', () => {
-    const result = federateSubgraphs(
-      [subgraphA, subgraphB],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
@@ -87,10 +80,7 @@ describe('Entity Interface Tests', () => {
   });
 
   test('that interface objects produce the correct engine configuration', () => {
-    const result = federateSubgraphs(
-      [subgraphA, subgraphB],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    const result = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     const subgraphConfigBySubgraphName = result.subgraphConfigBySubgraphName;
     expect(subgraphConfigBySubgraphName).toBeDefined();
@@ -153,29 +143,30 @@ describe('Entity Interface Tests', () => {
   });
 
   test('that an error is returned if a subgraph does not define all implementations of an entity interface', () => {
-    const result = federateSubgraphsFailure([subgraphE, subgraphF], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    const { errors } = federateSubgraphsFailure([subgraphE, subgraphF], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       undefinedEntityInterfaceImplementationsError(
         new Map<string, InvalidEntityInterface[]>([
           [
-            'Interface',
+            INTERFACE,
             [
               {
                 subgraphName: 'subgraph-e',
-                concreteTypeNames: new Set<string>(['EntityOne', 'EntityTwo']),
+                definedConcreteTypeNames: new Set<string>(['EntityOne', 'EntityTwo']),
+                requiredConcreteTypeNames: new Set<string>(['EntityOne', 'EntityTwo', 'EntityThree']),
               },
               {
                 subgraphName: 'subgraph-f',
-                concreteTypeNames: new Set<string>(['EntityOne', 'EntityThree']),
+                definedConcreteTypeNames: new Set<string>(['EntityOne', 'EntityThree']),
+                requiredConcreteTypeNames: new Set<string>(['EntityOne', 'EntityTwo', 'EntityThree']),
               },
             ],
           ],
         ]),
         new Map<string, EntityInterfaceFederationData>([
           [
-            'Interface',
+            INTERFACE,
             {
               concreteTypeNames: new Set<string>(['EntityOne', 'EntityTwo', 'EntityThree']),
               fieldDatasBySubgraphName: new Map<string, Array<SimpleFieldData>>(),
@@ -374,8 +365,8 @@ const subgraphD: Subgraph = {
   definitions: parse(`
     type Interface @key(fields: "id") @interfaceObject {
       id: ID!
-      name: String!
-      age: Int!
+      name: String! @shareable
+      age: Int! @shareable
     }
   `),
 };

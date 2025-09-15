@@ -3,15 +3,11 @@ description: 'Build and upload CLI binary'
 
 inputs:
   target:
-    description: 'Target platform for the build (e.g., linux-x64, darwin-x64)'
+    description: 'Target platform for the build (e.g., bun-linux-x64, bun-darwin-arm64)'
     required: true
   github-sha:
     description: 'GitHub SHA for versioning'
     required: true
-  working-directory:
-    description: 'Working directory for the build'
-    required: false
-    default: '.'
 
 outputs:
   artifact-url:
@@ -19,41 +15,51 @@ outputs:
     value: ${{ steps.artifact-upload-url.outputs.artifact-url }}
 
 runs:
-  using: "composite"
+  using: 'composite'
   steps:
     - name: Checkout repository
       uses: actions/checkout@v4
 
     - name: Setup Bun
       uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: '1.2.19'
 
     - name: Setup Node
       uses: ./.github/actions/node
 
+    - name: Generate outfile name
+      id: outfile
+      shell: bash
+      run: echo "name=wgc-experimental-${{ inputs.github-sha }}-${{ inputs.target }}${{contains(inputs.target, 'windows') && '.exe' || ''}}" >> $GITHUB_OUTPUT
+
     - name: Install dependencies
       shell: bash
       run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
-      working-directory: ${{ inputs.working-directory }}
 
     - name: Build
       shell: bash
       run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic run build
-      working-directory: ${{ inputs.working-directory }}
 
     - name: 'Build wgc binary'
       shell: bash
-      run: bun build --compile --minify --sourcemap --target ${{ inputs.target }} src/index.ts --outfile out/wgc-experimental-${{ inputs.github-sha }}-${{ inputs.target }}
-      working-directory: ${{ inputs.working-directory }}/cli
+      run: bun build --compile --minify --sourcemap --target ${{ inputs.target }} src/index.ts --outfile out/${{ steps.outfile.outputs.name }}
+      working-directory: cli
+
+    - name: Chmod the build artifact
+      shell: bash
+      run: chmod +rwX out/${{ steps.outfile.outputs.name }}
+      working-directory: cli
 
     - name: 'Upload builds as artifacts'
       id: upload
       uses: actions/upload-artifact@v4
       with:
-        name: wgc-experimental-${{ inputs.github-sha }}-${{ inputs.target }}
-        path: cli/out/wgc-experimental-${{ inputs.github-sha }}-${{ inputs.target }}*
+        name: '${{ steps.outfile.outputs.name }}'
+        path: 'cli/out/${{ steps.outfile.outputs.name }}'
         if-no-files-found: error
 
     - name: Output artifact URL
       id: artifact-upload-url
       shell: bash
-      run: echo "artifact-url=${{ steps.upload.outputs.artifact-url }}" >> $GITHUB_OUTPUT 
+      run: echo "artifact-url=${{ steps.upload.outputs.artifact-url }}" >> $GITHUB_OUTPUT

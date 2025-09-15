@@ -156,6 +156,9 @@ export function migrateFromApollo(
           webhookJWTSecret: opts.admissionWebhookJWTSecret,
         },
         chClient: opts.chClient!,
+        compositionOptions: {
+          disableResolvabilityValidation: true,
+        },
       });
     });
 

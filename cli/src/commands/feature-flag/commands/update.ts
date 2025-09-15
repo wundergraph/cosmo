@@ -28,6 +28,10 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option('-j, --json', 'Prints to the console in json format instead of table');
   command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
+  command.option(
+    '--disable-resolvability-validation',
+    'This flag will disable the validation for whether all nodes of the federated graph are resolvable. Do NOT use unless troubleshooting.',
+  );
 
   command.action(async (name, options) => {
     if (options.featureGraphs && options.featureSubgraphs.length === 0) {
@@ -47,10 +51,11 @@ export default (opts: BaseCommandOptions) => {
     }
     const resp = await opts.client.platform.updateFeatureFlag(
       {
+        disableResolvabilityValidation: options.disableResolvabilityValidation,
+        featureSubgraphNames: options.featureSubgraphs,
+        labels: options.label ? options.label.map((label: string) => splitLabel(label)) : [],
         name,
         namespace: options.namespace,
-        labels: options.label ? options.label.map((label: string) => splitLabel(label)) : [],
-        featureSubgraphNames: options.featureSubgraphs,
         unsetLabels: options.unsetLabels,
       },
       {

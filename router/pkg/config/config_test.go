@@ -1198,3 +1198,263 @@ traffic_shaping:
 		require.NoError(t, err)
 	})
 }
+
+func TestValidateJwksConfiguration(t *testing.T) {
+	t.Parallel()
+
+	t.Run("verify valid url config", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+authentication:
+  jwt:
+    jwks:
+      - url: "http://url/valid.json"
+
+`)
+		_, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+	})
+
+	t.Run("verify valid secret config", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+authentication:
+  jwt:
+    jwks:
+      - header_key_id: "givenKID"
+        secret: "example secret"
+        symmetric_algorithm: HS512
+
+`)
+		_, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+	})
+
+	t.Run("verify both secret and url are not allowed together", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+authentication:
+  jwt:
+    jwks:
+      - header_key_id: "givenKID"
+        url: "http://url/valid.json"
+        algorithms: []
+        secret: "example secret"
+        symmetric_algorithm: HS512
+`)
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, "at '/authentication/jwt/jwks/")
+		require.ErrorContains(t, err, "oneOf failed, none matched")
+
+	})
+
+	t.Run("verify secret parameters mandatory", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+authentication:
+  jwt:
+    jwks:
+      - secret: "example secret"
+`)
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, "at '/authentication/jwt/jwks/")
+		require.ErrorContains(t, err, "missing properties 'symmetric_algorithm', 'header_key_id'")
+
+	})
+
+	t.Run("verify url parameter is mandatory", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+authentication:
+  jwt:
+    jwks:
+      - algorithms: []
+
+`)
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, "at '/authentication/jwt/jwks/")
+		require.ErrorContains(t, err, "oneOf failed, none matched")
+
+	})
+
+}
+
+func TestValidateAccessLogFileMode(t *testing.T) {
+	t.Parallel()
+
+	t.Run("verify file mode is parsed correctly", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+access_logs:
+  enabled: true
+  output:
+    file:
+      enabled: true
+      path: ./access.log
+      mode: "640"
+`)
+		c, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+
+		require.Equal(t, FileMode(0640), c.Config.AccessLogs.Output.File.Mode)
+	})
+
+	t.Run("verify file mode is parsed correctly with leading zero", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+access_logs:
+  enabled: true
+  output:
+    file:
+      enabled: true
+      path: ./access.log
+      mode: "0640"
+`)
+		c, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+
+		require.Equal(t, FileMode(0640), c.Config.AccessLogs.Output.File.Mode)
+	})
+
+	t.Run("verify file mode throws an error when pattern is not matched", func(t *testing.T) {
+		t.Parallel()
+
+		invalidPatterns := []string{
+			// Too few digits
+			"0",
+			"00",
+			"64",
+
+			// Too many digits
+			"6440",
+			"06440",
+			"64400",
+			"640000",
+			"0640000",
+
+			// Invalid octal digits (8, 9)
+			"648",
+			"0648",
+			"659",
+			"0659",
+			"688",
+			"0688",
+			"789",
+			"0789",
+			"888",
+			"0888",
+			"999",
+			"0999",
+
+			// Non-numeric characters
+			"64A",
+			"064A",
+			"6BC",
+			"0ABC",
+			"invalid",
+			"abc",
+			"",
+
+			// Special characters
+			"64-",
+			"64+",
+			"64.",
+			"64/",
+			"64 ",
+			" 640",
+			"6 40",
+
+			// Leading zeros in wrong position
+			"6040",
+			"6400",
+			"64000",
+		}
+
+		for _, pattern := range invalidPatterns {
+			f := createTempFileFromFixture(t, `
+version: "1"
+
+access_logs:
+  enabled: true
+  output:
+    file:
+      enabled: true
+      path: ./access.log
+      mode: "`+pattern+`"
+`)
+			_, err := LoadConfig([]string{f})
+			require.Error(t, err, "Pattern '%s' should be invalid but was accepted", pattern)
+		}
+	})
+
+	t.Run("verify file mode accepts valid octal patterns", func(t *testing.T) {
+		t.Parallel()
+
+		validPatterns := []struct {
+			pattern string
+			mode    FileMode
+		}{
+			// 3 digits without leading zero
+			{"000", FileMode(0000)},
+			{"001", FileMode(0001)},
+			{"644", FileMode(0644)},
+			{"640", FileMode(0640)},
+			{"755", FileMode(0755)},
+			{"777", FileMode(0777)},
+			{"600", FileMode(0600)},
+			{"700", FileMode(0700)},
+			{"666", FileMode(0666)},
+			{"111", FileMode(0111)},
+
+			// 3 digits with leading zero
+			{"0000", FileMode(0000)},
+			{"0001", FileMode(0001)},
+			{"0644", FileMode(0644)},
+			{"0640", FileMode(0640)},
+			{"0755", FileMode(0755)},
+			{"0777", FileMode(0777)},
+			{"0600", FileMode(0600)},
+			{"0700", FileMode(0700)},
+			{"0666", FileMode(0666)},
+			{"0111", FileMode(0111)},
+		}
+
+		for _, tc := range validPatterns {
+			f := createTempFileFromFixture(t, `
+version: "1"
+
+access_logs:
+  enabled: true
+  output:
+    file:
+      enabled: true
+      path: ./access.log
+      mode: "`+tc.pattern+`"
+`)
+			c, err := LoadConfig([]string{f})
+			require.NoError(t, err, "Pattern '%s' should be valid but was rejected", tc.pattern)
+			require.Equal(t, tc.mode, c.Config.AccessLogs.Output.File.Mode, "Pattern '%s' should parse to mode %o but got %o", tc.pattern, tc.mode, c.Config.AccessLogs.Output.File.Mode)
+		}
+	})
+}

@@ -1,10 +1,8 @@
 import { describe, expect, test } from 'vitest';
 import {
-  federateSubgraphs,
-  FederationResultSuccess,
   FieldData,
   invalidFieldShareabilityError,
-  NormalizationResultSuccess,
+  NormalizationSuccess,
   normalizeSubgraph,
   normalizeSubgraphFromString,
   ObjectDefinitionData,
@@ -49,7 +47,7 @@ describe('@shareable directive tests', () => {
       `,
         true,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -102,7 +100,7 @@ describe('@shareable directive tests', () => {
       `,
         true,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -134,7 +132,7 @@ describe('@shareable directive tests', () => {
         subgraphD.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
@@ -159,7 +157,7 @@ describe('@shareable directive tests', () => {
         subgraphE.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toStrictEqual(
         normalizeString(
@@ -182,11 +180,7 @@ describe('@shareable directive tests', () => {
 
   describe('Federation tests', () => {
     test('that @shareable functions with extensions correctly #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphA, subgraphB, subgraphC],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
-      expect(result.success).toBe(true);
+      const result = federateSubgraphsSuccess([subgraphA, subgraphB, subgraphC], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
           versionTwoRouterDefinitions +
@@ -210,10 +204,7 @@ describe('@shareable directive tests', () => {
     });
 
     test('that @shareable functions with extensions correctly #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphA, subgraphC, subgraphB],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphA, subgraphC, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -238,10 +229,7 @@ describe('@shareable directive tests', () => {
     });
 
     test('that @shareable functions with extensions correctly #1.3', () => {
-      const result = federateSubgraphs(
-        [subgraphB, subgraphA, subgraphC],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphB, subgraphA, subgraphC], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -266,10 +254,7 @@ describe('@shareable directive tests', () => {
     });
 
     test('that @shareable functions with extensions correctly #1.4', () => {
-      const result = federateSubgraphs(
-        [subgraphB, subgraphC, subgraphA],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphB, subgraphC, subgraphA], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -294,10 +279,7 @@ describe('@shareable directive tests', () => {
     });
 
     test('that @shareable functions with extensions correctly #1.5', () => {
-      const result = federateSubgraphs(
-        [subgraphC, subgraphA, subgraphB],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphC, subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -322,10 +304,7 @@ describe('@shareable directive tests', () => {
     });
 
     test('that @shareable functions with extensions correctly #1.6', () => {
-      const result = federateSubgraphs(
-        [subgraphC, subgraphB, subgraphA],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphC, subgraphB, subgraphA], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(

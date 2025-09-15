@@ -680,10 +680,31 @@ func TestAuthenticationWithCustomHeaders(t *testing.T) {
 	})
 }
 
-func TestAuthorization(t *testing.T) {
+func TestHttpJwksAuthorization(t *testing.T) {
 	t.Parallel()
 
-	t.Run("no token", func(t *testing.T) {
+	t.Run("startup should fail when duplicate URLs are specified", func(t *testing.T) {
+		t.Parallel()
+
+		authServer, err := jwks.NewServer(t)
+		require.NoError(t, err)
+		t.Cleanup(authServer.Close)
+
+		_, err = authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{
+			{
+				URL:             authServer.JWKSURL(),
+				RefreshInterval: 2 * time.Second,
+			},
+			{
+				URL:             authServer.JWKSURL(),
+				RefreshInterval: 2 * time.Second,
+			},
+		})
+
+		require.ErrorContains(t, err, "duplicate JWK URL found")
+	})
+
+	t.Run("authentication should fail with no token", func(t *testing.T) {
 		t.Parallel()
 
 		authenticators, _ := ConfigureAuth(t)
@@ -704,7 +725,7 @@ func TestAuthorization(t *testing.T) {
 		})
 	})
 
-	t.Run("invalid token", func(t *testing.T) {
+	t.Run("authentication should fail with an invalid token", func(t *testing.T) {
 		t.Parallel()
 
 		authenticators, _ := ConfigureAuth(t)
@@ -728,7 +749,7 @@ func TestAuthorization(t *testing.T) {
 		})
 	})
 
-	t.Run("valid token", func(t *testing.T) {
+	t.Run("authentication should succeed with a valid token", func(t *testing.T) {
 		t.Parallel()
 
 		authenticators, authServer := ConfigureAuth(t)
@@ -751,6 +772,200 @@ func TestAuthorization(t *testing.T) {
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
 			require.Equal(t, employeesExpectedData, string(data))
+		})
+	})
+
+	t.Run("authentication should succeed with valid token when multiple JWK configurations are specified", func(t *testing.T) {
+		t.Parallel()
+
+		authServer1, err := jwks.NewServer(t)
+		t.Cleanup(authServer1.Close)
+		require.NoError(t, err)
+
+		authServer2, err := jwks.NewServer(t)
+		t.Cleanup(authServer2.Close)
+		require.NoError(t, err)
+
+		// aud claim
+		token, err := authServer2.Token(map[string]any{
+			"aud": "https://example.com",
+		})
+		require.NoError(t, err)
+
+		authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+			{
+				Secret:    "example secret",
+				Algorithm: string(jwkset.AlgHS256),
+				KeyId:     "givenKID",
+			},
+			{
+				URL:             authServer1.JWKSURL(),
+				RefreshInterval: time.Second * 5,
+			},
+			{
+				URL:             authServer2.JWKSURL(),
+				RefreshInterval: time.Second * 5,
+			},
+		})
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, true)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Operations with a token should succeed
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, employeesExpectedData, string(data))
+		})
+	})
+
+}
+
+func TestNonHttpAuthorization(t *testing.T) {
+	t.Run("startup should fail when duplicate key ids are manually specified", func(t *testing.T) {
+		t.Parallel()
+
+		secret := "example secret"
+		kid := "givenKID"
+
+		_, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{
+			{
+				Secret:    secret,
+				Algorithm: string(jwkset.AlgHS256),
+				KeyId:     kid,
+			},
+			{
+				Secret:    secret,
+				Algorithm: string(jwkset.AlgHS256),
+				KeyId:     kid,
+			},
+		})
+
+		require.ErrorContains(t, err, "duplicate JWK keyid specified found")
+	})
+
+	t.Run("authentication should succeed with a valid HS256 token", func(t *testing.T) {
+		t.Parallel()
+
+		secret := "example secret"
+		kid := "givenKID"
+		authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+			{
+				Secret:    secret,
+				Algorithm: string(jwkset.AlgHS256),
+				KeyId:     kid,
+			},
+		})
+
+		token := generateToken(t, kid, secret, jwt.SigningMethodHS256, nil)
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, true)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Operations with a token should succeed
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, employeesExpectedData, string(data))
+		})
+	})
+
+	t.Run("authentication should succeed with valid token when multiple JWK configurations are specified", func(t *testing.T) {
+		t.Parallel()
+
+		authServer, err := jwks.NewServer(t)
+		t.Cleanup(authServer.Close)
+		require.NoError(t, err)
+
+		secret := "example secret"
+		kid := "givenKID"
+		authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+			{
+				URL:             authServer.JWKSURL(),
+				RefreshInterval: time.Second * 5,
+			},
+			{
+				Secret:    secret,
+				Algorithm: string(jwkset.AlgHS256),
+				KeyId:     kid,
+			},
+		})
+
+		token := generateToken(t, kid, secret, jwt.SigningMethodHS256, nil)
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, true)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Operations with a token should succeed
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, employeesExpectedData, string(data))
+		})
+	})
+
+	t.Run("authentication should fail when the secret is correct but they key id does not match", func(t *testing.T) {
+		t.Parallel()
+
+		secret := "example secret"
+		authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+			{
+				Secret:    secret,
+				Algorithm: string(jwkset.AlgHS256),
+				KeyId:     "givenKID1",
+			},
+			{
+				Secret:    secret,
+				Algorithm: string(jwkset.AlgHS256),
+				KeyId:     "givenKID2",
+			},
+		})
+
+		token := generateToken(t, "differentKID", secret, jwt.SigningMethodHS256, nil)
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, true)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+			require.Equal(t, "", res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.JSONEq(t, unauthorizedExpectedData, string(data))
 		})
 	})
 }
@@ -1859,10 +2074,451 @@ func TestAuthenticationOverWebsocket(t *testing.T) {
 	})
 }
 
+func TestAudienceValidation(t *testing.T) {
+	t.Parallel()
+
+	t.Run("authentication fails when there is no audience match", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("with slice of string audiences in the token", func(t *testing.T) {
+			t.Parallel()
+
+			t.Run("with http based configuration", func(t *testing.T) {
+				t.Parallel()
+
+				tokenAudiences := []string{"aud1", "aud2"}
+
+				authServer, err := jwks.NewServer(t)
+				require.NoError(t, err)
+				t.Cleanup(authServer.Close)
+
+				token, err := authServer.Token(map[string]any{"aud": tokenAudiences})
+				require.NoError(t, err)
+
+				authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+					{
+						URL:             authServer.JWKSURL(),
+						RefreshInterval: time.Second * 5,
+						Audiences:       []string{"aud3", "aud5"},
+					},
+				})
+
+				testenv.Run(t, &testenv.Config{
+					RouterOptions: []core.Option{
+						core.WithAccessController(core.NewAccessController(authenticators, true)),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					// Operations with a token should succeed
+					header := http.Header{
+						"Authorization": []string{"Bearer " + token},
+					}
+					res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+					require.NoError(t, err)
+					defer res.Body.Close()
+					require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+					require.Equal(t, "", res.Header.Get(xAuthenticatedByHeader))
+					data, err := io.ReadAll(res.Body)
+					require.NoError(t, err)
+					require.JSONEq(t, unauthorizedExpectedData, string(data))
+				})
+			})
+
+			t.Run("with secret based configuration", func(t *testing.T) {
+				t.Parallel()
+
+				tokenAudiences := []string{"aud1", "aud2"}
+
+				secret := "example secret"
+				kid := "givenKID"
+				authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+					{
+						Secret:    secret,
+						Algorithm: string(jwkset.AlgHS256),
+						KeyId:     kid,
+						Audiences: []string{"aud3", "aud5"},
+					},
+				})
+
+				token := generateToken(t, kid, secret, jwt.SigningMethodHS256, jwt.MapClaims{
+					"aud": tokenAudiences,
+				})
+
+				testenv.Run(t, &testenv.Config{
+					RouterOptions: []core.Option{
+						core.WithAccessController(core.NewAccessController(authenticators, true)),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					// Operations with a token should succeed
+					header := http.Header{
+						"Authorization": []string{"Bearer " + token},
+					}
+					res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+					require.NoError(t, err)
+					defer res.Body.Close()
+					require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+					require.Equal(t, "", res.Header.Get(xAuthenticatedByHeader))
+					data, err := io.ReadAll(res.Body)
+					require.NoError(t, err)
+					require.JSONEq(t, unauthorizedExpectedData, string(data))
+				})
+			})
+		})
+
+		t.Run("with single string audience in the token", func(t *testing.T) {
+			t.Parallel()
+
+			t.Run("with http based configuration", func(t *testing.T) {
+				t.Parallel()
+
+				tokenAudiences := "aud1"
+
+				authServer, err := jwks.NewServer(t)
+				require.NoError(t, err)
+				t.Cleanup(authServer.Close)
+
+				token, err := authServer.Token(map[string]any{"aud": tokenAudiences})
+				require.NoError(t, err)
+
+				authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+					{
+						URL:             authServer.JWKSURL(),
+						RefreshInterval: time.Second * 5,
+						Audiences:       []string{"aud3", "aud5"},
+					},
+				})
+
+				testenv.Run(t, &testenv.Config{
+					RouterOptions: []core.Option{
+						core.WithAccessController(core.NewAccessController(authenticators, true)),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					// Operations with a token should succeed
+					header := http.Header{
+						"Authorization": []string{"Bearer " + token},
+					}
+					res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+					require.NoError(t, err)
+					defer res.Body.Close()
+					require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+					require.Equal(t, "", res.Header.Get(xAuthenticatedByHeader))
+					data, err := io.ReadAll(res.Body)
+					require.NoError(t, err)
+					require.JSONEq(t, unauthorizedExpectedData, string(data))
+				})
+			})
+
+			t.Run("with secret based configuration", func(t *testing.T) {
+				t.Parallel()
+
+				tokenAudience := "aud1"
+
+				secret := "example secret"
+				kid := "givenKID"
+				authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+					{
+						Secret:    secret,
+						Algorithm: string(jwkset.AlgHS256),
+						KeyId:     kid,
+						Audiences: []string{"aud3", "aud5"},
+					},
+				})
+
+				token := generateToken(t, kid, secret, jwt.SigningMethodHS256, jwt.MapClaims{
+					"aud": tokenAudience,
+				})
+
+				testenv.Run(t, &testenv.Config{
+					RouterOptions: []core.Option{
+						core.WithAccessController(core.NewAccessController(authenticators, true)),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					// Operations with a token should succeed
+					header := http.Header{
+						"Authorization": []string{"Bearer " + token},
+					}
+					res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+					require.NoError(t, err)
+					defer res.Body.Close()
+					require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+					require.Equal(t, "", res.Header.Get(xAuthenticatedByHeader))
+					data, err := io.ReadAll(res.Body)
+					require.NoError(t, err)
+					require.JSONEq(t, unauthorizedExpectedData, string(data))
+				})
+			})
+		})
+	})
+
+	t.Run("authentication succeeds when there is an audience match", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("with slice of string audiences in the token", func(t *testing.T) {
+			t.Parallel()
+
+			t.Run("with http based configuration", func(t *testing.T) {
+				t.Parallel()
+
+				matchingAudience := "matchingAudience"
+				tokenAudiences := []string{matchingAudience, "aud5"}
+
+				authServer, err := jwks.NewServer(t)
+				require.NoError(t, err)
+				t.Cleanup(authServer.Close)
+
+				token, err := authServer.Token(map[string]any{"aud": tokenAudiences})
+				require.NoError(t, err)
+
+				authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+					{
+						URL:             authServer.JWKSURL(),
+						RefreshInterval: time.Second * 5,
+						Audiences:       []string{matchingAudience, "aud5"},
+					},
+				})
+
+				testenv.Run(t, &testenv.Config{
+					RouterOptions: []core.Option{
+						core.WithAccessController(core.NewAccessController(authenticators, true)),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					// Operations with a token should succeed
+					header := http.Header{
+						"Authorization": []string{"Bearer " + token},
+					}
+					res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+					require.NoError(t, err)
+					defer res.Body.Close()
+					require.Equal(t, http.StatusOK, res.StatusCode)
+					require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+					data, err := io.ReadAll(res.Body)
+					require.NoError(t, err)
+					require.Equal(t, employeesExpectedData, string(data))
+				})
+			})
+
+			t.Run("with secret based configuration", func(t *testing.T) {
+				t.Parallel()
+
+				matchingAud := "matchingAud"
+				tokenAudiences := []string{matchingAud, "aud2"}
+
+				secret := "example secret"
+				kid := "givenKID"
+				authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+					{
+						Secret:    secret,
+						Algorithm: string(jwkset.AlgHS256),
+						KeyId:     kid,
+						Audiences: []string{matchingAud, "aud5"},
+					},
+				})
+
+				token := generateToken(t, kid, secret, jwt.SigningMethodHS256, jwt.MapClaims{
+					"aud": tokenAudiences,
+				})
+
+				testenv.Run(t, &testenv.Config{
+					RouterOptions: []core.Option{
+						core.WithAccessController(core.NewAccessController(authenticators, true)),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					// Operations with a token should succeed
+					header := http.Header{
+						"Authorization": []string{"Bearer " + token},
+					}
+					res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+					require.NoError(t, err)
+					defer res.Body.Close()
+					require.Equal(t, http.StatusOK, res.StatusCode)
+					require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+					data, err := io.ReadAll(res.Body)
+					require.NoError(t, err)
+					require.Equal(t, employeesExpectedData, string(data))
+				})
+			})
+		})
+
+		t.Run("with single string audience in the token", func(t *testing.T) {
+			t.Parallel()
+
+			t.Run("with http based configuration", func(t *testing.T) {
+				t.Parallel()
+
+				matchingAudience := "matchingAudience"
+
+				authServer, err := jwks.NewServer(t)
+				require.NoError(t, err)
+				t.Cleanup(authServer.Close)
+
+				token, err := authServer.Token(map[string]any{"aud": matchingAudience})
+				require.NoError(t, err)
+
+				authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+					{
+						URL:             authServer.JWKSURL(),
+						RefreshInterval: time.Second * 5,
+						Audiences:       []string{matchingAudience, "aud5"},
+					},
+				})
+
+				testenv.Run(t, &testenv.Config{
+					RouterOptions: []core.Option{
+						core.WithAccessController(core.NewAccessController(authenticators, true)),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					// Operations with a token should succeed
+					header := http.Header{
+						"Authorization": []string{"Bearer " + token},
+					}
+					res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+					require.NoError(t, err)
+					defer res.Body.Close()
+					require.Equal(t, http.StatusOK, res.StatusCode)
+					require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+					data, err := io.ReadAll(res.Body)
+					require.NoError(t, err)
+					require.Equal(t, employeesExpectedData, string(data))
+				})
+			})
+
+			t.Run("with secret based configuration", func(t *testing.T) {
+				t.Parallel()
+
+				matchingAud := "matchingAudience"
+
+				secret := "example secret"
+				kid := "givenKID"
+				authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+					{
+						Secret:    secret,
+						Algorithm: string(jwkset.AlgHS256),
+						KeyId:     kid,
+						Audiences: []string{matchingAud, "aud5"},
+					},
+				})
+
+				token := generateToken(t, kid, secret, jwt.SigningMethodHS256, jwt.MapClaims{
+					"aud": matchingAud,
+				})
+
+				testenv.Run(t, &testenv.Config{
+					RouterOptions: []core.Option{
+						core.WithAccessController(core.NewAccessController(authenticators, true)),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					// Operations with a token should succeed
+					header := http.Header{
+						"Authorization": []string{"Bearer " + token},
+					}
+					res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+					require.NoError(t, err)
+					defer res.Body.Close()
+					require.Equal(t, http.StatusOK, res.StatusCode)
+					require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+					data, err := io.ReadAll(res.Body)
+					require.NoError(t, err)
+					require.Equal(t, employeesExpectedData, string(data))
+				})
+			})
+		})
+	})
+
+	t.Run("authentication fails when audience is invalid format", func(t *testing.T) {
+		t.Parallel()
+
+		tokenAudiences := []bool{true, true}
+
+		authServer, err := jwks.NewServer(t)
+		require.NoError(t, err)
+		t.Cleanup(authServer.Close)
+
+		token, err := authServer.Token(map[string]any{"aud": tokenAudiences})
+		require.NoError(t, err)
+
+		authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+			{
+				URL:             authServer.JWKSURL(),
+				RefreshInterval: time.Second * 5,
+				Audiences:       []string{"aud3", "aud5"},
+			},
+		})
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, true)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Operations with a token should succeed
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+			require.Equal(t, "", res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.JSONEq(t, unauthorizedExpectedData, string(data))
+		})
+
+	})
+
+	t.Run("audience validation is ignored when expected aud is not provided", func(t *testing.T) {
+		t.Parallel()
+
+		tokenAudiences := []bool{true, true}
+
+		authServer, err := jwks.NewServer(t)
+		require.NoError(t, err)
+		t.Cleanup(authServer.Close)
+
+		token, err := authServer.Token(map[string]any{"aud": tokenAudiences})
+		require.NoError(t, err)
+
+		authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+			{
+				URL:             authServer.JWKSURL(),
+				RefreshInterval: time.Second * 5,
+			},
+		})
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, true)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Operations with a token should succeed
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, employeesExpectedData, string(data))
+		})
+	})
+}
+
 func toJWKSConfig(url string, refresh time.Duration, allowedAlgorithms ...string) authentication.JWKSConfig {
 	return authentication.JWKSConfig{
 		URL:               url,
 		RefreshInterval:   refresh,
 		AllowedAlgorithms: allowedAlgorithms,
 	}
+}
+
+func generateToken(t *testing.T, kid string, secret string, signingMethod *jwt.SigningMethodHMAC, claims jwt.MapClaims) string {
+	if claims == nil {
+		claims = jwt.MapClaims{}
+	}
+	token := jwt.NewWithClaims(signingMethod, claims)
+	token.Header[jwkset.HeaderKID] = kid
+	jwtValue, err := token.SignedString([]byte(secret))
+	require.NoError(t, err)
+	return jwtValue
 }

@@ -1,4 +1,4 @@
-FROM --platform=${BUILDPLATFORM} golang:1.23 AS builder
+FROM --platform=${BUILDPLATFORM} golang:1.25 AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -30,6 +30,20 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
     -X 'github.com/wundergraph/cosmo/router/core.Commit=${COMMIT}' \
     -X 'github.com/wundergraph/cosmo/router/core.Date=${DATE}'" \
     -a -o router cmd/router/main.go
+
+FROM --platform=${BUILDPLATFORM} gcr.io/distroless/base-debian12:nonroot AS nonroot
+
+# nonroot user uid
+USER 65532
+
+COPY --from=builder /app/router /router
+
+# Configure workdir to be compatible with default image
+WORKDIR /
+
+CMD ["/router"]
+
+EXPOSE 3002
 
 FROM --platform=${BUILDPLATFORM} gcr.io/distroless/base-debian12
 

@@ -67,13 +67,14 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 
 	if cfg.AccessLogs.Enabled {
 		c := &AccessLogsConfig{
-			Attributes:         cfg.AccessLogs.Router.Fields,
-			SubgraphEnabled:    cfg.AccessLogs.Subgraphs.Enabled,
-			SubgraphAttributes: cfg.AccessLogs.Subgraphs.Fields,
+			Attributes:            cfg.AccessLogs.Router.Fields,
+			IgnoreQueryParamsList: cfg.AccessLogs.Router.IgnoreQueryParamsList,
+			SubgraphEnabled:       cfg.AccessLogs.Subgraphs.Enabled,
+			SubgraphAttributes:    cfg.AccessLogs.Subgraphs.Fields,
 		}
 
 		if cfg.AccessLogs.Output.File.Enabled {
-			f, err := logging.NewLogFile(cfg.AccessLogs.Output.File.Path)
+			f, err := logging.NewLogFile(cfg.AccessLogs.Output.File.Path, os.FileMode(cfg.AccessLogs.Output.File.Mode))
 			if err != nil {
 				return nil, fmt.Errorf("could not create log file: %w", err)
 			}
@@ -194,9 +195,12 @@ func optionsFromResources(logger *zap.Logger, config *config.Config) []Option {
 		WithSubgraphCircuitBreakerOptions(NewSubgraphCircuitBreakerOptions(config.TrafficShaping)),
 		WithSubgraphRetryOptions(
 			config.TrafficShaping.All.BackoffJitterRetry.Enabled,
+			config.TrafficShaping.All.BackoffJitterRetry.Algorithm,
 			config.TrafficShaping.All.BackoffJitterRetry.MaxAttempts,
 			config.TrafficShaping.All.BackoffJitterRetry.MaxDuration,
 			config.TrafficShaping.All.BackoffJitterRetry.Interval,
+			config.TrafficShaping.All.BackoffJitterRetry.Expression,
+			nil,
 		),
 		WithCors(&cors.Config{
 			Enabled:          config.CORS.Enabled,
@@ -255,6 +259,12 @@ func setupAuthenticators(ctx context.Context, logger *zap.Logger, cfg *config.Co
 			URL:               jwks.URL,
 			RefreshInterval:   jwks.RefreshInterval,
 			AllowedAlgorithms: jwks.Algorithms,
+
+			Secret:    jwks.Secret,
+			Algorithm: jwks.Algorithm,
+			KeyId:     jwks.KeyId,
+
+			Audiences: jwks.Audiences,
 		})
 	}
 

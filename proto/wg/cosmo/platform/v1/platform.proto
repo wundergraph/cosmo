@@ -36,6 +36,14 @@ message PublishMonographResponse {
   repeated CompositionWarning compositionWarnings = 4;
 }
 
+message ProtoInput {
+  string schema = 1;
+  string mappings = 2;
+  string lock = 3;
+  repeated string platforms = 4;
+  string version = 5;
+}
+
 message PublishFederatedSubgraphRequest {
   // The FQDN of the subgraph to be published e.g. "wg.team1.orders"
   string name = 1;
@@ -55,6 +63,9 @@ message PublishFederatedSubgraphRequest {
   optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 9;
   optional bool is_feature_subgraph = 10;
   optional string base_subgraph_name = 11;
+  optional bool disable_resolvability_validation = 12;
+  optional SubgraphType type = 13;
+  optional ProtoInput proto = 14;
 }
 
 message PublishFederatedSubgraphResponse {
@@ -91,6 +102,7 @@ message CheckSubgraphSchemaRequest {
   optional bool skip_traffic_check = 6;
   optional VCSContext vcsContext = 7;
   repeated Label labels = 8;
+  optional bool disable_resolvability_validation = 9;
 }
 
 message FixSubgraphSchemaRequest {
@@ -99,6 +111,7 @@ message FixSubgraphSchemaRequest {
   // The string representation of the schema, the content of the file
   string schema = 2;
   string namespace = 3;
+  optional bool disable_resolvability_validation = 4;
 }
 
 message CreateMonographRequest {
@@ -131,6 +144,7 @@ message CreateFederatedGraphRequest {
   string namespace = 5;
   string admissionWebhookURL = 6;
   optional string admissionWebhookSecret = 7;
+  optional bool disable_resolvability_validation = 8;
 }
 
 message CreateFederatedSubgraphRequest {
@@ -151,6 +165,7 @@ message CreateFederatedSubgraphRequest {
   optional bool is_event_driven_graph = 10;
   optional bool is_feature_subgraph = 11;
   optional string base_subgraph_name = 12;
+  SubgraphType type = 13;
 }
 
 message DeleteFederatedGraphRequest {
@@ -171,6 +186,7 @@ message DeleteFederatedSubgraphRequest {
   // The FQDN of the subgraph to be checked e.g. "wg.team1.orders"
   string subgraph_name = 1;
   string namespace = 2;
+  optional bool disable_resolvability_validation = 3;
 }
 
 message SchemaChange{
@@ -262,6 +278,10 @@ message CheckSubgraphSchemaResponse {
   optional bool client_traffic_check_skipped = 12;
   repeated CompositionWarning compositionWarnings = 13;
   optional string proposalMatchMessage = 14;
+  // If true, it means the traffic check failed for the linked check
+  optional bool isLinkedTrafficCheckFailed = 15;
+  // If true, it means the graph pruning check failed for the linked check
+  optional bool isLinkedPruningCheckFailed = 16;
 }
 
 message FixSubgraphSchemaResponse {
@@ -351,7 +371,18 @@ message GetSubgraphsRequest {
   bool exclude_feature_subgraphs = 5;
 }
 
+enum SubgraphType {
+  STANDARD = 0;
+  GRPC_PLUGIN = 1;
+  GRPC_SERVICE = 2;
+}
+
 message Subgraph {
+  message PluginData{
+    string version = 1;
+    repeated string platforms = 2;
+  }
+
   string id = 1;
   string name = 2;
   string routingURL = 3;
@@ -369,6 +400,8 @@ message Subgraph {
   bool isFeatureSubgraph = 15;
   optional string baseSubgraphName = 16;
   optional string baseSubgraphId = 17;
+  SubgraphType type = 18;
+  optional PluginData pluginData = 19;
 }
 
 message GetSubgraphsResponse {
@@ -413,9 +446,16 @@ message GetSubgraphByNameRequest {
 }
 
 message GetSubgraphByNameResponse {
+  message LinkedSubgraph{
+    string id = 1;
+    string name = 2;
+    string namespace = 3;
+  }
+
   Response response = 1;
   Subgraph graph = 2;
   repeated SubgraphMember members = 3;
+  optional LinkedSubgraph linkedSubgraph = 4;
 }
 
 message GetSubgraphSDLFromLatestCompositionRequest {
@@ -473,6 +513,19 @@ message SchemaCheck {
     repeated Label labels = 6;
   }
 
+  message LinkedCheck {
+    string id = 1;
+    repeated string affectedGraphNames = 2;
+    bool isCheckSuccessful = 3;
+    bool hasClientTraffic = 4;
+    bool hasGraphPruningErrors = 5;
+    bool clientTrafficCheckSkipped = 6;
+    bool graphPruningCheckSkipped = 7;
+    repeated string subgraphNames = 8;
+    string namespace = 9;
+    bool isForcedSuccess = 10;
+  }
+
   string id = 1;
   optional string targetID = 2;
   optional string subgraphName = 3;
@@ -494,6 +547,7 @@ message SchemaCheck {
   bool composition_skipped = 19;
   bool breaking_changes_skipped = 20;
   optional string errorMessage = 21;
+  repeated LinkedCheck linkedChecks = 22;
 }
 
 message GetChecksByFederatedGraphNameResponse {
@@ -519,6 +573,11 @@ message GetCheckSummaryResponse {
     int32 traffic_check_days = 2;
     string name = 3;
     bool isCheckSuccessful = 4;
+    bool isComposable = 5;
+    bool isBreaking = 6;
+    bool hasClientTraffic = 7;
+    bool hasLintErrors = 8;
+    bool hasGraphPruningErrors = 9;
   }
 
   message ProposalSchemaMatch {
@@ -576,6 +635,8 @@ message GetCheckOperationsResponse {
 
 message GetOperationContentRequest {
   string hash = 1;
+  string federated_graph_name = 2;
+  string namespace = 3;
 }
 
 message GetOperationContentResponse {
@@ -629,6 +690,7 @@ message UpdateSubgraphRequest {
   string namespace = 8;
   optional bool unset_labels = 9;
   optional wg.cosmo.common.GraphQLWebsocketSubprotocol websocket_subprotocol = 10;
+  optional bool disable_resolvability_validation = 11;
 }
 
 message UpdateSubgraphResponse {
@@ -647,6 +709,7 @@ message UpdateFederatedGraphRequest {
   optional bool unset_label_matchers = 6;
   optional string admissionWebhookURL = 7;
   optional string admissionWebhookSecret = 8;
+  optional bool disable_resolvability_validation = 9;
 }
 
 message UpdateFederatedGraphResponse {
@@ -677,6 +740,7 @@ message CheckFederatedGraphRequest {
   string name = 1;
   repeated string label_matchers = 2;
   string namespace = 3;
+  optional bool disable_resolvability_validation = 4;
 }
 
 message CheckFederatedGraphResponse {
@@ -1805,6 +1869,7 @@ message GraphCompositionSubgraph {
   string target_id = 4;
   bool isFeatureSubgraph = 5;
   string changeType = 6;
+  SubgraphType subgraphType = 7;
 }
 
 message GetCompositionsRequest {
@@ -2062,6 +2127,7 @@ message MoveGraphRequest {
   string name = 1;
   string namespace = 2;
   string new_namespace = 3;
+  optional bool disable_resolvability_validation = 4;
 }
 
 message MoveGraphResponse {
@@ -2189,6 +2255,7 @@ message CreateContractRequest {
   optional string readme = 7;
   optional string admission_webhook_secret = 8;
   repeated string include_tags = 9;
+  optional bool disable_resolvability_validation = 10;
 }
 
 message CreateContractResponse {
@@ -2207,6 +2274,7 @@ message UpdateContractRequest {
   optional string admission_webhook_url = 6;
   optional string admission_webhook_secret = 7;
   optional string readme = 8;
+  optional bool disable_resolvability_validation = 9;
 }
 
 message UpdateContractResponse {
@@ -2236,6 +2304,7 @@ message CreateFeatureFlagRequest {
   repeated Label labels = 3;
   repeated string feature_subgraph_names = 4;
   bool is_enabled = 5;
+  optional bool disable_resolvability_validation = 6;
 }
 
 message CreateFeatureFlagResponse {
@@ -2251,6 +2320,7 @@ message UpdateFeatureFlagRequest {
   repeated Label labels = 3;
   repeated string feature_subgraph_names = 4;
   bool unset_labels = 5;
+  optional bool disable_resolvability_validation = 6;
 }
 
 message UpdateFeatureFlagResponse {
@@ -2264,6 +2334,7 @@ message EnableFeatureFlagRequest {
   string name = 1;
   string namespace = 2;
   bool enabled = 3;
+  optional bool disable_resolvability_validation = 4;
 }
 
 message EnableFeatureFlagResponse {
@@ -2277,6 +2348,7 @@ message EnableFeatureFlagResponse {
 message DeleteFeatureFlagRequest {
   string name = 1;
   string namespace = 2;
+  optional bool disable_resolvability_validation = 3;
 }
 
 message DeleteFeatureFlagResponse {
@@ -2582,6 +2654,7 @@ message SetGraphRouterCompatibilityVersionRequest {
   string name = 1;
   string namespace = 2;
   string version = 3;
+  optional bool disable_resolvability_validation = 4;
 }
 
 message SetGraphRouterCompatibilityVersionResponse {
@@ -2655,6 +2728,10 @@ message CreateProposalResponse {
   string checkUrl = 15;
   string proposalUrl = 16;
   string proposalName = 17;
+   // If true, it means the traffic check failed for the linked check
+  optional bool isLinkedTrafficCheckFailed = 18;
+  // If true, it means the graph pruning check failed for the linked check
+  optional bool isLinkedPruningCheckFailed = 19;
 }
 
 message GetProposalRequest {
@@ -2679,7 +2756,7 @@ message GetProposalsByFederatedGraphRequest {
   string endDate = 4;
   int32 limit = 5;
   int32 offset = 6;
-}   
+}
 
 message GetProposalsByFederatedGraphResponse {
   Response response = 1;
@@ -2729,6 +2806,10 @@ message UpdateProposalResponse {
   bool lintingSkipped = 12;
   bool graphPruningSkipped = 13;
   string checkUrl = 14;
+   // If true, it means the traffic check failed for the linked check
+  optional bool isLinkedTrafficCheckFailed = 15;
+  // If true, it means the graph pruning check failed for the linked check
+  optional bool isLinkedPruningCheckFailed = 16;
 }
 
 message EnableProposalsForNamespaceRequest {
@@ -2765,6 +2846,7 @@ message GetOperationsRequest {
   string federatedGraphName = 1;
   string namespace = 2;
   optional string clientName = 3;
+  optional int32 limit = 4;
 }
 
 message GetOperationsResponse {
@@ -2797,6 +2879,39 @@ message GetClientsFromAnalyticsResponse {
   }
   Response response = 1;
   repeated Client clients = 2;
+}
+
+message ValidateAndFetchPluginDataRequest {
+  string name = 1;
+  string namespace = 2;
+  repeated Label labels = 3;
+}
+
+message ValidateAndFetchPluginDataResponse {
+  Response response = 1;
+  string newVersion = 2;
+  string pushToken = 3;
+  string reference = 4;
+}
+
+message LinkSubgraphRequest {
+  string sourceSubgraphName = 1;
+  string sourceSubgraphNamespace = 2;
+  string targetSubgraphName = 3;
+  string targetSubgraphNamespace = 4;
+}
+
+message LinkSubgraphResponse {
+  Response response = 1;
+}
+
+message UnlinkSubgraphRequest {
+  string sourceSubgraphName = 1;
+  string sourceSubgraphNamespace = 2;
+}
+
+message UnlinkSubgraphResponse {
+  Response response = 1;
 }
 
 service PlatformService {
@@ -3162,4 +3277,12 @@ service PlatformService {
   rpc GetOperations(GetOperationsRequest) returns (GetOperationsResponse) {}
   // GetClientsFromAnalytics returns all the clients of the federated graph from the analytics
   rpc GetClientsFromAnalytics(GetClientsFromAnalyticsRequest) returns (GetClientsFromAnalyticsResponse) {}
+
+  // ValidateAndFetchPluginData validates the limit of plugins and returns the latest version and token
+  rpc ValidateAndFetchPluginData(ValidateAndFetchPluginDataRequest) returns (ValidateAndFetchPluginDataResponse) {}
+
+  // LinkSubgraph links one subgraph to another
+  rpc LinkSubgraph(LinkSubgraphRequest) returns (LinkSubgraphResponse) {}
+  // UnlinkSubgraph unlinks one subgraph from another
+  rpc UnlinkSubgraph(UnlinkSubgraphRequest) returns (UnlinkSubgraphResponse) {}
 }

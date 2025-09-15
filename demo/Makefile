@@ -17,6 +17,7 @@ plugin-build-binary:
 
 plugin-compose:
 	pnpx tsx --env-file ../cli/.env ../cli/src/index.ts router compose -i ./graph-with-plugin.yaml -o ./configWithPlugins.json
+	pnpx prettier ./configWithPlugins.json -w
 
 plugin-build-integration: plugin-build plugin-compose
 	rm -rf ../router/plugins/*
@@ -30,3 +31,7 @@ plugin-build-ci: plugin-build-binary
 
 standalone-compose:
 	pnpx tsx --env-file ../cli/.env ../cli/src/index.ts router compose -i ./graph-with-standalone.yaml -o ./configWithStandalone.json
+	pnpx prettier ./configWithStandalone.json -w
+
+standalone-integration: standalone-compose
+	mv ./configWithStandalone.json ../router-tests/testenv/testdata/configWithGRPC.json

@@ -31,6 +31,11 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
   command.option('--readme <path-to-readme>', 'The markdown file which describes the contract.');
+  command.option(
+    '--disable-resolvability-validation',
+    'This flag will disable the validation for whether all nodes of the federated graph are resolvable. Do NOT use unless troubleshooting.',
+  );
+
   command.action(async (name, options) => {
     let readmeFile;
     if (options.readme) {
@@ -59,15 +64,16 @@ export default (opts: BaseCommandOptions) => {
 
     const resp = await opts.client.platform.createContract(
       {
-        name,
-        namespace: options.namespace,
-        sourceGraphName: options.source,
+        admissionWebhookSecret: options.admissionWebhookSecret,
+        admissionWebhookUrl: options.admissionWebhookUrl,
+        disableResolvabilityValidation: options.disableResolvabilityValidation,
         excludeTags: options.exclude,
         includeTags: options.include,
-        routingUrl: options.routingUrl,
-        admissionWebhookUrl: options.admissionWebhookUrl,
-        admissionWebhookSecret: options.admissionWebhookSecret,
+        name,
+        namespace: options.namespace,
         readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
+        routingUrl: options.routingUrl,
+        sourceGraphName: options.source,
       },
       {
         headers: getBaseHeaders(),

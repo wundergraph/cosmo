@@ -32,6 +32,7 @@ export type FederationFactoryParams = {
   internalGraph: Graph;
   internalSubgraphBySubgraphName: Map<string, InternalSubgraph>;
   warnings: Warning[];
+  disableResolvabilityValidation?: boolean;
 };
 
 export type ParentTagData = {

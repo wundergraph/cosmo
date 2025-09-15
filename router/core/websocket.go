@@ -627,6 +627,11 @@ func (rw *websocketResponseWriter) Complete() {
 	}
 }
 
+// Heartbeat is a no-op function for WebSocket subscriptions.
+func (rw *websocketResponseWriter) Heartbeat() error {
+	return nil
+}
+
 func (rw *websocketResponseWriter) Close(kind resolve.SubscriptionCloseKind) {
 	err := rw.protocol.Close(kind.WSCode, kind.Reason)
 	if err != nil {
@@ -894,6 +899,12 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 
 	startValidation := time.Now()
 
+	_, _, err = operationKit.ValidateQueryComplexity()
+	if err != nil {
+		opContext.validationTime = time.Since(startValidation)
+		return nil, nil, err
+	}
+
 	if _, err := operationKit.Validate(h.plannerOptions.ExecutionOptions.SkipLoader, opContext.remapVariables, &h.apolloCompatibilityFlags); err != nil {
 		opContext.validationTime = time.Since(startValidation)
 		return nil, nil, err
@@ -985,6 +996,10 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 		w:                   nil,
 		r:                   registration.clientRequest,
 	})
+
+	if origCtx := getRequestContext(h.request.Context()); origCtx != nil {
+		reqContext.expressionContext = *origCtx.expressionContext.Clone()
+	}
 	resolveCtx = resolveCtx.WithContext(withRequestContext(h.ctx, reqContext))
 	if h.graphqlHandler.authorizer != nil {
 		resolveCtx = WithAuthorizationExtension(resolveCtx)

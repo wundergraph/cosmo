@@ -4,6 +4,34 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.44.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.43.3...@wundergraph/composition@0.44.0) (2025-09-10)
+
+### Features
+
+* implement openfed__requireFetchReasons ([#2170](https://github.com/wundergraph/cosmo/issues/2170)) ([cfb097f](https://github.com/wundergraph/cosmo/commit/cfb097fb6ccc29a81cfca55fec6b71fdf6e1b61c)) (@Aenimus)
+
+## [0.43.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.43.2...@wundergraph/composition@0.43.3) (2025-08-18)
+
+### Bug Fixes
+
+* propagate [@external](https://github.com/external) interface object fields ([#2145](https://github.com/wundergraph/cosmo/issues/2145)) ([783f875](https://github.com/wundergraph/cosmo/commit/783f875850e83f13bccb8b89faf2a87e69304537)) (@Aenimus)
+
+## [0.43.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.43.1...@wundergraph/composition@0.43.2) (2025-08-07)
+
+**Note:** Version bump only for package @wundergraph/composition
+
+## [0.43.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.43.0...@wundergraph/composition@0.43.1) (2025-08-06)
+
+### Bug Fixes
+
+* interface object implementing entity interface ([#2117](https://github.com/wundergraph/cosmo/issues/2117)) ([e999a8c](https://github.com/wundergraph/cosmo/commit/e999a8c8e34dd39f5e6718503e2f5f6bd1903f3e)) (@Aenimus)
+
+# [0.43.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.42.2...@wundergraph/composition@0.43.0) (2025-07-21)
+
+### Features
+
+* add disable resolvability validation flag ([#2065](https://github.com/wundergraph/cosmo/issues/2065)) ([0c920cc](https://github.com/wundergraph/cosmo/commit/0c920cc95065099667fc378b50e9278e8a99c286)) (@Aenimus)
+
 ## [0.42.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.42.1...@wundergraph/composition@0.42.2) (2025-07-03)
 
 **Note:** Version bump only for package @wundergraph/composition

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import {
-  BatchNormalizationResultSuccess,
+  BatchNormalizationSuccess,
   batchNormalize,
   ConfigurationData,
   ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -691,7 +691,7 @@ describe('Router Configuration tests', () => {
       const result = batchNormalize(
         [monolith, reviews, users],
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as BatchNormalizationResultSuccess;
+      ) as BatchNormalizationSuccess;
       expect(result.success).toBe(true);
       expect(result.internalSubgraphBySubgraphName.get('monolith')!.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([

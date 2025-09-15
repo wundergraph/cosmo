@@ -21,9 +21,13 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 const OperationContent = ({
   hash,
   enabled,
+  federatedGraphName,
+  namespace,
 }: {
   hash: string;
   enabled: boolean;
+  federatedGraphName: string;
+  namespace: string;
 }) => {
   const [content, setContent] = useState("");
 
@@ -31,9 +35,11 @@ const OperationContent = ({
     getOperationContent,
     {
       hash,
+      federatedGraphName,
+      namespace,
     },
     {
-      enabled,
+      enabled: enabled && !!federatedGraphName && !!namespace,
     },
   );
 
@@ -49,6 +55,17 @@ const OperationContent = ({
     if (!data) return;
     set(data.operationContent);
   }, [data]);
+
+  if (!federatedGraphName || !namespace) {
+    return (
+      <EmptyState
+        icon={<ExclamationTriangleIcon />}
+        title="Could not retrieve content"
+        description="Please try again"
+        actions={<Button onClick={() => refetch()}>Retry</Button>}
+      />
+    );
+  }
 
   if (isLoading) {
     return (
@@ -80,9 +97,13 @@ const OperationContent = ({
 export const OperationContentDialog = ({
   hash,
   trigger,
+  federatedGraphName,
+  namespace,
 }: {
   hash: string;
   trigger?: React.ReactNode;
+  federatedGraphName: string;
+  namespace: string;
 }) => {
   const [open, setOpen] = useState(false);
 
@@ -104,7 +125,12 @@ export const OperationContentDialog = ({
         <DialogHeader>
           <DialogTitle>Operation Content</DialogTitle>
         </DialogHeader>
-        <OperationContent hash={hash} enabled={open} />
+        <OperationContent
+          hash={hash}
+          enabled={open}
+          federatedGraphName={federatedGraphName}
+          namespace={namespace}
+        />
       </DialogContent>
     </Dialog>
   );

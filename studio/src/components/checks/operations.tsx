@@ -454,7 +454,11 @@ export const CheckOperations = () => {
                             : `First seen at ${firstSeenFormatted} and last seen at ${lastSeenAtFormatted}`}
                         </p>
                         <div className="flex items-center gap-x-2">
-                          <OperationContentDialog hash={hash} />
+                          <OperationContentDialog
+                            hash={hash}
+                            federatedGraphName={graphContext?.graph?.name ?? ""}
+                            namespace={graphContext?.graph?.namespace ?? ""}
+                          />
                           <Tooltip delayDuration={100}>
                             <TooltipTrigger asChild>
                               <Button

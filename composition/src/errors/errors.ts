@@ -30,6 +30,7 @@ import { getEntriesNotInHashSet, getOrThrowError, kindToNodeType, numberToOrdina
 import { ImplementationErrors, InvalidEntityInterface, InvalidRequiredInputValueData } from '../utils/types';
 import { isFieldData } from '../schema-building/utils';
 import { printTypeNode } from '@graphql-tools/merge';
+import { NodeType, TypeName } from '../types/types';
 
 export const minimumSubgraphRequirementError = new Error('At least one subgraph is required for federation.');
 
@@ -424,9 +425,9 @@ export function subgraphInvalidSyntaxError(error?: Error): Error {
 }
 
 export function invalidInterfaceImplementationError(
-  parentTypeName: string,
-  parentTypeString: string,
-  implementationErrorsByInterfaceTypeName: Map<string, ImplementationErrors>,
+  parentTypeName: TypeName,
+  parentNodeType: NodeType,
+  implementationErrorsByInterfaceTypeName: Map<TypeName, ImplementationErrors>,
 ): Error {
   const messages: string[] = [];
   for (const [interfaceName, implementationErrors] of implementationErrorsByInterfaceTypeName) {
@@ -486,7 +487,7 @@ export function invalidInterfaceImplementationError(
     messages.push(message);
   }
   return new Error(
-    `The ${parentTypeString} "${parentTypeName}" has the following Interface implementation errors:\n` +
+    `The ${parentNodeType} "${parentTypeName}" has the following Interface implementation errors:\n` +
       messages.join('\n'),
   );
 }
@@ -846,8 +847,9 @@ export function undefinedEntityInterfaceImplementationsError(
   entityInterfaceFederationDataByTypeName: Map<string, EntityInterfaceFederationData>,
 ): Error {
   let message =
-    `Federation was unsuccessful because any one subgraph that defines a specific entity interface` +
-    ` must also define each and every entity object that implements that entity interface.\n`;
+    `Federation was unsuccessful because any one subgraph that defines a specific entity Interface` +
+    ` must also define each and every entity Object that implements that entity Interface.\n` +
+    `Each entity Object must also explicitly define its implementation of the entity Interface.\n`;
   for (const [typeName, undefinedImplementations] of invalidEntityInterfacesByTypeName) {
     const entityInterfaceDatas = getOrThrowError(
       entityInterfaceFederationDataByTypeName,
@@ -856,15 +858,15 @@ export function undefinedEntityInterfaceImplementationsError(
     );
     const implementedConcreteTypeNames = entityInterfaceDatas.concreteTypeNames!;
     message +=
-      ` Across all subgraphs, the entity interface "${typeName}" is implemented by the following entities` +
-      (implementedConcreteTypeNames.size > 1 ? `s` : ``) +
+      ` Across all subgraphs, the entity interface "${typeName}" is implemented by the following entit` +
+      (implementedConcreteTypeNames.size > 1 ? `ies` : `y`) +
       `:\n  "` +
       Array.from(implementedConcreteTypeNames).join(QUOTATION_JOIN) +
       `"\n` +
       ` However, the definition of at least one of these implementations is missing in a subgraph that` +
       ` defines the entity interface "${typeName}":\n`;
-    for (const { subgraphName, concreteTypeNames } of undefinedImplementations) {
-      const disparities = getEntriesNotInHashSet(implementedConcreteTypeNames, concreteTypeNames);
+    for (const { subgraphName, definedConcreteTypeNames } of undefinedImplementations) {
+      const disparities = getEntriesNotInHashSet(implementedConcreteTypeNames, definedConcreteTypeNames);
       message +=
         `  Subgraph "${subgraphName}" does not define the following implementations: "` +
         disparities.join(QUOTATION_JOIN) +

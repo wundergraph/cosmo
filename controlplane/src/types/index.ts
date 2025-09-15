@@ -1,6 +1,6 @@
 import { LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { JWTPayload } from 'jose';
-import { GraphPruningRuleEnum, LintRuleEnum, OrganizationRole, ProposalMatch } from '../db/models.js';
+import { DBSubgraphType, GraphPruningRuleEnum, LintRuleEnum, OrganizationRole, ProposalMatch } from '../db/models.js';
 import { RBACEvaluator } from '../core/services/RBACEvaluator.js';
 
 export type FeatureIds =
@@ -23,7 +23,8 @@ export type FeatureIds =
   | 'scim'
   | 'field-pruning-grace-period'
   | 'cache-warmer'
-  | 'proposals';
+  | 'proposals'
+  | 'plugins';
 
 export type Features = {
   [key in FeatureIds]: Feature;
@@ -87,6 +88,7 @@ export interface FederatedGraphDTO {
   supportsFederation: boolean;
   contract?: ContractDTO;
   routerCompatibilityVersion: string;
+  organizationId: string;
 }
 
 export interface FederatedGraphChangelogDTO {
@@ -100,6 +102,16 @@ export interface FederatedGraphChangelogDTO {
     createdAt: string;
   }[];
   compositionId: string;
+}
+
+export interface ProtoSubgraph {
+  schema: string;
+  mappings: string;
+  lock: string;
+  pluginData?: {
+    platforms: string[];
+    version: string;
+  };
 }
 
 export interface SubgraphDTO {
@@ -121,6 +133,8 @@ export interface SubgraphDTO {
   readme?: string;
   websocketSubprotocol?: 'auto' | 'graphql-ws' | 'graphql-transport-ws';
   isFeatureSubgraph: boolean;
+  type: DBSubgraphType;
+  proto?: ProtoSubgraph;
 }
 
 export interface FeatureSubgraphDTO extends SubgraphDTO {
@@ -158,6 +172,19 @@ export interface CheckedSubgraphDTO {
   labels: Label[];
 }
 
+export interface LinkedCheckDTO {
+  id: string;
+  affectedGraphNames: string[];
+  subgraphNames: string[];
+  namespace: string;
+  isCheckSuccessful: boolean;
+  hasClientTraffic: boolean;
+  hasGraphPruningErrors: boolean;
+  clientTrafficCheckSkipped: boolean;
+  graphPruningCheckSkipped: boolean;
+  isForcedSuccess: boolean;
+}
+
 export interface SchemaCheckDTO {
   id: string;
   targetID?: string;
@@ -189,6 +216,7 @@ export interface SchemaCheckDTO {
   compositionSkipped: boolean;
   breakingChangesSkipped: boolean;
   errorMessage?: string;
+  linkedChecks: LinkedCheckDTO[];
 }
 
 export interface SchemaCheckSummaryDTO extends SchemaCheckDTO {
@@ -454,6 +482,17 @@ export type AuthContext = {
 export interface GraphApiKeyJwtPayload extends JWTPayload {
   federated_graph_id: string;
   organization_id: string;
+}
+
+export interface PluginAccess {
+  type: 'repository';
+  name: string;
+  tag: string;
+  actions: string[];
+}
+
+export interface PluginApiKeyJwtPayload extends JWTPayload {
+  access: PluginAccess[];
 }
 
 export interface GraphApiKeyDTO {
@@ -745,3 +784,7 @@ export interface ProposalSubgraphDTO {
   isNew: boolean;
   labels: Label[];
 }
+
+export type CompositionOptions = {
+  disableResolvabilityValidation: boolean;
+};

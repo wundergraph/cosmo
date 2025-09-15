@@ -1,0 +1,14 @@
+QueryPlan {
+  Subscription {
+    Primary: {
+      Fetch(service: "employees") {
+        {
+            currentTime {
+                __typename
+                timeStamp
+            }
+        }
+      }
+    },
+  }
+}

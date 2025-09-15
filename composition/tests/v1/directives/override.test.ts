@@ -1,21 +1,18 @@
 import { describe, expect, test } from 'vitest';
 import {
   ARGUMENT_DEFINITION_UPPER,
-  BatchNormalizationResultSuccess,
+  BatchNormalizationSuccess,
   ConfigurationData,
   duplicateOverriddenFieldErrorMessage,
   duplicateOverriddenFieldsError,
   equivalentSourceAndTargetOverrideErrorMessage,
-  federateSubgraphs,
-  FederationResultFailure,
-  FederationResultSuccess,
   FieldData,
   FIRST_ORDINAL,
   invalidDirectiveError,
   invalidDirectiveLocationErrorMessage,
   invalidFieldShareabilityError,
   invalidOverrideTargetSubgraphNameWarning,
-  NormalizationResultFailure,
+  NormalizationFailure,
   normalizeSubgraph,
   ObjectDefinitionData,
   OVERRIDE,
@@ -26,7 +23,12 @@ import {
 } from '../../../src';
 import { versionTwoRouterDefinitions } from '../utils/utils';
 import { batchNormalize } from '../../../src/v1/normalization/normalization-factory';
-import { normalizeString, schemaToSortedNormalizedString } from '../../utils/utils';
+import {
+  federateSubgraphsFailure,
+  federateSubgraphsSuccess,
+  normalizeString,
+  schemaToSortedNormalizedString,
+} from '../../utils/utils';
 
 describe('@override directive tests', () => {
   describe('normalization tests', () => {
@@ -36,7 +38,7 @@ describe('@override directive tests', () => {
         subgraphQ.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -47,7 +49,7 @@ describe('@override directive tests', () => {
     });
 
     test('that @override produces the correct engine configuration', () => {
-      const result = batchNormalize([subgraphA, subgraphE, subgraphF]) as BatchNormalizationResultSuccess;
+      const result = batchNormalize([subgraphA, subgraphE, subgraphF]) as BatchNormalizationSuccess;
       expect(result.success).toBe(true);
       const a = result.internalSubgraphBySubgraphName.get('subgraph-a');
       expect(a).toBeDefined();
@@ -107,10 +109,7 @@ describe('@override directive tests', () => {
 
   describe('federation tests', () => {
     test('that a warning is returned if @override targets an unknown subgraph name', () => {
-      const result = federateSubgraphs(
-        [subgraphA, subgraphB],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.warnings).toBeDefined();
       expect(result.warnings![0]).toStrictEqual(
@@ -138,10 +137,7 @@ describe('@override directive tests', () => {
     });
 
     test('that an error is returned if @override is declared on multiple instances of a field', () => {
-      const result = federateSubgraphs(
-        [subgraphA, subgraphC, subgraphD],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
+      const result = federateSubgraphsFailure([subgraphA, subgraphC, subgraphD], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -152,10 +148,7 @@ describe('@override directive tests', () => {
     });
 
     test('that an overridden field does not need to be declared shareable #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphA, subgraphC],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphA, subgraphC], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -178,10 +171,7 @@ describe('@override directive tests', () => {
     });
 
     test('that an overridden field does not need to be declared shareable #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphC, subgraphA],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphC, subgraphA], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -204,10 +194,7 @@ describe('@override directive tests', () => {
     });
 
     test('that an overridden field does not need to be declared shareable #2.1', () => {
-      const result = federateSubgraphs(
-        [subgraphI, subgraphJ],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphI, subgraphJ], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -230,10 +217,7 @@ describe('@override directive tests', () => {
     });
 
     test('that an overridden field does not need to be declared shareable #2.2', () => {
-      const result = federateSubgraphs(
-        [subgraphJ, subgraphI],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphJ, subgraphI], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -256,10 +240,7 @@ describe('@override directive tests', () => {
     });
 
     test('that an overridden field does not need to be declared shareable #3.1', () => {
-      const result = federateSubgraphs(
-        [subgraphI, subgraphJ, subgraphK],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphI, subgraphJ, subgraphK], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -283,10 +264,7 @@ describe('@override directive tests', () => {
     });
 
     test('that an overridden field does not need to be declared shareable #3.2', () => {
-      const result = federateSubgraphs(
-        [subgraphI, subgraphK, subgraphJ],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphI, subgraphK, subgraphJ], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -310,10 +288,7 @@ describe('@override directive tests', () => {
     });
 
     test('that an overridden field does not need to be declared shareable #3.3', () => {
-      const result = federateSubgraphs(
-        [subgraphJ, subgraphI, subgraphK],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphJ, subgraphI, subgraphK], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -337,10 +312,7 @@ describe('@override directive tests', () => {
     });
 
     test('that an overridden field does not need to be declared shareable #3.4', () => {
-      const result = federateSubgraphs(
-        [subgraphJ, subgraphK, subgraphI],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphJ, subgraphK, subgraphI], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -364,10 +336,7 @@ describe('@override directive tests', () => {
     });
 
     test('that an overridden field does not need to be declared shareable #3.5', () => {
-      const result = federateSubgraphs(
-        [subgraphK, subgraphI, subgraphJ],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphK, subgraphI, subgraphJ], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -391,10 +360,7 @@ describe('@override directive tests', () => {
     });
 
     test('that an overridden field does not need to be declared shareable #3.6', () => {
-      const result = federateSubgraphs(
-        [subgraphK, subgraphJ, subgraphI],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphK, subgraphJ, subgraphI], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -418,10 +384,7 @@ describe('@override directive tests', () => {
     });
 
     test('that an overridden field does not need to be declared shareable #4.1', () => {
-      const result = federateSubgraphs(
-        [subgraphL, subgraphM],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphL, subgraphM], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -443,10 +406,7 @@ describe('@override directive tests', () => {
     });
 
     test('that an overridden field does not need to be declared shareable #4.2', () => {
-      const result = federateSubgraphs(
-        [subgraphM, subgraphL],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphM, subgraphL], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -468,10 +428,7 @@ describe('@override directive tests', () => {
     });
 
     test('that an overridden field does not need to be declared shareable #5.1', () => {
-      const result = federateSubgraphs(
-        [subgraphN, subgraphO],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphN, subgraphO], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -493,10 +450,7 @@ describe('@override directive tests', () => {
     });
 
     test('that an overridden field does not need to be declared shareable #5.2', () => {
-      const result = federateSubgraphs(
-        [subgraphO, subgraphN],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphO, subgraphN], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -518,10 +472,7 @@ describe('@override directive tests', () => {
     });
 
     test('that an overridden field does not need to be declared shareable #6.1', () => {
-      const result = federateSubgraphs(
-        [subgraphE, subgraphP],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphE, subgraphP], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -543,10 +494,7 @@ describe('@override directive tests', () => {
     });
 
     test('that an overridden field does not need to be declared shareable #6.2', () => {
-      const result = federateSubgraphs(
-        [subgraphP, subgraphE],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphP, subgraphE], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -568,10 +516,7 @@ describe('@override directive tests', () => {
     });
 
     test('that > 1 instance of an un-shareable field returns an error regardless of override #1', () => {
-      const result = federateSubgraphs(
-        [subgraphA, subgraphC, subgraphE],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
+      const result = federateSubgraphsFailure([subgraphA, subgraphC, subgraphE], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -596,10 +541,7 @@ describe('@override directive tests', () => {
     });
 
     test('that > 1 instance of an un-shareable field returns an error regardless of override #2', () => {
-      const result = federateSubgraphs(
-        [subgraphA, subgraphI, subgraphJ],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
+      const result = federateSubgraphsFailure([subgraphA, subgraphI, subgraphJ], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -624,10 +566,7 @@ describe('@override directive tests', () => {
     });
 
     test('that if @override is declared at an invalid location, an error is returned', () => {
-      const result = federateSubgraphs(
-        [subgraphG, subgraphH],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultFailure;
+      const result = federateSubgraphsFailure([subgraphG, subgraphH], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       const directiveCoords = 'Entity.name(argOne: ...)';
@@ -641,10 +580,7 @@ describe('@override directive tests', () => {
     });
 
     test('that an overridden field still contributes to type merging #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphR, subgraphS],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphR, subgraphS], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -666,10 +602,7 @@ describe('@override directive tests', () => {
     });
 
     test('that an overridden field still contributes to type merging #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphS, subgraphR],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphS, subgraphR], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -691,10 +624,7 @@ describe('@override directive tests', () => {
     });
 
     test('that renamed root type fields are successfully overridden #1.1', () => {
-      const result = federateSubgraphs(
-        [subgraphT, subgraphU],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphT, subgraphU], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -747,10 +677,7 @@ describe('@override directive tests', () => {
     });
 
     test('that renamed root type fields are successfully overridden #1.2', () => {
-      const result = federateSubgraphs(
-        [subgraphU, subgraphT],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphU, subgraphT], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -803,10 +730,7 @@ describe('@override directive tests', () => {
     });
 
     test('that renamed root type fields are successfully overridden #2.1', () => {
-      const result = federateSubgraphs(
-        [subgraphV, subgraphW],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphV, subgraphW], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -840,10 +764,7 @@ describe('@override directive tests', () => {
     });
 
     test('that renamed root type fields are successfully overridden #2.2', () => {
-      const result = federateSubgraphs(
-        [subgraphW, subgraphV],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphW, subgraphV], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(

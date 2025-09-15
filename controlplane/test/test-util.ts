@@ -435,6 +435,7 @@ export const SetupKeycloak = async ({
       registrationEmailAsUsername: true,
     });
   } catch (e: any) {
+    console.error(e);
     if (e.response?.status !== 409) {
       e.message = `Failed to create keycloak realm: ${realmName}.` + e.message;
       throw e;
@@ -958,3 +959,19 @@ export async function seedBilling(queryConnection: postgres.Sql) {
       .execute();
   }
 }
+
+export const resolvabilitySDLOne = `
+  type Object {
+    id: ID!
+  }
+  
+  type Query {
+    object: Object!
+  }
+`;
+
+export const resolvabilitySDLTwo = `
+  type Object {
+    name: String!
+  }
+`;

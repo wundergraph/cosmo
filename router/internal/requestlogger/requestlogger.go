@@ -2,15 +2,17 @@ package requestlogger
 
 import (
 	"crypto/sha256"
-	"fmt"
+	"encoding/hex"
+	"net"
+	"net/http"
+	"net/url"
+	"time"
+
 	"github.com/wundergraph/cosmo/router/internal/errors"
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
-	"net"
-	"net/http"
-	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
 
@@ -108,6 +110,12 @@ func WithDefaultOptions() Option {
 	}
 }
 
+func WithIgnoreQueryParamsList(ignoreList []string) Option {
+	return func(r *handler) {
+		r.accessLogger.ignoreQueryParamsList = ignoreList
+	}
+}
+
 func New(logger *zap.Logger, opts ...Option) func(h http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		r := &handler{
@@ -123,7 +131,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	start := time.Now()
 	path := r.URL.Path
-	fields := h.accessLogger.getRequestFields(r)
+	fields := h.accessLogger.getRequestFields(r, h.logger)
 
 	defer func() {
 
@@ -183,23 +191,42 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info(path, append(fields, resFields...)...)
 }
 
-func (al *accessLogger) getRequestFields(r *http.Request) []zapcore.Field {
+func (al *accessLogger) getRequestFields(r *http.Request, logger *zap.Logger) []zapcore.Field {
 	if r == nil {
 		return al.baseFields
 	}
 
 	start := time.Now()
-	url := r.URL
-	path := url.Path
-	query := url.RawQuery
+	reqUrl := r.URL
+	path := reqUrl.Path
+	query := reqUrl.RawQuery
 	remoteAddr := r.RemoteAddr
 
 	if al.ipAnonymizationConfig != nil && al.ipAnonymizationConfig.Enabled {
-		if al.ipAnonymizationConfig.Method == Hash {
+		switch al.ipAnonymizationConfig.Method {
+		case Hash:
 			h := sha256.New()
-			remoteAddr = fmt.Sprintf("%x", h.Sum([]byte(r.RemoteAddr)))
-		} else if al.ipAnonymizationConfig.Method == Redact {
+			h.Write([]byte(r.RemoteAddr))
+			remoteAddr = hex.EncodeToString(h.Sum(nil))
+		case Redact:
 			remoteAddr = "[REDACTED]"
+		}
+	}
+
+	if query != "" && len(al.ignoreQueryParamsList) > 0 {
+		vals, err := url.ParseQuery(reqUrl.RawQuery)
+		if err != nil {
+			// We ignore logging the err since it could leak partial sensitive data
+			// such as %pa from "%password"
+			logger.Error("Failed to parse query parameters")
+			// Since we wanted to ignore some values but we cant parse it
+			// we default to a safer skip all
+			query = ""
+		} else {
+			for _, ignoreQueryParam := range al.ignoreQueryParamsList {
+				vals.Del(ignoreQueryParam)
+			}
+			query = vals.Encode()
 		}
 	}
 

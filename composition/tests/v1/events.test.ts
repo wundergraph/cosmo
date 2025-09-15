@@ -7,9 +7,6 @@ import {
   EDFS_NATS_PUBLISH,
   EDFS_NATS_REQUEST,
   EDFS_NATS_SUBSCRIBE,
-  federateSubgraphs,
-  FederationResultFailure,
-  FederationResultSuccess,
   FIRST_ORDINAL,
   invalidArgumentValueErrorMessage,
   invalidDirectiveError,
@@ -27,9 +24,7 @@ import {
   noBaseDefinitionForExtensionError,
   nonExternalKeyFieldNamesEventDrivenErrorMessage,
   nonKeyFieldNamesEventDrivenErrorMessage,
-  NormalizationResultFailure,
-  NormalizationResultSuccess,
-  normalizeSubgraph,
+  NormalizationSuccess,
   normalizeSubgraphFromString,
   OBJECT,
   parse,
@@ -51,6 +46,8 @@ import {
   versionOneSubscriptionEventDefinitions,
 } from './utils/utils';
 import {
+  federateSubgraphsFailure,
+  federateSubgraphsSuccess,
   normalizeString,
   normalizeSubgraphFailure,
   normalizeSubgraphSuccess,
@@ -188,7 +185,7 @@ describe('events Configuration tests', () => {
         subgraphStringB,
         true,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(result.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
@@ -228,7 +225,7 @@ describe('events Configuration tests', () => {
         subgraphStringC,
         true,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(result.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
@@ -807,7 +804,7 @@ describe('events Configuration tests', () => {
 
   describe('Federation tests', () => {
     test('that an error is returned if the subgraph includes fields that are not part of an entity key', () => {
-      const result = federateSubgraphs([subgraphC], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultFailure;
+      const result = federateSubgraphsFailure([subgraphC], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -820,7 +817,7 @@ describe('events Configuration tests', () => {
     });
 
     test('that an error is returned if the subgraph includes fields that are part of an entity key but not declared external', () => {
-      const result = federateSubgraphs([subgraphD], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultFailure;
+      const result = federateSubgraphsFailure([subgraphD], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -833,7 +830,7 @@ describe('events Configuration tests', () => {
     });
 
     test('that an error is returned if the subgraph contains root type fields that do not define their respective events directives', () => {
-      const result = federateSubgraphs([subgraphE], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultFailure;
+      const result = federateSubgraphsFailure([subgraphE], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -852,7 +849,7 @@ describe('events Configuration tests', () => {
     });
 
     test('that an error is returned if the subgraph contains root type fields that do not return valid types', () => {
-      const result = federateSubgraphs([subgraphF], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultFailure;
+      const result = federateSubgraphsFailure([subgraphF], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -867,7 +864,7 @@ describe('events Configuration tests', () => {
     });
 
     test('that an error is returned if the subgraph contains root type fields that return a nullable or list type', () => {
-      const result = federateSubgraphs([subgraphM], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultFailure;
+      const result = federateSubgraphsFailure([subgraphM], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -885,7 +882,7 @@ describe('events Configuration tests', () => {
     });
 
     test('that an error is returned if an entity key is defined without resolvable: false', () => {
-      const result = federateSubgraphs([subgraphG], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultFailure;
+      const result = federateSubgraphsFailure([subgraphG], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -898,7 +895,7 @@ describe('events Configuration tests', () => {
     });
 
     test('that an error is returned if the events graph contains a non-entity object extension', () => {
-      const result = federateSubgraphs([subgraphH], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultFailure;
+      const result = federateSubgraphsFailure([subgraphH], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(3);
       expect(result.errors[0]).toStrictEqual(
@@ -917,10 +914,7 @@ describe('events Configuration tests', () => {
     });
 
     test('that an interface implemented by an entity is a valid root type response named type', () => {
-      const result = federateSubgraphs(
-        [subgraphI, subgraphV],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphI, subgraphV], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -956,10 +950,7 @@ describe('events Configuration tests', () => {
     });
 
     test('that a union of which an entity is a member is a valid root type response named type', () => {
-      const result = federateSubgraphs(
-        [subgraphJ, subgraphV],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphJ, subgraphV], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
@@ -993,7 +984,7 @@ describe('events Configuration tests', () => {
     });
 
     test('that an error is returned if there are invalid eventsDirective definitions', () => {
-      const result = federateSubgraphs([subgraphK], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultFailure;
+      const result = federateSubgraphsFailure([subgraphK], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -1015,7 +1006,7 @@ describe('events Configuration tests', () => {
     });
 
     test('that an error is returned if a mutation type field does not return "edfs__PublishResult"', () => {
-      const result = federateSubgraphs([subgraphL], ROUTER_COMPATIBILITY_VERSION_ONE) as FederationResultFailure;
+      const result = federateSubgraphsFailure([subgraphL], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
