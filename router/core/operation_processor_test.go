@@ -29,6 +29,7 @@ func TestOperationProcessorPersistentOperations(t *testing.T) {
 		Name:    "test",
 		Version: "1.0.0",
 	}
+	const cacheHashNotStored = "0000000000000000000000000000000000000000000000000000000000000000"
 	testCases := []struct {
 		ExpectedType  string
 		ExpectedError error
@@ -39,7 +40,7 @@ func TestOperationProcessorPersistentOperations(t *testing.T) {
 		 * Test cases persist operation
 		 */
 		{
-			Input:         `{"operationName": "test", "variables": {"foo": "bar"}, "extensions": {"persistedQuery": {"version": 1, "sha256Hash": "does-not-exist"}}}`,
+			Input:         `{"operationName": "test", "variables": {"foo": "bar"}, "extensions": {"persistedQuery": {"version": 1, "sha256Hash": "` + cacheHashNotStored + `"}}}`,
 			Variables:     `{"foo": "bar"}`,
 			ExpectedError: errors.New("could not resolve persisted query, feature is not configured"),
 		},

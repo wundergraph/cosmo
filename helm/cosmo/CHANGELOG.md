@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.15.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.14.0...helm-cosmo@0.15.0) (2025-09-10)
+
+
+### Features
+
+* pod label configuration in cosmo router helm chart ([#2200](https://github.com/wundergraph/cosmo/issues/2200)) ([b5b13a1](https://github.com/wundergraph/cosmo/commit/b5b13a110c7c4d08cb612f065a38bb82e5da461d))
+
+## [0.14.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.13.2...helm-cosmo@0.14.0) (2025-09-09)
+
+
+### Features
+
+* update images in values for bitnami helm charts ([#2190](https://github.com/wundergraph/cosmo/issues/2190)) ([a52c215](https://github.com/wundergraph/cosmo/commit/a52c2153304610e116274752a8269e41be887359))
+
+## [0.13.2](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.13.1...helm-cosmo@0.13.2) (2025-08-15)
+
+
+### Bug Fixes
+
+* make the session cookie last as long as Keycloak's ([#2135](https://github.com/wundergraph/cosmo/issues/2135)) ([589bbc9](https://github.com/wundergraph/cosmo/commit/589bbc9c778c21879ddf088a38f419fb0b909219))
+
 ## [0.13.1](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.13.0...helm-cosmo@0.13.1) (2025-04-14)
 
 

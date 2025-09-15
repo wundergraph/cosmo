@@ -26,9 +26,9 @@ import {
   NatsEventType as CompositionEventType,
   PROVIDER_TYPE_KAFKA,
   PROVIDER_TYPE_NATS,
+  PROVIDER_TYPE_REDIS,
   RequiredFieldConfiguration,
   SubscriptionCondition,
-  PROVIDER_TYPE_REDIS,
 } from '@wundergraph/composition';
 
 export type DataSourceConfiguration = {
@@ -125,9 +125,12 @@ export function configurationDatasToDataSourceConfiguration(
   for (const data of dataByTypeName.values()) {
     const typeName = data.typeName;
     const fieldNames: string[] = [...data.fieldNames];
-    const typeField = new TypeField({ typeName, fieldNames });
+    const typeField = new TypeField({ fieldNames, typeName });
     if (data.externalFieldNames && data.externalFieldNames.size > 0) {
       typeField.externalFieldNames = [...data.externalFieldNames];
+    }
+    if (data.requireFetchReasonsFieldNames && data.requireFetchReasonsFieldNames.length > 0) {
+      typeField.requireFetchReasonsFieldNames = [...data.requireFetchReasonsFieldNames];
     }
     if (data.isRootNode) {
       output.rootNodes.push(typeField);

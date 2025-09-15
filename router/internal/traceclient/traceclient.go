@@ -2,11 +2,12 @@ package traceclient
 
 import (
 	"context"
-	rcontext "github.com/wundergraph/cosmo/router/internal/context"
-	"github.com/wundergraph/cosmo/router/internal/expr"
 	"net/http"
 	"net/http/httptrace"
 	"time"
+
+	rcontext "github.com/wundergraph/cosmo/router/internal/context"
+	"github.com/wundergraph/cosmo/router/internal/expr"
 
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
@@ -32,20 +33,20 @@ type ClientTrace struct {
 type ClientTraceContextKey struct{}
 
 type TraceInjectingRoundTripper struct {
-	base                  http.RoundTripper
-	connectionMetricStore metric.ConnectionMetricStore
-	getExprContext        func(req context.Context) *expr.Context
+	base                   http.RoundTripper
+	connectionMetricStore  metric.ConnectionMetricStore
+	reqContextValuesGetter func(ctx context.Context, req *http.Request) (*expr.Context, string)
 }
 
 func NewTraceInjectingRoundTripper(
 	base http.RoundTripper,
 	connectionMetricStore metric.ConnectionMetricStore,
-	exprContext func(req context.Context) *expr.Context,
+	reqContextValuesGetter func(ctx context.Context, req *http.Request) (*expr.Context, string),
 ) *TraceInjectingRoundTripper {
 	return &TraceInjectingRoundTripper{
-		base:                  base,
-		connectionMetricStore: connectionMetricStore,
-		getExprContext:        exprContext,
+		base:                   base,
+		connectionMetricStore:  connectionMetricStore,
+		reqContextValuesGetter: reqContextValuesGetter,
 	}
 }
 
@@ -73,7 +74,7 @@ func (t *TraceInjectingRoundTripper) RoundTrip(req *http.Request) (*http.Respons
 	req = req.WithContext(httptrace.WithClientTrace(ctx, trace))
 	trip, err := t.base.RoundTrip(req)
 
-	t.processConnectionMetrics(ctx)
+	t.processConnectionMetrics(ctx, req)
 
 	return trip, err
 }
@@ -100,7 +101,7 @@ func (t *TraceInjectingRoundTripper) getClientTrace(ctx context.Context) *httptr
 	return trace
 }
 
-func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Context) {
+func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Context, req *http.Request) {
 	trace := GetClientTraceFromContext(ctx)
 
 	var subgraph string
@@ -109,13 +110,16 @@ func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Contex
 		subgraph = subgraphCtxVal.(string)
 	}
 
-	exprContext := t.getExprContext(ctx)
+	// We have a fallback for active subgraph name in case engine loader hooks is not called
+	// TODO: Evaluate if we actually need a fallback and if we can use only one way to get the active subgraph name
+	exprContext, activeSubgraphName := t.reqContextValuesGetter(ctx, req)
+	if subgraph == "" {
+		subgraph = activeSubgraphName
+	}
 
 	if trace.ConnectionGet != nil && trace.ConnectionAcquired != nil {
 		duration := trace.ConnectionAcquired.Time.Sub(trace.ConnectionGet.Time)
-		connAcquireTime := float64(duration) / float64(time.Millisecond)
-
-		exprContext.Subgraph.Request.ClientTrace.ConnectionAcquireDuration = connAcquireTime
+		exprContext.Subgraph.Request.ClientTrace.ConnectionAcquireDuration = duration
 
 		serverAttributes := rotel.GetServerAttributes(trace.ConnectionGet.HostPort)
 		serverAttributes = append(
@@ -124,9 +128,9 @@ func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Contex
 			rotel.WgSubgraphName.String(subgraph),
 		)
 
+		connAcquireTime := float64(duration) / float64(time.Millisecond)
 		t.connectionMetricStore.MeasureConnectionAcquireDuration(ctx,
 			connAcquireTime,
 			serverAttributes...)
-
 	}
 }

@@ -2,7 +2,14 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { SQL, and, count, desc, eq, gt, lt, not } from 'drizzle-orm';
 import { FastifyBaseLogger } from 'fastify';
 import * as schema from '../../db/schema.js';
-import { graphCompositions, graphCompositionSubgraphs, schemaVersion, targets, users } from '../../db/schema.js';
+import {
+  graphCompositions,
+  graphCompositionSubgraphs,
+  schemaVersion,
+  subgraphs,
+  targets,
+  users,
+} from '../../db/schema.js';
 import { DateRange, GraphCompositionDTO } from '../../types/index.js';
 import { ComposedSubgraph } from '../composition/composer.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
@@ -46,7 +53,7 @@ export class GraphCompositionRepository {
         throw new Error(`Could not find actor ${composedById}`);
       }
 
-      const subgraphSchemaVersionIds = composedSubgraphs.map((subgraph) => subgraph.schemaVersionId!);
+      const subgraphSchemaVersionIds = composedSubgraphs.map((subgraph) => subgraph.schemaVersionId);
 
       const previousComposition = (
         await tx
@@ -140,7 +147,7 @@ export class GraphCompositionRepository {
           subgraphId: subgraph.id,
           subgraphTargetId: subgraph.targetId,
           subgraphName: subgraph.name,
-          schemaVersionId: subgraph.schemaVersionId!,
+          schemaVersionId: subgraph.schemaVersionId,
           isFeatureSubgraph: subgraph.isFeatureSubgraph,
           changeType: (() => {
             if (addedSubgraphs.some((s) => s.id === subgraph.id)) {
@@ -301,8 +308,10 @@ export class GraphCompositionRepository {
         targetId: graphCompositionSubgraphs.subgraphTargetId,
         isFeatureSubgraph: graphCompositionSubgraphs.isFeatureSubgraph,
         changeType: graphCompositionSubgraphs.changeType,
+        subgraphType: subgraphs.type,
       })
       .from(graphCompositionSubgraphs)
+      .innerJoin(subgraphs, eq(graphCompositionSubgraphs.subgraphId, subgraphs.id))
       .where(eq(graphCompositionSubgraphs.graphCompositionId, input.compositionId))
       .execute();
 

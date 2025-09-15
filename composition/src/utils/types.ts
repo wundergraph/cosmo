@@ -37,8 +37,9 @@ export type InvalidRequiredInputValueData = {
 };
 
 export type InvalidEntityInterface = {
+  definedConcreteTypeNames: Set<string>;
+  requiredConcreteTypeNames: Set<string>;
   subgraphName: string;
-  concreteTypeNames: Set<string>;
 };
 
 export type InputNodeKind = Kind.ENUM_TYPE_DEFINITION | Kind.INPUT_OBJECT_TYPE_DEFINITION | Kind.SCALAR_TYPE_DEFINITION;

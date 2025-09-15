@@ -8,7 +8,7 @@ The Router Plugin system allows you to extend the Cosmo router with custom gRPC 
 
 ## Getting Started
 
-Read the official [documentation](https://cosmo-docs.wundergraph.com/router/plugins) for the Cosmo router to understand how to set up your environment and build a plugin.
+Read the official [documentation](https://cosmo-docs.wundergraph.com/connect/plugins) for the Cosmo router to understand how to set up your environment and build a plugin.
 
 ## API Reference
 

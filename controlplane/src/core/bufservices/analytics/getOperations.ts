@@ -3,19 +3,19 @@ import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
+  AnalyticsFilter,
+  AnalyticsViewFilterOperator,
   GetOperationsRequest,
   GetOperationsResponse,
   GetOperationsResponse_Operation,
   GetOperationsResponse_OperationType,
-  AnalyticsViewFilterOperator,
-  AnalyticsFilter,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { deafultRangeInHoursForGetOperations } from '../../constants.js';
 import { MetricsRepository } from '../../repositories/analytics/MetricsRepository.js';
 import { CacheWarmerRepository } from '../../repositories/CacheWarmerRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
-import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
+import { enrichLogger, getLogger, handleError } from '../../util.js';
 
 export function getOperations(
   opts: RouterOptions,
@@ -39,7 +39,6 @@ export function getOperations(
     const metricsRepo = new MetricsRepository(opts.chClient);
     const cacheWarmerRepo = new CacheWarmerRepository(opts.chClient, opts.db);
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
-    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
 
     const graph = await fedGraphRepo.byName(req.federatedGraphName, req.namespace);
     if (!graph) {
@@ -52,27 +51,19 @@ export function getOperations(
       };
     }
 
-    const analyticsRetention = await orgRepo.getFeature({
-      organizationId: authContext.organizationId,
-      featureId: 'analytics-retention',
-    });
-
-    const limit = analyticsRetention?.limit ?? 7;
-
-    const { range } = validateDateRanges({
-      limit,
-      range: limit * 24,
-    });
-
-    if (!range) {
+    req.limit = req.limit ?? 100;
+    // Validate limit is within reasonable bounds
+    if (req.limit < 1 || req.limit > 1000) {
       return {
         response: {
           code: EnumStatusCode.ERR,
-          details: 'Invalid date range',
+          details: 'Limit must be between 1 and 1000',
         },
         operations: [],
       };
     }
+
+    const range = deafultRangeInHoursForGetOperations;
 
     const operations = await metricsRepo.getOperations({
       range,
@@ -87,6 +78,7 @@ export function getOperations(
             }),
           ]
         : [],
+      limit: req.limit,
     });
 
     if (operations.length === 0) {

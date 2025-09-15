@@ -84,6 +84,9 @@ access_logs:
       - key: 'request_information'
         value_from:
           expression: "request.error ?? 'success'"
+    ignore_query_params_list:
+      - variables
+      - anothervalue
   subgraphs:
     enabled: true
     fields:
@@ -427,6 +430,7 @@ security:
       enabled: true
       limit: 4
       ignore_persisted_operations: true
+  operation_name_length_limit: 2000
 persisted_operations:
   safelist:
     enabled: true

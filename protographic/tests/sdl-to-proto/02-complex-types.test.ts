@@ -38,9 +38,11 @@ describe('SDL to Proto - Complex Types', () => {
 
       // Wrapper message for a list of User.
       message ListOfUser {
-        repeated User items = 1;
+        message List {
+          repeated User items = 1;
+        }
+        List list = 1;
       }
-
       // Request message for usersByRole operation.
       message QueryUsersByRoleRequest {
         UserRole role = 1;
@@ -231,9 +233,11 @@ describe('SDL to Proto - Complex Types', () => {
 
       // Wrapper message for a list of TreeNode.
       message ListOfTreeNode {
-        repeated TreeNode items = 1;
+        message List {
+          repeated TreeNode items = 1;
+        }
+        List list = 1;
       }
-
       // Request message for rootNode operation.
       message QueryRootNodeRequest {
       }
@@ -305,14 +309,18 @@ describe('SDL to Proto - Complex Types', () => {
 
       // Wrapper message for a list of AddressInput.
       message ListOfAddressInput {
-        repeated AddressInput items = 1;
+        message List {
+          repeated AddressInput items = 1;
+        }
+        List list = 1;
       }
-
       // Wrapper message for a list of User.
       message ListOfUser {
-        repeated User items = 1;
+        message List {
+          repeated User items = 1;
+        }
+        List list = 1;
       }
-
       // Request message for users operation.
       message QueryUsersRequest {
         UserFilterInput filter = 1;

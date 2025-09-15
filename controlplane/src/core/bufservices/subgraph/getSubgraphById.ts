@@ -7,7 +7,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { convertToSubgraphType, enrichLogger, getLogger, handleError } from '../../util.js';
 import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
 import { SubgraphDTO } from '../../../types/index.js';
 import { UnauthorizedError } from '../../errors/errors.js';
@@ -68,6 +68,7 @@ export function getSubgraphById(
         isFeatureSubgraph: subgraph.isFeatureSubgraph,
         baseSubgraphId: baseSubgraph?.id,
         baseSubgraphName: baseSubgraph?.name,
+        type: convertToSubgraphType(subgraph.type),
       },
       members: await subgraphRepo.getSubgraphMembers(subgraph.id),
       response: {

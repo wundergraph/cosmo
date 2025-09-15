@@ -71,6 +71,7 @@ import {
 import { generateRequiresScopesDirective, generateSimpleDirective, getEntriesNotInHashSet } from '../utils/utils';
 import { InputNodeKind, InvalidRequiredInputValueData, OutputNodeKind } from '../utils/types';
 import { getDescriptionFromString } from '../v1/federation/utils';
+import { SubgraphName } from '../types/types';
 
 export function newPersistedDirectivesData(): PersistedDirectivesData {
   return {
@@ -257,8 +258,8 @@ export function isParentDataRootType(parentData: ParentDefinitionData): boolean 
   return parentData.isRootType;
 }
 
-export function isParentDataInterfaceType(parentData: ParentDefinitionData): boolean {
-  return parentData.kind === Kind.INTERFACE_TYPE_DEFINITION;
+export function isInterfaceDefinitionData(data: ParentDefinitionData): data is InterfaceDefinitionData {
+  return data.kind === Kind.INTERFACE_TYPE_DEFINITION;
 }
 
 export function setParentDataExtensionType(existingData: ParentDefinitionData, incomingData: ParentDefinitionData) {
@@ -572,7 +573,7 @@ export function newInvalidFieldNames() {
 export function validateExternalAndShareable(fieldData: FieldData, invalidFieldNames: InvalidFieldNames) {
   // fieldData.subgraphNames.size is not used due to overridden fields
   const instances = fieldData.isShareableBySubgraphName.size;
-  let externalFieldSubgraphNames: Array<string> = [];
+  let externalFieldSubgraphNames = new Array<SubgraphName>();
   let unshareableFields = 0;
   for (const [subgraphName, isShareable] of fieldData.isShareableBySubgraphName) {
     /*

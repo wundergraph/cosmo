@@ -1,0 +1,6 @@
+subscription CurrentTime {
+    currentTime {
+        __typename
+        timeStamp
+    }
+}

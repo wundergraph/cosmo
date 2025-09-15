@@ -366,19 +366,25 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
 
       // Wrapper message for a list of Comment.
       message ListOfComment {
-        repeated Comment items = 1;
+        message List {
+          repeated Comment items = 1;
+        }
+        List list = 1;
       }
-
       // Wrapper message for a list of Post.
       message ListOfPost {
-        repeated Post items = 1;
+        message List {
+          repeated Post items = 1;
+        }
+        List list = 1;
       }
-
       // Wrapper message for a list of String.
       message ListOfString {
-        repeated string items = 1;
+        message List {
+          repeated string items = 1;
+        }
+        List list = 1;
       }
-
       // Key message for User entity lookup
       message LookupUserByIdRequestKey {
         // Key field for User entity lookup.

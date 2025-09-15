@@ -19,6 +19,11 @@ var ServiceTasks = []*projects.Task{
 		ActualHours:    &wrapperspb.DoubleValue{Value: 45.0},
 		CreatedAt:      &wrapperspb.StringValue{Value: "2021-01-01T00:00:00Z"},
 		CompletedAt:    &wrapperspb.StringValue{Value: "2021-01-15T17:30:00Z"},
+		Labels:         &projects.ListOfString{List: &projects.ListOfString_List{Items: []string{"audit", "infrastructure", "high-priority"}}}, // nullable list of nullable labels
+		Subtasks:       &projects.ListOfTask{List: &projects.ListOfTask_List{Items: []*projects.Task{}}},                                       // nullable list of non-nullable subtasks
+		Dependencies:   []*projects.Task{},                                                                                                     // non-nullable list of nullable tasks
+		AttachmentUrls: []string{"https://docs.company.com/audit-report.pdf", "https://drive.company.com/infrastructure-map"},                  // non-nullable list of non-nullable URLs
+		ReviewerIds:    &projects.ListOfInt{List: &projects.ListOfInt_List{Items: []int32{2, 3}}},                                              // nullable list of nullable reviewer IDs
 	},
 	{
 		Id:             "2",
@@ -33,6 +38,11 @@ var ServiceTasks = []*projects.Task{
 		ActualHours:    &wrapperspb.DoubleValue{Value: 20.0},
 		CreatedAt:      &wrapperspb.StringValue{Value: "2021-01-16T00:00:00Z"},
 		CompletedAt:    &wrapperspb.StringValue{Value: "2021-02-28T16:00:00Z"},
+		Labels:         nil,                                                     // nullable list example
+		Subtasks:       &projects.ListOfTask{List: &projects.ListOfTask_List{}}, // null list example
+		Dependencies:   []*projects.Task{},                                      // depends on task 1 (will be populated by helper)
+		AttachmentUrls: []string{"https://docs.company.com/cloud-comparison.xlsx"},
+		ReviewerIds:    &projects.ListOfInt{List: &projects.ListOfInt_List{Items: []int32{1, 4}}},
 	},
 	{
 		Id:             "3",
@@ -47,6 +57,11 @@ var ServiceTasks = []*projects.Task{
 		ActualHours:    &wrapperspb.DoubleValue{Value: 25.0},
 		CreatedAt:      &wrapperspb.StringValue{Value: "2021-04-01T00:00:00Z"},
 		CompletedAt:    nil,
+		Labels:         &projects.ListOfString{List: &projects.ListOfString_List{Items: []string{"networking", "cloud", "security"}}},
+		Subtasks:       &projects.ListOfTask{List: &projects.ListOfTask_List{Items: []*projects.Task{}}},
+		Dependencies:   []*projects.Task{}, // depends on tasks 1 and 2
+		AttachmentUrls: []string{},
+		ReviewerIds:    &projects.ListOfInt{List: &projects.ListOfInt_List{Items: []int32{2}}},
 	},
 	{
 		Id:             "4",
@@ -202,12 +217,133 @@ var ServiceTasks = []*projects.Task{
 	},
 }
 
+// Helper function to get task dependencies
+func GetTaskDependencies(taskID string) []*projects.Task {
+	var dependencies []*projects.Task
+
+	// Simple dependency logic for testing
+	switch taskID {
+	case "2": // Cloud Provider Selection depends on Infrastructure Audit
+		dep := GetTaskByID("1")
+		if dep != nil {
+			dependencies = append(dependencies, dep)
+		}
+	case "3": // Network Setup depends on both previous tasks
+		dep1 := GetTaskByID("1")
+		dep2 := GetTaskByID("2")
+		if dep1 != nil {
+			dependencies = append(dependencies, dep1)
+		}
+		if dep2 != nil {
+			dependencies = append(dependencies, dep2)
+		}
+	case "5": // Container Platform depends on Network Setup
+		dep := GetTaskByID("3")
+		if dep != nil {
+			dependencies = append(dependencies, dep)
+		}
+	case "6": // Database Migration depends on Container Platform
+		dep := GetTaskByID("5")
+		if dep != nil {
+			dependencies = append(dependencies, dep)
+		}
+	}
+
+	// Add nil for testing nullable items in non-nullable list
+	if len(dependencies) > 0 {
+		dependencies = append(dependencies, nil)
+	}
+
+	return dependencies
+}
+
+// Helper function to get task subtasks
+func GetTaskSubtasks(taskID string) *projects.ListOfTask {
+	// Return nil for some tasks to test nullable lists
+	if taskID == "2" || taskID == "6" || taskID == "10" {
+		return nil
+	}
+
+	// For testing, create some mock subtasks for specific tasks
+	var subtasks []*projects.Task
+
+	switch taskID {
+	case "1": // Infrastructure Audit has subtasks
+		subtasks = append(subtasks, &projects.Task{
+			Id:          "1a",
+			ProjectId:   "1",
+			Name:        "Server Inventory",
+			Description: &wrapperspb.StringValue{Value: "Document all servers"},
+			Priority:    projects.TaskPriority_TASK_PRIORITY_MEDIUM,
+			Status:      projects.TaskStatus_TASK_STATUS_COMPLETED,
+		})
+		subtasks = append(subtasks, &projects.Task{
+			Id:          "1b",
+			ProjectId:   "1",
+			Name:        "Database Inventory",
+			Description: &wrapperspb.StringValue{Value: "Document all databases"},
+			Priority:    projects.TaskPriority_TASK_PRIORITY_MEDIUM,
+			Status:      projects.TaskStatus_TASK_STATUS_COMPLETED,
+		})
+	case "3": // Network Setup has subtasks
+		subtasks = append(subtasks, &projects.Task{
+			Id:          "3a",
+			ProjectId:   "1",
+			Name:        "VPC Configuration",
+			Description: &wrapperspb.StringValue{Value: "Set up Virtual Private Cloud"},
+			Priority:    projects.TaskPriority_TASK_PRIORITY_HIGH,
+			Status:      projects.TaskStatus_TASK_STATUS_IN_PROGRESS,
+		})
+		subtasks = append(subtasks, &projects.Task{
+			Id:          "3b",
+			ProjectId:   "1",
+			Name:        "Security Groups",
+			Description: &wrapperspb.StringValue{Value: "Configure security groups"},
+			Priority:    projects.TaskPriority_TASK_PRIORITY_HIGH,
+			Status:      projects.TaskStatus_TASK_STATUS_TODO,
+		})
+	}
+
+	// Add nil subtask for testing nullable items
+	if len(subtasks) > 0 {
+		subtasks = append(subtasks, nil)
+	}
+
+	return &projects.ListOfTask{List: &projects.ListOfTask_List{Items: subtasks}}
+}
+
 // Helper function to get task by ID
-func GetTaskById(id string) *projects.Task {
+func GetTaskByID(id string) *projects.Task {
 	for _, task := range ServiceTasks {
 		if task.Id == id {
 			return task
 		}
 	}
 	return nil
+}
+
+// Function to populate task with its relationships (call this dynamically, not during initialization)
+func PopulateTaskRelationships(task *projects.Task) *projects.Task {
+	populatedTask := &projects.Task{
+		Id:             task.Id,
+		ProjectId:      task.ProjectId,
+		MilestoneId:    task.MilestoneId,
+		AssigneeId:     task.AssigneeId,
+		Name:           task.Name,
+		Description:    task.Description,
+		Priority:       task.Priority,
+		Status:         task.Status,
+		EstimatedHours: task.EstimatedHours,
+		ActualHours:    task.ActualHours,
+		CreatedAt:      task.CreatedAt,
+		CompletedAt:    task.CompletedAt,
+		// Keep original fields
+		Labels:         task.Labels,
+		AttachmentUrls: task.AttachmentUrls,
+		ReviewerIds:    task.ReviewerIds,
+		// Populate relationship fields dynamically
+		Subtasks:     GetTaskSubtasks(task.Id),
+		Dependencies: GetTaskDependencies(task.Id),
+	}
+	return populatedTask
 }

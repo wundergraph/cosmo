@@ -1,15 +1,16 @@
-import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
+import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { parseGraphQLSubscriptionProtocol, parseGraphQLWebsocketSubprotocol } from '@wundergraph/cosmo-shared';
 import { Command, program } from 'commander';
 import ora from 'ora';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
-import { parseGraphQLSubscriptionProtocol, parseGraphQLWebsocketSubprotocol } from '@wundergraph/cosmo-shared';
-import { BaseCommandOptions } from '../../../core/types/types.js';
-import { getBaseHeaders } from '../../../core/config.js';
-import { validateSubscriptionProtocols } from '../../../utils.js';
 import { websocketSubprotocolDescription } from '../../../constants.js';
+import { BaseCommandOptions } from '../../../core/types/types.js';
 import { handleCompositionResult } from '../../../handle-composition-result.js';
+import { validateSubscriptionProtocols } from '../../../utils.js';
+import { getBaseHeaders } from '../../../core/config.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('publish');
@@ -113,6 +114,8 @@ export default (opts: BaseCommandOptions) => {
         websocketSubprotocol: options.websocketSubprotocol
           ? parseGraphQLWebsocketSubprotocol(options.websocketSubprotocol)
           : undefined,
+        // passing Standard type to the backend, because the users have to use the 'wgc router plugin publish' command to publish the plugin
+        type: SubgraphType.STANDARD,
       },
       {
         headers: getBaseHeaders(),

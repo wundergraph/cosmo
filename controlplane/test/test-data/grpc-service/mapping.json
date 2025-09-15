@@ -1,0 +1,184 @@
+{
+  "version": 1,
+  "service": "UserService",
+  "operationMappings": [
+    {
+      "type": "OPERATION_TYPE_QUERY",
+      "original": "users",
+      "mapped": "QueryUsers",
+      "request": "QueryUsersRequest",
+      "response": "QueryUsersResponse"
+    },
+    {
+      "type": "OPERATION_TYPE_QUERY",
+      "original": "user",
+      "mapped": "QueryUser",
+      "request": "QueryUserRequest",
+      "response": "QueryUserResponse"
+    },
+    {
+      "type": "OPERATION_TYPE_MUTATION",
+      "original": "createUser",
+      "mapped": "MutationCreateUser",
+      "request": "MutationCreateUserRequest",
+      "response": "MutationCreateUserResponse"
+    },
+    {
+      "type": "OPERATION_TYPE_MUTATION",
+      "original": "updateUser",
+      "mapped": "MutationUpdateUser",
+      "request": "MutationUpdateUserRequest",
+      "response": "MutationUpdateUserResponse"
+    }
+  ],
+  "entityMappings": [
+    {
+      "typeName": "User",
+      "kind": "entity",
+      "key": "id",
+      "rpc": "LookupUserById",
+      "request": "LookupUserByIdRequest",
+      "response": "LookupUserByIdResponse"
+    }
+  ],
+  "typeFieldMappings": [
+    {
+      "type": "Query",
+      "fieldMappings": [
+        {
+          "original": "users",
+          "mapped": "users",
+          "argumentMappings": []
+        },
+        {
+          "original": "user",
+          "mapped": "user",
+          "argumentMappings": [
+            {
+              "original": "id",
+              "mapped": "id"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Mutation",
+      "fieldMappings": [
+        {
+          "original": "createUser",
+          "mapped": "create_user",
+          "argumentMappings": [
+            {
+              "original": "user",
+              "mapped": "user"
+            }
+          ]
+        },
+        {
+          "original": "updateUser",
+          "mapped": "update_user",
+          "argumentMappings": [
+            {
+              "original": "id",
+              "mapped": "id"
+            },
+            {
+              "original": "user",
+              "mapped": "user"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "User",
+      "fieldMappings": [
+        {
+          "original": "id",
+          "mapped": "id",
+          "argumentMappings": []
+        },
+        {
+          "original": "name",
+          "mapped": "name",
+          "argumentMappings": []
+        },
+        {
+          "original": "email",
+          "mapped": "email",
+          "argumentMappings": []
+        },
+        {
+          "original": "phone",
+          "mapped": "phone",
+          "argumentMappings": []
+        },
+        {
+          "original": "status",
+          "mapped": "status",
+          "argumentMappings": []
+        },
+        {
+          "original": "bio",
+          "mapped": "bio",
+          "argumentMappings": []
+        },
+        {
+          "original": "tags",
+          "mapped": "tags",
+          "argumentMappings": []
+        }
+      ]
+    },
+    {
+      "type": "UserInput",
+      "fieldMappings": [
+        {
+          "original": "name",
+          "mapped": "name",
+          "argumentMappings": []
+        },
+        {
+          "original": "email",
+          "mapped": "email",
+          "argumentMappings": []
+        },
+        {
+          "original": "phone",
+          "mapped": "phone",
+          "argumentMappings": []
+        },
+        {
+          "original": "status",
+          "mapped": "status",
+          "argumentMappings": []
+        },
+        {
+          "original": "bio",
+          "mapped": "bio",
+          "argumentMappings": []
+        }
+      ]
+    }
+  ],
+  "enumMappings": [
+    {
+      "type": "UserStatus",
+      "values": [
+        {
+          "original": "ACTIVE",
+          "mapped": "USER_STATUS_ACTIVE"
+        },
+        {
+          "original": "INACTIVE",
+          "mapped": "USER_STATUS_INACTIVE"
+        },
+        {
+          "original": "SUSPENDED",
+          "mapped": "USER_STATUS_SUSPENDED"
+        }
+      ]
+    }
+  ]
+}

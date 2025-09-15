@@ -165,6 +165,9 @@ import { getNamespaceProposalConfig } from './proposal/getNamespaceProposalConfi
 import { configureNamespaceProposalConfig } from './proposal/configureNamespaceProposalConfig.js';
 import { getOperations } from './analytics/getOperations.js';
 import { getClientsFromAnalytics } from './federated-graph/getClientsFromAnalytics.js';
+import { validateAndFetchPluginData } from './plugin/validateAndFetchPluginData.js';
+import { linkSubgraph } from './subgraph/linkSubgraph.js';
+import { unlinkSubgraph } from './subgraph/unlinkSubgraph.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -833,6 +836,18 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     getClientsFromAnalytics: (req, ctx) => {
       return getClientsFromAnalytics(opts, req, ctx);
+    },
+
+    validateAndFetchPluginData: (req, ctx) => {
+      return validateAndFetchPluginData(opts, req, ctx);
+    },
+
+    linkSubgraph: (req, ctx) => {
+      return linkSubgraph(opts, req, ctx);
+    },
+
+    unlinkSubgraph: (req, ctx) => {
+      return unlinkSubgraph(opts, req, ctx);
     },
   };
 }
