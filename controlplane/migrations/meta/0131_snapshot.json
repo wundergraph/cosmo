@@ -1,6 +1,6 @@
 {
-  "id": "1bb12880-ed57-4cad-b9aa-dcd0a3d08f67",
-  "prevId": "e8d72d6a-3744-48e9-88a2-d8617e9a867c",
+  "id": "aa949867-16a4-42b3-abac-089abf6a6e4d",
+  "prevId": "d090b695-c13a-4b3d-ad8f-0516d5689336",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -2798,6 +2798,27 @@
         }
       },
       "indexes": {
+        "lsc_schema_check_id_linked_schema_check_id_unique": {
+          "name": "lsc_schema_check_id_linked_schema_check_id_unique",
+          "columns": [
+            {
+              "expression": "schema_check_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "linked_schema_check_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "lsc_schema_check_id_idx": {
           "name": "lsc_schema_check_id_idx",
           "columns": [
@@ -2858,15 +2879,7 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "linked_schema_checks_schema_check_id_unique": {
-          "name": "linked_schema_checks_schema_check_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "schema_check_id"
-          ]
-        }
-      },
+      "uniqueConstraints": {},
       "checkConstraints": {}
     },
     "public.linked_subgraphs": {
@@ -8425,6 +8438,7 @@
         "graph-viewer",
         "subgraph-admin",
         "subgraph-publisher",
+        "subgraph-checker",
         "subgraph-viewer"
       ]
     },
