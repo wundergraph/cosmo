@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.163.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.162.0...controlplane@0.163.0) (2025-09-15)
+
+### Features
+
+* introduce the `subgraph-checker` role ([#2198](https://github.com/wundergraph/cosmo/issues/2198)) ([726b814](https://github.com/wundergraph/cosmo/commit/726b814b4a460acbbf98aed37b802fe6bfda8c2c)) (@wilsonrivera)
+
 # [0.162.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.161.0...controlplane@0.162.0) (2025-09-12)
 
 ### Features
