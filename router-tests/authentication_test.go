@@ -828,6 +828,43 @@ func TestHttpJwksAuthorization(t *testing.T) {
 		})
 	})
 
+	t.Run("authentication should not block with an invalid token on multiple calls", func(t *testing.T) {
+		t.Parallel()
+
+		authenticators, authServer := ConfigureAuth(t)
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, true)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// This token has a static keyid
+			token, err := authServer.TokenForKID("wg_static_kid", nil, true)
+			maxDuration := 5 * time.Second
+
+			xEnv.WaitForTest(maxDuration, func() {
+				require.NoError(t, err)
+				for range 5 {
+					func() {
+						// Operations with an invalid token should fail
+						header := http.Header{
+							"Authorization": []string{"Bearer " + token},
+						}
+						res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+						require.NoError(t, err)
+						defer func() {
+							_ = res.Body.Close()
+						}()
+						require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+						require.Equal(t, "", res.Header.Get(xAuthenticatedByHeader))
+						data, err := io.ReadAll(res.Body)
+						require.NoError(t, err)
+						require.JSONEq(t, unauthorizedExpectedData, string(data))
+					}()
+				}
+			})
+		})
+	})
+
 }
 
 func TestNonHttpAuthorization(t *testing.T) {
@@ -1182,7 +1219,7 @@ func TestAlgorithmMismatch(t *testing.T) {
 
 		authenticators := []authentication.Authenticator{authenticator}
 
-		token, err := authServer.TokenForKID(crypto.KID(), nil)
+		token, err := authServer.TokenForKID(crypto.KID(), nil, false)
 		require.NoError(t, err)
 
 		return token, authenticators
@@ -1307,7 +1344,7 @@ func TestOidcDiscovery(t *testing.T) {
 		tokens := make(map[string]string)
 
 		for _, c := range crypto {
-			token, err := authServer.TokenForKID(c.KID(), nil)
+			token, err := authServer.TokenForKID(c.KID(), nil, false)
 			require.NoError(t, err)
 
 			tokens[c.KID()] = token
@@ -1421,7 +1458,7 @@ func TestMultipleKeys(t *testing.T) {
 		tokens := make(map[string]string)
 
 		for _, c := range crypto {
-			token, err := authServer.TokenForKID(c.KID(), nil)
+			token, err := authServer.TokenForKID(c.KID(), nil, false)
 			require.NoError(t, err)
 
 			tokens[c.KID()] = token
@@ -1604,7 +1641,7 @@ func TestSupportedAlgorithms(t *testing.T) {
 
 		authenticators := []authentication.Authenticator{authenticator}
 
-		token, err := authServer.TokenForKID(crypto.KID(), nil)
+		token, err := authServer.TokenForKID(crypto.KID(), nil, false)
 		require.NoError(t, err)
 
 		return token, authenticators

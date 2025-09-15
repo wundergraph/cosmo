@@ -50,11 +50,19 @@ func (s *Server) Token(claims map[string]any) (string, error) {
 	return "", jwt.ErrInvalidKey
 }
 
-func (s *Server) TokenForKID(kid string, claims map[string]any) (string, error) {
+func (s *Server) TokenForKID(kid string, claims map[string]any, useInvalidKid bool) (string, error) {
 	provider, ok := s.providers[kid]
-	if !ok {
+	if !useInvalidKid && !ok {
 		return "", jwt.ErrInvalidKey
+	} else if useInvalidKid {
+		// If we don't care about the kid we don't care about the provider
+		// we just get the first random provider provided
+		for _, pr := range s.providers {
+			provider = pr
+			break
+		}
 	}
+
 	token := jwt.NewWithClaims(provider.SigningMethod(), jwt.MapClaims(claims))
 	token.Header[jwkset.HeaderKID] = kid
 	return token.SignedString(provider.PrivateKey())

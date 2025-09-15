@@ -2532,6 +2532,27 @@ func (e *Environment) WaitForConnectionCount(desiredCount uint64, timeout time.D
 	}
 }
 
+func (e *Environment) WaitForTest(timeout time.Duration, testFunction func()) {
+	e.t.Helper()
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		testFunction()
+	}()
+
+	select {
+	case <-done:
+		return
+	case <-ctx.Done():
+		e.t.Fatalf("test timed out, want %d", timeout)
+		return
+	}
+}
+
 type EngineStatisticAssertion struct {
 	Subscriptions int64
 	Connections   int64
