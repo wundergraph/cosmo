@@ -15,7 +15,7 @@
     "url": "https://github.com/wundergraph/cosmo"
   },
   "scripts": {
-    "build": "del dist && tsc",
+    "build": "rm -rf dist && tsc",
     "test": "pnpm lint && vitest run",
     "test:update": "vitest run -u",
     "lint": "eslint --cache --ext .ts,.mjs,.cjs . && prettier -c src",
