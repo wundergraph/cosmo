@@ -23,7 +23,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// TRIGGER WORKFLOW, REMOVE ME LATER! #3
+// TRIGGER WORKFLOW, REMOVE ME LATER! #4
 
 var (
 	overrideEnvFlag = flag.String("override-env", os.Getenv("OVERRIDE_ENV"), "Path to .env file to override environment variables")
