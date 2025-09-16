@@ -78,7 +78,7 @@ export class OperationToProtoVisitor {
             const operationName = operation.name?.value || name;
 
             // Use the operation name directly for persisted operations
-            const methodName = upperFirst(camelCase(operationName));
+            const methodName = operationName;
             const requestType = createRequestMessageName(methodName);
             const responseType = createResponseMessageName(methodName);
 
@@ -110,7 +110,7 @@ export class OperationToProtoVisitor {
     }
 
     private generateRequestMessage(operationName: string, variables: readonly VariableDefinitionNode[]): string {
-        const methodName = upperFirst(camelCase(operationName));
+        const methodName = operationName;
         const messageName = createRequestMessageName(methodName);
         const fields: string[] = [];
 
@@ -150,7 +150,7 @@ export class OperationToProtoVisitor {
     }
 
     private generateResponseMessage(operationName: string, selectionSet: SelectionSetNode): string {
-        const methodName = upperFirst(camelCase(operationName));
+        const methodName = operationName;
         const messageName = createResponseMessageName(methodName);
         const fields: string[] = [];
         let fieldIndex = 1;
@@ -229,7 +229,7 @@ export class OperationToProtoVisitor {
 
     private createNestedMessageName(operationName: string, fieldPath: string): string {
         // Convert GetEmployeeByID + Employee -> GetEmployeeByIDEmployee
-        const pascalCaseOperation = upperFirst(camelCase(operationName));
+        const pascalCaseOperation = operationName;
         const pascalCasePath = fieldPath.split('.').map(part =>
             upperFirst(camelCase(part))
         ).join('');
