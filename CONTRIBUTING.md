@@ -9,8 +9,8 @@ The following sections provide a guide on how to contribute to the WunderGraph C
 
 This guide assumes you have already installed the following software:
 
-- make (should be installed on all linux / IOS systems)
-- [golang](https://go.dev/dl/) `>= 1.18`
+- make (should be installed on all Linux / MacOS systems)
+- [golang](https://go.dev/dl/) `>= 1.25`
 - [pnpm](https://pnpm.io/installation) >= 9
 - Node.js [LTS](https://nodejs.org/en/about/releases/). You can also pnpm to [install](https://pnpm.io/cli/env) Node.js.
 - [docker desktop](https://docs.docker.com/desktop/) (includes: engine, buildkit & compose) **or**:
@@ -44,7 +44,7 @@ According to best practices, we don't commit the `go.work` or `go.work.sum` file
 ### Example
 
 ```
-go 1.23
+go 1.25
 
 use (
 	./demo
@@ -86,8 +86,8 @@ We merge all pull requests in `squash merge` mode. You're not enforced to use [c
 - [Docker](https://docs.docker.com/get-docker/)
 - [Docker Compose V2](https://docs.docker.com/compose/install/)
 - [NodeJS LTS](https://nodejs.org/en/download/)
-- [PNPM 8+](https://pnpm.io/installation)
-- [Go 1.23+](https://golang.org/doc/install)
+- [PNPM 9+](https://pnpm.io/installation)
+- [Go 1.25+](https://golang.org/doc/install)
 - [wgc](https://www.npmjs.com/package/wgc)
 - .env/.env.local (see below)
 

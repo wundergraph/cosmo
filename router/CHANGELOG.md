@@ -4,6 +4,43 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.252.1](https://github.com/wundergraph/cosmo/compare/router@0.252.0...router@0.252.1) (2025-09-12)
+
+### Bug Fixes
+
+* fix detecting requires on interface members for abstract selection rewriter ([#2209](https://github.com/wundergraph/cosmo/issues/2209)) ([aeb0cd3](https://github.com/wundergraph/cosmo/commit/aeb0cd3202266d31c721988944b4e71f3807dbf2)) (@devsergiy)
+
+# [0.252.0](https://github.com/wundergraph/cosmo/compare/router@0.251.1...router@0.252.0) (2025-09-12)
+
+### Features
+
+* send to subgraphs the "fetch_reasons" extension ([#2160](https://github.com/wundergraph/cosmo/issues/2160)) ([cd6f827](https://github.com/wundergraph/cosmo/commit/cd6f82738e6950969b0912374d0360b935345800)) (@ysmolski)
+
+## [0.251.1](https://github.com/wundergraph/cosmo/compare/router@0.251.0...router@0.251.1) (2025-09-10)
+
+### Bug Fixes
+
+* connection stats being enabled break subscriptions ([#2203](https://github.com/wundergraph/cosmo/issues/2203)) ([64f87e6](https://github.com/wundergraph/cosmo/commit/64f87e665a0b36af8af392fcc41eef36f89635af)) (@SkArchon)
+
+# [0.251.0](https://github.com/wundergraph/cosmo/compare/router@0.250.0...router@0.251.0) (2025-09-10)
+
+### Features
+
+* implement openfed__requireFetchReasons ([#2170](https://github.com/wundergraph/cosmo/issues/2170)) ([cfb097f](https://github.com/wundergraph/cosmo/commit/cfb097fb6ccc29a81cfca55fec6b71fdf6e1b61c)) (@Aenimus)
+
+# [0.250.0](https://github.com/wundergraph/cosmo/compare/router@0.249.0...router@0.250.0) (2025-09-06)
+
+### Features
+
+* demo_mode should work also when no graph api token is set ([#2185](https://github.com/wundergraph/cosmo/issues/2185)) ([cad81fc](https://github.com/wundergraph/cosmo/commit/cad81fcb14087fdf25100d0bc585f57d7115cabf)) (@alepane21)
+* upgrade all components to go 1.25 ([#2187](https://github.com/wundergraph/cosmo/issues/2187)) ([49c35ed](https://github.com/wundergraph/cosmo/commit/49c35ede5ab5873ee163815a047797429a63e3d1)) (@miklosbarabas)
+
+# [0.249.0](https://github.com/wundergraph/cosmo/compare/router@0.248.0...router@0.249.0) (2025-09-03)
+
+### Features
+
+* **router:** block/disable persisted operations ([#2181](https://github.com/wundergraph/cosmo/issues/2181)) ([24fafa7](https://github.com/wundergraph/cosmo/commit/24fafa7e3b5f6975725963ba48c9e1dce359544f)) (@endigma)
+
 # [0.248.0](https://github.com/wundergraph/cosmo/compare/router@0.247.0...router@0.248.0) (2025-09-03)
 
 ### Bug Fixes

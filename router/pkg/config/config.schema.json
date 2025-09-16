@@ -145,7 +145,7 @@
       "properties": {
         "disabled": {
           "type": "boolean",
-          "description": "Disables persisted operations. If disabled, all operations sent with a persisted operation in the body are blocked.",
+          "description": "Disable persisted operations.",
           "default": false
         },
         "safelist": {
@@ -2383,11 +2383,26 @@
           "properties": {
             "enabled": {
               "type": "boolean",
-              "description": "Block non-persisted operations (sent with operation ID). If the value is true, all Operations are blocked. You can also specify a condition that is evaluated to determine if the non-persisted operation should be blocked."
+              "description": "Block non-persisted operations (sent without operation hash). You can also specify a condition that is evaluated to determine if the non-persisted operation should be blocked."
             },
             "condition": {
               "type": "string",
               "description": "The expression to evaluate if the non-persisted operation should be blocked. The expression is specified as a string and needs to evaluate to a boolean. Please see https://expr-lang.org/ for more information."
+            }
+          }
+        },
+        "block_persisted_operations": {
+          "type": "object",
+          "description": "The configuration for blocking persisted operations.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Block persisted operations (sent with operation hash). You can also specify a condition that is evaluated to determine if the persisted operation should be blocked."
+            },
+            "condition": {
+              "type": "string",
+              "description": "The expression to evaluate if the persisted operation should be blocked. The expression is specified as a string and needs to evaluate to a boolean. Please see https://expr-lang.org/ for more information."
             }
           }
         },
@@ -2779,6 +2794,11 @@
           "type": "boolean",
           "default": false,
           "description": "Disables variables renaming during normalization. This option could have a negative impact on planner cache hits."
+        },
+        "enable_require_fetch_reasons": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enables sending the \"fetch_reasons\" extension to upstream subgraphs (only) that explains why each field (marked with @openfed__requireFetchReasons) was requested. This flag does not expose the data to clients."
         },
         "subscription_fetch_timeout": {
           "type": "string",

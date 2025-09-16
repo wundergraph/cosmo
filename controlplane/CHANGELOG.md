@@ -4,6 +4,34 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.163.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.162.0...controlplane@0.163.0) (2025-09-15)
+
+### Features
+
+* introduce the `subgraph-checker` role ([#2198](https://github.com/wundergraph/cosmo/issues/2198)) ([726b814](https://github.com/wundergraph/cosmo/commit/726b814b4a460acbbf98aed37b802fe6bfda8c2c)) (@wilsonrivera)
+
+# [0.162.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.161.0...controlplane@0.162.0) (2025-09-12)
+
+### Features
+
+* setup sentry for the controlplane ([#2199](https://github.com/wundergraph/cosmo/issues/2199)) ([aed082e](https://github.com/wundergraph/cosmo/commit/aed082ea3ec20d00ae7349509f153cf64fb54ce5)) (@miklosbarabas)
+
+# [0.161.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.160.0...controlplane@0.161.0) (2025-09-12)
+
+### Features
+
+* add cli commands to create,publish and delete grpc subgraphs ([#2179](https://github.com/wundergraph/cosmo/issues/2179)) ([2254925](https://github.com/wundergraph/cosmo/commit/2254925681aa644119e11b8958911bf490a2e885)) (@JivusAyrus)
+
+# [0.160.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.159.2...controlplane@0.160.0) (2025-09-10)
+
+### Features
+
+* add a feature to link subgraphs across namespaces ([#2156](https://github.com/wundergraph/cosmo/issues/2156)) ([e1abdea](https://github.com/wundergraph/cosmo/commit/e1abdeab80ee2fe8ccdff1ce963787280a86dee9)) (@JivusAyrus)
+
+## [0.159.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.159.1...controlplane@0.159.2) (2025-09-10)
+
+**Note:** Version bump only for package controlplane
+
 ## [0.159.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.159.0...controlplane@0.159.1) (2025-09-03)
 
 ### Bug Fixes

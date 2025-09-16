@@ -1,6 +1,6 @@
 module github.com/wundergraph/cosmo/router
 
-go 1.23.0
+go 1.25
 
 require (
 	connectrpc.com/connect v1.16.2
@@ -31,7 +31,7 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/sjson v1.2.5
 	github.com/twmb/franz-go v1.16.1
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.224
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.226
 	// Do not upgrade, it renames attributes we rely on
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.58.0
 	go.opentelemetry.io/contrib/propagators/b3 v1.23.0

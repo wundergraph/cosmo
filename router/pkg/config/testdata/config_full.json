@@ -655,6 +655,10 @@
       "Enabled": false,
       "Condition": ""
     },
+    "BlockPersistedOperations": {
+      "Enabled": false,
+      "Condition": ""
+    },
     "ComplexityCalculationCache": {
       "Enabled": true,
       "CacheSize": 1024
@@ -732,6 +736,7 @@
     "ResolverMaxRecyclableParserSize": 4096,
     "EnableSubgraphFetchOperationName": true,
     "DisableVariablesRemapping": false,
+    "EnableRequireFetchReasons": false,
     "SubscriptionFetchTimeout": 30000000000
   },
   "WebSocket": {

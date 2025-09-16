@@ -4,6 +4,24 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.129.0](https://github.com/wundergraph/cosmo/compare/studio@0.128.0...studio@0.129.0) (2025-09-15)
+
+### Features
+
+* introduce the `subgraph-checker` role ([#2198](https://github.com/wundergraph/cosmo/issues/2198)) ([726b814](https://github.com/wundergraph/cosmo/commit/726b814b4a460acbbf98aed37b802fe6bfda8c2c)) (@wilsonrivera)
+
+# [0.128.0](https://github.com/wundergraph/cosmo/compare/studio@0.127.1...studio@0.128.0) (2025-09-10)
+
+### Features
+
+* add a feature to link subgraphs across namespaces ([#2156](https://github.com/wundergraph/cosmo/issues/2156)) ([e1abdea](https://github.com/wundergraph/cosmo/commit/e1abdeab80ee2fe8ccdff1ce963787280a86dee9)) (@JivusAyrus)
+
+## [0.127.1](https://github.com/wundergraph/cosmo/compare/studio@0.127.0...studio@0.127.1) (2025-09-10)
+
+### Bug Fixes
+
+* features popup for light theme ([#2196](https://github.com/wundergraph/cosmo/issues/2196)) ([5ca12dd](https://github.com/wundergraph/cosmo/commit/5ca12dde6c8f96b5da6e8949aa8eb2515b230812)) (@JivusAyrus)
+
 # [0.127.0](https://github.com/wundergraph/cosmo/compare/studio@0.126.0...studio@0.127.0) (2025-09-03)
 
 ### Features
