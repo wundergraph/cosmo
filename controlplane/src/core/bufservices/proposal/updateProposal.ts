@@ -151,14 +151,8 @@ export function updateProposal(
       };
     }
 
-    let expectedOrigin: ProposalOrigin;
-    const userAgent = ctx.requestHeader.get('user-agent');
-    if (userAgent && userAgent.toLowerCase() === 'cosmo-hub') {
-      expectedOrigin = 'HUB';
-    } else {
-      expectedOrigin = 'COSMO';
-    }
-
+    const clientHdr = ctx.requestHeader.get('user-agent')?.toLowerCase() ?? '';
+    const expectedOrigin: ProposalOrigin = clientHdr.includes('cosmo-hub') ? 'HUB' : 'COSMO';
     if (proposal.proposal.origin !== expectedOrigin) {
       return {
         response: {

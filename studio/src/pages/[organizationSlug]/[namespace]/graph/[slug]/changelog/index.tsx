@@ -32,6 +32,7 @@ import { FederatedGraphChangelogOutput } from "@wundergraph/cosmo-connect/dist/p
 import { endOfDay, formatISO, startOfDay } from "date-fns";
 import { useRouter } from "next/router";
 import { useContext, useEffect, useRef, useState } from "react";
+import { useWorkspace } from "@/hooks/use-workspace";
 
 const ChangelogToolbar = () => {
   const applyParams = useApplyParams();
@@ -80,6 +81,7 @@ const ChangelogPage: NextPageWithLayout = () => {
   const [items, setItems] = useState<FederatedGraphChangelogOutput[]>([]);
   const [offset, setOffset] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { namespace: { name: namespace } } = useWorkspace();
 
   const graphData = useContext(GraphContext);
 
@@ -98,7 +100,7 @@ const ChangelogPage: NextPageWithLayout = () => {
     getFederatedGraphChangelog,
     {
       name: router.query.slug as string,
-      namespace: router.query.namespace as string,
+      namespace,
       pagination: {
         limit,
         offset,
@@ -198,8 +200,8 @@ const ChangelogPage: NextPageWithLayout = () => {
             <CLI
               command={
                 !graphData?.graph?.supportsFederation
-                  ? `npx wgc monograph publish ${graphData?.graph?.name} --namespace ${router.query.namespace} --schema <path-to-schema>`
-                  : `npx wgc subgraph publish <subgraph-name> --namespace ${router.query.namespace} --schema <path-to-schema>`
+                  ? `npx wgc monograph publish ${graphData?.graph?.name} --namespace ${namespace} --schema <path-to-schema>`
+                  : `npx wgc subgraph publish <subgraph-name> --namespace ${namespace} --schema <path-to-schema>`
               }
             />
           }
