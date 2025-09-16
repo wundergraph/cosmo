@@ -151,27 +151,6 @@ export function updateProposal(
       };
     }
 
-    if (proposal.proposal.origin !== 'COSMO') {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_NOT_FOUND,
-          details: `The proposal ${req.proposalName} cannot be be updated directly.`,
-        },
-        breakingChanges: [],
-        nonBreakingChanges: [],
-        compositionErrors: [],
-        checkId: '',
-        lintWarnings: [],
-        lintErrors: [],
-        graphPruneWarnings: [],
-        graphPruneErrors: [],
-        compositionWarnings: [],
-        lintingSkipped: false,
-        graphPruningSkipped: false,
-        checkUrl: '',
-      };
-    }
-
     if (req.updateAction.case === 'state') {
       const stateValue = req.updateAction.value as ProposalState;
       await proposalRepo.updateProposal({

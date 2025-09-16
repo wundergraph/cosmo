@@ -1,7 +1,7 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
-import { ProposalNamingConvention } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { ProposalNamingConvention, ProposalOrigin } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import {
   afterAllSetup,
   beforeAllSetup,
@@ -49,14 +49,16 @@ async function createTestProposal(
     subgraphName: string;
     subgraphSchemaSDL: string;
     updatedSubgraphSDL: string;
+    origin?: ProposalOrigin,
   },
 ) {
-  const { federatedGraphName, proposalName, subgraphName, subgraphSchemaSDL, updatedSubgraphSDL } = options;
+  const { federatedGraphName, proposalName, subgraphName, subgraphSchemaSDL, updatedSubgraphSDL, origin } = options;
 
   const createProposalResponse = await client.createProposal({
     federatedGraphName,
     namespace: DEFAULT_NAMESPACE,
     name: proposalName,
+    origin: origin ?? ProposalOrigin.COSMO,
     subgraphs: [
       {
         name: subgraphName,
@@ -512,6 +514,7 @@ describe('Update proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      origin: ProposalOrigin.COSMO,
       subgraphs: [
         {
           name: subgraph1Name,
@@ -679,6 +682,7 @@ describe('Update proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      origin: ProposalOrigin.COSMO,
       subgraphs: [
         {
           name: subgraph1Name,
@@ -1502,6 +1506,7 @@ describe('Update proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      origin: ProposalOrigin.COSMO,
       subgraphs: [
         {
           name: subgraph1Name,
@@ -1649,6 +1654,7 @@ describe('Update proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      origin: ProposalOrigin.COSMO,
       subgraphs: [
         {
           name: subgraph1Name,
@@ -1776,6 +1782,7 @@ describe('Update proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      origin: ProposalOrigin.COSMO,
       subgraphs: [
         {
           name: newSubgraphName,
