@@ -2145,4 +2145,100 @@ describe('Update proposal tests', () => {
 
     await server.close();
   });
+
+  test('should fail to update a proposal created from hub', async () => {
+    const { client, server } = await SetupTest({
+      dbname,
+      chClient,
+      setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
+    });
+
+    // Setup a federated graph with a single subgraph
+    const existingSubgraphName = genID('existing-subgraph');
+    const fedGraphName = genID('fedGraph');
+    const label = genUniqueLabel('label');
+    const proposalName = genID('proposal');
+    const newSubgraphName = genID('new-subgraph');
+
+    const subgraphSchemaSDL = `
+      type Query {
+        hello: String!
+      }
+    `;
+
+    await createThenPublishSubgraph(
+      client,
+      existingSubgraphName,
+      DEFAULT_NAMESPACE,
+      subgraphSchemaSDL,
+      [label],
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
+
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], DEFAULT_ROUTER_URL);
+
+    // Enable proposals for the namespace
+    const enableResponse = await enableProposalsForNamespace(client);
+    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Create initial proposal with just an update to the existing subgraph
+    const updatedSubgraphSDL = `
+      type Query {
+        hello: String!
+        newField: Int!
+      }
+    `;
+
+    const createProposalResponse = await createTestProposal(client, {
+      federatedGraphName: fedGraphName,
+      proposalName,
+      subgraphName: existingSubgraphName,
+      subgraphSchemaSDL,
+      updatedSubgraphSDL,
+      origin: ProposalOrigin.HUB,
+    });
+
+    expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Define a schema for a new subgraph
+    const newSubgraphSchemaSDL = `
+      type Query {
+        products: [Product!]!
+      }
+      
+      type Product {
+        id: ID!
+        name: String!
+        price: Float!
+      }
+    `;
+
+    // Try to update the proposal with conflicting operations on the same subgraph
+    const updateProposalResponse = await client.updateProposal({
+      proposalName: createProposalResponse.proposalName,
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      updateAction: {
+        case: 'updatedSubgraphs',
+        value: {
+          subgraphs: [
+            {
+              name: newSubgraphName,
+              schemaSDL: newSubgraphSchemaSDL,
+              isDeleted: false,
+              isNew: true,
+              labels: [label],
+            },
+          ],
+        },
+      },
+    });
+
+    // Expect an error response
+    expect(updateProposalResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
+    expect(updateProposalResponse.response?.details).toContain(`Proposal p-1/${proposalName} not found`);
+
+    await server.close();
+  });
 });
