@@ -295,7 +295,7 @@ func TestPublishHook(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			events.KafkaEnsureTopicExists(t, xEnv, time.Second, "employeeUpdated")
 			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `mutation UpdateEmployeeKafka($employeeID: Int!) { updateEmployeeMyKafka(employeeID: $employeeID, update: {name: "name test"}) { success } }`,
+				Query:     `mutation UpdateEmployeeKafka($employeeID: Int!) { updateEmployeeMyKafka(employeeID: $employeeID, update: {name: "name test"}) { success } }`,
 				Variables: json.RawMessage(`{"employeeID": 3}`),
 			})
 			require.JSONEq(t, `{"data": {"updateEmployeeMyKafka": {"success": true}}}`, resOne.Body)
