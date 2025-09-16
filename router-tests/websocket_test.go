@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/buger/jsonparser"
 	"github.com/gorilla/websocket"
@@ -2067,6 +2068,106 @@ func TestWebSockets(t *testing.T) {
 
 			require.NoError(t, conn.Close())
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+		})
+	})
+
+	t.Run("subscription with unknown hash when safelist is enabled", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
+					Safelist: config.SafelistConfiguration{Enabled: true},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, []byte(`{"graphql-client-name": "my-client"}`))
+			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { employeeUpdated(employeeID: 1) { id } }"}`),
+			})
+			require.NoError(t, err)
+			var res testenv.WebSocketMessage
+			err = testenv.WSReadJSON(t, conn, &res)
+			require.NoError(t, err)
+			require.Equal(t, "error", res.Type)
+			require.Equal(t, "1", res.ID)
+			require.JSONEq(t, `[{"message":"operation '9a41d21da2823195ad42c11d51e9ad3345824abdabf567b3615a235843a1fcc7' for client 'my-client' not found"}]`,
+				string(res.Payload))
+
+			require.NoError(t, conn.Close())
+		})
+	})
+
+	t.Run("subscription with known hash when safelist is enabled", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
+					Safelist: config.SafelistConfiguration{Enabled: true},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, []byte(`{"graphql-client-name": "my-client"}`))
+			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"extensions":{"persistedQuery":{"version":1,"sha256Hash":"8ad544bda5b2ad7a59481e31fb6fa62705fd072b20fdaadba4f3908d01f2c132"}}}`),
+			})
+			require.NoError(t, err)
+			var res testenv.WebSocketMessage
+			err = testenv.WSReadJSON(t, conn, &res)
+			require.NoError(t, err)
+			require.Equal(t, "next", res.Type)
+			require.Equal(t, "1", res.ID)
+			require.Contains(t, string(res.Payload), `"data"`)
+			require.Contains(t, string(res.Payload), `"currentTime"`)
+
+			require.NoError(t, conn.Close())
+		})
+	})
+
+	t.Run("subscription with unknown hash when log_unknown is enabled", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
+					LogUnknown: true,
+					Safelist:   config.SafelistConfiguration{Enabled: false},
+				}),
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, []byte(`{"graphql-client-name": "my-client"}`))
+			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { currentTime { unixTime } }"}`),
+			})
+			require.NoError(t, err)
+
+			// The operation should succeed (not be blocked)
+			var res testenv.WebSocketMessage
+			err = testenv.WSReadJSON(t, conn, &res)
+			require.NoError(t, err)
+			require.Equal(t, "next", res.Type)
+			require.Equal(t, "1", res.ID)
+			require.Contains(t, string(res.Payload), `"data"`)
+
+			// Verify the warning was logged
+			logEntries := xEnv.Observer().FilterMessageSnippet("Unknown persisted operation found").All()
+			require.Len(t, logEntries, 1)
+			requestContext := logEntries[0].ContextMap()
+			require.Contains(t, requestContext["query"], "subscription { currentTime { unixTime } }")
+			require.Equal(t, "6e94d99132b544a0d7522696a7d35643d56a26c7b8c2e0df29e2b9935636628c", requestContext["sha256Hash"])
+
+			require.NoError(t, conn.Close())
 		})
 	})
 }
