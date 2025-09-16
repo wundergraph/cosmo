@@ -103,7 +103,12 @@ export const eventDirectiveDefinitions = `
   directive @edfs__natsSubscribe(providerId: String! = "default", streamConfiguration: edfs__NatsStreamConfiguration, subjects: [String!]!) on FIELD_DEFINITION
 `;
 
+export const semanticNonNullDefinition = `directive @semanticNonNull(levels: [Int!]! = [0]) on FIELD_DEFINITION`;
+
 export const versionOneRouterDefinitions = schemaQueryDefinition + versionOnePersistedDirectiveDefinitions;
+
+export const versionOneRouterDefinitionsWithSemanticNonNull =
+  schemaQueryDefinition + semanticNonNullDefinition + versionOnePersistedDirectiveDefinitions;
 
 export const versionOneRouterContractDefinitions =
   schemaQueryDefinition +
