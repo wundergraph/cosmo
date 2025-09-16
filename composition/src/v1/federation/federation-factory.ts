@@ -53,6 +53,7 @@ import {
   nonLeafSubscriptionFieldConditionFieldPathFinalFieldErrorMessage,
   noQueryRootTypeError,
   orScopesLimitError,
+  semanticNonNullInconsistentLevelsError,
   subscriptionFieldConditionEmptyValuesArrayErrorMessage,
   subscriptionFieldConditionInvalidInputFieldErrorMessage,
   subscriptionFieldConditionInvalidValuesArrayErrorMessage,
@@ -85,6 +86,7 @@ import {
 } from './utils';
 import { SUBSCRIPTION_FILTER_INPUT_NAMES, SUBSCRIPTION_FILTER_LIST_INPUT_NAMES } from '../utils/string-constants';
 import {
+  getNodeCoords,
   isNodeLeaf,
   isObjectDefinitionData,
   mapToArrayOfValues,
@@ -112,6 +114,7 @@ import {
   MAX_OR_SCOPES,
   REQUIRES_SCOPES_DEFINITION,
   SCOPE_SCALAR_DEFINITION,
+  SEMANTIC_NON_NULL_DEFINITION,
   TAG_DEFINITION,
 } from '../utils/constants';
 import { batchNormalize } from '../normalization/normalization-factory';
@@ -147,6 +150,7 @@ import {
   getInitialFederatedDescription,
   getNodeForRouterSchemaByData,
   getSubscriptionFilterValue,
+  isFieldData,
   isLeafKind,
   isNodeDataInaccessible,
   isParentDataCompositeOutputType,
@@ -202,6 +206,7 @@ import {
   PERIOD,
   QUERY,
   REQUIRES_SCOPES,
+  SEMANTIC_NON_NULL,
   STRING,
   SUBSCRIPTION_FILTER,
   TAG,
@@ -215,10 +220,11 @@ import {
   addNewObjectValueMapEntries,
   copyArrayValueMap,
   copyObjectValueMap,
+  generateSemanticNonNullDirective,
   generateSimpleDirective,
   getEntriesNotInHashSet,
   getOrThrowError,
-  getSingleSetEntry,
+  getSingleHashSetEntry,
   getValueOrDefault,
   kindToNodeType,
 } from '../../utils/utils';
@@ -230,7 +236,7 @@ import {
   InvalidRequiredInputValueData,
 } from '../../utils/types';
 import { FederateSubgraphsContractV1Params, FederateSubgraphsWithContractsV1Params, FederationParams } from './types';
-import { ContractName, FieldCoords, FieldName, SubgraphName, TypeName } from '../../types/types';
+import { ContractName, DirectiveName, FieldCoords, FieldName, SubgraphName, TypeName } from '../../types/types';
 
 export class FederationFactory {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
@@ -252,7 +258,7 @@ export class FederationFactory {
   invalidORScopesCoords = new Set<string>();
   isMaxDepth = false;
   isVersionTwo = false;
-  namedInputValueTypeNames = new Set<string>();
+  namedInputValueTypeNames = new Set<TypeName>();
   namedOutputTypeNames = new Set<string>();
   parentDefinitionDataByTypeName = new Map<string, ParentDefinitionData>();
   parentTagDataByTypeName = new Map<string, ParentTagData>();
@@ -261,10 +267,12 @@ export class FederationFactory {
     [DEPRECATED, DEPRECATED_DEFINITION],
     [INACCESSIBLE, INACCESSIBLE_DEFINITION],
     [REQUIRES_SCOPES, REQUIRES_SCOPES_DEFINITION],
+    [SEMANTIC_NON_NULL, SEMANTIC_NON_NULL_DEFINITION],
     [TAG, TAG_DEFINITION],
   ]);
   persistedDirectiveDefinitions = new Set<string>([AUTHENTICATED, DEPRECATED, INACCESSIBLE, TAG, REQUIRES_SCOPES]);
   potentialPersistedDirectiveDefinitionDataByDirectiveName = new Map<string, PersistedDirectiveDefinitionData>();
+  referencedPersistedDirectiveNames = new Set<DirectiveName>();
   routerDefinitions: MutableTypeDefinitionNode[] = [DEPRECATED_DEFINITION, TAG_DEFINITION];
   subscriptionFilterDataByFieldPath = new Map<string, SubscriptionFilterData>();
   tagNamesByCoords = new Map<string, Set<string>>();
@@ -691,7 +699,7 @@ export class FederationFactory {
       return;
     }
     // There should only be a single entry in the set
-    const subgraphName = getSingleSetEntry(incomingData.subgraphNames);
+    const subgraphName = getSingleHashSetEntry(incomingData.subgraphNames);
     if (subgraphName === undefined) {
       this.errors.push(unknownFieldSubgraphNameError(incomingData.federatedCoords));
       return;
@@ -877,6 +885,7 @@ export class FederationFactory {
       targetData.externalFieldDataBySubgraphName,
     );
     addMapEntries(incomingData.isShareableBySubgraphName, targetData.isShareableBySubgraphName);
+    addMapEntries(incomingData.nullLevelsBySubgraphName, targetData.nullLevelsBySubgraphName);
     addIterableValuesToSet(incomingData.subgraphNames, targetData.subgraphNames);
   }
 
@@ -994,6 +1003,9 @@ export class FederationFactory {
   }
 
   copyFieldData(sourceData: FieldData, isInaccessible: boolean): FieldData {
+    if (sourceData.directivesByDirectiveName.has(SEMANTIC_NON_NULL)) {
+      this.referencedPersistedDirectiveNames.add(SEMANTIC_NON_NULL);
+    }
     return {
       argumentDataByName: this.copyInputValueDataByValueName(
         sourceData.argumentDataByName,
@@ -1005,7 +1017,7 @@ export class FederationFactory {
       externalFieldDataBySubgraphName: copyObjectValueMap(sourceData.externalFieldDataBySubgraphName),
       federatedCoords: sourceData.federatedCoords,
       // Intentionally reset; only the subgraph fields involve directive inheritance
-      inheritedDirectiveNames: new Set<string>(),
+      inheritedDirectiveNames: new Set<DirectiveName>(),
       isInaccessible: sourceData.isInaccessible,
       isShareableBySubgraphName: new Map(sourceData.isShareableBySubgraphName),
       kind: sourceData.kind,
@@ -1019,6 +1031,7 @@ export class FederationFactory {
         name: stringToNameNode(sourceData.name),
         type: sourceData.type,
       },
+      nullLevelsBySubgraphName: sourceData.nullLevelsBySubgraphName,
       originalParentTypeName: sourceData.originalParentTypeName,
       persistedDirectivesData: extractPersistedDirectives(
         newPersistedDirectivesData(),
@@ -1714,12 +1727,18 @@ export class FederationFactory {
     };
   }
 
-  getValidFlattenedPersistedDirectiveNodeArray(
-    directivesByDirectiveName: Map<string, Array<ConstDirectiveNode>>,
-    coords: string,
-  ): Array<ConstDirectiveNode> {
+  getValidFlattenedPersistedDirectiveNodeArray(data: NodeData): Array<ConstDirectiveNode> {
+    const coords = getNodeCoords(data);
     const persistedDirectiveNodes: Array<ConstDirectiveNode> = [];
-    for (const [directiveName, directiveNodes] of directivesByDirectiveName) {
+    for (const [directiveName, directiveNodes] of data.persistedDirectivesData.directivesByDirectiveName) {
+      if (directiveName === SEMANTIC_NON_NULL && isFieldData(data)) {
+        persistedDirectiveNodes.push(
+          generateSemanticNonNullDirective(
+            getSingleHashSetEntry(data.nullLevelsBySubgraphName) ?? new Set<number>([0]),
+          ),
+        );
+        continue;
+      }
       const persistedDirectiveDefinition = this.persistedDirectiveDefinitionByDirectiveName.get(directiveName);
       if (!persistedDirectiveDefinition) {
         continue;
@@ -1742,12 +1761,7 @@ export class FederationFactory {
     if (nodeData.persistedDirectivesData.isDeprecated) {
       persistedDirectiveNodes.push(generateDeprecatedDirective(nodeData.persistedDirectivesData.deprecatedReason));
     }
-    persistedDirectiveNodes.push(
-      ...this.getValidFlattenedPersistedDirectiveNodeArray(
-        nodeData.persistedDirectivesData.directivesByDirectiveName,
-        nodeData.name,
-      ),
-    );
+    persistedDirectiveNodes.push(...this.getValidFlattenedPersistedDirectiveNodeArray(nodeData));
     return persistedDirectiveNodes;
   }
 
@@ -1832,6 +1846,27 @@ export class FederationFactory {
     fieldData.node.description = this.getFederatedGraphNodeDescription(fieldData);
     fieldData.node.directives = this.getRouterPersistedDirectiveNodes(fieldData);
     return fieldData.node;
+  }
+
+  validateSemanticNonNull(data: FieldData) {
+    let comparison: Set<number> | undefined;
+    for (const levels of data.nullLevelsBySubgraphName.values()) {
+      if (!comparison) {
+        comparison = levels;
+        continue;
+      }
+      if (comparison.size !== levels.size) {
+        this.errors.push(semanticNonNullInconsistentLevelsError(data));
+        return;
+      }
+      for (const level of levels) {
+        // IDE complains but `comparison` will always have been initialized.
+        if (!comparison.has(level)) {
+          this.errors.push(semanticNonNullInconsistentLevelsError(data));
+          return;
+        }
+      }
+    }
   }
 
   pushParentDefinitionDataToDocumentDefinitions(interfaceImplementations: InterfaceImplementationData[]) {
@@ -1974,6 +2009,7 @@ export class FederationFactory {
             if (isObject) {
               validateExternalAndShareable(fieldData, invalidFieldNames);
             }
+            this.validateSemanticNonNull(fieldData);
             fieldNodes.push(this.getNodeWithPersistedDirectivesByFieldData(fieldData, argumentNodes));
             if (isNodeDataInaccessible(fieldData)) {
               continue;
@@ -2154,18 +2190,16 @@ export class FederationFactory {
   }
 
   pushVersionTwoDirectiveDefinitionsToDocumentDefinitions() {
+    if (this.referencedPersistedDirectiveNames.has(SEMANTIC_NON_NULL)) {
+      this.routerDefinitions.push(SEMANTIC_NON_NULL_DEFINITION);
+      this.clientDefinitions.push(SEMANTIC_NON_NULL_DEFINITION);
+    }
     if (!this.isVersionTwo) {
       return;
     }
-    this.routerDefinitions = [
-      AUTHENTICATED_DEFINITION,
-      DEPRECATED_DEFINITION,
-      INACCESSIBLE_DEFINITION,
-      REQUIRES_SCOPES_DEFINITION,
-      TAG_DEFINITION,
-      SCOPE_SCALAR_DEFINITION,
-    ];
-    this.clientDefinitions = [DEPRECATED_DEFINITION];
+    this.routerDefinitions.push(
+      ...[AUTHENTICATED_DEFINITION, INACCESSIBLE_DEFINITION, REQUIRES_SCOPES_DEFINITION, SCOPE_SCALAR_DEFINITION],
+    );
   }
 
   validatePathSegmentInaccessibility(path: string): boolean {
