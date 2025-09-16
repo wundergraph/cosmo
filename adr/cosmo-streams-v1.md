@@ -68,14 +68,19 @@ type PublishEventConfiguration interface {
 }
 
 type SubscriptionOnStartHookContext interface {
-    // the request context
-    RequestContext() RequestContext
-    // the stream context
-    StreamContext() StreamContext
-    // the subscription event configuration
-    SubscriptionEventConfiguration() SubscriptionEventConfiguration
-    // write an event to the stream of the current subscription
-    WriteEvent(event core.StreamEvent)
+    // Request is the original request received by the router.
+    Request() *http.Request
+    // Logger is the logger for the request
+    Logger() *zap.Logger
+    // Operation is the GraphQL operation
+    Operation() OperationContext
+    // Authentication is the authentication for the request
+    Authentication() authentication.Authentication
+    // SubscriptionEventConfiguration is the subscription event configuration (will return nil for engine subscription)
+    SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration
+    // WriteEvent writes an event to the stream of the current subscription
+    // It returns true if the event was written to the stream, false if the event was dropped
+    WriteEvent(event datasource.StreamEvent) bool
 }
 
 type SubscriptionOnStartHandler interface {
@@ -142,7 +147,7 @@ The developer will start by adding a subscription to the cosmo streams graphql s
 
 ```graphql
 type Subscription {
-    employeeUpdates(): Employee! @edfs__natsSubscribe(subjects: ["employeeUpdates"], providerId: "my-nats")
+    employeeUpdates: Employee! @edfs__natsSubscribe(subjects: ["employeeUpdates"], providerId: "my-nats")
 }
 
 type Employee @key(fields: "id", resolvable: false) {
@@ -286,7 +291,7 @@ The developer will start by adding a subscription to the cosmo streams graphql s
 
 ```graphql
 type Subscription {
-    employeeUpdates(): Employee! @edfs__natsSubscribe(subjects: ["employeeUpdates"], providerId: "my-nats")
+    employeeUpdates: Employee! @edfs__natsSubscribe(subjects: ["employeeUpdates"], providerId: "my-nats")
 }
 
 type Employee @key(fields: "id", resolvable: false) {
@@ -318,12 +323,12 @@ type MyModule struct {}
 
 func (m *MyModule) SubscriptionOnStart(ctx SubscriptionOnStartHookContext) error {
     // check if the provider is nats
-    if ctx.StreamContext().ProviderType() != pubsub.ProviderTypeNats {
+    if ctx.SubscriptionEventConfiguration().ProviderType() != pubsub.ProviderTypeNats {
         return nil
     }
 
     // check if the provider id is the one expected by the module
-    if ctx.StreamContext().ProviderID() != "my-nats" {
+    if ctx.SubscriptionEventConfiguration().ProviderID() != "my-nats" {
         return nil
     }
 
@@ -334,7 +339,7 @@ func (m *MyModule) SubscriptionOnStart(ctx SubscriptionOnStartHookContext) error
     }
 
     // check if the client is authenticated
-    if ctx.RequestContext().Authentication() == nil {
+    if ctx.Authentication() == nil {
         // if the client is not authenticated, return an error
         return &StreamHookError{
             HttpError: core.HttpError{
@@ -346,7 +351,7 @@ func (m *MyModule) SubscriptionOnStart(ctx SubscriptionOnStartHookContext) error
     }
 
     // check if the client is allowed to subscribe to the stream
-    clientAllowedEntitiesIds, found := ctx.RequestContext().Authentication().Claims()["readEmployee"]
+    clientAllowedEntitiesIds, found := ctx.Authentication().Claims()["readEmployee"]
     if !found {
         return &StreamHookError{
             HttpError: core.HttpError{
