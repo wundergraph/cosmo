@@ -2687,6 +2687,7 @@ message Proposal {
   repeated ProposalSubgraph subgraphs = 8;
   bool latestCheckSuccess = 9;
   string latestCheckId = 10;
+  ProposalOrigin origin = 11;
 }
 
 message ProposalSubgraph {
@@ -2695,6 +2696,11 @@ message ProposalSubgraph {
   bool isDeleted = 3;
   bool isNew = 4;
   repeated Label labels = 5;
+}
+
+enum ProposalOrigin {
+   COSMO = 0;
+   HUB = 1;
 }
 
 enum ProposalNamingConvention {
@@ -2708,6 +2714,7 @@ message CreateProposalRequest {
   string name = 3;
   repeated ProposalSubgraph subgraphs = 4;
   ProposalNamingConvention namingConvention = 5;
+  ProposalOrigin origin = 6;
 }
 
 message CreateProposalResponse {

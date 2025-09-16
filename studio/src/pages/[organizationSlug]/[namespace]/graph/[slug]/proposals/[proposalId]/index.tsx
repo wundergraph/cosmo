@@ -72,6 +72,7 @@ import {
 import {
   GetProposalResponse_CurrentSubgraph,
   Proposal,
+  ProposalOrigin,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
@@ -225,6 +226,7 @@ export const ProposalDetails = ({
     state,
     subgraphs,
     latestCheckSuccess,
+    origin,
   } = proposal;
 
   return (
@@ -300,7 +302,7 @@ export const ProposalDetails = ({
           </div>
 
           <div className="flex flex-1 items-center justify-end gap-1">
-            {state === "DRAFT" && (
+            {state === "DRAFT" && origin === ProposalOrigin.COSMO && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button className="ml-4" disabled={isApproving || isClosing}>

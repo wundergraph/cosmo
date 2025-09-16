@@ -2442,6 +2442,8 @@ export const namespaceCacheWarmerConfigRelations = relations(namespaceCacheWarme
 
 export const proposalStateEnum = pgEnum('proposal_state', ['DRAFT', 'APPROVED', 'PUBLISHED', 'CLOSED'] as const);
 
+export const proposalOriginEnum = pgEnum('proposal_origin', ['COSMO', 'HUB'] as const);
+
 export const proposals = pgTable(
   'proposals', // pr
   {
@@ -2457,6 +2459,7 @@ export const proposals = pgTable(
       onDelete: 'set null',
     }),
     state: proposalStateEnum('state').notNull(),
+    origin: proposalOriginEnum('origin').notNull().default('COSMO'),
   },
   (t) => ({
     uniqueFederatedGraphClientName: unique('federated_graph_proposal_name').on(t.federatedGraphId, t.name),
