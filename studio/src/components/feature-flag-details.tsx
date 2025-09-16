@@ -21,6 +21,8 @@ import { Badge } from "./ui/badge";
 import { CLI, CLISteps } from "./ui/cli";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
+import { useWorkspace } from "@/hooks/use-workspace";
+import { useCurrentOrganization } from "@/hooks/use-current-organization";
 
 const FeatureFlagOverview = ({
   federatedGraphs,
@@ -32,9 +34,9 @@ const FeatureFlagOverview = ({
   isEnabled: boolean;
 }) => {
   const router = useRouter();
+  const { namespace: { name: namespace } } = useWorkspace();
+  const currentOrg = useCurrentOrganization();
   const slug = router.query.slug as string;
-  const organizationSlug = router.query.organizationSlug as string;
-  const namespace = router.query.namespace as string;
 
   let content: React.ReactNode;
   if (featureSubgraphs.length === 0) {
@@ -54,12 +56,12 @@ const FeatureFlagOverview = ({
               {
                 description:
                   "Create a feature subgraph using the below command.",
-                command: `npx wgc feature-subgraph create <feature-subgraph-name> --namespace ${router.query.namespace} -r <routing-url> --subgraph <base-subgraph-name>`,
+                command: `npx wgc feature-subgraph create <feature-subgraph-name> --namespace ${namespace} -r <routing-url> --subgraph <base-subgraph-name>`,
               },
               {
                 description:
                   "Update your feature subgraphs of this feature flag.",
-                command: `npx wgc feature-flag update <feature-flag-name> --namespace ${router.query.namespace} --feature-subgraphs <featureSubgraphs...>`,
+                command: `npx wgc feature-flag update <feature-flag-name> --namespace ${namespace} --feature-subgraphs <featureSubgraphs...>`,
               },
             ]}
           />
@@ -95,10 +97,10 @@ const FeatureFlagOverview = ({
           description={
             <>
               This feature flag will be a part of compositions of this federated
-              graph. Once the feature flag is composed succesfully, you can
+              graph. Once the feature flag is composed successfully, you can
               query the feature flag in the{" "}
               <Link
-                href={`/${organizationSlug}/${namespace}/graph/${slug}/playground`}
+                href={`/${currentOrg?.slug}/${namespace}/graph/${slug}/playground`}
                 className="text-sm text-primary"
               >
                 playground
@@ -124,7 +126,7 @@ const FeatureFlagOverview = ({
           }
           actions={
             <CLI
-              command={`npx wgc subgraph publish <feature-subgraph-name> --namespace ${router.query.namespace} --schema <path-to-schema>`}
+              command={`npx wgc subgraph publish <feature-subgraph-name> --namespace ${namespace} --schema <path-to-schema>`}
             />
           }
         />
