@@ -158,6 +158,7 @@ import {
   operationDefinitionError,
   orScopesLimitError,
   selfImplementationError,
+  semanticNonNullArgumentErrorMessage,
   semanticNonNullLevelsIndexOutOfBoundsErrorMessage,
   semanticNonNullLevelsNaNIndexErrorMessage,
   semanticNonNullLevelsNonNullErrorMessage,
@@ -2199,14 +2200,15 @@ export class NormalizationFactory {
     }
     const levelsArg = directiveNode.arguments?.find((arg) => arg.name.value === LEVELS);
     if (!levelsArg || levelsArg.value.kind !== Kind.LIST) {
-      errorMessages.push(`Argument "${LEVELS}" validation error.`);
+      // Should never happen because the argument will have just been validated.
+      errorMessages.push(semanticNonNullArgumentErrorMessage);
       return;
     }
     const values = levelsArg.value.values as ReadonlyArray<IntValueNode>;
     const typeString = printTypeNode(data.type);
     const levels = new Set<number>();
     for (const { value } of values) {
-      const int = parseInt(value);
+      const int = parseInt(value, 10);
       if (Number.isNaN(int)) {
         errorMessages.push(semanticNonNullLevelsNaNIndexErrorMessage(value));
         continue;

@@ -21,6 +21,7 @@ import {
   IN_UPPER,
   INPUT_FIELD,
   INTERFACE,
+  LEVELS,
   LITERAL_NEW_LINE,
   NOT_UPPER,
   OR_UPPER,
@@ -1644,6 +1645,8 @@ export function semanticNonNullLevelsNonNullErrorMessage({
 }: SemanticNonNullLevelsNonNullErrorParams) {
   return `Index "${value}" of type ${typeString} is non-null but must be nullable.`;
 }
+
+export const semanticNonNullArgumentErrorMessage = `Argument "${LEVELS}" validation error.`;
 
 export function semanticNonNullInconsistentLevelsError(data: FieldData): Error {
   const coords = `${data.renamedParentTypeName}.${data.name}`;

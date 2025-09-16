@@ -803,6 +803,9 @@ export class FederationFactory {
     incomingData: FieldData,
     isParentInaccessible: boolean,
   ) {
+    if (incomingData.directivesByDirectiveName.has(SEMANTIC_NON_NULL)) {
+      this.referencedPersistedDirectiveNames.add(SEMANTIC_NON_NULL);
+    }
     const existingData = fieldDataByFieldName.get(incomingData.name);
     const targetData =
       existingData || this.copyFieldData(incomingData, isParentInaccessible || isNodeDataInaccessible(incomingData));
@@ -2191,12 +2194,14 @@ export class FederationFactory {
     if (!this.isVersionTwo) {
       if (this.referencedPersistedDirectiveNames.has(SEMANTIC_NON_NULL)) {
         this.clientDefinitions.push(SEMANTIC_NON_NULL_DEFINITION);
+        // Recreate the array until all directive imports are usage-based.
         this.routerDefinitions = [DEPRECATED_DEFINITION, SEMANTIC_NON_NULL_DEFINITION, TAG_DEFINITION];
       }
       return;
     }
     if (this.referencedPersistedDirectiveNames.has(SEMANTIC_NON_NULL)) {
       this.clientDefinitions.push(SEMANTIC_NON_NULL_DEFINITION);
+      // Recreate the array until all directive imports are usage-based.
       this.routerDefinitions = [
         AUTHENTICATED_DEFINITION,
         DEPRECATED_DEFINITION,
@@ -2208,6 +2213,7 @@ export class FederationFactory {
       ];
       return;
     }
+    // Recreate the array until all directive imports are usage-based.
     this.routerDefinitions = [
       AUTHENTICATED_DEFINITION,
       DEPRECATED_DEFINITION,

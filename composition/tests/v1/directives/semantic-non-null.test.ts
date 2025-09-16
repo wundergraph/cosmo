@@ -101,9 +101,65 @@ describe('@semanticNonNull tests', () => {
   });
 
   describe('federation tests', () => {
-    test('that the directive is persisted in the federated schema', () => {
+    test('that the directive is persisted in the federated schema #1', () => {
       const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
         [faaa],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(
+          versionOneRouterDefinitionsWithSemanticNonNull +
+            `
+            type Query {
+              a: ID @semanticNonNull(levels: [0])
+            }
+          `,
+        ),
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+        normalizeString(
+          schemaQueryDefinition +
+            semanticNonNullDefinition +
+            `
+            type Query {
+              a: ID @semanticNonNull(levels: [0])
+            }
+          `,
+        ),
+      );
+    });
+
+    test('that the directive is persisted in the federated schema #2', () => {
+      const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+        [faaa, faab],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(
+          versionOneRouterDefinitionsWithSemanticNonNull +
+            `
+            type Query {
+              a: ID @semanticNonNull(levels: [0])
+            }
+          `,
+        ),
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+        normalizeString(
+          schemaQueryDefinition +
+            semanticNonNullDefinition +
+            `
+            type Query {
+              a: ID @semanticNonNull(levels: [0])
+            }
+          `,
+        ),
+      );
+    });
+
+    test('that the directive is persisted in the federated schema #3', () => {
+      const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+        [faab, faaa],
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
@@ -399,6 +455,16 @@ const faaa: Subgraph = {
   definitions: parse(`
     type Query {
       a: ID @semanticNonNull
+    }
+  `),
+};
+
+const faab: Subgraph = {
+  name: 'faab',
+  url: '',
+  definitions: parse(`
+    type Query {
+      a: ID
     }
   `),
 };
