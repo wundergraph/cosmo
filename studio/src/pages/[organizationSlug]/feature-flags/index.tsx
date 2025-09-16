@@ -1,5 +1,4 @@
 import { useApplyParams } from "@/components/analytics/use-apply-params";
-import { NamespaceSelector } from "@/components/dashboard/NamespaceSelector";
 import { EmptyState } from "@/components/empty-state";
 import { FeatureFlagsTable } from "@/components/feature-flags-table";
 import { getDashboardLayout } from "@/components/layout/dashboard-layout";
@@ -15,10 +14,12 @@ import { getFeatureFlags } from "@wundergraph/cosmo-connect/dist/platform/v1/pla
 import { useRouter } from "next/router";
 import { useState } from "react";
 import { useDebounce } from "use-debounce";
+import { WorkspaceSelector } from "@/components/dashboard/workspace-selector";
+import { useWorkspace } from "@/hooks/use-workspace";
 
 const FeatureFlagsDashboardPage: NextPageWithLayout = () => {
+  const { namespace: { name: namespace } } = useWorkspace();
   const router = useRouter();
-  const namespace = router.query.namespace as string;
 
   const pageNumber = router.query.page
     ? parseInt(router.query.page as string)
@@ -33,7 +34,7 @@ const FeatureFlagsDashboardPage: NextPageWithLayout = () => {
   const applyParams = useApplyParams();
 
   const { data, isLoading, error, refetch } = useQuery(getFeatureFlags, {
-    namespace: namespace || "default",
+    namespace,
     query,
     limit,
     offset,
@@ -100,7 +101,7 @@ FeatureFlagsDashboardPage.getLayout = (page) => {
     "An overview of all feature flags",
     undefined,
     undefined,
-    [<NamespaceSelector key="0" />],
+    [<WorkspaceSelector key="0" />],
   );
 };
 

@@ -48,7 +48,7 @@ export function getFederatedGraphs(
     const list: FederatedGraphDTO[] = await fedGraphRepo.list({
       limit: req.limit,
       offset: req.offset,
-      namespaceId,
+      namespaceIds: namespaceId ? [namespaceId] : undefined,
       supportsFederation: req.supportsFederation,
       rbac: authContext.rbac,
     });
