@@ -13,7 +13,6 @@ import {
     visit,
 } from 'graphql';
 import {
-    createOperationMethodName,
     createRequestMessageName,
     createResponseMessageName,
     graphqlFieldToProtoField,
@@ -78,8 +77,7 @@ export class OperationToProtoVisitor {
             const operation = document.definitions[0] as OperationDefinitionNode;
             const operationName = operation.name?.value || name;
 
-            // For persisted operations, we use the operation name directly as the method name
-            // since it already contains the semantic meaning (e.g., "GetEmployeeByID")
+            // Use the operation name directly for persisted operations
             const methodName = upperFirst(camelCase(operationName));
             const requestType = createRequestMessageName(methodName);
             const responseType = createResponseMessageName(methodName);
@@ -104,7 +102,7 @@ export class OperationToProtoVisitor {
             messages.push(responseMessage);
 
             // Generate nested messages for this operation
-            const nestedMessages = this.generateNestedMessages(operationName, operation.selectionSet);
+            const nestedMessages = this.generateNestedMessages(operationName, operation.selectionSet, '');
             messages.push(...nestedMessages);
         }
 
@@ -128,17 +126,14 @@ export class OperationToProtoVisitor {
 
     private convertVariableTypeToProto(typeNode: any): string {
         if (typeNode.kind === 'NonNullType') {
-            // For non-null types, unwrap and convert the inner type
             return this.convertVariableTypeToProto(typeNode.type);
         }
 
         if (typeNode.kind === 'ListType') {
-            // For list types, add repeated keyword
             return `repeated ${this.convertVariableTypeToProto(typeNode.type)}`;
         }
 
         if (typeNode.kind === 'NamedType') {
-            // Convert GraphQL scalar types to proto types
             const typeName = typeNode.name.value;
             switch (typeName) {
                 case 'Int': return 'int32';
@@ -147,18 +142,16 @@ export class OperationToProtoVisitor {
                 case 'Float': return 'double';
                 case 'ID': return 'string';
                 default:
-                    // For custom scalar or object types, you might want to handle them differently
-                    // For now, treating them as strings
                     return 'string';
             }
         }
 
-        // Fallback
         return 'string';
     }
 
     private generateResponseMessage(operationName: string, selectionSet: SelectionSetNode): string {
-        const messageName = createResponseMessageName(operationName);
+        const methodName = upperFirst(camelCase(operationName));
+        const messageName = createResponseMessageName(methodName);
         const fields: string[] = [];
         let fieldIndex = 1;
 
@@ -168,7 +161,7 @@ export class OperationToProtoVisitor {
                 const schemaField = this.schema.getQueryType()?.getFields()[selection.name.value];
 
                 if (schemaField) {
-                    const protoType = this.getOperationSpecificType(operationName, selection, schemaField.type);
+                    const protoType = this.getOperationSpecificType(operationName, selection, schemaField.type, '');
                     fields.push(`  ${protoType} ${fieldName} = ${fieldIndex++};`);
                 }
             }
@@ -178,42 +171,49 @@ export class OperationToProtoVisitor {
         return `// Response message for ${operationName} operation.\nmessage ${messageName} {${fieldsStr}}`;
     }
 
-    private generateNestedMessages(operationName: string, selectionSet: SelectionSetNode): string[] {
+    private generateNestedMessages(operationName: string, selectionSet: SelectionSetNode, currentPath: string): string[] {
         const messages: string[] = [];
 
         for (const selection of selectionSet.selections) {
             if (selection.kind === 'Field' && selection.selectionSet) {
-                const nestedMessages = this.generateNestedMessageForField(operationName, selection);
-                messages.push(...nestedMessages);
+                const fieldPath = this.buildFieldPath(currentPath, selection.name.value);
+                const messageName = this.createNestedMessageName(operationName, fieldPath);
+
+                // Generate the nested message
+                const nestedMessage = this.generateNestedMessageForField(operationName, selection, fieldPath);
+                messages.push(nestedMessage);
+
+                // Recursively generate deeper nested messages
+                const deeperMessages = this.generateNestedMessages(operationName, selection.selectionSet, fieldPath);
+                messages.push(...deeperMessages);
             }
         }
 
         return messages;
     }
 
-    private generateNestedMessageForField(operationName: string, field: FieldNode): string[] {
-        const messages: string[] = [];
-        const fieldPath = this.buildFieldPath(operationName, field.name.value);
+    private generateNestedMessageForField(operationName: string, field: FieldNode, fieldPath: string): string {
+        const messageName = this.createNestedMessageName(operationName, fieldPath);
+        const fields: string[] = [];
+        let fieldIndex = 1;
 
         if (field.selectionSet) {
-            const messageName = this.createNestedMessageName(operationName, fieldPath);
-            const fields: string[] = [];
-            let fieldIndex = 1;
-
             for (const selection of field.selectionSet.selections) {
                 if (selection.kind === 'Field') {
                     const fieldName = graphqlFieldToProtoField(selection.name.value);
 
                     if (selection.selectionSet) {
                         // This field has its own selection set, so it needs a nested message
-                        const nestedType = this.createNestedMessageName(operationName,
-                            this.buildFieldPath(fieldPath, selection.name.value));
-                        const protoType = this.wrapTypeIfList(nestedType, selection);
-                        fields.push(`  ${protoType} ${fieldName} = ${fieldIndex++};`);
+                        const nestedFieldPath = this.buildFieldPath(fieldPath, selection.name.value);
+                        const nestedType = this.createNestedMessageName(operationName, nestedFieldPath);
 
-                        // Recursively generate nested messages
-                        const deeperMessages = this.generateNestedMessageForField(operationName, selection);
-                        messages.push(...deeperMessages);
+                        // Check if this should be repeated based on GraphQL schema
+                        const schemaField = this.getSchemaFieldFromPath(field.name.value, selection.name.value);
+                        const protoType = schemaField && this.isGraphQLListType(schemaField.type)
+                            ? `repeated ${nestedType}`
+                            : nestedType;
+
+                        fields.push(`  ${protoType} ${fieldName} = ${fieldIndex++};`);
                     } else {
                         // Leaf field - use scalar type
                         const protoType = this.getScalarProtoType(selection.name.value);
@@ -221,50 +221,69 @@ export class OperationToProtoVisitor {
                     }
                 }
             }
-
-            const fieldsStr = fields.length > 0 ? '\n' + fields.join('\n') + '\n' : '';
-            messages.unshift(`message ${messageName} {${fieldsStr}}`);
         }
 
-        return messages;
+        const fieldsStr = fields.length > 0 ? '\n' + fields.join('\n') + '\n' : '';
+        return `message ${messageName} {${fieldsStr}}`;
     }
 
     private createNestedMessageName(operationName: string, fieldPath: string): string {
-        // Convert GetEmployeeByID + Employee.Details.Location -> GetEmployeeByIDEmployeeDetailsLocation
-        const pascalCaseOperation = operationName.charAt(0).toUpperCase() + operationName.slice(1);
+        // Convert GetEmployeeByID + Employee -> GetEmployeeByIDEmployee
+        const pascalCaseOperation = upperFirst(camelCase(operationName));
         const pascalCasePath = fieldPath.split('.').map(part =>
-            part.charAt(0).toUpperCase() + part.slice(1)
+            upperFirst(camelCase(part))
         ).join('');
         return `${pascalCaseOperation}${pascalCasePath}`;
     }
 
     private buildFieldPath(basePath: string, fieldName: string): string {
-        const capitalizedField = fieldName.charAt(0).toUpperCase() + fieldName.slice(1);
+        const capitalizedField = upperFirst(camelCase(fieldName));
         return basePath ? `${basePath}.${capitalizedField}` : capitalizedField;
     }
 
-    private getOperationSpecificType(operationName: string, field: FieldNode, graphqlType: any): string {
+    private getOperationSpecificType(operationName: string, field: FieldNode, graphqlType: any, currentPath: string): string {
         if (field.selectionSet) {
-            const fieldPath = this.buildFieldPath('', field.name.value);
+            const fieldPath = this.buildFieldPath(currentPath, field.name.value);
             const messageName = this.createNestedMessageName(operationName, fieldPath);
-            return this.wrapTypeIfList(messageName, field);
+
+            // Check if the GraphQL type is a list type
+            const isListField = this.isGraphQLListType(graphqlType);
+            return isListField ? `repeated ${messageName}` : messageName;
         }
 
         return this.getScalarProtoType(field.name.value);
     }
 
-    private wrapTypeIfList(baseType: string, field: FieldNode): string {
-        // This is simplified - you'd need to check the actual GraphQL type
-        // For now, assume arrays based on field name patterns
-        const fieldName = field.name.value;
-        if (fieldName.endsWith('s') || fieldName === 'pets') {
-            return `repeated ${baseType}`;
+    private isGraphQLListType(graphqlType: any): boolean {
+        // Handle NonNull wrapper
+        if (isNonNullType(graphqlType)) {
+            return this.isGraphQLListType(graphqlType.ofType);
         }
-        return baseType;
+
+        // Check if it's a list type
+        return isListType(graphqlType);
+    }
+
+    private getSchemaFieldFromPath(parentFieldName: string, fieldName: string): any {
+        // This is a simplified version - you might need more sophisticated path resolution
+        const queryType = this.schema.getQueryType();
+        if (!queryType) return null;
+
+        const parentField = queryType.getFields()[parentFieldName];
+        if (!parentField) return null;
+
+        // Get the type and navigate to the field
+        const parentType = getNamedType(parentField.type);
+        if (parentType && 'getFields' in parentType) {
+            const fields = (parentType as any).getFields();
+            return fields[fieldName];
+        }
+
+        return null;
     }
 
     private getScalarProtoType(fieldName: string): string {
-        // Simplified mapping - in reality, you'd check the actual GraphQL type
+        // Simplified mapping based on common field names
         switch (fieldName) {
             case 'id': return 'int32';
             case 'tag':
@@ -294,10 +313,16 @@ export class OperationToProtoVisitor {
         parts.push(`service ${this.serviceName} {`);
         parts.push(...serviceMethods);
         parts.push('}');
-        parts.push('');
+        parts.push(''); // Add spacing after service
 
-        // Messages
-        parts.push(...messages);
+        // Messages with spacing between each message
+        for (let i = 0; i < messages.length; i++) {
+            parts.push(messages[i]);
+            // Add empty line after each message (except the last one)
+            if (i < messages.length - 1) {
+                parts.push('');
+            }
+        }
 
         return parts.join('\n');
     }
