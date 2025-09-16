@@ -2,7 +2,6 @@ package retrytransport
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -17,11 +16,18 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 
-	rcontext "github.com/wundergraph/cosmo/router/internal/context"
 	"github.com/wundergraph/cosmo/router/internal/expr"
 )
 
 const defaultMaxDuration = 100 * time.Second
+
+var loggerFunc = func(req *http.Request) *zap.Logger { return zap.NewNop() }
+
+var getActiveSubgraph = func(subgraphName string) func(req *http.Request) string {
+	return func(req *http.Request) string {
+		return subgraphName
+	}
+}
 
 // simpleShouldRetry provides simple retry logic for testing the transport implementation
 func simpleShouldRetry(err error, req *http.Request, resp *http.Response) bool {
@@ -55,11 +61,6 @@ func (dt *MockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	return dt.handler(req)
 }
 
-func withSubgraph(req *http.Request, name string) *http.Request {
-	ctx := context.WithValue(req.Context(), rcontext.CurrentSubgraphContextKey{}, name)
-	return req.WithContext(ctx)
-}
-
 func newTestManager(shouldRetry func(error, *http.Request, *http.Response) bool, onRetry OnRetryFunc, opts RetryOptions, subgraphName string) *Manager {
 	mgr := NewManager(expr.NewRetryExpressionManager(), func(err error, req *http.Request, resp *http.Response, exprString string) bool {
 		return shouldRetry(err, req, resp)
@@ -74,31 +75,28 @@ func TestRetryOnHTTP5xx(t *testing.T) {
 	attemptCount := 0
 	maxRetries := 3
 
+	subgraphName := "sg"
 	mgr := newTestManager(simpleShouldRetry, func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
 		retries++
-	}, RetryOptions{MaxRetryCount: maxRetries, Interval: 1 * time.Millisecond, MaxDuration: 10 * time.Millisecond}, "sg")
+	}, RetryOptions{MaxRetryCount: maxRetries, Interval: 1 * time.Millisecond, MaxDuration: 10 * time.Millisecond}, subgraphName)
 
-	tr := NewRetryHTTPTransport(
-		&MockTransport{
-			handler: func(req *http.Request) (*http.Response, error) {
-				attemptCount++
-				if attemptCount <= maxRetries {
-					// Return 500 to trigger retry
-					return &http.Response{
-						StatusCode: http.StatusInternalServerError,
-					}, nil
-				}
-				// Finally return success
+	tr := NewRetryHTTPTransport(&MockTransport{
+		handler: func(req *http.Request) (*http.Response, error) {
+			attemptCount++
+			if attemptCount <= maxRetries {
+				// Return 500 to trigger retry
 				return &http.Response{
-					StatusCode: http.StatusOK,
+					StatusCode: http.StatusInternalServerError,
 				}, nil
-			},
+			}
+			// Finally return success
+			return &http.Response{
+				StatusCode: http.StatusOK,
+			}, nil
 		},
-		func(req *http.Request) *zap.Logger { return zap.NewNop() },
-		mgr,
-	)
+	}, loggerFunc, mgr, getActiveSubgraph(subgraphName))
 
-	req := withSubgraph(httptest.NewRequest("GET", "http://localhost:3000/graphql", nil), "sg")
+	req := httptest.NewRequest("GET", "http://localhost:3000/graphql", nil)
 
 	resp, err := tr.RoundTrip(req)
 	assert.Nil(t, err)
@@ -114,29 +112,26 @@ func TestRetryOnErrors(t *testing.T) {
 	attemptCount := 0
 	maxRetries := 3
 
+	subgraphName := "sg"
 	mgr := newTestManager(simpleShouldRetry, func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
 		retries++
-	}, RetryOptions{MaxRetryCount: maxRetries, Interval: 1 * time.Millisecond, MaxDuration: 10 * time.Millisecond}, "sg")
+	}, RetryOptions{MaxRetryCount: maxRetries, Interval: 1 * time.Millisecond, MaxDuration: 10 * time.Millisecond}, subgraphName)
 
-	tr := NewRetryHTTPTransport(
-		&MockTransport{
-			handler: func(req *http.Request) (*http.Response, error) {
-				attemptCount++
-				if attemptCount <= maxRetries {
-					// Return any error to trigger retry
-					return nil, errors.New("some network error")
-				}
-				// Finally return success
-				return &http.Response{
-					StatusCode: http.StatusOK,
-				}, nil
-			},
+	tr := NewRetryHTTPTransport(&MockTransport{
+		handler: func(req *http.Request) (*http.Response, error) {
+			attemptCount++
+			if attemptCount <= maxRetries {
+				// Return any error to trigger retry
+				return nil, errors.New("some network error")
+			}
+			// Finally return success
+			return &http.Response{
+				StatusCode: http.StatusOK,
+			}, nil
 		},
-		func(req *http.Request) *zap.Logger { return zap.NewNop() },
-		mgr,
-	)
+	}, loggerFunc, mgr, getActiveSubgraph(subgraphName))
 
-	req := withSubgraph(httptest.NewRequest("GET", "http://localhost:3000/graphql", nil), "sg")
+	req := httptest.NewRequest("GET", "http://localhost:3000/graphql", nil)
 
 	resp, err := tr.RoundTrip(req)
 	assert.Nil(t, err)
@@ -162,32 +157,29 @@ func TestDoNotRetryWhenShouldRetryReturnsFalse(t *testing.T) {
 		return simpleShouldRetry(err, req, resp)
 	}
 
+	subgraphName := "sg"
 	mgr := newTestManager(shouldRetry, func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
 		retries++
-	}, RetryOptions{MaxRetryCount: maxRetryCount, Interval: 1 * time.Millisecond, MaxDuration: 10 * time.Millisecond}, "sg")
+	}, RetryOptions{MaxRetryCount: maxRetryCount, Interval: 1 * time.Millisecond, MaxDuration: 10 * time.Millisecond}, subgraphName)
 
-	tr := NewRetryHTTPTransport(
-		&MockTransport{
-			handler: func(req *http.Request) (*http.Response, error) {
-				attemptCount++
-				switch attemptCount {
-				case 1:
-					// First attempt: return retryable error
-					return nil, errors.New("retryable error")
-				case 2:
-					// Second attempt: return retryable status code
-					return &http.Response{StatusCode: http.StatusInternalServerError}, nil
-				default:
-					// Third attempt: return non-retryable error (should stop retrying)
-					return nil, nonRetryableError
-				}
-			},
+	tr := NewRetryHTTPTransport(&MockTransport{
+		handler: func(req *http.Request) (*http.Response, error) {
+			attemptCount++
+			switch attemptCount {
+			case 1:
+				// First attempt: return retryable error
+				return nil, errors.New("retryable error")
+			case 2:
+				// Second attempt: return retryable status code
+				return &http.Response{StatusCode: http.StatusInternalServerError}, nil
+			default:
+				// Third attempt: return non-retryable error (should stop retrying)
+				return nil, nonRetryableError
+			}
 		},
-		func(req *http.Request) *zap.Logger { return zap.NewNop() },
-		mgr,
-	)
+	}, loggerFunc, mgr, getActiveSubgraph(subgraphName))
 
-	req := withSubgraph(httptest.NewRequest("GET", "http://localhost:3000/graphql", nil), "sg")
+	req := httptest.NewRequest("GET", "http://localhost:3000/graphql", nil)
 
 	resp, err := tr.RoundTrip(req)
 	assert.Error(t, err)
@@ -232,26 +224,23 @@ func (b *TrackableBody) Close() error {
 func TestShortCircuitOnSuccess(t *testing.T) {
 	attemptCount := 0
 
+	subgraphName := "sg"
 	mgr := newTestManager(simpleShouldRetry, func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
 		t.Error("OnRetry should not be called when first request succeeds")
-	}, RetryOptions{MaxRetryCount: 5, Interval: 1 * time.Millisecond, MaxDuration: 10 * time.Millisecond}, "sg")
+	}, RetryOptions{MaxRetryCount: 5, Interval: 1 * time.Millisecond, MaxDuration: 10 * time.Millisecond}, subgraphName)
 
-	tr := NewRetryHTTPTransport(
-		&MockTransport{
-			handler: func(req *http.Request) (*http.Response, error) {
-				attemptCount++
-				// Always return success
-				return &http.Response{
-					StatusCode: http.StatusOK,
-					Body:       io.NopCloser(strings.NewReader("success")),
-				}, nil
-			},
+	tr := NewRetryHTTPTransport(&MockTransport{
+		handler: func(req *http.Request) (*http.Response, error) {
+			attemptCount++
+			// Always return success
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader("success")),
+			}, nil
 		},
-		func(req *http.Request) *zap.Logger { return zap.NewNop() },
-		mgr,
-	)
+	}, loggerFunc, mgr, getActiveSubgraph(subgraphName))
 
-	req := withSubgraph(httptest.NewRequest("GET", "http://localhost:3000/graphql", nil), "sg")
+	req := httptest.NewRequest("GET", "http://localhost:3000/graphql", nil)
 	resp, err := tr.RoundTrip(req)
 
 	assert.NoError(t, err)
@@ -270,23 +259,20 @@ func TestMaxRetryCountRespected(t *testing.T) {
 	retries := 0
 	attemptCount := 0
 
+	subgraphName := "sg"
 	mgr := newTestManager(simpleShouldRetry, func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
 		retries++
-	}, RetryOptions{MaxRetryCount: maxRetries, Interval: 1 * time.Millisecond, MaxDuration: 10 * time.Millisecond}, "sg")
+	}, RetryOptions{MaxRetryCount: maxRetries, Interval: 1 * time.Millisecond, MaxDuration: 10 * time.Millisecond}, subgraphName)
 
-	tr := NewRetryHTTPTransport(
-		&MockTransport{
-			handler: func(req *http.Request) (*http.Response, error) {
-				attemptCount++
-				// Always return retryable error to test max retry limit
-				return nil, errors.New("always fail")
-			},
+	tr := NewRetryHTTPTransport(&MockTransport{
+		handler: func(req *http.Request) (*http.Response, error) {
+			attemptCount++
+			// Always return retryable error to test max retry limit
+			return nil, errors.New("always fail")
 		},
-		func(req *http.Request) *zap.Logger { return zap.NewNop() },
-		mgr,
-	)
+	}, loggerFunc, mgr, getActiveSubgraph(subgraphName))
 
-	req := withSubgraph(httptest.NewRequest("GET", "http://localhost:3000/graphql", nil), "sg")
+	req := httptest.NewRequest("GET", "http://localhost:3000/graphql", nil)
 	resp, err := tr.RoundTrip(req)
 
 	assert.Error(t, err)
@@ -311,32 +297,29 @@ func TestResponseBodyDraining(t *testing.T) {
 		}
 	}
 
+	subgraphName := "sg"
 	mgr := newTestManager(simpleShouldRetry, func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
 		actualRetries++
-	}, RetryOptions{MaxRetryCount: retryCount, Interval: 1 * time.Millisecond, MaxDuration: 10 * time.Millisecond}, "sg")
+	}, RetryOptions{MaxRetryCount: retryCount, Interval: 1 * time.Millisecond, MaxDuration: 10 * time.Millisecond}, subgraphName)
 
-	tr := NewRetryHTTPTransport(
-		&MockTransport{
-			handler: func(req *http.Request) (*http.Response, error) {
-				index++
-				if index < retryCount {
-					return &http.Response{
-						StatusCode: http.StatusInternalServerError,
-						Body:       bodies[index],
-					}, nil
-				} else {
-					return &http.Response{
-						StatusCode: http.StatusOK,
-						Body:       bodies[index],
-					}, nil
-				}
-			},
+	tr := NewRetryHTTPTransport(&MockTransport{
+		handler: func(req *http.Request) (*http.Response, error) {
+			index++
+			if index < retryCount {
+				return &http.Response{
+					StatusCode: http.StatusInternalServerError,
+					Body:       bodies[index],
+				}, nil
+			} else {
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       bodies[index],
+				}, nil
+			}
 		},
-		func(req *http.Request) *zap.Logger { return zap.NewNop() },
-		mgr,
-	)
+	}, loggerFunc, mgr, getActiveSubgraph(subgraphName))
 
-	req := withSubgraph(httptest.NewRequest("GET", "http://localhost:3000/graphql", nil), "sg")
+	req := httptest.NewRequest("GET", "http://localhost:3000/graphql", nil)
 
 	resp, err := tr.RoundTrip(req)
 	assert.Nil(t, err)
@@ -380,34 +363,32 @@ func TestRequestLoggerIsUsed(t *testing.T) {
 		bodies[i] = trackableBody
 	}
 
+	subgraphName := "sg"
 	mgr := newTestManager(simpleShouldRetry, func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
 		actualRetries++
-	}, RetryOptions{MaxRetryCount: retryCount, Interval: 1 * time.Millisecond, MaxDuration: 10 * time.Millisecond}, "sg")
+	}, RetryOptions{MaxRetryCount: retryCount, Interval: 1 * time.Millisecond, MaxDuration: 10 * time.Millisecond}, subgraphName)
 
-	tr := NewRetryHTTPTransport(
-		&MockTransport{
-			handler: func(req *http.Request) (*http.Response, error) {
-				index++
-				if index < retryCount {
-					return &http.Response{
-						StatusCode: http.StatusInternalServerError,
-						Body:       bodies[index],
-					}, nil
-				} else {
-					return &http.Response{
-						StatusCode: http.StatusOK,
-						Body:       bodies[index],
-					}, nil
-				}
-			},
+	tr := NewRetryHTTPTransport(&MockTransport{
+		handler: func(req *http.Request) (*http.Response, error) {
+			index++
+			if index < retryCount {
+				return &http.Response{
+					StatusCode: http.StatusInternalServerError,
+					Body:       bodies[index],
+				}, nil
+			} else {
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       bodies[index],
+				}, nil
+			}
 		},
-		func(req *http.Request) *zap.Logger { return requestLogger },
-		mgr,
-	)
+	}, func(req *http.Request) *zap.Logger { return requestLogger }, mgr, getActiveSubgraph(subgraphName))
 
-	req := withSubgraph(httptest.NewRequest("GET", "http://localhost:3000/graphql", nil), "sg")
+	req := httptest.NewRequest("GET", "http://localhost:3000/graphql", nil)
 
-	tr.RoundTrip(req)
+	_, err := tr.RoundTrip(req)
+	assert.NoError(t, err)
 
 	assert.Contains(t, requestLoggerBuf.String(), "Failed draining when discarding the body\t{\"error\": \"retry read error, index: 1\"}")
 	assert.Contains(t, requestLoggerBuf.String(), "Failed draining when closing the body\t{\"error\": \"retry close error, index: 2\"}")
@@ -435,6 +416,7 @@ func TestOnRetryCallbackInvoked(t *testing.T) {
 		resp  *http.Response
 	}
 
+	subgraphName := "sg"
 	mgr := newTestManager(simpleShouldRetry, func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
 		retries++
 		retryCallbacks = append(retryCallbacks, struct {
@@ -442,26 +424,22 @@ func TestOnRetryCallbackInvoked(t *testing.T) {
 			err   error
 			resp  *http.Response
 		}{count: count, err: err, resp: resp})
-	}, RetryOptions{MaxRetryCount: maxRetries, Interval: 1 * time.Millisecond, MaxDuration: 10 * time.Millisecond}, "sg")
+	}, RetryOptions{MaxRetryCount: maxRetries, Interval: 1 * time.Millisecond, MaxDuration: 10 * time.Millisecond}, subgraphName)
 
-	tr := NewRetryHTTPTransport(
-		&MockTransport{
-			handler: func(req *http.Request) (*http.Response, error) {
-				if retries < maxRetries {
-					// Return retryable error
-					return nil, errors.New("retryable error")
-				}
-				// Finally return success
-				return &http.Response{
-					StatusCode: http.StatusOK,
-				}, nil
-			},
+	tr := NewRetryHTTPTransport(&MockTransport{
+		handler: func(req *http.Request) (*http.Response, error) {
+			if retries < maxRetries {
+				// Return retryable error
+				return nil, errors.New("retryable error")
+			}
+			// Finally return success
+			return &http.Response{
+				StatusCode: http.StatusOK,
+			}, nil
 		},
-		func(req *http.Request) *zap.Logger { return zap.NewNop() },
-		mgr,
-	)
+	}, loggerFunc, mgr, getActiveSubgraph(subgraphName))
 
-	req := withSubgraph(httptest.NewRequest("GET", "http://localhost:3000/graphql", nil), "sg")
+	req := httptest.NewRequest("GET", "http://localhost:3000/graphql", nil)
 	resp, err := tr.RoundTrip(req)
 
 	assert.NoError(t, err)
@@ -489,41 +467,38 @@ func TestRetryOn429WithDelaySeconds(t *testing.T) {
 	// Track what retry duration was requested to verify Retry-After is parsed correctly
 	var retryAfterUsed []bool
 
+	subgraphName := `sg`
 	mgr := newTestManager(shouldRetryWith429, func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
 		retries++
-	}, RetryOptions{MaxRetryCount: maxRetries, Interval: 100 * time.Millisecond, MaxDuration: 10 * time.Second}, "sg")
+	}, RetryOptions{MaxRetryCount: maxRetries, Interval: 100 * time.Millisecond, MaxDuration: 10 * time.Second}, subgraphName)
 
-	tr := NewRetryHTTPTransport(
-		&MockTransport{
-			handler: func(req *http.Request) (*http.Response, error) {
-				attemptCount++
-				if attemptCount <= maxRetries {
-					// Return 429 with Retry-After header in seconds
-					resp := &http.Response{
-						StatusCode: http.StatusTooManyRequests,
-						Header:     make(http.Header),
-					}
-					resp.Header.Set("Retry-After", fmt.Sprintf("%d", retryAfterSeconds))
-
-					// Verify the header is parsed correctly
-					duration, useRetryAfter := shouldUseRetryAfter(zap.NewNop(), resp, defaultMaxDuration)
-					retryAfterUsed = append(retryAfterUsed, useRetryAfter)
-					assert.True(t, useRetryAfter, "Should use Retry-After header for 429")
-					assert.Equal(t, time.Duration(retryAfterSeconds)*time.Second, duration)
-
-					return resp, nil
+	tr := NewRetryHTTPTransport(&MockTransport{
+		handler: func(req *http.Request) (*http.Response, error) {
+			attemptCount++
+			if attemptCount <= maxRetries {
+				// Return 429 with Retry-After header in seconds
+				resp := &http.Response{
+					StatusCode: http.StatusTooManyRequests,
+					Header:     make(http.Header),
 				}
-				// Finally return success
-				return &http.Response{
-					StatusCode: http.StatusOK,
-				}, nil
-			},
-		},
-		func(req *http.Request) *zap.Logger { return zap.NewNop() },
-		mgr,
-	)
+				resp.Header.Set("Retry-After", fmt.Sprintf("%d", retryAfterSeconds))
 
-	req := withSubgraph(httptest.NewRequest("GET", "http://localhost:3000/graphql", nil), "sg")
+				// Verify the header is parsed correctly
+				duration, useRetryAfter := shouldUseRetryAfter(zap.NewNop(), resp, defaultMaxDuration)
+				retryAfterUsed = append(retryAfterUsed, useRetryAfter)
+				assert.True(t, useRetryAfter, "Should use Retry-After header for 429")
+				assert.Equal(t, time.Duration(retryAfterSeconds)*time.Second, duration)
+
+				return resp, nil
+			}
+			// Finally return success
+			return &http.Response{
+				StatusCode: http.StatusOK,
+			}, nil
+		},
+	}, loggerFunc, mgr, getActiveSubgraph(subgraphName))
+
+	req := httptest.NewRequest("GET", "http://localhost:3000/graphql", nil)
 	resp, err := tr.RoundTrip(req)
 
 	assert.NoError(t, err)
@@ -547,41 +522,38 @@ func TestRetryOn429WithDelaySecondsLargerThanMaxDuration(t *testing.T) {
 	// Track what retry duration was requested to verify Retry-After is parsed correctly
 	var retryAfterUsed []bool
 
+	subgraphName := "sg"
 	mgr := newTestManager(shouldRetryWith429, func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
 		retries++
-	}, RetryOptions{MaxRetryCount: maxRetries, Interval: 100 * time.Millisecond, MaxDuration: 10 * time.Second}, "sg")
+	}, RetryOptions{MaxRetryCount: maxRetries, Interval: 100 * time.Millisecond, MaxDuration: 10 * time.Second}, subgraphName)
 
-	tr := NewRetryHTTPTransport(
-		&MockTransport{
-			handler: func(req *http.Request) (*http.Response, error) {
-				attemptCount++
-				if attemptCount <= maxRetries {
-					// Return 429 with Retry-After header in seconds
-					resp := &http.Response{
-						StatusCode: http.StatusTooManyRequests,
-						Header:     make(http.Header),
-					}
-					resp.Header.Set("Retry-After", fmt.Sprintf("%d", retryAfterSeconds))
-
-					// Verify the header is parsed correctly
-					duration, useRetryAfter := shouldUseRetryAfter(zap.NewNop(), resp, maxDuration)
-					retryAfterUsed = append(retryAfterUsed, useRetryAfter)
-					assert.True(t, useRetryAfter, "Should use Retry-After header for 429")
-					assert.Equal(t, maxDuration, duration)
-
-					return resp, nil
+	tr := NewRetryHTTPTransport(&MockTransport{
+		handler: func(req *http.Request) (*http.Response, error) {
+			attemptCount++
+			if attemptCount <= maxRetries {
+				// Return 429 with Retry-After header in seconds
+				resp := &http.Response{
+					StatusCode: http.StatusTooManyRequests,
+					Header:     make(http.Header),
 				}
-				// Finally return success
-				return &http.Response{
-					StatusCode: http.StatusOK,
-				}, nil
-			},
-		},
-		func(req *http.Request) *zap.Logger { return zap.NewNop() },
-		mgr,
-	)
+				resp.Header.Set("Retry-After", fmt.Sprintf("%d", retryAfterSeconds))
 
-	req := withSubgraph(httptest.NewRequest("GET", "http://localhost:3000/graphql", nil), "sg")
+				// Verify the header is parsed correctly
+				duration, useRetryAfter := shouldUseRetryAfter(zap.NewNop(), resp, maxDuration)
+				retryAfterUsed = append(retryAfterUsed, useRetryAfter)
+				assert.True(t, useRetryAfter, "Should use Retry-After header for 429")
+				assert.Equal(t, maxDuration, duration)
+
+				return resp, nil
+			}
+			// Finally return success
+			return &http.Response{
+				StatusCode: http.StatusOK,
+			}, nil
+		},
+	}, loggerFunc, mgr, getActiveSubgraph(subgraphName))
+
+	req := httptest.NewRequest("GET", "http://localhost:3000/graphql", nil)
 	resp, err := tr.RoundTrip(req)
 
 	assert.NoError(t, err)
@@ -600,32 +572,29 @@ func TestRetryOn429WithoutRetryAfter(t *testing.T) {
 	attemptCount := 0
 	maxRetries := 2
 
+	subgraphName := "sg"
 	mgr := newTestManager(shouldRetryWith429, func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
 		retries++
-	}, RetryOptions{MaxRetryCount: maxRetries, Interval: 1 * time.Millisecond, MaxDuration: 10 * time.Millisecond}, "sg")
+	}, RetryOptions{MaxRetryCount: maxRetries, Interval: 1 * time.Millisecond, MaxDuration: 10 * time.Millisecond}, subgraphName)
 
-	tr := NewRetryHTTPTransport(
-		&MockTransport{
-			handler: func(req *http.Request) (*http.Response, error) {
-				attemptCount++
-				if attemptCount <= maxRetries {
-					// Return 429 without Retry-After header
-					return &http.Response{
-						StatusCode: http.StatusTooManyRequests,
-						Header:     make(http.Header),
-					}, nil
-				}
-				// Finally return success
+	tr := NewRetryHTTPTransport(&MockTransport{
+		handler: func(req *http.Request) (*http.Response, error) {
+			attemptCount++
+			if attemptCount <= maxRetries {
+				// Return 429 without Retry-After header
 				return &http.Response{
-					StatusCode: http.StatusOK,
+					StatusCode: http.StatusTooManyRequests,
+					Header:     make(http.Header),
 				}, nil
-			},
+			}
+			// Finally return success
+			return &http.Response{
+				StatusCode: http.StatusOK,
+			}, nil
 		},
-		func(req *http.Request) *zap.Logger { return zap.NewNop() },
-		mgr,
-	)
+	}, loggerFunc, mgr, getActiveSubgraph(subgraphName))
 
-	req := withSubgraph(httptest.NewRequest("GET", "http://localhost:3000/graphql", nil), "sg")
+	req := httptest.NewRequest("GET", "http://localhost:3000/graphql", nil)
 	resp, err := tr.RoundTrip(req)
 
 	assert.NoError(t, err)
@@ -644,45 +613,42 @@ func TestRetryOn429WithHTTPDate(t *testing.T) {
 	var retryAfterUsed []bool
 	var expectedDuration time.Duration
 
+	subgraphName := "sg"
 	mgr := newTestManager(shouldRetryWith429, func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
 		retries++
-	}, RetryOptions{MaxRetryCount: maxRetries, Interval: 100 * time.Millisecond, MaxDuration: 10 * time.Second}, "sg")
+	}, RetryOptions{MaxRetryCount: maxRetries, Interval: 100 * time.Millisecond, MaxDuration: 10 * time.Second}, subgraphName)
 
-	tr := NewRetryHTTPTransport(
-		&MockTransport{
-			handler: func(req *http.Request) (*http.Response, error) {
-				attemptCount++
-				if attemptCount <= maxRetries {
-					// Return 429 with Retry-After header as HTTP-date (1 second in future to keep test fast)
-					expectedDuration = 1 * time.Second
-					futureTime := time.Now().UTC().Add(expectedDuration)
-					resp := &http.Response{
-						StatusCode: http.StatusTooManyRequests,
-						Header:     make(http.Header),
-					}
-					resp.Header.Set("Retry-After", futureTime.Format(http.TimeFormat))
-
-					// Verify the header is parsed correctly
-					duration, useRetryAfter := shouldUseRetryAfter(zap.NewNop(), resp, defaultMaxDuration)
-					retryAfterUsed = append(retryAfterUsed, useRetryAfter)
-					assert.True(t, useRetryAfter, "Should use Retry-After header for 429")
-					// Allow reasonable tolerance for execution delay between time creation and parsing
-					assert.True(t, duration > 0 && duration <= expectedDuration,
-						"Duration should be positive and <= %v, got %v", expectedDuration, duration)
-
-					return resp, nil
+	tr := NewRetryHTTPTransport(&MockTransport{
+		handler: func(req *http.Request) (*http.Response, error) {
+			attemptCount++
+			if attemptCount <= maxRetries {
+				// Return 429 with Retry-After header as HTTP-date (1 second in future to keep test fast)
+				expectedDuration = 1 * time.Second
+				futureTime := time.Now().UTC().Add(expectedDuration)
+				resp := &http.Response{
+					StatusCode: http.StatusTooManyRequests,
+					Header:     make(http.Header),
 				}
-				// Finally return success
-				return &http.Response{
-					StatusCode: http.StatusOK,
-				}, nil
-			},
-		},
-		func(req *http.Request) *zap.Logger { return zap.NewNop() },
-		mgr,
-	)
+				resp.Header.Set("Retry-After", futureTime.Format(http.TimeFormat))
 
-	req := withSubgraph(httptest.NewRequest("GET", "http://localhost:3000/graphql", nil), "sg")
+				// Verify the header is parsed correctly
+				duration, useRetryAfter := shouldUseRetryAfter(zap.NewNop(), resp, defaultMaxDuration)
+				retryAfterUsed = append(retryAfterUsed, useRetryAfter)
+				assert.True(t, useRetryAfter, "Should use Retry-After header for 429")
+				// Allow reasonable tolerance for execution delay between time creation and parsing
+				assert.True(t, duration > 0 && duration <= expectedDuration,
+					"Duration should be positive and <= %v, got %v", expectedDuration, duration)
+
+				return resp, nil
+			}
+			// Finally return success
+			return &http.Response{
+				StatusCode: http.StatusOK,
+			}, nil
+		},
+	}, loggerFunc, mgr, getActiveSubgraph(subgraphName))
+
+	req := httptest.NewRequest("GET", "http://localhost:3000/graphql", nil)
 	resp, err := tr.RoundTrip(req)
 
 	assert.NoError(t, err)
@@ -701,34 +667,31 @@ func TestRetryOn429WithInvalidRetryAfterHeader(t *testing.T) {
 	attemptCount := 0
 	maxRetries := 2
 
+	subgraphName := "sg"
 	mgr := newTestManager(shouldRetryWith429, func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
 		retries++
-	}, RetryOptions{MaxRetryCount: maxRetries, Interval: 1 * time.Millisecond, MaxDuration: 10 * time.Millisecond}, "sg")
+	}, RetryOptions{MaxRetryCount: maxRetries, Interval: 1 * time.Millisecond, MaxDuration: 10 * time.Millisecond}, subgraphName)
 
-	tr := NewRetryHTTPTransport(
-		&MockTransport{
-			handler: func(req *http.Request) (*http.Response, error) {
-				attemptCount++
-				if attemptCount <= maxRetries {
-					// Return 429 with invalid Retry-After header
-					resp := &http.Response{
-						StatusCode: http.StatusTooManyRequests,
-						Header:     make(http.Header),
-					}
-					resp.Header.Set("Retry-After", "invalid-value")
-					return resp, nil
+	tr := NewRetryHTTPTransport(&MockTransport{
+		handler: func(req *http.Request) (*http.Response, error) {
+			attemptCount++
+			if attemptCount <= maxRetries {
+				// Return 429 with invalid Retry-After header
+				resp := &http.Response{
+					StatusCode: http.StatusTooManyRequests,
+					Header:     make(http.Header),
 				}
-				// Finally return success
-				return &http.Response{
-					StatusCode: http.StatusOK,
-				}, nil
-			},
+				resp.Header.Set("Retry-After", "invalid-value")
+				return resp, nil
+			}
+			// Finally return success
+			return &http.Response{
+				StatusCode: http.StatusOK,
+			}, nil
 		},
-		func(req *http.Request) *zap.Logger { return zap.NewNop() },
-		mgr,
-	)
+	}, loggerFunc, mgr, getActiveSubgraph(subgraphName))
 
-	req := withSubgraph(httptest.NewRequest("GET", "http://localhost:3000/graphql", nil), "sg")
+	req := httptest.NewRequest("GET", "http://localhost:3000/graphql", nil)
 	resp, err := tr.RoundTrip(req)
 
 	assert.NoError(t, err)
@@ -744,34 +707,31 @@ func TestRetryOn429WithNegativeDelaySeconds(t *testing.T) {
 	attemptCount := 0
 	maxRetries := 2
 
+	subgraphName := "sg"
 	mgr := newTestManager(shouldRetryWith429, func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
 		retries++
-	}, RetryOptions{MaxRetryCount: maxRetries, Interval: 1 * time.Millisecond, MaxDuration: 10 * time.Millisecond}, "sg")
+	}, RetryOptions{MaxRetryCount: maxRetries, Interval: 1 * time.Millisecond, MaxDuration: 10 * time.Millisecond}, subgraphName)
 
-	tr := NewRetryHTTPTransport(
-		&MockTransport{
-			handler: func(req *http.Request) (*http.Response, error) {
-				attemptCount++
-				if attemptCount <= maxRetries {
-					// Return 429 with negative Retry-After value (should fall back to normal backoff)
-					resp := &http.Response{
-						StatusCode: http.StatusTooManyRequests,
-						Header:     make(http.Header),
-					}
-					resp.Header.Set("Retry-After", "-1")
-					return resp, nil
+	tr := NewRetryHTTPTransport(&MockTransport{
+		handler: func(req *http.Request) (*http.Response, error) {
+			attemptCount++
+			if attemptCount <= maxRetries {
+				// Return 429 with negative Retry-After value (should fall back to normal backoff)
+				resp := &http.Response{
+					StatusCode: http.StatusTooManyRequests,
+					Header:     make(http.Header),
 				}
-				// Finally return success
-				return &http.Response{
-					StatusCode: http.StatusOK,
-				}, nil
-			},
+				resp.Header.Set("Retry-After", "-1")
+				return resp, nil
+			}
+			// Finally return success
+			return &http.Response{
+				StatusCode: http.StatusOK,
+			}, nil
 		},
-		func(req *http.Request) *zap.Logger { return zap.NewNop() },
-		mgr,
-	)
+	}, loggerFunc, mgr, getActiveSubgraph(subgraphName))
 
-	req := withSubgraph(httptest.NewRequest("GET", "http://localhost:3000/graphql", nil), "sg")
+	req := httptest.NewRequest("GET", "http://localhost:3000/graphql", nil)
 	resp, err := tr.RoundTrip(req)
 
 	assert.NoError(t, err)
@@ -789,62 +749,59 @@ func TestRetryMixed429AndOtherErrors(t *testing.T) {
 	// Track which responses used Retry-After vs normal backoff
 	var retryAfterUsedPerAttempt []bool
 
+	subgraphName := "sg"
 	mgr := newTestManager(shouldRetryWith429, func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
 		retries++
-	}, RetryOptions{MaxRetryCount: maxRetries, Interval: 10 * time.Millisecond, MaxDuration: 10 * time.Second}, "sg")
+	}, RetryOptions{MaxRetryCount: maxRetries, Interval: 10 * time.Millisecond, MaxDuration: 10 * time.Second}, subgraphName)
 
-	tr := NewRetryHTTPTransport(
-		&MockTransport{
-			handler: func(req *http.Request) (*http.Response, error) {
-				attemptCount++
-				switch attemptCount {
-				case 1:
-					// First: 429 with Retry-After
-					resp := &http.Response{
-						StatusCode: http.StatusTooManyRequests,
-						Header:     make(http.Header),
-					}
-					resp.Header.Set("Retry-After", "1")
-
-					// Verify this should use Retry-After
-					_, useRetryAfter := shouldUseRetryAfter(zap.NewNop(), resp, defaultMaxDuration)
-					retryAfterUsedPerAttempt = append(retryAfterUsedPerAttempt, useRetryAfter)
-
-					return resp, nil
-				case 2:
-					// Second: Network error (should use normal backoff)
-					retryAfterUsedPerAttempt = append(retryAfterUsedPerAttempt, false)
-					return nil, errors.New("network error")
-				case 3:
-					// Third: 500 error (should use normal backoff)
-					resp := &http.Response{
-						StatusCode: http.StatusInternalServerError,
-					}
-					_, useRetryAfter := shouldUseRetryAfter(zap.NewNop(), resp, defaultMaxDuration)
-					retryAfterUsedPerAttempt = append(retryAfterUsedPerAttempt, useRetryAfter)
-					return resp, nil
-				case 4:
-					// Fourth: 429 without Retry-After (should use normal backoff)
-					resp := &http.Response{
-						StatusCode: http.StatusTooManyRequests,
-						Header:     make(http.Header),
-					}
-					_, useRetryAfter := shouldUseRetryAfter(zap.NewNop(), resp, defaultMaxDuration)
-					retryAfterUsedPerAttempt = append(retryAfterUsedPerAttempt, useRetryAfter)
-					return resp, nil
-				default:
-					// Finally: Success
-					return &http.Response{
-						StatusCode: http.StatusOK,
-					}, nil
+	tr := NewRetryHTTPTransport(&MockTransport{
+		handler: func(req *http.Request) (*http.Response, error) {
+			attemptCount++
+			switch attemptCount {
+			case 1:
+				// First: 429 with Retry-After
+				resp := &http.Response{
+					StatusCode: http.StatusTooManyRequests,
+					Header:     make(http.Header),
 				}
-			},
-		},
-		func(req *http.Request) *zap.Logger { return zap.NewNop() },
-		mgr,
-	)
+				resp.Header.Set("Retry-After", "1")
 
-	req := withSubgraph(httptest.NewRequest("GET", "http://localhost:3000/graphql", nil), "sg")
+				// Verify this should use Retry-After
+				_, useRetryAfter := shouldUseRetryAfter(zap.NewNop(), resp, defaultMaxDuration)
+				retryAfterUsedPerAttempt = append(retryAfterUsedPerAttempt, useRetryAfter)
+
+				return resp, nil
+			case 2:
+				// Second: Network error (should use normal backoff)
+				retryAfterUsedPerAttempt = append(retryAfterUsedPerAttempt, false)
+				return nil, errors.New("network error")
+			case 3:
+				// Third: 500 error (should use normal backoff)
+				resp := &http.Response{
+					StatusCode: http.StatusInternalServerError,
+				}
+				_, useRetryAfter := shouldUseRetryAfter(zap.NewNop(), resp, defaultMaxDuration)
+				retryAfterUsedPerAttempt = append(retryAfterUsedPerAttempt, useRetryAfter)
+				return resp, nil
+			case 4:
+				// Fourth: 429 without Retry-After (should use normal backoff)
+				resp := &http.Response{
+					StatusCode: http.StatusTooManyRequests,
+					Header:     make(http.Header),
+				}
+				_, useRetryAfter := shouldUseRetryAfter(zap.NewNop(), resp, defaultMaxDuration)
+				retryAfterUsedPerAttempt = append(retryAfterUsedPerAttempt, useRetryAfter)
+				return resp, nil
+			default:
+				// Finally: Success
+				return &http.Response{
+					StatusCode: http.StatusOK,
+				}, nil
+			}
+		},
+	}, loggerFunc, mgr, getActiveSubgraph(subgraphName))
+
+	req := httptest.NewRequest("GET", "http://localhost:3000/graphql", nil)
 	resp, err := tr.RoundTrip(req)
 
 	assert.NoError(t, err)
@@ -873,28 +830,25 @@ func TestNoRetryOn429WhenShouldRetryReturnsFalse(t *testing.T) {
 		return err != nil
 	}
 
+	subgraphName := `sg`
 	mgr := newTestManager(shouldNotRetry429, func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
 		retries++
-	}, RetryOptions{MaxRetryCount: 3, Interval: 1 * time.Millisecond, MaxDuration: 10 * time.Millisecond}, "sg")
+	}, RetryOptions{MaxRetryCount: 3, Interval: 1 * time.Millisecond, MaxDuration: 10 * time.Millisecond}, subgraphName)
 
-	tr := NewRetryHTTPTransport(
-		&MockTransport{
-			handler: func(req *http.Request) (*http.Response, error) {
-				attemptCount++
-				// Always return 429 with Retry-After header
-				resp := &http.Response{
-					StatusCode: http.StatusTooManyRequests,
-					Header:     make(http.Header),
-				}
-				resp.Header.Set("Retry-After", "1")
-				return resp, nil
-			},
+	tr := NewRetryHTTPTransport(&MockTransport{
+		handler: func(req *http.Request) (*http.Response, error) {
+			attemptCount++
+			// Always return 429 with Retry-After header
+			resp := &http.Response{
+				StatusCode: http.StatusTooManyRequests,
+				Header:     make(http.Header),
+			}
+			resp.Header.Set("Retry-After", "1")
+			return resp, nil
 		},
-		func(req *http.Request) *zap.Logger { return zap.NewNop() },
-		mgr,
-	)
+	}, loggerFunc, mgr, getActiveSubgraph(subgraphName))
 
-	req := withSubgraph(httptest.NewRequest("GET", "http://localhost:3000/graphql", nil), "sg")
+	req := httptest.NewRequest("GET", "http://localhost:3000/graphql", nil)
 	resp, err := tr.RoundTrip(req)
 
 	assert.NoError(t, err)

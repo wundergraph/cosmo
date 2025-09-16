@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"github.com/gorilla/websocket"
 	"net/http"
 	"strconv"
 	"sync/atomic"
@@ -924,6 +925,107 @@ func TestRetryPerSubgraph(t *testing.T) {
 			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'test1', Reason: empty response.","extensions":{"statusCode":502}}],"data":{"floatField":null}}`, resTest1.Body)
 			require.Equal(t, int32(generalMax+1), employeesCalls.Load())
 			require.Equal(t, int32(generalMax+1), test1Calls.Load())
+		})
+	})
+
+	t.Run("verify retry on upgrade requests", func(t *testing.T) {
+		t.Parallel()
+
+		const failedTries int64 = 2
+
+		const timestampMessage = `{"type":"next","id":"1","payload":{"data":{"currentTime":{"unixTime":1,"timeStamp":"2021-09-01T12:00:00Z"}}}}`
+		const completeMessage = `{"type":"complete","id":"1"}`
+
+		employeesCalls := atomic.Int64{}
+
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
+				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 2000
+			},
+
+			RouterOptions: []core.Option{
+				core.WithSubgraphRetryOptions(core.NewSubgraphRetryOptions(config.TrafficShapingRules{
+					All: config.GlobalSubgraphRequestRule{
+						BackoffJitterRetry: config.BackoffJitterRetry{
+							Enabled:     true,
+							MaxAttempts: 5,
+							MaxDuration: 10 * time.Second,
+							Interval:    200 * time.Millisecond,
+							Expression:  "IsRetryableStatusCode() || IsConnectionError() || IsTimeout()",
+						},
+					},
+				})),
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							employeesCalls.Add(1)
+							if employeesCalls.Load() <= failedTries {
+								w.WriteHeader(http.StatusBadGateway)
+								return
+							}
+
+							upgrader := websocket.Upgrader{
+								CheckOrigin: func(r *http.Request) bool {
+									return true
+								},
+								Subprotocols: []string{"graphql-transport-ws"},
+							}
+							conn, err := upgrader.Upgrade(w, r, nil)
+							require.NoError(t, err)
+							defer func() {
+								_ = conn.Close()
+							}()
+
+							_, _, err = testenv.WSReadMessage(t, conn)
+							require.NoError(t, err)
+
+							err = testenv.WSWriteMessage(t, conn, websocket.TextMessage, []byte(`{"type":"connection_ack"}`))
+							require.NoError(t, err)
+
+							err = testenv.WSWriteMessage(t, conn, websocket.TextMessage, []byte(timestampMessage))
+							require.NoError(t, err)
+
+							err = testenv.WSWriteMessage(t, conn, websocket.TextMessage, []byte(completeMessage))
+							require.NoError(t, err)
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+			err := testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
+			})
+			require.NoError(t, err)
+
+			// Read a result and store its timestamp, next result should be 1 second later
+			_, messageBytes, err := testenv.WSReadMessage(t, conn)
+			require.NoError(t, err)
+
+			require.Equal(t, failedTries+1, employeesCalls.Load())
+
+			// ====
+			// Verify the messages are correct from here onwards
+			// ====
+			require.JSONEq(t, timestampMessage, string(messageBytes))
+
+			// Sending a complete must stop the subscription
+			err = testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{ID: "1", Type: "complete"})
+			require.NoError(t, err)
+
+			err = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+			require.NoError(t, err)
+
+			_, actualCompleteMessage, err := testenv.WSReadMessage(t, conn)
+			require.NoError(t, err)
+			require.JSONEq(t, completeMessage, string(actualCompleteMessage))
+
+			require.NoError(t, conn.Close())
+			xEnv.WaitForSubscriptionCount(0, time.Second*5)
 		})
 	})
 }

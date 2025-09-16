@@ -7,16 +7,15 @@ import (
 	"strconv"
 	"time"
 
-	rcontext "github.com/wundergraph/cosmo/router/internal/context"
-
 	"github.com/cloudflare/backoff"
 	"go.uber.org/zap"
 )
 
 type RetryHTTPTransport struct {
-	roundTripper     http.RoundTripper
-	getRequestLogger requestLoggerGetter
-	retryManager     *Manager
+	roundTripper      http.RoundTripper
+	getRequestLogger  requestLoggerGetter
+	retryManager      *Manager
+	getActiveSubgraph func(req *http.Request) string
 }
 
 // parseRetryAfterHeader parses the Retry-After header value according to RFC 7231.
@@ -74,15 +73,12 @@ func shouldUseRetryAfter(logger *zap.Logger, resp *http.Response, maxDuration ti
 	return duration, duration > 0
 }
 
-func NewRetryHTTPTransport(
-	roundTripper http.RoundTripper,
-	getRequestLogger requestLoggerGetter,
-	retryManager *Manager,
-) *RetryHTTPTransport {
+func NewRetryHTTPTransport(roundTripper http.RoundTripper, getRequestLogger requestLoggerGetter, retryManager *Manager, getActiveSubgraph func(req *http.Request) string) *RetryHTTPTransport {
 	return &RetryHTTPTransport{
-		roundTripper:     roundTripper,
-		getRequestLogger: getRequestLogger,
-		retryManager:     retryManager,
+		roundTripper:      roundTripper,
+		getRequestLogger:  getRequestLogger,
+		getActiveSubgraph: getActiveSubgraph,
+		retryManager:      retryManager,
 	}
 }
 
@@ -93,16 +89,10 @@ func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, erro
 		return resp, nil
 	}
 
-	var subgraph string
-	subgraphCtxVal := req.Context().Value(rcontext.CurrentSubgraphContextKey{})
-	if subgraphCtxVal != nil {
-		if sg, ok := subgraphCtxVal.(string); ok {
-			subgraph = sg
-		}
-	}
+	activeSubgraph := rt.getActiveSubgraph(req)
+	retryOptions := rt.retryManager.GetSubgraphOptions(activeSubgraph)
 
 	// If there is no option defined for this subgraph
-	retryOptions := rt.retryManager.GetSubgraphOptions(subgraph)
 	if retryOptions == nil {
 		return resp, err
 	}
@@ -115,6 +105,7 @@ func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, erro
 	// Retry logic
 	retries := 0
 	for (rt.retryManager.Retry(err, req, resp, retryOptions.Expression)) && retries < retryOptions.MaxRetryCount {
+
 		retries++
 
 		// Check if we should use Retry-After header for 429 responses

@@ -84,31 +84,41 @@ func NewCustomTransport(
 	// As a workaround we pass in a function that can be used to get the logger from within the round tripper
 	getRequestContextLogger := func(req *http.Request) *zap.Logger {
 		reqContext := getRequestContext(req.Context())
+		if reqContext == nil {
+			return zap.NewNop()
+		}
 		return reqContext.Logger()
 	}
 
+	getActiveSubgraphName := func(req *http.Request) string {
+		reqContext := getRequestContext(req.Context())
+		if reqContext == nil {
+			return ""
+		}
+		subgraph := reqContext.ActiveSubgraph(req)
+		if subgraph != nil {
+			return subgraph.Name
+		}
+		return ""
+	}
+
 	if enableTraceClient {
-		getValuesFromRequest := func(ctx context.Context, req *http.Request) (*expr.Context, string) {
+		getExprContext := func(ctx context.Context, req *http.Request) *expr.Context {
 			reqContext := getRequestContext(ctx)
 			if reqContext == nil {
-				return &expr.Context{}, ""
+				return &expr.Context{}
 			}
-
-			var activeSubgraphName string
-			if activeSubgraph := reqContext.ActiveSubgraph(req); activeSubgraph != nil {
-				activeSubgraphName = activeSubgraph.Name
-			}
-			return &reqContext.expressionContext, activeSubgraphName
+			return &reqContext.expressionContext
 		}
-		baseRoundTripper = traceclient.NewTraceInjectingRoundTripper(baseRoundTripper, connectionMetricStore, getValuesFromRequest)
+		baseRoundTripper = traceclient.NewTraceInjectingRoundTripper(baseRoundTripper, connectionMetricStore, getExprContext, getActiveSubgraphName)
 	}
 
 	if breaker.HasCircuits() {
-		baseRoundTripper = circuit.NewCircuitTripper(baseRoundTripper, breaker, getRequestContextLogger)
+		baseRoundTripper = circuit.NewCircuitTripper(baseRoundTripper, breaker, getRequestContextLogger, getActiveSubgraphName)
 	}
 
 	if retryManager.IsEnabled() {
-		ct.roundTripper = retrytransport.NewRetryHTTPTransport(baseRoundTripper, getRequestContextLogger, retryManager)
+		ct.roundTripper = retrytransport.NewRetryHTTPTransport(baseRoundTripper, getRequestContextLogger, retryManager, getActiveSubgraphName)
 	} else {
 		ct.roundTripper = baseRoundTripper
 	}

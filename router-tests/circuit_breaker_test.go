@@ -2,6 +2,7 @@ package integration
 
 import (
 	"context"
+	"github.com/gorilla/websocket"
 	"net/http"
 	"sort"
 	"sync/atomic"
@@ -620,6 +621,139 @@ func TestCircuitBreaker(t *testing.T) {
 			response = sendRequest(ffOpts, "myff", SendFailedRequest)
 			require.Equal(t, 2, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
 			require.Contains(t, response, "Failed to fetch from Subgraph 'products_fg' at Path 'employees'")
+		})
+	})
+
+	t.Run("verify circuit breaker tripping on upgrade requests", func(t *testing.T) {
+		t.Parallel()
+
+		const failedTries int64 = 3
+
+		const timestampMessage = `{"type":"next","id":"1","payload":{"data":{"currentTime":{"unixTime":1,"timeStamp":"2021-09-01T12:00:00Z"}}}}`
+		const completeMessage = `{"type":"complete","id":"1"}`
+		const defaultErrorMessage = `{"id":"1","type":"error","payload":[{"message":"Internal server error"}]}`
+
+		breaker := getCircuitBreakerWithDefaults()
+		breaker.RequestThreshold = 3
+		breaker.ErrorThresholdPercentage = 100
+
+		breaker.NumBuckets = 1
+		breaker.RollingDuration = 5000 * time.Millisecond
+
+		trafficConfig := getTrafficConfigWithTimeout(breaker, 1*time.Second)
+
+		employeesCalls := atomic.Int64{}
+
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
+				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 2000
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.DebugLevel,
+			},
+			RouterOptions: []core.Option{
+				core.WithSubgraphCircuitBreakerOptions(core.NewSubgraphCircuitBreakerOptions(trafficConfig)),
+				core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(trafficConfig)),
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							employeesCalls.Add(1)
+							if employeesCalls.Load() <= failedTries {
+								simulateConnectionFailureOnClose(w)
+								return
+							}
+
+							upgrader := websocket.Upgrader{
+								CheckOrigin: func(r *http.Request) bool {
+									return true
+								},
+								Subprotocols: []string{"graphql-transport-ws"},
+							}
+							conn, err := upgrader.Upgrade(w, r, nil)
+							require.NoError(t, err)
+							defer func() {
+								_ = conn.Close()
+							}()
+
+							_, _, err = testenv.WSReadMessage(t, conn)
+							require.NoError(t, err)
+
+							err = testenv.WSWriteMessage(t, conn, websocket.TextMessage, []byte(`{"type":"connection_ack"}`))
+							require.NoError(t, err)
+
+							err = testenv.WSWriteMessage(t, conn, websocket.TextMessage, []byte(timestampMessage))
+							require.NoError(t, err)
+
+							err = testenv.WSWriteMessage(t, conn, websocket.TextMessage, []byte(completeMessage))
+							require.NoError(t, err)
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			for i := range failedTries + 2 {
+				conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+				err := testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
+					ID:      "1",
+					Type:    "subscribe",
+					Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
+				})
+				require.NoError(t, err)
+
+				_, message, err := testenv.WSReadMessage(t, conn)
+				require.NoError(t, err)
+
+				require.Equal(t, defaultErrorMessage, string(message))
+				require.NoError(t, conn.Close())
+
+				switch {
+				case i < breaker.RequestThreshold-1:
+					require.Zero(t, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
+				case i == breaker.RequestThreshold-1:
+					require.Equal(t, 1, xEnv.Observer().FilterMessage("Circuit breaker status changed").Len())
+				case i > breaker.RequestThreshold-1:
+					expectedCount := i - (breaker.RequestThreshold - 1)
+					require.Equal(t, int(expectedCount), xEnv.Observer().FilterMessage("Circuit breaker open, request callback did not execute").Len())
+				}
+
+			}
+
+			require.Equal(t, failedTries, employeesCalls.Load())
+
+			// Wait for current bucket to be cleaned up
+			time.Sleep(breaker.RollingDuration + time.Millisecond*500)
+
+			// ====
+			// Verify a success case with messages validated from here onwards
+			// ====
+
+			// Sending a complete must stop the subscription
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+			err := testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp }}"}`),
+			})
+			require.NoError(t, err)
+
+			_, message, err := testenv.WSReadMessage(t, conn)
+			require.NoError(t, err)
+			require.JSONEq(t, timestampMessage, string(message))
+
+			err = testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{ID: "1", Type: "complete"})
+			require.NoError(t, err)
+
+			err = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+			require.NoError(t, err)
+
+			_, actualCompleteMessage, err := testenv.WSReadMessage(t, conn)
+			require.NoError(t, err)
+			require.JSONEq(t, completeMessage, string(actualCompleteMessage))
+
+			xEnv.WaitForSubscriptionCount(0, time.Second*5)
 		})
 	})
 

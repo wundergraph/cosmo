@@ -6,7 +6,6 @@ import (
 	"net/http/httptrace"
 	"time"
 
-	rcontext "github.com/wundergraph/cosmo/router/internal/context"
 	"github.com/wundergraph/cosmo/router/internal/expr"
 
 	"github.com/wundergraph/cosmo/router/pkg/metric"
@@ -33,20 +32,23 @@ type ClientTrace struct {
 type ClientTraceContextKey struct{}
 
 type TraceInjectingRoundTripper struct {
-	base                   http.RoundTripper
-	connectionMetricStore  metric.ConnectionMetricStore
-	reqContextValuesGetter func(ctx context.Context, req *http.Request) (*expr.Context, string)
+	base                  http.RoundTripper
+	connectionMetricStore metric.ConnectionMetricStore
+	getExprContext        func(ctx context.Context, req *http.Request) *expr.Context
+	getActiveSubgraphName func(req *http.Request) string
 }
 
 func NewTraceInjectingRoundTripper(
 	base http.RoundTripper,
 	connectionMetricStore metric.ConnectionMetricStore,
-	reqContextValuesGetter func(ctx context.Context, req *http.Request) (*expr.Context, string),
+	getExprContext func(ctx context.Context, req *http.Request) *expr.Context,
+	getActiveSubgraphName func(req *http.Request) string,
 ) *TraceInjectingRoundTripper {
 	return &TraceInjectingRoundTripper{
-		base:                   base,
-		connectionMetricStore:  connectionMetricStore,
-		reqContextValuesGetter: reqContextValuesGetter,
+		base:                  base,
+		connectionMetricStore: connectionMetricStore,
+		getExprContext:        getExprContext,
+		getActiveSubgraphName: getActiveSubgraphName,
 	}
 }
 
@@ -104,23 +106,14 @@ func (t *TraceInjectingRoundTripper) getClientTrace(ctx context.Context) *httptr
 func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Context, req *http.Request) {
 	trace := GetClientTraceFromContext(ctx)
 
-	var subgraph string
-	subgraphCtxVal := ctx.Value(rcontext.CurrentSubgraphContextKey{})
-	if subgraphCtxVal != nil {
-		subgraph = subgraphCtxVal.(string)
-	}
-
-	// We have a fallback for active subgraph name in case engine loader hooks is not called
-	// TODO: Evaluate if we actually need a fallback and if we can use only one way to get the active subgraph name
-	exprContext, activeSubgraphName := t.reqContextValuesGetter(ctx, req)
-	if subgraph == "" {
-		subgraph = activeSubgraphName
-	}
+	exprContext := t.getExprContext(ctx, req)
 
 	if trace.ConnectionGet != nil && trace.ConnectionAcquired != nil {
 		duration := trace.ConnectionAcquired.Time.Sub(trace.ConnectionGet.Time)
 		exprContext.Subgraph.Request.ClientTrace.ConnectionAcquireDuration = duration
 
+		subgraph := t.getActiveSubgraphName(req)
+		
 		serverAttributes := rotel.GetServerAttributes(trace.ConnectionGet.HostPort)
 		serverAttributes = append(
 			serverAttributes,

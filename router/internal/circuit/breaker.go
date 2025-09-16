@@ -4,34 +4,27 @@ import (
 	"context"
 	"net/http"
 
-	rcontext "github.com/wundergraph/cosmo/router/internal/context"
 	"go.uber.org/zap"
 )
 
 type Breaker struct {
-	roundTripper   http.RoundTripper
-	loggerFunc     func(req *http.Request) *zap.Logger
-	circuitBreaker *Manager
+	roundTripper          http.RoundTripper
+	loggerFunc            func(req *http.Request) *zap.Logger
+	circuitBreaker        *Manager
+	getActiveSubgraphName func(req *http.Request) string
 }
 
-func NewCircuitTripper(roundTripper http.RoundTripper, breaker *Manager, logger func(req *http.Request) *zap.Logger) *Breaker {
+func NewCircuitTripper(roundTripper http.RoundTripper, breaker *Manager, logger func(req *http.Request) *zap.Logger, getActiveSubgraphName func(req *http.Request) string) *Breaker {
 	return &Breaker{
-		circuitBreaker: breaker,
-		loggerFunc:     logger,
-		roundTripper:   roundTripper,
+		circuitBreaker:        breaker,
+		loggerFunc:            logger,
+		roundTripper:          roundTripper,
+		getActiveSubgraphName: getActiveSubgraphName,
 	}
 }
 
 func (rt *Breaker) RoundTrip(req *http.Request) (resp *http.Response, err error) {
-	ctx := req.Context()
-
-	var subgraph string
-	subgraphCtxVal := ctx.Value(rcontext.CurrentSubgraphContextKey{})
-	if subgraphCtxVal != nil {
-		if sg, ok := subgraphCtxVal.(string); ok {
-			subgraph = sg
-		}
-	}
+	subgraph := rt.getActiveSubgraphName(req)
 
 	// If there is no circuit defined for this subgraph
 	circuit := rt.circuitBreaker.GetCircuitBreaker(subgraph)
