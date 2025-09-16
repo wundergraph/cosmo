@@ -2190,16 +2190,34 @@ export class FederationFactory {
   }
 
   pushVersionTwoDirectiveDefinitionsToDocumentDefinitions() {
-    if (this.referencedPersistedDirectiveNames.has(SEMANTIC_NON_NULL)) {
-      this.routerDefinitions.push(SEMANTIC_NON_NULL_DEFINITION);
-      this.clientDefinitions.push(SEMANTIC_NON_NULL_DEFINITION);
-    }
     if (!this.isVersionTwo) {
+      if (this.referencedPersistedDirectiveNames.has(SEMANTIC_NON_NULL)) {
+        this.clientDefinitions.push(SEMANTIC_NON_NULL_DEFINITION);
+        this.routerDefinitions = [DEPRECATED_DEFINITION, SEMANTIC_NON_NULL_DEFINITION, TAG_DEFINITION];
+      }
       return;
     }
-    this.routerDefinitions.push(
-      ...[AUTHENTICATED_DEFINITION, INACCESSIBLE_DEFINITION, REQUIRES_SCOPES_DEFINITION, SCOPE_SCALAR_DEFINITION],
-    );
+    if (this.referencedPersistedDirectiveNames.has(SEMANTIC_NON_NULL)) {
+      this.clientDefinitions.push(SEMANTIC_NON_NULL_DEFINITION);
+      this.routerDefinitions = [
+        AUTHENTICATED_DEFINITION,
+        DEPRECATED_DEFINITION,
+        INACCESSIBLE_DEFINITION,
+        REQUIRES_SCOPES_DEFINITION,
+        SEMANTIC_NON_NULL_DEFINITION,
+        SCOPE_SCALAR_DEFINITION,
+        TAG_DEFINITION,
+      ];
+      return;
+    }
+    this.routerDefinitions = [
+      AUTHENTICATED_DEFINITION,
+      DEPRECATED_DEFINITION,
+      INACCESSIBLE_DEFINITION,
+      REQUIRES_SCOPES_DEFINITION,
+      SCOPE_SCALAR_DEFINITION,
+      TAG_DEFINITION,
+    ];
   }
 
   validatePathSegmentInaccessibility(path: string): boolean {

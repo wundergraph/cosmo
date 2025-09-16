@@ -1632,7 +1632,10 @@ export function semanticNonNullLevelsIndexOutOfBoundsErrorMessage({
   typeString,
   value,
 }: SemanticNonNullLevelsIndexOutOfBoundsErrorParams) {
-  return `Index "${value}" is out of bounds for type ${typeString}; valid indices are 0–${maxIndex} inclusive.`;
+  return (
+    `Index "${value}" is out of bounds for type ${typeString}; ` +
+    (maxIndex > 0 ? `valid indices are 0-${maxIndex} inclusive.` : `the only valid index is 0.`)
+  );
 }
 
 export function semanticNonNullLevelsNonNullErrorMessage({

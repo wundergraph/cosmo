@@ -446,6 +446,8 @@ export function isObjectDefinitionData(data?: ParentDefinitionData): data is Obj
 
 export function getNodeCoords(data: NodeData): string {
   switch (data.kind) {
+    case Kind.ARGUMENT:
+    // Intentional fallthrough
     case Kind.FIELD_DEFINITION:
     // Intentional fallthrough
     case Kind.INPUT_VALUE_DEFINITION:
