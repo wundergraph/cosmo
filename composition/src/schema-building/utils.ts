@@ -76,7 +76,7 @@ import {
   generateSemanticNonNullDirective,
   generateSimpleDirective,
   getEntriesNotInHashSet,
-  getSingleHashSetEntry,
+  getFirstEntry,
 } from '../utils/utils';
 import { InputNodeKind, InvalidRequiredInputValueData, OutputNodeKind } from '../utils/types';
 import { getDescriptionFromString } from '../v1/federation/utils';
@@ -449,13 +449,11 @@ export function getClientPersistedDirectiveNodes<T extends NodeData>(nodeData: T
   for (const [directiveName, directiveNodes] of nodeData.persistedDirectivesData.directivesByDirectiveName) {
     if (directiveName === SEMANTIC_NON_NULL && isFieldData(nodeData)) {
       persistedDirectiveNodes.push(
-        generateSemanticNonNullDirective(
-          getSingleHashSetEntry(nodeData.nullLevelsBySubgraphName) ?? new Set<number>([0]),
-        ),
+        generateSemanticNonNullDirective(getFirstEntry(nodeData.nullLevelsBySubgraphName) ?? new Set<number>([0])),
       );
       continue;
     }
-    // Only include @authenticated, @deprecated, @requiresScopes, @semanticNonNull in the client schema
+    // Only include @deprecated and @semanticNonNull in the client schema.
     if (!PERSISTED_CLIENT_DIRECTIVES.has(directiveName)) {
       continue;
     }

@@ -3,6 +3,7 @@ import {
   FieldData,
   ID_SCALAR,
   invalidDirectiveError,
+  parse,
   QUERY,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   SEMANTIC_NON_NULL,
@@ -12,7 +13,6 @@ import {
   Subgraph,
   SubgraphName,
 } from '../../../src';
-import { parse } from 'graphql';
 import {
   federateSubgraphsFailure,
   federateSubgraphsSuccess,

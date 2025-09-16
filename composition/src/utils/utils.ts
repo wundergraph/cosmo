@@ -194,7 +194,7 @@ export function generateRequiresScopesDirective(orScopes: Set<string>[]): ConstD
 }
 
 export function generateSemanticNonNullDirective(levels: Set<number>): ConstDirectiveNode {
-  const sortedLevels = Array.from(levels).sort();
+  const sortedLevels = Array.from(levels).sort((a, b) => a - b);
   const values = new Array<ConstValueNode>();
   for (const level of sortedLevels) {
     values.push({
@@ -248,7 +248,7 @@ export function addMapEntries<K, V>(source: Map<K, V>, target: Map<K, V>) {
   }
 }
 
-export function getSingleHashSetEntry<K, V>(hashSet: Set<V> | Map<K, V>): V | undefined {
+export function getFirstEntry<K, V>(hashSet: Set<V> | Map<K, V>): V | undefined {
   const { value, done } = hashSet.values().next();
   if (done) {
     return;

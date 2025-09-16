@@ -1,7 +1,6 @@
 import {
   BREAK,
   ConstDirectiveNode,
-  ConstListValueNode,
   ConstValueNode,
   DefinitionNode,
   DirectiveDefinitionNode,
@@ -299,6 +298,7 @@ import {
   INT_SCALAR,
   INTERFACE_OBJECT,
   KEY,
+  LEVELS,
   LINK,
   LINK_IMPORT,
   LINK_PURPOSE,
@@ -679,8 +679,11 @@ export class NormalizationFactory {
         );
         continue;
       }
-      // The directive location validation means the kind check should be unnecessary
-      if (isOverride && data.kind === Kind.FIELD_DEFINITION) {
+      /* Individual directives are handled in the loop because they validate a single argument, and duplicate
+       * arguments would short-circuit.
+       * The directive location validation means the node kind check should be unnecessary
+       * */
+      if (isOverride && isField) {
         this.handleOverrideDirective({
           data,
           directiveCoords,
@@ -689,7 +692,7 @@ export class NormalizationFactory {
         });
         continue;
       }
-      if (isSemanticNonNull && data.kind === Kind.FIELD_DEFINITION) {
+      if (isSemanticNonNull && isField) {
         this.handleSemanticNonNullDirective({
           data,
           directiveNode,
@@ -2194,7 +2197,12 @@ export class NormalizationFactory {
         }
       }
     }
-    const values = (directiveNode.arguments![0].value as ConstListValueNode).values as ReadonlyArray<IntValueNode>;
+    const levelsArg = directiveNode.arguments?.find((arg) => arg.name.value === LEVELS);
+    if (!levelsArg || levelsArg.value.kind !== Kind.LIST) {
+      errorMessages.push(`Argument "${LEVELS}" validation error.`);
+      return;
+    }
+    const values = levelsArg.value.values as ReadonlyArray<IntValueNode>;
     const typeString = printTypeNode(data.type);
     const levels = new Set<number>();
     for (const { value } of values) {

@@ -223,8 +223,8 @@ import {
   generateSemanticNonNullDirective,
   generateSimpleDirective,
   getEntriesNotInHashSet,
+  getFirstEntry,
   getOrThrowError,
-  getSingleHashSetEntry,
   getValueOrDefault,
   kindToNodeType,
 } from '../../utils/utils';
@@ -699,7 +699,7 @@ export class FederationFactory {
       return;
     }
     // There should only be a single entry in the set
-    const subgraphName = getSingleHashSetEntry(incomingData.subgraphNames);
+    const subgraphName = getFirstEntry(incomingData.subgraphNames);
     if (subgraphName === undefined) {
       this.errors.push(unknownFieldSubgraphNameError(incomingData.federatedCoords));
       return;
@@ -1733,9 +1733,7 @@ export class FederationFactory {
     for (const [directiveName, directiveNodes] of data.persistedDirectivesData.directivesByDirectiveName) {
       if (directiveName === SEMANTIC_NON_NULL && isFieldData(data)) {
         persistedDirectiveNodes.push(
-          generateSemanticNonNullDirective(
-            getSingleHashSetEntry(data.nullLevelsBySubgraphName) ?? new Set<number>([0]),
-          ),
+          generateSemanticNonNullDirective(getFirstEntry(data.nullLevelsBySubgraphName) ?? new Set<number>([0])),
         );
         continue;
       }
