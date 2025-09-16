@@ -4,13 +4,16 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"testing"
 
+	"github.com/cespare/xxhash/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/pubsubtest"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 func TestNatsEngineDataSourceFactory(t *testing.T) {
@@ -34,7 +37,7 @@ func TestEngineDataSourceFactoryWithMockAdapter(t *testing.T) {
 
 	// Configure mock expectations for Publish
 	mockAdapter.On("Publish", mock.Anything, mock.MatchedBy(func(event PublishAndRequestEventConfiguration) bool {
-		return event.ProviderID == "test-provider" && event.Subject == "test-subject"
+		return event.ProviderID() == "test-provider" && event.Subject == "test-subject"
 	})).Return(nil)
 
 	// Create the data source with mock adapter
@@ -167,7 +170,7 @@ func TestEngineDataSourceFactory_RequestDataSource(t *testing.T) {
 
 	// Configure mock expectations for Request
 	mockAdapter.On("Request", mock.Anything, mock.MatchedBy(func(event PublishAndRequestEventConfiguration) bool {
-		return event.ProviderID == "test-provider" && event.Subject == "test-subject"
+		return event.ProviderID() == "test-provider" && event.Subject == "test-subject"
 	}), mock.Anything).Return(nil).Run(func(args mock.Arguments) {
 		w := args.Get(2).(io.Writer)
 		w.Write([]byte(`{"response": "test"}`))
@@ -252,4 +255,58 @@ func TestTransformEventConfig(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid subject")
 	})
+}
+
+func TestNatsEngineDataSourceFactory_UniqueRequestID(t *testing.T) {
+	tests := []struct {
+		name          string
+		input         string
+		expectError   bool
+		expectedError error
+	}{
+		{
+			name:        "valid input",
+			input:       `{"subjects":["subject1", "subject2"], "providerId":"test-provider"}`,
+			expectError: false,
+		},
+		{
+			name:          "missing subjects",
+			input:         `{"providerId":"test-provider"}`,
+			expectError:   true,
+			expectedError: errors.New("Key path not found"),
+		},
+		{
+			name:          "missing providerId",
+			input:         `{"subjects":["subject1", "subject2"]}`,
+			expectError:   true,
+			expectedError: errors.New("Key path not found"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			factory := &EngineDataSourceFactory{
+				NatsAdapter: NewMockAdapter(t),
+			}
+			source, err := factory.ResolveDataSourceSubscription()
+			require.NoError(t, err)
+			ctx := &resolve.Context{}
+			input := []byte(tt.input)
+			xxh := xxhash.New()
+
+			err = source.UniqueRequestID(ctx, input, xxh)
+
+			if tt.expectError {
+				require.Error(t, err)
+				if tt.expectedError != nil {
+					// For jsonparser errors, just check if the error message contains the expected text
+					assert.Contains(t, err.Error(), tt.expectedError.Error())
+				}
+			} else {
+				require.NoError(t, err)
+				// Check that the hash has been updated
+				assert.NotEqual(t, 0, xxh.Sum64())
+			}
+		})
+	}
 }

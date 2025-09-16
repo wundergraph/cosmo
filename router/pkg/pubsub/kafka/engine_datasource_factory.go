@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/buger/jsonparser"
+	"github.com/cespare/xxhash/v2"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
@@ -49,24 +51,44 @@ func (c *EngineDataSourceFactory) ResolveDataSourceInput(eventData []byte) (stri
 	}
 
 	evtCfg := PublishEventConfiguration{
-		ProviderID: c.providerId,
-		Topic:      c.topics[0],
-		Data:       eventData,
+		Provider:  c.providerId,
+		Topic:     c.topics[0],
+		Event:     Event{Data: eventData},
+		FieldName: c.fieldName,
 	}
 
-	return evtCfg.MarshalJSONTemplate(), nil
+	return evtCfg.MarshalJSONTemplate()
 }
 
-func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (resolve.SubscriptionDataSource, error) {
-	return &SubscriptionDataSource{
-		pubSub: c.KafkaAdapter,
-	}, nil
+func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (datasource.SubscriptionDataSource, error) {
+	return datasource.NewPubSubSubscriptionDataSource[*SubscriptionEventConfiguration](
+		c.KafkaAdapter,
+		func(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
+			val, _, _, err := jsonparser.Get(input, "topics")
+			if err != nil {
+				return err
+			}
+
+			_, err = xxh.Write(val)
+			if err != nil {
+				return err
+			}
+
+			val, _, _, err = jsonparser.Get(input, "providerId")
+			if err != nil {
+				return err
+			}
+
+			_, err = xxh.Write(val)
+			return err
+		}), nil
 }
 
 func (c *EngineDataSourceFactory) ResolveDataSourceSubscriptionInput() (string, error) {
 	evtCfg := SubscriptionEventConfiguration{
-		ProviderID: c.providerId,
-		Topics:     c.topics,
+		Provider:  c.providerId,
+		Topics:    c.topics,
+		FieldName: c.fieldName,
 	}
 	object, err := json.Marshal(evtCfg)
 	if err != nil {
