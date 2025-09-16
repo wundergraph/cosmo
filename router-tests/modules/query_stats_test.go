@@ -48,6 +48,23 @@ func TestCustomModuleQueryStats(t *testing.T) {
 			testenv.AwaitChannelWithT(t, 10*time.Second, resultsChan, func(t *testing.T, qps core.QueryPlanStats) {
 				assert.Equal(t, 4, qps.TotalSubgraphFetches)
 				assert.Equal(t, map[string]int{"employees": 1, "hobbies": 1, "mood": 2}, qps.SubgraphFetches)
+				assert.Equal(t, map[string]map[string]map[string]int{
+					"employees": {
+						"Query": {
+							"employee": 1,
+						},
+					},
+					"hobbies": {
+						"Employee": {
+							"hobbies": 1,
+						},
+					},
+					"mood": {
+						"Employee": {
+							"currentMood": 2,
+						},
+					},
+				}, qps.SubgraphFieldsFetches)
 			})
 		})
 	})

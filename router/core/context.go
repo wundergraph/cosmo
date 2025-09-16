@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -576,8 +577,9 @@ func (o *operationContext) ClientInfo() ClientInfo {
 }
 
 type QueryPlanStats struct {
-	TotalSubgraphFetches int
-	SubgraphFetches      map[string]int
+	TotalSubgraphFetches  int
+	SubgraphFetches       map[string]int
+	SubgraphFieldsFetches map[string]map[string]map[string]int // subgraph name -> root type -> field name -> count
 }
 
 func (p *QueryPlanStats) analyzePlanNode(plan *resolve.FetchTreeQueryPlanNode) {
@@ -588,6 +590,8 @@ func (p *QueryPlanStats) analyzePlanNode(plan *resolve.FetchTreeQueryPlanNode) {
 		for _, child := range plan.Children {
 			p.analyzePlanNode(child)
 		}
+	default:
+		fmt.Printf("Not workinggggg")
 	}
 }
 
@@ -601,6 +605,26 @@ func (p *QueryPlanStats) analyzeSingleFetch(plan *resolve.FetchTreeQueryPlanNode
 	} else {
 		p.SubgraphFetches[key] = 1
 	}
+
+	if plan.Fetch == nil {
+		return
+	}
+
+	for _, dep := range plan.Fetch.Dependencies {
+		typeName := dep.Coordinate.TypeName
+		fieldName := dep.Coordinate.FieldName
+		if p.SubgraphFieldsFetches[key] == nil {
+			p.SubgraphFieldsFetches[key] = make(map[string]map[string]int)
+		}
+		if p.SubgraphFieldsFetches[key][typeName] == nil {
+			p.SubgraphFieldsFetches[key][typeName] = make(map[string]int)
+		}
+		if entry, ok := p.SubgraphFieldsFetches[key][typeName][fieldName]; ok {
+			p.SubgraphFieldsFetches[key][typeName][fieldName] = entry + 1
+		} else {
+			p.SubgraphFieldsFetches[key][typeName][fieldName] = 1
+		}
+	}
 }
 
 func (o *operationContext) QueryPlanStats() (QueryPlanStats, error) {
@@ -613,8 +637,9 @@ func (o *operationContext) QueryPlanStats() (QueryPlanStats, error) {
 	}
 
 	qps := QueryPlanStats{
-		TotalSubgraphFetches: 0,
-		SubgraphFetches:      make(map[string]int),
+		TotalSubgraphFetches:  0,
+		SubgraphFetches:       make(map[string]int),
+		SubgraphFieldsFetches: make(map[string]map[string]map[string]int),
 	}
 
 	if p, ok := o.preparedPlan.preparedPlan.(*plan.SynchronousResponsePlan); ok {
