@@ -2205,8 +2205,8 @@ export class FederationFactory {
         INACCESSIBLE_DEFINITION,
         REQUIRES_SCOPES_DEFINITION,
         SEMANTIC_NON_NULL_DEFINITION,
-        SCOPE_SCALAR_DEFINITION,
         TAG_DEFINITION,
+        SCOPE_SCALAR_DEFINITION,
       ];
       return;
     }
@@ -2215,8 +2215,8 @@ export class FederationFactory {
       DEPRECATED_DEFINITION,
       INACCESSIBLE_DEFINITION,
       REQUIRES_SCOPES_DEFINITION,
-      SCOPE_SCALAR_DEFINITION,
       TAG_DEFINITION,
+      SCOPE_SCALAR_DEFINITION,
     ];
   }
 
