@@ -71,17 +71,6 @@ func (s *Server) TokenWithOpts(claims map[string]any, tokenOpts TokenOpts) (stri
 	return "", jwt.ErrInvalidKey
 }
 
-func NewWithClaims(method jwt.SigningMethod, claims jwt.Claims, opts ...jwt.TokenOption) *jwt.Token {
-	return &jwt.Token{
-		Header: map[string]interface{}{
-			"typ": "JWT",
-			"alg": jwt.SigningMethodRS256.Alg(),
-		},
-		Claims: claims,
-		Method: method,
-	}
-}
-
 func (s *Server) TokenForKID(kid string, claims map[string]any, useInvalidKID bool) (string, error) {
 	provider, ok := s.providers[kid]
 	if useInvalidKID {
