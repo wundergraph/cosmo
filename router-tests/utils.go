@@ -47,18 +47,13 @@ type ConfigureAuthOpts struct {
 }
 
 func ConfigureAuth(t *testing.T) ([]authentication.Authenticator, *jwks.Server) {
-	return ConfigureAuthWithOpts(t, ConfigureAuthOpts{})
-}
-
-func ConfigureAuthWithOpts(t *testing.T, opts ConfigureAuthOpts) ([]authentication.Authenticator, *jwks.Server) {
 	authServer, err := jwks.NewServer(t)
 	require.NoError(t, err)
 	t.Cleanup(authServer.Close)
 	authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
 		{
-			URL:                 authServer.JWKSURL(),
-			RefreshInterval:     time.Second * 5,
-			AllowEmptyAlgorithm: opts.AllowEmptyAlgorithm,
+			URL:             authServer.JWKSURL(),
+			RefreshInterval: time.Second * 5,
 		},
 	})
 

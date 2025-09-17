@@ -36,14 +36,34 @@ func (s *Server) Close() {
 	s.httpServer.Close()
 }
 
+type TokenOpts struct {
+	AlgOverride string
+}
+
 func (s *Server) Token(claims map[string]any) (string, error) {
+	return s.TokenWithOpts(claims, TokenOpts{AlgOverride: ""})
+}
+
+func (s *Server) TokenWithOpts(claims map[string]any, tokenOpts TokenOpts) (string, error) {
 	if len(s.providers) == 0 {
 		return "", jwt.ErrInvalidKey
 	}
 
 	for kid, pr := range s.providers {
-		method := jwt.GetSigningMethod(jwt.SigningMethodRS256.Alg())
-		token := NewWithClaims(method, jwt.MapClaims(claims))
+		var token *jwt.Token
+		if tokenOpts.AlgOverride != "" {
+			token = &jwt.Token{
+				Header: map[string]interface{}{
+					"typ": "JWT",
+					"alg": tokenOpts.AlgOverride,
+				},
+				Claims: jwt.MapClaims(claims),
+				Method: jwt.GetSigningMethod(tokenOpts.AlgOverride),
+			}
+		} else {
+			token = jwt.NewWithClaims(pr.SigningMethod(), jwt.MapClaims(claims))
+		}
+
 		token.Header[jwkset.HeaderKID] = kid
 		return token.SignedString(pr.PrivateKey())
 	}
