@@ -18,7 +18,7 @@ const getCustomScripts = ():
 export default function Document() {
   const osanoScriptId = process.env.NEXT_PUBLIC_OSANO_SCRIPT_ID;
   const gtmId = process.env.NEXT_PUBLIC_GOOGLE_TAG_MANAGER_ID;
-  const isProduction = process.env.NODE_ENV !== 'production';
+  const isProduction = process.env.NODE_ENV === 'production';
   const scripts = getCustomScripts();
 
   return (
@@ -48,7 +48,7 @@ gtag('consent', 'default', {
             )}
           </>
         )}
-        <GtmScript />
+        {isProduction && <GtmScript />}
 
         <link
           rel="apple-touch-icon"
@@ -128,7 +128,7 @@ gtag('consent', 'default', {
         <meta name="theme-color" content="#ffffff" />
       </Head>
       <body>
-        <GtmNoScript />
+        {isProduction && <GtmNoScript />}
         <Main />
         <NextScript />
 
