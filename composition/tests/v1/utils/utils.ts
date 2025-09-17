@@ -34,6 +34,16 @@ export const baseDirectiveDefinitionsWithConfigureDescription = `
   directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
 `;
 
+export const baseDirectiveDefinitionsWithSemanticNonNull = `
+  directive @extends on INTERFACE | OBJECT
+  directive @external on FIELD_DEFINITION | OBJECT
+  directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
+  directive @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION
+  directive @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION
+  directive @semanticNonNull(levels: [Int!]! = [0]) on FIELD_DEFINITION
+  directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
+`;
+
 export const baseDirectiveDefinitionsWithRequireFetchReasons = `
   directive @extends on INTERFACE | OBJECT
   directive @external on FIELD_DEFINITION | OBJECT
