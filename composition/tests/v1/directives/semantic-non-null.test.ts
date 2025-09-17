@@ -18,9 +18,11 @@ import {
   federateSubgraphsSuccess,
   normalizeString,
   normalizeSubgraphFailure,
+  normalizeSubgraphSuccess,
   schemaToSortedNormalizedString,
 } from '../../utils/utils';
 import {
+  baseDirectiveDefinitionsWithSemanticNonNull,
   schemaQueryDefinition,
   semanticNonNullDefinition,
   versionOneRouterDefinitionsWithSemanticNonNull,
@@ -96,6 +98,23 @@ describe('@semanticNonNull tests', () => {
             value: '0',
           }),
         ]),
+      );
+    });
+
+    test('that @semanticNonNull is validated successfully', () => {
+      const { schema } = normalizeSubgraphSuccess(naf, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
+        normalizeString(
+          schemaQueryDefinition +
+            baseDirectiveDefinitionsWithSemanticNonNull +
+            `
+          type Query {
+            a: ID @semanticNonNull
+          }
+          
+          scalar openfed__FieldSet
+        `,
+        ),
       );
     });
   });
@@ -445,6 +464,16 @@ const nae: Subgraph = {
   definitions: parse(`
     type Query {
       a: ID! @semanticNonNull
+    }
+  `),
+};
+
+const naf: Subgraph = {
+  name: 'naf',
+  url: '',
+  definitions: parse(`
+    type Query {
+      a: ID @semanticNonNull
     }
   `),
 };

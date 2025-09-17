@@ -9,6 +9,7 @@ import {
   IncompatibleMergedTypesErrorParams,
   InvalidNamedTypeErrorParams,
   InvalidRootTypeFieldEventsDirectiveData,
+  OneOfRequiredFieldsErrorParams,
   SemanticNonNullLevelsIndexOutOfBoundsErrorParams,
   SemanticNonNullLevelsNonNullErrorParams,
 } from './types';
@@ -1660,4 +1661,15 @@ export function semanticNonNullInconsistentLevelsError(data: FieldData): Error {
     `The list value provided to the "levels" argument must be consistently defined across all subgraphs that` +
     ` define "@semanticNonNull" on field "${coords}".`;
   return new Error(message);
+}
+
+export function oneOfRequiredFieldsError({ requiredFieldNames, typeName }: OneOfRequiredFieldsErrorParams): Error {
+  return new Error(
+    `The "@oneOf" directive defined on Input Object "${typeName}" is invalid because all Input fields must be` +
+      ` optional (nullable); however, the following Input field` +
+      (requiredFieldNames.length > 1 ? `s are` : ` is`) +
+      ` required (non-nullable): "` +
+      requiredFieldNames.join(QUOTATION_JOIN) +
+      `".`,
+  );
 }
