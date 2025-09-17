@@ -48,23 +48,26 @@ func TestCustomModuleQueryStats(t *testing.T) {
 			testenv.AwaitChannelWithT(t, 10*time.Second, resultsChan, func(t *testing.T, qps core.QueryPlanStats) {
 				assert.Equal(t, 4, qps.TotalSubgraphFetches)
 				assert.Equal(t, map[string]int{"employees": 1, "hobbies": 1, "mood": 2}, qps.SubgraphFetches)
-				assert.Equal(t, map[string]map[string]map[string]int{
-					"employees": {
-						"Query": {
-							"employee": 1,
-						},
+				assert.Equal(t, []core.SubgraphRootField{
+					{
+						SubgraphName: "employees",
+						TypeName:     "Query",
+						FieldName:    "employee",
+						Count:        1,
 					},
-					"hobbies": {
-						"Employee": {
-							"hobbies": 1,
-						},
+					{
+						SubgraphName: "mood",
+						TypeName:     "Query",
+						FieldName:    "_entities",
+						Count:        2,
 					},
-					"mood": {
-						"Employee": {
-							"currentMood": 2,
-						},
+					{
+						SubgraphName: "hobbies",
+						TypeName:     "Query",
+						FieldName:    "_entities",
+						Count:        1,
 					},
-				}, qps.SubgraphFieldsFetches)
+				}, qps.SubgraphRootFields)
 			})
 		})
 	})
@@ -164,6 +167,45 @@ func TestCustomModuleQueryStats(t *testing.T) {
 				}
 
 				assert.Equal(t, expectedSubgraphFetches, qps.SubgraphFetches)
+
+				assert.Equal(t, []core.SubgraphRootField{
+					{
+						SubgraphName: "employees",
+						TypeName:     "Query",
+						FieldName:    "employees",
+						Count:        1,
+					},
+					{
+						SubgraphName: "products",
+						TypeName:     "Query",
+						FieldName:    "_entities",
+						Count:        2,
+					},
+					{
+						SubgraphName: "mood",
+						TypeName:     "Query",
+						FieldName:    "_entities",
+						Count:        2,
+					},
+					{
+						SubgraphName: "availability",
+						TypeName:     "Query",
+						FieldName:    "_entities",
+						Count:        2,
+					},
+					{
+						SubgraphName: "family",
+						TypeName:     "Query",
+						FieldName:    "_entities",
+						Count:        1,
+					},
+					{
+						SubgraphName: "employees",
+						TypeName:     "Query",
+						FieldName:    "_entities",
+						Count:        1,
+					},
+				}, qps.SubgraphRootFields)
 			})
 		})
 	})

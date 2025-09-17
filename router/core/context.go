@@ -3,9 +3,9 @@ package core
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -577,53 +577,73 @@ func (o *operationContext) ClientInfo() ClientInfo {
 }
 
 type QueryPlanStats struct {
-	TotalSubgraphFetches  int
-	SubgraphFetches       map[string]int
-	SubgraphFieldsFetches map[string]map[string]map[string]int // subgraph name -> root type -> field name -> count
+	TotalSubgraphFetches int
+	SubgraphFetches      map[string]int
+	SubgraphRootFields   []SubgraphRootField
 }
 
-func (p *QueryPlanStats) analyzePlanNode(plan *resolve.FetchTreeQueryPlanNode) {
-	switch plan.Kind {
+type SubgraphRootField struct {
+	SubgraphName string
+	TypeName     string
+	FieldName    string
+	Count        int
+}
+
+func (p *QueryPlanStats) analyzePlanNode(fetchNode *resolve.FetchTreeNode) {
+	switch fetchNode.Kind {
 	case resolve.FetchTreeNodeKindSingle:
-		p.analyzeSingleFetch(plan)
+		p.analyzeSingleFetch(fetchNode)
 	case resolve.FetchTreeNodeKindSequence, resolve.FetchTreeNodeKindParallel:
-		for _, child := range plan.Children {
+		for _, child := range fetchNode.ChildNodes {
 			p.analyzePlanNode(child)
 		}
-	default:
-		fmt.Printf("Not workinggggg")
 	}
 }
 
-func (p *QueryPlanStats) analyzeSingleFetch(plan *resolve.FetchTreeQueryPlanNode) {
-	key := plan.Fetch.SubgraphName
+func (p *QueryPlanStats) analyzeSingleFetch(fetchNode *resolve.FetchTreeNode) {
+	info := fetchNode.Item.Fetch.FetchInfo()
+	depsInfo := fetchNode.Item.Fetch.Dependencies()
 
-	p.TotalSubgraphFetches++
-
-	if entry, ok := p.SubgraphFetches[key]; ok {
-		p.SubgraphFetches[key] = entry + 1
-	} else {
-		p.SubgraphFetches[key] = 1
-	}
-
-	if plan.Fetch == nil {
+	if info == nil || depsInfo == nil {
 		return
 	}
 
-	for _, dep := range plan.Fetch.Dependencies {
-		typeName := dep.Coordinate.TypeName
-		fieldName := dep.Coordinate.FieldName
-		if p.SubgraphFieldsFetches[key] == nil {
-			p.SubgraphFieldsFetches[key] = make(map[string]map[string]int)
-		}
-		if p.SubgraphFieldsFetches[key][typeName] == nil {
-			p.SubgraphFieldsFetches[key][typeName] = make(map[string]int)
-		}
-		if entry, ok := p.SubgraphFieldsFetches[key][typeName][fieldName]; ok {
-			p.SubgraphFieldsFetches[key][typeName][fieldName] = entry + 1
-		} else {
-			p.SubgraphFieldsFetches[key][typeName][fieldName] = 1
-		}
+	subgraphName := info.DataSourceName
+
+	p.TotalSubgraphFetches++
+	if entry, ok := p.SubgraphFetches[subgraphName]; ok {
+		p.SubgraphFetches[subgraphName] = entry + 1
+	} else {
+		p.SubgraphFetches[subgraphName] = 1
+	}
+
+	// If the fetch has dependencies, it means it is a nested entity fetch,
+	// and we count it as an _entities root field fetch
+	if len(depsInfo.DependsOnFetchIDs) > 0 {
+		p.storeRootField(subgraphName, "Query", "_entities")
+		return
+	}
+
+	// If the fetch is for a named query or mutation, we count it as a root field fetch
+	for _, rootField := range info.RootFields {
+		p.storeRootField(subgraphName, rootField.TypeName, rootField.FieldName)
+	}
+}
+
+func (p *QueryPlanStats) storeRootField(subgraphName, typeName, fieldName string) {
+	idx := slices.IndexFunc(p.SubgraphRootFields, func(srf SubgraphRootField) bool {
+		return srf.SubgraphName == subgraphName && srf.TypeName == typeName && srf.FieldName == fieldName
+	})
+
+	if idx >= 0 {
+		p.SubgraphRootFields[idx].Count++
+	} else {
+		p.SubgraphRootFields = append(p.SubgraphRootFields, SubgraphRootField{
+			SubgraphName: subgraphName,
+			TypeName:     typeName,
+			FieldName:    fieldName,
+			Count:        1,
+		})
 	}
 }
 
@@ -637,9 +657,9 @@ func (o *operationContext) QueryPlanStats() (QueryPlanStats, error) {
 	}
 
 	qps := QueryPlanStats{
-		TotalSubgraphFetches:  0,
-		SubgraphFetches:       make(map[string]int),
-		SubgraphFieldsFetches: make(map[string]map[string]map[string]int),
+		TotalSubgraphFetches: 0,
+		SubgraphFetches:      make(map[string]int),
+		SubgraphRootFields:   make([]SubgraphRootField, 0, 2),
 	}
 
 	if p, ok := o.preparedPlan.preparedPlan.(*plan.SynchronousResponsePlan); ok {
@@ -651,7 +671,7 @@ func (o *operationContext) QueryPlanStats() (QueryPlanStats, error) {
 			return QueryPlanStats{}, errors.New("synchronous response plan has no fetches")
 		}
 
-		qps.analyzePlanNode(p.Response.Fetches.QueryPlan())
+		qps.analyzePlanNode(p.Response.Fetches)
 	} else {
 		return QueryPlanStats{}, errors.New("query plan stats currently only support synchronous response plans")
 	}
