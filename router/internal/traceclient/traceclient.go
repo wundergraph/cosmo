@@ -34,14 +34,14 @@ type ClientTraceContextKey struct{}
 type TraceInjectingRoundTripper struct {
 	base                  http.RoundTripper
 	connectionMetricStore metric.ConnectionMetricStore
-	getExprContext        func(ctx context.Context, req *http.Request) *expr.Context
+	getExprContext        func(ctx context.Context) *expr.Context
 	getActiveSubgraphName func(req *http.Request) string
 }
 
 func NewTraceInjectingRoundTripper(
 	base http.RoundTripper,
 	connectionMetricStore metric.ConnectionMetricStore,
-	getExprContext func(ctx context.Context, req *http.Request) *expr.Context,
+	getExprContext func(ctx context.Context) *expr.Context,
 	getActiveSubgraphName func(req *http.Request) string,
 ) *TraceInjectingRoundTripper {
 	return &TraceInjectingRoundTripper{
@@ -106,14 +106,14 @@ func (t *TraceInjectingRoundTripper) getClientTrace(ctx context.Context) *httptr
 func (t *TraceInjectingRoundTripper) processConnectionMetrics(ctx context.Context, req *http.Request) {
 	trace := GetClientTraceFromContext(ctx)
 
-	exprContext := t.getExprContext(ctx, req)
+	exprContext := t.getExprContext(ctx)
 
 	if trace.ConnectionGet != nil && trace.ConnectionAcquired != nil {
 		duration := trace.ConnectionAcquired.Time.Sub(trace.ConnectionGet.Time)
 		exprContext.Subgraph.Request.ClientTrace.ConnectionAcquireDuration = duration
 
 		subgraph := t.getActiveSubgraphName(req)
-		
+
 		serverAttributes := rotel.GetServerAttributes(trace.ConnectionGet.HostPort)
 		serverAttributes = append(
 			serverAttributes,

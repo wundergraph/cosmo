@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -21,10 +22,10 @@ import (
 
 const defaultMaxDuration = 100 * time.Second
 
-var loggerFunc = func(req *http.Request) *zap.Logger { return zap.NewNop() }
+var loggerFunc = func(_ *http.Request) *zap.Logger { return zap.NewNop() }
 
-var getActiveSubgraph = func(subgraphName string) func(req *http.Request) string {
-	return func(req *http.Request) string {
+var getActiveSubgraph = func(subgraphName string) func(_ *http.Request) string {
+	return func(_ *http.Request) string {
 		return subgraphName
 	}
 }
@@ -62,7 +63,7 @@ func (dt *MockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 func newTestManager(shouldRetry func(error, *http.Request, *http.Response) bool, onRetry OnRetryFunc, opts RetryOptions, subgraphName string) *Manager {
-	mgr := NewManager(expr.NewRetryExpressionManager(), func(err error, req *http.Request, resp *http.Response, exprString string) bool {
+	mgr := NewManager(expr.NewRetryExpressionManager(), func(err error, req *http.Request, resp *http.Response, _ string) bool {
 		return shouldRetry(err, req, resp)
 	}, onRetry)
 	// attach options for the subgraph
@@ -76,12 +77,12 @@ func TestRetryOnHTTP5xx(t *testing.T) {
 	maxRetries := 3
 
 	subgraphName := "sg"
-	mgr := newTestManager(simpleShouldRetry, func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
+	mgr := newTestManager(simpleShouldRetry, func(_ int, _ *http.Request, _ *http.Response, _ time.Duration, _ error) {
 		retries++
 	}, RetryOptions{MaxRetryCount: maxRetries, Interval: 1 * time.Millisecond, MaxDuration: 10 * time.Millisecond}, subgraphName)
 
 	tr := NewRetryHTTPTransport(&MockTransport{
-		handler: func(req *http.Request) (*http.Response, error) {
+		handler: func(_ *http.Request) (*http.Response, error) {
 			attemptCount++
 			if attemptCount <= maxRetries {
 				// Return 500 to trigger retry
@@ -113,12 +114,12 @@ func TestRetryOnErrors(t *testing.T) {
 	maxRetries := 3
 
 	subgraphName := "sg"
-	mgr := newTestManager(simpleShouldRetry, func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
+	mgr := newTestManager(simpleShouldRetry, func(_ int, _ *http.Request, _ *http.Response, _ time.Duration, _ error) {
 		retries++
 	}, RetryOptions{MaxRetryCount: maxRetries, Interval: 1 * time.Millisecond, MaxDuration: 10 * time.Millisecond}, subgraphName)
 
 	tr := NewRetryHTTPTransport(&MockTransport{
-		handler: func(req *http.Request) (*http.Response, error) {
+		handler: func(_ *http.Request) (*http.Response, error) {
 			attemptCount++
 			if attemptCount <= maxRetries {
 				// Return any error to trigger retry
@@ -158,12 +159,12 @@ func TestDoNotRetryWhenShouldRetryReturnsFalse(t *testing.T) {
 	}
 
 	subgraphName := "sg"
-	mgr := newTestManager(shouldRetry, func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
+	mgr := newTestManager(shouldRetry, func(_ int, _ *http.Request, _ *http.Response, _ time.Duration, _ error) {
 		retries++
 	}, RetryOptions{MaxRetryCount: maxRetryCount, Interval: 1 * time.Millisecond, MaxDuration: 10 * time.Millisecond}, subgraphName)
 
 	tr := NewRetryHTTPTransport(&MockTransport{
-		handler: func(req *http.Request) (*http.Response, error) {
+		handler: func(_ *http.Request) (*http.Response, error) {
 			attemptCount++
 			switch attemptCount {
 			case 1:
@@ -225,12 +226,12 @@ func TestShortCircuitOnSuccess(t *testing.T) {
 	attemptCount := 0
 
 	subgraphName := "sg"
-	mgr := newTestManager(simpleShouldRetry, func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
+	mgr := newTestManager(simpleShouldRetry, func(_ int, _ *http.Request, _ *http.Response, _ time.Duration, _ error) {
 		t.Error("OnRetry should not be called when first request succeeds")
 	}, RetryOptions{MaxRetryCount: 5, Interval: 1 * time.Millisecond, MaxDuration: 10 * time.Millisecond}, subgraphName)
 
 	tr := NewRetryHTTPTransport(&MockTransport{
-		handler: func(req *http.Request) (*http.Response, error) {
+		handler: func(_ *http.Request) (*http.Response, error) {
 			attemptCount++
 			// Always return success
 			return &http.Response{
@@ -260,12 +261,12 @@ func TestMaxRetryCountRespected(t *testing.T) {
 	attemptCount := 0
 
 	subgraphName := "sg"
-	mgr := newTestManager(simpleShouldRetry, func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
+	mgr := newTestManager(simpleShouldRetry, func(_ int, _ *http.Request, _ *http.Response, _ time.Duration, _ error) {
 		retries++
 	}, RetryOptions{MaxRetryCount: maxRetries, Interval: 1 * time.Millisecond, MaxDuration: 10 * time.Millisecond}, subgraphName)
 
 	tr := NewRetryHTTPTransport(&MockTransport{
-		handler: func(req *http.Request) (*http.Response, error) {
+		handler: func(_ *http.Request) (*http.Response, error) {
 			attemptCount++
 			// Always return retryable error to test max retry limit
 			return nil, errors.New("always fail")
@@ -298,24 +299,24 @@ func TestResponseBodyDraining(t *testing.T) {
 	}
 
 	subgraphName := "sg"
-	mgr := newTestManager(simpleShouldRetry, func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
+	mgr := newTestManager(simpleShouldRetry, func(_ int, _ *http.Request, _ *http.Response, _ time.Duration, _ error) {
 		actualRetries++
 	}, RetryOptions{MaxRetryCount: retryCount, Interval: 1 * time.Millisecond, MaxDuration: 10 * time.Millisecond}, subgraphName)
 
 	tr := NewRetryHTTPTransport(&MockTransport{
-		handler: func(req *http.Request) (*http.Response, error) {
+		handler: func(_ *http.Request) (*http.Response, error) {
 			index++
 			if index < retryCount {
 				return &http.Response{
 					StatusCode: http.StatusInternalServerError,
 					Body:       bodies[index],
 				}, nil
-			} else {
-				return &http.Response{
-					StatusCode: http.StatusOK,
-					Body:       bodies[index],
-				}, nil
 			}
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       bodies[index],
+			}, nil
+
 		},
 	}, loggerFunc, mgr, getActiveSubgraph(subgraphName))
 
@@ -364,24 +365,23 @@ func TestRequestLoggerIsUsed(t *testing.T) {
 	}
 
 	subgraphName := "sg"
-	mgr := newTestManager(simpleShouldRetry, func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
+	mgr := newTestManager(simpleShouldRetry, func(_ int, _ *http.Request, _ *http.Response, _ time.Duration, _ error) {
 		actualRetries++
 	}, RetryOptions{MaxRetryCount: retryCount, Interval: 1 * time.Millisecond, MaxDuration: 10 * time.Millisecond}, subgraphName)
 
 	tr := NewRetryHTTPTransport(&MockTransport{
-		handler: func(req *http.Request) (*http.Response, error) {
+		handler: func(_ *http.Request) (*http.Response, error) {
 			index++
 			if index < retryCount {
 				return &http.Response{
 					StatusCode: http.StatusInternalServerError,
 					Body:       bodies[index],
 				}, nil
-			} else {
-				return &http.Response{
-					StatusCode: http.StatusOK,
-					Body:       bodies[index],
-				}, nil
 			}
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       bodies[index],
+			}, nil
 		},
 	}, func(req *http.Request) *zap.Logger { return requestLogger }, mgr, getActiveSubgraph(subgraphName))
 
@@ -468,7 +468,7 @@ func TestRetryOn429WithDelaySeconds(t *testing.T) {
 	var retryAfterUsed []bool
 
 	subgraphName := `sg`
-	mgr := newTestManager(shouldRetryWith429, func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
+	mgr := newTestManager(shouldRetryWith429, func(_ int, _ *http.Request, _ *http.Response, _ time.Duration, _ error) {
 		retries++
 	}, RetryOptions{MaxRetryCount: maxRetries, Interval: 100 * time.Millisecond, MaxDuration: 10 * time.Second}, subgraphName)
 
@@ -481,7 +481,7 @@ func TestRetryOn429WithDelaySeconds(t *testing.T) {
 					StatusCode: http.StatusTooManyRequests,
 					Header:     make(http.Header),
 				}
-				resp.Header.Set("Retry-After", fmt.Sprintf("%d", retryAfterSeconds))
+				resp.Header.Set("Retry-After", strconv.Itoa(retryAfterSeconds))
 
 				// Verify the header is parsed correctly
 				duration, useRetryAfter := shouldUseRetryAfter(zap.NewNop(), resp, defaultMaxDuration)
@@ -523,7 +523,7 @@ func TestRetryOn429WithDelaySecondsLargerThanMaxDuration(t *testing.T) {
 	var retryAfterUsed []bool
 
 	subgraphName := "sg"
-	mgr := newTestManager(shouldRetryWith429, func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
+	mgr := newTestManager(shouldRetryWith429, func(_ int, _ *http.Request, _ *http.Response, _ time.Duration, _ error) {
 		retries++
 	}, RetryOptions{MaxRetryCount: maxRetries, Interval: 100 * time.Millisecond, MaxDuration: 10 * time.Second}, subgraphName)
 
@@ -536,7 +536,7 @@ func TestRetryOn429WithDelaySecondsLargerThanMaxDuration(t *testing.T) {
 					StatusCode: http.StatusTooManyRequests,
 					Header:     make(http.Header),
 				}
-				resp.Header.Set("Retry-After", fmt.Sprintf("%d", retryAfterSeconds))
+				resp.Header.Set("Retry-After", strconv.Itoa(retryAfterSeconds))
 
 				// Verify the header is parsed correctly
 				duration, useRetryAfter := shouldUseRetryAfter(zap.NewNop(), resp, maxDuration)
@@ -573,7 +573,7 @@ func TestRetryOn429WithoutRetryAfter(t *testing.T) {
 	maxRetries := 2
 
 	subgraphName := "sg"
-	mgr := newTestManager(shouldRetryWith429, func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
+	mgr := newTestManager(shouldRetryWith429, func(_ int, _ *http.Request, _ *http.Response, _ time.Duration, _ error) {
 		retries++
 	}, RetryOptions{MaxRetryCount: maxRetries, Interval: 1 * time.Millisecond, MaxDuration: 10 * time.Millisecond}, subgraphName)
 
@@ -614,7 +614,7 @@ func TestRetryOn429WithHTTPDate(t *testing.T) {
 	var expectedDuration time.Duration
 
 	subgraphName := "sg"
-	mgr := newTestManager(shouldRetryWith429, func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
+	mgr := newTestManager(shouldRetryWith429, func(_ int, _ *http.Request, _ *http.Response, _ time.Duration, _ error) {
 		retries++
 	}, RetryOptions{MaxRetryCount: maxRetries, Interval: 100 * time.Millisecond, MaxDuration: 10 * time.Second}, subgraphName)
 
@@ -668,7 +668,7 @@ func TestRetryOn429WithInvalidRetryAfterHeader(t *testing.T) {
 	maxRetries := 2
 
 	subgraphName := "sg"
-	mgr := newTestManager(shouldRetryWith429, func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
+	mgr := newTestManager(shouldRetryWith429, func(_ int, _ *http.Request, _ *http.Response, _ time.Duration, _ error) {
 		retries++
 	}, RetryOptions{MaxRetryCount: maxRetries, Interval: 1 * time.Millisecond, MaxDuration: 10 * time.Millisecond}, subgraphName)
 
@@ -708,7 +708,7 @@ func TestRetryOn429WithNegativeDelaySeconds(t *testing.T) {
 	maxRetries := 2
 
 	subgraphName := "sg"
-	mgr := newTestManager(shouldRetryWith429, func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
+	mgr := newTestManager(shouldRetryWith429, func(_ int, _ *http.Request, _ *http.Response, _ time.Duration, _ error) {
 		retries++
 	}, RetryOptions{MaxRetryCount: maxRetries, Interval: 1 * time.Millisecond, MaxDuration: 10 * time.Millisecond}, subgraphName)
 
@@ -750,7 +750,7 @@ func TestRetryMixed429AndOtherErrors(t *testing.T) {
 	var retryAfterUsedPerAttempt []bool
 
 	subgraphName := "sg"
-	mgr := newTestManager(shouldRetryWith429, func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
+	mgr := newTestManager(shouldRetryWith429, func(_ int, _ *http.Request, _ *http.Response, _ time.Duration, _ error) {
 		retries++
 	}, RetryOptions{MaxRetryCount: maxRetries, Interval: 10 * time.Millisecond, MaxDuration: 10 * time.Second}, subgraphName)
 
@@ -831,7 +831,7 @@ func TestNoRetryOn429WhenShouldRetryReturnsFalse(t *testing.T) {
 	}
 
 	subgraphName := `sg`
-	mgr := newTestManager(shouldNotRetry429, func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error) {
+	mgr := newTestManager(shouldNotRetry429, func(_ int, _ *http.Request, _ *http.Response, _ time.Duration, _ error) {
 		retries++
 	}, RetryOptions{MaxRetryCount: 3, Interval: 1 * time.Millisecond, MaxDuration: 10 * time.Millisecond}, subgraphName)
 

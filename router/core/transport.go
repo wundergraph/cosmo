@@ -103,7 +103,7 @@ func NewCustomTransport(
 	}
 
 	if enableTraceClient {
-		getExprContext := func(ctx context.Context, req *http.Request) *expr.Context {
+		getExprContext := func(ctx context.Context) *expr.Context {
 			reqContext := getRequestContext(ctx)
 			if reqContext == nil {
 				return &expr.Context{}

@@ -78,18 +78,18 @@ func (m *Manager) Initialize(baseRetryOptions RetryOptions, subgraphRetryOptions
 	if len(defaultSgNames) > 0 && baseRetryOptions.Enabled {
 		if baseRetryOptions.Algorithm != BackoffJitter {
 			return fmt.Errorf("unsupported retry algorithm: %s", baseRetryOptions.Algorithm)
-		} else {
-			err := m.exprManager.AddExpression(baseRetryOptions.Expression)
-			if err != nil {
-				return fmt.Errorf("failed to add base retry expression: %w", err)
-			} else {
-				// Only assign default options if validation succeeds
-				for _, sgName := range defaultSgNames {
-					opts := baseRetryOptions
-					m.retries[sgName] = &opts
-				}
-			}
 		}
+		
+		err := m.exprManager.AddExpression(baseRetryOptions.Expression)
+		if err != nil {
+			return fmt.Errorf("failed to add base retry expression: %w", err)
+		}
+		// Only assign default options if validation succeeds
+		for _, sgName := range defaultSgNames {
+			opts := baseRetryOptions
+			m.retries[sgName] = &opts
+		}
+
 	}
 
 	// Process custom retry options

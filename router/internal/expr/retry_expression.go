@@ -22,14 +22,14 @@ func NewRetryExpressionManager() *RetryExpressionManager {
 	}
 }
 
-func (c *RetryExpressionManager) AddExpression(exprString string) error {
+func (m *RetryExpressionManager) AddExpression(exprString string) error {
 	expression := exprString
 	if expression == "" {
 		expression = defaultRetryExpression
 	}
 
 	// The expression has already been processed, skip recompilation
-	if _, ok := c.expressionMap[expression]; ok {
+	if _, ok := m.expressionMap[expression]; ok {
 		return nil
 	}
 
@@ -45,7 +45,7 @@ func (c *RetryExpressionManager) AddExpression(exprString string) error {
 	}
 
 	// Use the normalized expression string as the key for deduplication
-	c.expressionMap[expression] = program
+	m.expressionMap[expression] = program
 	return nil
 }
 
