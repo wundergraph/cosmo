@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import React from "react";
 import { TbBook } from "react-icons/tb";
+import { useWorkspace } from "@/hooks/use-workspace";
+import { useCurrentOrganization } from "@/hooks/use-current-organization";
 
 export const OverviewToolbar = ({
   tab,
@@ -14,10 +16,12 @@ export const OverviewToolbar = ({
   children?: React.ReactNode;
 }) => {
   const router = useRouter();
+  const { namespace: { name: namespace } } = useWorkspace();
+  const organizationSlug = useCurrentOrganization()?.slug;
 
   const query = {
-    namespace: router.query.namespace,
-    organizationSlug: router.query.organizationSlug,
+    namespace,
+    organizationSlug,
     slug: router.query.slug,
   };
 

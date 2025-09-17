@@ -57,6 +57,8 @@ import {
 import { useToast } from "./ui/use-toast";
 import { useMutation } from "@connectrpc/connect-query";
 import { useCheckUserAccess } from "@/hooks/use-check-user-access";
+import { useWorkspace } from "@/hooks/use-workspace";
+import { useCurrentOrganization } from "@/hooks/use-current-organization";
 
 // this is required to render a blank line with LineChart
 const fallbackData = [
@@ -86,7 +88,8 @@ const MigrationDialog = ({
   isEmptyState?: boolean;
 }) => {
   const router = useRouter();
-  const { organizationSlug } = router.query;
+  const { namespace: { name: namespace } } = useWorkspace();
+  const organizationSlug = useCurrentOrganization()?.slug;
   const migrate = !!router.query.migrate;
 
   const migrateInputSchema = z.object({
@@ -122,7 +125,7 @@ const MigrationDialog = ({
       {
         apiKey: data.apiKey,
         variantName: data.variantName,
-        namespace: router.query.namespace as string,
+        namespace,
       },
       {
         onSuccess: (d) => {
@@ -144,7 +147,7 @@ const MigrationDialog = ({
           }
           router.replace(`/${organizationSlug}/graphs`);
         },
-        onError: (error) => {
+        onError: (_) => {
           toast({
             description: "Could not migrate the graph. Please try again.",
             duration: 3000,
@@ -467,7 +470,7 @@ export const Empty = ({
   setIsMigrating: Dispatch<SetStateAction<boolean>>;
 }) => {
   const checkUserAccess = useCheckUserAccess();
-  const router = useRouter();
+  const { namespace: { name: namespace } } = useWorkspace();
 
   let labels = "team=A";
   return (
@@ -507,12 +510,12 @@ export const Empty = ({
             </TabsList>
             <TabsContent value="federated">
               <CLI
-                command={`npx wgc federated-graph create production --namespace ${router.query.namespace} --label-matcher ${labels} --routing-url http://localhost:3002/graphql`}
+                command={`npx wgc federated-graph create production --namespace ${namespace} --label-matcher ${labels} --routing-url http://localhost:3002/graphql`}
               />
             </TabsContent>
             <TabsContent value="monograph">
               <CLI
-                command={`npx wgc monograph create production --namespace ${router.query.namespace} --routing-url http://localhost:3002/graphql  --graph-url http://localhost:4000/graphql`}
+                command={`npx wgc monograph create production --namespace ${namespace} --routing-url http://localhost:3002/graphql  --graph-url http://localhost:4000/graphql`}
               />
             </TabsContent>
           </Tabs>

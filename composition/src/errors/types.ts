@@ -17,3 +17,14 @@ export type InvalidNamedTypeErrorParams = {
   namedTypeData: ParentDefinitionData;
   nodeType: string;
 };
+
+export type SemanticNonNullLevelsIndexOutOfBoundsErrorParams = {
+  maxIndex: number;
+  typeString: string;
+  value: string;
+};
+
+export type SemanticNonNullLevelsNonNullErrorParams = {
+  typeString: string;
+  value: string;
+};

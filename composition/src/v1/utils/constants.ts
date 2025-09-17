@@ -61,6 +61,7 @@ import {
   INTERFACE_OBJECT,
   INTERFACE_UPPER,
   KEY,
+  LEVELS,
   LINK,
   LINK_IMPORT,
   LINK_PURPOSE,
@@ -82,6 +83,7 @@ import {
   SCOPE_SCALAR,
   SCOPES,
   SECURITY,
+  SEMANTIC_NON_NULL,
   SHAREABLE,
   SPECIFIED_BY,
   STREAM_CONFIGURATION,
@@ -516,6 +518,7 @@ export const ALL_IN_BUILT_DIRECTIVE_NAMES = new Set<string>([
   REQUIRE_FETCH_REASONS,
   REQUIRES,
   REQUIRES_SCOPES,
+  SEMANTIC_NON_NULL,
   SHAREABLE,
   SPECIFIED_BY,
   SUBSCRIPTION_FILTER,
@@ -701,6 +704,40 @@ export const REQUIRES_SCOPES_DEFINITION: MutableDirectiveDefinitionNode = {
     SCALAR_UPPER,
   ]),
   name: stringToNameNode(REQUIRES_SCOPES),
+  repeatable: false,
+};
+
+// directive @semanticNonNull(levels: [Int!]! = [0]) on FIELD_DEFINITION
+export const SEMANTIC_NON_NULL_DEFINITION: MutableDirectiveDefinitionNode = {
+  arguments: [
+    {
+      directives: [],
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(LEVELS),
+      type: {
+        kind: Kind.NON_NULL_TYPE,
+        type: {
+          kind: Kind.LIST_TYPE,
+          type: {
+            kind: Kind.NON_NULL_TYPE,
+            type: stringToNamedTypeNode(INT_SCALAR),
+          },
+        },
+      },
+      defaultValue: {
+        kind: Kind.LIST,
+        values: [
+          {
+            kind: Kind.INT,
+            value: '0',
+          },
+        ],
+      },
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: [stringToNameNode(FIELD_DEFINITION_UPPER)],
+  name: stringToNameNode(SEMANTIC_NON_NULL),
   repeatable: false,
 };
 
