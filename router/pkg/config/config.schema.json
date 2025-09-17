@@ -1777,7 +1777,10 @@
                       },
                       {
                         "if": {
-                          "required": ["allow_empty_algorithm"]
+                          "required": ["allow_empty_algorithm"],
+                          "properties": {
+                            "allow_empty_algorithm": { "const": true }
+                          }
                         },
                         "then": {
                           "required": ["algorithms"],

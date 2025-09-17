@@ -197,16 +197,19 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 				// We use the same error messages as keyfunc.Keyfunc for consistency
 				algInter, ok := token.Header["alg"]
 				if !ok {
-					return nil, fmt.Errorf("%w: could not find alg in JWT header", keyfunc.ErrKeyfunc)
+					errJoin = errors.Join(errJoin, fmt.Errorf("%w: could not find alg in JWT header", keyfunc.ErrKeyfunc))
+					continue
 				}
 				alg, ok := algInter.(string)
 				if !ok {
-					return nil, fmt.Errorf(`%w: the JWT header did not contain the "alg" parameter, which is required by RFC 7515 section 4.1.1`, keyfunc.ErrKeyfunc)
+					errJoin = errors.Join(errJoin, fmt.Errorf(`%w: the JWT header did not contain the "alg" parameter, which is required by RFC 7515 section 4.1.1`, keyfunc.ErrKeyfunc))
+					continue
 				}
 
 				// This is a custom validation different from keyfunc.Keyfunc
 				if !slices.Contains(keyFuncAndOpts.allowedAlgorithms, alg) {
-					return nil, fmt.Errorf("%w: could not find alg %s in allow list", keyfunc.ErrKeyfunc, alg)
+					errJoin = errors.Join(errJoin, fmt.Errorf("%w: could not find alg %s in allow list", keyfunc.ErrKeyfunc, alg))
+					continue
 				}
 			}
 
