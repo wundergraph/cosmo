@@ -68,6 +68,7 @@ import {
   NAME,
   NOT_UPPER,
   OBJECT_UPPER,
+  ONE_OF,
   OR_UPPER,
   OVERRIDE,
   PROPAGATE,
@@ -513,6 +514,7 @@ export const ALL_IN_BUILT_DIRECTIVE_NAMES = new Set<string>([
   INTERFACE_OBJECT,
   KEY,
   LINK,
+  ONE_OF,
   OVERRIDE,
   PROVIDES,
   REQUIRE_FETCH_REASONS,
@@ -641,6 +643,14 @@ export const LINK_DEFINITION: DirectiveDefinitionNode = {
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: stringArrayToNameNodeArray([SCHEMA_UPPER]),
   name: stringToNameNode(LINK),
+  repeatable: true,
+};
+
+// directive @oneOf on INPUT_OBJECT
+export const ONE_OF_DEFINITION: DirectiveDefinitionNode = {
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([INPUT_OBJECT_UPPER]),
+  name: stringToNameNode(ONE_OF),
   repeatable: true,
 };
 

@@ -65,8 +65,10 @@ import {
   LINK_IMPORT_DEFINITION,
   LINK_PURPOSE_DEFINITION,
   MAX_OR_SCOPES,
+  ONE_OF_DEFINITION,
   REQUIRE_FETCH_REASONS_DEFINITION,
   SCOPE_SCALAR_DEFINITION,
+  SEMANTIC_NON_NULL_DEFINITION,
   SUBSCRIPTION_FIELD_CONDITION_DEFINITION,
   SUBSCRIPTION_FILTER_CONDITION_DEFINITION,
   SUBSCRIPTION_FILTER_DEFINITION,
@@ -155,6 +157,7 @@ import {
   nonExternalKeyFieldNamesEventDrivenErrorMessage,
   nonKeyComposingObjectTypeNamesEventDrivenErrorMessage,
   nonKeyFieldNamesEventDrivenErrorMessage,
+  oneOfRequiredFieldsError,
   operationDefinitionError,
   orScopesLimitError,
   selfImplementationError,
@@ -200,6 +203,7 @@ import {
   invalidExternalFieldWarning,
   invalidOverrideTargetSubgraphNameWarning,
   nonExternalConditionalFieldWarning,
+  singleSubgraphInputFieldOneOfWarning,
   unimplementedInterfaceOutputTypeWarning,
 } from '../warnings/warnings';
 import { upsertDirectiveSchemaAndEntityDefinitions, upsertParentsAndChildren } from './walkers';
@@ -309,6 +313,7 @@ import {
   NON_NULLABLE_INT,
   NON_NULLABLE_STRING,
   NOT_APPLICABLE,
+  ONE_OF,
   OPERATION_TO_DEFAULT,
   OVERRIDE,
   PROPAGATE,
@@ -349,6 +354,7 @@ import {
   addIterableValuesToSet,
   generateSimpleDirective,
   getEntriesNotInHashSet,
+  getFirstEntry,
   getOrThrowError,
   getValueOrDefault,
   kindToNodeType,
@@ -3423,20 +3429,26 @@ export class NormalizationFactory {
       definitions.push(SUBSCRIPTION_FIELD_CONDITION_DEFINITION);
       definitions.push(SUBSCRIPTION_FILTER_VALUE_DEFINITION);
     }
-
-    if (this.referencedDirectiveNames.has(LINK)) {
-      definitions.push(LINK_DEFINITION);
-      definitions.push(LINK_IMPORT_DEFINITION);
-      definitions.push(LINK_PURPOSE_DEFINITION);
-    }
     if (this.referencedDirectiveNames.has(CONFIGURE_DESCRIPTION)) {
       definitions.push(CONFIGURE_DESCRIPTION_DEFINITION);
     }
     if (this.referencedDirectiveNames.has(CONFIGURE_CHILD_DESCRIPTIONS)) {
       definitions.push(CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION);
     }
+    if (this.referencedDirectiveNames.has(LINK)) {
+      definitions.push(LINK_DEFINITION);
+      definitions.push(LINK_IMPORT_DEFINITION);
+      definitions.push(LINK_PURPOSE_DEFINITION);
+    }
+    // @oneOf is part of the new base schema, so this definition is/will be unnecessary, but add it as a precaution.
+    if (this.referencedDirectiveNames.has(ONE_OF)) {
+      definitions.push(ONE_OF_DEFINITION);
+    }
     if (this.referencedDirectiveNames.has(REQUIRE_FETCH_REASONS)) {
       definitions.push(REQUIRE_FETCH_REASONS_DEFINITION);
+    }
+    if (this.referencedDirectiveNames.has(SEMANTIC_NON_NULL)) {
+      definitions.push(SEMANTIC_NON_NULL_DEFINITION);
     }
     for (const directiveDefinition of this.customDirectiveDefinitions.values()) {
       definitions.push(directiveDefinition);
@@ -3465,11 +3477,17 @@ export class NormalizationFactory {
           definitions.push(this.getEnumNodeByData(parentData));
           break;
         case Kind.INPUT_OBJECT_TYPE_DEFINITION:
-          if (parentData.inputValueDataByName.size < 1) {
+          const fieldCount = parentData.inputValueDataByName.size;
+          if (fieldCount < 1) {
             this.errors.push(noInputValueDefinitionsError(parentTypeName));
             break;
           }
+          const definesOneOf = parentData.directivesByDirectiveName.has(ONE_OF);
+          const requiredFieldNames = new Set<FieldName>();
           for (const valueData of parentData.inputValueDataByName.values()) {
+            if (isTypeRequired(valueData.type)) {
+              requiredFieldNames.add(valueData.name);
+            }
             // Base Scalars have already been set
             if (valueData.namedTypeKind !== Kind.NULL) {
               continue;
@@ -3490,6 +3508,26 @@ export class NormalizationFactory {
               continue;
             }
             valueData.namedTypeKind = namedTypeData.kind;
+          }
+          if (definesOneOf) {
+            if (requiredFieldNames.size > 0) {
+              this.errors.push(
+                oneOfRequiredFieldsError({
+                  requiredFieldNames: Array.from(requiredFieldNames),
+                  typeName: parentTypeName,
+                }),
+              );
+              break;
+            }
+            if (fieldCount === 1) {
+              this.warnings.push(
+                singleSubgraphInputFieldOneOfWarning({
+                  fieldName: getFirstEntry(parentData.inputValueDataByName)?.name ?? 'unknown',
+                  subgraphName: this.subgraphName,
+                  typeName: parentTypeName,
+                }),
+              );
+            }
           }
           definitions.push(this.getInputObjectNodeByData(parentData));
           break;

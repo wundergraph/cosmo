@@ -52,6 +52,7 @@ import {
   noBaseDefinitionForExtensionError,
   nonLeafSubscriptionFieldConditionFieldPathFinalFieldErrorMessage,
   noQueryRootTypeError,
+  oneOfRequiredFieldsError,
   orScopesLimitError,
   semanticNonNullInconsistentLevelsError,
   subscriptionFieldConditionEmptyValuesArrayErrorMessage,
@@ -112,6 +113,7 @@ import {
   DEPRECATED_DEFINITION,
   INACCESSIBLE_DEFINITION,
   MAX_OR_SCOPES,
+  ONE_OF_DEFINITION,
   REQUIRES_SCOPES_DEFINITION,
   SCOPE_SCALAR_DEFINITION,
   SEMANTIC_NON_NULL_DEFINITION,
@@ -201,6 +203,7 @@ import {
   LIST,
   NOT_UPPER,
   OBJECT,
+  ONE_OF,
   OR_UPPER,
   PARENT_DEFINITION_DATA,
   PERIOD,
@@ -237,6 +240,7 @@ import {
 } from '../../utils/types';
 import { FederateSubgraphsContractV1Params, FederateSubgraphsWithContractsV1Params, FederationParams } from './types';
 import { ContractName, DirectiveName, FieldCoords, FieldName, SubgraphName, TypeName } from '../../types/types';
+import { singleFederatedInputFieldOneOfWarning } from '../warnings/warnings';
 
 export class FederationFactory {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
@@ -266,6 +270,7 @@ export class FederationFactory {
     [AUTHENTICATED, AUTHENTICATED_DEFINITION],
     [DEPRECATED, DEPRECATED_DEFINITION],
     [INACCESSIBLE, INACCESSIBLE_DEFINITION],
+    [ONE_OF, ONE_OF_DEFINITION],
     [REQUIRES_SCOPES, REQUIRES_SCOPES_DEFINITION],
     [SEMANTIC_NON_NULL, SEMANTIC_NON_NULL_DEFINITION],
     [TAG, TAG_DEFINITION],
@@ -1942,10 +1947,15 @@ export class FederationFactory {
           });
           break;
         case Kind.INPUT_OBJECT_TYPE_DEFINITION:
-          const invalidRequiredInputs: Array<InvalidRequiredInputValueData> = [];
-          const inputValueNodes: Array<MutableInputValueNode> = [];
-          const clientInputValueNodes: Array<MutableInputValueNode> = [];
+          const invalidRequiredInputs = new Array<InvalidRequiredInputValueData>();
+          const inputValueNodes = new Array<MutableInputValueNode>();
+          const clientInputValueNodes = new Array<MutableInputValueNode>();
+          const definesOneOf = parentDefinitionData.directivesByDirectiveName.has(ONE_OF);
+          const requiredFieldNames = new Set<FieldName>();
           for (const [inputValueName, inputValueData] of parentDefinitionData.inputValueDataByName) {
+            if (isTypeRequired(inputValueData.type)) {
+              requiredFieldNames.add(inputValueName);
+            }
             if (parentDefinitionData.subgraphNames.size === inputValueData.subgraphNames.size) {
               inputValueNodes.push(this.getNodeWithPersistedDirectivesByInputValueData(inputValueData));
               if (isNodeDataInaccessible(inputValueData)) {
@@ -1972,6 +1982,25 @@ export class FederationFactory {
             );
             break;
           }
+          if (definesOneOf) {
+            if (requiredFieldNames.size > 0) {
+              this.errors.push(
+                oneOfRequiredFieldsError({
+                  requiredFieldNames: Array.from(requiredFieldNames),
+                  typeName: parentTypeName,
+                }),
+              );
+              break;
+            }
+            if (inputValueNodes.length === 1) {
+              this.warnings.push(
+                singleFederatedInputFieldOneOfWarning({
+                  fieldName: inputValueNodes[0]!.name.value,
+                  typeName: parentTypeName,
+                }),
+              );
+            }
+          }
           parentDefinitionData.node.fields = inputValueNodes;
           this.routerDefinitions.push(this.getNodeForRouterSchemaByData(parentDefinitionData));
           if (isNodeDataInaccessible(parentDefinitionData)) {
@@ -1983,7 +2012,7 @@ export class FederationFactory {
               allChildDefinitionsAreInaccessibleError(
                 kindToNodeType(parentDefinitionData.kind),
                 parentTypeName,
-                'input field',
+                'Input field',
               ),
             );
             break;
