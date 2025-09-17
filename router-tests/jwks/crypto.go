@@ -43,7 +43,7 @@ func (b *baseCrypto) MarshalJWK() (jwkset.JWK, error) {
 	}
 
 	meta := jwkset.JWKMetadataOptions{
-		ALG: b.alg,
+		//ALG: b.alg,
 		KID: b.kID,
 		USE: jwkset.UseSig,
 	}
@@ -76,8 +76,8 @@ func NewRSACrypto(kID string, alg jwkset.ALG, size int) (Crypto, error) {
 
 	return &rsaCrypto{
 		baseCrypto: baseCrypto{
-			pk:  pk,
-			alg: alg,
+			pk: pk,
+			//alg: alg,
 			kID: kID,
 		},
 	}, nil
