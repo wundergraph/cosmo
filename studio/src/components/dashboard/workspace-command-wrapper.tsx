@@ -47,6 +47,14 @@ export function WorkspaceCommandWrapper({
         continue;
       }
 
+      // Determine whether the namespace contains the filter value
+      fuse.setCollection([wns]);
+      if (fuse.search(filterValue).length > 0) {
+        // The namespace contains the filter value, add it with all the graphs/subgraphs to the search results
+        searchResults.push(wns);
+        continue;
+      }
+
       // We need to clone the namespace to avoid mutating the original object
       const clonedWns = wns.clone();
       clonedWns.graphs = [];
@@ -105,14 +113,14 @@ export function WorkspaceCommandWrapper({
         {showFilter && (<CommandInput
           value={filter}
           onValueChange={setFilter}
-          placeholder="Search graphs and subgraphs"
+          placeholder="Search namespace, graphs and subgraphs"
         />)}
         <div className="scrollbar-custom h-full overflow-y-auto">
           {isFiltering || !children ? (
             <>
               {filteredGraphs.length === 0 ? (
                 <div className="p-3 text-sm text-muted-foreground text-center pointer-events-none">
-                  No graph or subgraph matches your criteria.
+                  No namespace, graph or subgraph matches your criteria.
                 </div>
               ) : filteredGraphs.map((wns, index) => (
                 <>
