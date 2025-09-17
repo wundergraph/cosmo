@@ -203,7 +203,7 @@ func TestCustomModuleQueryStats(t *testing.T) {
 						SubgraphName: "employees",
 						TypeName:     "Query",
 						FieldName:    "_entities",
-						Count:        1,
+						Count:        2,
 					},
 				}, qps.SubgraphRootFields)
 			})
