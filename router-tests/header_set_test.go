@@ -275,7 +275,12 @@ func TestHeaderSetWithExpression(t *testing.T) {
 		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
 		require.NoError(t, err)
 
-		accessController, err := core.NewAccessController([]authentication.Authenticator{authenticator}, true, core.IntrospectionAuthModeFull, "")
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:             []authentication.Authenticator{authenticator},
+			AuthenticationRequired:     true,
+			IntrospectionAuthMode:      core.IntrospectionAuthModeFull,
+			IntrospectionAuthSkipToken: "",
+		})
 		require.NoError(t, err)
 
 		token, err := authServer.TokenForKID(rsa1.KID(), map[string]any{"user_id": "TestId"})

@@ -984,10 +984,18 @@ type PluginRegistryConfiguration struct {
 	URL string `yaml:"url" env:"URL" envDefault:"cosmo-registry.wundergraph.com"`
 }
 
+type IntrospectionAuthenticationMode string
+
+const (
+	IntrospectionAuthenticationModeFull  IntrospectionAuthenticationMode = "full"
+	IntrospectionAuthenticationModeToken IntrospectionAuthenticationMode = "token"
+	IntrospectionAuthenticationModeSkip  IntrospectionAuthenticationMode = "skip"
+)
+
 type IntrospectionConfiguration struct {
-	Enabled            bool   `yaml:"enabled" envDefault:"true" env:"INTROSPECTION_ENABLED"`
-	AuthenticationMode string `yaml:"authentication_mode" envDefault:"full" env:"INTROSPECTION_AUTHENTICATION_MODE"`
-	Token              string `yaml:"token" env:"INTROSPECTION_TOKEN"`
+	Enabled            bool                            `yaml:"enabled" envDefault:"true" env:"INTROSPECTION_ENABLED"`
+	AuthenticationMode IntrospectionAuthenticationMode `yaml:"authentication_mode" envDefault:"full" env:"INTROSPECTION_AUTHENTICATION_MODE"`
+	Token              string                          `yaml:"token" env:"INTROSPECTION_TOKEN"`
 }
 
 type Config struct {

@@ -13,7 +13,15 @@ import (
 // IntrospectionAuthMode defines how introspection queries are authenticated.
 type IntrospectionAuthMode string
 
+// IsValid checks if the introspection authentication mode is valid.
+func (m IntrospectionAuthMode) IsValid() bool {
+	return m == IntrospectionAuthModeFull || m == IntrospectionAuthModeToken || m == IntrospectionAuthModeSkip
+}
+
 const (
+	// IntrospectionAuthModeInvalid is an invalid introspection authentication mode.
+	IntrospectionAuthModeInvalid IntrospectionAuthMode = ""
+
 	// IntrospectionAuthModeFull requires normal authentication for introspection queries.
 	IntrospectionAuthModeFull IntrospectionAuthMode = "full"
 
@@ -31,6 +39,14 @@ var (
 	ErrUnauthorized = errors.New("unauthorized")
 )
 
+// AccessControllerOptions holds configuration options for creating a new AccessController
+type AccessControllerOptions struct {
+	Authenticators             []authentication.Authenticator
+	AuthenticationRequired     bool
+	IntrospectionAuthMode      IntrospectionAuthMode
+	IntrospectionAuthSkipToken string
+}
+
 // AccessController handles both authentication and authorization for the Router
 type AccessController struct {
 	authenticationRequired     bool
@@ -41,20 +57,16 @@ type AccessController struct {
 
 // NewAccessController creates a new AccessController.
 // It returns an error if the introspection auth mode is invalid.
-func NewAccessController(
-	authenticators []authentication.Authenticator,
-	authenticationRequired bool,
-	introspectionAuthMode IntrospectionAuthMode,
-	introspectionAuthSkipToken string) (*AccessController, error) {
-	if introspectionAuthMode != IntrospectionAuthModeFull && introspectionAuthMode != IntrospectionAuthModeToken && introspectionAuthMode != IntrospectionAuthModeSkip {
-		return nil, fmt.Errorf("invalid introspection auth mode: %s", introspectionAuthMode)
+func NewAccessController(opts AccessControllerOptions) (*AccessController, error) {
+	if !opts.IntrospectionAuthMode.IsValid() {
+		return nil, fmt.Errorf("invalid introspection auth mode: %s", opts.IntrospectionAuthMode)
 	}
 
 	return &AccessController{
-		authenticationRequired:     authenticationRequired,
-		authenticators:             authenticators,
-		introspectionAuthMode:      introspectionAuthMode,
-		introspectionAuthSkipToken: introspectionAuthSkipToken,
+		authenticationRequired:     opts.AuthenticationRequired,
+		authenticators:             opts.Authenticators,
+		introspectionAuthMode:      opts.IntrospectionAuthMode,
+		introspectionAuthSkipToken: opts.IntrospectionAuthSkipToken,
 	}, nil
 }
 

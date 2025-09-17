@@ -57,12 +57,12 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 	}
 
 	if len(authenticators) > 0 {
-		accessController, err := NewAccessController(
-			authenticators,
-			cfg.Authorization.RequireAuthentication,
-			IntrospectionAuthMode(cfg.IntrospectionConfig.AuthenticationMode),
-			cfg.IntrospectionConfig.Token,
-		)
+		accessController, err := NewAccessController(AccessControllerOptions{
+			Authenticators:             authenticators,
+			AuthenticationRequired:     cfg.Authorization.RequireAuthentication,
+			IntrospectionAuthMode:      IntrospectionAuthMode(cfg.IntrospectionConfig.AuthenticationMode),
+			IntrospectionAuthSkipToken: cfg.IntrospectionConfig.Token,
+		})
 		if err != nil {
 			return nil, fmt.Errorf("could not create access controller: %w", err)
 		}

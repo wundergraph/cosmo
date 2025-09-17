@@ -127,7 +127,12 @@ func TestBlockOperations(t *testing.T) {
 			t.Parallel()
 
 			authenticators, authServer := ConfigureAuth(t)
-			accessController, err := core.NewAccessController(authenticators, false, core.IntrospectionAuthModeFull, "")
+			accessController, err := core.NewAccessController(core.AccessControllerOptions{
+				Authenticators:             authenticators,
+				AuthenticationRequired:     false,
+				IntrospectionAuthMode:      core.IntrospectionAuthModeFull,
+				IntrospectionAuthSkipToken: "",
+			})
 			require.NoError(t, err)
 
 			testenv.Run(t, &testenv.Config{
@@ -283,7 +288,12 @@ func TestBlockOperations(t *testing.T) {
 			t.Parallel()
 
 			authenticators, authServer := ConfigureAuth(t)
-			accessController, err := core.NewAccessController(authenticators, false, core.IntrospectionAuthModeFull, "")
+			accessController, err := core.NewAccessController(core.AccessControllerOptions{
+				Authenticators:             authenticators,
+				AuthenticationRequired:     false,
+				IntrospectionAuthMode:      core.IntrospectionAuthModeFull,
+				IntrospectionAuthSkipToken: "",
+			})
 			require.NoError(t, err)
 
 			testenv.Run(t, &testenv.Config{
@@ -377,7 +387,12 @@ func TestBlockOperations(t *testing.T) {
 			t.Parallel()
 
 			authenticators, authServer := ConfigureAuth(t)
-			accessController, err := core.NewAccessController(authenticators, false, core.IntrospectionAuthModeFull, "")
+			accessController, err := core.NewAccessController(core.AccessControllerOptions{
+				Authenticators:             authenticators,
+				AuthenticationRequired:     false,
+				IntrospectionAuthMode:      core.IntrospectionAuthModeFull,
+				IntrospectionAuthSkipToken: "",
+			})
 			require.NoError(t, err)
 
 			testenv.Run(t, &testenv.Config{

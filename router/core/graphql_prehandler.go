@@ -681,23 +681,27 @@ func (h *PreHandler) handleOperation(w http.ResponseWriter, req *http.Request, v
 		// we decide here if we need to abort the request or not.
 		isIntrospection, err := operationKit.isIntrospectionQuery()
 		if err != nil {
-			requestContext.logger.Debug("failed to check if operation is introspection, treat it like non-introspection operation", zap.Error(err))
+			requestContext.logger.Error("failed to check if operation is introspection, treat it like non-introspection operation", zap.Error(err))
 			isIntrospection = false
 		}
 
-		if httpOperation.authMethod != authenticationMethodNormal {
-			if isIntrospection {
-				if httpOperation.authMethod != authenticationMethodIntrospectionToken && httpOperation.authMethod != authenticationMethodIntrospectionSkip {
-					return &httpGraphqlError{
-						message:    "unauthorized",
-						statusCode: http.StatusUnauthorized,
-					}
-				}
-			} else {
-				return &httpGraphqlError{
-					message:    "unauthorized",
-					statusCode: http.StatusUnauthorized,
-				}
+		// non-introspection queries are only allowed when authenticated via normal authentication
+		if !isIntrospection && httpOperation.authMethod != authenticationMethodNormal {
+			return &httpGraphqlError{
+				message:    "unauthorized",
+				statusCode: http.StatusUnauthorized,
+			}
+		}
+
+		// introspection queries are only allowed when authenticated normally or via dedicated token, or when auth skip is enabled
+		// note: httpOperation.authMethod is only set when authentication is successful and the config allows such authentication.
+		if isIntrospection &&
+			httpOperation.authMethod != authenticationMethodNormal &&
+			httpOperation.authMethod != authenticationMethodIntrospectionToken &&
+			httpOperation.authMethod != authenticationMethodIntrospectionSkip {
+			return &httpGraphqlError{
+				message:    "unauthorized",
+				statusCode: http.StatusUnauthorized,
 			}
 		}
 	}

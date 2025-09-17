@@ -70,7 +70,12 @@ func TestRouterOnRequestHook(t *testing.T) {
 			},
 		}
 
-		accessController, err := core.NewAccessController(authenticators, true, core.IntrospectionAuthModeFull, "")
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:             authenticators,
+			AuthenticationRequired:     true,
+			IntrospectionAuthMode:      core.IntrospectionAuthModeFull,
+			IntrospectionAuthSkipToken: "",
+		})
 		require.NoError(t, err)
 
 		testenv.Run(t, &testenv.Config{
