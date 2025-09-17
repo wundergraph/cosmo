@@ -96,12 +96,20 @@ func Main() {
 			zap.String("service_version", core.Version),
 		)
 
+	if *pprofListenAddr != "" && *pyroscopeAddr != "" {
+		log.Fatal("Cannot use pprof and pyroscope at the same time")
+	}
+
 	// Start pprof server if address is provided
 	if *pprofListenAddr != "" {
 		pprofSvr := profile.NewServer(*pprofListenAddr, baseLogger)
 		defer pprofSvr.Close()
 		go pprofSvr.Listen()
 	}
+
+	// Start profiling if flags are set
+	profiler := profile.Start(baseLogger, *cpuProfilePath, *memProfilePath)
+	defer profiler.Finish()
 
 	if *pyroscopeAddr != "" {
 		// These 2 lines are only required if you're using mutex or block profiling
@@ -112,27 +120,18 @@ func Main() {
 		logger := baseLogger.With(zap.String("component", "pyroscope"))
 		logger.Info("starting pyroscope server")
 
-		pyroscope.Start(pyroscope.Config{
+		pyro, err := pyroscope.Start(pyroscope.Config{
 			ApplicationName: "wundergraph.cosmo.router",
-
-			// replace this with the address of pyroscope server
-			ServerAddress: *pyroscopeAddr,
-
-			// you can disable logging by setting this to nil
-			Logger: logger.Sugar(),
-
-			// you can provide static tags via a map:
-			Tags: map[string]string{"hostname": os.Getenv("HOSTNAME")},
+			ServerAddress:   *pyroscopeAddr,
+			Logger:          logger.Sugar(),
+			Tags:            map[string]string{"hostname": os.Getenv("HOSTNAME")},
 
 			ProfileTypes: []pyroscope.ProfileType{
-				// these profile types are enabled by default:
 				pyroscope.ProfileCPU,
 				pyroscope.ProfileAllocObjects,
 				pyroscope.ProfileAllocSpace,
 				pyroscope.ProfileInuseObjects,
 				pyroscope.ProfileInuseSpace,
-
-				// these profile types are optional:
 				pyroscope.ProfileGoroutines,
 				pyroscope.ProfileMutexCount,
 				pyroscope.ProfileMutexDuration,
@@ -140,10 +139,12 @@ func Main() {
 				pyroscope.ProfileBlockDuration,
 			},
 		})
-
-		// Start profiling if flags are set
-		profiler := profile.Start(baseLogger, *cpuProfilePath, *memProfilePath)
-		defer profiler.Finish()
+		if err != nil {
+			logger.Error("failed to start pyroscope", zap.Error(err))
+		}
+		if pyro != nil {
+			defer pyro.Stop()
+		}
 	}
 
 	rs, err := core.NewRouterSupervisor(&core.RouterSupervisorOpts{
