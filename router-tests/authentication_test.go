@@ -839,10 +839,13 @@ func TestHttpJwksAuthorization(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// This token has a static keyid
 			token, err := authServer.TokenForKID("wg_static_kid", nil, true)
+			require.NoError(t, err)
+
 			maxDuration := 5 * time.Second
 
-			xEnv.WaitForTest(maxDuration, func() {
-				require.NoError(t, err)
+			doneCh := make(chan struct{})
+			go func() {
+				defer close(doneCh)
 				for range 5 {
 					func() {
 						// Operations with an invalid token should fail
@@ -861,7 +864,9 @@ func TestHttpJwksAuthorization(t *testing.T) {
 						require.JSONEq(t, unauthorizedExpectedData, string(data))
 					}()
 				}
-			})
+			}()
+
+			testenv.AwaitChannelWithT(t, maxDuration, doneCh, func(t *testing.T, _ struct{}) {}, "test timed out")
 		})
 	})
 

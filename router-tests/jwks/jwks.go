@@ -50,11 +50,11 @@ func (s *Server) Token(claims map[string]any) (string, error) {
 	return "", jwt.ErrInvalidKey
 }
 
-func (s *Server) TokenForKID(kid string, claims map[string]any, useInvalidKid bool) (string, error) {
+func (s *Server) TokenForKID(kid string, claims map[string]any, useInvalidKID bool) (string, error) {
 	provider, ok := s.providers[kid]
-	if !useInvalidKid && !ok {
+	if !useInvalidKID && !ok {
 		return "", jwt.ErrInvalidKey
-	} else if useInvalidKid {
+	} else if useInvalidKID {
 		// If we don't care about the kid we don't care about the provider
 		// we just get the first random provider provided
 		for _, pr := range s.providers {
