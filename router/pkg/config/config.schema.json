@@ -1758,20 +1758,37 @@
                 },
                 "oneOf": [
                   {
-                    "required": ["url"],
-                    "not": {
-                      "anyOf": [
-                        {
-                          "required": ["secret"]
-                        },
-                        {
-                          "required": ["symmetric_algorithm"]
-                        },
-                        {
-                          "required": ["header_key_id"]
+                    "allOf": [
+                      {
+                        "required": ["url"],
+                        "not": {
+                          "anyOf": [
+                            {
+                              "required": ["secret"]
+                            },
+                            {
+                              "required": ["symmetric_algorithm"]
+                            },
+                            {
+                              "required": ["header_key_id"]
+                            }
+                          ]
                         }
-                      ]
-                    }
+                      },
+                      {
+                        "if": {
+                          "required": ["allow_empty_algorithm"]
+                        },
+                        "then": {
+                          "required": ["algorithms"],
+                          "properties": {
+                            "algorithms": {
+                              "minItems": 1
+                            }
+                          }
+                        }
+                      }
+                    ]
                   },
                   {
                     "required": ["secret", "symmetric_algorithm", "header_key_id"],
@@ -1785,6 +1802,9 @@
                         },
                         {
                           "required": ["refresh_interval"]
+                        },
+                        {
+                          "required": ["allow_empty_algorithm"]
                         }
                       ]
                     }

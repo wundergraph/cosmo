@@ -2836,9 +2836,8 @@ func TestAudienceValidation(t *testing.T) {
 		t.Parallel()
 
 		rsaCrypto, err := jwks.NewRSACrypto("", "", 2048)
-		if err != nil {
-			t.Fatalf("Failed to create an RSA crypto provider.\nError: %s", err)
-		}
+		require.NoError(t, err)
+
 		authServer, err := jwks.NewServerWithCrypto(t, rsaCrypto)
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
@@ -2872,6 +2871,48 @@ func TestAudienceValidation(t *testing.T) {
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
 			require.Equal(t, employeesExpectedData, string(data))
+		})
+	})
+
+	t.Run("verify blocking invalid specified algorithm even though token is valid", func(t *testing.T) {
+		t.Parallel()
+
+		rsaCrypto, err := jwks.NewRSACrypto("", "", 2048)
+		require.NoError(t, err)
+		
+		authServer, err := jwks.NewServerWithCrypto(t, rsaCrypto)
+		require.NoError(t, err)
+		t.Cleanup(authServer.Close)
+
+		allowedAlgorithm := jwkset.AlgRS256
+
+		authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+			{
+				URL:                 authServer.JWKSURL(),
+				RefreshInterval:     time.Second * 5,
+				AllowedAlgorithms:   []string{string(allowedAlgorithm)},
+				AllowEmptyAlgorithm: true,
+			},
+		})
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, false)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Fail with RS512
+			token2, err := authServer.TokenWithOpts(nil, jwks.TokenOpts{
+				AlgOverride: string(jwkset.AlgRS512),
+			})
+			require.NoError(t, err)
+			res2, err := xEnv.MakeRequest(http.MethodPost, "/graphql", http.Header{
+				"Authorization": []string{"Bearer " + token2},
+			}, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer func() {
+				_ = res2.Body.Close()
+			}()
+			require.Equal(t, http.StatusUnauthorized, res2.StatusCode)
 		})
 	})
 }
