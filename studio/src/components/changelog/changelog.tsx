@@ -1,4 +1,3 @@
-import { useUser } from "@/hooks/use-user";
 import { formatDateTime } from "@/lib/format-date";
 import { MinusIcon, PlusIcon } from "@radix-ui/react-icons";
 import { FederatedGraphChangelogOutput } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
@@ -6,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { PiCubeFocus } from "react-icons/pi";
 import { Changes, getDiffCount } from "./changes";
+import { useWorkspace } from "@/hooks/use-workspace";
+import { useCurrentOrganization } from "@/hooks/use-current-organization";
 
 export const Changelog = ({
   entries,
@@ -13,9 +14,9 @@ export const Changelog = ({
   entries: FederatedGraphChangelogOutput[];
 }) => {
   const router = useRouter();
-  const user = useUser();
   const slug = router.query.slug as string;
-  const namespace = router.query.namespace as string;
+  const { namespace: { name: namespace } } = useWorkspace();
+  const organizationSlug = useCurrentOrganization()?.slug;
 
   return (
     <ol className="relative w-full">
@@ -34,7 +35,7 @@ export const Changelog = ({
                     {formatDateTime(new Date(createdAt))}
                   </time>
                   <Link
-                    href={`/${user?.currentOrganization?.slug}/${namespace}/graph/${slug}/compositions/${compositionId}`}
+                    href={`/${organizationSlug}/${namespace}/graph/${slug}/compositions/${compositionId}`}
                     className="flex items-center gap-x-1 text-sm text-primary hover:underline"
                   >
                     <PiCubeFocus className="h-4 w-4" />
