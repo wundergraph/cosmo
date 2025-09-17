@@ -190,7 +190,7 @@ export function singleSubgraphInputFieldOneOfWarning({
 export function singleFederatedInputFieldOneOfWarning({
   fieldName,
   typeName,
-}: SingleFederatedInputFieldOneOfWarningParams) {
+}: SingleFederatedInputFieldOneOfWarningParams): Warning {
   return new Warning({
     message:
       `The directive "@oneOf" is defined on Input Object "${typeName}"` +

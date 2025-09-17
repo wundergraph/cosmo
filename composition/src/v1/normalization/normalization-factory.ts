@@ -375,6 +375,7 @@ import {
 import { newConfigurationData, newFieldSetConditionData } from '../../router-configuration/utils';
 import { ImplementationErrors, InvalidFieldImplementation } from '../../utils/types';
 import { FieldName, SubgraphName } from '../../types/types';
+import { ValidateOneOfDirectiveParams } from './params';
 
 export function normalizeSubgraphFromString(subgraphSDL: string, noLocation = true): NormalizationResult {
   const { error, documentNode } = safeParse(subgraphSDL, noLocation);
@@ -3386,6 +3387,31 @@ export class NormalizationFactory {
     }
   }
 
+  validateOneOfDirective({ data, requiredFieldNames }: ValidateOneOfDirectiveParams): boolean {
+    if (!data.directivesByDirectiveName.has(ONE_OF)) {
+      return true;
+    }
+    if (requiredFieldNames.size > 0) {
+      this.errors.push(
+        oneOfRequiredFieldsError({
+          requiredFieldNames: Array.from(requiredFieldNames),
+          typeName: data.name,
+        }),
+      );
+      return false;
+    }
+    if (data.inputValueDataByName.size === 1) {
+      this.warnings.push(
+        singleSubgraphInputFieldOneOfWarning({
+          fieldName: getFirstEntry(data.inputValueDataByName)?.name ?? 'unknown',
+          subgraphName: this.subgraphName,
+          typeName: data.name,
+        }),
+      );
+    }
+    return true;
+  }
+
   normalize(document: DocumentNode): NormalizationResult {
     /* factory.allDirectiveDefinitions is initialized with v1 directive definitions, and v2 definitions are only added
     after the visitor has visited the entire schema and the subgraph is known to be a V2 graph. Consequently,
@@ -3469,20 +3495,19 @@ export class NormalizationFactory {
     this.evaluateExternalKeyFields();
     for (const [parentTypeName, parentData] of this.parentDefinitionDataByTypeName) {
       switch (parentData.kind) {
-        case Kind.ENUM_TYPE_DEFINITION:
+        case Kind.ENUM_TYPE_DEFINITION: {
           if (parentData.enumValueDataByValueName.size < 1) {
             this.errors.push(noDefinedEnumValuesError(parentTypeName));
             break;
           }
           definitions.push(this.getEnumNodeByData(parentData));
           break;
-        case Kind.INPUT_OBJECT_TYPE_DEFINITION:
-          const fieldCount = parentData.inputValueDataByName.size;
-          if (fieldCount < 1) {
+        }
+        case Kind.INPUT_OBJECT_TYPE_DEFINITION: {
+          if (parentData.inputValueDataByName.size < 1) {
             this.errors.push(noInputValueDefinitionsError(parentTypeName));
             break;
           }
-          const definesOneOf = parentData.directivesByDirectiveName.has(ONE_OF);
           const requiredFieldNames = new Set<FieldName>();
           for (const valueData of parentData.inputValueDataByName.values()) {
             if (isTypeRequired(valueData.type)) {
@@ -3509,31 +3534,15 @@ export class NormalizationFactory {
             }
             valueData.namedTypeKind = namedTypeData.kind;
           }
-          if (definesOneOf) {
-            if (requiredFieldNames.size > 0) {
-              this.errors.push(
-                oneOfRequiredFieldsError({
-                  requiredFieldNames: Array.from(requiredFieldNames),
-                  typeName: parentTypeName,
-                }),
-              );
-              break;
-            }
-            if (fieldCount === 1) {
-              this.warnings.push(
-                singleSubgraphInputFieldOneOfWarning({
-                  fieldName: getFirstEntry(parentData.inputValueDataByName)?.name ?? 'unknown',
-                  subgraphName: this.subgraphName,
-                  typeName: parentTypeName,
-                }),
-              );
-            }
+          if (!this.validateOneOfDirective({ data: parentData, requiredFieldNames })) {
+            break;
           }
           definitions.push(this.getInputObjectNodeByData(parentData));
           break;
+        }
         case Kind.INTERFACE_TYPE_DEFINITION:
         // intentional fallthrough
-        case Kind.OBJECT_TYPE_DEFINITION:
+        case Kind.OBJECT_TYPE_DEFINITION: {
           const isEntity = this.entityDataByTypeName.has(parentTypeName);
           const operationTypeNode = this.operationTypeNodeByTypeName.get(parentTypeName);
           const isObject = parentData.kind === Kind.OBJECT_TYPE_DEFINITION;
@@ -3612,19 +3621,23 @@ export class NormalizationFactory {
             configurationData.requireFetchReasonsFieldNames = [...parentData.requireFetchReasonsFieldNames];
           }
           break;
-        case Kind.SCALAR_TYPE_DEFINITION:
+        }
+        case Kind.SCALAR_TYPE_DEFINITION: {
           if (parentData.extensionType === ExtensionType.REAL) {
             this.errors.push(noBaseScalarDefinitionError(parentTypeName));
             break;
           }
           definitions.push(this.getScalarNodeByData(parentData));
           break;
-        case Kind.UNION_TYPE_DEFINITION:
+        }
+        case Kind.UNION_TYPE_DEFINITION: {
           definitions.push(this.getUnionNodeByData(parentData));
           this.validateUnionMembers(parentData);
           break;
-        default:
+        }
+        default: {
           throw unexpectedKindFatalError(parentTypeName);
+        }
       }
     }
     // this is where @provides and @requires configurations are added to the ConfigurationData

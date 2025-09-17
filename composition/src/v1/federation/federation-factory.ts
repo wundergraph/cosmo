@@ -241,6 +241,7 @@ import {
 import { FederateSubgraphsContractV1Params, FederateSubgraphsWithContractsV1Params, FederationParams } from './types';
 import { ContractName, DirectiveName, FieldCoords, FieldName, SubgraphName, TypeName } from '../../types/types';
 import { singleFederatedInputFieldOneOfWarning } from '../warnings/warnings';
+import { ValidateOneOfDirectiveParams } from './params';
 
 export class FederationFactory {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
@@ -1482,7 +1483,7 @@ export class FederationFactory {
           }
         }
       }
-      if (interfaceDataByTypeName.size < 0 && !unionTypeName) {
+      if (interfaceDataByTypeName.size < 1 && !unionTypeName) {
         this.errors.push(incompatibleFederatedFieldNamedTypeError(fieldCoordinates, subgraphNamesByNamedTypeName));
         continue;
       }
@@ -1875,13 +1876,37 @@ export class FederationFactory {
     }
   }
 
+  validateOneOfDirective({ data, inputValueNodes, requiredFieldNames }: ValidateOneOfDirectiveParams): boolean {
+    if (!data.directivesByDirectiveName.has(ONE_OF)) {
+      return true;
+    }
+    if (requiredFieldNames.size > 0) {
+      this.errors.push(
+        oneOfRequiredFieldsError({
+          requiredFieldNames: Array.from(requiredFieldNames),
+          typeName: data.name,
+        }),
+      );
+      return false;
+    }
+    if (inputValueNodes.length === 1) {
+      this.warnings.push(
+        singleFederatedInputFieldOneOfWarning({
+          fieldName: inputValueNodes[0]!.name.value,
+          typeName: data.name,
+        }),
+      );
+    }
+    return true;
+  }
+
   pushParentDefinitionDataToDocumentDefinitions(interfaceImplementations: InterfaceImplementationData[]) {
     for (const [parentTypeName, parentDefinitionData] of this.parentDefinitionDataByTypeName) {
       if (parentDefinitionData.extensionType !== ExtensionType.NONE) {
         this.errors.push(noBaseDefinitionForExtensionError(kindToNodeType(parentDefinitionData.kind), parentTypeName));
       }
       switch (parentDefinitionData.kind) {
-        case Kind.ENUM_TYPE_DEFINITION:
+        case Kind.ENUM_TYPE_DEFINITION: {
           const enumValueNodes: Array<MutableEnumValueNode> = [];
           const clientEnumValueNodes: Array<MutableEnumValueNode> = [];
           const mergeMethod = this.getEnumValueMergeMethod(parentTypeName);
@@ -1946,11 +1971,11 @@ export class FederationFactory {
             values: clientEnumValueNodes,
           });
           break;
-        case Kind.INPUT_OBJECT_TYPE_DEFINITION:
+        }
+        case Kind.INPUT_OBJECT_TYPE_DEFINITION: {
           const invalidRequiredInputs = new Array<InvalidRequiredInputValueData>();
           const inputValueNodes = new Array<MutableInputValueNode>();
           const clientInputValueNodes = new Array<MutableInputValueNode>();
-          const definesOneOf = parentDefinitionData.directivesByDirectiveName.has(ONE_OF);
           const requiredFieldNames = new Set<FieldName>();
           for (const [inputValueName, inputValueData] of parentDefinitionData.inputValueDataByName) {
             if (isTypeRequired(inputValueData.type)) {
@@ -1982,24 +2007,14 @@ export class FederationFactory {
             );
             break;
           }
-          if (definesOneOf) {
-            if (requiredFieldNames.size > 0) {
-              this.errors.push(
-                oneOfRequiredFieldsError({
-                  requiredFieldNames: Array.from(requiredFieldNames),
-                  typeName: parentTypeName,
-                }),
-              );
-              break;
-            }
-            if (inputValueNodes.length === 1) {
-              this.warnings.push(
-                singleFederatedInputFieldOneOfWarning({
-                  fieldName: inputValueNodes[0]!.name.value,
-                  typeName: parentTypeName,
-                }),
-              );
-            }
+          if (
+            !this.validateOneOfDirective({
+              data: parentDefinitionData,
+              inputValueNodes,
+              requiredFieldNames,
+            })
+          ) {
+            break;
           }
           parentDefinitionData.node.fields = inputValueNodes;
           this.routerDefinitions.push(this.getNodeForRouterSchemaByData(parentDefinitionData));
@@ -2023,9 +2038,10 @@ export class FederationFactory {
             fields: clientInputValueNodes,
           });
           break;
+        }
         case Kind.INTERFACE_TYPE_DEFINITION:
         // intentional fallthrough
-        case Kind.OBJECT_TYPE_DEFINITION:
+        case Kind.OBJECT_TYPE_DEFINITION: {
           const fieldNodes: Array<MutableFieldNode> = [];
           const clientSchemaFieldNodes: Array<MutableFieldNode> = [];
           const graphFieldDataByFieldName = new Map<string, GraphFieldData>();
@@ -2092,7 +2108,8 @@ export class FederationFactory {
             fields: clientSchemaFieldNodes,
           });
           break;
-        case Kind.SCALAR_TYPE_DEFINITION:
+        }
+        case Kind.SCALAR_TYPE_DEFINITION: {
           if (BASE_SCALARS.has(parentTypeName)) {
             break;
           }
@@ -2108,7 +2125,8 @@ export class FederationFactory {
             directives: getClientPersistedDirectiveNodes(parentDefinitionData),
           });
           break;
-        case Kind.UNION_TYPE_DEFINITION:
+        }
+        case Kind.UNION_TYPE_DEFINITION: {
           parentDefinitionData.node.types = mapToArrayOfValues(parentDefinitionData.memberByMemberTypeName);
           this.routerDefinitions.push(this.getNodeForRouterSchemaByData(parentDefinitionData));
           if (isNodeDataInaccessible(parentDefinitionData)) {
@@ -2127,6 +2145,7 @@ export class FederationFactory {
             types: clientMembers,
           });
           break;
+        }
       }
     }
   }
@@ -2916,9 +2935,10 @@ export class FederationFactory {
         switch (parentDefinitionData.kind) {
           case Kind.SCALAR_TYPE_DEFINITION:
           // intentional fallthrough
-          case Kind.UNION_TYPE_DEFINITION:
-            continue;
-          case Kind.ENUM_TYPE_DEFINITION:
+          case Kind.UNION_TYPE_DEFINITION: {
+            break;
+          }
+          case Kind.ENUM_TYPE_DEFINITION: {
             this.handleChildTagExclusions(
               parentDefinitionData,
               parentDefinitionData.enumValueDataByValueName,
@@ -2926,7 +2946,8 @@ export class FederationFactory {
               contractTagOptions.tagNamesToExclude,
             );
             break;
-          case Kind.INPUT_OBJECT_TYPE_DEFINITION:
+          }
+          case Kind.INPUT_OBJECT_TYPE_DEFINITION: {
             this.handleChildTagExclusions(
               parentDefinitionData,
               parentDefinitionData.inputValueDataByName,
@@ -2934,7 +2955,8 @@ export class FederationFactory {
               contractTagOptions.tagNamesToExclude,
             );
             break;
-          default:
+          }
+          default: {
             let accessibleFields = parentDefinitionData.fieldDataByName.size;
             for (const [fieldName, childTagData] of parentTagData.childTagDataByChildName) {
               const fieldData = getOrThrowError(
@@ -2954,7 +2976,7 @@ export class FederationFactory {
                 accessibleFields -= 1;
                 continue;
               }
-              for (const [argumentName, tagNames] of childTagData.tagNamesByArgumentName) {
+              for (const [argumentName, argTagNames] of childTagData.tagNamesByArgumentName) {
                 const inputValueData = getOrThrowError(
                   fieldData.argumentDataByName,
                   argumentName,
@@ -2963,7 +2985,7 @@ export class FederationFactory {
                 if (isNodeDataInaccessible(inputValueData)) {
                   continue;
                 }
-                if (!tagNames.isDisjointFrom(tagNames)) {
+                if (!contractTagOptions.tagNamesToExclude.isDisjointFrom(argTagNames)) {
                   getValueOrDefault(
                     inputValueData.persistedDirectivesData.directivesByDirectiveName,
                     INACCESSIBLE,
@@ -2979,6 +3001,7 @@ export class FederationFactory {
               ]);
               this.inaccessibleCoords.add(parentTypeName);
             }
+          }
         }
       }
     } else if (contractTagOptions.tagNamesToInclude.size > 0) {

@@ -547,9 +547,9 @@ const fbac: Subgraph = {
   name: 'fbac',
   url: '',
   definitions: parse(`
-  input Input {
-    a: ID!
-    b: Boolean
-  }
+    input Input {
+      a: ID!
+      b: Boolean
+    }
 `),
 };

@@ -651,7 +651,7 @@ export const ONE_OF_DEFINITION: DirectiveDefinitionNode = {
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: stringArrayToNameNodeArray([INPUT_OBJECT_UPPER]),
   name: stringToNameNode(ONE_OF),
-  repeatable: true,
+  repeatable: false,
 };
 
 // directive @override(from: String!) on FIELD_DEFINITION
