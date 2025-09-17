@@ -15,7 +15,6 @@ import {
   LintSeverity,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import Link from "next/link";
-import { useRouter } from "next/router";
 import { useState, useEffect } from "react";
 import { Button } from "../ui/button";
 import {
@@ -39,6 +38,7 @@ import { Switch } from "../ui/switch";
 import { useToast } from "../ui/use-toast";
 import { SeverityDropdown } from "./linter-config";
 import { useCheckUserAccess } from "@/hooks/use-check-user-access";
+import { useWorkspace } from "@/hooks/use-workspace";
 
 const fetchPeriodOptions = (
   limit: number,
@@ -141,8 +141,7 @@ export const GraphPruningLintConfig = ({
 }) => {
   const user = useUser();
   const checkUserAccess = useCheckUserAccess();
-  const router = useRouter();
-  const namespace = router.query.namespace as string;
+  const { namespace: { name: namespace } } = useWorkspace();
   const feature = useFeature("field-pruning-grace-period");
   const plan = user?.currentOrganization?.billing?.plan;
 
@@ -207,7 +206,7 @@ export const GraphPruningLintConfig = ({
                   }
                   refetch();
                 },
-                onError: (error) => {
+                onError: (_) => {
                   toast({
                     description: checked
                       ? "Could not enable the graph pruning linter. Please try again."
@@ -287,7 +286,7 @@ export const GraphPruningLintConfig = ({
                         }
                         refetch();
                       },
-                      onError: (error) => {
+                      onError: (_) => {
                         toast({
                           description:
                             "Could not apply the graph pruning lint policy. Please try again.",

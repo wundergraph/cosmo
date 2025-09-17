@@ -39,17 +39,18 @@ export function getSubgraphs(
       namespaceId = namespace.id;
     }
 
+    const namespaceIds: string[] | undefined = namespaceId ? [namespaceId] : undefined;
     const list: SubgraphDTO[] = await repo.list({
       limit: req.limit,
       offset: req.offset,
-      namespaceId,
+      namespaceIds,
       query: req.query,
       excludeFeatureSubgraphs: req.excludeFeatureSubgraphs,
       rbac: authContext.rbac,
     });
 
     const count = await repo.count({
-      namespaceId,
+      namespaceIds,
       query: req.query,
       limit: 0,
       offset: 0,

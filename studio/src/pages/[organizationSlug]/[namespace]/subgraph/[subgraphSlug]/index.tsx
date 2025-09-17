@@ -33,9 +33,10 @@ import { useEffect, useState } from "react";
 import Markdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
+import { useWorkspace } from "@/hooks/use-workspace";
 
 export const Empty = ({ subgraphName }: { subgraphName: string }) => {
-  const router = useRouter();
+  const { namespace: { name: namespace } } = useWorkspace();
 
   return (
     <EmptyState
@@ -56,7 +57,7 @@ export const Empty = ({ subgraphName }: { subgraphName: string }) => {
       }
       actions={
         <CLI
-          command={`npx wgc subgraph update ${subgraphName} --namespace ${router.query.namespace} --readme <path-to-readme>`}
+          command={`npx wgc subgraph update ${subgraphName} --namespace ${namespace} --readme <path-to-readme>`}
         />
       }
     />

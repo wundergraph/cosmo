@@ -100,6 +100,8 @@ import { BiAnalyse } from "react-icons/bi";
 import { IoBarcodeSharp } from "react-icons/io5";
 import { z } from "zod";
 import { useCheckUserAccess } from "@/hooks/use-check-user-access";
+import { useWorkspace } from "@/hooks/use-workspace";
+import { useCurrentOrganization } from "@/hooks/use-current-organization";
 
 const getSnippets = ({
   clientName,
@@ -169,7 +171,7 @@ fetch(url, {
 const ClientOperations = () => {
   const router = useRouter();
   const slug = router.query.slug as string;
-  const namespace = router.query.namespace as string;
+  const { namespace: { name: namespace } } = useWorkspace();
   const organizationSlug = router.query.organizationSlug as string;
   const { toast } = useToast();
   const searchParams = useSearchParams();
@@ -358,7 +360,7 @@ const ClientOperations = () => {
                                   query: {
                                     organizationSlug:
                                       router.query.organizationSlug,
-                                    namespace: router.query.namespace,
+                                    namespace,
                                     slug: router.query.slug,
                                     filterState: createFilterState({
                                       operationPersistedId: op.id,
@@ -492,7 +494,7 @@ type Input = z.infer<typeof FormSchema>;
 const CreateClient = ({ refresh }: { refresh: () => void }) => {
   const checkUserAccess = useCheckUserAccess();
   const router = useRouter();
-  const namespace = router.query.namespace as string;
+  const { namespace: { name: namespace } } = useWorkspace();
   const slug = router.query.slug as string;
   const [isOpen, setIsOpen] = useState(false);
 
@@ -584,8 +586,8 @@ const CreateClient = ({ refresh }: { refresh: () => void }) => {
 const ClientsPage: NextPageWithLayout = () => {
   const checkUserAccess = useCheckUserAccess();
   const router = useRouter();
-  const organizationSlug = router.query.organizationSlug as string;
-  const namespace = router.query.namespace as string;
+  const organizationSlug = useCurrentOrganization()?.slug;
+  const { namespace: { name: namespace } } = useWorkspace();
   const slug = router.query.slug as string;
 
   const constructLink = (name: string, mode: "metrics" | "traces") => {
