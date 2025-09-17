@@ -53,7 +53,7 @@ func NewValidationStore(logger *zap.Logger, inner jwkset.Storage, algs []string,
 	}
 
 	if len(algs) == 0 {
-		return store, nil
+		return store, store.getSupportedAlgorithms()
 	}
 
 	for _, alg := range algs {
