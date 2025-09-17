@@ -658,7 +658,7 @@ func TestCircuitBreaker(t *testing.T) {
 			},
 			Subgraphs: testenv.SubgraphsConfig{
 				Employees: testenv.SubgraphConfig{
-					Middleware: func(handler http.Handler) http.Handler {
+					Middleware: func(_ http.Handler) http.Handler {
 						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 							employeesCalls.Add(1)
 							if employeesCalls.Load() <= failedTries {
@@ -667,7 +667,7 @@ func TestCircuitBreaker(t *testing.T) {
 							}
 
 							upgrader := websocket.Upgrader{
-								CheckOrigin: func(r *http.Request) bool {
+								CheckOrigin: func(_ *http.Request) bool {
 									return true
 								},
 								Subprotocols: []string{"graphql-transport-ws"},
@@ -706,7 +706,7 @@ func TestCircuitBreaker(t *testing.T) {
 				_, message, err := testenv.WSReadMessage(t, conn)
 				require.NoError(t, err)
 
-				require.Equal(t, defaultErrorMessage, string(message))
+				require.JSONEq(t, defaultErrorMessage, string(message))
 				require.NoError(t, conn.Close())
 
 				switch {

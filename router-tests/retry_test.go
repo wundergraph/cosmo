@@ -524,7 +524,7 @@ func TestRetryPerSubgraph(t *testing.T) {
 			RouterOptions: []core.Option{
 				options,
 			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
+		}, func(t *testing.T, _ *testenv.Environment) {
 			require.Fail(t, "expected initialization to fail due to invalid algorithm")
 		})
 
@@ -553,7 +553,7 @@ func TestRetryPerSubgraph(t *testing.T) {
 			RouterOptions: []core.Option{
 				options,
 			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {})
+		}, func(_ *testing.T, _ *testenv.Environment) {})
 
 		require.NoError(t, err)
 	})
@@ -582,7 +582,7 @@ func TestRetryPerSubgraph(t *testing.T) {
 			RouterOptions: []core.Option{
 				options,
 			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {})
+		}, func(_ *testing.T, _ *testenv.Environment) {})
 
 		require.NoError(t, err)
 	})
@@ -611,7 +611,7 @@ func TestRetryPerSubgraph(t *testing.T) {
 			RouterOptions: []core.Option{
 				options,
 			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
+		}, func(t *testing.T, _ *testenv.Environment) {
 			require.Fail(t, "expected initialization to fail due to invalid algorithm")
 		})
 
@@ -639,7 +639,7 @@ func TestRetryPerSubgraph(t *testing.T) {
 			RouterOptions: []core.Option{
 				options,
 			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
+		}, func(t *testing.T, _ *testenv.Environment) {
 			require.Fail(t, "expected initialization to fail due to invalid algorithm")
 		})
 
@@ -669,7 +669,7 @@ func TestRetryPerSubgraph(t *testing.T) {
 			RouterOptions: []core.Option{
 				options,
 			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
+		}, func(t *testing.T, _ *testenv.Environment) {
 			require.Fail(t, "expected initialization to fail due to invalid algorithm")
 		})
 
@@ -700,7 +700,7 @@ func TestRetryPerSubgraph(t *testing.T) {
 			RouterOptions: []core.Option{
 				options,
 			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
+		}, func(_ *testing.T, _ *testenv.Environment) {
 		})
 
 		require.NoError(t, err)
@@ -754,8 +754,8 @@ func TestRetryPerSubgraph(t *testing.T) {
 					},
 				},
 				Test1: testenv.SubgraphConfig{
-					Middleware: func(handler http.Handler) http.Handler {
-						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					Middleware: func(_ http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 							w.WriteHeader(http.StatusBadGateway)
 							test1Calls.Add(1)
 						})
@@ -768,9 +768,9 @@ func TestRetryPerSubgraph(t *testing.T) {
 				Query: `query employees { employees { id } }`,
 			})
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees', Reason: empty response.","extensions":{"statusCode":502}}],"data":{"employees":null}}`, resEmp.Body)
-			require.Equal(t, int32(employeesMax+1), employeesCalls.Load())
-			require.Equal(t, int32(0), test1Calls.Load())
+			require.JSONEq(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees', Reason: empty response.","extensions":{"statusCode":502}}],"data":{"employees":null}}`, resEmp.Body)
+			require.Equal(t, employeesMax+1, int(employeesCalls.Load()))
+			require.Equal(t, 0, int(test1Calls.Load()))
 
 			// 2) Call test1-only query; expect test subgraph to be retried test1Max times (attempts = retries + 1)
 			resTest1, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
@@ -778,9 +778,9 @@ func TestRetryPerSubgraph(t *testing.T) {
 			})
 
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'test1', Reason: empty response.","extensions":{"statusCode":502}}],"data":{"floatField":null}}`, resTest1.Body)
-			require.Equal(t, int32(employeesMax+1), employeesCalls.Load())
-			require.Equal(t, int32(test1Max+1), test1Calls.Load())
+			require.JSONEq(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'test1', Reason: empty response.","extensions":{"statusCode":502}}],"data":{"floatField":null}}`, resTest1.Body)
+			require.Equal(t, employeesMax+1, int(employeesCalls.Load()))
+			require.Equal(t, test1Max+1, int(test1Calls.Load()))
 		})
 	})
 
@@ -832,8 +832,8 @@ func TestRetryPerSubgraph(t *testing.T) {
 					},
 				},
 				Test1: testenv.SubgraphConfig{
-					Middleware: func(handler http.Handler) http.Handler {
-						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					Middleware: func(_ http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 							w.WriteHeader(http.StatusBadGateway)
 							test1Calls.Add(1)
 						})
@@ -846,9 +846,9 @@ func TestRetryPerSubgraph(t *testing.T) {
 				Query: `query employees { employees { id } }`,
 			})
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees', Reason: empty response.","extensions":{"statusCode":502}}],"data":{"employees":null}}`, resEmp.Body)
-			require.Equal(t, int32(employeesMax+1), employeesCalls.Load())
-			require.Equal(t, int32(0), test1Calls.Load())
+			require.JSONEq(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees', Reason: empty response.","extensions":{"statusCode":502}}],"data":{"employees":null}}`, resEmp.Body)
+			require.Equal(t, employeesMax+1, int(employeesCalls.Load()))
+			require.Equal(t, 0, int(test1Calls.Load()))
 
 			// 2) Call test1-only query; expect test subgraph to be retried test1Max times (attempts = retries + 1)
 			resTest1, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
@@ -856,9 +856,9 @@ func TestRetryPerSubgraph(t *testing.T) {
 			})
 
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'test1', Reason: empty response.","extensions":{"statusCode":502}}],"data":{"floatField":null}}`, resTest1.Body)
-			require.Equal(t, int32(employeesMax+1), employeesCalls.Load())
-			require.Equal(t, int32(test1Max+1), test1Calls.Load())
+			require.JSONEq(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'test1', Reason: empty response.","extensions":{"statusCode":502}}],"data":{"floatField":null}}`, resTest1.Body)
+			require.Equal(t, employeesMax+1, int(employeesCalls.Load()))
+			require.Equal(t, test1Max+1, int(test1Calls.Load()))
 		})
 	})
 
@@ -898,8 +898,8 @@ func TestRetryPerSubgraph(t *testing.T) {
 					},
 				},
 				Test1: testenv.SubgraphConfig{
-					Middleware: func(handler http.Handler) http.Handler {
-						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					Middleware: func(_ http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 							w.WriteHeader(http.StatusBadGateway)
 							test1Calls.Add(1)
 						})
@@ -912,9 +912,9 @@ func TestRetryPerSubgraph(t *testing.T) {
 				Query: `query employees { employees { id } }`,
 			})
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees', Reason: empty response.","extensions":{"statusCode":502}}],"data":{"employees":null}}`, resEmp.Body)
-			require.Equal(t, int32(generalMax+1), employeesCalls.Load())
-			require.Equal(t, int32(0), test1Calls.Load())
+			require.JSONEq(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees', Reason: empty response.","extensions":{"statusCode":502}}],"data":{"employees":null}}`, resEmp.Body)
+			require.Equal(t, generalMax+1, int(employeesCalls.Load()))
+			require.Equal(t, 0, int(test1Calls.Load()))
 
 			// 2) Call test1-only query; expect test subgraph to be retried test1Max times (attempts = retries + 1)
 			resTest1, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
@@ -922,9 +922,9 @@ func TestRetryPerSubgraph(t *testing.T) {
 			})
 
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'test1', Reason: empty response.","extensions":{"statusCode":502}}],"data":{"floatField":null}}`, resTest1.Body)
-			require.Equal(t, int32(generalMax+1), employeesCalls.Load())
-			require.Equal(t, int32(generalMax+1), test1Calls.Load())
+			require.JSONEq(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'test1', Reason: empty response.","extensions":{"statusCode":502}}],"data":{"floatField":null}}`, resTest1.Body)
+			require.Equal(t, generalMax+1, int(employeesCalls.Load()))
+			require.Equal(t, generalMax+1, int(test1Calls.Load()))
 		})
 	})
 
@@ -971,9 +971,9 @@ func TestRetryPerSubgraph(t *testing.T) {
 				},
 			})
 			require.NoError(t, err)
-			require.Equal(t, res.Response.Header.Get("X-Feature-Flag"), "myff")
+			require.Equal(t, "myff", res.Response.Header.Get("X-Feature-Flag"))
 			require.Contains(t, res.Body, `{"message":"Failed to fetch from Subgraph 'products_fg' at Path 'employees', Reason: empty response.","extensions":{"statusCode":502}}`)
-			require.Equal(t, int32(generalMax+1), calls.Load())
+			require.Equal(t, generalMax+1, int(calls.Load()))
 		})
 	})
 
@@ -1007,7 +1007,7 @@ func TestRetryPerSubgraph(t *testing.T) {
 			},
 			Subgraphs: testenv.SubgraphsConfig{
 				Employees: testenv.SubgraphConfig{
-					Middleware: func(handler http.Handler) http.Handler {
+					Middleware: func(_ http.Handler) http.Handler {
 						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 							employeesCalls.Add(1)
 							if employeesCalls.Load() <= failedTries {
@@ -1016,7 +1016,7 @@ func TestRetryPerSubgraph(t *testing.T) {
 							}
 
 							upgrader := websocket.Upgrader{
-								CheckOrigin: func(r *http.Request) bool {
+								CheckOrigin: func(_ *http.Request) bool {
 									return true
 								},
 								Subprotocols: []string{"graphql-transport-ws"},
