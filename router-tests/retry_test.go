@@ -928,6 +928,55 @@ func TestRetryPerSubgraph(t *testing.T) {
 		})
 	})
 
+	t.Run("verify retries are applied when only all and no subgraph specific overrides are present", func(t *testing.T) {
+		t.Parallel()
+
+		calls := atomic.Int32{}
+
+		// Configure per-subgraph retry: employees gets 3 retries, test1 gets 1 retry
+		generalMax := 5
+		opts := core.NewSubgraphRetryOptions(config.TrafficShapingRules{
+			All: config.GlobalSubgraphRequestRule{
+				BackoffJitterRetry: config.BackoffJitterRetry{
+					Enabled:     true,
+					MaxAttempts: generalMax,
+					MaxDuration: 2 * time.Second,
+					Interval:    10 * time.Millisecond,
+					Expression:  "true",
+				},
+			},
+		})
+		options := core.WithSubgraphRetryOptions(opts)
+
+		testenv.Run(t, &testenv.Config{
+			NoRetryClient: true,
+			RouterOptions: []core.Option{
+				options,
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				ProductsFg: testenv.SubgraphConfig{
+					Middleware: func(_ http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+							w.WriteHeader(http.StatusBadGateway)
+							calls.Add(1)
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `query { employees { id products } }`,
+				Header: map[string][]string{
+					"X-Feature-Flag": {"myff"},
+				},
+			})
+			require.NoError(t, err)
+			require.Equal(t, res.Response.Header.Get("X-Feature-Flag"), "myff")
+			require.Contains(t, res.Body, `{"message":"Failed to fetch from Subgraph 'products_fg' at Path 'employees', Reason: empty response.","extensions":{"statusCode":502}}`)
+			require.Equal(t, int32(generalMax+1), calls.Load())
+		})
+	})
+
 	t.Run("verify retry on upgrade requests", func(t *testing.T) {
 		t.Parallel()
 

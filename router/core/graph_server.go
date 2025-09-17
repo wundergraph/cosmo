@@ -276,7 +276,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		err = retryManager.Initialize(
 			s.retryOptions.All,
 			s.retryOptions.SubgraphMap,
-			routerConfig.GetSubgraphs(),
+			routerConfig,
 		)
 		if err != nil {
 			return nil, err

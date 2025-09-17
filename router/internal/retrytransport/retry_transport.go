@@ -105,7 +105,6 @@ func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, erro
 	// Retry logic
 	retries := 0
 	for (rt.retryManager.Retry(err, req, resp, retryOptions.Expression)) && retries < retryOptions.MaxRetryCount {
-
 		retries++
 
 		// Check if we should use Retry-After header for 429 responses

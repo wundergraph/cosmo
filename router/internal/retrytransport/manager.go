@@ -47,21 +47,30 @@ func NewManager(exprManager *expr.RetryExpressionManager, retryFunc ShouldRetryF
 	}
 }
 
-func (m *Manager) Initialize(
-	baseRetryOptions RetryOptions,
-	subgraphRetryOptions map[string]RetryOptions,
-	subgraphs []*nodev1.Subgraph,
-) error {
-	defaultSgNames := make([]string, 0, len(subgraphs))
-	customSgNames := make([]string, 0, len(subgraphs))
+func (m *Manager) Initialize(baseRetryOptions RetryOptions, subgraphRetryOptions map[string]RetryOptions, routerConfig *nodev1.RouterConfig) error {
+	// Get the list of all subgraph AND feature subgraphs
+	subgraphNameSet := make(map[string]bool, len(routerConfig.Subgraphs))
+	for _, subgraph := range routerConfig.GetSubgraphs() {
+		subgraphNameSet[subgraph.Name] = true
+	}
+	if routerConfig.FeatureFlagConfigs != nil {
+		for _, ffConfig := range routerConfig.FeatureFlagConfigs.ConfigByFeatureFlagName {
+			for _, subgraph := range ffConfig.GetSubgraphs() {
+				subgraphNameSet[subgraph.Name] = true
+			}
+		}
+	}
 
-	for _, subgraph := range subgraphs {
-		entry, ok := subgraphRetryOptions[subgraph.Name]
+	defaultSgNames := make([]string, 0, len(subgraphNameSet))
+	customSgNames := make([]string, 0, len(subgraphNameSet))
+
+	for subgraphName := range subgraphNameSet {
+		entry, ok := subgraphRetryOptions[subgraphName]
 		if !ok {
-			defaultSgNames = append(defaultSgNames, subgraph.Name)
+			defaultSgNames = append(defaultSgNames, subgraphName)
 		} else if entry.Enabled {
 			// This will cover the case of if a subgraph is explicitly disabled
-			customSgNames = append(customSgNames, subgraph.Name)
+			customSgNames = append(customSgNames, subgraphName)
 		}
 	}
 
