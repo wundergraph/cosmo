@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.131.0](https://github.com/wundergraph/cosmo/compare/studio@0.130.1...studio@0.131.0) (2025-09-17)
+
+### Features
+
+* add analytic scripts ([#2208](https://github.com/wundergraph/cosmo/issues/2208)) ([932eb83](https://github.com/wundergraph/cosmo/commit/932eb83ff75459eca536badd65e434534e1c48db)) (@wilsonrivera)
+
 ## [0.130.1](https://github.com/wundergraph/cosmo/compare/studio@0.130.0...studio@0.130.1) (2025-09-16)
 
 **Note:** Version bump only for package studio
