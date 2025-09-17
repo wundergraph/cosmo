@@ -52,7 +52,9 @@ import {
   noBaseDefinitionForExtensionError,
   nonLeafSubscriptionFieldConditionFieldPathFinalFieldErrorMessage,
   noQueryRootTypeError,
+  oneOfRequiredFieldsError,
   orScopesLimitError,
+  semanticNonNullInconsistentLevelsError,
   subscriptionFieldConditionEmptyValuesArrayErrorMessage,
   subscriptionFieldConditionInvalidInputFieldErrorMessage,
   subscriptionFieldConditionInvalidValuesArrayErrorMessage,
@@ -85,6 +87,7 @@ import {
 } from './utils';
 import { SUBSCRIPTION_FILTER_INPUT_NAMES, SUBSCRIPTION_FILTER_LIST_INPUT_NAMES } from '../utils/string-constants';
 import {
+  getNodeCoords,
   isNodeLeaf,
   isObjectDefinitionData,
   mapToArrayOfValues,
@@ -110,8 +113,10 @@ import {
   DEPRECATED_DEFINITION,
   INACCESSIBLE_DEFINITION,
   MAX_OR_SCOPES,
+  ONE_OF_DEFINITION,
   REQUIRES_SCOPES_DEFINITION,
   SCOPE_SCALAR_DEFINITION,
+  SEMANTIC_NON_NULL_DEFINITION,
   TAG_DEFINITION,
 } from '../utils/constants';
 import { batchNormalize } from '../normalization/normalization-factory';
@@ -147,6 +152,7 @@ import {
   getInitialFederatedDescription,
   getNodeForRouterSchemaByData,
   getSubscriptionFilterValue,
+  isFieldData,
   isLeafKind,
   isNodeDataInaccessible,
   isParentDataCompositeOutputType,
@@ -197,11 +203,13 @@ import {
   LIST,
   NOT_UPPER,
   OBJECT,
+  ONE_OF,
   OR_UPPER,
   PARENT_DEFINITION_DATA,
   PERIOD,
   QUERY,
   REQUIRES_SCOPES,
+  SEMANTIC_NON_NULL,
   STRING,
   SUBSCRIPTION_FILTER,
   TAG,
@@ -215,10 +223,11 @@ import {
   addNewObjectValueMapEntries,
   copyArrayValueMap,
   copyObjectValueMap,
+  generateSemanticNonNullDirective,
   generateSimpleDirective,
   getEntriesNotInHashSet,
+  getFirstEntry,
   getOrThrowError,
-  getSingleSetEntry,
   getValueOrDefault,
   kindToNodeType,
 } from '../../utils/utils';
@@ -230,7 +239,9 @@ import {
   InvalidRequiredInputValueData,
 } from '../../utils/types';
 import { FederateSubgraphsContractV1Params, FederateSubgraphsWithContractsV1Params, FederationParams } from './types';
-import { ContractName, FieldCoords, FieldName, SubgraphName, TypeName } from '../../types/types';
+import { ContractName, DirectiveName, FieldCoords, FieldName, SubgraphName, TypeName } from '../../types/types';
+import { singleFederatedInputFieldOneOfWarning } from '../warnings/warnings';
+import { ValidateOneOfDirectiveParams } from './params';
 
 export class FederationFactory {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
@@ -252,7 +263,7 @@ export class FederationFactory {
   invalidORScopesCoords = new Set<string>();
   isMaxDepth = false;
   isVersionTwo = false;
-  namedInputValueTypeNames = new Set<string>();
+  namedInputValueTypeNames = new Set<TypeName>();
   namedOutputTypeNames = new Set<string>();
   parentDefinitionDataByTypeName = new Map<string, ParentDefinitionData>();
   parentTagDataByTypeName = new Map<string, ParentTagData>();
@@ -260,11 +271,14 @@ export class FederationFactory {
     [AUTHENTICATED, AUTHENTICATED_DEFINITION],
     [DEPRECATED, DEPRECATED_DEFINITION],
     [INACCESSIBLE, INACCESSIBLE_DEFINITION],
+    [ONE_OF, ONE_OF_DEFINITION],
     [REQUIRES_SCOPES, REQUIRES_SCOPES_DEFINITION],
+    [SEMANTIC_NON_NULL, SEMANTIC_NON_NULL_DEFINITION],
     [TAG, TAG_DEFINITION],
   ]);
   persistedDirectiveDefinitions = new Set<string>([AUTHENTICATED, DEPRECATED, INACCESSIBLE, TAG, REQUIRES_SCOPES]);
   potentialPersistedDirectiveDefinitionDataByDirectiveName = new Map<string, PersistedDirectiveDefinitionData>();
+  referencedPersistedDirectiveNames = new Set<DirectiveName>();
   routerDefinitions: MutableTypeDefinitionNode[] = [DEPRECATED_DEFINITION, TAG_DEFINITION];
   subscriptionFilterDataByFieldPath = new Map<string, SubscriptionFilterData>();
   tagNamesByCoords = new Map<string, Set<string>>();
@@ -691,7 +705,7 @@ export class FederationFactory {
       return;
     }
     // There should only be a single entry in the set
-    const subgraphName = getSingleSetEntry(incomingData.subgraphNames);
+    const subgraphName = getFirstEntry(incomingData.subgraphNames);
     if (subgraphName === undefined) {
       this.errors.push(unknownFieldSubgraphNameError(incomingData.federatedCoords));
       return;
@@ -795,6 +809,9 @@ export class FederationFactory {
     incomingData: FieldData,
     isParentInaccessible: boolean,
   ) {
+    if (incomingData.directivesByDirectiveName.has(SEMANTIC_NON_NULL)) {
+      this.referencedPersistedDirectiveNames.add(SEMANTIC_NON_NULL);
+    }
     const existingData = fieldDataByFieldName.get(incomingData.name);
     const targetData =
       existingData || this.copyFieldData(incomingData, isParentInaccessible || isNodeDataInaccessible(incomingData));
@@ -877,6 +894,7 @@ export class FederationFactory {
       targetData.externalFieldDataBySubgraphName,
     );
     addMapEntries(incomingData.isShareableBySubgraphName, targetData.isShareableBySubgraphName);
+    addMapEntries(incomingData.nullLevelsBySubgraphName, targetData.nullLevelsBySubgraphName);
     addIterableValuesToSet(incomingData.subgraphNames, targetData.subgraphNames);
   }
 
@@ -994,6 +1012,9 @@ export class FederationFactory {
   }
 
   copyFieldData(sourceData: FieldData, isInaccessible: boolean): FieldData {
+    if (sourceData.directivesByDirectiveName.has(SEMANTIC_NON_NULL)) {
+      this.referencedPersistedDirectiveNames.add(SEMANTIC_NON_NULL);
+    }
     return {
       argumentDataByName: this.copyInputValueDataByValueName(
         sourceData.argumentDataByName,
@@ -1005,7 +1026,7 @@ export class FederationFactory {
       externalFieldDataBySubgraphName: copyObjectValueMap(sourceData.externalFieldDataBySubgraphName),
       federatedCoords: sourceData.federatedCoords,
       // Intentionally reset; only the subgraph fields involve directive inheritance
-      inheritedDirectiveNames: new Set<string>(),
+      inheritedDirectiveNames: new Set<DirectiveName>(),
       isInaccessible: sourceData.isInaccessible,
       isShareableBySubgraphName: new Map(sourceData.isShareableBySubgraphName),
       kind: sourceData.kind,
@@ -1019,6 +1040,7 @@ export class FederationFactory {
         name: stringToNameNode(sourceData.name),
         type: sourceData.type,
       },
+      nullLevelsBySubgraphName: sourceData.nullLevelsBySubgraphName,
       originalParentTypeName: sourceData.originalParentTypeName,
       persistedDirectivesData: extractPersistedDirectives(
         newPersistedDirectivesData(),
@@ -1461,7 +1483,7 @@ export class FederationFactory {
           }
         }
       }
-      if (interfaceDataByTypeName.size < 0 && !unionTypeName) {
+      if (interfaceDataByTypeName.size < 1 && !unionTypeName) {
         this.errors.push(incompatibleFederatedFieldNamedTypeError(fieldCoordinates, subgraphNamesByNamedTypeName));
         continue;
       }
@@ -1714,12 +1736,16 @@ export class FederationFactory {
     };
   }
 
-  getValidFlattenedPersistedDirectiveNodeArray(
-    directivesByDirectiveName: Map<string, Array<ConstDirectiveNode>>,
-    coords: string,
-  ): Array<ConstDirectiveNode> {
+  getValidFlattenedPersistedDirectiveNodeArray(data: NodeData): Array<ConstDirectiveNode> {
+    const coords = getNodeCoords(data);
     const persistedDirectiveNodes: Array<ConstDirectiveNode> = [];
-    for (const [directiveName, directiveNodes] of directivesByDirectiveName) {
+    for (const [directiveName, directiveNodes] of data.persistedDirectivesData.directivesByDirectiveName) {
+      if (directiveName === SEMANTIC_NON_NULL && isFieldData(data)) {
+        persistedDirectiveNodes.push(
+          generateSemanticNonNullDirective(getFirstEntry(data.nullLevelsBySubgraphName) ?? new Set<number>([0])),
+        );
+        continue;
+      }
       const persistedDirectiveDefinition = this.persistedDirectiveDefinitionByDirectiveName.get(directiveName);
       if (!persistedDirectiveDefinition) {
         continue;
@@ -1742,12 +1768,7 @@ export class FederationFactory {
     if (nodeData.persistedDirectivesData.isDeprecated) {
       persistedDirectiveNodes.push(generateDeprecatedDirective(nodeData.persistedDirectivesData.deprecatedReason));
     }
-    persistedDirectiveNodes.push(
-      ...this.getValidFlattenedPersistedDirectiveNodeArray(
-        nodeData.persistedDirectivesData.directivesByDirectiveName,
-        nodeData.name,
-      ),
-    );
+    persistedDirectiveNodes.push(...this.getValidFlattenedPersistedDirectiveNodeArray(nodeData));
     return persistedDirectiveNodes;
   }
 
@@ -1834,13 +1855,58 @@ export class FederationFactory {
     return fieldData.node;
   }
 
+  validateSemanticNonNull(data: FieldData) {
+    let comparison: Set<number> | undefined;
+    for (const levels of data.nullLevelsBySubgraphName.values()) {
+      if (!comparison) {
+        comparison = levels;
+        continue;
+      }
+      if (comparison.size !== levels.size) {
+        this.errors.push(semanticNonNullInconsistentLevelsError(data));
+        return;
+      }
+      for (const level of levels) {
+        // IDE complains but `comparison` will always have been initialized.
+        if (!comparison.has(level)) {
+          this.errors.push(semanticNonNullInconsistentLevelsError(data));
+          return;
+        }
+      }
+    }
+  }
+
+  validateOneOfDirective({ data, inputValueNodes, requiredFieldNames }: ValidateOneOfDirectiveParams): boolean {
+    if (!data.directivesByDirectiveName.has(ONE_OF)) {
+      return true;
+    }
+    if (requiredFieldNames.size > 0) {
+      this.errors.push(
+        oneOfRequiredFieldsError({
+          requiredFieldNames: Array.from(requiredFieldNames),
+          typeName: data.name,
+        }),
+      );
+      return false;
+    }
+    if (inputValueNodes.length === 1) {
+      this.warnings.push(
+        singleFederatedInputFieldOneOfWarning({
+          fieldName: inputValueNodes[0]!.name.value,
+          typeName: data.name,
+        }),
+      );
+    }
+    return true;
+  }
+
   pushParentDefinitionDataToDocumentDefinitions(interfaceImplementations: InterfaceImplementationData[]) {
     for (const [parentTypeName, parentDefinitionData] of this.parentDefinitionDataByTypeName) {
       if (parentDefinitionData.extensionType !== ExtensionType.NONE) {
         this.errors.push(noBaseDefinitionForExtensionError(kindToNodeType(parentDefinitionData.kind), parentTypeName));
       }
       switch (parentDefinitionData.kind) {
-        case Kind.ENUM_TYPE_DEFINITION:
+        case Kind.ENUM_TYPE_DEFINITION: {
           const enumValueNodes: Array<MutableEnumValueNode> = [];
           const clientEnumValueNodes: Array<MutableEnumValueNode> = [];
           const mergeMethod = this.getEnumValueMergeMethod(parentTypeName);
@@ -1905,11 +1971,16 @@ export class FederationFactory {
             values: clientEnumValueNodes,
           });
           break;
-        case Kind.INPUT_OBJECT_TYPE_DEFINITION:
-          const invalidRequiredInputs: Array<InvalidRequiredInputValueData> = [];
-          const inputValueNodes: Array<MutableInputValueNode> = [];
-          const clientInputValueNodes: Array<MutableInputValueNode> = [];
+        }
+        case Kind.INPUT_OBJECT_TYPE_DEFINITION: {
+          const invalidRequiredInputs = new Array<InvalidRequiredInputValueData>();
+          const inputValueNodes = new Array<MutableInputValueNode>();
+          const clientInputValueNodes = new Array<MutableInputValueNode>();
+          const requiredFieldNames = new Set<FieldName>();
           for (const [inputValueName, inputValueData] of parentDefinitionData.inputValueDataByName) {
+            if (isTypeRequired(inputValueData.type)) {
+              requiredFieldNames.add(inputValueName);
+            }
             if (parentDefinitionData.subgraphNames.size === inputValueData.subgraphNames.size) {
               inputValueNodes.push(this.getNodeWithPersistedDirectivesByInputValueData(inputValueData));
               if (isNodeDataInaccessible(inputValueData)) {
@@ -1936,6 +2007,15 @@ export class FederationFactory {
             );
             break;
           }
+          if (
+            !this.validateOneOfDirective({
+              data: parentDefinitionData,
+              inputValueNodes,
+              requiredFieldNames,
+            })
+          ) {
+            break;
+          }
           parentDefinitionData.node.fields = inputValueNodes;
           this.routerDefinitions.push(this.getNodeForRouterSchemaByData(parentDefinitionData));
           if (isNodeDataInaccessible(parentDefinitionData)) {
@@ -1947,7 +2027,7 @@ export class FederationFactory {
               allChildDefinitionsAreInaccessibleError(
                 kindToNodeType(parentDefinitionData.kind),
                 parentTypeName,
-                'input field',
+                'Input field',
               ),
             );
             break;
@@ -1958,9 +2038,10 @@ export class FederationFactory {
             fields: clientInputValueNodes,
           });
           break;
+        }
         case Kind.INTERFACE_TYPE_DEFINITION:
         // intentional fallthrough
-        case Kind.OBJECT_TYPE_DEFINITION:
+        case Kind.OBJECT_TYPE_DEFINITION: {
           const fieldNodes: Array<MutableFieldNode> = [];
           const clientSchemaFieldNodes: Array<MutableFieldNode> = [];
           const graphFieldDataByFieldName = new Map<string, GraphFieldData>();
@@ -1974,6 +2055,7 @@ export class FederationFactory {
             if (isObject) {
               validateExternalAndShareable(fieldData, invalidFieldNames);
             }
+            this.validateSemanticNonNull(fieldData);
             fieldNodes.push(this.getNodeWithPersistedDirectivesByFieldData(fieldData, argumentNodes));
             if (isNodeDataInaccessible(fieldData)) {
               continue;
@@ -2026,7 +2108,8 @@ export class FederationFactory {
             fields: clientSchemaFieldNodes,
           });
           break;
-        case Kind.SCALAR_TYPE_DEFINITION:
+        }
+        case Kind.SCALAR_TYPE_DEFINITION: {
           if (BASE_SCALARS.has(parentTypeName)) {
             break;
           }
@@ -2042,7 +2125,8 @@ export class FederationFactory {
             directives: getClientPersistedDirectiveNodes(parentDefinitionData),
           });
           break;
-        case Kind.UNION_TYPE_DEFINITION:
+        }
+        case Kind.UNION_TYPE_DEFINITION: {
           parentDefinitionData.node.types = mapToArrayOfValues(parentDefinitionData.memberByMemberTypeName);
           this.routerDefinitions.push(this.getNodeForRouterSchemaByData(parentDefinitionData));
           if (isNodeDataInaccessible(parentDefinitionData)) {
@@ -2061,6 +2145,7 @@ export class FederationFactory {
             types: clientMembers,
           });
           break;
+        }
       }
     }
   }
@@ -2155,8 +2240,28 @@ export class FederationFactory {
 
   pushVersionTwoDirectiveDefinitionsToDocumentDefinitions() {
     if (!this.isVersionTwo) {
+      if (this.referencedPersistedDirectiveNames.has(SEMANTIC_NON_NULL)) {
+        this.clientDefinitions.push(SEMANTIC_NON_NULL_DEFINITION);
+        // Recreate the array until all directive imports are usage-based.
+        this.routerDefinitions = [DEPRECATED_DEFINITION, SEMANTIC_NON_NULL_DEFINITION, TAG_DEFINITION];
+      }
       return;
     }
+    if (this.referencedPersistedDirectiveNames.has(SEMANTIC_NON_NULL)) {
+      this.clientDefinitions.push(SEMANTIC_NON_NULL_DEFINITION);
+      // Recreate the array until all directive imports are usage-based.
+      this.routerDefinitions = [
+        AUTHENTICATED_DEFINITION,
+        DEPRECATED_DEFINITION,
+        INACCESSIBLE_DEFINITION,
+        REQUIRES_SCOPES_DEFINITION,
+        SEMANTIC_NON_NULL_DEFINITION,
+        TAG_DEFINITION,
+        SCOPE_SCALAR_DEFINITION,
+      ];
+      return;
+    }
+    // Recreate the array until all directive imports are usage-based.
     this.routerDefinitions = [
       AUTHENTICATED_DEFINITION,
       DEPRECATED_DEFINITION,
@@ -2165,7 +2270,6 @@ export class FederationFactory {
       TAG_DEFINITION,
       SCOPE_SCALAR_DEFINITION,
     ];
-    this.clientDefinitions = [DEPRECATED_DEFINITION];
   }
 
   validatePathSegmentInaccessibility(path: string): boolean {
@@ -2831,9 +2935,10 @@ export class FederationFactory {
         switch (parentDefinitionData.kind) {
           case Kind.SCALAR_TYPE_DEFINITION:
           // intentional fallthrough
-          case Kind.UNION_TYPE_DEFINITION:
-            continue;
-          case Kind.ENUM_TYPE_DEFINITION:
+          case Kind.UNION_TYPE_DEFINITION: {
+            break;
+          }
+          case Kind.ENUM_TYPE_DEFINITION: {
             this.handleChildTagExclusions(
               parentDefinitionData,
               parentDefinitionData.enumValueDataByValueName,
@@ -2841,7 +2946,8 @@ export class FederationFactory {
               contractTagOptions.tagNamesToExclude,
             );
             break;
-          case Kind.INPUT_OBJECT_TYPE_DEFINITION:
+          }
+          case Kind.INPUT_OBJECT_TYPE_DEFINITION: {
             this.handleChildTagExclusions(
               parentDefinitionData,
               parentDefinitionData.inputValueDataByName,
@@ -2849,7 +2955,8 @@ export class FederationFactory {
               contractTagOptions.tagNamesToExclude,
             );
             break;
-          default:
+          }
+          default: {
             let accessibleFields = parentDefinitionData.fieldDataByName.size;
             for (const [fieldName, childTagData] of parentTagData.childTagDataByChildName) {
               const fieldData = getOrThrowError(
@@ -2869,7 +2976,7 @@ export class FederationFactory {
                 accessibleFields -= 1;
                 continue;
               }
-              for (const [argumentName, tagNames] of childTagData.tagNamesByArgumentName) {
+              for (const [argumentName, argTagNames] of childTagData.tagNamesByArgumentName) {
                 const inputValueData = getOrThrowError(
                   fieldData.argumentDataByName,
                   argumentName,
@@ -2878,7 +2985,7 @@ export class FederationFactory {
                 if (isNodeDataInaccessible(inputValueData)) {
                   continue;
                 }
-                if (!tagNames.isDisjointFrom(tagNames)) {
+                if (!contractTagOptions.tagNamesToExclude.isDisjointFrom(argTagNames)) {
                   getValueOrDefault(
                     inputValueData.persistedDirectivesData.directivesByDirectiveName,
                     INACCESSIBLE,
@@ -2894,6 +3001,7 @@ export class FederationFactory {
               ]);
               this.inaccessibleCoords.add(parentTypeName);
             }
+          }
         }
       }
     } else if (contractTagOptions.tagNamesToInclude.size > 0) {
