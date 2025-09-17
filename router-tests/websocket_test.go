@@ -2152,7 +2152,6 @@ func TestWebSockets(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			// The operation should succeed (not be blocked)
 			var res testenv.WebSocketMessage
 			err = testenv.WSReadJSON(t, conn, &res)
 			require.NoError(t, err)
@@ -2170,6 +2169,72 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, conn.Close())
 		})
 	})
+
+	t.Run("subscription with persisted operation hash and matching query", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, []byte(`{"graphql-client-name": "my-client"}`))
+
+			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+				ID:   "1",
+				Type: "subscribe",
+				Payload: []byte(`{
+					"query": "subscription { currentTime { unixTime timeStamp } }",
+					"extensions": {
+						"persistedQuery": {
+							"version": 1,
+							"sha256Hash": "8ad544bda5b2ad7a59481e31fb6fa62705fd072b20fdaadba4f3908d01f2c132"
+						}
+					}
+				}`),
+			})
+			require.NoError(t, err)
+
+			var res testenv.WebSocketMessage
+			err = testenv.WSReadJSON(t, conn, &res)
+			require.NoError(t, err)
+			require.Equal(t, "next", res.Type)
+			require.Equal(t, "1", res.ID)
+			require.Contains(t, string(res.Payload), `"data"`)
+			require.Contains(t, string(res.Payload), `"currentTime"`)
+
+			require.NoError(t, conn.Close())
+		})
+	})
+
+	t.Run("subscription with persisted operation hash and no matching query", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, []byte(`{"graphql-client-name": "my-client"}`))
+
+			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+				ID:   "1",
+				Type: "subscribe",
+				Payload: []byte(`{
+					"query": "subscription { currentTime { unixTime timeStamp } }",
+					"extensions": {
+						"persistedQuery": {
+							"version": 1,
+							"sha256Hash": "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+						}
+					}
+				}`),
+			})
+			require.NoError(t, err)
+
+			var res testenv.WebSocketMessage
+			err = testenv.WSReadJSON(t, conn, &res)
+			require.NoError(t, err)
+			require.Equal(t, "error", res.Type)
+			require.Equal(t, "1", res.ID)
+			require.Contains(t, string(res.Payload), "persistedQuery sha256 hash does not match query body")
+
+			require.NoError(t, conn.Close())
+		})
+	})
+
 }
 
 func TestFlakyWebSockets(t *testing.T) {
