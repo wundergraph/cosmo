@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.130.1](https://github.com/wundergraph/cosmo/compare/studio@0.130.0...studio@0.130.1) (2025-09-16)
+
+**Note:** Version bump only for package studio
+
+# [0.130.0](https://github.com/wundergraph/cosmo/compare/studio@0.129.0...studio@0.130.0) (2025-09-16)
+
+### Features
+
+* improve namespace selector UI/UX ([#2161](https://github.com/wundergraph/cosmo/issues/2161)) ([33f870e](https://github.com/wundergraph/cosmo/commit/33f870e8b33751ce547b33eb9ca6cb12578f4034)) (@wilsonrivera)
+
+# [0.129.0](https://github.com/wundergraph/cosmo/compare/studio@0.128.0...studio@0.129.0) (2025-09-15)
+
+### Features
+
+* introduce the `subgraph-checker` role ([#2198](https://github.com/wundergraph/cosmo/issues/2198)) ([726b814](https://github.com/wundergraph/cosmo/commit/726b814b4a460acbbf98aed37b802fe6bfda8c2c)) (@wilsonrivera)
+
 # [0.128.0](https://github.com/wundergraph/cosmo/compare/studio@0.127.1...studio@0.128.0) (2025-09-10)
 
 ### Features
