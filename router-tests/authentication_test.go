@@ -2835,14 +2835,31 @@ func TestAudienceValidation(t *testing.T) {
 	t.Run("valid token with empty algorithm in JWKS", func(t *testing.T) {
 		t.Parallel()
 
-		authenticators, authServer := ConfigureAuthWithOpts(t, ConfigureAuthOpts{AllowEmptyAlgorithm: true})
+		rsaCrypto, err := jwks.NewRSACrypto("", "", 2048)
+		if err != nil {
+			t.Fatalf("Failed to create an RSA crypto provider.\nError: %s", err)
+		}
+		authServer, err := jwks.NewServerWithCrypto(t, rsaCrypto)
+		require.NoError(t, err)
+		t.Cleanup(authServer.Close)
+
+		authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+			{
+				URL:                 authServer.JWKSURL(),
+				RefreshInterval:     time.Second * 5,
+				AllowEmptyAlgorithm: true,
+			},
+		})
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Operations with a token should succeed
-			token, err := authServer.Token(nil)
+			token, err := authServer.TokenWithOpts(nil, jwks.TokenOpts{
+				AlgOverride: string(jwkset.AlgRS256),
+			})
 			require.NoError(t, err)
 			header := http.Header{
 				"Authorization": []string{"Bearer " + token},
