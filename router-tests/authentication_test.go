@@ -843,9 +843,7 @@ func TestHttpJwksAuthorization(t *testing.T) {
 
 			maxDuration := 5 * time.Second
 
-			doneCh := make(chan struct{})
-			go func() {
-				defer close(doneCh)
+			testenv.AwaitFunc(t, maxDuration, func() {
 				for range 5 {
 					func() {
 						// Operations with an invalid token should fail
@@ -864,9 +862,7 @@ func TestHttpJwksAuthorization(t *testing.T) {
 						require.JSONEq(t, unauthorizedExpectedData, string(data))
 					}()
 				}
-			}()
-
-			testenv.AwaitChannelWithT(t, maxDuration, doneCh, func(t *testing.T, _ struct{}) {}, "test timed out")
+			})
 		})
 	})
 

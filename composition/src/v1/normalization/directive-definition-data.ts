@@ -25,6 +25,7 @@ import {
   REQUIRED_STRING_TYPE_NODE,
   REQUIRES_DEFINITION,
   REQUIRES_SCOPES_DEFINITION,
+  SEMANTIC_NON_NULL_DEFINITION,
   SHAREABLE_DEFINITION,
   SPECIFIED_BY_DEFINITION,
   SUBSCRIPTION_FILTER_DEFINITION,
@@ -66,9 +67,11 @@ import {
   INACCESSIBLE,
   INPUT_FIELD_DEFINITION_UPPER,
   INPUT_OBJECT_UPPER,
+  INT_SCALAR,
   INTERFACE_OBJECT,
   INTERFACE_UPPER,
   KEY,
+  LEVELS,
   LINK,
   LINK_IMPORT,
   LINK_PURPOSE,
@@ -87,6 +90,7 @@ import {
   SCHEMA_UPPER,
   SCOPE_SCALAR,
   SCOPES,
+  SEMANTIC_NON_NULL,
   SHAREABLE,
   SPECIFIED_BY,
   STREAM_CONFIGURATION,
@@ -513,6 +517,42 @@ export const REDIS_SUBSCRIBE_DEFINITION_DATA: DirectiveDefinitionData = {
   node: EDFS_REDIS_SUBSCRIBE_DEFINITION,
   optionalArgumentNames: new Set<string>([PROVIDER_ID]),
   requiredArgumentNames: new Set<string>([CHANNELS]),
+};
+
+export const SEMANTIC_NON_NULL_DATA: DirectiveDefinitionData = {
+  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+    [
+      LEVELS,
+      {
+        name: LEVELS,
+        typeNode: {
+          kind: Kind.NON_NULL_TYPE,
+          type: {
+            kind: Kind.LIST_TYPE,
+            type: {
+              kind: Kind.NON_NULL_TYPE,
+              type: stringToNamedTypeNode(INT_SCALAR),
+            },
+          },
+        },
+        defaultValue: {
+          kind: Kind.LIST,
+          values: [
+            {
+              kind: Kind.INT,
+              value: '0',
+            },
+          ],
+        },
+      },
+    ],
+  ]),
+  isRepeatable: false,
+  locations: new Set<string>([FIELD_DEFINITION_UPPER]),
+  name: SEMANTIC_NON_NULL,
+  node: SEMANTIC_NON_NULL_DEFINITION,
+  optionalArgumentNames: new Set<string>([LEVELS]),
+  requiredArgumentNames: new Set<string>(),
 };
 
 export const OVERRIDE_DEFINITION_DATA: DirectiveDefinitionData = {

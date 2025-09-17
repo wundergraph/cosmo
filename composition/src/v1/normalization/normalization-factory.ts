@@ -10,6 +10,7 @@ import {
   InputValueDefinitionNode,
   InterfaceTypeDefinitionNode,
   InterfaceTypeExtensionNode,
+  IntValueNode,
   Kind,
   ListValueNode,
   NamedTypeNode,
@@ -157,6 +158,10 @@ import {
   operationDefinitionError,
   orScopesLimitError,
   selfImplementationError,
+  semanticNonNullArgumentErrorMessage,
+  semanticNonNullLevelsIndexOutOfBoundsErrorMessage,
+  semanticNonNullLevelsNaNIndexErrorMessage,
+  semanticNonNullLevelsNonNullErrorMessage,
   subgraphInvalidSyntaxError,
   subgraphValidationError,
   subgraphValidationFailureError,
@@ -226,6 +231,7 @@ import {
   areDefaultValuesCompatible,
   childMapToValueArray,
   getParentTypeName,
+  isFieldData,
   isInputNodeKind,
   isNodeExternalOrShareable,
   isOutputNodeKind,
@@ -248,6 +254,7 @@ import {
   getMutableUnionNode,
   getNamedTypeNode,
   getTypeNodeNamedTypeName,
+  MutableTypeNode,
 } from '../../schema-building/ast';
 import { InvalidRootTypeFieldEventsDirectiveData } from '../../errors/types';
 import { Graph } from '../../resolvability-graph/graph';
@@ -292,6 +299,7 @@ import {
   INT_SCALAR,
   INTERFACE_OBJECT,
   KEY,
+  LEVELS,
   LINK,
   LINK_IMPORT,
   LINK_PURPOSE,
@@ -319,6 +327,7 @@ import {
   SCOPE_SCALAR,
   SCOPES,
   SECURITY,
+  SEMANTIC_NON_NULL,
   SERVICE_FIELD,
   SHAREABLE,
   STREAM_CONFIGURATION,
@@ -353,12 +362,13 @@ import {
   FieldSetParentResult,
   HandleOverrideDirectiveParams,
   HandleRequiresScopesDirectiveParams,
+  HandleSemanticNonNullDirectiveParams,
   KeyFieldSetData,
   ValidateDirectiveParams,
 } from './types';
 import { newConfigurationData, newFieldSetConditionData } from '../../router-configuration/utils';
 import { ImplementationErrors, InvalidFieldImplementation } from '../../utils/types';
-import { FieldName } from '../../types/types';
+import { FieldName, SubgraphName } from '../../types/types';
 
 export function normalizeSubgraphFromString(subgraphSDL: string, noLocation = true): NormalizationResult {
   const { error, documentNode } = safeParse(subgraphSDL, noLocation);
@@ -617,14 +627,29 @@ export class NormalizationFactory {
     const parentTypeName =
       data.kind === Kind.FIELD_DEFINITION ? data.renamedParentTypeName || data.originalParentTypeName : data.name;
     const isAuthenticated = directiveName === AUTHENTICATED;
+    const isField = isFieldData(data);
     const isOverride = directiveName === OVERRIDE;
     const isRequiresScopes = directiveName === REQUIRES_SCOPES;
+    const isSemanticNonNull = directiveName === SEMANTIC_NON_NULL;
     if (!directiveNode.arguments || directiveNode.arguments.length < 1) {
       if (definitionData.requiredArgumentNames.size > 0) {
         errorMessages.push(undefinedRequiredArgumentsErrorMessage(directiveName, requiredArgumentNames, []));
       }
       if (isAuthenticated) {
         this.handleAuthenticatedDirective(data, parentTypeName);
+      }
+      if (isSemanticNonNull && isField) {
+        // The default argument for levels is [0], so a non-null wrapper is invalid.
+        if (isTypeRequired(data.type)) {
+          errorMessages.push(
+            semanticNonNullLevelsNonNullErrorMessage({
+              typeString: printTypeNode(data.type),
+              value: '0',
+            }),
+          );
+        } else {
+          data.nullLevelsBySubgraphName.set(this.subgraphName, new Set<number>([0]));
+        }
       }
       return errorMessages;
     }
@@ -655,13 +680,24 @@ export class NormalizationFactory {
         );
         continue;
       }
-      // The directive location validation means the kind check should be unnecessary
-      if (isOverride && data.kind === Kind.FIELD_DEFINITION) {
+      /* Individual directives are handled in the loop because they validate a single argument, and duplicate
+       * arguments would short-circuit.
+       * The directive location validation means the node kind check should be unnecessary
+       * */
+      if (isOverride && isField) {
         this.handleOverrideDirective({
           data,
           directiveCoords,
           errorMessages,
           targetSubgraphName: (argumentNode.value as StringValueNode).value,
+        });
+        continue;
+      }
+      if (isSemanticNonNull && isField) {
+        this.handleSemanticNonNullDirective({
+          data,
+          directiveNode,
+          errorMessages,
         });
         continue;
       }
@@ -1112,6 +1148,7 @@ export class NormalizationFactory {
       namedTypeKind: BASE_SCALARS.has(namedTypeName) ? Kind.SCALAR_TYPE_DEFINITION : Kind.NULL,
       namedTypeName,
       node: getMutableFieldNode(node, fieldCoords, this.errors),
+      nullLevelsBySubgraphName: new Map<SubgraphName, Set<number>>(),
       originalParentTypeName: this.originalParentTypeName,
       persistedDirectivesData: newPersistedDirectivesData(),
       renamedParentTypeName: parentTypeName,
@@ -2137,6 +2174,67 @@ export class NormalizationFactory {
       () => new Map<string, Set<string>>(),
     );
     getValueOrDefault(overrideDataForSubgraph, data.renamedParentTypeName, () => new Set<string>()).add(data.name);
+  }
+
+  handleSemanticNonNullDirective({ data, directiveNode, errorMessages }: HandleSemanticNonNullDirectiveParams) {
+    const nonNullIndices = new Set<number>();
+    let currentType: MutableTypeNode | null = data.node.type;
+    let index = 0;
+    while (currentType) {
+      switch (currentType.kind) {
+        case Kind.LIST_TYPE: {
+          index += 1;
+          currentType = currentType.type;
+          break;
+        }
+        case Kind.NON_NULL_TYPE: {
+          nonNullIndices.add(index);
+          currentType = currentType.type;
+          break;
+        }
+        default: {
+          currentType = null;
+          break;
+        }
+      }
+    }
+    const levelsArg = directiveNode.arguments?.find((arg) => arg.name.value === LEVELS);
+    if (!levelsArg || levelsArg.value.kind !== Kind.LIST) {
+      // Should never happen because the argument will have just been validated.
+      errorMessages.push(semanticNonNullArgumentErrorMessage);
+      return;
+    }
+    const values = levelsArg.value.values as ReadonlyArray<IntValueNode>;
+    const typeString = printTypeNode(data.type);
+    const levels = new Set<number>();
+    for (const { value } of values) {
+      const int = parseInt(value, 10);
+      if (Number.isNaN(int)) {
+        errorMessages.push(semanticNonNullLevelsNaNIndexErrorMessage(value));
+        continue;
+      }
+      if (int < 0 || int > index) {
+        errorMessages.push(
+          semanticNonNullLevelsIndexOutOfBoundsErrorMessage({
+            maxIndex: index,
+            typeString,
+            value,
+          }),
+        );
+        continue;
+      }
+      if (!nonNullIndices.has(int)) {
+        levels.add(int);
+        continue;
+      }
+      errorMessages.push(
+        semanticNonNullLevelsNonNullErrorMessage({
+          typeString,
+          value,
+        }),
+      );
+    }
+    data.nullLevelsBySubgraphName.set(this.subgraphName, levels);
   }
 
   extractRequiredScopes({ directiveCoords, orScopes, requiredScopes }: HandleRequiresScopesDirectiveParams) {

@@ -103,6 +103,8 @@ import React, { useContext, useMemo } from "react";
 import { HiOutlineScissors } from "react-icons/hi2";
 import { PiBracketsCurlyBold, PiCubeFocus } from "react-icons/pi";
 import { SiLintcode } from "react-icons/si";
+import { useWorkspace } from "@/hooks/use-workspace";
+import { useCurrentOrganization } from "@/hooks/use-current-organization";
 
 const ForceSuccess: React.FC<{ onSubmit: () => void }> = (props) => {
   return (
@@ -256,8 +258,8 @@ const CheckOverviewPage: NextPageWithLayout = () => {
   const graphContext = useContext(GraphContext);
   const router = useRouter();
 
-  const organizationSlug = router.query.organizationSlug as string;
-  const namespace = router.query.namespace as string;
+  const organizationSlug = useCurrentOrganization()?.slug;
+  const { namespace: { name: namespace } } = useWorkspace();
   const slug = router.query.slug as string;
   const id = router.query.checkId as string;
 
@@ -402,8 +404,8 @@ const CheckDetails = ({
   const router = useRouter();
   const { toast } = useToast();
   const proposalsFeature = useFeature("proposals");
-  const organizationSlug = router.query.organizationSlug as string;
-  const namespace = router.query.namespace as string;
+  const organizationSlug = useCurrentOrganization()?.slug;
+  const { namespace: { name: namespace } } = useWorkspace();
   const slug = router.query.slug as string;
   const id = router.query.checkId as string;
   const tab = router.query.tab as string;

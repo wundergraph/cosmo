@@ -24,9 +24,10 @@ import {
   TableWrapper,
 } from "./ui/table";
 import { Tooltip } from "./ui/tooltip";
+import { useWorkspace } from "@/hooks/use-workspace";
 
 export const Empty = ({ graph }: { graph?: FederatedGraph }) => {
-  const router = useRouter();
+  const { namespace: { name: namespace } } = useWorkspace();
 
   let label = "[labels...]";
   if (graph?.labelMatchers && graph.labelMatchers.length > 0) {
@@ -54,16 +55,16 @@ export const Empty = ({ graph }: { graph?: FederatedGraph }) => {
           steps={[
             {
               description: "Create a feature subgraph using the below command.",
-              command: `npx wgc feature-subgraph create <feature-subgraph-name> --namespace ${router.query.namespace} -r <routing-url> --subgraph <base-subgraph-name>`,
+              command: `npx wgc feature-subgraph create <feature-subgraph-name> --namespace ${namespace} -r <routing-url> --subgraph <base-subgraph-name>`,
             },
             {
               description:
                 "Publish a feature subgraph using the below command.",
-              command: `npx wgc subgraph publish <feature-subgraph-name> --namespace ${router.query.namespace} --schema <schema-path> `,
+              command: `npx wgc subgraph publish <feature-subgraph-name> --namespace ${namespace} --schema <schema-path> `,
             },
             {
               description: "Create a feature flag using the below command.",
-              command: `npx wgc feature-flag create <feature-flag-name> --namespace ${router.query.namespace} --label ${label} --enabled --feature-subgraphs <feature-subgraph-names...>`,
+              command: `npx wgc feature-flag create <feature-flag-name> --namespace ${namespace} --label ${label} --enabled --feature-subgraphs <feature-subgraph-names...>`,
             },
           ]}
         />

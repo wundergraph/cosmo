@@ -17,16 +17,20 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "../ui/tooltip";
+import { useWorkspace } from "@/hooks/use-workspace";
+import { useCurrentOrganization } from "@/hooks/use-current-organization";
 
 export const AnalyticsToolbar: React.FC<{
   tab: string;
   children?: React.ReactNode;
 }> = (props) => {
   const router = useRouter();
+  const { namespace: { name: namespace } } = useWorkspace();
+  const organizationSlug = useCurrentOrganization()?.slug;
 
   const query: ParsedUrlQueryInput = {
-    organizationSlug: router.query.organizationSlug,
-    namespace: router.query.namespace,
+    organizationSlug,
+    namespace,
     slug: router.query.slug,
   };
 

@@ -20143,6 +20143,239 @@ export class GetNamespaceResponse extends Message<GetNamespaceResponse> {
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.WorkspaceNamespace
+ */
+export class WorkspaceNamespace extends Message<WorkspaceNamespace> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name = "";
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.WorkspaceFederatedGraph graphs = 3;
+   */
+  graphs: WorkspaceFederatedGraph[] = [];
+
+  constructor(data?: PartialMessage<WorkspaceNamespace>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.WorkspaceNamespace";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "graphs", kind: "message", T: WorkspaceFederatedGraph, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): WorkspaceNamespace {
+    return new WorkspaceNamespace().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): WorkspaceNamespace {
+    return new WorkspaceNamespace().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): WorkspaceNamespace {
+    return new WorkspaceNamespace().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: WorkspaceNamespace | PlainMessage<WorkspaceNamespace> | undefined, b: WorkspaceNamespace | PlainMessage<WorkspaceNamespace> | undefined): boolean {
+    return proto3.util.equals(WorkspaceNamespace, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.WorkspaceFederatedGraph
+ */
+export class WorkspaceFederatedGraph extends Message<WorkspaceFederatedGraph> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string targetId = 2;
+   */
+  targetId = "";
+
+  /**
+   * @generated from field: string name = 3;
+   */
+  name = "";
+
+  /**
+   * @generated from field: bool isContract = 4;
+   */
+  isContract = false;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.WorkspaceSubgraph subgraphs = 5;
+   */
+  subgraphs: WorkspaceSubgraph[] = [];
+
+  constructor(data?: PartialMessage<WorkspaceFederatedGraph>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.WorkspaceFederatedGraph";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "targetId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "isContract", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 5, name: "subgraphs", kind: "message", T: WorkspaceSubgraph, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): WorkspaceFederatedGraph {
+    return new WorkspaceFederatedGraph().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): WorkspaceFederatedGraph {
+    return new WorkspaceFederatedGraph().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): WorkspaceFederatedGraph {
+    return new WorkspaceFederatedGraph().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: WorkspaceFederatedGraph | PlainMessage<WorkspaceFederatedGraph> | undefined, b: WorkspaceFederatedGraph | PlainMessage<WorkspaceFederatedGraph> | undefined): boolean {
+    return proto3.util.equals(WorkspaceFederatedGraph, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.WorkspaceSubgraph
+ */
+export class WorkspaceSubgraph extends Message<WorkspaceSubgraph> {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id = "";
+
+  /**
+   * @generated from field: string targetId = 2;
+   */
+  targetId = "";
+
+  /**
+   * @generated from field: string name = 3;
+   */
+  name = "";
+
+  constructor(data?: PartialMessage<WorkspaceSubgraph>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.WorkspaceSubgraph";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "targetId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): WorkspaceSubgraph {
+    return new WorkspaceSubgraph().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): WorkspaceSubgraph {
+    return new WorkspaceSubgraph().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): WorkspaceSubgraph {
+    return new WorkspaceSubgraph().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: WorkspaceSubgraph | PlainMessage<WorkspaceSubgraph> | undefined, b: WorkspaceSubgraph | PlainMessage<WorkspaceSubgraph> | undefined): boolean {
+    return proto3.util.equals(WorkspaceSubgraph, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetWorkspaceRequest
+ */
+export class GetWorkspaceRequest extends Message<GetWorkspaceRequest> {
+  constructor(data?: PartialMessage<GetWorkspaceRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetWorkspaceRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetWorkspaceRequest {
+    return new GetWorkspaceRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetWorkspaceRequest {
+    return new GetWorkspaceRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetWorkspaceRequest {
+    return new GetWorkspaceRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetWorkspaceRequest | PlainMessage<GetWorkspaceRequest> | undefined, b: GetWorkspaceRequest | PlainMessage<GetWorkspaceRequest> | undefined): boolean {
+    return proto3.util.equals(GetWorkspaceRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.GetWorkspaceResponse
+ */
+export class GetWorkspaceResponse extends Message<GetWorkspaceResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.WorkspaceNamespace namespaces = 2;
+   */
+  namespaces: WorkspaceNamespace[] = [];
+
+  constructor(data?: PartialMessage<GetWorkspaceResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.GetWorkspaceResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "namespaces", kind: "message", T: WorkspaceNamespace, repeated: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetWorkspaceResponse {
+    return new GetWorkspaceResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): GetWorkspaceResponse {
+    return new GetWorkspaceResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): GetWorkspaceResponse {
+    return new GetWorkspaceResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: GetWorkspaceResponse | PlainMessage<GetWorkspaceResponse> | undefined, b: GetWorkspaceResponse | PlainMessage<GetWorkspaceResponse> | undefined): boolean {
+    return proto3.util.equals(GetWorkspaceResponse, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.PushCacheWarmerOperationRequest
  */
 export class PushCacheWarmerOperationRequest extends Message<PushCacheWarmerOperationRequest> {
