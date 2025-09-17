@@ -42,14 +42,23 @@ func RequireSpanWithName(t *testing.T, exporter *tracetest2.InMemoryExporter, na
 	return testSpan
 }
 
+type ConfigureAuthOpts struct {
+	AllowEmptyAlgorithm bool
+}
+
 func ConfigureAuth(t *testing.T) ([]authentication.Authenticator, *jwks.Server) {
+	return ConfigureAuthWithOpts(t, ConfigureAuthOpts{})
+}
+
+func ConfigureAuthWithOpts(t *testing.T, opts ConfigureAuthOpts) ([]authentication.Authenticator, *jwks.Server) {
 	authServer, err := jwks.NewServer(t)
 	require.NoError(t, err)
 	t.Cleanup(authServer.Close)
 	authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
 		{
-			URL:             authServer.JWKSURL(),
-			RefreshInterval: time.Second * 5,
+			URL:                 authServer.JWKSURL(),
+			RefreshInterval:     time.Second * 5,
+			AllowEmptyAlgorithm: opts.AllowEmptyAlgorithm,
 		},
 	})
 

@@ -42,12 +42,24 @@ func (s *Server) Token(claims map[string]any) (string, error) {
 	}
 
 	for kid, pr := range s.providers {
-		token := jwt.NewWithClaims(pr.SigningMethod(), jwt.MapClaims(claims))
+		method := jwt.GetSigningMethod(jwt.SigningMethodRS256.Alg())
+		token := NewWithClaims(method, jwt.MapClaims(claims))
 		token.Header[jwkset.HeaderKID] = kid
 		return token.SignedString(pr.PrivateKey())
 	}
 
 	return "", jwt.ErrInvalidKey
+}
+
+func NewWithClaims(method jwt.SigningMethod, claims jwt.Claims, opts ...jwt.TokenOption) *jwt.Token {
+	return &jwt.Token{
+		Header: map[string]interface{}{
+			"typ": "JWT",
+			"alg": jwt.SigningMethodRS256.Alg(),
+		},
+		Claims: claims,
+		Method: method,
+	}
 }
 
 func (s *Server) TokenForKID(kid string, claims map[string]any, useInvalidKID bool) (string, error) {
