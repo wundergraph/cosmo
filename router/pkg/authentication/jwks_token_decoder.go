@@ -190,10 +190,11 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 	keyFuncWrapper := jwt.Keyfunc(func(token *jwt.Token) (any, error) {
 		var errJoin error
 		for key, keyFuncAndOpts := range keyFuncMap {
-			// TODO: We can enable this for non empty cases, though it is a potential breaking change
-			// if users are using RS512 after specifying RS256 for example, to discuss
+			// When an algorithm is actually provided in the jwks the current keyfunc will validate the
+			// jwts algorithm with it. But when no algorithm is provided (alg: none or missing alg)
+			// the default keyfunc will not validate the algorithm as it has nothing to cross check.
 			if keyFuncAndOpts.allowEmptyAlgorithm {
-				// We use the same error messages as keyfunc.Keyfunc
+				// We use the same error messages as keyfunc.Keyfunc for consistency
 				algInter, ok := token.Header["alg"]
 				if !ok {
 					return nil, fmt.Errorf("%w: could not find alg in JWT header", keyfunc.ErrKeyfunc)
@@ -202,6 +203,7 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 				if !ok {
 					return nil, fmt.Errorf(`%w: the JWT header did not contain the "alg" parameter, which is required by RFC 7515 section 4.1.1`, keyfunc.ErrKeyfunc)
 				}
+
 				// This is a custom validation different from keyfunc.Keyfunc
 				if !slices.Contains(keyFuncAndOpts.allowedAlgorithms, alg) {
 					return nil, fmt.Errorf("%w: could not find alg %s in allow list", keyfunc.ErrKeyfunc, alg)
