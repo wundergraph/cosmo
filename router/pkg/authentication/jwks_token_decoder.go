@@ -223,10 +223,12 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 			if len(expectedAudiences) > 0 {
 				tokenAudiences, err := token.Claims.GetAudience()
 				if err != nil {
-					return nil, fmt.Errorf("could not get audiences from token claims: %w", err)
+					errJoin = errors.Join(errJoin, fmt.Errorf("could not get audiences from token claims: %w", err))
+					continue
 				}
 				if !hasAudience(tokenAudiences, expectedAudiences) {
-					return nil, errUnacceptableAud
+					errJoin = errors.Join(errJoin, errUnacceptableAud)
+					continue
 				}
 			}
 			return pub, nil
