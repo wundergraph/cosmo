@@ -46,7 +46,8 @@ type JWKSConfig struct {
 	Algorithm string
 	KeyId     string
 
-	Audiences []string
+	Audiences           []string
+	AllowEmptyAlgorithm bool
 }
 
 type audKey struct {
@@ -79,7 +80,7 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 					l.Error("Failed to refresh HTTP JWK Set from remote HTTP resource.", zap.Error(err))
 				},
 				RefreshInterval: c.RefreshInterval,
-				Storage:         NewValidationStore(logger, nil, c.AllowedAlgorithms),
+				Storage:         NewValidationStore(logger, nil, c.AllowedAlgorithms, c.AllowEmptyAlgorithm),
 			}
 
 			store, err := jwkset.NewStorageFromHTTP(c.URL, jwksetHTTPStorageOptions)
