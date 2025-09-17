@@ -168,6 +168,7 @@ import { getClientsFromAnalytics } from './federated-graph/getClientsFromAnalyti
 import { validateAndFetchPluginData } from './plugin/validateAndFetchPluginData.js';
 import { linkSubgraph } from './subgraph/linkSubgraph.js';
 import { unlinkSubgraph } from './subgraph/unlinkSubgraph.js';
+import { getWorkspace } from './workspace/getWorkspace.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -788,6 +789,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     getNamespace: (req, ctx) => {
       return getNamespace(opts, req, ctx);
+    },
+
+    getWorkspace: (req, ctx) => {
+      return getWorkspace(opts, req, ctx);
     },
 
     listRouterCompatibilityVersions: () => {

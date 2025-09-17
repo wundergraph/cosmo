@@ -1,4 +1,3 @@
-import { useRouter } from "next/router";
 import {
   Card,
   CardContent,
@@ -14,7 +13,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
-import { useUser } from "@/hooks/use-user";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { useState } from "react";
 import { useToast } from "../ui/use-toast";
@@ -33,6 +31,7 @@ import { docsBaseURL } from "@/lib/constants";
 import Link from "next/link";
 import { Switch } from "../ui/switch";
 import { useCheckUserAccess } from "@/hooks/use-check-user-access";
+import { useWorkspace } from "@/hooks/use-workspace";
 
 export const ProposalConfig = ({
   data,
@@ -41,10 +40,8 @@ export const ProposalConfig = ({
   data: GetNamespaceProposalConfigResponse;
   refetch: () => void;
 }) => {
-  const router = useRouter();
-  const user = useUser();
   const checkUserAccess = useCheckUserAccess();
-  const namespace = router.query.namespace as string;
+  const { namespace: { name: namespace } } = useWorkspace();
 
   const proposalsFeature = useFeature("proposals");
 
@@ -95,7 +92,7 @@ export const ProposalConfig = ({
             setProposalsEnabled(checked);
             enableProposals(
               {
-                namespace: namespace || "default",
+                namespace,
                 enableProposals: checked,
               },
               {
@@ -115,7 +112,7 @@ export const ProposalConfig = ({
                   }
                   refetch();
                 },
-                onError: (error) => {
+                onError: (_) => {
                   toast({
                     description: checked
                       ? "Could not enable proposals. Please try again."
@@ -176,7 +173,7 @@ export const ProposalConfig = ({
                       }
                       refetch();
                     },
-                    onError: (error) => {
+                    onError: (_) => {
                       toast({
                         description:
                           "Could not set the proposal config. Please try again.",
