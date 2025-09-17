@@ -1,4 +1,5 @@
 import { FieldData, InputValueData, ParentDefinitionData } from '../schema-building/types';
+import { FieldName, TypeName } from '../types/types';
 
 export type InvalidRootTypeFieldEventsDirectiveData = {
   definesDirectives: boolean;
@@ -27,4 +28,9 @@ export type SemanticNonNullLevelsIndexOutOfBoundsErrorParams = {
 export type SemanticNonNullLevelsNonNullErrorParams = {
   typeString: string;
   value: string;
+};
+
+export type OneOfRequiredFieldsErrorParams = {
+  requiredFieldNames: Array<FieldName>;
+  typeName: TypeName;
 };
