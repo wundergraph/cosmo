@@ -34,7 +34,7 @@ var supportedAlgorithms = map[string]struct{}{
 	"EdDSA": {},
 }
 
-func NewValidationStore(logger *zap.Logger, inner jwkset.Storage, algs []string, allowEmptyAlgorithm bool) jwkset.Storage {
+func NewValidationStore(logger *zap.Logger, inner jwkset.Storage, algs []string, allowEmptyAlgorithm bool) (jwkset.Storage, []string) {
 	if inner == nil {
 		inner = jwkset.NewMemoryStorage()
 	}
@@ -53,7 +53,7 @@ func NewValidationStore(logger *zap.Logger, inner jwkset.Storage, algs []string,
 	}
 
 	if len(algs) == 0 {
-		return store
+		return store, nil
 	}
 
 	for _, alg := range algs {
@@ -65,7 +65,15 @@ func NewValidationStore(logger *zap.Logger, inner jwkset.Storage, algs []string,
 	}
 
 	store.algs = algSet
-	return store
+	return store, store.getSupportedAlgorithms()
+}
+
+func (v *validationStore) getSupportedAlgorithms() []string {
+	algs := make([]string, 0, len(v.algs))
+	for alg := range v.algs {
+		algs = append(algs, alg)
+	}
+	return algs
 }
 
 func (v *validationStore) KeyDelete(ctx context.Context, keyID string) (ok bool, err error) {
