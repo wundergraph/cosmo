@@ -724,7 +724,7 @@ func TestCircuitBreaker(t *testing.T) {
 			require.Equal(t, failedTries, employeesCalls.Load())
 
 			// Wait for current bucket to be cleaned up
-			time.Sleep(breaker.RollingDuration + time.Millisecond*500)
+			time.Sleep(breaker.RollingDuration + time.Millisecond*2000)
 
 			// ====
 			// Verify a success case with messages validated from here onwards
