@@ -1800,20 +1800,8 @@ func TestNatsEvents(t *testing.T) {
 
 			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client1 := graphql.NewSubscriptionClient(surl)
-			client1.OnError(func(client *graphql.SubscriptionClient, err error) error {
-				// always retry on error
-				return nil
-			})
 			client2 := graphql.NewSubscriptionClient(surl)
-			client2.OnError(func(client *graphql.SubscriptionClient, err error) error {
-				// avoid retry on error
-				return nil
-			})
 			client3 := graphql.NewSubscriptionClient(surl)
-			client3.OnError(func(client *graphql.SubscriptionClient, err error) error {
-				// avoid retry on error
-				return nil
-			})
 			subOneDataCh := make(chan natsSubscriptionArgs)
 			subscriptionOneID, err := client1.Subscribe(&subscriptionMyNats, nil, func(dataValue []byte, errValue error) error {
 				subOneDataCh <- natsSubscriptionArgs{
