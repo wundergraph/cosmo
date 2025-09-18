@@ -1,6 +1,8 @@
 package module_test
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -18,6 +20,18 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
 )
+
+type errorWithCloseSubscription struct {
+	err error
+}
+
+func (e *errorWithCloseSubscription) Error() string {
+	return e.err.Error()
+}
+
+func (e *errorWithCloseSubscription) CloseSubscription() bool {
+	return true
+}
 
 func TestReceiveHook(t *testing.T) {
 	t.Parallel()
@@ -304,6 +318,80 @@ func TestReceiveHook(t *testing.T) {
 
 			requestLog := xEnv.Observer().FilterMessage("Stream Hook has been run")
 			assert.Len(t, requestLog.All(), 1)
+		})
+	})
+
+	t.Run("Test Batch hook can close Kafka subscriptions", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := config.Config{
+			Graph: config.Graph{},
+			Modules: map[string]interface{}{
+				"streamBatchModule": stream_receive.StreamReceiveModule{
+					Callback: func(ctx core.StreamReceiveEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
+						return nil, &errorWithCloseSubscription{err: errors.New("test error from streamevents hook")}
+					},
+				},
+			},
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
+			RouterOptions: []core.Option{
+				core.WithModulesConfig(cfg.Modules),
+				core.WithCustomModules(&stream_receive.StreamReceiveModule{}),
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			topics := []string{"employeeUpdated"}
+			events.KafkaEnsureTopicExists(t, xEnv, time.Second, topics...)
+
+			var subscriptionOne struct {
+				employeeUpdatedMyKafka struct {
+					ID      float64 `graphql:"id"`
+					Details struct {
+						Forename string `graphql:"forename"`
+						Surname  string `graphql:"surname"`
+					} `graphql:"details"`
+				} `graphql:"employeeUpdatedMyKafka(employeeID: 3)"`
+			}
+
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
+			client := graphql.NewSubscriptionClient(surl)
+
+			subscriptionArgsCh := make(chan kafkaSubscriptionArgs)
+			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
+				subscriptionArgsCh <- kafkaSubscriptionArgs{
+					dataValue: dataValue,
+					errValue:  errValue,
+				}
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEmpty(t, subscriptionOneID)
+
+			clientRunCh := make(chan error)
+			go func() {
+				clientRunCh <- client.Run()
+			}()
+
+			xEnv.WaitForSubscriptionCount(1, Timeout)
+
+			fmt.Println(client.GetSubscription(subscriptionOneID).GetStatus())
+
+			events.ProduceKafkaMessage(t, xEnv, Timeout, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+
+			// Wait for server to close the subscription connection
+			xEnv.WaitForSubscriptionCount(0, Timeout)
+
+			// Verify that client.Run() completed when server closed the connection
+			testenv.AwaitChannelWithT(t, Timeout, clientRunCh, func(t *testing.T, err error) {
+				require.NoError(t, err)
+			}, "client should have completed when server closed connection")
 		})
 	})
 }
