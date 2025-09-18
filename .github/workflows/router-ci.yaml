@@ -180,7 +180,7 @@ jobs:
           - 8222:8222
           - 6222:6222
       redis-0:
-        image: bitnami/redis-cluster:7.2
+        image: bitnamilegacy/redis-cluster:7.2
         env:
           ALLOW_EMPTY_PASSWORD: yes
           REDIS_NODES: "redis-0,redis-1,redis-2"
@@ -190,14 +190,14 @@ jobs:
           - 6379:6379
           - 7001:6379
       redis-1:
-        image: bitnami/redis-cluster:7.2
+        image: bitnamilegacy/redis-cluster:7.2
         env:
           ALLOW_EMPTY_PASSWORD: yes
           REDIS_NODES: "redis-0,redis-1,redis-2"
         ports:
           - 7002:6379
       redis-2:
-        image: bitnami/redis-cluster:7.2
+        image: bitnamilegacy/redis-cluster:7.2
         env:
           ALLOW_EMPTY_PASSWORD: yes
           REDIS_NODES: "redis-0,redis-1,redis-2"
