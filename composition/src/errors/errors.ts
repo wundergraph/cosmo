@@ -1,9 +1,17 @@
 import { Kind, OperationTypeNode } from 'graphql';
-import { EntityInterfaceFederationData, InputValueData, ObjectDefinitionData } from '../schema-building/types';
+import {
+  EntityInterfaceFederationData,
+  FieldData,
+  InputValueData,
+  ObjectDefinitionData,
+} from '../schema-building/types';
 import {
   IncompatibleMergedTypesErrorParams,
   InvalidNamedTypeErrorParams,
   InvalidRootTypeFieldEventsDirectiveData,
+  OneOfRequiredFieldsErrorParams,
+  SemanticNonNullLevelsIndexOutOfBoundsErrorParams,
+  SemanticNonNullLevelsNonNullErrorParams,
 } from './types';
 import { UnresolvableFieldData } from '../resolvability-graph/utils';
 import {
@@ -14,6 +22,7 @@ import {
   IN_UPPER,
   INPUT_FIELD,
   INTERFACE,
+  LEVELS,
   LITERAL_NEW_LINE,
   NOT_UPPER,
   OR_UPPER,
@@ -1613,5 +1622,54 @@ export function invalidNamedTypeError({ data, namedTypeData, nodeType }: Invalid
       `; however, ${kindToNodeType(namedTypeData.kind)} "${namedTypeData.name}" is not a valid ` +
       (isOutputField ? 'output' : 'input') +
       ' type.',
+  );
+}
+
+export function semanticNonNullLevelsNaNIndexErrorMessage(value: string) {
+  return `Index "${value}" is not a valid integer.`;
+}
+
+export function semanticNonNullLevelsIndexOutOfBoundsErrorMessage({
+  maxIndex,
+  typeString,
+  value,
+}: SemanticNonNullLevelsIndexOutOfBoundsErrorParams) {
+  return (
+    `Index "${value}" is out of bounds for type ${typeString}; ` +
+    (maxIndex > 0 ? `valid indices are 0-${maxIndex} inclusive.` : `the only valid index is 0.`)
+  );
+}
+
+export function semanticNonNullLevelsNonNullErrorMessage({
+  typeString,
+  value,
+}: SemanticNonNullLevelsNonNullErrorParams) {
+  return `Index "${value}" of type ${typeString} is non-null but must be nullable.`;
+}
+
+export const semanticNonNullArgumentErrorMessage = `Argument "${LEVELS}" validation error.`;
+
+export function semanticNonNullInconsistentLevelsError(data: FieldData): Error {
+  const coords = `${data.renamedParentTypeName}.${data.name}`;
+  let message =
+    `The "@semanticNonNull" directive defined on field "${coords}"` +
+    ` is invalid due to inconsistent values provided to the "levels" argument across the following subgraphs:\n`;
+  for (const [subgraphName, levels] of data.nullLevelsBySubgraphName) {
+    message += ` Subgraph "${subgraphName}" defines levels ${Array.from(levels).sort((a, b) => a - b)}.\n`;
+  }
+  message +=
+    `The list value provided to the "levels" argument must be consistently defined across all subgraphs that` +
+    ` define "@semanticNonNull" on field "${coords}".`;
+  return new Error(message);
+}
+
+export function oneOfRequiredFieldsError({ requiredFieldNames, typeName }: OneOfRequiredFieldsErrorParams): Error {
+  return new Error(
+    `The "@oneOf" directive defined on Input Object "${typeName}" is invalid because all Input fields must be` +
+      ` optional (nullable); however, the following Input field` +
+      (requiredFieldNames.length > 1 ? `s are` : ` is`) +
+      ` required (non-nullable): "` +
+      requiredFieldNames.join(QUOTATION_JOIN) +
+      `".`,
   );
 }

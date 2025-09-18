@@ -1,4 +1,5 @@
 import { Kind } from 'graphql';
+import { DirectiveName } from '../types/types';
 
 export const AS = 'as';
 export const AND_UPPER = 'AND';
@@ -8,10 +9,13 @@ export const AUTHENTICATED = 'authenticated';
 export const ARGUMENT_DEFINITION_UPPER = 'ARGUMENT_DEFINITION';
 export const BOOLEAN = 'boolean';
 export const BOOLEAN_SCALAR = 'Boolean';
+export const CHANNEL = 'channel';
+export const CHANNELS = 'channels';
 export const COMPOSE_DIRECTIVE = 'composeDirective';
 export const CONDITION = 'condition';
 export const CONFIGURE_DESCRIPTION = 'openfed__configureDescription';
 export const CONFIGURE_CHILD_DESCRIPTIONS = 'openfed__configureChildDescriptions';
+export const CONSUMER_INACTIVE_THRESHOLD = 'consumerInactiveThreshold';
 export const CONSUMER_NAME = 'consumerName';
 export const DEFAULT = 'default';
 export const DEFAULT_EDFS_PROVIDER_ID = 'default';
@@ -73,6 +77,7 @@ export const INTERFACE_UPPER = 'INTERFACE';
 export const INTERFACE_OBJECT = 'interfaceObject';
 export const KEY = 'key';
 export const LEFT_PARENTHESIS = '(';
+export const LEVELS = 'levels';
 export const LINK = 'link';
 export const LINK_IMPORT = 'link__Import';
 export const LINK_PURPOSE = 'link__Purpose';
@@ -94,6 +99,7 @@ export const NON_NULLABLE_INT = 'Int!';
 export const NON_NULLABLE_STRING = 'String!';
 export const NOT_UPPER = 'NOT';
 export const NULL = 'Null';
+export const ONE_OF = 'oneOf';
 export const OPERATION_TO_DEFAULT = 'operationTypeNodeToDefaultType';
 export const OBJECT = 'Object';
 export const OBJECT_UPPER = 'OBJECT';
@@ -103,7 +109,6 @@ export const PARENT_DEFINITION_DATA = 'parentDefinitionDataByTypeName';
 export const PARENT_DEFINITION_DATA_MAP = 'parentDefinitionDataByParentTypeName';
 export const PARENT_EXTENSION_DATA_MAP = 'parentExtensionDataByParentTypeName';
 export const PERIOD = '.';
-export const REQUIRE_FETCH_REASONS = 'openfed__requireFetchReasons';
 export const PROVIDER_ID = 'providerId';
 export const PROVIDES = 'provides';
 export const PUBLISH = 'publish';
@@ -112,6 +117,7 @@ export const QUERY_UPPER = 'QUERY';
 export const QUOTATION_JOIN = `", "`;
 export const REASON = 'reason';
 export const REQUEST = 'request';
+export const REQUIRE_FETCH_REASONS = 'openfed__requireFetchReasons';
 export const REQUIRES = 'requires';
 export const REQUIRES_SCOPES = 'requiresScopes';
 export const RESOLVABLE = 'resolvable';
@@ -123,12 +129,12 @@ export const SCOPES = 'scopes';
 export const SCOPE_SCALAR = 'openfed__Scope';
 export const SECURITY = 'SECURITY';
 export const SELECTION_REPRESENTATION = ' { ... }';
+export const SEMANTIC_NON_NULL = 'semanticNonNull';
 export const SERVICE_OBJECT = '_Service';
 export const SERVICE_FIELD = '_service';
 export const SHAREABLE = 'shareable';
 export const SPECIFIED_BY = 'specifiedBy';
 export const STREAM_CONFIGURATION = 'streamConfiguration';
-export const CONSUMER_INACTIVE_THRESHOLD = 'consumerInactiveThreshold';
 export const STREAM_NAME = 'streamName';
 export const STRING = 'string';
 export const STRING_SCALAR = 'String';
@@ -150,8 +156,6 @@ export const UNION_UPPER = 'UNION';
 export const URL_LOWER = 'url';
 export const VALUES = 'values';
 export const VARIABLE_DEFINITION_UPPER = 'VARIABLE_DEFINITION';
-export const CHANNEL = 'channel';
-export const CHANNELS = 'channels';
 
 export const EXECUTABLE_DIRECTIVE_LOCATIONS = new Set<string>([
   FIELD_UPPER,
@@ -165,7 +169,7 @@ export const EXECUTABLE_DIRECTIVE_LOCATIONS = new Set<string>([
 
 export const ROOT_TYPE_NAMES = new Set<string>([MUTATION, QUERY, SUBSCRIPTION]);
 export const AUTHORIZATION_DIRECTIVES = new Set<string>([AUTHENTICATED, REQUIRES_SCOPES]);
-export const PERSISTED_CLIENT_DIRECTIVES = new Set<string>([DEPRECATED]);
+export const PERSISTED_CLIENT_DIRECTIVES = new Set<string>([DEPRECATED, ONE_OF, SEMANTIC_NON_NULL]);
 export const INHERITABLE_DIRECTIVE_NAMES = new Set<string>([EXTERNAL, REQUIRE_FETCH_REASONS, SHAREABLE]);
 export const IGNORED_FIELDS = new Set<string>([ENTITIES_FIELD, SERVICE_FIELD]);
 
@@ -182,3 +186,5 @@ export const OUTPUT_NODE_KINDS = new Set<Kind>([
   Kind.SCALAR_TYPE_DEFINITION,
   Kind.UNION_TYPE_DEFINITION,
 ]);
+
+export const NON_REPEATABLE_PERSISTED_DIRECTIVES = new Set<DirectiveName>([INACCESSIBLE, ONE_OF, SEMANTIC_NON_NULL]);

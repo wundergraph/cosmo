@@ -7,7 +7,7 @@ import {
   EntityInterfaceSubgraphData,
   FieldAuthorizationData,
   FieldData,
-  InterfaceDefinitionData,
+  NodeData,
   ObjectDefinitionData,
   ParentDefinitionData,
   SimpleFieldData,
@@ -442,4 +442,21 @@ export function isObjectDefinitionData(data?: ParentDefinitionData): data is Obj
     return false;
   }
   return data.kind === Kind.OBJECT_TYPE_DEFINITION;
+}
+
+export function getNodeCoords(data: NodeData): string {
+  switch (data.kind) {
+    case Kind.ARGUMENT:
+    // Intentional fallthrough
+    case Kind.FIELD_DEFINITION:
+    // Intentional fallthrough
+    case Kind.INPUT_VALUE_DEFINITION:
+    // Intentional fallthrough
+    case Kind.ENUM_VALUE_DEFINITION: {
+      return data.federatedCoords;
+    }
+    default: {
+      return data.name;
+    }
+  }
 }
