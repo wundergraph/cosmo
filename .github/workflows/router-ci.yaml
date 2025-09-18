@@ -179,27 +179,30 @@ jobs:
           - 4222:4222
           - 8222:8222
           - 6222:6222
-      redis:
-        image: bitnamilegacy/redis-cluster:7.2
-        # Set health checks to wait until redis has started
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        credentials:
-          username: ${{secrets.DOCKER_USERNAME}}
-          password: ${{secrets.DOCKER_PASSWORD}}
+      redis-0:
+        image: bitnami/redis-cluster:7.2
+        env:
+          ALLOW_EMPTY_PASSWORD: yes
+          REDIS_NODES: "redis-0,redis-1,redis-2"
+          REDIS_CLUSTER_REPLICAS: 0
+          REDIS_CLUSTER_CREATOR: yes
         ports:
           - 6379:6379
           - 7001:6379
-          - 7002:6379
-          - 7003:6379
+      redis-1:
+        image: bitnami/redis-cluster:7.2
         env:
           ALLOW_EMPTY_PASSWORD: yes
-          REDIS_NODES: "redis"
-          REDIS_CLUSTER_REPLICAS: 0
-          REDIS_CLUSTER_CREATOR: yes
+          REDIS_NODES: "redis-0,redis-1,redis-2"
+        ports:
+          - 7002:6379
+      redis-2:
+        image: bitnami/redis-cluster:7.2
+        env:
+          ALLOW_EMPTY_PASSWORD: yes
+          REDIS_NODES: "redis-0,redis-1,redis-2"
+        ports:
+          - 7003:6379
       kafka:
         image: bitnamilegacy/kafka:3.7.0
         options: >-
