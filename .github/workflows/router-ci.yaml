@@ -183,8 +183,9 @@ jobs:
         image: bitnamilegacy/redis-cluster:7.2
         env:
           ALLOW_EMPTY_PASSWORD: yes
-          REDIS_NODES: "redis-0,redis-1,redis-2"
+          REDIS_NODES: "redis-0:7001,redis-1:7002,redis-2:7003"
           REDIS_CLUSTER_ANNOUNCE_IP: redis-0
+          REDIS_CLUSTER_ANNOUNCE_PORT: 6379
           REDIS_CLUSTER_REPLICAS: 0
           REDIS_CLUSTER_CREATOR: yes
         ports:
@@ -194,16 +195,18 @@ jobs:
         image: bitnamilegacy/redis-cluster:7.2
         env:
           ALLOW_EMPTY_PASSWORD: yes
-          REDIS_NODES: "redis-0,redis-1,redis-2"
+          REDIS_NODES: "redis-0:7001,redis-1:7002,redis-2:7003"
           REDIS_CLUSTER_ANNOUNCE_IP: redis-1
+          REDIS_CLUSTER_ANNOUNCE_PORT: 7002
         ports:
           - 7002:6379
       redis-2:
         image: bitnamilegacy/redis-cluster:7.2
         env:
           ALLOW_EMPTY_PASSWORD: yes
-          REDIS_NODES: "redis-0,redis-1,redis-2"
+          REDIS_NODES: "redis-0:7001,redis-1:7002,redis-2:7003"
           REDIS_CLUSTER_ANNOUNCE_IP: redis-2
+          REDIS_CLUSTER_ANNOUNCE_PORT: 7003
         ports:
           - 7003:6379
       kafka:
