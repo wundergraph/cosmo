@@ -192,6 +192,9 @@ jobs:
           password: ${{secrets.DOCKER_PASSWORD}}
         ports:
           - 6379:6379
+          - 6379:7001
+          - 6379:7002
+          - 6379:7003
       kafka:
         image: bitnamilegacy/kafka:3.7.0
         options: >-
