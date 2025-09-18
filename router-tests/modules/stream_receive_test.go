@@ -195,7 +195,7 @@ func TestReceiveHook(t *testing.T) {
 			Modules: map[string]interface{}{
 				"streamReceiveModule": stream_receive.StreamReceiveModule{
 					Callback: func(ctx core.StreamReceiveEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
-						if hdr, ok := ctx.Request().Header["x-custom-header"]; ok && hdr[0] == "dont-change" {
+						if hdr, ok := ctx.Request().Header[http.CanonicalHeaderKey("x-custom-header")]; ok && hdr[0] == "dont-change" {
 							return events, nil
 						}
 						for _, event := range events {
@@ -242,7 +242,7 @@ func TestReceiveHook(t *testing.T) {
 			client2 := graphql.NewSubscriptionClient(surl)
 			client2.WithWebSocketOptions(graphql.WebsocketOptions{
 				HTTPHeader: http.Header{
-					"x-custom-header": []string{"dont-change"},
+					http.CanonicalHeaderKey("x-custom-header"): []string{"dont-change"},
 				},
 			})
 
