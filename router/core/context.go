@@ -611,11 +611,12 @@ func (p *QueryPlanStats) analyzeSingleFetch(fetchNode *resolve.FetchTreeNode) {
 	subgraphName := info.DataSourceName
 
 	p.TotalSubgraphFetches++
+
+	fetches := 1
 	if entry, ok := p.SubgraphFetches[subgraphName]; ok {
-		p.SubgraphFetches[subgraphName] = entry + 1
-	} else {
-		p.SubgraphFetches[subgraphName] = 1
+		fetches += entry
 	}
+	p.SubgraphFetches[subgraphName] = fetches
 
 	// If the fetch has dependencies, it means it is a nested entity fetch,
 	// and we count it as an _entities root field fetch
