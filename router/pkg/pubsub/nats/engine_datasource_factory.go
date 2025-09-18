@@ -8,8 +8,8 @@ import (
 	"github.com/buger/jsonparser"
 	"github.com/cespare/xxhash/v2"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
-
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"go.uber.org/zap"
 )
 
 type EventType int
@@ -21,12 +21,13 @@ const (
 )
 
 type EngineDataSourceFactory struct {
-	NatsAdapter Adapter
+	NatsAdapter datasource.Adapter
 
 	fieldName  string
 	eventType  EventType
 	subjects   []string
 	providerId string
+	logger     *zap.Logger
 
 	withStreamConfiguration   bool
 	consumerName              string
@@ -64,11 +65,11 @@ func (c *EngineDataSourceFactory) ResolveDataSourceInput(eventData []byte) (stri
 
 	subject := c.subjects[0]
 
-	evtCfg := PublishAndRequestEventConfiguration{
+	evtCfg := publishData{
 		Provider:  c.providerId,
 		Subject:   subject,
-		Event:     Event{Data: eventData},
 		FieldName: c.fieldName,
+		Event:     Event{Data: eventData},
 	}
 
 	return evtCfg.MarshalJSONTemplate()
@@ -95,7 +96,7 @@ func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (datasource.Su
 
 			_, err = xxh.Write(val)
 			return err
-		}), nil
+		}, c.logger), nil
 }
 
 func (c *EngineDataSourceFactory) ResolveDataSourceSubscriptionInput() (string, error) {

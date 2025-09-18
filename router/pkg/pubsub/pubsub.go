@@ -49,11 +49,6 @@ func (e *ProviderNotDefinedError) Error() string {
 	return fmt.Sprintf("%s provider with ID %s is not defined", e.ProviderTypeID, e.ProviderID)
 }
 
-// Hooks contains hooks for the pubsub providers and data sources
-type Hooks struct {
-	SubscriptionOnStart []pubsub_datasource.SubscriptionOnStartFn
-}
-
 // BuildProvidersAndDataSources is a generic function that builds providers and data sources for the given
 // EventsConfiguration and DataSourceConfigurationWithMetadata
 func BuildProvidersAndDataSources(
@@ -63,7 +58,7 @@ func BuildProvidersAndDataSources(
 	dsConfs []DataSourceConfigurationWithMetadata,
 	hostName string,
 	routerListenAddr string,
-	hooks Hooks,
+	hooks pubsub_datasource.Hooks,
 ) ([]pubsub_datasource.Provider, []plan.DataSource, error) {
 	var pubSubProviders []pubsub_datasource.Provider
 	var outs []plan.DataSource
@@ -81,7 +76,9 @@ func BuildProvidersAndDataSources(
 	if err != nil {
 		return nil, nil, err
 	}
-	pubSubProviders = append(pubSubProviders, kafkaPubSubProviders...)
+	for _, provider := range kafkaPubSubProviders {
+		pubSubProviders = append(pubSubProviders, provider)
+	}
 	outs = append(outs, kafkaOuts...)
 
 	// initialize NATS providers and data sources
@@ -97,7 +94,9 @@ func BuildProvidersAndDataSources(
 	if err != nil {
 		return nil, nil, err
 	}
-	pubSubProviders = append(pubSubProviders, natsPubSubProviders...)
+	for _, provider := range natsPubSubProviders {
+		pubSubProviders = append(pubSubProviders, provider)
+	}
 	outs = append(outs, natsOuts...)
 
 	// initialize Redis providers and data sources
@@ -113,14 +112,16 @@ func BuildProvidersAndDataSources(
 	if err != nil {
 		return nil, nil, err
 	}
-	pubSubProviders = append(pubSubProviders, redisPubSubProviders...)
+	for _, provider := range redisPubSubProviders {
+		pubSubProviders = append(pubSubProviders, provider)
+	}
 	outs = append(outs, redisOuts...)
 
 	return pubSubProviders, outs, nil
 }
 
-func build[P GetID, E GetEngineEventConfiguration](ctx context.Context, builder pubsub_datasource.ProviderBuilder[P, E], providersData []P, dsConfs []dsConfAndEvents[E], hooks Hooks) ([]pubsub_datasource.Provider, []plan.DataSource, error) {
-	var pubSubProviders []pubsub_datasource.Provider
+func build[P GetID, E GetEngineEventConfiguration](ctx context.Context, builder pubsub_datasource.ProviderBuilder[P, E], providersData []P, dsConfs []dsConfAndEvents[E], hooks pubsub_datasource.Hooks) (map[string]pubsub_datasource.Provider, []plan.DataSource, error) {
+	pubSubProviders := make(map[string]pubsub_datasource.Provider)
 	var outs []plan.DataSource
 
 	// check used providers
@@ -134,7 +135,6 @@ func build[P GetID, E GetEngineEventConfiguration](ctx context.Context, builder 
 	}
 
 	// initialize providers if used
-	providerIds := []string{}
 	for _, providerData := range providersData {
 		if !slices.Contains(usedProviderIds, providerData.GetID()) {
 			continue
@@ -143,13 +143,13 @@ func build[P GetID, E GetEngineEventConfiguration](ctx context.Context, builder 
 		if err != nil {
 			return nil, nil, err
 		}
-		pubSubProviders = append(pubSubProviders, provider)
-		providerIds = append(providerIds, provider.ID())
+		provider.SetHooks(hooks)
+		pubSubProviders[provider.ID()] = provider
 	}
 
 	// check if all used providers are initialized
 	for _, providerId := range usedProviderIds {
-		if !slices.Contains(providerIds, providerId) {
+		if _, ok := pubSubProviders[providerId]; !ok {
 			return pubSubProviders, nil, &ProviderNotDefinedError{
 				ProviderID:     providerId,
 				ProviderTypeID: builder.TypeID(),
@@ -160,7 +160,12 @@ func build[P GetID, E GetEngineEventConfiguration](ctx context.Context, builder 
 	// build data sources for each event
 	for _, dsConf := range dsConfs {
 		for i, event := range dsConf.events {
-			plannerConfig := pubsub_datasource.NewPlannerConfig(builder, event, hooks.SubscriptionOnStart)
+			plannerConfig := pubsub_datasource.NewPlannerConfig(
+				builder,
+				event,
+				pubSubProviders,
+				hooks,
+			)
 			out, err := plan.NewDataSourceConfiguration(
 				dsConf.dsConf.Configuration.Id+"-"+builder.TypeID()+"-"+strconv.Itoa(i),
 				pubsub_datasource.NewPlannerFactory(ctx, plannerConfig),

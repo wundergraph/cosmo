@@ -21,7 +21,7 @@ The following interfaces will extend the existing logic in the custom modules.
 These provide additional control over subscriptions by providing hooks, which are invoked during specific events.
 
 - `SubscriptionOnStartHandler`: Called once at subscription start.
-- `StreamBatchEventHook`: Called each time a batch of events is received from the provider.
+- `StreamReceiveEventHook`: Called each time a batch of events is received from the provider.
 - `StreamPublishEventHook`: Called each time a batch of events is going to be sent to the provider.
 
 ```go
@@ -48,8 +48,9 @@ type OperationContext interface {
 
 // each provider will have its own event type with custom fields
 // the StreamEvent interface is used to allow the hooks system to be provider-agnostic
-// there could be common fields in future, but for now we don't need them
-type StreamEvent interface {}
+type StreamEvent interface {
+    GetData() []byte
+}
 
 // SubscriptionEventConfiguration is the common interface for the subscription event configuration
 type SubscriptionEventConfiguration interface {
@@ -89,29 +90,41 @@ type SubscriptionOnStartHandler interface {
     SubscriptionOnStart(ctx SubscriptionOnStartHookContext) error
 }
 
-type StreamBatchEventHookContext interface {
-    // the request context
-    RequestContext() RequestContext
-    // the subscription event configuration
+type StreamReceiveEventHookContext interface {
+    // Request is the original request received by the router.
+    Request() *http.Request
+    // Logger is the logger for the request
+    Logger() *zap.Logger
+    // Operation is the GraphQL operation
+    Operation() OperationContext
+    // Authentication is the authentication for the request
+    Authentication() authentication.Authentication
+    // SubscriptionEventConfiguration is the subscription event configuration
     SubscriptionEventConfiguration() SubscriptionEventConfiguration
 }
 
-type StreamBatchEventHook interface {
+type StreamReceiveEventHook interface {
     // OnStreamEvents is called each time a batch of events is received from the provider
     // Returning an error will result in a GraphQL error being returned to the client, could be customized returning a StreamHookError.
-    OnStreamEvents(ctx StreamBatchEventHookContext, events []StreamEvent) ([]StreamEvent, error)
+    OnReceiveEvents(ctx StreamReceiveEventHookContext, events []StreamEvent) ([]StreamEvent, error)
 }
 
 type StreamPublishEventHookContext interface {
-    // the request context
-    RequestContext() RequestContext
-    // the publish event configuration
+    // Request is the original request received by the router.
+    Request() *http.Request
+    // Logger is the logger for the request
+    Logger() *zap.Logger
+    // Operation is the GraphQL operation
+    Operation() OperationContext
+    // Authentication is the authentication for the request
+    Authentication() authentication.Authentication
+    // PublishEventConfiguration is the publish event configuration
     PublishEventConfiguration() PublishEventConfiguration
 }
 
 type StreamPublishEventHook interface {
     // OnPublishEvents is called each time a batch of events is going to be sent to the provider
-    // Returning an error will result in a GraphQL error being returned to the client, could be customized returning a StreamHookError.
+    // Returning an error will result in an error being returned and the client will see the mutation failing
     OnPublishEvents(ctx StreamPublishEventHookContext, events []StreamEvent) ([]StreamEvent, error)
 }
 ```
@@ -177,14 +190,14 @@ func init() {
 
 type MyModule struct {}
 
-func (m *MyModule) OnStreamEvents(ctx StreamBatchEventHookContext, events []core.StreamEvent) ([]core.StreamEvent, error) {
+func (m *MyModule) OnReceiveEvents(ctx StreamReceiveEventHookContext, events []core.StreamEvent) ([]core.StreamEvent, error) {
     // check if the provider is nats
-    if ctx.StreamContext().ProviderType() != pubsub.ProviderTypeNats {
+    if ctx.SubscriptionEventConfiguration().ProviderType() != pubsub.ProviderTypeNats {
         return events, nil
     }
 
     // check if the provider id is the one expected by the module
-    if ctx.StreamContext().ProviderID() != "my-nats" {
+    if ctx.SubscriptionEventConfiguration().ProviderID() != "my-nats" {
         return events, nil
     }
 
@@ -195,13 +208,13 @@ func (m *MyModule) OnStreamEvents(ctx StreamBatchEventHookContext, events []core
     }
 
     // check if the client is authenticated
-    if ctx.RequestContext().Authentication() == nil {
+    if ctx.Authentication() == nil {
         // if the client is not authenticated, return no events
         return events, nil
     }
 
     // check if the client is allowed to subscribe to the stream
-    clientAllowedEntitiesIds, found := ctx.RequestContext().Authentication().Claims()["allowedEntitiesIds"]
+    clientAllowedEntitiesIds, found := ctx.Authentication().Claims()["allowedEntitiesIds"]
     if !found {
         return events, fmt.Errorf("client is not allowed to subscribe to the stream")
     }
@@ -266,7 +279,7 @@ func (m *MyModule) Module() core.ModuleInfo {
 
 // Interface guards
 var (
-    _ core.StreamBatchEventHook = (*MyModule)(nil)
+    _ core.StreamReceiveEventHook = (*MyModule)(nil)
 )
 ```
 
