@@ -184,6 +184,7 @@ jobs:
         env:
           ALLOW_EMPTY_PASSWORD: yes
           REDIS_NODES: "redis-0,redis-1,redis-2"
+          REDIS_CLUSTER_ANNOUNCE_IP: redis-0
           REDIS_CLUSTER_REPLICAS: 0
           REDIS_CLUSTER_CREATOR: yes
         ports:
@@ -194,6 +195,7 @@ jobs:
         env:
           ALLOW_EMPTY_PASSWORD: yes
           REDIS_NODES: "redis-0,redis-1,redis-2"
+          REDIS_CLUSTER_ANNOUNCE_IP: redis-1
         ports:
           - 7002:6379
       redis-2:
@@ -201,6 +203,7 @@ jobs:
         env:
           ALLOW_EMPTY_PASSWORD: yes
           REDIS_NODES: "redis-0,redis-1,redis-2"
+          REDIS_CLUSTER_ANNOUNCE_IP: redis-2
         ports:
           - 7003:6379
       kafka:
