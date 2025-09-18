@@ -484,9 +484,9 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 		onPublishEventsFns[i] = NewPubSubOnPublishEventsHook(fn)
 	}
 
-	onStreamEventsFns := make([]pubsub_datasource.OnStreamEventsFn, len(l.subscriptionHooks.onStreamEvents))
-	for i, fn := range l.subscriptionHooks.onStreamEvents {
-		onStreamEventsFns[i] = NewPubSubOnStreamEventsHook(fn)
+	onReceiveEventsFns := make([]pubsub_datasource.OnReceiveEventsFn, len(l.subscriptionHooks.onReceiveEvents))
+	for i, fn := range l.subscriptionHooks.onReceiveEvents {
+		onReceiveEventsFns[i] = NewPubSubOnReceiveEventsHook(fn)
 	}
 
 	factoryProviders, factoryDataSources, err := pubsub.BuildProvidersAndDataSources(
@@ -498,7 +498,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 		l.resolver.InstanceData().ListenAddress,
 		pubsub_datasource.Hooks{
 			SubscriptionOnStart: subscriptionOnStartFns,
-			OnStreamEvents:      onStreamEventsFns,
+			OnReceiveEvents:     onReceiveEventsFns,
 			OnPublishEvents:     onPublishEventsFns,
 		},
 	)

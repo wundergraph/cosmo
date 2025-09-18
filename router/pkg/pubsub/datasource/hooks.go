@@ -6,15 +6,15 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
-type SubscriptionOnStartFn func(ctx resolve.StartupHookContext, subConf SubscriptionEventConfiguration) (error)
+type SubscriptionOnStartFn func(ctx resolve.StartupHookContext, subConf SubscriptionEventConfiguration) error
 
 type OnPublishEventsFn func(ctx context.Context, pubConf PublishEventConfiguration, evts []StreamEvent) ([]StreamEvent, error)
 
-type OnStreamEventsFn func(ctx context.Context, subConf SubscriptionEventConfiguration, evts []StreamEvent) ([]StreamEvent, error)
+type OnReceiveEventsFn func(ctx context.Context, subConf SubscriptionEventConfiguration, evts []StreamEvent) ([]StreamEvent, error)
 
 // Hooks contains hooks for the pubsub providers and data sources
 type Hooks struct {
 	SubscriptionOnStart []SubscriptionOnStartFn
-	OnStreamEvents      []OnStreamEventsFn
+	OnReceiveEvents     []OnReceiveEventsFn
 	OnPublishEvents     []OnPublishEventsFn
 }

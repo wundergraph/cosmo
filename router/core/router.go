@@ -651,7 +651,7 @@ func (r *Router) initModules(ctx context.Context) error {
 		}
 
 		if handler, ok := moduleInstance.(StreamReceiveEventHook); ok {
-			r.subscriptionHooks.onStreamEvents = append(r.subscriptionHooks.onStreamEvents, handler.OnReceiveEvents)
+			r.subscriptionHooks.onReceiveEvents = append(r.subscriptionHooks.onReceiveEvents, handler.OnReceiveEvents)
 		}
 
 		r.modules = append(r.modules, moduleInstance)

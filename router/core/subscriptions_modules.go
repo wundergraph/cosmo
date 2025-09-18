@@ -301,7 +301,7 @@ func (c *pubSubStreamReceiveEventHookContext) SubscriptionEventConfiguration() d
 	return c.subscriptionEventConfiguration
 }
 
-func NewPubSubOnStreamEventsHook(fn func(ctx StreamReceiveEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error)) datasource.OnStreamEventsFn {
+func NewPubSubOnReceiveEventsHook(fn func(ctx StreamReceiveEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error)) datasource.OnReceiveEventsFn {
 	if fn == nil {
 		return nil
 	}

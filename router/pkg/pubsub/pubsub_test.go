@@ -60,7 +60,7 @@ func TestBuild_OK(t *testing.T) {
 
 	mockPubSubProvider.On("ID").Return("provider-1")
 	mockPubSubProvider.On("SetHooks", datasource.Hooks{
-		OnStreamEvents:  []datasource.OnStreamEventsFn(nil),
+		OnReceiveEvents: []datasource.OnReceiveEventsFn(nil),
 		OnPublishEvents: []datasource.OnPublishEventsFn(nil),
 	}).Return(nil)
 
@@ -239,7 +239,7 @@ func TestBuild_ShouldNotInitializeProviderIfNotUsed(t *testing.T) {
 
 	mockPubSubUsedProvider.On("ID").Return("provider-2")
 	mockPubSubUsedProvider.On("SetHooks", datasource.Hooks{
-		OnStreamEvents:  []datasource.OnStreamEventsFn(nil),
+		OnReceiveEvents: []datasource.OnReceiveEventsFn(nil),
 		OnPublishEvents: []datasource.OnPublishEventsFn(nil),
 	}).Return(nil)
 

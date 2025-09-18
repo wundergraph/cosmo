@@ -32,12 +32,12 @@ func (s *subscriptionEventUpdater) updateEvents(events []StreamEvent) {
 }
 
 func (s *subscriptionEventUpdater) Update(events []StreamEvent) error {
-	if len(s.hooks.OnStreamEvents) == 0 {
+	if len(s.hooks.OnReceiveEvents) == 0 {
 		s.updateEvents(events)
 		return nil
 	}
 
-	processedEvents, err := applyStreamEventHooks(s.ctx, s.subscriptionEventConfiguration, events, s.hooks.OnStreamEvents)
+	processedEvents, err := applyStreamEventHooks(s.ctx, s.subscriptionEventConfiguration, events, s.hooks.OnReceiveEvents)
 	// updates the events even if the hooks fail
 	// if a hook doesn't want to send the events, it should return no events!
 	s.updateEvents(processedEvents)
@@ -83,7 +83,7 @@ func applyStreamEventHooks(
 	ctx context.Context,
 	cfg SubscriptionEventConfiguration,
 	events []StreamEvent,
-	hooks []OnStreamEventsFn) ([]StreamEvent, error) {
+	hooks []OnReceiveEventsFn) ([]StreamEvent, error) {
 	currentEvents := events
 	for _, hook := range hooks {
 		var err error

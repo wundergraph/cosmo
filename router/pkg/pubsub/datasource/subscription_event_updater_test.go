@@ -95,7 +95,7 @@ func TestSubscriptionEventUpdater_Update_WithHooks_Success(t *testing.T) {
 		ctx:                            ctx,
 		subscriptionEventConfiguration: config,
 		hooks: Hooks{
-			OnStreamEvents: []OnStreamEventsFn{testHook},
+			OnReceiveEvents: []OnReceiveEventsFn{testHook},
 		},
 	}
 
@@ -136,7 +136,7 @@ func TestSubscriptionEventUpdater_Update_WithHooks_Error(t *testing.T) {
 		ctx:                            ctx,
 		subscriptionEventConfiguration: config,
 		hooks: Hooks{
-			OnStreamEvents: []OnStreamEventsFn{testHook},
+			OnReceiveEvents: []OnReceiveEventsFn{testHook},
 		},
 	}
 
@@ -181,7 +181,7 @@ func TestSubscriptionEventUpdater_Update_WithMultipleHooks_Success(t *testing.T)
 		ctx:                            ctx,
 		subscriptionEventConfiguration: config,
 		hooks: Hooks{
-			OnStreamEvents: []OnStreamEventsFn{hook1, hook2},
+			OnReceiveEvents: []OnReceiveEventsFn{hook1, hook2},
 		},
 	}
 
@@ -263,7 +263,7 @@ func TestSubscriptionEventUpdater_SetHooks(t *testing.T) {
 	}
 
 	hooks := Hooks{
-		OnStreamEvents: []OnStreamEventsFn{testHook},
+		OnReceiveEvents: []OnReceiveEventsFn{testHook},
 	}
 
 	updater := &subscriptionEventUpdater{
@@ -292,7 +292,7 @@ func TestNewSubscriptionEventUpdater(t *testing.T) {
 	}
 
 	hooks := Hooks{
-		OnStreamEvents: []OnStreamEventsFn{testHook},
+		OnReceiveEvents: []OnReceiveEventsFn{testHook},
 	}
 
 	updater := NewSubscriptionEventUpdater(ctx, config, hooks, mockUpdater, zap.NewNop())
@@ -320,7 +320,7 @@ func TestApplyStreamEventHooks_NoHooks(t *testing.T) {
 		&testEvent{data: []byte("test data")},
 	}
 
-	result, err := applyStreamEventHooks(ctx, config, originalEvents, []OnStreamEventsFn{})
+	result, err := applyStreamEventHooks(ctx, config, originalEvents, []OnReceiveEventsFn{})
 
 	assert.NoError(t, err)
 	assert.Equal(t, originalEvents, result)
@@ -344,7 +344,7 @@ func TestApplyStreamEventHooks_SingleHook_Success(t *testing.T) {
 		return modifiedEvents, nil
 	}
 
-	result, err := applyStreamEventHooks(ctx, config, originalEvents, []OnStreamEventsFn{hook})
+	result, err := applyStreamEventHooks(ctx, config, originalEvents, []OnReceiveEventsFn{hook})
 
 	assert.NoError(t, err)
 	assert.Equal(t, modifiedEvents, result)
@@ -366,7 +366,7 @@ func TestApplyStreamEventHooks_SingleHook_Error(t *testing.T) {
 		return nil, hookError
 	}
 
-	result, err := applyStreamEventHooks(ctx, config, originalEvents, []OnStreamEventsFn{hook})
+	result, err := applyStreamEventHooks(ctx, config, originalEvents, []OnReceiveEventsFn{hook})
 
 	assert.Error(t, err)
 	assert.Equal(t, hookError, err)
@@ -400,7 +400,7 @@ func TestApplyStreamEventHooks_MultipleHooks_Success(t *testing.T) {
 		return []StreamEvent{&testEvent{data: []byte("final")}}, nil
 	}
 
-	result, err := applyStreamEventHooks(ctx, config, originalEvents, []OnStreamEventsFn{hook1, hook2, hook3})
+	result, err := applyStreamEventHooks(ctx, config, originalEvents, []OnReceiveEventsFn{hook1, hook2, hook3})
 
 	select {
 	case receivedArgs1 := <-receivedArgs1:
@@ -459,7 +459,7 @@ func TestApplyStreamEventHooks_MultipleHooks_MiddleHookError(t *testing.T) {
 		return []StreamEvent{&testEvent{data: []byte("final")}}, nil
 	}
 
-	result, err := applyStreamEventHooks(ctx, config, originalEvents, []OnStreamEventsFn{hook1, hook2, hook3})
+	result, err := applyStreamEventHooks(ctx, config, originalEvents, []OnReceiveEventsFn{hook1, hook2, hook3})
 
 	assert.Error(t, err)
 	assert.Equal(t, middleHookError, err)
@@ -558,7 +558,7 @@ func TestSubscriptionEventUpdater_Update_WithStreamHookError_CloseSubscription(t
 	// Create a mock StreamHookError with CloseSubscription=true
 	mockHookError := &mockStreamHookError{
 		closeSubscription: true,
-		message:         "subscription should close",
+		message:           "subscription should close",
 	}
 
 	// Define hook that returns a StreamHookError with CloseSubscription=true
@@ -571,7 +571,7 @@ func TestSubscriptionEventUpdater_Update_WithStreamHookError_CloseSubscription(t
 		ctx:                            ctx,
 		subscriptionEventConfiguration: config,
 		hooks: Hooks{
-			OnStreamEvents: []OnStreamEventsFn{testHook},
+			OnReceiveEvents: []OnReceiveEventsFn{testHook},
 		},
 	}
 
@@ -598,7 +598,7 @@ func TestSubscriptionEventUpdater_Update_WithStreamHookError_NoCloseSubscription
 	// Create a mock StreamHookError with CloseSubscription=false
 	mockHookError := &mockStreamHookError{
 		closeSubscription: false,
-		message:         "subscription should not close",
+		message:           "subscription should not close",
 	}
 
 	// Define hook that returns a StreamHookError with CloseSubscription=false
@@ -611,7 +611,7 @@ func TestSubscriptionEventUpdater_Update_WithStreamHookError_NoCloseSubscription
 		ctx:                            ctx,
 		subscriptionEventConfiguration: config,
 		hooks: Hooks{
-			OnStreamEvents: []OnStreamEventsFn{testHook},
+			OnReceiveEvents: []OnReceiveEventsFn{testHook},
 		},
 	}
 
@@ -648,7 +648,7 @@ func TestSubscriptionEventUpdater_Update_WithHooks_Error_LoggerWritesError(t *te
 	// Test with a real zap logger to verify error logging behavior
 	// The logger.Error() call should be executed when an error occurs
 	updater := NewSubscriptionEventUpdater(ctx, config, Hooks{
-		OnStreamEvents: []OnStreamEventsFn{testHook},
+		OnReceiveEvents: []OnReceiveEventsFn{testHook},
 	}, mockUpdater, logger)
 
 	err := updater.Update(events)
@@ -657,7 +657,7 @@ func TestSubscriptionEventUpdater_Update_WithHooks_Error_LoggerWritesError(t *te
 	assert.NoError(t, err)
 	// Assert that Update was not called on the eventUpdater
 	mockUpdater.AssertNotCalled(t, "Update")
-	
+
 	msgs := logObserver.FilterMessageSnippet("An error occurred while processing stream events hooks").TakeAll()
 	assert.Equal(t, 1, len(msgs))
 }
@@ -665,7 +665,7 @@ func TestSubscriptionEventUpdater_Update_WithHooks_Error_LoggerWritesError(t *te
 // mockStreamHookError implements the CloseSubscription() method for testing
 type mockStreamHookError struct {
 	closeSubscription bool
-	message         string
+	message           string
 }
 
 func (e *mockStreamHookError) Error() string {
@@ -675,5 +675,3 @@ func (e *mockStreamHookError) Error() string {
 func (e *mockStreamHookError) CloseSubscription() bool {
 	return e.closeSubscription
 }
-
-
