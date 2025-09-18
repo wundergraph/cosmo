@@ -199,6 +199,7 @@ jobs:
           ALLOW_EMPTY_PASSWORD: yes
           REDIS_NODES: "redis"
           REDIS_CLUSTER_REPLICAS: 0
+          REDIS_CLUSTER_CREATOR: yes
       kafka:
         image: bitnamilegacy/kafka:3.7.0
         options: >-
