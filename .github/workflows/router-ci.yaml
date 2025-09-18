@@ -236,7 +236,6 @@ jobs:
           sleep-duration: 5
       - name: Configure Redis Authentication & ACL
         run: |
-#          sudo apt-get install -y redis-tools
           docker ps -a
           # Set a password for each master node
           for port in 7001 7002 7003; do
