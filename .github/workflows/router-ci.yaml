@@ -180,7 +180,7 @@ jobs:
           - 8222:8222
           - 6222:6222
       redis:
-        image: bitnami/redis-cluster:7.2
+        image: bitnamilegacy/redis-cluster:7.2
         # Set health checks to wait until redis has started
         options: >-
           --health-cmd "redis-cli ping"
