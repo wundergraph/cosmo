@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/events"
-	stream_batch "github.com/wundergraph/cosmo/router-tests/modules/stream-batch"
+	stream_receive "github.com/wundergraph/cosmo/router-tests/modules/stream-receive"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -18,7 +18,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
 )
 
-func TestBatchHook(t *testing.T) {
+func TestReceiveHook(t *testing.T) {
 	t.Parallel()
 
 	const Timeout = time.Second * 10
@@ -28,13 +28,13 @@ func TestBatchHook(t *testing.T) {
 		errValue  error
 	}
 
-	t.Run("Test Batch hook is called", func(t *testing.T) {
+	t.Run("Test Receive hook is called", func(t *testing.T) {
 		t.Parallel()
 
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
-				"batchModule": stream_batch.StreamBatchModule{},
+				"streamReceiveModule": stream_receive.StreamReceiveModule{},
 			},
 		}
 
@@ -43,7 +43,7 @@ func TestBatchHook(t *testing.T) {
 			EnableKafka:              true,
 			RouterOptions: []core.Option{
 				core.WithModulesConfig(cfg.Modules),
-				core.WithCustomModules(&stream_batch.StreamBatchModule{}),
+				core.WithCustomModules(&stream_receive.StreamReceiveModule{}),
 			},
 			LogObservation: testenv.LogObservationConfig{
 				Enabled:  true,
@@ -101,14 +101,14 @@ func TestBatchHook(t *testing.T) {
 		})
 	})
 
-	t.Run("Test Batch hook could change events", func(t *testing.T) {
+	t.Run("Test Receive hook could change events", func(t *testing.T) {
 		t.Parallel()
 
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
-				"streamBatchModule": stream_batch.StreamBatchModule{
-					Callback: func(ctx core.StreamBatchEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
+				"streamReceiveModule": stream_receive.StreamReceiveModule{
+					Callback: func(ctx core.StreamReceiveEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
 						for _, event := range events {
 							evt, ok := event.(*kafka.Event)
 							if !ok {
@@ -128,7 +128,7 @@ func TestBatchHook(t *testing.T) {
 			EnableKafka:              true,
 			RouterOptions: []core.Option{
 				core.WithModulesConfig(cfg.Modules),
-				core.WithCustomModules(&stream_batch.StreamBatchModule{}),
+				core.WithCustomModules(&stream_receive.StreamReceiveModule{}),
 			},
 			LogObservation: testenv.LogObservationConfig{
 				Enabled:  true,

@@ -64,12 +64,27 @@ type SubscriptionOnStartHookContext interface {
 }
 
 type pubSubPublishEventHookContext struct {
-	requestContext            RequestContext
+	request                   *http.Request
+	logger                    *zap.Logger
+	operation                 OperationContext
+	authentication            authentication.Authentication
 	publishEventConfiguration datasource.PublishEventConfiguration
 }
 
-func (c *pubSubPublishEventHookContext) RequestContext() RequestContext {
-	return c.requestContext
+func (c *pubSubPublishEventHookContext) Request() *http.Request {
+	return c.request
+}
+
+func (c *pubSubPublishEventHookContext) Logger() *zap.Logger {
+	return c.logger
+}
+
+func (c *pubSubPublishEventHookContext) Operation() OperationContext {
+	return c.operation
+}
+
+func (c *pubSubPublishEventHookContext) Authentication() authentication.Authentication {
+	return c.authentication
 }
 
 func (c *pubSubPublishEventHookContext) PublishEventConfiguration() datasource.PublishEventConfiguration {
@@ -201,23 +216,35 @@ func NewEngineSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHookContext
 	}
 }
 
-type StreamBatchEventHookContext interface {
-	// the request context
-	RequestContext() RequestContext
-	// the subscription event configuration
+type StreamReceiveEventHookContext interface {
+	// Request is the original request received by the router.
+	Request() *http.Request
+	// Logger is the logger for the request
+	Logger() *zap.Logger
+	// Operation is the GraphQL operation
+	Operation() OperationContext
+	// Authentication is the authentication for the request
+	Authentication() authentication.Authentication
+	// SubscriptionEventConfiguration the subscription event configuration
 	SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration
 }
 
-type StreamBatchEventHook interface {
-	// OnStreamEvents is called each time a batch of events is received from the provider
+type StreamReceiveEventHook interface {
+	// OnReceiveEvents is called each time a batch of events is received from the provider
 	// Returning an error will result in a GraphQL error being returned to the client, could be customized returning a StreamHookError.
-	OnStreamEvents(ctx StreamBatchEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error)
+	OnReceiveEvents(ctx StreamReceiveEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error)
 }
 
 type StreamPublishEventHookContext interface {
-	// the request context
-	RequestContext() RequestContext
-	// the publish event configuration
+	// Request is the original request received by the router.
+	Request() *http.Request
+	// Logger is the logger for the request
+	Logger() *zap.Logger
+	// Operation is the GraphQL operation
+	Operation() OperationContext
+	// Authentication is the authentication for the request
+	Authentication() authentication.Authentication
+	// PublishEventConfiguration the publish event configuration
 	PublishEventConfiguration() datasource.PublishEventConfiguration
 }
 
@@ -235,7 +262,10 @@ func NewPubSubOnPublishEventsHook(fn func(ctx StreamPublishEventHookContext, eve
 	return func(ctx context.Context, pubConf datasource.PublishEventConfiguration, evts []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
 		requestContext := getRequestContext(ctx)
 		hookCtx := &pubSubPublishEventHookContext{
-			requestContext:            requestContext,
+			request:                   requestContext.Request(),
+			logger:                    requestContext.Logger(),
+			operation:                 requestContext.Operation(),
+			authentication:            requestContext.Authentication(),
 			publishEventConfiguration: pubConf,
 		}
 
@@ -243,28 +273,46 @@ func NewPubSubOnPublishEventsHook(fn func(ctx StreamPublishEventHookContext, eve
 	}
 }
 
-type pubSubStreamBatchEventHookContext struct {
-	requestContext                 RequestContext
+type pubSubStreamReceiveEventHookContext struct {
+	request                        *http.Request
+	logger                         *zap.Logger
+	operation                      OperationContext
+	authentication                 authentication.Authentication
 	subscriptionEventConfiguration datasource.SubscriptionEventConfiguration
 }
 
-func (c *pubSubStreamBatchEventHookContext) RequestContext() RequestContext {
-	return c.requestContext
+func (c *pubSubStreamReceiveEventHookContext) Request() *http.Request {
+	return c.request
 }
 
-func (c *pubSubStreamBatchEventHookContext) SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration {
+func (c *pubSubStreamReceiveEventHookContext) Logger() *zap.Logger {
+	return c.logger
+}
+
+func (c *pubSubStreamReceiveEventHookContext) Operation() OperationContext {
+	return c.operation
+}
+
+func (c *pubSubStreamReceiveEventHookContext) Authentication() authentication.Authentication {
+	return c.authentication
+}
+
+func (c *pubSubStreamReceiveEventHookContext) SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration {
 	return c.subscriptionEventConfiguration
 }
 
-func NewPubSubOnStreamEventsHook(fn func(ctx StreamBatchEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error)) datasource.OnStreamEventsFn {
+func NewPubSubOnStreamEventsHook(fn func(ctx StreamReceiveEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error)) datasource.OnStreamEventsFn {
 	if fn == nil {
 		return nil
 	}
 
 	return func(ctx context.Context, subConf datasource.SubscriptionEventConfiguration, evts []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
 		requestContext := getRequestContext(ctx)
-		hookCtx := &pubSubStreamBatchEventHookContext{
-			requestContext:                 requestContext,
+		hookCtx := &pubSubStreamReceiveEventHookContext{
+			request:                        requestContext.Request(),
+			logger:                         requestContext.Logger(),
+			operation:                      requestContext.Operation(),
+			authentication:                 requestContext.Authentication(),
 			subscriptionEventConfiguration: subConf,
 		}
 

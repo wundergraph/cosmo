@@ -650,8 +650,8 @@ func (r *Router) initModules(ctx context.Context) error {
 			r.subscriptionHooks.onPublishEvents = append(r.subscriptionHooks.onPublishEvents, handler.OnPublishEvents)
 		}
 
-		if handler, ok := moduleInstance.(StreamBatchEventHook); ok {
-			r.subscriptionHooks.onStreamEvents = append(r.subscriptionHooks.onStreamEvents, handler.OnStreamEvents)
+		if handler, ok := moduleInstance.(StreamReceiveEventHook); ok {
+			r.subscriptionHooks.onStreamEvents = append(r.subscriptionHooks.onStreamEvents, handler.OnReceiveEvents)
 		}
 
 		r.modules = append(r.modules, moduleInstance)

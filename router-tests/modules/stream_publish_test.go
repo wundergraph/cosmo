@@ -261,7 +261,7 @@ func TestPublishHook(t *testing.T) {
 							return events, nil
 						}
 
-						employeeID := ctx.RequestContext().Operation().Variables().GetInt("employeeID")
+						employeeID := ctx.Operation().Variables().GetInt("employeeID")
 
 						newEvents := []datasource.StreamEvent{}
 						for _, event := range events {

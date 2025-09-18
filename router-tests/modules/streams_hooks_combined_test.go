@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/events"
-	stream_batch "github.com/wundergraph/cosmo/router-tests/modules/stream-batch"
 	stream_publish "github.com/wundergraph/cosmo/router-tests/modules/stream-publish"
+	stream_receive "github.com/wundergraph/cosmo/router-tests/modules/stream-receive"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -35,8 +35,8 @@ func TestStreamsHooksCombined(t *testing.T) {
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
-				"streamBatchModule": stream_batch.StreamBatchModule{
-					Callback: func(ctx core.StreamBatchEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
+				"streamReceiveModule": stream_receive.StreamReceiveModule{
+					Callback: func(ctx core.StreamReceiveEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
 						for _, event := range events {
 							evt, ok := event.(*kafka.Event)
 							if !ok {
@@ -76,7 +76,7 @@ func TestStreamsHooksCombined(t *testing.T) {
 			EnableKafka:              true,
 			RouterOptions: []core.Option{
 				core.WithModulesConfig(cfg.Modules),
-				core.WithCustomModules(&stream_publish.PublishModule{}, &stream_batch.StreamBatchModule{}),
+				core.WithCustomModules(&stream_publish.PublishModule{}, &stream_receive.StreamReceiveModule{}),
 			},
 			LogObservation: testenv.LogObservationConfig{
 				Enabled:  true,
