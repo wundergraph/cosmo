@@ -238,9 +238,11 @@ jobs:
         run: |
           docker ps -a
           # Set a password for each master node
-          for port in 6379; do
-            docker exec -it $(docker ps --filter "ancestor=redis:7" -q | head -n 1) redis-cli -h 127.0.0.1 -p $port ACL SETUSER cosmo on ">test" "~*" "+@all"
-            docker exec -it $(docker ps --filter "ancestor=redis:7" -q | head -n 1) redis-cli -u "redis://cosmo:test@127.0.0.1:$port" ping
+          echo 'redis() { docker exec $(docker ps --filter "ancestor=redis" -q | head -n 1) redis-cli "$@"; }' >> redis-shortcut.sh
+          source redis-shortcut.sh
+          for pot in 6379; do
+            redis -h 127.0.0.1 -p $port ACL SETUSER cosmo on ">test" "~*" "+@all"
+            redis -u "redis://cosmo:test@127.0.0.1:$port" ping
             echo "ACL user 'cosmo' created with full access on port $port"
           done
       - name: Run Integration tests ${{ matrix.test_target }}
