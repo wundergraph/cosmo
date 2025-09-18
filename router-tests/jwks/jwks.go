@@ -52,15 +52,14 @@ func (s *Server) Token(claims map[string]any) (string, error) {
 
 func (s *Server) TokenForKID(kid string, claims map[string]any, useInvalidKID bool) (string, error) {
 	provider, ok := s.providers[kid]
-	if !useInvalidKID && !ok {
-		return "", jwt.ErrInvalidKey
-	} else if useInvalidKID {
-		// If we don't care about the kid we don't care about the provider
-		// we just get the first random provider provided
+	if useInvalidKID {
+		// If we don't care about the kid, use any available provider
 		for _, pr := range s.providers {
 			provider = pr
 			break
 		}
+	} else if !ok {
+		return "", jwt.ErrInvalidKey
 	}
 
 	token := jwt.NewWithClaims(provider.SigningMethod(), jwt.MapClaims(claims))
