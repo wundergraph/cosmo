@@ -18,6 +18,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/nats-io/nuid"
 	"github.com/wundergraph/cosmo/router/internal/track"
+	"github.com/wundergraph/cosmo/router/pkg/connect_rpc"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
@@ -839,6 +840,17 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("failed to create redis client: %w", err)
 		}
+	}
+
+	if r.connectRPC.Enabled {
+		rpcServer := connect_rpc.NewConnectRPCServer(nil)
+
+		err := rpcServer.Start()
+		if err != nil {
+			return fmt.Errorf("failed to start connect rpc server: %w", err)
+		}
+
+		r.connectRPCServer = rpcServer
 	}
 
 	if r.mcp.Enabled {
@@ -2101,6 +2113,12 @@ func WithCacheWarmupConfig(cfg *config.CacheWarmupConfiguration) Option {
 func WithMCP(cfg config.MCPConfiguration) Option {
 	return func(r *Router) {
 		r.mcp = cfg
+	}
+}
+
+func WithConnectRPC(cfg config.ConnectRPCConfiguration) Option {
+	return func(r *Router) {
+		r.connectRPC = cfg
 	}
 }
 

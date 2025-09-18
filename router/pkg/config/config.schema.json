@@ -1942,6 +1942,42 @@
         }
       }
     },
+    "connect_rpc": {
+      "type": "object",
+      "description": "The configuration for Connect RPC. Connect RPC allows exposing GraphQL operations as RPC endpoints.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable Connect RPC support. If the value is true, GraphQL operations can be accessed via Connect RPC protocol."
+        },
+        "storage": {
+          "type": "object",
+          "description": "Storage provider configuration for the Connect RPC server. This specifies where GraphQL operations are loaded from.",
+          "additionalProperties": false,
+          "properties": {
+            "provider_id": {
+              "type": "string",
+              "description": "The ID of the storage provider to use for loading GraphQL operations. Only storage provider of type 'file_system' are supported. The provider must be configured in the storage_providers section."
+            }
+          },
+          "required": ["provider_id"]
+        },
+        "server": {
+          "type": "object",
+          "description": "Server configuration for Connect RPC.",
+          "additionalProperties": false,
+          "properties": {
+            "listen_address": {
+              "type": "string",
+              "description": "The address on which the Connect RPC server listens for incoming requests. The address is specified as a string with the format 'host:port'.",
+              "format": "hostname-port"
+            }
+          }
+        }
+      }
+    },
     "mcp": {
       "type": "object",
       "description": "The configuration for the Model Context Protocol (MCP) server. MCP allows AI models to interact with your GraphQL APIs. By exposing individual GraphQL operations to the model, you can open your graph to empower AI agents working with your data. See https://cosmo-docs.wundergraph.com/router/mcp for more information.",

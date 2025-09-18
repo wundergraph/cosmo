@@ -11,6 +11,7 @@ import (
 	rd "github.com/wundergraph/cosmo/router/internal/rediscloser"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/connect_rpc"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/selfregister"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
@@ -115,6 +116,8 @@ type Config struct {
 	cacheWarmup                   *config.CacheWarmupConfiguration
 	subscriptionHeartbeatInterval time.Duration
 	hostName                      string
+	connectRPC                    config.ConnectRPCConfiguration
+	connectRPCServer              *connect_rpc.ConnectRPCServer
 	mcp                           config.MCPConfiguration
 	plugins                       config.PluginsConfiguration
 	tracingAttributes             []config.CustomAttribute
