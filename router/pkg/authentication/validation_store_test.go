@@ -21,7 +21,7 @@ func TestValidationStore(t *testing.T) {
 
 		t.Run("accepts supported algorithms without filter", func(t *testing.T) {
 			inner := jwkset.NewMemoryStorage()
-			store := NewValidationStore(nil, inner, nil)
+			store, _ := NewValidationStore(nil, inner, nil, false)
 			keys := []jwkset.JWK{
 				genRSAJWK(t, "rsa1", jwkset.AlgRS256),
 				genHMACJWK(t, "hmac1", jwkset.AlgHS256),
@@ -37,7 +37,7 @@ func TestValidationStore(t *testing.T) {
 
 		t.Run("skips disallowed algorithms when filtered", func(t *testing.T) {
 			inner := jwkset.NewMemoryStorage()
-			store := NewValidationStore(zap.NewNop(), inner, []string{"RS256"})
+			store, _ := NewValidationStore(zap.NewNop(), inner, []string{"RS256"}, false)
 			allowed := genRSAJWK(t, "rsa-allowed", jwkset.AlgRS256)
 			disallowed := genHMACJWK(t, "hmac-blocked", jwkset.AlgHS256)
 			requires.NoError(t, store.KeyWrite(ctx, allowed))
@@ -56,7 +56,7 @@ func TestValidationStore(t *testing.T) {
 		disallowed := genHMACJWK(t, "hmac-1", jwkset.AlgHS256)
 		requires.NoError(t, inner.KeyWrite(ctx, allowed))
 		requires.NoError(t, inner.KeyWrite(ctx, disallowed))
-		store := NewValidationStore(zap.NewNop(), inner, []string{"RS256"})
+		store, _ := NewValidationStore(zap.NewNop(), inner, []string{"RS256"}, false)
 
 		_, err := store.KeyRead(ctx, allowed.Marshal().KID)
 		requires.NoError(t, err)
@@ -71,7 +71,7 @@ func TestValidationStore(t *testing.T) {
 		disallowed := genHMACJWK(t, "hmac-1", jwkset.AlgHS256)
 		requires.NoError(t, inner.KeyWrite(ctx, allowed))
 		requires.NoError(t, inner.KeyWrite(ctx, disallowed))
-		store := NewValidationStore(zap.NewNop(), inner, []string{"RS256"})
+		store, _ := NewValidationStore(zap.NewNop(), inner, []string{"RS256"}, false)
 
 		keys, err := store.KeyReadAll(ctx)
 		requires.NoError(t, err)
@@ -83,7 +83,7 @@ func TestValidationStore(t *testing.T) {
 	t.Run("verify KeyReplaceAll", func(t *testing.T) {
 		ctx := context.Background()
 		inner := jwkset.NewMemoryStorage()
-		store := NewValidationStore(zap.NewNop(), inner, []string{"RS256"})
+		store, _ := NewValidationStore(zap.NewNop(), inner, []string{"RS256"}, false)
 
 		allowed := genRSAJWK(t, "rsa-1", jwkset.AlgRS256)
 		disallowed := genHMACJWK(t, "hmac-1", jwkset.AlgHS256)
@@ -99,7 +99,7 @@ func TestValidationStore(t *testing.T) {
 	t.Run("verify KeyDelete", func(t *testing.T) {
 		ctx := context.Background()
 		inner := jwkset.NewMemoryStorage()
-		store := NewValidationStore(zap.NewNop(), inner, nil)
+		store, _ := NewValidationStore(zap.NewNop(), inner, nil, false)
 
 		key := genRSAJWK(t, "rsa-del", jwkset.AlgRS256)
 		requires.NoError(t, store.KeyWrite(ctx, key))
@@ -117,7 +117,7 @@ func TestValidationStore(t *testing.T) {
 		disallowed := genHMACJWK(t, "hmac-json", jwkset.AlgHS256)
 		requires.NoError(t, inner.KeyWrite(ctx, allowed))
 		requires.NoError(t, inner.KeyWrite(ctx, disallowed))
-		store := NewValidationStore(zap.NewNop(), inner, []string{"RS256"})
+		store, _ := NewValidationStore(zap.NewNop(), inner, []string{"RS256"}, false)
 
 		a, err := store.JSON(ctx)
 		requires.NoError(t, err)
@@ -133,7 +133,7 @@ func TestValidationStore(t *testing.T) {
 		disallowed := genHMACJWK(t, "hmac-json", jwkset.AlgHS256)
 		requires.NoError(t, inner.KeyWrite(ctx, allowed))
 		requires.NoError(t, inner.KeyWrite(ctx, disallowed))
-		store := NewValidationStore(zap.NewNop(), inner, []string{"RS256"})
+		store, _ := NewValidationStore(zap.NewNop(), inner, []string{"RS256"}, false)
 
 		a, err := store.JSONPublic(ctx)
 		requires.NoError(t, err)
@@ -149,7 +149,7 @@ func TestValidationStore(t *testing.T) {
 		disallowed := genHMACJWK(t, "hmac-json", jwkset.AlgHS256)
 		requires.NoError(t, inner.KeyWrite(ctx, allowed))
 		requires.NoError(t, inner.KeyWrite(ctx, disallowed))
-		store := NewValidationStore(zap.NewNop(), inner, []string{"RS256"})
+		store, _ := NewValidationStore(zap.NewNop(), inner, []string{"RS256"}, false)
 
 		a, err := store.JSONPrivate(ctx)
 		requires.NoError(t, err)
@@ -165,7 +165,7 @@ func TestValidationStore(t *testing.T) {
 		disallowed := genHMACJWK(t, "hmac-json", jwkset.AlgHS256)
 		requires.NoError(t, inner.KeyWrite(ctx, allowed))
 		requires.NoError(t, inner.KeyWrite(ctx, disallowed))
-		store := NewValidationStore(zap.NewNop(), inner, []string{"RS256"})
+		store, _ := NewValidationStore(zap.NewNop(), inner, []string{"RS256"}, false)
 
 		a, err := store.JSONWithOptions(ctx, jwkset.JWKMarshalOptions{}, jwkset.JWKValidateOptions{})
 		requires.NoError(t, err)
@@ -181,7 +181,7 @@ func TestValidationStore(t *testing.T) {
 		disallowed := genHMACJWK(t, "hmac-json", jwkset.AlgHS256)
 		requires.NoError(t, inner.KeyWrite(ctx, allowed))
 		requires.NoError(t, inner.KeyWrite(ctx, disallowed))
-		store := NewValidationStore(zap.NewNop(), inner, []string{"RS256"})
+		store, _ := NewValidationStore(zap.NewNop(), inner, []string{"RS256"}, false)
 
 		ma, err := store.Marshal(ctx)
 		requires.NoError(t, err)
@@ -197,7 +197,7 @@ func TestValidationStore(t *testing.T) {
 		disallowed := genHMACJWK(t, "hmac-json", jwkset.AlgHS256)
 		requires.NoError(t, inner.KeyWrite(ctx, allowed))
 		requires.NoError(t, inner.KeyWrite(ctx, disallowed))
-		store := NewValidationStore(zap.NewNop(), inner, []string{"RS256"})
+		store, _ := NewValidationStore(zap.NewNop(), inner, []string{"RS256"}, false)
 
 		ma, err := store.MarshalWithOptions(ctx, jwkset.JWKMarshalOptions{}, jwkset.JWKValidateOptions{})
 		requires.NoError(t, err)
