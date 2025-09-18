@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/MicahParks/jwkset"
@@ -46,7 +47,8 @@ type JWKSConfig struct {
 	Algorithm string
 	KeyId     string
 
-	Audiences []string
+	Audiences           []string
+	AllowEmptyAlgorithm bool
 }
 
 type audKey struct {
@@ -56,9 +58,15 @@ type audKey struct {
 
 type audienceSet map[string]struct{}
 
+type keyFuncWithOpts struct {
+	keyFunc             keyfunc.Keyfunc
+	allowEmptyAlgorithm bool
+	allowedAlgorithms   []string
+}
+
 func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKSConfig) (TokenDecoder, error) {
 	audiencesMap := make(map[audKey]audienceSet, len(configs))
-	keyFuncMap := make(map[audKey]keyfunc.Keyfunc, len(configs))
+	keyFuncMap := make(map[audKey]keyFuncWithOpts, len(configs))
 
 	for _, c := range configs {
 		if c.URL != "" {
@@ -68,6 +76,8 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 			}
 
 			l := logger.With(zap.String("url", c.URL))
+
+			newValidationStore, processedAllowedAlgorithms := NewValidationStore(logger, nil, c.AllowedAlgorithms, c.AllowEmptyAlgorithm)
 
 			jwksetHTTPStorageOptions := jwkset.HTTPClientStorageOptions{
 				Client:             newOIDCDiscoveryClient(httpclient.NewRetryableHTTPClient(l)),
@@ -79,7 +89,7 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 					l.Error("Failed to refresh HTTP JWK Set from remote HTTP resource.", zap.Error(err))
 				},
 				RefreshInterval: c.RefreshInterval,
-				Storage:         NewValidationStore(logger, nil, c.AllowedAlgorithms),
+				Storage:         newValidationStore,
 			}
 
 			store, err := jwkset.NewStorageFromHTTP(c.URL, jwksetHTTPStorageOptions)
@@ -100,14 +110,17 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 			if err != nil {
 				return nil, err
 			}
-			keyFuncMap[key] = jwks
+			keyFuncMap[key] = keyFuncWithOpts{
+				keyFunc:             jwks,
+				allowEmptyAlgorithm: c.AllowEmptyAlgorithm,
+				allowedAlgorithms:   processedAllowedAlgorithms,
+			}
 
 		} else if c.Secret != "" {
 			key := audKey{kid: c.KeyId}
 			if _, ok := audiencesMap[key]; ok {
 				return nil, fmt.Errorf("duplicate JWK keyid specified found: %s", c.KeyId)
 			}
-
 			given := jwkset.NewMemoryStorage()
 
 			marshalOptions := jwkset.JWKMarshalOptions{
@@ -151,14 +164,40 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 			if err != nil {
 				return nil, err
 			}
-			keyFuncMap[key] = jwks
+			keyFuncMap[key] = keyFuncWithOpts{
+				keyFunc:           jwks,
+				allowedAlgorithms: []string{c.Algorithm},
+			}
 		}
 	}
 
 	keyFuncWrapper := jwt.Keyfunc(func(token *jwt.Token) (any, error) {
 		var errJoin error
-		for key, keyFunc := range keyFuncMap {
-			pub, err := keyFunc.Keyfunc(token)
+		for key, keyFuncAndOpts := range keyFuncMap {
+			// When an algorithm is actually provided in the jwks the current keyfunc will validate the
+			// jwts algorithm with it. But when no algorithm is provided (alg: none or missing alg)
+			// the default keyfunc will not validate the algorithm as it has nothing to cross check.
+			if keyFuncAndOpts.allowEmptyAlgorithm {
+				// We use the same error messages as keyfunc.Keyfunc for consistency
+				algInter, ok := token.Header["alg"]
+				if !ok {
+					errJoin = errors.Join(errJoin, fmt.Errorf("%w: could not find alg in JWT header", keyfunc.ErrKeyfunc))
+					continue
+				}
+				alg, ok := algInter.(string)
+				if !ok {
+					errJoin = errors.Join(errJoin, fmt.Errorf(`%w: the JWT header did not contain the "alg" parameter, which is required by RFC 7515 section 4.1.1`, keyfunc.ErrKeyfunc))
+					continue
+				}
+
+				// This is a custom validation different from keyfunc.Keyfunc
+				if !slices.Contains(keyFuncAndOpts.allowedAlgorithms, alg) {
+					errJoin = errors.Join(errJoin, fmt.Errorf("%w: could not find alg %s in allow list", keyfunc.ErrKeyfunc, alg))
+					continue
+				}
+			}
+
+			pub, err := keyFuncAndOpts.keyFunc.Keyfunc(token)
 			if err != nil {
 				errJoin = errors.Join(errJoin, err)
 				continue
@@ -168,10 +207,12 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 			if len(expectedAudiences) > 0 {
 				tokenAudiences, err := token.Claims.GetAudience()
 				if err != nil {
-					return nil, fmt.Errorf("could not get audiences from token claims: %w", err)
+					errJoin = errors.Join(errJoin, fmt.Errorf("could not get audiences from token claims: %w", err))
+					continue
 				}
 				if !hasAudience(tokenAudiences, expectedAudiences) {
-					return nil, errUnacceptableAud
+					errJoin = errors.Join(errJoin, errUnacceptableAud)
+					continue
 				}
 			}
 			return pub, nil

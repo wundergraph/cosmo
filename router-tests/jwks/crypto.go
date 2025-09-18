@@ -43,9 +43,12 @@ func (b *baseCrypto) MarshalJWK() (jwkset.JWK, error) {
 	}
 
 	meta := jwkset.JWKMetadataOptions{
-		ALG: b.alg,
 		KID: b.kID,
 		USE: jwkset.UseSig,
+	}
+
+	if b.alg != "" {
+		meta.ALG = b.alg
 	}
 
 	options := jwkset.JWKOptions{
