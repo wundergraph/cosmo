@@ -12,7 +12,7 @@ import {
 import { SDLViewerActions } from "@/components/schema/sdl-viewer";
 import { SDLViewerMonaco } from "@/components/schema/sdl-viewer-monaco";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -303,13 +303,34 @@ export const ProposalDetails = ({
           </div>
 
           <div className="flex flex-1 items-center justify-end gap-1">
-            {state === "DRAFT" && origin === ProposalOrigin.COSMO && (
+            {state === "DRAFT" && (
               <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button className="ml-4" disabled={isApproving || isClosing}>
-                    Review Changes
-                    <ChevronDownIcon className="ml-2 h-4 w-4" />
-                  </Button>
+                <DropdownMenuTrigger asChild disabled={origin !== ProposalOrigin.COSMO}>
+                  {origin === ProposalOrigin.COSMO ? (
+                    <Button
+                      className="ml-4"
+                      disabled={isApproving || isClosing}
+                    >
+                      Review Changes
+                      <ChevronDownIcon className="ml-2 h-4 w-4" />
+                    </Button>
+                  ) : (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span
+                          className={buttonVariants({
+                            className: "ml-4 cursor-not-allowed opacity-60 hover:!bg-primary",
+                          })}
+                        >
+                          Review Changes
+                          <ChevronDownIcon className="ml-2 h-4 w-4" />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        This proposal was created outside of Cosmo and cannot be updated within Cosmo.
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-[500px] p-3">
                   <div className="flex flex-col space-y-4 px-2 py-1">
