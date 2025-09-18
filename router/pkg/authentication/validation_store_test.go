@@ -16,10 +16,13 @@ import (
 
 func TestValidationStore(t *testing.T) {
 	t.Parallel()
+
 	t.Run("verify KeyWrite", func(t *testing.T) {
 		t.Parallel()
+
 		t.Run("accepts supported algorithms without filter", func(t *testing.T) {
 			t.Parallel()
+
 			inner := jwkset.NewMemoryStorage()
 			store, _ := NewValidationStore(nil, inner, nil, false)
 			keys := []jwkset.JWK{
@@ -38,6 +41,7 @@ func TestValidationStore(t *testing.T) {
 
 		t.Run("skips disallowed algorithms when filtered", func(t *testing.T) {
 			t.Parallel()
+
 			inner := jwkset.NewMemoryStorage()
 			store, _ := NewValidationStore(zap.NewNop(), inner, []string{"RS256"}, false)
 			allowed := genRSAJWK(t, "rsa-allowed", jwkset.AlgRS256)
@@ -53,6 +57,7 @@ func TestValidationStore(t *testing.T) {
 
 		t.Run("accepts empty algorithm when allowed", func(t *testing.T) {
 			t.Parallel()
+
 			inner := jwkset.NewMemoryStorage()
 			store, _ := NewValidationStore(zap.NewNop(), inner, []string{"RS256"}, true)
 			ctx := context.Background()
@@ -66,6 +71,7 @@ func TestValidationStore(t *testing.T) {
 
 		t.Run("skips empty algorithm when not allowed", func(t *testing.T) {
 			t.Parallel()
+
 			inner := jwkset.NewMemoryStorage()
 			store, _ := NewValidationStore(zap.NewNop(), inner, []string{"RS256"}, false)
 			ctx := context.Background()
@@ -79,8 +85,10 @@ func TestValidationStore(t *testing.T) {
 
 	t.Run("verify KeyRead", func(t *testing.T) {
 		t.Parallel()
+
 		t.Run("allowed and disallowed algorithms", func(t *testing.T) {
 			t.Parallel()
+
 			ctx := context.Background()
 			inner := jwkset.NewMemoryStorage()
 			allowed := genRSAJWK(t, "rsa-1", jwkset.AlgRS256)
@@ -97,6 +105,7 @@ func TestValidationStore(t *testing.T) {
 
 		t.Run("empty algorithm allowed returns key", func(t *testing.T) {
 			t.Parallel()
+
 			ctx := context.Background()
 			inner := jwkset.NewMemoryStorage()
 			noAlg := genRSAJWK(t, "noalg-read-allowed", jwkset.ALG(""))
@@ -109,6 +118,7 @@ func TestValidationStore(t *testing.T) {
 
 		t.Run("empty algorithm not allowed returns error", func(t *testing.T) {
 			t.Parallel()
+
 			ctx := context.Background()
 			inner := jwkset.NewMemoryStorage()
 			noAlg := genRSAJWK(t, "noalg-read-deny", jwkset.ALG(""))
@@ -122,8 +132,10 @@ func TestValidationStore(t *testing.T) {
 
 	t.Run("verify KeyReadAll", func(t *testing.T) {
 		t.Parallel()
+
 		t.Run("filters to allowed algorithms", func(t *testing.T) {
 			t.Parallel()
+
 			ctx := context.Background()
 			inner := jwkset.NewMemoryStorage()
 			allowed := genRSAJWK(t, "rsa-1", jwkset.AlgRS256)
@@ -141,6 +153,7 @@ func TestValidationStore(t *testing.T) {
 
 		t.Run("includes empty algorithm when allowed", func(t *testing.T) {
 			t.Parallel()
+
 			ctx := context.Background()
 			inner2 := jwkset.NewMemoryStorage()
 			allowed2 := genRSAJWK(t, "rsa-2", jwkset.AlgRS256)
@@ -156,8 +169,10 @@ func TestValidationStore(t *testing.T) {
 
 	t.Run("verify KeyReplaceAll", func(t *testing.T) {
 		t.Parallel()
+
 		t.Run("replaces with only allowed algorithms", func(t *testing.T) {
 			t.Parallel()
+
 			ctx := context.Background()
 			inner := jwkset.NewMemoryStorage()
 			store, _ := NewValidationStore(zap.NewNop(), inner, []string{"RS256"}, false)
@@ -172,6 +187,7 @@ func TestValidationStore(t *testing.T) {
 
 		t.Run("includes empty algorithm on replace when allowed", func(t *testing.T) {
 			t.Parallel()
+
 			ctx := context.Background()
 			inner := jwkset.NewMemoryStorage()
 			store, _ := NewValidationStore(zap.NewNop(), inner, []string{"RS256"}, true)
@@ -186,6 +202,7 @@ func TestValidationStore(t *testing.T) {
 
 	t.Run("verify KeyDelete", func(t *testing.T) {
 		t.Parallel()
+
 		ctx := context.Background()
 		inner := jwkset.NewMemoryStorage()
 		store, _ := NewValidationStore(zap.NewNop(), inner, nil, false)
@@ -201,6 +218,7 @@ func TestValidationStore(t *testing.T) {
 
 	t.Run("verify JSON", func(t *testing.T) {
 		t.Parallel()
+
 		ctx := context.Background()
 		inner := jwkset.NewMemoryStorage()
 		allowed := genRSAJWK(t, "rsa-json", jwkset.AlgRS256)
@@ -218,6 +236,7 @@ func TestValidationStore(t *testing.T) {
 
 	t.Run("verify JSONPublic", func(t *testing.T) {
 		t.Parallel()
+
 		ctx := context.Background()
 		inner := jwkset.NewMemoryStorage()
 		allowed := genRSAJWK(t, "rsa-json", jwkset.AlgRS256)
@@ -235,6 +254,7 @@ func TestValidationStore(t *testing.T) {
 
 	t.Run("verify JSONPrivate", func(t *testing.T) {
 		t.Parallel()
+
 		ctx := context.Background()
 		inner := jwkset.NewMemoryStorage()
 		allowed := genRSAJWK(t, "rsa-json", jwkset.AlgRS256)
@@ -252,6 +272,7 @@ func TestValidationStore(t *testing.T) {
 
 	t.Run("verify JSONWithOptions", func(t *testing.T) {
 		t.Parallel()
+
 		ctx := context.Background()
 		inner := jwkset.NewMemoryStorage()
 		allowed := genRSAJWK(t, "rsa-json", jwkset.AlgRS256)
@@ -269,6 +290,7 @@ func TestValidationStore(t *testing.T) {
 
 	t.Run("verify Marshal", func(t *testing.T) {
 		t.Parallel()
+
 		ctx := context.Background()
 		inner := jwkset.NewMemoryStorage()
 		allowed := genRSAJWK(t, "rsa-json", jwkset.AlgRS256)
@@ -286,6 +308,7 @@ func TestValidationStore(t *testing.T) {
 
 	t.Run("verify MarshalWithOptions", func(t *testing.T) {
 		t.Parallel()
+
 		ctx := context.Background()
 		inner := jwkset.NewMemoryStorage()
 		allowed := genRSAJWK(t, "rsa-json", jwkset.AlgRS256)
@@ -301,9 +324,9 @@ func TestValidationStore(t *testing.T) {
 		requires.Len(t, ma.Keys, len(mb.Keys))
 	})
 
-	// verify NewValidationStore supported algorithms return value
 	t.Run("verify ConstructorSupportedAlgorithms", func(t *testing.T) {
 		t.Parallel()
+
 		inner := jwkset.NewMemoryStorage()
 		_, algs := NewValidationStore(zap.NewNop(), inner, nil, false)
 		requires.Len(t, algs, len(supportedAlgorithms))
@@ -360,5 +383,3 @@ func genEd25519JWK(t *testing.T, kid string) jwkset.JWK {
 	requires.NoError(t, err)
 	return j
 }
-
-// genNoAlgRSAJWK creates a JWK with no ALG set to exercise allowEmptyAlgorithm behavior.
