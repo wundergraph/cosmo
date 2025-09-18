@@ -20,9 +20,3 @@ events:
       - id: my-redis
         urls:
         - "redis://localhost:6379/2"
-
-log_level: info
-
-persisted_operations:
-  safelist:
-    enabled: false

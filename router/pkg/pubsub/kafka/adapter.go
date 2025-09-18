@@ -57,7 +57,6 @@ func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, u
 
 					// If the context was canceled, the error is wrapped in a fetch error
 					if errors.Is(fetchError.Err, context.Canceled) {
-						fmt.Println("GOT ERROR")
 						return fetchError.Err
 					}
 
@@ -77,8 +76,6 @@ func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, u
 					}
 				}
 			}
-
-			fmt.Println("GOT NO ERROR")
 
 			iter := fetches.RecordIter()
 			for !iter.Done() {
@@ -140,11 +137,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 
 	go func() {
 
-		defer func() {
-			log.Warn("-----> poller done")
-			p.closeWg.Done()
-			p.Shutdown(ctx)
-		}()
+		defer p.closeWg.Done()
 
 		err := p.topicPoller(ctx, client, updater)
 		if err != nil {
