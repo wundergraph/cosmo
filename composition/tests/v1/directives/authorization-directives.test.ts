@@ -9,7 +9,7 @@ import {
   ROUTER_COMPATIBILITY_VERSION_ONE,
   Subgraph,
 } from '../../../src';
-import { schemaQueryDefinition, versionTwoDirectiveDefinitions, versionTwoRouterDefinitions, } from '../utils/utils';
+import { schemaQueryDefinition, versionTwoDirectiveDefinitions, versionTwoRouterDefinitions } from '../utils/utils';
 import {
   federateSubgraphsFailure,
   federateSubgraphsSuccess,
