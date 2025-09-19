@@ -192,6 +192,7 @@ jobs:
         image: bitnamilegacy/redis-cluster:7.2
         env:
           REDIS_PASSWORD: test
+          REDIS_PORT_NUMBER: 7001
           REDIS_NODES: "redis-0:7001,redis-1:7002,redis-2:7003"
           REDIS_CLUSTER_ANNOUNCE_IP: redis-0
           REDIS_CLUSTER_ANNOUNCE_PORT: 7001
@@ -203,6 +204,7 @@ jobs:
         image: bitnamilegacy/redis-cluster:7.2
         env:
           REDIS_PASSWORD: test
+          REDIS_PORT_NUMBER: 7002
           REDIS_NODES: "redis-0:7001,redis-1:7002,redis-2:7003"
           REDIS_CLUSTER_ANNOUNCE_IP: redis-1
           REDIS_CLUSTER_ANNOUNCE_PORT: 7002
@@ -212,6 +214,7 @@ jobs:
         image: bitnamilegacy/redis-cluster:7.2
         env:
           REDIS_PASSWORD: test
+          REDIS_PORT_NUMBER: 7003
           REDIS_NODES: "redis-0:7001,redis-1:7002,redis-2:7003"
           REDIS_CLUSTER_ANNOUNCE_IP: redis-2
           REDIS_CLUSTER_ANNOUNCE_PORT: 7003
