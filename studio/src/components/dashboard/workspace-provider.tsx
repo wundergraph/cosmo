@@ -32,7 +32,7 @@ export function WorkspaceProvider({ children }: React.PropsWithChildren) {
   const [namespaces, setNamespaces] = useState([DEFAULT_NAMESPACE_NAME]);
 
   // Correct namespace
-  /*useEffect(() => {
+  useEffect(() => {
     if (!data || data.response?.code == EnumStatusCode.OK || !data.namespaces?.length) {
       return;
     }
@@ -55,7 +55,7 @@ export function WorkspaceProvider({ children }: React.PropsWithChildren) {
     }
 
     setNamespaces(currentNamespaces);
-  }, [applyParams, data, namespace, namespaceParam, setStoredNamespace]);*/
+  }, [applyParams, data, namespace, namespaceParam, setStoredNamespace]);
 
   // Memoize context components
   const currentNamespace= useMemo(
