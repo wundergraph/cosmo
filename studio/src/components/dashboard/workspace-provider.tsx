@@ -32,7 +32,7 @@ export function WorkspaceProvider({ children }: React.PropsWithChildren) {
   const [namespaces, setNamespaces] = useState([DEFAULT_NAMESPACE_NAME]);
 
   // Correct namespace
-  useEffect(() => {
+  /*useEffect(() => {
     if (!data || data.response?.code == EnumStatusCode.OK || !data.namespaces?.length) {
       return;
     }
@@ -55,16 +55,18 @@ export function WorkspaceProvider({ children }: React.PropsWithChildren) {
     }
 
     setNamespaces(currentNamespaces);
-  }, [applyParams, data, namespace, namespaceParam, setStoredNamespace]);
+  }, [applyParams, data, namespace, namespaceParam, setStoredNamespace]);*/
 
   // Memoize context components
   const currentNamespace= useMemo(
-    () => data?.namespaces.find((wns) => wns.name === namespace) ?? new WorkspaceNamespace({
-      id: '',
-      name: DEFAULT_NAMESPACE_NAME,
-      graphs: [],
-    }),
-    [data?.namespaces, namespace],
+    () => isLoading
+      ? new WorkspaceNamespace({ id: '', name: namespace, graphs: [] })
+      : data?.namespaces.find((wns) => wns.name === namespace) ?? new WorkspaceNamespace({
+        id: '',
+        name: DEFAULT_NAMESPACE_NAME,
+        graphs: [],
+      }),
+    [isLoading, data?.namespaces, namespace],
   );
 
   const namespaceByName = useMemo(
