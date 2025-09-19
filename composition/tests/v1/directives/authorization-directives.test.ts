@@ -5,6 +5,7 @@ import {
   MAX_OR_SCOPES,
   orScopesLimitError,
   parse,
+  QUERY,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   Subgraph,
 } from '../../../src';
@@ -525,20 +526,23 @@ describe('Authorization directives tests', () => {
     });
   });
 
-  describe('Federation Tests', () => {
+  describe('Federation tests', () => {
     test('that @authenticated is persisted in the federated schema', () => {
-      const result = federateSubgraphsSuccess([faa, fab], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.fieldConfigurations).toStrictEqual([
+      const { fieldConfigurations, federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+        [faa, fab],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(fieldConfigurations).toStrictEqual([
         {
           argumentNames: [],
           fieldName: 'object',
-          typeName: 'Query',
+          typeName: QUERY,
           requiresAuthentication: true,
           requiredScopes: [],
           requiredScopesByOR: [],
         },
       ]);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
           versionTwoRouterDefinitions +
             `
@@ -556,21 +560,40 @@ describe('Authorization directives tests', () => {
         `,
         ),
       );
+      expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+        normalizeString(
+          schemaQueryDefinition +
+            `
+          type Object {
+            age: Int!
+            id: ID!
+            name: String!
+          }
+          
+          type Query {
+            object: Object!
+          }
+        `,
+        ),
+      );
     });
 
     test('that @requiresScopes is persisted in the federated schema', () => {
-      const result = federateSubgraphsSuccess([fab, fac], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.fieldConfigurations).toStrictEqual([
+      const { fieldConfigurations, federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+        [fab, fac],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(fieldConfigurations).toStrictEqual([
         {
           argumentNames: [],
           fieldName: 'object',
-          typeName: 'Query',
+          typeName: QUERY,
           requiresAuthentication: false,
           requiredScopes: [['b']],
           requiredScopesByOR: [['b']],
         },
       ]);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
           versionTwoRouterDefinitions +
             `
@@ -585,6 +608,22 @@ describe('Authorization directives tests', () => {
           }
           
           scalar openfed__Scope
+        `,
+        ),
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+        normalizeString(
+          schemaQueryDefinition +
+            `
+          type Object {
+            age: Int!
+            id: ID!
+            name: String!
+          }
+          
+          type Query {
+            object: Object!
+          }
         `,
         ),
       );
