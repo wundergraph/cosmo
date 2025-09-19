@@ -2148,7 +2148,7 @@ func TestWebSockets(t *testing.T) {
 			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
-				Payload: []byte(`{"query":"subscription { currentTime { unixTime } }"}`),
+				Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp } }"}`),
 			})
 			require.NoError(t, err)
 
@@ -2163,8 +2163,8 @@ func TestWebSockets(t *testing.T) {
 			logEntries := xEnv.Observer().FilterMessageSnippet("Unknown persisted operation found").All()
 			require.Len(t, logEntries, 1)
 			requestContext := logEntries[0].ContextMap()
-			require.Contains(t, requestContext["query"], "subscription { currentTime { unixTime } }")
-			require.Equal(t, "6e94d99132b544a0d7522696a7d35643d56a26c7b8c2e0df29e2b9935636628c", requestContext["sha256Hash"])
+			require.Contains(t, requestContext["query"], "subscription { currentTime { unixTime timeStamp } }")
+			require.Equal(t, "8ad544bda5b2ad7a59481e31fb6fa62705fd072b20fdaadba4f3908d01f2c132", requestContext["sha256Hash"])
 
 			require.NoError(t, conn.Close())
 		})
