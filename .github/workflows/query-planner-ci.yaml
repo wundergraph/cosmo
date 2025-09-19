@@ -109,8 +109,7 @@ jobs:
           token: ${{secrets.GITHUB_TOKEN}}
           image_name: router-qp
           image_description: 'Cosmo Router Query Planner'
-          image_platforms: linux/amd64
-          with_tests: "false"
+          image_platforms: 'linux/amd64,linux/arm64'
   build-cli:
     needs: filter-changes
     if: ${{ needs.filter-changes.outputs.cli_changed == 'true' }}
@@ -151,7 +150,7 @@ jobs:
         with:
           owner: wundergraph
           repo: cosmo-celestial
-          ref: master
+          ref: miklos/eng-8136-query-plan-tester-stuck
           github_token: ${{ secrets.GH_TOKEN_CELESTIAL_TRIGGER }}
           propagate_failure: true
           workflow_file_name: 'query-planner-tester.yaml'
