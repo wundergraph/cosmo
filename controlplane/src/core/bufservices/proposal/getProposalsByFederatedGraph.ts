@@ -9,7 +9,7 @@ import {
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
+import { enrichLogger, fromProposalOriginEnum, getLogger, handleError, validateDateRanges } from '../../util.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
@@ -153,6 +153,7 @@ export function getProposalsByFederatedGraph(
             })),
             latestCheckSuccess: proposal.latestCheckSuccess,
             latestCheckId: proposal.latestCheckId,
+            origin: fromProposalOriginEnum(proposal.proposal.origin),
           }),
       ),
       isProposalsEnabled: true,

@@ -1,7 +1,7 @@
 import { Command, program } from 'commander';
 import ora from 'ora';
 import pc from 'picocolors';
-import { ProposalNamingConvention } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { ProposalNamingConvention, ProposalOrigin } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { handleProposalResult } from '../../../handle-proposal-result.js';
@@ -80,6 +80,7 @@ export default (opts: BaseCommandOptions) => {
         name,
         subgraphs,
         namingConvention: ProposalNamingConvention.NORMAL,
+        origin: ProposalOrigin.COSMO,
       },
       {
         headers: getBaseHeaders(),
