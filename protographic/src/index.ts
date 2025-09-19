@@ -5,7 +5,7 @@ import type { GraphQLToProtoTextVisitorOptions } from './sdl-to-proto-visitor.js
 import { GraphQLToProtoTextVisitor } from './sdl-to-proto-visitor.js';
 import type { ProtoLock } from './proto-lock.js';
 import { SDLValidationVisitor, type ValidationResult } from './sdl-validation-visitor.js';
-import {OperationInfo, OperationToProtoOptions, OperationToProtoVisitor} from "./operations-to-proto-visitor";
+import {OperationInfo, OperationToProtoOptions, OperationToProtoVisitor} from "./operations-to-proto-visitor.js";
 
 /**
  * Compiles a GraphQL schema to a mapping structure
@@ -110,10 +110,12 @@ export function compileOperationsToProto(
     const visitor = new OperationToProtoVisitor(schema, operations, options);
     const proto = visitor.visit();
 
-    // For now, return null lock data - you could extend this later
+    // Get the generated lock data
+    const lockData = visitor.getGeneratedLockData();
+
     return {
         proto,
-        lockData: null,
+        lockData,
     };
 }
 

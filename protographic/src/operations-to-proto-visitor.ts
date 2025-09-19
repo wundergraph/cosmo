@@ -9,8 +9,19 @@ import {
     getNamedType,
     isListType,
     isNonNullType,
+    isObjectType,
+    isInterfaceType,
+    isScalarType,
+    isEnumType,
     parse,
     visit,
+    GraphQLType,
+    GraphQLObjectType,
+    GraphQLInterfaceType,
+    GraphQLField,
+    GraphQLNamedType,
+    GraphQLList,
+    GraphQLNonNull,
 } from 'graphql';
 import {
     createRequestMessageName,
@@ -18,7 +29,17 @@ import {
     graphqlFieldToProtoField,
 } from './naming-conventions.js';
 import type { ProtoLock } from './proto-lock.js';
+import { ProtoLockManager } from './proto-lock.js';
+import { SCALAR_TYPE_MAP, SCALAR_WRAPPER_TYPE_MAP } from './sdl-to-proto-visitor.js';
 import {camelCase, upperFirst} from "lodash-es";
+
+/**
+ * Data structure for formatting message fields
+ */
+interface ProtoType {
+    typeName: string;
+    isRepeated: boolean;
+}
 
 export interface OperationToProtoOptions {
     serviceName?: string;
@@ -39,8 +60,10 @@ export class OperationToProtoVisitor {
     private serviceName: string;
     private packageName: string;
     private goPackage?: string;
+    private lockManager: ProtoLockManager;
     private usedTypes = new Set<string>();
     private generatedMessages = new Map<string, string>();
+    private usesWrapperTypes = false;
 
     constructor(
         schemaOrSDL: GraphQLSchema | string,
@@ -55,6 +78,7 @@ export class OperationToProtoVisitor {
         this.serviceName = options.serviceName || 'DefaultService';
         this.packageName = options.packageName || 'service.v1';
         this.goPackage = options.goPackage;
+        this.lockManager = new ProtoLockManager(options.lockData);
     }
 
     visit(): string {
@@ -63,6 +87,12 @@ export class OperationToProtoVisitor {
             document: parse(op.content)
         }));
 
+        // Validate operations against schema
+        for (const { document } of parsedOperations) {
+            const operation = document.definitions[0] as OperationDefinitionNode;
+            this.validateOperationAgainstSchema(operation);
+        }
+
         // Generate service definition
         const serviceMethods = this.generateServiceMethods(parsedOperations);
 
@@ -70,6 +100,55 @@ export class OperationToProtoVisitor {
         const messages = this.generateMessages(parsedOperations);
 
         return this.assembleProto(serviceMethods, messages);
+    }
+
+    /**
+     * Get the generated lock data
+     */
+    public getGeneratedLockData(): ProtoLock | null {
+        return this.lockManager.getLockData();
+    }
+
+    /**
+     * Validate an operation against the schema
+     */
+    private validateOperationAgainstSchema(operation: OperationDefinitionNode): void {
+        const operationType = operation.operation;
+        const rootType = this.getRootTypeForOperation(operationType);
+        
+        if (!rootType) {
+            throw new Error(`Schema does not define ${operationType} type`);
+        }
+
+        // Validate all fields in the selection set exist in the schema
+        this.validateSelectionSet(operation.selectionSet, rootType);
+    }
+
+    /**
+     * Recursively validate a selection set against a GraphQL type
+     */
+    private validateSelectionSet(selectionSet: SelectionSetNode, parentType: GraphQLType): void {
+        const namedParentType: GraphQLNamedType = getNamedType(parentType);
+        
+        if (!isObjectType(namedParentType) && !isInterfaceType(namedParentType)) {
+            return; // Skip validation for scalar/enum types
+        }
+
+        const fields = namedParentType.getFields();
+
+        for (const selection of selectionSet.selections) {
+            if (selection.kind === 'Field') {
+                const field = fields[selection.name.value];
+                if (!field) {
+                    throw new Error(`Field '${selection.name.value}' not found on type '${namedParentType.name}'`);
+                }
+
+                // Recursively validate nested selection sets
+                if (selection.selectionSet) {
+                    this.validateSelectionSet(selection.selectionSet, field.type);
+                }
+            }
+        }
     }
 
     private generateServiceMethods(operations: { name: string; document: DocumentNode }[]): string[] {
@@ -114,10 +193,17 @@ export class OperationToProtoVisitor {
         const messageName = createRequestMessageName(methodName);
         const fields: string[] = [];
 
-        variables.forEach((variable, index) => {
-            const fieldName = graphqlFieldToProtoField(variable.variable.name.value);
-            const protoType = this.convertVariableTypeToProto(variable.type);
-            fields.push(`  ${protoType} ${fieldName} = ${index + 1};`);
+        // Get field names and order them using the lock manager
+        const fieldNames = variables.map(v => graphqlFieldToProtoField(v.variable.name.value));
+        const orderedFieldNames = this.lockManager.reconcileMessageFieldOrder(messageName, fieldNames);
+
+        // Generate fields in the ordered sequence
+        orderedFieldNames.forEach((fieldName, index) => {
+            const variable = variables.find(v => graphqlFieldToProtoField(v.variable.name.value) === fieldName);
+            if (variable) {
+                const protoType = this.convertVariableTypeToProto(variable.type);
+                fields.push(`  ${protoType} ${fieldName} = ${index + 1};`);
+            }
         });
 
         const fieldsStr = fields.length > 0 ? '\n' + fields.join('\n') + '\n' : '';
@@ -155,14 +241,22 @@ export class OperationToProtoVisitor {
         const fields: string[] = [];
         let fieldIndex = 1;
 
+        // Get the root type based on operation type (assume Query for now, can be enhanced)
+        const rootType = this.schema.getQueryType();
+        if (!rootType) {
+            throw new Error('Schema does not define Query type');
+        }
+
         for (const selection of selectionSet.selections) {
             if (selection.kind === 'Field') {
                 const fieldName = graphqlFieldToProtoField(selection.name.value);
-                const schemaField = this.schema.getQueryType()?.getFields()[selection.name.value];
+                const schemaField = rootType.getFields()[selection.name.value];
 
                 if (schemaField) {
                     const protoType = this.getOperationSpecificType(operationName, selection, schemaField.type, '');
                     fields.push(`  ${protoType} ${fieldName} = ${fieldIndex++};`);
+                } else {
+                    throw new Error(`Field '${selection.name.value}' not found on Query type`);
                 }
             }
         }
@@ -198,26 +292,37 @@ export class OperationToProtoVisitor {
         let fieldIndex = 1;
 
         if (field.selectionSet) {
+            // Resolve the GraphQL type for this field using the schema
+            const parentType = this.resolveParentTypeForField(field.name.value, fieldPath);
+            if (!parentType) {
+                throw new Error(`Cannot resolve parent type for field '${field.name.value}' at path '${fieldPath}'`);
+            }
+
             for (const selection of field.selectionSet.selections) {
                 if (selection.kind === 'Field') {
                     const fieldName = graphqlFieldToProtoField(selection.name.value);
+
+                    // Get the GraphQL field from the parent type
+                    const schemaField = parentType.getFields()[selection.name.value];
+                    if (!schemaField) {
+                        throw new Error(`Field '${selection.name.value}' not found on type '${parentType.name}'`);
+                    }
 
                     if (selection.selectionSet) {
                         // This field has its own selection set, so it needs a nested message
                         const nestedFieldPath = this.buildFieldPath(fieldPath, selection.name.value);
                         const nestedType = this.createNestedMessageName(operationName, nestedFieldPath);
 
-                        // Check if this should be repeated based on GraphQL schema
-                        const schemaField = this.getSchemaFieldFromPath(field.name.value, selection.name.value);
-                        const protoType = schemaField && this.isGraphQLListType(schemaField.type)
+                        // Use the proven list type detection from sdl-to-proto-visitor
+                        const protoType = this.isGraphQLListType(schemaField.type)
                             ? `repeated ${nestedType}`
                             : nestedType;
 
                         fields.push(`  ${protoType} ${fieldName} = ${fieldIndex++};`);
                     } else {
-                        // Leaf field - use scalar type
-                        const protoType = this.getScalarProtoType(selection.name.value);
-                        fields.push(`  ${protoType} ${fieldName} = ${fieldIndex++};`);
+                        // Leaf field - use the battle-tested getProtoTypeFromGraphQL method
+                        const protoType = this.getProtoTypeFromGraphQL(schemaField.type);
+                        fields.push(`  ${protoType.typeName} ${fieldName} = ${fieldIndex++};`);
                     }
                 }
             }
@@ -251,7 +356,20 @@ export class OperationToProtoVisitor {
             return isListField ? `repeated ${messageName}` : messageName;
         }
 
-        return this.getScalarProtoType(field.name.value);
+        // For leaf fields without selection sets, try to resolve from schema
+        try {
+            const rootType = this.schema.getQueryType();
+            if (rootType) {
+                const schemaField = rootType.getFields()[field.name.value];
+                if (schemaField) {
+                    const protoType = this.getProtoTypeFromGraphQL(schemaField.type);
+                    return protoType.typeName;
+                }
+            }
+        } catch (error) {
+            // Fallback to string if resolution fails
+        }
+        return 'string';
     }
 
     private isGraphQLListType(graphqlType: any): boolean {
@@ -264,35 +382,161 @@ export class OperationToProtoVisitor {
         return isListType(graphqlType);
     }
 
-    private getSchemaFieldFromPath(parentFieldName: string, fieldName: string): any {
-        // This is a simplified version - you might need more sophisticated path resolution
+    private getSchemaFieldFromPath(parentFieldName: string, fieldName: string): GraphQLField<any, any> | null {
         const queryType = this.schema.getQueryType();
         if (!queryType) return null;
+
+        if (!parentFieldName) {
+            // If no parent field, look directly in the root type
+            return queryType.getFields()[fieldName] || null;
+        }
 
         const parentField = queryType.getFields()[parentFieldName];
         if (!parentField) return null;
 
-        // Get the type and navigate to the field
+        // Get the named type and navigate to the field
         const parentType = getNamedType(parentField.type);
-        if (parentType && 'getFields' in parentType) {
-            const fields = (parentType as any).getFields();
-            return fields[fieldName];
+        if (isObjectType(parentType) || isInterfaceType(parentType)) {
+            const fields = parentType.getFields();
+            return fields[fieldName] || null;
         }
 
         return null;
     }
 
-    private getScalarProtoType(fieldName: string): string {
-        // Simplified mapping based on common field names
-        switch (fieldName) {
-            case 'id': return 'int32';
-            case 'tag':
-            case 'name':
-            case 'forename':
-            case 'surname': return 'string';
-            case 'hasChildren': return 'bool';
-            default: return 'string';
+    /**
+     * Resolve the parent GraphQL type for a field in the operation context
+     * This is a simplified version that focuses on the specific use case
+     */
+    private resolveParentTypeForField(fieldName: string, fieldPath: string): GraphQLObjectType | GraphQLInterfaceType | null {
+        // Start from the root type (Query for now - can be enhanced for Mutation/Subscription)
+        const rootType = this.schema.getQueryType();
+        if (!rootType) return null;
+
+        // If no path, the parent is the root type
+        if (!fieldPath) {
+            return rootType;
         }
+
+        // Navigate through the path to find the parent type
+        let currentType: GraphQLType = rootType;
+        
+        // Split the path and navigate through each part
+        const pathParts = fieldPath.split('.').filter(p => p.length > 0);
+        for (const pathPart of pathParts) {
+            const namedType: GraphQLNamedType = getNamedType(currentType);
+            if (!isObjectType(namedType) && !isInterfaceType(namedType)) {
+                return null;
+            }
+            
+            // Convert PascalCase path part back to camelCase field name
+            const graphqlFieldName = this.convertPascalCaseToGraphQLField(pathPart);
+            const field: GraphQLField<any, any> | undefined = namedType.getFields()[graphqlFieldName];
+            if (!field) {
+                return null;
+            }
+            
+            currentType = field.type;
+        }
+
+        // Return the final type as the parent
+        const finalType = getNamedType(currentType);
+        if (isObjectType(finalType) || isInterfaceType(finalType)) {
+            return finalType;
+        }
+
+        return null;
+    }
+
+    /**
+     * Map GraphQL type to Protocol Buffer type
+     * Reused from sdl-to-proto-visitor.ts - battle-tested implementation
+     */
+    private getProtoTypeFromGraphQL(graphqlType: GraphQLType, ignoreWrapperTypes: boolean = false): ProtoType {
+        // Nullable lists need to be handled first, otherwise they will be treated as scalar types
+        if (isListType(graphqlType) || (isNonNullType(graphqlType) && isListType(graphqlType.ofType))) {
+            return this.handleListType(graphqlType);
+        }
+        // For nullable scalar types, use wrapper types
+        if (isScalarType(graphqlType)) {
+            if (ignoreWrapperTypes) {
+                return { typeName: SCALAR_TYPE_MAP[graphqlType.name] || 'string', isRepeated: false };
+            }
+            this.usesWrapperTypes = true; // Track that we're using wrapper types
+            return {
+                typeName: SCALAR_WRAPPER_TYPE_MAP[graphqlType.name] || 'google.protobuf.StringValue',
+                isRepeated: false,
+            };
+        }
+
+        if (isEnumType(graphqlType)) {
+            return { typeName: graphqlType.name, isRepeated: false };
+        }
+
+        if (isNonNullType(graphqlType)) {
+            // For non-null scalar types, use the base type
+            if (isScalarType(graphqlType.ofType)) {
+                return { typeName: SCALAR_TYPE_MAP[graphqlType.ofType.name] || 'string', isRepeated: false };
+            }
+
+            return this.getProtoTypeFromGraphQL(graphqlType.ofType);
+        }
+        // Named types (object, interface, union, input)
+        const namedType = graphqlType as GraphQLNamedType;
+        if (namedType && typeof namedType.name === 'string') {
+            return { typeName: namedType.name, isRepeated: false };
+        }
+
+        return { typeName: 'string', isRepeated: false }; // Default fallback
+    }
+
+    /**
+     * Handle GraphQL list types
+     * Simplified version from sdl-to-proto-visitor.ts
+     */
+    private handleListType(graphqlType: GraphQLList<GraphQLType> | GraphQLNonNull<GraphQLList<GraphQLType>>): ProtoType {
+        const listType = isNonNullType(graphqlType) ? graphqlType.ofType as GraphQLList<GraphQLType> : graphqlType as GraphQLList<GraphQLType>;
+        
+        // Get the inner type of the list
+        let innerType = listType.ofType;
+        
+        // Unwrap NonNull if present
+        if (isNonNullType(innerType)) {
+            innerType = innerType.ofType;
+        }
+        
+        // Convert the inner type
+        const protoType = this.getProtoTypeFromGraphQL(innerType, true);
+        return { ...protoType, isRepeated: true };
+    }
+
+    /**
+     * Get the root type for an operation (Query, Mutation, Subscription)
+     */
+    private getRootTypeForOperation(operationType: string): GraphQLObjectType {
+        switch (operationType) {
+            case 'query':
+                const queryType = this.schema.getQueryType();
+                if (!queryType) throw new Error('Schema does not define Query type');
+                return queryType;
+            case 'mutation':
+                const mutationType = this.schema.getMutationType();
+                if (!mutationType) throw new Error('Schema does not define Mutation type');
+                return mutationType;
+            case 'subscription':
+                const subscriptionType = this.schema.getSubscriptionType();
+                if (!subscriptionType) throw new Error('Schema does not define Subscription type');
+                return subscriptionType;
+            default:
+                throw new Error(`Unknown operation type: ${operationType}`);
+        }
+    }
+
+    /**
+     * Convert PascalCase field path part to camelCase GraphQL field name
+     */
+    private convertPascalCaseToGraphQLField(pathPart: string): string {
+        return camelCase(pathPart);
     }
 
     private assembleProto(serviceMethods: string[], messages: string[]): string {
@@ -302,6 +546,12 @@ export class OperationToProtoVisitor {
         parts.push('syntax = "proto3";');
         parts.push(`package ${this.packageName};`);
         parts.push('');
+
+        // Add wrapper import if needed
+        if (this.usesWrapperTypes) {
+            parts.push('import "google/protobuf/wrappers.proto";');
+            parts.push('');
+        }
 
         if (this.goPackage) {
             parts.push(`option go_package = "${this.goPackage}";`);

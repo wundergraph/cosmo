@@ -45,7 +45,7 @@ import { ProtoLock, ProtoLockManager } from './proto-lock.js';
  * GraphQL has a smaller set of primitive types compared to Protocol Buffers.
  * This mapping ensures consistent representation between the two type systems.
  */
-const SCALAR_TYPE_MAP: Record<string, string> = {
+export const SCALAR_TYPE_MAP: Record<string, string> = {
   ID: 'string', // GraphQL IDs map to Proto strings
   String: 'string', // Direct mapping
   Int: 'int32', // GraphQL Int is 32-bit signed
@@ -59,7 +59,7 @@ const SCALAR_TYPE_MAP: Record<string, string> = {
  * These wrapper types allow distinguishing between unset fields and zero values
  * in Protocol Buffers, which is important for GraphQL nullable semantics.
  */
-const SCALAR_WRAPPER_TYPE_MAP: Record<string, string> = {
+export const SCALAR_WRAPPER_TYPE_MAP: Record<string, string> = {
   ID: 'google.protobuf.StringValue',
   String: 'google.protobuf.StringValue',
   Int: 'google.protobuf.Int32Value',
