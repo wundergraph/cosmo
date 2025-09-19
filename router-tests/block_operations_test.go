@@ -127,9 +127,17 @@ func TestBlockOperations(t *testing.T) {
 			t.Parallel()
 
 			authenticators, authServer := ConfigureAuth(t)
+			accessController, err := core.NewAccessController(core.AccessControllerOptions{
+				Authenticators:             authenticators,
+				AuthenticationRequired:     false,
+				IntrospectionAuthMode:      core.IntrospectionAuthModeFull,
+				IntrospectionAuthSkipToken: "",
+			})
+			require.NoError(t, err)
+
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, false)),
+					core.WithAccessController(accessController),
 				},
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 					securityConfiguration.BlockMutations = config.BlockOperationConfiguration{
@@ -280,10 +288,17 @@ func TestBlockOperations(t *testing.T) {
 			t.Parallel()
 
 			authenticators, authServer := ConfigureAuth(t)
+			accessController, err := core.NewAccessController(core.AccessControllerOptions{
+				Authenticators:             authenticators,
+				AuthenticationRequired:     false,
+				IntrospectionAuthMode:      core.IntrospectionAuthModeFull,
+				IntrospectionAuthSkipToken: "",
+			})
+			require.NoError(t, err)
 
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, false)),
+					core.WithAccessController(accessController),
 					core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
 						RejectOperationIfUnauthorized: false,
 					}),
@@ -372,6 +387,13 @@ func TestBlockOperations(t *testing.T) {
 			t.Parallel()
 
 			authenticators, authServer := ConfigureAuth(t)
+			accessController, err := core.NewAccessController(core.AccessControllerOptions{
+				Authenticators:             authenticators,
+				AuthenticationRequired:     false,
+				IntrospectionAuthMode:      core.IntrospectionAuthModeFull,
+				IntrospectionAuthSkipToken: "",
+			})
+			require.NoError(t, err)
 
 			testenv.Run(t, &testenv.Config{
 				ModifyWebsocketConfiguration: func(cfg *config.WebSocketConfiguration) {
@@ -379,7 +401,7 @@ func TestBlockOperations(t *testing.T) {
 					cfg.Enabled = true
 				},
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, false)),
+					core.WithAccessController(accessController),
 					core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
 						RejectOperationIfUnauthorized: false,
 					}),

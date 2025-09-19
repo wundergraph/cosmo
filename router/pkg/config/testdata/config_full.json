@@ -459,6 +459,11 @@
   },
   "PlaygroundEnabled": true,
   "IntrospectionEnabled": true,
+  "IntrospectionConfig": {
+    "Enabled": true,
+    "AuthenticationMode": "full",
+    "Token": "AN_EXAMPLE_PLACEHOLDER_TOKEN_ONLY"
+  },
   "QueryPlansEnabled": true,
   "LogLevel": "info",
   "JSONLog": true,
