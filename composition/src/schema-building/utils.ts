@@ -453,7 +453,7 @@ export function getClientPersistedDirectiveNodes<T extends NodeData>(nodeData: T
       );
       continue;
     }
-    // Only include @deprecated and @semanticNonNull in the client schema.
+    // Only include @deprecated, @oneOf, and @semanticNonNull in the client schema.
     if (!PERSISTED_CLIENT_DIRECTIVES.has(directiveName)) {
       continue;
     }
