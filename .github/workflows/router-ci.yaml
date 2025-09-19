@@ -266,29 +266,29 @@ jobs:
       - name: Wait for Redis Cluster
         run: |
           echo "[CHECK] Waiting for Redis Cluster to become healthy..."
+          cluster_containers=$(docker ps --quiet --filter "ancestor=bitnamilegacy/redis-cluster:7.2")
+
           success=0
           for i in {1..30}; do
-            if docker exec $(docker ps -qf "name=redis-0") \
-              redis-cli -a test -p 6379 cluster info 2>/dev/null | grep -q "cluster_state:ok"; then
-              echo "[SUCCESS] Redis Cluster is ready"
-              success=1
-              break
-            fi
+            for cid in $cluster_containers; do
+              if docker exec "$cid" redis-cli -a test -p 6379 cluster info 2>/dev/null | grep -q "cluster_state:ok"; then
+                echo "[SUCCESS] Redis Cluster is ready (reported by $cid)"
+                success=1
+                break 2
+              fi
+            done
             echo "[WAITING] Cluster not ready yet (attempt $i)..."
             sleep 2
           done
 
           if [ $success -eq 0 ]; then
             echo "[ERROR] Redis Cluster did not become healthy in time"
-            echo "--- Cluster info (redis-0) ---"
-            docker exec $(docker ps -qf "name=redis-0") redis-cli -a test -p 6379 cluster info || true
-            echo "--- Cluster nodes (redis-0) ---"
-            docker exec $(docker ps -qf "name=redis-0") redis-cli -a test -p 6379 cluster nodes || true
-
-            echo "--- Last logs from cluster containers ---"
-            for svc in redis-0 redis-1 redis-2; do
-              echo "----- $svc -----"
-              docker logs $(docker ps -qf "name=$svc") | tail -n 100
+            for cid in $cluster_containers; do
+              echo "--- Cluster info for $cid ---"
+              docker exec "$cid" redis-cli -a test -p 6379 cluster info || true
+              docker exec "$cid" redis-cli -a test -p 6379 cluster nodes || true
+              echo "--- Logs for $cid ---"
+              docker logs "$cid" | tail -n 100
             done
             exit 1
           fi
