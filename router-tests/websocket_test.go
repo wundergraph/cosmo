@@ -2114,7 +2114,7 @@ func TestWebSockets(t *testing.T) {
 			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
-				Payload: []byte(`{"extensions":{"persistedQuery":{"version":1,"sha256Hash":"8ad544bda5b2ad7a59481e31fb6fa62705fd072b20fdaadba4f3908d01f2c132"}}}`),
+				Payload: []byte(`{"extensions":{"persistedQuery":{"version":1,"sha256Hash":"6e94d99132b544a0d7522696a7d35643d56a26c7b8c2e0df29e2b9935636628c"}}}`),
 			})
 			require.NoError(t, err)
 			var res testenv.WebSocketMessage
@@ -2180,11 +2180,11 @@ func TestWebSockets(t *testing.T) {
 				ID:   "1",
 				Type: "subscribe",
 				Payload: []byte(`{
-					"query": "subscription { currentTime { unixTime timeStamp } }",
+					"query": "subscription { currentTime { unixTime } }",
 					"extensions": {
 						"persistedQuery": {
 							"version": 1,
-							"sha256Hash": "8ad544bda5b2ad7a59481e31fb6fa62705fd072b20fdaadba4f3908d01f2c132"
+							"sha256Hash": "6e94d99132b544a0d7522696a7d35643d56a26c7b8c2e0df29e2b9935636628c"
 						}
 					}
 				}`),
@@ -2213,7 +2213,7 @@ func TestWebSockets(t *testing.T) {
 				ID:   "1",
 				Type: "subscribe",
 				Payload: []byte(`{
-					"query": "subscription { currentTime { unixTime timeStamp } }",
+					"query": "subscription { currentTime { unixTime } }",
 					"extensions": {
 						"persistedQuery": {
 							"version": 1,
@@ -2230,6 +2230,73 @@ func TestWebSockets(t *testing.T) {
 			require.Equal(t, "error", res.Type)
 			require.Equal(t, "1", res.ID)
 			require.Contains(t, string(res.Payload), "persistedQuery sha256 hash does not match query body")
+
+			require.NoError(t, conn.Close())
+		})
+	})
+
+	t.Run("cache poisoning is tried but prevented", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			ApqConfig: config.AutomaticPersistedQueriesConfig{
+				Enabled: true,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, []byte(`{"graphql-client-name": "my-client"}`))
+
+			query1 := "subscription { employeeUpdated(employeeID: 3) { id } }"
+			query2 := "subscription { currentTime { unixTime } }"
+			hashOfQuery2 := "6e94d99132b544a0d7522696a7d35643d56a26c7b8c2e0df29e2b9935636628c"
+
+			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+				ID:   "1",
+				Type: "subscribe",
+				Payload: []byte(fmt.Sprintf(`{
+					"query": "%s",
+					"extensions": {
+						"persistedQuery": {
+							"version": 1,
+							"sha256Hash": "%s"
+						}
+					}
+				}`, query1, hashOfQuery2)),
+			})
+			require.NoError(t, err)
+
+			var res1 testenv.WebSocketMessage
+			err = testenv.WSReadJSON(t, conn, &res1)
+			require.NoError(t, err)
+			require.Equal(t, "error", res1.Type)
+			require.Equal(t, "1", res1.ID)
+			require.Contains(t, string(res1.Payload), "persistedQuery sha256 hash does not match query body")
+
+			// even though we got an error we challenge that and still try
+			// out if our malicious query was cached with hash2.
+			err = testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+				ID:   "2",
+				Type: "subscribe",
+				Payload: []byte(fmt.Sprintf(`{
+					"query": "%s",
+					"extensions": {
+						"persistedQuery": {
+							"version": 1,
+							"sha256Hash": "%s"
+						}
+					}
+				}`, query2, hashOfQuery2)),
+			})
+			require.NoError(t, err)
+
+			var res2 testenv.WebSocketMessage
+			err = testenv.WSReadJSON(t, conn, &res2)
+			require.NoError(t, err)
+			require.Equal(t, "next", res2.Type)
+			require.Equal(t, "2", res2.ID)
+
+			// we expect the response to look like what we asked for via query2
+			require.Contains(t, string(res2.Payload), "currentTime")
+			require.Contains(t, string(res2.Payload), "unixTime")
 
 			require.NoError(t, conn.Close())
 		})
