@@ -179,17 +179,25 @@ jobs:
           - 4222:4222
           - 8222:8222
           - 6222:6222
+      redis:
+        image: bitnamilegacy/redis-cluster:7.2
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
       redis-0:
         image: bitnamilegacy/redis-cluster:7.2
         env:
           ALLOW_REDIS_PASSWORD: test
           REDIS_NODES: "redis-0:7001,redis-1:7002,redis-2:7003"
           REDIS_CLUSTER_ANNOUNCE_IP: redis-0
-          REDIS_CLUSTER_ANNOUNCE_PORT: 6379
+          REDIS_CLUSTER_ANNOUNCE_PORT: 7001
           REDIS_CLUSTER_REPLICAS: 0
           REDIS_CLUSTER_CREATOR: yes
         ports:
-          - 6379:6379
           - 7001:6379
       redis-1:
         image: bitnamilegacy/redis-cluster:7.2
