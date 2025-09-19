@@ -182,7 +182,7 @@ jobs:
       redis-0:
         image: bitnamilegacy/redis-cluster:7.2
         env:
-          ALLOW_EMPTY_PASSWORD: yes
+          ALLOW_REDIS_PASSWORD: test
           REDIS_NODES: "redis-0:7001,redis-1:7002,redis-2:7003"
           REDIS_CLUSTER_ANNOUNCE_IP: redis-0
           REDIS_CLUSTER_ANNOUNCE_PORT: 6379
@@ -194,7 +194,7 @@ jobs:
       redis-1:
         image: bitnamilegacy/redis-cluster:7.2
         env:
-          ALLOW_EMPTY_PASSWORD: yes
+          REDIS_PASSWORD: test
           REDIS_NODES: "redis-0:7001,redis-1:7002,redis-2:7003"
           REDIS_CLUSTER_ANNOUNCE_IP: redis-1
           REDIS_CLUSTER_ANNOUNCE_PORT: 7002
@@ -203,7 +203,7 @@ jobs:
       redis-2:
         image: bitnamilegacy/redis-cluster:7.2
         env:
-          ALLOW_EMPTY_PASSWORD: yes
+          REDIS_PASSWORD: test
           REDIS_NODES: "redis-0:7001,redis-1:7002,redis-2:7003"
           REDIS_CLUSTER_ANNOUNCE_IP: redis-2
           REDIS_CLUSTER_ANNOUNCE_PORT: 7003
@@ -255,7 +255,7 @@ jobs:
         run: |
           docker ps -a
           # Set a password for each master node
-          for port in 6379; do
+          for port in 7001 7002 7003; do
             docker exec $(docker ps --format "{{.Image}} {{.ID}}" | grep "redis" | awk '{print $2}' | head -n 1) redis-cli -h 127.0.0.1 -p $port ACL SETUSER cosmo on ">test" "~*" "+@all"
             docker exec $(docker ps --format "{{.Image}} {{.ID}}" | grep "redis" | awk '{print $2}' | head -n 1) redis-cli -u "redis://cosmo:test@127.0.0.1:$port" ping
             echo "ACL user 'cosmo' created with full access on port $port"
