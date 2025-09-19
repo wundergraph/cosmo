@@ -192,34 +192,31 @@ jobs:
         image: bitnamilegacy/redis-cluster:7.2
         env:
           REDIS_PASSWORD: test
-          REDIS_PORT_NUMBER: 7001
-          REDIS_NODES: "redis-0:7001,redis-1:7002,redis-2:7003"
-          REDIS_CLUSTER_ANNOUNCE_IP: redis-0
+          REDIS_NODES: "localhost:7001,localhost:7002,localhost:7003"
+          REDIS_CLUSTER_ANNOUNCE_IP: localhost
           REDIS_CLUSTER_ANNOUNCE_PORT: 7001
           REDIS_CLUSTER_REPLICAS: 0
           REDIS_CLUSTER_CREATOR: yes
         ports:
-          - 7001:7001
+          - 7001:6379
       redis-1:
         image: bitnamilegacy/redis-cluster:7.2
         env:
           REDIS_PASSWORD: test
-          REDIS_PORT_NUMBER: 7002
-          REDIS_NODES: "redis-0:7001,redis-1:7002,redis-2:7003"
-          REDIS_CLUSTER_ANNOUNCE_IP: redis-1
+          REDIS_NODES: "localhost:7001,localhost:7002,localhost:7003"
+          REDIS_CLUSTER_ANNOUNCE_IP: localhost
           REDIS_CLUSTER_ANNOUNCE_PORT: 7002
         ports:
-          - 7002:7002
+          - 7002:6379
       redis-2:
         image: bitnamilegacy/redis-cluster:7.2
         env:
           REDIS_PASSWORD: test
-          REDIS_PORT_NUMBER: 7003
-          REDIS_NODES: "redis-0:7001,redis-1:7002,redis-2:7003"
-          REDIS_CLUSTER_ANNOUNCE_IP: redis-2
+          REDIS_NODES: "localhost:7001,localhost:7002,localhost:7003"
+          REDIS_CLUSTER_ANNOUNCE_IP: localhost
           REDIS_CLUSTER_ANNOUNCE_PORT: 7003
         ports:
-          - 7003:7003
+          - 7003:6379
       kafka:
         image: bitnamilegacy/kafka:3.7.0
         options: >-
@@ -266,10 +263,10 @@ jobs:
         run: |
           docker ps -a
           # Set a password for each master node
-          for port in 7001 7002 7003; do
-            docker exec $(docker ps --format "{{.Image}} {{.ID}}" | grep "redis" | awk '{print $2}' | head -n 1) redis-cli -h 127.0.0.1 -p $port ACL SETUSER cosmo on ">test" "~*" "+@all"
-            docker exec $(docker ps --format "{{.Image}} {{.ID}}" | grep "redis" | awk '{print $2}' | head -n 1) redis-cli -u "redis://cosmo:test@127.0.0.1:$port" ping
-            echo "ACL user 'cosmo' created with full access on port $port"
+          for cid in $(docker ps --format "{{.ID}} {{.Image}}" | grep "redis-cluster" | awk '{print $1}'); do
+            echo "Configuring ACLs in container $cid"
+            docker exec "$cid" redis-cli -p 6379 -a test ACL SETUSER cosmo on ">test" "~*" "+@all"
+            docker exec "$cid" redis-cli -p 6379 -a test ping
           done
       - name: Run Integration tests ${{ matrix.test_target }}
         working-directory: ./router-tests
