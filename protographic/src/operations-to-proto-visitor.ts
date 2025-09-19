@@ -342,7 +342,9 @@ export class OperationToProtoVisitor {
             if (rootType) {
                 const schemaField = rootType.getFields()[field.name.value];
                 if (schemaField) {
-                    const protoType = this.getProtoTypeFromGraphQL(schemaField.type);
+                    const wrapperTracker = { usesWrapperTypes: this.usesWrapperTypes };
+                    const protoType = getProtoTypeFromGraphQL(schemaField.type, false, wrapperTracker);
+                    this.usesWrapperTypes = wrapperTracker.usesWrapperTypes;
                     return protoType.typeName;
                 }
             }
@@ -483,97 +485,4 @@ export class OperationToProtoVisitor {
         return parts.join('\n');
     }
 
-    private isGraphQLListType(graphqlType: any): boolean {
-        // Handle NonNull wrapper
-        if (isNonNullType(graphqlType)) {
-            return this.isGraphQLListType(graphqlType.ofType);
-        }
-
-        // Check if it's a list type
-        return isListType(graphqlType);
-    }
-
-    /**
-     * Map GraphQL type to Protocol Buffer type
-     * Reused from sdl-to-proto-visitor.ts - battle-tested implementation
-     */
-    private getProtoTypeFromGraphQL(graphqlType: GraphQLType, ignoreWrapperTypes: boolean = false): ProtoType {
-        // Nullable lists need to be handled first, otherwise they will be treated as scalar types
-        if (isListType(graphqlType) || (isNonNullType(graphqlType) && isListType(graphqlType.ofType))) {
-            return this.handleListType(graphqlType);
-        }
-        // For nullable scalar types, use wrapper types
-        if (isScalarType(graphqlType)) {
-            if (ignoreWrapperTypes) {
-                return { typeName: SCALAR_TYPE_MAP[graphqlType.name] || 'string', isRepeated: false };
-            }
-            this.usesWrapperTypes = true; // Track that we're using wrapper types
-            return {
-                typeName: SCALAR_WRAPPER_TYPE_MAP[graphqlType.name] || 'google.protobuf.StringValue',
-                isRepeated: false,
-            };
-        }
-
-        if (isEnumType(graphqlType)) {
-            return { typeName: graphqlType.name, isRepeated: false };
-        }
-
-        if (isNonNullType(graphqlType)) {
-            // For non-null scalar types, use the base type
-            if (isScalarType(graphqlType.ofType)) {
-                return { typeName: SCALAR_TYPE_MAP[graphqlType.ofType.name] || 'string', isRepeated: false };
-            }
-
-            return this.getProtoTypeFromGraphQL(graphqlType.ofType);
-        }
-        // Named types (object, interface, union, input)
-        const namedType = graphqlType as GraphQLNamedType;
-        if (namedType && typeof namedType.name === 'string') {
-            return { typeName: namedType.name, isRepeated: false };
-        }
-
-        return { typeName: 'string', isRepeated: false }; // Default fallback
-    }
-
-    /**
-     * Handle GraphQL list types
-     * Simplified version from sdl-to-proto-visitor.ts
-     */
-    private handleListType(graphqlType: GraphQLList<GraphQLType> | GraphQLNonNull<GraphQLList<GraphQLType>>): ProtoType {
-        const listType = isNonNullType(graphqlType) ? graphqlType.ofType as GraphQLList<GraphQLType> : graphqlType as GraphQLList<GraphQLType>;
-        
-        // Get the inner type of the list
-        let innerType = listType.ofType;
-        
-        // Unwrap NonNull if present
-        if (isNonNullType(innerType)) {
-            innerType = innerType.ofType;
-        }
-        
-        // Convert the inner type
-        const protoType = this.getProtoTypeFromGraphQL(innerType, true);
-        return { ...protoType, isRepeated: true };
-    }
-
-    /**
-     * Get the root type for an operation (Query, Mutation, Subscription)
-     */
-    private getRootTypeForOperation(operationType: string): GraphQLObjectType {
-        switch (operationType) {
-            case 'query':
-                const queryType = this.schema.getQueryType();
-                if (!queryType) throw new Error('Schema does not define Query type');
-                return queryType;
-            case 'mutation':
-                const mutationType = this.schema.getMutationType();
-                if (!mutationType) throw new Error('Schema does not define Mutation type');
-                return mutationType;
-            case 'subscription':
-                const subscriptionType = this.schema.getSubscriptionType();
-                if (!subscriptionType) throw new Error('Schema does not define Subscription type');
-                return subscriptionType;
-            default:
-                throw new Error(`Unknown operation type: ${operationType}`);
-        }
-    }
 }
