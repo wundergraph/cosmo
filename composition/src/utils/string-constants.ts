@@ -99,6 +99,7 @@ export const NON_NULLABLE_INT = 'Int!';
 export const NON_NULLABLE_STRING = 'String!';
 export const NOT_UPPER = 'NOT';
 export const NULL = 'Null';
+export const ONE_OF = 'oneOf';
 export const OPERATION_TO_DEFAULT = 'operationTypeNodeToDefaultType';
 export const OBJECT = 'Object';
 export const OBJECT_UPPER = 'OBJECT';
@@ -168,7 +169,7 @@ export const EXECUTABLE_DIRECTIVE_LOCATIONS = new Set<string>([
 
 export const ROOT_TYPE_NAMES = new Set<string>([MUTATION, QUERY, SUBSCRIPTION]);
 export const AUTHORIZATION_DIRECTIVES = new Set<string>([AUTHENTICATED, REQUIRES_SCOPES]);
-export const PERSISTED_CLIENT_DIRECTIVES = new Set<string>([DEPRECATED, SEMANTIC_NON_NULL]);
+export const PERSISTED_CLIENT_DIRECTIVES = new Set<string>([DEPRECATED, ONE_OF, SEMANTIC_NON_NULL]);
 export const INHERITABLE_DIRECTIVE_NAMES = new Set<string>([EXTERNAL, REQUIRE_FETCH_REASONS, SHAREABLE]);
 export const IGNORED_FIELDS = new Set<string>([ENTITIES_FIELD, SERVICE_FIELD]);
 
@@ -186,4 +187,4 @@ export const OUTPUT_NODE_KINDS = new Set<Kind>([
   Kind.UNION_TYPE_DEFINITION,
 ]);
 
-export const NON_REPEATABLE_PERSISTED_DIRECTIVES = new Set<DirectiveName>([INACCESSIBLE, SEMANTIC_NON_NULL]);
+export const NON_REPEATABLE_PERSISTED_DIRECTIVES = new Set<DirectiveName>([INACCESSIBLE, ONE_OF, SEMANTIC_NON_NULL]);
