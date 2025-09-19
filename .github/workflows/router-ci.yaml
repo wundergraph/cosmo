@@ -323,7 +323,8 @@ jobs:
           cid=$(docker ps --format "{{.ID}} {{.Image}}" | grep "redis:7" | awk '{print $1}')
           # Sanity checks
           docker exec "$cid" redis-cli -p 6379 ping
-          docker exec "$cid" redis-cli -u "redis://cosmo:test@localhost:7001" cluster nodes
+          docker exec "$cid" redis-cli -u "redis://cosmo:test@redis-0:6379" ping
+          docker exec "$cid" redis-cli -u "redis://cosmo:test@redis-0:6379" cluster nodes
       - name: Run Integration tests ${{ matrix.test_target }}
         working-directory: ./router-tests
         run: make test test_params="-run '^Test[^(Flaky)]' --timeout=5m -p 1 --parallel 10" test_target="${{ matrix.test_target }}"
