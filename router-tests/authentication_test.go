@@ -3029,11 +3029,8 @@ func TestAudienceValidation(t *testing.T) {
 }
 
 func TestIntrospectionAuthentication(t *testing.T) {
-	t.Run("introspection query no token no auth skip", func(t *testing.T) {
+	t.Run("unauthenticated introspection query fails on full auth", func(t *testing.T) {
 		t.Parallel()
-
-		// when introspection auth skip is not enabled,
-		// introspection queries must fail when they do not have a valid token
 
 		authenticators, _ := ConfigureAuth(t)
 		accessController, err := core.NewAccessController(core.AccessControllerOptions{
@@ -3062,11 +3059,8 @@ func TestIntrospectionAuthentication(t *testing.T) {
 		})
 	})
 
-	t.Run("introspection query no token with auth skip", func(t *testing.T) {
+	t.Run("introspection query skips auth when allowed to skip", func(t *testing.T) {
 		t.Parallel()
-
-		// when introspection auth skip is enabled,
-		// introspection queries are not expected to have a valid token
 
 		authenticators, _ := ConfigureAuth(t)
 		accessController, err := core.NewAccessController(core.AccessControllerOptions{
@@ -3093,7 +3087,7 @@ func TestIntrospectionAuthentication(t *testing.T) {
 		})
 	})
 
-	t.Run("introspection query (http get) no token with auth skip", func(t *testing.T) {
+	t.Run("introspection query auth skip works over http get", func(t *testing.T) {
 		t.Parallel()
 
 		// introspection queries over http get should be recognized and
@@ -3123,7 +3117,7 @@ func TestIntrospectionAuthentication(t *testing.T) {
 		})
 	})
 
-	t.Run("introspection query valid token with auth skip", func(t *testing.T) {
+	t.Run("introspection query with bearer token is authenticated even with auth skip", func(t *testing.T) {
 		t.Parallel()
 
 		// though auth skip is enabled, the introspection query is authenticated
@@ -3160,11 +3154,8 @@ func TestIntrospectionAuthentication(t *testing.T) {
 		})
 	})
 
-	t.Run("introspection query invalid token with auth skip", func(t *testing.T) {
+	t.Run("introspection query with invalid token still succeeds on auth skip", func(t *testing.T) {
 		t.Parallel()
-
-		// since we are skipping auth for introspection and have not configured
-		// a dedicated token for introspection queries, this query must succeed
 
 		authenticators, _ := ConfigureAuth(t)
 		accessController, err := core.NewAccessController(core.AccessControllerOptions{
@@ -3195,11 +3186,8 @@ func TestIntrospectionAuthentication(t *testing.T) {
 		})
 	})
 
-	t.Run("introspection query with auth skip and introspection token", func(t *testing.T) {
+	t.Run("introspection query with valid token succeeds when token is required", func(t *testing.T) {
 		t.Parallel()
-
-		// since we are skipping auth for introspection and have not configured
-		// a dedicated token for introspection queries, this query must succeed
 
 		authenticators, _ := ConfigureAuth(t)
 		token := "wg_test_introspection_token"
@@ -3231,10 +3219,8 @@ func TestIntrospectionAuthentication(t *testing.T) {
 		})
 	})
 
-	t.Run("introspection query with auth skip and invalid introspection token", func(t *testing.T) {
+	t.Run("introspection query with invalid token fails when token is required", func(t *testing.T) {
 		t.Parallel()
-
-		// since we have configured a token and the introspection query does not match it, this query must fail
 
 		authenticators, _ := ConfigureAuth(t)
 		token := "wg_test_introspection_token"
@@ -3266,11 +3252,8 @@ func TestIntrospectionAuthentication(t *testing.T) {
 		})
 	})
 
-	t.Run("normal query with auth skip and valid token", func(t *testing.T) {
+	t.Run("normal query passes auth with valid bearer token when auth skip is enabled", func(t *testing.T) {
 		t.Parallel()
-
-		// a normal query with valid token is expected to be authenticated
-		// with an authenticator, even when auth skip (for introspection) is enabled.
 
 		authenticators, authServer := ConfigureAuth(t)
 		accessController, err := core.NewAccessController(core.AccessControllerOptions{
@@ -3302,11 +3285,10 @@ func TestIntrospectionAuthentication(t *testing.T) {
 		})
 	})
 
-	t.Run("normal query with auth skip and invalid token", func(t *testing.T) {
+	t.Run("normal query fails auth with invalid bearer token when auth skip is enabled", func(t *testing.T) {
 		t.Parallel()
 
-		// a normal query with invalid token is expected to fail authentication,
-		// even when auth skip (for introspection) is enabled.
+		// This ensures auth skip is only allowed for introspection queries, not others.
 
 		authenticators, _ := ConfigureAuth(t)
 		accessController, err := core.NewAccessController(core.AccessControllerOptions{
