@@ -1973,6 +1973,16 @@
               "type": "string",
               "description": "The address on which the Connect RPC server listens for incoming requests. The address is specified as a string with the format 'host:port'.",
               "format": "hostname-port"
+            },
+            "package_name": {
+              "type": "string",
+              "description": "The protobuf package name for the Connect RPC service. This defines the namespace for the generated service and is used in the service definition. Example: 'com.example.graphql'",
+              "pattern": "^[a-zA-Z][a-zA-Z0-9_]*(\\.[a-zA-Z][a-zA-Z0-9_]*)*$"
+            },
+            "service_name": {
+              "type": "string",
+              "description": "The name of the Connect RPC service. This is used as the service identifier in the protobuf service definition. Example: 'GraphQLService'",
+              "pattern": "^[A-Z][a-zA-Z0-9_]*$"
             }
           }
         }

@@ -955,6 +955,8 @@ type ConnectRPCStorageConfig struct {
 
 type ConnectRPCServer struct {
 	ListenAddress string `yaml:"listen_address" env:"CONNECT_RPC_SERVER_LISTEN_ADDRESS"`
+	PackageName   string `yaml:"package_name" env:"CONNECT_RPC_SERVER_PACKAGE_NAME"`
+	ServiceName   string `yaml:"service_name" env:"CONNECT_RPC_SERVER_SERVICE_NAME"`
 }
 
 type ConnectRPCConfiguration struct {
