@@ -96,11 +96,21 @@ services:
       - primary
     environment:
       - GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS=true
-      - GF_INSTALL_PLUGINS=grafana-clickhouse-datasource
+      - GF_INSTALL_PLUGINS=grafana-clickhouse-datasource,grafana-pyroscope-app
       - CLICKHOUSE_USER=${CLICKHOUSE_USER:-default}
       - CLICKHOUSE_PASSWORD=${CLICKHOUSE_PASSWORD:-changeme}
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    profiles:
+      - debug
+
+  pyroscope:
+    image: grafana/pyroscope:latest
+    ports:
+      - '4040:4040'
+    restart: unless-stopped
+    networks:
+      - primary
     profiles:
       - debug
 
