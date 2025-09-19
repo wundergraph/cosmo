@@ -148,7 +148,7 @@ type Employee implements Identifiable @key(fields: "id") {
   currentMood: Mood! @external
   derivedMood: Mood! @requires(fields: "currentMood")
   # From the `availability` service. Only defined for use in @requires
-  isAvailable: Boolean! @external
+  isAvailable: Boolean @external
   rootFieldThrowsError: String @goField(forceResolver: true)
   rootFieldErrorWrapper: ErrorWrapper @goField(forceResolver: true)
 }
@@ -180,6 +180,7 @@ type Cosmo implements IProduct @key(fields: "upc") {
   upc: ID!
   engineers: [Employee!]!
   lead: Employee!
+  isLeadAvailable: Boolean @requires(fields: "lead { isAvailable }")
 }
 
 type SDK implements IProduct @key(fields: "upc") {
