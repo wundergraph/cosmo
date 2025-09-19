@@ -62,7 +62,7 @@ type natsSubscriptionArgs struct {
 	errValue  error
 }
 
-func TestNatsEvents(t *testing.T) {
+func TestFlakyNatsEvents(t *testing.T) {
 	t.Parallel()
 
 	t.Run("subscribe async", func(t *testing.T) {
