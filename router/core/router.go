@@ -19,6 +19,7 @@ import (
 	"github.com/nats-io/nuid"
 	"github.com/wundergraph/cosmo/router/internal/track"
 	"github.com/wundergraph/cosmo/router/pkg/connect_rpc"
+	"github.com/wundergraph/cosmo/router/pkg/connect_rpc/proxy"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
@@ -843,7 +844,44 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	}
 
 	if r.connectRPC.Enabled {
-		rpcServer := connect_rpc.NewConnectRPCServer(nil)
+		var collectionDir string
+
+		if r.connectRPC.Storage.ProviderID != "" {
+			r.logger.Debug("Resolving storage provider for ConnectRPC operations",
+				zap.String("provider_id", r.connectRPC.Storage.ProviderID))
+
+			// Find the provider in storage_providers
+			found := false
+
+			// Check for file_system providers
+			for _, provider := range r.storageProviders.FileSystem {
+				if provider.ID == r.mcp.Storage.ProviderID {
+					r.logger.Debug("Found file_system storage provider for ConnectRPC",
+						zap.String("id", provider.ID),
+						zap.String("path", provider.Path))
+
+					// Use the resolved file system path
+					collectionDir = provider.Path
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				return fmt.Errorf("storage provider with id '%s' for mcp server not found", r.mcp.Storage.ProviderID)
+			}
+		}
+
+		connectRPCOpts := []func(options *connect_rpc.Options){
+			connect_rpc.WithLogger(r.logger),
+			connect_rpc.WithListenAddress(r.connectRPC.Server.ListenAddress),
+			connect_rpc.WithCollectionDir(collectionDir),
+			connect_rpc.WithPackageName(r.connectRPC.Server.PackageName),
+			connect_rpc.WithServiceName(r.connectRPC.Server.ServiceName),
+			connect_rpc.WithGraphQLClient(proxy.NewClient(fmt.Sprintf("http://%s/graphql", r.listenAddr), 30*time.Second)),
+		}
+
+		rpcServer := connect_rpc.NewConnectRPCServer(connectRPCOpts...)
 
 		err := rpcServer.Start()
 		if err != nil {
