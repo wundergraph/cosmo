@@ -30,7 +30,11 @@ import {
 } from './naming-conventions.js';
 import type { ProtoLock } from './proto-lock.js';
 import { ProtoLockManager } from './proto-lock.js';
-import { SCALAR_TYPE_MAP, SCALAR_WRAPPER_TYPE_MAP } from './sdl-to-proto-visitor.js';
+import {
+    SCALAR_TYPE_MAP,
+    SCALAR_WRAPPER_TYPE_MAP,
+    convertVariableTypeToProto,
+} from './proto-utils.js';
 import {camelCase, upperFirst} from "lodash-es";
 
 /**
@@ -201,7 +205,7 @@ export class OperationToProtoVisitor {
         orderedFieldNames.forEach((fieldName, index) => {
             const variable = variables.find(v => graphqlFieldToProtoField(v.variable.name.value) === fieldName);
             if (variable) {
-                const protoType = this.convertVariableTypeToProto(variable.type);
+                const protoType = convertVariableTypeToProto(variable.type);
                 fields.push(`  ${protoType} ${fieldName} = ${index + 1};`);
             }
         });
@@ -210,30 +214,6 @@ export class OperationToProtoVisitor {
         return `// Request message for ${operationName} operation.\nmessage ${messageName} {${fieldsStr}}`;
     }
 
-    private convertVariableTypeToProto(typeNode: any): string {
-        if (typeNode.kind === 'NonNullType') {
-            return this.convertVariableTypeToProto(typeNode.type);
-        }
-
-        if (typeNode.kind === 'ListType') {
-            return `repeated ${this.convertVariableTypeToProto(typeNode.type)}`;
-        }
-
-        if (typeNode.kind === 'NamedType') {
-            const typeName = typeNode.name.value;
-            switch (typeName) {
-                case 'Int': return 'int32';
-                case 'String': return 'string';
-                case 'Boolean': return 'bool';
-                case 'Float': return 'double';
-                case 'ID': return 'string';
-                default:
-                    return 'string';
-            }
-        }
-
-        return 'string';
-    }
 
     private generateResponseMessage(operationName: string, selectionSet: SelectionSetNode): string {
         const methodName = operationName;
@@ -372,15 +352,6 @@ export class OperationToProtoVisitor {
         return 'string';
     }
 
-    private isGraphQLListType(graphqlType: any): boolean {
-        // Handle NonNull wrapper
-        if (isNonNullType(graphqlType)) {
-            return this.isGraphQLListType(graphqlType.ofType);
-        }
-
-        // Check if it's a list type
-        return isListType(graphqlType);
-    }
 
     private getSchemaFieldFromPath(parentFieldName: string, fieldName: string): GraphQLField<any, any> | null {
         const queryType = this.schema.getQueryType();
@@ -446,6 +417,80 @@ export class OperationToProtoVisitor {
         }
 
         return null;
+    }
+
+
+    /**
+     * Convert PascalCase field path part to camelCase GraphQL field name
+     */
+    private convertPascalCaseToGraphQLField(pathPart: string): string {
+        return camelCase(pathPart);
+    }
+
+    private assembleProto(serviceMethods: string[], messages: string[]): string {
+        const parts: string[] = [];
+
+        // Build imports and options
+        const imports: string[] = [];
+        const options: string[] = [];
+
+        // Add wrapper import if needed
+        if (this.usesWrapperTypes) {
+            imports.push('google/protobuf/wrappers.proto');
+        }
+
+        if (this.goPackage) {
+            options.push(`option go_package = "${this.goPackage}";`);
+        }
+
+        // Proto header
+        parts.push('syntax = "proto3";');
+        parts.push(`package ${this.packageName};`);
+        parts.push('');
+
+        // Add imports
+        for (const importPath of imports) {
+            parts.push(`import "${importPath}";`);
+        }
+        if (imports.length > 0) {
+            parts.push('');
+        }
+
+        // Add options
+        for (const option of options) {
+            parts.push(option);
+        }
+        if (options.length > 0) {
+            parts.push('');
+        }
+
+        // Service definition
+        parts.push(`// Service definition for ${this.serviceName}`);
+        parts.push(`service ${this.serviceName} {`);
+        parts.push(...serviceMethods);
+        parts.push('}');
+        parts.push(''); // Add spacing after service
+
+        // Messages with spacing between each message
+        for (let i = 0; i < messages.length; i++) {
+            parts.push(messages[i]);
+            // Add empty line after each message (except the last one)
+            if (i < messages.length - 1) {
+                parts.push('');
+            }
+        }
+
+        return parts.join('\n');
+    }
+
+    private isGraphQLListType(graphqlType: any): boolean {
+        // Handle NonNull wrapper
+        if (isNonNullType(graphqlType)) {
+            return this.isGraphQLListType(graphqlType.ofType);
+        }
+
+        // Check if it's a list type
+        return isListType(graphqlType);
     }
 
     /**
@@ -530,50 +575,5 @@ export class OperationToProtoVisitor {
             default:
                 throw new Error(`Unknown operation type: ${operationType}`);
         }
-    }
-
-    /**
-     * Convert PascalCase field path part to camelCase GraphQL field name
-     */
-    private convertPascalCaseToGraphQLField(pathPart: string): string {
-        return camelCase(pathPart);
-    }
-
-    private assembleProto(serviceMethods: string[], messages: string[]): string {
-        const parts: string[] = [];
-
-        // Proto header
-        parts.push('syntax = "proto3";');
-        parts.push(`package ${this.packageName};`);
-        parts.push('');
-
-        // Add wrapper import if needed
-        if (this.usesWrapperTypes) {
-            parts.push('import "google/protobuf/wrappers.proto";');
-            parts.push('');
-        }
-
-        if (this.goPackage) {
-            parts.push(`option go_package = "${this.goPackage}";`);
-            parts.push('');
-        }
-
-        // Service definition
-        parts.push(`// Service definition for ${this.serviceName}`);
-        parts.push(`service ${this.serviceName} {`);
-        parts.push(...serviceMethods);
-        parts.push('}');
-        parts.push(''); // Add spacing after service
-
-        // Messages with spacing between each message
-        for (let i = 0; i < messages.length; i++) {
-            parts.push(messages[i]);
-            // Add empty line after each message (except the last one)
-            if (i < messages.length - 1) {
-                parts.push('');
-            }
-        }
-
-        return parts.join('\n');
     }
 }
