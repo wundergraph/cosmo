@@ -2071,7 +2071,7 @@ func TestWebSockets(t *testing.T) {
 		})
 	})
 
-	t.Run("subscription with unknown hash when safelist is enabled", func(t *testing.T) {
+	t.Run("unknown operation gets rejected when safelist is enabled", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
@@ -2100,7 +2100,7 @@ func TestWebSockets(t *testing.T) {
 		})
 	})
 
-	t.Run("subscription with known hash when safelist is enabled", func(t *testing.T) {
+	t.Run("known hash passes when safelist is enabled", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
@@ -2129,7 +2129,7 @@ func TestWebSockets(t *testing.T) {
 		})
 	})
 
-	t.Run("subscription with unknown hash when log_unknown is enabled", func(t *testing.T) {
+	t.Run("unknown operation gets logged when log_unknown is enabled", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
@@ -2170,7 +2170,7 @@ func TestWebSockets(t *testing.T) {
 		})
 	})
 
-	t.Run("subscription with persisted operation hash and matching query", func(t *testing.T) {
+	t.Run("operation with matching hash passes", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -2203,7 +2203,7 @@ func TestWebSockets(t *testing.T) {
 		})
 	})
 
-	t.Run("subscription with persisted operation hash and no matching query", func(t *testing.T) {
+	t.Run("operation with mismatched hash is rejected", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
