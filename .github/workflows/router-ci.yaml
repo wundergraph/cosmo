@@ -180,13 +180,7 @@ jobs:
           - 8222:8222
           - 6222:6222
       redis:
-        image: bitnamilegacy/redis-cluster:7.2
-        env:
-          ALLOW_EMPTY_PASSWORD: yes
-          REDIS_NODES: "redis"
-          REDIS_CLUSTER_REPLICAS: 0
-          REDIS_CLUSTER_ANNOUNCE_IP: redis
-          REDIS_CLUSTER_ANNOUNCE_PORT: 6379
+        image: redis:7
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s
@@ -204,7 +198,7 @@ jobs:
           REDIS_CLUSTER_REPLICAS: 0
           REDIS_CLUSTER_CREATOR: yes
         ports:
-          - 7001:6379
+          - 7001:7001
       redis-1:
         image: bitnamilegacy/redis-cluster:7.2
         env:
@@ -213,7 +207,7 @@ jobs:
           REDIS_CLUSTER_ANNOUNCE_IP: redis-1
           REDIS_CLUSTER_ANNOUNCE_PORT: 7002
         ports:
-          - 7002:6379
+          - 7002:7002
       redis-2:
         image: bitnamilegacy/redis-cluster:7.2
         env:
@@ -222,7 +216,7 @@ jobs:
           REDIS_CLUSTER_ANNOUNCE_IP: redis-2
           REDIS_CLUSTER_ANNOUNCE_PORT: 7003
         ports:
-          - 7003:6379
+          - 7003:7003
       kafka:
         image: bitnamilegacy/kafka:3.7.0
         options: >-
