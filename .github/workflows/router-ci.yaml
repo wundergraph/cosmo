@@ -259,6 +259,19 @@ jobs:
 #          slave2-port: 7005
 #          slave3-port: 7006
 #          sleep-duration: 5
+      - name: Wait for Redis Cluster
+        run: |
+          echo "Waiting for Redis Cluster to become healthy..."
+          cid=$(docker ps --format "{{.ID}} {{.Image}}" | grep "redis:7" | awk '{print $1}')
+          for i in {1..30}; do
+            if docker exec "$cid" redis-cli -a test -h localhost -p 7001 cluster info 2>/dev/null | grep -q "cluster_state:ok"; then
+              echo "[!] Redis Cluster is ready"
+              break
+            fi
+            echo "[!] Cluster not ready yet..."
+            sleep 2
+          done
+          docker exec "$cid" redis-cli -a test -h localhost -p 7001 cluster info
       - name: Configure Redis Authentication & ACL
         run: |
           docker ps -a
@@ -268,6 +281,10 @@ jobs:
             docker exec "$cid" redis-cli -p 6379 -a test ACL SETUSER cosmo on ">test" "~*" "+@all"
             docker exec "$cid" redis-cli -p 6379 -a test ping
           done
+          cid=$(docker ps --format "{{.ID}} {{.Image}}" | grep "redis:7" | awk '{print $1}')
+          # Sanity checks
+          docker exec "$cid" redis-cli -p 6379 ping
+          docker exec "$cid" redis-cli -u "redis://cosmo:test@localhost:7001" cluster nodes
       - name: Run Integration tests ${{ matrix.test_target }}
         working-directory: ./router-tests
         run: make test test_params="-run '^Test[^(Flaky)]' --timeout=5m -p 1 --parallel 10" test_target="${{ matrix.test_target }}"
