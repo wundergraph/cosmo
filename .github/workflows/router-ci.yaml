@@ -192,7 +192,7 @@ jobs:
         image: bitnamilegacy/redis-cluster:7.2
         env:
           REDIS_PASSWORD: test
-          REDIS_NODES: "redis-0 redis-1 redis-2"
+          REDIS_NODES: "redis-0,redis-1,redis-2"
           REDIS_CLUSTER_ANNOUNCE_IP: localhost
           REDIS_CLUSTER_ANNOUNCE_PORT: 7001
           REDIS_CLUSTER_REPLICAS: 0
@@ -203,7 +203,7 @@ jobs:
         image: bitnamilegacy/redis-cluster:7.2
         env:
           REDIS_PASSWORD: test
-          REDIS_NODES: "redis-0 redis-1 redis-2"
+          REDIS_NODES: "redis-0,redis-1,redis-2"
           REDIS_CLUSTER_ANNOUNCE_IP: localhost
           REDIS_CLUSTER_ANNOUNCE_PORT: 7002
           REDIS_CLUSTER_REPLICAS: 0
@@ -214,7 +214,7 @@ jobs:
         image: bitnamilegacy/redis-cluster:7.2
         env:
           REDIS_PASSWORD: test
-          REDIS_NODES: "redis-0 redis-1 redis-2"
+          REDIS_NODES: "redis-0,redis-1,redis-2"
           REDIS_CLUSTER_ANNOUNCE_IP: localhost
           REDIS_CLUSTER_ANNOUNCE_PORT: 7003
           REDIS_CLUSTER_REPLICAS: 0
