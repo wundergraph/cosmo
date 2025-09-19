@@ -192,7 +192,7 @@ jobs:
         image: bitnamilegacy/redis-cluster:7.2
         env:
           REDIS_PASSWORD: test
-          REDIS_NODES: "redis-0:6379,redis-1:6379,redis-2:6379"
+          REDIS_NODES: "redis-0:6379 redis-1:6379 redis-2:6379"
           REDIS_CLUSTER_ANNOUNCE_IP: localhost
           REDIS_CLUSTER_ANNOUNCE_PORT: 7001
           REDIS_CLUSTER_REPLICAS: 0
@@ -203,7 +203,7 @@ jobs:
         image: bitnamilegacy/redis-cluster:7.2
         env:
           REDIS_PASSWORD: test
-          REDIS_NODES: "redis-0:6379,redis-1:6379,redis-2:6379"
+          REDIS_NODES: "redis-0:6379 redis-1:6379 redis-2:6379"
           REDIS_CLUSTER_ANNOUNCE_IP: localhost
           REDIS_CLUSTER_ANNOUNCE_PORT: 7002
         ports:
@@ -212,7 +212,7 @@ jobs:
         image: bitnamilegacy/redis-cluster:7.2
         env:
           REDIS_PASSWORD: test
-          REDIS_NODES: "redis-0:6379,redis-1:6379,redis-2:6379"
+          REDIS_NODES: "redis-0:6379 redis-1:6379 redis-2:6379"
           REDIS_CLUSTER_ANNOUNCE_IP: localhost
           REDIS_CLUSTER_ANNOUNCE_PORT: 7003
         ports:
@@ -261,17 +261,23 @@ jobs:
 #          sleep-duration: 5
       - name: Wait for Redis Cluster
         run: |
-          echo "Waiting for Redis Cluster to become healthy..."
+          echo "[CHECK] Waiting for Redis Cluster to become healthy..."
           cid=$(docker ps --format "{{.ID}} {{.Image}}" | grep "redis:7" | awk '{print $1}')
+          success=0
           for i in {1..30}; do
             if docker exec "$cid" redis-cli -a test -h localhost -p 7001 cluster info 2>/dev/null | grep -q "cluster_state:ok"; then
-              echo "[!] Redis Cluster is ready"
+              echo "[SUCCESS] Redis Cluster is ready"
+              success=1
               break
             fi
-            echo "[!] Cluster not ready yet..."
+            echo "[WAITING] Cluster not ready yet (attempt $i)..."
             sleep 2
           done
-          docker exec "$cid" redis-cli -a test -h localhost -p 7001 cluster info
+          if [ $success -eq 0 ]; then
+            echo "[ERROR] Redis Cluster did not become healthy in time"
+            docker exec "$cid" redis-cli -a test -h localhost -p 7001 cluster info || true
+            exit 1
+          fi
       - name: Configure Redis Authentication & ACL
         run: |
           docker ps -a
