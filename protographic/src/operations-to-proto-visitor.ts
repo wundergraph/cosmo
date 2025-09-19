@@ -33,17 +33,15 @@ import { ProtoLockManager } from './proto-lock.js';
 import {
     SCALAR_TYPE_MAP,
     SCALAR_WRAPPER_TYPE_MAP,
+    ProtoType,
     convertVariableTypeToProto,
+    getProtoTypeFromGraphQL,
+    handleListType,
+    isGraphQLListType,
+    getRootTypeForOperation,
+    buildProtoHeader,
 } from './proto-utils.js';
 import {camelCase, upperFirst} from "lodash-es";
-
-/**
- * Data structure for formatting message fields
- */
-interface ProtoType {
-    typeName: string;
-    isRepeated: boolean;
-}
 
 export interface OperationToProtoOptions {
     serviceName?: string;
@@ -118,7 +116,7 @@ export class OperationToProtoVisitor {
      */
     private validateOperationAgainstSchema(operation: OperationDefinitionNode): void {
         const operationType = operation.operation;
-        const rootType = this.getRootTypeForOperation(operationType);
+        const rootType = getRootTypeForOperation(this.schema, operationType);
         
         if (!rootType) {
             throw new Error(`Schema does not define ${operationType} type`);
@@ -293,15 +291,17 @@ export class OperationToProtoVisitor {
                         const nestedFieldPath = this.buildFieldPath(fieldPath, selection.name.value);
                         const nestedType = this.createNestedMessageName(operationName, nestedFieldPath);
 
-                        // Use the proven list type detection from sdl-to-proto-visitor
-                        const protoType = this.isGraphQLListType(schemaField.type)
+                        // Use the proven list type detection from proto-utils
+                        const protoType = isGraphQLListType(schemaField.type)
                             ? `repeated ${nestedType}`
                             : nestedType;
 
                         fields.push(`  ${protoType} ${fieldName} = ${fieldIndex++};`);
                     } else {
                         // Leaf field - use the battle-tested getProtoTypeFromGraphQL method
-                        const protoType = this.getProtoTypeFromGraphQL(schemaField.type);
+                        const wrapperTracker = { usesWrapperTypes: this.usesWrapperTypes };
+                        const protoType = getProtoTypeFromGraphQL(schemaField.type, false, wrapperTracker);
+                        this.usesWrapperTypes = wrapperTracker.usesWrapperTypes;
                         fields.push(`  ${protoType.typeName} ${fieldName} = ${fieldIndex++};`);
                     }
                 }
@@ -332,7 +332,7 @@ export class OperationToProtoVisitor {
             const messageName = this.createNestedMessageName(operationName, fieldPath);
 
             // Check if the GraphQL type is a list type
-            const isListField = this.isGraphQLListType(graphqlType);
+            const isListField = isGraphQLListType(graphqlType);
             return isListField ? `repeated ${messageName}` : messageName;
         }
 

@@ -1,3 +1,17 @@
+import {
+    GraphQLType,
+    GraphQLNonNull,
+    GraphQLList,
+    GraphQLNamedType,
+    GraphQLSchema,
+    GraphQLObjectType,
+    isNonNullType,
+    isListType,
+    isScalarType,
+    isEnumType,
+    getNamedType,
+} from 'graphql';
+
 /**
  * Maps GraphQL scalar types to Protocol Buffer types
  *
@@ -27,6 +41,14 @@ export const SCALAR_WRAPPER_TYPE_MAP: Record<string, string> = {
 };
 
 /**
+ * Data structure for formatting message fields
+ */
+export interface ProtoType {
+    typeName: string;
+    isRepeated: boolean;
+}
+
+/**
  * Convert GraphQL variable type node to Protocol Buffer type using SCALAR_TYPE_MAP
  */
 export function convertVariableTypeToProto(typeNode: any): string {
@@ -44,4 +66,146 @@ export function convertVariableTypeToProto(typeNode: any): string {
   }
 
   return 'string';
+}
+
+/**
+ * Check if a GraphQL type is a list type (handles NonNull wrappers)
+ */
+export function isGraphQLListType(graphqlType: GraphQLType): boolean {
+    // Handle NonNull wrapper
+    if (isNonNullType(graphqlType)) {
+        return isGraphQLListType(graphqlType.ofType);
+    }
+
+    // Check if it's a list type
+    return isListType(graphqlType);
+}
+
+/**
+ * Get the root type for an operation (Query, Mutation, Subscription)
+ */
+export function getRootTypeForOperation(schema: GraphQLSchema, operationType: string): GraphQLObjectType {
+    switch (operationType) {
+        case 'query':
+            const queryType = schema.getQueryType();
+            if (!queryType) throw new Error('Schema does not define Query type');
+            return queryType;
+        case 'mutation':
+            const mutationType = schema.getMutationType();
+            if (!mutationType) throw new Error('Schema does not define Mutation type');
+            return mutationType;
+        case 'subscription':
+            const subscriptionType = schema.getSubscriptionType();
+            if (!subscriptionType) throw new Error('Schema does not define Subscription type');
+            return subscriptionType;
+        default:
+            throw new Error(`Unknown operation type: ${operationType}`);
+    }
+}
+
+/**
+ * Map GraphQL type to Protocol Buffer type
+ * Battle-tested implementation from sdl-to-proto-visitor.ts
+ */
+export function getProtoTypeFromGraphQL(
+    graphqlType: GraphQLType,
+    ignoreWrapperTypes: boolean = false,
+    usesWrapperTypesTracker?: { usesWrapperTypes: boolean }
+): ProtoType {
+    // Nullable lists need to be handled first, otherwise they will be treated as scalar types
+    if (isListType(graphqlType) || (isNonNullType(graphqlType) && isListType(graphqlType.ofType))) {
+        return handleListType(graphqlType, usesWrapperTypesTracker);
+    }
+    // For nullable scalar types, use wrapper types
+    if (isScalarType(graphqlType)) {
+        if (ignoreWrapperTypes) {
+            return { typeName: SCALAR_TYPE_MAP[graphqlType.name] || 'string', isRepeated: false };
+        }
+        if (usesWrapperTypesTracker) {
+            usesWrapperTypesTracker.usesWrapperTypes = true; // Track that we're using wrapper types
+        }
+        return {
+            typeName: SCALAR_WRAPPER_TYPE_MAP[graphqlType.name] || 'google.protobuf.StringValue',
+            isRepeated: false,
+        };
+    }
+
+    if (isEnumType(graphqlType)) {
+        return { typeName: graphqlType.name, isRepeated: false };
+    }
+
+    if (isNonNullType(graphqlType)) {
+        // For non-null scalar types, use the base type
+        if (isScalarType(graphqlType.ofType)) {
+            return { typeName: SCALAR_TYPE_MAP[graphqlType.ofType.name] || 'string', isRepeated: false };
+        }
+
+        return getProtoTypeFromGraphQL(graphqlType.ofType, ignoreWrapperTypes, usesWrapperTypesTracker);
+    }
+    // Named types (object, interface, union, input)
+    const namedType = graphqlType as GraphQLNamedType;
+    if (namedType && typeof namedType.name === 'string') {
+        return { typeName: namedType.name, isRepeated: false };
+    }
+
+    return { typeName: 'string', isRepeated: false }; // Default fallback
+}
+
+/**
+ * Handle GraphQL list types
+ * Simplified version that works for both SDL and operations visitors
+ */
+export function handleListType(
+    graphqlType: GraphQLList<GraphQLType> | GraphQLNonNull<GraphQLList<GraphQLType>>,
+    usesWrapperTypesTracker?: { usesWrapperTypes: boolean }
+): ProtoType {
+    const listType = isNonNullType(graphqlType) ? graphqlType.ofType as GraphQLList<GraphQLType> : graphqlType as GraphQLList<GraphQLType>;
+    
+    // Get the inner type of the list
+    let innerType = listType.ofType;
+    
+    // Unwrap NonNull if present
+    if (isNonNullType(innerType)) {
+        innerType = innerType.ofType;
+    }
+    
+    // Convert the inner type
+    const protoType = getProtoTypeFromGraphQL(innerType, true, usesWrapperTypesTracker);
+    return { ...protoType, isRepeated: true };
+}
+
+/**
+ * Build the proto file header with syntax, package, imports, and options
+ */
+export function buildProtoHeader(packageName: string, imports: string[], options: string[]): string[] {
+    const header: string[] = [];
+
+    // Add syntax declaration
+    header.push('syntax = "proto3";');
+
+    // Add package declaration
+    header.push(`package ${packageName};`);
+    header.push('');
+
+    // Add options if any (options come before imports)
+    if (options.length > 0) {
+        // Sort options for consistent output
+        const sortedOptions = [...options].sort();
+        for (const option of sortedOptions) {
+            header.push(option);
+        }
+        header.push('');
+    }
+
+    // Add imports if any
+    if (imports.length > 0) {
+        // Sort imports for consistent output
+        const sortedImports = [...imports].sort();
+        for (const importPath of sortedImports) {
+            header.push(`import "${importPath}";`);
+        }
+        header.push('');
+    }
+
+    return header;
 }

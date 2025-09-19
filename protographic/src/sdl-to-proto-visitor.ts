@@ -41,6 +41,12 @@ import { ProtoLock, ProtoLockManager } from './proto-lock.js';
 import {
   SCALAR_TYPE_MAP,
   SCALAR_WRAPPER_TYPE_MAP,
+  ProtoType,
+  getProtoTypeFromGraphQL,
+  handleListType,
+  isGraphQLListType,
+  getRootTypeForOperation,
+  buildProtoHeader,
 } from './proto-utils.js';
 
 /**
@@ -52,13 +58,6 @@ interface CollectionResult {
   messageDefinitions: string[];
 }
 
-/**
- * Data structure for formatting message fields
- */
-interface ProtoType {
-  typeName: string;
-  isRepeated: boolean;
-}
 
 /**
  * Options for GraphQLToProtoTextVisitor
@@ -379,41 +378,6 @@ export class GraphQLToProtoTextVisitor {
   }
 
 
-  /**
-   * Build the proto file header with syntax, package, imports, and options
-   */
-  private buildProtoHeader(): string[] {
-    const header: string[] = [];
-
-    // Add syntax declaration
-    header.push('syntax = "proto3";');
-
-    // Add package declaration
-    header.push(`package ${this.packageName};`);
-    header.push('');
-
-    // Add options if any (options come before imports)
-    if (this.options.length > 0) {
-      // Sort options for consistent output
-      const sortedOptions = [...this.options].sort();
-      for (const option of sortedOptions) {
-        header.push(option);
-      }
-      header.push('');
-    }
-
-    // Add imports if any
-    if (this.imports.length > 0) {
-      // Sort imports for consistent output
-      const sortedImports = [...this.imports].sort();
-      for (const importPath of sortedImports) {
-        header.push(`import "${importPath}";`);
-      }
-      header.push('');
-    }
-
-    return header;
-  }
 
   /**
    * Visit the GraphQL schema to generate Proto buffer definition
@@ -451,7 +415,7 @@ export class GraphQLToProtoTextVisitor {
     let protoContent: string[] = [];
 
     // Add the header (syntax, package, imports, options)
-    protoContent.push(...this.buildProtoHeader());
+    protoContent.push(...buildProtoHeader(this.packageName, this.imports, this.options));
 
     // Add a service description comment
     if (this.includeComments) {
@@ -1570,6 +1534,7 @@ Example:
   }
 
 
+
   /**
    * Map GraphQL type to Protocol Buffer type
    *
@@ -1642,7 +1607,10 @@ Example:
 
     // Simple non-nullable lists can use repeated fields directly
     if (!isNullableList && !isNestedList) {
-      return { ...this.getProtoTypeFromGraphQL(getNamedType(listType), true), isRepeated: true };
+      const wrapperTracker = { usesWrapperTypes: this.usesWrapperTypes };
+      const result = { ...getProtoTypeFromGraphQL(getNamedType(listType), true, wrapperTracker), isRepeated: true };
+      this.usesWrapperTypes = wrapperTracker.usesWrapperTypes;
+      return result;
     }
 
     // Nullable or nested lists need wrapper messages
@@ -1760,7 +1728,9 @@ Example:
     if (level > 1) {
       innerWrapperName = `${'ListOf'.repeat(level - 1)}${baseType.name}`;
     } else {
-      innerWrapperName = this.getProtoTypeFromGraphQL(baseType, true).typeName;
+      const wrapperTracker = { usesWrapperTypes: this.usesWrapperTypes };
+      innerWrapperName = getProtoTypeFromGraphQL(baseType, true, wrapperTracker).typeName;
+      this.usesWrapperTypes = wrapperTracker.usesWrapperTypes;
     }
 
     lines.push(
