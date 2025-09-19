@@ -252,6 +252,45 @@ jobs:
         ports:
           - '9092:9092'
     steps:
+      - name: Wait for Redis Cluster
+        run: |
+          echo "[CHECK] Waiting for Redis Cluster to become healthy..."
+          cluster_containers=$(docker ps --quiet --filter "ancestor=bitnamilegacy/redis-cluster:7.2")
+
+          success=0
+          for i in {1..30}; do
+            if [ $i -eq 1 ]; then
+              echo "[INIT] Forcing cluster creation..."
+              # pick one container as the "creator"
+              creator=$(echo $cluster_containers | awk '{print $1}')
+              # run the cluster create command inside it
+              docker exec "$creator" redis-cli --cluster create redis-0:6379 redis-1:6379 redis-2:6379 --cluster-replicas 0 --cluster-yes -a test || true
+            fi
+
+            for cid in $cluster_containers; do
+              docker exec "$cid" redis-cli -a test -p 6379 cluster info
+              if docker exec "$cid" redis-cli -a test -p 6379 cluster info 2>/dev/null | grep -q "cluster_state:ok"; then
+                echo "[SUCCESS] Redis Cluster is ready (reported by $cid)"
+                success=1
+                break 2
+              fi
+            done
+
+            echo "[WAITING] Cluster not ready yet (attempt $i)..."
+            sleep 2
+          done
+
+          if [ $success -eq 0 ]; then
+            echo "[ERROR] Redis Cluster did not become healthy in time"
+            for cid in $cluster_containers; do
+              echo "--- Cluster info for $cid ---"
+              docker exec "$cid" redis-cli -a test -p 6379 cluster info || true
+              docker exec "$cid" redis-cli -a test -p 6379 cluster nodes || true
+              echo "--- Logs for $cid ---"
+              docker logs "$cid" | tail -n 100
+            done
+            exit 1
+          fi
       - uses: actions/checkout@v4
       - uses: ./.github/actions/go
         with:
@@ -272,35 +311,6 @@ jobs:
 #          slave2-port: 7005
 #          slave3-port: 7006
 #          sleep-duration: 5
-      - name: Wait for Redis Cluster
-        run: |
-          echo "[CHECK] Waiting for Redis Cluster to become healthy..."
-          cluster_containers=$(docker ps --quiet --filter "ancestor=bitnamilegacy/redis-cluster:7.2")
-
-          success=0
-          for i in {1..30}; do
-            for cid in $cluster_containers; do
-              if docker exec "$cid" redis-cli -a test -p 6379 cluster info 2>/dev/null | grep -q "cluster_state:ok"; then
-                echo "[SUCCESS] Redis Cluster is ready (reported by $cid)"
-                success=1
-                break 2
-              fi
-            done
-            echo "[WAITING] Cluster not ready yet (attempt $i)..."
-            sleep 2
-          done
-
-          if [ $success -eq 0 ]; then
-            echo "[ERROR] Redis Cluster did not become healthy in time"
-            for cid in $cluster_containers; do
-              echo "--- Cluster info for $cid ---"
-              docker exec "$cid" redis-cli -a test -p 6379 cluster info || true
-              docker exec "$cid" redis-cli -a test -p 6379 cluster nodes || true
-              echo "--- Logs for $cid ---"
-              docker logs "$cid" | tail -n 100
-            done
-            exit 1
-          fi
       - name: Configure Redis Authentication & ACL
         run: |
           docker ps -a
