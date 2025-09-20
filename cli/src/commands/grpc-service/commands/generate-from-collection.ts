@@ -14,7 +14,7 @@ import { renderResultTree, renderValidationResults } from '../../router/commands
 
 type CLIOptions = {
     schema: string;
-    operations: string;
+    collection: string;
     output: string;
     packageName?: string;
     goPackage?: string;
@@ -22,16 +22,16 @@ type CLIOptions = {
 };
 
 export default (opts: BaseCommandOptions) => {
-    const command = new Command('generate-from-operations');
-    command.description('Generate a protobuf schema from GraphQL operations.');
+    const command = new Command('generate-from-collection');
+    command.description('Generate a proto from a collection GraphQL operations and SDL.');
     command.argument('[name]', 'The name of the proto service.');
-    command.requiredOption('-s, --schema <path-to-schema>', 'The GraphQL schema file.');
-    command.requiredOption('-o, --operations <path-to-operations>', 'The directory containing GraphQL operation files.');
-    command.option('--output <path-to-output>', 'The output directory for the protobuf schema. (default ".").', '.');
+    command.requiredOption('-s, --schema <path>', 'The GraphQL schema file.');
+    command.requiredOption('-c, --collection <path>', 'The directory containing GraphQL operation files.');
+    command.option('-o, --output <path>', 'The output directory for the protobuf schema. (default ".").', '.');
     command.option('-p, --package-name <name>', 'The name of the proto package. (default "service.v1")', 'service.v1');
     command.option('-g, --go-package <name>', 'Adds an `option go_package` to the proto file.');
     command.option(
-        '-l, --proto-lock <path-to-proto-lock>',
+        '-l, --proto-lock <path>',
         'The path to the existing proto lock file to use as the starting point for the updated proto lock file. ' +
         'Default is to use and overwrite the output file "<outdir>/service.proto.lock.json".',
     );
@@ -55,7 +55,7 @@ async function generateFromOperationsAction(name: string, options: CLIOptions) {
 
     try {
         const schemaFile = resolve(options.schema);
-        const operationsDir = resolve(options.operations);
+        const collectionDir = resolve(options.collection);
 
         // Ensure output directory exists
         if (!(await exists(options.output))) {
@@ -70,14 +70,14 @@ async function generateFromOperationsAction(name: string, options: CLIOptions) {
             program.error(`Schema file ${options.schema} does not exist`);
         }
 
-        if (!(await exists(operationsDir))) {
-            program.error(`Operations directory ${options.operations} does not exist`);
+        if (!(await exists(collectionDir))) {
+            program.error(`Operations directory ${options.collection} does not exist`);
         }
 
-        const result = await generateProtoFromOperations({
+        const result = await generateProtoFromCollection({
             outdir: options.output,
             schemaFile,
-            operationsDir,
+            collectionDir,
             name,
             spinner,
             packageName: options.packageName,
@@ -91,9 +91,9 @@ async function generateFromOperationsAction(name: string, options: CLIOptions) {
             await writeFile(resolve(options.output, 'service.proto.lock.json'), JSON.stringify(result.lockData, null, 2));
         }
 
-        renderResultTree(spinner, 'Generated protobuf schema from operations', true, name, {
+        renderResultTree(spinner, 'Generated protobuf schema from collection', true, name, {
             'schema file': schemaFile,
-            'operations dir': operationsDir,
+            'collection dir': collectionDir,
             'output dir': options.output,
             'service name': upperFirst(camelCase(name)) + 'Service',
             generated: result.lockData ? 'service.proto, service.proto.lock.json' : 'service.proto',
@@ -110,7 +110,7 @@ type GenerationOptions = {
     name: string;
     outdir: string;
     schemaFile: string;
-    operationsDir: string;
+    collectionDir: string;
     spinner: Ora;
     packageName?: string;
     goPackage?: string;
@@ -118,28 +118,28 @@ type GenerationOptions = {
 };
 
 /**
- * Generate proto from operations and schema
+ * Generate proto from collection and schema
  */
-async function generateProtoFromOperations({
+async function generateProtoFromCollection({
                                                name,
                                                outdir,
                                                schemaFile,
-                                               operationsDir,
+                                               collectionDir,
                                                spinner,
                                                packageName,
                                                goPackage,
                                                lockFile = resolve(outdir, 'service.proto.lock.json'),
                                            }: GenerationOptions): Promise<GenerationResult> {
-    spinner.text = 'Reading schema and operations...';
+    spinner.text = 'Reading schema and collection...';
 
     const schema = await readFile(schemaFile, 'utf8');
     const serviceName = upperFirst(camelCase(name)) + 'Service';
 
-    // Read all GraphQL operation files
-    const operations = await loadOperations(operationsDir, spinner);
+    // Read all GraphQL operation files from collection
+    const operations = await loadOperations(collectionDir, spinner);
 
     if (operations.length === 0) {
-        throw new Error('No GraphQL operation files found in the operations directory');
+        throw new Error('No GraphQL operation files found in the collection directory');
     }
 
     spinner.text = `Found ${operations.length} operation(s)...`;
@@ -169,12 +169,12 @@ async function generateProtoFromOperations({
 /**
  * Load all GraphQL operation files from a directory
  */
-async function loadOperations(operationsDir: string, spinner: Ora): Promise<OperationInfo[]> {
-    const files = await readdir(operationsDir);
+async function loadOperations(collectionDir: string, spinner: Ora): Promise<OperationInfo[]> {
+    const files = await readdir(collectionDir);
     const operations: OperationInfo[] = [];
 
     for (const file of files) {
-        const filePath = resolve(operationsDir, file);
+        const filePath = resolve(collectionDir, file);
         const ext = extname(file).toLowerCase();
 
         // Only process .graphql and .gql files

@@ -6,7 +6,7 @@ import listTemplatesCommand from './commands/list-templates.js';
 import createCommand from './commands/create.js';
 import publishCommand from './commands/publish.js';
 import deleteCommand from './commands/delete.js';
-import generateFromOperations from "./commands/generate-from-operations.js";
+import generateFromOperations from "./commands/generate-from-collection.js";
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('grpc-service');
