@@ -1,45 +1,29 @@
 import {
+    buildSchema,
     DocumentNode,
     FieldNode,
+    getNamedType,
+    GraphQLField,
+    GraphQLInterfaceType,
+    GraphQLNamedType,
+    GraphQLObjectType,
     GraphQLSchema,
+    GraphQLType,
+    isInterfaceType,
+    isObjectType,
     OperationDefinitionNode,
+    parse,
     SelectionSetNode,
     VariableDefinitionNode,
-    buildSchema,
-    getNamedType,
-    isListType,
-    isNonNullType,
-    isObjectType,
-    isInterfaceType,
-    isScalarType,
-    isEnumType,
-    parse,
-    visit,
-    GraphQLType,
-    GraphQLObjectType,
-    GraphQLInterfaceType,
-    GraphQLField,
-    GraphQLNamedType,
-    GraphQLList,
-    GraphQLNonNull,
 } from 'graphql';
+import {createRequestMessageName, createResponseMessageName, graphqlFieldToProtoField,} from './naming-conventions.js';
+import type {ProtoLock} from './proto-lock.js';
+import {ProtoLockManager} from './proto-lock.js';
 import {
-    createRequestMessageName,
-    createResponseMessageName,
-    graphqlFieldToProtoField,
-} from './naming-conventions.js';
-import type { ProtoLock } from './proto-lock.js';
-import { ProtoLockManager } from './proto-lock.js';
-import {
-    SCALAR_TYPE_MAP,
-    SCALAR_WRAPPER_TYPE_MAP,
-    ProtoType,
     convertVariableTypeToProto,
     getProtoTypeFromGraphQL,
-    handleListType,
-    isGraphQLListType,
     getRootTypeForOperation,
-    buildProtoHeader,
+    isGraphQLListType,
 } from './proto-utils.js';
 import {camelCase, upperFirst} from "lodash-es";
 
@@ -63,8 +47,6 @@ export class OperationToProtoVisitor {
     private packageName: string;
     private goPackage?: string;
     private lockManager: ProtoLockManager;
-    private usedTypes = new Set<string>();
-    private generatedMessages = new Map<string, string>();
     private usesWrapperTypes = false;
 
     constructor(
@@ -191,8 +173,7 @@ export class OperationToProtoVisitor {
     }
 
     private generateRequestMessage(operationName: string, variables: readonly VariableDefinitionNode[]): string {
-        const methodName = operationName;
-        const messageName = createRequestMessageName(methodName);
+        const messageName = createRequestMessageName(operationName);
         const fields: string[] = [];
 
         // Get field names and order them using the lock manager
@@ -214,8 +195,7 @@ export class OperationToProtoVisitor {
 
 
     private generateResponseMessage(operationName: string, selectionSet: SelectionSetNode): string {
-        const methodName = operationName;
-        const messageName = createResponseMessageName(methodName);
+        const messageName = createResponseMessageName(operationName);
         const fields: string[] = [];
         let fieldIndex = 1;
 
@@ -249,7 +229,6 @@ export class OperationToProtoVisitor {
         for (const selection of selectionSet.selections) {
             if (selection.kind === 'Field' && selection.selectionSet) {
                 const fieldPath = this.buildFieldPath(currentPath, selection.name.value);
-                const messageName = this.createNestedMessageName(operationName, fieldPath);
 
                 // Generate the nested message
                 const nestedMessage = this.generateNestedMessageForField(operationName, selection, fieldPath);
@@ -352,29 +331,6 @@ export class OperationToProtoVisitor {
             // Fallback to string if resolution fails
         }
         return 'string';
-    }
-
-
-    private getSchemaFieldFromPath(parentFieldName: string, fieldName: string): GraphQLField<any, any> | null {
-        const queryType = this.schema.getQueryType();
-        if (!queryType) return null;
-
-        if (!parentFieldName) {
-            // If no parent field, look directly in the root type
-            return queryType.getFields()[fieldName] || null;
-        }
-
-        const parentField = queryType.getFields()[parentFieldName];
-        if (!parentField) return null;
-
-        // Get the named type and navigate to the field
-        const parentType = getNamedType(parentField.type);
-        if (isObjectType(parentType) || isInterfaceType(parentType)) {
-            const fields = parentType.getFields();
-            return fields[fieldName] || null;
-        }
-
-        return null;
     }
 
     /**
