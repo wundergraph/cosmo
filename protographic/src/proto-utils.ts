@@ -209,3 +209,54 @@ export function buildProtoHeader(packageName: string, imports: string[], options
 
     return header;
 }
+
+/**
+ * Create an RPC method definition with optional comment
+ *
+ * @param methodName - The name of the RPC method
+ * @param requestName - The request message name
+ * @param responseName - The response message name
+ * @param includeComments - Whether to include comments in the output
+ * @param description - Optional description for the method
+ * @returns The RPC method definition with or without comment
+ */
+export function createRpcMethod(
+    methodName: string,
+    requestName: string,
+    responseName: string,
+    includeComments: boolean,
+    description?: string | null,
+): string {
+    if (!includeComments || !description) {
+        return `rpc ${methodName}(${requestName}) returns (${responseName}) {}`;
+    }
+
+    // RPC method comments should be indented 1 level (2 spaces)
+    const commentLines = formatComment(description, includeComments, 1);
+    const methodLine = `  rpc ${methodName}(${requestName}) returns (${responseName}) {}`;
+
+    return [...commentLines, methodLine].join('\n');
+}
+
+/**
+ * Convert a GraphQL description to Protocol Buffer comment
+ * @param description - The GraphQL description text
+ * @param includeComments - Whether to include comments in the output
+ * @param indentLevel - The level of indentation for the comment (in number of 2-space blocks)
+ * @returns Array of comment lines with proper indentation
+ */
+export function formatComment(description: string | undefined | null, includeComments: boolean, indentLevel: number = 0): string[] {
+    if (!includeComments || !description) {
+        return [];
+    }
+
+    // Use 2-space indentation consistently
+    const indent = '  '.repeat(indentLevel);
+    const lines = description.trim().split('\n');
+
+    if (lines.length === 1) {
+        return [`${indent}// ${lines[0]}`];
+    } else {
+        return [`${indent}/*`, ...lines.map((line) => `${indent} * ${line}`), `${indent} */`];
+    }
+}
