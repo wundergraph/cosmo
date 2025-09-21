@@ -72,8 +72,20 @@ export class OperationToProtoVisitor {
         }));
 
         // Validate operations against schema
-        for (const { document } of parsedOperations) {
-            const operation = document.definitions[0] as OperationDefinitionNode;
+        for (const { document, name } of parsedOperations) {
+            // Find the first OperationDefinition in the document
+            const operation = document.definitions.find(def => def.kind === 'OperationDefinition') as OperationDefinitionNode;
+            
+            if (!operation) {
+                throw new Error(`No OperationDefinition found in document for operation "${name}". The GraphQL file must contain at least one operation (query, mutation, or subscription).`);
+            }
+            
+            // Count how many operations are in this document
+            const operationCount = document.definitions.filter(def => def.kind === 'OperationDefinition').length;
+            if (operationCount > 1) {
+                throw new Error(`Multiple OperationDefinitions found in document for operation "${name}". Each GraphQL file should contain exactly one operation definition. Found ${operationCount} operations.`);
+            }
+            
             this.validateOperationAgainstSchema(operation);
         }
 
@@ -131,13 +143,20 @@ export class OperationToProtoVisitor {
                 if (selection.selectionSet) {
                     this.validateSelectionSet(selection.selectionSet, field.type);
                 }
+            } else if (selection.kind === 'FragmentSpread') {
+                throw new Error(`Fragment spreads are not currently supported. Found fragment spread '...${selection.name.value}'. Please inline the fragment fields directly in your operation.`);
+            } else if (selection.kind === 'InlineFragment') {
+                throw new Error(`Inline fragments are not currently supported. Please use regular field selections instead of inline fragments.`);
             }
         }
     }
 
     private generateServiceMethods(operations: { name: string; document: DocumentNode }[]): string[] {
         return operations.map(({ name, document }) => {
-            const operation = document.definitions[0] as OperationDefinitionNode;
+            const operation = document.definitions.find(def => def.kind === 'OperationDefinition') as OperationDefinitionNode;
+            if (!operation) {
+                throw new Error(`No operation definition found in document for ${name}`);
+            }
             const operationName = operation.name?.value || name;
 
             // Use the operation name directly for persisted operations
@@ -153,7 +172,10 @@ export class OperationToProtoVisitor {
         const messages: string[] = [];
 
         for (const { name, document } of operations) {
-            const operation = document.definitions[0] as OperationDefinitionNode;
+            const operation = document.definitions.find(def => def.kind === 'OperationDefinition') as OperationDefinitionNode;
+            if (!operation) {
+                throw new Error(`No operation definition found in document for ${name}`);
+            }
             const operationName = operation.name?.value || name;
 
             // Generate request message from variables
