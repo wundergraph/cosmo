@@ -1,6 +1,6 @@
 {
   "name": "controlplane",
-  "version": "0.162.0",
+  "version": "0.164.1",
   "private": true,
   "description": "WunderGraph Cosmo Controlplane",
   "type": "module",
@@ -59,7 +59,7 @@
     "@wundergraph/cosmo-connect": "workspace:*",
     "@wundergraph/cosmo-shared": "workspace:*",
     "@wundergraph/protographic": "workspace:*",
-    "axios": "^1.11.0",
+    "axios": "^1.12.2",
     "axios-retry": "^4.5.0",
     "bullmq": "^5.10.0",
     "cookie": "^0.7.2",
