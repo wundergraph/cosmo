@@ -98,7 +98,7 @@ func TestAuthentication(t *testing.T) {
 			defer func() { _ = res2.Body.Close() }()
 			elapsed := time.Since(start)
 
-			require.True(t, elapsed >= 600*time.Millisecond)
+			require.True(t, elapsed >= 700*time.Millisecond)
 			require.Equal(t, http.StatusUnauthorized, res2.StatusCode)
 			data, err := io.ReadAll(res2.Body)
 			require.NoError(t, err)
@@ -150,6 +150,113 @@ func TestAuthentication(t *testing.T) {
 			defer func() { _ = res2.Body.Close() }()
 			elapsed := time.Since(start)
 			require.True(t, elapsed < 100*time.Millisecond)
+			require.Equal(t, http.StatusUnauthorized, res2.StatusCode)
+			data, err := io.ReadAll(res2.Body)
+			require.NoError(t, err)
+			require.JSONEq(t, unauthorizedExpectedData, string(data))
+		})
+	})
+
+	// Since the rate limiter knows that the limit will definitely be exceeded it exits
+	// immediately without waiting
+	t.Run("unknown kid refresh interval exceeding max wait returns immediately", func(t *testing.T) {
+		t.Parallel()
+
+		authServer, err := jwks.NewServer(t)
+		require.NoError(t, err)
+		t.Cleanup(authServer.Close)
+
+		authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+			{
+				URL:             authServer.JWKSURL(),
+				RefreshInterval: 10 * time.Second,
+				RefreshUnknownKID: authentication.RefreshUnknownKIDConfig{
+					Enabled:  true,
+					Interval: 1 * time.Second, // next token available in ~1s
+					Burst:    1,
+					MaxWait:  700 * time.Millisecond, // cap wait well below interval
+				},
+			},
+		})
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, true)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			token, err := authServer.TokenForKID("unknown_kid", nil, true)
+			require.NoError(t, err)
+
+			header := http.Header{"Authorization": []string{"Bearer " + token}}
+
+			// Consume burst token
+			res1, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer func() { _ = res1.Body.Close() }()
+			require.Equal(t, http.StatusUnauthorized, res1.StatusCode)
+			_, err = io.ReadAll(res1.Body)
+			require.NoError(t, err)
+
+			// Next call should block but only up to MaxWait (< interval)
+			start := time.Now()
+			res2, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer func() { _ = res2.Body.Close() }()
+			elapsed := time.Since(start)
+			require.True(t, elapsed < 100*time.Millisecond)
+			require.Equal(t, http.StatusUnauthorized, res2.StatusCode)
+			data, err := io.ReadAll(res2.Body)
+			require.NoError(t, err)
+			require.JSONEq(t, unauthorizedExpectedData, string(data))
+		})
+	})
+
+	t.Run("unknown kid refresh exceeding burst waits until interval when MaxWait larger", func(t *testing.T) {
+		t.Parallel()
+
+		authServer, err := jwks.NewServer(t)
+		require.NoError(t, err)
+		t.Cleanup(authServer.Close)
+
+		authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+			{
+				URL:             authServer.JWKSURL(),
+				RefreshInterval: 10 * time.Second,
+				RefreshUnknownKID: authentication.RefreshUnknownKIDConfig{
+					Enabled:  true,
+					Interval: 1 * time.Second,
+					Burst:    1,
+					MaxWait:  2 * time.Second, // larger than interval, so it can wait until next token
+				},
+			},
+		})
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, true)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			token, err := authServer.TokenForKID("unknown_kid", nil, true)
+			require.NoError(t, err)
+
+			header := http.Header{"Authorization": []string{"Bearer " + token}}
+
+			// Consume burst token
+			res1, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer func() { _ = res1.Body.Close() }()
+			require.Equal(t, http.StatusUnauthorized, res1.StatusCode)
+			_, err = io.ReadAll(res1.Body)
+			require.NoError(t, err)
+
+			// Next call should wait until limiter allows next refresh (~1s)
+			start := time.Now()
+			res2, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer func() { _ = res2.Body.Close() }()
+			elapsed := time.Since(start)
+
+			require.True(t, elapsed >= 600*time.Millisecond)
 			require.Equal(t, http.StatusUnauthorized, res2.StatusCode)
 			data, err := io.ReadAll(res2.Body)
 			require.NoError(t, err)

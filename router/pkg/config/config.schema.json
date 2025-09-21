@@ -1727,6 +1727,14 @@
                         "description": "Enable refresh attempts on unknown KID.",
                         "default": false
                       },
+                      "max_wait": {
+                        "type": "string",
+                        "description": "Maximum time to wait for a refresh permit before giving up.",
+                        "default": "10s",
+                        "duration": {
+                          "minimum": "0s"
+                        }
+                      },
                       "interval": {
                         "type": "string",
                         "description": "Token refill interval for the rate limiter.",

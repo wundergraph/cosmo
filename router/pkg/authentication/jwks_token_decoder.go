@@ -57,6 +57,7 @@ type RefreshUnknownKIDConfig struct {
 	Enabled  bool
 	Interval time.Duration
 	Burst    int
+	MaxWait  time.Duration
 }
 
 type audKey struct {
@@ -99,18 +100,17 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 
 			audiencesMap[key] = getAudienceSet(c.Audiences)
 
-			// Configure the rate limiter for refreshing unknown KIDs
-			var refreshLimiter *rate.Limiter
-			if c.RefreshUnknownKID.Enabled {
-				refreshLimiter = rate.NewLimiter(rate.Every(c.RefreshUnknownKID.Interval), c.RefreshUnknownKID.Burst)
-			}
-
 			jwksetHTTPClientOptions := jwkset.HTTPClientOptions{
 				HTTPURLs: map[string]jwkset.Storage{
 					c.URL: store,
 				},
-				PrioritizeHTTP:    true,
-				RefreshUnknownKID: refreshLimiter,
+				PrioritizeHTTP: true,
+			}
+
+			// Configure the rate limiter for refreshing unknown KIDs
+			if c.RefreshUnknownKID.Enabled {
+				jwksetHTTPClientOptions.RefreshUnknownKID = rate.NewLimiter(rate.Every(c.RefreshUnknownKID.Interval), c.RefreshUnknownKID.Burst)
+				jwksetHTTPClientOptions.RateLimitWaitMax = c.RefreshUnknownKID.MaxWait
 			}
 
 			jwks, err := createKeyFunc(ctx, jwksetHTTPClientOptions)

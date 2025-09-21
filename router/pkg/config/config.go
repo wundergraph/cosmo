@@ -466,10 +466,10 @@ type OverridesConfiguration struct {
 }
 
 type JWKSConfiguration struct {
-	URL               string                  `yaml:"url"`
-	Algorithms        []string                `yaml:"algorithms"`
-	RefreshInterval   time.Duration           `yaml:"refresh_interval" envDefault:"1m"`
-	RefreshUnknownKID RefreshUnknownKIDConfig `yaml:",inline"`
+	URL               string            `yaml:"url"`
+	Algorithms        []string          `yaml:"algorithms"`
+	RefreshInterval   time.Duration     `yaml:"refresh_interval" envDefault:"1m"`
+	RefreshUnknownKID RefreshUnknownKID `yaml:"refresh_unknown_kid"`
 
 	// For secret based where we need to create a jwk  entry with
 	// a key id and algorithm
@@ -481,8 +481,9 @@ type JWKSConfiguration struct {
 	Audiences []string `yaml:"audiences"`
 }
 
-type RefreshUnknownKIDConfig struct {
+type RefreshUnknownKID struct {
 	Enabled  bool          `yaml:"enabled" envDefault:"false"`
+	MaxWait  time.Duration `yaml:"max_wait" envDefault:"10s"`
 	Interval time.Duration `yaml:"interval" envDefault:"1m"`
 	Burst    int           `yaml:"burst" envDefault:"2"`
 }
