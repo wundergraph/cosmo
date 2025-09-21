@@ -65,6 +65,7 @@ export class OperationToProtoVisitor {
     private usesWrapperTypes = false;
     private enumsUsed = new Set<string>();
     private fragments = new Map<string, FragmentDefinitionNode>();
+    private multiDimensionalArraysToGenerate = new Map<string, { operationName: string; fieldPath: string; graphqlType: GraphQLType }>();
 
     constructor(
         schemaOrSDL: GraphQLSchema | string,
@@ -516,6 +517,24 @@ export class OperationToProtoVisitor {
             messages.push(...nestedMessages);
         }
 
+        // Generate messages for multi-dimensional arrays that were detected
+        const multiDimMessages = this.generateStoredMultiDimensionalArrayMessages();
+        messages.push(...multiDimMessages);
+
+        return messages;
+    }
+
+    /**
+     * Generate messages for stored multi-dimensional arrays
+     */
+    private generateStoredMultiDimensionalArrayMessages(): string[] {
+        const messages: string[] = [];
+        
+        for (const { operationName, fieldPath, graphqlType } of this.multiDimensionalArraysToGenerate.values()) {
+            const multiDimMessages = this.generateMultiDimensionalArrayMessages(operationName, fieldPath, graphqlType);
+            messages.push(...multiDimMessages);
+        }
+        
         return messages;
     }
 
@@ -587,6 +606,12 @@ export class OperationToProtoVisitor {
         // Expand fragment spreads before processing
         const expandedSelectionSet = this.expandFragmentSpreads(selectionSet);
 
+        // Get the root type for field resolution
+        const rootType = getRootTypeForOperation(this.schema, operation.operation);
+        if (!rootType) {
+            return messages;
+        }
+
         for (const selection of expandedSelectionSet.selections) {
             if (selection.kind === 'Field' && selection.selectionSet) {
                 // If we're within a fragment, include the fragment type name in the path to avoid conflicts
@@ -615,6 +640,26 @@ export class OperationToProtoVisitor {
                 // Pass the resolved field type as the new context type
                 const deeperMessages = this.generateNestedMessages(operationName, selection.selectionSet, fieldPath, operation, fieldType);
                 messages.push(...deeperMessages);
+            } else if (selection.kind === 'Field' && !selection.selectionSet) {
+                // Handle multi-dimensional arrays without selection sets
+                let fieldType: GraphQLType | undefined;
+                
+                if (contextType) {
+                    const schemaField = contextType.getFields()[selection.name.value];
+                    fieldType = schemaField?.type;
+                } else {
+                    const schemaField = rootType.getFields()[selection.name.value];
+                    fieldType = schemaField?.type;
+                }
+                
+                if (fieldType && this.isMultiDimensionalArray(fieldType)) {
+                    const fieldPath = fragmentTypeName
+                        ? this.buildFieldPath(currentPath, `${fragmentTypeName}${upperFirst(camelCase(selection.name.value))}`)
+                        : this.buildFieldPath(currentPath, selection.name.value);
+                    
+                    const multiDimMessages = this.generateMultiDimensionalArrayMessages(operationName, fieldPath, fieldType);
+                    messages.push(...multiDimMessages);
+                }
             } else if (selection.kind === 'InlineFragment' && selection.selectionSet) {
                 // Generate messages for inline fragment types
                 const fragmentMessages = this.generateInlineFragmentMessages(operationName, selection, currentPath, operation);
@@ -701,16 +746,32 @@ export class OperationToProtoVisitor {
 
                             regularFields.push(`  ${protoType} ${fieldName} = ${regularFieldIndex++};`);
                         } else {
-                            // Leaf field - use the battle-tested getProtoTypeFromGraphQL method
-                            const wrapperTracker = { usesWrapperTypes: this.usesWrapperTypes };
-                            const protoType = getProtoTypeFromGraphQL(schemaField.type, false, wrapperTracker);
-                            this.usesWrapperTypes = wrapperTracker.usesWrapperTypes;
-                            
-                            // Handle repeated types correctly
-                            if (protoType.isRepeated) {
-                                regularFields.push(`  repeated ${protoType.typeName} ${fieldName} = ${regularFieldIndex++};`);
+                            // Check if this is a multi-dimensional array that needs nested messages
+                            if (this.isMultiDimensionalArray(schemaField.type)) {
+                                const nestedFieldPath = this.buildFieldPath(fieldPath, selection.name.value);
+                                const nestedType = this.createNestedMessageName(operationName, nestedFieldPath);
+                                
+                                // Store this multi-dimensional array for later message generation
+                                const key = `${operationName}_${nestedFieldPath}`;
+                                this.multiDimensionalArraysToGenerate.set(key, {
+                                    operationName,
+                                    fieldPath: nestedFieldPath,
+                                    graphqlType: schemaField.type
+                                });
+                                
+                                regularFields.push(`  repeated ${nestedType} ${fieldName} = ${regularFieldIndex++};`);
                             } else {
-                                regularFields.push(`  ${protoType.typeName} ${fieldName} = ${regularFieldIndex++};`);
+                                // Leaf field - use the battle-tested getProtoTypeFromGraphQL method
+                                const wrapperTracker = { usesWrapperTypes: this.usesWrapperTypes };
+                                const protoType = getProtoTypeFromGraphQL(schemaField.type, false, wrapperTracker);
+                                this.usesWrapperTypes = wrapperTracker.usesWrapperTypes;
+                                
+                                // Handle repeated types correctly
+                                if (protoType.isRepeated) {
+                                    regularFields.push(`  repeated ${protoType.typeName} ${fieldName} = ${regularFieldIndex++};`);
+                                } else {
+                                    regularFields.push(`  ${protoType.typeName} ${fieldName} = ${regularFieldIndex++};`);
+                                }
                             }
                         }
                     }
@@ -932,7 +993,32 @@ export class OperationToProtoVisitor {
             return isListField ? `repeated ${messageName}` : messageName;
         }
 
-        // For leaf fields without selection sets, try to resolve from schema
+        // For leaf fields without selection sets, we need to resolve the actual GraphQL type from schema
+        let actualGraphQLType = graphqlType;
+        
+        // If graphqlType is not provided or not the actual GraphQL type, resolve it from schema
+        if (!actualGraphQLType || typeof actualGraphQLType === 'string') {
+            try {
+                const rootType = getRootTypeForOperation(this.schema, operation.operation);
+                if (rootType) {
+                    const schemaField = rootType.getFields()[field.name.value];
+                    if (schemaField) {
+                        actualGraphQLType = schemaField.type;
+                    }
+                }
+            } catch (error) {
+                // Continue with fallback logic
+            }
+        }
+
+        // Check if it's a multi-dimensional array
+        if (actualGraphQLType && this.isMultiDimensionalArray(actualGraphQLType)) {
+            const fieldPath = this.buildFieldPath(currentPath, field.name.value);
+            const messageName = this.createNestedMessageName(operationName, fieldPath);
+            return `repeated ${messageName}`;
+        }
+
+        // For regular leaf fields, try to resolve from schema
         try {
             const rootType = getRootTypeForOperation(this.schema, operation.operation);
             if (rootType) {
@@ -1276,6 +1362,93 @@ export class OperationToProtoVisitor {
             return type;
         }
         throw new Error(`Unknown type node kind: ${typeNode.kind}`);
+    }
+
+    /**
+     * Check if a GraphQL type is a multi-dimensional array (e.g., [[Type]] or [[[Type]]])
+     */
+    private isMultiDimensionalArray(graphqlType: GraphQLType): boolean {
+        // Check if it's a list type
+        if (!isGraphQLListType(graphqlType)) {
+            return false;
+        }
+
+        // Get the inner type (unwrap NonNull if present)
+        let innerType = graphqlType;
+        if (innerType instanceof GraphQLNonNull) {
+            innerType = innerType.ofType;
+        }
+        if (innerType instanceof GraphQLList) {
+            innerType = innerType.ofType;
+        }
+        
+        // Check if the inner type is also a list (making it multi-dimensional)
+        if (innerType instanceof GraphQLNonNull) {
+            innerType = innerType.ofType;
+        }
+        
+        return innerType instanceof GraphQLList;
+    }
+
+    /**
+     * Generate nested messages for multi-dimensional arrays
+     */
+    private generateMultiDimensionalArrayMessages(operationName: string, fieldPath: string, graphqlType: GraphQLType): string[] {
+        const messages: string[] = [];
+        const arrayStructure = this.analyzeArrayStructure(graphqlType);
+        
+        // Generate messages for each dimension level
+        for (let i = 0; i < arrayStructure.dimensions - 1; i++) {
+            const messageName = i === 0
+                ? this.createNestedMessageName(operationName, fieldPath)
+                : `${this.createNestedMessageName(operationName, fieldPath)}${'Values'.repeat(i)}`;
+            
+            const nextMessageName = i === arrayStructure.dimensions - 2
+                ? null // Last level uses the scalar type
+                : `${this.createNestedMessageName(operationName, fieldPath)}${'Values'.repeat(i + 1)}`;
+            
+            const fieldType = nextMessageName
+                ? `repeated ${nextMessageName} values = 1;`
+                : `repeated ${arrayStructure.scalarType} values = 1;`;
+            
+            messages.push(`message ${messageName} {\n  ${fieldType}\n}`);
+        }
+        
+        return messages;
+    }
+
+    /**
+     * Analyze the structure of a multi-dimensional array
+     */
+    private analyzeArrayStructure(graphqlType: GraphQLType): { dimensions: number; scalarType: string } {
+        let dimensions = 0;
+        let currentType = graphqlType;
+        let scalarIsNonNull = false;
+        
+        // Count the dimensions by unwrapping list types and track if scalar is non-null
+        while (currentType instanceof GraphQLList || currentType instanceof GraphQLNonNull) {
+            if (currentType instanceof GraphQLList) {
+                dimensions++;
+                currentType = currentType.ofType;
+            } else if (currentType instanceof GraphQLNonNull) {
+                // Check if this NonNull wraps the final scalar (not another List)
+                if (!(currentType.ofType instanceof GraphQLList)) {
+                    scalarIsNonNull = true;
+                }
+                currentType = currentType.ofType;
+            }
+        }
+        
+        
+        // Get the scalar type name
+        const wrapperTracker = { usesWrapperTypes: this.usesWrapperTypes };
+        const protoType = getProtoTypeFromGraphQL(currentType, scalarIsNonNull, wrapperTracker);
+        this.usesWrapperTypes = wrapperTracker.usesWrapperTypes;
+        
+        return {
+            dimensions,
+            scalarType: protoType.typeName
+        };
     }
 
 }

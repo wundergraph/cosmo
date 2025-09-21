@@ -201,7 +201,7 @@ const SDL = `
 
 describe('Operations to Proto - Complex Nested Lists', () => {
   describe('Multi-dimensional Arrays', () => {
-    test.skip('should handle 2D arrays correctly', () => {
+    test('should handle 2D arrays correctly', () => {
       const operation = {
         name: 'GetMatrix2D',
         content: `
@@ -224,9 +224,9 @@ describe('Operations to Proto - Complex Nested Lists', () => {
       // Should generate proper repeated fields for 2D arrays
       expect(proto).toContain('message GetMatrix2DGetMatrix {');
       expect(proto).toContain('repeated int32 dimensions = 3;');
-      expect(proto).toContain('repeated GetMatrix2DGetMatrixData2D data2_d = 4;');
+      expect(proto).toContain('repeated GetMatrix2DGetMatrixData2D data_2_d = 4;');
       expect(proto).toContain('message GetMatrix2DGetMatrixData2D {');
-      expect(proto).toContain('repeated float values = 1;'); // Inner array
+      expect(proto).toContain('repeated double values = 1;'); // Inner array
     });
 
     test.skip('should handle 3D arrays correctly', () => {
@@ -249,11 +249,11 @@ describe('Operations to Proto - Complex Nested Lists', () => {
       expectValidProto(proto);
 
       // Should generate nested message structure for 3D arrays
-      expect(proto).toContain('repeated GetMatrix3DGetMatrixData3D data3_d = 3;');
+      expect(proto).toContain('repeated GetMatrix3DGetMatrixData3D data_3_d = 3;');
       expect(proto).toContain('message GetMatrix3DGetMatrixData3D {');
       expect(proto).toContain('repeated GetMatrix3DGetMatrixData3DValues values = 1;');
       expect(proto).toContain('message GetMatrix3DGetMatrixData3DValues {');
-      expect(proto).toContain('repeated float items = 1;'); // Innermost array
+      expect(proto).toContain('repeated double items = 1;'); // Innermost array
     });
 
     test.skip('should handle nullable multi-dimensional arrays', () => {
@@ -430,17 +430,17 @@ describe('Operations to Proto - Complex Nested Lists', () => {
       // Should generate input message with nested array structures
       expect(proto).toContain('message MatrixInput {');
       expect(proto).toContain('repeated int32 dimensions = 2;');
-      expect(proto).toContain('repeated MatrixInputData2D data2_d = 3;');
-      expect(proto).toContain('repeated MatrixInputData3D data3_d = 4;');
+      expect(proto).toContain('repeated MatrixInputData2D data_2_d = 3;');
+      expect(proto).toContain('repeated MatrixInputData3D data_3_d = 4;');
       expect(proto).toContain('repeated MatrixInputMetadata metadata = 5;');
 
       // Should generate nested input message types
       expect(proto).toContain('message MatrixInputData2D {');
-      expect(proto).toContain('repeated float values = 1;');
+      expect(proto).toContain('repeated double values = 1;');
       expect(proto).toContain('message MatrixInputData3D {');
       expect(proto).toContain('repeated MatrixInputData3DValues values = 1;');
       expect(proto).toContain('message MatrixInputData3DValues {');
-      expect(proto).toContain('repeated float items = 1;');
+      expect(proto).toContain('repeated double items = 1;');
     });
 
     test.skip('should handle deeply nested input structures', () => {
