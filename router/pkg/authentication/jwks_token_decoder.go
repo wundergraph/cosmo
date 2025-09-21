@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"time"
 
+	"golang.org/x/time/rate"
+
 	"github.com/MicahParks/jwkset"
 	"github.com/MicahParks/keyfunc/v3"
 	"github.com/golang-jwt/jwt/v5"
@@ -47,6 +49,14 @@ type JWKSConfig struct {
 	KeyId     string
 
 	Audiences []string
+
+	RefreshUnknownKID RefreshUnknownKIDConfig
+}
+
+type RefreshUnknownKIDConfig struct {
+	Enabled  bool
+	Interval time.Duration
+	Burst    int
 }
 
 type audKey struct {
@@ -89,11 +99,18 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 
 			audiencesMap[key] = getAudienceSet(c.Audiences)
 
+			// Configure the rate limiter for refreshing unknown KIDs
+			var refreshLimiter *rate.Limiter
+			if c.RefreshUnknownKID.Enabled {
+				refreshLimiter = rate.NewLimiter(rate.Every(c.RefreshUnknownKID.Interval), c.RefreshUnknownKID.Burst)
+			}
+
 			jwksetHTTPClientOptions := jwkset.HTTPClientOptions{
 				HTTPURLs: map[string]jwkset.Storage{
 					c.URL: store,
 				},
-				PrioritizeHTTP: true,
+				PrioritizeHTTP:    true,
+				RefreshUnknownKID: refreshLimiter,
 			}
 
 			jwks, err := createKeyFunc(ctx, jwksetHTTPClientOptions)

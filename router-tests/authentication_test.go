@@ -56,6 +56,151 @@ func TestAuthentication(t *testing.T) {
 		})
 	})
 
+	t.Run("unknown kid refresh blocks when burst exceeded", func(t *testing.T) {
+		t.Parallel()
+
+		authServer, err := jwks.NewServer(t)
+		require.NoError(t, err)
+		t.Cleanup(authServer.Close)
+
+		authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+			{
+				URL:             authServer.JWKSURL(),
+				RefreshInterval: 10 * time.Second,
+				RefreshUnknownKID: authentication.RefreshUnknownKIDConfig{
+					Enabled:  true,
+					Interval: 1 * time.Second,
+					Burst:    1,
+				},
+			},
+		})
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, true)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			token, err := authServer.TokenForKID("unknown_kid", nil, true)
+			require.NoError(t, err)
+
+			header := http.Header{"Authorization": []string{"Bearer " + token}}
+
+			res1, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer func() { _ = res1.Body.Close() }()
+			require.Equal(t, http.StatusUnauthorized, res1.StatusCode)
+			_, err = io.ReadAll(res1.Body)
+			require.NoError(t, err)
+
+			start := time.Now()
+			res2, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer func() { _ = res2.Body.Close() }()
+			elapsed := time.Since(start)
+
+			require.True(t, elapsed >= 600*time.Millisecond)
+			require.Equal(t, http.StatusUnauthorized, res2.StatusCode)
+			data, err := io.ReadAll(res2.Body)
+			require.NoError(t, err)
+			require.JSONEq(t, unauthorizedExpectedData, string(data))
+		})
+	})
+
+	t.Run("unknown kid refresh does not block when burst not exceeded", func(t *testing.T) {
+		t.Parallel()
+
+		authServer, err := jwks.NewServer(t)
+		require.NoError(t, err)
+		t.Cleanup(authServer.Close)
+
+		authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+			{
+				URL:             authServer.JWKSURL(),
+				RefreshInterval: 10 * time.Second,
+				RefreshUnknownKID: authentication.RefreshUnknownKIDConfig{
+					Enabled:  true,
+					Interval: 1 * time.Second,
+					Burst:    1,
+				},
+			},
+		})
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, true)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			token, err := authServer.TokenForKID("unknown_kid", nil, true)
+			require.NoError(t, err)
+			header := http.Header{"Authorization": []string{"Bearer " + token}}
+
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer func() { _ = res.Body.Close() }()
+			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+			_, err = io.ReadAll(res.Body)
+			require.NoError(t, err)
+
+			// Wait for interval so next refresh is within burst budget
+			time.Sleep(1200 * time.Millisecond)
+
+			start := time.Now()
+			res2, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer func() { _ = res2.Body.Close() }()
+			elapsed := time.Since(start)
+			require.True(t, elapsed < 100*time.Millisecond)
+			require.Equal(t, http.StatusUnauthorized, res2.StatusCode)
+			data, err := io.ReadAll(res2.Body)
+			require.NoError(t, err)
+			require.JSONEq(t, unauthorizedExpectedData, string(data))
+		})
+	})
+
+	t.Run("authentication should not block with unknown kid when refresh is disabled", func(t *testing.T) {
+		t.Parallel()
+
+		authServer, err := jwks.NewServer(t)
+		require.NoError(t, err)
+		t.Cleanup(authServer.Close)
+
+		authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+			{
+				URL:             authServer.JWKSURL(),
+				RefreshInterval: 100 * time.Millisecond,
+			},
+		})
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, true)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Create a token signed with a valid key but with an unknown kid header
+			token, err := authServer.TokenForKID("unknown_kid", nil, true)
+			require.NoError(t, err)
+
+			maxDuration := 4 * time.Second
+			testenv.AwaitFunc(t, maxDuration, func() {
+				for range 5 {
+					func() {
+						header := http.Header{
+							"Authorization": []string{"Bearer " + token},
+						}
+						res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+						require.NoError(t, err)
+						defer func() { _ = res.Body.Close() }()
+						require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+						require.Equal(t, "", res.Header.Get(xAuthenticatedByHeader))
+						data, err := io.ReadAll(res.Body)
+						require.NoError(t, err)
+						require.JSONEq(t, unauthorizedExpectedData, string(data))
+					}()
+				}
+			})
+		})
+	})
+
 	t.Run("invalid token", func(t *testing.T) {
 		t.Parallel()
 
@@ -825,44 +970,6 @@ func TestHttpJwksAuthorization(t *testing.T) {
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
 			require.Equal(t, employeesExpectedData, string(data))
-		})
-	})
-
-	t.Run("authentication should not block with an invalid token on multiple calls", func(t *testing.T) {
-		t.Parallel()
-
-		authenticators, authServer := ConfigureAuth(t)
-		testenv.Run(t, &testenv.Config{
-			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, true)),
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// This token has a static keyid
-			token, err := authServer.TokenForKID("wg_static_kid", nil, true)
-			require.NoError(t, err)
-
-			maxDuration := 5 * time.Second
-
-			testenv.AwaitFunc(t, maxDuration, func() {
-				for range 5 {
-					func() {
-						// Operations with an invalid token should fail
-						header := http.Header{
-							"Authorization": []string{"Bearer " + token},
-						}
-						res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
-						require.NoError(t, err)
-						defer func() {
-							_ = res.Body.Close()
-						}()
-						require.Equal(t, http.StatusUnauthorized, res.StatusCode)
-						require.Equal(t, "", res.Header.Get(xAuthenticatedByHeader))
-						data, err := io.ReadAll(res.Body)
-						require.NoError(t, err)
-						require.JSONEq(t, unauthorizedExpectedData, string(data))
-					}()
-				}
-			})
 		})
 	})
 
