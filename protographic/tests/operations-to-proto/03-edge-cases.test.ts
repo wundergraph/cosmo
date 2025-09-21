@@ -123,7 +123,7 @@ describe('Operations to Proto - Edge Cases and Validation', () => {
 
     const visitor = new OperationToProtoVisitor(schemaWithoutMutation, operations);
 
-    expect(() => visitor.visit()).toThrow('Schema does not define Mutation type');
+    expect(() => visitor.visit()).toThrow('Schema does not define mutation type');
   });
 
   test('should handle fragment spreads correctly', () => {

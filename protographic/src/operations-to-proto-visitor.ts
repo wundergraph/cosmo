@@ -1,4 +1,3 @@
-
 import {
     buildSchema,
     DocumentNode,
@@ -84,13 +83,30 @@ export class OperationToProtoVisitor {
     }
 
     visit(): string {
-        const parsedOperations = this.operations.map(op => ({
-            ...op,
-            document: parse(op.content)
-        }));
+        const parsedOperations = this.operations.map(op => {
+            try {
+                return {
+                    ...op,
+                    document: parse(op.content)
+                };
+            } catch (error) {
+                // Handle GraphQL parsing errors with better messages
+                if (error instanceof Error && error.message.includes('Syntax Error')) {
+                    // Check if the content is empty or only contains comments
+                    const trimmedContent = op.content.trim().replace(/^\s*#.*$/gm, '').trim();
+                    if (!trimmedContent) {
+                        throw new Error(`No OperationDefinition found in document for operation "${op.name}". The GraphQL file must contain at least one operation (query, mutation, or subscription).`);
+                    }
+                }
+                throw error;
+            }
+        });
 
         // Collect all fragment definitions from all operations
         this.collectFragmentDefinitions(parsedOperations);
+
+        // Validate operation name uniqueness
+        this.validateOperationNameUniqueness(parsedOperations);
 
         // Validate operations against schema
         for (const { document, name } of parsedOperations) {
@@ -309,18 +325,92 @@ export class OperationToProtoVisitor {
     }
 
     /**
+     * Validate operation name uniqueness across all operations
+     */
+    private validateOperationNameUniqueness(parsedOperations: { name: string; document: DocumentNode }[]): void {
+        const operationNames = new Set<string>();
+        
+        for (const { document, name } of parsedOperations) {
+            const operation = document.definitions.find(def => def.kind === 'OperationDefinition') as OperationDefinitionNode;
+            if (operation) {
+                const operationName = operation.name?.value || name;
+                if (operationNames.has(operationName)) {
+                    throw new Error(`Duplicate operation name "${operationName}". Each operation must have a unique name.`);
+                }
+                operationNames.add(operationName);
+            }
+        }
+    }
+
+    /**
+     * Find a similar field name using Levenshtein distance
+     */
+    private findSimilarFieldName(inputName: string, availableNames: string[]): string | null {
+        let bestMatch: string | null = null;
+        let bestDistance = Infinity;
+        const maxDistance = Math.floor(inputName.length / 2); // Allow up to half the characters to be different
+
+        for (const name of availableNames) {
+            const distance = this.levenshteinDistance(inputName.toLowerCase(), name.toLowerCase());
+            if (distance < bestDistance && distance <= maxDistance) {
+                bestDistance = distance;
+                bestMatch = name;
+            }
+        }
+
+        return bestMatch;
+    }
+
+    /**
+     * Calculate Levenshtein distance between two strings
+     */
+    private levenshteinDistance(str1: string, str2: string): number {
+        const matrix = Array(str2.length + 1).fill(null).map(() => Array(str1.length + 1).fill(null));
+
+        for (let i = 0; i <= str1.length; i++) {
+            matrix[0][i] = i;
+        }
+
+        for (let j = 0; j <= str2.length; j++) {
+            matrix[j][0] = j;
+        }
+
+        for (let j = 1; j <= str2.length; j++) {
+            for (let i = 1; i <= str1.length; i++) {
+                const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1;
+                matrix[j][i] = Math.min(
+                    matrix[j][i - 1] + 1, // deletion
+                    matrix[j - 1][i] + 1, // insertion
+                    matrix[j - 1][i - 1] + indicator // substitution
+                );
+            }
+        }
+
+        return matrix[str2.length][str1.length];
+    }
+
+    /**
      * Validate an operation against the schema
      */
     private validateOperationAgainstSchema(operation: OperationDefinitionNode): void {
         const operationType = operation.operation;
-        const rootType = getRootTypeForOperation(this.schema, operationType);
         
-        if (!rootType) {
-            throw new Error(`Schema does not define ${operationType} type`);
-        }
+        try {
+            const rootType = getRootTypeForOperation(this.schema, operationType);
+            
+            if (!rootType) {
+                throw new Error(`Schema does not define ${operationType} type`);
+            }
 
-        // Validate all fields in the selection set exist in the schema
-        this.validateSelectionSet(operation.selectionSet, rootType);
+            // Validate all fields in the selection set exist in the schema
+            this.validateSelectionSet(operation.selectionSet, rootType);
+        } catch (error) {
+            // Convert the error message to use lowercase operation type for consistency
+            if (error instanceof Error && error.message.includes('Schema does not define')) {
+                throw new Error(`Schema does not define ${operationType} type`);
+            }
+            throw error;
+        }
     }
 
     /**
@@ -339,7 +429,10 @@ export class OperationToProtoVisitor {
             if (selection.kind === 'Field') {
                 const field = fields[selection.name.value];
                 if (!field) {
-                    throw new Error(`Field '${selection.name.value}' not found on type '${namedParentType.name}'`);
+                    // Generate helpful suggestion for similar field names
+                    const suggestion = this.findSimilarFieldName(selection.name.value, Object.keys(fields));
+                    const suggestionText = suggestion ? `. Did you mean '${suggestion}'?` : '';
+                    throw new Error(`Field '${selection.name.value}' not found on type '${namedParentType.name}'${suggestionText}`);
                 }
 
                 // Recursively validate nested selection sets
@@ -356,6 +449,11 @@ export class OperationToProtoVisitor {
                     const fragmentType = this.schema.getTypeMap()[fragmentTypeName];
                     if (!fragmentType) {
                         throw new Error(`Unknown type '${fragmentTypeName}' in inline fragment`);
+                    }
+                    
+                    // Check if fragment can be spread on parent type
+                    if (!this.canFragmentBeSpreadOnType(fragmentType, namedParentType)) {
+                        throw new Error(`Fragment cannot be spread here as objects of type "${namedParentType.name}" can never be of type "${fragmentTypeName}"`);
                     }
                     
                     // Recursively validate the inline fragment's selection set
@@ -450,7 +548,6 @@ export class OperationToProtoVisitor {
         const fieldsStr = fields.length > 0 ? '\n' + fields.join('\n') + '\n' : '';
         return `// Request message for ${operationName} operation.\nmessage ${messageName} {${fieldsStr}}`;
     }
-
 
     private generateResponseMessage(operationName: string, selectionSet: SelectionSetNode, operation: OperationDefinitionNode): string {
         const messageName = createResponseMessageName(operationName);
@@ -945,7 +1042,6 @@ export class OperationToProtoVisitor {
         return null;
     }
 
-
     /**
      * Convert PascalCase field path part to camelCase GraphQL field name
      */
@@ -995,7 +1091,6 @@ export class OperationToProtoVisitor {
 
         return messages;
     }
-
 
     /**
      * Collect enum types used in operation variables

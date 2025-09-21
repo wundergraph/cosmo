@@ -72,7 +72,7 @@ const SDL = `
 
 describe('Operations to Proto - Enhanced Error Handling', () => {
   describe('Schema Validation Errors', () => {
-    test.skip('should provide detailed error for non-existent fields', () => {
+    test('should provide detailed error for non-existent fields', () => {
       const operation = {
         name: 'InvalidFieldQuery',
         content: `
@@ -92,7 +92,7 @@ describe('Operations to Proto - Enhanced Error Handling', () => {
       }).toThrow(/Field 'nonExistentField' not found on type 'Employee'/);
     });
 
-    test.skip('should provide helpful suggestions for similar field names', () => {
+    test('should provide helpful suggestions for similar field names', () => {
       const operation = {
         name: 'TypoFieldQuery',
         content: `
@@ -231,7 +231,7 @@ describe('Operations to Proto - Enhanced Error Handling', () => {
   });
 
   describe('Operation Structure Validation', () => {
-    test.skip('should validate operation name uniqueness', () => {
+    test('should validate operation name uniqueness', () => {
       const operations = [
         {
           name: 'DuplicateOperation',
@@ -263,7 +263,7 @@ describe('Operations to Proto - Enhanced Error Handling', () => {
       }).toThrow(/Duplicate operation name "DuplicateOperation"/);
     });
 
-    test.skip('should validate operation definition presence', () => {
+    test('should validate operation definition presence', () => {
       const operation = {
         name: 'EmptyDocument',
         content: `
@@ -277,7 +277,7 @@ describe('Operations to Proto - Enhanced Error Handling', () => {
       }).toThrow(/No OperationDefinition found in document for operation "EmptyDocument"/);
     });
 
-    test.skip('should validate single operation per document', () => {
+    test('should validate single operation per document', () => {
       const operation = {
         name: 'MultipleOperations',
         content: `
@@ -301,7 +301,7 @@ describe('Operations to Proto - Enhanced Error Handling', () => {
       }).toThrow(/Multiple OperationDefinitions found in document for operation "MultipleOperations"/);
     });
 
-    test.skip('should validate operation type against schema', () => {
+    test('should validate operation type against schema', () => {
       const schemaWithoutSubscription = `
         type Query {
           employee(id: Int!): Employee
@@ -457,7 +457,7 @@ describe('Operations to Proto - Enhanced Error Handling', () => {
   });
 
   describe('Fragment Validation Errors', () => {
-    test.skip('should validate fragment type conditions', () => {
+    test('should validate fragment type conditions', () => {
       const operation = {
         name: 'InvalidFragmentType',
         content: `
@@ -479,7 +479,7 @@ describe('Operations to Proto - Enhanced Error Handling', () => {
       }).toThrow(/Fragment cannot be spread here as objects of type "Employee" can never be of type "Details"/);
     });
 
-    test.skip('should validate named fragment definitions', () => {
+    test('should validate named fragment definitions', () => {
       const operation = {
         name: 'UndefinedFragment',
         content: `
@@ -498,7 +498,7 @@ describe('Operations to Proto - Enhanced Error Handling', () => {
       }).toThrow(/Unknown fragment "UndefinedEmployeeFragment"/);
     });
 
-    test.skip('should detect circular fragment dependencies', () => {
+    test('should detect circular fragment dependencies', () => {
       const operation = {
         name: 'CircularFragments',
         content: `
@@ -644,7 +644,7 @@ describe('Operations to Proto - Enhanced Error Handling', () => {
       expectValidProto(proto);
     });
 
-    test.skip('should handle deeply nested selections gracefully', () => {
+    test('should handle deeply nested selections gracefully', () => {
       const deepSchema = `
         type Query {
           level1: Level1
