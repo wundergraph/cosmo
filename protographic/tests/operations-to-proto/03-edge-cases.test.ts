@@ -126,7 +126,7 @@ describe('Operations to Proto - Edge Cases and Validation', () => {
     expect(() => visitor.visit()).toThrow('Schema does not define Mutation type');
   });
 
-  test('should throw error for fragment spreads', () => {
+  test('should handle fragment spreads correctly', () => {
     const operations = [
       {
         name: 'WithFragmentSpread',
@@ -147,9 +147,17 @@ describe('Operations to Proto - Edge Cases and Validation', () => {
 
     const visitor = new OperationToProtoVisitor(schema, operations);
 
-    expect(() => visitor.visit()).toThrow(
-      'Fragment spreads are not currently supported'
-    );
+    const protoText = visitor.visit();
+    
+    // Should now support fragment spreads and generate valid proto
+    expectValidProto(protoText);
+    
+    // Should contain the expanded fields from the fragment
+    expect(protoText).toContain('int32 id = 1;');
+    expect(protoText).toContain('string tag = 2;');
+    
+    // Should generate proper service method
+    expect(protoText).toContain('rpc WithFragmentSpread(WithFragmentSpreadRequest)');
   });
 
   test('should throw error for inline fragments', () => {

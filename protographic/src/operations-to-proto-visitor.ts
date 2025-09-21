@@ -3,6 +3,8 @@ import {
     buildSchema,
     DocumentNode,
     FieldNode,
+    FragmentDefinitionNode,
+    FragmentSpreadNode,
     getNamedType,
     GraphQLField,
     GraphQLInputObjectType,
@@ -63,6 +65,7 @@ export class OperationToProtoVisitor {
     private lockManager: ProtoLockManager;
     private usesWrapperTypes = false;
     private enumsUsed = new Set<string>();
+    private fragments = new Map<string, FragmentDefinitionNode>();
 
     constructor(
         schemaOrSDL: GraphQLSchema | string,
@@ -85,6 +88,9 @@ export class OperationToProtoVisitor {
             ...op,
             document: parse(op.content)
         }));
+
+        // Collect all fragment definitions from all operations
+        this.collectFragmentDefinitions(parsedOperations);
 
         // Validate operations against schema
         for (const { document, name } of parsedOperations) {
@@ -121,6 +127,162 @@ export class OperationToProtoVisitor {
      */
     public getGeneratedLockData(): ProtoLock | null {
         return this.lockManager.getLockData();
+    }
+
+    /**
+     * Collect all fragment definitions from parsed operations
+     */
+    private collectFragmentDefinitions(parsedOperations: { name: string; document: DocumentNode }[]): void {
+        for (const { document, name } of parsedOperations) {
+            for (const definition of document.definitions) {
+                if (definition.kind === 'FragmentDefinition') {
+                    const fragmentName = definition.name.value;
+                    if (this.fragments.has(fragmentName)) {
+                        throw new Error(`Duplicate fragment definition "${fragmentName}"`);
+                    }
+                    this.fragments.set(fragmentName, definition);
+                }
+            }
+        }
+    }
+
+    /**
+     * Validate a fragment spread against the parent type
+     */
+    private validateFragmentSpread(fragmentSpread: FragmentSpreadNode, parentType: GraphQLNamedType): void {
+        const fragmentName = fragmentSpread.name.value;
+        const fragment = this.fragments.get(fragmentName);
+        
+        if (!fragment) {
+            throw new Error(`Unknown fragment "${fragmentName}"`);
+        }
+
+        // Check for circular dependencies
+        this.checkCircularFragmentDependency(fragmentName, new Set());
+
+        // Validate fragment type compatibility
+        const fragmentTypeName = fragment.typeCondition.name.value;
+        const fragmentType = this.schema.getTypeMap()[fragmentTypeName];
+        
+        if (!fragmentType) {
+            throw new Error(`Unknown type "${fragmentTypeName}" in fragment "${fragmentName}"`);
+        }
+
+        // Check if fragment can be spread on parent type
+        if (!this.canFragmentBeSpreadOnType(fragmentType, parentType)) {
+            throw new Error(`Fragment "${fragmentName}" cannot be spread on type "${parentType.name}"`);
+        }
+    }
+
+    /**
+     * Check for circular fragment dependencies
+     */
+    private checkCircularFragmentDependency(fragmentName: string, visited: Set<string>): void {
+        if (visited.has(fragmentName)) {
+            const cycle = Array.from(visited).concat(fragmentName).join(' -> ');
+            throw new Error(`Circular fragment dependency detected: ${cycle}`);
+        }
+
+        const fragment = this.fragments.get(fragmentName);
+        if (!fragment) return;
+
+        visited.add(fragmentName);
+
+        // Check all fragment spreads within this fragment
+        this.findFragmentSpreadsInSelectionSet(fragment.selectionSet, (spreadName) => {
+            this.checkCircularFragmentDependency(spreadName, new Set(visited));
+        });
+
+        visited.delete(fragmentName);
+    }
+
+    /**
+     * Find all fragment spreads in a selection set
+     */
+    private findFragmentSpreadsInSelectionSet(selectionSet: SelectionSetNode, callback: (fragmentName: string) => void): void {
+        for (const selection of selectionSet.selections) {
+            if (selection.kind === 'FragmentSpread') {
+                callback(selection.name.value);
+            } else if (selection.kind === 'Field' && selection.selectionSet) {
+                this.findFragmentSpreadsInSelectionSet(selection.selectionSet, callback);
+            } else if (selection.kind === 'InlineFragment' && selection.selectionSet) {
+                this.findFragmentSpreadsInSelectionSet(selection.selectionSet, callback);
+            }
+        }
+    }
+
+    /**
+     * Check if a fragment can be spread on a given type
+     */
+    private canFragmentBeSpreadOnType(fragmentType: GraphQLType, parentType: GraphQLType): boolean {
+        // Same type
+        if (fragmentType === parentType) {
+            return true;
+        }
+
+        // Fragment type is an interface that parent type implements
+        if (isInterfaceType(fragmentType) && isObjectType(parentType)) {
+            return parentType.getInterfaces().includes(fragmentType);
+        }
+
+        // Fragment type is a union member that includes parent type
+        if (isUnionType(fragmentType) && isObjectType(parentType)) {
+            return fragmentType.getTypes().includes(parentType);
+        }
+
+        // Parent type is an interface that fragment type implements
+        if (isObjectType(fragmentType) && isInterfaceType(parentType)) {
+            return fragmentType.getInterfaces().includes(parentType);
+        }
+
+        // Both are interfaces with compatible hierarchy
+        if (isInterfaceType(fragmentType) && isInterfaceType(parentType)) {
+            // Check if they share any implementing types
+            const fragmentImplementors = this.schema.getPossibleTypes(fragmentType);
+            const parentImplementors = this.schema.getPossibleTypes(parentType);
+            return fragmentImplementors.some(type => parentImplementors.includes(type));
+        }
+
+        return false;
+    }
+
+    /**
+     * Expand fragment spreads in a selection set
+     */
+    private expandFragmentSpreads(selectionSet: SelectionSetNode): SelectionSetNode {
+        const expandedSelections = [];
+
+        for (const selection of selectionSet.selections) {
+            if (selection.kind === 'FragmentSpread') {
+                const fragment = this.fragments.get(selection.name.value);
+                if (fragment) {
+                    // Recursively expand the fragment's selection set
+                    const expandedFragmentSelections = this.expandFragmentSpreads(fragment.selectionSet);
+                    expandedSelections.push(...expandedFragmentSelections.selections);
+                }
+            } else if (selection.kind === 'Field' && selection.selectionSet) {
+                // Recursively expand nested selection sets
+                const expandedSelectionSet = this.expandFragmentSpreads(selection.selectionSet);
+                expandedSelections.push({
+                    ...selection,
+                    selectionSet: expandedSelectionSet
+                });
+            } else if (selection.kind === 'InlineFragment' && selection.selectionSet) {
+                // Recursively expand inline fragment selection sets
+                const expandedSelectionSet = this.expandFragmentSpreads(selection.selectionSet);
+                expandedSelections.push({
+                    ...selection,
+                    selectionSet: expandedSelectionSet
+                });
+            } else {
+                expandedSelections.push(selection);
+            }
+        }
+
+        return {
+            ...selectionSet,
+            selections: expandedSelections
+        };
     }
 
     /**
@@ -162,7 +324,8 @@ export class OperationToProtoVisitor {
                     this.validateSelectionSet(selection.selectionSet, field.type);
                 }
             } else if (selection.kind === 'FragmentSpread') {
-                throw new Error(`Fragment spreads are not currently supported. Found fragment spread '...${selection.name.value}'. Please inline the fragment fields directly in your operation.`);
+                // Validate fragment spread
+                this.validateFragmentSpread(selection, namedParentType);
             } else if (selection.kind === 'InlineFragment') {
                 // Validate inline fragments - they should target valid types
                 if (selection.typeCondition) {
@@ -271,13 +434,16 @@ export class OperationToProtoVisitor {
         const fields: string[] = [];
         let fieldIndex = 1;
 
+        // Expand fragment spreads before processing
+        const expandedSelectionSet = this.expandFragmentSpreads(selectionSet);
+
         // Get the root type based on operation type
         const rootType = getRootTypeForOperation(this.schema, operation.operation);
         if (!rootType) {
             throw new Error(`Schema does not define ${operation.operation} type`);
         }
 
-        for (const selection of selectionSet.selections) {
+        for (const selection of expandedSelectionSet.selections) {
             if (selection.kind === 'Field') {
                 const fieldName = graphqlFieldToProtoField(selection.name.value);
                 const schemaField = rootType.getFields()[selection.name.value];
@@ -298,7 +464,10 @@ export class OperationToProtoVisitor {
     private generateNestedMessages(operationName: string, selectionSet: SelectionSetNode, currentPath: string, operation: OperationDefinitionNode, contextType?: GraphQLObjectType | GraphQLInterfaceType, fragmentTypeName?: string): string[] {
         const messages: string[] = [];
 
-        for (const selection of selectionSet.selections) {
+        // Expand fragment spreads before processing
+        const expandedSelectionSet = this.expandFragmentSpreads(selectionSet);
+
+        for (const selection of expandedSelectionSet.selections) {
             if (selection.kind === 'Field' && selection.selectionSet) {
                 // If we're within a fragment, include the fragment type name in the path to avoid conflicts
                 const fieldPath = fragmentTypeName
@@ -386,7 +555,10 @@ export class OperationToProtoVisitor {
                     fieldIndex += oneofFields.length;
                 }
 
-                // Process regular fields
+                // Process regular fields - these should come first, before oneof
+                const regularFields: string[] = [];
+                let regularFieldIndex = 1;
+                
                 for (const selection of field.selectionSet.selections) {
                     if (selection.kind === 'Field') {
                         const fieldName = graphqlFieldToProtoField(selection.name.value);
@@ -407,15 +579,40 @@ export class OperationToProtoVisitor {
                                 ? `repeated ${nestedType}`
                                 : nestedType;
 
-                            fields.push(`  ${protoType} ${fieldName} = ${fieldIndex++};`);
+                            regularFields.push(`  ${protoType} ${fieldName} = ${regularFieldIndex++};`);
                         } else {
                             // Leaf field - use the battle-tested getProtoTypeFromGraphQL method
                             const wrapperTracker = { usesWrapperTypes: this.usesWrapperTypes };
                             const protoType = getProtoTypeFromGraphQL(schemaField.type, false, wrapperTracker);
                             this.usesWrapperTypes = wrapperTracker.usesWrapperTypes;
-                            fields.push(`  ${protoType.typeName} ${fieldName} = ${fieldIndex++};`);
+                            
+                            // Handle repeated types correctly
+                            if (protoType.isRepeated) {
+                                regularFields.push(`  repeated ${protoType.typeName} ${fieldName} = ${regularFieldIndex++};`);
+                            } else {
+                                regularFields.push(`  ${protoType.typeName} ${fieldName} = ${regularFieldIndex++};`);
+                            }
                         }
                     }
+                }
+                
+                // Add regular fields first, then oneof fields
+                if (hasInlineFragments) {
+                    // Put regular fields first, then oneof
+                    const reorderedFields = [...regularFields];
+                    const oneofStartIndex = regularFieldIndex;
+                    const oneofFields = this.generateOneofFields(operationName, field.selectionSet, fieldPath, parentType);
+                    // Update oneof field indices
+                    const updatedOneofFields = oneofFields.map(line => {
+                        if (line.includes(' = ')) {
+                            return line.replace(/ = (\d+);/, (match, num) => ` = ${parseInt(num) + oneofStartIndex - 1};`);
+                        }
+                        return line;
+                    });
+                    reorderedFields.push(...updatedOneofFields);
+                    fields.splice(fields.length - oneofFields.length, oneofFields.length, ...reorderedFields);
+                } else {
+                    fields.push(...regularFields);
                 }
             }
         }
@@ -793,7 +990,9 @@ export class OperationToProtoVisitor {
         const rootType = getRootTypeForOperation(this.schema, operation.operation);
         if (!rootType) return;
 
-        this.collectEnumsFromSelectionSetRecursive(selectionSet, rootType);
+        // Expand fragment spreads before collecting enums
+        const expandedSelectionSet = this.expandFragmentSpreads(selectionSet);
+        this.collectEnumsFromSelectionSetRecursive(expandedSelectionSet, rootType);
     }
 
     /**
