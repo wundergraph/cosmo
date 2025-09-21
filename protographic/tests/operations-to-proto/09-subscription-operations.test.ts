@@ -153,7 +153,7 @@ const SDL = `
   }
 `;
 
-describe('Operations to Proto - Subscription Operations)', () => {
+describe('Operations to Proto - Subscription Operations', () => {
   describe('Basic Subscription Operations', () => {
     test('should handle simple subscription operations', () => {
       const operation = {
