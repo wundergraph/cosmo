@@ -23,13 +23,29 @@ import type { ProtoLockManager } from './proto-lock.js';
  *
  * GraphQL has a smaller set of primitive types compared to Protocol Buffers.
  * This mapping ensures consistent representation between the two type systems.
+ *
+ * Custom scalars are mapped to appropriate Protocol Buffer types:
+ * - DateTime, UUID, EmailAddress, URL, JSON, Decimal -> string
+ * - BigInt -> int64
+ * - Upload -> string (could be bytes, but string is more common for file references)
  */
 export const SCALAR_TYPE_MAP: Record<string, string> = {
+  // Built-in GraphQL scalars
   ID: 'string', // GraphQL IDs map to Proto strings
   String: 'string', // Direct mapping
   Int: 'int32', // GraphQL Int is 32-bit signed
   Float: 'double', // Using double for GraphQL Float gives better precision
   Boolean: 'bool', // Direct mapping
+  
+  // Common custom scalars
+  DateTime: 'string', // ISO 8601 string representation
+  UUID: 'string', // String representation of UUID
+  JSON: 'string', // JSON serialized as string
+  BigInt: 'int64', // Large integers map to int64
+  Decimal: 'string', // Decimal numbers as string to preserve precision
+  EmailAddress: 'string', // Email addresses as strings
+  URL: 'string', // URLs as strings
+  Upload: 'string', // File uploads as string references (could be bytes)
 };
 
 /**
@@ -39,11 +55,22 @@ export const SCALAR_TYPE_MAP: Record<string, string> = {
  * in Protocol Buffers, which is important for GraphQL nullable semantics.
  */
 export const SCALAR_WRAPPER_TYPE_MAP: Record<string, string> = {
+  // Built-in GraphQL scalars
   ID: 'google.protobuf.StringValue',
   String: 'google.protobuf.StringValue',
   Int: 'google.protobuf.Int32Value',
   Float: 'google.protobuf.DoubleValue',
   Boolean: 'google.protobuf.BoolValue',
+  
+  // Common custom scalars
+  DateTime: 'google.protobuf.StringValue',
+  UUID: 'google.protobuf.StringValue',
+  JSON: 'google.protobuf.StringValue',
+  BigInt: 'google.protobuf.Int64Value',
+  Decimal: 'google.protobuf.StringValue',
+  EmailAddress: 'google.protobuf.StringValue',
+  URL: 'google.protobuf.StringValue',
+  Upload: 'google.protobuf.StringValue',
 };
 
 /**

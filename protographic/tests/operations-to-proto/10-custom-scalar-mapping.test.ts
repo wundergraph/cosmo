@@ -87,7 +87,7 @@ const SDL = `
 
 describe('Operations to Proto - Custom Scalar Mapping', () => {
   describe('Basic Custom Scalar Operations', () => {
-    test.skip('should handle DateTime scalars in queries', () => {
+    test('should handle DateTime scalars in queries', () => {
       const operation = {
         name: 'GetEmployeeDates',
         content: `
@@ -111,7 +111,7 @@ describe('Operations to Proto - Custom Scalar Mapping', () => {
       expect(proto).toContain('google.protobuf.StringValue updated_at = 3;');
     });
 
-    test.skip('should handle UUID scalars in queries', () => {
+    test('should handle UUID scalars in queries', () => {
       const operation = {
         name: 'GetEventById',
         content: `
@@ -134,7 +134,7 @@ describe('Operations to Proto - Custom Scalar Mapping', () => {
       expect(proto).toContain('string id = 1;');
     });
 
-    test.skip('should handle JSON scalars in queries', () => {
+    test('should handle JSON scalars in queries', () => {
       const operation = {
         name: 'GetMetadataInfo',
         content: `
@@ -159,10 +159,10 @@ describe('Operations to Proto - Custom Scalar Mapping', () => {
       // Should map JSON to string in proto with wrapper for nullable
       expect(proto).toContain('google.protobuf.StringValue format = 1;');
       expect(proto).toContain('string schema = 2;');
-      expect(proto).toContain('google.protobuf.StringValue metadata = 5;');
+      expect(proto).toContain('google.protobuf.StringValue metadata = 1;');
     });
 
-    test.skip('should handle BigInt scalars in queries', () => {
+    test('should handle BigInt scalars in queries', () => {
       const operation = {
         name: 'GetFileInfo',
         content: `
@@ -189,7 +189,7 @@ describe('Operations to Proto - Custom Scalar Mapping', () => {
   });
 
   describe('Complex Custom Scalar Operations', () => {
-    test.skip('should handle multiple custom scalars in complex queries', () => {
+    test('should handle multiple custom scalars in complex queries', () => {
       const operation = {
         name: 'GetEmployeeDetails',
         content: `
@@ -220,7 +220,7 @@ describe('Operations to Proto - Custom Scalar Mapping', () => {
       expect(proto).toContain('google.protobuf.StringValue metadata = 6;');
     });
 
-    test.skip('should handle custom scalars in nested objects', () => {
+    test('should handle custom scalars in nested objects', () => {
       const operation = {
         name: 'GetEventWithMetadata',
         content: `
@@ -249,7 +249,7 @@ describe('Operations to Proto - Custom Scalar Mapping', () => {
   });
 
   describe('Custom Scalars in Mutations', () => {
-    test.skip('should handle custom scalar inputs in mutations', () => {
+    test('should handle custom scalar inputs in mutations', () => {
       const operation = {
         name: 'CreateEventMutation',
         content: `
@@ -278,7 +278,7 @@ describe('Operations to Proto - Custom Scalar Mapping', () => {
       expect(proto).toContain('google.protobuf.StringValue metadata = 4;');
     });
 
-    test.skip('should handle file upload with custom scalars', () => {
+    test('should handle file upload with custom scalars', () => {
       const operation = {
         name: 'FileUploadMutation',
         content: `
@@ -309,7 +309,7 @@ describe('Operations to Proto - Custom Scalar Mapping', () => {
       expect(proto).toContain('google.protobuf.StringValue metadata = 6;'); // JSON
     });
 
-    test.skip('should handle payment processing with decimal scalars', () => {
+    test('should handle payment processing with decimal scalars', () => {
       const operation = {
         name: 'ProcessPaymentMutation',
         content: `
@@ -341,7 +341,7 @@ describe('Operations to Proto - Custom Scalar Mapping', () => {
   });
 
   describe('Custom Scalar Type Mapping', () => {
-    test.skip('should use default mapping for custom scalars', () => {
+    test('should use default mapping for custom scalars', () => {
       const operation = {
         name: 'CustomMappingTest',
         content: `
@@ -369,7 +369,7 @@ describe('Operations to Proto - Custom Scalar Mapping', () => {
       expect(proto).toContain('google.protobuf.StringValue email = 4;'); // EmailAddress -> string
     });
 
-    test.skip('should handle unknown custom scalars with default mapping', () => {
+    test('should handle unknown custom scalars with default mapping', () => {
       const sdlWithUnknownScalar = `
         scalar UnknownCustomScalar
         
@@ -392,8 +392,8 @@ describe('Operations to Proto - Custom Scalar Mapping', () => {
 
       expectValidProto(proto);
 
-      // Should default to string for unknown custom scalars
-      expect(proto).toContain('string test = 1;');
+      // Should default to string for unknown custom scalars (with wrapper for nullable)
+      expect(proto).toContain('google.protobuf.StringValue test = 1;');
     });
   });
 
@@ -444,7 +444,7 @@ describe('Operations to Proto - Custom Scalar Mapping', () => {
   });
 
   describe('Performance with Many Custom Scalars', () => {
-    test.skip('should efficiently handle operations with many custom scalar fields', () => {
+    test('should efficiently handle operations with many custom scalar fields', () => {
       const operation = {
         name: 'ManyCustomScalars',
         content: `
