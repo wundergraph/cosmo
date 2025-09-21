@@ -5,10 +5,13 @@ import {
     getNamedType,
     GraphQLField,
     GraphQLInterfaceType,
+    GraphQLList,
     GraphQLNamedType,
+    GraphQLNonNull,
     GraphQLObjectType,
     GraphQLSchema,
     GraphQLType,
+    isEnumType,
     isInterfaceType,
     isObjectType,
     OperationDefinitionNode,
@@ -20,7 +23,9 @@ import {createRequestMessageName, createResponseMessageName, graphqlFieldToProto
 import type {ProtoLock} from './proto-lock.js';
 import {ProtoLockManager} from './proto-lock.js';
 import {
+    collectEnumsFromTypeNode,
     convertVariableTypeToProto,
+    generateEnumDefinition,
     getProtoTypeFromGraphQL,
     getRootTypeForOperation,
     isGraphQLListType,
@@ -49,6 +54,7 @@ export class OperationToProtoVisitor {
     private goPackage?: string;
     private lockManager: ProtoLockManager;
     private usesWrapperTypes = false;
+    private enumsUsed = new Set<string>();
 
     constructor(
         schemaOrSDL: GraphQLSchema | string,
@@ -96,7 +102,10 @@ export class OperationToProtoVisitor {
         // Generate all message types for each operation
         const messages = this.generateMessages(parsedOperations);
 
-        return this.assembleProto(serviceMethods, messages);
+        // Generate enum definitions for all enums used in operations
+        const enums = this.generateEnumDefinitions();
+
+        return this.assembleProto(serviceMethods, messages, enums);
     }
 
     /**
@@ -180,6 +189,12 @@ export class OperationToProtoVisitor {
             }
             const operationName = operation.name?.value || name;
 
+            // Collect enum types used in variables
+            this.collectEnumsFromVariables(operation.variableDefinitions || []);
+
+            // Collect enum types used in selection set
+            this.collectEnumsFromSelectionSet(operation.selectionSet, operation);
+
             // Generate input message types from variables (if not already generated)
             const inputMessages = this.generateInputMessages(operation.variableDefinitions || [], inputTypesGenerated);
             messages.push(...inputMessages);
@@ -212,8 +227,17 @@ export class OperationToProtoVisitor {
         orderedFieldNames.forEach((fieldName, index) => {
             const variable = variables.find(v => graphqlFieldToProtoField(v.variable.name.value) === fieldName);
             if (variable) {
-                const protoType = convertVariableTypeToProto(variable.type);
-                fields.push(`  ${protoType} ${fieldName} = ${index + 1};`);
+                // Convert TypeNode to GraphQL type and use wrapper types for nullable variables
+                const graphqlType = this.typeNodeToGraphQLType(variable.type);
+                const wrapperTracker = { usesWrapperTypes: this.usesWrapperTypes };
+                const protoType = getProtoTypeFromGraphQL(graphqlType, false, wrapperTracker);
+                this.usesWrapperTypes = wrapperTracker.usesWrapperTypes;
+                
+                if (protoType.isRepeated) {
+                    fields.push(`  repeated ${protoType.typeName} ${fieldName} = ${index + 1};`);
+                } else {
+                    fields.push(`  ${protoType.typeName} ${fieldName} = ${index + 1};`);
+                }
             }
         });
 
@@ -476,6 +500,12 @@ export class OperationToProtoVisitor {
             const protoFieldName = graphqlFieldToProtoField(fieldName);
             const fieldType = (field as any).type;
             
+            // Check if field type is an enum and collect it
+            const namedFieldType = getNamedType(fieldType);
+            if (isEnumType(namedFieldType)) {
+                this.enumsUsed.add(namedFieldType.name);
+            }
+            
             const wrapperTracker = { usesWrapperTypes: this.usesWrapperTypes };
             const protoType = getProtoTypeFromGraphQL(fieldType, false, wrapperTracker);
             this.usesWrapperTypes = wrapperTracker.usesWrapperTypes;
@@ -491,7 +521,74 @@ export class OperationToProtoVisitor {
         return `// Input message for ${inputTypeName}.\nmessage ${inputTypeName} {${fieldsStr}}`;
     }
 
-    private assembleProto(serviceMethods: string[], messages: string[]): string {
+    /**
+     * Collect enum types used in operation variables
+     */
+    private collectEnumsFromVariables(variables: readonly VariableDefinitionNode[]): void {
+        for (const variable of variables) {
+            collectEnumsFromTypeNode(variable.type, this.schema, this.enumsUsed);
+        }
+    }
+
+    /**
+     * Collect enum types used in selection sets
+     */
+    private collectEnumsFromSelectionSet(selectionSet: SelectionSetNode, operation: OperationDefinitionNode): void {
+        const rootType = getRootTypeForOperation(this.schema, operation.operation);
+        if (!rootType) return;
+
+        this.collectEnumsFromSelectionSetRecursive(selectionSet, rootType);
+    }
+
+    /**
+     * Recursively collect enum types from selection sets
+     */
+    private collectEnumsFromSelectionSetRecursive(selectionSet: SelectionSetNode, parentType: GraphQLType): void {
+        const namedParentType: GraphQLNamedType = getNamedType(parentType);
+        
+        if (!isObjectType(namedParentType) && !isInterfaceType(namedParentType)) {
+            return; // Skip validation for scalar/enum types
+        }
+
+        const fields = namedParentType.getFields();
+
+        for (const selection of selectionSet.selections) {
+            if (selection.kind === 'Field') {
+                const field = fields[selection.name.value];
+                if (field) {
+                    // Check if the field type is an enum
+                    const fieldType = getNamedType(field.type);
+                    if (isEnumType(fieldType)) {
+                        this.enumsUsed.add(fieldType.name);
+                    }
+
+                    // Recursively check nested selection sets
+                    if (selection.selectionSet) {
+                        this.collectEnumsFromSelectionSetRecursive(selection.selectionSet, field.type);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Generate Protocol Buffer enum definitions for all enums used in operations
+     */
+    private generateEnumDefinitions(): string[] {
+        const enumDefinitions: string[] = [];
+
+        for (const enumName of this.enumsUsed) {
+            const enumType = this.schema.getTypeMap()[enumName];
+            if (enumType && isEnumType(enumType)) {
+                const enumDef = generateEnumDefinition(enumType, this.lockManager, false);
+                enumDefinitions.push(enumDef);
+            }
+        }
+
+        return enumDefinitions;
+    }
+
+    private assembleProto(serviceMethods: string[], messages: string[], enums: string[]): string {
         const parts: string[] = [];
 
         // Build imports and options
@@ -535,6 +632,20 @@ export class OperationToProtoVisitor {
         parts.push('}');
         parts.push(''); // Add spacing after service
 
+        // Enum definitions with spacing between each enum
+        for (let i = 0; i < enums.length; i++) {
+            parts.push(enums[i]);
+            // Add empty line after each enum (except the last one)
+            if (i < enums.length - 1) {
+                parts.push('');
+            }
+        }
+
+        // Add spacing between enums and messages if both exist
+        if (enums.length > 0 && messages.length > 0) {
+            parts.push('');
+        }
+
         // Messages with spacing between each message
         for (let i = 0; i < messages.length; i++) {
             parts.push(messages[i]);
@@ -546,5 +657,27 @@ export class OperationToProtoVisitor {
 
         return parts.join('\n');
     }
+
+    /**
+     * Convert a GraphQL TypeNode to a GraphQL type
+     */
+    private typeNodeToGraphQLType(typeNode: any): GraphQLType {
+        if (typeNode.kind === 'NonNullType') {
+            const innerType = this.typeNodeToGraphQLType(typeNode.type);
+            return new GraphQLNonNull(innerType);
+        } else if (typeNode.kind === 'ListType') {
+            const innerType = this.typeNodeToGraphQLType(typeNode.type);
+            return new GraphQLList(innerType);
+        } else if (typeNode.kind === 'NamedType') {
+            const typeName = typeNode.name.value;
+            const type = this.schema.getTypeMap()[typeName];
+            if (!type) {
+                throw new Error(`Unknown type: ${typeName}`);
+            }
+            return type;
+        }
+        throw new Error(`Unknown type node kind: ${typeNode.kind}`);
+    }
+
 
 }

@@ -5,12 +5,15 @@ import {
     GraphQLNamedType,
     GraphQLSchema,
     GraphQLObjectType,
+    GraphQLEnumType,
     isNonNullType,
     isListType,
     isScalarType,
     isEnumType,
     getNamedType,
 } from 'graphql';
+import { createEnumUnspecifiedValue, graphqlEnumValueToProtoEnumValue } from './naming-conventions.js';
+import type { ProtoLockManager } from './proto-lock.js';
 
 /**
  * Maps GraphQL scalar types to Protocol Buffer types
@@ -259,5 +262,86 @@ export function formatComment(description: string | undefined | null, includeCom
         return [`${indent}// ${lines[0]}`];
     } else {
         return [`${indent}/*`, ...lines.map((line) => `${indent} * ${line}`), `${indent} */`];
+    }
+}
+
+/**
+ * Generate a Protocol Buffer enum definition from a GraphQL enum type
+ * Shared implementation used by both SDL and operations visitors
+ */
+export function generateEnumDefinition(
+    enumType: GraphQLEnumType,
+    lockManager: ProtoLockManager,
+    includeComments: boolean = false
+): string {
+    const lines: string[] = [];
+
+    // Add enum description as comment if available
+    if (enumType.description && includeComments) {
+        lines.push(...formatComment(enumType.description, includeComments, 0));
+    }
+
+    lines.push(`enum ${enumType.name} {`);
+
+    // Add unspecified value as first enum value (required in proto3)
+    const unspecifiedValue = createEnumUnspecifiedValue(enumType.name);
+    lines.push(`  ${unspecifiedValue} = 0;`);
+
+    // Get enum values and order them using the lock manager
+    const values = enumType.getValues();
+    const valueNames = values.map(v => v.name);
+    const orderedValueNames = lockManager.reconcileEnumValueOrder(enumType.name, valueNames);
+
+    for (const valueName of orderedValueNames) {
+        const value = values.find(v => v.name === valueName);
+        if (!value) continue;
+
+        const protoEnumValue = graphqlEnumValueToProtoEnumValue(enumType.name, value.name);
+
+        // Get value number from lock data
+        const lockData = lockManager.getLockData();
+        let valueNumber = 1; // Start from 1 since 0 is reserved for UNSPECIFIED
+
+        if (lockData.enums[enumType.name] && lockData.enums[enumType.name].fields[value.name]) {
+            valueNumber = lockData.enums[enumType.name].fields[value.name];
+        } else {
+            // Find the next available number if not in lock data
+            const usedNumbers = new Set([0]); // 0 is reserved for UNSPECIFIED
+            if (lockData.enums[enumType.name]) {
+                Object.values(lockData.enums[enumType.name].fields).forEach(num => usedNumbers.add(num));
+            }
+            while (usedNumbers.has(valueNumber)) {
+                valueNumber++;
+            }
+        }
+
+        // Add value description as comment if available
+        if (value.description && includeComments) {
+            lines.push(...formatComment(value.description, includeComments, 1));
+        }
+
+        lines.push(`  ${protoEnumValue} = ${valueNumber};`);
+    }
+
+    lines.push('}');
+
+    return lines.join('\n');
+}
+
+/**
+ * Collect enum types from a GraphQL type node (handles NonNull and List wrappers)
+ * Shared utility for both SDL and operations visitors
+ */
+export function collectEnumsFromTypeNode(typeNode: any, schema: GraphQLSchema, enumsUsed: Set<string>): void {
+    if (typeNode.kind === 'NonNullType') {
+        collectEnumsFromTypeNode(typeNode.type, schema, enumsUsed);
+    } else if (typeNode.kind === 'ListType') {
+        collectEnumsFromTypeNode(typeNode.type, schema, enumsUsed);
+    } else if (typeNode.kind === 'NamedType') {
+        const typeName = typeNode.name.value;
+        const type = schema.getTypeMap()[typeName];
+        if (type && isEnumType(type)) {
+            enumsUsed.add(typeName);
+        }
     }
 }
