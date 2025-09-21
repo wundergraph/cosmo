@@ -153,9 +153,9 @@ const SDL = `
   }
 `;
 
-describe('Operations to Proto - Subscription Operations (Priority 2)', () => {
+describe('Operations to Proto - Subscription Operations)', () => {
   describe('Basic Subscription Operations', () => {
-    test.skip('should handle simple subscription operations', () => {
+    test('should handle simple subscription operations', () => {
       const operation = {
         name: 'CurrentTimeSubscription',
         content: `
@@ -187,7 +187,7 @@ describe('Operations to Proto - Subscription Operations (Priority 2)', () => {
       expect(proto).toContain('string time_stamp = 2;');
     });
 
-    test.skip('should handle subscription operations with arguments', () => {
+    test('should handle subscription operations with arguments', () => {
       const operation = {
         name: 'CountEmployees',
         content: `
@@ -215,7 +215,7 @@ describe('Operations to Proto - Subscription Operations (Priority 2)', () => {
       expect(proto).toContain('int32 count_emp = 1;');
     });
 
-    test.skip('should handle subscription operations with optional arguments', () => {
+    test('should handle subscription operations with optional arguments', () => {
       const operation = {
         name: 'EmployeeUpdates',
         content: `
@@ -247,7 +247,7 @@ describe('Operations to Proto - Subscription Operations (Priority 2)', () => {
   });
 
   describe('Complex Subscription Operations', () => {
-    test.skip('should handle subscription operations with complex object responses', () => {
+    test('should handle subscription operations with complex object responses', () => {
       const operation = {
         name: 'EmployeeStatusUpdates',
         content: `
@@ -288,7 +288,7 @@ describe('Operations to Proto - Subscription Operations (Priority 2)', () => {
       expect(proto).toContain('Department department = 4;');
     });
 
-    test.skip('should handle subscription operations with input filters', () => {
+    test('should handle subscription operations with input filters', () => {
       const operation = {
         name: 'RealTimeMetrics',
         content: `
@@ -326,7 +326,7 @@ describe('Operations to Proto - Subscription Operations (Priority 2)', () => {
       expect(proto).toContain('repeated RealTimeMetricsRealTimeMetricsDepartmentBreakdown department_breakdown = 3;');
     });
 
-    test.skip('should handle subscription operations with union types', () => {
+    test('should handle subscription operations with union types', () => {
       const operation = {
         name: 'NotificationStream',
         content: `
@@ -371,15 +371,15 @@ describe('Operations to Proto - Subscription Operations (Priority 2)', () => {
 
       // Should handle union types in subscription responses
       expect(proto).toContain('message NotificationStreamNotificationsData {');
-      expect(proto).toContain('oneof data_value {');
-      expect(proto).toContain('NotificationStreamNotificationsDataEmployeeNotificationData employee_notification_data = 1;');
-      expect(proto).toContain('NotificationStreamNotificationsDataSystemNotificationData system_notification_data = 2;');
-      expect(proto).toContain('NotificationStreamNotificationsDataChatNotificationData chat_notification_data = 3;');
+      expect(proto).toContain('oneof type_specific {');
+      expect(proto).toContain('NotificationStreamNotificationsDataEmployeeNotificationData employeenotificationdata = 1;');
+      expect(proto).toContain('NotificationStreamNotificationsDataSystemNotificationData systemnotificationdata = 2;');
+      expect(proto).toContain('NotificationStreamNotificationsDataChatNotificationData chatnotificationdata = 3;');
     });
   });
 
   describe('Multiple Subscription Operations', () => {
-    test.skip('should handle multiple subscription operations in single service', () => {
+    test('should handle multiple subscription operations in single service', () => {
       const operations = [
         {
           name: 'TimeUpdates',
@@ -436,7 +436,7 @@ describe('Operations to Proto - Subscription Operations (Priority 2)', () => {
   });
 
   describe('Subscription Error Handling', () => {
-    test.skip('should handle subscription operations with validation errors', () => {
+    test('should handle subscription operations with validation errors', () => {
       const operation = {
         name: 'InvalidSubscription',
         content: `
@@ -451,7 +451,7 @@ describe('Operations to Proto - Subscription Operations (Priority 2)', () => {
       expect(() => {
         const visitor = new OperationToProtoVisitor(SDL, [operation]);
         visitor.visit();
-      }).toThrow('Field \'nonExistentField\' not found on Subscription type');
+      }).toThrow('Field \'nonExistentField\' not found on type \'Subscription\'');
     });
 
     test.skip('should handle subscription operations with invalid argument types', () => {
@@ -472,7 +472,7 @@ describe('Operations to Proto - Subscription Operations (Priority 2)', () => {
   });
 
   describe('Subscription with Fragments', () => {
-    test.skip('should handle subscription operations with inline fragments', () => {
+    test('should handle subscription operations with inline fragments', () => {
       const operation = {
         name: 'NotificationsWithFragments',
         content: `
@@ -511,12 +511,12 @@ describe('Operations to Proto - Subscription Operations (Priority 2)', () => {
       expectValidProto(proto);
 
       // Should handle inline fragments in subscription responses
-      expect(proto).toContain('oneof data_value {');
+      expect(proto).toContain('oneof type_specific {');
       expect(proto).toContain('message NotificationsWithFragmentsNotificationsDataEmployeeNotificationData {');
       expect(proto).toContain('message NotificationsWithFragmentsNotificationsDataChatNotificationData {');
     });
 
-    test.skip('should handle subscription operations with named fragments', () => {
+    test('should handle subscription operations with named fragments', () => {
       const operation = {
         name: 'ChatWithNamedFragments',
         content: `
@@ -560,7 +560,7 @@ describe('Operations to Proto - Subscription Operations (Priority 2)', () => {
   });
 
   describe('Subscription Performance and Scalability', () => {
-    test.skip('should handle subscription operations with large response objects', () => {
+    test('should handle subscription operations with large response objects', () => {
       const operation = {
         name: 'ComprehensiveEmployeeUpdates',
         content: `
@@ -592,10 +592,10 @@ describe('Operations to Proto - Subscription Operations (Priority 2)', () => {
 
       // Should efficiently handle large response objects
       expect(proto).toContain('message ComprehensiveEmployeeUpdatesEmployeeUpdated {');
-      expect(proto).toContain('ComprehensiveEmployeeUpdatesEmployeeUpdatedDetails details = 8;');
+      expect(proto).toContain('ComprehensiveEmployeeUpdatesEmployeeUpdatedDetails details = 9;');
     });
 
-    test.skip('should handle subscription operations with deeply nested selections', () => {
+    test('should handle subscription operations with deeply nested selections', () => {
       const operation = {
         name: 'DeepNestedSubscription',
         content: `

@@ -485,6 +485,10 @@ export class OperationToProtoVisitor {
             const requestType = createRequestMessageName(methodName);
             const responseType = createResponseMessageName(methodName);
 
+            // Determine if this is a subscription operation (streaming)
+            const isSubscription = operation.operation === 'subscription';
+            const returnType = isSubscription ? `stream ${responseType}` : responseType;
+
             // Get operation documentation from schema
             let operationDescription: string | null = null;
             if (this.includeComments) {
@@ -528,10 +532,10 @@ export class OperationToProtoVisitor {
 
             // For backward compatibility, we need to ensure the RPC method has the right indentation
             if (!this.includeComments || !operationDescription) {
-                return `  rpc ${methodName}(${requestType}) returns (${responseType}) {}`;
+                return `  rpc ${methodName}(${requestType}) returns (${returnType}) {}`;
             }
             
-            return createRpcMethod(methodName, requestType, responseType, this.includeComments, operationDescription);
+            return createRpcMethod(methodName, requestType, returnType, this.includeComments, operationDescription);
         });
     }
 
