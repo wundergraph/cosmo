@@ -17,6 +17,7 @@ import {
     GraphQLUnionType,
     InlineFragmentNode,
     isEnumType,
+    isInputObjectType,
     isInterfaceType,
     isObjectType,
     isUnionType,
@@ -647,15 +648,14 @@ export class OperationToProtoVisitor {
                     const protoType = this.getOperationSpecificType(operationName, selection, schemaField.type, '', operation);
                     
                     // Add field comment if includeComments is enabled and field has description
-                    let fieldLine = `  ${protoType} ${fieldName} = ${fieldIndex++};`;
                     if (this.includeComments && schemaField.description) {
                         const commentLines = formatComment(schemaField.description, this.includeComments, 1);
                         if (commentLines.length > 0) {
-                            fieldLine = `${commentLines.join('\n')}\n${fieldLine}`;
+                            fields.push(...commentLines);
                         }
                     }
                     
-                    fields.push(fieldLine);
+                    fields.push(`  ${protoType} ${fieldName} = ${fieldIndex++};`);
                 } else {
                     throw new Error(`Field '${selection.name.value}' not found on ${operation.operation} type`);
                 }
@@ -749,6 +749,7 @@ export class OperationToProtoVisitor {
         const messageName = this.createNestedMessageName(operationName, fieldPath);
         const fields: string[] = [];
         let fieldIndex = 1;
+        let parentType: GraphQLObjectType | GraphQLInterfaceType | undefined;
 
         if (field.selectionSet) {
             // Check if this selection set contains only inline fragments (union/interface case)
@@ -763,7 +764,6 @@ export class OperationToProtoVisitor {
             } else {
                 // This is an interface or object type with regular fields and possibly inline fragments
                 // Resolve the actual parent type for this field
-                let parentType: GraphQLObjectType | GraphQLInterfaceType;
                 
                 if (contextType) {
                     // If we have a context type, we need to resolve the field type from it
@@ -820,15 +820,14 @@ export class OperationToProtoVisitor {
                                 : nestedType;
 
                             // Add field comment if includeComments is enabled and field has description
-                            let fieldLine = `  ${protoType} ${fieldName} = ${regularFieldIndex++};`;
                             if (this.includeComments && schemaField.description) {
                                 const commentLines = formatComment(schemaField.description, this.includeComments, 1);
                                 if (commentLines.length > 0) {
-                                    fieldLine = `${commentLines.join('\n')}\n${fieldLine}`;
+                                    regularFields.push(...commentLines);
                                 }
                             }
 
-                            regularFields.push(fieldLine);
+                            regularFields.push(`  ${protoType} ${fieldName} = ${regularFieldIndex++};`);
                         } else {
                             // Check if this is a multi-dimensional array that needs nested messages
                             if (this.isMultiDimensionalArray(schemaField.type)) {
@@ -851,21 +850,18 @@ export class OperationToProtoVisitor {
                                 this.usesWrapperTypes = wrapperTracker.usesWrapperTypes;
                                 
                                 // Add field comment if includeComments is enabled and field has description
-                                let fieldLine: string;
-                                if (protoType.isRepeated) {
-                                    fieldLine = `  repeated ${protoType.typeName} ${fieldName} = ${regularFieldIndex++};`;
-                                } else {
-                                    fieldLine = `  ${protoType.typeName} ${fieldName} = ${regularFieldIndex++};`;
-                                }
-                                
                                 if (this.includeComments && schemaField.description) {
                                     const commentLines = formatComment(schemaField.description, this.includeComments, 1);
                                     if (commentLines.length > 0) {
-                                        fieldLine = `${commentLines.join('\n')}\n${fieldLine}`;
+                                        regularFields.push(...commentLines);
                                     }
                                 }
                                 
-                                regularFields.push(fieldLine);
+                                if (protoType.isRepeated) {
+                                    regularFields.push(`  repeated ${protoType.typeName} ${fieldName} = ${regularFieldIndex++};`);
+                                } else {
+                                    regularFields.push(`  ${protoType.typeName} ${fieldName} = ${regularFieldIndex++};`);
+                                }
                             }
                         }
                     }
@@ -893,6 +889,15 @@ export class OperationToProtoVisitor {
         }
 
         const fieldsStr = fields.length > 0 ? '\n' + fields.join('\n') + '\n' : '';
+        
+        // Add type description as comment if available and includeComments is enabled
+        if (this.includeComments && parentType && parentType.description) {
+            const typeComment = formatComment(parentType.description, this.includeComments, 0);
+            if (typeComment.length > 0) {
+                return `${typeComment.join('\n')}\nmessage ${messageName} {${fieldsStr}}`;
+            }
+        }
+        
         return `message ${messageName} {${fieldsStr}}`;
     }
 
@@ -1035,15 +1040,14 @@ export class OperationToProtoVisitor {
                             : nestedType;
 
                         // Add field comment if includeComments is enabled and field has description
-                        let fieldLine = `  ${protoType} ${fieldName} = ${fieldIndex++};`;
                         if (this.includeComments && schemaField.description) {
                             const commentLines = formatComment(schemaField.description, this.includeComments, 1);
                             if (commentLines.length > 0) {
-                                fieldLine = `${commentLines.join('\n')}\n${fieldLine}`;
+                                fields.push(...commentLines);
                             }
                         }
 
-                        fields.push(fieldLine);
+                        fields.push(`  ${protoType} ${fieldName} = ${fieldIndex++};`);
                     } else {
                         // Leaf field - use the battle-tested getProtoTypeFromGraphQL method
                         const wrapperTracker = { usesWrapperTypes: this.usesWrapperTypes };
@@ -1051,15 +1055,14 @@ export class OperationToProtoVisitor {
                         this.usesWrapperTypes = wrapperTracker.usesWrapperTypes;
                         
                         // Add field comment if includeComments is enabled and field has description
-                        let fieldLine = `  ${protoType.typeName} ${fieldName} = ${fieldIndex++};`;
                         if (this.includeComments && schemaField.description) {
                             const commentLines = formatComment(schemaField.description, this.includeComments, 1);
                             if (commentLines.length > 0) {
-                                fieldLine = `${commentLines.join('\n')}\n${fieldLine}`;
+                                fields.push(...commentLines);
                             }
                         }
                         
-                        fields.push(fieldLine);
+                        fields.push(`  ${protoType.typeName} ${fieldName} = ${fieldIndex++};`);
                     }
                 }
             }
@@ -1297,6 +1300,30 @@ export class OperationToProtoVisitor {
     private collectEnumsFromVariables(variables: readonly VariableDefinitionNode[]): void {
         for (const variable of variables) {
             collectEnumsFromTypeNode(variable.type, this.schema, this.enumsUsed);
+            
+            // Also collect enums from input types referenced by variables
+            const graphqlType = this.typeNodeToGraphQLType(variable.type);
+            const inputTypes = extractInputTypesFromGraphQLType(graphqlType, this.schema);
+            for (const inputType of inputTypes) {
+                this.collectEnumsFromInputType(inputType);
+            }
+        }
+    }
+
+    /**
+     * Collect enum types used in input types
+     */
+    private collectEnumsFromInputType(inputType: GraphQLInputObjectType): void {
+        const fields = inputType.getFields();
+        for (const field of Object.values(fields)) {
+            const fieldType = getNamedType(field.type);
+            if (isEnumType(fieldType)) {
+                this.enumsUsed.add(fieldType.name);
+            }
+            // Recursively check nested input types
+            if (isInputObjectType(fieldType)) {
+                this.collectEnumsFromInputType(fieldType);
+            }
         }
     }
 

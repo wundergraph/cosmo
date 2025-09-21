@@ -285,7 +285,7 @@ describe('Operations to Proto - Documentation Preservation', () => {
       expect(proto).toContain('rpc GetAllEmployees(GetAllEmployeesRequest) returns (GetAllEmployeesResponse) {}');
     });
 
-    test.skip('should preserve complex documentation with multiple paragraphs', () => {
+    test('should preserve complex documentation with multiple paragraphs', () => {
       const operation = {
         name: 'FindEmployees',
         content: `
@@ -302,19 +302,19 @@ describe('Operations to Proto - Documentation Preservation', () => {
         `,
       };
 
-      const visitor = new OperationToProtoVisitor(SDL, [operation]);
+      const visitor = new OperationToProtoVisitor(SDL, [operation], { includeComments: true });
       const proto = visitor.visit();
 
       expectValidProto(proto);
 
       // Should preserve multi-line documentation
-      expect(proto).toContain('// Searches for employees based on various criteria.');
-      expect(proto).toContain('// Supports filtering by department, skills, and availability.');
+      expect(proto).toContain('* Searches for employees based on various criteria.');
+      expect(proto).toContain('* Supports filtering by department, skills, and availability.');
     });
   });
 
   describe('Mutation Documentation', () => {
-    test.skip('should preserve mutation documentation with parameter descriptions', () => {
+    test('should preserve mutation documentation with parameter descriptions', () => {
       const operation = {
         name: 'UpdateEmployeeTag',
         content: `
@@ -328,20 +328,20 @@ describe('Operations to Proto - Documentation Preservation', () => {
         `,
       };
 
-      const visitor = new OperationToProtoVisitor(SDL, [operation]);
+      const visitor = new OperationToProtoVisitor(SDL, [operation], { includeComments: true });
       const proto = visitor.visit();
 
       expectValidProto(proto);
 
       // Should preserve detailed mutation documentation
-      expect(proto).toContain('// Updates an employee\'s tag information.');
-      expect(proto).toContain('// This operation requires admin privileges.');
-      expect(proto).toContain('// @param id - The unique identifier of the employee');
-      expect(proto).toContain('// @param tag - The new tag value to assign');
-      expect(proto).toContain('// @returns The updated employee record');
+      expect(proto).toContain('* Updates an employee\'s tag information.');
+      expect(proto).toContain('* This operation requires admin privileges.');
+      expect(proto).toContain('* @param id - The unique identifier of the employee');
+      expect(proto).toContain('* @param tag - The new tag value to assign');
+      expect(proto).toContain('* @returns The updated employee record');
     });
 
-    test.skip('should preserve complex mutation documentation with validation rules', () => {
+    test('should preserve complex mutation documentation with validation rules', () => {
       const operation = {
         name: 'CreateEmployee',
         content: `
@@ -360,23 +360,23 @@ describe('Operations to Proto - Documentation Preservation', () => {
         `,
       };
 
-      const visitor = new OperationToProtoVisitor(SDL, [operation]);
+      const visitor = new OperationToProtoVisitor(SDL, [operation], { includeComments: true });
       const proto = visitor.visit();
 
       expectValidProto(proto);
 
       // Should preserve validation rules and complex documentation
-      expect(proto).toContain('// Creates a new employee record in the system.');
-      expect(proto).toContain('// All required fields must be provided.');
-      expect(proto).toContain('// Validation rules:');
-      expect(proto).toContain('// - Email must be unique');
-      expect(proto).toContain('// - Department must be valid');
-      expect(proto).toContain('// - Start date cannot be in the future');
+      expect(proto).toContain('* Creates a new employee record in the system.');
+      expect(proto).toContain('* All required fields must be provided.');
+      expect(proto).toContain('* Validation rules:');
+      expect(proto).toContain('* - Email must be unique');
+      expect(proto).toContain('* - Department must be valid');
+      expect(proto).toContain('* - Start date cannot be in the future');
     });
   });
 
   describe('Type Documentation', () => {
-    test.skip('should preserve type-level documentation in message comments', () => {
+    test('should preserve type-level documentation in message comments', () => {
       const operation = {
         name: 'GetEmployeeInfo',
         content: `
@@ -395,16 +395,16 @@ describe('Operations to Proto - Documentation Preservation', () => {
         `,
       };
 
-      const visitor = new OperationToProtoVisitor(SDL, [operation]);
+      const visitor = new OperationToProtoVisitor(SDL, [operation], { includeComments: true });
       const proto = visitor.visit();
 
       expectValidProto(proto);
 
       // Should preserve type documentation
-      expect(proto).toContain('// Represents an employee in the organization.');
-      expect(proto).toContain('// Contains personal details, role information, and system metadata.');
-      expect(proto).toContain('// Personal and contact information for an employee.');
-      expect(proto).toContain('// All fields are optional except for the employee\'s name.');
+      expect(proto).toContain('* Represents an employee in the organization.');
+      expect(proto).toContain('* Contains personal details, role information, and system metadata.');
+      expect(proto).toContain('* Personal and contact information for an employee.');
+      expect(proto).toContain('* All fields are optional except for the employee\'s name.');
     });
 
     test('should preserve enum documentation and value descriptions', () => {
@@ -485,7 +485,7 @@ describe('Operations to Proto - Documentation Preservation', () => {
   });
 
   describe('Documentation Formatting and Edge Cases', () => {
-    test.skip('should handle documentation with special characters', () => {
+    test('should handle documentation with special characters', () => {
       const sdlWithSpecialChars = `
         type Query {
           """
@@ -505,14 +505,14 @@ describe('Operations to Proto - Documentation Preservation', () => {
         `,
       };
 
-      const visitor = new OperationToProtoVisitor(sdlWithSpecialChars, [operation]);
+      const visitor = new OperationToProtoVisitor(sdlWithSpecialChars, [operation], { includeComments: true });
       const proto = visitor.visit();
 
       expectValidProto(proto);
 
       // Should properly escape special characters in comments
-      expect(proto).toContain('// Special test: "quotes", \'apostrophes\', & ampersands, <tags>, and @mentions.');
-      expect(proto).toContain('// Also handles: newlines, tabs	, and unicode: 🚀 ✨ 💻');
+      expect(proto).toContain('* Special test: "quotes", \'apostrophes\', & ampersands, <tags>, and @mentions.');
+      expect(proto).toContain('* Also handles: newlines, tabs	, and unicode: 🚀 ✨ 💻');
     });
 
     test('should handle empty or missing documentation gracefully', () => {
@@ -553,7 +553,7 @@ describe('Operations to Proto - Documentation Preservation', () => {
       expect(proto).toContain('google.protobuf.StringValue name = 2;');
     });
 
-    test.skip('should preserve documentation order and structure', () => {
+    test('should preserve documentation order and structure', () => {
       const operation = {
         name: 'DocumentationOrderTest',
         content: `
@@ -572,7 +572,7 @@ describe('Operations to Proto - Documentation Preservation', () => {
         `,
       };
 
-      const visitor = new OperationToProtoVisitor(SDL, [operation]);
+      const visitor = new OperationToProtoVisitor(SDL, [operation], { includeComments: true });
       const proto = visitor.visit();
 
       expectValidProto(proto);
@@ -580,9 +580,15 @@ describe('Operations to Proto - Documentation Preservation', () => {
       // Should maintain documentation structure and field order
       const lines = proto.split('\n');
       const idCommentIndex = lines.findIndex(line => line.includes('// Unique identifier for the employee'));
-      const idFieldIndex = lines.findIndex(line => line.includes('int32 id = 1;'));
       const tagCommentIndex = lines.findIndex(line => line.includes('// Display tag or badge identifier'));
-      const tagFieldIndex = lines.findIndex(line => line.includes('string tag = 2;'));
+      
+      // Find the id and tag fields in the nested message (after the comment lines)
+      const idFieldIndex = lines.findIndex((line, index) =>
+        line.includes('int32 id = 1;') && index > idCommentIndex
+      );
+      const tagFieldIndex = lines.findIndex((line, index) =>
+        line.includes('string tag = 2;') && index > tagCommentIndex
+      );
 
       expect(idCommentIndex).toBeLessThan(idFieldIndex);
       expect(tagCommentIndex).toBeLessThan(tagFieldIndex);
@@ -591,7 +597,7 @@ describe('Operations to Proto - Documentation Preservation', () => {
   });
 
   describe('Documentation Integration with Proto Features', () => {
-    test.skip('should preserve documentation when using wrapper types', () => {
+    test('should preserve documentation when using wrapper types', () => {
       const operation = {
         name: 'WrapperTypesWithDocs',
         content: `
@@ -607,7 +613,7 @@ describe('Operations to Proto - Documentation Preservation', () => {
         `,
       };
 
-      const visitor = new OperationToProtoVisitor(SDL, [operation]);
+      const visitor = new OperationToProtoVisitor(SDL, [operation], { includeComments: true });
       const proto = visitor.visit();
 
       expectValidProto(proto);
@@ -621,7 +627,7 @@ describe('Operations to Proto - Documentation Preservation', () => {
       expect(proto).toContain('MaritalStatus marital_status = 3;');
     });
 
-    test.skip('should preserve documentation with repeated fields', () => {
+    test('should preserve documentation with repeated fields', () => {
       const operation = {
         name: 'RepeatedFieldsWithDocs',
         content: `
@@ -636,7 +642,7 @@ describe('Operations to Proto - Documentation Preservation', () => {
         `,
       };
 
-      const visitor = new OperationToProtoVisitor(SDL, [operation]);
+      const visitor = new OperationToProtoVisitor(SDL, [operation], { includeComments: true });
       const proto = visitor.visit();
 
       expectValidProto(proto);
