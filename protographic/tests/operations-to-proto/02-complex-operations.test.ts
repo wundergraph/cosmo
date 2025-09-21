@@ -273,7 +273,7 @@ describe('Operations to Proto - Complex Operations', () => {
     expect(protoText).toContain('Mood current_mood');
   });
 
-  test.skip('should handle interface and union types in selections - inline fragments not supported yet', () => {
+  test('should handle interface and union types in selections', () => {
     const operations = [
       {
         name: 'GetEmployeeHobbies',
@@ -301,8 +301,21 @@ describe('Operations to Proto - Complex Operations', () => {
       packageName: 'employee.v1'
     });
 
-    // This should throw because inline fragments are not supported
-    expect(() => visitor.visit()).toThrow('Inline fragments are not currently supported');
+    const protoText = visitor.visit();
+
+    // Validate Proto definition
+    expectValidProto(protoText);
+
+    // Should generate nested message types
+    expect(protoText).toContain('message GetEmployeeHobbiesEmployee');
+    expect(protoText).toContain('message GetEmployeeHobbiesEmployeeHobbies');
+
+    // Should generate oneof for polymorphic types
+    expect(protoText).toContain('oneof type_specific');
+    expect(protoText).toContain('GetEmployeeHobbiesEmployeeHobbiesGaming gaming');
+
+    // Should generate fragment-specific message types
+    expect(protoText).toContain('message GetEmployeeHobbiesEmployeeHobbiesGaming');
   });
 
   test('should handle multiple variables with different types', () => {

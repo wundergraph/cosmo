@@ -1,3 +1,4 @@
+
 import {
     buildSchema,
     DocumentNode,
@@ -12,9 +13,12 @@ import {
     GraphQLObjectType,
     GraphQLSchema,
     GraphQLType,
+    GraphQLUnionType,
+    InlineFragmentNode,
     isEnumType,
     isInterfaceType,
     isObjectType,
+    isUnionType,
     OperationDefinitionNode,
     parse,
     SelectionSetNode,
@@ -160,7 +164,19 @@ export class OperationToProtoVisitor {
             } else if (selection.kind === 'FragmentSpread') {
                 throw new Error(`Fragment spreads are not currently supported. Found fragment spread '...${selection.name.value}'. Please inline the fragment fields directly in your operation.`);
             } else if (selection.kind === 'InlineFragment') {
-                throw new Error(`Inline fragments are not currently supported. Please use regular field selections instead of inline fragments.`);
+                // Validate inline fragments - they should target valid types
+                if (selection.typeCondition) {
+                    const fragmentTypeName = selection.typeCondition.name.value;
+                    const fragmentType = this.schema.getTypeMap()[fragmentTypeName];
+                    if (!fragmentType) {
+                        throw new Error(`Unknown type '${fragmentTypeName}' in inline fragment`);
+                    }
+                    
+                    // Recursively validate the inline fragment's selection set
+                    if (selection.selectionSet) {
+                        this.validateSelectionSet(selection.selectionSet, fragmentType);
+                    }
+                }
             }
         }
     }
@@ -279,52 +295,267 @@ export class OperationToProtoVisitor {
         return `// Response message for ${operationName} operation.\nmessage ${messageName} {${fieldsStr}}`;
     }
 
-    private generateNestedMessages(operationName: string, selectionSet: SelectionSetNode, currentPath: string, operation: OperationDefinitionNode): string[] {
+    private generateNestedMessages(operationName: string, selectionSet: SelectionSetNode, currentPath: string, operation: OperationDefinitionNode, contextType?: GraphQLObjectType | GraphQLInterfaceType, fragmentTypeName?: string): string[] {
         const messages: string[] = [];
 
         for (const selection of selectionSet.selections) {
             if (selection.kind === 'Field' && selection.selectionSet) {
-                const fieldPath = this.buildFieldPath(currentPath, selection.name.value);
+                // If we're within a fragment, include the fragment type name in the path to avoid conflicts
+                const fieldPath = fragmentTypeName
+                    ? this.buildFieldPath(currentPath, `${fragmentTypeName}${upperFirst(camelCase(selection.name.value))}`)
+                    : this.buildFieldPath(currentPath, selection.name.value);
 
-                // Generate the nested message
-                const nestedMessage = this.generateNestedMessageForField(operationName, selection, fieldPath, operation);
+                // Generate the nested message with the context type (fragment type if available)
+                const nestedMessage = this.generateNestedMessageForField(operationName, selection, fieldPath, operation, contextType);
                 messages.push(nestedMessage);
 
+                // For deeper nested messages, resolve the field type as the new context
+                let fieldType: GraphQLObjectType | GraphQLInterfaceType | undefined;
+                if (contextType) {
+                    const schemaField = contextType.getFields()[selection.name.value];
+                    if (schemaField) {
+                        const namedType = getNamedType(schemaField.type);
+                        if (isObjectType(namedType) || isInterfaceType(namedType)) {
+                            fieldType = namedType;
+                        }
+                    }
+                }
+
                 // Recursively generate deeper nested messages
-                const deeperMessages = this.generateNestedMessages(operationName, selection.selectionSet, fieldPath, operation);
+                // Don't pass fragmentTypeName to deeper levels - it should only apply to the immediate level
+                // Pass the resolved field type as the new context type
+                const deeperMessages = this.generateNestedMessages(operationName, selection.selectionSet, fieldPath, operation, fieldType);
                 messages.push(...deeperMessages);
+            } else if (selection.kind === 'InlineFragment' && selection.selectionSet) {
+                // Generate messages for inline fragment types
+                const fragmentMessages = this.generateInlineFragmentMessages(operationName, selection, currentPath, operation);
+                messages.push(...fragmentMessages);
             }
         }
 
         return messages;
     }
 
-    private generateNestedMessageForField(operationName: string, field: FieldNode, fieldPath: string, operation: OperationDefinitionNode): string {
+    private generateNestedMessageForField(operationName: string, field: FieldNode, fieldPath: string, operation: OperationDefinitionNode, contextType?: GraphQLObjectType | GraphQLInterfaceType): string {
         const messageName = this.createNestedMessageName(operationName, fieldPath);
         const fields: string[] = [];
         let fieldIndex = 1;
 
         if (field.selectionSet) {
-            // Resolve the GraphQL type for this field using the schema
-            const parentType = this.resolveParentTypeForField(field.name.value, fieldPath, operation);
-            if (!parentType) {
-                throw new Error(`Cannot resolve parent type for field '${field.name.value}' at path '${fieldPath}'`);
-            }
-
-            for (const selection of field.selectionSet.selections) {
-                if (selection.kind === 'Field') {
-                    const fieldName = graphqlFieldToProtoField(selection.name.value);
-
-                    // Get the GraphQL field from the parent type
-                    const schemaField = parentType.getFields()[selection.name.value];
-                    if (!schemaField) {
-                        throw new Error(`Field '${selection.name.value}' not found on type '${parentType.name}'`);
+            // Check if this selection set contains only inline fragments (union/interface case)
+            const hasOnlyInlineFragments = field.selectionSet.selections.every(s => s.kind === 'InlineFragment');
+            const hasInlineFragments = field.selectionSet.selections.some(s => s.kind === 'InlineFragment');
+            
+            if (hasOnlyInlineFragments) {
+                // This is a union type - only inline fragments, no regular fields
+                const oneofFields = this.generateOneofFieldsForUnion(operationName, field.selectionSet, fieldPath);
+                fields.push(...oneofFields);
+                fieldIndex += oneofFields.length;
+            } else {
+                // This is an interface or object type with regular fields and possibly inline fragments
+                // Resolve the actual parent type for this field
+                let parentType: GraphQLObjectType | GraphQLInterfaceType;
+                
+                if (contextType) {
+                    // If we have a context type, we need to resolve the field type from it
+                    // This handles the case where we're processing fields within an inline fragment
+                    const contextField = contextType.getFields()[field.name.value];
+                    if (contextField) {
+                        const fieldReturnType = getNamedType(contextField.type);
+                        if (isObjectType(fieldReturnType) || isInterfaceType(fieldReturnType)) {
+                            parentType = fieldReturnType;
+                        } else {
+                            throw new Error(`Field '${field.name.value}' on type '${contextType.name}' does not return an object or interface type`);
+                        }
+                    } else {
+                        throw new Error(`Field '${field.name.value}' not found on context type '${contextType.name}'`);
                     }
+                } else {
+                    // No context type provided, resolve from path
+                    const resolvedType = this.resolveParentTypeForField(field.name.value, fieldPath, operation);
+                    if (!resolvedType) {
+                        throw new Error(`Cannot resolve parent type for field '${field.name.value}' at path '${fieldPath}'`);
+                    }
+                    parentType = resolvedType;
+                }
 
+                if (hasInlineFragments) {
+                    // Handle polymorphic types with oneof
+                    const oneofFields = this.generateOneofFields(operationName, field.selectionSet, fieldPath, parentType);
+                    fields.push(...oneofFields);
+                    fieldIndex += oneofFields.length;
+                }
+
+                // Process regular fields
+                for (const selection of field.selectionSet.selections) {
+                    if (selection.kind === 'Field') {
+                        const fieldName = graphqlFieldToProtoField(selection.name.value);
+
+                        // Get the GraphQL field from the parent type
+                        const schemaField = parentType.getFields()[selection.name.value];
+                        if (!schemaField) {
+                            throw new Error(`Field '${selection.name.value}' not found on type '${parentType.name}'`);
+                        }
+
+                        if (selection.selectionSet) {
+                            // This field has its own selection set, so it needs a nested message
+                            const nestedFieldPath = this.buildFieldPath(fieldPath, selection.name.value);
+                            const nestedType = this.createNestedMessageName(operationName, nestedFieldPath);
+
+                            // Use the proven list type detection from proto-utils
+                            const protoType = isGraphQLListType(schemaField.type)
+                                ? `repeated ${nestedType}`
+                                : nestedType;
+
+                            fields.push(`  ${protoType} ${fieldName} = ${fieldIndex++};`);
+                        } else {
+                            // Leaf field - use the battle-tested getProtoTypeFromGraphQL method
+                            const wrapperTracker = { usesWrapperTypes: this.usesWrapperTypes };
+                            const protoType = getProtoTypeFromGraphQL(schemaField.type, false, wrapperTracker);
+                            this.usesWrapperTypes = wrapperTracker.usesWrapperTypes;
+                            fields.push(`  ${protoType.typeName} ${fieldName} = ${fieldIndex++};`);
+                        }
+                    }
+                }
+            }
+        }
+
+        const fieldsStr = fields.length > 0 ? '\n' + fields.join('\n') + '\n' : '';
+        return `message ${messageName} {${fieldsStr}}`;
+    }
+
+    /**
+     * Generate oneof fields for polymorphic types (interfaces and unions)
+     */
+    private generateOneofFields(
+        operationName: string,
+        selectionSet: SelectionSetNode,
+        fieldPath: string,
+        parentType: GraphQLObjectType | GraphQLInterfaceType
+    ): string[] {
+        const oneofFields: string[] = [];
+        const inlineFragments = selectionSet.selections.filter(s => s.kind === 'InlineFragment') as InlineFragmentNode[];
+        
+        if (inlineFragments.length === 0) {
+            return oneofFields;
+        }
+
+        // Create a oneof field for the polymorphic type
+        const oneofName = 'type_specific';
+        oneofFields.push(`  oneof ${oneofName} {`);
+        
+        let oneofFieldIndex = 1;
+        for (const fragment of inlineFragments) {
+            if (fragment.typeCondition) {
+                const fragmentTypeName = fragment.typeCondition.name.value;
+                const fragmentMessageName = this.createInlineFragmentMessageName(operationName, fieldPath, fragmentTypeName);
+                const protoFieldName = graphqlFieldToProtoField(fragmentTypeName.toLowerCase());
+                
+                oneofFields.push(`    ${fragmentMessageName} ${protoFieldName} = ${oneofFieldIndex++};`);
+            }
+        }
+        
+        oneofFields.push('  }');
+        return oneofFields;
+    }
+
+    /**
+     * Generate oneof fields for union types (only inline fragments, no regular fields)
+     */
+    private generateOneofFieldsForUnion(
+        operationName: string,
+        selectionSet: SelectionSetNode,
+        fieldPath: string
+    ): string[] {
+        const oneofFields: string[] = [];
+        const inlineFragments = selectionSet.selections.filter(s => s.kind === 'InlineFragment') as InlineFragmentNode[];
+        
+        if (inlineFragments.length === 0) {
+            return oneofFields;
+        }
+
+        // Create a oneof field for the union type
+        const oneofName = 'type_specific';
+        oneofFields.push(`  oneof ${oneofName} {`);
+        
+        let oneofFieldIndex = 1;
+        for (const fragment of inlineFragments) {
+            if (fragment.typeCondition) {
+                const fragmentTypeName = fragment.typeCondition.name.value;
+                const fragmentMessageName = this.createInlineFragmentMessageName(operationName, fieldPath, fragmentTypeName);
+                const protoFieldName = graphqlFieldToProtoField(fragmentTypeName.toLowerCase());
+                
+                oneofFields.push(`    ${fragmentMessageName} ${protoFieldName} = ${oneofFieldIndex++};`);
+            }
+        }
+        
+        oneofFields.push('  }');
+        return oneofFields;
+    }
+
+    /**
+     * Generate messages for inline fragments
+     */
+    private generateInlineFragmentMessages(
+        operationName: string,
+        fragment: InlineFragmentNode,
+        currentPath: string,
+        operation: OperationDefinitionNode
+    ): string[] {
+        const messages: string[] = [];
+        
+        if (!fragment.typeCondition || !fragment.selectionSet) {
+            return messages;
+        }
+
+        const fragmentTypeName = fragment.typeCondition.name.value;
+        const fragmentType = this.schema.getTypeMap()[fragmentTypeName];
+        
+        if (!fragmentType || (!isObjectType(fragmentType) && !isInterfaceType(fragmentType))) {
+            return messages;
+        }
+
+        // Generate message for this fragment type
+        const fragmentMessageName = this.createInlineFragmentMessageName(operationName, currentPath, fragmentTypeName);
+        const fragmentMessage = this.generateFragmentMessage(operationName, fragment, fragmentMessageName, fragmentType);
+        messages.push(fragmentMessage);
+
+        // For nested messages within fragments, use the current path and pass the fragment type as context
+        // Pass the fragment type name only for the immediate level to ensure unique message names
+        const nestedMessages = this.generateNestedMessages(operationName, fragment.selectionSet, currentPath, operation, fragmentType, fragmentTypeName);
+        messages.push(...nestedMessages);
+
+        return messages;
+    }
+
+    /**
+     * Generate a message for an inline fragment
+     */
+    private generateFragmentMessage(
+        operationName: string,
+        fragment: InlineFragmentNode,
+        messageName: string,
+        fragmentType: GraphQLObjectType | GraphQLInterfaceType
+    ): string {
+        const fields: string[] = [];
+        let fieldIndex = 1;
+
+        if (!fragment.selectionSet) {
+            return `message ${messageName} {}`;
+        }
+
+        const typeFields = fragmentType.getFields();
+
+        for (const selection of fragment.selectionSet.selections) {
+            if (selection.kind === 'Field') {
+                const fieldName = graphqlFieldToProtoField(selection.name.value);
+                const schemaField = typeFields[selection.name.value];
+
+                if (schemaField) {
                     if (selection.selectionSet) {
                         // This field has its own selection set, so it needs a nested message
-                        const nestedFieldPath = this.buildFieldPath(fieldPath, selection.name.value);
-                        const nestedType = this.createNestedMessageName(operationName, nestedFieldPath);
+                        const nestedFieldPath = `${messageName}${upperFirst(camelCase(selection.name.value))}`;
+                        const nestedType = nestedFieldPath;
 
                         // Use the proven list type detection from proto-utils
                         const protoType = isGraphQLListType(schemaField.type)
@@ -345,6 +576,19 @@ export class OperationToProtoVisitor {
 
         const fieldsStr = fields.length > 0 ? '\n' + fields.join('\n') + '\n' : '';
         return `message ${messageName} {${fieldsStr}}`;
+    }
+
+    /**
+     * Create a message name for an inline fragment
+     */
+    private createInlineFragmentMessageName(operationName: string, fieldPath: string, fragmentTypeName: string): string {
+        const pascalCaseOperation = operationName;
+        const pascalCasePath = fieldPath.split('.').map(part =>
+            upperFirst(camelCase(part))
+        ).join('');
+        const pascalCaseFragment = upperFirst(camelCase(fragmentTypeName));
+        
+        return `${pascalCaseOperation}${pascalCasePath}${pascalCaseFragment}`;
     }
 
     private createNestedMessageName(operationName: string, fieldPath: string): string {
@@ -391,7 +635,7 @@ export class OperationToProtoVisitor {
 
     /**
      * Resolve the parent GraphQL type for a field in the operation context
-     * This is a simplified version that focuses on the specific use case
+     * This handles union types, interface types, and regular object types
      */
     private resolveParentTypeForField(fieldName: string, fieldPath: string, operation: OperationDefinitionNode): GraphQLObjectType | GraphQLInterfaceType | null {
         // Start from the root type based on operation type
@@ -408,20 +652,68 @@ export class OperationToProtoVisitor {
         
         // Split the path and navigate through each part
         const pathParts = fieldPath.split('.').filter(p => p.length > 0);
-        for (const pathPart of pathParts) {
+        
+        for (let i = 0; i < pathParts.length; i++) {
+            const pathPart = pathParts[i];
             const namedType: GraphQLNamedType = getNamedType(currentType);
-            if (!isObjectType(namedType) && !isInterfaceType(namedType)) {
-                return null;
+            
+            // Check if this path part is a fragment-specific compound name (e.g., "ConsultancyLead")
+            // This happens when we have inline fragments and we combine the fragment type with field name
+            if (pathPart.length > 0) {
+                // First, check if this path part is a direct fragment type name
+                const fragmentType = this.schema.getTypeMap()[pathPart];
+                if (fragmentType && (isObjectType(fragmentType) || isInterfaceType(fragmentType))) {
+                    currentType = fragmentType;
+                    continue;
+                }
+                
+                // Check if this is a compound name from inline fragments (e.g., "ConsultancyLead")
+                // Try to find a fragment type that this path part starts with
+                const typeMap = this.schema.getTypeMap();
+                for (const typeName of Object.keys(typeMap)) {
+                    const type = typeMap[typeName];
+                    if ((isObjectType(type) || isInterfaceType(type)) && pathPart.startsWith(typeName)) {
+                        // This path part starts with a known type name, so it's likely a compound name
+                        // Extract the field name part (everything after the type name)
+                        const fieldNamePart = pathPart.substring(typeName.length);
+                        if (fieldNamePart.length > 0) {
+                            // Use the fragment type as current type and continue with the field name
+                            currentType = type;
+                            
+                            // Now resolve the field name part
+                            const graphqlFieldName = this.convertPascalCaseToGraphQLField(fieldNamePart);
+                            const field: GraphQLField<any, any> | undefined = type.getFields()[graphqlFieldName];
+                            if (field) {
+                                currentType = field.type;
+                                continue;
+                            }
+                        }
+                    }
+                }
             }
             
-            // Convert PascalCase path part back to camelCase field name
-            const graphqlFieldName = this.convertPascalCaseToGraphQLField(pathPart);
-            const field: GraphQLField<any, any> | undefined = namedType.getFields()[graphqlFieldName];
-            if (!field) {
+            if (isObjectType(namedType) || isInterfaceType(namedType)) {
+                // Convert PascalCase path part back to camelCase field name
+                const graphqlFieldName = this.convertPascalCaseToGraphQLField(pathPart);
+                
+                const field: GraphQLField<any, any> | undefined = namedType.getFields()[graphqlFieldName];
+                if (!field) {
+                    return null;
+                }
+                
+                currentType = field.type;
+            } else if (isUnionType(namedType)) {
+                // For union types, the path part represents a union member type
+                // Look for the union member type that matches this path part
+                const unionMemberTypes = namedType.getTypes();
+                const memberType = unionMemberTypes.find(type => type.name === pathPart);
+                if (!memberType) {
+                    return null;
+                }
+                currentType = memberType;
+            } else {
                 return null;
             }
-            
-            currentType = field.type;
         }
 
         // Return the final type as the parent
@@ -510,10 +802,27 @@ export class OperationToProtoVisitor {
     private collectEnumsFromSelectionSetRecursive(selectionSet: SelectionSetNode, parentType: GraphQLType): void {
         const namedParentType: GraphQLNamedType = getNamedType(parentType);
         
-        if (!isObjectType(namedParentType) && !isInterfaceType(namedParentType)) {
-            return; // Skip validation for scalar/enum types
+        if (!isObjectType(namedParentType) && !isInterfaceType(namedParentType) && !isUnionType(namedParentType)) {
+            return; // Skip for scalar/enum types
         }
 
+        // Handle union types - process inline fragments
+        if (isUnionType(namedParentType)) {
+            for (const selection of selectionSet.selections) {
+                if (selection.kind === 'InlineFragment') {
+                    if (selection.typeCondition && selection.selectionSet) {
+                        const fragmentTypeName = selection.typeCondition.name.value;
+                        const fragmentType = this.schema.getTypeMap()[fragmentTypeName];
+                        if (fragmentType && (isObjectType(fragmentType) || isInterfaceType(fragmentType))) {
+                            this.collectEnumsFromSelectionSetRecursive(selection.selectionSet, fragmentType);
+                        }
+                    }
+                }
+            }
+            return;
+        }
+
+        // Handle object and interface types
         const fields = namedParentType.getFields();
 
         for (const selection of selectionSet.selections) {
@@ -529,6 +838,15 @@ export class OperationToProtoVisitor {
                     // Recursively check nested selection sets
                     if (selection.selectionSet) {
                         this.collectEnumsFromSelectionSetRecursive(selection.selectionSet, field.type);
+                    }
+                }
+            } else if (selection.kind === 'InlineFragment') {
+                // Handle inline fragments - collect enums from fragment types
+                if (selection.typeCondition && selection.selectionSet) {
+                    const fragmentTypeName = selection.typeCondition.name.value;
+                    const fragmentType = this.schema.getTypeMap()[fragmentTypeName];
+                    if (fragmentType && (isObjectType(fragmentType) || isInterfaceType(fragmentType))) {
+                        this.collectEnumsFromSelectionSetRecursive(selection.selectionSet, fragmentType);
                     }
                 }
             }
@@ -642,6 +960,5 @@ export class OperationToProtoVisitor {
         }
         throw new Error(`Unknown type node kind: ${typeNode.kind}`);
     }
-
 
 }

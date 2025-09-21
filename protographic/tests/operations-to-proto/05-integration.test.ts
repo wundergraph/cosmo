@@ -335,7 +335,7 @@ describe('Operations to Proto - Integration Tests', () => {
     }
   `;
 
-  test.skip('should handle comprehensive employee query with all nested fields - inline fragments not supported yet', () => {
+  test('should handle comprehensive employee query with all nested fields', () => {
     const operations = [
       {
         name: 'GetCompleteEmployee',
@@ -446,9 +446,16 @@ describe('Operations to Proto - Integration Tests', () => {
     expect(protoText).toContain('message GetCompleteEmployeeEmployeeRole');
     expect(protoText).toContain('message GetCompleteEmployeeEmployeeHobbies');
 
-    // Should handle union and interface types
+    // Should handle union and interface types with oneof
     expect(protoText).toContain('repeated GetCompleteEmployeeEmployeeDetailsPets pets');
     expect(protoText).toContain('repeated GetCompleteEmployeeEmployeeHobbies hobbies');
+    expect(protoText).toContain('oneof type_specific');
+
+    // Should generate fragment-specific message types
+    expect(protoText).toContain('message GetCompleteEmployeeEmployeeDetailsPetsCat');
+    expect(protoText).toContain('message GetCompleteEmployeeEmployeeDetailsPetsDog');
+    expect(protoText).toContain('message GetCompleteEmployeeEmployeeRoleEngineer');
+    expect(protoText).toContain('message GetCompleteEmployeeEmployeeHobbiesGaming');
   });
 
   test.skip('should handle complex mutation with file uploads - nested input generation not fully supported yet', () => {
@@ -482,7 +489,7 @@ describe('Operations to Proto - Integration Tests', () => {
     expect(protoText).toContain('repeated string nested_list');
   });
 
-  test.skip('should handle products query with union types - inline fragments and union resolution not supported yet', () => {
+  test('should handle products query with union types', () => {
     const operations = [
       {
         name: 'GetProducts',
@@ -543,14 +550,24 @@ describe('Operations to Proto - Integration Tests', () => {
 
     // Should generate nested message types for union members
     expect(protoText).toContain('message GetProductsProducts');
-    expect(protoText).toContain('message GetProductsProductsLead');
-    expect(protoText).toContain('message GetProductsProductsEngineers');
-    expect(protoText).toContain('message GetProductsProductsOwner');
+    expect(protoText).toContain('message GetProductsProductsConsultancyLead');
+    expect(protoText).toContain('message GetProductsProductsCosmoLead');
+    expect(protoText).toContain('message GetProductsProductsCosmoEngineers');
+    expect(protoText).toContain('message GetProductsProductsSdkOwner');
+    expect(protoText).toContain('message GetProductsProductsSdkEngineers');
 
     // Should handle repeated fields correctly
     expect(protoText).toContain('repeated GetProductsProducts products = 1;');
-    expect(protoText).toContain('repeated GetProductsProductsEngineers engineers');
-    expect(protoText).toContain('repeated ProgrammingLanguage client_languages');
+    expect(protoText).toContain('repeated GetProductsProductsCosmoEngineers engineers');
+    expect(protoText).toContain('ProgrammingLanguage client_languages');
+
+    // Should handle union types with oneof
+    expect(protoText).toContain('oneof type_specific');
+
+    // Should generate fragment-specific message types for union members
+    expect(protoText).toContain('message GetProductsProductsConsultancy');
+    expect(protoText).toContain('message GetProductsProductsCosmo');
+    expect(protoText).toContain('message GetProductsProductsSdk');
   });
 
   test('should handle search with complex input types', () => {

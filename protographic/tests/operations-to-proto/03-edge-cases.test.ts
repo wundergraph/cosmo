@@ -171,9 +171,11 @@ describe('Operations to Proto - Edge Cases and Validation', () => {
 
     const visitor = new OperationToProtoVisitor(schema, operations);
 
-    expect(() => visitor.visit()).toThrow(
-      'Inline fragments are not currently supported'
-    );
+    const protoText = visitor.visit();
+    
+    // Should now support inline fragments and generate oneof fields
+    expectValidProto(protoText);
+    expect(protoText).toContain('oneof type_specific');
   });
 
   test('should handle operations with no variables', () => {
