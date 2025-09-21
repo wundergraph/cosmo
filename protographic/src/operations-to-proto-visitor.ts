@@ -138,12 +138,35 @@ export class OperationToProtoVisitor {
                 if (definition.kind === 'FragmentDefinition') {
                     const fragmentName = definition.name.value;
                     if (this.fragments.has(fragmentName)) {
-                        throw new Error(`Duplicate fragment definition "${fragmentName}"`);
+                        // Allow duplicate fragments if they have the same definition
+                        const existingFragment = this.fragments.get(fragmentName)!;
+                        if (!this.areFragmentDefinitionsEqual(existingFragment, definition)) {
+                            throw new Error(`Conflicting fragment definitions for "${fragmentName}". Fragment definitions with the same name must be identical across operations.`);
+                        }
+                        // Skip adding duplicate - we already have this fragment
+                        continue;
                     }
                     this.fragments.set(fragmentName, definition);
                 }
             }
         }
+    }
+
+    /**
+     * Check if two fragment definitions are equal
+     */
+    private areFragmentDefinitionsEqual(fragment1: FragmentDefinitionNode, fragment2: FragmentDefinitionNode): boolean {
+        // Compare type conditions
+        if (fragment1.typeCondition.name.value !== fragment2.typeCondition.name.value) {
+            return false;
+        }
+
+        // Compare selection sets by converting to string representation
+        // This is a simple but effective way to compare GraphQL AST nodes
+        const selectionSet1 = JSON.stringify(fragment1.selectionSet);
+        const selectionSet2 = JSON.stringify(fragment2.selectionSet);
+        
+        return selectionSet1 === selectionSet2;
     }
 
     /**

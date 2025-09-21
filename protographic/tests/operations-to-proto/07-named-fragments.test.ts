@@ -297,7 +297,7 @@ describe('Operations to Proto - Named Fragments', () => {
   });
 
   describe('Fragment Reuse and Composition', () => {
-    test.skip('should handle fragment reuse across multiple operations', () => {
+    test('should handle fragment reuse across multiple operations', () => {
       const operations = [
         {
           name: 'GetEmployee',
@@ -359,7 +359,7 @@ describe('Operations to Proto - Named Fragments', () => {
       expect(getAllEmployeesMatch?.[0]).toContain('bool is_available');
     });
 
-    test.skip('should handle complex fragment composition', () => {
+    test('should handle complex fragment composition', () => {
       const operation = {
         name: 'GetEmployeeComplete',
         content: `
@@ -414,7 +414,7 @@ describe('Operations to Proto - Named Fragments', () => {
   });
 
   describe('Fragment Validation and Error Handling', () => {
-    test.skip('should detect undefined fragments', () => {
+    test('should detect undefined fragments', () => {
       const operation = {
         name: 'InvalidFragmentUsage',
         content: `
