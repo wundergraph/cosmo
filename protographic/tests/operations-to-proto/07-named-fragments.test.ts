@@ -433,7 +433,7 @@ describe('Operations to Proto - Named Fragments', () => {
       }).toThrow('Unknown fragment "UndefinedFragment"');
     });
 
-    test.skip('should detect circular fragment dependencies', () => {
+    test('should detect circular fragment dependencies', () => {
       const operation = {
         name: 'CircularFragments',
         content: `
@@ -461,7 +461,7 @@ describe('Operations to Proto - Named Fragments', () => {
       }).toThrow('Circular fragment dependency detected');
     });
 
-    test.skip('should validate fragment type compatibility', () => {
+    test('should validate fragment type compatibility', () => {
       const operation = {
         name: 'IncompatibleFragment',
         content: `
@@ -487,7 +487,7 @@ describe('Operations to Proto - Named Fragments', () => {
       }).toThrow('Fragment "EmployeeFragment" cannot be spread on type "Details"');
     });
 
-    test.skip('should handle unused fragments gracefully', () => {
+    test('should handle unused fragments gracefully', () => {
       const operation = {
         name: 'UnusedFragment',
         content: `
@@ -527,7 +527,7 @@ describe('Operations to Proto - Named Fragments', () => {
   });
 
   describe('Fragment Performance and Edge Cases', () => {
-    test.skip('should handle deeply nested fragment hierarchies', () => {
+    test('should handle deeply nested fragment hierarchies', () => {
       const operation = {
         name: 'DeepFragmentNesting',
         content: `
@@ -584,7 +584,7 @@ describe('Operations to Proto - Named Fragments', () => {
       expect(proto).toContain('string surname = 6;');
     });
 
-    test.skip('should handle fragments with many fields efficiently', () => {
+    test('should handle fragments with many fields efficiently', () => {
       const operation = {
         name: 'LargeFragment',
         content: `
@@ -640,7 +640,7 @@ describe('Operations to Proto - Named Fragments', () => {
   });
 
   describe('Fragment Integration with Mutations', () => {
-    test.skip('should handle fragments in mutation responses', () => {
+    test('should handle fragments in mutation responses', () => {
       const operation = {
         name: 'UpdateEmployeeWithFragment',
         content: `
