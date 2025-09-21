@@ -8,6 +8,8 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -208,6 +210,84 @@ func TestAuthentication(t *testing.T) {
 			data, err := io.ReadAll(res2.Body)
 			require.NoError(t, err)
 			require.JSONEq(t, unauthorizedExpectedData, string(data))
+		})
+	})
+
+	// After consuming the single burst token, launch multiple requests in parallel.
+	// Each should block if the max limit has not been accumulated
+	t.Run("unknown kid refresh parallel exceeding burst waits up to MaxWait", func(t *testing.T) {
+		t.Parallel()
+
+		authServer, err := jwks.NewServer(t)
+		require.NoError(t, err)
+		t.Cleanup(authServer.Close)
+
+		const waitEntries = 4
+
+		authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+			{
+				URL:             authServer.JWKSURL(),
+				RefreshInterval: 10 * time.Second,
+				RefreshUnknownKID: authentication.RefreshUnknownKIDConfig{
+					Enabled:  true,
+					Interval: 1 * time.Second,
+					Burst:    1,
+					MaxWait:  waitEntries * time.Second,
+				},
+			},
+		})
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, true)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			token, err := authServer.TokenForKID("unknown_kid", nil, true)
+			require.NoError(t, err)
+
+			header := http.Header{"Authorization": []string{"Bearer " + token}}
+
+			// Send initial request to use up the burst token
+			res1, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer func() { _ = res1.Body.Close() }()
+			require.Equal(t, http.StatusUnauthorized, res1.StatusCode)
+			_, err = io.ReadAll(res1.Body)
+			require.NoError(t, err)
+
+			var elapsedFastCounter atomic.Int64
+			var wg sync.WaitGroup
+
+			for range waitEntries + 1 {
+				wg.Add(1)
+
+				go func() {
+					defer wg.Done()
+
+					start := time.Now()
+					res2, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+					require.NoError(t, err)
+					defer func() { _ = res2.Body.Close() }()
+
+					elapsed := time.Since(start)
+
+					if elapsed < 100*time.Millisecond {
+						elapsedFastCounter.Add(1)
+					}
+
+					require.True(t, elapsed < 50*time.Millisecond || elapsed >= 700*time.Millisecond)
+					require.Equal(t, http.StatusUnauthorized, res2.StatusCode)
+					data, err := io.ReadAll(res2.Body)
+					require.NoError(t, err)
+					require.JSONEq(t, unauthorizedExpectedData, string(data))
+				}()
+			}
+
+			wg.Wait()
+
+			// We only exit early on the 5th request as by the 5th request we have accumulated
+			// enough tokens to exceed the max wait duration
+			require.Equal(t, 1, int(elapsedFastCounter.Load()))
 		})
 	})
 
