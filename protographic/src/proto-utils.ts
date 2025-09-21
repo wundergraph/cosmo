@@ -6,13 +6,16 @@ import {
     GraphQLSchema,
     GraphQLObjectType,
     GraphQLEnumType,
+    GraphQLInputObjectType,
+    GraphQLInputField,
     isNonNullType,
     isListType,
     isScalarType,
     isEnumType,
+    isInputObjectType,
     getNamedType,
 } from 'graphql';
-import { createEnumUnspecifiedValue, graphqlEnumValueToProtoEnumValue } from './naming-conventions.js';
+import { createEnumUnspecifiedValue, graphqlEnumValueToProtoEnumValue, graphqlFieldToProtoField } from './naming-conventions.js';
 import type { ProtoLockManager } from './proto-lock.js';
 
 /**
@@ -326,6 +329,166 @@ export function generateEnumDefinition(
     lines.push('}');
 
     return lines.join('\n');
+}
+
+/**
+ * Generate a Protocol Buffer message from a GraphQL input object type
+ * Shared implementation extracted from SDL-to-proto visitor
+ */
+export function generateInputMessageFromSchema(
+    inputType: GraphQLInputObjectType,
+    lockManager: ProtoLockManager,
+    includeComments: boolean = false,
+    usesWrapperTypesTracker?: { usesWrapperTypes: boolean }
+): string {
+    const lines: string[] = [];
+
+    // Add type description as comment before message definition
+    if (inputType.description && includeComments) {
+        lines.push(...formatComment(inputType.description, includeComments, 0));
+    }
+
+    lines.push(`message ${inputType.name} {`);
+
+    const fields = inputType.getFields();
+
+    // Get field names and order them using the lock manager
+    const fieldNames = Object.keys(fields);
+    const orderedFieldNames = lockManager.reconcileMessageFieldOrder(inputType.name, fieldNames);
+
+    let fieldNumber = 1;
+    for (const fieldName of orderedFieldNames) {
+        if (!fields[fieldName]) continue;
+
+        const field = fields[fieldName];
+        const fieldType = getProtoTypeFromGraphQL(field.type, false, usesWrapperTypesTracker);
+        const protoFieldName = graphqlFieldToProtoField(fieldName);
+
+        // Add field description as comment
+        if (field.description && includeComments) {
+            lines.push(...formatComment(field.description, includeComments, 1));
+        }
+
+        if (fieldType.isRepeated) {
+            lines.push(`  repeated ${fieldType.typeName} ${protoFieldName} = ${fieldNumber++};`);
+        } else {
+            lines.push(`  ${fieldType.typeName} ${protoFieldName} = ${fieldNumber++};`);
+        }
+    }
+
+    lines.push('}');
+
+    return lines.join('\n');
+}
+
+/**
+ * Recursively collect all nested input type dependencies from a GraphQL input type
+ * Returns them in dependency order (dependencies first, then dependents)
+ */
+export function collectNestedInputDependencies(
+    inputType: GraphQLInputObjectType,
+    schema: GraphQLSchema,
+    visited: Set<string> = new Set()
+): GraphQLInputObjectType[] {
+    const dependencies: GraphQLInputObjectType[] = [];
+    
+    // Avoid infinite recursion
+    if (visited.has(inputType.name)) {
+        return dependencies;
+    }
+    visited.add(inputType.name);
+
+    const fields = inputType.getFields();
+    
+    // First, collect all dependencies
+    for (const [fieldName, field] of Object.entries(fields)) {
+        const namedType = getNamedType(field.type);
+        
+        if (isInputObjectType(namedType) && !visited.has(namedType.name)) {
+            // Recursively collect dependencies of this nested input type
+            const nestedDependencies = collectNestedInputDependencies(namedType, schema, visited);
+            dependencies.push(...nestedDependencies);
+            
+            // Add the nested input type itself
+            dependencies.push(namedType);
+        }
+    }
+
+    return dependencies;
+}
+
+/**
+ * Process a list of input types and generate their Protocol Buffer messages
+ * Handles dependency resolution to ensure nested types are generated in correct order
+ */
+export function processInputTypeQueue(
+    inputTypes: GraphQLInputObjectType[],
+    schema: GraphQLSchema,
+    lockManager: ProtoLockManager,
+    includeComments: boolean = false,
+    usesWrapperTypesTracker?: { usesWrapperTypes: boolean }
+): string[] {
+    const messages: string[] = [];
+    const processed = new Set<string>();
+
+    // Process each input type and its dependencies
+    for (const inputType of inputTypes) {
+        if (processed.has(inputType.name)) {
+            continue;
+        }
+
+        // Get all dependencies in correct order
+        const dependencies = collectNestedInputDependencies(inputType, schema);
+        
+        // Process dependencies first
+        for (const dependency of dependencies) {
+            if (!processed.has(dependency.name)) {
+                const message = generateInputMessageFromSchema(
+                    dependency,
+                    lockManager,
+                    includeComments,
+                    usesWrapperTypesTracker
+                );
+                messages.push(message);
+                processed.add(dependency.name);
+            }
+        }
+
+        // Then process the main input type
+        if (!processed.has(inputType.name)) {
+            const message = generateInputMessageFromSchema(
+                inputType,
+                lockManager,
+                includeComments,
+                usesWrapperTypesTracker
+            );
+            messages.push(message);
+            processed.add(inputType.name);
+        }
+    }
+
+    return messages;
+}
+
+/**
+ * Extract all input object types referenced by a GraphQL type (handles NonNull and List wrappers)
+ * Shared utility for collecting input type dependencies
+ */
+export function extractInputTypesFromGraphQLType(graphqlType: GraphQLType, schema: GraphQLSchema): GraphQLInputObjectType[] {
+    const inputTypes: GraphQLInputObjectType[] = [];
+    
+    // Unwrap NonNull and List types to get to the named type
+    const namedType = getNamedType(graphqlType);
+    
+    if (isInputObjectType(namedType)) {
+        inputTypes.push(namedType);
+        
+        // Recursively collect nested input types
+        const dependencies = collectNestedInputDependencies(namedType, schema);
+        inputTypes.push(...dependencies);
+    }
+    
+    return inputTypes;
 }
 
 /**

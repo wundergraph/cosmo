@@ -4,6 +4,7 @@ import {
     FieldNode,
     getNamedType,
     GraphQLField,
+    GraphQLInputObjectType,
     GraphQLInterfaceType,
     GraphQLList,
     GraphQLNamedType,
@@ -25,10 +26,13 @@ import {ProtoLockManager} from './proto-lock.js';
 import {
     collectEnumsFromTypeNode,
     convertVariableTypeToProto,
+    extractInputTypesFromGraphQLType,
     generateEnumDefinition,
+    generateInputMessageFromSchema,
     getProtoTypeFromGraphQL,
     getRootTypeForOperation,
     isGraphQLListType,
+    processInputTypeQueue,
     SCALAR_TYPE_MAP,
 } from './proto-utils.js';
 import {camelCase, upperFirst} from "lodash-es";
@@ -439,87 +443,47 @@ export class OperationToProtoVisitor {
 
     /**
      * Generate input message types from GraphQL input types referenced in variables
+     * Now uses shared logic from proto-utils for nested input support
      */
     private generateInputMessages(variables: readonly VariableDefinitionNode[], inputTypesGenerated: Set<string>): string[] {
-        const messages: string[] = [];
+        const inputTypes: GraphQLInputObjectType[] = [];
 
+        // Collect all input types from variables (including nested dependencies)
         for (const variable of variables) {
-            const inputTypeNames = this.extractInputTypeNames(variable.type);
-            
-            for (const inputTypeName of inputTypeNames) {
-                if (!inputTypesGenerated.has(inputTypeName)) {
-                    const inputMessage = this.generateInputMessageFromSchema(inputTypeName);
-                    if (inputMessage) {
-                        messages.push(inputMessage);
-                        inputTypesGenerated.add(inputTypeName);
-                    }
-                }
-            }
+            const graphqlType = this.typeNodeToGraphQLType(variable.type);
+            const variableInputTypes = extractInputTypesFromGraphQLType(graphqlType, this.schema);
+            inputTypes.push(...variableInputTypes);
         }
+
+        // Remove duplicates
+        const uniqueInputTypes = inputTypes.filter((type, index, array) =>
+            array.findIndex(t => t.name === type.name) === index
+        );
+
+        // Filter out already generated types
+        const newInputTypes = uniqueInputTypes.filter(type => !inputTypesGenerated.has(type.name));
+
+        if (newInputTypes.length === 0) {
+            return [];
+        }
+
+        // Use shared logic to process input types with dependency resolution
+        const wrapperTracker = { usesWrapperTypes: this.usesWrapperTypes };
+        const messages = processInputTypeQueue(
+            newInputTypes,
+            this.schema,
+            this.lockManager,
+            false, // includeComments - operations visitor doesn't include comments
+            wrapperTracker
+        );
+        this.usesWrapperTypes = wrapperTracker.usesWrapperTypes;
+
+        // Mark all types as generated
+        newInputTypes.forEach(type => inputTypesGenerated.add(type.name));
 
         return messages;
     }
 
-    /**
-     * Extract input type names from a variable type node
-     */
-    private extractInputTypeNames(typeNode: any): string[] {
-        const typeNames: string[] = [];
-
-        if (typeNode.kind === 'NonNullType') {
-            typeNames.push(...this.extractInputTypeNames(typeNode.type));
-        } else if (typeNode.kind === 'ListType') {
-            typeNames.push(...this.extractInputTypeNames(typeNode.type));
-        } else if (typeNode.kind === 'NamedType') {
-            const typeName = typeNode.name.value;
-            // Only include non-scalar types
-            if (!SCALAR_TYPE_MAP[typeName]) {
-                typeNames.push(typeName);
-            }
-        }
-
-        return typeNames;
-    }
-
-    /**
-     * Generate a proto message from a GraphQL input type in the schema
-     */
-    private generateInputMessageFromSchema(inputTypeName: string): string | null {
-        const typeMap = this.schema.getTypeMap();
-        const inputType = typeMap[inputTypeName];
-
-        if (!inputType || !('getFields' in inputType)) {
-            return null;
-        }
-
-        const fields: string[] = [];
-        const inputFields = (inputType as any).getFields();
-        let fieldIndex = 1;
-
-        for (const [fieldName, field] of Object.entries(inputFields)) {
-            const protoFieldName = graphqlFieldToProtoField(fieldName);
-            const fieldType = (field as any).type;
-            
-            // Check if field type is an enum and collect it
-            const namedFieldType = getNamedType(fieldType);
-            if (isEnumType(namedFieldType)) {
-                this.enumsUsed.add(namedFieldType.name);
-            }
-            
-            const wrapperTracker = { usesWrapperTypes: this.usesWrapperTypes };
-            const protoType = getProtoTypeFromGraphQL(fieldType, false, wrapperTracker);
-            this.usesWrapperTypes = wrapperTracker.usesWrapperTypes;
-
-            if (protoType.isRepeated) {
-                fields.push(`  repeated ${protoType.typeName} ${protoFieldName} = ${fieldIndex++};`);
-            } else {
-                fields.push(`  ${protoType.typeName} ${protoFieldName} = ${fieldIndex++};`);
-            }
-        }
-
-        const fieldsStr = fields.length > 0 ? '\n' + fields.join('\n') + '\n' : '';
-        return `// Input message for ${inputTypeName}.\nmessage ${inputTypeName} {${fieldsStr}}`;
-    }
 
     /**
      * Collect enum types used in operation variables

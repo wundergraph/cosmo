@@ -553,7 +553,7 @@ describe('Operations to Proto - Integration Tests', () => {
     expect(protoText).toContain('repeated ProgrammingLanguage client_languages');
   });
 
-  test.skip('should handle search with complex input types - nested input generation not fully supported yet', () => {
+  test('should handle search with complex input types', () => {
     const operations = [
       {
         name: 'SearchEmployees',

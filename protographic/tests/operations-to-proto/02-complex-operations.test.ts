@@ -166,7 +166,7 @@ describe('Operations to Proto - Complex Operations', () => {
     expect(protoText).toContain('repeated GetEmployeeWithDetailsEmployeeDetailsPastLocations past_locations');
   });
 
-  test.skip('should handle complex input types with nested structures - nested input generation not fully supported yet', () => {
+  test('should handle complex input types with nested structures', () => {
     const operations = [
       {
         name: 'FindEmployees',
@@ -196,10 +196,8 @@ describe('Operations to Proto - Complex Operations', () => {
     // Validate Proto definition
     expectValidProto(protoText);
 
-    // Should generate input message types
-    expect(protoText).toContain('// Input message for SearchInput.');
+    // Should generate input message types (operations visitor doesn't include comments)
     expect(protoText).toContain('message SearchInput {');
-    expect(protoText).toContain('// Input message for NestedSearchInput.');
     expect(protoText).toContain('message NestedSearchInput {');
 
     // Should use the input types in request message
@@ -422,7 +420,7 @@ describe('Operations to Proto - Complex Operations', () => {
     expect(protoText).toContain('repeated string tags = 1;');
   });
 
-  test.skip('should handle operations with deeply nested input types - nested input generation not fully supported yet', () => {
+  test('should handle operations with deeply nested input types', () => {
     const complexSchema = `
       type Query {
         searchEmployees(filter: EmployeeFilter): [Employee]
