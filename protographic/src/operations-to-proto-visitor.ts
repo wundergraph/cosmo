@@ -31,7 +31,9 @@ import {ProtoLockManager} from './proto-lock.js';
 import {
     collectEnumsFromTypeNode,
     convertVariableTypeToProto,
+    createRpcMethod,
     extractInputTypesFromGraphQLType,
+    formatComment,
     generateEnumDefinition,
     generateInputMessageFromSchema,
     getProtoTypeFromGraphQL,
@@ -47,6 +49,7 @@ export interface OperationToProtoOptions {
     packageName?: string;
     goPackage?: string;
     lockData?: ProtoLock;
+    includeComments?: boolean;
 }
 
 export interface OperationInfo {
@@ -62,6 +65,7 @@ export class OperationToProtoVisitor {
     private packageName: string;
     private goPackage?: string;
     private lockManager: ProtoLockManager;
+    private includeComments: boolean;
     private usesWrapperTypes = false;
     private enumsUsed = new Set<string>();
     private fragments = new Map<string, FragmentDefinitionNode>();
@@ -80,6 +84,7 @@ export class OperationToProtoVisitor {
         this.serviceName = options.serviceName || 'DefaultService';
         this.packageName = options.packageName || 'service.v1';
         this.goPackage = options.goPackage;
+        this.includeComments = options.includeComments || false;
         this.lockManager = new ProtoLockManager(options.lockData);
     }
 
@@ -479,7 +484,53 @@ export class OperationToProtoVisitor {
             const requestType = createRequestMessageName(methodName);
             const responseType = createResponseMessageName(methodName);
 
-            return `  rpc ${methodName}(${requestType}) returns (${responseType}) {}`;
+            // Get operation documentation from schema
+            let operationDescription: string | null = null;
+            if (this.includeComments) {
+                const rootType = getRootTypeForOperation(this.schema, operation.operation);
+                if (rootType) {
+                    // For operations, we need to find the field that matches the operation
+                    // The operation name might not exactly match the field name
+                    // Try to find a matching field in the root type
+                    const fields = rootType.getFields();
+                    
+                    // First try exact match
+                    let schemaField = fields[operationName];
+                    
+                    // If no exact match, try to find a field that could match this operation
+                    if (!schemaField) {
+                        // For operations like "GetAllEmployees", look for "employees"
+                        // For operations like "GetEmployeeById", look for "employee"
+                        const fieldNames = Object.keys(fields);
+                        
+                        // Sort by length descending to prefer longer matches (more specific)
+                        const sortedFieldNames = fieldNames.sort((a, b) => b.length - a.length);
+                        
+                        for (const fieldName of sortedFieldNames) {
+                            // Simple heuristic: if operation name contains the field name (case insensitive)
+                            const operationLower = operationName.toLowerCase();
+                            const fieldLower = fieldName.toLowerCase();
+                            
+                            // Check if the operation name contains the field name
+                            if (operationLower.includes(fieldLower)) {
+                                schemaField = fields[fieldName];
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (schemaField && schemaField.description) {
+                        operationDescription = schemaField.description;
+                    }
+                }
+            }
+
+            // For backward compatibility, we need to ensure the RPC method has the right indentation
+            if (!this.includeComments || !operationDescription) {
+                return `  rpc ${methodName}(${requestType}) returns (${responseType}) {}`;
+            }
+            
+            return createRpcMethod(methodName, requestType, responseType, this.includeComments, operationDescription);
         });
     }
 
@@ -582,6 +633,11 @@ export class OperationToProtoVisitor {
             throw new Error(`Schema does not define ${operation.operation} type`);
         }
 
+        // Add type description as comment if available
+        const messageComment = this.includeComments && rootType.description
+            ? formatComment(rootType.description, this.includeComments, 0)
+            : [];
+
         for (const selection of expandedSelectionSet.selections) {
             if (selection.kind === 'Field') {
                 const fieldName = graphqlFieldToProtoField(selection.name.value);
@@ -589,7 +645,17 @@ export class OperationToProtoVisitor {
 
                 if (schemaField) {
                     const protoType = this.getOperationSpecificType(operationName, selection, schemaField.type, '', operation);
-                    fields.push(`  ${protoType} ${fieldName} = ${fieldIndex++};`);
+                    
+                    // Add field comment if includeComments is enabled and field has description
+                    let fieldLine = `  ${protoType} ${fieldName} = ${fieldIndex++};`;
+                    if (this.includeComments && schemaField.description) {
+                        const commentLines = formatComment(schemaField.description, this.includeComments, 1);
+                        if (commentLines.length > 0) {
+                            fieldLine = `${commentLines.join('\n')}\n${fieldLine}`;
+                        }
+                    }
+                    
+                    fields.push(fieldLine);
                 } else {
                     throw new Error(`Field '${selection.name.value}' not found on ${operation.operation} type`);
                 }
@@ -597,7 +663,16 @@ export class OperationToProtoVisitor {
         }
 
         const fieldsStr = fields.length > 0 ? '\n' + fields.join('\n') + '\n' : '';
-        return `// Response message for ${operationName} operation.\nmessage ${messageName} {${fieldsStr}}`;
+        
+        // Build the message with optional type comment
+        const messageLines: string[] = [];
+        if (messageComment.length > 0) {
+            messageLines.push(...messageComment);
+        }
+        messageLines.push(`// Response message for ${operationName} operation.`);
+        messageLines.push(`message ${messageName} {${fieldsStr}}`);
+        
+        return messageLines.join('\n');
     }
 
     private generateNestedMessages(operationName: string, selectionSet: SelectionSetNode, currentPath: string, operation: OperationDefinitionNode, contextType?: GraphQLObjectType | GraphQLInterfaceType, fragmentTypeName?: string): string[] {
@@ -744,7 +819,16 @@ export class OperationToProtoVisitor {
                                 ? `repeated ${nestedType}`
                                 : nestedType;
 
-                            regularFields.push(`  ${protoType} ${fieldName} = ${regularFieldIndex++};`);
+                            // Add field comment if includeComments is enabled and field has description
+                            let fieldLine = `  ${protoType} ${fieldName} = ${regularFieldIndex++};`;
+                            if (this.includeComments && schemaField.description) {
+                                const commentLines = formatComment(schemaField.description, this.includeComments, 1);
+                                if (commentLines.length > 0) {
+                                    fieldLine = `${commentLines.join('\n')}\n${fieldLine}`;
+                                }
+                            }
+
+                            regularFields.push(fieldLine);
                         } else {
                             // Check if this is a multi-dimensional array that needs nested messages
                             if (this.isMultiDimensionalArray(schemaField.type)) {
@@ -766,12 +850,22 @@ export class OperationToProtoVisitor {
                                 const protoType = getProtoTypeFromGraphQL(schemaField.type, false, wrapperTracker);
                                 this.usesWrapperTypes = wrapperTracker.usesWrapperTypes;
                                 
-                                // Handle repeated types correctly
+                                // Add field comment if includeComments is enabled and field has description
+                                let fieldLine: string;
                                 if (protoType.isRepeated) {
-                                    regularFields.push(`  repeated ${protoType.typeName} ${fieldName} = ${regularFieldIndex++};`);
+                                    fieldLine = `  repeated ${protoType.typeName} ${fieldName} = ${regularFieldIndex++};`;
                                 } else {
-                                    regularFields.push(`  ${protoType.typeName} ${fieldName} = ${regularFieldIndex++};`);
+                                    fieldLine = `  ${protoType.typeName} ${fieldName} = ${regularFieldIndex++};`;
                                 }
+                                
+                                if (this.includeComments && schemaField.description) {
+                                    const commentLines = formatComment(schemaField.description, this.includeComments, 1);
+                                    if (commentLines.length > 0) {
+                                        fieldLine = `${commentLines.join('\n')}\n${fieldLine}`;
+                                    }
+                                }
+                                
+                                regularFields.push(fieldLine);
                             }
                         }
                     }
@@ -940,13 +1034,32 @@ export class OperationToProtoVisitor {
                             ? `repeated ${nestedType}`
                             : nestedType;
 
-                        fields.push(`  ${protoType} ${fieldName} = ${fieldIndex++};`);
+                        // Add field comment if includeComments is enabled and field has description
+                        let fieldLine = `  ${protoType} ${fieldName} = ${fieldIndex++};`;
+                        if (this.includeComments && schemaField.description) {
+                            const commentLines = formatComment(schemaField.description, this.includeComments, 1);
+                            if (commentLines.length > 0) {
+                                fieldLine = `${commentLines.join('\n')}\n${fieldLine}`;
+                            }
+                        }
+
+                        fields.push(fieldLine);
                     } else {
                         // Leaf field - use the battle-tested getProtoTypeFromGraphQL method
                         const wrapperTracker = { usesWrapperTypes: this.usesWrapperTypes };
                         const protoType = getProtoTypeFromGraphQL(schemaField.type, false, wrapperTracker);
                         this.usesWrapperTypes = wrapperTracker.usesWrapperTypes;
-                        fields.push(`  ${protoType.typeName} ${fieldName} = ${fieldIndex++};`);
+                        
+                        // Add field comment if includeComments is enabled and field has description
+                        let fieldLine = `  ${protoType.typeName} ${fieldName} = ${fieldIndex++};`;
+                        if (this.includeComments && schemaField.description) {
+                            const commentLines = formatComment(schemaField.description, this.includeComments, 1);
+                            if (commentLines.length > 0) {
+                                fieldLine = `${commentLines.join('\n')}\n${fieldLine}`;
+                            }
+                        }
+                        
+                        fields.push(fieldLine);
                     }
                 }
             }
@@ -1167,7 +1280,7 @@ export class OperationToProtoVisitor {
             newInputTypes,
             this.schema,
             this.lockManager,
-            false, // includeComments - operations visitor doesn't include comments
+            this.includeComments,
             wrapperTracker
         );
         this.usesWrapperTypes = wrapperTracker.usesWrapperTypes;
@@ -1265,7 +1378,7 @@ export class OperationToProtoVisitor {
         for (const enumName of this.enumsUsed) {
             const enumType = this.schema.getTypeMap()[enumName];
             if (enumType && isEnumType(enumType)) {
-                const enumDef = generateEnumDefinition(enumType, this.lockManager, false);
+                const enumDef = generateEnumDefinition(enumType, this.lockManager, this.includeComments);
                 enumDefinitions.push(enumDef);
             }
         }

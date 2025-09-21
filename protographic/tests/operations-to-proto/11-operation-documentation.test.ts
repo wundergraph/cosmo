@@ -229,7 +229,7 @@ const SDL = `
 
 describe('Operations to Proto - Documentation Preservation', () => {
   describe('Query Documentation', () => {
-    test.skip('should preserve GraphQL field documentation in proto comments', () => {
+    test('should preserve GraphQL field documentation in proto comments', () => {
       const operation = {
         name: 'GetEmployeeWithDocs',
         content: `
@@ -247,7 +247,7 @@ describe('Operations to Proto - Documentation Preservation', () => {
         `,
       };
 
-      const visitor = new OperationToProtoVisitor(SDL, [operation]);
+      const visitor = new OperationToProtoVisitor(SDL, [operation], { includeComments: true });
       const proto = visitor.visit();
 
       expectValidProto(proto);
@@ -260,7 +260,7 @@ describe('Operations to Proto - Documentation Preservation', () => {
       expect(proto).toContain('// Primary email address');
     });
 
-    test.skip('should preserve operation documentation in service method comments', () => {
+    test('should preserve operation documentation in service method comments', () => {
       const operation = {
         name: 'GetAllEmployees',
         content: `
@@ -274,14 +274,14 @@ describe('Operations to Proto - Documentation Preservation', () => {
         `,
       };
 
-      const visitor = new OperationToProtoVisitor(SDL, [operation]);
+      const visitor = new OperationToProtoVisitor(SDL, [operation], { includeComments: true });
       const proto = visitor.visit();
 
       expectValidProto(proto);
 
       // Should preserve operation documentation
-      expect(proto).toContain('// Retrieves all employees in the system.');
-      expect(proto).toContain('// This operation may return a large dataset and should be used with caution.');
+      expect(proto).toContain('* Retrieves all employees in the system.');
+      expect(proto).toContain('* This operation may return a large dataset and should be used with caution.');
       expect(proto).toContain('rpc GetAllEmployees(GetAllEmployeesRequest) returns (GetAllEmployeesResponse) {}');
     });
 
@@ -407,7 +407,7 @@ describe('Operations to Proto - Documentation Preservation', () => {
       expect(proto).toContain('// All fields are optional except for the employee\'s name.');
     });
 
-    test.skip('should preserve enum documentation and value descriptions', () => {
+    test('should preserve enum documentation and value descriptions', () => {
       const operation = {
         name: 'GetEmployeesByDepartment',
         content: `
@@ -423,7 +423,7 @@ describe('Operations to Proto - Documentation Preservation', () => {
         `,
       };
 
-      const visitor = new OperationToProtoVisitor(SDL, [operation]);
+      const visitor = new OperationToProtoVisitor(SDL, [operation], { includeComments: true });
       const proto = visitor.visit();
 
       expectValidProto(proto);
@@ -441,7 +441,7 @@ describe('Operations to Proto - Documentation Preservation', () => {
   });
 
   describe('Input Type Documentation', () => {
-    test.skip('should preserve input type documentation in proto messages', () => {
+    test('should preserve input type documentation in proto messages', () => {
       const operation = {
         name: 'CreateEmployeeWithDetails',
         content: `
@@ -462,7 +462,7 @@ describe('Operations to Proto - Documentation Preservation', () => {
         `,
       };
 
-      const visitor = new OperationToProtoVisitor(SDL, [operation]);
+      const visitor = new OperationToProtoVisitor(SDL, [operation], { includeComments: true });
       const proto = visitor.visit();
 
       expectValidProto(proto);
@@ -515,7 +515,7 @@ describe('Operations to Proto - Documentation Preservation', () => {
       expect(proto).toContain('// Also handles: newlines, tabs	, and unicode: 🚀 ✨ 💻');
     });
 
-    test.skip('should handle empty or missing documentation gracefully', () => {
+    test('should handle empty or missing documentation gracefully', () => {
       const sdlWithoutDocs = `
         type Query {
           undocumentedField: String
@@ -541,16 +541,16 @@ describe('Operations to Proto - Documentation Preservation', () => {
         `,
       };
 
-      const visitor = new OperationToProtoVisitor(sdlWithoutDocs, [operation]);
+      const visitor = new OperationToProtoVisitor(sdlWithoutDocs, [operation], { includeComments: true });
       const proto = visitor.visit();
 
       expectValidProto(proto);
 
       // Should generate valid proto without documentation comments
       expect(proto).toContain('rpc UndocumentedTest(UndocumentedTestRequest) returns (UndocumentedTestResponse) {}');
-      expect(proto).toContain('string undocumented_field = 1;');
+      expect(proto).toContain('google.protobuf.StringValue undocumented_field = 1;');
       expect(proto).toContain('int32 id = 1;');
-      expect(proto).toContain('string name = 2;');
+      expect(proto).toContain('google.protobuf.StringValue name = 2;');
     });
 
     test.skip('should preserve documentation order and structure', () => {
