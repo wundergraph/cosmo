@@ -62,7 +62,8 @@ export function convertVariableTypeToProto(typeNode: any): string {
 
   if (typeNode.kind === 'NamedType') {
     const typeName = typeNode.name.value;
-    return SCALAR_TYPE_MAP[typeName] || 'string';
+    // Return scalar types or the actual type name for input objects/enums
+    return SCALAR_TYPE_MAP[typeName] || typeName;
   }
 
   return 'string';

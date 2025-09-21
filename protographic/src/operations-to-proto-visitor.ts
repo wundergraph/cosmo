@@ -24,6 +24,7 @@ import {
     getProtoTypeFromGraphQL,
     getRootTypeForOperation,
     isGraphQLListType,
+    SCALAR_TYPE_MAP,
 } from './proto-utils.js';
 import {camelCase, upperFirst} from "lodash-es";
 
@@ -170,6 +171,7 @@ export class OperationToProtoVisitor {
 
     private generateMessages(operations: { name: string; document: DocumentNode }[]): string[] {
         const messages: string[] = [];
+        const inputTypesGenerated = new Set<string>();
 
         for (const { name, document } of operations) {
             const operation = document.definitions.find(def => def.kind === 'OperationDefinition') as OperationDefinitionNode;
@@ -178,16 +180,20 @@ export class OperationToProtoVisitor {
             }
             const operationName = operation.name?.value || name;
 
+            // Generate input message types from variables (if not already generated)
+            const inputMessages = this.generateInputMessages(operation.variableDefinitions || [], inputTypesGenerated);
+            messages.push(...inputMessages);
+
             // Generate request message from variables
             const requestMessage = this.generateRequestMessage(operationName, operation.variableDefinitions || []);
             messages.push(requestMessage);
 
             // Generate response message from selection set
-            const responseMessage = this.generateResponseMessage(operationName, operation.selectionSet);
+            const responseMessage = this.generateResponseMessage(operationName, operation.selectionSet, operation);
             messages.push(responseMessage);
 
             // Generate nested messages for this operation
-            const nestedMessages = this.generateNestedMessages(operationName, operation.selectionSet, '');
+            const nestedMessages = this.generateNestedMessages(operationName, operation.selectionSet, '', operation);
             messages.push(...nestedMessages);
         }
 
@@ -216,15 +222,15 @@ export class OperationToProtoVisitor {
     }
 
 
-    private generateResponseMessage(operationName: string, selectionSet: SelectionSetNode): string {
+    private generateResponseMessage(operationName: string, selectionSet: SelectionSetNode, operation: OperationDefinitionNode): string {
         const messageName = createResponseMessageName(operationName);
         const fields: string[] = [];
         let fieldIndex = 1;
 
-        // Get the root type based on operation type (assume Query for now, can be enhanced)
-        const rootType = this.schema.getQueryType();
+        // Get the root type based on operation type
+        const rootType = getRootTypeForOperation(this.schema, operation.operation);
         if (!rootType) {
-            throw new Error('Schema does not define Query type');
+            throw new Error(`Schema does not define ${operation.operation} type`);
         }
 
         for (const selection of selectionSet.selections) {
@@ -233,10 +239,10 @@ export class OperationToProtoVisitor {
                 const schemaField = rootType.getFields()[selection.name.value];
 
                 if (schemaField) {
-                    const protoType = this.getOperationSpecificType(operationName, selection, schemaField.type, '');
+                    const protoType = this.getOperationSpecificType(operationName, selection, schemaField.type, '', operation);
                     fields.push(`  ${protoType} ${fieldName} = ${fieldIndex++};`);
                 } else {
-                    throw new Error(`Field '${selection.name.value}' not found on Query type`);
+                    throw new Error(`Field '${selection.name.value}' not found on ${operation.operation} type`);
                 }
             }
         }
@@ -245,7 +251,7 @@ export class OperationToProtoVisitor {
         return `// Response message for ${operationName} operation.\nmessage ${messageName} {${fieldsStr}}`;
     }
 
-    private generateNestedMessages(operationName: string, selectionSet: SelectionSetNode, currentPath: string): string[] {
+    private generateNestedMessages(operationName: string, selectionSet: SelectionSetNode, currentPath: string, operation: OperationDefinitionNode): string[] {
         const messages: string[] = [];
 
         for (const selection of selectionSet.selections) {
@@ -253,11 +259,11 @@ export class OperationToProtoVisitor {
                 const fieldPath = this.buildFieldPath(currentPath, selection.name.value);
 
                 // Generate the nested message
-                const nestedMessage = this.generateNestedMessageForField(operationName, selection, fieldPath);
+                const nestedMessage = this.generateNestedMessageForField(operationName, selection, fieldPath, operation);
                 messages.push(nestedMessage);
 
                 // Recursively generate deeper nested messages
-                const deeperMessages = this.generateNestedMessages(operationName, selection.selectionSet, fieldPath);
+                const deeperMessages = this.generateNestedMessages(operationName, selection.selectionSet, fieldPath, operation);
                 messages.push(...deeperMessages);
             }
         }
@@ -265,14 +271,14 @@ export class OperationToProtoVisitor {
         return messages;
     }
 
-    private generateNestedMessageForField(operationName: string, field: FieldNode, fieldPath: string): string {
+    private generateNestedMessageForField(operationName: string, field: FieldNode, fieldPath: string, operation: OperationDefinitionNode): string {
         const messageName = this.createNestedMessageName(operationName, fieldPath);
         const fields: string[] = [];
         let fieldIndex = 1;
 
         if (field.selectionSet) {
             // Resolve the GraphQL type for this field using the schema
-            const parentType = this.resolveParentTypeForField(field.name.value, fieldPath);
+            const parentType = this.resolveParentTypeForField(field.name.value, fieldPath, operation);
             if (!parentType) {
                 throw new Error(`Cannot resolve parent type for field '${field.name.value}' at path '${fieldPath}'`);
             }
@@ -327,7 +333,7 @@ export class OperationToProtoVisitor {
         return basePath ? `${basePath}.${capitalizedField}` : capitalizedField;
     }
 
-    private getOperationSpecificType(operationName: string, field: FieldNode, graphqlType: any, currentPath: string): string {
+    private getOperationSpecificType(operationName: string, field: FieldNode, graphqlType: any, currentPath: string, operation: OperationDefinitionNode): string {
         if (field.selectionSet) {
             const fieldPath = this.buildFieldPath(currentPath, field.name.value);
             const messageName = this.createNestedMessageName(operationName, fieldPath);
@@ -339,7 +345,7 @@ export class OperationToProtoVisitor {
 
         // For leaf fields without selection sets, try to resolve from schema
         try {
-            const rootType = this.schema.getQueryType();
+            const rootType = getRootTypeForOperation(this.schema, operation.operation);
             if (rootType) {
                 const schemaField = rootType.getFields()[field.name.value];
                 if (schemaField) {
@@ -359,9 +365,9 @@ export class OperationToProtoVisitor {
      * Resolve the parent GraphQL type for a field in the operation context
      * This is a simplified version that focuses on the specific use case
      */
-    private resolveParentTypeForField(fieldName: string, fieldPath: string): GraphQLObjectType | GraphQLInterfaceType | null {
-        // Start from the root type (Query for now - can be enhanced for Mutation/Subscription)
-        const rootType = this.schema.getQueryType();
+    private resolveParentTypeForField(fieldName: string, fieldPath: string, operation: OperationDefinitionNode): GraphQLObjectType | GraphQLInterfaceType | null {
+        // Start from the root type based on operation type
+        const rootType = getRootTypeForOperation(this.schema, operation.operation);
         if (!rootType) return null;
 
         // If no path, the parent is the root type
@@ -405,6 +411,84 @@ export class OperationToProtoVisitor {
      */
     private convertPascalCaseToGraphQLField(pathPart: string): string {
         return camelCase(pathPart);
+    }
+
+    /**
+     * Generate input message types from GraphQL input types referenced in variables
+     */
+    private generateInputMessages(variables: readonly VariableDefinitionNode[], inputTypesGenerated: Set<string>): string[] {
+        const messages: string[] = [];
+
+        for (const variable of variables) {
+            const inputTypeNames = this.extractInputTypeNames(variable.type);
+            
+            for (const inputTypeName of inputTypeNames) {
+                if (!inputTypesGenerated.has(inputTypeName)) {
+                    const inputMessage = this.generateInputMessageFromSchema(inputTypeName);
+                    if (inputMessage) {
+                        messages.push(inputMessage);
+                        inputTypesGenerated.add(inputTypeName);
+                    }
+                }
+            }
+        }
+
+        return messages;
+    }
+
+    /**
+     * Extract input type names from a variable type node
+     */
+    private extractInputTypeNames(typeNode: any): string[] {
+        const typeNames: string[] = [];
+
+        if (typeNode.kind === 'NonNullType') {
+            typeNames.push(...this.extractInputTypeNames(typeNode.type));
+        } else if (typeNode.kind === 'ListType') {
+            typeNames.push(...this.extractInputTypeNames(typeNode.type));
+        } else if (typeNode.kind === 'NamedType') {
+            const typeName = typeNode.name.value;
+            // Only include non-scalar types
+            if (!SCALAR_TYPE_MAP[typeName]) {
+                typeNames.push(typeName);
+            }
+        }
+
+        return typeNames;
+    }
+
+    /**
+     * Generate a proto message from a GraphQL input type in the schema
+     */
+    private generateInputMessageFromSchema(inputTypeName: string): string | null {
+        const typeMap = this.schema.getTypeMap();
+        const inputType = typeMap[inputTypeName];
+
+        if (!inputType || !('getFields' in inputType)) {
+            return null;
+        }
+
+        const fields: string[] = [];
+        const inputFields = (inputType as any).getFields();
+        let fieldIndex = 1;
+
+        for (const [fieldName, field] of Object.entries(inputFields)) {
+            const protoFieldName = graphqlFieldToProtoField(fieldName);
+            const fieldType = (field as any).type;
+            
+            const wrapperTracker = { usesWrapperTypes: this.usesWrapperTypes };
+            const protoType = getProtoTypeFromGraphQL(fieldType, false, wrapperTracker);
+            this.usesWrapperTypes = wrapperTracker.usesWrapperTypes;
+
+            if (protoType.isRepeated) {
+                fields.push(`  repeated ${protoType.typeName} ${protoFieldName} = ${fieldIndex++};`);
+            } else {
+                fields.push(`  ${protoType.typeName} ${protoFieldName} = ${fieldIndex++};`);
+            }
+        }
+
+        const fieldsStr = fields.length > 0 ? '\n' + fields.join('\n') + '\n' : '';
+        return `// Input message for ${inputTypeName}.\nmessage ${inputTypeName} {${fieldsStr}}`;
     }
 
     private assembleProto(serviceMethods: string[], messages: string[]): string {
