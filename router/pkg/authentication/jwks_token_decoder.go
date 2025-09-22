@@ -68,14 +68,9 @@ type audKey struct {
 
 type audienceSet map[string]struct{}
 
-type keyFuncWithOpts struct {
-	keyFunc           keyfunc.Keyfunc
-	allowedAlgorithms []string
-}
-
 func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKSConfig) (TokenDecoder, error) {
 	audiencesMap := make(map[audKey]audienceSet, len(configs))
-	keyFuncMap := make(map[audKey]keyFuncWithOpts, len(configs))
+	keyFuncMap := make(map[audKey]keyfunc.Keyfunc, len(configs))
 
 	for _, c := range configs {
 		if c.URL != "" {
@@ -123,10 +118,7 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 			if err != nil {
 				return nil, err
 			}
-			keyFuncMap[key] = keyFuncWithOpts{
-				keyFunc:           jwks,
-				allowedAlgorithms: c.AllowedAlgorithms,
-			}
+			keyFuncMap[key] = jwks
 
 		} else if c.Secret != "" {
 			key := audKey{kid: c.KeyId}
@@ -176,18 +168,14 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 			if err != nil {
 				return nil, err
 			}
-			keyFuncMap[key] = keyFuncWithOpts{
-				keyFunc:           jwks,
-				allowedAlgorithms: []string{c.Algorithm},
-			}
+			keyFuncMap[key] = jwks
 		}
 	}
 
 	keyFuncWrapper := jwt.Keyfunc(func(token *jwt.Token) (any, error) {
 		var errJoin error
-		for key, keyFuncAndOpts := range keyFuncMap {
-
-			pub, err := keyFuncAndOpts.keyFunc.Keyfunc(token)
+		for key, keyFunc := range keyFuncMap {
+			pub, err := keyFunc.Keyfunc(token)
 			if err != nil {
 				errJoin = errors.Join(errJoin, err)
 				continue
