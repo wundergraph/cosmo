@@ -39,7 +39,7 @@ export function WorkspaceSelector({ children, truncateNamespace = true }: Worksp
   const isViewingGraphOrSubgraph = !!activeGraph || !!activeSubgraph;
   return (
     <div className={cn(
-      "h-9 flex justify-start items-center",
+      "flex justify-start items-center",
       isViewingGraphOrSubgraph && "gap-x-2",
     )}>
       <NamespaceSelector
