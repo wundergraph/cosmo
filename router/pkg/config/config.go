@@ -483,8 +483,8 @@ type JWKSConfiguration struct {
 
 type RefreshUnknownKID struct {
 	Enabled  bool          `yaml:"enabled" envDefault:"false"`
-	MaxWait  time.Duration `yaml:"max_wait" envDefault:"10s"`
-	Interval time.Duration `yaml:"interval" envDefault:"1m"`
+	MaxWait  time.Duration `yaml:"max_wait" envDefault:"2m"`
+	Interval time.Duration `yaml:"interval" envDefault:"30s"`
 	Burst    int           `yaml:"burst" envDefault:"2"`
 }
 
