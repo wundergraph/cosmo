@@ -550,6 +550,8 @@ describe('SDL to Proto Field Arguments', () => {
     }
   `;
 
-    expect(() => compileGraphQLToProto(sdl)).throws('Invalid field context for resolver. Multiple fields with type ID found - provide a context with the fields you want to use in the @resolved directive');
+    expect(() => compileGraphQLToProto(sdl)).throws(
+      'Invalid field context for resolver. Multiple fields with type ID found - provide a context with the fields you want to use in the @resolved directive',
+    );
   });
 });

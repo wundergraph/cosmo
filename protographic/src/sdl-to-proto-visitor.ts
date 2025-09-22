@@ -472,8 +472,18 @@ export class GraphQLToProtoTextVisitor {
     const mutationResult = this.collectMutationRpcMethods();
 
     // Combine all RPC methods and message definitions
-    const allRpcMethods = [...entityResult.rpcMethods, ...queryResult.rpcMethods, ...mutationResult.rpcMethods, ...resolverResult.rpcMethods];
-    const allMethodNames = [...entityResult.methodNames, ...queryResult.methodNames, ...mutationResult.methodNames, ...resolverResult.methodNames];
+    const allRpcMethods = [
+      ...entityResult.rpcMethods,
+      ...queryResult.rpcMethods,
+      ...mutationResult.rpcMethods,
+      ...resolverResult.rpcMethods,
+    ];
+    const allMethodNames = [
+      ...entityResult.methodNames,
+      ...queryResult.methodNames,
+      ...mutationResult.methodNames,
+      ...resolverResult.methodNames,
+    ];
 
     const allMessageDefinitions = [
       ...entityResult.messageDefinitions,
@@ -1138,7 +1148,10 @@ Example:
     return result;
   }
 
-  private getFieldContext(parent: GraphQLObjectType, field: GraphQLField<any, any>): { context: string, error: string | undefined } {
+  private getFieldContext(
+    parent: GraphQLObjectType,
+    field: GraphQLField<any, any>,
+  ): { context: string; error: string | undefined } {
     const resolvedDirective = this.findResolvedDirective(field);
     if (resolvedDirective) {
       const valueNode = resolvedDirective.arguments?.find((arg) => arg.name.value === 'context')?.value;
@@ -1162,7 +1175,11 @@ Example:
       case 1:
         return { context: idFields[0].name, error: undefined };
       default:
-        return { context: '', error: 'Multiple fields with type ID found - provide a context with the fields you want to use in the @resolved directive' };
+        return {
+          context: '',
+          error:
+            'Multiple fields with type ID found - provide a context with the fields you want to use in the @resolved directive',
+        };
     }
   }
 
@@ -1229,12 +1246,10 @@ Example:
     field: GraphQLField<any, any>,
   ): string[] {
     const messageLines: string[] = [];
-    const {context, error} = this.getFieldContext(parent, field);
+    const { context, error } = this.getFieldContext(parent, field);
 
     if (error) {
-      throw new Error(
-        `Invalid field context for resolver. ${error}`,
-      );
+      throw new Error(`Invalid field context for resolver. ${error}`);
     }
 
     const argsMessageName = typeFieldArgsName(parent.name, field.name);
@@ -1252,16 +1267,13 @@ Example:
       }),
     );
 
-
     // build the key message
     const searchFields = context.split(/[,\s]+/).filter((field) => field.length > 0);
     const fieldFilter = Object.entries(parent.getFields())
       .filter(([_, field]) => searchFields.includes(field.name))
       .map(([_, field]) => field);
     if (searchFields.length !== fieldFilter.length) {
-      throw new Error(
-        `Invalid field context for resolver. Could not find all fields in the parent type: ${context}`,
-      );
+      throw new Error(`Invalid field context for resolver. Could not find all fields in the parent type: ${context}`);
     }
 
     fieldNumber = 0;
@@ -1335,33 +1347,38 @@ Example:
     parent: GraphQLObjectType,
     field: GraphQLField<any, any>,
   ): string[] {
-    console.log('createResolverResponseMessage', responseName, parent, field);
     const messageLines: string[] = [];
-
 
     // CreateResultMessage
     const resultMessageName = resolverResponseResultName(responseName);
     const protoType = this.getProtoTypeFromGraphQL(field.type);
 
-    messageLines.push(...this.buildMessage({
-      messageName: resultMessageName,
-      fields: [{
-        fieldName: graphqlFieldToProtoField(field.name),
-        typeName: protoType.typeName,
-        fieldNumber: 1,
-      }]
-    }))
+    messageLines.push(
+      ...this.buildMessage({
+        messageName: resultMessageName,
+        fields: [
+          {
+            fieldName: graphqlFieldToProtoField(field.name),
+            typeName: protoType.typeName,
+            fieldNumber: 1,
+          },
+        ],
+      }),
+    );
 
-    messageLines.push(...this.buildMessage({
-      messageName: responseName,
-      fields: [{
-        fieldName: 'result',
-        typeName: resultMessageName,
-        fieldNumber: 1,
-        isRepeated: true,
-      }]
-    }))
-
+    messageLines.push(
+      ...this.buildMessage({
+        messageName: responseName,
+        fields: [
+          {
+            fieldName: 'result',
+            typeName: resultMessageName,
+            fieldNumber: 1,
+            isRepeated: true,
+          },
+        ],
+      }),
+    );
 
     return messageLines;
   }
