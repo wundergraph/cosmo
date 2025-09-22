@@ -627,7 +627,6 @@ export class OperationToProtoVisitor {
     private generateResponseMessage(operationName: string, selectionSet: SelectionSetNode, operation: OperationDefinitionNode): string {
         const messageName = createResponseMessageName(operationName);
         const fields: string[] = [];
-        let fieldIndex = 1;
 
         // Expand fragment spreads before processing
         const expandedSelectionSet = this.expandFragmentSpreads(selectionSet);
@@ -643,6 +642,10 @@ export class OperationToProtoVisitor {
             ? formatComment(rootType.description, this.includeComments, 0)
             : [];
 
+        // Collect field names and order them using the lock manager
+        const fieldNames: string[] = [];
+        const fieldData = new Map<string, { selection: any; schemaField: any; protoType: string }>();
+
         for (const selection of expandedSelectionSet.selections) {
             if (selection.kind === 'Field') {
                 const fieldName = graphqlFieldToProtoField(selection.name.value);
@@ -650,21 +653,34 @@ export class OperationToProtoVisitor {
 
                 if (schemaField) {
                     const protoType = this.getOperationSpecificType(operationName, selection, schemaField.type, '', operation);
-                    
-                    // Add field comment if includeComments is enabled and field has description
-                    if (this.includeComments && schemaField.description) {
-                        const commentLines = formatComment(schemaField.description, this.includeComments, 1);
-                        if (commentLines.length > 0) {
-                            fields.push(...commentLines);
-                        }
-                    }
-                    
-                    fields.push(`  ${protoType} ${fieldName} = ${fieldIndex++};`);
+                    fieldNames.push(fieldName);
+                    fieldData.set(fieldName, { selection, schemaField, protoType });
                 } else {
                     throw new Error(`Field '${selection.name.value}' not found on ${operation.operation} type`);
                 }
             }
         }
+
+        // Get field names ordered by the lock manager
+        const orderedFieldNames = this.lockManager.reconcileMessageFieldOrder(messageName, fieldNames);
+
+        // Generate fields in the ordered sequence
+        orderedFieldNames.forEach((fieldName, index) => {
+            const data = fieldData.get(fieldName);
+            if (data) {
+                const { selection, schemaField, protoType } = data;
+                
+                // Add field comment if includeComments is enabled and field has description
+                if (this.includeComments && schemaField.description) {
+                    const commentLines = formatComment(schemaField.description, this.includeComments, 1);
+                    if (commentLines.length > 0) {
+                        fields.push(...commentLines);
+                    }
+                }
+                
+                fields.push(`  ${protoType} ${fieldName} = ${index + 1};`);
+            }
+        });
 
         const fieldsStr = fields.length > 0 ? '\n' + fields.join('\n') + '\n' : '';
         
@@ -799,9 +815,9 @@ export class OperationToProtoVisitor {
                     fieldIndex += oneofFields.length;
                 }
 
-                // Process regular fields - these should come first, before oneof
-                const regularFields: string[] = [];
-                let regularFieldIndex = 1;
+                // Process regular fields - collect field data and use lock manager for ordering
+                const fieldNames: string[] = [];
+                const fieldData = new Map<string, { selection: any; schemaField: any; protoType: string; comments: string[] }>();
                 
                 for (const selection of field.selectionSet.selections) {
                     if (selection.kind === 'Field') {
@@ -813,25 +829,18 @@ export class OperationToProtoVisitor {
                             throw new Error(`Field '${selection.name.value}' not found on type '${parentType.name}'`);
                         }
 
+                        let protoType: string;
+                        let comments: string[] = [];
+
                         if (selection.selectionSet) {
                             // This field has its own selection set, so it needs a nested message
                             const nestedFieldPath = this.buildFieldPath(fieldPath, selection.name.value);
                             const nestedType = this.createNestedMessageName(operationName, nestedFieldPath);
 
                             // Use the proven list type detection from proto-utils
-                            const protoType = isGraphQLListType(schemaField.type)
+                            protoType = isGraphQLListType(schemaField.type)
                                 ? `repeated ${nestedType}`
                                 : nestedType;
-
-                            // Add field comment if includeComments is enabled and field has description
-                            if (this.includeComments && schemaField.description) {
-                                const commentLines = formatComment(schemaField.description, this.includeComments, 1);
-                                if (commentLines.length > 0) {
-                                    regularFields.push(...commentLines);
-                                }
-                            }
-
-                            regularFields.push(`  ${protoType} ${fieldName} = ${regularFieldIndex++};`);
                         } else {
                             // Check if this is a multi-dimensional array that needs nested messages
                             if (this.isMultiDimensionalArray(schemaField.type)) {
@@ -846,36 +855,52 @@ export class OperationToProtoVisitor {
                                     graphqlType: schemaField.type
                                 });
                                 
-                                regularFields.push(`  repeated ${nestedType} ${fieldName} = ${regularFieldIndex++};`);
+                                protoType = `repeated ${nestedType}`;
                             } else {
                                 // Leaf field - use the battle-tested getProtoTypeFromGraphQL method
                                 const wrapperTracker = { usesWrapperTypes: this.usesWrapperTypes };
-                                const protoType = getProtoTypeFromGraphQL(schemaField.type, false, wrapperTracker);
+                                const protoTypeResult = getProtoTypeFromGraphQL(schemaField.type, false, wrapperTracker);
                                 this.usesWrapperTypes = wrapperTracker.usesWrapperTypes;
                                 
-                                // Add field comment if includeComments is enabled and field has description
-                                if (this.includeComments && schemaField.description) {
-                                    const commentLines = formatComment(schemaField.description, this.includeComments, 1);
-                                    if (commentLines.length > 0) {
-                                        regularFields.push(...commentLines);
-                                    }
-                                }
-                                
-                                if (protoType.isRepeated) {
-                                    regularFields.push(`  repeated ${protoType.typeName} ${fieldName} = ${regularFieldIndex++};`);
-                                } else {
-                                    regularFields.push(`  ${protoType.typeName} ${fieldName} = ${regularFieldIndex++};`);
-                                }
+                                protoType = protoTypeResult.isRepeated
+                                    ? `repeated ${protoTypeResult.typeName}`
+                                    : protoTypeResult.typeName;
                             }
                         }
+
+                        // Add field comment if includeComments is enabled and field has description
+                        if (this.includeComments && schemaField.description) {
+                            comments = formatComment(schemaField.description, this.includeComments, 1);
+                        }
+
+                        fieldNames.push(fieldName);
+                        fieldData.set(fieldName, { selection, schemaField, protoType, comments });
                     }
                 }
+
+                // Get field names ordered by the lock manager
+                const orderedFieldNames = this.lockManager.reconcileMessageFieldOrder(messageName, fieldNames);
+
+                // Generate regular fields in the ordered sequence
+                const regularFields: string[] = [];
+                orderedFieldNames.forEach((fieldName, index) => {
+                    const data = fieldData.get(fieldName);
+                    if (data) {
+                        const { protoType, comments } = data;
+                        
+                        if (comments.length > 0) {
+                            regularFields.push(...comments);
+                        }
+                        
+                        regularFields.push(`  ${protoType} ${fieldName} = ${index + 1};`);
+                    }
+                });
                 
                 // Add regular fields first, then oneof fields
                 if (hasInlineFragments) {
                     // Put regular fields first, then oneof
                     const reorderedFields = [...regularFields];
-                    const oneofStartIndex = regularFieldIndex;
+                    const oneofStartIndex = orderedFieldNames.length + 1;
                     const oneofFields = this.generateOneofFields(operationName, field.selectionSet, fieldPath, parentType);
                     // Update oneof field indices
                     const updatedOneofFields = oneofFields.map(line => {

@@ -201,23 +201,16 @@ describe('Operations to Proto - Field Ordering and Proto Lock', () => {
     const employeeFields2 = getFieldNumbersFromMessage(root2, 'GetEmployeeDetailsEmployee');
     const detailsFields2 = getFieldNumbersFromMessage(root2, 'GetEmployeeDetailsEmployeeDetails');
 
-    // Note: Field ordering preservation with proto lock may not work perfectly yet
-    // Just verify that all fields are present with valid field numbers
-    expect(employeeFields2['id']).toBeDefined();
-    expect(employeeFields2['tag']).toBeDefined();
-    expect(employeeFields2['is_available']).toBeDefined();
-    expect(employeeFields2['details']).toBeDefined();
+    // Verify that field numbers are preserved despite reordering
+    expect(employeeFields2['id']).toBe(employeeIdNumber);
+    expect(employeeFields2['tag']).toBe(employeeTagNumber);
+    expect(employeeFields2['is_available']).toBe(employeeAvailableNumber);
+    expect(employeeFields2['details']).toBe(employeeDetailsNumber);
 
-    expect(detailsFields2['forename']).toBeDefined();
-    expect(detailsFields2['surname']).toBeDefined();
-    expect(detailsFields2['has_children']).toBeDefined();
-    expect(detailsFields2['age']).toBeDefined();
-
-    // Verify field numbers are positive integers
-    expect(employeeFields2['id']).toBeGreaterThan(0);
-    expect(employeeFields2['tag']).toBeGreaterThan(0);
-    expect(employeeFields2['is_available']).toBeGreaterThan(0);
-    expect(employeeFields2['details']).toBeGreaterThan(0);
+    expect(detailsFields2['forename']).toBe(forenameNumber);
+    expect(detailsFields2['surname']).toBe(surnameNumber);
+    expect(detailsFields2['has_children']).toBe(hasChildrenNumber);
+    expect(detailsFields2['age']).toBe(ageNumber);
   });
 
   test('should handle adding and removing fields while preserving field numbers', () => {
