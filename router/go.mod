@@ -4,7 +4,6 @@ go 1.25
 
 require (
 	connectrpc.com/connect v1.16.2
-	github.com/MicahParks/keyfunc/v3 v3.3.5
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/buger/jsonparser v1.1.1
 	github.com/cespare/xxhash/v2 v2.3.0
@@ -79,6 +78,7 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1
 	github.com/tonglil/opentelemetry-go-datadog-propagator v0.1.3
 	github.com/wundergraph/astjson v0.0.0-20250106123708-be463c97e083
+	github.com/wundergraph/keyfunc/v3 v3.0.0-20250922133930-92f21becf3d9
 	go.uber.org/goleak v1.3.0
 	go.uber.org/ratelimit v0.3.1
 	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8
@@ -174,7 +174,6 @@ require (
 
 // Do not upgrade, it renames attributes we rely on
 replace (
-	github.com/MicahParks/keyfunc/v3 => github.com/wundergraph/keyfunc/v3 v3.0.0-20250922133930-92f21becf3d9 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp => go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.opentelemetry.io/contrib/propagators/b3 => go.opentelemetry.io/contrib/propagators/b3 v1.23.0
 	go.opentelemetry.io/contrib/propagators/jaeger => go.opentelemetry.io/contrib/propagators/jaeger v1.23.0
