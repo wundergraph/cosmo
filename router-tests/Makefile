@@ -1,5 +1,7 @@
 SHELL := bash
 test_target := ./...
+test_target_comma := $(shell echo $(test_target) | tr ' ' ',')
+rerun_fails_count := 3
 
 ifeq ($(CI),true)
  FORMAT := github-actions
@@ -11,7 +13,7 @@ test-deps:
 	$(MAKE) -C ../demo plugin-build-ci
 
 test: test-deps
-	gotestsum -f $(FORMAT) -- -ldflags=-extldflags=-Wl,-ld_classic $(test_params) -race $(test_target)
+	gotestsum --rerun-fails=$(rerun_fails_count) --packages="$(test_target_comma)" -f $(FORMAT) -- -ldflags=-extldflags=-Wl,-ld_classic $(test_params) -race $(test_target)
 
 update-snapshot:
 	go test -update -race $(test_target)
