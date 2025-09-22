@@ -319,16 +319,6 @@ jobs:
       - name: Run Integration tests ${{ matrix.test_target }}
         working-directory: ./router-tests
         run: make test test_params="--timeout=5m -p 1 --parallel 10" test_target="${{ matrix.test_target }}"
-#      - name: Run Flaky Integration tests ${{ matrix.test_target }}
-#        uses: nick-fields/retry@v3
-#        with:
-#          timeout_minutes: 30
-#          max_attempts: 5
-#          retry_wait_seconds: 5
-#          retry_on: error
-#          command: |
-#            cd router-tests
-#            make test test_params="-run '^TestFlaky' --timeout=5m --parallel 1" test_target="${{ matrix.test_target }}"
 
   image_scan:
     if: github.event.pull_request.head.repo.full_name == github.repository
