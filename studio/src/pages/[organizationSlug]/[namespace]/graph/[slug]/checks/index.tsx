@@ -61,6 +61,7 @@ import { useRouter } from "next/router";
 import { useContext } from "react";
 import { cn } from "@/lib/utils";
 import { useFeature } from "@/hooks/use-feature";
+import { useWorkspace } from "@/hooks/use-workspace";
 
 const ChecksPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -70,6 +71,7 @@ const ChecksPage: NextPageWithLayout = () => {
 
   const limit = Number.parseInt((router.query.pageSize as string) || "10");
   const selectedSubgraphs = parseSelectedSubgraphs(router.query.subgraphs);
+  const { namespace: { name: namespace } } = useWorkspace();
 
   const {
     dateRange: { start, end },
@@ -87,7 +89,7 @@ const ChecksPage: NextPageWithLayout = () => {
     getChecksByFederatedGraphName,
     {
       name: router.query.slug as string,
-      namespace: router.query.namespace as string,
+      namespace,
       limit: limit > 50 ? 50 : limit,
       offset: (pageNumber - 1) * limit,
       startDate: formatISO(startDate),
@@ -141,8 +143,8 @@ const ChecksPage: NextPageWithLayout = () => {
           <CLI
             command={
               !graphContext.graph.supportsFederation
-                ? `npx wgc monograph check ${graphContext.graph?.name} --namespace ${router.query.namespace} --schema <path-to-schema>`
-                : `npx wgc subgraph check users --namespace ${router.query.namespace} --schema users.graphql`
+                ? `npx wgc monograph check ${graphContext.graph?.name} --namespace ${namespace} --schema <path-to-schema>`
+                : `npx wgc subgraph check users --namespace ${namespace} --schema users.graphql`
             }
           />
         }
@@ -186,7 +188,18 @@ const ChecksPage: NextPageWithLayout = () => {
                   proposalMatch,
                   compositionSkipped,
                   breakingChangesSkipped,
+                  linkedChecks,
                 }) => {
+                  const isLinkedTrafficCheckFailed = linkedChecks.some(
+                    (linkedCheck) =>
+                      linkedCheck.hasClientTraffic &&
+                      !linkedCheck.isForcedSuccess,
+                  );
+                  const isLinkedPruningCheckFailed = linkedChecks.some(
+                    (linkedCheck) =>
+                      linkedCheck.hasGraphPruningErrors &&
+                      !linkedCheck.isForcedSuccess,
+                  );
                   const isSuccessful = isCheckSuccessful(
                     isComposable,
                     isBreaking,
@@ -195,6 +208,8 @@ const ChecksPage: NextPageWithLayout = () => {
                     hasGraphPruningErrors,
                     clientTrafficCheckSkipped,
                     proposalMatch === "error",
+                    isLinkedTrafficCheckFailed,
+                    isLinkedPruningCheckFailed,
                   );
 
                   const path = `${router.asPath.split("?")[0]}/${id}`;

@@ -565,6 +565,143 @@ describe('Create feature subgraph tests', () => {
     await server.close();
   });
 
+  test('that a feature subgraph inherits the GRPC_SERVICE type from its base subgraph', async () => {
+    const { client, server } = await SetupTest({ dbname });
+
+    const baseGrpcServiceName = genID('baseGrpcService');
+    const featureSubgraphName = genID('featureGrpcService');
+    const grpcServiceLabel = genUniqueLabel('grpc-service');
+
+    // Create a gRPC service base subgraph
+    const createBaseGrpcServiceResponse = await client.createFederatedSubgraph({
+      name: baseGrpcServiceName,
+      type: SubgraphType.GRPC_SERVICE,
+      routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+      labels: [grpcServiceLabel],
+    });
+    expect(createBaseGrpcServiceResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Verify the base subgraph is GRPC_SERVICE type
+    const getBaseSubgraphResponse = await client.getSubgraphByName({
+      name: baseGrpcServiceName,
+    });
+    expect(getBaseSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(getBaseSubgraphResponse.graph?.type).toBe(SubgraphType.GRPC_SERVICE);
+
+    // Create a feature subgraph based on the gRPC service
+    const createFeatureSubgraphResponse = await client.createFederatedSubgraph({
+      name: featureSubgraphName,
+      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      isFeatureSubgraph: true,
+      baseSubgraphName: baseGrpcServiceName,
+    });
+    expect(createFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Verify the feature subgraph inherited the GRPC_SERVICE type
+    const getFeatureSubgraphResponse = await client.getSubgraphByName({
+      name: featureSubgraphName,
+    });
+    expect(getFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(getFeatureSubgraphResponse.graph?.name).toBe(featureSubgraphName);
+    expect(getFeatureSubgraphResponse.graph?.isFeatureSubgraph).toBe(true);
+    expect(getFeatureSubgraphResponse.graph?.type).toBe(SubgraphType.GRPC_SERVICE);
+    expect(getFeatureSubgraphResponse.graph?.routingURL).toBe(DEFAULT_SUBGRAPH_URL_TWO);
+
+    await server.close();
+  });
+
+  test('that a feature subgraph based on a gRPC service requires a routing URL', async () => {
+    const { client, server } = await SetupTest({ dbname });
+
+    const baseGrpcServiceName = genID('baseGrpcService');
+    const featureSubgraphName = genID('featureGrpcService');
+    const grpcServiceLabel = genUniqueLabel('grpc-service');
+
+    // Create a gRPC service base subgraph (requires routing URL)
+    const createBaseGrpcServiceResponse = await client.createFederatedSubgraph({
+      name: baseGrpcServiceName,
+      type: SubgraphType.GRPC_SERVICE,
+      routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+      labels: [grpcServiceLabel],
+    });
+    expect(createBaseGrpcServiceResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Verify the base gRPC service has a routing URL
+    const getBaseGrpcServiceResponse = await client.getSubgraphByName({
+      name: baseGrpcServiceName,
+    });
+    expect(getBaseGrpcServiceResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(getBaseGrpcServiceResponse.graph?.type).toBe(SubgraphType.GRPC_SERVICE);
+    expect(getBaseGrpcServiceResponse.graph?.routingURL).toBe(DEFAULT_SUBGRAPH_URL_ONE);
+
+    // Try to create a feature subgraph based on the gRPC service without routing URL - should fail
+    const createFeatureSubgraphResponse = await client.createFederatedSubgraph({
+      name: featureSubgraphName,
+      isFeatureSubgraph: true,
+      baseSubgraphName: baseGrpcServiceName,
+      // Note: No routingUrl provided - should fail for gRPC service-based feature subgraphs
+    });
+    expect(createFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR);
+    expect(createFeatureSubgraphResponse.response?.details).toBe('A non-Event-Driven Graph must define a routing URL');
+
+    await server.close();
+  });
+
+  test('that multiple feature subgraphs can inherit the GRPC_SERVICE type from their base subgraph', async () => {
+    const { client, server } = await SetupTest({ dbname });
+
+    const baseGrpcServiceName = genID('baseGrpcService');
+    const featureSubgraphName1 = genID('featureGrpcService1');
+    const featureSubgraphName2 = genID('featureGrpcService2');
+    const grpcServiceLabel = genUniqueLabel('grpc-service');
+
+    // Create a gRPC service base subgraph
+    const createBaseGrpcServiceResponse = await client.createFederatedSubgraph({
+      name: baseGrpcServiceName,
+      type: SubgraphType.GRPC_SERVICE,
+      routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+      labels: [grpcServiceLabel],
+    });
+    expect(createBaseGrpcServiceResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Create first feature subgraph
+    const createFeatureSubgraph1Response = await client.createFederatedSubgraph({
+      name: featureSubgraphName1,
+      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      isFeatureSubgraph: true,
+      baseSubgraphName: baseGrpcServiceName,
+    });
+    expect(createFeatureSubgraph1Response.response?.code).toBe(EnumStatusCode.OK);
+
+    // Create second feature subgraph
+    const createFeatureSubgraph2Response = await client.createFederatedSubgraph({
+      name: featureSubgraphName2,
+      routingUrl: 'http://localhost:4003',
+      isFeatureSubgraph: true,
+      baseSubgraphName: baseGrpcServiceName,
+    });
+    expect(createFeatureSubgraph2Response.response?.code).toBe(EnumStatusCode.OK);
+
+    // Verify both feature subgraphs inherited the GRPC_SERVICE type
+    const getFeatureSubgraph1Response = await client.getSubgraphByName({
+      name: featureSubgraphName1,
+    });
+    expect(getFeatureSubgraph1Response.response?.code).toBe(EnumStatusCode.OK);
+    expect(getFeatureSubgraph1Response.graph?.type).toBe(SubgraphType.GRPC_SERVICE);
+    expect(getFeatureSubgraph1Response.graph?.isFeatureSubgraph).toBe(true);
+    expect(getFeatureSubgraph1Response.graph?.routingURL).toBe(DEFAULT_SUBGRAPH_URL_TWO);
+
+    const getFeatureSubgraph2Response = await client.getSubgraphByName({
+      name: featureSubgraphName2,
+    });
+    expect(getFeatureSubgraph2Response.response?.code).toBe(EnumStatusCode.OK);
+    expect(getFeatureSubgraph2Response.graph?.type).toBe(SubgraphType.GRPC_SERVICE);
+    expect(getFeatureSubgraph2Response.graph?.isFeatureSubgraph).toBe(true);
+    expect(getFeatureSubgraph2Response.graph?.routingURL).toBe('http://localhost:4003');
+
+    await server.close();
+  });
+
   test.each(['organization-admin', 'organization-developer', 'subgraph-admin'])(
     '%s should be able to create feature subgraph',
     async (role) => {

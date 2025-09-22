@@ -2,7 +2,7 @@
 
 For a detailed deployment guide of the chart, including the full documentation, see the [DEV.md](DEV.md) file.
 
-![Version: 0.13.2](https://img.shields.io/badge/Version-0.13.2-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
+![Version: 0.15.0](https://img.shields.io/badge/Version-0.15.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
 
 This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle GraphQL API Management Solution.
 
@@ -44,6 +44,8 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | clickhouse.auth.password | string | `"changeme"` |  |
 | clickhouse.auth.username | string | `"default"` |  |
 | clickhouse.commonAnnotations."kapp.k14s.io/change-group" | string | `"cosmo.apps.clickhouse.wundergraph.com/deployment"` |  |
+| clickhouse.image.registry | string | `"docker.io"` |  |
+| clickhouse.image.repository | string | `"bitnamilegacy/clickhouse"` |  |
 | clickhouse.initdbScripts."db-init.sh" | string | `"#!/bin/bash\nset -e\nclickhouse-client --user $CLICKHOUSE_ADMIN_USER --password $CLICKHOUSE_ADMIN_PASSWORD -n <<-EOSQL\n  CREATE DATABASE IF NOT EXISTS cosmo;\nEOSQL\n"` |  |
 | clickhouse.persistence.annotations."kapp.k14s.io/owned-for-deletion" | string | `""` |  |
 | clickhouse.persistence.size | string | `"2Gi"` |  |
@@ -202,6 +204,8 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | minio.auth.rootUser | string | `"minio"` |  |
 | minio.commonAnnotations."kapp.k14s.io/change-group" | string | `"cosmo.apps.minio.wundergraph.com/deployment"` |  |
 | minio.defaultBuckets | string | `"cosmo"` |  |
+| minio.image.registry | string | `"docker.io"` |  |
+| minio.image.repository | string | `"bitnamilegacy/minio"` |  |
 | minio.persistence.annotations."kapp.k14s.io/owned-for-deletion" | string | `""` |  |
 | minio.persistence.size | string | `"1Gi"` |  |
 | minio.service.ports.minio | int | `9000` |  |
@@ -219,6 +223,8 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | postgresql.auth.password | string | `"changeme"` |  |
 | postgresql.auth.username | string | `"postgres"` |  |
 | postgresql.commonAnnotations."kapp.k14s.io/change-group" | string | `"cosmo.apps.postgresql.wundergraph.com/deployment"` |  |
+| postgresql.image.registry | string | `"docker.io"` |  |
+| postgresql.image.repository | string | `"bitnamilegacy/postgresql"` |  |
 | postgresql.primary.initdb.password | string | `"changeme"` |  |
 | postgresql.primary.initdb.scripts."01_init_keycloak.sql" | string | `"-- Create the database for Keycloak\nCREATE DATABASE \"keycloak\";\n"` |  |
 | postgresql.primary.initdb.user | string | `"postgres"` |  |
@@ -228,10 +234,13 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | redis.auth.enabled | bool | `false` |  |
 | redis.commonAnnotations."kapp.k14s.io/change-group" | string | `"cosmo.apps.redis.wundergraph.com/deployment"` |  |
 | redis.commonConfiguration | string | `"# Enable AOF https://redis.io/topics/persistence#append-only-file\nappendonly yes\n# Enable RDB persistence (backup every 24h)\nsave \"86400 1\"\n# Disable maxmemory-policy https://redis.io/topics/lru-cache#eviction-policies\nmaxmemory-policy noeviction\n# Set maxmemory to 100mb\nmaxmemory 100mb"` |  |
+| redis.image.registry | string | `"docker.io"` |  |
+| redis.image.repository | string | `"bitnamilegacy/redis"` |  |
 | redis.master.persistence.annotations."kapp.k14s.io/owned-for-deletion" | string | `""` |  |
 | redis.master.persistence.enabled | bool | `true` |  |
 | redis.master.persistence.size | string | `"1Gi"` |  |
 | redis.replica.replicaCount | int | `0` |  |
+| router.additionalPodLabels | object | `{}` | Add labels to pod resources |
 | router.commonLabels | object | `{}` | Add labels to all deployed resources |
 | router.configuration.cdnUrl | string | `"http://cosmo-cdn:8787"` | The URL of the Cosmo CDN. Should be internal to the cluster. |
 | router.configuration.controlplaneUrl | string | `"http://cosmo-controlplane:3001"` | The URL of the Cosmo Controlplane. Should be internal to the cluster. |

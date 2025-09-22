@@ -1,3 +1,5 @@
+import { FieldName, TypeName } from '../types/types';
+
 export type NatsEventType = 'subscribe' | 'publish' | 'request';
 
 export type KafkaEventType = 'subscribe' | 'publish';
@@ -72,21 +74,22 @@ export type FieldSetConditionDataParams = {
 };
 
 export type RequiredFieldConfiguration = {
-  fieldName: string;
+  fieldName: FieldName;
   selectionSet: string;
   conditions?: Array<FieldSetConditionData>;
   disableEntityResolver?: boolean;
 };
 
 export type ConfigurationData = {
-  fieldNames: Set<string>;
+  fieldNames: Set<FieldName>;
   isRootNode: boolean;
-  typeName: string;
-  entityInterfaceConcreteTypeNames?: Set<string>;
+  typeName: TypeName;
+  entityInterfaceConcreteTypeNames?: Set<TypeName>;
   events?: EventConfiguration[];
-  externalFieldNames?: Set<string>;
+  externalFieldNames?: Set<FieldName>;
   isInterfaceObject?: boolean;
   provides?: RequiredFieldConfiguration[];
   keys?: RequiredFieldConfiguration[];
+  requireFetchReasonsFieldNames?: Array<FieldName>;
   requires?: RequiredFieldConfiguration[];
 };

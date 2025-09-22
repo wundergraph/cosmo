@@ -236,6 +236,21 @@ export const handleProposalResult = (
     console.log(graphPruningIssuesTable.toString());
   }
 
+  if (resp.isLinkedTrafficCheckFailed || resp.isLinkedPruningCheckFailed) {
+    finalStatement += success
+      ? `\n\n But this schema change has been linked to a target subgraph and the target subgraph check has failed.`
+      : `\n\n This schema change has been linked to a target subgraph and the target subgraph check has failed.`;
+
+    if (resp.isLinkedTrafficCheckFailed) {
+      finalStatement += `\n\n The target subgraph check has failed because of client traffic issues.`;
+    }
+
+    if (resp.isLinkedPruningCheckFailed) {
+      finalStatement += `\n\n The target subgraph check has failed because of graph pruning issues.`;
+    }
+    success = false;
+  }
+
   if (success) {
     console.log(
       '\n' +

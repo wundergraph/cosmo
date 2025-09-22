@@ -1,5 +1,7 @@
 export type ContractName = string;
 
+export type DirectiveName = string;
+
 export type FieldName = string;
 
 export type FieldCoords = string;

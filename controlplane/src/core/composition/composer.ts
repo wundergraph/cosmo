@@ -13,13 +13,13 @@ import {
 } from '@wundergraph/composition';
 import {
   buildRouterConfig,
+  ComposedSubgraph as IComposedSubgraph,
   ComposedSubgraphGRPC,
   ComposedSubgraphPlugin,
-  ComposedSubgraph as IComposedSubgraph,
   SubgraphKind,
 } from '@wundergraph/cosmo-shared';
 import { FastifyBaseLogger } from 'fastify';
-import { DocumentNode, GraphQLSchema, parse, printSchema } from 'graphql';
+import { DocumentNode, GraphQLSchema, parse } from 'graphql';
 import {
   FeatureFlagRouterExecutionConfig,
   FeatureFlagRouterExecutionConfigs,
@@ -220,7 +220,7 @@ export function mapResultToComposedGraph(
     namespace: federatedGraph.namespace,
     namespaceId: federatedGraph.namespaceId,
     composedSchema: result.success ? printSchemaWithDirectives(result.federatedGraphSchema) : undefined,
-    federatedClientSchema: result.success ? printSchema(result.federatedGraphClientSchema) : undefined,
+    federatedClientSchema: result.success ? printSchemaWithDirectives(result.federatedGraphClientSchema) : undefined,
     shouldIncludeClientSchema: result.success ? result.shouldIncludeClientSchema : false,
     errors: result.success ? [] : result.errors,
     subgraphs: subgraphDTOsToComposedSubgraphs(federatedGraph.organizationId, subgraphs, result),

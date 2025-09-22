@@ -239,6 +239,110 @@ func TestConnectionMetrics(t *testing.T) {
 			})
 		})
 	})
+
+	t.Run("validate recording connection stats for subscriptions", func(t *testing.T) {
+		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+		testenv.Run(t, &testenv.Config{
+			MetricReader: metricReader,
+			MetricOptions: testenv.MetricOptions{
+				EnableOTLPConnectionMetrics: true,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+			defer func() {
+				_ = conn.Close()
+			}()
+
+			err := conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { countEmp2(max: 2, intervalMilliseconds: 100) }"}`),
+			})
+			require.NoError(t, err)
+
+			var msg testenv.WebSocketMessage
+			err = conn.ReadJSON(&msg)
+			require.NoError(t, err)
+			require.Equal(t, "1", msg.ID)
+			require.Equal(t, "next", msg.Type)
+			require.Equal(t, `{"data":{"countEmp2":0}}`, string(msg.Payload))
+
+			rm := metricdata.ResourceMetrics{}
+			err = metricReader.Collect(context.Background(), &rm)
+			require.NoError(t, err)
+
+			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.connections")
+			excludePortFromMetrics(t, rm.ScopeMetrics)
+
+			require.Len(t, scopeMetric.Metrics, 3)
+
+			t.Run("verify max connections", func(t *testing.T) {
+				expected := metricdata.Metrics{
+					Name:        "router.http.client.max_connections",
+					Description: "Total number of max connections per subgraph",
+					Unit:        "",
+					Data: metricdata.Gauge[int64]{
+						DataPoints: []metricdata.DataPoint[int64]{
+							{},
+						},
+					},
+				}
+				metricdatatest.AssertEqual(t, expected, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			})
+
+			t.Run("verify connections active", func(t *testing.T) {
+				metrics := scopeMetric.Metrics[2]
+
+				expected := metricdata.Metrics{
+					Name:        "router.http.client.active_connections",
+					Description: "Connections active",
+					Unit:        "",
+					Data: metricdata.Gauge[int64]{
+						DataPoints: []metricdata.DataPoint[int64]{
+							{
+								Attributes: attribute.NewSet(
+									otel.ServerAddress.String("127.0.0.1"),
+								),
+								Value: 1,
+							},
+						},
+					},
+				}
+
+				metricdatatest.AssertEqual(t, expected, metrics, metricdatatest.IgnoreTimestamp())
+			})
+
+			t.Run("verify connection total duration", func(t *testing.T) {
+				metrics := scopeMetric.Metrics[1]
+
+				actualHistogram, ok := metrics.Data.(metricdata.Histogram[float64])
+				require.True(t, ok)
+				require.Greater(t, actualHistogram.DataPoints[0].Sum, 0.0)
+
+				expected := metricdata.Metrics{
+					Name:        "router.http.client.connection.acquire_duration",
+					Description: "Total connection acquire duration",
+					Unit:        "ms",
+					Data: metricdata.Histogram[float64]{
+						Temporality: metricdata.CumulativeTemporality,
+						DataPoints: []metricdata.HistogramDataPoint[float64]{
+							{
+								Attributes: attribute.NewSet(
+									otel.ServerAddress.String("127.0.0.1"),
+									otel.WgClientReusedConnection.Bool(false),
+									otel.WgSubgraphName.String("employees"),
+								),
+							},
+						},
+					},
+				}
+
+				metricdatatest.AssertEqual(t, expected, metrics, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			})
+		})
+	})
 }
 
 // Checking for the port introduced flakiness in the tests, as we cannot really map the correct port to the datapoint.
@@ -270,4 +374,5 @@ func excludePortFromMetrics(t *testing.T, scopeMetrics []metricdata.ScopeMetrics
 			}
 		}
 	}
+
 }
