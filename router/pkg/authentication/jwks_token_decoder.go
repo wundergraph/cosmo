@@ -4,13 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/keyfunc/v3"
 	"net/http"
 	"time"
 
 	"golang.org/x/time/rate"
 
 	"github.com/MicahParks/jwkset"
-	"github.com/MicahParks/keyfunc/v3"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/wundergraph/cosmo/router/internal/httpclient"
 	"go.uber.org/zap"
@@ -90,7 +90,7 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 					l.Error("Failed to refresh HTTP JWK Set from remote HTTP resource.", zap.Error(err))
 				},
 				RefreshInterval: c.RefreshInterval,
-				Storage:         NewValidationStore(logger, nil, c.AllowedAlgorithms),
+				Storage:         jwkset.NewMemoryStorage(),
 			}
 
 			store, err := jwkset.NewStorageFromHTTP(c.URL, jwksetHTTPStorageOptions)
@@ -113,7 +113,7 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 				jwksetHTTPClientOptions.RateLimitWaitMax = c.RefreshUnknownKID.MaxWait
 			}
 
-			jwks, err := createKeyFunc(ctx, jwksetHTTPClientOptions)
+			jwks, err := createKeyFunc(ctx, jwksetHTTPClientOptions, c.AllowedAlgorithms)
 			if err != nil {
 				return nil, err
 			}
@@ -124,7 +124,6 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 			if _, ok := audiencesMap[key]; ok {
 				return nil, fmt.Errorf("duplicate JWK keyid specified found: %s", c.KeyId)
 			}
-
 			given := jwkset.NewMemoryStorage()
 
 			marshalOptions := jwkset.JWKMarshalOptions{
@@ -164,7 +163,7 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 				PrioritizeHTTP: false,
 			}
 
-			jwks, err := createKeyFunc(ctx, jwksetHTTPClientOptions)
+			jwks, err := createKeyFunc(ctx, jwksetHTTPClientOptions, make([]string, 0))
 			if err != nil {
 				return nil, err
 			}
@@ -185,10 +184,12 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 			if len(expectedAudiences) > 0 {
 				tokenAudiences, err := token.Claims.GetAudience()
 				if err != nil {
-					return nil, fmt.Errorf("could not get audiences from token claims: %w", err)
+					errJoin = errors.Join(errJoin, fmt.Errorf("could not get audiences from token claims: %w", err))
+					continue
 				}
 				if !hasAudience(tokenAudiences, expectedAudiences) {
-					return nil, errUnacceptableAud
+					errJoin = errors.Join(errJoin, errUnacceptableAud)
+					continue
 				}
 			}
 			return pub, nil
@@ -210,16 +211,17 @@ func getAudienceSet(audiences []string) audienceSet {
 	return audSet
 }
 
-func createKeyFunc(ctx context.Context, options jwkset.HTTPClientOptions) (keyfunc.Keyfunc, error) {
+func createKeyFunc(ctx context.Context, options jwkset.HTTPClientOptions, algorithms []string) (keyfunc.Keyfunc, error) {
 	combined, err := jwkset.NewHTTPClient(options)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP client storage for JWK provider: %w", err)
 	}
 
 	keyfuncOptions := keyfunc.Options{
-		Ctx:          ctx,
-		Storage:      combined,
-		UseWhitelist: []jwkset.USE{jwkset.UseSig},
+		Ctx:               ctx,
+		Storage:           combined,
+		UseWhitelist:      []jwkset.USE{jwkset.UseSig},
+		AllowedAlgorithms: algorithms,
 	}
 
 	jwks, err := keyfunc.New(keyfuncOptions)

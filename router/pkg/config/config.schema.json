@@ -1781,6 +1781,9 @@
                         },
                         {
                           "required": ["refresh_interval"]
+                        },
+                        {
+                          "required": ["refresh_unknown_kid"]
                         }
                       ]
                     }
