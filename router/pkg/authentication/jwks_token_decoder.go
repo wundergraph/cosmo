@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/MicahParks/keyfunc/v3"
+	"github.com/wundergraph/keyfunc/v3"
 	"net/http"
 	"time"
 
