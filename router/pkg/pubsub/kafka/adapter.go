@@ -11,6 +11,7 @@ import (
 	"github.com/twmb/franz-go/pkg/kerr"
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
 )
 
@@ -137,7 +138,11 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 
 	go func() {
 
-		defer p.closeWg.Done()
+		defer func() {
+			client.Close()
+			updater.Close(resolve.SubscriptionCloseKindNormal)
+			p.closeWg.Done()
+		}()
 
 		err := p.topicPoller(ctx, client, updater)
 		if err != nil {

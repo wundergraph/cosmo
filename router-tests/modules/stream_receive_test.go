@@ -2,12 +2,9 @@ package module_test
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"testing"
 	"time"
-
-	"go.uber.org/zap/zapcore"
 
 	"github.com/hasura/go-graphql-client"
 	"github.com/stretchr/testify/assert"
@@ -19,6 +16,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
+	"go.uber.org/zap/zapcore"
 )
 
 type errorWithCloseSubscription struct {
@@ -321,7 +319,7 @@ func TestReceiveHook(t *testing.T) {
 		})
 	})
 
-	t.Run("Test Batch hook can close Kafka subscriptions", func(t *testing.T) {
+	t.Run("Test Batch hook error should close Kafka clients and subscriptions", func(t *testing.T) {
 		t.Parallel()
 
 		cfg := config.Config{
@@ -381,8 +379,6 @@ func TestReceiveHook(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, Timeout)
 
-			fmt.Println(client.GetSubscription(subscriptionOneID).GetStatus())
-
 			events.ProduceKafkaMessage(t, xEnv, Timeout, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
 			// Wait for server to close the subscription connection
@@ -392,6 +388,11 @@ func TestReceiveHook(t *testing.T) {
 			testenv.AwaitChannelWithT(t, Timeout, clientRunCh, func(t *testing.T, err error) {
 				require.NoError(t, err)
 			}, "client should have completed when server closed connection")
+
+			// Verify that Kafka connections are also closed by checking for "poller canceled" log messages
+			// The Kafka adapter logs this when connections are closed due to context cancellation
+			kafkaPollerLogs := xEnv.Observer().FilterMessage("poller error")
+			assert.GreaterOrEqual(t, len(kafkaPollerLogs.All()), 1, "Expected at least one Kafka poller to be canceled")
 		})
 	})
 }
