@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import { OperationToProtoVisitor } from '../../src/operations-to-proto-visitor';
-import { expectValidProto, loadProtoFromText, getFieldNumbersFromMessage, getServiceMethods } from '../util';
+import { OperationToProtoVisitor } from '../../src';
+import { expectValidProto, loadProtoFromText, getServiceMethods } from '../util';
 
 describe('Operations to Proto - Basic Operations', () => {
   const schema = `
