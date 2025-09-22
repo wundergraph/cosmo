@@ -301,16 +301,6 @@ jobs:
       - name: Install dependencies
         working-directory: ./router-tests
         run: go mod download
-#      - name: Setup Redis Cluster (for Cluster tests)
-#        uses: vishnudxb/redis-cluster@1.0.9
-#        with:
-#          master1-port: 7001
-#          master2-port: 7002
-#          master3-port: 7003
-#          slave1-port: 7004
-#          slave2-port: 7005
-#          slave3-port: 7006
-#          sleep-duration: 5
       - name: Configure Redis Authentication & ACL
         run: |
           docker ps -a
