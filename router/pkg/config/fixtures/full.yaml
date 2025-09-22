@@ -272,7 +272,6 @@ authentication:
       - url: 'https://example.com/.well-known/jwks.json'
         refresh_interval: 1m
         algorithms: ['RS256']
-        allow_empty_algorithm: true
       - url: 'https://example.com/.well-known/jwks2.json'
         refresh_interval: 2m
         algorithms: ['RS256', 'ES256']

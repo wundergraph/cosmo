@@ -1687,10 +1687,6 @@
                     "type": "string",
                     "description": "The KID header of the JWK token created using the secret"
                   },
-                  "allow_empty_algorithm": {
-                    "type": "boolean",
-                    "description": "This attribute can be enabled to allow for the JWK to contain keys with empty algorithms"
-                  },
                   "algorithms": {
                     "type": "array",
                     "description": "The allowed algorithms for the keys that are retrieved from the JWKs. An empty list means that all algorithms are allowed.",
@@ -1758,40 +1754,20 @@
                 },
                 "oneOf": [
                   {
-                    "allOf": [
-                      {
-                        "required": ["url"],
-                        "not": {
-                          "anyOf": [
-                            {
-                              "required": ["secret"]
-                            },
-                            {
-                              "required": ["symmetric_algorithm"]
-                            },
-                            {
-                              "required": ["header_key_id"]
-                            }
-                          ]
-                        }
-                      },
-                      {
-                        "if": {
-                          "required": ["allow_empty_algorithm"],
-                          "properties": {
-                            "allow_empty_algorithm": { "const": true }
-                          }
+                    "required": ["url"],
+                    "not": {
+                      "anyOf": [
+                        {
+                          "required": ["secret"]
                         },
-                        "then": {
-                          "required": ["algorithms"],
-                          "properties": {
-                            "algorithms": {
-                              "minItems": 1
-                            }
-                          }
+                        {
+                          "required": ["symmetric_algorithm"]
+                        },
+                        {
+                          "required": ["header_key_id"]
                         }
-                      }
-                    ]
+                      ]
+                    }
                   },
                   {
                     "required": ["secret", "symmetric_algorithm", "header_key_id"],
@@ -1805,9 +1781,6 @@
                         },
                         {
                           "required": ["refresh_interval"]
-                        },
-                        {
-                          "required": ["allow_empty_algorithm"]
                         }
                       ]
                     }
