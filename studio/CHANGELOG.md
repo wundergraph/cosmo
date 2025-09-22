@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.133.0](https://github.com/wundergraph/cosmo/compare/studio@0.132.1...studio@0.133.0) (2025-09-22)
+
+### Features
+
+* fix navigation sometimes not working when switching graph ([#2231](https://github.com/wundergraph/cosmo/issues/2231)) ([77396ff](https://github.com/wundergraph/cosmo/commit/77396ffa63e2b17acca78ef57b71a51dcde78887)) (@wilsonrivera)
+
 ## [0.132.1](https://github.com/wundergraph/cosmo/compare/studio@0.132.0...studio@0.132.1) (2025-09-22)
 
 **Note:** Version bump only for package studio
