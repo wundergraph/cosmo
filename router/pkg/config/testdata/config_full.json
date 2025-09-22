@@ -489,8 +489,7 @@
           "Secret": "",
           "Algorithm": "",
           "KeyId": "",
-          "Audiences": null,
-          "AllowEmptyAlgorithm": true
+          "Audiences": null
         },
         {
           "URL": "https://example.com/.well-known/jwks2.json",
@@ -508,8 +507,7 @@
           "Secret": "",
           "Algorithm": "",
           "KeyId": "",
-          "Audiences": null,
-          "AllowEmptyAlgorithm": false
+          "Audiences": null
         },
         {
           "URL": "https://example.com/.well-known/jwks3.json",
@@ -524,8 +522,7 @@
           "Secret": "",
           "Algorithm": "",
           "KeyId": "",
-          "Audiences": null,
-          "AllowEmptyAlgorithm": false
+          "Audiences": null
         }
       ],
       "HeaderName": "Authorization",

@@ -2228,7 +2228,6 @@ func TestSupportedAlgorithms(t *testing.T) {
 					t.Parallel()
 					body := testRequest(t, xEnv, authHeader(token), true)
 					require.Equal(t, employeesExpectedData, string(body))
-
 				})
 
 				t.Run("Should fail when providing no Token", func(t *testing.T) {
@@ -2844,9 +2843,8 @@ func TestAudienceValidation(t *testing.T) {
 
 		authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
 			{
-				URL:                 authServer.JWKSURL(),
-				RefreshInterval:     time.Second * 5,
-				AllowEmptyAlgorithm: true,
+				URL:             authServer.JWKSURL(),
+				RefreshInterval: time.Second * 5,
 			},
 		})
 
@@ -2879,7 +2877,7 @@ func TestAudienceValidation(t *testing.T) {
 
 		rsaCrypto, err := jwks.NewRSACrypto("", "", 2048)
 		require.NoError(t, err)
-		
+
 		authServer, err := jwks.NewServerWithCrypto(t, rsaCrypto)
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
@@ -2888,10 +2886,9 @@ func TestAudienceValidation(t *testing.T) {
 
 		authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
 			{
-				URL:                 authServer.JWKSURL(),
-				RefreshInterval:     time.Second * 5,
-				AllowedAlgorithms:   []string{string(allowedAlgorithm)},
-				AllowEmptyAlgorithm: true,
+				URL:               authServer.JWKSURL(),
+				RefreshInterval:   time.Second * 5,
+				AllowedAlgorithms: []string{string(allowedAlgorithm)},
 			},
 		})
 

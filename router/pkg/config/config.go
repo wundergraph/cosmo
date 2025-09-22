@@ -478,8 +478,7 @@ type JWKSConfiguration struct {
 	KeyId     string `yaml:"header_key_id"`
 
 	// Common
-	Audiences           []string `yaml:"audiences"`
-	AllowEmptyAlgorithm bool     `yaml:"allow_empty_algorithm" envDefault:"false"`
+	Audiences []string `yaml:"audiences"`
 }
 
 type RefreshUnknownKID struct {
