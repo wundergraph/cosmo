@@ -4,6 +4,7 @@ go 1.25
 
 require (
 	connectrpc.com/connect v1.16.2
+	github.com/MicahParks/keyfunc/v3 v3.3.5
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/buger/jsonparser v1.1.1
 	github.com/cespare/xxhash/v2 v2.3.0
@@ -173,6 +174,7 @@ require (
 
 // Do not upgrade, it renames attributes we rely on
 replace (
+	github.com/MicahParks/keyfunc/v3 => github.com/wundergraph/keyfunc/v3 v3.0.0-20250922133930-92f21becf3d9 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp => go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
 	go.opentelemetry.io/contrib/propagators/b3 => go.opentelemetry.io/contrib/propagators/b3 v1.23.0
 	go.opentelemetry.io/contrib/propagators/jaeger => go.opentelemetry.io/contrib/propagators/jaeger v1.23.0

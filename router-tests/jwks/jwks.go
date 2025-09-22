@@ -50,17 +50,14 @@ func (s *Server) TokenWithOpts(claims map[string]any, tokenOpts TokenOpts) (stri
 	}
 
 	for kid, pr := range s.providers {
-		var token *jwt.Token
+		method := pr.SigningMethod()
 		if tokenOpts.AlgOverride != "" {
-			method := jwt.GetSigningMethod(tokenOpts.AlgOverride)
+			method = jwt.GetSigningMethod(tokenOpts.AlgOverride)
 			if method == nil {
 				return "", fmt.Errorf("unsupported signing method: %s", tokenOpts.AlgOverride)
 			}
-			token = jwt.NewWithClaims(method, jwt.MapClaims(claims))
-		} else {
-			token = jwt.NewWithClaims(pr.SigningMethod(), jwt.MapClaims(claims))
 		}
-
+		token := jwt.NewWithClaims(method, jwt.MapClaims(claims))
 		token.Header[jwkset.HeaderKID] = kid
 		return token.SignedString(pr.PrivateKey())
 	}

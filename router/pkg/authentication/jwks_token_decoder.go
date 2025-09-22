@@ -4,10 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/MicahParks/keyfunc/v3"
 	"net/http"
 	"time"
-
-	"github.com/wundergraph/cosmo/router/pkg/authentication/keyfunc"
 
 	"golang.org/x/time/rate"
 
