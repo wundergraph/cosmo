@@ -2,11 +2,15 @@ package integration
 
 import (
 	"bytes"
+	"crypto/ed25519"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/base64"
+	"encoding/json"
 	"encoding/pem"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -2358,6 +2362,117 @@ func TestSupportedAlgorithms(t *testing.T) {
 	})
 }
 
+func TestJWKSIgnoreUnsupportedKeys(t *testing.T) {
+	t.Parallel()
+
+	// Create one supported RSA key and one unsupported OKP(Ed448) entry in the same JWKS.
+	rsaProvider, err := jwks.NewRSACrypto("", jwkset.AlgRS256, 2048)
+	require.NoError(t, err)
+
+	edProvider, err := jwks.NewED25519Crypto("")
+	require.NoError(t, err)
+
+	rsaKID := rsaProvider.KID()
+	unsupportedKID := edProvider.KID() + "-unsupported"
+
+	// Build RSA public JWK
+	rsaPriv := rsaProvider.PrivateKey().(*rsa.PrivateKey)
+	rsaPub := rsaPriv.PublicKey
+	nB64 := base64.RawURLEncoding.EncodeToString(rsaPub.N.Bytes())
+	eB64 := base64.RawURLEncoding.EncodeToString(bigIntBytes(int64(rsaPub.E)))
+
+	rsaJWK := map[string]any{
+		"kty": "RSA",
+		"n":   nB64,
+		"e":   eB64,
+		"use": "sig",
+		"alg": jwkset.AlgRS256.String(),
+		"kid": rsaKID,
+	}
+
+	// Build unsupported OKP Ed448 JWK (intentionally unsupported curve)
+	edPriv := edProvider.PrivateKey().(ed25519.PrivateKey)
+	edPub := edPriv.Public().(ed25519.PublicKey)
+	xB64 := base64.RawURLEncoding.EncodeToString(edPub)
+	unsupportedJWK := map[string]any{
+		"kty": "OKP",
+		"crv": "Ed448",
+		"x":   xB64,
+		"use": "sig",
+		"alg": jwkset.AlgEdDSA.String(),
+		"kid": unsupportedKID,
+	}
+
+	jwksJSON := map[string]any{
+		"keys": []any{rsaJWK, unsupportedJWK},
+	}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/.well-known/jwks.json", func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(jwksJSON)
+	})
+	ts := httptest.NewServer(mux)
+	t.Cleanup(ts.Close)
+
+	authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+		{
+			URL:             ts.URL + "/.well-known/jwks.json",
+			RefreshInterval: time.Second * 5,
+		},
+	})
+
+	testenv.Run(t, &testenv.Config{
+		RouterOptions: []core.Option{
+			core.WithAccessController(core.NewAccessController(authenticators, true)),
+		},
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		// 1) Supported RSA token should succeed
+		rsaToken := jwt.New(jwt.SigningMethodRS256)
+		rsaToken.Header[jwkset.HeaderKID] = rsaKID
+		signedRSA, err := rsaToken.SignedString(rsaPriv)
+		require.NoError(t, err)
+
+		header := http.Header{"Authorization": []string{"Bearer " + signedRSA}}
+		res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+		require.NoError(t, err)
+		defer func() { _ = res.Body.Close() }()
+		require.Equal(t, http.StatusOK, res.StatusCode)
+		require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+		body, err := io.ReadAll(res.Body)
+		require.NoError(t, err)
+		require.Equal(t, employeesExpectedData, string(body))
+
+		// 2) Token with KID pointing to an unsupported Ed448 key in JWKS should fail
+		edToken := jwt.New(jwt.SigningMethodEdDSA)
+		edToken.Header[jwkset.HeaderKID] = unsupportedKID
+		signedEd, err := edToken.SignedString(edPriv)
+		require.NoError(t, err)
+
+		header2 := http.Header{"Authorization": []string{"Bearer " + signedEd}}
+		res2, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header2, strings.NewReader(employeesQuery))
+		require.NoError(t, err)
+		defer func() { _ = res2.Body.Close() }()
+		require.Equal(t, http.StatusUnauthorized, res2.StatusCode)
+		body2, err := io.ReadAll(res2.Body)
+		require.NoError(t, err)
+		require.JSONEq(t, unauthorizedExpectedData, string(body2))
+	})
+}
+
+// bigIntBytes converts an int64 to big-endian bytes without leading zeros trimmed by base64 encoder behavior.
+func bigIntBytes(v int64) []byte {
+	// Minimal big-endian bytes for the exponent
+	b := make([]byte, 0, 8)
+	for v > 0 {
+		b = append([]byte{byte(v & 0xff)}, b...)
+		v >>= 8
+	}
+	if len(b) == 0 {
+		return []byte{0}
+	}
+	return b
+}
+
 func TestAuthenticationOverWebsocket(t *testing.T) {
 	t.Parallel()
 
@@ -2910,6 +3025,45 @@ func TestAudienceValidation(t *testing.T) {
 				_ = res2.Body.Close()
 			}()
 			require.Equal(t, http.StatusUnauthorized, res2.StatusCode)
+		})
+	})
+
+	t.Run("verify blocking invalid algorithm", func(t *testing.T) {
+		t.Parallel()
+
+		rsaCrypto, err := jwks.NewRSACrypto("", "R4ND0M", 2048)
+		require.NoError(t, err)
+
+		authServer, err := jwks.NewServerWithCrypto(t, rsaCrypto)
+		require.NoError(t, err)
+		t.Cleanup(authServer.Close)
+
+		authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+			toJWKSConfig(authServer.JWKSURL(), time.Second*5),
+		})
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, true)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Manually craft a JWT with an unregistered/unknown alg value
+			hdr := map[string]any{"alg": "R4ND0M", "typ": "JWT", jwkset.HeaderKID: rsaCrypto.KID()}
+			pl := map[string]any{}
+			hBytes, err := json.Marshal(hdr)
+			require.NoError(t, err)
+			pBytes, err := json.Marshal(pl)
+			require.NoError(t, err)
+			signed := base64.RawURLEncoding.EncodeToString(hBytes) + "." + base64.RawURLEncoding.EncodeToString(pBytes) + ".bogus"
+
+			header := http.Header{"Authorization": []string{"Bearer " + signed}}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer func() { _ = res.Body.Close() }()
+			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.JSONEq(t, unauthorizedExpectedData, string(data))
 		})
 	})
 }
