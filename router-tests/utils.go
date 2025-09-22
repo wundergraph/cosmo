@@ -42,10 +42,6 @@ func RequireSpanWithName(t *testing.T, exporter *tracetest2.InMemoryExporter, na
 	return testSpan
 }
 
-type ConfigureAuthOpts struct {
-	AllowEmptyAlgorithm bool
-}
-
 func ConfigureAuth(t *testing.T) ([]authentication.Authenticator, *jwks.Server) {
 	authServer, err := jwks.NewServer(t)
 	require.NoError(t, err)
