@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.46.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.45.0...@wundergraph/composition@0.46.0) (2025-09-22)
+
+### Bug Fixes
+
+* print client schema with select directives ([#2232](https://github.com/wundergraph/cosmo/issues/2232)) ([fe41836](https://github.com/wundergraph/cosmo/commit/fe4183640a008b328807f6d0f8a6557ec7b03245)) (@Aenimus)
+
+### Features
+
+* add [@one](https://github.com/one)Of composition support ([#2225](https://github.com/wundergraph/cosmo/issues/2225)) ([9a55be8](https://github.com/wundergraph/cosmo/commit/9a55be87e97c2f130cb783873f069eb5bda9ceb1)) (@Aenimus)
+
+# [0.45.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.44.0...@wundergraph/composition@0.45.0) (2025-09-16)
+
+### Features
+
+* add [@semantic](https://github.com/semantic)NonNull support ([#2221](https://github.com/wundergraph/cosmo/issues/2221)) ([933d9f7](https://github.com/wundergraph/cosmo/commit/933d9f784c09ab7c396c48e469bdf73089a9e4ce)) (@Aenimus)
+
 # [0.44.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.43.3...@wundergraph/composition@0.44.0) (2025-09-10)
 
 ### Features

@@ -395,6 +395,7 @@ type EngineExecutionConfiguration struct {
 	ResolverMaxRecyclableParserSize                  int                      `envDefault:"32768" env:"ENGINE_RESOLVER_MAX_RECYCLABLE_PARSER_SIZE" yaml:"resolver_max_recyclable_parser_size,omitempty"`
 	EnableSubgraphFetchOperationName                 bool                     `envDefault:"false" env:"ENGINE_ENABLE_SUBGRAPH_FETCH_OPERATION_NAME" yaml:"enable_subgraph_fetch_operation_name"`
 	DisableVariablesRemapping                        bool                     `envDefault:"false" env:"ENGINE_DISABLE_VARIABLES_REMAPPING" yaml:"disable_variables_remapping"`
+	EnableRequireFetchReasons                        bool                     `envDefault:"false" env:"ENGINE_ENABLE_REQUIRE_FETCH_REASONS" yaml:"enable_require_fetch_reasons"`
 	SubscriptionFetchTimeout                         time.Duration            `envDefault:"30s" env:"ENGINE_SUBSCRIPTION_FETCH_TIMEOUT" yaml:"subscription_fetch_timeout,omitempty"`
 }
 
@@ -465,9 +466,10 @@ type OverridesConfiguration struct {
 }
 
 type JWKSConfiguration struct {
-	URL             string        `yaml:"url"`
-	Algorithms      []string      `yaml:"algorithms"`
-	RefreshInterval time.Duration `yaml:"refresh_interval" envDefault:"1m"`
+	URL               string            `yaml:"url"`
+	Algorithms        []string          `yaml:"algorithms"`
+	RefreshInterval   time.Duration     `yaml:"refresh_interval" envDefault:"1m"`
+	RefreshUnknownKID RefreshUnknownKID `yaml:"refresh_unknown_kid"`
 
 	// For secret based where we need to create a jwk  entry with
 	// a key id and algorithm
@@ -477,6 +479,13 @@ type JWKSConfiguration struct {
 
 	// Common
 	Audiences []string `yaml:"audiences"`
+}
+
+type RefreshUnknownKID struct {
+	Enabled  bool          `yaml:"enabled" envDefault:"false"`
+	MaxWait  time.Duration `yaml:"max_wait" envDefault:"2m"`
+	Interval time.Duration `yaml:"interval" envDefault:"30s"`
+	Burst    int           `yaml:"burst" envDefault:"2"`
 }
 
 type HeaderSource struct {

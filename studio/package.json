@@ -1,6 +1,6 @@
 {
   "name": "studio",
-  "version": "0.128.0",
+  "version": "0.133.0",
   "private": true,
   "license": "Apache-2.0",
   "description": "WunderGraph Cosmo Studio",
@@ -70,7 +70,7 @@
     "@tiptap/starter-kit": "2.1.13",
     "@wundergraph/composition": "workspace:*",
     "@wundergraph/cosmo-connect": "workspace:*",
-    "axios": "^1.11.0",
+    "axios": "^1.12.2",
     "bowser": "^2.11.0",
     "canvas-confetti": "^1.6.0",
     "change-case": "^4.1.2",
