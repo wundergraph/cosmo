@@ -39,9 +39,16 @@ export function WorkspaceCommandWrapper({
       return Array.from(namespaceByName.values());
     }
 
-    const fuse = new Fuse<unknown>([], { keys: ['name'], threshold: 0.3, });
+    const fuse = new Fuse<unknown>([], { keys: ['name'], threshold: 0.2, includeScore: true });
     const searchResults: WorkspaceNamespace[] = [];
     for (const wns of Array.from(namespaceByName.values())) {
+      // Determine whether the namespace contains the filter value
+      if (wns.name.toLowerCase().includes(filterValue)) {
+        // The namespace contains the filter value, add it with all the graphs/subgraphs to the search results
+        searchResults.push(wns);
+        continue;
+      }
+
       if (!wns.graphs?.length) {
         // The namespace doesn't contain any federated graph, we don't need to perform the search here
         continue;
@@ -105,14 +112,14 @@ export function WorkspaceCommandWrapper({
         {showFilter && (<CommandInput
           value={filter}
           onValueChange={setFilter}
-          placeholder="Search graphs and subgraphs"
+          placeholder="Search namespace, graphs and subgraphs"
         />)}
         <div className="scrollbar-custom h-full overflow-y-auto">
           {isFiltering || !children ? (
             <>
               {filteredGraphs.length === 0 ? (
                 <div className="p-3 text-sm text-muted-foreground text-center pointer-events-none">
-                  No graph or subgraph matches your criteria.
+                  No namespace, graph or subgraph matches your criteria.
                 </div>
               ) : filteredGraphs.map((wns, index) => (
                 <>

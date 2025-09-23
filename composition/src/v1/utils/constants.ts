@@ -61,12 +61,14 @@ import {
   INTERFACE_OBJECT,
   INTERFACE_UPPER,
   KEY,
+  LEVELS,
   LINK,
   LINK_IMPORT,
   LINK_PURPOSE,
   NAME,
   NOT_UPPER,
   OBJECT_UPPER,
+  ONE_OF,
   OR_UPPER,
   OVERRIDE,
   PROPAGATE,
@@ -82,6 +84,7 @@ import {
   SCOPE_SCALAR,
   SCOPES,
   SECURITY,
+  SEMANTIC_NON_NULL,
   SHAREABLE,
   SPECIFIED_BY,
   STREAM_CONFIGURATION,
@@ -511,11 +514,13 @@ export const ALL_IN_BUILT_DIRECTIVE_NAMES = new Set<string>([
   INTERFACE_OBJECT,
   KEY,
   LINK,
+  ONE_OF,
   OVERRIDE,
   PROVIDES,
   REQUIRE_FETCH_REASONS,
   REQUIRES,
   REQUIRES_SCOPES,
+  SEMANTIC_NON_NULL,
   SHAREABLE,
   SPECIFIED_BY,
   SUBSCRIPTION_FILTER,
@@ -641,6 +646,14 @@ export const LINK_DEFINITION: DirectiveDefinitionNode = {
   repeatable: true,
 };
 
+// directive @oneOf on INPUT_OBJECT
+export const ONE_OF_DEFINITION: DirectiveDefinitionNode = {
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([INPUT_OBJECT_UPPER]),
+  name: stringToNameNode(ONE_OF),
+  repeatable: false,
+};
+
 // directive @override(from: String!) on FIELD_DEFINITION
 export const OVERRIDE_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
@@ -701,6 +714,40 @@ export const REQUIRES_SCOPES_DEFINITION: MutableDirectiveDefinitionNode = {
     SCALAR_UPPER,
   ]),
   name: stringToNameNode(REQUIRES_SCOPES),
+  repeatable: false,
+};
+
+// directive @semanticNonNull(levels: [Int!]! = [0]) on FIELD_DEFINITION
+export const SEMANTIC_NON_NULL_DEFINITION: MutableDirectiveDefinitionNode = {
+  arguments: [
+    {
+      directives: [],
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(LEVELS),
+      type: {
+        kind: Kind.NON_NULL_TYPE,
+        type: {
+          kind: Kind.LIST_TYPE,
+          type: {
+            kind: Kind.NON_NULL_TYPE,
+            type: stringToNamedTypeNode(INT_SCALAR),
+          },
+        },
+      },
+      defaultValue: {
+        kind: Kind.LIST,
+        values: [
+          {
+            kind: Kind.INT,
+            value: '0',
+          },
+        ],
+      },
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: [stringToNameNode(FIELD_DEFINITION_UPPER)],
+  name: stringToNameNode(SEMANTIC_NON_NULL),
   repeatable: false,
 };
 
