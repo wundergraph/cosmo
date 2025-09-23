@@ -116,8 +116,6 @@ func Main() {
 	defer profiler.Finish()
 
 	if *pyroscopeAddr != "" {
-		// These 2 lines are only required if you're using mutex or block profiling
-		// Read the explanation below for how to set these rates:
 		runtime.SetMutexProfileFraction(5)
 		runtime.SetBlockProfileRate(5)
 
