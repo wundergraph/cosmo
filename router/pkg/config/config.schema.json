@@ -1716,6 +1716,40 @@
                     },
                     "description": "The interval at which the JWKs are refreshed. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
                     "default": "1m"
+                  },
+                  "refresh_unknown_kid": {
+                    "type": "object",
+                    "description": "Controls rate-limited refresh behavior when a JWT KID is unknown.",
+                    "additionalProperties": false,
+                    "properties": {
+                      "enabled": {
+                        "type": "boolean",
+                        "description": "Enable refresh attempts on unknown KID.",
+                        "default": false
+                      },
+                      "max_wait": {
+                        "type": "string",
+                        "description": "Maximum time to wait for a refresh permit before giving up.",
+                        "default": "10s",
+                        "duration": {
+                          "minimum": "0s"
+                        }
+                      },
+                      "interval": {
+                        "type": "string",
+                        "description": "Token refill interval for the rate limiter.",
+                        "default": "1m",
+                        "duration": {
+                          "minimum": "1s"
+                        }
+                      },
+                      "burst": {
+                        "type": "integer",
+                        "description": "Burst size for the rate limiter.",
+                        "default": 2,
+                        "minimum": 1
+                      }
+                    }
                   }
                 },
                 "oneOf": [

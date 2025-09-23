@@ -480,6 +480,12 @@
             "RS256"
           ],
           "RefreshInterval": 60000000000,
+          "RefreshUnknownKID": {
+            "Enabled": false,
+            "MaxWait": 0,
+            "Interval": 0,
+            "Burst": 0
+          },
           "Secret": "",
           "Algorithm": "",
           "KeyId": "",
@@ -492,6 +498,12 @@
             "ES256"
           ],
           "RefreshInterval": 120000000000,
+          "RefreshUnknownKID": {
+            "Enabled": true,
+            "MaxWait": 10000000000,
+            "Interval": 5000000000,
+            "Burst": 3
+          },
           "Secret": "",
           "Algorithm": "",
           "KeyId": "",
@@ -501,6 +513,12 @@
           "URL": "https://example.com/.well-known/jwks3.json",
           "Algorithms": null,
           "RefreshInterval": 0,
+          "RefreshUnknownKID": {
+            "Enabled": false,
+            "MaxWait": 0,
+            "Interval": 0,
+            "Burst": 0
+          },
           "Secret": "",
           "Algorithm": "",
           "KeyId": "",
