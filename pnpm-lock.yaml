@@ -488,8 +488,8 @@ importers:
         specifier: ^10.1.2
         version: 10.1.2(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))
       '@keycloak/keycloak-admin-client':
-        specifier: ^25.0.2
-        version: 25.0.6
+        specifier: 26.2.5
+        version: 26.2.5
       '@octokit/webhooks-types':
         specifier: ^7.6.1
         version: 7.6.1
@@ -4085,8 +4085,8 @@ packages:
   '@jspm/core@2.0.1':
     resolution: {integrity: sha512-Lg3PnLp0QXpxwLIAuuJboLeRaIhrgJjeuh797QADg3xz8wGLugQOS5DpsE8A6i6Adgzf+bacllkKZG3J0tGfDw==}
 
-  '@keycloak/keycloak-admin-client@25.0.6':
-    resolution: {integrity: sha512-rUvo6L0aT9+y/R2wFhDKb+lRD5rwj36XwnIGIbmC2HeQVfgroYB5u/79yc/Mo0inBFNIG8VuiwjRzU878fRE0Q==}
+  '@keycloak/keycloak-admin-client@26.2.5':
+    resolution: {integrity: sha512-glMBjQE0M8KOe9uZtdIl7kvHeBjfegZKxK8SzAZxekWvwsZ3Kt+XNd1kKW7NUxRdrs9EGtJLNUWX8vfaR+0Snw==}
     engines: {node: '>=18'}
 
   '@lerna-lite/cli@4.1.1':
@@ -17871,7 +17871,7 @@ snapshots:
 
   '@jspm/core@2.0.1': {}
 
-  '@keycloak/keycloak-admin-client@25.0.6':
+  '@keycloak/keycloak-admin-client@26.2.5':
     dependencies:
       camelize-ts: 3.0.0
       url-join: 5.0.0
