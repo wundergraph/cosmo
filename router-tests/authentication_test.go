@@ -2827,24 +2827,18 @@ func TestAudienceValidation(t *testing.T) {
 				core.WithAccessController(core.NewAccessController(authenticators, true)),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Since the order is random from a map we run multiple times to ensure
-			// that at least the correct order was hit
-			for range 10 {
-				func() {
-					// Operations with a token should succeed
-					header := http.Header{
-						"Authorization": []string{"Bearer " + token},
-					}
-					res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
-					require.NoError(t, err)
-					defer res.Body.Close()
-					require.Equal(t, http.StatusOK, res.StatusCode)
-					require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
-					data, err := io.ReadAll(res.Body)
-					require.NoError(t, err)
-					require.Equal(t, employeesExpectedData, string(data))
-				}()
+			// Operations with a token should succeed
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
 			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, employeesExpectedData, string(data))
 		})
 	})
 

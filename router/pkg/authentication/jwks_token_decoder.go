@@ -4,9 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/keyfunc/v3"
 	"net/http"
 	"time"
+
+	"github.com/wundergraph/keyfunc/v3"
 
 	"golang.org/x/time/rate"
 
@@ -60,20 +61,26 @@ type RefreshUnknownKIDConfig struct {
 	MaxWait  time.Duration
 }
 
-type audKey struct {
+type configKey struct {
 	kid string
 	url string
 }
 
 type audienceSet map[string]struct{}
 
+type keyFuncEntry struct {
+	jwks keyfunc.Keyfunc
+	aud  audienceSet
+}
+
 func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKSConfig) (TokenDecoder, error) {
-	audiencesMap := make(map[audKey]audienceSet, len(configs))
-	keyFuncMap := make(map[audKey]keyfunc.Keyfunc, len(configs))
+	// Audience map is used to validate duplicate configs
+	audiencesMap := make(map[configKey]audienceSet, len(configs))
+	entries := make([]keyFuncEntry, 0, len(configs))
 
 	for _, c := range configs {
 		if c.URL != "" {
-			key := audKey{url: c.URL}
+			key := configKey{url: c.URL}
 			if _, ok := audiencesMap[key]; ok {
 				return nil, fmt.Errorf("duplicate JWK URL found: %s", c.URL)
 			}
@@ -117,10 +124,13 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 			if err != nil {
 				return nil, err
 			}
-			keyFuncMap[key] = jwks
+			entries = append(entries, keyFuncEntry{
+				jwks: jwks,
+				aud:  audiencesMap[key],
+			})
 
 		} else if c.Secret != "" {
-			key := audKey{kid: c.KeyId}
+			key := configKey{kid: c.KeyId}
 			if _, ok := audiencesMap[key]; ok {
 				return nil, fmt.Errorf("duplicate JWK keyid specified found: %s", c.KeyId)
 			}
@@ -167,27 +177,29 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 			if err != nil {
 				return nil, err
 			}
-			keyFuncMap[key] = jwks
+			entries = append(entries, keyFuncEntry{
+				jwks: jwks,
+				aud:  audiencesMap[key],
+			})
 		}
 	}
 
 	keyFuncWrapper := jwt.Keyfunc(func(token *jwt.Token) (any, error) {
 		var errJoin error
-		for key, keyFunc := range keyFuncMap {
-			expectedAudiences := audiencesMap[key]
-			if len(expectedAudiences) > 0 {
+		for _, entry := range entries {
+			if len(entry.aud) > 0 {
 				tokenAudiences, err := token.Claims.GetAudience()
 				if err != nil {
 					errJoin = errors.Join(errJoin, fmt.Errorf("could not get audiences from token claims: %w", err))
 					continue
 				}
-				if !hasAudience(tokenAudiences, expectedAudiences) {
+				if !hasAudience(tokenAudiences, entry.aud) {
 					errJoin = errors.Join(errJoin, errUnacceptableAud)
 					continue
 				}
 			}
 
-			pub, err := keyFunc.Keyfunc(token)
+			pub, err := entry.jwks.Keyfunc(token)
 			if err != nil {
 				errJoin = errors.Join(errJoin, err)
 				continue
