@@ -334,10 +334,10 @@ func TestBatch(t *testing.T) {
 
 		authenticators, authServer := ConfigureAuth(t)
 		accessController, err := core.NewAccessController(core.AccessControllerOptions{
-			Authenticators:             authenticators,
-			AuthenticationRequired:     false,
-			IntrospectionAuthMode:      core.IntrospectionAuthModeFull,
-			IntrospectionAuthSkipToken: "",
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
 		})
 		require.NoError(t, err)
 
@@ -746,10 +746,10 @@ func TestBatch(t *testing.T) {
 
 		authenticators, authServer := ConfigureAuth(t)
 		accessController, err := core.NewAccessController(core.AccessControllerOptions{
-			Authenticators:             authenticators,
-			AuthenticationRequired:     false,
-			IntrospectionAuthMode:      core.IntrospectionAuthModeFull,
-			IntrospectionAuthSkipToken: "",
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
 		})
 		require.NoError(t, err)
 

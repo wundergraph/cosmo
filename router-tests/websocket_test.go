@@ -136,10 +136,10 @@ func TestWebSockets(t *testing.T) {
 		authenticators := []authentication.Authenticator{authenticator}
 
 		accessController, err := core.NewAccessController(core.AccessControllerOptions{
-			Authenticators:             authenticators,
-			AuthenticationRequired:     false,
-			IntrospectionAuthMode:      core.IntrospectionAuthModeFull,
-			IntrospectionAuthSkipToken: "",
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
 		})
 		require.NoError(t, err)
 
@@ -193,10 +193,10 @@ func TestWebSockets(t *testing.T) {
 		authenticators := []authentication.Authenticator{authenticator}
 
 		accessController, err := core.NewAccessController(core.AccessControllerOptions{
-			Authenticators:             authenticators,
-			AuthenticationRequired:     false,
-			IntrospectionAuthMode:      core.IntrospectionAuthModeFull,
-			IntrospectionAuthSkipToken: "",
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
 		})
 		require.NoError(t, err)
 
@@ -249,10 +249,10 @@ func TestWebSockets(t *testing.T) {
 		require.NoError(t, err)
 		authenticators := []authentication.Authenticator{authenticator}
 		accessController, err := core.NewAccessController(core.AccessControllerOptions{
-			Authenticators:             authenticators,
-			AuthenticationRequired:     false,
-			IntrospectionAuthMode:      core.IntrospectionAuthModeFull,
-			IntrospectionAuthSkipToken: "",
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
 		})
 		require.NoError(t, err)
 
@@ -315,10 +315,10 @@ func TestWebSockets(t *testing.T) {
 		require.NoError(t, err)
 		authenticators := []authentication.Authenticator{authenticator}
 		accessController, err := core.NewAccessController(core.AccessControllerOptions{
-			Authenticators:             authenticators,
-			AuthenticationRequired:     false,
-			IntrospectionAuthMode:      core.IntrospectionAuthModeFull,
-			IntrospectionAuthSkipToken: "",
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
 		})
 		require.NoError(t, err)
 
@@ -380,10 +380,10 @@ func TestWebSockets(t *testing.T) {
 		require.NoError(t, err)
 		authenticators := []authentication.Authenticator{authenticator}
 		accessController, err := core.NewAccessController(core.AccessControllerOptions{
-			Authenticators:             authenticators,
-			AuthenticationRequired:     true,
-			IntrospectionAuthMode:      core.IntrospectionAuthModeFull,
-			IntrospectionAuthSkipToken: "",
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
 		})
 		require.NoError(t, err)
 
@@ -449,10 +449,10 @@ func TestWebSockets(t *testing.T) {
 		require.NoError(t, err)
 		authenticators := []authentication.Authenticator{authenticator}
 		accessController, err := core.NewAccessController(core.AccessControllerOptions{
-			Authenticators:             authenticators,
-			AuthenticationRequired:     true,
-			IntrospectionAuthMode:      core.IntrospectionAuthModeFull,
-			IntrospectionAuthSkipToken: "",
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
 		})
 		require.NoError(t, err)
 
@@ -505,10 +505,10 @@ func TestWebSockets(t *testing.T) {
 		require.NoError(t, err)
 		authenticators := []authentication.Authenticator{authenticator}
 		accessController, err := core.NewAccessController(core.AccessControllerOptions{
-			Authenticators:             authenticators,
-			AuthenticationRequired:     true,
-			IntrospectionAuthMode:      core.IntrospectionAuthModeFull,
-			IntrospectionAuthSkipToken: "",
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
 		})
 		require.NoError(t, err)
 
@@ -913,10 +913,10 @@ func TestWebSockets(t *testing.T) {
 		require.NoError(t, err)
 		authenticators := []authentication.Authenticator{authenticator}
 		accessController, err := core.NewAccessController(core.AccessControllerOptions{
-			Authenticators:             authenticators,
-			AuthenticationRequired:     false,
-			IntrospectionAuthMode:      core.IntrospectionAuthModeFull,
-			IntrospectionAuthSkipToken: "",
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
 		})
 		require.NoError(t, err)
 

@@ -271,10 +271,10 @@ func TestRateLimit(t *testing.T) {
 		authenticators := []authentication.Authenticator{authenticator}
 
 		accessController, err := core.NewAccessController(core.AccessControllerOptions{
-			Authenticators:             authenticators,
-			AuthenticationRequired:     false,
-			IntrospectionAuthMode:      core.IntrospectionAuthModeFull,
-			IntrospectionAuthSkipToken: "",
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
 		})
 		require.NoError(t, err)
 

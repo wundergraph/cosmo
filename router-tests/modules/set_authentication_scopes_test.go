@@ -33,10 +33,10 @@ func TestCustomModuleSetAuthenticationScopes(t *testing.T) {
 		}
 		authenticators, authServer := configureAuth(t)
 		accessController, err := core.NewAccessController(core.AccessControllerOptions{
-			Authenticators:             authenticators,
-			AuthenticationRequired:     false,
-			IntrospectionAuthMode:      core.IntrospectionAuthModeFull,
-			IntrospectionAuthSkipToken: "",
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
 		})
 		require.NoError(t, err)
 
@@ -82,10 +82,10 @@ func TestCustomModuleSetAuthenticationScopes(t *testing.T) {
 		}
 		authenticators, authServer := configureAuth(t)
 		accessController, err := core.NewAccessController(core.AccessControllerOptions{
-			Authenticators:             authenticators,
-			AuthenticationRequired:     false,
-			IntrospectionAuthMode:      core.IntrospectionAuthModeFull,
-			IntrospectionAuthSkipToken: "",
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
 		})
 		require.NoError(t, err)
 
@@ -133,10 +133,10 @@ func TestCustomModuleSetAuthenticationScopes(t *testing.T) {
 		}
 		authenticators, authServer := configureAuth(t)
 		accessController, err := core.NewAccessController(core.AccessControllerOptions{
-			Authenticators:             authenticators,
-			AuthenticationRequired:     false,
-			IntrospectionAuthMode:      core.IntrospectionAuthModeFull,
-			IntrospectionAuthSkipToken: "",
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
 		})
 		require.NoError(t, err)
 

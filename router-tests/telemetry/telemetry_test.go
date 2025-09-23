@@ -9029,10 +9029,10 @@ func TestFlakyTelemetry(t *testing.T) {
 			metricReader := metric.NewManualReader()
 			authenticators, authServer := integration.ConfigureAuth(t)
 			accessController, err := core.NewAccessController(core.AccessControllerOptions{
-				Authenticators:             authenticators,
-				AuthenticationRequired:     false,
-				IntrospectionAuthMode:      core.IntrospectionAuthModeFull,
-				IntrospectionAuthSkipToken: "",
+				Authenticators:           authenticators,
+				AuthenticationRequired:   false,
+				SkipIntrospectionQueries: false,
+				IntrospectionSkipSecret:  "",
 			})
 			require.NoError(t, err)
 
@@ -9087,10 +9087,10 @@ func TestFlakyTelemetry(t *testing.T) {
 			metricReader := metric.NewManualReader()
 			authenticators, authServer := integration.ConfigureAuth(t)
 			accessController, err := core.NewAccessController(core.AccessControllerOptions{
-				Authenticators:             authenticators,
-				AuthenticationRequired:     false,
-				IntrospectionAuthMode:      core.IntrospectionAuthModeFull,
-				IntrospectionAuthSkipToken: "",
+				Authenticators:           authenticators,
+				AuthenticationRequired:   false,
+				SkipIntrospectionQueries: false,
+				IntrospectionSkipSecret:  "",
 			})
 			require.NoError(t, err)
 
@@ -9143,10 +9143,10 @@ func TestFlakyTelemetry(t *testing.T) {
 			metricReader := metric.NewManualReader()
 			authenticators, authServer := integration.ConfigureAuth(t)
 			accessController, err := core.NewAccessController(core.AccessControllerOptions{
-				Authenticators:             authenticators,
-				AuthenticationRequired:     false,
-				IntrospectionAuthMode:      core.IntrospectionAuthModeFull,
-				IntrospectionAuthSkipToken: "",
+				Authenticators:           authenticators,
+				AuthenticationRequired:   false,
+				SkipIntrospectionQueries: false,
+				IntrospectionSkipSecret:  "",
 			})
 			require.NoError(t, err)
 
@@ -9224,10 +9224,10 @@ func TestFlakyTelemetry(t *testing.T) {
 			metricReader := metric.NewManualReader()
 			authenticators, authServer := integration.ConfigureAuth(t)
 			accessController, err := core.NewAccessController(core.AccessControllerOptions{
-				Authenticators:             authenticators,
-				AuthenticationRequired:     false,
-				IntrospectionAuthMode:      core.IntrospectionAuthModeFull,
-				IntrospectionAuthSkipToken: "",
+				Authenticators:           authenticators,
+				AuthenticationRequired:   false,
+				SkipIntrospectionQueries: false,
+				IntrospectionSkipSecret:  "",
 			})
 			require.NoError(t, err)
 
@@ -9307,10 +9307,10 @@ func TestFlakyTelemetry(t *testing.T) {
 			metricReader := metric.NewManualReader()
 			authenticators, authServer := integration.ConfigureAuth(t)
 			accessController, err := core.NewAccessController(core.AccessControllerOptions{
-				Authenticators:             authenticators,
-				AuthenticationRequired:     false,
-				IntrospectionAuthMode:      core.IntrospectionAuthModeFull,
-				IntrospectionAuthSkipToken: "",
+				Authenticators:           authenticators,
+				AuthenticationRequired:   false,
+				SkipIntrospectionQueries: false,
+				IntrospectionSkipSecret:  "",
 			})
 			require.NoError(t, err)
 
@@ -9373,10 +9373,10 @@ func TestFlakyTelemetry(t *testing.T) {
 			exporter := tracetest.NewInMemoryExporter(t)
 			authenticators, authServer := integration.ConfigureAuth(t)
 			accessController, err := core.NewAccessController(core.AccessControllerOptions{
-				Authenticators:             authenticators,
-				AuthenticationRequired:     false,
-				IntrospectionAuthMode:      core.IntrospectionAuthModeFull,
-				IntrospectionAuthSkipToken: "",
+				Authenticators:           authenticators,
+				AuthenticationRequired:   false,
+				SkipIntrospectionQueries: false,
+				IntrospectionSkipSecret:  "",
 			})
 			require.NoError(t, err)
 
@@ -9582,10 +9582,10 @@ func TestFlakyTelemetry(t *testing.T) {
 			exporter := tracetest.NewInMemoryExporter(t)
 			authenticators, authServer := integration.ConfigureAuth(t)
 			accessController, err := core.NewAccessController(core.AccessControllerOptions{
-				Authenticators:             authenticators,
-				AuthenticationRequired:     false,
-				IntrospectionAuthMode:      core.IntrospectionAuthModeFull,
-				IntrospectionAuthSkipToken: "",
+				Authenticators:           authenticators,
+				AuthenticationRequired:   false,
+				SkipIntrospectionQueries: false,
+				IntrospectionSkipSecret:  "",
 			})
 			require.NoError(t, err)
 

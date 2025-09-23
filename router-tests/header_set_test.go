@@ -276,10 +276,10 @@ func TestHeaderSetWithExpression(t *testing.T) {
 		require.NoError(t, err)
 
 		accessController, err := core.NewAccessController(core.AccessControllerOptions{
-			Authenticators:             []authentication.Authenticator{authenticator},
-			AuthenticationRequired:     true,
-			IntrospectionAuthMode:      core.IntrospectionAuthModeFull,
-			IntrospectionAuthSkipToken: "",
+			Authenticators:           []authentication.Authenticator{authenticator},
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
 		})
 		require.NoError(t, err)
 
