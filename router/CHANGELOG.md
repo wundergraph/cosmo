@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.252.2](https://github.com/wundergraph/cosmo/compare/router@0.252.1...router@0.252.2) (2025-09-23)
+
+### Bug Fixes
+
+* jwt validation blocks on multiple requests ([#2216](https://github.com/wundergraph/cosmo/issues/2216)) ([2d5a02a](https://github.com/wundergraph/cosmo/commit/2d5a02ad8e3e59a8429d9b1cd1071a5e5c605562)) (@SkArchon)
+
 ## [0.252.1](https://github.com/wundergraph/cosmo/compare/router@0.252.0...router@0.252.1) (2025-09-12)
 
 ### Bug Fixes

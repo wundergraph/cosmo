@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.165.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.164.2...controlplane@0.165.0) (2025-09-23)
+
+### Features
+
+* improve Keycloak device auth page to include SSO options ([#2100](https://github.com/wundergraph/cosmo/issues/2100)) ([c0b4031](https://github.com/wundergraph/cosmo/commit/c0b40318d0a65abeb547a8abf564c6b961649695)) (@wilsonrivera)
+
 ## [0.164.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.164.1...controlplane@0.164.2) (2025-09-22)
 
 ### Bug Fixes
