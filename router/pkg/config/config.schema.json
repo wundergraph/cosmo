@@ -1373,12 +1373,12 @@
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "",
+          "description": "Enable the GraphQL introspection. The GraphQL introspection allows you to query the schema of the GraphQL API. The default value is true. If the value is false, the GraphQL introspection is disabled. In production, it is recommended to disable the introspection.",
           "default": true
         },
         "secret": {
           "type": "string",
-          "description": "A dedicated secret to authenticate introspection requests independently from the regular authentication. Need to passed by introspection queries via the 'Authorization' header. Works only when authentication.ignore_introspection is true.",
+          "description": "A dedicated secret to protect introspection when skipping standard authentication. Needs to be passed via the 'Authorization' header. Effective only when /authentication/ignore_introspection is true.",
           "minLength": 32
         }
       }
