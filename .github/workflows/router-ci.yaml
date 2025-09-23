@@ -218,12 +218,12 @@ jobs:
         ports:
           - 7002:6379
       redis-2:
+        image: bitnamilegacy/redis-cluster:7.2
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-        image: bitnamilegacy/redis-cluster:7.2
         env:
           ALLOW_EMPTY_PASSWORD: "yes"
           REDIS_NODES: "redis-0 redis-1 redis-2"
