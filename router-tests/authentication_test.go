@@ -2,7 +2,6 @@ package integration
 
 import (
 	"bytes"
-	"crypto/ed25519"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
@@ -10,7 +9,6 @@ import (
 	"encoding/pem"
 	"io"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -2793,7 +2791,61 @@ func TestAudienceValidation(t *testing.T) {
 			require.NoError(t, err)
 			require.JSONEq(t, unauthorizedExpectedData, string(data))
 		})
+	})
 
+	t.Run("audience validation succeeds even when one audience match fails", func(t *testing.T) {
+		t.Parallel()
+
+		tokenAudiences := []string{"aud1"}
+
+		authServer1, err := jwks.NewServer(t)
+		require.NoError(t, err)
+		t.Cleanup(authServer1.Close)
+
+		authServer2, err := jwks.NewServer(t)
+		require.NoError(t, err)
+		t.Cleanup(authServer2.Close)
+
+		token, err := authServer1.Token(map[string]any{"aud": tokenAudiences})
+		require.NoError(t, err)
+
+		authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+			{
+				URL:             authServer2.JWKSURL(),
+				RefreshInterval: time.Second * 5,
+				Audiences:       []string{"aud2"},
+			},
+			{
+				URL:             authServer1.JWKSURL(),
+				RefreshInterval: time.Second * 5,
+				Audiences:       []string{"aud1", "aud5"},
+			},
+		})
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, true)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Since the order is random from a map we run multiple times to ensure
+			// that at least the correct order was hit
+			for range 10 {
+				func() {
+					// Operations with a token should succeed
+					header := http.Header{
+						"Authorization": []string{"Bearer " + token},
+					}
+					res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+					require.NoError(t, err)
+					defer res.Body.Close()
+					require.Equal(t, http.StatusOK, res.StatusCode)
+					require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+					data, err := io.ReadAll(res.Body)
+					require.NoError(t, err)
+					require.Equal(t, employeesExpectedData, string(data))
+				}()
+			}
+		})
 	})
 
 	t.Run("audience validation is ignored when expected aud is not provided", func(t *testing.T) {

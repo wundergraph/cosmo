@@ -174,12 +174,6 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 	keyFuncWrapper := jwt.Keyfunc(func(token *jwt.Token) (any, error) {
 		var errJoin error
 		for key, keyFunc := range keyFuncMap {
-			pub, err := keyFunc.Keyfunc(token)
-			if err != nil {
-				errJoin = errors.Join(errJoin, err)
-				continue
-			}
-
 			expectedAudiences := audiencesMap[key]
 			if len(expectedAudiences) > 0 {
 				tokenAudiences, err := token.Claims.GetAudience()
@@ -191,6 +185,12 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 					errJoin = errors.Join(errJoin, errUnacceptableAud)
 					continue
 				}
+			}
+
+			pub, err := keyFunc.Keyfunc(token)
+			if err != nil {
+				errJoin = errors.Join(errJoin, err)
+				continue
 			}
 			return pub, nil
 		}
