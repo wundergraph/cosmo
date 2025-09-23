@@ -494,7 +494,8 @@ type JWTAuthenticationConfiguration struct {
 }
 
 type AuthenticationConfiguration struct {
-	JWT JWTAuthenticationConfiguration `yaml:"jwt"`
+	JWT                 JWTAuthenticationConfiguration `yaml:"jwt"`
+	IgnoreIntrospection bool                           `yaml:"ignore_introspection" envDefault:"false"`
 }
 
 type AuthorizationConfiguration struct {
@@ -984,18 +985,9 @@ type PluginRegistryConfiguration struct {
 	URL string `yaml:"url" env:"URL" envDefault:"cosmo-registry.wundergraph.com"`
 }
 
-type IntrospectionAuthenticationMode string
-
-const (
-	IntrospectionAuthenticationModeFull  IntrospectionAuthenticationMode = "full"
-	IntrospectionAuthenticationModeToken IntrospectionAuthenticationMode = "token"
-	IntrospectionAuthenticationModeSkip  IntrospectionAuthenticationMode = "skip"
-)
-
 type IntrospectionConfiguration struct {
-	Enabled            bool                            `yaml:"enabled" envDefault:"true" env:"INTROSPECTION_ENABLED"`
-	AuthenticationMode IntrospectionAuthenticationMode `yaml:"authentication_mode" envDefault:"full" env:"INTROSPECTION_AUTHENTICATION_MODE"`
-	Token              string                          `yaml:"token" env:"INTROSPECTION_TOKEN"`
+	Enabled bool   `yaml:"enabled" envDefault:"true" env:"INTROSPECTION_ENABLED"`
+	Secret  string `yaml:"secret" env:"INTROSPECTION_SECRET"`
 }
 
 type Config struct {

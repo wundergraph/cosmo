@@ -3,33 +3,10 @@ package core
 import (
 	"crypto/subtle"
 	"errors"
-	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
-)
-
-// IntrospectionAuthMode defines how introspection queries are authenticated.
-type IntrospectionAuthMode string
-
-// IsValid checks if the introspection authentication mode is valid.
-func (m IntrospectionAuthMode) IsValid() bool {
-	return m == IntrospectionAuthModeFull || m == IntrospectionAuthModeToken || m == IntrospectionAuthModeSkip
-}
-
-const (
-	// IntrospectionAuthModeInvalid is an invalid introspection authentication mode.
-	IntrospectionAuthModeInvalid IntrospectionAuthMode = ""
-
-	// IntrospectionAuthModeFull requires normal authentication for introspection queries.
-	IntrospectionAuthModeFull IntrospectionAuthMode = "full"
-
-	// IntrospectionAuthModeToken requires a specific introspection token for introspection queries.
-	IntrospectionAuthModeToken IntrospectionAuthMode = "token"
-
-	// IntrospectionAuthModeSkip bypasses authentication for introspection queries.
-	IntrospectionAuthModeSkip IntrospectionAuthMode = "skip"
 )
 
 var (
@@ -41,32 +18,28 @@ var (
 
 // AccessControllerOptions holds configuration options for creating a new AccessController
 type AccessControllerOptions struct {
-	Authenticators             []authentication.Authenticator
-	AuthenticationRequired     bool
-	IntrospectionAuthMode      IntrospectionAuthMode
-	IntrospectionAuthSkipToken string
+	Authenticators           []authentication.Authenticator
+	AuthenticationRequired   bool
+	SkipIntrospectionQueries bool
+	IntrospectionSkipSecret  string
 }
 
 // AccessController handles both authentication and authorization for the Router
 type AccessController struct {
-	authenticationRequired     bool
-	authenticators             []authentication.Authenticator
-	introspectionAuthMode      IntrospectionAuthMode
-	introspectionAuthSkipToken string
+	authenticationRequired   bool
+	authenticators           []authentication.Authenticator
+	skipIntrospectionQueries bool
+	introspectionSkipSecret  string
 }
 
 // NewAccessController creates a new AccessController.
 // It returns an error if the introspection auth mode is invalid.
 func NewAccessController(opts AccessControllerOptions) (*AccessController, error) {
-	if !opts.IntrospectionAuthMode.IsValid() {
-		return nil, fmt.Errorf("invalid introspection auth mode: %s", opts.IntrospectionAuthMode)
-	}
-
 	return &AccessController{
-		authenticationRequired:     opts.AuthenticationRequired,
-		authenticators:             opts.Authenticators,
-		introspectionAuthMode:      opts.IntrospectionAuthMode,
-		introspectionAuthSkipToken: opts.IntrospectionAuthSkipToken,
+		authenticationRequired:   opts.AuthenticationRequired,
+		skipIntrospectionQueries: opts.SkipIntrospectionQueries,
+		authenticators:           opts.Authenticators,
+		introspectionSkipSecret:  opts.IntrospectionSkipSecret,
 	}, nil
 }
 
@@ -88,22 +61,27 @@ func (a *AccessController) Access(w http.ResponseWriter, r *http.Request) (*http
 	return r, nil
 }
 
-func (a *AccessController) IntrospectionTokenAccess(r *http.Request, body []byte) bool {
-	if a.introspectionAuthMode == IntrospectionAuthModeToken {
-		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
-			return false
-		}
+func (a *AccessController) IntrospectionSecretConfigured() bool {
+	return a.introspectionSkipSecret != ""
+}
 
-		authHeader = strings.TrimSpace(authHeader)
-
-		// guard to prevent bypass when token is unset
-		if a.introspectionAuthSkipToken == "" {
-			return false
-		}
-
-		return subtle.ConstantTimeCompare([]byte(authHeader), []byte(a.introspectionAuthSkipToken)) == 1
+// IntrospectionAccess is a dedicated access method check specifically for
+// introspection queries.
+// It should only be used when introspection authentication skip is enabled.
+func (a *AccessController) IntrospectionAccess(r *http.Request, body []byte) bool {
+	if !a.skipIntrospectionQueries {
+		return false
 	}
 
-	return false
+	if a.introspectionSkipSecret == "" {
+		return true
+	}
+
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		return false
+	}
+
+	authHeader = strings.TrimSpace(authHeader)
+	return subtle.ConstantTimeCompare([]byte(authHeader), []byte(a.introspectionSkipSecret)) == 1
 }

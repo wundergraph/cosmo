@@ -58,16 +58,25 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 
 	if len(authenticators) > 0 {
 		accessController, err := NewAccessController(AccessControllerOptions{
-			Authenticators:             authenticators,
-			AuthenticationRequired:     cfg.Authorization.RequireAuthentication,
-			IntrospectionAuthMode:      IntrospectionAuthMode(cfg.IntrospectionConfig.AuthenticationMode),
-			IntrospectionAuthSkipToken: cfg.IntrospectionConfig.Token,
+			Authenticators:           authenticators,
+			AuthenticationRequired:   cfg.Authorization.RequireAuthentication,
+			SkipIntrospectionQueries: cfg.Authentication.IgnoreIntrospection,
+			IntrospectionSkipSecret:  cfg.IntrospectionConfig.Secret,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("could not create access controller: %w", err)
 		}
 
 		options = append(options, WithAccessController(accessController))
+	}
+
+	if cfg.Authentication.IgnoreIntrospection && cfg.IntrospectionConfig.Secret == "" {
+		params.Logger.Warn("introspection operations are not authenticated. " +
+			"Consider setting /introspection/secret or set /authentication/ignore_introspection to false. Do not use this in production.")
+	}
+
+	if !cfg.Authentication.IgnoreIntrospection && cfg.IntrospectionConfig.Secret != "" {
+		params.Logger.Warn("/introspection/secret is ignored because /authentication/ignore_introspection is false.")
 	}
 
 	// HTTP_PROXY, HTTPS_PROXY and NO_PROXY

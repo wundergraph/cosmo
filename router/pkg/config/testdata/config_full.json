@@ -461,8 +461,7 @@
   "IntrospectionEnabled": true,
   "IntrospectionConfig": {
     "Enabled": true,
-    "AuthenticationMode": "full",
-    "Token": "AN_EXAMPLE_PLACEHOLDER_TOKEN_ONLY"
+    "Secret": "AN_EXAMPLE_PLACEHOLDER_SECRET_ONLY"
   },
   "QueryPlansEnabled": true,
   "LogLevel": "info",
@@ -529,7 +528,8 @@
           "ValuePrefixes": null
         }
       ]
-    }
+    },
+    "IgnoreIntrospection": false
   },
   "Authorization": {
     "RequireAuthentication": false,

@@ -231,10 +231,6 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.introspection = r.introspectionConfig.Enabled
 	}
 
-	if r.introspectionConfig.AuthenticationMode == config.IntrospectionAuthenticationModeSkip {
-		r.logger.Warn(`Insecure option /introspection/authentication_mode is set to "skip". This should only be used for testing purposes`)
-	}
-
 	if r.instanceID == "" {
 		r.instanceID = nuid.Next()
 	}

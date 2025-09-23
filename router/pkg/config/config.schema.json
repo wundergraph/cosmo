@@ -1376,27 +1376,11 @@
           "description": "",
           "default": true
         },
-        "authentication_mode": {
+        "secret": {
           "type": "string",
-          "enum": ["full", "token", "skip"],
-          "description": "Authentication mode for introspection queries. 'full' requires normal authentication, 'token' requires a specific introspection token, 'skip' bypasses authentication entirely.",
-          "default": "full"
-        },
-        "token": {
-          "type": "string",
-          "description": "Token to authenticate introspection requests. Required when introspection.authentication_mode is set to 'token', ignored otherwise.",
+          "description": "A dedicated secret to authenticate introspection requests independently from the regular authentication. Need to passed by introspection queries via the 'Authorization' header. Works only when authentication.ignore_introspection is true.",
           "minLength": 32
         }
-      },
-      "if": {
-        "properties": {
-          "authentication_mode": {
-            "const": "token"
-          }
-        }
-      },
-      "then": {
-        "required": ["token"]
       }
     },
     "query_plans_enabled": {
@@ -1829,6 +1813,11 @@
               }
             }
           }
+        },
+        "ignore_introspection": {
+          "type": "boolean",
+          "description": "If the value is true, introspection requests not need to be authenticated. The default value is false.",
+          "default": false
         }
       }
     },

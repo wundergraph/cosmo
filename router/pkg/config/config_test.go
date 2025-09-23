@@ -1297,7 +1297,7 @@ authentication:
 func TestValidateIntrospectionAuthConfig(t *testing.T) {
 	t.Parallel()
 
-	t.Run("valid config no token", func(t *testing.T) {
+	t.Run("verify authentication can be skipped for introspection queries", func(t *testing.T) {
 		t.Parallel()
 
 		f := createTempFileFromFixture(t, `
@@ -1305,13 +1305,15 @@ version: "1"
 
 introspection:
   enabled: true
-  authentication_mode: full
+
+authentication:
+  ignore_introspection: true
 `)
 		_, err := LoadConfig([]string{f})
 		require.NoError(t, err)
 	})
 
-	t.Run("valid config with token", func(t *testing.T) {
+	t.Run("verify a secret can be set for introspection query authentication skip", func(t *testing.T) {
 		t.Parallel()
 
 		f := createTempFileFromFixture(t, `
@@ -1319,14 +1321,16 @@ version: "1"
 
 introspection:
   enabled: true
-  authentication_mode: token
-  token: dedicated_secret_for_introspection
+  secret: dedicated_secret_for_introspection
+
+authentication:
+  ignore_introspection: true
 `)
 		_, err := LoadConfig([]string{f})
 		require.NoError(t, err)
 	})
 
-	t.Run("invalid authentication mode", func(t *testing.T) {
+	t.Run("A secret too short is invalid", func(t *testing.T) {
 		t.Parallel()
 
 		f := createTempFileFromFixture(t, `
@@ -1334,39 +1338,13 @@ version: "1"
 
 introspection:
   enabled: true
-  authentication_mode: invalid
+  secret: too_short_token
+
+authentication:
+  ignore_introspection: true
 `)
 		_, err := LoadConfig([]string{f})
-		require.ErrorContains(t, err, "at '/introspection/authentication_mode': value must be one of 'full', 'token', 'skip'")
-	})
-
-	t.Run("no token set when authentication mode is token", func(t *testing.T) {
-		t.Parallel()
-
-		f := createTempFileFromFixture(t, `
-version: "1"
-
-introspection:
-  enabled: true
-  authentication_mode: token
-`)
-		_, err := LoadConfig([]string{f})
-		require.ErrorContains(t, err, "at '/introspection': missing property 'token'")
-	})
-
-	t.Run("token too short", func(t *testing.T) {
-		t.Parallel()
-
-		f := createTempFileFromFixture(t, `
-version: "1"
-
-introspection:
-  enabled: true
-  authentication_mode: token
-  token: too_short_token
-`)
-		_, err := LoadConfig([]string{f})
-		require.ErrorContains(t, err, "at '/introspection/token': minLength: got 15, want 32")
+		require.ErrorContains(t, err, "at '/introspection/secret': minLength: got 15, want 32")
 	})
 }
 

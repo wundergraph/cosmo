@@ -105,23 +105,23 @@ type PreHandler struct {
 }
 
 type httpOperation struct {
-	requestContext   *requestContext
-	body             []byte
-	files            []*httpclient.FileUpload
-	requestLogger    *zap.Logger
-	routerSpan       trace.Span
-	operationMetrics *OperationMetrics
-	traceTimings     *art.TraceTimings
-	authMethod       authenticationMethod
+	requestContext     *requestContext
+	body               []byte
+	files              []*httpclient.FileUpload
+	requestLogger      *zap.Logger
+	routerSpan         trace.Span
+	operationMetrics   *OperationMetrics
+	traceTimings       *art.TraceTimings
+	authenticationPass authenticationPass
 }
 
-type authenticationMethod int
+type authenticationPass int
 
 const (
-	authenticationMethodNone authenticationMethod = iota
-	authenticationMethodNormal
-	authenticationMethodIntrospectionToken
-	authenticationMethodIntrospectionSkip
+	authenticationPassNone authenticationPass = iota
+	authenticationPassNormal
+	authenticationPassIntrospectionSecret
+	authenticationPassSkip
 )
 
 func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
@@ -362,7 +362,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		variablesParser := h.variableParsePool.Get()
 		defer h.variableParsePool.Put(variablesParser)
-		authMethod := authenticationMethodNone
+		authenticationPass := authenticationPassNone
 
 		if h.accessController != nil {
 			_, authenticateSpan := h.tracer.Start(r.Context(), "Authenticate",
@@ -372,33 +372,35 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 			validatedReq, err := h.accessController.Access(w, r)
 			if err != nil {
-				// if introspection auth mode is "full", we abort the request here
-				// since normal authentication failed and is required
-				switch h.accessController.introspectionAuthMode {
-				case IntrospectionAuthModeFull:
+				// Auth failed but but introspection queries might be allowed to skip auth.
+				// At this early stage we don't know wether this query is an introspection query or not.
+				// We verify if the operation is allowed to skip auth, remember the result in authMode and continue.
+				// At a later stage, when we know the operation type, we recall this decision, to either reject or allow
+				// the operation based on wether this is an introspection query or not.
+
+				if !h.accessController.skipIntrospectionQueries {
+					// Reject the request since auth has failed
+					// and skipping auth for introspection queries is not allowed,
+					// so it does not matter wether this is an introspection query or not.
 					h.handleAuthenticationFailure(requestContext, requestLogger, err, routerSpan, authenticateSpan, r, w)
 					authenticateSpan.End()
 					return
+				}
 
-				case IntrospectionAuthModeToken:
-					// if introspection auth mode is "token", we fallback to static token auth
-					// and abort the request if this fails, too. If it succeeds, we remember this in the request context
-					// for when we can identify the operation as an introspection query,
-					// to decide there wether to abort the request or not.
-					if !h.accessController.IntrospectionTokenAccess(r, body) {
+				if h.accessController.IntrospectionSecretConfigured() {
+					if !h.accessController.IntrospectionAccess(r, body) {
 						h.handleAuthenticationFailure(requestContext, requestLogger, err, routerSpan, authenticateSpan, r, w)
 						authenticateSpan.End()
 						return
 					}
-					authMethod = authenticationMethodIntrospectionToken
-
-				case IntrospectionAuthModeSkip:
-					authMethod = authenticationMethodIntrospectionSkip
+					authenticationPass = authenticationPassIntrospectionSecret
+				} else {
+					authenticationPass = authenticationPassSkip
 				}
 			} else {
 				r = validatedReq
 				requestContext.expressionContext.Request.Auth = expr.LoadAuth(r.Context())
-				authMethod = authenticationMethodNormal
+				authenticationPass = authenticationPassNormal
 			}
 
 			authenticateSpan.End()
@@ -437,14 +439,14 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		}
 
 		err = h.handleOperation(w, r, variablesParser, &httpOperation{
-			requestContext:   requestContext,
-			requestLogger:    requestLogger,
-			routerSpan:       routerSpan,
-			operationMetrics: metrics,
-			traceTimings:     traceTimings,
-			files:            files,
-			body:             body,
-			authMethod:       authMethod,
+			requestContext:     requestContext,
+			requestLogger:      requestLogger,
+			routerSpan:         routerSpan,
+			operationMetrics:   metrics,
+			traceTimings:       traceTimings,
+			files:              files,
+			body:               body,
+			authenticationPass: authenticationPass,
 		})
 		if err != nil {
 			requestContext.SetError(err)
@@ -686,7 +688,7 @@ func (h *PreHandler) handleOperation(w http.ResponseWriter, req *http.Request, v
 		}
 
 		// non-introspection queries are only allowed when authenticated via normal authentication
-		if !isIntrospection && httpOperation.authMethod != authenticationMethodNormal {
+		if !isIntrospection && httpOperation.authenticationPass != authenticationPassNormal {
 			return &httpGraphqlError{
 				message:    "unauthorized",
 				statusCode: http.StatusUnauthorized,
@@ -696,9 +698,9 @@ func (h *PreHandler) handleOperation(w http.ResponseWriter, req *http.Request, v
 		// introspection queries are only allowed when authenticated normally or via dedicated token, or when auth skip is enabled
 		// note: httpOperation.authMethod is only set when authentication is successful and the config allows such authentication.
 		if isIntrospection &&
-			httpOperation.authMethod != authenticationMethodNormal &&
-			httpOperation.authMethod != authenticationMethodIntrospectionToken &&
-			httpOperation.authMethod != authenticationMethodIntrospectionSkip {
+			httpOperation.authenticationPass != authenticationPassNormal &&
+			httpOperation.authenticationPass != authenticationPassIntrospectionSecret &&
+			httpOperation.authenticationPass != authenticationPassSkip {
 			return &httpGraphqlError{
 				message:    "unauthorized",
 				statusCode: http.StatusUnauthorized,

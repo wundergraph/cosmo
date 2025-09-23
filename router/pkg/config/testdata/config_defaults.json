@@ -230,8 +230,7 @@
   "IntrospectionEnabled": true,
   "IntrospectionConfig": {
     "Enabled": true,
-    "AuthenticationMode": "full",
-    "Token": ""
+    "Secret": ""
   },
   "QueryPlansEnabled": true,
   "LogLevel": "info",
@@ -251,7 +250,8 @@
       "HeaderName": "Authorization",
       "HeaderValuePrefix": "Bearer",
       "HeaderSources": null
-    }
+    },
+    "IgnoreIntrospection": false
   },
   "Authorization": {
     "RequireAuthentication": false,
