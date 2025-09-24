@@ -2251,7 +2251,7 @@ func TestWebSockets(t *testing.T) {
 			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
 				ID:   "1",
 				Type: "subscribe",
-				Payload: []byte(fmt.Sprintf(`{
+				Payload: fmt.Appendf(nil, `{
 					"query": "%s",
 					"extensions": {
 						"persistedQuery": {
@@ -2259,7 +2259,7 @@ func TestWebSockets(t *testing.T) {
 							"sha256Hash": "%s"
 						}
 					}
-				}`, query1, hashOfQuery2)),
+				}`, query1, hashOfQuery2),
 			})
 			require.NoError(t, err)
 
