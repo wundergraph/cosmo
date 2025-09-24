@@ -59,7 +59,6 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 			// We use type assertion to check for the CloseSubscription method without importing core
 			if hookErr, ok := err.(ErrorWithCloseSubscription); ok && hookErr.CloseSubscription() {
 				s.eventUpdater.CloseSubscription(resolve.SubscriptionCloseKindNormal, subId)
-				return
 			}
 		}
 	}

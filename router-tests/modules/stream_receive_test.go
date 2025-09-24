@@ -428,10 +428,7 @@ func TestReceiveHook(t *testing.T) {
 				require.NoError(t, err)
 			}, "client should have completed when server closed connection")
 
-			// Verify that Kafka connections are also closed by checking for "poller canceled" log messages
-			// The Kafka adapter logs this when connections are closed due to context cancellation
-			kafkaPollerLogs := xEnv.Observer().FilterMessage("poller error")
-			assert.GreaterOrEqual(t, len(kafkaPollerLogs.All()), 1, "Expected at least one Kafka poller to be canceled")
+			xEnv.WaitForTriggerCount(0, Timeout)
 		})
 	})
 }
