@@ -2246,7 +2246,6 @@ func TestWebSockets(t *testing.T) {
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, []byte(`{"graphql-client-name": "my-client"}`))
 
 			query1 := "subscription { employeeUpdated(employeeID: 3) { id } }"
-			query2 := "subscription { currentTime { unixTime } }"
 			hashOfQuery2 := "6e94d99132b544a0d7522696a7d35643d56a26c7b8c2e0df29e2b9935636628c"
 
 			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
@@ -2276,15 +2275,14 @@ func TestWebSockets(t *testing.T) {
 			err = testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
 				ID:   "2",
 				Type: "subscribe",
-				Payload: []byte(fmt.Sprintf(`{
-					"query": "%s",
+				Payload: fmt.Appendf(nil, `{
 					"extensions": {
 						"persistedQuery": {
 							"version": 1,
 							"sha256Hash": "%s"
 						}
 					}
-				}`, query2, hashOfQuery2)),
+				}`, hashOfQuery2),
 			})
 			require.NoError(t, err)
 
