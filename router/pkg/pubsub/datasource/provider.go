@@ -58,6 +58,7 @@ const (
 // there could be other common fields in the future, but for now we only have data
 type StreamEvent interface {
 	GetData() []byte
+	Clone() StreamEvent
 }
 
 // SubscriptionEventConfiguration is the interface that all subscription event configurations must implement

@@ -19,6 +19,11 @@ func (e *testEvent) GetData() []byte {
 	return e.data
 }
 
+func (e *testEvent) Clone() StreamEvent {
+	e2 := *e
+	return &e2
+}
+
 type testSubscriptionConfig struct {
 	providerID   string
 	providerType ProviderType

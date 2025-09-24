@@ -114,22 +114,9 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 					return
 				}
 				log.Debug("subscription update", zap.String("message_channel", msg.Channel), zap.String("data", msg.Payload))
-				updateErr := updater.Update([]datasource.StreamEvent{&Event{
+				updater.Update([]datasource.StreamEvent{&Event{
 					Data: []byte(msg.Payload),
 				}})
-				if updateErr != nil {
-					log.Error(
-						"error updating subscription, stopping subscription",
-						zap.Error(updateErr),
-						zap.String("message_channel", msg.Channel),
-						zap.String("provider_id", conf.ProviderID()),
-						zap.String("provider_type", string(conf.ProviderType())),
-						zap.String("field_name", conf.RootFieldName()),
-					)
-					// If the error is not recoverable, we stop the subscription
-					cleanup()
-					return
-				}
 			case <-p.ctx.Done():
 				// When the application context is done, we stop the subscription if it is not already done
 				log.Debug("application context done, stopping subscription")

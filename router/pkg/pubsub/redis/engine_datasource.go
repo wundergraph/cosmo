@@ -23,6 +23,11 @@ func (e *Event) GetData() []byte {
 	return e.Data
 }
 
+func (e *Event) Clone() datasource.StreamEvent {
+	e2 := *e
+	return &e2
+}
+
 // SubscriptionEventConfiguration contains configuration for subscription events
 type SubscriptionEventConfiguration struct {
 	Provider  string   `json:"providerId"`

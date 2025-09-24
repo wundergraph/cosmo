@@ -24,6 +24,11 @@ func (e *Event) GetData() []byte {
 	return e.Data
 }
 
+func (e *Event) Clone() datasource.StreamEvent {
+	e2 := *e
+	return &e2
+}
+
 type StreamConfiguration struct {
 	Consumer                  string `json:"consumer"`
 	ConsumerInactiveThreshold int32  `json:"consumerInactiveThreshold"`

@@ -41,7 +41,7 @@ func (s *PubSubSubscriptionDataSource[C]) Start(ctx *resolve.Context, input []by
 		return errors.New("invalid subscription configuration")
 	}
 
-	return s.pubSub.Subscribe(ctx.Context(), conf, NewSubscriptionEventUpdater(ctx.Context(), conf, s.hooks, updater, s.logger))
+	return s.pubSub.Subscribe(ctx.Context(), conf, NewSubscriptionEventUpdater(conf, s.hooks, updater, s.logger))
 }
 
 func (s *PubSubSubscriptionDataSource[C]) SubscriptionOnStart(ctx resolve.StartupHookContext, input []byte) (err error) {

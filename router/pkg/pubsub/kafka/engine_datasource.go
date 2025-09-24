@@ -25,6 +25,11 @@ func (e *Event) GetData() []byte {
 	return e.Data
 }
 
+func (e *Event) Clone() datasource.StreamEvent {
+	e2 := *e
+	return &e2
+}
+
 // SubscriptionEventConfiguration is a public type that is used to allow access to custom fields
 // of the provider
 type SubscriptionEventConfiguration struct {
@@ -163,7 +168,7 @@ func (s *PublishDataSource) Load(ctx context.Context, input []byte, out *bytes.B
 
 	if err := s.pubSub.Publish(ctx, publishData.PublishEventConfiguration(), []datasource.StreamEvent{&publishData.Event}); err != nil {
 		// err will not be returned but only logged inside PubSubProvider.Publish to avoid a "unable to fetch from subgraph" error
-		_, errWrite := io.WriteString(out, `{"success": false}`)		
+		_, errWrite := io.WriteString(out, `{"success": false}`)
 		return errWrite
 	}
 	_, errWrite := io.WriteString(out, `{"success": true}`)

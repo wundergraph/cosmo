@@ -135,6 +135,11 @@ func (e *EngineEvent) GetData() []byte {
 	return e.Data
 }
 
+func (e *EngineEvent) Clone() datasource.StreamEvent {
+	e2 := *e
+	return &e2
+}
+
 type engineSubscriptionOnStartHookContext struct {
 	request        *http.Request
 	logger         *zap.Logger

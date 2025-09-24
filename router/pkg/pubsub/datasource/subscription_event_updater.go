@@ -11,7 +11,7 @@ import (
 // that provides a way to send the event struct instead of the raw data
 // It is used to give access to the event additional fields to the hooks.
 type SubscriptionEventUpdater interface {
-	Update(events []StreamEvent) error
+	Update(events []StreamEvent)
 	Complete()
 	Close(kind resolve.SubscriptionCloseKind)
 	SetHooks(hooks Hooks)
@@ -19,50 +19,50 @@ type SubscriptionEventUpdater interface {
 
 type subscriptionEventUpdater struct {
 	eventUpdater                   resolve.SubscriptionUpdater
-	ctx                            context.Context
 	subscriptionEventConfiguration SubscriptionEventConfiguration
 	hooks                          Hooks
 	logger                         *zap.Logger
 }
 
-func (s *subscriptionEventUpdater) updateEvents(events []StreamEvent) {
-	for _, event := range events {
-		s.eventUpdater.Update(event.GetData())
-	}
-}
-
-func (s *subscriptionEventUpdater) Update(events []StreamEvent) error {
+func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 	if len(s.hooks.OnReceiveEvents) == 0 {
-		s.updateEvents(events)
-		return nil
+		for _, event := range events {
+			s.eventUpdater.Update(event.GetData())
+		}
+		return
 	}
-
-	processedEvents, err := applyStreamEventHooks(s.ctx, s.subscriptionEventConfiguration, events, s.hooks.OnReceiveEvents)
-	// updates the events even if the hooks fail
-	// if a hook doesn't want to send the events, it should return no events!
-	s.updateEvents(processedEvents)
-	if err != nil {
-		// Check if the error is a StreamHookError and should close the subscription
-		// We use type assertion to check for the CloseSubscription method without importing core
-		if hookErr, ok := err.(ErrorWithCloseSubscription); ok {
-			if hookErr.CloseSubscription() {
-				// If CloseSubscription is true, return the error to close the subscription
-				return err
+	// If there are hooks, we should apply them separated for each subscription
+	for ctx, subId := range s.eventUpdater.Subscriptions() {
+		processedEvents, err := applyStreamEventHooks(
+			ctx,
+			s.subscriptionEventConfiguration,
+			events,
+			s.hooks.OnReceiveEvents,
+		)
+		// updates the events even if the hooks fail
+		// if a hook doesn't want to send the events, it should return no events!
+		for _, event := range processedEvents {
+			s.eventUpdater.UpdateSubscription(subId, event.GetData())
+		}
+		if err != nil {
+			// For all errors, log them
+			if s.logger != nil {
+				s.logger.Error(
+					"An error occurred while processing stream events hooks",
+					zap.Error(err),
+					zap.String("provider_type", string(s.subscriptionEventConfiguration.ProviderType())),
+					zap.String("provider_id", s.subscriptionEventConfiguration.ProviderID()),
+					zap.String("field_name", s.subscriptionEventConfiguration.RootFieldName()),
+				)
+			}
+			// Check if the error is a StreamHookError and should close the subscription
+			// We use type assertion to check for the CloseSubscription method without importing core
+			if hookErr, ok := err.(ErrorWithCloseSubscription); ok && hookErr.CloseSubscription() {
+				s.eventUpdater.CloseSubscription(resolve.SubscriptionCloseKindNormal, subId)
+				return
 			}
 		}
-		// For all other errors, just log them and continue
-		if s.logger != nil {
-			s.logger.Error(
-				"An error occurred while processing stream events hooks",
-				zap.Error(err),
-				zap.String("provider_type", string(s.subscriptionEventConfiguration.ProviderType())),
-				zap.String("provider_id", s.subscriptionEventConfiguration.ProviderID()),
-				zap.String("field_name", s.subscriptionEventConfiguration.RootFieldName()),
-			)
-		}
 	}
-
-	return nil
 }
 
 func (s *subscriptionEventUpdater) Complete() {
@@ -84,7 +84,13 @@ func applyStreamEventHooks(
 	cfg SubscriptionEventConfiguration,
 	events []StreamEvent,
 	hooks []OnReceiveEventsFn) ([]StreamEvent, error) {
-	currentEvents := events
+	// Copy the events to avoid modifying the original slice
+	currentEvents := make([]StreamEvent, len(events), len(events))
+	for i, event := range events {
+		currentEvents[i] = event.Clone()
+	}
+	// Apply each hook in sequence, passing the result of one as the input to the next
+	// If any hook returns an error, stop processing and return the error
 	for _, hook := range hooks {
 		var err error
 		currentEvents, err = hook(ctx, cfg, currentEvents)
@@ -96,14 +102,12 @@ func applyStreamEventHooks(
 }
 
 func NewSubscriptionEventUpdater(
-	ctx context.Context,
 	cfg SubscriptionEventConfiguration,
 	hooks Hooks,
 	eventUpdater resolve.SubscriptionUpdater,
 	logger *zap.Logger,
 ) SubscriptionEventUpdater {
 	return &subscriptionEventUpdater{
-		ctx:                            ctx,
 		subscriptionEventConfiguration: cfg,
 		hooks:                          hooks,
 		eventUpdater:                   eventUpdater,

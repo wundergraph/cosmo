@@ -9,13 +9,17 @@ import (
 	"github.com/hasura/go-graphql-client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	integration "github.com/wundergraph/cosmo/router-tests"
 	"github.com/wundergraph/cosmo/router-tests/events"
+	"github.com/wundergraph/cosmo/router-tests/jwks"
 	stream_receive "github.com/wundergraph/cosmo/router-tests/modules/stream-receive"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
+	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
+	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -204,10 +208,14 @@ func TestReceiveHook(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
+
 			Modules: map[string]interface{}{
 				"streamReceiveModule": stream_receive.StreamReceiveModule{
 					Callback: func(ctx core.StreamReceiveEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
-						if hdr, ok := ctx.Request().Header[http.CanonicalHeaderKey("x-custom-header")]; ok && hdr[0] == "dont-change" {
+						if ctx.Authentication() == nil {
+							return events, nil
+						}
+						if val, ok := ctx.Authentication().Claims()["sub"]; !ok || val != "user-2" {
 							return events, nil
 						}
 						for _, event := range events {
@@ -224,12 +232,32 @@ func TestReceiveHook(t *testing.T) {
 			},
 		}
 
+		authServer, err := jwks.NewServer(t)
+		require.NoError(t, err)
+		defer authServer.Close()
+
+		JwksName := "my-jwks-server"
+
+		tokenDecoder, _ := authentication.NewJwksTokenDecoder(integration.NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{{
+			URL:             authServer.JWKSURL(),
+			RefreshInterval: time.Second * 5,
+		}})
+		jwksOpts := authentication.HttpHeaderAuthenticatorOptions{
+			Name:         JwksName,
+			TokenDecoder: tokenDecoder,
+		}
+
+		authenticator, err := authentication.NewHttpHeaderAuthenticator(jwksOpts)
+		require.NoError(t, err)
+		authenticators := []authentication.Authenticator{authenticator}
+
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 			EnableKafka:              true,
 			RouterOptions: []core.Option{
 				core.WithModulesConfig(cfg.Modules),
 				core.WithCustomModules(&stream_receive.StreamReceiveModule{}),
+				core.WithAccessController(core.NewAccessController(authenticators, false)),
 			},
 			LogObservation: testenv.LogObservationConfig{
 				Enabled:  true,
@@ -249,13 +277,20 @@ func TestReceiveHook(t *testing.T) {
 				} `graphql:"employeeUpdatedMyKafka(employeeID: 3)"`
 			}
 
+			token, err := authServer.Token(map[string]interface{}{
+				"sub": "user-2",
+			})
+			require.NoError(t, err)
+
+			headers := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+
 			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
 			client2 := graphql.NewSubscriptionClient(surl)
 			client2.WithWebSocketOptions(graphql.WebsocketOptions{
-				HTTPHeader: http.Header{
-					http.CanonicalHeaderKey("x-custom-header"): []string{"dont-change"},
-				},
+				HTTPHeader: headers,
 			})
 
 			subscriptionArgsCh := make(chan kafkaSubscriptionArgs)
@@ -275,7 +310,7 @@ func TestReceiveHook(t *testing.T) {
 			}()
 
 			subscriptionArgsCh2 := make(chan kafkaSubscriptionArgs)
-			subscriptionTwoID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
+			subscriptionTwoID, err := client2.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
 				subscriptionArgsCh2 <- kafkaSubscriptionArgs{
 					dataValue: dataValue,
 					errValue:  errValue,
@@ -296,26 +331,30 @@ func TestReceiveHook(t *testing.T) {
 
 			testenv.AwaitChannelWithT(t, Timeout, subscriptionArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
-				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(args.dataValue))
+				assert.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
 			})
 
 			testenv.AwaitChannelWithT(t, Timeout, subscriptionArgsCh2, func(t *testing.T, args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
-				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
+				assert.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(args.dataValue))
 			})
 
+			unSub1Err := client.Unsubscribe(subscriptionOneID)
+			require.NoError(t, unSub1Err)
 			require.NoError(t, client.Close())
 			testenv.AwaitChannelWithT(t, Timeout, clientRunCh, func(t *testing.T, err error) {
 				require.NoError(t, err)
 			}, "unable to close client before timeout")
 
+			unSub2Err := client2.Unsubscribe(subscriptionTwoID)
+			require.NoError(t, unSub2Err)
 			require.NoError(t, client2.Close())
-			testenv.AwaitChannelWithT(t, Timeout, clientRunCh, func(t *testing.T, err error) {
+			testenv.AwaitChannelWithT(t, Timeout, clientRunCh2, func(t *testing.T, err error) {
 				require.NoError(t, err)
 			}, "unable to close client before timeout")
 
 			requestLog := xEnv.Observer().FilterMessage("Stream Hook has been run")
-			assert.Len(t, requestLog.All(), 1)
+			assert.Len(t, requestLog.All(), 2)
 		})
 	})
 
