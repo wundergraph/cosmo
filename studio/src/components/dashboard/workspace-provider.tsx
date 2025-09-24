@@ -59,12 +59,14 @@ export function WorkspaceProvider({ children }: React.PropsWithChildren) {
 
   // Memoize context components
   const currentNamespace= useMemo(
-    () => data?.namespaces.find((wns) => wns.name === namespace) ?? new WorkspaceNamespace({
-      id: '',
-      name: DEFAULT_NAMESPACE_NAME,
-      graphs: [],
-    }),
-    [data?.namespaces, namespace],
+    () => isLoading
+      ? new WorkspaceNamespace({ id: '', name: namespace, graphs: [] })
+      : data?.namespaces.find((wns) => wns.name === namespace) ?? new WorkspaceNamespace({
+        id: '',
+        name: DEFAULT_NAMESPACE_NAME,
+        graphs: [],
+      }),
+    [isLoading, data?.namespaces, namespace],
   );
 
   const namespaceByName = useMemo(
