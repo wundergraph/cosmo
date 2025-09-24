@@ -154,7 +154,6 @@ describe('Router Configuration tests', () => {
 
     test('that the router configuration for family.graphql is correctly generated', () => {
       const result = normalizeSubgraphSuccess(family, ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
       const configurationDataMap = result.configurationDataByTypeName;
       expect(configurationDataMap).toStrictEqual(
         new Map<string, ConfigurationData>([
@@ -253,7 +252,6 @@ describe('Router Configuration tests', () => {
 
     test('that the router configuration for hobbies.graphql is correctly generated', () => {
       const result = normalizeSubgraphSuccess(hobbies, ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
       const configurationDataMap = result.configurationDataByTypeName;
       expect(configurationDataMap).toStrictEqual(
         new Map<string, ConfigurationData>([
@@ -337,7 +335,6 @@ describe('Router Configuration tests', () => {
 
     test('that the router configuration for products.graphql is correctly generated', () => {
       const result = normalizeSubgraphSuccess(products, ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
       const configurationDataMap = result.configurationDataByTypeName;
       expect(configurationDataMap).toStrictEqual(
         new Map<string, ConfigurationData>([
@@ -422,7 +419,6 @@ describe('Router Configuration tests', () => {
 
     test('that FieldSet configuration is generated', () => {
       const result = normalizeSubgraphSuccess(subgraphA, ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
       const configurationDataMap = result.configurationDataByTypeName;
       expect(configurationDataMap).toStrictEqual(
         new Map<string, ConfigurationData>([
@@ -478,7 +474,6 @@ describe('Router Configuration tests', () => {
 
     test('that entity interfaces produce the correct configuration', () => {
       const result = normalizeSubgraphSuccess(subgraphB, ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
       expect(result.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
@@ -507,7 +502,6 @@ describe('Router Configuration tests', () => {
 
     test('that interface objects produce the correct configuration', () => {
       const result = normalizeSubgraphSuccess(subgraphC, ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
       expect(result.configurationDataByTypeName).toStrictEqual(
         new Map<string, ConfigurationData>([
           [
@@ -527,7 +521,6 @@ describe('Router Configuration tests', () => {
 
     test('that nested external fields that are part of a key FieldSet are added to configuration', () => {
       const result = normalizeSubgraphSuccess(subgraphD, ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
       const configurationData = result.configurationDataByTypeName;
       expect(configurationData).toStrictEqual(
         new Map<string, ConfigurationData>([
