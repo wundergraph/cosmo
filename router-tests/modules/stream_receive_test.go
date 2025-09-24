@@ -364,7 +364,7 @@ func TestReceiveHook(t *testing.T) {
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
-				"streamBatchModule": stream_receive.StreamReceiveModule{
+				"streamReceiveModule": stream_receive.StreamReceiveModule{
 					Callback: func(ctx core.StreamReceiveEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
 						return nil, &errorWithCloseSubscription{err: errors.New("test error from streamevents hook")}
 					},
