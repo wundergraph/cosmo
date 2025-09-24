@@ -14,7 +14,7 @@ test: test-deps
 	gotestsum -f $(FORMAT) -- -ldflags=-extldflags=-Wl,-ld_classic $(test_params) -race $(test_target)
 
 update-snapshot:
-	go test -update -race $(test_target)
+	GOLDIE_UPDATE=1 go test -race $(test_target)
 
 test-fresh: clean-testcache test
 

@@ -176,6 +176,47 @@
               "deprecationReason": null
             },
             {
+              "name": "findEmployeesBy",
+              "description": "",
+              "args": [
+                {
+                  "name": "criteria",
+                  "description": "",
+                  "type": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "INPUT_OBJECT",
+                      "name": "FindEmployeeCriteria",
+                      "ofType": null
+                    }
+                  },
+                  "defaultValue": null,
+                  "isDeprecated": false,
+                  "deprecationReason": null
+                }
+              ],
+              "type": {
+                "kind": "NON_NULL",
+                "name": null,
+                "ofType": {
+                  "kind": "LIST",
+                  "name": null,
+                  "ofType": {
+                    "kind": "NON_NULL",
+                    "name": null,
+                    "ofType": {
+                      "kind": "OBJECT",
+                      "name": "Employee",
+                      "ofType": null
+                    }
+                  }
+                }
+              },
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "findEmployees",
               "description": "This is a GraphQL query that retrieves a list of employees.",
               "args": [
@@ -2356,6 +2397,53 @@
             }
           ],
           "inputFields": [],
+          "interfaces": [],
+          "enumValues": null,
+          "possibleTypes": []
+        },
+        {
+          "kind": "INPUT_OBJECT",
+          "name": "FindEmployeeCriteria",
+          "description": "",
+          "fields": null,
+          "inputFields": [
+            {
+              "name": "id",
+              "description": "",
+              "type": {
+                "kind": "SCALAR",
+                "name": "Int",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "department",
+              "description": "",
+              "type": {
+                "kind": "ENUM",
+                "name": "Department",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "title",
+              "description": "",
+              "type": {
+                "kind": "SCALAR",
+                "name": "String",
+                "ofType": null
+              },
+              "defaultValue": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
           "interfaces": [],
           "enumValues": null,
           "possibleTypes": []
@@ -17328,6 +17416,14 @@
               "deprecationReason": null
             }
           ]
+        },
+        {
+          "name": "oneOf",
+          "description": "The @oneOf built-in directive marks an input object as a OneOf Input Object.\nExactly one field must be provided and its value must be non-null at runtime.\nAll fields defined within a @oneOf input must be nullable in the schema.",
+          "locations": [
+            "INPUT_OBJECT"
+          ],
+          "args": []
         }
       ]
     }

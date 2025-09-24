@@ -31,6 +31,7 @@ type Query {
   products: [Products!]!
   teammates(team: Department!): [Employee!]!
   firstEmployee: Employee! @tag(name: "internal")
+  findEmployeesBy(criteria: FindEmployeeCriteria!): [Employee!]!
 }
 
 scalar Upload
@@ -187,4 +188,10 @@ type SDK implements IProduct @key(fields: "upc") {
   engineers: [Employee!]!
   owner: Employee!
   unicode: String!
+}
+
+input FindEmployeeCriteria @oneOf {
+    id: Int
+    department: Department
+    title: String
 }
