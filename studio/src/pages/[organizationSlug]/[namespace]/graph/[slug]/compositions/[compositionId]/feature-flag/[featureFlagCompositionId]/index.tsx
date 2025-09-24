@@ -13,12 +13,14 @@ import { Button } from "@/components/ui/button";
 import { CompositionDetails } from "../..";
 import { getCompositionDetails } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { useQuery } from "@connectrpc/connect-query";
+import { useWorkspace } from "@/hooks/use-workspace";
+import { useCurrentOrganization } from "@/hooks/use-current-organization";
 
 const FeatureFlagCompositionDetailsPage: NextPageWithLayout = () => {
   const router = useRouter();
 
-  const organizationSlug = router.query.organizationSlug as string;
-  const namespace = router.query.namespace as string;
+  const organizationSlug = useCurrentOrganization()?.slug;
+  const { namespace: { name: namespace } } = useWorkspace();
   const slug = router.query.slug as string;
   const id = router.query.compositionId as string;
   const featureFlagCompositionId = router.query

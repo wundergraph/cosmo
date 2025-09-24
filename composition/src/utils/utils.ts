@@ -9,11 +9,13 @@ import {
   INPUT_VALUE,
   INT_SCALAR,
   INTERFACE,
+  LEVELS,
   NULL,
   OBJECT,
   REQUIRES_SCOPES,
   SCALAR,
   SCOPES,
+  SEMANTIC_NON_NULL,
   STRING_SCALAR,
   UNION,
 } from './string-constants';
@@ -191,6 +193,31 @@ export function generateRequiresScopesDirective(orScopes: Set<string>[]): ConstD
   };
 }
 
+export function generateSemanticNonNullDirective(levels: Set<number>): ConstDirectiveNode {
+  const sortedLevels = Array.from(levels).sort((a, b) => a - b);
+  const values = new Array<ConstValueNode>();
+  for (const level of sortedLevels) {
+    values.push({
+      kind: Kind.INT,
+      value: level.toString(),
+    });
+  }
+  return {
+    kind: Kind.DIRECTIVE,
+    name: stringToNameNode(SEMANTIC_NON_NULL),
+    arguments: [
+      {
+        kind: Kind.ARGUMENT,
+        name: stringToNameNode(LEVELS),
+        value: {
+          kind: Kind.LIST,
+          values,
+        },
+      },
+    ],
+  };
+}
+
 // shallow copy
 export function copyObjectValueMap<K, V>(source: Map<K, V>): Map<K, V> {
   const output = new Map<K, V>();
@@ -221,8 +248,8 @@ export function addMapEntries<K, V>(source: Map<K, V>, target: Map<K, V>) {
   }
 }
 
-export function getSingleSetEntry<T>(set: Set<T>): T | undefined {
-  const { value, done } = set.values().next();
+export function getFirstEntry<K, V>(hashSet: Set<V> | Map<K, V>): V | undefined {
+  const { value, done } = hashSet.values().next();
   if (done) {
     return;
   }

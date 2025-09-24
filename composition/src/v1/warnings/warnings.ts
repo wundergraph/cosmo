@@ -1,5 +1,6 @@
 import { Warning } from '../../warnings/types';
 import { QUOTATION_JOIN } from '../../utils/string-constants';
+import { SingleFederatedInputFieldOneOfWarningParams, SingleSubgraphInputFieldOneOfWarningParams } from './params';
 
 export function invalidOverrideTargetSubgraphNameWarning(
   targetSubgraphName: string,
@@ -166,6 +167,38 @@ export function fieldAlreadyProvidedWarning(
       ` reasons and are not internally considered "@external".`,
     subgraph: {
       name: subgraphName,
+    },
+  });
+}
+
+export function singleSubgraphInputFieldOneOfWarning({
+  fieldName,
+  subgraphName,
+  typeName,
+}: SingleSubgraphInputFieldOneOfWarningParams): Warning {
+  return new Warning({
+    message:
+      `The directive "@oneOf" is defined on Input Object "${typeName}"` +
+      `, but only one optional Input field, "${fieldName}", is defined.` +
+      ` Consider removing "@oneOf" and changing "${fieldName}" to a required type instead.`,
+    subgraph: {
+      name: subgraphName,
+    },
+  });
+}
+
+export function singleFederatedInputFieldOneOfWarning({
+  fieldName,
+  typeName,
+}: SingleFederatedInputFieldOneOfWarningParams): Warning {
+  return new Warning({
+    message:
+      `The directive "@oneOf" is defined on Input Object "${typeName}"` +
+      `, but only one optional Input field, "${fieldName}", is propagated to` +
+      ` the federated graph. Consider removing "@oneOf", changing "${fieldName}"` +
+      ` to a required type, and removing any other remaining optional Input fields instead.`,
+    subgraph: {
+      name: '',
     },
   });
 }

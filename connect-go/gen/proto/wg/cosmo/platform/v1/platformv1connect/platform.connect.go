@@ -62,6 +62,9 @@ const (
 	// PlatformServiceGetNamespaceProcedure is the fully-qualified name of the PlatformService's
 	// GetNamespace RPC.
 	PlatformServiceGetNamespaceProcedure = "/wg.cosmo.platform.v1.PlatformService/GetNamespace"
+	// PlatformServiceGetWorkspaceProcedure is the fully-qualified name of the PlatformService's
+	// GetWorkspace RPC.
+	PlatformServiceGetWorkspaceProcedure = "/wg.cosmo.platform.v1.PlatformService/GetWorkspace"
 	// PlatformServiceCreateContractProcedure is the fully-qualified name of the PlatformService's
 	// CreateContract RPC.
 	PlatformServiceCreateContractProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateContract"
@@ -549,6 +552,7 @@ var (
 	platformServiceRenameNamespaceMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("RenameNamespace")
 	platformServiceGetNamespacesMethodDescriptor                         = platformServiceServiceDescriptor.Methods().ByName("GetNamespaces")
 	platformServiceGetNamespaceMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("GetNamespace")
+	platformServiceGetWorkspaceMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("GetWorkspace")
 	platformServiceCreateContractMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("CreateContract")
 	platformServiceUpdateContractMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("UpdateContract")
 	platformServiceMoveFederatedGraphMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("MoveFederatedGraph")
@@ -722,6 +726,8 @@ type PlatformServiceClient interface {
 	RenameNamespace(context.Context, *connect.Request[v1.RenameNamespaceRequest]) (*connect.Response[v1.RenameNamespaceResponse], error)
 	GetNamespaces(context.Context, *connect.Request[v1.GetNamespacesRequest]) (*connect.Response[v1.GetNamespacesResponse], error)
 	GetNamespace(context.Context, *connect.Request[v1.GetNamespaceRequest]) (*connect.Response[v1.GetNamespaceResponse], error)
+	// Workspace
+	GetWorkspace(context.Context, *connect.Request[v1.GetWorkspaceRequest]) (*connect.Response[v1.GetWorkspaceResponse], error)
 	// Contracts
 	CreateContract(context.Context, *connect.Request[v1.CreateContractRequest]) (*connect.Response[v1.CreateContractResponse], error)
 	UpdateContract(context.Context, *connect.Request[v1.UpdateContractRequest]) (*connect.Response[v1.UpdateContractResponse], error)
@@ -1091,6 +1097,12 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			httpClient,
 			baseURL+PlatformServiceGetNamespaceProcedure,
 			connect.WithSchema(platformServiceGetNamespaceMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getWorkspace: connect.NewClient[v1.GetWorkspaceRequest, v1.GetWorkspaceResponse](
+			httpClient,
+			baseURL+PlatformServiceGetWorkspaceProcedure,
+			connect.WithSchema(platformServiceGetWorkspaceMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		createContract: connect.NewClient[v1.CreateContractRequest, v1.CreateContractResponse](
@@ -2062,6 +2074,7 @@ type platformServiceClient struct {
 	renameNamespace                       *connect.Client[v1.RenameNamespaceRequest, v1.RenameNamespaceResponse]
 	getNamespaces                         *connect.Client[v1.GetNamespacesRequest, v1.GetNamespacesResponse]
 	getNamespace                          *connect.Client[v1.GetNamespaceRequest, v1.GetNamespaceResponse]
+	getWorkspace                          *connect.Client[v1.GetWorkspaceRequest, v1.GetWorkspaceResponse]
 	createContract                        *connect.Client[v1.CreateContractRequest, v1.CreateContractResponse]
 	updateContract                        *connect.Client[v1.UpdateContractRequest, v1.UpdateContractResponse]
 	moveFederatedGraph                    *connect.Client[v1.MoveGraphRequest, v1.MoveGraphResponse]
@@ -2265,6 +2278,11 @@ func (c *platformServiceClient) GetNamespaces(ctx context.Context, req *connect.
 // GetNamespace calls wg.cosmo.platform.v1.PlatformService.GetNamespace.
 func (c *platformServiceClient) GetNamespace(ctx context.Context, req *connect.Request[v1.GetNamespaceRequest]) (*connect.Response[v1.GetNamespaceResponse], error) {
 	return c.getNamespace.CallUnary(ctx, req)
+}
+
+// GetWorkspace calls wg.cosmo.platform.v1.PlatformService.GetWorkspace.
+func (c *platformServiceClient) GetWorkspace(ctx context.Context, req *connect.Request[v1.GetWorkspaceRequest]) (*connect.Response[v1.GetWorkspaceResponse], error) {
+	return c.getWorkspace.CallUnary(ctx, req)
 }
 
 // CreateContract calls wg.cosmo.platform.v1.PlatformService.CreateContract.
@@ -3103,6 +3121,8 @@ type PlatformServiceHandler interface {
 	RenameNamespace(context.Context, *connect.Request[v1.RenameNamespaceRequest]) (*connect.Response[v1.RenameNamespaceResponse], error)
 	GetNamespaces(context.Context, *connect.Request[v1.GetNamespacesRequest]) (*connect.Response[v1.GetNamespacesResponse], error)
 	GetNamespace(context.Context, *connect.Request[v1.GetNamespaceRequest]) (*connect.Response[v1.GetNamespaceResponse], error)
+	// Workspace
+	GetWorkspace(context.Context, *connect.Request[v1.GetWorkspaceRequest]) (*connect.Response[v1.GetWorkspaceResponse], error)
 	// Contracts
 	CreateContract(context.Context, *connect.Request[v1.CreateContractRequest]) (*connect.Response[v1.CreateContractResponse], error)
 	UpdateContract(context.Context, *connect.Request[v1.UpdateContractRequest]) (*connect.Response[v1.UpdateContractResponse], error)
@@ -3468,6 +3488,12 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		PlatformServiceGetNamespaceProcedure,
 		svc.GetNamespace,
 		connect.WithSchema(platformServiceGetNamespaceMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetWorkspaceHandler := connect.NewUnaryHandler(
+		PlatformServiceGetWorkspaceProcedure,
+		svc.GetWorkspace,
+		connect.WithSchema(platformServiceGetWorkspaceMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceCreateContractHandler := connect.NewUnaryHandler(
@@ -4445,6 +4471,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceGetNamespacesHandler.ServeHTTP(w, r)
 		case PlatformServiceGetNamespaceProcedure:
 			platformServiceGetNamespaceHandler.ServeHTTP(w, r)
+		case PlatformServiceGetWorkspaceProcedure:
+			platformServiceGetWorkspaceHandler.ServeHTTP(w, r)
 		case PlatformServiceCreateContractProcedure:
 			platformServiceCreateContractHandler.ServeHTTP(w, r)
 		case PlatformServiceUpdateContractProcedure:
@@ -4804,6 +4832,10 @@ func (UnimplementedPlatformServiceHandler) GetNamespaces(context.Context, *conne
 
 func (UnimplementedPlatformServiceHandler) GetNamespace(context.Context, *connect.Request[v1.GetNamespaceRequest]) (*connect.Response[v1.GetNamespaceResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetNamespace is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetWorkspace(context.Context, *connect.Request[v1.GetWorkspaceRequest]) (*connect.Response[v1.GetWorkspaceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetWorkspace is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) CreateContract(context.Context, *connect.Request[v1.CreateContractRequest]) (*connect.Response[v1.CreateContractResponse], error) {

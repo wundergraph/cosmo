@@ -49,6 +49,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { useIsAdmin } from "@/hooks/use-is-admin";
+import { useWorkspace } from "@/hooks/use-workspace";
 
 export const Empty = ({
   graph,
@@ -57,7 +58,7 @@ export const Empty = ({
   graph?: FederatedGraph;
   tab: "subgraphs" | "featureSubgraphs";
 }) => {
-  const router = useRouter();
+  const { namespace: { name: namespace } } = useWorkspace();
 
   let label = "team=A";
   if (graph?.labelMatchers && graph.labelMatchers.length > 0) {
@@ -90,12 +91,12 @@ export const Empty = ({
               {
                 description:
                   "Create a feature subgraph using the below command.",
-                command: `npx wgc feature-subgraph create <feature-subgraph-name> --namespace ${router.query.namespace} -r <routing-url> --subgraph <base-subgraph-name>`,
+                command: `npx wgc feature-subgraph create <feature-subgraph-name> --namespace ${namespace} -r <routing-url> --subgraph <base-subgraph-name>`,
               },
               {
                 description:
                   "Update your feature subgraphs of this feature flag.",
-                command: `npx wgc feature-flag update <feature-flag-name> --namespace ${router.query.namespace} --feature-subgraphs <featureSubgraphs...>`,
+                command: `npx wgc feature-flag update <feature-flag-name> --namespace ${namespace} --feature-subgraphs <featureSubgraphs...>`,
               },
             ]}
           />
@@ -127,7 +128,7 @@ export const Empty = ({
             {
               description:
                 "Publish a subgraph. If the subgraph does not exist, it will be created.",
-              command: `npx wgc subgraph publish users --namespace ${router.query.namespace} --schema users.graphql --label ${label} --routing-url http://localhost:4003/graphql`,
+              command: `npx wgc subgraph publish users --namespace ${namespace} --schema users.graphql --label ${label} --routing-url http://localhost:4003/graphql`,
             },
           ]}
         />
