@@ -630,6 +630,9 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 			trace.WithAttributes(requestContext.telemetry.traceAttrs...),
 		)
 
+		// Set the original operation on the parse span
+		engineParseSpan.SetAttributes(otel.WgOperationOriginalContent.String(operationKit.parsedOperation.Request.Query))
+
 		httpOperation.traceTimings.StartParse()
 		startParsing := time.Now()
 
@@ -890,6 +893,9 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		httpOperation.traceTimings.EndNormalize()
 	}
 
+	// Set the normalized operation on the span
+	engineNormalizeSpan.SetAttributes(otel.WgOperationNormalizedContent.String(operationKit.parsedOperation.NormalizedRepresentation))
+
 	engineNormalizeSpan.End()
 
 	if operationKit.parsedOperation.IsPersistedOperation {
@@ -900,10 +906,6 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		// At this stage the variables are normalized
 		httpOperation.routerSpan.SetAttributes(otel.WgOperationVariables.String(string(operationKit.parsedOperation.Request.Variables)))
 	}
-
-	// Set the normalized operation only on the root span
-	operationContentAttribute := otel.WgOperationContent.String(operationKit.parsedOperation.NormalizedRepresentation)
-	httpOperation.routerSpan.SetAttributes(operationContentAttribute)
 
 	/**
 	* Validate the operation
