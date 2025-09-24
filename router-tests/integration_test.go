@@ -868,7 +868,7 @@ func TestEnableRequireFetchReasons(t *testing.T) {
 	})
 }
 
-func TestHandleOptionalRequiresDependencies(t *testing.T) {
+func TestValidateRequiredExternalFields(t *testing.T) {
 	t.Parallel()
 
 	t.Run("disabled", func(t *testing.T) {
@@ -988,8 +988,10 @@ func TestHandleOptionalRequiresDependencies(t *testing.T) {
 						{"isLeadAvailable":null,"upc":"consultancy"},
 						{"isLeadAvailable":false,"upc":"cosmo"},
 						{}]},
-				"errors":[{"message":"Failed to fetch from Subgraph 'availability' at Path 'products.@.lead', Reason: failed to obtain field dependencies.","extensions":{"statusCode":200}}]
-				}`, res.Body)
+					"errors":[
+						{"message":"Failed to obtain field dependencies from Subgraph 'availability' at Path 'products.@.lead'.","extensions":{"statusCode":200}},
+						{"message":"Failed to fetch from Subgraph 'availability' at Path 'products.@.lead'.","extensions":{"errors":[{"message":"Cannot provide value","path":["products","@","lead","0","isAvailable"]}],"statusCode":200}}
+					]}`, res.Body)
 		})
 	})
 }
