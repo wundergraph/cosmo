@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.252.3](https://github.com/wundergraph/cosmo/compare/router@0.252.2...router@0.252.3) (2025-09-24)
+
+### Bug Fixes
+
+* **router:** high subscription loads causing deadlocks ([#2223](https://github.com/wundergraph/cosmo/issues/2223)) ([ff8bfa3](https://github.com/wundergraph/cosmo/commit/ff8bfa38f2d245ab884ce44152a2bbeaaa717118)) (@endigma)
+
 ## [0.252.2](https://github.com/wundergraph/cosmo/compare/router@0.252.1...router@0.252.2) (2025-09-23)
 
 ### Bug Fixes
