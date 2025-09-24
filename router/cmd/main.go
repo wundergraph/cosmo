@@ -25,7 +25,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// TODO: REMOVE ME! - TRIGGER WORKFLOW, REMOVE ME LATER! #GRRBRRRRR23467565675YYYYYYXXXXX! "jobs fail with error code 143"
+// TODO: REMOVE ME! - TRIGGER WORKFLOW, REMOVE ME LATER! #GRRaagarrBRRRRR23467565675YYYYYYXXXXX! "jobs fail with error code 143"
 
 var (
 	overrideEnvFlag = flag.String("override-env", os.Getenv("OVERRIDE_ENV"), "Path to .env file to override environment variables")
