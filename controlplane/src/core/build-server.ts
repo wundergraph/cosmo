@@ -82,6 +82,7 @@ export interface BuildConfig {
   auth: {
     webBaseUrl: string;
     secureCookie?: boolean;
+    ssoCookieDomain?: string;
     webErrorPath: string;
     secret: string;
     redirectUri: string;
@@ -236,6 +237,7 @@ export default async function build(opts: BuildConfig) {
       cookieName: pkceCodeVerifierCookieName,
     },
     webBaseUrl: opts.auth.webBaseUrl,
+    ssoCookieDomain: opts.auth.ssoCookieDomain,
     webErrorPath: opts.auth.webErrorPath,
   });
 

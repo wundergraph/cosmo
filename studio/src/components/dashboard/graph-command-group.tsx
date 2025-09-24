@@ -67,6 +67,15 @@ interface GraphLinkProps {
   setNamespace(namespace: string): void;
 }
 
+const defaultGraphTemplate = `/[organizationSlug]/[namespace]/graph/[slug]`;
+const graphAreasWithParameters: readonly string[] = [
+  'change-log',
+  'checks',
+  'compositions',
+  'feature-flags',
+  'proposals'
+];
+
 function GraphCommandItem({
   name,
   namespace,
@@ -82,16 +91,22 @@ function GraphCommandItem({
 
   const pathname = useMemo(
     () => {
-      const segment = router.pathname.split('/')[3]?.toLowerCase();
+      const segmentSplit = router.pathname.split('/');
+      const segment = segmentSplit[3]?.toLowerCase();
       if (isSubgraph) {
         return segment === 'subgraph'
           ? router.pathname
           : `/[organizationSlug]/[namespace]/subgraph/[subgraphSlug]`;
       }
 
-      return segment === 'graph'
-        ? router.pathname
-        : `/[organizationSlug]/[namespace]/graph/[slug]`;
+      if (segment !== 'graph') {
+        return defaultGraphTemplate;
+      }
+
+      const areaSegment = segmentSplit[5]?.toLowerCase();
+      return areaSegment && graphAreasWithParameters.includes(areaSegment) && segmentSplit.length > 5
+        ? `${defaultGraphTemplate}/${areaSegment}`
+        : router.pathname;
     },
     [router.pathname, isSubgraph],
   );
