@@ -4,6 +4,44 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.133.0](https://github.com/wundergraph/cosmo/compare/studio@0.132.1...studio@0.133.0) (2025-09-22)
+
+### Features
+
+* fix navigation sometimes not working when switching graph ([#2231](https://github.com/wundergraph/cosmo/issues/2231)) ([77396ff](https://github.com/wundergraph/cosmo/commit/77396ffa63e2b17acca78ef57b71a51dcde78887)) (@wilsonrivera)
+
+## [0.132.1](https://github.com/wundergraph/cosmo/compare/studio@0.132.0...studio@0.132.1) (2025-09-22)
+
+**Note:** Version bump only for package studio
+
+# [0.132.0](https://github.com/wundergraph/cosmo/compare/studio@0.131.0...studio@0.132.0) (2025-09-17)
+
+### Features
+
+* filter by namespace ([#2226](https://github.com/wundergraph/cosmo/issues/2226)) ([395372e](https://github.com/wundergraph/cosmo/commit/395372eefe33c52825e88925e2e76d616e426952)) (@wilsonrivera)
+
+# [0.131.0](https://github.com/wundergraph/cosmo/compare/studio@0.130.1...studio@0.131.0) (2025-09-17)
+
+### Features
+
+* add analytic scripts ([#2208](https://github.com/wundergraph/cosmo/issues/2208)) ([932eb83](https://github.com/wundergraph/cosmo/commit/932eb83ff75459eca536badd65e434534e1c48db)) (@wilsonrivera)
+
+## [0.130.1](https://github.com/wundergraph/cosmo/compare/studio@0.130.0...studio@0.130.1) (2025-09-16)
+
+**Note:** Version bump only for package studio
+
+# [0.130.0](https://github.com/wundergraph/cosmo/compare/studio@0.129.0...studio@0.130.0) (2025-09-16)
+
+### Features
+
+* improve namespace selector UI/UX ([#2161](https://github.com/wundergraph/cosmo/issues/2161)) ([33f870e](https://github.com/wundergraph/cosmo/commit/33f870e8b33751ce547b33eb9ca6cb12578f4034)) (@wilsonrivera)
+
+# [0.129.0](https://github.com/wundergraph/cosmo/compare/studio@0.128.0...studio@0.129.0) (2025-09-15)
+
+### Features
+
+* introduce the `subgraph-checker` role ([#2198](https://github.com/wundergraph/cosmo/issues/2198)) ([726b814](https://github.com/wundergraph/cosmo/commit/726b814b4a460acbbf98aed37b802fe6bfda8c2c)) (@wilsonrivera)
+
 # [0.128.0](https://github.com/wundergraph/cosmo/compare/studio@0.127.1...studio@0.128.0) (2025-09-10)
 
 ### Features

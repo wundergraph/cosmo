@@ -1,6 +1,6 @@
 {
   "name": "@wundergraph/playground",
-  "version": "0.9.4",
+  "version": "0.9.5",
   "description": "Cosmo Playground built on top of graphiql",
   "author": {
     "name": "WunderGraph Maintainers",
@@ -48,7 +48,7 @@
     "@radix-ui/react-slot": "1.0.2",
     "@radix-ui/react-tabs": "^1.0.4",
     "@radix-ui/react-tooltip": "^1.0.7",
-    "axios": "^1.11.0",
+    "axios": "^1.12.2",
     "change-case": "^5.2.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.0.0",

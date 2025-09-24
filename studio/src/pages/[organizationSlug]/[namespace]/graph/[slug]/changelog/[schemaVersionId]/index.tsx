@@ -16,11 +16,13 @@ import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb
 import { getChangelogBySchemaVersion } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { useWorkspace } from "@/hooks/use-workspace";
+import { useCurrentOrganization } from "@/hooks/use-current-organization";
 
 const SchemaVersionChangelogPage: NextPageWithLayout = () => {
   const router = useRouter();
-  const organizationSlug = router.query.organizationSlug as string;
-  const namespace = router.query.namespace as string;
+  const organizationSlug = useCurrentOrganization()?.slug;
+  const { namespace: { name: namespace } } = useWorkspace();
   const slug = router.query.slug as string;
   const id = router.query.schemaVersionId as string;
 
