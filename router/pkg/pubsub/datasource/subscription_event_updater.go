@@ -85,7 +85,7 @@ func applyStreamEventHooks(
 	events []StreamEvent,
 	hooks []OnReceiveEventsFn) ([]StreamEvent, error) {
 	// Copy the events to avoid modifying the original slice
-	currentEvents := make([]StreamEvent, len(events), len(events))
+	currentEvents := make([]StreamEvent, len(events))
 	for i, event := range events {
 		currentEvents[i] = event.Clone()
 	}
