@@ -118,7 +118,10 @@ export function getProposalsByFederatedGraph(
     // Get the latest check success for each proposal
     const proposalsWithChecks = await Promise.all(
       proposals.map(async (proposal) => {
-        const latestCheck = await proposalRepo.getLatestCheckForProposal(proposal.proposal.id);
+        const latestCheck = await proposalRepo.getLatestCheckForProposal(
+          proposal.proposal.id,
+          authContext.organizationId,
+        );
         return {
           ...proposal,
           latestCheckSuccess: latestCheck?.isSuccessful || false,

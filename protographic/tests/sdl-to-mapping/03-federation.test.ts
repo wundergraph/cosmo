@@ -421,6 +421,14 @@ describe('GraphQL Federation to Proto Mapping', () => {
             "rpc": "LookupProductById",
             "typeName": "Product",
           },
+          {
+            "key": "upc",
+            "kind": "entity",
+            "request": "LookupProductByUpcRequest",
+            "response": "LookupProductByUpcResponse",
+            "rpc": "LookupProductByUpc",
+            "typeName": "Product",
+          },
         ],
         "operationMappings": [
           {
@@ -541,6 +549,434 @@ describe('GraphQL Federation to Proto Mapping', () => {
               {
                 "mapped": "reviews",
                 "original": "reviews",
+              },
+            ],
+            "type": "Product",
+          },
+        ],
+        "version": 1,
+      }
+    `);
+  });
+
+  it('maps entity with multiple @key directives to separate entity mappings', () => {
+    const sdl = `
+      directive @key(fields: String!) on OBJECT
+      
+      type Product @key(fields: "id") @key(fields: "upc") {
+        id: ID!
+        upc: String!
+        name: String!
+        price: Float!
+      }
+      
+      type Query {
+        products: [Product!]!
+      }
+    `;
+
+    const mapping = compileGraphQLToMapping(sdl, 'ProductService');
+
+    expect(mapping.toJson()).toMatchInlineSnapshot(`
+      {
+        "entityMappings": [
+          {
+            "key": "id",
+            "kind": "entity",
+            "request": "LookupProductByIdRequest",
+            "response": "LookupProductByIdResponse",
+            "rpc": "LookupProductById",
+            "typeName": "Product",
+          },
+          {
+            "key": "upc",
+            "kind": "entity",
+            "request": "LookupProductByUpcRequest",
+            "response": "LookupProductByUpcResponse",
+            "rpc": "LookupProductByUpc",
+            "typeName": "Product",
+          },
+        ],
+        "operationMappings": [
+          {
+            "mapped": "QueryProducts",
+            "original": "products",
+            "request": "QueryProductsRequest",
+            "response": "QueryProductsResponse",
+            "type": "OPERATION_TYPE_QUERY",
+          },
+        ],
+        "service": "ProductService",
+        "typeFieldMappings": [
+          {
+            "fieldMappings": [
+              {
+                "mapped": "products",
+                "original": "products",
+              },
+            ],
+            "type": "Query",
+          },
+          {
+            "fieldMappings": [
+              {
+                "mapped": "id",
+                "original": "id",
+              },
+              {
+                "mapped": "upc",
+                "original": "upc",
+              },
+              {
+                "mapped": "name",
+                "original": "name",
+              },
+              {
+                "mapped": "price",
+                "original": "price",
+              },
+            ],
+            "type": "Product",
+          },
+        ],
+        "version": 1,
+      }
+    `);
+  });
+
+  it('correctly handles malformed key fields', () => {
+    // fields has a space after id
+    const sdl = `
+      directive @key(fields: String!) on OBJECT
+      
+      type Product @key(fields: "id ") {
+        id: ID!
+        upc: String!
+        name: String!
+        price: Float!
+      }
+      
+      type Query {
+        products: [Product!]!
+      }
+    `;
+
+    const mapping = compileGraphQLToMapping(sdl, 'ProductService');
+
+    expect(mapping.toJson()).toMatchInlineSnapshot(`
+      {
+        "entityMappings": [
+          {
+            "key": "id ",
+            "kind": "entity",
+            "request": "LookupProductByIdRequest",
+            "response": "LookupProductByIdResponse",
+            "rpc": "LookupProductById",
+            "typeName": "Product",
+          },
+        ],
+        "operationMappings": [
+          {
+            "mapped": "QueryProducts",
+            "original": "products",
+            "request": "QueryProductsRequest",
+            "response": "QueryProductsResponse",
+            "type": "OPERATION_TYPE_QUERY",
+          },
+        ],
+        "service": "ProductService",
+        "typeFieldMappings": [
+          {
+            "fieldMappings": [
+              {
+                "mapped": "products",
+                "original": "products",
+              },
+            ],
+            "type": "Query",
+          },
+          {
+            "fieldMappings": [
+              {
+                "mapped": "id",
+                "original": "id",
+              },
+              {
+                "mapped": "upc",
+                "original": "upc",
+              },
+              {
+                "mapped": "name",
+                "original": "name",
+              },
+              {
+                "mapped": "price",
+                "original": "price",
+              },
+            ],
+            "type": "Product",
+          },
+        ],
+        "version": 1,
+      }
+    `);
+  });
+
+  it('maps entity with compound key fields to single entity mapping', () => {
+    const sdl = `
+      directive @key(fields: String!) on OBJECT
+      
+      type OrderItem @key(fields: "orderId itemId") @key(fields: "itemId orderId") {
+        orderId: ID!
+        itemId: ID!
+        quantity: Int!
+        price: Float!
+      }
+      
+      type Query {
+        orderItems: [OrderItem!]!
+      }
+    `;
+
+    const mapping = compileGraphQLToMapping(sdl, 'OrderService');
+
+    expect(mapping.toJson()).toMatchInlineSnapshot(`
+      {
+        "entityMappings": [
+          {
+            "key": "orderId itemId",
+            "kind": "entity",
+            "request": "LookupOrderItemByItemIdAndOrderIdRequest",
+            "response": "LookupOrderItemByItemIdAndOrderIdResponse",
+            "rpc": "LookupOrderItemByItemIdAndOrderId",
+            "typeName": "OrderItem",
+          },
+          {
+            "key": "itemId orderId",
+            "kind": "entity",
+            "request": "LookupOrderItemByItemIdAndOrderIdRequest",
+            "response": "LookupOrderItemByItemIdAndOrderIdResponse",
+            "rpc": "LookupOrderItemByItemIdAndOrderId",
+            "typeName": "OrderItem",
+          },
+        ],
+        "operationMappings": [
+          {
+            "mapped": "QueryOrderItems",
+            "original": "orderItems",
+            "request": "QueryOrderItemsRequest",
+            "response": "QueryOrderItemsResponse",
+            "type": "OPERATION_TYPE_QUERY",
+          },
+        ],
+        "service": "OrderService",
+        "typeFieldMappings": [
+          {
+            "fieldMappings": [
+              {
+                "mapped": "order_items",
+                "original": "orderItems",
+              },
+            ],
+            "type": "Query",
+          },
+          {
+            "fieldMappings": [
+              {
+                "mapped": "order_id",
+                "original": "orderId",
+              },
+              {
+                "mapped": "item_id",
+                "original": "itemId",
+              },
+              {
+                "mapped": "quantity",
+                "original": "quantity",
+              },
+              {
+                "mapped": "price",
+                "original": "price",
+              },
+            ],
+            "type": "OrderItem",
+          },
+        ],
+        "version": 1,
+      }
+    `);
+  });
+
+  it('maps entity with mixed multiple and compound keys', () => {
+    const sdl = `
+      directive @key(fields: String!) on OBJECT
+      
+      type Product @key(fields: "id") @key(fields: "manufacturerId productCode") {
+        id: ID!
+        manufacturerId: ID!
+        productCode: String!
+        name: String!
+        price: Float!
+      }
+      
+      type Query {
+        products: [Product!]!
+      }
+    `;
+
+    const mapping = compileGraphQLToMapping(sdl, 'ProductService');
+
+    expect(mapping.toJson()).toMatchInlineSnapshot(`
+      {
+        "entityMappings": [
+          {
+            "key": "id",
+            "kind": "entity",
+            "request": "LookupProductByIdRequest",
+            "response": "LookupProductByIdResponse",
+            "rpc": "LookupProductById",
+            "typeName": "Product",
+          },
+          {
+            "key": "manufacturerId productCode",
+            "kind": "entity",
+            "request": "LookupProductByManufacturerIdAndProductCodeRequest",
+            "response": "LookupProductByManufacturerIdAndProductCodeResponse",
+            "rpc": "LookupProductByManufacturerIdAndProductCode",
+            "typeName": "Product",
+          },
+        ],
+        "operationMappings": [
+          {
+            "mapped": "QueryProducts",
+            "original": "products",
+            "request": "QueryProductsRequest",
+            "response": "QueryProductsResponse",
+            "type": "OPERATION_TYPE_QUERY",
+          },
+        ],
+        "service": "ProductService",
+        "typeFieldMappings": [
+          {
+            "fieldMappings": [
+              {
+                "mapped": "products",
+                "original": "products",
+              },
+            ],
+            "type": "Query",
+          },
+          {
+            "fieldMappings": [
+              {
+                "mapped": "id",
+                "original": "id",
+              },
+              {
+                "mapped": "manufacturer_id",
+                "original": "manufacturerId",
+              },
+              {
+                "mapped": "product_code",
+                "original": "productCode",
+              },
+              {
+                "mapped": "name",
+                "original": "name",
+              },
+              {
+                "mapped": "price",
+                "original": "price",
+              },
+            ],
+            "type": "Product",
+          },
+        ],
+        "version": 1,
+      }
+    `);
+  });
+
+  it('maps entity with mixed multiple and compound keys with commas and extra spaces', () => {
+    const sdl = `
+      directive @key(fields: String!) on OBJECT
+      
+      type Product @key(fields: "id") @key(fields: "manufacturerId,    productCode") {
+        id: ID!
+        manufacturerId: ID!
+        productCode: String!
+        name: String!
+        price: Float!
+      }
+      
+      type Query {
+        products: [Product!]!
+      }
+    `;
+
+    const mapping = compileGraphQLToMapping(sdl, 'ProductService');
+
+    expect(mapping.toJson()).toMatchInlineSnapshot(`
+      {
+        "entityMappings": [
+          {
+            "key": "id",
+            "kind": "entity",
+            "request": "LookupProductByIdRequest",
+            "response": "LookupProductByIdResponse",
+            "rpc": "LookupProductById",
+            "typeName": "Product",
+          },
+          {
+            "key": "manufacturerId,    productCode",
+            "kind": "entity",
+            "request": "LookupProductByManufacturerIdAndProductCodeRequest",
+            "response": "LookupProductByManufacturerIdAndProductCodeResponse",
+            "rpc": "LookupProductByManufacturerIdAndProductCode",
+            "typeName": "Product",
+          },
+        ],
+        "operationMappings": [
+          {
+            "mapped": "QueryProducts",
+            "original": "products",
+            "request": "QueryProductsRequest",
+            "response": "QueryProductsResponse",
+            "type": "OPERATION_TYPE_QUERY",
+          },
+        ],
+        "service": "ProductService",
+        "typeFieldMappings": [
+          {
+            "fieldMappings": [
+              {
+                "mapped": "products",
+                "original": "products",
+              },
+            ],
+            "type": "Query",
+          },
+          {
+            "fieldMappings": [
+              {
+                "mapped": "id",
+                "original": "id",
+              },
+              {
+                "mapped": "manufacturer_id",
+                "original": "manufacturerId",
+              },
+              {
+                "mapped": "product_code",
+                "original": "productCode",
+              },
+              {
+                "mapped": "name",
+                "original": "name",
+              },
+              {
+                "mapped": "price",
+                "original": "price",
               },
             ],
             "type": "Product",

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"sync/atomic"
 	"time"
 
 	rcontext "github.com/wundergraph/cosmo/router/internal/context"
@@ -93,6 +94,9 @@ func (f *engineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInf
 
 	ctx = context.WithValue(ctx, rcontext.CurrentSubgraphContextKey{}, ds.Name)
 
+	duration := atomic.Int64{}
+	ctx = context.WithValue(ctx, rcontext.FetchTimingKey, &duration)
+
 	reqContext := getRequestContext(ctx)
 	if reqContext == nil {
 		return ctx
@@ -152,6 +156,12 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	exprCtx.Subgraph.Id = ds.ID
 	exprCtx.Subgraph.Name = ds.Name
 	exprCtx.Subgraph.Request.Error = WrapExprError(responseInfo.Err)
+
+	if value := ctx.Value(rcontext.FetchTimingKey); value != nil {
+		if fetchTiming, ok := value.(*atomic.Int64); ok {
+			exprCtx.Subgraph.Request.ClientTrace.FetchDuration = time.Duration(fetchTiming.Load())
+		}
+	}
 
 	if f.storeSubgraphResponseBody {
 		exprCtx.Subgraph.Response.Body.Raw = responseInfo.GetResponseBody()

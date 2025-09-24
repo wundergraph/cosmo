@@ -76,6 +76,10 @@ func newVM() (*gojaVm, error) {
 	if err := runtime.Set("urlParse", urlParse); err != nil {
 		return nil, err
 	}
+	if err := runtime.Set("urlCanParse", urlCanParse); err != nil {
+		return nil, err
+	}
+
 	return &gojaVm{
 		runtime:                  runtime,
 		federateSubgraphs:        federateSubgraphs,

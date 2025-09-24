@@ -4,7 +4,7 @@ import { JWTDecodeParams, JWTEncodeParams } from '../../types/index.js';
 import { base64URLEncode } from '../util.js';
 
 export const nowInSeconds = () => Math.trunc(Date.now() / 1000);
-export const DEFAULT_SESSION_MAX_AGE_SEC = 24 * 60 * 60; // 1 day
+export const DEFAULT_SESSION_MAX_AGE_SEC = 14 * 24 * 60 * 60; // 14 days
 
 // The cookie name used to store the user session.
 export const userSessionCookieName = 'cosmo_user_session';
@@ -16,6 +16,7 @@ export const cosmoIdpHintCookieName = 'cosmo_idp_hint';
 export const audiences = {
   cosmoGraphKey: 'cosmo:graph-key',
   cosmoCDNAdmission: 'cosmo:cdn-admission',
+  cosmoPluginKey: 'cosmo:registry-key',
 };
 
 /**

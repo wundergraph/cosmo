@@ -20,6 +20,8 @@ import {
   AS,
   AUTHENTICATED,
   BOOLEAN_SCALAR,
+  CHANNEL,
+  CHANNELS,
   COMPOSE_DIRECTIVE,
   CONDITION,
   CONFIGURE_CHILD_DESCRIPTIONS,
@@ -35,6 +37,8 @@ import {
   EDFS_NATS_REQUEST,
   EDFS_NATS_STREAM_CONFIGURATION,
   EDFS_NATS_SUBSCRIBE,
+  EDFS_REDIS_PUBLISH,
+  EDFS_REDIS_SUBSCRIBE,
   ENUM_UPPER,
   ENUM_VALUE_UPPER,
   EXECUTION,
@@ -57,18 +61,21 @@ import {
   INTERFACE_OBJECT,
   INTERFACE_UPPER,
   KEY,
+  LEVELS,
   LINK,
   LINK_IMPORT,
   LINK_PURPOSE,
   NAME,
   NOT_UPPER,
   OBJECT_UPPER,
+  ONE_OF,
   OR_UPPER,
   OVERRIDE,
   PROPAGATE,
   PROVIDER_ID,
   PROVIDES,
   REASON,
+  REQUIRE_FETCH_REASONS,
   REQUIRES,
   REQUIRES_SCOPES,
   RESOLVABLE,
@@ -77,6 +84,7 @@ import {
   SCOPE_SCALAR,
   SCOPES,
   SECURITY,
+  SEMANTIC_NON_NULL,
   SHAREABLE,
   SPECIFIED_BY,
   STREAM_CONFIGURATION,
@@ -94,10 +102,6 @@ import {
   UNION_UPPER,
   URL_LOWER,
   VALUES,
-  EDFS_REDIS_PUBLISH,
-  EDFS_REDIS_SUBSCRIBE,
-  CHANNEL,
-  CHANNELS,
 } from '../../utils/string-constants';
 
 export const REQUIRED_STRING_TYPE_NODE: TypeNode = {
@@ -510,10 +514,13 @@ export const ALL_IN_BUILT_DIRECTIVE_NAMES = new Set<string>([
   INTERFACE_OBJECT,
   KEY,
   LINK,
+  ONE_OF,
   OVERRIDE,
   PROVIDES,
+  REQUIRE_FETCH_REASONS,
   REQUIRES,
   REQUIRES_SCOPES,
+  SEMANTIC_NON_NULL,
   SHAREABLE,
   SPECIFIED_BY,
   SUBSCRIPTION_FILTER,
@@ -639,6 +646,14 @@ export const LINK_DEFINITION: DirectiveDefinitionNode = {
   repeatable: true,
 };
 
+// directive @oneOf on INPUT_OBJECT
+export const ONE_OF_DEFINITION: DirectiveDefinitionNode = {
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([INPUT_OBJECT_UPPER]),
+  name: stringToNameNode(ONE_OF),
+  repeatable: false,
+};
+
 // directive @override(from: String!) on FIELD_DEFINITION
 export const OVERRIDE_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
@@ -655,6 +670,14 @@ export const OVERRIDE_DEFINITION: DirectiveDefinitionNode = {
   locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER]),
   name: stringToNameNode(OVERRIDE),
   repeatable: false,
+};
+
+// directive @openfed__requireFetchReasons repeatable on FIELD_DEFINITION | OBJECT
+export const REQUIRE_FETCH_REASONS_DEFINITION: DirectiveDefinitionNode = {
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER, OBJECT_UPPER]),
+  name: stringToNameNode(REQUIRE_FETCH_REASONS),
+  repeatable: true,
 };
 
 // @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
@@ -691,6 +714,40 @@ export const REQUIRES_SCOPES_DEFINITION: MutableDirectiveDefinitionNode = {
     SCALAR_UPPER,
   ]),
   name: stringToNameNode(REQUIRES_SCOPES),
+  repeatable: false,
+};
+
+// directive @semanticNonNull(levels: [Int!]! = [0]) on FIELD_DEFINITION
+export const SEMANTIC_NON_NULL_DEFINITION: MutableDirectiveDefinitionNode = {
+  arguments: [
+    {
+      directives: [],
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(LEVELS),
+      type: {
+        kind: Kind.NON_NULL_TYPE,
+        type: {
+          kind: Kind.LIST_TYPE,
+          type: {
+            kind: Kind.NON_NULL_TYPE,
+            type: stringToNamedTypeNode(INT_SCALAR),
+          },
+        },
+      },
+      defaultValue: {
+        kind: Kind.LIST,
+        values: [
+          {
+            kind: Kind.INT,
+            value: '0',
+          },
+        ],
+      },
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: [stringToNameNode(FIELD_DEFINITION_UPPER)],
+  name: stringToNameNode(SEMANTIC_NON_NULL),
   repeatable: false,
 };
 

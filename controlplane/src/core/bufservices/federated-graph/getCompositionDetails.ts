@@ -10,7 +10,7 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { GraphCompositionRepository } from '../../repositories/GraphCompositionRepository.js';
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { convertToSubgraphType, enrichLogger, getLogger, handleError } from '../../util.js';
 
 export function getCompositionDetails(
   opts: RouterOptions,
@@ -88,7 +88,10 @@ export function getCompositionDetails(
         code: EnumStatusCode.OK,
       },
       composition,
-      compositionSubgraphs,
+      compositionSubgraphs: compositionSubgraphs.map((subgraph) => ({
+        ...subgraph,
+        subgraphType: convertToSubgraphType(subgraph.subgraphType),
+      })),
       changeCounts: {
         additions: addCount,
         deletions: minusCount,

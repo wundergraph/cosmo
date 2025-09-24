@@ -14,8 +14,11 @@ image:
 # -- Add labels to all deployed resources
 commonLabels: {}
 
-# -- Add labels to deployment metadata.labels
+# -- Add labels to deployment (metadata.labels)
 additionalLabels: {}
+
+# -- Add labels to deployment pod template (spec.template.metadata.labels)
+additionalPodLabels: {}
 
 deploymentStrategy: {}
 

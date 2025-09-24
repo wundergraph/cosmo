@@ -5,10 +5,17 @@ import (
 	"fmt"
 	"sync"
 
-	rd "github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
+	"github.com/wundergraph/cosmo/router/pkg/metric"
+
+	rd "github.com/wundergraph/cosmo/router/internal/rediscloser"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
+)
+
+const (
+	redisPublish = "publish"
+	redisReceive = "receive"
 )
 
 // Adapter defines the methods that a Redis adapter should implement
@@ -23,25 +30,38 @@ type Adapter interface {
 	Shutdown(ctx context.Context) error
 }
 
-func NewProviderAdapter(ctx context.Context, logger *zap.Logger, urls []string, clusterEnabled bool) Adapter {
+func NewProviderAdapter(ctx context.Context, logger *zap.Logger, urls []string, clusterEnabled bool, opts datasource.ProviderOpts) Adapter {
 	ctx, cancel := context.WithCancel(ctx)
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+
+	var store metric.StreamMetricStore
+	if opts.StreamMetricStore != nil {
+		store = opts.StreamMetricStore
+	} else {
+		store = metric.NewNoopStreamMetricStore()
+	}
+
 	return &ProviderAdapter{
-		ctx:            ctx,
-		cancel:         cancel,
-		logger:         logger,
-		urls:           urls,
-		clusterEnabled: clusterEnabled,
+		ctx:               ctx,
+		cancel:            cancel,
+		logger:            logger,
+		urls:              urls,
+		clusterEnabled:    clusterEnabled,
+		streamMetricStore: store,
 	}
 }
 
 type ProviderAdapter struct {
-	ctx            context.Context
-	cancel         context.CancelFunc
-	conn           rd.RDCloser
-	logger         *zap.Logger
-	closeWg        sync.WaitGroup
-	urls           []string
-	clusterEnabled bool
+	ctx               context.Context
+	cancel            context.CancelFunc
+	conn              rd.RDCloser
+	logger            *zap.Logger
+	closeWg           sync.WaitGroup
+	urls              []string
+	clusterEnabled    bool
+	streamMetricStore metric.StreamMetricStore
 }
 
 func (p *ProviderAdapter) Startup(ctx context.Context) error {
@@ -107,6 +127,12 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 					return
 				}
 				log.Debug("subscription update", zap.String("message_channel", msg.Channel), zap.String("data", msg.Payload))
+				p.streamMetricStore.Consume(ctx, metric.StreamsEvent{
+					ProviderId:          event.ProviderID,
+					StreamOperationName: redisReceive,
+					ProviderType:        metric.ProviderTypeRedis,
+					DestinationName:     msg.Channel,
+				})
 				updater.Update([]byte(msg.Payload))
 			case <-p.ctx.Done():
 				// When the application context is done, we stop the subscription if it is not already done
@@ -145,8 +171,21 @@ func (p *ProviderAdapter) Publish(ctx context.Context, event PublishEventConfigu
 	intCmd := p.conn.Publish(ctx, event.Channel, data)
 	if intCmd.Err() != nil {
 		log.Error("publish error", zap.Error(intCmd.Err()))
+		p.streamMetricStore.Produce(ctx, metric.StreamsEvent{
+			ProviderId:          event.ProviderID,
+			StreamOperationName: redisPublish,
+			ProviderType:        metric.ProviderTypeRedis,
+			ErrorType:           "publish_error",
+			DestinationName:     event.Channel,
+		})
 		return datasource.NewError(fmt.Sprintf("error publishing to Redis PubSub channel %s", event.Channel), intCmd.Err())
 	}
 
+	p.streamMetricStore.Produce(ctx, metric.StreamsEvent{
+		ProviderId:          event.ProviderID,
+		StreamOperationName: redisPublish,
+		ProviderType:        metric.ProviderTypeRedis,
+		DestinationName:     event.Channel,
+	})
 	return nil
 }

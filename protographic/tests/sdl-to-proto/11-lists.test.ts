@@ -67,40 +67,44 @@ describe('SDL to Proto Lists', () => {
     expectValidProto(protoText);
 
     expect(protoText).toMatchInlineSnapshot(`
-          "syntax = "proto3";
-          package service.v1;
+      "syntax = "proto3";
+      package service.v1;
 
-          // Service definition for DefaultService
-          service DefaultService {
-            rpc QueryGetUser(QueryGetUserRequest) returns (QueryGetUserResponse) {}
-          }
+      // Service definition for DefaultService
+      service DefaultService {
+        rpc QueryGetUser(QueryGetUserRequest) returns (QueryGetUserResponse) {}
+      }
 
-          // Wrapper message for a list of String.
-          message ListOfString {
-            repeated string items = 1;
-          }
+      // Wrapper message for a list of String.
+      message ListOfString {
+        message List {
+          repeated string items = 1;
+        }
+        List list = 1;
+      }
+      // Wrapper message for a list of User.
+      message ListOfUser {
+        message List {
+          repeated User items = 1;
+        }
+        List list = 1;
+      }
+      // Request message for getUser operation.
+      message QueryGetUserRequest {
+      }
+      // Response message for getUser operation.
+      message QueryGetUserResponse {
+        User get_user = 1;
+      }
 
-          // Wrapper message for a list of User.
-          message ListOfUser {
-            repeated User items = 1;
-          }
-
-          // Request message for getUser operation.
-          message QueryGetUserRequest {
-          }
-          // Response message for getUser operation.
-          message QueryGetUserResponse {
-            User get_user = 1;
-          }
-
-          message User {
-            string id = 1;
-            string first_name = 2;
-            ListOfString middle_names = 3;
-            string last_name = 4;
-            ListOfUser friends = 5;
-          }"
-        `);
+      message User {
+        string id = 1;
+        string first_name = 2;
+        ListOfString middle_names = 3;
+        string last_name = 4;
+        ListOfUser friends = 5;
+      }"
+    `);
   });
 
   it('should correctly generate protobuf for types with a nested non nullable list', () => {
@@ -135,7 +139,6 @@ describe('SDL to Proto Lists', () => {
         }
         List list = 1;
       }
-
       // Wrapper message for a list of User.
       message ListOfListOfUser {
         message List {
@@ -143,17 +146,20 @@ describe('SDL to Proto Lists', () => {
         }
         List list = 1;
       }
-
       // Wrapper message for a list of String.
       message ListOfString {
-        repeated string items = 1;
+        message List {
+          repeated string items = 1;
+        }
+        List list = 1;
       }
-
       // Wrapper message for a list of User.
       message ListOfUser {
-        repeated User items = 1;
+        message List {
+          repeated User items = 1;
+        }
+        List list = 1;
       }
-
       // Request message for getUser operation.
       message QueryGetUserRequest {
       }
@@ -202,7 +208,6 @@ describe('SDL to Proto Lists', () => {
         }
         List list = 1;
       }
-
       // Wrapper message for a list of User.
       message ListOfListOfUser {
         message List {
@@ -210,17 +215,20 @@ describe('SDL to Proto Lists', () => {
         }
         List list = 1;
       }
-
       // Wrapper message for a list of String.
       message ListOfString {
-        repeated string items = 1;
+        message List {
+          repeated string items = 1;
+        }
+        List list = 1;
       }
-
       // Wrapper message for a list of User.
       message ListOfUser {
-        repeated User items = 1;
+        message List {
+          repeated User items = 1;
+        }
+        List list = 1;
       }
-
       // Request message for getUser operation.
       message QueryGetUserRequest {
       }
@@ -272,7 +280,6 @@ describe('SDL to Proto Lists', () => {
         }
         List list = 1;
       }
-
       // Wrapper message for a list of User.
       message ListOfListOfUser {
         message List {
@@ -280,17 +287,20 @@ describe('SDL to Proto Lists', () => {
         }
         List list = 1;
       }
-
       // Wrapper message for a list of String.
       message ListOfString {
-        repeated string items = 1;
+        message List {
+          repeated string items = 1;
+        }
+        List list = 1;
       }
-
       // Wrapper message for a list of User.
       message ListOfUser {
-        repeated User items = 1;
+        message List {
+          repeated User items = 1;
+        }
+        List list = 1;
       }
-
       // Request message for getUser operation.
       message QueryGetUserRequest {
       }
@@ -350,12 +360,13 @@ describe('SDL to Proto Lists', () => {
         }
         List list = 1;
       }
-
       // Wrapper message for a list of Status.
       message ListOfStatus {
-        repeated Status items = 1;
+        message List {
+          repeated Status items = 1;
+        }
+        List list = 1;
       }
-
       // Request message for getUser operation.
       message QueryGetUserRequest {
       }
@@ -428,12 +439,13 @@ describe('SDL to Proto Lists', () => {
         }
         List list = 1;
       }
-
       // Wrapper message for a list of Node.
       message ListOfNode {
-        repeated Node items = 1;
+        message List {
+          repeated Node items = 1;
+        }
+        List list = 1;
       }
-
       // Request message for getTimeline operation.
       message QueryGetTimelineRequest {
       }
@@ -513,12 +525,13 @@ describe('SDL to Proto Lists', () => {
         }
         List list = 1;
       }
-
       // Wrapper message for a list of SearchResult.
       message ListOfSearchResult {
-        repeated SearchResult items = 1;
+        message List {
+          repeated SearchResult items = 1;
+        }
+        List list = 1;
       }
-
       // Request message for search operation.
       message QuerySearchRequest {
       }
@@ -593,24 +606,32 @@ describe('SDL to Proto Lists', () => {
 
       // Wrapper message for a list of DateTime.
       message ListOfDateTime {
-        repeated string items = 1;
+        message List {
+          repeated string items = 1;
+        }
+        List list = 1;
       }
-
       // Wrapper message for a list of Float.
       message ListOfFloat {
-        repeated double items = 1;
+        message List {
+          repeated double items = 1;
+        }
+        List list = 1;
       }
-
       // Wrapper message for a list of Int.
       message ListOfInt {
-        repeated int32 items = 1;
+        message List {
+          repeated int32 items = 1;
+        }
+        List list = 1;
       }
-
       // Wrapper message for a list of JSON.
       message ListOfJSON {
-        repeated string items = 1;
+        message List {
+          repeated string items = 1;
+        }
+        List list = 1;
       }
-
       // Wrapper message for a list of String.
       message ListOfListOfString {
         message List {
@@ -618,12 +639,13 @@ describe('SDL to Proto Lists', () => {
         }
         List list = 1;
       }
-
       // Wrapper message for a list of String.
       message ListOfString {
-        repeated string items = 1;
+        message List {
+          repeated string items = 1;
+        }
+        List list = 1;
       }
-
       // Request message for getUser operation.
       message QueryGetUserRequest {
       }
@@ -688,7 +710,6 @@ describe('SDL to Proto Lists', () => {
         }
         List list = 1;
       }
-
       // Wrapper message for a list of String.
       message ListOfListOfListOfListOfString {
         message List {
@@ -696,7 +717,6 @@ describe('SDL to Proto Lists', () => {
         }
         List list = 1;
       }
-
       // Wrapper message for a list of User.
       message ListOfListOfListOfListOfUser {
         message List {
@@ -704,7 +724,6 @@ describe('SDL to Proto Lists', () => {
         }
         List list = 1;
       }
-
       // Wrapper message for a list of String.
       message ListOfListOfListOfString {
         message List {
@@ -712,7 +731,6 @@ describe('SDL to Proto Lists', () => {
         }
         List list = 1;
       }
-
       // Wrapper message for a list of User.
       message ListOfListOfListOfUser {
         message List {
@@ -720,7 +738,6 @@ describe('SDL to Proto Lists', () => {
         }
         List list = 1;
       }
-
       // Wrapper message for a list of String.
       message ListOfListOfString {
         message List {
@@ -728,7 +745,6 @@ describe('SDL to Proto Lists', () => {
         }
         List list = 1;
       }
-
       // Wrapper message for a list of User.
       message ListOfListOfUser {
         message List {
@@ -736,17 +752,20 @@ describe('SDL to Proto Lists', () => {
         }
         List list = 1;
       }
-
       // Wrapper message for a list of String.
       message ListOfString {
-        repeated string items = 1;
+        message List {
+          repeated string items = 1;
+        }
+        List list = 1;
       }
-
       // Wrapper message for a list of User.
       message ListOfUser {
-        repeated User items = 1;
+        message List {
+          repeated User items = 1;
+        }
+        List list = 1;
       }
-
       // Request message for getMatrix operation.
       message QueryGetMatrixRequest {
       }
@@ -827,17 +846,20 @@ describe('SDL to Proto Lists', () => {
         }
         List list = 1;
       }
-
       // Wrapper message for a list of String.
       message ListOfString {
-        repeated string items = 1;
+        message List {
+          repeated string items = 1;
+        }
+        List list = 1;
       }
-
       // Wrapper message for a list of UpdateUserInput.
       message ListOfUpdateUserInput {
-        repeated UpdateUserInput items = 1;
+        message List {
+          repeated UpdateUserInput items = 1;
+        }
+        List list = 1;
       }
-
       // Request message for getUser operation.
       message QueryGetUserRequest {
       }
@@ -977,14 +999,18 @@ describe('SDL to Proto Lists', () => {
 
       // Wrapper message for a list of ID.
       message ListOfID {
-        repeated string items = 1;
+        message List {
+          repeated string items = 1;
+        }
+        List list = 1;
       }
-
       // Wrapper message for a list of Item.
       message ListOfItem {
-        repeated Item items = 1;
+        message List {
+          repeated Item items = 1;
+        }
+        List list = 1;
       }
-
       // Wrapper message for a list of Item.
       message ListOfListOfItem {
         message List {
@@ -992,7 +1018,6 @@ describe('SDL to Proto Lists', () => {
         }
         List list = 1;
       }
-
       // Wrapper message for a list of Item.
       message ListOfListOfListOfItem {
         message List {
@@ -1000,7 +1025,6 @@ describe('SDL to Proto Lists', () => {
         }
         List list = 1;
       }
-
       // Wrapper message for a list of Priority.
       message ListOfListOfListOfListOfPriority {
         message List {
@@ -1008,7 +1032,6 @@ describe('SDL to Proto Lists', () => {
         }
         List list = 1;
       }
-
       // Wrapper message for a list of Priority.
       message ListOfListOfListOfPriority {
         message List {
@@ -1016,7 +1039,6 @@ describe('SDL to Proto Lists', () => {
         }
         List list = 1;
       }
-
       // Wrapper message for a list of Priority.
       message ListOfListOfPriority {
         message List {
@@ -1024,7 +1046,6 @@ describe('SDL to Proto Lists', () => {
         }
         List list = 1;
       }
-
       // Wrapper message for a list of String.
       message ListOfListOfString {
         message List {
@@ -1032,22 +1053,27 @@ describe('SDL to Proto Lists', () => {
         }
         List list = 1;
       }
-
       // Wrapper message for a list of Node.
       message ListOfNode {
-        repeated Node items = 1;
+        message List {
+          repeated Node items = 1;
+        }
+        List list = 1;
       }
-
       // Wrapper message for a list of Priority.
       message ListOfPriority {
-        repeated Priority items = 1;
+        message List {
+          repeated Priority items = 1;
+        }
+        List list = 1;
       }
-
       // Wrapper message for a list of String.
       message ListOfString {
-        repeated string items = 1;
+        message List {
+          repeated string items = 1;
+        }
+        List list = 1;
       }
-
       // Request message for getComplex operation.
       message QueryGetComplexRequest {
         FilterInput filter = 1;
@@ -1167,7 +1193,6 @@ describe('SDL to Proto Lists', () => {
         }
         List list = 1;
       }
-
       // Wrapper message for a list of User.
       message ListOfListOfUser {
         message List {
@@ -1175,17 +1200,20 @@ describe('SDL to Proto Lists', () => {
         }
         List list = 1;
       }
-
       // Wrapper message for a list of String.
       message ListOfString {
-        repeated string items = 1;
+        message List {
+          repeated string items = 1;
+        }
+        List list = 1;
       }
-
       // Wrapper message for a list of User.
       message ListOfUser {
-        repeated User items = 1;
+        message List {
+          repeated User items = 1;
+        }
+        List list = 1;
       }
-
       // Request message for getEdgeCases operation.
       message QueryGetEdgeCasesRequest {
       }
@@ -1273,14 +1301,18 @@ describe('SDL to Proto Lists', () => {
 
       // Wrapper message for a list of Category.
       message ListOfCategory {
-        repeated Category items = 1;
+        message List {
+          repeated Category items = 1;
+        }
+        List list = 1;
       }
-
       // Wrapper message for a list of Comment.
       message ListOfComment {
-        repeated Comment items = 1;
+        message List {
+          repeated Comment items = 1;
+        }
+        List list = 1;
       }
-
       // Wrapper message for a list of Category.
       message ListOfListOfCategory {
         message List {
@@ -1288,7 +1320,6 @@ describe('SDL to Proto Lists', () => {
         }
         List list = 1;
       }
-
       // Wrapper message for a list of Comment.
       message ListOfListOfComment {
         message List {
@@ -1296,7 +1327,6 @@ describe('SDL to Proto Lists', () => {
         }
         List list = 1;
       }
-
       // Wrapper message for a list of User.
       message ListOfListOfUser {
         message List {
@@ -1304,12 +1334,13 @@ describe('SDL to Proto Lists', () => {
         }
         List list = 1;
       }
-
       // Wrapper message for a list of User.
       message ListOfUser {
-        repeated User items = 1;
+        message List {
+          repeated User items = 1;
+        }
+        List list = 1;
       }
-
       // Request message for getUser operation.
       message QueryGetUserRequest {
       }
@@ -1439,19 +1470,25 @@ describe('SDL to Proto Lists', () => {
 
       // Wrapper message for a list of Float.
       message ListOfFloat {
-        repeated double items = 1;
+        message List {
+          repeated double items = 1;
+        }
+        List list = 1;
       }
-
       // Wrapper message for a list of ID.
       message ListOfID {
-        repeated string items = 1;
+        message List {
+          repeated string items = 1;
+        }
+        List list = 1;
       }
-
       // Wrapper message for a list of Int.
       message ListOfInt {
-        repeated int32 items = 1;
+        message List {
+          repeated int32 items = 1;
+        }
+        List list = 1;
       }
-
       // Wrapper message for a list of TagInput.
       message ListOfListOfTagInput {
         message List {
@@ -1459,7 +1496,6 @@ describe('SDL to Proto Lists', () => {
         }
         List list = 1;
       }
-
       // Wrapper message for a list of UserFilterInput.
       message ListOfListOfUserFilterInput {
         message List {
@@ -1467,27 +1503,34 @@ describe('SDL to Proto Lists', () => {
         }
         List list = 1;
       }
-
       // Wrapper message for a list of SortInput.
       message ListOfSortInput {
-        repeated SortInput items = 1;
+        message List {
+          repeated SortInput items = 1;
+        }
+        List list = 1;
       }
-
       // Wrapper message for a list of String.
       message ListOfString {
-        repeated string items = 1;
+        message List {
+          repeated string items = 1;
+        }
+        List list = 1;
       }
-
       // Wrapper message for a list of TagInput.
       message ListOfTagInput {
-        repeated TagInput items = 1;
+        message List {
+          repeated TagInput items = 1;
+        }
+        List list = 1;
       }
-
       // Wrapper message for a list of UserFilterInput.
       message ListOfUserFilterInput {
-        repeated UserFilterInput items = 1;
+        message List {
+          repeated UserFilterInput items = 1;
+        }
+        List list = 1;
       }
-
       // Request message for searchUsers operation.
       message QuerySearchUsersRequest {
         SearchInput input = 1;
@@ -1645,19 +1688,25 @@ describe('SDL to Proto Lists', () => {
 
       // Wrapper message for a list of CategoryInput.
       message ListOfCategoryInput {
-        repeated CategoryInput items = 1;
+        message List {
+          repeated CategoryInput items = 1;
+        }
+        List list = 1;
       }
-
       // Wrapper message for a list of CommentInput.
       message ListOfCommentInput {
-        repeated CommentInput items = 1;
+        message List {
+          repeated CommentInput items = 1;
+        }
+        List list = 1;
       }
-
       // Wrapper message for a list of FilterNodeInput.
       message ListOfFilterNodeInput {
-        repeated FilterNodeInput items = 1;
+        message List {
+          repeated FilterNodeInput items = 1;
+        }
+        List list = 1;
       }
-
       // Wrapper message for a list of CategoryInput.
       message ListOfListOfCategoryInput {
         message List {
@@ -1665,7 +1714,6 @@ describe('SDL to Proto Lists', () => {
         }
         List list = 1;
       }
-
       // Wrapper message for a list of CommentInput.
       message ListOfListOfCommentInput {
         message List {
@@ -1673,7 +1721,6 @@ describe('SDL to Proto Lists', () => {
         }
         List list = 1;
       }
-
       // Wrapper message for a list of FilterNodeInput.
       message ListOfListOfFilterNodeInput {
         message List {
@@ -1681,7 +1728,6 @@ describe('SDL to Proto Lists', () => {
         }
         List list = 1;
       }
-
       // Request message for getCategory operation.
       message QueryGetCategoryRequest {
       }
@@ -1873,7 +1919,6 @@ describe('SDL to Proto Lists', () => {
         }
         List list = 1;
       }
-
       // Wrapper message for a list of String.
       message ListOfListOfString {
         message List {
@@ -1881,7 +1926,6 @@ describe('SDL to Proto Lists', () => {
         }
         List list = 1;
       }
-
       // Wrapper message for a list of TreeNode.
       message ListOfListOfTreeNode {
         message List {
@@ -1889,7 +1933,6 @@ describe('SDL to Proto Lists', () => {
         }
         List list = 1;
       }
-
       // Wrapper message for a list of TreeNodeInput.
       message ListOfListOfTreeNodeInput {
         message List {
@@ -1897,32 +1940,41 @@ describe('SDL to Proto Lists', () => {
         }
         List list = 1;
       }
-
       // Wrapper message for a list of MetadataInput.
       message ListOfMetadataInput {
-        repeated MetadataInput items = 1;
+        message List {
+          repeated MetadataInput items = 1;
+        }
+        List list = 1;
       }
-
       // Wrapper message for a list of ProcessingResult.
       message ListOfProcessingResult {
-        repeated ProcessingResult items = 1;
+        message List {
+          repeated ProcessingResult items = 1;
+        }
+        List list = 1;
       }
-
       // Wrapper message for a list of String.
       message ListOfString {
-        repeated string items = 1;
+        message List {
+          repeated string items = 1;
+        }
+        List list = 1;
       }
-
       // Wrapper message for a list of TreeNode.
       message ListOfTreeNode {
-        repeated TreeNode items = 1;
+        message List {
+          repeated TreeNode items = 1;
+        }
+        List list = 1;
       }
-
       // Wrapper message for a list of TreeNodeInput.
       message ListOfTreeNodeInput {
-        repeated TreeNodeInput items = 1;
+        message List {
+          repeated TreeNodeInput items = 1;
+        }
+        List list = 1;
       }
-
       // Request message for getTree operation.
       message QueryGetTreeRequest {
       }

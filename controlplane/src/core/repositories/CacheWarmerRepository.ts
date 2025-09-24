@@ -96,8 +96,8 @@ export class CacheWarmerRepository {
     rangeInHours,
     dateRange,
     operationHashes,
-    federatedGraphID, // TODO; Update view to get operations scoped to the federated graph
-    organizationID, // TODO; Update view to get operations scoped to the organization
+    federatedGraphID,
+    organizationID,
   }: {
     rangeInHours?: number;
     dateRange?: DateRange;
@@ -116,7 +116,9 @@ export class CacheWarmerRepository {
         OperationContent as operationContent, 
         OperationHash as operationHash
       FROM ${this.client.database}.gql_metrics_operations
-      WHERE Timestamp >= startDate AND Timestamp <= endDate AND OperationHash IN (${operationHashes.map((hash) => `'${hash}'`).join(',')})
+      WHERE OrganizationID = '${organizationID}' 
+      AND FederatedGraphID = '${federatedGraphID}'
+      AND Timestamp >= startDate AND Timestamp <= endDate AND OperationHash IN (${operationHashes.map((hash) => `'${hash}'`).join(',')})
       GROUP BY
         OperationContent,
         OperationHash

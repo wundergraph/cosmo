@@ -1,0 +1,2 @@
+ALTER TABLE "linked_schema_checks" DROP CONSTRAINT "linked_schema_checks_schema_check_id_unique";--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "lsc_schema_check_id_linked_schema_check_id_unique" ON "linked_schema_checks" USING btree ("schema_check_id","linked_schema_check_id");

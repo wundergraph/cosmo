@@ -5,7 +5,7 @@ import { ProposalState } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import { GetChecksResponse, Label, LintSeverityLevel, ProposalDTO, ProposalSubgraphDTO } from '../../types/index.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
-import { normalizeLabels } from '../util.js';
+import { isCheckSuccessful, normalizeLabels } from '../util.js';
 import { SchemaCheckRepository } from './SchemaCheckRepository.js';
 
 /**
@@ -510,6 +510,7 @@ export class ProposalRepository {
 
   public async getLatestCheckForProposal(
     proposalId: string,
+    organizationId: string,
   ): Promise<{ checkId: string; isSuccessful: boolean } | null> {
     const latestCheck = await this.db
       .select({
@@ -550,11 +551,29 @@ export class ProposalRepository {
     const hasGraphPruningErrors = Boolean(check[0].hasGraphPruningErrors);
     const clientTrafficCheckSkipped = Boolean(check[0].clientTrafficCheckSkipped);
 
-    const isSuccessful =
-      isComposable &&
-      (!isBreaking || (isBreaking && !hasClientTraffic && !clientTrafficCheckSkipped)) &&
-      !hasLintErrors &&
-      !hasGraphPruningErrors;
+    const schemaCheckRepo = new SchemaCheckRepository(this.db);
+    const linkedChecks = await schemaCheckRepo.getLinkedSchemaChecks({
+      schemaCheckID: check[0].id,
+      organizationId,
+    });
+    const isLinkedTrafficCheckFailed = linkedChecks.some(
+      (linkedCheck) => linkedCheck.hasClientTraffic && !linkedCheck.isForcedSuccess,
+    );
+    const isLinkedPruningCheckFailed = linkedChecks.some(
+      (linkedCheck) => linkedCheck.hasGraphPruningErrors && !linkedCheck.isForcedSuccess,
+    );
+
+    const isSuccessful = isCheckSuccessful({
+      isComposable,
+      isBreaking,
+      hasClientTraffic,
+      hasLintErrors,
+      hasGraphPruningErrors,
+      clientTrafficCheckSkipped,
+      hasProposalMatchError: false,
+      isLinkedTrafficCheckFailed,
+      isLinkedPruningCheckFailed,
+    });
 
     return {
       checkId: check[0].id,
@@ -565,6 +584,7 @@ export class ProposalRepository {
   public async getChecksByProposalId({
     proposalId,
     federatedGraphId,
+    organizationId,
     limit,
     offset,
     startDate,
@@ -572,6 +592,7 @@ export class ProposalRepository {
   }: {
     proposalId: string;
     federatedGraphId: string;
+    organizationId: string;
     limit: number;
     offset: number;
     startDate?: string;
@@ -639,6 +660,11 @@ export class ProposalRepository {
           federatedGraphId,
         });
 
+        const linkedChecks = await schemaCheckRepo.getLinkedSchemaChecks({
+          schemaCheckID: c.id,
+          organizationId,
+        });
+
         return {
           id: c.id,
           timestamp: c.createdAt.toISOString(),
@@ -665,6 +691,7 @@ export class ProposalRepository {
           compositionSkipped: c.compositionSkipped ?? false,
           breakingChangesSkipped: c.breakingChangesSkipped ?? false,
           errorMessage: c.errorMessage || undefined,
+          linkedChecks,
         };
       }),
     );

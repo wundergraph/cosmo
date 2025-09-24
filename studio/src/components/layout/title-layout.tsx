@@ -40,7 +40,7 @@ export const TitleLayout = ({
         {breadcrumbs && breadcrumbs.length > 0 ? (
           <div
             className={cn(
-              "-ml-2 flex w-full flex-col justify-between gap-y-4 px-4 md:w-auto lg:flex-row lg:items-center lg:px-6 xl:px-8",
+              "flex w-full flex-col justify-between gap-y-4 px-4 md:w-auto lg:flex-row lg:items-center lg:px-6 xl:px-8",
             )}
           >
             <div className="flex flex-row items-center space-x-2 text-sm">

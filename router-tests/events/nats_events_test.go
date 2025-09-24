@@ -1,4 +1,4 @@
-package events_test
+package events
 
 import (
 	"bufio"
@@ -324,7 +324,7 @@ func TestNatsEvents(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 				RouterOptions: []core.Option{
-					core.WithMultipartHeartbeatInterval(heartbeatInterval),
+					core.WithSubscriptionHeartbeatInterval(heartbeatInterval),
 				},
 				EnableNats: true,
 				TLSConfig: &core.TlsConfig{
@@ -378,7 +378,7 @@ func TestNatsEvents(t *testing.T) {
 				EnableNats:               true,
 				TLSConfig:                nil, // Force Http/1
 				RouterOptions: []core.Option{
-					core.WithMultipartHeartbeatInterval(heartbeatInterval),
+					core.WithSubscriptionHeartbeatInterval(heartbeatInterval),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 

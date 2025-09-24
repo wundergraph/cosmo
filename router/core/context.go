@@ -634,15 +634,6 @@ func (o *operationContext) QueryPlanStats() (QueryPlanStats, error) {
 	return qps, nil
 }
 
-// isMutationRequest returns true if the current request is a mutation request
-func isMutationRequest(ctx context.Context) bool {
-	op := getRequestContext(ctx)
-	if op == nil {
-		return false
-	}
-	return op.Operation().Type() == "mutation"
-}
-
 type SubgraphResolver struct {
 	subgraphsByURL map[string]*Subgraph
 	subgraphsByID  map[string]*Subgraph

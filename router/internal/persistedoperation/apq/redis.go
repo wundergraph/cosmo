@@ -3,11 +3,12 @@ package apq
 import (
 	"context"
 	"errors"
+	"time"
+
 	"github.com/redis/go-redis/v9"
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
+	rd "github.com/wundergraph/cosmo/router/internal/rediscloser"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"go.uber.org/zap"
-	"time"
 )
 
 type RedisOptions struct {

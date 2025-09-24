@@ -1,5 +1,4 @@
 /* eslint-disable import/no-named-as-default-member */
-
 import { access, mkdir, rename, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
@@ -19,20 +18,17 @@ export default (opts: BaseCommandOptions) => {
   const command = new Command('init');
   command.description('Scaffold a new gRPC router plugin');
   command.argument('name', 'Name of the plugin');
-  command.option('-p, --project <project>', 'Project name', 'cosmo');
+  command.option('-p, --project <project>', 'Project name', '');
   command.option('-d, --directory <directory>', 'Directory to create the project in', '.');
-  command.option('--only-plugin', 'Only create the plugin without a router project', false);
   command.option('-l, --language <language>', 'Programming language to use for the plugin', 'go');
   command.action(async (name, options) => {
     const startTime = performance.now();
     const cwd = process.cwd();
 
-    if (options.onlyPlugin) {
-      options.project = '';
-    }
-
     const projectDir = resolve(cwd, options.directory, options.project);
-    const pluginDir = resolve(cwd, projectDir, 'plugins', name);
+
+    const pluginDir = options.project ? resolve(cwd, projectDir, 'plugins', name) : resolve(cwd, projectDir, name);
+
     const originalPluginName = name;
 
     name = upperFirst(camelCase(name));
@@ -72,7 +68,7 @@ export default (opts: BaseCommandOptions) => {
 
       spinner.text = 'Generating mapping and proto files...';
 
-      if (!options.onlyPlugin && options.project) {
+      if (options.project) {
         await writeFile(resolve(tempDir, 'README.md'), pupa(ProjectTemplates.readme, { name, originalPluginName }));
         await writeFile(resolve(srcDir, 'schema.graphql'), pupa(PluginTemplates.schema, { name }));
 
@@ -146,10 +142,12 @@ export default (opts: BaseCommandOptions) => {
         await writeFile(resolve(tempDir, '.gitignore'), PluginTemplates.gitignore);
         await writeFile(resolve(tempDir, '.cursorignore'), PluginTemplates.cursorIgnore);
 
-        await mkdir(resolve(projectDir, 'plugins'), { recursive: true });
+        await mkdir(projectDir, { recursive: true });
 
         await rename(tempDir, pluginDir);
       }
+
+      await writeFile(resolve(pluginDir, 'Dockerfile'), pupa(PluginTemplates.dockerfile, { originalPluginName }));
 
       const endTime = performance.now();
       const elapsedTimeMs = endTime - startTime;
@@ -163,9 +161,12 @@ export default (opts: BaseCommandOptions) => {
       });
       console.log('');
       console.log(
-        `  Checkout the ${pc.bold(pc.italic('README.md'))} file for instructions on how to build and run your plugin.`,
+        `  You can modify your schema in src/schema.graphql, when you're ready to start implementing, run ${pc.bold('wgc router plugin generate')}.`,
       );
-      console.log(`  Go to https://cosmo-docs.wundergraph.com/router/plugins to learn more about it.`);
+      console.log(
+        `  For more information, checkout the ${pc.bold(pc.italic('README.md'))} file for instructions on how to build and run your plugin.`,
+      );
+      console.log(`  Go to https://cosmo-docs.wundergraph.com/connect/plugins to learn more about it.`);
       console.log('');
     } catch (error: any) {
       // Clean up the temp directory in case of error

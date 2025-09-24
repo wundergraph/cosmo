@@ -81,6 +81,7 @@ export function getProposalChecks(
       offset: req.offset,
       startDate: dateRange?.start,
       endDate: dateRange?.end,
+      organizationId: authContext.organizationId,
     });
 
     return {

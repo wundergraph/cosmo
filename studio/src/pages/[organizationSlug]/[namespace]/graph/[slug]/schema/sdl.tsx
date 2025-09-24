@@ -42,12 +42,13 @@ import { useRouter } from "next/router";
 import { useContext } from "react";
 import { MdOutlineFeaturedPlayList } from "react-icons/md";
 import { PiGraphLight } from "react-icons/pi";
+import { useWorkspace } from "@/hooks/use-workspace";
 
 const SDLPage: NextPageWithLayout = () => {
   const router = useRouter();
   const activeSubgraph = router.query.subgraph as string;
   const activeFeatureFlag = router.query.featureFlag as string;
-  const namespace = router.query.namespace as string;
+  const { namespace: { name: namespace } } = useWorkspace();
   const graphName = router.query.slug as string;
   const schemaType = router.query.schemaType as string;
 

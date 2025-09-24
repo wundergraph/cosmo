@@ -274,6 +274,12 @@ export const roles = [
     description: "Grants publish access to the selected subgraphs.",
   },
   {
+    key: "subgraph-checker",
+    category: "subgraph",
+    displayName: "Checker",
+    description: "Grants access to creating checks for the selected subgraphs.",
+  },
+  {
     key: "subgraph-viewer",
     category: "subgraph",
     displayName: "Viewer",

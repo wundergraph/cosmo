@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.39.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.38.4...aws-lambda-router@0.39.0) (2025-09-06)
+
+### Features
+
+* upgrade all components to go 1.25 ([#2187](https://github.com/wundergraph/cosmo/issues/2187)) ([49c35ed](https://github.com/wundergraph/cosmo/commit/49c35ede5ab5873ee163815a047797429a63e3d1)) (@miklosbarabas)
+
 ## [0.38.4](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.38.3...aws-lambda-router@0.38.4) (2025-07-16)
 
 ### Bug Fixes

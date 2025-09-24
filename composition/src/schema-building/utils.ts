@@ -33,6 +33,7 @@ import {
   ParentDefinitionData,
   PersistedDirectiveDefinitionData,
   PersistedDirectivesData,
+  SchemaData,
 } from './types';
 import { MutableFieldNode, MutableInputValueNode, MutableTypeDefinitionNode } from './ast';
 import { ObjectTypeNode, setToNameNodeArray, stringToNameNode } from '../ast/utils';
@@ -57,20 +58,29 @@ import {
   INPUT_NODE_KINDS,
   INT_SCALAR,
   MUTATION,
+  NON_REPEATABLE_PERSISTED_DIRECTIVES,
   OUTPUT_NODE_KINDS,
   PERSISTED_CLIENT_DIRECTIVES,
   QUERY,
   REASON,
   REQUIRES_SCOPES,
   ROOT_TYPE_NAMES,
+  SEMANTIC_NON_NULL,
   SHAREABLE,
   STRING_SCALAR,
   SUBSCRIPTION,
   TAG,
 } from '../utils/string-constants';
-import { generateRequiresScopesDirective, generateSimpleDirective, getEntriesNotInHashSet } from '../utils/utils';
+import {
+  generateRequiresScopesDirective,
+  generateSemanticNonNullDirective,
+  generateSimpleDirective,
+  getEntriesNotInHashSet,
+  getFirstEntry,
+} from '../utils/utils';
 import { InputNodeKind, InvalidRequiredInputValueData, OutputNodeKind } from '../utils/types';
 import { getDescriptionFromString } from '../v1/federation/utils';
+import { SubgraphName } from '../types/types';
 
 export function newPersistedDirectivesData(): PersistedDirectivesData {
   return {
@@ -257,8 +267,8 @@ export function isParentDataRootType(parentData: ParentDefinitionData): boolean 
   return parentData.isRootType;
 }
 
-export function isParentDataInterfaceType(parentData: ParentDefinitionData): boolean {
-  return parentData.kind === Kind.INTERFACE_TYPE_DEFINITION;
+export function isInterfaceDefinitionData(data: ParentDefinitionData): data is InterfaceDefinitionData {
+  return data.kind === Kind.INTERFACE_TYPE_DEFINITION;
 }
 
 export function setParentDataExtensionType(existingData: ParentDefinitionData, incomingData: ParentDefinitionData) {
@@ -324,8 +334,8 @@ export function extractPersistedDirectives(
       persistedDirectivesData.directivesByDirectiveName.set(directiveName, [...directiveNodes]);
       continue;
     }
-    // Only add one instance of the @inaccessible directive
-    if (directiveName === INACCESSIBLE) {
+    // Only add one instance of certain directives.
+    if (NON_REPEATABLE_PERSISTED_DIRECTIVES.has(directiveName)) {
       continue;
     }
     existingDirectives.push(...directiveNodes);
@@ -437,11 +447,17 @@ export function getClientPersistedDirectiveNodes<T extends NodeData>(nodeData: T
     persistedDirectiveNodes.push(generateDeprecatedDirective(nodeData.persistedDirectivesData.deprecatedReason));
   }
   for (const [directiveName, directiveNodes] of nodeData.persistedDirectivesData.directivesByDirectiveName) {
-    // Only include @deprecated, @authenticated, and @requiresScopes in the client schema
+    if (directiveName === SEMANTIC_NON_NULL && isFieldData(nodeData)) {
+      persistedDirectiveNodes.push(
+        generateSemanticNonNullDirective(getFirstEntry(nodeData.nullLevelsBySubgraphName) ?? new Set<number>([0])),
+      );
+      continue;
+    }
+    // Only include @deprecated, @oneOf, and @semanticNonNull in the client schema.
     if (!PERSISTED_CLIENT_DIRECTIVES.has(directiveName)) {
       continue;
     }
-    /* Persisted client-facing directives or all non-repeatable.
+    /* Persisted client-facing directives are all non-repeatable.
      ** The directive is validated against the definition when creating the router schema node, so it is not necessary
      ** to validate again. */
     persistedDirectiveNodes.push(directiveNodes[0]);
@@ -572,7 +588,7 @@ export function newInvalidFieldNames() {
 export function validateExternalAndShareable(fieldData: FieldData, invalidFieldNames: InvalidFieldNames) {
   // fieldData.subgraphNames.size is not used due to overridden fields
   const instances = fieldData.isShareableBySubgraphName.size;
-  let externalFieldSubgraphNames: Array<string> = [];
+  let externalFieldSubgraphNames = new Array<SubgraphName>();
   let unshareableFields = 0;
   for (const [subgraphName, isShareable] of fieldData.isShareableBySubgraphName) {
     /*
@@ -760,7 +776,7 @@ export function areKindsEqual<T extends ParentDefinitionData>(a: T, b: ParentDef
   return a.kind === b.kind;
 }
 
-export function isFieldData(data: ChildData): data is FieldData {
+export function isFieldData(data: ChildData | NodeData | SchemaData): data is FieldData {
   return data.kind === Kind.FIELD_DEFINITION;
 }
 
