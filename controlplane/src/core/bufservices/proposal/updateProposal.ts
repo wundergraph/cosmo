@@ -152,7 +152,7 @@ export function updateProposal(
     }
 
     const clientHdr = ctx.requestHeader.get('user-agent')?.toLowerCase() ?? '';
-    const expectedOrigin: ProposalOrigin = clientHdr.includes('cosmo-hub') ? 'HUB' : 'COSMO';
+    const expectedOrigin: ProposalOrigin = clientHdr.includes('cosmo-hub') ? 'EXTERNAL' : 'INTERNAL';
     if (proposal.proposal.origin !== expectedOrigin) {
       return {
         response: {
