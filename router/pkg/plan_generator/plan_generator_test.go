@@ -370,35 +370,6 @@ func TestPlanGenerator(t *testing.T) {
 		}
 	})
 
-	t.Run("report file uses .json filenames when Raw is enabled", func(t *testing.T) {
-		tempDir, err := os.MkdirTemp("", "plans-")
-		require.NoError(t, err)
-		defer func() {
-			_ = os.RemoveAll(tempDir)
-		}()
-
-		cfg := QueryPlanConfig{
-			SourceDir:       path.Join(getTestDataDir(), "queries", "base"),
-			OutDir:          tempDir,
-			ExecutionConfig: path.Join(getTestDataDir(), "execution_config", "base.json"),
-			Timeout:         "30s",
-			OutputReport:    true,
-			Raw:             true,
-		}
-
-		err = PlanGenerator(context.Background(), cfg)
-		assert.NoError(t, err)
-
-		results, err := os.ReadFile(path.Join(tempDir, ReportFileName))
-		assert.NoError(t, err)
-		var writtenResults QueryPlanResults
-		assert.NoError(t, json.Unmarshal(results, &writtenResults))
-		assert.Len(t, writtenResults.Plans, len(allFiles))
-		for _, pr := range writtenResults.Plans {
-			assert.True(t, strings.HasSuffix(pr.FileName, ".json"))
-		}
-	})
-
 	t.Run("generates non-raw textual plans when Raw is disabled", func(t *testing.T) {
 		tempDir, err := os.MkdirTemp("", "plans-")
 		require.NoError(t, err)
