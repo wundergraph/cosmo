@@ -40,14 +40,12 @@ func PlanGenerator(args []string) {
 	f.BoolVar(&cfg.FailFast, "fail-fast", false, "stop as soon as possible if a plan fails")
 	f.StringVar(&cfg.LogLevel, "log-level", "warn", "log level to use (debug, info, warn, error, panic, fatal)")
 	f.Func("print-format", "output format (text|json)", func(s string) error {
-		v := core.PlanOutputFormat(strings.ToLower(s))
-		// Set default
-		if v == "" {
-			v = core.PlanOutputFormatText
-		}
-		switch v {
+		switch value := core.PlanOutputFormat(strings.ToLower(s)); value {
+		case "":
+			cfg.OutputFormat = core.PlanOutputFormatText
+			return nil
 		case core.PlanOutputFormatText, core.PlanOutputFormatJSON:
-			cfg.OutputFormat = v
+			cfg.OutputFormat = value
 			return nil
 		}
 		return fmt.Errorf("must be one of: text, json (got %q)", s)

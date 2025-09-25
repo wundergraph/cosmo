@@ -110,7 +110,7 @@ func (pl *Planner) PlanOperation(operationFilePath string, outputFormat PlanOutp
 		return string(marshal), nil
 	}
 
-	return "", fmt.Errorf("invalid type specified: %w", err)
+	return "", fmt.Errorf("invalid type specified: %q", outputFormat)
 }
 
 func (pl *Planner) PlanParsedOperation(operation *ast.Document) (*resolve.FetchTreeQueryPlanNode, error) {
