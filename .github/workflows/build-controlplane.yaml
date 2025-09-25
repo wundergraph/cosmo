@@ -11,7 +11,6 @@ env:
   DO_NOT_TRACK: '1'
   # Angel Studios AWS ECR Configuration
   AWS_REGION: ${{ secrets.SHARED_AWS_REGION }}
-  BUILD_ROLE: ${{ secrets.AWS_GITHUB_ACTIONS_BUILD_ROLE }}
   IMAGE_NAME: wundergraph-cosmo-controlplane
 
 jobs:
@@ -34,8 +33,8 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-access-key-id: ${{ secrets.ECR_REPO_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.ECR_REPO_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
