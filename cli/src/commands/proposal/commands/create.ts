@@ -80,7 +80,7 @@ export default (opts: BaseCommandOptions) => {
         name,
         subgraphs,
         namingConvention: ProposalNamingConvention.NORMAL,
-        origin: ProposalOrigin.COSMO,
+        origin: ProposalOrigin.INTERNAL,
       },
       {
         headers: getBaseHeaders(),

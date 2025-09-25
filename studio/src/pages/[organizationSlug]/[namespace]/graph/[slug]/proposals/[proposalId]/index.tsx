@@ -305,8 +305,8 @@ export const ProposalDetails = ({
           <div className="flex flex-1 items-center justify-end gap-1">
             {state === "DRAFT" && (
               <DropdownMenu>
-                <DropdownMenuTrigger asChild disabled={origin !== ProposalOrigin.COSMO}>
-                  {origin === ProposalOrigin.COSMO ? (
+                <DropdownMenuTrigger asChild disabled={origin !== ProposalOrigin.INTERNAL}>
+                  {origin === ProposalOrigin.INTERNAL ? (
                     <Button
                       className="ml-4"
                       disabled={isApproving || isClosing}

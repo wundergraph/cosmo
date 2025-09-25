@@ -657,22 +657,22 @@ export function newCompositionOptions(disableResolvabilityValidation?: boolean):
 
 export function toProposalOriginEnum(value: ProposalOrigin): ProposalOriginEnum {
   switch (value) {
-    case ProposalOrigin.HUB: {
-      return 'HUB';
+    case ProposalOrigin.EXTERNAL: {
+      return 'EXTERNAL';
     }
     default: {
-      return 'COSMO';
+      return 'INTERNAL';
     }
   }
 }
 
 export function fromProposalOriginEnum(value: ProposalOriginEnum): ProposalOrigin {
   switch (value) {
-    case 'HUB': {
-      return ProposalOrigin.HUB;
+    case 'EXTERNAL': {
+      return ProposalOrigin.EXTERNAL;
     }
     default: {
-      return ProposalOrigin.COSMO;
+      return ProposalOrigin.INTERNAL;
     }
   }
 }

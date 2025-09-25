@@ -1,5 +1,5 @@
 {
-  "id": "7202f92f-1053-40bc-9531-7c5074d34d99",
+  "id": "3904e4bd-f2e7-4364-a807-c3000b7d0f56",
   "prevId": "aa949867-16a4-42b3-abac-089abf6a6e4d",
   "version": "7",
   "dialect": "postgresql",
@@ -5470,7 +5470,7 @@
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true,
-          "default": "'COSMO'"
+          "default": "'INTERNAL'"
         }
       },
       "indexes": {
@@ -8472,8 +8472,8 @@
       "name": "proposal_origin",
       "schema": "public",
       "values": [
-        "COSMO",
-        "HUB"
+        "INTERNAL",
+        "EXTERNAL"
       ]
     },
     "public.proposal_state": {

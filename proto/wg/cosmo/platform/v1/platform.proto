@@ -2726,8 +2726,8 @@ message ProposalSubgraph {
 }
 
 enum ProposalOrigin {
-   COSMO = 0;
-   HUB = 1;
+   INTERNAL = 0;
+   EXTERNAL = 1;
 }
 
 enum ProposalNamingConvention {

@@ -365,19 +365,19 @@ proto3.util.setEnumType(Feature, "wg.cosmo.platform.v1.Feature", [
  */
 export enum ProposalOrigin {
   /**
-   * @generated from enum value: COSMO = 0;
+   * @generated from enum value: INTERNAL = 0;
    */
-  COSMO = 0,
+  INTERNAL = 0,
 
   /**
-   * @generated from enum value: HUB = 1;
+   * @generated from enum value: EXTERNAL = 1;
    */
-  HUB = 1,
+  EXTERNAL = 1,
 }
 // Retrieve enum metadata with: proto3.getEnumType(ProposalOrigin)
 proto3.util.setEnumType(ProposalOrigin, "wg.cosmo.platform.v1.ProposalOrigin", [
-  { no: 0, name: "COSMO" },
-  { no: 1, name: "HUB" },
+  { no: 0, name: "INTERNAL" },
+  { no: 1, name: "EXTERNAL" },
 ]);
 
 /**
@@ -21377,7 +21377,7 @@ export class Proposal extends Message<Proposal> {
   /**
    * @generated from field: wg.cosmo.platform.v1.ProposalOrigin origin = 11;
    */
-  origin = ProposalOrigin.COSMO;
+  origin = ProposalOrigin.INTERNAL;
 
   constructor(data?: PartialMessage<Proposal>) {
     super();
@@ -21510,7 +21510,7 @@ export class CreateProposalRequest extends Message<CreateProposalRequest> {
   /**
    * @generated from field: wg.cosmo.platform.v1.ProposalOrigin origin = 6;
    */
-  origin = ProposalOrigin.COSMO;
+  origin = ProposalOrigin.INTERNAL;
 
   constructor(data?: PartialMessage<CreateProposalRequest>) {
     super();

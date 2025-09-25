@@ -58,7 +58,7 @@ async function createTestProposal(
     federatedGraphName,
     namespace: DEFAULT_NAMESPACE,
     name: proposalName,
-    origin: origin ?? ProposalOrigin.COSMO,
+    origin: origin ?? ProposalOrigin.INTERNAL,
     subgraphs: [
       {
         name: subgraphName,
@@ -514,7 +514,7 @@ describe('Update proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
-      origin: ProposalOrigin.COSMO,
+      origin: ProposalOrigin.INTERNAL,
       subgraphs: [
         {
           name: subgraph1Name,
@@ -682,7 +682,7 @@ describe('Update proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
-      origin: ProposalOrigin.COSMO,
+      origin: ProposalOrigin.INTERNAL,
       subgraphs: [
         {
           name: subgraph1Name,
@@ -1506,7 +1506,7 @@ describe('Update proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
-      origin: ProposalOrigin.COSMO,
+      origin: ProposalOrigin.INTERNAL,
       subgraphs: [
         {
           name: subgraph1Name,
@@ -1654,7 +1654,7 @@ describe('Update proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
-      origin: ProposalOrigin.COSMO,
+      origin: ProposalOrigin.INTERNAL,
       subgraphs: [
         {
           name: subgraph1Name,
@@ -1782,7 +1782,7 @@ describe('Update proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
-      origin: ProposalOrigin.COSMO,
+      origin: ProposalOrigin.INTERNAL,
       subgraphs: [
         {
           name: newSubgraphName,
@@ -2196,7 +2196,7 @@ describe('Update proposal tests', () => {
       subgraphName: existingSubgraphName,
       subgraphSchemaSDL,
       updatedSubgraphSDL,
-      origin: ProposalOrigin.HUB,
+      origin: ProposalOrigin.EXTERNAL,
     });
 
     expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
