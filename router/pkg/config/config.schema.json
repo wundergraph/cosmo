@@ -1716,6 +1716,40 @@
                     },
                     "description": "The interval at which the JWKs are refreshed. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
                     "default": "1m"
+                  },
+                  "refresh_unknown_kid": {
+                    "type": "object",
+                    "description": "Controls rate-limited refresh behavior when a JWT KID is unknown.",
+                    "additionalProperties": false,
+                    "properties": {
+                      "enabled": {
+                        "type": "boolean",
+                        "description": "Enable refresh attempts on unknown KID.",
+                        "default": false
+                      },
+                      "max_wait": {
+                        "type": "string",
+                        "description": "Maximum time to wait for a refresh permit before giving up.",
+                        "default": "10s",
+                        "duration": {
+                          "minimum": "0s"
+                        }
+                      },
+                      "interval": {
+                        "type": "string",
+                        "description": "Token refill interval for the rate limiter.",
+                        "default": "1m",
+                        "duration": {
+                          "minimum": "1s"
+                        }
+                      },
+                      "burst": {
+                        "type": "integer",
+                        "description": "Burst size for the rate limiter.",
+                        "default": 2,
+                        "minimum": 1
+                      }
+                    }
                   }
                 },
                 "oneOf": [
@@ -2805,6 +2839,11 @@
           "format": "go-duration",
           "default": "30s",
           "description": "The maximum time a subscription fetch can take before it is considered timed out. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+        },
+        "validate_required_external_fields": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enables validation of resolved input field set specified as an argument for \"requires\" directive. If this field set 'points' to a nullable fields marked as external, and if router resolves such a field set with null values with errors pointing to those values, then it will not provide such entities to the resolver of the field on which directive was specified."
         }
       }
     },
