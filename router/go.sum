@@ -321,8 +321,8 @@ github.com/wk8/go-ordered-map/v2 v2.1.8 h1:5h/BUHu93oj4gIdvHHHGsScSTMijfx5PeYkE/
 github.com/wk8/go-ordered-map/v2 v2.1.8/go.mod h1:5nJHM5DyteebpVlHnWMV0rPz6Zp7+xBAnxjb1X5vnTw=
 github.com/wundergraph/astjson v0.0.0-20250106123708-be463c97e083 h1:8/D7f8gKxTBjW+SZK4mhxTTBVpxcqeBgWF1Rfmltbfk=
 github.com/wundergraph/astjson v0.0.0-20250106123708-be463c97e083/go.mod h1:eOTL6acwctsN4F3b7YE+eE2t8zcJ/doLm9sZzsxxxrE=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.227 h1:uia2rhiJt/TIqZbeEvqoy68tSs5MZM4kG1Ht+wjHrF8=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.227/go.mod h1:g1IFIylu5Fd9pKjzq0mDvpaKhEB/vkwLAIbGdX2djXU=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.229 h1:VCfCX/xmpBGQLhTHJMHLugzJrXJk/smjLRAEruCI0HY=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.229/go.mod h1:g1IFIylu5Fd9pKjzq0mDvpaKhEB/vkwLAIbGdX2djXU=
 github.com/yosida95/uritemplate/v3 v3.0.2 h1:Ed3Oyj9yrmi9087+NczuL5BwkIc4wvTb5zIM+UJPGz4=
 github.com/yosida95/uritemplate/v3 v3.0.2/go.mod h1:ILOh0sOhIJR3+L/8afwt/kE++YT040gmv5BQTMR2HP4=
 github.com/yuin/gopher-lua v1.1.1 h1:kYKnWBjvbNP4XLT3+bPEwAXJx262OhaHDWDVOPjL46M=

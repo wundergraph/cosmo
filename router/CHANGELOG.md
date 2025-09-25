@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.253.1](https://github.com/wundergraph/cosmo/compare/router@0.253.0...router@0.253.1) (2025-09-25)
+
+### Bug Fixes
+
+* remove an index after _entities in errors path ([#2237](https://github.com/wundergraph/cosmo/issues/2237)) ([ad1818e](https://github.com/wundergraph/cosmo/commit/ad1818eb4364210345e6624336daf1335d776af9)) (@ysmolski)
+
+# [0.253.0](https://github.com/wundergraph/cosmo/compare/router@0.252.3...router@0.253.0) (2025-09-25)
+
+### Features
+
+* validate optional "requires" fields ([#2230](https://github.com/wundergraph/cosmo/issues/2230)) ([8fe4967](https://github.com/wundergraph/cosmo/commit/8fe4967f0c700677c2ca37fa212f57769ba951e4)) (@ysmolski)
+
 ## [0.252.3](https://github.com/wundergraph/cosmo/compare/router@0.252.2...router@0.252.3) (2025-09-24)
 
 ### Bug Fixes
