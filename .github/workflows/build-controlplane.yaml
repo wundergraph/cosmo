@@ -12,14 +12,10 @@ env:
 
 jobs:
   build_push_image:
-    # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
-    # For now, we will disable the push to the GitHub Container Registry for external contributors
-    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-
       - uses: ./.github/actions/build-push-image
         with:
           docker_username: ${{secrets.DOCKER_USERNAME}}
