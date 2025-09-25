@@ -21,7 +21,7 @@ The following interfaces will extend the existing logic in the custom modules.
 These provide additional control over subscriptions by providing hooks, which are invoked during specific events.
 
 - `SubscriptionOnStartHandler`: Called once at subscription start.
-- `StreamReceiveEventHook`: Called each time a batch of events is received from the provider.
+- `StreamReceiveEventHook`: Triggered for each client/subscription when a batch of events is received from the provider, prior to delivery.
 - `StreamPublishEventHook`: Called each time a batch of events is going to be sent to the provider.
 
 ```go
@@ -104,7 +104,9 @@ type StreamReceiveEventHookContext interface {
 }
 
 type StreamReceiveEventHook interface {
-    // OnStreamEvents is called each time a batch of events is received from the provider
+    // OnReceiveEvents is called each time a batch of events is received from the provider before delivering them to the client
+	// So for a single batch of events received from the provider, this hook will be called one time for each active subscription.
+	// It is important to optimize the logic inside this hook to avoid performance issues.
     // Returning an error will result in a GraphQL error being returned to the client, could be customized returning a StreamHookError.
     OnReceiveEvents(ctx StreamReceiveEventHookContext, events []StreamEvent) ([]StreamEvent, error)
 }
@@ -167,7 +169,7 @@ type Employee @key(fields: "id", resolvable: false) {
   id: Int! @external
 }
 ```
-After publishing the schema, the developer will need to add the module to the cosmo streams engine.
+After publishing the schema, the developer will need to add the module to the cosmo router.
 
 ### 2. Write the custom module
 
@@ -201,28 +203,27 @@ func (m *MyModule) OnReceiveEvents(ctx StreamReceiveEventHookContext, events []c
         return events, nil
     }
 
-    // check if the subject is the one expected by the module
-    natsConfig := ctx.SubscriptionEventConfiguration().(*nats.SubscriptionEventConfiguration)
-    if natsConfig.Subjects[0] != "employeeUpdates" {
-        return events, nil
-    }
+	// check if the subscription is the one expected by the module
+	if ctx.SubscriptionEventConfiguration().RootFieldName() != "employeeUpdates" {
+		return events, nil
+	}
+	
+	newEvents := make([]core.StreamEvent, 0, len(events))
 
     // check if the client is authenticated
     if ctx.Authentication() == nil {
         // if the client is not authenticated, return no events
-        return events, nil
+        return newEvents, nil
     }
 
     // check if the client is allowed to subscribe to the stream
     clientAllowedEntitiesIds, found := ctx.Authentication().Claims()["allowedEntitiesIds"]
     if !found {
-        return events, fmt.Errorf("client is not allowed to subscribe to the stream")
+        return newEvents, fmt.Errorf("client is not allowed to subscribe to the stream")
     }
-
-    newEvents := make([]core.StreamEvent, 0, len(events))
-
+	
     for _, evt := range events {
-        natsEvent, ok := evt.(*nats.NatsEvent);
+        natsEvent, ok := evt.(*nats.NatsEvent)
         if !ok {
             newEvents = append(newEvents, evt)
             continue
@@ -345,11 +346,10 @@ func (m *MyModule) SubscriptionOnStart(ctx SubscriptionOnStartHookContext) error
         return nil
     }
 
-    // check if the subject is the one expected by the module
-    natsConfig := ctx.SubscriptionEventConfiguration().(*nats.SubscriptionEventConfiguration)
-    if natsConfig.Subjects[0] != "employeeUpdates" {
-        return nil
-    }
+	// check if the subscription is the one expected by the module
+	if ctx.SubscriptionEventConfiguration().RootFieldName() != "employeeUpdates" {
+		return nil
+	}
 
     // check if the client is authenticated
     if ctx.Authentication() == nil {

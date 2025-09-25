@@ -235,8 +235,11 @@ type StreamReceiveEventHookContext interface {
 }
 
 type StreamReceiveEventHook interface {
-	// OnReceiveEvents is called each time a batch of events is received from the provider
-	// Returning an error will result in a GraphQL error being returned to the client, could be customized returning a StreamHookError.
+	// OnReceiveEvents is called each time a batch of events is received from the provider before delivering them to the
+	// client. So for a single batch of events received from the provider, this hook will be called as many times as the
+	// number of active subscriptions. It is important to optimize the logic inside this hook to avoid performance issues.
+	// Returning an error will result in a GraphQL error being returned to the client, could be customized returning a
+	// StreamHookError.
 	OnReceiveEvents(ctx StreamReceiveEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error)
 }
 
@@ -255,7 +258,8 @@ type StreamPublishEventHookContext interface {
 
 type StreamPublishEventHook interface {
 	// OnPublishEvents is called each time a batch of events is going to be sent to the provider
-	// Returning an error will result in a GraphQL error being returned to the client, could be customized returning a StreamHookError.
+	// Returning an error will result in a GraphQL error being returned to the client, could be customized returning a
+	// StreamHookError.
 	OnPublishEvents(ctx StreamPublishEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error)
 }
 
