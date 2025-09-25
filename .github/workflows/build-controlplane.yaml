@@ -10,8 +10,8 @@ env:
   CI: true
   DO_NOT_TRACK: '1'
   # Angel Studios AWS ECR Configuration
-  AWS_REGION: us-east-1
-  ECR_REGISTRY: 317057480065.dkr.ecr.us-east-1.amazonaws.com
+  AWS_REGION: ${{ secrets.SHARED_AWS_REGION }}
+  BUILD_ROLE: ${{ secrets.AWS_GITHUB_ACTIONS_BUILD_ROLE }}
   IMAGE_NAME: wundergraph-cosmo-controlplane
 
 jobs:
@@ -23,17 +23,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
         with:
@@ -42,11 +31,21 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.BUILD_ROLE }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
       - name: Extract metadata (tags, labels) for Docker
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.ECR_REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ steps.login-ecr.outputs.registry }}/${{ env.IMAGE_NAME }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
