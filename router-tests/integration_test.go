@@ -990,7 +990,7 @@ func TestValidateRequiredExternalFields(t *testing.T) {
 						{}]},
 					"errors":[
 						{"message":"Failed to obtain field dependencies from Subgraph 'availability' at Path 'products.@.lead'.","extensions":{"statusCode":200}},
-						{"message":"Failed to fetch from Subgraph 'availability' at Path 'products.@.lead'.","extensions":{"errors":[{"message":"Cannot provide value","path":["products","@","lead","0","isAvailable"]}],"statusCode":200}}
+						{"message":"Failed to fetch from Subgraph 'availability' at Path 'products.@.lead'.","extensions":{"errors":[{"message":"Cannot provide value","path":["products","@","lead","isAvailable"]}],"statusCode":200}}
 					]}`, res.Body)
 		})
 	})
