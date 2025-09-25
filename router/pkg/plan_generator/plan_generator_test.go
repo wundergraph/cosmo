@@ -331,4 +331,107 @@ func TestPlanGenerator(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, errMsg, writtenResults.Error)
 	})
+
+	t.Run("generates raw json plans when Raw is enabled", func(t *testing.T) {
+		tempDir, err := os.MkdirTemp("", "plans-")
+		require.NoError(t, err)
+		defer func() {
+			_ = os.RemoveAll(tempDir)
+		}()
+
+		cfg := QueryPlanConfig{
+			SourceDir:       path.Join(getTestDataDir(), "queries", "base"),
+			OutDir:          tempDir,
+			ExecutionConfig: path.Join(getTestDataDir(), "execution_config", "base.json"),
+			Timeout:         "30s",
+			OutputFiles:     true,
+			Raw:             true,
+		}
+
+		err = PlanGenerator(context.Background(), cfg)
+		assert.NoError(t, err)
+
+		entriesInOutDir, err := os.ReadDir(tempDir)
+		assert.NoError(t, err)
+		assert.Len(t, entriesInOutDir, len(allFiles))
+
+		for _, de := range entriesInOutDir {
+			name := de.Name()
+			content, err := os.ReadFile(path.Join(tempDir, name))
+			assert.NoError(t, err)
+			var m map[string]interface{}
+
+			// One of the queries produces a failed result
+			if err := json.Unmarshal(content, &m); err != nil {
+				assert.True(t, strings.HasPrefix(string(content), "Warning:"))
+			} else {
+				assert.NotEmpty(t, m)
+			}
+		}
+	})
+
+	t.Run("report file uses .json filenames when Raw is enabled", func(t *testing.T) {
+		tempDir, err := os.MkdirTemp("", "plans-")
+		require.NoError(t, err)
+		defer func() {
+			_ = os.RemoveAll(tempDir)
+		}()
+
+		cfg := QueryPlanConfig{
+			SourceDir:       path.Join(getTestDataDir(), "queries", "base"),
+			OutDir:          tempDir,
+			ExecutionConfig: path.Join(getTestDataDir(), "execution_config", "base.json"),
+			Timeout:         "30s",
+			OutputReport:    true,
+			Raw:             true,
+		}
+
+		err = PlanGenerator(context.Background(), cfg)
+		assert.NoError(t, err)
+
+		results, err := os.ReadFile(path.Join(tempDir, ReportFileName))
+		assert.NoError(t, err)
+		var writtenResults QueryPlanResults
+		assert.NoError(t, json.Unmarshal(results, &writtenResults))
+		assert.Len(t, writtenResults.Plans, len(allFiles))
+		for _, pr := range writtenResults.Plans {
+			assert.True(t, strings.HasSuffix(pr.FileName, ".json"))
+		}
+	})
+
+	t.Run("generates non-raw textual plans when Raw is disabled", func(t *testing.T) {
+		tempDir, err := os.MkdirTemp("", "plans-")
+		require.NoError(t, err)
+		defer func() {
+			_ = os.RemoveAll(tempDir)
+		}()
+
+		cfg := QueryPlanConfig{
+			SourceDir:       path.Join(getTestDataDir(), "queries", "base"),
+			OutDir:          tempDir,
+			ExecutionConfig: path.Join(getTestDataDir(), "execution_config", "base.json"),
+			Timeout:         "30s",
+			OutputFiles:     true,
+		}
+
+		err = PlanGenerator(context.Background(), cfg)
+		assert.NoError(t, err)
+
+		entriesInOutDir, err := os.ReadDir(tempDir)
+		assert.NoError(t, err)
+		assert.Len(t, entriesInOutDir, len(allFiles))
+
+		for _, de := range entriesInOutDir {
+			name := de.Name()
+			assert.True(t, strings.HasSuffix(name, ".graphql"))
+			content, err := os.ReadFile(path.Join(tempDir, name))
+			assert.NoError(t, err)
+			var m map[string]interface{}
+			assert.Error(t, json.Unmarshal(content, &m))
+			// Should be textual query plan or warning
+			s := string(content)
+			assert.True(t, strings.HasPrefix(s, "QueryPlan {") || strings.HasPrefix(s, "Warning:"))
+		}
+	})
+
 }
