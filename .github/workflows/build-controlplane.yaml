@@ -12,7 +12,7 @@ env:
   # Angel Studios AWS ECR Configuration
   AWS_REGION: us-east-1
   ECR_REGISTRY: 317057480065.dkr.ecr.us-east-1.amazonaws.com
-  IMAGE_NAME: cosmo/controlplane
+  IMAGE_NAME: wundergraph-cosmo-controlplane
 
 jobs:
   build_push_image:
@@ -33,6 +33,11 @@ jobs:
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
