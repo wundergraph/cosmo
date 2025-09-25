@@ -1,6 +1,5 @@
 name: Controlplane CI
 on:
-  workflow_dispatch:
   pull_request:
     paths:
       - 'pnpm-lock.yaml'
