@@ -7,5 +7,5 @@ type Mutation {
 }
 type Employee @key(fields: "id") {
   id: Int!
-  isAvailable: Boolean!
+  isAvailable: Boolean
 }
