@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/KimMachineGun/automemlimit/memlimit"
@@ -22,7 +23,9 @@ import (
 func PlanGenerator(args []string) {
 	var planHelp bool
 
-	cfg := plan_generator.QueryPlanConfig{}
+	cfg := plan_generator.QueryPlanConfig{
+		OutputFormat: core.PlanOutputFormatText,
+	}
 	f := flag.NewFlagSet("router "+args[0], flag.ExitOnError)
 	f.BoolVar(&planHelp, "help", false, "Prints the help message")
 	f.StringVar(&cfg.ExecutionConfig, "execution-config", "", "required, execution config file location")
@@ -36,7 +39,19 @@ func PlanGenerator(args []string) {
 	f.BoolVar(&cfg.FailOnPlanError, "fail-on-error", false, "if at least one plan fails, the command exit code will be 1")
 	f.BoolVar(&cfg.FailFast, "fail-fast", false, "stop as soon as possible if a plan fails")
 	f.StringVar(&cfg.LogLevel, "log-level", "warn", "log level to use (debug, info, warn, error, panic, fatal)")
-	f.BoolVar(&cfg.Raw, "raw", false, "get the raw json output of the plan generator")
+	f.Func("print-format", "output format (text|json)", func(s string) error {
+		v := core.PlanOutputFormat(strings.ToLower(s))
+		// Set default
+		if v == "" {
+			v = core.PlanOutputFormatText
+		}
+		switch v {
+		case core.PlanOutputFormatText, core.PlanOutputFormatJSON:
+			cfg.OutputFormat = v
+			return nil
+		}
+		return fmt.Errorf("must be one of: text, json (got %q)", s)
+	})
 	f.UintVar(&cfg.MaxDataSourceCollectorsConcurrency, "max-collectors", 0, "max number of concurrent data source collectors, if unset or 0, no limit will be enforced")
 
 	if err := f.Parse(args[1:]); err != nil {

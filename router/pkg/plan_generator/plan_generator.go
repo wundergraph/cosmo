@@ -30,7 +30,7 @@ type QueryPlanConfig struct {
 	OutputReport                       bool
 	FailOnPlanError                    bool
 	FailFast                           bool
-	Raw                                bool
+	OutputFormat                       core.PlanOutputFormat
 	LogLevel                           string
 	Logger                             *zap.Logger
 	MaxDataSourceCollectorsConcurrency uint
@@ -51,6 +51,10 @@ type QueryPlanResult struct {
 func PlanGenerator(ctx context.Context, cfg QueryPlanConfig) error {
 	if cfg.Concurrency == 0 {
 		cfg.Concurrency = runtime.GOMAXPROCS(0)
+	}
+
+	if cfg.OutputFormat == "" {
+		cfg.OutputFormat = core.PlanOutputFormatText
 	}
 
 	queriesPath, err := filepath.Abs(cfg.SourceDir)
@@ -141,7 +145,7 @@ func PlanGenerator(ctx context.Context, cfg QueryPlanConfig) error {
 
 					queryFilePath := filepath.Join(queriesPath, queryFile.Name())
 
-					outContent, err := planner.PlanOperation(queryFilePath, cfg.Raw)
+					outContent, err := planner.PlanOperation(queryFilePath, cfg.OutputFormat)
 					res := QueryPlanResult{
 						FileName: queryFile.Name(),
 						Plan:     outContent,

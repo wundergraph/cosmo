@@ -53,6 +53,13 @@ type Planner struct {
 	operationValidator *astvalidation.OperationValidator
 }
 
+type PlanOutputFormat string
+
+const (
+	PlanOutputFormatText PlanOutputFormat = "text"
+	PlanOutputFormatJSON PlanOutputFormat = "json"
+)
+
 func NewPlanner(planConfiguration *plan.Configuration, definition *ast.Document, clientDefinition *ast.Document) (*Planner, error) {
 	planner, err := plan.NewPlanner(*planConfiguration)
 	if err != nil {
@@ -66,7 +73,7 @@ func NewPlanner(planConfiguration *plan.Configuration, definition *ast.Document,
 	}, nil
 }
 
-func (pl *Planner) PlanOperation(operationFilePath string, rawQueryPlan bool) (string, error) {
+func (pl *Planner) PlanOperation(operationFilePath string, outputFormat PlanOutputFormat) (string, error) {
 	operation, err := pl.parseOperation(operationFilePath)
 	if err != nil {
 		return "", &PlannerOperationValidationError{err: err}
@@ -92,14 +99,18 @@ func (pl *Planner) PlanOperation(operationFilePath string, rawQueryPlan bool) (s
 		return "", fmt.Errorf("failed to plan operation: %w", err)
 	}
 
-	if rawQueryPlan {
+	switch outputFormat {
+	case PlanOutputFormatText:
+		return rawPlan.PrettyPrint(), nil
+	case PlanOutputFormatJSON:
 		marshal, err := json.Marshal(rawPlan)
 		if err != nil {
 			return "", fmt.Errorf("failed to marshal raw plan: %w", err)
 		}
 		return string(marshal), nil
 	}
-	return rawPlan.PrettyPrint(), nil
+
+	return "", fmt.Errorf("invalid type specified: %w", err)
 }
 
 func (pl *Planner) PlanParsedOperation(operation *ast.Document) (*resolve.FetchTreeQueryPlanNode, error) {

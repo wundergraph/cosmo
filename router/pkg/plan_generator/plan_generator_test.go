@@ -3,6 +3,7 @@ package plan_generator
 import (
 	"context"
 	"encoding/json"
+	"github.com/wundergraph/cosmo/router/core"
 	"os"
 	"path"
 	"path/filepath"
@@ -33,7 +34,9 @@ func TestPlanGenerator(t *testing.T) {
 	t.Run("checks queries path exists", func(t *testing.T) {
 		tempDir, err := os.MkdirTemp("", "plans-")
 		require.NoError(t, err)
-		defer os.RemoveAll(tempDir)
+		defer func() {
+			_ = os.RemoveAll(tempDir)
+		}()
 
 		cfg := QueryPlanConfig{
 			SourceDir:       path.Join(getTestDataDir(), "queries", "notexistant"),
@@ -64,7 +67,9 @@ func TestPlanGenerator(t *testing.T) {
 	t.Run("checks filter file exists", func(t *testing.T) {
 		tempDir, err := os.MkdirTemp("", "plans-")
 		require.NoError(t, err)
-		defer os.RemoveAll(tempDir)
+		defer func() {
+			_ = os.RemoveAll(tempDir)
+		}()
 
 		cfg := QueryPlanConfig{
 			SourceDir:       path.Join(getTestDataDir(), "queries", "base"),
@@ -82,7 +87,9 @@ func TestPlanGenerator(t *testing.T) {
 	t.Run("fail if execution config don't exists", func(t *testing.T) {
 		tempDir, err := os.MkdirTemp("", "plans-")
 		require.NoError(t, err)
-		defer os.RemoveAll(tempDir)
+		defer func() {
+			_ = os.RemoveAll(tempDir)
+		}()
 
 		cfg := QueryPlanConfig{
 			SourceDir:       path.Join(getTestDataDir(), "queries", "base"),
@@ -99,7 +106,9 @@ func TestPlanGenerator(t *testing.T) {
 	t.Run("fail with invalid execution config ", func(t *testing.T) {
 		tempDir, err := os.MkdirTemp("", "plans-")
 		require.NoError(t, err)
-		defer os.RemoveAll(tempDir)
+		defer func() {
+			_ = os.RemoveAll(tempDir)
+		}()
 
 		cfg := QueryPlanConfig{
 			SourceDir:       path.Join(getTestDataDir(), "queries", "base"),
@@ -116,7 +125,9 @@ func TestPlanGenerator(t *testing.T) {
 	t.Run("fails with wrong timeout duration", func(t *testing.T) {
 		tempDir, err := os.MkdirTemp("", "plans-")
 		require.NoError(t, err)
-		defer os.RemoveAll(tempDir)
+		defer func() {
+			_ = os.RemoveAll(tempDir)
+		}()
 
 		cfg := QueryPlanConfig{
 			SourceDir:       path.Join(getTestDataDir(), "queries", "base"),
@@ -133,7 +144,9 @@ func TestPlanGenerator(t *testing.T) {
 	t.Run("generates a plan for every file", func(t *testing.T) {
 		tempDir, err := os.MkdirTemp("", "plans-")
 		require.NoError(t, err)
-		defer os.RemoveAll(tempDir)
+		defer func() {
+			_ = os.RemoveAll(tempDir)
+		}()
 
 		cfg := QueryPlanConfig{
 			SourceDir:       path.Join(getTestDataDir(), "queries", "base"),
@@ -167,7 +180,9 @@ func TestPlanGenerator(t *testing.T) {
 	t.Run("generates a plan for every file filtered", func(t *testing.T) {
 		tempDir, err := os.MkdirTemp("", "plans-")
 		require.NoError(t, err)
-		defer os.RemoveAll(tempDir)
+		defer func() {
+			_ = os.RemoveAll(tempDir)
+		}()
 
 		cfg := QueryPlanConfig{
 			SourceDir:       path.Join(getTestDataDir(), "queries", "base"),
@@ -195,7 +210,9 @@ func TestPlanGenerator(t *testing.T) {
 	t.Run("generates a result file with every plan inside", func(t *testing.T) {
 		tempDir, err := os.MkdirTemp("", "plans-")
 		require.NoError(t, err)
-		defer os.RemoveAll(tempDir)
+		defer func() {
+			_ = os.RemoveAll(tempDir)
+		}()
 
 		cfg := QueryPlanConfig{
 			SourceDir:       path.Join(getTestDataDir(), "queries", "base"),
@@ -227,7 +244,9 @@ func TestPlanGenerator(t *testing.T) {
 	t.Run("will not fail on warnings and results should return the warnings and generate results file", func(t *testing.T) {
 		tempDir, err := os.MkdirTemp("", "plans-")
 		require.NoError(t, err)
-		defer os.RemoveAll(tempDir)
+		defer func() {
+			_ = os.RemoveAll(tempDir)
+		}()
 
 		cfg := QueryPlanConfig{
 			SourceDir:       path.Join(getTestDataDir(), "queries", "base"),
@@ -260,7 +279,9 @@ func TestPlanGenerator(t *testing.T) {
 	t.Run("will not fail on warnings and files should have warnings and generate files", func(t *testing.T) {
 		tempDir, err := os.MkdirTemp("", "plans-")
 		require.NoError(t, err)
-		defer os.RemoveAll(tempDir)
+		defer func() {
+			_ = os.RemoveAll(tempDir)
+		}()
 
 		cfg := QueryPlanConfig{
 			SourceDir:       path.Join(getTestDataDir(), "queries", "base"),
@@ -293,7 +314,9 @@ func TestPlanGenerator(t *testing.T) {
 	t.Run("when reaching timeout an error should be returned", func(t *testing.T) {
 		tempDir, err := os.MkdirTemp("", "plans-")
 		require.NoError(t, err)
-		defer os.RemoveAll(tempDir)
+		defer func() {
+			_ = os.RemoveAll(tempDir)
+		}()
 
 		cfg := QueryPlanConfig{
 			SourceDir:       path.Join(getTestDataDir(), "queries", "base"),
@@ -310,7 +333,9 @@ func TestPlanGenerator(t *testing.T) {
 	t.Run("when reaching timeout the report should contains the error", func(t *testing.T) {
 		tempDir, err := os.MkdirTemp("", "plans-")
 		require.NoError(t, err)
-		defer os.RemoveAll(tempDir)
+		defer func() {
+			_ = os.RemoveAll(tempDir)
+		}()
 
 		cfg := QueryPlanConfig{
 			SourceDir:       path.Join(getTestDataDir(), "queries", "base"),
@@ -345,7 +370,7 @@ func TestPlanGenerator(t *testing.T) {
 			ExecutionConfig: path.Join(getTestDataDir(), "execution_config", "base.json"),
 			Timeout:         "30s",
 			OutputFiles:     true,
-			Raw:             true,
+			OutputFormat:    core.PlanOutputFormatJSON,
 		}
 
 		err = PlanGenerator(context.Background(), cfg)
@@ -383,6 +408,7 @@ func TestPlanGenerator(t *testing.T) {
 			ExecutionConfig: path.Join(getTestDataDir(), "execution_config", "base.json"),
 			Timeout:         "30s",
 			OutputFiles:     true,
+			OutputFormat:    core.PlanOutputFormatText,
 		}
 
 		err = PlanGenerator(context.Background(), cfg)
