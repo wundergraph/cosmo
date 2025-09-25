@@ -30,6 +30,7 @@ type QueryPlanConfig struct {
 	OutputReport                       bool
 	FailOnPlanError                    bool
 	FailFast                           bool
+	Raw                                bool
 	LogLevel                           string
 	Logger                             *zap.Logger
 	MaxDataSourceCollectorsConcurrency uint
@@ -140,9 +141,13 @@ func PlanGenerator(ctx context.Context, cfg QueryPlanConfig) error {
 
 					queryFilePath := filepath.Join(queriesPath, queryFile.Name())
 
-					outContent, err := planner.PlanOperation(queryFilePath)
+					outContent, err := planner.PlanOperation(queryFilePath, cfg.Raw)
+					fileName := queryFile.Name()
+					if cfg.Raw {
+						fileName += ".json"
+					}
 					res := QueryPlanResult{
-						FileName: queryFile.Name(),
+						FileName: fileName,
 						Plan:     outContent,
 					}
 					if err != nil {
@@ -160,7 +165,7 @@ func PlanGenerator(ctx context.Context, cfg QueryPlanConfig) error {
 					}
 
 					if cfg.OutputFiles {
-						outFileName := filepath.Join(outPath, queryFile.Name())
+						outFileName := filepath.Join(outPath, fileName)
 						err = os.WriteFile(outFileName, []byte(outContent), 0644)
 						if err != nil {
 							cancelError(fmt.Errorf("failed to write file: %v", err))

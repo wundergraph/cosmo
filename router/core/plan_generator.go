@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -65,7 +66,7 @@ func NewPlanner(planConfiguration *plan.Configuration, definition *ast.Document,
 	}, nil
 }
 
-func (pl *Planner) PlanOperation(operationFilePath string) (string, error) {
+func (pl *Planner) PlanOperation(operationFilePath string, rawQueryPlan bool) (string, error) {
 	operation, err := pl.parseOperation(operationFilePath)
 	if err != nil {
 		return "", &PlannerOperationValidationError{err: err}
@@ -91,6 +92,13 @@ func (pl *Planner) PlanOperation(operationFilePath string) (string, error) {
 		return "", fmt.Errorf("failed to plan operation: %w", err)
 	}
 
+	if rawQueryPlan {
+		marshal, err := json.Marshal(rawPlan)
+		if err != nil {
+			return "", fmt.Errorf("failed to marshal raw plan: %w", err)
+		}
+		return string(marshal), nil
+	}
 	return rawPlan.PrettyPrint(), nil
 }
 
