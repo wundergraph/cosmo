@@ -518,7 +518,12 @@
   },
   "ClientHeader": {
     "Name": "",
-    "Version": ""
+    "Version": "",
+    "Enforce": {
+      "OnName": false,
+      "OnVersion": false,
+      "ResponseCode": 400
+    }
   },
   "Plugins": {
     "Enabled": false,
