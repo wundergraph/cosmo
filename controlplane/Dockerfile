@@ -1,4 +1,4 @@
-FROM --platform=${BUILDPLATFORM} node:lts AS builder
+FROM node:lts AS builder
 
 ARG TARGETARCH
 
@@ -32,7 +32,7 @@ RUN curl -fsSL -o /usr/local/bin/dbmate https://github.com/amacneil/dbmate/relea
 # Deploy
 RUN pnpm --filter=./controlplane --prod deploy pruned
 
-FROM --platform=${BUILDPLATFORM} node:lts-alpine
+FROM node:lts-alpine
 
 WORKDIR /app
 
