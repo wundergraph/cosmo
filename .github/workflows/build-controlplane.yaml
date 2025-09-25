@@ -1,4 +1,4 @@
-name: Controlplane CI
+name: Build Controlplane
 on:
   workflow_dispatch:
 
