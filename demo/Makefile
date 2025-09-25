@@ -1,5 +1,11 @@
+SHELL := bash
+wgc_router = pnpx tsx --env-file ../cli/.env ../cli/src/index.ts router
+
 generate:
 	go generate ./...
+
+compose-integration:
+	cd ../router-tests && ./update-config-no-edg.sh
 
 bump-deps:
 	./bump-deps.sh
@@ -7,16 +13,16 @@ bump-deps:
 PHONY: plugin-build plugin-generate plugin-build-binary plugin-build-integration
 
 plugin-build:
-	pnpx tsx --env-file ../cli/.env ../cli/src/index.ts router plugin build ./pkg/subgraphs/projects --debug --go-module-path github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects
+	$(wgc_router) plugin build ./pkg/subgraphs/projects --debug --go-module-path github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects
 
 plugin-generate:
-	pnpx tsx --env-file ../cli/.env ../cli/src/index.ts router plugin build ./pkg/subgraphs/projects --generate-only --go-module-path github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects
+	$(wgc_router) plugin build ./pkg/subgraphs/projects --generate-only --go-module-path github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects
 
 plugin-build-binary:
 	cd pkg/subgraphs/projects/ && go build -o ./bin/$(shell go env GOOS)_$(shell go env GOARCH) ./src
 
 plugin-compose:
-	pnpx tsx --env-file ../cli/.env ../cli/src/index.ts router compose -i ./graph-with-plugin.yaml -o ./configWithPlugins.json
+	$(wgc_router) compose -i ./graph-with-plugin.yaml -o ./configWithPlugins.json
 	pnpx prettier ./configWithPlugins.json -w
 
 plugin-build-integration: plugin-build plugin-compose
@@ -30,7 +36,7 @@ plugin-build-ci: plugin-build-binary
 	cp -a pkg/subgraphs/projects/bin/* ../router/plugins/projects/bin/
 
 standalone-compose:
-	pnpx tsx --env-file ../cli/.env ../cli/src/index.ts router compose -i ./graph-with-standalone.yaml -o ./configWithStandalone.json
+	$(wgc_router) compose -i ./graph-with-standalone.yaml -o ./configWithStandalone.json
 	pnpx prettier ./configWithStandalone.json -w
 
 standalone-integration: standalone-compose

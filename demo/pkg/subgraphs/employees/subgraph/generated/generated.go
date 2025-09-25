@@ -68,9 +68,10 @@ type ComplexityRoot struct {
 	}
 
 	Cosmo struct {
-		Engineers func(childComplexity int) int
-		Lead      func(childComplexity int) int
-		Upc       func(childComplexity int) int
+		Engineers       func(childComplexity int) int
+		IsLeadAvailable func(childComplexity int) int
+		Lead            func(childComplexity int) int
+		Upc             func(childComplexity int) int
 	}
 
 	Country struct {
@@ -287,6 +288,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Cosmo.Engineers(childComplexity), true
+
+	case "Cosmo.isLeadAvailable":
+		if e.complexity.Cosmo.IsLeadAvailable == nil {
+			break
+		}
+
+		return e.complexity.Cosmo.IsLeadAvailable(childComplexity), true
 
 	case "Cosmo.lead":
 		if e.complexity.Cosmo.Lead == nil {
@@ -1057,7 +1065,7 @@ type Employee implements Identifiable @key(fields: "id") {
   currentMood: Mood! @external
   derivedMood: Mood! @requires(fields: "currentMood")
   # From the ` + "`" + `availability` + "`" + ` service. Only defined for use in @requires
-  isAvailable: Boolean! @external
+  isAvailable: Boolean @external
   rootFieldThrowsError: String @goField(forceResolver: true)
   rootFieldErrorWrapper: ErrorWrapper @goField(forceResolver: true)
 }
@@ -1089,6 +1097,7 @@ type Cosmo implements IProduct @key(fields: "upc") {
   upc: ID!
   engineers: [Employee!]!
   lead: Employee!
+  isLeadAvailable: Boolean @requires(fields: "lead { isAvailable }")
 }
 
 type SDK implements IProduct @key(fields: "upc") {
@@ -2286,6 +2295,47 @@ func (ec *executionContext) fieldContext_Cosmo_lead(_ context.Context, field gra
 	return fc, nil
 }
 
+func (ec *executionContext) _Cosmo_isLeadAvailable(ctx context.Context, field graphql.CollectedField, obj *model.Cosmo) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Cosmo_isLeadAvailable(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.IsLeadAvailable, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*bool)
+	fc.Result = res
+	return ec.marshalOBoolean2ᚖbool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Cosmo_isLeadAvailable(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Cosmo",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Country_key(ctx context.Context, field graphql.CollectedField, obj *model.Country) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Country_key(ctx, field)
 	if err != nil {
@@ -2990,14 +3040,11 @@ func (ec *executionContext) _Employee_isAvailable(ctx context.Context, field gra
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
-	res := resTmp.(bool)
+	res := resTmp.(*bool)
 	fc.Result = res
-	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+	return ec.marshalOBoolean2ᚖbool(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Employee_isAvailable(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3411,6 +3458,8 @@ func (ec *executionContext) fieldContext_Entity_findCosmoByUpc(ctx context.Conte
 				return ec.fieldContext_Cosmo_engineers(ctx, field)
 			case "lead":
 				return ec.fieldContext_Cosmo_lead(ctx, field)
+			case "isLeadAvailable":
+				return ec.fieldContext_Cosmo_isLeadAvailable(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Cosmo", field.Name)
 		},
@@ -7821,6 +7870,8 @@ func (ec *executionContext) _Cosmo(ctx context.Context, sel ast.SelectionSet, ob
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "isLeadAvailable":
+			out.Values[i] = ec._Cosmo_isLeadAvailable(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -8031,9 +8082,6 @@ func (ec *executionContext) _Employee(ctx context.Context, sel ast.SelectionSet,
 			}
 		case "isAvailable":
 			out.Values[i] = ec._Employee_isAvailable(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
 		case "rootFieldThrowsError":
 			field := field
 

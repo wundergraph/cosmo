@@ -14,7 +14,7 @@ import (
 // FindEmployeeByID is the resolver for the findEmployeeByID field.
 func (r *entityResolver) FindEmployeeByID(ctx context.Context, id int) (*model.Employee, error) {
 	availability := storage.Get(id)
-	return &model.Employee{ID: id, IsAvailable: availability}, nil
+	return &model.Employee{ID: id, IsAvailable: &availability}, nil
 }
 
 // Entity returns generated.EntityResolver implementation.
