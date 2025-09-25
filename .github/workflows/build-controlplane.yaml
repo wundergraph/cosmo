@@ -9,19 +9,54 @@ concurrency:
 env:
   CI: true
   DO_NOT_TRACK: '1'
+  # Angel Studios AWS ECR Configuration
+  AWS_REGION: us-east-1
+  ECR_REGISTRY: 317057480065.dkr.ecr.us-east-1.amazonaws.com
+  IMAGE_NAME: cosmo/controlplane
 
 jobs:
   build_push_image:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/actions/build-push-image
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          docker_username: ${{secrets.DOCKER_USERNAME}}
-          docker_password: ${{secrets.DOCKER_PASSWORD}}
-          docker_context: .
-          dockerfile: controlplane/Dockerfile
-          token: ${{secrets.GITHUB_TOKEN}}
-          image_name: controlplane
-          image_description: "Cosmo Controlplane"
+          role-to-assume: arn:aws:iam::317057480065:role/GitHubActions-ECR-Push
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.ECR_REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=sha-${{ github.sha }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: controlplane/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          platforms: linux/amd64,linux/arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
