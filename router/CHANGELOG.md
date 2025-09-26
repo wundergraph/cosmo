@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.254.1](https://github.com/wundergraph/cosmo/compare/router@0.254.0...router@0.254.1) (2025-09-26)
+
+### Bug Fixes
+
+* **router:** enable safelisting on websocket subscriptions ([#2222](https://github.com/wundergraph/cosmo/issues/2222)) ([709483b](https://github.com/wundergraph/cosmo/commit/709483b8c748e1a1a7a3ae7172d29a2f41f0ea6b)) (@dkorittki)
+
 # [0.254.0](https://github.com/wundergraph/cosmo/compare/router@0.253.1...router@0.254.0) (2025-09-26)
 
 ### Features
