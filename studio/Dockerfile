@@ -1,4 +1,4 @@
-FROM --platform=${BUILDPLATFORM} node:lts AS builder
+FROM node:lts AS builder
 
 WORKDIR /app
 
@@ -45,7 +45,7 @@ RUN pnpm buf generate --template buf.ts.gen.yaml
 
 RUN pnpm run --filter=./connect --filter=./shared --filter=./studio --filter=./composition build
 
-FROM --platform=${BUILDPLATFORM} node:lts-alpine
+FROM node:lts-alpine
 
 WORKDIR /app
 
