@@ -8,6 +8,8 @@ export * from './normalization/normalization';
 export * from './normalization/types';
 export * from './resolvability-graph/graph';
 export * from './resolvability-graph/graph-nodes';
+export * from './resolvability-graph/node-resolution-data/node-resolution-data';
+export * from './resolvability-graph/node-resolution-data/types/params';
 export * from './resolvability-graph/utils';
 export * from './router-compatibility-version/router-compatibility-version';
 export * from './router-configuration/types';

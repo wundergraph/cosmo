@@ -1,5 +1,6 @@
 import { add, getEntriesNotInHashSet, getValueOrDefault } from '../utils/utils';
 import { GraphFieldData } from '../utils/types';
+import { SubgraphName, TypeName } from './types/types';
 
 export class Edge {
   edgeName: string;
@@ -23,10 +24,10 @@ export type GraphNodeOptions = {
 };
 
 export class GraphNode {
-  fieldDataByFieldName = new Map<string, GraphFieldData>();
+  fieldDataByName = new Map<string, GraphFieldData>();
   headToTailEdges = new Map<string, Edge>();
   entityEdges: Array<Edge> = [];
-  nodeName: string;
+  nodeName: `${SubgraphName}.${TypeName}`;
   hasEntitySiblings = false;
   isAbstract: boolean;
   isInaccessible = false;
@@ -48,7 +49,7 @@ export class GraphNode {
     if (this.isAbstract) {
       return;
     }
-    const inaccessibleFieldNames = getEntriesNotInHashSet(this.headToTailEdges.keys(), this.fieldDataByFieldName);
+    const inaccessibleFieldNames = getEntriesNotInHashSet(this.headToTailEdges.keys(), this.fieldDataByName);
     for (const fieldName of inaccessibleFieldNames) {
       const headToTailEdge = this.headToTailEdges.get(fieldName);
       if (!headToTailEdge) {
@@ -76,7 +77,7 @@ export class GraphNode {
 }
 
 export class RootNode {
-  fieldDataByFieldName = new Map<string, GraphFieldData>();
+  fieldDataByName = new Map<string, GraphFieldData>();
   headToShareableTailEdges = new Map<string, Array<Edge>>();
   // It is used
   isAbstract = false;

@@ -4,35 +4,47 @@ import {
   EntityResolvabilityResult,
   generateResolvabilityErrors,
   newRootFieldData,
-  NodeResolutionData,
   RootFieldData,
 } from './utils';
-import { NOT_APPLICABLE, ROOT_TYPE_NAMES } from '../utils/string-constants';
 import { GraphFieldData, RootTypeName } from '../utils/types';
 import { add, getOrThrowError, getValueOrDefault } from '../utils/utils';
+import type { FieldPath, NodeName, RootCoords, TypeName, ValidateNodeResult } from './types/types';
+import {
+  ValidateEntityDescendantEdgeParams,
+  ValidateEntityDescendantNodeParams,
+  VisitEdgeParams,
+  VisitNodeParams,
+  WalkerParams
+} from './types/params';
+import { NodeResolutionData } from './node-resolution-data/node-resolution-data';
+import { NOT_APPLICABLE, ROOT_TYPE_NAMES } from './constants/string-constants';
 
 export class Graph {
   edgeId = -1;
   entityDataNodes = new Map<string, EntityDataNode>();
-  entityNodeNamesBySharedFieldPath = new Map<string, Set<string>>();
-  nodeByNodeName = new Map<string, GraphNode>();
-  nodesByTypeName = new Map<string, Array<GraphNode>>();
-  rootNodeByRootTypeName = new Map<RootTypeName, RootNode>();
+  entityNodeNamesBySharedFieldPath = new Map<FieldPath, Set<NodeName>>();
+  nodeByNodeName = new Map<NodeName, GraphNode>();
+  nodesByTypeName = new Map<TypeName, Array<GraphNode>>();
+  rootNodeByTypeName = new Map<RootTypeName, RootNode>();
   subgraphName = NOT_APPLICABLE;
   resolvableFieldNamesByRelativeFieldPathByEntityNodeName = new Map<string, Map<string, NodeResolutionData>>();
-  nodeResolutionDataByFieldPath = new Map<string, NodeResolutionData>();
-  unresolvableFieldPaths = new Set<string>();
-  failureResultByEntityNodeName = new Map<string, EntityResolvabilityFailure>();
+  nodeResolutionDataByFieldPath = new Map<FieldPath, NodeResolutionData>();
+  nodeResolutionDataByNodeName = new Map<NodeName, NodeResolutionData>();
+  // Consolidate shared root fields.
+  nodeResolutionDataByTypeNameAndRootCoords = new Map<TypeName, Map<RootCoords, NodeResolutionData>>();
+  nodeResolutionDataByTypeNameByEntityNodeName = new Map<NodeName, Map<TypeName, NodeResolutionData>>();
+  unresolvableFieldPaths = new Set<FieldPath>();
+  failureResultByEntityNodeName = new Map<NodeName, EntityResolvabilityFailure>();
   walkerIndex = -1;
 
   constructor() {}
 
   getRootNode(typeName: RootTypeName): RootNode {
-    return getValueOrDefault(this.rootNodeByRootTypeName, typeName, () => new RootNode(typeName));
+    return getValueOrDefault(this.rootNodeByTypeName, typeName, () => new RootNode(typeName));
   }
 
   addOrUpdateNode(typeName: string, options?: GraphNodeOptions): GraphNode {
-    const nodeName = `${this.subgraphName}.${typeName}`;
+    const nodeName: NodeName = `${this.subgraphName}.${typeName}`;
     const node = this.nodeByNodeName.get(nodeName);
     if (node) {
       node.isAbstract ||= !!options?.isAbstract;
@@ -93,7 +105,7 @@ export class Graph {
     if (ROOT_TYPE_NAMES.has(typeName)) {
       const rootNode = this.getRootNode(typeName as RootTypeName);
       rootNode.removeInaccessibleEdges(fieldDataByFieldName);
-      rootNode.fieldDataByFieldName = fieldDataByFieldName;
+      rootNode.fieldDataByName = fieldDataByFieldName;
       return;
     }
     const nodes = this.nodesByTypeName.get(typeName);
@@ -101,7 +113,7 @@ export class Graph {
       return;
     }
     for (const node of nodes) {
-      node.fieldDataByFieldName = fieldDataByFieldName;
+      node.fieldDataByName = fieldDataByFieldName;
       node.handleInaccessibleEdges();
       node.isLeaf = false;
       if (!entityDataNode) {
@@ -110,7 +122,7 @@ export class Graph {
       node.hasEntitySiblings = true;
       for (const fieldSet of node.satisfiedFieldSets) {
         const subgraphNames = entityDataNode.targetSubgraphNamesByFieldSet.get(fieldSet);
-        for (const subgraphName of subgraphNames || []) {
+        for (const subgraphName of subgraphNames ?? []) {
           // A subgraph should not jump to itself
           if (subgraphName === node.subgraphName) {
             continue;
@@ -129,10 +141,10 @@ export class Graph {
   }
 
   validateEntities(
-    entityNodeNamesBySharedFieldPath: Map<string, Set<string>>,
+    entityNodeNamesBySharedFieldPath: Map<FieldPath, Set<NodeName>>,
     rootFieldData: RootFieldData,
   ): EntityResolvabilityResult {
-    const nestedEntityNodeNamesBySharedFieldPathByParentNodeName = new Map<string, Map<string, Set<string>>>();
+    const nestedEntityNodeNamesBySharedFieldPathByParentNodeName = new Map<NodeName, Map<FieldPath, Set<NodeName>>>();
     for (const [sharedFieldPath, entityNodeNames] of entityNodeNamesBySharedFieldPath) {
       const isFieldShared = entityNodeNames.size > 1;
       let failureResult: EntityResolvabilityFailure | undefined;
@@ -143,18 +155,18 @@ export class Graph {
        * paths are assessed collectively, rather than by a single instance of the shared fields
        * */
       const sharedResolvableFieldNamesByRelativeFieldPath = isFieldShared
-        ? new Map<string, NodeResolutionData>()
+        ? new Map<FieldPath, NodeResolutionData>()
         : undefined;
       /*
        * 2. unresolvableSharedFieldPaths is used to determine whether there are still unresolvable paths even after
        * all shared fields have been analysed.
        * */
-      const unresolvableSharedFieldPaths = new Set<string>();
+      const unresolvableSharedFieldPaths = new Set<FieldPath>();
       /*
        * 3. nestedEntityNodeNamesBySharedFieldPath should be a reference to the same set, to ensure nested shared fields
        * are analysed as shared fields when moving deeper.
        * */
-      const sharedNestedEntityNodeNamesBySharedFieldPath = new Map<string, Set<string>>();
+      const sharedNestedEntityNodeNamesBySharedFieldPath = new Map<FieldPath, Set<NodeName>>();
       for (const entityNodeName of entityNodeNames) {
         const entityNode = this.nodeByNodeName.get(entityNodeName);
         if (!entityNode) {
@@ -178,11 +190,13 @@ export class Graph {
         const nestedEntityNodeNamesBySharedFieldPath = getValueOrDefault(
           nestedEntityNodeNamesBySharedFieldPathByParentNodeName,
           entityNodeName,
-          () => (isFieldShared ? sharedNestedEntityNodeNamesBySharedFieldPath : new Map<string, Set<string>>()),
+          () => (isFieldShared ? sharedNestedEntityNodeNamesBySharedFieldPath : new Map<FieldPath, Set<NodeName>>()),
         );
         const walker = new Walker({
           interSubgraphNodes,
           entityNodeNamesBySharedFieldPath: nestedEntityNodeNamesBySharedFieldPath,
+          nodeResolutionDataByNodeName: this.nodeResolutionDataByNodeName,
+          nodeResolutionDataByTypeNameByEntityNodeName: this.nodeResolutionDataByTypeNameByEntityNodeName,
           originNode: entityNode,
           resolvableFieldNamesByRelativeFieldPathByEntityNodeName:
             this.resolvableFieldNamesByRelativeFieldPathByEntityNodeName,
@@ -253,7 +267,7 @@ export class Graph {
 
   validate(): Array<Error> {
     const errors: Array<Error> = [];
-    for (const rootNode of this.rootNodeByRootTypeName.values()) {
+    for (const rootNode of this.rootNodeByTypeName.values()) {
       shareableRootFieldLoop: for (const [
         rootFieldName,
         shareableRootFieldEdges,
@@ -263,9 +277,13 @@ export class Graph {
             continue shareableRootFieldLoop;
           }
           this.walkerIndex += 1;
-          this.visitEdge(rootFieldEdge, `${rootNode.typeName.toLowerCase()}`);
+          this.visitEdge({
+            edge: rootFieldEdge,
+            fieldPath: rootNode.typeName.toLowerCase(),
+            rootCoords: `${rootNode.typeName}.${rootFieldName}`,
+          });
         }
-        const fieldData = getOrThrowError(rootNode.fieldDataByFieldName, rootFieldName, 'fieldDataByFieldName');
+        const fieldData = getOrThrowError(rootNode.fieldDataByName, rootFieldName, 'fieldDataByName');
         const rootFieldData = newRootFieldData(rootNode.typeName, rootFieldName, fieldData.subgraphNames);
         if (this.unresolvableFieldPaths.size > 0) {
           generateResolvabilityErrors({
@@ -284,62 +302,134 @@ export class Graph {
         if (errors.length > 0) {
           return errors;
         }
-        this.entityNodeNamesBySharedFieldPath = new Map<string, Set<string>>();
+        this.entityNodeNamesBySharedFieldPath = new Map<FieldPath, Set<NodeName>>();
       }
     }
     return [];
   }
 
   // Returns true if the edge is visited and false otherwise (e.g., inaccessible)
-  visitEdge(edge: Edge, fieldPath: string): boolean {
+  visitEdge({ edge, fieldPath, rootCoords }: VisitEdgeParams): ValidateNodeResult {
     if (edge.isInaccessible || edge.node.isInaccessible) {
-      return false;
+      return { visited: false, areDescendentsResolved: true };
     }
-    if (!add(edge.visitedIndices, this.walkerIndex) || edge.node.isLeaf) {
-      return true;
+    if (edge.node.isLeaf) {
+      return { visited: true, areDescendentsResolved: true };
+    }
+    if (!add(edge.visitedIndices, this.walkerIndex)) {
+      return { visited: false, areDescendentsResolved: false };
     }
     if (edge.node.isAbstract) {
-      this.validateAbstractNode(edge.node, `${fieldPath}.${edge.edgeName}`);
-    } else {
-      this.validateConcreteNode(edge.node, `${fieldPath}.${edge.edgeName}`);
+      return this.validateAbstractNode({
+        node: edge.node,
+        fieldPath: `${fieldPath}.${edge.edgeName}`,
+        rootCoords,
+      });
     }
-    return true;
+    return this.validateConcreteNode({
+      node: edge.node,
+      fieldPath: `${fieldPath}.${edge.edgeName}`,
+      rootCoords,
+    });
   }
 
-  validateConcreteNode(node: GraphNode, fieldPath: string) {
+  validateConcreteNode({ node, fieldPath, rootCoords }: VisitNodeParams): ValidateNodeResult {
     if (node.headToTailEdges.size < 1) {
-      return;
+      node.isLeaf = true;
+      return { visited: true, areDescendentsResolved: true };
     }
     if (node.hasEntitySiblings) {
-      getValueOrDefault(this.entityNodeNamesBySharedFieldPath, fieldPath, () => new Set<string>()).add(node.nodeName);
-      return;
+      getValueOrDefault(this.entityNodeNamesBySharedFieldPath, fieldPath, () => new Set<NodeName>()).add(node.nodeName);
+      // return { visited: true, areDescendentsResolved: false };
     }
 
-    const resolvedFieldNames = getValueOrDefault(
+    const dataByRootCoords = getValueOrDefault(
+      this.nodeResolutionDataByTypeNameAndRootCoords,
+      node.typeName,
+      () => new Map<RootCoords, NodeResolutionData>,
+    );
+    const rootCoordsData = getValueOrDefault(
+      dataByRootCoords,
+      rootCoords,
+      () => new NodeResolutionData({
+        fieldDataByName: node.fieldDataByName,
+        typeName: node.typeName,
+      }),
+    );
+    const existingData = this.nodeResolutionDataByNodeName.get(node.nodeName);
+    if (existingData) {
+      return {
+        visited: true,
+        areDescendentsResolved: existingData.areDescendentsResolved(),
+      };
+    }
+    if (rootCoordsData.isResolved && rootCoordsData.areDescendentsResolved()) {
+      return {
+        visited: true,
+        areDescendentsResolved: true,
+      };
+    }
+    const nodeNameData = getValueOrDefault(
+      this.nodeResolutionDataByNodeName,
+      node.nodeName,
+      () => new NodeResolutionData({
+        fieldDataByName: node.fieldDataByName,
+        typeName: node.typeName,
+      }),
+    );
+    const fieldPathData = getValueOrDefault(
       this.nodeResolutionDataByFieldPath,
       fieldPath,
-      () => new NodeResolutionData(node.typeName, node.fieldDataByFieldName),
+      () => new NodeResolutionData({
+        fieldDataByName: node.fieldDataByName,
+        typeName: node.typeName,
+      }),
     );
     for (const [fieldName, edge] of node.headToTailEdges) {
-      // Returns true if the edge was visited
-      if (this.visitEdge(edge, fieldPath)) {
-        resolvedFieldNames.add(fieldName);
+      const { visited, areDescendentsResolved } = this.visitEdge({ edge, fieldPath, rootCoords });
+      if (visited) {
+        fieldPathData.add(fieldName);
+        rootCoordsData.add(fieldName);
+        nodeNameData.add(fieldName);
       }
+      if (!areDescendentsResolved) {
+        continue;
+      }
+      fieldPathData.resolvedDescendentNames.add(fieldName);
+      nodeNameData.resolvedDescendentNames.add(fieldName);
+      rootCoordsData.resolvedDescendentNames.add(fieldName);
     }
-    if (resolvedFieldNames.isResolved) {
+    if (rootCoordsData.isResolved || nodeNameData.isResolved) {
+      this.nodeResolutionDataByFieldPath.delete(fieldPath);
       this.unresolvableFieldPaths.delete(fieldPath);
     } else {
       this.unresolvableFieldPaths.add(fieldPath);
     }
+    return {
+      visited: true,
+      areDescendentsResolved:
+        rootCoordsData.areDescendentsResolved() ||
+        nodeNameData.areDescendentsResolved(),
+    };
   }
 
-  validateAbstractNode(node: GraphNode, fieldPath: string) {
+  validateAbstractNode({ node, fieldPath, rootCoords }: VisitNodeParams): ValidateNodeResult {
     if (node.headToTailEdges.size < 1) {
-      return;
+      return { visited: true, areDescendentsResolved: true };
     }
+    let resolvedDescendents = 0;
     for (const edge of node.headToTailEdges.values()) {
-      this.visitEdge(edge, fieldPath);
+      /* Propagate any one of the abstract path failures.
+       * Don't set value in-line so or it will short-circuit.
+       * */
+      if (this.visitEdge({ edge, fieldPath, rootCoords }).areDescendentsResolved) {
+        resolvedDescendents += 1;
+      }
     }
+    return {
+      visited: true,
+      areDescendentsResolved: resolvedDescendents === node.headToTailEdges.size,
+    };
   }
 
   generateEntityResolvabilityErrors(
@@ -368,19 +458,11 @@ export class Graph {
   }
 }
 
-type WalkerOptions = {
-  entityNodeNamesBySharedFieldPath: Map<string, Set<string>>;
-  interSubgraphNodes: Array<GraphNode>;
-  originNode: GraphNode;
-  resolvableFieldNamesByRelativeFieldPathByEntityNodeName: Map<string, Map<string, NodeResolutionData>>;
-  unresolvableSharedFieldPaths: Set<string>;
-  walkerIndex: number;
-  sharedResolvableFieldNamesByRelativeFieldPath?: Map<string, NodeResolutionData>;
-};
-
 class Walker {
   entityNodeNamesBySharedFieldPath: Map<string, Set<string>>;
   interSubgraphNodes: Array<GraphNode>;
+  nodeResolutionDataByTypeNameByEntityNodeName: Map<NodeName, Map<TypeName, NodeResolutionData>>;
+  nodeResolutionDataByNodeName: Map<NodeName, NodeResolutionData>;
   originNode: GraphNode;
   resolvableFieldNamesByRelativeFieldPath: Map<string, NodeResolutionData>;
   resolvableFieldNamesByRelativeFieldPathByEntityNodeName: Map<string, Map<string, NodeResolutionData>>;
@@ -392,14 +474,18 @@ class Walker {
   constructor({
     entityNodeNamesBySharedFieldPath,
     interSubgraphNodes,
+    nodeResolutionDataByTypeNameByEntityNodeName,
+    nodeResolutionDataByNodeName,
     originNode,
     resolvableFieldNamesByRelativeFieldPathByEntityNodeName,
     unresolvableSharedFieldPaths,
     walkerIndex,
     sharedResolvableFieldNamesByRelativeFieldPath,
-  }: WalkerOptions) {
+  }: WalkerParams) {
     this.entityNodeNamesBySharedFieldPath = entityNodeNamesBySharedFieldPath;
     this.interSubgraphNodes = interSubgraphNodes;
+    this.nodeResolutionDataByTypeNameByEntityNodeName = nodeResolutionDataByTypeNameByEntityNodeName;
+    this.nodeResolutionDataByNodeName = nodeResolutionDataByNodeName;
     this.originNode = originNode;
     this.resolvableFieldNamesByRelativeFieldPathByEntityNodeName =
       resolvableFieldNamesByRelativeFieldPathByEntityNodeName;
@@ -413,88 +499,152 @@ class Walker {
     this.sharedResolvableFieldNamesByRelativeFieldPath = sharedResolvableFieldNamesByRelativeFieldPath;
   }
 
+  getNodeResolutionData({ fieldDataByName, nodeName, typeName }: GraphNode): NodeResolutionData {
+    const nodeResolutionData = this.nodeResolutionDataByNodeName.get(nodeName);
+    if (nodeResolutionData) {
+      return nodeResolutionData.copy();
+    }
+    return new NodeResolutionData({ fieldDataByName, typeName });
+  }
+
   visitEntityNode(node: GraphNode) {
-    this.validateEntityRelatedConcreteNode(node, '');
+    const nodeResolutionDataByTypeName = getValueOrDefault(
+      this.nodeResolutionDataByTypeNameByEntityNodeName,
+      node.nodeName,
+      () => new Map<NodeName, NodeResolutionData>(),
+    );
+    this.validateEntityDescendantConcreteNode({ node, nodeResolutionDataByTypeName, fieldPath: '' });
     const accessibleEntityNodeNames = node.getAllAccessibleEntityNodeNames();
     for (const sibling of this.interSubgraphNodes) {
-      if (this.unresolvableFieldPaths.size < 0) {
+      if (this.unresolvableFieldPaths.size < 1) {
         return;
       }
       if (!accessibleEntityNodeNames.has(sibling.nodeName)) {
         continue;
       }
-      this.validateEntityRelatedConcreteNode(sibling, '');
+      this.validateEntityDescendantConcreteNode({
+        node: sibling,
+        nodeResolutionDataByTypeName,
+        fieldPath: '',
+      });
     }
   }
 
   // Returns true if the edge is visited and false if it's inaccessible
-  visitEntityRelatedEdge(edge: Edge, fieldPath: string) {
+  visitEntityDescendentEdge({ edge, fieldPath, nodeResolutionDataByTypeName }: ValidateEntityDescendantEdgeParams): ValidateNodeResult {
     if (edge.isInaccessible || edge.node.isInaccessible) {
-      return false;
+      return { visited: false, areDescendentsResolved: false };
     }
-    if (!add(edge.visitedIndices, this.walkerIndex) || edge.node.isLeaf) {
-      return true;
+    if (edge.node.isLeaf) {
+      return { visited: true, areDescendentsResolved: true };
+    }
+    if (!add(edge.visitedIndices, this.walkerIndex)) {
+      return { visited: false, areDescendentsResolved: false };
     }
     if (edge.node.hasEntitySiblings) {
       getValueOrDefault(
         this.entityNodeNamesBySharedFieldPath,
         `${fieldPath}.${edge.edgeName}`,
-        () => new Set<string>(),
+        () => new Set<NodeName>(),
       ).add(edge.node.nodeName);
-      return true;
+      return { visited: true, areDescendentsResolved: false };
     }
     if (edge.node.isAbstract) {
-      this.validateEntityRelatedAbstractNode(edge.node, `${fieldPath}.${edge.edgeName}`);
-    } else {
-      this.validateEntityRelatedConcreteNode(edge.node, `${fieldPath}.${edge.edgeName}`);
+      return this.validateEntityDescendantAbstractNode({
+        fieldPath: `${fieldPath}.${edge.edgeName}`,
+        node: edge.node,
+        nodeResolutionDataByTypeName,
+      });
     }
-    return true;
+    return this.validateEntityDescendantConcreteNode({
+      fieldPath: `${fieldPath}.${edge.edgeName}`,
+      node: edge.node,
+      nodeResolutionDataByTypeName
+    });
   }
 
-  validateEntityRelatedConcreteNode(node: GraphNode, fieldPath: string) {
+  validateEntityDescendantConcreteNode({ node, nodeResolutionDataByTypeName, fieldPath }: ValidateEntityDescendantNodeParams): ValidateNodeResult {
     if (node.headToTailEdges.size < 1) {
-      return;
+      return { visited: true, areDescendentsResolved: true };
+    }
+    const nodeResolutionData = getValueOrDefault(
+      nodeResolutionDataByTypeName,
+      node.typeName,
+      () => this.getNodeResolutionData(node),
+    );
+    if (nodeResolutionData.isResolved) {
+      this.unresolvableFieldPaths.delete(fieldPath);
+      if (nodeResolutionData.areDescendentsResolved()) {
+        return { visited: true, areDescendentsResolved: true };
+      }
     }
     const originResolvedFieldNames = getValueOrDefault(
       this.resolvableFieldNamesByRelativeFieldPath,
       fieldPath,
-      () => new NodeResolutionData(node.typeName, node.fieldDataByFieldName),
+      () => this.getNodeResolutionData(node),
     );
     const sharedResolvedFieldNames = this.sharedResolvableFieldNamesByRelativeFieldPath
       ? getValueOrDefault(
           this.sharedResolvableFieldNamesByRelativeFieldPath,
           fieldPath,
-          () => new NodeResolutionData(node.typeName, node.fieldDataByFieldName),
+          () => this.getNodeResolutionData(node),
         )
       : undefined;
     for (const [fieldName, edge] of node.headToTailEdges) {
-      // Returns true if the edge is visited
-      if (this.visitEntityRelatedEdge(edge, fieldPath)) {
+      const { visited, areDescendentsResolved } =  this.visitEntityDescendentEdge({ edge, nodeResolutionDataByTypeName, fieldPath });
+      if (visited) {
+        nodeResolutionData.add(fieldName);
         originResolvedFieldNames.add(fieldName);
         sharedResolvedFieldNames?.add(fieldName);
       }
+      if (!areDescendentsResolved) {
+        continue;
+      }
+      nodeResolutionData.resolvedDescendentNames.add(fieldName);
+      sharedResolvedFieldNames?.resolvedDescendentNames.add(fieldName);
+      // Returns true if the edge is visited
+      // if (this.visitEntityDescendentEdge({ edge, nodeResolutionDataByTypeName, fieldPath })) {
+      //   originResolvedFieldNames.add(fieldName);
+      //   sharedResolvedFieldNames?.add(fieldName);
+      // }
     }
-    if (originResolvedFieldNames.isResolved) {
+    if (nodeResolutionData.isResolved || sharedResolvedFieldNames?.isResolved) {
       this.unresolvableFieldPaths.delete(fieldPath);
     } else {
       this.unresolvableFieldPaths.add(fieldPath);
     }
-    if (!sharedResolvedFieldNames) {
-      return;
-    }
-    if (sharedResolvedFieldNames.isResolved) {
-      this.unresolvableSharedFieldPaths.delete(fieldPath);
-    } else {
-      this.unresolvableSharedFieldPaths.add(fieldPath);
-    }
+    // if (originResolvedFieldNames.isResolved) {
+    //   this.unresolvableFieldPaths.delete(fieldPath);
+    // } else {
+    //   this.unresolvableFieldPaths.add(fieldPath);
+    // }
+    // if (!sharedResolvedFieldNames) {
+    //   return;
+    // }
+    // if (sharedResolvedFieldNames.isResolved) {
+    //   this.unresolvableSharedFieldPaths.delete(fieldPath);
+    // } else {
+    //   this.unresolvableSharedFieldPaths.add(fieldPath);
+    // }
+    return {
+      visited: true,
+      areDescendentsResolved: nodeResolutionData.areDescendentsResolved(),
+    };
   }
 
-  validateEntityRelatedAbstractNode(node: GraphNode, fieldPath: string) {
+  validateEntityDescendantAbstractNode({ node, nodeResolutionDataByTypeName, fieldPath }: ValidateEntityDescendantNodeParams): ValidateNodeResult {
     if (node.headToTailEdges.size < 1) {
-      return;
+      return { visited: true, areDescendentsResolved: true };
     }
+    let resolvedDescendents = 0;
     for (const edge of node.headToTailEdges.values()) {
-      this.visitEntityRelatedEdge(edge, fieldPath);
+      /* Propagate any one of the abstract path failures.
+       * Don't set value in-line so or it will short-circuit.
+       * */
+      if (this.visitEntityDescendentEdge({ edge, nodeResolutionDataByTypeName, fieldPath }).areDescendentsResolved) {
+        resolvedDescendents += 1;
+      }
     }
+    return { visited: true, areDescendentsResolved: resolvedDescendents === node.headToTailEdges.size };
   }
 }
