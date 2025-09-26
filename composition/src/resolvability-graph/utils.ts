@@ -1,29 +1,8 @@
-import { unexpectedEdgeFatalError, unresolvablePathError } from '../errors/errors';
+import { unresolvablePathError } from '../errors/errors';
 import { LITERAL_SPACE, QUOTATION_JOIN } from '../utils/string-constants';
-import { getEntriesNotInHashSet, getOrThrowError } from '../utils/utils';
+import { getOrThrowError } from '../utils/utils';
 import { GraphFieldData } from '../utils/types';
-
-export class NodeResolutionData {
-  fieldDataByFieldName: Map<string, GraphFieldData>;
-  isResolved = false;
-  resolvedFieldNames = new Set<string>();
-  typeName: string;
-
-  constructor(typeName: string, fieldDataByFieldName: Map<string, GraphFieldData>) {
-    this.fieldDataByFieldName = fieldDataByFieldName;
-    this.typeName = typeName;
-  }
-
-  add(fieldName: string): boolean {
-    this.resolvedFieldNames.add(fieldName);
-    if (this.resolvedFieldNames.size > this.fieldDataByFieldName.size) {
-      const unexpectedEntries = getEntriesNotInHashSet(this.resolvedFieldNames, this.fieldDataByFieldName);
-      throw unexpectedEdgeFatalError(this.typeName, unexpectedEntries);
-    }
-    this.isResolved = this.resolvedFieldNames.size === this.fieldDataByFieldName.size;
-    return this.isResolved;
-  }
-}
+import { NodeResolutionData } from './node-resolution-data/node-resolution-data';
 
 export type EntityResolvabilitySuccess = {
   success: true;
@@ -210,7 +189,7 @@ export function generateResolvabilityErrors({
       'nodeResolutionDataByFieldPath',
     );
     const fieldDataByFieldName = new Map<string, GraphFieldData>();
-    for (const [fieldName, fieldData] of nodeResolutionData.fieldDataByFieldName) {
+    for (const [fieldName, fieldData] of nodeResolutionData.fieldDataByName) {
       if (nodeResolutionData.resolvedFieldNames.has(fieldName)) {
         continue;
       }
