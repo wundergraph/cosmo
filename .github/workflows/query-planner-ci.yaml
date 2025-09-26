@@ -150,7 +150,7 @@ jobs:
         with:
           owner: wundergraph
           repo: cosmo-celestial
-          ref: miklos/eng-8136-query-plan-tester-stuck
+          ref: master
           github_token: ${{ secrets.GH_TOKEN_CELESTIAL_TRIGGER }}
           propagate_failure: true
           workflow_file_name: 'query-planner-tester.yaml'
