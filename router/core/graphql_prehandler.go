@@ -520,14 +520,15 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	requestContext := httpOperation.requestContext
 
 	// Handle the case when operation information are provided as GET parameters
-	if req.Method == http.MethodGet {
+	switch req.Method {
+	case http.MethodGet:
 		if err := operationKit.UnmarshalOperationFromURL(req.URL); err != nil {
 			return &httpGraphqlError{
 				message:    fmt.Sprintf("invalid GET request: %s", err),
 				statusCode: http.StatusBadRequest,
 			}
 		}
-	} else if req.Method == http.MethodPost {
+	case http.MethodPost:
 		if err := operationKit.UnmarshalOperationFromBody(httpOperation.body); err != nil {
 			return &httpGraphqlError{
 				message:    fmt.Sprintf("invalid request body: %s", err),
