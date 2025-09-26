@@ -41,7 +41,7 @@ func PlanGenerator(args []string) {
 	f.StringVar(&cfg.LogLevel, "log-level", "warn", "log level to use (debug, info, warn, error, panic, fatal)")
 	f.Func("print-format", "output format (text|json)", func(s string) error {
 		switch value := core.PlanOutputFormat(strings.ToLower(s)); value {
-		case core.PlanOutputFormatInvalid:
+		case core.PlanOutputFormatUnset:
 			cfg.OutputFormat = core.PlanOutputFormatText
 			return nil
 		case core.PlanOutputFormatText, core.PlanOutputFormatJSON:

@@ -53,7 +53,7 @@ func PlanGenerator(ctx context.Context, cfg QueryPlanConfig) error {
 		cfg.Concurrency = runtime.GOMAXPROCS(0)
 	}
 
-	if cfg.OutputFormat == "" {
+	if cfg.OutputFormat == core.PlanOutputFormatUnset {
 		cfg.OutputFormat = core.PlanOutputFormatText
 	}
 
