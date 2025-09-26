@@ -56,8 +56,9 @@ type Planner struct {
 type PlanOutputFormat string
 
 const (
-	PlanOutputFormatText PlanOutputFormat = "text"
-	PlanOutputFormatJSON PlanOutputFormat = "json"
+	PlanOutputFormatInvalid PlanOutputFormat = ""
+	PlanOutputFormatText    PlanOutputFormat = "text"
+	PlanOutputFormatJSON    PlanOutputFormat = "json"
 )
 
 func NewPlanner(planConfiguration *plan.Configuration, definition *ast.Document, clientDefinition *ast.Document) (*Planner, error) {
