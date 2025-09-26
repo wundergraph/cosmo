@@ -9028,6 +9028,14 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			metricReader := metric.NewManualReader()
 			authenticators, authServer := integration.ConfigureAuth(t)
+			accessController, err := core.NewAccessController(core.AccessControllerOptions{
+				Authenticators:           authenticators,
+				AuthenticationRequired:   false,
+				SkipIntrospectionQueries: false,
+				IntrospectionSkipSecret:  "",
+			})
+			require.NoError(t, err)
+
 			claimKey := "extraclaim"
 			claimVal := "extravalue"
 			testenv.Run(t, &testenv.Config{
@@ -9041,7 +9049,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					},
 				},
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, false)),
+					core.WithAccessController(accessController),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				// Operations with a token should succeed
@@ -9078,6 +9086,14 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			metricReader := metric.NewManualReader()
 			authenticators, authServer := integration.ConfigureAuth(t)
+			accessController, err := core.NewAccessController(core.AccessControllerOptions{
+				Authenticators:           authenticators,
+				AuthenticationRequired:   false,
+				SkipIntrospectionQueries: false,
+				IntrospectionSkipSecret:  "",
+			})
+			require.NoError(t, err)
+
 			claimKey := "extraclaim"
 			testenv.Run(t, &testenv.Config{
 				MetricReader: metricReader,
@@ -9090,7 +9106,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					},
 				},
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, false)),
+					core.WithAccessController(accessController),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				// Operations with a token should succeed
@@ -9126,6 +9142,14 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			metricReader := metric.NewManualReader()
 			authenticators, authServer := integration.ConfigureAuth(t)
+			accessController, err := core.NewAccessController(core.AccessControllerOptions{
+				Authenticators:           authenticators,
+				AuthenticationRequired:   false,
+				SkipIntrospectionQueries: false,
+				IntrospectionSkipSecret:  "",
+			})
+			require.NoError(t, err)
+
 			testenv.Run(t, &testenv.Config{
 				MetricReader: metricReader,
 				CustomMetricAttributes: []config.CustomAttribute{
@@ -9137,7 +9161,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					},
 				},
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, false)),
+					core.WithAccessController(accessController),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				// Operations with a token should succeed
@@ -9199,6 +9223,14 @@ func TestFlakyTelemetry(t *testing.T) {
 			exporter := tracetest.NewInMemoryExporter(t)
 			metricReader := metric.NewManualReader()
 			authenticators, authServer := integration.ConfigureAuth(t)
+			accessController, err := core.NewAccessController(core.AccessControllerOptions{
+				Authenticators:           authenticators,
+				AuthenticationRequired:   false,
+				SkipIntrospectionQueries: false,
+				IntrospectionSkipSecret:  "",
+			})
+			require.NoError(t, err)
+
 			claimKeyWithAuth := "extraclaim"
 			claimValWithAuth := "extravalue"
 			headerKey := "X-Custom-Header"
@@ -9221,7 +9253,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					},
 				},
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, false)),
+					core.WithAccessController(accessController),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				// Operations with a token should succeed
@@ -9274,6 +9306,14 @@ func TestFlakyTelemetry(t *testing.T) {
 			exporter := tracetest.NewInMemoryExporter(t)
 			metricReader := metric.NewManualReader()
 			authenticators, authServer := integration.ConfigureAuth(t)
+			accessController, err := core.NewAccessController(core.AccessControllerOptions{
+				Authenticators:           authenticators,
+				AuthenticationRequired:   false,
+				SkipIntrospectionQueries: false,
+				IntrospectionSkipSecret:  "",
+			})
+			require.NoError(t, err)
+
 			claimKey := "extraclaim"
 			claimVal := "extravalue"
 			testenv.Run(t, &testenv.Config{
@@ -9288,7 +9328,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					},
 				},
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, false)),
+					core.WithAccessController(accessController),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				// Operations with a token should succeed
@@ -9332,6 +9372,14 @@ func TestFlakyTelemetry(t *testing.T) {
 			metricReader := metric.NewManualReader()
 			exporter := tracetest.NewInMemoryExporter(t)
 			authenticators, authServer := integration.ConfigureAuth(t)
+			accessController, err := core.NewAccessController(core.AccessControllerOptions{
+				Authenticators:           authenticators,
+				AuthenticationRequired:   false,
+				SkipIntrospectionQueries: false,
+				IntrospectionSkipSecret:  "",
+			})
+			require.NoError(t, err)
+
 			testenv.Run(t, &testenv.Config{
 				TraceExporter: exporter,
 				MetricReader:  metricReader,
@@ -9344,7 +9392,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					},
 				},
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, false)),
+					core.WithAccessController(accessController),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				// Operations with a token should succeed
@@ -9533,6 +9581,13 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			exporter := tracetest.NewInMemoryExporter(t)
 			authenticators, authServer := integration.ConfigureAuth(t)
+			accessController, err := core.NewAccessController(core.AccessControllerOptions{
+				Authenticators:           authenticators,
+				AuthenticationRequired:   false,
+				SkipIntrospectionQueries: false,
+				IntrospectionSkipSecret:  "",
+			})
+			require.NoError(t, err)
 
 			testenv.Run(t, &testenv.Config{
 				TraceExporter: exporter,
@@ -9551,7 +9606,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					},
 				},
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, false)),
+					core.WithAccessController(accessController),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				// Operations with a token should succeed

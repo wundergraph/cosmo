@@ -228,6 +228,10 @@
   },
   "PlaygroundEnabled": true,
   "IntrospectionEnabled": true,
+  "IntrospectionConfig": {
+    "Enabled": true,
+    "Secret": ""
+  },
   "QueryPlansEnabled": true,
   "LogLevel": "info",
   "JSONLog": true,
@@ -246,7 +250,8 @@
       "HeaderName": "Authorization",
       "HeaderValuePrefix": "Bearer",
       "HeaderSources": null
-    }
+    },
+    "IgnoreIntrospection": false
   },
   "Authorization": {
     "RequireAuthentication": false,
