@@ -11,7 +11,7 @@
   },
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "del dist && tsc",
+    "build": "rm -rf dist && tsc",
     "seed": "API_KEY=cosmo_669b576aaadc10ee1ae81d9193425705 tsx src/bin/seed.ts",
     "delete-user": "tsx src/bin/delete-user.ts",
     "deactivate-org": "tsx src/bin/deactivate-org.ts",

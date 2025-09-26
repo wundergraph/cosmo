@@ -14,7 +14,7 @@
   "license": "Apache-2.0",
   "scripts": {
     "dev": "tsc --watch",
-    "build": "del dist && tsc",
+    "build": "rm -rf dist && tsc",
     "test:watch": "vitest test",
     "test": "vitest run",
     "lint": "eslint --cache && prettier -c src test",
