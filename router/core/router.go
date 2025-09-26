@@ -2200,10 +2200,11 @@ func TraceConfigFromTelemetry(cfg *config.Telemetry) *rtrace.Config {
 		ExportGraphQLVariables: rtrace.ExportGraphQLVariables{
 			Enabled: cfg.Tracing.ExportGraphQLVariables,
 		},
-		ResourceAttributes:  buildResourceAttributes(cfg.ResourceAttributes),
-		Exporters:           exporters,
-		Propagators:         propagators,
-		ResponseTraceHeader: cfg.Tracing.ResponseTraceHeader,
+		ResourceAttributes:            buildResourceAttributes(cfg.ResourceAttributes),
+		Exporters:                     exporters,
+		Propagators:                   propagators,
+		ResponseTraceHeader:           cfg.Tracing.ResponseTraceHeader,
+		EnableOperationBodyAttributes: cfg.Tracing.EnableOperationBodyAttributes,
 	}
 }
 

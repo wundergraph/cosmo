@@ -69,6 +69,8 @@ type PreHandlerOptions struct {
 	DisableVariablesRemapping   bool
 	ExprManager                 *expr.Manager
 	OmitBatchExtensions         bool
+
+	EnableOperationBodyAttributes bool
 }
 
 type PreHandler struct {
@@ -102,6 +104,8 @@ type PreHandler struct {
 	disableVariablesRemapping   bool
 	exprManager                 *expr.Manager
 	omitBatchExtensions         bool
+
+	enableOperationBodyAttributes bool
 }
 
 type httpOperation struct {
@@ -148,6 +152,8 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		disableVariablesRemapping: opts.DisableVariablesRemapping,
 		exprManager:               opts.ExprManager,
 		omitBatchExtensions:       opts.OmitBatchExtensions,
+
+		enableOperationBodyAttributes: opts.EnableOperationBodyAttributes,
 	}
 }
 
@@ -632,7 +638,9 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		)
 
 		// Set the original operation on the parse span
-		engineParseSpan.SetAttributes(otel.WgOperationOriginalContent.String(operationKit.parsedOperation.Request.Query))
+		if h.enableOperationBodyAttributes {
+			engineParseSpan.SetAttributes(otel.WgOperationOriginalContent.String(operationKit.parsedOperation.Request.Query))
+		}
 
 		httpOperation.traceTimings.StartParse()
 		startParsing := time.Now()
@@ -895,7 +903,9 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	}
 
 	// Set the normalized operation on the span
-	engineNormalizeSpan.SetAttributes(otel.WgOperationNormalizedContent.String(operationKit.parsedOperation.NormalizedRepresentation))
+	if h.enableOperationBodyAttributes {
+		engineNormalizeSpan.SetAttributes(otel.WgOperationNormalizedContent.String(operationKit.parsedOperation.NormalizedRepresentation))
+	}
 
 	engineNormalizeSpan.End()
 
