@@ -857,6 +857,11 @@
               "default": false,
               "description": "Specifies that the router span should be treated as a root Span. Any existing parent span context will be ignored when defining the Span's trace identifiers. This is useful when the router must be the entry point of the trace."
             },
+            "enable_operation_body_attributes": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable the addition of GraphQL operation body content as trace attributes. When enabled, both original and normalized operation content will be added to trace spans. The default value is false."
+            },
             "exporters": {
               "type": "array",
               "description": "The exporters to use to export the traces. If no exporters are specified, the default Cosmo Cloud exporter is used. If you override, please make sure to include the default exporter.",
