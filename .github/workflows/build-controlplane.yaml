@@ -10,7 +10,9 @@ env:
   CI: true
   DO_NOT_TRACK: '1'
   # Angel Studios AWS ECR Configuration
-  AWS_REGION: ${{ secrets.SHARED_AWS_REGION }}
+  AWS_REGION: us-east-1
+  AWS_ACCOUNT_ID: 317057480065
+  BUILD_ROLE: arn:aws:iam::317057480065:role/github-actions-build-role
   IMAGE_NAME: wundergraph-cosmo-controlplane
 
 jobs:
@@ -19,6 +21,7 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
 
@@ -33,9 +36,10 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.ECR_REPO_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.ECR_REPO_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ env.BUILD_ROLE }}
           aws-region: ${{ env.AWS_REGION }}
+          role-session-name: GitHubActions-${{ github.repository_owner }}-${{ github.event.repository.name }}-${{ github.run_id }}
+        timeout-minutes: 5
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -45,13 +49,12 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ steps.login-ecr.outputs.registry }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.IMAGE_NAME }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=sha,prefix={{branch}}-
+            type=sha,format=long
             type=raw,value=latest,enable={{is_default_branch}}
-            type=raw,value=sha-${{ github.sha }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
@@ -61,6 +64,5 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/arm64
           cache-from: type=gha
-          cache-to: type=gha,mode=max
