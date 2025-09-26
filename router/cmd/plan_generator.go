@@ -38,8 +38,8 @@ func PlanGenerator(args []string) {
 	f.BoolVar(&cfg.OutputReport, "print-report", false, "write a report.json file, with all the query plans and errors sorted by file name")
 	f.BoolVar(&cfg.FailOnPlanError, "fail-on-error", false, "if at least one plan fails, the command exit code will be 1")
 	f.BoolVar(&cfg.FailFast, "fail-fast", false, "stop as soon as possible if a plan fails")
-	f.StringVar(&cfg.LogLevel, "log-level", "warn", "log level to use (debug, info, warn, error, panic, fatal)")
-	f.Func("print-format", "output format (text|json)", func(s string) error {
+	f.StringVar(&cfg.LogLevel, "log-level", "warn", "the log level to use (debug, info, warn, error, panic, fatal)")
+	f.Func("print-format", "output format of the query plan (text, json) (default \"text\")", func(s string) error {
 		switch value := core.PlanOutputFormat(strings.ToLower(s)); value {
 		case core.PlanOutputFormatUnset:
 			cfg.OutputFormat = core.PlanOutputFormatText
