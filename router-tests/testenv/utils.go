@@ -42,7 +42,7 @@ func AwaitFunc(t *testing.T, timeout time.Duration, testFunction func()) {
 }
 
 func Go[A any](fn func() A) <-chan A {
-	doneCh := make(chan A)
+	doneCh := make(chan A, 1)
 	go func() {
 		doneCh <- fn()
 	}()
