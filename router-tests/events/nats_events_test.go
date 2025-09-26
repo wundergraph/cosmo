@@ -1813,10 +1813,7 @@ func TestNatsEvents(t *testing.T) {
 			require.NoError(t, err)
 			require.NotEqual(t, "", subscriptionOneID)
 
-			client1RunCh := make(chan error)
-			go func() {
-				client1RunCh <- client1.Run()
-			}()
+			client1RunCh := testenv.Go(client1.Run)
 
 			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
 
@@ -1831,10 +1828,7 @@ func TestNatsEvents(t *testing.T) {
 			require.NoError(t, err)
 			require.NotEqual(t, "", subscriptionTwoID)
 
-			client2RunCh := make(chan error)
-			go func() {
-				client2RunCh <- client2.Run()
-			}()
+			client2RunCh := testenv.Go(client2.Run)
 
 			xEnv.WaitForSubscriptionCount(2, NatsWaitTimeout)
 
@@ -1849,10 +1843,7 @@ func TestNatsEvents(t *testing.T) {
 			require.NoError(t, err)
 			require.NotEqual(t, "", subscriptionThreeID)
 
-			client3RunCh := make(chan error)
-			go func() {
-				client3RunCh <- client3.Run()
-			}()
+			client3RunCh := testenv.Go(client3.Run)
 
 			xEnv.WaitForSubscriptionCount(3, NatsWaitTimeout)
 
