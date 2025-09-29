@@ -273,7 +273,7 @@ type Mutation {
 }
 type Employee @key(fields: "id") {
   id: Int!
-  isAvailable: Boolean!
+  isAvailable: Boolean
 }
 `, BuiltIn: false},
 	{Name: "../../federation/directives.graphql", Input: `
@@ -672,14 +672,11 @@ func (ec *executionContext) _Employee_isAvailable(ctx context.Context, field gra
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
-	res := resTmp.(bool)
+	res := resTmp.(*bool)
 	fc.Result = res
-	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+	return ec.marshalOBoolean2ᚖbool(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Employee_isAvailable(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3085,9 +3082,6 @@ func (ec *executionContext) _Employee(ctx context.Context, sel ast.SelectionSet,
 			}
 		case "isAvailable":
 			out.Values[i] = ec._Employee_isAvailable(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
