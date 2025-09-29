@@ -2797,9 +2797,9 @@ export class FederationFactory {
      * This should only be done for troubleshooting purposes.
      * */
     if (!this.disableResolvabilityValidation && this.internalSubgraphBySubgraphName.size > 1) {
-      const resolvabilityErrors = this.internalGraph.validate();
-      if (resolvabilityErrors.length > 0) {
-        return { errors: resolvabilityErrors, success: false, warnings: this.warnings };
+      const validationResult = this.internalGraph.validate();
+      if (!validationResult.success) {
+        return { errors: validationResult.errors, success: false, warnings: this.warnings };
       }
     }
     const newRouterAST: DocumentNode = {

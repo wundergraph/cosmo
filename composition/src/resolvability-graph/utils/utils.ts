@@ -1,8 +1,16 @@
-import { unresolvablePathError } from '../errors/errors';
-import { LITERAL_SPACE, QUOTATION_JOIN } from '../utils/string-constants';
-import { getOrThrowError } from '../utils/utils';
-import { GraphFieldData } from '../utils/types';
-import { NodeResolutionData } from './node-resolution-data/node-resolution-data';
+import { unresolvablePathError } from '../../errors/errors';
+import { LITERAL_SPACE, QUOTATION_JOIN } from '../../utils/string-constants';
+import { getOrThrowError } from '../../utils/utils';
+import { GraphFieldData } from '../../utils/types';
+import { NodeResolutionData } from '../node-resolution-data/node-resolution-data';
+import { FieldName, RootFieldData, SelectionPath, SubgraphName, TypeName } from '../types/types';
+
+import {
+  GetMultipliedRelativeOriginPathsParams,
+  ResolvabilityErrorsParams,
+  RootResolvabilityErrorsParams,
+} from './types/params';
+import { EntityAncestorData } from './types/types';
 
 export type EntityResolvabilitySuccess = {
   success: true;
@@ -26,15 +34,13 @@ export type UnresolvableFieldData = {
   typeName: string;
 };
 
-export type RootFieldData = {
-  coordinate: string;
-  message: string;
-  subgraphNames: Set<string>;
-};
-
-export function newRootFieldData(typeName: string, fieldName: string, subgraphNames: Set<string>) {
+export function newRootFieldData(
+  typeName: TypeName,
+  fieldName: FieldName,
+  subgraphNames: Set<SubgraphName>,
+): RootFieldData {
   return {
-    coordinate: `${typeName}.${fieldName}`,
+    coords: `${typeName}.${fieldName}`,
     message:
       `The root type field "${typeName}.${fieldName}" is defined in the following subgraph` +
       (subgraphNames.size > 1 ? `s` : ``) +
@@ -65,12 +71,6 @@ function formatFieldNameSelection(fieldData: GraphFieldData, pathLength: number)
     `}\n`
   );
 }
-
-export type EntityAncestorData = {
-  fieldSetsByTargetSubgraphName: Map<string, Set<string>>;
-  subgraphName: string;
-  typeName: string;
-};
 
 export type GenerateResolvabilityErrorReasonsOptions = {
   rootFieldData: RootFieldData;
@@ -109,16 +109,16 @@ export function generateResolvabilityErrorReasons({
       );
     }
     reasons.push(
-      `The type "${typeName}" is not a descendent of any other entity ancestors that can provide a shared route to access "${fieldName}".`,
+      `The type "${typeName}" is not a descendant of any other entity ancestors that can provide a shared route to access "${fieldName}".`,
     );
   } else {
     if (rootFieldData.subgraphNames.size > 1) {
       reasons.push(
-        `None of the subgraphs that share the same root type field "${rootFieldData.coordinate}" can provide a route to access "${fieldName}".`,
+        `None of the subgraphs that shares the same root type field "${rootFieldData.coords}" can provide a route to access "${fieldName}".`,
       );
     }
     reasons.push(
-      `The type "${typeName}" is not a descendent of an entity ancestor that can provide a shared route to access "${fieldName}".`,
+      `The type "${typeName}" is not a descendant of an entity ancestor that can provide a shared route to access "${fieldName}".`,
     );
   }
   if (typeName !== entityAncestorData?.typeName) {
@@ -173,21 +173,14 @@ function getUnresolvablePath(fieldPath: string, pathFromRoot?: string): string {
   return fieldPath;
 }
 
-export function generateResolvabilityErrors({
-  entityAncestorData,
-  errors,
-  nodeResolutionDataByFieldPath,
-  pathFromRoot,
+export function generateRootResolvabilityErrors({
+  resDataByPath,
   rootFieldData,
-  unresolvableFieldPaths,
-}: ResolvabilityErrorsOptions) {
-  const unresolvableFieldDatas: Array<UnresolvableFieldData> = [];
-  for (const fieldPath of unresolvableFieldPaths) {
-    const nodeResolutionData = getOrThrowError(
-      nodeResolutionDataByFieldPath,
-      fieldPath,
-      'nodeResolutionDataByFieldPath',
-    );
+  unresolvablePaths,
+}: RootResolvabilityErrorsParams): Array<Error> {
+  const unresolvableFieldDatas = new Array<UnresolvableFieldData>();
+  for (const path of unresolvablePaths) {
+    const nodeResolutionData = getOrThrowError(resDataByPath, path, 'resDataByPath');
     const fieldDataByFieldName = new Map<string, GraphFieldData>();
     for (const [fieldName, fieldData] of nodeResolutionData.fieldDataByName) {
       if (nodeResolutionData.resolvedFieldNames.has(fieldName)) {
@@ -195,8 +188,7 @@ export function generateResolvabilityErrors({
       }
       fieldDataByFieldName.set(fieldName, fieldData);
     }
-    const fullPath = getUnresolvablePath(fieldPath, pathFromRoot);
-    const selectionSetSegments = generateSelectionSetSegments(fullPath);
+    const selectionSetSegments = generateSelectionSetSegments(path);
     for (const [fieldName, fieldData] of fieldDataByFieldName) {
       unresolvableFieldDatas.push({
         fieldName,
@@ -206,12 +198,70 @@ export function generateResolvabilityErrors({
       });
     }
   }
+  const errors = new Array<Error>();
   for (const unresolvableFieldData of unresolvableFieldDatas) {
     errors.push(
       unresolvablePathError(
         unresolvableFieldData,
-        generateResolvabilityErrorReasons({ rootFieldData, unresolvableFieldData, entityAncestorData }),
+        generateResolvabilityErrorReasons({ rootFieldData, unresolvableFieldData }),
       ),
     );
   }
+  return errors;
+}
+
+export function generateResolvabilityErrors({
+  entityAncestorData,
+  resDataByPath,
+  pathFromRoot,
+  rootFieldData,
+  subgraphNameByUnresolvablePath,
+}: ResolvabilityErrorsParams): Array<Error> {
+  const errors = new Array<Error>();
+  for (const [path, subgraphName] of subgraphNameByUnresolvablePath) {
+    const unresolvableFieldDatas = new Array<UnresolvableFieldData>();
+    const nodeResolutionData = getOrThrowError(resDataByPath, path, 'resDataByPath');
+    const fieldDataByFieldName = new Map<string, GraphFieldData>();
+    for (const [fieldName, fieldData] of nodeResolutionData.fieldDataByName) {
+      if (nodeResolutionData.resolvedFieldNames.has(fieldName)) {
+        continue;
+      }
+      fieldDataByFieldName.set(fieldName, fieldData);
+    }
+    const fullPath = getUnresolvablePath(path, pathFromRoot);
+    const selectionSetSegments = generateSelectionSetSegments(fullPath);
+    for (const [fieldName, fieldData] of fieldDataByFieldName) {
+      unresolvableFieldDatas.push({
+        fieldName,
+        selectionSet: renderSelectionSet(selectionSetSegments, fieldData),
+        subgraphNames: fieldData.subgraphNames,
+        typeName: nodeResolutionData.typeName,
+      });
+    }
+    // Reflect whence the resolvability came accurately.
+    entityAncestorData.subgraphName = subgraphName;
+    for (const unresolvableFieldData of unresolvableFieldDatas) {
+      errors.push(
+        unresolvablePathError(
+          unresolvableFieldData,
+          generateResolvabilityErrorReasons({ rootFieldData, unresolvableFieldData, entityAncestorData }),
+        ),
+      );
+    }
+  }
+  return errors;
+}
+
+export function getMultipliedRelativeOriginPaths({
+  relativeOriginPaths,
+  selectionPath,
+}: GetMultipliedRelativeOriginPathsParams): Set<SelectionPath> {
+  if (!relativeOriginPaths) {
+    return new Set<SelectionPath>([selectionPath]);
+  }
+  const multipliedPaths = new Set<SelectionPath>();
+  for (const originPath of relativeOriginPaths) {
+    multipliedPaths.add(`${originPath}${selectionPath}`);
+  }
+  return multipliedPaths;
 }

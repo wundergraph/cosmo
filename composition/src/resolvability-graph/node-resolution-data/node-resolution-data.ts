@@ -1,13 +1,12 @@
 import { GraphFieldData } from '../../utils/types';
-import { getEntriesNotInHashSet } from '../../utils/utils';
 import { unexpectedEdgeFatalError } from '../../errors/errors';
 import { FieldName, SubgraphName } from '../types/types';
 import { NodeResolutionDataParams } from './types/params';
 
 export class NodeResolutionData {
+  #isResolved = false;
   fieldDataByName: Map<FieldName, GraphFieldData>;
-  isResolved: boolean
-  resolvedDescendentNames: Set<FieldName>;
+  resolvedDescendantNames: Set<FieldName>;
   resolvedFieldNames: Set<FieldName>;
   typeName: string;
 
@@ -18,21 +17,18 @@ export class NodeResolutionData {
     resolvedFieldNames,
     typeName,
   }: NodeResolutionDataParams) {
+    this.#isResolved = isResolved;
     this.fieldDataByName = fieldDataByName;
-    this.isResolved = isResolved;
-    this.resolvedDescendentNames = new Set<FieldName>(resolvedDescendentNames);
+    this.resolvedDescendantNames = new Set<FieldName>(resolvedDescendentNames);
     this.resolvedFieldNames = new Set<FieldName>(resolvedFieldNames);
     this.typeName = typeName;
   }
 
-  add(fieldName: FieldName): boolean {
-    this.resolvedFieldNames.add(fieldName);
-    if (this.resolvedFieldNames.size > this.fieldDataByName.size) {
-      const unexpectedEntries = getEntriesNotInHashSet(this.resolvedFieldNames, this.fieldDataByName);
-      throw unexpectedEdgeFatalError(this.typeName, unexpectedEntries);
+  addResolvedFieldName(fieldName: FieldName) {
+    if (!this.fieldDataByName.has(fieldName)) {
+      throw unexpectedEdgeFatalError(this.typeName, [fieldName]);
     }
-    this.isResolved = this.resolvedFieldNames.size === this.fieldDataByName.size;
-    return this.isResolved;
+    this.resolvedFieldNames.add(fieldName);
   }
 
   copy(): NodeResolutionData {
@@ -47,14 +43,30 @@ export class NodeResolutionData {
     }
     return new NodeResolutionData({
       fieldDataByName: this.fieldDataByName,
-      isResolved: this.isResolved,
-      resolvedDescendentNames: this.resolvedDescendentNames,
+      isResolved: this.#isResolved,
+      resolvedDescendentNames: this.resolvedDescendantNames,
       resolvedFieldNames: this.resolvedFieldNames,
       typeName: this.typeName,
     });
   }
 
-  areDescendentsResolved(): boolean {
-    return this.fieldDataByName.size === this.resolvedDescendentNames.size;
+  areDescendantsResolved(): boolean {
+    return this.fieldDataByName.size === this.resolvedDescendantNames.size;
+  }
+
+  isResolved(): boolean {
+    if (this.#isResolved) {
+      return true;
+    }
+    if (this.fieldDataByName.size !== this.resolvedFieldNames.size) {
+      return false;
+    }
+    for (const fieldName of this.fieldDataByName.keys()) {
+      if (!this.resolvedFieldNames.has(fieldName)) {
+        return false;
+      }
+    }
+    this.#isResolved = true;
+    return true;
   }
 }

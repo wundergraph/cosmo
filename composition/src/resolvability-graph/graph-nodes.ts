@@ -26,7 +26,7 @@ export type GraphNodeOptions = {
 export class GraphNode {
   fieldDataByName = new Map<string, GraphFieldData>();
   headToTailEdges = new Map<string, Edge>();
-  entityEdges: Array<Edge> = [];
+  entityEdges = new Array<Edge>();
   nodeName: `${SubgraphName}.${TypeName}`;
   hasEntitySiblings = false;
   isAbstract: boolean;
@@ -78,7 +78,7 @@ export class GraphNode {
 
 export class RootNode {
   fieldDataByName = new Map<string, GraphFieldData>();
-  headToShareableTailEdges = new Map<string, Array<Edge>>();
+  headToSharedTailEdges = new Map<string, Array<Edge>>();
   // It is used
   isAbstract = false;
   isRootNode = true;
@@ -89,7 +89,7 @@ export class RootNode {
   }
 
   removeInaccessibleEdges(fieldDataByFieldName: Map<string, GraphFieldData>) {
-    for (const [fieldName, edges] of this.headToShareableTailEdges) {
+    for (const [fieldName, edges] of this.headToSharedTailEdges) {
       if (fieldDataByFieldName.has(fieldName)) {
         continue;
       }
