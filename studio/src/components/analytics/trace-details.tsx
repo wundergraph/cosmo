@@ -55,28 +55,25 @@ export const TraceDetails = ({ ast }: { ast: GraphQLSchema | null }) => {
     },
   );
 
-  // Find the span with the operation hash
-  // In that way, we don't rely on the order of the spans
-  const routerSpan = traceData?.spans.find((span) => !!span.attributes?.operationHash)?.attributes.operationHash;
+  // Find the operation hash from any span that provides it
+  const operationHash = traceData?.spans.find((span) => !!span.attributes?.operationHash)?.attributes.operationHash;
 
   const {
     data: operationContentData,
     error: operationContentError,
-    isLoading: operationContentIsLoading,
+    isFetching: operationContentIsFetching,
     refetch: operationContentRefetch,
   } = useQuery(
     getOperationContent,
     {
-      hash: routerSpan,
+      hash: operationHash,
       federatedGraphName: graphContext?.graph?.name,
       namespace,
     },
     {
-      enabled: !!routerSpan,
+      enabled: !!operationHash,
     },
   );
-
-  console.log({ traceData, routerSpan, operationContentData });
 
   useEffect(() => {
     if (!traceData || !operationContentData) {
@@ -143,64 +140,95 @@ export const TraceDetails = ({ ast }: { ast: GraphQLSchema | null }) => {
   return (
     <div>
       <Trace spans={traceData.spans} />
-      <div className="mb-3 mt-4">
-        <div className="mb-1">Operation and Variables</div>
-        <div className="text-xs text-muted-foreground">
-          Content is truncated to 3KB. To view the GraphQL variables of the operation, please enable variable export in
-          the router.{' '}
-          <a
-            target="_blank"
-            rel="noreferrer"
-            href={docsBaseURL + '/router/open-telemetry#graphql-variables'}
-            className="text-primary"
-          >
-            Learn more.
-          </a>
+      {operationContentIsFetching ? (
+        <div className="mt-4 flex h-72 items-center justify-center rounded-md border">
+          <Loader />
         </div>
-      </div>
-      {operationContentIsLoading ? <Loader fullscreen /> : <></>}
-      <div className="flex max-h-96 justify-between rounded border">
-        <CodeViewer code={content} language="graphql" disableLinking className="scrollbar-custom w-3/6 overflow-auto" />
-        <CodeViewer code={variables} language="json" disableLinking className="scrollbar-custom w-2/6 overflow-auto" />
-        <div className="px-2 py-2">
-          {isTruncated ? (
-            <Tooltip delayDuration={0}>
-              <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" className="relative" asChild>
-                  <Link
-                    href={`/${organizationSlug}/${namespace}/graph/${slug}/playground?operation=${encodeURIComponent(
-                      content || '',
-                    )}&variables=${encodeURIComponent(
-                      variables || JSON.stringify(extractVariablesFromGraphQL(content, ast)),
-                    )}`}
-                  >
-                    <PlayIcon className="h-5" />
-                    <ExclamationTriangleIcon className="absolute -right-1 -top-1 h-3.5 text-destructive" />
-                  </Link>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Run in playground with truncated / invalid content</TooltipContent>
-            </Tooltip>
+      ) : (
+        <>
+          {operationContentError || operationContentData?.response?.code !== EnumStatusCode.OK ? (
+            <EmptyState
+              className="order-2 mt-4 h-72 border lg:order-last"
+              icon={<ExclamationTriangleIcon />}
+              title="Could not retrieve operation contents"
+              description={
+                operationContentData?.response?.details || operationContentError?.message || 'Please try again'
+              }
+              actions={<Button onClick={() => operationContentRefetch()}>Retry</Button>}
+            />
           ) : (
-            <Tooltip delayDuration={0}>
-              <TooltipTrigger asChild>
-                <Button variant="outline" size="icon" asChild>
-                  <Link
-                    href={`/${organizationSlug}/${namespace}/graph/${slug}/playground?operation=${encodeURIComponent(
-                      content || '',
-                    )}&variables=${encodeURIComponent(
-                      variables || JSON.stringify(extractVariablesFromGraphQL(content, ast)),
-                    )}`}
+            <>
+              <div className="mb-3 mt-4">
+                <div className="mb-1">Operation and Variables</div>
+                <div className="text-xs text-muted-foreground">
+                  Content is truncated to 3KB. To view the GraphQL variables of the operation, please enable variable
+                  export in the router.{' '}
+                  <a
+                    target="_blank"
+                    rel="noreferrer"
+                    href={docsBaseURL + '/router/open-telemetry#graphql-variables'}
+                    className="text-primary"
                   >
-                    <PlayIcon className="h-5" />
-                  </Link>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Run in playground</TooltipContent>
-            </Tooltip>
+                    Learn more.
+                  </a>
+                </div>
+              </div>
+              <div className="flex max-h-96 justify-between rounded border">
+                <CodeViewer
+                  code={content}
+                  language="graphql"
+                  disableLinking
+                  className="scrollbar-custom w-3/6 overflow-auto"
+                />
+                <CodeViewer
+                  code={variables}
+                  language="json"
+                  disableLinking
+                  className="scrollbar-custom w-2/6 overflow-auto"
+                />
+                <div className="px-2 py-2">
+                  {isTruncated ? (
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger asChild>
+                        <Button variant="outline" size="icon" className="relative" asChild>
+                          <Link
+                            href={`/${organizationSlug}/${namespace}/graph/${slug}/playground?operation=${encodeURIComponent(
+                              content || '',
+                            )}&variables=${encodeURIComponent(
+                              variables || JSON.stringify(extractVariablesFromGraphQL(content, ast)),
+                            )}`}
+                          >
+                            <PlayIcon className="h-5" />
+                            <ExclamationTriangleIcon className="absolute -right-1 -top-1 h-3.5 text-destructive" />
+                          </Link>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Run in playground with truncated / invalid content</TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger asChild>
+                        <Button variant="outline" size="icon" asChild>
+                          <Link
+                            href={`/${organizationSlug}/${namespace}/graph/${slug}/playground?operation=${encodeURIComponent(
+                              content || '',
+                            )}&variables=${encodeURIComponent(
+                              variables || JSON.stringify(extractVariablesFromGraphQL(content, ast)),
+                            )}`}
+                          >
+                            <PlayIcon className="h-5" />
+                          </Link>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Run in playground</TooltipContent>
+                    </Tooltip>
+                  )}
+                </div>
+              </div>
+            </>
           )}
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 };
