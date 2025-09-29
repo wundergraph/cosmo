@@ -47,6 +47,7 @@
           }
         }
       ],
+      "EnableOperationBodyAttributes": false,
       "ExportGraphQLVariables": true,
       "WithNewRoot": false
     },
