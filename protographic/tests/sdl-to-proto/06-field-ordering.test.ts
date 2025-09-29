@@ -1154,19 +1154,38 @@ describe('Field Ordering and Preservation', () => {
       const root1 = loadProtoFromText(proto1);
 
       // Verify wrapper types exist and get their field numbers
-      const listOfStringFields = getFieldNumbersFromMessage(root1, 'ListOfString');
-      const listOfIntFields = getFieldNumbersFromMessage(root1, 'ListOfInt');
-      const listOfUserFields = getFieldNumbersFromMessage(root1, 'ListOfUser');
+      const listOfStringWrapperFields = getFieldNumbersFromMessage(root1, 'ListOfString');
+      const listOfIntWrapperFields = getFieldNumbersFromMessage(root1, 'ListOfInt');
+      const listOfUserWrapperFields = getFieldNumbersFromMessage(root1, 'ListOfUser');
 
-      // Store original field numbers for wrapper types
-      const stringItemsNumber = listOfStringFields['items'];
-      const intItemsNumber = listOfIntFields['items'];
-      const userItemsNumber = listOfUserFields['items'];
+      // Get the inner List type field numbers for items
+      const stringListType = root1.lookupType('ListOfString').lookupType('List');
+      const intListType = root1.lookupType('ListOfInt').lookupType('List');
+      const userListType = root1.lookupType('ListOfUser').lookupType('List');
 
-      // Verify all wrapper types have the 'items' field with field number 1
-      expect(stringItemsNumber).toBe(1);
-      expect(intItemsNumber).toBe(1);
-      expect(userItemsNumber).toBe(1);
+      const stringListFields = getFieldNumbersFromMessage(stringListType.root, 'List');
+      const intListFields = getFieldNumbersFromMessage(intListType.root, 'List');
+      const userListFields = getFieldNumbersFromMessage(userListType.root, 'List');
+
+      // Store original field numbers for wrapper types (outer 'list' field)
+      const stringWrapperListFieldNumber = listOfStringWrapperFields['list'];
+      const intWrapperListFieldNumber = listOfIntWrapperFields['list'];
+      const userWrapperListFieldNumber = listOfUserWrapperFields['list'];
+
+      // Store original field numbers for inner List types ('items' field)
+      const stringListItemsFieldNumber = stringListFields['items'];
+      const intListItemsFieldNumber = intListFields['items'];
+      const userListItemsFieldNumber = userListFields['items'];
+
+      // Verify all wrapper types have the 'list' field with field number 1
+      expect(stringWrapperListFieldNumber).toBe(1);
+      expect(intWrapperListFieldNumber).toBe(1);
+      expect(userWrapperListFieldNumber).toBe(1);
+
+      // Verify all inner List types have the 'items' field with field number 1
+      expect(stringListItemsFieldNumber).toBe(1);
+      expect(intListItemsFieldNumber).toBe(1);
+      expect(userListItemsFieldNumber).toBe(1);
 
       // Get the generated lock data
       const lockData = visitor1.getGeneratedLockData();
@@ -1206,18 +1225,35 @@ describe('Field Ordering and Preservation', () => {
       const root2 = loadProtoFromText(proto2);
 
       // Verify existing wrapper types preserved their field numbers
-      const listOfStringFields2 = getFieldNumbersFromMessage(root2, 'ListOfString');
-      const listOfIntFields2 = getFieldNumbersFromMessage(root2, 'ListOfInt');
-      const listOfUserFields2 = getFieldNumbersFromMessage(root2, 'ListOfUser');
-      const listOfFloatFields2 = getFieldNumbersFromMessage(root2, 'ListOfFloat');
+      const listOfStringWrapperFields2 = getFieldNumbersFromMessage(root2, 'ListOfString');
+      const listOfIntWrapperFields2 = getFieldNumbersFromMessage(root2, 'ListOfInt');
+      const listOfUserWrapperFields2 = getFieldNumbersFromMessage(root2, 'ListOfUser');
+      const listOfFloatWrapperFields2 = getFieldNumbersFromMessage(root2, 'ListOfFloat');
 
-      // Verify field numbers are preserved
-      expect(listOfStringFields2['items']).toBe(stringItemsNumber);
-      expect(listOfIntFields2['items']).toBe(intItemsNumber);
-      expect(listOfUserFields2['items']).toBe(userItemsNumber);
+      // Get the inner List type field numbers for items verification
+      const stringListType2 = root2.lookupType('ListOfString').lookupType('List');
+      const intListType2 = root2.lookupType('ListOfInt').lookupType('List');
+      const userListType2 = root2.lookupType('ListOfUser').lookupType('List');
+      const floatListType2 = root2.lookupType('ListOfFloat').lookupType('List');
 
-      // Verify new wrapper type has field number 1
-      expect(listOfFloatFields2['items']).toBe(1);
+      const stringListFields2 = getFieldNumbersFromMessage(stringListType2.root, 'List');
+      const intListFields2 = getFieldNumbersFromMessage(intListType2.root, 'List');
+      const userListFields2 = getFieldNumbersFromMessage(userListType2.root, 'List');
+      const floatListFields2 = getFieldNumbersFromMessage(floatListType2.root, 'List');
+
+      // Verify wrapper field numbers are preserved (outer 'list' field)
+      expect(listOfStringWrapperFields2['list']).toBe(stringWrapperListFieldNumber);
+      expect(listOfIntWrapperFields2['list']).toBe(intWrapperListFieldNumber);
+      expect(listOfUserWrapperFields2['list']).toBe(userWrapperListFieldNumber);
+
+      // Verify inner List field numbers are preserved ('items' field)
+      expect(stringListFields2['items']).toBe(stringListItemsFieldNumber);
+      expect(intListFields2['items']).toBe(intListItemsFieldNumber);
+      expect(userListFields2['items']).toBe(userListItemsFieldNumber);
+
+      // Verify new wrapper types have field number 1
+      expect(listOfFloatWrapperFields2['list']).toBe(1);
+      expect(floatListFields2['items']).toBe(1);
     });
 
     test('should preserve field numbers for nested list wrapper types', () => {
@@ -1247,26 +1283,37 @@ describe('Field Ordering and Preservation', () => {
       const root1 = loadProtoFromText(proto1);
 
       // Verify nested wrapper types exist and get their field numbers
-      const listOfListOfStringFields = getFieldNumbersFromMessage(root1, 'ListOfListOfString');
-      const listOfListOfIntFields = getFieldNumbersFromMessage(root1, 'ListOfListOfInt');
+      const listOfListOfStringWrapperFields = getFieldNumbersFromMessage(root1, 'ListOfListOfString');
+      const listOfListOfIntWrapperFields = getFieldNumbersFromMessage(root1, 'ListOfListOfInt');
 
-      // For nested wrappers, they should have a 'list' field (not 'items')
-      const stringListNumber = listOfListOfStringFields['list'];
-      const intListNumber = listOfListOfIntFields['list'];
+      // For nested wrappers, they should have a 'list' field at the outer level
+      const nestedStringWrapperListFieldNumber = listOfListOfStringWrapperFields['list'];
+      const nestedIntWrapperListFieldNumber = listOfListOfIntWrapperFields['list'];
 
       // Verify nested wrapper types have the 'list' field with field number 1
-      expect(stringListNumber).toBe(1);
-      expect(intListNumber).toBe(1);
+      expect(nestedStringWrapperListFieldNumber).toBe(1);
+      expect(nestedIntWrapperListFieldNumber).toBe(1);
 
-      // Also verify the inner simple wrapper types exist
-      const listOfStringFields = getFieldNumbersFromMessage(root1, 'ListOfString');
-      const listOfIntFields = getFieldNumbersFromMessage(root1, 'ListOfInt');
+      // Also verify the inner simple wrapper types exist and get their field numbers
+      const listOfStringWrapperFields = getFieldNumbersFromMessage(root1, 'ListOfString');
+      const listOfIntWrapperFields = getFieldNumbersFromMessage(root1, 'ListOfInt');
 
-      const stringItemsNumber = listOfStringFields['items'];
-      const intItemsNumber = listOfIntFields['items'];
+      // Get the inner List type field numbers for items
+      const stringListType = root1.lookupType('ListOfString').lookupType('List');
+      const intListType = root1.lookupType('ListOfInt').lookupType('List');
 
-      expect(stringItemsNumber).toBe(1);
-      expect(intItemsNumber).toBe(1);
+      const stringListFields = getFieldNumbersFromMessage(stringListType.root, 'List');
+      const intListFields = getFieldNumbersFromMessage(intListType.root, 'List');
+
+      const simpleStringWrapperListFieldNumber = listOfStringWrapperFields['list'];
+      const simpleIntWrapperListFieldNumber = listOfIntWrapperFields['list'];
+      const stringListItemsFieldNumber = stringListFields['items'];
+      const intListItemsFieldNumber = intListFields['items'];
+
+      expect(simpleStringWrapperListFieldNumber).toBe(1);
+      expect(simpleIntWrapperListFieldNumber).toBe(1);
+      expect(stringListItemsFieldNumber).toBe(1);
+      expect(intListItemsFieldNumber).toBe(1);
 
       // Get the generated lock data
       const lockData = visitor1.getGeneratedLockData();
@@ -1306,25 +1353,37 @@ describe('Field Ordering and Preservation', () => {
       const root2 = loadProtoFromText(proto2);
 
       // Verify existing wrapper types preserved their field numbers
-      const listOfListOfStringFields2 = getFieldNumbersFromMessage(root2, 'ListOfListOfString');
-      const listOfListOfIntFields2 = getFieldNumbersFromMessage(root2, 'ListOfListOfInt');
-      const listOfListOfUserFields2 = getFieldNumbersFromMessage(root2, 'ListOfListOfUser');
+      const listOfListOfStringWrapperFields2 = getFieldNumbersFromMessage(root2, 'ListOfListOfString');
+      const listOfListOfIntWrapperFields2 = getFieldNumbersFromMessage(root2, 'ListOfListOfInt');
+      const listOfListOfUserWrapperFields2 = getFieldNumbersFromMessage(root2, 'ListOfListOfUser');
 
-      // Verify existing field numbers are preserved
-      expect(listOfListOfStringFields2['list']).toBe(stringListNumber);
-      expect(listOfListOfIntFields2['list']).toBe(intListNumber);
+      // Verify existing nested wrapper field numbers are preserved
+      expect(listOfListOfStringWrapperFields2['list']).toBe(nestedStringWrapperListFieldNumber);
+      expect(listOfListOfIntWrapperFields2['list']).toBe(nestedIntWrapperListFieldNumber);
 
       // Verify new nested wrapper type has field number 1
-      expect(listOfListOfUserFields2['list']).toBe(1);
+      expect(listOfListOfUserWrapperFields2['list']).toBe(1);
 
       // Verify simple wrapper types are still preserved
-      const listOfStringFields2 = getFieldNumbersFromMessage(root2, 'ListOfString');
-      const listOfIntFields2 = getFieldNumbersFromMessage(root2, 'ListOfInt');
-      const listOfUserFields2 = getFieldNumbersFromMessage(root2, 'ListOfUser');
+      const listOfStringWrapperFields2 = getFieldNumbersFromMessage(root2, 'ListOfString');
+      const listOfIntWrapperFields2 = getFieldNumbersFromMessage(root2, 'ListOfInt');
+      const listOfUserWrapperFields2 = getFieldNumbersFromMessage(root2, 'ListOfUser');
 
-      expect(listOfStringFields2['items']).toBe(stringItemsNumber);
-      expect(listOfIntFields2['items']).toBe(intItemsNumber);
-      expect(listOfUserFields2['items']).toBe(1); // New simple wrapper for User
+      // Get the inner List type field numbers for verification
+      const stringListType2 = root2.lookupType('ListOfString').lookupType('List');
+      const intListType2 = root2.lookupType('ListOfInt').lookupType('List');
+      const userListType2 = root2.lookupType('ListOfUser').lookupType('List');
+
+      const stringListFields2 = getFieldNumbersFromMessage(stringListType2.root, 'List');
+      const intListFields2 = getFieldNumbersFromMessage(intListType2.root, 'List');
+      const userListFields2 = getFieldNumbersFromMessage(userListType2.root, 'List');
+
+      expect(listOfStringWrapperFields2['list']).toBe(simpleStringWrapperListFieldNumber);
+      expect(listOfIntWrapperFields2['list']).toBe(simpleIntWrapperListFieldNumber);
+      expect(stringListFields2['items']).toBe(stringListItemsFieldNumber);
+      expect(intListFields2['items']).toBe(intListItemsFieldNumber);
+      expect(listOfUserWrapperFields2['list']).toBe(1); // New simple wrapper for User
+      expect(userListFields2['items']).toBe(1); // New simple wrapper inner List for User
     });
 
     test('should handle mixed simple and nested wrapper types with field preservation', () => {
@@ -1356,22 +1415,35 @@ describe('Field Ordering and Preservation', () => {
       const root1 = loadProtoFromText(proto1);
 
       // Get field numbers for all wrapper types
-      const listOfStringFields = getFieldNumbersFromMessage(root1, 'ListOfString');
-      const listOfListOfStringFields = getFieldNumbersFromMessage(root1, 'ListOfListOfString');
-      const listOfUserFields = getFieldNumbersFromMessage(root1, 'ListOfUser');
-      const listOfListOfUserFields = getFieldNumbersFromMessage(root1, 'ListOfListOfUser');
+      const listOfStringWrapperFields = getFieldNumbersFromMessage(root1, 'ListOfString');
+      const listOfListOfStringWrapperFields = getFieldNumbersFromMessage(root1, 'ListOfListOfString');
+      const listOfUserWrapperFields = getFieldNumbersFromMessage(root1, 'ListOfUser');
+      const listOfListOfUserWrapperFields = getFieldNumbersFromMessage(root1, 'ListOfListOfUser');
 
-      // Store original field numbers
-      const stringItemsNumber = listOfStringFields['items'];
-      const stringListNumber = listOfListOfStringFields['list'];
-      const userItemsNumber = listOfUserFields['items'];
-      const userListNumber = listOfListOfUserFields['list'];
+      // Get the inner List type field numbers for items
+      const stringListType = root1.lookupType('ListOfString').lookupType('List');
+      const userListType = root1.lookupType('ListOfUser').lookupType('List');
 
-      // Verify correct field types for different wrapper levels
-      expect(stringItemsNumber).toBe(1); // Simple wrapper has 'items'
-      expect(stringListNumber).toBe(1); // Nested wrapper has 'list'
-      expect(userItemsNumber).toBe(1); // Simple wrapper has 'items'
-      expect(userListNumber).toBe(1); // Nested wrapper has 'list'
+      const stringListFields = getFieldNumbersFromMessage(stringListType.root, 'List');
+      const userListFields = getFieldNumbersFromMessage(userListType.root, 'List');
+
+      // Store original field numbers for wrapper types (outer 'list' field)
+      const simpleStringWrapperListFieldNumber = listOfStringWrapperFields['list'];
+      const simpleUserWrapperListFieldNumber = listOfUserWrapperFields['list'];
+      const nestedStringWrapperListFieldNumber = listOfListOfStringWrapperFields['list'];
+      const nestedUserWrapperListFieldNumber = listOfListOfUserWrapperFields['list'];
+
+      // Store original field numbers for inner List types ('items' field)
+      const stringListItemsFieldNumber = stringListFields['items'];
+      const userListItemsFieldNumber = userListFields['items'];
+
+      // Verify correct field numbers for different wrapper levels
+      expect(simpleStringWrapperListFieldNumber).toBe(1); // Simple wrapper outer 'list' field
+      expect(stringListItemsFieldNumber).toBe(1); // Simple wrapper inner 'items' field
+      expect(nestedStringWrapperListFieldNumber).toBe(1); // Nested wrapper outer 'list' field
+      expect(simpleUserWrapperListFieldNumber).toBe(1); // Simple wrapper outer 'list' field
+      expect(nestedUserWrapperListFieldNumber).toBe(1); // Nested wrapper outer 'list' field
+      expect(userListItemsFieldNumber).toBe(1); // Simple wrapper inner 'items' field
 
       // Get the generated lock data
       const lockData = visitor1.getGeneratedLockData();
@@ -1414,18 +1486,32 @@ describe('Field Ordering and Preservation', () => {
       const root2 = loadProtoFromText(proto2);
 
       // Verify preserved wrapper types maintain their field numbers
-      const listOfStringFields2 = getFieldNumbersFromMessage(root2, 'ListOfString');
-      const listOfUserFields2 = getFieldNumbersFromMessage(root2, 'ListOfUser');
-      const listOfListOfUserFields2 = getFieldNumbersFromMessage(root2, 'ListOfListOfUser');
-      const listOfIntFields2 = getFieldNumbersFromMessage(root2, 'ListOfInt');
+      const listOfStringWrapperFields2 = getFieldNumbersFromMessage(root2, 'ListOfString');
+      const listOfUserWrapperFields2 = getFieldNumbersFromMessage(root2, 'ListOfUser');
+      const listOfListOfUserWrapperFields2 = getFieldNumbersFromMessage(root2, 'ListOfListOfUser');
+      const listOfIntWrapperFields2 = getFieldNumbersFromMessage(root2, 'ListOfInt');
 
-      // Verify field numbers are preserved
-      expect(listOfStringFields2['items']).toBe(stringItemsNumber);
-      expect(listOfUserFields2['items']).toBe(userItemsNumber);
-      expect(listOfListOfUserFields2['list']).toBe(userListNumber);
+      // Get the inner List type field numbers for verification
+      const stringListType2 = root2.lookupType('ListOfString').lookupType('List');
+      const userListType2 = root2.lookupType('ListOfUser').lookupType('List');
+      const intListType2 = root2.lookupType('ListOfInt').lookupType('List');
 
-      // Verify new wrapper type has field number 1
-      expect(listOfIntFields2['items']).toBe(1);
+      const stringListFields2 = getFieldNumbersFromMessage(stringListType2.root, 'List');
+      const userListFields2 = getFieldNumbersFromMessage(userListType2.root, 'List');
+      const intListFields2 = getFieldNumbersFromMessage(intListType2.root, 'List');
+
+      // Verify wrapper field numbers are preserved (outer 'list' field)
+      expect(listOfStringWrapperFields2['list']).toBe(simpleStringWrapperListFieldNumber);
+      expect(listOfUserWrapperFields2['list']).toBe(simpleUserWrapperListFieldNumber);
+      expect(listOfListOfUserWrapperFields2['list']).toBe(nestedUserWrapperListFieldNumber);
+
+      // Verify inner List field numbers are preserved ('items' field)
+      expect(stringListFields2['items']).toBe(stringListItemsFieldNumber);
+      expect(userListFields2['items']).toBe(userListItemsFieldNumber);
+
+      // Verify new wrapper types have field number 1
+      expect(listOfIntWrapperFields2['list']).toBe(1);
+      expect(intListFields2['items']).toBe(1);
 
       // Verify removed wrapper type is not present
       // Check if the removed wrapper type exists in the proto

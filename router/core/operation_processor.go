@@ -100,7 +100,7 @@ var (
 type OperationProcessorOptions struct {
 	Executor                            *Executor
 	MaxOperationSizeInBytes             int64
-	PersistedOperationClient            persistedoperation.SaveClient
+	PersistedOperationClient            *persistedoperation.Client
 	AutomaticPersistedOperationCacheTtl int
 
 	EnablePersistedOperationsCache                   bool
@@ -116,6 +116,7 @@ type OperationProcessorOptions struct {
 	DisableExposingVariablesContentOnValidationError bool
 	ComplexityLimits                                 *config.ComplexityLimits
 	ParserTokenizerLimits                            astparser.TokenizerLimits
+	OperationNameLengthLimit                         int
 }
 
 // OperationProcessor provides shared resources to the parseKit and OperationKit.
@@ -123,7 +124,7 @@ type OperationProcessorOptions struct {
 type OperationProcessor struct {
 	executor                 *Executor
 	maxOperationSizeInBytes  int64
-	persistedOperationClient persistedoperation.SaveClient
+	persistedOperationClient *persistedoperation.Client
 	operationCache           *OperationCache
 	parseKits                map[int]*parseKit
 	parseKitSemaphore        chan int
@@ -131,6 +132,7 @@ type OperationProcessor struct {
 	parseKitOptions          *parseKitOptions
 	complexityLimits         *config.ComplexityLimits
 	parserTokenizerLimits    astparser.TokenizerLimits
+	operationNameLengthLimit int
 }
 
 // parseKit is a helper struct to parse, normalize and validate operations
@@ -192,6 +194,19 @@ type GraphQLRequestExtensionsPersistedQuery struct {
 	Sha256Hash string `json:"sha256Hash"`
 }
 
+// isValidHash verifies if the Sha256Hash string is valid and well-formed.
+func (pq *GraphQLRequestExtensionsPersistedQuery) isValidHash() bool {
+	if len(pq.Sha256Hash) != 64 {
+		return false
+	}
+	_, err := hex.DecodeString(pq.Sha256Hash)
+	return err == nil
+}
+
+func (pq *GraphQLRequestExtensionsPersistedQuery) HasHash() bool {
+	return pq != nil && len(pq.Sha256Hash) > 0
+}
+
 type complexityComparison struct {
 	field        int
 	cachedField  int
@@ -248,29 +263,26 @@ func (o *OperationKit) UnmarshalOperationFromURL(url *url.URL) error {
 	variables := values.Get("variables")
 	if variables != "" {
 		o.parsedOperation.Request.Variables = []byte(variables)
+		// Do sanity check early with json because later we parse variables with fastjson,
+		// and fastjson produces verbose error messages.
 		buf := bytes.NewBuffer(make([]byte, len(o.parsedOperation.Request.Variables))[:0])
 		err := json.Compact(buf, o.parsedOperation.Request.Variables)
 		if err != nil {
-			return err
+			return fmt.Errorf("error parsing variables: %w", err)
 		}
 	}
 
 	extensions := values.Get("extensions")
 	if extensions != "" {
 		o.parsedOperation.Request.Extensions = []byte(extensions)
-		buf := bytes.NewBuffer(make([]byte, len(o.parsedOperation.Request.Extensions))[:0])
-		err := json.Compact(buf, o.parsedOperation.Request.Extensions)
-		if err != nil {
-			return err
-		}
 	}
 
 	return o.unmarshalOperation()
 }
 
-// UnmarshalOperationFromBody loads the operation from the request body and unmarshal it into the ParsedOperation
-// This will load operationName, query, variables and extensions from the request body but extension and variables
-// will be unmarshalled as JSON.RawMessage.
+// UnmarshalOperationFromBody loads the operation from the request body and unmarshal it into the ParsedOperation.
+// This will load operationName, query, variables and extensions from the request body,
+// but extension and variables will be unmarshalled as JSON.RawMessage.
 // We always compact the variables and extensions to ensure that we produce easy to parse JSON for the engine
 func (o *OperationKit) UnmarshalOperationFromBody(data []byte) error {
 	buf := bytes.NewBuffer(make([]byte, len(data))[:0])
@@ -291,23 +303,31 @@ func (o *OperationKit) UnmarshalOperationFromBody(data []byte) error {
 func (o *OperationKit) unmarshalOperation() error {
 	var err error
 
-	if o.parsedOperation.Request.Extensions != nil {
-		var mapExtensions map[string]any
-		err = json.Unmarshal(o.parsedOperation.Request.Extensions, &mapExtensions)
-		if err != nil {
-			return &httpGraphqlError{
-				message:    fmt.Sprintf("error parsing extensions: %s", err),
-				statusCode: http.StatusBadRequest,
-			}
+	// trimmedError removes details not relevant to a user
+	trimmedError := func(err error) string {
+		var ue *json.UnmarshalTypeError
+		if errors.As(err, &ue) {
+			return "json: cannot unmarshal " + ue.Value
 		}
+		return err.Error()
+	}
+
+	if o.parsedOperation.Request.Extensions != nil {
 		err = json.Unmarshal(o.parsedOperation.Request.Extensions, &o.parsedOperation.GraphQLRequestExtensions)
 		if err != nil {
 			return &httpGraphqlError{
-				message:    fmt.Sprintf("error parsing extensions: %s", err),
+				message:    fmt.Sprintf("error parsing extensions: %s", trimmedError(err)),
 				statusCode: http.StatusBadRequest,
 			}
 		}
 		if o.parsedOperation.GraphQLRequestExtensions.PersistedQuery != nil {
+			if !o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.isValidHash() {
+				return &httpGraphqlError{
+					message:    "persistedQuery does not have a valid sha256 hash",
+					statusCode: http.StatusBadRequest,
+				}
+			}
+
 			// Delete persistedQuery from extensions to avoid it being passed to the subgraphs
 			o.parsedOperation.Request.Extensions, err = sjson.DeleteBytes(o.parsedOperation.Request.Extensions, "persistedQuery")
 			if err != nil {
@@ -338,13 +358,13 @@ func (o *OperationKit) unmarshalOperation() error {
 			o.parsedOperation.Variables = variables.GetObject()
 		default:
 			return &httpGraphqlError{
-				message:    "variables must be an object",
+				message:    "variables must be a JSON object",
 				statusCode: http.StatusBadRequest,
 			}
 		}
 	} else {
-		// set variables to empty object if they are null, so we can later add exported defaults
-		// also, other parts of the engine depend on variables being a valid JSON object
+		// Set variables to an empty object if they are null, so we can add exported defaults later.
+		// Also, other parts of the engine depend on variables being a valid JSON object.
 		o.parsedOperation.Request.Variables = []byte("{}")
 		o.parsedOperation.Variables = fastjson.MustParseBytes(o.parsedOperation.Request.Variables).GetObject()
 	}
@@ -354,7 +374,7 @@ func (o *OperationKit) unmarshalOperation() error {
 		o.parsedOperation.Request.OperationName = ""
 	}
 
-	if o.parsedOperation.GraphQLRequestExtensions.PersistedQuery != nil && len(o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash) > 0 {
+	if o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() {
 		o.parsedOperation.IsPersistedOperation = true
 	}
 
@@ -406,7 +426,7 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 		}
 	}
 	if fromCache {
-		if isApq, _ := o.persistedOperationCacheKeyHasTtl(clientInfo.Name, includeOperationName); isApq {
+		if fromCacheHasTTL, _ := o.persistedOperationCacheKeyHasTtl(clientInfo.Name, includeOperationName); fromCacheHasTTL {
 			// if it is an APQ request, we need to save it again to renew the TTL expiration
 			if err = o.operationProcessor.persistedOperationClient.SaveOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, o.parsedOperation.NormalizedRepresentation); err != nil {
 				return false, false, err
@@ -415,34 +435,51 @@ func (o *OperationKit) FetchPersistedOperation(ctx context.Context, clientInfo *
 		return true, false, nil
 	}
 
-	persistedOperationData, isApq, err := o.operationProcessor.persistedOperationClient.PersistedOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
-	if err != nil {
-		return false, isApq, err
-	} else if isApq && persistedOperationData == nil && o.parsedOperation.Request.Query == "" {
-		// If the client has APQ enabled, throw an error if the operation wasn't attached to the request
-		return false, isApq, &persistedoperation.PersistentOperationNotFoundError{
-			ClientName: clientInfo.Name,
-			Sha256Hash: o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash,
+	// If APQ is enabled and the query body is in the request, short-circuit
+	if o.parsedOperation.Request.Query != "" && o.operationProcessor.persistedOperationClient.APQEnabled() {
+		isAPQ = true
+
+		// If the operation was fetched with APQ, save it again to renew the TTL
+		err := o.operationProcessor.persistedOperationClient.SaveOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, o.parsedOperation.Request.Query)
+		if err != nil {
+			return false, true, err
+		}
+	} else {
+		var persistedOperationData []byte
+		var err error
+
+		persistedOperationData, isAPQ, err = o.operationProcessor.persistedOperationClient.PersistedOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash)
+		if err != nil {
+			return false, isAPQ, err
+		}
+
+		if isAPQ && persistedOperationData == nil && o.parsedOperation.Request.Query == "" {
+			// If the client has APQ enabled, throw an error if the operation wasn't attached to the request
+			return false, isAPQ, &persistedoperation.PersistentOperationNotFoundError{
+				ClientName: clientInfo.Name,
+				Sha256Hash: o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash,
+			}
+		}
+
+		// it's important to make a copy of the persisted operation data, because it's used in the cache
+		// we might modify it later, so we don't want to modify the cached data
+		if persistedOperationData != nil {
+			o.parsedOperation.Request.Query = string(persistedOperationData)
+			// when we have successfully loaded the operation content from the storage,
+			// but it was passed via body instead of hash, we need to mark operation as persisted
+			// to populate persisted operation cache
+			o.parsedOperation.IsPersistedOperation = true
+		}
+
+		// If the operation was fetched with APQ, save it again to renew the TTL
+		if isAPQ {
+			if err = o.operationProcessor.persistedOperationClient.SaveOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, o.parsedOperation.Request.Query); err != nil {
+				return false, true, err
+			}
 		}
 	}
-	// it's important to make a copy of the persisted operation data, because it's used in the cache
-	// we might modify it later, so we don't want to modify the cached data
-	if persistedOperationData != nil {
-		o.parsedOperation.Request.Query = string(persistedOperationData)
-		// when we have successfully loaded the operation content from the storage,
-		// but it was passed via body instead of hash, we need to mark operation as persisted
-		// to populate persisted operation cache
-		o.parsedOperation.IsPersistedOperation = true
-	}
 
-	// If the operation was fetched with APQ, save it again to renew the TTL
-	if isApq {
-		if err = o.operationProcessor.persistedOperationClient.SaveOperation(ctx, clientInfo.Name, o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash, o.parsedOperation.Request.Query); err != nil {
-			return false, isApq, err
-		}
-	}
-
-	return false, isApq, nil
+	return false, isAPQ, nil
 }
 
 const (
@@ -468,6 +505,14 @@ func (o *OperationKit) isIntrospectionQuery() (result bool, err error) {
 		for i := 0; i < len(possibleOperationDefinitionRefs); i++ {
 			ref := possibleOperationDefinitionRefs[i]
 			name := o.kit.doc.OperationDefinitionNameString(ref)
+
+			if o.isOperationNameLengthLimitExceeded(name) {
+				return false, &httpGraphqlError{
+					message: fmt.Sprintf("operation name of length %d exceeds max length of %d",
+						len(name), o.operationProcessor.operationNameLengthLimit),
+					statusCode: http.StatusBadRequest,
+				}
+			}
 
 			if o.parsedOperation.Request.OperationName == name {
 				operationDefinitionRef = ref
@@ -509,7 +554,14 @@ func (o *OperationKit) isIntrospectionQuery() (result bool, err error) {
 	return false, nil
 }
 
-// Parse parses the operation, populate the document and set the operation type.
+func (o *OperationKit) isOperationNameLengthLimitExceeded(operationName string) bool {
+	if o.operationProcessor.operationNameLengthLimit == 0 {
+		return false
+	}
+	return len(operationName) > o.operationProcessor.operationNameLengthLimit
+}
+
+// Parse parses the operation, populates the document and set the operation type.
 // UnmarshalOperationFromBody must be called before calling this method.
 func (o *OperationKit) Parse() error {
 	var (
@@ -519,7 +571,7 @@ func (o *OperationKit) Parse() error {
 
 	if len(o.parsedOperation.Request.Query) == 0 {
 		return &httpGraphqlError{
-			message:    "error parsing request body",
+			message:    "empty request body",
 			statusCode: http.StatusBadRequest,
 		}
 	}
@@ -542,6 +594,11 @@ func (o *OperationKit) Parse() error {
 		isIntrospection, err := o.isIntrospectionQuery()
 
 		if err != nil {
+			var httpGqlError *httpGraphqlError
+			if errors.As(err, &httpGqlError) {
+				return httpGqlError
+			}
+
 			return &httpGraphqlError{
 				message:    "could not determine if operation was an introspection query",
 				statusCode: http.StatusOK,
@@ -564,6 +621,7 @@ func (o *OperationKit) Parse() error {
 		o.kit.numOperations++
 		ref := o.kit.doc.RootNodes[i].Ref
 		name := string(o.kit.doc.OperationDefinitionNameBytes(ref))
+
 		if len(name) == 0 {
 			anonymousOperationCount++
 			if anonymousOperationDefinitionRef == -1 {
@@ -571,6 +629,15 @@ func (o *OperationKit) Parse() error {
 			}
 			continue
 		}
+
+		if o.isOperationNameLengthLimitExceeded(name) {
+			return &httpGraphqlError{
+				message: fmt.Sprintf("operation name of length %d exceeds max length of %d",
+					len(name), o.operationProcessor.operationNameLengthLimit),
+				statusCode: http.StatusBadRequest,
+			}
+		}
+
 		if o.parsedOperation.Request.OperationName == "" {
 			o.operationDefinitionRef = ref
 			o.originalOperationNameRef = o.kit.doc.OperationDefinitions[ref].Name
@@ -1238,6 +1305,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		parseKitSemaphore:        make(chan int, opts.ParseKitPoolSize),
 		introspectionEnabled:     opts.IntrospectionEnabled,
 		parserTokenizerLimits:    opts.ParserTokenizerLimits,
+		operationNameLengthLimit: opts.OperationNameLengthLimit,
 		complexityLimits:         opts.ComplexityLimits,
 		parseKitOptions: &parseKitOptions{
 			apolloCompatibilityFlags:                         opts.ApolloCompatibilityFlags,
