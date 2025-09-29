@@ -9964,7 +9964,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 
 						rm := metricdata.ResourceMetrics{}
 						err := metricReader.Collect(context.Background(), &rm)
-						require.NoError(t, err)
+						require.NoError(t, err, "failed to collect metrics")
 
 						firstDataPoint := []attribute.KeyValue{
 							semconv.HTTPStatusCode(200),
@@ -10046,7 +10046,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 					}
 				}
 
-				testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+				testenv.Run(t, cfg, func(t *testing.T, xEnv *testenv.Environment) {
 					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 						Query: `query { employees { id } }`,
 						Header: map[string][]string{
@@ -10056,7 +10056,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 
 					rm := metricdata.ResourceMetrics{}
 					err := metricReader.Collect(context.Background(), &rm)
-					require.NoError(t, err)
+					require.NoError(t, err, "failed to collect metrics")
 
 					firstDataPoint := []attribute.KeyValue{
 						semconv.HTTPStatusCode(200),
