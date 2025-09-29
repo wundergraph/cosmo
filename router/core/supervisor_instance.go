@@ -72,11 +72,11 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 
 	if cfg.Authentication.IgnoreIntrospection && cfg.IntrospectionConfig.Secret == "" {
 		params.Logger.Warn("introspection operations are not authenticated. " +
-			"Consider setting /introspection/secret or set /authentication/ignore_introspection to false. Do not use this in production.")
+			"Consider setting /introspection/secret configuration parameter or set /authentication/ignore_introspection to false. Do not use this in production.")
 	}
 
 	if !cfg.Authentication.IgnoreIntrospection && cfg.IntrospectionConfig.Secret != "" {
-		params.Logger.Warn("/introspection/secret is ignored because /authentication/ignore_introspection is false.")
+		params.Logger.Warn("/introspection/secret configuration parameter is ignored because /authentication/ignore_introspection is false.")
 	}
 
 	// HTTP_PROXY, HTTPS_PROXY and NO_PROXY
