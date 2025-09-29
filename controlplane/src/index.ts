@@ -25,6 +25,7 @@ const {
   AUTH_REDIRECT_URI,
   WEB_BASE_URL,
   AUTH_JWT_SECRET,
+  AUTH_SSO_COOKIE_DOMAIN,
   KC_REALM,
   KC_LOGIN_REALM,
   KC_CLIENT_ID,
@@ -108,6 +109,7 @@ const options: BuildConfig = {
     secret: AUTH_JWT_SECRET,
     webBaseUrl: WEB_BASE_URL,
     webErrorPath: '/auth/error',
+    ssoCookieDomain: AUTH_SSO_COOKIE_DOMAIN,
   },
   webhook: {
     url: WEBHOOK_URL,

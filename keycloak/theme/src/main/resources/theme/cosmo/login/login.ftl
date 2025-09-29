@@ -4,10 +4,10 @@
         ${msg("loginAccountTitle")}
     <#elseif section = "form">
         <div id="kc-form">
-         <#if realm.password && social.providers??>
+         <#if realm.password && client.clientId != "studio" && social.providers??>
                 <div id="kc-social-providers" class="${properties.kcFormSocialAccountSectionClass!}">
                     <#list social.providers as p>
-                        <a id="social-${p.alias}" type="button" href="${p.loginUrl}">
+                        <a id="social-${p.alias}" type="button" href="${p.loginUrl}" class="${properties.kcFormSocialAccountLinkClass}">
                             <#if p.iconClasses?has_content>
                                 <i class="${properties.kcCommonLogoIdP!} ${p.iconClasses!}" aria-hidden="true"></i>
                                 <span class="${properties.kcFormSocialAccountNameClass!} kc-social-icon-text">${p.displayName!}</span>
@@ -16,6 +16,13 @@
                             </#if>
                         </a>
                     </#list>
+
+                    <#if ssoLoginUrl?has_content>
+                        <a id="social-sso-idp" type="button" href="${ssoLoginUrl}">
+                            <i class="kc-social-provider-logo kc-social-gray fa fa-building" aria-hidden="true"></i>
+                            <span class="${properties.kcFormSocialAccountNameClass!} kc-social-icon-text">${msg("signInWithSSO")}</span>
+                        </a>
+                    </#if>
                 </div>
             </#if>
             <div id="kc-form-wrapper">
