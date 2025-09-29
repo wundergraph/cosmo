@@ -82,6 +82,13 @@ type Operation struct {
 	Name string `expr:"name"`
 	Type string `expr:"type"`
 	Hash string `expr:"hash"`
+
+	PlanningTime      time.Duration `expr:"planningTime"`
+	NormalizationTime time.Duration `expr:"normalizationTime"`
+	ParsingTime       time.Duration `expr:"parsingTime"`
+	ValidationTime    time.Duration `expr:"validationTime"`
+	Sha256Hash        string        `expr:"sha256Hash"`
+	PersistedId       string        `expr:"persistedId"`
 }
 
 type Client struct {

@@ -1996,6 +1996,235 @@ func TestFlakyAccessLogs(t *testing.T) {
 			)
 		})
 
+		t.Run("validate request.operation.sha256Hash expression with persisted hash and body", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t,
+				&testenv.Config{
+					AccessLogFields: []config.CustomAttribute{
+						{
+							Key: "operation_sha256_expression",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.operation.sha256Hash",
+							},
+						},
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.InfoLevel,
+					},
+				},
+				func(t *testing.T, xEnv *testenv.Environment) {
+					res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+						OperationName: []byte(`"Employees"`),
+						Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+						Header:        map[string][]string{"graphql-client-name": {"my-client"}},
+					})
+					require.NoError(t, err)
+					require.JSONEq(t, employeesIDData, res.Body)
+
+					requestLog := xEnv.Observer().FilterMessage("/graphql")
+					requestLogAll := requestLog.All()
+					requestContext := requestLogAll[0].ContextMap()
+
+					val, ok := requestContext["operation_sha256_expression"].(string)
+					require.True(t, ok)
+					require.Equal(t, val, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+				},
+			)
+		})
+
+		t.Run("validate request.operation.sha256Hash expression without persisted operation", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t,
+				&testenv.Config{
+					AccessLogFields: []config.CustomAttribute{
+						{
+							Key:     "operation_sha256_expression",
+							Default: "not-set",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.operation.sha256Hash",
+							},
+						},
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.InfoLevel,
+					},
+				},
+				func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query employees { employees { id } }`,
+					})
+					require.JSONEq(t, employeesIDData, res.Body)
+
+					requestLog := xEnv.Observer().FilterMessage("/graphql")
+					requestLogAll := requestLog.All()
+					requestContext := requestLogAll[0].ContextMap()
+
+					val, ok := requestContext["operation_sha256_expression"].(string)
+					require.True(t, ok)
+					require.Equal(t, val, "c13e0fafb0a3a72e74c19df743fedee690fe133554a17a9408747585a0d1b423")
+				},
+			)
+		})
+
+		t.Run("validate request.operation.persistedId expression set with persisted hash", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t,
+				&testenv.Config{
+					AccessLogFields: []config.CustomAttribute{
+						{
+							Key: "persisted_id_expression",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.operation.persistedId",
+							},
+						},
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.InfoLevel,
+					},
+				},
+				func(t *testing.T, xEnv *testenv.Environment) {
+					res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+						OperationName: []byte(`"Employees"`),
+						Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+						Header:        map[string][]string{"graphql-client-name": {"my-client"}},
+					})
+					require.NoError(t, err)
+					require.JSONEq(t, employeesIDData, res.Body)
+
+					requestLog := xEnv.Observer().FilterMessage("/graphql")
+					requestLogAll := requestLog.All()
+					requestContext := requestLogAll[0].ContextMap()
+
+					val, ok := requestContext["persisted_id_expression"].(string)
+					require.True(t, ok)
+					require.Equal(t, val, "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f")
+				},
+			)
+
+		})
+
+		t.Run("validate request.operation.parsingTime expression > 0", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t,
+				&testenv.Config{
+					AccessLogFields: []config.CustomAttribute{
+						{
+							Key: "parsing_time_expression",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.operation.parsingTime",
+							},
+						},
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.InfoLevel,
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query employees { employees { id } }`,
+					})
+					requestLog := xEnv.Observer().FilterMessage("/graphql")
+					requestContext := requestLog.All()[0].ContextMap()
+					val, ok := requestContext["parsing_time_expression"].(time.Duration)
+					require.True(t, ok)
+					require.Greater(t, int(val), 0)
+				})
+		})
+
+		t.Run("validate request.operation.normalizationTime expression > 0", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t,
+				&testenv.Config{
+					AccessLogFields: []config.CustomAttribute{
+						{
+							Key: "normalization_time_expression",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.operation.normalizationTime",
+							},
+						},
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.InfoLevel,
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query employees { employees { id } }`,
+					})
+					requestLog := xEnv.Observer().FilterMessage("/graphql")
+					requestContext := requestLog.All()[0].ContextMap()
+					val, ok := requestContext["normalization_time_expression"].(time.Duration)
+					require.True(t, ok)
+					require.Greater(t, int(val), 0)
+				})
+		})
+
+		t.Run("validate request.operation.validationTime expression > 0", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t,
+				&testenv.Config{
+					AccessLogFields: []config.CustomAttribute{
+						{
+							Key: "validation_time_expression",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.operation.validationTime",
+							},
+						},
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.InfoLevel,
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query employees { employees { id } }`,
+					})
+					requestLog := xEnv.Observer().FilterMessage("/graphql")
+					requestContext := requestLog.All()[0].ContextMap()
+					val, ok := requestContext["validation_time_expression"].(time.Duration)
+					require.True(t, ok)
+					require.Greater(t, int(val), 0)
+				})
+		})
+
+		t.Run("validate request.operation.planningTime expression > 0", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t,
+				&testenv.Config{
+					AccessLogFields: []config.CustomAttribute{
+						{
+							Key: "planning_time_expression",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.operation.planningTime",
+							},
+						},
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.InfoLevel,
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query employees { employees { id } }`,
+					})
+					requestLog := xEnv.Observer().FilterMessage("/graphql")
+					requestContext := requestLog.All()[0].ContextMap()
+					val, ok := requestContext["planning_time_expression"].(time.Duration)
+					require.True(t, ok)
+					require.Greater(t, int(val), 0)
+				})
+		})
+
 		t.Run("should be able to use an expression for access logging in feature flags", func(t *testing.T) {
 			t.Parallel()
 

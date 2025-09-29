@@ -477,6 +477,10 @@ func (h *PreHandler) shouldComputeOperationSha256(operationKit *OperationKit) bo
 		return true
 	}
 
+	if h.exprManager.VisitorManager.IsRequestOperationSha256UsedInExpressions() {
+		return true
+	}
+
 	hasPersistedHash := operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash()
 
 	// If it has a hash already AND a body, we need to compute the hash again to ensure it matches the persisted hash
@@ -558,6 +562,8 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 			}
 		}
 		requestContext.operation.sha256Hash = operationKit.parsedOperation.Sha256Hash
+		requestContext.expressionContext.Request.Operation.Sha256Hash = operationKit.parsedOperation.Sha256Hash
+
 		requestContext.telemetry.addCustomMetricStringAttr(ContextFieldOperationSha256, requestContext.operation.sha256Hash)
 		if h.operationBlocker.safelistEnabled || h.operationBlocker.logUnknownOperationsEnabled {
 			// Set the request hash to the parsed hash, to see if it matches a persisted operation
@@ -638,6 +644,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 			rtrace.AttachErrToSpan(engineParseSpan, err)
 
 			requestContext.operation.parsingTime = time.Since(startParsing)
+			requestContext.expressionContext.Request.Operation.ParsingTime = requestContext.operation.parsingTime
 			if !requestContext.operation.traceOptions.ExcludeParseStats {
 				httpOperation.traceTimings.EndParse()
 			}
@@ -648,6 +655,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		}
 
 		requestContext.operation.parsingTime = time.Since(startParsing)
+		requestContext.expressionContext.Request.Operation.ParsingTime = requestContext.operation.parsingTime
 		if !requestContext.operation.traceOptions.ExcludeParseStats {
 			httpOperation.traceTimings.EndParse()
 		}
@@ -658,7 +666,9 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	requestContext.operation.name = operationKit.parsedOperation.Request.OperationName
 	requestContext.operation.opType = operationKit.parsedOperation.Type
 
-	setExpressionContextOperation(requestContext)
+	requestContext.expressionContext.Request.Operation.Name = requestContext.operation.name
+	requestContext.expressionContext.Request.Operation.Type = requestContext.operation.opType
+
 	setExpressionContextClient(requestContext)
 
 	attributesAfterParse := []attribute.KeyValue{
@@ -711,6 +721,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	if operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() {
 		hash := operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
 		requestContext.operation.persistedID = hash
+		requestContext.expressionContext.Request.Operation.PersistedId = hash
 		persistedIDAttribute := otel.WgOperationPersistedID.String(hash)
 
 		requestContext.telemetry.addCommonAttribute(persistedIDAttribute)
@@ -738,6 +749,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
 
 		requestContext.operation.normalizationTime = time.Since(startNormalization)
+		requestContext.expressionContext.Request.Operation.NormalizationTime = requestContext.operation.normalizationTime
 		if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
 			httpOperation.traceTimings.EndNormalize()
 		}
@@ -767,6 +779,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
 
 		requestContext.operation.normalizationTime = time.Since(startNormalization)
+		requestContext.expressionContext.Request.Operation.NormalizationTime = requestContext.operation.normalizationTime
 
 		if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
 			httpOperation.traceTimings.EndNormalize()
@@ -809,6 +822,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
 
 		requestContext.operation.normalizationTime = time.Since(startNormalization)
+		requestContext.expressionContext.Request.Operation.NormalizationTime = requestContext.operation.normalizationTime
 
 		if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
 			httpOperation.traceTimings.EndNormalize()
@@ -885,6 +899,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		return err
 	}
 	requestContext.operation.normalizationTime = time.Since(startNormalization)
+	requestContext.expressionContext.Request.Operation.NormalizationTime = requestContext.operation.normalizationTime
 
 	if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
 		httpOperation.traceTimings.EndNormalize()
@@ -933,6 +948,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 			rtrace.AttachErrToSpan(engineValidateSpan, err)
 
 			requestContext.operation.validationTime = time.Since(startValidation)
+			requestContext.expressionContext.Request.Operation.ValidationTime = requestContext.operation.validationTime
 			httpOperation.traceTimings.EndValidate()
 
 			engineValidateSpan.End()
@@ -947,6 +963,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 
 		requestContext.graphQLErrorCodes = append(requestContext.graphQLErrorCodes, h.getErrorCodes(err)...)
 		requestContext.operation.validationTime = time.Since(startValidation)
+		requestContext.expressionContext.Request.Operation.ValidationTime = requestContext.operation.validationTime
 
 		if !requestContext.operation.traceOptions.ExcludeValidateStats {
 			httpOperation.traceTimings.EndValidate()
@@ -966,6 +983,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	}
 
 	requestContext.operation.validationTime = time.Since(startValidation)
+	requestContext.expressionContext.Request.Operation.ValidationTime = requestContext.operation.validationTime
 	httpOperation.traceTimings.EndValidate()
 
 	engineValidateSpan.End()
@@ -1005,6 +1023,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		}
 
 		requestContext.operation.planningTime = time.Since(startPlanning)
+		requestContext.expressionContext.Request.Operation.PlanningTime = requestContext.operation.planningTime
 
 		rtrace.AttachErrToSpan(enginePlanSpan, err)
 		enginePlanSpan.End()
@@ -1017,6 +1036,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	}
 
 	requestContext.operation.planningTime = time.Since(startPlanning)
+	requestContext.expressionContext.Request.Operation.PlanningTime = requestContext.operation.planningTime
 
 	enginePlanSpan.SetAttributes(otel.WgEnginePlanCacheHit.Bool(requestContext.operation.planCacheHit))
 	enginePlanSpan.End()
@@ -1182,13 +1202,6 @@ func (h *PreHandler) parseRequestExecutionOptions(r *http.Request) resolve.Execu
 	return options
 }
 
-func setExpressionContextOperation(requestContext *requestContext) {
-	requestContext.expressionContext.Request.Operation = expr.Operation{
-		Name: requestContext.operation.name,
-		Type: requestContext.operation.opType,
-	}
-}
-
 func setExpressionContextClient(requestContext *requestContext) {
 	clientName := requestContext.operation.clientInfo.Name
 	if clientName == "unknown" {
@@ -1201,9 +1214,7 @@ func setExpressionContextClient(requestContext *requestContext) {
 	}
 
 	if clientName != "" || clientVersion != "" {
-		requestContext.expressionContext.Request.Client = expr.Client{
-			Name:    clientName,
-			Version: clientVersion,
-		}
+		requestContext.expressionContext.Request.Client.Name = clientName
+		requestContext.expressionContext.Request.Client.Version = clientVersion
 	}
 }
