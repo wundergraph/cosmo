@@ -491,8 +491,21 @@ func CreateGRPCTraceGetter(
 			attrs = append(attrs, telemetryValues...)
 		}
 
-		addExpressions(telemetryAttributeExpressions, expr.BucketSubgraph, reqCtx, nil, spanAttrFunc)
-		addExpressions(tracingAttributeExpressions, expr.BucketSubgraph, reqCtx, nil, spanAttrFunc)
+		addExpressions(AddExprOpts{
+			logger:      reqCtx.logger,
+			expressions: telemetryAttributeExpressions,
+			key:         expr.BucketSubgraph,
+			exprCtx:     &reqCtx.expressionContext,
+			attrAddFunc: spanAttrFunc,
+		})
+
+		addExpressions(AddExprOpts{
+			logger:      reqCtx.logger,
+			expressions: tracingAttributeExpressions,
+			key:         expr.BucketSubgraph,
+			exprCtx:     &reqCtx.expressionContext,
+			attrAddFunc: spanAttrFunc,
+		})
 
 		// Override http operation protocol with grpc
 		attrs = append(attrs, otel.EngineTransportAttribute, otel.WgOperationProtocol.String(OperationProtocolGRPC.String()))

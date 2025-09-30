@@ -104,8 +104,24 @@ func TestNewAttributeExpressions_SplitsExpressionsUsingAuth(t *testing.T) {
 	attrExpr, err := newAttributeExpressions(attrs, manager)
 	assert.NoError(t, err)
 	require.NotNil(t, attrExpr)
-	assert.Contains(t, attrExpr.expressions, "attr1")
-	assert.Contains(t, attrExpr.expressions, "attr2")
+
+	assert.Condition(t, func() bool {
+		for _, it := range attrExpr.expressions[expr.BucketDefault] {
+			if it.Key == "attr1" {
+				return true
+			}
+		}
+		return false
+	}, "expected Key == attr1 in items")
+
+	assert.Condition(t, func() bool {
+		for _, it := range attrExpr.expressions[expr.BucketAuth] {
+			if it.Key == "attr2" {
+				return true
+			}
+		}
+		return false
+	}, "expected Key == attr2 in items")
 
 	reqCtx := requestContext{
 		expressionContext: expr.Context{
@@ -120,12 +136,12 @@ func TestNewAttributeExpressions_SplitsExpressionsUsingAuth(t *testing.T) {
 		},
 	}
 
-	val, err := attrExpr.expressionsAttributes(&reqCtx.expressionContext)
+	val, err := attrExpr.expressionsAttributes(&reqCtx.expressionContext, expr.BucketDefault)
 	assert.NoError(t, err)
 	require.Len(t, val, 1)
 	assert.Equal(t, "/some/path", val[0].Value.AsString())
 
-	val2, err2 := attrExpr.expressionsAttributesWithAuth(&reqCtx.expressionContext)
+	val2, err2 := attrExpr.expressionsAttributes(&reqCtx.expressionContext, expr.BucketAuth)
 	assert.NoError(t, err2)
 	require.Len(t, val2, 1)
 	assert.Equal(t, "yes", val2[0].Value.AsString())

@@ -173,15 +173,35 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	metricAttrs = append(metricAttrs, reqContext.telemetry.metricAttrs...)
 	metricAttrs = append(metricAttrs, commonAttrs...)
 
-	addExpressions(f.telemetryAttributeExpressions, expr.BucketSubgraph, reqContext, span, func(telemetryValues ...attribute.KeyValue) {
-		traceAttrs = append(traceAttrs, telemetryValues...)
-		metricAttrs = append(metricAttrs, telemetryValues...)
+	addExpressions(AddExprOpts{
+		logger:      reqContext.logger,
+		expressions: f.telemetryAttributeExpressions,
+		key:         expr.BucketSubgraph,
+		currSpan:    span,
+		exprCtx:     exprCtx,
+		attrAddFunc: func(telemetryValues ...attribute.KeyValue) {
+			traceAttrs = append(traceAttrs, telemetryValues...)
+			metricAttrs = append(metricAttrs, telemetryValues...)
+		},
 	})
-	addExpressions(f.tracingAttributeExpressions, expr.BucketSubgraph, reqContext, nil, func(telemetryValues ...attribute.KeyValue) {
-		traceAttrs = append(traceAttrs, telemetryValues...)
+	addExpressions(AddExprOpts{
+		logger:      reqContext.logger,
+		expressions: f.tracingAttributeExpressions,
+		key:         expr.BucketSubgraph,
+		currSpan:    span,
+		exprCtx:     exprCtx,
+		attrAddFunc: func(telemetryValues ...attribute.KeyValue) {
+			traceAttrs = append(traceAttrs, telemetryValues...)
+		},
 	})
-	addExpressions(f.metricAttributeExpressions, expr.BucketSubgraph, reqContext, span, func(telemetryValues ...attribute.KeyValue) {
-		metricAttrs = append(metricAttrs, telemetryValues...)
+	addExpressions(AddExprOpts{
+		logger:      reqContext.logger,
+		expressions: f.metricAttributeExpressions,
+		key:         expr.BucketSubgraph,
+		exprCtx:     exprCtx,
+		attrAddFunc: func(telemetryValues ...attribute.KeyValue) {
+			metricAttrs = append(metricAttrs, telemetryValues...)
+		},
 	})
 
 	metricAddOpt := otelmetric.WithAttributeSet(attribute.NewSet(metricAttrs...))

@@ -1046,30 +1046,6 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	return nil
 }
 
-func setTelemetryAttributes(ctx context.Context, requestContext *requestContext, key expr.AttributeBucket) {
-	currSpan := trace.SpanFromContext(ctx)
-	addExpressions(requestContext.telemetry.telemetryAttributeExpressions, key, requestContext, currSpan, requestContext.telemetry.addCommonAttribute)
-	addExpressions(requestContext.telemetry.metricAttributeExpressions, key, requestContext, nil, requestContext.telemetry.addMetricAttribute)
-	addExpressions(requestContext.telemetry.tracingAttributeExpressions, key, requestContext, currSpan, requestContext.telemetry.addCommonTraceAttribute)
-}
-
-func addExpressions(expressions *attributeExpressions, key expr.AttributeBucket, requestContext *requestContext, currSpan trace.Span, attrAddFunc func(vals ...attribute.KeyValue)) {
-	if expressions == nil {
-		return
-	}
-
-	attributesForKey, err := expressions.expressionsAttributes(&requestContext.expressionContext, key)
-	if err != nil {
-		requestContext.logger.Error("failed to resolve trace attribute", zap.Error(err))
-		return
-	}
-
-	attrAddFunc(attributesForKey...)
-	if currSpan != nil {
-		currSpan.SetAttributes(attributesForKey...)
-	}
-}
-
 func (h *PreHandler) getErrorCodes(err error) []string {
 	errorCodes := make([]string, 0)
 
