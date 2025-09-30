@@ -1,3 +1,4 @@
+import { useRouter } from "next/router";
 import {
   Card,
   CardContent,
@@ -20,7 +21,6 @@ import { configureCacheWarmer } from "@wundergraph/cosmo-connect/dist/platform/v
 import { useMutation } from "@connectrpc/connect-query";
 import { Button } from "../ui/button";
 import { useCheckUserAccess } from "@/hooks/use-check-user-access";
-import { useWorkspace } from "@/hooks/use-workspace";
 
 export const CacheWarmerConfig = ({
   currentOperationsCount,
@@ -31,7 +31,8 @@ export const CacheWarmerConfig = ({
   cacheWarmerEnabled: boolean;
   refetch: () => void;
 }) => {
-  const { namespace: { name: namespace } } = useWorkspace();
+  const router = useRouter();
+  const namespace = router.query.namespace as string;
   const { mutate: configureCacheWarmerConfig, isPending } =
     useMutation(configureCacheWarmer);
   const [maxOperationsCount, setMaxOperationsCount] = useState(
@@ -90,7 +91,7 @@ export const CacheWarmerConfig = ({
                     }
                     refetch();
                   },
-                  onError: (_) => {
+                  onError: (error) => {
                     toast({
                       description:
                         "Could not set the cache warmer config. Please try again.",

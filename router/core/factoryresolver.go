@@ -8,8 +8,6 @@ import (
 	"net/url"
 	"slices"
 
-	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
-
 	"github.com/buger/jsonparser"
 	"github.com/wundergraph/cosmo/router/pkg/grpcconnector"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub"
@@ -213,7 +211,6 @@ type RouterEngineConfiguration struct {
 	Headers                  *config.HeaderRules
 	Events                   config.EventsConfiguration
 	SubgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
-	StreamMetricStore        rmetric.StreamMetricStore
 }
 
 func mapProtoFilterToPlanFilter(input *nodev1.SubscriptionFilterCondition, output *plan.SubscriptionFilterCondition) *plan.SubscriptionFilterCondition {
@@ -473,7 +470,6 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 	factoryProviders, factoryDataSources, err := pubsub.BuildProvidersAndDataSources(
 		l.ctx,
 		routerEngineConfig.Events,
-		routerEngineConfig.StreamMetricStore,
 		l.logger,
 		pubSubDS,
 		l.resolver.InstanceData().HostName,
@@ -514,11 +510,9 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 		ChildNodes: make([]plan.TypeField, 0, len(in.ChildNodes)),
 		Directives: &d,
 		FederationMetaData: plan.FederationMetaData{
-			Keys:             make([]plan.FederationFieldConfiguration, 0, len(in.Keys)),
-			Requires:         make([]plan.FederationFieldConfiguration, 0, len(in.Requires)),
-			Provides:         make([]plan.FederationFieldConfiguration, 0, len(in.Provides)),
-			EntityInterfaces: make([]plan.EntityInterfaceConfiguration, 0, len(in.EntityInterfaces)),
-			InterfaceObjects: make([]plan.EntityInterfaceConfiguration, 0, len(in.InterfaceObjects)),
+			Keys:     make([]plan.FederationFieldConfiguration, 0, len(in.Keys)),
+			Requires: make([]plan.FederationFieldConfiguration, 0, len(in.Requires)),
+			Provides: make([]plan.FederationFieldConfiguration, 0, len(in.Provides)),
 		},
 	}
 
@@ -527,7 +521,6 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 			TypeName:           node.TypeName,
 			FieldNames:         node.FieldNames,
 			ExternalFieldNames: node.ExternalFieldNames,
-			FetchReasonFields:  node.RequireFetchReasonsFieldNames,
 		})
 	}
 	for _, node := range in.ChildNodes {
@@ -535,7 +528,6 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 			TypeName:           node.TypeName,
 			FieldNames:         node.FieldNames,
 			ExternalFieldNames: node.ExternalFieldNames,
-			FetchReasonFields:  node.RequireFetchReasonsFieldNames,
 		})
 	}
 	for _, directive := range in.Directives {
@@ -551,9 +543,9 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 		if len(keyConfiguration.Conditions) > 0 {
 			conditions = make([]plan.KeyCondition, 0, len(keyConfiguration.Conditions))
 			for _, condition := range keyConfiguration.Conditions {
-				coordinates := make([]plan.FieldCoordinate, 0, len(condition.FieldCoordinatesPath))
+				coordinates := make([]plan.KeyConditionCoordinate, 0, len(condition.FieldCoordinatesPath))
 				for _, coordinate := range condition.FieldCoordinatesPath {
-					coordinates = append(coordinates, plan.FieldCoordinate{
+					coordinates = append(coordinates, plan.KeyConditionCoordinate{
 						TypeName:  coordinate.TypeName,
 						FieldName: coordinate.FieldName,
 					})
@@ -566,7 +558,7 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 			}
 		}
 
-		out.Keys = append(out.Keys, plan.FederationFieldConfiguration{
+		out.FederationMetaData.Keys = append(out.FederationMetaData.Keys, plan.FederationFieldConfiguration{
 			TypeName:              keyConfiguration.TypeName,
 			FieldName:             keyConfiguration.FieldName,
 			SelectionSet:          keyConfiguration.SelectionSet,
@@ -575,27 +567,27 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 		})
 	}
 	for _, providesConfiguration := range in.Provides {
-		out.Provides = append(out.Provides, plan.FederationFieldConfiguration{
+		out.FederationMetaData.Provides = append(out.FederationMetaData.Provides, plan.FederationFieldConfiguration{
 			TypeName:     providesConfiguration.TypeName,
 			FieldName:    providesConfiguration.FieldName,
 			SelectionSet: providesConfiguration.SelectionSet,
 		})
 	}
 	for _, requiresConfiguration := range in.Requires {
-		out.Requires = append(out.Requires, plan.FederationFieldConfiguration{
+		out.FederationMetaData.Requires = append(out.FederationMetaData.Requires, plan.FederationFieldConfiguration{
 			TypeName:     requiresConfiguration.TypeName,
 			FieldName:    requiresConfiguration.FieldName,
 			SelectionSet: requiresConfiguration.SelectionSet,
 		})
 	}
 	for _, entityInterfacesConfiguration := range in.EntityInterfaces {
-		out.EntityInterfaces = append(out.EntityInterfaces, plan.EntityInterfaceConfiguration{
+		out.FederationMetaData.EntityInterfaces = append(out.FederationMetaData.EntityInterfaces, plan.EntityInterfaceConfiguration{
 			InterfaceTypeName: entityInterfacesConfiguration.InterfaceTypeName,
 			ConcreteTypeNames: entityInterfacesConfiguration.ConcreteTypeNames,
 		})
 	}
 	for _, interfaceObjectConfiguration := range in.InterfaceObjects {
-		out.InterfaceObjects = append(out.InterfaceObjects, plan.EntityInterfaceConfiguration{
+		out.FederationMetaData.InterfaceObjects = append(out.FederationMetaData.InterfaceObjects, plan.EntityInterfaceConfiguration{
 			InterfaceTypeName: interfaceObjectConfiguration.InterfaceTypeName,
 			ConcreteTypeNames: interfaceObjectConfiguration.ConcreteTypeNames,
 		})
@@ -635,7 +627,7 @@ func toGRPCConfiguration(config *nodev1.GRPCConfiguration, pluginsEnabled bool) 
 		QueryRPCs:        make(grpcdatasource.RPCConfigMap),
 		MutationRPCs:     make(grpcdatasource.RPCConfigMap),
 		SubscriptionRPCs: make(grpcdatasource.RPCConfigMap),
-		EntityRPCs:       make(map[string][]grpcdatasource.EntityRPCConfig),
+		EntityRPCs:       make(map[string]grpcdatasource.EntityRPCConfig),
 		Fields:           make(map[string]grpcdatasource.FieldMap),
 		EnumValues:       make(map[string][]grpcdatasource.EnumValueMapping),
 	}
@@ -657,14 +649,14 @@ func toGRPCConfiguration(config *nodev1.GRPCConfiguration, pluginsEnabled bool) 
 	}
 
 	for _, entity := range in.EntityMappings {
-		result.EntityRPCs[entity.TypeName] = append(result.EntityRPCs[entity.TypeName], grpcdatasource.EntityRPCConfig{
+		result.EntityRPCs[entity.Key] = grpcdatasource.EntityRPCConfig{
 			Key: entity.Key,
 			RPCConfig: grpcdatasource.RPCConfig{
 				RPC:      entity.Rpc,
 				Request:  entity.Request,
 				Response: entity.Response,
 			},
-		})
+		}
 	}
 
 	for _, field := range in.TypeFieldMappings {

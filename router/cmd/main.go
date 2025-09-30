@@ -8,11 +8,9 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"runtime"
 	"syscall"
 	"time"
 
-	"github.com/grafana/pyroscope-go"
 	"github.com/joho/godotenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/internal/timex"
@@ -29,11 +27,9 @@ var (
 	overrideEnvFlag = flag.String("override-env", os.Getenv("OVERRIDE_ENV"), "Path to .env file to override environment variables")
 	routerVersion   = flag.Bool("version", false, "Prints the version and dependency information")
 	pprofListenAddr = flag.String("pprof-addr", os.Getenv("PPROF_ADDR"), "Address to listen for pprof requests. e.g. :6060 for localhost:6060")
-	pyroscopeAddr   = flag.String("pyroscope-addr", os.Getenv("PYROSCOPE_ADDR"), "Address to use for pyroscope continuous profiling. e.g. http://localhost:4040")
-
-	memProfilePath = flag.String("memprofile", "", "Path to write memory profile. Memory is a snapshot taken at the time the program exits")
-	cpuProfilePath = flag.String("cpuprofile", "", "Path to write cpu profile. CPU is measured from when the program starts until the program exits")
-	help           = flag.Bool("help", false, "Prints the help message")
+	memProfilePath  = flag.String("memprofile", "", "Path to write memory profile. Memory is a snapshot taken at the time the program exits")
+	cpuProfilePath  = flag.String("cpuprofile", "", "Path to write cpu profile. CPU is measured from when the program starts until the program exits")
+	help            = flag.Bool("help", false, "Prints the help message")
 
 	// Register the custom flag types
 	configPathFlag = newMultipleString("config", os.Getenv("CONFIG_PATH"), "Path to the router config file e.g. config.yaml, in case the path is a comma separated file list e.g. \"config.yaml,override.yaml\", the configs will be merged")
@@ -96,14 +92,6 @@ func Main() {
 			zap.String("service_version", core.Version),
 		)
 
-	if *pprofListenAddr != "" && *pyroscopeAddr != "" {
-		baseLogger.Fatal("Cannot use pprof and pyroscope at the same time")
-	}
-
-	if *pyroscopeAddr != "" && (*cpuProfilePath != "" || *memProfilePath != "") {
-		baseLogger.Fatal("Cannot use --cpuprofile or --memprofile while Pyroscope is enabled")
-	}
-
 	// Start pprof server if address is provided
 	if *pprofListenAddr != "" {
 		pprofSvr := profile.NewServer(*pprofListenAddr, baseLogger)
@@ -114,40 +102,6 @@ func Main() {
 	// Start profiling if flags are set
 	profiler := profile.Start(baseLogger, *cpuProfilePath, *memProfilePath)
 	defer profiler.Finish()
-
-	if *pyroscopeAddr != "" {
-		runtime.SetMutexProfileFraction(5)
-		runtime.SetBlockProfileRate(5)
-
-		logger := baseLogger.With(zap.String("component", "pyroscope"))
-		logger.Info("starting pyroscope server")
-
-		pyro, err := pyroscope.Start(pyroscope.Config{
-			ApplicationName: "wundergraph.cosmo.router",
-			ServerAddress:   *pyroscopeAddr,
-			Logger:          logger.Sugar(),
-			Tags:            map[string]string{"hostname": os.Getenv("HOSTNAME")},
-
-			ProfileTypes: []pyroscope.ProfileType{
-				pyroscope.ProfileCPU,
-				pyroscope.ProfileAllocObjects,
-				pyroscope.ProfileAllocSpace,
-				pyroscope.ProfileInuseObjects,
-				pyroscope.ProfileInuseSpace,
-				pyroscope.ProfileGoroutines,
-				pyroscope.ProfileMutexCount,
-				pyroscope.ProfileMutexDuration,
-				pyroscope.ProfileBlockCount,
-				pyroscope.ProfileBlockDuration,
-			},
-		})
-		if err != nil {
-			logger.Error("failed to start pyroscope", zap.Error(err))
-		}
-		if pyro != nil {
-			defer pyro.Stop()
-		}
-	}
 
 	rs, err := core.NewRouterSupervisor(&core.RouterSupervisorOpts{
 		BaseLogger: baseLogger,
@@ -229,7 +183,7 @@ func Main() {
 			)
 		}
 
-		w, err := watcher.New(watcher.Options{
+		watchFunc, err := watcher.New(watcher.Options{
 			Interval: result.Config.WatchConfig.Interval,
 			Logger:   ll,
 			Paths:    *configPathFlag,
@@ -249,9 +203,9 @@ func Main() {
 			// different instances of the router
 			time.Sleep(startupDelay)
 
-			if err := w(rootCtx); err != nil {
+			if err := watchFunc(rootCtx); err != nil {
 				if !errors.Is(err, context.Canceled) {
-					ll.Error("Error watching router config", zap.Error(err))
+					ll.Error("Error watching execution config", zap.Error(err))
 				} else {
 					ll.Debug("Watcher context cancelled, shutting down")
 				}

@@ -50,31 +50,23 @@ export class RBACEvaluator {
     this.isApiKey = !!isApiKey;
     this.isLegacyApiKey = this.isApiKey && groups.length === 0;
 
-    this.roles = [];
-    this.namespaces = [];
-    this.resources = [];
-    this.rules = new Map<OrganizationRole, RuleData>();
+    const flattenRules = groups.flatMap((group) => group.rules);
+    const rulesGroupedByRole = Object.groupBy(flattenRules, (rule) => rule.role);
 
-    if (!this.isLegacyApiKey) {
-      // Only evaluate the rules if the user is not a legacy API key
-      const flattenRules = groups.flatMap((group) => group.rules);
-      const rulesGroupedByRole = Object.groupBy(flattenRules, (rule) => rule.role);
-
-      const result = new Map<OrganizationRole, RuleData>();
-      for (const [role, ruleData] of Object.entries(rulesGroupedByRole)) {
-        result.set(role as OrganizationRole, {
-          namespaces: [...new Set(ruleData.flatMap((r) => r.namespaces))],
-          resources: [...new Set(ruleData.flatMap((r) => r.resources))],
-        });
-      }
-
-      this.roles = Array.from(result.keys(), (k) => k);
-      this.namespaces = [...new Set(Array.from(result.values(), (res) => res.namespaces).flat())];
-      this.resources = [...new Set(Array.from(result.values(), (res) => res.resources).flat())];
-      this.rules = result;
+    const result = new Map<OrganizationRole, RuleData>();
+    for (const [role, ruleData] of Object.entries(rulesGroupedByRole)) {
+      result.set(role as OrganizationRole, {
+        namespaces: [...new Set(ruleData.flatMap((r) => r.namespaces))],
+        resources: [...new Set(ruleData.flatMap((r) => r.resources))],
+      });
     }
 
-    this.isOrganizationAdmin = this.isLegacyApiKey || this.roles.includes('organization-admin');
+    this.roles = Array.from(result.keys(), (k) => k);
+    this.namespaces = [...new Set(Array.from(result.values(), (res) => res.namespaces).flat())];
+    this.resources = [...new Set(Array.from(result.values(), (res) => res.resources).flat())];
+    this.rules = result;
+
+    this.isOrganizationAdmin = this.roles.includes('organization-admin') || this.isLegacyApiKey;
     this.isOrganizationAdminOrDeveloper = this.isOrganizationAdmin || this.roles.includes('organization-developer');
     this.isOrganizationApiKeyManager = this.isOrganizationAdmin || !!this.ruleFor('organization-apikey-manager');
     this.isOrganizationViewer = this.isOrganizationAdminOrDeveloper || this.roles.includes('organization-viewer');
@@ -96,6 +88,11 @@ export class RBACEvaluator {
   }
 
   hasNamespaceReadAccess(namespace: Namespace) {
+    if (this.isLegacyApiKey) {
+      // When using an API without a group, fallback to always allow (legacy implementation)
+      return true;
+    }
+
     return this.isOrganizationViewer || this.checkNamespaceAccess(namespace, ['namespace-admin', 'namespace-viewer']);
   }
 
@@ -103,29 +100,56 @@ export class RBACEvaluator {
     return this.canCreateFederatedGraph(namespace);
   }
 
-  canCreateFeatureFlag(_: Namespace) {
+  canCreateFeatureFlag(namespace: Namespace) {
     return this.isOrganizationAdminOrDeveloper;
   }
 
-  hasFeatureFlagWriteAccess(_: FeatureFlag) {
+  hasFeatureFlagWriteAccess(featureFlag: FeatureFlag) {
     return this.isOrganizationAdminOrDeveloper;
   }
 
-  hasFeatureFlagReadAccess(_: FeatureFlag) {
+  hasFeatureFlagReadAccess(featureFlag: FeatureFlag) {
+    if (this.isLegacyApiKey) {
+      // When using an API without a group, fallback to always allow (legacy implementation)
+      return true;
+    }
+
     return this.isOrganizationViewer;
   }
 
   canCreateFederatedGraph(namespace: Namespace) {
-    return (
-      this.isOrganizationAdminOrDeveloper || this.hasRoleWithAccessToAllOrGivenNamespace('graph-admin', namespace.id)
-    );
+    if (this.isOrganizationAdminOrDeveloper) {
+      return true;
+    }
+
+    const rule = this.ruleFor('graph-admin');
+    if (!rule) {
+      return false;
+    }
+
+    if (rule.namespaces.length === 0 && rule.resources.length === 0) {
+      return true;
+    } else if (rule.namespaces.length > 0) {
+      return rule.namespaces.includes(namespace.id);
+    }
+
+    return false;
   }
 
   canDeleteFederatedGraph(graph: Target) {
+    if (graph.creatorUserId && this.userId && graph.creatorUserId === this.userId) {
+      // The graph creator should always have access to the provided target
+      return true;
+    }
+
+    if (this.isOrganizationAdminOrDeveloper) {
+      return true;
+    }
+
+    const rule = this.ruleFor('graph-admin');
     return (
-      this.isOrganizationAdminOrDeveloper ||
-      this.isTargetOwnedByUser(graph) ||
-      this.hasRoleWithAccessToAllOrGivenNamespace('graph-admin', graph.namespaceId)
+      !!rule &&
+      ((rule.namespaces.length === 0 && rule.resources.length === 0) || rule.namespaces.includes(graph.namespaceId))
     );
   }
 
@@ -134,17 +158,31 @@ export class RBACEvaluator {
   }
 
   hasFederatedGraphReadAccess(graph: Target) {
-    return (
-      this.isOrganizationViewer ||
-      this.hasFederatedGraphWriteAccess(graph) ||
-      this.checkTargetAccess(graph, ['graph-viewer'])
-    );
+    if (this.isLegacyApiKey) {
+      // When using an API without a group, fallback to always allow (legacy implementation)
+      return true;
+    }
+
+    return this.isOrganizationViewer || this.checkTargetAccess(graph, ['graph-admin', 'graph-viewer']);
   }
 
   canCreateSubGraph(namespace: Namespace) {
-    return (
-      this.isOrganizationAdminOrDeveloper || this.hasRoleWithAccessToAllOrGivenNamespace('subgraph-admin', namespace.id)
-    );
+    if (this.isOrganizationAdminOrDeveloper) {
+      return true;
+    }
+
+    const rule = this.ruleFor('subgraph-admin');
+    if (!rule) {
+      return false;
+    }
+
+    if (rule.namespaces.length === 0 && rule.resources.length === 0) {
+      return true;
+    } else if (rule.namespaces.length > 0) {
+      return rule.namespaces.includes(namespace.id);
+    }
+
+    return false;
   }
 
   canUpdateSubGraph(graph: Target) {
@@ -152,10 +190,19 @@ export class RBACEvaluator {
   }
 
   canDeleteSubGraph(graph: Target) {
+    if (!this.isApiKey && graph.creatorUserId && this.userId && graph.creatorUserId === this.userId) {
+      // The graph creator should always have access to the provided target
+      return true;
+    }
+
+    if (this.isOrganizationAdminOrDeveloper) {
+      return true;
+    }
+
+    const rule = this.ruleFor('subgraph-admin');
     return (
-      this.isOrganizationAdminOrDeveloper ||
-      this.isTargetOwnedByUser(graph) ||
-      this.hasRoleWithAccessToAllOrGivenNamespace('subgraph-admin', graph.namespaceId)
+      !!rule &&
+      ((rule.namespaces.length === 0 && rule.resources.length === 0) || rule.namespaces.includes(graph.namespaceId))
     );
   }
 
@@ -165,26 +212,15 @@ export class RBACEvaluator {
     );
   }
 
-  hasSubGraphCheckAccess(graph: Target) {
-    return this.hasSubGraphWriteAccess(graph) || this.checkTargetAccess(graph, ['subgraph-checker']);
-  }
-
   hasSubGraphReadAccess(graph: Target) {
+    if (this.isLegacyApiKey) {
+      // When using an API without a group, fallback to always allow (legacy implementation)
+      return true;
+    }
+
     return (
       this.isOrganizationViewer ||
-      this.hasSubGraphCheckAccess(graph) ||
-      this.checkTargetAccess(graph, ['subgraph-viewer'])
-    );
-  }
-
-  private hasRoleWithAccessToAllOrGivenNamespace(role: OrganizationRole, namespaceId: string) {
-    const rule = this.ruleFor(role);
-    return (
-      !!rule &&
-      // The rule has access to every namespace
-      ((rule.namespaces.length === 0 && rule.resources.length === 0) ||
-        // The rule has access to the given namespace
-        (rule.namespaces.length > 0 && rule.namespaces.includes(namespaceId)))
+      this.checkTargetAccess(graph, ['subgraph-admin', 'subgraph-publisher', 'subgraph-viewer'])
     );
   }
 
@@ -201,7 +237,7 @@ export class RBACEvaluator {
       }
 
       if (
-        // The rule has access to every namespace
+        // The rule have access to every namespace
         rule.namespaces.length === 0 ||
         // The rule was given write access to the namespace
         (rule.namespaces.length > 0 && rule.namespaces.includes(ns.id))
@@ -211,10 +247,6 @@ export class RBACEvaluator {
     }
 
     return false;
-  }
-
-  private isTargetOwnedByUser(target: Target) {
-    return !this.isApiKey && target.creatorUserId && this.userId && target.creatorUserId === this.userId;
   }
 
   private checkTargetAccess(target: Target, requiredRoles: OrganizationRole[]) {
@@ -230,9 +262,9 @@ export class RBACEvaluator {
       }
 
       if (
-        // The rule has access to every resource
+        // The rule have access to every resource
         (rule.namespaces.length === 0 && rule.resources.length === 0) ||
-        // The rule was given access to the namespace
+        // The rule was given write access to the namespace
         (rule.namespaces.length > 0 && rule.namespaces.includes(target.namespaceId)) ||
         // The rule was given write access to the resource
         (rule.resources.length > 0 && rule.resources.includes(target.targetId))

@@ -6,8 +6,8 @@ import {
   federateSubgraphsContract,
   federateSubgraphsWithContracts,
   FederationFailure,
-  FederationResultWithContractsSuccess,
   FederationSuccess,
+  FederationResultWithContractsSuccess,
   NormalizationFailure,
   NormalizationSuccess,
   normalizeSubgraph,
@@ -62,11 +62,6 @@ export function federateSubgraphsSuccess(
   disableResolvabilityValidation = false,
 ): FederationSuccess {
   const result = federateSubgraphs({ disableResolvabilityValidation, subgraphs, version });
-  if (!result.success) {
-    for (const error of result.errors) {
-      console.dir(error, { depth: null });
-    }
-  }
   expect(result.success, 'federateSubgraphs failed when expected to succeed').toBe(true);
   return result as FederationSuccess;
 }

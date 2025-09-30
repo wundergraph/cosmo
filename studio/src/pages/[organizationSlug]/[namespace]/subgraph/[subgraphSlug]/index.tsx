@@ -17,26 +17,20 @@ import { docsBaseURL } from "@/lib/constants";
 import { formatDateTime } from "@/lib/format-date";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@connectrpc/connect-query";
-import {
-  CommandLineIcon,
-  ArrowTopRightOnSquareIcon,
-} from "@heroicons/react/24/outline";
+import { CommandLineIcon } from "@heroicons/react/24/outline";
 import {
   getOrganizationMembers,
   getSubgraphMembers,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { SubgraphType } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { formatDistanceToNow } from "date-fns";
-import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import Markdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import remarkGfm from "remark-gfm";
-import { useWorkspace } from "@/hooks/use-workspace";
 
 export const Empty = ({ subgraphName }: { subgraphName: string }) => {
-  const { namespace: { name: namespace } } = useWorkspace();
+  const router = useRouter();
 
   return (
     <EmptyState
@@ -57,7 +51,7 @@ export const Empty = ({ subgraphName }: { subgraphName: string }) => {
       }
       actions={
         <CLI
-          command={`npx wgc subgraph update ${subgraphName} --namespace ${namespace} --readme <path-to-readme>`}
+          command={`npx wgc subgraph update ${subgraphName} --namespace ${router.query.namespace} --readme <path-to-readme>`}
         />
       }
     />
@@ -65,7 +59,6 @@ export const Empty = ({ subgraphName }: { subgraphName: string }) => {
 };
 
 const SubgraphOverviewPage = () => {
-  const router = useRouter();
   const graph = useSubgraph();
   const { data } = useQuery(getOrganizationMembers);
 
@@ -97,13 +90,13 @@ const SubgraphOverviewPage = () => {
 
   if (!graph || !graph.subgraph) return null;
 
-  const { subgraph, linkedSubgraph } = graph;
+  const { subgraph } = graph;
 
   return (
     <div className="flex h-full flex-col">
       <div className="flex-shrink-0 overflow-x-auto border-b scrollbar-thin">
         <dl className="flex w-full flex-col flex-wrap gap-x-8 gap-y-4 px-4 py-4 text-sm xl:flex-row">
-          <div className="flex-start flex min-w-[240px] flex-col gap-2">
+          <div className="flex-start flex min-w-[220px] flex-col gap-2">
             <dt className="text-sm text-muted-foreground">ID</dt>
             <dd className="text-sm">{subgraph.id}</dd>
           </div>
@@ -122,7 +115,7 @@ const SubgraphOverviewPage = () => {
             </div>
           )}
 
-          <div className="flex-start flex min-w-[150px] flex-col gap-2">
+          <div className="flex-start flex min-w-[100px] flex-col gap-2">
             <dt className="text-sm text-muted-foreground">Labels</dt>
             <dd className="flex gap-x-2">
               <div
@@ -142,58 +135,6 @@ const SubgraphOverviewPage = () => {
               </div>
             </dd>
           </div>
-
-          <div className="flex-start flex min-w-[150px] flex-col gap-2">
-            <dt className="text-sm text-muted-foreground">Type</dt>
-            <dd className="flex gap-x-2">
-              <div className="flex flex-shrink-0 gap-x-2">
-                {subgraph.type === SubgraphType.GRPC_PLUGIN ? (
-                  <Badge variant="outline">GRPC_Plugin</Badge>
-                ) : subgraph.type === SubgraphType.GRPC_SERVICE ? (
-                  <Badge variant="outline">GRPC_Service</Badge>
-                ) : (
-                  <Badge variant="outline">Standard</Badge>
-                )}
-              </div>
-            </dd>
-          </div>
-
-          {linkedSubgraph && (
-            <div className="flex-start flex min-w-[150px] flex-col gap-2">
-              <dt className="text-sm text-muted-foreground">Linked Subgraph</dt>
-              <dd className="flex gap-x-2">
-                <Link
-                  href={`/${router.query.organizationSlug}/${linkedSubgraph.namespace}/subgraph/${linkedSubgraph.name}`}
-                  className="flex items-center gap-1 hover:underline"
-                >
-                  {`${linkedSubgraph.namespace}/${linkedSubgraph.name}`}
-                  <ArrowTopRightOnSquareIcon className="h-[14px] w-[14px]" />
-                </Link>
-              </dd>
-            </div>
-          )}
-
-          {subgraph.type === SubgraphType.GRPC_PLUGIN &&
-            subgraph.pluginData && (
-              <>
-                <div className="flex-start flex min-w-[60px] flex-col gap-2">
-                  <dt className="text-sm text-muted-foreground">Version</dt>
-                  <dd className="flex gap-x-2">
-                    <p className="text-sm">{subgraph.pluginData.version}</p>
-                  </dd>
-                </div>
-                <div className="flex-start flex min-w-[100px] flex-col gap-2">
-                  <dt className="text-sm text-muted-foreground">Platforms</dt>
-                  <dd className="flex gap-x-1">
-                    {subgraph.pluginData.platforms.map((platform) => (
-                      <Badge variant="secondary" key={platform}>
-                        {platform}
-                      </Badge>
-                    ))}
-                  </dd>
-                </div>
-              </>
-            )}
 
           <div className="flex-start flex flex-col gap-2 ">
             <dt className="text-sm text-muted-foreground">Last Published</dt>
@@ -301,9 +242,7 @@ const SubgraphOverviewPage = () => {
         <div className="scrollbar-custom col-span-1 flex flex-col rounded-md border">
           <h3 className="border-b px-4 py-2 font-semibold">Subgraph Members</h3>
           <div className="px-4 py-4">
-            <AddSubgraphUsersContent
-              subgraphMembers={subgraphMembersData?.members || []}
-            />
+            <AddSubgraphUsersContent subgraphMembers={subgraphMembersData?.members || []} />
           </div>
         </div>
       </div>

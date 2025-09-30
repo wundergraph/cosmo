@@ -50,15 +50,22 @@ export function createResponseMessageName(methodName: string): string {
 /**
  * Creates an entity lookup method name for an entity type
  */
-export function createEntityLookupMethodName(typeName: string, keyString: string = 'id'): string {
-  const normalizedKey = keyString
-    .split(/[,\s]+/)
-    .filter((field) => field.length > 0)
-    .map((field) => upperFirst(camelCase(field)))
-    .sort()
-    .join('And');
+export function createEntityLookupMethodName(typeName: string, keyField: string = 'id'): string {
+  return `Lookup${typeName}By${upperFirst(camelCase(keyField))}`;
+}
 
-  return `Lookup${typeName}By${normalizedKey}`;
+/**
+ * Creates a request message name for an entity lookup
+ */
+export function createEntityLookupRequestName(typeName: string, keyField: string = 'id'): string {
+  return `Lookup${typeName}By${upperFirst(camelCase(keyField))}Request`;
+}
+
+/**
+ * Creates a response message name for an entity lookup
+ */
+export function createEntityLookupResponseName(typeName: string, keyField: string = 'id'): string {
+  return `Lookup${typeName}By${upperFirst(camelCase(keyField))}Response`;
 }
 
 /**

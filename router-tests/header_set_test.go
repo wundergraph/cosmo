@@ -275,7 +275,7 @@ func TestHeaderSetWithExpression(t *testing.T) {
 		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
 		require.NoError(t, err)
 
-		token, err := authServer.TokenForKID(rsa1.KID(), map[string]any{"user_id": "TestId"}, false)
+		token, err := authServer.TokenForKID(rsa1.KID(), map[string]any{"user_id": "TestId"})
 		require.NoError(t, err)
 
 		testenv.Run(t, &testenv.Config{

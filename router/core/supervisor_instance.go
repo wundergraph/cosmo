@@ -67,10 +67,9 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 
 	if cfg.AccessLogs.Enabled {
 		c := &AccessLogsConfig{
-			Attributes:            cfg.AccessLogs.Router.Fields,
-			IgnoreQueryParamsList: cfg.AccessLogs.Router.IgnoreQueryParamsList,
-			SubgraphEnabled:       cfg.AccessLogs.Subgraphs.Enabled,
-			SubgraphAttributes:    cfg.AccessLogs.Subgraphs.Fields,
+			Attributes:         cfg.AccessLogs.Router.Fields,
+			SubgraphEnabled:    cfg.AccessLogs.Subgraphs.Enabled,
+			SubgraphAttributes: cfg.AccessLogs.Subgraphs.Fields,
 		}
 
 		if cfg.AccessLogs.Output.File.Enabled {
@@ -195,12 +194,9 @@ func optionsFromResources(logger *zap.Logger, config *config.Config) []Option {
 		WithSubgraphCircuitBreakerOptions(NewSubgraphCircuitBreakerOptions(config.TrafficShaping)),
 		WithSubgraphRetryOptions(
 			config.TrafficShaping.All.BackoffJitterRetry.Enabled,
-			config.TrafficShaping.All.BackoffJitterRetry.Algorithm,
 			config.TrafficShaping.All.BackoffJitterRetry.MaxAttempts,
 			config.TrafficShaping.All.BackoffJitterRetry.MaxDuration,
 			config.TrafficShaping.All.BackoffJitterRetry.Interval,
-			config.TrafficShaping.All.BackoffJitterRetry.Expression,
-			nil,
 		),
 		WithCors(&cors.Config{
 			Enabled:          config.CORS.Enabled,
@@ -263,14 +259,6 @@ func setupAuthenticators(ctx context.Context, logger *zap.Logger, cfg *config.Co
 			Secret:    jwks.Secret,
 			Algorithm: jwks.Algorithm,
 			KeyId:     jwks.KeyId,
-
-			Audiences: jwks.Audiences,
-			RefreshUnknownKID: authentication.RefreshUnknownKIDConfig{
-				Enabled:  jwks.RefreshUnknownKID.Enabled,
-				MaxWait:  jwks.RefreshUnknownKID.MaxWait,
-				Interval: jwks.RefreshUnknownKID.Interval,
-				Burst:    jwks.RefreshUnknownKID.Burst,
-			},
 		})
 	}
 

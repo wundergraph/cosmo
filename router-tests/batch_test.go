@@ -78,7 +78,7 @@ func TestBatch(t *testing.T) {
 				}, nil)
 				require.NoError(t, err)
 				require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-				require.JSONEq(t, `{"errors":[{"message":"invalid request body: json: cannot unmarshal array into Go value of type core.GraphQLRequest"}]}`, res.Body)
+				require.JSONEq(t, `{"errors":[{"message":"error parsing request body"}]}`, res.Body)
 			},
 		)
 	})

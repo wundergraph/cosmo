@@ -40,7 +40,6 @@
           "Subscriptions": false
         },
         "CircuitBreaker": false,
-        "Streams": false,
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
         "Exporters": null
@@ -51,7 +50,6 @@
         "ListenAddr": "127.0.0.1:8088",
         "GraphqlCache": false,
         "ConnectionStats": false,
-        "Streams": false,
         "EngineStats": {
           "Subscriptions": false
         },
@@ -123,9 +121,6 @@
     "Storage": {
       "ProviderID": ""
     },
-    "Session": {
-      "Stateless": true
-    },
     "GraphName": "mygraph",
     "ExcludeMutations": false,
     "EnableArbitraryOperations": false,
@@ -146,8 +141,7 @@
         "Algorithm": "backoff_jitter",
         "MaxAttempts": 5,
         "MaxDuration": 10000000000,
-        "Interval": 3000000000,
-        "Expression": "IsRetryableStatusCode() || IsConnectionError() || IsTimeout()"
+        "Interval": 3000000000
       },
       "CircuitBreaker": {
         "Enabled": false,
@@ -203,10 +197,7 @@
       }
     },
     "Router": {
-      "Fields": null,
-      "IgnoreQueryParamsList": [
-        "variables"
-      ]
+      "Fields": null
     },
     "Subgraphs": {
       "Enabled": false,
@@ -318,18 +309,13 @@
       "Enabled": false,
       "Condition": ""
     },
-    "BlockPersistedOperations": {
-      "Enabled": false,
-      "Condition": ""
-    },
     "ComplexityCalculationCache": null,
     "ComplexityLimits": null,
     "DepthLimit": null,
     "ParserLimits": {
-      "ApproximateDepthLimit": 200,
-      "TotalFieldsLimit": 3500
-    },
-    "OperationNameLengthLimit": 512
+      "ApproximateDepthLimit": 100,
+      "TotalFieldsLimit": 500
+    }
   },
   "EngineExecutionConfiguration": {
     "Debug": {
@@ -375,9 +361,7 @@
     "ResolverMaxRecyclableParserSize": 32768,
     "EnableSubgraphFetchOperationName": false,
     "DisableVariablesRemapping": false,
-    "EnableRequireFetchReasons": false,
-    "SubscriptionFetchTimeout": 30000000000,
-    "ValidateRequiredExternalFields": false
+    "SubscriptionFetchTimeout": 30000000000
   },
   "WebSocket": {
     "Enabled": true,
@@ -522,10 +506,7 @@
   },
   "Plugins": {
     "Enabled": false,
-    "Path": "plugins",
-    "Registry": {
-      "URL": "cosmo-registry.wundergraph.com"
-    }
+    "Path": "plugins"
   },
   "WatchConfig": {
     "Enabled": false,

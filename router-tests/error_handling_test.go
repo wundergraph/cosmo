@@ -1380,7 +1380,7 @@ func TestErrorPropagation(t *testing.T) {
 					EnableSingleFlight:     true,
 					MaxConcurrentResolvers: 1,
 				}),
-				core.WithSubgraphRetryOptions(false, "", 0, 0, 0, "", nil),
+				core.WithSubgraphRetryOptions(false, 0, 0, 0),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			resp, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
@@ -1412,7 +1412,7 @@ func TestErrorPropagation(t *testing.T) {
 					EnableSingleFlight:     true,
 					MaxConcurrentResolvers: 1,
 				}),
-				core.WithSubgraphRetryOptions(false, "", 0, 0, 0, "", nil),
+				core.WithSubgraphRetryOptions(false, 0, 0, 0),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			resp, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
@@ -1444,7 +1444,7 @@ func TestErrorPropagation(t *testing.T) {
 					EnableSingleFlight:     true,
 					MaxConcurrentResolvers: 1,
 				}),
-				core.WithSubgraphRetryOptions(false, "", 0, 0, 0, "", nil),
+				core.WithSubgraphRetryOptions(false, 0, 0, 0),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			resp, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
@@ -1476,7 +1476,7 @@ func TestErrorPropagation(t *testing.T) {
 					EnableSingleFlight:     true,
 					MaxConcurrentResolvers: 1,
 				}),
-				core.WithSubgraphRetryOptions(false, "", 0, 0, 0, "", nil),
+				core.WithSubgraphRetryOptions(false, 0, 0, 0),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			resp, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{

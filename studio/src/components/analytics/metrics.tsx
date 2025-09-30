@@ -54,8 +54,6 @@ import {
   Line,
   LineChart,
 } from "recharts";
-import { useWorkspace } from "@/hooks/use-workspace";
-import { useCurrentOrganization } from "@/hooks/use-current-organization";
 
 export const getInfoTip = (range?: number) => {
   switch (range) {
@@ -246,8 +244,6 @@ const TopList: React.FC<{
   queryParams?: Record<string, string | number>;
 }> = ({ title, items, formatter, isSubgraphAnalytics, queryParams = {} }) => {
   const router = useRouter();
-  const { namespace: { name: namespace } } = useWorkspace();
-  const organizationSlug = useCurrentOrganization()?.slug;
 
   const range = router.query.range;
   const dateRange = router.query.dateRange;
@@ -270,8 +266,8 @@ const TopList: React.FC<{
                   href={{
                     pathname: `${router.pathname}/traces`,
                     query: {
-                      organizationSlug,
-                      namespace,
+                      organizationSlug: router.query.organizationSlug,
+                      namespace: router.query.namespace,
                       slug: router.query.slug,
                       filterState: router.query.filterState || "[]",
                       range,
@@ -322,8 +318,8 @@ const TopList: React.FC<{
             : {
                 pathname: `${router.pathname}/traces`,
                 query: {
-                  organizationSlug,
-                  namespace,
+                  organizationSlug: router.query.organizationSlug,
+                  namespace: router.query.namespace,
                   slug: router.query.slug,
                   filterState: createFilterState({
                     operationName: row.name,

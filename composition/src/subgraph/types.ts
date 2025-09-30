@@ -6,7 +6,6 @@ import {
   ParentDefinitionData,
   PersistedDirectiveDefinitionData,
 } from '../schema-building/types';
-import { TypeName } from '../types/types';
 
 export type Subgraph = {
   definitions: DocumentNode;
@@ -15,9 +14,9 @@ export type Subgraph = {
 };
 
 export type SubgraphConfig = {
-  configurationDataByTypeName: Map<TypeName, ConfigurationData>;
+  configurationDataByTypeName: Map<string, ConfigurationData>;
   isVersionTwo: boolean;
-  parentDefinitionDataByTypeName: Map<TypeName, ParentDefinitionData>;
+  parentDefinitionDataByTypeName: Map<string, ParentDefinitionData>;
   schema: GraphQLSchema;
 };
 

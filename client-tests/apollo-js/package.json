@@ -13,12 +13,12 @@
   "license": "ISC",
   "packageManager": "pnpm@9.12.3",
   "devDependencies": {
-    "@apollo/client": "^3.13.9",
-    "@types/node": "^22.17.0",
-    "graphql": "^15.10.1",
-    "graphql-ws": "^6.0.6",
+    "@apollo/client": "^3.13.7",
+    "@types/node": "^22.13.17",
+    "graphql": "^15.8.0",
+    "graphql-ws": "^6.0.4",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.2",
-    "vitest": "^3.2.4"
+    "typescript": "^5.8.2",
+    "vitest": "^3.1.2"
   }
 }

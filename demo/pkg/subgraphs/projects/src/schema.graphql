@@ -17,17 +17,9 @@ type Query {
   tasks(projectId: ID!): [Task!]!
   projectActivities(projectId: ID!): [ProjectActivity!]!
 
-  # New query fields with different list patterns
-  projectTags: [String]  # nullable list of nullable strings
-  archivedProjects: [Project]!  # non-nullable list of nullable projects
-  tasksByPriority(projectId: ID!): [[Task]]  # nullable list of nullable lists
-  resourceMatrix(projectId: ID!): [[ProjectResource!]!]!  # non-nullable list of non-nullable lists
-
   # query to simulate that the service goes down
   killService: Boolean!
   panic: Boolean!
-
-  nodesById(id: ID!): [Node!]!
 }
 
 type Mutation {
@@ -86,24 +78,15 @@ type Project implements Node & Timestamped @key(fields: "id") {
   endDate: String     # ISO date
   status: ProjectStatus!
   # Federated references:
-  teamMembers: [Employee!]!
+  teamMembers: [Employee!]! 
   relatedProducts: [Product!]!  # from products subgraph
   # Project milestones or checkpoints
   milestoneIds: [String!]  # Array of milestone identifiers
-
+  
   # New fields for extended functionality
   milestones: [Milestone!]!
   tasks: [Task!]!
   progress: Float  # Completion percentage
-
-  # New fields with various list patterns for testing
-  tags: [String]  # nullable list of nullable tags
-  alternativeProjects: [Project]  # nullable list of nullable projects
-  dependencies: [Project!]  # nullable list of non-nullable projects
-  resourceGroups: [[ProjectResource!]!]!  # nested lists: non-nullable list of non-nullable lists
-  tasksByPhase: [[Task!]]!  # nested lists: non-nullable list of nullable lists
-  milestoneGroups: [[Milestone]]  # nested lists: nullable list of nullable lists
-  priorityMatrix: [[[Task!]!]!]  # triple nested: non-nullable list of non-nullable lists of non-nullable lists
 }
 
 # New types - simplified with ID references only
@@ -116,11 +99,6 @@ type Milestone implements Node & Timestamped @key(fields: "id") {
   endDate: String     # ISO date (milestone due date)
   status: MilestoneStatus!
   completionPercentage: Float
-
-  # New fields with different list patterns
-  dependencies: [Milestone]!  # non-nullable list of nullable milestones
-  subtasks: [Task]  # nullable list of nullable tasks
-  reviewers: [Employee!]  # nullable list of non-nullable employees
 }
 
 type Task implements Node & Assignable @key(fields: "id") {
@@ -132,17 +110,10 @@ type Task implements Node & Assignable @key(fields: "id") {
   description: String
   priority: TaskPriority!
   status: TaskStatus!
-  estimatedHours: Float @deprecated(reason: "No more estimations!")
+  estimatedHours: Float
   actualHours: Float
   createdAt: String   # ISO date
   completedAt: String # ISO date
-
-  # New fields with different list patterns
-  labels: [String]  # nullable list of nullable labels
-  subtasks: [Task!]  # nullable list of non-nullable subtasks
-  dependencies: [Task]!  # non-nullable list of nullable tasks
-  attachmentUrls: [String!]!  # non-nullable list of non-nullable URLs
-  reviewerIds: [Int]  # nullable list of nullable reviewer IDs
 }
 
 type ProjectUpdate implements Node {
@@ -202,24 +173,17 @@ union ProjectActivity = ProjectUpdate | Milestone | Task
 
 # Federated types (unchanged)
 type Employee @key(fields: "id") {
-  id: Int!
+  id: Int! 
   # New field resolved by this subgraph:
   projects: [Project!]
   # New fields for extended functionality
   assignedTasks: [Task!]!
   completedTasks: [Task!]!
-
-  # New fields with different list patterns
-  skills: [String]  # nullable list of nullable skills
-  certifications: [String!]  # nullable list of non-nullable certifications
-  projectHistory: [[Project!]]!  # non-nullable list of nullable lists of non-nullable projects
 }
 
 type Product @key(fields: "upc") {
-  upc: String!
+  upc: String! 
   # Projects contributing to this product:
   projects: [Project!]
-
-  # New field with nested lists
-  featureMatrix: [[String]]  # nullable list of nullable lists of nullable features
 }
+

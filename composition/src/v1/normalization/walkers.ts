@@ -22,8 +22,8 @@ import { extractFieldSetValue, newFieldSetData } from './utils';
 import { EVENT_DIRECTIVE_NAMES } from '../utils/string-constants';
 import {
   getRenamedRootTypeName,
-  isInterfaceDefinitionData,
   isParentDataCompositeOutputType,
+  isParentDataInterfaceType,
   isTypeNameRootType,
   newPersistedDirectivesData,
 } from '../../schema-building/utils';
@@ -40,7 +40,6 @@ import {
   IGNORED_FIELDS,
   PARENT_DEFINITION_DATA,
   PROVIDES,
-  REQUIRE_FETCH_REASONS,
   REQUIRES,
   SERVICE_OBJECT,
   SUBSCRIPTION_FILTER,
@@ -363,13 +362,10 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
         const directivesByDirectiveName = nf.extractDirectives(node, new Map<string, ConstDirectiveNode[]>());
         const inheritedDirectiveNames = new Set<string>();
         // Add parent-level shareable and external to the field extraction and repeatable validation
-        if (!isInterfaceDefinitionData(parentData)) {
+        if (!isParentDataInterfaceType(parentData)) {
           nf.addInheritedDirectivesToFieldData(directivesByDirectiveName, inheritedDirectiveNames);
           if (directivesByDirectiveName.has(EXTERNAL)) {
             nf.unvalidatedExternalFieldCoords.add(`${nf.originalParentTypeName}.${fieldName}`);
-          }
-          if (nf.doesParentObjectRequireFetchReasons || directivesByDirectiveName.has(REQUIRE_FETCH_REASONS)) {
-            parentData.requireFetchReasonsFieldNames.add(fieldName);
           }
         }
         const fieldData = nf.addFieldDataByNode(
@@ -525,7 +521,6 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
         nf.renamedParentTypeName = '';
         nf.lastParentNodeKind = Kind.NULL;
         nf.isParentObjectExternal = false;
-        nf.doesParentObjectRequireFetchReasons = false;
         nf.isParentObjectShareable = false;
       },
     },
@@ -551,7 +546,6 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
         nf.renamedParentTypeName = '';
         nf.lastParentNodeKind = Kind.NULL;
         nf.isParentObjectExternal = false;
-        nf.doesParentObjectRequireFetchReasons = false;
         nf.isParentObjectShareable = false;
       },
     },

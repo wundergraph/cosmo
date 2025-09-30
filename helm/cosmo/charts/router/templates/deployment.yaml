@@ -30,7 +30,6 @@ spec:
       {{- end }}
       labels:
         {{- include "router.selectorLabels" . | nindent 8 }}
-        {{- include "router.additionalPodLabels" . | nindent 8 }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:

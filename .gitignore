@@ -21,6 +21,3 @@ lerna-debug.log
 # Go workspace files
 go.work
 go.work.sum
-
-# Mise local config
-**/mise.local.toml

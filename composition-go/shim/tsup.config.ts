@@ -24,7 +24,7 @@ const stringHashPLugin: Plugin = {
     build.onEnd((result) => {
       // Replace hashing with a shim function that we provide
       // in the runtime
-      const needle = /[A-Za-z_][A-Za-z0-9_]*\.createHash\("sha1"\).update\((.*?)\).digest\("hex"\)/g;
+      const needle = /[A-Za-z][A-Za-z0-9]+?\.createHash\("sha1"\).update\((.*?)\).digest\("hex"\)/g;
       for (const file of result.outputFiles ?? []) {
         const replaced = file.text.replace(needle, 'stringHash($1)');
         file.contents = new TextEncoder().encode(replaced);

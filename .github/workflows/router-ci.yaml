@@ -6,7 +6,6 @@ on:
       - 'composition-go/**/*'
       - 'demo/**/*'
       - 'router/**/*'
-      - 'router-plugin/**/*'
       - 'router-tests/**/*'
       - 'connect/**/*'
       - '.github/workflows/router-ci.yaml'
@@ -193,7 +192,7 @@ jobs:
         ports:
           - 6379:6379
       kafka:
-        image: bitnamilegacy/kafka:3.7.0
+        image: bitnami/kafka:3.7.0
         options: >-
           --health-cmd "kafka-broker-api-versions.sh --version"
           --health-interval 10s

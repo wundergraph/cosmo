@@ -252,9 +252,6 @@ router:
   # -- Add labels to all deployed resources
   commonLabels: {}
 
-  # -- Add labels to pod resources
-  additionalPodLabels: {}
-
   terminationGracePeriodSeconds: 60
   deploymentStrategy:
     rollingUpdate:
@@ -402,9 +399,6 @@ keycloak:
 # ClickHouse for the Cosmo Controlplane & Collectors
 # https://artifacthub.io/packages/helm/bitnami/clickhouse
 clickhouse:
-  image:
-    registry: docker.io
-    repository: bitnamilegacy/clickhouse
   shards: 1
   # 1 replica for development
   replicaCount: 1
@@ -437,9 +431,6 @@ clickhouse:
 # Postgres for the Cosmo Controlplane
 # https://artifacthub.io/packages/helm/bitnami/postgresql
 postgresql:
-  image:
-    registry: docker.io
-    repository: bitnamilegacy/postgresql
   commonAnnotations:
     # Support for k14s.io. This annotation will form a group to coordinate deployments with kapp.
     kapp.k14s.io/change-group: 'cosmo.apps.postgresql.wundergraph.com/deployment'
@@ -469,9 +460,6 @@ postgresql:
 # Minio for the Cosmo Controlplane
 # https://artifacthub.io/packages/helm/bitnami/minio
 minio:
-  image:
-    registry: docker.io
-    repository: bitnamilegacy/minio
   persistence:
     size: 1Gi
     annotations:
@@ -493,9 +481,6 @@ minio:
 # https://artifacthub.io/packages/helm/bitnami/redis
 
 redis:
-  image:
-    registry: docker.io
-    repository: bitnamilegacy/redis
   auth:
     enabled: false
   replica:

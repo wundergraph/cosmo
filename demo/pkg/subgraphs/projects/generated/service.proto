@@ -21,115 +21,19 @@ service ProjectsService {
   rpc MutationAddProject(MutationAddProjectRequest) returns (MutationAddProjectResponse) {}
   rpc MutationAddTask(MutationAddTaskRequest) returns (MutationAddTaskResponse) {}
   rpc MutationUpdateProjectStatus(MutationUpdateProjectStatusRequest) returns (MutationUpdateProjectStatusResponse) {}
-  rpc QueryArchivedProjects(QueryArchivedProjectsRequest) returns (QueryArchivedProjectsResponse) {}
   rpc QueryKillService(QueryKillServiceRequest) returns (QueryKillServiceResponse) {}
   rpc QueryMilestones(QueryMilestonesRequest) returns (QueryMilestonesResponse) {}
-  rpc QueryNodesById(QueryNodesByIdRequest) returns (QueryNodesByIdResponse) {}
   rpc QueryPanic(QueryPanicRequest) returns (QueryPanicResponse) {}
   rpc QueryProject(QueryProjectRequest) returns (QueryProjectResponse) {}
   rpc QueryProjectActivities(QueryProjectActivitiesRequest) returns (QueryProjectActivitiesResponse) {}
   rpc QueryProjectResources(QueryProjectResourcesRequest) returns (QueryProjectResourcesResponse) {}
   rpc QueryProjectStatuses(QueryProjectStatusesRequest) returns (QueryProjectStatusesResponse) {}
-  rpc QueryProjectTags(QueryProjectTagsRequest) returns (QueryProjectTagsResponse) {}
   rpc QueryProjects(QueryProjectsRequest) returns (QueryProjectsResponse) {}
   rpc QueryProjectsByStatus(QueryProjectsByStatusRequest) returns (QueryProjectsByStatusResponse) {}
-  rpc QueryResourceMatrix(QueryResourceMatrixRequest) returns (QueryResourceMatrixResponse) {}
   rpc QuerySearchProjects(QuerySearchProjectsRequest) returns (QuerySearchProjectsResponse) {}
   rpc QueryTasks(QueryTasksRequest) returns (QueryTasksResponse) {}
-  rpc QueryTasksByPriority(QueryTasksByPriorityRequest) returns (QueryTasksByPriorityResponse) {}
 }
 
-// Wrapper message for a list of Employee.
-message ListOfEmployee {
-  message List {
-    repeated Employee items = 1;
-  }
-  List list = 1;
-}
-// Wrapper message for a list of Int.
-message ListOfInt {
-  message List {
-    repeated int32 items = 1;
-  }
-  List list = 1;
-}
-// Wrapper message for a list of Task.
-message ListOfListOfListOfTask {
-  message List {
-    repeated ListOfListOfTask items = 1;
-  }
-  List list = 1;
-}
-// Wrapper message for a list of Milestone.
-message ListOfListOfMilestone {
-  message List {
-    repeated ListOfMilestone items = 1;
-  }
-  List list = 1;
-}
-// Wrapper message for a list of Project.
-message ListOfListOfProject {
-  message List {
-    repeated ListOfProject items = 1;
-  }
-  List list = 1;
-}
-// Wrapper message for a list of ProjectResource.
-message ListOfListOfProjectResource {
-  message List {
-    repeated ListOfProjectResource items = 1;
-  }
-  List list = 1;
-}
-// Wrapper message for a list of String.
-message ListOfListOfString {
-  message List {
-    repeated ListOfString items = 1;
-  }
-  List list = 1;
-}
-// Wrapper message for a list of Task.
-message ListOfListOfTask {
-  message List {
-    repeated ListOfTask items = 1;
-  }
-  List list = 1;
-}
-// Wrapper message for a list of Milestone.
-message ListOfMilestone {
-  message List {
-    repeated Milestone items = 1;
-  }
-  List list = 1;
-}
-// Wrapper message for a list of Project.
-message ListOfProject {
-  message List {
-    repeated Project items = 1;
-  }
-  List list = 1;
-}
-// Wrapper message for a list of ProjectResource.
-message ListOfProjectResource {
-  message List {
-    repeated ProjectResource items = 1;
-  }
-  List list = 1;
-}
-// Wrapper message for a list of String.
-message ListOfString {
-  message List {
-    repeated string items = 1;
-  }
-  List list = 1;
-}
-// Wrapper message for a list of Task.
-message ListOfTask {
-  message List {
-    repeated Task items = 1;
-  }
-  List list = 1;
-}
 // Key message for Project entity lookup
 message LookupProjectByIdRequestKey {
   // Key field for Project entity lookup.
@@ -330,6 +234,20 @@ message QueryProjectsByStatusRequest {
 message QueryProjectsByStatusResponse {
   repeated Project projects_by_status = 1;
 }
+// Request message for killService operation.
+message QueryKillServiceRequest {
+}
+// Response message for killService operation.
+message QueryKillServiceResponse {
+  bool kill_service = 1;
+}
+// Request message for panic operation.
+message QueryPanicRequest {
+}
+// Response message for panic operation.
+message QueryPanicResponse {
+  bool panic = 1;
+}
 // Request message for projectResources operation.
 message QueryProjectResourcesRequest {
   string project_id = 1;
@@ -370,58 +288,6 @@ message QueryProjectActivitiesRequest {
 message QueryProjectActivitiesResponse {
   repeated ProjectActivity project_activities = 1;
 }
-// Request message for projectTags operation.
-message QueryProjectTagsRequest {
-}
-// Response message for projectTags operation.
-message QueryProjectTagsResponse {
-  ListOfString project_tags = 1;
-}
-// Request message for archivedProjects operation.
-message QueryArchivedProjectsRequest {
-}
-// Response message for archivedProjects operation.
-message QueryArchivedProjectsResponse {
-  repeated Project archived_projects = 1;
-}
-// Request message for tasksByPriority operation.
-message QueryTasksByPriorityRequest {
-  string project_id = 1;
-}
-// Response message for tasksByPriority operation.
-message QueryTasksByPriorityResponse {
-  ListOfListOfTask tasks_by_priority = 1;
-}
-// Request message for resourceMatrix operation.
-message QueryResourceMatrixRequest {
-  string project_id = 1;
-}
-// Response message for resourceMatrix operation.
-message QueryResourceMatrixResponse {
-  ListOfListOfProjectResource resource_matrix = 1;
-}
-// Request message for killService operation.
-message QueryKillServiceRequest {
-}
-// Response message for killService operation.
-message QueryKillServiceResponse {
-  bool kill_service = 1;
-}
-// Request message for panic operation.
-message QueryPanicRequest {
-}
-// Response message for panic operation.
-message QueryPanicResponse {
-  bool panic = 1;
-}
-// Request message for nodesById operation.
-message QueryNodesByIdRequest {
-  string id = 1;
-}
-// Response message for nodesById operation.
-message QueryNodesByIdResponse {
-  repeated Node nodes_by_id = 1;
-}
 // Request message for addProject operation.
 message MutationAddProjectRequest {
   ProjectInput project = 1;
@@ -457,6 +323,7 @@ message MutationUpdateProjectStatusResponse {
 }
 
 message Project {
+  reserved 8;
   string id = 1;
   string name = 2;
   google.protobuf.StringValue description = 3;
@@ -464,69 +331,51 @@ message Project {
   google.protobuf.StringValue end_date = 5;
   ProjectStatus status = 6;
   repeated Employee team_members = 7;
-  repeated Product related_products = 8;
-  ListOfString milestone_ids = 9;
-  repeated Milestone milestones = 10;
-  repeated Task tasks = 11;
-  google.protobuf.DoubleValue progress = 12;
-  ListOfString tags = 13;
-  ListOfProject alternative_projects = 14;
-  ListOfProject dependencies = 15;
-  ListOfListOfProjectResource resource_groups = 16;
-  ListOfListOfTask tasks_by_phase = 17;
-  ListOfListOfMilestone milestone_groups = 18;
-  ListOfListOfListOfTask priority_matrix = 19;
+  repeated Product related_products = 9;
+  repeated string milestone_ids = 10;
+  repeated Milestone milestones = 11;
+  repeated Task tasks = 12;
+  google.protobuf.DoubleValue progress = 13;
 }
 
 message Milestone {
+  reserved 3, 9;
   string id = 1;
   string project_id = 2;
-  string name = 3;
-  google.protobuf.StringValue description = 4;
-  google.protobuf.StringValue start_date = 5;
-  google.protobuf.StringValue end_date = 6;
-  MilestoneStatus status = 7;
-  google.protobuf.DoubleValue completion_percentage = 8;
-  repeated Milestone dependencies = 9;
-  ListOfTask subtasks = 10;
-  ListOfEmployee reviewers = 11;
+  string name = 4;
+  google.protobuf.StringValue description = 5;
+  google.protobuf.StringValue start_date = 6;
+  google.protobuf.StringValue end_date = 7;
+  MilestoneStatus status = 8;
+  google.protobuf.DoubleValue completion_percentage = 10;
 }
 
 message Task {
+  reserved 3, 5, 7;
   string id = 1;
   string project_id = 2;
-  google.protobuf.StringValue milestone_id = 3;
-  google.protobuf.Int32Value assignee_id = 4;
-  string name = 5;
-  google.protobuf.StringValue description = 6;
-  TaskPriority priority = 7;
-  TaskStatus status = 8;
-  // Deprecation notice: No more estimations!
-  google.protobuf.DoubleValue estimated_hours = 9 [deprecated = true];
-  google.protobuf.DoubleValue actual_hours = 10;
-  google.protobuf.StringValue created_at = 11;
-  google.protobuf.StringValue completed_at = 12;
-  ListOfString labels = 13;
-  ListOfTask subtasks = 14;
-  repeated Task dependencies = 15;
-  repeated string attachment_urls = 16;
-  ListOfInt reviewer_ids = 17;
+  google.protobuf.StringValue milestone_id = 4;
+  google.protobuf.Int32Value assignee_id = 6;
+  string name = 8;
+  google.protobuf.StringValue description = 9;
+  TaskPriority priority = 10;
+  TaskStatus status = 11;
+  google.protobuf.DoubleValue estimated_hours = 12;
+  google.protobuf.DoubleValue actual_hours = 13;
+  google.protobuf.StringValue created_at = 14;
+  google.protobuf.StringValue completed_at = 15;
 }
 
 message Employee {
   int32 id = 1;
-  ListOfProject projects = 2;
+  repeated Project projects = 2;
   repeated Task assigned_tasks = 3;
   repeated Task completed_tasks = 4;
-  ListOfString skills = 5;
-  ListOfString certifications = 6;
-  ListOfListOfProject project_history = 7;
 }
 
 message Product {
   string upc = 1;
-  ListOfProject projects = 2;
-  ListOfListOfString feature_matrix = 3;
+  repeated Project projects = 2;
 }
 
 enum ProjectStatus {
@@ -562,15 +411,6 @@ message ProjectActivity {
   }
 }
 
-message Node {
-  oneof instance {
-  Project project = 1;
-  Milestone milestone = 2;
-  Task task = 3;
-  ProjectUpdate project_update = 4;
-  }
-}
-
 message ProjectInput {
   string name = 1;
   google.protobuf.StringValue description = 2;
@@ -598,13 +438,23 @@ message TaskInput {
 }
 
 message ProjectUpdate {
+  reserved 3 to 4;
   string id = 1;
   string project_id = 2;
-  int32 updated_by_id = 3;
-  ProjectUpdateType update_type = 4;
-  string description = 5;
-  string timestamp = 6;
-  google.protobuf.StringValue metadata = 7;
+  ProjectUpdateType update_type = 5;
+  string description = 6;
+  string timestamp = 7;
+  google.protobuf.StringValue metadata = 8;
+  int32 updated_by_id = 9;
+}
+
+message Node {
+  oneof instance {
+  Project project = 1;
+  Milestone milestone = 2;
+  Task task = 3;
+  ProjectUpdate project_update = 4;
+  }
 }
 
 message Timestamped {

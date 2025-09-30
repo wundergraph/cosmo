@@ -8,20 +8,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/wundergraph/cosmo/router/pkg/metric"
-
 	"github.com/cespare/xxhash/v2"
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
-)
-
-const (
-	natsRequest = "request"
-	natsPublish = "publish"
-	natsReceive = "receive"
 )
 
 // Adapter defines the methods that a NATS adapter should implement
@@ -40,17 +32,16 @@ type Adapter interface {
 
 // ProviderAdapter implements the AdapterInterface for NATS pub/sub
 type ProviderAdapter struct {
-	ctx               context.Context
-	client            *nats.Conn
-	js                jetstream.JetStream
-	logger            *zap.Logger
-	closeWg           sync.WaitGroup
-	hostName          string
-	routerListenAddr  string
-	url               string
-	opts              []nats.Option
-	flushTimeout      time.Duration
-	streamMetricStore metric.StreamMetricStore
+	ctx              context.Context
+	client           *nats.Conn
+	js               jetstream.JetStream
+	logger           *zap.Logger
+	closeWg          sync.WaitGroup
+	hostName         string
+	routerListenAddr string
+	url              string
+	opts             []nats.Option
+	flushTimeout     time.Duration
 }
 
 // getInstanceIdentifier returns an identifier for the current instance.
@@ -141,12 +132,6 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 					for msg := range msgBatch.Messages() {
 						log.Debug("subscription update", zap.String("message_subject", msg.Subject()), zap.ByteString("data", msg.Data()))
 
-						p.streamMetricStore.Consume(p.ctx, metric.StreamsEvent{
-							ProviderId:          event.ProviderID,
-							StreamOperationName: natsReceive,
-							ProviderType:        metric.ProviderTypeNats,
-							DestinationName:     msg.Subject(),
-						})
 						updater.Update(msg.Data())
 
 						// Acknowledge the message after it has been processed
@@ -184,12 +169,6 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 			select {
 			case msg := <-msgChan:
 				log.Debug("subscription update", zap.String("message_subject", msg.Subject), zap.ByteString("data", msg.Data))
-				p.streamMetricStore.Consume(p.ctx, metric.StreamsEvent{
-					ProviderId:          event.ProviderID,
-					StreamOperationName: natsReceive,
-					ProviderType:        metric.ProviderTypeNats,
-					DestinationName:     msg.Subject,
-				})
 				updater.Update(msg.Data)
 			case <-p.ctx.Done():
 				// When the application context is done, we stop the subscriptions
@@ -218,7 +197,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 	return nil
 }
 
-func (p *ProviderAdapter) Publish(ctx context.Context, event PublishAndRequestEventConfiguration) error {
+func (p *ProviderAdapter) Publish(_ context.Context, event PublishAndRequestEventConfiguration) error {
 	log := p.logger.With(
 		zap.String("provider_id", event.ProviderID),
 		zap.String("method", "publish"),
@@ -234,21 +213,7 @@ func (p *ProviderAdapter) Publish(ctx context.Context, event PublishAndRequestEv
 	err := p.client.Publish(event.Subject, event.Data)
 	if err != nil {
 		log.Error("publish error", zap.Error(err))
-		p.streamMetricStore.Produce(ctx, metric.StreamsEvent{
-			ProviderId:          event.ProviderID,
-			StreamOperationName: natsPublish,
-			ProviderType:        metric.ProviderTypeNats,
-			ErrorType:           "publish_error",
-			DestinationName:     event.Subject,
-		})
 		return datasource.NewError(fmt.Sprintf("error publishing to NATS subject %s", event.Subject), err)
-	} else {
-		p.streamMetricStore.Produce(ctx, metric.StreamsEvent{
-			ProviderId:          event.ProviderID,
-			StreamOperationName: natsPublish,
-			ProviderType:        metric.ProviderTypeNats,
-			DestinationName:     event.Subject,
-		})
 	}
 
 	return nil
@@ -270,24 +235,9 @@ func (p *ProviderAdapter) Request(ctx context.Context, event PublishAndRequestEv
 	msg, err := p.client.RequestWithContext(ctx, event.Subject, event.Data)
 	if err != nil {
 		log.Error("request error", zap.Error(err))
-		p.streamMetricStore.Produce(ctx, metric.StreamsEvent{
-			ProviderId:          event.ProviderID,
-			StreamOperationName: natsRequest,
-			ProviderType:        metric.ProviderTypeNats,
-			ErrorType:           "request_error",
-			DestinationName:     event.Subject,
-		})
 		return datasource.NewError(fmt.Sprintf("error requesting from NATS subject %s", event.Subject), err)
 	}
 
-	p.streamMetricStore.Produce(ctx, metric.StreamsEvent{
-		ProviderId:          event.ProviderID,
-		StreamOperationName: natsRequest,
-		ProviderType:        metric.ProviderTypeNats,
-		DestinationName:     event.Subject,
-	})
-
-	// We don't collect metrics on err here as it's an error related to the writer
 	_, err = w.Write(msg.Data)
 	if err != nil {
 		log.Error("error writing response to writer", zap.Error(err))
@@ -353,27 +303,19 @@ func (p *ProviderAdapter) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func NewAdapter(ctx context.Context, logger *zap.Logger, url string, opts []nats.Option, hostName string, routerListenAddr string, providerOpts datasource.ProviderOpts) (Adapter, error) {
+func NewAdapter(ctx context.Context, logger *zap.Logger, url string, opts []nats.Option, hostName string, routerListenAddr string) (Adapter, error) {
 	if logger == nil {
 		logger = zap.NewNop()
 	}
 
-	var store metric.StreamMetricStore
-	if providerOpts.StreamMetricStore != nil {
-		store = providerOpts.StreamMetricStore
-	} else {
-		store = metric.NewNoopStreamMetricStore()
-	}
-
 	return &ProviderAdapter{
-		ctx:               ctx,
-		logger:            logger.With(zap.String("pubsub", "nats")),
-		closeWg:           sync.WaitGroup{},
-		hostName:          hostName,
-		routerListenAddr:  routerListenAddr,
-		url:               url,
-		opts:              opts,
-		flushTimeout:      10 * time.Second,
-		streamMetricStore: store,
+		ctx:              ctx,
+		logger:           logger.With(zap.String("pubsub", "nats")),
+		closeWg:          sync.WaitGroup{},
+		hostName:         hostName,
+		routerListenAddr: routerListenAddr,
+		url:              url,
+		opts:             opts,
+		flushTimeout:     10 * time.Second,
 	}, nil
 }

@@ -145,7 +145,7 @@
       "properties": {
         "disabled": {
           "type": "boolean",
-          "description": "Disable persisted operations.",
+          "description": "Disables persisted operations. If disabled, all operations sent with a persisted operation in the body are blocked.",
           "default": false
         },
         "safelist": {
@@ -694,14 +694,6 @@
           "properties": {
             "fields": {
               "$ref": "#/$defs/context_fields"
-            },
-            "ignore_query_params_list": {
-              "type": "array",
-              "description": "List of query params to be ignored from being logged in the query field.",
-              "default": ["variables"],
-              "items": {
-                "type": "string"
-              }
             }
           }
         },
@@ -1066,11 +1058,6 @@
                   "default": false,
                   "description": "Enable the collection of connection stats. The default value is false."
                 },
-                "streams": {
-                  "type": "boolean",
-                  "default": false,
-                  "description": "Enable the collection of stream metrics. This contains metrics related to EDFS. The default value is false."
-                },
                 "circuit_breaker": {
                   "type": "boolean",
                   "default": false,
@@ -1175,11 +1162,6 @@
                   "type": "boolean",
                   "default": false,
                   "description": "Enable the collection of connection stats. The default value is false."
-                },
-                "streams": {
-                  "type": "boolean",
-                  "default": false,
-                  "description": "Enable the collection of stream metrics. This contains metrics related to EDFS. The default value is false."
                 },
                 "circuit_breaker": {
                   "type": "boolean",
@@ -1667,25 +1649,22 @@
                     "description": "The URL of the JWKs. The JWKs are used to verify the JWT (JSON Web Token). The URL is specified as a string with the format 'scheme://host:port'.",
                     "format": "http-url"
                   },
-                  "audiences": {
-                    "type": "array",
-                    "description": "The audiences of the JWKs. The audiences are used to verify the JWT (JSON Web Token). The audiences are specified as a list of strings.",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
                   "secret": {
                     "type": "string",
                     "description": "The secret of the JWKs"
                   },
-                  "symmetric_algorithm": {
+                  "algorithm": {
                     "type": "string",
-                    "description": "The symmetric algorithm used",
-                    "enum": ["HS256", "HS384", "HS512"]
+                    "description": "The algorithm used",
+                    "enum": [
+                      "HS256",
+                      "HS384",
+                      "HS512"
+                    ]
                   },
-                  "header_key_id": {
+                  "key_id": {
                     "type": "string",
-                    "description": "The KID header of the JWK token created using the secret"
+                    "description": "The secret of the JWKs"
                   },
                   "algorithms": {
                     "type": "array",
@@ -1693,9 +1672,6 @@
                     "items": {
                       "type": "string",
                       "enum": [
-                        "HS256",
-                        "HS384",
-                        "HS512",
                         "RS256",
                         "RS384",
                         "RS512",
@@ -1716,74 +1692,16 @@
                     },
                     "description": "The interval at which the JWKs are refreshed. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
                     "default": "1m"
-                  },
-                  "refresh_unknown_kid": {
-                    "type": "object",
-                    "description": "Controls rate-limited refresh behavior when a JWT KID is unknown.",
-                    "additionalProperties": false,
-                    "properties": {
-                      "enabled": {
-                        "type": "boolean",
-                        "description": "Enable refresh attempts on unknown KID.",
-                        "default": false
-                      },
-                      "max_wait": {
-                        "type": "string",
-                        "description": "Maximum time to wait for a refresh permit before giving up.",
-                        "default": "10s",
-                        "duration": {
-                          "minimum": "0s"
-                        }
-                      },
-                      "interval": {
-                        "type": "string",
-                        "description": "Token refill interval for the rate limiter.",
-                        "default": "1m",
-                        "duration": {
-                          "minimum": "1s"
-                        }
-                      },
-                      "burst": {
-                        "type": "integer",
-                        "description": "Burst size for the rate limiter.",
-                        "default": 2,
-                        "minimum": 1
-                      }
-                    }
                   }
                 },
                 "oneOf": [
                   {
                     "required": ["url"],
-                    "not": {
-                      "anyOf": [
-                        {
-                          "required": ["secret"]
-                        },
-                        {
-                          "required": ["symmetric_algorithm"]
-                        },
-                        {
-                          "required": ["header_key_id"]
-                        }
-                      ]
-                    }
+                    "not": { "anyOf": [{ "required": ["secret"] }, { "required": ["algorithm"] }, { "required": ["key_id"] }] }
                   },
                   {
-                    "required": ["secret", "symmetric_algorithm", "header_key_id"],
-                    "not": {
-                      "anyOf": [
-                        {
-                          "required": ["url"]
-                        },
-                        {
-                          "required": ["algorithms"]
-                        },
-                        {
-                          "required": ["refresh_interval"]
-                        }
-                      ]
-                    }
+                    "required": ["secret", "algorithm", "key_id"],
+                    "not": { "anyOf": [{ "required": ["url"] }, { "required": ["algorithms"] }, { "required": ["refresh_interval"] }] }
                   }
                 ]
               }
@@ -2020,18 +1938,6 @@
             }
           },
           "required": ["provider_id"]
-        },
-        "session": {
-          "type": "object",
-          "description": "Session configuration for the MCP server. This controls how the MCP server handles client sessions.",
-          "additionalProperties": false,
-          "properties": {
-            "stateless": {
-              "type": "boolean",
-              "default": true,
-              "description": "Whether the MCP server should operate in stateless mode. When true, the server does not maintain session state between requests. When false, the server maintains session state, which can be useful for certain AI model integrations."
-            }
-          }
         },
         "graph_name": {
           "type": "string",
@@ -2417,26 +2323,11 @@
           "properties": {
             "enabled": {
               "type": "boolean",
-              "description": "Block non-persisted operations (sent without operation hash). You can also specify a condition that is evaluated to determine if the non-persisted operation should be blocked."
+              "description": "Block non-persisted operations (sent with operation ID). If the value is true, all Operations are blocked. You can also specify a condition that is evaluated to determine if the non-persisted operation should be blocked."
             },
             "condition": {
               "type": "string",
               "description": "The expression to evaluate if the non-persisted operation should be blocked. The expression is specified as a string and needs to evaluate to a boolean. Please see https://expr-lang.org/ for more information."
-            }
-          }
-        },
-        "block_persisted_operations": {
-          "type": "object",
-          "description": "The configuration for blocking persisted operations.",
-          "additionalProperties": false,
-          "properties": {
-            "enabled": {
-              "type": "boolean",
-              "description": "Block persisted operations (sent with operation hash). You can also specify a condition that is evaluated to determine if the persisted operation should be blocked."
-            },
-            "condition": {
-              "type": "string",
-              "description": "The expression to evaluate if the persisted operation should be blocked. The expression is specified as a string and needs to evaluate to a boolean. Please see https://expr-lang.org/ for more information."
             }
           }
         },
@@ -2556,12 +2447,6 @@
             }
           }
         },
-        "operation_name_length_limit": {
-          "type": "integer",
-          "description": "The maximum allowed length of the operation name, 0 allows any length.",
-          "default": "512",
-          "minimum": 0
-        },
         "depth_limit": {
           "type": "object",
           "description": "DEPRECATED (move to complexity_limits.depth): The configuration for adding a max depth limit for query (how many nested levels you can have in a query).",
@@ -2599,13 +2484,13 @@
             "approximate_depth_limit": {
               "type": "integer",
               "description": "The approximate cumulative depth limit of a query, including fragments. Set to 0 to disable.",
-              "default": 200,
+              "default": 100,
               "minimum": 0
             },
             "total_fields_limit": {
               "type": "integer",
               "description": "The total number of fields the parser will allow. Set to 0 to disable.",
-              "default": 3500,
+              "default": 500,
               "minimum": 0
             }
           }
@@ -2822,28 +2707,18 @@
         "enable_subgraph_fetch_operation_name": {
           "type": "boolean",
           "default": false,
-          "description": "Enable appending the operation name to subgraph fetches. This will ensure that the operation name will be included in the corresponding subgraph requests using the following format: $OperationName__$SubgraphName__$FetchID."
+          "description": "Enable appending the operation name to subgraph fetches. This will ensure that the operation name will be included in the corresponding subgraph requests using the following format: $operationName__$subgraphName__$sequenceID."
         },
         "disable_variables_remapping": {
           "type": "boolean",
           "default": false,
           "description": "Disables variables renaming during normalization. This option could have a negative impact on planner cache hits."
         },
-        "enable_require_fetch_reasons": {
-          "type": "boolean",
-          "default": false,
-          "description": "Enables sending the \"fetch_reasons\" extension to upstream subgraphs (only) that explains why each field (marked with @openfed__requireFetchReasons) was requested. This flag does not expose the data to clients."
-        },
         "subscription_fetch_timeout": {
           "type": "string",
           "format": "go-duration",
           "default": "30s",
           "description": "The maximum time a subscription fetch can take before it is considered timed out. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
-        },
-        "validate_required_external_fields": {
-          "type": "boolean",
-          "default": false,
-          "description": "Enables validation of resolved input field set specified as an argument for \"requires\" directive. If this field set 'points' to a nullable fields marked as external, and if router resolves such a field set with null values with errors pointing to those values, then it will not provide such entities to the resolver of the field on which directive was specified."
         }
       }
     },
@@ -3034,18 +2909,6 @@
           "type": "string",
           "description": "The path to the plugins directory. The plugins directory is used to load the plugins.",
           "default": "plugins"
-        },
-        "registry": {
-          "type": "object",
-          "description": "Configuration for the plugin registry.",
-          "additionalProperties": false,
-          "properties": {
-            "url": {
-              "type": "string",
-              "default": "cosmo-registry.wundergraph.com",
-              "description": "The URL of the plugin registry."
-            }
-          }
         }
       }
     },
@@ -3298,11 +3161,6 @@
               "format": "go-duration",
               "default": "10s",
               "description": "The maximum allowable duration between retries (random). The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
-            },
-            "expression": {
-              "type": "string",
-              "description": "The expression used to determine if a request should be retried. The expression can reference status codes, error messages, and helper functions like IsRetryableStatusCode(), IsConnectionError(), IsHttpReadTimeout(), IsTimeout() (includes HTTP read timeouts). See https://expr-lang.org/ for expression syntax. Note: Mutations are never retried regardless of this expression. EOF errors are always retried at the transport layer regardless of this expression.",
-              "default": "IsRetryableStatusCode() || IsConnectionError() || IsTimeout()"
             }
           }
         }

@@ -62,9 +62,6 @@ const (
 	// PlatformServiceGetNamespaceProcedure is the fully-qualified name of the PlatformService's
 	// GetNamespace RPC.
 	PlatformServiceGetNamespaceProcedure = "/wg.cosmo.platform.v1.PlatformService/GetNamespace"
-	// PlatformServiceGetWorkspaceProcedure is the fully-qualified name of the PlatformService's
-	// GetWorkspace RPC.
-	PlatformServiceGetWorkspaceProcedure = "/wg.cosmo.platform.v1.PlatformService/GetWorkspace"
 	// PlatformServiceCreateContractProcedure is the fully-qualified name of the PlatformService's
 	// CreateContract RPC.
 	PlatformServiceCreateContractProcedure = "/wg.cosmo.platform.v1.PlatformService/CreateContract"
@@ -529,15 +526,6 @@ const (
 	// PlatformServiceGetClientsFromAnalyticsProcedure is the fully-qualified name of the
 	// PlatformService's GetClientsFromAnalytics RPC.
 	PlatformServiceGetClientsFromAnalyticsProcedure = "/wg.cosmo.platform.v1.PlatformService/GetClientsFromAnalytics"
-	// PlatformServiceValidateAndFetchPluginDataProcedure is the fully-qualified name of the
-	// PlatformService's ValidateAndFetchPluginData RPC.
-	PlatformServiceValidateAndFetchPluginDataProcedure = "/wg.cosmo.platform.v1.PlatformService/ValidateAndFetchPluginData"
-	// PlatformServiceLinkSubgraphProcedure is the fully-qualified name of the PlatformService's
-	// LinkSubgraph RPC.
-	PlatformServiceLinkSubgraphProcedure = "/wg.cosmo.platform.v1.PlatformService/LinkSubgraph"
-	// PlatformServiceUnlinkSubgraphProcedure is the fully-qualified name of the PlatformService's
-	// UnlinkSubgraph RPC.
-	PlatformServiceUnlinkSubgraphProcedure = "/wg.cosmo.platform.v1.PlatformService/UnlinkSubgraph"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
@@ -552,7 +540,6 @@ var (
 	platformServiceRenameNamespaceMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("RenameNamespace")
 	platformServiceGetNamespacesMethodDescriptor                         = platformServiceServiceDescriptor.Methods().ByName("GetNamespaces")
 	platformServiceGetNamespaceMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("GetNamespace")
-	platformServiceGetWorkspaceMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("GetWorkspace")
 	platformServiceCreateContractMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("CreateContract")
 	platformServiceUpdateContractMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("UpdateContract")
 	platformServiceMoveFederatedGraphMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("MoveFederatedGraph")
@@ -708,9 +695,6 @@ var (
 	platformServiceGetProposalChecksMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("GetProposalChecks")
 	platformServiceGetOperationsMethodDescriptor                         = platformServiceServiceDescriptor.Methods().ByName("GetOperations")
 	platformServiceGetClientsFromAnalyticsMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("GetClientsFromAnalytics")
-	platformServiceValidateAndFetchPluginDataMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("ValidateAndFetchPluginData")
-	platformServiceLinkSubgraphMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("LinkSubgraph")
-	platformServiceUnlinkSubgraphMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("UnlinkSubgraph")
 )
 
 // PlatformServiceClient is a client for the wg.cosmo.platform.v1.PlatformService service.
@@ -726,8 +710,6 @@ type PlatformServiceClient interface {
 	RenameNamespace(context.Context, *connect.Request[v1.RenameNamespaceRequest]) (*connect.Response[v1.RenameNamespaceResponse], error)
 	GetNamespaces(context.Context, *connect.Request[v1.GetNamespacesRequest]) (*connect.Response[v1.GetNamespacesResponse], error)
 	GetNamespace(context.Context, *connect.Request[v1.GetNamespaceRequest]) (*connect.Response[v1.GetNamespaceResponse], error)
-	// Workspace
-	GetWorkspace(context.Context, *connect.Request[v1.GetWorkspaceRequest]) (*connect.Response[v1.GetWorkspaceResponse], error)
 	// Contracts
 	CreateContract(context.Context, *connect.Request[v1.CreateContractRequest]) (*connect.Response[v1.CreateContractResponse], error)
 	UpdateContract(context.Context, *connect.Request[v1.UpdateContractRequest]) (*connect.Response[v1.UpdateContractResponse], error)
@@ -1027,12 +1009,6 @@ type PlatformServiceClient interface {
 	GetOperations(context.Context, *connect.Request[v1.GetOperationsRequest]) (*connect.Response[v1.GetOperationsResponse], error)
 	// GetClientsFromAnalytics returns all the clients of the federated graph from the analytics
 	GetClientsFromAnalytics(context.Context, *connect.Request[v1.GetClientsFromAnalyticsRequest]) (*connect.Response[v1.GetClientsFromAnalyticsResponse], error)
-	// ValidateAndFetchPluginData validates the limit of plugins and returns the latest version and token
-	ValidateAndFetchPluginData(context.Context, *connect.Request[v1.ValidateAndFetchPluginDataRequest]) (*connect.Response[v1.ValidateAndFetchPluginDataResponse], error)
-	// LinkSubgraph links one subgraph to another
-	LinkSubgraph(context.Context, *connect.Request[v1.LinkSubgraphRequest]) (*connect.Response[v1.LinkSubgraphResponse], error)
-	// UnlinkSubgraph unlinks one subgraph from another
-	UnlinkSubgraph(context.Context, *connect.Request[v1.UnlinkSubgraphRequest]) (*connect.Response[v1.UnlinkSubgraphResponse], error)
 }
 
 // NewPlatformServiceClient constructs a client for the wg.cosmo.platform.v1.PlatformService
@@ -1097,12 +1073,6 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			httpClient,
 			baseURL+PlatformServiceGetNamespaceProcedure,
 			connect.WithSchema(platformServiceGetNamespaceMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		getWorkspace: connect.NewClient[v1.GetWorkspaceRequest, v1.GetWorkspaceResponse](
-			httpClient,
-			baseURL+PlatformServiceGetWorkspaceProcedure,
-			connect.WithSchema(platformServiceGetWorkspaceMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		createContract: connect.NewClient[v1.CreateContractRequest, v1.CreateContractResponse](
@@ -2042,24 +2012,6 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceGetClientsFromAnalyticsMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
-		validateAndFetchPluginData: connect.NewClient[v1.ValidateAndFetchPluginDataRequest, v1.ValidateAndFetchPluginDataResponse](
-			httpClient,
-			baseURL+PlatformServiceValidateAndFetchPluginDataProcedure,
-			connect.WithSchema(platformServiceValidateAndFetchPluginDataMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		linkSubgraph: connect.NewClient[v1.LinkSubgraphRequest, v1.LinkSubgraphResponse](
-			httpClient,
-			baseURL+PlatformServiceLinkSubgraphProcedure,
-			connect.WithSchema(platformServiceLinkSubgraphMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		unlinkSubgraph: connect.NewClient[v1.UnlinkSubgraphRequest, v1.UnlinkSubgraphResponse](
-			httpClient,
-			baseURL+PlatformServiceUnlinkSubgraphProcedure,
-			connect.WithSchema(platformServiceUnlinkSubgraphMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
 	}
 }
 
@@ -2074,7 +2026,6 @@ type platformServiceClient struct {
 	renameNamespace                       *connect.Client[v1.RenameNamespaceRequest, v1.RenameNamespaceResponse]
 	getNamespaces                         *connect.Client[v1.GetNamespacesRequest, v1.GetNamespacesResponse]
 	getNamespace                          *connect.Client[v1.GetNamespaceRequest, v1.GetNamespaceResponse]
-	getWorkspace                          *connect.Client[v1.GetWorkspaceRequest, v1.GetWorkspaceResponse]
 	createContract                        *connect.Client[v1.CreateContractRequest, v1.CreateContractResponse]
 	updateContract                        *connect.Client[v1.UpdateContractRequest, v1.UpdateContractResponse]
 	moveFederatedGraph                    *connect.Client[v1.MoveGraphRequest, v1.MoveGraphResponse]
@@ -2230,9 +2181,6 @@ type platformServiceClient struct {
 	getProposalChecks                     *connect.Client[v1.GetProposalChecksRequest, v1.GetProposalChecksResponse]
 	getOperations                         *connect.Client[v1.GetOperationsRequest, v1.GetOperationsResponse]
 	getClientsFromAnalytics               *connect.Client[v1.GetClientsFromAnalyticsRequest, v1.GetClientsFromAnalyticsResponse]
-	validateAndFetchPluginData            *connect.Client[v1.ValidateAndFetchPluginDataRequest, v1.ValidateAndFetchPluginDataResponse]
-	linkSubgraph                          *connect.Client[v1.LinkSubgraphRequest, v1.LinkSubgraphResponse]
-	unlinkSubgraph                        *connect.Client[v1.UnlinkSubgraphRequest, v1.UnlinkSubgraphResponse]
 }
 
 // CreatePlaygroundScript calls wg.cosmo.platform.v1.PlatformService.CreatePlaygroundScript.
@@ -2278,11 +2226,6 @@ func (c *platformServiceClient) GetNamespaces(ctx context.Context, req *connect.
 // GetNamespace calls wg.cosmo.platform.v1.PlatformService.GetNamespace.
 func (c *platformServiceClient) GetNamespace(ctx context.Context, req *connect.Request[v1.GetNamespaceRequest]) (*connect.Response[v1.GetNamespaceResponse], error) {
 	return c.getNamespace.CallUnary(ctx, req)
-}
-
-// GetWorkspace calls wg.cosmo.platform.v1.PlatformService.GetWorkspace.
-func (c *platformServiceClient) GetWorkspace(ctx context.Context, req *connect.Request[v1.GetWorkspaceRequest]) (*connect.Response[v1.GetWorkspaceResponse], error) {
-	return c.getWorkspace.CallUnary(ctx, req)
 }
 
 // CreateContract calls wg.cosmo.platform.v1.PlatformService.CreateContract.
@@ -3093,21 +3036,6 @@ func (c *platformServiceClient) GetClientsFromAnalytics(ctx context.Context, req
 	return c.getClientsFromAnalytics.CallUnary(ctx, req)
 }
 
-// ValidateAndFetchPluginData calls wg.cosmo.platform.v1.PlatformService.ValidateAndFetchPluginData.
-func (c *platformServiceClient) ValidateAndFetchPluginData(ctx context.Context, req *connect.Request[v1.ValidateAndFetchPluginDataRequest]) (*connect.Response[v1.ValidateAndFetchPluginDataResponse], error) {
-	return c.validateAndFetchPluginData.CallUnary(ctx, req)
-}
-
-// LinkSubgraph calls wg.cosmo.platform.v1.PlatformService.LinkSubgraph.
-func (c *platformServiceClient) LinkSubgraph(ctx context.Context, req *connect.Request[v1.LinkSubgraphRequest]) (*connect.Response[v1.LinkSubgraphResponse], error) {
-	return c.linkSubgraph.CallUnary(ctx, req)
-}
-
-// UnlinkSubgraph calls wg.cosmo.platform.v1.PlatformService.UnlinkSubgraph.
-func (c *platformServiceClient) UnlinkSubgraph(ctx context.Context, req *connect.Request[v1.UnlinkSubgraphRequest]) (*connect.Response[v1.UnlinkSubgraphResponse], error) {
-	return c.unlinkSubgraph.CallUnary(ctx, req)
-}
-
 // PlatformServiceHandler is an implementation of the wg.cosmo.platform.v1.PlatformService service.
 type PlatformServiceHandler interface {
 	// PlaygroundScripts
@@ -3121,8 +3049,6 @@ type PlatformServiceHandler interface {
 	RenameNamespace(context.Context, *connect.Request[v1.RenameNamespaceRequest]) (*connect.Response[v1.RenameNamespaceResponse], error)
 	GetNamespaces(context.Context, *connect.Request[v1.GetNamespacesRequest]) (*connect.Response[v1.GetNamespacesResponse], error)
 	GetNamespace(context.Context, *connect.Request[v1.GetNamespaceRequest]) (*connect.Response[v1.GetNamespaceResponse], error)
-	// Workspace
-	GetWorkspace(context.Context, *connect.Request[v1.GetWorkspaceRequest]) (*connect.Response[v1.GetWorkspaceResponse], error)
 	// Contracts
 	CreateContract(context.Context, *connect.Request[v1.CreateContractRequest]) (*connect.Response[v1.CreateContractResponse], error)
 	UpdateContract(context.Context, *connect.Request[v1.UpdateContractRequest]) (*connect.Response[v1.UpdateContractResponse], error)
@@ -3422,12 +3348,6 @@ type PlatformServiceHandler interface {
 	GetOperations(context.Context, *connect.Request[v1.GetOperationsRequest]) (*connect.Response[v1.GetOperationsResponse], error)
 	// GetClientsFromAnalytics returns all the clients of the federated graph from the analytics
 	GetClientsFromAnalytics(context.Context, *connect.Request[v1.GetClientsFromAnalyticsRequest]) (*connect.Response[v1.GetClientsFromAnalyticsResponse], error)
-	// ValidateAndFetchPluginData validates the limit of plugins and returns the latest version and token
-	ValidateAndFetchPluginData(context.Context, *connect.Request[v1.ValidateAndFetchPluginDataRequest]) (*connect.Response[v1.ValidateAndFetchPluginDataResponse], error)
-	// LinkSubgraph links one subgraph to another
-	LinkSubgraph(context.Context, *connect.Request[v1.LinkSubgraphRequest]) (*connect.Response[v1.LinkSubgraphResponse], error)
-	// UnlinkSubgraph unlinks one subgraph from another
-	UnlinkSubgraph(context.Context, *connect.Request[v1.UnlinkSubgraphRequest]) (*connect.Response[v1.UnlinkSubgraphResponse], error)
 }
 
 // NewPlatformServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -3488,12 +3408,6 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		PlatformServiceGetNamespaceProcedure,
 		svc.GetNamespace,
 		connect.WithSchema(platformServiceGetNamespaceMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	platformServiceGetWorkspaceHandler := connect.NewUnaryHandler(
-		PlatformServiceGetWorkspaceProcedure,
-		svc.GetWorkspace,
-		connect.WithSchema(platformServiceGetWorkspaceMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceCreateContractHandler := connect.NewUnaryHandler(
@@ -4433,24 +4347,6 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceGetClientsFromAnalyticsMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
-	platformServiceValidateAndFetchPluginDataHandler := connect.NewUnaryHandler(
-		PlatformServiceValidateAndFetchPluginDataProcedure,
-		svc.ValidateAndFetchPluginData,
-		connect.WithSchema(platformServiceValidateAndFetchPluginDataMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	platformServiceLinkSubgraphHandler := connect.NewUnaryHandler(
-		PlatformServiceLinkSubgraphProcedure,
-		svc.LinkSubgraph,
-		connect.WithSchema(platformServiceLinkSubgraphMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	platformServiceUnlinkSubgraphHandler := connect.NewUnaryHandler(
-		PlatformServiceUnlinkSubgraphProcedure,
-		svc.UnlinkSubgraph,
-		connect.WithSchema(platformServiceUnlinkSubgraphMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
 	return "/wg.cosmo.platform.v1.PlatformService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case PlatformServiceCreatePlaygroundScriptProcedure:
@@ -4471,8 +4367,6 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceGetNamespacesHandler.ServeHTTP(w, r)
 		case PlatformServiceGetNamespaceProcedure:
 			platformServiceGetNamespaceHandler.ServeHTTP(w, r)
-		case PlatformServiceGetWorkspaceProcedure:
-			platformServiceGetWorkspaceHandler.ServeHTTP(w, r)
 		case PlatformServiceCreateContractProcedure:
 			platformServiceCreateContractHandler.ServeHTTP(w, r)
 		case PlatformServiceUpdateContractProcedure:
@@ -4783,12 +4677,6 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceGetOperationsHandler.ServeHTTP(w, r)
 		case PlatformServiceGetClientsFromAnalyticsProcedure:
 			platformServiceGetClientsFromAnalyticsHandler.ServeHTTP(w, r)
-		case PlatformServiceValidateAndFetchPluginDataProcedure:
-			platformServiceValidateAndFetchPluginDataHandler.ServeHTTP(w, r)
-		case PlatformServiceLinkSubgraphProcedure:
-			platformServiceLinkSubgraphHandler.ServeHTTP(w, r)
-		case PlatformServiceUnlinkSubgraphProcedure:
-			platformServiceUnlinkSubgraphHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -4832,10 +4720,6 @@ func (UnimplementedPlatformServiceHandler) GetNamespaces(context.Context, *conne
 
 func (UnimplementedPlatformServiceHandler) GetNamespace(context.Context, *connect.Request[v1.GetNamespaceRequest]) (*connect.Response[v1.GetNamespaceResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetNamespace is not implemented"))
-}
-
-func (UnimplementedPlatformServiceHandler) GetWorkspace(context.Context, *connect.Request[v1.GetWorkspaceRequest]) (*connect.Response[v1.GetWorkspaceResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetWorkspace is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) CreateContract(context.Context, *connect.Request[v1.CreateContractRequest]) (*connect.Response[v1.CreateContractResponse], error) {
@@ -5456,16 +5340,4 @@ func (UnimplementedPlatformServiceHandler) GetOperations(context.Context, *conne
 
 func (UnimplementedPlatformServiceHandler) GetClientsFromAnalytics(context.Context, *connect.Request[v1.GetClientsFromAnalyticsRequest]) (*connect.Response[v1.GetClientsFromAnalyticsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetClientsFromAnalytics is not implemented"))
-}
-
-func (UnimplementedPlatformServiceHandler) ValidateAndFetchPluginData(context.Context, *connect.Request[v1.ValidateAndFetchPluginDataRequest]) (*connect.Response[v1.ValidateAndFetchPluginDataResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.ValidateAndFetchPluginData is not implemented"))
-}
-
-func (UnimplementedPlatformServiceHandler) LinkSubgraph(context.Context, *connect.Request[v1.LinkSubgraphRequest]) (*connect.Response[v1.LinkSubgraphResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.LinkSubgraph is not implemented"))
-}
-
-func (UnimplementedPlatformServiceHandler) UnlinkSubgraph(context.Context, *connect.Request[v1.UnlinkSubgraphRequest]) (*connect.Response[v1.UnlinkSubgraphResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UnlinkSubgraph is not implemented"))
 }

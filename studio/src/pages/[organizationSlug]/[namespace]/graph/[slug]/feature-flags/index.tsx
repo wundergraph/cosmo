@@ -21,13 +21,12 @@ import { getFeatureFlagsByFederatedGraph } from "@wundergraph/cosmo-connect/dist
 import { useRouter } from "next/router";
 import { useContext, useState } from "react";
 import { useDebounce } from "use-debounce";
-import { useWorkspace } from "@/hooks/use-workspace";
 
 const FeatureFlagsPage: NextPageWithLayout = () => {
   const graphData = useContext(GraphContext);
   const router = useRouter();
 
-  const { namespace: { name: namespace } } = useWorkspace();
+  const namespace = router.query.namespace as string;
 
   const pageNumber = router.query.page
     ? parseInt(router.query.page as string)

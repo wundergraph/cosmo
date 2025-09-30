@@ -48,8 +48,6 @@ export const registerSubgraphVerifySchemaChangesTool = ({ server, opts }: ToolCo
                   clientTrafficCheckSkipped: resp.clientTrafficCheckSkipped === true,
                   hasProposalMatchError:
                     resp.response?.code === EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL,
-                  isLinkedTrafficCheckFailed: resp.isLinkedTrafficCheckFailed,
-                  isLinkedPruningCheckFailed: resp.isLinkedPruningCheckFailed,
                 }),
               },
               null,
@@ -70,8 +68,6 @@ const isCheckSuccessful = ({
   hasGraphPruningErrors,
   clientTrafficCheckSkipped,
   hasProposalMatchError,
-  isLinkedTrafficCheckFailed,
-  isLinkedPruningCheckFailed,
 }: {
   isComposable: boolean;
   isBreaking: boolean;
@@ -80,14 +76,7 @@ const isCheckSuccessful = ({
   hasGraphPruningErrors: boolean;
   clientTrafficCheckSkipped: boolean;
   hasProposalMatchError: boolean;
-  isLinkedTrafficCheckFailed?: boolean;
-  isLinkedPruningCheckFailed?: boolean;
 }) => {
-  // if a subgraph is linked to another subgraph, then the status of the check depends on the traffic and pruning check of the linked subgraph
-  if (isLinkedTrafficCheckFailed || isLinkedPruningCheckFailed) {
-    return false;
-  }
-
   return (
     isComposable &&
     // If no breaking changes found

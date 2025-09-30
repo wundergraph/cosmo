@@ -77,10 +77,10 @@ func (h *Connector) Run(ctx context.Context) error {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 
-	for subgraphName, provider := range h.clientMap {
+	for _, provider := range h.clientMap {
 		err := provider.Start(ctx)
 		if err != nil {
-			return fmt.Errorf("failed to start plugin for subgraph %s: %w", subgraphName, err)
+			return fmt.Errorf("failed to start plugin %s: %w", provider.Name(), err)
 		}
 	}
 

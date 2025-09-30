@@ -5,11 +5,7 @@ import { docsBaseURL } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@connectrpc/connect-query";
 import { ChartBarIcon, CommandLineIcon } from "@heroicons/react/24/outline";
-import {
-  Component1Icon,
-  Component2Icon,
-  InfoCircledIcon,
-} from "@radix-ui/react-icons";
+import { Component1Icon, Component2Icon, InfoCircledIcon } from "@radix-ui/react-icons";
 import {
   getOrganizationMembers,
   getSubgraphMembers,
@@ -18,7 +14,6 @@ import {
   FederatedGraph,
   Subgraph,
   SubgraphMember,
-  SubgraphType,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
@@ -49,7 +44,6 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { useIsAdmin } from "@/hooks/use-is-admin";
-import { useWorkspace } from "@/hooks/use-workspace";
 
 export const Empty = ({
   graph,
@@ -58,7 +52,7 @@ export const Empty = ({
   graph?: FederatedGraph;
   tab: "subgraphs" | "featureSubgraphs";
 }) => {
-  const { namespace: { name: namespace } } = useWorkspace();
+  const router = useRouter();
 
   let label = "team=A";
   if (graph?.labelMatchers && graph.labelMatchers.length > 0) {
@@ -91,12 +85,12 @@ export const Empty = ({
               {
                 description:
                   "Create a feature subgraph using the below command.",
-                command: `npx wgc feature-subgraph create <feature-subgraph-name> --namespace ${namespace} -r <routing-url> --subgraph <base-subgraph-name>`,
+                command: `npx wgc feature-subgraph create <feature-subgraph-name> --namespace ${router.query.namespace} -r <routing-url> --subgraph <base-subgraph-name>`,
               },
               {
                 description:
                   "Update your feature subgraphs of this feature flag.",
-                command: `npx wgc feature-flag update <feature-flag-name> --namespace ${namespace} --feature-subgraphs <featureSubgraphs...>`,
+                command: `npx wgc feature-flag update <feature-flag-name> --namespace ${router.query.namespace} --feature-subgraphs <featureSubgraphs...>`,
               },
             ]}
           />
@@ -128,7 +122,7 @@ export const Empty = ({
             {
               description:
                 "Publish a subgraph. If the subgraph does not exist, it will be created.",
-              command: `npx wgc subgraph publish users --namespace ${namespace} --schema users.graphql --label ${label} --routing-url http://localhost:4003/graphql`,
+              command: `npx wgc subgraph publish users --namespace ${router.query.namespace} --schema users.graphql --label ${label} --routing-url http://localhost:4003/graphql`,
             },
           ]}
         />
@@ -137,11 +131,7 @@ export const Empty = ({
   );
 };
 
-export const AddSubgraphUsersContent = ({
-  subgraphMembers,
-}: {
-  subgraphMembers: SubgraphMember[];
-}) => {
+export const AddSubgraphUsersContent = ({ subgraphMembers }: { subgraphMembers: SubgraphMember[]; }) => {
   return (
     <div className="flex flex-col gap-y-6">
       <Alert>
@@ -246,9 +236,7 @@ const AddSubgraphUsers = ({
               subgraph
             </DialogTitle>
           </DialogHeader>
-          <AddSubgraphUsersContent
-            subgraphMembers={subgraphMembersData?.members || []}
-          />
+          <AddSubgraphUsersContent subgraphMembers={subgraphMembersData?.members || []} />
         </DialogContent>
       </Dialog>
     </div>
@@ -337,7 +325,6 @@ export const SubgraphsTable = ({
               >
                 {tab === "featureSubgraphs" ? "Base Subgraph Name" : "Labels"}
               </TableHead>
-              <TableHead className="w-2/12 px-4">Type</TableHead>
               <TableHead className="w-2/12 px-4">Last Published</TableHead>
               {rbac?.enabled && <TableHead className="w-1/12"></TableHead>}
             </TableRow>
@@ -350,9 +337,9 @@ export const SubgraphsTable = ({
                 routingURL,
                 lastUpdatedAt,
                 labels,
+                creatorUserId,
                 namespace,
                 baseSubgraphName,
-                type,
               }) => {
                 const path = `/${organizationSlug}/${namespace}/subgraph/${name}`;
                 let analyticsPath = `${path}/analytics`;
@@ -387,7 +374,7 @@ export const SubgraphsTable = ({
                     </TableCell>
                     <TableCell className="px-4 font-medium">{name}</TableCell>
                     <TableCell className="px-4 text-muted-foreground">
-                      {routingURL || "-"}
+                      {routingURL}
                     </TableCell>
                     <TableCell className="px-4">
                       {tab !== "featureSubgraphs" ? (
@@ -413,15 +400,6 @@ export const SubgraphsTable = ({
                         <>{baseSubgraphName}</>
                       )}
                     </TableCell>
-                    <TableCell className="px-4 text-muted-foreground ">
-                      {type === SubgraphType.GRPC_PLUGIN ? (
-                        <Badge variant="outline">GRPC_Plugin</Badge>
-                      ) : type === SubgraphType.GRPC_SERVICE ? (
-                        <Badge variant="outline">GRPC_Service</Badge>
-                      ) : (
-                        <Badge variant="outline">Standard</Badge>
-                      )}
-                    </TableCell>
                     <TableCell className="px-4 text-muted-foreground">
                       {lastUpdatedAt
                         ? formatDistanceToNow(new Date(lastUpdatedAt), {
@@ -430,6 +408,13 @@ export const SubgraphsTable = ({
                         : "Never"}
                     </TableCell>
                     <TableCell className="flex justify-end gap-2">
+                      {rbac?.enabled && (
+                        <AddSubgraphUsers
+                          subgraphName={name}
+                          namespace={namespace}
+                          creatorUserId={creatorUserId}
+                        />
+                      )}
                       <Tooltip delayDuration={200}>
                         <TooltipTrigger asChild>
                           <Button

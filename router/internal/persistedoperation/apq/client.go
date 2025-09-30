@@ -3,7 +3,6 @@ package apq
 import (
 	"context"
 	"errors"
-
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"go.uber.org/zap"

@@ -396,11 +396,8 @@ export function createProposal(
       graphPruneErrors,
       compositionWarnings,
       operationUsageStats,
-      isLinkedTrafficCheckFailed,
-      isLinkedPruningCheckFailed,
     } = await schemaCheckRepo.checkMultipleSchemas({
       organizationId: authContext.organizationId,
-      organizationSlug: authContext.organizationSlug,
       orgRepo,
       subgraphRepo,
       fedGraphRepo,
@@ -450,8 +447,6 @@ export function createProposal(
       checkUrl: `${process.env.WEB_BASE_URL}/${authContext.organizationSlug}/${namespace.name}/graph/${federatedGraph.name}/checks/${checkId}`,
       proposalUrl: `${process.env.WEB_BASE_URL}/${authContext.organizationSlug}/${namespace.name}/graph/${federatedGraph.name}/proposals/${proposal.id}`,
       proposalName: proposal.name,
-      isLinkedTrafficCheckFailed,
-      isLinkedPruningCheckFailed,
     };
   });
 }

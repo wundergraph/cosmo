@@ -3,12 +3,12 @@ import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
-  PublishedOperation,
-  PublishedOperationStatus,
   PublishPersistedOperationsRequest,
   PublishPersistedOperationsResponse,
+  PublishedOperation,
+  PublishedOperationStatus,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { buildASTSchema as graphQLBuildASTSchema, DocumentNode, parse, validate } from 'graphql';
+import { DocumentNode, buildASTSchema as graphQLBuildASTSchema, parse, validate } from 'graphql';
 import { PublishedOperationData, UpdatedPersistedOperation } from '../../../types/index.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
@@ -51,30 +51,6 @@ export function publishPersistedOperations(
         operations: [],
       };
     }
-
-    req.clientName = req.clientName ? req.clientName.trim() : '';
-
-    if (!req.clientName) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `Client name is required`,
-        },
-        operations: [],
-      };
-    }
-
-    // Validate client name. Min length is 3 and max length is 255.
-    if (req.clientName.length < 3 || req.clientName.length > 255) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `Client name must be between 3 and 255 characters`,
-        },
-        operations: [],
-      };
-    }
-
     const organizationId = authContext.organizationId;
     const federatedGraphRepo = new FederatedGraphRepository(logger, opts.db, organizationId);
 
@@ -130,10 +106,20 @@ export function publishPersistedOperations(
         };
       }
     }
-
     const operationsRepo = new OperationsRepository(opts.db, federatedGraph.id);
-    const clientId = await operationsRepo.registerClient(req.clientName, userId);
-
+    let clientId: string;
+    try {
+      clientId = await operationsRepo.registerClient(req.clientName, userId);
+    } catch (e: any) {
+      const message = e instanceof Error ? e.message : e.toString();
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `Could not register client "${req.clientName}": ${message}`,
+        },
+        operations: [],
+      };
+    }
     const operations: PublishedOperation[] = [];
     const updatedOperations: UpdatedPersistedOperation[] = [];
     // Retrieve the operations that have already been published
@@ -159,8 +145,7 @@ export function publishPersistedOperations(
       }
       const operationNames = extractOperationNames(operation.contents);
       operationsByOperationId.set(operationId, { hash: operationHash, operationNames });
-      const clientName = encodeURIComponent(req.clientName);
-      const path = `${organizationId}/${federatedGraph.id}/operations/${clientName}/${operationId}.json`;
+      const path = `${organizationId}/${federatedGraph.id}/operations/${req.clientName}/${operationId}.json`;
       updatedOperations.push({
         operationId,
         hash: operationHash,

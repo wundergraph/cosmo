@@ -1,5 +1,4 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../../src/core/test-util.js';
@@ -245,52 +244,6 @@ describe('DeleteSubgraph', (ctx) => {
       namespace: DEFAULT_NAMESPACE,
     });
     expect(getFeatureSubgraphByNameResponseThree.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
-
-    await server.close();
-  });
-
-  test('Should be able to create a plugin and then delete it', async () => {
-    const { client, server } = await SetupTest({ dbname, setupBilling: { plan: 'launch@1' } });
-
-    const pluginName = genID('plugin');
-    const pluginLabel = genUniqueLabel('plugin');
-
-    // Create a plugin subgraph
-    const createPluginSubgraphResp = await client.createFederatedSubgraph({
-      name: pluginName,
-      namespace: DEFAULT_NAMESPACE,
-      type: SubgraphType.GRPC_PLUGIN,
-      labels: [pluginLabel],
-    });
-
-    expect(createPluginSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
-
-    // Verify the plugin was created with the correct type
-    const getPluginResp = await client.getSubgraphByName({
-      name: pluginName,
-      namespace: DEFAULT_NAMESPACE,
-    });
-
-    expect(getPluginResp.response?.code).toBe(EnumStatusCode.OK);
-    expect(getPluginResp.graph).toBeDefined();
-    expect(getPluginResp.graph?.name).toBe(pluginName);
-    expect(getPluginResp.graph?.type).toBe(SubgraphType.GRPC_PLUGIN);
-
-    // Delete the plugin subgraph
-    const deletePluginSubgraphResp = await client.deleteFederatedSubgraph({
-      subgraphName: pluginName,
-      namespace: DEFAULT_NAMESPACE,
-    });
-
-    expect(deletePluginSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
-
-    // Verify the plugin was deleted by trying to get it
-    const getDeletedPluginResp = await client.getSubgraphByName({
-      name: pluginName,
-      namespace: DEFAULT_NAMESPACE,
-    });
-
-    expect(getDeletedPluginResp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
 
     await server.close();
   });

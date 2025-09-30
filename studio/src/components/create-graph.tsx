@@ -21,13 +21,12 @@ import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { useUser } from "@/hooks/use-user";
 import { docsBaseURL } from "@/lib/constants";
-import { useMutation, createConnectQueryKey } from "@connectrpc/connect-query";
+import { useMutation } from "@connectrpc/connect-query";
 import { CheckCircleIcon } from "@heroicons/react/24/outline";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
   createFederatedGraph,
   createMonograph,
-  getWorkspace
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -39,8 +38,6 @@ import {
   CreateFederatedGraphResponse,
   CreateMonographResponse,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { useWorkspace } from "@/hooks/use-workspace";
-import { useQueryClient } from "@tanstack/react-query";
 
 export const CreateGraphForm = ({
   isMonograph = false,
@@ -49,9 +46,8 @@ export const CreateGraphForm = ({
 }) => {
   const router = useRouter();
   const user = useUser();
-  const { namespace: { name: namespace } } = useWorkspace();
-  const queryClient = useQueryClient();
 
+  const namespace = (router.query.namespace as string) || "default";
   const [tags, setTags] = useState<Tag[]>([]);
   const [activeTagIndex, setActiveTagIndex] = useState<number | null>(null);
 
@@ -127,8 +123,6 @@ export const CreateGraphForm = ({
         d: CreateFederatedGraphResponse | CreateMonographResponse,
       ) => {
         if (d.response?.code === EnumStatusCode.OK) {
-          // We need to refresh the workspace after creating a graph
-          await queryClient.refetchQueries({ queryKey: createConnectQueryKey(getWorkspace) });
           router.replace(
             `/${user?.currentOrganization.slug}/${namespace}/graph/${data.name}`,
           );

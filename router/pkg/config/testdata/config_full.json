@@ -61,7 +61,6 @@
           "Subscriptions": true
         },
         "CircuitBreaker": false,
-        "Streams": false,
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
         "Exporters": [
@@ -81,7 +80,6 @@
         "ListenAddr": "127.0.0.1:8088",
         "GraphqlCache": true,
         "ConnectionStats": true,
-        "Streams": false,
         "EngineStats": {
           "Subscriptions": true
         },
@@ -157,9 +155,6 @@
     },
     "Storage": {
       "ProviderID": "mcp"
-    },
-    "Session": {
-      "Stateless": true
     },
     "GraphName": "cosmo",
     "ExcludeMutations": false,
@@ -311,8 +306,7 @@
         "Algorithm": "backoff_jitter",
         "MaxAttempts": 5,
         "MaxDuration": 10000000000,
-        "Interval": 3000000000,
-        "Expression": "IsRetryableStatusCode() || IsConnectionError() || IsTimeout()"
+        "Interval": 3000000000
       },
       "CircuitBreaker": {
         "Enabled": false,
@@ -350,8 +344,7 @@
           "Algorithm": "",
           "MaxAttempts": 0,
           "MaxDuration": 0,
-          "Interval": 0,
-          "Expression": ""
+          "Interval": 0
         },
         "CircuitBreaker": {
           "Enabled": false,
@@ -422,10 +415,6 @@
             "Expression": "request.error ?? 'success'"
           }
         }
-      ],
-      "IgnoreQueryParamsList": [
-        "variables",
-        "anothervalue"
       ]
     },
     "Subgraphs": {
@@ -480,16 +469,9 @@
             "RS256"
           ],
           "RefreshInterval": 60000000000,
-          "RefreshUnknownKID": {
-            "Enabled": false,
-            "MaxWait": 0,
-            "Interval": 0,
-            "Burst": 0
-          },
           "Secret": "",
           "Algorithm": "",
-          "KeyId": "",
-          "Audiences": null
+          "KeyId": ""
         },
         {
           "URL": "https://example.com/.well-known/jwks2.json",
@@ -498,31 +480,17 @@
             "ES256"
           ],
           "RefreshInterval": 120000000000,
-          "RefreshUnknownKID": {
-            "Enabled": true,
-            "MaxWait": 10000000000,
-            "Interval": 5000000000,
-            "Burst": 3
-          },
           "Secret": "",
           "Algorithm": "",
-          "KeyId": "",
-          "Audiences": null
+          "KeyId": ""
         },
         {
           "URL": "https://example.com/.well-known/jwks3.json",
           "Algorithms": null,
           "RefreshInterval": 0,
-          "RefreshUnknownKID": {
-            "Enabled": false,
-            "MaxWait": 0,
-            "Interval": 0,
-            "Burst": 0
-          },
           "Secret": "",
           "Algorithm": "",
-          "KeyId": "",
-          "Audiences": null
+          "KeyId": ""
         }
       ],
       "HeaderName": "Authorization",
@@ -673,10 +641,6 @@
       "Enabled": false,
       "Condition": ""
     },
-    "BlockPersistedOperations": {
-      "Enabled": false,
-      "Condition": ""
-    },
     "ComplexityCalculationCache": {
       "Enabled": true,
       "CacheSize": 1024
@@ -705,10 +669,9 @@
     },
     "DepthLimit": null,
     "ParserLimits": {
-      "ApproximateDepthLimit": 200,
-      "TotalFieldsLimit": 3500
-    },
-    "OperationNameLengthLimit": 2000
+      "ApproximateDepthLimit": 100,
+      "TotalFieldsLimit": 500
+    }
   },
   "EngineExecutionConfiguration": {
     "Debug": {
@@ -754,9 +717,7 @@
     "ResolverMaxRecyclableParserSize": 4096,
     "EnableSubgraphFetchOperationName": true,
     "DisableVariablesRemapping": false,
-    "EnableRequireFetchReasons": false,
-    "SubscriptionFetchTimeout": 30000000000,
-    "ValidateRequiredExternalFields": false
+    "SubscriptionFetchTimeout": 30000000000
   },
   "WebSocket": {
     "Enabled": true,
@@ -926,10 +887,7 @@
   },
   "Plugins": {
     "Enabled": true,
-    "Path": "some/path/to/plugins",
-    "Registry": {
-      "URL": "cosmo-registry.wundergraph.com"
-    }
+    "Path": "some/path/to/plugins"
   },
   "WatchConfig": {
     "Enabled": true,

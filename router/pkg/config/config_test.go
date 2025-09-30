@@ -1227,9 +1227,9 @@ version: "1"
 authentication:
   jwt:
     jwks:
-      - header_key_id: "givenKID"
+      - key_id: "givenKID"
         secret: "example secret"
-        symmetric_algorithm: HS512
+        algorithm: HS512
 
 `)
 		_, err := LoadConfig([]string{f})
@@ -1245,11 +1245,11 @@ version: "1"
 authentication:
   jwt:
     jwks:
-      - header_key_id: "givenKID"
+      - key_id: "givenKID"
         url: "http://url/valid.json"
         algorithms: []
         secret: "example secret"
-        symmetric_algorithm: HS512
+        algorithm: HS512
 `)
 		_, err := LoadConfig([]string{f})
 		require.ErrorContains(t, err, "at '/authentication/jwt/jwks/")
@@ -1270,7 +1270,7 @@ authentication:
 `)
 		_, err := LoadConfig([]string{f})
 		require.ErrorContains(t, err, "at '/authentication/jwt/jwks/")
-		require.ErrorContains(t, err, "missing properties 'symmetric_algorithm', 'header_key_id'")
+		require.ErrorContains(t, err, "missing properties 'algorithm', 'key_id'")
 
 	})
 

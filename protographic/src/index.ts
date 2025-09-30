@@ -4,7 +4,6 @@ import { GraphQLToProtoVisitor } from './sdl-to-mapping-visitor.js';
 import type { GraphQLToProtoTextVisitorOptions } from './sdl-to-proto-visitor.js';
 import { GraphQLToProtoTextVisitor } from './sdl-to-proto-visitor.js';
 import type { ProtoLock } from './proto-lock.js';
-import { SDLValidationVisitor, type ValidationResult } from './sdl-validation-visitor.js';
 
 /**
  * Compiles a GraphQL schema to a mapping structure
@@ -78,26 +77,12 @@ export function compileGraphQLToProto(
   };
 }
 
-/**
- * Validates a GraphQL SDL schema against specific rules and constraints
- *
- * @param sdl - The GraphQL SDL string to validate
- * @returns ValidationResult containing any errors and warnings found during validation
- * @throws Error if the SDL cannot be parsed as valid GraphQL
- */
-export function validateGraphQLSDL(sdl: string): ValidationResult {
-  const visitor = new SDLValidationVisitor(sdl);
-  return visitor.visit();
-}
-
 export * from './sdl-to-mapping-visitor.js';
 export { GraphQLToProtoTextVisitor } from './sdl-to-proto-visitor.js';
 export { ProtoLockManager } from './proto-lock.js';
-export { SDLValidationVisitor } from './sdl-validation-visitor.js';
 
 export type { GraphQLToProtoTextVisitorOptions } from './sdl-to-proto-visitor.js';
 export type { ProtoLock } from './proto-lock.js';
-export type { ValidationResult } from './sdl-validation-visitor.js';
 export {
   GRPCMapping,
   OperationMapping,

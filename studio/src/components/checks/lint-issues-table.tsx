@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { CheckCircleIcon, NoSymbolIcon } from "@heroicons/react/24/outline";
-import { Cross1Icon } from "@radix-ui/react-icons";
+import { Cross1Icon, EyeOpenIcon } from "@radix-ui/react-icons";
 import {
   LintIssue,
   LintSeverity,
@@ -24,8 +24,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { useUser } from "@/hooks/use-user";
 import { useContext } from "react";
 import { GraphContext } from "@/components/layout/graph-layout";
-import { useWorkspace } from "@/hooks/use-workspace";
-import { useCurrentOrganization } from "@/hooks/use-current-organization";
 
 export const LintIssuesTable = ({
   lintIssues,
@@ -39,8 +37,6 @@ export const LintIssuesTable = ({
   const router = useRouter();
   const user = useUser();
   const graphContext = useContext(GraphContext);
-  const { namespace: { name: namespace } } = useWorkspace();
-  const organizationSlug = useCurrentOrganization()?.slug;
 
   if (lintIssues.length === 0 && !isLintingEnabled) {
     return (
@@ -121,8 +117,8 @@ export const LintIssuesTable = ({
                         className="table-action"
                       >
                         <Link
-                          href={`/${organizationSlug}/${
-                            namespace
+                          href={`/${router.query.organizationSlug}/${
+                            router.query.namespace
                           }/graph/${router.query.slug}/checks/${
                             router.query.checkId
                           }?tab=schema&${

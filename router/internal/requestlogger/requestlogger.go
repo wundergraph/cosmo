@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"net"
 	"net/http"
-	"net/url"
 	"time"
 
 	"github.com/wundergraph/cosmo/router/internal/errors"
@@ -110,12 +109,6 @@ func WithDefaultOptions() Option {
 	}
 }
 
-func WithIgnoreQueryParamsList(ignoreList []string) Option {
-	return func(r *handler) {
-		r.accessLogger.ignoreQueryParamsList = ignoreList
-	}
-}
-
 func New(logger *zap.Logger, opts ...Option) func(h http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		r := &handler{
@@ -131,7 +124,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	start := time.Now()
 	path := r.URL.Path
-	fields := h.accessLogger.getRequestFields(r, h.logger)
+	fields := h.accessLogger.getRequestFields(r)
 
 	defer func() {
 
@@ -191,15 +184,15 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.logger.Info(path, append(fields, resFields...)...)
 }
 
-func (al *accessLogger) getRequestFields(r *http.Request, logger *zap.Logger) []zapcore.Field {
+func (al *accessLogger) getRequestFields(r *http.Request) []zapcore.Field {
 	if r == nil {
 		return al.baseFields
 	}
 
 	start := time.Now()
-	reqUrl := r.URL
-	path := reqUrl.Path
-	query := reqUrl.RawQuery
+	url := r.URL
+	path := url.Path
+	query := url.RawQuery
 	remoteAddr := r.RemoteAddr
 
 	if al.ipAnonymizationConfig != nil && al.ipAnonymizationConfig.Enabled {
@@ -210,23 +203,6 @@ func (al *accessLogger) getRequestFields(r *http.Request, logger *zap.Logger) []
 			remoteAddr = hex.EncodeToString(h.Sum(nil))
 		case Redact:
 			remoteAddr = "[REDACTED]"
-		}
-	}
-
-	if query != "" && len(al.ignoreQueryParamsList) > 0 {
-		vals, err := url.ParseQuery(reqUrl.RawQuery)
-		if err != nil {
-			// We ignore logging the err since it could leak partial sensitive data
-			// such as %pa from "%password"
-			logger.Error("Failed to parse query parameters")
-			// Since we wanted to ignore some values but we cant parse it
-			// we default to a safer skip all
-			query = ""
-		} else {
-			for _, ignoreQueryParam := range al.ignoreQueryParamsList {
-				vals.Del(ignoreQueryParam)
-			}
-			query = vals.Encode()
 		}
 	}
 

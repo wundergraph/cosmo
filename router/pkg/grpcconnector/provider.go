@@ -7,6 +7,7 @@ import (
 )
 
 type ClientProvider interface {
+	Name() string
 	Start(ctx context.Context) error
 	GetClient() grpc.ClientConnInterface
 	Stop() error

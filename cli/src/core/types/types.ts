@@ -2,7 +2,7 @@ import {
   CompositionError,
   CompositionWarning,
   DeploymentError,
-} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb.js';
 import { Client } from '../client/client.js';
 
 export interface BaseCommandOptions {

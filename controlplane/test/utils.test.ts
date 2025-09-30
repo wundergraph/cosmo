@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { isValidLabelMatchers, mergeUrls, normalizeLabelMatchers, isGoogleCloudStorageUrl } from '../src/core/util.js';
+import { isValidLabelMatchers, mergeUrls, normalizeLabelMatchers } from '../src/core/util.js';
 
 describe('Utils', () => {
   test('isValidLabelMatchers', () => {
@@ -28,25 +28,5 @@ describe('Utils', () => {
     expect(mergeUrls('http://example.com/auth/', 'path')).toBe('http://example.com/auth/path');
     expect(mergeUrls('http://example.com/auth', '/path')).toBe('http://example.com/auth/path');
     expect(mergeUrls('http://example.com/auth/', '/path')).toBe('http://example.com/auth/path');
-  });
-
-  describe('isGoogleCloudStorageUrl', () => {
-    test('that true is returned when a valid Google Cloud Storage URL', () => {
-      expect(isGoogleCloudStorageUrl('https://storage.googleapis.com/')).toBe(true);
-      expect(isGoogleCloudStorageUrl('https://STORAGE.GOOGLEAPIS.COM')).toBe(true);
-      expect(isGoogleCloudStorageUrl('https://storage.googleapis.com/bucket-name')).toBe(true);
-      expect(isGoogleCloudStorageUrl('https://bucket-name.storage.googleapis.com/')).toBe(true);
-    });
-
-    test('that true is returned when an URL with the `gs` protocol', () => {
-      expect(isGoogleCloudStorageUrl('gs://bucket-name')).toBe(true);
-    });
-
-    test('that false is returned when the URL is not a valid Google Cloud Storage URL', () => {
-      expect(isGoogleCloudStorageUrl('http://minio/cosmo')).toBe(false);
-      expect(isGoogleCloudStorageUrl('https://bucket-name.s3.amazonaws.com/')).toBe(false);
-      expect(isGoogleCloudStorageUrl('https://bucket-name.s3.amazonaws.com')).toBe(false);
-      expect(isGoogleCloudStorageUrl('https://storage.googleapis.com.evil.com')).toBe(false);
-    });
   });
 });

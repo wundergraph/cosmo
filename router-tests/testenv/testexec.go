@@ -162,10 +162,8 @@ func runRouterBin(t *testing.T, ctx context.Context, opts RunRouterBinConfigOpti
 	}
 
 	newCtx, cancel := context.WithCancelCause(ctx)
-
 	err = runCmdWithLogs(t, ctx, cmd, false, cmdLogChannel)
 	if err != nil {
-		cancel(err)
 		return nil, err
 	}
 

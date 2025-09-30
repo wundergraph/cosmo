@@ -24,9 +24,14 @@ func (e PersistentOperationNotFoundError) Error() string {
 	return fmt.Sprintf("operation '%s' for client '%s' not found", e.Sha256Hash, e.ClientName)
 }
 
-type StorageClient interface {
-	PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error)
+type Client interface {
+	PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, bool, error)
 	Close()
+}
+
+type SaveClient interface {
+	Client
+	SaveOperation(ctx context.Context, clientName, sha256Hash, operationBody string) error
 }
 
 type Options struct {
@@ -35,17 +40,17 @@ type Options struct {
 	CacheSize uint64
 	Logger    *zap.Logger
 
-	ProviderClient StorageClient
+	ProviderClient Client
 	ApqClient      apq.Client
 }
 
-type Client struct {
+type client struct {
 	cache          *operationstorage.OperationsCache
-	providerClient StorageClient
+	providerClient Client
 	apqClient      apq.Client
 }
 
-func NewClient(opts *Options) (*Client, error) {
+func NewClient(opts *Options) (SaveClient, error) {
 	cacheSize := int64(opts.CacheSize)
 
 	cache, err := operationstorage.NewOperationsCache(cacheSize)
@@ -53,14 +58,14 @@ func NewClient(opts *Options) (*Client, error) {
 		return nil, errors.Join(err, fmt.Errorf("initializing CDN cache"))
 	}
 
-	return &Client{
+	return &client{
 		providerClient: opts.ProviderClient,
 		cache:          cache,
 		apqClient:      opts.ApqClient,
 	}, nil
 }
 
-func (c *Client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, bool, error) {
+func (c *client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, bool, error) {
 	if c.apqClient != nil && c.apqClient.Enabled() {
 		resp, apqErr := c.apqClient.PersistedOperation(ctx, clientName, sha256Hash)
 		if len(resp) > 0 || apqErr != nil {
@@ -81,7 +86,7 @@ func (c *Client) PersistedOperation(ctx context.Context, clientName string, sha2
 		poNotFound *PersistentOperationNotFoundError
 	)
 
-	content, err := c.providerClient.PersistedOperation(ctx, clientName, sha256Hash)
+	content, _, err := c.providerClient.PersistedOperation(ctx, clientName, sha256Hash)
 	if errors.As(err, &poNotFound) && c.apqClient != nil {
 		// This could well be the first time a client is requesting an APQ operation and the query is attached to the request. Return without error here, and we'll verify the operation later.
 		return content, true, nil
@@ -95,7 +100,7 @@ func (c *Client) PersistedOperation(ctx context.Context, clientName string, sha2
 	return content, false, nil
 }
 
-func (c *Client) SaveOperation(ctx context.Context, clientName, sha256Hash, operationBody string) error {
+func (c *client) SaveOperation(ctx context.Context, clientName, sha256Hash, operationBody string) error {
 	if c.apqClient != nil && c.apqClient.Enabled() {
 		return c.apqClient.SaveOperation(ctx, clientName, sha256Hash, []byte(operationBody))
 	}
@@ -103,11 +108,7 @@ func (c *Client) SaveOperation(ctx context.Context, clientName, sha256Hash, oper
 	return nil
 }
 
-func (c *Client) APQEnabled() bool {
-	return c.apqClient != nil && c.apqClient.Enabled()
-}
-
-func (c *Client) Close() {
+func (c *client) Close() {
 	if c.providerClient != nil {
 		c.providerClient.Close()
 	}

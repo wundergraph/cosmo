@@ -6,7 +6,7 @@ import { SubgraphDTO } from '../../../types/index.js';
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { convertToSubgraphType, enrichLogger, getLogger, handleError } from '../../util.js';
+import { enrichLogger, getLogger, handleError } from '../../util.js';
 
 export function getSubgraphs(
   opts: RouterOptions,
@@ -39,18 +39,17 @@ export function getSubgraphs(
       namespaceId = namespace.id;
     }
 
-    const namespaceIds: string[] | undefined = namespaceId ? [namespaceId] : undefined;
     const list: SubgraphDTO[] = await repo.list({
       limit: req.limit,
       offset: req.offset,
-      namespaceIds,
+      namespaceId,
       query: req.query,
       excludeFeatureSubgraphs: req.excludeFeatureSubgraphs,
       rbac: authContext.rbac,
     });
 
     const count = await repo.count({
-      namespaceIds,
+      namespaceId,
       query: req.query,
       limit: 0,
       offset: 0,
@@ -73,7 +72,6 @@ export function getSubgraphs(
         namespace: g.namespace,
         websocketSubprotocol: g.websocketSubprotocol || '',
         isFeatureSubgraph: g.isFeatureSubgraph,
-        type: convertToSubgraphType(g.type),
       })),
       count,
       response: {

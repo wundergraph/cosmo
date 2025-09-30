@@ -80,15 +80,14 @@ export function deleteNamespace(
       const namespaceRepo = new NamespaceRepository(tx, authContext.organizationId);
       const auditLogRepo = new AuditLogRepository(tx);
 
-      const namespaceIds = [ns.id];
       const federatedGraphs = await federatedGraphRepo.list({
-        namespaceIds,
+        namespaceId: ns.id,
         offset: 0,
         limit: 0,
       });
 
       const subgraphs = await subgraphRepo.list({
-        namespaceIds,
+        namespaceId: ns.id,
         offset: 0,
         limit: 0,
         excludeFeatureSubgraphs: false,

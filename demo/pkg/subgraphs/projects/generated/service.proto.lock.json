@@ -16,36 +16,6 @@
         "result": 1
       }
     },
-    "LookupMilestoneByIdRequestKey": {
-      "fields": {
-        "id": 1
-      }
-    },
-    "LookupMilestoneByIdRequest": {
-      "fields": {
-        "keys": 1
-      }
-    },
-    "LookupMilestoneByIdResponse": {
-      "fields": {
-        "result": 1
-      }
-    },
-    "LookupTaskByIdRequestKey": {
-      "fields": {
-        "id": 1
-      }
-    },
-    "LookupTaskByIdRequest": {
-      "fields": {
-        "keys": 1
-      }
-    },
-    "LookupTaskByIdResponse": {
-      "fields": {
-        "result": 1
-      }
-    },
     "LookupEmployeeByIdRequestKey": {
       "fields": {
         "id": 1
@@ -76,24 +46,34 @@
         "result": 1
       }
     },
+    "LookupCountryByCodeRequestKey": {
+      "fields": {
+        "code": 1
+      }
+    },
+    "LookupCountryByCodeRequest": {
+      "fields": {
+        "keys": 1
+      }
+    },
+    "LookupCountryByCodeResponse": {
+      "fields": {
+        "result": 1
+      }
+    },
     "Query": {
       "fields": {
         "projects": 1,
         "project": 2,
         "projectStatuses": 3,
         "projectsByStatus": 4,
-        "projectResources": 5,
-        "searchProjects": 6,
-        "milestones": 7,
-        "tasks": 8,
-        "projectActivities": 9,
-        "projectTags": 10,
-        "archivedProjects": 11,
-        "tasksByPriority": 12,
-        "resourceMatrix": 13,
-        "killService": 14,
-        "panic": 15,
-        "nodesById": 16
+        "projectResources": 7,
+        "searchProjects": 8,
+        "milestones": 9,
+        "tasks": 10,
+        "projectActivities": 11,
+        "killService": 5,
+        "panic": 6
       }
     },
     "QueryProjectsResponse": {
@@ -134,6 +114,117 @@
     "QueryProjectsByStatusResponse": {
       "fields": {
         "projects_by_status": 1
+      }
+    },
+    "Mutation": {
+      "fields": {
+        "addProject": 1,
+        "addMilestone": 2,
+        "addTask": 3,
+        "updateProjectStatus": 4
+      }
+    },
+    "MutationAddProject": {
+      "fields": {
+        "project": 1
+      }
+    },
+    "MutationAddProjectRequest": {
+      "fields": {
+        "project": 1
+      }
+    },
+    "MutationAddProjectResponse": {
+      "fields": {
+        "add_project": 1
+      }
+    },
+    "Project": {
+      "fields": {
+        "id": 1,
+        "name": 2,
+        "description": 3,
+        "startDate": 4,
+        "endDate": 5,
+        "status": 6,
+        "teamMembers": 7,
+        "relatedProducts": 9,
+        "milestoneIds": 10,
+        "milestones": 11,
+        "tasks": 12,
+        "progress": 13
+      },
+      "reservedNumbers": [
+        8
+      ]
+    },
+    "Employee": {
+      "fields": {
+        "id": 1,
+        "projects": 2,
+        "assignedTasks": 3,
+        "completedTasks": 4
+      }
+    },
+    "Product": {
+      "fields": {
+        "upc": 1,
+        "projects": 2
+      }
+    },
+    "Country": {
+      "fields": {
+        "code": 1,
+        "projects": 2
+      }
+    },
+    "ProjectInput": {
+      "fields": {
+        "name": 1,
+        "description": 2,
+        "startDate": 3,
+        "endDate": 4,
+        "status": 5
+      }
+    },
+    "QueryKillServiceResponse": {
+      "fields": {
+        "kill_service": 1
+      }
+    },
+    "QueryPanicResponse": {
+      "fields": {
+        "panic": 1
+      }
+    },
+    "LookupMilestoneByIdRequestKey": {
+      "fields": {
+        "id": 1
+      }
+    },
+    "LookupMilestoneByIdRequest": {
+      "fields": {
+        "keys": 1
+      }
+    },
+    "LookupMilestoneByIdResponse": {
+      "fields": {
+        "result": 1
+      }
+    },
+    "LookupTaskByIdRequestKey": {
+      "fields": {
+        "id": 1
+      }
+    },
+    "LookupTaskByIdRequest": {
+      "fields": {
+        "keys": 1
+      }
+    },
+    "LookupTaskByIdResponse": {
+      "fields": {
+        "result": 1
       }
     },
     "QueryProjectResources": {
@@ -211,79 +302,6 @@
         "project_activities": 1
       }
     },
-    "QueryProjectTagsResponse": {
-      "fields": {
-        "project_tags": 1
-      }
-    },
-    "QueryArchivedProjectsResponse": {
-      "fields": {
-        "archived_projects": 1
-      }
-    },
-    "QueryTasksByPriority": {
-      "fields": {
-        "projectId": 1
-      }
-    },
-    "QueryTasksByPriorityRequest": {
-      "fields": {
-        "project_id": 1
-      }
-    },
-    "QueryTasksByPriorityResponse": {
-      "fields": {
-        "tasks_by_priority": 1
-      }
-    },
-    "QueryResourceMatrix": {
-      "fields": {
-        "projectId": 1
-      }
-    },
-    "QueryResourceMatrixRequest": {
-      "fields": {
-        "project_id": 1
-      }
-    },
-    "QueryResourceMatrixResponse": {
-      "fields": {
-        "resource_matrix": 1
-      }
-    },
-    "QueryKillServiceResponse": {
-      "fields": {
-        "kill_service": 1
-      }
-    },
-    "QueryPanicResponse": {
-      "fields": {
-        "panic": 1
-      }
-    },
-    "Mutation": {
-      "fields": {
-        "addProject": 1,
-        "addMilestone": 2,
-        "addTask": 3,
-        "updateProjectStatus": 4
-      }
-    },
-    "MutationAddProject": {
-      "fields": {
-        "project": 1
-      }
-    },
-    "MutationAddProjectRequest": {
-      "fields": {
-        "project": 1
-      }
-    },
-    "MutationAddProjectResponse": {
-      "fields": {
-        "add_project": 1
-      }
-    },
     "MutationAddMilestone": {
       "fields": {
         "milestone": 1
@@ -331,82 +349,42 @@
         "update_project_status": 1
       }
     },
-    "Project": {
-      "fields": {
-        "id": 1,
-        "name": 2,
-        "description": 3,
-        "startDate": 4,
-        "endDate": 5,
-        "status": 6,
-        "teamMembers": 7,
-        "relatedProducts": 8,
-        "milestoneIds": 9,
-        "milestones": 10,
-        "tasks": 11,
-        "progress": 12,
-        "tags": 13,
-        "alternativeProjects": 14,
-        "dependencies": 15,
-        "resourceGroups": 16,
-        "tasksByPhase": 17,
-        "milestoneGroups": 18,
-        "priorityMatrix": 19
-      }
-    },
     "Milestone": {
       "fields": {
         "id": 1,
         "projectId": 2,
-        "name": 3,
-        "description": 4,
-        "startDate": 5,
-        "endDate": 6,
-        "status": 7,
-        "completionPercentage": 8,
-        "dependencies": 9,
-        "subtasks": 10,
-        "reviewers": 11
-      }
+        "name": 4,
+        "description": 5,
+        "startDate": 6,
+        "endDate": 7,
+        "status": 8,
+        "completionPercentage": 10
+      },
+      "reservedNumbers": [
+        3,
+        9
+      ]
     },
     "Task": {
       "fields": {
         "id": 1,
         "projectId": 2,
-        "milestoneId": 3,
-        "assigneeId": 4,
-        "name": 5,
-        "description": 6,
-        "priority": 7,
-        "status": 8,
-        "estimatedHours": 9,
-        "actualHours": 10,
-        "createdAt": 11,
-        "completedAt": 12,
-        "labels": 13,
-        "subtasks": 14,
-        "dependencies": 15,
-        "attachmentUrls": 16,
-        "reviewerIds": 17
-      }
-    },
-    "Employee": {
-      "fields": {
-        "id": 1,
-        "projects": 2,
-        "assignedTasks": 3,
-        "completedTasks": 4,
-        "skills": 5,
-        "certifications": 6,
-        "projectHistory": 7
-      }
-    },
-    "Product": {
-      "fields": {
-        "upc": 1,
-        "projects": 2,
-        "featureMatrix": 3
-      }
+        "milestoneId": 4,
+        "assigneeId": 6,
+        "name": 8,
+        "description": 9,
+        "priority": 10,
+        "status": 11,
+        "estimatedHours": 12,
+        "actualHours": 13,
+        "createdAt": 14,
+        "completedAt": 15
+      },
+      "reservedNumbers": [
+        3,
+        5,
+        7
+      ]
     },
     "ProjectResourceMembers": {
       "fields": {
@@ -428,15 +406,6 @@
         "ProjectUpdate": 1,
         "Milestone": 2,
         "Task": 3
-      }
-    },
-    "ProjectInput": {
-      "fields": {
-        "name": 1,
-        "description": 2,
-        "startDate": 3,
-        "endDate": 4,
-        "status": 5
       }
     },
     "MilestoneInput": {
@@ -463,12 +432,16 @@
       "fields": {
         "id": 1,
         "projectId": 2,
-        "updatedById": 3,
-        "updateType": 4,
-        "description": 5,
-        "timestamp": 6,
-        "metadata": 7
-      }
+        "updateType": 5,
+        "description": 6,
+        "timestamp": 7,
+        "metadata": 8,
+        "updatedById": 9
+      },
+      "reservedNumbers": [
+        3,
+        4
+      ]
     },
     "NodeImplementations": {
       "fields": {
@@ -484,43 +457,17 @@
         "Milestone": 2
       }
     },
+    "TrackableImplementations": {
+      "fields": {
+        "Project": 1,
+        "Milestone": 2,
+        "Task": 3
+      }
+    },
     "AssignableImplementations": {
       "fields": {
         "Task": 1
       }
-    },
-    "QueryNodesByIdRequest": {
-      "fields": {
-        "id": 1
-      }
-    },
-    "QueryNodesById": {
-      "fields": {
-        "id": 1
-      }
-    },
-    "QueryNodesByIdResponse": {
-      "fields": {
-        "nodes_by_id": 1
-      }
-    },
-    "QueryProjectsRequest": {
-      "fields": {}
-    },
-    "QueryProjectStatusesRequest": {
-      "fields": {}
-    },
-    "QueryProjectTagsRequest": {
-      "fields": {}
-    },
-    "QueryArchivedProjectsRequest": {
-      "fields": {}
-    },
-    "QueryKillServiceRequest": {
-      "fields": {}
-    },
-    "QueryPanicRequest": {
-      "fields": {}
     }
   },
   "enums": {

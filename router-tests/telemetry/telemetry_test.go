@@ -3639,7 +3639,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						All: config.GlobalSubgraphRequestRule{
 							RequestTimeout: integration.ToPtr(10 * time.Second),
 						},
-						Subgraphs: map[string]config.GlobalSubgraphRequestRule{
+						Subgraphs: map[string]*config.GlobalSubgraphRequestRule{
 							"hobbies": {
 								RequestTimeout: integration.ToPtr(3 * time.Second),
 							},
@@ -4039,12 +4039,11 @@ func TestFlakyTelemetry(t *testing.T) {
 			TraceExporter: exporter,
 			MetricReader:  metricReader,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			listArgQuery := "1000000000000000000000000000000000000000000000000000000000000000"
 			header := make(http.Header)
 			header.Add("graphql-client-name", "my-client")
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				OperationName: []byte(`"MyQuery"`),
-				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + listArgQuery + `"}}`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "listArgQuery"}}`),
 				Header:        header,
 				Variables:     []byte(`{"arg": "a"}`),
 			})
@@ -4072,7 +4071,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				OperationName: []byte(`"MyQuery"`),
-				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + listArgQuery + `"}}`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "listArgQuery"}}`),
 				Header:        header,
 				Variables:     []byte(`{"arg": "a"}`),
 			})
@@ -8706,7 +8705,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					},
 				},
 				RouterOptions: []core.Option{
-					core.WithSubgraphRetryOptions(false, "", 0, 0, 0, "", nil),
+					core.WithSubgraphRetryOptions(false, 0, 0, 0),
 				},
 				Subgraphs: testenv.SubgraphsConfig{
 					Products: testenv.SubgraphConfig{
@@ -9795,7 +9794,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					{
 						Key: "custom.subgraph",
 						ValueFrom: &config.CustomDynamicAttribute{
-							Expression: "string(subgraph.request.clientTrace.connAcquireDuration.Seconds())",
+							Expression: "string(subgraph.request.clientTrace.connAcquireDuration)",
 						},
 					},
 				},
@@ -9852,58 +9851,6 @@ func TestFlakyTelemetry(t *testing.T) {
 				atts = subgraphNonMetric.Data.(metricdata.Histogram[float64]).DataPoints[0].Attributes
 				_, ok = atts.Value("custom.subgraph")
 				require.False(t, ok)
-			})
-		})
-
-		t.Run("verify subgraph fetch duration value is attached for multiple subgraph calls", func(t *testing.T) {
-			t.Parallel()
-
-			exporter := tracetest.NewInMemoryExporter(t)
-			metricReader := metric.NewManualReader()
-			testenv.Run(t, &testenv.Config{
-				TraceExporter: exporter,
-				MetricReader:  metricReader,
-				CustomTelemetryAttributes: []config.CustomAttribute{
-					{
-						Key: "fetch_duration.subgraph",
-						ValueFrom: &config.CustomDynamicAttribute{
-							Expression: "string(subgraph.request.clientTrace.fetchDuration.Seconds())",
-						},
-					},
-				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
-				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-					Query: `query myQuery { employees { id isAvailable } }`,
-				})
-
-				sn := exporter.GetSpans().Snapshots()
-				require.Len(t, sn, 11)
-
-				var attributesDetected int
-
-				for i := 0; i < len(sn); i++ {
-					attributes := sn[i].Attributes()
-
-					if slices.Contains([]string{"Engine - Fetch"}, sn[i].Name()) {
-						for _, attributeEntry := range attributes {
-							if attributeEntry.Key == "fetch_duration.subgraph" {
-								attributesDetected++
-								valueString := attributeEntry.Value.AsString()
-								floatValue, err := strconv.ParseFloat(valueString, 64)
-								require.NoError(t, err)
-								require.Greater(t, floatValue, 0.0)
-							}
-						}
-					} else {
-						for _, attributeEntry := range attributes {
-							if attributeEntry.Key == "fetch_duration.subgraph" {
-								require.Fail(t, "fetch_duration.subgraph should not be present on non engine fetch spans")
-							}
-						}
-					}
-				}
-
-				require.Equal(t, 2, attributesDetected)
 			})
 		})
 	})

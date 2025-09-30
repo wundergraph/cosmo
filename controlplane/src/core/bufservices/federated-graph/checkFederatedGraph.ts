@@ -14,14 +14,7 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import {
-  convertToSubgraphType,
-  enrichLogger,
-  getLogger,
-  handleError,
-  isValidLabelMatchers,
-  newCompositionOptions,
-} from '../../util.js';
+import { enrichLogger, getLogger, handleError, isValidLabelMatchers, newCompositionOptions } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
 export function checkFederatedGraph(
@@ -96,7 +89,6 @@ export function checkFederatedGraph(
       namespace: s.namespace,
       websocketSubprotocol: s.websocketSubprotocol || '',
       isFeatureSubgraph: s.isFeatureSubgraph,
-      type: convertToSubgraphType(s.type),
     }));
 
     const result = composeSubgraphs(

@@ -7,7 +7,6 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
-import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 
 // Get operation content by hash
 // TODO: Specify daterange to improve clickhouse performance
@@ -31,26 +30,12 @@ export function getOperationContent(
       };
     }
 
-    const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
-    const graph = await fedGraphRepo.byName(req.federatedGraphName, req.namespace);
-    if (!graph) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_NOT_FOUND,
-          details: `Federated graph '${req.federatedGraphName}' not found`,
-        },
-        operationContent: '',
-      };
-    }
-
     const query = `
-      SELECT OperationContent as operationContent
-      FROM ${opts.chClient?.database}.gql_metrics_operations
-      WHERE OrganizationID = '${authContext.organizationId}' 
-      AND FederatedGraphID = '${graph.id}'
-      AND OperationHash = '${req.hash}'
-      LIMIT 1 SETTINGS use_query_cache = true, query_cache_ttl = 2629800
-    `;
+          SELECT OperationContent as operationContent
+          FROM ${opts.chClient?.database}.gql_metrics_operations
+          WHERE OperationHash = '${req.hash}'
+          LIMIT 1 SETTINGS use_query_cache = true, query_cache_ttl = 2629800
+        `;
 
     const result = await opts.chClient.queryPromise(query);
 

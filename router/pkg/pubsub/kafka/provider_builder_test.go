@@ -93,7 +93,7 @@ func TestPubSubProviderBuilderFactory(t *testing.T) {
 
 		builder := NewProviderBuilder(ctx, logger, "host", "addr")
 		require.NotNil(t, builder)
-		provider, err := builder.BuildProvider(cfg, datasource.ProviderOpts{})
+		provider, err := builder.BuildProvider(cfg)
 		require.NoError(t, err)
 
 		// Check the returned provider

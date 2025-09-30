@@ -10,25 +10,25 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 )
 
-type client struct {
+type Option func(*Client)
+
+type Client struct {
 	path    string
 	options *Options
 }
-
-var _ persistedoperation.StorageClient = (*client)(nil)
 
 type Options struct {
 	ObjectPathPrefix string
 }
 
 // NewClient creates a new FileStorage client that can be used to retrieve persisted operations
-func NewClient(path string, options *Options) (*client, error) {
+func NewClient(path string, options *Options) (persistedoperation.Client, error) {
 	absolutePath, err := filepath.Abs(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get absolute storage path: %w", err)
 	}
 
-	client := &client{
+	client := &Client{
 		path:    absolutePath,
 		options: options,
 	}
@@ -36,16 +36,16 @@ func NewClient(path string, options *Options) (*client, error) {
 	return client, nil
 }
 
-func (c client) PersistedOperation(ctx context.Context, clientName, sha256Hash string) ([]byte, error) {
+func (c Client) PersistedOperation(ctx context.Context, clientName, sha256Hash string) ([]byte, bool, error) {
 	content, err := c.persistedOperation(clientName, sha256Hash)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
-	return content, nil
+	return content, false, nil
 }
 
-func (c client) persistedOperation(clientName string, sha256Hash string) ([]byte, error) {
+func (c Client) persistedOperation(clientName string, sha256Hash string) ([]byte, error) {
 	operationName := fmt.Sprintf("%s.json", sha256Hash)
 	objectPath := filepath.Join(c.path, c.options.ObjectPathPrefix, operationName)
 
@@ -69,4 +69,4 @@ func (c client) persistedOperation(clientName string, sha256Hash string) ([]byte
 	return []byte(po.Body), nil
 }
 
-func (c client) Close() {}
+func (c Client) Close() {}

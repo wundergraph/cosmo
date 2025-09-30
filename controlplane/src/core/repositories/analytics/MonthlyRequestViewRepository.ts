@@ -9,8 +9,8 @@ export class MonthlyRequestViewRepository {
          toStartOfMonth(now()) AS startDate,
          toLastDayOfMonth(now()) AS endDate
         SELECT
-          sum(RequestCount) as totalRequests
-        FROM ${this.client.database}.gql_metrics_router_requests
+          sum(TotalRequests) as totalRequests
+        FROM ${this.client.database}.operation_request_metrics_5_30
         WHERE OrganizationID = '${organizationId}'
           AND toDate(Timestamp) >= startDate AND toDate(Timestamp) <= endDate
     `;

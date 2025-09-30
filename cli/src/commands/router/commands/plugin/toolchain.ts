@@ -4,17 +4,11 @@ import { existsSync } from 'node:fs';
 import { basename, join, resolve } from 'pathe';
 import pc from 'picocolors';
 import { execa } from 'execa';
-import {
-  compileGraphQLToMapping,
-  compileGraphQLToProto,
-  ProtoLock,
-  validateGraphQLSDL,
-} from '@wundergraph/protographic';
+import { compileGraphQLToMapping, compileGraphQLToProto, ProtoLock } from '@wundergraph/protographic';
 import prompts from 'prompts';
 import semver from 'semver';
 import { camelCase, upperFirst } from 'lodash-es';
 import { dataDir } from '../../../../core/config.js';
-import { renderValidationResults } from './helper.js';
 
 // Define platform-architecture combinations
 export const HOST_PLATFORM = `${os.platform()}-${getOSArch()}`;
@@ -365,8 +359,7 @@ export async function generateProtoAndMapping(pluginDir: string, goModulePath: s
   await mkdir(generatedDir, { recursive: true });
 
   spinner.text = 'Reading schema...';
-  const schemaFile = resolve(srcDir, 'schema.graphql');
-  const schema = await readFile(schemaFile, 'utf8');
+  const schema = await readFile(resolve(srcDir, 'schema.graphql'), 'utf8');
   const lockFile = resolve(generatedDir, 'service.proto.lock.json');
 
   let lockData: ProtoLock | undefined;
@@ -380,11 +373,6 @@ export async function generateProtoAndMapping(pluginDir: string, goModulePath: s
   const pluginName = basename(pluginDir);
 
   const serviceName = upperFirst(camelCase(pluginName)) + 'Service';
-
-  // Validate the GraphQL schema and render results
-  spinner.text = 'Validating GraphQL schema...';
-  const validationResult = validateGraphQLSDL(schema);
-  renderValidationResults(validationResult, schemaFile);
 
   spinner.text = 'Generating mapping and proto files...';
 

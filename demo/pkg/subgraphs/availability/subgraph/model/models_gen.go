@@ -3,8 +3,8 @@
 package model
 
 type Employee struct {
-	ID          int   `json:"id"`
-	IsAvailable *bool `json:"isAvailable,omitempty"`
+	ID          int  `json:"id"`
+	IsAvailable bool `json:"isAvailable"`
 }
 
 func (Employee) IsEntity() {}

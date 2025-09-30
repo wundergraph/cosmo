@@ -50,10 +50,9 @@ func (Consultancy) IsProducts() {}
 func (Consultancy) IsEntity() {}
 
 type Cosmo struct {
-	Upc             string      `json:"upc"`
-	Engineers       []*Employee `json:"engineers"`
-	Lead            *Employee   `json:"lead"`
-	IsLeadAvailable *bool       `json:"isLeadAvailable,omitempty"`
+	Upc       string      `json:"upc"`
+	Engineers []*Employee `json:"engineers"`
+	Lead      *Employee   `json:"lead"`
 }
 
 func (Cosmo) IsProducts() {}
@@ -104,7 +103,7 @@ type Employee struct {
 	StartDate             string        `json:"startDate"`
 	CurrentMood           Mood          `json:"currentMood"`
 	DerivedMood           Mood          `json:"derivedMood"`
-	IsAvailable           *bool         `json:"isAvailable,omitempty"`
+	IsAvailable           bool          `json:"isAvailable"`
 	RootFieldThrowsError  *string       `json:"rootFieldThrowsError,omitempty"`
 	RootFieldErrorWrapper *ErrorWrapper `json:"rootFieldErrorWrapper,omitempty"`
 }

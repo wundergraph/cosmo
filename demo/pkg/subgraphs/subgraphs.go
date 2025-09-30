@@ -14,8 +14,6 @@ import (
 
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/products_fg"
 	"github.com/wundergraph/cosmo/router/core"
-	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"go.uber.org/zap"
 
 	"github.com/99designs/gqlgen/graphql"
@@ -212,17 +210,13 @@ func New(ctx context.Context, config *Config) (*Subgraphs, error) {
 
 	natsPubSubByProviderID := map[string]natsPubsub.Adapter{}
 
-	defaultAdapter, err := natsPubsub.NewAdapter(ctx, zap.NewNop(), url, []nats.Option{}, "hostname", "test", datasource.ProviderOpts{
-		StreamMetricStore: rmetric.NewNoopStreamMetricStore(),
-	})
+	defaultAdapter, err := natsPubsub.NewAdapter(ctx, zap.NewNop(), url, []nats.Option{}, "hostname", "test")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create default nats adapter: %w", err)
 	}
 	natsPubSubByProviderID["default"] = defaultAdapter
 
-	myNatsAdapter, err := natsPubsub.NewAdapter(ctx, zap.NewNop(), url, []nats.Option{}, "hostname", "test", datasource.ProviderOpts{
-		StreamMetricStore: rmetric.NewNoopStreamMetricStore(),
-	})
+	myNatsAdapter, err := natsPubsub.NewAdapter(ctx, zap.NewNop(), url, []nats.Option{}, "hostname", "test")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create my-nats adapter: %w", err)
 	}

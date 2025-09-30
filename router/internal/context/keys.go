@@ -12,5 +12,4 @@ const (
 	RequestContextKey ContextKey = iota
 	SubgraphResolverContextKey
 	EngineLoaderHooksContextKey
-	FetchTimingKey
 )

@@ -5,7 +5,8 @@
 ## using source code
 
 echo "Generating config using 'wgc router compose'"
-pnpx tsx --env-file ../cli/.env ../cli/src/index.ts router compose -i ../demo/graph-no-edg.yaml -o ../router-tests/testenv/testdata/config.json
+cd "../cli" || exit
+pnpm wgc router compose -i ../demo/graph-no-edg.yaml -o ../router-tests/testenv/testdata/config.json
 
 ## using npm package
 

@@ -61,8 +61,6 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { OperationContentDialog } from "./operation-content";
 import { useCheckUserAccess } from "@/hooks/use-check-user-access";
-import { useWorkspace } from "@/hooks/use-workspace";
-import { useCurrentOrganization } from "@/hooks/use-current-organization";
 
 const Override = ({
   changeType,
@@ -80,8 +78,6 @@ const Override = ({
   const router = useRouter();
   const { toast } = useToast();
   const graphContext = useContext(GraphContext);
-  const { namespace: { name: namespace } } = useWorkspace();
-  const organizationSlug = useCurrentOrganization()?.slug;
 
   const { mutate: removeOverrides, isPending: removingOverrides } = useMutation(
     removeOperationOverrides,
@@ -134,8 +130,8 @@ const Override = ({
                       ? {
                           pathname: `/[organizationSlug]/[namespace]/graph/[slug]/schema`,
                           query: {
-                            organizationSlug,
-                            namespace,
+                            organizationSlug: router.query.organizationSlug,
+                            namespace: router.query.namespace,
                             slug: router.query.slug,
                             typename: path?.split(".")?.[0],
                           },
@@ -442,8 +438,6 @@ export const ConfigureOverride = () => {
                     View Operation Content
                   </Button>
                 }
-                federatedGraphName={graphContext?.graph?.name ?? ""}
-                namespace={graphContext?.graph?.namespace ?? ""}
               />
             </div>
           </SheetDescription>

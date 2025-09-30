@@ -21,7 +21,6 @@ import { AuthenticationError } from './errors/errors.js';
 export type AuthUtilsOptions = {
   webBaseUrl: string;
   webErrorPath: string;
-  ssoCookieDomain: string | undefined;
   jwtSecret: string;
   oauth: {
     clientID: string;
@@ -38,7 +37,6 @@ export type AuthUtilsOptions = {
   };
 };
 
-const tokenExpirationWindowSkew = 60 * 5;
 const pkceMaxAgeSec = 60 * 15; // 15 minutes
 const pkceCodeAlgorithm = 'S256';
 const scope = 'openid profile email';
@@ -114,7 +112,7 @@ export default class AuthUtils {
   createSsoCookie(res: FastifyReply, ssoSlug: string) {
     const currentDate = new Date();
     const userSsoCookie = cookie.serialize(cosmoIdpHintCookieName, ssoSlug, {
-      domain: this.opts.ssoCookieDomain ?? this.webDomain,
+      domain: this.webDomain,
       sameSite: 'lax',
       expires: new Date(currentDate.setFullYear(currentDate.getFullYear() + 1)),
       path: '/',
@@ -307,27 +305,16 @@ export default class AuthUtils {
 
     // Check if the access token is expired
     const parsedAccessToken = decodeJWT(userSession.accessToken);
-    if (parsedAccessToken.exp && parsedAccessToken.exp < Date.now() / 1000 + tokenExpirationWindowSkew) {
-      if (!userSession.refreshToken) {
-        throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'No refresh token');
-      }
+    if (parsedAccessToken.exp && parsedAccessToken.exp < Date.now() / 1000) {
+      const parsedRefreshToken = decodeJWT(userSession.accessToken);
 
       // Check if the refresh token is valid to issue a new access token
-      const parsedRefreshToken = decodeJWT(userSession.refreshToken);
       if (parsedRefreshToken.exp && parsedRefreshToken.exp < Date.now() / 1000) {
         throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Refresh token expired');
       }
 
-      // The session expiration is relative to the creation time
-      const baseMs = userSession.createdAt.getTime();
-      const expiresAtMs = baseMs + DEFAULT_SESSION_MAX_AGE_SEC * 1000;
-      const sessionExpiresDate = new Date(expiresAtMs);
-      const remainingSeconds = Math.max(0, Math.floor((expiresAtMs - Date.now()) / 1000));
-
-      if (remainingSeconds <= 0) {
-        // Absolute session lifetime has elapsed; do not renew.
-        throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Session expired');
-      }
+      const sessionExpiresIn = DEFAULT_SESSION_MAX_AGE_SEC;
+      const sessionExpiresDate = new Date(Date.now() + 1000 * sessionExpiresIn);
 
       // Refresh the access token with the refresh token
       // The method will throw an error if the request fails
@@ -354,9 +341,8 @@ export default class AuthUtils {
       const newUserSession = updatedSessions[0];
 
       const jwt = await encrypt<UserSession>({
-        maxAgeInSeconds: remainingSeconds,
+        maxAgeInSeconds: sessionExpiresIn,
         token: {
-          iss: userSession.userId,
           sessionId: newUserSession.id,
         },
         secret: this.opts.jwtSecret,

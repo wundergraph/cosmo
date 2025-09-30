@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuTrigger,
+  DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { Loader } from "@/components/ui/loader";
@@ -77,7 +77,6 @@ import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useContext, useState } from "react";
-import { useWorkspace } from "@/hooks/use-workspace";
 
 export const ProposalDetails = ({
   proposal,
@@ -92,7 +91,7 @@ export const ProposalDetails = ({
   const user = useUser();
   const graphData = useContext(GraphContext);
 
-  const { namespace: { name: namespace } } = useWorkspace();
+  const namespace = router.query.namespace as string;
   const slug = router.query.slug as string;
   const id = router.query.proposalId as string;
   const tab = router.query.tab as string;
@@ -560,7 +559,6 @@ export const ProposalDetails = ({
                               graphPruningSkipped,
                               checkedSubgraphs,
                               proposalMatch,
-                              linkedChecks,
                             }) => {
                               const isSuccessful = isCheckSuccessful(
                                 isComposable,
@@ -570,16 +568,6 @@ export const ProposalDetails = ({
                                 hasGraphPruningErrors,
                                 clientTrafficCheckSkipped,
                                 proposalMatch === "error",
-                                linkedChecks.some(
-                                  (linkedCheck) =>
-                                    linkedCheck.hasClientTraffic &&
-                                    !linkedCheck.isForcedSuccess,
-                                ),
-                                linkedChecks.some(
-                                  (linkedCheck) =>
-                                    linkedCheck.hasGraphPruningErrors &&
-                                    !linkedCheck.isForcedSuccess,
-                                ),
                               );
 
                               const path = `/${user?.currentOrganization.slug}/${graphData?.graph?.namespace}/graph/${graphData?.graph?.name}/checks/${id}`;

@@ -67,34 +67,6 @@
     },
     {
       "type": "OPERATION_TYPE_QUERY",
-      "original": "projectTags",
-      "mapped": "QueryProjectTags",
-      "request": "QueryProjectTagsRequest",
-      "response": "QueryProjectTagsResponse"
-    },
-    {
-      "type": "OPERATION_TYPE_QUERY",
-      "original": "archivedProjects",
-      "mapped": "QueryArchivedProjects",
-      "request": "QueryArchivedProjectsRequest",
-      "response": "QueryArchivedProjectsResponse"
-    },
-    {
-      "type": "OPERATION_TYPE_QUERY",
-      "original": "tasksByPriority",
-      "mapped": "QueryTasksByPriority",
-      "request": "QueryTasksByPriorityRequest",
-      "response": "QueryTasksByPriorityResponse"
-    },
-    {
-      "type": "OPERATION_TYPE_QUERY",
-      "original": "resourceMatrix",
-      "mapped": "QueryResourceMatrix",
-      "request": "QueryResourceMatrixRequest",
-      "response": "QueryResourceMatrixResponse"
-    },
-    {
-      "type": "OPERATION_TYPE_QUERY",
       "original": "killService",
       "mapped": "QueryKillService",
       "request": "QueryKillServiceRequest",
@@ -106,13 +78,6 @@
       "mapped": "QueryPanic",
       "request": "QueryPanicRequest",
       "response": "QueryPanicResponse"
-    },
-    {
-      "type": "OPERATION_TYPE_QUERY",
-      "original": "nodesById",
-      "mapped": "QueryNodesById",
-      "request": "QueryNodesByIdRequest",
-      "response": "QueryNodesByIdResponse"
     },
     {
       "type": "OPERATION_TYPE_MUTATION",
@@ -270,36 +235,6 @@
           ]
         },
         {
-          "original": "projectTags",
-          "mapped": "project_tags",
-          "argumentMappings": []
-        },
-        {
-          "original": "archivedProjects",
-          "mapped": "archived_projects",
-          "argumentMappings": []
-        },
-        {
-          "original": "tasksByPriority",
-          "mapped": "tasks_by_priority",
-          "argumentMappings": [
-            {
-              "original": "projectId",
-              "mapped": "project_id"
-            }
-          ]
-        },
-        {
-          "original": "resourceMatrix",
-          "mapped": "resource_matrix",
-          "argumentMappings": [
-            {
-              "original": "projectId",
-              "mapped": "project_id"
-            }
-          ]
-        },
-        {
           "original": "killService",
           "mapped": "kill_service",
           "argumentMappings": []
@@ -308,16 +243,6 @@
           "original": "panic",
           "mapped": "panic",
           "argumentMappings": []
-        },
-        {
-          "original": "nodesById",
-          "mapped": "nodes_by_id",
-          "argumentMappings": [
-            {
-              "original": "id",
-              "mapped": "id"
-            }
-          ]
         }
       ]
     },
@@ -532,41 +457,6 @@
           "original": "progress",
           "mapped": "progress",
           "argumentMappings": []
-        },
-        {
-          "original": "tags",
-          "mapped": "tags",
-          "argumentMappings": []
-        },
-        {
-          "original": "alternativeProjects",
-          "mapped": "alternative_projects",
-          "argumentMappings": []
-        },
-        {
-          "original": "dependencies",
-          "mapped": "dependencies",
-          "argumentMappings": []
-        },
-        {
-          "original": "resourceGroups",
-          "mapped": "resource_groups",
-          "argumentMappings": []
-        },
-        {
-          "original": "tasksByPhase",
-          "mapped": "tasks_by_phase",
-          "argumentMappings": []
-        },
-        {
-          "original": "milestoneGroups",
-          "mapped": "milestone_groups",
-          "argumentMappings": []
-        },
-        {
-          "original": "priorityMatrix",
-          "mapped": "priority_matrix",
-          "argumentMappings": []
         }
       ]
     },
@@ -611,21 +501,6 @@
         {
           "original": "completionPercentage",
           "mapped": "completion_percentage",
-          "argumentMappings": []
-        },
-        {
-          "original": "dependencies",
-          "mapped": "dependencies",
-          "argumentMappings": []
-        },
-        {
-          "original": "subtasks",
-          "mapped": "subtasks",
-          "argumentMappings": []
-        },
-        {
-          "original": "reviewers",
-          "mapped": "reviewers",
           "argumentMappings": []
         }
       ]
@@ -692,31 +567,6 @@
           "original": "completedAt",
           "mapped": "completed_at",
           "argumentMappings": []
-        },
-        {
-          "original": "labels",
-          "mapped": "labels",
-          "argumentMappings": []
-        },
-        {
-          "original": "subtasks",
-          "mapped": "subtasks",
-          "argumentMappings": []
-        },
-        {
-          "original": "dependencies",
-          "mapped": "dependencies",
-          "argumentMappings": []
-        },
-        {
-          "original": "attachmentUrls",
-          "mapped": "attachment_urls",
-          "argumentMappings": []
-        },
-        {
-          "original": "reviewerIds",
-          "mapped": "reviewer_ids",
-          "argumentMappings": []
         }
       ]
     },
@@ -782,21 +632,6 @@
           "original": "completedTasks",
           "mapped": "completed_tasks",
           "argumentMappings": []
-        },
-        {
-          "original": "skills",
-          "mapped": "skills",
-          "argumentMappings": []
-        },
-        {
-          "original": "certifications",
-          "mapped": "certifications",
-          "argumentMappings": []
-        },
-        {
-          "original": "projectHistory",
-          "mapped": "project_history",
-          "argumentMappings": []
         }
       ]
     },
@@ -811,11 +646,6 @@
         {
           "original": "projects",
           "mapped": "projects",
-          "argumentMappings": []
-        },
-        {
-          "original": "featureMatrix",
-          "mapped": "feature_matrix",
           "argumentMappings": []
         }
       ]

@@ -84,9 +84,6 @@ access_logs:
       - key: 'request_information'
         value_from:
           expression: "request.error ?? 'success'"
-    ignore_query_params_list:
-      - variables
-      - anothervalue
   subgraphs:
     enabled: true
     fields:
@@ -275,11 +272,6 @@ authentication:
       - url: 'https://example.com/.well-known/jwks2.json'
         refresh_interval: 2m
         algorithms: ['RS256', 'ES256']
-        refresh_unknown_kid:
-          enabled: true
-          max_wait: 10s
-          interval: 5s
-          burst: 3
       - url: 'https://example.com/.well-known/jwks3.json'
     header_name: Authorization
     header_value_prefix: Bearer
@@ -435,7 +427,6 @@ security:
       enabled: true
       limit: 4
       ignore_persisted_operations: true
-  operation_name_length_limit: 2000
 persisted_operations:
   safelist:
     enabled: true

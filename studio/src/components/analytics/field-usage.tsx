@@ -59,8 +59,7 @@ import { createFilterState } from "./constructAnalyticsTableQueryState";
 import { useApplyParams } from "./use-apply-params";
 import { useAnalyticsQueryState } from "./useAnalyticsQueryState";
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
-import { useWorkspace } from "@/hooks/use-workspace";
-import { useCurrentOrganization } from "@/hooks/use-current-organization";
+import { useUser } from "@/hooks/use-user";
 
 export const FieldUsage = ({
   usageData,
@@ -68,8 +67,8 @@ export const FieldUsage = ({
   usageData: GetFieldUsageResponse;
 }) => {
   const router = useRouter();
-  const { namespace: { name: namespace } } = useWorkspace();
-  const organizationSlug = useCurrentOrganization()?.slug;
+  const user = useUser();
+  const organizationSlug = user?.currentOrganization.slug;
   const slug = router.query.slug;
 
   const subgraphs = useContext(GraphContext)?.subgraphs ?? [];
@@ -250,8 +249,9 @@ export const FieldUsage = ({
                                     href={{
                                       pathname: `/[organizationSlug]/[namespace]/graph/[slug]/analytics/traces`,
                                       query: {
-                                        namespace,
-                                        organizationSlug,
+                                        namespace: router.query.namespace,
+                                        organizationSlug:
+                                          user?.currentOrganization.slug,
                                         slug: router.query.slug,
                                         filterState: createFilterState({
                                           operationName: op.name,

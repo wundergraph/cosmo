@@ -1,3 +1,4 @@
+import { useUser } from "@/hooks/use-user";
 import { docsBaseURL, lintCategories } from "@/lib/constants";
 import { cn, countLintConfigsByCategory } from "@/lib/utils";
 import { useMutation } from "@connectrpc/connect-query";
@@ -12,6 +13,7 @@ import {
   LintSeverity,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import Link from "next/link";
+import { useRouter } from "next/router";
 import { useState, useEffect } from "react";
 import {
   Accordion,
@@ -41,7 +43,6 @@ import {
 import { Switch } from "../ui/switch";
 import { useToast } from "../ui/use-toast";
 import { useCheckUserAccess } from "@/hooks/use-check-user-access";
-import { useWorkspace } from "@/hooks/use-workspace";
 
 export const SeverityDropdown = ({
   onChange,
@@ -84,8 +85,10 @@ export const LinterConfig = ({
   data: GetNamespaceLintConfigResponse;
   refetch: () => void;
 }) => {
+  const user = useUser();
   const checkUserAccess = useCheckUserAccess();
-  const { namespace: { name: namespace } } = useWorkspace();
+  const router = useRouter();
+  const namespace = router.query.namespace as string;
 
   const { mutate: configureLintRules, isPending: isConfiguring } = useMutation(
     configureNamespaceLintConfig,

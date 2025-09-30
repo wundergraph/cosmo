@@ -1,17 +1,9 @@
 import { Kind, OperationTypeNode } from 'graphql';
-import {
-  EntityInterfaceFederationData,
-  FieldData,
-  InputValueData,
-  ObjectDefinitionData,
-} from '../schema-building/types';
+import { EntityInterfaceFederationData, InputValueData, ObjectDefinitionData } from '../schema-building/types';
 import {
   IncompatibleMergedTypesErrorParams,
   InvalidNamedTypeErrorParams,
   InvalidRootTypeFieldEventsDirectiveData,
-  OneOfRequiredFieldsErrorParams,
-  SemanticNonNullLevelsIndexOutOfBoundsErrorParams,
-  SemanticNonNullLevelsNonNullErrorParams,
 } from './types';
 import { UnresolvableFieldData } from '../resolvability-graph/utils';
 import {
@@ -22,7 +14,6 @@ import {
   IN_UPPER,
   INPUT_FIELD,
   INTERFACE,
-  LEVELS,
   LITERAL_NEW_LINE,
   NOT_UPPER,
   OR_UPPER,
@@ -39,7 +30,6 @@ import { getEntriesNotInHashSet, getOrThrowError, kindToNodeType, numberToOrdina
 import { ImplementationErrors, InvalidEntityInterface, InvalidRequiredInputValueData } from '../utils/types';
 import { isFieldData } from '../schema-building/utils';
 import { printTypeNode } from '@graphql-tools/merge';
-import { NodeType, TypeName } from '../types/types';
 
 export const minimumSubgraphRequirementError = new Error('At least one subgraph is required for federation.');
 
@@ -434,9 +424,9 @@ export function subgraphInvalidSyntaxError(error?: Error): Error {
 }
 
 export function invalidInterfaceImplementationError(
-  parentTypeName: TypeName,
-  parentNodeType: NodeType,
-  implementationErrorsByInterfaceTypeName: Map<TypeName, ImplementationErrors>,
+  parentTypeName: string,
+  parentTypeString: string,
+  implementationErrorsByInterfaceTypeName: Map<string, ImplementationErrors>,
 ): Error {
   const messages: string[] = [];
   for (const [interfaceName, implementationErrors] of implementationErrorsByInterfaceTypeName) {
@@ -496,7 +486,7 @@ export function invalidInterfaceImplementationError(
     messages.push(message);
   }
   return new Error(
-    `The ${parentNodeType} "${parentTypeName}" has the following Interface implementation errors:\n` +
+    `The ${parentTypeString} "${parentTypeName}" has the following Interface implementation errors:\n` +
       messages.join('\n'),
   );
 }
@@ -856,9 +846,8 @@ export function undefinedEntityInterfaceImplementationsError(
   entityInterfaceFederationDataByTypeName: Map<string, EntityInterfaceFederationData>,
 ): Error {
   let message =
-    `Federation was unsuccessful because any one subgraph that defines a specific entity Interface` +
-    ` must also define each and every entity Object that implements that entity Interface.\n` +
-    `Each entity Object must also explicitly define its implementation of the entity Interface.\n`;
+    `Federation was unsuccessful because any one subgraph that defines a specific entity interface` +
+    ` must also define each and every entity object that implements that entity interface.\n`;
   for (const [typeName, undefinedImplementations] of invalidEntityInterfacesByTypeName) {
     const entityInterfaceDatas = getOrThrowError(
       entityInterfaceFederationDataByTypeName,
@@ -867,15 +856,15 @@ export function undefinedEntityInterfaceImplementationsError(
     );
     const implementedConcreteTypeNames = entityInterfaceDatas.concreteTypeNames!;
     message +=
-      ` Across all subgraphs, the entity interface "${typeName}" is implemented by the following entit` +
-      (implementedConcreteTypeNames.size > 1 ? `ies` : `y`) +
+      ` Across all subgraphs, the entity interface "${typeName}" is implemented by the following entities` +
+      (implementedConcreteTypeNames.size > 1 ? `s` : ``) +
       `:\n  "` +
       Array.from(implementedConcreteTypeNames).join(QUOTATION_JOIN) +
       `"\n` +
       ` However, the definition of at least one of these implementations is missing in a subgraph that` +
       ` defines the entity interface "${typeName}":\n`;
-    for (const { subgraphName, definedConcreteTypeNames } of undefinedImplementations) {
-      const disparities = getEntriesNotInHashSet(implementedConcreteTypeNames, definedConcreteTypeNames);
+    for (const { subgraphName, concreteTypeNames } of undefinedImplementations) {
+      const disparities = getEntriesNotInHashSet(implementedConcreteTypeNames, concreteTypeNames);
       message +=
         `  Subgraph "${subgraphName}" does not define the following implementations: "` +
         disparities.join(QUOTATION_JOIN) +
@@ -1622,54 +1611,5 @@ export function invalidNamedTypeError({ data, namedTypeData, nodeType }: Invalid
       `; however, ${kindToNodeType(namedTypeData.kind)} "${namedTypeData.name}" is not a valid ` +
       (isOutputField ? 'output' : 'input') +
       ' type.',
-  );
-}
-
-export function semanticNonNullLevelsNaNIndexErrorMessage(value: string) {
-  return `Index "${value}" is not a valid integer.`;
-}
-
-export function semanticNonNullLevelsIndexOutOfBoundsErrorMessage({
-  maxIndex,
-  typeString,
-  value,
-}: SemanticNonNullLevelsIndexOutOfBoundsErrorParams) {
-  return (
-    `Index "${value}" is out of bounds for type ${typeString}; ` +
-    (maxIndex > 0 ? `valid indices are 0-${maxIndex} inclusive.` : `the only valid index is 0.`)
-  );
-}
-
-export function semanticNonNullLevelsNonNullErrorMessage({
-  typeString,
-  value,
-}: SemanticNonNullLevelsNonNullErrorParams) {
-  return `Index "${value}" of type ${typeString} is non-null but must be nullable.`;
-}
-
-export const semanticNonNullArgumentErrorMessage = `Argument "${LEVELS}" validation error.`;
-
-export function semanticNonNullInconsistentLevelsError(data: FieldData): Error {
-  const coords = `${data.renamedParentTypeName}.${data.name}`;
-  let message =
-    `The "@semanticNonNull" directive defined on field "${coords}"` +
-    ` is invalid due to inconsistent values provided to the "levels" argument across the following subgraphs:\n`;
-  for (const [subgraphName, levels] of data.nullLevelsBySubgraphName) {
-    message += ` Subgraph "${subgraphName}" defines levels ${Array.from(levels).sort((a, b) => a - b)}.\n`;
-  }
-  message +=
-    `The list value provided to the "levels" argument must be consistently defined across all subgraphs that` +
-    ` define "@semanticNonNull" on field "${coords}".`;
-  return new Error(message);
-}
-
-export function oneOfRequiredFieldsError({ requiredFieldNames, typeName }: OneOfRequiredFieldsErrorParams): Error {
-  return new Error(
-    `The "@oneOf" directive defined on Input Object "${typeName}" is invalid because all Input fields must be` +
-      ` optional (nullable); however, the following Input field` +
-      (requiredFieldNames.length > 1 ? `s are` : ` is`) +
-      ` required (non-nullable): "` +
-      requiredFieldNames.join(QUOTATION_JOIN) +
-      `".`,
   );
 }

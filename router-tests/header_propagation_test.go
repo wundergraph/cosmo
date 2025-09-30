@@ -48,7 +48,7 @@ func TestCacheControl(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query:      "", // Empty query
 				Variables:  json.RawMessage(`{}`),
-				Extensions: json.RawMessage(`{"persistedQuery": {"version": 1, "sha256Hash": "` + cacheHashNotStored + `"}}`),
+				Extensions: json.RawMessage(`{"persistedQuery": {"version": 1, "sha256Hash": "invalid-hash"}}`),
 			})
 
 			require.Contains(t, res.Body, "PERSISTED_QUERY_NOT_FOUND")

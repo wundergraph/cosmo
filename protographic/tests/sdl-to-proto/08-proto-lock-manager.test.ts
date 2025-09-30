@@ -1,6 +1,5 @@
 import { describe, expect, test } from 'vitest';
 import { ProtoLockManager } from '../../src/proto-lock';
-import { compileGraphQLToProto } from '../../src';
 
 describe('ProtoLockManager', () => {
   test('should correctly initialize lock data with ordered fields', () => {
@@ -186,40 +185,5 @@ describe('ProtoLockManager', () => {
     expect(lockData.messages.Message.reservedNumbers).toContain(2);
     expect(lockData.messages.Message.reservedNumbers).toContain(3);
     expect(lockData.messages.Message.reservedNumbers).toContain(4);
-  });
-
-  test('field indexes should not overlap when re-adding arguments', () => {
-    const schemaWithArgument = `
-      type Query {
-        hello(name: String!): String!
-      }
-    `;
-
-    const schemaWithoutArgument = `
-      type Query {
-        hello: String!
-      }
-    `;
-
-    const result1 = compileGraphQLToProto(schemaWithArgument);
-    expect(result1.lockData).not.toBeNull();
-
-    // Argument 'name' should be field 1 on the request message
-    expect(result1.lockData!.messages?.QueryHelloRequest?.fields?.name).toBe(1);
-
-    // Remove the name field from the arguments, and thus lock field 1 of the request message
-    const result2 = compileGraphQLToProto(schemaWithoutArgument, { lockData: result1.lockData! });
-    expect(result2.lockData).not.toBeNull();
-
-    // The index of the previous 'name' field on the request message should be reserved
-    expect(result2.lockData!.messages?.QueryHelloRequest?.reservedNumbers).toContain(1);
-
-    // Add the name argument back, should be index 2 now, we do not reuse indices
-    const result3 = compileGraphQLToProto(schemaWithArgument, { lockData: result2.lockData! });
-    expect(result3.lockData).not.toBeNull();
-
-    // Check that field 1 is still reserved, and that name is now field 2
-    expect(result3.lockData!.messages?.QueryHelloRequest?.reservedNumbers).toContain(1);
-    expect(result3.lockData!.messages?.QueryHelloRequest?.fields?.name, 'name field should be field 2').toBe(2);
   });
 });

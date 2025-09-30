@@ -25,7 +25,6 @@ import {
 import { FieldSetConditionData } from '../router-configuration/types';
 import { KeyFieldSetData } from '../v1/normalization/types';
 import { InputNodeKind, OutputNodeKind } from '../utils/types';
-import { FieldName, SubgraphName } from '../types/types';
 
 export type ArgumentData = {
   name: string;
@@ -102,17 +101,16 @@ export type FieldData = {
   federatedCoords: string;
   inheritedDirectiveNames: Set<string>;
   isInaccessible: boolean;
-  isShareableBySubgraphName: Map<SubgraphName, boolean>;
+  isShareableBySubgraphName: Map<string, boolean>;
   kind: Kind.FIELD_DEFINITION;
   name: string;
   namedTypeKind: OutputNodeKind | Kind.NULL;
   namedTypeName: string;
   node: MutableFieldNode;
-  nullLevelsBySubgraphName: Map<SubgraphName, Set<number>>;
   originalParentTypeName: string;
   persistedDirectivesData: PersistedDirectivesData;
   renamedParentTypeName: string;
-  subgraphNames: Set<SubgraphName>;
+  subgraphNames: Set<string>;
   type: MutableTypeNode;
   description?: StringValueNode;
 };
@@ -174,7 +172,7 @@ export type ObjectDefinitionData = {
   configureDescriptionDataBySubgraphName: Map<string, ConfigureDescriptionData>;
   directivesByDirectiveName: Map<string, Array<ConstDirectiveNode>>;
   extensionType: ExtensionType;
-  fieldDataByName: Map<FieldName, FieldData>;
+  fieldDataByName: Map<string, FieldData>;
   implementedInterfaceTypeNames: Set<string>;
   isEntity: boolean;
   isInaccessible: boolean;
@@ -184,7 +182,6 @@ export type ObjectDefinitionData = {
   node: MutableObjectNode;
   persistedDirectivesData: PersistedDirectivesData;
   renamedTypeName: string;
-  requireFetchReasonsFieldNames: Set<FieldName>;
   subgraphNames: Set<string>;
   description?: StringValueNode;
 };

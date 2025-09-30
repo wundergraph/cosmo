@@ -53,7 +53,7 @@ func (f *HttpFlushWriter) Complete() {
 		return
 	}
 	if f.sse {
-		_, _ = f.writer.Write([]byte("event: complete\ndata: \n\n"))
+		_, _ = f.writer.Write([]byte("event: complete"))
 	} else if f.multipart {
 		// Write the final boundary in the multipart response
 		if f.apolloSubscriptionMultipartPrintBoundary {
@@ -75,33 +75,6 @@ func (f *HttpFlushWriter) Write(p []byte) (n int, err error) {
 	}
 
 	return f.buf.Write(p)
-}
-
-func (f *HttpFlushWriter) Heartbeat() error {
-	if err := f.ctx.Err(); err != nil {
-		return err
-	}
-
-	var heartbeat []byte
-	if f.sse {
-		heartbeat = []byte(":heartbeat\n\n")
-
-		if _, err := f.writer.Write(heartbeat); err != nil {
-			return err
-		}
-
-		f.flusher.Flush()
-	} else if f.multipart {
-		if _, err := f.Write([]byte("{}")); err != nil {
-			return err
-		}
-
-		if err := f.Flush(); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func (f *HttpFlushWriter) Close(_ resolve.SubscriptionCloseKind) {
@@ -186,7 +159,7 @@ func GetSubscriptionResponseWriter(ctx *resolve.Context, r *http.Request, w http
 	flushWriter.ctx, flushWriter.cancel = context.WithCancel(ctx.Context())
 	ctx = ctx.WithContext(flushWriter.ctx)
 
-	if wgParams.UseMultipart || wgParams.UseSse {
+	if wgParams.UseMultipart {
 		ctx.ExecutionOptions.SendHeartbeat = true
 	}
 

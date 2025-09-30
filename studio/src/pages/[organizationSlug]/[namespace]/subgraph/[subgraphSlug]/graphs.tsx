@@ -36,10 +36,9 @@ import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { PiWarningCircle } from "react-icons/pi";
-import { useWorkspace } from "@/hooks/use-workspace";
 
 export const Empty = ({ labels }: { labels: string[] }) => {
-  const { namespace: { name: namespace } } = useWorkspace();
+  const router = useRouter();
 
   return (
     <EmptyState
@@ -62,7 +61,7 @@ export const Empty = ({ labels }: { labels: string[] }) => {
       actions={
         <CLI
           command={`npx wgc federated-graph create production --namespace ${
-            namespace
+            router.query.namespace
           } --label-matcher ${labels.join(
             " ",
           )} --routing-url http://localhost:4000/graphql`}
@@ -203,7 +202,7 @@ export const FederatedGraphsTable = ({
 const FederatedGraphsPage: NextPageWithLayout = () => {
   const router = useRouter();
   const subgraphSlug = router.query.subgraphSlug as string;
-  const { namespace: { name: namespace } } = useWorkspace();
+  const namespace = router.query.namespace as string;
 
   const { data, error, refetch, isLoading } = useQuery(
     getFederatedGraphsBySubgraphLabels,

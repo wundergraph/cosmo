@@ -56,8 +56,8 @@ func (p *ProviderBuilder) BuildEngineDataSourceFactory(data *nodev1.KafkaEventCo
 	}, nil
 }
 
-func (p *ProviderBuilder) BuildProvider(provider config.KafkaEventSource, providerOpts datasource.ProviderOpts) (datasource.Provider, error) {
-	adapter, pubSubProvider, err := buildProvider(p.ctx, provider, p.logger, providerOpts)
+func (p *ProviderBuilder) BuildProvider(provider config.KafkaEventSource) (datasource.Provider, error) {
+	adapter, pubSubProvider, err := buildProvider(p.ctx, provider, p.logger)
 	if err != nil {
 		return nil, err
 	}
@@ -150,12 +150,12 @@ func buildKafkaOptions(eventSource config.KafkaEventSource, logger *zap.Logger) 
 	return opts, nil
 }
 
-func buildProvider(ctx context.Context, provider config.KafkaEventSource, logger *zap.Logger, providerOpts datasource.ProviderOpts) (Adapter, datasource.Provider, error) {
-	kafkaOpts, err := buildKafkaOptions(provider, logger)
+func buildProvider(ctx context.Context, provider config.KafkaEventSource, logger *zap.Logger) (Adapter, datasource.Provider, error) {
+	options, err := buildKafkaOptions(provider, logger)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to build options for Kafka provider with ID \"%s\": %w", provider.ID, err)
 	}
-	adapter, err := NewProviderAdapter(ctx, logger, kafkaOpts, providerOpts)
+	adapter, err := NewProviderAdapter(ctx, logger, options)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create adapter for Kafka provider with ID \"%s\": %w", provider.ID, err)
 	}

@@ -141,7 +141,6 @@ message TypeField {
   string type_name = 1;
   repeated string field_names = 2;
   repeated string external_field_names = 3;
-  repeated string require_fetch_reasons_field_names = 4;
 }
 
 message FieldCoordinates {
@@ -209,17 +208,11 @@ message GRPCConfiguration {
   PluginConfiguration plugin = 3;
 }
 
-message ImageReference {
-  string repository = 1; // {organization_id}/{subgraph_id}
-  string reference = 2; // v1
-}
-
 message PluginConfiguration {
   // Plugin name
   string name = 1;
   // Plugin version
   string version = 2;
-  optional ImageReference image_reference = 3;
 }
 
 message SSLConfiguration {

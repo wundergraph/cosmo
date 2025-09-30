@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"time"
 
 	"github.com/expr-lang/expr/file"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
@@ -54,7 +53,7 @@ func (copyCtx Context) Clone() *Context {
 
 	query := make(map[string]string, len(copyCtx.Request.URL.Query))
 	for k, v := range copyCtx.Request.URL.Query {
-		query[k] = v
+		claims[k] = v
 	}
 	copyCtx.Request.URL.Query = query
 
@@ -133,8 +132,7 @@ type SubgraphResponse struct {
 }
 
 type ClientTrace struct {
-	FetchDuration             time.Duration `expr:"fetchDuration"`
-	ConnectionAcquireDuration time.Duration `expr:"connAcquireDuration"`
+	ConnectionAcquireDuration float64 `expr:"connAcquireDuration"`
 }
 
 // Subgraph Related

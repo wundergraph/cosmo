@@ -70,7 +70,7 @@ jobs:
         run: git diff --no-ext-diff --exit-code
 
       - name: Build
-        run: pnpm run --filter ./controlplane --filter ./connect --filter ./shared --filter ./composition --filter ./protographic build
+        run: pnpm run --filter ./controlplane --filter ./connect --filter ./shared --filter ./composition build
 
       - uses: actions/setup-java@v4
         with:

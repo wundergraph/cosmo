@@ -239,20 +239,6 @@ func urlParseV8(info *v8.FunctionCallbackInfo) *v8.Value {
 	return value
 }
 
-func urlCanParseV8(info *v8.FunctionCallbackInfo) *v8.Value {
-	isolate := info.Context().Isolate()
-	args := info.Args()
-	url := args[0].String()
-	base := args[1].String()
-
-	result := urlCanParse(url, base)
-	value, err := v8.NewValue(isolate, result)
-	if err != nil {
-		panic(err)
-	}
-	return value
-}
-
 func newVM() (*v8Vm, error) {
 	isolate := v8.NewIsolate()
 
@@ -265,11 +251,6 @@ func newVM() (*v8Vm, error) {
 
 	urlParse := v8.NewFunctionTemplate(isolate, urlParseV8)
 	if err := global.Set("urlParse", urlParse, v8.ReadOnly); err != nil {
-		return nil, err
-	}
-
-	urlCanParse := v8.NewFunctionTemplate(isolate, urlCanParseV8)
-	if err := global.Set("urlCanParse", urlCanParse, v8.ReadOnly); err != nil {
 		return nil, err
 	}
 

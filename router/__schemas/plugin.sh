@@ -2,7 +2,7 @@
 
 rm -rf ../plugins
 
-pnpx tsx --env-file ../../cli/.env ../../cli/src/index.ts router plugin init hello-world -d ../
+pnpx tsx --env-file ../../cli/.env ../../cli/src/index.ts router plugin init hello-world --only-plugin -d ../
 
 pnpx tsx --env-file ../../cli/.env ../../cli/src/index.ts router plugin build ../plugins/hello-world --debug
 

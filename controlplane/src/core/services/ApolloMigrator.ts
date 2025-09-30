@@ -275,7 +275,6 @@ export default class ApolloMigrator {
           routingUrl: subgraph.routingURL,
           isEventDrivenGraph: false,
           subscriptionProtocol: 'ws',
-          type: 'standard',
         });
 
         if (!createdSubgraph) {

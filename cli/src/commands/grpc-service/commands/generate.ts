@@ -1,16 +1,11 @@
 import { access, constants, lstat, mkdir, readFile, writeFile } from 'node:fs/promises';
-import {
-  compileGraphQLToMapping,
-  compileGraphQLToProto,
-  ProtoLock,
-  validateGraphQLSDL,
-} from '@wundergraph/protographic';
+import { compileGraphQLToMapping, compileGraphQLToProto, ProtoLock } from '@wundergraph/protographic';
 import { Command, program } from 'commander';
 import { camelCase, upperFirst } from 'lodash-es';
 import Spinner, { type Ora } from 'ora';
 import { resolve } from 'pathe';
 import { BaseCommandOptions } from '../../../core/types/types.js';
-import { renderResultTree, renderValidationResults } from '../../router/commands/plugin/helper.js';
+import { renderResultTree } from '../../router/commands/plugin/helper.js';
 
 type CLIOptions = {
   input: string;
@@ -126,14 +121,6 @@ async function generateProtoAndMapping({
   spinner.text = 'Generating mapping and proto files...';
 
   const lockData = await fetchLockData(lockFile);
-
-  // Validate the GraphQL schema and render results
-  spinner.text = 'Validating GraphQL schema...';
-  const validationResult = validateGraphQLSDL(schema);
-  renderValidationResults(validationResult, schemaFile);
-
-  // Continue with generation if validation passed (no errors)
-  spinner.text = 'Generating mapping and proto files...';
   const mapping = compileGraphQLToMapping(schema, serviceName);
   const proto = compileGraphQLToProto(schema, {
     serviceName,

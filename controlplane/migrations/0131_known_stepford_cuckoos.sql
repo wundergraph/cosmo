@@ -1,1 +1,0 @@
-ALTER TYPE "public"."organization_role" ADD VALUE 'subgraph-checker' BEFORE 'subgraph-viewer';

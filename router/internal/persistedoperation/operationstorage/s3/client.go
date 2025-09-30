@@ -32,10 +32,9 @@ type Options struct {
 	TraceProvider    *sdktrace.TracerProvider
 }
 
-var _ persistedoperation.StorageClient = (*Client)(nil)
-
 // NewClient creates a new S3 client that can be used to retrieve persisted operations
-func NewClient(endpoint string, options *Options) (*Client, error) {
+func NewClient(endpoint string, options *Options) (persistedoperation.Client, error) {
+
 	client := &Client{
 		options: options,
 		tracer: options.TraceProvider.Tracer(
@@ -75,13 +74,13 @@ func NewClient(endpoint string, options *Options) (*Client, error) {
 	return client, nil
 }
 
-func (c Client) PersistedOperation(ctx context.Context, clientName, sha256Hash string) ([]byte, error) {
+func (c Client) PersistedOperation(ctx context.Context, clientName, sha256Hash string) ([]byte, bool, error) {
 	content, err := c.persistedOperation(ctx, clientName, sha256Hash)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
-	return content, nil
+	return content, false, nil
 }
 
 func (c Client) persistedOperation(ctx context.Context, clientName, sha256Hash string) ([]byte, error) {

@@ -2,29 +2,45 @@ package retrytransport
 
 import (
 	"errors"
-	"io"
-	"net/http"
-	"strconv"
-	"time"
-
 	"github.com/cloudflare/backoff"
 	"go.uber.org/zap"
+	"io"
+	"net/http"
+	"strings"
+	"syscall"
+	"time"
 )
 
+var defaultRetryableErrors = []error{
+	syscall.ECONNREFUSED, // "connection refused"
+	syscall.ECONNRESET,   // "connection reset by peer"
+	syscall.ETIMEDOUT,    // "operation timed out"
+	errors.New("i/o timeout"),
+	errors.New("no such host"),
+	errors.New("handshake failure"),
+	errors.New("handshake timeout"),
+	errors.New("timeout awaiting response headers"),
+	errors.New("unexpected EOF"),
+	errors.New("unexpected EOF reading trailer"),
+}
+
+var defaultRetryableStatusCodes = []int{
+	http.StatusInternalServerError,
+	http.StatusBadGateway,
+	http.StatusServiceUnavailable,
+	http.StatusGatewayTimeout,
+	http.StatusTooManyRequests,
+}
+
 type ShouldRetryFunc func(err error, req *http.Request, resp *http.Response) bool
-type OnRetryFunc func(count int, req *http.Request, resp *http.Response, sleepDuration time.Duration, err error)
 
 type RetryOptions struct {
 	Enabled       bool
-	Algorithm     string
 	MaxRetryCount int
 	Interval      time.Duration
 	MaxDuration   time.Duration
-	Expression    string
+	OnRetry       func(count int, req *http.Request, resp *http.Response, err error)
 	ShouldRetry   ShouldRetryFunc
-
-	// Test specific only
-	OnRetry OnRetryFunc
 }
 
 type requestLoggerGetter func(req *http.Request) *zap.Logger
@@ -33,61 +49,6 @@ type RetryHTTPTransport struct {
 	RoundTripper     http.RoundTripper
 	RetryOptions     RetryOptions
 	getRequestLogger requestLoggerGetter
-}
-
-// parseRetryAfterHeader parses the Retry-After header value according to RFC 7231.
-// It supports both delay-seconds and HTTP-date formats.
-// Returns the duration to wait before retrying, or 0 if parsing fails.
-func parseRetryAfterHeader(logger *zap.Logger, retryAfter string) time.Duration {
-	if retryAfter == "" {
-		return 0
-	}
-
-	var errJoin error
-
-	seconds, err := strconv.Atoi(retryAfter)
-	if err != nil {
-		errJoin = errors.Join(errJoin, err)
-	} else {
-		if seconds >= 0 {
-			return time.Duration(seconds) * time.Second
-		}
-	}
-
-	t, err := http.ParseTime(retryAfter)
-	if err != nil {
-		errJoin = errors.Join(errJoin, err)
-	} else {
-		if duration := time.Until(t); duration > 0 {
-			return duration
-		}
-	}
-
-	// Collect and print the error in case of a malformed header
-	if errJoin != nil {
-		logger.Error("Failed to parse Retry-After header", zap.String("retry-after", retryAfter), zap.Error(errJoin))
-	}
-
-	return 0
-}
-
-// shouldUseRetryAfter determines if we should use Retry-After header for 429 responses
-func shouldUseRetryAfter(logger *zap.Logger, resp *http.Response, maxDuration time.Duration) (time.Duration, bool) {
-	if resp == nil || resp.StatusCode != http.StatusTooManyRequests {
-		return 0, false
-	}
-
-	retryAfter := resp.Header.Get("Retry-After")
-	if retryAfter == "" {
-		return 0, false
-	}
-
-	duration := parseRetryAfterHeader(logger, retryAfter)
-	if duration > maxDuration {
-		duration = maxDuration
-	}
-
-	return duration, duration > 0
 }
 
 func NewRetryHTTPTransport(
@@ -116,34 +77,23 @@ func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, erro
 
 	// Retry logic
 	retries := 0
-	for (rt.RetryOptions.ShouldRetry(err, req, resp)) && retries < rt.RetryOptions.MaxRetryCount {
+	for rt.RetryOptions.ShouldRetry(err, req, resp) && retries < rt.RetryOptions.MaxRetryCount {
+		if rt.RetryOptions.OnRetry != nil {
+			rt.RetryOptions.OnRetry(retries, req, resp, err)
+		}
+
 		retries++
 
-		// Check if we should use Retry-After header for 429 responses
-		var sleepDuration time.Duration
-		if retryAfterDuration, useRetryAfter := shouldUseRetryAfter(requestLogger, resp, rt.RetryOptions.MaxDuration); useRetryAfter {
-			sleepDuration = retryAfterDuration
-			requestLogger.Debug("Using Retry-After header for 429 response",
-				zap.Int("retry", retries),
-				zap.String("url", req.URL.String()),
-				zap.Duration("retry-after", sleepDuration),
-			)
-		} else {
-			// Use normal backoff for non-429 or 429 without valid Retry-After
-			sleepDuration = b.Duration()
-			requestLogger.Debug("Retrying request",
-				zap.Int("retry", retries),
-				zap.String("url", req.URL.String()),
-				zap.Duration("sleep", sleepDuration),
-			)
-		}
+		// Wait for the specified backoff period
+		sleepDuration := b.Duration()
 
-		// Test Specific
-		if rt.RetryOptions.OnRetry != nil {
-			rt.RetryOptions.OnRetry(retries, req, resp, sleepDuration, err)
-		}
+		requestLogger.Debug("Retrying request",
+			zap.Int("retry", retries),
+			zap.String("url", req.URL.String()),
+			zap.Duration("sleep", sleepDuration),
+		)
 
-		// Wait for the specified duration
+		// Wait for the specified backoff period
 		time.Sleep(sleepDuration)
 
 		// drain the previous response before retrying
@@ -186,4 +136,30 @@ func isResponseOK(resp *http.Response) bool {
 	// Ensure we don't wait for no reason when subgraphs don't behave
 	// spec-compliant and returns a different status code than 200.
 	return resp.StatusCode >= 200 && resp.StatusCode < 300
+}
+
+func IsRetryableError(err error, resp *http.Response) bool {
+
+	if err != nil {
+		// Network
+		s := err.Error()
+		for _, retryableError := range defaultRetryableErrors {
+			if strings.HasSuffix(
+				strings.ToLower(s),
+				strings.ToLower(retryableError.Error())) {
+				return true
+			}
+		}
+	}
+
+	if resp != nil {
+		// HTTP
+		for _, retryableStatusCode := range defaultRetryableStatusCodes {
+			if resp.StatusCode == retryableStatusCode {
+				return true
+			}
+		}
+	}
+
+	return false
 }

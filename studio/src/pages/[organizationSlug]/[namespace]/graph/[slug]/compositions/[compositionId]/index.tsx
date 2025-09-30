@@ -44,7 +44,6 @@ import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
-import { FaPlug } from "react-icons/fa6";
 import {
   BoxIcon,
   Component2Icon,
@@ -62,7 +61,6 @@ import {
   FeatureFlagComposition,
   GraphComposition,
   GraphCompositionSubgraph,
-  SubgraphType,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { sentenceCase } from "change-case";
 import { formatDistanceToNow } from "date-fns";
@@ -72,8 +70,6 @@ import { useContext, useState } from "react";
 import { MdNearbyError, MdVerifiedUser } from "react-icons/md";
 import { PiGitBranch } from "react-icons/pi";
 import { RxComponentInstance } from "react-icons/rx";
-import { useWorkspace } from "@/hooks/use-workspace";
-import { useCurrentOrganization } from "@/hooks/use-current-organization";
 
 export const FeatureFlagCompositionsTable = ({
   ffCompositions,
@@ -218,18 +214,6 @@ const SubgraphDetails = ({
               {getIcon(subgraph.id, subgraph.isFeatureSubgraph)}
             </div>
             <span>{subgraph.name}</span>
-            {subgraph.subgraphType === SubgraphType.GRPC_PLUGIN && (
-              <div className="mt-[2px]">
-                <Tooltip>
-                  <TooltipTrigger>
-                    <FaPlug className="h-3 w-3 flex-shrink-0" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <span>Plugin</span>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-            )}
           </div>
           <span className="pl-5 text-xs">
             {subgraph.schemaVersionId.split("-")[0]}
@@ -253,8 +237,8 @@ export const CompositionDetails = ({
   isFeatureFlagComposition: boolean;
 }) => {
   const router = useRouter();
-  const organizationSlug = useCurrentOrganization()?.slug;
-  const { namespace: { name: namespace } } = useWorkspace();
+  const organizationSlug = router.query.organizationSlug as string;
+  const namespace = router.query.namespace as string;
   const slug = router.query.slug as string;
   const id = router.query.compositionId as string;
   const tab = router.query.tab as string;
@@ -727,8 +711,8 @@ export const CompositionDetails = ({
 const CompositionDetailsPage: NextPageWithLayout = () => {
   const router = useRouter();
 
-  const organizationSlug = useCurrentOrganization()?.slug;
-  const { namespace: { name: namespace } } = useWorkspace();
+  const organizationSlug = router.query.organizationSlug as string;
+  const namespace = router.query.namespace as string;
   const slug = router.query.slug as string;
   const id = router.query.compositionId as string;
 

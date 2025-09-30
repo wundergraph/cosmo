@@ -5,7 +5,6 @@ import 'dotenv/config';
 
 import build, { BuildConfig } from './core/build-server.js';
 import { envVariables } from './core/env.schema.js';
-import { SentryConfig } from './core/sentry.config.js';
 
 const {
   LOG_LEVEL,
@@ -25,7 +24,6 @@ const {
   AUTH_REDIRECT_URI,
   WEB_BASE_URL,
   AUTH_JWT_SECRET,
-  AUTH_SSO_COOKIE_DOMAIN,
   KC_REALM,
   KC_LOGIN_REALM,
   KC_CLIENT_ID,
@@ -48,7 +46,6 @@ const {
   S3_ACCESS_KEY_ID,
   S3_SECRET_ACCESS_KEY,
   S3_FORCE_PATH_STYLE,
-  S3_USE_INDIVIDUAL_DELETES,
   SMTP_ENABLED,
   SMTP_HOST,
   SMTP_PORT,
@@ -68,12 +65,6 @@ const {
   REDIS_PASSWORD,
   AUTH_ADMISSION_JWT_SECRET,
   CDN_BASE_URL,
-  SENTRY_ENABLED,
-  SENTRY_DSN,
-  SENTRY_SEND_DEFAULT_PII,
-  SENTRY_TRACES_SAMPLE_RATE,
-  SENTRY_PROFILE_SESSION_SAMPLE_RATE,
-  SENTRY_EVENT_LOOP_BLOCK_THRESHOLD_MS,
 } = envVariables.parse(process.env);
 
 const options: BuildConfig = {
@@ -109,7 +100,6 @@ const options: BuildConfig = {
     secret: AUTH_JWT_SECRET,
     webBaseUrl: WEB_BASE_URL,
     webErrorPath: '/auth/error',
-    ssoCookieDomain: AUTH_SSO_COOKIE_DOMAIN,
   },
   webhook: {
     url: WEBHOOK_URL,
@@ -138,7 +128,6 @@ const options: BuildConfig = {
     username: S3_ACCESS_KEY_ID,
     password: S3_SECRET_ACCESS_KEY,
     forcePathStyle: S3_FORCE_PATH_STYLE,
-    useIndividualDeletes: S3_USE_INDIVIDUAL_DELETES,
   },
   mailer: {
     smtpEnabled: SMTP_ENABLED,
@@ -177,24 +166,6 @@ if (STRIPE_SECRET_KEY) {
     webhookSecret: STRIPE_WEBHOOK_SECRET,
     defaultPlanId: DEFAULT_PLAN,
   };
-}
-
-if (SENTRY_ENABLED) {
-  if (SENTRY_DSN) {
-    const sentryConfig: SentryConfig = {
-      sentry: {
-        enabled: SENTRY_ENABLED,
-        dsn: SENTRY_DSN,
-        eventLoopBlockIntegrationThresholdMs: SENTRY_EVENT_LOOP_BLOCK_THRESHOLD_MS,
-        profileSessionSampleRate: SENTRY_PROFILE_SESSION_SAMPLE_RATE,
-        sendDefaultPii: SENTRY_SEND_DEFAULT_PII,
-        tracesSampleRate: SENTRY_TRACES_SAMPLE_RATE,
-      },
-    };
-    await import('./core/sentry.config.js').then((sentry) => sentry.init(sentryConfig));
-  } else {
-    throw new Error('SENTRY_ENABLED is set but SENTRY_DSN is not');
-  }
 }
 
 const app = await build(options);

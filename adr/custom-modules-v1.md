@@ -662,7 +662,7 @@ Every custom router has its own `go.mod` file which represents in Go a module. T
 
 module github.com/myorg/myrouter
 
-go 1.25
+go 1.23
 
 require (
 	"github.com/wundergraph/cosmo/router v0.93.0

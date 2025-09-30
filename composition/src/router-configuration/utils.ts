@@ -1,5 +1,4 @@
 import { ConfigurationData, FieldSetConditionData, FieldSetConditionDataParams } from './types';
-import { FieldName } from '../types/types';
 
 export function newFieldSetConditionData({
   fieldCoordinatesPath,
@@ -13,7 +12,7 @@ export function newFieldSetConditionData({
 
 export function newConfigurationData(isEntity: boolean, renamedTypeName: string): ConfigurationData {
   return {
-    fieldNames: new Set<FieldName>(),
+    fieldNames: new Set<string>(),
     isRootNode: isEntity,
     typeName: renamedTypeName,
   };

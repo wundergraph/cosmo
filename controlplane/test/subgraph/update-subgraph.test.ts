@@ -125,7 +125,6 @@ describe('Update subgraph tests', () => {
     'graph-admin',
     'graph-viewer',
     'subgraph-publisher',
-    'subgraph-checker',
     'subgraph-viewer',
   ])('%s should not be able to update subgraph', async (role ) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });

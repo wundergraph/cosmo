@@ -37,7 +37,7 @@ import { BillingRepository } from './repositories/BillingRepository.js';
 import { BillingService } from './services/BillingService.js';
 import { UserRepository } from './repositories/UserRepository.js';
 import { AIGraphReadmeQueue, createAIGraphReadmeWorker } from './workers/AIGraphReadmeWorker.js';
-import { fastifyLoggerId, createS3ClientConfig, extractS3BucketName, isGoogleCloudStorageUrl } from './util.js';
+import { fastifyLoggerId, createS3ClientConfig, extractS3BucketName } from './util.js';
 import { ApiKeyRepository } from './repositories/ApiKeyRepository.js';
 import { createDeleteOrganizationWorker, DeleteOrganizationQueue } from './workers/DeleteOrganizationWorker.js';
 import {
@@ -82,7 +82,6 @@ export interface BuildConfig {
   auth: {
     webBaseUrl: string;
     secureCookie?: boolean;
-    ssoCookieDomain?: string;
     webErrorPath: string;
     secret: string;
     redirectUri: string;
@@ -107,7 +106,6 @@ export interface BuildConfig {
     username?: string;
     password?: string;
     forcePathStyle?: boolean;
-    useIndividualDeletes?: boolean;
   };
   mailer: {
     smtpEnabled: boolean;
@@ -237,7 +235,6 @@ export default async function build(opts: BuildConfig) {
       cookieName: pkceCodeVerifierCookieName,
     },
     webBaseUrl: opts.auth.webBaseUrl,
-    ssoCookieDomain: opts.auth.ssoCookieDomain,
     webErrorPath: opts.auth.webErrorPath,
   });
 
@@ -313,13 +310,7 @@ export default async function build(opts: BuildConfig) {
   const s3Config = createS3ClientConfig(bucketName, opts.s3Storage);
 
   const s3Client = new S3Client(s3Config);
-  const blobStorage = new S3BlobStorage(s3Client, bucketName, {
-    // GCS does not support DeleteObjects; force individual deletes when detected.
-    useIndividualDeletes:
-      isGoogleCloudStorageUrl(opts.s3Storage.url) || isGoogleCloudStorageUrl(s3Config.endpoint as string)
-        ? true
-        : opts.s3Storage.useIndividualDeletes ?? false,
-  });
+  const blobStorage = new S3BlobStorage(s3Client, bucketName);
 
   const platformWebhooks = new PlatformWebhookService(opts.webhook?.url, opts.webhook?.key, logger);
 

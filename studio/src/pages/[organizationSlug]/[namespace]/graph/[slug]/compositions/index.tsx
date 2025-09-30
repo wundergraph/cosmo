@@ -43,7 +43,6 @@ import { formatDistanceToNow, formatISO } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { MdNearbyError, MdVerifiedUser } from "react-icons/md";
-import { useWorkspace } from "@/hooks/use-workspace";
 
 const CompositionsPage: NextPageWithLayout = () => {
   const router = useRouter();
@@ -52,7 +51,6 @@ const CompositionsPage: NextPageWithLayout = () => {
     : 1;
 
   const limit = Number.parseInt((router.query.pageSize as string) || "10");
-  const { namespace: { name: namespace } } = useWorkspace();
 
   const {
     dateRange: { start, end },
@@ -66,7 +64,7 @@ const CompositionsPage: NextPageWithLayout = () => {
     getCompositions,
     {
       fedGraphName: router.query.slug as string,
-      namespace,
+      namespace: router.query.namespace as string,
       limit: limit > 50 ? 50 : limit,
       offset: (pageNumber - 1) * limit,
       startDate: formatISO(startDate),

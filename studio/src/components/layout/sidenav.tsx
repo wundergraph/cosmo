@@ -3,13 +3,21 @@ import { cn } from "@/lib/utils";
 import {
   CaretSortIcon,
   Cross2Icon,
+  EnvelopeClosedIcon,
   HamburgerMenuIcon,
 } from "@radix-ui/react-icons";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { ReactNode, useContext, useState } from "react";
+import { ReactNode, useContext, useMemo, useState } from "react";
 import { UserContext } from "../app-provider";
 import { Logo } from "../logo";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import { Separator } from "../ui/separator";
 import { UserMenu, UserMenuMobile } from "../user-menu";
 import { LayoutProps } from "./layout";
@@ -26,11 +34,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
-import NewFeaturesPopup from "../dashboard/NewFeaturesPopup";
 
 export type NavLink = {
-  title: ReactNode;
-  className?: string;
+  title: string;
   href: string;
   matchExact?: boolean;
   icon: ReactNode;
@@ -42,7 +48,6 @@ const isActive = (path: string, currentPath: string, exact = true) => {
 };
 
 const MobileNav = () => {
-  const user = useUser();
   return (
     <div
       className={cn(
@@ -51,24 +56,7 @@ const MobileNav = () => {
     >
       <div className="relative z-20 grid gap-6 rounded-md p-4 text-popover-foreground">
         <nav className="grid grid-flow-row auto-rows-max items-center justify-center space-y-2 text-center text-sm">
-          <Link
-            href="/account/invitations"
-            className="flex items-center justify-center gap-x-2"
-          >
-            Invitations
-            {user?.invitations?.length && (
-              <div className="relative">
-                <div
-                  aria-hidden="true"
-                  className="absolute h-2 w-2 animate-ping rounded-full bg-blue-400"
-                />
-                <div
-                  aria-hidden="true"
-                  className="h-2 w-2 rounded-full bg-blue-400"
-                />
-              </div>
-            )}
-          </Link>
+          <Link href="/account/invitations">Invitations</Link>
 
           <Link
             href={docsBaseURL}
@@ -151,7 +139,7 @@ export const SideNav = (props: SideNavLayoutProps) => {
     <div className="lg:grid lg:grid-cols-[auto_1fr] lg:divide-x">
       <aside
         className={cn(
-          "relative z-40 flex min-w-[210px] flex-shrink-0 flex-col bg-background pt-4 lg:px-3 lg:pb-4",
+          "z-40 flex min-w-[210px] flex-shrink-0 flex-col bg-background pt-4 lg:px-3 lg:pb-4",
           {
             "lg:h-[calc(100vh-32px)]": props.isBannerDisplayed,
             "lg:h-screen": !props.isBannerDisplayed,
@@ -217,9 +205,7 @@ export const SideNav = (props: SideNavLayoutProps) => {
                     >
                       {item.icon}
 
-                      <span className={cn("whitespace-nowrap", item.className)}>
-                        {item.title}
-                      </span>
+                      <span className="whitespace-nowrap">{item.title}</span>
                     </Link>
                   ) : (
                     <h4 className="hidden px-3 py-2 text-sm text-muted-foreground lg:block">
@@ -249,9 +235,6 @@ export const SideNav = (props: SideNavLayoutProps) => {
             Documentation
           </Link>
           <UserMenu />
-        </div>
-        <div className="absolute bottom-3 left-3 z-50 hidden lg:block">
-          <NewFeaturesPopup />
         </div>
       </aside>
     </div>

@@ -32,7 +32,6 @@ import {
 import * as Prism from "prismjs";
 import "prismjs/components/prism-graphql";
 import "prismjs/components/prism-json";
-import "prismjs/components/prism-protobuf";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { Button } from "../ui/button";
 import { useToast } from "../ui/use-toast";
@@ -42,24 +41,19 @@ export const SDLViewerActions = ({
   className,
   size = "icon",
   targetName,
-  language = "graphql",
 }: {
   sdl: string;
   className?: string;
   size?: "icon" | "icon-sm";
   targetName?: string;
-  language?: "graphql" | "protobuf";
 }) => {
   const { toast, dismiss } = useToast();
 
   const downloadSDL = () => {
-    const extension = language === "protobuf" ? "proto" : "graphql";
-    const mimeType =
-      language === "protobuf" ? "text/plain" : "application/graphql";
     downloadStringAsFile(
       sdl,
-      targetName ? `${targetName}.${extension}` : `schema.${extension}`,
-      mimeType,
+      targetName ? `${targetName}.graphql` : `schema.graphql`,
+      `application/graphql`,
     );
   };
 
@@ -89,6 +83,7 @@ export const SDLViewerActions = ({
 };
 
 const LineActions = ({ lineNo }: { lineNo: number }) => {
+  const router = useRouter();
   const { toast } = useToast();
 
   return (
@@ -256,37 +251,28 @@ const Block = ({
 export const SDLViewer = ({
   sdl,
   className,
-  language = "graphql",
 }: {
   sdl: string;
   className?: string;
-  language?: "graphql" | "protobuf";
 }) => {
   const [content, setContent] = useState("");
 
   useEffect(() => {
-    const formatContent = async (source: string) => {
-      // For GraphQL, use Prettier formatting
+    const set = async (source: string) => {
       try {
-        if (language === "protobuf") {
-          // For protobuf, don't format with Prettier since it doesn't support protobuf
-          // Just use the raw content
-          setContent(source);
-        } else {
-          const res = await prettier.format(source, {
-            parser: "graphql",
-            plugins: [graphQLPlugin, estreePlugin, babelPlugin],
-          });
-          setContent(res);
-        }
+        const res = await prettier.format(source, {
+          parser: "graphql",
+          plugins: [graphQLPlugin, estreePlugin, babelPlugin],
+        });
+        setContent(res);
       } catch {
         setContent("INVALID CONTENT");
       }
     };
 
     if (!sdl) return;
-    formatContent(sdl);
-  }, [sdl, language]);
+    set(sdl);
+  }, [sdl]);
 
   const selectedTheme = useResolvedTheme();
 
@@ -294,7 +280,7 @@ export const SDLViewer = ({
     <Highlight
       theme={selectedTheme === "dark" ? themes.nightOwl : themes.nightOwlLight}
       code={content}
-      language={language}
+      language="graphql"
       prism={Prism}
     >
       {({ style, tokens, getLineProps, getTokenProps }) => (

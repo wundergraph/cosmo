@@ -2176,7 +2176,7 @@ const subgraphAW: Subgraph = {
     
     type Interface @interfaceObject @key(fields: "id") {
      id: ID!
-     age: Int! @shareable
+     age: Int!
     }
   `),
 };

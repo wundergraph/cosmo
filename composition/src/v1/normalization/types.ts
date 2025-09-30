@@ -9,7 +9,6 @@ import {
 } from '../../schema-building/types';
 import { ConstDirectiveNode, DocumentNode, InputValueDefinitionNode, ValueNode } from 'graphql';
 import { RequiredFieldConfiguration } from '../../router-configuration/types';
-import { SubgraphName } from '../../types/types';
 
 export type KeyFieldSetData = {
   documentNode: DocumentNode;
@@ -52,19 +51,13 @@ export type HandleOverrideDirectiveParams = {
   data: FieldData;
   directiveCoords: string;
   errorMessages: Array<string>;
-  targetSubgraphName: SubgraphName;
+  targetSubgraphName: string;
 };
 
 export type HandleRequiresScopesDirectiveParams = {
   directiveCoords: string;
   orScopes: ReadonlyArray<ValueNode>;
   requiredScopes: Array<Set<string>>;
-};
-
-export type HandleSemanticNonNullDirectiveParams = {
-  data: FieldData;
-  directiveNode: ConstDirectiveNode;
-  errorMessages: Array<string>;
 };
 
 export type AddInputValueDataByNodeParams = {

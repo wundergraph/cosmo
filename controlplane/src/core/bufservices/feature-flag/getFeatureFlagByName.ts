@@ -9,7 +9,7 @@ import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { convertToSubgraphType, enrichLogger, getLogger, handleError } from '../../util.js';
+import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
 export function getFeatureFlagByName(
@@ -99,7 +99,6 @@ export function getFeatureFlagByName(
         isFeatureSubgraph: f.isFeatureSubgraph,
         baseSubgraphName: f.baseSubgraphName,
         baseSubgraphId: f.baseSubgraphId,
-        type: convertToSubgraphType(f.type),
       })),
       federatedGraphs: labelMatchedFederatedGraphs.map((g) => ({
         federatedGraph: {

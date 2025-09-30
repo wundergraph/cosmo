@@ -6,8 +6,8 @@ import { ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_
 import { pino } from 'pino';
 import { AuthContext, Label, OrganizationGroupDTO } from '../types/index.js';
 import * as schema from '../db/schema.js';
-import { organizationRoleEnum } from '../db/schema.js';
 import { OrganizationRole } from '../db/models.js';
+import { organizationRoleEnum } from '../db/schema.js';
 import { Authenticator } from './services/Authentication.js';
 import { UserRepository } from './repositories/UserRepository.js';
 import { OrganizationRepository } from './repositories/OrganizationRepository.js';
@@ -46,8 +46,8 @@ export async function beforeAllSetup(): Promise<string> {
 
 export async function afterAllSetup(dbname: string) {
   const sql = postgres('postgresql://postgres:changeme@localhost:5432/postgres', { max: 1 });
-  await sql`DROP DATABASE "${sql.unsafe(dbname)}" (FORCE);`;
-  await sql.end({ timeout: 5 });
+  await sql`DROP DATABASE "${sql.unsafe(dbname)}"`;
+  await sql.end({ timeout: 1 });
 }
 
 export function genID(prefix = 'prefix') {

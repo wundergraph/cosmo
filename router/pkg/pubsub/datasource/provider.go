@@ -2,8 +2,6 @@ package datasource
 
 import (
 	"context"
-
-	"github.com/wundergraph/cosmo/router/pkg/metric"
 )
 
 type ArgumentTemplateCallback func(tpl string) (string, error)
@@ -29,11 +27,7 @@ type ProviderBuilder[P, E any] interface {
 	// TypeID Get the provider type id (e.g. "kafka", "nats")
 	TypeID() string
 	// BuildProvider Build the provider and the adapter
-	BuildProvider(options P, providerOpts ProviderOpts) (Provider, error)
+	BuildProvider(options P) (Provider, error)
 	// BuildEngineDataSourceFactory Build the data source for the given provider and event configuration
 	BuildEngineDataSourceFactory(data E) (EngineDataSourceFactory, error)
-}
-
-type ProviderOpts struct {
-	StreamMetricStore metric.StreamMetricStore
 }

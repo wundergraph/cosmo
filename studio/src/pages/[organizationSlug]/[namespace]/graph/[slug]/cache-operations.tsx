@@ -29,12 +29,11 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { docsBaseURL } from "@/lib/constants";
 import { useCheckUserAccess } from "@/hooks/use-check-user-access";
-import { useWorkspace } from "@/hooks/use-workspace";
 
 const CacheOperationsPage: NextPageWithLayout = () => {
   const router = useRouter();
   const federatedGraphName = router.query.slug as string;
-  const { namespace: { name: namespace } } = useWorkspace();
+  const namespace = router.query.namespace as string;
   const user = useUser();
   const checkUserAccess = useCheckUserAccess();
   const plan = user?.currentOrganization?.billing?.plan;
@@ -139,7 +138,7 @@ const CacheOperationsPage: NextPageWithLayout = () => {
           <Button
             onClick={() => {
               router.push(
-                `/${user?.currentOrganization.slug}/cache-warmer?namespace=${namespace}`,
+                `/${user?.currentOrganization.slug}/cache-warmer?namespace=${router.query.namespace}`,
               );
             }}
           >

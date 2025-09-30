@@ -1,9 +1,0 @@
-query SkipIncludeNodesAreNotRemoved($t: Boolean = true, $f: Boolean = false) {
-    employees {
-        id @include(if: $f)
-        ... @skip(if: $t) {
-            tag
-        }
-        notes @include(if: $f)
-    }
-}

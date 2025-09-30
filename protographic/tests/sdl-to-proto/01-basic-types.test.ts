@@ -142,11 +142,9 @@ describe('SDL to Proto - Basic Types', () => {
 
       // Wrapper message for a list of String.
       message ListOfString {
-        message List {
-          repeated string items = 1;
-        }
-        List list = 1;
+        repeated string items = 1;
       }
+
       // Request message for stringList operation.
       message QueryStringListRequest {
       }
@@ -249,11 +247,9 @@ describe('SDL to Proto - Basic Types', () => {
 
       // Wrapper message for a list of User.
       message ListOfUser {
-        message List {
-          repeated User items = 1;
-        }
-        List list = 1;
+        repeated User items = 1;
       }
+
       // Request message for user operation.
       message QueryUserRequest {
         string id = 1;
@@ -482,18 +478,14 @@ describe('SDL to Proto - Basic Types', () => {
 
       // Wrapper message for a list of Float.
       message ListOfFloat {
-        message List {
-          repeated double items = 1;
-        }
-        List list = 1;
+        repeated double items = 1;
       }
+
       // Wrapper message for a list of Int.
       message ListOfInt {
-        message List {
-          repeated int32 items = 1;
-        }
-        List list = 1;
+        repeated int32 items = 1;
       }
+
       // Wrapper message for a list of Float.
       message ListOfListOfFloat {
         message List {
@@ -501,6 +493,7 @@ describe('SDL to Proto - Basic Types', () => {
         }
         List list = 1;
       }
+
       // Wrapper message for a list of Int.
       message ListOfListOfInt {
         message List {
@@ -508,6 +501,7 @@ describe('SDL to Proto - Basic Types', () => {
         }
         List list = 1;
       }
+
       // Wrapper message for a list of Point.
       message ListOfListOfPoint {
         message List {
@@ -515,20 +509,17 @@ describe('SDL to Proto - Basic Types', () => {
         }
         List list = 1;
       }
+
       // Wrapper message for a list of Point.
       message ListOfPoint {
-        message List {
-          repeated Point items = 1;
-        }
-        List list = 1;
+        repeated Point items = 1;
       }
+
       // Wrapper message for a list of String.
       message ListOfString {
-        message List {
-          repeated string items = 1;
-        }
-        List list = 1;
+        repeated string items = 1;
       }
+
       // Request message for getMatrix operation.
       message QueryGetMatrixRequest {
       }
@@ -712,18 +703,14 @@ describe('SDL to Proto - Basic Types', () => {
 
       // Wrapper message for a list of TreeNode.
       message ListOfTreeNode {
-        message List {
-          repeated TreeNode items = 1;
-        }
-        List list = 1;
+        repeated TreeNode items = 1;
       }
+
       // Wrapper message for a list of User.
       message ListOfUser {
-        message List {
-          repeated User items = 1;
-        }
-        List list = 1;
+        repeated User items = 1;
       }
+
       // Request message for user operation.
       message QueryUserRequest {
         string id = 1;

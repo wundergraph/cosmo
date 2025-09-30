@@ -10,7 +10,6 @@ import { cn } from "@/lib/utils";
 export interface InfoTooltipProps {
   children: React.ReactNode;
   tooltipTriggerClassName?: string;
-  tooltipContentClassName?: string;
 }
 
 export const InfoTooltip: React.FC<InfoTooltipProps> = (props) => {
@@ -28,7 +27,7 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = (props) => {
         </span>
       </TooltipTrigger>
 
-      <TooltipContent className={cn(props.tooltipContentClassName)}>
+      <TooltipContent>
         <TooltipArrow />
         {children}
       </TooltipContent>
