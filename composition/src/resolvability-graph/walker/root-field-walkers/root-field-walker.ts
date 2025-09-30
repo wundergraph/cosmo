@@ -15,7 +15,10 @@ export class RootFieldWalker {
   index: number;
   resDataByNodeName: Map<NodeName, NodeResolutionData>;
   resDataByPath = new Map<SelectionPath, NodeResolutionData>();
-  selectionPathsByEntityNodeName = new Map<NodeName, Set<SelectionPath>>();
+  // Used by shared root fields.
+  entityNodeNamesByPath = new Map<SelectionPath, Set<NodeName>>();
+  // Used by unshared root fields.
+  pathsByEntityNodeName = new Map<NodeName, Set<SelectionPath>>();
   unresolvablePaths = new Set<SelectionPath>();
 
   constructor({ index, nodeResolutionDataByNodeName }: RootFieldWalkerParams) {
@@ -45,7 +48,7 @@ export class RootFieldWalker {
       if (this.resDataByNodeName.has(edge.node.nodeName)) {
         return { visited: true, areDescendantsResolved: true };
       }
-      getValueOrDefault(this.selectionPathsByEntityNodeName, edge.node.nodeName, () => new Set<SelectionPath>()).add(
+      getValueOrDefault(this.pathsByEntityNodeName, edge.node.nodeName, () => new Set<NodeName>()).add(
         `${selectionPath}.${edge.edgeName}`,
       );
       return { visited: true, areDescendantsResolved: false };
@@ -66,16 +69,16 @@ export class RootFieldWalker {
     if (node.headToTailEdges.size < 1) {
       return { visited: true, areDescendantsResolved: true };
     }
-    let resolvedDescendents = 0;
+    let resolvedDescendants = 0;
     for (const edge of node.headToTailEdges.values()) {
       // Propagate any one of the abstract path failures.
       if (this.visitEdge({ edge, selectionPath }).areDescendantsResolved) {
-        resolvedDescendents += 1;
+        resolvedDescendants += 1;
       }
     }
     return {
       visited: true,
-      areDescendantsResolved: resolvedDescendents === node.headToTailEdges.size,
+      areDescendantsResolved: resolvedDescendants === node.headToTailEdges.size,
     };
   }
 
@@ -132,9 +135,11 @@ export class RootFieldWalker {
      * In these cases, the error message explains the specific reason the jump cannot happen.
      */
     if (edge.node.hasEntitySiblings) {
-      getValueOrDefault(this.selectionPathsByEntityNodeName, edge.node.nodeName, () => new Set<SelectionPath>()).add(
+      getValueOrDefault(
+        this.entityNodeNamesByPath,
         `${selectionPath}.${edge.edgeName}`,
-      );
+        () => new Set<SelectionPath>(),
+      ).add(edge.node.nodeName);
     }
     if (edge.node.isAbstract) {
       return this.visitSharedAbstractNode({
@@ -152,16 +157,16 @@ export class RootFieldWalker {
     if (node.headToTailEdges.size < 1) {
       return { visited: true, areDescendantsResolved: true };
     }
-    let resolvedDescendents = 0;
+    let resolvedDescendants = 0;
     for (const edge of node.headToTailEdges.values()) {
       // Propagate any one of the abstract path failures.
       if (this.visitSharedEdge({ edge, selectionPath }).areDescendantsResolved) {
-        resolvedDescendents += 1;
+        resolvedDescendants += 1;
       }
     }
     return {
       visited: true,
-      areDescendantsResolved: resolvedDescendents === node.headToTailEdges.size,
+      areDescendantsResolved: resolvedDescendants === node.headToTailEdges.size,
     };
   }
 

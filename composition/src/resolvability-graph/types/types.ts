@@ -4,13 +4,9 @@ export type VisitNodeResult = {
   isRevisitedNode?: boolean;
 };
 
-export type FieldPath = string;
-
 export type FieldName = string;
 
 export type NodeName = `${SubgraphName}.${TypeName}`;
-
-export type RootCoords = `${TypeName}.${FieldName}`;
 
 export type SelectionPath = string;
 
@@ -34,14 +30,3 @@ export type ValidationSuccess = {
 };
 
 export type ValidationResult = ValidationFailure | ValidationSuccess;
-
-export type VisitEntityFailure = {
-  subgraphNameByUnresolvablePath: Map<SelectionPath, SubgraphName>;
-  success: false;
-};
-
-export type VisitEntitySuccess = {
-  success: true;
-};
-
-export type VisitEntityResult = VisitEntityFailure | VisitEntitySuccess;

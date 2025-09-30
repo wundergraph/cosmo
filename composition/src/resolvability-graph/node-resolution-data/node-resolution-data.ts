@@ -13,15 +13,24 @@ export class NodeResolutionData {
   constructor({
     fieldDataByName,
     isResolved = false,
-    resolvedDescendentNames,
+    resolvedDescendantNames,
     resolvedFieldNames,
     typeName,
   }: NodeResolutionDataParams) {
     this.#isResolved = isResolved;
     this.fieldDataByName = fieldDataByName;
-    this.resolvedDescendantNames = new Set<FieldName>(resolvedDescendentNames);
+    this.resolvedDescendantNames = new Set<FieldName>(resolvedDescendantNames);
     this.resolvedFieldNames = new Set<FieldName>(resolvedFieldNames);
     this.typeName = typeName;
+  }
+
+  addData(data: NodeResolutionData) {
+    for (const fieldName of data.resolvedFieldNames) {
+      this.addResolvedFieldName(fieldName);
+    }
+    for (const fieldName of data.resolvedDescendantNames) {
+      this.resolvedDescendantNames.add(fieldName);
+    }
   }
 
   addResolvedFieldName(fieldName: FieldName) {
@@ -44,7 +53,7 @@ export class NodeResolutionData {
     return new NodeResolutionData({
       fieldDataByName: this.fieldDataByName,
       isResolved: this.#isResolved,
-      resolvedDescendentNames: this.resolvedDescendantNames,
+      resolvedDescendantNames: this.resolvedDescendantNames,
       resolvedFieldNames: this.resolvedFieldNames,
       typeName: this.typeName,
     });

@@ -5,6 +5,6 @@ export type NodeResolutionDataParams = {
   fieldDataByName: Map<FieldName, GraphFieldData>;
   typeName: TypeName;
   isResolved?: boolean;
-  resolvedDescendentNames?: Set<FieldName>;
+  resolvedDescendantNames?: Set<FieldName>;
   resolvedFieldNames?: Set<FieldName>;
 };

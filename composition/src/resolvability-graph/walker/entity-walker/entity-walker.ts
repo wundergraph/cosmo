@@ -151,14 +151,14 @@ export class EntityWalker {
     if (node.headToTailEdges.size < 1) {
       return { visited: true, areDescendantsResolved: true };
     }
-    let resolvedDescendents = 0;
+    let resolvedDescendants = 0;
     for (const edge of node.headToTailEdges.values()) {
       // Propagate any one of the abstract path failures.
       if (this.visitEntityDescendantEdge({ edge, selectionPath }).areDescendantsResolved) {
-        resolvedDescendents += 1;
+        resolvedDescendants += 1;
       }
     }
-    return { visited: true, areDescendantsResolved: resolvedDescendents === node.headToTailEdges.size };
+    return { visited: true, areDescendantsResolved: resolvedDescendants === node.headToTailEdges.size };
   }
 
   propagateVisitedField({

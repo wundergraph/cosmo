@@ -5,3 +5,15 @@ export type EntityAncestorData = {
   subgraphName: SubgraphName;
   typeName: TypeName;
 };
+
+export type EntityAncestorCollection = {
+  fieldSetsByTargetSubgraphName: Map<SubgraphName, Set<string>>;
+  subgraphNames: Array<SubgraphName>;
+  typeName: TypeName;
+};
+
+export type SelectionSetSegments = {
+  outputEnd: string;
+  outputStart: string;
+  pathNodes: Array<string>;
+};
