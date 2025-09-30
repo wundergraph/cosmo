@@ -256,7 +256,14 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
         });
 
         const orgs = await opts.db.transaction(async (tx) => {
-          await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${userId}))`);
+          const advisoryLockRows = await tx.execute(
+            sql`select pg_try_advisory_xact_lock(hashtext(${userId})) as acquired`
+          );
+
+          if (!advisoryLockRows?.[0]?.acquired) {
+            // We need to identify when we failed to acquire the lock because another request already acquired it
+            return -1;
+          }
 
           const orgRepo = new OrganizationRepository(req.log, tx, opts.defaultBillingPlanId);
 
@@ -330,6 +337,12 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
           // user registered webhook and prompt the user to migrate
           return 0;
         });
+
+        if (orgs === -1) {
+          // We failed to acquire the lock, so we need to retry the request
+          await res.code(429).send('Slow down');
+          return;
+        }
 
         if (orgs === 0) {
           // Send a notification to the platform that a new user has been created
