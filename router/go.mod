@@ -59,6 +59,7 @@ require (
 require (
 	github.com/KimMachineGun/automemlimit v0.6.1
 	github.com/MicahParks/jwkset v0.11.0
+	github.com/MicahParks/keyfunc/v3 v3.3.5
 	github.com/alicebob/miniredis/v2 v2.34.0
 	github.com/caarlos0/env/v11 v11.3.1
 	github.com/cep21/circuit/v4 v4.0.0
@@ -78,7 +79,6 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1
 	github.com/tonglil/opentelemetry-go-datadog-propagator v0.1.3
 	github.com/wundergraph/astjson v0.0.0-20250106123708-be463c97e083
-	github.com/wundergraph/keyfunc/v3 v3.0.0-20250922133930-92f21becf3d9
 	go.uber.org/goleak v1.3.0
 	go.uber.org/ratelimit v0.3.1
 	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8

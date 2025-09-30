@@ -5,9 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"time"
 
-	"github.com/wundergraph/keyfunc/v3"
+	"github.com/MicahParks/keyfunc/v3"
 
 	"golang.org/x/time/rate"
 
@@ -69,8 +70,9 @@ type configKey struct {
 type audienceSet map[string]struct{}
 
 type keyFuncEntry struct {
-	jwks keyfunc.Keyfunc
-	aud  audienceSet
+	jwks              keyfunc.Keyfunc
+	aud               audienceSet
+	allowedAlgorithms []string
 }
 
 func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKSConfig) (TokenDecoder, error) {
@@ -120,13 +122,14 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 				jwksetHTTPClientOptions.RateLimitWaitMax = c.RefreshUnknownKID.MaxWait
 			}
 
-			jwks, err := createKeyFunc(ctx, jwksetHTTPClientOptions, c.AllowedAlgorithms)
+			jwks, err := createKeyFunc(ctx, jwksetHTTPClientOptions)
 			if err != nil {
 				return nil, err
 			}
 			entries = append(entries, keyFuncEntry{
-				jwks: jwks,
-				aud:  audiencesMap[key],
+				jwks:              jwks,
+				aud:               audiencesMap[key],
+				allowedAlgorithms: c.AllowedAlgorithms,
 			})
 
 		} else if c.Secret != "" {
@@ -173,7 +176,7 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 				PrioritizeHTTP: false,
 			}
 
-			jwks, err := createKeyFunc(ctx, jwksetHTTPClientOptions, make([]string, 0))
+			jwks, err := createKeyFunc(ctx, jwksetHTTPClientOptions)
 			if err != nil {
 				return nil, err
 			}
@@ -196,6 +199,27 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 				if !hasAudience(tokenAudiences, entry.aud) {
 					errJoin = errors.Join(errJoin, errUnacceptableAud)
 					continue
+				}
+			}
+
+			// When an algorithm is actually provided in the jwks the current keyfunc will validate the
+			// jwks algorithm with it. But when no algorithm is provided (alg: none or missing alg)
+			// the default keyfunc will not validate the algorithm as it has nothing to cross check.
+			if len(entry.allowedAlgorithms) > 0 {
+				algInter, ok := token.Header["alg"]
+				if !ok {
+					return nil, fmt.Errorf("%w: could not find alg in JWT header", keyfunc.ErrKeyfunc)
+				}
+				alg, ok := algInter.(string)
+				if !ok {
+					// For test coverage purposes, this should be impossible to reach because the JWT package rejects a token
+					// without an alg parameter in the header before calling jwt.Keyfunc.
+					return nil, fmt.Errorf(`%w: the JWT header did not contain the "alg" parameter, which is required by RFC 7515 section 4.1.1`, keyfunc.ErrKeyfunc)
+				}
+
+				// This is a custom validation different from the original keyfunc.Keyfunc
+				if !slices.Contains(entry.allowedAlgorithms, alg) {
+					return nil, fmt.Errorf("%w: could not find alg %s in allow list", keyfunc.ErrKeyfunc, alg)
 				}
 			}
 
@@ -223,17 +247,16 @@ func getAudienceSet(audiences []string) audienceSet {
 	return audSet
 }
 
-func createKeyFunc(ctx context.Context, options jwkset.HTTPClientOptions, algorithms []string) (keyfunc.Keyfunc, error) {
+func createKeyFunc(ctx context.Context, options jwkset.HTTPClientOptions) (keyfunc.Keyfunc, error) {
 	combined, err := jwkset.NewHTTPClient(options)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP client storage for JWK provider: %w", err)
 	}
 
 	keyfuncOptions := keyfunc.Options{
-		Ctx:               ctx,
-		Storage:           combined,
-		UseWhitelist:      []jwkset.USE{jwkset.UseSig},
-		AllowedAlgorithms: algorithms,
+		Ctx:          ctx,
+		Storage:      combined,
+		UseWhitelist: []jwkset.USE{jwkset.UseSig},
 	}
 
 	jwks, err := keyfunc.New(keyfuncOptions)
