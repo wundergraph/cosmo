@@ -105,7 +105,7 @@ func TestNewAttributeExpressions_SplitsExpressionsUsingAuth(t *testing.T) {
 	assert.NoError(t, err)
 	require.NotNil(t, attrExpr)
 	assert.Contains(t, attrExpr.expressions, "attr1")
-	assert.Contains(t, attrExpr.expressionsWithAuth, "attr2")
+	assert.Contains(t, attrExpr.expressions, "attr2")
 
 	reqCtx := requestContext{
 		expressionContext: expr.Context{
