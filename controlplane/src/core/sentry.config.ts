@@ -27,7 +27,7 @@ export function init(opts: SentryConfig) {
       profileSessionSampleRate: opts.sentry.profileSessionSampleRate,
       sendDefaultPii: opts.sentry.sendDefaultPii,
       tracesSampleRate: opts.sentry.tracesSampleRate,
-      profileLifecycle: opts.sentry.profileLifecycle
+      profileLifecycle: opts.sentry.profileLifecycle,
     });
   }
 }
