@@ -257,7 +257,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
 
         const orgs = await opts.db.transaction(async (tx) => {
           const advisoryLockRows = await tx.execute(
-            sql`select pg_try_advisory_xact_lock(hashtext(${userId})) as acquired`
+            sql`select pg_try_advisory_xact_lock(hashtext(${userId})) as acquired`,
           );
 
           if (!advisoryLockRows?.[0]?.acquired) {
