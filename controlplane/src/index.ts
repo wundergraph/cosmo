@@ -73,6 +73,7 @@ const {
   SENTRY_SEND_DEFAULT_PII,
   SENTRY_TRACES_SAMPLE_RATE,
   SENTRY_PROFILE_SESSION_SAMPLE_RATE,
+  SENTRY_PROFILE_LIFECYCLE,
   SENTRY_EVENT_LOOP_BLOCK_THRESHOLD_MS,
 } = envVariables.parse(process.env);
 
@@ -187,6 +188,7 @@ if (SENTRY_ENABLED) {
         dsn: SENTRY_DSN,
         eventLoopBlockIntegrationThresholdMs: SENTRY_EVENT_LOOP_BLOCK_THRESHOLD_MS,
         profileSessionSampleRate: SENTRY_PROFILE_SESSION_SAMPLE_RATE,
+        profileLifecycle: SENTRY_PROFILE_LIFECYCLE,
         sendDefaultPii: SENTRY_SEND_DEFAULT_PII,
         tracesSampleRate: SENTRY_TRACES_SAMPLE_RATE,
       },
