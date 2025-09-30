@@ -71,12 +71,12 @@ func newAttributeExpressions(attr []config.CustomAttribute, exprManager *expr.Ma
 	}, nil
 }
 
-func expressionAttributes(expressions map[expr.AttributeBucket][]ProgramWrapper, exprCtx *expr.Context, key expr.AttributeBucket) ([]attribute.KeyValue, error) {
+func (r *attributeExpressions) expressionsAttributes(exprCtx *expr.Context, key expr.AttributeBucket) ([]attribute.KeyValue, error) {
 	if exprCtx == nil {
 		return nil, nil
 	}
 
-	programWrappers, ok := expressions[key]
+	programWrappers, ok := r.expressions[key]
 	if !ok {
 		return nil, nil
 	}
@@ -91,8 +91,4 @@ func expressionAttributes(expressions map[expr.AttributeBucket][]ProgramWrapper,
 	}
 
 	return result, nil
-}
-
-func (r *attributeExpressions) expressionsAttributes(exprCtx *expr.Context, key expr.AttributeBucket) ([]attribute.KeyValue, error) {
-	return expressionAttributes(r.expressions, exprCtx, key)
 }

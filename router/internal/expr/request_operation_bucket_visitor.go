@@ -8,7 +8,7 @@ import (
 type AttributeBucket uint8
 
 const (
-	BucketNone AttributeBucket = iota
+	BucketDefault AttributeBucket = iota
 	BucketAuth
 	BucketSha256
 	BucketParsingTime

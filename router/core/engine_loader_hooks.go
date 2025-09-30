@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/expr"
 	"slices"
 	"sync/atomic"
 	"time"
@@ -172,30 +173,16 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	metricAttrs = append(metricAttrs, reqContext.telemetry.metricAttrs...)
 	metricAttrs = append(metricAttrs, commonAttrs...)
 
-	if f.telemetryAttributeExpressions != nil {
-		telemetryValues, err := f.telemetryAttributeExpressions.expressionsAttributesWithSubgraph(exprCtx)
-		if err != nil {
-			reqContext.Logger().Warn("failed to resolve expression for telemetry", zap.Error(err))
-		}
+	addExpressions(f.telemetryAttributeExpressions, expr.BucketSubgraph, reqContext, span, func(telemetryValues ...attribute.KeyValue) {
 		traceAttrs = append(traceAttrs, telemetryValues...)
 		metricAttrs = append(metricAttrs, telemetryValues...)
-	}
-
-	if f.tracingAttributeExpressions != nil {
-		tracingValues, err := f.tracingAttributeExpressions.expressionsAttributesWithSubgraph(exprCtx)
-		if err != nil {
-			reqContext.Logger().Warn("failed to resolve expression for tracing", zap.Error(err))
-		}
-		traceAttrs = append(traceAttrs, tracingValues...)
-	}
-
-	if f.metricAttributeExpressions != nil {
-		metricValues, err := f.metricAttributeExpressions.expressionsAttributesWithSubgraph(exprCtx)
-		if err != nil {
-			reqContext.Logger().Warn("failed to resolve expression for metrics", zap.Error(err))
-		}
-		metricAttrs = append(metricAttrs, metricValues...)
-	}
+	})
+	addExpressions(f.tracingAttributeExpressions, expr.BucketSubgraph, reqContext, nil, func(telemetryValues ...attribute.KeyValue) {
+		traceAttrs = append(traceAttrs, telemetryValues...)
+	})
+	addExpressions(f.metricAttributeExpressions, expr.BucketSubgraph, reqContext, span, func(telemetryValues ...attribute.KeyValue) {
+		metricAttrs = append(metricAttrs, telemetryValues...)
+	})
 
 	metricAddOpt := otelmetric.WithAttributeSet(attribute.NewSet(metricAttrs...))
 
