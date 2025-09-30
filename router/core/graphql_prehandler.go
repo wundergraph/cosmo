@@ -564,6 +564,8 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		requestContext.operation.sha256Hash = operationKit.parsedOperation.Sha256Hash
 		requestContext.expressionContext.Request.Operation.Sha256Hash = operationKit.parsedOperation.Sha256Hash
 
+		setTelemetryAttributes(req.Context(), requestContext, AttributeExpressionsKeyWithSha256)
+
 		requestContext.telemetry.addCustomMetricStringAttr(ContextFieldOperationSha256, requestContext.operation.sha256Hash)
 		if h.operationBlocker.safelistEnabled || h.operationBlocker.logUnknownOperationsEnabled {
 			// Set the request hash to the parsed hash, to see if it matches a persisted operation
@@ -631,7 +633,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	// because the operation was already parsed. This is a performance optimization, and we
 	// can do it because we know that the persisted operation is immutable (identified by the hash)
 	if !skipParse {
-		_, engineParseSpan := h.tracer.Start(req.Context(), "Operation - Parse",
+		parseCtx, engineParseSpan := h.tracer.Start(req.Context(), "Operation - Parse",
 			trace.WithSpanKind(trace.SpanKindInternal),
 			trace.WithAttributes(requestContext.telemetry.traceAttrs...),
 		)
@@ -645,6 +647,8 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 
 			requestContext.operation.parsingTime = time.Since(startParsing)
 			requestContext.expressionContext.Request.Operation.ParsingTime = requestContext.operation.parsingTime
+			setTelemetryAttributes(parseCtx, requestContext, AttributeExpressionsKeyWithParsingTime)
+
 			if !requestContext.operation.traceOptions.ExcludeParseStats {
 				httpOperation.traceTimings.EndParse()
 			}
@@ -656,6 +660,8 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 
 		requestContext.operation.parsingTime = time.Since(startParsing)
 		requestContext.expressionContext.Request.Operation.ParsingTime = requestContext.operation.parsingTime
+		setTelemetryAttributes(parseCtx, requestContext, AttributeExpressionsKeyWithParsingTime)
+
 		if !requestContext.operation.traceOptions.ExcludeParseStats {
 			httpOperation.traceTimings.EndParse()
 		}
@@ -668,6 +674,8 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 
 	requestContext.expressionContext.Request.Operation.Name = requestContext.operation.name
 	requestContext.expressionContext.Request.Operation.Type = requestContext.operation.opType
+
+	setTelemetryAttributes(req.Context(), requestContext, AttributeExpressionsKeyWithNameOrType)
 
 	setExpressionContextClient(requestContext)
 
@@ -722,6 +730,8 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		hash := operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
 		requestContext.operation.persistedID = hash
 		requestContext.expressionContext.Request.Operation.PersistedId = hash
+		setTelemetryAttributes(req.Context(), requestContext, AttributeExpressionsKeyWithSha256)
+
 		persistedIDAttribute := otel.WgOperationPersistedID.String(hash)
 
 		requestContext.telemetry.addCommonAttribute(persistedIDAttribute)
@@ -739,7 +749,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 
 	startNormalization := time.Now()
 
-	_, engineNormalizeSpan := h.tracer.Start(req.Context(), "Operation - Normalize",
+	normalizeCtx, engineNormalizeSpan := h.tracer.Start(req.Context(), "Operation - Normalize",
 		trace.WithSpanKind(trace.SpanKindInternal),
 		trace.WithAttributes(requestContext.telemetry.traceAttrs...),
 	)
@@ -750,6 +760,8 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 
 		requestContext.operation.normalizationTime = time.Since(startNormalization)
 		requestContext.expressionContext.Request.Operation.NormalizationTime = requestContext.operation.normalizationTime
+		setTelemetryAttributes(normalizeCtx, requestContext, AttributeExpressionsKeyWithNormalizationTime)
+
 		if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
 			httpOperation.traceTimings.EndNormalize()
 		}
@@ -780,6 +792,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 
 		requestContext.operation.normalizationTime = time.Since(startNormalization)
 		requestContext.expressionContext.Request.Operation.NormalizationTime = requestContext.operation.normalizationTime
+		setTelemetryAttributes(normalizeCtx, requestContext, AttributeExpressionsKeyWithNormalizationTime)
 
 		if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
 			httpOperation.traceTimings.EndNormalize()
@@ -823,6 +836,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 
 		requestContext.operation.normalizationTime = time.Since(startNormalization)
 		requestContext.expressionContext.Request.Operation.NormalizationTime = requestContext.operation.normalizationTime
+		setTelemetryAttributes(normalizeCtx, requestContext, AttributeExpressionsKeyWithNormalizationTime)
 
 		if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
 			httpOperation.traceTimings.EndNormalize()
@@ -841,7 +855,6 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	if requestContext.operation.hash != 0 {
 		operationHash = requestContext.operation.HashString()
 	}
-	requestContext.expressionContext.Request.Operation.Hash = operationHash
 
 	if !h.disableVariablesRemapping && len(uploadsMapping) > 0 {
 		// after variables remapping we need to update the file uploads path because variables relative path has changed
@@ -900,6 +913,10 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	}
 	requestContext.operation.normalizationTime = time.Since(startNormalization)
 	requestContext.expressionContext.Request.Operation.NormalizationTime = requestContext.operation.normalizationTime
+	setTelemetryAttributes(normalizeCtx, requestContext, AttributeExpressionsKeyWithNormalizationTime)
+
+	requestContext.expressionContext.Request.Operation.Hash = operationHash
+	setTelemetryAttributes(normalizeCtx, requestContext, AttributeExpressionsKeyWithHash)
 
 	if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
 		httpOperation.traceTimings.EndNormalize()
@@ -930,7 +947,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 
 	startValidation := time.Now()
 
-	_, engineValidateSpan := h.tracer.Start(req.Context(), "Operation - Validate",
+	validationCtx, engineValidateSpan := h.tracer.Start(req.Context(), "Operation - Validate",
 		trace.WithSpanKind(trace.SpanKindInternal),
 		trace.WithAttributes(requestContext.telemetry.traceAttrs...),
 	)
@@ -949,6 +966,8 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 
 			requestContext.operation.validationTime = time.Since(startValidation)
 			requestContext.expressionContext.Request.Operation.ValidationTime = requestContext.operation.validationTime
+			setTelemetryAttributes(validationCtx, requestContext, AttributeExpressionsKeyWithValidationTime)
+
 			httpOperation.traceTimings.EndValidate()
 
 			engineValidateSpan.End()
@@ -964,6 +983,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		requestContext.graphQLErrorCodes = append(requestContext.graphQLErrorCodes, h.getErrorCodes(err)...)
 		requestContext.operation.validationTime = time.Since(startValidation)
 		requestContext.expressionContext.Request.Operation.ValidationTime = requestContext.operation.validationTime
+		setTelemetryAttributes(validationCtx, requestContext, AttributeExpressionsKeyWithValidationTime)
 
 		if !requestContext.operation.traceOptions.ExcludeValidateStats {
 			httpOperation.traceTimings.EndValidate()
@@ -984,6 +1004,8 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 
 	requestContext.operation.validationTime = time.Since(startValidation)
 	requestContext.expressionContext.Request.Operation.ValidationTime = requestContext.operation.validationTime
+	setTelemetryAttributes(validationCtx, requestContext, AttributeExpressionsKeyWithValidationTime)
+
 	httpOperation.traceTimings.EndValidate()
 
 	engineValidateSpan.End()
@@ -1001,7 +1023,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 
 	startPlanning := time.Now()
 
-	_, enginePlanSpan := h.tracer.Start(req.Context(), "Operation - Plan",
+	planCtx, enginePlanSpan := h.tracer.Start(req.Context(), "Operation - Plan",
 		trace.WithSpanKind(trace.SpanKindInternal),
 		trace.WithAttributes(otel.WgEngineRequestTracingEnabled.Bool(requestContext.operation.traceOptions.Enable)),
 		trace.WithAttributes(requestContext.telemetry.traceAttrs...),
@@ -1024,6 +1046,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 
 		requestContext.operation.planningTime = time.Since(startPlanning)
 		requestContext.expressionContext.Request.Operation.PlanningTime = requestContext.operation.planningTime
+		setTelemetryAttributes(planCtx, requestContext, AttributeExpressionsKeyWithPlanningTime)
 
 		rtrace.AttachErrToSpan(enginePlanSpan, err)
 		enginePlanSpan.End()
@@ -1037,6 +1060,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 
 	requestContext.operation.planningTime = time.Since(startPlanning)
 	requestContext.expressionContext.Request.Operation.PlanningTime = requestContext.operation.planningTime
+	setTelemetryAttributes(planCtx, requestContext, AttributeExpressionsKeyWithPlanningTime)
 
 	enginePlanSpan.SetAttributes(otel.WgEnginePlanCacheHit.Bool(requestContext.operation.planCacheHit))
 	enginePlanSpan.End()
@@ -1080,6 +1104,30 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	}
 
 	return nil
+}
+
+func setTelemetryAttributes(ctx context.Context, requestContext *requestContext, key AttributeExpressionsKey) {
+	currSpan := trace.SpanFromContext(ctx)
+	addExpressions(requestContext.telemetry.telemetryAttributeExpressions, key, requestContext, currSpan, requestContext.telemetry.addCommonAttribute)
+	addExpressions(requestContext.telemetry.metricAttributeExpressions, key, requestContext, nil, requestContext.telemetry.addMetricAttribute)
+	addExpressions(requestContext.telemetry.tracingAttributeExpressions, key, requestContext, currSpan, requestContext.telemetry.addCommonTraceAttribute)
+}
+
+func addExpressions(expressions *attributeExpressions, key AttributeExpressionsKey, requestContext *requestContext, currSpan trace.Span, attrAddFunc func(vals ...attribute.KeyValue)) {
+	if expressions == nil {
+		return
+	}
+
+	attributesForKey, err := expressions.expressionsWithKey(key, &requestContext.expressionContext)
+	if err != nil {
+		requestContext.logger.Error("failed to resolve trace attribute", zap.Error(err))
+		return
+	}
+
+	attrAddFunc(attributesForKey...)
+	if currSpan != nil {
+		currSpan.SetAttributes(attributesForKey...)
+	}
 }
 
 func (h *PreHandler) getErrorCodes(err error) []string {
