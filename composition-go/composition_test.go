@@ -35,6 +35,7 @@ var subgraphs = []*Subgraph{
 			name: String
 		  }`,
 		SubscriptionProtocol: "ws",
+		URL:                  "https://example.com/subgraph-a",
 	},
 	{
 		Name: "B",
@@ -58,6 +59,7 @@ var subgraphs = []*Subgraph{
 			age: Int @authenticated
 		  }`,
 		SubscriptionProtocol: "ws",
+		URL:                  "https://example.com/subgraph-b",
 	},
 }
 

@@ -29,6 +29,7 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
 
 	"github.com/wundergraph/cosmo/router/internal/expr"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/wsproto"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -627,6 +628,11 @@ func (rw *websocketResponseWriter) Complete() {
 	}
 }
 
+// Heartbeat is a no-op function for WebSocket subscriptions.
+func (rw *websocketResponseWriter) Heartbeat() error {
+	return nil
+}
+
 func (rw *websocketResponseWriter) Close(kind resolve.SubscriptionCloseKind) {
 	err := rw.protocol.Close(kind.WSCode, kind.Reason)
 	if err != nil {
@@ -831,10 +837,39 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 		isApq     bool
 	)
 
-	if operationKit.parsedOperation.IsPersistedOperation {
-		skipParse, isApq, err = operationKit.FetchPersistedOperation(h.ctx, h.clientInfo)
+	if h.shouldComputeOperationSha256(operationKit) {
+		err = operationKit.ComputeOperationSha256()
 		if err != nil {
 			return nil, nil, err
+		}
+
+		// Ensure if operation has both hash and query, that the hash matches the query
+		if operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() && operationKit.parsedOperation.Request.Query != "" {
+			if operationKit.parsedOperation.Sha256Hash != operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash {
+				return nil, nil, errors.New("persistedQuery sha256 hash does not match query body")
+			}
+		}
+
+		if h.operationBlocker.safelistEnabled || h.operationBlocker.logUnknownOperationsEnabled {
+			// Set the request hash to the parsed hash, to see if it matches a persisted operation
+			operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery = &GraphQLRequestExtensionsPersistedQuery{
+				Sha256Hash: operationKit.parsedOperation.Sha256Hash,
+			}
+		}
+	}
+
+	if operationKit.parsedOperation.IsPersistedOperation || h.operationBlocker.safelistEnabled || h.operationBlocker.logUnknownOperationsEnabled {
+		skipParse, isApq, err = operationKit.FetchPersistedOperation(h.ctx, h.clientInfo)
+		if err != nil {
+			var poNotFoundErr *persistedoperation.PersistentOperationNotFoundError
+			if h.operationBlocker.logUnknownOperationsEnabled && errors.As(err, &poNotFoundErr) {
+				h.logger.Warn("Unknown persisted operation found", zap.String("query", operationKit.parsedOperation.Request.Query), zap.String("sha256Hash", poNotFoundErr.Sha256Hash))
+				if h.operationBlocker.safelistEnabled {
+					return nil, nil, err
+				}
+			} else {
+				return nil, nil, err
+			}
 		}
 	}
 
@@ -1205,6 +1240,20 @@ func (h *WebSocketConnectionHandler) ignoreHeader(k string) bool {
 		}
 	}
 	return h.forwardUpgradeHeaders.withStaticAllowList || h.forwardUpgradeHeaders.withRegexAllowList
+}
+
+func (h *WebSocketConnectionHandler) shouldComputeOperationSha256(operationKit *OperationKit) bool {
+	hasPersistedHash := operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash()
+
+	if hasPersistedHash && operationKit.parsedOperation.Request.Query != "" {
+		return true
+	}
+
+	if !hasPersistedHash && (h.operationBlocker.safelistEnabled || h.operationBlocker.logUnknownOperationsEnabled) {
+		return true
+	}
+
+	return false
 }
 
 func (h *WebSocketConnectionHandler) Complete(rw *websocketResponseWriter) {

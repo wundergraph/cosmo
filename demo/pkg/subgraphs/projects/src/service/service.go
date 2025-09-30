@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	service "github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/generated"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/src/data"
 	"google.golang.org/grpc/codes"
@@ -49,13 +50,40 @@ func (p *ProjectsService) populateProjectRelationships(project *service.Project)
 		EndDate:      project.EndDate,
 		MilestoneIds: project.MilestoneIds,
 		Progress:     project.Progress,
-		// Populate relationships
-		Milestones:      data.GetMilestonesByProjectID(project.Id),
-		Tasks:           data.GetTasksByProjectID(project.Id),
+		// Populate relationships with populated versions
+		Milestones:      p.populateMilestonesList(data.GetMilestonesByProjectID(project.Id)),
+		Tasks:           p.populateTasksList(data.GetTasksByProjectID(project.Id)),
 		TeamMembers:     data.GetTeamMembersByProjectId(project.Id),
 		RelatedProducts: p.getRelatedProductsByProjectId(project.Id),
+		// Populate all new fields with helper functions
+		Tags:                project.Tags, // Keep original tags
+		AlternativeProjects: data.GetAlternativeProjects(project.Id),
+		Dependencies:        data.GetProjectDependencies(project.Id),
+		ResourceGroups:      data.GetResourceGroups(project.Id),
+		TasksByPhase:        data.GetTasksByPhase(project.Id),
+		MilestoneGroups:     data.GetMilestoneGroups(project.Id),
+		PriorityMatrix:      data.GetPriorityMatrix(project.Id),
 	}
+
 	return populatedProject
+}
+
+// Helper function to populate a list of milestones with their relationships
+func (p *ProjectsService) populateMilestonesList(milestones []*service.Milestone) []*service.Milestone {
+	var populatedMilestones []*service.Milestone
+	for _, milestone := range milestones {
+		populatedMilestones = append(populatedMilestones, data.PopulateMilestoneRelationships(milestone))
+	}
+	return populatedMilestones
+}
+
+// Helper function to populate a list of tasks with their relationships
+func (p *ProjectsService) populateTasksList(tasks []*service.Task) []*service.Task {
+	var populatedTasks []*service.Task
+	for _, task := range tasks {
+		populatedTasks = append(populatedTasks, data.PopulateTaskRelationships(task))
+	}
+	return populatedTasks
 }
 
 func (p *ProjectsService) populateProjectUpdateRelationships(update *service.ProjectUpdate) *service.ProjectUpdate {
@@ -80,6 +108,14 @@ func (p *ProjectsService) getRelatedProductsByProjectId(projectId string) []*ser
 
 // LookupMilestoneById implements projects.ProjectsServiceServer.
 func (p *ProjectsService) LookupMilestoneById(ctx context.Context, req *service.LookupMilestoneByIdRequest) (*service.LookupMilestoneByIdResponse, error) {
+	logger := hclog.FromContext(ctx)
+	if len(req.Keys) == 0 {
+		logger.Info("LookupMilestoneById", "no keys provided")
+		return &service.LookupMilestoneByIdResponse{Result: []*service.Milestone{}}, nil
+	}
+
+	logger.Info("LookupMilestoneById", "milestone_id", req.Keys[0].Id)
+
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
@@ -90,7 +126,9 @@ func (p *ProjectsService) LookupMilestoneById(ctx context.Context, req *service.
 		found := false
 		for _, milestone := range data.ServiceMilestones {
 			if milestone.Id == key.Id {
-				result = append(result, milestone)
+				// Populate the milestone with its relationships
+				populatedMilestone := data.PopulateMilestoneRelationships(milestone)
+				result = append(result, populatedMilestone)
 				found = true
 				break
 			}
@@ -105,6 +143,14 @@ func (p *ProjectsService) LookupMilestoneById(ctx context.Context, req *service.
 
 // LookupTaskById implements projects.ProjectsServiceServer.
 func (p *ProjectsService) LookupTaskById(ctx context.Context, req *service.LookupTaskByIdRequest) (*service.LookupTaskByIdResponse, error) {
+	logger := hclog.FromContext(ctx)
+	if len(req.Keys) == 0 {
+		logger.Info("LookupTaskById", "no keys provided")
+		return &service.LookupTaskByIdResponse{Result: []*service.Task{}}, nil
+	}
+
+	logger.Info("LookupTaskById", "task_id", req.Keys[0].Id)
+
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
@@ -115,7 +161,9 @@ func (p *ProjectsService) LookupTaskById(ctx context.Context, req *service.Looku
 		found := false
 		for _, task := range data.ServiceTasks {
 			if task.Id == key.Id {
-				result = append(result, task)
+				// Populate the task with its relationships
+				populatedTask := data.PopulateTaskRelationships(task)
+				result = append(result, populatedTask)
 				found = true
 				break
 			}
@@ -130,6 +178,15 @@ func (p *ProjectsService) LookupTaskById(ctx context.Context, req *service.Looku
 
 // LookupProductByUpc implements projects.ProjectsServiceServer.
 func (p *ProjectsService) LookupProductByUpc(ctx context.Context, req *service.LookupProductByUpcRequest) (*service.LookupProductByUpcResponse, error) {
+	logger := hclog.FromContext(ctx)
+
+	if len(req.Keys) == 0 {
+		logger.Info("LookupProductByUpc", "no keys provided")
+		return &service.LookupProductByUpcResponse{Result: []*service.Product{}}, nil
+	}
+
+	logger.Info("LookupProductByUpc", "upc", req.Keys[0].Upc)
+
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
@@ -155,6 +212,9 @@ func (p *ProjectsService) LookupProductByUpc(ctx context.Context, req *service.L
 
 // MutationAddMilestone implements projects.ProjectsServiceServer.
 func (p *ProjectsService) MutationAddMilestone(ctx context.Context, req *service.MutationAddMilestoneRequest) (*service.MutationAddMilestoneResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("MutationAddMilestone", "project_id", req.Milestone.ProjectId)
+
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
@@ -189,6 +249,9 @@ func (p *ProjectsService) MutationAddMilestone(ctx context.Context, req *service
 
 // MutationAddTask implements projects.ProjectsServiceServer.
 func (p *ProjectsService) MutationAddTask(ctx context.Context, req *service.MutationAddTaskRequest) (*service.MutationAddTaskResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("MutationAddTask", "project_id", req.Task.ProjectId)
+
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
@@ -221,6 +284,9 @@ func (p *ProjectsService) MutationAddTask(ctx context.Context, req *service.Muta
 
 // MutationUpdateProjectStatus implements projects.ProjectsServiceServer.
 func (p *ProjectsService) MutationUpdateProjectStatus(ctx context.Context, req *service.MutationUpdateProjectStatusRequest) (*service.MutationUpdateProjectStatusResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("MutationUpdateProjectStatus", "project_id", req.ProjectId, "status", req.Status)
+
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
@@ -268,32 +334,39 @@ func (p *ProjectsService) MutationUpdateProjectStatus(ctx context.Context, req *
 
 // QueryMilestones implements projects.ProjectsServiceServer.
 func (p *ProjectsService) QueryMilestones(ctx context.Context, req *service.QueryMilestonesRequest) (*service.QueryMilestonesResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("QueryMilestones", "project_id", req.ProjectId)
+
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
 	milestones := data.GetMilestonesByProjectID(req.ProjectId)
 	// Populate relationships for all milestones
-	var populatedMilestones []*service.Milestone
-	populatedMilestones = append(populatedMilestones, milestones...)
+	populatedMilestones := p.populateMilestonesList(milestones)
 
 	return &service.QueryMilestonesResponse{Milestones: populatedMilestones}, nil
 }
 
 // QueryTasks implements projects.ProjectsServiceServer.
 func (p *ProjectsService) QueryTasks(ctx context.Context, req *service.QueryTasksRequest) (*service.QueryTasksResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("QueryTasks", "project_id", req.ProjectId)
+
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
 	tasks := data.GetTasksByProjectID(req.ProjectId)
 	// Populate relationships for all tasks
-	var populatedTasks []*service.Task
-	populatedTasks = append(populatedTasks, tasks...)
+	populatedTasks := p.populateTasksList(tasks)
 
 	return &service.QueryTasksResponse{Tasks: populatedTasks}, nil
 }
 
 // QueryProjectActivities implements projects.ProjectsServiceServer.
 func (p *ProjectsService) QueryProjectActivities(ctx context.Context, req *service.QueryProjectActivitiesRequest) (*service.QueryProjectActivitiesResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("QueryProjectActivities", "project_id", req.ProjectId)
+
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
@@ -328,6 +401,9 @@ func (p *ProjectsService) QueryProjectActivities(ctx context.Context, req *servi
 
 // QueryProjectResources implements projects.ProjectsServiceServer.
 func (p *ProjectsService) QueryProjectResources(ctx context.Context, req *service.QueryProjectResourcesRequest) (*service.QueryProjectResourcesResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("QueryProjectResources", "project_id", req.ProjectId)
+
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
@@ -382,6 +458,9 @@ func (p *ProjectsService) QueryProjectResources(ctx context.Context, req *servic
 
 // QuerySearchProjects implements projects.ProjectsServiceServer.
 func (p *ProjectsService) QuerySearchProjects(ctx context.Context, req *service.QuerySearchProjectsRequest) (*service.QuerySearchProjectsResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("QuerySearchProjects", "query", req.Query)
+
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
@@ -433,11 +512,20 @@ func (p *ProjectsService) QueryKillService(context.Context, *service.QueryKillSe
 
 // QueryPanic implements projects.ProjectsServiceServer.
 func (p *ProjectsService) QueryPanic(context.Context, *service.QueryPanicRequest) (*service.QueryPanicResponse, error) {
-	panic("Panic")
+	panic("The panic was triggered from QueryPanic")
 }
 
 // LookupEmployeeById implements projects.ProjectsServiceServer.
 func (p *ProjectsService) LookupEmployeeById(ctx context.Context, req *service.LookupEmployeeByIdRequest) (*service.LookupEmployeeByIdResponse, error) {
+	logger := hclog.FromContext(ctx)
+
+	if len(req.Keys) == 0 {
+		logger.Info("LookupEmployeeById", "no keys provided")
+		return &service.LookupEmployeeByIdResponse{Result: []*service.Employee{}}, nil
+	}
+
+	logger.Info("LookupEmployeeById", "employee_id", req.Keys[0].Id)
+
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
@@ -468,6 +556,15 @@ func (p *ProjectsService) LookupEmployeeById(ctx context.Context, req *service.L
 
 // LookupProjectById implements projects.ProjectsServiceServer.
 func (p *ProjectsService) LookupProjectById(ctx context.Context, req *service.LookupProjectByIdRequest) (*service.LookupProjectByIdResponse, error) {
+	logger := hclog.FromContext(ctx)
+
+	if len(req.Keys) == 0 {
+		logger.Info("LookupProjectById", "no keys provided")
+		return &service.LookupProjectByIdResponse{Result: []*service.Project{}}, nil
+	}
+
+	logger.Info("LookupProjectById", "project_id", req.Keys[0].Id)
+
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
@@ -493,6 +590,9 @@ func (p *ProjectsService) LookupProjectById(ctx context.Context, req *service.Lo
 
 // MutationAddProject implements projects.ProjectsServiceServer.
 func (p *ProjectsService) MutationAddProject(ctx context.Context, req *service.MutationAddProjectRequest) (*service.MutationAddProjectResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("MutationAddProject")
+
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
@@ -514,7 +614,7 @@ func (p *ProjectsService) MutationAddProject(ctx context.Context, req *service.M
 		EndDate:         req.Project.EndDate,
 		TeamMembers:     []*service.Employee{},
 		RelatedProducts: []*service.Product{},
-		MilestoneIds:    []string{},
+		MilestoneIds:    &service.ListOfString{List: &service.ListOfString_List{Items: []string{}}},
 		Milestones:      []*service.Milestone{},
 		Tasks:           []*service.Task{},
 		Progress:        &wrapperspb.DoubleValue{Value: 0.0},
@@ -527,6 +627,9 @@ func (p *ProjectsService) MutationAddProject(ctx context.Context, req *service.M
 
 // QueryProject implements projects.ProjectsServiceServer.
 func (p *ProjectsService) QueryProject(ctx context.Context, req *service.QueryProjectRequest) (*service.QueryProjectResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("QueryProject", "project_id", req.Id)
+
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
@@ -540,7 +643,10 @@ func (p *ProjectsService) QueryProject(ctx context.Context, req *service.QueryPr
 }
 
 // QueryProjectStatuses implements projects.ProjectsServiceServer.
-func (p *ProjectsService) QueryProjectStatuses(context.Context, *service.QueryProjectStatusesRequest) (*service.QueryProjectStatusesResponse, error) {
+func (p *ProjectsService) QueryProjectStatuses(ctx context.Context, _ *service.QueryProjectStatusesRequest) (*service.QueryProjectStatusesResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("QueryProjectStatuses")
+
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
@@ -562,6 +668,9 @@ func (p *ProjectsService) QueryProjectStatuses(context.Context, *service.QueryPr
 
 // QueryProjects implements projects.ProjectsServiceServer.
 func (p *ProjectsService) QueryProjects(ctx context.Context, req *service.QueryProjectsRequest) (*service.QueryProjectsResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("QueryProjects")
+
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
@@ -574,8 +683,61 @@ func (p *ProjectsService) QueryProjects(ctx context.Context, req *service.QueryP
 	return &service.QueryProjectsResponse{Projects: populatedProjects}, nil
 }
 
+// QueryNodesById implements projects.ProjectsServiceServer.
+func (p *ProjectsService) QueryNodesById(ctx context.Context, req *service.QueryNodesByIdRequest) (*service.QueryNodesByIdResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("QueryNodesById", "id", req.Id)
+
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	var nodes []*service.Node
+
+	for _, project := range data.ServiceProjects {
+		if project.Id == req.Id {
+			nodes = append(nodes, &service.Node{
+				Instance: &service.Node_Project{
+					Project: p.populateProjectRelationships(project),
+				},
+			})
+		}
+	}
+	for _, milestone := range data.ServiceMilestones {
+		if milestone.Id == req.Id {
+			nodes = append(nodes, &service.Node{
+				Instance: &service.Node_Milestone{
+					Milestone: data.PopulateMilestoneRelationships(milestone),
+				},
+			})
+		}
+	}
+	for _, task := range data.ServiceTasks {
+		if task.Id == req.Id {
+			nodes = append(nodes, &service.Node{
+				Instance: &service.Node_Task{
+					Task: data.PopulateTaskRelationships(task),
+				},
+			})
+		}
+	}
+	for _, update := range data.ServiceProjectUpdates {
+		if update.Id == req.Id {
+			nodes = append(nodes, &service.Node{
+				Instance: &service.Node_ProjectUpdate{
+					ProjectUpdate: p.populateProjectUpdateRelationships(update),
+				},
+			})
+		}
+	}
+
+	return &service.QueryNodesByIdResponse{NodesById: nodes}, nil
+}
+
 // QueryProjectsByStatus implements projects.ProjectsServiceServer.
 func (p *ProjectsService) QueryProjectsByStatus(ctx context.Context, req *service.QueryProjectsByStatusRequest) (*service.QueryProjectsByStatusResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("QueryProjectsByStatus", "status", req.Status)
+
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
@@ -588,4 +750,137 @@ func (p *ProjectsService) QueryProjectsByStatus(ctx context.Context, req *servic
 	}
 
 	return &service.QueryProjectsByStatusResponse{ProjectsByStatus: projects}, nil
+}
+
+// QueryProjectTags implements projects.ProjectsServiceServer.
+func (p *ProjectsService) QueryProjectTags(ctx context.Context, req *service.QueryProjectTagsRequest) (*service.QueryProjectTagsResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("QueryProjectTags")
+
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	tags := data.GetAllProjectTags()
+	return &service.QueryProjectTagsResponse{ProjectTags: tags}, nil
+}
+
+// QueryArchivedProjects implements projects.ProjectsServiceServer.
+func (p *ProjectsService) QueryArchivedProjects(ctx context.Context, req *service.QueryArchivedProjectsRequest) (*service.QueryArchivedProjectsResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("QueryArchivedProjects")
+
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	archivedProjects := data.GetArchivedProjects()
+	return &service.QueryArchivedProjectsResponse{ArchivedProjects: archivedProjects}, nil
+}
+
+// QueryTasksByPriority implements projects.ProjectsServiceServer.
+func (p *ProjectsService) QueryTasksByPriority(ctx context.Context, req *service.QueryTasksByPriorityRequest) (*service.QueryTasksByPriorityResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("QueryTasksByPriority", "project_id", req.ProjectId)
+
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	tasks := data.GetTasksByProjectID(req.ProjectId)
+
+	// Group tasks by priority - create nested lists
+	lowTasks := []*service.Task{}
+	mediumTasks := []*service.Task{}
+	highTasks := []*service.Task{}
+	urgentTasks := []*service.Task{}
+
+	for _, task := range tasks {
+		switch task.Priority {
+		case service.TaskPriority_TASK_PRIORITY_LOW:
+			lowTasks = append(lowTasks, task)
+		case service.TaskPriority_TASK_PRIORITY_MEDIUM:
+			mediumTasks = append(mediumTasks, task)
+		case service.TaskPriority_TASK_PRIORITY_HIGH:
+			highTasks = append(highTasks, task)
+		case service.TaskPriority_TASK_PRIORITY_URGENT:
+			urgentTasks = append(urgentTasks, task)
+		}
+	}
+
+	// Create nested list structure for testing
+	tasksByPriority := &service.ListOfListOfTask{
+		List: &service.ListOfListOfTask_List{
+			Items: []*service.ListOfTask{
+				{List: &service.ListOfTask_List{Items: lowTasks}},
+				{List: &service.ListOfTask_List{Items: mediumTasks}},
+				{List: &service.ListOfTask_List{Items: highTasks}},
+				{List: &service.ListOfTask_List{Items: urgentTasks}},
+				{List: &service.ListOfTask_List{}}, // Empty list for testing
+				nil,                                // Add nullable list for testing
+			},
+		},
+	}
+
+	return &service.QueryTasksByPriorityResponse{TasksByPriority: tasksByPriority}, nil
+}
+
+// QueryResourceMatrix implements projects.ProjectsServiceServer.
+func (p *ProjectsService) QueryResourceMatrix(ctx context.Context, req *service.QueryResourceMatrixRequest) (*service.QueryResourceMatrixResponse, error) {
+	logger := hclog.FromContext(ctx)
+	logger.Info("QueryResourceMatrix", "project_id", req.ProjectId)
+
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	// Create a matrix of resources grouped by type for testing
+	var resourceMatrix []*service.ListOfProjectResource
+
+	// Get project resources
+	milestones := data.GetMilestonesByProjectID(req.ProjectId)
+	tasks := data.GetTasksByProjectID(req.ProjectId)
+	teamMembers := data.GetTeamMembersByProjectId(req.ProjectId)
+	relatedProducts := p.getRelatedProductsByProjectId(req.ProjectId)
+
+	// Group 1: Milestones as resources
+	milestoneResources := []*service.ProjectResource{}
+	for _, milestone := range milestones {
+		milestoneResources = append(milestoneResources, &service.ProjectResource{
+			Value: &service.ProjectResource_Milestone{Milestone: milestone},
+		})
+	}
+
+	// Group 2: Tasks as resources
+	taskResources := []*service.ProjectResource{}
+	for _, task := range tasks {
+		taskResources = append(taskResources, &service.ProjectResource{
+			Value: &service.ProjectResource_Task{Task: task},
+		})
+	}
+
+	// Group 3: Team members as resources
+	employeeResources := []*service.ProjectResource{}
+	for _, employee := range teamMembers {
+		employeeResources = append(employeeResources, &service.ProjectResource{
+			Value: &service.ProjectResource_Employee{Employee: employee},
+		})
+	}
+
+	// Group 4: Products as resources
+	productResources := []*service.ProjectResource{}
+	for _, product := range relatedProducts {
+		productResources = append(productResources, &service.ProjectResource{
+			Value: &service.ProjectResource_Product{Product: product},
+		})
+	}
+
+	resourceMatrix = []*service.ListOfProjectResource{
+		{List: &service.ListOfProjectResource_List{Items: milestoneResources}},
+		{List: &service.ListOfProjectResource_List{Items: taskResources}},
+		{List: &service.ListOfProjectResource_List{Items: employeeResources}},
+		{List: &service.ListOfProjectResource_List{Items: productResources}},
+	}
+
+	return &service.QueryResourceMatrixResponse{
+		ResourceMatrix: &service.ListOfListOfProjectResource{
+			List: &service.ListOfListOfProjectResource_List{Items: resourceMatrix},
+		},
+	}, nil
 }

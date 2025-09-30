@@ -2,6 +2,7 @@ import {
   ConfigurationData,
   EntityInterfaceFederationData,
   EntityInterfaceSubgraphData,
+  INTERFACE,
   InvalidEntityInterface,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   SimpleFieldData,
@@ -142,29 +143,30 @@ describe('Entity Interface Tests', () => {
   });
 
   test('that an error is returned if a subgraph does not define all implementations of an entity interface', () => {
-    const result = federateSubgraphsFailure([subgraphE, subgraphF], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    const { errors } = federateSubgraphsFailure([subgraphE, subgraphF], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       undefinedEntityInterfaceImplementationsError(
         new Map<string, InvalidEntityInterface[]>([
           [
-            'Interface',
+            INTERFACE,
             [
               {
                 subgraphName: 'subgraph-e',
-                concreteTypeNames: new Set<string>(['EntityOne', 'EntityTwo']),
+                definedConcreteTypeNames: new Set<string>(['EntityOne', 'EntityTwo']),
+                requiredConcreteTypeNames: new Set<string>(['EntityOne', 'EntityTwo', 'EntityThree']),
               },
               {
                 subgraphName: 'subgraph-f',
-                concreteTypeNames: new Set<string>(['EntityOne', 'EntityThree']),
+                definedConcreteTypeNames: new Set<string>(['EntityOne', 'EntityThree']),
+                requiredConcreteTypeNames: new Set<string>(['EntityOne', 'EntityTwo', 'EntityThree']),
               },
             ],
           ],
         ]),
         new Map<string, EntityInterfaceFederationData>([
           [
-            'Interface',
+            INTERFACE,
             {
               concreteTypeNames: new Set<string>(['EntityOne', 'EntityTwo', 'EntityThree']),
               fieldDatasBySubgraphName: new Map<string, Array<SimpleFieldData>>(),
@@ -363,8 +365,8 @@ const subgraphD: Subgraph = {
   definitions: parse(`
     type Interface @key(fields: "id") @interfaceObject {
       id: ID!
-      name: String!
-      age: Int!
+      name: String! @shareable
+      age: Int! @shareable
     }
   `),
 };

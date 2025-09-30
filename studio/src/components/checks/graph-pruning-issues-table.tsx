@@ -27,6 +27,8 @@ import {
   TableWrapper,
 } from "../ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
+import { useWorkspace } from "@/hooks/use-workspace";
+import { useCurrentOrganization } from "@/hooks/use-current-organization";
 
 export const GraphPruningIssuesTable = ({
   pruneIssues,
@@ -42,6 +44,8 @@ export const GraphPruningIssuesTable = ({
   const router = useRouter();
   const user = useUser();
   const graphContext = useContext(GraphContext);
+  const { namespace: { name: namespace } } = useWorkspace();
+  const organizationSlug = useCurrentOrganization()?.slug;
 
   if (pruneIssues.length === 0 && !isGraphPruningEnabled) {
     return (
@@ -54,7 +58,7 @@ export const GraphPruningIssuesTable = ({
             onClick={() => {
               router.push(
                 `/${user!.currentOrganization.slug}/policies?namespace=${
-                  graphContext?.graph?.namespace ?? "default"
+                  graphContext?.graph?.namespace ?? namespace
                 }`,
               );
             }}
@@ -130,8 +134,8 @@ export const GraphPruningIssuesTable = ({
                         className="table-action"
                       >
                         <Link
-                          href={`/${router.query.organizationSlug}/${
-                            router.query.namespace
+                          href={`/${organizationSlug}/${
+                            namespace
                           }/graph/${router.query.slug}/checks/${
                             router.query.checkId
                           }?tab=schema&${

@@ -2,10 +2,13 @@ package core
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"os"
+
+	"github.com/wundergraph/cosmo/router/pkg/metric"
 
 	log "github.com/jensneuse/abstractlogger"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
@@ -50,6 +53,14 @@ type Planner struct {
 	operationValidator *astvalidation.OperationValidator
 }
 
+type PlanOutputFormat string
+
+const (
+	PlanOutputFormatUnset PlanOutputFormat = ""
+	PlanOutputFormatText  PlanOutputFormat = "text"
+	PlanOutputFormatJSON  PlanOutputFormat = "json"
+)
+
 func NewPlanner(planConfiguration *plan.Configuration, definition *ast.Document, clientDefinition *ast.Document) (*Planner, error) {
 	planner, err := plan.NewPlanner(*planConfiguration)
 	if err != nil {
@@ -63,7 +74,7 @@ func NewPlanner(planConfiguration *plan.Configuration, definition *ast.Document,
 	}, nil
 }
 
-func (pl *Planner) PlanOperation(operationFilePath string) (string, error) {
+func (pl *Planner) PlanOperation(operationFilePath string, outputFormat PlanOutputFormat) (string, error) {
 	operation, err := pl.parseOperation(operationFilePath)
 	if err != nil {
 		return "", &PlannerOperationValidationError{err: err}
@@ -89,7 +100,18 @@ func (pl *Planner) PlanOperation(operationFilePath string) (string, error) {
 		return "", fmt.Errorf("failed to plan operation: %w", err)
 	}
 
-	return rawPlan.PrettyPrint(), nil
+	switch outputFormat {
+	case PlanOutputFormatText:
+		return rawPlan.PrettyPrint(), nil
+	case PlanOutputFormatJSON:
+		marshal, err := json.Marshal(rawPlan)
+		if err != nil {
+			return "", fmt.Errorf("failed to marshal raw plan: %w", err)
+		}
+		return string(marshal), nil
+	}
+
+	return "", fmt.Errorf("invalid type specified: %q", outputFormat)
 }
 
 func (pl *Planner) PlanParsedOperation(operation *ast.Document) (*resolve.FetchTreeQueryPlanNode, error) {
@@ -125,7 +147,15 @@ func (pl *Planner) normalizeOperation(operation *ast.Document, operationName []b
 
 	report := operationreport.Report{}
 
-	astnormalization.NormalizeNamedOperation(operation, pl.definition, operationName, &report)
+	normalizer := astnormalization.NewWithOpts(
+		astnormalization.WithRemoveNotMatchingOperationDefinitions(),
+		astnormalization.WithExtractVariables(),
+		astnormalization.WithRemoveFragmentDefinitions(),
+		astnormalization.WithInlineFragmentSpreads(),
+		astnormalization.WithRemoveUnusedVariables(),
+		astnormalization.WithIgnoreSkipInclude(),
+	)
+	normalizer.NormalizeNamedOperation(operation, pl.definition, operationName, &report)
 	if report.HasErrors() {
 		return report
 	}
@@ -162,8 +192,11 @@ func (pl *Planner) planOperation(operation *ast.Document) (planNode *resolve.Fet
 	post := postprocess.NewProcessor()
 	post.Process(preparedPlan)
 
-	if p, ok := preparedPlan.(*plan.SynchronousResponsePlan); ok {
+	switch p := preparedPlan.(type) {
+	case *plan.SynchronousResponsePlan:
 		return p.Response.Fetches.QueryPlan(), nil
+	case *plan.SubscriptionResponsePlan:
+		return p.Response.Response.Fetches.QueryPlan(), nil
 	}
 
 	return &resolve.FetchTreeQueryPlanNode{}, nil
@@ -242,7 +275,9 @@ func (pg *PlanGenerator) buildRouterConfig(configFilePath string) (*nodev1.Route
 }
 
 func (pg *PlanGenerator) loadConfiguration(routerConfig *nodev1.RouterConfig, logger *zap.Logger, maxDataSourceCollectorsConcurrency uint) error {
-	routerEngineConfig := RouterEngineConfiguration{}
+	routerEngineConfig := RouterEngineConfiguration{
+		StreamMetricStore: metric.NewNoopStreamMetricStore(),
+	}
 	natSources := map[string]*nats.ProviderAdapter{}
 	kafkaSources := map[string]*kafka.ProviderAdapter{}
 	for _, ds := range routerConfig.GetEngineConfig().GetDatasourceConfigurations() {

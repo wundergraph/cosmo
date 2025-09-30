@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.15.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.14.0...helm-cosmo-router@0.15.0) (2025-09-10)
+
+
+### Features
+
+* pod label configuration in cosmo router helm chart ([#2200](https://github.com/wundergraph/cosmo/issues/2200)) ([b5b13a1](https://github.com/wundergraph/cosmo/commit/b5b13a110c7c4d08cb612f065a38bb82e5da461d))
+
+## [0.14.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.13.1...helm-cosmo-router@0.14.0) (2025-08-15)
+
+
+### Features
+
+* bump helm versions ([#2142](https://github.com/wundergraph/cosmo/issues/2142)) ([df97e3d](https://github.com/wundergraph/cosmo/commit/df97e3d42ac942ddf2678b83e4d284f3d4ca63d8))
+
 ## [0.13.1](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.13.0...helm-cosmo-router@0.13.1) (2025-06-23)
 
 

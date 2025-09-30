@@ -181,7 +181,6 @@ describe('@shareable directive tests', () => {
   describe('Federation tests', () => {
     test('that @shareable functions with extensions correctly #1.1', () => {
       const result = federateSubgraphsSuccess([subgraphA, subgraphB, subgraphC], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
           versionTwoRouterDefinitions +

@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/wundergraph/cosmo/router/pkg/metric"
+
 	"github.com/twmb/franz-go/pkg/kerr"
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
@@ -16,6 +18,11 @@ import (
 
 var (
 	errClientClosed = errors.New("client closed")
+)
+
+const (
+	kafkaReceive = "receive"
+	kafkaProduce = "produce"
 )
 
 // Adapter defines the interface for Kafka adapter operations
@@ -32,16 +39,21 @@ type Adapter interface {
 // It uses a single write client to produce messages and a client per topic to consume messages.
 // Each client polls the Kafka topic for new records and updates the subscriptions with the new data.
 type ProviderAdapter struct {
-	ctx         context.Context
-	opts        []kgo.Opt
-	logger      *zap.Logger
-	writeClient *kgo.Client
-	closeWg     sync.WaitGroup
-	cancel      context.CancelFunc
+	ctx               context.Context
+	opts              []kgo.Opt
+	logger            *zap.Logger
+	writeClient       *kgo.Client
+	closeWg           sync.WaitGroup
+	cancel            context.CancelFunc
+	streamMetricStore metric.StreamMetricStore
+}
+
+type PollerOpts struct {
+	providerId string
 }
 
 // topicPoller polls the Kafka topic for new records and calls the updateTriggers function.
-func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, updater datasource.SubscriptionEventUpdater) error {
+func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, updater datasource.SubscriptionEventUpdater, pollerOpts PollerOpts) error {
 	for {
 		select {
 		case <-p.ctx.Done(): // Close the poller if the application context was canceled
@@ -87,16 +99,25 @@ func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, u
 				r := iter.Next()
 
 				p.logger.Debug("subscription update", zap.String("topic", r.Topic), zap.ByteString("data", r.Value))
+
 				headers := make(map[string][]byte)
 				for _, header := range r.Headers {
 					headers[header.Key] = header.Value
 				}
+
+				p.streamMetricStore.Consume(p.ctx, metric.StreamsEvent{
+					ProviderId:          pollerOpts.providerId,
+					StreamOperationName: kafkaReceive,
+					ProviderType:        metric.ProviderTypeKafka,
+					DestinationName:     r.Topic,
+				})
 
 				updater.Update(&Event{
 					Data:    r.Value,
 					Headers: headers,
 					Key:     r.Key,
 				})
+
 			}
 		}
 	}
@@ -140,7 +161,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 
 		defer p.closeWg.Done()
 
-		err := p.topicPoller(ctx, client, updater)
+		err := p.topicPoller(ctx, client, updater, PollerOpts{providerId: conf.ProviderID()})
 		if err != nil {
 			if errors.Is(err, errClientClosed) || errors.Is(err, context.Canceled) {
 				log.Debug("poller canceled", zap.Error(err))
@@ -200,9 +221,23 @@ func (p *ProviderAdapter) Publish(ctx context.Context, event PublishEventConfigu
 
 	if pErr != nil {
 		log.Error("publish error", zap.Error(pErr))
+		// failure emission: include error.type generic
+		p.streamMetricStore.Produce(ctx, metric.StreamsEvent{
+			ProviderId:          event.ProviderID(),
+			StreamOperationName: kafkaProduce,
+			ProviderType:        metric.ProviderTypeKafka,
+			ErrorType:           "publish_error",
+			DestinationName:     event.Topic,
+		})
 		return datasource.NewError(fmt.Sprintf("error publishing to Kafka topic %s", event.Topic), pErr)
 	}
 
+	p.streamMetricStore.Produce(ctx, metric.StreamsEvent{
+		ProviderId:          event.ProviderID(),
+		StreamOperationName: kafkaProduce,
+		ProviderType:        metric.ProviderTypeKafka,
+		DestinationName:     event.Topic,
+	})
 	return nil
 }
 
@@ -244,17 +279,25 @@ func (p *ProviderAdapter) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func NewProviderAdapter(ctx context.Context, logger *zap.Logger, opts []kgo.Opt) (*ProviderAdapter, error) {
+func NewProviderAdapter(ctx context.Context, logger *zap.Logger, opts []kgo.Opt, providerOpts datasource.ProviderOpts) (*ProviderAdapter, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	if logger == nil {
 		logger = zap.NewNop()
 	}
 
+	var store metric.StreamMetricStore
+	if providerOpts.StreamMetricStore != nil {
+		store = providerOpts.StreamMetricStore
+	} else {
+		store = metric.NewNoopStreamMetricStore()
+	}
+
 	return &ProviderAdapter{
-		ctx:     ctx,
-		logger:  logger.With(zap.String("pubsub", "kafka")),
-		opts:    opts,
-		closeWg: sync.WaitGroup{},
-		cancel:  cancel,
+		ctx:               ctx,
+		logger:            logger.With(zap.String("pubsub", "kafka")),
+		opts:              opts,
+		closeWg:           sync.WaitGroup{},
+		cancel:            cancel,
+		streamMetricStore: store,
 	}, nil
 }

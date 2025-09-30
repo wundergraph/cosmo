@@ -6,6 +6,7 @@ import { Command, program } from 'commander';
 import ora from 'ora';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
+import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { validateSubscriptionProtocols } from '../../../utils.js';
@@ -16,7 +17,7 @@ export default (opts: BaseCommandOptions) => {
   command.description('Creates a feature subgraph on the control plane.');
   command.argument('<name>', 'The name of the feature subgraph to create.');
   command.option('-n, --namespace [string]', 'The namespace of the feature subgraph.');
-  command.requiredOption(
+  command.option(
     '-r, --routing-url <url>',
     'The routing url of your feature subgraph. This is the url at which the feature subgraph will be accessible.',
   );

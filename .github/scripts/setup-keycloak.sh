@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export KC_VERSION=25.0.1
+export KC_VERSION=26.2.5
 curl -LO  https://github.com/keycloak/keycloak/releases/download/"${KC_VERSION}"/keycloak-"${KC_VERSION}".zip
 
 unzip -q keycloak-${KC_VERSION}.zip

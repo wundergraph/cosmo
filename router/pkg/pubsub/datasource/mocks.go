@@ -855,7 +855,7 @@ func (_c *MockProviderBuilder_BuildEngineDataSourceFactory_Call[P, E]) RunAndRet
 }
 
 // BuildProvider provides a mock function for the type MockProviderBuilder
-func (_mock *MockProviderBuilder[P, E]) BuildProvider(options P) (Provider, error) {
+func (_mock *MockProviderBuilder[P, E]) BuildProvider(options P, providerOpts ProviderOpts) (Provider, error) {
 	ret := _mock.Called(options)
 
 	if len(ret) == 0 {

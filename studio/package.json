@@ -1,6 +1,6 @@
 {
   "name": "studio",
-  "version": "0.122.2",
+  "version": "0.133.0",
   "private": true,
   "license": "Apache-2.0",
   "description": "WunderGraph Cosmo Studio",
@@ -70,7 +70,7 @@
     "@tiptap/starter-kit": "2.1.13",
     "@wundergraph/composition": "workspace:*",
     "@wundergraph/cosmo-connect": "workspace:*",
-    "axios": "^1.8.4",
+    "axios": "^1.12.2",
     "bowser": "^2.11.0",
     "canvas-confetti": "^1.6.0",
     "change-case": "^4.1.2",
@@ -141,6 +141,6 @@
     "postcss": "8.4.38",
     "prettier-plugin-tailwindcss": "^0.5.6",
     "typescript": "5.5.2",
-    "vitest": "^3.1.2"
+    "vitest": "^3.2.4"
   }
 }
