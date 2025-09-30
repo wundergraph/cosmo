@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"slices"
 
 	"github.com/buger/jsonparser"
 	"github.com/cespare/xxhash/v2"
@@ -26,6 +27,11 @@ func (e *Event) GetData() []byte {
 
 func (e *Event) Clone() datasource.StreamEvent {
 	e2 := *e
+	e2.Data = slices.Clone(e.Data)
+	e2.Headers = make(map[string][]string, len(e.Headers))
+	for k, v := range e.Headers {
+		e2.Headers[k] = slices.Clone(v)
+	}
 	return &e2
 }
 

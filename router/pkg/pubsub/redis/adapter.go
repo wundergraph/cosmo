@@ -10,22 +10,10 @@ import (
 	"go.uber.org/zap"
 )
 
-// Adapter defines the methods that a Redis adapter should implement
-type Adapter interface {
-	// Subscribe subscribes to the given events and sends updates to the updater
-	Subscribe(ctx context.Context, conf datasource.SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater) error
-	// Publish publishes the given events to the specified channel
-	Publish(ctx context.Context, conf datasource.PublishEventConfiguration, events []datasource.StreamEvent) error
-	// Startup initializes the adapter
-	Startup(ctx context.Context) error
-	// Shutdown gracefully shuts down the adapter
-	Shutdown(ctx context.Context) error
-}
-
 // Ensure ProviderAdapter implements ProviderSubscriptionHooks
 var _ datasource.Adapter = (*ProviderAdapter)(nil)
 
-func NewProviderAdapter(ctx context.Context, logger *zap.Logger, urls []string, clusterEnabled bool) Adapter {
+func NewProviderAdapter(ctx context.Context, logger *zap.Logger, urls []string, clusterEnabled bool) datasource.Adapter {
 	ctx, cancel := context.WithCancel(ctx)
 	return &ProviderAdapter{
 		ctx:            ctx,

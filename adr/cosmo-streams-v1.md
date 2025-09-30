@@ -91,7 +91,7 @@ type SubscriptionOnStartHandler interface {
 }
 
 type StreamReceiveEventHookContext interface {
-    // Request is the original request received by the router.
+    // Request is the initial client request that started the subscription
     Request() *http.Request
     // Logger is the logger for the request
     Logger() *zap.Logger
@@ -105,8 +105,8 @@ type StreamReceiveEventHookContext interface {
 
 type StreamReceiveEventHook interface {
     // OnReceiveEvents is called each time a batch of events is received from the provider before delivering them to the client
-	// So for a single batch of events received from the provider, this hook will be called one time for each active subscription.
-	// It is important to optimize the logic inside this hook to avoid performance issues.
+    // So for a single batch of events received from the provider, this hook will be called one time for each active subscription.
+    // It is important to optimize the logic inside this hook to avoid performance issues.
     // Returning an error will result in a GraphQL error being returned to the client, could be customized returning a StreamHookError.
     OnReceiveEvents(ctx StreamReceiveEventHookContext, events []StreamEvent) ([]StreamEvent, error)
 }
@@ -207,7 +207,7 @@ func (m *MyModule) OnReceiveEvents(ctx StreamReceiveEventHookContext, events []c
 	if ctx.SubscriptionEventConfiguration().RootFieldName() != "employeeUpdates" {
 		return events, nil
 	}
-	
+
 	newEvents := make([]core.StreamEvent, 0, len(events))
 
     // check if the client is authenticated
@@ -221,7 +221,7 @@ func (m *MyModule) OnReceiveEvents(ctx StreamReceiveEventHookContext, events []c
     if !found {
         return newEvents, fmt.Errorf("client is not allowed to subscribe to the stream")
     }
-	
+
     for _, evt := range events {
         natsEvent, ok := evt.(*nats.NatsEvent)
         if !ok {

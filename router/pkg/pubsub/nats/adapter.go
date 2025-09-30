@@ -219,10 +219,6 @@ func (p *ProviderAdapter) Publish(_ context.Context, conf datasource.PublishEven
 		return datasource.NewError("nats client not initialized", nil)
 	}
 
-	if len(events) == 0 {
-		return nil
-	}
-
 	log.Debug("publish", zap.Int("event_count", len(events)))
 
 	for _, streamEvent := range events {

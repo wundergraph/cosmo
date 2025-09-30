@@ -95,7 +95,7 @@ func (p *PublishEventConfiguration) RootFieldName() string {
 
 // SubscriptionDataSource implements resolve.SubscriptionDataSource for Redis
 type SubscriptionDataSource struct {
-	pubSub Adapter
+	pubSub datasource.Adapter
 }
 
 func (s *SubscriptionDataSource) SubscriptionEventConfiguration(input []byte) datasource.SubscriptionEventConfiguration {
@@ -150,7 +150,7 @@ func (s *SubscriptionDataSource) LoadInitialData(ctx context.Context) (initial [
 
 // PublishDataSource implements resolve.DataSource for Redis publishing
 type PublishDataSource struct {
-	pubSub Adapter
+	pubSub datasource.Adapter
 }
 
 // Load processes a request to publish to Redis

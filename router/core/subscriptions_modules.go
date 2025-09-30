@@ -222,7 +222,7 @@ func NewEngineSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHookContext
 }
 
 type StreamReceiveEventHookContext interface {
-	// Request is the original request received by the router.
+	// Request is the initial client request that started the subscription
 	Request() *http.Request
 	// Logger is the logger for the request
 	Logger() *zap.Logger
@@ -236,8 +236,9 @@ type StreamReceiveEventHookContext interface {
 
 type StreamReceiveEventHook interface {
 	// OnReceiveEvents is called each time a batch of events is received from the provider before delivering them to the
-	// client. So for a single batch of events received from the provider, this hook will be called as many times as the
-	// number of active subscriptions. It is important to optimize the logic inside this hook to avoid performance issues.
+	// client. So for a single batch of events received from the provider, this hook will be called one time for each
+	// active subscription.
+	// It is important to optimize the logic inside this hook to avoid performance issues.
 	// Returning an error will result in a GraphQL error being returned to the client, could be customized returning a
 	// StreamHookError.
 	OnReceiveEvents(ctx StreamReceiveEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error)

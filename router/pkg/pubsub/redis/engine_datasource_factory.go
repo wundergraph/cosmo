@@ -21,7 +21,7 @@ const (
 
 // EngineDataSourceFactory implements the datasource.EngineDataSourceFactory interface for Redis
 type EngineDataSourceFactory struct {
-	RedisAdapter Adapter
+	RedisAdapter datasource.Adapter
 
 	fieldName  string
 	eventType  EventType
