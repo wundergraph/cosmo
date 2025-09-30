@@ -11,35 +11,35 @@ import (
 	"go.uber.org/zap"
 )
 
-// StreamHookError is used to customize the error messages and the behavior
-type StreamHookError struct {
+// StreamHandlerError is used to customize the error messages and the behavior
+type StreamHandlerError struct {
 	err        error
 	message    string
 	statusCode int
 	code       string
 }
 
-func (e *StreamHookError) Error() string {
+func (e *StreamHandlerError) Error() string {
 	if e.err != nil {
 		return e.err.Error()
 	}
 	return e.message
 }
 
-func (e *StreamHookError) Message() string {
+func (e *StreamHandlerError) Message() string {
 	return e.message
 }
 
-func (e *StreamHookError) StatusCode() int {
+func (e *StreamHandlerError) StatusCode() int {
 	return e.statusCode
 }
 
-func (e *StreamHookError) Code() string {
+func (e *StreamHandlerError) Code() string {
 	return e.code
 }
 
-func NewStreamHookError(err error, message string, statusCode int, code string) *StreamHookError {
-	return &StreamHookError{
+func NewStreamHookError(err error, message string, statusCode int, code string) *StreamHandlerError {
+	return &StreamHandlerError{
 		err:        err,
 		message:    message,
 		statusCode: statusCode,
@@ -47,7 +47,7 @@ func NewStreamHookError(err error, message string, statusCode int, code string) 
 	}
 }
 
-type SubscriptionOnStartHookContext interface {
+type SubscriptionOnStartHandlerContext interface {
 	// Request is the original request received by the router.
 	Request() *http.Request
 	// Logger is the logger for the request
@@ -177,11 +177,11 @@ func (c *engineSubscriptionOnStartHookContext) SubscriptionEventConfiguration() 
 type SubscriptionOnStartHandler interface {
 	// SubscriptionOnStart is called once at subscription start
 	// The error is propagated to the client.
-	SubscriptionOnStart(ctx SubscriptionOnStartHookContext) error
+	SubscriptionOnStart(ctx SubscriptionOnStartHandlerContext) error
 }
 
 // NewPubSubSubscriptionOnStartHook converts a SubscriptionOnStartHandler to a pubsub.SubscriptionOnStartFn
-func NewPubSubSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHookContext) error) datasource.SubscriptionOnStartFn {
+func NewPubSubSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHandlerContext) error) datasource.SubscriptionOnStartFn {
 	if fn == nil {
 		return nil
 	}
@@ -202,7 +202,7 @@ func NewPubSubSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHookContext
 }
 
 // NewEngineSubscriptionOnStartHook converts a SubscriptionOnStartHandler to a graphql_datasource.SubscriptionOnStartFn
-func NewEngineSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHookContext) error) graphql_datasource.SubscriptionOnStartFn {
+func NewEngineSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHandlerContext) error) graphql_datasource.SubscriptionOnStartFn {
 	if fn == nil {
 		return nil
 	}
@@ -221,7 +221,7 @@ func NewEngineSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHookContext
 	}
 }
 
-type StreamReceiveEventHookContext interface {
+type StreamReceiveEventHandlerContext interface {
 	// Request is the initial client request that started the subscription
 	Request() *http.Request
 	// Logger is the logger for the request
@@ -234,17 +234,17 @@ type StreamReceiveEventHookContext interface {
 	SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration
 }
 
-type StreamReceiveEventHook interface {
+type StreamReceiveEventHandler interface {
 	// OnReceiveEvents is called each time a batch of events is received from the provider before delivering them to the
 	// client. So for a single batch of events received from the provider, this hook will be called one time for each
 	// active subscription.
 	// It is important to optimize the logic inside this hook to avoid performance issues.
 	// Returning an error will result in a GraphQL error being returned to the client, could be customized returning a
 	// StreamHookError.
-	OnReceiveEvents(ctx StreamReceiveEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error)
+	OnReceiveEvents(ctx StreamReceiveEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error)
 }
 
-type StreamPublishEventHookContext interface {
+type StreamPublishEventHandlerContext interface {
 	// Request is the original request received by the router.
 	Request() *http.Request
 	// Logger is the logger for the request
@@ -257,14 +257,14 @@ type StreamPublishEventHookContext interface {
 	PublishEventConfiguration() datasource.PublishEventConfiguration
 }
 
-type StreamPublishEventHook interface {
+type StreamPublishEventHandler interface {
 	// OnPublishEvents is called each time a batch of events is going to be sent to the provider
 	// Returning an error will result in a GraphQL error being returned to the client, could be customized returning a
 	// StreamHookError.
-	OnPublishEvents(ctx StreamPublishEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error)
+	OnPublishEvents(ctx StreamPublishEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error)
 }
 
-func NewPubSubOnPublishEventsHook(fn func(ctx StreamPublishEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error)) datasource.OnPublishEventsFn {
+func NewPubSubOnPublishEventsHook(fn func(ctx StreamPublishEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error)) datasource.OnPublishEventsFn {
 	if fn == nil {
 		return nil
 	}
@@ -311,7 +311,7 @@ func (c *pubSubStreamReceiveEventHookContext) SubscriptionEventConfiguration() d
 	return c.subscriptionEventConfiguration
 }
 
-func NewPubSubOnReceiveEventsHook(fn func(ctx StreamReceiveEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error)) datasource.OnReceiveEventsFn {
+func NewPubSubOnReceiveEventsHook(fn func(ctx StreamReceiveEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error)) datasource.OnReceiveEventsFn {
 	if fn == nil {
 		return nil
 	}

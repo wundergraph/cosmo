@@ -21,20 +21,20 @@ The following interfaces will extend the existing logic in the custom modules.
 These provide additional control over subscriptions by providing hooks, which are invoked during specific events.
 
 - `SubscriptionOnStartHandler`: Called once at subscription start.
-- `StreamReceiveEventHook`: Triggered for each client/subscription when a batch of events is received from the provider, prior to delivery.
-- `StreamPublishEventHook`: Called each time a batch of events is going to be sent to the provider.
+- `StreamReceiveEventHandler`: Triggered for each client/subscription when a batch of events is received from the provider, prior to delivery.
+- `StreamPublishEventHandler`: Called each time a batch of events is going to be sent to the provider.
 
 ```go
 // STRUCTURES TO BE ADDED TO PUBSUB PACKAGE
 type ProviderType string
 const (
-    ProviderTypeNats ProviderType = "nats"
+    ProviderTypeNats  ProviderType = "nats"
     ProviderTypeKafka ProviderType = "kafka"
     ProviderTypeRedis ProviderType = "redis"
 }
 
-// StreamHookError is used to customize the error messages and the behavior
-type StreamHookError struct {
+// StreamHandlerError is used to customize the error messages and the behavior
+type StreamHandlerError struct {
     HttpError core.HttpError
     CloseSubscription bool
 }
@@ -68,7 +68,7 @@ type PublishEventConfiguration interface {
     RootFieldName() string
 }
 
-type SubscriptionOnStartHookContext interface {
+type SubscriptionOnStartHandlerContext interface {
     // Request is the original request received by the router.
     Request() *http.Request
     // Logger is the logger for the request
@@ -86,11 +86,11 @@ type SubscriptionOnStartHookContext interface {
 
 type SubscriptionOnStartHandler interface {
     // OnSubscriptionOnStart is called once at subscription start
-    // Returning an error will result in a GraphQL error being returned to the client, could be customized returning a StreamHookError.
-    SubscriptionOnStart(ctx SubscriptionOnStartHookContext) error
+    // Returning an error will result in a GraphQL error being returned to the client, could be customized returning a StreamHandlerError.
+    SubscriptionOnStart(ctx SubscriptionOnStartHandlerContext) error
 }
 
-type StreamReceiveEventHookContext interface {
+type StreamReceiveEventHandlerContext interface {
     // Request is the initial client request that started the subscription
     Request() *http.Request
     // Logger is the logger for the request
@@ -103,15 +103,15 @@ type StreamReceiveEventHookContext interface {
     SubscriptionEventConfiguration() SubscriptionEventConfiguration
 }
 
-type StreamReceiveEventHook interface {
+type StreamReceiveEventHandler interface {
     // OnReceiveEvents is called each time a batch of events is received from the provider before delivering them to the client
     // So for a single batch of events received from the provider, this hook will be called one time for each active subscription.
     // It is important to optimize the logic inside this hook to avoid performance issues.
-    // Returning an error will result in a GraphQL error being returned to the client, could be customized returning a StreamHookError.
-    OnReceiveEvents(ctx StreamReceiveEventHookContext, events []StreamEvent) ([]StreamEvent, error)
+    // Returning an error will result in a GraphQL error being returned to the client, could be customized returning a StreamHandlerError.
+    OnReceiveEvents(ctx StreamReceiveEventHandlerContext, events []StreamEvent) ([]StreamEvent, error)
 }
 
-type StreamPublishEventHookContext interface {
+type StreamPublishEventHandlerContext interface {
     // Request is the original request received by the router.
     Request() *http.Request
     // Logger is the logger for the request
@@ -124,10 +124,10 @@ type StreamPublishEventHookContext interface {
     PublishEventConfiguration() PublishEventConfiguration
 }
 
-type StreamPublishEventHook interface {
+type StreamPublishEventHandler interface {
     // OnPublishEvents is called each time a batch of events is going to be sent to the provider
     // Returning an error will result in an error being returned and the client will see the mutation failing
-    OnPublishEvents(ctx StreamPublishEventHookContext, events []StreamEvent) ([]StreamEvent, error)
+    OnPublishEvents(ctx StreamPublishEventHandlerContext, events []StreamEvent) ([]StreamEvent, error)
 }
 ```
 
@@ -192,7 +192,7 @@ func init() {
 
 type MyModule struct {}
 
-func (m *MyModule) OnReceiveEvents(ctx StreamReceiveEventHookContext, events []core.StreamEvent) ([]core.StreamEvent, error) {
+func (m *MyModule) OnReceiveEvents(ctx StreamReceiveEventHandlerContext, events []core.StreamEvent) ([]core.StreamEvent, error) {
     // check if the provider is nats
     if ctx.SubscriptionEventConfiguration().ProviderType() != pubsub.ProviderTypeNats {
         return events, nil
@@ -280,7 +280,7 @@ func (m *MyModule) Module() core.ModuleInfo {
 
 // Interface guards
 var (
-    _ core.StreamReceiveEventHook = (*MyModule)(nil)
+    _ core.StreamReceiveEventHandler = (*MyModule)(nil)
 )
 ```
 
@@ -335,7 +335,7 @@ func init() {
 
 type MyModule struct {}
 
-func (m *MyModule) SubscriptionOnStart(ctx SubscriptionOnStartHookContext) error {
+func (m *MyModule) SubscriptionOnStart(ctx SubscriptionOnStartHandlerContext) error {
     // check if the provider is nats
     if ctx.SubscriptionEventConfiguration().ProviderType() != pubsub.ProviderTypeNats {
         return nil
@@ -354,7 +354,7 @@ func (m *MyModule) SubscriptionOnStart(ctx SubscriptionOnStartHookContext) error
     // check if the client is authenticated
     if ctx.Authentication() == nil {
         // if the client is not authenticated, return an error
-        return &StreamHookError{
+        return &StreamHandlerError{
             HttpError: core.HttpError{
                 Code: http.StatusUnauthorized,
                 Message: "client is not authenticated",
@@ -366,7 +366,7 @@ func (m *MyModule) SubscriptionOnStart(ctx SubscriptionOnStartHookContext) error
     // check if the client is allowed to subscribe to the stream
     clientAllowedEntitiesIds, found := ctx.Authentication().Claims()["readEmployee"]
     if !found {
-        return &StreamHookError{
+        return &StreamHandlerError{
             HttpError: core.HttpError{
                 Code: http.StatusForbidden,
                 Message: "client is not allowed to read employees",

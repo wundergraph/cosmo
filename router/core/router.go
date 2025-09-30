@@ -646,11 +646,11 @@ func (r *Router) initModules(ctx context.Context) error {
 			r.subscriptionHooks.onStart = append(r.subscriptionHooks.onStart, handler.SubscriptionOnStart)
 		}
 
-		if handler, ok := moduleInstance.(StreamPublishEventHook); ok {
+		if handler, ok := moduleInstance.(StreamPublishEventHandler); ok {
 			r.subscriptionHooks.onPublishEvents = append(r.subscriptionHooks.onPublishEvents, handler.OnPublishEvents)
 		}
 
-		if handler, ok := moduleInstance.(StreamReceiveEventHook); ok {
+		if handler, ok := moduleInstance.(StreamReceiveEventHandler); ok {
 			r.subscriptionHooks.onReceiveEvents = append(r.subscriptionHooks.onReceiveEvents, handler.OnReceiveEvents)
 		}
 

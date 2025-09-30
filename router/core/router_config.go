@@ -27,9 +27,9 @@ import (
 )
 
 type subscriptionHooks struct {
-	onStart         []func(ctx SubscriptionOnStartHookContext) error
-	onPublishEvents []func(ctx StreamPublishEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error)
-	onReceiveEvents []func(ctx StreamReceiveEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error)
+	onStart         []func(ctx SubscriptionOnStartHandlerContext) error
+	onPublishEvents []func(ctx StreamPublishEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error)
+	onReceiveEvents []func(ctx StreamReceiveEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error)
 }
 
 type Config struct {

@@ -90,8 +90,8 @@ func getErrorType(err error) errorType {
 	if errors.As(err, &mergeResultErr) {
 		return errorTypeMergeResult
 	}
-	var streamHookErr *StreamHookError
-	if errors.As(err, &streamHookErr) {
+	var streamHandlerErr *StreamHandlerError
+	if errors.As(err, &streamHandlerErr) {
 		return errorTypeStreamHookError
 	}
 	return errorTypeUnknown
