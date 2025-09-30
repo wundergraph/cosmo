@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.119.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.118.0...@wundergraph/cosmo-connect@0.119.0) (2025-09-16)
+
+### Features
+
+* improve namespace selector UI/UX ([#2161](https://github.com/wundergraph/cosmo/issues/2161)) ([33f870e](https://github.com/wundergraph/cosmo/commit/33f870e8b33751ce547b33eb9ca6cb12578f4034)) (@wilsonrivera)
+
 # [0.118.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.117.0...@wundergraph/cosmo-connect@0.118.0) (2025-09-10)
 
 ### Features

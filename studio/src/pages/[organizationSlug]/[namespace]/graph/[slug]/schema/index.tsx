@@ -128,6 +128,7 @@ import { MdOutlineFeaturedPlayList } from "react-icons/md";
 import { PiGraphLight } from "react-icons/pi";
 import { Line, LineChart, ResponsiveContainer } from "recharts";
 import { useDebounce } from "use-debounce";
+import { useWorkspace } from "@/hooks/use-workspace";
 
 const fallback = buildASTSchema(parse(`type Query { dummy: String! }`));
 
@@ -1407,7 +1408,7 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
   const user = useUser();
 
   const organizationSlug = user?.currentOrganization.slug;
-  const namespace = router.query.namespace as string;
+  const { namespace: { name: namespace } } = useWorkspace();
   const graphName = router.query.slug as string;
   const selectedCategory = (router.query.category as string) ?? "query";
   const typename = router.query.typename as string;

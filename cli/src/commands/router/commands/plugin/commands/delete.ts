@@ -12,7 +12,7 @@ export default (opts: BaseCommandOptions) => {
   command.description('Deletes a plugin subgraph on the control plane.');
   command.argument('<name>', 'The name of the plugin subgraph to delete.');
   command.option('-n, --namespace [string]', 'The namespace of the plugin subgraph.');
-  command.option('-f --force', 'Flag to force the deletion (skip confirmation).');
+  command.option('-f, --force', 'Flag to force the deletion (skip confirmation).');
   command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
   command.action(async (name, options) => {
     if (!options.force) {

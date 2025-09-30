@@ -4,6 +4,54 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.254.1](https://github.com/wundergraph/cosmo/compare/router@0.254.0...router@0.254.1) (2025-09-26)
+
+### Bug Fixes
+
+* **router:** enable safelisting on websocket subscriptions ([#2222](https://github.com/wundergraph/cosmo/issues/2222)) ([709483b](https://github.com/wundergraph/cosmo/commit/709483b8c748e1a1a7a3ae7172d29a2f41f0ea6b)) (@dkorittki)
+
+# [0.254.0](https://github.com/wundergraph/cosmo/compare/router@0.253.1...router@0.254.0) (2025-09-26)
+
+### Features
+
+* view query plan as a json ([#2236](https://github.com/wundergraph/cosmo/issues/2236)) ([5435da3](https://github.com/wundergraph/cosmo/commit/5435da38ba0daa453175f5a10d55870b1661f205)) (@SkArchon)
+
+## [0.253.1](https://github.com/wundergraph/cosmo/compare/router@0.253.0...router@0.253.1) (2025-09-25)
+
+### Bug Fixes
+
+* remove an index after _entities in errors path ([#2237](https://github.com/wundergraph/cosmo/issues/2237)) ([ad1818e](https://github.com/wundergraph/cosmo/commit/ad1818eb4364210345e6624336daf1335d776af9)) (@ysmolski)
+
+# [0.253.0](https://github.com/wundergraph/cosmo/compare/router@0.252.3...router@0.253.0) (2025-09-25)
+
+### Features
+
+* validate optional "requires" fields ([#2230](https://github.com/wundergraph/cosmo/issues/2230)) ([8fe4967](https://github.com/wundergraph/cosmo/commit/8fe4967f0c700677c2ca37fa212f57769ba951e4)) (@ysmolski)
+
+## [0.252.3](https://github.com/wundergraph/cosmo/compare/router@0.252.2...router@0.252.3) (2025-09-24)
+
+### Bug Fixes
+
+* **router:** high subscription loads causing deadlocks ([#2223](https://github.com/wundergraph/cosmo/issues/2223)) ([ff8bfa3](https://github.com/wundergraph/cosmo/commit/ff8bfa38f2d245ab884ce44152a2bbeaaa717118)) (@endigma)
+
+## [0.252.2](https://github.com/wundergraph/cosmo/compare/router@0.252.1...router@0.252.2) (2025-09-23)
+
+### Bug Fixes
+
+* jwt validation blocks on multiple requests ([#2216](https://github.com/wundergraph/cosmo/issues/2216)) ([2d5a02a](https://github.com/wundergraph/cosmo/commit/2d5a02ad8e3e59a8429d9b1cd1071a5e5c605562)) (@SkArchon)
+
+## [0.252.1](https://github.com/wundergraph/cosmo/compare/router@0.252.0...router@0.252.1) (2025-09-12)
+
+### Bug Fixes
+
+* fix detecting requires on interface members for abstract selection rewriter ([#2209](https://github.com/wundergraph/cosmo/issues/2209)) ([aeb0cd3](https://github.com/wundergraph/cosmo/commit/aeb0cd3202266d31c721988944b4e71f3807dbf2)) (@devsergiy)
+
+# [0.252.0](https://github.com/wundergraph/cosmo/compare/router@0.251.1...router@0.252.0) (2025-09-12)
+
+### Features
+
+* send to subgraphs the "fetch_reasons" extension ([#2160](https://github.com/wundergraph/cosmo/issues/2160)) ([cd6f827](https://github.com/wundergraph/cosmo/commit/cd6f82738e6950969b0912374d0360b935345800)) (@ysmolski)
+
 ## [0.251.1](https://github.com/wundergraph/cosmo/compare/router@0.251.0...router@0.251.1) (2025-09-10)
 
 ### Bug Fixes

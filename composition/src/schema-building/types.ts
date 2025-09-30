@@ -108,6 +108,7 @@ export type FieldData = {
   namedTypeKind: OutputNodeKind | Kind.NULL;
   namedTypeName: string;
   node: MutableFieldNode;
+  nullLevelsBySubgraphName: Map<SubgraphName, Set<number>>;
   originalParentTypeName: string;
   persistedDirectivesData: PersistedDirectivesData;
   renamedParentTypeName: string;

@@ -4,6 +4,46 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.165.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.164.2...controlplane@0.165.0) (2025-09-23)
+
+### Features
+
+* improve Keycloak device auth page to include SSO options ([#2100](https://github.com/wundergraph/cosmo/issues/2100)) ([c0b4031](https://github.com/wundergraph/cosmo/commit/c0b40318d0a65abeb547a8abf564c6b961649695)) (@wilsonrivera)
+
+## [0.164.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.164.1...controlplane@0.164.2) (2025-09-22)
+
+### Bug Fixes
+
+* print client schema with select directives ([#2232](https://github.com/wundergraph/cosmo/issues/2232)) ([fe41836](https://github.com/wundergraph/cosmo/commit/fe4183640a008b328807f6d0f8a6557ec7b03245)) (@Aenimus)
+
+## [0.164.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.164.0...controlplane@0.164.1) (2025-09-16)
+
+**Note:** Version bump only for package controlplane
+
+# [0.164.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.163.0...controlplane@0.164.0) (2025-09-16)
+
+### Features
+
+* improve namespace selector UI/UX ([#2161](https://github.com/wundergraph/cosmo/issues/2161)) ([33f870e](https://github.com/wundergraph/cosmo/commit/33f870e8b33751ce547b33eb9ca6cb12578f4034)) (@wilsonrivera)
+
+# [0.163.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.162.0...controlplane@0.163.0) (2025-09-15)
+
+### Features
+
+* introduce the `subgraph-checker` role ([#2198](https://github.com/wundergraph/cosmo/issues/2198)) ([726b814](https://github.com/wundergraph/cosmo/commit/726b814b4a460acbbf98aed37b802fe6bfda8c2c)) (@wilsonrivera)
+
+# [0.162.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.161.0...controlplane@0.162.0) (2025-09-12)
+
+### Features
+
+* setup sentry for the controlplane ([#2199](https://github.com/wundergraph/cosmo/issues/2199)) ([aed082e](https://github.com/wundergraph/cosmo/commit/aed082ea3ec20d00ae7349509f153cf64fb54ce5)) (@miklosbarabas)
+
+# [0.161.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.160.0...controlplane@0.161.0) (2025-09-12)
+
+### Features
+
+* add cli commands to create,publish and delete grpc subgraphs ([#2179](https://github.com/wundergraph/cosmo/issues/2179)) ([2254925](https://github.com/wundergraph/cosmo/commit/2254925681aa644119e11b8958911bf490a2e885)) (@JivusAyrus)
+
 # [0.160.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.159.2...controlplane@0.160.0) (2025-09-10)
 
 ### Features

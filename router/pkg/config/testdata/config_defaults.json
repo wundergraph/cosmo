@@ -375,7 +375,9 @@
     "ResolverMaxRecyclableParserSize": 32768,
     "EnableSubgraphFetchOperationName": false,
     "DisableVariablesRemapping": false,
-    "SubscriptionFetchTimeout": 30000000000
+    "EnableRequireFetchReasons": false,
+    "SubscriptionFetchTimeout": 30000000000,
+    "ValidateRequiredExternalFields": false
   },
   "WebSocket": {
     "Enabled": true,
