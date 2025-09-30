@@ -29,6 +29,7 @@ require (
 	github.com/MicahParks/keyfunc/v3 v3.3.5 // indirect
 	github.com/agnivade/levenshtein v1.2.1 // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
+	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/benbjohnson/clock v1.3.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bufbuild/protocompile v0.14.1 // indirect
@@ -85,6 +86,7 @@ require (
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/hashicorp/yamux v0.1.1 // indirect
 	github.com/iancoleman/strcase v0.3.0 // indirect
+	github.com/invopop/jsonschema v0.13.0 // indirect
 	github.com/jensneuse/abstractlogger v0.0.4 // indirect
 	github.com/jensneuse/byte-template v0.0.0-20231025215717-69252eb3ed56 // indirect
 	github.com/kingledion/go-tools v0.6.0 // indirect
@@ -92,6 +94,7 @@ require (
 	github.com/klauspost/cpuid/v2 v2.2.8 // indirect
 	github.com/logrusorgru/aurora/v4 v4.0.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
+	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mark3labs/mcp-go v0.36.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
@@ -142,6 +145,7 @@ require (
 	github.com/twmb/franz-go/pkg/kmsg v1.7.0 // indirect
 	github.com/urfave/cli/v2 v2.27.7 // indirect
 	github.com/vbatts/tar-split v0.12.1 // indirect
+	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	github.com/wundergraph/astjson v0.0.0-20250106123708-be463c97e083 // indirect
 	github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects v0.0.0-20250715110703-10f2e5f9c79e // indirect
 	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.220 // indirect

@@ -32,7 +32,7 @@ func (r *mutationResolver) UpdateAvailability(ctx context.Context, employeeID in
 	if err != nil {
 		return nil, err
 	}
-	return &model.Employee{ID: employeeID, IsAvailable: isAvailable}, nil
+	return &model.Employee{ID: employeeID, IsAvailable: &isAvailable}, nil
 }
 
 // Mutation returns generated.MutationResolver implementation.

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { FeatureFlagDetails } from "@/components/feature-flag-details";
 import { useWorkspace } from "@/hooks/use-workspace";
+import { NamespaceSelector } from "@/components/dashboard/namespace-selector";
 import { useCurrentOrganization } from "@/hooks/use-current-organization";
 
 const FeatureFlagDetailsPage: NextPageWithLayout = () => {
@@ -89,8 +90,13 @@ FeatureFlagDetailsPage.getLayout = (page) => {
     undefined,
     undefined,
     [
-      <FeatureFlagBreadcrumb key={1} />,
-      <FeatureFlagNameBreadcrumb key={2} />,
+      <NamespaceSelector
+        isViewingGraphOrSubgraph={false}
+        truncateNamespace
+        key={1}
+      />,
+      <FeatureFlagBreadcrumb key={2} />,
+      <FeatureFlagNameBreadcrumb key={3} />,
     ],
     true,
   );

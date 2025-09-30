@@ -39,19 +39,18 @@ export function WorkspaceCommandWrapper({
       return Array.from(namespaceByName.values());
     }
 
-    const fuse = new Fuse<unknown>([], { keys: ['name'], threshold: 0.3, });
+    const fuse = new Fuse<unknown>([], { keys: ['name'], threshold: 0.2, includeScore: true });
     const searchResults: WorkspaceNamespace[] = [];
     for (const wns of Array.from(namespaceByName.values())) {
-      if (!wns.graphs?.length) {
-        // The namespace doesn't contain any federated graph, we don't need to perform the search here
+      // Determine whether the namespace contains the filter value
+      if (wns.name.toLowerCase().includes(filterValue)) {
+        // The namespace contains the filter value, add it with all the graphs/subgraphs to the search results
+        searchResults.push(wns);
         continue;
       }
 
-      // Determine whether the namespace contains the filter value
-      fuse.setCollection([wns]);
-      if (fuse.search(filterValue).length > 0) {
-        // The namespace contains the filter value, add it with all the graphs/subgraphs to the search results
-        searchResults.push(wns);
+      if (!wns.graphs?.length) {
+        // The namespace doesn't contain any federated graph, we don't need to perform the search here
         continue;
       }
 

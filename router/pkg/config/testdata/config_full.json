@@ -755,7 +755,8 @@
     "EnableSubgraphFetchOperationName": true,
     "DisableVariablesRemapping": false,
     "EnableRequireFetchReasons": false,
-    "SubscriptionFetchTimeout": 30000000000
+    "SubscriptionFetchTimeout": 30000000000,
+    "ValidateRequiredExternalFields": false
   },
   "WebSocket": {
     "Enabled": true,
