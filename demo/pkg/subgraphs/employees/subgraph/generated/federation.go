@@ -191,7 +191,10 @@ func (ec *executionContext) resolveEntity(
 			if err != nil {
 				return nil, fmt.Errorf(`resolving Entity "Cosmo": %w`, err)
 			}
-
+			err = ec.PopulateCosmoRequires(ctx, entity, rep)
+			if err != nil {
+				return nil, fmt.Errorf(`populating requires for Entity "Cosmo": %w`, err)
+			}
 			return entity, nil
 		}
 	case "Employee":
