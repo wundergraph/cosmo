@@ -507,22 +507,6 @@ func CreateGRPCTraceGetter(
 			attrAddFunc: spanAttrFunc,
 		})
 
-		//if telemetryAttributeExpressions != nil {
-		//	telemetryValues, err := telemetryAttributeExpressions.expressionsAttributesWithSubgraph(&reqCtx.expressionContext)
-		//	if err != nil {
-		//		reqCtx.Logger().Warn("failed to resolve grpc plugin expression for telemetry", zap.Error(err))
-		//	}
-		//	attrs = append(attrs, telemetryValues...)
-		//}
-		//
-		//if tracingAttributeExpressions != nil {
-		//	tracingValues, err := tracingAttributeExpressions.expressionsAttributesWithSubgraph(&reqCtx.expressionContext)
-		//	if err != nil {
-		//		reqCtx.Logger().Warn("failed to resolve grpc plugin expression for tracing", zap.Error(err))
-		//	}
-		//	attrs = append(attrs, tracingValues...)
-		//}
-
 		// Override http operation protocol with grpc
 		attrs = append(attrs, otel.EngineTransportAttribute, otel.WgOperationProtocol.String(OperationProtocolGRPC.String()))
 
