@@ -99,10 +99,6 @@ func (r *attributeExpressions) expressionsAttributes(exprCtx *expr.Context, key 
 	return expressionAttributes(r.expressions, exprCtx, key)
 }
 
-func (r *attributeExpressions) expressionsAttributesWithSubgraph(exprCtx *expr.Context) ([]attribute.KeyValue, error) {
-	return expressionAttributes(r.expressions, exprCtx, expr.BucketSubgraph)
-}
-
 type AddExprOpts struct {
 	logger      *zap.Logger
 	expressions *attributeExpressions
