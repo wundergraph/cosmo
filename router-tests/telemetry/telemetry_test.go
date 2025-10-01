@@ -42,6 +42,11 @@ const (
 	defaultCosmoRouterMetricsCount   = 7
 )
 
+type spanEntry struct {
+	name     string
+	spanKind trace.SpanKind
+}
+
 func TestFlakyEngineStatisticsTelemetry(t *testing.T) {
 	t.Parallel()
 
@@ -9593,7 +9598,549 @@ func TestFlakyTelemetry(t *testing.T) {
 		})
 	})
 
+	t.Run("verify request.operation expression attributes with dynamic evaluation", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("verify sha256Hash expression attribute", func(t *testing.T) {
+			t.Parallel()
+
+			exporter := tracetest.NewInMemoryExporter(t)
+
+			key := "custom.attribute"
+
+			testenv.Run(t, &testenv.Config{
+				TraceExporter: exporter,
+				CustomTracingAttributes: []config.CustomAttribute{
+					{
+						Key: key,
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "request.operation.sha256Hash",
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { employees { id } }`,
+				})
+
+				expectedSha256Hash := "da7b196c305087a40625b93073c796f9182e5693ac764fb72050c24f8c6a6071"
+
+				skipSpans := []spanEntry{
+					{
+						name:     "HTTP - Read Body",
+						spanKind: trace.SpanKindInternal,
+					},
+				}
+
+				spans := exporter.GetSpans().Snapshots()
+				require.Len(t, spans, 9)
+
+				var detectedSpanCount int
+
+				detectedSpanCount = validateDetectedSpans(t, spans, key, skipSpans, func(value attribute.Value) {
+					require.Equal(t, expectedSha256Hash, value.AsString())
+				})
+
+				expected := len(spans) - len(skipSpans)
+				require.Equal(t, expected, detectedSpanCount)
+			})
+		})
+
+		t.Run("verify parsingTime expression attribute", func(t *testing.T) {
+			exporter := tracetest.NewInMemoryExporter(t)
+
+			key := "custom.attribute"
+
+			testenv.Run(t, &testenv.Config{
+				TraceExporter: exporter,
+				CustomTracingAttributes: []config.CustomAttribute{
+					{
+						Key: key,
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "string(request.operation.parsingTime.Nanoseconds())",
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				queryType := "query"
+				queryName := "exampleName"
+				queryHeader := queryType + " " + queryName
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryHeader + ` { employees { id } }`,
+				})
+
+				skipSpans := []spanEntry{
+					{
+						name:     "HTTP - Read Body",
+						spanKind: trace.SpanKindInternal,
+					},
+					{
+						name:     queryHeader,
+						spanKind: trace.SpanKindServer,
+					},
+				}
+
+				spans := exporter.GetSpans().Snapshots()
+				require.Len(t, spans, 9)
+
+				var detectedSpanCount int
+
+				detectedSpanCount = validateDetectedSpans(t, spans, key, skipSpans, func(value attribute.Value) {
+					intVal, err := strconv.Atoi(value.AsString())
+					require.NoError(t, err)
+					require.Greater(t, intVal, 0)
+				})
+
+				expected := len(spans) - len(skipSpans)
+				require.Equal(t, expected, detectedSpanCount)
+			})
+		})
+
+		t.Run("verify name expression attribute", func(t *testing.T) {
+			t.Parallel()
+
+			exporter := tracetest.NewInMemoryExporter(t)
+
+			key := "custom.attribute"
+
+			testenv.Run(t, &testenv.Config{
+				TraceExporter: exporter,
+				CustomTracingAttributes: []config.CustomAttribute{
+					{
+						Key: key,
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "request.operation.name",
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				queryType := "query"
+				queryName := "exampleName"
+				queryHeader := queryType + " " + queryName
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryHeader + ` { employees { id } }`,
+				})
+
+				skipSpans := []spanEntry{
+					{
+						name:     "HTTP - Read Body",
+						spanKind: trace.SpanKindInternal,
+					},
+					{
+						name:     "Operation - Parse",
+						spanKind: trace.SpanKindInternal,
+					},
+				}
+
+				spans := exporter.GetSpans().Snapshots()
+				require.Len(t, spans, 9)
+
+				var detectedSpanCount int
+
+				detectedSpanCount = validateDetectedSpans(t, spans, key, skipSpans, func(value attribute.Value) {
+					require.Equal(t, queryName, value.AsString())
+				})
+
+				expected := len(spans) - len(skipSpans)
+				require.Equal(t, expected, detectedSpanCount)
+			})
+		})
+
+		t.Run("verify type expression attribute", func(t *testing.T) {
+			t.Parallel()
+
+			exporter := tracetest.NewInMemoryExporter(t)
+
+			key := "custom.attribute"
+
+			testenv.Run(t, &testenv.Config{
+				TraceExporter: exporter,
+				CustomTracingAttributes: []config.CustomAttribute{
+					{
+						Key: key,
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "request.operation.type",
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				queryType := "query"
+				queryName := "exampleName"
+				queryHeader := queryType + " " + queryName
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryHeader + ` { employees { id } }`,
+				})
+
+				skipSpans := []spanEntry{
+					{
+						name:     "HTTP - Read Body",
+						spanKind: trace.SpanKindInternal,
+					},
+					{
+						name:     "Operation - Parse",
+						spanKind: trace.SpanKindInternal,
+					},
+				}
+
+				spans := exporter.GetSpans().Snapshots()
+				require.Len(t, spans, 9)
+
+				var detectedSpanCount int
+
+				detectedSpanCount = validateDetectedSpans(t, spans, key, skipSpans, func(value attribute.Value) {
+					require.Equal(t, queryType, value.AsString())
+				})
+
+				expected := len(spans) - len(skipSpans)
+				require.Equal(t, expected, detectedSpanCount)
+			})
+		})
+
+		t.Run("verify persistedId expression attribute", func(t *testing.T) {
+			t.Parallel()
+
+			exporter := tracetest.NewInMemoryExporter(t)
+
+			key := "custom.attribute"
+
+			testenv.Run(t, &testenv.Config{
+				TraceExporter: exporter,
+				CustomTracingAttributes: []config.CustomAttribute{
+					{
+						Key: key,
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "request.operation.persistedId",
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					OperationName: []byte(`"Employees"`),
+					Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+					Header:        map[string][]string{"graphql-client-name": {"my-client"}},
+				})
+
+				persistedId := "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"
+
+				skipSpans := []spanEntry{
+					{
+						name:     "HTTP - Read Body",
+						spanKind: trace.SpanKindInternal,
+					},
+					{
+						name:     "Operation - Parse",
+						spanKind: trace.SpanKindInternal,
+					},
+					{
+						name:     "Load Persisted Operation",
+						spanKind: trace.SpanKindClient,
+					},
+				}
+
+				spans := exporter.GetSpans().Snapshots()
+				require.Len(t, spans, 10)
+
+				var detectedSpanCount int
+
+				detectedSpanCount = validateDetectedSpans(t, spans, key, skipSpans, func(value attribute.Value) {
+					require.Equal(t, persistedId, value.AsString())
+				})
+
+				expected := len(spans) - len(skipSpans)
+				require.Equal(t, expected, detectedSpanCount)
+			})
+		})
+
+		t.Run("verify normalizationTime expression attribute", func(t *testing.T) {
+			exporter := tracetest.NewInMemoryExporter(t)
+
+			key := "custom.attribute"
+
+			testenv.Run(t, &testenv.Config{
+				TraceExporter: exporter,
+				CustomTracingAttributes: []config.CustomAttribute{
+					{
+						Key: key,
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "string(request.operation.normalizationTime.Nanoseconds())",
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				queryType := "query"
+				queryName := "exampleName"
+				queryHeader := queryType + " " + queryName
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryHeader + ` { employees { id } }`,
+				})
+
+				skipSpans := []spanEntry{
+					{
+						name:     "HTTP - Read Body",
+						spanKind: trace.SpanKindInternal,
+					},
+					{
+						name:     "Operation - Parse",
+						spanKind: trace.SpanKindInternal,
+					},
+					{
+						name:     queryHeader,
+						spanKind: trace.SpanKindServer,
+					},
+				}
+
+				spans := exporter.GetSpans().Snapshots()
+				require.Len(t, spans, 9)
+
+				var detectedSpanCount int
+
+				detectedSpanCount = validateDetectedSpans(t, spans, key, skipSpans, func(value attribute.Value) {
+					intVal, err := strconv.Atoi(value.AsString())
+					require.NoError(t, err)
+					require.Greater(t, intVal, 0)
+				})
+
+				expected := len(spans) - len(skipSpans)
+				require.Equal(t, expected, detectedSpanCount)
+			})
+		})
+
+		t.Run("verify hash expression attribute", func(t *testing.T) {
+			t.Parallel()
+
+			exporter := tracetest.NewInMemoryExporter(t)
+
+			key := "custom.attribute"
+
+			testenv.Run(t, &testenv.Config{
+				TraceExporter: exporter,
+				CustomTracingAttributes: []config.CustomAttribute{
+					{
+						Key: key,
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "request.operation.hash",
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				queryType := "query"
+				queryName := "exampleName"
+				queryHeader := queryType + " " + queryName
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryHeader + ` { employees { id } }`,
+				})
+
+				hash := "1163600561566987607"
+
+				skipSpans := []spanEntry{
+					{
+						name:     "HTTP - Read Body",
+						spanKind: trace.SpanKindInternal,
+					},
+					{
+						name:     "Operation - Parse",
+						spanKind: trace.SpanKindInternal,
+					},
+					{
+						name:     queryHeader,
+						spanKind: trace.SpanKindServer,
+					},
+				}
+
+				spans := exporter.GetSpans().Snapshots()
+				require.Len(t, spans, 9)
+
+				var detectedSpanCount int
+
+				detectedSpanCount = validateDetectedSpans(t, spans, key, skipSpans, func(value attribute.Value) {
+					require.Equal(t, hash, value.AsString())
+				})
+
+				expected := len(spans) - len(skipSpans)
+				require.Equal(t, expected, detectedSpanCount)
+			})
+		})
+
+		t.Run("verify validationTime expression attribute", func(t *testing.T) {
+			exporter := tracetest.NewInMemoryExporter(t)
+
+			key := "custom.attribute"
+
+			testenv.Run(t, &testenv.Config{
+				TraceExporter: exporter,
+				CustomTracingAttributes: []config.CustomAttribute{
+					{
+						Key: key,
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "string(request.operation.validationTime.Nanoseconds())",
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				queryType := "query"
+				queryName := "exampleName"
+				queryHeader := queryType + " " + queryName
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryHeader + ` { employees { id } }`,
+				})
+
+				skipSpans := []spanEntry{
+					{
+						name:     "HTTP - Read Body",
+						spanKind: trace.SpanKindInternal,
+					},
+					{
+						name:     "Operation - Parse",
+						spanKind: trace.SpanKindInternal,
+					},
+					{
+						name:     "Operation - Normalize",
+						spanKind: trace.SpanKindInternal,
+					},
+					{
+						name:     queryHeader,
+						spanKind: trace.SpanKindServer,
+					},
+				}
+
+				spans := exporter.GetSpans().Snapshots()
+				require.Len(t, spans, 9)
+
+				var detectedSpanCount int
+
+				detectedSpanCount = validateDetectedSpans(t, spans, key, skipSpans, func(value attribute.Value) {
+					intVal, err := strconv.Atoi(value.AsString())
+					require.NoError(t, err)
+					require.Greater(t, intVal, 0)
+				})
+
+				expected := len(spans) - len(skipSpans)
+				require.Equal(t, expected, detectedSpanCount)
+			})
+		})
+
+		t.Run("verify planningTime expression attribute", func(t *testing.T) {
+			exporter := tracetest.NewInMemoryExporter(t)
+
+			key := "custom.attribute"
+
+			testenv.Run(t, &testenv.Config{
+				TraceExporter: exporter,
+				CustomTracingAttributes: []config.CustomAttribute{
+					{
+						Key: key,
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: "string(request.operation.planningTime.Nanoseconds())",
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				queryType := "query"
+				queryName := "exampleName"
+				queryHeader := queryType + " " + queryName
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryHeader + ` { employees { id } }`,
+				})
+
+				skipSpans := []spanEntry{
+					{
+						name:     "HTTP - Read Body",
+						spanKind: trace.SpanKindInternal,
+					},
+					{
+						name:     "Operation - Parse",
+						spanKind: trace.SpanKindInternal,
+					},
+					{
+						name:     "Operation - Normalize",
+						spanKind: trace.SpanKindInternal,
+					},
+					{
+						name:     "Operation - Validate",
+						spanKind: trace.SpanKindInternal,
+					},
+					{
+						name:     queryHeader,
+						spanKind: trace.SpanKindServer,
+					},
+				}
+
+				spans := exporter.GetSpans().Snapshots()
+				require.Len(t, spans, 9)
+
+				var detectedSpanCount int
+
+				detectedSpanCount = validateDetectedSpans(t, spans, key, skipSpans, func(value attribute.Value) {
+					intVal, err := strconv.Atoi(value.AsString())
+					require.NoError(t, err)
+					require.Greater(t, intVal, 0)
+				})
+
+				expected := len(spans) - len(skipSpans)
+				require.Equal(t, expected, detectedSpanCount)
+			})
+		})
+
+		t.Run("verify name and hash expression attributes together", func(t *testing.T) {
+			t.Parallel()
+
+			exporter := tracetest.NewInMemoryExporter(t)
+
+			key := "custom.attribute"
+
+			testenv.Run(t, &testenv.Config{
+				TraceExporter: exporter,
+				CustomTracingAttributes: []config.CustomAttribute{
+					{
+						Key: key,
+						ValueFrom: &config.CustomDynamicAttribute{
+							Expression: `request.operation.hash + " " + request.operation.name`,
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				queryType := "query"
+				queryName := "exampleName"
+				queryHeader := queryType + " " + queryName
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryHeader + ` { employees { id } }`,
+				})
+
+				hashAndOperationName := "1163600561566987607" + " " + queryName
+
+				skipSpans := []spanEntry{
+					{
+						name:     "HTTP - Read Body",
+						spanKind: trace.SpanKindInternal,
+					},
+					{
+						name:     "Operation - Parse",
+						spanKind: trace.SpanKindInternal,
+					},
+					{
+						name:     queryHeader,
+						spanKind: trace.SpanKindServer,
+					},
+				}
+
+				spans := exporter.GetSpans().Snapshots()
+				require.Len(t, spans, 9)
+
+				var detectedSpanCount int
+
+				detectedSpanCount = validateDetectedSpans(t, spans, key, skipSpans, func(value attribute.Value) {
+					require.Equal(t, hashAndOperationName, value.AsString())
+				})
+
+				expected := len(spans) - len(skipSpans)
+				require.Equal(t, expected, detectedSpanCount)
+			})
+		})
+	})
+
 	t.Run("verify attribute expressions with subgraph in the expression", func(t *testing.T) {
+		t.Parallel()
+
 		t.Run("verify subgraph expression should only be present for engine fetch", func(t *testing.T) {
 			t.Parallel()
 
@@ -10456,4 +11003,35 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 		}
 
 	})
+}
+
+func validateDetectedSpans(t *testing.T, sn []sdktrace.ReadOnlySpan, key string, skipSpans []spanEntry, validateFunc func(value attribute.Value)) int {
+	var detectedSpanCount int
+
+	for _, snapshot := range sn {
+		attributes := snapshot.Attributes()
+		snapshot.SpanKind()
+
+		spanSearchEntry := spanEntry{name: snapshot.Name(), spanKind: snapshot.SpanKind()}
+		value, ok := getAttributeFromKey(attributes, key)
+		if slices.Contains(skipSpans, spanSearchEntry) {
+			require.False(t, ok)
+			continue
+		}
+
+		require.True(t, ok)
+
+		validateFunc(*value)
+		detectedSpanCount++
+	}
+	return detectedSpanCount
+}
+
+func getAttributeFromKey(attrs []attribute.KeyValue, key string) (*attribute.Value, bool) {
+	for _, attr := range attrs {
+		if string(attr.Key) == key {
+			return &attr.Value, true
+		}
+	}
+	return nil, false
 }
