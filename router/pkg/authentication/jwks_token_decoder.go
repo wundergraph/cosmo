@@ -213,8 +213,6 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 				}
 				alg, ok := algInter.(string)
 				if !ok {
-					// For test coverage purposes, this should be impossible to reach because the JWT package rejects a token
-					// without an alg parameter in the header before calling jwt.Keyfunc.
 					return nil, fmt.Errorf(`%w: the JWT header did not contain the "alg" parameter, which is required by RFC 7515 section 4.1.1`, keyfunc.ErrKeyfunc)
 				}
 
