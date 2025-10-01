@@ -7,7 +7,6 @@ import (
 	"go.uber.org/zap"
 	"reflect"
 
-	"github.com/expr-lang/expr/ast"
 	"github.com/expr-lang/expr/vm"
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -22,31 +21,6 @@ type ProgramWithKey struct {
 // attributeExpressions maps context attributes to custom attributes.
 type attributeExpressions struct {
 	expressions map[expr.AttributeBucket][]ProgramWithKey
-}
-
-type VisitorCheckForRequestAuthAccess struct {
-	HasAuth bool
-}
-
-func (v *VisitorCheckForRequestAuthAccess) Visit(node *ast.Node) {
-	if node == nil {
-		return
-	}
-
-	if v.HasAuth {
-		return
-	}
-
-	switch n := (*node).(type) {
-	case *ast.MemberNode:
-		property, propertyOk := n.Property.(*ast.StringNode)
-		node, nodeOk := n.Node.(*ast.IdentifierNode)
-		if propertyOk && nodeOk {
-			if node.Value == expr.ExprRequestKey && property.Value == expr.ExprRequestAuthKey {
-				v.HasAuth = true
-			}
-		}
-	}
 }
 
 func newAttributeExpressions(attr []config.CustomAttribute, exprManager *expr.Manager) (*attributeExpressions, error) {

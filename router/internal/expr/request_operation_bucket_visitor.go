@@ -22,16 +22,10 @@ const (
 )
 
 // RequestOperationBucketVisitor inspects nodes and sets Bucket to the highest-priority match
-// Priority (low -> high): auth, sha256, parsingTime, name/type, persistedId, normalizationTime,
+// Priority (low -> high): any, auth, sha256, parsingTime, name/type, persistedId, normalizationTime,
 // hash, validationTime, planningTime, subgraph
 type RequestOperationBucketVisitor struct {
 	Bucket AttributeBucket
-}
-
-func (v *RequestOperationBucketVisitor) setBucketIfHigher(bucket AttributeBucket) {
-	if bucket > v.Bucket {
-		v.Bucket = bucket
-	}
 }
 
 func (v *RequestOperationBucketVisitor) Visit(baseNode *ast.Node) {
@@ -55,35 +49,16 @@ func (v *RequestOperationBucketVisitor) Visit(baseNode *ast.Node) {
 		}
 
 		// request.auth (lowest priority)
-		{
-			prop := ""
-			switch p := member.Property.(type) {
-			case *ast.StringNode:
-				prop = p.Value
-			case *ast.IdentifierNode:
-				prop = p.Value
-			}
-			if prop == "auth" {
-				if reqIdent, ok := member.Node.(*ast.IdentifierNode); ok && reqIdent.Value == ExprRequestKey {
-					v.setBucketIfHigher(BucketAuth)
-					// no return; higher-priority matches may exist in other nodes
-				}
-			}
+		prop := getPropValue(member)
+		if prop == "" {
+			return
 		}
 
-		// request.operation.<prop>
-		// Check property first
-		propName := ""
-		switch p := member.Property.(type) {
-		case *ast.StringNode:
-			propName = p.Value
-		case *ast.IdentifierNode:
-			propName = p.Value
-		default:
-			propName = ""
-		}
-		if propName == "" {
-			return
+		if prop == "auth" {
+			if reqIdent, ok := member.Node.(*ast.IdentifierNode); ok && reqIdent.Value == ExprRequestKey {
+				v.setBucketIfHigher(BucketAuth)
+				// don't return as higher-priority matches may exist in other nodes as child nodes
+			}
 		}
 
 		// Ensure parent is request.operation
@@ -91,22 +66,18 @@ func (v *RequestOperationBucketVisitor) Visit(baseNode *ast.Node) {
 		if !ok {
 			return
 		}
-		opProp := ""
-		switch op := opMember.Property.(type) {
-		case *ast.StringNode:
-			opProp = op.Value
-		case *ast.IdentifierNode:
-			opProp = op.Value
-		}
+
+		opProp := getPropValue(opMember)
 		if opProp != "operation" {
 			return
 		}
-		if reqIdent, ok := opMember.Node.(*ast.IdentifierNode); !ok || reqIdent.Value != "request" {
+
+		if reqIdent, ok := opMember.Node.(*ast.IdentifierNode); !ok || reqIdent.Value != ExprRequestKey {
 			return
 		}
 
 		// Map property to bucket
-		switch propName {
+		switch prop {
 		case "sha256Hash":
 			v.setBucketIfHigher(BucketSha256)
 		case "parsingTime":
@@ -125,4 +96,21 @@ func (v *RequestOperationBucketVisitor) Visit(baseNode *ast.Node) {
 			v.setBucketIfHigher(BucketPlanningTime)
 		}
 	}
+}
+
+func (v *RequestOperationBucketVisitor) setBucketIfHigher(bucket AttributeBucket) {
+	if bucket > v.Bucket {
+		v.Bucket = bucket
+	}
+}
+
+func getPropValue(member *ast.MemberNode) string {
+	prop := ""
+	switch p := member.Property.(type) {
+	case *ast.StringNode:
+		prop = p.Value
+	case *ast.IdentifierNode:
+		prop = p.Value
+	}
+	return prop
 }

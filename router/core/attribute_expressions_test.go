@@ -73,12 +73,12 @@ func TestVisitorCheckForRequestAuthAccess_Visit(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			v := VisitorCheckForRequestAuthAccess{}
+			v := expr.RequestOperationBucketVisitor{}
 			manager := expr.CreateNewExprManager()
 			out, err := manager.CompileExpression(tt.expr, reflect.String, &v)
 			assert.NoError(t, err)
 			assert.NotNil(t, out)
-			assert.Equal(t, tt.expectedHasAuth, v.HasAuth)
+			assert.Equal(t, tt.expectedHasAuth, v.Bucket == expr.BucketAuth)
 		})
 	}
 
