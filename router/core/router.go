@@ -36,8 +36,8 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/apq"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/cdn"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/fs"
-	rd "github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/s3"
+	rd "github.com/wundergraph/cosmo/router/internal/rediscloser"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/internal/stringsx"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -161,10 +161,11 @@ type (
 	}
 
 	AccessLogsConfig struct {
-		Attributes         []config.CustomAttribute
-		Logger             *zap.Logger
-		SubgraphEnabled    bool
-		SubgraphAttributes []config.CustomAttribute
+		Attributes            []config.CustomAttribute
+		Logger                *zap.Logger
+		SubgraphEnabled       bool
+		SubgraphAttributes    []config.CustomAttribute
+		IgnoreQueryParamsList []string
 	}
 
 	// Option defines the method to customize server.
@@ -466,6 +467,29 @@ func NewRouter(opts ...Option) (*Router, error) {
 
 	if r.persistedOperationsConfig.Safelist.Enabled && r.automaticPersistedQueriesConfig.Enabled {
 		return nil, errors.New("automatic persisted queries and safelist cannot be enabled at the same time (as APQ would permit queries that are not in the safelist)")
+	}
+
+	if r.securityConfiguration.BlockPersistedOperations.Enabled &&
+		r.securityConfiguration.BlockNonPersistedOperations.Enabled {
+
+		// Both have no condition, unusable state
+		if r.securityConfiguration.BlockPersistedOperations.Condition == "" &&
+			r.securityConfiguration.BlockNonPersistedOperations.Condition == "" {
+			return nil, errors.New("persisted and non-persisted operations are both unconditionally blocked")
+		}
+
+		// One or both have a condition, could be intentional for edge cases
+		r.logger.Warn("The security configuration fields 'block_persisted_operations' and 'block_non_persisted_operations' are both enabled. Take care to ensure this is intentional.")
+	}
+
+	if r.persistedOperationsConfig.Safelist.Enabled && r.securityConfiguration.BlockPersistedOperations.Enabled {
+		// Both have no condition, unusable state
+		if r.securityConfiguration.BlockPersistedOperations.Condition == "" {
+			return nil, errors.New("safelist cannot be enabled while persisted operations are unconditionally blocked")
+		}
+
+		// Has a condition, could be intentional for edge cases
+		r.logger.Warn("The security configuration field 'block_persisted_operations' is enabled alongside the persisted operations safelist. Take care to ensure this is intentional. Misconfiguration will result in safelisted queries being blocked.")
 	}
 
 	if r.securityConfiguration.DepthLimit != nil {
@@ -873,6 +897,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			mcpserver.WithExcludeMutations(r.mcp.ExcludeMutations),
 			mcpserver.WithEnableArbitraryOperations(r.mcp.EnableArbitraryOperations),
 			mcpserver.WithExposeSchema(r.mcp.ExposeSchema),
+			mcpserver.WithStateless(r.mcp.Session.Stateless),
 		}
 
 		// Determine the router GraphQL endpoint
@@ -988,71 +1013,73 @@ func (r *Router) buildClients() error {
 		fileSystemProviders[provider.ID] = provider
 	}
 
-	var pClient persistedoperation.Client
+	var pClient persistedoperation.StorageClient
 
-	if provider, ok := cdnProviders[r.persistedOperationsConfig.Storage.ProviderID]; ok {
-		if r.graphApiToken == "" {
-			return errors.New("graph token is required to fetch persisted operations from CDN")
+	if !r.persistedOperationsConfig.Disabled {
+		if provider, ok := cdnProviders[r.persistedOperationsConfig.Storage.ProviderID]; ok {
+			if r.graphApiToken == "" {
+				return errors.New("graph token is required to fetch persisted operations from CDN")
+			}
+
+			c, err := cdn.NewClient(provider.URL, r.graphApiToken, cdn.Options{
+				Logger: r.logger,
+			})
+			if err != nil {
+				return err
+			}
+			pClient = c
+
+			r.logger.Info("Use CDN as storage provider for persisted operations",
+				zap.String("provider_id", provider.ID),
+			)
+		} else if provider, ok := s3Providers[r.persistedOperationsConfig.Storage.ProviderID]; ok {
+
+			c, err := s3.NewClient(provider.Endpoint, &s3.Options{
+				AccessKeyID:      provider.AccessKey,
+				SecretAccessKey:  provider.SecretKey,
+				Region:           provider.Region,
+				UseSSL:           provider.Secure,
+				BucketName:       provider.Bucket,
+				ObjectPathPrefix: r.persistedOperationsConfig.Storage.ObjectPrefix,
+				TraceProvider:    r.tracerProvider,
+			})
+			if err != nil {
+				return err
+			}
+			pClient = c
+
+			r.logger.Info("Use S3 as storage provider for persisted operations",
+				zap.String("provider_id", provider.ID),
+			)
+		} else if provider, ok := fileSystemProviders[r.persistedOperationsConfig.Storage.ProviderID]; ok {
+			c, err := fs.NewClient(provider.Path, &fs.Options{
+				ObjectPathPrefix: r.persistedOperationsConfig.Storage.ObjectPrefix,
+			})
+			if err != nil {
+				return err
+			}
+			pClient = c
+
+			r.logger.Info("Use file system as storage provider for persisted operations",
+				zap.String("provider_id", provider.ID),
+			)
+		} else if r.graphApiToken != "" {
+			if r.persistedOperationsConfig.Storage.ProviderID != "" {
+				return fmt.Errorf("unknown storage provider id '%s' for persisted operations", r.persistedOperationsConfig.Storage.ProviderID)
+			}
+
+			c, err := cdn.NewClient(r.cdnConfig.URL, r.graphApiToken, cdn.Options{
+				Logger: r.logger,
+			})
+			if err != nil {
+				return err
+			}
+			pClient = c
+
+			r.logger.Debug("Default to Cosmo CDN as persisted operations provider",
+				zap.String("url", r.cdnConfig.URL),
+			)
 		}
-
-		c, err := cdn.NewClient(provider.URL, r.graphApiToken, cdn.Options{
-			Logger: r.logger,
-		})
-		if err != nil {
-			return err
-		}
-		pClient = c
-
-		r.logger.Info("Use CDN as storage provider for persisted operations",
-			zap.String("provider_id", provider.ID),
-		)
-	} else if provider, ok := s3Providers[r.persistedOperationsConfig.Storage.ProviderID]; ok {
-
-		c, err := s3.NewClient(provider.Endpoint, &s3.Options{
-			AccessKeyID:      provider.AccessKey,
-			SecretAccessKey:  provider.SecretKey,
-			Region:           provider.Region,
-			UseSSL:           provider.Secure,
-			BucketName:       provider.Bucket,
-			ObjectPathPrefix: r.persistedOperationsConfig.Storage.ObjectPrefix,
-			TraceProvider:    r.tracerProvider,
-		})
-		if err != nil {
-			return err
-		}
-		pClient = c
-
-		r.logger.Info("Use S3 as storage provider for persisted operations",
-			zap.String("provider_id", provider.ID),
-		)
-	} else if provider, ok := fileSystemProviders[r.persistedOperationsConfig.Storage.ProviderID]; ok {
-		c, err := fs.NewClient(provider.Path, &fs.Options{
-			ObjectPathPrefix: r.persistedOperationsConfig.Storage.ObjectPrefix,
-		})
-		if err != nil {
-			return err
-		}
-		pClient = c
-
-		r.logger.Info("Use file system as storage provider for persisted operations",
-			zap.String("provider_id", provider.ID),
-		)
-	} else if r.graphApiToken != "" {
-		if r.persistedOperationsConfig.Storage.ProviderID != "" {
-			return fmt.Errorf("unknown storage provider id '%s' for persisted operations", r.persistedOperationsConfig.Storage.ProviderID)
-		}
-
-		c, err := cdn.NewClient(r.cdnConfig.URL, r.graphApiToken, cdn.Options{
-			Logger: r.logger,
-		})
-		if err != nil {
-			return err
-		}
-		pClient = c
-
-		r.logger.Debug("Default to Cosmo CDN as persisted operations provider",
-			zap.String("url", r.cdnConfig.URL),
-		)
 	}
 
 	var kvClient apq.KVClient
@@ -1211,8 +1238,11 @@ func (r *Router) Start(ctx context.Context) error {
 
 			go func() {
 				if err := w(ctx); err != nil {
-					r.logger.Error("Error watching execution config", zap.Error(err))
-					return
+					if !errors.Is(err, context.Canceled) {
+						ll.Error("Error watching execution config", zap.Error(err))
+					} else {
+						ll.Debug("Watcher context cancelled, shutting down")
+					}
 				}
 			}()
 
@@ -1548,10 +1578,10 @@ func WithCors(corsOpts *cors.Config) Option {
 	}
 }
 
-// WithMultipartHeartbeatInterval sets the interval for the engine to send heartbeats for multipart subscriptions.
-func WithMultipartHeartbeatInterval(interval time.Duration) Option {
+// WithSubscriptionHeartbeatInterval sets the interval for the engine to send heartbeats for multipart subscriptions.
+func WithSubscriptionHeartbeatInterval(interval time.Duration) Option {
 	return func(r *Router) {
-		r.multipartHeartbeatInterval = interval
+		r.subscriptionHeartbeatInterval = interval
 	}
 }
 
@@ -1759,13 +1789,25 @@ func WithSubgraphCircuitBreakerOptions(opts *SubgraphCircuitBreakerOptions) Opti
 	}
 }
 
-func WithSubgraphRetryOptions(enabled bool, maxRetryCount int, retryMaxDuration, retryInterval time.Duration) Option {
+func WithSubgraphRetryOptions(
+	enabled bool,
+	algorithm string,
+	maxRetryCount int,
+	retryMaxDuration, retryInterval time.Duration,
+	expression string,
+	onRetryFunc retrytransport.OnRetryFunc,
+) Option {
 	return func(r *Router) {
 		r.retryOptions = retrytransport.RetryOptions{
 			Enabled:       enabled,
+			Algorithm:     algorithm,
 			MaxRetryCount: maxRetryCount,
 			MaxDuration:   retryMaxDuration,
 			Interval:      retryInterval,
+			Expression:    expression,
+
+			// Test case overrides
+			OnRetry: onRetryFunc,
 		}
 	}
 }
@@ -1827,8 +1869,12 @@ func DefaultFileUploadConfig() *config.FileUpload {
 	}
 }
 
-func NewTransportRequestOptions(cfg config.GlobalSubgraphRequestRule) *TransportRequestOptions {
-	defaults := DefaultTransportRequestOptions()
+// NewTransportRequestOptions creates a new TransportRequestOptions instance with the given configuration and defaults.
+// If defaults is nil, it uses the global default values.
+func NewTransportRequestOptions(cfg config.GlobalSubgraphRequestRule, defaults *TransportRequestOptions) *TransportRequestOptions {
+	if defaults == nil {
+		defaults = DefaultTransportRequestOptions()
+	}
 
 	return &TransportRequestOptions{
 		RequestTimeout:         or(cfg.RequestTimeout, defaults.RequestTimeout),
@@ -1861,13 +1907,15 @@ func DefaultTransportRequestOptions() *TransportRequestOptions {
 }
 
 func NewSubgraphTransportOptions(cfg config.TrafficShapingRules) *SubgraphTransportOptions {
+	allRequestOptions := NewTransportRequestOptions(cfg.All, nil)
+
 	base := &SubgraphTransportOptions{
-		TransportRequestOptions: NewTransportRequestOptions(cfg.All),
+		TransportRequestOptions: allRequestOptions,
 		SubgraphMap:             map[string]*TransportRequestOptions{},
 	}
 
 	for k, v := range cfg.Subgraphs {
-		base.SubgraphMap[k] = NewTransportRequestOptions(*v)
+		base.SubgraphMap[k] = NewTransportRequestOptions(v, allRequestOptions)
 	}
 
 	return base
@@ -1883,9 +1931,8 @@ func NewSubgraphCircuitBreakerOptions(cfg config.TrafficShapingRules) *SubgraphC
 	}
 	// Subgraph specific circuit breakers
 	for k, v := range cfg.Subgraphs {
-		if v != nil {
-			entry.SubgraphMap[k] = newCircuitBreakerConfig(v.CircuitBreaker)
-		}
+		entry.SubgraphMap[k] = newCircuitBreakerConfig(v.CircuitBreaker)
+
 	}
 
 	return entry
@@ -2251,6 +2298,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			},
 			Exporters:           openTelemetryExporters,
 			CircuitBreaker:      cfg.Metrics.OTLP.CircuitBreaker,
+			Streams:             cfg.Metrics.OTLP.Streams,
 			ExcludeMetrics:      cfg.Metrics.OTLP.ExcludeMetrics,
 			ExcludeMetricLabels: cfg.Metrics.OTLP.ExcludeMetricLabels,
 		},
@@ -2266,6 +2314,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			CircuitBreaker:      cfg.Metrics.Prometheus.CircuitBreaker,
 			ExcludeMetrics:      cfg.Metrics.Prometheus.ExcludeMetrics,
 			ExcludeMetricLabels: cfg.Metrics.Prometheus.ExcludeMetricLabels,
+			Streams:             cfg.Metrics.Prometheus.Streams,
 			ExcludeScopeInfo:    cfg.Metrics.Prometheus.ExcludeScopeInfo,
 			PromSchemaFieldUsage: rmetric.PrometheusSchemaFieldUsage{
 				Enabled:             cfg.Metrics.Prometheus.SchemaFieldUsage.Enabled,

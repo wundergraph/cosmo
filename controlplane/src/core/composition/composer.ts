@@ -11,12 +11,20 @@ import {
   SupportedRouterCompatibilityVersion,
   Warning,
 } from '@wundergraph/composition';
-import { buildRouterConfig, ComposedSubgraph as IComposedSubgraph, SubgraphKind } from '@wundergraph/cosmo-shared';
+import {
+  buildRouterConfig,
+  ComposedSubgraph as IComposedSubgraph,
+  ComposedSubgraphGRPC,
+  ComposedSubgraphPlugin,
+  SubgraphKind,
+} from '@wundergraph/cosmo-shared';
 import { FastifyBaseLogger } from 'fastify';
-import { DocumentNode, GraphQLSchema, parse, printSchema } from 'graphql';
+import { DocumentNode, GraphQLSchema, parse } from 'graphql';
 import {
   FeatureFlagRouterExecutionConfig,
   FeatureFlagRouterExecutionConfigs,
+  GRPCMapping,
+  ImageReference,
   RouterConfig,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
@@ -102,12 +110,23 @@ export function buildRouterExecutionConfig(
   });
 }
 
-export type ComposedSubgraph = IComposedSubgraph & {
+export type ComposedSubgraph = (IComposedSubgraph | ComposedSubgraphPlugin | ComposedSubgraphGRPC) & {
   targetId: string;
   isFeatureSubgraph: boolean;
+  schemaVersionId: string;
+};
+
+const parseGRPCMapping = (mappings: string): GRPCMapping => {
+  try {
+    const mappingsJson = JSON.parse(mappings);
+    return GRPCMapping.fromJson(mappingsJson);
+  } catch (error) {
+    throw new Error(`Failed to parse gRPC mappings: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 };
 
 export function subgraphDTOsToComposedSubgraphs(
+  organizationId: string,
   subgraphs: SubgraphDTO[],
   result: FederationResult,
 ): ComposedSubgraph[] {
@@ -123,6 +142,53 @@ export function subgraphDTOsToComposedSubgraphs(
     const subgraphConfig = result.success ? result.subgraphConfigBySubgraphName.get(subgraph.name) : undefined;
     const schema = subgraphConfig?.schema;
     const configurationDataByTypeName = subgraphConfig?.configurationDataByTypeName;
+
+    if (subgraph.type === 'grpc_plugin') {
+      if (!subgraph.proto || !subgraph.proto.pluginData) {
+        throw new Error(`Subgraph ${subgraph.name} is a plugin but does not have a plugin data`);
+      }
+
+      return {
+        kind: SubgraphKind.Plugin,
+        id: subgraph.id,
+        version: subgraph.proto.pluginData.version,
+        name: subgraph.name,
+        sdl: subgraph.schemaSDL,
+        url: subgraph.routingUrl,
+        schemaVersionId: subgraph.schemaVersionId,
+        targetId: subgraph.targetId,
+        isFeatureSubgraph: subgraph.isFeatureSubgraph,
+        configurationDataByTypeName,
+        schema,
+        protoSchema: subgraph.proto.schema,
+        mapping: parseGRPCMapping(subgraph.proto.mappings),
+        imageReference: new ImageReference({
+          repository: `${organizationId}/${subgraph.id}`,
+          reference: subgraph.proto.pluginData.version,
+        }),
+      };
+    }
+    if (subgraph.type === 'grpc_service') {
+      if (!subgraph.proto) {
+        throw new Error(`Subgraph ${subgraph.name} is a GRPC service but does not have a proto`);
+      }
+
+      return {
+        kind: SubgraphKind.GRPC,
+        id: subgraph.id,
+        name: subgraph.name,
+        sdl: subgraph.schemaSDL,
+        url: subgraph.routingUrl,
+        schemaVersionId: subgraph.schemaVersionId,
+        targetId: subgraph.targetId,
+        isFeatureSubgraph: subgraph.isFeatureSubgraph,
+        configurationDataByTypeName,
+        schema,
+        protoSchema: subgraph.proto.schema,
+        mapping: parseGRPCMapping(subgraph.proto.mappings),
+      };
+    }
+
     return {
       kind: SubgraphKind.Standard,
       id: subgraph.id,
@@ -154,10 +220,10 @@ export function mapResultToComposedGraph(
     namespace: federatedGraph.namespace,
     namespaceId: federatedGraph.namespaceId,
     composedSchema: result.success ? printSchemaWithDirectives(result.federatedGraphSchema) : undefined,
-    federatedClientSchema: result.success ? printSchema(result.federatedGraphClientSchema) : undefined,
+    federatedClientSchema: result.success ? printSchemaWithDirectives(result.federatedGraphClientSchema) : undefined,
     shouldIncludeClientSchema: result.success ? result.shouldIncludeClientSchema : false,
     errors: result.success ? [] : result.errors,
-    subgraphs: subgraphDTOsToComposedSubgraphs(subgraphs, result),
+    subgraphs: subgraphDTOsToComposedSubgraphs(federatedGraph.organizationId, subgraphs, result),
     fieldConfigurations: result.success ? result.fieldConfigurations : [],
     warnings: result.warnings,
   };

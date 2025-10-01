@@ -62,7 +62,7 @@ func TestPublishHook(t *testing.T) {
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
 				"publishModule": stream_publish.PublishModule{
-					Callback: func(ctx core.StreamPublishEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
+					Callback: func(ctx core.StreamPublishEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
 						for _, event := range events {
 							evt, ok := event.(*kafka.Event)
 							if !ok {
@@ -114,7 +114,7 @@ func TestPublishHook(t *testing.T) {
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
 				"publishModule": stream_publish.PublishModule{
-					Callback: func(ctx core.StreamPublishEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
+					Callback: func(ctx core.StreamPublishEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
 						return events, core.NewStreamHookError(errors.New("test"), "test", 500, "INTERNAL_SERVER_ERROR")
 					},
 				},
@@ -158,7 +158,7 @@ func TestPublishHook(t *testing.T) {
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
 				"publishModule": stream_publish.PublishModule{
-					Callback: func(ctx core.StreamPublishEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
+					Callback: func(ctx core.StreamPublishEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
 						return events, core.NewStreamHookError(errors.New("test"), "test", 500, "INTERNAL_SERVER_ERROR")
 					},
 				},
@@ -212,7 +212,7 @@ func TestPublishHook(t *testing.T) {
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
 				"publishModule": stream_publish.PublishModule{
-					Callback: func(ctx core.StreamPublishEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
+					Callback: func(ctx core.StreamPublishEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
 						return events, core.NewStreamHookError(errors.New("test"), "test", 500, "INTERNAL_SERVER_ERROR")
 					},
 				},
@@ -256,7 +256,7 @@ func TestPublishHook(t *testing.T) {
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
 				"publishModule": stream_publish.PublishModule{
-					Callback: func(ctx core.StreamPublishEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
+					Callback: func(ctx core.StreamPublishEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
 						if ctx.PublishEventConfiguration().RootFieldName() != "updateEmployeeMyKafka" {
 							return events, nil
 						}

@@ -49,3 +49,7 @@ func (f *PlannerFactory[PB, P, E]) Context() context.Context {
 func (f *PlannerFactory[PB, P, E]) UpstreamSchema(dataSourceConfig plan.DataSourceConfiguration[*PlannerConfig[PB, P, E]]) (*ast.Document, bool) {
 	return nil, false
 }
+
+func (f *PlannerFactory[PB, P, E]) PlanningBehavior() plan.DataSourcePlanningBehavior {
+	return plan.DataSourcePlanningBehavior{}
+}

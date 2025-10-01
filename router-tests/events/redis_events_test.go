@@ -476,7 +476,7 @@ func TestRedisEvents(t *testing.T) {
 	t.Run("multipart", func(t *testing.T) {
 		t.Parallel()
 
-		multipartHeartbeatInterval := time.Second * 5
+		subscriptionHeartbeatInterval := time.Second * 5
 
 		t.Run("subscribe sync", func(t *testing.T) {
 			t.Parallel()
@@ -487,7 +487,7 @@ func TestRedisEvents(t *testing.T) {
 				RouterConfigJSONTemplate: testenv.ConfigWithEdfsRedisJSONTemplate,
 				EnableRedis:              true,
 				RouterOptions: []core.Option{
-					core.WithMultipartHeartbeatInterval(multipartHeartbeatInterval),
+					core.WithSubscriptionHeartbeatInterval(subscriptionHeartbeatInterval),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				subscribePayload := []byte(`{"query":"subscription { employeeUpdates { id details { forename surname } }}"}`)

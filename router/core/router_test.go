@@ -230,40 +230,159 @@ func TestOverridesPriority(t *testing.T) {
 }
 
 func TestTrafficShapingRules(t *testing.T) {
-	allRequestTimeout := 10 * time.Second
-	allDialTimeout := 0 * time.Second
-	subgraphRequestTimeout := 15 * time.Second
-	subgraphDialTimeout := 0 * time.Second
+	t.Run("loads defaults correctly when empty", func(t *testing.T) {
+		config := config.TrafficShapingRules{
+			All: config.GlobalSubgraphRequestRule{},
+		}
 
-	defaults := DefaultTransportRequestOptions()
+		defaults := DefaultTransportRequestOptions()
 
-	config := config.TrafficShapingRules{
-		All: config.GlobalSubgraphRequestRule{
-			RequestTimeout: &allRequestTimeout,
-			DialTimeout:    &allDialTimeout,
-		},
-		Subgraphs: map[string]*config.GlobalSubgraphRequestRule{
-			"some-subgraph": {
-				RequestTimeout: &subgraphRequestTimeout,
-				DialTimeout:    &subgraphDialTimeout,
+		options := []Option{
+			WithSubgraphTransportOptions(NewSubgraphTransportOptions(config)),
+		}
+		router, err := NewRouter(options...)
+		assert.Nil(t, err)
+
+		// Assert that configs are properly loaded from defaults when empty
+		assert.Equal(t, defaults.RequestTimeout, router.subgraphTransportOptions.RequestTimeout)
+		assert.Equal(t, defaults.TLSHandshakeTimeout, router.subgraphTransportOptions.TLSHandshakeTimeout)
+		assert.Equal(t, defaults.ResponseHeaderTimeout, router.subgraphTransportOptions.ResponseHeaderTimeout)
+		assert.Equal(t, defaults.ExpectContinueTimeout, router.subgraphTransportOptions.ExpectContinueTimeout)
+		assert.Equal(t, defaults.KeepAliveProbeInterval, router.subgraphTransportOptions.KeepAliveProbeInterval)
+		assert.Equal(t, defaults.KeepAliveIdleTimeout, router.subgraphTransportOptions.KeepAliveIdleTimeout)
+		assert.Equal(t, defaults.DialTimeout, router.subgraphTransportOptions.DialTimeout)
+		assert.Equal(t, defaults.MaxConnsPerHost, router.subgraphTransportOptions.MaxConnsPerHost)
+		assert.Equal(t, defaults.MaxIdleConns, router.subgraphTransportOptions.MaxIdleConns)
+		assert.Equal(t, defaults.MaxIdleConnsPerHost, router.subgraphTransportOptions.MaxIdleConnsPerHost)
+	})
+
+	t.Run("loads set values over defaults when populated", func(t *testing.T) {
+		allRequestTimeout := 60 * time.Second
+		allTLSHandshakeTimeout := 10 * time.Second
+		allResponseHeaderTimeout := 0 * time.Second
+		allExpectContinueTimeout := 0 * time.Second
+		allKeepAliveProbeInterval := 30 * time.Second
+		allKeepAliveIdleTimeout := 90 * time.Second
+		allDialTimeout := 30 * time.Second
+		allMaxConnsPerHost := 100
+		allMaxIdleConns := 1024
+		allMaxIdleConnsPerHost := 20
+
+		config := config.TrafficShapingRules{
+			All: config.GlobalSubgraphRequestRule{
+				RequestTimeout:         &allRequestTimeout,
+				TLSHandshakeTimeout:    &allTLSHandshakeTimeout,
+				ResponseHeaderTimeout:  &allResponseHeaderTimeout,
+				ExpectContinueTimeout:  &allExpectContinueTimeout,
+				KeepAliveProbeInterval: &allKeepAliveProbeInterval,
+				KeepAliveIdleTimeout:   &allKeepAliveIdleTimeout,
+				DialTimeout:            &allDialTimeout,
+				MaxConnsPerHost:        &allMaxConnsPerHost,
+				MaxIdleConns:           &allMaxIdleConns,
+				MaxIdleConnsPerHost:    &allMaxIdleConnsPerHost,
 			},
-		},
-	}
+		}
 
-	options := []Option{
-		WithSubgraphTransportOptions(NewSubgraphTransportOptions(config)),
-	}
-	router, err := NewRouter(options...)
-	assert.Nil(t, err)
+		options := []Option{
+			WithSubgraphTransportOptions(NewSubgraphTransportOptions(config)),
+		}
 
-	// Assert that configs are loaded for real, zero and absent values.
-	assert.Equal(t, allRequestTimeout, router.subgraphTransportOptions.RequestTimeout)
-	assert.Equal(t, allDialTimeout, router.subgraphTransportOptions.DialTimeout)
-	assert.Equal(t, defaults.MaxIdleConns, router.subgraphTransportOptions.MaxIdleConns)
+		router, err := NewRouter(options...)
+		assert.Nil(t, err)
 
-	assert.Equal(t, subgraphRequestTimeout, router.subgraphTransportOptions.SubgraphMap["some-subgraph"].RequestTimeout)
-	assert.Equal(t, subgraphDialTimeout, router.subgraphTransportOptions.SubgraphMap["some-subgraph"].DialTimeout)
-	assert.Equal(t, defaults.MaxIdleConns, router.subgraphTransportOptions.SubgraphMap["some-subgraph"].MaxIdleConns)
+		// Assert that configs are properly loaded over defaults when populated
+		assert.Equal(t, allRequestTimeout, router.subgraphTransportOptions.RequestTimeout)
+		assert.Equal(t, allDialTimeout, router.subgraphTransportOptions.DialTimeout)
+		assert.Equal(t, allMaxConnsPerHost, router.subgraphTransportOptions.MaxConnsPerHost)
+		assert.Equal(t, allTLSHandshakeTimeout, router.subgraphTransportOptions.TLSHandshakeTimeout)
+		assert.Equal(t, allResponseHeaderTimeout, router.subgraphTransportOptions.ResponseHeaderTimeout)
+		assert.Equal(t, allExpectContinueTimeout, router.subgraphTransportOptions.ExpectContinueTimeout)
+		assert.Equal(t, allKeepAliveProbeInterval, router.subgraphTransportOptions.KeepAliveProbeInterval)
+		assert.Equal(t, allKeepAliveIdleTimeout, router.subgraphTransportOptions.KeepAliveIdleTimeout)
+		assert.Equal(t, allMaxIdleConns, router.subgraphTransportOptions.MaxIdleConns)
+		assert.Equal(t, allMaxIdleConnsPerHost, router.subgraphTransportOptions.MaxIdleConnsPerHost)
+	})
+
+	t.Run("falls through to defaults when partially populated", func(t *testing.T) {
+		allRequestTimeout := 60 * time.Second
+
+		config := config.TrafficShapingRules{
+			All: config.GlobalSubgraphRequestRule{
+				RequestTimeout: &allRequestTimeout,
+			},
+		}
+
+		defaults := DefaultTransportRequestOptions()
+
+		options := []Option{
+			WithSubgraphTransportOptions(NewSubgraphTransportOptions(config)),
+		}
+		router, err := NewRouter(options...)
+		assert.Nil(t, err)
+
+		// Loads the populated value
+		assert.Equal(t, allRequestTimeout, router.subgraphTransportOptions.RequestTimeout)
+
+		// Falls through to defaults when not set
+		assert.Equal(t, defaults.TLSHandshakeTimeout, router.subgraphTransportOptions.TLSHandshakeTimeout)
+		assert.Equal(t, defaults.ResponseHeaderTimeout, router.subgraphTransportOptions.ResponseHeaderTimeout)
+		assert.Equal(t, defaults.ExpectContinueTimeout, router.subgraphTransportOptions.ExpectContinueTimeout)
+		assert.Equal(t, defaults.KeepAliveProbeInterval, router.subgraphTransportOptions.KeepAliveProbeInterval)
+		assert.Equal(t, defaults.KeepAliveIdleTimeout, router.subgraphTransportOptions.KeepAliveIdleTimeout)
+		assert.Equal(t, defaults.DialTimeout, router.subgraphTransportOptions.DialTimeout)
+		assert.Equal(t, defaults.MaxConnsPerHost, router.subgraphTransportOptions.MaxConnsPerHost)
+		assert.Equal(t, defaults.MaxIdleConns, router.subgraphTransportOptions.MaxIdleConns)
+		assert.Equal(t, defaults.MaxIdleConnsPerHost, router.subgraphTransportOptions.MaxIdleConnsPerHost)
+	})
+
+	t.Run("loads subgraph specific options with fallback to all and defaults", func(t *testing.T) {
+		allRequestTimeout := 10 * time.Second
+		allDialTimeout := 0 * time.Second
+		allMaxConnsPerHost := 1024
+
+		subgraphRequestTimeout := 15 * time.Second
+		subgraphDialTimeout := 0 * time.Second
+
+		defaults := DefaultTransportRequestOptions()
+
+		config := config.TrafficShapingRules{
+			All: config.GlobalSubgraphRequestRule{
+				RequestTimeout:  &allRequestTimeout,
+				DialTimeout:     &allDialTimeout,
+				MaxConnsPerHost: &allMaxConnsPerHost,
+			},
+			Subgraphs: map[string]config.GlobalSubgraphRequestRule{
+				"some-subgraph": {
+					RequestTimeout: &subgraphRequestTimeout,
+					DialTimeout:    &subgraphDialTimeout,
+				},
+			},
+		}
+
+		options := []Option{
+			WithSubgraphTransportOptions(NewSubgraphTransportOptions(config)),
+		}
+		router, err := NewRouter(options...)
+		assert.Nil(t, err)
+
+		// Assert that configs are loaded for real, zero and absent values.
+		assert.Equal(t, allRequestTimeout, router.subgraphTransportOptions.RequestTimeout)
+		assert.Equal(t, allDialTimeout, router.subgraphTransportOptions.DialTimeout)
+		assert.Equal(t, allMaxConnsPerHost, router.subgraphTransportOptions.MaxConnsPerHost)
+		assert.Equal(t, defaults.MaxIdleConns, router.subgraphTransportOptions.MaxIdleConns)
+
+		subgraphRequestOptions := router.subgraphTransportOptions.SubgraphMap["some-subgraph"]
+
+		// Subgraph specific configurations
+		assert.Equal(t, subgraphRequestTimeout, subgraphRequestOptions.RequestTimeout)
+		assert.Equal(t, subgraphDialTimeout, subgraphRequestOptions.DialTimeout)
+
+		// Inherit from `all`
+		assert.Equal(t, allMaxConnsPerHost, subgraphRequestOptions.MaxConnsPerHost)
+
+		// Inherit from global defaults
+		assert.Equal(t, defaults.MaxIdleConns, subgraphRequestOptions.MaxIdleConns)
+	})
 }
 
 // Confirms that defaults and fallthrough works properly
@@ -272,13 +391,13 @@ func TestNewTransportRequestOptions(t *testing.T) {
 
 	subgraphRequestTimeout := 10 * time.Second
 	subgraphDialTimeout := 0 * time.Second
-	subgraphConfig := &config.GlobalSubgraphRequestRule{
+	subgraphConfig := config.GlobalSubgraphRequestRule{
 		RequestTimeout: &subgraphRequestTimeout,
 		DialTimeout:    &subgraphDialTimeout,
 	}
 
 	// Test that the defaults are set properly
-	transportCfg := NewTransportRequestOptions(*subgraphConfig)
+	transportCfg := NewTransportRequestOptions(subgraphConfig, nil)
 
 	// The two set values are preserved, including the manually specified zero
 	assert.Equal(t, subgraphRequestTimeout, transportCfg.RequestTimeout)

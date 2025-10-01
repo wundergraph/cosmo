@@ -11,7 +11,7 @@ const myModuleID = "publishModule"
 
 type PublishModule struct {
 	Logger   *zap.Logger
-	Callback func(ctx core.StreamPublishEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error)
+	Callback func(ctx core.StreamPublishEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error)
 }
 
 func (m *PublishModule) Provision(ctx *core.ModuleContext) error {
@@ -21,7 +21,7 @@ func (m *PublishModule) Provision(ctx *core.ModuleContext) error {
 	return nil
 }
 
-func (m *PublishModule) OnPublishEvents(ctx core.StreamPublishEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
+func (m *PublishModule) OnPublishEvents(ctx core.StreamPublishEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
 	m.Logger.Info("Publish Hook has been run")
 
 	if m.Callback != nil {
@@ -45,5 +45,5 @@ func (m *PublishModule) Module() core.ModuleInfo {
 
 // Interface guard
 var (
-	_ core.StreamPublishEventHook = (*PublishModule)(nil)
+	_ core.StreamPublishEventHandler = (*PublishModule)(nil)
 )

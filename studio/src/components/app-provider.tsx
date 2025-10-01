@@ -2,18 +2,14 @@ import { identify, resetTracking } from "@/lib/track";
 import { Transport } from "@connectrpc/connect";
 import { TransportProvider } from "@connectrpc/connect-query";
 import { createConnectTransport } from "@connectrpc/connect-web";
-import {
-  QueryClient,
-  QueryClientProvider,
-  useQuery,
-} from "@tanstack/react-query";
+import { QueryClient, useQuery, useQueryClient, } from "@tanstack/react-query";
 import { useRouter } from "next/router";
 import { ReactNode, createContext, useEffect, useState } from "react";
 import { useCookieOrganization } from "@/hooks/use-cookie-organization";
 import { setUser as setSentryUser } from "@sentry/nextjs";
 import { OrganizationRole } from "@/lib/constants";
+import { WorkspaceProvider } from "@/components/dashboard/workspace-provider";
 
-const queryClient = new QueryClient();
 const sessionQueryClient = new QueryClient();
 
 export const UserContext = createContext<User | undefined>(undefined);
@@ -133,6 +129,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     useState<string>();
   const [transport, setTransport] = useState<Transport>();
   const [queryResetCounter, setQueryResetCounter] = useState(-1);
+  const queryClient = useQueryClient();
 
   const [user, setUser] = useState<User>();
 
@@ -260,13 +257,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
 
     queryClient.resetQueries();
-  }, [queryResetCounter]);
+  }, [queryResetCounter, queryClient]);
 
   if (!transport) {
     return (
       <UserContext.Provider value={user}>
         <SessionClientContext.Provider value={sessionQueryClient}>
-          {children}
+          <WorkspaceProvider>
+            {children}
+          </WorkspaceProvider>
         </SessionClientContext.Provider>
       </UserContext.Provider>
     );
@@ -274,13 +273,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <TransportProvider transport={transport}>
-      <QueryClientProvider client={queryClient}>
-        <UserContext.Provider value={user}>
-          <SessionClientContext.Provider value={sessionQueryClient}>
+      <UserContext.Provider value={user}>
+        <SessionClientContext.Provider value={sessionQueryClient}>
+          <WorkspaceProvider>
             {children}
-          </SessionClientContext.Provider>
-        </UserContext.Provider>
-      </QueryClientProvider>
+          </WorkspaceProvider>
+        </SessionClientContext.Provider>
+      </UserContext.Provider>
     </TransportProvider>
   );
 };

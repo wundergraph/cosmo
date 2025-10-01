@@ -528,11 +528,15 @@ type FakeFactory[T any] struct {
 	upstreamSchema *ast.Document
 }
 
-func (f *FakeFactory[T]) UpstreamSchema(dataSourceConfig plan.DataSourceConfiguration[T]) (*ast.Document, bool) {
+func (f *FakeFactory[T]) UpstreamSchema(_ plan.DataSourceConfiguration[T]) (*ast.Document, bool) {
 	return f.upstreamSchema, true
 }
 
-func (f *FakeFactory[T]) Planner(logger abstractlogger.Logger) plan.DataSourcePlanner[T] {
+func (f *FakeFactory[T]) PlanningBehavior() plan.DataSourcePlanningBehavior {
+	return plan.DataSourcePlanningBehavior{}
+}
+
+func (f *FakeFactory[T]) Planner(_ abstractlogger.Logger) plan.DataSourcePlanner[T] {
 	source := &StatefulSource{}
 	go source.Start()
 	return &FakePlanner[T]{
@@ -559,11 +563,11 @@ func (f *FakePlanner[T]) SetID(id int) {
 	f.id = id
 }
 
-func (f *FakePlanner[T]) UpstreamSchema(dataSourceConfig plan.DataSourceConfiguration[T]) (*ast.Document, bool) {
+func (f *FakePlanner[T]) UpstreamSchema(_ plan.DataSourceConfiguration[T]) (*ast.Document, bool) {
 	return f.upstreamSchema, true
 }
 
-func (f *FakePlanner[T]) EnterDocument(operation, definition *ast.Document) {
+func (f *FakePlanner[T]) EnterDocument(_, _ *ast.Document) {
 
 }
 
@@ -584,14 +588,7 @@ func (f *FakePlanner[T]) ConfigureSubscription() plan.SubscriptionConfiguration 
 	return plan.SubscriptionConfiguration{}
 }
 
-func (f *FakePlanner[T]) DataSourcePlanningBehavior() plan.DataSourcePlanningBehavior {
-	return plan.DataSourcePlanningBehavior{
-		MergeAliasedRootNodes:      false,
-		OverrideFieldPathFromAlias: false,
-	}
-}
-
-func (f *FakePlanner[T]) DownstreamResponseFieldAlias(downstreamFieldRef int) (alias string, exists bool) {
+func (f *FakePlanner[T]) DownstreamResponseFieldAlias(_ int) (alias string, exists bool) {
 	return
 }
 

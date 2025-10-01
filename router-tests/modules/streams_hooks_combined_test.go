@@ -36,7 +36,7 @@ func TestStreamsHooksCombined(t *testing.T) {
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
 				"streamReceiveModule": stream_receive.StreamReceiveModule{
-					Callback: func(ctx core.StreamReceiveEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
+					Callback: func(ctx core.StreamReceiveEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
 						for _, event := range events {
 							evt, ok := event.(*kafka.Event)
 							if !ok {
@@ -52,7 +52,7 @@ func TestStreamsHooksCombined(t *testing.T) {
 					},
 				},
 				"publishModule": stream_publish.PublishModule{
-					Callback: func(ctx core.StreamPublishEventHookContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
+					Callback: func(ctx core.StreamPublishEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
 						if ctx.PublishEventConfiguration().RootFieldName() != "updateEmployeeMyKafka" {
 							return events, nil
 						}

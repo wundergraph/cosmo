@@ -10,13 +10,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/wundergraph/cosmo/router/core"
-
 	"github.com/hasura/go-graphql-client"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"github.com/wundergraph/cosmo/router-tests/events"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
@@ -416,7 +416,7 @@ func TestKafkaEvents(t *testing.T) {
 	t.Run("multipart", func(t *testing.T) {
 		t.Parallel()
 
-		multipartHeartbeatInterval := time.Second * 5
+		subscriptionHeartbeatInterval := time.Second * 5
 
 		t.Run("subscribe sync", func(t *testing.T) {
 			t.Parallel()
@@ -427,7 +427,7 @@ func TestKafkaEvents(t *testing.T) {
 				RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
 				EnableKafka:              true,
 				RouterOptions: []core.Option{
-					core.WithMultipartHeartbeatInterval(multipartHeartbeatInterval),
+					core.WithSubscriptionHeartbeatInterval(subscriptionHeartbeatInterval),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				events.KafkaEnsureTopicExists(t, xEnv, KafkaWaitTimeout, topics...)
