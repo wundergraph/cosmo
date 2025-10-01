@@ -45,7 +45,7 @@ require (
 	connectrpc.com/connect v1.16.2 // indirect
 	github.com/99designs/gqlgen v0.17.76 // indirect
 	github.com/KimMachineGun/automemlimit v0.6.1 // indirect
-	github.com/MicahParks/keyfunc/v3 v3.3.5 // indirect
+	github.com/MicahParks/keyfunc/v3 v3.6.2 // indirect
 	github.com/agnivade/levenshtein v1.2.1 // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
