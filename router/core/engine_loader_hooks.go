@@ -206,31 +206,6 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 		},
 	})
 
-	//if f.telemetryAttributeExpressions != nil {
-	//	telemetryValues, err := f.telemetryAttributeExpressions.expressionsAttributesWithSubgraph(exprCtx)
-	//	if err != nil {
-	//		reqContext.Logger().Warn("failed to resolve expression for telemetry", zap.Error(err))
-	//	}
-	//	traceAttrs = append(traceAttrs, telemetryValues...)
-	//	metricAttrs = append(metricAttrs, telemetryValues...)
-	//}
-	//
-	//if f.tracingAttributeExpressions != nil {
-	//	tracingValues, err := f.tracingAttributeExpressions.expressionsAttributesWithSubgraph(exprCtx)
-	//	if err != nil {
-	//		reqContext.Logger().Warn("failed to resolve expression for tracing", zap.Error(err))
-	//	}
-	//	traceAttrs = append(traceAttrs, tracingValues...)
-	//}
-	//
-	//if f.metricAttributeExpressions != nil {
-	//	metricValues, err := f.metricAttributeExpressions.expressionsAttributesWithSubgraph(exprCtx)
-	//	if err != nil {
-	//		reqContext.Logger().Warn("failed to resolve expression for metrics", zap.Error(err))
-	//	}
-	//	metricAttrs = append(metricAttrs, metricValues...)
-	//}
-
 	metricAddOpt := otelmetric.WithAttributeSet(attribute.NewSet(metricAttrs...))
 
 	if f.accessLogger != nil {

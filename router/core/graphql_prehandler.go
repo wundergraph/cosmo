@@ -615,6 +615,8 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	requestContext.expressionContext.Request.Operation.Name = requestContext.operation.name
 	requestContext.expressionContext.Request.Operation.Type = requestContext.operation.opType
 
+	setTelemetryAttributes(req.Context(), requestContext, expr.BucketNameOrType)
+
 	setExpressionContextClient(requestContext)
 
 	attributesAfterParse := []attribute.KeyValue{
@@ -667,6 +669,9 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	if operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() {
 		hash := operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
 		requestContext.operation.persistedID = hash
+		requestContext.expressionContext.Request.Operation.PersistedId = hash
+		setTelemetryAttributes(req.Context(), requestContext, expr.BucketPersistedId)
+
 		persistedIDAttribute := otel.WgOperationPersistedID.String(hash)
 
 		requestContext.telemetry.addCommonAttribute(persistedIDAttribute)
@@ -938,6 +943,9 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	}
 
 	requestContext.operation.validationTime = time.Since(startValidation)
+	requestContext.expressionContext.Request.Operation.ValidationTime = requestContext.operation.validationTime
+	setTelemetryAttributes(validationCtx, requestContext, expr.BucketValidationTime)
+
 	httpOperation.traceTimings.EndValidate()
 
 	engineValidateSpan.End()
