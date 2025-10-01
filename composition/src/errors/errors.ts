@@ -13,7 +13,7 @@ import {
   SemanticNonNullLevelsIndexOutOfBoundsErrorParams,
   SemanticNonNullLevelsNonNullErrorParams,
 } from './types';
-import { UnresolvableFieldData } from '../resolvability-graph/utils';
+import { UnresolvableFieldData } from '../resolvability-graph/utils/utils';
 import {
   AND_UPPER,
   ARGUMENT,
