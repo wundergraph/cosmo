@@ -1,7 +1,7 @@
 import { FastifyPluginCallback } from 'fastify';
 import fp from 'fastify-plugin';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { lru } from 'tiny-lru';
 import { uid } from 'uid';
 import { PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
@@ -255,64 +255,97 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
           return insertedSessions[0];
         });
 
-        const orgs = await opts.organizationRepository.memberships({
-          userId,
-        });
+        const orgs = await opts.db.transaction(async (tx) => {
+          const advisoryLockRows = await tx.execute(
+            sql`select pg_try_advisory_xact_lock(hashtext(${userId})) as acquired`,
+          );
 
-        if (orgs.length === 0) {
+          if (!advisoryLockRows?.[0]?.acquired) {
+            // We need to identify when we failed to acquire the lock because another request already acquired it
+            return -1;
+          }
+
+          const orgRepo = new OrganizationRepository(req.log, tx, opts.defaultBillingPlanId);
+
+          // Check if the user is already a member of at least one organization
+          const existingMemberships = await tx
+            .select({ one: sql<number>`1`.as('one') })
+            .from(organizationsMembers)
+            .where(eq(organizationsMembers.userId, userId))
+            .limit(1)
+            .execute();
+
+          if (existingMemberships.length > 0) {
+            return existingMemberships.length;
+          }
+
+          // Authenticate on Keycloak and create the organization group
           await opts.keycloakClient.authenticateClient();
 
           const organizationSlug = uid(8);
-
           const [kcRootGroupId, kcCreatedGroups] = await opts.keycloakClient.seedGroup({
             userID: userId,
             organizationSlug,
             realm: opts.keycloakRealm,
           });
 
-          await opts.db.transaction(async (tx) => {
-            const orgRepo = new OrganizationRepository(req.log, tx, opts.defaultBillingPlanId);
-            const orgGroupRepo = new OrganizationGroupRepository(tx);
-
-            const insertedOrg = await orgRepo.createOrganization({
-              organizationName: userEmail.split('@')[0],
-              organizationSlug,
-              ownerID: userId,
-              kcGroupId: kcRootGroupId,
-            });
-
-            const orgMember = await orgRepo.addOrganizationMember({
-              organizationID: insertedOrg.id,
-              userID: userId,
-            });
-
-            await orgGroupRepo.importKeycloakGroups({
-              organizationId: insertedOrg.id,
-              kcGroups: kcCreatedGroups,
-            });
-
-            const orgAdminGroup = await orgGroupRepo.byName({
-              organizationId: insertedOrg.id,
-              name: 'admin',
-            });
-
-            if (orgAdminGroup) {
-              await orgGroupRepo.addUserToGroup({
-                organizationMemberId: orgMember.id,
-                groupId: orgAdminGroup.groupId,
-              });
-            }
-
-            const namespaceRepo = new NamespaceRepository(tx, insertedOrg.id);
-            const ns = await namespaceRepo.create({
-              name: DefaultNamespace,
-              createdBy: userId,
-            });
-            if (!ns) {
-              throw new Error(`Could not create ${DefaultNamespace} namespace`);
-            }
+          // Create the new organization and add the user as a member of the organization
+          const insertedOrg = await orgRepo.createOrganization({
+            organizationName: userEmail.split('@')[0],
+            organizationSlug,
+            ownerID: userId,
+            kcGroupId: kcRootGroupId,
           });
 
+          const orgMember = await orgRepo.addOrganizationMember({
+            organizationID: insertedOrg.id,
+            userID: userId,
+          });
+
+          // Create the organization groups
+          const orgGroupRepo = new OrganizationGroupRepository(tx);
+
+          await orgGroupRepo.importKeycloakGroups({
+            organizationId: insertedOrg.id,
+            kcGroups: kcCreatedGroups,
+          });
+
+          const orgAdminGroup = await orgGroupRepo.byName({
+            organizationId: insertedOrg.id,
+            name: 'admin',
+          });
+
+          if (orgAdminGroup) {
+            await orgGroupRepo.addUserToGroup({
+              organizationMemberId: orgMember.id,
+              groupId: orgAdminGroup.groupId,
+            });
+          }
+
+          // Create the default namespace for the organization
+          const namespaceRepo = new NamespaceRepository(tx, insertedOrg.id);
+          const ns = await namespaceRepo.create({
+            name: DefaultNamespace,
+            createdBy: userId,
+          });
+
+          if (!ns) {
+            throw new Error(`Could not create ${DefaultNamespace} namespace`);
+          }
+
+          // We return an empty even when we just created the organization, that way we can still send the
+          // user registered webhook and prompt the user to migrate
+          return 0;
+        });
+
+        if (orgs === -1) {
+          // We failed to acquire the lock, so we need to retry the request
+          await res.code(429).send('Slow down');
+          return;
+        }
+
+        if (orgs === 0) {
+          // Send a notification to the platform that a new user has been created
           opts.platformWebhooks.send(PlatformEventName.USER_REGISTER_SUCCESS, {
             user_id: userId,
             user_email: userEmail,
@@ -343,7 +376,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
           } else {
             res.redirect(opts.webBaseUrl);
           }
-        } else if (orgs.length === 0) {
+        } else if (orgs === 0) {
           res.redirect(opts.webBaseUrl + '?migrate=true');
         } else {
           res.redirect(opts.webBaseUrl);
