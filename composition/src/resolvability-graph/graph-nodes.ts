@@ -1,6 +1,6 @@
 import { add, getEntriesNotInHashSet, getValueOrDefault } from '../utils/utils';
 import { GraphFieldData } from '../utils/types';
-import { SubgraphName, TypeName } from './types/types';
+import { FieldName, NodeName, SubgraphName, TypeName } from './types/types';
 
 export class Edge {
   edgeName: string;
@@ -24,20 +24,20 @@ export type GraphNodeOptions = {
 };
 
 export class GraphNode {
-  fieldDataByName = new Map<string, GraphFieldData>();
+  fieldDataByName = new Map<FieldName, GraphFieldData>();
   headToTailEdges = new Map<string, Edge>();
   entityEdges = new Array<Edge>();
-  nodeName: `${SubgraphName}.${TypeName}`;
+  nodeName: NodeName;
   hasEntitySiblings = false;
   isAbstract: boolean;
   isInaccessible = false;
   isLeaf = false;
   isRootNode = false;
   satisfiedFieldSets = new Set<string>();
-  subgraphName: string;
-  typeName: string;
+  subgraphName: SubgraphName;
+  typeName: TypeName;
 
-  constructor(subgraphName: string, typeName: string, options?: GraphNodeOptions) {
+  constructor(subgraphName: SubgraphName, typeName: TypeName, options?: GraphNodeOptions) {
     this.isAbstract = !!options?.isAbstract;
     this.isLeaf = !!options?.isLeaf;
     this.nodeName = `${subgraphName}.${typeName}`;
@@ -59,8 +59,8 @@ export class GraphNode {
     }
   }
 
-  getAllAccessibleEntityNodeNames(): Set<string> {
-    const accessibleEntityNodeNames = new Set<string>([this.nodeName]);
+  getAllAccessibleEntityNodeNames(): Set<NodeName> {
+    const accessibleEntityNodeNames = new Set<NodeName>([this.nodeName]);
     this.getAccessibleEntityNodeNames(this, accessibleEntityNodeNames);
     accessibleEntityNodeNames.delete(this.nodeName);
     return accessibleEntityNodeNames;
@@ -77,18 +77,18 @@ export class GraphNode {
 }
 
 export class RootNode {
-  fieldDataByName = new Map<string, GraphFieldData>();
+  fieldDataByName = new Map<FieldName, GraphFieldData>();
   headToSharedTailEdges = new Map<string, Array<Edge>>();
   // It is used
   isAbstract = false;
   isRootNode = true;
-  typeName: string;
+  typeName: TypeName;
 
-  constructor(typeName: string) {
+  constructor(typeName: TypeName) {
     this.typeName = typeName;
   }
 
-  removeInaccessibleEdges(fieldDataByFieldName: Map<string, GraphFieldData>) {
+  removeInaccessibleEdges(fieldDataByFieldName: Map<FieldName, GraphFieldData>) {
     for (const [fieldName, edges] of this.headToSharedTailEdges) {
       if (fieldDataByFieldName.has(fieldName)) {
         continue;
@@ -101,16 +101,18 @@ export class RootNode {
 }
 
 export class EntityDataNode {
-  fieldSetsByTargetSubgraphName = new Map<string, Set<string>>();
-  targetSubgraphNamesByFieldSet = new Map<string, Set<string>>();
+  fieldSetsByTargetSubgraphName = new Map<SubgraphName, Set<string>>();
+  targetSubgraphNamesByFieldSet = new Map<string, Set<SubgraphName>>();
   typeName: string;
 
   constructor(typeName: string) {
     this.typeName = typeName;
   }
 
-  addTargetSubgraphByFieldSet(fieldSet: string, targetSubgraphName: string) {
-    getValueOrDefault(this.targetSubgraphNamesByFieldSet, fieldSet, () => new Set<string>()).add(targetSubgraphName);
+  addTargetSubgraphByFieldSet(fieldSet: string, targetSubgraphName: SubgraphName) {
+    getValueOrDefault(this.targetSubgraphNamesByFieldSet, fieldSet, () => new Set<SubgraphName>()).add(
+      targetSubgraphName,
+    );
     getValueOrDefault(this.fieldSetsByTargetSubgraphName, targetSubgraphName, () => new Set<string>()).add(fieldSet);
   }
 }

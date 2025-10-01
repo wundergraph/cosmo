@@ -48,7 +48,7 @@ export class RootFieldWalker {
       if (this.resDataByNodeName.has(edge.node.nodeName)) {
         return { visited: true, areDescendantsResolved: true };
       }
-      getValueOrDefault(this.pathsByEntityNodeName, edge.node.nodeName, () => new Set<NodeName>()).add(
+      getValueOrDefault(this.pathsByEntityNodeName, edge.node.nodeName, () => new Set<SelectionPath>()).add(
         `${selectionPath}.${edge.edgeName}`,
       );
       return { visited: true, areDescendantsResolved: false };
@@ -203,13 +203,29 @@ export class RootFieldWalker {
     };
   }
   getNodeResolutionData({ node, selectionPath }: GetNodeResolutionDataParams): NodeResolutionData {
-    const data = getValueOrDefault(this.resDataByNodeName, node.nodeName, () => new NodeResolutionData(node));
+    const data = getValueOrDefault(
+      this.resDataByNodeName,
+      node.nodeName,
+      () =>
+        new NodeResolutionData({
+          fieldDataByName: node.fieldDataByName,
+          typeName: node.typeName,
+        }),
+    );
     getValueOrDefault(this.resDataByPath, selectionPath, () => data.copy());
     return data;
   }
 
   getSharedNodeResolutionData({ node, selectionPath }: GetNodeResolutionDataParams): NodeResolutionData {
-    const dataByNodeName = getValueOrDefault(this.resDataByNodeName, node.nodeName, () => new NodeResolutionData(node));
+    const dataByNodeName = getValueOrDefault(
+      this.resDataByNodeName,
+      node.nodeName,
+      () =>
+        new NodeResolutionData({
+          fieldDataByName: node.fieldDataByName,
+          typeName: node.typeName,
+        }),
+    );
     return getValueOrDefault(this.resDataByPath, selectionPath, () => dataByNodeName.copy());
   }
 
@@ -228,7 +244,11 @@ export class RootFieldWalker {
     const dataBySelectionPath = getValueOrDefault(
       this.resDataByPath,
       selectionPath,
-      () => new NodeResolutionData(node),
+      () =>
+        new NodeResolutionData({
+          fieldDataByName: node.fieldDataByName,
+          typeName: node.typeName,
+        }),
     );
     dataBySelectionPath.addResolvedFieldName(fieldName);
     if (!areDescendantsResolved) {
@@ -249,7 +269,15 @@ export class RootFieldWalker {
       return;
     }
     data.addResolvedFieldName(fieldName);
-    const dataByNodeName = getValueOrDefault(this.resDataByNodeName, node.nodeName, () => new NodeResolutionData(node));
+    const dataByNodeName = getValueOrDefault(
+      this.resDataByNodeName,
+      node.nodeName,
+      () =>
+        new NodeResolutionData({
+          fieldDataByName: node.fieldDataByName,
+          typeName: node.typeName,
+        }),
+    );
     dataByNodeName.addResolvedFieldName(fieldName);
     if (!areDescendantsResolved) {
       return;

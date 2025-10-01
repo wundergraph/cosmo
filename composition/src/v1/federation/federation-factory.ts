@@ -552,7 +552,7 @@ export class FederationFactory {
 
   generateTagData() {
     for (const [path, tagNames] of this.tagNamesByCoords) {
-      const paths = path.split('.');
+      const paths = path.split(PERIOD);
       if (paths.length < 1) {
         continue;
       }

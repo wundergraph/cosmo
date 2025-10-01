@@ -19,7 +19,7 @@ export class EntityWalker {
   resDataByRelativeOriginPath: Map<SelectionPath, NodeResolutionData>;
   selectionPathByEntityNodeName = new Map<NodeName, SelectionPath>();
   // The subgraph name is so the propagated errors accurately reflect which subgraph cannot reach the node.
-  subgraphNameByUnresolvablePath: Map<SubgraphName, SelectionPath>;
+  subgraphNameByUnresolvablePath: Map<SelectionPath, SubgraphName>;
   visitedEntities: Set<NodeName>;
   relativeOriginPaths?: Set<SelectionPath>;
 
@@ -120,13 +120,13 @@ export class EntityWalker {
         return { visited: true, areDescendantsResolved: true };
       }
     }
-    let removeChildPaths: boolean | undefined = undefined;
+    let removeDescendantPaths: boolean | undefined = undefined;
     for (const [fieldName, edge] of node.headToTailEdges) {
       const { visited, areDescendantsResolved, isRevisitedNode } = this.visitEntityDescendantEdge({
         edge,
         selectionPath,
       });
-      removeChildPaths &&= isRevisitedNode;
+      removeDescendantPaths &&= isRevisitedNode;
       this.propagateVisitedField({
         areDescendantsResolved,
         fieldName,
@@ -137,7 +137,7 @@ export class EntityWalker {
       });
     }
     if (data.isResolved()) {
-      this.removeUnresolvablePaths({ selectionPath });
+      this.removeUnresolvablePaths({ removeDescendantPaths, selectionPath });
     } else {
       this.addUnresolvablePaths({ selectionPath, subgraphName: node.subgraphName });
     }
@@ -176,8 +176,10 @@ export class EntityWalker {
     data.addResolvedFieldName(fieldName);
     dataByNodeName.addResolvedFieldName(fieldName);
     if (areDescendantsResolved) {
+      /* Cannot propagate`areDescendantsResolved` to `dataByNodeName` because the context
+       * of `data` is not isolated to the graph being walked only.
+       */
       data.resolvedDescendantNames.add(fieldName);
-      dataByNodeName.addResolvedFieldName(fieldName);
     }
     if (this.relativeOriginPaths) {
       for (const originPath of this.relativeOriginPaths) {

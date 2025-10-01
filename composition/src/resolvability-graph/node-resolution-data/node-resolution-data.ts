@@ -1,11 +1,11 @@
 import { GraphFieldData } from '../../utils/types';
 import { unexpectedEdgeFatalError } from '../../errors/errors';
-import { FieldName, SubgraphName } from '../types/types';
+import { FieldName } from '../types/types';
 import { NodeResolutionDataParams } from './types/params';
 
 export class NodeResolutionData {
   #isResolved = false;
-  fieldDataByName: Map<FieldName, GraphFieldData>;
+  readonly fieldDataByName: ReadonlyMap<FieldName, GraphFieldData>;
   resolvedDescendantNames: Set<FieldName>;
   resolvedFieldNames: Set<FieldName>;
   typeName: string;
@@ -41,16 +41,8 @@ export class NodeResolutionData {
   }
 
   copy(): NodeResolutionData {
-    const fieldDataByName = new Map<FieldName, GraphFieldData>();
-    for (const [fieldName, data] of this.fieldDataByName) {
-      fieldDataByName.set(fieldName, {
-        isLeaf: data.isLeaf,
-        name: data.name,
-        namedTypeName: data.namedTypeName,
-        subgraphNames: new Set<SubgraphName>(data.subgraphNames),
-      });
-    }
     return new NodeResolutionData({
+      // Only used for reading, so just a shallow copy.
       fieldDataByName: this.fieldDataByName,
       isResolved: this.#isResolved,
       resolvedDescendantNames: this.resolvedDescendantNames,

@@ -8,7 +8,7 @@ import {
 } from './utils/utils';
 import { GraphFieldData, RootTypeName } from '../utils/types';
 import { getFirstEntry, getOrThrowError, getValueOrDefault } from '../utils/utils';
-import { NodeName, SelectionPath, SubgraphName, TypeName, ValidationResult } from './types/types';
+import { FieldName, NodeName, SelectionPath, SubgraphName, TypeName, ValidationResult } from './types/types';
 import { ConsolidateUnresolvablePathsParams, ValidateEntitiesParams, VisitEntityParams } from './types/params';
 import { NodeResolutionData } from './node-resolution-data/node-resolution-data';
 import { LITERAL_PERIOD, NOT_APPLICABLE, ROOT_TYPE_NAMES } from './constants/string-constants';
@@ -23,7 +23,7 @@ export class Graph {
   nodesByTypeName = new Map<TypeName, Array<GraphNode>>();
   resolvedRootFieldNodeNames = new Set<NodeName>();
   rootNodeByTypeName = new Map<RootTypeName, RootNode>();
-  subgraphName = NOT_APPLICABLE;
+  subgraphName: SubgraphName = NOT_APPLICABLE;
   resDataByNodeName = new Map<NodeName, NodeResolutionData>();
   resDataByRelativePathByEntity = new Map<NodeName, Map<SelectionPath, NodeResolutionData>>();
   visitedEntitiesByOriginEntity = new Map<NodeName, Set<NodeName>>();
@@ -35,7 +35,7 @@ export class Graph {
     return getValueOrDefault(this.rootNodeByTypeName, typeName, () => new RootNode(typeName));
   }
 
-  addOrUpdateNode(typeName: string, options?: GraphNodeOptions): GraphNode {
+  addOrUpdateNode(typeName: TypeName, options?: GraphNodeOptions): GraphNode {
     const nodeName: NodeName = `${this.subgraphName}.${typeName}`;
     const node = this.nodeByNodeName.get(nodeName);
     if (node) {
@@ -68,7 +68,7 @@ export class Graph {
     return headToTailEdge;
   }
 
-  addEntityDataNode(typeName: string): EntityDataNode {
+  addEntityDataNode(typeName: TypeName): EntityDataNode {
     const node = this.entityDataNodeByTypeName.get(typeName);
     if (node) {
       return node;
@@ -86,7 +86,7 @@ export class Graph {
     return (this.walkerIndex += 1);
   }
 
-  setNodeInaccessible(typeName: string) {
+  setNodeInaccessible(typeName: TypeName) {
     const nodes = this.nodesByTypeName.get(typeName);
     if (!nodes) {
       return;
@@ -96,12 +96,12 @@ export class Graph {
     }
   }
 
-  initializeNode(typeName: string, fieldDataByFieldName: Map<string, GraphFieldData>) {
+  initializeNode(typeName: TypeName, fieldDataByName: Map<FieldName, GraphFieldData>) {
     const entityDataNode = this.entityDataNodeByTypeName.get(typeName);
     if (ROOT_TYPE_NAMES.has(typeName)) {
       const rootNode = this.getRootNode(typeName as RootTypeName);
-      rootNode.removeInaccessibleEdges(fieldDataByFieldName);
-      rootNode.fieldDataByName = fieldDataByFieldName;
+      rootNode.removeInaccessibleEdges(fieldDataByName);
+      rootNode.fieldDataByName = fieldDataByName;
       return;
     }
     const nodes = this.nodesByTypeName.get(typeName);
@@ -109,7 +109,7 @@ export class Graph {
       return;
     }
     for (const node of nodes) {
-      node.fieldDataByName = fieldDataByFieldName;
+      node.fieldDataByName = fieldDataByName;
       node.handleInaccessibleEdges();
       node.isLeaf = false;
       if (!entityDataNode) {
@@ -132,7 +132,7 @@ export class Graph {
     }
   }
 
-  setSubgraphName(subgraphName: string) {
+  setSubgraphName(subgraphName: SubgraphName) {
     this.subgraphName = subgraphName;
   }
 
@@ -263,7 +263,7 @@ export class Graph {
       if (!unresolvableRootPath.startsWith(pathFromRoot)) {
         continue;
       }
-      const relativePath = unresolvableRootPath.split(pathFromRoot)[1];
+      const relativePath = unresolvableRootPath.slice(pathFromRoot.length);
       const rootResData = getOrThrowError(
         walker.resDataByPath,
         unresolvableRootPath,
@@ -325,15 +325,18 @@ export class Graph {
           visitedEntities: new Set<NodeName>(),
         });
       }
-      if (subgraphNameByUnresolvablePath.size < 1) {
-        continue;
-      }
+      /* There might be root errors that rely on entity data propagation.
+       * Always propagate entity resolution data to the root data before moving on.
+       * */
       this.consolidateUnresolvableRootWithEntityPaths({
         pathFromRoot,
         resDataByRelativeOriginPath,
         subgraphNameByUnresolvablePath,
         walker,
       });
+      if (subgraphNameByUnresolvablePath.size < 1) {
+        continue;
+      }
       this.consolidateUnresolvableEntityWithRootPaths({
         pathFromRoot,
         resDataByRelativeOriginPath,
@@ -366,6 +369,16 @@ export class Graph {
       }
       return {
         errors,
+        success: false,
+      };
+    }
+    if (walker.unresolvablePaths.size > 0) {
+      return {
+        errors: generateRootResolvabilityErrors({
+          resDataByPath: walker.resDataByPath,
+          rootFieldData,
+          unresolvablePaths: walker.unresolvablePaths,
+        }),
         success: false,
       };
     }

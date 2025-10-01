@@ -142,7 +142,7 @@ export function generateSharedResolvabilityErrorReasons({
   reasons.push(
     `The type "${typeName}" is not a descendant of any other entity ancestors that can provide a shared route to access "${fieldName}".`,
   );
-  if (typeName !== entityAncestors?.typeName) {
+  if (typeName !== entityAncestors.typeName) {
     reasons.push(
       `The type "${typeName}" has no accessible target entities (resolvable @key directives) in any other subgraph, so accessing other subgraphs is not possible.`,
     );
@@ -196,15 +196,15 @@ export function generateRootResolvabilityErrors({
   const unresolvableFieldDatas = new Array<UnresolvableFieldData>();
   for (const path of unresolvablePaths) {
     const nodeResolutionData = getOrThrowError(resDataByPath, path, 'resDataByPath');
-    const fieldDataByFieldName = new Map<string, GraphFieldData>();
+    const fieldDataByName = new Map<FieldName, GraphFieldData>();
     for (const [fieldName, fieldData] of nodeResolutionData.fieldDataByName) {
       if (nodeResolutionData.resolvedFieldNames.has(fieldName)) {
         continue;
       }
-      fieldDataByFieldName.set(fieldName, fieldData);
+      fieldDataByName.set(fieldName, fieldData);
     }
     const selectionSetSegments = generateSelectionSetSegments(path);
-    for (const [fieldName, fieldData] of fieldDataByFieldName) {
+    for (const [fieldName, fieldData] of fieldDataByName) {
       unresolvableFieldDatas.push({
         fieldName,
         selectionSet: renderSelectionSet(selectionSetSegments, fieldData),
@@ -236,16 +236,16 @@ export function generateEntityResolvabilityErrors({
   for (const [path, subgraphName] of subgraphNameByUnresolvablePath) {
     const unresolvableFieldDatas = new Array<UnresolvableFieldData>();
     const nodeResolutionData = getOrThrowError(resDataByPath, path, 'resDataByPath');
-    const fieldDataByFieldName = new Map<string, GraphFieldData>();
+    const fieldDataByName = new Map<FieldName, GraphFieldData>();
     for (const [fieldName, fieldData] of nodeResolutionData.fieldDataByName) {
       if (nodeResolutionData.resolvedFieldNames.has(fieldName)) {
         continue;
       }
-      fieldDataByFieldName.set(fieldName, fieldData);
+      fieldDataByName.set(fieldName, fieldData);
     }
     const fullPath = getUnresolvablePath(path, pathFromRoot);
     const selectionSetSegments = generateSelectionSetSegments(fullPath);
-    for (const [fieldName, fieldData] of fieldDataByFieldName) {
+    for (const [fieldName, fieldData] of fieldDataByName) {
       unresolvableFieldDatas.push({
         fieldName,
         selectionSet: renderSelectionSet(selectionSetSegments, fieldData),
@@ -278,16 +278,16 @@ export function generateSharedEntityResolvabilityErrors({
   for (const path of subgraphNameByUnresolvablePath.keys()) {
     const unresolvableFieldDatas = new Array<UnresolvableFieldData>();
     const nodeResolutionData = getOrThrowError(resDataByPath, path, 'resDataByPath');
-    const fieldDataByFieldName = new Map<string, GraphFieldData>();
+    const fieldDataByName = new Map<FieldName, GraphFieldData>();
     for (const [fieldName, fieldData] of nodeResolutionData.fieldDataByName) {
       if (nodeResolutionData.resolvedFieldNames.has(fieldName)) {
         continue;
       }
-      fieldDataByFieldName.set(fieldName, fieldData);
+      fieldDataByName.set(fieldName, fieldData);
     }
     const fullPath = getUnresolvablePath(path, pathFromRoot);
     const selectionSetSegments = generateSelectionSetSegments(fullPath);
-    for (const [fieldName, fieldData] of fieldDataByFieldName) {
+    for (const [fieldName, fieldData] of fieldDataByName) {
       unresolvableFieldDatas.push({
         fieldName,
         selectionSet: renderSelectionSet(selectionSetSegments, fieldData),

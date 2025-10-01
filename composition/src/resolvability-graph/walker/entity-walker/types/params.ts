@@ -8,7 +8,7 @@ export type EntityWalkerParams = {
   resDataByNodeName: Map<NodeName, NodeResolutionData>;
   resDataByRelativeOriginPath: Map<SelectionPath, NodeResolutionData>;
   relativeOriginPaths?: Set<SelectionPath>;
-  subgraphNameByUnresolvablePath: Map<SubgraphName, SelectionPath>;
+  subgraphNameByUnresolvablePath: Map<SelectionPath, SubgraphName>;
   visitedEntities: Set<NodeName>;
 };
 

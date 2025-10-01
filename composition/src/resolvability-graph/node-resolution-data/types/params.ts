@@ -2,7 +2,7 @@ import { FieldName, TypeName } from '../../types/types';
 import { GraphFieldData } from '../../../utils/types';
 
 export type NodeResolutionDataParams = {
-  fieldDataByName: Map<FieldName, GraphFieldData>;
+  readonly fieldDataByName: ReadonlyMap<FieldName, GraphFieldData>;
   typeName: TypeName;
   isResolved?: boolean;
   resolvedDescendantNames?: Set<FieldName>;
