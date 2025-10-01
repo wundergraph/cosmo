@@ -118,6 +118,9 @@ Username: foo@wundergraph.com
 Password: wunder@123
 ```
 
+**NOTE**: With more recent browsers that are enforcing secured [context](https://w3c.github.io/webappsec-secure-contexts/), Keycloak might not be able to set the session cookie if TLS is disabled. To work around the issue on Chrome for instance, 
+one can add `http://keycloak.wundergraph.local,http://studio.wundergraph.local` to `chrome://flags/#unsafely-treat-insecure-origin-as-secure` , so they are treated as secured contexts without being secured (http). 
+
 #### 6. Use the Cosmo CLI
 
 In the `global.seed.apiKey` of your `values.yaml` we defined your API key. You can use this API key to authenticate with the Cosmo CLI.
