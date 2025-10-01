@@ -862,11 +862,11 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		httpOperation.traceTimings.EndNormalize()
 	}
 
-	engineNormalizeSpan.End()
-
 	if operationKit.parsedOperation.IsPersistedOperation {
 		engineNormalizeSpan.SetAttributes(otel.WgEnginePersistedOperationCacheHit.Bool(operationKit.parsedOperation.PersistedOperationCacheHit))
 	}
+
+	engineNormalizeSpan.End()
 
 	if h.traceExportVariables {
 		// At this stage the variables are normalized
