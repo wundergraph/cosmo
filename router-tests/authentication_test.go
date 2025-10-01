@@ -3001,6 +3001,57 @@ func TestAudienceValidation(t *testing.T) {
 			require.JSONEq(t, unauthorizedExpectedData, string(data))
 		})
 	})
+
+	t.Run("valid token for second entry with empty algorithm in JWKS", func(t *testing.T) {
+		t.Parallel()
+
+		rsaCrypto, err := jwks.NewRSACrypto("", "", 2048)
+		require.NoError(t, err)
+
+		authServer1, err := jwks.NewServerWithCrypto(t, rsaCrypto)
+		require.NoError(t, err)
+		t.Cleanup(authServer1.Close)
+
+		authServer2, err := jwks.NewServerWithCrypto(t, rsaCrypto)
+		require.NoError(t, err)
+		t.Cleanup(authServer1.Close)
+
+		authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+			{
+				URL:               authServer1.JWKSURL(),
+				RefreshInterval:   time.Second * 5,
+				AllowedAlgorithms: []string{string(jwkset.AlgRS256)},
+			},
+			{
+				URL:               authServer2.JWKSURL(),
+				RefreshInterval:   time.Second * 5,
+				AllowedAlgorithms: []string{string(jwkset.AlgRS512)},
+			},
+		})
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(core.NewAccessController(authenticators, false)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Operations with a token should succeed
+			token, err := authServer2.TokenWithOpts(nil, jwks.TokenOpts{
+				AlgOverride: string(jwkset.AlgRS512),
+			})
+			require.NoError(t, err)
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, employeesExpectedData, string(data))
+		})
+	})
 }
 
 func toJWKSConfig(url string, refresh time.Duration, allowedAlgorithms ...string) authentication.JWKSConfig {
