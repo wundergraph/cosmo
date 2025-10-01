@@ -178,7 +178,7 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 		expressions: reqContext.telemetry.telemetryAttributeExpressions,
 		key:         expr.BucketSubgraph,
 		currSpan:    span,
-		exprCtx:     &reqContext.expressionContext,
+		exprCtx:     exprCtx,
 		attrAddFunc: func(telemetryValues ...attribute.KeyValue) {
 			traceAttrs = append(traceAttrs, telemetryValues...)
 			metricAttrs = append(metricAttrs, telemetryValues...)
@@ -189,7 +189,7 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 		logger:      reqContext.logger,
 		expressions: reqContext.telemetry.metricAttributeExpressions,
 		key:         expr.BucketSubgraph,
-		exprCtx:     &reqContext.expressionContext,
+		exprCtx:     exprCtx,
 		attrAddFunc: func(telemetryValues ...attribute.KeyValue) {
 			metricAttrs = append(metricAttrs, telemetryValues...)
 		},
@@ -200,7 +200,7 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 		expressions: reqContext.telemetry.tracingAttributeExpressions,
 		key:         expr.BucketSubgraph,
 		currSpan:    span,
-		exprCtx:     &reqContext.expressionContext,
+		exprCtx:     exprCtx,
 		attrAddFunc: func(telemetryValues ...attribute.KeyValue) {
 			traceAttrs = append(traceAttrs, telemetryValues...)
 		},

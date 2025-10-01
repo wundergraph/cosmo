@@ -95,8 +95,8 @@ func expressionAttributes(expressions map[expr.AttributeBucket][]ProgramWithKey,
 	return result, nil
 }
 
-func (r *attributeExpressions) expressionsAttributes(exprCtx *expr.Context) ([]attribute.KeyValue, error) {
-	return expressionAttributes(r.expressions, exprCtx, expr.BucketDefault)
+func (r *attributeExpressions) expressionsAttributes(exprCtx *expr.Context, key expr.AttributeBucket) ([]attribute.KeyValue, error) {
+	return expressionAttributes(r.expressions, exprCtx, key)
 }
 
 func (r *attributeExpressions) expressionsAttributesWithSubgraph(exprCtx *expr.Context) ([]attribute.KeyValue, error) {
