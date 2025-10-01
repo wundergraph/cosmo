@@ -109,6 +109,7 @@ func (p *Planner[PB, P, E]) ConfigureSubscription() plan.SubscriptionConfigurati
 		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to get resolve data source subscription: %w", err))
 		return plan.SubscriptionConfiguration{}
 	}
+	dataSource.SetSubscriptionOnStartFns(p.config.SubscriptionOnStartFns...)
 
 	input, err := pubSubDataSource.ResolveDataSourceSubscriptionInput()
 	if err != nil {
