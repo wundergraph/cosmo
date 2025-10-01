@@ -118,8 +118,9 @@ Username: foo@wundergraph.com
 Password: wunder@123
 ```
 
-**NOTE**: With more recent browsers that are enforcing secured [context](https://w3c.github.io/webappsec-secure-contexts/), Keycloak might not be able to set the session cookie if TLS is disabled. To work around the issue on Chrome for instance, 
-one can add `http://keycloak.wundergraph.local,http://studio.wundergraph.local` to `chrome://flags/#unsafely-treat-insecure-origin-as-secure` , so they are treated as secured contexts without being secured (http). 
+**NOTE**: With recent browsers enforcing [secure contexts](https://w3c.github.io/webappsec-secure-contexts/), Keycloak may not set its session cookie when TLS is disabled (SameSite=None cookies require the `Secure` attribute).
+As a local‑dev workaround in Chrome, add `http://keycloak.wundergraph.local,http://studio.wundergraph.local` to `chrome://flags/#unsafely-treat-insecure-origin-as-secure` so these origins are treated as secure contexts over HTTP.
+Use this only for local development and remove the flag after testing. Prefer enabling TLS locally (e.g., self‑signed cert via mkcert and an Ingress TLS secret).
 
 #### 6. Use the Cosmo CLI
 
