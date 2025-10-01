@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/wundergraph/cosmo/router/pkg/metric"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 type ArgumentTemplateCallback func(tpl string) (string, error)
@@ -23,6 +22,7 @@ type Lifecycle interface {
 type Adapter interface {
 	Lifecycle
 	Subscribe(ctx context.Context, cfg SubscriptionEventConfiguration, updater SubscriptionEventUpdater) error
+	Publish(ctx context.Context, cfg PublishEventConfiguration, events []StreamEvent) error
 }
 
 // Provider is the interface that the PubSub provider must implement
@@ -32,6 +32,8 @@ type Provider interface {
 	ID() string
 	// TypeID Get the provider type id (e.g. "kafka", "nats")
 	TypeID() string
+	// SetHooks Set the hooks
+	SetHooks(Hooks)
 }
 
 // ProviderBuilder is the interface that the provider builder must implement.
@@ -41,7 +43,7 @@ type ProviderBuilder[P, E any] interface {
 	// BuildProvider Build the provider and the adapter
 	BuildProvider(options P, providerOpts ProviderOpts) (Provider, error)
 	// BuildEngineDataSourceFactory Build the data source for the given provider and event configuration
-	BuildEngineDataSourceFactory(data E) (EngineDataSourceFactory, error)
+	BuildEngineDataSourceFactory(data E, providers map[string]Provider) (EngineDataSourceFactory, error)
 }
 
 // ProviderType represents the type of pubsub provider
@@ -58,9 +60,8 @@ const (
 // there could be other common fields in the future, but for now we only have data
 type StreamEvent interface {
 	GetData() []byte
+	Clone() StreamEvent
 }
-
-type SubscriptionOnStartFn func(ctx resolve.StartupHookContext, subConf SubscriptionEventConfiguration) error
 
 // SubscriptionEventConfiguration is the interface that all subscription event configurations must implement
 type SubscriptionEventConfiguration interface {

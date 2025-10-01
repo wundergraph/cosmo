@@ -5,36 +5,40 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 )
 
 func TestPublishEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 	tests := []struct {
 		name        string
-		config      PublishEventConfiguration
+		config      publishData
 		wantPattern string
 	}{
 		{
 			name: "simple configuration",
-			config: PublishEventConfiguration{
+			config: publishData{
 				Provider: "test-provider",
 				Channel:  "test-channel",
 				Event:    Event{Data: json.RawMessage(`{"message":"hello"}`)},
+				FieldName: "test-field",
 			},
-			wantPattern: `{"channel":"test-channel", "event": {"data": {"message":"hello"}}, "providerId":"test-provider"}`,
+			wantPattern: `{"channel":"test-channel", "event": {"data": {"message":"hello"}}, "providerId":"test-provider", "rootFieldName":"test-field"}`,
 		},
 		{
 			name: "with special characters",
-			config: PublishEventConfiguration{
+			config: publishData{
 				Provider: "test-provider-id",
 				Channel:  "channel-with-hyphens",
 				Event:    Event{Data: json.RawMessage(`{"message":"special \"quotes\" here"}`)},
+				FieldName: "test-field",
 			},
-			wantPattern: `{"channel":"channel-with-hyphens", "event": {"data": {"message":"special \"quotes\" here"}}, "providerId":"test-provider-id"}`,
+			wantPattern: `{"channel":"channel-with-hyphens", "event": {"data": {"message":"special \"quotes\" here"}}, "providerId":"test-provider-id", "rootFieldName":"test-field"}`,
 		},
 	}
 
@@ -47,11 +51,27 @@ func TestPublishEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 	}
 }
 
+func TestPublishData_PublishEventConfiguration(t *testing.T) {
+	data := publishData{
+		Provider:  "test-provider",
+		Channel:   "test-channel",
+		FieldName: "test-field",
+	}
+
+	evtCfg := &PublishEventConfiguration{
+		Provider:  data.Provider,
+		Channel:   data.Channel,
+		FieldName: data.FieldName,
+	}
+
+	assert.Equal(t, evtCfg, data.PublishEventConfiguration())
+}
+
 func TestRedisPublishDataSource_Load(t *testing.T) {
 	tests := []struct {
 		name            string
 		input           string
-		mockSetup       func(*MockAdapter)
+		mockSetup       func(*datasource.MockProvider)
 		expectError     bool
 		expectedOutput  string
 		expectPublished bool
@@ -59,11 +79,12 @@ func TestRedisPublishDataSource_Load(t *testing.T) {
 		{
 			name:  "successful publish",
 			input: `{"channel":"test-channel", "event": {"data":{"message":"hello"}}, "providerId":"test-provider"}`,
-			mockSetup: func(m *MockAdapter) {
-				m.On("Publish", mock.Anything, mock.MatchedBy(func(event PublishEventConfiguration) bool {
+			mockSetup: func(m *datasource.MockProvider) {
+				m.On("Publish", mock.Anything, mock.MatchedBy(func(event *PublishEventConfiguration) bool {
 					return event.ProviderID() == "test-provider" &&
-						event.Channel == "test-channel" &&
-						string(event.Event.Data) == `{"message":"hello"}`
+						event.Channel == "test-channel"
+				}), mock.MatchedBy(func(events []datasource.StreamEvent) bool {
+					return len(events) == 1 && strings.EqualFold(string(events[0].GetData()), `{"message":"hello"}`)
 				})).Return(nil)
 			},
 			expectError:     false,
@@ -73,8 +94,8 @@ func TestRedisPublishDataSource_Load(t *testing.T) {
 		{
 			name:  "publish error",
 			input: `{"channel":"test-channel", "event": {"data":{"message":"hello"}}, "providerId":"test-provider"}`,
-			mockSetup: func(m *MockAdapter) {
-				m.On("Publish", mock.Anything, mock.Anything).Return(errors.New("publish error"))
+			mockSetup: func(m *datasource.MockProvider) {
+				m.On("Publish", mock.Anything, mock.Anything, mock.Anything).Return(errors.New("publish error"))
 			},
 			expectError:     false, // The Load method doesn't return the publish error directly
 			expectedOutput:  `{"success": false}`,
@@ -83,7 +104,7 @@ func TestRedisPublishDataSource_Load(t *testing.T) {
 		{
 			name:            "invalid input json",
 			input:           `{"invalid json":`,
-			mockSetup:       func(m *MockAdapter) {},
+			mockSetup:       func(m *datasource.MockProvider) {},
 			expectError:     true,
 			expectPublished: false,
 		},
@@ -91,7 +112,7 @@ func TestRedisPublishDataSource_Load(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockAdapter := NewMockAdapter(t)
+			mockAdapter := datasource.NewMockProvider(t)
 			tt.mockSetup(mockAdapter)
 
 			dataSource := &PublishDataSource{
@@ -116,7 +137,7 @@ func TestRedisPublishDataSource_Load(t *testing.T) {
 func TestRedisPublishDataSource_LoadWithFiles(t *testing.T) {
 	t.Run("panic on not implemented", func(t *testing.T) {
 		dataSource := &PublishDataSource{
-			pubSub: NewMockAdapter(t),
+			pubSub: datasource.NewMockProvider(t),
 		}
 
 		assert.Panics(t, func() {

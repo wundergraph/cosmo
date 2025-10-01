@@ -556,6 +556,109 @@ func (_c *MockProvider_ID_Call) RunAndReturn(run func() string) *MockProvider_ID
 	return _c
 }
 
+// Publish provides a mock function for the type MockProvider
+func (_mock *MockProvider) Publish(ctx context.Context, cfg PublishEventConfiguration, events []StreamEvent) error {
+	ret := _mock.Called(ctx, cfg, events)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Publish")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, PublishEventConfiguration, []StreamEvent) error); ok {
+		r0 = returnFunc(ctx, cfg, events)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// MockProvider_Publish_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Publish'
+type MockProvider_Publish_Call struct {
+	*mock.Call
+}
+
+// Publish is a helper method to define mock.On call
+//   - ctx context.Context
+//   - cfg PublishEventConfiguration
+//   - events []StreamEvent
+func (_e *MockProvider_Expecter) Publish(ctx interface{}, cfg interface{}, events interface{}) *MockProvider_Publish_Call {
+	return &MockProvider_Publish_Call{Call: _e.mock.On("Publish", ctx, cfg, events)}
+}
+
+func (_c *MockProvider_Publish_Call) Run(run func(ctx context.Context, cfg PublishEventConfiguration, events []StreamEvent)) *MockProvider_Publish_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 PublishEventConfiguration
+		if args[1] != nil {
+			arg1 = args[1].(PublishEventConfiguration)
+		}
+		var arg2 []StreamEvent
+		if args[2] != nil {
+			arg2 = args[2].([]StreamEvent)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *MockProvider_Publish_Call) Return(err error) *MockProvider_Publish_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *MockProvider_Publish_Call) RunAndReturn(run func(ctx context.Context, cfg PublishEventConfiguration, events []StreamEvent) error) *MockProvider_Publish_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetHooks provides a mock function for the type MockProvider
+func (_mock *MockProvider) SetHooks(hooks Hooks) {
+	_mock.Called(hooks)
+	return
+}
+
+// MockProvider_SetHooks_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetHooks'
+type MockProvider_SetHooks_Call struct {
+	*mock.Call
+}
+
+// SetHooks is a helper method to define mock.On call
+//   - hooks Hooks
+func (_e *MockProvider_Expecter) SetHooks(hooks interface{}) *MockProvider_SetHooks_Call {
+	return &MockProvider_SetHooks_Call{Call: _e.mock.On("SetHooks", hooks)}
+}
+
+func (_c *MockProvider_SetHooks_Call) Run(run func(hooks Hooks)) *MockProvider_SetHooks_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 Hooks
+		if args[0] != nil {
+			arg0 = args[0].(Hooks)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockProvider_SetHooks_Call) Return() *MockProvider_SetHooks_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockProvider_SetHooks_Call) RunAndReturn(run func(hooks Hooks)) *MockProvider_SetHooks_Call {
+	_c.Run(run)
+	return _c
+}
+
 // Shutdown provides a mock function for the type MockProvider
 func (_mock *MockProvider) Shutdown(ctx context.Context) error {
 	ret := _mock.Called(ctx)
@@ -793,8 +896,8 @@ func (_m *MockProviderBuilder[P, E]) EXPECT() *MockProviderBuilder_Expecter[P, E
 }
 
 // BuildEngineDataSourceFactory provides a mock function for the type MockProviderBuilder
-func (_mock *MockProviderBuilder[P, E]) BuildEngineDataSourceFactory(data E) (EngineDataSourceFactory, error) {
-	ret := _mock.Called(data)
+func (_mock *MockProviderBuilder[P, E]) BuildEngineDataSourceFactory(data E, providers map[string]Provider) (EngineDataSourceFactory, error) {
+	ret := _mock.Called(data, providers)
 
 	if len(ret) == 0 {
 		panic("no return value specified for BuildEngineDataSourceFactory")
@@ -802,18 +905,18 @@ func (_mock *MockProviderBuilder[P, E]) BuildEngineDataSourceFactory(data E) (En
 
 	var r0 EngineDataSourceFactory
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(E) (EngineDataSourceFactory, error)); ok {
-		return returnFunc(data)
+	if returnFunc, ok := ret.Get(0).(func(E, map[string]Provider) (EngineDataSourceFactory, error)); ok {
+		return returnFunc(data, providers)
 	}
-	if returnFunc, ok := ret.Get(0).(func(E) EngineDataSourceFactory); ok {
-		r0 = returnFunc(data)
+	if returnFunc, ok := ret.Get(0).(func(E, map[string]Provider) EngineDataSourceFactory); ok {
+		r0 = returnFunc(data, providers)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(EngineDataSourceFactory)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(E) error); ok {
-		r1 = returnFunc(data)
+	if returnFunc, ok := ret.Get(1).(func(E, map[string]Provider) error); ok {
+		r1 = returnFunc(data, providers)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -827,18 +930,24 @@ type MockProviderBuilder_BuildEngineDataSourceFactory_Call[P any, E any] struct 
 
 // BuildEngineDataSourceFactory is a helper method to define mock.On call
 //   - data E
-func (_e *MockProviderBuilder_Expecter[P, E]) BuildEngineDataSourceFactory(data interface{}) *MockProviderBuilder_BuildEngineDataSourceFactory_Call[P, E] {
-	return &MockProviderBuilder_BuildEngineDataSourceFactory_Call[P, E]{Call: _e.mock.On("BuildEngineDataSourceFactory", data)}
+//   - providers map[string]Provider
+func (_e *MockProviderBuilder_Expecter[P, E]) BuildEngineDataSourceFactory(data interface{}, providers interface{}) *MockProviderBuilder_BuildEngineDataSourceFactory_Call[P, E] {
+	return &MockProviderBuilder_BuildEngineDataSourceFactory_Call[P, E]{Call: _e.mock.On("BuildEngineDataSourceFactory", data, providers)}
 }
 
-func (_c *MockProviderBuilder_BuildEngineDataSourceFactory_Call[P, E]) Run(run func(data E)) *MockProviderBuilder_BuildEngineDataSourceFactory_Call[P, E] {
+func (_c *MockProviderBuilder_BuildEngineDataSourceFactory_Call[P, E]) Run(run func(data E, providers map[string]Provider)) *MockProviderBuilder_BuildEngineDataSourceFactory_Call[P, E] {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 E
 		if args[0] != nil {
 			arg0 = args[0].(E)
 		}
+		var arg1 map[string]Provider
+		if args[1] != nil {
+			arg1 = args[1].(map[string]Provider)
+		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -849,7 +958,7 @@ func (_c *MockProviderBuilder_BuildEngineDataSourceFactory_Call[P, E]) Return(en
 	return _c
 }
 
-func (_c *MockProviderBuilder_BuildEngineDataSourceFactory_Call[P, E]) RunAndReturn(run func(data E) (EngineDataSourceFactory, error)) *MockProviderBuilder_BuildEngineDataSourceFactory_Call[P, E] {
+func (_c *MockProviderBuilder_BuildEngineDataSourceFactory_Call[P, E]) RunAndReturn(run func(data E, providers map[string]Provider) (EngineDataSourceFactory, error)) *MockProviderBuilder_BuildEngineDataSourceFactory_Call[P, E] {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1060,9 +1169,49 @@ func (_c *MockSubscriptionEventUpdater_Complete_Call) RunAndReturn(run func()) *
 	return _c
 }
 
+// SetHooks provides a mock function for the type MockSubscriptionEventUpdater
+func (_mock *MockSubscriptionEventUpdater) SetHooks(hooks Hooks) {
+	_mock.Called(hooks)
+	return
+}
+
+// MockSubscriptionEventUpdater_SetHooks_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetHooks'
+type MockSubscriptionEventUpdater_SetHooks_Call struct {
+	*mock.Call
+}
+
+// SetHooks is a helper method to define mock.On call
+//   - hooks Hooks
+func (_e *MockSubscriptionEventUpdater_Expecter) SetHooks(hooks interface{}) *MockSubscriptionEventUpdater_SetHooks_Call {
+	return &MockSubscriptionEventUpdater_SetHooks_Call{Call: _e.mock.On("SetHooks", hooks)}
+}
+
+func (_c *MockSubscriptionEventUpdater_SetHooks_Call) Run(run func(hooks Hooks)) *MockSubscriptionEventUpdater_SetHooks_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 Hooks
+		if args[0] != nil {
+			arg0 = args[0].(Hooks)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *MockSubscriptionEventUpdater_SetHooks_Call) Return() *MockSubscriptionEventUpdater_SetHooks_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockSubscriptionEventUpdater_SetHooks_Call) RunAndReturn(run func(hooks Hooks)) *MockSubscriptionEventUpdater_SetHooks_Call {
+	_c.Run(run)
+	return _c
+}
+
 // Update provides a mock function for the type MockSubscriptionEventUpdater
-func (_mock *MockSubscriptionEventUpdater) Update(event StreamEvent) {
-	_mock.Called(event)
+func (_mock *MockSubscriptionEventUpdater) Update(events []StreamEvent) {
+	_mock.Called(events)
 	return
 }
 
@@ -1072,16 +1221,16 @@ type MockSubscriptionEventUpdater_Update_Call struct {
 }
 
 // Update is a helper method to define mock.On call
-//   - event StreamEvent
-func (_e *MockSubscriptionEventUpdater_Expecter) Update(event interface{}) *MockSubscriptionEventUpdater_Update_Call {
-	return &MockSubscriptionEventUpdater_Update_Call{Call: _e.mock.On("Update", event)}
+//   - events []StreamEvent
+func (_e *MockSubscriptionEventUpdater_Expecter) Update(events interface{}) *MockSubscriptionEventUpdater_Update_Call {
+	return &MockSubscriptionEventUpdater_Update_Call{Call: _e.mock.On("Update", events)}
 }
 
-func (_c *MockSubscriptionEventUpdater_Update_Call) Run(run func(event StreamEvent)) *MockSubscriptionEventUpdater_Update_Call {
+func (_c *MockSubscriptionEventUpdater_Update_Call) Run(run func(events []StreamEvent)) *MockSubscriptionEventUpdater_Update_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 StreamEvent
+		var arg0 []StreamEvent
 		if args[0] != nil {
-			arg0 = args[0].(StreamEvent)
+			arg0 = args[0].([]StreamEvent)
 		}
 		run(
 			arg0,
@@ -1095,7 +1244,7 @@ func (_c *MockSubscriptionEventUpdater_Update_Call) Return() *MockSubscriptionEv
 	return _c
 }
 
-func (_c *MockSubscriptionEventUpdater_Update_Call) RunAndReturn(run func(event StreamEvent)) *MockSubscriptionEventUpdater_Update_Call {
+func (_c *MockSubscriptionEventUpdater_Update_Call) RunAndReturn(run func(events []StreamEvent)) *MockSubscriptionEventUpdater_Update_Call {
 	_c.Run(run)
 	return _c
 }
