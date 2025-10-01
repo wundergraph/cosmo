@@ -3692,7 +3692,7 @@ export class NormalizationFactory {
       }
       // There will be a run time error if a field can return an Interface without any Object implementations.
       const implementationTypeNames = this.concreteTypeNamesByAbstractTypeName.get(referencedTypeName);
-      if (!implementationTypeNames || implementationTypeNames.size < 0) {
+      if (!implementationTypeNames || implementationTypeNames.size < 1) {
         // Temporarily propagate as a warning until @inaccessible, entity interfaces and other such considerations are handled
         this.warnings.push(unimplementedInterfaceOutputTypeWarning(this.subgraphName, referencedTypeName));
       }
