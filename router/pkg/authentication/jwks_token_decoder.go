@@ -8,11 +8,10 @@ import (
 	"slices"
 	"time"
 
-	"github.com/MicahParks/keyfunc/v3"
-
 	"golang.org/x/time/rate"
 
 	"github.com/MicahParks/jwkset"
+	"github.com/MicahParks/keyfunc/v3"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/wundergraph/cosmo/router/internal/httpclient"
