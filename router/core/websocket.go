@@ -873,11 +873,6 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 		}
 	}
 
-	reqCtx := getRequestContext(registration.clientRequest.Context())
-	if reqCtx == nil {
-		return nil, nil, fmt.Errorf("request context not found")
-	}
-
 	// If the persistent operation is already in the cache, we skip the parse step
 	// because the operation was already parsed. This is a performance optimization, and we
 	// can do it because we know that the persisted operation is immutable (identified by the hash)
@@ -885,15 +880,18 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 		startParsing := time.Now()
 		if err := operationKit.Parse(); err != nil {
 			opContext.parsingTime = time.Since(startParsing)
-			reqCtx.expressionContext.Request.Operation.ParsingTime = opContext.parsingTime
 			return nil, nil, err
 		}
 		opContext.parsingTime = time.Since(startParsing)
-		reqCtx.expressionContext.Request.Operation.ParsingTime = opContext.parsingTime
 	}
 
 	opContext.name = operationKit.parsedOperation.Request.OperationName
 	opContext.opType = operationKit.parsedOperation.Type
+
+	reqCtx := getRequestContext(registration.clientRequest.Context())
+	if reqCtx == nil {
+		return nil, nil, fmt.Errorf("request context not found")
+	}
 
 	if blocked := h.operationBlocker.OperationIsBlocked(h.logger, reqCtx.expressionContext, operationKit.parsedOperation); blocked != nil {
 		return nil, nil, blocked
@@ -903,7 +901,6 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 
 	if _, err := operationKit.NormalizeOperation(h.clientInfo.Name, isApq); err != nil {
 		opContext.normalizationTime = time.Since(startNormalization)
-		reqCtx.expressionContext.Request.Operation.NormalizationTime = opContext.normalizationTime
 		return nil, nil, err
 	}
 
@@ -911,13 +908,11 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 
 	if _, err := operationKit.NormalizeVariables(); err != nil {
 		opContext.normalizationTime = time.Since(startNormalization)
-		reqCtx.expressionContext.Request.Operation.NormalizationTime = opContext.normalizationTime
 		return nil, nil, err
 	}
 
 	if err := operationKit.RemapVariables(h.disableVariablesRemapping); err != nil {
 		opContext.normalizationTime = time.Since(startNormalization)
-		reqCtx.expressionContext.Request.Operation.NormalizationTime = opContext.normalizationTime
 		return nil, nil, err
 	}
 
@@ -928,8 +923,6 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 	opContext.normalizationTime = time.Since(startNormalization)
 	opContext.content = operationKit.parsedOperation.NormalizedRepresentation
 	opContext.variables, err = astjson.ParseBytes(operationKit.parsedOperation.Request.Variables)
-
-	reqCtx.expressionContext.Request.Operation.NormalizationTime = opContext.normalizationTime
 	if err != nil {
 		return nil, nil, err
 	}
@@ -939,30 +932,25 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 	_, _, err = operationKit.ValidateQueryComplexity()
 	if err != nil {
 		opContext.validationTime = time.Since(startValidation)
-		reqCtx.expressionContext.Request.Operation.ValidationTime = opContext.validationTime
 		return nil, nil, err
 	}
 
 	if _, err := operationKit.Validate(h.plannerOptions.ExecutionOptions.SkipLoader, opContext.remapVariables, &h.apolloCompatibilityFlags); err != nil {
 		opContext.validationTime = time.Since(startValidation)
-		reqCtx.expressionContext.Request.Operation.ValidationTime = opContext.validationTime
 		return nil, nil, err
 	}
 
 	opContext.validationTime = time.Since(startValidation)
-	reqCtx.expressionContext.Request.Operation.ValidationTime = opContext.validationTime
 
 	startPlanning := time.Now()
 
 	err = h.planner.plan(opContext, h.plannerOptions)
 	if err != nil {
 		opContext.planningTime = time.Since(startPlanning)
-		reqCtx.expressionContext.Request.Operation.PlanningTime = opContext.planningTime
 		return operationKit.parsedOperation, nil, err
 	}
 
 	opContext.planningTime = time.Since(startPlanning)
-	reqCtx.expressionContext.Request.Operation.PlanningTime = opContext.planningTime
 
 	opContext.initialPayload = h.initialPayload
 
