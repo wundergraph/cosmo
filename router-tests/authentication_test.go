@@ -3014,7 +3014,7 @@ func TestAudienceValidation(t *testing.T) {
 
 		authServer2, err := jwks.NewServerWithCrypto(t, rsaCrypto)
 		require.NoError(t, err)
-		t.Cleanup(authServer1.Close)
+		t.Cleanup(authServer2.Close)
 
 		authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
 			{
