@@ -669,8 +669,8 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	if operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() {
 		hash := operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
 		requestContext.operation.persistedID = hash
-		requestContext.expressionContext.Request.Operation.PersistedId = hash
-		setTelemetryAttributes(req.Context(), requestContext, expr.BucketPersistedId)
+		requestContext.expressionContext.Request.Operation.PersistedID = hash
+		setTelemetryAttributes(req.Context(), requestContext, expr.BucketPersistedID)
 
 		persistedIDAttribute := otel.WgOperationPersistedID.String(hash)
 

@@ -142,7 +142,7 @@ func TestBlockOperations(t *testing.T) {
 					Query: `mutation { updateEmployeeTag(id: 1, tag: "test") { id tag } }`,
 				})
 				require.Equal(t, http.StatusOK, res.Response.StatusCode)
-				require.Equal(t, `{"errors":[{"message":"operation type 'mutation' is blocked"}]}`, res.Body)
+				require.JSONEq(t, `{"errors":[{"message":"operation type 'mutation' is blocked"}]}`, res.Body)
 			})
 		})
 

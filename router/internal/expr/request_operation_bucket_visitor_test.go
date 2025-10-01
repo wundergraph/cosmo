@@ -10,10 +10,12 @@ import (
 // TestRequestOperationBucketVisitor validates that expressions are correctly classified into buckets
 // based on the attributes they access.
 //
-// Priority (low → high): Default < Auth < Sha256 < ParsingTime < NameOrType < PersistedId <
+// Priority (low → high): Default < Auth < Sha256 < ParsingTime < NameOrType < PersistedID <
 //	NormalizationTime < Hash < ValidationTime < PlanningTime < Subgraph
 
 func TestRequestOperationBucketVisitor(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name           string
 		expression     string
@@ -108,17 +110,17 @@ func TestRequestOperationBucketVisitor(t *testing.T) {
 			description:    "Operation name in ternary should use name/type bucket",
 		},
 
-		// BucketPersistedId - request.operation.persistedId
+		// BucketPersistedID - request.operation.persistedId
 		{
 			name:           "persistedId",
 			expression:     `request.operation.persistedId == "abc123"`,
-			expectedBucket: BucketPersistedId,
+			expectedBucket: BucketPersistedID,
 			description:    "Persisted ID access should use persisted ID bucket",
 		},
 		{
 			name:           "persistedId existence check",
 			expression:     `request.operation.persistedId != ""`,
-			expectedBucket: BucketPersistedId,
+			expectedBucket: BucketPersistedID,
 			description:    "Persisted ID check should use persisted ID bucket",
 		},
 
@@ -220,7 +222,7 @@ func TestRequestOperationBucketVisitor(t *testing.T) {
 		{
 			name:           "name and persistedId - persistedId wins",
 			expression:     `request.operation.name == "Query" && request.operation.persistedId != ""`,
-			expectedBucket: BucketPersistedId,
+			expectedBucket: BucketPersistedID,
 			description:    "Persisted ID should win over name (higher priority)",
 		},
 		{
@@ -291,6 +293,8 @@ func TestRequestOperationBucketVisitor(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			// Create a new expression manager
 			exprManager := CreateNewExprManager()
 
@@ -325,8 +329,8 @@ func bucketName(bucket AttributeBucket) string {
 		return "BucketParsingTime"
 	case BucketNameOrType:
 		return "BucketNameOrType"
-	case BucketPersistedId:
-		return "BucketPersistedId"
+	case BucketPersistedID:
+		return "BucketPersistedID"
 	case BucketNormalizationTime:
 		return "BucketNormalizationTime"
 	case BucketHash:
@@ -344,6 +348,8 @@ func bucketName(bucket AttributeBucket) string {
 
 // TestBucketPriority verifies the priority order is correct
 func TestBucketPriority(t *testing.T) {
+	t.Parallel()
+
 	// This test verifies the priority order defined in the constants
 	// which would alert in case someone would change it
 
@@ -351,8 +357,8 @@ func TestBucketPriority(t *testing.T) {
 	assert.True(t, BucketAuth < BucketSha256, "Auth should be lower priority than Sha256")
 	assert.True(t, BucketSha256 < BucketParsingTime, "Sha256 should be lower priority than ParsingTime")
 	assert.True(t, BucketParsingTime < BucketNameOrType, "ParsingTime should be lower priority than NameOrType")
-	assert.True(t, BucketNameOrType < BucketPersistedId, "NameOrType should be lower priority than PersistedId")
-	assert.True(t, BucketPersistedId < BucketNormalizationTime, "PersistedId should be lower priority than NormalizationTime")
+	assert.True(t, BucketNameOrType < BucketPersistedID, "NameOrType should be lower priority than PersistedID")
+	assert.True(t, BucketPersistedID < BucketNormalizationTime, "PersistedID should be lower priority than NormalizationTime")
 	assert.True(t, BucketNormalizationTime < BucketHash, "NormalizationTime should be lower priority than Hash")
 	assert.True(t, BucketHash < BucketValidationTime, "Hash should be lower priority than ValidationTime")
 	assert.True(t, BucketValidationTime < BucketPlanningTime, "ValidationTime should be lower priority than PlanningTime")
@@ -361,6 +367,8 @@ func TestBucketPriority(t *testing.T) {
 
 // TestSetBucketIfHigher verifies the setBucketIfHigher logic
 func TestSetBucketIfHigher(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name           string
 		currentBucket  AttributeBucket
@@ -401,6 +409,8 @@ func TestSetBucketIfHigher(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			visitor := &RequestOperationBucketVisitor{
 				Bucket: tt.currentBucket,
 			}

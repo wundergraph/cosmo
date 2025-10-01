@@ -4,6 +4,11 @@ import (
 	"github.com/expr-lang/expr/ast"
 )
 
+const (
+	sha256HashAttributeName = "sha256Hash"
+	operationAttributeName  = "operation"
+)
+
 // UsesRequestOperationSha256 detects whether an expression references request.operation.sha256Hash
 type UsesRequestOperationSha256 struct {
 	UsesRequestOperationSha256 bool
@@ -23,11 +28,11 @@ func (v *UsesRequestOperationSha256) Visit(baseNode *ast.Node) {
 	// Property should be "sha256Hash"
 	switch p := shaAccess.Property.(type) {
 	case *ast.StringNode:
-		if p.Value != "sha256Hash" {
+		if p.Value != sha256HashAttributeName {
 			return
 		}
 	case *ast.IdentifierNode:
-		if p.Value != "sha256Hash" {
+		if p.Value != sha256HashAttributeName {
 			return
 		}
 	default:
@@ -42,11 +47,11 @@ func (v *UsesRequestOperationSha256) Visit(baseNode *ast.Node) {
 
 	switch op := operationAccess.Property.(type) {
 	case *ast.StringNode:
-		if op.Value != "operation" {
+		if op.Value != operationAttributeName {
 			return
 		}
 	case *ast.IdentifierNode:
-		if op.Value != "operation" {
+		if op.Value != operationAttributeName {
 			return
 		}
 	default:

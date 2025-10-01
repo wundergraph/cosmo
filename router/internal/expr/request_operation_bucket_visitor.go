@@ -13,7 +13,7 @@ const (
 	BucketSha256
 	BucketParsingTime
 	BucketNameOrType
-	BucketPersistedId
+	BucketPersistedID
 	BucketNormalizationTime
 	BucketHash
 	BucketValidationTime
@@ -85,7 +85,7 @@ func (v *RequestOperationBucketVisitor) Visit(baseNode *ast.Node) {
 		case "name", "type":
 			v.setBucketIfHigher(BucketNameOrType)
 		case "persistedId":
-			v.setBucketIfHigher(BucketPersistedId)
+			v.setBucketIfHigher(BucketPersistedID)
 		case "normalizationTime":
 			v.setBucketIfHigher(BucketNormalizationTime)
 		case "hash":

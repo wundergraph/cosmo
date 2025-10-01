@@ -2029,7 +2029,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 
 					val, ok := requestContext["operation_sha256_expression"].(string)
 					require.True(t, ok)
-					require.Equal(t, val, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+					require.Equal(t, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", val)
 				},
 			)
 		})
@@ -2065,7 +2065,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 
 					val, ok := requestContext["operation_sha256_expression"].(string)
 					require.True(t, ok)
-					require.Equal(t, val, "c13e0fafb0a3a72e74c19df743fedee690fe133554a17a9408747585a0d1b423")
+					require.Equal(t, "c13e0fafb0a3a72e74c19df743fedee690fe133554a17a9408747585a0d1b423", val)
 				},
 			)
 		})
@@ -2103,7 +2103,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 
 					val, ok := requestContext["persisted_id_expression"].(string)
 					require.True(t, ok)
-					require.Equal(t, val, "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f")
+					require.Equal(t, "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f", val)
 				},
 			)
 

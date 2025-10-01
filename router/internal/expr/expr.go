@@ -83,7 +83,7 @@ type Operation struct {
 	ParsingTime       time.Duration `expr:"parsingTime"`
 	Name              string        `expr:"name"`
 	Type              string        `expr:"type"`
-	PersistedId       string        `expr:"persistedId"`
+	PersistedID       string        `expr:"persistedId"`
 	NormalizationTime time.Duration `expr:"normalizationTime"`
 	Hash              string        `expr:"hash"`
 	ValidationTime    time.Duration `expr:"validationTime"`

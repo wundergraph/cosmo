@@ -9635,9 +9635,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				spans := exporter.GetSpans().Snapshots()
 				require.Len(t, spans, 9)
 
-				var detectedSpanCount int
-
-				detectedSpanCount = validateDetectedSpans(t, spans, key, skipSpans, func(value attribute.Value) {
+				detectedSpanCount := validateDetectedSpans(t, spans, key, skipSpans, func(value attribute.Value) {
 					require.Equal(t, expectedSha256Hash, value.AsString())
 				})
 
@@ -9647,6 +9645,8 @@ func TestFlakyTelemetry(t *testing.T) {
 		})
 
 		t.Run("verify parsingTime expression attribute", func(t *testing.T) {
+			t.Parallel()
+
 			exporter := tracetest.NewInMemoryExporter(t)
 
 			key := "custom.attribute"
@@ -9683,9 +9683,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				spans := exporter.GetSpans().Snapshots()
 				require.Len(t, spans, 9)
 
-				var detectedSpanCount int
-
-				detectedSpanCount = validateDetectedSpans(t, spans, key, skipSpans, func(value attribute.Value) {
+				detectedSpanCount := validateDetectedSpans(t, spans, key, skipSpans, func(value attribute.Value) {
 					intVal, err := strconv.Atoi(value.AsString())
 					require.NoError(t, err)
 					require.Greater(t, intVal, 0)
@@ -9735,9 +9733,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				spans := exporter.GetSpans().Snapshots()
 				require.Len(t, spans, 9)
 
-				var detectedSpanCount int
-
-				detectedSpanCount = validateDetectedSpans(t, spans, key, skipSpans, func(value attribute.Value) {
+				detectedSpanCount := validateDetectedSpans(t, spans, key, skipSpans, func(value attribute.Value) {
 					require.Equal(t, queryName, value.AsString())
 				})
 
@@ -9785,9 +9781,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				spans := exporter.GetSpans().Snapshots()
 				require.Len(t, spans, 9)
 
-				var detectedSpanCount int
-
-				detectedSpanCount = validateDetectedSpans(t, spans, key, skipSpans, func(value attribute.Value) {
+				detectedSpanCount := validateDetectedSpans(t, spans, key, skipSpans, func(value attribute.Value) {
 					require.Equal(t, queryType, value.AsString())
 				})
 
@@ -9820,7 +9814,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					Header:        map[string][]string{"graphql-client-name": {"my-client"}},
 				})
 
-				persistedId := "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"
+				persistedID := "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"
 
 				skipSpans := []spanEntry{
 					{
@@ -9840,10 +9834,8 @@ func TestFlakyTelemetry(t *testing.T) {
 				spans := exporter.GetSpans().Snapshots()
 				require.Len(t, spans, 10)
 
-				var detectedSpanCount int
-
-				detectedSpanCount = validateDetectedSpans(t, spans, key, skipSpans, func(value attribute.Value) {
-					require.Equal(t, persistedId, value.AsString())
+				detectedSpanCount := validateDetectedSpans(t, spans, key, skipSpans, func(value attribute.Value) {
+					require.Equal(t, persistedID, value.AsString())
 				})
 
 				expected := len(spans) - len(skipSpans)
@@ -9852,6 +9844,8 @@ func TestFlakyTelemetry(t *testing.T) {
 		})
 
 		t.Run("verify normalizationTime expression attribute", func(t *testing.T) {
+			t.Parallel()
+
 			exporter := tracetest.NewInMemoryExporter(t)
 
 			key := "custom.attribute"
@@ -9892,9 +9886,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				spans := exporter.GetSpans().Snapshots()
 				require.Len(t, spans, 9)
 
-				var detectedSpanCount int
-
-				detectedSpanCount = validateDetectedSpans(t, spans, key, skipSpans, func(value attribute.Value) {
+				detectedSpanCount := validateDetectedSpans(t, spans, key, skipSpans, func(value attribute.Value) {
 					intVal, err := strconv.Atoi(value.AsString())
 					require.NoError(t, err)
 					require.Greater(t, intVal, 0)
@@ -9950,9 +9942,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				spans := exporter.GetSpans().Snapshots()
 				require.Len(t, spans, 9)
 
-				var detectedSpanCount int
-
-				detectedSpanCount = validateDetectedSpans(t, spans, key, skipSpans, func(value attribute.Value) {
+				detectedSpanCount := validateDetectedSpans(t, spans, key, skipSpans, func(value attribute.Value) {
 					require.Equal(t, hash, value.AsString())
 				})
 
@@ -9962,6 +9952,8 @@ func TestFlakyTelemetry(t *testing.T) {
 		})
 
 		t.Run("verify validationTime expression attribute", func(t *testing.T) {
+			t.Parallel()
+
 			exporter := tracetest.NewInMemoryExporter(t)
 
 			key := "custom.attribute"
@@ -10006,9 +9998,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				spans := exporter.GetSpans().Snapshots()
 				require.Len(t, spans, 9)
 
-				var detectedSpanCount int
-
-				detectedSpanCount = validateDetectedSpans(t, spans, key, skipSpans, func(value attribute.Value) {
+				detectedSpanCount := validateDetectedSpans(t, spans, key, skipSpans, func(value attribute.Value) {
 					intVal, err := strconv.Atoi(value.AsString())
 					require.NoError(t, err)
 					require.Greater(t, intVal, 0)
@@ -10020,6 +10010,8 @@ func TestFlakyTelemetry(t *testing.T) {
 		})
 
 		t.Run("verify planningTime expression attribute", func(t *testing.T) {
+			t.Parallel()
+
 			exporter := tracetest.NewInMemoryExporter(t)
 
 			key := "custom.attribute"
@@ -10068,9 +10060,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				spans := exporter.GetSpans().Snapshots()
 				require.Len(t, spans, 9)
 
-				var detectedSpanCount int
-
-				detectedSpanCount = validateDetectedSpans(t, spans, key, skipSpans, func(value attribute.Value) {
+				detectedSpanCount := validateDetectedSpans(t, spans, key, skipSpans, func(value attribute.Value) {
 					intVal, err := strconv.Atoi(value.AsString())
 					require.NoError(t, err)
 					require.Greater(t, intVal, 0)
@@ -10126,9 +10116,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				spans := exporter.GetSpans().Snapshots()
 				require.Len(t, spans, 9)
 
-				var detectedSpanCount int
-
-				detectedSpanCount = validateDetectedSpans(t, spans, key, skipSpans, func(value attribute.Value) {
+				detectedSpanCount := validateDetectedSpans(t, spans, key, skipSpans, func(value attribute.Value) {
 					require.Equal(t, hashAndOperationName, value.AsString())
 				})
 

@@ -8,15 +8,19 @@ import (
 )
 
 func TestUsesRequestOperationSha256(t *testing.T) {
-	// nil node
+	t.Parallel()
+
 	t.Run("nil node", func(t *testing.T) {
+		t.Parallel()
+
 		visitor := &UsesRequestOperationSha256{}
 		visitor.Visit(nil)
 		assert.False(t, visitor.UsesRequestOperationSha256)
 	})
 
-	// request.operation.sha256Hash dot chaining
 	t.Run("request.operation.sha256Hash access", func(t *testing.T) {
+		t.Parallel()
+
 		visitor := &UsesRequestOperationSha256{}
 		node := ast.Node(&ast.MemberNode{
 			Node: &ast.MemberNode{
@@ -29,8 +33,9 @@ func TestUsesRequestOperationSha256(t *testing.T) {
 		assert.True(t, visitor.UsesRequestOperationSha256)
 	})
 
-	// request["operation"]["sha256Hash"] square bracket equivalent
 	t.Run("request[\"operation\"][\"sha256Hash\"] access", func(t *testing.T) {
+		t.Parallel()
+
 		visitor := &UsesRequestOperationSha256{}
 		node := ast.Node(&ast.MemberNode{
 			Node: &ast.MemberNode{
@@ -43,8 +48,9 @@ func TestUsesRequestOperationSha256(t *testing.T) {
 		assert.True(t, visitor.UsesRequestOperationSha256)
 	})
 
-	// request["operation"].sha256Hash mixed
 	t.Run("request[\"operation\"].sha256Hash access", func(t *testing.T) {
+		t.Parallel()
+
 		visitor := &UsesRequestOperationSha256{}
 		node := ast.Node(&ast.MemberNode{
 			Node: &ast.MemberNode{
@@ -57,8 +63,9 @@ func TestUsesRequestOperationSha256(t *testing.T) {
 		assert.True(t, visitor.UsesRequestOperationSha256)
 	})
 
-	// Non sha256 access
 	t.Run("request.operation.hash access - not sha256", func(t *testing.T) {
+		t.Parallel()
+
 		visitor := &UsesRequestOperationSha256{}
 		node := ast.Node(&ast.MemberNode{
 			Node: &ast.MemberNode{
@@ -71,8 +78,9 @@ func TestUsesRequestOperationSha256(t *testing.T) {
 		assert.False(t, visitor.UsesRequestOperationSha256)
 	})
 
-	// Different top-level identifier
 	t.Run("other.operation.sha256Hash access - wrong root", func(t *testing.T) {
+		t.Parallel()
+
 		visitor := &UsesRequestOperationSha256{}
 		node := ast.Node(&ast.MemberNode{
 			Node: &ast.MemberNode{
@@ -85,8 +93,9 @@ func TestUsesRequestOperationSha256(t *testing.T) {
 		assert.False(t, visitor.UsesRequestOperationSha256)
 	})
 
-	// Middle not a member node
 	t.Run("request.body.sha256Hash access - wrong middle", func(t *testing.T) {
+		t.Parallel()
+
 		visitor := &UsesRequestOperationSha256{}
 		node := ast.Node(&ast.MemberNode{
 			Node: &ast.MemberNode{
@@ -99,8 +108,9 @@ func TestUsesRequestOperationSha256(t *testing.T) {
 		assert.False(t, visitor.UsesRequestOperationSha256)
 	})
 
-	// Already set short-circuits
 	t.Run("already set short-circuit", func(t *testing.T) {
+		t.Parallel()
+
 		visitor := &UsesRequestOperationSha256{UsesRequestOperationSha256: true}
 		node := ast.Node(&ast.MemberNode{
 			Node:     &ast.IdentifierNode{Value: "request"},
