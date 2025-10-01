@@ -2796,49 +2796,99 @@ func TestAudienceValidation(t *testing.T) {
 	t.Run("audience validation succeeds even when one audience match fails", func(t *testing.T) {
 		t.Parallel()
 
-		tokenAudiences := []string{"aud1"}
+		t.Run("with http based configuration", func(t *testing.T) {
+			t.Parallel()
 
-		authServer1, err := jwks.NewServer(t)
-		require.NoError(t, err)
-		t.Cleanup(authServer1.Close)
+			tokenAudiences := []string{"aud1"}
 
-		authServer2, err := jwks.NewServer(t)
-		require.NoError(t, err)
-		t.Cleanup(authServer2.Close)
+			authServer1, err := jwks.NewServer(t)
+			require.NoError(t, err)
+			t.Cleanup(authServer1.Close)
 
-		token, err := authServer1.Token(map[string]any{"aud": tokenAudiences})
-		require.NoError(t, err)
+			authServer2, err := jwks.NewServer(t)
+			require.NoError(t, err)
+			t.Cleanup(authServer2.Close)
 
-		authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
-			{
-				URL:             authServer2.JWKSURL(),
-				RefreshInterval: time.Second * 5,
-				Audiences:       []string{"aud2"},
-			},
-			{
-				URL:             authServer1.JWKSURL(),
-				RefreshInterval: time.Second * 5,
-				Audiences:       []string{"aud1", "aud5"},
-			},
+			token, err := authServer1.Token(map[string]any{"aud": tokenAudiences})
+			require.NoError(t, err)
+
+			authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+				{
+					URL:             authServer2.JWKSURL(),
+					RefreshInterval: time.Second * 5,
+					Audiences:       []string{"aud2"},
+				},
+				{
+					URL:             authServer1.JWKSURL(),
+					RefreshInterval: time.Second * 5,
+					Audiences:       []string{"aud1", "aud5"},
+				},
+			})
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithAccessController(core.NewAccessController(authenticators, true)),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				// Operations with a token should succeed
+				header := http.Header{
+					"Authorization": []string{"Bearer " + token},
+				}
+				res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+				require.NoError(t, err)
+				defer res.Body.Close()
+				require.Equal(t, http.StatusOK, res.StatusCode)
+				require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+				data, err := io.ReadAll(res.Body)
+				require.NoError(t, err)
+				require.Equal(t, employeesExpectedData, string(data))
+			})
 		})
 
-		testenv.Run(t, &testenv.Config{
-			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, true)),
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Operations with a token should succeed
-			header := http.Header{
-				"Authorization": []string{"Bearer " + token},
-			}
-			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
-			require.NoError(t, err)
-			defer res.Body.Close()
-			require.Equal(t, http.StatusOK, res.StatusCode)
-			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
-			data, err := io.ReadAll(res.Body)
-			require.NoError(t, err)
-			require.Equal(t, employeesExpectedData, string(data))
+		t.Run("with secret based configuration", func(t *testing.T) {
+			t.Parallel()
+
+			matchingAud := "matchingAudience"
+
+			secret := "example secret"
+			kid := "givenKID"
+			authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
+				{
+					Secret:    "secret",
+					Algorithm: string(jwkset.AlgHS256),
+					KeyId:     "kid",
+					Audiences: []string{"aud3"},
+				},
+				{
+					Secret:    secret,
+					Algorithm: string(jwkset.AlgHS256),
+					KeyId:     kid,
+					Audiences: []string{matchingAud, "aud5"},
+				},
+			})
+
+			token := generateToken(t, kid, secret, jwt.SigningMethodHS256, jwt.MapClaims{
+				"aud": matchingAud,
+			})
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithAccessController(core.NewAccessController(authenticators, true)),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				// Operations with a token should succeed
+				header := http.Header{
+					"Authorization": []string{"Bearer " + token},
+				}
+				res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+				require.NoError(t, err)
+				defer res.Body.Close()
+				require.Equal(t, http.StatusOK, res.StatusCode)
+				require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+				data, err := io.ReadAll(res.Body)
+				require.NoError(t, err)
+				require.Equal(t, employeesExpectedData, string(data))
+			})
 		})
 	})
 
