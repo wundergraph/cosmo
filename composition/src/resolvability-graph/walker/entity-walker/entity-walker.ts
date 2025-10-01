@@ -120,13 +120,13 @@ export class EntityWalker {
         return { visited: true, areDescendantsResolved: true };
       }
     }
-    let removeDescendantPaths: boolean | undefined = undefined;
+    let removeDescendantPaths: true | undefined = undefined;
     for (const [fieldName, edge] of node.headToTailEdges) {
       const { visited, areDescendantsResolved, isRevisitedNode } = this.visitEntityDescendantEdge({
         edge,
         selectionPath,
       });
-      removeDescendantPaths &&= isRevisitedNode;
+      removeDescendantPaths ??= isRevisitedNode;
       this.propagateVisitedField({
         areDescendantsResolved,
         fieldName,

@@ -66,7 +66,7 @@ export class GraphNode {
     return accessibleEntityNodeNames;
   }
 
-  getAccessibleEntityNodeNames(node: GraphNode, accessibleEntityNodeNames: Set<string>) {
+  getAccessibleEntityNodeNames(node: GraphNode, accessibleEntityNodeNames: Set<NodeName>) {
     for (const edge of node.entityEdges) {
       if (!add(accessibleEntityNodeNames, edge.node.nodeName)) {
         continue;
@@ -88,9 +88,9 @@ export class RootNode {
     this.typeName = typeName;
   }
 
-  removeInaccessibleEdges(fieldDataByFieldName: Map<FieldName, GraphFieldData>) {
+  removeInaccessibleEdges(fieldDataByName: Map<FieldName, GraphFieldData>) {
     for (const [fieldName, edges] of this.headToSharedTailEdges) {
-      if (fieldDataByFieldName.has(fieldName)) {
+      if (fieldDataByName.has(fieldName)) {
         continue;
       }
       for (const edge of edges) {

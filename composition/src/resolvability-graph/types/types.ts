@@ -1,7 +1,7 @@
 export type VisitNodeResult = {
   visited: boolean;
   areDescendantsResolved: boolean;
-  isRevisitedNode?: boolean;
+  isRevisitedNode?: true;
 };
 
 export type FieldName = string;
