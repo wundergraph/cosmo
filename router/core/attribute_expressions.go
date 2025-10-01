@@ -1,7 +1,10 @@
 package core
 
 import (
+	"context"
 	"fmt"
+	"go.opentelemetry.io/otel/trace"
+	"go.uber.org/zap"
 	"reflect"
 
 	"github.com/expr-lang/expr/ast"
@@ -11,15 +14,14 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
+type ProgramWithKey struct {
+	Program *vm.Program
+	Key     string
+}
+
 // attributeExpressions maps context attributes to custom attributes.
 type attributeExpressions struct {
-	// expressions is a map of expressions that can be used to resolve dynamic attributes
-	expressions map[string]*vm.Program
-	// expressionsWithAuth is a map of expressions that can be used to resolve dynamic attributes and acces the auth
-	// argument
-	expressionsWithAuth map[string]*vm.Program
-
-	expressionsWithSubgraph map[string]*vm.Program
+	expressions map[expr.AttributeBucket][]ProgramWithKey
 }
 
 type VisitorCheckForRequestAuthAccess struct {
@@ -48,60 +50,110 @@ func (v *VisitorCheckForRequestAuthAccess) Visit(node *ast.Node) {
 }
 
 func newAttributeExpressions(attr []config.CustomAttribute, exprManager *expr.Manager) (*attributeExpressions, error) {
-	attrExprMap := make(map[string]*vm.Program)
-	attrExprMapWithAuth := make(map[string]*vm.Program)
-	attrExprMapSubgraph := make(map[string]*vm.Program)
+	attrs := make(map[expr.AttributeBucket][]ProgramWithKey)
 
 	for _, a := range attr {
 		if a.ValueFrom != nil && a.ValueFrom.Expression != "" {
-			usesAuth := VisitorCheckForRequestAuthAccess{}
-			usesSubgraph := expr.UsesSubgraph{}
-			prog, err := exprManager.CompileExpression(a.ValueFrom.Expression, reflect.String, &usesAuth, &usesSubgraph)
+			bucket := expr.RequestOperationBucketVisitor{}
+
+			prog, err := exprManager.CompileExpression(a.ValueFrom.Expression, reflect.String, &bucket)
 			if err != nil {
 				return nil, fmt.Errorf("custom attribute error, unable to compile '%s' with expression '%s': %s", a.Key, a.ValueFrom.Expression, err)
 			}
-			if usesSubgraph.UsesSubgraph {
-				attrExprMapSubgraph[a.Key] = prog
-			} else if usesAuth.HasAuth {
-				attrExprMapWithAuth[a.Key] = prog
-			} else {
-				attrExprMap[a.Key] = prog
-			}
+
+			attrs[bucket.Bucket] = append(attrs[bucket.Bucket], ProgramWithKey{
+				Program: prog,
+				Key:     a.Key,
+			})
 		}
 	}
 
 	return &attributeExpressions{
-		expressions:             attrExprMap,
-		expressionsWithAuth:     attrExprMapWithAuth,
-		expressionsWithSubgraph: attrExprMapSubgraph,
+		expressions: attrs,
 	}, nil
 }
 
-func expressionAttributes(expressions map[string]*vm.Program, exprCtx *expr.Context) ([]attribute.KeyValue, error) {
+func expressionAttributes(expressions map[expr.AttributeBucket][]ProgramWithKey, exprCtx *expr.Context, key expr.AttributeBucket) ([]attribute.KeyValue, error) {
 	if exprCtx == nil {
 		return nil, nil
 	}
 
+	programWrappers, ok := expressions[key]
+	if !ok {
+		return nil, nil
+	}
+
 	var result []attribute.KeyValue
-	for exprKey, exprVal := range expressions {
-		val, err := expr.ResolveStringExpression(exprVal, *exprCtx)
+	for _, exprVal := range programWrappers {
+		val, err := expr.ResolveStringExpression(exprVal.Program, *exprCtx)
 		if err != nil {
 			return nil, err
 		}
-		result = append(result, attribute.String(exprKey, val))
+		result = append(result, attribute.String(exprVal.Key, val))
 	}
 
 	return result, nil
 }
 
 func (r *attributeExpressions) expressionsAttributes(exprCtx *expr.Context) ([]attribute.KeyValue, error) {
-	return expressionAttributes(r.expressions, exprCtx)
-}
-
-func (r *attributeExpressions) expressionsAttributesWithAuth(exprCtx *expr.Context) ([]attribute.KeyValue, error) {
-	return expressionAttributes(r.expressionsWithAuth, exprCtx)
+	return expressionAttributes(r.expressions, exprCtx, expr.BucketDefault)
 }
 
 func (r *attributeExpressions) expressionsAttributesWithSubgraph(exprCtx *expr.Context) ([]attribute.KeyValue, error) {
-	return expressionAttributes(r.expressionsWithSubgraph, exprCtx)
+	return expressionAttributes(r.expressions, exprCtx, expr.BucketSubgraph)
+}
+
+type AddExprOpts struct {
+	logger      *zap.Logger
+	expressions *attributeExpressions
+	key         expr.AttributeBucket
+	currSpan    trace.Span
+	exprCtx     *expr.Context
+	attrAddFunc func(vals ...attribute.KeyValue)
+}
+
+func addExpressions(opts AddExprOpts) {
+	if opts.expressions == nil {
+		return
+	}
+
+	attributesForKey, err := expressionAttributes(opts.expressions.expressions, opts.exprCtx, opts.key)
+	if err != nil {
+		opts.logger.Error("failed to resolve trace attribute", zap.Error(err))
+		return
+	}
+
+	opts.attrAddFunc(attributesForKey...)
+	if opts.currSpan != nil {
+		opts.currSpan.SetAttributes(attributesForKey...)
+	}
+}
+
+func setTelemetryAttributes(ctx context.Context, requestContext *requestContext, key expr.AttributeBucket) {
+	currSpan := trace.SpanFromContext(ctx)
+	addExpressions(AddExprOpts{
+		logger:      requestContext.logger,
+		expressions: requestContext.telemetry.telemetryAttributeExpressions,
+		key:         key,
+		currSpan:    currSpan,
+		exprCtx:     &requestContext.expressionContext,
+		attrAddFunc: requestContext.telemetry.addCommonAttribute,
+	})
+
+	addExpressions(AddExprOpts{
+		logger:      requestContext.logger,
+		expressions: requestContext.telemetry.metricAttributeExpressions,
+		key:         key,
+		exprCtx:     &requestContext.expressionContext,
+		attrAddFunc: requestContext.telemetry.addMetricAttribute,
+	})
+
+	addExpressions(AddExprOpts{
+		logger:      requestContext.logger,
+		expressions: requestContext.telemetry.tracingAttributeExpressions,
+		key:         key,
+		currSpan:    currSpan,
+		exprCtx:     &requestContext.expressionContext,
+		attrAddFunc: requestContext.telemetry.addCommonTraceAttribute,
+	})
 }
