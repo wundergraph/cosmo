@@ -10,6 +10,7 @@ export interface SentryConfig {
     dsn: string;
     eventLoopBlockIntegrationThresholdMs?: number;
     profileSessionSampleRate?: number;
+    profileLifecycle?: 'manual' | 'trace';
     sendDefaultPii?: boolean;
     tracesSampleRate?: number;
   };
@@ -26,6 +27,7 @@ export function init(opts: SentryConfig) {
       profileSessionSampleRate: opts.sentry.profileSessionSampleRate,
       sendDefaultPii: opts.sentry.sendDefaultPii,
       tracesSampleRate: opts.sentry.tracesSampleRate,
+      profileLifecycle: opts.sentry.profileLifecycle,
     });
   }
 }
