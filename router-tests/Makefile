@@ -1,6 +1,6 @@
 SHELL := bash
 test_target := ./...
-test_retry_count := 3
+test_retry_count ?= 0
 
 ifeq ($(CI),true)
  FORMAT := github-actions
