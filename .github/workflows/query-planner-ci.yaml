@@ -153,7 +153,7 @@ jobs:
   build_test: # This job is use to lock the merge of the PR if anything fails in the query planner
     runs-on: ubuntu-latest
     if: ${{ always() }}
-    needs: [ build-router, build-cli, cli-release-url, check-label-and-engine-changes ]
+    needs: [build-router, build-cli, cli-release-url, check-labels-and-engine-changes]
     outputs:
       workflow_url: ${{ steps.trigger_workflow.outputs.workflow_url }}
       workflow_id: ${{ steps.trigger_workflow.outputs.workflow_id }}
@@ -176,7 +176,7 @@ jobs:
               "wgc": "${{ needs.build-cli.outputs.wgc || needs.cli-release-url.outputs.wgc }}"
             }
   get_pr_url:
-    needs: [ build_test, check-label-and-engine-changes ]
+    needs: [build_test, check-labels-and-engine-changes]
     runs-on: ubuntu-latest
     if: ${{ always() && (needs.check-labels-and-engine-changes.outputs.has_label == 'true' || needs.check-labels-and-engine-changes.outputs.engine_changed == 'true') && needs.check-labels-and-engine-changes.outputs.has_skip_label != 'true' }}
     outputs:
