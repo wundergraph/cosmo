@@ -40,7 +40,7 @@ jobs:
           cache: true
       - name: Check for query-planner label
         id: check_label
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           script: |
             const labels = await github.rest.issues.listLabelsOnIssue({
@@ -52,7 +52,7 @@ jobs:
             core.setOutput('has_label', hasLabel ? 'true' : 'false');
       - name: Check for query-planner-skip label
         id: check_label_skip
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           script: |
             const labels = await github.rest.issues.listLabelsOnIssue({
@@ -123,7 +123,6 @@ jobs:
           image_name: router-qp
           image_description: 'Cosmo Router Query Planner'
           image_platforms: linux/amd64
-          with_tests: 'false'
   build-cli:
     needs: [filter-changes, check-labels-and-engine-changes]
     if: ${{ needs.filter-changes.outputs.cli_changed == 'true' && needs.check-labels-and-engine-changes.outputs.has_skip_label != 'true'}}
