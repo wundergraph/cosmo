@@ -203,6 +203,7 @@ export const envVariables = z
       .default('false'),
     SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().optional().default(1),
     SENTRY_PROFILE_SESSION_SAMPLE_RATE: z.coerce.number().optional().default(1),
+    SENTRY_PROFILE_LIFECYCLE: z.enum(['manual', 'trace']).optional().default('manual'),
     SENTRY_EVENT_LOOP_BLOCK_THRESHOLD_MS: z.coerce.number().optional().default(100),
   })
   .refine((input) => {
