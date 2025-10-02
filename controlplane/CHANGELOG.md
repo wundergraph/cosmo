@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.165.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.165.1...controlplane@0.165.2) (2025-10-02)
+
+### Bug Fixes
+
+* possible race condition where multiple organizations could be created ([#2162](https://github.com/wundergraph/cosmo/issues/2162)) ([32483b8](https://github.com/wundergraph/cosmo/commit/32483b8fb0ca1527796bf05503f8eba35d806366)) (@wilsonrivera)
+* sentry profile lifecycle switch for controlplane ([#2251](https://github.com/wundergraph/cosmo/issues/2251)) ([ba7b94f](https://github.com/wundergraph/cosmo/commit/ba7b94f00a7d4dc0de1e10f42b59639f67805c97)) (@miklosbarabas)
+
 ## [0.165.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.165.0...controlplane@0.165.1) (2025-10-01)
 
 **Note:** Version bump only for package controlplane
