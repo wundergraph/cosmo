@@ -79,7 +79,9 @@ import {
 import {
   addScopes,
   fieldDatasToSimpleFieldDatas,
+  isCompositeOutputNodeKind,
   isNodeKindObject,
+  isObjectDefinitionData,
   kindToConvertedTypeString,
   mapToArrayOfValues,
   newAuthorizationData,
@@ -375,7 +377,7 @@ import {
 import { newConfigurationData, newFieldSetConditionData } from '../../router-configuration/utils';
 import { ImplementationErrors, InvalidFieldImplementation } from '../../utils/types';
 import { FieldName, SubgraphName } from '../../types/types';
-import { ValidateOneOfDirectiveParams } from './params';
+import { HandleFieldInheritableDirectivesParams, ValidateOneOfDirectiveParams } from './params';
 
 export function normalizeSubgraphFromString(subgraphSDL: string, noLocation = true): NormalizationResult {
   const { error, documentNode } = safeParse(subgraphSDL, noLocation);
@@ -405,9 +407,9 @@ export class NormalizationFactory {
   definedDirectiveNames = new Set<string>();
   directiveDefinitionByDirectiveName = new Map<string, DirectiveDefinitionNode>();
   directiveDefinitionDataByDirectiveName = initializeDirectiveDefinitionDatas();
-  doesParentObjectRequireFetchReasons = false;
+  doesParentRequireFetchReasons = false;
   edfsDirectiveReferences = new Set<string>();
-  errors: Error[] = [];
+  errors = new Array<Error>();
   entityDataByTypeName = new Map<string, EntityData>();
   entityInterfaceDataByTypeName = new Map<string, EntityInterfaceSubgraphData>();
   eventsConfigurations = new Map<string, EventConfiguration[]>();
@@ -438,7 +440,7 @@ export class NormalizationFactory {
   referencedDirectiveNames = new Set<string>();
   referencedTypeNames = new Set<string>();
   renamedParentTypeName = '';
-  subgraphName: string;
+  subgraphName: SubgraphName;
   unvalidatedExternalFieldCoords = new Set<string>();
   usesEdfsNatsStreamConfiguration: boolean = false;
   warnings: Array<Warning> = [];
@@ -572,23 +574,33 @@ export class NormalizationFactory {
     }
   }
 
-  addInheritedDirectivesToFieldData(
-    fieldDirectivesByDirectiveName: Map<string, Array<ConstDirectiveNode>>,
-    inheritedDirectiveNames: Set<string>,
-  ) {
-    if (this.isParentObjectExternal && !fieldDirectivesByDirectiveName.has(EXTERNAL)) {
-      fieldDirectivesByDirectiveName.set(EXTERNAL, [generateSimpleDirective(EXTERNAL)]);
-      inheritedDirectiveNames.add(EXTERNAL);
-    }
-    if (this.doesParentObjectRequireFetchReasons && !fieldDirectivesByDirectiveName.has(REQUIRE_FETCH_REASONS)) {
-      fieldDirectivesByDirectiveName.set(REQUIRE_FETCH_REASONS, [generateSimpleDirective(REQUIRE_FETCH_REASONS)]);
+  handleFieldInheritableDirectives({
+    directivesByDirectiveName,
+    fieldName,
+    inheritedDirectiveNames,
+    parentData,
+  }: HandleFieldInheritableDirectivesParams) {
+    if (this.doesParentRequireFetchReasons && !directivesByDirectiveName.has(REQUIRE_FETCH_REASONS)) {
+      directivesByDirectiveName.set(REQUIRE_FETCH_REASONS, [generateSimpleDirective(REQUIRE_FETCH_REASONS)]);
       inheritedDirectiveNames.add(REQUIRE_FETCH_REASONS);
     }
-    if (this.isParentObjectShareable && !fieldDirectivesByDirectiveName.has(SHAREABLE)) {
-      fieldDirectivesByDirectiveName.set(SHAREABLE, [generateSimpleDirective(SHAREABLE)]);
+    if (this.doesParentRequireFetchReasons || directivesByDirectiveName.has(REQUIRE_FETCH_REASONS)) {
+      parentData.requireFetchReasonsFieldNames.add(fieldName);
+    }
+    if (!isObjectDefinitionData(parentData)) {
+      return;
+    }
+    if (this.isParentObjectExternal && !directivesByDirectiveName.has(EXTERNAL)) {
+      directivesByDirectiveName.set(EXTERNAL, [generateSimpleDirective(EXTERNAL)]);
+      inheritedDirectiveNames.add(EXTERNAL);
+    }
+    if (directivesByDirectiveName.has(EXTERNAL)) {
+      this.unvalidatedExternalFieldCoords.add(`${parentData.name}.${fieldName}`);
+    }
+    if (this.isParentObjectShareable && !directivesByDirectiveName.has(SHAREABLE)) {
+      directivesByDirectiveName.set(SHAREABLE, [generateSimpleDirective(SHAREABLE)]);
       inheritedDirectiveNames.add(SHAREABLE);
     }
-    return fieldDirectivesByDirectiveName;
   }
 
   extractDirectives(
@@ -612,11 +624,14 @@ export class NormalizationFactory {
       } else {
         getValueOrDefault(directivesByDirectiveName, directiveName, () => []).push(directiveNode);
       }
+      if (!isCompositeOutputNodeKind(node.kind)) {
+        continue;
+      }
+      this.doesParentRequireFetchReasons ||= directiveName === REQUIRE_FETCH_REASONS;
       if (!isNodeKindObject(node.kind)) {
         continue;
       }
       this.isParentObjectExternal ||= directiveName === EXTERNAL;
-      this.doesParentObjectRequireFetchReasons ||= directiveName === REQUIRE_FETCH_REASONS;
       this.isParentObjectShareable ||= directiveName === SHAREABLE;
     }
     return directivesByDirectiveName;
@@ -1019,7 +1034,7 @@ export class NormalizationFactory {
       executableLocations,
       name,
       repeatable: node.repeatable,
-      subgraphNames: new Set<string>([this.subgraphName]),
+      subgraphNames: new Set<SubgraphName>([this.subgraphName]),
       description: formatDescription(node.description),
     });
   }
@@ -1159,7 +1174,7 @@ export class NormalizationFactory {
       originalParentTypeName: this.originalParentTypeName,
       persistedDirectivesData: newPersistedDirectivesData(),
       renamedParentTypeName: parentTypeName,
-      subgraphNames: new Set<string>([this.subgraphName]),
+      subgraphNames: new Set<SubgraphName>([this.subgraphName]),
       type: getMutableTypeNode(node.type, fieldCoords, this.errors),
       directivesByDirectiveName,
       description: formatDescription(node.description),
@@ -1216,8 +1231,8 @@ export class NormalizationFactory {
       originalParentTypeName: originalParentTypeName,
       persistedDirectivesData: newPersistedDirectivesData(),
       renamedParentTypeName: federatedParentTypeName,
-      requiredSubgraphNames: new Set<string>(isTypeRequired(node.type) ? [this.subgraphName] : []),
-      subgraphNames: new Set<string>([this.subgraphName]),
+      requiredSubgraphNames: new Set<SubgraphName>(isTypeRequired(node.type) ? [this.subgraphName] : []),
+      subgraphNames: new Set<SubgraphName>([this.subgraphName]),
       type: getMutableTypeNode(node.type, originalParentTypeName, this.errors),
       defaultValue: node.defaultValue, // TODO validate
       description: formatDescription(node.description),
@@ -1266,7 +1281,8 @@ export class NormalizationFactory {
       name: typeName,
       node: getMutableInterfaceNode(node.name),
       persistedDirectivesData: newPersistedDirectivesData(),
-      subgraphNames: new Set<string>([this.subgraphName]),
+      requireFetchReasonsFieldNames: new Set<FieldName>(),
+      subgraphNames: new Set<SubgraphName>([this.subgraphName]),
       description: formatDescription('description' in node ? node.description : undefined),
     };
     this.extractConfigureDescriptionsData(newParentData);
@@ -1345,7 +1361,7 @@ export class NormalizationFactory {
       persistedDirectivesData: newPersistedDirectivesData(),
       requireFetchReasonsFieldNames: new Set<FieldName>(),
       renamedTypeName: this.getRenamedRootTypeName(typeName),
-      subgraphNames: new Set<string>([this.subgraphName]),
+      subgraphNames: new Set<SubgraphName>([this.subgraphName]),
       description: formatDescription('description' in node ? node.description : undefined),
     };
     this.extractConfigureDescriptionsData(newParentData);
@@ -1433,7 +1449,7 @@ export class NormalizationFactory {
       name: typeName,
       node: getMutableInputObjectNode(node.name),
       persistedDirectivesData: newPersistedDirectivesData(),
-      subgraphNames: new Set<string>([this.subgraphName]),
+      subgraphNames: new Set<SubgraphName>([this.subgraphName]),
       description: formatDescription('description' in node ? node.description : undefined),
     };
     this.extractConfigureDescriptionsData(newParentData);
@@ -3617,7 +3633,7 @@ export class NormalizationFactory {
           if (parentData.fieldDataByName.size < 1 && !isNodeQuery(parentTypeName, operationTypeNode)) {
             this.errors.push(noFieldDefinitionsError(kindToNodeType(parentData.kind), parentTypeName));
           }
-          if (isObject && parentData.requireFetchReasonsFieldNames.size > 0) {
+          if (parentData.requireFetchReasonsFieldNames.size > 0) {
             configurationData.requireFetchReasonsFieldNames = [...parentData.requireFetchReasonsFieldNames];
           }
           break;

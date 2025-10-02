@@ -57,7 +57,7 @@ export enum ExtensionType {
 
 export type EnumDefinitionData = {
   appearances: number;
-  configureDescriptionDataBySubgraphName: Map<string, ConfigureDescriptionData>;
+  configureDescriptionDataBySubgraphName: Map<SubgraphName, ConfigureDescriptionData>;
   directivesByDirectiveName: Map<string, Array<ConstDirectiveNode>>;
   enumValueDataByValueName: Map<string, EnumValueData>;
   extensionType: ExtensionType;
@@ -66,13 +66,13 @@ export type EnumDefinitionData = {
   name: string;
   node: MutableEnumNode;
   persistedDirectivesData: PersistedDirectivesData;
-  subgraphNames: Set<string>;
+  subgraphNames: Set<SubgraphName>;
   description?: StringValueNode;
 };
 
 export type EnumValueData = {
   appearances: number;
-  configureDescriptionDataBySubgraphName: Map<string, ConfigureDescriptionData>;
+  configureDescriptionDataBySubgraphName: Map<SubgraphName, ConfigureDescriptionData>;
   directivesByDirectiveName: Map<string, Array<ConstDirectiveNode>>;
   federatedCoords: string;
   kind: Kind.ENUM_VALUE_DEFINITION;
@@ -80,7 +80,7 @@ export type EnumValueData = {
   node: MutableEnumValueNode;
   parentTypeName: string;
   persistedDirectivesData: PersistedDirectivesData;
-  subgraphNames: Set<string>;
+  subgraphNames: Set<SubgraphName>;
   description?: StringValueNode;
 };
 
@@ -96,7 +96,7 @@ export type ExternalFieldData = {
 
 export type FieldData = {
   argumentDataByName: Map<string, InputValueData>;
-  configureDescriptionDataBySubgraphName: Map<string, ConfigureDescriptionData>;
+  configureDescriptionDataBySubgraphName: Map<SubgraphName, ConfigureDescriptionData>;
   directivesByDirectiveName: Map<string, Array<ConstDirectiveNode>>;
   externalFieldDataBySubgraphName: Map<string, ExternalFieldData>;
   federatedCoords: string;
@@ -118,7 +118,7 @@ export type FieldData = {
 };
 
 export type InputObjectDefinitionData = {
-  configureDescriptionDataBySubgraphName: Map<string, ConfigureDescriptionData>;
+  configureDescriptionDataBySubgraphName: Map<SubgraphName, ConfigureDescriptionData>;
   directivesByDirectiveName: Map<string, Array<ConstDirectiveNode>>;
   extensionType: ExtensionType;
   inputValueDataByName: Map<string, InputValueData>;
@@ -127,12 +127,12 @@ export type InputObjectDefinitionData = {
   name: string;
   node: MutableInputObjectNode;
   persistedDirectivesData: PersistedDirectivesData;
-  subgraphNames: Set<string>;
+  subgraphNames: Set<SubgraphName>;
   description?: StringValueNode;
 };
 
 export type InputValueData = {
-  configureDescriptionDataBySubgraphName: Map<string, ConfigureDescriptionData>;
+  configureDescriptionDataBySubgraphName: Map<SubgraphName, ConfigureDescriptionData>;
   directivesByDirectiveName: Map<string, Array<ConstDirectiveNode>>;
   federatedCoords: string;
   includeDefaultValue: boolean;
@@ -146,8 +146,8 @@ export type InputValueData = {
   originalParentTypeName: string;
   persistedDirectivesData: PersistedDirectivesData;
   renamedParentTypeName: string;
-  requiredSubgraphNames: Set<string>;
-  subgraphNames: Set<string>;
+  requiredSubgraphNames: Set<SubgraphName>;
+  subgraphNames: Set<SubgraphName>;
   type: MutableTypeNode;
   defaultValue?: ConstValueNode;
   description?: StringValueNode;
@@ -155,7 +155,7 @@ export type InputValueData = {
 };
 
 export type InterfaceDefinitionData = {
-  configureDescriptionDataBySubgraphName: Map<string, ConfigureDescriptionData>;
+  configureDescriptionDataBySubgraphName: Map<SubgraphName, ConfigureDescriptionData>;
   directivesByDirectiveName: Map<string, Array<ConstDirectiveNode>>;
   extensionType: ExtensionType;
   fieldDataByName: Map<string, FieldData>;
@@ -166,12 +166,13 @@ export type InterfaceDefinitionData = {
   name: string;
   node: MutableInterfaceNode;
   persistedDirectivesData: PersistedDirectivesData;
-  subgraphNames: Set<string>;
+  requireFetchReasonsFieldNames: Set<FieldName>;
+  subgraphNames: Set<SubgraphName>;
   description?: StringValueNode;
 };
 
 export type ObjectDefinitionData = {
-  configureDescriptionDataBySubgraphName: Map<string, ConfigureDescriptionData>;
+  configureDescriptionDataBySubgraphName: Map<SubgraphName, ConfigureDescriptionData>;
   directivesByDirectiveName: Map<string, Array<ConstDirectiveNode>>;
   extensionType: ExtensionType;
   fieldDataByName: Map<FieldName, FieldData>;
@@ -185,7 +186,7 @@ export type ObjectDefinitionData = {
   persistedDirectivesData: PersistedDirectivesData;
   renamedTypeName: string;
   requireFetchReasonsFieldNames: Set<FieldName>;
-  subgraphNames: Set<string>;
+  subgraphNames: Set<SubgraphName>;
   description?: StringValueNode;
 };
 
@@ -194,7 +195,7 @@ export type PersistedDirectiveDefinitionData = {
   executableLocations: Set<string>;
   name: string;
   repeatable: boolean;
-  subgraphNames: Set<string>;
+  subgraphNames: Set<SubgraphName>;
   description?: StringValueNode;
 };
 
@@ -213,7 +214,7 @@ export type ScalarDefinitionData = {
   name: string;
   node: MutableScalarNode;
   persistedDirectivesData: PersistedDirectivesData;
-  subgraphNames: Set<string>;
+  subgraphNames: Set<SubgraphName>;
   description?: StringValueNode;
 };
 
@@ -226,7 +227,7 @@ export type SchemaData = {
 };
 
 export type UnionDefinitionData = {
-  configureDescriptionDataBySubgraphName: Map<string, ConfigureDescriptionData>;
+  configureDescriptionDataBySubgraphName: Map<SubgraphName, ConfigureDescriptionData>;
   directivesByDirectiveName: Map<string, Array<ConstDirectiveNode>>;
   extensionType: ExtensionType;
   kind: Kind.UNION_TYPE_DEFINITION;
@@ -234,7 +235,7 @@ export type UnionDefinitionData = {
   memberByMemberTypeName: Map<string, NamedTypeNode>;
   node: MutableUnionNode;
   persistedDirectivesData: PersistedDirectivesData;
-  subgraphNames: Set<string>;
+  subgraphNames: Set<SubgraphName>;
   description?: StringValueNode;
 };
 
@@ -269,7 +270,7 @@ export type EntityData = {
   documentNodeByKeyFieldSet: Map<string, DocumentNode>;
   keyFieldSets: Set<string>;
   keyFieldSetDatasBySubgraphName: Map<string, Map<string, KeyFieldSetData>>;
-  subgraphNames: Set<string>;
+  subgraphNames: Set<SubgraphName>;
   typeName: string;
 };
 
@@ -320,7 +321,7 @@ export type ConditionalFieldData = {
 
 export type EntityInterfaceFederationData = {
   concreteTypeNames: Set<string>;
-  fieldDatasBySubgraphName: Map<string, Array<SimpleFieldData>>;
+  fieldDatasBySubgraphName: Map<SubgraphName, Array<SimpleFieldData>>;
   interfaceFieldNames: Set<string>;
   interfaceObjectFieldNames: Set<string>;
   interfaceObjectSubgraphs: Set<string>;

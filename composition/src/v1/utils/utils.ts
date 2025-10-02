@@ -33,6 +33,8 @@ import { KeyFieldSetData } from '../normalization/types';
 import { MAX_OR_SCOPES } from './constants';
 import 'core-js/modules/esnext.set.is-subset-of.v2';
 import 'core-js/modules/esnext.set.is-superset-of.v2';
+import { CompositeOutputNodeKind } from '../../ast/utils';
+import { COMPOSITE_OUTPUT_NODE_KINDS } from './string-constants';
 
 export function subtractSet<T>(source: Set<T>, target: Set<T>) {
   for (const entry of source) {
@@ -435,6 +437,10 @@ export function upsertAuthorizationConfiguration(
 
 export function isNodeKindObject(kind: Kind) {
   return kind === Kind.OBJECT_TYPE_DEFINITION || kind === Kind.OBJECT_TYPE_EXTENSION;
+}
+
+export function isCompositeOutputNodeKind(kind: Kind): kind is CompositeOutputNodeKind {
+  return COMPOSITE_OUTPUT_NODE_KINDS.has(kind);
 }
 
 export function isObjectDefinitionData(data?: ParentDefinitionData): data is ObjectDefinitionData {

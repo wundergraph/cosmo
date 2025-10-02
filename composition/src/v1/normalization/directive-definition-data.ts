@@ -649,7 +649,7 @@ export const REDIS_SUBSCRIBE_DEFINITION_DATA: DirectiveDefinitionData = {
 export const REQUIRE_FETCH_REASONS_DEFINITION_DATA: DirectiveDefinitionData = {
   argumentTypeNodeByArgumentName: new Map<string, ArgumentData>(),
   isRepeatable: true,
-  locations: new Set<string>([FIELD_DEFINITION_UPPER, OBJECT_UPPER]),
+  locations: new Set<string>([FIELD_DEFINITION_UPPER, INTERFACE_UPPER, OBJECT_UPPER]),
   name: REQUIRE_FETCH_REASONS,
   node: REQUIRE_FETCH_REASONS_DEFINITION,
   optionalArgumentNames: new Set<string>(),
