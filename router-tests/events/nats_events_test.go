@@ -1208,79 +1208,6 @@ func TestNatsEvents(t *testing.T) {
 		})
 	})
 
-	t.Run("subscribe ws with filter", func(t *testing.T) {
-		t.Parallel()
-
-		testenv.Run(t, &testenv.Config{
-			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
-			EnableNats:               true,
-			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
-				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Second
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			type subscriptionPayload struct {
-				Data struct {
-					FilteredEmployeeUpdated struct {
-						ID      float64 `graphql:"id"`
-						Details struct {
-							Forename string `graphql:"forename"`
-							Surname  string `graphql:"surname"`
-						} `graphql:"details"`
-					} `graphql:"filteredEmployeeUpdated(id: 1)"`
-				} `json:"data"`
-			}
-
-			// conn.Close() is called in a cleanup defined in the function
-			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
-			err := conn.WriteJSON(&testenv.WebSocketMessage{
-				ID:      "1",
-				Type:    "subscribe",
-				Payload: []byte(`{"query":"subscription { filteredEmployeeUpdated(id: 1) { id details { forename, surname } } }"}`),
-			})
-
-			require.NoError(t, err)
-
-			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
-
-			testData := map[uint32]struct{ forename, surname string }{
-				1:  {forename: "Jens", surname: "Neuse"},
-				3:  {forename: "Stefan", surname: "Avram"},
-				4:  {forename: "Björn", surname: "Schwenzer"},
-				5:  {forename: "Sergiy", surname: "Petrunin"},
-				7:  {forename: "Suvij", surname: "Surya"},
-				8:  {forename: "Nithin", surname: "Kumar"},
-				11: {forename: "Alexandra", surname: "Neuse"},
-			}
-
-			var msg testenv.WebSocketMessage
-			var payload subscriptionPayload
-			// This loop is used to test the filter
-			// It will emit 12 events, and only 7 of them should be included:
-			// 1, 3, 4, 5, 7, 8, and 11
-			for i := uint32(1); i < 13; i++ {
-				err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), []byte(fmt.Sprintf(`{"id":%d,"__typename":"Employee"}`, i)))
-				require.NoError(t, err)
-				err = xEnv.NatsConnectionDefault.Flush()
-				require.NoError(t, err)
-
-				// Should get the message only for the events that should be included
-				// if some message is not filtered out, the test will fail
-				switch i {
-				case 1, 3, 4, 5, 7, 8, 11:
-					gErr := conn.ReadJSON(&msg)
-					require.NoError(t, gErr)
-					require.Equal(t, "1", msg.ID)
-					require.Equal(t, "next", msg.Type)
-					gErr = json.Unmarshal(msg.Payload, &payload)
-					require.NoError(t, gErr)
-					require.Equal(t, float64(i), payload.Data.FilteredEmployeeUpdated.ID)
-					require.Equal(t, testData[i].forename, payload.Data.FilteredEmployeeUpdated.Details.Forename)
-					require.Equal(t, testData[i].surname, payload.Data.FilteredEmployeeUpdated.Details.Surname)
-				}
-			}
-		})
-	})
-
 	t.Run("message with invalid JSON should give a specific error", func(t *testing.T) {
 		t.Parallel()
 
@@ -1717,6 +1644,79 @@ func TestFlakyNatsEvents(t *testing.T) {
 					line, _, gErr = reader.ReadLine()
 					require.NoError(t, gErr)
 					require.Equal(t, "", string(line))
+				}
+			}
+		})
+	})
+
+	t.Run("subscribe ws with filter", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               true,
+			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
+				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Second
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			type subscriptionPayload struct {
+				Data struct {
+					FilteredEmployeeUpdated struct {
+						ID      float64 `graphql:"id"`
+						Details struct {
+							Forename string `graphql:"forename"`
+							Surname  string `graphql:"surname"`
+						} `graphql:"details"`
+					} `graphql:"filteredEmployeeUpdated(id: 1)"`
+				} `json:"data"`
+			}
+
+			// conn.Close() is called in a cleanup defined in the function
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+			err := conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { filteredEmployeeUpdated(id: 1) { id details { forename, surname } } }"}`),
+			})
+
+			require.NoError(t, err)
+
+			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
+
+			testData := map[uint32]struct{ forename, surname string }{
+				1:  {forename: "Jens", surname: "Neuse"},
+				3:  {forename: "Stefan", surname: "Avram"},
+				4:  {forename: "Björn", surname: "Schwenzer"},
+				5:  {forename: "Sergiy", surname: "Petrunin"},
+				7:  {forename: "Suvij", surname: "Surya"},
+				8:  {forename: "Nithin", surname: "Kumar"},
+				11: {forename: "Alexandra", surname: "Neuse"},
+			}
+
+			var msg testenv.WebSocketMessage
+			var payload subscriptionPayload
+			// This loop is used to test the filter
+			// It will emit 12 events, and only 7 of them should be included:
+			// 1, 3, 4, 5, 7, 8, and 11
+			for i := uint32(1); i < 13; i++ {
+				err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), []byte(fmt.Sprintf(`{"id":%d,"__typename":"Employee"}`, i)))
+				require.NoError(t, err)
+				err = xEnv.NatsConnectionDefault.Flush()
+				require.NoError(t, err)
+
+				// Should get the message only for the events that should be included
+				// if some message is not filtered out, the test will fail
+				switch i {
+				case 1, 3, 4, 5, 7, 8, 11:
+					gErr := conn.ReadJSON(&msg)
+					require.NoError(t, gErr)
+					require.Equal(t, "1", msg.ID)
+					require.Equal(t, "next", msg.Type)
+					gErr = json.Unmarshal(msg.Payload, &payload)
+					require.NoError(t, gErr)
+					require.Equal(t, float64(i), payload.Data.FilteredEmployeeUpdated.ID)
+					require.Equal(t, testData[i].forename, payload.Data.FilteredEmployeeUpdated.Details.Forename)
+					require.Equal(t, testData[i].surname, payload.Data.FilteredEmployeeUpdated.Details.Surname)
 				}
 			}
 		})
