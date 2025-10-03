@@ -397,52 +397,6 @@ describe('Operations to Proto - Custom Scalar Mapping', () => {
     });
   });
 
-  describe('Custom Scalar Validation and Error Handling', () => {
-    test.skip('should handle custom scalar validation errors', () => {
-      const operation = {
-        name: 'InvalidScalarUsage',
-        content: `
-          query InvalidScalarUsage {
-            employee(id: 1) {
-              createdAt {
-                # This should fail - DateTime is a scalar, not an object
-                year
-                month
-                day
-              }
-            }
-          }
-        `,
-      };
-
-      expect(() => {
-        const visitor = new OperationToProtoVisitor(SDL, [operation]);
-        visitor.visit();
-      }).toThrow('Cannot query field "year" on type "DateTime"');
-    });
-
-    test.skip('should provide helpful error messages for custom scalar misuse', () => {
-      const operation = {
-        name: 'ScalarMisuse',
-        content: `
-          mutation ScalarMisuse {
-            createEvent(input: {
-              title: "Test Event"
-              startTime: 123456789  # Should be DateTime string, not number
-            }) {
-              id
-            }
-          }
-        `,
-      };
-
-      expect(() => {
-        const visitor = new OperationToProtoVisitor(SDL, [operation]);
-        visitor.visit();
-      }).toThrow('Expected type "DateTime!", found 123456789');
-    });
-  });
-
   describe('Performance with Many Custom Scalars', () => {
     test('should efficiently handle operations with many custom scalar fields', () => {
       const operation = {

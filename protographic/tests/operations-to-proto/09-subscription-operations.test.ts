@@ -453,22 +453,6 @@ describe('Operations to Proto - Subscription Operations', () => {
         visitor.visit();
       }).toThrow('Field \'nonExistentField\' not found on type \'Subscription\'');
     });
-
-    test.skip('should handle subscription operations with invalid argument types', () => {
-      const operation = {
-        name: 'InvalidArguments',
-        content: `
-          subscription InvalidArguments($wrongType: String!) {
-            countEmp(max: $wrongType, intervalMilliseconds: 1000)
-          }
-        `,
-      };
-
-      expect(() => {
-        const visitor = new OperationToProtoVisitor(SDL, [operation]);
-        visitor.visit();
-      }).toThrow('Variable "$wrongType" of type "String!" used in position expecting type "Int!"');
-    });
   });
 
   describe('Subscription with Fragments', () => {
