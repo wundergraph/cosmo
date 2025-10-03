@@ -458,7 +458,7 @@ describe('Operations to Proto - Integration Tests', () => {
     expect(protoText).toContain('message GetCompleteEmployeeEmployeeHobbiesGaming');
   });
 
-  test.skip('should handle complex mutation with file uploads - nested input generation not fully supported yet', () => {
+  test('should handle complex mutation with file uploads', () => {
     const operations = [
       {
         name: 'UploadWithInput',
