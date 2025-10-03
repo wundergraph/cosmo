@@ -3,6 +3,7 @@ import * as Sentry from '@sentry/node';
 
 import { nodeProfilingIntegration } from '@sentry/profiling-node';
 import { eventLoopBlockIntegration } from '@sentry/node-native';
+import { fastifyIntegration } from '@sentry/node';
 
 export interface SentryConfig {
   sentry: {
@@ -21,6 +22,7 @@ export function init(opts: SentryConfig) {
     Sentry.init({
       dsn: opts.sentry.dsn,
       integrations: [
+        fastifyIntegration(),
         eventLoopBlockIntegration({ threshold: opts.sentry.eventLoopBlockIntegrationThresholdMs }),
         nodeProfilingIntegration(),
       ],
