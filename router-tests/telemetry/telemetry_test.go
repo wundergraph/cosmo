@@ -2924,8 +2924,9 @@ func TestFlakyTelemetry(t *testing.T) {
 		exporter := tracetest.NewInMemoryExporter(t)
 
 		testenv.Run(t, &testenv.Config{
-			TraceExporter: exporter,
-			MetricReader:  metricReader,
+			TraceExporter:              exporter,
+			MetricReader:               metricReader,
+			OperationContentAttributes: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employees { id } }`,
@@ -2976,7 +2977,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			// Span attributes
 
-			require.Len(t, sn[1].Attributes(), 7)
+			require.Len(t, sn[1].Attributes(), 8)
 			require.Contains(t, sn[1].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[1].Attributes(), otel.WgRouterClusterName.String(""))
 			require.Contains(t, sn[1].Attributes(), otel.WgFederatedGraphID.String("graph"))
@@ -2984,6 +2985,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, sn[1].Attributes(), otel.WgClientName.String("unknown"))
 			require.Contains(t, sn[1].Attributes(), otel.WgClientVersion.String("missing"))
 			require.Contains(t, sn[1].Attributes(), otel.WgOperationProtocol.String("http"))
+			require.Contains(t, sn[1].Attributes(), otel.WgOperationOriginalContent.String("query { employees { id } }"))
 
 			require.Equal(t, "Operation - Normalize", sn[2].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[2].SpanKind())
@@ -3008,7 +3010,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			// Span attributes
 
-			require.Len(t, sn[2].Attributes(), 10)
+			require.Len(t, sn[2].Attributes(), 11)
 
 			require.Contains(t, sn[2].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[2].Attributes(), otel.WgRouterClusterName.String(""))
@@ -3020,6 +3022,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, sn[2].Attributes(), otel.WgClientName.String("unknown"))
 			require.Contains(t, sn[2].Attributes(), otel.WgClientVersion.String("missing"))
 			require.Contains(t, sn[2].Attributes(), otel.WgOperationProtocol.String("http"))
+			require.Contains(t, sn[2].Attributes(), otel.WgOperationNormalizedContent.String("{employees {id}}"))
 
 			require.Equal(t, "Operation - Validate", sn[3].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[3].SpanKind())
@@ -3252,7 +3255,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			sa = attribute.NewSet(sn[8].Attributes()...)
 
-			require.Len(t, sn[8].Attributes(), 26)
+			require.Len(t, sn[8].Attributes(), 25)
 			require.True(t, sa.HasValue(semconv.NetHostPortKey))
 			require.True(t, sa.HasValue(semconv.NetSockPeerAddrKey))
 			require.True(t, sa.HasValue(semconv.NetSockPeerPortKey))
@@ -3277,7 +3280,6 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, sn[8].Attributes(), otel.WgOperationProtocol.String("http"))
 			require.Contains(t, sn[8].Attributes(), otel.WgOperationName.String(""))
 			require.Contains(t, sn[8].Attributes(), otel.WgOperationType.String("query"))
-			require.Contains(t, sn[8].Attributes(), otel.WgOperationContent.String("{employees {id}}"))
 			require.Contains(t, sn[8].Attributes(), otel.WgFederatedGraphID.String("graph"))
 			require.Contains(t, sn[8].Attributes(), otel.WgOperationHash.String("1163600561566987607"))
 			require.Contains(t, sn[8].Attributes(), semconv.HTTPStatusCode(200))
@@ -3631,8 +3633,9 @@ func TestFlakyTelemetry(t *testing.T) {
 		exporter := tracetest.NewInMemoryExporter(t)
 
 		testenv.Run(t, &testenv.Config{
-			TraceExporter: exporter,
-			MetricReader:  metricReader,
+			TraceExporter:              exporter,
+			MetricReader:               metricReader,
+			OperationContentAttributes: true,
 			RouterOptions: []core.Option{
 				core.WithSubgraphTransportOptions(
 					core.NewSubgraphTransportOptions(config.TrafficShapingRules{
@@ -3696,7 +3699,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			// Span attributes
 
-			require.Len(t, sn[1].Attributes(), 7)
+			require.Len(t, sn[1].Attributes(), 8)
 			require.Contains(t, sn[1].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[1].Attributes(), otel.WgRouterClusterName.String(""))
 			require.Contains(t, sn[1].Attributes(), otel.WgFederatedGraphID.String("graph"))
@@ -3704,6 +3707,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, sn[1].Attributes(), otel.WgClientName.String("unknown"))
 			require.Contains(t, sn[1].Attributes(), otel.WgClientVersion.String("missing"))
 			require.Contains(t, sn[1].Attributes(), otel.WgOperationProtocol.String("http"))
+			require.Contains(t, sn[1].Attributes(), otel.WgOperationOriginalContent.String("{ employee(id:1) { id details { forename surname } } }"))
 
 			require.Equal(t, "Operation - Normalize", sn[2].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[2].SpanKind())
@@ -3728,7 +3732,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			// Span attributes
 
-			require.Len(t, sn[2].Attributes(), 10)
+			require.Len(t, sn[2].Attributes(), 11)
 
 			require.Contains(t, sn[2].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[2].Attributes(), otel.WgRouterClusterName.String(""))
@@ -3740,6 +3744,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, sn[2].Attributes(), otel.WgClientName.String("unknown"))
 			require.Contains(t, sn[2].Attributes(), otel.WgClientVersion.String("missing"))
 			require.Contains(t, sn[2].Attributes(), otel.WgOperationProtocol.String("http"))
+			require.Contains(t, sn[2].Attributes(), otel.WgOperationNormalizedContent.String("query($a: Int!){employee(id: $a){id details {forename surname}}}"))
 
 			require.Equal(t, "Operation - Validate", sn[3].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[3].SpanKind())
@@ -3972,7 +3977,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			sa = attribute.NewSet(sn[8].Attributes()...)
 
-			require.Len(t, sn[8].Attributes(), 26)
+			require.Len(t, sn[8].Attributes(), 25)
 			require.True(t, sa.HasValue(semconv.NetHostPortKey))
 			require.True(t, sa.HasValue(semconv.NetSockPeerAddrKey))
 			require.True(t, sa.HasValue(semconv.NetSockPeerPortKey))
@@ -3997,7 +4002,6 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, sn[8].Attributes(), otel.WgOperationProtocol.String("http"))
 			require.Contains(t, sn[8].Attributes(), otel.WgOperationName.String(""))
 			require.Contains(t, sn[8].Attributes(), otel.WgOperationType.String("query"))
-			require.Contains(t, sn[8].Attributes(), otel.WgOperationContent.String("query($a: Int!){employee(id: $a){id details {forename surname}}}"))
 			require.Contains(t, sn[8].Attributes(), otel.WgFederatedGraphID.String("graph"))
 			require.Contains(t, sn[8].Attributes(), otel.WgOperationHash.String("14671468813149144966"))
 			require.Contains(t, sn[8].Attributes(), semconv.HTTPStatusCode(200))
@@ -4036,8 +4040,9 @@ func TestFlakyTelemetry(t *testing.T) {
 		exporter := tracetest.NewInMemoryExporter(t)
 
 		testenv.Run(t, &testenv.Config{
-			TraceExporter: exporter,
-			MetricReader:  metricReader,
+			TraceExporter:              exporter,
+			MetricReader:               metricReader,
+			OperationContentAttributes: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			listArgQuery := "1000000000000000000000000000000000000000000000000000000000000000"
 			header := make(http.Header)
@@ -4098,6 +4103,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			TraceExporter:                exporter,
 			MetricReader:                 metricReader,
 			DisableSimulateCloudExporter: true,
+			OperationContentAttributes:   true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employees { id } }`,
@@ -4148,7 +4154,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			// Span attributes
 
-			require.Len(t, sn[1].Attributes(), 7)
+			require.Len(t, sn[1].Attributes(), 8)
 			require.Contains(t, sn[1].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[1].Attributes(), otel.WgRouterClusterName.String(""))
 			require.Contains(t, sn[1].Attributes(), otel.WgFederatedGraphID.String("graph"))
@@ -4156,6 +4162,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, sn[1].Attributes(), otel.WgClientName.String("unknown"))
 			require.Contains(t, sn[1].Attributes(), otel.WgClientVersion.String("missing"))
 			require.Contains(t, sn[1].Attributes(), otel.WgOperationProtocol.String("http"))
+			require.Contains(t, sn[1].Attributes(), otel.WgOperationOriginalContent.String("query { employees { id } }"))
 
 			require.Equal(t, "Operation - Normalize", sn[2].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[2].SpanKind())
@@ -4180,7 +4187,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			// Span attributes
 
-			require.Len(t, sn[2].Attributes(), 10)
+			require.Len(t, sn[2].Attributes(), 11)
 
 			require.Contains(t, sn[2].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[2].Attributes(), otel.WgRouterClusterName.String(""))
@@ -4192,6 +4199,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, sn[2].Attributes(), otel.WgClientName.String("unknown"))
 			require.Contains(t, sn[2].Attributes(), otel.WgClientVersion.String("missing"))
 			require.Contains(t, sn[2].Attributes(), otel.WgOperationProtocol.String("http"))
+			require.Contains(t, sn[2].Attributes(), otel.WgOperationNormalizedContent.String("{employees {id}}"))
 
 			require.Equal(t, "Operation - Validate", sn[3].Name())
 			require.Equal(t, trace.SpanKindInternal, sn[3].SpanKind())
@@ -4424,7 +4432,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			sa = attribute.NewSet(sn[8].Attributes()...)
 
-			require.Len(t, sn[8].Attributes(), 26)
+			require.Len(t, sn[8].Attributes(), 25)
 			require.True(t, sa.HasValue(semconv.NetHostPortKey))
 			require.True(t, sa.HasValue(semconv.NetSockPeerAddrKey))
 			require.True(t, sa.HasValue(semconv.NetSockPeerPortKey))
@@ -4449,7 +4457,6 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, sn[8].Attributes(), otel.WgOperationProtocol.String("http"))
 			require.Contains(t, sn[8].Attributes(), otel.WgOperationName.String(""))
 			require.Contains(t, sn[8].Attributes(), otel.WgOperationType.String("query"))
-			require.Contains(t, sn[8].Attributes(), otel.WgOperationContent.String("{employees {id}}"))
 			require.Contains(t, sn[8].Attributes(), otel.WgFederatedGraphID.String("graph"))
 			require.Contains(t, sn[8].Attributes(), otel.WgOperationHash.String("1163600561566987607"))
 			require.Contains(t, sn[8].Attributes(), semconv.HTTPStatusCode(200))
@@ -6317,8 +6324,9 @@ func TestFlakyTelemetry(t *testing.T) {
 		exporter := tracetest.NewInMemoryExporter(t)
 
 		testenv.Run(t, &testenv.Config{
-			TraceExporter: exporter,
-			MetricReader:  metricReader,
+			TraceExporter:              exporter,
+			MetricReader:               metricReader,
+			OperationContentAttributes: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employees { id } }`,
@@ -6336,12 +6344,12 @@ func TestFlakyTelemetry(t *testing.T) {
 			 */
 
 			require.Equal(t, "Operation - Parse", sn[1].Name())
-			require.Len(t, sn[1].Attributes(), 8)
+			require.Len(t, sn[1].Attributes(), 9)
 			require.Contains(t, sn[1].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()))
 			require.Contains(t, sn[1].Attributes(), otel.WgFeatureFlag.String("myff"))
 
 			require.Equal(t, "Operation - Normalize", sn[2].Name())
-			require.Len(t, sn[2].Attributes(), 11)
+			require.Len(t, sn[2].Attributes(), 12)
 			require.Contains(t, sn[2].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()))
 			require.Contains(t, sn[2].Attributes(), otel.WgFeatureFlag.String("myff"))
 
@@ -6372,7 +6380,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, sn[7].Attributes(), otel.WgFeatureFlag.String("myff"))
 
 			require.Equal(t, "query unnamed", sn[8].Name())
-			require.Len(t, sn[8].Attributes(), 27)
+			require.Len(t, sn[8].Attributes(), 26)
 
 			require.Contains(t, sn[8].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()))
 			require.Contains(t, sn[8].Attributes(), otel.WgFeatureFlag.String("myff"))
@@ -7104,7 +7112,8 @@ func TestFlakyTelemetry(t *testing.T) {
 
 		exporter := tracetest.NewInMemoryExporter(t)
 		testenv.Run(t, &testenv.Config{
-			TraceExporter: exporter,
+			TraceExporter:              exporter,
+			OperationContentAttributes: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `invalid query`,
@@ -7119,7 +7128,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Equal(t, codes.Error, sn[1].Status().Code)
 			require.Contains(t, sn[1].Status().Description, "unexpected literal - got: UNDEFINED want one of: [ENUM TYPE UNION QUERY INPUT EXTEND SCHEMA SCALAR FRAGMENT INTERFACE DIRECTIVE]")
 
-			require.Lenf(t, sn[1].Attributes(), 8, "expected 8 attributes, got %d", len(sn[1].Attributes()))
+			require.Lenf(t, sn[1].Attributes(), 9, "expected 9 attributes, got %d", len(sn[1].Attributes()))
 
 			require.Contains(t, sn[1].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[1].Attributes(), otel.WgRouterClusterName.String(""))
@@ -7129,6 +7138,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, sn[1].Attributes(), otel.WgRequestError.Bool(true))
 			require.Contains(t, sn[1].Attributes(), otel.WgClientVersion.String("missing"))
 			require.Contains(t, sn[1].Attributes(), otel.WgOperationProtocol.String("http"))
+			require.Contains(t, sn[1].Attributes(), otel.WgOperationOriginalContent.String("invalid query"))
 
 			events := sn[1].Events()
 			require.Len(t, events, 1, "expected 1 event because the GraphQL parsing failed")
@@ -8751,8 +8761,9 @@ func TestFlakyTelemetry(t *testing.T) {
 			defer exporter.Reset()
 
 			testenv.Run(t, &testenv.Config{
-				TraceExporter: exporter,
-				MetricReader:  metricReader,
+				TraceExporter:              exporter,
+				MetricReader:               metricReader,
+				OperationContentAttributes: true,
 				CustomMetricAttributes: []config.CustomAttribute{
 					{
 						Key: "from_header",
@@ -8791,11 +8802,11 @@ func TestFlakyTelemetry(t *testing.T) {
 
 				require.Equal(t, "Operation - Parse", sn[1].Name())
 				require.Len(t, sn[1].Resource().Attributes(), 9)
-				require.Len(t, sn[1].Attributes(), 7)
+				require.Len(t, sn[1].Attributes(), 8)
 
 				require.Equal(t, "Operation - Normalize", sn[2].Name())
 				require.Len(t, sn[2].Resource().Attributes(), 9)
-				require.Len(t, sn[2].Attributes(), 10)
+				require.Len(t, sn[2].Attributes(), 11)
 
 				require.Equal(t, "Operation - Validate", sn[3].Name())
 				require.Len(t, sn[3].Resource().Attributes(), 9)
@@ -8822,7 +8833,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				// Root Server middleware
 				require.Equal(t, "query unnamed", sn[8].Name())
 				require.Len(t, sn[8].Resource().Attributes(), 9)
-				require.Len(t, sn[8].Attributes(), 26)
+				require.Len(t, sn[8].Attributes(), 25)
 			})
 		})
 	})
@@ -9953,7 +9964,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 
 						rm := metricdata.ResourceMetrics{}
 						err := metricReader.Collect(context.Background(), &rm)
-						require.NoError(t, err)
+						require.NoError(t, err, "failed to collect metrics")
 
 						firstDataPoint := []attribute.KeyValue{
 							semconv.HTTPStatusCode(200),
@@ -10045,7 +10056,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 
 					rm := metricdata.ResourceMetrics{}
 					err := metricReader.Collect(context.Background(), &rm)
-					require.NoError(t, err)
+					require.NoError(t, err, "failed to collect metrics")
 
 					firstDataPoint := []attribute.KeyValue{
 						semconv.HTTPStatusCode(200),
@@ -10454,6 +10465,99 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 				})
 			})
 		}
+	})
+}
 
+func TestOperationBodyAttributes(t *testing.T) {
+	t.Parallel()
+
+	const employeesIDData = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
+
+	t.Run("attributes should be present when OperationContentAttributes enabled", func(t *testing.T) {
+		t.Parallel()
+
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter:              exporter,
+			OperationContentAttributes: true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			sn := exporter.GetSpans().Snapshots()
+			require.Len(t, sn, 9)
+
+			// Check that original operation content is present in parse span
+			require.Equal(t, "Operation - Parse", sn[1].Name())
+			require.Contains(t, sn[1].Attributes(), otel.WgOperationOriginalContent.String("query { employees { id } }"))
+
+			// Check that normalized operation content is present in normalize span
+			require.Equal(t, "Operation - Normalize", sn[2].Name())
+			require.Contains(t, sn[2].Attributes(), otel.WgOperationNormalizedContent.String("{employees {id}}"))
+		})
+	})
+
+	t.Run("attributes should not be present when OperationContentAttributes are disabled", func(t *testing.T) {
+		t.Parallel()
+
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter:              exporter,
+			OperationContentAttributes: false, // Explicitly set to false (this is also the default)
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			sn := exporter.GetSpans().Snapshots()
+			require.Len(t, sn, 9)
+
+			// Check that original operation content is NOT present in parse span
+			require.Equal(t, "Operation - Parse", sn[1].Name())
+			for _, attr := range sn[1].Attributes() {
+				require.NotEqual(t, otel.WgOperationOriginalContent, attr.Key, "WgOperationOriginalContent should not be present when OperationContentAttributes are disabled")
+			}
+
+			// Check that normalized operation content is NOT present in normalize span
+			require.Equal(t, "Operation - Normalize", sn[2].Name())
+			for _, attr := range sn[2].Attributes() {
+				require.NotEqual(t, otel.WgOperationNormalizedContent, attr.Key, "WgOperationNormalizedContent should not be present when OperationContentAttributes are disabled")
+			}
+		})
+	})
+
+	t.Run("attributes should not be present when OperationContentAttributes defaulted", func(t *testing.T) {
+		t.Parallel()
+
+		exporter := tracetest.NewInMemoryExporter(t)
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+			// OperationContentAttributes not set, should default to false
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+
+			sn := exporter.GetSpans().Snapshots()
+			require.Len(t, sn, 9)
+
+			// Check that operation content attributes are NOT present by default
+			require.Equal(t, "Operation - Parse", sn[1].Name())
+			for _, attr := range sn[1].Attributes() {
+				require.NotEqual(t, otel.WgOperationOriginalContent, attr.Key, "WgOperationOriginalContent should not be present by default")
+			}
+
+			require.Equal(t, "Operation - Normalize", sn[2].Name())
+			for _, attr := range sn[2].Attributes() {
+				require.NotEqual(t, otel.WgOperationNormalizedContent, attr.Key, "WgOperationNormalizedContent should not be present by default")
+			}
+		})
 	})
 }
