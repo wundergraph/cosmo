@@ -1414,7 +1414,7 @@ func (s *graphServer) buildGraphMux(
 		ExprManager:                 exprManager,
 		OmitBatchExtensions:         s.batchingConfig.OmitExtensions,
 
-		EnableOperationBodyAttributes: s.traceConfig.EnableOperationBodyAttributes,
+		OperationContentAttributes: s.traceConfig.OperationContentAttributes,
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {

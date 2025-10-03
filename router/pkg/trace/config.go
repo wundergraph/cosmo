@@ -60,8 +60,8 @@ type Config struct {
 	Sampler float64
 	// ParentBasedSampler specifies if the parent-based sampler should be used. The default value is true.
 	ParentBasedSampler bool
-	// EnableOperationBodyAttributes controls whether GraphQL operation body content is added as trace attributes
-	EnableOperationBodyAttributes bool
+	// OperationContentAttributes controls whether GraphQL operation body content is added as trace attributes
+	OperationContentAttributes bool
 	// ExportGraphQLVariables defines if and how GraphQL variables should be exported as span attributes.
 	ExportGraphQLVariables ExportGraphQLVariables
 	Exporters              []*ExporterConfig
@@ -96,14 +96,14 @@ func DefaultExporter(cfg *Config) *ExporterConfig {
 // DefaultConfig returns the default config.
 func DefaultConfig(serviceVersion string) *Config {
 	return &Config{
-		Enabled:                       false,
-		Name:                          ServerName,
-		Version:                       serviceVersion,
-		Sampler:                       1,
-		WithNewRoot:                   false,
-		ParentBasedSampler:            true,
-		EnableOperationBodyAttributes: false,
-		Attributes:                    make([]config.CustomAttribute, 0),
+		Enabled:                    false,
+		Name:                       ServerName,
+		Version:                    serviceVersion,
+		Sampler:                    1,
+		WithNewRoot:                false,
+		ParentBasedSampler:         true,
+		OperationContentAttributes: false,
+		Attributes:                 make([]config.CustomAttribute, 0),
 		ExportGraphQLVariables: ExportGraphQLVariables{
 			Enabled: true,
 		},

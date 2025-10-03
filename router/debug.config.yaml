@@ -24,7 +24,7 @@ telemetry:
   tracing:
     enabled: true
     sampling_rate: 1
-    enable_operation_body_attributes: true
+    operation_content_attributes: true
 
     exporters:
       - exporter: http

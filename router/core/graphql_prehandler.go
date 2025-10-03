@@ -70,7 +70,7 @@ type PreHandlerOptions struct {
 	ExprManager                 *expr.Manager
 	OmitBatchExtensions         bool
 
-	EnableOperationBodyAttributes bool
+	OperationContentAttributes bool
 }
 
 type PreHandler struct {
@@ -105,7 +105,7 @@ type PreHandler struct {
 	exprManager                 *expr.Manager
 	omitBatchExtensions         bool
 
-	enableOperationBodyAttributes bool
+	operationContentAttributes bool
 }
 
 type httpOperation struct {
@@ -153,7 +153,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		exprManager:               opts.ExprManager,
 		omitBatchExtensions:       opts.OmitBatchExtensions,
 
-		enableOperationBodyAttributes: opts.EnableOperationBodyAttributes,
+		operationContentAttributes: opts.OperationContentAttributes,
 	}
 }
 
@@ -638,7 +638,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		)
 
 		// Set the original operation on the parse span
-		if h.enableOperationBodyAttributes {
+		if h.operationContentAttributes {
 			engineParseSpan.SetAttributes(otel.WgOperationOriginalContent.String(operationKit.parsedOperation.Request.Query))
 		}
 
@@ -903,7 +903,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	}
 
 	// Set the normalized operation on the span
-	if h.enableOperationBodyAttributes {
+	if h.operationContentAttributes {
 		engineNormalizeSpan.SetAttributes(otel.WgOperationNormalizedContent.String(operationKit.parsedOperation.NormalizedRepresentation))
 	}
 

@@ -2924,9 +2924,9 @@ func TestFlakyTelemetry(t *testing.T) {
 		exporter := tracetest.NewInMemoryExporter(t)
 
 		testenv.Run(t, &testenv.Config{
-			TraceExporter:                 exporter,
-			MetricReader:                  metricReader,
-			EnableOperationBodyAttributes: true,
+			TraceExporter:              exporter,
+			MetricReader:               metricReader,
+			OperationContentAttributes: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employees { id } }`,
@@ -3633,9 +3633,9 @@ func TestFlakyTelemetry(t *testing.T) {
 		exporter := tracetest.NewInMemoryExporter(t)
 
 		testenv.Run(t, &testenv.Config{
-			TraceExporter:                 exporter,
-			MetricReader:                  metricReader,
-			EnableOperationBodyAttributes: true,
+			TraceExporter:              exporter,
+			MetricReader:               metricReader,
+			OperationContentAttributes: true,
 			RouterOptions: []core.Option{
 				core.WithSubgraphTransportOptions(
 					core.NewSubgraphTransportOptions(config.TrafficShapingRules{
@@ -4040,9 +4040,9 @@ func TestFlakyTelemetry(t *testing.T) {
 		exporter := tracetest.NewInMemoryExporter(t)
 
 		testenv.Run(t, &testenv.Config{
-			TraceExporter:                 exporter,
-			MetricReader:                  metricReader,
-			EnableOperationBodyAttributes: true,
+			TraceExporter:              exporter,
+			MetricReader:               metricReader,
+			OperationContentAttributes: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			listArgQuery := "1000000000000000000000000000000000000000000000000000000000000000"
 			header := make(http.Header)
@@ -4100,10 +4100,10 @@ func TestFlakyTelemetry(t *testing.T) {
 		exporter := tracetest.NewInMemoryExporter(t)
 
 		testenv.Run(t, &testenv.Config{
-			TraceExporter:                 exporter,
-			MetricReader:                  metricReader,
-			DisableSimulateCloudExporter:  true,
-			EnableOperationBodyAttributes: true,
+			TraceExporter:                exporter,
+			MetricReader:                 metricReader,
+			DisableSimulateCloudExporter: true,
+			OperationContentAttributes:   true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employees { id } }`,
@@ -6324,9 +6324,9 @@ func TestFlakyTelemetry(t *testing.T) {
 		exporter := tracetest.NewInMemoryExporter(t)
 
 		testenv.Run(t, &testenv.Config{
-			TraceExporter:                 exporter,
-			MetricReader:                  metricReader,
-			EnableOperationBodyAttributes: true,
+			TraceExporter:              exporter,
+			MetricReader:               metricReader,
+			OperationContentAttributes: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employees { id } }`,
@@ -7112,8 +7112,8 @@ func TestFlakyTelemetry(t *testing.T) {
 
 		exporter := tracetest.NewInMemoryExporter(t)
 		testenv.Run(t, &testenv.Config{
-			TraceExporter:                 exporter,
-			EnableOperationBodyAttributes: true,
+			TraceExporter:              exporter,
+			OperationContentAttributes: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `invalid query`,
@@ -8761,9 +8761,9 @@ func TestFlakyTelemetry(t *testing.T) {
 			defer exporter.Reset()
 
 			testenv.Run(t, &testenv.Config{
-				TraceExporter:                 exporter,
-				MetricReader:                  metricReader,
-				EnableOperationBodyAttributes: true,
+				TraceExporter:              exporter,
+				MetricReader:               metricReader,
+				OperationContentAttributes: true,
 				CustomMetricAttributes: []config.CustomAttribute{
 					{
 						Key: "from_header",
@@ -10473,14 +10473,14 @@ func TestOperationBodyAttributes(t *testing.T) {
 
 	const employeesIDData = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
 
-	t.Run("attributes should be present when EnableOperationBodyAttributes enabled", func(t *testing.T) {
+	t.Run("attributes should be present when OperationContentAttributes enabled", func(t *testing.T) {
 		t.Parallel()
 
 		exporter := tracetest.NewInMemoryExporter(t)
 
 		testenv.Run(t, &testenv.Config{
-			TraceExporter:                 exporter,
-			EnableOperationBodyAttributes: true,
+			TraceExporter:              exporter,
+			OperationContentAttributes: true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employees { id } }`,
@@ -10500,14 +10500,14 @@ func TestOperationBodyAttributes(t *testing.T) {
 		})
 	})
 
-	t.Run("attributes should not be present when EnableOperationBodyAttributes disabled", func(t *testing.T) {
+	t.Run("attributes should not be present when OperationContentAttributes are disabled", func(t *testing.T) {
 		t.Parallel()
 
 		exporter := tracetest.NewInMemoryExporter(t)
 
 		testenv.Run(t, &testenv.Config{
-			TraceExporter:                 exporter,
-			EnableOperationBodyAttributes: false, // Explicitly set to false (this is also the default)
+			TraceExporter:              exporter,
+			OperationContentAttributes: false, // Explicitly set to false (this is also the default)
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employees { id } }`,
@@ -10520,25 +10520,25 @@ func TestOperationBodyAttributes(t *testing.T) {
 			// Check that original operation content is NOT present in parse span
 			require.Equal(t, "Operation - Parse", sn[1].Name())
 			for _, attr := range sn[1].Attributes() {
-				require.NotEqual(t, otel.WgOperationOriginalContent, attr.Key, "WgOperationOriginalContent should not be present when EnableOperationBodyAttributes is false")
+				require.NotEqual(t, otel.WgOperationOriginalContent, attr.Key, "WgOperationOriginalContent should not be present when OperationContentAttributes are disabled")
 			}
 
 			// Check that normalized operation content is NOT present in normalize span
 			require.Equal(t, "Operation - Normalize", sn[2].Name())
 			for _, attr := range sn[2].Attributes() {
-				require.NotEqual(t, otel.WgOperationNormalizedContent, attr.Key, "WgOperationNormalizedContent should not be present when EnableOperationBodyAttributes is false")
+				require.NotEqual(t, otel.WgOperationNormalizedContent, attr.Key, "WgOperationNormalizedContent should not be present when OperationContentAttributes are disabled")
 			}
 		})
 	})
 
-	t.Run("attributes should not be present when EnableOperationBodyAttributes defaulted", func(t *testing.T) {
+	t.Run("attributes should not be present when OperationContentAttributes defaulted", func(t *testing.T) {
 		t.Parallel()
 
 		exporter := tracetest.NewInMemoryExporter(t)
 
 		testenv.Run(t, &testenv.Config{
 			TraceExporter: exporter,
-			// EnableOperationBodyAttributes not set, should default to false
+			// OperationContentAttributes not set, should default to false
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employees { id } }`,
