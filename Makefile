@@ -4,7 +4,7 @@ setup-build-tools:
 	go install github.com/bufbuild/buf/cmd/buf@v1.32.2
 	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.34.2
 	go install connectrpc.com/connect/cmd/protoc-gen-connect-go@v1.16.2
-	go install gotest.tools/gotestsum@v1.12.3
+	go install gotest.tools/gotestsum@v1.13.0
 
 setup-dev-tools: setup-build-tools
 	go install github.com/amacneil/dbmate/v2@v2.6.0
