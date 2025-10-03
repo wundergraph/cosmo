@@ -79,6 +79,8 @@ type Tracing struct {
 	ResponseTraceHeader ResponseTraceHeader `yaml:"response_trace_id"`
 	Attributes          []CustomAttribute   `yaml:"attributes"`
 
+	OperationContentAttributes bool `yaml:"operation_content_attributes" envDefault:"false" env:"TRACING_OPERATION_CONTENT_ATTRIBUTES"`
+
 	TracingGlobalFeatures `yaml:",inline"`
 }
 

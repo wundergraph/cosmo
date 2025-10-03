@@ -1413,6 +1413,8 @@ func (s *graphServer) buildGraphMux(
 		DisableVariablesRemapping:   s.engineExecutionConfiguration.DisableVariablesRemapping,
 		ExprManager:                 exprManager,
 		OmitBatchExtensions:         s.batchingConfig.OmitExtensions,
+
+		OperationContentAttributes: s.traceConfig.OperationContentAttributes,
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {

@@ -69,6 +69,8 @@ type PreHandlerOptions struct {
 	DisableVariablesRemapping   bool
 	ExprManager                 *expr.Manager
 	OmitBatchExtensions         bool
+
+	OperationContentAttributes bool
 }
 
 type PreHandler struct {
@@ -102,6 +104,8 @@ type PreHandler struct {
 	disableVariablesRemapping   bool
 	exprManager                 *expr.Manager
 	omitBatchExtensions         bool
+
+	operationContentAttributes bool
 }
 
 type httpOperation struct {
@@ -148,6 +152,8 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		disableVariablesRemapping: opts.DisableVariablesRemapping,
 		exprManager:               opts.ExprManager,
 		omitBatchExtensions:       opts.OmitBatchExtensions,
+
+		operationContentAttributes: opts.OperationContentAttributes,
 	}
 }
 
@@ -520,14 +526,15 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	requestContext := httpOperation.requestContext
 
 	// Handle the case when operation information are provided as GET parameters
-	if req.Method == http.MethodGet {
+	switch req.Method {
+	case http.MethodGet:
 		if err := operationKit.UnmarshalOperationFromURL(req.URL); err != nil {
 			return &httpGraphqlError{
 				message:    fmt.Sprintf("invalid GET request: %s", err),
 				statusCode: http.StatusBadRequest,
 			}
 		}
-	} else if req.Method == http.MethodPost {
+	case http.MethodPost:
 		if err := operationKit.UnmarshalOperationFromBody(httpOperation.body); err != nil {
 			return &httpGraphqlError{
 				message:    fmt.Sprintf("invalid request body: %s", err),
@@ -629,6 +636,11 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 			trace.WithSpanKind(trace.SpanKindInternal),
 			trace.WithAttributes(requestContext.telemetry.traceAttrs...),
 		)
+
+		// Set the original operation on the parse span
+		if h.operationContentAttributes {
+			engineParseSpan.SetAttributes(otel.WgOperationOriginalContent.String(operationKit.parsedOperation.Request.Query))
+		}
 
 		httpOperation.traceTimings.StartParse()
 		startParsing := time.Now()
@@ -890,6 +902,11 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		httpOperation.traceTimings.EndNormalize()
 	}
 
+	// Set the normalized operation on the span
+	if h.operationContentAttributes {
+		engineNormalizeSpan.SetAttributes(otel.WgOperationNormalizedContent.String(operationKit.parsedOperation.NormalizedRepresentation))
+	}
+
 	engineNormalizeSpan.End()
 
 	if operationKit.parsedOperation.IsPersistedOperation {
@@ -900,10 +917,6 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 		// At this stage the variables are normalized
 		httpOperation.routerSpan.SetAttributes(otel.WgOperationVariables.String(string(operationKit.parsedOperation.Request.Variables)))
 	}
-
-	// Set the normalized operation only on the root span
-	operationContentAttribute := otel.WgOperationContent.String(operationKit.parsedOperation.NormalizedRepresentation)
-	httpOperation.routerSpan.SetAttributes(operationContentAttribute)
 
 	/**
 	* Validate the operation

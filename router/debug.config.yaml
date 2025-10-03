@@ -20,6 +20,24 @@ watch_config:
     enabled: false
     maximum: '10s'
 
+telemetry:
+  tracing:
+    enabled: true
+    sampling_rate: 1
+    operation_content_attributes: true
+
+    exporters:
+      - exporter: http
+        endpoint: http://localhost:4318
+        headers:
+          Authorization: Bearer ${GRAPH_API_TOKEN}
+        batch_timeout: '10s'
+        export_timeout: '30s'
+      - exporter: http
+        endpoint: http://localhost:4319
+        batch_timeout: '10s'
+        export_timeout: '30s'
+
 plugins:
   enabled: true
 
