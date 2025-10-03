@@ -62,7 +62,7 @@ type natsSubscriptionArgs struct {
 	errValue  error
 }
 
-func TestFlakyNatsEvents(t *testing.T) {
+func TestNatsEvents(t *testing.T) {
 	t.Parallel()
 
 	t.Run("subscribe async", func(t *testing.T) {
@@ -1281,114 +1281,6 @@ func TestFlakyNatsEvents(t *testing.T) {
 		})
 	})
 
-	t.Run("subscribe sse with filter", func(t *testing.T) {
-		t.Parallel()
-
-		testenv.Run(t, &testenv.Config{
-			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
-			EnableNats:               true,
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-
-			subscribePayload := []byte(`{"query":"subscription { filteredEmployeeUpdated(id: 1) { id details { forename surname } } }"}`)
-
-			client := http.Client{}
-			req, gErr := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
-			require.NoError(t, gErr)
-
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Accept", "text/event-stream")
-			req.Header.Set("Connection", "keep-alive")
-			req.Header.Set("Cache-Control", "no-cache")
-
-			var clientDoCh = make(chan struct {
-				resp *http.Response
-				err  error
-			})
-			go func() {
-				resp, gErr := client.Do(req)
-				clientDoCh <- struct {
-					resp *http.Response
-					err  error
-				}{resp, gErr}
-			}()
-
-			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
-
-			// Trigger the subscription via NATS
-			err := xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), []byte(`{"id":1,"__typename": "Employee"}`))
-			require.NoError(t, err)
-
-			err = xEnv.NatsConnectionDefault.Flush()
-			require.NoError(t, err)
-
-			var resp *http.Response
-
-			testenv.AwaitChannelWithT(t, NatsWaitTimeout, clientDoCh, func(t *testing.T, clientDo struct {
-				resp *http.Response
-				err  error
-			}) {
-				resp = clientDo.resp
-				require.NoError(t, clientDo.err)
-			})
-
-			require.Equal(t, http.StatusOK, resp.StatusCode)
-			defer resp.Body.Close()
-
-			require.Equal(t, "text/event-stream", resp.Header.Get("Content-Type"))
-			require.Equal(t, "no-cache", resp.Header.Get("Cache-Control"))
-			require.Equal(t, "keep-alive", resp.Header.Get("Connection"))
-			require.Equal(t, "no", resp.Header.Get("X-Accel-Buffering"))
-
-			reader := bufio.NewReader(resp.Body)
-
-			testData := map[int]struct{ forename, surname string }{
-				1:  {forename: "Jens", surname: "Neuse"},
-				3:  {forename: "Stefan", surname: "Avram"},
-				4:  {forename: "Björn", surname: "Schwenzer"},
-				5:  {forename: "Sergiy", surname: "Petrunin"},
-				7:  {forename: "Suvij", surname: "Surya"},
-				8:  {forename: "Nithin", surname: "Kumar"},
-				11: {forename: "Alexandra", surname: "Neuse"},
-			}
-
-			eventNext, _, gErr := reader.ReadLine()
-			require.NoError(t, gErr)
-			require.Equal(t, "event: next", string(eventNext))
-			data, _, gErr := reader.ReadLine()
-			require.NoError(t, gErr)
-			require.Equal(t, fmt.Sprintf("data: {\"data\":{\"filteredEmployeeUpdated\":{\"id\":%d,\"details\":{\"forename\":\"%s\",\"surname\":\"%s\"}}}}", 1, testData[1].forename, testData[1].surname), string(data))
-			line, _, gErr := reader.ReadLine()
-			require.NoError(t, gErr)
-			require.Equal(t, "", string(line))
-
-			// This loop is used to test the filter
-			// It will emit 12 events, and only 7 of them should be included:
-			// 1, 3, 4, 5, 7, 8, and 11
-			for i := 1; i < 13; i++ {
-				err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), []byte(fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, i)))
-				require.NoError(t, err)
-
-				err = xEnv.NatsConnectionDefault.Flush()
-				require.NoError(t, err)
-
-				// Should get the message only for the events that should be included
-				// if some message is not filtered out, the test will fail
-				switch i {
-				case 1, 3, 4, 5, 7, 8, 11:
-					eventNext, _, gErr = reader.ReadLine()
-					require.NoError(t, gErr)
-					require.Equal(t, "event: next", string(eventNext))
-					data, _, gErr = reader.ReadLine()
-					require.NoError(t, gErr)
-					require.Equal(t, fmt.Sprintf("data: {\"data\":{\"filteredEmployeeUpdated\":{\"id\":%d,\"details\":{\"forename\":\"%s\",\"surname\":\"%s\"}}}}", i, testData[i].forename, testData[i].surname), string(data))
-					line, _, gErr = reader.ReadLine()
-					require.NoError(t, gErr)
-					require.Equal(t, "", string(line))
-				}
-			}
-		})
-	})
-
 	t.Run("message with invalid JSON should give a specific error", func(t *testing.T) {
 		t.Parallel()
 
@@ -1715,6 +1607,118 @@ func TestFlakyNatsEvents(t *testing.T) {
 			err = json.Unmarshal(msg.Payload, &payload)
 			require.NoError(t, err)
 			require.Equal(t, float64(99), payload.Data.EmployeeUpdatedMyNats.ID)
+		})
+	})
+}
+
+func TestFlakyNatsEvents(t *testing.T) {
+	t.Parallel()
+
+	t.Run("subscribe sse with filter", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			subscribePayload := []byte(`{"query":"subscription { filteredEmployeeUpdated(id: 1) { id details { forename surname } } }"}`)
+
+			client := http.Client{}
+			req, gErr := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
+			require.NoError(t, gErr)
+
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Accept", "text/event-stream")
+			req.Header.Set("Connection", "keep-alive")
+			req.Header.Set("Cache-Control", "no-cache")
+
+			var clientDoCh = make(chan struct {
+				resp *http.Response
+				err  error
+			})
+			go func() {
+				resp, gErr := client.Do(req)
+				clientDoCh <- struct {
+					resp *http.Response
+					err  error
+				}{resp, gErr}
+			}()
+
+			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
+
+			// Trigger the subscription via NATS
+			err := xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), []byte(`{"id":1,"__typename": "Employee"}`))
+			require.NoError(t, err)
+
+			err = xEnv.NatsConnectionDefault.Flush()
+			require.NoError(t, err)
+
+			var resp *http.Response
+
+			testenv.AwaitChannelWithT(t, NatsWaitTimeout, clientDoCh, func(t *testing.T, clientDo struct {
+				resp *http.Response
+				err  error
+			}) {
+				resp = clientDo.resp
+				require.NoError(t, clientDo.err)
+			})
+
+			require.Equal(t, http.StatusOK, resp.StatusCode)
+			defer resp.Body.Close()
+
+			require.Equal(t, "text/event-stream", resp.Header.Get("Content-Type"))
+			require.Equal(t, "no-cache", resp.Header.Get("Cache-Control"))
+			require.Equal(t, "keep-alive", resp.Header.Get("Connection"))
+			require.Equal(t, "no", resp.Header.Get("X-Accel-Buffering"))
+
+			reader := bufio.NewReader(resp.Body)
+
+			testData := map[int]struct{ forename, surname string }{
+				1:  {forename: "Jens", surname: "Neuse"},
+				3:  {forename: "Stefan", surname: "Avram"},
+				4:  {forename: "Björn", surname: "Schwenzer"},
+				5:  {forename: "Sergiy", surname: "Petrunin"},
+				7:  {forename: "Suvij", surname: "Surya"},
+				8:  {forename: "Nithin", surname: "Kumar"},
+				11: {forename: "Alexandra", surname: "Neuse"},
+			}
+
+			eventNext, _, gErr := reader.ReadLine()
+			require.NoError(t, gErr)
+			require.Equal(t, "event: next", string(eventNext))
+			data, _, gErr := reader.ReadLine()
+			require.NoError(t, gErr)
+			require.Equal(t, fmt.Sprintf("data: {\"data\":{\"filteredEmployeeUpdated\":{\"id\":%d,\"details\":{\"forename\":\"%s\",\"surname\":\"%s\"}}}}", 1, testData[1].forename, testData[1].surname), string(data))
+			line, _, gErr := reader.ReadLine()
+			require.NoError(t, gErr)
+			require.Equal(t, "", string(line))
+
+			// This loop is used to test the filter
+			// It will emit 12 events, and only 7 of them should be included:
+			// 1, 3, 4, 5, 7, 8, and 11
+			for i := 1; i < 13; i++ {
+				err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), []byte(fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, i)))
+				require.NoError(t, err)
+
+				err = xEnv.NatsConnectionDefault.Flush()
+				require.NoError(t, err)
+
+				// Should get the message only for the events that should be included
+				// if some message is not filtered out, the test will fail
+				switch i {
+				case 1, 3, 4, 5, 7, 8, 11:
+					eventNext, _, gErr = reader.ReadLine()
+					require.NoError(t, gErr)
+					require.Equal(t, "event: next", string(eventNext))
+					data, _, gErr = reader.ReadLine()
+					require.NoError(t, gErr)
+					require.Equal(t, fmt.Sprintf("data: {\"data\":{\"filteredEmployeeUpdated\":{\"id\":%d,\"details\":{\"forename\":\"%s\",\"surname\":\"%s\"}}}}", i, testData[i].forename, testData[i].surname), string(data))
+					line, _, gErr = reader.ReadLine()
+					require.NoError(t, gErr)
+					require.Equal(t, "", string(line))
+				}
+			}
 		})
 	})
 }

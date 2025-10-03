@@ -24,7 +24,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-func TestFlakyBatch(t *testing.T) {
+func TestBatch(t *testing.T) {
 	t.Run("verify batching", func(t *testing.T) {
 		t.Parallel()
 
