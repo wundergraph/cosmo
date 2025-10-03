@@ -1802,48 +1802,48 @@ func TestNatsEvents(t *testing.T) {
 			client1 := graphql.NewSubscriptionClient(surl)
 			client2 := graphql.NewSubscriptionClient(surl)
 			client3 := graphql.NewSubscriptionClient(surl)
-			subOneDataCh := make(chan natsSubscriptionArgs)
-			subscriptionOneID, err := client1.Subscribe(&subscriptionMyNats, nil, func(dataValue []byte, errValue error) error {
-				subOneDataCh <- natsSubscriptionArgs{
+			sub1DataCh := make(chan natsSubscriptionArgs)
+			subscription1ID, err := client1.Subscribe(&subscriptionMyNats, nil, func(dataValue []byte, errValue error) error {
+				sub1DataCh <- natsSubscriptionArgs{
 					dataValue,
 					errValue,
 				}
 				return nil
 			})
 			require.NoError(t, err)
-			require.NotEqual(t, "", subscriptionOneID)
+			require.NotEqual(t, "", subscription1ID)
 
-			client1RunCh := testenv.Go(client1.Run)
+			client1Done := testenv.Go(client1.Run)
 
 			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
 
-			subTwoDataCh := make(chan natsSubscriptionArgs)
-			subscriptionTwoID, err := client2.Subscribe(&subscriptionNats, nil, func(dataValue []byte, errValue error) error {
-				subTwoDataCh <- natsSubscriptionArgs{
+			sub2DataCh := make(chan natsSubscriptionArgs)
+			subscription2ID, err := client2.Subscribe(&subscriptionNats, nil, func(dataValue []byte, errValue error) error {
+				sub2DataCh <- natsSubscriptionArgs{
 					dataValue,
 					errValue,
 				}
 				return nil
 			})
 			require.NoError(t, err)
-			require.NotEqual(t, "", subscriptionTwoID)
+			require.NotEqual(t, "", subscription2ID)
 
-			client2RunCh := testenv.Go(client2.Run)
+			client2Done := testenv.Go(client2.Run)
 
 			xEnv.WaitForSubscriptionCount(2, NatsWaitTimeout)
 
-			subThreeDataCh := make(chan natsSubscriptionArgs)
-			subscriptionThreeID, err := client3.Subscribe(&subscriptionNats2, nil, func(dataValue []byte, errValue error) error {
-				subThreeDataCh <- natsSubscriptionArgs{
+			sub3DataCh := make(chan natsSubscriptionArgs)
+			subscription3ID, err := client3.Subscribe(&subscriptionNats2, nil, func(dataValue []byte, errValue error) error {
+				sub3DataCh <- natsSubscriptionArgs{
 					dataValue,
 					errValue,
 				}
 				return nil
 			})
 			require.NoError(t, err)
-			require.NotEqual(t, "", subscriptionThreeID)
+			require.NotEqual(t, "", subscription3ID)
 
-			client3RunCh := testenv.Go(client3.Run)
+			client3Done := testenv.Go(client3.Run)
 
 			xEnv.WaitForSubscriptionCount(3, NatsWaitTimeout)
 
@@ -1877,47 +1877,47 @@ func TestNatsEvents(t *testing.T) {
 			xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.2"), []byte(`{"id":2,"__typename":"Employee"}`))
 			xEnv.NatsConnectionMyNats.Publish(xEnv.GetPubSubName("employeeUpdatedMyNats.1"), []byte(`{"id":1,"__typename":"Employee"}`))
 
-			testenv.AwaitChannelWithT(t, NatsWaitTimeout, subOneDataCh, func(t *testing.T, data natsSubscriptionArgs) {
+			testenv.AwaitChannelWithT(t, NatsWaitTimeout, sub1DataCh, func(t *testing.T, data natsSubscriptionArgs) {
 				assert.NoError(t, data.errValue)
 				assert.Equal(t, data.dataValue, []byte(`{"employeeUpdatedMyNats":{"id":1,"details":{"surname":"Neuse"}}}`))
-			}, "unable to receive data on subscription one before timeout")
+			}, "unable to receive data on subscription 1 before timeout")
 
-			testenv.AwaitChannelWithT(t, NatsWaitTimeout, subTwoDataCh, func(t *testing.T, data natsSubscriptionArgs) {
+			testenv.AwaitChannelWithT(t, NatsWaitTimeout, sub2DataCh, func(t *testing.T, data natsSubscriptionArgs) {
 				assert.NoError(t, data.errValue)
 				assert.Equal(t, data.dataValue, []byte(`{"employeeUpdated":{"id":1,"details":{"surname":"Neuse"}}}`))
-			}, "unable to receive data on subscription two before timeout")
+			}, "unable to receive data on subscription 2 before timeout")
 
-			testenv.AwaitChannelWithT(t, NatsWaitTimeout, subThreeDataCh, func(t *testing.T, data natsSubscriptionArgs) {
+			testenv.AwaitChannelWithT(t, NatsWaitTimeout, sub3DataCh, func(t *testing.T, data natsSubscriptionArgs) {
 				assert.NoError(t, data.errValue)
 				assert.Equal(t, data.dataValue, []byte(`{"employeeUpdated":{"id":2,"details":{"surname":"Deus"}}}`))
-			}, "unable to receive data on subscription three before timeout")
+			}, "unable to receive data on subscription 3 before timeout")
 
 			// Unsubscribe from all the subscriptions
-			errUnsubscribeOne := client1.Unsubscribe(subscriptionOneID)
+			errUnsubscribeOne := client1.Unsubscribe(subscription1ID)
 			require.NoError(t, errUnsubscribeOne)
-			errUnsubscribeTwo := client2.Unsubscribe(subscriptionTwoID)
+			errUnsubscribeTwo := client2.Unsubscribe(subscription2ID)
 			require.NoError(t, errUnsubscribeTwo)
-			errUnsubscribeThree := client3.Unsubscribe(subscriptionThreeID)
+			errUnsubscribeThree := client3.Unsubscribe(subscription3ID)
 			require.NoError(t, errUnsubscribeThree)
 
 			// close the first client
 			errClose1 := client1.Close()
 			require.NoError(t, errClose1)
-			testenv.AwaitChannelWithT(t, NatsWaitTimeout, client1RunCh, func(t *testing.T, client1RunErr error) {
+			testenv.AwaitChannelWithT(t, NatsWaitTimeout, client1Done, func(t *testing.T, client1RunErr error) {
 				require.NoError(t, client1RunErr)
 			})
 
 			// close the second client
 			errClose2 := client2.Close()
 			require.NoError(t, errClose2)
-			testenv.AwaitChannelWithT(t, NatsWaitTimeout, client2RunCh, func(t *testing.T, client2RunErr error) {
+			testenv.AwaitChannelWithT(t, NatsWaitTimeout, client2Done, func(t *testing.T, client2RunErr error) {
 				require.NoError(t, client2RunErr)
 			})
 
 			// close the third client
 			errClose3 := client3.Close()
 			require.NoError(t, errClose3)
-			testenv.AwaitChannelWithT(t, NatsWaitTimeout, client3RunCh, func(t *testing.T, client3RunErr error) {
+			testenv.AwaitChannelWithT(t, NatsWaitTimeout, client3Done, func(t *testing.T, client3RunErr error) {
 				require.NoError(t, client3RunErr)
 			})
 		})
