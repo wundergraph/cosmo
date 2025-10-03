@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.20.0](https://github.com/wundergraph/cosmo/compare/otelcollector@0.19.0...otelcollector@0.20.0) (2025-10-03)
+
+### Features
+
+* retrieve operation body from gqlmetrics instead of traces ([#2235](https://github.com/wundergraph/cosmo/issues/2235)) ([52cecf4](https://github.com/wundergraph/cosmo/commit/52cecf4cea2ef1ea33ecd79a1859f4bc2fd55991)) (@endigma)
+
 # [0.19.0](https://github.com/wundergraph/cosmo/compare/otelcollector@0.18.1...otelcollector@0.19.0) (2025-09-06)
 
 ### Features
