@@ -199,7 +199,7 @@ const SDL = `
   }
 `;
 
-describe.skip('Operations to Proto - Complex Nested Lists', () => {
+describe('Operations to Proto - Complex Nested Lists', () => {
   describe('Multi-dimensional Arrays', () => {
     test('should handle 2D arrays correctly', () => {
       const operation = {
