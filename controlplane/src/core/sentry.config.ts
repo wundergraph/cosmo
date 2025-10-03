@@ -3,7 +3,7 @@ import * as Sentry from '@sentry/node';
 
 import { nodeProfilingIntegration } from '@sentry/profiling-node';
 import { eventLoopBlockIntegration } from '@sentry/node-native';
-import { fastifyIntegration } from "@sentry/node";
+import { fastifyIntegration } from '@sentry/node';
 
 export interface SentryConfig {
   sentry: {
