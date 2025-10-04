@@ -21616,6 +21616,11 @@ export class CreateProposalResponse extends Message<CreateProposalResponse> {
    */
   isLinkedPruningCheckFailed?: boolean;
 
+  /**
+   * @generated from field: optional bool hasLinkedSchemaChecks = 20;
+   */
+  hasLinkedSchemaChecks?: boolean;
+
   constructor(data?: PartialMessage<CreateProposalResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -21643,6 +21648,7 @@ export class CreateProposalResponse extends Message<CreateProposalResponse> {
     { no: 17, name: "proposalName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 18, name: "isLinkedTrafficCheckFailed", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 19, name: "isLinkedPruningCheckFailed", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 20, name: "hasLinkedSchemaChecks", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateProposalResponse {
@@ -22210,6 +22216,11 @@ export class UpdateProposalResponse extends Message<UpdateProposalResponse> {
    */
   isLinkedPruningCheckFailed?: boolean;
 
+  /**
+   * @generated from field: optional bool hasLinkedSchemaChecks = 17;
+   */
+  hasLinkedSchemaChecks?: boolean;
+
   constructor(data?: PartialMessage<UpdateProposalResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -22234,6 +22245,7 @@ export class UpdateProposalResponse extends Message<UpdateProposalResponse> {
     { no: 14, name: "checkUrl", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 15, name: "isLinkedTrafficCheckFailed", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 16, name: "isLinkedPruningCheckFailed", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 17, name: "hasLinkedSchemaChecks", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateProposalResponse {
