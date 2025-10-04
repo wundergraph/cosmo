@@ -321,6 +321,12 @@ services:
 
   redis:
     image: redis:${DC_REDIS_VERSION:-7.2.4}-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
     ports:
       - '6379:6379'
     volumes:
@@ -332,6 +338,9 @@ services:
       - primary
 
   router:
+    depends_on:
+      redis:
+        condition: service_healthy
     image: ghcr.io/wundergraph/cosmo/router:${DC_ROUTER_VERSION:-latest}
     environment:
       LOG_LEVEL: info
