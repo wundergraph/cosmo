@@ -25,6 +25,7 @@ import {
   STREAM_NAME,
   UNION_UPPER,
 } from '../../utils/string-constants';
+import { Kind } from 'graphql';
 
 export const TYPE_SYSTEM_DIRECTIVE_LOCATIONS = new Set<string>([
   ARGUMENT_DEFINITION_UPPER,
@@ -58,3 +59,10 @@ export const STREAM_CONFIGURATION_FIELD_NAMES = new Set<string>([
 
 export const SUBSCRIPTION_FILTER_INPUT_NAMES = new Set<string>([AND_UPPER, IN_UPPER, NOT_UPPER, OR_UPPER]);
 export const SUBSCRIPTION_FILTER_LIST_INPUT_NAMES = new Set<string>([AND_UPPER, OR_UPPER]);
+
+export const COMPOSITE_OUTPUT_NODE_KINDS = new Set<Kind>([
+  Kind.INTERFACE_TYPE_DEFINITION,
+  Kind.INTERFACE_TYPE_EXTENSION,
+  Kind.OBJECT_TYPE_DEFINITION,
+  Kind.OBJECT_TYPE_EXTENSION,
+]);
