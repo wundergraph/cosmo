@@ -1,4 +1,4 @@
-FROM --platform=${BUILDPLATFORM} node:lts AS builder
+FROM node:lts AS builder
 
 WORKDIR /app
 
@@ -21,7 +21,7 @@ RUN pnpm run --filter=./cdn-server/cdn --filter=./cdn-server build
 # Deploy
 RUN pnpm --filter=./cdn-server --prod deploy pruned
 
-FROM --platform=${BUILDPLATFORM} node:lts-slim
+FROM node:lts-slim
 
 WORKDIR /app
 
