@@ -8716,7 +8716,11 @@ func TestFlakyTelemetry(t *testing.T) {
 					},
 				},
 				RouterOptions: []core.Option{
-					core.WithSubgraphRetryOptions(false, "", 0, 0, 0, "", nil),
+					core.WithSubgraphRetryOptions(core.NewSubgraphRetryOptions(config.TrafficShapingRules{
+						All: config.GlobalSubgraphRequestRule{
+							BackoffJitterRetry: config.BackoffJitterRetry{Enabled: false},
+						},
+					})),
 				},
 				Subgraphs: testenv.SubgraphsConfig{
 					Products: testenv.SubgraphConfig{

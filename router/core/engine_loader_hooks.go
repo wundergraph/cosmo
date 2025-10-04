@@ -92,8 +92,6 @@ func (f *engineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInf
 
 	start := time.Now()
 
-	ctx = context.WithValue(ctx, rcontext.CurrentSubgraphContextKey{}, ds.Name)
-
 	duration := atomic.Int64{}
 	ctx = context.WithValue(ctx, rcontext.FetchTimingKey, &duration)
 
