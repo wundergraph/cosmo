@@ -2,13 +2,13 @@ package integration
 
 import (
 	"fmt"
-	"github.com/wundergraph/cosmo/router/core"
 	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
@@ -341,7 +341,9 @@ func TestQueryNamingLimits(t *testing.T) {
 					securityConfiguration.OperationNameLengthLimit = maxLength
 				},
 				RouterOptions: []core.Option{
-					core.WithIntrospection(false),
+					core.WithIntrospection(false, config.IntrospectionConfiguration{
+						Enabled: false,
+					}),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				expectedErrorMessage := fmt.Sprintf(`{"errors":[{"message":"operation name of length %d exceeds max length of %d"}]}`, len(query1Name), maxLength)
