@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.256.1](https://github.com/wundergraph/cosmo/compare/router@0.256.0...router@0.256.1) (2025-10-04)
+
+### Bug Fixes
+
+* full-cosmo-docker ([#2261](https://github.com/wundergraph/cosmo/issues/2261)) ([0406cc9](https://github.com/wundergraph/cosmo/commit/0406cc9e1d60f86c63e0095f913a0b3c76b2a49d)) (@miklosbarabas)
+
 # [0.256.0](https://github.com/wundergraph/cosmo/compare/router@0.255.0...router@0.256.0) (2025-10-03)
 
 ### Features
