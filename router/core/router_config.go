@@ -11,6 +11,7 @@ import (
 	rd "github.com/wundergraph/cosmo/router/internal/rediscloser"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/connect_rpc"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/selfregister"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
@@ -84,7 +85,6 @@ type Config struct {
 	accessController                *AccessController
 	retryOptions                    retrytransport.RetryOptions
 	redisClient                     rd.RDCloser
-	mcpServer                       *mcpserver.GraphQLSchemaServer
 	processStartTime                time.Time
 	developmentMode                 bool
 	healthcheck                     health.Checker
@@ -115,7 +115,10 @@ type Config struct {
 	cacheWarmup                   *config.CacheWarmupConfiguration
 	subscriptionHeartbeatInterval time.Duration
 	hostName                      string
+	mcpServer                     *mcpserver.GraphQLSchemaServer
 	mcp                           config.MCPConfiguration
+	connectRPC                    config.ConnectRPCConfiguration
+	connectRPCServer              *connect_rpc.Server
 	plugins                       config.PluginsConfiguration
 	tracingAttributes             []config.CustomAttribute
 }

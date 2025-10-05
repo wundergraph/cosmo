@@ -985,6 +985,21 @@ type MCPServer struct {
 	BaseURL    string `yaml:"base_url,omitempty" env:"MCP_SERVER_BASE_URL"`
 }
 
+type ConnectRPCConfiguration struct {
+	Enabled   bool                    `yaml:"enabled" envDefault:"false" env:"CONNECT_RPC_ENABLED"`
+	Server    ConnectRPCServer        `yaml:"server,omitempty"`
+	Storage   ConnectRPCStorageConfig `yaml:"storage,omitempty"`
+	RouterURL string                  `yaml:"router_url,omitempty" env:"CONNECT_RPC_ROUTER_URL"`
+}
+
+type ConnectRPCStorageConfig struct {
+	ProviderID string `yaml:"provider_id,omitempty" env:"CONNECT_RPC_STORAGE_PROVIDER_ID"`
+}
+
+type ConnectRPCServer struct {
+	ListenAddress string `yaml:"listen_address" envDefault:"localhost:5026" env:"CONNECT_RPC_SERVER_LISTEN_ADDRESS"`
+}
+
 type PluginsConfiguration struct {
 	Enabled  bool                        `yaml:"enabled" envDefault:"false" env:"ENABLED"`
 	Path     string                      `yaml:"path" envDefault:"plugins" env:"PATH"`
@@ -996,27 +1011,25 @@ type PluginRegistryConfiguration struct {
 }
 
 type Config struct {
-	Version string `yaml:"version,omitempty" ignored:"true"`
-
-	InstanceID     string             `yaml:"instance_id,omitempty" env:"INSTANCE_ID"`
-	Graph          Graph              `yaml:"graph,omitempty"`
-	Telemetry      Telemetry          `yaml:"telemetry,omitempty"`
-	GraphqlMetrics GraphqlMetrics     `yaml:"graphql_metrics,omitempty"`
-	CORS           CORS               `yaml:"cors,omitempty"`
-	Cluster        Cluster            `yaml:"cluster,omitempty"`
-	Compliance     ComplianceConfig   `yaml:"compliance,omitempty"`
-	TLS            TLSConfiguration   `yaml:"tls,omitempty"`
-	CacheControl   CacheControlPolicy `yaml:"cache_control_policy"`
-	MCP            MCPConfiguration   `yaml:"mcp,omitempty"`
-	DemoMode       bool               `yaml:"demo_mode,omitempty" envDefault:"false" env:"DEMO_MODE"`
-
-	Modules        map[string]interface{} `yaml:"modules,omitempty"`
-	Headers        HeaderRules            `yaml:"headers,omitempty"`
-	TrafficShaping TrafficShapingRules    `yaml:"traffic_shaping,omitempty"`
-	FileUpload     FileUpload             `yaml:"file_upload,omitempty"`
-	AccessLogs     AccessLogsConfig       `yaml:"access_logs,omitempty"`
-	Batching       BatchingConfig         `yaml:"batching,omitempty"`
-
+	Version                       string                      `yaml:"version,omitempty" ignored:"true"`
+	InstanceID                    string                      `yaml:"instance_id,omitempty" env:"INSTANCE_ID"`
+	Graph                         Graph                       `yaml:"graph,omitempty"`
+	Telemetry                     Telemetry                   `yaml:"telemetry,omitempty"`
+	GraphqlMetrics                GraphqlMetrics              `yaml:"graphql_metrics,omitempty"`
+	CORS                          CORS                        `yaml:"cors,omitempty"`
+	Cluster                       Cluster                     `yaml:"cluster,omitempty"`
+	Compliance                    ComplianceConfig            `yaml:"compliance,omitempty"`
+	TLS                           TLSConfiguration            `yaml:"tls,omitempty"`
+	CacheControl                  CacheControlPolicy          `yaml:"cache_control_policy"`
+	MCP                           MCPConfiguration            `yaml:"mcp,omitempty"`
+	ConnectRPC                    ConnectRPCConfiguration     `yaml:"connect_rpc,omitempty"`
+	DemoMode                      bool                        `yaml:"demo_mode,omitempty" envDefault:"false" env:"DEMO_MODE"`
+	Modules                       map[string]interface{}      `yaml:"modules,omitempty"`
+	Headers                       HeaderRules                 `yaml:"headers,omitempty"`
+	TrafficShaping                TrafficShapingRules         `yaml:"traffic_shaping,omitempty"`
+	FileUpload                    FileUpload                  `yaml:"file_upload,omitempty"`
+	AccessLogs                    AccessLogsConfig            `yaml:"access_logs,omitempty"`
+	Batching                      BatchingConfig              `yaml:"batching,omitempty"`
 	ListenAddr                    string                      `yaml:"listen_addr" envDefault:"localhost:3002" env:"LISTEN_ADDR"`
 	ControlplaneURL               string                      `yaml:"controlplane_url" envDefault:"https://cosmo-cp.wundergraph.com" env:"CONTROLPLANE_URL"`
 	PlaygroundConfig              PlaygroundConfig            `yaml:"playground,omitempty"`

@@ -1,0 +1,23 @@
+version: "1"
+
+# Storage providers configuration
+storage_providers:
+  file_system:
+    - id: "proto_files"
+      path: "/Users/asoorm/go/src/github.com/wundergraph/openapi-demo/proto4"
+
+# Connect RPC server configuration
+connect_rpc:
+  enabled: true
+  server:
+    listen_address: "localhost:5026"
+  router_url: "http://localhost:3002/graphql"  # Optional: custom router URL
+  storage:
+    provider_id: "proto_files"
+
+# Basic router configuration
+listen_addr: "localhost:3002"
+log_level: "info"
+playground:
+  enabled: true
+introspection_enabled: true

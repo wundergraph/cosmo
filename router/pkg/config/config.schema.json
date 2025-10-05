@@ -2063,6 +2063,48 @@
         }
       }
     },
+    "connect_rpc": {
+      "type": "object",
+      "description": "The configuration for the Connect RPC server. Connect RPC allows clients to interact with your GraphQL APIs using Protocol Buffers over HTTP. By loading proto files and mapping them to GraphQL operations, you can provide a gRPC-compatible interface to your graph.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable the Connect RPC server. If the value is true, the Connect RPC server will be started."
+        },
+        "server": {
+          "type": "object",
+          "description": "Server configuration for the Connect RPC server.",
+          "additionalProperties": false,
+          "properties": {
+            "listen_address": {
+              "type": "string",
+              "description": "The address on which the Connect RPC server listens for incoming requests. The address is specified as a string with the format 'host:port'.",
+              "default": "localhost:5026",
+              "format": "hostname-port"
+            }
+          }
+        },
+        "router_url": {
+          "type": "string",
+          "description": "Custom URL to use for the router GraphQL endpoint in Connect RPC. Use this when your router is behind a proxy. This information is used to forward requests to the actual GraphQL endpoint.",
+          "format": "url"
+        },
+        "storage": {
+          "type": "object",
+          "description": "Storage provider configuration for the Connect RPC server. This specifies where proto files are loaded from.",
+          "additionalProperties": false,
+          "properties": {
+            "provider_id": {
+              "type": "string",
+              "description": "The ID of the storage provider to use for loading proto files. Only storage provider of type 'file_system' are supported. The provider must be configured in the storage_providers section."
+            }
+          },
+          "required": ["provider_id"]
+        }
+      }
+    },
     "demo_mode": {
       "type": "boolean",
       "description": "Launch the router in demo mode. If no execution config is found, the router will start with a demo execution config and deploy a demo federated graph that can be used for testing purposes.",
