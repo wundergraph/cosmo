@@ -22,6 +22,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/klauspost/compress/gzhttp"
 	"github.com/klauspost/compress/gzip"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
@@ -100,6 +101,7 @@ type (
 		traceDialer             *TraceDialer
 		connector               *grpcconnector.Connector
 		circuitBreakerManager   *circuit.Manager
+		connectRPCServer        interface{ Reload(*ast.Document) error }
 	}
 )
 
@@ -162,6 +164,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 			ListenAddress: r.listenAddr,
 		},
 		storageProviders: &r.storageProviders,
+		connectRPCServer: r.connectRPCServer,
 	}
 
 	baseOtelAttributes := []attribute.KeyValue{
@@ -1244,6 +1247,17 @@ func (s *graphServer) buildGraphMux(
 		if mErr := s.mcpServer.Reload(executor.ClientSchema); mErr != nil {
 			return nil, fmt.Errorf("failed to reload MCP server: %w", mErr)
 		}
+	}
+
+	// We support the Connect RPC only on the base graph. Feature flags are not supported yet.
+	if opts.IsBaseGraph() && s.connectRPCServer != nil {
+		s.logger.Debug("Reloading Connect RPC server with new schema",
+			zap.String("config_version", opts.RouterConfigVersion))
+		if cErr := s.connectRPCServer.Reload(executor.ClientSchema); cErr != nil {
+			return nil, fmt.Errorf("failed to reload Connect RPC server: %w", cErr)
+		}
+		s.logger.Info("Connect RPC server reloaded successfully",
+			zap.String("config_version", opts.RouterConfigVersion))
 	}
 
 	if s.Config.cacheWarmup != nil && s.Config.cacheWarmup.Enabled {

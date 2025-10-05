@@ -359,6 +359,20 @@ func (s *GraphQLSchemaServer) Reload(schema *ast.Document) error {
 		return fmt.Errorf("server is not started")
 	}
 
+	// Add diagnostic logging for schema analysis
+	s.logger.Debug("MCP server reloading with schema",
+		zap.String("operations_dir", s.operationsDir),
+		zap.Int("directive_definitions", len(schema.DirectiveDefinitions)))
+	
+	// Log available directive definitions
+	for i := range schema.DirectiveDefinitions {
+		directive := schema.DirectiveDefinitions[i]
+		directiveName := schema.Input.ByteSliceString(directive.Name)
+		s.logger.Debug("Schema directive definition available",
+			zap.String("directive_name", directiveName),
+			zap.Int("directive_index", i))
+	}
+
 	s.schemaCompiler = NewSchemaCompiler(s.logger)
 	s.operationsManager = NewOperationsManager(schema, s.logger, s.excludeMutations)
 

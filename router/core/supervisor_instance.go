@@ -150,6 +150,13 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 }
 
 func optionsFromResources(logger *zap.Logger, config *config.Config) []Option {
+	// DEBUG: Log Connect RPC configuration loading
+	logger.Debug("Loading Connect RPC configuration from config",
+		zap.Bool("enabled", config.ConnectRPC.Enabled),
+		zap.String("listen_addr", config.ConnectRPC.Server.ListenAddr),
+		zap.String("operations_dir", config.ConnectRPC.Storage.ProviderID),
+		zap.String("proto_path", config.ConnectRPC.ProtoConfig.Path))
+
 	options := []Option{
 		WithListenerAddr(config.ListenAddr),
 		WithOverrideRoutingURL(config.OverrideRoutingURL),
@@ -237,6 +244,7 @@ func optionsFromResources(logger *zap.Logger, config *config.Config) []Option {
 		WithClientHeader(config.ClientHeader),
 		WithCacheWarmupConfig(&config.CacheWarmup),
 		WithMCP(config.MCP),
+		WithConnectRPC(config.ConnectRPC),
 		WithPlugins(config.Plugins),
 		WithDemoMode(config.DemoMode),
 	}

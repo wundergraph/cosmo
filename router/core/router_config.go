@@ -11,6 +11,7 @@ import (
 	rd "github.com/wundergraph/cosmo/router/internal/rediscloser"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/connect_rpc"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/selfregister"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
@@ -116,6 +117,8 @@ type Config struct {
 	subscriptionHeartbeatInterval time.Duration
 	hostName                      string
 	mcp                           config.MCPConfiguration
+	connectRPC                    config.ConnectRPCConfiguration
+	connectRPCServer              *connect_rpc.ConnectRPCServer
 	plugins                       config.PluginsConfiguration
 	tracingAttributes             []config.CustomAttribute
 }
@@ -303,6 +306,8 @@ func (c *Config) Usage() map[string]any {
 	usage["mcp_enable_arbitrary_operations"] = c.mcp.EnableArbitraryOperations
 	usage["mcp_exclude_mutations"] = c.mcp.ExcludeMutations
 	usage["mcp_expose_schema"] = c.mcp.ExposeSchema
+
+	usage["connect_rpc"] = c.connectRPC.Enabled
 
 	usage["cosmo_cdn"] = c.cdnConfig.URL == "https://cosmo-cdn.wundergraph.com"
 

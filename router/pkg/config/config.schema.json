@@ -2063,6 +2063,69 @@
         }
       }
     },
+    "connect_rpc": {
+      "type": "object",
+      "description": "The configuration for the Connect RPC server. Connect RPC allows clients to interact with your GraphQL APIs using the Connect protocol over HTTP. By exposing individual GraphQL operations as RPC methods, you can provide a type-safe RPC interface to your graph. See https://connectrpc.com/ for more information.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable the Connect RPC server. If the value is true, the Connect RPC server will be started."
+        },
+        "server": {
+          "type": "object",
+          "description": "Server configuration for the Connect RPC server.",
+          "additionalProperties": false,
+          "properties": {
+            "listen_addr": {
+              "type": "string",
+              "description": "The address on which the Connect RPC server listens for incoming requests. The address is specified as a string with the format 'host:port'.",
+              "default": "localhost:5026",
+              "format": "hostname-port"
+            },
+            "base_url": {
+              "type": "string",
+              "description": "The base URL of the Connect RPC server. This is the URL advertised to clients. By default, the base URL is relative to the URL that the router is running on. The URL is specified as a string with the format 'scheme://host:port'.",
+              "format": "http-url"
+            }
+          }
+        },
+        "router_url": {
+          "type": "string",
+          "description": "Custom URL to use for the router GraphQL endpoint in Connect RPC. Use this when your router is behind a proxy. This information is used by the Connect RPC server to forward requests to the GraphQL endpoint.",
+          "format": "url"
+        },
+        "storage": {
+          "type": "object",
+          "description": "Storage provider configuration for the Connect RPC server. This specifies where GraphQL operations are loaded from.",
+          "additionalProperties": false,
+          "properties": {
+            "provider_id": {
+              "type": "string",
+              "description": "The ID of the storage provider to use for loading GraphQL operations. Only storage provider of type 'file_system' are supported. The provider must be configured in the storage_providers section."
+            }
+          },
+          "required": ["provider_id"]
+        },
+        "graph_name": {
+          "type": "string",
+          "default": "mygraph",
+          "description": "The name of the graph to be used for the Connect RPC service naming."
+        },
+        "proto": {
+          "type": "object",
+          "description": "Protocol Buffers configuration for the Connect RPC server.",
+          "additionalProperties": false,
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "The path to the directory containing generated proto files. These files define the RPC service interfaces."
+            }
+          }
+        }
+      }
+    },
     "demo_mode": {
       "type": "boolean",
       "description": "Launch the router in demo mode. If no execution config is found, the router will start with a demo execution config and deploy a demo federated graph that can be used for testing purposes.",

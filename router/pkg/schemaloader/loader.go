@@ -96,10 +96,33 @@ func (l *OperationLoader) LoadOperationsFromDirectory(dirPath string) ([]Operati
 		validationReport := operationreport.Report{}
 		validationState := validator.Validate(&opDoc, l.SchemaDocument, &validationReport)
 		if validationState == astvalidation.Invalid {
+			// Add diagnostic logging to understand validation failures
 			l.Logger.Error("Invalid MCP operation",
 				zap.String("operation", opName),
 				zap.String("file", path),
 				zap.String("errors", validationReport.Error()))
+			
+			// Log schema directive definitions for debugging
+			l.Logger.Debug("Schema directive definitions available",
+				zap.String("operation", opName),
+				zap.Int("directive_count", len(l.SchemaDocument.DirectiveDefinitions)))
+			
+			// Log operation directives being used
+			for _, ref := range opDoc.RootNodes {
+				if ref.Kind == ast.NodeKindOperationDefinition {
+					opDef := opDoc.OperationDefinitions[ref.Ref]
+					l.Logger.Debug("Operation directive usage",
+						zap.String("operation", opName),
+						zap.Int("directive_count", len(opDef.Directives.Refs)))
+					for _, directiveRef := range opDef.Directives.Refs {
+						directive := opDoc.Directives[directiveRef]
+						directiveName := opDoc.Input.ByteSliceString(directive.Name)
+						l.Logger.Debug("Operation uses directive",
+							zap.String("operation", opName),
+							zap.String("directive_name", directiveName))
+					}
+				}
+			}
 			return nil
 		}
 
