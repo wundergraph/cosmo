@@ -1,0 +1,96 @@
+// Protocol Buffers - Google's data interchange format
+// Copyright 2008 Google Inc.  All rights reserved.
+//
+// Minimal descriptor.proto for Connect RPC proto compilation
+// This provides the essential types needed for method options extensions
+
+syntax = "proto2";
+
+package google.protobuf;
+
+option go_package = "google.golang.org/protobuf/types/descriptorpb";
+option java_package = "com.google.protobuf";
+option java_outer_classname = "DescriptorProtos";
+option csharp_namespace = "Google.Protobuf.Reflection";
+option objc_class_prefix = "GPB";
+option cc_enable_arenas = true;
+
+// Essential message types for method and service options
+message MethodOptions {
+  // Is this method deprecated?
+  optional bool deprecated = 33 [default = false];
+
+  // The idempotency level for this method. Maps to the idempotency semantics
+  // defined by RFC 7231 section 4.2.2. HTTP requests that map to idempotent
+  // methods should not have observable side-effects on the server.
+  enum IdempotencyLevel {
+    IDEMPOTENCY_UNKNOWN = 0;
+    NO_SIDE_EFFECTS = 1;     // implies idempotent
+    IDEMPOTENT = 2;          // idempotent, but may have side effects
+  }
+  optional IdempotencyLevel idempotency_level = 34 [default = IDEMPOTENCY_UNKNOWN];
+
+  // The parser stores options it doesn't recognize here.
+  repeated UninterpretedOption uninterpreted_option = 999;
+
+  // Clients or servers may define custom options by extending this message type.
+  extensions 1000 to max;
+}
+
+message ServiceOptions {
+  // Is this service deprecated?
+  optional bool deprecated = 33 [default = false];
+
+  // The parser stores options it doesn't recognize here.
+  repeated UninterpretedOption uninterpreted_option = 999;
+
+  // Clients or servers may define custom options by extending this message type.
+  extensions 1000 to max;
+}
+
+message FileOptions {
+  // Sets the Go package where structs generated from this .proto will be placed.
+  optional string go_package = 11;
+  
+  // Sets the Java package where classes generated from this .proto will be placed.
+  optional string java_package = 1;
+  
+  // Controls the name of the wrapper Java class generated for the .proto file.
+  optional string java_outer_classname = 8;
+  
+  // Sets the C# namespace.
+  optional string csharp_namespace = 37;
+  
+  // Sets the Objective-C class prefix which is prepended to all Objective-C generated classes.
+  optional string objc_class_prefix = 36;
+  
+  // Enables the use of arenas for the proto messages in this file.
+  optional bool cc_enable_arenas = 31 [default = true];
+
+  // Is this file deprecated?
+  optional bool deprecated = 23 [default = false];
+
+  // The parser stores options it doesn't recognize here.
+  repeated UninterpretedOption uninterpreted_option = 999;
+
+  // Clients or servers may define custom options by extending this message type.
+  extensions 1000 to max;
+}
+
+// A message representing a option the parser does not recognize.
+message UninterpretedOption {
+  message NamePart {
+    required string name_part = 1;
+    required bool is_extension = 2;
+  }
+  repeated NamePart name = 2;
+
+  // The value of the uninterpreted option, in whatever type the tokenizer
+  // classified it as during parsing. Exactly one of these should be set.
+  optional string identifier_value = 3;
+  optional uint64 positive_int_value = 4;
+  optional int64 negative_int_value = 5;
+  optional double double_value = 6;
+  optional bytes string_value = 7;
+  optional string aggregate_value = 8;
+}

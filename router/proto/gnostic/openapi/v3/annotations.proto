@@ -1,0 +1,104 @@
+// Copyright 2020 Google LLC. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package gnostic.openapi.v3;
+
+import "google/protobuf/descriptor.proto";
+
+option go_package = "github.com/google/gnostic/openapiv3";
+
+// Operation represents an OpenAPI operation annotation
+message Operation {
+  // A unique string used to identify the operation
+  string operation_id = 1;
+  
+  // A short summary of what the operation does
+  string summary = 2;
+  
+  // A verbose explanation of the operation behavior
+  string description = 3;
+  
+  // A list of tags for API documentation control
+  repeated string tags = 4;
+  
+  // Declares this operation to be deprecated
+  bool deprecated = 5;
+  
+  // Additional metadata for the operation
+  map<string, string> extensions = 6;
+}
+
+// Info represents OpenAPI info annotation
+message Info {
+  string title = 1;
+  string description = 2;
+  string terms_of_service = 3;
+  string version = 4;
+}
+
+// Server represents OpenAPI server annotation
+message Server {
+  string url = 1;
+  string description = 2;
+}
+
+// Tag represents OpenAPI tag annotation
+message Tag {
+  string name = 1;
+  string description = 2;
+}
+
+// ExternalDocs represents OpenAPI external documentation annotation
+message ExternalDocs {
+  string description = 1;
+  string url = 2;
+}
+
+// Security represents OpenAPI security annotation
+message Security {
+  repeated SecurityRequirement security_requirements = 1;
+}
+
+message SecurityRequirement {
+  map<string, SecurityScope> requirements = 1;
+}
+
+message SecurityScope {
+  repeated string scopes = 1;
+}
+
+// Extensions for method options
+extend google.protobuf.MethodOptions {
+  Operation operation = 1042;
+}
+
+// Extensions for service options
+extend google.protobuf.ServiceOptions {
+  Info info = 1043;
+  repeated Server servers = 1044;
+  repeated Tag tags = 1045;
+  ExternalDocs external_docs = 1046;
+  Security security = 1047;
+}
+
+// Extensions for file options
+extend google.protobuf.FileOptions {
+  Info document_info = 1048;
+  repeated Server document_servers = 1049;
+  repeated Tag document_tags = 1050;
+  ExternalDocs document_external_docs = 1051;
+  Security document_security = 1052;
+}
