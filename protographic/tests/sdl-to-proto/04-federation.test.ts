@@ -40,10 +40,10 @@ describe('SDL to Proto - Federation and Special Types', () => {
 
       // Service definition for DefaultService
       service DefaultService {
-        // Lookup Product entity by id
-        rpc LookupProductById(LookupProductByIdRequest) returns (LookupProductByIdResponse) {}
-        // Lookup User entity by id
-        rpc LookupUserById(LookupUserByIdRequest) returns (LookupUserByIdResponse) {}
+      // Lookup Product entity by id
+      rpc LookupProductById(LookupProductByIdRequest) returns (LookupProductByIdResponse) {}
+      // Lookup User entity by id
+      rpc LookupUserById(LookupUserByIdRequest) returns (LookupUserByIdResponse) {}
         rpc QueryProduct(QueryProductRequest) returns (QueryProductResponse) {}
       }
 
@@ -166,8 +166,8 @@ describe('SDL to Proto - Federation and Special Types', () => {
 
       // Service definition for DefaultService
       service DefaultService {
-        // Lookup OrderItem entity by itemId and orderId
-        rpc LookupOrderItemByItemIdAndOrderId(LookupOrderItemByItemIdAndOrderIdRequest) returns (LookupOrderItemByItemIdAndOrderIdResponse) {}
+      // Lookup OrderItem entity by itemId and orderId
+      rpc LookupOrderItemByItemIdAndOrderId(LookupOrderItemByItemIdAndOrderIdRequest) returns (LookupOrderItemByItemIdAndOrderIdResponse) {}
         rpc QueryOrderItem(QueryOrderItemRequest) returns (QueryOrderItemResponse) {}
       }
 
@@ -266,10 +266,10 @@ describe('SDL to Proto - Federation and Special Types', () => {
 
       // Service definition for DefaultService
       service DefaultService {
-        // Lookup Product entity by id
-        rpc LookupProductById(LookupProductByIdRequest) returns (LookupProductByIdResponse) {}
-        // Lookup User entity by id
-        rpc LookupUserById(LookupUserByIdRequest) returns (LookupUserByIdResponse) {}
+      // Lookup Product entity by id
+      rpc LookupProductById(LookupProductByIdRequest) returns (LookupProductByIdResponse) {}
+      // Lookup User entity by id
+      rpc LookupUserById(LookupUserByIdRequest) returns (LookupUserByIdResponse) {}
         rpc QueryNode(QueryNodeRequest) returns (QueryNodeResponse) {}
       }
 
@@ -464,10 +464,10 @@ describe('SDL to Proto - Federation and Special Types', () => {
 
       // Service definition for DefaultService
       service DefaultService {
-        // Lookup Product entity by id
-        rpc LookupProductById(LookupProductByIdRequest) returns (LookupProductByIdResponse) {}
-        // Lookup Product entity by upc
-        rpc LookupProductByUpc(LookupProductByUpcRequest) returns (LookupProductByUpcResponse) {}
+      // Lookup Product entity by id
+      rpc LookupProductById(LookupProductByIdRequest) returns (LookupProductByIdResponse) {}
+      // Lookup Product entity by upc
+      rpc LookupProductByUpc(LookupProductByUpcRequest) returns (LookupProductByUpcResponse) {}
         rpc QueryProducts(QueryProductsRequest) returns (QueryProductsResponse) {}
       }
 
@@ -584,8 +584,8 @@ describe('SDL to Proto - Federation and Special Types', () => {
 
       // Service definition for DefaultService
       service DefaultService {
-        // Lookup OrderItem entity by itemId and orderId
-        rpc LookupOrderItemByItemIdAndOrderId(LookupOrderItemByItemIdAndOrderIdRequest) returns (LookupOrderItemByItemIdAndOrderIdResponse) {}
+      // Lookup OrderItem entity by itemId and orderId
+      rpc LookupOrderItemByItemIdAndOrderId(LookupOrderItemByItemIdAndOrderIdRequest) returns (LookupOrderItemByItemIdAndOrderIdResponse) {}
         rpc QueryOrderItems(QueryOrderItemsRequest) returns (QueryOrderItemsResponse) {}
       }
 
@@ -670,8 +670,8 @@ describe('SDL to Proto - Federation and Special Types', () => {
 
       // Service definition for DefaultService
       service DefaultService {
-        // Lookup OrderItem entity by itemId and orderId
-        rpc LookupOrderItemByItemIdAndOrderId(LookupOrderItemByItemIdAndOrderIdRequest) returns (LookupOrderItemByItemIdAndOrderIdResponse) {}
+      // Lookup OrderItem entity by itemId and orderId
+      rpc LookupOrderItemByItemIdAndOrderId(LookupOrderItemByItemIdAndOrderIdRequest) returns (LookupOrderItemByItemIdAndOrderIdResponse) {}
         rpc QueryOrderItems(QueryOrderItemsRequest) returns (QueryOrderItemsResponse) {}
       }
 
@@ -757,10 +757,10 @@ describe('SDL to Proto - Federation and Special Types', () => {
 
       // Service definition for DefaultService
       service DefaultService {
-        // Lookup Product entity by id
-        rpc LookupProductById(LookupProductByIdRequest) returns (LookupProductByIdResponse) {}
-        // Lookup Product entity by manufacturerId and productCode
-        rpc LookupProductByManufacturerIdAndProductCode(LookupProductByManufacturerIdAndProductCodeRequest) returns (LookupProductByManufacturerIdAndProductCodeResponse) {}
+      // Lookup Product entity by id
+      rpc LookupProductById(LookupProductByIdRequest) returns (LookupProductByIdResponse) {}
+      // Lookup Product entity by manufacturerId and productCode
+      rpc LookupProductByManufacturerIdAndProductCode(LookupProductByManufacturerIdAndProductCodeRequest) returns (LookupProductByManufacturerIdAndProductCodeResponse) {}
         rpc QueryProducts(QueryProductsRequest) returns (QueryProductsResponse) {}
       }
 
@@ -931,8 +931,8 @@ describe('SDL to Proto - Federation and Special Types', () => {
 
       // Service definition for DefaultService
       service DefaultService {
-        // Lookup Product entity by manufacturerId and productCode
-        rpc LookupProductByManufacturerIdAndProductCode(LookupProductByManufacturerIdAndProductCodeRequest) returns (LookupProductByManufacturerIdAndProductCodeResponse) {}
+      // Lookup Product entity by manufacturerId and productCode
+      rpc LookupProductByManufacturerIdAndProductCode(LookupProductByManufacturerIdAndProductCodeRequest) returns (LookupProductByManufacturerIdAndProductCodeResponse) {}
         rpc QueryProducts(QueryProductsRequest) returns (QueryProductsResponse) {}
       }
 
@@ -1019,8 +1019,8 @@ describe('SDL to Proto - Federation and Special Types', () => {
 
       // Service definition for DefaultService
       service DefaultService {
-        // Lookup Product entity by manufacturerId and productCode
-        rpc LookupProductByManufacturerIdAndProductCode(LookupProductByManufacturerIdAndProductCodeRequest) returns (LookupProductByManufacturerIdAndProductCodeResponse) {}
+      // Lookup Product entity by manufacturerId and productCode
+      rpc LookupProductByManufacturerIdAndProductCode(LookupProductByManufacturerIdAndProductCodeRequest) returns (LookupProductByManufacturerIdAndProductCodeResponse) {}
         rpc QueryProducts(QueryProductsRequest) returns (QueryProductsResponse) {}
       }
 

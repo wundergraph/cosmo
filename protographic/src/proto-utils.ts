@@ -278,16 +278,16 @@ export function createRpcMethod(
         }
     }
 
-    // RPC method comments should be indented 1 level (2 spaces)
-    const commentLines = formatComment(description, includeComments, 1);
+    // RPC method comments should have NO base indentation - the operations-visitor will add consistent indentation
+    const commentLines = formatComment(description, includeComments, 0);
     
     if (!hasOptions) {
-        const methodLine = `  rpc ${methodName}(${requestName}) returns (${responseName}) {}`;
+        const methodLine = `rpc ${methodName}(${requestName}) returns (${responseName}) {}`;
         return [...commentLines, methodLine].join('\n');
     } else {
-        const methodStart = `  rpc ${methodName}(${requestName}) returns (${responseName}) {`;
-        const optionsStr = allOptions.map(opt => `    ${opt}`).join('\n');
-        const methodEnd = '  }';
+        const methodStart = `rpc ${methodName}(${requestName}) returns (${responseName}) {`;
+        const optionsStr = allOptions.map(opt => `  ${opt}`).join('\n');
+        const methodEnd = '}';
         return [...commentLines, methodStart, optionsStr, methodEnd].join('\n');
     }
 }
