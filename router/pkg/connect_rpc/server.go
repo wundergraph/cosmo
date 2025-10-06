@@ -4,15 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 	"time"
 
+	"connectrpc.com/connect"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/wundergraph/cosmo/router/pkg/mcpserver"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // Options represents configuration options for the ConnectRPCServer
@@ -263,22 +264,29 @@ func (s *ConnectRPCServer) createHTTPServer() (*http.Server, error) {
 	// Add debug endpoint for route inspection
 	mux.Handle("/_debug/routes", corsMiddleware(http.HandlerFunc(s.handleDebugRoutes)))
 
-	// Register dynamic Connect RPC handlers for each proto service method
+	// Register dynamic Connect RPC handlers using Connect-Go's interceptor system
 	if s.protoManager != nil && len(s.protoManager.services) > 0 {
-		s.logger.Info("Registering Connect RPC handlers",
+		s.logger.Info("Registering Connect RPC handlers with interceptors",
 			zap.Int("services_to_register", len(s.protoManager.services)))
+
+		// Create Connect-Go interceptor for dynamic routing
+		interceptor := s.createConnectInterceptor()
 
 		for serviceName, serviceInfo := range s.protoManager.services {
 			for _, method := range serviceInfo.Methods {
 				methodPath := fmt.Sprintf("/%s/%s", serviceName, method.Name)
 
-				s.logger.Debug("Registering Connect RPC handler",
+				s.logger.Debug("Registering Connect RPC handler with interceptor",
 					zap.String("service", serviceName),
 					zap.String("method", method.Name),
 					zap.String("path", methodPath))
 
-				// Create Connect RPC protocol handler for this method
-				handler := s.createConnectRPCHandler(method.Name)
+				// Create Connect handler with interceptor - Connect-Go handles all protocol detection
+				handler := connect.NewUnaryHandler(
+					methodPath,
+					s.createDummyHandler(), // Dummy handler, real logic is in interceptor
+					connect.WithInterceptors(interceptor),
+				)
 
 				mux.Handle(methodPath, corsMiddleware(handler))
 			}
@@ -315,6 +323,9 @@ func (s *ConnectRPCServer) recreateHTTPServerRoutes() error {
 		s.logger.Info("Registering Connect RPC handlers after reload",
 			zap.Int("services_to_register", len(s.protoManager.services)))
 
+		// Create Connect-Go interceptor for dynamic routing
+		interceptor := s.createConnectInterceptor()
+
 		for serviceName, serviceInfo := range s.protoManager.services {
 			for _, method := range serviceInfo.Methods {
 				methodPath := fmt.Sprintf("/%s/%s", serviceName, method.Name)
@@ -324,14 +335,18 @@ func (s *ConnectRPCServer) recreateHTTPServerRoutes() error {
 					zap.String("method", method.Name),
 					zap.String("path", methodPath))
 
-				// Create Connect RPC protocol handler for this method
-				s.logger.Debug("Creating Connect RPC handler",
+				s.logger.Debug("Creating Connect RPC handler with interceptor",
 					zap.String("method_path", methodPath),
 					zap.String("method_name", method.Name),
 					zap.String("input_type", method.InputType),
 					zap.String("output_type", method.OutputType))
 
-				handler := s.createConnectRPCHandler(method.Name)
+				// Create Connect handler with interceptor - Connect-Go handles all protocol detection
+				handler := connect.NewUnaryHandler(
+					methodPath,
+					s.createDummyHandler(), // Dummy handler, real logic is in interceptor
+					connect.WithInterceptors(interceptor),
+				)
 
 				mux.Handle(methodPath, corsMiddleware(handler))
 			}
@@ -350,90 +365,136 @@ func (s *ConnectRPCServer) recreateHTTPServerRoutes() error {
 	return nil
 }
 
-// createConnectRPCHandler creates a Connect RPC protocol handler for a specific method
-// This uses HTTP interceptor approach to support Connect/gRPC/gRPC-Web protocols
-func (s *ConnectRPCServer) createConnectRPCHandler(methodName string) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
+// createConnectInterceptor creates a Connect-Go interceptor for dynamic GraphQL routing
+// This leverages Connect-Go's built-in protocol detection and encoding/decoding
+func (s *ConnectRPCServer) createConnectInterceptor() connect.UnaryInterceptorFunc {
+	return func(next connect.UnaryFunc) connect.UnaryFunc {
+		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
+			// Extract method name from Connect-Go procedure
+			methodName := s.extractMethodFromProcedure(req.Spec().Procedure)
 
-		// Detect protocol from headers
-		protocol := s.detectProtocol(r)
+			// Get protocol info from Connect-Go (automatic detection)
+			protocol := req.Peer().Protocol
 
-		s.logger.Debug("Handling Connect RPC request",
-			zap.String("method", methodName),
-			zap.String("protocol", protocol),
-			zap.String("content_type", r.Header.Get("Content-Type")))
-
-		// Get the GraphQL operation
-		operation := s.operationsManager.GetOperation(methodName)
-		if operation == nil {
-			s.logger.Error("No GraphQL operation found",
-				zap.String("method", methodName),
-				zap.Int("available_operations", s.operationsManager.GetOperationCount()))
-			s.writeConnectError(w, protocol, "not_found", fmt.Sprintf("no GraphQL operation found for method: %s", methodName))
-			return
-		}
-
-		// Read and parse request body
-		body, err := io.ReadAll(r.Body)
-		if err != nil {
-			s.logger.Error("Failed to read request body",
-				zap.String("method", methodName),
-				zap.Error(err))
-			s.writeConnectError(w, protocol, "invalid_argument", "failed to read request body")
-			return
-		}
-
-		// Parse variables from request body based on protocol
-		variables, err := s.parseRequestVariables(body, protocol)
-		if err != nil {
-			s.logger.Error("Failed to parse request variables",
+			s.logger.Debug("Handling Connect RPC request via interceptor",
 				zap.String("method", methodName),
 				zap.String("protocol", protocol),
-				zap.Error(err))
-			s.writeConnectError(w, protocol, "invalid_argument", "failed to parse request variables")
-			return
-		}
+				zap.String("procedure", req.Spec().Procedure))
 
-		s.logger.Debug("Executing GraphQL operation",
-			zap.String("method", methodName),
-			zap.String("operation_name", operation.Name),
-			zap.String("operation_type", operation.OperationType),
-			zap.String("protocol", protocol))
+			// Get the GraphQL operation
+			operation := s.operationsManager.GetOperation(methodName)
+			if operation == nil {
+				s.logger.Error("No GraphQL operation found",
+					zap.String("method", methodName),
+					zap.Int("available_operations", s.operationsManager.GetOperationCount()))
+				return nil, connect.NewError(connect.CodeNotFound,
+					fmt.Errorf("no GraphQL operation found for method: %s", methodName))
+			}
 
-		// Execute GraphQL operation
-		result, err := s.executeGraphQLOperation(ctx, operation.OperationString, variables)
-		if err != nil {
-			s.logger.Error("GraphQL execution failed",
+			// Parse request message - Connect-Go handles all protocol decoding automatically
+			var variables json.RawMessage
+			if req.Any() != nil {
+				// Convert the decoded message to JSON for GraphQL variables
+				msgBytes, err := json.Marshal(req.Any())
+				if err != nil {
+					s.logger.Error("Failed to marshal request message",
+						zap.String("method", methodName),
+						zap.Error(err))
+					return nil, connect.NewError(connect.CodeInvalidArgument, err)
+				}
+				variables = json.RawMessage(msgBytes)
+			} else {
+				variables = json.RawMessage("{}")
+			}
+
+			s.logger.Debug("Executing GraphQL operation via interceptor",
 				zap.String("method", methodName),
-				zap.Error(err))
-			s.writeConnectError(w, protocol, "internal", "GraphQL execution failed")
-			return
-		}
+				zap.String("operation_name", operation.Name),
+				zap.String("operation_type", operation.OperationType),
+				zap.String("protocol", protocol))
 
-		s.logger.Debug("GraphQL execution successful",
-			zap.String("method", methodName),
-			zap.Int("response_size", len(result)))
+			// Execute GraphQL operation
+			result, err := s.executeGraphQLOperation(ctx, operation.OperationString, variables)
+			if err != nil {
+				s.logger.Error("GraphQL execution failed",
+					zap.String("method", methodName),
+					zap.Error(err))
+				return nil, connect.NewError(connect.CodeInternal, err)
+			}
 
-		// Transform GraphQL response based on detected protocol
-		protocolResponse, err := s.transformGraphQLResponseForProtocol(result, methodName, protocol)
-		if err != nil {
-			s.logger.Error("Failed to transform response for protocol",
+			s.logger.Debug("GraphQL execution successful",
+				zap.String("method", methodName),
+				zap.Int("response_size", len(result)))
+
+			// Transform GraphQL response to proto format
+			protoResponse, err := s.transformGraphQLResponseToProto(result, methodName)
+			if err != nil {
+				s.logger.Error("Failed to transform response to proto format",
+					zap.String("method", methodName),
+					zap.Error(err))
+				return nil, connect.NewError(connect.CodeInternal, err)
+			}
+
+			s.logger.Debug("Response transformed to proto format",
+				zap.String("method", methodName),
+				zap.Int("proto_response_size", len(protoResponse)))
+
+			s.logger.Debug("DIAGNOSTIC: About to create Connect response",
 				zap.String("method", methodName),
 				zap.String("protocol", protocol),
-				zap.Error(err))
-			s.writeConnectError(w, protocol, "internal", "failed to transform response")
-			return
+				zap.String("response_data", string(protoResponse)))
+
+			// Convert JSON response to protobuf Struct (implements proto.Message)
+			var responseData map[string]interface{}
+			if err := json.Unmarshal(protoResponse, &responseData); err != nil {
+				s.logger.Error("Failed to unmarshal response data",
+					zap.String("method", methodName),
+					zap.Error(err))
+				return nil, connect.NewError(connect.CodeInternal, err)
+			}
+
+			s.logger.Debug("DIAGNOSTIC: Response data unmarshaled",
+				zap.String("method", methodName),
+				zap.Any("response_data", responseData))
+
+			// Convert to protobuf Struct which implements proto.Message
+			protoStruct, err := structpb.NewStruct(responseData)
+			if err != nil {
+				s.logger.Error("Failed to create protobuf struct",
+					zap.String("method", methodName),
+					zap.Error(err))
+				return nil, connect.NewError(connect.CodeInternal, err)
+			}
+
+			// Create Connect response with protobuf Struct - Connect-Go handles all protocol encoding automatically
+			response := connect.NewResponse(protoStruct)
+
+			s.logger.Debug("Connect response created successfully",
+				zap.String("method", methodName),
+				zap.String("protocol", protocol))
+
+			return response, nil
 		}
+	}
+}
 
-		s.logger.Debug("Response transformed for protocol",
-			zap.String("method", methodName),
-			zap.String("protocol", protocol),
-			zap.Int("response_size", len(protocolResponse)))
+// createDummyHandler creates a dummy handler since the real logic is in the interceptor
+func (s *ConnectRPCServer) createDummyHandler() func(context.Context, *connect.Request[structpb.Struct]) (*connect.Response[structpb.Struct], error) {
+	return func(ctx context.Context, req *connect.Request[structpb.Struct]) (*connect.Response[structpb.Struct], error) {
+		// This should never be called since the interceptor handles everything
+		s.logger.Error("DIAGNOSTIC: Dummy handler called - this should not happen")
+		return nil, connect.NewError(connect.CodeInternal, fmt.Errorf("dummy handler called"))
+	}
+}
 
-		// Write response based on protocol
-		s.writeConnectResponse(w, protocol, protocolResponse)
-	})
+// extractMethodFromProcedure extracts method name from Connect-Go procedure
+func (s *ConnectRPCServer) extractMethodFromProcedure(procedure string) string {
+	// Procedure format: /service.v1.EmployeeService/GetEmployeeByID
+	parts := strings.Split(strings.TrimPrefix(procedure, "/"), "/")
+	if len(parts) >= 2 {
+		return parts[1] // Return "GetEmployeeByID"
+	}
+	return procedure
 }
 
 // getAvailableServices returns a list of available service names for error reporting
@@ -594,122 +655,9 @@ func (s *ConnectRPCServer) handleNotFound(w http.ResponseWriter, r *http.Request
 	json.NewEncoder(w).Encode(errorResponse)
 }
 
-// detectProtocol detects the Connect RPC protocol from HTTP headers
-func (s *ConnectRPCServer) detectProtocol(r *http.Request) string {
-	contentType := r.Header.Get("Content-Type")
-
-	// Check for gRPC protocol
-	if strings.Contains(contentType, "application/grpc") {
-		return "grpc"
-	}
-
-	// Check for Connect protocol
-	if strings.Contains(contentType, "application/connect+") {
-		return "connect"
-	}
-
-	// Check for gRPC-Web protocol
-	if strings.Contains(contentType, "application/grpc-web") {
-		return "grpc-web"
-	}
-
-	// Default to Connect protocol for JSON
-	if strings.Contains(contentType, "application/json") {
-		return "connect"
-	}
-
-	// Default fallback
-	return "connect"
-}
-
-// parseRequestVariables parses request variables based on protocol
-func (s *ConnectRPCServer) parseRequestVariables(body []byte, protocol string) (json.RawMessage, error) {
-	if len(body) == 0 {
-		return json.RawMessage("{}"), nil
-	}
-
-	switch protocol {
-	case "connect":
-		// Connect protocol uses JSON directly
-		return json.RawMessage(body), nil
-	case "grpc", "grpc-web":
-		// For gRPC protocols, we expect JSON for now (simplified implementation)
-		// In a full implementation, this would handle protobuf binary format
-		return json.RawMessage(body), nil
-	default:
-		return json.RawMessage(body), nil
-	}
-}
-
-// writeConnectError writes an error response in the appropriate protocol format
-func (s *ConnectRPCServer) writeConnectError(w http.ResponseWriter, protocol, code, message string) {
-	var statusCode int
-	var contentType string
-	var errorResponse []byte
-
-	switch code {
-	case "not_found":
-		statusCode = http.StatusNotFound
-	case "invalid_argument":
-		statusCode = http.StatusBadRequest
-	case "internal":
-		statusCode = http.StatusInternalServerError
-	default:
-		statusCode = http.StatusInternalServerError
-	}
-
-	switch protocol {
-	case "connect":
-		contentType = "application/json"
-		errorResponse, _ = json.Marshal(map[string]interface{}{
-			"code":    code,
-			"message": message,
-		})
-	case "grpc", "grpc-web":
-		contentType = "application/json"
-		errorResponse, _ = json.Marshal(map[string]interface{}{
-			"code":    code,
-			"message": message,
-		})
-	default:
-		contentType = "application/json"
-		errorResponse, _ = json.Marshal(map[string]interface{}{
-			"error": message,
-		})
-	}
-
-	w.Header().Set("Content-Type", contentType)
-	w.WriteHeader(statusCode)
-	w.Write(errorResponse)
-}
-
-// writeConnectResponse writes a successful response in the appropriate protocol format
-func (s *ConnectRPCServer) writeConnectResponse(w http.ResponseWriter, protocol string, data json.RawMessage) {
-	var contentType string
-	var response []byte
-
-	switch protocol {
-	case "connect":
-		contentType = "application/json"
-		response = data
-	case "grpc":
-		contentType = "application/grpc+json"
-		response = data
-	case "grpc-web":
-		contentType = "application/grpc-web+json"
-		response = data
-	default:
-		contentType = "application/json"
-		response = data
-	}
-
-	w.Header().Set("Content-Type", contentType)
-	w.WriteHeader(http.StatusOK)
-	w.Write(response)
-}
-
-// transformGraphQLResponseForProtocol transforms GraphQL response based on the detected protocol
-func (s *ConnectRPCServer) transformGraphQLResponseForProtocol(graphqlResponse json.RawMessage, methodName, protocol string) (json.RawMessage, error) {
+// transformGraphQLResponseToProto transforms GraphQL response to proto message format
+// Connect-Go handles all protocol-specific encoding automatically
+func (s *ConnectRPCServer) transformGraphQLResponseToProto(graphqlResponse json.RawMessage, methodName string) (json.RawMessage, error) {
 	var gqlResp struct {
 		Data   json.RawMessage `json:"data"`
 		Errors []struct {
@@ -730,39 +678,17 @@ func (s *ConnectRPCServer) transformGraphQLResponseForProtocol(graphqlResponse j
 		return nil, fmt.Errorf("GraphQL errors: %s", strings.Join(errorMessages, "; "))
 	}
 
-	// Transform response based on protocol
-	switch protocol {
-	case "connect":
-		// Connect protocol expects the proto message directly (unwrapped from GraphQL "data")
-		if gqlResp.Data == nil {
-			return json.RawMessage("{}"), nil
-		}
-		return gqlResp.Data, nil
-		
-	case "grpc":
-		// gRPC protocol expects the proto message directly
-		if gqlResp.Data == nil {
-			return json.RawMessage("{}"), nil
-		}
-		return gqlResp.Data, nil
-		
-	case "grpc-web":
-		// gRPC-Web protocol expects the proto message directly
-		if gqlResp.Data == nil {
-			return json.RawMessage("{}"), nil
-		}
-		return gqlResp.Data, nil
-		
-	default:
-		// Default fallback - return unwrapped data
-		if gqlResp.Data == nil {
-			return json.RawMessage("{}"), nil
-		}
-		return gqlResp.Data, nil
+	// Extract the data field - this removes the GraphQL "data" wrapper
+	// Connect-Go will handle protocol-specific encoding (Connect/gRPC/gRPC-Web) automatically
+	if gqlResp.Data == nil {
+		return json.RawMessage("{}"), nil
 	}
+
+	return gqlResp.Data, nil
 }
 
 // withCORS creates a CORS middleware with Connect RPC support
+// Connect-Go handles protocol-specific headers automatically
 func (s *ConnectRPCServer) withCORS(allowedMethods ...string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -770,7 +696,8 @@ func (s *ConnectRPCServer) withCORS(allowedMethods ...string) func(http.Handler)
 			w.Header().Set("Access-Control-Allow-Origin", "*")
 			w.Header().Set("Access-Control-Allow-Methods", strings.Join(append(allowedMethods, "OPTIONS"), ", "))
 
-			// Include Connect RPC specific headers
+			// Include Connect RPC, gRPC, and gRPC-Web headers
+			// Connect-Go will handle protocol-specific headers automatically
 			allowedHeaders := []string{
 				"Content-Type",
 				"Accept",
@@ -782,6 +709,9 @@ func (s *ConnectRPCServer) withCORS(allowedMethods ...string) func(http.Handler)
 				"Grpc-Timeout",
 				"Grpc-Encoding",
 				"Grpc-Accept-Encoding",
+				"Grpc-Message",
+				"Grpc-Status",
+				"Grpc-Status-Details-Bin",
 			}
 			w.Header().Set("Access-Control-Allow-Headers", strings.Join(allowedHeaders, ", "))
 			w.Header().Set("Access-Control-Max-Age", "86400") // 24 hours
@@ -792,7 +722,7 @@ func (s *ConnectRPCServer) withCORS(allowedMethods ...string) func(http.Handler)
 				return
 			}
 
-			// Call the next handler
+			// Call the next handler - Connect-Go handles all protocol detection
 			next.ServeHTTP(w, req)
 		})
 	}
