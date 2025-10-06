@@ -4,7 +4,6 @@ go 1.25
 
 require (
 	connectrpc.com/connect v1.16.2
-	connectrpc.com/vanguard v0.2.0
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/buger/jsonparser v1.1.1
 	github.com/cespare/xxhash/v2 v2.3.0

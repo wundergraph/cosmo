@@ -56,14 +56,14 @@ func TestNewConnectRPCServer(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			server, err := NewConnectRPCServer(tt.routerGraphQLEndpoint, tt.options...)
-			
+
 			if tt.expectError {
 				assert.Error(t, err)
 				assert.Nil(t, server)
 			} else {
 				assert.NoError(t, err)
 				assert.NotNil(t, server)
-				
+
 				if len(tt.options) > 0 {
 					assert.Equal(t, "0.0.0.0:8080", server.listenAddr)
 					assert.Equal(t, "custom-operations", server.operationsDir)
@@ -139,7 +139,7 @@ func TestConnectRPCServer_ExecuteGraphQLQuery(t *testing.T) {
 			Query     string          `json:"query"`
 			Variables json.RawMessage `json:"variables"`
 		}
-		
+
 		err := json.NewDecoder(r.Body).Decode(&req)
 		require.NoError(t, err)
 
@@ -165,7 +165,7 @@ func TestConnectRPCServer_ExecuteGraphQLQuery(t *testing.T) {
 	query := `query GetEmployee($id: ID!) { employee(id: $id) { id name } }`
 	variables := json.RawMessage(`{"id": "1"}`)
 
-	result, err := server.executeGraphQLQuery(ctx, query, variables)
+	result, err := server.executeGraphQLOperation(ctx, query, variables)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, result)
 
@@ -173,13 +173,13 @@ func TestConnectRPCServer_ExecuteGraphQLQuery(t *testing.T) {
 	var response map[string]interface{}
 	err = json.Unmarshal(result, &response)
 	require.NoError(t, err)
-	
+
 	data, ok := response["data"].(map[string]interface{})
 	require.True(t, ok)
-	
+
 	employee, ok := data["employee"].(map[string]interface{})
 	require.True(t, ok)
-	
+
 	assert.Equal(t, float64(1), employee["id"])
 	assert.Equal(t, "John Doe", employee["name"])
 }
@@ -206,7 +206,7 @@ func TestConnectRPCServer_ExecuteGraphQLQueryWithErrors(t *testing.T) {
 	query := `query GetEmployee($id: ID!) { employee(id: $id) { id name } }`
 	variables := json.RawMessage(`{"id": "1"}`)
 
-	result, err := server.executeGraphQLQuery(ctx, query, variables)
+	result, err := server.executeGraphQLOperation(ctx, query, variables)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "GraphQL errors")
 	assert.Contains(t, err.Error(), "Field 'employee' not found")
@@ -244,7 +244,7 @@ func TestConnectRPCServer_HandleConnectRPCRequest(t *testing.T) {
 			name: String!
 		}
 	`
-	
+
 	doc, report := astparser.ParseGraphqlDocumentString(schemaSDL)
 	require.False(t, report.HasErrors())
 
@@ -322,7 +322,7 @@ func TestConnectRPCServer_StartAndStop(t *testing.T) {
 
 func TestWithCORS(t *testing.T) {
 	server := &ConnectRPCServer{}
-	
+
 	// Create a test handler
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)

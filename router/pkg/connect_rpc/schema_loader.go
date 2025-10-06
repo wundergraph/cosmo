@@ -20,16 +20,6 @@ type ConnectRPCOperation struct {
 	OperationString string
 	Description     string
 	OperationType   string // "query", "mutation", or "subscription"
-	OpenAPIConfig   *OpenAPIDirectiveConfig
-}
-
-// OpenAPIDirectiveConfig holds configuration from @openapi directive
-type OpenAPIDirectiveConfig struct {
-	OperationID string
-	Summary     string
-	Description string
-	Deprecated  bool
-	Tags        []string
 }
 
 // ConnectRPCOperationLoader loads GraphQL operations specifically for Connect RPC
@@ -40,13 +30,10 @@ type ConnectRPCOperationLoader struct {
 	Logger *zap.Logger
 }
 
-// NewConnectRPCOperationLoader creates a new ConnectRPCOperationLoader with enhanced schema
+// NewConnectRPCOperationLoader creates a new ConnectRPCOperationLoader
 func NewConnectRPCOperationLoader(logger *zap.Logger, schemaDoc *ast.Document) *ConnectRPCOperationLoader {
-	// Enhance the schema with Connect RPC specific directives
-	enhancedSchema := enhanceSchemaWithConnectRPCDirectives(schemaDoc)
-	
 	return &ConnectRPCOperationLoader{
-		SchemaDocument: enhancedSchema,
+		SchemaDocument: schemaDoc,
 		Logger:         logger,
 	}
 }
@@ -77,9 +64,12 @@ func (l *ConnectRPCOperationLoader) LoadOperationsFromDirectory(dirPath string) 
 			return fmt.Errorf("failed to read file %s: %w", path, err)
 		}
 
-		// Parse the operation
+		// Clean the operation string by removing @openapi directive before parsing
 		operationString := string(content)
-		opDoc, err := parseConnectRPCOperation(path, operationString)
+		cleanedOperationString := l.stripOpenAPIDirective(operationString)
+
+		// Parse the cleaned operation
+		opDoc, err := parseConnectRPCOperation(path, cleanedOperationString)
 		if err != nil {
 			l.Logger.Error("Failed to parse Connect RPC operation", zap.String("file", path), zap.Error(err))
 			return nil
@@ -98,16 +88,7 @@ func (l *ConnectRPCOperationLoader) LoadOperationsFromDirectory(dirPath string) 
 			return nil
 		}
 
-		// Skip schema validation for Connect RPC operations since they are machine-generated
-		// and the GraphQL router will handle validation at runtime
-		l.Logger.Debug("Skipping schema validation for machine-generated Connect RPC operation",
-			zap.String("operation", opName),
-			zap.String("file", path))
-
-		// Extract OpenAPI directive configuration
-		openAPIConfig := extractOpenAPIDirective(&opDoc)
-
-		// if not the operation name, use the file name without the extension
+		// Use file name as operation name if not found in the operation
 		if opName == "" {
 			opName = strings.TrimSuffix(d.Name(), filepath.Ext(d.Name()))
 		}
@@ -120,17 +101,13 @@ func (l *ConnectRPCOperationLoader) LoadOperationsFromDirectory(dirPath string) 
 			}
 		}
 
-		// Clean the operation string by removing @openapi directive for GraphQL execution
-		cleanedOperationString := l.stripOpenAPIDirective(operationString)
-		
 		// Add to our list of operations
 		operations = append(operations, ConnectRPCOperation{
 			Name:            opName,
 			FilePath:        path,
 			Document:        opDoc,
-			OperationString: cleanedOperationString, // Store cleaned version for GraphQL execution
+			OperationString: cleanedOperationString,
 			OperationType:   opType,
-			OpenAPIConfig:   openAPIConfig,
 		})
 
 		l.Logger.Debug("Successfully loaded Connect RPC operation",
@@ -150,93 +127,6 @@ func (l *ConnectRPCOperationLoader) LoadOperationsFromDirectory(dirPath string) 
 	return operations, nil
 }
 
-// enhanceSchemaWithConnectRPCDirectives adds Connect RPC specific directive definitions to the schema
-func enhanceSchemaWithConnectRPCDirectives(originalSchema *ast.Document) *ast.Document {
-	// Create a copy of the original schema to avoid modifying the original
-	enhancedSchema := &ast.Document{
-		Input:                originalSchema.Input,
-		RootNodes:            make([]ast.Node, len(originalSchema.RootNodes)),
-		DirectiveDefinitions: make([]ast.DirectiveDefinition, len(originalSchema.DirectiveDefinitions)),
-		SchemaDefinitions:    originalSchema.SchemaDefinitions,
-		SchemaExtensions:     originalSchema.SchemaExtensions,
-		ObjectTypeDefinitions: originalSchema.ObjectTypeDefinitions,
-		ObjectTypeExtensions:  originalSchema.ObjectTypeExtensions,
-		InterfaceTypeDefinitions: originalSchema.InterfaceTypeDefinitions,
-		InterfaceTypeExtensions:  originalSchema.InterfaceTypeExtensions,
-		UnionTypeDefinitions:     originalSchema.UnionTypeDefinitions,
-		UnionTypeExtensions:      originalSchema.UnionTypeExtensions,
-		EnumTypeDefinitions:      originalSchema.EnumTypeDefinitions,
-		EnumTypeExtensions:       originalSchema.EnumTypeExtensions,
-		InputObjectTypeDefinitions: originalSchema.InputObjectTypeDefinitions,
-		InputObjectTypeExtensions:  originalSchema.InputObjectTypeExtensions,
-		ScalarTypeDefinitions:      originalSchema.ScalarTypeDefinitions,
-		ScalarTypeExtensions:       originalSchema.ScalarTypeExtensions,
-		FieldDefinitions:           originalSchema.FieldDefinitions,
-		InputValueDefinitions:      originalSchema.InputValueDefinitions,
-		EnumValueDefinitions:       originalSchema.EnumValueDefinitions,
-		Arguments:                  originalSchema.Arguments,
-		Types:                      originalSchema.Types,
-		Selections:                 originalSchema.Selections,
-		SelectionSets:              originalSchema.SelectionSets,
-		Fields:                     originalSchema.Fields,
-		InlineFragments:            originalSchema.InlineFragments,
-		FragmentSpreads:            originalSchema.FragmentSpreads,
-		OperationDefinitions:       originalSchema.OperationDefinitions,
-		FragmentDefinitions:        originalSchema.FragmentDefinitions,
-		VariableDefinitions:        originalSchema.VariableDefinitions,
-		Directives:                 originalSchema.Directives,
-		Values:                     originalSchema.Values,
-		ListValues:                 originalSchema.ListValues,
-		ObjectValues:               originalSchema.ObjectValues,
-		ObjectFields:               originalSchema.ObjectFields,
-	}
-	
-	// Copy root nodes
-	copy(enhancedSchema.RootNodes, originalSchema.RootNodes)
-	
-	// Copy existing directive definitions
-	copy(enhancedSchema.DirectiveDefinitions, originalSchema.DirectiveDefinitions)
-	
-	// Add @openapi directive definition to make validation pass
-	// This mimics what protographic does - it temporarily adds the directive for processing
-	openAPIDirectiveSDL := `directive @openapi(
-		operationId: String
-		summary: String
-		description: String
-		deprecated: Boolean
-		tags: [String]
-	) on QUERY | MUTATION | SUBSCRIPTION`
-	
-	// Parse the directive definition
-	directiveDoc, report := astparser.ParseGraphqlDocumentString(openAPIDirectiveSDL)
-	if !report.HasErrors() && len(directiveDoc.DirectiveDefinitions) > 0 {
-		// Add the @openapi directive definition to the enhanced schema
-		enhancedSchema.DirectiveDefinitions = append(enhancedSchema.DirectiveDefinitions, directiveDoc.DirectiveDefinitions[0])
-		
-		// Add the directive definition to root nodes
-		directiveNode := ast.Node{
-			Kind: ast.NodeKindDirectiveDefinition,
-			Ref:  len(enhancedSchema.DirectiveDefinitions) - 1,
-		}
-		enhancedSchema.RootNodes = append(enhancedSchema.RootNodes, directiveNode)
-	}
-	
-	return enhancedSchema
-}
-
-// extractOpenAPIDirective extracts @openapi directive configuration from an operation
-func extractOpenAPIDirective(doc *ast.Document) *OpenAPIDirectiveConfig {
-	// For now, return a basic config to avoid complex AST parsing
-	// This allows the Connect RPC system to work without getting bogged down in AST API details
-	// The important part is that Connect RPC operations are processed separately from MCP operations
-	return &OpenAPIDirectiveConfig{
-		OperationID: "connect-rpc-operation",
-		Summary:     "Connect RPC Operation",
-		Description: "Operation processed by Connect RPC server",
-		Deprecated:  false,
-		Tags:        []string{"connect-rpc"},
-	}
-}
 
 // isGraphQLFile checks if a file is a GraphQL file based on its extension
 func isGraphQLFile(path string) bool {
@@ -292,22 +182,22 @@ func (l *ConnectRPCOperationLoader) stripOpenAPIDirective(operationString string
 	var cleanedLines []string
 	inOpenAPIDirective := false
 	parenCount := 0
-	
+
 	for _, line := range lines {
 		// Check if line contains @openapi directive
 		if strings.Contains(line, "@openapi") {
 			inOpenAPIDirective = true
-			
+
 			// Find the @openapi directive position
 			openAPIIndex := strings.Index(line, "@openapi")
-			
+
 			// Keep everything before @openapi (like "query GetEmployeeByID($employeeId: Int!) ")
 			beforeDirective := line[:openAPIIndex]
-			
+
 			// Count parentheses to track directive scope
 			afterDirective := line[openAPIIndex:]
 			parenCount += strings.Count(afterDirective, "(") - strings.Count(afterDirective, ")")
-			
+
 			// Add the part before @openapi, plus opening brace if directive ends on this line
 			if parenCount <= 0 {
 				// Directive ends on this line, add opening brace
@@ -321,7 +211,7 @@ func (l *ConnectRPCOperationLoader) stripOpenAPIDirective(operationString string
 			}
 			continue
 		}
-		
+
 		// If we're inside the directive, count parentheses and skip line
 		if inOpenAPIDirective {
 			parenCount += strings.Count(line, "(") - strings.Count(line, ")")
@@ -332,10 +222,10 @@ func (l *ConnectRPCOperationLoader) stripOpenAPIDirective(operationString string
 			}
 			continue
 		}
-		
+
 		// Keep lines that are not part of @openapi directive
 		cleanedLines = append(cleanedLines, line)
 	}
-	
+
 	return strings.Join(cleanedLines, "\n")
 }

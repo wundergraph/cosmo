@@ -135,14 +135,17 @@ func (pm *ProtoManager) parseProtoFile(path string) error {
 	lines := strings.Split(string(content), "\n")
 	var currentPackage string
 	var currentService *ServiceInfo
+	var braceDepth int
+	var inService bool
 
-	for _, line := range lines {
+	for lineNum, line := range lines {
 		line = strings.TrimSpace(line)
 		
 		// Parse package declaration
 		if strings.HasPrefix(line, "package ") {
 			packageLine := strings.TrimPrefix(line, "package ")
 			currentPackage = strings.TrimSuffix(packageLine, ";")
+			pm.logger.Debug("Found package", zap.String("package", currentPackage))
 			continue
 		}
 
@@ -156,22 +159,43 @@ func (pm *ProtoManager) parseProtoFile(path string) error {
 				ServiceName: serviceName,
 				Methods:     []MethodInfo{},
 			}
+			inService = true
+			braceDepth = 0
+			pm.logger.Debug("Found service", zap.String("service", serviceName))
 			continue
 		}
 
-		// Parse RPC methods within service
-		if currentService != nil && strings.Contains(line, "rpc ") {
-			method := pm.parseRPCMethod(line)
-			if method != nil {
-				currentService.Methods = append(currentService.Methods, *method)
-			}
-		}
+		if inService && currentService != nil {
+			// Count braces to track nesting depth
+			openBraces := strings.Count(line, "{")
+			closeBraces := strings.Count(line, "}")
+			braceDepth += openBraces - closeBraces
 
-		// End of service block
-		if currentService != nil && strings.Contains(line, "}") {
-			serviceKey := fmt.Sprintf("%s.%s", currentPackage, currentService.ServiceName)
-			pm.services[serviceKey] = currentService
-			currentService = nil
+			// Parse RPC methods within service
+			if strings.Contains(line, "rpc ") {
+				method := pm.parseRPCMethod(line)
+				if method != nil {
+					currentService.Methods = append(currentService.Methods, *method)
+					pm.logger.Debug("Parsed RPC method",
+						zap.String("service", currentService.ServiceName),
+						zap.String("method", method.Name),
+						zap.String("input", method.InputType),
+						zap.String("output", method.OutputType),
+						zap.Int("line", lineNum+1))
+				}
+			}
+
+			// End of service block - only when brace depth returns to -1 (closing the service)
+			if braceDepth < 0 {
+				serviceKey := fmt.Sprintf("%s.%s", currentPackage, currentService.ServiceName)
+				pm.services[serviceKey] = currentService
+				pm.logger.Info("Completed parsing proto service",
+					zap.String("service", serviceKey),
+					zap.Int("methods_found", len(currentService.Methods)))
+				currentService = nil
+				inService = false
+				braceDepth = 0
+			}
 		}
 	}
 
@@ -181,18 +205,22 @@ func (pm *ProtoManager) parseProtoFile(path string) error {
 // parseRPCMethod parses an RPC method line
 func (pm *ProtoManager) parseRPCMethod(line string) *MethodInfo {
 	// Example: "rpc GetEmployeeByID(GetEmployeeByIDRequest) returns (GetEmployeeByIDResponse);"
+	// Or: "rpc GetEmployeeByID(GetEmployeeByIDRequest) returns (GetEmployeeByIDResponse) {"
 	line = strings.TrimSpace(line)
 	if !strings.HasPrefix(line, "rpc ") {
 		return nil
 	}
 
-	// Remove "rpc " prefix and ";" suffix
+	// Remove "rpc " prefix and clean up
 	line = strings.TrimPrefix(line, "rpc ")
 	line = strings.TrimSuffix(line, ";")
+	line = strings.TrimSuffix(line, "{") // Handle multi-line RPC blocks
+	line = strings.TrimSpace(line)
 
 	// Find method name (everything before the first parenthesis)
 	parenIndex := strings.Index(line, "(")
 	if parenIndex == -1 {
+		pm.logger.Debug("No opening parenthesis found in RPC line", zap.String("line", line))
 		return nil
 	}
 
@@ -205,6 +233,7 @@ func (pm *ProtoManager) parseRPCMethod(line string) *MethodInfo {
 	inputStart := strings.Index(remainder, "(")
 	inputEnd := strings.Index(remainder, ")")
 	if inputStart == -1 || inputEnd == -1 {
+		pm.logger.Debug("Could not find input type parentheses", zap.String("remainder", remainder))
 		return nil
 	}
 	
@@ -213,6 +242,7 @@ func (pm *ProtoManager) parseRPCMethod(line string) *MethodInfo {
 	// Find output type between "returns" parentheses
 	returnsIndex := strings.Index(remainder, "returns")
 	if returnsIndex == -1 {
+		pm.logger.Debug("No 'returns' keyword found", zap.String("remainder", remainder))
 		return nil
 	}
 	
@@ -220,10 +250,16 @@ func (pm *ProtoManager) parseRPCMethod(line string) *MethodInfo {
 	outputStart := strings.Index(returnsRemainder, "(")
 	outputEnd := strings.Index(returnsRemainder, ")")
 	if outputStart == -1 || outputEnd == -1 {
+		pm.logger.Debug("Could not find output type parentheses", zap.String("returnsRemainder", returnsRemainder))
 		return nil
 	}
 	
 	outputType := strings.TrimSpace(returnsRemainder[outputStart+1 : outputEnd])
+
+	pm.logger.Debug("Successfully parsed RPC method",
+		zap.String("method", methodName),
+		zap.String("input", inputType),
+		zap.String("output", outputType))
 
 	return &MethodInfo{
 		Name:       methodName,

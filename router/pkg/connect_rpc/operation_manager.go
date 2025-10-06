@@ -114,21 +114,3 @@ func (om *ConnectRPCOperationsManager) GetOperationsByType(operationType string)
 	}
 	return filteredOps
 }
-
-// HasOpenAPIDirective checks if an operation has @openapi directive
-func (om *ConnectRPCOperationsManager) HasOpenAPIDirective(operationName string) bool {
-	op := om.GetOperation(operationName)
-	if op == nil {
-		return false
-	}
-	return op.OpenAPIConfig != nil
-}
-
-// GetOpenAPIConfig returns the OpenAPI configuration for an operation
-func (om *ConnectRPCOperationsManager) GetOpenAPIConfig(operationName string) *OpenAPIDirectiveConfig {
-	op := om.GetOperation(operationName)
-	if op == nil {
-		return nil
-	}
-	return op.OpenAPIConfig
-}
