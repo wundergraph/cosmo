@@ -1165,6 +1165,7 @@ export class SchemaCheckRepository {
       proposalMatchMessage,
       isLinkedTrafficCheckFailed,
       isLinkedPruningCheckFailed,
+      hasLinkedSchemaChecks: linkedSubgraphs.length > 0,
     };
   }
 

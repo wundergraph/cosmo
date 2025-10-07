@@ -1,6 +1,6 @@
 {
   "name": "@wundergraph/cosmo-cdn",
-  "version": "0.9.4",
+  "version": "0.9.5",
   "author": {
     "name": "WunderGraph Maintainers",
     "email": "info@wundergraph.com"
@@ -14,7 +14,7 @@
   "license": "Apache-2.0",
   "scripts": {
     "dev": "tsc --watch",
-    "build": "del dist && tsc",
+    "build": "rm -rf dist && tsc",
     "test:watch": "vitest test",
     "test": "vitest run",
     "lint": "eslint --cache && prettier -c src test",
