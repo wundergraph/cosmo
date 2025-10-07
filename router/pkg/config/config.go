@@ -874,6 +874,7 @@ type AccessLogsConfig struct {
 	Output    AccessLogsOutputConfig    `yaml:"output,omitempty" env:"ACCESS_LOGS_OUTPUT"`
 	Router    AccessLogsRouterConfig    `yaml:"router,omitempty" env:"ACCESS_LOGS_ROUTER"`
 	Subgraphs AccessLogsSubgraphsConfig `yaml:"subgraphs,omitempty" env:"ACCESS_LOGS_SUBGRAPH"`
+	Level     string                    `yaml:"level" env:"ACCESS_LOGS_LEVEL" envDefault:"info"`
 }
 
 type BatchingConfig struct {

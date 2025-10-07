@@ -1,8 +1,10 @@
 package logging
 
 import (
+	"fmt"
 	"math"
 	"os"
+	"strings"
 	"time"
 
 	"go.uber.org/zap"
@@ -104,7 +106,7 @@ func NewZapLogger(syncer zapcore.WriteSyncer, pretty, development bool, level za
 	return zapLogger
 }
 
-func NewZapAccessLogger(syncer zapcore.WriteSyncer, development, pretty bool) *zap.Logger {
+func NewZapAccessLogger(syncer zapcore.WriteSyncer, level zapcore.Level, development, pretty bool) *zap.Logger {
 	var encoder zapcore.Encoder
 
 	if pretty {
@@ -116,7 +118,7 @@ func NewZapAccessLogger(syncer zapcore.WriteSyncer, development, pretty bool) *z
 	c := zapcore.NewCore(
 		encoder,
 		syncer,
-		zapcore.InfoLevel,
+		level,
 	)
 	zapLogger := zap.New(c, defaultZapCoreOptions(development)...)
 	zapLogger = attachBaseFields(zapLogger)
@@ -147,7 +149,7 @@ func NewJSONZapBufferedLogger(options BufferedLoggerOptions) (*BufferedLogger, e
 		FlushInterval: options.FlushInterval,
 	}
 
-	fl.Logger = NewZapAccessLogger(fl.bufferedWriteSyncer, options.Development, options.Pretty)
+	fl.Logger = NewZapAccessLogger(fl.bufferedWriteSyncer, options.Level, options.Development, options.Pretty)
 
 	return fl, nil
 }
@@ -162,6 +164,25 @@ func NewLogFile(path string, fileMode os.FileMode) (*os.File, error) {
 	}
 
 	return os.OpenFile(path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, fileMode)
+}
+
+func ZapLogLevelFromString(logLevel string) (zapcore.Level, error) {
+	switch strings.ToUpper(logLevel) {
+	case "DEBUG":
+		return zap.DebugLevel, nil
+	case "INFO":
+		return zap.InfoLevel, nil
+	case "WARNING":
+		return zap.WarnLevel, nil
+	case "ERROR":
+		return zap.ErrorLevel, nil
+	case "FATAL":
+		return zap.FatalLevel, nil
+	case "PANIC":
+		return zap.PanicLevel, nil
+	default:
+		return -1, fmt.Errorf("unknown log level: %s", logLevel)
+	}
 }
 
 func WithRequestID(reqID string) zap.Field {

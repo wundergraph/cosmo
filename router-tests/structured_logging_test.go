@@ -204,7 +204,7 @@ func TestAccessLogsFileOutput(t *testing.T) {
 			require.NoError(t, os.RemoveAll(fp))
 		})
 
-		logger := logging.NewZapAccessLogger(f, false, false)
+		logger := logging.NewZapAccessLogger(f, 0, false, false)
 		require.NoError(t, err)
 
 		testenv.Run(t, &testenv.Config{
@@ -307,7 +307,7 @@ func TestAccessLogsFileOutput(t *testing.T) {
 				require.NoError(t, os.RemoveAll(fp))
 			})
 
-			logger := logging.NewZapAccessLogger(f, false, false)
+			logger := logging.NewZapAccessLogger(f, 0, false, false)
 			require.NoError(t, err)
 
 			testenv.Run(t, &testenv.Config{

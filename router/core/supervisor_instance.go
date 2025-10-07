@@ -73,6 +73,11 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 			SubgraphAttributes:    cfg.AccessLogs.Subgraphs.Fields,
 		}
 
+		level, err := logging.ZapLogLevelFromString(cfg.AccessLogs.Level)
+		if err != nil {
+			return nil, fmt.Errorf("could not parse log level: %w for access logs", err)
+		}
+
 		if cfg.AccessLogs.Output.File.Enabled {
 			f, err := logging.NewLogFile(cfg.AccessLogs.Output.File.Path, os.FileMode(cfg.AccessLogs.Output.File.Mode))
 			if err != nil {
@@ -84,7 +89,7 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 					BufferSize:    int(cfg.AccessLogs.Buffer.Size.Uint64()),
 					FlushInterval: cfg.AccessLogs.Buffer.FlushInterval,
 					Development:   cfg.DevelopmentMode,
-					Level:         zap.InfoLevel,
+					Level:         level,
 					Pretty:        !cfg.JSONLog,
 				})
 				if err != nil {
@@ -92,7 +97,7 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 				}
 				c.Logger = bl.Logger
 			} else {
-				c.Logger = logging.NewZapAccessLogger(f, cfg.DevelopmentMode, !cfg.JSONLog)
+				c.Logger = logging.NewZapAccessLogger(f, 0, cfg.DevelopmentMode, !cfg.JSONLog)
 			}
 		} else if cfg.AccessLogs.Output.Stdout.Enabled {
 			if cfg.AccessLogs.Buffer.Enabled {
@@ -101,7 +106,7 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 					BufferSize:    int(cfg.AccessLogs.Buffer.Size.Uint64()),
 					FlushInterval: cfg.AccessLogs.Buffer.FlushInterval,
 					Development:   cfg.DevelopmentMode,
-					Level:         zap.InfoLevel,
+					Level:         level,
 					Pretty:        !cfg.JSONLog,
 				})
 				if err != nil {
@@ -109,7 +114,7 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 				}
 				c.Logger = bl.Logger
 			} else {
-				c.Logger = logging.NewZapAccessLogger(os.Stdout, cfg.DevelopmentMode, !cfg.JSONLog)
+				c.Logger = logging.NewZapAccessLogger(os.Stdout, 0, cfg.DevelopmentMode, !cfg.JSONLog)
 			}
 		}
 
