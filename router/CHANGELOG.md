@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.257.0](https://github.com/wundergraph/cosmo/compare/router@0.256.1...router@0.257.0) (2025-10-07)
+
+### Features
+
+* ability to add operation info as trace or telemetry attributes ([#2252](https://github.com/wundergraph/cosmo/issues/2252)) ([97ab155](https://github.com/wundergraph/cosmo/commit/97ab155e4c16c7b011b8a9088a198a79e79bead9)) (@SkArchon)
+
 ## [0.256.1](https://github.com/wundergraph/cosmo/compare/router@0.256.0...router@0.256.1) (2025-10-04)
 
 ### Bug Fixes
