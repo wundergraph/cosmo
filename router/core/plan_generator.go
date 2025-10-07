@@ -138,6 +138,39 @@ func (pl *Planner) PlanParsedOperation(operation *ast.Document) (*resolve.FetchT
 	return rawPlan, nil
 }
 
+func (pl *Planner) OnlyPlanOperation(operation *ast.Document) (*resolve.FetchTreeQueryPlanNode, error) {
+	rawPlan, err := pl.planOperation(operation)
+	if err != nil {
+		return nil, fmt.Errorf("failed to plan operation: %w", err)
+	}
+
+	return rawPlan, nil
+}
+
+func (pl *Planner) PrepareOperation(operationFilePath string) (*ast.Document, error) {
+	operation, err := pl.parseOperation(operationFilePath)
+	if err != nil {
+		return nil, &PlannerOperationValidationError{err: err}
+	}
+
+	operationName := findOperationName(operation)
+	if operationName == nil {
+		return nil, &PlannerOperationValidationError{err: errors.New("operation name not found")}
+	}
+
+	err = pl.normalizeOperation(operation, operationName)
+	if err != nil {
+		return nil, err
+	}
+
+	err = pl.validateOperation(operation)
+	if err != nil {
+		return nil, err
+	}
+
+	return operation, nil
+}
+
 func (pl *Planner) normalizeOperation(operation *ast.Document, operationName []byte) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
