@@ -79,9 +79,15 @@ type Response struct {
 }
 
 type Operation struct {
-	Name string `expr:"name"`
-	Type string `expr:"type"`
-	Hash string `expr:"hash"`
+	Sha256Hash        string        `expr:"sha256Hash"`
+	ParsingTime       time.Duration `expr:"parsingTime"`
+	Name              string        `expr:"name"`
+	Type              string        `expr:"type"`
+	PersistedID       string        `expr:"persistedId"`
+	NormalizationTime time.Duration `expr:"normalizationTime"`
+	Hash              string        `expr:"hash"`
+	ValidationTime    time.Duration `expr:"validationTime"`
+	PlanningTime      time.Duration `expr:"planningTime"`
 }
 
 type Client struct {
