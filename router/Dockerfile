@@ -1,4 +1,4 @@
-FROM golang:1.25 AS builder
+FROM --platform=${BUILDPLATFORM} golang:1.25 AS builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -31,7 +31,7 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
     -X 'github.com/wundergraph/cosmo/router/core.Date=${DATE}'" \
     -a -o router cmd/router/main.go
 
-FROM gcr.io/distroless/base-debian12:nonroot AS nonroot
+FROM --platform=${TARGETPLATFORM} gcr.io/distroless/base-debian12:nonroot AS nonroot
 
 # nonroot user uid
 USER 65532
@@ -45,7 +45,7 @@ CMD ["/router"]
 
 EXPOSE 3002
 
-FROM gcr.io/distroless/base-debian12
+FROM --platform=${TARGETPLATFORM} gcr.io/distroless/base-debian12
 
 COPY --from=builder /app/router /router
 
