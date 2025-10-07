@@ -95,12 +95,13 @@ export class OrganizationRepository {
     return org;
   }
 
-  public async updateOrganization(input: { id: string; slug?: string; name?: string }) {
+  public async updateOrganization(input: { id: string; slug?: string; name?: string; kcGroupId?: string }) {
     await this.db
       .update(organizations)
       .set({
         name: input.name,
         slug: input.slug,
+        kcGroupId: input.kcGroupId,
       })
       .where(eq(organizations.id, input.id))
       .execute();

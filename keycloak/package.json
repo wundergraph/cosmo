@@ -1,6 +1,6 @@
 {
   "name": "keycloak",
-  "version": "0.10.7",
+  "version": "0.11.0",
   "private": true,
   "description": "Placeholder package to simplify versioning and releasing with lerna.",
   "keywords": [

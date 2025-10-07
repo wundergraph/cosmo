@@ -23,7 +23,7 @@
     "generate": "pnpm buf generate --path proto/wg/cosmo/platform --path proto/wg/cosmo/notifications --path proto/wg/cosmo/common --path proto/wg/cosmo/node --template buf.ts.gen.yaml && pnpm -r run --filter './connect' build",
     "husky": "husky install",
     "lint:fix": "pnpm run -r --parallel lint:fix",
-    "clean": "del-cli '**/node_modules/' '**/**/dist/' '**/**/gen/' '**/**/.next' '**/**/tsconfig.tsbuildinfo' '**/**/.eslintcache'",
+    "clean": "rm -rf node_modules **/node_modules dist **/dist gen **/gen .next **/.next tsconfig.tsbuildinfo **/tsconfig.tsbuildinfo .eslintcache **/.eslintcache",
     "release-preview": "lerna publish --ignore-scripts --dry-run",
     "release": "lerna publish -y",
     "wgc": "DO_NOT_TRACK=1 pnpm -r run --filter './cli' wgc"
@@ -56,7 +56,6 @@
     "@lerna-lite/cli": "4.1.1",
     "@lerna-lite/publish": "4.1.1",
     "@lerna-lite/version": "4.1.1",
-    "del-cli": "^5.1.0",
     "husky": "^8.0.3",
     "lint-staged": "^15.2.10",
     "prettier": "^3.0.3",

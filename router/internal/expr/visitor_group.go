@@ -9,6 +9,7 @@ const (
 	usesSubgraphTraceKey
 	usesResponseBodyKey
 	usesSubgraphResponseBodyKey
+	usesRequestOperationSha256Key
 )
 
 // VisitorGroup is a struct that holds all the VisitorManager that are used to compile the expressions
@@ -22,10 +23,11 @@ type VisitorGroup struct {
 func createVisitorGroup() *VisitorGroup {
 	return &VisitorGroup{
 		globalVisitors: map[visitorKind]ast.Visitor{
-			usesRequestBodyKey:          &UsesBody{},
-			usesSubgraphTraceKey:        &UsesSubgraphTrace{},
-			usesResponseBodyKey:         &UsesResponseBody{},
-			usesSubgraphResponseBodyKey: &UsesSubgraphResponseBody{},
+			usesRequestBodyKey:            &UsesBody{},
+			usesSubgraphTraceKey:          &UsesSubgraphTrace{},
+			usesResponseBodyKey:           &UsesResponseBody{},
+			usesSubgraphResponseBodyKey:   &UsesSubgraphResponseBody{},
+			usesRequestOperationSha256Key: &UsesRequestOperationSha256{},
 		},
 	}
 }
@@ -60,4 +62,12 @@ func (c *VisitorGroup) IsSubgraphResponseBodyUsedInExpressions() bool {
 	}
 	body := c.globalVisitors[usesSubgraphResponseBodyKey].(*UsesSubgraphResponseBody)
 	return body.UsesSubgraphResponseBody
+}
+
+func (c *VisitorGroup) IsRequestOperationSha256UsedInExpressions() bool {
+	if c == nil {
+		return true
+	}
+	v := c.globalVisitors[usesRequestOperationSha256Key].(*UsesRequestOperationSha256)
+	return v.UsesRequestOperationSha256
 }
