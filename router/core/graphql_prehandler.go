@@ -870,6 +870,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	requestContext.expressionContext.Request.Operation.Hash = operationHash
 	setTelemetryAttributes(normalizeCtx, requestContext, expr.BucketHash)
 
+	// There
 	if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
 		httpOperation.traceTimings.EndNormalize()
 	}
