@@ -25,6 +25,7 @@ const {
   AUTH_REDIRECT_URI,
   WEB_BASE_URL,
   AUTH_JWT_SECRET,
+  AUTH_SSO_COOKIE_DOMAIN,
   KC_REALM,
   KC_LOGIN_REALM,
   KC_CLIENT_ID,
@@ -72,6 +73,7 @@ const {
   SENTRY_SEND_DEFAULT_PII,
   SENTRY_TRACES_SAMPLE_RATE,
   SENTRY_PROFILE_SESSION_SAMPLE_RATE,
+  SENTRY_PROFILE_LIFECYCLE,
   SENTRY_EVENT_LOOP_BLOCK_THRESHOLD_MS,
 } = envVariables.parse(process.env);
 
@@ -108,6 +110,7 @@ const options: BuildConfig = {
     secret: AUTH_JWT_SECRET,
     webBaseUrl: WEB_BASE_URL,
     webErrorPath: '/auth/error',
+    ssoCookieDomain: AUTH_SSO_COOKIE_DOMAIN,
   },
   webhook: {
     url: WEBHOOK_URL,
@@ -185,6 +188,7 @@ if (SENTRY_ENABLED) {
         dsn: SENTRY_DSN,
         eventLoopBlockIntegrationThresholdMs: SENTRY_EVENT_LOOP_BLOCK_THRESHOLD_MS,
         profileSessionSampleRate: SENTRY_PROFILE_SESSION_SAMPLE_RATE,
+        profileLifecycle: SENTRY_PROFILE_LIFECYCLE,
         sendDefaultPii: SENTRY_SEND_DEFAULT_PII,
         tracesSampleRate: SENTRY_TRACES_SAMPLE_RATE,
       },
