@@ -50,9 +50,10 @@ const (
 )
 
 type handler struct {
-	accessLogger *accessLogger
-	handler      http.Handler
-	logger       *zap.Logger
+	accessLogger    *accessLogger
+	handler         http.Handler
+	logger          *zap.Logger
+	logLevelHandler func(r *http.Request) zapcore.Level
 }
 
 func parseOptions(r *handler, opts ...Option) http.Handler {
@@ -107,6 +108,12 @@ func WithDefaultOptions() Option {
 		r.accessLogger.skipPaths = []string{}
 		r.accessLogger.traceID = true
 		r.accessLogger.fieldsHandler = nil
+	}
+}
+
+func WithLogLevelHandler(fn func(r *http.Request) zapcore.Level) Option {
+	return func(r *handler) {
+		r.logLevelHandler = fn
 	}
 }
 
@@ -188,6 +195,12 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		resFields = append(resFields, h.accessLogger.fieldsHandler(h.logger, h.accessLogger.attributes, h.accessLogger.exprAttributes, nil, r, nil, nil)...)
 	}
 
+	logLevel := zapcore.InfoLevel
+	if h.logLevelHandler != nil {
+		logLevel = h.logLevelHandler(r)
+	}
+
+	h.logger.Log(logLevel, path, append(fields, resFields...)...)
 	h.logger.Info(path, append(fields, resFields...)...)
 }
 
