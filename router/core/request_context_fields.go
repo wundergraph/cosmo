@@ -293,7 +293,6 @@ func getCustomDynamicAttributeValue(
 }
 
 func LogLevelHandler(r *http.Request) zapcore.Level {
-
 	if r == nil {
 		return zapcore.InfoLevel
 	}

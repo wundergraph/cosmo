@@ -98,7 +98,7 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 				}
 				c.Logger = bl.Logger
 			} else {
-				c.Logger = logging.NewZapAccessLogger(f, 0, cfg.DevelopmentMode, !cfg.JSONLog, cfg.AccessLogs.AddStacktrace)
+				c.Logger = logging.NewZapAccessLogger(f, level, cfg.DevelopmentMode, !cfg.JSONLog, cfg.AccessLogs.AddStacktrace)
 			}
 		} else if cfg.AccessLogs.Output.Stdout.Enabled {
 			if cfg.AccessLogs.Buffer.Enabled {
@@ -115,7 +115,7 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 				}
 				c.Logger = bl.Logger
 			} else {
-				c.Logger = logging.NewZapAccessLogger(os.Stdout, 0, cfg.DevelopmentMode, !cfg.JSONLog, cfg.AccessLogs.AddStacktrace)
+				c.Logger = logging.NewZapAccessLogger(os.Stdout, level, cfg.DevelopmentMode, !cfg.JSONLog, cfg.AccessLogs.AddStacktrace)
 			}
 		}
 

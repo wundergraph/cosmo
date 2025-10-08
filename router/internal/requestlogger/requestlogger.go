@@ -201,7 +201,6 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.logger.Log(logLevel, path, append(fields, resFields...)...)
-	h.logger.Info(path, append(fields, resFields...)...)
 }
 
 func (al *accessLogger) getRequestFields(r *http.Request, logger *zap.Logger) []zapcore.Field {
