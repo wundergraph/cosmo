@@ -1,6 +1,7 @@
 package datasource
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"testing"
@@ -20,8 +21,9 @@ func (e *testEvent) GetData() []byte {
 }
 
 func (e *testEvent) Clone() StreamEvent {
-	e2 := *e
-	return &e2
+	return &testEvent{
+		data: bytes.Clone(e.data),
+	}
 }
 
 type testSubscriptionConfig struct {

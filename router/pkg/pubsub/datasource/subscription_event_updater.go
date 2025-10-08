@@ -55,11 +55,8 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 					zap.String("field_name", s.subscriptionEventConfiguration.RootFieldName()),
 				)
 			}
-			// Check if the error is a StreamHookError and should close the subscription
-			// We use type assertion to check for the CloseSubscription method without importing core
-			if hookErr, ok := err.(ErrorWithCloseSubscription); ok && hookErr.CloseSubscription() {
-				s.eventUpdater.CloseSubscription(resolve.SubscriptionCloseKindNormal, subId)
-			}
+			// Always close the subscription when a hook reports an error to avoid inconsistent state.
+			s.eventUpdater.CloseSubscription(resolve.SubscriptionCloseKindNormal, subId)
 		}
 	}
 }

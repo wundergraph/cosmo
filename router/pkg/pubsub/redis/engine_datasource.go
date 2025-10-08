@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"slices"
 
 	"github.com/buger/jsonparser"
 	"github.com/cespare/xxhash/v2"
@@ -24,8 +25,9 @@ func (e *Event) GetData() []byte {
 }
 
 func (e *Event) Clone() datasource.StreamEvent {
-	e2 := *e
-	return &e2
+	return &Event{
+		Data: slices.Clone(e.Data),
+	}
 }
 
 // SubscriptionEventConfiguration contains configuration for subscription events

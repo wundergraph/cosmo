@@ -138,6 +138,7 @@ func TestPublishHook(t *testing.T) {
 				Query: `mutation { updateEmployeeMyKafka(employeeID: 3, update: {name: "name test"}) { success } }`,
 			})
 			require.JSONEq(t, `{"data": {"updateEmployeeMyKafka": {"success": false}}}`, resOne.Body)
+			require.Equal(t, resOne.Response.StatusCode, 200)
 
 			requestLog := xEnv.Observer().FilterMessage("Publish Hook has been run")
 			assert.Len(t, requestLog.All(), 1)

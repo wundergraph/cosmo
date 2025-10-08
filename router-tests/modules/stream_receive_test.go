@@ -23,18 +23,6 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type errorWithCloseSubscription struct {
-	err error
-}
-
-func (e *errorWithCloseSubscription) Error() string {
-	return e.err.Error()
-}
-
-func (e *errorWithCloseSubscription) CloseSubscription() bool {
-	return true
-}
-
 func TestReceiveHook(t *testing.T) {
 	t.Parallel()
 
@@ -465,7 +453,7 @@ func TestReceiveHook(t *testing.T) {
 			Modules: map[string]interface{}{
 				"streamReceiveModule": stream_receive.StreamReceiveModule{
 					Callback: func(ctx core.StreamReceiveEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
-						return nil, &errorWithCloseSubscription{err: errors.New("test error from streamevents hook")}
+						return nil, errors.New("test error from streamevents hook")
 					},
 				},
 			},

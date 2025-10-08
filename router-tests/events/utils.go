@@ -40,7 +40,7 @@ func ProduceKafkaMessage(t *testing.T, xEnv *testenv.Environment, timeout time.D
 	xEnv.KafkaClient.Produce(ctx, &kgo.Record{
 		Topic: xEnv.GetPubSubName(topicName),
 		Value: []byte(message),
-	}, func(record *kgo.Record, err error) {
+	}, func(_ *kgo.Record, err error) {
 		pErrCh <- err
 	})
 

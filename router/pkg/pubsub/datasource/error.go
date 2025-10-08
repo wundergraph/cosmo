@@ -15,7 +15,3 @@ func NewError(publicMsg string, cause error) *Error {
 		Internal:  cause,
 	}
 }
-
-type ErrorWithCloseSubscription interface {
-	CloseSubscription() bool
-}

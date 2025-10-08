@@ -130,6 +130,7 @@ func TestSubscriptionEventUpdater_UpdateSubscriptions_WithHooks_Error(t *testing
 	mockUpdater.On("Subscriptions").Return(map[context.Context]resolve.SubscriptionIdentifier{
 		context.Background(): subId,
 	})
+	mockUpdater.On("CloseSubscription", resolve.SubscriptionCloseKindNormal, subId).Return()
 
 	// Should not call Update or UpdateSubscription on eventUpdater since hook fails
 	updater := &subscriptionEventUpdater{
@@ -145,6 +146,7 @@ func TestSubscriptionEventUpdater_UpdateSubscriptions_WithHooks_Error(t *testing
 	// Assert that Update and UpdateSubscription were not called on the eventUpdater
 	mockUpdater.AssertNotCalled(t, "Update")
 	mockUpdater.AssertNotCalled(t, "UpdateSubscription")
+	mockUpdater.AssertCalled(t, "CloseSubscription", resolve.SubscriptionCloseKindNormal, subId)
 }
 
 func TestSubscriptionEventUpdater_Update_WithMultipleHooks_Success(t *testing.T) {
@@ -529,89 +531,57 @@ func TestSubscriptionEventUpdater_Close_WithDifferentCloseKinds(t *testing.T) {
 	}
 }
 
-func TestSubscriptionEventUpdater_UpdateSubscription_WithStreamHookError_CloseSubscription(t *testing.T) {
-	mockUpdater := NewMockSubscriptionUpdater(t)
-	config := &testSubscriptionEventConfig{
-		providerID:   "test-provider",
-		providerType: ProviderTypeNats,
-		fieldName:    "testField",
-	}
-	events := []StreamEvent{
-		&testEvent{data: []byte("test data")},
-	}
-
-	// Create a mock StreamHookError with CloseSubscription=true
-	mockHookError := &mockStreamHookError{
-		closeSubscription: true,
-		message:           "subscription should close",
-	}
-
-	// Define hook that returns a StreamHookError with CloseSubscription=true
-	testHook := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
-		return events, mockHookError
-	}
-
-	updater := &subscriptionEventUpdater{
-		eventUpdater:                   mockUpdater,
-		subscriptionEventConfiguration: config,
-		hooks: Hooks{
-			OnReceiveEvents: []OnReceiveEventsFn{testHook},
+func TestSubscriptionEventUpdater_UpdateSubscription_WithHookError_ClosesSubscription(t *testing.T) {
+	testCases := []struct {
+		name      string
+		hookError error
+	}{
+		{
+			name:      "generic error",
+			hookError: errors.New("subscription should close"),
+		},
+		{
+			name:      "error implementing CloseSubscription false",
+			hookError: errors.New("subscription should still close"),
 		},
 	}
 
-	// Expect call to UpdateSubscription with modified data
-	subId := resolve.SubscriptionIdentifier{ConnectionID: 1, SubscriptionID: 1}
-	mockUpdater.On("UpdateSubscription", subId, []byte("test data")).Return()
-	mockUpdater.On("Subscriptions").Return(map[context.Context]resolve.SubscriptionIdentifier{
-		context.Background(): subId,
-	})
-	mockUpdater.On("CloseSubscription", resolve.SubscriptionCloseKindNormal, subId).Return()
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mockUpdater := NewMockSubscriptionUpdater(t)
+			config := &testSubscriptionEventConfig{
+				providerID:   "test-provider",
+				providerType: ProviderTypeNats,
+				fieldName:    "testField",
+			}
+			events := []StreamEvent{
+				&testEvent{data: []byte("test data")},
+			}
 
-	updater.Update(events)
-}
+			testHook := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
+				return events, tc.hookError
+			}
 
-func TestSubscriptionEventUpdater_UpdateSubscription_WithStreamHookError_NoCloseSubscription(t *testing.T) {
-	mockUpdater := NewMockSubscriptionUpdater(t)
-	config := &testSubscriptionEventConfig{
-		providerID:   "test-provider",
-		providerType: ProviderTypeNats,
-		fieldName:    "testField",
+			updater := &subscriptionEventUpdater{
+				eventUpdater:                   mockUpdater,
+				subscriptionEventConfiguration: config,
+				hooks: Hooks{
+					OnReceiveEvents: []OnReceiveEventsFn{testHook},
+				},
+			}
+
+			subId := resolve.SubscriptionIdentifier{ConnectionID: 1, SubscriptionID: 1}
+			mockUpdater.On("UpdateSubscription", subId, []byte("test data")).Return()
+			mockUpdater.On("Subscriptions").Return(map[context.Context]resolve.SubscriptionIdentifier{
+				context.Background(): subId,
+			})
+			mockUpdater.On("CloseSubscription", resolve.SubscriptionCloseKindNormal, subId).Return()
+
+			updater.Update(events)
+
+			mockUpdater.AssertCalled(t, "CloseSubscription", resolve.SubscriptionCloseKindNormal, subId)
+		})
 	}
-	events := []StreamEvent{
-		&testEvent{data: []byte("test data")},
-	}
-
-	// Create a mock StreamHookError with CloseSubscription=false
-	mockHookError := &mockStreamHookError{
-		closeSubscription: false,
-		message:           "subscription should not close",
-	}
-
-	// Define hook that returns a StreamHookError with CloseSubscription=false
-	testHook := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
-		return events, mockHookError
-	}
-
-	updater := &subscriptionEventUpdater{
-		eventUpdater:                   mockUpdater,
-		subscriptionEventConfiguration: config,
-		hooks: Hooks{
-			OnReceiveEvents: []OnReceiveEventsFn{testHook},
-		},
-	}
-
-	// Expect call to UpdateSubscription with modified data
-	subId := resolve.SubscriptionIdentifier{ConnectionID: 1, SubscriptionID: 1}
-	mockUpdater.On("UpdateSubscription", subId, []byte("test data")).Return()
-	mockUpdater.On("Subscriptions").Return(map[context.Context]resolve.SubscriptionIdentifier{
-		context.Background(): subId,
-	})
-
-	updater.Update(events)
-
-	// Assert that Update was not called on the eventUpdater
-	mockUpdater.AssertNotCalled(t, "Update")
-	mockUpdater.AssertNotCalled(t, "CloseSubscription")
 }
 
 func TestSubscriptionEventUpdater_UpdateSubscription_WithHooks_Error_LoggerWritesError(t *testing.T) {
@@ -644,26 +614,14 @@ func TestSubscriptionEventUpdater_UpdateSubscription_WithHooks_Error_LoggerWrite
 	mockUpdater.On("Subscriptions").Return(map[context.Context]resolve.SubscriptionIdentifier{
 		context.Background(): subId,
 	})
+	mockUpdater.On("CloseSubscription", resolve.SubscriptionCloseKindNormal, subId).Return()
 
 	updater.Update(events)
 
 	// Assert that Update was not called on the eventUpdater
 	mockUpdater.AssertNotCalled(t, "UpdateSubscription")
+	mockUpdater.AssertCalled(t, "CloseSubscription", resolve.SubscriptionCloseKindNormal, subId)
 
 	msgs := logObserver.FilterMessageSnippet("An error occurred while processing stream events hooks").TakeAll()
 	assert.Equal(t, 1, len(msgs))
-}
-
-// mockStreamHookError implements the CloseSubscription() method for testing
-type mockStreamHookError struct {
-	closeSubscription bool
-	message           string
-}
-
-func (e *mockStreamHookError) Error() string {
-	return e.message
-}
-
-func (e *mockStreamHookError) CloseSubscription() bool {
-	return e.closeSubscription
 }

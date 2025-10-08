@@ -33,12 +33,6 @@ const (
     ProviderTypeRedis ProviderType = "redis"
 }
 
-// StreamHandlerError is used to customize the error messages and the behavior
-type StreamHandlerError struct {
-    HttpError core.HttpError
-    CloseSubscription bool
-}
-
 // OperationContext already exists, we just have to add the Variables() method
 type OperationContext interface {
     Name() string
@@ -86,7 +80,7 @@ type SubscriptionOnStartHandlerContext interface {
 
 type SubscriptionOnStartHandler interface {
     // OnSubscriptionOnStart is called once at subscription start
-    // Returning an error will result in a GraphQL error being returned to the client, could be customized returning a StreamHandlerError.
+    // Returning an error will result in a GraphQL error being returned to the client
     SubscriptionOnStart(ctx SubscriptionOnStartHandlerContext) error
 }
 
@@ -107,7 +101,7 @@ type StreamReceiveEventHandler interface {
     // OnReceiveEvents is called each time a batch of events is received from the provider before delivering them to the client
     // So for a single batch of events received from the provider, this hook will be called one time for each active subscription.
     // It is important to optimize the logic inside this hook to avoid performance issues.
-    // Returning an error will result in a GraphQL error being returned to the client, could be customized returning a StreamHandlerError.
+    // Returning an error will result in a GraphQL error being returned to the client
     OnReceiveEvents(ctx StreamReceiveEventHandlerContext, events []StreamEvent) ([]StreamEvent, error)
 }
 
@@ -354,11 +348,9 @@ func (m *MyModule) SubscriptionOnStart(ctx SubscriptionOnStartHandlerContext) er
     // check if the client is authenticated
     if ctx.Authentication() == nil {
         // if the client is not authenticated, return an error
-        return &StreamHandlerError{
-            HttpError: core.HttpError{
-                Code: http.StatusUnauthorized,
-                Message: "client is not authenticated",
-            },
+        return &core.HttpError{
+            Code: http.StatusUnauthorized,
+            Message: "client is not authenticated",
             CloseSubscription: true,
         }
     }
@@ -366,11 +358,9 @@ func (m *MyModule) SubscriptionOnStart(ctx SubscriptionOnStartHandlerContext) er
     // check if the client is allowed to subscribe to the stream
     clientAllowedEntitiesIds, found := ctx.Authentication().Claims()["readEmployee"]
     if !found {
-        return &StreamHandlerError{
-            HttpError: core.HttpError{
-                Code: http.StatusForbidden,
-                Message: "client is not allowed to read employees",
-            },
+        return &core.HttpError{
+            Code: http.StatusForbidden,
+            Message: "client is not allowed to read employees",
             CloseSubscription: true,
         }
     }
