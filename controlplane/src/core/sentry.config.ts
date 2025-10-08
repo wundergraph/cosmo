@@ -3,6 +3,7 @@ import * as Sentry from '@sentry/node';
 
 import { nodeProfilingIntegration } from '@sentry/profiling-node';
 import { eventLoopBlockIntegration } from '@sentry/node-native';
+import { fastifyIntegration } from '@sentry/node';
 
 export interface SentryConfig {
   sentry: {
@@ -10,6 +11,7 @@ export interface SentryConfig {
     dsn: string;
     eventLoopBlockIntegrationThresholdMs?: number;
     profileSessionSampleRate?: number;
+    profileLifecycle?: 'manual' | 'trace';
     sendDefaultPii?: boolean;
     tracesSampleRate?: number;
   };
@@ -20,12 +22,14 @@ export function init(opts: SentryConfig) {
     Sentry.init({
       dsn: opts.sentry.dsn,
       integrations: [
+        fastifyIntegration(),
         eventLoopBlockIntegration({ threshold: opts.sentry.eventLoopBlockIntegrationThresholdMs }),
         nodeProfilingIntegration(),
       ],
       profileSessionSampleRate: opts.sentry.profileSessionSampleRate,
       sendDefaultPii: opts.sentry.sendDefaultPii,
       tracesSampleRate: opts.sentry.tracesSampleRate,
+      profileLifecycle: opts.sentry.profileLifecycle,
     });
   }
 }

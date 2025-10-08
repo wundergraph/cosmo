@@ -306,6 +306,7 @@ type Config struct {
 	CustomTelemetryAttributes          []config.CustomAttribute
 	CustomTracingAttributes            []config.CustomAttribute
 	CustomResourceAttributes           []config.CustomStaticAttribute
+	OperationContentAttributes         bool
 	MetricReader                       metric.Reader
 	PrometheusRegistry                 *prometheus.Registry
 	PrometheusPort                     int
@@ -1470,13 +1471,14 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			ServiceName:        "cosmo-router",
 			ResourceAttributes: testConfig.CustomResourceAttributes,
 			Tracing: config.Tracing{
-				Enabled:               true,
-				SamplingRate:          1,
-				ParentBasedSampler:    !testConfig.DisableParentBasedSampler,
-				Exporters:             []config.TracingExporter{},
-				Propagation:           testConfig.PropagationConfig,
-				TracingGlobalFeatures: config.TracingGlobalFeatures{},
-				ResponseTraceHeader:   testConfig.ResponseTraceHeader,
+				Enabled:                    true,
+				SamplingRate:               1,
+				ParentBasedSampler:         !testConfig.DisableParentBasedSampler,
+				OperationContentAttributes: testConfig.OperationContentAttributes,
+				Exporters:                  []config.TracingExporter{},
+				Propagation:                testConfig.PropagationConfig,
+				TracingGlobalFeatures:      config.TracingGlobalFeatures{},
+				ResponseTraceHeader:        testConfig.ResponseTraceHeader,
 			},
 		})
 

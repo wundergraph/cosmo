@@ -4,6 +4,36 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.258.0](https://github.com/wundergraph/cosmo/compare/router@0.257.0...router@0.258.0) (2025-10-07)
+
+### Features
+
+* add SubgraphFieldsFetches to QueryPlanStats for detailed field tracking ([#2220](https://github.com/wundergraph/cosmo/issues/2220)) ([8a3f2a9](https://github.com/wundergraph/cosmo/commit/8a3f2a95432f67ded3259719f694ceaed6e65b68)) (@alepane21)
+
+# [0.257.0](https://github.com/wundergraph/cosmo/compare/router@0.256.1...router@0.257.0) (2025-10-07)
+
+### Features
+
+* ability to add operation info as trace or telemetry attributes ([#2252](https://github.com/wundergraph/cosmo/issues/2252)) ([97ab155](https://github.com/wundergraph/cosmo/commit/97ab155e4c16c7b011b8a9088a198a79e79bead9)) (@SkArchon)
+
+## [0.256.1](https://github.com/wundergraph/cosmo/compare/router@0.256.0...router@0.256.1) (2025-10-04)
+
+### Bug Fixes
+
+* full-cosmo-docker ([#2261](https://github.com/wundergraph/cosmo/issues/2261)) ([0406cc9](https://github.com/wundergraph/cosmo/commit/0406cc9e1d60f86c63e0095f913a0b3c76b2a49d)) (@miklosbarabas)
+
+# [0.256.0](https://github.com/wundergraph/cosmo/compare/router@0.255.0...router@0.256.0) (2025-10-03)
+
+### Features
+
+* retrieve operation body from gqlmetrics instead of traces ([#2235](https://github.com/wundergraph/cosmo/issues/2235)) ([52cecf4](https://github.com/wundergraph/cosmo/commit/52cecf4cea2ef1ea33ecd79a1859f4bc2fd55991)) (@endigma)
+
+# [0.255.0](https://github.com/wundergraph/cosmo/compare/router@0.254.1...router@0.255.0) (2025-10-01)
+
+### Features
+
+* allow use of empty alg fields in jwks ([#2224](https://github.com/wundergraph/cosmo/issues/2224)) ([6e83450](https://github.com/wundergraph/cosmo/commit/6e83450aecff95761fbb97ce1aa9fedad0742203)) (@SkArchon)
+
 ## [0.254.1](https://github.com/wundergraph/cosmo/compare/router@0.254.0...router@0.254.1) (2025-09-26)
 
 ### Bug Fixes

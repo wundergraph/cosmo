@@ -4,6 +4,20 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.134.1](https://github.com/wundergraph/cosmo/compare/studio@0.134.0...studio@0.134.1) (2025-10-06)
+
+**Note:** Version bump only for package studio
+
+# [0.134.0](https://github.com/wundergraph/cosmo/compare/studio@0.133.1...studio@0.134.0) (2025-10-03)
+
+### Features
+
+* retrieve operation body from gqlmetrics instead of traces ([#2235](https://github.com/wundergraph/cosmo/issues/2235)) ([52cecf4](https://github.com/wundergraph/cosmo/commit/52cecf4cea2ef1ea33ecd79a1859f4bc2fd55991)) (@endigma)
+
+## [0.133.1](https://github.com/wundergraph/cosmo/compare/studio@0.133.0...studio@0.133.1) (2025-10-01)
+
+**Note:** Version bump only for package studio
+
 # [0.133.0](https://github.com/wundergraph/cosmo/compare/studio@0.132.1...studio@0.133.0) (2025-09-22)
 
 ### Features
