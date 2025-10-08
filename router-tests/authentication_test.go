@@ -3389,9 +3389,17 @@ func TestAudienceValidation(t *testing.T) {
 				},
 			})
 
+			accessController, err := core.NewAccessController(core.AccessControllerOptions{
+				Authenticators:           authenticators,
+				AuthenticationRequired:   true,
+				SkipIntrospectionQueries: false,
+				IntrospectionSkipSecret:  "",
+			})
+			require.NoError(t, err)
+
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, true)),
+					core.WithAccessController(accessController),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				// Operations with a token should succeed
@@ -3435,9 +3443,17 @@ func TestAudienceValidation(t *testing.T) {
 				"aud": matchingAud,
 			})
 
+			accessController, err := core.NewAccessController(core.AccessControllerOptions{
+				Authenticators:           authenticators,
+				AuthenticationRequired:   true,
+				SkipIntrospectionQueries: false,
+				IntrospectionSkipSecret:  "",
+			})
+			require.NoError(t, err)
+
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, true)),
+					core.WithAccessController(accessController),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				// Operations with a token should succeed
@@ -3520,9 +3536,17 @@ func TestAudienceValidation(t *testing.T) {
 			},
 		})
 
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Operations with a token should succeed
@@ -3564,9 +3588,17 @@ func TestAudienceValidation(t *testing.T) {
 			},
 		})
 
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Fail with RS512
@@ -3599,9 +3631,17 @@ func TestAudienceValidation(t *testing.T) {
 			toJWKSConfig(authServer.JWKSURL(), time.Second*5),
 		})
 
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, true)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Manually craft a JWT with an unregistered/unknown alg value
@@ -3651,9 +3691,17 @@ func TestAudienceValidation(t *testing.T) {
 			},
 		})
 
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Operations with a token should succeed
