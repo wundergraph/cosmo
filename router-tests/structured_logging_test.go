@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"net/http"
 	"net/url"
@@ -17,6 +18,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
@@ -3572,6 +3574,325 @@ func TestFlakyAccessLogs(t *testing.T) {
 			})
 		})
 	})
+
+	t.Run("verify access log level configuration", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("default level is info for successful requests", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.DebugLevel,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employees { id } }`,
+				})
+				require.JSONEq(t, employeesIDData, res.Body)
+
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				require.Equal(t, 1, requestLog.Len())
+				logEntry := requestLog.All()[0]
+				require.Equal(t, zapcore.InfoLevel, logEntry.Level)
+			})
+		})
+
+		t.Run("custom level filters logs below configured level", func(t *testing.T) {
+			t.Parallel()
+
+			var logObserver *observer.ObservedLogs
+			var zCore zapcore.Core
+			// Configure logger to only accept WarnLevel and above
+			zCore, logObserver = observer.New(zapcore.WarnLevel)
+			accessLogger := logging.NewZapAccessLogger(zapcore.AddSync(io.Discard), zapcore.WarnLevel, false, false, true)
+			accessLogger = accessLogger.WithOptions(zap.WrapCore(func(c zapcore.Core) zapcore.Core { return zCore }))
+
+			testenv.Run(t, &testenv.Config{
+				AccessLogger: accessLogger,
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.DebugLevel,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employees { id } }`,
+				})
+				require.JSONEq(t, employeesIDData, res.Body)
+
+				requestLog := logObserver.FilterMessage("/graphql")
+				// Should be filtered out because InfoLevel < WarnLevel
+				require.Equal(t, 0, requestLog.Len())
+			})
+		})
+
+		t.Run("validation error logged as ERROR", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.DebugLevel,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				_, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query: `{ notExists { id } }`,
+				})
+				require.NoError(t, err)
+
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				require.Equal(t, 1, requestLog.Len())
+				logEntry := requestLog.All()[0]
+				require.Equal(t, zapcore.ErrorLevel, logEntry.Level)
+			})
+		})
+
+		t.Run("subgraph error logged as ERROR", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+					cfg.Enabled = true
+					cfg.Mode = config.SubgraphErrorPropagationModeWrapped
+				},
+				Subgraphs: testenv.SubgraphsConfig{
+					Products: testenv.SubgraphConfig{
+						Middleware: func(handler http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								w.Header().Set("Content-Type", "application/json")
+								w.WriteHeader(http.StatusForbidden)
+								_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}]}`))
+							})
+						},
+					},
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.DebugLevel,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employees { id details { forename surname } notes } }`,
+				})
+				require.Contains(t, res.Body, "UNAUTHORIZED")
+
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				require.Equal(t, 1, requestLog.Len())
+				logEntry := requestLog.All()[0]
+				require.Equal(t, zapcore.ErrorLevel, logEntry.Level)
+			})
+		})
+	})
+
+	t.Run("verify stacktrace configuration", func(t *testing.T) {
+
+		t.Run("stacktrace enabled by default on panic", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				NoRetryClient: true,
+				RouterOptions: []core.Option{
+					core.WithCustomModules(&MyPanicModule2{}),
+					core.WithHeaderRules(config.HeaderRules{
+						All: &config.GlobalHeaderRule{
+							Request: []*config.RequestHeaderRule{
+								{Named: "panic-with-error", Operation: config.HeaderRuleOperationPropagate},
+							},
+						},
+					}),
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				_, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Header: map[string][]string{
+						"panic-with-error": {"true"},
+					},
+					Query: `{ employees { id } }`,
+				})
+				require.NoError(t, err)
+
+				panicLog := xEnv.Observer().FilterMessage("[Recovery from panic]")
+				require.Equal(t, 1, panicLog.Len())
+				logEntry := panicLog.All()[0]
+				require.Equal(t, zapcore.ErrorLevel, logEntry.Level)
+				require.NotEmpty(t, logEntry.Stack)
+			})
+		})
+
+		t.Run("stacktrace disabled on panic", func(t *testing.T) {
+			t.Parallel()
+
+			var logObserver *observer.ObservedLogs
+			var zCore zapcore.Core
+			zCore, logObserver = observer.New(zapcore.InfoLevel)
+			accessLogger := logging.NewZapAccessLogger(zapcore.AddSync(io.Discard), zapcore.InfoLevel, false, false, false)
+			accessLogger = accessLogger.WithOptions(zap.WrapCore(func(c zapcore.Core) zapcore.Core { return zCore }))
+
+			testenv.Run(t, &testenv.Config{
+				NoRetryClient: true,
+				AccessLogger:  accessLogger,
+				RouterOptions: []core.Option{
+					core.WithCustomModules(&MyPanicModule2{}),
+					core.WithHeaderRules(config.HeaderRules{
+						All: &config.GlobalHeaderRule{
+							Request: []*config.RequestHeaderRule{
+								{Named: "panic-with-error", Operation: config.HeaderRuleOperationPropagate},
+							},
+						},
+					}),
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				_, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Header: map[string][]string{
+						"panic-with-error": {"true"},
+					},
+					Query: `{ employees { id } }`,
+				})
+				require.NoError(t, err)
+
+				panicLog := logObserver.FilterMessage("[Recovery from panic]")
+				require.Equal(t, 1, panicLog.Len())
+				logEntry := panicLog.All()[0]
+				require.Empty(t, logEntry.Stack)
+			})
+		})
+
+		t.Run("stacktrace on validation error when enabled", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.DebugLevel,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				_, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query: `{ notExists { id } }`,
+				})
+				require.NoError(t, err)
+
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				require.Equal(t, 1, requestLog.Len())
+				logEntry := requestLog.All()[0]
+				// Error requests should always be logged at ERROR level
+				require.Equal(t, zapcore.ErrorLevel, logEntry.Level)
+				require.NotEmpty(t, logEntry.Stack)
+			})
+		})
+
+		t.Run("stacktrace on validation error when disabled", func(t *testing.T) {
+			t.Parallel()
+
+			var logObserver *observer.ObservedLogs
+			var zCore zapcore.Core
+			zCore, logObserver = observer.New(zapcore.InfoLevel)
+			accessLogger := logging.NewZapAccessLogger(zapcore.AddSync(io.Discard), zapcore.InfoLevel, false, false, false)
+			accessLogger = accessLogger.WithOptions(zap.WrapCore(func(c zapcore.Core) zapcore.Core { return zCore }))
+
+			testenv.Run(t, &testenv.Config{
+				AccessLogger: accessLogger,
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.DebugLevel,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				_, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query: `{ notExists { id } }`, // Invalid field
+				})
+				require.NoError(t, err)
+
+				requestLog := logObserver.FilterMessage("/graphql")
+				require.Equal(t, 1, requestLog.Len())
+				logEntry := requestLog.All()[0]
+				// Error requests should always be logged at ERROR level
+				require.Equal(t, zapcore.ErrorLevel, logEntry.Level)
+				require.Empty(t, logEntry.Stack)
+			})
+		})
+
+		t.Run("stacktrace on subgraph error when enabled", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.DebugLevel,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				_, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query: `query Employees { employees { id tag rootFieldThrowsError} }`,
+				})
+				require.NoError(t, err)
+
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				require.Equal(t, 1, requestLog.Len())
+				logEntry := requestLog.All()[0]
+				// Error requests should always be logged at ERROR level
+				require.Equal(t, zapcore.ErrorLevel, logEntry.Level)
+				require.NotEmpty(t, logEntry.Stack)
+			})
+		})
+
+		t.Run("stacktrace on subgraph error when disabled", func(t *testing.T) {
+			t.Parallel()
+
+			var logObserver *observer.ObservedLogs
+			var zCore zapcore.Core
+			zCore, logObserver = observer.New(zapcore.InfoLevel)
+			accessLogger := logging.NewZapAccessLogger(zapcore.AddSync(io.Discard), zapcore.InfoLevel, false, false, false)
+			accessLogger = accessLogger.WithOptions(zap.WrapCore(func(c zapcore.Core) zapcore.Core { return zCore }))
+
+			testenv.Run(t, &testenv.Config{
+				AccessLogger: accessLogger,
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.DebugLevel,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				_, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query: `query Employees { employees { id tag rootFieldThrowsError} }`,
+				})
+				require.NoError(t, err)
+
+				requestLog := logObserver.FilterMessage("/graphql")
+				require.Equal(t, 1, requestLog.Len())
+				logEntry := requestLog.All()[0]
+				// Error requests should always be logged at ERROR level
+				require.Equal(t, zapcore.ErrorLevel, logEntry.Level)
+				require.Empty(t, logEntry.Stack)
+			})
+		})
+
+		t.Run("stacktrace not added to successful requests", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.DebugLevel,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employees { id } }`,
+				})
+				require.JSONEq(t, employeesIDData, res.Body)
+
+				requestLog := xEnv.Observer().FilterMessage("/graphql")
+				require.Equal(t, 1, requestLog.Len())
+				logEntry := requestLog.All()[0]
+				require.Empty(t, logEntry.Stack)
+			})
+		})
+	})
+
 }
 
 func checkValues(t *testing.T, requestContext map[string]interface{}, expectedValues map[string]interface{}, additionalExpectedKeys []string) {
