@@ -372,7 +372,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 			validatedReq, err := h.accessController.Access(w, r)
 			if err != nil {
-				// Auth failed but but introspection queries might be allowed to skip auth.
+				// Auth failed but introspection queries might be allowed to skip auth.
 				// At this early stage we don't know wether this query is an introspection query or not.
 				// We verify if the operation is allowed to skip auth, remember the result in authMode and continue.
 				// At a later stage, when we know the operation type, we recall this decision, to either reject or allow
