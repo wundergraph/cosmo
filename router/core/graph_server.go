@@ -1732,10 +1732,6 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 		}
 	}
 
-	if err := s.shutdownPubSubProviders(ctx); err != nil {
-		finalErr = errors.Join(finalErr, err)
-	}
-
 	// Shutdown all graphs muxes to release resources
 	// e.g. planner cache
 	s.graphMuxListLock.Lock()
@@ -1750,6 +1746,11 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 	s.baseTransport.CloseIdleConnections()
 	for _, subgraphTransport := range s.subgraphTransports {
 		subgraphTransport.CloseIdleConnections()
+	}
+
+	// Shutdown pubsub providers
+	if err := s.shutdownPubSubProviders(ctx); err != nil {
+		finalErr = errors.Join(finalErr, err)
 	}
 
 	if s.connector != nil {

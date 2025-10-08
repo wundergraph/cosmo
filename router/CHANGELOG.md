@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.258.1](https://github.com/wundergraph/cosmo/compare/router@0.258.0...router@0.258.1) (2025-10-08)
+
+### Bug Fixes
+
+* closing a graph server should force all subscriptions to close ([#2188](https://github.com/wundergraph/cosmo/issues/2188)) ([88dbf80](https://github.com/wundergraph/cosmo/commit/88dbf8048cadf560eaa325a14d5dafd9e6975166)) (@alepane21)
+
+# [0.258.0](https://github.com/wundergraph/cosmo/compare/router@0.257.0...router@0.258.0) (2025-10-07)
+
+### Features
+
+* add SubgraphFieldsFetches to QueryPlanStats for detailed field tracking ([#2220](https://github.com/wundergraph/cosmo/issues/2220)) ([8a3f2a9](https://github.com/wundergraph/cosmo/commit/8a3f2a95432f67ded3259719f694ceaed6e65b68)) (@alepane21)
+
 # [0.257.0](https://github.com/wundergraph/cosmo/compare/router@0.256.1...router@0.257.0) (2025-10-07)
 
 ### Features
