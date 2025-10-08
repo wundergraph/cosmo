@@ -3,6 +3,7 @@ package events
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -19,12 +20,41 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
+	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 
 	"github.com/hasura/go-graphql-client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 )
+
+var (
+	_ configpoller.ConfigPoller = (*ConfigPollerMock)(nil)
+)
+
+type ConfigPollerMock struct {
+	initConfig   *nodev1.RouterConfig
+	updateConfig func(newConfig *nodev1.RouterConfig, oldVersion string) error
+	ready        chan struct{}
+}
+
+func (c *ConfigPollerMock) Subscribe(_ context.Context, handler func(newConfig *nodev1.RouterConfig, oldVersion string) error) {
+	c.updateConfig = handler
+	close(c.ready)
+}
+
+func (c *ConfigPollerMock) GetRouterConfig(_ context.Context) (*routerconfig.Response, error) {
+	result := &routerconfig.Response{
+		Config: c.initConfig,
+	}
+	return result, nil
+}
+
+func (c *ConfigPollerMock) Stop(_ context.Context) error {
+	return nil
+}
 
 const NatsWaitTimeout = time.Second * 30
 
@@ -1534,6 +1564,181 @@ func TestNatsEvents(t *testing.T) {
 			err = json.Unmarshal(msg.Payload, &payload)
 			require.NoError(t, err)
 			require.Equal(t, float64(99), payload.Data.EmployeeUpdatedMyNats.ID)
+		})
+	})
+
+	t.Run("start multiple subscriptions and hot reload should stop all the subscriptions and after restart they should work", func(t *testing.T) {
+		pm := ConfigPollerMock{
+			ready: make(chan struct{}),
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               true,
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+			NoRetryClient: true,
+			RouterConfig: &testenv.RouterConfig{
+				ConfigPollerFactory: func(config *nodev1.RouterConfig) configpoller.ConfigPoller {
+					pm.initConfig = config
+					return &pm
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Wait for the config poller to be ready
+			<-pm.ready
+
+			var subscriptionMyNats struct {
+				employeeUpdatedMyNats struct {
+					ID      float64 `graphql:"id"`
+					Details struct {
+						Surname string `graphql:"surname"`
+					} `graphql:"details"`
+				} `graphql:"employeeUpdatedMyNats(id: 1)"`
+			}
+
+			var subscriptionNats struct {
+				employeeUpdated struct {
+					ID      float64 `graphql:"id"`
+					Details struct {
+						Surname string `graphql:"surname"`
+					} `graphql:"details"`
+				} `graphql:"employeeUpdated(employeeID: 1)"`
+			}
+
+			var subscriptionNats2 struct {
+				employeeUpdated struct {
+					ID      float64 `graphql:"id"`
+					Details struct {
+						Surname string `graphql:"surname"`
+					} `graphql:"details"`
+				} `graphql:"employeeUpdated(employeeID: 2)"`
+			}
+
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
+			client1 := graphql.NewSubscriptionClient(surl)
+			client2 := graphql.NewSubscriptionClient(surl)
+			client3 := graphql.NewSubscriptionClient(surl)
+			sub1DataCh := make(chan natsSubscriptionArgs)
+			subscription1ID, err := client1.Subscribe(&subscriptionMyNats, nil, func(dataValue []byte, errValue error) error {
+				sub1DataCh <- natsSubscriptionArgs{
+					dataValue,
+					errValue,
+				}
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEqual(t, "", subscription1ID)
+
+			client1Done := testenv.Go(client1.Run)
+
+			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
+
+			sub2DataCh := make(chan natsSubscriptionArgs)
+			subscription2ID, err := client2.Subscribe(&subscriptionNats, nil, func(dataValue []byte, errValue error) error {
+				sub2DataCh <- natsSubscriptionArgs{
+					dataValue,
+					errValue,
+				}
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEqual(t, "", subscription2ID)
+
+			client2Done := testenv.Go(client2.Run)
+
+			xEnv.WaitForSubscriptionCount(2, NatsWaitTimeout)
+
+			sub3DataCh := make(chan natsSubscriptionArgs)
+			subscription3ID, err := client3.Subscribe(&subscriptionNats2, nil, func(dataValue []byte, errValue error) error {
+				sub3DataCh <- natsSubscriptionArgs{
+					dataValue,
+					errValue,
+				}
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEqual(t, "", subscription3ID)
+
+			client3Done := testenv.Go(client3.Run)
+
+			xEnv.WaitForSubscriptionCount(3, NatsWaitTimeout)
+
+			// Swap config
+			require.NoError(t, pm.updateConfig(pm.initConfig, "old-1"))
+
+			// Wait for all providers to shut down and restart
+			require.Eventually(t, func() bool {
+				defaultLogs := xEnv.Observer().FilterField(zapcore.Field{
+					Type:   zapcore.StringType,
+					Key:    "provider_id",
+					String: "default",
+				})
+				myNatsLogs := xEnv.Observer().FilterField(zapcore.Field{
+					Type:   zapcore.StringType,
+					Key:    "provider_id",
+					String: "my-nats",
+				})
+				return myNatsLogs.FilterMessage("NATS connection established").Len() == 4 &&
+					myNatsLogs.FilterMessage("NATS disconnected").Len() == 1 &&
+					myNatsLogs.FilterMessage("NATS connection closed").Len() == 1 &&
+					defaultLogs.FilterMessage("NATS connection established").Len() == 4 &&
+					defaultLogs.FilterMessage("NATS disconnected").Len() == 1 &&
+					defaultLogs.FilterMessage("NATS connection closed").Len() == 1
+			}, NatsWaitTimeout, 10*time.Second)
+
+			// Then wait for subscriptions to be started again
+			xEnv.WaitForSubscriptionCount(3, NatsWaitTimeout)
+
+			xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), []byte(`{"id":1,"__typename":"Employee"}`))
+			xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.2"), []byte(`{"id":2,"__typename":"Employee"}`))
+			xEnv.NatsConnectionMyNats.Publish(xEnv.GetPubSubName("employeeUpdatedMyNats.1"), []byte(`{"id":1,"__typename":"Employee"}`))
+
+			testenv.AwaitChannelWithT(t, NatsWaitTimeout, sub1DataCh, func(t *testing.T, data natsSubscriptionArgs) {
+				assert.NoError(t, data.errValue)
+				assert.Equal(t, data.dataValue, []byte(`{"employeeUpdatedMyNats":{"id":1,"details":{"surname":"Neuse"}}}`))
+			}, "unable to receive data on subscription 1 before timeout")
+
+			testenv.AwaitChannelWithT(t, NatsWaitTimeout, sub2DataCh, func(t *testing.T, data natsSubscriptionArgs) {
+				assert.NoError(t, data.errValue)
+				assert.Equal(t, data.dataValue, []byte(`{"employeeUpdated":{"id":1,"details":{"surname":"Neuse"}}}`))
+			}, "unable to receive data on subscription 2 before timeout")
+
+			testenv.AwaitChannelWithT(t, NatsWaitTimeout, sub3DataCh, func(t *testing.T, data natsSubscriptionArgs) {
+				assert.NoError(t, data.errValue)
+				assert.Equal(t, data.dataValue, []byte(`{"employeeUpdated":{"id":2,"details":{"surname":"Deus"}}}`))
+			}, "unable to receive data on subscription 3 before timeout")
+
+			// Unsubscribe from all the subscriptions
+			errUnsubscribeOne := client1.Unsubscribe(subscription1ID)
+			require.NoError(t, errUnsubscribeOne)
+			errUnsubscribeTwo := client2.Unsubscribe(subscription2ID)
+			require.NoError(t, errUnsubscribeTwo)
+			errUnsubscribeThree := client3.Unsubscribe(subscription3ID)
+			require.NoError(t, errUnsubscribeThree)
+
+			// close the first client
+			errClose1 := client1.Close()
+			require.NoError(t, errClose1)
+			testenv.AwaitChannelWithT(t, NatsWaitTimeout, client1Done, func(t *testing.T, client1RunErr error) {
+				require.NoError(t, client1RunErr)
+			})
+
+			// close the second client
+			errClose2 := client2.Close()
+			require.NoError(t, errClose2)
+			testenv.AwaitChannelWithT(t, NatsWaitTimeout, client2Done, func(t *testing.T, client2RunErr error) {
+				require.NoError(t, client2RunErr)
+			})
+
+			// close the third client
+			errClose3 := client3.Close()
+			require.NoError(t, errClose3)
+			testenv.AwaitChannelWithT(t, NatsWaitTimeout, client3Done, func(t *testing.T, client3RunErr error) {
+				require.NoError(t, client3RunErr)
+			})
 		})
 	})
 }
