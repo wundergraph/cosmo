@@ -1,7 +1,6 @@
 package logging
 
 import (
-	"fmt"
 	"math"
 	"os"
 	"strings"
@@ -20,8 +19,8 @@ const (
 
 type RequestIDKey struct{}
 
-func New(pretty bool, development bool, level zapcore.LevelEnabler) *zap.Logger {
-	return NewZapLogger(zapcore.AddSync(os.Stdout), pretty, development, level)
+func New(pretty bool, development bool, stacktrace bool, level zapcore.LevelEnabler) *zap.Logger {
+	return NewZapLogger(zapcore.AddSync(os.Stdout), pretty, development, stacktrace, level)
 }
 
 func zapBaseEncoderConfig() zapcore.EncoderConfig {
@@ -167,25 +166,6 @@ func NewLogFile(path string, fileMode os.FileMode) (*os.File, error) {
 	}
 
 	return os.OpenFile(path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, fileMode)
-}
-
-func ZapLogLevelFromString(logLevel string) (zapcore.Level, error) {
-	switch strings.ToUpper(logLevel) {
-	case "DEBUG":
-		return zap.DebugLevel, nil
-	case "INFO":
-		return zap.InfoLevel, nil
-	case "WARNING":
-		return zap.WarnLevel, nil
-	case "ERROR":
-		return zap.ErrorLevel, nil
-	case "FATAL":
-		return zap.FatalLevel, nil
-	case "PANIC":
-		return zap.PanicLevel, nil
-	default:
-		return -1, fmt.Errorf("unknown log level: %s", logLevel)
-	}
 }
 
 func WithRequestID(reqID string) zap.Field {

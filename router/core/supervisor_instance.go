@@ -3,9 +3,6 @@ package core
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"os"
-
 	"github.com/KimMachineGun/automemlimit/memlimit"
 	"github.com/dustin/go-humanize"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
@@ -15,6 +12,10 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"go.uber.org/automaxprocs/maxprocs"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"net/http"
+	"os"
+	"strings"
 )
 
 // newRouter creates a new router instance.
@@ -73,8 +74,8 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 			SubgraphAttributes:    cfg.AccessLogs.Subgraphs.Fields,
 		}
 
-		level, err := logging.ZapLogLevelFromString(cfg.AccessLogs.Level)
-		if err != nil {
+		var level zapcore.Level
+		if err := level.Set(strings.ToUpper(cfg.AccessLogs.Level)); err != nil {
 			return nil, fmt.Errorf("could not parse log level: %w for access logs", err)
 		}
 
