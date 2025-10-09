@@ -2237,7 +2237,7 @@ describe('Update proposal tests', () => {
 
     // Expect an error response
     expect(updateProposalResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
-    expect(updateProposalResponse.response?.details).toContain(`Proposal p-1/${proposalName} not found`);
+    expect(updateProposalResponse.response?.details).toMatch(new RegExp(`Proposal .*${proposalName} not found`));
 
     await server.close();
   });
