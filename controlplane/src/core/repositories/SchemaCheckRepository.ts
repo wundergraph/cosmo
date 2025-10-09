@@ -11,7 +11,7 @@ import {
   VCSContext,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
-import { and, eq, ilike, inArray, is, or, SQL, sql } from 'drizzle-orm';
+import { and, eq, ilike, inArray, or, SQL, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { GraphQLSchema, parse } from 'graphql';
@@ -50,6 +50,8 @@ import {
   isCheckSuccessful,
   normalizeLabels,
 } from '../util.js';
+import { OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
+import { BlobStorage } from '../blobstorage/index.js';
 import { FederatedGraphConfig, FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { OrganizationRepository } from './OrganizationRepository.js';
 import { ProposalRepository } from './ProposalRepository.js';
@@ -108,6 +110,8 @@ export class SchemaCheckRepository {
     compositionSkipped?: boolean;
     breakingChangesSkipped?: boolean;
     errorMessage?: string;
+    checkExtensionDeliveryId?: string;
+    checkExtensionErrorMessage?: string;
   }): Promise<string | undefined> {
     const updatedSchemaCheck = await this.db
       .update(schemaChecks)
@@ -124,6 +128,8 @@ export class SchemaCheckRepository {
         compositionSkipped: data.compositionSkipped,
         breakingChangesSkipped: data.breakingChangesSkipped,
         errorMessage: data.errorMessage,
+        checkExtensionErrorMessage: data.checkExtensionErrorMessage,
+        checkExtensionDeliveryId: data.checkExtensionDeliveryId,
       })
       .where(eq(schemaChecks.id, data.schemaCheckID))
       .returning()
@@ -599,6 +605,9 @@ export class SchemaCheckRepository {
   }
 
   public async checkMultipleSchemas({
+    actorId,
+    blobStorage,
+    admissionConfig,
     organizationId,
     organizationSlug,
     subgraphs,
@@ -615,7 +624,11 @@ export class SchemaCheckRepository {
     vcsContext,
     chClient,
     skipProposalMatchCheck,
+    webhookService,
   }: {
+    actorId: string;
+    blobStorage: BlobStorage;
+    admissionConfig: { jwtSecret: string; cdnBaseUrl: string };
     organizationId: string;
     organizationSlug: string;
     orgRepo: OrganizationRepository;
@@ -633,6 +646,7 @@ export class SchemaCheckRepository {
     vcsContext?: VCSContext;
     chClient?: ClickHouseClient;
     skipProposalMatchCheck: boolean;
+    webhookService: OrganizationWebhookService;
   }) {
     const breakingChanges: SchemaChange[] = [];
     const nonBreakingChanges: SchemaChange[] = [];
@@ -1124,6 +1138,9 @@ export class SchemaCheckRepository {
       }
 
       const targetCheckResult = await subgraphRepo.performSchemaCheck({
+        actorId,
+        blobStorage,
+        admissionConfig,
         organizationSlug,
         namespace: targetNamespace,
         subgraphName: targetSubgraph.name,
@@ -1137,6 +1154,7 @@ export class SchemaCheckRepository {
         chClient,
         newGraphQLSchema: targetNewGraphQLSchema,
         disableResolvabilityValidation: false,
+        webhookService,
       });
 
       await this.addLinkedSchemaCheck({
@@ -1165,7 +1183,6 @@ export class SchemaCheckRepository {
       proposalMatchMessage,
       isLinkedTrafficCheckFailed,
       isLinkedPruningCheckFailed,
-      hasLinkedSchemaChecks: linkedSubgraphs.length > 0,
     };
   }
 

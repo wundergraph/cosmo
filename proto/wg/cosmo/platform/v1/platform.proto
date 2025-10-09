@@ -282,6 +282,8 @@ message CheckSubgraphSchemaResponse {
   optional bool isLinkedTrafficCheckFailed = 15;
   // If true, it means the graph pruning check failed for the linked check
   optional bool isLinkedPruningCheckFailed = 16;
+  optional bool isCheckExtensionSkipped = 17;
+  optional string checkExtensionErrorMessage = 18;
 }
 
 message FixSubgraphSchemaResponse {
@@ -548,6 +550,8 @@ message SchemaCheck {
   bool breaking_changes_skipped = 20;
   optional string errorMessage = 21;
   repeated LinkedCheck linkedChecks = 22;
+  optional string check_extension_delivery_id = 23;
+  optional string check_extension_error_message = 24;
 }
 
 message GetChecksByFederatedGraphNameResponse {
@@ -2659,6 +2663,38 @@ message GetCacheWarmerConfigResponse {
   int32 maxOperationsCount = 3;
 }
 
+message GetSubgraphCheckExtensionsConfigRequest {
+  string namespace = 1;
+}
+
+message GetSubgraphCheckExtensionsConfigResponse {
+  Response response = 1;
+  bool isEnabledForNamespace = 2;
+  string endpoint = 3;
+  bool isSecretKeyAssigned = 4;
+  bool includeComposedSdl = 5;
+  bool includeLintingIssues = 6;
+  bool includePruningIssues = 7;
+  bool includeSchemaChanges = 8;
+  bool includeAffectedOperations = 9;
+}
+
+message ConfigureSubgraphCheckExtensionsRequest {
+   string namespace = 1;
+   bool enableSubgraphCheckExtensions = 2;
+   string endpoint = 3;
+   optional string secretKey = 4;
+   bool includeComposedSdl = 5;
+   bool includeLintingIssues = 6;
+   bool includePruningIssues = 7;
+   bool includeSchemaChanges = 8;
+   bool includeAffectedOperations = 9;
+}
+
+message ConfigureSubgraphCheckExtensionsResponse {
+  Response response = 1;
+ }
+
 message DeleteCacheWarmerOperationRequest {
   string id = 1;
   string federatedGraphName = 2;
@@ -3269,6 +3305,9 @@ service PlatformService {
   rpc GetCacheWarmerConfig(GetCacheWarmerConfigRequest) returns (GetCacheWarmerConfigResponse) {}
   // DeleteCacheWarmerOperation deletes a cache warmer operation.
   rpc DeleteCacheWarmerOperation(DeleteCacheWarmerOperationRequest) returns (DeleteCacheWarmerOperationResponse) {}
+
+  rpc GetSubgraphCheckExtensionsConfig(GetSubgraphCheckExtensionsConfigRequest) returns (GetSubgraphCheckExtensionsConfigResponse) {}
+  rpc ConfigureSubgraphCheckExtensions(ConfigureSubgraphCheckExtensionsRequest) returns (ConfigureSubgraphCheckExtensionsResponse) {}
 
   //
   // Billing

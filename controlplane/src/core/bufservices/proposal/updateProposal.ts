@@ -442,8 +442,10 @@ export function updateProposal(
         operationUsageStats,
         isLinkedTrafficCheckFailed,
         isLinkedPruningCheckFailed,
-        hasLinkedSchemaChecks,
       } = await schemaCheckRepo.checkMultipleSchemas({
+        actorId: authContext.userId,
+        blobStorage: opts.blobStorage,
+        admissionConfig: { cdnBaseUrl: opts.cdnBaseUrl, jwtSecret: opts.jwtSecret },
         organizationId: authContext.organizationId,
         organizationSlug: authContext.organizationSlug,
         orgRepo,
@@ -468,6 +470,12 @@ export function updateProposal(
         logger,
         chClient: opts.chClient,
         skipProposalMatchCheck: true,
+        webhookService: new OrganizationWebhookService(
+          opts.db,
+          authContext.organizationId,
+          opts.logger,
+          opts.billingDefaultPlanId,
+        ),
       });
 
       if (checkId) {
@@ -494,7 +502,6 @@ export function updateProposal(
         checkUrl: `${process.env.WEB_BASE_URL}/${authContext.organizationSlug}/${namespace.name}/graph/${federatedGraph.name}/checks/${checkId}`,
         isLinkedPruningCheckFailed,
         isLinkedTrafficCheckFailed,
-        hasLinkedSchemaChecks,
       };
     } else {
       return {

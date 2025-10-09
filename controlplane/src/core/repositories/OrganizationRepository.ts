@@ -1378,6 +1378,7 @@ export class OrganizationRepository {
       scim: false,
       'cache-warmer': false,
       proposals: false,
+      'subgraph-check-extensions': false,
     };
 
     for (const feature of features) {

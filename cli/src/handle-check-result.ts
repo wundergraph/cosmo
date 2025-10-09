@@ -66,7 +66,8 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse) => {
         resp.lintErrors.length === 0 &&
         resp.lintWarnings.length === 0 &&
         resp.graphPruneErrors.length === 0 &&
-        resp.graphPruneWarnings.length === 0
+        resp.graphPruneWarnings.length === 0 &&
+        resp.isCheckExtensionSkipped
       ) {
         console.log(
           `\nDetected no changes.\nDetected no lint issues.\nDetected no graph pruning issues.\n\n${studioCheckDestination}\n`,
@@ -241,6 +242,11 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse) => {
           finalStatement += `\n\n The target subgraph check has failed because of graph pruning issues.`;
         }
         success = false;
+      }
+
+      if (resp.checkExtensionErrorMessage) {
+        success = false;
+        finalStatement += `\n${logSymbols.error} Subgraph extension check failed with message: ${resp.checkExtensionErrorMessage}`;
       }
 
       if (success) {

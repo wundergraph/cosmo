@@ -528,6 +528,7 @@ export const namespaceConfig = pgTable(
     enableCacheWarming: boolean('enable_cache_warming').default(false).notNull(),
     checksTimeframeInDays: integer('checks_timeframe_in_days'),
     enableProposals: boolean('enable_proposals').default(false).notNull(),
+    enableSubgraphCheckExtensions: boolean('enable_subgraph_check_extensions').default(false).notNull(),
   },
   (t) => {
     return {
@@ -818,6 +819,10 @@ export const schemaChecks = pgTable(
     }>(),
     // this is used to store the error message of a non check policy
     errorMessage: text('error_message'),
+    checkExtensionDeliveryId: uuid('check_extension_delivery_id').references(() => webhookDeliveries.id, {
+      onDelete: 'set null',
+    }),
+    checkExtensionErrorMessage: text('check_extension_error_message'),
   },
   (t) => {
     return {
@@ -1698,7 +1703,12 @@ export const webhookProposalStateUpdate = pgTable(
   },
 );
 
-export const webhookDeliveryType = pgEnum('webhook_delivery_type', ['webhook', 'slack', 'admission'] as const);
+export const webhookDeliveryType = pgEnum('webhook_delivery_type', [
+  'webhook',
+  'slack',
+  'admission',
+  'check-extension',
+] as const);
 
 export const webhookDeliveries = pgTable(
   'webhook_deliveries', // webhd
@@ -2098,30 +2108,6 @@ export const subgraphMembers = pgTable(
   },
 );
 
-export const lintRulesEnum = pgEnum('lint_rules', [
-  'FIELD_NAMES_SHOULD_BE_CAMEL_CASE',
-  'TYPE_NAMES_SHOULD_BE_PASCAL_CASE',
-  'SHOULD_NOT_HAVE_TYPE_PREFIX',
-  'SHOULD_NOT_HAVE_TYPE_SUFFIX',
-  'SHOULD_NOT_HAVE_INPUT_PREFIX',
-  'SHOULD_HAVE_INPUT_SUFFIX',
-  'SHOULD_NOT_HAVE_ENUM_PREFIX',
-  'SHOULD_NOT_HAVE_ENUM_SUFFIX',
-  'SHOULD_NOT_HAVE_INTERFACE_PREFIX',
-  'SHOULD_NOT_HAVE_INTERFACE_SUFFIX',
-  'ENUM_VALUES_SHOULD_BE_UPPER_CASE',
-  'ORDER_FIELDS',
-  'ORDER_ENUM_VALUES',
-  'ORDER_DEFINITIONS',
-  'ALL_TYPES_REQUIRE_DESCRIPTION',
-  'DISALLOW_CASE_INSENSITIVE_ENUM_VALUES',
-  'NO_TYPENAME_PREFIX_IN_TYPE_FIELDS',
-  'REQUIRE_DEPRECATION_REASON',
-  // https://github.com/drizzle-team/drizzle-kit-mirror/issues/178 , the below rule is removed and not be used
-  // due to a limitation in postgres, we cant remove a enum value
-  // 'REQUIRE_DEPRECATION_DATE', // @deprecated
-] as const);
-
 export const lintSeverityEnum = pgEnum('lint_severity', ['warn', 'error'] as const);
 
 export const namespaceLintCheckConfig = pgTable(
@@ -2133,7 +2119,7 @@ export const namespaceLintCheckConfig = pgTable(
       .references(() => namespaces.id, {
         onDelete: 'cascade',
       }),
-    lintRule: lintRulesEnum('lint_rule').notNull(),
+    lintRule: text('lint_rule').notNull(),
     severityLevel: lintSeverityEnum('severity_level').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -2219,7 +2205,7 @@ export const schemaCheckLintAction = pgTable(
       .references(() => schemaChecks.id, {
         onDelete: 'cascade',
       }),
-    lintRuleType: lintRulesEnum('lint_rule_type'),
+    lintRuleType: text('lint_rule_type'),
     message: text('message'),
     isError: boolean('is_error').default(false),
     location: json('location')
@@ -2575,3 +2561,26 @@ export const pluginImageVersionsRelations = relations(pluginImageVersions, ({ on
     references: [schemaVersion.id],
   }),
 }));
+
+export const namespaceSubgraphCheckExtensionConfig = pgTable(
+  'namespace_subgraph_check_extensions_config',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    namespaceId: uuid('namespace_id')
+      .notNull()
+      .unique()
+      .references(() => namespaces.id, { onDelete: 'cascade' }),
+    endpoint: text('endpoint').notNull(),
+    secretKey: text('secret_key'),
+    includeComposedSdl: boolean('include_composed_sdl').notNull().default(false),
+    includeLintingIssues: boolean('include_linting_issues').notNull().default(false),
+    includePruningIssues: boolean('include_pruning_issues').notNull().default(false),
+    includeSchemaChanges: boolean('include_schema_changes').notNull().default(false),
+    includeAffectedOperations: boolean('include_affected_operations').notNull().default(false),
+  },
+  (t) => {
+    return {
+      namespaceIdIndex: index('nsce_namespace_id_idx').on(t.namespaceId),
+    };
+  },
+);

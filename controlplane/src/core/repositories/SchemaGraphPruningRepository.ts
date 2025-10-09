@@ -105,6 +105,24 @@ export class SchemaGraphPruningRepository {
     }
   }
 
+  public deleteExistingSchemaCheckGraphPruningIssues({
+    schemaCheckId,
+    schemaCheckSubgraphId,
+  }: {
+    schemaCheckId: string;
+    schemaCheckSubgraphId: string;
+  }) {
+    return this.db
+      .delete(schemaCheckGraphPruningAction)
+      .where(
+        and(
+          eq(schemaCheckGraphPruningAction.schemaCheckId, schemaCheckId),
+          eq(schemaCheckGraphPruningAction.schemaCheckSubgraphId, schemaCheckSubgraphId),
+        ),
+      )
+      .execute();
+  }
+
   public async getSchemaCheckGraphPruningIsssues({
     schemaCheckId,
     federatedGraphId,

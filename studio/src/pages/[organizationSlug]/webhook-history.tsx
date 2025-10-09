@@ -451,6 +451,7 @@ const WebhookHistoryPage: NextPageWithLayout = () => {
             <SelectItem value="webhook">Webhook</SelectItem>
             <SelectItem value="slack">Slack</SelectItem>
             <SelectItem value="admission">Admission</SelectItem>
+            <SelectItem value="check-extension">Check Extension</SelectItem>
           </SelectContent>
         </Select>
         <Spacer />
