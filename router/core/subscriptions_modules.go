@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"net/http"
+	"slices"
 
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
@@ -100,8 +101,9 @@ func (e *EngineEvent) GetData() []byte {
 }
 
 func (e *EngineEvent) Clone() datasource.StreamEvent {
-	e2 := *e
-	return &e2
+	return &EngineEvent{
+		Data: slices.Clone(e.Data),
+	}
 }
 
 type engineSubscriptionOnStartHookContext struct {
