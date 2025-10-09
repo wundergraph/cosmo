@@ -465,6 +465,7 @@ export function updateProposal(
         operationUsageStats,
         isLinkedTrafficCheckFailed,
         isLinkedPruningCheckFailed,
+        hasLinkedSchemaChecks,
       } = await schemaCheckRepo.checkMultipleSchemas({
         organizationId: authContext.organizationId,
         organizationSlug: authContext.organizationSlug,
@@ -516,6 +517,7 @@ export function updateProposal(
         checkUrl: `${process.env.WEB_BASE_URL}/${authContext.organizationSlug}/${namespace.name}/graph/${federatedGraph.name}/checks/${checkId}`,
         isLinkedPruningCheckFailed,
         isLinkedTrafficCheckFailed,
+        hasLinkedSchemaChecks,
       };
     } else {
       return {

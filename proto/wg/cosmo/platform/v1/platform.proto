@@ -2766,6 +2766,7 @@ message CreateProposalResponse {
   optional bool isLinkedTrafficCheckFailed = 18;
   // If true, it means the graph pruning check failed for the linked check
   optional bool isLinkedPruningCheckFailed = 19;
+  optional bool hasLinkedSchemaChecks = 20;
 }
 
 message GetProposalRequest {
@@ -2844,6 +2845,7 @@ message UpdateProposalResponse {
   optional bool isLinkedTrafficCheckFailed = 15;
   // If true, it means the graph pruning check failed for the linked check
   optional bool isLinkedPruningCheckFailed = 16;
+  optional bool hasLinkedSchemaChecks = 17;
 }
 
 message EnableProposalsForNamespaceRequest {

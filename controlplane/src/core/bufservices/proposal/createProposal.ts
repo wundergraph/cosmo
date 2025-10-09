@@ -399,6 +399,7 @@ export function createProposal(
       operationUsageStats,
       isLinkedTrafficCheckFailed,
       isLinkedPruningCheckFailed,
+      hasLinkedSchemaChecks,
     } = await schemaCheckRepo.checkMultipleSchemas({
       organizationId: authContext.organizationId,
       organizationSlug: authContext.organizationSlug,
@@ -453,6 +454,7 @@ export function createProposal(
       proposalName: proposal.name,
       isLinkedTrafficCheckFailed,
       isLinkedPruningCheckFailed,
+      hasLinkedSchemaChecks,
     };
   });
 }
