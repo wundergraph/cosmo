@@ -1915,7 +1915,7 @@
             },
             "urls": {
               "type": "array",
-              "description": "The Redis connection URLs. The values are specified as a string with the format 'scheme://host:port', with optional auth and options added in to the URL. If cluster is enabled, will use them to instantiate a cluster connection. Required for standalone and cluster modes.",
+              "description": "The Redis connection URLs. The values are specified as a string with the format 'scheme://host:port', with optional auth and options added in to the URL. If cluster is enabled, will use them to instantiate a cluster connection. Required for direct and cluster modes.",
               "default": [],
               "items": {
                 "type": "string"

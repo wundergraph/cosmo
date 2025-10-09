@@ -30,6 +30,12 @@ type RedisCloserOptions struct {
 }
 
 func NewRedisCloser(opts *RedisCloserOptions) (RDCloser, error) {
+	if opts == nil { 
+		return nil, fmt.Errorf("nil RedisCloserOptions") 
+	} 
+	if opts.Logger == nil {
+		 opts.Logger = zap.NewNop() 
+	}
 	if err := validateRedisConfig(opts); err != nil {
 		return nil, err
 	}
@@ -83,6 +89,7 @@ func createSentinelClient(opts *RedisCloserOptions) (RDCloser, error) {
 	})
 
 	if isFunctioning, err := IsFunctioningClient(rdb); !isFunctioning {
+		_ = rdb.Close()
 		return rdb, fmt.Errorf("failed to create a functioning Redis sentinel client: %w", err)
 	}
 
@@ -118,6 +125,7 @@ func createClusterClient(opts *RedisCloserOptions) (RDCloser, error) {
 	rdb := redis.NewClusterClient(clusterOps)
 
 	if isFunctioning, err := IsFunctioningClient(rdb); !isFunctioning {
+		_ = rdb.Close()
 		return rdb, fmt.Errorf("failed to create a functioning Redis cluster client: %w", err)
 	}
 
