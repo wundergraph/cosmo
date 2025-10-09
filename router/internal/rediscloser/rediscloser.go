@@ -152,6 +152,7 @@ func createDirectClient(opts *RedisCloserOptions) (RDCloser, error) {
 	}
 
 	if isFunctioning, err := IsFunctioningClient(rdb); !isFunctioning {
+		_ = rdb.Close()
 		return rdb, fmt.Errorf("failed to create a functioning Redis direct client: %w", err)
 	}
 
