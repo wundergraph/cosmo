@@ -40,7 +40,7 @@ func NewRedisCloser(opts *RedisCloserOptions) (RDCloser, error) {
 	case opts.ClusterEnabled:
 		return createClusterClient(opts)
 	default:
-		return createStandaloneClient(opts)
+		return createDirectClient(opts)
 	}
 }
 
@@ -63,7 +63,7 @@ func validateRedisConfig(opts *RedisCloserOptions) error {
 		}
 	default:
 		if len(opts.URLs) == 0 {
-			return fmt.Errorf("urls is required for standalone Redis")
+			return fmt.Errorf("urls is required for direct Redis")
 		}
 	}
 	return nil
@@ -124,9 +124,9 @@ func createClusterClient(opts *RedisCloserOptions) (RDCloser, error) {
 	return rdb, nil
 }
 
-// createStandaloneClient creates a standalone Redis client
-func createStandaloneClient(opts *RedisCloserOptions) (RDCloser, error) {
-	opts.Logger.Info("Creating Redis client in standalone mode.")
+// createDirectClient creates a direct Redis client (single instance or master-slave without automatic failover)
+func createDirectClient(opts *RedisCloserOptions) (RDCloser, error) {
+	opts.Logger.Info("Creating Redis client in direct mode.")
 
 	urlEncodedOpts, err := redis.ParseURL(opts.URLs[0])
 	if err != nil {
@@ -144,7 +144,7 @@ func createStandaloneClient(opts *RedisCloserOptions) (RDCloser, error) {
 	}
 
 	if isFunctioning, err := IsFunctioningClient(rdb); !isFunctioning {
-		return rdb, fmt.Errorf("failed to create a functioning Redis standalone client: %w", err)
+		return rdb, fmt.Errorf("failed to create a functioning Redis direct client: %w", err)
 	}
 
 	return rdb, nil

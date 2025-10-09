@@ -18,7 +18,7 @@ func TestRedisCloser(t *testing.T) {
 		})
 
 		require.Error(t, err)
-		require.ErrorContains(t, err, "no redis URLs provided")
+		require.ErrorContains(t, err, "urls is required for direct Redis")
 	})
 
 	t.Run("Creates default client for normal redis", func(t *testing.T) {
@@ -62,7 +62,7 @@ func TestRedisCloser(t *testing.T) {
 		})
 
 		require.Error(t, err)
-		require.ErrorContains(t, err, "failed to create a functioning redis client")
+		require.ErrorContains(t, err, "failed to create a functioning Redis direct client")
 	})
 }
 
@@ -156,7 +156,7 @@ func TestValidateRedisConfig(t *testing.T) {
 		errorMsg    string
 	}{
 		{
-			name: "valid standalone config",
+			name: "valid direct config",
 			opts: &RedisCloserOptions{
 				URLs: []string{"redis://localhost:6379"},
 			},
@@ -180,12 +180,12 @@ func TestValidateRedisConfig(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name: "missing URLs for standalone",
+			name: "missing URLs for direct",
 			opts: &RedisCloserOptions{
 				URLs: []string{},
 			},
 			expectError: true,
-			errorMsg:    "urls is required for standalone Redis",
+			errorMsg:    "urls is required for direct Redis",
 		},
 		{
 			name: "missing URLs for cluster",

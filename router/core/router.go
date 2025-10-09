@@ -1,5 +1,4 @@
 package core
-package core
 
 import (
 	"context"
