@@ -535,6 +535,12 @@ type RedisConfiguration struct {
 	URLs           []string `yaml:"urls,omitempty" env:"RATE_LIMIT_REDIS_URLS"`
 	ClusterEnabled bool     `yaml:"cluster_enabled,omitempty" envDefault:"false" env:"RATE_LIMIT_REDIS_CLUSTER_ENABLED"`
 	KeyPrefix      string   `yaml:"key_prefix,omitempty" envDefault:"cosmo_rate_limit" env:"RATE_LIMIT_REDIS_KEY_PREFIX"`
+	
+	// Redis Sentinel configuration for high availability
+	SentinelEnabled  bool     `yaml:"sentinel_enabled,omitempty" envDefault:"false" env:"RATE_LIMIT_REDIS_SENTINEL_ENABLED"`
+	MasterName       string   `yaml:"master_name,omitempty" env:"RATE_LIMIT_REDIS_MASTER_NAME"`
+	SentinelAddrs    []string `yaml:"sentinel_addrs,omitempty" env:"RATE_LIMIT_REDIS_SENTINEL_ADDRS"`
+	SentinelPassword string   `yaml:"sentinel_password,omitempty" env:"RATE_LIMIT_REDIS_SENTINEL_PASSWORD"`
 }
 
 type RateLimitSimpleStrategy struct {

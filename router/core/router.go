@@ -1,4 +1,5 @@
 package core
+package core
 
 import (
 	"context"
@@ -832,9 +833,13 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	if r.Config.rateLimit != nil && r.Config.rateLimit.Enabled {
 		var err error
 		r.redisClient, err = rd.NewRedisCloser(&rd.RedisCloserOptions{
-			URLs:           r.Config.rateLimit.Storage.URLs,
-			ClusterEnabled: r.Config.rateLimit.Storage.ClusterEnabled,
-			Logger:         r.logger,
+			URLs:             r.Config.rateLimit.Storage.URLs,
+			ClusterEnabled:   r.Config.rateLimit.Storage.ClusterEnabled,
+			SentinelEnabled:  r.Config.rateLimit.Storage.SentinelEnabled,
+			MasterName:       r.Config.rateLimit.Storage.MasterName,
+			SentinelAddrs:    r.Config.rateLimit.Storage.SentinelAddrs,
+			SentinelPassword: r.Config.rateLimit.Storage.SentinelPassword,
+			Logger:           r.logger,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to create redis client: %w", err)

@@ -1907,7 +1907,6 @@
         "storage": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["urls"],
           "properties": {
             "cluster_enabled": {
               "type": "boolean",
@@ -1916,7 +1915,7 @@
             },
             "urls": {
               "type": "array",
-              "description": "The Redis connection URLs. The values are specified as a string with the format 'scheme://host:port', with optional auth and options added in to the URL. If cluster is enabled, will use them to instantiate a cluster connection.",
+              "description": "The Redis connection URLs. The values are specified as a string with the format 'scheme://host:port', with optional auth and options added in to the URL. If cluster is enabled, will use them to instantiate a cluster connection. Required for standalone and cluster modes.",
               "default": [],
               "items": {
                 "type": "string"
@@ -1926,6 +1925,26 @@
               "type": "string",
               "description": "The prefix of the keys used to store the rate limit data.",
               "default": "cosmo_rate_limit"
+            },
+            "sentinel_enabled": {
+              "type": "boolean",
+              "description": "Enable Redis Sentinel mode for high availability. Cannot be used together with cluster_enabled.",
+              "default": false
+            },
+            "master_name": {
+              "type": "string",
+              "description": "The name of the Redis master as configured in Sentinel. Required when sentinel_enabled is true."
+            },
+            "sentinel_addrs": {
+              "type": "array",
+              "description": "List of Redis Sentinel addresses in the format 'host:port'. Required when sentinel_enabled is true.",
+              "items": {
+                "type": "string"
+              }
+            },
+            "sentinel_password": {
+              "type": "string",
+              "description": "Password for authenticating with Redis Sentinel nodes, if required."
             }
           }
         },

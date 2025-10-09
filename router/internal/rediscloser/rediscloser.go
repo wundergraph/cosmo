@@ -21,60 +21,130 @@ type RedisCloserOptions struct {
 	URLs           []string
 	ClusterEnabled bool
 	Password       string
+	
+	// Redis Sentinel configuration
+	SentinelEnabled  bool
+	MasterName       string
+	SentinelAddrs    []string
+	SentinelPassword string
 }
 
 func NewRedisCloser(opts *RedisCloserOptions) (RDCloser, error) {
-	if len(opts.URLs) == 0 {
-		return nil, fmt.Errorf("no redis URLs provided")
+	if err := validateRedisConfig(opts); err != nil {
+		return nil, err
 	}
 
-	var rdb RDCloser
-	// If provided, we create a cluster client
-	if opts.ClusterEnabled {
-		opts.Logger.Info("Detected that redis is running in cluster mode.")
+	switch {
+	case opts.SentinelEnabled:
+		return createSentinelClient(opts)
+	case opts.ClusterEnabled:
+		return createClusterClient(opts)
+	default:
+		return createStandaloneClient(opts)
+	}
+}
 
-		// Parse the first URL to get the cluster options. We assume that the first URL provided is the primary URL
-		// and append further URLs as secondary addr params to the URL, as required by the go-redis library.
-		// e.g. redis://user:password@localhost:6789?dial_timeout=3&read_timeout=6s&addr=localhost:6790&addr=localhost:6791
-		parsedUrl, err := url.Parse(opts.URLs[0])
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse the redis connection url: %w", err)
+// validateRedisConfig validates the Redis configuration options
+func validateRedisConfig(opts *RedisCloserOptions) error {
+	switch {
+	case opts.SentinelEnabled:
+		if opts.MasterName == "" {
+			return fmt.Errorf("master_name is required when sentinel_enabled is true")
 		}
+		if len(opts.SentinelAddrs) == 0 {
+			return fmt.Errorf("sentinel_addrs is required when sentinel_enabled is true")
+		}
+		if opts.ClusterEnabled {
+			return fmt.Errorf("cannot enable both sentinel_enabled and cluster_enabled")
+		}
+	case opts.ClusterEnabled:
+		if len(opts.URLs) == 0 {
+			return fmt.Errorf("urls is required when cluster_enabled is true")
+		}
+	default:
+		if len(opts.URLs) == 0 {
+			return fmt.Errorf("urls is required for standalone Redis")
+		}
+	}
+	return nil
+}
 
-		// This operates on the URL query, and if there are more urls, appends them to the addr param
-		addClusterUrlsToQuery(opts, parsedUrl)
-		// Parse the cluster URL using the library method, to pick up all of the options encoded
-		clusterOps, err := redis.ParseClusterURL(parsedUrl.String())
+// createSentinelClient creates a Redis sentinel client
+func createSentinelClient(opts *RedisCloserOptions) (RDCloser, error) {
+	opts.Logger.Info("Creating Redis client in sentinel mode.", 
+		zap.String("master_name", opts.MasterName),
+		zap.Int("sentinel_count", len(opts.SentinelAddrs)))
 
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse the redis connection url into ops: %w", err)
-		}
-		if opts.Password != "" {
-			// If they explicitly provide a password, assume that it's overwriting the URL password or that none was
-			// provided in the URL
-			clusterOps.Password = opts.Password
-		}
+	rdb := redis.NewFailoverClient(&redis.FailoverOptions{
+		MasterName:       opts.MasterName,
+		SentinelAddrs:    opts.SentinelAddrs,
+		SentinelPassword: opts.SentinelPassword,
+		Password:         opts.Password,
+	})
 
-		rdb = redis.NewClusterClient(clusterOps)
-	} else {
-		urlEncodedOpts, err := redis.ParseURL(opts.URLs[0])
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse the redis connection url: %w", err)
-		}
-		if opts.Password != "" {
-			// If they explicitly provide a password, assume that it's overwriting the URL password or that none was
-			// provided in the URL
-			urlEncodedOpts.Password = opts.Password
-		}
-		rdb = redis.NewClient(urlEncodedOpts)
+	if isFunctioning, err := IsFunctioningClient(rdb); !isFunctioning {
+		return rdb, fmt.Errorf("failed to create a functioning Redis sentinel client: %w", err)
+	}
 
-		if isClusterClient(rdb) {
-			opts.Logger.Warn("Detected that redis is running in cluster mode. You may encounter issues as a result")
-		}
+	return rdb, nil
+}
+
+// createClusterClient creates a Redis cluster client
+func createClusterClient(opts *RedisCloserOptions) (RDCloser, error) {
+	opts.Logger.Info("Creating Redis client in cluster mode.")
+
+	// Parse the first URL to get the cluster options. We assume that the first URL provided is the primary URL
+	// and append further URLs as secondary addr params to the URL, as required by the go-redis library.
+	// e.g. redis://user:password@localhost:6789?dial_timeout=3&read_timeout=6s&addr=localhost:6790&addr=localhost:6791
+	parsedUrl, err := url.Parse(opts.URLs[0])
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse the redis connection url: %w", err)
+	}
+
+	// This operates on the URL query, and if there are more urls, appends them to the addr param
+	addClusterUrlsToQuery(opts, parsedUrl)
+	// Parse the cluster URL using the library method, to pick up all of the options encoded
+	clusterOps, err := redis.ParseClusterURL(parsedUrl.String())
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse the redis connection url into ops: %w", err)
+	}
+	if opts.Password != "" {
+		// If they explicitly provide a password, assume that it's overwriting the URL password or that none was
+		// provided in the URL
+		clusterOps.Password = opts.Password
+	}
+
+	rdb := redis.NewClusterClient(clusterOps)
+
+	if isFunctioning, err := IsFunctioningClient(rdb); !isFunctioning {
+		return rdb, fmt.Errorf("failed to create a functioning Redis cluster client: %w", err)
+	}
+
+	return rdb, nil
+}
+
+// createStandaloneClient creates a standalone Redis client
+func createStandaloneClient(opts *RedisCloserOptions) (RDCloser, error) {
+	opts.Logger.Info("Creating Redis client in standalone mode.")
+
+	urlEncodedOpts, err := redis.ParseURL(opts.URLs[0])
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse the redis connection url: %w", err)
+	}
+	if opts.Password != "" {
+		// If they explicitly provide a password, assume that it's overwriting the URL password or that none was
+		// provided in the URL
+		urlEncodedOpts.Password = opts.Password
+	}
+	rdb := redis.NewClient(urlEncodedOpts)
+
+	if isClusterClient(rdb) {
+		opts.Logger.Warn("Detected that redis is running in cluster mode. You may encounter issues as a result")
 	}
 
 	if isFunctioning, err := IsFunctioningClient(rdb); !isFunctioning {
-		return rdb, fmt.Errorf("failed to create a functioning redis client with the provided URLs: %w", err)
+		return rdb, fmt.Errorf("failed to create a functioning Redis standalone client: %w", err)
 	}
 
 	return rdb, nil
