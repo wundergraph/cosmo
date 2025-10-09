@@ -64,6 +64,51 @@ func TestVisitorManager(t *testing.T) {
 		}
 	})
 
+	t.Run("verify IsRequestOperationSha256UsedInExpressions", func(t *testing.T) {
+		t.Parallel()
+
+		testCases := []struct {
+			name           string
+			expression     string
+			expectedResult bool
+		}{
+			{
+				name:           "without sha256",
+				expression:     "request.operation.hash",
+				expectedResult: false,
+			},
+			{
+				name:           "with sha256 dot chaining",
+				expression:     "request.operation.sha256Hash",
+				expectedResult: true,
+			},
+			{
+				name:           "with sha256 square bracket",
+				expression:     `request["operation"]["sha256Hash"]`,
+				expectedResult: true,
+			},
+			{
+				name:           "with sha256 mixed access",
+				expression:     `request["operation"].sha256Hash`,
+				expectedResult: true,
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+
+				exprManager := CreateNewExprManager()
+				visitorManager := exprManager.VisitorManager
+
+				_, err := exprManager.CompileAnyExpression(tc.expression)
+				require.NoError(t, err)
+
+				require.Equal(t, tc.expectedResult, visitorManager.IsRequestOperationSha256UsedInExpressions())
+			})
+		}
+	})
+
 	t.Run("verify IsSubgraphResponseBodyUsedInExpressions", func(t *testing.T) {
 		t.Parallel()
 
