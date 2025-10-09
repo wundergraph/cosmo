@@ -11,42 +11,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// StreamHandlerError is used to customize the error messages and the behavior
-type StreamHandlerError struct {
-	err        error
-	message    string
-	statusCode int
-	code       string
-}
-
-func (e *StreamHandlerError) Error() string {
-	if e.err != nil {
-		return e.err.Error()
-	}
-	return e.message
-}
-
-func (e *StreamHandlerError) Message() string {
-	return e.message
-}
-
-func (e *StreamHandlerError) StatusCode() int {
-	return e.statusCode
-}
-
-func (e *StreamHandlerError) Code() string {
-	return e.code
-}
-
-func NewStreamHookError(err error, message string, statusCode int, code string) *StreamHandlerError {
-	return &StreamHandlerError{
-		err:        err,
-		message:    message,
-		statusCode: statusCode,
-		code:       code,
-	}
-}
-
 type SubscriptionOnStartHandlerContext interface {
 	// Request is the original request received by the router.
 	Request() *http.Request

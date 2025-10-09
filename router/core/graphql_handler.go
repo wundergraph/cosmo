@@ -400,21 +400,21 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 		if isHttpResponseWriter {
 			httpWriter.WriteHeader(http.StatusInternalServerError)
 		}
-	case errorTypeStreamHookError:
-		var streamHookErr *StreamHandlerError
-		if !errors.As(err, &streamHookErr) {
+	case errorTypeHttpError:
+		var httpErr *httpGraphqlError
+		if !errors.As(err, &httpErr) {
 			response.Errors[0].Message = "Internal server error"
 			return
 		}
-		response.Errors[0].Message = streamHookErr.Message()
-		if streamHookErr.Code() != "" || streamHookErr.StatusCode() != 0 {
+		response.Errors[0].Message = httpErr.Message()
+		if httpErr.ExtensionCode() != "" || httpErr.StatusCode() != 0 {
 			response.Errors[0].Extensions = &Extensions{
-				Code:       streamHookErr.Code(),
-				StatusCode: streamHookErr.StatusCode(),
+				Code:       httpErr.ExtensionCode(),
+				StatusCode: httpErr.StatusCode(),
 			}
 		}
 		if isHttpResponseWriter {
-			httpWriter.WriteHeader(streamHookErr.StatusCode())
+			httpWriter.WriteHeader(httpErr.StatusCode())
 		}
 	}
 

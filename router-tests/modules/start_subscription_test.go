@@ -181,7 +181,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
 					Callback: func(ctx core.SubscriptionOnStartHandlerContext) error {
 						callbackCalled <- true
-						return core.NewStreamHookError(nil, "subscription closed", http.StatusOK, "")
+						return core.NewHttpGraphqlError("subscription closed", http.StatusText(http.StatusOK), http.StatusOK)
 					},
 				},
 			},
@@ -366,7 +366,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 			Modules: map[string]interface{}{
 				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
 					Callback: func(ctx core.SubscriptionOnStartHandlerContext) error {
-						return core.NewStreamHookError(errors.New("test error"), "test error", http.StatusLoopDetected, http.StatusText(http.StatusLoopDetected))
+						return core.NewHttpGraphqlError("test error", http.StatusText(http.StatusLoopDetected), http.StatusLoopDetected)
 					},
 				},
 			},
@@ -594,7 +594,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 			Modules: map[string]interface{}{
 				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
 					Callback: func(ctx core.SubscriptionOnStartHandlerContext) error {
-						return core.NewStreamHookError(errors.New("subscription closed"), "subscription closed", http.StatusOK, "NotFound")
+						return core.NewHttpGraphqlError("subscription closed", http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 					},
 					CallbackOnOriginResponse: func(response *http.Response, ctx core.RequestContext) *http.Response {
 						originResponseCalled <- response

@@ -2,7 +2,7 @@ package module_test
 
 import (
 	"encoding/json"
-	"errors"
+	"net/http"
 	"strconv"
 	"testing"
 	"time"
@@ -115,7 +115,7 @@ func TestPublishHook(t *testing.T) {
 			Modules: map[string]interface{}{
 				"publishModule": stream_publish.PublishModule{
 					Callback: func(ctx core.StreamPublishEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
-						return events, core.NewStreamHookError(errors.New("test"), "test", 500, "INTERNAL_SERVER_ERROR")
+						return events, core.NewHttpGraphqlError("test", http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 					},
 				},
 			},
@@ -160,7 +160,7 @@ func TestPublishHook(t *testing.T) {
 			Modules: map[string]interface{}{
 				"publishModule": stream_publish.PublishModule{
 					Callback: func(ctx core.StreamPublishEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
-						return events, core.NewStreamHookError(errors.New("test"), "test", 500, "INTERNAL_SERVER_ERROR")
+						return events, core.NewHttpGraphqlError("test", http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 					},
 				},
 			},
@@ -214,7 +214,7 @@ func TestPublishHook(t *testing.T) {
 			Modules: map[string]interface{}{
 				"publishModule": stream_publish.PublishModule{
 					Callback: func(ctx core.StreamPublishEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
-						return events, core.NewStreamHookError(errors.New("test"), "test", 500, "INTERNAL_SERVER_ERROR")
+						return events, core.NewHttpGraphqlError("test", http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 					},
 				},
 			},
