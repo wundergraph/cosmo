@@ -481,6 +481,17 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 	for i, fn := range l.subscriptionHooks.onStart {
 		subscriptionOnStartFns[i] = NewPubSubSubscriptionOnStartHook(fn)
 	}
+
+	onPublishEventsFns := make([]pubsub_datasource.OnPublishEventsFn, len(l.subscriptionHooks.onPublishEvents))
+	for i, fn := range l.subscriptionHooks.onPublishEvents {
+		onPublishEventsFns[i] = NewPubSubOnPublishEventsHook(fn)
+	}
+
+	onReceiveEventsFns := make([]pubsub_datasource.OnReceiveEventsFn, len(l.subscriptionHooks.onReceiveEvents))
+	for i, fn := range l.subscriptionHooks.onReceiveEvents {
+		onReceiveEventsFns[i] = NewPubSubOnReceiveEventsHook(fn)
+	}
+
 	factoryProviders, factoryDataSources, err := pubsub.BuildProvidersAndDataSources(
 		l.ctx,
 		routerEngineConfig.Events,
@@ -489,8 +500,10 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 		pubSubDS,
 		l.resolver.InstanceData().HostName,
 		l.resolver.InstanceData().ListenAddress,
-		pubsub.Hooks{
+		pubsub_datasource.Hooks{
 			SubscriptionOnStart: subscriptionOnStartFns,
+			OnReceiveEvents:     onReceiveEventsFns,
+			OnPublishEvents:     onPublishEventsFns,
 		},
 	)
 	if err != nil {

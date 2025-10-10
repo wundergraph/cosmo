@@ -44,7 +44,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 					EnablePrometheusStreamMetrics: true,
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-				events.EnsureTopicExists(t, xEnv, "employeeUpdated")
+				events.KafkaEnsureTopicExists(t, xEnv, time.Second, "employeeUpdated")
 				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: `mutation { updateEmployeeMyKafka(employeeID: 3, update: {name: "name test"}) { success } }`})
 				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: `mutation { updateEmployeeMyKafka(employeeID: 3, update: {name: "name test"}) { success } }`})
 
@@ -91,7 +91,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 					EnablePrometheusStreamMetrics: true,
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-				events.EnsureTopicExists(t, xEnv, topic)
+				events.KafkaEnsureTopicExists(t, xEnv, time.Second, topic)
 
 				var subscriptionOne struct {
 					employeeUpdatedMyKafka struct {
@@ -115,7 +115,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 				go func() { clientRunCh <- client.Run() }()
 				xEnv.WaitForSubscriptionCount(1, WaitTimeout)
 
-				events.ProduceKafkaMessage(t, xEnv, topic, `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+				events.ProduceKafkaMessage(t, xEnv, time.Second, topic, `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
 				testenv.AwaitChannelWithT(t, WaitTimeout, subscriptionArgsCh, func(t *testing.T, args subscriptionArgs) {
 					require.NoError(t, args.errValue)

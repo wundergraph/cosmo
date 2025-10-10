@@ -6,9 +6,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"slices"
 
+	"github.com/buger/jsonparser"
+	"github.com/cespare/xxhash/v2"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 // Event represents an event from Kafka
@@ -22,6 +26,18 @@ func (e *Event) GetData() []byte {
 	return e.Data
 }
 
+func (e *Event) Clone() datasource.StreamEvent {
+	e2 := *e
+	e2.Data = slices.Clone(e.Data)
+	e2.Headers = make(map[string][]byte, len(e.Headers))
+	for k, v := range e.Headers {
+		e2.Headers[k] = slices.Clone(v)
+	}
+	return &e2
+}
+
+// SubscriptionEventConfiguration is a public type that is used to allow access to custom fields
+// of the provider
 type SubscriptionEventConfiguration struct {
 	Provider  string   `json:"providerId"`
 	Topics    []string `json:"topics"`
@@ -43,10 +59,44 @@ func (s *SubscriptionEventConfiguration) RootFieldName() string {
 	return s.FieldName
 }
 
-type PublishEventConfiguration struct {
+// publishData is a private type that is used to pass data from the engine to the provider
+type publishData struct {
 	Provider  string `json:"providerId"`
 	Topic     string `json:"topic"`
 	Event     Event  `json:"event"`
+	FieldName string `json:"rootFieldName"`
+}
+
+// PublishEventConfiguration returns the publish event configuration from the publishData type
+func (p *publishData) PublishEventConfiguration() datasource.PublishEventConfiguration {
+	return &PublishEventConfiguration{
+		Provider:  p.Provider,
+		Topic:     p.Topic,
+		FieldName: p.FieldName,
+	}
+}
+
+func (p *publishData) MarshalJSONTemplate() (string, error) {
+	// The content of the data field could be not valid JSON, so we can't use json.Marshal
+	// e.g. {"id":$$0$$,"update":$$1$$}
+	headers := p.Event.Headers
+	if headers == nil {
+		headers = make(map[string][]byte)
+	}
+
+	headersBytes, err := json.Marshal(headers)
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf(`{"topic":"%s", "event": {"data": %s, "key": "%s", "headers": %s}, "providerId":"%s", "rootFieldName":"%s"}`, p.Topic, p.Event.Data, p.Event.Key, headersBytes, p.Provider, p.FieldName), nil
+}
+
+// PublishEventConfiguration is a public type that is used to allow access to custom fields
+// of the provider
+type PublishEventConfiguration struct {
+	Provider  string `json:"providerId"`
+	Topic     string `json:"topic"`
 	FieldName string `json:"rootFieldName"`
 }
 
@@ -65,38 +115,73 @@ func (p *PublishEventConfiguration) RootFieldName() string {
 	return p.FieldName
 }
 
-func (s *PublishEventConfiguration) MarshalJSONTemplate() (string, error) {
-	// The content of the data field could be not valid JSON, so we can't use json.Marshal
-	// e.g. {"id":$$0$$,"update":$$1$$}
-	headers := s.Event.Headers
-	if headers == nil {
-		headers = make(map[string][]byte)
-	}
+type SubscriptionDataSource struct {
+	pubSub datasource.Adapter
+}
 
-	headersBytes, err := json.Marshal(headers)
+func (s *SubscriptionDataSource) SubscriptionEventConfiguration(input []byte) datasource.SubscriptionEventConfiguration {
+	var subscriptionConfiguration SubscriptionEventConfiguration
+	err := json.Unmarshal(input, &subscriptionConfiguration)
 	if err != nil {
-		return "", err
+		return nil
+	}
+	return &subscriptionConfiguration
+}
+
+func (s *SubscriptionDataSource) UniqueRequestID(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
+	val, _, _, err := jsonparser.Get(input, "topics")
+	if err != nil {
+		return err
 	}
 
-	return fmt.Sprintf(`{"topic":"%s", "event": {"data": %s, "key": "%s", "headers": %s}, "providerId":"%s"}`, s.Topic, s.Event.Data, s.Event.Key, headersBytes, s.ProviderID()), nil
+	_, err = xxh.Write(val)
+	if err != nil {
+		return err
+	}
+
+	val, _, _, err = jsonparser.Get(input, "providerId")
+	if err != nil {
+		return err
+	}
+
+	_, err = xxh.Write(val)
+	return err
+}
+
+func (s *SubscriptionDataSource) Start(ctx *resolve.Context, input []byte, updater datasource.SubscriptionEventUpdater) error {
+	subConf := s.SubscriptionEventConfiguration(input)
+	if subConf == nil {
+		return fmt.Errorf("no subscription configuration found")
+	}
+
+	conf, ok := subConf.(*SubscriptionEventConfiguration)
+	if !ok {
+		return fmt.Errorf("invalid subscription configuration")
+	}
+
+	return s.pubSub.Subscribe(ctx.Context(), conf, updater)
 }
 
 type PublishDataSource struct {
-	pubSub Adapter
+	pubSub datasource.Adapter
 }
 
 func (s *PublishDataSource) Load(ctx context.Context, input []byte, out *bytes.Buffer) error {
-	var publishConfiguration PublishEventConfiguration
-	if err := json.Unmarshal(input, &publishConfiguration); err != nil {
+	var publishData publishData
+	if err := json.Unmarshal(input, &publishData); err != nil {
 		return err
 	}
 
-	if err := s.pubSub.Publish(ctx, publishConfiguration); err != nil {
-		_, err = io.WriteString(out, `{"success": false}`)
-		return err
+	if err := s.pubSub.Publish(ctx, publishData.PublishEventConfiguration(), []datasource.StreamEvent{&publishData.Event}); err != nil {
+		// err will not be returned but only logged inside PubSubProvider.Publish to avoid a "unable to fetch from subgraph" error
+		_, errWrite := io.WriteString(out, `{"success": false}`)
+		return errWrite
 	}
-	_, err := io.WriteString(out, `{"success": true}`)
-	return err
+	_, errWrite := io.WriteString(out, `{"success": true}`)
+	if errWrite != nil {
+		return errWrite
+	}
+	return nil
 }
 
 func (s *PublishDataSource) LoadWithFiles(ctx context.Context, input []byte, files []*httpclient.FileUpload, out *bytes.Buffer) (err error) {

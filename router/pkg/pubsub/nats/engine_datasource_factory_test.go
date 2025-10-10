@@ -6,14 +6,17 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"strings"
 	"testing"
 
 	"github.com/cespare/xxhash/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/pubsubtest"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"go.uber.org/zap"
 )
 
 func TestNatsEngineDataSourceFactory(t *testing.T) {
@@ -36,8 +39,10 @@ func TestEngineDataSourceFactoryWithMockAdapter(t *testing.T) {
 	mockAdapter := NewMockAdapter(t)
 
 	// Configure mock expectations for Publish
-	mockAdapter.On("Publish", mock.Anything, mock.MatchedBy(func(event PublishAndRequestEventConfiguration) bool {
+	mockAdapter.On("Publish", mock.Anything, mock.MatchedBy(func(event *PublishAndRequestEventConfiguration) bool {
 		return event.ProviderID() == "test-provider" && event.Subject == "test-subject"
+	}), mock.MatchedBy(func(events []datasource.StreamEvent) bool {
+		return len(events) == 1 && strings.EqualFold(string(events[0].GetData()), `{"test":"data"}`)
 	})).Return(nil)
 
 	// Create the data source with mock adapter
@@ -167,12 +172,15 @@ func TestNatsEngineDataSourceFactoryWithStreamConfiguration(t *testing.T) {
 func TestEngineDataSourceFactory_RequestDataSource(t *testing.T) {
 	// Create mock adapter
 	mockAdapter := NewMockAdapter(t)
+	provider := datasource.NewPubSubProvider("test-provider", "nats", mockAdapter, zap.NewNop())
 
 	// Configure mock expectations for Request
-	mockAdapter.On("Request", mock.Anything, mock.MatchedBy(func(event PublishAndRequestEventConfiguration) bool {
+	mockAdapter.On("Request", mock.Anything, mock.MatchedBy(func(event *PublishAndRequestEventConfiguration) bool {
 		return event.ProviderID() == "test-provider" && event.Subject == "test-subject"
+	}), mock.MatchedBy(func(event datasource.StreamEvent) bool {
+		return event != nil && strings.EqualFold(string(event.GetData()), `{"test":"data"}`)
 	}), mock.Anything).Return(nil).Run(func(args mock.Arguments) {
-		w := args.Get(2).(io.Writer)
+		w := args.Get(3).(io.Writer)
 		w.Write([]byte(`{"response": "test"}`))
 	})
 
@@ -182,7 +190,7 @@ func TestEngineDataSourceFactory_RequestDataSource(t *testing.T) {
 		eventType:   EventTypeRequest,
 		subjects:    []string{"test-subject"},
 		fieldName:   "testField",
-		NatsAdapter: mockAdapter,
+		NatsAdapter: provider,
 	}
 
 	// Get the data source

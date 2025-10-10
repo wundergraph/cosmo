@@ -23,16 +23,15 @@ type ProviderBuilder struct {
 	logger           *zap.Logger
 	hostName         string
 	routerListenAddr string
-	adapters         map[string]Adapter
 }
 
 func (p *ProviderBuilder) TypeID() string {
 	return providerTypeID
 }
 
-func (p *ProviderBuilder) BuildEngineDataSourceFactory(data *nodev1.KafkaEventConfiguration) (datasource.EngineDataSourceFactory, error) {
+func (p *ProviderBuilder) BuildEngineDataSourceFactory(data *nodev1.KafkaEventConfiguration, providers map[string]datasource.Provider) (datasource.EngineDataSourceFactory, error) {
 	providerId := data.GetEngineEventConfiguration().GetProviderId()
-	adapter, ok := p.adapters[providerId]
+	provider, ok := providers[providerId]
 	if !ok {
 		return nil, fmt.Errorf("failed to get adapter for provider %s with ID %s", p.TypeID(), providerId)
 	}
@@ -52,17 +51,16 @@ func (p *ProviderBuilder) BuildEngineDataSourceFactory(data *nodev1.KafkaEventCo
 		eventType:    eventType,
 		topics:       data.GetTopics(),
 		providerId:   providerId,
-		KafkaAdapter: adapter,
+		KafkaAdapter: provider,
+		logger:       p.logger,
 	}, nil
 }
 
 func (p *ProviderBuilder) BuildProvider(provider config.KafkaEventSource, providerOpts datasource.ProviderOpts) (datasource.Provider, error) {
-	adapter, pubSubProvider, err := buildProvider(p.ctx, provider, p.logger, providerOpts)
+	pubSubProvider, err := buildProvider(p.ctx, provider, p.logger, providerOpts)
 	if err != nil {
 		return nil, err
 	}
-
-	p.adapters[provider.ID] = adapter
 
 	return pubSubProvider, nil
 }
@@ -150,18 +148,18 @@ func buildKafkaOptions(eventSource config.KafkaEventSource, logger *zap.Logger) 
 	return opts, nil
 }
 
-func buildProvider(ctx context.Context, provider config.KafkaEventSource, logger *zap.Logger, providerOpts datasource.ProviderOpts) (Adapter, datasource.Provider, error) {
+func buildProvider(ctx context.Context, provider config.KafkaEventSource, logger *zap.Logger, providerOpts datasource.ProviderOpts) (datasource.Provider, error) {
 	kafkaOpts, err := buildKafkaOptions(provider, logger)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to build options for Kafka provider with ID \"%s\": %w", provider.ID, err)
+		return nil, fmt.Errorf("failed to build options for Kafka provider with ID \"%s\": %w", provider.ID, err)
 	}
 	adapter, err := NewProviderAdapter(ctx, logger, kafkaOpts, providerOpts)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create adapter for Kafka provider with ID \"%s\": %w", provider.ID, err)
+		return nil, fmt.Errorf("failed to create adapter for Kafka provider with ID \"%s\": %w", provider.ID, err)
 	}
 	pubSubProvider := datasource.NewPubSubProvider(provider.ID, providerTypeID, adapter, logger)
 
-	return adapter, pubSubProvider, nil
+	return pubSubProvider, nil
 }
 
 func NewProviderBuilder(
@@ -175,6 +173,5 @@ func NewProviderBuilder(
 		logger:           logger,
 		hostName:         hostName,
 		routerListenAddr: routerListenAddr,
-		adapters:         make(map[string]Adapter),
 	}
 }
