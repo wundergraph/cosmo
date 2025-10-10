@@ -7,6 +7,7 @@ package subgraph
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/99designs/gqlgen/graphql"
@@ -191,6 +192,29 @@ func (r *queryResolver) FirstEmployee(ctx context.Context) (*model.Employee, err
 	}
 
 	return employee, nil
+}
+
+// FindEmployeesBy is the resolver for the findEmployeesBy field.
+func (r *queryResolver) FindEmployeesBy(ctx context.Context, criteria model.FindEmployeeCriteria) ([]*model.Employee, error) {
+	r.mux.Lock()
+	defer r.mux.Unlock()
+	var res []*model.Employee
+	for _, employee := range r.EmployeesData {
+		if criteria.ID != nil {
+			if *criteria.ID == employee.ID {
+				res = append(res, employee)
+			}
+		} else if criteria.Department != nil {
+			if slices.Contains(employee.Role.GetDepartments(), *criteria.Department) {
+				res = append(res, employee)
+			}
+		} else if criteria.Title != nil {
+			if slices.Contains(employee.Role.GetTitle(), *criteria.Title) {
+				res = append(res, employee)
+			}
+		}
+	}
+	return res, nil
 }
 
 // CurrentTime is the resolver for the currentTime field.

@@ -163,6 +163,12 @@ type FileUpload struct {
 	NestedList []*graphql.Upload       `json:"nestedList,omitempty"`
 }
 
+type FindEmployeeCriteria struct {
+	ID         *int        `json:"id,omitempty"`
+	Department *Department `json:"department,omitempty"`
+	Title      *string     `json:"title,omitempty"`
+}
+
 type Marketer struct {
 	Departments []Department `json:"departments"`
 	Title       []string     `json:"title"`
