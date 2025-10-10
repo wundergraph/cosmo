@@ -15,6 +15,7 @@ import {
   graphPruningRulesEnum,
   cacheWarmerOperations,
   proposalStateEnum,
+  proposalOriginEnum,
   proposalMatchEnum,
   schemaChangeTypeEnum,
   subgraphTypeEnum,
@@ -35,6 +36,7 @@ export type GraphPruningRuleEnum = (typeof graphPruningRulesEnum.enumValues)[num
 export type WebsocketSubprotocol = (typeof websocketSubprotocolEnum.enumValues)[number];
 export type CacheWarmupOperation = typeof cacheWarmerOperations.$inferInsert;
 export type ProposalState = (typeof proposalStateEnum.enumValues)[number];
+export type ProposalOrigin = (typeof proposalOriginEnum.enumValues)[number];
 export type ProposalMatch = (typeof proposalMatchEnum.enumValues)[number];
 export type WebhookDeliveryInfo = typeof webhookDeliveries.$inferInsert;
 export type DBSchemaChangeType = (typeof schemaChangeTypeEnum.enumValues)[number];
