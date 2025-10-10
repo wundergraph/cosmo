@@ -34,7 +34,7 @@ export type FieldSetParentResult = {
 };
 
 export type ExtractArgumentDataResult = {
-  argumentTypeNodeByArgumentName: Map<string, ArgumentData>;
+  argumentTypeNodeByName: Map<string, ArgumentData>;
   optionalArgumentNames: Set<string>;
   requiredArgumentNames: Set<string>;
 };

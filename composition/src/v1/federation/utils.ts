@@ -22,15 +22,16 @@ import { InternalSubgraph } from '../../subgraph/types';
 import { ContractTagOptions } from '../../federation/types';
 import { getOrThrowError, getValueOrDefault } from '../../utils/utils';
 import { KeyFieldSetData } from '../normalization/types';
+import { SubgraphName, TypeName } from '../../types/types';
 
 export type FederationFactoryParams = {
-  authorizationDataByParentTypeName: Map<string, AuthorizationData>;
-  concreteTypeNamesByAbstractTypeName: Map<string, Set<string>>;
-  entityDataByTypeName: Map<string, EntityData>;
-  entityInterfaceFederationDataByTypeName: Map<string, EntityInterfaceFederationData>;
-  fieldCoordsByNamedTypeName: Map<string, Set<string>>;
+  authorizationDataByParentTypeName: Map<TypeName, AuthorizationData>;
+  concreteTypeNamesByAbstractTypeName: Map<TypeName, Set<TypeName>>;
+  entityDataByTypeName: Map<TypeName, EntityData>;
+  entityInterfaceFederationDataByTypeName: Map<TypeName, EntityInterfaceFederationData>;
+  fieldCoordsByNamedTypeName: Map<TypeName, Set<string>>;
   internalGraph: Graph;
-  internalSubgraphBySubgraphName: Map<string, InternalSubgraph>;
+  internalSubgraphBySubgraphName: Map<SubgraphName, InternalSubgraph>;
   warnings: Warning[];
   disableResolvabilityValidation?: boolean;
 };
@@ -89,7 +90,7 @@ export type VisitFieldSetOptions = {
   entityData: EntityData;
   implicitKeys: Array<RequiredFieldConfiguration>;
   objectData: ObjectDefinitionData | InterfaceDefinitionData;
-  parentDefinitionDataByTypeName: Map<string, ParentDefinitionData>;
+  parentDefinitionDataByTypeName: Map<TypeName, ParentDefinitionData>;
   graphNode?: GraphNode;
 };
 
