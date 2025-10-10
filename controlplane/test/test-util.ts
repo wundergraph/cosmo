@@ -372,9 +372,9 @@ export const SetupTest = async function ({
         // Check if x-cosmo-client header is set to cosmo-cli
         const cosmoClient = req.header.get('x-cosmo-client');
 
-        if (cosmoClient === 'cosmo-cli') {
+        if (cosmoClient === 'cosmo-cli' || cosmoClient === 'cosmo-hub') {
           const modifiedHeaders = new Headers(req.header);
-          modifiedHeaders.set('user-agent', 'cosmo-cli');
+          modifiedHeaders.set('user-agent', cosmoClient);
           // Remove the temporary header
           modifiedHeaders.delete('x-cosmo-client');
 
