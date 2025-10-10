@@ -169,7 +169,7 @@ import { validateAndFetchPluginData } from './plugin/validateAndFetchPluginData.
 import { linkSubgraph } from './subgraph/linkSubgraph.js';
 import { unlinkSubgraph } from './subgraph/unlinkSubgraph.js';
 import { getWorkspace } from './workspace/getWorkspace.js';
-import { checkOrganizationPermissions } from './api-key/verifyAPIKeyGraphAccess.js';
+import { verifyAPIKeyGraphAccess } from './api-key/verifyAPIKeyGraphAccess.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -856,8 +856,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return unlinkSubgraph(opts, req, ctx);
     },
 
-    checkOrganizationPermissions: (req, ctx) => {
-      return checkOrganizationPermissions(opts, req, ctx);
+    verifyAPIKeyGraphAccess: (req, ctx) => {
+      return verifyAPIKeyGraphAccess(opts, req, ctx);
     },
   };
 }
