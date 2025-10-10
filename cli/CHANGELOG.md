@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.94.0](https://github.com/wundergraph/cosmo/compare/wgc@0.93.6...wgc@0.94.0) (2025-10-10)
+
+### Features
+
+* disallow reviewing proposals not created by Cosmo ([#2218](https://github.com/wundergraph/cosmo/issues/2218)) ([d4aee49](https://github.com/wundergraph/cosmo/commit/d4aee4905c1a3f1d409c3892621a0d2a1ce8d147)) (@wilsonrivera)
+
 ## [0.93.6](https://github.com/wundergraph/cosmo/compare/wgc@0.93.5...wgc@0.93.6) (2025-10-06)
 
 **Note:** Version bump only for package wgc
