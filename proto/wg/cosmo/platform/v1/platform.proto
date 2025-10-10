@@ -2943,6 +2943,14 @@ message UnlinkSubgraphResponse {
   Response response = 1;
 }
 
+message CheckOrganizationPermissionsRequest {
+}
+
+message CheckOrganizationPermissionsResponse {
+  Response response = 1;
+  bool hasOrganizationAdminOrDeveloperPermissions = 2;
+}
+
 service PlatformService {
   // PlaygroundScripts
   rpc CreatePlaygroundScript(CreatePlaygroundScriptRequest) returns (CreatePlaygroundScriptResponse) {}
@@ -3317,4 +3325,6 @@ service PlatformService {
   rpc LinkSubgraph(LinkSubgraphRequest) returns (LinkSubgraphResponse) {}
   // UnlinkSubgraph unlinks one subgraph from another
   rpc UnlinkSubgraph(UnlinkSubgraphRequest) returns (UnlinkSubgraphResponse) {}
+  // CheckOrganizationPermissions checks if the token or the jwt has organization admin or developer permissions
+  rpc CheckOrganizationPermissions(CheckOrganizationPermissionsRequest) returns (CheckOrganizationPermissionsResponse) {}
 }

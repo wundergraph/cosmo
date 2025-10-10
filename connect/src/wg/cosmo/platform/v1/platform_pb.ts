@@ -23107,3 +23107,77 @@ export class UnlinkSubgraphResponse extends Message<UnlinkSubgraphResponse> {
   }
 }
 
+/**
+ * @generated from message wg.cosmo.platform.v1.CheckOrganizationPermissionsRequest
+ */
+export class CheckOrganizationPermissionsRequest extends Message<CheckOrganizationPermissionsRequest> {
+  constructor(data?: PartialMessage<CheckOrganizationPermissionsRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.CheckOrganizationPermissionsRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckOrganizationPermissionsRequest {
+    return new CheckOrganizationPermissionsRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CheckOrganizationPermissionsRequest {
+    return new CheckOrganizationPermissionsRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CheckOrganizationPermissionsRequest {
+    return new CheckOrganizationPermissionsRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CheckOrganizationPermissionsRequest | PlainMessage<CheckOrganizationPermissionsRequest> | undefined, b: CheckOrganizationPermissionsRequest | PlainMessage<CheckOrganizationPermissionsRequest> | undefined): boolean {
+    return proto3.util.equals(CheckOrganizationPermissionsRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.CheckOrganizationPermissionsResponse
+ */
+export class CheckOrganizationPermissionsResponse extends Message<CheckOrganizationPermissionsResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: bool hasOrganizationAdminOrDeveloperPermissions = 2;
+   */
+  hasOrganizationAdminOrDeveloperPermissions = false;
+
+  constructor(data?: PartialMessage<CheckOrganizationPermissionsResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.CheckOrganizationPermissionsResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "hasOrganizationAdminOrDeveloperPermissions", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckOrganizationPermissionsResponse {
+    return new CheckOrganizationPermissionsResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): CheckOrganizationPermissionsResponse {
+    return new CheckOrganizationPermissionsResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): CheckOrganizationPermissionsResponse {
+    return new CheckOrganizationPermissionsResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: CheckOrganizationPermissionsResponse | PlainMessage<CheckOrganizationPermissionsResponse> | undefined, b: CheckOrganizationPermissionsResponse | PlainMessage<CheckOrganizationPermissionsResponse> | undefined): boolean {
+    return proto3.util.equals(CheckOrganizationPermissionsResponse, a, b);
+  }
+}
+
