@@ -80,8 +80,8 @@ import {
   addScopes,
   fieldDatasToSimpleFieldDatas,
   isCompositeOutputNodeKind,
-  isNodeKindObject,
   isObjectDefinitionData,
+  isObjectNodeKind,
   kindToConvertedTypeString,
   mapToArrayOfValues,
   newAuthorizationData,
@@ -554,7 +554,7 @@ export class NormalizationFactory {
               if (argumentValue.kind !== Kind.ENUM) {
                 return false;
               }
-              const enumValue = parentData.enumValueDataByValueName.get(argumentValue.value);
+              const enumValue = parentData.enumValueDataByName.get(argumentValue.value);
               if (!enumValue) {
                 return false;
               }
@@ -616,6 +616,8 @@ export class NormalizationFactory {
     if (!node.directives) {
       return directivesByDirectiveName;
     }
+    const isCompositeKind = isCompositeOutputNodeKind(node.kind);
+    const isObjectKind = isObjectNodeKind(node.kind);
     for (const directiveNode of node.directives) {
       const directiveName = directiveNode.name.value;
       // Don't create pointless repetitions of @shareable
@@ -624,11 +626,11 @@ export class NormalizationFactory {
       } else {
         getValueOrDefault(directivesByDirectiveName, directiveName, () => []).push(directiveNode);
       }
-      if (!isCompositeOutputNodeKind(node.kind)) {
+      if (!isCompositeKind) {
         continue;
       }
       this.doesParentRequireFetchReasons ||= directiveName === REQUIRE_FETCH_REASONS;
-      if (!isNodeKindObject(node.kind)) {
+      if (!isObjectKind) {
         continue;
       }
       this.isParentObjectExternal ||= directiveName === EXTERNAL;
@@ -686,7 +688,7 @@ export class NormalizationFactory {
         continue;
       }
       definedArgumentNames.add(argumentName);
-      const argumentData = definitionData.argumentTypeNodeByArgumentName.get(argumentName);
+      const argumentData = definitionData.argumentTypeNodeByName.get(argumentName);
       if (!argumentData) {
         unexpectedArgumentNames.add(argumentName);
         continue;
@@ -810,7 +812,7 @@ export class NormalizationFactory {
     }
     switch (data.kind) {
       case Kind.ENUM_TYPE_DEFINITION: {
-        for (const [enumValueName, enumValueData] of data.enumValueDataByValueName) {
+        for (const [enumValueName, enumValueData] of data.enumValueDataByName) {
           this.validateDirectives(enumValueData, `${data.name}.${enumValueName}`);
         }
         return;
@@ -1030,7 +1032,7 @@ export class NormalizationFactory {
       });
     }
     persistedDirectiveDefinitionDataByDirectiveName.set(name, {
-      argumentDataByArgumentName: argumentDataByName,
+      argumentDataByName: argumentDataByName,
       executableLocations,
       name,
       repeatable: node.repeatable,
@@ -1066,11 +1068,11 @@ export class NormalizationFactory {
     argumentNodes: ReadonlyArray<InputValueDefinitionNode> | Array<InputValueDefinitionNode> | undefined,
     errorMessages: Array<string>,
   ): ExtractArgumentDataResult {
-    const argumentTypeNodeByArgumentName = new Map<string, ArgumentData>();
+    const argumentTypeNodeByName = new Map<string, ArgumentData>();
     const optionalArgumentNames = new Set<string>();
     const requiredArgumentNames = new Set<string>();
     const output = {
-      argumentTypeNodeByArgumentName,
+      argumentTypeNodeByName,
       optionalArgumentNames,
       requiredArgumentNames,
     };
@@ -1080,7 +1082,7 @@ export class NormalizationFactory {
     const duplicateArgumentNames = new Set<string>();
     for (const argumentNode of argumentNodes) {
       const name = argumentNode.name.value;
-      if (argumentTypeNodeByArgumentName.has(name)) {
+      if (argumentTypeNodeByName.has(name)) {
         duplicateArgumentNames.add(name);
         continue;
       }
@@ -1090,7 +1092,7 @@ export class NormalizationFactory {
       if (isTypeRequired(argumentNode.type) && !argumentNode.defaultValue) {
         requiredArgumentNames.add(name);
       }
-      argumentTypeNodeByArgumentName.set(name, {
+      argumentTypeNodeByName.set(name, {
         name,
         typeNode: argumentNode.type,
         defaultValue: argumentNode.defaultValue,
@@ -1120,12 +1122,12 @@ export class NormalizationFactory {
       return false;
     }
     const errorMessages: Array<string> = [];
-    const { argumentTypeNodeByArgumentName, optionalArgumentNames, requiredArgumentNames } = this.extractArgumentData(
+    const { argumentTypeNodeByName, optionalArgumentNames, requiredArgumentNames } = this.extractArgumentData(
       node.arguments,
       errorMessages,
     );
     this.directiveDefinitionDataByDirectiveName.set(name, {
-      argumentTypeNodeByArgumentName,
+      argumentTypeNodeByName: argumentTypeNodeByName,
       isRepeatable: node.repeatable,
       locations: this.extractDirectiveLocations(node, errorMessages),
       name,
@@ -1400,7 +1402,7 @@ export class NormalizationFactory {
       configureDescriptionDataBySubgraphName: new Map<string, ConfigureDescriptionData>(),
       directivesByDirectiveName,
       extensionType,
-      enumValueDataByValueName: new Map<string, EnumValueData>(),
+      enumValueDataByName: new Map<string, EnumValueData>(),
       isInaccessible: directivesByDirectiveName.has(INACCESSIBLE),
       kind: Kind.ENUM_TYPE_DEFINITION,
       name: typeName,
@@ -3152,7 +3154,7 @@ export class NormalizationFactory {
       enumDefinitionData.directivesByDirectiveName,
       enumDefinitionData.name,
     );
-    enumDefinitionData.node.values = childMapToValueArray(enumDefinitionData.enumValueDataByValueName);
+    enumDefinitionData.node.values = childMapToValueArray(enumDefinitionData.enumValueDataByName);
     return enumDefinitionData.node;
   }
 
@@ -3512,7 +3514,7 @@ export class NormalizationFactory {
     for (const [parentTypeName, parentData] of this.parentDefinitionDataByTypeName) {
       switch (parentData.kind) {
         case Kind.ENUM_TYPE_DEFINITION: {
-          if (parentData.enumValueDataByValueName.size < 1) {
+          if (parentData.enumValueDataByName.size < 1) {
             this.errors.push(noDefinedEnumValuesError(parentTypeName));
             break;
           }

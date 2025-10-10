@@ -25,7 +25,7 @@ import {
 import { FieldSetConditionData } from '../router-configuration/types';
 import { KeyFieldSetData } from '../v1/normalization/types';
 import { InputNodeKind, OutputNodeKind } from '../utils/types';
-import { FieldName, SubgraphName } from '../types/types';
+import { DirectiveName, FieldName, SubgraphName, TypeName } from '../types/types';
 
 export type ArgumentData = {
   name: string;
@@ -39,7 +39,7 @@ export type ConfigureDescriptionData = {
 };
 
 export type DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: Map<string, ArgumentData>;
+  argumentTypeNodeByName: Map<string, ArgumentData>;
   isRepeatable: boolean;
   locations: Set<string>;
   name: string;
@@ -58,8 +58,8 @@ export enum ExtensionType {
 export type EnumDefinitionData = {
   appearances: number;
   configureDescriptionDataBySubgraphName: Map<SubgraphName, ConfigureDescriptionData>;
-  directivesByDirectiveName: Map<string, Array<ConstDirectiveNode>>;
-  enumValueDataByValueName: Map<string, EnumValueData>;
+  directivesByDirectiveName: Map<DirectiveName, Array<ConstDirectiveNode>>;
+  enumValueDataByName: Map<string, EnumValueData>;
   extensionType: ExtensionType;
   isInaccessible: boolean;
   kind: Kind.ENUM_TYPE_DEFINITION;
@@ -73,12 +73,12 @@ export type EnumDefinitionData = {
 export type EnumValueData = {
   appearances: number;
   configureDescriptionDataBySubgraphName: Map<SubgraphName, ConfigureDescriptionData>;
-  directivesByDirectiveName: Map<string, Array<ConstDirectiveNode>>;
+  directivesByDirectiveName: Map<DirectiveName, Array<ConstDirectiveNode>>;
   federatedCoords: string;
   kind: Kind.ENUM_VALUE_DEFINITION;
   name: string;
   node: MutableEnumValueNode;
-  parentTypeName: string;
+  parentTypeName: TypeName;
   persistedDirectivesData: PersistedDirectivesData;
   subgraphNames: Set<SubgraphName>;
   description?: StringValueNode;
@@ -97,21 +97,21 @@ export type ExternalFieldData = {
 export type FieldData = {
   argumentDataByName: Map<string, InputValueData>;
   configureDescriptionDataBySubgraphName: Map<SubgraphName, ConfigureDescriptionData>;
-  directivesByDirectiveName: Map<string, Array<ConstDirectiveNode>>;
-  externalFieldDataBySubgraphName: Map<string, ExternalFieldData>;
+  directivesByDirectiveName: Map<DirectiveName, Array<ConstDirectiveNode>>;
+  externalFieldDataBySubgraphName: Map<SubgraphName, ExternalFieldData>;
   federatedCoords: string;
-  inheritedDirectiveNames: Set<string>;
+  inheritedDirectiveNames: Set<DirectiveName>;
   isInaccessible: boolean;
   isShareableBySubgraphName: Map<SubgraphName, boolean>;
   kind: Kind.FIELD_DEFINITION;
-  name: string;
+  name: FieldName;
   namedTypeKind: OutputNodeKind | Kind.NULL;
-  namedTypeName: string;
+  namedTypeName: TypeName;
   node: MutableFieldNode;
   nullLevelsBySubgraphName: Map<SubgraphName, Set<number>>;
-  originalParentTypeName: string;
+  originalParentTypeName: TypeName;
   persistedDirectivesData: PersistedDirectivesData;
-  renamedParentTypeName: string;
+  renamedParentTypeName: TypeName;
   subgraphNames: Set<SubgraphName>;
   type: MutableTypeNode;
   description?: StringValueNode;
@@ -119,12 +119,12 @@ export type FieldData = {
 
 export type InputObjectDefinitionData = {
   configureDescriptionDataBySubgraphName: Map<SubgraphName, ConfigureDescriptionData>;
-  directivesByDirectiveName: Map<string, Array<ConstDirectiveNode>>;
+  directivesByDirectiveName: Map<DirectiveName, Array<ConstDirectiveNode>>;
   extensionType: ExtensionType;
-  inputValueDataByName: Map<string, InputValueData>;
+  inputValueDataByName: Map<FieldName, InputValueData>;
   isInaccessible: boolean;
   kind: Kind.INPUT_OBJECT_TYPE_DEFINITION;
-  name: string;
+  name: TypeName;
   node: MutableInputObjectNode;
   persistedDirectivesData: PersistedDirectivesData;
   subgraphNames: Set<SubgraphName>;
@@ -133,37 +133,37 @@ export type InputObjectDefinitionData = {
 
 export type InputValueData = {
   configureDescriptionDataBySubgraphName: Map<SubgraphName, ConfigureDescriptionData>;
-  directivesByDirectiveName: Map<string, Array<ConstDirectiveNode>>;
+  directivesByDirectiveName: Map<DirectiveName, Array<ConstDirectiveNode>>;
   federatedCoords: string;
   includeDefaultValue: boolean;
   isArgument: boolean;
   kind: Kind.ARGUMENT | Kind.INPUT_VALUE_DEFINITION;
-  name: string;
+  name: FieldName;
   namedTypeKind: InputNodeKind | Kind.NULL;
-  namedTypeName: string;
+  namedTypeName: TypeName;
   node: MutableInputValueNode;
   originalCoords: string;
-  originalParentTypeName: string;
+  originalParentTypeName: TypeName;
   persistedDirectivesData: PersistedDirectivesData;
-  renamedParentTypeName: string;
+  renamedParentTypeName: TypeName;
   requiredSubgraphNames: Set<SubgraphName>;
   subgraphNames: Set<SubgraphName>;
   type: MutableTypeNode;
   defaultValue?: ConstValueNode;
   description?: StringValueNode;
-  fieldName?: string;
+  fieldName?: FieldName;
 };
 
 export type InterfaceDefinitionData = {
   configureDescriptionDataBySubgraphName: Map<SubgraphName, ConfigureDescriptionData>;
-  directivesByDirectiveName: Map<string, Array<ConstDirectiveNode>>;
+  directivesByDirectiveName: Map<DirectiveName, Array<ConstDirectiveNode>>;
   extensionType: ExtensionType;
-  fieldDataByName: Map<string, FieldData>;
-  implementedInterfaceTypeNames: Set<string>;
+  fieldDataByName: Map<FieldName, FieldData>;
+  implementedInterfaceTypeNames: Set<TypeName>;
   isEntity: boolean;
   isInaccessible: boolean;
   kind: Kind.INTERFACE_TYPE_DEFINITION;
-  name: string;
+  name: TypeName;
   node: MutableInterfaceNode;
   persistedDirectivesData: PersistedDirectivesData;
   requireFetchReasonsFieldNames: Set<FieldName>;
@@ -173,27 +173,27 @@ export type InterfaceDefinitionData = {
 
 export type ObjectDefinitionData = {
   configureDescriptionDataBySubgraphName: Map<SubgraphName, ConfigureDescriptionData>;
-  directivesByDirectiveName: Map<string, Array<ConstDirectiveNode>>;
+  directivesByDirectiveName: Map<DirectiveName, Array<ConstDirectiveNode>>;
   extensionType: ExtensionType;
   fieldDataByName: Map<FieldName, FieldData>;
-  implementedInterfaceTypeNames: Set<string>;
+  implementedInterfaceTypeNames: Set<TypeName>;
   isEntity: boolean;
   isInaccessible: boolean;
   isRootType: boolean;
   kind: Kind.OBJECT_TYPE_DEFINITION;
-  name: string;
+  name: TypeName;
   node: MutableObjectNode;
   persistedDirectivesData: PersistedDirectivesData;
-  renamedTypeName: string;
+  renamedTypeName: TypeName;
   requireFetchReasonsFieldNames: Set<FieldName>;
   subgraphNames: Set<SubgraphName>;
   description?: StringValueNode;
 };
 
 export type PersistedDirectiveDefinitionData = {
-  argumentDataByArgumentName: Map<string, InputValueData>;
+  argumentDataByName: Map<string, InputValueData>;
   executableLocations: Set<string>;
-  name: string;
+  name: DirectiveName;
   repeatable: boolean;
   subgraphNames: Set<SubgraphName>;
   description?: StringValueNode;
@@ -201,17 +201,17 @@ export type PersistedDirectiveDefinitionData = {
 
 export type PersistedDirectivesData = {
   deprecatedReason: string;
-  directivesByDirectiveName: Map<string, Array<ConstDirectiveNode>>;
+  directivesByDirectiveName: Map<DirectiveName, Array<ConstDirectiveNode>>;
   isDeprecated: boolean;
   tagDirectiveByName: Map<string, ConstDirectiveNode>;
 };
 
 export type ScalarDefinitionData = {
-  configureDescriptionDataBySubgraphName: Map<string, ConfigureDescriptionData>;
-  directivesByDirectiveName: Map<string, Array<ConstDirectiveNode>>;
+  configureDescriptionDataBySubgraphName: Map<SubgraphName, ConfigureDescriptionData>;
+  directivesByDirectiveName: Map<DirectiveName, Array<ConstDirectiveNode>>;
   extensionType: ExtensionType;
   kind: Kind.SCALAR_TYPE_DEFINITION;
-  name: string;
+  name: TypeName;
   node: MutableScalarNode;
   persistedDirectivesData: PersistedDirectivesData;
   subgraphNames: Set<SubgraphName>;
@@ -219,7 +219,7 @@ export type ScalarDefinitionData = {
 };
 
 export type SchemaData = {
-  directivesByDirectiveName: Map<string, Array<ConstDirectiveNode>>;
+  directivesByDirectiveName: Map<DirectiveName, Array<ConstDirectiveNode>>;
   kind: Kind.SCHEMA_DEFINITION;
   name: string;
   operationTypes: Map<OperationTypeNode, OperationTypeDefinitionNode>;
@@ -228,11 +228,11 @@ export type SchemaData = {
 
 export type UnionDefinitionData = {
   configureDescriptionDataBySubgraphName: Map<SubgraphName, ConfigureDescriptionData>;
-  directivesByDirectiveName: Map<string, Array<ConstDirectiveNode>>;
+  directivesByDirectiveName: Map<DirectiveName, Array<ConstDirectiveNode>>;
   extensionType: ExtensionType;
   kind: Kind.UNION_TYPE_DEFINITION;
-  name: string;
-  memberByMemberTypeName: Map<string, NamedTypeNode>;
+  name: TypeName;
+  memberByMemberTypeName: Map<TypeName, NamedTypeNode>;
   node: MutableUnionNode;
   persistedDirectivesData: PersistedDirectivesData;
   subgraphNames: Set<SubgraphName>;
@@ -269,28 +269,28 @@ export type EntityData = {
   // If propagated in documentNodeByKeyFieldSet, at least one subgraph defines a resolvable key with this field set.
   documentNodeByKeyFieldSet: Map<string, DocumentNode>;
   keyFieldSets: Set<string>;
-  keyFieldSetDatasBySubgraphName: Map<string, Map<string, KeyFieldSetData>>;
+  keyFieldSetDatasBySubgraphName: Map<SubgraphName, Map<string, KeyFieldSetData>>;
   subgraphNames: Set<SubgraphName>;
-  typeName: string;
+  typeName: TypeName;
 };
 
 export type SimpleFieldData = {
-  name: string;
-  namedTypeName: string;
+  name: FieldName;
+  namedTypeName: TypeName;
 };
 
 export type EntityInterfaceSubgraphData = {
-  concreteTypeNames: Set<string>;
+  concreteTypeNames: Set<TypeName>;
   fieldDatas: Array<SimpleFieldData>;
-  interfaceFieldNames: Set<string>;
-  interfaceObjectFieldNames: Set<string>;
+  interfaceFieldNames: Set<FieldName>;
+  interfaceObjectFieldNames: Set<FieldName>;
   isInterfaceObject: boolean;
   resolvable: boolean;
-  typeName: string;
+  typeName: TypeName;
 };
 
 export type FieldAuthorizationData = {
-  fieldName: string;
+  fieldName: FieldName;
   inheritedData: InheritedAuthorizationData;
   originalData: OriginalAuthorizationData;
 };
@@ -307,11 +307,11 @@ export type OriginalAuthorizationData = {
 };
 
 export type AuthorizationData = {
-  fieldAuthDataByFieldName: Map<string, FieldAuthorizationData>;
+  fieldAuthDataByFieldName: Map<FieldName, FieldAuthorizationData>;
   requiredScopes: Array<Set<string>>;
   requiredScopesByOR: Array<Set<string>>;
   requiresAuthentication: boolean;
-  typeName: string;
+  typeName: TypeName;
 };
 
 export type ConditionalFieldData = {
@@ -320,11 +320,11 @@ export type ConditionalFieldData = {
 };
 
 export type EntityInterfaceFederationData = {
-  concreteTypeNames: Set<string>;
+  concreteTypeNames: Set<TypeName>;
   fieldDatasBySubgraphName: Map<SubgraphName, Array<SimpleFieldData>>;
-  interfaceFieldNames: Set<string>;
-  interfaceObjectFieldNames: Set<string>;
-  interfaceObjectSubgraphs: Set<string>;
-  subgraphDataByTypeName: Map<string, EntityInterfaceSubgraphData>;
-  typeName: string;
+  interfaceFieldNames: Set<FieldName>;
+  interfaceObjectFieldNames: Set<FieldName>;
+  interfaceObjectSubgraphNames: Set<SubgraphName>;
+  subgraphDataByTypeName: Map<TypeName, EntityInterfaceSubgraphData>;
+  typeName: TypeName;
 };

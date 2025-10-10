@@ -109,7 +109,7 @@ import {
 } from '../../utils/string-constants';
 
 export const AUTHENTICATED_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([]),
+  argumentTypeNodeByName: new Map<string, ArgumentData>([]),
   isRepeatable: false,
   locations: new Set<string>([ENUM_UPPER, FIELD_DEFINITION_UPPER, INTERFACE_UPPER, OBJECT_UPPER, SCALAR_UPPER]),
   name: AUTHENTICATED,
@@ -119,7 +119,7 @@ export const AUTHENTICATED_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const COMPOSE_DIRECTIVE_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       NAME,
       {
@@ -137,7 +137,7 @@ export const COMPOSE_DIRECTIVE_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const CONFIGURE_DESCRIPTION_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       PROPAGATE,
       {
@@ -181,7 +181,7 @@ export const CONFIGURE_DESCRIPTION_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       PROPAGATE,
       {
@@ -206,7 +206,7 @@ export const CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION_DATA: DirectiveDefinitionDa
 };
 
 export const DEPRECATED_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       REASON,
       {
@@ -233,7 +233,7 @@ export const DEPRECATED_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const EXTENDS_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>(),
+  argumentTypeNodeByName: new Map<string, ArgumentData>(),
   isRepeatable: false,
   locations: new Set<string>([INTERFACE_UPPER, OBJECT_UPPER]),
   name: EXTENDS,
@@ -243,7 +243,7 @@ export const EXTENDS_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const EXTERNAL_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>(),
+  argumentTypeNodeByName: new Map<string, ArgumentData>(),
   isRepeatable: false,
   locations: new Set<string>([FIELD_DEFINITION_UPPER, OBJECT_UPPER]),
   name: EXTERNAL,
@@ -253,7 +253,7 @@ export const EXTERNAL_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const INACCESSIBLE_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>(),
+  argumentTypeNodeByName: new Map<string, ArgumentData>(),
   isRepeatable: false,
   locations: new Set<string>([
     ARGUMENT_DEFINITION_UPPER,
@@ -274,7 +274,7 @@ export const INACCESSIBLE_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const INTERFACE_OBJECT_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>(),
+  argumentTypeNodeByName: new Map<string, ArgumentData>(),
   isRepeatable: false,
   locations: new Set<string>([OBJECT_UPPER]),
   name: INTERFACE_OBJECT,
@@ -284,7 +284,7 @@ export const INTERFACE_OBJECT_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const KAFKA_PUBLISH_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       TOPIC,
       {
@@ -313,7 +313,7 @@ export const KAFKA_PUBLISH_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const KAFKA_SUBSCRIBE_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       TOPICS,
       {
@@ -348,7 +348,7 @@ export const KAFKA_SUBSCRIBE_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const NATS_PUBLISH_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       SUBJECT,
       {
@@ -377,7 +377,7 @@ export const NATS_PUBLISH_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const NATS_REQUEST_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       SUBJECT,
       {
@@ -406,7 +406,7 @@ export const NATS_REQUEST_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const NATS_SUBSCRIBE_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       SUBJECTS,
       {
@@ -448,7 +448,7 @@ export const NATS_SUBSCRIBE_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const ONE_OF_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([]),
+  argumentTypeNodeByName: new Map<string, ArgumentData>([]),
   isRepeatable: false,
   locations: new Set<string>([INPUT_OBJECT_UPPER]),
   name: ONE_OF,
@@ -458,7 +458,7 @@ export const ONE_OF_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const OVERRIDE_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       FROM,
       {
@@ -476,7 +476,7 @@ export const OVERRIDE_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const KEY_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       FIELDS,
       {
@@ -505,7 +505,7 @@ export const KEY_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const LINK_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       URL_LOWER,
       {
@@ -547,7 +547,7 @@ export const LINK_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const PROVIDES_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       FIELDS,
       {
@@ -565,7 +565,7 @@ export const PROVIDES_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const REQUIRES_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       FIELDS,
       {
@@ -583,7 +583,7 @@ export const REQUIRES_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const REDIS_PUBLISH_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       CHANNEL,
       {
@@ -612,7 +612,7 @@ export const REDIS_PUBLISH_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const REDIS_SUBSCRIBE_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       CHANNELS,
       {
@@ -647,7 +647,7 @@ export const REDIS_SUBSCRIBE_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const REQUIRE_FETCH_REASONS_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>(),
+  argumentTypeNodeByName: new Map<string, ArgumentData>(),
   isRepeatable: true,
   locations: new Set<string>([FIELD_DEFINITION_UPPER, INTERFACE_UPPER, OBJECT_UPPER]),
   name: REQUIRE_FETCH_REASONS,
@@ -657,7 +657,7 @@ export const REQUIRE_FETCH_REASONS_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const REQUIRES_SCOPES_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       SCOPES,
       {
@@ -690,7 +690,7 @@ export const REQUIRES_SCOPES_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const SEMANTIC_NON_NULL_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       LEVELS,
       {
@@ -726,7 +726,7 @@ export const SEMANTIC_NON_NULL_DATA: DirectiveDefinitionData = {
 };
 
 export const SPECIFIED_BY_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       URL_LOWER,
       {
@@ -744,7 +744,7 @@ export const SPECIFIED_BY_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const SHAREABLE_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>(),
+  argumentTypeNodeByName: new Map<string, ArgumentData>(),
   isRepeatable: true,
   locations: new Set<string>([FIELD_DEFINITION_UPPER, OBJECT_UPPER]),
   name: SHAREABLE,
@@ -754,7 +754,7 @@ export const SHAREABLE_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const SUBSCRIPTION_FILTER_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       CONDITION,
       {
@@ -775,7 +775,7 @@ export const SUBSCRIPTION_FILTER_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const TAG_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       NAME,
       {
