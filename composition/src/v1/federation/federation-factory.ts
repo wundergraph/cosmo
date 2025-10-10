@@ -594,11 +594,11 @@ export class FederationFactory {
   }
 
   upsertEnumValueData(
-    enumValueDataByValueName: Map<string, EnumValueData>,
+    enumValueDataByName: Map<string, EnumValueData>,
     incomingData: EnumValueData,
     isParentInaccessible: boolean,
   ) {
-    const existingData = enumValueDataByValueName.get(incomingData.name);
+    const existingData = enumValueDataByName.get(incomingData.name);
     const targetData = existingData || this.copyEnumValueData(incomingData);
     extractPersistedDirectives(
       targetData.persistedDirectivesData,
@@ -611,7 +611,7 @@ export class FederationFactory {
     }
     this.recordTagNamesByCoords(targetData, targetData.federatedCoords);
     if (!existingData) {
-      enumValueDataByValueName.set(targetData.name, targetData);
+      enumValueDataByName.set(targetData.name, targetData);
       return;
     }
     targetData.appearances += 1;
@@ -1096,8 +1096,8 @@ export class FederationFactory {
         return {
           ...data,
           appearances: sourceData.appearances,
-          enumValueDataByValueName: this.copyEnumValueDataByValueName(
-            sourceData.enumValueDataByValueName,
+          enumValueDataByName: this.copyEnumValueDataByValueName(
+            sourceData.enumValueDataByName,
             sourceData.isInaccessible,
           ),
           isInaccessible: sourceData.isInaccessible,
@@ -1138,6 +1138,7 @@ export class FederationFactory {
             kind: sourceData.kind,
             name: stringToNameNode(sourceData.name),
           },
+          // `requireFetchReasonsFieldNames` is not required for the federated node.
           requireFetchReasonsFieldNames: new Set<FieldName>(),
           subgraphNames: new Set(sourceData.subgraphNames),
         };
@@ -1155,6 +1156,7 @@ export class FederationFactory {
             kind: sourceData.kind,
             name: stringToNameNode(sourceData.renamedTypeName || sourceData.name),
           },
+          // `requireFetchReasonsFieldNames` is not required for the federated node.
           requireFetchReasonsFieldNames: new Set<FieldName>(),
           renamedTypeName: sourceData.renamedTypeName,
           subgraphNames: new Set(sourceData.subgraphNames),
@@ -1217,7 +1219,7 @@ export class FederationFactory {
     if (isParentInaccessible) {
       this.inaccessibleCoords.add(targetData.name);
     }
-    if (entityInterfaceData && entityInterfaceData.interfaceObjectSubgraphs.has(subgraphName)) {
+    if (entityInterfaceData && entityInterfaceData.interfaceObjectSubgraphNames.has(subgraphName)) {
       targetData.kind = Kind.INTERFACE_TYPE_DEFINITION;
       targetData.node.kind = Kind.INTERFACE_TYPE_DEFINITION;
     }
@@ -1228,7 +1230,7 @@ export class FederationFactory {
     if (targetData.kind !== incomingData.kind) {
       if (
         !entityInterfaceData ||
-        !entityInterfaceData.interfaceObjectSubgraphs.has(subgraphName) ||
+        !entityInterfaceData.interfaceObjectSubgraphNames.has(subgraphName) ||
         targetData.kind !== Kind.INTERFACE_TYPE_DEFINITION ||
         incomingData.kind !== Kind.OBJECT_TYPE_DEFINITION
       ) {
@@ -1256,8 +1258,8 @@ export class FederationFactory {
         targetData.appearances += 1;
         targetData.isInaccessible ||= isParentInaccessible;
         addIterableValuesToSet(incomingData.subgraphNames, targetData.subgraphNames);
-        for (const data of incomingData.enumValueDataByValueName.values()) {
-          this.upsertEnumValueData(targetData.enumValueDataByValueName, data, isParentInaccessible);
+        for (const data of incomingData.enumValueDataByName.values()) {
+          this.upsertEnumValueData(targetData.enumValueDataByName, data, isParentInaccessible);
         }
         return;
       case Kind.INPUT_OBJECT_TYPE_DEFINITION:
@@ -1340,12 +1342,12 @@ export class FederationFactory {
         return;
       }
       const argumentDataByArgumentName = new Map<string, InputValueData>();
-      for (const inputValueData of incomingData.argumentDataByArgumentName.values()) {
+      for (const inputValueData of incomingData.argumentDataByName.values()) {
         this.namedInputValueTypeNames.add(inputValueData.namedTypeName);
         this.upsertInputValueData(argumentDataByArgumentName, inputValueData, `@${incomingData.name}`, false);
       }
       this.potentialPersistedDirectiveDefinitionDataByDirectiveName.set(name, {
-        argumentDataByArgumentName,
+        argumentDataByName: argumentDataByArgumentName,
         executableLocations: new Set<string>(incomingData.executableLocations),
         name,
         repeatable: incomingData.repeatable,
@@ -1365,14 +1367,9 @@ export class FederationFactory {
       this.potentialPersistedDirectiveDefinitionDataByDirectiveName.delete(name);
       return;
     }
-    for (const inputValueData of incomingData.argumentDataByArgumentName.values()) {
+    for (const inputValueData of incomingData.argumentDataByName.values()) {
       this.namedInputValueTypeNames.add(getTypeNodeNamedTypeName(inputValueData.type));
-      this.upsertInputValueData(
-        existingData.argumentDataByArgumentName,
-        inputValueData,
-        `@${existingData.name}`,
-        false,
-      );
+      this.upsertInputValueData(existingData.argumentDataByName, inputValueData, `@${existingData.name}`, false);
     }
     setLongestDescription(existingData, incomingData);
     existingData.repeatable &&= incomingData.repeatable;
@@ -1606,7 +1603,7 @@ export class FederationFactory {
         // TODO error
         continue;
       }
-      for (const subgraphName of entityInterfaceData.interfaceObjectSubgraphs) {
+      for (const subgraphName of entityInterfaceData.interfaceObjectSubgraphNames) {
         const internalSubgraph = getOrThrowError(
           this.internalSubgraphBySubgraphName,
           subgraphName,
@@ -1912,7 +1909,7 @@ export class FederationFactory {
           const clientEnumValueNodes: Array<MutableEnumValueNode> = [];
           const mergeMethod = this.getEnumValueMergeMethod(parentTypeName);
           propagateAuthDirectives(parentDefinitionData, this.authorizationDataByParentTypeName.get(parentTypeName));
-          for (const enumValueData of parentDefinitionData.enumValueDataByValueName.values()) {
+          for (const enumValueData of parentDefinitionData.enumValueDataByName.values()) {
             const enumValueNode = getNodeForRouterSchemaByData(
               enumValueData,
               this.persistedDirectiveDefinitionByDirectiveName,
@@ -2942,7 +2939,7 @@ export class FederationFactory {
           case Kind.ENUM_TYPE_DEFINITION: {
             this.handleChildTagExclusions(
               parentDefinitionData,
-              parentDefinitionData.enumValueDataByValueName,
+              parentDefinitionData.enumValueDataByName,
               parentTagData.childTagDataByChildName,
               contractTagOptions.tagNamesToExclude,
             );
@@ -3038,7 +3035,7 @@ export class FederationFactory {
           case Kind.ENUM_TYPE_DEFINITION:
             this.handleChildTagInclusions(
               parentDefinitionData,
-              parentDefinitionData.enumValueDataByValueName,
+              parentDefinitionData.enumValueDataByName,
               parentTagData.childTagDataByChildName,
               contractTagOptions.tagNamesToInclude,
             );

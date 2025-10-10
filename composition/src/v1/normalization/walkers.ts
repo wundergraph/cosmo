@@ -288,11 +288,11 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           );
           return;
         }
-        if (parentData.enumValueDataByValueName.has(name)) {
+        if (parentData.enumValueDataByName.has(name)) {
           nf.errors.push(duplicateEnumValueDefinitionError(nf.originalParentTypeName, name));
           return;
         }
-        parentData.enumValueDataByValueName.set(name, {
+        parentData.enumValueDataByName.set(name, {
           appearances: 1,
           configureDescriptionDataBySubgraphName: new Map<string, ConfigureDescriptionData>(),
           directivesByDirectiveName: nf.extractDirectives(node, new Map<string, ConstDirectiveNode[]>()),
