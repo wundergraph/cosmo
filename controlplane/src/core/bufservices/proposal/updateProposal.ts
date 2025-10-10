@@ -8,7 +8,7 @@ import {
   UpdateProposalResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
-import { ProposalState } from '../../../db/models.js';
+import { ProposalOrigin, ProposalState } from '../../../db/models.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
@@ -131,6 +131,29 @@ export function updateProposal(
       federatedGraphId: federatedGraph.id,
     });
     if (!proposal) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: `Proposal ${req.proposalName} not found`,
+        },
+        breakingChanges: [],
+        nonBreakingChanges: [],
+        compositionErrors: [],
+        checkId: '',
+        lintWarnings: [],
+        lintErrors: [],
+        graphPruneWarnings: [],
+        graphPruneErrors: [],
+        compositionWarnings: [],
+        lintingSkipped: false,
+        graphPruningSkipped: false,
+        checkUrl: '',
+      };
+    }
+
+    const clientHdr = ctx.requestHeader.get('user-agent')?.toLowerCase() ?? '';
+    const expectedOrigin: ProposalOrigin = clientHdr.includes('cosmo-hub') ? 'EXTERNAL' : 'INTERNAL';
+    if (proposal.proposal.origin !== expectedOrigin) {
       return {
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,

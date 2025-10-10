@@ -4,6 +4,24 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.168.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.167.0...controlplane@0.168.0) (2025-10-10)
+
+### Features
+
+* disallow reviewing proposals not created by Cosmo ([#2218](https://github.com/wundergraph/cosmo/issues/2218)) ([d4aee49](https://github.com/wundergraph/cosmo/commit/d4aee4905c1a3f1d409c3892621a0d2a1ce8d147)) (@wilsonrivera)
+
+# [0.167.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.166.1...controlplane@0.167.0) (2025-10-06)
+
+### Features
+
+* return additional linked check info when proposals are created/updated ([#2258](https://github.com/wundergraph/cosmo/issues/2258)) ([81ac616](https://github.com/wundergraph/cosmo/commit/81ac61679fe140961fcd610f2f6a419955dff23e)) (@JivusAyrus)
+
+## [0.166.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.166.0...controlplane@0.166.1) (2025-10-04)
+
+### Bug Fixes
+
+* add fastify integration to sentry of controlplane ([#2260](https://github.com/wundergraph/cosmo/issues/2260)) ([363b1c3](https://github.com/wundergraph/cosmo/commit/363b1c30ed29ab0ee1cfd1d67219b3bcf9ed7bd3)) (@miklosbarabas)
+
 # [0.166.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.165.2...controlplane@0.166.0) (2025-10-03)
 
 ### Features

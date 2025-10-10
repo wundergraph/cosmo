@@ -1,6 +1,12 @@
 import { LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { JWTPayload } from 'jose';
-import { DBSubgraphType, GraphPruningRuleEnum, OrganizationRole, ProposalMatch } from '../db/models.js';
+import {
+  DBSubgraphType,
+  GraphPruningRuleEnum,
+  OrganizationRole,
+  ProposalMatch,
+  ProposalOrigin,
+} from '../db/models.js';
 import { RBACEvaluator } from '../core/services/RBACEvaluator.js';
 
 export type FeatureIds =
@@ -776,6 +782,7 @@ export interface ProposalDTO {
   createdById: string;
   createdByEmail?: string;
   state: string;
+  origin: ProposalOrigin;
 }
 
 export interface ProposalSubgraphDTO {
