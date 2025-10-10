@@ -35,6 +35,7 @@ const (
 	errorTypeInvalidWsSubprotocol
 	errorTypeEDFSInvalidMessage
 	errorTypeMergeResult
+	errorTypeStreamHookError
 )
 
 type (
@@ -88,6 +89,10 @@ func getErrorType(err error) errorType {
 	var mergeResultErr resolve.ErrMergeResult
 	if errors.As(err, &mergeResultErr) {
 		return errorTypeMergeResult
+	}
+	var streamHookErr *StreamHookError
+	if errors.As(err, &streamHookErr) {
+		return errorTypeStreamHookError
 	}
 	return errorTypeUnknown
 }

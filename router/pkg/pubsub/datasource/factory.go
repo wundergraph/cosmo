@@ -9,14 +9,16 @@ import (
 )
 
 type PlannerConfig[PB ProviderBuilder[P, E], P any, E any] struct {
-	ProviderBuilder PB
-	Event           E
+	ProviderBuilder        PB
+	Event                  E
+	SubscriptionOnStartFns []SubscriptionOnStartFn
 }
 
-func NewPlannerConfig[PB ProviderBuilder[P, E], P any, E any](providerBuilder PB, event E) *PlannerConfig[PB, P, E] {
+func NewPlannerConfig[PB ProviderBuilder[P, E], P any, E any](providerBuilder PB, event E, subscriptionOnStartFns []SubscriptionOnStartFn) *PlannerConfig[PB, P, E] {
 	return &PlannerConfig[PB, P, E]{
-		ProviderBuilder: providerBuilder,
-		Event:           event,
+		ProviderBuilder:        providerBuilder,
+		Event:                  event,
+		SubscriptionOnStartFns: subscriptionOnStartFns,
 	}
 }
 

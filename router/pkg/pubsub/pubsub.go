@@ -51,9 +51,23 @@ func (e *ProviderNotDefinedError) Error() string {
 	return fmt.Sprintf("%s provider with ID %s is not defined", e.ProviderTypeID, e.ProviderID)
 }
 
+// Hooks contains hooks for the pubsub providers and data sources
+type Hooks struct {
+	SubscriptionOnStart []pubsub_datasource.SubscriptionOnStartFn
+}
+
 // BuildProvidersAndDataSources is a generic function that builds providers and data sources for the given
 // EventsConfiguration and DataSourceConfigurationWithMetadata
-func BuildProvidersAndDataSources(ctx context.Context, config config.EventsConfiguration, store metric.StreamMetricStore, logger *zap.Logger, dsConfs []DataSourceConfigurationWithMetadata, hostName string, routerListenAddr string) ([]pubsub_datasource.Provider, []plan.DataSource, error) {
+func BuildProvidersAndDataSources(
+	ctx context.Context,
+	config config.EventsConfiguration,
+	store metric.StreamMetricStore,
+	logger *zap.Logger,
+	dsConfs []DataSourceConfigurationWithMetadata,
+	hostName string,
+	routerListenAddr string,
+	hooks Hooks,
+) ([]pubsub_datasource.Provider, []plan.DataSource, error) {
 	if store == nil {
 		store = metric.NewNoopStreamMetricStore()
 	}
@@ -70,7 +84,7 @@ func BuildProvidersAndDataSources(ctx context.Context, config config.EventsConfi
 			events: dsConf.Configuration.GetCustomEvents().GetKafka(),
 		})
 	}
-	kafkaPubSubProviders, kafkaOuts, err := build(ctx, kafkaBuilder, config.Providers.Kafka, kafkaDsConfsWithEvents, store)
+	kafkaPubSubProviders, kafkaOuts, err := build(ctx, kafkaBuilder, config.Providers.Kafka, kafkaDsConfsWithEvents, store, hooks)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -86,7 +100,7 @@ func BuildProvidersAndDataSources(ctx context.Context, config config.EventsConfi
 			events: dsConf.Configuration.GetCustomEvents().GetNats(),
 		})
 	}
-	natsPubSubProviders, natsOuts, err := build(ctx, natsBuilder, config.Providers.Nats, natsDsConfsWithEvents, store)
+	natsPubSubProviders, natsOuts, err := build(ctx, natsBuilder, config.Providers.Nats, natsDsConfsWithEvents, store, hooks)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -102,7 +116,7 @@ func BuildProvidersAndDataSources(ctx context.Context, config config.EventsConfi
 			events: dsConf.Configuration.GetCustomEvents().GetRedis(),
 		})
 	}
-	redisPubSubProviders, redisOuts, err := build(ctx, redisBuilder, config.Providers.Redis, redisDsConfsWithEvents, store)
+	redisPubSubProviders, redisOuts, err := build(ctx, redisBuilder, config.Providers.Redis, redisDsConfsWithEvents, store, hooks)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -118,6 +132,7 @@ func build[P GetID, E GetEngineEventConfiguration](
 	providersData []P,
 	dsConfs []dsConfAndEvents[E],
 	store metric.StreamMetricStore,
+	hooks Hooks,
 ) ([]pubsub_datasource.Provider, []plan.DataSource, error) {
 	var pubSubProviders []pubsub_datasource.Provider
 	var outs []plan.DataSource
@@ -161,7 +176,7 @@ func build[P GetID, E GetEngineEventConfiguration](
 	// build data sources for each event
 	for _, dsConf := range dsConfs {
 		for i, event := range dsConf.events {
-			plannerConfig := pubsub_datasource.NewPlannerConfig(builder, event)
+			plannerConfig := pubsub_datasource.NewPlannerConfig(builder, event, hooks.SubscriptionOnStart)
 			out, err := plan.NewDataSourceConfiguration(
 				dsConf.dsConf.Configuration.Id+"-"+builder.TypeID()+"-"+strconv.Itoa(i),
 				pubsub_datasource.NewPlannerFactory(ctx, plannerConfig),
