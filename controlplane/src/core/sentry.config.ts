@@ -15,8 +15,8 @@ if (process.env.SENTRY_ENABLED === 'true' && process.env.SENTRY_DSN) {
     profileSessionSampleRate: Number(process.env.SENTRY_PROFILE_SESSION_SAMPLE_RATE ?? 1),
     sendDefaultPii: (process.env.SENTRY_SEND_DEFAULT_PII ?? 'true') === 'true',
     tracesSampleRate: Number(process.env.SENTRY_TRACES_SAMPLE_RATE ?? 1),
-    profileLifecycle: (process.env.SENTRY_PROFILE_LIFECYCLE as "trace" | "manual") ?? "trace",
+    profileLifecycle: (process.env.SENTRY_PROFILE_LIFECYCLE as 'trace' | 'manual') ?? 'trace',
     enableLogs: (process.env.SENTRY_ENABLE_LOGS ?? 'false') === 'true',
   });
-  console.log("Sentry is initialized.");
+  console.log('Sentry is initialized.');
 }
