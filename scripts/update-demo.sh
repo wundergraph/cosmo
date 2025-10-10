@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
 
 SUBGRAPHS="employees family hobbies products availability mood employeeupdated"
