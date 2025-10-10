@@ -386,6 +386,8 @@
   },
   "AccessLogs": {
     "Enabled": true,
+    "Level": "info",
+    "AddStacktrace": true,
     "Buffer": {
       "Enabled": false,
       "Size": 256000,

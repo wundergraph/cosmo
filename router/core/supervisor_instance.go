@@ -3,9 +3,6 @@ package core
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"os"
-
 	"github.com/KimMachineGun/automemlimit/memlimit"
 	"github.com/dustin/go-humanize"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
@@ -15,6 +12,10 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"go.uber.org/automaxprocs/maxprocs"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"net/http"
+	"os"
+	"strings"
 )
 
 // newRouter creates a new router instance.
@@ -73,6 +74,11 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 			SubgraphAttributes:    cfg.AccessLogs.Subgraphs.Fields,
 		}
 
+		var level zapcore.Level
+		if err := level.Set(strings.ToUpper(cfg.AccessLogs.Level)); err != nil {
+			return nil, fmt.Errorf("could not parse log level: %w for access logs", err)
+		}
+
 		if cfg.AccessLogs.Output.File.Enabled {
 			f, err := logging.NewLogFile(cfg.AccessLogs.Output.File.Path, os.FileMode(cfg.AccessLogs.Output.File.Mode))
 			if err != nil {
@@ -84,7 +90,7 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 					BufferSize:    int(cfg.AccessLogs.Buffer.Size.Uint64()),
 					FlushInterval: cfg.AccessLogs.Buffer.FlushInterval,
 					Development:   cfg.DevelopmentMode,
-					Level:         zap.InfoLevel,
+					Level:         level,
 					Pretty:        !cfg.JSONLog,
 				})
 				if err != nil {
@@ -92,7 +98,7 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 				}
 				c.Logger = bl.Logger
 			} else {
-				c.Logger = logging.NewZapAccessLogger(f, cfg.DevelopmentMode, !cfg.JSONLog)
+				c.Logger = logging.NewZapAccessLogger(f, level, cfg.DevelopmentMode, !cfg.JSONLog, cfg.AccessLogs.AddStacktrace)
 			}
 		} else if cfg.AccessLogs.Output.Stdout.Enabled {
 			if cfg.AccessLogs.Buffer.Enabled {
@@ -101,7 +107,7 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 					BufferSize:    int(cfg.AccessLogs.Buffer.Size.Uint64()),
 					FlushInterval: cfg.AccessLogs.Buffer.FlushInterval,
 					Development:   cfg.DevelopmentMode,
-					Level:         zap.InfoLevel,
+					Level:         level,
 					Pretty:        !cfg.JSONLog,
 				})
 				if err != nil {
@@ -109,7 +115,7 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 				}
 				c.Logger = bl.Logger
 			} else {
-				c.Logger = logging.NewZapAccessLogger(os.Stdout, cfg.DevelopmentMode, !cfg.JSONLog)
+				c.Logger = logging.NewZapAccessLogger(os.Stdout, level, cfg.DevelopmentMode, !cfg.JSONLog, cfg.AccessLogs.AddStacktrace)
 			}
 		}
 
