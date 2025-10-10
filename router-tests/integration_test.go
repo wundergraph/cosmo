@@ -838,7 +838,7 @@ func TestEnableRequireFetchReasons(t *testing.T) {
 	// Simple test to verify that the configuration switch works.
 	// Multi subgraphs calls are tested in the engine.
 	testenv.Run(t, &testenv.Config{
-		RouterConfigJSONTemplate: testenv.ConfigWithRequireFetchReasonsJSONTemplate,
+		RouterConfigJSONTemplate: testenv.ConfigJSONTemplate,
 		ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 			cfg.EnableRequireFetchReasons = true
 		},
@@ -850,6 +850,8 @@ func TestEnableRequireFetchReasons(t *testing.T) {
 						var req core.GraphQLRequest
 						require.NoError(t, json.Unmarshal(body, &req))
 
+						// Verify that directive worked on the fields of the Query type
+						// and on the interface implemented by Employee.
 						require.Equal(t, `query($a: Int!){employee(id: $a){id}}`, req.Query)
 						require.Equal(t, `{"fetch_reasons":[{"typename":"Employee","field":"id","by_user":true},{"typename":"Query","field":"employee","by_user":true}]}`, string(req.Extensions))
 
