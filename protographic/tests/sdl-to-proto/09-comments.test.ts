@@ -86,13 +86,13 @@ describe('SDL to Proto Comments', () => {
 
       // Service definition for DefaultService
       service DefaultService {
-        // Get a user by ID
-        rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
-        /*
-         * List all users with pagination.
-         * Returns a list of User objects.
-         */
-        rpc QueryUsers(QueryUsersRequest) returns (QueryUsersResponse) {}
+      // Get a user by ID
+      rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
+      /*
+       * List all users with pagination.
+       * Returns a list of User objects.
+       */
+      rpc QueryUsers(QueryUsersRequest) returns (QueryUsersResponse) {}
       }
 
       // Request message for user operation: Get a user by ID.
@@ -237,10 +237,10 @@ describe('SDL to Proto Comments', () => {
 
       // Service definition for DefaultService
       service DefaultService {
-        // Get node by ID
-        rpc QueryNode(QueryNodeRequest) returns (QueryNodeResponse) {}
-        // Search for entities by name
-        rpc QuerySearch(QuerySearchRequest) returns (QuerySearchResponse) {}
+      // Get node by ID
+      rpc QueryNode(QueryNodeRequest) returns (QueryNodeResponse) {}
+      // Search for entities by name
+      rpc QuerySearch(QuerySearchRequest) returns (QuerySearchResponse) {}
       }
 
       // Request message for search operation: Search for entities by name.
@@ -380,20 +380,20 @@ describe('SDL to Proto Comments', () => {
 
       // Service definition for DefaultService
       service DefaultService {
-        /*
-         * Lookup Product entity by upc: Product entity type.
-         * Contains product information across the graph.
-         */
-        rpc LookupProductByUpc(LookupProductByUpcRequest) returns (LookupProductByUpcResponse) {}
-        /*
-         * Lookup User entity by id: User entity type.
-         * This is a federated entity marked with the @key directive.
-         */
-        rpc LookupUserById(LookupUserByIdRequest) returns (LookupUserByIdResponse) {}
-        // Get a single product by UPC
-        rpc QueryProduct(QueryProductRequest) returns (QueryProductResponse) {}
-        // Get all available products
-        rpc QueryProducts(QueryProductsRequest) returns (QueryProductsResponse) {}
+      /*
+       * Lookup Product entity by upc: Product entity type.
+       * Contains product information across the graph.
+       */
+      rpc LookupProductByUpc(LookupProductByUpcRequest) returns (LookupProductByUpcResponse) {}
+      /*
+       * Lookup User entity by id: User entity type.
+       * This is a federated entity marked with the @key directive.
+       */
+      rpc LookupUserById(LookupUserByIdRequest) returns (LookupUserByIdResponse) {}
+      // Get a single product by UPC
+      rpc QueryProduct(QueryProductRequest) returns (QueryProductResponse) {}
+      // Get all available products
+      rpc QueryProducts(QueryProductsRequest) returns (QueryProductsResponse) {}
       }
 
       // Key message for User entity lookup
