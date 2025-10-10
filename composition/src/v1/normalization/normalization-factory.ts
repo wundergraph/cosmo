@@ -1068,11 +1068,11 @@ export class NormalizationFactory {
     argumentNodes: ReadonlyArray<InputValueDefinitionNode> | Array<InputValueDefinitionNode> | undefined,
     errorMessages: Array<string>,
   ): ExtractArgumentDataResult {
-    const argumentTypeNodeByArgumentName = new Map<string, ArgumentData>();
+    const argumentTypeNodeByName = new Map<string, ArgumentData>();
     const optionalArgumentNames = new Set<string>();
     const requiredArgumentNames = new Set<string>();
     const output = {
-      argumentTypeNodeByArgumentName,
+      argumentTypeNodeByName,
       optionalArgumentNames,
       requiredArgumentNames,
     };
@@ -1082,7 +1082,7 @@ export class NormalizationFactory {
     const duplicateArgumentNames = new Set<string>();
     for (const argumentNode of argumentNodes) {
       const name = argumentNode.name.value;
-      if (argumentTypeNodeByArgumentName.has(name)) {
+      if (argumentTypeNodeByName.has(name)) {
         duplicateArgumentNames.add(name);
         continue;
       }
@@ -1092,7 +1092,7 @@ export class NormalizationFactory {
       if (isTypeRequired(argumentNode.type) && !argumentNode.defaultValue) {
         requiredArgumentNames.add(name);
       }
-      argumentTypeNodeByArgumentName.set(name, {
+      argumentTypeNodeByName.set(name, {
         name,
         typeNode: argumentNode.type,
         defaultValue: argumentNode.defaultValue,
@@ -1122,12 +1122,12 @@ export class NormalizationFactory {
       return false;
     }
     const errorMessages: Array<string> = [];
-    const { argumentTypeNodeByArgumentName, optionalArgumentNames, requiredArgumentNames } = this.extractArgumentData(
+    const { argumentTypeNodeByName, optionalArgumentNames, requiredArgumentNames } = this.extractArgumentData(
       node.arguments,
       errorMessages,
     );
     this.directiveDefinitionDataByDirectiveName.set(name, {
-      argumentTypeNodeByName: argumentTypeNodeByArgumentName,
+      argumentTypeNodeByName: argumentTypeNodeByName,
       isRepeatable: node.repeatable,
       locations: this.extractDirectiveLocations(node, errorMessages),
       name,

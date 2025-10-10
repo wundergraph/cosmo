@@ -1054,7 +1054,7 @@ export class FederationFactory {
     };
   }
 
-  copyEnumValueDataByValueName(
+  copyEnumValueDataByName(
     source: Map<string, EnumValueData>,
     isParentInaccessible: boolean,
   ): Map<string, EnumValueData> {
@@ -1096,10 +1096,7 @@ export class FederationFactory {
         return {
           ...data,
           appearances: sourceData.appearances,
-          enumValueDataByName: this.copyEnumValueDataByValueName(
-            sourceData.enumValueDataByName,
-            sourceData.isInaccessible,
-          ),
+          enumValueDataByName: this.copyEnumValueDataByName(sourceData.enumValueDataByName, sourceData.isInaccessible),
           isInaccessible: sourceData.isInaccessible,
           kind: sourceData.kind,
           node: {

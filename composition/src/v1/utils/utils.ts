@@ -35,6 +35,7 @@ import 'core-js/modules/esnext.set.is-subset-of.v2';
 import 'core-js/modules/esnext.set.is-superset-of.v2';
 import type { CompositeOutputNodeKind } from '../../ast/utils';
 import { COMPOSITE_OUTPUT_NODE_KINDS } from './string-constants';
+import { SubgraphName, TypeName } from '../../types/types';
 
 export function subtractSet<T>(source: Set<T>, target: Set<T>) {
   for (const entry of source) {
@@ -191,16 +192,16 @@ function newEntityData({ keyFieldSetDataByFieldSet, subgraphName, typeName }: Ne
     keyFieldSetDatasBySubgraphName,
     documentNodeByKeyFieldSet,
     keyFieldSets: new Set<string>(),
-    subgraphNames: new Set<string>([subgraphName]),
+    subgraphNames: new Set<SubgraphName>([subgraphName]),
     typeName,
   };
 }
 
 export type UpsertEntityDataParams = {
-  entityDataByTypeName: Map<string, EntityData>;
+  entityDataByTypeName: Map<TypeName, EntityData>;
   keyFieldSetDataByFieldSet: Map<string, KeyFieldSetData>;
-  subgraphName: string;
-  typeName: string;
+  subgraphName: SubgraphName;
+  typeName: TypeName;
 };
 
 export function upsertEntityData({
@@ -218,7 +219,7 @@ export function upsertEntityData({
 export type UpdateEntityDataParams = {
   entityData: EntityData;
   keyFieldSetDataByFieldSet: Map<string, KeyFieldSetData>;
-  subgraphName: string;
+  subgraphName: SubgraphName;
 };
 
 export function updateEntityData({ entityData, keyFieldSetDataByFieldSet, subgraphName }: UpdateEntityDataParams) {
