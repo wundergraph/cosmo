@@ -2943,12 +2943,14 @@ message UnlinkSubgraphResponse {
   Response response = 1;
 }
 
-message CheckOrganizationPermissionsRequest {
+message VerifyAPIKeyGraphAccessRequest {
+  string federatedGraphId = 1;
 }
 
-message CheckOrganizationPermissionsResponse {
+message VerifyAPIKeyGraphAccessResponse {
   Response response = 1;
   bool hasOrganizationAdminOrDeveloperPermissions = 2;
+  bool hasWriteAccessToGraph = 3;
 }
 
 service PlatformService {
@@ -3325,6 +3327,6 @@ service PlatformService {
   rpc LinkSubgraph(LinkSubgraphRequest) returns (LinkSubgraphResponse) {}
   // UnlinkSubgraph unlinks one subgraph from another
   rpc UnlinkSubgraph(UnlinkSubgraphRequest) returns (UnlinkSubgraphResponse) {}
-  // CheckOrganizationPermissions checks if the token or the jwt has organization admin or developer permissions
-  rpc CheckOrganizationPermissions(CheckOrganizationPermissionsRequest) returns (CheckOrganizationPermissionsResponse) {}
+  // VerifyAPIKeyGraphAccess checks if the token or the jwt has organization admin or developer  and checks if the token has permissions to write to the graph
+  rpc VerifyAPIKeyGraphAccess(VerifyAPIKeyGraphAccessRequest) returns (VerifyAPIKeyGraphAccessResponse) {}
 }

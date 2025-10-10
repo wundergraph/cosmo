@@ -538,9 +538,9 @@ const (
 	// PlatformServiceUnlinkSubgraphProcedure is the fully-qualified name of the PlatformService's
 	// UnlinkSubgraph RPC.
 	PlatformServiceUnlinkSubgraphProcedure = "/wg.cosmo.platform.v1.PlatformService/UnlinkSubgraph"
-	// PlatformServiceCheckOrganizationPermissionsProcedure is the fully-qualified name of the
-	// PlatformService's CheckOrganizationPermissions RPC.
-	PlatformServiceCheckOrganizationPermissionsProcedure = "/wg.cosmo.platform.v1.PlatformService/CheckOrganizationPermissions"
+	// PlatformServiceVerifyAPIKeyGraphAccessProcedure is the fully-qualified name of the
+	// PlatformService's VerifyAPIKeyGraphAccess RPC.
+	PlatformServiceVerifyAPIKeyGraphAccessProcedure = "/wg.cosmo.platform.v1.PlatformService/VerifyAPIKeyGraphAccess"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
@@ -714,7 +714,7 @@ var (
 	platformServiceValidateAndFetchPluginDataMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("ValidateAndFetchPluginData")
 	platformServiceLinkSubgraphMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("LinkSubgraph")
 	platformServiceUnlinkSubgraphMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("UnlinkSubgraph")
-	platformServiceCheckOrganizationPermissionsMethodDescriptor          = platformServiceServiceDescriptor.Methods().ByName("CheckOrganizationPermissions")
+	platformServiceVerifyAPIKeyGraphAccessMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("VerifyAPIKeyGraphAccess")
 )
 
 // PlatformServiceClient is a client for the wg.cosmo.platform.v1.PlatformService service.
@@ -1037,8 +1037,8 @@ type PlatformServiceClient interface {
 	LinkSubgraph(context.Context, *connect.Request[v1.LinkSubgraphRequest]) (*connect.Response[v1.LinkSubgraphResponse], error)
 	// UnlinkSubgraph unlinks one subgraph from another
 	UnlinkSubgraph(context.Context, *connect.Request[v1.UnlinkSubgraphRequest]) (*connect.Response[v1.UnlinkSubgraphResponse], error)
-	// CheckOrganizationPermissions checks if the token or the jwt has organization admin or developer permissions
-	CheckOrganizationPermissions(context.Context, *connect.Request[v1.CheckOrganizationPermissionsRequest]) (*connect.Response[v1.CheckOrganizationPermissionsResponse], error)
+	// VerifyAPIKeyGraphAccess checks if the token or the jwt has organization admin or developer  and checks if the token has permissions to write to the graph
+	VerifyAPIKeyGraphAccess(context.Context, *connect.Request[v1.VerifyAPIKeyGraphAccessRequest]) (*connect.Response[v1.VerifyAPIKeyGraphAccessResponse], error)
 }
 
 // NewPlatformServiceClient constructs a client for the wg.cosmo.platform.v1.PlatformService
@@ -2066,10 +2066,10 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceUnlinkSubgraphMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
-		checkOrganizationPermissions: connect.NewClient[v1.CheckOrganizationPermissionsRequest, v1.CheckOrganizationPermissionsResponse](
+		verifyAPIKeyGraphAccess: connect.NewClient[v1.VerifyAPIKeyGraphAccessRequest, v1.VerifyAPIKeyGraphAccessResponse](
 			httpClient,
-			baseURL+PlatformServiceCheckOrganizationPermissionsProcedure,
-			connect.WithSchema(platformServiceCheckOrganizationPermissionsMethodDescriptor),
+			baseURL+PlatformServiceVerifyAPIKeyGraphAccessProcedure,
+			connect.WithSchema(platformServiceVerifyAPIKeyGraphAccessMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -2245,7 +2245,7 @@ type platformServiceClient struct {
 	validateAndFetchPluginData            *connect.Client[v1.ValidateAndFetchPluginDataRequest, v1.ValidateAndFetchPluginDataResponse]
 	linkSubgraph                          *connect.Client[v1.LinkSubgraphRequest, v1.LinkSubgraphResponse]
 	unlinkSubgraph                        *connect.Client[v1.UnlinkSubgraphRequest, v1.UnlinkSubgraphResponse]
-	checkOrganizationPermissions          *connect.Client[v1.CheckOrganizationPermissionsRequest, v1.CheckOrganizationPermissionsResponse]
+	verifyAPIKeyGraphAccess               *connect.Client[v1.VerifyAPIKeyGraphAccessRequest, v1.VerifyAPIKeyGraphAccessResponse]
 }
 
 // CreatePlaygroundScript calls wg.cosmo.platform.v1.PlatformService.CreatePlaygroundScript.
@@ -3121,10 +3121,9 @@ func (c *platformServiceClient) UnlinkSubgraph(ctx context.Context, req *connect
 	return c.unlinkSubgraph.CallUnary(ctx, req)
 }
 
-// CheckOrganizationPermissions calls
-// wg.cosmo.platform.v1.PlatformService.CheckOrganizationPermissions.
-func (c *platformServiceClient) CheckOrganizationPermissions(ctx context.Context, req *connect.Request[v1.CheckOrganizationPermissionsRequest]) (*connect.Response[v1.CheckOrganizationPermissionsResponse], error) {
-	return c.checkOrganizationPermissions.CallUnary(ctx, req)
+// VerifyAPIKeyGraphAccess calls wg.cosmo.platform.v1.PlatformService.VerifyAPIKeyGraphAccess.
+func (c *platformServiceClient) VerifyAPIKeyGraphAccess(ctx context.Context, req *connect.Request[v1.VerifyAPIKeyGraphAccessRequest]) (*connect.Response[v1.VerifyAPIKeyGraphAccessResponse], error) {
+	return c.verifyAPIKeyGraphAccess.CallUnary(ctx, req)
 }
 
 // PlatformServiceHandler is an implementation of the wg.cosmo.platform.v1.PlatformService service.
@@ -3447,8 +3446,8 @@ type PlatformServiceHandler interface {
 	LinkSubgraph(context.Context, *connect.Request[v1.LinkSubgraphRequest]) (*connect.Response[v1.LinkSubgraphResponse], error)
 	// UnlinkSubgraph unlinks one subgraph from another
 	UnlinkSubgraph(context.Context, *connect.Request[v1.UnlinkSubgraphRequest]) (*connect.Response[v1.UnlinkSubgraphResponse], error)
-	// CheckOrganizationPermissions checks if the token or the jwt has organization admin or developer permissions
-	CheckOrganizationPermissions(context.Context, *connect.Request[v1.CheckOrganizationPermissionsRequest]) (*connect.Response[v1.CheckOrganizationPermissionsResponse], error)
+	// VerifyAPIKeyGraphAccess checks if the token or the jwt has organization admin or developer  and checks if the token has permissions to write to the graph
+	VerifyAPIKeyGraphAccess(context.Context, *connect.Request[v1.VerifyAPIKeyGraphAccessRequest]) (*connect.Response[v1.VerifyAPIKeyGraphAccessResponse], error)
 }
 
 // NewPlatformServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -4472,10 +4471,10 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceUnlinkSubgraphMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
-	platformServiceCheckOrganizationPermissionsHandler := connect.NewUnaryHandler(
-		PlatformServiceCheckOrganizationPermissionsProcedure,
-		svc.CheckOrganizationPermissions,
-		connect.WithSchema(platformServiceCheckOrganizationPermissionsMethodDescriptor),
+	platformServiceVerifyAPIKeyGraphAccessHandler := connect.NewUnaryHandler(
+		PlatformServiceVerifyAPIKeyGraphAccessProcedure,
+		svc.VerifyAPIKeyGraphAccess,
+		connect.WithSchema(platformServiceVerifyAPIKeyGraphAccessMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	return "/wg.cosmo.platform.v1.PlatformService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -4816,8 +4815,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceLinkSubgraphHandler.ServeHTTP(w, r)
 		case PlatformServiceUnlinkSubgraphProcedure:
 			platformServiceUnlinkSubgraphHandler.ServeHTTP(w, r)
-		case PlatformServiceCheckOrganizationPermissionsProcedure:
-			platformServiceCheckOrganizationPermissionsHandler.ServeHTTP(w, r)
+		case PlatformServiceVerifyAPIKeyGraphAccessProcedure:
+			platformServiceVerifyAPIKeyGraphAccessHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -5499,6 +5498,6 @@ func (UnimplementedPlatformServiceHandler) UnlinkSubgraph(context.Context, *conn
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.UnlinkSubgraph is not implemented"))
 }
 
-func (UnimplementedPlatformServiceHandler) CheckOrganizationPermissions(context.Context, *connect.Request[v1.CheckOrganizationPermissionsRequest]) (*connect.Response[v1.CheckOrganizationPermissionsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CheckOrganizationPermissions is not implemented"))
+func (UnimplementedPlatformServiceHandler) VerifyAPIKeyGraphAccess(context.Context, *connect.Request[v1.VerifyAPIKeyGraphAccessRequest]) (*connect.Response[v1.VerifyAPIKeyGraphAccessResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.VerifyAPIKeyGraphAccess is not implemented"))
 }
