@@ -1,4 +1,3 @@
-// eslint-disable-next-line import/order
 import './core/sentry.config.js';
 import * as Sentry from '@sentry/node';
 // eslint-disable-next-line import/order
@@ -71,6 +70,8 @@ const {
   REDIS_PASSWORD,
   AUTH_ADMISSION_JWT_SECRET,
   CDN_BASE_URL,
+  SENTRY_ENABLED,
+  SENTRY_DSN,
 } = envVariables.parse(process.env);
 
 const options: BuildConfig = {
@@ -176,9 +177,8 @@ if (STRIPE_SECRET_KEY) {
   };
 }
 
-
 const app = await build(options);
-if (process.env.SENTRY_ENABLED === 'true' && process.env.SENTRY_DSN) {
+if (SENTRY_ENABLED && SENTRY_DSN) {
   Sentry.setupFastifyErrorHandler(app);
 }
 await app.listen({
