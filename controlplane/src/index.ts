@@ -1,7 +1,6 @@
 import './core/sentry.config.js';
-import * as Sentry from '@sentry/node';
-// eslint-disable-next-line import/order
 import * as process from 'node:process';
+import * as Sentry from '@sentry/node';
 import pino from 'pino';
 
 import 'dotenv/config';
