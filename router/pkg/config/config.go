@@ -871,7 +871,7 @@ type AutomaticPersistedQueriesConfig struct {
 type AccessLogsConfig struct {
 	Enabled       bool                      `yaml:"enabled" env:"ACCESS_LOGS_ENABLED" envDefault:"true"`
 	Level         string                    `yaml:"level" env:"ACCESS_LOGS_LEVEL" envDefault:"info"`
-	AddStacktrace bool                      `yaml:"add_stacktrace" env:"ACCESS_LOGS_ADD_STACKTRACE" envDefault:"true"`
+	AddStacktrace bool                      `yaml:"add_stacktrace" env:"ACCESS_LOGS_ADD_STACKTRACE" envDefault:"false"`
 	Buffer        AccessLogsBufferConfig    `yaml:"buffer,omitempty" env:"ACCESS_LOGS_BUFFER"`
 	Output        AccessLogsOutputConfig    `yaml:"output,omitempty" env:"ACCESS_LOGS_OUTPUT"`
 	Router        AccessLogsRouterConfig    `yaml:"router,omitempty" env:"ACCESS_LOGS_ROUTER"`

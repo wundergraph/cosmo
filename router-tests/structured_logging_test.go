@@ -3687,7 +3687,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 
 	t.Run("verify stacktrace configuration", func(t *testing.T) {
 
-		t.Run("stacktrace enabled by default on panic", func(t *testing.T) {
+		t.Run("stacktrace always enabled by default on panic", func(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
@@ -3723,12 +3723,13 @@ func TestFlakyAccessLogs(t *testing.T) {
 			})
 		})
 
-		t.Run("stacktrace disabled on panic", func(t *testing.T) {
+		t.Run("stacktrace enabled on panic even if explicitly disabled", func(t *testing.T) {
 			t.Parallel()
 
 			var logObserver *observer.ObservedLogs
 			var zCore zapcore.Core
 			zCore, logObserver = observer.New(zapcore.InfoLevel)
+			// Explicitly disable stacktraces in the access logger configuration
 			accessLogger := logging.NewZapAccessLogger(zapcore.AddSync(io.Discard), zapcore.InfoLevel, false, false, false)
 			accessLogger = accessLogger.WithOptions(zap.WrapCore(func(c zapcore.Core) zapcore.Core { return zCore }))
 
@@ -3758,10 +3759,11 @@ func TestFlakyAccessLogs(t *testing.T) {
 				})
 				require.NoError(t, err)
 
+				// Even though stacktraces are disabled, panics should always log stacktraces
 				panicLog := logObserver.FilterMessage("[Recovery from panic]")
 				require.Equal(t, 1, panicLog.Len())
 				logEntry := panicLog.All()[0]
-				require.Empty(t, logEntry.Stack)
+				require.NotEmpty(t, logEntry.Stack, "Panic stacktrace should always be printed even when stacktraces are explicitly disabled")
 			})
 		})
 

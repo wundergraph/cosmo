@@ -632,7 +632,7 @@
         },
         "add_stacktrace": {
           "type": "boolean",
-          "description": "Add stack traces to access logs. When enabled, stack traces will be included in access log entries. The default value is true.",
+          "description": "Add stack traces to access logs when enabled for all error logs. When disabled, panic error logs will still contain stack traces. The default value is false.",
           "default": true
         },
         "buffer": {

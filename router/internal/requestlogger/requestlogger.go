@@ -53,6 +53,7 @@ type handler struct {
 	accessLogger    *accessLogger
 	handler         http.Handler
 	logger          *zap.Logger
+	panicLogger     *zap.Logger
 	logLevelHandler func(r *http.Request) zapcore.Level
 }
 
@@ -125,9 +126,11 @@ func WithIgnoreQueryParamsList(ignoreList []string) Option {
 
 func New(logger *zap.Logger, opts ...Option) func(h http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
+		newLogger := logger.With(zap.String("log_type", "request"))
 		r := &handler{
 			handler:      h,
-			logger:       logger.With(zap.String("log_type", "request")),
+			logger:       newLogger,
+			panicLogger:  newLogger.WithOptions(zap.AddStacktrace(zapcore.ErrorLevel)),
 			accessLogger: &accessLogger{},
 		}
 		return parseOptions(r, opts...)
@@ -169,9 +172,9 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if brokenPipe {
 				fields = append(fields, zap.Bool("broken_pipe", brokenPipe))
 				// Avoid logging the stack trace for broken pipe errors
-				h.logger.WithOptions(zap.AddStacktrace(zapcore.PanicLevel)).Error(path, fields...)
+				h.panicLogger.WithOptions(zap.AddStacktrace(zapcore.PanicLevel)).Error(path, fields...)
 			} else {
-				h.logger.Error("[Recovery from panic]", fields...)
+				h.panicLogger.Error("[Recovery from panic]", fields...)
 			}
 
 			// Dpanic will panic already in development but in production it will log the error and continue
