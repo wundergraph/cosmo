@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
+	"syscall"
 	"testing"
 	"time"
 
@@ -31,6 +33,8 @@ import (
 var (
 	_ core.EnginePreOriginHandler = (*MyPanicModule2)(nil)
 	_ core.Module                 = (*MyPanicModule2)(nil)
+	_ core.EnginePreOriginHandler = (*MyBrokenPipeModule)(nil)
+	_ core.Module                 = (*MyBrokenPipeModule)(nil)
 )
 
 type MyPanicModule2 struct{}
@@ -54,6 +58,33 @@ func (m MyPanicModule2) Module() core.ModuleInfo {
 		Priority: math.MaxInt32,
 		New: func() core.Module {
 			return &MyPanicModule2{}
+		},
+	}
+}
+
+type MyBrokenPipeModule struct{}
+
+func (m MyBrokenPipeModule) OnOriginRequest(req *http.Request, ctx core.RequestContext) (*http.Request, *http.Response) {
+
+	if req.Header.Get("trigger-broken-pipe") == "true" {
+		// Simulate a broken pipe error by panicking with a net.OpError
+		opErr := &net.OpError{
+			Op:  "write",
+			Net: "tcp",
+			Err: syscall.EPIPE,
+		}
+		panic(opErr)
+	}
+
+	return req, nil
+}
+
+func (m MyBrokenPipeModule) Module() core.ModuleInfo {
+	return core.ModuleInfo{
+		ID:       "MyBrokenPipeModule",
+		Priority: math.MaxInt32,
+		New: func() core.Module {
+			return &MyBrokenPipeModule{}
 		},
 	}
 }
@@ -3764,6 +3795,52 @@ func TestFlakyAccessLogs(t *testing.T) {
 				require.Equal(t, 1, panicLog.Len())
 				logEntry := panicLog.All()[0]
 				require.NotEmpty(t, logEntry.Stack, "Panic stacktrace should always be printed even when stacktraces are explicitly disabled")
+			})
+		})
+
+		t.Run("stacktrace should not be present on panic for broken pipe error", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				NoRetryClient: true,
+				RouterOptions: []core.Option{
+					core.WithCustomModules(&MyBrokenPipeModule{}),
+					core.WithHeaderRules(config.HeaderRules{
+						All: &config.GlobalHeaderRule{
+							Request: []*config.RequestHeaderRule{
+								{Named: "trigger-broken-pipe", Operation: config.HeaderRuleOperationPropagate},
+							},
+						},
+					}),
+				},
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.InfoLevel,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				_, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Header: map[string][]string{
+						"trigger-broken-pipe": {"true"},
+					},
+					Query: `{ employees { id } }`,
+				})
+				require.NoError(t, err)
+
+				// Broken pipe errors should be logged without stacktraces
+				brokenPipeLog := xEnv.Observer().FilterMessage("/graphql")
+				require.Equal(t, 1, brokenPipeLog.Len())
+				logEntry := brokenPipeLog.All()[0]
+				require.Equal(t, zapcore.ErrorLevel, logEntry.Level)
+				require.Empty(t, logEntry.Stack, "Broken pipe errors should not include stacktraces")
+
+				var hasBrokenPipeField bool
+				for _, field := range logEntry.Context {
+					if field.Key == "broken_pipe" && field.Type == zapcore.BoolType && field.Integer == 1 {
+						hasBrokenPipeField = true
+						break
+					}
+				}
+				require.True(t, hasBrokenPipeField)
 			})
 		})
 
