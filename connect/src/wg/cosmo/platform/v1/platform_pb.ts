@@ -21507,11 +21507,6 @@ export class CreateProposalRequest extends Message<CreateProposalRequest> {
    */
   namingConvention = ProposalNamingConvention.NORMAL;
 
-  /**
-   * @generated from field: wg.cosmo.platform.v1.ProposalOrigin origin = 6;
-   */
-  origin = ProposalOrigin.INTERNAL;
-
   constructor(data?: PartialMessage<CreateProposalRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -21525,7 +21520,6 @@ export class CreateProposalRequest extends Message<CreateProposalRequest> {
     { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "subgraphs", kind: "message", T: ProposalSubgraph, repeated: true },
     { no: 5, name: "namingConvention", kind: "enum", T: proto3.getEnumType(ProposalNamingConvention) },
-    { no: 6, name: "origin", kind: "enum", T: proto3.getEnumType(ProposalOrigin) },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateProposalRequest {

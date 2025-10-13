@@ -8,7 +8,9 @@ import {
   ProposalNamingConvention,
   ProposalSubgraph,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { ProposalOrigin } from '../../../db/models.js';
 import { Composer } from '../../composition/composer.js';
+import { UnauthorizedError } from '../../errors/errors.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { ContractRepository } from '../../repositories/ContractRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
@@ -22,8 +24,7 @@ import { SchemaLintRepository } from '../../repositories/SchemaLintRepository.js
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { SchemaUsageTrafficInspector } from '../../services/SchemaUsageTrafficInspector.js';
-import { enrichLogger, getLogger, handleError, toProposalOriginEnum } from '../../util.js';
-import { UnauthorizedError } from '../../errors/errors.js';
+import { enrichLogger, getLogger, handleError } from '../../util.js';
 
 export function createProposal(
   opts: RouterOptions,
@@ -344,12 +345,15 @@ export function createProposal(
       });
     }
 
+    const clientHdr = ctx.requestHeader.get('user-agent')?.toLowerCase() ?? '';
+    const proposalOrigin: ProposalOrigin = clientHdr.includes('cosmo-hub') ? 'EXTERNAL' : 'INTERNAL';
+
     const proposal = await proposalRepo.createProposal({
       federatedGraphId: federatedGraph.id,
       name: proposalName,
       userId: authContext.userId,
       proposalSubgraphs,
-      origin: toProposalOriginEnum(req.origin),
+      origin: proposalOrigin,
     });
 
     await auditLogRepo.addAuditLog({

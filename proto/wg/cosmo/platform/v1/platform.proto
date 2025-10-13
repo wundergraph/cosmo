@@ -2741,7 +2741,6 @@ message CreateProposalRequest {
   string name = 3;
   repeated ProposalSubgraph subgraphs = 4;
   ProposalNamingConvention namingConvention = 5;
-  ProposalOrigin origin = 6;
 }
 
 message CreateProposalResponse {
@@ -2822,6 +2821,7 @@ message UpdateProposalRequest {
   oneof update_action {
     string state = 3;
     UpdateProposalSubgraphs updatedSubgraphs = 4;
+
   }
   string namespace = 5;
 }
