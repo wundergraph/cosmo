@@ -91,6 +91,7 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 					FlushInterval: cfg.AccessLogs.Buffer.FlushInterval,
 					Development:   cfg.DevelopmentMode,
 					Level:         level,
+					StackTrace:    cfg.AccessLogs.AddStacktrace,
 					Pretty:        !cfg.JSONLog,
 				})
 				if err != nil {
@@ -108,6 +109,7 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 					FlushInterval: cfg.AccessLogs.Buffer.FlushInterval,
 					Development:   cfg.DevelopmentMode,
 					Level:         level,
+					StackTrace:    cfg.AccessLogs.AddStacktrace,
 					Pretty:        !cfg.JSONLog,
 				})
 				if err != nil {
