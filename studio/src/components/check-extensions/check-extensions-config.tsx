@@ -107,6 +107,12 @@ export function CheckExtensionsConfig({
     defaultValues: config,
   });
 
+  useEffect(() => {
+    form.reset(config);
+    // We intentionally only observe the `enableSubgraphCheckExtensions` field so we don't undo any
+    // modifications every time the configuration is refreshed
+  }, [form, config.enableSubgraphCheckExtensions]);
+
   const onConfigUpdated = (newConfig: SubgraphCheckExtensionsConfig) => {
     form.reset(newConfig);
     setForceShowSecretKeyInput(undefined);

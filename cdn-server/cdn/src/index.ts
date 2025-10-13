@@ -92,11 +92,15 @@ const jwtMiddleware = (secret: string | ((c: Context) => string)) => {
 
     const organizationId = result.payload.organization_id;
     const federatedGraphId = result.payload.federated_graph_id;
-    if (!organizationId || !federatedGraphId) {
+    if (!organizationId) {
       return c.text('Unauthorized - Malformed token', 403);
     }
     c.set('authenticatedOrganizationId', organizationId as string);
-    c.set('authenticatedFederatedGraphId', federatedGraphId as string);
+
+    if (federatedGraphId) {
+      // Only assign the federated graph id when it was provided
+      c.set('authenticatedFederatedGraphId', federatedGraphId as string);
+    }
 
     await next();
   };
@@ -258,6 +262,41 @@ const cacheOperations = (storage: BlobStorage) => {
   };
 };
 
+const subgraphChecks = (storage: BlobStorage) => {
+  return async (c: Context) => {
+    const organizationId = c.get('authenticatedOrganizationId');
+
+    if (organizationId !== c.req.param('organization_id')) {
+      return c.text('Bad Request', 400);
+    }
+
+    const uniqueId = c.req.param('uniqueid');
+    if (!uniqueId.endsWith('.json')) {
+      return c.notFound();
+    }
+
+    const key = `${organizationId}/subgraph_checks/${uniqueId}`;
+    let blobObject: BlobObject;
+
+    try {
+      blobObject = await storage.getObject({ context: c, key, cacheControl: 'no-cache' });
+    } catch (e: any) {
+      console.log('burn')
+      if (e instanceof BlobNotFoundError) {
+        return c.notFound()
+      }
+      throw e;
+    }
+
+    c.header('Content-Type', 'application/json; charset=UTF-8');
+    c.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+
+    return stream(c, async (stream) => {
+      await stream.pipe(blobObject.stream);
+    });
+  };
+}
+
 // eslint-disable-next-line @typescript-eslint/ban-types
 export const cdn = <E extends Env, S extends Schema = {}, BasePath extends string = '/'>(
   hono: Hono<E, S, BasePath>,
@@ -286,4 +325,9 @@ export const cdn = <E extends Env, S extends Schema = {}, BasePath extends strin
   hono
     .use(cacheOperationsPath, jwtMiddleware(opts.authJwtSecret))
     .get(cacheOperationsPath, cacheOperations(opts.blobStorage));
+
+  const subgraphChecksPath = '/:organization_id/subgraph_checks/:uniqueid{.+\\.json$}';
+  hono
+    .use(subgraphChecksPath, jwtMiddleware(opts.authJwtSecret))
+    .get(subgraphChecksPath, subgraphChecks(opts.blobStorage));
 };

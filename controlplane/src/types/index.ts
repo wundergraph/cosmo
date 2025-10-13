@@ -1,12 +1,6 @@
 import { LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { JWTPayload } from 'jose';
-import {
-  DBSubgraphType,
-  GraphPruningRuleEnum,
-  OrganizationRole,
-  ProposalMatch,
-  ProposalOrigin,
-} from '../db/models.js';
+import { DBSubgraphType, GraphPruningRuleEnum, OrganizationRole, ProposalMatch, ProposalOrigin } from '../db/models.js';
 import { RBACEvaluator } from '../core/services/RBACEvaluator.js';
 
 export type FeatureIds =
