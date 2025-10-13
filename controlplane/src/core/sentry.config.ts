@@ -2,7 +2,7 @@ import * as Sentry from '@sentry/node';
 import { nodeProfilingIntegration } from '@sentry/profiling-node';
 import { eventLoopBlockIntegration } from '@sentry/node-native';
 import { fastifyIntegration, pinoIntegration } from '@sentry/node';
-import { envVariables } from "./env.schema.js";
+import { envVariables } from './env.schema.js';
 
 const {
   SENTRY_ENABLED,
