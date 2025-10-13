@@ -75,12 +75,12 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 		}
 
 		var level zapcore.Level
-		accessLogLevel := strings.ToUpper(cfg.AccessLogs.Level)
-		if accessLogLevel == "" {
-			accessLogLevel = zapcore.InfoLevel.CapitalString()
-		}
-		if err := level.Set(accessLogLevel); err != nil {
-			return nil, fmt.Errorf("could not parse log level: %w for access logs", err)
+		if cfg.AccessLogs.Level == "" {
+			level = zapcore.InfoLevel
+		} else {
+			if err := level.Set(strings.ToUpper(cfg.AccessLogs.Level)); err != nil {
+				return nil, fmt.Errorf("could not parse log level: %w for access logs", err)
+			}
 		}
 
 		if cfg.AccessLogs.Output.File.Enabled {
