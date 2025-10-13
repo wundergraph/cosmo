@@ -624,6 +624,17 @@
           "description": "Enable the access logs. The access logs are used to log the incoming requests. By default, the access logs are enabled and logged to the standard output.",
           "default": true
         },
+        "level": {
+          "type": "string",
+          "enum": ["debug", "info", "warn", "error", "panic", "fatal"],
+          "description": "The log level for access logs. The log level is used to control the verbosity of the access logs. The default value is 'info'.",
+          "default": "info"
+        },
+        "add_stacktrace": {
+          "type": "boolean",
+          "description": "Add stack traces to access logs when enabled for all error logs. When disabled, panic error logs will still contain stack traces. The default value is false.",
+          "default": true
+        },
         "buffer": {
           "type": "object",
           "additionalProperties": false,

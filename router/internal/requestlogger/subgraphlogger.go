@@ -67,3 +67,7 @@ func (h *SubgraphAccessLogger) RequestFields(respInfo *resolve.ResponseInfo, ove
 func (h *SubgraphAccessLogger) Info(message string, fields []zap.Field) {
 	h.logger.Info(message, fields...)
 }
+
+func (h *SubgraphAccessLogger) Error(message string, fields []zap.Field) {
+	h.logger.Error(message, fields...)
+}

@@ -291,3 +291,20 @@ func getCustomDynamicAttributeValue(
 
 	return ""
 }
+
+func LogLevelHandler(r *http.Request) zapcore.Level {
+	if r == nil {
+		return zapcore.InfoLevel
+	}
+
+	reqContext := getRequestContext(r.Context())
+	if reqContext == nil {
+		return zapcore.InfoLevel
+	}
+
+	if reqContext.error != nil {
+		return zapcore.ErrorLevel
+	}
+
+	return zapcore.InfoLevel
+}

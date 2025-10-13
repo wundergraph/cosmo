@@ -220,7 +220,12 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 				path = responseInfo.Request.URL.Path
 			}
 		}
-		f.accessLogger.Info(path, fields)
+
+		if responseInfo.Err != nil {
+			f.accessLogger.Error(path, fields)
+		} else {
+			f.accessLogger.Info(path, fields)
+		}
 	}
 
 	if responseInfo.Err != nil {
