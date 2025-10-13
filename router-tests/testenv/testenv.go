@@ -443,14 +443,14 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	if oc := cfg.LogObservation; oc.Enabled {
 		var zCore zapcore.Core
 		zCore, logObserver = observer.New(oc.LogLevel)
-		cfg.Logger = logging.NewZapLoggerWithCore(zCore, true)
+		cfg.Logger = logging.NewZapLoggerWithCore(zCore, true, true)
 	} else {
 		ec := zap.NewProductionEncoderConfig()
 		ec.EncodeDuration = zapcore.SecondsDurationEncoder
 		ec.TimeKey = "time"
 
 		syncer := zapcore.AddSync(os.Stderr)
-		cfg.Logger = logging.NewZapLogger(syncer, false, true, zapcore.ErrorLevel)
+		cfg.Logger = logging.NewZapLogger(syncer, false, true, true, zapcore.ErrorLevel)
 	}
 
 	if cfg.AccessLogger == nil {
@@ -870,14 +870,14 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	if oc := cfg.LogObservation; oc.Enabled {
 		var zCore zapcore.Core
 		zCore, logObserver = observer.New(oc.LogLevel)
-		cfg.Logger = logging.NewZapLoggerWithCore(zCore, true)
+		cfg.Logger = logging.NewZapLoggerWithCore(zCore, true, true)
 	} else {
 		ec := zap.NewProductionEncoderConfig()
 		ec.EncodeDuration = zapcore.SecondsDurationEncoder
 		ec.TimeKey = "time"
 
 		syncer := zapcore.AddSync(os.Stderr)
-		cfg.Logger = logging.NewZapLogger(syncer, false, true, zapcore.ErrorLevel)
+		cfg.Logger = logging.NewZapLogger(syncer, false, true, true, zapcore.ErrorLevel)
 	}
 
 	if cfg.AccessLogger == nil {
