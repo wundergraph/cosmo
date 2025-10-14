@@ -1,9 +1,8 @@
+import 'dotenv/config';
 import './core/sentry.config.js';
 import * as process from 'node:process';
 import * as Sentry from '@sentry/node';
 import pino from 'pino';
-
-import 'dotenv/config';
 
 import build, { BuildConfig } from './core/build-server.js';
 import { envVariables } from './core/env.schema.js';
