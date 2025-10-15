@@ -26,16 +26,6 @@ func Test_Poller(t *testing.T) {
 		})
 	})
 
-	// This is a guarunteed pass because Poll.Stop() always returns nil,
-	// but it's good to have a test for it should there be an error in the future
-	t.Run("stopping should work correctly", func(t *testing.T) {
-		p := NewPoll(1*time.Second, 0*time.Second)
-
-		err := p.Stop()
-
-		assert.NoError(t, err)
-	})
-
 	t.Run("interval plus jitter timing should work correctly", func(t *testing.T) {
 		interval := 100 * time.Millisecond
 		maxJitter := 50 * time.Millisecond
@@ -143,5 +133,43 @@ func Test_Poller(t *testing.T) {
 			"should have at least some handler invocations")
 
 		t.Logf("total invocations: %d, max concurrent: %d", totalInvoked, maxConcurrent)
+	})
+
+	t.Run("should stop polling when context is cancelled", func(t *testing.T) {
+		interval := 50 * time.Millisecond
+		maxJitter := 0 * time.Millisecond // No jitter for predictable timing
+
+		p := NewPoll(interval, maxJitter)
+
+		var executionCount int32
+
+		ctx, cancel := context.WithCancel(context.Background())
+
+		// Start polling
+		go p.Subscribe(ctx, func() {
+			atomic.AddInt32(&executionCount, 1)
+		})
+
+		// Let it run for a bit to ensure polling starts
+		time.Sleep(150 * time.Millisecond)
+		countBeforeCancel := atomic.LoadInt32(&executionCount)
+
+		// Cancel the context
+		cancel()
+
+		// Wait for any pending executions to complete and verify no new ones occur
+		time.Sleep(200 * time.Millisecond)
+		countAfterCancel := atomic.LoadInt32(&executionCount)
+
+		// Verify that we had some executions before cancellation
+		assert.Greater(t, countBeforeCancel, int32(0),
+			"should have had executions before context cancellation")
+
+		// Verify that no new executions occurred after cancellation
+		assert.Equal(t, countBeforeCancel, countAfterCancel,
+			"should not have new executions after context cancellation")
+
+		t.Logf("executions before cancel: %d, executions after cancel: %d",
+			countBeforeCancel, countAfterCancel)
 	})
 }
