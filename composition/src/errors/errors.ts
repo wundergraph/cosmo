@@ -40,7 +40,7 @@ import { getEntriesNotInHashSet, getOrThrowError, kindToNodeType, numberToOrdina
 import { ImplementationErrors, InvalidEntityInterface, InvalidRequiredInputValueData } from '../utils/types';
 import { isFieldData } from '../schema-building/utils';
 import { printTypeNode } from '@graphql-tools/merge';
-import { NodeType, SubgraphName, TypeName } from '../types/types';
+import { NodeType, TypeName } from '../types/types';
 
 export const minimumSubgraphRequirementError = new Error('At least one subgraph is required for federation.');
 
@@ -346,7 +346,7 @@ export function incompatibleParentTypeMergeError({
   incomingNodeType,
   incomingSubgraphName,
 }: IncompatibleParentTypeMergeErrorParams): Error {
-  const existingSubgraphNames = new Array<SubgraphName>(...existingData.subgraphNames);
+  const existingSubgraphNames = [...existingData.subgraphNames];
   const nodeType = incomingNodeType ? `"${incomingNodeType}"` : interfaceObject;
   return new Error(
     ` "${existingData.name}" is defined using incompatible types across subgraphs.` +
