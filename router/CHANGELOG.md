@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.258.3](https://github.com/wundergraph/cosmo/compare/router@0.258.2...router@0.258.3) (2025-10-13)
+
+### Bug Fixes
+
+* improve access logs ([#2266](https://github.com/wundergraph/cosmo/issues/2266)) ([3ef065d](https://github.com/wundergraph/cosmo/commit/3ef065d17d6741b00b28da3b854220d9bff46063)) (@SkArchon)
+
+## [0.258.2](https://github.com/wundergraph/cosmo/compare/router@0.258.1...router@0.258.2) (2025-10-10)
+
+### Bug Fixes
+
+* support requireFetchReasons on interface fields ([#2272](https://github.com/wundergraph/cosmo/issues/2272)) ([97bd5cd](https://github.com/wundergraph/cosmo/commit/97bd5cd15c55edba92ec3a2304126a9cb394d765)) (@ysmolski)
+
 ## [0.258.1](https://github.com/wundergraph/cosmo/compare/router@0.258.0...router@0.258.1) (2025-10-08)
 
 ### Bug Fixes
