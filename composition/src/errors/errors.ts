@@ -7,7 +7,7 @@ import {
 } from '../schema-building/types';
 import {
   IncompatibleMergedTypesErrorParams,
-  IncompatibleParentKindMergeErrorParams,
+  IncompatibleParentTypeMergeErrorParams,
   InvalidNamedTypeErrorParams,
   InvalidRootTypeFieldEventsDirectiveData,
   OneOfRequiredFieldsErrorParams,
@@ -345,7 +345,7 @@ export function incompatibleParentTypeMergeError({
   existingData,
   incomingNodeType,
   incomingSubgraphName,
-}: IncompatibleParentKindMergeErrorParams): Error {
+}: IncompatibleParentTypeMergeErrorParams): Error {
   const existingSubgraphNames = new Array<SubgraphName>(...existingData.subgraphNames);
   const nodeType = incomingNodeType ? `"${incomingNodeType}"` : interfaceObject;
   return new Error(

@@ -35,7 +35,7 @@ export type OneOfRequiredFieldsErrorParams = {
   typeName: TypeName;
 };
 
-export type IncompatibleParentKindMergeErrorParams = {
+export type IncompatibleParentTypeMergeErrorParams = {
   existingData: ParentDefinitionData;
   incomingSubgraphName: SubgraphName;
   incomingNodeType?: string;
