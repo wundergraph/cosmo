@@ -7,6 +7,7 @@ import {
 } from '../schema-building/types';
 import {
   IncompatibleMergedTypesErrorParams,
+  IncompatibleParentKindMergeErrorParams,
   InvalidNamedTypeErrorParams,
   InvalidRootTypeFieldEventsDirectiveData,
   OneOfRequiredFieldsErrorParams,
@@ -39,7 +40,7 @@ import { getEntriesNotInHashSet, getOrThrowError, kindToNodeType, numberToOrdina
 import { ImplementationErrors, InvalidEntityInterface, InvalidRequiredInputValueData } from '../utils/types';
 import { isFieldData } from '../schema-building/utils';
 import { printTypeNode } from '@graphql-tools/merge';
-import { NodeType, TypeName } from '../types/types';
+import { NodeType, SubgraphName, TypeName } from '../types/types';
 
 export const minimumSubgraphRequirementError = new Error('At least one subgraph is required for federation.');
 
@@ -338,20 +339,21 @@ export function unexpectedEdgeFatalError(typeName: string, edgeNames: Array<stri
   );
 }
 
-export function incompatibleParentKindMergeError(
-  parentTypeName: string,
-  expectedTypeString: string,
-  actualTypeString: string,
-): Error {
-  return new Error(
-    ` When merging types, expected "${parentTypeName}" to be type "${expectedTypeString}" but received "${actualTypeString}".`,
-  );
-}
+const interfaceObject = `"Interface Object" (an "Object" type that also defines the "@interfaceObject" directive)`;
 
-export function fieldTypeMergeFatalError(fieldName: string) {
+export function incompatibleParentTypeMergeError({
+  existingData,
+  incomingNodeType,
+  incomingSubgraphName,
+}: IncompatibleParentKindMergeErrorParams): Error {
+  const existingSubgraphNames = new Array<SubgraphName>(...existingData.subgraphNames);
+  const nodeType = incomingNodeType ? `"${incomingNodeType}"` : interfaceObject;
   return new Error(
-    `Fatal: Unsuccessfully merged the cross-subgraph types of field "${fieldName}"` +
-      ` without producing a type error object.`,
+    ` "${existingData.name}" is defined using incompatible types across subgraphs.` +
+      ` It is defined as type "${kindToNodeType(existingData.kind)}" in subgraph` +
+      (existingSubgraphNames.length > 1 ? 's' : '') +
+      ` "${existingSubgraphNames.join(QUOTATION_JOIN)}" but type ${nodeType} in subgraph` +
+      ` "${incomingSubgraphName}".`,
   );
 }
 
@@ -378,7 +380,7 @@ export function unexpectedParentKindForChildError(
   childTypeString: string,
 ): Error {
   return new Error(
-    ` Expected "${parentTypeName}" to be type ${expectedTypeString} but received "${actualTypeString}"` +
+    ` Expected "${parentTypeName}" to be type "${expectedTypeString}" but received "${actualTypeString}"` +
       ` when handling child "${childName}" of type "${childTypeString}".`,
   );
 }
