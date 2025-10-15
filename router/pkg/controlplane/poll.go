@@ -11,8 +11,6 @@ type Poller interface {
 	// Subscribe subscribes to the poller with a handler function that will be invoked
 	// Must only be called once. If the handler is busy during a tick, the next tick will be skipped.
 	Subscribe(ctx context.Context, handler func())
-	// Stop stops the poller. That means no more events will be emitted.
-	Stop() error
 }
 
 type Poll struct {
@@ -37,14 +35,6 @@ func NewPoll(interval time.Duration, maxJitter time.Duration) *Poll {
 		interval:  interval,
 		maxJitter: maxJitter,
 	}
-}
-
-// Stop stops the poller. That means no more events will be emitted.
-// After calling stop, the poller cannot be used again.
-func (c *Poll) Stop() error {
-	// The timer is managed within the Subscribe goroutine
-	// and will be cleaned up when the context is cancelled
-	return nil
 }
 
 func (c *Poll) Subscribe(ctx context.Context, handler func()) {
