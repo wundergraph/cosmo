@@ -6,8 +6,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import * as React from "react";
-import { CheckIcon } from "@radix-ui/react-icons";
-import { CaretSortIcon } from "@radix-ui/react-icons";
+import { CheckIcon, CaretSortIcon } from "@radix-ui/react-icons";
 import { docsBaseURL } from "@/lib/constants";
 import { WorkspaceCommandWrapper } from "./workspace-command-wrapper"
 import { useCurrentOrganization } from "@/hooks/use-current-organization";
@@ -20,7 +19,7 @@ interface NamespaceSelectorProps {
 export function NamespaceSelector({ isViewingGraphOrSubgraph, truncateNamespace }: NamespaceSelectorProps) {
   const [filter, setFilter] = useState('');
   const [isOpen, setOpen] = useState(false);
-  const { namespace, namespaceByName, setNamespace } = useWorkspace();
+  const { isLoading, namespace, namespaceByName, setNamespace } = useWorkspace();
 
   const router = useRouter();
   const organizationSlug = useCurrentOrganization()?.slug;
@@ -30,6 +29,22 @@ export function NamespaceSelector({ isViewingGraphOrSubgraph, truncateNamespace 
   );
 
   const namespaces = Array.from(namespaceByName.keys());
+  if (isLoading) {
+    return (
+      <span
+        className="flex justify-start items-center text-primary text-sm bg-primary/15 rounded-lg flex-shrink-0 animate-pulse px-3 py-1.5 gap-x-4"
+      >
+        <span
+          className={cn(
+            truncateNamespace && "max-w-[180px] lg:max-w-xs truncate"
+          )}
+        >
+          {namespace.name}
+        </span>
+        <CaretSortIcon className="h-4 w-4 flex-shrink-0 opacity-50" />
+      </span>
+    );
+  }
 
   return (
     <div className="flex items-center justify-start">
@@ -48,7 +63,6 @@ export function NamespaceSelector({ isViewingGraphOrSubgraph, truncateNamespace 
           {namespace.name}
         </Link>
       )}
-
       <Popover
         modal
         open={isOpen}

@@ -19,6 +19,12 @@ processors:
       - key: wg.federated_graph.id
         from_context: auth.federated_graph_id
         action: insert
+  attributes/delete_operation_bodies:
+    actions:
+      - key: wg.operation.normalized_content
+        action: delete
+      - key: wg.operation.original_content
+        action: delete
   batch:
     send_batch_size: 10000
     send_batch_max_size: 20000
@@ -56,7 +62,7 @@ service:
     traces:
       receivers: [otlp]
       # Order is important here. Otherwise, the attributes processor will not be able to read the attributes from the auth context.
-      processors: [attributes/from_auth_context, batch]
+      processors: [attributes/from_auth_context, attributes/delete_operation_bodies, batch]
       exporters: [clickhouse]
   telemetry:
     metrics:

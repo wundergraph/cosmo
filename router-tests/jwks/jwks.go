@@ -36,13 +36,28 @@ func (s *Server) Close() {
 	s.httpServer.Close()
 }
 
+type TokenOpts struct {
+	AlgOverride string
+}
+
 func (s *Server) Token(claims map[string]any) (string, error) {
+	return s.TokenWithOpts(claims, TokenOpts{AlgOverride: ""})
+}
+
+func (s *Server) TokenWithOpts(claims map[string]any, tokenOpts TokenOpts) (string, error) {
 	if len(s.providers) == 0 {
 		return "", jwt.ErrInvalidKey
 	}
 
 	for kid, pr := range s.providers {
-		token := jwt.NewWithClaims(pr.SigningMethod(), jwt.MapClaims(claims))
+		method := pr.SigningMethod()
+		if tokenOpts.AlgOverride != "" {
+			method = jwt.GetSigningMethod(tokenOpts.AlgOverride)
+			if method == nil {
+				return "", fmt.Errorf("unsupported signing method: %s", tokenOpts.AlgOverride)
+			}
+		}
+		token := jwt.NewWithClaims(method, jwt.MapClaims(claims))
 		token.Header[jwkset.HeaderKID] = kid
 		return token.SignedString(pr.PrivateKey())
 	}
@@ -50,11 +65,18 @@ func (s *Server) Token(claims map[string]any) (string, error) {
 	return "", jwt.ErrInvalidKey
 }
 
-func (s *Server) TokenForKID(kid string, claims map[string]any) (string, error) {
+func (s *Server) TokenForKID(kid string, claims map[string]any, useInvalidKID bool) (string, error) {
 	provider, ok := s.providers[kid]
-	if !ok {
+	if useInvalidKID {
+		// If we don't care about the kid, use any available provider
+		for _, pr := range s.providers {
+			provider = pr
+			break
+		}
+	} else if !ok {
 		return "", jwt.ErrInvalidKey
 	}
+
 	token := jwt.NewWithClaims(provider.SigningMethod(), jwt.MapClaims(claims))
 	token.Header[jwkset.HeaderKID] = kid
 	return token.SignedString(provider.PrivateKey())

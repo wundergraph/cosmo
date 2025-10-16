@@ -624,6 +624,17 @@
           "description": "Enable the access logs. The access logs are used to log the incoming requests. By default, the access logs are enabled and logged to the standard output.",
           "default": true
         },
+        "level": {
+          "type": "string",
+          "enum": ["debug", "info", "warn", "error", "panic", "fatal"],
+          "description": "The log level for access logs. The log level is used to control the verbosity of the access logs. The default value is 'info'.",
+          "default": "info"
+        },
+        "add_stacktrace": {
+          "type": "boolean",
+          "description": "Add stack traces to access logs when enabled for all error logs. When disabled, panic error logs will still contain stack traces. The default value is false.",
+          "default": true
+        },
         "buffer": {
           "type": "object",
           "additionalProperties": false,
@@ -856,6 +867,11 @@
               "type": "boolean",
               "default": false,
               "description": "Specifies that the router span should be treated as a root Span. Any existing parent span context will be ignored when defining the Span's trace identifiers. This is useful when the router must be the entry point of the trace."
+            },
+            "operation_content_attributes": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable the addition of GraphQL operation body content as trace attributes. When enabled, original operation content will be added to the trace span for parse and normalized operation content will be added to the trace span for normalize. The default value is false."
             },
             "exporters": {
               "type": "array",
@@ -1716,6 +1732,40 @@
                     },
                     "description": "The interval at which the JWKs are refreshed. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
                     "default": "1m"
+                  },
+                  "refresh_unknown_kid": {
+                    "type": "object",
+                    "description": "Controls rate-limited refresh behavior when a JWT KID is unknown.",
+                    "additionalProperties": false,
+                    "properties": {
+                      "enabled": {
+                        "type": "boolean",
+                        "description": "Enable refresh attempts on unknown KID.",
+                        "default": false
+                      },
+                      "max_wait": {
+                        "type": "string",
+                        "description": "Maximum time to wait for a refresh permit before giving up.",
+                        "default": "10s",
+                        "duration": {
+                          "minimum": "0s"
+                        }
+                      },
+                      "interval": {
+                        "type": "string",
+                        "description": "Token refill interval for the rate limiter.",
+                        "default": "1m",
+                        "duration": {
+                          "minimum": "1s"
+                        }
+                      },
+                      "burst": {
+                        "type": "integer",
+                        "description": "Burst size for the rate limiter.",
+                        "default": 2,
+                        "minimum": 1
+                      }
+                    }
                   }
                 },
                 "oneOf": [
@@ -1747,6 +1797,9 @@
                         },
                         {
                           "required": ["refresh_interval"]
+                        },
+                        {
+                          "required": ["refresh_unknown_kid"]
                         }
                       ]
                     }
@@ -2805,6 +2858,11 @@
           "format": "go-duration",
           "default": "30s",
           "description": "The maximum time a subscription fetch can take before it is considered timed out. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'."
+        },
+        "validate_required_external_fields": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enables validation of resolved input field set specified as an argument for \"requires\" directive. If this field set 'points' to a nullable fields marked as external, and if router resolves such a field set with null values with errors pointing to those values, then it will not provide such entities to the resolver of the field on which directive was specified."
         }
       }
     },

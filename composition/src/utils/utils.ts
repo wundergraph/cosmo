@@ -248,8 +248,8 @@ export function addMapEntries<K, V>(source: Map<K, V>, target: Map<K, V>) {
   }
 }
 
-export function getFirstEntry<K, V>(hashSet: Set<V> | Map<K, V>): V | undefined {
-  const { value, done } = hashSet.values().next();
+export function getFirstEntry<K, V>(collection: Set<V> | Map<K, V>): V | undefined {
+  const { value, done } = collection.values().next();
   if (done) {
     return;
   }

@@ -86,6 +86,7 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 		SubscriptionHeartbeatInterval:      opts.HeartbeatInterval,
 		MaxSubscriptionFetchTimeout:        opts.RouterEngineConfig.Execution.SubscriptionFetchTimeout,
 		PropagateFetchReasons:              opts.RouterEngineConfig.Execution.EnableRequireFetchReasons,
+		ValidateRequiredExternalFields:     opts.RouterEngineConfig.Execution.ValidateRequiredExternalFields,
 	}
 
 	if opts.ApolloCompatibilityFlags.ValueCompletion.Enabled {
@@ -237,7 +238,8 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 
 	planConfig.EnableOperationNamePropagation = routerEngineCfg.Execution.EnableSubgraphFetchOperationName
 
-	planConfig.BuildFetchReasons = routerEngineCfg.Execution.EnableRequireFetchReasons
+	planConfig.BuildFetchReasons = routerEngineCfg.Execution.EnableRequireFetchReasons || routerEngineCfg.Execution.ValidateRequiredExternalFields
+	planConfig.ValidateRequiredExternalFields = routerEngineCfg.Execution.ValidateRequiredExternalFields
 
 	return planConfig, providers, nil
 }

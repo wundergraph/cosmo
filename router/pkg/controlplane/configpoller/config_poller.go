@@ -26,8 +26,6 @@ type ConfigPoller interface {
 	// If the Config is nil, no new config is available and the current config should be used.
 	// and updates the latest router config version. This method is only used for the initial config
 	GetRouterConfig(ctx context.Context) (*routerconfig.Response, error)
-	// Stop stops the config poller. After calling stop, the config poller cannot be used again.
-	Stop(ctx context.Context) error
 }
 
 type configPoller struct {
@@ -63,11 +61,6 @@ func New(token string, opts ...Option) ConfigPoller {
 
 func (c *configPoller) Version() string {
 	return c.latestRouterConfigVersion
-}
-
-// Stop stops the config poller
-func (c *configPoller) Stop(_ context.Context) error {
-	return c.poller.Stop()
 }
 
 func (c *configPoller) Subscribe(ctx context.Context, handler func(newConfig *nodev1.RouterConfig, _ string) error) {

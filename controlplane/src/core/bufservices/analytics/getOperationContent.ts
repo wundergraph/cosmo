@@ -54,17 +54,7 @@ export function getOperationContent(
 
     const result = await opts.chClient.queryPromise(query);
 
-    if (!Array.isArray(result)) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_NOT_FOUND,
-          details: 'Requested operation not found',
-        },
-        operationContent: '',
-      };
-    }
-
-    if (result.length === 0) {
+    if (!Array.isArray(result) || result.length === 0) {
       return {
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,

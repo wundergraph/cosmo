@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/KimMachineGun/automemlimit/memlimit"
@@ -22,7 +23,9 @@ import (
 func PlanGenerator(args []string) {
 	var planHelp bool
 
-	cfg := plan_generator.QueryPlanConfig{}
+	cfg := plan_generator.QueryPlanConfig{
+		OutputFormat: core.PlanOutputFormatText,
+	}
 	f := flag.NewFlagSet("router "+args[0], flag.ExitOnError)
 	f.BoolVar(&planHelp, "help", false, "Prints the help message")
 	f.StringVar(&cfg.ExecutionConfig, "execution-config", "", "required, execution config file location")
@@ -35,7 +38,18 @@ func PlanGenerator(args []string) {
 	f.BoolVar(&cfg.OutputReport, "print-report", false, "write a report.json file, with all the query plans and errors sorted by file name")
 	f.BoolVar(&cfg.FailOnPlanError, "fail-on-error", false, "if at least one plan fails, the command exit code will be 1")
 	f.BoolVar(&cfg.FailFast, "fail-fast", false, "stop as soon as possible if a plan fails")
-	f.StringVar(&cfg.LogLevel, "log-level", "warn", "log level to use (debug, info, warn, error, panic, fatal)")
+	f.StringVar(&cfg.LogLevel, "log-level", "warn", "the log level to use (debug, info, warn, error, panic, fatal)")
+	f.Func("print-format", "output format of the query plan (text, json) (default \"text\")", func(s string) error {
+		switch value := core.PlanOutputFormat(strings.ToLower(s)); value {
+		case core.PlanOutputFormatUnset:
+			cfg.OutputFormat = core.PlanOutputFormatText
+			return nil
+		case core.PlanOutputFormatText, core.PlanOutputFormatJSON:
+			cfg.OutputFormat = value
+			return nil
+		}
+		return fmt.Errorf("must be one of: text, json (got %q)", s)
+	})
 	f.UintVar(&cfg.MaxDataSourceCollectorsConcurrency, "max-collectors", 0, "max number of concurrent data source collectors, if unset or 0, no limit will be enforced")
 
 	if err := f.Parse(args[1:]); err != nil {
@@ -66,7 +80,7 @@ func PlanGenerator(args []string) {
 		log.Fatalf("Could not parse log level: %s", err)
 	}
 
-	logger := logging.New(false, false, logLevel).
+	logger := logging.New(false, false, true, logLevel).
 		With(
 			zap.String("service", "@wundergraph/query-plan"),
 			zap.String("service_version", core.Version),

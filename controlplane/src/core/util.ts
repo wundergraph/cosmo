@@ -19,8 +19,8 @@ import {
   LATEST_ROUTER_COMPATIBILITY_VERSION,
   newContractTagOptionsFromArrays,
 } from '@wundergraph/composition';
-import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { MemberRole, WebsocketSubprotocol } from '../db/models.js';
+import { SubgraphType, ProposalOrigin } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { MemberRole, WebsocketSubprotocol, ProposalOrigin as ProposalOriginEnum } from '../db/models.js';
 import {
   AuthContext,
   CompositionOptions,
@@ -653,4 +653,26 @@ export function newCompositionOptions(disableResolvabilityValidation?: boolean):
   return {
     disableResolvabilityValidation,
   };
+}
+
+export function toProposalOriginEnum(value: ProposalOrigin): ProposalOriginEnum {
+  switch (value) {
+    case ProposalOrigin.EXTERNAL: {
+      return 'EXTERNAL';
+    }
+    default: {
+      return 'INTERNAL';
+    }
+  }
+}
+
+export function fromProposalOriginEnum(value: ProposalOriginEnum): ProposalOrigin {
+  switch (value) {
+    case 'EXTERNAL': {
+      return ProposalOrigin.EXTERNAL;
+    }
+    default: {
+      return ProposalOrigin.INTERNAL;
+    }
+  }
 }
