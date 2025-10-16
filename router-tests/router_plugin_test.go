@@ -80,15 +80,14 @@ func TestRouterPlugin(t *testing.T) {
 
 				require.EventuallyWithT(t, func(c *assert.CollectT) {
 					logMessages := xEnv.Observer().All()
-					require.Greater(t, len(logMessages), 0)
-					found := false
-					for _, msg := range logMessages {
-						if strings.Contains(msg.Message, "plugin process exited") {
-							found = true
-							break
+					require.Condition(c, func() bool {
+						for _, msg := range logMessages {
+							if strings.Contains(msg.Message, "plugin process exited") {
+								return true
+							}
 						}
-					}
-					require.True(t, found, "expected to find 'plugin process exited' message in logs, but got: %v", logMessages)
+						return false
+					}, "expected to find 'plugin process exited' message in logs")
 				}, 5*time.Second, 1*time.Second)
 
 				require.EventuallyWithT(t, func(c *assert.CollectT) {
