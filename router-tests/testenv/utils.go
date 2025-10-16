@@ -28,3 +28,24 @@ func AwaitChannelWithCloseWithT[A any](t *testing.T, timeout time.Duration, ch <
 		require.Fail(t, "unable to receive message before timeout", msgAndArgs...)
 	}
 }
+
+func AwaitFunc(t *testing.T, timeout time.Duration, testFunction func()) {
+	t.Helper()
+
+	doneCh := make(chan struct{})
+	go func() {
+		defer close(doneCh)
+		testFunction()
+	}()
+
+	AwaitChannelWithT(t, timeout, doneCh, func(t *testing.T, _ struct{}) {}, "the test function timed out")
+}
+
+func Go[A any](fn func() A) <-chan A {
+	doneCh := make(chan A, 1)
+	go func() {
+		doneCh <- fn()
+	}()
+
+	return doneCh
+}

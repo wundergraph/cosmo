@@ -41,6 +41,7 @@ type Adapter interface {
 // ProviderAdapter implements the AdapterInterface for NATS pub/sub
 type ProviderAdapter struct {
 	ctx               context.Context
+	cancel            context.CancelFunc
 	client            *nats.Conn
 	js                jetstream.JetStream
 	logger            *zap.Logger
@@ -343,6 +344,10 @@ func (p *ProviderAdapter) Shutdown(ctx context.Context) error {
 		shutdownErr = errors.Join(shutdownErr, drainErr)
 	}
 
+	// Close the client
+	p.client.Close()
+	p.cancel()
+
 	// Wait for all subscriptions to be closed
 	p.closeWg.Wait()
 
@@ -365,8 +370,11 @@ func NewAdapter(ctx context.Context, logger *zap.Logger, url string, opts []nats
 		store = metric.NewNoopStreamMetricStore()
 	}
 
+	ctx, cancelFunc := context.WithCancel(ctx)
+
 	return &ProviderAdapter{
 		ctx:               ctx,
+		cancel:            cancelFunc,
 		logger:            logger.With(zap.String("pubsub", "nats")),
 		closeWg:           sync.WaitGroup{},
 		hostName:          hostName,
