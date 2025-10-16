@@ -2,17 +2,22 @@ import {
   ConfigurationData,
   EntityInterfaceFederationData,
   EntityInterfaceSubgraphData,
+  incompatibleParentTypeMergeError,
   INTERFACE,
+  InterfaceDefinitionData,
   InvalidEntityInterface,
+  OBJECT,
+  ObjectDefinitionData,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   SimpleFieldData,
   Subgraph,
+  SubgraphName,
   undefinedEntityInterfaceImplementationsError,
 } from '../../src';
 import { describe, expect, test } from 'vitest';
 import { versionOneRouterDefinitions, versionTwoRouterDefinitions } from './utils/utils';
 
-import { parse } from 'graphql';
+import { Kind, parse } from 'graphql';
 import {
   federateSubgraphsFailure,
   federateSubgraphsSuccess,
@@ -256,7 +261,7 @@ describe('Entity Interface Tests', () => {
     );
   });
 
-  test('that  @interfaceObject works correctly with implicit key checks #1.2', () => {
+  test('that @interfaceObject works correctly with implicit key checks #1.2', () => {
     const result = federateSubgraphsSuccess([subgraphJ, subgraphI], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
@@ -298,6 +303,44 @@ describe('Entity Interface Tests', () => {
     `,
       ),
     );
+  });
+
+  test('that error is returned if an entity Interface is defined as a regular Object type #1', () => {
+    const { errors } = federateSubgraphsFailure([kaaa, kaab, kaac], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    const existingData = {
+      kind: Kind.INTERFACE_TYPE_DEFINITION,
+      name: INTERFACE,
+      subgraphNames: new Set<SubgraphName>([kaaa.name, kaab.name]),
+    } as InterfaceDefinitionData;
+    expect(errors).toStrictEqual([
+      incompatibleParentTypeMergeError({
+        existingData,
+        incomingNodeType: OBJECT,
+        incomingSubgraphName: kaac.name,
+      }),
+    ]);
+  });
+
+  test('that error is returned if an entity Interface is defined as a regular Object type #2', () => {
+    const { errors } = federateSubgraphsFailure([kaac, kaab, kaaa], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(2);
+    const existingData = {
+      kind: Kind.OBJECT_TYPE_DEFINITION,
+      name: INTERFACE,
+      subgraphNames: new Set<SubgraphName>([kaac.name]),
+    } as ObjectDefinitionData;
+    expect(errors).toStrictEqual([
+      incompatibleParentTypeMergeError({
+        existingData,
+        incomingSubgraphName: kaab.name,
+      }),
+      incompatibleParentTypeMergeError({
+        existingData,
+        incomingNodeType: INTERFACE,
+        incomingSubgraphName: kaaa.name,
+      }),
+    ]);
   });
 
   test.skip('that an error is returned if a type declared with @interfaceObject is not an interface in other subgraphs', () => {});
@@ -501,6 +544,40 @@ const subgraphJ: Subgraph = {
     
     type Query {
       objects: [Object!]!
+    }
+  `),
+};
+
+const kaaa: Subgraph = {
+  name: 'kaaa',
+  url: '',
+  definitions: parse(`
+    interface Interface @key(fields: "id", resolvable: false) {
+      id: ID!
+    }
+    
+    type Query {
+      a: ID
+    }
+  `),
+};
+
+const kaab: Subgraph = {
+  name: 'kaab',
+  url: '',
+  definitions: parse(`
+    type Interface @key(fields: "id", resolvable: false) @interfaceObject {
+      id: ID!
+    }
+  `),
+};
+
+const kaac: Subgraph = {
+  name: 'kaac',
+  url: '',
+  definitions: parse(`
+    type Interface @key(fields: "id", resolvable: false) {
+      id: ID!
     }
   `),
 };

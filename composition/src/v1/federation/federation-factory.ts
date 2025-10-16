@@ -33,7 +33,7 @@ import {
   incompatibleFederatedFieldNamedTypeError,
   incompatibleMergedTypesError,
   incompatibleParentKindFatalError,
-  incompatibleParentKindMergeError,
+  incompatibleParentTypeMergeError,
   incompatibleSharedEnumError,
   invalidFieldShareabilityError,
   invalidImplementedTypeError,
@@ -1207,7 +1207,7 @@ export class FederationFactory {
     return existingData;
   }
 
-  upsertParentDefinitionData(incomingData: ParentDefinitionData, subgraphName: string) {
+  upsertParentDefinitionData(incomingData: ParentDefinitionData, subgraphName: SubgraphName) {
     const entityInterfaceData = this.entityInterfaceFederationDataByTypeName.get(incomingData.name);
     const existingData = this.parentDefinitionDataByTypeName.get(incomingData.name);
     const targetData = this.getParentTargetData({ existingData, incomingData });
@@ -1217,6 +1217,15 @@ export class FederationFactory {
       this.inaccessibleCoords.add(targetData.name);
     }
     if (entityInterfaceData && entityInterfaceData.interfaceObjectSubgraphNames.has(subgraphName)) {
+      if (existingData && existingData.kind !== Kind.INTERFACE_TYPE_DEFINITION) {
+        this.errors.push(
+          incompatibleParentTypeMergeError({
+            existingData,
+            incomingSubgraphName: subgraphName,
+          }),
+        );
+        return;
+      }
       targetData.kind = Kind.INTERFACE_TYPE_DEFINITION;
       targetData.node.kind = Kind.INTERFACE_TYPE_DEFINITION;
     }
@@ -1232,11 +1241,11 @@ export class FederationFactory {
         incomingData.kind !== Kind.OBJECT_TYPE_DEFINITION
       ) {
         this.errors.push(
-          incompatibleParentKindMergeError(
-            targetData.name,
-            kindToNodeType(targetData.kind),
-            kindToNodeType(incomingData.kind),
-          ),
+          incompatibleParentTypeMergeError({
+            existingData: targetData,
+            incomingNodeType: kindToNodeType(incomingData.kind),
+            incomingSubgraphName: subgraphName,
+          }),
         );
         return;
       }
