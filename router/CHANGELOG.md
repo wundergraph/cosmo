@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.258.4](https://github.com/wundergraph/cosmo/compare/router@0.258.3...router@0.258.4) (2025-10-16)
+
+### Bug Fixes
+
+* handle jitter correctly ([#2278](https://github.com/wundergraph/cosmo/issues/2278)) ([a205890](https://github.com/wundergraph/cosmo/commit/a205890a07faa42d59fa37df138b7647845adb76)) (@StarpTech)
+
 ## [0.258.3](https://github.com/wundergraph/cosmo/compare/router@0.258.2...router@0.258.3) (2025-10-13)
 
 ### Bug Fixes
