@@ -67,10 +67,12 @@ func Test_Poller(t *testing.T) {
 				"execution %d: actual interval %v should be >= minimum interval %v",
 				i, actualInterval, expectedMinInterval)
 
-			// Each interval should be at most interval + maxJitter, a small delay to account for system scheduling delays
-			assert.LessOrEqual(t, actualInterval, expectedMaxInterval+20,
+			// Each interval should be at most interval + maxJitter
+			// a small delay to account for system scheduling delays
+			expectedInterval := expectedMaxInterval + 10*time.Millisecond
+			assert.LessOrEqual(t, actualInterval, expectedInterval,
 				"execution %d: actual interval %v should be <= maximum interval %v",
-				i, actualInterval, expectedMaxInterval)
+				i, actualInterval, expectedInterval)
 
 			t.Logf("execution %d: interval = %v (expected: %v to %v)",
 				i, actualInterval, expectedMinInterval, expectedMaxInterval)
