@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.168.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.168.1...controlplane@0.168.2) (2025-10-16)
+
+### Bug Fixes
+
+* zod errors when sentry is imported before dotenv ([#2275](https://github.com/wundergraph/cosmo/issues/2275)) ([e7c05cb](https://github.com/wundergraph/cosmo/commit/e7c05cba08f9e4236f719dfe5ec11546e83289b6)) (@JivusAyrus)
+
 ## [0.168.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.168.0...controlplane@0.168.1) (2025-10-14)
 
 ### Bug Fixes
