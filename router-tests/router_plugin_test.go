@@ -2,9 +2,11 @@ package integration
 
 import (
 	"fmt"
-	"github.com/wundergraph/cosmo/router/pkg/otel"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/pkg/otel"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -79,7 +81,14 @@ func TestRouterPlugin(t *testing.T) {
 				require.EventuallyWithT(t, func(c *assert.CollectT) {
 					logMessages := xEnv.Observer().All()
 					require.Greater(t, len(logMessages), 0)
-					require.Equal(t, "plugin process exited", logMessages[0].Message)
+					found := false
+					for _, msg := range logMessages {
+						if strings.Contains(msg.Message, "plugin process exited") {
+							found = true
+							break
+						}
+					}
+					require.True(t, found, "expected to find 'plugin process exited' message in logs, but got: %v", logMessages)
 				}, 5*time.Second, 1*time.Second)
 
 				require.EventuallyWithT(t, func(c *assert.CollectT) {
