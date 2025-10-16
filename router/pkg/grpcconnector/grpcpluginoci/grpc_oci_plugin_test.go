@@ -68,12 +68,11 @@ func TestNewGRPCOCIPlugin(t *testing.T) {
 	}
 }
 
-func TestNewGRPCOCIPluginCreation(t *testing.T) {
+func TestNewGRPCOCIPluginWithStartupConfig(t *testing.T) {
 	t.Run("successful creation with startup config", func(t *testing.T) {
-		samplerValue := 7.0
 		telemetry := &grpccommon.GRPCTelemetry{
 			Tracing: &grpccommon.GRPCTracing{
-				Sampler: samplerValue,
+				Sampler: 1.0,
 			},
 		}
 		plugin := GRPCPluginConfig{
