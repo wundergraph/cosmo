@@ -227,6 +227,7 @@ message SSLConfiguration {
   bool enabled = 1;
 }
 
+// Defines mapping for a gRPC service
 message GRPCMapping {
   // Version of the mapping format
   int32 version = 1;
@@ -240,6 +241,40 @@ message GRPCMapping {
   repeated TypeFieldMapping type_field_mappings = 5;
   // Mappings for GraphQL enum values to gRPC enum values
   repeated EnumMapping enum_mappings = 6;
+  // Mappings for GraphQL resolve operations to gRPC service methods
+  repeated LookupMapping resolve_mappings = 7;
+}
+
+// Defines mapping for a lookup operation
+message LookupMapping {
+  // Type of lookup operation
+  LookupType type = 1;
+  // Mappings for GraphQL type fields to gRPC message fields
+  LookupFieldMapping lookup_mapping = 2;
+  // Mapped gRPC method name
+  string rpc = 3;
+  // Mapped gRPC request message type name
+  string request = 4;
+  // Mapped gRPC response message type name
+  string response = 5;
+}
+
+// Defines mapping for a lookup field
+message LookupFieldMapping {
+  // GraphQL type name
+  string type = 1;
+  // Mapping for the lookup field
+  FieldMapping field_mapping = 2;
+}
+
+// Defines the type of lookup operation
+enum LookupType {
+  // Unspecified lookup type
+  LOOKUP_TYPE_UNSPECIFIED = 0;
+  // Lookup type for field resolution
+  LOOKUP_TYPE_RESOLVE = 1;
+  // Lookup type for the @requires directive
+  LOOKUP_TYPE_REQUIRES = 2;
 }
 
 // Defines the type of GraphQL operation

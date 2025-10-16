@@ -147,7 +147,7 @@ describe('SDL Validation', () => {
 
     expect(result.errors).toHaveLength(1);
     expect(result.warnings).toHaveLength(1);
-    expect(result.warnings[0]).toContain('No @resolved directive found on the field name - falling back to ID field');
+    expect(result.warnings[0]).toContain('No @configureResolver directive found on the field name - falling back to ID field');
     expect(result.errors[0]).toContain('No fields with type ID found');
   });
 
@@ -180,7 +180,7 @@ describe('SDL Validation', () => {
 
   test('should return an error if an empty context was provided and no ID field is present', () => {
     const sdl = `
-        directive @resolved(context: openfed__FieldSet!) on FIELD_DEFINITION
+        directive @configureResolver(context: openfed__FieldSet!) on FIELD_DEFINITION
         scalar openfed__FieldSet
 
         type Query {
@@ -188,7 +188,7 @@ describe('SDL Validation', () => {
         }
 
         type User {
-            name(context: String!): String! @resolved(context: "")
+            name(context: String!): String! @configureResolver(context: "")
         }
     `;
 
@@ -197,13 +197,13 @@ describe('SDL Validation', () => {
 
     expect(result.errors).toHaveLength(1);
     expect(result.warnings).toHaveLength(1);
-    expect(result.warnings[0]).toContain('No @resolved directive found on the field name - falling back to ID field');
+    expect(result.warnings[0]).toContain('No @configureResolver directive found on the field name - falling back to ID field');
     expect(result.errors[0]).toContain('No fields with type ID found');
   });
 
   test('should raise a warning if an empty context was provided and it is able to default to the ID field', () => {
     const sdl = `
-        directive @resolved(context: openfed__FieldSet!) on FIELD_DEFINITION
+        directive @configureResolver(context: openfed__FieldSet!) on FIELD_DEFINITION
         scalar openfed__FieldSet
 
         type Query {
@@ -212,7 +212,7 @@ describe('SDL Validation', () => {
 
         type User {
             id: ID!
-            name(context: String!): String! @resolved
+            name(context: String!): String! @configureResolver
         }
     `;
 
@@ -221,12 +221,12 @@ describe('SDL Validation', () => {
 
     expect(result.errors).toHaveLength(0);
     expect(result.warnings).toHaveLength(1);
-    expect(result.warnings[0]).toContain('No @resolved directive found on the field name - falling back to ID field');
+    expect(result.warnings[0]).toContain('No @configureResolver directive found on the field name - falling back to ID field');
   });
 
   test('should return an error if multiple ID fields are present but no context is provided', () => {
     const sdl = `
-        directive @resolved(context: openfed__FieldSet!) on FIELD_DEFINITION
+        directive @configureResolver(context: openfed__FieldSet!) on FIELD_DEFINITION
         scalar openfed__FieldSet
 
         type Query {
@@ -236,7 +236,7 @@ describe('SDL Validation', () => {
         type User {
             id: ID!
             uuid: ID!
-            name(context: String!): String! @resolved
+            name(context: String!): String! @configureResolver
         }
     `;
 
@@ -245,15 +245,15 @@ describe('SDL Validation', () => {
 
     expect(result.errors).toHaveLength(1);
     expect(result.warnings).toHaveLength(1);
-    expect(result.warnings[0]).toContain('No @resolved directive found on the field name - falling back to ID field');
+    expect(result.warnings[0]).toContain('No @configureResolver directive found on the field name - falling back to ID field');
     expect(result.errors[0]).toContain(
-      'Multiple fields with type ID found - provide a context with the fields you want to use in the @resolved directive',
+      'Multiple fields with type ID found - provide a context with the fields you want to use in the @configureResolver directive',
     );
   });
 
   test('should return an error when attempting to use the resolver field in the context', () => {
     const sdl = `
-        directive @resolved(context: openfed__FieldSet!) on FIELD_DEFINITION
+        directive @configureResolver(context: openfed__FieldSet!) on FIELD_DEFINITION
         scalar openfed__FieldSet
 
         type Query {
@@ -262,7 +262,7 @@ describe('SDL Validation', () => {
 
         type User {
             id: ID!
-            name(context: String!): String! @resolved(context: "name")
+            name(context: String!): String! @configureResolver(context: "name")
         }
     `;
 
@@ -278,7 +278,7 @@ describe('SDL Validation', () => {
 
   test('should return an error when attempting to use a non existing field in the context', () => {
     const sdl = `
-        directive @resolved(context: openfed__FieldSet!) on FIELD_DEFINITION
+        directive @configureResolver(context: openfed__FieldSet!) on FIELD_DEFINITION
         scalar openfed__FieldSet
 
         type Query {
@@ -287,7 +287,7 @@ describe('SDL Validation', () => {
 
         type User {
             id: ID!
-            name(context: String!): String! @resolved(context: "id nonExistingField")
+            name(context: String!): String! @configureResolver(context: "id nonExistingField")
         }
     `;
 
@@ -303,7 +303,7 @@ describe('SDL Validation', () => {
 
   test('should not return an error if multiple ID fields are present and a context is provided', () => {
     const sdl = `
-        directive @resolved(context: openfed__FieldSet!) on FIELD_DEFINITION
+        directive @configureResolver(context: openfed__FieldSet!) on FIELD_DEFINITION
         scalar openfed__FieldSet
 
         type Query {
@@ -313,7 +313,7 @@ describe('SDL Validation', () => {
         type User {
             id: ID!
             uuid: ID!
-            name(context: String!): String! @resolved(context: "id uuid")
+            name(context: String!): String! @configureResolver(context: "id uuid")
         }
     `;
 
@@ -326,7 +326,7 @@ describe('SDL Validation', () => {
 
   test('should not return an error if multiple ID fields are present and a context is provided with comma separated values', () => {
     const sdl = `
-        directive @resolved(context: openfed__FieldSet!) on FIELD_DEFINITION
+        directive @configureResolver(context: openfed__FieldSet!) on FIELD_DEFINITION
         scalar openfed__FieldSet
 
         type Query {
@@ -337,7 +337,7 @@ describe('SDL Validation', () => {
             id: ID!
             uuid: ID!
             otherId: ID!
-            name(context: String!): String! @resolved(context: "id, uuid,otherId")
+            name(context: String!): String! @configureResolver(context: "id, uuid,otherId")
         }
     `;
 
@@ -350,7 +350,7 @@ describe('SDL Validation', () => {
 
   test('should allow to only select one field from the context', () => {
     const sdl = `
-        directive @resolved(context: openfed__FieldSet!) on FIELD_DEFINITION
+        directive @configureResolver(context: openfed__FieldSet!) on FIELD_DEFINITION
         scalar openfed__FieldSet
 
         type Query {
@@ -361,7 +361,69 @@ describe('SDL Validation', () => {
             id: ID!
             firstname: String
             lastname: String
-            grandparent(parent: String!): String! @resolved(context: "firstname")
+            grandparent(parent: String!): String! @configureResolver(context: "firstname")
+        }
+    `;
+
+    const visitor = new SDLValidationVisitor(sdl);
+    const result = visitor.visit();
+
+    expect(result.errors).toHaveLength(0);
+    expect(result.warnings).toHaveLength(0);
+  });
+  test('should return an error if a field has a provides directive', () => {
+    const sdl = `
+        type Query {
+            user: User!
+        }
+
+        type User @key(fields: "id") {
+            id: ID!
+            name: String! @external
+            age: Int! @provides(fields: "name")
+        }
+    `;
+
+    const visitor = new SDLValidationVisitor(sdl);
+    const result = visitor.visit();
+
+    expect(result.errors).toHaveLength(1);
+    expect(result.warnings).toHaveLength(0);
+    expect(result.errors[0]).toContain('Use of provides is not supported in connect subgraphs');
+  });
+
+  test('should return an error if a field contains a field in the context of another field', () => {
+    const sdl = `
+        type Query {
+            user: User!
+        }
+
+        type User @key(fields: "id name") {
+            id: ID!
+            foo(a: String!): String! @configureResolver(context: "parent")
+            parent(context: String!): String! @configureResolver(context: "foo")
+        }
+    `;
+
+    const visitor = new SDLValidationVisitor(sdl);
+    const result = visitor.visit();
+
+    expect(result.errors).toHaveLength(2);
+    expect(result.warnings).toHaveLength(0);
+    expect(result.errors[0]).toContain('Cycle detected in context: field foo is referenced in the context of field parent');
+    expect(result.errors[1]).toContain('Cycle detected in context: field parent is referenced in the context of field foo');
+  });
+
+  test('should return no error when no cycle is detected', () => {
+    const sdl = `
+        type Query {
+            user: User!
+        }
+
+        type User @key(fields: "id name") {
+            id: ID!
+            foo(a: String!): String! @configureResolver(context: "id")
+            parent(context: String!): String! @configureResolver(context: "id foo")
         }
     `;
 
