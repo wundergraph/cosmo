@@ -134,6 +134,14 @@ export class SDLValidationVisitor {
       validationFunction: (ctx) => this.validateRequiresDirective(ctx),
     };
 
+    const providesRule: LintingRule<Kind.FIELD_DEFINITION> = {
+      name: 'use-of-provides',
+      description: 'Validates usage of @provides directive which is not yet supported',
+      enabled: true,
+      nodeKind: Kind.FIELD_DEFINITION,
+      validationFunction: (ctx) => this.validateProvidesDirective(ctx),
+    };
+
     const resolverContextRule: LintingRule<Kind.FIELD_DEFINITION> = {
       name: 'use-of-invalid-resolver-context',
       description: 'Validates whether a resolver context can be extracted from a type',
@@ -142,7 +150,7 @@ export class SDLValidationVisitor {
       validationFunction: (ctx) => this.validateInvalidResolverContext(ctx),
     };
 
-    this.lintingRules = [objectTypeRule, listTypeRule, requiresRule, resolverContextRule];
+    this.lintingRules = [objectTypeRule, listTypeRule, requiresRule, providesRule, resolverContextRule];
   }
 
   /**
@@ -290,8 +298,8 @@ export class SDLValidationVisitor {
   }
 
   /**
-   * Validate @requires directive usage (currently not supported)
-   * @param ctx - The VisitContext containing the field definition node to check for @requires directive
+   * Validate `@requires` directive usage (currently not supported)
+   * @param ctx - The VisitContext containing the field definition node to check for `@requires` directive
    * @private
    */
   private validateRequiresDirective(ctx: VisitContext<FieldDefinitionNode>): void {
@@ -299,6 +307,19 @@ export class SDLValidationVisitor {
 
     if (hasRequiresDirective) {
       this.addWarning('Use of requires is not supported yet', ctx.node.loc);
+    }
+  }
+
+  /**
+   * Validate `@provides` directive usage. This is not supported in connect subgraphs.
+   * However `@requires` will be supported in the future.
+   * @param ctx - The VisitContext containing the field definition node to check for @provides directive
+   * @private
+   */
+  private validateProvidesDirective(ctx: VisitContext<FieldDefinitionNode>): void {
+    const hasProvidesDirective = ctx.node.directives?.some((directive) => directive.name.value === 'provides');
+    if (hasProvidesDirective) {
+      this.addError('Use of provides is not supported in connect subgraphs', ctx.node.loc);
     }
   }
 
@@ -322,17 +343,14 @@ export class SDLValidationVisitor {
       return;
     }
 
-    const resolverContext = ctx.node.directives
-      ?.find((directive) => directive.name.value === 'resolved')
-      ?.arguments?.find((arg) => arg.name.value === 'context');
-
+    const resolverContext = this.getResolverContext(ctx.node);
     // If the context is invalid, we don't need to continue with the validation
     if (!this.validateResolvedDirectiveContext(ctx, parent, resolverContext)) {
       return;
     }
 
     this.addWarning(
-      `No @resolved directive found on the field ${ctx.node.name.value} - falling back to ID field`,
+      `No @configureResolver directive found on the field ${ctx.node.name.value} - falling back to ID field`,
       ctx.node.loc,
     );
     const idFields = parent.fields?.filter((field) => this.getUnderlyingType(field.type).name.value === GraphQLID.name);
@@ -344,10 +362,16 @@ export class SDLValidationVisitor {
         return;
       default:
         this.addError(
-          'Invalid context provided for resolver. Multiple fields with type ID found - provide a context with the fields you want to use in the @resolved directive',
+          'Invalid context provided for resolver. Multiple fields with type ID found - provide a context with the fields you want to use in the @configureResolver directive',
           ctx.node.loc,
         );
     }
+  }
+
+  private getResolverContext(node: FieldDefinitionNode): ConstArgumentNode | undefined {
+    return node.directives
+      ?.find((directive) => directive.name.value === 'configureResolver')
+      ?.arguments?.find((arg) => arg.name.value === 'context');
   }
 
   /**
@@ -363,42 +387,94 @@ export class SDLValidationVisitor {
     parent: ObjectTypeDefinitionNode,
     node: ConstArgumentNode | undefined,
   ): boolean {
-    const contextValue = node?.value.kind === Kind.STRING ? node.value.value.trim() : '';
-    if (contextValue.length > 0) {
-      if (!parent) {
-        this.addError('Invalid context provided for resolver. Could not determine parent type', ctx.node.loc);
-        return false;
-      }
-
-      const fieldNames = contextValue.split(/[,\s]+/).filter((field) => field.length > 0);
-      const parentFields = this.getParentFields(parent);
-
-      if (parentFields.error) {
-        this.addError(parentFields.error, ctx.node.loc);
-        return false;
-      }
-
-      let invalidFields: string[] = [];
-      invalidFields = fieldNames.filter((field) => !parentFields.fields.includes(field));
-      if (invalidFields.length > 0) {
-        this.addError(
-          `Invalid context provided for resolver. Context contains invalid fields: ${invalidFields.join(', ')}`,
-          ctx.node.loc,
-        );
-        return false;
-      }
-
-      if (fieldNames.includes(ctx.node.name.value)) {
-        this.addError(
-          'Invalid context provided for resolver. Cannot contain resolver field in the context',
-          ctx.node.loc,
-        );
-      }
-
+    if (!parent) {
+      this.addError('Invalid context provided for resolver. Could not determine parent type', ctx.node.loc);
       return false;
     }
 
-    return true;
+    const fieldNames = this.getContextFields(node);
+    if (fieldNames.length === 0) return true;
+    const parentFields = this.getParentFields(parent);
+
+    if (parentFields.error) {
+      this.addError(parentFields.error, ctx.node.loc);
+      return false;
+    }
+
+    let invalidFields: string[] = [];
+    invalidFields = fieldNames.filter((field) => !parentFields.fields.some((f) => f.name.value === field));
+    if (invalidFields.length > 0) {
+      this.addError(
+        `Invalid context provided for resolver. Context contains invalid fields: ${invalidFields.join(', ')}`,
+        ctx.node.loc,
+      );
+    }
+
+    if (fieldNames.includes(ctx.node.name.value)) {
+      this.addError(
+        'Invalid context provided for resolver. Cannot contain resolver field in the context',
+        ctx.node.loc,
+      );
+    }
+
+    const { contains, fieldName } = this.isFieldInOtherFieldContext(ctx.node, fieldNames, parentFields.fields);
+    if (contains) {
+      this.addError(`Cycle detected in context: field ${ctx.node.name.value} is referenced in the context of field ${fieldName}`, ctx.node.loc);
+    }
+
+    return false;
+  }
+
+  /**
+   * Get the fields from the context value
+   * @param node - The argument node for the @resolved directive
+   * @returns The fields from the context value
+   * @private
+   */
+  private getContextFields(node: ConstArgumentNode | undefined): string[] {
+    if (!node) return [];
+
+    let value = node?.value.kind === Kind.STRING ? node.value.value.trim() : '';
+    if (value.length === 0) {
+      return [];
+    }
+
+    return value
+      .split(/[,\s]+/)
+      .filter((field) => field.length > 0)
+      .map((field) => field.trim());
+  }
+
+
+  /**
+   * Check if a field is in the context of another field. This is used to detect cycles in the context.
+   * @param field - The field to check
+   * @param contextFields - The fields in the context
+   * @param parentFields - The fields in the parent
+   * @returns true if the field is in the context of another field, false otherwise
+   * @private
+   */
+  private isFieldInOtherFieldContext(field: FieldDefinitionNode, contextFields: string[], parentFields: FieldDefinitionNode[]): { contains: boolean, fieldName: string } {
+    if (parentFields.length === 0) return { contains: false, fieldName: '' };
+
+    const fieldName = field.name.value;
+
+    for (const contextField of contextFields) {
+      if (contextField === fieldName) continue;
+
+      let parentField = parentFields.find((p) => p.name.value === contextField)
+      if (!parentField) continue;
+
+      const resolverContext = this.getResolverContext(parentField);
+      if (!resolverContext) continue;
+
+      const contextFields = this.getContextFields(resolverContext);
+      if (contextFields.includes(fieldName)) {
+        return { contains: true, fieldName: parentField.name.value };
+      }
+    }
+
+    return { contains: false, fieldName: '' };
   }
 
   /**
@@ -421,8 +497,8 @@ export class SDLValidationVisitor {
    * @returns The fields of the parent object type definition
    * @private
    */
-  private getParentFields(parent: ASTNode | ReadonlyArray<ASTNode>): { fields: string[]; error: string } {
-    const result: { fields: string[]; error: string } = { fields: [], error: '' };
+  private getParentFields(parent: ASTNode | ReadonlyArray<ASTNode>): { fields: FieldDefinitionNode[]; error: string } {
+    const result: { fields: FieldDefinitionNode[]; error: string } = { fields: [], error: '' };
 
     if (!this.isASTObjectTypeNode(parent)) {
       result.error = 'Invalid context provided for resolver. Could not determine parent type';
@@ -434,7 +510,7 @@ export class SDLValidationVisitor {
       return result;
     }
 
-    result.fields = parent.fields.map((field) => field.name.value);
+    result.fields = Array.from(parent.fields ?? []);
     return result;
   }
 

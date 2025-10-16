@@ -45,46 +45,50 @@ describe('SDL to Proto Field Arguments', () => {
       message QueryUserResponse {
         User user = 1;
       }
-      message UserPostsArgs {
+      message ResolveUserPostsArgs {
         int32 limit = 1;
       }
 
-      message ResolveUserPostsRequestKey {
-        string user_id = 1;
-        UserPostsArgs user_posts_args = 2;
+      message ResolveUserPostsContext {
+        string id = 1;
       }
 
       message ResolveUserPostsRequest {
-        repeated ResolveUserPostsRequestKey key = 1;
+        // context provides the resolver context for the field posts of type User.
+        repeated ResolveUserPostsContext context = 1;
+        // field_args provides the arguments for the resolver field posts of type User.
+        ResolveUserPostsArgs field_args = 2;
       }
 
-      message ResolveUserPostsResponseResult {
+      message ResolveUserPostsResult {
         Post posts = 1;
       }
 
       message ResolveUserPostsResponse {
-        repeated ResolveUserPostsResponseResult result = 1;
+        repeated ResolveUserPostsResult result = 1;
       }
 
-      message UserHasPermissionArgs {
+      message ResolveUserHasPermissionArgs {
         string permission = 1;
       }
 
-      message ResolveUserHasPermissionRequestKey {
-        string user_id = 1;
-        UserHasPermissionArgs user_has_permission_args = 2;
+      message ResolveUserHasPermissionContext {
+        string id = 1;
       }
 
       message ResolveUserHasPermissionRequest {
-        repeated ResolveUserHasPermissionRequestKey key = 1;
+        // context provides the resolver context for the field hasPermission of type User.
+        repeated ResolveUserHasPermissionContext context = 1;
+        // field_args provides the arguments for the resolver field hasPermission of type User.
+        ResolveUserHasPermissionArgs field_args = 2;
       }
 
-      message ResolveUserHasPermissionResponseResult {
+      message ResolveUserHasPermissionResult {
         bool has_permission = 1;
       }
 
       message ResolveUserHasPermissionResponse {
-        repeated ResolveUserHasPermissionResponseResult result = 1;
+        repeated ResolveUserHasPermissionResult result = 1;
       }
 
       message User {
@@ -141,46 +145,50 @@ describe('SDL to Proto Field Arguments', () => {
       message QueryUserResponse {
         User user = 1;
       }
-      message UserPostArgs {
+      message ResolveUserPostArgs {
         bool upper = 1;
       }
 
-      message ResolveUserPostRequestKey {
-        string user_id = 1;
-        UserPostArgs user_post_args = 2;
+      message ResolveUserPostContext {
+        string id = 1;
       }
 
       message ResolveUserPostRequest {
-        repeated ResolveUserPostRequestKey key = 1;
+        // context provides the resolver context for the field post of type User.
+        repeated ResolveUserPostContext context = 1;
+        // field_args provides the arguments for the resolver field post of type User.
+        ResolveUserPostArgs field_args = 2;
       }
 
-      message ResolveUserPostResponseResult {
+      message ResolveUserPostResult {
         Post post = 1;
       }
 
       message ResolveUserPostResponse {
-        repeated ResolveUserPostResponseResult result = 1;
+        repeated ResolveUserPostResult result = 1;
       }
 
-      message PostCommentArgs {
+      message ResolvePostCommentArgs {
         bool upper = 1;
       }
 
-      message ResolvePostCommentRequestKey {
-        string post_id = 1;
-        PostCommentArgs post_comment_args = 2;
+      message ResolvePostCommentContext {
+        string id = 1;
       }
 
       message ResolvePostCommentRequest {
-        repeated ResolvePostCommentRequestKey key = 1;
+        // context provides the resolver context for the field comment of type Post.
+        repeated ResolvePostCommentContext context = 1;
+        // field_args provides the arguments for the resolver field comment of type Post.
+        ResolvePostCommentArgs field_args = 2;
       }
 
-      message ResolvePostCommentResponseResult {
+      message ResolvePostCommentResult {
         Comment comment = 1;
       }
 
       message ResolvePostCommentResponse {
-        repeated ResolvePostCommentResponseResult result = 1;
+        repeated ResolvePostCommentResult result = 1;
       }
 
       message User {
@@ -241,67 +249,73 @@ describe('SDL to Proto Field Arguments', () => {
       message QueryUserResponse {
         User user = 1;
       }
-      message UserPostArgs {
+      message ResolveUserPostArgs {
         bool upper = 1;
       }
 
-      message ResolveUserPostRequestKey {
-        string user_id = 1;
-        UserPostArgs user_post_args = 2;
+      message ResolveUserPostContext {
+        string id = 1;
       }
 
       message ResolveUserPostRequest {
-        repeated ResolveUserPostRequestKey key = 1;
+        // context provides the resolver context for the field post of type User.
+        repeated ResolveUserPostContext context = 1;
+        // field_args provides the arguments for the resolver field post of type User.
+        ResolveUserPostArgs field_args = 2;
       }
 
-      message ResolveUserPostResponseResult {
+      message ResolveUserPostResult {
         Post post = 1;
       }
 
       message ResolveUserPostResponse {
-        repeated ResolveUserPostResponseResult result = 1;
+        repeated ResolveUserPostResult result = 1;
       }
 
-      message PostCommentArgs {
+      message ResolvePostCommentArgs {
         bool upper = 1;
       }
 
-      message ResolvePostCommentRequestKey {
-        string post_id = 1;
-        PostCommentArgs post_comment_args = 2;
+      message ResolvePostCommentContext {
+        string id = 1;
       }
 
       message ResolvePostCommentRequest {
-        repeated ResolvePostCommentRequestKey key = 1;
+        // context provides the resolver context for the field comment of type Post.
+        repeated ResolvePostCommentContext context = 1;
+        // field_args provides the arguments for the resolver field comment of type Post.
+        ResolvePostCommentArgs field_args = 2;
       }
 
-      message ResolvePostCommentResponseResult {
+      message ResolvePostCommentResult {
         Comment comment = 1;
       }
 
       message ResolvePostCommentResponse {
-        repeated ResolvePostCommentResponseResult result = 1;
+        repeated ResolvePostCommentResult result = 1;
       }
 
-      message PostOtherCommentArgs {
+      message ResolvePostOtherCommentArgs {
         bool upper = 1;
       }
 
-      message ResolvePostOtherCommentRequestKey {
-        string post_id = 1;
-        PostOtherCommentArgs post_other_comment_args = 2;
+      message ResolvePostOtherCommentContext {
+        string id = 1;
       }
 
       message ResolvePostOtherCommentRequest {
-        repeated ResolvePostOtherCommentRequestKey key = 1;
+        // context provides the resolver context for the field otherComment of type Post.
+        repeated ResolvePostOtherCommentContext context = 1;
+        // field_args provides the arguments for the resolver field otherComment of type Post.
+        ResolvePostOtherCommentArgs field_args = 2;
       }
 
-      message ResolvePostOtherCommentResponseResult {
+      message ResolvePostOtherCommentResult {
         Comment other_comment = 1;
       }
 
       message ResolvePostOtherCommentResponse {
-        repeated ResolvePostOtherCommentResponseResult result = 1;
+        repeated ResolvePostOtherCommentResult result = 1;
       }
 
       message User {
@@ -320,19 +334,19 @@ describe('SDL to Proto Field Arguments', () => {
   it('should correctly handle multiple same return types with different arguments and nested resolver types', () => {
     const sdl = `
 
-    directive @resolved(context: openfed__FieldSet!) on FIELD_DEFINITION
+    directive @configureResolver(context: openfed__FieldSet!) on FIELD_DEFINITION
     scalar openfed__FieldSet
 
     type User {
         id: ID!
         name: String!
-        post(upper: Boolean!): Post! @resolved(context: "id")
-        posts(upper: Boolean!): [Post!]! @resolved(context: "id")
+        post(upper: Boolean!): Post! @configureResolver(context: "id")
+        posts(upper: Boolean!): [Post!]! @configureResolver(context: "id")
     }
 
     type Post {
         id: ID!
-        comment(upper: Boolean!): Comment! @resolved(context: "id")
+        comment(upper: Boolean!): Comment! @configureResolver(context: "id")
     }
 
     type Comment {
@@ -367,67 +381,73 @@ describe('SDL to Proto Field Arguments', () => {
       message QueryUserResponse {
         User user = 1;
       }
-      message UserPostArgs {
+      message ResolveUserPostArgs {
         bool upper = 1;
       }
 
-      message ResolveUserPostRequestKey {
-        string user_id = 1;
-        UserPostArgs user_post_args = 2;
+      message ResolveUserPostContext {
+        string id = 1;
       }
 
       message ResolveUserPostRequest {
-        repeated ResolveUserPostRequestKey key = 1;
+        // context provides the resolver context for the field post of type User.
+        repeated ResolveUserPostContext context = 1;
+        // field_args provides the arguments for the resolver field post of type User.
+        ResolveUserPostArgs field_args = 2;
       }
 
-      message ResolveUserPostResponseResult {
+      message ResolveUserPostResult {
         Post post = 1;
       }
 
       message ResolveUserPostResponse {
-        repeated ResolveUserPostResponseResult result = 1;
+        repeated ResolveUserPostResult result = 1;
       }
 
-      message UserPostsArgs {
+      message ResolveUserPostsArgs {
         bool upper = 1;
       }
 
-      message ResolveUserPostsRequestKey {
-        string user_id = 1;
-        UserPostsArgs user_posts_args = 2;
+      message ResolveUserPostsContext {
+        string id = 1;
       }
 
       message ResolveUserPostsRequest {
-        repeated ResolveUserPostsRequestKey key = 1;
+        // context provides the resolver context for the field posts of type User.
+        repeated ResolveUserPostsContext context = 1;
+        // field_args provides the arguments for the resolver field posts of type User.
+        ResolveUserPostsArgs field_args = 2;
       }
 
-      message ResolveUserPostsResponseResult {
+      message ResolveUserPostsResult {
         Post posts = 1;
       }
 
       message ResolveUserPostsResponse {
-        repeated ResolveUserPostsResponseResult result = 1;
+        repeated ResolveUserPostsResult result = 1;
       }
 
-      message PostCommentArgs {
+      message ResolvePostCommentArgs {
         bool upper = 1;
       }
 
-      message ResolvePostCommentRequestKey {
-        string post_id = 1;
-        PostCommentArgs post_comment_args = 2;
+      message ResolvePostCommentContext {
+        string id = 1;
       }
 
       message ResolvePostCommentRequest {
-        repeated ResolvePostCommentRequestKey key = 1;
+        // context provides the resolver context for the field comment of type Post.
+        repeated ResolvePostCommentContext context = 1;
+        // field_args provides the arguments for the resolver field comment of type Post.
+        ResolvePostCommentArgs field_args = 2;
       }
 
-      message ResolvePostCommentResponseResult {
+      message ResolvePostCommentResult {
         Comment comment = 1;
       }
 
       message ResolvePostCommentResponse {
-        repeated ResolvePostCommentResponseResult result = 1;
+        repeated ResolvePostCommentResult result = 1;
       }
 
       message User {
@@ -453,7 +473,7 @@ describe('SDL to Proto Field Arguments', () => {
     type User {
         id: ID!
         name: String!
-        post(upper: Boolean!): Post! @resolved(context: "id name")
+        post(upper: Boolean!): Post! @configureResolver(context: "id name")
     }
 
     type Post {
@@ -486,26 +506,28 @@ describe('SDL to Proto Field Arguments', () => {
       message QueryUserResponse {
         User user = 1;
       }
-      message UserPostArgs {
+      message ResolveUserPostArgs {
         bool upper = 1;
       }
 
-      message ResolveUserPostRequestKey {
-        string user_id = 1;
-        string user_name = 2;
-        UserPostArgs user_post_args = 3;
+      message ResolveUserPostContext {
+        string id = 1;
+        string name = 2;
       }
 
       message ResolveUserPostRequest {
-        repeated ResolveUserPostRequestKey key = 1;
+        // context provides the resolver context for the field post of type User.
+        repeated ResolveUserPostContext context = 1;
+        // field_args provides the arguments for the resolver field post of type User.
+        ResolveUserPostArgs field_args = 2;
       }
 
-      message ResolveUserPostResponseResult {
+      message ResolveUserPostResult {
         Post post = 1;
       }
 
       message ResolveUserPostResponse {
-        repeated ResolveUserPostResponseResult result = 1;
+        repeated ResolveUserPostResult result = 1;
       }
 
       message User {
@@ -518,11 +540,101 @@ describe('SDL to Proto Field Arguments', () => {
       }"
     `);
   });
+  it('should correctly handle fields inside arrays', () => {
+    const sdl = `
+
+    directive @parent(fields: openfed__FieldSet!) on FIELD_DEFINITION
+    scalar openfed__FieldSet
+
+    type Category {
+      id: ID!
+      products: [Product!]!
+    }
+
+    type Product {
+        id: ID!
+        count(filters: ProductCountFilter): Int! @configureResolver(context: "id")
+    }
+
+    type ProductCountFilter {
+      minPrice: Float
+      maxPrice: Float
+      inStock: Boolean
+      searchTerm: String
+    }
+
+    type Query {
+        categories: [Category!]!
+    }
+  `;
+
+    const { proto: protoText } = compileGraphQLToProto(sdl);
+
+    expectValidProto(protoText);
+    expect(protoText).toMatchInlineSnapshot(`
+      "syntax = "proto3";
+      package service.v1;
+
+      import "google/protobuf/wrappers.proto";
+
+      // Service definition for DefaultService
+      service DefaultService {
+        rpc QueryCategories(QueryCategoriesRequest) returns (QueryCategoriesResponse) {}
+        rpc ResolveProductCount(ResolveProductCountRequest) returns (ResolveProductCountResponse) {}
+      }
+
+      // Request message for categories operation.
+      message QueryCategoriesRequest {
+      }
+      // Response message for categories operation.
+      message QueryCategoriesResponse {
+        repeated Category categories = 1;
+      }
+      message ResolveProductCountArgs {
+        ProductCountFilter filters = 1;
+      }
+
+      message ResolveProductCountContext {
+        string id = 1;
+      }
+
+      message ResolveProductCountRequest {
+        // context provides the resolver context for the field count of type Product.
+        repeated ResolveProductCountContext context = 1;
+        // field_args provides the arguments for the resolver field count of type Product.
+        ResolveProductCountArgs field_args = 2;
+      }
+
+      message ResolveProductCountResult {
+        int32 count = 1;
+      }
+
+      message ResolveProductCountResponse {
+        repeated ResolveProductCountResult result = 1;
+      }
+
+      message Category {
+        string id = 1;
+        repeated Product products = 2;
+      }
+
+      message Product {
+        string id = 1;
+      }
+
+      message ProductCountFilter {
+        google.protobuf.DoubleValue min_price = 1;
+        google.protobuf.DoubleValue max_price = 2;
+        google.protobuf.BoolValue in_stock = 3;
+        google.protobuf.StringValue search_term = 4;
+      }"
+    `);
+  });
   it('should raise an error if a field without a context is defined but no ID field is present', () => {
     const sdl = `
     type User {
         name: String!
-        post(upper: Boolean!): Post! @resolved
+        post(upper: Boolean!): Post! @configureResolver
     }
 
     type Post {
@@ -542,7 +654,7 @@ describe('SDL to Proto Field Arguments', () => {
     type User {
         id: ID!
         uuid: ID!
-        name(context: String!): String! @resolved
+        name(context: String!): String! @configureResolver
     }
 
     type Query {
@@ -551,7 +663,7 @@ describe('SDL to Proto Field Arguments', () => {
   `;
 
     expect(() => compileGraphQLToProto(sdl)).throws(
-      'Invalid field context for resolver. Multiple fields with type ID found - provide a context with the fields you want to use in the @resolved directive',
+      'Invalid field context for resolver. Multiple fields with type ID found - provide a context with the fields you want to use in the @configureResolver directive',
     );
   });
 });

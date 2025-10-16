@@ -15,6 +15,7 @@ import {
   createEntityLookupMethodName,
   createOperationMethodName,
   createRequestMessageName,
+  createResolverMethodName,
   createResponseMessageName,
   graphqlArgumentToProtoField,
   graphqlEnumValueToProtoEnumValue,
@@ -28,6 +29,9 @@ import {
   EnumValueMapping,
   FieldMapping,
   GRPCMapping,
+  LookupFieldMapping,
+  LookupMapping,
+  LookupType,
   OperationMapping,
   OperationType,
   TypeFieldMapping,
@@ -90,6 +94,9 @@ export class GraphQLToProtoVisitor {
 
     // Process subscription type
     this.processSubscriptionType();
+
+    // Process resolveable fields
+    this.processResolveableFields();
 
     // Process all other types for field mappings
     this.processAllTypes();
@@ -211,6 +218,25 @@ export class GraphQLToProtoVisitor {
     this.processType('Subscription', OperationType.SUBSCRIPTION, this.schema.getSubscriptionType());
   }
 
+  private processResolveableFields(): void {
+    const typeMap = this.schema.getTypeMap();
+
+    for (const typeName in typeMap) {
+      const type = typeMap[typeName];
+      if (this.shouldSkipRootType(type)) continue;
+
+      if (!isObjectType(type)) continue;
+
+      const fields = type.getFields();
+
+      for (const field of Object.values(fields)) {
+        if (field.args.length === 0) continue;
+
+        this.createLookupMapping(LookupType.RESOLVE, type.name, field);
+      }
+    }
+  }
+
   /**
    * Process a GraphQL type to generate operation mappings
    *
@@ -243,7 +269,7 @@ export class GraphQLToProtoVisitor {
       const mappedName = createOperationMethodName(operationTypeName, fieldName);
       this.createOperationMapping(operationType, fieldName, mappedName);
 
-      const fieldMapping = this.createFieldMapping(operationTypeName, field);
+      const fieldMapping = this.createFieldMapping(field);
       typeFieldMapping.fieldMappings.push(fieldMapping);
     }
 
@@ -267,6 +293,21 @@ export class GraphQLToProtoVisitor {
     });
 
     this.mapping.operationMappings.push(operationMapping);
+  }
+
+
+  private createLookupMapping(type: LookupType, typeName: string, field: GraphQLField<any, any>): void {
+    const methodName = createResolverMethodName(typeName, field.name);
+
+    const lookupMapping = new LookupMapping({
+      type,
+      lookupMapping: this.createLookupFieldMapping(typeName, field),
+      rpc: methodName,
+      request: createRequestMessageName(methodName),
+      response: createResponseMessageName(methodName),
+    })
+
+    this.mapping.resolveMappings.push(lookupMapping);
   }
 
   /**
@@ -330,7 +371,7 @@ export class GraphQLToProtoVisitor {
 
     for (const fieldName in fields) {
       const field = fields[fieldName];
-      const fieldMapping = this.createFieldMapping(type.name, field);
+      const fieldMapping = this.createFieldMapping(field);
       typeFieldMapping.fieldMappings.push(fieldMapping);
     }
 
@@ -412,7 +453,7 @@ export class GraphQLToProtoVisitor {
    * @param field - The GraphQL field to create a mapping for
    * @returns The created field mapping
    */
-  private createFieldMapping(type: string, field: GraphQLField<any, any>): FieldMapping {
+  private createFieldMapping(field: GraphQLField<any, any>): FieldMapping {
     const fieldName = field.name;
     // Convert field names to snake_case for Protocol Buffers
     const mappedFieldName = graphqlFieldToProtoField(fieldName);
@@ -424,6 +465,23 @@ export class GraphQLToProtoVisitor {
       argumentMappings,
     });
   }
+
+  /**
+   * Create a lookup field mapping between a GraphQL type and Protocol Buffer type
+   *
+   * This includes mapping the type name and any fields the type may have.
+   *
+   * @param type - The name of the containing GraphQL type
+   * @param field - The GraphQL field to create a mapping for
+   * @returns The created lookup field mapping
+   */
+  private createLookupFieldMapping(type: string, field: GraphQLField<any, any>): LookupFieldMapping {
+    return new LookupFieldMapping({
+      type,
+      fieldMapping: this.createFieldMapping(field),
+    });
+  }
+
 
   /**
    * Create argument mappings for a GraphQL field
