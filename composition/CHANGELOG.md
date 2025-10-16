@@ -4,6 +4,26 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.46.4](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.46.3...@wundergraph/composition@0.46.4) (2025-10-16)
+
+**Note:** Version bump only for package @wundergraph/composition
+
+## [0.46.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.46.2...@wundergraph/composition@0.46.3) (2025-10-10)
+
+### Bug Fixes
+
+* propagate [@openfed](https://github.com/openfed)__requireFetchReasons on Interfaces ([#2256](https://github.com/wundergraph/cosmo/issues/2256)) ([2a31f95](https://github.com/wundergraph/cosmo/commit/2a31f95f2c184bab5f9b02fef27ba2961c9f9e8c)) (@Aenimus)
+
+## [0.46.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.46.1...@wundergraph/composition@0.46.2) (2025-10-03)
+
+**Note:** Version bump only for package @wundergraph/composition
+
+## [0.46.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.46.0...@wundergraph/composition@0.46.1) (2025-10-01)
+
+### Bug Fixes
+
+* internal graph bugs ([#2240](https://github.com/wundergraph/cosmo/issues/2240)) ([7f2e3f4](https://github.com/wundergraph/cosmo/commit/7f2e3f46a777640e3146f5950cac6b6d46688b17)) (@Aenimus)
+
 # [0.46.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.45.0...@wundergraph/composition@0.46.0) (2025-09-22)
 
 ### Bug Fixes

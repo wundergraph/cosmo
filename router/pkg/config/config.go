@@ -79,6 +79,8 @@ type Tracing struct {
 	ResponseTraceHeader ResponseTraceHeader `yaml:"response_trace_id"`
 	Attributes          []CustomAttribute   `yaml:"attributes"`
 
+	OperationContentAttributes bool `yaml:"operation_content_attributes" envDefault:"false" env:"TRACING_OPERATION_CONTENT_ATTRIBUTES"`
+
 	TracingGlobalFeatures `yaml:",inline"`
 }
 
@@ -867,11 +869,13 @@ type AutomaticPersistedQueriesConfig struct {
 }
 
 type AccessLogsConfig struct {
-	Enabled   bool                      `yaml:"enabled" env:"ACCESS_LOGS_ENABLED" envDefault:"true"`
-	Buffer    AccessLogsBufferConfig    `yaml:"buffer,omitempty" env:"ACCESS_LOGS_BUFFER"`
-	Output    AccessLogsOutputConfig    `yaml:"output,omitempty" env:"ACCESS_LOGS_OUTPUT"`
-	Router    AccessLogsRouterConfig    `yaml:"router,omitempty" env:"ACCESS_LOGS_ROUTER"`
-	Subgraphs AccessLogsSubgraphsConfig `yaml:"subgraphs,omitempty" env:"ACCESS_LOGS_SUBGRAPH"`
+	Enabled       bool                      `yaml:"enabled" env:"ACCESS_LOGS_ENABLED" envDefault:"true"`
+	Level         string                    `yaml:"level" env:"ACCESS_LOGS_LEVEL" envDefault:"info"`
+	AddStacktrace bool                      `yaml:"add_stacktrace" env:"ACCESS_LOGS_ADD_STACKTRACE" envDefault:"false"`
+	Buffer        AccessLogsBufferConfig    `yaml:"buffer,omitempty" env:"ACCESS_LOGS_BUFFER"`
+	Output        AccessLogsOutputConfig    `yaml:"output,omitempty" env:"ACCESS_LOGS_OUTPUT"`
+	Router        AccessLogsRouterConfig    `yaml:"router,omitempty" env:"ACCESS_LOGS_ROUTER"`
+	Subgraphs     AccessLogsSubgraphsConfig `yaml:"subgraphs,omitempty" env:"ACCESS_LOGS_SUBGRAPH"`
 }
 
 type BatchingConfig struct {

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { ProposalNamingConvention } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { ProposalNamingConvention, ProposalOrigin } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { ClickHouseClient } from '../../src/core/clickhouse/index.js';
@@ -115,6 +115,7 @@ describe('Create proposal tests', () => {
         namespace: DEFAULT_NAMESPACE,
         name: proposalName,
         namingConvention: ProposalNamingConvention.INCREMENTAL,
+        origin: ProposalOrigin.INTERNAL,
         subgraphs: [
           {
             name: subgraphName,
@@ -209,6 +210,7 @@ describe('Create proposal tests', () => {
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
       namingConvention: ProposalNamingConvention.INCREMENTAL,
+      origin: ProposalOrigin.INTERNAL,
       subgraphs: [
         {
           name: subgraphName,
@@ -253,6 +255,7 @@ describe('Create proposal tests', () => {
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
       namingConvention: ProposalNamingConvention.INCREMENTAL,
+      origin: ProposalOrigin.INTERNAL,
       subgraphs: [
         {
           name: subgraphName,
@@ -331,6 +334,7 @@ describe('Create proposal tests', () => {
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
       namingConvention: ProposalNamingConvention.INCREMENTAL,
+      origin: ProposalOrigin.INTERNAL,
       subgraphs: [
         {
           name: subgraphName,
@@ -440,6 +444,7 @@ describe('Create proposal tests', () => {
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
       namingConvention: ProposalNamingConvention.INCREMENTAL,
+      origin: ProposalOrigin.INTERNAL,
       subgraphs: [
         {
           name: subgraph1Name,
@@ -541,6 +546,7 @@ describe('Create proposal tests', () => {
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
       namingConvention: ProposalNamingConvention.INCREMENTAL,
+      origin: ProposalOrigin.INTERNAL,
       subgraphs: [
         {
           name: newSubgraphName,
@@ -644,6 +650,7 @@ describe('Create proposal tests', () => {
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
       namingConvention: ProposalNamingConvention.INCREMENTAL,
+      origin: ProposalOrigin.INTERNAL,
       subgraphs: [
         {
           name: subgraph2Name,
@@ -690,6 +697,7 @@ describe('Create proposal tests', () => {
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
       namingConvention: ProposalNamingConvention.INCREMENTAL,
+      origin: ProposalOrigin.INTERNAL,
       subgraphs: [
         {
           name: 'testSubgraph',
@@ -804,6 +812,7 @@ describe('Create proposal tests', () => {
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
       namingConvention: ProposalNamingConvention.INCREMENTAL,
+      origin: ProposalOrigin.INTERNAL,
       subgraphs: [
         {
           name: subgraph1Name,
@@ -928,6 +937,7 @@ describe('Create proposal tests', () => {
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
       namingConvention: ProposalNamingConvention.INCREMENTAL,
+      origin: ProposalOrigin.INTERNAL,
       subgraphs: [
         {
           name: subgraphName,
@@ -998,6 +1008,7 @@ describe('Create proposal tests', () => {
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
       namingConvention: ProposalNamingConvention.INCREMENTAL,
+      origin: ProposalOrigin.INTERNAL,
       subgraphs: [
         {
           name: subgraphName,
@@ -1019,6 +1030,7 @@ describe('Create proposal tests', () => {
       namespace: DEFAULT_NAMESPACE,
       name: proposalName, // Same proposal name
       namingConvention: ProposalNamingConvention.INCREMENTAL,
+      origin: ProposalOrigin.INTERNAL,
       subgraphs: [
         {
           name: subgraphName,
@@ -1105,6 +1117,7 @@ describe('Create proposal tests', () => {
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
       namingConvention: ProposalNamingConvention.INCREMENTAL,
+      origin: ProposalOrigin.INTERNAL,
       subgraphs: [
         {
           name: subgraphName + '1',
@@ -1132,6 +1145,7 @@ describe('Create proposal tests', () => {
       namespace: DEFAULT_NAMESPACE,
       name: proposalName, // Same proposal name
       namingConvention: ProposalNamingConvention.INCREMENTAL,
+      origin: ProposalOrigin.INTERNAL,
       subgraphs: [
         {
           name: subgraphName + '2',
@@ -1209,6 +1223,7 @@ describe('Create proposal tests', () => {
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
       namingConvention: ProposalNamingConvention.INCREMENTAL,
+      origin: ProposalOrigin.INTERNAL,
       subgraphs: [], // empty array
     });
 
@@ -1276,6 +1291,7 @@ describe('Create proposal tests', () => {
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
       namingConvention: ProposalNamingConvention.INCREMENTAL,
+      origin: ProposalOrigin.INTERNAL,
       subgraphs: [
         {
           name: subgraphName, // Same subgraph name used twice
@@ -1358,6 +1374,7 @@ describe('Create proposal tests', () => {
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
       namingConvention: ProposalNamingConvention.INCREMENTAL,
+      origin: ProposalOrigin.INTERNAL,
       subgraphs: [
         {
           name: newSubgraphName,
@@ -1460,6 +1477,7 @@ describe('Create proposal tests with normal naming convention', () => {
         namespace: DEFAULT_NAMESPACE,
         name: proposalName,
         namingConvention: ProposalNamingConvention.NORMAL,
+        origin: ProposalOrigin.INTERNAL,
         subgraphs: [
           {
             name: subgraphName,
@@ -1554,6 +1572,7 @@ describe('Create proposal tests with normal naming convention', () => {
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
       namingConvention: ProposalNamingConvention.NORMAL,
+      origin: ProposalOrigin.INTERNAL,
       subgraphs: [
         {
           name: subgraphName,
@@ -1598,6 +1617,7 @@ describe('Create proposal tests with normal naming convention', () => {
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
       namingConvention: ProposalNamingConvention.NORMAL,
+      origin: ProposalOrigin.INTERNAL,
       subgraphs: [
         {
           name: subgraphName,
@@ -1662,6 +1682,7 @@ describe('Create proposal tests with normal naming convention', () => {
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
       namingConvention: ProposalNamingConvention.NORMAL,
+      origin: ProposalOrigin.INTERNAL,
       subgraphs: [
         {
           name: subgraphName,
@@ -1727,6 +1748,7 @@ describe('Create proposal tests with normal naming convention', () => {
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
       namingConvention: ProposalNamingConvention.NORMAL,
+      origin: ProposalOrigin.INTERNAL,
       subgraphs: [
         {
           name: subgraphName,
@@ -1747,6 +1769,7 @@ describe('Create proposal tests with normal naming convention', () => {
       namespace: DEFAULT_NAMESPACE,
       name: proposalName, // Same proposal name
       namingConvention: ProposalNamingConvention.NORMAL,
+      origin: ProposalOrigin.INTERNAL,
       subgraphs: [
         {
           name: subgraphName,
@@ -1833,6 +1856,7 @@ describe('Create proposal tests with normal naming convention', () => {
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
       namingConvention: ProposalNamingConvention.NORMAL,
+      origin: ProposalOrigin.INTERNAL,
       subgraphs: [
         {
           name: subgraphName + '1',
@@ -1860,6 +1884,7 @@ describe('Create proposal tests with normal naming convention', () => {
       namespace: DEFAULT_NAMESPACE,
       name: proposalName, // Same proposal name
       namingConvention: ProposalNamingConvention.NORMAL,
+      origin: ProposalOrigin.INTERNAL,
       subgraphs: [
         {
           name: subgraphName + '2',

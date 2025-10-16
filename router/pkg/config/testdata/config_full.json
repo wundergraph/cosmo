@@ -47,6 +47,7 @@
           }
         }
       ],
+      "OperationContentAttributes": false,
       "ExportGraphQLVariables": true,
       "WithNewRoot": false
     },
@@ -385,6 +386,8 @@
   },
   "AccessLogs": {
     "Enabled": true,
+    "Level": "info",
+    "AddStacktrace": false,
     "Buffer": {
       "Enabled": false,
       "Size": 256000,

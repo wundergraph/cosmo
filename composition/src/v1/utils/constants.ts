@@ -672,10 +672,10 @@ export const OVERRIDE_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-// directive @openfed__requireFetchReasons repeatable on FIELD_DEFINITION | OBJECT
+// directive @openfed__requireFetchReasons repeatable on FIELD_DEFINITION | INTERFACE | OBJECT
 export const REQUIRE_FETCH_REASONS_DEFINITION: DirectiveDefinitionNode = {
   kind: Kind.DIRECTIVE_DEFINITION,
-  locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER, OBJECT_UPPER]),
+  locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER, INTERFACE_UPPER, OBJECT_UPPER]),
   name: stringToNameNode(REQUIRE_FETCH_REASONS),
   repeatable: true,
 };
