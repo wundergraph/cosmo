@@ -1,33 +1,34 @@
-// sentry.config.ts
 import * as Sentry from '@sentry/node';
-
 import { nodeProfilingIntegration } from '@sentry/profiling-node';
 import { eventLoopBlockIntegration } from '@sentry/node-native';
+import { fastifyIntegration, pinoIntegration } from '@sentry/node';
+import { envVariables } from './env.schema.js';
 
-export interface SentryConfig {
-  sentry: {
-    enabled: boolean;
-    dsn: string;
-    eventLoopBlockIntegrationThresholdMs?: number;
-    profileSessionSampleRate?: number;
-    profileLifecycle?: 'manual' | 'trace';
-    sendDefaultPii?: boolean;
-    tracesSampleRate?: number;
-  };
-}
+const {
+  SENTRY_ENABLED,
+  SENTRY_DSN,
+  SENTRY_SEND_DEFAULT_PII,
+  SENTRY_TRACES_SAMPLE_RATE,
+  SENTRY_PROFILE_SESSION_SAMPLE_RATE,
+  SENTRY_PROFILE_LIFECYCLE,
+  SENTRY_EVENT_LOOP_BLOCK_THRESHOLD_MS,
+  SENTRY_ENABLE_LOGS,
+} = envVariables.parse(process.env);
 
-export function init(opts: SentryConfig) {
-  if (opts.sentry.enabled) {
-    Sentry.init({
-      dsn: opts.sentry.dsn,
-      integrations: [
-        eventLoopBlockIntegration({ threshold: opts.sentry.eventLoopBlockIntegrationThresholdMs }),
-        nodeProfilingIntegration(),
-      ],
-      profileSessionSampleRate: opts.sentry.profileSessionSampleRate,
-      sendDefaultPii: opts.sentry.sendDefaultPii,
-      tracesSampleRate: opts.sentry.tracesSampleRate,
-      profileLifecycle: opts.sentry.profileLifecycle,
-    });
-  }
+if (SENTRY_ENABLED && SENTRY_DSN) {
+  Sentry.init({
+    dsn: SENTRY_DSN,
+    integrations: [
+      fastifyIntegration(),
+      eventLoopBlockIntegration({ threshold: SENTRY_EVENT_LOOP_BLOCK_THRESHOLD_MS }),
+      nodeProfilingIntegration(),
+      pinoIntegration({ log: { levels: ['info', 'warn', 'error'] } }),
+    ],
+    profileSessionSampleRate: SENTRY_PROFILE_SESSION_SAMPLE_RATE,
+    sendDefaultPii: SENTRY_SEND_DEFAULT_PII,
+    tracesSampleRate: SENTRY_TRACES_SAMPLE_RATE,
+    profileLifecycle: SENTRY_PROFILE_LIFECYCLE,
+    enableLogs: SENTRY_ENABLE_LOGS,
+  });
+  console.log('Sentry is initialized.');
 }
