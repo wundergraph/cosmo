@@ -2,6 +2,7 @@ package integration
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
@@ -80,14 +82,9 @@ func TestRouterPlugin(t *testing.T) {
 
 				require.EventuallyWithT(t, func(c *assert.CollectT) {
 					logMessages := xEnv.Observer().All()
-					require.Condition(c, func() bool {
-						for _, msg := range logMessages {
-							if strings.Contains(msg.Message, "plugin process exited") {
-								return true
-							}
-						}
-						return false
-					}, "expected to find 'plugin process exited' message in logs")
+					require.True(c, slices.ContainsFunc(logMessages, func(msg observer.LoggedEntry) bool {
+						return strings.Contains(msg.Message, "plugin process exited")
+					}), "expected to find 'plugin process exited' message in logs")
 				}, 5*time.Second, 1*time.Second)
 
 				require.EventuallyWithT(t, func(c *assert.CollectT) {
