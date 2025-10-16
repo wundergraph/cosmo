@@ -67,7 +67,7 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse) => {
         resp.lintWarnings.length === 0 &&
         resp.graphPruneErrors.length === 0 &&
         resp.graphPruneWarnings.length === 0 &&
-        resp.isCheckExtensionSkipped
+        (resp.isCheckExtensionSkipped ?? true)
       ) {
         console.log(
           `\nDetected no changes.\nDetected no lint issues.\nDetected no graph pruning issues.\n\n${studioCheckDestination}\n`,

@@ -51,7 +51,7 @@ export function configureSubgraphCheckExtensions(
         };
       }
 
-      if (!authContext.rbac.hasNamespaceReadAccess(namespace)) {
+      if (!authContext.rbac.hasNamespaceWriteAccess(namespace)) {
         throw new UnauthorizedError();
       }
 
