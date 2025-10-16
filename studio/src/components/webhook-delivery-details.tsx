@@ -19,12 +19,11 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 
 export interface WebhookDeliveryDetailsProps {
   deliveryId: string | undefined;
-  allowRedelivery: boolean;
   onOpenChange(open: boolean): void;
-  refreshDeliveries(): void;
+  refreshDeliveries?: () => void;
 }
 
-export function WebhookDeliveryDetails({ deliveryId, allowRedelivery, onOpenChange, refreshDeliveries }: WebhookDeliveryDetailsProps) {
+export function WebhookDeliveryDetails({ deliveryId, onOpenChange, refreshDeliveries }: WebhookDeliveryDetailsProps) {
   const { toast } = useToast();
   const { data, error, isLoading, refetch } = useQuery(
     getWebhookDeliveryDetails,
@@ -39,7 +38,10 @@ export function WebhookDeliveryDetails({ deliveryId, allowRedelivery, onOpenChan
           description: "Webhook redelivery attempted",
           duration: 2000,
         });
-        refreshDeliveries();
+
+        if (refreshDeliveries) {
+          refreshDeliveries();
+        }
       } else {
         toast({
           description: data.response?.details,
@@ -84,7 +86,7 @@ export function WebhookDeliveryDetails({ deliveryId, allowRedelivery, onOpenChan
               {details.endpoint}
             </code>
           </div>
-          {allowRedelivery && (<Button
+          {details.type !== 'check-extension' && (<Button
             variant="secondary"
             className="w-full md:w-auto"
             isLoading={isPending}

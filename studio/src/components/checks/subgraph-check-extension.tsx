@@ -78,7 +78,6 @@ export function SubgraphCheckExtension({ enabled, deliveryId, errorMessage }: Su
 
       <WebhookDeliveryDetails
         deliveryId={d}
-        allowRedelivery={false}
         onOpenChange={(isOpen) => {
           if (!isOpen) {
             setD(undefined);

@@ -12,13 +12,14 @@ import { OrganizationRepository } from '../repositories/OrganizationRepository.j
 import { WebhookDeliveryInfo } from '../../db/models.js';
 import { webhookAxiosRetryCond } from '../util.js';
 import {
-  FederatedGraphDTO,
+  FederatedGraphDTO, Label,
+  LintIssueResult,
   NamespaceDTO,
   SchemaGraphPruningIssues,
   SchemaLintIssues,
   SubgraphDTO,
 } from '../../types/index.js';
-import { VCSContext } from '../../../../connect/src/wg/cosmo/platform/v1/platform_pb.js';
+import { LintSeverity, VCSContext } from '../../../../connect/src/wg/cosmo/platform/v1/platform_pb.js';
 import { ComposedFederatedGraph } from '../composition/composer.js';
 import { GetDiffBetweenGraphsSuccess } from '../composition/schemaCheck.js';
 import { SubgraphCheckExtensionsRepository } from '../repositories/SubgraphCheckExtensionsRepository.js';
@@ -83,6 +84,13 @@ export interface ProposalStateUpdated {
 }
 
 type OrganizationEventData = FederatedGraphSchemaUpdate | MonographSchemaUpdate | ProposalStateUpdated;
+
+export interface SubgraphCheckExtensionResponse {
+  errorMessage?: string;
+  overwrite?: {
+    lintIssues: LintIssueResult[];
+  };
+}
 
 type Config = {
   url?: string;
@@ -463,13 +471,13 @@ export class OrganizationWebhookService {
     }
   }
 
-  async #sendWebhookRequest<TResponse = void>(
+  async #sendWebhookRequest<TResponse = any>(
     endpoint: string,
     secretKey: string | undefined,
     data: unknown,
     deliveryInfo: WebhookDeliveryInfo,
     logger: pino.Logger,
-  ): Promise<AxiosResponse | undefined> {
+  ): Promise<AxiosResponse<TResponse> | undefined> {
     let retryCount = 0;
     const startTime = performance.now();
 
@@ -493,7 +501,7 @@ export class OrganizationWebhookService {
     // @TODO Use a queue to send the events
     let res: AxiosResponse | undefined;
     try {
-      res = await makeWebhookRequest(this.httpClient, data, endpoint, secretKey);
+      res = await makeWebhookRequest<any, TResponse>(this.httpClient, data, endpoint, secretKey);
       deliveryInfo.responseStatusCode = res.status;
       deliveryInfo.responseHeaders = res.headers;
       deliveryInfo.responseBody = JSON.stringify(res.data);
@@ -508,6 +516,14 @@ export class OrganizationWebhookService {
         deliveryInfo.responseErrorCode = error.code;
         deliveryInfo.responseBody = JSON.stringify(error.response?.data);
         deliveryInfo.errorMessage = error.message;
+
+        if (error.response?.data &&
+          typeof error.response?.data === 'object' &&
+          'errorMessage' in error.response.data &&
+          typeof error.response.data.errorMessage === 'string') {
+          // Overwrite the error message with the response error message
+          deliveryInfo.errorMessage = error.response.data.errorMessage;
+        }
       } else {
         logger.debug(error, 'Could not send organization webhook event');
         deliveryInfo.errorMessage = error.message || 'Failed due to unknown reasons';
@@ -540,6 +556,8 @@ export class OrganizationWebhookService {
 
   async sendSubgraphCheckExtension(input: {
     actorId: string;
+    schemaCheckID: string;
+    labels?: Label[];
     blobStorage: BlobStorage;
     admissionConfig: { jwtSecret: string; cdnBaseUrl: string };
     organization: { id: string; slug: string };
@@ -554,7 +572,14 @@ export class OrganizationWebhookService {
     lintIssues: SchemaLintIssues;
     pruneIssues: SchemaGraphPruningIssues;
     inspectedOperations: InspectorOperationResult[];
-  }): Promise<[AxiosResponse | undefined, WebhookDeliveryInfo] | undefined> {
+  }): Promise<
+    | {
+        deliveryInfo: WebhookDeliveryInfo;
+        overwriteLintIssues: boolean;
+        lintIssues: SchemaLintIssues;
+      }
+    | undefined
+  > {
     if (!input.namespace.enableSubgraphCheckExtensions) {
       // The subgraph check extensions are not enabled for the namespace, we don't need to execute the webhook
       return undefined;
@@ -636,13 +661,15 @@ export class OrganizationWebhookService {
 
     // Compose the webhook payload
     const payload: Record<string, unknown> = {
+      actorId: input.actorId,
+      checkId: input.schemaCheckID,
+      labels: input.subgraph ? undefined : input.labels,
       organization: input.organization,
       namespace: { id: input.namespace.id, name: input.namespace.name },
       vcsContext: input.vcsContext,
       affectedGraphs: input.affectedGraphs.map((graph) => ({
         id: graph.id,
         name: graph.name,
-        namespace: { id: graph.namespaceId, name: graph.namespace },
       })),
       url: `${input.admissionConfig.cdnBaseUrl}${blobKey}?token=${token}`,
     };
@@ -666,7 +693,7 @@ export class OrganizationWebhookService {
       requestHeaders: {},
     };
 
-    const response = await this.#sendWebhookRequest(
+    const response = await this.#sendWebhookRequest<SubgraphCheckExtensionResponse>(
       sceConfig.endpoint,
       sceConfig.secretKey,
       payload,
@@ -674,6 +701,33 @@ export class OrganizationWebhookService {
       this.logger,
     );
 
-    return [response, deliveryInfo];
+    if (
+      response &&
+      ((response.status !== 200 && response.status !== 204) ||
+        (response.data && typeof response.data.errorMessage === 'string'))
+    ) {
+      //
+      deliveryInfo.errorMessage =
+        response.data?.errorMessage ??
+        `Check extension returned status code '${response?.status}'. Allowed values are 200 and 204.`;
+
+      await this.db
+        .update(schema.webhookDeliveries)
+        .set({ errorMessage: response.data.errorMessage })
+        .where(eq(schema.webhookDeliveries.id, deliveryInfo.id!))
+        .execute();
+    }
+
+    const overwriteLintIssues = Array.isArray(response?.data?.overwrite?.lintIssues);
+    return {
+      deliveryInfo,
+      overwriteLintIssues,
+      lintIssues: overwriteLintIssues
+        ? {
+            warnings: response.data.overwrite!.lintIssues!.filter((issue) => issue.severity === LintSeverity.warn),
+            errors: response.data.overwrite!.lintIssues!.filter((issue) => issue.severity === LintSeverity.error),
+          }
+        : input.lintIssues,
+    };
   }
 }

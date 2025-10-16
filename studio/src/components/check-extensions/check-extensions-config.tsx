@@ -76,11 +76,11 @@ const toggleableOptions: { key: keyof z.infer<typeof validationSchema>, label: s
   },
   {
     key: 'includeLintingIssues',
-    label: 'Include Linting Warnings and Errors',
+    label: 'Include Lint Warnings and Errors',
   },
   {
     key: 'includePruningIssues',
-    label: 'Include Pruning Warnings and Errors',
+    label: 'Include Graph Pruning Warnings and Errors',
   },
   {
     key: 'includeSchemaChanges',

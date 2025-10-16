@@ -5,7 +5,6 @@ import {
   CompositionError,
   CompositionWarning,
   DeploymentError,
-  LintSeverity,
   VCSContext,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, normalizeURL, splitLabel } from '@wundergraph/cosmo-shared';
@@ -34,9 +33,7 @@ import {
   CompositionOptions,
   FederatedGraphDTO,
   GetChecksResponse,
-  GraphPruningIssueResult,
   Label,
-  LintIssueResult,
   NamespaceDTO,
   ProtoSubgraph,
   SchemaCheckDetailsDTO,
@@ -2122,90 +2119,41 @@ export class SubgraphRepository {
     }
 
     // Execute the subgraph check extension webhook
-    const [response, sceDeliveryInfo] =
-      (await webhookService.sendSubgraphCheckExtension({
-        actorId,
-        blobStorage,
-        admissionConfig,
-        organization: { id: this.organizationId, slug: organizationSlug },
-        namespace,
-        vcsContext,
-        subgraph,
-        newSchemaSDL,
-        isDeleted,
-        affectedGraphs: federatedGraphs,
-        composedGraphs,
-        schemaChanges,
-        lintIssues,
-        pruneIssues: graphPruningIssues,
-        inspectedOperations,
-      })) || [];
+    const sceResult = await webhookService.sendSubgraphCheckExtension({
+      actorId,
+      schemaCheckID,
+      labels,
+      blobStorage,
+      admissionConfig,
+      organization: { id: this.organizationId, slug: organizationSlug },
+      namespace,
+      vcsContext,
+      subgraph,
+      newSchemaSDL,
+      isDeleted,
+      affectedGraphs: federatedGraphs,
+      composedGraphs,
+      schemaChanges,
+      lintIssues,
+      pruneIssues: graphPruningIssues,
+      inspectedOperations,
+    });
 
-    let checkExtensionErrorMessage: string | undefined;
-    switch (response?.status) {
-      case 200: {
-        const responseData = response?.data as {
-          error?: string;
-          overwrite?: {
-            lintIssues?: LintIssueResult[];
-            pruneIssues?: GraphPruningIssueResult[];
-          };
-        };
+    if (sceResult && sceResult.overwriteLintIssues) {
+      lintIssues = sceResult.lintIssues;
 
-        // Only overwrite values that were provided in the response
-        if (typeof responseData?.error === 'string' && responseData.error) {
-          checkExtensionErrorMessage = responseData.error;
-        }
+      // We need to replace the lint issues in the database with the ones returned by the webhook
+      await schemaLintRepo.deleteExistingSchemaCheckLintIssues({
+        schemaCheckId: schemaCheckID,
+        schemaCheckSubgraphId,
+      });
 
-        if (Array.isArray(responseData?.overwrite?.lintIssues)) {
-          lintIssues = {
-            warnings: responseData.overwrite.lintIssues.filter((issue) => issue.severity === LintSeverity.warn),
-            errors: responseData.overwrite.lintIssues.filter((issue) => issue.severity === LintSeverity.error),
-          };
-
-          // We need to replace the lint issues in the database with the ones returned by the webhook
-          await schemaLintRepo.deleteExistingSchemaCheckLintIssues({
-            schemaCheckId: schemaCheckID,
-            schemaCheckSubgraphId,
-          });
-
-          // Then, we need to add the overwritten lint issues
-          await schemaLintRepo.addSchemaCheckLintIssues({
-            schemaCheckId: schemaCheckID,
-            lintIssues: [...lintIssues.warnings, ...lintIssues.errors],
-            schemaCheckSubgraphId,
-          });
-        }
-
-        if (subgraph && namespace.enableGraphPruning && Array.isArray(responseData?.overwrite?.pruneIssues)) {
-          graphPruningIssues = {
-            warnings: responseData.overwrite.pruneIssues.filter((issue) => issue.severity === LintSeverity.warn),
-            errors: responseData.overwrite.pruneIssues.filter((issue) => issue.severity === LintSeverity.error),
-          };
-
-          // We need to replace the graph pruning issues in the database wit hthe ones returned by the webhook
-          await schemaGraphPruningRepo.deleteExistingSchemaCheckGraphPruningIssues({
-            schemaCheckId: schemaCheckID,
-            schemaCheckSubgraphId,
-          });
-
-          await schemaGraphPruningRepo.addSchemaCheckGraphPruningIssues({
-            schemaCheckId: schemaCheckID,
-            graphPruningIssues: [...graphPruningIssues.warnings, ...graphPruningIssues.errors],
-            schemaCheckSubgraphId,
-          });
-        }
-        break;
-      }
-      case 204: {
-        // We got a `204 No Content` response, which means the webhook was sent and handled successfully,
-        // but we shouldn't overwrite anything
-        break;
-      }
-      default: {
-        checkExtensionErrorMessage = sceDeliveryInfo?.errorMessage ?? `Check extension returned a: ${response?.status}`;
-        break;
-      }
+      // Then, we need to add the overwritten lint issues
+      await schemaLintRepo.addSchemaCheckLintIssues({
+        schemaCheckId: schemaCheckID,
+        lintIssues: [...lintIssues.warnings, ...lintIssues.errors],
+        schemaCheckSubgraphId,
+      });
     }
 
     // Update the overall schema check with the results
@@ -2215,8 +2163,8 @@ export class SubgraphRepository {
       hasBreakingChanges,
       hasLintErrors: lintIssues.errors.length > 0,
       hasGraphPruningErrors: graphPruningIssues.errors.length > 0,
-      checkExtensionDeliveryId: sceDeliveryInfo?.id,
-      checkExtensionErrorMessage,
+      checkExtensionDeliveryId: sceResult?.deliveryInfo?.id,
+      checkExtensionErrorMessage: sceResult?.deliveryInfo?.errorMessage ?? undefined,
     });
 
     return {
@@ -2241,8 +2189,8 @@ export class SubgraphRepository {
       compositionWarnings,
       proposalMatchMessage,
       hasClientTraffic,
-      isCheckExtensionSkipped: !sceDeliveryInfo?.id,
-      checkExtensionErrorMessage,
+      isCheckExtensionSkipped: !sceResult?.deliveryInfo?.id,
+      checkExtensionErrorMessage: sceResult?.deliveryInfo?.errorMessage ?? undefined,
     };
   }
 }
