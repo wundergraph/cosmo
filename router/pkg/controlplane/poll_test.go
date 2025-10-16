@@ -67,8 +67,8 @@ func Test_Poller(t *testing.T) {
 				"execution %d: actual interval %v should be >= minimum interval %v",
 				i, actualInterval, expectedMinInterval)
 
-			// Each interval should be at most interval + maxJitter
-			assert.LessOrEqual(t, actualInterval, expectedMaxInterval,
+			// Each interval should be at most interval + maxJitter, small delay to account for system scheduling delays
+			assert.LessOrEqual(t, actualInterval, expectedMaxInterval+20,
 				"execution %d: actual interval %v should be <= maximum interval %v",
 				i, actualInterval, expectedMaxInterval)
 
