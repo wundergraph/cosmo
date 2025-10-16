@@ -281,9 +281,8 @@ const subgraphChecks = (storage: BlobStorage) => {
     try {
       blobObject = await storage.getObject({ context: c, key, cacheControl: 'no-cache' });
     } catch (e: any) {
-      console.log('burn')
       if (e instanceof BlobNotFoundError) {
-        return c.notFound()
+        return c.notFound();
       }
       throw e;
     }
@@ -295,7 +294,7 @@ const subgraphChecks = (storage: BlobStorage) => {
       await stream.pipe(blobObject.stream);
     });
   };
-}
+};
 
 // eslint-disable-next-line @typescript-eslint/ban-types
 export const cdn = <E extends Env, S extends Schema = {}, BasePath extends string = '/'>(
