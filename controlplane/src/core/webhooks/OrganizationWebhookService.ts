@@ -12,7 +12,8 @@ import { OrganizationRepository } from '../repositories/OrganizationRepository.j
 import { WebhookDeliveryInfo } from '../../db/models.js';
 import { webhookAxiosRetryCond } from '../util.js';
 import {
-  FederatedGraphDTO, Label,
+  FederatedGraphDTO,
+  Label,
   LintIssueResult,
   NamespaceDTO,
   SchemaGraphPruningIssues,
@@ -517,10 +518,12 @@ export class OrganizationWebhookService {
         deliveryInfo.responseBody = JSON.stringify(error.response?.data);
         deliveryInfo.errorMessage = error.message;
 
-        if (error.response?.data &&
+        if (
+          error.response?.data &&
           typeof error.response?.data === 'object' &&
           'errorMessage' in error.response.data &&
-          typeof error.response.data.errorMessage === 'string') {
+          typeof error.response.data.errorMessage === 'string'
+        ) {
           // Overwrite the error message with the response error message
           deliveryInfo.errorMessage = error.response.data.errorMessage;
         }
