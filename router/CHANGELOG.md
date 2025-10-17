@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.258.7](https://github.com/wundergraph/cosmo/compare/router@0.258.6...router@0.258.7) (2025-10-17)
+
+### Bug Fixes
+
+* add the startup config value to oci plugin startup ([#2285](https://github.com/wundergraph/cosmo/issues/2285)) ([dddbf62](https://github.com/wundergraph/cosmo/commit/dddbf62d4f23be694f8904e34ceb35d0db033cc4)) (@SkArchon)
+
 ## [0.258.6](https://github.com/wundergraph/cosmo/compare/router@0.258.5...router@0.258.6) (2025-10-16)
 
 **Note:** Version bump only for package router
