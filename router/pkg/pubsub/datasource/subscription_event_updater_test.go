@@ -302,7 +302,7 @@ func TestNewSubscriptionEventUpdater(t *testing.T) {
 	assert.Equal(t, mockUpdater, concreteUpdater.eventUpdater)
 }
 
-func TestApplyStreamEventHooks_NoHooks(t *testing.T) {
+func TestApplyReceiveEventHooks_NoHooks(t *testing.T) {
 	ctx := context.Background()
 	config := &testSubscriptionEventConfig{
 		providerID:   "test-provider",
@@ -313,13 +313,13 @@ func TestApplyStreamEventHooks_NoHooks(t *testing.T) {
 		&testEvent{data: []byte("test data")},
 	}
 
-	result, err := applyStreamEventHooks(ctx, config, originalEvents, []OnReceiveEventsFn{})
+	result, err := applyReceiveEventHooks(ctx, config, originalEvents, []OnReceiveEventsFn{})
 
 	assert.NoError(t, err)
 	assert.Equal(t, originalEvents, result)
 }
 
-func TestApplyStreamEventHooks_SingleHook_Success(t *testing.T) {
+func TestApplyReceiveEventHooks_SingleHook_Success(t *testing.T) {
 	ctx := context.Background()
 	config := &testSubscriptionEventConfig{
 		providerID:   "test-provider",
@@ -337,13 +337,13 @@ func TestApplyStreamEventHooks_SingleHook_Success(t *testing.T) {
 		return modifiedEvents, nil
 	}
 
-	result, err := applyStreamEventHooks(ctx, config, originalEvents, []OnReceiveEventsFn{hook})
+	result, err := applyReceiveEventHooks(ctx, config, originalEvents, []OnReceiveEventsFn{hook})
 
 	assert.NoError(t, err)
 	assert.Equal(t, modifiedEvents, result)
 }
 
-func TestApplyStreamEventHooks_SingleHook_Error(t *testing.T) {
+func TestApplyReceiveEventHooks_SingleHook_Error(t *testing.T) {
 	ctx := context.Background()
 	config := &testSubscriptionEventConfig{
 		providerID:   "test-provider",
@@ -359,14 +359,14 @@ func TestApplyStreamEventHooks_SingleHook_Error(t *testing.T) {
 		return nil, hookError
 	}
 
-	result, err := applyStreamEventHooks(ctx, config, originalEvents, []OnReceiveEventsFn{hook})
+	result, err := applyReceiveEventHooks(ctx, config, originalEvents, []OnReceiveEventsFn{hook})
 
 	assert.Error(t, err)
 	assert.Equal(t, hookError, err)
 	assert.Nil(t, result)
 }
 
-func TestApplyStreamEventHooks_MultipleHooks_Success(t *testing.T) {
+func TestApplyReceiveEventHooks_MultipleHooks_Success(t *testing.T) {
 	ctx := context.Background()
 	config := &testSubscriptionEventConfig{
 		providerID:   "test-provider",
@@ -393,7 +393,7 @@ func TestApplyStreamEventHooks_MultipleHooks_Success(t *testing.T) {
 		return []StreamEvent{&testEvent{data: []byte("final")}}, nil
 	}
 
-	result, err := applyStreamEventHooks(ctx, config, originalEvents, []OnReceiveEventsFn{hook1, hook2, hook3})
+	result, err := applyReceiveEventHooks(ctx, config, originalEvents, []OnReceiveEventsFn{hook1, hook2, hook3})
 
 	select {
 	case receivedArgs1 := <-receivedArgs1:
@@ -424,7 +424,7 @@ func TestApplyStreamEventHooks_MultipleHooks_Success(t *testing.T) {
 	assert.Equal(t, "final", string(result[0].GetData()))
 }
 
-func TestApplyStreamEventHooks_MultipleHooks_MiddleHookError(t *testing.T) {
+func TestApplyReceiveEventHooks_MultipleHooks_MiddleHookError(t *testing.T) {
 	ctx := context.Background()
 	config := &testSubscriptionEventConfig{
 		providerID:   "test-provider",
@@ -452,7 +452,7 @@ func TestApplyStreamEventHooks_MultipleHooks_MiddleHookError(t *testing.T) {
 		return []StreamEvent{&testEvent{data: []byte("final")}}, nil
 	}
 
-	result, err := applyStreamEventHooks(ctx, config, originalEvents, []OnReceiveEventsFn{hook1, hook2, hook3})
+	result, err := applyReceiveEventHooks(ctx, config, originalEvents, []OnReceiveEventsFn{hook1, hook2, hook3})
 
 	assert.Error(t, err)
 	assert.Equal(t, middleHookError, err)

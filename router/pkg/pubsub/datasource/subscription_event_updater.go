@@ -2,6 +2,7 @@ package datasource
 
 import (
 	"context"
+	"sync"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
@@ -31,34 +32,21 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 		}
 		return
 	}
-	// If there are hooks, we should apply them separated for each subscription
-	for ctx, subId := range s.eventUpdater.Subscriptions() {
-		processedEvents, err := applyStreamEventHooks(
-			ctx,
-			s.subscriptionEventConfiguration,
-			events,
-			s.hooks.OnReceiveEvents,
-		)
-		// updates the events even if the hooks fail
-		// if a hook doesn't want to send the events, it should return no events!
-		for _, event := range processedEvents {
-			s.eventUpdater.UpdateSubscription(subId, event.GetData())
-		}
-		if err != nil {
-			// For all errors, log them
-			if s.logger != nil {
-				s.logger.Error(
-					"An error occurred while processing stream events hooks",
-					zap.Error(err),
-					zap.String("provider_type", string(s.subscriptionEventConfiguration.ProviderType())),
-					zap.String("provider_id", s.subscriptionEventConfiguration.ProviderID()),
-					zap.String("field_name", s.subscriptionEventConfiguration.RootFieldName()),
-				)
-			}
-			// Always close the subscription when a hook reports an error to avoid inconsistent state.
-			s.eventUpdater.CloseSubscription(resolve.SubscriptionCloseKindNormal, subId)
-		}
+
+	maxConcurrency := 2
+	semaphore := make(chan struct{}, maxConcurrency)
+	for range maxConcurrency {
+		semaphore <- struct{}{}
 	}
+
+	wg := sync.WaitGroup{}
+	for ctx, subId := range s.eventUpdater.Subscriptions() {
+		<-semaphore // wait for a slot to be available
+		eventsCopy := copyEvents(events)
+		wg.Add(1)
+		go s.updateSubscription(ctx, &wg, semaphore, subId, eventsCopy)
+	}
+	wg.Wait()
 }
 
 func (s *subscriptionEventUpdater) Complete() {
@@ -73,9 +61,9 @@ func (s *subscriptionEventUpdater) SetHooks(hooks Hooks) {
 	s.hooks = hooks
 }
 
-// applyStreamEventHooks processes events through a chain of hook functions
+// applyReceiveEventHooks processes events through a chain of hook functions
 // Each hook receives the result from the previous hook, creating a proper middleware pipeline
-func applyStreamEventHooks(
+func applyReceiveEventHooks(
 	ctx context.Context,
 	cfg SubscriptionEventConfiguration,
 	events []StreamEvent,
@@ -95,6 +83,53 @@ func applyStreamEventHooks(
 		}
 	}
 	return currentEvents, nil
+}
+
+func copyEvents(in []StreamEvent) []StreamEvent {
+	out := make([]StreamEvent, len(in))
+	for i := range in {
+		out[i] = in[i].Clone()
+	}
+	return out
+}
+
+func (s *subscriptionEventUpdater) updateSubscription(ctx context.Context, wg *sync.WaitGroup, semaphore chan struct{}, subID resolve.SubscriptionIdentifier, events []StreamEvent) {
+	defer wg.Done()
+	defer func() {
+		semaphore <- struct{}{} // release the slot when done
+	}()
+
+	hooks := s.hooks.OnReceiveEvents
+
+	// modify events with hooks
+	var err error
+	for i := range hooks {
+		events, err = hooks[i](ctx, s.subscriptionEventConfiguration, events)
+		if err != nil {
+			break
+		}
+	}
+
+	// send events to the subscription,
+	// regardless if there was an error during hook processing.
+	// If no events should be sent, hook must return no events.
+	for _, event := range events {
+		s.eventUpdater.UpdateSubscription(subID, event.GetData())
+	}
+
+	if err != nil {
+		if s.logger != nil {
+			s.logger.Error(
+				"An error occurred while processing stream events hooks",
+				zap.Error(err),
+				zap.String("provider_type", string(s.subscriptionEventConfiguration.ProviderType())),
+				zap.String("provider_id", s.subscriptionEventConfiguration.ProviderID()),
+				zap.String("field_name", s.subscriptionEventConfiguration.RootFieldName()),
+			)
+
+			s.eventUpdater.CloseSubscription(resolve.SubscriptionCloseKindNormal, subID)
+		}
+	}
 }
 
 func NewSubscriptionEventUpdater(
