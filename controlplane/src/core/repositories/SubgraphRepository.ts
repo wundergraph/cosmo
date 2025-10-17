@@ -37,6 +37,7 @@ import {
   NamespaceDTO,
   ProtoSubgraph,
   SchemaCheckDetailsDTO,
+  SchemaCheckDTO,
   SchemaCheckSummaryDTO,
   SchemaGraphPruningDTO,
   SchemaGraphPruningIssues,
@@ -62,6 +63,7 @@ import {
   newCompositionOptions,
   normalizeLabels,
 } from '../util.js';
+import { OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 import { ContractRepository } from './ContractRepository.js';
 import { FeatureFlagRepository } from './FeatureFlagRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
@@ -1157,6 +1159,8 @@ export class SubgraphRepository {
         compositionSkipped: schemaChecks.compositionSkipped,
         breakingChangesSkipped: schemaChecks.breakingChangesSkipped,
         errorMessage: schemaChecks.errorMessage,
+        checkExtensionDeliveryId: schemaChecks.checkExtensionDeliveryId,
+        checkExtensionErrorMessage: schemaChecks.checkExtensionErrorMessage,
       })
       .from(schemaChecks)
       .where(
@@ -1214,7 +1218,9 @@ export class SubgraphRepository {
           breakingChangesSkipped: c.breakingChangesSkipped ?? false,
           errorMessage: c.errorMessage || undefined,
           linkedChecks,
-        };
+          checkExtensionDeliveryId: c.checkExtensionDeliveryId || undefined,
+          checkExtensionErrorMessage: c.checkExtensionErrorMessage || undefined,
+        } satisfies SchemaCheckDTO;
       }),
     );
 
@@ -1297,6 +1303,8 @@ export class SubgraphRepository {
       breakingChangesSkipped: check.breakingChangesSkipped ?? false,
       errorMessage: check.errorMessage || undefined,
       linkedChecks,
+      checkExtensionDeliveryId: check.checkExtensionDeliveryId || undefined,
+      checkExtensionErrorMessage: check.checkExtensionErrorMessage || undefined,
     };
   }
 
@@ -1783,6 +1791,9 @@ export class SubgraphRepository {
   }
 
   public async performSchemaCheck({
+    actorId,
+    blobStorage,
+    admissionConfig,
     organizationSlug,
     namespace,
     subgraphName,
@@ -1798,7 +1809,14 @@ export class SubgraphRepository {
     chClient,
     newGraphQLSchema,
     disableResolvabilityValidation,
+    webhookService,
   }: {
+    actorId: string;
+    blobStorage: BlobStorage;
+    admissionConfig: {
+      jwtSecret: string;
+      cdnBaseUrl: string;
+    };
     organizationSlug: string;
     namespace: NamespaceDTO;
     subgraphName: string;
@@ -1815,6 +1833,7 @@ export class SubgraphRepository {
     chClient?: ClickHouseClient;
     newGraphQLSchema?: GraphQLSchema;
     disableResolvabilityValidation?: boolean;
+    webhookService: OrganizationWebhookService;
   }): Promise<PlainMessage<CheckSubgraphSchemaResponse> & { hasClientTraffic: boolean }> {
     const schemaCheckRepo = new SchemaCheckRepository(this.db);
     const proposalRepo = new ProposalRepository(this.db);
@@ -2069,7 +2088,7 @@ export class SubgraphRepository {
       }
     }
 
-    const lintIssues: SchemaLintIssues = await schemaLintRepo.performSchemaLintCheck({
+    let lintIssues: SchemaLintIssues = await schemaLintRepo.performSchemaLintCheck({
       schemaCheckID,
       newSchemaSDL,
       namespaceId: namespace.id,
@@ -2099,6 +2118,44 @@ export class SubgraphRepository {
       });
     }
 
+    // Execute the subgraph check extension webhook
+    const sceResult = await webhookService.sendSubgraphCheckExtension({
+      actorId,
+      schemaCheckID,
+      labels,
+      blobStorage,
+      admissionConfig,
+      organization: { id: this.organizationId, slug: organizationSlug },
+      namespace,
+      vcsContext,
+      subgraph,
+      newSchemaSDL,
+      isDeleted,
+      affectedGraphs: federatedGraphs,
+      composedGraphs,
+      schemaChanges,
+      lintIssues,
+      pruneIssues: graphPruningIssues,
+      inspectedOperations,
+    });
+
+    if (sceResult && sceResult.overwriteLintIssues) {
+      lintIssues = sceResult.lintIssues;
+
+      // We need to replace the lint issues in the database with the ones returned by the webhook
+      await schemaLintRepo.deleteExistingSchemaCheckLintIssues({
+        schemaCheckId: schemaCheckID,
+        schemaCheckSubgraphId,
+      });
+
+      // Then, we need to add the overwritten lint issues
+      await schemaLintRepo.addSchemaCheckLintIssues({
+        schemaCheckId: schemaCheckID,
+        lintIssues: [...lintIssues.warnings, ...lintIssues.errors],
+        schemaCheckSubgraphId,
+      });
+    }
+
     // Update the overall schema check with the results
     await schemaCheckRepo.update({
       schemaCheckID,
@@ -2106,6 +2163,8 @@ export class SubgraphRepository {
       hasBreakingChanges,
       hasLintErrors: lintIssues.errors.length > 0,
       hasGraphPruningErrors: graphPruningIssues.errors.length > 0,
+      checkExtensionDeliveryId: sceResult?.deliveryInfo?.id,
+      checkExtensionErrorMessage: sceResult?.deliveryInfo?.errorMessage ?? undefined,
     });
 
     return {
@@ -2130,6 +2189,8 @@ export class SubgraphRepository {
       compositionWarnings,
       proposalMatchMessage,
       hasClientTraffic,
+      isCheckExtensionSkipped: !sceResult?.deliveryInfo?.id,
+      checkExtensionErrorMessage: sceResult?.deliveryInfo?.errorMessage ?? undefined,
     };
   }
 }

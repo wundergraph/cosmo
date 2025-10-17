@@ -33,7 +33,7 @@ export function WorkspaceProvider({ children }: React.PropsWithChildren) {
 
   // Correct namespace
   useEffect(() => {
-    if (!data || data.response?.code == EnumStatusCode.OK || !data.namespaces?.length) {
+    if (data?.response?.code !== EnumStatusCode.OK || !data?.namespaces?.length) {
       return;
     }
 
@@ -55,7 +55,7 @@ export function WorkspaceProvider({ children }: React.PropsWithChildren) {
     }
 
     setNamespaces(currentNamespaces);
-  }, [applyParams, data, namespace, namespaceParam, setStoredNamespace]);
+  }, [applyParams, data?.response?.code, data?.namespaces, namespace, namespaceParam, setStoredNamespace]);
 
   // Memoize context components
   const currentNamespace= useMemo(
