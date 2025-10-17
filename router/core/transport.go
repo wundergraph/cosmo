@@ -66,11 +66,11 @@ type sfCacheItem struct {
 
 func NewCustomTransport(
 	baseRoundTripper http.RoundTripper,
-	retryOptions retrytransport.RetryOptions,
 	metricStore metric.Store,
 	connectionMetricStore metric.ConnectionMetricStore,
 	enableSingleFlight bool,
 	breaker *circuit.Manager,
+	retryManager *retrytransport.Manager,
 	enableTraceClient bool,
 ) *CustomTransport {
 	ct := &CustomTransport{
@@ -84,31 +84,41 @@ func NewCustomTransport(
 	// As a workaround we pass in a function that can be used to get the logger from within the round tripper
 	getRequestContextLogger := func(req *http.Request) *zap.Logger {
 		reqContext := getRequestContext(req.Context())
+		if reqContext == nil {
+			return zap.NewNop()
+		}
 		return reqContext.Logger()
 	}
 
+	getActiveSubgraphName := func(req *http.Request) string {
+		reqContext := getRequestContext(req.Context())
+		if reqContext == nil {
+			return ""
+		}
+		subgraph := reqContext.ActiveSubgraph(req)
+		if subgraph != nil {
+			return subgraph.Name
+		}
+		return ""
+	}
+
 	if enableTraceClient {
-		getValuesFromRequest := func(ctx context.Context, req *http.Request) (*expr.Context, string) {
+		getExprContext := func(ctx context.Context) *expr.Context {
 			reqContext := getRequestContext(ctx)
 			if reqContext == nil {
-				return &expr.Context{}, ""
+				return &expr.Context{}
 			}
-
-			var activeSubgraphName string
-			if activeSubgraph := reqContext.ActiveSubgraph(req); activeSubgraph != nil {
-				activeSubgraphName = activeSubgraph.Name
-			}
-			return &reqContext.expressionContext, activeSubgraphName
+			return &reqContext.expressionContext
 		}
-		baseRoundTripper = traceclient.NewTraceInjectingRoundTripper(baseRoundTripper, connectionMetricStore, getValuesFromRequest)
+		baseRoundTripper = traceclient.NewTraceInjectingRoundTripper(baseRoundTripper, connectionMetricStore, getExprContext, getActiveSubgraphName)
 	}
 
 	if breaker.HasCircuits() {
-		baseRoundTripper = circuit.NewCircuitTripper(baseRoundTripper, breaker, getRequestContextLogger)
+		baseRoundTripper = circuit.NewCircuitTripper(baseRoundTripper, breaker, getRequestContextLogger, getActiveSubgraphName)
 	}
 
-	if retryOptions.Enabled {
-		ct.roundTripper = retrytransport.NewRetryHTTPTransport(baseRoundTripper, retryOptions, getRequestContextLogger)
+	if retryManager.IsEnabled() {
+		ct.roundTripper = retrytransport.NewRetryHTTPTransport(baseRoundTripper, getRequestContextLogger, retryManager, getActiveSubgraphName)
 	} else {
 		ct.roundTripper = baseRoundTripper
 	}
@@ -344,11 +354,11 @@ func (ct *CustomTransport) singleFlightKey(req *http.Request) uint64 {
 type TransportFactory struct {
 	preHandlers                   []TransportPreHandler
 	postHandlers                  []TransportPostHandler
-	retryOptions                  retrytransport.RetryOptions
 	localhostFallbackInsideDocker bool
 	metricStore                   metric.Store
 	connectionMetricStore         metric.ConnectionMetricStore
 	circuitBreaker                *circuit.Manager
+	retryManager                  *retrytransport.Manager
 	logger                        *zap.Logger
 	tracerProvider                *sdktrace.TracerProvider
 	tracePropagators              propagation.TextMapPropagator
@@ -361,7 +371,6 @@ type TransportOptions struct {
 	PreHandlers                   []TransportPreHandler
 	PostHandlers                  []TransportPostHandler
 	SubgraphTransportOptions      *SubgraphTransportOptions
-	RetryOptions                  retrytransport.RetryOptions
 	LocalhostFallbackInsideDocker bool
 	MetricStore                   metric.Store
 	ConnectionMetricStore         metric.ConnectionMetricStore
@@ -370,6 +379,7 @@ type TransportOptions struct {
 	TracerProvider                *sdktrace.TracerProvider
 	TracePropagators              propagation.TextMapPropagator
 	EnableTraceClient             bool
+	RetryManager                  *retrytransport.Manager
 }
 
 type SubscriptionClientOptions struct {
@@ -383,7 +393,6 @@ func NewTransport(opts *TransportOptions) *TransportFactory {
 	return &TransportFactory{
 		preHandlers:                   opts.PreHandlers,
 		postHandlers:                  opts.PostHandlers,
-		retryOptions:                  opts.RetryOptions,
 		localhostFallbackInsideDocker: opts.LocalhostFallbackInsideDocker,
 		metricStore:                   opts.MetricStore,
 		connectionMetricStore:         opts.ConnectionMetricStore,
@@ -391,6 +400,7 @@ func NewTransport(opts *TransportOptions) *TransportFactory {
 		tracerProvider:                opts.TracerProvider,
 		tracePropagators:              opts.TracePropagators,
 		circuitBreaker:                opts.CircuitBreaker,
+		retryManager:                  opts.RetryManager,
 		enableTraceClient:             opts.EnableTraceClient,
 	}
 }
@@ -432,11 +442,11 @@ func (t TransportFactory) RoundTripper(enableSingleFlight bool, baseTransport ht
 	)
 	tp := NewCustomTransport(
 		traceTransport,
-		t.retryOptions,
 		t.metricStore,
 		t.connectionMetricStore,
 		enableSingleFlight,
 		t.circuitBreaker,
+		t.retryManager,
 		t.enableTraceClient,
 	)
 

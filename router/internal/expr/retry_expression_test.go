@@ -122,7 +122,8 @@ func TestRetryExpressionManager(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			manager, err := NewRetryExpressionManager(tt.expression)
+			manager := NewRetryExpressionManager()
+			err := manager.AddExpression(tt.expression)
 			if tt.expectErr {
 				assert.Error(t, err)
 				return
@@ -130,7 +131,7 @@ func TestRetryExpressionManager(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, manager)
 
-			result, err := manager.ShouldRetry(tt.ctx)
+			result, err := manager.ShouldRetry(tt.ctx, tt.expression)
 			assert.NoError(t, err)
 			assert.Equal(t, tt.expected, result)
 		})
@@ -138,9 +139,10 @@ func TestRetryExpressionManager(t *testing.T) {
 }
 
 func TestRetryExpressionManager_EmptyExpression(t *testing.T) {
-	manager, err := NewRetryExpressionManager("")
+	manager := NewRetryExpressionManager()
+	err := manager.AddExpression("")
 	assert.NoError(t, err)
-	assert.Nil(t, manager)
+	assert.NotNil(t, manager)
 }
 
 func TestLoadRetryContext(t *testing.T) {
@@ -493,56 +495,56 @@ func (e *mockTimeoutError) Temporary() bool {
 func TestRetryExpressionManager_WithSyscallErrors(t *testing.T) {
 	t.Run("expression with specific syscall error helpers", func(t *testing.T) {
 		expression := "IsConnectionRefused() || IsConnectionReset() || IsTimeout()"
-		manager, err := NewRetryExpressionManager(expression)
-		require.NoError(t, err)
+		manager := NewRetryExpressionManager()
+		require.NoError(t, manager.AddExpression(expression))
 		require.NotNil(t, manager)
 
 		// Test ECONNREFUSED
 		ctx := LoadRetryContext(syscall.ECONNREFUSED, nil)
-		result, err := manager.ShouldRetry(ctx)
+		result, err := manager.ShouldRetry(ctx, expression)
 		assert.NoError(t, err)
 		assert.True(t, result)
 
 		// Test ECONNRESET
 		ctx = LoadRetryContext(syscall.ECONNRESET, nil)
-		result, err = manager.ShouldRetry(ctx)
+		result, err = manager.ShouldRetry(ctx, expression)
 		assert.NoError(t, err)
 		assert.True(t, result)
 
 		// Test ETIMEDOUT
 		ctx = LoadRetryContext(syscall.ETIMEDOUT, nil)
-		result, err = manager.ShouldRetry(ctx)
+		result, err = manager.ShouldRetry(ctx, expression)
 		assert.NoError(t, err)
 		assert.True(t, result)
 
 		// Test unrelated error
 		ctx = LoadRetryContext(errors.New("some other error"), nil)
-		result, err = manager.ShouldRetry(ctx)
+		result, err = manager.ShouldRetry(ctx, expression)
 		assert.NoError(t, err)
 		assert.False(t, result)
 	})
 
 	t.Run("expression combining status and syscall errors", func(t *testing.T) {
 		expression := "statusCode == 500 || IsConnectionRefused()"
-		manager, err := NewRetryExpressionManager(expression)
-		require.NoError(t, err)
+		manager := NewRetryExpressionManager()
+		require.NoError(t, manager.AddExpression(expression))
 		require.NotNil(t, manager)
 
 		// Test with status code
 		ctx := LoadRetryContext(nil, &http.Response{StatusCode: 500})
-		result, err := manager.ShouldRetry(ctx)
+		result, err := manager.ShouldRetry(ctx, expression)
 		assert.NoError(t, err)
 		assert.True(t, result)
 
 		// Test with syscall error
 		ctx = LoadRetryContext(syscall.ECONNREFUSED, nil)
-		result, err = manager.ShouldRetry(ctx)
+		result, err = manager.ShouldRetry(ctx, expression)
 		assert.NoError(t, err)
 		assert.True(t, result)
 
 		// Test with neither condition
 		ctx = LoadRetryContext(nil, &http.Response{StatusCode: 200})
-		result, err = manager.ShouldRetry(ctx)
+		result, err = manager.ShouldRetry(ctx, expression)
 		assert.NoError(t, err)
 		assert.False(t, result)
 	})
