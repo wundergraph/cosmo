@@ -26,10 +26,11 @@ import (
 )
 
 var (
-	overrideEnvFlag = flag.String("override-env", os.Getenv("OVERRIDE_ENV"), "Path to .env file to override environment variables")
-	routerVersion   = flag.Bool("version", false, "Prints the version and dependency information")
-	pprofListenAddr = flag.String("pprof-addr", os.Getenv("PPROF_ADDR"), "Address to listen for pprof requests. e.g. :6060 for localhost:6060")
-	pyroscopeAddr   = flag.String("pyroscope-addr", os.Getenv("PYROSCOPE_ADDR"), "Address to use for pyroscope continuous profiling. e.g. http://localhost:4040")
+	overrideEnvFlag  = flag.String("override-env", os.Getenv("OVERRIDE_ENV"), "Path to .env file to override environment variables")
+	routerVersion    = flag.Bool("version", false, "Prints the version and dependency information")
+	pprofListenAddr  = flag.String("pprof-addr", os.Getenv("PPROF_ADDR"), "Address to listen for pprof requests. e.g. :6060 for localhost:6060")
+	pyroscopeAddr    = flag.String("pyroscope-addr", os.Getenv("PYROSCOPE_ADDR"), "Address to use for pyroscope continuous profiling. e.g. http://localhost:4040")
+	logServiceName   = flag.String("log-service-name", os.Getenv("LOG_SERVICE_NAME"), "Service name to use in logs, defaults to @wundergraph/router")
 
 	memProfilePath = flag.String("memprofile", "", "Path to write memory profile. Memory is a snapshot taken at the time the program exits")
 	cpuProfilePath = flag.String("cpuprofile", "", "Path to write cpu profile. CPU is measured from when the program starts until the program exits")
@@ -90,9 +91,14 @@ func Main() {
 
 	logLevelAtomic := zap.NewAtomicLevelAt(result.Config.LogLevel)
 
+	serviceName := *logServiceName
+	if serviceName == "" {
+		serviceName = "@wundergraph/router"
+	}
+
 	baseLogger := logging.New(!result.Config.JSONLog, result.Config.DevelopmentMode, result.Config.AccessLogs.AddStacktrace, logLevelAtomic).
 		With(
-			zap.String("service", "@wundergraph/router"),
+			zap.String("service", serviceName),
 			zap.String("service_version", core.Version),
 		)
 
