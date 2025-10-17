@@ -3,7 +3,7 @@ import { DirectiveDefinitionNode, DocumentNode, GraphQLSchema, OperationTypeNode
 import { ConfigurationData } from '../router-configuration/types';
 import {
   AuthorizationData,
-  ConditionalFieldData, DirectiveDefinitionData,
+  ConditionalFieldData,
   EntityData,
   EntityInterfaceSubgraphData,
   ParentDefinitionData,
@@ -11,7 +11,7 @@ import {
 } from '../schema-building/types';
 import { Graph } from '../resolvability-graph/graph';
 import { InternalSubgraph } from '../subgraph/types';
-import { DirectiveName } from "../types/types";
+import { DirectiveName } from '../types/types';
 
 export type NormalizationFailure = {
   errors: Array<Error>;

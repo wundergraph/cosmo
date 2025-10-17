@@ -524,7 +524,10 @@ describe('FederationFactory tests', () => {
   });
 
   test('that subgraphs are federated #2', () => {
-    const { federatedGraphSchema, subgraphConfigBySubgraphName } = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
+    const { federatedGraphSchema, subgraphConfigBySubgraphName } = federateSubgraphsSuccess(
+      [subgraphA, subgraphB],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
         versionTwoRouterDefinitions +

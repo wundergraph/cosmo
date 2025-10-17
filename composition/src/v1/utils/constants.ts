@@ -103,7 +103,7 @@ import {
   URL_LOWER,
   VALUES,
 } from '../../utils/string-constants';
-import { DirectiveName } from "../../types/types";
+import { DirectiveName } from '../../types/types';
 
 export const REQUIRED_STRING_TYPE_NODE: TypeNode = {
   kind: Kind.NON_NULL_TYPE,
