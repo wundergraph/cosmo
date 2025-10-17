@@ -21,18 +21,13 @@ var (
 	errClientClosed = errors.New("client closed")
 )
 
+// Ensure ProviderAdapter implements Adapter
+var _ datasource.Adapter = (*ProviderAdapter)(nil)
+
 const (
 	kafkaReceive = "receive"
 	kafkaProduce = "produce"
 )
-
-// Adapter defines the interface for Kafka adapter operations
-type Adapter interface {
-	Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error
-	Publish(ctx context.Context, event PublishEventConfiguration) error
-	Startup(ctx context.Context) error
-	Shutdown(ctx context.Context) error
-}
 
 // ProviderAdapter is a Kafka pubsub implementation.
 // It uses the franz-go Kafka client to consume and produce messages.
@@ -54,7 +49,7 @@ type PollerOpts struct {
 }
 
 // topicPoller polls the Kafka topic for new records and calls the updateTriggers function.
-func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, updater resolve.SubscriptionUpdater, pollerOpts PollerOpts) error {
+func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, updater datasource.SubscriptionEventUpdater, pollerOpts PollerOpts) error {
 	for {
 		select {
 		case <-p.ctx.Done(): // Close the poller if the application context was canceled
@@ -100,13 +95,24 @@ func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, u
 				r := iter.Next()
 
 				p.logger.Debug("subscription update", zap.String("topic", r.Topic), zap.ByteString("data", r.Value))
+
+				headers := make(map[string][]byte)
+				for _, header := range r.Headers {
+					headers[header.Key] = header.Value
+				}
+
 				p.streamMetricStore.Consume(p.ctx, metric.StreamsEvent{
 					ProviderId:          pollerOpts.providerId,
 					StreamOperationName: kafkaReceive,
 					ProviderType:        metric.ProviderTypeKafka,
 					DestinationName:     r.Topic,
 				})
-				updater.Update(r.Value)
+
+				updater.Update([]datasource.StreamEvent{&Event{
+					Data:    r.Value,
+					Headers: headers,
+					Key:     r.Key,
+				}})
 			}
 		}
 	}
@@ -114,23 +120,27 @@ func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, u
 
 // Subscribe subscribes to the given topics and updates the subscription updater.
 // The engine already deduplicates subscriptions with the same topics, stream configuration, extensions, headers, etc.
-func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
+func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater) error {
+	subConf, ok := conf.(*SubscriptionEventConfiguration)
+	if !ok {
+		return datasource.NewError("invalid event type for Kafka adapter", nil)
+	}
 
 	log := p.logger.With(
-		zap.String("provider_id", event.ProviderID),
+		zap.String("provider_id", conf.ProviderID()),
 		zap.String("method", "subscribe"),
-		zap.Strings("topics", event.Topics),
+		zap.Strings("topics", subConf.Topics),
 	)
 
 	// Create a new client for the topic
 	client, err := kgo.NewClient(append(p.opts,
-		kgo.ConsumeTopics(event.Topics...),
+		kgo.ConsumeTopics(subConf.Topics...),
 		// We want to consume the events produced after the first subscription was created
 		// Messages are shared among all subscriptions, therefore old events are not redelivered
 		// This replicates a stateless publish-subscribe model
 		kgo.ConsumeResetOffset(kgo.NewOffset().AfterMilli(time.Now().UnixMilli())),
 		// For observability, we set the client ID to "router"
-		kgo.ClientID(fmt.Sprintf("cosmo.router.consumer.%s", strings.Join(event.Topics, "-"))),
+		kgo.ClientID(fmt.Sprintf("cosmo.router.consumer.%s", strings.Join(subConf.Topics, "-"))),
 		// FIXME: the client id should have some unique identifier, like in nats
 		// What if we have multiple subscriptions for the same topics?
 		// What if we have more router instances?
@@ -144,15 +154,24 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 
 	go func() {
 
-		defer p.closeWg.Done()
+		defer func() {
+			client.Close()
+			updater.Close(resolve.SubscriptionCloseKindNormal)
+			p.closeWg.Done()
+		}()
 
-		err := p.topicPoller(ctx, client, updater, PollerOpts{providerId: event.ProviderID})
+		err := p.topicPoller(ctx, client, updater, PollerOpts{providerId: conf.ProviderID()})
 		if err != nil {
 			if errors.Is(err, errClientClosed) || errors.Is(err, context.Canceled) {
 				log.Debug("poller canceled", zap.Error(err))
 			} else {
-				log.Error("poller error", zap.Error(err))
-
+				log.Error(
+					"poller error",
+					zap.Error(err),
+					zap.String("provider_id", conf.ProviderID()),
+					zap.String("provider_type", string(conf.ProviderType())),
+					zap.String("field_name", conf.RootFieldName()),
+				)
 			}
 			return
 		}
@@ -161,57 +180,85 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 	return nil
 }
 
-// Publish publishes the given event to the Kafka topic in a non-blocking way.
+// Publish publishes the given events to the Kafka topic in a non-blocking way.
 // Publish errors are logged and returned as a pubsub error.
-// The event is written with a dedicated write client.
-func (p *ProviderAdapter) Publish(ctx context.Context, event PublishEventConfiguration) error {
+// The events are written with a dedicated write client.
+func (p *ProviderAdapter) Publish(ctx context.Context, conf datasource.PublishEventConfiguration, events []datasource.StreamEvent) error {
+	pubConf, ok := conf.(*PublishEventConfiguration)
+	if !ok {
+		return datasource.NewError("invalid event type for Kafka adapter", nil)
+	}
+
 	log := p.logger.With(
-		zap.String("provider_id", event.ProviderID),
+		zap.String("provider_id", conf.ProviderID()),
 		zap.String("method", "publish"),
-		zap.String("topic", event.Topic),
+		zap.String("topic", pubConf.Topic),
 	)
 
 	if p.writeClient == nil {
 		return datasource.NewError("kafka write client not initialized", nil)
 	}
 
-	log.Debug("publish", zap.ByteString("data", event.Data))
+	if len(events) == 0 {
+		return nil
+	}
+
+	log.Debug("publish", zap.Int("event_count", len(events)))
 
 	var wg sync.WaitGroup
-	wg.Add(1)
+	wg.Add(len(events))
 
 	var pErr error
+	var errMutex sync.Mutex
 
-	p.writeClient.Produce(ctx, &kgo.Record{
-		Topic: event.Topic,
-		Value: event.Data,
-	}, func(record *kgo.Record, err error) {
-		defer wg.Done()
-		if err != nil {
-			pErr = err
+	for _, streamEvent := range events {
+		kafkaEvent, ok := streamEvent.(*Event)
+		if !ok {
+			return datasource.NewError("invalid event type for Kafka adapter", nil)
 		}
-	})
+
+		headers := make([]kgo.RecordHeader, 0, len(kafkaEvent.Headers))
+		for key, value := range kafkaEvent.Headers {
+			headers = append(headers, kgo.RecordHeader{
+				Key:   key,
+				Value: value,
+			})
+		}
+
+		p.writeClient.Produce(ctx, &kgo.Record{
+			Key:     kafkaEvent.Key,
+			Topic:   pubConf.Topic,
+			Value:   kafkaEvent.Data,
+			Headers: headers,
+		}, func(record *kgo.Record, err error) {
+			defer wg.Done()
+			if err != nil {
+				errMutex.Lock()
+				pErr = err
+				errMutex.Unlock()
+			}
+		})
+	}
 
 	wg.Wait()
 
 	if pErr != nil {
 		log.Error("publish error", zap.Error(pErr))
-		// failure emission: include error.type generic
 		p.streamMetricStore.Produce(ctx, metric.StreamsEvent{
-			ProviderId:          event.ProviderID,
+			ProviderId:          pubConf.ProviderID(),
 			StreamOperationName: kafkaProduce,
 			ProviderType:        metric.ProviderTypeKafka,
 			ErrorType:           "publish_error",
-			DestinationName:     event.Topic,
+			DestinationName:     pubConf.Topic,
 		})
-		return datasource.NewError(fmt.Sprintf("error publishing to Kafka topic %s", event.Topic), pErr)
+		return datasource.NewError(fmt.Sprintf("error publishing to Kafka topic %s", pubConf.Topic), pErr)
 	}
 
 	p.streamMetricStore.Produce(ctx, metric.StreamsEvent{
-		ProviderId:          event.ProviderID,
+		ProviderId:          pubConf.ProviderID(),
 		StreamOperationName: kafkaProduce,
 		ProviderType:        metric.ProviderTypeKafka,
-		DestinationName:     event.Topic,
+		DestinationName:     pubConf.Topic,
 	})
 	return nil
 }

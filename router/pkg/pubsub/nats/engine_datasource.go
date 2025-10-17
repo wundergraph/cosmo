@@ -6,12 +6,34 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"slices"
 
 	"github.com/buger/jsonparser"
 	"github.com/cespare/xxhash/v2"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
+
+// Event represents an event from NATS
+type Event struct {
+	Data    json.RawMessage     `json:"data"`
+	Headers map[string][]string `json:"headers"`
+}
+
+func (e *Event) GetData() []byte {
+	return e.Data
+}
+
+func (e *Event) Clone() datasource.StreamEvent {
+	e2 := *e
+	e2.Data = slices.Clone(e.Data)
+	e2.Headers = make(map[string][]string, len(e.Headers))
+	for k, v := range e.Headers {
+		e2.Headers[k] = slices.Clone(v)
+	}
+	return &e2
+}
 
 type StreamConfiguration struct {
 	Consumer                  string `json:"consumer"`
@@ -20,25 +42,81 @@ type StreamConfiguration struct {
 }
 
 type SubscriptionEventConfiguration struct {
-	ProviderID          string               `json:"providerId"`
+	Provider            string               `json:"providerId"`
 	Subjects            []string             `json:"subjects"`
 	StreamConfiguration *StreamConfiguration `json:"streamConfiguration,omitempty"`
+	FieldName           string               `json:"rootFieldName"`
+}
+
+// ProviderID returns the provider ID
+func (s *SubscriptionEventConfiguration) ProviderID() string {
+	return s.Provider
+}
+
+// ProviderType returns the provider type
+func (s *SubscriptionEventConfiguration) ProviderType() datasource.ProviderType {
+	return datasource.ProviderTypeNats
+}
+
+// RootFieldName returns the root field name
+func (s *SubscriptionEventConfiguration) RootFieldName() string {
+	return s.FieldName
+}
+
+// publishData is a private type that is used to pass data from the engine to the provider
+type publishData struct {
+	Provider  string `json:"providerId"`
+	Subject   string `json:"subject"`
+	Event     Event  `json:"event"`
+	FieldName string `json:"rootFieldName"`
+}
+
+func (p *publishData) PublishEventConfiguration() datasource.PublishEventConfiguration {
+	return &PublishAndRequestEventConfiguration{
+		Provider:  p.Provider,
+		Subject:   p.Subject,
+		FieldName: p.FieldName,
+	}
+}
+
+func (p *publishData) MarshalJSONTemplate() (string, error) {
+	// The content of the data field could be not valid JSON, so we can't use json.Marshal
+	// e.g. {"id":$$0$$,"update":$$1$$}
+	return fmt.Sprintf(`{"subject":"%s", "event": {"data": %s}, "providerId":"%s", "rootFieldName":"%s"}`, p.Subject, p.Event.Data, p.Provider, p.FieldName), nil
 }
 
 type PublishAndRequestEventConfiguration struct {
-	ProviderID string          `json:"providerId"`
-	Subject    string          `json:"subject"`
-	Data       json.RawMessage `json:"data"`
+	Provider  string `json:"providerId"`
+	Subject   string `json:"subject"`
+	FieldName string `json:"rootFieldName"`
 }
 
-func (s *PublishAndRequestEventConfiguration) MarshalJSONTemplate() string {
-	// The content of the data field could be not valid JSON, so we can't use json.Marshal
-	// e.g. {"id":$$0$$,"update":$$1$$}
-	return fmt.Sprintf(`{"subject":"%s", "data": %s, "providerId":"%s"}`, s.Subject, s.Data, s.ProviderID)
+// ProviderID returns the provider ID
+func (p *PublishAndRequestEventConfiguration) ProviderID() string {
+	return p.Provider
+}
+
+// ProviderType returns the provider type
+func (p *PublishAndRequestEventConfiguration) ProviderType() datasource.ProviderType {
+	return datasource.ProviderTypeNats
+}
+
+// RootFieldName returns the root field name
+func (p *PublishAndRequestEventConfiguration) RootFieldName() string {
+	return p.FieldName
 }
 
 type SubscriptionSource struct {
-	pubSub Adapter
+	pubSub datasource.Adapter
+}
+
+func (s *SubscriptionSource) SubscriptionEventConfiguration(input []byte) datasource.SubscriptionEventConfiguration {
+	var subscriptionConfiguration SubscriptionEventConfiguration
+	err := json.Unmarshal(input, &subscriptionConfiguration)
+	if err != nil {
+		return nil
+	}
+	return &subscriptionConfiguration
 }
 
 func (s *SubscriptionSource) UniqueRequestID(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
@@ -62,32 +140,36 @@ func (s *SubscriptionSource) UniqueRequestID(ctx *resolve.Context, input []byte,
 	return err
 }
 
-func (s *SubscriptionSource) Start(ctx *resolve.Context, input []byte, updater resolve.SubscriptionUpdater) error {
-	var subscriptionConfiguration SubscriptionEventConfiguration
-	err := json.Unmarshal(input, &subscriptionConfiguration)
-	if err != nil {
-		return err
+func (s *SubscriptionSource) Start(ctx *resolve.Context, input []byte, updater datasource.SubscriptionEventUpdater) error {
+	subConf := s.SubscriptionEventConfiguration(input)
+	if subConf == nil {
+		return fmt.Errorf("no subscription configuration found")
 	}
 
-	return s.pubSub.Subscribe(ctx.Context(), subscriptionConfiguration, updater)
+	conf, ok := subConf.(*SubscriptionEventConfiguration)
+	if !ok {
+		return fmt.Errorf("invalid subscription configuration")
+	}
+
+	return s.pubSub.Subscribe(ctx.Context(), conf, updater)
 }
 
 type NatsPublishDataSource struct {
-	pubSub Adapter
+	pubSub datasource.Adapter
 }
 
 func (s *NatsPublishDataSource) Load(ctx context.Context, input []byte, out *bytes.Buffer) error {
-	var publishConfiguration PublishAndRequestEventConfiguration
-	err := json.Unmarshal(input, &publishConfiguration)
-	if err != nil {
+	var publishData publishData
+	if err := json.Unmarshal(input, &publishData); err != nil {
 		return err
 	}
 
-	if err := s.pubSub.Publish(ctx, publishConfiguration); err != nil {
-		_, err = io.WriteString(out, `{"success": false}`)
-		return err
+	if err := s.pubSub.Publish(ctx, publishData.PublishEventConfiguration(), []datasource.StreamEvent{&publishData.Event}); err != nil {
+		// err will not be returned but only logged inside PubSubProvider.Publish to avoid a "unable to fetch from subgraph" error
+		_, errWrite := io.WriteString(out, `{"success": false}`)
+		return errWrite
 	}
-	_, err = io.WriteString(out, `{"success": true}`)
+	_, err := io.WriteString(out, `{"success": true}`)
 	return err
 }
 
@@ -96,19 +178,33 @@ func (s *NatsPublishDataSource) LoadWithFiles(ctx context.Context, input []byte,
 }
 
 type NatsRequestDataSource struct {
-	pubSub Adapter
+	pubSub datasource.Adapter
 }
 
 func (s *NatsRequestDataSource) Load(ctx context.Context, input []byte, out *bytes.Buffer) error {
-	var subscriptionConfiguration PublishAndRequestEventConfiguration
-	err := json.Unmarshal(input, &subscriptionConfiguration)
-	if err != nil {
+	var publishData publishData
+	if err := json.Unmarshal(input, &publishData); err != nil {
 		return err
 	}
 
-	return s.pubSub.Request(ctx, subscriptionConfiguration, out)
+	providerBase, ok := s.pubSub.(*datasource.PubSubProvider)
+	if !ok {
+		return fmt.Errorf("adapter for provider %s is not of the right type", publishData.Provider)
+	}
+
+	adapter, ok := providerBase.Adapter.(Adapter)
+	if !ok {
+		return fmt.Errorf("adapter for provider %s is not of the right type", publishData.Provider)
+	}
+
+	return adapter.Request(ctx, publishData.PublishEventConfiguration(), &publishData.Event, out)
 }
 
 func (s *NatsRequestDataSource) LoadWithFiles(ctx context.Context, input []byte, files []*httpclient.FileUpload, out *bytes.Buffer) error {
 	panic("not implemented")
 }
+
+// Interface compliance checks
+var _ datasource.SubscriptionEventConfiguration = (*SubscriptionEventConfiguration)(nil)
+var _ datasource.PublishEventConfiguration = (*PublishAndRequestEventConfiguration)(nil)
+var _ datasource.StreamEvent = (*Event)(nil)
