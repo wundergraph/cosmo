@@ -642,17 +642,17 @@ describe('Enum tests', () => {
       expect(enumDef.subgraphNames).toContain(subgraphA.name);
       expect(enumDef.subgraphNames).toContain(subgraphC.name);
 
-      const fightEnumVal = enumDef.enumValueDataByValueName.get('FIGHT');
+      const fightEnumVal = enumDef.enumValueDataByName.get('FIGHT');
       expect(fightEnumVal?.subgraphNames.size).toBe(2);
       expect(fightEnumVal?.subgraphNames).toContain(subgraphA.name);
       expect(fightEnumVal?.subgraphNames).toContain(subgraphC.name);
 
-      const pokemonEnumVal = enumDef.enumValueDataByValueName.get('POKEMON');
+      const pokemonEnumVal = enumDef.enumValueDataByName.get('POKEMON');
       expect(pokemonEnumVal?.subgraphNames.size).toBe(2);
       expect(pokemonEnumVal?.subgraphNames).toContain(subgraphA.name);
       expect(pokemonEnumVal?.subgraphNames).toContain(subgraphC.name);
 
-      const itemEnumVal = enumDef.enumValueDataByValueName.get('ITEM');
+      const itemEnumVal = enumDef.enumValueDataByName.get('ITEM');
       expect(itemEnumVal?.subgraphNames.size).toBe(1);
       expect(itemEnumVal?.subgraphNames).toContain(subgraphC.name);
     });

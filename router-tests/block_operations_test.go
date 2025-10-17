@@ -123,6 +123,29 @@ func TestBlockOperations(t *testing.T) {
 			})
 		})
 
+		t.Run("should block operations by parsing time expression", func(t *testing.T) {
+			t.Parallel()
+
+			// This will verify that parsing time is used to block the operation
+			expression := "request.operation.parsingTime.Nanoseconds() > 0"
+
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.BlockMutations = config.BlockOperationConfiguration{
+						Enabled:   true,
+						Condition: expression,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `mutation { updateEmployeeTag(id: 1, tag: "test") { id tag } }`,
+				})
+				require.Equal(t, http.StatusOK, res.Response.StatusCode)
+				require.JSONEq(t, `{"errors":[{"message":"operation type 'mutation' is blocked"}]}`, res.Body)
+			})
+		})
+
 		t.Run("should block operation by scope expression condition", func(t *testing.T) {
 			t.Parallel()
 

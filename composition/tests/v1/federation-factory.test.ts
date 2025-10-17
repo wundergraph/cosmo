@@ -1,14 +1,18 @@
 import {
-  incompatibleParentKindMergeError,
+  incompatibleParentTypeMergeError,
   INPUT_OBJECT,
+  InputObjectDefinitionData,
   invalidSubgraphNamesError,
   noBaseDefinitionForExtensionError,
   noQueryRootTypeError,
   OBJECT,
+  ObjectDefinitionData,
   parse,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   SCALAR,
+  ScalarDefinitionData,
   Subgraph,
+  SubgraphName,
 } from '../../src';
 import { describe, expect, test } from 'vitest';
 import {
@@ -28,6 +32,7 @@ import {
   normalizeString,
   schemaToSortedNormalizedString,
 } from '../utils/utils';
+import { Kind } from 'graphql';
 
 // @ts-ignore
 const __filename = fileURLToPath(import.meta.url);
@@ -880,26 +885,70 @@ describe('FederationFactory tests', () => {
   test('that an error is returned when merging incompatible types #1.1', () => {
     const result = federateSubgraphsFailure([subgraphR, subgraphS], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(incompatibleParentKindMergeError(OBJECT, SCALAR, OBJECT));
+    const existingData = {
+      kind: Kind.SCALAR_TYPE_DEFINITION,
+      name: OBJECT,
+      subgraphNames: new Set<SubgraphName>([subgraphR.name]),
+    } as ScalarDefinitionData;
+    expect(result.errors).toStrictEqual([
+      incompatibleParentTypeMergeError({
+        existingData,
+        incomingNodeType: OBJECT,
+        incomingSubgraphName: subgraphS.name,
+      }),
+    ]);
   });
 
   test('that an error is returned when merging incompatible types #1.2', () => {
     const result = federateSubgraphsFailure([subgraphS, subgraphR], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(incompatibleParentKindMergeError(OBJECT, OBJECT, SCALAR));
+    const existingData = {
+      kind: Kind.OBJECT_TYPE_DEFINITION,
+      name: OBJECT,
+      subgraphNames: new Set<SubgraphName>([subgraphS.name]),
+    } as ObjectDefinitionData;
+    expect(result.errors).toStrictEqual([
+      incompatibleParentTypeMergeError({
+        existingData,
+        incomingNodeType: SCALAR,
+        incomingSubgraphName: subgraphR.name,
+      }),
+    ]);
   });
 
   test('that an error is returned when merging an object extension orphan with an incompatible base type #1.1', () => {
     const result = federateSubgraphsFailure([subgraphT, subgraphU], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.errors).toHaveLength(2);
-    expect(result.errors[0]).toStrictEqual(incompatibleParentKindMergeError(OBJECT, OBJECT, INPUT_OBJECT));
-    expect(result.errors[1]).toStrictEqual(noBaseDefinitionForExtensionError(OBJECT, OBJECT));
+    const existingData = {
+      kind: Kind.OBJECT_TYPE_DEFINITION,
+      name: OBJECT,
+      subgraphNames: new Set<SubgraphName>([subgraphT.name]),
+    } as ObjectDefinitionData;
+    expect(result.errors).toStrictEqual([
+      incompatibleParentTypeMergeError({
+        existingData,
+        incomingNodeType: INPUT_OBJECT,
+        incomingSubgraphName: subgraphU.name,
+      }),
+      noBaseDefinitionForExtensionError(OBJECT, OBJECT),
+    ]);
   });
 
   test('that an error is returned when merging an object extension orphan with an incompatible base type #1.2', () => {
     const result = federateSubgraphsFailure([subgraphU, subgraphT], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(incompatibleParentKindMergeError(OBJECT, INPUT_OBJECT, OBJECT));
+    const existingData = {
+      kind: Kind.INPUT_OBJECT_TYPE_DEFINITION,
+      name: OBJECT,
+      subgraphNames: new Set<SubgraphName>([subgraphU.name]),
+    } as InputObjectDefinitionData;
+    expect(result.errors).toStrictEqual([
+      incompatibleParentTypeMergeError({
+        existingData,
+        incomingNodeType: OBJECT,
+        incomingSubgraphName: subgraphT.name,
+      }),
+    ]);
   });
 
   test('that renaming a root type also renames field return types of the same type #1.1', () => {

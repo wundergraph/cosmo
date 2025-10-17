@@ -22,7 +22,7 @@ import { SchemaLintRepository } from '../../repositories/SchemaLintRepository.js
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { SchemaUsageTrafficInspector } from '../../services/SchemaUsageTrafficInspector.js';
-import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { enrichLogger, getLogger, handleError, toProposalOriginEnum } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
 export function createProposal(
@@ -349,6 +349,7 @@ export function createProposal(
       name: proposalName,
       userId: authContext.userId,
       proposalSubgraphs,
+      origin: toProposalOriginEnum(req.origin),
     });
 
     await auditLogRepo.addAuditLog({
@@ -398,6 +399,7 @@ export function createProposal(
       operationUsageStats,
       isLinkedTrafficCheckFailed,
       isLinkedPruningCheckFailed,
+      hasLinkedSchemaChecks,
     } = await schemaCheckRepo.checkMultipleSchemas({
       organizationId: authContext.organizationId,
       organizationSlug: authContext.organizationSlug,
@@ -452,6 +454,7 @@ export function createProposal(
       proposalName: proposal.name,
       isLinkedTrafficCheckFailed,
       isLinkedPruningCheckFailed,
+      hasLinkedSchemaChecks,
     };
   });
 }
