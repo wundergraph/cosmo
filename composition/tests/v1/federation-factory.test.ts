@@ -1,4 +1,5 @@
 import {
+  BASE_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME,
   incompatibleParentTypeMergeError,
   INPUT_OBJECT,
   InputObjectDefinitionData,
@@ -13,6 +14,7 @@ import {
   ScalarDefinitionData,
   Subgraph,
   SubgraphName,
+  V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME,
 } from '../../src';
 import { describe, expect, test } from 'vitest';
 import {
@@ -522,8 +524,8 @@ describe('FederationFactory tests', () => {
   });
 
   test('that subgraphs are federated #2', () => {
-    const result = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphSchema, subgraphConfigBySubgraphName } = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
         versionTwoRouterDefinitions +
           `
@@ -554,6 +556,27 @@ describe('FederationFactory tests', () => {
       `,
       ),
     );
+
+    const subgraphAConfig = subgraphConfigBySubgraphName.get(subgraphA.name);
+    expect(subgraphAConfig).toBeDefined();
+
+    const subgraphBConfig = subgraphConfigBySubgraphName.get(subgraphB.name);
+    expect(subgraphBConfig).toBeDefined();
+
+    expect(subgraphAConfig!.directiveDefinitionByDirectiveName).toHaveLength(22);
+    expect(subgraphBConfig!.directiveDefinitionByDirectiveName).toHaveLength(23);
+
+    for (const directiveName of BASE_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME.keys()) {
+      expect(subgraphAConfig!.directiveDefinitionByDirectiveName.has(directiveName));
+      expect(subgraphBConfig!.directiveDefinitionByDirectiveName.has(directiveName));
+    }
+
+    for (const directiveName of V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME.keys()) {
+      expect(subgraphAConfig!.directiveDefinitionByDirectiveName.has(directiveName));
+      expect(subgraphBConfig!.directiveDefinitionByDirectiveName.has(directiveName));
+    }
+
+    expect(subgraphBConfig!.directiveDefinitionByDirectiveName.has('a'));
   });
 
   test('that extension orphans return an error', () => {
@@ -1120,6 +1143,8 @@ const subgraphB: Subgraph = {
   name: 'subgraph-b',
   url: '',
   definitions: parse(`
+    directive @a on FIELD_DEFINITION | OBJECT
+    
     type Query {
       trainer: [Trainer!]!
       pokemon: [Pokemon!]! @shareable

@@ -103,6 +103,7 @@ import {
   URL_LOWER,
   VALUES,
 } from '../../utils/string-constants';
+import { DirectiveName } from "../../types/types";
 
 export const REQUIRED_STRING_TYPE_NODE: TypeNode = {
   kind: Kind.NON_NULL_TYPE,
@@ -477,7 +478,7 @@ export const EDFS_REDIS_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-export const BASE_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME = new Map<string, DirectiveDefinitionNode>([
+export const BASE_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME = new Map<DirectiveName, DirectiveDefinitionNode>([
   [DEPRECATED, DEPRECATED_DEFINITION],
   [EXTENDS, EXTENDS_DEFINITION],
   [EXTERNAL, EXTERNAL_DEFINITION],
@@ -495,7 +496,7 @@ export const BASE_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME = new Map<string, Direc
   [TAG, TAG_DEFINITION],
 ]);
 
-export const ALL_IN_BUILT_DIRECTIVE_NAMES = new Set<string>([
+export const ALL_IN_BUILT_DIRECTIVE_NAMES = new Set<DirectiveName>([
   AUTHENTICATED,
   COMPOSE_DIRECTIVE,
   CONFIGURE_DESCRIPTION,
@@ -860,7 +861,7 @@ export const SUBSCRIPTION_FIELD_CONDITION_DEFINITION: InputObjectTypeDefinitionN
   name: stringToNameNode(SUBSCRIPTION_FIELD_CONDITION),
 };
 
-export const V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME = new Map<string, DirectiveDefinitionNode>([
+export const V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME = new Map<DirectiveName, DirectiveDefinitionNode>([
   [AUTHENTICATED, AUTHENTICATED_DEFINITION],
   [COMPOSE_DIRECTIVE, COMPOSE_DIRECTIVE_DEFINITION],
   [INACCESSIBLE, INACCESSIBLE_DEFINITION],
