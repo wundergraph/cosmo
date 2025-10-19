@@ -39,14 +39,22 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 		semaphore <- struct{}{}
 	}
 
-	wg := sync.WaitGroup{}
+	var (
+		wg    = sync.WaitGroup{}
+		errCh = make(chan error, len(s.eventUpdater.Subscriptions()))
+	)
+
 	for ctx, subId := range s.eventUpdater.Subscriptions() {
 		<-semaphore // wait for a slot to be available
 		eventsCopy := copyEvents(events)
 		wg.Add(1)
-		go s.updateSubscription(ctx, &wg, semaphore, subId, eventsCopy)
+		go s.updateSubscription(ctx, &wg, errCh, semaphore, subId, eventsCopy)
 	}
+
+	go s.deduplicateAndLogErrors(errCh, len(s.eventUpdater.Subscriptions()))
+
 	wg.Wait()
+	close(errCh)
 }
 
 func (s *subscriptionEventUpdater) Complete() {
@@ -93,7 +101,7 @@ func copyEvents(in []StreamEvent) []StreamEvent {
 	return out
 }
 
-func (s *subscriptionEventUpdater) updateSubscription(ctx context.Context, wg *sync.WaitGroup, semaphore chan struct{}, subID resolve.SubscriptionIdentifier, events []StreamEvent) {
+func (s *subscriptionEventUpdater) updateSubscription(ctx context.Context, wg *sync.WaitGroup, errCh chan error, semaphore chan struct{}, subID resolve.SubscriptionIdentifier, events []StreamEvent) {
 	defer wg.Done()
 	defer func() {
 		semaphore <- struct{}{} // release the slot when done
@@ -106,7 +114,8 @@ func (s *subscriptionEventUpdater) updateSubscription(ctx context.Context, wg *s
 	for i := range hooks {
 		events, err = hooks[i](ctx, s.subscriptionEventConfiguration, events)
 		if err != nil {
-			break
+			errCh <- err
+			s.eventUpdater.CloseSubscription(resolve.SubscriptionCloseKindNormal, subID)
 		}
 	}
 
@@ -116,19 +125,31 @@ func (s *subscriptionEventUpdater) updateSubscription(ctx context.Context, wg *s
 	for _, event := range events {
 		s.eventUpdater.UpdateSubscription(subID, event.GetData())
 	}
+}
 
-	if err != nil {
-		if s.logger != nil {
-			s.logger.Error(
-				"An error occurred while processing stream events hooks",
-				zap.Error(err),
-				zap.String("provider_type", string(s.subscriptionEventConfiguration.ProviderType())),
-				zap.String("provider_id", s.subscriptionEventConfiguration.ProviderID()),
-				zap.String("field_name", s.subscriptionEventConfiguration.RootFieldName()),
-			)
-
-			s.eventUpdater.CloseSubscription(resolve.SubscriptionCloseKindNormal, subID)
+// deduplicateAndLogErrors collects errors from errCh
+// and deduplicates them based on their err.Error() value.
+// Afterwards it uses s.logger to log the message.
+func (s *subscriptionEventUpdater) deduplicateAndLogErrors(errCh chan error, size int) {
+	errs := make(map[string]int, size)
+	for err := range errCh {
+		amount, found := errs[err.Error()]
+		if found {
+			errs[err.Error()] = amount + 1
+			continue
 		}
+		errs[err.Error()] = 1
+	}
+
+	for err, amount := range errs {
+		s.logger.Warn(
+			"some handlers have thrown an error",
+			zap.String("error", err),
+			zap.Int("amount_handlers", amount),
+			zap.String("provider_type", string(s.subscriptionEventConfiguration.ProviderType())),
+			zap.String("provider_id", s.subscriptionEventConfiguration.ProviderID()),
+			zap.String("field_name", s.subscriptionEventConfiguration.RootFieldName()),
+		)
 	}
 }
 
