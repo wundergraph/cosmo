@@ -3,7 +3,7 @@ module github.com/wundergraph/cosmo/router-tests
 go 1.25
 
 require (
-	github.com/MicahParks/jwkset v0.9.0
+	github.com/MicahParks/jwkset v0.11.0
 	github.com/buger/jsonparser v1.1.1
 	github.com/cloudflare/backoff v0.0.0-20240920015135-e46b80a3a7d0
 	github.com/golang-jwt/jwt/v5 v5.2.2
@@ -45,7 +45,7 @@ require (
 	connectrpc.com/connect v1.16.2 // indirect
 	github.com/99designs/gqlgen v0.17.76 // indirect
 	github.com/KimMachineGun/automemlimit v0.6.1 // indirect
-	github.com/MicahParks/keyfunc/v3 v3.3.5 // indirect
+	github.com/MicahParks/keyfunc/v3 v3.6.2 // indirect
 	github.com/agnivade/levenshtein v1.2.1 // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
@@ -134,7 +134,7 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.1 // indirect
 	github.com/sergi/go-diff v1.3.1 // indirect
 	github.com/shirou/gopsutil/v3 v3.24.3 // indirect
-	github.com/shoenig/go-m1cpu v0.1.6 // indirect
+	github.com/shoenig/go-m1cpu v0.1.7 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/sosodev/duration v1.3.1 // indirect
 	github.com/spf13/cast v1.7.1 // indirect

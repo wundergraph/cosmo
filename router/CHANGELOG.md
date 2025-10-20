@@ -4,6 +4,74 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.258.7](https://github.com/wundergraph/cosmo/compare/router@0.258.6...router@0.258.7) (2025-10-17)
+
+### Bug Fixes
+
+* add the startup config value to oci plugin startup ([#2285](https://github.com/wundergraph/cosmo/issues/2285)) ([dddbf62](https://github.com/wundergraph/cosmo/commit/dddbf62d4f23be694f8904e34ceb35d0db033cc4)) (@SkArchon)
+
+## [0.258.6](https://github.com/wundergraph/cosmo/compare/router@0.258.5...router@0.258.6) (2025-10-16)
+
+**Note:** Version bump only for package router
+
+## [0.258.5](https://github.com/wundergraph/cosmo/compare/router@0.258.4...router@0.258.5) (2025-10-16)
+
+**Note:** Version bump only for package router
+
+## [0.258.4](https://github.com/wundergraph/cosmo/compare/router@0.258.3...router@0.258.4) (2025-10-16)
+
+### Bug Fixes
+
+* handle jitter correctly ([#2278](https://github.com/wundergraph/cosmo/issues/2278)) ([a205890](https://github.com/wundergraph/cosmo/commit/a205890a07faa42d59fa37df138b7647845adb76)) (@StarpTech)
+
+## [0.258.3](https://github.com/wundergraph/cosmo/compare/router@0.258.2...router@0.258.3) (2025-10-13)
+
+### Bug Fixes
+
+* improve access logs ([#2266](https://github.com/wundergraph/cosmo/issues/2266)) ([3ef065d](https://github.com/wundergraph/cosmo/commit/3ef065d17d6741b00b28da3b854220d9bff46063)) (@SkArchon)
+
+## [0.258.2](https://github.com/wundergraph/cosmo/compare/router@0.258.1...router@0.258.2) (2025-10-10)
+
+### Bug Fixes
+
+* support requireFetchReasons on interface fields ([#2272](https://github.com/wundergraph/cosmo/issues/2272)) ([97bd5cd](https://github.com/wundergraph/cosmo/commit/97bd5cd15c55edba92ec3a2304126a9cb394d765)) (@ysmolski)
+
+## [0.258.1](https://github.com/wundergraph/cosmo/compare/router@0.258.0...router@0.258.1) (2025-10-08)
+
+### Bug Fixes
+
+* closing a graph server should force all subscriptions to close ([#2188](https://github.com/wundergraph/cosmo/issues/2188)) ([88dbf80](https://github.com/wundergraph/cosmo/commit/88dbf8048cadf560eaa325a14d5dafd9e6975166)) (@alepane21)
+
+# [0.258.0](https://github.com/wundergraph/cosmo/compare/router@0.257.0...router@0.258.0) (2025-10-07)
+
+### Features
+
+* add SubgraphFieldsFetches to QueryPlanStats for detailed field tracking ([#2220](https://github.com/wundergraph/cosmo/issues/2220)) ([8a3f2a9](https://github.com/wundergraph/cosmo/commit/8a3f2a95432f67ded3259719f694ceaed6e65b68)) (@alepane21)
+
+# [0.257.0](https://github.com/wundergraph/cosmo/compare/router@0.256.1...router@0.257.0) (2025-10-07)
+
+### Features
+
+* ability to add operation info as trace or telemetry attributes ([#2252](https://github.com/wundergraph/cosmo/issues/2252)) ([97ab155](https://github.com/wundergraph/cosmo/commit/97ab155e4c16c7b011b8a9088a198a79e79bead9)) (@SkArchon)
+
+## [0.256.1](https://github.com/wundergraph/cosmo/compare/router@0.256.0...router@0.256.1) (2025-10-04)
+
+### Bug Fixes
+
+* full-cosmo-docker ([#2261](https://github.com/wundergraph/cosmo/issues/2261)) ([0406cc9](https://github.com/wundergraph/cosmo/commit/0406cc9e1d60f86c63e0095f913a0b3c76b2a49d)) (@miklosbarabas)
+
+# [0.256.0](https://github.com/wundergraph/cosmo/compare/router@0.255.0...router@0.256.0) (2025-10-03)
+
+### Features
+
+* retrieve operation body from gqlmetrics instead of traces ([#2235](https://github.com/wundergraph/cosmo/issues/2235)) ([52cecf4](https://github.com/wundergraph/cosmo/commit/52cecf4cea2ef1ea33ecd79a1859f4bc2fd55991)) (@endigma)
+
+# [0.255.0](https://github.com/wundergraph/cosmo/compare/router@0.254.1...router@0.255.0) (2025-10-01)
+
+### Features
+
+* allow use of empty alg fields in jwks ([#2224](https://github.com/wundergraph/cosmo/issues/2224)) ([6e83450](https://github.com/wundergraph/cosmo/commit/6e83450aecff95761fbb97ce1aa9fedad0742203)) (@SkArchon)
+
 ## [0.254.1](https://github.com/wundergraph/cosmo/compare/router@0.254.0...router@0.254.1) (2025-09-26)
 
 ### Bug Fixes

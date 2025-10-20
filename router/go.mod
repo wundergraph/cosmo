@@ -58,8 +58,8 @@ require (
 
 require (
 	github.com/KimMachineGun/automemlimit v0.6.1
-	github.com/MicahParks/jwkset v0.9.0
-	github.com/MicahParks/keyfunc/v3 v3.3.5
+	github.com/MicahParks/jwkset v0.11.0
+	github.com/MicahParks/keyfunc/v3 v3.6.2
 	github.com/alicebob/miniredis/v2 v2.34.0
 	github.com/caarlos0/env/v11 v11.3.1
 	github.com/cep21/circuit/v4 v4.0.0
@@ -147,7 +147,7 @@ require (
 	github.com/r3labs/sse/v2 v2.8.1 // indirect
 	github.com/rs/xid v1.5.0 // indirect
 	github.com/sergi/go-diff v1.3.1 // indirect
-	github.com/shoenig/go-m1cpu v0.1.6 // indirect
+	github.com/shoenig/go-m1cpu v0.1.7 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spf13/cast v1.7.1 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect

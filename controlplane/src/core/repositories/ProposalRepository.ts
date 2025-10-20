@@ -1,7 +1,7 @@
 import { and, count, desc, eq, gt, lt } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
-import { ProposalState } from '../../db/models.js';
+import { ProposalState, ProposalOrigin } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import { GetChecksResponse, Label, LintSeverityLevel, ProposalDTO, ProposalSubgraphDTO } from '../../types/index.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
@@ -19,6 +19,7 @@ export class ProposalRepository {
     name,
     userId,
     proposalSubgraphs,
+    origin,
   }: {
     federatedGraphId: string;
     name: string;
@@ -32,6 +33,7 @@ export class ProposalRepository {
       currentSchemaVersionId?: string;
       labels: Label[];
     }[];
+    origin: ProposalOrigin;
   }): Promise<ProposalDTO> {
     const proposal = await this.db
       .insert(schema.proposals)
@@ -40,6 +42,7 @@ export class ProposalRepository {
         name,
         createdById: userId,
         state: 'DRAFT',
+        origin,
       })
       .returning();
 
@@ -63,6 +66,7 @@ export class ProposalRepository {
       createdById: proposal[0].createdById || '',
       state: proposal[0].state,
       federatedGraphId: proposal[0].federatedGraphId,
+      origin: proposal[0].origin,
     };
   }
 
@@ -78,6 +82,7 @@ export class ProposalRepository {
         createdByEmail: schema.users.email,
         state: schema.proposals.state,
         federatedGraphId: schema.proposals.federatedGraphId,
+        origin: schema.proposals.origin,
       })
       .from(schema.proposals)
       .leftJoin(schema.users, eq(schema.proposals.createdById, schema.users.id))
@@ -109,6 +114,7 @@ export class ProposalRepository {
         createdByEmail: proposal[0].createdByEmail || '',
         state: proposal[0].state,
         federatedGraphId: proposal[0].federatedGraphId,
+        origin: proposal[0].origin,
       },
       proposalSubgraphs: proposalSubgraphs.map((subgraph) => ({
         id: subgraph.id,
@@ -139,6 +145,7 @@ export class ProposalRepository {
         createdByEmail: schema.users.email,
         state: schema.proposals.state,
         federatedGraphId: schema.proposals.federatedGraphId,
+        origin: schema.proposals.origin,
       })
       .from(schema.proposals)
       .leftJoin(schema.users, eq(schema.proposals.createdById, schema.users.id))
@@ -171,6 +178,7 @@ export class ProposalRepository {
         createdByEmail: proposal[0].createdByEmail || '',
         state: proposal[0].state,
         federatedGraphId: proposal[0].federatedGraphId,
+        origin: proposal[0].origin,
       },
       proposalSubgraphs: proposalSubgraphs.map((subgraph) => ({
         id: subgraph.id,
@@ -218,6 +226,7 @@ export class ProposalRepository {
         createdByEmail: schema.users.email,
         state: schema.proposals.state,
         federatedGraphId: schema.proposals.federatedGraphId,
+        origin: schema.proposals.origin,
       })
       .from(schema.proposals)
       .leftJoin(schema.users, eq(schema.proposals.createdById, schema.users.id))
@@ -263,6 +272,7 @@ export class ProposalRepository {
           createdByEmail: proposal.createdByEmail || '',
           state: proposal.state,
           federatedGraphId: proposal.federatedGraphId,
+          origin: proposal.origin,
         },
         proposalSubgraphs: proposalSubgraphs.map((subgraph) => ({
           id: subgraph.id,
