@@ -2122,6 +2122,12 @@ func WithDemoMode(demoMode bool) Option {
 	}
 }
 
+func WithSubscriptionHooks(cfg config.SubscriptionHooksConfiguration) Option {
+	return func(r *Router) {
+		r.subscriptionHooks.maxConcurrentOnReceiveHooks = cfg.MaxConcurrentEventReceiveHandlers
+	}
+}
+
 type ProxyFunc func(req *http.Request) (*url.URL, error)
 
 func newHTTPTransport(opts *TransportRequestOptions, proxy ProxyFunc, traceDialer *TraceDialer, subgraph string) *http.Transport {

@@ -28,6 +28,11 @@ func TestPublishHook(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
+			Events: config.EventsConfiguration{
+				SubscriptionHooks: config.SubscriptionHooksConfiguration{
+					MaxConcurrentEventReceiveHandlers: defaultMaxConcurrentEventReceiveHandlers,
+				},
+			},
 			Modules: map[string]interface{}{
 				"publishModule": stream_publish.PublishModule{},
 			},
@@ -39,6 +44,7 @@ func TestPublishHook(t *testing.T) {
 			RouterOptions: []core.Option{
 				core.WithModulesConfig(cfg.Modules),
 				core.WithCustomModules(&stream_publish.PublishModule{}),
+				core.WithSubscriptionHooks(cfg.Events.SubscriptionHooks),
 			},
 			LogObservation: testenv.LogObservationConfig{
 				Enabled:  true,
@@ -60,6 +66,11 @@ func TestPublishHook(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
+			Events: config.EventsConfiguration{
+				SubscriptionHooks: config.SubscriptionHooksConfiguration{
+					MaxConcurrentEventReceiveHandlers: defaultMaxConcurrentEventReceiveHandlers,
+				},
+			},
 			Modules: map[string]interface{}{
 				"publishModule": stream_publish.PublishModule{
 					Callback: func(ctx core.StreamPublishEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
@@ -83,6 +94,7 @@ func TestPublishHook(t *testing.T) {
 			RouterOptions: []core.Option{
 				core.WithModulesConfig(cfg.Modules),
 				core.WithCustomModules(&stream_publish.PublishModule{}),
+				core.WithSubscriptionHooks(cfg.Events.SubscriptionHooks),
 			},
 			LogObservation: testenv.LogObservationConfig{
 				Enabled:  true,
@@ -112,6 +124,11 @@ func TestPublishHook(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
+			Events: config.EventsConfiguration{
+				SubscriptionHooks: config.SubscriptionHooksConfiguration{
+					MaxConcurrentEventReceiveHandlers: defaultMaxConcurrentEventReceiveHandlers,
+				},
+			},
 			Modules: map[string]interface{}{
 				"publishModule": stream_publish.PublishModule{
 					Callback: func(ctx core.StreamPublishEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
@@ -127,6 +144,7 @@ func TestPublishHook(t *testing.T) {
 			RouterOptions: []core.Option{
 				core.WithModulesConfig(cfg.Modules),
 				core.WithCustomModules(&stream_publish.PublishModule{}),
+				core.WithSubscriptionHooks(cfg.Events.SubscriptionHooks),
 			},
 			LogObservation: testenv.LogObservationConfig{
 				Enabled:  true,
@@ -157,6 +175,11 @@ func TestPublishHook(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
+			Events: config.EventsConfiguration{
+				SubscriptionHooks: config.SubscriptionHooksConfiguration{
+					MaxConcurrentEventReceiveHandlers: defaultMaxConcurrentEventReceiveHandlers,
+				},
+			},
 			Modules: map[string]interface{}{
 				"publishModule": stream_publish.PublishModule{
 					Callback: func(ctx core.StreamPublishEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
@@ -172,6 +195,7 @@ func TestPublishHook(t *testing.T) {
 			RouterOptions: []core.Option{
 				core.WithModulesConfig(cfg.Modules),
 				core.WithCustomModules(&stream_publish.PublishModule{}),
+				core.WithSubscriptionHooks(cfg.Events.SubscriptionHooks),
 			},
 			LogObservation: testenv.LogObservationConfig{
 				Enabled:  true,
@@ -211,6 +235,11 @@ func TestPublishHook(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
+			Events: config.EventsConfiguration{
+				SubscriptionHooks: config.SubscriptionHooksConfiguration{
+					MaxConcurrentEventReceiveHandlers: defaultMaxConcurrentEventReceiveHandlers,
+				},
+			},
 			Modules: map[string]interface{}{
 				"publishModule": stream_publish.PublishModule{
 					Callback: func(ctx core.StreamPublishEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
@@ -226,6 +255,7 @@ func TestPublishHook(t *testing.T) {
 			RouterOptions: []core.Option{
 				core.WithModulesConfig(cfg.Modules),
 				core.WithCustomModules(&stream_publish.PublishModule{}),
+				core.WithSubscriptionHooks(cfg.Events.SubscriptionHooks),
 			},
 			LogObservation: testenv.LogObservationConfig{
 				Enabled:  true,
@@ -255,6 +285,11 @@ func TestPublishHook(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
+			Events: config.EventsConfiguration{
+				SubscriptionHooks: config.SubscriptionHooksConfiguration{
+					MaxConcurrentEventReceiveHandlers: defaultMaxConcurrentEventReceiveHandlers,
+				},
+			},
 			Modules: map[string]interface{}{
 				"publishModule": stream_publish.PublishModule{
 					Callback: func(ctx core.StreamPublishEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
@@ -288,6 +323,7 @@ func TestPublishHook(t *testing.T) {
 			RouterOptions: []core.Option{
 				core.WithModulesConfig(cfg.Modules),
 				core.WithCustomModules(&stream_publish.PublishModule{}),
+				core.WithSubscriptionHooks(cfg.Events.SubscriptionHooks),
 			},
 			LogObservation: testenv.LogObservationConfig{
 				Enabled:  true,

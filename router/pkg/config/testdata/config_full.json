@@ -635,6 +635,9 @@
           "ClusterEnabled": true
         }
       ]
+    },
+    "SubscriptionHooks": {
+      "MaxConcurrentEventReceiveHandlers": 100
     }
   },
   "CacheWarmup": {

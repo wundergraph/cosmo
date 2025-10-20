@@ -34,6 +34,11 @@ func TestStreamsHooksCombined(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
+			Events: config.EventsConfiguration{
+				SubscriptionHooks: config.SubscriptionHooksConfiguration{
+					MaxConcurrentEventReceiveHandlers: 100,
+				},
+			},
 			Modules: map[string]interface{}{
 				"streamReceiveModule": stream_receive.StreamReceiveModule{
 					Callback: func(ctx core.StreamReceiveEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
@@ -77,6 +82,7 @@ func TestStreamsHooksCombined(t *testing.T) {
 			RouterOptions: []core.Option{
 				core.WithModulesConfig(cfg.Modules),
 				core.WithCustomModules(&stream_publish.PublishModule{}, &stream_receive.StreamReceiveModule{}),
+				core.WithSubscriptionHooks(cfg.Events.SubscriptionHooks),
 			},
 			LogObservation: testenv.LogObservationConfig{
 				Enabled:  true,

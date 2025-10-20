@@ -34,10 +34,10 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 	}
 
 	subscriptions := s.eventUpdater.Subscriptions()
+	maxConcurrentHandlers := max(s.hooks.MaxConcurrentOnReceiveHandlers, 1)
 
-	maxConcurrency := 2
-	semaphore := make(chan struct{}, maxConcurrency)
-	for range maxConcurrency {
+	semaphore := make(chan struct{}, maxConcurrentHandlers)
+	for range maxConcurrentHandlers {
 		semaphore <- struct{}{}
 	}
 
@@ -138,6 +138,10 @@ func (s *subscriptionEventUpdater) updateSubscription(ctx context.Context, wg *s
 // and deduplicates them based on their err.Error() value.
 // Afterwards it uses s.logger to log the message.
 func (s *subscriptionEventUpdater) deduplicateAndLogErrors(errCh chan error, size int) {
+	if s.logger == nil {
+		return
+	}
+
 	errs := make(map[string]int, size)
 	for err := range errCh {
 		amount, found := errs[err.Error()]
@@ -149,7 +153,7 @@ func (s *subscriptionEventUpdater) deduplicateAndLogErrors(errCh chan error, siz
 	}
 
 	for err, amount := range errs {
-		s.logger.Warn(
+		s.logger.Error(
 			"some handlers have thrown an error",
 			zap.String("error", err),
 			zap.Int("amount_handlers", amount),

@@ -501,9 +501,10 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 		l.resolver.InstanceData().HostName,
 		l.resolver.InstanceData().ListenAddress,
 		pubsub_datasource.Hooks{
-			SubscriptionOnStart: subscriptionOnStartFns,
-			OnReceiveEvents:     onReceiveEventsFns,
-			OnPublishEvents:     onPublishEventsFns,
+			SubscriptionOnStart:            subscriptionOnStartFns,
+			OnReceiveEvents:                onReceiveEventsFns,
+			OnPublishEvents:                onPublishEventsFns,
+			MaxConcurrentOnReceiveHandlers: l.subscriptionHooks.maxConcurrentOnReceiveHooks,
 		},
 	)
 	if err != nil {

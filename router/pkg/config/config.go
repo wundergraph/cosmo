@@ -639,7 +639,12 @@ type EventProviders struct {
 }
 
 type EventsConfiguration struct {
-	Providers EventProviders `yaml:"providers,omitempty"`
+	Providers         EventProviders                 `yaml:"providers,omitempty"`
+	SubscriptionHooks SubscriptionHooksConfiguration `yaml:"subscription_hooks,omitempty"`
+}
+
+type SubscriptionHooksConfiguration struct {
+	MaxConcurrentEventReceiveHandlers int `yaml:"max_concurrent_event_receive_handlers" envDefault:"100"`
 }
 
 type Cluster struct {

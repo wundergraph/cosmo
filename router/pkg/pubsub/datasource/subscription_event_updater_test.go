@@ -622,6 +622,9 @@ func TestSubscriptionEventUpdater_UpdateSubscription_WithHooks_Error_LoggerWrite
 	mockUpdater.AssertNotCalled(t, "UpdateSubscription")
 	mockUpdater.AssertCalled(t, "CloseSubscription", resolve.SubscriptionCloseKindNormal, subId)
 
-	msgs := logObserver.FilterMessageSnippet("An error occurred while processing stream events hooks").TakeAll()
+	// log error messages for hooks are written async, we need to wait for them to be written
+	time.Sleep(10 * time.Millisecond)
+
+	msgs := logObserver.FilterMessageSnippet("some handlers have thrown an error").TakeAll()
 	assert.Equal(t, 1, len(msgs))
 }

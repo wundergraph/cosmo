@@ -325,6 +325,8 @@ events:
         urls:
           - 'redis://localhost:6379/11'
         cluster_enabled: true
+  subscription_hooks:
+    max_concurrent_event_receive_handlers: 100
 
 engine:
   enable_single_flight: true

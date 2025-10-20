@@ -23,6 +23,10 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+const (
+	defaultMaxConcurrentEventReceiveHandlers = 100
+)
+
 func TestReceiveHook(t *testing.T) {
 	t.Parallel()
 
@@ -41,6 +45,11 @@ func TestReceiveHook(t *testing.T) {
 			Modules: map[string]interface{}{
 				"streamReceiveModule": stream_receive.StreamReceiveModule{},
 			},
+			Events: config.EventsConfiguration{
+				SubscriptionHooks: config.SubscriptionHooksConfiguration{
+					MaxConcurrentEventReceiveHandlers: defaultMaxConcurrentEventReceiveHandlers,
+				},
+			},
 		}
 
 		testenv.Run(t, &testenv.Config{
@@ -49,6 +58,7 @@ func TestReceiveHook(t *testing.T) {
 			RouterOptions: []core.Option{
 				core.WithModulesConfig(cfg.Modules),
 				core.WithCustomModules(&stream_receive.StreamReceiveModule{}),
+				core.WithSubscriptionHooks(cfg.Events.SubscriptionHooks),
 			},
 			LogObservation: testenv.LogObservationConfig{
 				Enabled:  true,
@@ -111,6 +121,11 @@ func TestReceiveHook(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
+			Events: config.EventsConfiguration{
+				SubscriptionHooks: config.SubscriptionHooksConfiguration{
+					MaxConcurrentEventReceiveHandlers: defaultMaxConcurrentEventReceiveHandlers,
+				},
+			},
 			Modules: map[string]interface{}{
 				"streamReceiveModule": stream_receive.StreamReceiveModule{
 					Callback: func(ctx core.StreamReceiveEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
@@ -134,6 +149,7 @@ func TestReceiveHook(t *testing.T) {
 			RouterOptions: []core.Option{
 				core.WithModulesConfig(cfg.Modules),
 				core.WithCustomModules(&stream_receive.StreamReceiveModule{}),
+				core.WithSubscriptionHooks(cfg.Events.SubscriptionHooks),
 			},
 			LogObservation: testenv.LogObservationConfig{
 				Enabled:  true,
@@ -196,7 +212,11 @@ func TestReceiveHook(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-
+			Events: config.EventsConfiguration{
+				SubscriptionHooks: config.SubscriptionHooksConfiguration{
+					MaxConcurrentEventReceiveHandlers: defaultMaxConcurrentEventReceiveHandlers,
+				},
+			},
 			Modules: map[string]interface{}{
 				"streamReceiveModule": stream_receive.StreamReceiveModule{
 					Callback: func(ctx core.StreamReceiveEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
@@ -246,6 +266,7 @@ func TestReceiveHook(t *testing.T) {
 				core.WithModulesConfig(cfg.Modules),
 				core.WithCustomModules(&stream_receive.StreamReceiveModule{}),
 				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithSubscriptionHooks(cfg.Events.SubscriptionHooks),
 			},
 			LogObservation: testenv.LogObservationConfig{
 				Enabled:  true,
@@ -353,7 +374,11 @@ func TestReceiveHook(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
-
+			Events: config.EventsConfiguration{
+				SubscriptionHooks: config.SubscriptionHooksConfiguration{
+					MaxConcurrentEventReceiveHandlers: defaultMaxConcurrentEventReceiveHandlers,
+				},
+			},
 			Modules: map[string]interface{}{
 				"streamReceiveModule": stream_receive.StreamReceiveModule{
 					Callback: func(ctx core.StreamReceiveEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
@@ -380,6 +405,7 @@ func TestReceiveHook(t *testing.T) {
 			RouterOptions: []core.Option{
 				core.WithModulesConfig(cfg.Modules),
 				core.WithCustomModules(&stream_receive.StreamReceiveModule{}),
+				core.WithSubscriptionHooks(cfg.Events.SubscriptionHooks),
 			},
 			LogObservation: testenv.LogObservationConfig{
 				Enabled:  true,
@@ -450,6 +476,11 @@ func TestReceiveHook(t *testing.T) {
 
 		cfg := config.Config{
 			Graph: config.Graph{},
+			Events: config.EventsConfiguration{
+				SubscriptionHooks: config.SubscriptionHooksConfiguration{
+					MaxConcurrentEventReceiveHandlers: defaultMaxConcurrentEventReceiveHandlers,
+				},
+			},
 			Modules: map[string]interface{}{
 				"streamReceiveModule": stream_receive.StreamReceiveModule{
 					Callback: func(ctx core.StreamReceiveEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
@@ -465,6 +496,7 @@ func TestReceiveHook(t *testing.T) {
 			RouterOptions: []core.Option{
 				core.WithModulesConfig(cfg.Modules),
 				core.WithCustomModules(&stream_receive.StreamReceiveModule{}),
+				core.WithSubscriptionHooks(cfg.Events.SubscriptionHooks),
 			},
 			LogObservation: testenv.LogObservationConfig{
 				Enabled:  true,

@@ -14,7 +14,8 @@ type OnReceiveEventsFn func(ctx context.Context, subConf SubscriptionEventConfig
 
 // Hooks contains hooks for the pubsub providers and data sources
 type Hooks struct {
-	SubscriptionOnStart []SubscriptionOnStartFn
-	OnReceiveEvents     []OnReceiveEventsFn
-	OnPublishEvents     []OnPublishEventsFn
+	SubscriptionOnStart            []SubscriptionOnStartFn
+	OnReceiveEvents                []OnReceiveEventsFn
+	OnPublishEvents                []OnPublishEventsFn
+	MaxConcurrentOnReceiveHandlers int
 }
