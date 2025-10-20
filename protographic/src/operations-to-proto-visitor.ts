@@ -1,4 +1,5 @@
 import {
+    ASTVisitor,
     buildSchema,
     DocumentNode,
     FieldNode,
@@ -14,35 +15,35 @@ import {
     GraphQLObjectType,
     GraphQLSchema,
     GraphQLType,
-    GraphQLUnionType,
     InlineFragmentNode,
     isEnumType,
     isInputObjectType,
     isInterfaceType,
     isObjectType,
     isUnionType,
+    Kind,
     OperationDefinitionNode,
+    OperationTypeNode,
     parse,
     SelectionSetNode,
     VariableDefinitionNode,
+    visit,
 } from 'graphql';
 import {createRequestMessageName, createResponseMessageName, graphqlFieldToProtoField,} from './naming-conventions.js';
 import type {ProtoLock} from './proto-lock.js';
 import {ProtoLockManager} from './proto-lock.js';
 import {
     collectEnumsFromTypeNode,
-    convertVariableTypeToProto,
     createRpcMethod,
     extractInputTypesFromGraphQLType,
+    findSimilarFieldName,
     formatComment,
     generateEnumDefinition,
-    generateInputMessageFromSchema,
     generateGnosticOptions,
     getProtoTypeFromGraphQL,
     getRootTypeForOperation,
     isGraphQLListType,
     processInputTypeQueue,
-    SCALAR_TYPE_MAP,
 } from './proto-utils';
 import {camelCase, upperFirst} from "lodash-es";
 import {extractOpenApiMetadataFromOperation} from './openapi-preprocessor.js';
@@ -355,55 +356,9 @@ export class OperationToProtoVisitor {
         }
     }
 
-    /**
-     * Find a similar field name using Levenshtein distance
-     */
-    private findSimilarFieldName(inputName: string, availableNames: string[]): string | null {
-        let bestMatch: string | null = null;
-        let bestDistance = Infinity;
-        const maxDistance = Math.floor(inputName.length / 2); // Allow up to half the characters to be different
-
-        for (const name of availableNames) {
-            const distance = this.levenshteinDistance(inputName.toLowerCase(), name.toLowerCase());
-            if (distance < bestDistance && distance <= maxDistance) {
-                bestDistance = distance;
-                bestMatch = name;
-            }
-        }
-
-        return bestMatch;
-    }
 
     /**
-     * Calculate Levenshtein distance between two strings
-     */
-    private levenshteinDistance(str1: string, str2: string): number {
-        const matrix = Array(str2.length + 1).fill(null).map(() => Array(str1.length + 1).fill(null));
-
-        for (let i = 0; i <= str1.length; i++) {
-            matrix[0][i] = i;
-        }
-
-        for (let j = 0; j <= str2.length; j++) {
-            matrix[j][0] = j;
-        }
-
-        for (let j = 1; j <= str2.length; j++) {
-            for (let i = 1; i <= str1.length; i++) {
-                const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1;
-                matrix[j][i] = Math.min(
-                    matrix[j][i - 1] + 1, // deletion
-                    matrix[j - 1][i] + 1, // insertion
-                    matrix[j - 1][i - 1] + indicator // substitution
-                );
-            }
-        }
-
-        return matrix[str2.length][str1.length];
-    }
-
-    /**
-     * Validate an operation against the schema
+     * Validate an operation against the schema using visitor pattern
      */
     private validateOperationAgainstSchema(operation: OperationDefinitionNode): void {
         const operationType = operation.operation;
@@ -415,8 +370,8 @@ export class OperationToProtoVisitor {
                 throw new Error(`Schema does not define ${operationType} type`);
             }
 
-            // Validate all fields in the selection set exist in the schema
-            this.validateSelectionSet(operation.selectionSet, rootType);
+            // Use visitor pattern for validation
+            this.validateOperationUsingVisitor(operation, rootType);
         } catch (error) {
             // Convert the error message to use lowercase operation type for consistency
             if (error instanceof Error && error.message.includes('Schema does not define')) {
@@ -427,55 +382,88 @@ export class OperationToProtoVisitor {
     }
 
     /**
-     * Recursively validate a selection set against a GraphQL type
+     * Validate operation using visitor pattern
      */
-    private validateSelectionSet(selectionSet: SelectionSetNode, parentType: GraphQLType): void {
-        const namedParentType: GraphQLNamedType = getNamedType(parentType);
+    private validateOperationUsingVisitor(operation: OperationDefinitionNode, rootType: GraphQLObjectType | GraphQLInterfaceType): void {
+        // Stack to track parent types as we traverse
+        const typeStack: GraphQLType[] = [rootType];
         
-        if (!isObjectType(namedParentType) && !isInterfaceType(namedParentType)) {
-            return; // Skip validation for scalar/enum types
-        }
-
-        const fields = namedParentType.getFields();
-
-        for (const selection of selectionSet.selections) {
-            if (selection.kind === 'Field') {
-                const field = fields[selection.name.value];
-                if (!field) {
-                    // Generate helpful suggestion for similar field names
-                    const suggestion = this.findSimilarFieldName(selection.name.value, Object.keys(fields));
-                    const suggestionText = suggestion ? `. Did you mean '${suggestion}'?` : '';
-                    throw new Error(`Field '${selection.name.value}' not found on type '${namedParentType.name}'${suggestionText}`);
-                }
-
-                // Recursively validate nested selection sets
-                if (selection.selectionSet) {
-                    this.validateSelectionSet(selection.selectionSet, field.type);
-                }
-            } else if (selection.kind === 'FragmentSpread') {
-                // Validate fragment spread
-                this.validateFragmentSpread(selection, namedParentType);
-            } else if (selection.kind === 'InlineFragment') {
-                // Validate inline fragments - they should target valid types
-                if (selection.typeCondition) {
-                    const fragmentTypeName = selection.typeCondition.name.value;
-                    const fragmentType = this.schema.getTypeMap()[fragmentTypeName];
-                    if (!fragmentType) {
-                        throw new Error(`Unknown type '${fragmentTypeName}' in inline fragment`);
-                    }
+        const validationVisitor: ASTVisitor = {
+            Field: {
+                enter: (node: FieldNode) => {
+                    const parentType = typeStack[typeStack.length - 1];
+                    const namedParentType = getNamedType(parentType);
                     
-                    // Check if fragment can be spread on parent type
-                    if (!this.canFragmentBeSpreadOnType(fragmentType, namedParentType)) {
-                        throw new Error(`Fragment cannot be spread here as objects of type "${namedParentType.name}" can never be of type "${fragmentTypeName}"`);
+                    if (!isObjectType(namedParentType) && !isInterfaceType(namedParentType)) {
+                        return; // Skip validation for scalar/enum types
                     }
+
+                    const fields = namedParentType.getFields();
+                    const field = fields[node.name.value];
                     
-                    // Recursively validate the inline fragment's selection set
-                    if (selection.selectionSet) {
-                        this.validateSelectionSet(selection.selectionSet, fragmentType);
+                    if (!field) {
+                        const suggestion = findSimilarFieldName(node.name.value, Object.keys(fields));
+                        const suggestionText = suggestion ? `. Did you mean '${suggestion}'?` : '';
+                        throw new Error(`Field '${node.name.value}' not found on type '${namedParentType.name}'${suggestionText}`);
+                    }
+
+                    // Push field type onto stack for nested validation
+                    if (node.selectionSet) {
+                        typeStack.push(field.type);
+                    }
+                },
+                leave: (node: FieldNode) => {
+                    // Pop type from stack when leaving field with selection set
+                    if (node.selectionSet) {
+                        typeStack.pop();
+                    }
+                }
+            },
+            FragmentSpread: {
+                enter: (node: FragmentSpreadNode) => {
+                    const parentType = typeStack[typeStack.length - 1];
+                    const namedParentType = getNamedType(parentType);
+                    
+                    if (isObjectType(namedParentType) || isInterfaceType(namedParentType)) {
+                        this.validateFragmentSpread(node, namedParentType);
+                    }
+                }
+            },
+            InlineFragment: {
+                enter: (node: InlineFragmentNode) => {
+                    const parentType = typeStack[typeStack.length - 1];
+                    const namedParentType = getNamedType(parentType);
+                    
+                    if (node.typeCondition) {
+                        const fragmentTypeName = node.typeCondition.name.value;
+                        const fragmentType = this.schema.getTypeMap()[fragmentTypeName];
+                        
+                        if (!fragmentType) {
+                            throw new Error(`Unknown type '${fragmentTypeName}' in inline fragment`);
+                        }
+                        
+                        if (isObjectType(namedParentType) || isInterfaceType(namedParentType)) {
+                            if (!this.canFragmentBeSpreadOnType(fragmentType, namedParentType)) {
+                                throw new Error(`Fragment cannot be spread here as objects of type "${namedParentType.name}" can never be of type "${fragmentTypeName}"`);
+                            }
+                        }
+                        
+                        // Push fragment type onto stack
+                        if (node.selectionSet) {
+                            typeStack.push(fragmentType);
+                        }
+                    }
+                },
+                leave: (node: InlineFragmentNode) => {
+                    // Pop type from stack when leaving inline fragment
+                    if (node.typeCondition && node.selectionSet) {
+                        typeStack.pop();
                     }
                 }
             }
-        }
+        };
+
+        visit(operation, validationVisitor);
     }
 
     private generateServiceMethods(operations: { name: string; document: DocumentNode }[]): string[] {
@@ -1386,7 +1374,7 @@ export class OperationToProtoVisitor {
     }
 
     /**
-     * Collect enum types used in selection sets
+     * Collect enum types used in selection sets using visitor pattern
      */
     private collectEnumsFromSelectionSet(selectionSet: SelectionSetNode, operation: OperationDefinitionNode): void {
         const rootType = getRootTypeForOperation(this.schema, operation.operation);
@@ -1394,64 +1382,85 @@ export class OperationToProtoVisitor {
 
         // Expand fragment spreads before collecting enums
         const expandedSelectionSet = this.expandFragmentSpreads(selectionSet);
-        this.collectEnumsFromSelectionSetRecursive(expandedSelectionSet, rootType);
+        this.collectEnumsUsingVisitor(expandedSelectionSet, rootType);
     }
 
     /**
-     * Recursively collect enum types from selection sets
+     * Collect enum types using visitor pattern
      */
-    private collectEnumsFromSelectionSetRecursive(selectionSet: SelectionSetNode, parentType: GraphQLType): void {
-        const namedParentType: GraphQLNamedType = getNamedType(parentType);
+    private collectEnumsUsingVisitor(selectionSet: SelectionSetNode, rootType: GraphQLObjectType | GraphQLInterfaceType): void {
+        // Stack to track parent types as we traverse
+        const typeStack: GraphQLType[] = [rootType];
         
-        if (!isObjectType(namedParentType) && !isInterfaceType(namedParentType) && !isUnionType(namedParentType)) {
-            return; // Skip for scalar/enum types
-        }
+        const enumCollectionVisitor: ASTVisitor = {
+            Field: {
+                enter: (node: FieldNode) => {
+                    const parentType = typeStack[typeStack.length - 1];
+                    const namedParentType = getNamedType(parentType);
+                    
+                    // Skip if not an object or interface type
+                    if (!isObjectType(namedParentType) && !isInterfaceType(namedParentType)) {
+                        return;
+                    }
 
-        // Handle union types - process inline fragments
-        if (isUnionType(namedParentType)) {
-            for (const selection of selectionSet.selections) {
-                if (selection.kind === 'InlineFragment') {
-                    if (selection.typeCondition && selection.selectionSet) {
-                        const fragmentTypeName = selection.typeCondition.name.value;
+                    const fields = namedParentType.getFields();
+                    const field = fields[node.name.value];
+                    
+                    if (field) {
+                        // Check if the field type is an enum
+                        const fieldType = getNamedType(field.type);
+                        if (isEnumType(fieldType)) {
+                            this.enumsUsed.add(fieldType.name);
+                        }
+
+                        // Push field type onto stack for nested traversal
+                        if (node.selectionSet) {
+                            typeStack.push(field.type);
+                        }
+                    }
+                },
+                leave: (node: FieldNode) => {
+                    // Pop type from stack when leaving field with selection set
+                    if (node.selectionSet) {
+                        typeStack.pop();
+                    }
+                }
+            },
+            InlineFragment: {
+                enter: (node: InlineFragmentNode) => {
+                    if (node.typeCondition && node.selectionSet) {
+                        const fragmentTypeName = node.typeCondition.name.value;
                         const fragmentType = this.schema.getTypeMap()[fragmentTypeName];
+                        
                         if (fragmentType && (isObjectType(fragmentType) || isInterfaceType(fragmentType))) {
-                            this.collectEnumsFromSelectionSetRecursive(selection.selectionSet, fragmentType);
+                            // Push fragment type onto stack
+                            typeStack.push(fragmentType);
+                        }
+                    }
+                },
+                leave: (node: InlineFragmentNode) => {
+                    // Pop type from stack when leaving inline fragment
+                    if (node.typeCondition && node.selectionSet) {
+                        const fragmentType = this.schema.getTypeMap()[node.typeCondition.name.value];
+                        if (fragmentType && (isObjectType(fragmentType) || isInterfaceType(fragmentType))) {
+                            typeStack.pop();
                         }
                     }
                 }
             }
-            return;
-        }
+        };
 
-        // Handle object and interface types
-        const fields = namedParentType.getFields();
+        // Create a temporary document to visit
+        const tempDoc: DocumentNode = {
+            kind: Kind.DOCUMENT,
+            definitions: [{
+                kind: Kind.OPERATION_DEFINITION,
+                operation: OperationTypeNode.QUERY,
+                selectionSet: selectionSet
+            }]
+        };
 
-        for (const selection of selectionSet.selections) {
-            if (selection.kind === 'Field') {
-                const field = fields[selection.name.value];
-                if (field) {
-                    // Check if the field type is an enum
-                    const fieldType = getNamedType(field.type);
-                    if (isEnumType(fieldType)) {
-                        this.enumsUsed.add(fieldType.name);
-                    }
-
-                    // Recursively check nested selection sets
-                    if (selection.selectionSet) {
-                        this.collectEnumsFromSelectionSetRecursive(selection.selectionSet, field.type);
-                    }
-                }
-            } else if (selection.kind === 'InlineFragment') {
-                // Handle inline fragments - collect enums from fragment types
-                if (selection.typeCondition && selection.selectionSet) {
-                    const fragmentTypeName = selection.typeCondition.name.value;
-                    const fragmentType = this.schema.getTypeMap()[fragmentTypeName];
-                    if (fragmentType && (isObjectType(fragmentType) || isInterfaceType(fragmentType))) {
-                        this.collectEnumsFromSelectionSetRecursive(selection.selectionSet, fragmentType);
-                    }
-                }
-            }
-        }
+        visit(tempDoc, enumCollectionVisitor);
     }
 
     /**
