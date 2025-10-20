@@ -623,8 +623,7 @@ func TestSubscriptionEventUpdater_UpdateSubscription_WithHooks_Error_LoggerWrite
 	mockUpdater.AssertCalled(t, "CloseSubscription", resolve.SubscriptionCloseKindNormal, subId)
 
 	// log error messages for hooks are written async, we need to wait for them to be written
-	time.Sleep(10 * time.Millisecond)
-
-	msgs := logObserver.FilterMessageSnippet("some handlers have thrown an error").TakeAll()
-	assert.Equal(t, 1, len(msgs))
+	assert.Eventually(t, func() bool {
+		return len(logObserver.FilterMessageSnippet("some handlers have thrown an error").TakeAll()) == 1
+	}, time.Second, 10*time.Millisecond, "expected one deduplicated error log")
 }
