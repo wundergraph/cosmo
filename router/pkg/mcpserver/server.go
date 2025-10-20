@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -25,14 +26,29 @@ import (
 // authKey is a custom context key for storing the auth token.
 type authKey struct{}
 
+// headersKey is a custom context key for storing forwarded headers.
+type headersKey struct{}
+
 // withAuthKey adds an auth key to the context.
 func withAuthKey(ctx context.Context, auth string) context.Context {
 	return context.WithValue(ctx, authKey{}, auth)
 }
 
+// withHeaders adds headers to the context.
+func withHeaders(ctx context.Context, headers http.Header) context.Context {
+	return context.WithValue(ctx, headersKey{}, headers)
+}
+
 // authFromRequest extracts the auth token from the request headers.
 func authFromRequest(ctx context.Context, r *http.Request) context.Context {
 	return withAuthKey(ctx, r.Header.Get("Authorization"))
+}
+
+// headersFromRequest extracts all headers from the request and stores them in context.
+func headersFromRequest(ctx context.Context, r *http.Request) context.Context {
+	// Clone the headers to avoid any mutation issues
+	headers := r.Header.Clone()
+	return withHeaders(ctx, headers)
 }
 
 // tokenFromContext extracts the auth token from the context.
@@ -43,6 +59,12 @@ func tokenFromContext(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("missing auth")
 	}
 	return auth, nil
+}
+
+// headersFromContext extracts headers from the context.
+func headersFromContext(ctx context.Context) (http.Header, bool) {
+	headers, ok := ctx.Value(headersKey{}).(http.Header)
+	return headers, ok
 }
 
 // Options represents configuration options for the GraphQLSchemaServer
@@ -70,6 +92,10 @@ type Options struct {
 	ExposeSchema bool
 	// Stateless determines whether the MCP server should be stateless
 	Stateless bool
+	// ForwardHeadersEnabled determines whether header forwarding is enabled
+	ForwardHeadersEnabled bool
+	// ForwardHeadersAllowList is the list of headers (or regex patterns) to forward
+	ForwardHeadersAllowList []string
 }
 
 // GraphQLSchemaServer represents an MCP server that works with GraphQL schemas and operations
@@ -91,6 +117,8 @@ type GraphQLSchemaServer struct {
 	operationsManager         *OperationsManager
 	schemaCompiler            *SchemaCompiler
 	registeredTools           []string
+	forwardHeadersEnabled     bool
+	forwardHeadersAllowList   []string
 }
 
 type graphqlRequest struct {
@@ -218,6 +246,8 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)
 		exposeSchema:              options.ExposeSchema,
 		stateless:                 options.Stateless,
 		baseURL:                   options.BaseURL,
+		forwardHeadersEnabled:     options.ForwardHeadersEnabled,
+		forwardHeadersAllowList:   options.ForwardHeadersAllowList,
 	}
 
 	return gs, nil
@@ -285,6 +315,14 @@ func WithStateless(stateless bool) func(*Options) {
 	}
 }
 
+// WithForwardHeaders configures header forwarding to GraphQL requests
+func WithForwardHeaders(enabled bool, allowList []string) func(*Options) {
+	return func(o *Options) {
+		o.ForwardHeadersEnabled = enabled
+		o.ForwardHeadersAllowList = allowList
+	}
+}
+
 // Serve starts the server with the configured options and returns a streamable HTTP server.
 func (s *GraphQLSchemaServer) Serve() (*server.StreamableHTTPServer, error) {
 	// Create custom HTTP server
@@ -295,11 +333,20 @@ func (s *GraphQLSchemaServer) Serve() (*server.StreamableHTTPServer, error) {
 		IdleTimeout:  60 * time.Second,
 	}
 
+	// Create a combined context function that captures both auth and headers
+	contextFunc := func(ctx context.Context, r *http.Request) context.Context {
+		ctx = authFromRequest(ctx, r)
+		if s.forwardHeadersEnabled {
+			ctx = headersFromRequest(ctx, r)
+		}
+		return ctx
+	}
+
 	streamableHTTPServer := server.NewStreamableHTTPServer(s.server,
 		server.WithStreamableHTTPServer(httpServer),
 		server.WithLogger(NewZapAdapter(s.logger.With(zap.String("component", "mcp-server")))),
 		server.WithStateLess(s.stateless),
-		server.WithHTTPContextFunc(authFromRequest),
+		server.WithHTTPContextFunc(contextFunc),
 		server.WithHeartbeatInterval(10*time.Second),
 	)
 
@@ -654,6 +701,39 @@ Important Notes:
 	}
 }
 
+// filterHeaders filters headers based on the allowlist configuration.
+// It supports both exact matches and regex patterns.
+func (s *GraphQLSchemaServer) filterHeaders(headers http.Header) http.Header {
+	if !s.forwardHeadersEnabled || len(s.forwardHeadersAllowList) == 0 {
+		return http.Header{}
+	}
+
+	filtered := http.Header{}
+	
+	for _, pattern := range s.forwardHeadersAllowList {
+		// Try to compile as regex
+		re, err := regexp.Compile("(?i)^" + pattern + "$")
+		if err != nil {
+			// If it's not a valid regex, treat it as an exact match (case-insensitive)
+			for headerName, headerValues := range headers {
+				if strings.EqualFold(headerName, pattern) {
+					filtered[headerName] = headerValues
+				}
+			}
+			continue
+		}
+		
+		// Match using regex
+		for headerName, headerValues := range headers {
+			if re.MatchString(headerName) {
+				filtered[headerName] = headerValues
+			}
+		}
+	}
+	
+	return filtered
+}
+
 // executeGraphQLQuery executes a GraphQL query against the router endpoint
 func (s *GraphQLSchemaServer) executeGraphQLQuery(ctx context.Context, query string, variables json.RawMessage) (*mcp.CallToolResult, error) {
 	// Create the GraphQL request
@@ -675,6 +755,7 @@ func (s *GraphQLSchemaServer) executeGraphQLQuery(ctx context.Context, query str
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 
+	// Always forward Authorization header (legacy behavior)
 	token, err := tokenFromContext(ctx)
 	if err != nil {
 		s.logger.Debug("failed to get token from context", zap.Error(err))
@@ -682,7 +763,21 @@ func (s *GraphQLSchemaServer) executeGraphQLQuery(ctx context.Context, query str
 		req.Header.Set("Authorization", token)
 	}
 
-	// Forward Authorization header if provided
+	// Forward additional headers if enabled
+	if s.forwardHeadersEnabled {
+		if headers, ok := headersFromContext(ctx); ok {
+			filteredHeaders := s.filterHeaders(headers)
+			for headerName, headerValues := range filteredHeaders {
+				// Skip Authorization as it's already handled above
+				if strings.EqualFold(headerName, "Authorization") {
+					continue
+				}
+				for _, headerValue := range headerValues {
+					req.Header.Add(headerName, headerValue)
+				}
+			}
+		}
+	}
 
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
