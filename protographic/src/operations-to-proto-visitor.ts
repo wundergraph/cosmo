@@ -949,6 +949,7 @@ export class OperationToProtoVisitor {
 
     /**
      * Generate oneof fields for polymorphic types (interfaces and unions)
+     * Uses lock manager for stable field numbering across schema changes
      */
     private generateOneofFields(
         operationName: string,
@@ -964,19 +965,32 @@ export class OperationToProtoVisitor {
         }
 
         // Create a oneof field for the polymorphic type
-        const oneofName = 'type_specific';
+        // Use a descriptive name based on the parent type for better clarity
+        const oneofName = `${camelCase(parentType.name)}_type`;
         oneofFields.push(`  oneof ${oneofName} {`);
         
-        let oneofFieldIndex = 1;
-        for (const fragment of inlineFragments) {
-            if (fragment.typeCondition) {
-                const fragmentTypeName = fragment.typeCondition.name.value;
-                const fragmentMessageName = this.createInlineFragmentMessageName(operationName, fieldPath, fragmentTypeName);
-                const protoFieldName = graphqlFieldToProtoField(fragmentTypeName.toLowerCase());
+        // Collect fragment type names for lock manager ordering
+        const fragmentTypeNames = inlineFragments
+            .filter(f => f.typeCondition)
+            .map(f => f.typeCondition!.name.value);
+        
+        // Use lock manager to maintain stable field numbers
+        const messageName = this.createNestedMessageName(operationName, fieldPath);
+        const oneofKey = `${messageName}_${oneofName}`;
+        const orderedFragments = this.lockManager.reconcileMessageFieldOrder(oneofKey, fragmentTypeNames);
+        
+        // Generate fields in stable order
+        orderedFragments.forEach((typeName, index) => {
+            const fragment = inlineFragments.find(f => f.typeCondition?.name.value === typeName);
+            
+            if (fragment && fragment.typeCondition) {
+                const fragmentMessageName = this.createInlineFragmentMessageName(operationName, fieldPath, typeName);
+                // Use semantic field naming: as_article, as_video, etc.
+                const protoFieldName = `as_${graphqlFieldToProtoField(typeName)}`;
                 
-                oneofFields.push(`    ${fragmentMessageName} ${protoFieldName} = ${oneofFieldIndex++};`);
+                oneofFields.push(`    ${fragmentMessageName} ${protoFieldName} = ${index + 1};`);
             }
-        }
+        });
         
         oneofFields.push('  }');
         return oneofFields;
@@ -984,6 +998,7 @@ export class OperationToProtoVisitor {
 
     /**
      * Generate oneof fields for union types (only inline fragments, no regular fields)
+     * Uses lock manager for stable field numbering across schema changes
      */
     private generateOneofFieldsForUnion(
         operationName: string,
@@ -998,19 +1013,31 @@ export class OperationToProtoVisitor {
         }
 
         // Create a oneof field for the union type
-        const oneofName = 'type_specific';
+        const oneofName = 'union_type';
         oneofFields.push(`  oneof ${oneofName} {`);
         
-        let oneofFieldIndex = 1;
-        for (const fragment of inlineFragments) {
-            if (fragment.typeCondition) {
-                const fragmentTypeName = fragment.typeCondition.name.value;
-                const fragmentMessageName = this.createInlineFragmentMessageName(operationName, fieldPath, fragmentTypeName);
-                const protoFieldName = graphqlFieldToProtoField(fragmentTypeName.toLowerCase());
+        // Collect fragment type names for lock manager ordering
+        const fragmentTypeNames = inlineFragments
+            .filter(f => f.typeCondition)
+            .map(f => f.typeCondition!.name.value);
+        
+        // Use lock manager to maintain stable field numbers
+        const messageName = this.createNestedMessageName(operationName, fieldPath);
+        const oneofKey = `${messageName}_${oneofName}`;
+        const orderedFragments = this.lockManager.reconcileMessageFieldOrder(oneofKey, fragmentTypeNames);
+        
+        // Generate fields in stable order
+        orderedFragments.forEach((typeName, index) => {
+            const fragment = inlineFragments.find(f => f.typeCondition?.name.value === typeName);
+            
+            if (fragment && fragment.typeCondition) {
+                const fragmentMessageName = this.createInlineFragmentMessageName(operationName, fieldPath, typeName);
+                // Use semantic field naming: as_article, as_video, etc.
+                const protoFieldName = `as_${graphqlFieldToProtoField(typeName)}`;
                 
-                oneofFields.push(`    ${fragmentMessageName} ${protoFieldName} = ${oneofFieldIndex++};`);
+                oneofFields.push(`    ${fragmentMessageName} ${protoFieldName} = ${index + 1};`);
             }
-        }
+        });
         
         oneofFields.push('  }');
         return oneofFields;

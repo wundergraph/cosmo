@@ -449,7 +449,10 @@ describe('Operations to Proto - Integration Tests', () => {
     // Should handle union and interface types with oneof
     expect(protoText).toContain('repeated GetCompleteEmployeeEmployeeDetailsPets pets');
     expect(protoText).toContain('repeated GetCompleteEmployeeEmployeeHobbies hobbies');
-    expect(protoText).toContain('oneof type_specific');
+    // Interfaces use camelCase(typeName)_type pattern, unions use 'union_type'
+    expect(protoText).toContain('oneof pet_type');
+    // Hobby is queried as a union (only inline fragments), so uses 'union_type'
+    expect(protoText).toContain('oneof union_type');
 
     // Should generate fragment-specific message types
     expect(protoText).toContain('message GetCompleteEmployeeEmployeeDetailsPetsCat');
@@ -561,8 +564,8 @@ describe('Operations to Proto - Integration Tests', () => {
     expect(protoText).toContain('repeated GetProductsProductsCosmoEngineers engineers');
     expect(protoText).toContain('ProgrammingLanguage client_languages');
 
-    // Should handle union types with oneof
-    expect(protoText).toContain('oneof type_specific');
+    // Should handle union types with oneof (unions use 'union_type')
+    expect(protoText).toContain('oneof union_type');
 
     // Should generate fragment-specific message types for union members
     expect(protoText).toContain('message GetProductsProductsConsultancy');

@@ -160,7 +160,7 @@ describe('Operations to Proto - Edge Cases and Validation', () => {
     expect(protoText).toContain('rpc WithFragmentSpread(WithFragmentSpreadRequest)');
   });
 
-  test('should throw error for inline fragments', () => {
+  test('should handle inline fragments on same type', () => {
     const operations = [
       {
         name: 'WithInlineFragment',
@@ -181,9 +181,13 @@ describe('Operations to Proto - Edge Cases and Validation', () => {
 
     const protoText = visitor.visit();
     
-    // Should now support inline fragments and generate oneof fields
+    // Should support inline fragments on same type
+    // Note: Currently generates oneof even for same-type fragments (could be optimized)
     expectValidProto(protoText);
-    expect(protoText).toContain('oneof type_specific');
+    expect(protoText).toContain('int32 id = 1;');
+    // Tag is in the inline fragment message
+    expect(protoText).toContain('string tag = 1;');
+    expect(protoText).toContain('oneof employee_type');
   });
 
   test('should handle operations with no variables', () => {

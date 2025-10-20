@@ -310,9 +310,9 @@ describe('Operations to Proto - Complex Operations', () => {
     expect(protoText).toContain('message GetEmployeeHobbiesEmployee');
     expect(protoText).toContain('message GetEmployeeHobbiesEmployeeHobbies');
 
-    // Should generate oneof for polymorphic types
-    expect(protoText).toContain('oneof type_specific');
-    expect(protoText).toContain('GetEmployeeHobbiesEmployeeHobbiesGaming gaming');
+    // Should generate oneof for polymorphic types with semantic naming
+    expect(protoText).toContain('oneof hobby_type');
+    expect(protoText).toContain('GetEmployeeHobbiesEmployeeHobbiesGaming as_gaming');
 
     // Should generate fragment-specific message types
     expect(protoText).toContain('message GetEmployeeHobbiesEmployeeHobbiesGaming');

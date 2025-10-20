@@ -247,8 +247,9 @@ describe('Operations to Proto - Named Fragments', () => {
       expect(proto).toContain('message GetEmployeeRoleEmployeeRole {');
       expect(proto).toContain('repeated Department departments = 1;');
       expect(proto).toContain('repeated string title = 2;');
-      expect(proto).toContain('oneof type_specific {');
-      expect(proto).toContain('GetEmployeeRoleEmployeeRoleEngineer engineer = 3;');
+      // Interfaces use camelCase(typeName)_type pattern
+      expect(proto).toContain('oneof roleType_type {');
+      expect(proto).toContain('GetEmployeeRoleEmployeeRoleEngineer as_engineer = 3;');
     });
 
     test('should handle fragments with union types', () => {

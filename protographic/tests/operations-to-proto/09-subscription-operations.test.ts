@@ -369,12 +369,13 @@ describe('Operations to Proto - Subscription Operations', () => {
 
       expectValidProto(proto);
 
-      // Should handle union types in subscription responses
+      // Should handle union types in subscription responses with semantic naming
       expect(proto).toContain('message NotificationStreamNotificationsData {');
-      expect(proto).toContain('oneof type_specific {');
-      expect(proto).toContain('NotificationStreamNotificationsDataEmployeeNotificationData employeenotificationdata = 1;');
-      expect(proto).toContain('NotificationStreamNotificationsDataSystemNotificationData systemnotificationdata = 2;');
-      expect(proto).toContain('NotificationStreamNotificationsDataChatNotificationData chatnotificationdata = 3;');
+      // Unions use 'union_type' as the oneof name
+      expect(proto).toContain('oneof union_type {');
+      expect(proto).toContain('NotificationStreamNotificationsDataEmployeeNotificationData as_employee_notification_data = 1;');
+      expect(proto).toContain('NotificationStreamNotificationsDataSystemNotificationData as_system_notification_data = 2;');
+      expect(proto).toContain('NotificationStreamNotificationsDataChatNotificationData as_chat_notification_data = 3;');
     });
   });
 
@@ -494,8 +495,9 @@ describe('Operations to Proto - Subscription Operations', () => {
 
       expectValidProto(proto);
 
-      // Should handle inline fragments in subscription responses
-      expect(proto).toContain('oneof type_specific {');
+      // Should handle inline fragments in subscription responses with semantic naming
+      // Unions use 'union_type' as the oneof name
+      expect(proto).toContain('oneof union_type {');
       expect(proto).toContain('message NotificationsWithFragmentsNotificationsDataEmployeeNotificationData {');
       expect(proto).toContain('message NotificationsWithFragmentsNotificationsDataChatNotificationData {');
     });
