@@ -131,7 +131,11 @@
     "ExcludeMutations": false,
     "EnableArbitraryOperations": false,
     "ExposeSchema": false,
-    "RouterURL": ""
+    "RouterURL": "",
+    "ForwardHeaders": {
+      "Enabled": false,
+      "AllowList": null
+    }
   },
   "DemoMode": false,
   "Modules": null,
