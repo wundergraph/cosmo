@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.259.0](https://github.com/wundergraph/cosmo/compare/router@0.258.7...router@0.259.0) (2025-10-20)
+
+### Features
+
+* **router:** support the "oneOf" directive ([#2246](https://github.com/wundergraph/cosmo/issues/2246)) ([1c1aaa1](https://github.com/wundergraph/cosmo/commit/1c1aaa10609d67e84242f507a76c7ae603bc0aa1)) (@ysmolski)
+
 ## [0.258.7](https://github.com/wundergraph/cosmo/compare/router@0.258.6...router@0.258.7) (2025-10-17)
 
 ### Bug Fixes
