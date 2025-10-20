@@ -33,6 +33,8 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 		return
 	}
 
+	subscriptions := s.eventUpdater.Subscriptions()
+
 	maxConcurrency := 2
 	semaphore := make(chan struct{}, maxConcurrency)
 	for range maxConcurrency {
@@ -41,19 +43,20 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 
 	var (
 		wg    = sync.WaitGroup{}
-		errCh = make(chan error, len(s.eventUpdater.Subscriptions()))
+		errCh = make(chan error, len(subscriptions))
 	)
 
-	for ctx, subId := range s.eventUpdater.Subscriptions() {
+	for ctx, subId := range subscriptions {
 		<-semaphore // wait for a slot to be available
 		eventsCopy := copyEvents(events)
 		wg.Add(1)
 		go s.updateSubscription(ctx, &wg, errCh, semaphore, subId, eventsCopy)
 	}
 
-	go s.deduplicateAndLogErrors(errCh, len(s.eventUpdater.Subscriptions()))
+	go s.deduplicateAndLogErrors(errCh, len(subscriptions))
 
 	wg.Wait()
+	close(semaphore)
 	close(errCh)
 }
 
@@ -115,7 +118,6 @@ func (s *subscriptionEventUpdater) updateSubscription(ctx context.Context, wg *s
 		events, err = hooks[i](ctx, s.subscriptionEventConfiguration, events)
 		if err != nil {
 			errCh <- err
-			s.eventUpdater.CloseSubscription(resolve.SubscriptionCloseKindNormal, subID)
 		}
 	}
 
@@ -124,6 +126,11 @@ func (s *subscriptionEventUpdater) updateSubscription(ctx context.Context, wg *s
 	// If no events should be sent, hook must return no events.
 	for _, event := range events {
 		s.eventUpdater.UpdateSubscription(subID, event.GetData())
+	}
+
+	// In case there was an error we close the affected subscription.
+	if err != nil {
+		s.eventUpdater.CloseSubscription(resolve.SubscriptionCloseKindNormal, subID)
 	}
 }
 
