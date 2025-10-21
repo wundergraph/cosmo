@@ -935,7 +935,7 @@ func TestWebSockets(t *testing.T) {
 				},
 			},
 		}
-		closeCh := make(chan struct{}, 1)
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 500
@@ -984,8 +984,6 @@ func TestWebSockets(t *testing.T) {
 
 							for {
 								select {
-								case <-closeCh:
-									return
 								case <-r.Context().Done():
 									return
 								case <-ticker.C:
@@ -1055,7 +1053,6 @@ func TestWebSockets(t *testing.T) {
 			} else {
 				require.Fail(t, "expected net.Error")
 			}
-			closeCh <- struct{}{}
 		})
 	})
 
@@ -1072,7 +1069,6 @@ func TestWebSockets(t *testing.T) {
 				},
 			},
 		}
-		closeCh := make(chan struct{}, 1)
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 500
@@ -1121,8 +1117,6 @@ func TestWebSockets(t *testing.T) {
 
 							for {
 								select {
-								case <-closeCh:
-									return
 								case <-r.Context().Done():
 									return
 								case <-ticker.C:
