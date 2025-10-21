@@ -20,5 +20,3 @@ events:
       - id: my-redis
         urls:
         - "redis://localhost:6379/2"
-  subscription_hooks:
-    max_concurrent_event_receive_handlers: 100
