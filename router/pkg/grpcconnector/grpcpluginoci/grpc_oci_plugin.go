@@ -79,6 +79,7 @@ func NewGRPCOCIPlugin(config GRPCPluginConfig) (*GRPCPlugin, error) {
 		registryPassword: config.RegistryToken,
 
 		tracer:             config.Tracer,
+		startupConfig:      config.StartupConfig,
 		getTraceAttributes: config.GetTraceAttributes,
 	}, nil
 }
