@@ -36,11 +36,8 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 	subscriptions := s.eventUpdater.Subscriptions()
 	limit := max(s.hooks.MaxConcurrentOnReceiveHandlers, 1)
 	semaphore := make(chan struct{}, limit)
-
-	var (
-		wg    = sync.WaitGroup{}
-		errCh = make(chan error, len(subscriptions))
-	)
+	wg := sync.WaitGroup{}
+	errCh := make(chan error, len(subscriptions))
 
 	for ctx, subId := range subscriptions {
 		semaphore <- struct{}{} // aquire a slot
@@ -49,11 +46,16 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 		go s.updateSubscription(ctx, &wg, errCh, semaphore, subId, eventsCopy)
 	}
 
-	go s.deduplicateAndLogErrors(errCh, len(subscriptions))
+	doneLogging := make(chan struct{})
+	go func() {
+		s.deduplicateAndLogErrors(errCh, len(subscriptions))
+		doneLogging <- struct{}{}
+	}()
 
 	wg.Wait()
 	close(semaphore)
 	close(errCh)
+	<-doneLogging
 }
 
 func (s *subscriptionEventUpdater) Complete() {
