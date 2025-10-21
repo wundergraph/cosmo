@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -717,6 +719,157 @@ func TestReceiveHook(t *testing.T) {
 				// Verify we got exactly 3 unique error messages
 				assert.Len(t, errorMessages, 3, "should have exactly 3 unique error messages")
 			}
+		})
+	})
+
+	t.Run("Test async handler execution works", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := config.Config{
+			Graph: config.Graph{},
+			Modules: map[string]interface{}{
+				"streamReceiveModule": stream_receive.StreamReceiveModule{
+					Callback: func(ctx core.StreamReceiveEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
+						// Add 20ms delay before returning events unmodified
+						time.Sleep(20 * time.Millisecond)
+						return events, nil
+					},
+				},
+			},
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
+			RouterOptions: []core.Option{
+				core.WithModulesConfig(cfg.Modules),
+				core.WithCustomModules(&stream_receive.StreamReceiveModule{}),
+				core.WithSubscriptionHooks(config.SubscriptionHooksConfiguration{
+					MaxConcurrentEventReceiveHandlers: 2,
+				}),
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			topics := []string{"employeeUpdated"}
+			events.KafkaEnsureTopicExists(t, xEnv, time.Second, topics...)
+
+			var subscriptionOne struct {
+				employeeUpdatedMyKafka struct {
+					ID      float64 `graphql:"id"`
+					Details struct {
+						Forename string `graphql:"forename"`
+						Surname  string `graphql:"surname"`
+					} `graphql:"details"`
+				} `graphql:"employeeUpdatedMyKafka(employeeID: 3)"`
+			}
+
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
+
+			// Create 10 subscribers
+			const numSubscribers = 10
+			clients := make([]*graphql.SubscriptionClient, numSubscribers)
+			clientRunChs := make([]chan error, numSubscribers)
+			subscriptionArgsChs := make([]chan kafkaSubscriptionArgs, numSubscribers)
+			receivedTimes := make([]time.Time, numSubscribers)
+			var timeMutex sync.Mutex
+
+			for i := range numSubscribers {
+				clients[i] = graphql.NewSubscriptionClient(surl)
+				clientRunChs[i] = make(chan error)
+				subscriptionArgsChs[i] = make(chan kafkaSubscriptionArgs, 1)
+
+				idx := i
+				subscriptionID, err := clients[i].Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
+					timeMutex.Lock()
+					receivedTimes[idx] = time.Now()
+					timeMutex.Unlock()
+					subscriptionArgsChs[idx] <- kafkaSubscriptionArgs{
+						dataValue: dataValue,
+						errValue:  errValue,
+					}
+					return nil
+				})
+				require.NoError(t, err)
+				require.NotEmpty(t, subscriptionID)
+
+				go func(i int) {
+					clientRunChs[i] <- clients[i].Run()
+				}(i)
+			}
+
+			xEnv.WaitForSubscriptionCount(numSubscribers, Timeout)
+
+			events.ProduceKafkaMessage(t, xEnv, Timeout, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+
+			// Collect events from all subscribers
+			for i := 0; i < numSubscribers; i++ {
+				testenv.AwaitChannelWithT(t, Timeout, subscriptionArgsChs[i], func(t *testing.T, args kafkaSubscriptionArgs) {
+					require.NoError(t, args.errValue)
+					require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
+				})
+			}
+
+			// Close all clients
+			for i := 0; i < numSubscribers; i++ {
+				require.NoError(t, clients[i].Close())
+				testenv.AwaitChannelWithT(t, Timeout, clientRunChs[i], func(t *testing.T, err error) {
+					require.NoError(t, err)
+				}, "unable to close client before timeout")
+			}
+
+			// Prevent race condition on receivedTimes, because we will access it in the next step
+			timeMutex.Lock()
+			defer timeMutex.Unlock()
+
+			// Sort received times by timestamp to determine actual execution order
+			type indexedTime struct {
+				index int
+				time  time.Time
+			}
+			sorted := make([]indexedTime, numSubscribers)
+			for i := range numSubscribers {
+				sorted[i] = indexedTime{index: i, time: receivedTimes[i]}
+			}
+			// Sort by time using generic slices.SortFunc
+			slices.SortFunc(sorted, func(a, b indexedTime) int {
+				if a.time.Before(b.time) {
+					return -1
+				}
+				if a.time.After(b.time) {
+					return 1
+				}
+				return 0
+			})
+
+			// Verify pairs: within each pair, events should arrive nearly simultaneously
+			// Between pairs, there should be ~20ms delay
+			for i := 0; i < numSubscribers; i += 2 {
+				if i+1 < numSubscribers {
+					// Check time difference within a pair (should be small, < 10ms)
+					pairDiff := sorted[i+1].time.Sub(sorted[i].time)
+					assert.LessOrEqual(t, pairDiff.Milliseconds(), int64(10),
+						"Subscribers %d and %d should receive events nearly simultaneously (within pair), got %v",
+						sorted[i].index, sorted[i+1].index, pairDiff)
+				}
+
+				// Check time difference between pairs (should be ~20ms)
+				if i+2 < numSubscribers {
+					batchDiff := sorted[i+2].time.Sub(sorted[i].time)
+					assert.GreaterOrEqual(t, batchDiff.Milliseconds(), int64(15),
+						"Time between pair starting at %d and next pair starting at %d should be at least 15ms, got %v",
+						sorted[i].index, sorted[i+2].index, batchDiff)
+					assert.LessOrEqual(t, batchDiff.Milliseconds(), int64(35),
+						"Time between pair starting at %d and next pair starting at %d should be at most 35ms, got %v",
+						sorted[i].index, sorted[i+2].index, batchDiff)
+				}
+			}
+
+			// Verify that the hooks were called for all subscriptions
+			requestLog := xEnv.Observer().FilterMessage("Stream Hook has been run")
+			assert.Len(t, requestLog.All(), numSubscribers)
 		})
 	})
 }
