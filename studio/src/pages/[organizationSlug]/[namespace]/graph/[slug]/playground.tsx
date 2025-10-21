@@ -1289,6 +1289,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
             query={query}
             variables={updatedVariables}
             onEditQuery={setQuery}
+            headers={headers === PLAYGROUND_DEFAULT_HEADERS_TEMPLATE ? undefined : headers}
             defaultHeaders={PLAYGROUND_DEFAULT_HEADERS_TEMPLATE}
             onEditHeaders={setHeaders}
             plugins={[
