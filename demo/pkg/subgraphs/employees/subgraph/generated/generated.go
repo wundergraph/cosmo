@@ -52,6 +52,7 @@ type ResolverRoot interface {
 }
 
 type DirectiveRoot struct {
+	Openfed__requireFetchReasons func(ctx context.Context, obj any, next graphql.Resolver) (res any, err error)
 }
 
 type ComplexityRoot struct {
@@ -956,8 +957,10 @@ directive @goField(
   omittable: Boolean
 ) on INPUT_FIELD_DEFINITION | FIELD_DEFINITION
 
+directive @openfed__requireFetchReasons repeatable on FIELD_DEFINITION | INTERFACE | OBJECT
+
 type Query {
-  employee(id: Int!): Employee
+  employee(id: Int!): Employee @openfed__requireFetchReasons
   employeeAsList(id: Int!): [Employee]
   employees: [Employee]
   products: [Products!]!
@@ -1013,7 +1016,7 @@ enum EngineerType {
   FULLSTACK
 }
 
-interface Identifiable {
+interface Identifiable @openfed__requireFetchReasons {
   id: Int!
 }
 
@@ -4371,8 +4374,30 @@ func (ec *executionContext) _Query_employee(ctx context.Context, field graphql.C
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Employee(rctx, fc.Args["id"].(int))
+		directive0 := func(rctx context.Context) (any, error) {
+			ctx = rctx // use context from middleware stack in children
+			return ec.resolvers.Query().Employee(rctx, fc.Args["id"].(int))
+		}
+
+		directive1 := func(ctx context.Context) (any, error) {
+			if ec.directives.Openfed__requireFetchReasons == nil {
+				var zeroVal *model.Employee
+				return zeroVal, errors.New("directive openfed__requireFetchReasons is not implemented")
+			}
+			return ec.directives.Openfed__requireFetchReasons(ctx, nil, directive0)
+		}
+
+		tmp, err := directive1(rctx)
+		if err != nil {
+			return nil, graphql.ErrorOnPath(ctx, err)
+		}
+		if tmp == nil {
+			return nil, nil
+		}
+		if data, ok := tmp.(*model.Employee); ok {
+			return data, nil
+		}
+		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/model.Employee`, tmp)
 	})
 	if err != nil {
 		ec.Error(ctx, err)

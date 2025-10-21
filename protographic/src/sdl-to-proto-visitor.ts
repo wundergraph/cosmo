@@ -1365,6 +1365,7 @@ Example:
           {
             fieldName: graphqlFieldToProtoField(field.name),
             typeName: protoType.typeName,
+            isRepeated: protoType.isRepeated,
             fieldNumber: 1,
           },
         ],

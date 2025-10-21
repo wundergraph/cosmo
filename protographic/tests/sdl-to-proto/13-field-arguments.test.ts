@@ -102,6 +102,119 @@ describe('SDL to Proto Field Arguments', () => {
       }"
     `);
   });
+  it('should correctly include lists as response types', () => {
+    const sdl = `
+    type User {
+        id: ID!
+        posts(limit: Int!): [Post!]!
+        comments(limit: Int!): [Comment!]
+    }
+
+    type Post {
+        id: ID!
+        title: String!
+    }
+
+    type Comment {
+        id: ID!
+        content: String!
+    }
+
+    type Query {
+        user(id: ID!): User
+    }
+  `;
+
+    const { proto: protoText } = compileGraphQLToProto(sdl);
+
+    expectValidProto(protoText);
+    expect(protoText).toMatchInlineSnapshot(`
+      "syntax = "proto3";
+      package service.v1;
+
+      // Service definition for DefaultService
+      service DefaultService {
+        rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
+        rpc ResolveUserComments(ResolveUserCommentsRequest) returns (ResolveUserCommentsResponse) {}
+        rpc ResolveUserPosts(ResolveUserPostsRequest) returns (ResolveUserPostsResponse) {}
+      }
+
+      // Wrapper message for a list of Comment.
+      message ListOfComment {
+        message List {
+          repeated Comment items = 1;
+        }
+        List list = 1;
+      }
+      // Request message for user operation.
+      message QueryUserRequest {
+        string id = 1;
+      }
+      // Response message for user operation.
+      message QueryUserResponse {
+        User user = 1;
+      }
+      message ResolveUserPostsArgs {
+        int32 limit = 1;
+      }
+
+      message ResolveUserPostsContext {
+        string id = 1;
+      }
+
+      message ResolveUserPostsRequest {
+        // context provides the resolver context for the field posts of type User.
+        repeated ResolveUserPostsContext context = 1;
+        // field_args provides the arguments for the resolver field posts of type User.
+        ResolveUserPostsArgs field_args = 2;
+      }
+
+      message ResolveUserPostsResult {
+        repeated Post posts = 1;
+      }
+
+      message ResolveUserPostsResponse {
+        repeated ResolveUserPostsResult result = 1;
+      }
+
+      message ResolveUserCommentsArgs {
+        int32 limit = 1;
+      }
+
+      message ResolveUserCommentsContext {
+        string id = 1;
+      }
+
+      message ResolveUserCommentsRequest {
+        // context provides the resolver context for the field comments of type User.
+        repeated ResolveUserCommentsContext context = 1;
+        // field_args provides the arguments for the resolver field comments of type User.
+        ResolveUserCommentsArgs field_args = 2;
+      }
+
+      message ResolveUserCommentsResult {
+        ListOfComment comments = 1;
+      }
+
+      message ResolveUserCommentsResponse {
+        repeated ResolveUserCommentsResult result = 1;
+      }
+
+      message User {
+        string id = 1;
+      }
+
+      message Post {
+        string id = 1;
+        string title = 2;
+      }
+
+      message Comment {
+        string id = 1;
+        string content = 2;
+      }"
+    `);
+  });
   it('should correctly include field arguments with nested types', () => {
     const sdl = `
     type User {
