@@ -59,36 +59,41 @@ export default (opts: BaseCommandOptions) => {
 
       spinner.text = 'Checkout templates...';
 
-      if (options.language.toLowerCase() !== 'go') {
+      options.language = options.language.toLowerCase();
+      if (options.language !== 'go' || options.language !== 'ts') {
         spinner.fail(pc.yellow(`Language '${options.language}' is not supported yet. Using 'go' instead.`));
-        options.language = 'go';
       }
 
       const goModulePath = 'github.com/wundergraph/cosmo/plugin';
 
       spinner.text = 'Generating mapping and proto files...';
 
+      await writeFile(resolve(srcDir, 'schema.graphql'), pupa(PluginTemplates.schema, { name }));
+      const mapping = compileGraphQLToMapping(PluginTemplates.schema, serviceName);
+      await writeFile(resolve(generatedDir, 'mapping.json'), JSON.stringify(mapping, null, 2));
+      await writeFile(resolve(tempDir, 'Makefile'), pupa(PluginTemplates.makefile, { originalPluginName }));
+
+      await writeFile(resolve(tempDir, '.gitignore'), PluginTemplates.gitignore);
+      await writeFile(resolve(tempDir, '.cursorignore'), PluginTemplates.cursorIgnore);
+
+      const proto = compileGraphQLToProto(PluginTemplates.schema, { serviceName, packageName: 'service', goPackage: goModulePath });
+      await writeFile(resolve(generatedDir, 'service.proto'), proto.proto);
+      await writeFile(resolve(generatedDir, 'service.proto.lock.json'), JSON.stringify(proto.lockData, null, 2));
+
+      switch (options.language) {
+        case 'go': {
+          await writeFile(resolve(srcDir, 'main.go'), pupa(PluginTemplates.mainGo, { serviceName }));
+          await writeFile(resolve(srcDir, 'main_test.go'), pupa(PluginTemplates.mainGoTest, { serviceName }));
+          await writeFile(resolve(tempDir, 'go.mod'), pupa(PluginTemplates.goMod, { modulePath: goModulePath }));
+          break;
+        }
+        case 'ts': {
+        }
+      }
+      // Language Specific
+
       if (options.project) {
         await writeFile(resolve(tempDir, 'README.md'), pupa(ProjectTemplates.readme, { name, originalPluginName }));
-        await writeFile(resolve(srcDir, 'schema.graphql'), pupa(PluginTemplates.schema, { name }));
-
-        const mapping = compileGraphQLToMapping(PluginTemplates.schema, serviceName);
-        await writeFile(resolve(generatedDir, 'mapping.json'), JSON.stringify(mapping, null, 2));
-
-        const proto = compileGraphQLToProto(PluginTemplates.schema, {
-          serviceName,
-          packageName: 'service',
-          goPackage: goModulePath,
-        });
-
-        await writeFile(resolve(generatedDir, 'service.proto'), proto.proto);
-        await writeFile(resolve(generatedDir, 'service.proto.lock.json'), JSON.stringify(proto.lockData, null, 2));
-        await writeFile(resolve(srcDir, 'main.go'), pupa(PluginTemplates.mainGo, { serviceName }));
-        await writeFile(resolve(srcDir, 'main_test.go'), pupa(PluginTemplates.mainGoTest, { serviceName }));
-        await writeFile(resolve(tempDir, 'go.mod'), pupa(PluginTemplates.goMod, { modulePath: goModulePath }));
-        await writeFile(resolve(tempDir, 'Makefile'), pupa(PluginTemplates.makefile, { originalPluginName }));
-        await writeFile(resolve(tempDir, '.gitignore'), PluginTemplates.gitignore);
-        await writeFile(resolve(tempDir, '.cursorignore'), PluginTemplates.cursorIgnore);
 
         // Create cursor rules in .cursor/rules
         await mkdir(resolve(tempDir, '.cursor', 'rules'), { recursive: true });
@@ -115,11 +120,6 @@ export default (opts: BaseCommandOptions) => {
         await rename(tempDir, pluginDir);
       } else {
         await writeFile(resolve(tempDir, 'README.md'), pupa(PluginTemplates.readme, { name, originalPluginName }));
-        await writeFile(resolve(tempDir, 'Makefile'), pupa(PluginTemplates.makefile, { originalPluginName }));
-        await writeFile(resolve(srcDir, 'schema.graphql'), pupa(PluginTemplates.schema, { name }));
-
-        const mapping = compileGraphQLToMapping(PluginTemplates.schema, serviceName);
-        await writeFile(resolve(generatedDir, 'mapping.json'), JSON.stringify(mapping, null, 2));
 
         // Create cursor rules in .cursor/rules
         await mkdir(resolve(tempDir, '.cursor', 'rules'), { recursive: true });
@@ -128,22 +128,7 @@ export default (opts: BaseCommandOptions) => {
           pupa(PluginTemplates.cursorRules, { name, originalPluginName, pluginDir }),
         );
 
-        const proto = compileGraphQLToProto(PluginTemplates.schema, {
-          serviceName,
-          packageName: 'service',
-          goPackage: goModulePath,
-        });
-
-        await writeFile(resolve(generatedDir, 'service.proto'), proto.proto);
-        await writeFile(resolve(generatedDir, 'service.proto.lock.json'), JSON.stringify(proto.lockData, null, 2));
-        await writeFile(resolve(srcDir, 'main.go'), pupa(PluginTemplates.mainGo, { serviceName }));
-        await writeFile(resolve(srcDir, 'main_test.go'), pupa(PluginTemplates.mainGoTest, { serviceName }));
-        await writeFile(resolve(tempDir, 'go.mod'), pupa(PluginTemplates.goMod, { modulePath: goModulePath }));
-        await writeFile(resolve(tempDir, '.gitignore'), PluginTemplates.gitignore);
-        await writeFile(resolve(tempDir, '.cursorignore'), PluginTemplates.cursorIgnore);
-
         await mkdir(projectDir, { recursive: true });
-
         await rename(tempDir, pluginDir);
       }
 
