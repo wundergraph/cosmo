@@ -14,7 +14,7 @@ import {
   GraphQLID,
   ConstArgumentNode,
 } from 'graphql';
-import { CONNECT_CONFIGURE_RESOLVER, CONTEXT } from './string-constants';
+import { CONNECT_CONFIGURE_RESOLVER, CONTEXT } from './string-constants.js';
 
 /**
  * Type mapping from Kind enum values to their corresponding AST node types
