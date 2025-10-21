@@ -96,6 +96,8 @@ type Options struct {
 	ForwardHeadersEnabled bool
 	// ForwardHeadersAllowList is the list of headers (or regex patterns) to forward
 	ForwardHeadersAllowList []string
+	// TokenValidator is the token validator for authorization
+	TokenValidator *TokenValidator
 }
 
 // GraphQLSchemaServer represents an MCP server that works with GraphQL schemas and operations
@@ -119,6 +121,7 @@ type GraphQLSchemaServer struct {
 	registeredTools           []string
 	forwardHeadersEnabled     bool
 	forwardHeadersAllowList   []string
+	tokenValidator            *TokenValidator
 }
 
 type graphqlRequest struct {
@@ -248,6 +251,7 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)
 		baseURL:                   options.BaseURL,
 		forwardHeadersEnabled:     options.ForwardHeadersEnabled,
 		forwardHeadersAllowList:   options.ForwardHeadersAllowList,
+		tokenValidator:            options.TokenValidator,
 	}
 
 	return gs, nil
@@ -323,6 +327,13 @@ func WithForwardHeaders(enabled bool, allowList []string) func(*Options) {
 	}
 }
 
+// WithTokenValidator sets the token validator for authorization
+func WithTokenValidator(tokenValidator *TokenValidator) func(*Options) {
+	return func(o *Options) {
+		o.TokenValidator = tokenValidator
+	}
+}
+
 // Serve starts the server with the configured options and returns a streamable HTTP server.
 func (s *GraphQLSchemaServer) Serve() (*server.StreamableHTTPServer, error) {
 	// Create custom HTTP server
@@ -354,10 +365,18 @@ func (s *GraphQLSchemaServer) Serve() (*server.StreamableHTTPServer, error) {
 
 	mux := http.NewServeMux()
 
-	// No OAuth protection - original behavior
-	mux.Handle("/mcp", corsMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	// Create the MCP handler
+	mcpHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		streamableHTTPServer.ServeHTTP(w, r)
-	})))
+	})
+
+	// Apply authorization middleware if token validator is configured
+	if s.tokenValidator != nil && s.tokenValidator.enabled {
+		mcpHandler = s.tokenValidator.AuthorizationMiddleware(mcpHandler).(http.HandlerFunc)
+	}
+
+	// Apply CORS middleware
+	mux.Handle("/mcp", corsMiddleware(mcpHandler))
 
 	// Set the handler for the custom HTTP server
 	httpServer.Handler = mux

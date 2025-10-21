@@ -2090,6 +2090,182 @@
               }
             }
           }
+        },
+        "authorization": {
+          "type": "object",
+          "description": "OAuth 2.1 authorization configuration for the MCP server. When enabled, validates JWT access tokens using JWKS from authorization servers.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable OAuth 2.1 authorization for the MCP server. When true, all MCP requests must include a valid JWT access token in the Authorization header."
+            },
+            "jwks": {
+              "type": "array",
+              "description": "List of JWKS (JSON Web Key Set) configurations for validating JWT access tokens. Supports multiple authorization servers.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "description": "The URL of the JWKS endpoint. Used to fetch public keys for JWT signature verification.",
+                    "format": "http-url"
+                  },
+                  "algorithms": {
+                    "type": "array",
+                    "description": "The allowed signing algorithms for JWT tokens. An empty list means all algorithms are allowed.",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "HS256",
+                        "HS384",
+                        "HS512",
+                        "RS256",
+                        "RS384",
+                        "RS512",
+                        "ES256",
+                        "ES384",
+                        "ES512",
+                        "PS256",
+                        "PS384",
+                        "PS512",
+                        "EdDSA"
+                      ]
+                    }
+                  },
+                  "refresh_interval": {
+                    "type": "string",
+                    "duration": {
+                      "minimum": "5s"
+                    },
+                    "description": "The interval at which the JWKS are refreshed. The period is specified as a string with a number and a unit, e.g. 10ms, 1s, 1m, 1h. The supported units are 'ms', 's', 'm', 'h'.",
+                    "default": "1m"
+                  },
+                  "audiences": {
+                    "type": "array",
+                    "description": "The expected audiences in the JWT token. Used to verify the 'aud' claim.",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "refresh_unknown_kid": {
+                    "type": "object",
+                    "description": "Controls rate-limited refresh behavior when a JWT KID (Key ID) is unknown.",
+                    "additionalProperties": false,
+                    "properties": {
+                      "enabled": {
+                        "type": "boolean",
+                        "description": "Enable refresh attempts on unknown KID.",
+                        "default": false
+                      },
+                      "max_wait": {
+                        "type": "string",
+                        "description": "Maximum time to wait for a refresh permit before giving up.",
+                        "default": "10s",
+                        "duration": {
+                          "minimum": "0s"
+                        }
+                      },
+                      "interval": {
+                        "type": "string",
+                        "description": "Token refill interval for the rate limiter.",
+                        "default": "1m",
+                        "duration": {
+                          "minimum": "1s"
+                        }
+                      },
+                      "burst": {
+                        "type": "integer",
+                        "description": "Burst size for the rate limiter.",
+                        "default": 2,
+                        "minimum": 1
+                      }
+                    }
+                  }
+                },
+                "required": ["url"]
+              }
+            },
+            "scopes": {
+              "type": "object",
+              "description": "Scope-based authorization configuration. Controls how OAuth scopes are enforced for MCP operations.",
+              "additionalProperties": false,
+              "properties": {
+                "mode": {
+                  "type": "string",
+                  "enum": ["enforce", "log_only", "disabled"],
+                  "default": "enforce",
+                  "description": "The enforcement mode for scope validation. 'enforce' (default) blocks requests with insufficient scopes, 'log_only' logs violations but allows requests, 'disabled' skips scope checking entirely."
+                },
+                "tools": {
+                  "type": "object",
+                  "description": "Scope requirements for built-in MCP tools.",
+                  "additionalProperties": false,
+                  "properties": {
+                    "get_schema": {
+                      "type": "object",
+                      "description": "Scope configuration for the get_schema tool.",
+                      "additionalProperties": false,
+                      "properties": {
+                        "scopes": {
+                          "type": "array",
+                          "description": "Required OAuth scopes for accessing the get_schema tool.",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "public": {
+                          "type": "boolean",
+                          "default": false,
+                          "description": "If true, no authentication is required for this tool."
+                        }
+                      }
+                    },
+                    "execute_graphql": {
+                      "type": "object",
+                      "description": "Scope configuration for the execute_graphql tool.",
+                      "additionalProperties": false,
+                      "properties": {
+                        "scopes": {
+                          "type": "array",
+                          "description": "Required OAuth scopes for accessing the execute_graphql tool.",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "public": {
+                          "type": "boolean",
+                          "default": false,
+                          "description": "If true, no authentication is required for this tool."
+                        }
+                      }
+                    },
+                    "get_operation_info": {
+                      "type": "object",
+                      "description": "Scope configuration for the get_operation_info tool.",
+                      "additionalProperties": false,
+                      "properties": {
+                        "scopes": {
+                          "type": "array",
+                          "description": "Required OAuth scopes for accessing the get_operation_info tool.",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "public": {
+                          "type": "boolean",
+                          "default": false,
+                          "description": "If true, no authentication is required for this tool."
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },

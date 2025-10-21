@@ -45,6 +45,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/selfregister"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
+	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/health"
 	"github.com/wundergraph/cosmo/router/pkg/mcpserver"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
@@ -887,6 +888,22 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			mcpserver.WithExposeSchema(r.mcp.ExposeSchema),
 			mcpserver.WithStateless(r.mcp.Session.Stateless),
 			mcpserver.WithForwardHeaders(r.mcp.ForwardHeaders.Enabled, r.mcp.ForwardHeaders.AllowList),
+		}
+
+		// Setup MCP authenticators if authorization is enabled
+		if r.mcp.Authorization.Enabled {
+			mcpAuthenticators, err := setupMCPAuthenticators(ctx, r.logger, &r.mcp)
+			if err != nil {
+				return fmt.Errorf("failed to setup MCP authenticators: %w", err)
+			}
+
+			if len(mcpAuthenticators) > 0 {
+				tokenValidator := mcpserver.NewTokenValidator(mcpAuthenticators, r.logger, true)
+				mcpOpts = append(mcpOpts, mcpserver.WithTokenValidator(tokenValidator))
+				r.logger.Info("MCP authorization enabled",
+					zap.Int("authenticators", len(mcpAuthenticators)),
+				)
+			}
 		}
 
 		// Determine the router GraphQL endpoint
@@ -2313,4 +2330,57 @@ func or[T any](maybe *T, or T) T {
 		return *maybe
 	}
 	return or
+}
+
+// setupMCPAuthenticators creates JWT authenticators for the MCP server from the MCP authorization configuration.
+// This is similar to setupAuthenticators but specifically for MCP server authorization.
+func setupMCPAuthenticators(ctx context.Context, logger *zap.Logger, mcpCfg *config.MCPConfiguration) ([]authentication.Authenticator, error) {
+	if !mcpCfg.Authorization.Enabled || len(mcpCfg.Authorization.JWKS) == 0 {
+		// No MCP JWT authenticators configured
+		return nil, nil
+	}
+
+	var authenticators []authentication.Authenticator
+	configs := make([]authentication.JWKSConfig, 0, len(mcpCfg.Authorization.JWKS))
+
+	for _, jwks := range mcpCfg.Authorization.JWKS {
+		configs = append(configs, authentication.JWKSConfig{
+			URL:               jwks.URL,
+			RefreshInterval:   jwks.RefreshInterval,
+			AllowedAlgorithms: jwks.Algorithms,
+			Audiences:         jwks.Audiences,
+			RefreshUnknownKID: authentication.RefreshUnknownKIDConfig{
+				Enabled:  jwks.RefreshUnknownKID.Enabled,
+				MaxWait:  jwks.RefreshUnknownKID.MaxWait,
+				Interval: jwks.RefreshUnknownKID.Interval,
+				Burst:    jwks.RefreshUnknownKID.Burst,
+			},
+		})
+	}
+
+	tokenDecoder, err := authentication.NewJwksTokenDecoder(ctx, logger, configs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create MCP token decoder: %w", err)
+	}
+
+	// MCP server uses standard Authorization header with Bearer prefix
+	headerSourceMap := map[string][]string{
+		"Authorization": {"Bearer"},
+	}
+
+	opts := authentication.HttpHeaderAuthenticatorOptions{
+		Name:                 "mcp-jwks",
+		HeaderSourcePrefixes: headerSourceMap,
+		TokenDecoder:         tokenDecoder,
+	}
+
+	authenticator, err := authentication.NewHttpHeaderAuthenticator(opts)
+	if err != nil {
+		logger.Error("Could not create MCP HttpHeader authenticator", zap.Error(err))
+		return nil, fmt.Errorf("failed to create MCP authenticator: %w", err)
+	}
+
+	authenticators = append(authenticators, authenticator)
+
+	return authenticators, nil
 }
