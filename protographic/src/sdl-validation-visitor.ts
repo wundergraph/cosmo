@@ -14,6 +14,7 @@ import {
   GraphQLID,
   ConstArgumentNode,
 } from 'graphql';
+import { CONNECT_CONFIGURE_RESOLVER, CONTEXT } from './string-constants';
 
 /**
  * Type mapping from Kind enum values to their corresponding AST node types
@@ -350,7 +351,7 @@ export class SDLValidationVisitor {
     }
 
     this.addWarning(
-      `No @configureResolver directive found on the field ${ctx.node.name.value} - falling back to ID field`,
+      `No @${CONNECT_CONFIGURE_RESOLVER} directive found on the field ${ctx.node.name.value} - falling back to ID field`,
       ctx.node.loc,
     );
     const idFields = parent.fields?.filter((field) => this.getUnderlyingType(field.type).name.value === GraphQLID.name);
@@ -362,7 +363,7 @@ export class SDLValidationVisitor {
         return;
       default:
         this.addError(
-          'Invalid context provided for resolver. Multiple fields with type ID found - provide a context with the fields you want to use in the @configureResolver directive',
+          `Invalid context provided for resolver. Multiple fields with type ID found - provide a context with the fields you want to use in the @${CONNECT_CONFIGURE_RESOLVER} directive`,
           ctx.node.loc,
         );
     }
@@ -370,8 +371,8 @@ export class SDLValidationVisitor {
 
   private getResolverContext(node: FieldDefinitionNode): ConstArgumentNode | undefined {
     return node.directives
-      ?.find((directive) => directive.name.value === 'configureResolver')
-      ?.arguments?.find((arg) => arg.name.value === 'context');
+      ?.find((directive) => directive.name.value === CONNECT_CONFIGURE_RESOLVER)
+      ?.arguments?.find((arg) => arg.name.value === CONTEXT);
   }
 
   /**
@@ -419,7 +420,10 @@ export class SDLValidationVisitor {
 
     const { contains, fieldName } = this.isFieldInOtherFieldContext(ctx.node, fieldNames, parentFields.fields);
     if (contains) {
-      this.addError(`Cycle detected in context: field ${ctx.node.name.value} is referenced in the context of field ${fieldName}`, ctx.node.loc);
+      this.addError(
+        `Cycle detected in context: field ${ctx.node.name.value} is referenced in the context of field ${fieldName}`,
+        ctx.node.loc,
+      );
     }
 
     return false;
@@ -445,7 +449,6 @@ export class SDLValidationVisitor {
       .map((field) => field.trim());
   }
 
-
   /**
    * Check if a field is in the context of another field. This is used to detect cycles in the context.
    * @param field - The field to check
@@ -454,7 +457,11 @@ export class SDLValidationVisitor {
    * @returns true if the field is in the context of another field, false otherwise
    * @private
    */
-  private isFieldInOtherFieldContext(field: FieldDefinitionNode, contextFields: string[], parentFields: FieldDefinitionNode[]): { contains: boolean, fieldName: string } {
+  private isFieldInOtherFieldContext(
+    field: FieldDefinitionNode,
+    contextFields: string[],
+    parentFields: FieldDefinitionNode[],
+  ): { contains: boolean; fieldName: string } {
     if (parentFields.length === 0) return { contains: false, fieldName: '' };
 
     const fieldName = field.name.value;
@@ -462,7 +469,7 @@ export class SDLValidationVisitor {
     for (const contextField of contextFields) {
       if (contextField === fieldName) continue;
 
-      let parentField = parentFields.find((p) => p.name.value === contextField)
+      let parentField = parentFields.find((p) => p.name.value === contextField);
       if (!parentField) continue;
 
       const resolverContext = this.getResolverContext(parentField);

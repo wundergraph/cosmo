@@ -61,7 +61,7 @@ describe('SDL to Proto Field Arguments', () => {
       }
 
       message ResolveUserPostsResult {
-        Post posts = 1;
+        repeated Post posts = 1;
       }
 
       message ResolveUserPostsResponse {
@@ -446,10 +446,6 @@ describe('SDL to Proto Field Arguments', () => {
   });
   it('should correctly handle multiple same return types with different arguments and nested resolver types', () => {
     const sdl = `
-
-    directive @configureResolver(context: openfed__FieldSet!) on FIELD_DEFINITION
-    scalar openfed__FieldSet
-
     type User {
         id: ID!
         name: String!
@@ -533,7 +529,7 @@ describe('SDL to Proto Field Arguments', () => {
       }
 
       message ResolveUserPostsResult {
-        Post posts = 1;
+        repeated Post posts = 1;
       }
 
       message ResolveUserPostsResponse {
@@ -580,13 +576,10 @@ describe('SDL to Proto Field Arguments', () => {
   it('should correctly handle multiple same return types with different arguments and nested resolver types', () => {
     const sdl = `
 
-    directive @parent(fields: openfed__FieldSet!) on FIELD_DEFINITION
-    scalar openfed__FieldSet
-
     type User {
         id: ID!
         name: String!
-        post(upper: Boolean!): Post! @configureResolver(context: "id name")
+        post(upper: Boolean!): Post! @connect__configureResolver(context: "id name")
     }
 
     type Post {
@@ -655,8 +648,6 @@ describe('SDL to Proto Field Arguments', () => {
   });
   it('should correctly handle fields inside arrays', () => {
     const sdl = `
-
-    directive @parent(fields: openfed__FieldSet!) on FIELD_DEFINITION
     scalar openfed__FieldSet
 
     type Category {
@@ -666,7 +657,7 @@ describe('SDL to Proto Field Arguments', () => {
 
     type Product {
         id: ID!
-        count(filters: ProductCountFilter): Int! @configureResolver(context: "id")
+        count(filters: ProductCountFilter): Int! @connect__configureResolver(context: "id")
     }
 
     type ProductCountFilter {
@@ -747,7 +738,7 @@ describe('SDL to Proto Field Arguments', () => {
     const sdl = `
     type User {
         name: String!
-        post(upper: Boolean!): Post! @configureResolver
+        post(upper: Boolean!): Post! @connect__configureResolver
     }
 
     type Post {
@@ -767,7 +758,7 @@ describe('SDL to Proto Field Arguments', () => {
     type User {
         id: ID!
         uuid: ID!
-        name(context: String!): String! @configureResolver
+        name(context: String!): String! @connect__configureResolver
     }
 
     type Query {
@@ -776,7 +767,7 @@ describe('SDL to Proto Field Arguments', () => {
   `;
 
     expect(() => compileGraphQLToProto(sdl)).throws(
-      'Invalid field context for resolver. Multiple fields with type ID found - provide a context with the fields you want to use in the @configureResolver directive',
+      'Invalid field context for resolver. Multiple fields with type ID found - provide a context with the fields you want to use in the @connect__configureResolver directive',
     );
   });
 });

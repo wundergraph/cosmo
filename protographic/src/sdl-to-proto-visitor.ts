@@ -44,6 +44,7 @@ import {
 } from './naming-conventions.js';
 import { camelCase } from 'lodash-es';
 import { ProtoLock, ProtoLockManager } from './proto-lock.js';
+import { CONNECT_CONFIGURE_RESOLVER, CONTEXT, FIELD_ARGS, RESULT } from './string-constants.js';
 
 /**
  * Maps GraphQL scalar types to Protocol Buffer types
@@ -1154,7 +1155,7 @@ Example:
   ): { context: string; error: string | undefined } {
     const resolvedDirective = this.findResolverDirective(field);
     if (resolvedDirective) {
-      const valueNode = resolvedDirective.arguments?.find((arg) => arg.name.value === 'context')?.value;
+      const valueNode = resolvedDirective.arguments?.find((arg) => arg.name.value === CONTEXT)?.value;
       const context = (() => {
         if (!valueNode || valueNode.kind !== 'StringValue') {
           return '';
@@ -1177,8 +1178,7 @@ Example:
       default:
         return {
           context: '',
-          error:
-            'Multiple fields with type ID found - provide a context with the fields you want to use in the @configureResolver directive',
+          error: `Multiple fields with type ID found - provide a context with the fields you want to use in the @${CONNECT_CONFIGURE_RESOLVER} directive`,
         };
     }
   }
@@ -1213,7 +1213,7 @@ Example:
       return undefined;
     }
 
-    return directives.find((d) => d.name.value === 'configureResolver');
+    return directives.find((d) => d.name.value === CONNECT_CONFIGURE_RESOLVER);
   }
 
   /**
@@ -1297,26 +1297,26 @@ Example:
 
     // add the context message to the key message
     keyMessageFields.push({
-      fieldName: 'context',
+      fieldName: CONTEXT,
       typeName: contextMessageName,
       fieldNumber: ++fieldNumber,
       isRepeated: true,
-      description: `context provides the resolver context for the field ${field.name} of type ${parent.name}.`,
+      description: `${CONTEXT} provides the resolver context for the field ${field.name} of type ${parent.name}.`,
     });
 
     // add the args message to the key message
     keyMessageFields.push({
-      fieldName: 'field_args',
+      fieldName: FIELD_ARGS,
       typeName: argsMessageName,
       fieldNumber: ++fieldNumber,
-      description: `field_args provides the arguments for the resolver field ${field.name} of type ${parent.name}.`,
+      description: `${FIELD_ARGS} provides the arguments for the resolver field ${field.name} of type ${parent.name}.`,
     });
 
     // build the actual request message
     messageLines.push(
       ...this.buildMessage({
         messageName: requestName,
-        fields: keyMessageFields
+        fields: keyMessageFields,
       }),
     );
 
@@ -1377,7 +1377,7 @@ Example:
         messageName: responseName,
         fields: [
           {
-            fieldName: 'result',
+            fieldName: RESULT,
             typeName: resultMessageName,
             fieldNumber: 1,
             isRepeated: true,

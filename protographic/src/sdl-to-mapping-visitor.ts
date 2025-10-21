@@ -295,7 +295,6 @@ export class GraphQLToProtoVisitor {
     this.mapping.operationMappings.push(operationMapping);
   }
 
-
   private createLookupMapping(type: LookupType, typeName: string, field: GraphQLField<any, any>): void {
     const methodName = createResolverMethodName(typeName, field.name);
 
@@ -305,7 +304,7 @@ export class GraphQLToProtoVisitor {
       rpc: methodName,
       request: createRequestMessageName(methodName),
       response: createResponseMessageName(methodName),
-    })
+    });
 
     this.mapping.resolveMappings.push(lookupMapping);
   }
@@ -481,7 +480,6 @@ export class GraphQLToProtoVisitor {
       fieldMapping: this.createFieldMapping(field),
     });
   }
-
 
   /**
    * Create argument mappings for a GraphQL field

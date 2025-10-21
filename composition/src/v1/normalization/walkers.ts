@@ -13,6 +13,7 @@ import {
   BASE_SCALARS,
   CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION,
   CONFIGURE_DESCRIPTION_DEFINITION,
+  CONNECT_CONFIGURE_RESOLVER_DEFINITION,
   SUBSCRIPTION_FILTER_DEFINITION,
   V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME,
 } from '../utils/constants';
@@ -34,6 +35,7 @@ import {
   ANY_SCALAR,
   CONFIGURE_CHILD_DESCRIPTIONS,
   CONFIGURE_DESCRIPTION,
+  CONNECT_CONFIGURE_RESOLVER,
   ENTITY_UNION,
   IGNORED_FIELDS,
   PARENT_DEFINITION_DATA,
@@ -78,6 +80,14 @@ export function upsertDirectiveSchemaAndEntityDefinitions(nf: NormalizationFacto
               CONFIGURE_CHILD_DESCRIPTIONS,
               CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION,
             );
+            break;
+          }
+          case CONNECT_CONFIGURE_RESOLVER: {
+            nf.directiveDefinitionByDirectiveName.set(
+              CONNECT_CONFIGURE_RESOLVER,
+              CONNECT_CONFIGURE_RESOLVER_DEFINITION,
+            );
+
             break;
           }
         }
