@@ -244,6 +244,11 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.metricConfig = rmetric.DefaultConfig(Version)
 	}
 
+	// Default value for maxConcurrentOnReceiveHooks
+	if r.subscriptionHooks.maxConcurrentOnReceiveHooks == 0 {
+		r.subscriptionHooks.maxConcurrentOnReceiveHooks = 100
+	}
+
 	if r.corsOptions == nil {
 		r.corsOptions = CorsDefaultOptions()
 	}
@@ -2124,6 +2129,11 @@ func WithDemoMode(demoMode bool) Option {
 
 func WithSubscriptionHooks(cfg config.SubscriptionHooksConfiguration) Option {
 	return func(r *Router) {
+		// maxConcurrent := cfg.MaxConcurrentEventReceiveHandlers
+		// if maxConcurrent == 0 {
+		// 	maxConcurrent = 100
+		// }
+		// r.subscriptionHooks.maxConcurrentOnReceiveHooks = maxConcurrent
 		r.subscriptionHooks.maxConcurrentOnReceiveHooks = cfg.MaxConcurrentEventReceiveHandlers
 	}
 }
