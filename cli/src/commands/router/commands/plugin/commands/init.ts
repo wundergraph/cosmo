@@ -12,6 +12,8 @@ import { camelCase, upperFirst } from 'lodash-es';
 import { BaseCommandOptions } from '../../../../../core/types/types.js';
 import PluginTemplates from '../templates/plugin.js';
 import ProjectTemplates from '../templates/project.js';
+import GoTemplates from '../templates/goplugin.js';
+import TsTemplates from '../templates/tsplugin.js';
 import { renderResultTree } from '../helper.js';
 
 export default (opts: BaseCommandOptions) => {
@@ -82,12 +84,15 @@ export default (opts: BaseCommandOptions) => {
 
       switch (options.language) {
         case 'go': {
-          await writeFile(resolve(srcDir, 'main.go'), pupa(PluginTemplates.mainGo, { serviceName }));
-          await writeFile(resolve(srcDir, 'main_test.go'), pupa(PluginTemplates.mainGoTest, { serviceName }));
+          await writeFile(resolve(srcDir, 'main.go'), pupa(GoTemplates.mainGo, { serviceName }));
+          await writeFile(resolve(srcDir, 'main_test.go'), pupa(GoTemplates.mainGoTest, { serviceName }));
           await writeFile(resolve(tempDir, 'go.mod'), pupa(PluginTemplates.goMod, { modulePath: goModulePath }));
           break;
         }
         case 'ts': {
+          await writeFile(resolve(srcDir, 'plugin.ts'), pupa(TsTemplates.pluginTs, { serviceName }));
+          await writeFile(resolve(srcDir, 'client.ts'), pupa(TsTemplates.clientTs, { serviceName }));
+          await writeFile(resolve(tempDir, 'package.json'), pupa(TsTemplates.packageJson, { serviceName }));
         }
       }
       // Language Specific
