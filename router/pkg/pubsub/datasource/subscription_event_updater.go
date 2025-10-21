@@ -40,7 +40,7 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 	errCh := make(chan error, len(subscriptions))
 
 	for ctx, subId := range subscriptions {
-		semaphore <- struct{}{} // aquire a slot
+		semaphore <- struct{}{} // Acquire a slot
 		eventsCopy := copyEvents(events)
 		wg.Add(1)
 		go s.updateSubscription(ctx, &wg, errCh, semaphore, subId, eventsCopy)
@@ -105,7 +105,7 @@ func copyEvents(in []StreamEvent) []StreamEvent {
 func (s *subscriptionEventUpdater) updateSubscription(ctx context.Context, wg *sync.WaitGroup, errCh chan error, semaphore chan struct{}, subID resolve.SubscriptionIdentifier, events []StreamEvent) {
 	defer wg.Done()
 	defer func() {
-		<-semaphore // release the slot when done
+		<-semaphore // Release the slot when done
 	}()
 
 	hooks := s.hooks.OnReceiveEvents
