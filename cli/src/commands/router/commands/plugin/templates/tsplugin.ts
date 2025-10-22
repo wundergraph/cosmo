@@ -152,12 +152,11 @@ const packageJson = `
   "scripts": {
     "build": "bun build src/plugin.ts --compile --outfile dist/plugin",
     "dev": "bun run src/plugin.ts",
-    "client": "bun run src/client.ts",
-    "generate": "grpc_tools_node_protoc --js_out=import_style=commonjs,binary:generated --grpc_out=grpc_js:generated --ts_out=grpc_js:generated -I generated generated/service.proto"
+    "client": "bun run src/client.ts"
   },
   "dependencies": {
-    "@grpc/grpc-js": "^1.10.0",
-    "google-protobuf": "^3.21.2"
+    "@grpc/grpc-js": "^1.14.0",
+    "google-protobuf": "^4.0.0"
   },
   "devDependencies": {
     "@types/bun": "latest",

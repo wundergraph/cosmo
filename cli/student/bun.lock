@@ -4,8 +4,8 @@
     "": {
       "name": "awesome-plugin-bun",
       "dependencies": {
-        "@grpc/grpc-js": "^1.10.0",
-        "google-protobuf": "^3.21.2",
+        "@grpc/grpc-js": "^1.14.0",
+        "google-protobuf": "^4.0.0",
       },
       "devDependencies": {
         "@types/bun": "latest",
@@ -104,7 +104,7 @@
 
     "glob": ["glob@7.2.3", "", { "dependencies": { "fs.realpath": "^1.0.0", "inflight": "^1.0.4", "inherits": "2", "minimatch": "^3.1.1", "once": "^1.3.0", "path-is-absolute": "^1.0.0" } }, "sha512-nFR0zLpU2YCaRxwoCJvL6UvCH2JFyFVIvwTLsIf21AuHlMskA1hhTdk+LlYJtOlYt9v6dvszD2BGRqBL+iQK9Q=="],
 
-    "google-protobuf": ["google-protobuf@3.21.4", "", {}, "sha512-MnG7N936zcKTco4Jd2PX2U96Kf9PxygAPKBug+74LHzmHXmceN16MmRcdgZv+DGef/S9YvQAfRsNCn4cjf9yyQ=="],
+    "google-protobuf": ["google-protobuf@4.0.0", "", {}, "sha512-b8wmenhUMf2WNL+xIJ/slvD/hEE6V3nRnG86O2bzkBrMweM9gnqZE1dfXlDjibY3aXJXDNbAHepevYyQ7qWKsQ=="],
 
     "grpc-tools": ["grpc-tools@1.13.0", "", { "dependencies": { "@mapbox/node-pre-gyp": "^1.0.5" }, "bin": { "grpc_tools_node_protoc": "bin/protoc.js", "grpc_tools_node_protoc_plugin": "bin/protoc_plugin.js" } }, "sha512-7CbkJ1yWPfX0nHjbYG58BQThNhbICXBZynzCUxCb3LzX5X9B3hQbRY2STiRgIEiLILlK9fgl0z0QVGwPCdXf5g=="],
 
