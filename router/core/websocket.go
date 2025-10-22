@@ -1008,7 +1008,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 		Variables: operationCtx.Variables(),
 		Request: resolve.Request{
 			Header: registration.clientRequest.Header,
-			ID:     h.initRequestID,
+			ID:     operationCtx.internalHash,
 		},
 		RenameTypeNames: h.graphqlHandler.executor.RenameTypeNames,
 		RemapVariables:  operationCtx.remapVariables,
