@@ -98,7 +98,6 @@ type PreHandler struct {
 	clientHeader                config.ClientHeader
 	computeOperationSha256      bool
 	apolloCompatibilityFlags    *config.ApolloCompatibilityFlags
-	variableParsePool           astjson.ParserPool
 	disableVariablesRemapping   bool
 	exprManager                 *expr.Manager
 	omitBatchExtensions         bool
@@ -350,9 +349,6 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			readOperationBodySpan.End()
 		}
 
-		variablesParser := h.variableParsePool.Get()
-		defer h.variableParsePool.Put(variablesParser)
-
 		// If we have authenticators, we try to authenticate the request
 		if h.accessController != nil {
 			_, authenticateSpan := h.tracer.Start(r.Context(), "Authenticate",
@@ -417,7 +413,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			routerSpan.SetAttributes(traceMetrics...)
 		}
 
-		err = h.handleOperation(r, variablesParser, &httpOperation{
+		err = h.handleOperation(r, &httpOperation{
 			requestContext:   requestContext,
 			requestLogger:    requestLogger,
 			routerSpan:       routerSpan,
@@ -500,7 +496,7 @@ func (h *PreHandler) shouldFetchPersistedOperation(operationKit *OperationKit) b
 	return operationKit.parsedOperation.IsPersistedOperation || h.operationBlocker.safelistEnabled || h.operationBlocker.logUnknownOperationsEnabled
 }
 
-func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson.Parser, httpOperation *httpOperation) error {
+func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOperation) error {
 	operationKit, err := h.operationProcessor.NewKit()
 	if err != nil {
 		return err
@@ -578,7 +574,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 	}
 
 	requestContext.operation.extensions = operationKit.parsedOperation.Request.Extensions
-	requestContext.operation.variables, err = variablesParser.ParseBytes(operationKit.parsedOperation.Request.Variables)
+	requestContext.operation.variables, err = astjson.ParseBytes(operationKit.parsedOperation.Request.Variables)
 	if err != nil {
 		return &httpGraphqlError{
 			message:    fmt.Sprintf("error parsing variables: %s", err),
@@ -875,7 +871,7 @@ func (h *PreHandler) handleOperation(req *http.Request, variablesParser *astjson
 
 	requestContext.operation.rawContent = operationKit.parsedOperation.Request.Query
 	requestContext.operation.content = operationKit.parsedOperation.NormalizedRepresentation
-	requestContext.operation.variables, err = variablesParser.ParseBytes(operationKit.parsedOperation.Request.Variables)
+	requestContext.operation.variables, err = astjson.ParseBytes(operationKit.parsedOperation.Request.Variables)
 	if err != nil {
 		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
 		if !requestContext.operation.traceOptions.ExcludeNormalizeStats {

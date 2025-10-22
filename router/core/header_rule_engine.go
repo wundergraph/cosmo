@@ -3,15 +3,18 @@ package core
 import (
 	"context"
 	"fmt"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
 	"io"
 	"net/http"
 	"reflect"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
 
 	"github.com/expr-lang/expr/vm"
 	cachedirective "github.com/pquerna/cachecontrol/cacheobject"
@@ -85,7 +88,7 @@ func getResponseHeaderPropagation(ctx context.Context) *responseHeaderPropagatio
 	return v.(*responseHeaderPropagation)
 }
 
-func HeaderPropagationWriter(w http.ResponseWriter, ctx context.Context) io.Writer {
+func HeaderPropagationWriter(w http.ResponseWriter, ctx context.Context, setContentLength bool) io.Writer {
 	propagation := getResponseHeaderPropagation(ctx)
 	if propagation == nil {
 		return w
@@ -94,16 +97,22 @@ func HeaderPropagationWriter(w http.ResponseWriter, ctx context.Context) io.Writ
 		writer:            w,
 		headerPropagation: propagation,
 		propagateHeaders:  true,
+		setContentLength:  setContentLength,
 	}
 }
 
 type headerPropagationWriter struct {
+	setContentLength  bool
+	propagateHeaders  bool
 	writer            http.ResponseWriter
 	headerPropagation *responseHeaderPropagation
-	propagateHeaders  bool
 }
 
 func (h *headerPropagationWriter) Write(p []byte) (n int, err error) {
+	if h.setContentLength {
+		h.writer.Header().Set("Content-Length", strconv.Itoa(len(p)))
+		h.setContentLength = false
+	}
 	if h.propagateHeaders {
 		for k, v := range h.headerPropagation.header {
 			for _, el := range v {
@@ -530,7 +539,7 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 	defer span.End()
 
 	// Set no-cache for all mutations, to ensure that requests to mutate data always work as expected (without returning cached data)
-	if resolve.SingleFlightDisallowed(ctx) {
+	if resolve.GetOperationTypeFromContext(ctx) == ast.OperationTypeMutation {
 		propagation.header.Set(cacheControlKey, noCache)
 		return
 	}

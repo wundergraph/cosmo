@@ -13,7 +13,6 @@ import (
 	rErrors "github.com/wundergraph/cosmo/router/internal/errors"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
-
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
 
 	"go.opentelemetry.io/otel/trace"
@@ -148,6 +147,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Files:          reqCtx.operation.files,
 		Request: resolve.Request{
 			Header: r.Header,
+			ID:     reqCtx.operation.internalHash,
 		},
 		RenameTypeNames:  h.executor.RenameTypeNames,
 		TracingOptions:   reqCtx.operation.traceOptions,
@@ -180,11 +180,11 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		defer propagateSubgraphErrors(resolveCtx)
 
-		respBuf := bytes.Buffer{}
+		// Write contents of buf to the header propagation writer
+		hpw := HeaderPropagationWriter(w, resolveCtx.Context(), true)
 
-		resp, err := h.executor.Resolver.ResolveGraphQLResponse(resolveCtx, p.Response, nil, &respBuf)
+		info, err := h.executor.Resolver.ArenaResolveGraphQLResponse(resolveCtx, p.Response, hpw)
 		reqCtx.dataSourceNames = getSubgraphNames(p.Response.DataSources)
-
 		if err != nil {
 			trackFinalResponseError(resolveCtx.Context(), err)
 			h.WriteError(resolveCtx, err, p.Response, w)
@@ -195,17 +195,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
 		}
 
-		// Write contents of buf to the header propagation writer
-		hpw := HeaderPropagationWriter(w, resolveCtx.Context())
-		_, err = respBuf.WriteTo(hpw)
-
-		if err != nil {
-			trackFinalResponseError(resolveCtx.Context(), err)
-			h.WriteError(resolveCtx, err, p.Response, w)
-			return
-		}
-
-		graphqlExecutionSpan.SetAttributes(rotel.WgAcquireResolverWaitTimeMs.Int64(resp.ResolveAcquireWaitTime.Milliseconds()))
+		graphqlExecutionSpan.SetAttributes(rotel.WgAcquireResolverWaitTimeMs.Int64(info.ResolveAcquireWaitTime.Milliseconds()))
 	case *plan.SubscriptionResponsePlan:
 		var (
 			writer resolve.SubscriptionResponseWriter
