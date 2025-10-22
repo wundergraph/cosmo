@@ -302,7 +302,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.postOriginHandlers = append(r.postOriginHandlers, hr.OnOriginResponse)
 	}
 
-	defaultHeaders := []string{
+	defaultCorsHeaders := []string{
 		// Common headers
 		"authorization",
 		"origin",
@@ -328,16 +328,16 @@ func NewRouter(opts ...Option) (*Router, error) {
 	}
 
 	if r.clientHeader.Name != "" {
-		defaultHeaders = append(defaultHeaders, r.clientHeader.Name)
+		defaultCorsHeaders = append(defaultCorsHeaders, r.clientHeader.Name)
 	}
 	if r.clientHeader.Version != "" {
-		defaultHeaders = append(defaultHeaders, r.clientHeader.Version)
+		defaultCorsHeaders = append(defaultCorsHeaders, r.clientHeader.Version)
 	}
 
 	defaultMethods := []string{
 		"HEAD", "GET", "POST",
 	}
-	r.corsOptions.AllowHeaders = stringsx.RemoveDuplicates(append(r.corsOptions.AllowHeaders, defaultHeaders...))
+	r.corsOptions.AllowHeaders = stringsx.RemoveDuplicates(append(r.corsOptions.AllowHeaders, defaultCorsHeaders...))
 	r.corsOptions.AllowMethods = stringsx.RemoveDuplicates(append(r.corsOptions.AllowMethods, defaultMethods...))
 
 	if r.tlsConfig != nil && r.tlsConfig.Enabled {

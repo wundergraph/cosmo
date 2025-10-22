@@ -8,11 +8,13 @@ import (
 	"reflect"
 	"regexp"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/cespare/xxhash/v2"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
 
@@ -286,19 +288,79 @@ func (h *HeaderPropagation) HasResponseRules() bool {
 
 func (h *HeaderPropagation) OnOriginRequest(request *http.Request, ctx RequestContext) (*http.Request, *http.Response) {
 	for _, rule := range h.rules.All.Request {
-		h.applyRequestRule(ctx, request, rule)
+		h.applyRequestRuleToHeader(ctx, request.Header, rule)
 	}
 
 	subgraph := ctx.ActiveSubgraph(request)
 	if subgraph != nil {
 		if subgraphRules, ok := h.rules.Subgraphs[subgraph.Name]; ok {
 			for _, rule := range subgraphRules.Request {
-				h.applyRequestRule(ctx, request, rule)
+				h.applyRequestRuleToHeader(ctx, request.Header, rule)
 			}
 		}
 	}
 
 	return request, nil
+}
+
+// BuildRequestHeaderForSubgraph builds headers for an outbound subgraph request
+// as if the propagation rules were applied during transport. It returns the
+// resulting headers and a stable hash over all header names and values that is
+// independent of map iteration order.
+func (h *HeaderPropagation) BuildRequestHeaderForSubgraph(subgraphName string, ctx RequestContext) (http.Header, uint64) {
+	if h == nil || h.rules == nil || ctx == nil || ctx.Request() == nil {
+		return http.Header{}, 0
+	}
+
+	// Build headers in a fresh map without relying on a subgraph request seed.
+	outHeader := make(http.Header)
+
+	// Apply global rules
+	for _, rule := range h.rules.All.Request {
+		h.applyRequestRuleToHeader(ctx, outHeader, rule)
+	}
+
+	// Apply subgraph-specific rules
+	if subgraphName != "" {
+		if subRules, ok := h.rules.Subgraphs[subgraphName]; ok {
+			for _, rule := range subRules.Request {
+				h.applyRequestRuleToHeader(ctx, outHeader, rule)
+			}
+		}
+	}
+
+	return outHeader, hashHeaderStable(outHeader)
+}
+
+// hashHeaderStable computes a deterministic 64-bit hash over the provided header map.
+// It is independent of map iteration order and minimizes allocations.
+func hashHeaderStable(hdr http.Header) uint64 {
+	if len(hdr) == 0 {
+		return 0
+	}
+
+	keys := make([]string, len(hdr))
+	i := 0
+	for k := range hdr {
+		keys[i] = k
+		i++
+	}
+	sort.Strings(keys)
+
+	d := xxhash.New()
+	for _, k := range keys {
+		_, _ = d.WriteString(k)
+		_, _ = d.WriteString("\x00")
+		// Iterate values without creating copies to avoid allocations
+		vals := hdr[k]
+		for i := 0; i < len(vals); i++ {
+			_, _ = d.WriteString(vals[i])
+			_, _ = d.WriteString("\x00")
+		}
+		_, _ = d.WriteString("\x01")
+	}
+
+	return d.Sum64()
 }
 
 func (h *HeaderPropagation) OnOriginResponse(resp *http.Response, ctx RequestContext) *http.Response {
@@ -400,14 +462,14 @@ func (h *HeaderPropagation) applyResponseRuleKeyValue(res *http.Response, propag
 	}
 }
 
-func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.Request, rule *config.RequestHeaderRule) {
+func (h *HeaderPropagation) applyRequestRuleToHeader(ctx RequestContext, header http.Header, rule *config.RequestHeaderRule) {
 	if rule.Operation == config.HeaderRuleOperationSet {
-		reqCtx := getRequestContext(request.Context())
+		reqCtx := getRequestContext(ctx.Request().Context())
 		if rule.ValueFrom != nil && rule.ValueFrom.ContextField != "" {
 			val := getCustomDynamicAttributeValue(rule.ValueFrom, reqCtx, nil)
 			value := fmt.Sprintf("%v", val)
 			if value != "" {
-				request.Header.Set(rule.Name, value)
+				header.Set(rule.Name, value)
 			}
 			return
 		}
@@ -417,12 +479,12 @@ func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.R
 			if err != nil {
 				reqCtx.SetError(err)
 			} else if value != "" {
-				request.Header.Set(rule.Name, value)
+				header.Set(rule.Name, value)
 			}
 			return
 		}
 
-		request.Header.Set(rule.Name, rule.Value)
+		header.Set(rule.Name, rule.Value)
 		return
 	}
 
@@ -442,12 +504,12 @@ func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.R
 
 		value := ctx.Request().Header.Get(rule.Named)
 		if value != "" {
-			request.Header.Set(rule.Rename, ctx.Request().Header.Get(rule.Named))
-			request.Header.Del(rule.Named)
+			header.Set(rule.Rename, ctx.Request().Header.Get(rule.Named))
+			header.Del(rule.Named)
 			return
 		} else if rule.Default != "" {
-			request.Header.Set(rule.Rename, rule.Default)
-			request.Header.Del(rule.Named)
+			header.Set(rule.Rename, rule.Default)
+			header.Del(rule.Named)
 			return
 		}
 
@@ -465,9 +527,9 @@ func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.R
 
 		values := ctx.Request().Header.Values(rule.Named)
 		if len(values) > 0 {
-			request.Header[http.CanonicalHeaderKey(rule.Named)] = values
+			header[http.CanonicalHeaderKey(rule.Named)] = values
 		} else if rule.Default != "" {
-			request.Header.Set(rule.Named, rule.Default)
+			header.Set(rule.Named, rule.Default)
 		}
 
 		return
@@ -498,11 +560,11 @@ func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.R
 
 					value := ctx.Request().Header.Get(name)
 					if value != "" {
-						request.Header.Set(rule.Rename, ctx.Request().Header.Get(name))
-						request.Header.Del(name)
+						header.Set(rule.Rename, ctx.Request().Header.Get(name))
+						header.Del(name)
 					} else if rule.Default != "" {
-						request.Header.Set(rule.Rename, rule.Default)
-						request.Header.Del(name)
+						header.Set(rule.Rename, rule.Default)
+						header.Del(name)
 					}
 
 					continue
@@ -514,7 +576,7 @@ func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.R
 				if slices.Contains(ignoredHeaders, name) {
 					continue
 				}
-				request.Header.Set(name, ctx.Request().Header.Get(name))
+				header.Set(name, ctx.Request().Header.Get(name))
 			}
 		}
 	}
