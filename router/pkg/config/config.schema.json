@@ -2264,6 +2264,36 @@
                   }
                 }
               }
+            },
+            "metadata": {
+              "type": "object",
+              "description": "Protected Resource Metadata configuration (RFC 9728). Serves metadata about the protected resource at /.well-known/oauth-protected-resource endpoint.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Enable the Protected Resource Metadata endpoint."
+                },
+                "resource_uri": {
+                  "type": "string",
+                  "description": "The URI of the protected resource. This identifies the resource in the metadata response.",
+                  "format": "http-url"
+                },
+                "authorization_servers": {
+                  "type": "array",
+                  "description": "List of authorization server URLs that can issue tokens for this resource.",
+                  "items": {
+                    "type": "string",
+                    "format": "http-url"
+                  }
+                },
+                "documentation_url": {
+                  "type": "string",
+                  "description": "URL to documentation about the protected resource and its API.",
+                  "format": "http-url"
+                }
+              }
             }
           }
         }

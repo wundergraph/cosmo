@@ -963,9 +963,17 @@ type CacheWarmupConfiguration struct {
 }
 
 type MCPAuthorizationConfiguration struct {
-	Enabled bool                `yaml:"enabled" envDefault:"false" env:"MCP_AUTHORIZATION_ENABLED"`
-	JWKS    []JWKSConfiguration `yaml:"jwks"`
-	Scopes  MCPScopesConfiguration `yaml:"scopes"`
+	Enabled  bool                       `yaml:"enabled" envDefault:"false" env:"MCP_AUTHORIZATION_ENABLED"`
+	JWKS     []JWKSConfiguration        `yaml:"jwks"`
+	Scopes   MCPScopesConfiguration     `yaml:"scopes"`
+	Metadata MCPMetadataConfiguration   `yaml:"metadata"`
+}
+
+type MCPMetadataConfiguration struct {
+	Enabled              bool     `yaml:"enabled" envDefault:"true" env:"MCP_METADATA_ENABLED"`
+	ResourceURI          string   `yaml:"resource_uri,omitempty" env:"MCP_METADATA_RESOURCE_URI"`
+	AuthorizationServers []string `yaml:"authorization_servers,omitempty" env:"MCP_METADATA_AUTHORIZATION_SERVERS"`
+	DocumentationURL     string   `yaml:"documentation_url,omitempty" env:"MCP_METADATA_DOCUMENTATION_URL"`
 }
 
 type MCPScopesConfiguration struct {

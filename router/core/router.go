@@ -899,7 +899,11 @@ func (r *Router) bootstrap(ctx context.Context) error {
 
 			if len(mcpAuthenticators) > 0 {
 				tokenValidator := mcpserver.NewTokenValidator(mcpAuthenticators, r.logger, true)
-				mcpOpts = append(mcpOpts, mcpserver.WithTokenValidator(tokenValidator))
+				mcpOpts = append(mcpOpts,
+					mcpserver.WithTokenValidator(tokenValidator),
+					mcpserver.WithMetadataConfig(&r.mcp.Authorization.Metadata),
+					mcpserver.WithAuthConfig(&r.mcp.Authorization),
+				)
 				r.logger.Info("MCP authorization enabled",
 					zap.Int("authenticators", len(mcpAuthenticators)),
 				)
