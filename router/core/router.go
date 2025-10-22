@@ -1888,9 +1888,9 @@ func DefaultTransportRequestOptions() *TransportRequestOptions {
 		KeepAliveIdleTimeout:   90 * time.Second,
 		DialTimeout:            30 * time.Second,
 
-		MaxConnsPerHost:     100,
-		MaxIdleConns:        1024,
-		MaxIdleConnsPerHost: 20,
+		MaxConnsPerHost:     0,
+		MaxIdleConns:        1024 * 10,
+		MaxIdleConnsPerHost: 2048,
 	}
 }
 
