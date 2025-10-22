@@ -26,6 +26,9 @@ import {
   CONDITION,
   CONFIGURE_CHILD_DESCRIPTIONS,
   CONFIGURE_DESCRIPTION,
+  CONNECT_CONFIGURE_RESOLVER,
+  CONTEXT,
+  CONNECT_FIELDSET_SCALAR,
   CONSUMER_INACTIVE_THRESHOLD,
   CONSUMER_NAME,
   DEFAULT_EDFS_PROVIDER_ID,
@@ -44,6 +47,7 @@ import {
   EXECUTION,
   EXTENDS,
   EXTERNAL,
+  FIELD,
   FIELD_DEFINITION_UPPER,
   FIELD_PATH,
   FIELD_SET_SCALAR,
@@ -775,6 +779,30 @@ export const SUBSCRIPTION_FILTER_DEFINITION: DirectiveDefinitionNode = {
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER]),
   name: stringToNameNode(SUBSCRIPTION_FILTER),
+  repeatable: false,
+};
+
+// scalar connect__FieldSet
+export const CONNECT_FIELDSET_SCALAR_DEFINITION: ScalarTypeDefinitionNode = {
+  kind: Kind.SCALAR_TYPE_DEFINITION,
+  name: stringToNameNode(CONNECT_FIELDSET_SCALAR),
+};
+
+// directive @connect__configureResolver(context: connect__FieldSet!) on FIELD_DEFINITION
+export const CONNECT_CONFIGURE_RESOLVER_DEFINITION: DirectiveDefinitionNode = {
+  arguments: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(CONTEXT),
+      type: {
+        kind: Kind.NON_NULL_TYPE,
+        type: stringToNamedTypeNode(CONNECT_FIELDSET_SCALAR),
+      },
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER]),
+  name: stringToNameNode(CONNECT_CONFIGURE_RESOLVER),
   repeatable: false,
 };
 

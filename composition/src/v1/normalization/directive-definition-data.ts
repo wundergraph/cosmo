@@ -4,6 +4,7 @@ import {
   COMPOSE_DIRECTIVE_DEFINITION,
   CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION,
   CONFIGURE_DESCRIPTION_DEFINITION,
+  CONNECT_CONFIGURE_RESOLVER_DEFINITION,
   DEPRECATED_DEFINITION,
   EDFS_KAFKA_PUBLISH_DEFINITION,
   EDFS_KAFKA_SUBSCRIBE_DEFINITION,
@@ -45,6 +46,9 @@ import {
   CONDITION,
   CONFIGURE_CHILD_DESCRIPTIONS,
   CONFIGURE_DESCRIPTION,
+  CONNECT_CONFIGURE_RESOLVER,
+  CONNECT_FIELDSET_SCALAR,
+  CONTEXT,
   DEFAULT_EDFS_PROVIDER_ID,
   DEPRECATED,
   DESCRIPTION_OVERRIDE,
@@ -203,6 +207,27 @@ export const CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION_DATA: DirectiveDefinitionDa
   node: CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION,
   optionalArgumentNames: new Set<string>([PROPAGATE]),
   requiredArgumentNames: new Set<string>(),
+};
+
+export const CONNECT_CONFIGURE_RESOLVER_DEFINITION_DATA: DirectiveDefinitionData = {
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
+    [
+      CONTEXT,
+      {
+        name: CONTEXT,
+        typeNode: {
+          kind: Kind.NON_NULL_TYPE,
+          type: stringToNamedTypeNode(CONNECT_FIELDSET_SCALAR),
+        },
+      },
+    ],
+  ]),
+  isRepeatable: false,
+  locations: new Set<string>([FIELD_DEFINITION_UPPER]),
+  name: CONNECT_CONFIGURE_RESOLVER,
+  node: CONNECT_CONFIGURE_RESOLVER_DEFINITION,
+  optionalArgumentNames: new Set<string>(),
+  requiredArgumentNames: new Set<string>([CONTEXT]),
 };
 
 export const DEPRECATED_DEFINITION_DATA: DirectiveDefinitionData = {

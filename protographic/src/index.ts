@@ -90,6 +90,7 @@ export function validateGraphQLSDL(sdl: string): ValidationResult {
   return visitor.visit();
 }
 
+export * from './string-constants.js';
 export * from './sdl-to-mapping-visitor.js';
 export { GraphQLToProtoTextVisitor } from './sdl-to-proto-visitor.js';
 export { ProtoLockManager } from './proto-lock.js';

@@ -37,6 +37,15 @@ service ProjectsService {
   rpc QuerySearchProjects(QuerySearchProjectsRequest) returns (QuerySearchProjectsResponse) {}
   rpc QueryTasks(QueryTasksRequest) returns (QueryTasksResponse) {}
   rpc QueryTasksByPriority(QueryTasksByPriorityRequest) returns (QueryTasksByPriorityResponse) {}
+  rpc ResolveEmployeeAverageTaskCompletionDays(ResolveEmployeeAverageTaskCompletionDaysRequest) returns (ResolveEmployeeAverageTaskCompletionDaysResponse) {}
+  rpc ResolveEmployeeCurrentWorkload(ResolveEmployeeCurrentWorkloadRequest) returns (ResolveEmployeeCurrentWorkloadResponse) {}
+  rpc ResolveMilestoneDaysUntilDue(ResolveMilestoneDaysUntilDueRequest) returns (ResolveMilestoneDaysUntilDueResponse) {}
+  rpc ResolveMilestoneIsAtRisk(ResolveMilestoneIsAtRiskRequest) returns (ResolveMilestoneIsAtRiskResponse) {}
+  rpc ResolveProjectCompletionRate(ResolveProjectCompletionRateRequest) returns (ResolveProjectCompletionRateResponse) {}
+  rpc ResolveProjectEstimatedDaysRemaining(ResolveProjectEstimatedDaysRemainingRequest) returns (ResolveProjectEstimatedDaysRemainingResponse) {}
+  rpc ResolveProjectFilteredTasks(ResolveProjectFilteredTasksRequest) returns (ResolveProjectFilteredTasksResponse) {}
+  rpc ResolveTaskIsBlocked(ResolveTaskIsBlockedRequest) returns (ResolveTaskIsBlockedResponse) {}
+  rpc ResolveTaskTotalEffort(ResolveTaskTotalEffortRequest) returns (ResolveTaskTotalEffortResponse) {}
 }
 
 // Wrapper message for a list of Employee.
@@ -455,8 +464,230 @@ message MutationUpdateProjectStatusRequest {
 message MutationUpdateProjectStatusResponse {
   ProjectUpdate update_project_status = 1;
 }
+message ResolveProjectFilteredTasksArgs {
+  TaskStatus status = 1;
+  TaskPriority priority = 2;
+  google.protobuf.Int32Value limit = 3;
+}
+
+message ResolveProjectFilteredTasksContext {
+  string id = 1;
+}
+
+message ResolveProjectFilteredTasksRequest {
+  // context provides the resolver context for the field filteredTasks of type Project.
+  repeated ResolveProjectFilteredTasksContext context = 1;
+  // field_args provides the arguments for the resolver field filteredTasks of type Project.
+  ResolveProjectFilteredTasksArgs field_args = 2;
+}
+
+message ResolveProjectFilteredTasksResult {
+  repeated Task filtered_tasks = 1;
+}
+
+message ResolveProjectFilteredTasksResponse {
+  repeated ResolveProjectFilteredTasksResult result = 1;
+}
+
+message ResolveProjectCompletionRateArgs {
+  google.protobuf.BoolValue include_subtasks = 1;
+}
+
+message ResolveProjectCompletionRateContext {
+  string id = 1;
+  google.protobuf.StringValue startDate = 2;
+  google.protobuf.StringValue endDate = 3;
+  ProjectStatus status = 4;
+}
+
+message ResolveProjectCompletionRateRequest {
+  // context provides the resolver context for the field completionRate of type Project.
+  repeated ResolveProjectCompletionRateContext context = 1;
+  // field_args provides the arguments for the resolver field completionRate of type Project.
+  ResolveProjectCompletionRateArgs field_args = 2;
+}
+
+message ResolveProjectCompletionRateResult {
+  double completion_rate = 1;
+}
+
+message ResolveProjectCompletionRateResponse {
+  repeated ResolveProjectCompletionRateResult result = 1;
+}
+
+message ResolveProjectEstimatedDaysRemainingArgs {
+  google.protobuf.StringValue from_date = 1;
+}
+
+message ResolveProjectEstimatedDaysRemainingContext {
+  string id = 1;
+  google.protobuf.StringValue endDate = 2;
+  ProjectStatus status = 3;
+}
+
+message ResolveProjectEstimatedDaysRemainingRequest {
+  // context provides the resolver context for the field estimatedDaysRemaining of type Project.
+  repeated ResolveProjectEstimatedDaysRemainingContext context = 1;
+  // field_args provides the arguments for the resolver field estimatedDaysRemaining of type Project.
+  ResolveProjectEstimatedDaysRemainingArgs field_args = 2;
+}
+
+message ResolveProjectEstimatedDaysRemainingResult {
+  google.protobuf.Int32Value estimated_days_remaining = 1;
+}
+
+message ResolveProjectEstimatedDaysRemainingResponse {
+  repeated ResolveProjectEstimatedDaysRemainingResult result = 1;
+}
+
+message ResolveMilestoneIsAtRiskArgs {
+  google.protobuf.DoubleValue threshold = 1;
+}
+
+message ResolveMilestoneIsAtRiskContext {
+  string id = 1;
+  google.protobuf.StringValue endDate = 2;
+  MilestoneStatus status = 3;
+  google.protobuf.DoubleValue completionPercentage = 4;
+}
+
+message ResolveMilestoneIsAtRiskRequest {
+  // context provides the resolver context for the field isAtRisk of type Milestone.
+  repeated ResolveMilestoneIsAtRiskContext context = 1;
+  // field_args provides the arguments for the resolver field isAtRisk of type Milestone.
+  ResolveMilestoneIsAtRiskArgs field_args = 2;
+}
+
+message ResolveMilestoneIsAtRiskResult {
+  bool is_at_risk = 1;
+}
+
+message ResolveMilestoneIsAtRiskResponse {
+  repeated ResolveMilestoneIsAtRiskResult result = 1;
+}
+
+message ResolveMilestoneDaysUntilDueArgs {
+  google.protobuf.StringValue from_date = 1;
+}
+
+message ResolveMilestoneDaysUntilDueContext {
+  google.protobuf.StringValue endDate = 1;
+}
+
+message ResolveMilestoneDaysUntilDueRequest {
+  // context provides the resolver context for the field daysUntilDue of type Milestone.
+  repeated ResolveMilestoneDaysUntilDueContext context = 1;
+  // field_args provides the arguments for the resolver field daysUntilDue of type Milestone.
+  ResolveMilestoneDaysUntilDueArgs field_args = 2;
+}
+
+message ResolveMilestoneDaysUntilDueResult {
+  google.protobuf.Int32Value days_until_due = 1;
+}
+
+message ResolveMilestoneDaysUntilDueResponse {
+  repeated ResolveMilestoneDaysUntilDueResult result = 1;
+}
+
+message ResolveTaskIsBlockedArgs {
+  google.protobuf.BoolValue check_dependencies = 1;
+}
+
+message ResolveTaskIsBlockedContext {
+  string id = 1;
+  TaskStatus status = 2;
+}
+
+message ResolveTaskIsBlockedRequest {
+  // context provides the resolver context for the field isBlocked of type Task.
+  repeated ResolveTaskIsBlockedContext context = 1;
+  // field_args provides the arguments for the resolver field isBlocked of type Task.
+  ResolveTaskIsBlockedArgs field_args = 2;
+}
+
+message ResolveTaskIsBlockedResult {
+  bool is_blocked = 1;
+}
+
+message ResolveTaskIsBlockedResponse {
+  repeated ResolveTaskIsBlockedResult result = 1;
+}
+
+message ResolveTaskTotalEffortArgs {
+  google.protobuf.BoolValue include_subtasks = 1;
+}
+
+message ResolveTaskTotalEffortContext {
+  string id = 1;
+  google.protobuf.DoubleValue estimatedHours = 2;
+  google.protobuf.DoubleValue actualHours = 3;
+}
+
+message ResolveTaskTotalEffortRequest {
+  // context provides the resolver context for the field totalEffort of type Task.
+  repeated ResolveTaskTotalEffortContext context = 1;
+  // field_args provides the arguments for the resolver field totalEffort of type Task.
+  ResolveTaskTotalEffortArgs field_args = 2;
+}
+
+message ResolveTaskTotalEffortResult {
+  google.protobuf.DoubleValue total_effort = 1;
+}
+
+message ResolveTaskTotalEffortResponse {
+  repeated ResolveTaskTotalEffortResult result = 1;
+}
+
+message ResolveEmployeeCurrentWorkloadArgs {
+  google.protobuf.BoolValue include_completed = 1;
+  google.protobuf.StringValue project_id = 2;
+}
+
+message ResolveEmployeeCurrentWorkloadContext {
+  int32 id = 1;
+}
+
+message ResolveEmployeeCurrentWorkloadRequest {
+  // context provides the resolver context for the field currentWorkload of type Employee.
+  repeated ResolveEmployeeCurrentWorkloadContext context = 1;
+  // field_args provides the arguments for the resolver field currentWorkload of type Employee.
+  ResolveEmployeeCurrentWorkloadArgs field_args = 2;
+}
+
+message ResolveEmployeeCurrentWorkloadResult {
+  int32 current_workload = 1;
+}
+
+message ResolveEmployeeCurrentWorkloadResponse {
+  repeated ResolveEmployeeCurrentWorkloadResult result = 1;
+}
+
+message ResolveEmployeeAverageTaskCompletionDaysArgs {
+  google.protobuf.StringValue project_id = 1;
+  TaskPriority priority = 2;
+}
+
+message ResolveEmployeeAverageTaskCompletionDaysContext {
+  int32 id = 1;
+}
+
+message ResolveEmployeeAverageTaskCompletionDaysRequest {
+  // context provides the resolver context for the field averageTaskCompletionDays of type Employee.
+  repeated ResolveEmployeeAverageTaskCompletionDaysContext context = 1;
+  // field_args provides the arguments for the resolver field averageTaskCompletionDays of type Employee.
+  ResolveEmployeeAverageTaskCompletionDaysArgs field_args = 2;
+}
+
+message ResolveEmployeeAverageTaskCompletionDaysResult {
+  google.protobuf.DoubleValue average_task_completion_days = 1;
+}
+
+message ResolveEmployeeAverageTaskCompletionDaysResponse {
+  repeated ResolveEmployeeAverageTaskCompletionDaysResult result = 1;
+}
 
 message Project {
+  reserved 20 to 22;
   string id = 1;
   string name = 2;
   google.protobuf.StringValue description = 3;
@@ -479,6 +710,7 @@ message Project {
 }
 
 message Milestone {
+  reserved 12 to 13;
   string id = 1;
   string project_id = 2;
   string name = 3;
@@ -493,6 +725,7 @@ message Milestone {
 }
 
 message Task {
+  reserved 18 to 19;
   string id = 1;
   string project_id = 2;
   google.protobuf.StringValue milestone_id = 3;
@@ -514,6 +747,7 @@ message Task {
 }
 
 message Employee {
+  reserved 8 to 9;
   int32 id = 1;
   ListOfProject projects = 2;
   repeated Task assigned_tasks = 3;
