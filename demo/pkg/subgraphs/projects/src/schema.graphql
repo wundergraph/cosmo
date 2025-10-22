@@ -105,10 +105,10 @@ type Project implements Node & Timestamped @key(fields: "id") {
   milestoneGroups: [[Milestone]]  # nested lists: nullable list of nullable lists
   priorityMatrix: [[[Task!]!]!]  # triple nested: non-nullable list of non-nullable lists of non-nullable lists
 
-  # Computed fields with @connect__configureResolver
-  filteredTasks(status: TaskStatus, priority: TaskPriority, limit: Int): [Task!]! @connect__configureResolver(context: "id")
-  completionRate(includeSubtasks: Boolean): Float! @connect__configureResolver(context: "id startDate endDate status")
-  estimatedDaysRemaining(fromDate: String): Int @connect__configureResolver(context: "id endDate status")
+  # Computed fields with @connect__fieldResolver
+  filteredTasks(status: TaskStatus, priority: TaskPriority, limit: Int): [Task!]! @connect__fieldResolver(context: "id")
+  completionRate(includeSubtasks: Boolean): Float! @connect__fieldResolver(context: "id startDate endDate status")
+  estimatedDaysRemaining(fromDate: String): Int @connect__fieldResolver(context: "id endDate status")
 }
 
 # New types - simplified with ID references only
@@ -127,9 +127,9 @@ type Milestone implements Node & Timestamped @key(fields: "id") {
   subtasks: [Task]  # nullable list of nullable tasks
   reviewers: [Employee!]  # nullable list of non-nullable employees
 
-  # Computed fields with @connect__configureResolver
-  isAtRisk(threshold: Float): Boolean! @connect__configureResolver(context: "id endDate status completionPercentage")
-  daysUntilDue(fromDate: String): Int @connect__configureResolver(context: "endDate")
+  # Computed fields with @connect__fieldResolver
+  isAtRisk(threshold: Float): Boolean! @connect__fieldResolver(context: "id endDate status completionPercentage")
+  daysUntilDue(fromDate: String): Int @connect__fieldResolver(context: "endDate")
 }
 
 type Task implements Node & Assignable @key(fields: "id") {
@@ -153,9 +153,9 @@ type Task implements Node & Assignable @key(fields: "id") {
   attachmentUrls: [String!]!  # non-nullable list of non-nullable URLs
   reviewerIds: [Int]  # nullable list of nullable reviewer IDs
 
-  # Computed fields with @connect__configureResolver
-  isBlocked(checkDependencies: Boolean): Boolean! @connect__configureResolver(context: "id status")
-  totalEffort(includeSubtasks: Boolean): Float @connect__configureResolver(context: "id estimatedHours actualHours")
+  # Computed fields with @connect__fieldResolver
+  isBlocked(checkDependencies: Boolean): Boolean! @connect__fieldResolver(context: "id status")
+  totalEffort(includeSubtasks: Boolean): Float @connect__fieldResolver(context: "id estimatedHours actualHours")
 }
 
 type ProjectUpdate implements Node {
@@ -227,9 +227,9 @@ type Employee @key(fields: "id") {
   certifications: [String!]  # nullable list of non-nullable certifications
   projectHistory: [[Project!]]!  # non-nullable list of nullable lists of non-nullable projects
 
-  # Computed fields with @connect__configureResolver
-  currentWorkload(includeCompleted: Boolean, projectId: ID): Int! @connect__configureResolver(context: "id")
-  averageTaskCompletionDays(projectId: ID, priority: TaskPriority): Float @connect__configureResolver(context: "id")
+  # Computed fields with @connect__fieldResolver
+  currentWorkload(includeCompleted: Boolean, projectId: ID): Int! @connect__fieldResolver(context: "id")
+  averageTaskCompletionDays(projectId: ID, priority: TaskPriority): Float @connect__fieldResolver(context: "id")
 }
 
 type Product @key(fields: "upc") {

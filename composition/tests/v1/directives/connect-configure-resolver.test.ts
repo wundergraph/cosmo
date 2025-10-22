@@ -8,8 +8,8 @@ import {
 } from '../../../src';
 import { parse, printSchema } from 'graphql';
 
-describe('@connect__configureResolver tests', () => {
-  test('that @connect__configureResolver is automatically included in the subgraph schema if it is referenced', () => {
+describe('@connect__fieldResolver tests', () => {
+  test('that @connect__fieldResolver is automatically included in the subgraph schema if it is referenced', () => {
     const result = normalizeSubgraph(
       subgraphWithConnectConfigureResolver.definitions,
       subgraphWithConnectConfigureResolver.name,
@@ -21,12 +21,11 @@ describe('@connect__configureResolver tests', () => {
     const normalizationSuccess = result as NormalizationSuccess;
     expect(normalizationSuccess.warnings).toHaveLength(0);
     expect(normalizationSuccess.subgraphString).toContain(
-      `directive @connect__configureResolver(context: connect__FieldSet!) on FIELD_DEFINITION`,
+      `directive @connect__fieldResolver(context: openfed__FieldSet!) on FIELD_DEFINITION`,
     );
-    expect(normalizationSuccess.subgraphString).toContain(`scalar connect__FieldSet`);
   });
 
-  test('that @connect__configureResolver needs to have a context', () => {
+  test('that @connect__fieldResolver needs to have a context', () => {
     const result = normalizeSubgraph(
       subgraphWithConnectConfigureResolverWithoutContext.definitions,
       subgraphWithConnectConfigureResolverWithoutContext.name,
@@ -38,7 +37,7 @@ describe('@connect__configureResolver tests', () => {
     const normalizationFailure = result as NormalizationFailure;
     expect(normalizationFailure.errors).toHaveLength(1);
     expect(normalizationFailure.errors[0].message).toContain(
-      'The definition for "@connect__configureResolver" defines the following 1 required argument: "context".\n However, no arguments are defined on this instance.',
+      'The definition for "@connect__fieldResolver" defines the following 1 required argument: "context".\n However, no arguments are defined on this instance.',
     );
   });
 });
@@ -49,7 +48,7 @@ const subgraphWithConnectConfigureResolver: Subgraph = {
   definitions: parse(`
       type Foo {
         id: ID!
-        bar(baz: String!): String @connect__configureResolver(context: "id")  
+        bar(baz: String!): String @connect__fieldResolver(context: "id")  
       }
 
       type Query {
@@ -64,7 +63,7 @@ const subgraphWithConnectConfigureResolverWithoutContext: Subgraph = {
   definitions: parse(`
       type Foo {
         id: ID!
-        bar(baz: String!): String @connect__configureResolver
+        bar(baz: String!): String @connect__fieldResolver
       }
     `),
 };

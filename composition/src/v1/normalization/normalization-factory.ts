@@ -59,7 +59,6 @@ import {
   CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION,
   CONFIGURE_DESCRIPTION_DEFINITION,
   CONNECT_CONFIGURE_RESOLVER_DEFINITION,
-  CONNECT_FIELDSET_SCALAR_DEFINITION,
   EDFS_NATS_STREAM_CONFIGURATION_DEFINITION,
   EVENT_DRIVEN_DIRECTIVE_DEFINITIONS_BY_DIRECTIVE_NAME,
   FIELD_SET_SCALAR_DEFINITION,
@@ -279,7 +278,6 @@ import {
   CONFIGURE_CHILD_DESCRIPTIONS,
   CONFIGURE_DESCRIPTION,
   CONNECT_CONFIGURE_RESOLVER,
-  CONNECT_FIELDSET_SCALAR,
   CONSUMER_INACTIVE_THRESHOLD,
   CONSUMER_NAME,
   DEFAULT_EDFS_PROVIDER_ID,
@@ -526,8 +524,6 @@ export class NormalizationFactory {
           case FIELD_SET_SCALAR:
           // intentional fallthrough
           case SCOPE_SCALAR:
-          // intentional fallthrough
-          case CONNECT_FIELDSET_SCALAR:
           // intentional fallthrough
           case STRING_SCALAR: {
             return argumentValue.kind === Kind.STRING;
@@ -3507,7 +3503,6 @@ export class NormalizationFactory {
 
     // connect definitions
     if (this.referencedDirectiveNames.has(CONNECT_CONFIGURE_RESOLVER)) {
-      definitions.push(CONNECT_FIELDSET_SCALAR_DEFINITION);
       definitions.push(CONNECT_CONFIGURE_RESOLVER_DEFINITION);
     }
     /*

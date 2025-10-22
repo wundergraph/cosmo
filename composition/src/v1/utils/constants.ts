@@ -28,7 +28,6 @@ import {
   CONFIGURE_DESCRIPTION,
   CONNECT_CONFIGURE_RESOLVER,
   CONTEXT,
-  CONNECT_FIELDSET_SCALAR,
   CONSUMER_INACTIVE_THRESHOLD,
   CONSUMER_NAME,
   DEFAULT_EDFS_PROVIDER_ID,
@@ -782,22 +781,13 @@ export const SUBSCRIPTION_FILTER_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-// scalar connect__FieldSet
-export const CONNECT_FIELDSET_SCALAR_DEFINITION: ScalarTypeDefinitionNode = {
-  kind: Kind.SCALAR_TYPE_DEFINITION,
-  name: stringToNameNode(CONNECT_FIELDSET_SCALAR),
-};
-
-// directive @connect__configureResolver(context: connect__FieldSet!) on FIELD_DEFINITION
+// directive @connect__fieldResolver(context: openfed__FieldSet!) on FIELD_DEFINITION
 export const CONNECT_CONFIGURE_RESOLVER_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
       name: stringToNameNode(CONTEXT),
-      type: {
-        kind: Kind.NON_NULL_TYPE,
-        type: stringToNamedTypeNode(CONNECT_FIELDSET_SCALAR),
-      },
+      type: REQUIRED_FIELDSET_TYPE_NODE,
     },
   ],
   kind: Kind.DIRECTIVE_DEFINITION,

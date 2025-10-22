@@ -11,7 +11,7 @@ describe('SDL to Mapping Field Resolvers', () => {
             type User {
                 id: ID!
                 name: String!
-                post(upper: Boolean!): Post! @configureResolver(context: "id name")
+                post(upper: Boolean!): Post! @connect__fieldResolver(context: "id name")
             }
 
             type Post {

@@ -47,7 +47,6 @@ import {
   CONFIGURE_CHILD_DESCRIPTIONS,
   CONFIGURE_DESCRIPTION,
   CONNECT_CONFIGURE_RESOLVER,
-  CONNECT_FIELDSET_SCALAR,
   CONTEXT,
   DEFAULT_EDFS_PROVIDER_ID,
   DEPRECATED,
@@ -215,10 +214,7 @@ export const CONNECT_CONFIGURE_RESOLVER_DEFINITION_DATA: DirectiveDefinitionData
       CONTEXT,
       {
         name: CONTEXT,
-        typeNode: {
-          kind: Kind.NON_NULL_TYPE,
-          type: stringToNamedTypeNode(CONNECT_FIELDSET_SCALAR),
-        },
+        typeNode: REQUIRED_FIELDSET_TYPE_NODE,
       },
     ],
   ]),
