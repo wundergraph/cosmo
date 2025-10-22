@@ -755,28 +755,42 @@ func TestReceiveHook(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				t.Parallel()
 
-				var runningHandlers atomic.Int32
-				var maxConcurrentHandlers atomic.Int32
-				var maxConcurrentHandlersExceeded atomic.Bool
+				var (
+					currentHandlers    atomic.Int32
+					maxCurrentHandlers atomic.Int32
+					finishedHandlers   atomic.Int32
+				)
 
 				cfg := config.Config{
 					Graph: config.Graph{},
 					Modules: map[string]interface{}{
 						"streamReceiveModule": stream_receive.StreamReceiveModule{
 							Callback: func(ctx core.StreamReceiveEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
-								current := runningHandlers.Add(1)
+								currentHandlers.Add(1)
+
+								// wait for other handlers in the batch
 								for {
-									max := maxConcurrentHandlers.Load()
-									if current <= max || maxConcurrentHandlers.CompareAndSwap(max, current) {
+									current := currentHandlers.Load()
+									max := maxCurrentHandlers.Load()
+
+									if current > max {
+										maxCurrentHandlers.CompareAndSwap(max, current)
+									}
+
+									if current >= int32(tc.maxConcurrent) {
+										break
+									}
+
+									// Let handlers continue if we never reach a batch size = tc.maxConcurrent
+									// because there are not enough remaining subscribers to be updated.
+									remainingSubs := tc.numSubscribers - int(finishedHandlers.Load())
+									if remainingSubs < tc.maxConcurrent {
 										break
 									}
 								}
-								if current > int32(tc.maxConcurrent) {
-									maxConcurrentHandlersExceeded.Store(true)
-								}
-								// Block for some time to allow concurrent execution
-								time.Sleep(50 * time.Millisecond)
-								runningHandlers.Add(-1)
+
+								currentHandlers.Add(-1)
+								finishedHandlers.Add(1)
 								return events, nil
 							},
 						},
@@ -858,18 +872,176 @@ func TestReceiveHook(t *testing.T) {
 						}, "unable to close client before timeout")
 					}
 
-					// Verify concurrency
-					assert.False(t, maxConcurrentHandlersExceeded.Load(),
-						"Handler execution exceeded max concurrent limit of %d", tc.maxConcurrent)
-
-					maxReached := maxConcurrentHandlers.Load()
-					assert.Equal(t, int32(tc.maxConcurrent), maxReached,
-						"Expected to reach max concurrent handlers of %d, but only reached %d",
-						tc.maxConcurrent, maxReached)
-
 					// Verify that the hooks were called for all subscriptions
 					requestLog := xEnv.Observer().FilterMessage("Stream Hook has been run")
 					assert.Len(t, requestLog.All(), tc.numSubscribers)
+				})
+			})
+		}
+	})
+
+	t.Run("Test async handler execution is not over range", func(t *testing.T) {
+		t.Parallel()
+
+		testCases := []struct {
+			name           string
+			maxConcurrent  int
+			numSubscribers int
+		}{
+			{
+				name:           "1 concurrent handler",
+				maxConcurrent:  1,
+				numSubscribers: 5,
+			},
+			{
+				name:           "2 concurrent handlers",
+				maxConcurrent:  2,
+				numSubscribers: 10,
+			},
+			{
+				name:           "10 concurrent handlers",
+				maxConcurrent:  10,
+				numSubscribers: 20,
+			},
+			{
+				name:           "20 concurrent handlers",
+				maxConcurrent:  20,
+				numSubscribers: 40,
+			},
+		}
+
+		for _, tc := range testCases {
+			tc := tc // capture range variable
+			t.Run(tc.name, func(t *testing.T) {
+				t.Parallel()
+
+				var (
+					currentHandlers    atomic.Int32
+					maxCurrentHandlers atomic.Int32
+					finishedHandlers   atomic.Int32
+					deadlineExceeded   = make(chan struct{}, tc.numSubscribers)
+				)
+
+				cfg := config.Config{
+					Graph: config.Graph{},
+					Modules: map[string]interface{}{
+						"streamReceiveModule": stream_receive.StreamReceiveModule{
+							Callback: func(ctx core.StreamReceiveEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
+								currentHandlers.Add(1)
+
+								// wait for other handlers in the batch
+								begin := time.Now()
+								for {
+									if time.Now().After(begin.Add(500 * time.Millisecond)) {
+										deadlineExceeded <- struct{}{}
+										return events, nil
+									}
+
+									current := currentHandlers.Load()
+									max := maxCurrentHandlers.Load()
+
+									if current > max {
+										maxCurrentHandlers.CompareAndSwap(max, current)
+									}
+
+									if current >= int32(tc.maxConcurrent+1) {
+										break
+									}
+
+									// Let handlers continue if we never reach a batch size = tc.maxConcurrent
+									// because there are not enough remaining subscribers to be updated.
+									remainingSubs := tc.numSubscribers - int(finishedHandlers.Load())
+									if remainingSubs < tc.maxConcurrent+1 {
+										break
+									}
+								}
+
+								currentHandlers.Add(-1)
+								finishedHandlers.Add(1)
+								return events, nil
+							},
+						},
+					},
+				}
+
+				testenv.Run(t, &testenv.Config{
+					RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+					EnableKafka:              true,
+					RouterOptions: []core.Option{
+						core.WithModulesConfig(cfg.Modules),
+						core.WithCustomModules(&stream_receive.StreamReceiveModule{}),
+						core.WithSubscriptionHooks(config.SubscriptionHooksConfiguration{
+							MaxConcurrentEventReceiveHandlers: tc.maxConcurrent,
+						}),
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.InfoLevel,
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					topics := []string{"employeeUpdated"}
+					events.KafkaEnsureTopicExists(t, xEnv, time.Second, topics...)
+
+					var subscriptionOne struct {
+						employeeUpdatedMyKafka struct {
+							ID      float64 `graphql:"id"`
+							Details struct {
+								Forename string `graphql:"forename"`
+								Surname  string `graphql:"surname"`
+							} `graphql:"details"`
+						} `graphql:"employeeUpdatedMyKafka(employeeID: 3)"`
+					}
+
+					surl := xEnv.GraphQLWebSocketSubscriptionURL()
+
+					clients := make([]*graphql.SubscriptionClient, tc.numSubscribers)
+					clientRunChs := make([]chan error, tc.numSubscribers)
+					subscriptionArgsChs := make([]chan kafkaSubscriptionArgs, tc.numSubscribers)
+
+					for i := range tc.numSubscribers {
+						clients[i] = graphql.NewSubscriptionClient(surl)
+						clientRunChs[i] = make(chan error)
+						subscriptionArgsChs[i] = make(chan kafkaSubscriptionArgs, 1)
+
+						idx := i
+						subscriptionID, err := clients[i].Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
+							subscriptionArgsChs[idx] <- kafkaSubscriptionArgs{
+								dataValue: dataValue,
+								errValue:  errValue,
+							}
+							return nil
+						})
+						require.NoError(t, err)
+						require.NotEmpty(t, subscriptionID)
+
+						go func(i int) {
+							clientRunChs[i] <- clients[i].Run()
+						}(i)
+					}
+
+					xEnv.WaitForSubscriptionCount(uint64(tc.numSubscribers), Timeout)
+
+					events.ProduceKafkaMessage(t, xEnv, Timeout, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+
+					// Collect events from all subscribers
+					for i := 0; i < tc.numSubscribers; i++ {
+						testenv.AwaitChannelWithT(t, Timeout, subscriptionArgsChs[i], func(t *testing.T, args kafkaSubscriptionArgs) {
+							require.NoError(t, args.errValue)
+							require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
+						})
+					}
+
+					// Close all clients
+					for i := 0; i < tc.numSubscribers; i++ {
+						require.NoError(t, clients[i].Close())
+						testenv.AwaitChannelWithT(t, Timeout, clientRunChs[i], func(t *testing.T, err error) {
+							require.NoError(t, err)
+						}, "unable to close client before timeout")
+					}
+
+					emptyFn := func(t *testing.T, _ struct{}) {}
+					testenv.AwaitChannelWithT(t, Timeout, deadlineExceeded, emptyFn,
+						"too many handlers running at the same time")
 				})
 			})
 		}
