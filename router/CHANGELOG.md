@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.259.1](https://github.com/wundergraph/cosmo/compare/router@0.259.0...router@0.259.1) (2025-10-22)
+
+### Bug Fixes
+
+* correct SSE subgraph subscription complete behaviour ([#2262](https://github.com/wundergraph/cosmo/issues/2262)) ([e849bb9](https://github.com/wundergraph/cosmo/commit/e849bb9b4e28c09cdce4717bd5cfe422545dd062)) (@endigma)
+
 # [0.259.0](https://github.com/wundergraph/cosmo/compare/router@0.258.7...router@0.259.0) (2025-10-20)
 
 ### Features
