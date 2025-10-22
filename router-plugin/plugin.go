@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
 
 	"github.com/wundergraph/cosmo/router-plugin/config"
@@ -162,8 +161,5 @@ func NewRouterPlugin(registrationfunc func(*grpc.Server), opts ...PluginOption) 
 }
 
 func (r *RouterPlugin) Serve() {
-	there := os.Getenv("GRPC_DATASOURCE_PLUGIN")
-	fmt.Println(there)
-	os.Setenv("GRPC_DATASOURCE_PLUGIN", "GRPC_DATASOURCE_PLUGIN")
 	plugin.Serve(r.serveConfig)
 }
