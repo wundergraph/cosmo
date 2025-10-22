@@ -8,8 +8,8 @@ import { renderResultTree } from '../helper.js';
 import {
   checkAndInstallTools,
   generateGRPCCode,
-  generateProtoAndMapping,
-  installGoDependencies,
+  generateProtoAndMapping, getLanguage,
+  installGoDependencies, installTsDependencies,
 } from '../toolchain.js';
 
 export default (opts: BaseCommandOptions) => {
@@ -36,9 +36,18 @@ export default (opts: BaseCommandOptions) => {
     const goModulePath = options.goModulePath;
 
     try {
+      const language = getLanguage(pluginDir)
+
       // Check and install tools if needed
       if (!options.skipToolsInstallation) {
         await checkAndInstallTools(options.forceToolsInstallation);
+      }
+
+      switch (language) {
+        case 'ts': {
+          await installTsDependencies(pluginDir, spinner);
+          break;
+        }
       }
 
       // Start the generation process
@@ -48,10 +57,14 @@ export default (opts: BaseCommandOptions) => {
       await generateProtoAndMapping(pluginDir, goModulePath, spinner);
 
       // Generate gRPC code
-      await generateGRPCCode(pluginDir, spinner);
+      await generateGRPCCode(pluginDir, spinner, language);
 
-      // Install Go dependencies
-      await installGoDependencies(pluginDir, spinner);
+      switch (language) {
+        case 'go': {
+          await installGoDependencies(pluginDir, spinner);
+          break;
+        }
+      }
 
       // Calculate and format elapsed time
       const endTime = performance.now();

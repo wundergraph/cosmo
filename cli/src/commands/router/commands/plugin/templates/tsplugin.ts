@@ -1,16 +1,15 @@
 
-const clientTs = `
-#!/usr/bin/env bun
+const clientTs = `#!/usr/bin/env bun
 
 import * as grpc from '@grpc/grpc-js';
 
 // Import generated gRPC code
-import { AwesomeServiceClient } from '../generated/service_grpc_pb';
+import { {serviceName}Client } from '../generated/service_grpc_pb';
 import { QueryHelloRequest } from '../generated/service_pb';
 
 async function run() {
   // Create a client using the generated client class
-  const client = new AwesomeServiceClient(
+  const client = new {serviceName}Client(
     'localhost:1234',
     grpc.credentials.createInsecure()
   );
@@ -43,8 +42,7 @@ run().catch((error) => {
 });
 `
 
-const pluginTs = `
-#!/usr/bin/env bun
+const pluginTs = `#!/usr/bin/env bun
 
 import * as grpc from '@grpc/grpc-js';
 import * as path from 'path';
@@ -52,8 +50,8 @@ import { fileURLToPath } from 'url';
 
 // Import generated gRPC code
 import { 
-  AwesomeServiceService, 
-  IAwesomeServiceServer 
+  {serviceName}Service, 
+  I{serviceName}Server 
 } from '../generated/service_grpc_pb';
 import { 
   QueryHelloRequest, 
@@ -90,7 +88,7 @@ class Logger {
 const logger = new Logger();
 
 // Define the service implementation using the generated types
-const awesomeServiceImplementation: IAwesomeServiceServer = {
+const {serviceName}Implementation: I{serviceName}Server = {
   queryHello: (call: grpc.ServerUnaryCall<QueryHelloRequest, QueryHelloResponse>, callback: grpc.sendUnaryData<QueryHelloResponse>) => {
     const name = call.request.getName();
 
@@ -112,8 +110,8 @@ async function serve() {
   // Create the server
   const server = new grpc.Server();
 
-  // Add the AwesomeService using generated service definition
-  server.addService(AwesomeServiceService, awesomeServiceImplementation);
+  // Add the {serviceName} using generated service definition
+  server.addService({serviceName}Service, {serviceName}Implementation);
 
   // Bind the server to a port
   const address = '127.0.0.1:1234';
