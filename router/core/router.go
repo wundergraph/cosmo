@@ -2129,11 +2129,6 @@ func WithDemoMode(demoMode bool) Option {
 
 func WithSubscriptionHooks(cfg config.SubscriptionHooksConfiguration) Option {
 	return func(r *Router) {
-		// maxConcurrent := cfg.MaxConcurrentEventReceiveHandlers
-		// if maxConcurrent == 0 {
-		// 	maxConcurrent = 100
-		// }
-		// r.subscriptionHooks.maxConcurrentOnReceiveHooks = maxConcurrent
 		r.subscriptionHooks.maxConcurrentOnReceiveHooks = cfg.MaxConcurrentEventReceiveHandlers
 	}
 }

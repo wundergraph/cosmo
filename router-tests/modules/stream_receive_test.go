@@ -4,8 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"slices"
-	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -757,13 +755,28 @@ func TestReceiveHook(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				t.Parallel()
 
+				var runningHandlers atomic.Int32
+				var maxConcurrentHandlers atomic.Int32
+				var maxConcurrentHandlersExceeded atomic.Bool
+
 				cfg := config.Config{
 					Graph: config.Graph{},
 					Modules: map[string]interface{}{
 						"streamReceiveModule": stream_receive.StreamReceiveModule{
 							Callback: func(ctx core.StreamReceiveEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
-								// Add 20ms delay before returning events unmodified
-								time.Sleep(20 * time.Millisecond)
+								current := runningHandlers.Add(1)
+								for {
+									max := maxConcurrentHandlers.Load()
+									if current <= max || maxConcurrentHandlers.CompareAndSwap(max, current) {
+										break
+									}
+								}
+								if current > int32(tc.maxConcurrent) {
+									maxConcurrentHandlersExceeded.Store(true)
+								}
+								// Block for some time to allow concurrent execution
+								time.Sleep(50 * time.Millisecond)
+								runningHandlers.Add(-1)
 								return events, nil
 							},
 						},
@@ -803,8 +816,6 @@ func TestReceiveHook(t *testing.T) {
 					clients := make([]*graphql.SubscriptionClient, tc.numSubscribers)
 					clientRunChs := make([]chan error, tc.numSubscribers)
 					subscriptionArgsChs := make([]chan kafkaSubscriptionArgs, tc.numSubscribers)
-					receivedTimes := make([]time.Time, tc.numSubscribers)
-					var timeMutex sync.Mutex
 
 					for i := range tc.numSubscribers {
 						clients[i] = graphql.NewSubscriptionClient(surl)
@@ -813,9 +824,6 @@ func TestReceiveHook(t *testing.T) {
 
 						idx := i
 						subscriptionID, err := clients[i].Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-							timeMutex.Lock()
-							receivedTimes[idx] = time.Now()
-							timeMutex.Unlock()
 							subscriptionArgsChs[idx] <- kafkaSubscriptionArgs{
 								dataValue: dataValue,
 								errValue:  errValue,
@@ -850,57 +858,14 @@ func TestReceiveHook(t *testing.T) {
 						}, "unable to close client before timeout")
 					}
 
-					// Prevent race condition on receivedTimes, because we will access it in the next step
-					timeMutex.Lock()
-					defer timeMutex.Unlock()
+					// Verify concurrency
+					assert.False(t, maxConcurrentHandlersExceeded.Load(),
+						"Handler execution exceeded max concurrent limit of %d", tc.maxConcurrent)
 
-					// Sort received times by timestamp to determine actual execution order
-					type indexedTime struct {
-						index int
-						time  time.Time
-					}
-					sorted := make([]indexedTime, tc.numSubscribers)
-					for i := range tc.numSubscribers {
-						sorted[i] = indexedTime{index: i, time: receivedTimes[i]}
-					}
-					// Sort by time using generic slices.SortFunc
-					slices.SortFunc(sorted, func(a, b indexedTime) int {
-						if a.time.Before(b.time) {
-							return -1
-						}
-						if a.time.After(b.time) {
-							return 1
-						}
-						return 0
-					})
-
-					// Verify batches: within each batch, events should arrive nearly simultaneously
-					// Between batches, there should be ~20ms delay
-					for i := 0; i < tc.numSubscribers; i += tc.maxConcurrent {
-						batchEnd := i + tc.maxConcurrent
-						if batchEnd > tc.numSubscribers {
-							batchEnd = tc.numSubscribers
-						}
-
-						// Check time differences within the batch (should be small, < 10ms)
-						for j := i; j < batchEnd-1; j++ {
-							withinBatchDiff := sorted[j+1].time.Sub(sorted[j].time)
-							assert.LessOrEqual(t, withinBatchDiff.Milliseconds(), int64(10),
-								"Subscribers %d and %d in same batch should receive events nearly simultaneously, got %v",
-								sorted[j].index, sorted[j+1].index, withinBatchDiff)
-						}
-
-						// Check time difference between this batch and the next batch (should be ~20ms)
-						if batchEnd < tc.numSubscribers {
-							betweenBatchDiff := sorted[batchEnd].time.Sub(sorted[i].time)
-							assert.GreaterOrEqual(t, betweenBatchDiff.Milliseconds(), int64(15),
-								"Time between batch starting at index %d and next batch should be at least 15ms, got %v",
-								i, betweenBatchDiff)
-							assert.LessOrEqual(t, betweenBatchDiff.Milliseconds(), int64(35),
-								"Time between batch starting at index %d and next batch should be at most 35ms, got %v",
-								i, betweenBatchDiff)
-						}
-					}
+					maxReached := maxConcurrentHandlers.Load()
+					assert.Equal(t, int32(tc.maxConcurrent), maxReached,
+						"Expected to reach max concurrent handlers of %d, but only reached %d",
+						tc.maxConcurrent, maxReached)
 
 					// Verify that the hooks were called for all subscriptions
 					requestLog := xEnv.Observer().FilterMessage("Stream Hook has been run")
