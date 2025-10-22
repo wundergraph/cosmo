@@ -1,7 +1,6 @@
 package nats
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"io"
@@ -55,10 +54,9 @@ func TestEngineDataSourceFactoryWithMockAdapter(t *testing.T) {
 	require.NoError(t, err)
 
 	// Call Load on the data source
-	out := &bytes.Buffer{}
-	err = ds.Load(context.Background(), []byte(input), out)
+	data, err := ds.Load(context.Background(), []byte(input))
 	require.NoError(t, err)
-	require.Equal(t, `{"success": true}`, out.String())
+	require.Equal(t, `{"success": true}`, string(data))
 }
 
 func TestEngineDataSourceFactory_GetResolveDataSource_WrongType(t *testing.T) {
@@ -192,10 +190,9 @@ func TestEngineDataSourceFactory_RequestDataSource(t *testing.T) {
 	require.NoError(t, err)
 
 	// Call Load on the data source
-	out := &bytes.Buffer{}
-	err = ds.Load(context.Background(), []byte(input), out)
+	data, err := ds.Load(context.Background(), []byte(input))
 	require.NoError(t, err)
-	require.Equal(t, `{"response": "test"}`, out.String())
+	require.Equal(t, `{"response": "test"}`, string(data))
 }
 
 func TestTransformEventConfig(t *testing.T) {

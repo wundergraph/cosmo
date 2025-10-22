@@ -1,7 +1,6 @@
 package redis
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -220,15 +219,14 @@ func TestRedisPublishDataSource_Load(t *testing.T) {
 			}
 			ctx := context.Background()
 			input := []byte(tt.input)
-			out := &bytes.Buffer{}
 
-			err := dataSource.Load(ctx, input, out)
+			data, err := dataSource.Load(ctx, input)
 
 			if tt.expectError {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				assert.Equal(t, tt.expectedOutput, out.String())
+				assert.Equal(t, tt.expectedOutput, string(data))
 			}
 		})
 	}
@@ -241,7 +239,7 @@ func TestRedisPublishDataSource_LoadWithFiles(t *testing.T) {
 		}
 
 		assert.Panics(t, func() {
-			dataSource.LoadWithFiles(context.Background(), nil, nil, &bytes.Buffer{})
+			dataSource.LoadWithFiles(context.Background(), nil, nil)
 		})
 	})
 }

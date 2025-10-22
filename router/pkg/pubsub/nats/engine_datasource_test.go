@@ -1,7 +1,6 @@
 package nats
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -255,16 +254,15 @@ func TestNatsPublishDataSource_Load(t *testing.T) {
 
 			ctx := context.Background()
 			input := []byte(tt.input)
-			var out bytes.Buffer
 
-			err := dataSource.Load(ctx, input, &out)
+			data, err := dataSource.Load(ctx, input)
 
 			if tt.expectError {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
 				if tt.expectedOutput != "" {
-					assert.Equal(t, tt.expectedOutput, out.String())
+					assert.Equal(t, tt.expectedOutput, string(data))
 				}
 			}
 		})
@@ -274,7 +272,7 @@ func TestNatsPublishDataSource_Load(t *testing.T) {
 func TestNatsPublishDataSource_LoadWithFiles(t *testing.T) {
 	dataSource := &NatsPublishDataSource{}
 	assert.Panics(t, func() {
-		dataSource.LoadWithFiles(context.Background(), []byte{}, nil, &bytes.Buffer{})
+		dataSource.LoadWithFiles(context.Background(), []byte{}, nil)
 	}, "Expected LoadWithFiles to panic with 'not implemented'")
 }
 
@@ -332,16 +330,15 @@ func TestNatsRequestDataSource_Load(t *testing.T) {
 
 			ctx := context.Background()
 			input := []byte(tt.input)
-			var out bytes.Buffer
 
-			err := dataSource.Load(ctx, input, &out)
+			data, err := dataSource.Load(ctx, input)
 
 			if tt.expectError {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
 				if tt.expectedOutput != "" {
-					assert.Equal(t, tt.expectedOutput, out.String())
+					assert.Equal(t, tt.expectedOutput, string(data))
 				}
 			}
 		})
@@ -351,6 +348,6 @@ func TestNatsRequestDataSource_Load(t *testing.T) {
 func TestNatsRequestDataSource_LoadWithFiles(t *testing.T) {
 	dataSource := &NatsRequestDataSource{}
 	assert.Panics(t, func() {
-		dataSource.LoadWithFiles(context.Background(), []byte{}, nil, &bytes.Buffer{})
+		dataSource.LoadWithFiles(context.Background(), []byte{}, nil)
 	}, "Expected LoadWithFiles to panic with 'not implemented'")
 }
