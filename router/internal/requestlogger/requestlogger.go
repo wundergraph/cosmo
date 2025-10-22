@@ -50,9 +50,11 @@ const (
 )
 
 type handler struct {
-	accessLogger *accessLogger
-	handler      http.Handler
-	logger       *zap.Logger
+	accessLogger    *accessLogger
+	handler         http.Handler
+	logger          *zap.Logger
+	panicLogger     *zap.Logger
+	logLevelHandler func(r *http.Request) zapcore.Level
 }
 
 func parseOptions(r *handler, opts ...Option) http.Handler {
@@ -110,6 +112,12 @@ func WithDefaultOptions() Option {
 	}
 }
 
+func WithLogLevelHandler(fn func(r *http.Request) zapcore.Level) Option {
+	return func(r *handler) {
+		r.logLevelHandler = fn
+	}
+}
+
 func WithIgnoreQueryParamsList(ignoreList []string) Option {
 	return func(r *handler) {
 		r.accessLogger.ignoreQueryParamsList = ignoreList
@@ -118,9 +126,11 @@ func WithIgnoreQueryParamsList(ignoreList []string) Option {
 
 func New(logger *zap.Logger, opts ...Option) func(h http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
+		newLogger := logger.With(zap.String("log_type", "request"))
 		r := &handler{
 			handler:      h,
-			logger:       logger.With(zap.String("log_type", "request")),
+			logger:       newLogger,
+			panicLogger:  newLogger.WithOptions(zap.AddStacktrace(zapcore.ErrorLevel)),
 			accessLogger: &accessLogger{},
 		}
 		return parseOptions(r, opts...)
@@ -162,9 +172,9 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if brokenPipe {
 				fields = append(fields, zap.Bool("broken_pipe", brokenPipe))
 				// Avoid logging the stack trace for broken pipe errors
-				h.logger.WithOptions(zap.AddStacktrace(zapcore.PanicLevel)).Error(path, fields...)
+				h.panicLogger.WithOptions(zap.AddStacktrace(zapcore.PanicLevel)).Error(path, fields...)
 			} else {
-				h.logger.Error("[Recovery from panic]", fields...)
+				h.panicLogger.Error("[Recovery from panic]", fields...)
 			}
 
 			// Dpanic will panic already in development but in production it will log the error and continue
@@ -188,7 +198,12 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		resFields = append(resFields, h.accessLogger.fieldsHandler(h.logger, h.accessLogger.attributes, h.accessLogger.exprAttributes, nil, r, nil, nil)...)
 	}
 
-	h.logger.Info(path, append(fields, resFields...)...)
+	logLevel := zapcore.InfoLevel
+	if h.logLevelHandler != nil {
+		logLevel = h.logLevelHandler(r)
+	}
+
+	h.logger.Log(logLevel, path, append(fields, resFields...)...)
 }
 
 func (al *accessLogger) getRequestFields(r *http.Request, logger *zap.Logger) []zapcore.Field {

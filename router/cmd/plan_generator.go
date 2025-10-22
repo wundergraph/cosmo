@@ -80,7 +80,7 @@ func PlanGenerator(args []string) {
 		log.Fatalf("Could not parse log level: %s", err)
 	}
 
-	logger := logging.New(false, false, logLevel).
+	logger := logging.New(false, false, true, logLevel).
 		With(
 			zap.String("service", "@wundergraph/query-plan"),
 			zap.String("service_version", core.Version),
