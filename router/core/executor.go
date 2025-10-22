@@ -213,7 +213,6 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 		b.subgraphTrippers,
 		b.pluginHost,
 		b.logger,
-		routerEngineCfg.Execution.EnableSingleFlight,
 		routerEngineCfg.Execution.EnableNetPoll,
 		b.instanceData,
 	), b.logger)
