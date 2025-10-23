@@ -298,9 +298,9 @@ export class Graph {
         `resDataByRelativeOriginPath`,
       );
       const fullPath = `${pathFromRoot}${unresolvableEntityPath}`;
-
       const rootResData = walker.resDataByPath.get(fullPath);
       if (rootResData) {
+        // The path may not exist from the root walker due to nested entities.
         entityResData.addData(rootResData);
         rootResData.addData(entityResData);
       }
