@@ -1696,6 +1696,11 @@ describe('Field resolvability tests', () => {
       ),
     );
   });
+
+  test('that unresolvable field due to incorrect `@key` is handled correct', () => {
+    const { errors } = federateSubgraphsFailure([haaa, haab, haac], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(4);
+  });
 });
 
 const subgraphA: Subgraph = {
@@ -3380,5 +3385,77 @@ const gaab: Subgraph = {
     type Query {
       object: Object!
     }
+  `),
+};
+
+const haaa: Subgraph = {
+  name: 'haaa',
+  url: '',
+  definitions: parse(`
+scalar ScalarID @inaccessible
+
+type EntityA @shareable @key(fields: "idB") {
+  idA: ID!
+  idB: ScalarID! @inaccessible
+  createdAt: String!
+  active: Boolean!
+}
+
+type Query {
+  a: EntityA @shareable
+}
+  `),
+};
+
+const haab: Subgraph = {
+  name: 'haab',
+  url: '',
+  definitions: parse(`
+scalar ScalarID @inaccessible
+
+type EntityA @shareable @key(fields: "idB") {
+  idA: ID!
+  idB: ScalarID! @inaccessible
+  b: EntityBConnection!
+}
+
+type EntityB @shareable @key(fields: "idB") {
+  idA: ID!
+  idB: ScalarID! @inaccessible
+  a: EntityA
+}
+
+type EntityBConnection {
+  edges: [EntityBEdge]
+  nodes: [EntityB]
+}
+
+type EntityBEdge {
+  node: EntityB
+}
+
+type Query {
+  a: EntityA @shareable
+}
+  `),
+};
+
+const haac: Subgraph = {
+  name: 'haac',
+  url: '',
+  definitions: parse(`
+type EntityA @shareable @key(fields: "idA") {
+  idA: ID!
+}
+
+type EntityB @shareable @key(fields: "idA") {
+  idA: ID!
+  c: EntityC
+}
+
+type EntityC @shareable @key(fields: "id") {
+  id: ID!
+  a: EntityA
+}
   `),
 };

@@ -298,9 +298,12 @@ export class Graph {
         `resDataByRelativeOriginPath`,
       );
       const fullPath = `${pathFromRoot}${unresolvableEntityPath}`;
-      const rootResData = getOrThrowError(walker.resDataByPath, fullPath, `rootFieldWalker.resDataByPath`);
-      entityResData.addData(rootResData);
-      rootResData.addData(entityResData);
+
+      const rootResData = walker.resDataByPath.get(fullPath);
+      if (rootResData) {
+        entityResData.addData(rootResData);
+        rootResData.addData(entityResData);
+      }
       if (!entityResData.isResolved()) {
         continue;
       }
