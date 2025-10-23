@@ -2273,6 +2273,19 @@
               }
             }
           }
+        },
+        "subscription_hooks": {
+          "type": "object",
+          "description": "Configuration for subscription custom modules that are executed when events are received from a broker.",
+          "additionalProperties": false,
+          "properties": {
+            "max_concurrent_event_receive_handlers": {
+              "type": "integer",
+              "description": "The maximum number of concurrent event receive handlers. This controls the concurrency of the OnReceiveEvents custom modules.",
+              "minimum": 1,
+              "default": 100
+            }
+          }
         }
       }
     },

@@ -2,6 +2,7 @@ package datasource
 
 import (
 	"context"
+	"sync"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
@@ -31,34 +32,30 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 		}
 		return
 	}
-	// If there are hooks, we should apply them separated for each subscription
-	for ctx, subId := range s.eventUpdater.Subscriptions() {
-		processedEvents, err := applyStreamEventHooks(
-			ctx,
-			s.subscriptionEventConfiguration,
-			events,
-			s.hooks.OnReceiveEvents,
-		)
-		// updates the events even if the hooks fail
-		// if a hook doesn't want to send the events, it should return no events!
-		for _, event := range processedEvents {
-			s.eventUpdater.UpdateSubscription(subId, event.GetData())
-		}
-		if err != nil {
-			// For all errors, log them
-			if s.logger != nil {
-				s.logger.Error(
-					"An error occurred while processing stream events hooks",
-					zap.Error(err),
-					zap.String("provider_type", string(s.subscriptionEventConfiguration.ProviderType())),
-					zap.String("provider_id", s.subscriptionEventConfiguration.ProviderID()),
-					zap.String("field_name", s.subscriptionEventConfiguration.RootFieldName()),
-				)
-			}
-			// Always close the subscription when a hook reports an error to avoid inconsistent state.
-			s.eventUpdater.CloseSubscription(resolve.SubscriptionCloseKindNormal, subId)
-		}
+
+	subscriptions := s.eventUpdater.Subscriptions()
+	limit := max(s.hooks.MaxConcurrentOnReceiveHandlers, 1)
+	semaphore := make(chan struct{}, limit)
+	wg := sync.WaitGroup{}
+	errCh := make(chan error, len(subscriptions))
+
+	for ctx, subId := range subscriptions {
+		semaphore <- struct{}{} // Acquire a slot
+		eventsCopy := copyEvents(events)
+		wg.Add(1)
+		go s.updateSubscription(ctx, &wg, errCh, semaphore, subId, eventsCopy)
 	}
+
+	doneLogging := make(chan struct{})
+	go func() {
+		s.deduplicateAndLogErrors(errCh, len(subscriptions))
+		doneLogging <- struct{}{}
+	}()
+
+	wg.Wait()
+	close(semaphore)
+	close(errCh)
+	<-doneLogging
 }
 
 func (s *subscriptionEventUpdater) Complete() {
@@ -73,9 +70,9 @@ func (s *subscriptionEventUpdater) SetHooks(hooks Hooks) {
 	s.hooks = hooks
 }
 
-// applyStreamEventHooks processes events through a chain of hook functions
+// applyReceiveEventHooks processes events through a chain of hook functions
 // Each hook receives the result from the previous hook, creating a proper middleware pipeline
-func applyStreamEventHooks(
+func applyReceiveEventHooks(
 	ctx context.Context,
 	cfg SubscriptionEventConfiguration,
 	events []StreamEvent,
@@ -95,6 +92,74 @@ func applyStreamEventHooks(
 		}
 	}
 	return currentEvents, nil
+}
+
+func copyEvents(in []StreamEvent) []StreamEvent {
+	out := make([]StreamEvent, len(in))
+	for i := range in {
+		out[i] = in[i].Clone()
+	}
+	return out
+}
+
+func (s *subscriptionEventUpdater) updateSubscription(ctx context.Context, wg *sync.WaitGroup, errCh chan error, semaphore chan struct{}, subID resolve.SubscriptionIdentifier, events []StreamEvent) {
+	defer wg.Done()
+	defer func() {
+		<-semaphore // Release the slot when done
+	}()
+
+	hooks := s.hooks.OnReceiveEvents
+
+	// modify events with hooks
+	var err error
+	for i := range hooks {
+		events, err = hooks[i](ctx, s.subscriptionEventConfiguration, events)
+		if err != nil {
+			errCh <- err
+		}
+	}
+
+	// send events to the subscription,
+	// regardless if there was an error during hook processing.
+	// If no events should be sent, hook must return no events.
+	for _, event := range events {
+		s.eventUpdater.UpdateSubscription(subID, event.GetData())
+	}
+
+	// In case there was an error we close the affected subscription.
+	if err != nil {
+		s.eventUpdater.CloseSubscription(resolve.SubscriptionCloseKindNormal, subID)
+	}
+}
+
+// deduplicateAndLogErrors collects errors from errCh
+// and deduplicates them based on their err.Error() value.
+// Afterwards it uses s.logger to log the message.
+func (s *subscriptionEventUpdater) deduplicateAndLogErrors(errCh chan error, size int) {
+	if s.logger == nil {
+		return
+	}
+
+	errs := make(map[string]int, size)
+	for err := range errCh {
+		amount, found := errs[err.Error()]
+		if found {
+			errs[err.Error()] = amount + 1
+			continue
+		}
+		errs[err.Error()] = 1
+	}
+
+	for err, amount := range errs {
+		s.logger.Error(
+			"some handlers have thrown an error",
+			zap.String("error", err),
+			zap.Int("amount_handlers", amount),
+			zap.String("provider_type", string(s.subscriptionEventConfiguration.ProviderType())),
+			zap.String("provider_id", s.subscriptionEventConfiguration.ProviderID()),
+			zap.String("field_name", s.subscriptionEventConfiguration.RootFieldName()),
+		)
+	}
 }
 
 func NewSubscriptionEventUpdater(
