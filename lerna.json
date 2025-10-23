@@ -30,6 +30,7 @@
     "aws-lambda-router",
     "playground",
     "protographic",
+    "router-plugin/go",
     "router-plugin/ts"
   ],
   "npmClient": "pnpm",
