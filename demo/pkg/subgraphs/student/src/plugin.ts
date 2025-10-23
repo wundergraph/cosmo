@@ -1,9 +1,7 @@
 #!/usr/bin/env bun
 
 import * as grpc from '@grpc/grpc-js';
-import * as path from 'path';
-import { fileURLToPath } from 'url';
-import { UnixSocketListener } from './unixsocket';
+import { PluginServer } from './unixsocket';
 
 // Import generated gRPC code
 import { 
@@ -37,40 +35,16 @@ const StudentServiceImplementation: IStudentServiceServer = {
   }
 };
 
-async function serve() {
-  // Create the server
-  const server = new grpc.Server();
+function run() {
+  // Create the plugin server and add service
+  const pluginServer = new PluginServer();
+  pluginServer.addService(StudentServiceService, StudentServiceImplementation);
 
-  server.addService(StudentServiceService, StudentServiceImplementation);
-
-  // Create Unix socket listener to get a unique socket path
-  const socketListener = new UnixSocketListener();
-  const socketPath = socketListener.address();
-  const address = `${socketListener.network()}://${socketPath}`;
-
-  return new Promise<void>((resolve, reject) => {
-    server.bindAsync(
-        address,
-        grpc.ServerCredentials.createInsecure(),
-        (error, port) => {
-          if (error) {
-            reject(error);
-            return;
-          }
-
-          // Output the handshake information for go-plugin
-          // Format: VERSION|PROTOCOL_VERSION|NETWORK|ADDRESS|PROTOCOL
-          console.log(`1|1|${socketListener.network()}|${socketPath}|grpc|`);
-
-          resolve();
-        }
-    );
+  // Start the server
+  pluginServer.serve().catch((error) => {
+    process.exit(1);
   });
 }
 
-// Start the server
-serve().catch((error) => {
-  process.exit(1);
-});
-
+run();
 
