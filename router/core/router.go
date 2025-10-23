@@ -886,6 +886,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			mcpserver.WithEnableArbitraryOperations(r.mcp.EnableArbitraryOperations),
 			mcpserver.WithExposeSchema(r.mcp.ExposeSchema),
 			mcpserver.WithStateless(r.mcp.Session.Stateless),
+			mcpserver.WithForwardHeaders(r.mcp.ForwardHeaders.Enabled, r.mcp.ForwardHeaders.AllowList),
 		}
 
 		// Determine the router GraphQL endpoint

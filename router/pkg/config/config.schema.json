@@ -2071,6 +2071,25 @@
           "type": "boolean",
           "default": false,
           "description": "Expose the full GraphQL schema through MCP. When enabled, AI models can request the complete schema of your API."
+        },
+        "forward_headers": {
+          "type": "object",
+          "description": "Configuration for forwarding additional HTTP headers from MCP requests to GraphQL requests. The Authorization header is always forwarded regardless of this configuration to maintain backward compatibility. Use this to forward additional headers like tenant IDs, trace IDs, or custom authentication tokens.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable forwarding of additional headers beyond Authorization. When false (default), only the Authorization header is forwarded. When true, headers matching the allow_list are also forwarded."
+            },
+            "allow_list": {
+              "type": "array",
+              "description": "List of additional header names or regex patterns to forward (beyond Authorization which is always forwarded). Supports exact matches (e.g., 'X-Tenant-ID') and regex patterns (e.g., 'X-.*' for all headers starting with 'X-'). Header matching is case-insensitive.",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
         }
       }
     },
