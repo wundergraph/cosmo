@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
@@ -52,6 +53,82 @@ func TestComplexityLimits(t *testing.T) {
 					Query: `{ employee(id:1) { id details { forename surname } } }`,
 				})
 				require.JSONEq(t, `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`, res.Body)
+			})
+		})
+
+		t.Run("allows introspection queries without limits", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithIntrospection(true),
+				},
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					if securityConfiguration.DepthLimit == nil {
+						securityConfiguration.DepthLimit = &config.QueryDepthConfiguration{}
+					}
+					securityConfiguration.DepthLimit.Enabled = true
+					securityConfiguration.DepthLimit.Limit = 1
+					securityConfiguration.DepthLimit.CacheSize = 1024
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `
+						query IntrospectionQuery {
+						  __schema {
+							types { ...FullType }
+						  }
+						}
+						fragment FullType on __Type {
+						  kind
+						  name
+						  description
+						  fields(includeDeprecated: true) {
+							name
+							description
+							type {
+							  ...TypeRef
+							}
+							isDeprecated
+							deprecationReason
+						  }
+						  possibleTypes {
+							...TypeRef
+						  }
+						}
+						fragment TypeRef on __Type {
+						  kind
+						  name
+						  ofType {
+							kind
+							name
+							ofType {
+							  kind
+							  name
+							  ofType {
+								kind
+								name
+								ofType {
+								  kind
+								  name
+								  ofType {
+									kind
+									name
+									ofType {
+									  kind
+									  name
+									  ofType {
+										kind
+										name
+									  }
+									}
+								  }
+								}
+							  }
+							}
+						  }
+						}`,
+				})
+				require.Contains(t, res.Body, `"types":[{"kind":"OBJECT","name":"Query","description":"","fields":[{"name":"employee","description":"","type":{"kind":"OBJECT","name":"Employee","ofType":null}`)
 			})
 		})
 
