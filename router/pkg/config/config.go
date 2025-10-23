@@ -962,16 +962,53 @@ type CacheWarmupConfiguration struct {
 	Timeout        time.Duration     `yaml:"timeout" envDefault:"30s" env:"CACHE_WARMUP_TIMEOUT"`
 }
 
+type MCPAuthorizationConfiguration struct {
+	Enabled  bool                       `yaml:"enabled" envDefault:"false" env:"MCP_AUTHORIZATION_ENABLED"`
+	JWKS     []JWKSConfiguration        `yaml:"jwks"`
+	Scopes   MCPScopesConfiguration     `yaml:"scopes"`
+	Metadata MCPMetadataConfiguration   `yaml:"metadata"`
+}
+
+type MCPMetadataConfiguration struct {
+	Enabled              bool     `yaml:"enabled" envDefault:"true" env:"MCP_METADATA_ENABLED"`
+	ResourceURI          string   `yaml:"resource_uri,omitempty" env:"MCP_METADATA_RESOURCE_URI"`
+	AuthorizationServers []string `yaml:"authorization_servers,omitempty" env:"MCP_METADATA_AUTHORIZATION_SERVERS"`
+	DocumentationURL     string   `yaml:"documentation_url,omitempty" env:"MCP_METADATA_DOCUMENTATION_URL"`
+}
+
+type MCPScopesConfiguration struct {
+	Mode  string                 `yaml:"mode" envDefault:"enforce" env:"MCP_SCOPES_MODE"`
+	Tools MCPToolsScopesConfiguration `yaml:"tools"`
+}
+
+type MCPToolsScopesConfiguration struct {
+	GetSchema         MCPToolScopeConfiguration `yaml:"get_schema"`
+	ExecuteGraphQL    MCPToolScopeConfiguration `yaml:"execute_graphql"`
+	GetOperationInfo  MCPToolScopeConfiguration `yaml:"get_operation_info"`
+}
+
+type MCPToolScopeConfiguration struct {
+	Scopes []string `yaml:"scopes"`
+	Public bool     `yaml:"public" envDefault:"false"`
+}
+
 type MCPConfiguration struct {
-	Enabled                   bool             `yaml:"enabled" envDefault:"false" env:"MCP_ENABLED"`
-	Server                    MCPServer        `yaml:"server,omitempty"`
-	Storage                   MCPStorageConfig `yaml:"storage,omitempty"`
-	Session                   MCPSessionConfig `yaml:"session,omitempty"`
-	GraphName                 string           `yaml:"graph_name" envDefault:"mygraph" env:"MCP_GRAPH_NAME"`
-	ExcludeMutations          bool             `yaml:"exclude_mutations" envDefault:"false" env:"MCP_EXCLUDE_MUTATIONS"`
-	EnableArbitraryOperations bool             `yaml:"enable_arbitrary_operations" envDefault:"false" env:"MCP_ENABLE_ARBITRARY_OPERATIONS"`
-	ExposeSchema              bool             `yaml:"expose_schema" envDefault:"false" env:"MCP_EXPOSE_SCHEMA"`
-	RouterURL                 string           `yaml:"router_url,omitempty" env:"MCP_ROUTER_URL"`
+	Enabled                   bool                           `yaml:"enabled" envDefault:"false" env:"MCP_ENABLED"`
+	Server                    MCPServer                      `yaml:"server,omitempty"`
+	Storage                   MCPStorageConfig               `yaml:"storage,omitempty"`
+	Session                   MCPSessionConfig               `yaml:"session,omitempty"`
+	GraphName                 string                         `yaml:"graph_name" envDefault:"mygraph" env:"MCP_GRAPH_NAME"`
+	ExcludeMutations          bool                           `yaml:"exclude_mutations" envDefault:"false" env:"MCP_EXCLUDE_MUTATIONS"`
+	EnableArbitraryOperations bool                           `yaml:"enable_arbitrary_operations" envDefault:"false" env:"MCP_ENABLE_ARBITRARY_OPERATIONS"`
+	ExposeSchema              bool                           `yaml:"expose_schema" envDefault:"false" env:"MCP_EXPOSE_SCHEMA"`
+	RouterURL                 string                         `yaml:"router_url,omitempty" env:"MCP_ROUTER_URL"`
+	ForwardHeaders            MCPForwardHeadersConfiguration `yaml:"forward_headers"`
+	Authorization             MCPAuthorizationConfiguration  `yaml:"authorization"`
+}
+
+type MCPForwardHeadersConfiguration struct {
+	Enabled   bool     `yaml:"enabled" envDefault:"false" env:"MCP_FORWARD_HEADERS_ENABLED"`
+	AllowList []string `yaml:"allow_list" env:"MCP_FORWARD_HEADERS_ALLOW_LIST"`
 }
 
 type MCPSessionConfig struct {

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/santhosh-tekuri/jsonschema/v6"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
@@ -25,14 +27,29 @@ import (
 // authKey is a custom context key for storing the auth token.
 type authKey struct{}
 
+// headersKey is a custom context key for storing forwarded headers.
+type headersKey struct{}
+
 // withAuthKey adds an auth key to the context.
 func withAuthKey(ctx context.Context, auth string) context.Context {
 	return context.WithValue(ctx, authKey{}, auth)
 }
 
+// withHeaders adds headers to the context.
+func withHeaders(ctx context.Context, headers http.Header) context.Context {
+	return context.WithValue(ctx, headersKey{}, headers)
+}
+
 // authFromRequest extracts the auth token from the request headers.
 func authFromRequest(ctx context.Context, r *http.Request) context.Context {
 	return withAuthKey(ctx, r.Header.Get("Authorization"))
+}
+
+// headersFromRequest extracts all headers from the request and stores them in context.
+func headersFromRequest(ctx context.Context, r *http.Request) context.Context {
+	// Clone the headers to avoid any mutation issues
+	headers := r.Header.Clone()
+	return withHeaders(ctx, headers)
 }
 
 // tokenFromContext extracts the auth token from the context.
@@ -43,6 +60,12 @@ func tokenFromContext(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("missing auth")
 	}
 	return auth, nil
+}
+
+// headersFromContext extracts headers from the context.
+func headersFromContext(ctx context.Context) (http.Header, bool) {
+	headers, ok := ctx.Value(headersKey{}).(http.Header)
+	return headers, ok
 }
 
 // Options represents configuration options for the GraphQLSchemaServer
@@ -70,6 +93,16 @@ type Options struct {
 	ExposeSchema bool
 	// Stateless determines whether the MCP server should be stateless
 	Stateless bool
+	// ForwardHeadersEnabled determines whether header forwarding is enabled
+	ForwardHeadersEnabled bool
+	// ForwardHeadersAllowList is the list of headers (or regex patterns) to forward
+	ForwardHeadersAllowList []string
+	// TokenValidator is the token validator for authorization
+	TokenValidator *TokenValidator
+	// MetadataConfig is the configuration for the protected resource metadata endpoint
+	MetadataConfig *config.MCPMetadataConfiguration
+	// AuthConfig is the full authorization configuration
+	AuthConfig *config.MCPAuthorizationConfiguration
 }
 
 // GraphQLSchemaServer represents an MCP server that works with GraphQL schemas and operations
@@ -91,6 +124,11 @@ type GraphQLSchemaServer struct {
 	operationsManager         *OperationsManager
 	schemaCompiler            *SchemaCompiler
 	registeredTools           []string
+	forwardHeadersEnabled     bool
+	forwardHeadersAllowList   []string
+	tokenValidator            *TokenValidator
+	metadataConfig            *config.MCPMetadataConfiguration
+	authConfig                *config.MCPAuthorizationConfiguration
 }
 
 type graphqlRequest struct {
@@ -218,6 +256,11 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)
 		exposeSchema:              options.ExposeSchema,
 		stateless:                 options.Stateless,
 		baseURL:                   options.BaseURL,
+		forwardHeadersEnabled:     options.ForwardHeadersEnabled,
+		forwardHeadersAllowList:   options.ForwardHeadersAllowList,
+		tokenValidator:            options.TokenValidator,
+		metadataConfig:            options.MetadataConfig,
+		authConfig:                options.AuthConfig,
 	}
 
 	return gs, nil
@@ -285,6 +328,35 @@ func WithStateless(stateless bool) func(*Options) {
 	}
 }
 
+// WithForwardHeaders configures header forwarding to GraphQL requests
+func WithForwardHeaders(enabled bool, allowList []string) func(*Options) {
+	return func(o *Options) {
+		o.ForwardHeadersEnabled = enabled
+		o.ForwardHeadersAllowList = allowList
+	}
+}
+
+// WithTokenValidator sets the token validator for authorization
+func WithTokenValidator(tokenValidator *TokenValidator) func(*Options) {
+	return func(o *Options) {
+		o.TokenValidator = tokenValidator
+	}
+}
+
+// WithMetadataConfig sets the metadata configuration
+func WithMetadataConfig(metadataConfig *config.MCPMetadataConfiguration) func(*Options) {
+	return func(o *Options) {
+		o.MetadataConfig = metadataConfig
+	}
+}
+
+// WithAuthConfig sets the authorization configuration
+func WithAuthConfig(authConfig *config.MCPAuthorizationConfiguration) func(*Options) {
+	return func(o *Options) {
+		o.AuthConfig = authConfig
+	}
+}
+
 // Serve starts the server with the configured options and returns a streamable HTTP server.
 func (s *GraphQLSchemaServer) Serve() (*server.StreamableHTTPServer, error) {
 	// Create custom HTTP server
@@ -295,11 +367,20 @@ func (s *GraphQLSchemaServer) Serve() (*server.StreamableHTTPServer, error) {
 		IdleTimeout:  60 * time.Second,
 	}
 
+	// Create a combined context function that captures both auth and headers
+	contextFunc := func(ctx context.Context, r *http.Request) context.Context {
+		ctx = authFromRequest(ctx, r)
+		if s.forwardHeadersEnabled {
+			ctx = headersFromRequest(ctx, r)
+		}
+		return ctx
+	}
+
 	streamableHTTPServer := server.NewStreamableHTTPServer(s.server,
 		server.WithStreamableHTTPServer(httpServer),
 		server.WithLogger(NewZapAdapter(s.logger.With(zap.String("component", "mcp-server")))),
 		server.WithStateLess(s.stateless),
-		server.WithHTTPContextFunc(authFromRequest),
+		server.WithHTTPContextFunc(contextFunc),
 		server.WithHeartbeatInterval(10*time.Second),
 	)
 
@@ -307,10 +388,27 @@ func (s *GraphQLSchemaServer) Serve() (*server.StreamableHTTPServer, error) {
 
 	mux := http.NewServeMux()
 
-	// No OAuth protection - original behavior
-	mux.Handle("/mcp", corsMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	// Create the MCP handler
+	mcpHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		streamableHTTPServer.ServeHTTP(w, r)
-	})))
+	})
+
+	// Apply authorization middleware if token validator is configured
+	if s.tokenValidator != nil && s.tokenValidator.enabled {
+		mcpHandler = s.tokenValidator.AuthorizationMiddleware(mcpHandler).(http.HandlerFunc)
+	}
+
+	// Apply CORS middleware
+	mux.Handle("/mcp", corsMiddleware(mcpHandler))
+
+	// Add protected resource metadata endpoint if authorization is enabled
+	if s.metadataConfig != nil && s.metadataConfig.Enabled {
+		metadataHandler := http.HandlerFunc(s.handleProtectedResourceMetadata)
+		// Register at both standard RFC 9728 path and MCP-specific path
+		// The MCP-specific path is used when base_url includes /mcp
+		mux.Handle("/.well-known/oauth-protected-resource", corsMiddleware(metadataHandler))
+		mux.Handle("/.well-known/oauth-protected-resource/mcp", corsMiddleware(metadataHandler))
+	}
 
 	// Set the handler for the custom HTTP server
 	httpServer.Handler = mux
@@ -559,6 +657,11 @@ func (s *GraphQLSchemaServer) registerTools() error {
 // handleOperation handles a specific operation
 func (s *GraphQLSchemaServer) handleOperation(handler *operationHandler) func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		// TODO: Phase 3 - Validate scopes from GraphQL @wg_auth directive
+		// For now, operations inherit the same scope requirements as execute_graphql
+		if err := s.validateToolScopes(ctx, "execute_operation"); err != nil {
+			return nil, err
+		}
 
 		jsonBytes, err := json.Marshal(request.GetArguments())
 		if err != nil {
@@ -580,6 +683,11 @@ func (s *GraphQLSchemaServer) handleOperation(handler *operationHandler) func(ct
 // handleGraphQLOperationInfo returns a handler function that provides detailed info for a specific operation.
 func (s *GraphQLSchemaServer) handleGraphQLOperationInfo() func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		// Validate scopes for get_operation_info tool
+		if err := s.validateToolScopes(ctx, "get_operation_info"); err != nil {
+			return nil, err
+		}
+
 		var input GraphQLOperationInfoInput
 		inputBytes, err := json.Marshal(request.GetArguments())
 		if err != nil {
@@ -654,6 +762,39 @@ Important Notes:
 	}
 }
 
+// filterHeaders filters headers based on the allowlist configuration.
+// It supports both exact matches and regex patterns.
+func (s *GraphQLSchemaServer) filterHeaders(headers http.Header) http.Header {
+	if !s.forwardHeadersEnabled || len(s.forwardHeadersAllowList) == 0 {
+		return http.Header{}
+	}
+
+	filtered := http.Header{}
+
+	for _, pattern := range s.forwardHeadersAllowList {
+		// Try to compile as regex
+		re, err := regexp.Compile("(?i)^" + pattern + "$")
+		if err != nil {
+			// If it's not a valid regex, treat it as an exact match (case-insensitive)
+			for headerName, headerValues := range headers {
+				if strings.EqualFold(headerName, pattern) {
+					filtered[headerName] = headerValues
+				}
+			}
+			continue
+		}
+
+		// Match using regex
+		for headerName, headerValues := range headers {
+			if re.MatchString(headerName) {
+				filtered[headerName] = headerValues
+			}
+		}
+	}
+
+	return filtered
+}
+
 // executeGraphQLQuery executes a GraphQL query against the router endpoint
 func (s *GraphQLSchemaServer) executeGraphQLQuery(ctx context.Context, query string, variables json.RawMessage) (*mcp.CallToolResult, error) {
 	// Create the GraphQL request
@@ -675,6 +816,7 @@ func (s *GraphQLSchemaServer) executeGraphQLQuery(ctx context.Context, query str
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 
+	// Always forward Authorization header (legacy behavior)
 	token, err := tokenFromContext(ctx)
 	if err != nil {
 		s.logger.Debug("failed to get token from context", zap.Error(err))
@@ -682,7 +824,21 @@ func (s *GraphQLSchemaServer) executeGraphQLQuery(ctx context.Context, query str
 		req.Header.Set("Authorization", token)
 	}
 
-	// Forward Authorization header if provided
+	// Forward additional headers if enabled
+	if s.forwardHeadersEnabled {
+		if headers, ok := headersFromContext(ctx); ok {
+			filteredHeaders := s.filterHeaders(headers)
+			for headerName, headerValues := range filteredHeaders {
+				// Skip Authorization as it's already handled above
+				if strings.EqualFold(headerName, "Authorization") {
+					continue
+				}
+				for _, headerValue := range headerValues {
+					req.Header.Add(headerName, headerValue)
+				}
+			}
+		}
+	}
 
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
@@ -721,9 +877,90 @@ func (s *GraphQLSchemaServer) executeGraphQLQuery(ctx context.Context, query str
 	return mcp.NewToolResultText(string(body)), nil
 }
 
+// validateToolScopes validates that the authenticated user has the required scopes for a tool
+func (s *GraphQLSchemaServer) validateToolScopes(ctx context.Context, toolName string) error {
+	// Skip validation if authorization is not configured or disabled
+	if s.authConfig == nil || s.authConfig.Scopes.Mode == "disabled" {
+		return nil
+	}
+
+	// Get authentication from context
+	auth, ok := AuthenticationFromContext(ctx)
+	
+	// Determine required scopes based on tool name
+	var requiredScopes []string
+	var isPublic bool
+	
+	switch toolName {
+	case "get_schema":
+		requiredScopes = s.authConfig.Scopes.Tools.GetSchema.Scopes
+		isPublic = s.authConfig.Scopes.Tools.GetSchema.Public
+	case "execute_graphql", "execute_operation":
+		requiredScopes = s.authConfig.Scopes.Tools.ExecuteGraphQL.Scopes
+		isPublic = s.authConfig.Scopes.Tools.ExecuteGraphQL.Public
+	case "get_operation_info":
+		requiredScopes = s.authConfig.Scopes.Tools.GetOperationInfo.Scopes
+		isPublic = s.authConfig.Scopes.Tools.GetOperationInfo.Public
+	default:
+		// Unknown tool, allow by default
+		return nil
+	}
+	
+	// If tool is marked as public, skip scope validation
+	if isPublic {
+		return nil
+	}
+	
+	// If no scopes are required, allow access
+	if len(requiredScopes) == 0 {
+		return nil
+	}
+	
+	// If scopes are required but no authentication present
+	if !ok || auth == nil {
+		if s.authConfig.Scopes.Mode == "enforce" {
+			return fmt.Errorf("authentication required for tool '%s'", toolName)
+		}
+		// log_only mode
+		s.logger.Warn("scope validation failed: no authentication",
+			zap.String("tool", toolName),
+			zap.String("mode", s.authConfig.Scopes.Mode),
+			zap.Strings("required_scopes", requiredScopes))
+		return nil
+	}
+	
+	// Validate scopes using the token validator
+	if err := s.tokenValidator.ValidateScopes(auth, requiredScopes, false); err != nil {
+		if s.authConfig.Scopes.Mode == "enforce" {
+			return fmt.Errorf("insufficient scopes for tool '%s': %w", toolName, err)
+		}
+		// log_only mode
+		s.logger.Warn("scope validation failed",
+			zap.String("tool", toolName),
+			zap.String("mode", s.authConfig.Scopes.Mode),
+			zap.Strings("required_scopes", requiredScopes),
+			zap.Strings("provided_scopes", auth.Scopes()),
+			zap.Error(err))
+		return nil
+	}
+	
+	// Scopes validated successfully
+	s.logger.Debug("scope validation successful",
+		zap.String("tool", toolName),
+		zap.Strings("required_scopes", requiredScopes),
+		zap.Strings("provided_scopes", auth.Scopes()))
+	
+	return nil
+}
+
 // handleExecuteGraphQL returns a handler function that executes arbitrary GraphQL queries
 func (s *GraphQLSchemaServer) handleExecuteGraphQL() func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		// Validate scopes for execute_graphql tool
+		if err := s.validateToolScopes(ctx, "execute_graphql"); err != nil {
+			return nil, err
+		}
+
 		// Parse the JSON input
 		jsonBytes, err := json.Marshal(request.GetArguments())
 		if err != nil {
@@ -746,6 +983,11 @@ func (s *GraphQLSchemaServer) handleExecuteGraphQL() func(ctx context.Context, r
 // handleGetGraphQLSchema returns a handler function that returns the full GraphQL schema
 func (s *GraphQLSchemaServer) handleGetGraphQLSchema() func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		// Validate scopes for get_schema tool
+		if err := s.validateToolScopes(ctx, "get_schema"); err != nil {
+			return nil, err
+		}
+
 		// Get the schema from the operations manager
 		schema := s.operationsManager.GetSchema()
 		if schema == nil {
@@ -799,5 +1041,95 @@ func setCORSHeaders(w http.ResponseWriter, allowedMethods []string) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", strings.Join(append(allowedMethods, "OPTIONS"), ", "))
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Accept, Authorization, Last-Event-ID, Mcp-Protocol-Version, Mcp-Session-Id")
+	w.Header().Set("Access-Control-Expose-Headers", "Content-Type, Content-Length")
 	w.Header().Set("Access-Control-Max-Age", "86400") // 24 hours
+}
+
+// ProtectedResourceMetadata represents the RFC 9728 OAuth 2.0 Protected Resource Metadata
+type ProtectedResourceMetadata struct {
+	Resource               string   `json:"resource"`
+	AuthorizationServers   []string `json:"authorization_servers"`
+	ScopesSupported        []string `json:"scopes_supported,omitempty"`
+	BearerMethodsSupported []string `json:"bearer_methods_supported"`
+	ResourceDocumentation  string   `json:"resource_documentation,omitempty"`
+}
+
+// handleProtectedResourceMetadata serves the RFC 9728 OAuth 2.0 Protected Resource Metadata
+func (s *GraphQLSchemaServer) handleProtectedResourceMetadata(w http.ResponseWriter, r *http.Request) {
+
+	s.logger.Info("protected resource metadata request",
+		zap.String("method", r.Method),
+		zap.String("path", r.URL.Path),
+		zap.String("remote_addr", r.RemoteAddr),
+		zap.String("user_agent", r.Header.Get("User-Agent")),
+		zap.String("referer", r.Header.Get("Referer")),
+	)
+
+	// Only allow GET requests
+	if r.Method != http.MethodGet {
+		s.logger.Warn("protected resource metadata request with invalid method",
+			zap.String("method", r.Method),
+			zap.String("remote_addr", r.RemoteAddr),
+		)
+
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Collect all supported scopes from configuration
+	scopes := make(map[string]bool)
+
+	// Add scopes from built-in tools configuration
+	if s.authConfig != nil {
+		if len(s.authConfig.Scopes.Tools.GetSchema.Scopes) > 0 {
+			for _, scope := range s.authConfig.Scopes.Tools.GetSchema.Scopes {
+				scopes[scope] = true
+			}
+		}
+		if len(s.authConfig.Scopes.Tools.ExecuteGraphQL.Scopes) > 0 {
+			for _, scope := range s.authConfig.Scopes.Tools.ExecuteGraphQL.Scopes {
+				scopes[scope] = true
+			}
+		}
+		if len(s.authConfig.Scopes.Tools.GetOperationInfo.Scopes) > 0 {
+			for _, scope := range s.authConfig.Scopes.Tools.GetOperationInfo.Scopes {
+				scopes[scope] = true
+			}
+		}
+	}
+
+	// TODO: In Phase 3, add scopes from GraphQL operations with @wg_auth directive
+
+	// Convert map to sorted slice for consistent output
+	scopesList := make([]string, 0, len(scopes))
+	for scope := range scopes {
+		scopesList = append(scopesList, scope)
+	}
+
+	// Determine resource URI
+	resourceURI := s.metadataConfig.ResourceURI
+	if resourceURI == "" && s.baseURL != "" {
+		resourceURI = s.baseURL
+	}
+
+	// Build metadata response
+	metadata := ProtectedResourceMetadata{
+		Resource:               resourceURI,
+		AuthorizationServers:   s.metadataConfig.AuthorizationServers,
+		ScopesSupported:        scopesList,
+		BearerMethodsSupported: []string{"header"},
+	}
+
+	if s.metadataConfig.DocumentationURL != "" {
+		metadata.ResourceDocumentation = s.metadataConfig.DocumentationURL
+	}
+
+	// Set response headers
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	// Encode and send response
+	if err := json.NewEncoder(w).Encode(metadata); err != nil {
+		s.logger.Error("failed to encode protected resource metadata", zap.Error(err))
+	}
 }
