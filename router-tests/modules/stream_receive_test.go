@@ -35,6 +35,72 @@ func TestReceiveHook(t *testing.T) {
 		errValue  error
 	}
 
+	subscribeAndProduce := func(t *testing.T, xEnv *testenv.Environment, amountSubscribers int) {
+		topics := []string{"employeeUpdated"}
+		events.KafkaEnsureTopicExists(t, xEnv, time.Second, topics...)
+
+		var subscriptionQuery struct {
+			employeeUpdatedMyKafka struct {
+				ID      float64 `graphql:"id"`
+				Details struct {
+					Forename string `graphql:"forename"`
+					Surname  string `graphql:"surname"`
+				} `graphql:"details"`
+			} `graphql:"employeeUpdatedMyKafka(employeeID: 3)"`
+		}
+
+		surl := xEnv.GraphQLWebSocketSubscriptionURL()
+
+		clients := make([]*graphql.SubscriptionClient, amountSubscribers)
+		clientRunChs := make([]chan error, amountSubscribers)
+		subscriptionArgsChs := make([]chan kafkaSubscriptionArgs, amountSubscribers)
+
+		for i := range amountSubscribers {
+			clients[i] = graphql.NewSubscriptionClient(surl)
+			clientRunChs[i] = make(chan error)
+			subscriptionArgsChs[i] = make(chan kafkaSubscriptionArgs, 1)
+
+			idx := i
+			subscriptionID, err := clients[i].Subscribe(&subscriptionQuery, nil, func(dataValue []byte, errValue error) error {
+				subscriptionArgsChs[idx] <- kafkaSubscriptionArgs{
+					dataValue: dataValue,
+					errValue:  errValue,
+				}
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEmpty(t, subscriptionID)
+
+			go func(i int) {
+				clientRunChs[i] <- clients[i].Run()
+			}(i)
+		}
+
+		xEnv.WaitForSubscriptionCount(uint64(amountSubscribers), Timeout)
+
+		events.ProduceKafkaMessage(t, xEnv, Timeout, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+
+		// Collect events from all subscribers
+		for i := 0; i < amountSubscribers; i++ {
+			testenv.AwaitChannelWithT(t, Timeout, subscriptionArgsChs[i], func(t *testing.T, args kafkaSubscriptionArgs) {
+				require.NoError(t, args.errValue)
+				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
+			})
+		}
+
+		// Close all clients
+		for i := 0; i < amountSubscribers; i++ {
+			require.NoError(t, clients[i].Close())
+			testenv.AwaitChannelWithT(t, Timeout, clientRunChs[i], func(t *testing.T, err error) {
+				require.NoError(t, err)
+			}, "unable to close client before timeout")
+		}
+
+		for i := range subscriptionArgsChs {
+			close(subscriptionArgsChs[i])
+		}
+	}
+
 	t.Run("Test Receive hook is called", func(t *testing.T) {
 		t.Parallel()
 
@@ -720,7 +786,7 @@ func TestReceiveHook(t *testing.T) {
 		})
 	})
 
-	t.Run("Test async handler execution works", func(t *testing.T) {
+	t.Run("Test concurrent handler execution works", func(t *testing.T) {
 		t.Parallel()
 
 		testCases := []struct {
@@ -751,7 +817,6 @@ func TestReceiveHook(t *testing.T) {
 		}
 
 		for _, tc := range testCases {
-			tc := tc // capture range variable
 			t.Run(tc.name, func(t *testing.T) {
 				t.Parallel()
 
@@ -812,65 +877,9 @@ func TestReceiveHook(t *testing.T) {
 						LogLevel: zapcore.InfoLevel,
 					},
 				}, func(t *testing.T, xEnv *testenv.Environment) {
-					topics := []string{"employeeUpdated"}
-					events.KafkaEnsureTopicExists(t, xEnv, time.Second, topics...)
+					subscribeAndProduce(t, xEnv, tc.numSubscribers)
 
-					var subscriptionOne struct {
-						employeeUpdatedMyKafka struct {
-							ID      float64 `graphql:"id"`
-							Details struct {
-								Forename string `graphql:"forename"`
-								Surname  string `graphql:"surname"`
-							} `graphql:"details"`
-						} `graphql:"employeeUpdatedMyKafka(employeeID: 3)"`
-					}
-
-					surl := xEnv.GraphQLWebSocketSubscriptionURL()
-
-					clients := make([]*graphql.SubscriptionClient, tc.numSubscribers)
-					clientRunChs := make([]chan error, tc.numSubscribers)
-					subscriptionArgsChs := make([]chan kafkaSubscriptionArgs, tc.numSubscribers)
-
-					for i := range tc.numSubscribers {
-						clients[i] = graphql.NewSubscriptionClient(surl)
-						clientRunChs[i] = make(chan error)
-						subscriptionArgsChs[i] = make(chan kafkaSubscriptionArgs, 1)
-
-						idx := i
-						subscriptionID, err := clients[i].Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-							subscriptionArgsChs[idx] <- kafkaSubscriptionArgs{
-								dataValue: dataValue,
-								errValue:  errValue,
-							}
-							return nil
-						})
-						require.NoError(t, err)
-						require.NotEmpty(t, subscriptionID)
-
-						go func(i int) {
-							clientRunChs[i] <- clients[i].Run()
-						}(i)
-					}
-
-					xEnv.WaitForSubscriptionCount(uint64(tc.numSubscribers), Timeout)
-
-					events.ProduceKafkaMessage(t, xEnv, Timeout, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
-
-					// Collect events from all subscribers
-					for i := 0; i < tc.numSubscribers; i++ {
-						testenv.AwaitChannelWithT(t, Timeout, subscriptionArgsChs[i], func(t *testing.T, args kafkaSubscriptionArgs) {
-							require.NoError(t, args.errValue)
-							require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
-						})
-					}
-
-					// Close all clients
-					for i := 0; i < tc.numSubscribers; i++ {
-						require.NoError(t, clients[i].Close())
-						testenv.AwaitChannelWithT(t, Timeout, clientRunChs[i], func(t *testing.T, err error) {
-							require.NoError(t, err)
-						}, "unable to close client before timeout")
-					}
+					assert.Equal(t, int32(tc.maxConcurrent), maxCurrentHandlers.Load(), "amount of concurrent handlers not what was expected")
 
 					// Verify that the hooks were called for all subscriptions
 					requestLog := xEnv.Observer().FilterMessage("Stream Hook has been run")
@@ -911,7 +920,6 @@ func TestReceiveHook(t *testing.T) {
 		}
 
 		for _, tc := range testCases {
-			tc := tc // capture range variable
 			t.Run(tc.name, func(t *testing.T) {
 				t.Parallel()
 
@@ -944,12 +952,12 @@ func TestReceiveHook(t *testing.T) {
 										maxCurrentHandlers.CompareAndSwap(max, current)
 									}
 
+									// let the subscriber try to create one concurrent handler too much.
+									// If this succeeds there is a bug in the subscription updater.
 									if current >= int32(tc.maxConcurrent+1) {
 										break
 									}
 
-									// Let handlers continue if we never reach a batch size = tc.maxConcurrent
-									// because there are not enough remaining subscribers to be updated.
 									remainingSubs := tc.numSubscribers - int(finishedHandlers.Load())
 									if remainingSubs < tc.maxConcurrent+1 {
 										break
@@ -979,65 +987,7 @@ func TestReceiveHook(t *testing.T) {
 						LogLevel: zapcore.InfoLevel,
 					},
 				}, func(t *testing.T, xEnv *testenv.Environment) {
-					topics := []string{"employeeUpdated"}
-					events.KafkaEnsureTopicExists(t, xEnv, time.Second, topics...)
-
-					var subscriptionOne struct {
-						employeeUpdatedMyKafka struct {
-							ID      float64 `graphql:"id"`
-							Details struct {
-								Forename string `graphql:"forename"`
-								Surname  string `graphql:"surname"`
-							} `graphql:"details"`
-						} `graphql:"employeeUpdatedMyKafka(employeeID: 3)"`
-					}
-
-					surl := xEnv.GraphQLWebSocketSubscriptionURL()
-
-					clients := make([]*graphql.SubscriptionClient, tc.numSubscribers)
-					clientRunChs := make([]chan error, tc.numSubscribers)
-					subscriptionArgsChs := make([]chan kafkaSubscriptionArgs, tc.numSubscribers)
-
-					for i := range tc.numSubscribers {
-						clients[i] = graphql.NewSubscriptionClient(surl)
-						clientRunChs[i] = make(chan error)
-						subscriptionArgsChs[i] = make(chan kafkaSubscriptionArgs, 1)
-
-						idx := i
-						subscriptionID, err := clients[i].Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-							subscriptionArgsChs[idx] <- kafkaSubscriptionArgs{
-								dataValue: dataValue,
-								errValue:  errValue,
-							}
-							return nil
-						})
-						require.NoError(t, err)
-						require.NotEmpty(t, subscriptionID)
-
-						go func(i int) {
-							clientRunChs[i] <- clients[i].Run()
-						}(i)
-					}
-
-					xEnv.WaitForSubscriptionCount(uint64(tc.numSubscribers), Timeout)
-
-					events.ProduceKafkaMessage(t, xEnv, Timeout, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
-
-					// Collect events from all subscribers
-					for i := 0; i < tc.numSubscribers; i++ {
-						testenv.AwaitChannelWithT(t, Timeout, subscriptionArgsChs[i], func(t *testing.T, args kafkaSubscriptionArgs) {
-							require.NoError(t, args.errValue)
-							require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
-						})
-					}
-
-					// Close all clients
-					for i := 0; i < tc.numSubscribers; i++ {
-						require.NoError(t, clients[i].Close())
-						testenv.AwaitChannelWithT(t, Timeout, clientRunChs[i], func(t *testing.T, err error) {
-							require.NoError(t, err)
-						}, "unable to close client before timeout")
-					}
+					subscribeAndProduce(t, xEnv, tc.numSubscribers)
 
 					emptyFn := func(t *testing.T, _ struct{}) {}
 					testenv.AwaitChannelWithT(t, Timeout, deadlineExceeded, emptyFn,
