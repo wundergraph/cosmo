@@ -345,10 +345,10 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
 
       // Service definition for DefaultService
       service DefaultService {
-        // Lookup Post entity by id
-        rpc LookupPostById(LookupPostByIdRequest) returns (LookupPostByIdResponse) {}
-        // Lookup User entity by id
-        rpc LookupUserById(LookupUserByIdRequest) returns (LookupUserByIdResponse) {}
+      // Lookup Post entity by id
+      rpc LookupPostById(LookupPostByIdRequest) returns (LookupPostByIdResponse) {}
+      // Lookup User entity by id
+      rpc LookupUserById(LookupUserByIdRequest) returns (LookupUserByIdResponse) {}
         rpc MutationCreateComment(MutationCreateCommentRequest) returns (MutationCreateCommentResponse) {}
         rpc MutationCreatePost(MutationCreatePostRequest) returns (MutationCreatePostResponse) {}
         rpc MutationCreateUser(MutationCreateUserRequest) returns (MutationCreateUserResponse) {}
