@@ -1696,6 +1696,92 @@ describe('Field resolvability tests', () => {
       ),
     );
   });
+
+  test('that errors are returned for unresolvable fields involving a shared root query field and unreachable nested entities', () => {
+    const { errors } = federateSubgraphsFailure([haaa, haab, haac], ROUTER_COMPATIBILITY_VERSION_ONE);
+    const entityAncestors: EntityAncestorCollection = {
+      fieldSetsByTargetSubgraphName: new Map<string, Set<string>>([
+        [haaa.name, new Set<string>(['idB'])],
+        [haab.name, new Set<string>(['idB'])],
+        [haac.name, new Set<string>(['idA'])],
+      ]),
+      subgraphNames: [haaa.name, haab.name],
+      typeName: 'EntityA',
+    };
+    const rootFieldData = newRootFieldData(QUERY, 'a', new Set<string>([haaa.name, haab.name]));
+
+    const unresolvableFieldDataOne: UnresolvableFieldData = {
+      fieldName: 'createdAt',
+      selectionSet: renderSelectionSet(generateSelectionSetSegments('query.a.b.edges.node.c.a'), {
+        isLeaf: true,
+        name: 'createdAt',
+      } as GraphFieldData),
+      subgraphNames: new Set<string>([haaa.name]),
+      typeName: 'EntityA',
+    };
+    const unresolvableFieldDataTwo: UnresolvableFieldData = {
+      fieldName: 'active',
+      selectionSet: renderSelectionSet(generateSelectionSetSegments('query.a.b.edges.node.c.a'), {
+        isLeaf: true,
+        name: 'active',
+      } as GraphFieldData),
+      subgraphNames: new Set<string>([haaa.name]),
+      typeName: 'EntityA',
+    };
+    const unresolvableFieldDataThree: UnresolvableFieldData = {
+      fieldName: 'b',
+      selectionSet: renderSelectionSet(generateSelectionSetSegments('query.a.b.edges.node.c.a'), {
+        isLeaf: false,
+        name: 'b',
+      } as GraphFieldData),
+      subgraphNames: new Set<string>([haab.name]),
+      typeName: 'EntityA',
+    };
+    const unresolvableFieldDataFour: UnresolvableFieldData = {
+      fieldName: 'c',
+      selectionSet: renderSelectionSet(generateSelectionSetSegments('query.a.b.nodes'), {
+        isLeaf: false,
+        name: 'c',
+      } as GraphFieldData),
+      subgraphNames: new Set<string>([haac.name]),
+      typeName: 'EntityB',
+    };
+
+    expect(errors).toHaveLength(4);
+    expect(errors).toStrictEqual([
+      unresolvablePathError(
+        unresolvableFieldDataOne,
+        generateSharedResolvabilityErrorReasons({
+          entityAncestors,
+          rootFieldData,
+          unresolvableFieldData: unresolvableFieldDataOne,
+        }),
+      ),
+      unresolvablePathError(
+        unresolvableFieldDataTwo,
+        generateSharedResolvabilityErrorReasons({
+          entityAncestors,
+          rootFieldData,
+          unresolvableFieldData: unresolvableFieldDataTwo,
+        }),
+      ),
+      unresolvablePathError(
+        unresolvableFieldDataThree,
+        generateSharedResolvabilityErrorReasons({
+          entityAncestors,
+          rootFieldData,
+          unresolvableFieldData: unresolvableFieldDataThree,
+        }),
+      ),
+      unresolvablePathError(
+        unresolvableFieldDataFour,
+        generateResolvabilityErrorReasons({
+          rootFieldData,
+          unresolvableFieldData: unresolvableFieldDataFour,
+        }),
+      ),
+    ]);
+  });
 });
 
 const subgraphA: Subgraph = {
@@ -3379,6 +3465,78 @@ const gaab: Subgraph = {
     
     type Query {
       object: Object!
+    }
+  `),
+};
+
+const haaa: Subgraph = {
+  name: 'haaa',
+  url: '',
+  definitions: parse(`
+    scalar ScalarID @inaccessible
+    
+    type EntityA @shareable @key(fields: "idB") {
+      idA: ID!
+      idB: ScalarID! @inaccessible
+      createdAt: String!
+      active: Boolean!
+    }
+    
+    type Query {
+      a: EntityA @shareable
+    }
+  `),
+};
+
+const haab: Subgraph = {
+  name: 'haab',
+  url: '',
+  definitions: parse(`
+    scalar ScalarID @inaccessible
+    
+    type EntityA @shareable @key(fields: "idB") {
+      idA: ID!
+      idB: ScalarID! @inaccessible
+      b: EntityBConnection!
+    }
+    
+    type EntityB @shareable @key(fields: "idB") {
+      idA: ID!
+      idB: ScalarID! @inaccessible
+      a: EntityA
+    }
+    
+    type EntityBConnection {
+      edges: [EntityBEdge]
+      nodes: [EntityB]
+    }
+    
+    type EntityBEdge {
+      node: EntityB
+    }
+    
+    type Query {
+      a: EntityA @shareable
+    }
+  `),
+};
+
+const haac: Subgraph = {
+  name: 'haac',
+  url: '',
+  definitions: parse(`
+    type EntityA @shareable @key(fields: "idA") {
+      idA: ID!
+    }
+    
+    type EntityB @shareable @key(fields: "idA") {
+      idA: ID!
+      c: EntityC
+    }
+    
+    type EntityC @shareable @key(fields: "id") {
+      id: ID!
+      a: EntityA
     }
   `),
 };
