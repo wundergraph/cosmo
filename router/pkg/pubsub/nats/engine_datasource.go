@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 
 	"github.com/buger/jsonparser"
 	"github.com/cespare/xxhash/v2"
@@ -75,7 +76,7 @@ type NatsPublishDataSource struct {
 	pubSub Adapter
 }
 
-func (s *NatsPublishDataSource) Load(ctx context.Context, input []byte) (data []byte, err error) {
+func (s *NatsPublishDataSource) Load(ctx context.Context, headers http.Header, input []byte) (data []byte, err error) {
 	var publishConfiguration PublishAndRequestEventConfiguration
 	err = json.Unmarshal(input, &publishConfiguration)
 	if err != nil {
@@ -88,7 +89,7 @@ func (s *NatsPublishDataSource) Load(ctx context.Context, input []byte) (data []
 	return []byte(`{"success": true}`), nil
 }
 
-func (s *NatsPublishDataSource) LoadWithFiles(ctx context.Context, input []byte, files []*httpclient.FileUpload) (data []byte, err error) {
+func (s *NatsPublishDataSource) LoadWithFiles(ctx context.Context, headers http.Header, input []byte, files []*httpclient.FileUpload) (data []byte, err error) {
 	panic("not implemented")
 }
 
@@ -96,7 +97,7 @@ type NatsRequestDataSource struct {
 	pubSub Adapter
 }
 
-func (s *NatsRequestDataSource) Load(ctx context.Context, input []byte) (data []byte, err error) {
+func (s *NatsRequestDataSource) Load(ctx context.Context, headers http.Header, input []byte) (data []byte, err error) {
 	var subscriptionConfiguration PublishAndRequestEventConfiguration
 	err = json.Unmarshal(input, &subscriptionConfiguration)
 	if err != nil {
@@ -111,6 +112,6 @@ func (s *NatsRequestDataSource) Load(ctx context.Context, input []byte) (data []
 	return buf.Bytes(), nil
 }
 
-func (s *NatsRequestDataSource) LoadWithFiles(ctx context.Context, input []byte, files []*httpclient.FileUpload) (data []byte, err error) {
+func (s *NatsRequestDataSource) LoadWithFiles(ctx context.Context, headers http.Header, input []byte, files []*httpclient.FileUpload) (data []byte, err error) {
 	panic("not implemented")
 }

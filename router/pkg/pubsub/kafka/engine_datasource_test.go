@@ -219,7 +219,7 @@ func TestKafkaPublishDataSource_Load(t *testing.T) {
 			ctx := context.Background()
 			input := []byte(tt.input)
 
-			data, err := dataSource.Load(ctx, input)
+			data, err := dataSource.Load(ctx, nil, input)
 
 			if tt.expectError {
 				require.Error(t, err)
@@ -238,7 +238,7 @@ func TestKafkaPublishDataSource_LoadWithFiles(t *testing.T) {
 		}
 
 		assert.Panics(t, func() {
-			dataSource.LoadWithFiles(context.Background(), nil, nil)
+			dataSource.LoadWithFiles(context.Background(), nil, nil, nil)
 		})
 	})
 }

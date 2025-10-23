@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 
 	"github.com/buger/jsonparser"
 	"github.com/cespare/xxhash/v2"
@@ -76,7 +77,7 @@ type PublishDataSource struct {
 }
 
 // Load processes a request to publish to Redis
-func (s *PublishDataSource) Load(ctx context.Context, input []byte) (data []byte, err error) {
+func (s *PublishDataSource) Load(ctx context.Context, headers http.Header, input []byte) (data []byte, err error) {
 	var publishConfiguration PublishEventConfiguration
 	err = json.Unmarshal(input, &publishConfiguration)
 	if err != nil {
@@ -90,6 +91,6 @@ func (s *PublishDataSource) Load(ctx context.Context, input []byte) (data []byte
 }
 
 // LoadWithFiles implements resolve.DataSource.LoadWithFiles (not used for this type)
-func (s *PublishDataSource) LoadWithFiles(ctx context.Context, input []byte, files []*httpclient.FileUpload) (data []byte, err error) {
+func (s *PublishDataSource) LoadWithFiles(ctx context.Context, headers http.Header, input []byte, files []*httpclient.FileUpload) (data []byte, err error) {
 	panic("not implemented")
 }

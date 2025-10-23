@@ -53,7 +53,7 @@ func TestEngineDataSourceFactoryWithMockAdapter(t *testing.T) {
 	require.NoError(t, err)
 
 	// Call Load on the data source
-	data, err := ds.Load(context.Background(), []byte(input))
+	data, err := ds.Load(context.Background(), nil, []byte(input))
 	require.NoError(t, err)
 	require.Equal(t, `{"success": true}`, string(data))
 }

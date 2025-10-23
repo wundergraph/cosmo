@@ -3,6 +3,7 @@ package graphqlschemausage
 import (
 	"context"
 	"encoding/json"
+	"net/http"
 	"testing"
 
 	"github.com/jensneuse/abstractlogger"
@@ -596,10 +597,10 @@ type FakeDataSource struct {
 	source *StatefulSource
 }
 
-func (f *FakeDataSource) Load(ctx context.Context, input []byte) (data []byte, err error) {
+func (f *FakeDataSource) Load(ctx context.Context, headers http.Header, input []byte) (data []byte, err error) {
 	return nil, nil
 }
 
-func (f *FakeDataSource) LoadWithFiles(ctx context.Context, input []byte, files []*httpclient.FileUpload) (data []byte, err error) {
+func (f *FakeDataSource) LoadWithFiles(ctx context.Context, headers http.Header, input []byte, files []*httpclient.FileUpload) (data []byte, err error) {
 	return nil, nil
 }
