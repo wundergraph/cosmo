@@ -1,0 +1,44 @@
+{
+  "name": "@wundergraph/router-plugin",
+  "version": "0.5.0",
+  "description": "WunderGraph Cosmo Router Plugin SDK for building plugins with TypeScript",
+  "main": "./dist/plugin.js",
+  "type": "module",
+  "types": "./dist/plugin.d.ts",
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "url": "https://github.com/wundergraph/cosmo"
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsc",
+    "test": "pnpm lint",
+    "lint": "eslint --cache --ext .ts . && prettier -c src",
+    "lint:fix": "eslint --cache --fix --ext .ts . && prettier --write src"
+  },
+  "keywords": [
+    "wundergraph",
+    "router",
+    "cosmo",
+    "plugin",
+    "grpc"
+  ],
+  "author": {
+    "name": "WunderGraph Maintainers",
+    "email": "info@wundergraph.com"
+  },
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@grpc/grpc-js": "^1.12.4",
+    "grpc-health-check": "^2.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.3.1",
+    "typescript": "5.5.2"
+  }
+}
+
