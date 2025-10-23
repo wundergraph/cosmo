@@ -2,6 +2,7 @@ import * as grpc from '@grpc/grpc-js';
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
+import { HealthImplementation, ServingStatusMap } from 'grpc-health-check';
 
 /**
  * Plugin server that manages gRPC server with Unix domain socket
@@ -11,6 +12,7 @@ export class PluginServer {
     private readonly network: string = 'unix';
 
     private server: grpc.Server;
+    private healthImpl: HealthImplementation;
 
     constructor(socketDir: string = os.tmpdir()) {
         // Generate a unique temporary file path
@@ -24,6 +26,11 @@ export class PluginServer {
 
         // Create the gRPC server
         this.server = new grpc.Server();
+
+        // Initialize health check service with overall server status and plugin service
+        this.healthImpl = new HealthImplementation();
+        this.healthImpl.setStatus('plugin', 'SERVING');
+        this.healthImpl.addToServer(this.server);
     }
 
     /**

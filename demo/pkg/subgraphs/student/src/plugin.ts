@@ -36,8 +36,10 @@ const StudentServiceImplementation: IStudentServiceServer = {
 };
 
 function run() {
-  // Create the plugin server and add service
+  // Create the plugin server (health check automatically initialized)
   const pluginServer = new PluginServer();
+  
+  // Add the student service
   pluginServer.addService(StudentServiceService, StudentServiceImplementation);
 
   // Start the server
