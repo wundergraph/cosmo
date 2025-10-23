@@ -169,7 +169,8 @@ func (g *GRPCPluginClient) Invoke(ctx context.Context, method string, args any, 
 	otel.GetTextMapPropagator().Inject(ctx, metadataCarrier{md})
 	ctx = metadata.NewOutgoingContext(ctx, md)
 
-	return g.cc.Invoke(ctx, method, args, reply, opts...)
+	err := g.cc.Invoke(ctx, method, args, reply, opts...)
+	return err
 }
 
 // NewStream implements grpc.ClientConnInterface.

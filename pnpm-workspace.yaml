@@ -13,3 +13,4 @@ packages:
   - admission-server
   - protographic
   - playground
+  - router-plugin/ts

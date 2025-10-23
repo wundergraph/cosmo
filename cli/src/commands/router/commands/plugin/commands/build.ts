@@ -6,12 +6,12 @@ import Spinner from 'ora';
 import { BaseCommandOptions } from '../../../../../core/types/types.js';
 import { renderResultTree } from '../helper.js';
 import {
-  buildBinaries,
+  buildGoBinaries,
   checkAndInstallTools,
   generateGRPCCode,
-  generateProtoAndMapping,
-  HOST_PLATFORM,
-  installGoDependencies,
+  generateProtoAndMapping, getLanguage,
+  getHostPlatform,
+  installGoDependencies, installTsDependencies, buildTsBinaries,
   normalizePlatforms,
 } from '../toolchain.js';
 
@@ -21,9 +21,7 @@ export default (opts: BaseCommandOptions) => {
   command.argument('[directory]', 'Directory of the plugin', '.');
   command.option('--generate-only', 'Generate only the proto and mapping files, do not compile the plugin');
   command.option('--debug', 'Build the binary with debug information', false);
-  command.option('--platform [platforms...]', 'Platform-architecture combinations (e.g., darwin-arm64 linux-amd64)', [
-    HOST_PLATFORM,
-  ]);
+  command.option('--platform [platforms...]', 'Platform-architecture combinations (e.g., darwin-arm64 linux-amd64)', []);
   command.option('--all-platforms', 'Build for all supported platforms', false);
   command.option('--skip-tools-installation', 'Skip tool installation', false);
   command.option(
@@ -46,29 +44,44 @@ export default (opts: BaseCommandOptions) => {
     let platforms: string[] = [];
 
     try {
+      const language = getLanguage(pluginDir)
+
       // Check and install tools if needed
       if (!options.skipToolsInstallation) {
         await checkAndInstallTools(options.forceToolsInstallation);
       }
 
-      // Normalize platform list
-      platforms = normalizePlatforms(options.platform, options.allPlatforms);
-
       // Start the main build process
       spinner.start('Building plugin...');
+
+      switch (language) {
+        case 'ts': {
+          await installTsDependencies(pluginDir, spinner);
+          break;
+        }
+      }
+
+      // Normalize platform list
+      platforms = normalizePlatforms(options.platform, options.allPlatforms, language);
 
       // Generate proto and mapping files
       await generateProtoAndMapping(pluginDir, goModulePath, spinner);
 
       // Generate gRPC code
-      await generateGRPCCode(pluginDir, spinner);
+      await generateGRPCCode(pluginDir, spinner, language);
 
       if (!options.generateOnly) {
-        // Install Go dependencies
-        await installGoDependencies(pluginDir, spinner);
-
-        // Build binaries for all platforms
-        await buildBinaries(pluginDir, platforms, options.debug, spinner);
+        switch (language) {
+          case 'go': {
+            await installGoDependencies(pluginDir, spinner);
+            await buildGoBinaries(pluginDir, platforms, options.debug, spinner);
+            break;
+          }
+          case 'ts': {
+            await buildTsBinaries(pluginDir, platforms, options.debug, spinner);
+            break;
+          }
+        }
       }
 
       // Calculate and format elapsed time
