@@ -2356,6 +2356,31 @@ func (e *Environment) InitGraphQLWebSocketConnection(header http.Header, query u
 	return conn
 }
 
+func (e *Environment) GraphQLSubscriptionOverSSERaw(ctx context.Context, request GraphQLRequest, handler func(data string)) {
+	req, err := e.newGraphQLRequestOverGET(e.GraphQLRequestURL(), request)
+	if err != nil {
+		e.t.Fatalf("could not create request: %s", err)
+	}
+
+	resp, err := e.RouterClient.Do(req)
+	if err != nil {
+		e.t.Fatalf("could not make request: %s", err)
+	}
+	defer resp.Body.Close()
+
+	require.Equal(e.t, "text/event-stream", resp.Header.Get("Content-Type"))
+	require.Equal(e.t, "no-cache", resp.Header.Get("Cache-Control"))
+	require.Equal(e.t, "keep-alive", resp.Header.Get("Connection"))
+	require.Equal(e.t, "no", resp.Header.Get("X-Accel-Buffering"))
+
+	// Check for the correct response status code
+	if resp.StatusCode != http.StatusOK {
+		e.t.Fatalf("expected status code 200, got %d", resp.StatusCode)
+	}
+
+	e.ReadSSE(ctx, resp.Body, true, handler)
+}
+
 func (e *Environment) GraphQLSubscriptionOverSSE(ctx context.Context, request GraphQLRequest, handler func(data string)) {
 	req, err := e.newGraphQLRequestOverGET(e.GraphQLRequestURL(), request)
 	if err != nil {
@@ -2378,7 +2403,7 @@ func (e *Environment) GraphQLSubscriptionOverSSE(ctx context.Context, request Gr
 		e.t.Fatalf("expected status code 200, got %d", resp.StatusCode)
 	}
 
-	e.ReadSSE(ctx, resp.Body, handler)
+	e.ReadSSE(ctx, resp.Body, false, handler)
 }
 
 func (e *Environment) GraphQLSubscriptionOverSSEWithQueryParam(ctx context.Context, request GraphQLRequest, handler func(data string)) {
@@ -2403,10 +2428,10 @@ func (e *Environment) GraphQLSubscriptionOverSSEWithQueryParam(ctx context.Conte
 		e.t.Fatalf("expected status code 200, got %d", resp.StatusCode)
 	}
 
-	e.ReadSSE(ctx, resp.Body, handler)
+	e.ReadSSE(ctx, resp.Body, false, handler)
 }
 
-func (e *Environment) ReadSSE(ctx context.Context, body io.ReadCloser, handler func(data string)) {
+func (e *Environment) ReadSSE(ctx context.Context, body io.ReadCloser, raw bool, handler func(data string)) {
 	reader := bufio.NewReader(body)
 
 	// Process incoming events
@@ -2425,8 +2450,10 @@ func (e *Environment) ReadSSE(ctx context.Context, body io.ReadCloser, handler f
 				return
 			}
 
-			// SSE lines typically start with "event", "data", etc.
-			if strings.HasPrefix(line, "data: ") {
+			if raw {
+				handler(line)
+			} else if strings.HasPrefix(line, "data: ") {
+				// SSE lines typically start with "event", "data", etc.
 				data := strings.TrimPrefix(line, "data: ")
 				handler(data)
 			}

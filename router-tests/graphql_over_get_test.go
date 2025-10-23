@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -385,6 +386,56 @@ func TestSubscriptionOverGET(t *testing.T) {
 			})
 
 			wg.Wait()
+		})
+	})
+
+	t.Run("subscription over sse send heartbeat", func(t *testing.T) {
+		t.Parallel()
+
+		type currentTimePayload struct {
+			Data struct {
+				CurrentTime struct {
+					UnixTime  float64 `json:"unixTime"`
+					Timestamp string  `json:"timestamp"`
+				} `json:"currentTime"`
+			} `json:"data"`
+		}
+
+		twentySecs := 20 * time.Second
+		config := config.TrafficShapingRules{
+			All: config.GlobalSubgraphRequestRule{
+				KeepAliveProbeInterval: &twentySecs,
+			},
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(config)),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+
+			var checkHeartbeat atomic.Uint32
+
+			go xEnv.GraphQLSubscriptionOverSSERaw(ctx, testenv.GraphQLRequest{
+				OperationName: []byte(`CountEmp`),
+				Query:         `subscription CountEmp { countEmp(max: 1, intervalMilliseconds: 6000) }`,
+				Header: map[string][]string{
+					"Content-Type":  {"application/json"},
+					"Accept":        {"text/event-stream"},
+					"Connection":    {"keep-alive"},
+					"Cache-Control": {"no-cache"},
+				},
+			}, func(data string) {
+				if data == ":heartbeat\n" {
+					checkHeartbeat.Add(1)
+				}
+			})
+
+			require.Eventually(t, func() bool {
+				return checkHeartbeat.Load() > 0
+			}, 20*time.Second, 6*time.Second, "did not receive any heartbeat")
 		})
 	})
 }
