@@ -45,8 +45,7 @@ run().catch((error) => {
 const pluginTs = `#!/usr/bin/env bun
 
 import * as grpc from '@grpc/grpc-js';
-import * as path from 'path';
-import { fileURLToPath } from 'url';
+import { PluginServer } from '@wundergraph/cosmo-router-plugin';
 
 // Import generated gRPC code
 import { 
@@ -58,10 +57,6 @@ import {
   QueryHelloResponse, 
   World 
 } from '../generated/service_pb';
-
-// Get the directory of the current module
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // Counter for generating unique IDs
 let counter = 0;
@@ -96,7 +91,7 @@ const {serviceName}Implementation: I{serviceName}Server = {
 
     const world = new World();
     world.setId(\`world-\`+counter);
-    world.setName(\`Hello Thereeeee 17 17 17 17 17 17 17 17 1777 \`+ name);
+    world.setName(\`Hello from {serviceName} plugin! \`+ name);
 
     const response = new QueryHelloResponse();
     response.setHello(world);
@@ -106,41 +101,21 @@ const {serviceName}Implementation: I{serviceName}Server = {
   }
 };
 
-async function serve() {
-  // Create the server
-  const server = new grpc.Server();
-
-  // Add the {serviceName} using generated service definition
-  server.addService({serviceName}Service, {serviceName}Implementation);
-
-  // Bind the server to a port
-  const address = '127.0.0.1:1234';
+function run() {
+  // Create the plugin server (health check automatically initialized)
+  const pluginServer = new PluginServer();
   
-  return new Promise<void>((resolve, reject) => {
-    server.bindAsync(
-      address,
-      grpc.ServerCredentials.createInsecure(),
-      (error, port) => {
-        if (error) {
-          reject(error);
-          return;
-        }
+  // Add the {serviceName} service
+  pluginServer.addService({serviceName}Service, {serviceName}Implementation);
 
-        // Output the handshake information for go-plugin
-        // Format: VERSION|PROTOCOL_VERSION|NETWORK|ADDRESS|PROTOCOL
-        console.log('1|1|tcp|127.0.0.1:1234|grpc');
-        
-        resolve();
-      }
-    );
+  // Start the server
+  pluginServer.serve().catch((error) => {
+    logger.error(\`Failed to start server: \`+ error.message);
+    process.exit(1);
   });
 }
 
-// Start the server
-serve().catch((error) => {
-  logger.error(\`Failed to start serverL \`+ error.message);
-  process.exit(1);
-});
+run();
 `
 
 const packageJson = `
@@ -156,7 +131,9 @@ const packageJson = `
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.14.0",
-    "google-protobuf": "^4.0.0"
+    "@wundergraph/cosmo-router-plugin": "^0.0.1",
+    "google-protobuf": "^4.0.0",
+    "grpc-health-check": "^2.0.0"
   },
   "devDependencies": {
     "@types/bun": "latest",

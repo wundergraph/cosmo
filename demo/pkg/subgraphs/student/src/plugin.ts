@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 import * as grpc from '@grpc/grpc-js';
-import { PluginServer } from './unixsocket';
+import { PluginServer } from '../../../../../router-plugin/ts/src';
 
 // Import generated gRPC code
 import { 
