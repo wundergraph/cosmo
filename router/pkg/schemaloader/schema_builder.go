@@ -2,6 +2,7 @@ package schemaloader
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/jsonschema"
@@ -46,7 +47,9 @@ func (b *SchemaBuilder) buildSchemaForOperation(operation *Operation) error {
 			return fmt.Errorf("failed to marshal schema: %w", err)
 		}
 		operation.JSONSchema = s
-		operation.Description = schema.Description
+		
+		// Merge descriptions (operation takes priority)
+		operation.Description = strings.TrimSpace(operation.Description + " " + schema.Description)
 	}
 
 	return nil
