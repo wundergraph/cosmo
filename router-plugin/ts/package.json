@@ -1,6 +1,6 @@
 {
   "name": "@wundergraph/router-plugin",
-  "version": "0.5.0",
+  "version": "0.1.0",
   "description": "WunderGraph Cosmo Router Plugin SDK for building plugins with TypeScript",
   "main": "./dist/plugin.js",
   "type": "module",
