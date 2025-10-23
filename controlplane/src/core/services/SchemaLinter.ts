@@ -2,8 +2,14 @@ import { parseForESLint, rules } from '@graphql-eslint/eslint-plugin';
 import { LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { Linter } from 'eslint';
 import { uid } from 'uid';
-import { LintRuleEnum } from '../../db/models.js';
-import { LintIssueResult, LintRules, RulesConfig, SchemaLintDTO, SchemaLintIssues } from '../../types/index.js';
+import {
+  LintIssueResult,
+  LintRule,
+  LintRules,
+  RulesConfig,
+  SchemaLintDTO,
+  SchemaLintIssues,
+} from '../../types/index.js';
 
 export default class SchemaLinter {
   linter: Linter;
@@ -11,7 +17,7 @@ export default class SchemaLinter {
     this.linter = new Linter();
   }
 
-  getRuleModule = (rule: LintRuleEnum) => {
+  getRuleModule = (rule: LintRule) => {
     switch (rule) {
       case 'FIELD_NAMES_SHOULD_BE_CAMEL_CASE':
       case 'TYPE_NAMES_SHOULD_BE_PASCAL_CASE':
@@ -182,7 +188,7 @@ export default class SchemaLinter {
     this.linter.defineParser('@graphql-eslint/eslint-plugin', { parseForESLint });
 
     for (const ruleName of Object.keys(LintRules)) {
-      const ruleModule = this.getRuleModule(ruleName as LintRuleEnum);
+      const ruleModule = this.getRuleModule(ruleName as LintRule);
       if (ruleModule) {
         this.linter.defineRule(ruleName, ruleModule as any);
       }
@@ -205,7 +211,7 @@ export default class SchemaLinter {
     for (const i of lintIssues) {
       if (i.severity === 1) {
         lintWarnings.push({
-          lintRuleType: (i.ruleId as LintRuleEnum) || undefined,
+          lintRuleType: (i.ruleId as LintRule) || undefined,
           severity: LintSeverity.warn,
           message: i.message,
           issueLocation: {
@@ -217,7 +223,7 @@ export default class SchemaLinter {
         });
       } else if (i.severity === 2) {
         lintErrors.push({
-          lintRuleType: (i.ruleId as LintRuleEnum) || undefined,
+          lintRuleType: (i.ruleId as LintRule) || undefined,
           severity: LintSeverity.error,
           message: i.message,
           issueLocation: {

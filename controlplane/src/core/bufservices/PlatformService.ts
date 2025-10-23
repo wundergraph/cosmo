@@ -169,6 +169,8 @@ import { validateAndFetchPluginData } from './plugin/validateAndFetchPluginData.
 import { linkSubgraph } from './subgraph/linkSubgraph.js';
 import { unlinkSubgraph } from './subgraph/unlinkSubgraph.js';
 import { getWorkspace } from './workspace/getWorkspace.js';
+import { getSubgraphCheckExtensionsConfig } from './check-extensions/getSubgraphCheckExtensionsConfig.js';
+import { configureSubgraphCheckExtensions } from './check-extensions/configureSubgraphCheckExtensions.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -775,6 +777,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     getCacheWarmerConfig: (req, ctx) => {
       return getCacheWarmerConfig(opts, req, ctx);
+    },
+
+    getSubgraphCheckExtensionsConfig: (req, ctx) => {
+      return getSubgraphCheckExtensionsConfig(opts, req, ctx);
+    },
+
+    configureSubgraphCheckExtensions: (req, ctx) => {
+      return configureSubgraphCheckExtensions(opts, req, ctx);
     },
 
     // apis used by the terraform provider
