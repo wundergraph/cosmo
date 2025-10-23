@@ -743,7 +743,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 					EnableSingleFlight:     true,
 					MaxConcurrentResolvers: 1,
 				}),
-				core.WithSubgraphRetryOptions(false, "", 0, 0, 0, "", nil),
+				core.WithSubgraphRetryOptions(core.NewSubgraphRetryOptions(config.TrafficShapingRules{All: config.GlobalSubgraphRequestRule{BackoffJitterRetry: config.BackoffJitterRetry{Enabled: false}}})),
 			},
 			LogObservation: testenv.LogObservationConfig{
 				Enabled:  true,
@@ -862,7 +862,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 					EnableSingleFlight:     true,
 					MaxConcurrentResolvers: 1,
 				}),
-				core.WithSubgraphRetryOptions(false, "", 0, 0, 0, "", nil),
+				core.WithSubgraphRetryOptions(core.NewSubgraphRetryOptions(config.TrafficShapingRules{All: config.GlobalSubgraphRequestRule{BackoffJitterRetry: config.BackoffJitterRetry{Enabled: false}}})),
 			},
 			LogObservation: testenv.LogObservationConfig{
 				Enabled:  true,
@@ -994,7 +994,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 					EnableSingleFlight:     true,
 					MaxConcurrentResolvers: 1,
 				}),
-				core.WithSubgraphRetryOptions(false, "", 0, 0, 0, "", nil),
+				core.WithSubgraphRetryOptions(core.NewSubgraphRetryOptions(config.TrafficShapingRules{All: config.GlobalSubgraphRequestRule{BackoffJitterRetry: config.BackoffJitterRetry{Enabled: false}}})),
 			},
 			LogObservation: testenv.LogObservationConfig{
 				Enabled:  true,
@@ -1130,7 +1130,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 					EnableSingleFlight:     true,
 					MaxConcurrentResolvers: 1,
 				}),
-				core.WithSubgraphRetryOptions(false, "", 0, 0, 0, "", nil),
+				core.WithSubgraphRetryOptions(core.NewSubgraphRetryOptions(config.TrafficShapingRules{All: config.GlobalSubgraphRequestRule{BackoffJitterRetry: config.BackoffJitterRetry{Enabled: false}}})),
 			},
 			LogObservation: testenv.LogObservationConfig{
 				Enabled:  true,
@@ -2474,7 +2474,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 						EnableSingleFlight:     true,
 						MaxConcurrentResolvers: 1,
 					}),
-					core.WithSubgraphRetryOptions(false, "", 0, 0, 0, "", nil),
+					core.WithSubgraphRetryOptions(core.NewSubgraphRetryOptions(config.TrafficShapingRules{All: config.GlobalSubgraphRequestRule{BackoffJitterRetry: config.BackoffJitterRetry{Enabled: false}}})),
 				},
 				LogObservation: testenv.LogObservationConfig{
 					Enabled:  true,
