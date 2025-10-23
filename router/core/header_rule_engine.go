@@ -134,6 +134,9 @@ type HeaderPropagation struct {
 	compiledRules    map[string]*vm.Program
 	hasRequestRules  bool
 	hasResponseRules bool
+	// Precomputed request rule presence for fast-path checks
+	hasAllRequestRules      bool
+	subgraphHasRequestRules map[string]bool
 }
 
 func initHeaderRules(rules *config.HeaderRules) {
@@ -160,6 +163,18 @@ func NewHeaderPropagation(rules *config.HeaderRules) (*HeaderPropagation, error)
 	rhrs, rhrrs := hf.getAllRules()
 	hf.hasRequestRules = len(rhrs) > 0
 	hf.hasResponseRules = len(rhrrs) > 0
+
+	// Pre-compute request rule presence
+	hf.hasAllRequestRules = len(hf.rules.All.Request) > 0
+	if !hf.hasAllRequestRules {
+		// Only build a per-subgraph map if we don't have global rules
+		hf.subgraphHasRequestRules = make(map[string]bool, len(hf.rules.Subgraphs))
+		for name, sg := range hf.rules.Subgraphs {
+			if sg != nil && len(sg.Request) > 0 {
+				hf.subgraphHasRequestRules[name] = true
+			}
+		}
+	}
 
 	if err := hf.collectRuleMatchers(rhrs, rhrrs); err != nil {
 		return nil, err
@@ -312,6 +327,16 @@ func (h *HeaderPropagation) BuildRequestHeaderForSubgraph(subgraphName string, c
 		return http.Header{}, 0
 	}
 
+	// Fast-path: if we know no request rules apply to this subgraph, skip cache and building
+	if !h.hasRequestRulesForSubgraph(subgraphName) {
+		return nil, 0
+	}
+
+	cached := ctx.GetCachedSubgraphRequestHeader(subgraphName)
+	if cached != nil {
+		return cached.Header.Clone(), cached.Hash
+	}
+
 	// Build headers in a fresh map without relying on a subgraph request seed.
 	outHeader := make(http.Header)
 
@@ -329,7 +354,27 @@ func (h *HeaderPropagation) BuildRequestHeaderForSubgraph(subgraphName string, c
 		}
 	}
 
-	return outHeader, hashHeaderStable(outHeader)
+	headerHash := hashHeaderStable(outHeader)
+	// Store a clone in the cache to avoid external mutations affecting the cached copy
+	ctx.CacheSubgraphRequestHeader(subgraphName, outHeader.Clone(), headerHash)
+	return outHeader, headerHash
+}
+
+// hasRequestRulesForSubgraph returns true if there are request header rules
+// that would apply to the given subgraph. The result is computed at creation time.
+func (h *HeaderPropagation) hasRequestRulesForSubgraph(subgraphName string) bool {
+	if h == nil || h.rules == nil {
+		return false
+	}
+	if h.hasAllRequestRules {
+		// At least one global rule applies to all subgraphs
+		return true
+	}
+	if subgraphName == "" {
+		// No subgraph specified and no global rules
+		return false
+	}
+	return h.subgraphHasRequestRules != nil && h.subgraphHasRequestRules[subgraphName]
 }
 
 // hashHeaderStable computes a deterministic 64-bit hash over the provided header map.

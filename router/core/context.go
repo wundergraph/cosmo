@@ -133,6 +133,17 @@ type RequestContext interface {
 	// SetCustomFieldValueRenderer overrides the default field value rendering behavior
 	// This can be used, e.g. to obfuscate sensitive data in the response
 	SetCustomFieldValueRenderer(renderer resolve.FieldValueRenderer)
+
+	// CacheSubgraphRequestHeader
+	CacheSubgraphRequestHeader(subgraphName string, header http.Header, hash uint64)
+
+	// GetCachedSubgraphRequestHeader
+	GetCachedSubgraphRequestHeader(subgraphName string) *HeaderWithHash
+}
+
+type HeaderWithHash struct {
+	Header http.Header
+	Hash   uint64
 }
 
 var metricAttrsPool = sync.Pool{
@@ -262,6 +273,26 @@ type requestContext struct {
 	expressionContext expr.Context
 	// customFieldValueRenderer is used to override the default field value rendering behavior
 	customFieldValueRenderer resolve.FieldValueRenderer
+
+	subgraphRequestHeaderBuilderCache map[string]*HeaderWithHash
+}
+
+func (c *requestContext) CacheSubgraphRequestHeader(subgraphName string, header http.Header, hash uint64) {
+	c.mu.Lock()
+	if c.subgraphRequestHeaderBuilderCache == nil {
+		c.subgraphRequestHeaderBuilderCache = make(map[string]*HeaderWithHash)
+	}
+	c.subgraphRequestHeaderBuilderCache[subgraphName] = &HeaderWithHash{Header: header, Hash: hash}
+	c.mu.Unlock()
+}
+
+func (c *requestContext) GetCachedSubgraphRequestHeader(subgraphName string) *HeaderWithHash {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if c.subgraphRequestHeaderBuilderCache == nil {
+		return nil
+	}
+	return c.subgraphRequestHeaderBuilderCache[subgraphName]
 }
 
 func (c *requestContext) SetCustomFieldValueRenderer(renderer resolve.FieldValueRenderer) {
