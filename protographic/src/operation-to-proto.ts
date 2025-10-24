@@ -13,6 +13,7 @@ import {
   getNamedType,
   isInputObjectType,
   GraphQLInputObjectType,
+  FragmentDefinitionNode,
 } from 'graphql';
 import { createFieldNumberManager } from './operations/field-numbering.js';
 import { buildMessageFromSelectionSet } from './operations/message-builder.js';
@@ -94,6 +95,9 @@ class OperationsToProtoVisitor {
   // Field number manager
   private readonly fieldNumberManager = createFieldNumberManager();
 
+  // Fragment definitions map
+  private fragments = new Map<string, FragmentDefinitionNode>();
+
   constructor(document: DocumentNode, schema: GraphQLSchema, options?: OperationsToProtoOptions) {
     this.document = document;
     this.schema = schema;
@@ -103,6 +107,20 @@ class OperationsToProtoVisitor {
     this.includeComments = options?.includeComments ?? true;
 
     this.root = new protobuf.Root();
+    
+    // Collect all fragment definitions from the document
+    this.collectFragments();
+  }
+
+  /**
+   * Collects all fragment definitions from the document
+   */
+  private collectFragments(): void {
+    for (const definition of this.document.definitions) {
+      if (definition.kind === 'FragmentDefinition') {
+        this.fragments.set(definition.name.value, definition);
+      }
+    }
   }
 
   public visit(): protobuf.Root {
@@ -179,6 +197,8 @@ class OperationsToProtoVisitor {
           includeComments: this.includeComments,
           root: this.root,
           fieldNumberManager: this.fieldNumberManager,
+          fragments: this.fragments,
+          schema: this.schema,
         },
       );
 

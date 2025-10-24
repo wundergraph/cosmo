@@ -11,6 +11,9 @@ import {
   InlineFragmentNode,
   FragmentDefinitionNode,
   GraphQLOutputType,
+  FragmentSpreadNode,
+  isInterfaceType,
+  isUnionType,
 } from 'graphql';
 import { mapGraphQLTypeToProto, ProtoTypeInfo } from './type-mapper.js';
 import { FieldNumberManager } from './field-numbering.js';
@@ -26,6 +29,10 @@ export interface MessageBuilderOptions {
   root?: protobuf.Root;
   /** Field number manager for consistent numbering */
   fieldNumberManager?: FieldNumberManager;
+  /** Map of fragment definitions for resolving fragment spreads */
+  fragments?: Map<string, FragmentDefinitionNode>;
+  /** Schema for type lookups */
+  schema?: GraphQLSchema;
 }
 
 /**
@@ -51,7 +58,21 @@ export function buildMessageFromSelectionSet(
   // Process each selection in the set
   for (const selection of selectionSet.selections) {
     if (selection.kind === 'Field') {
-      processFieldSelection(
+      // For unions, fields can only be selected via inline fragments
+      // For interfaces and objects, we can select fields directly
+      if (isObjectType(parentType) || isInterfaceType(parentType)) {
+        processFieldSelection(
+          selection,
+          message,
+          parentType as any, // interfaces also have getFields()
+          typeInfo,
+          options,
+          fieldNumberManager,
+        );
+      }
+      // For unions, skip - fields will come from inline fragments
+    } else if (selection.kind === 'InlineFragment') {
+      processInlineFragment(
         selection,
         message,
         parentType,
@@ -59,17 +80,16 @@ export function buildMessageFromSelectionSet(
         options,
         fieldNumberManager,
       );
-    } else if (selection.kind === 'InlineFragment') {
-      processInlineFragment(
+    } else if (selection.kind === 'FragmentSpread') {
+      processFragmentSpread(
         selection,
         message,
+        parentType,
         typeInfo,
         options,
         fieldNumberManager,
       );
     }
-    // FragmentSpread would need fragment definitions to be passed in
-    // For now we'll skip it, but could be added later
   }
   
   return message;
@@ -89,6 +109,11 @@ function processFieldSelection(
   const fieldName = field.name.value;
   const protoFieldName = graphqlFieldToProtoField(fieldName);
   
+  // Check if field already exists in the message (avoid duplicates)
+  if (message.fields[protoFieldName]) {
+    return; // Field already added, skip
+  }
+  
   // Get the field definition from the parent type
   const fieldDef = parentType.getFields()[fieldName];
   if (!fieldDef) {
@@ -100,12 +125,17 @@ function processFieldSelection(
   // If the field has a selection set, we need a nested message
   if (field.selectionSet) {
     const namedType = getNamedType(fieldType);
-    if (isObjectType(namedType)) {
+    if (isObjectType(namedType) || isInterfaceType(namedType) || isUnionType(namedType)) {
       const nestedMessageName = `${message.name}_${fieldName}`;
+      
+      // For interfaces and unions, we use the base type to collect fields from inline fragments
+      // For object types, we process normally
+      const typeForSelection = isObjectType(namedType) ? namedType : namedType as any;
+      
       const nestedMessage = buildMessageFromSelectionSet(
         nestedMessageName,
         field.selectionSet,
-        namedType,
+        typeForSelection,
         typeInfo,
         options,
       );
@@ -174,31 +204,148 @@ function processFieldSelection(
 
 /**
  * Processes an inline fragment and adds its selections to the message
+ * Inline fragments allow type-specific field selections on interfaces/unions
  */
 function processInlineFragment(
   fragment: InlineFragmentNode,
   message: protobuf.Type,
+  parentType: GraphQLObjectType,
   typeInfo: TypeInfo,
   options?: MessageBuilderOptions,
   fieldNumberManager?: FieldNumberManager,
 ): void {
-  // For inline fragments, we need to get the type condition
-  if (!fragment.typeCondition) {
-    return;
+  // Determine the type for this inline fragment
+  let fragmentType: GraphQLObjectType;
+  
+  if (fragment.typeCondition) {
+    // Type condition specified: ... on User
+    const typeName = fragment.typeCondition.name.value;
+    const schema = options?.schema;
+    
+    if (!schema) {
+      // Without schema, we can't resolve the type - skip
+      return;
+    }
+    
+    const type = schema.getType(typeName);
+    if (!type || !isObjectType(type)) {
+      // Type not found or not an object type - skip
+      return;
+    }
+    
+    fragmentType = type;
+  } else {
+    // No type condition: just process with parent type
+    fragmentType = parentType;
   }
   
-  const typeName = fragment.typeCondition.name.value;
-  const schema = typeInfo.getParentType();
-  
-  // This is a simplified version - in a full implementation,
-  // you'd need to look up the type from the schema and process accordingly
-  // For now, we'll just process the selections
+  // Process all selections in the inline fragment with the resolved type
   if (fragment.selectionSet) {
     for (const selection of fragment.selectionSet.selections) {
       if (selection.kind === 'Field') {
-        // Would need parent type here - skipping for now
-        // In a full implementation, look up the type from the schema
+        processFieldSelection(
+          selection,
+          message,
+          fragmentType,
+          typeInfo,
+          options,
+          fieldNumberManager,
+        );
+      } else if (selection.kind === 'InlineFragment') {
+        // Nested inline fragment
+        processInlineFragment(
+          selection,
+          message,
+          fragmentType,
+          typeInfo,
+          options,
+          fieldNumberManager,
+        );
+      } else if (selection.kind === 'FragmentSpread') {
+        processFragmentSpread(
+          selection,
+          message,
+          fragmentType,
+          typeInfo,
+          options,
+          fieldNumberManager,
+        );
       }
+    }
+  }
+}
+
+/**
+ * Processes a fragment spread and adds its selections to the message
+ * Fragment spreads reference named fragment definitions
+ */
+function processFragmentSpread(
+  spread: FragmentSpreadNode,
+  message: protobuf.Type,
+  parentType: GraphQLObjectType,
+  typeInfo: TypeInfo,
+  options?: MessageBuilderOptions,
+  fieldNumberManager?: FieldNumberManager,
+): void {
+  const fragmentName = spread.name.value;
+  const fragments = options?.fragments;
+  
+  if (!fragments) {
+    // No fragments provided - skip
+    return;
+  }
+  
+  const fragmentDef = fragments.get(fragmentName);
+  if (!fragmentDef) {
+    // Fragment definition not found - skip
+    return;
+  }
+  
+  // Resolve the fragment's type condition
+  const typeName = fragmentDef.typeCondition.name.value;
+  const schema = options?.schema;
+  
+  if (!schema) {
+    // Without schema, we can't resolve the type - skip
+    return;
+  }
+  
+  const type = schema.getType(typeName);
+  if (!type || !isObjectType(type)) {
+    // Type not found or not an object type - skip
+    return;
+  }
+  
+  // Process the fragment's selection set with the resolved type
+  for (const selection of fragmentDef.selectionSet.selections) {
+    if (selection.kind === 'Field') {
+      processFieldSelection(
+        selection,
+        message,
+        type,
+        typeInfo,
+        options,
+        fieldNumberManager,
+      );
+    } else if (selection.kind === 'InlineFragment') {
+      processInlineFragment(
+        selection,
+        message,
+        type,
+        typeInfo,
+        options,
+        fieldNumberManager,
+      );
+    } else if (selection.kind === 'FragmentSpread') {
+      // Nested fragment spread (fragment inside fragment)
+      processFragmentSpread(
+        selection,
+        message,
+        type,
+        typeInfo,
+        options,
+        fieldNumberManager,
+      );
     }
   }
 }
