@@ -89,6 +89,7 @@ type (
 		proxy                ProxyFunc
 		disableUsageTracking bool
 		usage                UsageTracker
+		headerPropagation    *HeaderPropagation
 	}
 
 	UsageTracker interface {
@@ -290,16 +291,15 @@ func NewRouter(opts ...Option) (*Router, error) {
 	}
 
 	r.headerRules = AddCacheControlPolicyToRules(r.headerRules, r.cacheControlPolicy)
-	hr, err := NewHeaderPropagation(r.headerRules)
+	var err error
+	r.headerPropagation, err = NewHeaderPropagation(r.headerRules)
 	if err != nil {
 		return nil, err
 	}
-
-	if hr.HasRequestRules() {
-		r.preOriginHandlers = append(r.preOriginHandlers, hr.OnOriginRequest)
-	}
-	if hr.HasResponseRules() {
-		r.postOriginHandlers = append(r.postOriginHandlers, hr.OnOriginResponse)
+	// we only add post origin handler for header rules
+	// pre handlers (header propagation rules) are handled via the engine
+	if r.headerPropagation.HasResponseRules() {
+		r.postOriginHandlers = append(r.postOriginHandlers, r.headerPropagation.OnOriginResponse)
 	}
 
 	defaultCorsHeaders := []string{
