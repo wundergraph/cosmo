@@ -203,7 +203,7 @@ describe('Message Builder', () => {
       
       // Should have nested message for profile
       expect(message.nested).toBeDefined();
-      expect(message.nested!.UserResponse_profile).toBeDefined();
+      expect(message.nested!.UserResponseProfile).toBeDefined();
     });
 
     test('should use field number manager', () => {
