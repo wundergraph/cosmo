@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -14,6 +15,30 @@ import (
 type BenchmarkConfig struct {
 	ExecutionConfigPath string `json:"executionConfigPath"`
 	OperationPath       string `json:"operationPath"`
+}
+
+func TestPlanning(t *testing.T) {
+	cfgContent, err := os.ReadFile("benchmark_config.json")
+	require.NoError(t, err)
+
+	var cfg BenchmarkConfig
+	require.NoError(t, json.Unmarshal(cfgContent, &cfg))
+
+	logger := zap.NewNop()
+
+	pg, err := core.NewPlanGenerator(cfg.ExecutionConfigPath, logger, 0)
+	require.NoError(t, err)
+
+	pl, err := pg.GetPlanner()
+	require.NoError(t, err)
+
+	opDoc, err := pl.PrepareOperation(cfg.OperationPath)
+	require.NoError(t, err)
+
+	start := time.Now()
+	_, err = pl.OnlyPlanOperation(opDoc)
+	require.NoError(t, err)
+	t.Logf("Planning completed in %v", time.Since(start))
 }
 
 func BenchmarkPlanning(b *testing.B) {
