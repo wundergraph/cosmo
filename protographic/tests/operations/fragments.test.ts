@@ -38,7 +38,7 @@ describe('Fragment Support', () => {
       expectValidProto(proto);
       
       // Check that all fragment fields are included in the response message
-      expect(proto).toContain('message QueryGetUserResponse');
+      expect(proto).toContain('message GetUserResponse');
       expect(proto).toMatch(/id.*=.*1/);
       expect(proto).toMatch(/name.*=.*2/);
       expect(proto).toMatch(/email.*=.*3/);
@@ -141,8 +141,8 @@ describe('Fragment Support', () => {
       expect(proto).toMatch(/id/);
       expect(proto).toMatch(/name/);
       expect(proto).toMatch(/profile/);
-      // The nested message is named QueryGetUserResponseUserProfile in PascalCase
-      expect(proto).toContain('message QueryGetUserResponseUserProfile');
+      // The nested message is named GetUserResponseUserProfile in PascalCase
+      expect(proto).toContain('message GetUserResponseUserProfile');
       expect(proto).toMatch(/bio/);
       expect(proto).toMatch(/avatar/);
     });
@@ -294,7 +294,7 @@ describe('Fragment Support', () => {
       
       expectValidProto(proto);
       
-      expect(proto).toContain('rpc MutationCreateUser');
+      expect(proto).toContain('rpc CreateUser');
       expect(proto).toMatch(/id/);
       expect(proto).toMatch(/name/);
       expect(proto).toMatch(/created_at/);

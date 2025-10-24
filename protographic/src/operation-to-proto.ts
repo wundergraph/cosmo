@@ -155,16 +155,8 @@ class OperationsToProtoVisitor {
       return;
     }
 
-    // Determine operation type name
-    const operationTypeName =
-      node.operation === OperationTypeNode.QUERY
-        ? 'Query'
-        : node.operation === OperationTypeNode.MUTATION
-        ? 'Mutation'
-        : 'Subscription';
-
-    // 2. Create method name
-    const methodName = createOperationMethodName(operationTypeName as any, operationName);
+    // 2. Create method name directly from operation name (no Query/Mutation prefix)
+    const methodName = upperFirst(camelCase(operationName));
 
     // 3. Create request message from variables
     const requestMessageName = createRequestMessageName(methodName);
