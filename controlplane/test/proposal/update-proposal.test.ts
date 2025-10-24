@@ -1,7 +1,7 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
-import { ProposalNamingConvention } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { ProposalNamingConvention, ProposalOrigin } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import {
   afterAllSetup,
   beforeAllSetup,
@@ -49,14 +49,16 @@ async function createTestProposal(
     subgraphName: string;
     subgraphSchemaSDL: string;
     updatedSubgraphSDL: string;
+    origin?: ProposalOrigin,
   },
 ) {
-  const { federatedGraphName, proposalName, subgraphName, subgraphSchemaSDL, updatedSubgraphSDL } = options;
+  const { federatedGraphName, proposalName, subgraphName, subgraphSchemaSDL, updatedSubgraphSDL, origin } = options;
 
   const createProposalResponse = await client.createProposal({
     federatedGraphName,
     namespace: DEFAULT_NAMESPACE,
     name: proposalName,
+    origin: origin ?? ProposalOrigin.INTERNAL,
     subgraphs: [
       {
         name: subgraphName,
@@ -512,6 +514,7 @@ describe('Update proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      origin: ProposalOrigin.INTERNAL,
       subgraphs: [
         {
           name: subgraph1Name,
@@ -679,6 +682,7 @@ describe('Update proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      origin: ProposalOrigin.INTERNAL,
       subgraphs: [
         {
           name: subgraph1Name,
@@ -1502,6 +1506,7 @@ describe('Update proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      origin: ProposalOrigin.INTERNAL,
       subgraphs: [
         {
           name: subgraph1Name,
@@ -1649,6 +1654,7 @@ describe('Update proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      origin: ProposalOrigin.INTERNAL,
       subgraphs: [
         {
           name: subgraph1Name,
@@ -1776,6 +1782,7 @@ describe('Update proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      origin: ProposalOrigin.INTERNAL,
       subgraphs: [
         {
           name: newSubgraphName,
@@ -2135,6 +2142,102 @@ describe('Update proposal tests', () => {
     expect(getProposalResponse.proposal?.subgraphs.length).toBe(1);
     expect(getProposalResponse.proposal?.subgraphs[0].name).toBe(existingSubgraphName);
     expect(getProposalResponse.proposal?.subgraphs[0].schemaSDL).toBe(updatedSubgraphSDL);
+
+    await server.close();
+  });
+
+  test('should fail to update a proposal created from hub', async () => {
+    const { client, server } = await SetupTest({
+      dbname,
+      chClient,
+      setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
+    });
+
+    // Setup a federated graph with a single subgraph
+    const existingSubgraphName = genID('existing-subgraph');
+    const fedGraphName = genID('fedGraph');
+    const label = genUniqueLabel('label');
+    const proposalName = genID('proposal');
+    const newSubgraphName = genID('new-subgraph');
+
+    const subgraphSchemaSDL = `
+      type Query {
+        hello: String!
+      }
+    `;
+
+    await createThenPublishSubgraph(
+      client,
+      existingSubgraphName,
+      DEFAULT_NAMESPACE,
+      subgraphSchemaSDL,
+      [label],
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
+
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], DEFAULT_ROUTER_URL);
+
+    // Enable proposals for the namespace
+    const enableResponse = await enableProposalsForNamespace(client);
+    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Create initial proposal with just an update to the existing subgraph
+    const updatedSubgraphSDL = `
+      type Query {
+        hello: String!
+        newField: Int!
+      }
+    `;
+
+    const createProposalResponse = await createTestProposal(client, {
+      federatedGraphName: fedGraphName,
+      proposalName,
+      subgraphName: existingSubgraphName,
+      subgraphSchemaSDL,
+      updatedSubgraphSDL,
+      origin: ProposalOrigin.EXTERNAL,
+    });
+
+    expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Define a schema for a new subgraph
+    const newSubgraphSchemaSDL = `
+      type Query {
+        products: [Product!]!
+      }
+      
+      type Product {
+        id: ID!
+        name: String!
+        price: Float!
+      }
+    `;
+
+    // Try to update the proposal with conflicting operations on the same subgraph
+    const updateProposalResponse = await client.updateProposal({
+      proposalName: createProposalResponse.proposalName,
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      updateAction: {
+        case: 'updatedSubgraphs',
+        value: {
+          subgraphs: [
+            {
+              name: newSubgraphName,
+              schemaSDL: newSubgraphSchemaSDL,
+              isDeleted: false,
+              isNew: true,
+              labels: [label],
+            },
+          ],
+        },
+      },
+    });
+
+    // Expect an error response
+    expect(updateProposalResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
+    expect(updateProposalResponse.response?.details).toMatch(new RegExp(`Proposal .*${proposalName} not found`));
 
     await server.close();
   });

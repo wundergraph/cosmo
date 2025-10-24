@@ -1408,12 +1408,6 @@ func (r *Router) Shutdown(ctx context.Context) error {
 		ctx = ctxWithTimer
 	}
 
-	if r.configPoller != nil {
-		if subErr := r.configPoller.Stop(ctx); subErr != nil {
-			err.Append(fmt.Errorf("failed to stop config poller: %w", subErr))
-		}
-	}
-
 	if r.httpServer != nil {
 		if subErr := r.httpServer.Shutdown(ctx); subErr != nil {
 			if errors.Is(subErr, context.DeadlineExceeded) {

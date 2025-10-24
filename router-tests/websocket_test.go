@@ -993,6 +993,7 @@ func TestWebSockets(t *testing.T) {
 				},
 			},
 		}
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 500
@@ -1030,9 +1031,25 @@ func TestWebSockets(t *testing.T) {
 								http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
 								return
 							}
+							_, err = io.WriteString(w, "event: next\n")
+							require.NoError(t, err)
 							_, err = fmt.Fprintf(w, "data: %s\n\n", `{"data":{"currentTime":{"unixTime":1,"timeStamp":"2021-09-01T12:00:00Z"}}}`)
 							require.NoError(t, err)
 							flusher.Flush()
+
+							ticker := time.NewTicker(50 * time.Millisecond)
+							defer ticker.Stop()
+
+							for {
+								select {
+								case <-r.Context().Done():
+									return
+								case <-ticker.C:
+									_, err = io.WriteString(w, ":heartbeat\n\n")
+									require.NoError(t, err)
+									flusher.Flush()
+								}
+							}
 						})
 					},
 				},
@@ -1096,6 +1113,7 @@ func TestWebSockets(t *testing.T) {
 			}
 		})
 	})
+
 	t.Run("subscription with header propagation sse subgraph get", func(t *testing.T) {
 		t.Parallel()
 
@@ -1146,9 +1164,25 @@ func TestWebSockets(t *testing.T) {
 								http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
 								return
 							}
-							_, err := fmt.Fprintf(w, "data: %s\n\n", `{"data":{"currentTime":{"unixTime":1,"timeStamp":"2021-09-01T12:00:00Z"}}}`)
+							_, err := io.WriteString(w, "event: next\n")
+							require.NoError(t, err)
+							_, err = fmt.Fprintf(w, "data: %s\n\n", `{"data":{"currentTime":{"unixTime":1,"timeStamp":"2021-09-01T12:00:00Z"}}}`)
 							require.NoError(t, err)
 							flusher.Flush()
+
+							ticker := time.NewTicker(50 * time.Millisecond)
+							defer ticker.Stop()
+
+							for {
+								select {
+								case <-r.Context().Done():
+									return
+								case <-ticker.C:
+									_, err = io.WriteString(w, ":heartbeat\n\n")
+									require.NoError(t, err)
+									flusher.Flush()
+								}
+							}
 						})
 					},
 				},

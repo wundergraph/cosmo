@@ -289,3 +289,7 @@ export type ObjectTypeNode = ObjectTypeDefinitionNode | ObjectTypeExtensionNode;
 export type ScalarTypeNode = ScalarTypeDefinitionNode | ScalarTypeExtensionNode;
 export type SchemaNode = SchemaDefinitionNode | SchemaExtensionNode;
 export type UnionTypeNode = UnionTypeDefinitionNode | UnionTypeExtensionNode;
+
+export type InterfaceNodeKind = Kind.INTERFACE_TYPE_DEFINITION | Kind.INTERFACE_TYPE_EXTENSION;
+export type ObjectNodeKind = Kind.OBJECT_TYPE_DEFINITION | Kind.OBJECT_TYPE_EXTENSION;
+export type CompositeOutputNodeKind = InterfaceNodeKind | ObjectNodeKind;

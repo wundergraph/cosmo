@@ -1,6 +1,6 @@
-import { DocumentNode, Kind } from 'graphql';
-import { FieldConfiguration } from '../../router-configuration/types';
-import {
+import { type DocumentNode, Kind } from 'graphql';
+import type { FieldConfiguration } from '../../router-configuration/types';
+import type {
   AuthorizationData,
   EntityData,
   EntityInterfaceFederationData,
@@ -29,10 +29,13 @@ import {
   UNION,
 } from '../../utils/string-constants';
 import { addIterableValuesToSet, addSets } from '../../utils/utils';
-import { KeyFieldSetData } from '../normalization/types';
+import type { KeyFieldSetData } from '../normalization/types';
 import { MAX_OR_SCOPES } from './constants';
 import 'core-js/modules/esnext.set.is-subset-of.v2';
 import 'core-js/modules/esnext.set.is-superset-of.v2';
+import type { CompositeOutputNodeKind } from '../../ast/utils';
+import { COMPOSITE_OUTPUT_NODE_KINDS } from './string-constants';
+import { SubgraphName, TypeName } from '../../types/types';
 
 export function subtractSet<T>(source: Set<T>, target: Set<T>) {
   for (const entry of source) {
@@ -146,7 +149,7 @@ export function newEntityInterfaceFederationData(
     fieldDatasBySubgraphName: new Map<string, Array<SimpleFieldData>>([[subgraphName, entityInterfaceData.fieldDatas]]),
     interfaceFieldNames: new Set<string>(entityInterfaceData.interfaceFieldNames),
     interfaceObjectFieldNames: new Set<string>(entityInterfaceData.interfaceObjectFieldNames),
-    interfaceObjectSubgraphs: new Set<string>(entityInterfaceData.isInterfaceObject ? [subgraphName] : []),
+    interfaceObjectSubgraphNames: new Set<string>(entityInterfaceData.isInterfaceObject ? [subgraphName] : []),
     subgraphDataByTypeName: new Map<string, EntityInterfaceSubgraphData>([[subgraphName, entityInterfaceData]]),
     typeName: entityInterfaceData.typeName,
   };
@@ -163,7 +166,7 @@ export function upsertEntityInterfaceFederationData(
   addIterableValuesToSet(subgraphData.interfaceFieldNames, federationData.interfaceFieldNames);
   addIterableValuesToSet(subgraphData.interfaceObjectFieldNames, federationData.interfaceObjectFieldNames);
   if (subgraphData.isInterfaceObject) {
-    federationData.interfaceObjectSubgraphs.add(subgraphName);
+    federationData.interfaceObjectSubgraphNames.add(subgraphName);
   }
 }
 
@@ -189,16 +192,16 @@ function newEntityData({ keyFieldSetDataByFieldSet, subgraphName, typeName }: Ne
     keyFieldSetDatasBySubgraphName,
     documentNodeByKeyFieldSet,
     keyFieldSets: new Set<string>(),
-    subgraphNames: new Set<string>([subgraphName]),
+    subgraphNames: new Set<SubgraphName>([subgraphName]),
     typeName,
   };
 }
 
 export type UpsertEntityDataParams = {
-  entityDataByTypeName: Map<string, EntityData>;
+  entityDataByTypeName: Map<TypeName, EntityData>;
   keyFieldSetDataByFieldSet: Map<string, KeyFieldSetData>;
-  subgraphName: string;
-  typeName: string;
+  subgraphName: SubgraphName;
+  typeName: TypeName;
 };
 
 export function upsertEntityData({
@@ -216,7 +219,7 @@ export function upsertEntityData({
 export type UpdateEntityDataParams = {
   entityData: EntityData;
   keyFieldSetDataByFieldSet: Map<string, KeyFieldSetData>;
-  subgraphName: string;
+  subgraphName: SubgraphName;
 };
 
 export function updateEntityData({ entityData, keyFieldSetDataByFieldSet, subgraphName }: UpdateEntityDataParams) {
@@ -433,8 +436,12 @@ export function upsertAuthorizationConfiguration(
   }
 }
 
-export function isNodeKindObject(kind: Kind) {
+export function isObjectNodeKind(kind: Kind) {
   return kind === Kind.OBJECT_TYPE_DEFINITION || kind === Kind.OBJECT_TYPE_EXTENSION;
+}
+
+export function isCompositeOutputNodeKind(kind: Kind): kind is CompositeOutputNodeKind {
+  return COMPOSITE_OUTPUT_NODE_KINDS.has(kind);
 }
 
 export function isObjectDefinitionData(data?: ParentDefinitionData): data is ObjectDefinitionData {

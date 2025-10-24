@@ -6,7 +6,8 @@ github.com/wundergraph/cosmo/router.
 
 ## Updating the demo subgraphs
 
-Regenerate the router execution config with `./update-config-no-edg.sh`. This will propogate any changes from the SDLs.
+Regenerate the router execution config with `./update-config-no-edg.sh`.
+This will propagate any changes from the SDLs.
 
 ## Running the tests
 
@@ -18,15 +19,15 @@ It can take a while until the tests finish.
 
 ## Updating fixtures
 
-Some of the tests uses the [goldie](https://github.com/sebdah/goldie) based snaphots
+Some tests use the [goldie](https://github.com/sebdah/goldie) based snaphots.
 
-In case you need to update all snaphots, you can run the following command:
+In case you need to update all snapshots, run the following command:
 
 ```bash
-go test -update ./...
+GOLDIE_UPDATE=1 go test ./...
 ```
 
-Be aware that this will overwrite all snaphots with the current output of the tests.
+Be aware that this will overwrite all snapshots with the current output of the tests.
 Use this command with caution.
 
-Alternatively you can update a single snaphot by temporarily replacing call to `g.Assert` with `g.Update` in the test and running the test.
+Alternatively you can update a single snapshot by temporarily replacing call to `g.Assert` with `g.Update` in the test and running the test.
