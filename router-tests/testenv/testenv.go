@@ -1840,6 +1840,10 @@ func (e *Environment) Shutdown() {
 		// Do not call s.Close() here, as it will get stuck on connections left open!
 		lErr := s.Listener.Close()
 		if lErr != nil {
+			if errors.Is(lErr, net.ErrClosed) {
+				// skip, server was already closed, e.g. through manual (intentional) intervention
+				continue
+			}
 			e.t.Logf("could not close server listener: %s", lErr)
 		}
 	}
