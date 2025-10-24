@@ -34,6 +34,7 @@ export interface OperationsToProtoOptions {
   packageName?: string;
   goPackage?: string;
   includeComments?: boolean;
+  queryNoSideEffects?: boolean;
 }
 
 /**
@@ -85,6 +86,7 @@ class OperationsToProtoVisitor {
   private readonly packageName: string;
   private readonly goPackage?: string;
   private readonly includeComments: boolean;
+  private readonly queryNoSideEffects: boolean;
 
   // Proto AST root
   private readonly root: protobuf.Root;
@@ -105,6 +107,7 @@ class OperationsToProtoVisitor {
     this.packageName = options?.packageName || 'service.v1';
     this.goPackage = options?.goPackage;
     this.includeComments = options?.includeComments ?? true;
+    this.queryNoSideEffects = options?.queryNoSideEffects ?? false;
 
     this.root = new protobuf.Root();
     
@@ -214,6 +217,11 @@ class OperationsToProtoVisitor {
 
     if (this.includeComments) {
       method.comment = `RPC method for ${operationName} operation`;
+    }
+
+    // Mark Query operations with NO_SIDE_EFFECTS if enabled
+    if (this.queryNoSideEffects && node.operation === OperationTypeNode.QUERY) {
+      (method as any).idempotencyLevel = 'NO_SIDE_EFFECTS';
     }
 
     service.add(method);
