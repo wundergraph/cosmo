@@ -8,6 +8,7 @@ import {
   GraphQLInt,
   GraphQLNonNull,
   GraphQLList,
+  Kind,
 } from 'graphql';
 import {
   buildMessageFromSelectionSet,
@@ -360,7 +361,7 @@ describe('Message Builder', () => {
       
       const message = buildMessageFromSelectionSet(
         'EmptyResponse',
-        { kind: 'SelectionSet', selections: [] },
+        { kind: Kind.SELECTION_SET, selections: [] },
         queryType,
         typeInfo,
       );
