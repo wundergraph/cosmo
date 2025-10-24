@@ -26,9 +26,9 @@ describe('Operation to Proto - Integration Tests', () => {
       expect(proto).toContain('syntax = "proto3"');
       expect(proto).toContain('package service.v1');
       expect(proto).toContain('service DefaultService');
-      expect(proto).toContain('rpc QueryGetHello');
-      expect(proto).toContain('message QueryGetHelloRequest');
-      expect(proto).toContain('message QueryGetHelloResponse');
+      expect(proto).toContain('rpc GetHello');
+      expect(proto).toContain('message GetHelloRequest');
+      expect(proto).toContain('message GetHelloResponse');
     });
 
     test('should handle query with variables', () => {
@@ -56,9 +56,9 @@ describe('Operation to Proto - Integration Tests', () => {
       
       expectValidProto(proto);
       
-      expect(proto).toContain('message QueryGetUserRequest');
+      expect(proto).toContain('message GetUserRequest');
       expect(proto).toContain('string id = 1');
-      expect(proto).toContain('message QueryGetUserResponse');
+      expect(proto).toContain('message GetUserResponse');
     });
 
     test('should handle nested selections', () => {
@@ -94,7 +94,7 @@ describe('Operation to Proto - Integration Tests', () => {
       
       expectValidProto(proto);
       
-      expect(proto).toContain('message QueryGetUserProfileResponse');
+      expect(proto).toContain('message GetUserProfileResponse');
       // Should have nested message for profile
       expect(proto).toMatch(/message.*profile/i);
     });
@@ -124,7 +124,7 @@ describe('Operation to Proto - Integration Tests', () => {
       
       expectValidProto(proto);
       
-      expect(proto).toContain('message QueryGetUsersResponse');
+      expect(proto).toContain('message GetUsersResponse');
     });
 
     test('should handle multiple queries', () => {
@@ -165,12 +165,12 @@ describe('Operation to Proto - Integration Tests', () => {
       
       expectValidProto(proto);
       
-      expect(proto).toContain('rpc QueryGetUser');
-      expect(proto).toContain('rpc QueryGetPosts');
-      expect(proto).toContain('message QueryGetUserRequest');
-      expect(proto).toContain('message QueryGetUserResponse');
-      expect(proto).toContain('message QueryGetPostsRequest');
-      expect(proto).toContain('message QueryGetPostsResponse');
+      expect(proto).toContain('rpc GetUser');
+      expect(proto).toContain('rpc GetPosts');
+      expect(proto).toContain('message GetUserRequest');
+      expect(proto).toContain('message GetUserResponse');
+      expect(proto).toContain('message GetPostsRequest');
+      expect(proto).toContain('message GetPostsResponse');
     });
   });
 
@@ -204,9 +204,9 @@ describe('Operation to Proto - Integration Tests', () => {
       
       expectValidProto(proto);
       
-      expect(proto).toContain('rpc MutationCreateUser');
-      expect(proto).toContain('message MutationCreateUserRequest');
-      expect(proto).toContain('message MutationCreateUserResponse');
+      expect(proto).toContain('rpc CreateUser');
+      expect(proto).toContain('message CreateUserRequest');
+      expect(proto).toContain('message CreateUserResponse');
       expect(proto).toContain('string name = 1');
     });
 
@@ -244,7 +244,7 @@ describe('Operation to Proto - Integration Tests', () => {
       
       expectValidProto(proto);
       
-      expect(proto).toContain('rpc MutationUpdateUser');
+      expect(proto).toContain('rpc UpdateUser');
       expect(proto).toContain('UserInput input = 1');
     });
   });
@@ -366,9 +366,9 @@ describe('Operation to Proto - Integration Tests', () => {
       expectValidProto(proto);
       
       // Both query methods should have idempotency level
-      expect(proto).toContain('rpc QueryGetHello(QueryGetHelloRequest) returns (QueryGetHelloResponse) {');
+      expect(proto).toContain('rpc GetHello(GetHelloRequest) returns (GetHelloResponse) {');
       expect(proto).toContain('option idempotency_level = NO_SIDE_EFFECTS;');
-      expect(proto).toContain('rpc QueryGetUser(QueryGetUserRequest) returns (QueryGetUserResponse) {');
+      expect(proto).toContain('rpc GetUser(GetUserRequest) returns (GetUserResponse) {');
       
       // Count occurrences - should have idempotency option for each query
       const matches = proto.match(/option idempotency_level = NO_SIDE_EFFECTS;/g);
@@ -395,7 +395,7 @@ describe('Operation to Proto - Integration Tests', () => {
       expectValidProto(proto);
       
       // Should use single-line format without options
-      expect(proto).toContain('rpc QueryGetHello(QueryGetHelloRequest) returns (QueryGetHelloResponse) {}');
+      expect(proto).toContain('rpc GetHello(GetHelloRequest) returns (GetHelloResponse) {}');
       expect(proto).not.toContain('idempotency_level');
     });
 
@@ -439,8 +439,8 @@ describe('Operation to Proto - Integration Tests', () => {
       expectValidProto(proto);
       
       // Mutations should not have idempotency level
-      expect(proto).toContain('rpc MutationCreateUser(MutationCreateUserRequest) returns (MutationCreateUserResponse) {}');
-      expect(proto).toContain('rpc MutationUpdateUser(MutationUpdateUserRequest) returns (MutationUpdateUserResponse) {}');
+      expect(proto).toContain('rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {}');
+      expect(proto).toContain('rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse) {}');
       expect(proto).not.toContain('idempotency_level');
     });
 
@@ -483,11 +483,11 @@ describe('Operation to Proto - Integration Tests', () => {
       expectValidProto(proto);
       
       // Query should have idempotency level
-      expect(proto).toContain('rpc QueryGetUser(QueryGetUserRequest) returns (QueryGetUserResponse) {');
+      expect(proto).toContain('rpc GetUser(GetUserRequest) returns (GetUserResponse) {');
       expect(proto).toContain('option idempotency_level = NO_SIDE_EFFECTS;');
       
       // Mutation should not
-      expect(proto).toContain('rpc MutationCreateUser(MutationCreateUserRequest) returns (MutationCreateUserResponse) {}');
+      expect(proto).toContain('rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {}');
       
       // Only one idempotency option (for the query)
       const matches = proto.match(/option idempotency_level = NO_SIDE_EFFECTS;/g);
@@ -535,7 +535,7 @@ describe('Operation to Proto - Integration Tests', () => {
       
       expectValidProto(proto);
       
-      expect(proto).toContain('message QueryGetUserSettingsResponse');
+      expect(proto).toContain('message GetUserSettingsResponse');
     });
 
     test('should handle operations with multiple variables', () => {
@@ -578,7 +578,7 @@ describe('Operation to Proto - Integration Tests', () => {
       
       expectValidProto(proto);
       
-      expect(proto).toContain('message QuerySearchUsersRequest');
+      expect(proto).toContain('message SearchUsersRequest');
       expect(proto).toMatch(/name.*=.*1/);
       expect(proto).toMatch(/email.*=.*2/);
       expect(proto).toMatch(/min_age.*=.*3/);
@@ -621,8 +621,8 @@ describe('Operation to Proto - Integration Tests', () => {
       
       expectValidProto(proto);
       
-      expect(proto).toContain('rpc QueryGetUser');
-      expect(proto).toContain('rpc MutationCreateUser');
+      expect(proto).toContain('rpc GetUser');
+      expect(proto).toContain('rpc CreateUser');
     });
 
     test('should produce consistent field numbering', () => {
@@ -697,7 +697,7 @@ describe('Operation to Proto - Integration Tests', () => {
       
       expectValidProto(proto);
       
-      expect(proto).toContain('message QueryPingResponse');
+      expect(proto).toContain('message PingResponse');
     });
 
     test('should handle field aliases', () => {
@@ -726,7 +726,7 @@ describe('Operation to Proto - Integration Tests', () => {
       expectValidProto(proto);
       
       // Should use actual field names, not aliases
-      expect(proto).toContain('message QueryGetUserResponse');
+      expect(proto).toContain('message GetUserResponse');
     });
   });
 
