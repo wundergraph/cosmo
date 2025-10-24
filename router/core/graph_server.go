@@ -100,6 +100,7 @@ type (
 		traceDialer             *TraceDialer
 		connector               *grpcconnector.Connector
 		circuitBreakerManager   *circuit.Manager
+		headerPropagation       *HeaderPropagation
 	}
 )
 
@@ -161,7 +162,8 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 			HostName:      r.hostName,
 			ListenAddress: r.listenAddr,
 		},
-		storageProviders: &r.storageProviders,
+		storageProviders:  &r.storageProviders,
+		headerPropagation: r.headerPropagation,
 	}
 
 	baseOtelAttributes := []attribute.KeyValue{
@@ -1335,6 +1337,7 @@ func (s *graphServer) buildGraphMux(
 			metricAttExpressions,
 			exprManager.VisitorManager.IsSubgraphResponseBodyUsedInExpressions(),
 		),
+		HeaderPropagation: s.headerPropagation,
 	}
 
 	if s.redisClient != nil {

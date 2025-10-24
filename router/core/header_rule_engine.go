@@ -31,8 +31,8 @@ import (
 )
 
 var (
-	_              EnginePreOriginHandler = (*HeaderPropagation)(nil)
-	ignoredHeaders                        = []string{
+	_              EnginePostOriginHandler = (*HeaderPropagation)(nil)
+	ignoredHeaders                         = []string{
 		"Alt-Svc",
 		"Connection",
 		"Proxy-Connection", // non-standard but still sent by libcurl and rejected by e.g. google
@@ -90,8 +90,8 @@ func getResponseHeaderPropagation(ctx context.Context) *responseHeaderPropagatio
 	return v.(*responseHeaderPropagation)
 }
 
-func HeaderPropagationWriter(w http.ResponseWriter, ctx context.Context, setContentLength bool) io.Writer {
-	propagation := getResponseHeaderPropagation(ctx)
+func HeaderPropagationWriter(w http.ResponseWriter, resolveCtx *resolve.Context, setContentLength bool) io.Writer {
+	propagation := getResponseHeaderPropagation(resolveCtx.Context())
 	if propagation == nil {
 		return w
 	}
@@ -100,6 +100,7 @@ func HeaderPropagationWriter(w http.ResponseWriter, ctx context.Context, setCont
 		headerPropagation: propagation,
 		propagateHeaders:  true,
 		setContentLength:  setContentLength,
+		resolveCtx:        resolveCtx,
 	}
 }
 
@@ -108,6 +109,7 @@ type headerPropagationWriter struct {
 	propagateHeaders  bool
 	writer            http.ResponseWriter
 	headerPropagation *responseHeaderPropagation
+	resolveCtx        *resolve.Context
 }
 
 func (h *headerPropagationWriter) Write(p []byte) (n int, err error) {
@@ -116,10 +118,14 @@ func (h *headerPropagationWriter) Write(p []byte) (n int, err error) {
 		h.setContentLength = false
 	}
 	if h.propagateHeaders {
+		wh := h.writer.Header()
 		for k, v := range h.headerPropagation.header {
 			for _, el := range v {
-				h.writer.Header().Add(k, el)
+				wh.Add(k, el)
 			}
+		}
+		if h.resolveCtx.SubgraphErrors() != nil {
+			wh.Set("Cache-Control", "no-store, no-cache, must-revalidate")
 		}
 		h.propagateHeaders = false
 	}
@@ -301,28 +307,11 @@ func (h *HeaderPropagation) HasResponseRules() bool {
 	return h.hasResponseRules
 }
 
-func (h *HeaderPropagation) OnOriginRequest(request *http.Request, ctx RequestContext) (*http.Request, *http.Response) {
-	for _, rule := range h.rules.All.Request {
-		h.applyRequestRuleToHeader(ctx, request.Header, rule)
-	}
-
-	subgraph := ctx.ActiveSubgraph(request)
-	if subgraph != nil {
-		if subgraphRules, ok := h.rules.Subgraphs[subgraph.Name]; ok {
-			for _, rule := range subgraphRules.Request {
-				h.applyRequestRuleToHeader(ctx, request.Header, rule)
-			}
-		}
-	}
-
-	return request, nil
-}
-
 // BuildRequestHeaderForSubgraph builds headers for an outbound subgraph request
 // as if the propagation rules were applied during transport. It returns the
 // resulting headers and a stable hash over all header names and values that is
 // independent of map iteration order.
-func (h *HeaderPropagation) BuildRequestHeaderForSubgraph(subgraphName string, ctx RequestContext) (http.Header, uint64) {
+func (h *HeaderPropagation) BuildRequestHeaderForSubgraph(subgraphName string, ctx *requestContext) (http.Header, uint64) {
 	if h == nil || h.rules == nil || ctx == nil || ctx.Request() == nil {
 		return http.Header{}, 0
 	}
@@ -330,11 +319,6 @@ func (h *HeaderPropagation) BuildRequestHeaderForSubgraph(subgraphName string, c
 	// Fast-path: if we know no request rules apply to this subgraph, skip cache and building
 	if !h.hasRequestRulesForSubgraph(subgraphName) {
 		return nil, 0
-	}
-
-	cached := ctx.GetCachedSubgraphRequestHeader(subgraphName)
-	if cached != nil {
-		return cached.Header.Clone(), cached.Hash
 	}
 
 	// Build headers in a fresh map without relying on a subgraph request seed.
@@ -355,8 +339,6 @@ func (h *HeaderPropagation) BuildRequestHeaderForSubgraph(subgraphName string, c
 	}
 
 	headerHash := hashHeaderStable(outHeader)
-	// Store a clone in the cache to avoid external mutations affecting the cached copy
-	ctx.CacheSubgraphRequestHeader(subgraphName, outHeader.Clone(), headerHash)
 	return outHeader, headerHash
 }
 
@@ -507,11 +489,10 @@ func (h *HeaderPropagation) applyResponseRuleKeyValue(res *http.Response, propag
 	}
 }
 
-func (h *HeaderPropagation) applyRequestRuleToHeader(ctx RequestContext, header http.Header, rule *config.RequestHeaderRule) {
+func (h *HeaderPropagation) applyRequestRuleToHeader(ctx *requestContext, header http.Header, rule *config.RequestHeaderRule) {
 	if rule.Operation == config.HeaderRuleOperationSet {
-		reqCtx := getRequestContext(ctx.Request().Context())
 		if rule.ValueFrom != nil && rule.ValueFrom.ContextField != "" {
-			val := getCustomDynamicAttributeValue(rule.ValueFrom, reqCtx, nil)
+			val := getCustomDynamicAttributeValue(rule.ValueFrom, ctx, nil)
 			value := fmt.Sprintf("%v", val)
 			if value != "" {
 				header.Set(rule.Name, value)
@@ -520,9 +501,9 @@ func (h *HeaderPropagation) applyRequestRuleToHeader(ctx RequestContext, header 
 		}
 
 		if rule.Expression != "" {
-			value, err := h.getRequestRuleExpressionValue(rule, reqCtx)
+			value, err := h.getRequestRuleExpressionValue(rule, ctx)
 			if err != nil {
-				reqCtx.SetError(err)
+				ctx.SetError(err)
 			} else if value != "" {
 				header.Set(rule.Name, value)
 			}

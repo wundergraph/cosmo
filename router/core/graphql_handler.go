@@ -77,6 +77,7 @@ type HandlerOptions struct {
 	SubgraphErrorPropagation                    config.SubgraphErrorPropagationConfiguration
 	EngineLoaderHooks                           resolve.LoaderHooks
 	ApolloSubscriptionMultipartPrintBoundary    bool
+	HeaderPropagation                           *HeaderPropagation
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -98,6 +99,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		subgraphErrorPropagation:                 opts.SubgraphErrorPropagation,
 		engineLoaderHooks:                        opts.EngineLoaderHooks,
 		apolloSubscriptionMultipartPrintBoundary: opts.ApolloSubscriptionMultipartPrintBoundary,
+		headerPropagation:                        opts.HeaderPropagation,
 	}
 	return graphQLHandler
 }
@@ -123,6 +125,7 @@ type GraphQLHandler struct {
 	rateLimitConfig          *config.RateLimitConfiguration
 	subgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
 	engineLoaderHooks        resolve.LoaderHooks
+	headerPropagation        *HeaderPropagation
 
 	enableExecutionPlanCacheResponseHeader      bool
 	enablePersistedOperationCacheResponseHeader bool
@@ -156,6 +159,11 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ExecutionOptions: reqCtx.operation.executionOptions,
 	}
 
+	resolveCtx.SubgraphHeadersBuilder = SubgraphHeadersBuilder(
+		reqCtx,
+		h.headerPropagation,
+		reqCtx.operation.preparedPlan.preparedPlan)
+
 	resolveCtx = resolveCtx.WithContext(executionContext)
 	if h.authorizer != nil {
 		resolveCtx = WithAuthorizationExtension(resolveCtx)
@@ -181,7 +189,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		defer propagateSubgraphErrors(resolveCtx)
 
 		// Write contents of buf to the header propagation writer
-		hpw := HeaderPropagationWriter(w, resolveCtx.Context(), true)
+		hpw := HeaderPropagationWriter(w, resolveCtx, true)
 
 		info, err := h.executor.Resolver.ArenaResolveGraphQLResponse(resolveCtx, p.Response, hpw)
 		reqCtx.dataSourceNames = getSubgraphNames(p.Response.DataSources)
@@ -189,10 +197,6 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			trackFinalResponseError(resolveCtx.Context(), err)
 			h.WriteError(resolveCtx, err, p.Response, w)
 			return
-		}
-
-		if errs := resolveCtx.SubgraphErrors(); errs != nil {
-			w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
 		}
 
 		graphqlExecutionSpan.SetAttributes(rotel.WgAcquireResolverWaitTimeMs.Int64(info.ResolveAcquireWaitTime.Milliseconds()))

@@ -133,12 +133,6 @@ type RequestContext interface {
 	// SetCustomFieldValueRenderer overrides the default field value rendering behavior
 	// This can be used, e.g. to obfuscate sensitive data in the response
 	SetCustomFieldValueRenderer(renderer resolve.FieldValueRenderer)
-
-	// CacheSubgraphRequestHeader
-	CacheSubgraphRequestHeader(subgraphName string, header http.Header, hash uint64)
-
-	// GetCachedSubgraphRequestHeader
-	GetCachedSubgraphRequestHeader(subgraphName string) *HeaderWithHash
 }
 
 type HeaderWithHash struct {
@@ -273,26 +267,55 @@ type requestContext struct {
 	expressionContext expr.Context
 	// customFieldValueRenderer is used to override the default field value rendering behavior
 	customFieldValueRenderer resolve.FieldValueRenderer
-
-	subgraphRequestHeaderBuilderCache map[string]*HeaderWithHash
 }
 
-func (c *requestContext) CacheSubgraphRequestHeader(subgraphName string, header http.Header, hash uint64) {
-	c.mu.Lock()
-	if c.subgraphRequestHeaderBuilderCache == nil {
-		c.subgraphRequestHeaderBuilderCache = make(map[string]*HeaderWithHash)
-	}
-	c.subgraphRequestHeaderBuilderCache[subgraphName] = &HeaderWithHash{Header: header, Hash: hash}
-	c.mu.Unlock()
+type headerBuilder struct {
+	headers map[string]*HeaderWithHash
 }
 
-func (c *requestContext) GetCachedSubgraphRequestHeader(subgraphName string) *HeaderWithHash {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	if c.subgraphRequestHeaderBuilderCache == nil {
-		return nil
+func (c *headerBuilder) HeadersForSubgraph(subgraphName string) (http.Header, uint64) {
+	if header, ok := c.headers[subgraphName]; ok {
+		return header.Header.Clone(), header.Hash
 	}
-	return c.subgraphRequestHeaderBuilderCache[subgraphName]
+	return nil, 0
+}
+
+func SubgraphHeadersBuilder(ctx *requestContext, headerPropagation *HeaderPropagation, executionPlan plan.Plan) resolve.SubgraphHeadersBuilder {
+
+	switch p := executionPlan.(type) {
+	case *plan.SynchronousResponsePlan:
+		headers := make(map[string]*HeaderWithHash, len(p.Response.DataSources))
+		for i := range p.Response.DataSources {
+			h, hh := headerPropagation.BuildRequestHeaderForSubgraph(p.Response.DataSources[i].Name, ctx)
+			headers[p.Response.DataSources[i].Name] = &HeaderWithHash{
+				Header: h,
+				Hash:   hh,
+			}
+		}
+		return &headerBuilder{
+			headers: headers,
+		}
+	case *plan.SubscriptionResponsePlan:
+		headers := make(map[string]*HeaderWithHash, len(p.Response.Response.DataSources)+1)
+		for i := range p.Response.Response.DataSources {
+			h, hh := headerPropagation.BuildRequestHeaderForSubgraph(p.Response.Response.DataSources[i].Name, ctx)
+			headers[p.Response.Response.DataSources[i].Name] = &HeaderWithHash{
+				Header: h,
+				Hash:   hh,
+			}
+		}
+		h, hh := headerPropagation.BuildRequestHeaderForSubgraph(p.Response.Trigger.SourceName, ctx)
+		headers[p.Response.Trigger.SourceName] = &HeaderWithHash{
+			Header: h,
+			Hash:   hh,
+		}
+		return &headerBuilder{
+			headers: headers,
+		}
+	}
+	return &headerBuilder{
+		headers: make(map[string]*HeaderWithHash),
+	}
 }
 
 func (c *requestContext) SetCustomFieldValueRenderer(renderer resolve.FieldValueRenderer) {
