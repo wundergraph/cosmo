@@ -1,14 +1,15 @@
-import { access, constants, lstat, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { access, constants, lstat, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import {
   compileGraphQLToMapping,
   compileGraphQLToProto,
+  compileOperationsToProto,
   ProtoLock,
   validateGraphQLSDL,
 } from '@wundergraph/protographic';
 import { Command, program } from 'commander';
 import { camelCase, upperFirst } from 'lodash-es';
 import Spinner, { type Ora } from 'ora';
-import { resolve } from 'pathe';
+import { resolve, extname } from 'pathe';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { renderResultTree, renderValidationResults } from '../../router/commands/plugin/helper.js';
 
@@ -18,6 +19,8 @@ type CLIOptions = {
   packageName?: string;
   goPackage?: string;
   protoLock?: string;
+  withOperations?: string;
+  idempotentQueries?: boolean;
 };
 
 export default (opts: BaseCommandOptions) => {
@@ -33,15 +36,26 @@ export default (opts: BaseCommandOptions) => {
     'The path to the existing proto lock file to use as the starting point for the updated proto lock file. ' +
       'Default is to use and overwrite the output file "<outdir>/service.proto.lock.json".',
   );
+  command.option(
+    '-w, --with-operations <path-to-operations>',
+    'Path to directory containing GraphQL operation files (.graphql, .gql). ' +
+      'When provided, generates proto from operations instead of SDL types.',
+  );
+  command.option(
+    '--idempotent-queries',
+    'Mark all Query operations with NO_SIDE_EFFECTS idempotency level. Only applies with --with-operations.',
+    false,
+  );
   command.action(generateCommandAction);
 
   return command;
 };
 
 type GenerationResult = {
-  mapping: string;
+  mapping: string | null;
   proto: string;
   lockData: ProtoLock | null;
+  isOperationsMode: boolean;
 };
 
 async function generateCommandAction(name: string, options: CLIOptions) {
@@ -68,6 +82,22 @@ async function generateCommandAction(name: string, options: CLIOptions) {
       program.error(`Input file ${options.input} does not exist`);
     }
 
+    // Validate operations directory if provided
+    if (options.withOperations) {
+      const operationsPath = resolve(options.withOperations);
+      if (!(await exists(operationsPath))) {
+        program.error(`Operations directory ${options.withOperations} does not exist`);
+      }
+      if (!(await lstat(operationsPath)).isDirectory()) {
+        program.error(`Path ${options.withOperations} is not a directory`);
+      }
+    }
+
+    // Warn if idempotent-queries is used without with-operations
+    if (options.idempotentQueries && !options.withOperations) {
+      spinner.warn('--idempotent-queries flag is ignored when not using --with-operations');
+    }
+
     const result = await generateProtoAndMapping({
       outdir: options.output,
       schemaFile: inputFile,
@@ -76,19 +106,37 @@ async function generateCommandAction(name: string, options: CLIOptions) {
       packageName: options.packageName,
       goPackage: options.goPackage,
       lockFile: options.protoLock,
+      operationsDir: options.withOperations,
+      idempotentQueries: options.idempotentQueries || false,
     });
 
     // Write the generated files
-    await writeFile(resolve(options.output, 'mapping.json'), result.mapping);
+    if (result.mapping) {
+      await writeFile(resolve(options.output, 'mapping.json'), result.mapping);
+    }
     await writeFile(resolve(options.output, 'service.proto'), result.proto);
-    await writeFile(resolve(options.output, 'service.proto.lock.json'), JSON.stringify(result.lockData, null, 2));
+    if (result.lockData) {
+      await writeFile(resolve(options.output, 'service.proto.lock.json'), JSON.stringify(result.lockData, null, 2));
+    }
 
-    renderResultTree(spinner, 'Generated protobuf schema', true, name, {
+    const generatedFiles = [];
+    if (result.mapping) generatedFiles.push('mapping.json');
+    generatedFiles.push('service.proto');
+    if (result.lockData) generatedFiles.push('service.proto.lock.json');
+
+    const resultInfo: Record<string, string> = {
       'input file': inputFile,
       'output dir': options.output,
       'service name': upperFirst(camelCase(name)) + 'Service',
-      generated: 'mapping.json, service.proto, service.proto.lock.json',
-    });
+      'generation mode': result.isOperationsMode ? 'operations-based' : 'SDL-based',
+      generated: generatedFiles.join(', '),
+    };
+
+    if (result.isOperationsMode && options.idempotentQueries) {
+      resultInfo['idempotent queries'] = 'enabled';
+    }
+
+    renderResultTree(spinner, 'Generated protobuf schema', true, name, resultInfo);
   } catch (error) {
     renderResultTree(spinner, 'Failed to generate protobuf schema', false, name, {
       error: error instanceof Error ? error.message : String(error),
@@ -105,7 +153,33 @@ type GenerationOptions = {
   packageName?: string;
   goPackage?: string;
   lockFile?: string;
+  operationsDir?: string;
+  idempotentQueries?: boolean;
 };
+
+/**
+ * Read all GraphQL operation files from a directory
+ */
+async function readOperationFiles(operationsDir: string): Promise<string> {
+  const files = await readdir(operationsDir);
+  const operationFiles = files.filter((file) => {
+    const ext = extname(file).toLowerCase();
+    return ext === '.graphql' || ext === '.gql';
+  });
+
+  if (operationFiles.length === 0) {
+    throw new Error(`No GraphQL operation files (.graphql, .gql) found in ${operationsDir}`);
+  }
+
+  const operations: string[] = [];
+  for (const file of operationFiles) {
+    const filePath = resolve(operationsDir, file);
+    const content = await readFile(filePath, 'utf8');
+    operations.push(content);
+  }
+
+  return operations.join('\n\n');
+}
 
 /**
  * Generate proto and mapping data from schema
@@ -118,35 +192,64 @@ async function generateProtoAndMapping({
   packageName,
   goPackage,
   lockFile = resolve(outdir, 'service.proto.lock.json'),
+  operationsDir,
+  idempotentQueries = false,
 }: GenerationOptions): Promise<GenerationResult> {
-  spinner.text = 'Generating proto schema...';
-
   const schema = await readFile(schemaFile, 'utf8');
   const serviceName = upperFirst(camelCase(name)) + 'Service';
-  spinner.text = 'Generating mapping and proto files...';
 
-  const lockData = await fetchLockData(lockFile);
-
-  // Validate the GraphQL schema and render results
+  // Validate the GraphQL schema
   spinner.text = 'Validating GraphQL schema...';
   const validationResult = validateGraphQLSDL(schema);
   renderValidationResults(validationResult, schemaFile);
 
-  // Continue with generation if validation passed (no errors)
-  spinner.text = 'Generating mapping and proto files...';
-  const mapping = compileGraphQLToMapping(schema, serviceName);
-  const proto = compileGraphQLToProto(schema, {
-    serviceName,
-    packageName,
-    goPackage,
-    lockData,
-  });
+  // Determine generation mode
+  if (operationsDir) {
+    // Operations-based generation
+    spinner.text = 'Reading operation files...';
+    const operationsPath = resolve(operationsDir);
+    const operations = await readOperationFiles(operationsPath);
 
-  return {
-    mapping: JSON.stringify(mapping, null, 2),
-    proto: proto.proto,
-    lockData: proto.lockData,
-  };
+    // Load lock data for field number stability
+    const lockData = await fetchLockData(lockFile);
+
+    spinner.text = 'Generating proto from operations...';
+    const result = compileOperationsToProto(operations, schema, {
+      serviceName,
+      packageName: packageName || 'service.v1',
+      goPackage,
+      includeComments: true,
+      queryNoSideEffects: idempotentQueries,
+      lockData,
+    });
+
+    return {
+      mapping: null,
+      proto: result.proto,
+      lockData: result.lockData,
+      isOperationsMode: true,
+    };
+  } else {
+    // SDL-based generation (original behavior)
+    spinner.text = 'Generating mapping and proto files...';
+
+    const lockData = await fetchLockData(lockFile);
+
+    const mapping = compileGraphQLToMapping(schema, serviceName);
+    const proto = compileGraphQLToProto(schema, {
+      serviceName,
+      packageName,
+      goPackage,
+      lockData,
+    });
+
+    return {
+      mapping: JSON.stringify(mapping, null, 2),
+      proto: proto.proto,
+      lockData: proto.lockData,
+      isOperationsMode: false,
+    };
+  }
 }
 
 async function fetchLockData(lockFile: string): Promise<ProtoLock | undefined> {
