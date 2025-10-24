@@ -127,14 +127,33 @@ export function serviceToProtoText(service: protobuf.Service, options?: ProtoTex
       lines.push(`  // ${method.comment}`);
     }
     
+    // Build method signature with streaming support
+    let methodLine = `  rpc ${method.name}(`;
+    
+    if (method.requestStream) {
+      methodLine += 'stream ';
+    }
+    
+    methodLine += method.requestType;
+    methodLine += ') returns (';
+    
+    if (method.responseStream) {
+      methodLine += 'stream ';
+    }
+    
+    methodLine += method.responseType;
+    methodLine += ')';
+    
     // Check if method has idempotency level option
     const idempotencyLevel = (method as any).idempotencyLevel;
     if (idempotencyLevel) {
-      lines.push(`  rpc ${method.name}(${method.requestType}) returns (${method.responseType}) {`);
+      methodLine += ' {';
+      lines.push(methodLine);
       lines.push(`    option idempotency_level = ${idempotencyLevel};`);
       lines.push(`  }`);
     } else {
-      lines.push(`  rpc ${method.name}(${method.requestType}) returns (${method.responseType}) {}`);
+      methodLine += ' {}';
+      lines.push(methodLine);
     }
   }
   
