@@ -1,4 +1,4 @@
-import * as protobuf from 'protobufjs';
+import protobuf from 'protobufjs';
 import {
   SelectionSetNode,
   FieldNode,
