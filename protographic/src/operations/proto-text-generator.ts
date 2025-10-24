@@ -1,4 +1,4 @@
-import * as protobuf from 'protobufjs';
+import protobuf from 'protobufjs';
 
 /**
  * Options for generating proto text
