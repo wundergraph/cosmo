@@ -134,6 +134,53 @@ describe('Proto Text Generator', () => {
       expect(createIndex).toBeLessThan(deleteIndex);
       expect(deleteIndex).toBeLessThan(updateIndex);
     });
+
+    test('should include idempotency_level option for marked methods', () => {
+      const service = new protobuf.Service('UserService');
+      const method = new protobuf.Method('GetUser', 'rpc', 'GetUserRequest', 'GetUserResponse');
+      (method as any).idempotencyLevel = 'NO_SIDE_EFFECTS';
+      service.add(method);
+      
+      const lines = serviceToProtoText(service);
+      const text = lines.join('\n');
+      
+      expect(text).toContain('rpc GetUser(GetUserRequest) returns (GetUserResponse) {');
+      expect(text).toContain('option idempotency_level = NO_SIDE_EFFECTS;');
+      expect(text).toContain('}');
+    });
+
+    test('should not include idempotency_level for unmarked methods', () => {
+      const service = new protobuf.Service('UserService');
+      const method = new protobuf.Method('CreateUser', 'rpc', 'CreateUserRequest', 'CreateUserResponse');
+      service.add(method);
+      
+      const lines = serviceToProtoText(service);
+      const text = lines.join('\n');
+      
+      expect(text).toContain('rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {}');
+      expect(text).not.toContain('idempotency_level');
+    });
+
+    test('should handle mixed methods with and without idempotency_level', () => {
+      const service = new protobuf.Service('UserService');
+      
+      const queryMethod = new protobuf.Method('GetUser', 'rpc', 'GetUserRequest', 'GetUserResponse');
+      (queryMethod as any).idempotencyLevel = 'NO_SIDE_EFFECTS';
+      service.add(queryMethod);
+      
+      const mutationMethod = new protobuf.Method('CreateUser', 'rpc', 'CreateUserRequest', 'CreateUserResponse');
+      service.add(mutationMethod);
+      
+      const lines = serviceToProtoText(service);
+      const text = lines.join('\n');
+      
+      // Query method should have idempotency level
+      expect(text).toContain('rpc GetUser(GetUserRequest) returns (GetUserResponse) {');
+      expect(text).toContain('option idempotency_level = NO_SIDE_EFFECTS;');
+      
+      // Mutation method should not
+      expect(text).toContain('rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {}');
+    });
   });
 
   describe('messageToProtoText', () => {

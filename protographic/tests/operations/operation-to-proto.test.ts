@@ -332,6 +332,167 @@ describe('Operation to Proto - Integration Tests', () => {
       // Comments should be present
       expect(proto).toContain('//');
     });
+
+    test('should add NO_SIDE_EFFECTS idempotency level to queries when enabled', () => {
+      const schema = `
+        type Query {
+          hello: String
+          user: User
+        }
+        
+        type User {
+          id: ID!
+          name: String
+        }
+      `;
+      
+      const operation = `
+        query GetHello {
+          hello
+        }
+        
+        query GetUser {
+          user {
+            id
+            name
+          }
+        }
+      `;
+      
+      const { proto } = compileOperationsToProto(operation, schema, {
+        queryNoSideEffects: true,
+      });
+      
+      expectValidProto(proto);
+      
+      // Both query methods should have idempotency level
+      expect(proto).toContain('rpc QueryGetHello(QueryGetHelloRequest) returns (QueryGetHelloResponse) {');
+      expect(proto).toContain('option idempotency_level = NO_SIDE_EFFECTS;');
+      expect(proto).toContain('rpc QueryGetUser(QueryGetUserRequest) returns (QueryGetUserResponse) {');
+      
+      // Count occurrences - should have idempotency option for each query
+      const matches = proto.match(/option idempotency_level = NO_SIDE_EFFECTS;/g);
+      expect(matches).toHaveLength(2);
+    });
+
+    test('should not add idempotency level to queries when disabled', () => {
+      const schema = `
+        type Query {
+          hello: String
+        }
+      `;
+      
+      const operation = `
+        query GetHello {
+          hello
+        }
+      `;
+      
+      const { proto } = compileOperationsToProto(operation, schema, {
+        queryNoSideEffects: false,
+      });
+      
+      expectValidProto(proto);
+      
+      // Should use single-line format without options
+      expect(proto).toContain('rpc QueryGetHello(QueryGetHelloRequest) returns (QueryGetHelloResponse) {}');
+      expect(proto).not.toContain('idempotency_level');
+    });
+
+    test('should not add idempotency level to mutations even when enabled', () => {
+      const schema = `
+        type Query {
+          ping: String
+        }
+        
+        type Mutation {
+          createUser(name: String!): User
+          updateUser(id: ID!, name: String!): User
+        }
+        
+        type User {
+          id: ID!
+          name: String
+        }
+      `;
+      
+      const operations = `
+        mutation CreateUser($name: String!) {
+          createUser(name: $name) {
+            id
+            name
+          }
+        }
+        
+        mutation UpdateUser($id: ID!, $name: String!) {
+          updateUser(id: $id, name: $name) {
+            id
+            name
+          }
+        }
+      `;
+      
+      const { proto } = compileOperationsToProto(operations, schema, {
+        queryNoSideEffects: true,
+      });
+      
+      expectValidProto(proto);
+      
+      // Mutations should not have idempotency level
+      expect(proto).toContain('rpc MutationCreateUser(MutationCreateUserRequest) returns (MutationCreateUserResponse) {}');
+      expect(proto).toContain('rpc MutationUpdateUser(MutationUpdateUserRequest) returns (MutationUpdateUserResponse) {}');
+      expect(proto).not.toContain('idempotency_level');
+    });
+
+    test('should handle mixed queries and mutations with queryNoSideEffects enabled', () => {
+      const schema = `
+        type Query {
+          user: User
+        }
+        
+        type Mutation {
+          createUser(name: String!): User
+        }
+        
+        type User {
+          id: ID!
+          name: String
+        }
+      `;
+      
+      const operations = `
+        query GetUser {
+          user {
+            id
+            name
+          }
+        }
+        
+        mutation CreateUser($name: String!) {
+          createUser(name: $name) {
+            id
+            name
+          }
+        }
+      `;
+      
+      const { proto } = compileOperationsToProto(operations, schema, {
+        queryNoSideEffects: true,
+      });
+      
+      expectValidProto(proto);
+      
+      // Query should have idempotency level
+      expect(proto).toContain('rpc QueryGetUser(QueryGetUserRequest) returns (QueryGetUserResponse) {');
+      expect(proto).toContain('option idempotency_level = NO_SIDE_EFFECTS;');
+      
+      // Mutation should not
+      expect(proto).toContain('rpc MutationCreateUser(MutationCreateUserRequest) returns (MutationCreateUserResponse) {}');
+      
+      // Only one idempotency option (for the query)
+      const matches = proto.match(/option idempotency_level = NO_SIDE_EFFECTS;/g);
+      expect(matches).toHaveLength(1);
+    });
   });
 
   describe('complex scenarios', () => {

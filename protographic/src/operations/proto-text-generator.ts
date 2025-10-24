@@ -126,7 +126,16 @@ export function serviceToProtoText(service: protobuf.Service, options?: ProtoTex
     if (options?.includeComments && method.comment) {
       lines.push(`  // ${method.comment}`);
     }
-    lines.push(`  rpc ${method.name}(${method.requestType}) returns (${method.responseType}) {}`);
+    
+    // Check if method has idempotency level option
+    const idempotencyLevel = (method as any).idempotencyLevel;
+    if (idempotencyLevel) {
+      lines.push(`  rpc ${method.name}(${method.requestType}) returns (${method.responseType}) {`);
+      lines.push(`    option idempotency_level = ${idempotencyLevel};`);
+      lines.push(`  }`);
+    } else {
+      lines.push(`  rpc ${method.name}(${method.requestType}) returns (${method.responseType}) {}`);
+    }
   }
   
   lines.push('}');
