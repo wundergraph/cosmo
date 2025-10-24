@@ -12,7 +12,7 @@ import {
 import { SDLViewerActions } from "@/components/schema/sdl-viewer";
 import { SDLViewerMonaco } from "@/components/schema/sdl-viewer-monaco";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -72,11 +72,13 @@ import {
 import {
   GetProposalResponse_CurrentSubgraph,
   Proposal,
+  ProposalOrigin,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useContext, useState } from "react";
+import { useWorkspace } from "@/hooks/use-workspace";
 
 export const ProposalDetails = ({
   proposal,
@@ -91,7 +93,7 @@ export const ProposalDetails = ({
   const user = useUser();
   const graphData = useContext(GraphContext);
 
-  const namespace = router.query.namespace as string;
+  const { namespace: { name: namespace } } = useWorkspace();
   const slug = router.query.slug as string;
   const id = router.query.proposalId as string;
   const tab = router.query.tab as string;
@@ -225,6 +227,7 @@ export const ProposalDetails = ({
     state,
     subgraphs,
     latestCheckSuccess,
+    origin,
   } = proposal;
 
   return (
@@ -302,11 +305,32 @@ export const ProposalDetails = ({
           <div className="flex flex-1 items-center justify-end gap-1">
             {state === "DRAFT" && (
               <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button className="ml-4" disabled={isApproving || isClosing}>
-                    Review Changes
-                    <ChevronDownIcon className="ml-2 h-4 w-4" />
-                  </Button>
+                <DropdownMenuTrigger asChild disabled={origin !== ProposalOrigin.INTERNAL}>
+                  {origin === ProposalOrigin.INTERNAL ? (
+                    <Button
+                      className="ml-4"
+                      disabled={isApproving || isClosing}
+                    >
+                      Review Changes
+                      <ChevronDownIcon className="ml-2 h-4 w-4" />
+                    </Button>
+                  ) : (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span
+                          className={buttonVariants({
+                            className: "ml-4 cursor-not-allowed opacity-60 hover:!bg-primary",
+                          })}
+                        >
+                          Review Changes
+                          <ChevronDownIcon className="ml-2 h-4 w-4" />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        This proposal was created outside of Cosmo and cannot be updated within Cosmo.
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-[500px] p-3">
                   <div className="flex flex-col space-y-4 px-2 py-1">

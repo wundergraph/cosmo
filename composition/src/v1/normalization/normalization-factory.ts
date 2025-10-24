@@ -10,6 +10,7 @@ import {
   InputValueDefinitionNode,
   InterfaceTypeDefinitionNode,
   InterfaceTypeExtensionNode,
+  IntValueNode,
   Kind,
   ListValueNode,
   NamedTypeNode,
@@ -64,8 +65,10 @@ import {
   LINK_IMPORT_DEFINITION,
   LINK_PURPOSE_DEFINITION,
   MAX_OR_SCOPES,
+  ONE_OF_DEFINITION,
   REQUIRE_FETCH_REASONS_DEFINITION,
   SCOPE_SCALAR_DEFINITION,
+  SEMANTIC_NON_NULL_DEFINITION,
   SUBSCRIPTION_FIELD_CONDITION_DEFINITION,
   SUBSCRIPTION_FILTER_CONDITION_DEFINITION,
   SUBSCRIPTION_FILTER_DEFINITION,
@@ -76,7 +79,9 @@ import {
 import {
   addScopes,
   fieldDatasToSimpleFieldDatas,
-  isNodeKindObject,
+  isCompositeOutputNodeKind,
+  isObjectDefinitionData,
+  isObjectNodeKind,
   kindToConvertedTypeString,
   mapToArrayOfValues,
   newAuthorizationData,
@@ -154,9 +159,14 @@ import {
   nonExternalKeyFieldNamesEventDrivenErrorMessage,
   nonKeyComposingObjectTypeNamesEventDrivenErrorMessage,
   nonKeyFieldNamesEventDrivenErrorMessage,
+  oneOfRequiredFieldsError,
   operationDefinitionError,
   orScopesLimitError,
   selfImplementationError,
+  semanticNonNullArgumentErrorMessage,
+  semanticNonNullLevelsIndexOutOfBoundsErrorMessage,
+  semanticNonNullLevelsNaNIndexErrorMessage,
+  semanticNonNullLevelsNonNullErrorMessage,
   subgraphInvalidSyntaxError,
   subgraphValidationError,
   subgraphValidationFailureError,
@@ -195,6 +205,7 @@ import {
   invalidExternalFieldWarning,
   invalidOverrideTargetSubgraphNameWarning,
   nonExternalConditionalFieldWarning,
+  singleSubgraphInputFieldOneOfWarning,
   unimplementedInterfaceOutputTypeWarning,
 } from '../warnings/warnings';
 import { upsertDirectiveSchemaAndEntityDefinitions, upsertParentsAndChildren } from './walkers';
@@ -226,6 +237,7 @@ import {
   areDefaultValuesCompatible,
   childMapToValueArray,
   getParentTypeName,
+  isFieldData,
   isInputNodeKind,
   isNodeExternalOrShareable,
   isOutputNodeKind,
@@ -248,6 +260,7 @@ import {
   getMutableUnionNode,
   getNamedTypeNode,
   getTypeNodeNamedTypeName,
+  MutableTypeNode,
 } from '../../schema-building/ast';
 import { InvalidRootTypeFieldEventsDirectiveData } from '../../errors/types';
 import { Graph } from '../../resolvability-graph/graph';
@@ -292,6 +305,7 @@ import {
   INT_SCALAR,
   INTERFACE_OBJECT,
   KEY,
+  LEVELS,
   LINK,
   LINK_IMPORT,
   LINK_PURPOSE,
@@ -301,6 +315,7 @@ import {
   NON_NULLABLE_INT,
   NON_NULLABLE_STRING,
   NOT_APPLICABLE,
+  ONE_OF,
   OPERATION_TO_DEFAULT,
   OVERRIDE,
   PROPAGATE,
@@ -319,6 +334,7 @@ import {
   SCOPE_SCALAR,
   SCOPES,
   SECURITY,
+  SEMANTIC_NON_NULL,
   SERVICE_FIELD,
   SHAREABLE,
   STREAM_CONFIGURATION,
@@ -340,6 +356,7 @@ import {
   addIterableValuesToSet,
   generateSimpleDirective,
   getEntriesNotInHashSet,
+  getFirstEntry,
   getOrThrowError,
   getValueOrDefault,
   kindToNodeType,
@@ -353,12 +370,14 @@ import {
   FieldSetParentResult,
   HandleOverrideDirectiveParams,
   HandleRequiresScopesDirectiveParams,
+  HandleSemanticNonNullDirectiveParams,
   KeyFieldSetData,
   ValidateDirectiveParams,
 } from './types';
 import { newConfigurationData, newFieldSetConditionData } from '../../router-configuration/utils';
 import { ImplementationErrors, InvalidFieldImplementation } from '../../utils/types';
-import { FieldName } from '../../types/types';
+import { DirectiveName, FieldName, SubgraphName } from '../../types/types';
+import { HandleFieldInheritableDirectivesParams, ValidateOneOfDirectiveParams } from './params';
 
 export function normalizeSubgraphFromString(subgraphSDL: string, noLocation = true): NormalizationResult {
   const { error, documentNode } = safeParse(subgraphSDL, noLocation);
@@ -386,11 +405,11 @@ export class NormalizationFactory {
   configurationDataByTypeName = new Map<string, ConfigurationData>();
   customDirectiveDefinitions = new Map<string, DirectiveDefinitionNode>();
   definedDirectiveNames = new Set<string>();
-  directiveDefinitionByDirectiveName = new Map<string, DirectiveDefinitionNode>();
+  directiveDefinitionByDirectiveName = new Map<DirectiveName, DirectiveDefinitionNode>();
   directiveDefinitionDataByDirectiveName = initializeDirectiveDefinitionDatas();
-  doesParentObjectRequireFetchReasons = false;
+  doesParentRequireFetchReasons = false;
   edfsDirectiveReferences = new Set<string>();
-  errors: Error[] = [];
+  errors = new Array<Error>();
   entityDataByTypeName = new Map<string, EntityData>();
   entityInterfaceDataByTypeName = new Map<string, EntityInterfaceSubgraphData>();
   eventsConfigurations = new Map<string, EventConfiguration[]>();
@@ -399,7 +418,6 @@ export class NormalizationFactory {
   invalidConfigureDescriptionNodeDatas: Array<NodeData> = [];
   invalidORScopesCoords = new Set<string>();
   invalidRepeatedDirectiveNameByCoords = new Map<string, Set<string>>();
-  isCurrentParentExtension = false;
   isParentObjectExternal = false;
   isParentObjectShareable = false;
   isSubgraphEventDrivenGraph = false;
@@ -408,7 +426,6 @@ export class NormalizationFactory {
   lastParentNodeKind: Kind = Kind.NULL;
   lastChildNodeKind: Kind = Kind.NULL;
   parentTypeNamesWithAuthDirectives = new Set<string>();
-  keyFieldSetDataByTypeName = new Map<string, KeyFieldSetData>();
   keyFieldSetsByEntityTypeNameByFieldCoords = new Map<string, Map<string, Set<string>>>();
   keyFieldNamesByParentTypeName = new Map<string, Set<string>>();
   fieldCoordsByNamedTypeName = new Map<string, Set<string>>();
@@ -421,7 +438,7 @@ export class NormalizationFactory {
   referencedDirectiveNames = new Set<string>();
   referencedTypeNames = new Set<string>();
   renamedParentTypeName = '';
-  subgraphName: string;
+  subgraphName: SubgraphName;
   unvalidatedExternalFieldCoords = new Set<string>();
   usesEdfsNatsStreamConfiguration: boolean = false;
   warnings: Array<Warning> = [];
@@ -535,7 +552,7 @@ export class NormalizationFactory {
               if (argumentValue.kind !== Kind.ENUM) {
                 return false;
               }
-              const enumValue = parentData.enumValueDataByValueName.get(argumentValue.value);
+              const enumValue = parentData.enumValueDataByName.get(argumentValue.value);
               if (!enumValue) {
                 return false;
               }
@@ -555,23 +572,33 @@ export class NormalizationFactory {
     }
   }
 
-  addInheritedDirectivesToFieldData(
-    fieldDirectivesByDirectiveName: Map<string, Array<ConstDirectiveNode>>,
-    inheritedDirectiveNames: Set<string>,
-  ) {
-    if (this.isParentObjectExternal && !fieldDirectivesByDirectiveName.has(EXTERNAL)) {
-      fieldDirectivesByDirectiveName.set(EXTERNAL, [generateSimpleDirective(EXTERNAL)]);
-      inheritedDirectiveNames.add(EXTERNAL);
-    }
-    if (this.doesParentObjectRequireFetchReasons && !fieldDirectivesByDirectiveName.has(REQUIRE_FETCH_REASONS)) {
-      fieldDirectivesByDirectiveName.set(REQUIRE_FETCH_REASONS, [generateSimpleDirective(REQUIRE_FETCH_REASONS)]);
+  handleFieldInheritableDirectives({
+    directivesByDirectiveName,
+    fieldName,
+    inheritedDirectiveNames,
+    parentData,
+  }: HandleFieldInheritableDirectivesParams) {
+    if (this.doesParentRequireFetchReasons && !directivesByDirectiveName.has(REQUIRE_FETCH_REASONS)) {
+      directivesByDirectiveName.set(REQUIRE_FETCH_REASONS, [generateSimpleDirective(REQUIRE_FETCH_REASONS)]);
       inheritedDirectiveNames.add(REQUIRE_FETCH_REASONS);
     }
-    if (this.isParentObjectShareable && !fieldDirectivesByDirectiveName.has(SHAREABLE)) {
-      fieldDirectivesByDirectiveName.set(SHAREABLE, [generateSimpleDirective(SHAREABLE)]);
+    if (this.doesParentRequireFetchReasons || directivesByDirectiveName.has(REQUIRE_FETCH_REASONS)) {
+      parentData.requireFetchReasonsFieldNames.add(fieldName);
+    }
+    if (!isObjectDefinitionData(parentData)) {
+      return;
+    }
+    if (this.isParentObjectExternal && !directivesByDirectiveName.has(EXTERNAL)) {
+      directivesByDirectiveName.set(EXTERNAL, [generateSimpleDirective(EXTERNAL)]);
+      inheritedDirectiveNames.add(EXTERNAL);
+    }
+    if (directivesByDirectiveName.has(EXTERNAL)) {
+      this.unvalidatedExternalFieldCoords.add(`${parentData.name}.${fieldName}`);
+    }
+    if (this.isParentObjectShareable && !directivesByDirectiveName.has(SHAREABLE)) {
+      directivesByDirectiveName.set(SHAREABLE, [generateSimpleDirective(SHAREABLE)]);
       inheritedDirectiveNames.add(SHAREABLE);
     }
-    return fieldDirectivesByDirectiveName;
   }
 
   extractDirectives(
@@ -587,6 +614,8 @@ export class NormalizationFactory {
     if (!node.directives) {
       return directivesByDirectiveName;
     }
+    const isCompositeKind = isCompositeOutputNodeKind(node.kind);
+    const isObjectKind = isObjectNodeKind(node.kind);
     for (const directiveNode of node.directives) {
       const directiveName = directiveNode.name.value;
       // Don't create pointless repetitions of @shareable
@@ -595,11 +624,14 @@ export class NormalizationFactory {
       } else {
         getValueOrDefault(directivesByDirectiveName, directiveName, () => []).push(directiveNode);
       }
-      if (!isNodeKindObject(node.kind)) {
+      if (!isCompositeKind) {
+        continue;
+      }
+      this.doesParentRequireFetchReasons ||= directiveName === REQUIRE_FETCH_REASONS;
+      if (!isObjectKind) {
         continue;
       }
       this.isParentObjectExternal ||= directiveName === EXTERNAL;
-      this.doesParentObjectRequireFetchReasons ||= directiveName === REQUIRE_FETCH_REASONS;
       this.isParentObjectShareable ||= directiveName === SHAREABLE;
     }
     return directivesByDirectiveName;
@@ -617,14 +649,29 @@ export class NormalizationFactory {
     const parentTypeName =
       data.kind === Kind.FIELD_DEFINITION ? data.renamedParentTypeName || data.originalParentTypeName : data.name;
     const isAuthenticated = directiveName === AUTHENTICATED;
+    const isField = isFieldData(data);
     const isOverride = directiveName === OVERRIDE;
     const isRequiresScopes = directiveName === REQUIRES_SCOPES;
+    const isSemanticNonNull = directiveName === SEMANTIC_NON_NULL;
     if (!directiveNode.arguments || directiveNode.arguments.length < 1) {
       if (definitionData.requiredArgumentNames.size > 0) {
         errorMessages.push(undefinedRequiredArgumentsErrorMessage(directiveName, requiredArgumentNames, []));
       }
       if (isAuthenticated) {
         this.handleAuthenticatedDirective(data, parentTypeName);
+      }
+      if (isSemanticNonNull && isField) {
+        // The default argument for levels is [0], so a non-null wrapper is invalid.
+        if (isTypeRequired(data.type)) {
+          errorMessages.push(
+            semanticNonNullLevelsNonNullErrorMessage({
+              typeString: printTypeNode(data.type),
+              value: '0',
+            }),
+          );
+        } else {
+          data.nullLevelsBySubgraphName.set(this.subgraphName, new Set<number>([0]));
+        }
       }
       return errorMessages;
     }
@@ -639,7 +686,7 @@ export class NormalizationFactory {
         continue;
       }
       definedArgumentNames.add(argumentName);
-      const argumentData = definitionData.argumentTypeNodeByArgumentName.get(argumentName);
+      const argumentData = definitionData.argumentTypeNodeByName.get(argumentName);
       if (!argumentData) {
         unexpectedArgumentNames.add(argumentName);
         continue;
@@ -655,13 +702,24 @@ export class NormalizationFactory {
         );
         continue;
       }
-      // The directive location validation means the kind check should be unnecessary
-      if (isOverride && data.kind === Kind.FIELD_DEFINITION) {
+      /* Individual directives are handled in the loop because they validate a single argument, and duplicate
+       * arguments would short-circuit.
+       * The directive location validation means the node kind check should be unnecessary
+       * */
+      if (isOverride && isField) {
         this.handleOverrideDirective({
           data,
           directiveCoords,
           errorMessages,
           targetSubgraphName: (argumentNode.value as StringValueNode).value,
+        });
+        continue;
+      }
+      if (isSemanticNonNull && isField) {
+        this.handleSemanticNonNullDirective({
+          data,
+          directiveNode,
+          errorMessages,
         });
         continue;
       }
@@ -752,7 +810,7 @@ export class NormalizationFactory {
     }
     switch (data.kind) {
       case Kind.ENUM_TYPE_DEFINITION: {
-        for (const [enumValueName, enumValueData] of data.enumValueDataByValueName) {
+        for (const [enumValueName, enumValueData] of data.enumValueDataByName) {
           this.validateDirectives(enumValueData, `${data.name}.${enumValueName}`);
         }
         return;
@@ -972,11 +1030,11 @@ export class NormalizationFactory {
       });
     }
     persistedDirectiveDefinitionDataByDirectiveName.set(name, {
-      argumentDataByArgumentName: argumentDataByName,
+      argumentDataByName: argumentDataByName,
       executableLocations,
       name,
       repeatable: node.repeatable,
-      subgraphNames: new Set<string>([this.subgraphName]),
+      subgraphNames: new Set<SubgraphName>([this.subgraphName]),
       description: formatDescription(node.description),
     });
   }
@@ -1008,11 +1066,11 @@ export class NormalizationFactory {
     argumentNodes: ReadonlyArray<InputValueDefinitionNode> | Array<InputValueDefinitionNode> | undefined,
     errorMessages: Array<string>,
   ): ExtractArgumentDataResult {
-    const argumentTypeNodeByArgumentName = new Map<string, ArgumentData>();
+    const argumentTypeNodeByName = new Map<string, ArgumentData>();
     const optionalArgumentNames = new Set<string>();
     const requiredArgumentNames = new Set<string>();
     const output = {
-      argumentTypeNodeByArgumentName,
+      argumentTypeNodeByName,
       optionalArgumentNames,
       requiredArgumentNames,
     };
@@ -1022,7 +1080,7 @@ export class NormalizationFactory {
     const duplicateArgumentNames = new Set<string>();
     for (const argumentNode of argumentNodes) {
       const name = argumentNode.name.value;
-      if (argumentTypeNodeByArgumentName.has(name)) {
+      if (argumentTypeNodeByName.has(name)) {
         duplicateArgumentNames.add(name);
         continue;
       }
@@ -1032,7 +1090,7 @@ export class NormalizationFactory {
       if (isTypeRequired(argumentNode.type) && !argumentNode.defaultValue) {
         requiredArgumentNames.add(name);
       }
-      argumentTypeNodeByArgumentName.set(name, {
+      argumentTypeNodeByName.set(name, {
         name,
         typeNode: argumentNode.type,
         defaultValue: argumentNode.defaultValue,
@@ -1062,12 +1120,12 @@ export class NormalizationFactory {
       return false;
     }
     const errorMessages: Array<string> = [];
-    const { argumentTypeNodeByArgumentName, optionalArgumentNames, requiredArgumentNames } = this.extractArgumentData(
+    const { argumentTypeNodeByName, optionalArgumentNames, requiredArgumentNames } = this.extractArgumentData(
       node.arguments,
       errorMessages,
     );
     this.directiveDefinitionDataByDirectiveName.set(name, {
-      argumentTypeNodeByArgumentName,
+      argumentTypeNodeByName: argumentTypeNodeByName,
       isRepeatable: node.repeatable,
       locations: this.extractDirectiveLocations(node, errorMessages),
       name,
@@ -1112,10 +1170,11 @@ export class NormalizationFactory {
       namedTypeKind: BASE_SCALARS.has(namedTypeName) ? Kind.SCALAR_TYPE_DEFINITION : Kind.NULL,
       namedTypeName,
       node: getMutableFieldNode(node, fieldCoords, this.errors),
+      nullLevelsBySubgraphName: new Map<SubgraphName, Set<number>>(),
       originalParentTypeName: this.originalParentTypeName,
       persistedDirectivesData: newPersistedDirectivesData(),
       renamedParentTypeName: parentTypeName,
-      subgraphNames: new Set<string>([this.subgraphName]),
+      subgraphNames: new Set<SubgraphName>([this.subgraphName]),
       type: getMutableTypeNode(node.type, fieldCoords, this.errors),
       directivesByDirectiveName,
       description: formatDescription(node.description),
@@ -1172,8 +1231,8 @@ export class NormalizationFactory {
       originalParentTypeName: originalParentTypeName,
       persistedDirectivesData: newPersistedDirectivesData(),
       renamedParentTypeName: federatedParentTypeName,
-      requiredSubgraphNames: new Set<string>(isTypeRequired(node.type) ? [this.subgraphName] : []),
-      subgraphNames: new Set<string>([this.subgraphName]),
+      requiredSubgraphNames: new Set<SubgraphName>(isTypeRequired(node.type) ? [this.subgraphName] : []),
+      subgraphNames: new Set<SubgraphName>([this.subgraphName]),
       type: getMutableTypeNode(node.type, originalParentTypeName, this.errors),
       defaultValue: node.defaultValue, // TODO validate
       description: formatDescription(node.description),
@@ -1222,7 +1281,8 @@ export class NormalizationFactory {
       name: typeName,
       node: getMutableInterfaceNode(node.name),
       persistedDirectivesData: newPersistedDirectivesData(),
-      subgraphNames: new Set<string>([this.subgraphName]),
+      requireFetchReasonsFieldNames: new Set<FieldName>(),
+      subgraphNames: new Set<SubgraphName>([this.subgraphName]),
       description: formatDescription('description' in node ? node.description : undefined),
     };
     this.extractConfigureDescriptionsData(newParentData);
@@ -1301,7 +1361,7 @@ export class NormalizationFactory {
       persistedDirectivesData: newPersistedDirectivesData(),
       requireFetchReasonsFieldNames: new Set<FieldName>(),
       renamedTypeName: this.getRenamedRootTypeName(typeName),
-      subgraphNames: new Set<string>([this.subgraphName]),
+      subgraphNames: new Set<SubgraphName>([this.subgraphName]),
       description: formatDescription('description' in node ? node.description : undefined),
     };
     this.extractConfigureDescriptionsData(newParentData);
@@ -1340,7 +1400,7 @@ export class NormalizationFactory {
       configureDescriptionDataBySubgraphName: new Map<string, ConfigureDescriptionData>(),
       directivesByDirectiveName,
       extensionType,
-      enumValueDataByValueName: new Map<string, EnumValueData>(),
+      enumValueDataByName: new Map<string, EnumValueData>(),
       isInaccessible: directivesByDirectiveName.has(INACCESSIBLE),
       kind: Kind.ENUM_TYPE_DEFINITION,
       name: typeName,
@@ -1389,7 +1449,7 @@ export class NormalizationFactory {
       name: typeName,
       node: getMutableInputObjectNode(node.name),
       persistedDirectivesData: newPersistedDirectivesData(),
-      subgraphNames: new Set<string>([this.subgraphName]),
+      subgraphNames: new Set<SubgraphName>([this.subgraphName]),
       description: formatDescription('description' in node ? node.description : undefined),
     };
     this.extractConfigureDescriptionsData(newParentData);
@@ -2137,6 +2197,67 @@ export class NormalizationFactory {
       () => new Map<string, Set<string>>(),
     );
     getValueOrDefault(overrideDataForSubgraph, data.renamedParentTypeName, () => new Set<string>()).add(data.name);
+  }
+
+  handleSemanticNonNullDirective({ data, directiveNode, errorMessages }: HandleSemanticNonNullDirectiveParams) {
+    const nonNullIndices = new Set<number>();
+    let currentType: MutableTypeNode | null = data.node.type;
+    let index = 0;
+    while (currentType) {
+      switch (currentType.kind) {
+        case Kind.LIST_TYPE: {
+          index += 1;
+          currentType = currentType.type;
+          break;
+        }
+        case Kind.NON_NULL_TYPE: {
+          nonNullIndices.add(index);
+          currentType = currentType.type;
+          break;
+        }
+        default: {
+          currentType = null;
+          break;
+        }
+      }
+    }
+    const levelsArg = directiveNode.arguments?.find((arg) => arg.name.value === LEVELS);
+    if (!levelsArg || levelsArg.value.kind !== Kind.LIST) {
+      // Should never happen because the argument will have just been validated.
+      errorMessages.push(semanticNonNullArgumentErrorMessage);
+      return;
+    }
+    const values = levelsArg.value.values as ReadonlyArray<IntValueNode>;
+    const typeString = printTypeNode(data.type);
+    const levels = new Set<number>();
+    for (const { value } of values) {
+      const int = parseInt(value, 10);
+      if (Number.isNaN(int)) {
+        errorMessages.push(semanticNonNullLevelsNaNIndexErrorMessage(value));
+        continue;
+      }
+      if (int < 0 || int > index) {
+        errorMessages.push(
+          semanticNonNullLevelsIndexOutOfBoundsErrorMessage({
+            maxIndex: index,
+            typeString,
+            value,
+          }),
+        );
+        continue;
+      }
+      if (!nonNullIndices.has(int)) {
+        levels.add(int);
+        continue;
+      }
+      errorMessages.push(
+        semanticNonNullLevelsNonNullErrorMessage({
+          typeString,
+          value,
+        }),
+      );
+    }
+    data.nullLevelsBySubgraphName.set(this.subgraphName, levels);
   }
 
   extractRequiredScopes({ directiveCoords, orScopes, requiredScopes }: HandleRequiresScopesDirectiveParams) {
@@ -3031,7 +3152,7 @@ export class NormalizationFactory {
       enumDefinitionData.directivesByDirectiveName,
       enumDefinitionData.name,
     );
-    enumDefinitionData.node.values = childMapToValueArray(enumDefinitionData.enumValueDataByValueName);
+    enumDefinitionData.node.values = childMapToValueArray(enumDefinitionData.enumValueDataByName);
     return enumDefinitionData.node;
   }
 
@@ -3282,6 +3403,31 @@ export class NormalizationFactory {
     }
   }
 
+  validateOneOfDirective({ data, requiredFieldNames }: ValidateOneOfDirectiveParams): boolean {
+    if (!data.directivesByDirectiveName.has(ONE_OF)) {
+      return true;
+    }
+    if (requiredFieldNames.size > 0) {
+      this.errors.push(
+        oneOfRequiredFieldsError({
+          requiredFieldNames: Array.from(requiredFieldNames),
+          typeName: data.name,
+        }),
+      );
+      return false;
+    }
+    if (data.inputValueDataByName.size === 1) {
+      this.warnings.push(
+        singleSubgraphInputFieldOneOfWarning({
+          fieldName: getFirstEntry(data.inputValueDataByName)?.name ?? 'unknown',
+          subgraphName: this.subgraphName,
+          typeName: data.name,
+        }),
+      );
+    }
+    return true;
+  }
+
   normalize(document: DocumentNode): NormalizationResult {
     /* factory.allDirectiveDefinitions is initialized with v1 directive definitions, and v2 definitions are only added
     after the visitor has visited the entire schema and the subgraph is known to be a V2 graph. Consequently,
@@ -3325,20 +3471,26 @@ export class NormalizationFactory {
       definitions.push(SUBSCRIPTION_FIELD_CONDITION_DEFINITION);
       definitions.push(SUBSCRIPTION_FILTER_VALUE_DEFINITION);
     }
-
-    if (this.referencedDirectiveNames.has(LINK)) {
-      definitions.push(LINK_DEFINITION);
-      definitions.push(LINK_IMPORT_DEFINITION);
-      definitions.push(LINK_PURPOSE_DEFINITION);
-    }
     if (this.referencedDirectiveNames.has(CONFIGURE_DESCRIPTION)) {
       definitions.push(CONFIGURE_DESCRIPTION_DEFINITION);
     }
     if (this.referencedDirectiveNames.has(CONFIGURE_CHILD_DESCRIPTIONS)) {
       definitions.push(CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION);
     }
+    if (this.referencedDirectiveNames.has(LINK)) {
+      definitions.push(LINK_DEFINITION);
+      definitions.push(LINK_IMPORT_DEFINITION);
+      definitions.push(LINK_PURPOSE_DEFINITION);
+    }
+    // @oneOf is part of the new base schema, so this definition is/will be unnecessary, but add it as a precaution.
+    if (this.referencedDirectiveNames.has(ONE_OF)) {
+      definitions.push(ONE_OF_DEFINITION);
+    }
     if (this.referencedDirectiveNames.has(REQUIRE_FETCH_REASONS)) {
       definitions.push(REQUIRE_FETCH_REASONS_DEFINITION);
+    }
+    if (this.referencedDirectiveNames.has(SEMANTIC_NON_NULL)) {
+      definitions.push(SEMANTIC_NON_NULL_DEFINITION);
     }
     for (const directiveDefinition of this.customDirectiveDefinitions.values()) {
       definitions.push(directiveDefinition);
@@ -3359,19 +3511,24 @@ export class NormalizationFactory {
     this.evaluateExternalKeyFields();
     for (const [parentTypeName, parentData] of this.parentDefinitionDataByTypeName) {
       switch (parentData.kind) {
-        case Kind.ENUM_TYPE_DEFINITION:
-          if (parentData.enumValueDataByValueName.size < 1) {
+        case Kind.ENUM_TYPE_DEFINITION: {
+          if (parentData.enumValueDataByName.size < 1) {
             this.errors.push(noDefinedEnumValuesError(parentTypeName));
             break;
           }
           definitions.push(this.getEnumNodeByData(parentData));
           break;
-        case Kind.INPUT_OBJECT_TYPE_DEFINITION:
+        }
+        case Kind.INPUT_OBJECT_TYPE_DEFINITION: {
           if (parentData.inputValueDataByName.size < 1) {
             this.errors.push(noInputValueDefinitionsError(parentTypeName));
             break;
           }
+          const requiredFieldNames = new Set<FieldName>();
           for (const valueData of parentData.inputValueDataByName.values()) {
+            if (isTypeRequired(valueData.type)) {
+              requiredFieldNames.add(valueData.name);
+            }
             // Base Scalars have already been set
             if (valueData.namedTypeKind !== Kind.NULL) {
               continue;
@@ -3393,11 +3550,15 @@ export class NormalizationFactory {
             }
             valueData.namedTypeKind = namedTypeData.kind;
           }
+          if (!this.validateOneOfDirective({ data: parentData, requiredFieldNames })) {
+            break;
+          }
           definitions.push(this.getInputObjectNodeByData(parentData));
           break;
+        }
         case Kind.INTERFACE_TYPE_DEFINITION:
         // intentional fallthrough
-        case Kind.OBJECT_TYPE_DEFINITION:
+        case Kind.OBJECT_TYPE_DEFINITION: {
           const isEntity = this.entityDataByTypeName.has(parentTypeName);
           const operationTypeNode = this.operationTypeNodeByTypeName.get(parentTypeName);
           const isObject = parentData.kind === Kind.OBJECT_TYPE_DEFINITION;
@@ -3472,23 +3633,27 @@ export class NormalizationFactory {
           if (parentData.fieldDataByName.size < 1 && !isNodeQuery(parentTypeName, operationTypeNode)) {
             this.errors.push(noFieldDefinitionsError(kindToNodeType(parentData.kind), parentTypeName));
           }
-          if (isObject && parentData.requireFetchReasonsFieldNames.size > 0) {
+          if (parentData.requireFetchReasonsFieldNames.size > 0) {
             configurationData.requireFetchReasonsFieldNames = [...parentData.requireFetchReasonsFieldNames];
           }
           break;
-        case Kind.SCALAR_TYPE_DEFINITION:
+        }
+        case Kind.SCALAR_TYPE_DEFINITION: {
           if (parentData.extensionType === ExtensionType.REAL) {
             this.errors.push(noBaseScalarDefinitionError(parentTypeName));
             break;
           }
           definitions.push(this.getScalarNodeByData(parentData));
           break;
-        case Kind.UNION_TYPE_DEFINITION:
+        }
+        case Kind.UNION_TYPE_DEFINITION: {
           definitions.push(this.getUnionNodeByData(parentData));
           this.validateUnionMembers(parentData);
           break;
-        default:
+        }
+        default: {
           throw unexpectedKindFatalError(parentTypeName);
+        }
       }
     }
     // this is where @provides and @requires configurations are added to the ConfigurationData
@@ -3543,7 +3708,7 @@ export class NormalizationFactory {
       }
       // There will be a run time error if a field can return an Interface without any Object implementations.
       const implementationTypeNames = this.concreteTypeNamesByAbstractTypeName.get(referencedTypeName);
-      if (!implementationTypeNames || implementationTypeNames.size < 0) {
+      if (!implementationTypeNames || implementationTypeNames.size < 1) {
         // Temporarily propagate as a warning until @inaccessible, entity interfaces and other such considerations are handled
         this.warnings.push(unimplementedInterfaceOutputTypeWarning(this.subgraphName, referencedTypeName));
       }
@@ -3589,6 +3754,7 @@ export class NormalizationFactory {
       concreteTypeNamesByAbstractTypeName: this.concreteTypeNamesByAbstractTypeName,
       conditionalFieldDataByCoordinates: this.conditionalFieldDataByCoords,
       configurationDataByTypeName: this.configurationDataByTypeName,
+      directiveDefinitionByDirectiveName: this.directiveDefinitionByDirectiveName,
       entityDataByTypeName: this.entityDataByTypeName,
       entityInterfaces: this.entityInterfaceDataByTypeName,
       fieldCoordsByNamedTypeName: this.fieldCoordsByNamedTypeName,
@@ -3691,6 +3857,7 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationResult 
         conditionalFieldDataByCoordinates: normalizationResult.conditionalFieldDataByCoordinates,
         configurationDataByTypeName: normalizationResult.configurationDataByTypeName,
         definitions: normalizationResult.subgraphAST,
+        directiveDefinitionByDirectiveName: normalizationResult.directiveDefinitionByDirectiveName,
         entityInterfaces: normalizationResult.entityInterfaces,
         isVersionTwo: normalizationResult.isVersionTwo,
         keyFieldNamesByParentTypeName: normalizationResult.keyFieldNamesByParentTypeName,

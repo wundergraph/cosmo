@@ -5,15 +5,17 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"time"
+
+	"golang.org/x/time/rate"
 
 	"github.com/MicahParks/jwkset"
 	"github.com/MicahParks/keyfunc/v3"
-	"github.com/golang-jwt/jwt/v5"
-	"go.uber.org/zap"
-	"golang.org/x/time/rate"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/wundergraph/cosmo/router/internal/httpclient"
+	"go.uber.org/zap"
 )
 
 type TokenDecoder interface {
@@ -49,22 +51,38 @@ type JWKSConfig struct {
 	KeyId     string
 
 	Audiences []string
+
+	RefreshUnknownKID RefreshUnknownKIDConfig
 }
 
-type audKey struct {
+type RefreshUnknownKIDConfig struct {
+	Enabled  bool
+	Interval time.Duration
+	Burst    int
+	MaxWait  time.Duration
+}
+
+type configKey struct {
 	kid string
 	url string
 }
 
 type audienceSet map[string]struct{}
 
+type keyFuncEntry struct {
+	jwks              keyfunc.Keyfunc
+	aud               audienceSet
+	allowedAlgorithms []string
+}
+
 func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKSConfig) (TokenDecoder, error) {
-	audiencesMap := make(map[audKey]audienceSet, len(configs))
-	keyFuncMap := make(map[audKey]keyfunc.Keyfunc, len(configs))
+	// Audience map is used to validate duplicate configs
+	audiencesMap := make(map[configKey]audienceSet, len(configs))
+	entries := make([]keyFuncEntry, 0, len(configs))
 
 	for _, c := range configs {
 		if c.URL != "" {
-			key := audKey{url: c.URL}
+			key := configKey{url: c.URL}
 			if _, ok := audiencesMap[key]; ok {
 				return nil, fmt.Errorf("duplicate JWK URL found: %s", c.URL)
 			}
@@ -81,7 +99,7 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 					l.Error("Failed to refresh HTTP JWK Set from remote HTTP resource.", zap.Error(err))
 				},
 				RefreshInterval: c.RefreshInterval,
-				Storage:         NewValidationStore(logger, nil, c.AllowedAlgorithms),
+				Storage:         jwkset.NewMemoryStorage(),
 			}
 
 			store, err := jwkset.NewStorageFromHTTP(c.URL, jwksetHTTPStorageOptions)
@@ -95,22 +113,30 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 				HTTPURLs: map[string]jwkset.Storage{
 					c.URL: store,
 				},
-				PrioritizeHTTP:    true,
-				RefreshUnknownKID: rate.NewLimiter(rate.Every(5*time.Minute), 1),
+				PrioritizeHTTP: true,
+			}
+
+			// Configure the rate limiter for refreshing unknown KIDs
+			if c.RefreshUnknownKID.Enabled {
+				jwksetHTTPClientOptions.RefreshUnknownKID = rate.NewLimiter(rate.Every(c.RefreshUnknownKID.Interval), c.RefreshUnknownKID.Burst)
+				jwksetHTTPClientOptions.RateLimitWaitMax = c.RefreshUnknownKID.MaxWait
 			}
 
 			jwks, err := createKeyFunc(ctx, jwksetHTTPClientOptions)
 			if err != nil {
 				return nil, err
 			}
-			keyFuncMap[key] = jwks
+			entries = append(entries, keyFuncEntry{
+				jwks:              jwks,
+				aud:               audiencesMap[key],
+				allowedAlgorithms: c.AllowedAlgorithms,
+			})
 
 		} else if c.Secret != "" {
-			key := audKey{kid: c.KeyId}
+			key := configKey{kid: c.KeyId}
 			if _, ok := audiencesMap[key]; ok {
 				return nil, fmt.Errorf("duplicate JWK keyid specified found: %s", c.KeyId)
 			}
-
 			given := jwkset.NewMemoryStorage()
 
 			marshalOptions := jwkset.JWKMarshalOptions{
@@ -154,28 +180,54 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 			if err != nil {
 				return nil, err
 			}
-			keyFuncMap[key] = jwks
+			entries = append(entries, keyFuncEntry{
+				jwks: jwks,
+				aud:  audiencesMap[key],
+			})
 		}
 	}
 
 	keyFuncWrapper := jwt.Keyfunc(func(token *jwt.Token) (any, error) {
 		var errJoin error
-		for key, keyFunc := range keyFuncMap {
-			pub, err := keyFunc.Keyfunc(token)
+		for _, entry := range entries {
+			if len(entry.aud) > 0 {
+				tokenAudiences, err := token.Claims.GetAudience()
+				if err != nil {
+					errJoin = errors.Join(errJoin, fmt.Errorf("could not get audiences from token claims: %w", err))
+					continue
+				}
+				if !hasAudience(tokenAudiences, entry.aud) {
+					errJoin = errors.Join(errJoin, errUnacceptableAud)
+					continue
+				}
+			}
+
+			// When an algorithm is actually provided in the jwks the current keyfunc will validate the
+			// jwks algorithm with it. But when no algorithm is provided (alg: none or missing alg)
+			// the default keyfunc will not validate the algorithm as it has nothing to cross check.
+			if len(entry.allowedAlgorithms) > 0 {
+				algInter, ok := token.Header["alg"]
+				if !ok {
+					errJoin = errors.Join(errJoin, fmt.Errorf("%w: could not find alg in JWT header", keyfunc.ErrKeyfunc))
+					continue
+				}
+				alg, ok := algInter.(string)
+				if !ok {
+					errJoin = errors.Join(errJoin, fmt.Errorf(`%w: the JWT header did not contain the "alg" parameter, which is required by RFC 7515 section 4.1.1`, keyfunc.ErrKeyfunc))
+					continue
+				}
+
+				// This is a custom validation different from the original keyfunc.Keyfunc
+				if !slices.Contains(entry.allowedAlgorithms, alg) {
+					errJoin = errors.Join(errJoin, fmt.Errorf("%w: could not find alg %s in allow list", keyfunc.ErrKeyfunc, alg))
+					continue
+				}
+			}
+
+			pub, err := entry.jwks.Keyfunc(token)
 			if err != nil {
 				errJoin = errors.Join(errJoin, err)
 				continue
-			}
-
-			expectedAudiences := audiencesMap[key]
-			if len(expectedAudiences) > 0 {
-				tokenAudiences, err := token.Claims.GetAudience()
-				if err != nil {
-					return nil, fmt.Errorf("could not get audiences from token claims: %w", err)
-				}
-				if !hasAudience(tokenAudiences, expectedAudiences) {
-					return nil, errUnacceptableAud
-				}
 			}
 			return pub, nil
 		}

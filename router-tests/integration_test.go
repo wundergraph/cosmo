@@ -838,7 +838,7 @@ func TestEnableRequireFetchReasons(t *testing.T) {
 	// Simple test to verify that the configuration switch works.
 	// Multi subgraphs calls are tested in the engine.
 	testenv.Run(t, &testenv.Config{
-		RouterConfigJSONTemplate: testenv.ConfigWithRequireFetchReasonsJSONTemplate,
+		RouterConfigJSONTemplate: testenv.ConfigJSONTemplate,
 		ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 			cfg.EnableRequireFetchReasons = true
 		},
@@ -850,6 +850,8 @@ func TestEnableRequireFetchReasons(t *testing.T) {
 						var req core.GraphQLRequest
 						require.NoError(t, json.Unmarshal(body, &req))
 
+						// Verify that directive worked on the fields of the Query type
+						// and on the interface implemented by Employee.
 						require.Equal(t, `query($a: Int!){employee(id: $a){id}}`, req.Query)
 						require.Equal(t, `{"fetch_reasons":[{"typename":"Employee","field":"id","by_user":true},{"typename":"Query","field":"employee","by_user":true}]}`, string(req.Extensions))
 
@@ -865,6 +867,134 @@ func TestEnableRequireFetchReasons(t *testing.T) {
 			Variables: json.RawMessage(`{"count":1}`),
 		})
 		require.JSONEq(t, `{"data":{"employee":{"id":1}}}`, res.Body)
+	})
+}
+
+func TestValidateRequiredExternalFields(t *testing.T) {
+	t.Parallel()
+
+	t.Run("disabled", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigJSONTemplate,
+			// Engine will fetch in this order: Employees, Availability, Employees
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							body, err := io.ReadAll(r.Body)
+							require.NoError(t, err)
+							r.Body.Close()
+							var req core.GraphQLRequest
+							require.NoError(t, json.Unmarshal(body, &req))
+							// query mapped to expected variables
+							expectedVars := map[string]string{
+								// 1st request is just a regular query.
+								`{products {__typename ... on Consultancy {upc lead {__typename id} __typename} ... on Cosmo {upc lead {__typename id} __typename}}}`: ``,
+								// 2nd request sends 2 representation items, nothing was filtered out.
+								`query($representations: [_Any!]!){_entities(representations: $representations){... on Consultancy {__typename isLeadAvailable} ... on Cosmo {__typename isLeadAvailable}}}`: `{"representations":[{"__typename":"Consultancy","lead":{"isAvailable":false},"upc":"consultancy"},{"__typename":"Cosmo","lead":{"isAvailable":false},"upc":"cosmo"}]}`,
+							}
+							require.Contains(t, expectedVars, req.Query)
+							require.Equal(t, expectedVars[req.Query], string(req.Variables))
+							r.Body = io.NopCloser(bytes.NewReader(body))
+							handler.ServeHTTP(w, r)
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query {
+				    products {
+						... on Consultancy { upc isLeadAvailable }
+						... on Cosmo { upc isLeadAvailable }
+					}
+				}`,
+			})
+			require.JSONEq(t, `{"data":{"products":[
+					{"isLeadAvailable":false,"upc":"consultancy"},
+					{"isLeadAvailable":false,"upc":"cosmo"},
+					{}]}}
+				`, res.Body)
+		})
+	})
+
+	t.Run("enabled", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigJSONTemplate,
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.ValidateRequiredExternalFields = true
+			},
+			// Engine will fetch in this order: Employees, Availability, Employees
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							body, err := io.ReadAll(r.Body)
+							require.NoError(t, err)
+							r.Body.Close()
+							var req core.GraphQLRequest
+							require.NoError(t, json.Unmarshal(body, &req))
+							// query mapped to expected variables
+							expectedVars := map[string]string{
+								// 1st request is just a regular query.
+								`{products {__typename ... on Consultancy {upc lead {__typename id} __typename} ... on Cosmo {upc lead {__typename id} __typename}}}`: ``,
+								// 2nd request sends only 1 representation item because
+								// the other one was ignored by the engine as tainted.
+								`query($representations: [_Any!]!){_entities(representations: $representations){... on Consultancy {__typename isLeadAvailable} ... on Cosmo {__typename isLeadAvailable}}}`: `{"representations":[{"__typename":"Cosmo","lead":{"isAvailable":false},"upc":"cosmo"}]}`,
+							}
+							require.Contains(t, expectedVars, req.Query)
+							require.Equal(t, expectedVars[req.Query], string(req.Variables))
+							r.Body = io.NopCloser(bytes.NewReader(body))
+							handler.ServeHTTP(w, r)
+						})
+					},
+				},
+				Availability: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							body, err := io.ReadAll(r.Body)
+							require.NoError(t, err)
+							r.Body.Close()
+							var req core.GraphQLRequest
+							require.NoError(t, json.Unmarshal(body, &req))
+							require.Equal(t, `query($representations: [_Any!]!){_entities(representations: $representations){... on Employee {__typename isAvailable}}}`, req.Query)
+							require.JSONEq(t, `{"representations":[{"__typename":"Employee","id":1},{"__typename":"Employee","id":2}]}`, string(req.Variables))
+
+							// Representation call expects two entities. We send one with the null value
+							// and corresponding error. The engine will ignore such an entity in
+							// the following call to the Employees.
+							w.WriteHeader(http.StatusOK)
+							_, err = w.Write([]byte(`{"data":{"_entities":[
+							{"__typename":"Employee","isAvailable":null},
+							{"__typename":"Employee","isAvailable":false}
+						]},"errors":[
+							{"message":"Cannot provide value","locations":[{"line":1,"column":68}],"path":["_entities",0,"isAvailable"]}
+						]}`))
+							require.NoError(t, err)
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query {
+				    products {
+						... on Consultancy { upc isLeadAvailable }
+						... on Cosmo { upc isLeadAvailable }
+					}
+				}`,
+			})
+			require.JSONEq(t, `{
+				"data":{
+					"products":[
+						{"isLeadAvailable":null,"upc":"consultancy"},
+						{"isLeadAvailable":false,"upc":"cosmo"},
+						{}]},
+					"errors":[
+						{"message":"Failed to obtain field dependencies from Subgraph 'availability' at Path 'products.@.lead'.","extensions":{"statusCode":200}},
+						{"message":"Failed to fetch from Subgraph 'availability' at Path 'products.@.lead'.","extensions":{"errors":[{"message":"Cannot provide value","path":["products","@","lead","isAvailable"]}],"statusCode":200}}
+					]}`, res.Body)
+		})
 	})
 }
 
@@ -1179,6 +1309,85 @@ func TestIntegrationWithUndefinedField(t *testing.T) {
 			Query: `{ employees { id notDefined } }`,
 		})
 		require.JSONEq(t, `{"errors":[{"message":"Cannot query field \"notDefined\" on type \"Employee\".","path":["query","employees"]}]}`, res.Body)
+	})
+}
+
+func TestOneOfDirective(t *testing.T) {
+	t.Parallel()
+
+	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		t.Run("find employees by id", func(t *testing.T) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query {
+					findEmployeesBy(criteria: { id: 1 }) {
+						id
+						details { forename surname }
+					}
+				}`,
+			})
+			expected := `{"data": {"findEmployeesBy": [{
+				"id": 1, "details": { "forename": "Jens", "surname": "Neuse" }
+			}]}}`
+			require.JSONEq(t, expected, res.Body)
+		})
+
+		t.Run("find employees by department", func(t *testing.T) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query {
+					findEmployeesBy(criteria: { department: ENGINEERING }) {
+						id
+						details { forename }
+					}
+				}`,
+			})
+			require.Contains(t, res.Body, `"forename":"Jens"`)
+			require.Contains(t, res.Body, `"forename":"Dustin"`)
+			require.Contains(t, res.Body, `"forename":"Sergiy"`)
+			require.NotContains(t, res.Body, `error`)
+		})
+
+		t.Run("find employees with variables", func(t *testing.T) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query($criteria: FindEmployeeCriteria!) {
+					findEmployeesBy(criteria: $criteria) {
+						id
+						details { forename }
+					} }`,
+				Variables: json.RawMessage(`{"criteria": { "id": 2 }}`),
+			})
+			expected := `{"data":{
+				"findEmployeesBy": [{ "id": 2, "details": { "forename": "Dustin" } }]}}`
+			require.JSONEq(t, expected, res.Body)
+		})
+
+		// Errors:
+		t.Run("no fields", func(t *testing.T) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query($criteria: FindEmployeeCriteria!) {
+					findEmployeesBy(criteria: $criteria) {
+						id
+						details { forename }
+					} }`,
+				Variables: json.RawMessage(`{"criteria": {}}`),
+			})
+			expected := `{
+				"errors": [{
+					"message": "Variable \"$criteria\" got invalid value {}; OneOf input object \"FindEmployeeCriteria\" must have exactly one field provided, but 0 fields were provided."
+				}]}`
+			require.JSONEq(t, expected, res.Body)
+		})
+		t.Run("explicit null value", func(t *testing.T) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query($criteria: FindEmployeeCriteria!) {
+					findEmployeesBy(criteria: $criteria) {
+						id
+						details { forename }
+					}}`,
+				Variables: json.RawMessage(`{"criteria": {"department": null}}`),
+			})
+			require.Contains(t, res.Body, `"errors"`)
+			require.Contains(t, res.Body, `field \"department\" value must be non-null`)
+		})
 	})
 }
 

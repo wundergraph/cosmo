@@ -2563,6 +2563,33 @@ message GetNamespaceResponse {
   Namespace namespace = 2;
 }
 
+message WorkspaceNamespace {
+  string id = 1;
+  string name = 2;
+  repeated WorkspaceFederatedGraph graphs = 3;
+}
+
+message WorkspaceFederatedGraph {
+  string id = 1;
+  string targetId = 2;
+  string name = 3;
+  bool isContract = 4;
+  repeated WorkspaceSubgraph subgraphs = 5;
+}
+
+message WorkspaceSubgraph {
+  string id = 1;
+  string targetId = 2;
+  string name = 3;
+}
+
+message GetWorkspaceRequest {}
+
+message GetWorkspaceResponse {
+  Response response = 1;
+  repeated WorkspaceNamespace namespaces = 2;
+}
+
 message PushCacheWarmerOperationRequest {
   string federatedGraphName = 1;
   string operationContent = 2;
@@ -2687,6 +2714,7 @@ message Proposal {
   repeated ProposalSubgraph subgraphs = 8;
   bool latestCheckSuccess = 9;
   string latestCheckId = 10;
+  ProposalOrigin origin = 11;
 }
 
 message ProposalSubgraph {
@@ -2695,6 +2723,11 @@ message ProposalSubgraph {
   bool isDeleted = 3;
   bool isNew = 4;
   repeated Label labels = 5;
+}
+
+enum ProposalOrigin {
+   INTERNAL = 0;
+   EXTERNAL = 1;
 }
 
 enum ProposalNamingConvention {
@@ -2708,6 +2741,7 @@ message CreateProposalRequest {
   string name = 3;
   repeated ProposalSubgraph subgraphs = 4;
   ProposalNamingConvention namingConvention = 5;
+  ProposalOrigin origin = 6;
 }
 
 message CreateProposalResponse {
@@ -2732,6 +2766,7 @@ message CreateProposalResponse {
   optional bool isLinkedTrafficCheckFailed = 18;
   // If true, it means the graph pruning check failed for the linked check
   optional bool isLinkedPruningCheckFailed = 19;
+  optional bool hasLinkedSchemaChecks = 20;
 }
 
 message GetProposalRequest {
@@ -2810,6 +2845,7 @@ message UpdateProposalResponse {
   optional bool isLinkedTrafficCheckFailed = 15;
   // If true, it means the graph pruning check failed for the linked check
   optional bool isLinkedPruningCheckFailed = 16;
+  optional bool hasLinkedSchemaChecks = 17;
 }
 
 message EnableProposalsForNamespaceRequest {
@@ -2927,6 +2963,9 @@ service PlatformService {
   rpc RenameNamespace(RenameNamespaceRequest) returns (RenameNamespaceResponse) {}
   rpc GetNamespaces(GetNamespacesRequest) returns (GetNamespacesResponse) {}
   rpc GetNamespace(GetNamespaceRequest) returns (GetNamespaceResponse) {}
+
+  // Workspace
+  rpc GetWorkspace(GetWorkspaceRequest) returns (GetWorkspaceResponse) {}
 
   // Contracts
   rpc CreateContract(CreateContractRequest) returns (CreateContractResponse) {}

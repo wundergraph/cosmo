@@ -1,7 +1,8 @@
-import * as process from 'node:process';
-import pino from 'pino';
-
 import 'dotenv/config';
+import './core/sentry.config.js';
+import * as process from 'node:process';
+import * as Sentry from '@sentry/node';
+import pino from 'pino';
 
 import build, { BuildConfig } from './core/build-server.js';
 import { envVariables } from './core/env.schema.js';
@@ -24,6 +25,7 @@ const {
   AUTH_REDIRECT_URI,
   WEB_BASE_URL,
   AUTH_JWT_SECRET,
+  AUTH_SSO_COOKIE_DOMAIN,
   KC_REALM,
   KC_LOGIN_REALM,
   KC_CLIENT_ID,
@@ -66,6 +68,8 @@ const {
   REDIS_PASSWORD,
   AUTH_ADMISSION_JWT_SECRET,
   CDN_BASE_URL,
+  SENTRY_ENABLED,
+  SENTRY_DSN,
 } = envVariables.parse(process.env);
 
 const options: BuildConfig = {
@@ -101,6 +105,7 @@ const options: BuildConfig = {
     secret: AUTH_JWT_SECRET,
     webBaseUrl: WEB_BASE_URL,
     webErrorPath: '/auth/error',
+    ssoCookieDomain: AUTH_SSO_COOKIE_DOMAIN,
   },
   webhook: {
     url: WEBHOOK_URL,
@@ -171,7 +176,9 @@ if (STRIPE_SECRET_KEY) {
 }
 
 const app = await build(options);
-
+if (SENTRY_ENABLED && SENTRY_DSN) {
+  Sentry.setupFastifyErrorHandler(app);
+}
 await app.listen({
   host: HOST,
   port: PORT,

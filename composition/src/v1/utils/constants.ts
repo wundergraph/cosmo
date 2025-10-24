@@ -61,12 +61,14 @@ import {
   INTERFACE_OBJECT,
   INTERFACE_UPPER,
   KEY,
+  LEVELS,
   LINK,
   LINK_IMPORT,
   LINK_PURPOSE,
   NAME,
   NOT_UPPER,
   OBJECT_UPPER,
+  ONE_OF,
   OR_UPPER,
   OVERRIDE,
   PROPAGATE,
@@ -82,6 +84,7 @@ import {
   SCOPE_SCALAR,
   SCOPES,
   SECURITY,
+  SEMANTIC_NON_NULL,
   SHAREABLE,
   SPECIFIED_BY,
   STREAM_CONFIGURATION,
@@ -100,6 +103,7 @@ import {
   URL_LOWER,
   VALUES,
 } from '../../utils/string-constants';
+import { DirectiveName } from '../../types/types';
 
 export const REQUIRED_STRING_TYPE_NODE: TypeNode = {
   kind: Kind.NON_NULL_TYPE,
@@ -474,7 +478,7 @@ export const EDFS_REDIS_SUBSCRIBE_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-export const BASE_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME = new Map<string, DirectiveDefinitionNode>([
+export const BASE_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME = new Map<DirectiveName, DirectiveDefinitionNode>([
   [DEPRECATED, DEPRECATED_DEFINITION],
   [EXTENDS, EXTENDS_DEFINITION],
   [EXTERNAL, EXTERNAL_DEFINITION],
@@ -492,7 +496,7 @@ export const BASE_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME = new Map<string, Direc
   [TAG, TAG_DEFINITION],
 ]);
 
-export const ALL_IN_BUILT_DIRECTIVE_NAMES = new Set<string>([
+export const ALL_IN_BUILT_DIRECTIVE_NAMES = new Set<DirectiveName>([
   AUTHENTICATED,
   COMPOSE_DIRECTIVE,
   CONFIGURE_DESCRIPTION,
@@ -511,11 +515,13 @@ export const ALL_IN_BUILT_DIRECTIVE_NAMES = new Set<string>([
   INTERFACE_OBJECT,
   KEY,
   LINK,
+  ONE_OF,
   OVERRIDE,
   PROVIDES,
   REQUIRE_FETCH_REASONS,
   REQUIRES,
   REQUIRES_SCOPES,
+  SEMANTIC_NON_NULL,
   SHAREABLE,
   SPECIFIED_BY,
   SUBSCRIPTION_FILTER,
@@ -641,6 +647,14 @@ export const LINK_DEFINITION: DirectiveDefinitionNode = {
   repeatable: true,
 };
 
+// directive @oneOf on INPUT_OBJECT
+export const ONE_OF_DEFINITION: DirectiveDefinitionNode = {
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([INPUT_OBJECT_UPPER]),
+  name: stringToNameNode(ONE_OF),
+  repeatable: false,
+};
+
 // directive @override(from: String!) on FIELD_DEFINITION
 export const OVERRIDE_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
@@ -659,10 +673,10 @@ export const OVERRIDE_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-// directive @openfed__requireFetchReasons repeatable on FIELD_DEFINITION | OBJECT
+// directive @openfed__requireFetchReasons repeatable on FIELD_DEFINITION | INTERFACE | OBJECT
 export const REQUIRE_FETCH_REASONS_DEFINITION: DirectiveDefinitionNode = {
   kind: Kind.DIRECTIVE_DEFINITION,
-  locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER, OBJECT_UPPER]),
+  locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER, INTERFACE_UPPER, OBJECT_UPPER]),
   name: stringToNameNode(REQUIRE_FETCH_REASONS),
   repeatable: true,
 };
@@ -701,6 +715,40 @@ export const REQUIRES_SCOPES_DEFINITION: MutableDirectiveDefinitionNode = {
     SCALAR_UPPER,
   ]),
   name: stringToNameNode(REQUIRES_SCOPES),
+  repeatable: false,
+};
+
+// directive @semanticNonNull(levels: [Int!]! = [0]) on FIELD_DEFINITION
+export const SEMANTIC_NON_NULL_DEFINITION: MutableDirectiveDefinitionNode = {
+  arguments: [
+    {
+      directives: [],
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(LEVELS),
+      type: {
+        kind: Kind.NON_NULL_TYPE,
+        type: {
+          kind: Kind.LIST_TYPE,
+          type: {
+            kind: Kind.NON_NULL_TYPE,
+            type: stringToNamedTypeNode(INT_SCALAR),
+          },
+        },
+      },
+      defaultValue: {
+        kind: Kind.LIST,
+        values: [
+          {
+            kind: Kind.INT,
+            value: '0',
+          },
+        ],
+      },
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: [stringToNameNode(FIELD_DEFINITION_UPPER)],
+  name: stringToNameNode(SEMANTIC_NON_NULL),
   repeatable: false,
 };
 
@@ -813,7 +861,7 @@ export const SUBSCRIPTION_FIELD_CONDITION_DEFINITION: InputObjectTypeDefinitionN
   name: stringToNameNode(SUBSCRIPTION_FIELD_CONDITION),
 };
 
-export const V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME = new Map<string, DirectiveDefinitionNode>([
+export const V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME = new Map<DirectiveName, DirectiveDefinitionNode>([
   [AUTHENTICATED, AUTHENTICATED_DEFINITION],
   [COMPOSE_DIRECTIVE, COMPOSE_DIRECTIVE_DEFINITION],
   [INACCESSIBLE, INACCESSIBLE_DEFINITION],

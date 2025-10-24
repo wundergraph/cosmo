@@ -22,7 +22,6 @@ import { extractFieldSetValue, newFieldSetData } from './utils';
 import { EVENT_DIRECTIVE_NAMES } from '../utils/string-constants';
 import {
   getRenamedRootTypeName,
-  isInterfaceDefinitionData,
   isParentDataCompositeOutputType,
   isTypeNameRootType,
   newPersistedDirectivesData,
@@ -36,11 +35,9 @@ import {
   CONFIGURE_CHILD_DESCRIPTIONS,
   CONFIGURE_DESCRIPTION,
   ENTITY_UNION,
-  EXTERNAL,
   IGNORED_FIELDS,
   PARENT_DEFINITION_DATA,
   PROVIDES,
-  REQUIRE_FETCH_REASONS,
   REQUIRES,
   SERVICE_OBJECT,
   SUBSCRIPTION_FILTER,
@@ -291,11 +288,11 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           );
           return;
         }
-        if (parentData.enumValueDataByValueName.has(name)) {
+        if (parentData.enumValueDataByName.has(name)) {
           nf.errors.push(duplicateEnumValueDefinitionError(nf.originalParentTypeName, name));
           return;
         }
-        parentData.enumValueDataByValueName.set(name, {
+        parentData.enumValueDataByName.set(name, {
           appearances: 1,
           configureDescriptionDataBySubgraphName: new Map<string, ConfigureDescriptionData>(),
           directivesByDirectiveName: nf.extractDirectives(node, new Map<string, ConstDirectiveNode[]>()),
@@ -363,15 +360,12 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
         const directivesByDirectiveName = nf.extractDirectives(node, new Map<string, ConstDirectiveNode[]>());
         const inheritedDirectiveNames = new Set<string>();
         // Add parent-level shareable and external to the field extraction and repeatable validation
-        if (!isInterfaceDefinitionData(parentData)) {
-          nf.addInheritedDirectivesToFieldData(directivesByDirectiveName, inheritedDirectiveNames);
-          if (directivesByDirectiveName.has(EXTERNAL)) {
-            nf.unvalidatedExternalFieldCoords.add(`${nf.originalParentTypeName}.${fieldName}`);
-          }
-          if (nf.doesParentObjectRequireFetchReasons || directivesByDirectiveName.has(REQUIRE_FETCH_REASONS)) {
-            parentData.requireFetchReasonsFieldNames.add(fieldName);
-          }
-        }
+        nf.handleFieldInheritableDirectives({
+          directivesByDirectiveName,
+          fieldName,
+          inheritedDirectiveNames,
+          parentData,
+        });
         const fieldData = nf.addFieldDataByNode(
           parentData.fieldDataByName,
           node,
@@ -488,6 +482,7 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
         nf.upsertInterfaceDataByNode(node);
       },
       leave() {
+        nf.doesParentRequireFetchReasons = false;
         nf.originalParentTypeName = '';
         nf.lastParentNodeKind = Kind.NULL;
       },
@@ -499,6 +494,7 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
         nf.upsertInterfaceDataByNode(node, true);
       },
       leave() {
+        nf.doesParentRequireFetchReasons = false;
         nf.originalParentTypeName = '';
         nf.lastParentNodeKind = Kind.NULL;
       },
@@ -525,7 +521,7 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
         nf.renamedParentTypeName = '';
         nf.lastParentNodeKind = Kind.NULL;
         nf.isParentObjectExternal = false;
-        nf.doesParentObjectRequireFetchReasons = false;
+        nf.doesParentRequireFetchReasons = false;
         nf.isParentObjectShareable = false;
       },
     },
@@ -551,7 +547,7 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
         nf.renamedParentTypeName = '';
         nf.lastParentNodeKind = Kind.NULL;
         nf.isParentObjectExternal = false;
-        nf.doesParentObjectRequireFetchReasons = false;
+        nf.doesParentRequireFetchReasons = false;
         nf.isParentObjectShareable = false;
       },
     },

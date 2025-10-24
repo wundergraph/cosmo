@@ -4,6 +4,82 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.136.1](https://github.com/wundergraph/cosmo/compare/studio@0.136.0...studio@0.136.1) (2025-10-23)
+
+**Note:** Version bump only for package studio
+
+# [0.136.0](https://github.com/wundergraph/cosmo/compare/studio@0.135.2...studio@0.136.0) (2025-10-22)
+
+### Features
+
+* fix playground tab duplication ([#2291](https://github.com/wundergraph/cosmo/issues/2291)) ([943cf41](https://github.com/wundergraph/cosmo/commit/943cf411c5bb7ac1d5040cf4bf4bf6b91aa3c53d)) (@wilsonrivera)
+
+## [0.135.2](https://github.com/wundergraph/cosmo/compare/studio@0.135.1...studio@0.135.2) (2025-10-17)
+
+**Note:** Version bump only for package studio
+
+## [0.135.1](https://github.com/wundergraph/cosmo/compare/studio@0.135.0...studio@0.135.1) (2025-10-16)
+
+**Note:** Version bump only for package studio
+
+# [0.135.0](https://github.com/wundergraph/cosmo/compare/studio@0.134.1...studio@0.135.0) (2025-10-10)
+
+### Features
+
+* disallow reviewing proposals not created by Cosmo ([#2218](https://github.com/wundergraph/cosmo/issues/2218)) ([d4aee49](https://github.com/wundergraph/cosmo/commit/d4aee4905c1a3f1d409c3892621a0d2a1ce8d147)) (@wilsonrivera)
+
+## [0.134.1](https://github.com/wundergraph/cosmo/compare/studio@0.134.0...studio@0.134.1) (2025-10-06)
+
+**Note:** Version bump only for package studio
+
+# [0.134.0](https://github.com/wundergraph/cosmo/compare/studio@0.133.1...studio@0.134.0) (2025-10-03)
+
+### Features
+
+* retrieve operation body from gqlmetrics instead of traces ([#2235](https://github.com/wundergraph/cosmo/issues/2235)) ([52cecf4](https://github.com/wundergraph/cosmo/commit/52cecf4cea2ef1ea33ecd79a1859f4bc2fd55991)) (@endigma)
+
+## [0.133.1](https://github.com/wundergraph/cosmo/compare/studio@0.133.0...studio@0.133.1) (2025-10-01)
+
+**Note:** Version bump only for package studio
+
+# [0.133.0](https://github.com/wundergraph/cosmo/compare/studio@0.132.1...studio@0.133.0) (2025-09-22)
+
+### Features
+
+* fix navigation sometimes not working when switching graph ([#2231](https://github.com/wundergraph/cosmo/issues/2231)) ([77396ff](https://github.com/wundergraph/cosmo/commit/77396ffa63e2b17acca78ef57b71a51dcde78887)) (@wilsonrivera)
+
+## [0.132.1](https://github.com/wundergraph/cosmo/compare/studio@0.132.0...studio@0.132.1) (2025-09-22)
+
+**Note:** Version bump only for package studio
+
+# [0.132.0](https://github.com/wundergraph/cosmo/compare/studio@0.131.0...studio@0.132.0) (2025-09-17)
+
+### Features
+
+* filter by namespace ([#2226](https://github.com/wundergraph/cosmo/issues/2226)) ([395372e](https://github.com/wundergraph/cosmo/commit/395372eefe33c52825e88925e2e76d616e426952)) (@wilsonrivera)
+
+# [0.131.0](https://github.com/wundergraph/cosmo/compare/studio@0.130.1...studio@0.131.0) (2025-09-17)
+
+### Features
+
+* add analytic scripts ([#2208](https://github.com/wundergraph/cosmo/issues/2208)) ([932eb83](https://github.com/wundergraph/cosmo/commit/932eb83ff75459eca536badd65e434534e1c48db)) (@wilsonrivera)
+
+## [0.130.1](https://github.com/wundergraph/cosmo/compare/studio@0.130.0...studio@0.130.1) (2025-09-16)
+
+**Note:** Version bump only for package studio
+
+# [0.130.0](https://github.com/wundergraph/cosmo/compare/studio@0.129.0...studio@0.130.0) (2025-09-16)
+
+### Features
+
+* improve namespace selector UI/UX ([#2161](https://github.com/wundergraph/cosmo/issues/2161)) ([33f870e](https://github.com/wundergraph/cosmo/commit/33f870e8b33751ce547b33eb9ca6cb12578f4034)) (@wilsonrivera)
+
+# [0.129.0](https://github.com/wundergraph/cosmo/compare/studio@0.128.0...studio@0.129.0) (2025-09-15)
+
+### Features
+
+* introduce the `subgraph-checker` role ([#2198](https://github.com/wundergraph/cosmo/issues/2198)) ([726b814](https://github.com/wundergraph/cosmo/commit/726b814b4a460acbbf98aed37b802fe6bfda8c2c)) (@wilsonrivera)
+
 # [0.128.0](https://github.com/wundergraph/cosmo/compare/studio@0.127.1...studio@0.128.0) (2025-09-10)
 
 ### Features

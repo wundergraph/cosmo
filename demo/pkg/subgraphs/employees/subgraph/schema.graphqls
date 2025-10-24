@@ -24,13 +24,16 @@ directive @goField(
   omittable: Boolean
 ) on INPUT_FIELD_DEFINITION | FIELD_DEFINITION
 
+directive @openfed__requireFetchReasons repeatable on FIELD_DEFINITION | INTERFACE | OBJECT
+
 type Query {
-  employee(id: Int!): Employee
+  employee(id: Int!): Employee @openfed__requireFetchReasons
   employeeAsList(id: Int!): [Employee]
   employees: [Employee]
   products: [Products!]!
   teammates(team: Department!): [Employee!]!
   firstEmployee: Employee! @tag(name: "internal")
+  findEmployeesBy(criteria: FindEmployeeCriteria!): [Employee!]!
 }
 
 scalar Upload
@@ -80,7 +83,7 @@ enum EngineerType {
   FULLSTACK
 }
 
-interface Identifiable {
+interface Identifiable @openfed__requireFetchReasons {
   id: Int!
 }
 
@@ -148,7 +151,7 @@ type Employee implements Identifiable @key(fields: "id") {
   currentMood: Mood! @external
   derivedMood: Mood! @requires(fields: "currentMood")
   # From the `availability` service. Only defined for use in @requires
-  isAvailable: Boolean! @external
+  isAvailable: Boolean @external
   rootFieldThrowsError: String @goField(forceResolver: true)
   rootFieldErrorWrapper: ErrorWrapper @goField(forceResolver: true)
 }
@@ -180,6 +183,7 @@ type Cosmo implements IProduct @key(fields: "upc") {
   upc: ID!
   engineers: [Employee!]!
   lead: Employee!
+  isLeadAvailable: Boolean @requires(fields: "lead { isAvailable }")
 }
 
 type SDK implements IProduct @key(fields: "upc") {
@@ -187,4 +191,10 @@ type SDK implements IProduct @key(fields: "upc") {
   engineers: [Employee!]!
   owner: Employee!
   unicode: String!
+}
+
+input FindEmployeeCriteria @oneOf {
+    id: Int
+    department: Department
+    title: String
 }

@@ -57,6 +57,14 @@ export const envVariables = z
      * Auth
      */
     AUTH_JWT_SECRET: z.string().min(32).max(32),
+    AUTH_SSO_COOKIE_DOMAIN: z
+      .string()
+      .transform((val) => (val?.trim() === '' ? undefined : val))
+      .optional()
+      .refine(
+        (val) => !val || /^[\d.a-z-]+$/i.test(val),
+        'AUTH_SSO_COOKIE_DOMAIN must be a valid domain (e.g. ".example.com")',
+      ),
     AUTH_REDIRECT_URI: z.string().url(),
     /**
      * Database
@@ -178,6 +186,30 @@ export const envVariables = z
      * Admission Webhook
      */
     AUTH_ADMISSION_JWT_SECRET: z.string(),
+
+    /**
+     * Sentry
+     */
+    SENTRY_ENABLED: z
+      .string()
+      .optional()
+      .transform((val) => val === 'true')
+      .default('false'),
+    SENTRY_DSN: z.string().optional(),
+    SENTRY_SEND_DEFAULT_PII: z
+      .string()
+      .optional()
+      .transform((val) => val === 'true')
+      .default('false'),
+    SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().optional().default(1),
+    SENTRY_PROFILE_SESSION_SAMPLE_RATE: z.coerce.number().optional().default(1),
+    SENTRY_PROFILE_LIFECYCLE: z.enum(['manual', 'trace']).optional().default('manual'),
+    SENTRY_EVENT_LOOP_BLOCK_THRESHOLD_MS: z.coerce.number().optional().default(100),
+    SENTRY_ENABLE_LOGS: z
+      .string()
+      .optional()
+      .transform((val) => val === 'true')
+      .default('false'),
   })
   .refine((input) => {
     if (input.STRIPE_WEBHOOK_SECRET && !input.STRIPE_SECRET_KEY) {

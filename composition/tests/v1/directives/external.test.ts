@@ -176,7 +176,6 @@ describe('@external directive tests', () => {
 
     test('that a warning is returned if a V1 @external directive is unused', () => {
       const result = normalizeSubgraphSuccess(nm, ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(1);
       expect(result.warnings[0]).toStrictEqual(invalidExternalFieldWarning(`Nested.age`, nm.name));
     });

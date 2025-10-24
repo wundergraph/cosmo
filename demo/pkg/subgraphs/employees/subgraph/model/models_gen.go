@@ -50,9 +50,10 @@ func (Consultancy) IsProducts() {}
 func (Consultancy) IsEntity() {}
 
 type Cosmo struct {
-	Upc       string      `json:"upc"`
-	Engineers []*Employee `json:"engineers"`
-	Lead      *Employee   `json:"lead"`
+	Upc             string      `json:"upc"`
+	Engineers       []*Employee `json:"engineers"`
+	Lead            *Employee   `json:"lead"`
+	IsLeadAvailable *bool       `json:"isLeadAvailable,omitempty"`
 }
 
 func (Cosmo) IsProducts() {}
@@ -103,7 +104,7 @@ type Employee struct {
 	StartDate             string        `json:"startDate"`
 	CurrentMood           Mood          `json:"currentMood"`
 	DerivedMood           Mood          `json:"derivedMood"`
-	IsAvailable           bool          `json:"isAvailable"`
+	IsAvailable           *bool         `json:"isAvailable,omitempty"`
 	RootFieldThrowsError  *string       `json:"rootFieldThrowsError,omitempty"`
 	RootFieldErrorWrapper *ErrorWrapper `json:"rootFieldErrorWrapper,omitempty"`
 }
@@ -160,6 +161,12 @@ type ErrorWrapper struct {
 type FileUpload struct {
 	Nested     *DeeplyNestedFileUpload `json:"nested,omitempty"`
 	NestedList []*graphql.Upload       `json:"nestedList,omitempty"`
+}
+
+type FindEmployeeCriteria struct {
+	ID         *int        `json:"id,omitempty"`
+	Department *Department `json:"department,omitempty"`
+	Title      *string     `json:"title,omitempty"`
 }
 
 type Marketer struct {
