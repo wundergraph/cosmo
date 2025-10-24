@@ -591,6 +591,9 @@
                             "gzip",
                             "deflate"
                           ],
+                          "Content-Length": [
+                            "64"
+                          ],
                           "Content-Type": [
                             "application/json"
                           ]
@@ -616,7 +619,7 @@
                 "duration_since_start_pretty": "1ns",
                 "duration_load_nanoseconds": 1,
                 "duration_load_pretty": "1ns",
-                "single_flight_used": true,
+                "single_flight_used": false,
                 "single_flight_shared_response": false,
                 "load_skipped": false,
                 "load_stats": {
@@ -967,6 +970,9 @@
                                 "gzip",
                                 "deflate"
                               ],
+                              "Content-Length": [
+                                "527"
+                              ],
                               "Content-Type": [
                                 "application/json"
                               ]
@@ -992,7 +998,7 @@
                     "duration_since_start_pretty": "1ns",
                     "duration_load_nanoseconds": 1,
                     "duration_load_pretty": "1ns",
-                    "single_flight_used": true,
+                    "single_flight_used": false,
                     "single_flight_shared_response": false,
                     "load_skipped": false,
                     "load_stats": {
@@ -1596,6 +1602,9 @@
                                 "gzip",
                                 "deflate"
                               ],
+                              "Content-Length": [
+                                "738"
+                              ],
                               "Content-Type": [
                                 "application/json"
                               ]
@@ -1618,7 +1627,7 @@
                     "duration_since_start_pretty": "1ns",
                     "duration_load_nanoseconds": 1,
                     "duration_load_pretty": "1ns",
-                    "single_flight_used": true,
+                    "single_flight_used": false,
                     "single_flight_shared_response": false,
                     "load_skipped": false,
                     "load_stats": {
@@ -1922,6 +1931,9 @@
                             "gzip",
                             "deflate"
                           ],
+                          "Content-Length": [
+                            "715"
+                          ],
                           "Content-Type": [
                             "application/json"
                           ]
@@ -1947,7 +1959,7 @@
                 "duration_since_start_pretty": "1ns",
                 "duration_load_nanoseconds": 1,
                 "duration_load_pretty": "1ns",
-                "single_flight_used": true,
+                "single_flight_used": false,
                 "single_flight_shared_response": false,
                 "load_skipped": false,
                 "load_stats": {
