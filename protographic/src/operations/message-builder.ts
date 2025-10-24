@@ -18,6 +18,7 @@ import {
 import { mapGraphQLTypeToProto, ProtoTypeInfo } from './type-mapper.js';
 import { FieldNumberManager } from './field-numbering.js';
 import { graphqlFieldToProtoField } from '../naming-conventions.js';
+import { upperFirst, camelCase } from 'lodash-es';
 
 /**
  * Options for building proto messages
@@ -126,7 +127,7 @@ function processFieldSelection(
   if (field.selectionSet) {
     const namedType = getNamedType(fieldType);
     if (isObjectType(namedType) || isInterfaceType(namedType) || isUnionType(namedType)) {
-      const nestedMessageName = `${message.name}_${fieldName}`;
+      const nestedMessageName = `${message.name}${upperFirst(camelCase(fieldName))}`;
       
       // For interfaces and unions, we use the base type to collect fields from inline fragments
       // For object types, we process normally
