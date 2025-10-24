@@ -19,7 +19,9 @@ type BenchmarkConfig struct {
 
 func TestPlanning(t *testing.T) {
 	cfgContent, err := os.ReadFile("benchmark_config.json")
-	require.NoError(t, err)
+	if err != nil {
+		t.Skipf("unable to read benchmark_config.json: %v", err)
+	}
 
 	var cfg BenchmarkConfig
 	require.NoError(t, json.Unmarshal(cfgContent, &cfg))
@@ -43,7 +45,9 @@ func TestPlanning(t *testing.T) {
 
 func BenchmarkPlanning(b *testing.B) {
 	cfgContent, err := os.ReadFile("benchmark_config.json")
-	require.NoError(b, err)
+	if err != nil {
+		b.Skipf("unable to read benchmark_config.json: %v", err)
+	}
 
 	var cfg BenchmarkConfig
 	require.NoError(b, json.Unmarshal(cfgContent, &cfg))
