@@ -224,6 +224,11 @@ class OperationsToProtoVisitor {
     // 5. Add method to service
     const method = new protobuf.Method(methodName, 'rpc', requestMessageName, responseMessageName);
 
+    // Mark subscriptions as server streaming
+    if (node.operation === OperationTypeNode.SUBSCRIPTION) {
+      method.responseStream = true;
+    }
+
     if (this.includeComments) {
       method.comment = `RPC method for ${operationName} operation`;
     }

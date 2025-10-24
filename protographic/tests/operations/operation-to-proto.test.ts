@@ -174,6 +174,329 @@ describe('Operation to Proto - Integration Tests', () => {
     });
   });
 
+  describe('subscription operations', () => {
+    test('should convert subscription to server streaming RPC', () => {
+      const schema = `
+        type Query {
+          ping: String
+        }
+        
+        type Subscription {
+          messageAdded: Message
+        }
+        
+        type Message {
+          id: ID!
+          content: String
+        }
+      `;
+      
+      const operation = `
+        subscription OnMessageAdded {
+          messageAdded {
+            id
+            content
+          }
+        }
+      `;
+      
+      const { proto, root } = compileOperationsToProto(operation, schema);
+      
+      expectValidProto(proto);
+      
+      // Should have server streaming (stream keyword before response)
+      expect(proto).toContain('rpc OnMessageAdded(OnMessageAddedRequest) returns (stream OnMessageAddedResponse)');
+      expect(proto).toContain('message OnMessageAddedRequest');
+      expect(proto).toContain('message OnMessageAddedResponse');
+    });
+
+    test('should handle subscription with variables', () => {
+      const schema = `
+        type Query {
+          ping: String
+        }
+        
+        type Subscription {
+          messageAdded(channelId: ID!): Message
+        }
+        
+        type Message {
+          id: ID!
+          content: String
+          channelId: ID!
+        }
+      `;
+      
+      const operation = `
+        subscription OnMessageAdded($channelId: ID!) {
+          messageAdded(channelId: $channelId) {
+            id
+            content
+            channelId
+          }
+        }
+      `;
+      
+      const { proto, root } = compileOperationsToProto(operation, schema);
+      
+      expectValidProto(proto);
+      
+      // Should be server streaming
+      expect(proto).toContain('rpc OnMessageAdded(OnMessageAddedRequest) returns (stream OnMessageAddedResponse)');
+      // Should have variable in request
+      expect(proto).toContain('message OnMessageAddedRequest');
+      expect(proto).toContain('string channel_id = 1');
+    });
+
+    test('should handle multiple subscriptions', () => {
+      const schema = `
+        type Query {
+          ping: String
+        }
+        
+        type Subscription {
+          messageAdded: Message
+          userStatusChanged: UserStatus
+        }
+        
+        type Message {
+          id: ID!
+          content: String
+        }
+        
+        type UserStatus {
+          userId: ID!
+          online: Boolean
+        }
+      `;
+      
+      const operations = `
+        subscription OnMessageAdded {
+          messageAdded {
+            id
+            content
+          }
+        }
+        
+        subscription OnUserStatusChanged {
+          userStatusChanged {
+            userId
+            online
+          }
+        }
+      `;
+      
+      const { proto, root } = compileOperationsToProto(operations, schema);
+      
+      expectValidProto(proto);
+      
+      // Both should be server streaming
+      expect(proto).toContain('rpc OnMessageAdded(OnMessageAddedRequest) returns (stream OnMessageAddedResponse)');
+      expect(proto).toContain('rpc OnUserStatusChanged(OnUserStatusChangedRequest) returns (stream OnUserStatusChangedResponse)');
+    });
+
+    test('should handle subscription with nested selections', () => {
+      const schema = `
+        type Query {
+          ping: String
+        }
+        
+        type Subscription {
+          postAdded: Post
+        }
+        
+        type Post {
+          id: ID!
+          title: String
+          author: User
+        }
+        
+        type User {
+          id: ID!
+          name: String
+        }
+      `;
+      
+      const operation = `
+        subscription OnPostAdded {
+          postAdded {
+            id
+            title
+            author {
+              id
+              name
+            }
+          }
+        }
+      `;
+      
+      const { proto, root } = compileOperationsToProto(operation, schema);
+      
+      expectValidProto(proto);
+      
+      // Should be server streaming
+      expect(proto).toContain('rpc OnPostAdded(OnPostAddedRequest) returns (stream OnPostAddedResponse)');
+      expect(proto).toContain('message OnPostAddedResponse');
+    });
+
+    test('should not add idempotency level to subscriptions', () => {
+      const schema = `
+        type Query {
+          ping: String
+        }
+        
+        type Subscription {
+          messageAdded: Message
+        }
+        
+        type Message {
+          id: ID!
+          content: String
+        }
+      `;
+      
+      const operation = `
+        subscription OnMessageAdded {
+          messageAdded {
+            id
+            content
+          }
+        }
+      `;
+      
+      const { proto } = compileOperationsToProto(operation, schema, {
+        queryNoSideEffects: true,
+      });
+      
+      expectValidProto(proto);
+      
+      // Should be server streaming but no idempotency level
+      expect(proto).toContain('rpc OnMessageAdded(OnMessageAddedRequest) returns (stream OnMessageAddedResponse) {}');
+      expect(proto).not.toContain('idempotency_level');
+    });
+  });
+
+  describe('mixed operation types', () => {
+    test('should handle queries, mutations, and subscriptions together', () => {
+      const schema = `
+        type Query {
+          messages: [Message]
+        }
+        
+        type Mutation {
+          addMessage(content: String!): Message
+        }
+        
+        type Subscription {
+          messageAdded: Message
+        }
+        
+        type Message {
+          id: ID!
+          content: String
+        }
+      `;
+      
+      const operations = `
+        query GetMessages {
+          messages {
+            id
+            content
+          }
+        }
+        
+        mutation AddMessage($content: String!) {
+          addMessage(content: $content) {
+            id
+            content
+          }
+        }
+        
+        subscription OnMessageAdded {
+          messageAdded {
+            id
+            content
+          }
+        }
+      `;
+      
+      const { proto } = compileOperationsToProto(operations, schema);
+      
+      expectValidProto(proto);
+      
+      // Query should be unary
+      expect(proto).toContain('rpc GetMessages(GetMessagesRequest) returns (GetMessagesResponse)');
+      // Mutation should be unary
+      expect(proto).toContain('rpc AddMessage(AddMessageRequest) returns (AddMessageResponse)');
+      // Subscription should be server streaming
+      expect(proto).toContain('rpc OnMessageAdded(OnMessageAddedRequest) returns (stream OnMessageAddedResponse)');
+    });
+
+    test('should apply idempotency only to queries when mixed with subscriptions', () => {
+      const schema = `
+        type Query {
+          messages: [Message]
+        }
+        
+        type Mutation {
+          addMessage(content: String!): Message
+        }
+        
+        type Subscription {
+          messageAdded: Message
+        }
+        
+        type Message {
+          id: ID!
+          content: String
+        }
+      `;
+      
+      const operations = `
+        query GetMessages {
+          messages {
+            id
+            content
+          }
+        }
+        
+        mutation AddMessage($content: String!) {
+          addMessage(content: $content) {
+            id
+            content
+          }
+        }
+        
+        subscription OnMessageAdded {
+          messageAdded {
+            id
+            content
+          }
+        }
+      `;
+      
+      const { proto } = compileOperationsToProto(operations, schema, {
+        queryNoSideEffects: true,
+      });
+      
+      expectValidProto(proto);
+      
+      // Query should have idempotency level
+      expect(proto).toContain('rpc GetMessages(GetMessagesRequest) returns (GetMessagesResponse) {');
+      expect(proto).toContain('option idempotency_level = NO_SIDE_EFFECTS;');
+      
+      // Mutation should not have idempotency level
+      expect(proto).toContain('rpc AddMessage(AddMessageRequest) returns (AddMessageResponse) {}');
+      
+      // Subscription should be streaming but no idempotency level
+      expect(proto).toContain('rpc OnMessageAdded(OnMessageAddedRequest) returns (stream OnMessageAddedResponse) {}');
+      
+      // Only one idempotency option (for the query)
+      const matches = proto.match(/option idempotency_level = NO_SIDE_EFFECTS;/g);
+      expect(matches).toHaveLength(1);
+    });
+  });
+
   describe('mutation operations', () => {
     test('should convert mutation to proto', () => {
       const schema = `
