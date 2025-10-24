@@ -25,6 +25,7 @@ import {
   createOperationMethodName,
 } from './naming-conventions.js';
 import { upperFirst, camelCase } from 'lodash-es';
+import { ProtoLock, ProtoLockManager } from './proto-lock.js';
 
 /**
  * Options for converting operations to proto
@@ -35,6 +36,8 @@ export interface OperationsToProtoOptions {
   goPackage?: string;
   includeComments?: boolean;
   queryNoSideEffects?: boolean;
+  /** Lock data from previous compilation for field number stability */
+  lockData?: ProtoLock;
 }
 
 /**
@@ -43,6 +46,8 @@ export interface OperationsToProtoOptions {
 export interface CompileOperationsToProtoResult {
   proto: string;
   root: protobuf.Root;
+  /** Lock data for field number stability across compilations */
+  lockData: ProtoLock;
 }
 
 /**
@@ -72,8 +77,11 @@ export function compileOperationsToProto(
   const root = visitor.visit();
 
   const proto = visitor.toProtoText(root);
+  
+  // Get the updated lock data for field number stability
+  const lockData = visitor.getLockData();
 
-  return { proto, root };
+  return { proto, root, lockData };
 }
 
 /**
@@ -94,8 +102,11 @@ class OperationsToProtoVisitor {
   // For tracking / avoiding duplicate messages
   private createdMessages = new Set<string>();
 
+  // Lock manager for field number stability
+  private readonly lockManager: ProtoLockManager;
+  
   // Field number manager
-  private readonly fieldNumberManager = createFieldNumberManager();
+  private readonly fieldNumberManager;
 
   // Fragment definitions map
   private fragments = new Map<string, FragmentDefinitionNode>();
@@ -108,6 +119,12 @@ class OperationsToProtoVisitor {
     this.goPackage = options?.goPackage;
     this.includeComments = options?.includeComments ?? true;
     this.queryNoSideEffects = options?.queryNoSideEffects ?? false;
+
+    // Initialize lock manager with previous lock data if provided
+    this.lockManager = new ProtoLockManager(options?.lockData);
+    
+    // Create field number manager with lock manager integration
+    this.fieldNumberManager = createFieldNumberManager(this.lockManager);
 
     this.root = new protobuf.Root();
     
@@ -280,5 +297,12 @@ class OperationsToProtoVisitor {
       case OperationTypeNode.SUBSCRIPTION:
         return this.schema.getSubscriptionType()!;
     }
+  }
+  
+  /**
+   * Get the current lock data for field number stability
+   */
+  public getLockData(): ProtoLock {
+    return this.lockManager.getLockData();
   }
 }

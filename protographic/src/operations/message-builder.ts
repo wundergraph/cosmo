@@ -56,36 +56,78 @@ export function buildMessageFromSelectionSet(
   const message = new protobuf.Type(messageName);
   const fieldNumberManager = options?.fieldNumberManager;
   
-  // Process each selection in the set
-  for (const selection of selectionSet.selections) {
-    if (selection.kind === 'Field') {
-      // For unions, fields can only be selected via inline fragments
-      // For interfaces and objects, we can select fields directly
-      if (isObjectType(parentType) || isInterfaceType(parentType)) {
-        processFieldSelection(
-          selection,
-          message,
-          parentType as any, // interfaces also have getFields()
-          typeInfo,
-          options,
-          fieldNumberManager,
-        );
+  // First pass: collect all field names that will be in this message
+  const fieldNames: string[] = [];
+  const fieldSelections = new Map<string, { selection: FieldNode; type: GraphQLObjectType }>();
+  
+  const collectFields = (selections: readonly any[], currentType: any) => {
+    for (const selection of selections) {
+      if (selection.kind === 'Field') {
+        // Check if type has getFields method (objects and interfaces)
+        if (typeof currentType.getFields === 'function') {
+          const fieldName = selection.name.value;
+          const protoFieldName = graphqlFieldToProtoField(fieldName);
+          if (!fieldNames.includes(protoFieldName)) {
+            fieldNames.push(protoFieldName);
+            fieldSelections.set(protoFieldName, { selection, type: currentType });
+          }
+        }
+      } else if (selection.kind === 'InlineFragment') {
+        if (selection.typeCondition && options?.schema) {
+          const typeName = selection.typeCondition.name.value;
+          const type = options.schema.getType(typeName);
+          if (type && (isObjectType(type) || isInterfaceType(type))) {
+            collectFields(selection.selectionSet.selections, type);
+          }
+        } else if (typeof currentType.getFields === 'function') {
+          collectFields(selection.selectionSet.selections, currentType);
+        }
+      } else if (selection.kind === 'FragmentSpread' && options?.fragments) {
+        const fragmentDef = options.fragments.get(selection.name.value);
+        if (fragmentDef && options?.schema) {
+          const typeName = fragmentDef.typeCondition.name.value;
+          const type = options.schema.getType(typeName);
+          if (type && (isObjectType(type) || isInterfaceType(type))) {
+            collectFields(fragmentDef.selectionSet.selections, type);
+          }
+        }
       }
-      // For unions, skip - fields will come from inline fragments
-    } else if (selection.kind === 'InlineFragment') {
-      processInlineFragment(
-        selection,
+    }
+  };
+  
+  collectFields(selectionSet.selections, parentType);
+  
+  // Reconcile field order using lock manager if available
+  let orderedFieldNames = fieldNames;
+  if (fieldNumberManager && 'reconcileFieldOrder' in fieldNumberManager) {
+    orderedFieldNames = fieldNumberManager.reconcileFieldOrder(messageName, fieldNames);
+  }
+  
+  // Second pass: process fields in reconciled order
+  // Pre-assign field numbers from lock data if available
+  if (fieldNumberManager?.getLockManager) {
+    const lockManager = fieldNumberManager.getLockManager();
+    if (lockManager) {
+      const lockData = lockManager.getLockData();
+      if (lockData.messages[messageName]) {
+        const messageData = lockData.messages[messageName];
+        for (const protoFieldName of orderedFieldNames) {
+          const fieldNumber = messageData.fields[protoFieldName];
+          if (fieldNumber !== undefined) {
+            fieldNumberManager.assignFieldNumber(messageName, protoFieldName, fieldNumber);
+          }
+        }
+      }
+    }
+  }
+  
+  for (const protoFieldName of orderedFieldNames) {
+    const fieldData = fieldSelections.get(protoFieldName);
+    if (fieldData) {
+      processFieldSelection(
+        fieldData.selection,
         message,
-        parentType,
-        typeInfo,
-        options,
-        fieldNumberManager,
-      );
-    } else if (selection.kind === 'FragmentSpread') {
-      processFragmentSpread(
-        selection,
-        message,
-        parentType,
+        fieldData.type,
         typeInfo,
         options,
         fieldNumberManager,
@@ -144,13 +186,20 @@ function processFieldSelection(
       // Add nested message to the parent message
       message.add(nestedMessage);
       
-      // Get field number
-      const fieldNumber = fieldNumberManager
-        ? fieldNumberManager.getNextFieldNumber(message.name)
-        : message.fieldsArray.length + 1;
+      // Get field number - check if already assigned from reconciliation
+      const existingFieldNumber = fieldNumberManager?.getFieldNumber(message.name, protoFieldName);
       
-      if (fieldNumberManager) {
+      let fieldNumber: number;
+      if (existingFieldNumber !== undefined) {
+        // Use existing field number from reconciliation
+        fieldNumber = existingFieldNumber;
+      } else if (fieldNumberManager) {
+        // Get next field number and assign it
+        fieldNumber = fieldNumberManager.getNextFieldNumber(message.name);
         fieldNumberManager.assignFieldNumber(message.name, protoFieldName, fieldNumber);
+      } else {
+        // No field number manager, use sequential numbering
+        fieldNumber = message.fieldsArray.length + 1;
       }
       
       // Determine if field should be repeated
@@ -176,13 +225,20 @@ function processFieldSelection(
     // Scalar or enum field
     const protoTypeInfo = mapGraphQLTypeToProto(fieldType);
     
-    // Get field number
-    const fieldNumber = fieldNumberManager
-      ? fieldNumberManager.getNextFieldNumber(message.name)
-      : message.fieldsArray.length + 1;
+    // Get field number - check if already assigned from reconciliation
+    const existingFieldNumber = fieldNumberManager?.getFieldNumber(message.name, protoFieldName);
     
-    if (fieldNumberManager) {
+    let fieldNumber: number;
+    if (existingFieldNumber !== undefined) {
+      // Use existing field number from reconciliation
+      fieldNumber = existingFieldNumber;
+    } else if (fieldNumberManager) {
+      // Get next field number and assign it
+      fieldNumber = fieldNumberManager.getNextFieldNumber(message.name);
       fieldNumberManager.assignFieldNumber(message.name, protoFieldName, fieldNumber);
+    } else {
+      // No field number manager, use sequential numbering
+      fieldNumber = message.fieldsArray.length + 1;
     }
     
     const protoField = new protobuf.Field(

@@ -43,9 +43,47 @@ export function buildRequestMessage(
   options?: RequestBuilderOptions,
 ): protobuf.Type {
   const message = new protobuf.Type(messageName);
+  const fieldNumberManager = options?.fieldNumberManager;
   
-  let fieldNumber = 1;
+  // Collect all variable names
+  const variableNames = variables.map(v => graphqlArgumentToProtoField(v.variable.name.value));
+  
+  // Reconcile field order using lock manager if available
+  let orderedVariableNames = variableNames;
+  if (fieldNumberManager && 'reconcileFieldOrder' in fieldNumberManager) {
+    orderedVariableNames = fieldNumberManager.reconcileFieldOrder(messageName, variableNames);
+  }
+  
+  // Create a map for quick lookup
+  const variableMap = new Map<string, VariableDefinitionNode>();
   for (const variable of variables) {
+    const protoName = graphqlArgumentToProtoField(variable.variable.name.value);
+    variableMap.set(protoName, variable);
+  }
+  
+  // Pre-assign field numbers from lock data if available
+  if (fieldNumberManager?.getLockManager) {
+    const lockManager = fieldNumberManager.getLockManager();
+    if (lockManager) {
+      const lockData = lockManager.getLockData();
+      if (lockData.messages[messageName]) {
+        const messageData = lockData.messages[messageName];
+        for (const protoVariableName of orderedVariableNames) {
+          const fieldNumber = messageData.fields[protoVariableName];
+          if (fieldNumber !== undefined) {
+            fieldNumberManager.assignFieldNumber(messageName, protoVariableName, fieldNumber);
+          }
+        }
+      }
+    }
+  }
+  
+  // Process variables in reconciled order
+  let fieldNumber = 1;
+  for (const protoVariableName of orderedVariableNames) {
+    const variable = variableMap.get(protoVariableName);
+    if (!variable) continue;
+    
     const variableName = variable.variable.name.value;
     const field = buildVariableField(
       variableName,
@@ -95,13 +133,20 @@ export function buildVariableField(
   
   const typeInfo = mapGraphQLTypeToProto(graphqlType);
   
-  // Get field number
-  const fieldNumber = fieldNumberManager
-    ? fieldNumberManager.getNextFieldNumber(messageName)
-    : defaultFieldNumber;
+  // Get field number - check if already assigned from reconciliation
+  const existingFieldNumber = fieldNumberManager?.getFieldNumber(messageName, protoFieldName);
   
-  if (fieldNumberManager) {
+  let fieldNumber: number;
+  if (existingFieldNumber !== undefined) {
+    // Use existing field number from reconciliation
+    fieldNumber = existingFieldNumber;
+  } else if (fieldNumberManager) {
+    // Get next field number and assign it
+    fieldNumber = fieldNumberManager.getNextFieldNumber(messageName);
     fieldNumberManager.assignFieldNumber(messageName, protoFieldName, fieldNumber);
+  } else {
+    // No field number manager, use default
+    fieldNumber = defaultFieldNumber;
   }
   
   const field = new protobuf.Field(
@@ -132,17 +177,54 @@ export function buildInputObjectMessage(
   const fieldNumberManager = options?.fieldNumberManager;
   const fields = inputType.getFields();
   
+  // Collect all field names
+  const fieldNames = Object.keys(fields).map(name => graphqlFieldToProtoField(name));
+  
+  // Reconcile field order using lock manager if available
+  let orderedFieldNames = fieldNames;
+  if (fieldNumberManager && 'reconcileFieldOrder' in fieldNumberManager) {
+    orderedFieldNames = fieldNumberManager.reconcileFieldOrder(message.name, fieldNames);
+  }
+  
+  // Create a map for quick lookup
+  const fieldMap = new Map<string, typeof fields[string]>();
   for (const [fieldName, inputField] of Object.entries(fields)) {
     const protoFieldName = graphqlFieldToProtoField(fieldName);
+    fieldMap.set(protoFieldName, inputField);
+  }
+  
+  // Pre-assign field numbers from lock data if available
+  if (fieldNumberManager?.getLockManager) {
+    const lockManager = fieldNumberManager.getLockManager();
+    if (lockManager) {
+      const lockData = lockManager.getLockData();
+      if (lockData.messages[message.name]) {
+        const messageData = lockData.messages[message.name];
+        for (const protoFieldName of orderedFieldNames) {
+          const fieldNumber = messageData.fields[protoFieldName];
+          if (fieldNumber !== undefined) {
+            fieldNumberManager.assignFieldNumber(message.name, protoFieldName, fieldNumber);
+          }
+        }
+      }
+    }
+  }
+  
+  // Process fields in reconciled order
+  for (const protoFieldName of orderedFieldNames) {
+    const inputField = fieldMap.get(protoFieldName);
+    if (!inputField) continue;
+    
     const typeInfo = mapGraphQLTypeToProto(inputField.type);
     
-    // Get field number
-    const fieldNumber = fieldNumberManager
-      ? fieldNumberManager.getNextFieldNumber(message.name)
-      : Object.keys(fields).indexOf(fieldName) + 1;
+    // Get field number - check if already assigned from reconciliation
+    let fieldNumber = fieldNumberManager?.getFieldNumber(message.name, protoFieldName);
     
-    if (fieldNumberManager) {
+    if (fieldNumber === undefined && fieldNumberManager) {
+      fieldNumber = fieldNumberManager.getNextFieldNumber(message.name);
       fieldNumberManager.assignFieldNumber(message.name, protoFieldName, fieldNumber);
+    } else if (fieldNumber === undefined) {
+      fieldNumber = orderedFieldNames.indexOf(protoFieldName) + 1;
     }
     
     const field = new protobuf.Field(
