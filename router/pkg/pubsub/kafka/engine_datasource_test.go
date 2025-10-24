@@ -6,7 +6,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/cespare/xxhash/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -44,58 +43,6 @@ func TestPublishEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := tt.config.MarshalJSONTemplate()
 			assert.Equal(t, tt.wantPattern, result)
-		})
-	}
-}
-
-func TestSubscriptionSource_UniqueRequestID(t *testing.T) {
-	tests := []struct {
-		name          string
-		input         string
-		expectError   bool
-		expectedError error
-	}{
-		{
-			name:        "valid input",
-			input:       `{"topics":["topic1", "topic2"], "providerId":"test-provider"}`,
-			expectError: false,
-		},
-		{
-			name:          "missing topics",
-			input:         `{"providerId":"test-provider"}`,
-			expectError:   true,
-			expectedError: errors.New("Key path not found"),
-		},
-		{
-			name:          "missing providerId",
-			input:         `{"topics":["topic1", "topic2"]}`,
-			expectError:   true,
-			expectedError: errors.New("Key path not found"),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			source := &SubscriptionDataSource{
-				pubSub: NewMockAdapter(t),
-			}
-			ctx := &resolve.Context{}
-			input := []byte(tt.input)
-			xxh := xxhash.New()
-
-			err := source.UniqueRequestID(ctx, input, xxh)
-
-			if tt.expectError {
-				require.Error(t, err)
-				if tt.expectedError != nil {
-					// For jsonparser errors, just check if the error message contains the expected text
-					assert.Contains(t, err.Error(), tt.expectedError.Error())
-				}
-			} else {
-				require.NoError(t, err)
-				// Check that the hash has been updated
-				assert.NotEqual(t, 0, xxh.Sum64())
-			}
 		})
 	}
 }
@@ -155,7 +102,7 @@ func TestSubscriptionSource_Start(t *testing.T) {
 			resolveCtx = resolveCtx.WithContext(goCtx)
 
 			input := []byte(tt.input)
-			err := source.Start(resolveCtx, input, updater)
+			err := source.Start(resolveCtx, nil, input, updater)
 
 			if tt.expectError {
 				require.Error(t, err)
