@@ -1,10 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { buildSchema, parse } from 'graphql';
-import {
-  buildRequestMessage,
-  buildInputObjectMessage,
-  buildEnumType,
-} from '../../src/operations/request-builder';
+import { buildRequestMessage, buildInputObjectMessage, buildEnumType } from '../../src/operations/request-builder';
 import { createFieldNumberManager } from '../../src/operations/field-numbering';
 
 describe('Request Builder', () => {
@@ -19,7 +15,7 @@ describe('Request Builder', () => {
           id: ID!
         }
       `);
-      
+
       const query = parse(`
         query GetUsers {
           users {
@@ -27,18 +23,14 @@ describe('Request Builder', () => {
           }
         }
       `);
-      
+
       const operation = query.definitions[0];
       if (operation.kind !== 'OperationDefinition') {
         throw new Error('Invalid operation');
       }
-      
-      const message = buildRequestMessage(
-        'GetUsersRequest',
-        operation.variableDefinitions || [],
-        schema,
-      );
-      
+
+      const message = buildRequestMessage('GetUsersRequest', operation.variableDefinitions || [], schema);
+
       expect(message.name).toBe('GetUsersRequest');
       expect(message.fieldsArray).toHaveLength(0);
     });
@@ -54,7 +46,7 @@ describe('Request Builder', () => {
           name: String
         }
       `);
-      
+
       const query = parse(`
         query GetUser($id: ID!, $name: String) {
           user(id: $id, name: $name) {
@@ -63,18 +55,14 @@ describe('Request Builder', () => {
           }
         }
       `);
-      
+
       const operation = query.definitions[0];
       if (operation.kind !== 'OperationDefinition') {
         throw new Error('Invalid operation');
       }
-      
-      const message = buildRequestMessage(
-        'GetUserRequest',
-        operation.variableDefinitions || [],
-        schema,
-      );
-      
+
+      const message = buildRequestMessage('GetUserRequest', operation.variableDefinitions || [], schema);
+
       expect(message.name).toBe('GetUserRequest');
       expect(message.fieldsArray).toHaveLength(2);
       expect(message.fields.id).toBeDefined();
@@ -91,7 +79,7 @@ describe('Request Builder', () => {
           id: ID!
         }
       `);
-      
+
       const query = parse(`
         query GetUser($id: ID!) {
           user(id: $id) {
@@ -99,18 +87,14 @@ describe('Request Builder', () => {
           }
         }
       `);
-      
+
       const operation = query.definitions[0];
       if (operation.kind !== 'OperationDefinition') {
         throw new Error('Invalid operation');
       }
-      
-      const message = buildRequestMessage(
-        'GetUserRequest',
-        operation.variableDefinitions || [],
-        schema,
-      );
-      
+
+      const message = buildRequestMessage('GetUserRequest', operation.variableDefinitions || [], schema);
+
       expect(message.fields.id).toBeDefined();
       expect(message.fields.id.type).toBe('string');
     });
@@ -125,7 +109,7 @@ describe('Request Builder', () => {
           id: ID!
         }
       `);
-      
+
       const query = parse(`
         query GetUsers($ids: [ID!]!) {
           users(ids: $ids) {
@@ -133,18 +117,14 @@ describe('Request Builder', () => {
           }
         }
       `);
-      
+
       const operation = query.definitions[0];
       if (operation.kind !== 'OperationDefinition') {
         throw new Error('Invalid operation');
       }
-      
-      const message = buildRequestMessage(
-        'GetUsersRequest',
-        operation.variableDefinitions || [],
-        schema,
-      );
-      
+
+      const message = buildRequestMessage('GetUsersRequest', operation.variableDefinitions || [], schema);
+
       expect(message.fields.ids).toBeDefined();
       expect(message.fields.ids.repeated).toBe(true);
     });
@@ -159,7 +139,7 @@ describe('Request Builder', () => {
           id: ID!
         }
       `);
-      
+
       const query = parse(`
         query GetUser($id: ID!, $name: String) {
           user(id: $id, name: $name) {
@@ -167,23 +147,18 @@ describe('Request Builder', () => {
           }
         }
       `);
-      
+
       const operation = query.definitions[0];
       if (operation.kind !== 'OperationDefinition') {
         throw new Error('Invalid operation');
       }
-      
+
       const manager = createFieldNumberManager();
-      
-      const message = buildRequestMessage(
-        'GetUserRequest',
-        operation.variableDefinitions || [],
-        schema,
-        {
-          fieldNumberManager: manager,
-        },
-      );
-      
+
+      const message = buildRequestMessage('GetUserRequest', operation.variableDefinitions || [], schema, {
+        fieldNumberManager: manager,
+      });
+
       expect(manager.getFieldNumber('GetUserRequest', 'id')).toBe(1);
       expect(manager.getFieldNumber('GetUserRequest', 'name')).toBe(2);
     });
@@ -204,7 +179,7 @@ describe('Request Builder', () => {
           name: String
         }
       `);
-      
+
       const query = parse(`
         query CreateUser($input: UserInput!) {
           createUser(input: $input) {
@@ -212,18 +187,14 @@ describe('Request Builder', () => {
           }
         }
       `);
-      
+
       const operation = query.definitions[0];
       if (operation.kind !== 'OperationDefinition') {
         throw new Error('Invalid operation');
       }
-      
-      const message = buildRequestMessage(
-        'CreateUserRequest',
-        operation.variableDefinitions || [],
-        schema,
-      );
-      
+
+      const message = buildRequestMessage('CreateUserRequest', operation.variableDefinitions || [], schema);
+
       expect(message.fields.input).toBeDefined();
       expect(message.fields.input.type).toBe('UserInput');
     });
@@ -238,7 +209,7 @@ describe('Request Builder', () => {
           id: ID!
         }
       `);
-      
+
       const query = parse(`
         query GetUser($firstName: String) {
           user(firstName: $firstName) {
@@ -246,18 +217,14 @@ describe('Request Builder', () => {
           }
         }
       `);
-      
+
       const operation = query.definitions[0];
       if (operation.kind !== 'OperationDefinition') {
         throw new Error('Invalid operation');
       }
-      
-      const message = buildRequestMessage(
-        'GetUserRequest',
-        operation.variableDefinitions || [],
-        schema,
-      );
-      
+
+      const message = buildRequestMessage('GetUserRequest', operation.variableDefinitions || [], schema);
+
       expect(message.fields.first_name).toBeDefined();
     });
   });
@@ -271,14 +238,14 @@ describe('Request Builder', () => {
           age: Int
         }
       `);
-      
+
       const inputType = schema.getType('UserInput');
       if (!inputType || inputType.constructor.name !== 'GraphQLInputObjectType') {
         throw new Error('Invalid input type');
       }
-      
+
       const message = buildInputObjectMessage(inputType as any);
-      
+
       expect(message.name).toBe('UserInput');
       expect(message.fieldsArray).toHaveLength(3);
       expect(message.fields.name).toBeDefined();
@@ -297,14 +264,14 @@ describe('Request Builder', () => {
           profile: ProfileInput
         }
       `);
-      
+
       const inputType = schema.getType('UserInput');
       if (!inputType || inputType.constructor.name !== 'GraphQLInputObjectType') {
         throw new Error('Invalid input type');
       }
-      
+
       const message = buildInputObjectMessage(inputType as any);
-      
+
       expect(message.name).toBe('UserInput');
       expect(message.fields.profile).toBeDefined();
       expect(message.fields.profile.type).toBe('ProfileInput');
@@ -317,18 +284,18 @@ describe('Request Builder', () => {
           email: String!
         }
       `);
-      
+
       const inputType = schema.getType('UserInput');
       if (!inputType || inputType.constructor.name !== 'GraphQLInputObjectType') {
         throw new Error('Invalid input type');
       }
-      
+
       const manager = createFieldNumberManager();
-      
+
       const message = buildInputObjectMessage(inputType as any, {
         fieldNumberManager: manager,
       });
-      
+
       expect(manager.getFieldNumber('UserInput', 'name')).toBeDefined();
       expect(manager.getFieldNumber('UserInput', 'email')).toBeDefined();
     });
@@ -343,14 +310,14 @@ describe('Request Builder', () => {
           PENDING
         }
       `);
-      
+
       const enumType = schema.getType('Status');
       if (!enumType || enumType.constructor.name !== 'GraphQLEnumType') {
         throw new Error('Invalid enum type');
       }
-      
+
       const protoEnum = buildEnumType(enumType as any);
-      
+
       expect(protoEnum.name).toBe('Status');
       expect(protoEnum.values.UNSPECIFIED).toBe(0);
       expect(protoEnum.values.ACTIVE).toBeDefined();
@@ -365,14 +332,14 @@ describe('Request Builder', () => {
           USER
         }
       `);
-      
+
       const enumType = schema.getType('Role');
       if (!enumType || enumType.constructor.name !== 'GraphQLEnumType') {
         throw new Error('Invalid enum type');
       }
-      
+
       const protoEnum = buildEnumType(enumType as any);
-      
+
       expect(protoEnum.values.UNSPECIFIED).toBe(0);
       expect(protoEnum.values.ADMIN).toBeGreaterThan(0);
       expect(protoEnum.values.USER).toBeGreaterThan(0);
@@ -386,14 +353,14 @@ describe('Request Builder', () => {
           HIGH
         }
       `);
-      
+
       const enumType = schema.getType('Priority');
       if (!enumType || enumType.constructor.name !== 'GraphQLEnumType') {
         throw new Error('Invalid enum type');
       }
-      
+
       const protoEnum = buildEnumType(enumType as any);
-      
+
       expect(protoEnum.values.UNSPECIFIED).toBe(0);
       expect(protoEnum.values.LOW).toBe(1);
       expect(protoEnum.values.MEDIUM).toBe(2);
@@ -408,9 +375,9 @@ describe('Request Builder', () => {
           ping: String
         }
       `);
-      
+
       const message = buildRequestMessage('PingRequest', [], schema);
-      
+
       expect(message.name).toBe('PingRequest');
       expect(message.fieldsArray).toHaveLength(0);
     });
@@ -425,7 +392,7 @@ describe('Request Builder', () => {
           id: ID!
         }
       `);
-      
+
       const query = parse(`
         query Search($filters: [[String!]!]) {
           search(filters: $filters) {
@@ -433,21 +400,16 @@ describe('Request Builder', () => {
           }
         }
       `);
-      
+
       const operation = query.definitions[0];
       if (operation.kind !== 'OperationDefinition') {
         throw new Error('Invalid operation');
       }
-      
+
       // Should not throw
-      const message = buildRequestMessage(
-        'SearchRequest',
-        operation.variableDefinitions || [],
-        schema,
-      );
-      
+      const message = buildRequestMessage('SearchRequest', operation.variableDefinitions || [], schema);
+
       expect(message.name).toBe('SearchRequest');
     });
   });
 });
-
