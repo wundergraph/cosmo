@@ -46,45 +46,27 @@ export function loadProtoFromText(protoText: string): protobufjs.Root {
  * Gets field numbers from a message
  *
  * @param root - The protobufjs Root
- * @param messageName - The name of the message (can be verbose like 'GetUserResponseUser' or nested path like 'GetUserResponse.User')
+ * @param messagePath - The dot-notation path to the message (e.g., 'GetUserResponse.User' or 'UserInput')
  * @returns A record of field names to field numbers
  */
-export function getFieldNumbersFromMessage(root: protobufjs.Root, messageName: string): Record<string, number> {
-  let message: protobufjs.Type;
-
+export function getFieldNumbersFromMessage(root: protobufjs.Root, messagePath: string): Record<string, number> {
   try {
-    // Try direct lookup first (for flat names or already-correct paths)
-    message = root.lookupType(messageName);
+    const message = root.lookupType(messagePath);
+    const fieldNumbers: Record<string, number> = {};
+
+    for (const field of Object.values(message.fields)) {
+      fieldNumbers[field.name] = field.id;
+    }
+
+    return fieldNumbers;
   } catch (error) {
-    // Convert concatenated name to dot notation by trying different split strategies
-    const convertedPath = convertConcatenatedNameToDotNotation(messageName, root);
-    
-    if (!convertedPath) {
-      throw new Error(
-        `Could not find message "${messageName}". ` +
-        `Tried various path conversions but none matched. ` +
-        `Available types: ${getAllNestedTypeNames(root).join(', ')}`
-      );
-    }
-    
-    try {
-      message = root.lookupType(convertedPath);
-    } catch {
-      throw new Error(
-        `Could not find message "${messageName}". ` +
-        `Tried direct lookup and converted path "${convertedPath}". ` +
-        `Available types: ${getAllNestedTypeNames(root).join(', ')}`
-      );
-    }
+    // Provide helpful error message with available types
+    const availableTypes = getAllNestedTypeNames(root);
+    throw new Error(
+      `Could not find message "${messagePath}". ` +
+      `Available types: ${availableTypes.join(', ')}`
+    );
   }
-
-  const fieldNumbers: Record<string, number> = {};
-
-  for (const field of Object.values(message.fields)) {
-    fieldNumbers[field.name] = field.id;
-  }
-
-  return fieldNumbers;
 }
 
 /**
@@ -105,100 +87,6 @@ function getAllNestedTypeNames(root: protobufjs.Root): string[] {
   
   collectNames(root);
   return names;
-}
-
-/**
- * Converts a concatenated message name to dot notation by trying to match against actual types
- *
- * @param name - Concatenated name like 'GetUserResponseUser'
- * @param root - The protobufjs root to check against
- * @returns Dot notation path like 'GetUserResponse.User' or null if not found
- */
-function convertConcatenatedNameToDotNotation(name: string, root: protobufjs.Root): string | null {
-  // Find Request or Response suffix
-  const responseMatch = name.match(/^(.+?Response)(.+)$/);
-  const requestMatch = name.match(/^(.+?Request)(.+)$/);
-  
-  const match = responseMatch || requestMatch;
-  
-  if (!match) {
-    return null;
-  }
-  
-  const [, base, nested] = match;
-  
-  if (!nested) {
-    return null;
-  }
-  
-  // Split at capital letters to get potential segments
-  const segments = nested.split(/(?=[A-Z])/).filter(Boolean);
-  
-  // Generate all possible dot-notation paths and try each one
-  const attempts = generatePathAttempts(base, segments);
-  
-  // Try each attempt and return the first one that exists
-  for (const attempt of attempts) {
-    try {
-      root.lookupType(attempt);
-      return attempt; // Found it!
-    } catch {
-      // Continue trying
-    }
-  }
-  
-  return null;
-}
-
-/**
- * Generates all reasonable path attempts for a given base and segments
- *
- * Examples:
- *   base='GetUserResponse', segments=['User', 'Profile', 'Settings']
- *   -> ['GetUserResponse.User.Profile.Settings', 'GetUserResponse.UserProfile.Settings', etc.]
- */
-function generatePathAttempts(base: string, segments: string[]): string[] {
-  const attempts: string[] = [];
-  
-  if (segments.length === 0) {
-    return [];
-  }
-  
-  if (segments.length === 1) {
-    return [`${base}.${segments[0]}`];
-  }
-  
-  if (segments.length === 2) {
-    // Try both: 'Base.Seg1.Seg2' and 'Base.Seg1Seg2'
-    attempts.push(`${base}.${segments[0]}.${segments[1]}`);
-    attempts.push(`${base}.${segments.join('')}`);
-    return attempts;
-  }
-  
-  // For 3+ segments, try various groupings
-  // Priority order: most specific (all separate) to least specific (all together)
-  
-  // 1. All segments separate: 'Base.A.B.C'
-  attempts.push(`${base}.${segments.join('.')}`);
-  
-  // 2. Group first N-1, last separate: 'Base.AB.C'
-  if (segments.length >= 2) {
-    const firstPart = segments.slice(0, -1).join('');
-    const lastPart = segments[segments.length - 1];
-    attempts.push(`${base}.${firstPart}.${lastPart}`);
-  }
-  
-  // 3. First separate, rest together: 'Base.A.BC'
-  if (segments.length >= 2) {
-    const firstPart = segments[0];
-    const restPart = segments.slice(1).join('');
-    attempts.push(`${base}.${firstPart}.${restPart}`);
-  }
-  
-  // 4. All together: 'Base.ABC'
-  attempts.push(`${base}.${segments.join('')}`);
-  
-  return attempts;
 }
 
 /**

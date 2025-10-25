@@ -34,7 +34,7 @@ describe('Operations Field Ordering Stability', () => {
       expectValidProto(result1.proto);
 
       const root1 = loadProtoFromText(result1.proto);
-      const userFields1 = getFieldNumbersFromMessage(root1, 'GetUserResponseUser');
+      const userFields1 = getFieldNumbersFromMessage(root1, 'GetUserResponse.User');
 
       // Store original field numbers
       const idNumber = userFields1['id'];
@@ -60,7 +60,7 @@ describe('Operations Field Ordering Stability', () => {
       expectValidProto(result2.proto);
 
       const root2 = loadProtoFromText(result2.proto);
-      const userFields2 = getFieldNumbersFromMessage(root2, 'GetUserResponseUser');
+      const userFields2 = getFieldNumbersFromMessage(root2, 'GetUserResponse.User');
 
       // Verify field numbers are preserved despite reordering
       expect(userFields2['id']).toBe(idNumber);
@@ -102,7 +102,7 @@ describe('Operations Field Ordering Stability', () => {
       expectValidProto(result1.proto);
 
       const root1 = loadProtoFromText(result1.proto);
-      const productFields1 = getFieldNumbersFromMessage(root1, 'GetProductResponseProduct');
+      const productFields1 = getFieldNumbersFromMessage(root1, 'GetProductResponse.Product');
 
       const idNumber = productFields1['id'];
       const priceNumber = productFields1['price'];
@@ -123,7 +123,7 @@ describe('Operations Field Ordering Stability', () => {
       expectValidProto(result2.proto);
 
       const root2 = loadProtoFromText(result2.proto);
-      const productFields2 = getFieldNumbersFromMessage(root2, 'GetProductResponseProduct');
+      const productFields2 = getFieldNumbersFromMessage(root2, 'GetProductResponse.Product');
 
       // Verify preserved fields kept their numbers
       expect(productFields2['id']).toBe(idNumber);
@@ -154,7 +154,7 @@ describe('Operations Field Ordering Stability', () => {
       expectValidProto(result3.proto);
 
       const root3 = loadProtoFromText(result3.proto);
-      const productFields3 = getFieldNumbersFromMessage(root3, 'GetProductResponseProduct');
+      const productFields3 = getFieldNumbersFromMessage(root3, 'GetProductResponse.Product');
 
       // Verify original fields still have same numbers
       expect(productFields3['id']).toBe(idNumber);
@@ -210,8 +210,8 @@ describe('Operations Field Ordering Stability', () => {
       expectValidProto(result1.proto);
 
       const root1 = loadProtoFromText(result1.proto);
-      const userFields1 = getFieldNumbersFromMessage(root1, 'GetUserResponseUser');
-      const profileFields1 = getFieldNumbersFromMessage(root1, 'GetUserResponseUserProfile');
+      const userFields1 = getFieldNumbersFromMessage(root1, 'GetUserResponse.User');
+      const profileFields1 = getFieldNumbersFromMessage(root1, 'GetUserResponse.User.Profile');
 
       // Second operation with reordered nested fields
       const operation2 = `
@@ -234,8 +234,8 @@ describe('Operations Field Ordering Stability', () => {
       expectValidProto(result2.proto);
 
       const root2 = loadProtoFromText(result2.proto);
-      const userFields2 = getFieldNumbersFromMessage(root2, 'GetUserResponseUser');
-      const profileFields2 = getFieldNumbersFromMessage(root2, 'GetUserResponseUserProfile');
+      const userFields2 = getFieldNumbersFromMessage(root2, 'GetUserResponse.User');
+      const profileFields2 = getFieldNumbersFromMessage(root2, 'GetUserResponse.User.Profile');
 
       // Verify both parent and nested field numbers are preserved
       expect(userFields2['id']).toBe(userFields1['id']);
@@ -503,7 +503,7 @@ describe('Operations Field Ordering Stability', () => {
       expectValidProto(result1.proto);
 
       const root1 = loadProtoFromText(result1.proto);
-      const userFields1 = getFieldNumbersFromMessage(root1, 'GetUserResponseUser');
+      const userFields1 = getFieldNumbersFromMessage(root1, 'GetUserResponse.User');
 
       const idNumber = userFields1['id'];
       const nameNumber = userFields1['name'];
@@ -532,7 +532,7 @@ describe('Operations Field Ordering Stability', () => {
       expectValidProto(result2.proto);
 
       const root2 = loadProtoFromText(result2.proto);
-      const userFields2 = getFieldNumbersFromMessage(root2, 'GetUserResponseUser');
+      const userFields2 = getFieldNumbersFromMessage(root2, 'GetUserResponse.User');
 
       // Verify field numbers are preserved
       expect(userFields2['id']).toBe(idNumber);
@@ -577,7 +577,7 @@ describe('Operations Field Ordering Stability', () => {
       expectValidProto(result1.proto);
 
       const root1 = loadProtoFromText(result1.proto);
-      const userFields1 = getFieldNumbersFromMessage(root1, 'GetUserResponseUser');
+      const userFields1 = getFieldNumbersFromMessage(root1, 'GetUserResponse.User');
 
       // Second operation with reordered fields
       const operation2 = `
@@ -602,7 +602,7 @@ describe('Operations Field Ordering Stability', () => {
       expectValidProto(result2.proto);
 
       const root2 = loadProtoFromText(result2.proto);
-      const userFields2 = getFieldNumbersFromMessage(root2, 'GetUserResponseUser');
+      const userFields2 = getFieldNumbersFromMessage(root2, 'GetUserResponse.User');
 
       // Verify all field numbers are preserved
       for (const [fieldName, fieldNumber] of Object.entries(userFields1)) {
@@ -755,7 +755,7 @@ describe('Operations Field Ordering Stability', () => {
       expectValidProto(result1.proto);
 
       const root1 = loadProtoFromText(result1.proto);
-      const settingsFields1 = getFieldNumbersFromMessage(root1, 'GetUserResponseUserProfileSettings');
+      const settingsFields1 = getFieldNumbersFromMessage(root1, 'GetUserResponse.User.Profile.Settings');
 
       // Second operation with reordered deeply nested fields
       const operation2 = `
@@ -781,7 +781,7 @@ describe('Operations Field Ordering Stability', () => {
       expectValidProto(result2.proto);
 
       const root2 = loadProtoFromText(result2.proto);
-      const settingsFields2 = getFieldNumbersFromMessage(root2, 'GetUserResponseUserProfileSettings');
+      const settingsFields2 = getFieldNumbersFromMessage(root2, 'GetUserResponse.User.Profile.Settings');
 
       // Verify deeply nested field numbers are preserved
       expect(settingsFields2['theme']).toBe(settingsFields1['theme']);
@@ -828,8 +828,8 @@ describe('Operations Field Ordering Stability', () => {
 
       const root1 = loadProtoFromText(result1.proto);
       const requestFields1 = getFieldNumbersFromMessage(root1, 'SearchUsersRequest');
-      const resultFields1 = getFieldNumbersFromMessage(root1, 'SearchUsersResponseSearchUsers');
-      const userFields1 = getFieldNumbersFromMessage(root1, 'SearchUsersResponseSearchUsersUsers');
+      const resultFields1 = getFieldNumbersFromMessage(root1, 'SearchUsersResponse.SearchUsers');
+      const userFields1 = getFieldNumbersFromMessage(root1, 'SearchUsersResponse.SearchUsers.Users');
 
       // Second operation with everything reordered
       const operation2 = `
@@ -853,8 +853,8 @@ describe('Operations Field Ordering Stability', () => {
 
       const root2 = loadProtoFromText(result2.proto);
       const requestFields2 = getFieldNumbersFromMessage(root2, 'SearchUsersRequest');
-      const resultFields2 = getFieldNumbersFromMessage(root2, 'SearchUsersResponseSearchUsers');
-      const userFields2 = getFieldNumbersFromMessage(root2, 'SearchUsersResponseSearchUsersUsers');
+      const resultFields2 = getFieldNumbersFromMessage(root2, 'SearchUsersResponse.SearchUsers');
+      const userFields2 = getFieldNumbersFromMessage(root2, 'SearchUsersResponse.SearchUsers.Users');
 
       // Verify all field numbers are preserved at all levels
       for (const [fieldName, fieldNumber] of Object.entries(requestFields1)) {
@@ -944,8 +944,8 @@ describe('Operations Field Ordering Stability', () => {
       const root1 = loadProtoFromText(result1.proto);
       const root2 = loadProtoFromText(result2.proto);
 
-      const userFields1 = getFieldNumbersFromMessage(root1, 'GetUserResponseUser');
-      const userFields2 = getFieldNumbersFromMessage(root2, 'GetUserResponseUser');
+      const userFields1 = getFieldNumbersFromMessage(root1, 'GetUserResponse.User');
+      const userFields2 = getFieldNumbersFromMessage(root2, 'GetUserResponse.User');
 
       expect(userFields2['id']).toBe(userFields1['id']);
       expect(userFields2['name']).toBe(userFields1['name']);
@@ -1033,7 +1033,7 @@ describe('Operations Field Ordering Stability', () => {
       expectValidProto(result1.proto);
 
       const root1 = loadProtoFromText(result1.proto);
-      const nodeFields1 = getFieldNumbersFromMessage(root1, 'GetNodeResponseNode');
+      const nodeFields1 = getFieldNumbersFromMessage(root1, 'GetNodeResponse.Node');
 
       // Second operation with reordered inline fragments
       const operation2 = `
@@ -1058,7 +1058,7 @@ describe('Operations Field Ordering Stability', () => {
       expectValidProto(result2.proto);
 
       const root2 = loadProtoFromText(result2.proto);
-      const nodeFields2 = getFieldNumbersFromMessage(root2, 'GetNodeResponseNode');
+      const nodeFields2 = getFieldNumbersFromMessage(root2, 'GetNodeResponse.Node');
 
       // Verify field numbers are preserved
       for (const [fieldName, fieldNumber] of Object.entries(nodeFields1)) {
@@ -1164,7 +1164,7 @@ describe('Operations Field Ordering Stability', () => {
 
       const root1 = loadProtoFromText(result1.proto);
       const requestFields1 = getFieldNumbersFromMessage(root1, 'SearchContentRequest');
-      const resultsFields1 = getFieldNumbersFromMessage(root1, 'SearchContentResponseSearchContent');
+      const resultsFields1 = getFieldNumbersFromMessage(root1, 'SearchContentResponse.SearchContent');
 
       // Second operation with completely reordered everything
       const operation2 = `
@@ -1209,7 +1209,7 @@ describe('Operations Field Ordering Stability', () => {
 
       const root2 = loadProtoFromText(result2.proto);
       const requestFields2 = getFieldNumbersFromMessage(root2, 'SearchContentRequest');
-      const resultsFields2 = getFieldNumbersFromMessage(root2, 'SearchContentResponseSearchContent');
+      const resultsFields2 = getFieldNumbersFromMessage(root2, 'SearchContentResponse.SearchContent');
 
       // Verify all field numbers are preserved at all levels
       for (const [fieldName, fieldNumber] of Object.entries(requestFields1)) {
