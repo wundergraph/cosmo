@@ -25,6 +25,8 @@ export interface RequestBuilderOptions {
   fieldNumberManager?: FieldNumberManager;
   /** The GraphQL schema for type lookups */
   schema?: GraphQLSchema;
+  /** Custom scalar type mappings (scalar name -> proto type) */
+  customScalarMappings?: Record<string, string>;
 }
 
 /**
@@ -124,7 +126,9 @@ export function buildVariableField(
     return null;
   }
 
-  const typeInfo = mapGraphQLTypeToProto(graphqlType);
+  const typeInfo = mapGraphQLTypeToProto(graphqlType, {
+    customScalarMappings: options?.customScalarMappings,
+  });
 
   // Get field number - check if already assigned from reconciliation
   const existingFieldNumber = fieldNumberManager?.getFieldNumber(messageName, protoFieldName);
@@ -204,7 +208,9 @@ export function buildInputObjectMessage(
     const inputField = fieldMap.get(protoFieldName);
     if (!inputField) continue;
 
-    const typeInfo = mapGraphQLTypeToProto(inputField.type);
+    const typeInfo = mapGraphQLTypeToProto(inputField.type, {
+      customScalarMappings: options?.customScalarMappings,
+    });
 
     // Get field number - check if already assigned from reconciliation
     let fieldNumber = fieldNumberManager?.getFieldNumber(message.name, protoFieldName);

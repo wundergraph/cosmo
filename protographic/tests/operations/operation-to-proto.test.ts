@@ -1040,7 +1040,7 @@ describe('Operation to Proto - Integration Tests', () => {
       const matches = proto.match(/option idempotency_level = NO_SIDE_EFFECTS;/g);
       expect(matches).toHaveLength(1);
     });
-    
+
     test('should support DEFAULT idempotency level', () => {
       const schema = `
         type Query {
