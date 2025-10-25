@@ -492,7 +492,7 @@ describe('Enum Support', () => {
       expect(proto).toMatch(/Role role/);
     });
 
-    test('should not duplicate enum definitions', () => {
+    test('should reject multiple operations even with shared enums', () => {
       const schema = `
         type Query {
           user: User
@@ -529,13 +529,9 @@ describe('Enum Support', () => {
         }
       `;
 
-      const { proto } = compileOperationsToProto(operations, schema);
-
-      expectValidProto(proto);
-
-      // Should contain enum definition only once
-      const enumMatches = proto.match(/enum UserStatus \{/g);
-      expect(enumMatches).toHaveLength(1);
+      expect(() => compileOperationsToProto(operations, schema)).toThrow(
+        'Multiple operations found in document: GetUser, UpdateUser'
+      );
     });
   });
 

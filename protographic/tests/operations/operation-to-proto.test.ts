@@ -127,7 +127,7 @@ describe('Operation to Proto - Integration Tests', () => {
       expect(proto).toContain('message GetUsersResponse');
     });
 
-    test('should handle multiple queries', () => {
+    test('should reject multiple queries', () => {
       const schema = `
         type Query {
           user: User
@@ -161,16 +161,9 @@ describe('Operation to Proto - Integration Tests', () => {
         }
       `;
 
-      const { proto, root } = compileOperationsToProto(operations, schema);
-
-      expectValidProto(proto);
-
-      expect(proto).toContain('rpc GetUser');
-      expect(proto).toContain('rpc GetPosts');
-      expect(proto).toContain('message GetUserRequest');
-      expect(proto).toContain('message GetUserResponse');
-      expect(proto).toContain('message GetPostsRequest');
-      expect(proto).toContain('message GetPostsResponse');
+      expect(() => compileOperationsToProto(operations, schema)).toThrow(
+        'Multiple operations found in document: GetUser, GetPosts'
+      );
     });
   });
 
@@ -248,7 +241,7 @@ describe('Operation to Proto - Integration Tests', () => {
       expect(proto).toContain('string channel_id = 1');
     });
 
-    test('should handle multiple subscriptions', () => {
+    test('should reject multiple subscriptions', () => {
       const schema = `
         type Query {
           ping: String
@@ -286,14 +279,8 @@ describe('Operation to Proto - Integration Tests', () => {
         }
       `;
 
-      const { proto, root } = compileOperationsToProto(operations, schema);
-
-      expectValidProto(proto);
-
-      // Both should be server streaming
-      expect(proto).toContain('rpc OnMessageAdded(OnMessageAddedRequest) returns (stream OnMessageAddedResponse)');
-      expect(proto).toContain(
-        'rpc OnUserStatusChanged(OnUserStatusChangedRequest) returns (stream OnUserStatusChangedResponse)',
+      expect(() => compileOperationsToProto(operations, schema)).toThrow(
+        'Multiple operations found in document: OnMessageAdded, OnUserStatusChanged'
       );
     });
 
@@ -379,7 +366,7 @@ describe('Operation to Proto - Integration Tests', () => {
   });
 
   describe('mixed operation types', () => {
-    test('should handle queries, mutations, and subscriptions together', () => {
+    test('should reject queries, mutations, and subscriptions together', () => {
       const schema = `
         type Query {
           messages: [Message]
@@ -422,19 +409,12 @@ describe('Operation to Proto - Integration Tests', () => {
         }
       `;
 
-      const { proto } = compileOperationsToProto(operations, schema);
-
-      expectValidProto(proto);
-
-      // Query should be unary
-      expect(proto).toContain('rpc GetMessages(GetMessagesRequest) returns (GetMessagesResponse)');
-      // Mutation should be unary
-      expect(proto).toContain('rpc AddMessage(AddMessageRequest) returns (AddMessageResponse)');
-      // Subscription should be server streaming
-      expect(proto).toContain('rpc OnMessageAdded(OnMessageAddedRequest) returns (stream OnMessageAddedResponse)');
+      expect(() => compileOperationsToProto(operations, schema)).toThrow(
+        'Multiple operations found in document: GetMessages, AddMessage, OnMessageAdded'
+      );
     });
 
-    test('should apply idempotency only to queries when mixed with subscriptions', () => {
+    test('should reject mixed operations even with idempotency options', () => {
       const schema = `
         type Query {
           messages: [Message]
@@ -477,25 +457,11 @@ describe('Operation to Proto - Integration Tests', () => {
         }
       `;
 
-      const { proto } = compileOperationsToProto(operations, schema, {
-        queryIdempotency: 'NO_SIDE_EFFECTS',
-      });
-
-      expectValidProto(proto);
-
-      // Query should have idempotency level
-      expect(proto).toContain('rpc GetMessages(GetMessagesRequest) returns (GetMessagesResponse) {');
-      expect(proto).toContain('option idempotency_level = NO_SIDE_EFFECTS;');
-
-      // Mutation should not have idempotency level
-      expect(proto).toContain('rpc AddMessage(AddMessageRequest) returns (AddMessageResponse) {}');
-
-      // Subscription should be streaming but no idempotency level
-      expect(proto).toContain('rpc OnMessageAdded(OnMessageAddedRequest) returns (stream OnMessageAddedResponse) {}');
-
-      // Only one idempotency option (for the query)
-      const matches = proto.match(/option idempotency_level = NO_SIDE_EFFECTS;/g);
-      expect(matches).toHaveLength(1);
+      expect(() =>
+        compileOperationsToProto(operations, schema, {
+          queryIdempotency: 'NO_SIDE_EFFECTS',
+        })
+      ).toThrow('Multiple operations found in document: GetMessages, AddMessage, OnMessageAdded');
     });
   });
 
@@ -882,7 +848,7 @@ describe('Operation to Proto - Integration Tests', () => {
       expect(proto).toContain('//');
     });
 
-    test('should add NO_SIDE_EFFECTS idempotency level to queries when enabled', () => {
+    test('should reject multiple queries even with idempotency enabled', () => {
       const schema = `
         type Query {
           hello: String
@@ -908,20 +874,11 @@ describe('Operation to Proto - Integration Tests', () => {
         }
       `;
 
-      const { proto } = compileOperationsToProto(operation, schema, {
-        queryIdempotency: 'NO_SIDE_EFFECTS',
-      });
-
-      expectValidProto(proto);
-
-      // Both query methods should have idempotency level
-      expect(proto).toContain('rpc GetHello(GetHelloRequest) returns (GetHelloResponse) {');
-      expect(proto).toContain('option idempotency_level = NO_SIDE_EFFECTS;');
-      expect(proto).toContain('rpc GetUser(GetUserRequest) returns (GetUserResponse) {');
-
-      // Count occurrences - should have idempotency option for each query
-      const matches = proto.match(/option idempotency_level = NO_SIDE_EFFECTS;/g);
-      expect(matches).toHaveLength(2);
+      expect(() =>
+        compileOperationsToProto(operation, schema, {
+          queryIdempotency: 'NO_SIDE_EFFECTS',
+        })
+      ).toThrow('Multiple operations found in document: GetHello, GetUser');
     });
 
     test('should not add idempotency level to queries when omitted', () => {
@@ -946,7 +903,7 @@ describe('Operation to Proto - Integration Tests', () => {
       expect(proto).not.toContain('idempotency_level');
     });
 
-    test('should not add idempotency level to mutations even when enabled', () => {
+    test('should reject multiple mutations even when idempotency enabled', () => {
       const schema = `
         type Query {
           ping: String
@@ -979,19 +936,14 @@ describe('Operation to Proto - Integration Tests', () => {
         }
       `;
 
-      const { proto } = compileOperationsToProto(operations, schema, {
-        queryIdempotency: 'NO_SIDE_EFFECTS',
-      });
-
-      expectValidProto(proto);
-
-      // Mutations should not have idempotency level
-      expect(proto).toContain('rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {}');
-      expect(proto).toContain('rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse) {}');
-      expect(proto).not.toContain('idempotency_level');
+      expect(() =>
+        compileOperationsToProto(operations, schema, {
+          queryIdempotency: 'NO_SIDE_EFFECTS',
+        })
+      ).toThrow('Multiple operations found in document: CreateUser, UpdateUser');
     });
 
-    test('should handle mixed queries and mutations with queryIdempotency enabled', () => {
+    test('should reject mixed queries and mutations even with queryIdempotency enabled', () => {
       const schema = `
         type Query {
           user: User
@@ -1023,22 +975,11 @@ describe('Operation to Proto - Integration Tests', () => {
         }
       `;
 
-      const { proto } = compileOperationsToProto(operations, schema, {
-        queryIdempotency: 'NO_SIDE_EFFECTS',
-      });
-
-      expectValidProto(proto);
-
-      // Query should have idempotency level
-      expect(proto).toContain('rpc GetUser(GetUserRequest) returns (GetUserResponse) {');
-      expect(proto).toContain('option idempotency_level = NO_SIDE_EFFECTS;');
-
-      // Mutation should not
-      expect(proto).toContain('rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {}');
-
-      // Only one idempotency option (for the query)
-      const matches = proto.match(/option idempotency_level = NO_SIDE_EFFECTS;/g);
-      expect(matches).toHaveLength(1);
+      expect(() =>
+        compileOperationsToProto(operations, schema, {
+          queryIdempotency: 'NO_SIDE_EFFECTS',
+        })
+      ).toThrow('Multiple operations found in document: GetUser, CreateUser');
     });
 
     test('should support DEFAULT idempotency level', () => {
@@ -1156,7 +1097,7 @@ describe('Operation to Proto - Integration Tests', () => {
       expect(proto).toMatch(/active.*=.*4/);
     });
 
-    test('should handle mixed queries and mutations', () => {
+    test('should reject mixed queries and mutations', () => {
       const schema = `
         type Query {
           user: User
@@ -1188,12 +1129,9 @@ describe('Operation to Proto - Integration Tests', () => {
         }
       `;
 
-      const { proto, root } = compileOperationsToProto(operations, schema);
-
-      expectValidProto(proto);
-
-      expect(proto).toContain('rpc GetUser');
-      expect(proto).toContain('rpc CreateUser');
+      expect(() => compileOperationsToProto(operations, schema)).toThrow(
+        'Multiple operations found in document: GetUser, CreateUser'
+      );
     });
 
     test('should produce consistent field numbering', () => {
@@ -1230,7 +1168,7 @@ describe('Operation to Proto - Integration Tests', () => {
   });
 
   describe('edge cases', () => {
-    test('should skip anonymous operations', () => {
+    test('should reject anonymous operations', () => {
       const schema = `
         type Query {
           hello: String
@@ -1243,12 +1181,9 @@ describe('Operation to Proto - Integration Tests', () => {
         }
       `;
 
-      const { proto, root } = compileOperationsToProto(operation, schema);
-
-      // Should still be valid proto but with no operations
-      expect(proto).toContain('syntax = "proto3"');
-      expect(proto).toContain('service DefaultService');
-      // Service should be empty or have no methods
+      expect(() => compileOperationsToProto(operation, schema)).toThrow(
+        'No named operations found in document'
+      );
     });
 
     test('should handle empty selection sets', () => {
@@ -1271,7 +1206,7 @@ describe('Operation to Proto - Integration Tests', () => {
       expect(proto).toContain('message PingResponse');
     });
 
-    test('should handle field aliases', () => {
+    test('should reject root-level field aliases', () => {
       const schema = `
         type Query {
           user: User
@@ -1292,12 +1227,9 @@ describe('Operation to Proto - Integration Tests', () => {
         }
       `;
 
-      const { proto, root } = compileOperationsToProto(operation, schema);
-
-      expectValidProto(proto);
-
-      // Should use actual field names, not aliases
-      expect(proto).toContain('message GetUserResponse');
+      expect(() => compileOperationsToProto(operation, schema)).toThrow(
+        'Root-level field alias "currentUser: user" is not supported'
+      );
     });
   });
 
