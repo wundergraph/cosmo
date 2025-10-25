@@ -110,7 +110,7 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 
 	attributes = append(attributes, reqContext.telemetry.metricAttrs...)
 	if reqContext.telemetry.metricAttributeExpressions != nil {
-		additionalAttrs, err := reqContext.telemetry.metricAttributeExpressions.expressionsAttributes(&reqContext.expressionContext)
+		additionalAttrs, err := reqContext.telemetry.metricAttributeExpressions.expressionsAttributes(&reqContext.expressionContext, expr.BucketDefault)
 		if err != nil {
 			ct.logger.Error("failed to resolve metric attribute expressions", zap.Error(err))
 		}
@@ -328,21 +328,25 @@ func CreateGRPCTraceGetter(
 		attrs = append(attrs, traceAttrs...)
 		attrs = append(attrs, reqCtx.telemetry.traceAttrs...)
 
-		if telemetryAttributeExpressions != nil {
-			telemetryValues, err := telemetryAttributeExpressions.expressionsAttributesWithSubgraph(&reqCtx.expressionContext)
-			if err != nil {
-				reqCtx.Logger().Warn("failed to resolve grpc plugin expression for telemetry", zap.Error(err))
-			}
+		spanAttrFunc := func(telemetryValues ...attribute.KeyValue) {
 			attrs = append(attrs, telemetryValues...)
 		}
 
-		if tracingAttributeExpressions != nil {
-			tracingValues, err := tracingAttributeExpressions.expressionsAttributesWithSubgraph(&reqCtx.expressionContext)
-			if err != nil {
-				reqCtx.Logger().Warn("failed to resolve grpc plugin expression for tracing", zap.Error(err))
-			}
-			attrs = append(attrs, tracingValues...)
-		}
+		addExpressions(AddExprOpts{
+			logger:      reqCtx.logger,
+			expressions: telemetryAttributeExpressions,
+			key:         expr.BucketSubgraph,
+			exprCtx:     &reqCtx.expressionContext,
+			attrAddFunc: spanAttrFunc,
+		})
+
+		addExpressions(AddExprOpts{
+			logger:      reqCtx.logger,
+			expressions: tracingAttributeExpressions,
+			key:         expr.BucketSubgraph,
+			exprCtx:     &reqCtx.expressionContext,
+			attrAddFunc: spanAttrFunc,
+		})
 
 		// Override http operation protocol with grpc
 		attrs = append(attrs, otel.EngineTransportAttribute, otel.WgOperationProtocol.String(OperationProtocolGRPC.String()))

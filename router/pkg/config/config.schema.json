@@ -666,6 +666,17 @@
           "description": "Enable the access logs. The access logs are used to log the incoming requests. By default, the access logs are enabled and logged to the standard output.",
           "default": true
         },
+        "level": {
+          "type": "string",
+          "enum": ["debug", "info", "warn", "error", "panic", "fatal"],
+          "description": "The log level for access logs. The log level is used to control the verbosity of the access logs. The default value is 'info'.",
+          "default": "info"
+        },
+        "add_stacktrace": {
+          "type": "boolean",
+          "description": "Add stack traces to access logs when enabled for all error logs. When disabled, panic error logs will still contain stack traces. The default value is false.",
+          "default": true
+        },
         "buffer": {
           "type": "object",
           "additionalProperties": false,
@@ -909,6 +920,11 @@
               "type": "boolean",
               "default": false,
               "description": "Specifies that the router span should be treated as a root Span. Any existing parent span context will be ignored when defining the Span's trace identifiers. This is useful when the router must be the entry point of the trace."
+            },
+            "operation_content_attributes": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable the addition of GraphQL operation body content as trace attributes. When enabled, original operation content will be added to the trace span for parse and normalized operation content will be added to the trace span for normalize. The default value is false."
             },
             "exporters": {
               "type": "array",
@@ -1908,6 +1924,11 @@
                         {
                           "required": [
                             "refresh_interval"
+                          ]
+                        },
+                        {
+                          "required": [
+                            "refresh_unknown_kid"
                           ]
                         }
                       ]

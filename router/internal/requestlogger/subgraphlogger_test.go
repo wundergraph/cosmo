@@ -21,7 +21,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 	t.Run("writes correct request log", func(t *testing.T) {
 		var zCore zapcore.Core
 		zCore, logObserver := observer.New(zapcore.InfoLevel)
-		l := logging.NewZapLoggerWithCore(zCore, true)
+		l := logging.NewZapLoggerWithCore(zCore, true, true)
 
 		subgraphLogger := requestlogger.NewSubgraphAccessLogger(l, requestlogger.SubgraphOptions{})
 		req, err := http.NewRequest("POST", "http://localhost:3002/graphql", nil)
@@ -49,7 +49,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 	t.Run("Should include IP as custom attribute if requested", func(t *testing.T) {
 		var zCore zapcore.Core
 		zCore, logObserver := observer.New(zapcore.InfoLevel)
-		l := logging.NewZapLoggerWithCore(zCore, true)
+		l := logging.NewZapLoggerWithCore(zCore, true, true)
 
 		subgraphLogger := requestlogger.NewSubgraphAccessLogger(l, requestlogger.SubgraphOptions{})
 		req, err := http.NewRequest("POST", "http://localhost:3002/graphql", nil)
@@ -78,7 +78,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 	t.Run("Should redact client IP and add as a custom attribute", func(t *testing.T) {
 		var zCore zapcore.Core
 		zCore, logObserver := observer.New(zapcore.InfoLevel)
-		l := logging.NewZapLoggerWithCore(zCore, true)
+		l := logging.NewZapLoggerWithCore(zCore, true, true)
 
 		subgraphLogger := requestlogger.NewSubgraphAccessLogger(l, requestlogger.SubgraphOptions{
 			IPAnonymizationConfig: &requestlogger.IPAnonymizationConfig{
@@ -112,7 +112,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 	t.Run("Should hash client IP and add it as a custom attribute", func(t *testing.T) {
 		var zCore zapcore.Core
 		zCore, logObserver := observer.New(zapcore.InfoLevel)
-		l := logging.NewZapLoggerWithCore(zCore, true)
+		l := logging.NewZapLoggerWithCore(zCore, true, true)
 
 		subgraphLogger := requestlogger.NewSubgraphAccessLogger(l, requestlogger.SubgraphOptions{
 			IPAnonymizationConfig: &requestlogger.IPAnonymizationConfig{
@@ -146,7 +146,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 	t.Run("calls fields handler and adds request/response headers", func(t *testing.T) {
 		var zCore zapcore.Core
 		zCore, logObserver := observer.New(zapcore.InfoLevel)
-		l := logging.NewZapLoggerWithCore(zCore, true)
+		l := logging.NewZapLoggerWithCore(zCore, true, true)
 
 		subgraphLogger := requestlogger.NewSubgraphAccessLogger(l, requestlogger.SubgraphOptions{
 			FieldsHandler: core.SubgraphAccessLogsFieldHandler,
@@ -196,7 +196,7 @@ func TestSubgraphAccessLogger(t *testing.T) {
 	t.Run("can handle a null request", func(t *testing.T) {
 		var zCore zapcore.Core
 		zCore, logObserver := observer.New(zapcore.InfoLevel)
-		l := logging.NewZapLoggerWithCore(zCore, true)
+		l := logging.NewZapLoggerWithCore(zCore, true, true)
 
 		subgraphLogger := requestlogger.NewSubgraphAccessLogger(l, requestlogger.SubgraphOptions{
 			FieldsHandler: core.SubgraphAccessLogsFieldHandler,

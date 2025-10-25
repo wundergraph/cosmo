@@ -1077,6 +1077,7 @@ func (s *graphServer) buildGraphMux(
 			requestlogger.WithFields(baseLogFields...),
 			requestlogger.WithAttributes(accessLogAttributes),
 			requestlogger.WithExprAttributes(exprAttributes),
+			requestlogger.WithLogLevelHandler(LogLevelHandler),
 			requestlogger.WithFieldsHandler(RouterAccessLogsFieldHandler),
 			requestlogger.WithIgnoreQueryParamsList(s.accessLogsConfig.IgnoreQueryParamsList),
 		}
@@ -1419,6 +1420,7 @@ func (s *graphServer) buildGraphMux(
 		EnableRequestDeduplication:      s.engineExecutionConfiguration.EnableSingleFlight,
 		ForceEnableRequestDeduplication: s.engineExecutionConfiguration.ForceEnableSingleFlight,
 		HasPreOriginHandlers:            len(s.preOriginHandlers) != 0,
+		OperationContentAttributes: s.traceConfig.OperationContentAttributes,
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
@@ -1735,10 +1737,6 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 		}
 	}
 
-	if err := s.shutdownPubSubProviders(ctx); err != nil {
-		finalErr = errors.Join(finalErr, err)
-	}
-
 	// Shutdown all graphs muxes to release resources
 	// e.g. planner cache
 	s.graphMuxListLock.Lock()
@@ -1753,6 +1751,11 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 	s.baseTransport.CloseIdleConnections()
 	for _, subgraphTransport := range s.subgraphTransports {
 		subgraphTransport.CloseIdleConnections()
+	}
+
+	// Shutdown pubsub providers
+	if err := s.shutdownPubSubProviders(ctx); err != nil {
+		finalErr = errors.Join(finalErr, err)
 	}
 
 	if s.connector != nil {

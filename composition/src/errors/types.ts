@@ -1,5 +1,5 @@
 import { FieldData, InputValueData, ParentDefinitionData } from '../schema-building/types';
-import { FieldName, TypeName } from '../types/types';
+import { FieldName, SubgraphName, TypeName } from '../types/types';
 
 export type InvalidRootTypeFieldEventsDirectiveData = {
   definesDirectives: boolean;
@@ -33,4 +33,10 @@ export type SemanticNonNullLevelsNonNullErrorParams = {
 export type OneOfRequiredFieldsErrorParams = {
   requiredFieldNames: Array<FieldName>;
   typeName: TypeName;
+};
+
+export type IncompatibleParentTypeMergeErrorParams = {
+  existingData: ParentDefinitionData;
+  incomingSubgraphName: SubgraphName;
+  incomingNodeType?: string;
 };

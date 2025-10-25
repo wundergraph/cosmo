@@ -40,3 +40,12 @@ func AwaitFunc(t *testing.T, timeout time.Duration, testFunction func()) {
 
 	AwaitChannelWithT(t, timeout, doneCh, func(t *testing.T, _ struct{}) {}, "the test function timed out")
 }
+
+func Go[A any](fn func() A) <-chan A {
+	doneCh := make(chan A, 1)
+	go func() {
+		doneCh <- fn()
+	}()
+
+	return doneCh
+}
