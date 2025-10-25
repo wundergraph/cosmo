@@ -49,6 +49,8 @@ export interface OperationsToProtoOptions {
   queryIdempotency?: 'NO_SIDE_EFFECTS' | 'DEFAULT';
   /** Lock data from previous compilation for field number stability */
   lockData?: ProtoLock;
+  /** Custom scalar type mappings (scalar name -> proto type) */
+  customScalarMappings?: Record<string, string>;
 }
 
 /**
@@ -115,6 +117,7 @@ class OperationsToProtoVisitor {
   private readonly swiftPrefix?: string;
   private readonly includeComments: boolean;
   private readonly queryIdempotency?: 'NO_SIDE_EFFECTS' | 'DEFAULT';
+  private readonly customScalarMappings?: Record<string, string>;
 
   // Proto AST root
   private readonly root: protobuf.Root;
@@ -149,6 +152,7 @@ class OperationsToProtoVisitor {
     this.swiftPrefix = options?.swiftPrefix;
     this.includeComments = options?.includeComments ?? true;
     this.queryIdempotency = options?.queryIdempotency;
+    this.customScalarMappings = options?.customScalarMappings;
 
     // Initialize lock manager with previous lock data if provided
     this.lockManager = new ProtoLockManager(options?.lockData);
@@ -211,6 +215,7 @@ class OperationsToProtoVisitor {
       includeComments: this.includeComments,
       fieldNumberManager: this.fieldNumberManager,
       schema: this.schema,
+      customScalarMappings: this.customScalarMappings,
     });
 
     // Add request message to root
@@ -237,6 +242,7 @@ class OperationsToProtoVisitor {
         fragments: this.fragments,
         schema: this.schema,
         createdEnums: this.createdEnums,
+        customScalarMappings: this.customScalarMappings,
       });
 
       // Add response message to root
@@ -303,6 +309,7 @@ class OperationsToProtoVisitor {
           const inputMessage = buildInputObjectMessage(type as GraphQLInputObjectType, {
             includeComments: this.includeComments,
             fieldNumberManager: this.fieldNumberManager,
+            customScalarMappings: this.customScalarMappings,
           });
           this.root.add(inputMessage);
           this.createdMessages.add(typeName);

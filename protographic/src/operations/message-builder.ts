@@ -39,6 +39,8 @@ export interface MessageBuilderOptions {
   schema?: GraphQLSchema;
   /** Set to track created enums (to avoid duplicates) */
   createdEnums?: Set<string>;
+  /** Custom scalar type mappings (scalar name -> proto type) */
+  customScalarMappings?: Record<string, string>;
 }
 
 /**
@@ -202,7 +204,9 @@ function processFieldSelection(
       }
 
       // Determine if field should be repeated
-      const protoTypeInfo = mapGraphQLTypeToProto(fieldType);
+      const protoTypeInfo = mapGraphQLTypeToProto(fieldType, {
+        customScalarMappings: options?.customScalarMappings,
+      });
 
       const protoField = new protobuf.Field(protoFieldName, fieldNumber, nestedMessageName);
 
@@ -239,7 +243,9 @@ function processFieldSelection(
       }
     }
 
-    const protoTypeInfo = mapGraphQLTypeToProto(fieldType);
+    const protoTypeInfo = mapGraphQLTypeToProto(fieldType, {
+      customScalarMappings: options?.customScalarMappings,
+    });
 
     // Get field number - check if already assigned from reconciliation
     const existingFieldNumber = fieldNumberManager?.getFieldNumber(message.name, protoFieldName);
@@ -393,7 +399,9 @@ export function buildFieldDefinition(
   options?: MessageBuilderOptions,
 ): protobuf.Field {
   const protoFieldName = graphqlFieldToProtoField(fieldName);
-  const typeInfo = mapGraphQLTypeToProto(fieldType);
+  const typeInfo = mapGraphQLTypeToProto(fieldType, {
+    customScalarMappings: options?.customScalarMappings,
+  });
 
   const field = new protobuf.Field(protoFieldName, fieldNumber, typeInfo.typeName);
 

@@ -30,6 +30,7 @@ type CLIOptions = {
   protoLock?: string;
   withOperations?: string;
   queryIdempotency?: string;
+  customScalarMapping?: string;
 };
 
 export default (opts: BaseCommandOptions) => {
@@ -62,6 +63,11 @@ export default (opts: BaseCommandOptions) => {
   command.option(
     '--query-idempotency <level>',
     'Set idempotency level for Query operations. Valid values: NO_SIDE_EFFECTS, DEFAULT. Only applies with --with-operations.',
+  );
+  command.option(
+    '--custom-scalar-mapping <json-or-path>',
+    'Custom scalar type mappings as JSON string or path to JSON file. ' +
+      'Example: \'{"DateTime":"google.protobuf.Timestamp","UUID":"string"}\'',
   );
   command.action(generateCommandAction);
 
@@ -115,11 +121,25 @@ async function generateCommandAction(name: string, options: CLIOptions) {
       if (!options.withOperations) {
         spinner.warn('--query-idempotency flag is ignored when not using --with-operations');
       }
-      
+
       const validLevels = ['NO_SIDE_EFFECTS', 'DEFAULT'];
       const level = options.queryIdempotency.toUpperCase();
       if (!validLevels.includes(level)) {
-        program.error(`Invalid --query-idempotency value: ${options.queryIdempotency}. Valid values are: ${validLevels.join(', ')}`);
+        program.error(
+          `Invalid --query-idempotency value: ${options.queryIdempotency}. Valid values are: ${validLevels.join(', ')}`,
+        );
+      }
+    }
+
+    // Parse custom scalar mappings if provided
+    let customScalarMappings: Record<string, string> | undefined;
+    if (options.customScalarMapping) {
+      try {
+        customScalarMappings = await parseCustomScalarMapping(options.customScalarMapping);
+      } catch (error) {
+        program.error(
+          `Failed to parse custom scalar mapping: ${error instanceof Error ? error.message : String(error)}`,
+        );
       }
     }
 
@@ -142,6 +162,7 @@ async function generateCommandAction(name: string, options: CLIOptions) {
       lockFile: options.protoLock,
       operationsDir: options.withOperations,
       queryIdempotency: options.queryIdempotency?.toUpperCase(),
+      customScalarMappings,
     });
 
     // Write the generated files
@@ -202,6 +223,7 @@ type GenerationOptions = {
   lockFile?: string;
   operationsDir?: string;
   queryIdempotency?: string;
+  customScalarMappings?: Record<string, string>;
 };
 
 /**
@@ -250,6 +272,7 @@ async function generateProtoAndMapping({
   lockFile = resolve(outdir, 'service.proto.lock.json'),
   operationsDir,
   queryIdempotency,
+  customScalarMappings,
 }: GenerationOptions): Promise<GenerationResult> {
   const schema = await readFile(schemaFile, 'utf8');
   const serviceName = upperFirst(camelCase(name));
@@ -284,8 +307,9 @@ async function generateProtoAndMapping({
       objcClassPrefix,
       swiftPrefix,
       includeComments: true,
-      queryIdempotency: queryIdempotency,
+      queryIdempotency: queryIdempotency as 'NO_SIDE_EFFECTS' | 'DEFAULT' | undefined,
       lockData,
+      customScalarMappings,
     });
 
     return {
@@ -333,6 +357,24 @@ async function fetchLockData(lockFile: string): Promise<ProtoLock | undefined> {
 
   const existingLockData = JSON.parse(await readFile(lockFile, 'utf8'));
   return existingLockData == null ? undefined : existingLockData;
+}
+
+/**
+ * Parse custom scalar mapping from JSON string or file path
+ */
+async function parseCustomScalarMapping(input: string): Promise<Record<string, string>> {
+  // Check if input starts with @ to indicate a file path
+  if (input.startsWith('@')) {
+    const filePath = resolve(input.slice(1));
+    if (!(await exists(filePath))) {
+      throw new Error(`Custom scalar mapping file not found: ${filePath}`);
+    }
+    const fileContent = await readFile(filePath, 'utf8');
+    return JSON.parse(fileContent);
+  }
+
+  // Otherwise, treat as inline JSON
+  return JSON.parse(input);
 }
 
 // Usage of exists from node:fs is not recommended. Use access instead.
