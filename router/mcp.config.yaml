@@ -1,0 +1,56 @@
+# yaml-language-server: $schema=./pkg/config/config.schema.json
+
+# See pkg/config/config.go for the full list of configuration options.
+# This file is used for the demo environment
+
+version: "1"
+
+mcp:
+  enabled: true
+  server:
+    listen_addr: http://localhost:5025
+    base_url: /mcp
+  router_url: http://localhost:3002
+  storage:
+    provider_id: mcp
+  expose_schema: false
+  enable_arbitrary_operations: false
+  exclude_mutations: false
+  session:
+    stateless: true
+
+storage_providers:
+  file_system:
+    - id: 'mcp'
+      path: 'operations'
+
+headers:
+  all:
+    request:
+      # Forward Authorization header (legacy MCP behavior)
+      - op: propagate
+        named: "Authorization"
+      
+      # Forward tenant ID
+      - op: propagate
+        named: "X-Tenant-ID"
+      
+      # Forward all trace headers
+      - op: propagate
+        matching: "(?i)^X-Trace-.*"
+
+events:
+  providers:
+    nats:
+      - id: default
+        url: "nats://localhost:4222"
+      - id: my-nats
+        url: "nats://localhost:4222"
+    kafka:
+      - id: my-kafka
+        brokers:
+          - "localhost:9092"
+    redis:
+      - id: my-redis
+        urls:
+        - "redis://localhost:6379/2"
