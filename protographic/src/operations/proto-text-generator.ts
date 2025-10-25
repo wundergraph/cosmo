@@ -110,11 +110,9 @@ function generateHeader(options?: ProtoTextOptions): string[] {
 export function serviceToProtoText(service: protobuf.Service, options?: ProtoTextOptions): string[] {
   const lines: string[] = [];
   
-  // Service comment
+  // Only include service comment if there's an actual custom comment
   if (options?.includeComments && service.comment) {
     lines.push(`// ${service.comment}`);
-  } else {
-    lines.push(`// Service definition for ${service.name}`);
   }
   
   lines.push(`service ${service.name} {`);
@@ -122,7 +120,14 @@ export function serviceToProtoText(service: protobuf.Service, options?: ProtoTex
   // Sort methods for consistent output
   const methods = Object.values(service.methods).sort((a, b) => a.name.localeCompare(b.name));
   
-  for (const method of methods) {
+  for (let i = 0; i < methods.length; i++) {
+    const method = methods[i];
+    
+    // Add blank line between methods for readability
+    if (i > 0) {
+      lines.push('');
+    }
+    
     if (options?.includeComments && method.comment) {
       lines.push(`  // ${method.comment}`);
     }
