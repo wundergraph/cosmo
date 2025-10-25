@@ -8,6 +8,7 @@ import {
   GraphQLInt,
   GraphQLNonNull,
   GraphQLList,
+  GraphQLOutputType,
   Kind,
 } from 'graphql';
 import {
@@ -52,7 +53,7 @@ describe('Message Builder', () => {
 
   describe('buildNestedMessage', () => {
     test('should build message from field map', () => {
-      const fields = new Map<string, any>([
+      const fields = new Map<string, GraphQLOutputType>([
         ['id', new GraphQLNonNull(GraphQLString)],
         ['name', GraphQLString],
         ['age', GraphQLInt],
@@ -68,7 +69,7 @@ describe('Message Builder', () => {
     });
 
     test('should assign sequential field numbers', () => {
-      const fields = new Map<string, any>([
+      const fields = new Map<string, GraphQLOutputType>([
         ['first', GraphQLString],
         ['second', GraphQLString],
         ['third', GraphQLString],
@@ -83,7 +84,7 @@ describe('Message Builder', () => {
 
     test('should use field number manager when provided', () => {
       const manager = createFieldNumberManager();
-      const fields = new Map<string, any>([
+      const fields = new Map<string, GraphQLOutputType>([
         ['field1', GraphQLString],
         ['field2', GraphQLInt],
       ]);
@@ -380,7 +381,7 @@ describe('Message Builder', () => {
 
       // Should throw an error for unknown field
       expect(() => {
-        buildMessageFromSelectionSet('UserResponse', userSelection.selectionSet, userType, typeInfo);
+        buildMessageFromSelectionSet('UserResponse', userSelection.selectionSet!, userType, typeInfo);
       }).toThrow();
     });
   });

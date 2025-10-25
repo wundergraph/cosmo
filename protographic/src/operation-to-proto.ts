@@ -17,6 +17,13 @@ import {
   GraphQLEnumType,
   FragmentDefinitionNode,
 } from 'graphql';
+
+/**
+ * Extended Method interface that includes custom properties
+ */
+interface MethodWithIdempotency extends protobuf.Method {
+  idempotencyLevel?: 'NO_SIDE_EFFECTS' | 'DEFAULT';
+}
 import { createFieldNumberManager } from './operations/field-numbering.js';
 import { buildMessageFromSelectionSet } from './operations/message-builder.js';
 import { buildRequestMessage, buildInputObjectMessage, buildEnumType } from './operations/request-builder.js';
@@ -293,7 +300,8 @@ class OperationsToProtoVisitor {
 
     // Mark Query operations with idempotency level if specified
     if (this.queryIdempotency && node.operation === OperationTypeNode.QUERY) {
-      (method as any).idempotencyLevel = this.queryIdempotency;
+      const methodWithIdempotency = method as MethodWithIdempotency;
+      methodWithIdempotency.idempotencyLevel = this.queryIdempotency;
     }
 
     service.add(method);
