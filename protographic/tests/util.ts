@@ -72,8 +72,8 @@ export function getFieldNumbersFromMessage(root: protobufjs.Root, messagePath: s
 function getAllNestedTypeNames(root: protobufjs.Root): string[] {
   const names: string[] = [];
 
-  function collectNames(obj: any, prefix: string = '') {
-    if (obj.nested) {
+  function collectNames(obj: protobufjs.ReflectionObject, prefix: string = '') {
+    if ('nested' in obj && obj.nested) {
       for (const [name, nested] of Object.entries(obj.nested)) {
         const fullName = prefix ? `${prefix}.${name}` : name;
         names.push(fullName);
@@ -115,8 +115,8 @@ export function getEnumValuesWithNumbers(root: protobufjs.Root, enumName: string
  * @param serviceName The name of the service to extract methods from
  * @returns Array of method names in order
  */
-export function getServiceMethods(root: any, serviceName: string): string[] {
-  const service = root.lookup(serviceName);
+export function getServiceMethods(root: protobufjs.Root, serviceName: string): string[] {
+  const service = root.lookup(serviceName) as protobufjs.Service | null;
   if (!service || !service.methods) {
     return [];
   }
@@ -130,14 +130,16 @@ export function getServiceMethods(root: any, serviceName: string): string[] {
  * @param messageName The name of the message to extract reserved numbers from
  * @returns Array of reserved field numbers or empty array if none
  */
-export function getReservedNumbers(root: any, typeName: string, isEnum = false): number[] {
-  const type = root.lookup(typeName);
+export function getReservedNumbers(root: protobufjs.Root, typeName: string, isEnum = false): number[] {
+  const type = root.lookup(typeName) as protobufjs.Type | protobufjs.Enum | null;
   if (!type) {
     return [];
   }
 
+  // Type assertion needed because protobufjs doesn't expose reserved property in type definitions
+  const typeWithReserved = type as any;
   return (
-    type.reserved?.map((range: any) => {
+    typeWithReserved.reserved?.map((range: number | { start: number; end: number }) => {
       if (typeof range === 'number') {
         return range;
       } else if (range.start === range.end) {
@@ -156,7 +158,7 @@ export function getReservedNumbers(root: any, typeName: string, isEnum = false):
  * @returns Object with field definitions and reserved numbers
  */
 export function getMessageContent(
-  root: any,
+  root: protobufjs.Root,
   messageName: string,
 ): {
   fields: Record<string, number>;
@@ -175,7 +177,7 @@ export function getMessageContent(
  * @returns Object with enum values and reserved numbers
  */
 export function getEnumContent(
-  root: any,
+  root: protobufjs.Root,
   enumName: string,
 ): {
   values: Record<string, number>;
