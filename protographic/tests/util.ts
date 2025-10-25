@@ -56,97 +56,25 @@ export function getFieldNumbersFromMessage(root: protobufjs.Root, messageName: s
     // Try direct lookup first (for flat names or already-correct paths)
     message = root.lookupType(messageName);
   } catch (error) {
-    // If that fails, try to convert verbose name to nested path
-    // Strategy: Try different ways to split the name until one works
-
-    // Find the FIRST occurrence of Response/Request suffix
-    const responseIndex = messageName.indexOf('Response');
-    const requestIndex = messageName.indexOf('Request');
-
-    let splitIndex = -1;
-    let suffix = '';
-    if (responseIndex !== -1 && requestIndex !== -1) {
-      splitIndex = Math.min(responseIndex, requestIndex);
-      suffix = splitIndex === responseIndex ? 'Response' : 'Request';
-    } else if (responseIndex !== -1) {
-      splitIndex = responseIndex;
-      suffix = 'Response';
-    } else if (requestIndex !== -1) {
-      splitIndex = requestIndex;
-      suffix = 'Request';
+    // Convert concatenated name to dot notation by trying different split strategies
+    const convertedPath = convertConcatenatedNameToDotNotation(messageName, root);
+    
+    if (!convertedPath) {
+      throw new Error(
+        `Could not find message "${messageName}". ` +
+        `Tried various path conversions but none matched. ` +
+        `Available types: ${getAllNestedTypeNames(root).join(', ')}`
+      );
     }
-
-    if (splitIndex !== -1) {
-      const baseName = messageName.substring(0, splitIndex + suffix.length);
-      const nestedPart = messageName.substring(splitIndex + suffix.length);
-
-      if (nestedPart) {
-        // Try progressively longer first segments
-        // For 'SearchUsersUsers', try:
-        // 1. 'SearchUsersResponse.SearchUsersUsers' (no split)
-        // 2. 'SearchUsersResponse.SearchUsers.Users' (split after SearchUsers)
-        // 3. 'SearchUsersResponse.Search.Users.Users' (split after Search)
-
-        // Try different ways to split the nested part
-        // Strategy: Split at each capital letter and try all combinations
-
-        // Find all capital letter positions
-        const capitals: number[] = [];
-        for (let i = 0; i < nestedPart.length; i++) {
-          if (
-            i === 0 ||
-            (nestedPart[i] === nestedPart[i].toUpperCase() && nestedPart[i] !== nestedPart[i].toLowerCase())
-          ) {
-            capitals.push(i);
-          }
-        }
-
-        // Try different groupings of these segments
-        // For "SearchUsersUsers" with capitals at [0, 6, 11]:
-        // - Try: "SearchUsersUsers" (no split)
-        // - Try: "SearchUsers.Users" (split at position 6)
-        // - Try: "Search.UsersUsers" (split at position 6 differently)
-        // - Try: "Search.Users.Users" (split at both 6 and 11)
-
-        const attempts: string[] = [];
-
-        // No split - whole thing as one segment
-        attempts.push(`${baseName}.${nestedPart}`);
-
-        // Try splitting at each capital position
-        for (let i = 1; i < capitals.length; i++) {
-          const firstPart = nestedPart.substring(0, capitals[i]);
-          const secondPart = nestedPart.substring(capitals[i]);
-          attempts.push(`${baseName}.${firstPart}.${secondPart}`);
-
-          // Also try further splits in the second part
-          for (let j = i + 1; j < capitals.length; j++) {
-            const thirdPart = secondPart.substring(capitals[j] - capitals[i]);
-            const secondPartTrimmed = secondPart.substring(0, capitals[j] - capitals[i]);
-            attempts.push(`${baseName}.${firstPart}.${secondPartTrimmed}.${thirdPart}`);
-          }
-        }
-
-        // Try each attempt
-        let found = false;
-        for (const attempt of attempts) {
-          try {
-            message = root.lookupType(attempt);
-            found = true;
-            break;
-          } catch {
-            // Continue trying
-          }
-        }
-
-        if (!found) {
-          throw error;
-        }
-      } else {
-        throw error;
-      }
-    } else {
-      throw error;
+    
+    try {
+      message = root.lookupType(convertedPath);
+    } catch {
+      throw new Error(
+        `Could not find message "${messageName}". ` +
+        `Tried direct lookup and converted path "${convertedPath}". ` +
+        `Available types: ${getAllNestedTypeNames(root).join(', ')}`
+      );
     }
   }
 
@@ -157,6 +85,120 @@ export function getFieldNumbersFromMessage(root: protobufjs.Root, messageName: s
   }
 
   return fieldNumbers;
+}
+
+/**
+ * Gets all nested type names from a root for debugging
+ */
+function getAllNestedTypeNames(root: protobufjs.Root): string[] {
+  const names: string[] = [];
+  
+  function collectNames(obj: any, prefix: string = '') {
+    if (obj.nested) {
+      for (const [name, nested] of Object.entries(obj.nested)) {
+        const fullName = prefix ? `${prefix}.${name}` : name;
+        names.push(fullName);
+        collectNames(nested, fullName);
+      }
+    }
+  }
+  
+  collectNames(root);
+  return names;
+}
+
+/**
+ * Converts a concatenated message name to dot notation by trying to match against actual types
+ *
+ * @param name - Concatenated name like 'GetUserResponseUser'
+ * @param root - The protobufjs root to check against
+ * @returns Dot notation path like 'GetUserResponse.User' or null if not found
+ */
+function convertConcatenatedNameToDotNotation(name: string, root: protobufjs.Root): string | null {
+  // Find Request or Response suffix
+  const responseMatch = name.match(/^(.+?Response)(.+)$/);
+  const requestMatch = name.match(/^(.+?Request)(.+)$/);
+  
+  const match = responseMatch || requestMatch;
+  
+  if (!match) {
+    return null;
+  }
+  
+  const [, base, nested] = match;
+  
+  if (!nested) {
+    return null;
+  }
+  
+  // Split at capital letters to get potential segments
+  const segments = nested.split(/(?=[A-Z])/).filter(Boolean);
+  
+  // Generate all possible dot-notation paths and try each one
+  const attempts = generatePathAttempts(base, segments);
+  
+  // Try each attempt and return the first one that exists
+  for (const attempt of attempts) {
+    try {
+      root.lookupType(attempt);
+      return attempt; // Found it!
+    } catch {
+      // Continue trying
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Generates all reasonable path attempts for a given base and segments
+ *
+ * Examples:
+ *   base='GetUserResponse', segments=['User', 'Profile', 'Settings']
+ *   -> ['GetUserResponse.User.Profile.Settings', 'GetUserResponse.UserProfile.Settings', etc.]
+ */
+function generatePathAttempts(base: string, segments: string[]): string[] {
+  const attempts: string[] = [];
+  
+  if (segments.length === 0) {
+    return [];
+  }
+  
+  if (segments.length === 1) {
+    return [`${base}.${segments[0]}`];
+  }
+  
+  if (segments.length === 2) {
+    // Try both: 'Base.Seg1.Seg2' and 'Base.Seg1Seg2'
+    attempts.push(`${base}.${segments[0]}.${segments[1]}`);
+    attempts.push(`${base}.${segments.join('')}`);
+    return attempts;
+  }
+  
+  // For 3+ segments, try various groupings
+  // Priority order: most specific (all separate) to least specific (all together)
+  
+  // 1. All segments separate: 'Base.A.B.C'
+  attempts.push(`${base}.${segments.join('.')}`);
+  
+  // 2. Group first N-1, last separate: 'Base.AB.C'
+  if (segments.length >= 2) {
+    const firstPart = segments.slice(0, -1).join('');
+    const lastPart = segments[segments.length - 1];
+    attempts.push(`${base}.${firstPart}.${lastPart}`);
+  }
+  
+  // 3. First separate, rest together: 'Base.A.BC'
+  if (segments.length >= 2) {
+    const firstPart = segments[0];
+    const restPart = segments.slice(1).join('');
+    attempts.push(`${base}.${firstPart}.${restPart}`);
+  }
+  
+  // 4. All together: 'Base.ABC'
+  attempts.push(`${base}.${segments.join('')}`);
+  
+  return attempts;
 }
 
 /**
