@@ -57,7 +57,7 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option(
     '-w, --with-operations <path-to-operations>',
-    'Path to directory containing GraphQL operation files (.graphql, .gql). ' +
+    'Path to directory containing GraphQL operation files (.graphql, .gql, .graphqls, .gqls). ' +
       'When provided, generates proto from operations instead of SDL types.',
   );
   command.option(
@@ -233,11 +233,11 @@ async function readOperationFiles(operationsDir: string): Promise<string> {
   const files = await readdir(operationsDir);
   const operationFiles = files.filter((file) => {
     const ext = extname(file).toLowerCase();
-    return ext === '.graphql' || ext === '.gql';
+    return ext === '.graphql' || ext === '.gql' || ext === '.graphqls' || ext === '.gqls';
   });
 
   if (operationFiles.length === 0) {
-    throw new Error(`No GraphQL operation files (.graphql, .gql) found in ${operationsDir}`);
+    throw new Error(`No GraphQL operation files (.graphql, .gql, .graphqls, .gqls) found in ${operationsDir}`);
   }
 
   const operations: string[] = [];
