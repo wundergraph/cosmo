@@ -136,19 +136,31 @@ export function getReservedNumbers(root: protobufjs.Root, typeName: string, isEn
     return [];
   }
 
-  // Type assertion needed because protobufjs doesn't expose reserved property in type definitions
-  const typeWithReserved = type as any;
-  return (
-    typeWithReserved.reserved?.map((range: number | { start: number; end: number }) => {
-      if (typeof range === 'number') {
-        return range;
-      } else if (range.start === range.end) {
-        return range.start;
+  // Use the existing reserved property from protobufjs types
+  if (!type.reserved) {
+    return [];
+  }
+
+  const numbers: number[] = [];
+  for (const range of type.reserved) {
+    if (typeof range === 'string') {
+      // Skip string reserved fields (field names)
+      continue;
+    }
+    if (Array.isArray(range)) {
+      // Handle number arrays [start, end]
+      if (range.length === 2) {
+        const [start, end] = range;
+        for (let i = start; i <= end; i++) {
+          numbers.push(i);
+        }
+      } else {
+        numbers.push(...range);
       }
-      // For ranges, just return the start for simplicity
-      return range.start;
-    }) || []
-  );
+    }
+  }
+  
+  return numbers;
 }
 
 /**
