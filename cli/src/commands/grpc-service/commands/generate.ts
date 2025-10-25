@@ -131,7 +131,7 @@ async function generateCommandAction(name: string, options: CLIOptions) {
     const resultInfo: Record<string, string> = {
       'input file': inputFile,
       'output dir': options.output,
-      'service name': upperFirst(camelCase(name)) + 'Service',
+      'service name': upperFirst(camelCase(name)),
       'generation mode': result.isOperationsMode ? 'operations-based' : 'SDL-based',
       generated: generatedFiles.join(', '),
     };
@@ -200,7 +200,7 @@ async function generateProtoAndMapping({
   idempotentQueries = false,
 }: GenerationOptions): Promise<GenerationResult> {
   const schema = await readFile(schemaFile, 'utf8');
-  const serviceName = upperFirst(camelCase(name)) + 'Service';
+  const serviceName = upperFirst(camelCase(name));
 
   // Validate the GraphQL schema
   spinner.text = 'Validating GraphQL schema...';
