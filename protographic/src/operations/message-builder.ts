@@ -7,10 +7,12 @@ import {
   GraphQLSchema,
   TypeInfo,
   isObjectType,
+  isEnumType,
   getNamedType,
   InlineFragmentNode,
   FragmentDefinitionNode,
   GraphQLOutputType,
+  GraphQLEnumType,
   FragmentSpreadNode,
   isInterfaceType,
   isUnionType,
@@ -18,6 +20,7 @@ import {
 import { mapGraphQLTypeToProto, ProtoTypeInfo } from './type-mapper.js';
 import { FieldNumberManager } from './field-numbering.js';
 import { graphqlFieldToProtoField } from '../naming-conventions.js';
+import { buildEnumType } from './request-builder.js';
 import { upperFirst, camelCase } from 'lodash-es';
 
 /**
@@ -34,6 +37,8 @@ export interface MessageBuilderOptions {
   fragments?: Map<string, FragmentDefinitionNode>;
   /** Schema for type lookups */
   schema?: GraphQLSchema;
+  /** Set to track created enums (to avoid duplicates) */
+  createdEnums?: Set<string>;
 }
 
 /**
@@ -224,6 +229,27 @@ function processFieldSelection(
     }
   } else {
     // Scalar or enum field
+    const namedType = getNamedType(fieldType);
+    
+    // If this is an enum type, ensure it's added to the root
+    if (isEnumType(namedType) && options?.root) {
+      const enumTypeName = namedType.name;
+      const createdEnums = options.createdEnums || new Set<string>();
+      
+      if (!createdEnums.has(enumTypeName)) {
+        const protoEnum = buildEnumType(namedType as GraphQLEnumType, {
+          includeComments: options.includeComments,
+        });
+        options.root.add(protoEnum);
+        createdEnums.add(enumTypeName);
+        
+        // Update the set in options if it was provided
+        if (options.createdEnums) {
+          options.createdEnums.add(enumTypeName);
+        }
+      }
+    }
+    
     const protoTypeInfo = mapGraphQLTypeToProto(fieldType);
     
     // Get field number - check if already assigned from reconciliation
