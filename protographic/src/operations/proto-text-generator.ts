@@ -106,43 +106,43 @@ function generateHeader(options?: ProtoTextOptions): string[] {
 
   // Options
   const protoOptions: string[] = [];
-  
+
   if (options?.goPackage) {
     protoOptions.push(`option go_package = "${options.goPackage}";`);
   }
-  
+
   if (options?.javaPackage) {
     protoOptions.push(`option java_package = "${options.javaPackage}";`);
   }
-  
+
   if (options?.javaOuterClassname) {
     protoOptions.push(`option java_outer_classname = "${options.javaOuterClassname}";`);
   }
-  
+
   if (options?.javaMultipleFiles) {
     protoOptions.push(`option java_multiple_files = true;`);
   }
-  
+
   if (options?.csharpNamespace) {
     protoOptions.push(`option csharp_namespace = "${options.csharpNamespace}";`);
   }
-  
+
   if (options?.rubyPackage) {
     protoOptions.push(`option ruby_package = "${options.rubyPackage}";`);
   }
-  
+
   if (options?.phpNamespace) {
     protoOptions.push(`option php_namespace = "${options.phpNamespace}";`);
   }
-  
+
   if (options?.phpMetadataNamespace) {
     protoOptions.push(`option php_metadata_namespace = "${options.phpMetadataNamespace}";`);
   }
-  
+
   if (options?.objcClassPrefix) {
     protoOptions.push(`option objc_class_prefix = "${options.objcClassPrefix}";`);
   }
-  
+
   if (options?.swiftPrefix) {
     protoOptions.push(`option swift_prefix = "${options.swiftPrefix}";`);
   }
@@ -150,7 +150,7 @@ function generateHeader(options?: ProtoTextOptions): string[] {
   if (options?.options) {
     protoOptions.push(...options.options);
   }
-  
+
   if (protoOptions.length > 0) {
     lines.push(...protoOptions);
     lines.push('');

@@ -219,39 +219,39 @@ export class GraphQLToProtoTextVisitor {
       const goPackageOption = goPackage || defaultGoPackage;
       this.options.push(`option go_package = "${goPackageOption}";`);
     }
-    
+
     if (javaPackage) {
       this.options.push(`option java_package = "${javaPackage}";`);
     }
-    
+
     if (javaOuterClassname) {
       this.options.push(`option java_outer_classname = "${javaOuterClassname}";`);
     }
-    
+
     if (javaMultipleFiles) {
       this.options.push(`option java_multiple_files = true;`);
     }
-    
+
     if (csharpNamespace) {
       this.options.push(`option csharp_namespace = "${csharpNamespace}";`);
     }
-    
+
     if (rubyPackage) {
       this.options.push(`option ruby_package = "${rubyPackage}";`);
     }
-    
+
     if (phpNamespace) {
       this.options.push(`option php_namespace = "${phpNamespace}";`);
     }
-    
+
     if (phpMetadataNamespace) {
       this.options.push(`option php_metadata_namespace = "${phpMetadataNamespace}";`);
     }
-    
+
     if (objcClassPrefix) {
       this.options.push(`option objc_class_prefix = "${objcClassPrefix}";`);
     }
-    
+
     if (swiftPrefix) {
       this.options.push(`option swift_prefix = "${swiftPrefix}";`);
     }
