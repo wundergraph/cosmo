@@ -369,35 +369,40 @@ type EngineDebugConfiguration struct {
 }
 
 type EngineExecutionConfiguration struct {
-	Debug                                            EngineDebugConfiguration `yaml:"debug"`
-	EnableSingleFlight                               bool                     `envDefault:"true" env:"ENGINE_ENABLE_SINGLE_FLIGHT" yaml:"enable_single_flight"`
-	EnableRequestTracing                             bool                     `envDefault:"true" env:"ENGINE_ENABLE_REQUEST_TRACING" yaml:"enable_request_tracing"`
-	EnableExecutionPlanCacheResponseHeader           bool                     `envDefault:"false" env:"ENGINE_ENABLE_EXECUTION_PLAN_CACHE_RESPONSE_HEADER" yaml:"enable_execution_plan_cache_response_header"`
-	MaxConcurrentResolvers                           int                      `envDefault:"1024" env:"ENGINE_MAX_CONCURRENT_RESOLVERS" yaml:"max_concurrent_resolvers,omitempty"`
-	EnableNetPoll                                    bool                     `envDefault:"true" env:"ENGINE_ENABLE_NET_POLL" yaml:"enable_net_poll"`
-	WebSocketClientPollTimeout                       time.Duration            `envDefault:"1s" env:"ENGINE_WEBSOCKET_CLIENT_POLL_TIMEOUT" yaml:"websocket_client_poll_timeout,omitempty"`
-	WebSocketClientConnBufferSize                    int                      `envDefault:"128" env:"ENGINE_WEBSOCKET_CLIENT_CONN_BUFFER_SIZE" yaml:"websocket_client_conn_buffer_size,omitempty"`
-	WebSocketClientReadTimeout                       time.Duration            `envDefault:"5s" env:"ENGINE_WEBSOCKET_CLIENT_READ_TIMEOUT" yaml:"websocket_client_read_timeout,omitempty"`
-	WebSocketClientWriteTimeout                      time.Duration            `envDefault:"10s" env:"ENGINE_WEBSOCKET_CLIENT_WRITE_TIMEOUT" yaml:"websocket_client_write_timeout,omitempty"`
-	WebSocketClientPingInterval                      time.Duration            `envDefault:"15s" env:"ENGINE_WEBSOCKET_CLIENT_PING_INTERVAL" yaml:"websocket_client_ping_interval,omitempty"`
-	WebSocketClientPingTimeout                       time.Duration            `envDefault:"30s" env:"ENGINE_WEBSOCKET_CLIENT_PING_TIMEOUT" yaml:"websocket_client_ping_timeout,omitempty"`
-	WebSocketClientFrameTimeout                      time.Duration            `envDefault:"100ms" env:"ENGINE_WEBSOCKET_CLIENT_FRAME_TIMEOUT" yaml:"websocket_client_frame_timeout,omitempty"`
-	ExecutionPlanCacheSize                           int64                    `envDefault:"1024" env:"ENGINE_EXECUTION_PLAN_CACHE_SIZE" yaml:"execution_plan_cache_size,omitempty"`
-	MinifySubgraphOperations                         bool                     `envDefault:"true" env:"ENGINE_MINIFY_SUBGRAPH_OPERATIONS" yaml:"minify_subgraph_operations"`
-	EnablePersistedOperationsCache                   bool                     `envDefault:"true" env:"ENGINE_ENABLE_PERSISTED_OPERATIONS_CACHE" yaml:"enable_persisted_operations_cache"`
-	EnableNormalizationCache                         bool                     `envDefault:"true" env:"ENGINE_ENABLE_NORMALIZATION_CACHE" yaml:"enable_normalization_cache"`
-	NormalizationCacheSize                           int64                    `envDefault:"1024" env:"ENGINE_NORMALIZATION_CACHE_SIZE" yaml:"normalization_cache_size,omitempty"`
-	OperationHashCacheSize                           int64                    `envDefault:"2048" env:"ENGINE_OPERATION_HASH_CACHE_SIZE" yaml:"operation_hash_cache_size,omitempty"`
-	ParseKitPoolSize                                 int                      `envDefault:"16" env:"ENGINE_PARSEKIT_POOL_SIZE" yaml:"parsekit_pool_size,omitempty"`
-	EnableValidationCache                            bool                     `envDefault:"true" env:"ENGINE_ENABLE_VALIDATION_CACHE" yaml:"enable_validation_cache"`
-	ValidationCacheSize                              int64                    `envDefault:"1024" env:"ENGINE_VALIDATION_CACHE_SIZE" yaml:"validation_cache_size,omitempty"`
-	DisableExposingVariablesContentOnValidationError bool                     `envDefault:"false" env:"ENGINE_DISABLE_EXPOSING_VARIABLES_CONTENT_ON_VALIDATION_ERROR" yaml:"disable_exposing_variables_content_on_validation_error"`
-	ResolverMaxRecyclableParserSize                  int                      `envDefault:"32768" env:"ENGINE_RESOLVER_MAX_RECYCLABLE_PARSER_SIZE" yaml:"resolver_max_recyclable_parser_size,omitempty"`
-	EnableSubgraphFetchOperationName                 bool                     `envDefault:"false" env:"ENGINE_ENABLE_SUBGRAPH_FETCH_OPERATION_NAME" yaml:"enable_subgraph_fetch_operation_name"`
-	DisableVariablesRemapping                        bool                     `envDefault:"false" env:"ENGINE_DISABLE_VARIABLES_REMAPPING" yaml:"disable_variables_remapping"`
-	EnableRequireFetchReasons                        bool                     `envDefault:"false" env:"ENGINE_ENABLE_REQUIRE_FETCH_REASONS" yaml:"enable_require_fetch_reasons"`
-	SubscriptionFetchTimeout                         time.Duration            `envDefault:"30s" env:"ENGINE_SUBSCRIPTION_FETCH_TIMEOUT" yaml:"subscription_fetch_timeout,omitempty"`
-	ValidateRequiredExternalFields                   bool                     `envDefault:"false" env:"ENGINE_VALIDATE_REQUIRED_EXTERNAL_FIELDS" yaml:"validate_required_external_fields"`
+	Debug              EngineDebugConfiguration `yaml:"debug"`
+	EnableSingleFlight bool                     `envDefault:"true" env:"ENGINE_ENABLE_SINGLE_FLIGHT" yaml:"enable_single_flight"`
+	// ForceEnableSingleFlight always enables single flight, except for mutations
+	// By default, SingleFlight / Request Deduplication is disabled when PreOriginHandlers are configured
+	// This is because PreOriginHandlers can modify request headers, which has influence on the request deduplication key
+	// If you're sure that your PreOriginHandlers won't interfere with the request deduplication key, you can enable it with this flag
+	ForceEnableSingleFlight                          bool          `envDefault:"false" env:"ENGINE_FORCE_ENABLE_SINGLE_FLIGHT" yaml:"force_enable_single_flight"`
+	EnableRequestTracing                             bool          `envDefault:"true" env:"ENGINE_ENABLE_REQUEST_TRACING" yaml:"enable_request_tracing"`
+	EnableExecutionPlanCacheResponseHeader           bool          `envDefault:"false" env:"ENGINE_ENABLE_EXECUTION_PLAN_CACHE_RESPONSE_HEADER" yaml:"enable_execution_plan_cache_response_header"`
+	MaxConcurrentResolvers                           int           `envDefault:"1024" env:"ENGINE_MAX_CONCURRENT_RESOLVERS" yaml:"max_concurrent_resolvers,omitempty"`
+	EnableNetPoll                                    bool          `envDefault:"true" env:"ENGINE_ENABLE_NET_POLL" yaml:"enable_net_poll"`
+	WebSocketClientPollTimeout                       time.Duration `envDefault:"1s" env:"ENGINE_WEBSOCKET_CLIENT_POLL_TIMEOUT" yaml:"websocket_client_poll_timeout,omitempty"`
+	WebSocketClientConnBufferSize                    int           `envDefault:"128" env:"ENGINE_WEBSOCKET_CLIENT_CONN_BUFFER_SIZE" yaml:"websocket_client_conn_buffer_size,omitempty"`
+	WebSocketClientReadTimeout                       time.Duration `envDefault:"5s" env:"ENGINE_WEBSOCKET_CLIENT_READ_TIMEOUT" yaml:"websocket_client_read_timeout,omitempty"`
+	WebSocketClientWriteTimeout                      time.Duration `envDefault:"10s" env:"ENGINE_WEBSOCKET_CLIENT_WRITE_TIMEOUT" yaml:"websocket_client_write_timeout,omitempty"`
+	WebSocketClientPingInterval                      time.Duration `envDefault:"15s" env:"ENGINE_WEBSOCKET_CLIENT_PING_INTERVAL" yaml:"websocket_client_ping_interval,omitempty"`
+	WebSocketClientPingTimeout                       time.Duration `envDefault:"30s" env:"ENGINE_WEBSOCKET_CLIENT_PING_TIMEOUT" yaml:"websocket_client_ping_timeout,omitempty"`
+	WebSocketClientFrameTimeout                      time.Duration `envDefault:"100ms" env:"ENGINE_WEBSOCKET_CLIENT_FRAME_TIMEOUT" yaml:"websocket_client_frame_timeout,omitempty"`
+	ExecutionPlanCacheSize                           int64         `envDefault:"1024" env:"ENGINE_EXECUTION_PLAN_CACHE_SIZE" yaml:"execution_plan_cache_size,omitempty"`
+	MinifySubgraphOperations                         bool          `envDefault:"true" env:"ENGINE_MINIFY_SUBGRAPH_OPERATIONS" yaml:"minify_subgraph_operations"`
+	EnablePersistedOperationsCache                   bool          `envDefault:"true" env:"ENGINE_ENABLE_PERSISTED_OPERATIONS_CACHE" yaml:"enable_persisted_operations_cache"`
+	EnableNormalizationCache                         bool          `envDefault:"true" env:"ENGINE_ENABLE_NORMALIZATION_CACHE" yaml:"enable_normalization_cache"`
+	NormalizationCacheSize                           int64         `envDefault:"1024" env:"ENGINE_NORMALIZATION_CACHE_SIZE" yaml:"normalization_cache_size,omitempty"`
+	OperationHashCacheSize                           int64         `envDefault:"2048" env:"ENGINE_OPERATION_HASH_CACHE_SIZE" yaml:"operation_hash_cache_size,omitempty"`
+	ParseKitPoolSize                                 int           `envDefault:"16" env:"ENGINE_PARSEKIT_POOL_SIZE" yaml:"parsekit_pool_size,omitempty"`
+	EnableValidationCache                            bool          `envDefault:"true" env:"ENGINE_ENABLE_VALIDATION_CACHE" yaml:"enable_validation_cache"`
+	ValidationCacheSize                              int64         `envDefault:"1024" env:"ENGINE_VALIDATION_CACHE_SIZE" yaml:"validation_cache_size,omitempty"`
+	DisableExposingVariablesContentOnValidationError bool          `envDefault:"false" env:"ENGINE_DISABLE_EXPOSING_VARIABLES_CONTENT_ON_VALIDATION_ERROR" yaml:"disable_exposing_variables_content_on_validation_error"`
+	ResolverMaxRecyclableParserSize                  int           `envDefault:"32768" env:"ENGINE_RESOLVER_MAX_RECYCLABLE_PARSER_SIZE" yaml:"resolver_max_recyclable_parser_size,omitempty"`
+	EnableSubgraphFetchOperationName                 bool          `envDefault:"false" env:"ENGINE_ENABLE_SUBGRAPH_FETCH_OPERATION_NAME" yaml:"enable_subgraph_fetch_operation_name"`
+	DisableVariablesRemapping                        bool          `envDefault:"false" env:"ENGINE_DISABLE_VARIABLES_REMAPPING" yaml:"disable_variables_remapping"`
+	EnableRequireFetchReasons                        bool          `envDefault:"false" env:"ENGINE_ENABLE_REQUIRE_FETCH_REASONS" yaml:"enable_require_fetch_reasons"`
+	SubscriptionFetchTimeout                         time.Duration `envDefault:"30s" env:"ENGINE_SUBSCRIPTION_FETCH_TIMEOUT" yaml:"subscription_fetch_timeout,omitempty"`
+	ValidateRequiredExternalFields                   bool          `envDefault:"false" env:"ENGINE_VALIDATE_REQUIRED_EXTERNAL_FIELDS" yaml:"validate_required_external_fields"`
 }
 
 type BlockOperationConfiguration struct {

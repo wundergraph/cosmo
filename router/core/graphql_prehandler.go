@@ -69,6 +69,10 @@ type PreHandlerOptions struct {
 	DisableVariablesRemapping   bool
 	ExprManager                 *expr.Manager
 	OmitBatchExtensions         bool
+
+	EnableRequestDeduplication      bool
+	ForceEnableRequestDeduplication bool
+	HasPreOriginHandlers            bool
 }
 
 type PreHandler struct {
@@ -101,6 +105,10 @@ type PreHandler struct {
 	disableVariablesRemapping   bool
 	exprManager                 *expr.Manager
 	omitBatchExtensions         bool
+
+	enableRequestDeduplication      bool
+	forceEnableRequestDeduplication bool
+	hasPreOriginHandlers            bool
 }
 
 type httpOperation struct {
@@ -132,21 +140,24 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 			"wundergraph/cosmo/router/pre_handler",
 			trace.WithInstrumentationVersion("0.0.1"),
 		),
-		fileUploadEnabled:         opts.FileUploadEnabled,
-		maxUploadFiles:            opts.MaxUploadFiles,
-		maxUploadFileSize:         opts.MaxUploadFileSize,
-		complexityLimits:          opts.ComplexityLimits,
-		alwaysIncludeQueryPlan:    opts.AlwaysIncludeQueryPlan,
-		alwaysSkipLoader:          opts.AlwaysSkipLoader,
-		queryPlansEnabled:         opts.QueryPlansEnabled,
-		queryPlansLoggingEnabled:  opts.QueryPlansLoggingEnabled,
-		trackSchemaUsageInfo:      opts.TrackSchemaUsageInfo,
-		clientHeader:              opts.ClientHeader,
-		computeOperationSha256:    opts.ComputeOperationSha256,
-		apolloCompatibilityFlags:  opts.ApolloCompatibilityFlags,
-		disableVariablesRemapping: opts.DisableVariablesRemapping,
-		exprManager:               opts.ExprManager,
-		omitBatchExtensions:       opts.OmitBatchExtensions,
+		fileUploadEnabled:               opts.FileUploadEnabled,
+		maxUploadFiles:                  opts.MaxUploadFiles,
+		maxUploadFileSize:               opts.MaxUploadFileSize,
+		complexityLimits:                opts.ComplexityLimits,
+		alwaysIncludeQueryPlan:          opts.AlwaysIncludeQueryPlan,
+		alwaysSkipLoader:                opts.AlwaysSkipLoader,
+		queryPlansEnabled:               opts.QueryPlansEnabled,
+		queryPlansLoggingEnabled:        opts.QueryPlansLoggingEnabled,
+		trackSchemaUsageInfo:            opts.TrackSchemaUsageInfo,
+		clientHeader:                    opts.ClientHeader,
+		computeOperationSha256:          opts.ComputeOperationSha256,
+		apolloCompatibilityFlags:        opts.ApolloCompatibilityFlags,
+		disableVariablesRemapping:       opts.DisableVariablesRemapping,
+		exprManager:                     opts.ExprManager,
+		omitBatchExtensions:             opts.OmitBatchExtensions,
+		enableRequestDeduplication:      opts.EnableRequestDeduplication,
+		forceEnableRequestDeduplication: opts.ForceEnableRequestDeduplication,
+		hasPreOriginHandlers:            opts.HasPreOriginHandlers,
 	}
 }
 
@@ -260,7 +271,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			}
 		}()
 
-		executionOptions, traceOptions, err := h.parseRequestOptions(r, clientInfo, requestLogger)
+		executionOptions, traceOptions, err := h.parseExecutionAndTraceOptions(r, clientInfo, requestLogger)
 		if err != nil {
 			requestContext.SetError(err)
 			writeRequestErrors(r, w, http.StatusBadRequest, graphqlerrors.RequestErrorsFromError(err), requestLogger)
@@ -1112,7 +1123,7 @@ func (h *PreHandler) flushMetrics(ctx context.Context, requestLogger *zap.Logger
 	requestLogger.Debug("Metrics flushed", zap.Duration("duration", time.Since(now)))
 }
 
-func (h *PreHandler) parseRequestOptions(r *http.Request, clientInfo *ClientInfo, requestLogger *zap.Logger) (resolve.ExecutionOptions, resolve.TraceOptions, error) {
+func (h *PreHandler) parseExecutionAndTraceOptions(r *http.Request, clientInfo *ClientInfo, requestLogger *zap.Logger) (resolve.ExecutionOptions, resolve.TraceOptions, error) {
 	ex, tr, err := h.internalParseRequestOptions(r, clientInfo, requestLogger)
 	if err != nil {
 		return ex, tr, err
@@ -1125,6 +1136,23 @@ func (h *PreHandler) parseRequestOptions(r *http.Request, clientInfo *ClientInfo
 	}
 	if !h.queryPlansEnabled {
 		ex.IncludeQueryPlanInResponse = false
+	}
+	// don't change the order of
+	// 1. enableRequestDeduplication
+	// 2. hasPreOriginHandlers
+	// 3. forceEnableRequestDeduplication
+	if h.enableRequestDeduplication {
+		ex.DisableRequestDeduplication = false
+	}
+	if h.hasPreOriginHandlers {
+		// if we have pre origin handlers, we cannot guarantee that these handlers won't modify headers
+		// as such, we're automatically disabling request deduplication
+		ex.DisableRequestDeduplication = true
+	}
+	if h.forceEnableRequestDeduplication {
+		// if the user has pre origin handlers but knows for sure that they don't affect request deduplication
+		// they can make an override (via config) to force enable it
+		ex.DisableRequestDeduplication = false
 	}
 	return ex, tr, nil
 }
