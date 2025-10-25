@@ -31,7 +31,7 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/sjson v1.2.5
 	github.com/twmb/franz-go v1.16.1
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.232
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.234
 	// Do not upgrade, it renames attributes we rely on
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.58.0
 	go.opentelemetry.io/contrib/propagators/b3 v1.23.0
@@ -193,8 +193,5 @@ replace (
 
 // Remember you can use Go workspaces to avoid using replace directives in multiple go.mod files
 // Use what is best for your personal workflow. See CONTRIBUTING.md for more information
-
-// Local development: Use local graphql-go-tools with Description support in OperationDefinition
-replace github.com/wundergraph/graphql-go-tools/v2 => /Users/asoorm/go/src/github.com/wundergraph/graphql-go-tools/v2
 
 // replace github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
