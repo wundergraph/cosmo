@@ -635,6 +635,230 @@ describe('Operation to Proto - Integration Tests', () => {
       expect(proto).toContain('option go_package = "github.com/example/api/v1"');
     });
 
+    test('should include java_package option', () => {
+      const schema = `
+        type Query {
+          hello: String
+        }
+      `;
+
+      const operation = `
+        query GetHello {
+          hello
+        }
+      `;
+
+      const { proto } = compileOperationsToProto(operation, schema, {
+        javaPackage: 'com.example.api',
+      });
+
+      expectValidProto(proto);
+      expect(proto).toContain('option java_package = "com.example.api"');
+    });
+
+    test('should include java_outer_classname option', () => {
+      const schema = `
+        type Query {
+          hello: String
+        }
+      `;
+
+      const operation = `
+        query GetHello {
+          hello
+        }
+      `;
+
+      const { proto } = compileOperationsToProto(operation, schema, {
+        javaOuterClassname: 'ApiProto',
+      });
+
+      expectValidProto(proto);
+      expect(proto).toContain('option java_outer_classname = "ApiProto"');
+    });
+
+    test('should include java_multiple_files option', () => {
+      const schema = `
+        type Query {
+          hello: String
+        }
+      `;
+
+      const operation = `
+        query GetHello {
+          hello
+        }
+      `;
+
+      const { proto } = compileOperationsToProto(operation, schema, {
+        javaMultipleFiles: true,
+      });
+
+      expectValidProto(proto);
+      expect(proto).toContain('option java_multiple_files = true');
+    });
+
+    test('should include csharp_namespace option', () => {
+      const schema = `
+        type Query {
+          hello: String
+        }
+      `;
+
+      const operation = `
+        query GetHello {
+          hello
+        }
+      `;
+
+      const { proto } = compileOperationsToProto(operation, schema, {
+        csharpNamespace: 'Example.Api',
+      });
+
+      expectValidProto(proto);
+      expect(proto).toContain('option csharp_namespace = "Example.Api"');
+    });
+
+    test('should include ruby_package option', () => {
+      const schema = `
+        type Query {
+          hello: String
+        }
+      `;
+
+      const operation = `
+        query GetHello {
+          hello
+        }
+      `;
+
+      const { proto } = compileOperationsToProto(operation, schema, {
+        rubyPackage: 'Example::Api',
+      });
+
+      expectValidProto(proto);
+      expect(proto).toContain('option ruby_package = "Example::Api"');
+    });
+
+    test('should include php_namespace option', () => {
+      const schema = `
+        type Query {
+          hello: String
+        }
+      `;
+
+      const operation = `
+        query GetHello {
+          hello
+        }
+      `;
+
+      const { proto } = compileOperationsToProto(operation, schema, {
+        phpNamespace: 'Example\\Api',
+      });
+
+      expectValidProto(proto);
+      expect(proto).toContain('option php_namespace = "Example\\Api"');
+    });
+
+    test('should include php_metadata_namespace option', () => {
+      const schema = `
+        type Query {
+          hello: String
+        }
+      `;
+
+      const operation = `
+        query GetHello {
+          hello
+        }
+      `;
+
+      const { proto } = compileOperationsToProto(operation, schema, {
+        phpMetadataNamespace: 'Example\\Api\\Metadata',
+      });
+
+      expectValidProto(proto);
+      expect(proto).toContain('option php_metadata_namespace = "Example\\Api\\Metadata"');
+    });
+
+    test('should include objc_class_prefix option', () => {
+      const schema = `
+        type Query {
+          hello: String
+        }
+      `;
+
+      const operation = `
+        query GetHello {
+          hello
+        }
+      `;
+
+      const { proto } = compileOperationsToProto(operation, schema, {
+        objcClassPrefix: 'EA',
+      });
+
+      expectValidProto(proto);
+      expect(proto).toContain('option objc_class_prefix = "EA"');
+    });
+
+    test('should include swift_prefix option', () => {
+      const schema = `
+        type Query {
+          hello: String
+        }
+      `;
+
+      const operation = `
+        query GetHello {
+          hello
+        }
+      `;
+
+      const { proto } = compileOperationsToProto(operation, schema, {
+        swiftPrefix: 'ExampleApi',
+      });
+
+      expectValidProto(proto);
+      expect(proto).toContain('option swift_prefix = "ExampleApi"');
+    });
+
+    test('should include multiple language options', () => {
+      const schema = `
+        type Query {
+          hello: String
+        }
+      `;
+
+      const operation = `
+        query GetHello {
+          hello
+        }
+      `;
+
+      const { proto } = compileOperationsToProto(operation, schema, {
+        goPackage: 'github.com/example/api',
+        javaPackage: 'com.example.api',
+        javaOuterClassname: 'ApiProto',
+        javaMultipleFiles: true,
+        csharpNamespace: 'Example.Api',
+        rubyPackage: 'Example::Api',
+        phpNamespace: 'Example\\Api',
+        swiftPrefix: 'EA',
+      });
+
+      expectValidProto(proto);
+      expect(proto).toContain('option go_package = "github.com/example/api"');
+      expect(proto).toContain('option java_package = "com.example.api"');
+      expect(proto).toContain('option java_outer_classname = "ApiProto"');
+      expect(proto).toContain('option java_multiple_files = true');
+      expect(proto).toContain('option csharp_namespace = "Example.Api"');
+      expect(proto).toContain('option ruby_package = "Example::Api"');
+      expect(proto).toContain('option php_namespace = "Example\\Api"');
+      expect(proto).toContain('option swift_prefix = "EA"');
+    });
+
     test('should support includeComments option', () => {
       const schema = `
         type Query {
