@@ -169,7 +169,8 @@ function processFieldSelection(
   if (field.selectionSet) {
     const namedType = getNamedType(fieldType);
     if (isObjectType(namedType) || isInterfaceType(namedType) || isUnionType(namedType)) {
-      const nestedMessageName = `${message.name}${upperFirst(camelCase(fieldName))}`;
+      // Use simple name since message will be nested inside parent
+      const nestedMessageName = upperFirst(camelCase(fieldName));
       
       // For interfaces and unions, we use the base type to collect fields from inline fragments
       // For object types, we process normally

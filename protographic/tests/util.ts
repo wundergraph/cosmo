@@ -46,11 +46,107 @@ export function loadProtoFromText(protoText: string): protobufjs.Root {
  * Gets field numbers from a message
  *
  * @param root - The protobufjs Root
- * @param messageName - The name of the message
+ * @param messageName - The name of the message (can be verbose like 'GetUserResponseUser' or nested path like 'GetUserResponse.User')
  * @returns A record of field names to field numbers
  */
 export function getFieldNumbersFromMessage(root: protobufjs.Root, messageName: string): Record<string, number> {
-  const message = root.lookupType(messageName);
+  let message: protobufjs.Type;
+  
+  try {
+    // Try direct lookup first (for flat names or already-correct paths)
+    message = root.lookupType(messageName);
+  } catch (error) {
+    // If that fails, try to convert verbose name to nested path
+    // Strategy: Try different ways to split the name until one works
+    
+    // Find the FIRST occurrence of Response/Request suffix
+    const responseIndex = messageName.indexOf('Response');
+    const requestIndex = messageName.indexOf('Request');
+    
+    let splitIndex = -1;
+    let suffix = '';
+    if (responseIndex !== -1 && requestIndex !== -1) {
+      splitIndex = Math.min(responseIndex, requestIndex);
+      suffix = splitIndex === responseIndex ? 'Response' : 'Request';
+    } else if (responseIndex !== -1) {
+      splitIndex = responseIndex;
+      suffix = 'Response';
+    } else if (requestIndex !== -1) {
+      splitIndex = requestIndex;
+      suffix = 'Request';
+    }
+    
+    if (splitIndex !== -1) {
+      const baseName = messageName.substring(0, splitIndex + suffix.length);
+      const nestedPart = messageName.substring(splitIndex + suffix.length);
+      
+      if (nestedPart) {
+        // Try progressively longer first segments
+        // For 'SearchUsersUsers', try:
+        // 1. 'SearchUsersResponse.SearchUsersUsers' (no split)
+        // 2. 'SearchUsersResponse.SearchUsers.Users' (split after SearchUsers)
+        // 3. 'SearchUsersResponse.Search.Users.Users' (split after Search)
+        
+        // Try different ways to split the nested part
+        // Strategy: Split at each capital letter and try all combinations
+        
+        // Find all capital letter positions
+        const capitals: number[] = [];
+        for (let i = 0; i < nestedPart.length; i++) {
+          if (i === 0 || (nestedPart[i] === nestedPart[i].toUpperCase() && nestedPart[i] !== nestedPart[i].toLowerCase())) {
+            capitals.push(i);
+          }
+        }
+        
+        // Try different groupings of these segments
+        // For "SearchUsersUsers" with capitals at [0, 6, 11]:
+        // - Try: "SearchUsersUsers" (no split)
+        // - Try: "SearchUsers.Users" (split at position 6)
+        // - Try: "Search.UsersUsers" (split at position 6 differently)
+        // - Try: "Search.Users.Users" (split at both 6 and 11)
+        
+        const attempts: string[] = [];
+        
+        // No split - whole thing as one segment
+        attempts.push(`${baseName}.${nestedPart}`);
+        
+        // Try splitting at each capital position
+        for (let i = 1; i < capitals.length; i++) {
+          const firstPart = nestedPart.substring(0, capitals[i]);
+          const secondPart = nestedPart.substring(capitals[i]);
+          attempts.push(`${baseName}.${firstPart}.${secondPart}`);
+          
+          // Also try further splits in the second part
+          for (let j = i + 1; j < capitals.length; j++) {
+            const thirdPart = secondPart.substring(capitals[j] - capitals[i]);
+            const secondPartTrimmed = secondPart.substring(0, capitals[j] - capitals[i]);
+            attempts.push(`${baseName}.${firstPart}.${secondPartTrimmed}.${thirdPart}`);
+          }
+        }
+        
+        // Try each attempt
+        let found = false;
+        for (const attempt of attempts) {
+          try {
+            message = root.lookupType(attempt);
+            found = true;
+            break;
+          } catch {
+            // Continue trying
+          }
+        }
+        
+        if (!found) {
+          throw error;
+        }
+      } else {
+        throw error;
+      }
+    } else {
+      throw error;
+    }
+  }
+  
   const fieldNumbers: Record<string, number> = {};
 
   for (const field of Object.values(message.fields)) {

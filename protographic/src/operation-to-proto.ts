@@ -229,10 +229,6 @@ class OperationsToProtoVisitor {
       method.responseStream = true;
     }
 
-    if (this.includeComments) {
-      method.comment = `RPC method for ${operationName} operation`;
-    }
-
     // Mark Query operations with NO_SIDE_EFFECTS if enabled
     if (this.queryNoSideEffects && node.operation === OperationTypeNode.QUERY) {
       (method as any).idempotencyLevel = 'NO_SIDE_EFFECTS';

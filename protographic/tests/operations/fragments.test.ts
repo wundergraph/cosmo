@@ -141,8 +141,8 @@ describe('Fragment Support', () => {
       expect(proto).toMatch(/id/);
       expect(proto).toMatch(/name/);
       expect(proto).toMatch(/profile/);
-      // The nested message is named GetUserResponseUserProfile in PascalCase
-      expect(proto).toContain('message GetUserResponseUserProfile');
+      // The nested message is now simply named 'Profile' and nested inside 'User'
+      expect(proto).toContain('message Profile');
       expect(proto).toMatch(/bio/);
       expect(proto).toMatch(/avatar/);
     });
