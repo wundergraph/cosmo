@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { buildSchema, parse } from 'graphql';
+import { buildSchema, parse, GraphQLInputObjectType, GraphQLEnumType } from 'graphql';
 import { buildRequestMessage, buildInputObjectMessage, buildEnumType } from '../../src/operations/request-builder';
 import { createFieldNumberManager } from '../../src/operations/field-numbering';
 
@@ -244,7 +244,7 @@ describe('Request Builder', () => {
         throw new Error('Invalid input type');
       }
 
-      const message = buildInputObjectMessage(inputType as any);
+      const message = buildInputObjectMessage(inputType as GraphQLInputObjectType);
 
       expect(message.name).toBe('UserInput');
       expect(message.fieldsArray).toHaveLength(3);
@@ -270,7 +270,7 @@ describe('Request Builder', () => {
         throw new Error('Invalid input type');
       }
 
-      const message = buildInputObjectMessage(inputType as any);
+      const message = buildInputObjectMessage(inputType as GraphQLInputObjectType);
 
       expect(message.name).toBe('UserInput');
       expect(message.fields.profile).toBeDefined();
@@ -292,7 +292,7 @@ describe('Request Builder', () => {
 
       const manager = createFieldNumberManager();
 
-      const message = buildInputObjectMessage(inputType as any, {
+      const message = buildInputObjectMessage(inputType as GraphQLInputObjectType, {
         fieldNumberManager: manager,
       });
 
@@ -316,7 +316,7 @@ describe('Request Builder', () => {
         throw new Error('Invalid enum type');
       }
 
-      const protoEnum = buildEnumType(enumType as any);
+      const protoEnum = buildEnumType(enumType as GraphQLEnumType);
 
       expect(protoEnum.name).toBe('Status');
       expect(protoEnum.values.UNSPECIFIED).toBe(0);
@@ -338,7 +338,7 @@ describe('Request Builder', () => {
         throw new Error('Invalid enum type');
       }
 
-      const protoEnum = buildEnumType(enumType as any);
+      const protoEnum = buildEnumType(enumType as GraphQLEnumType);
 
       expect(protoEnum.values.UNSPECIFIED).toBe(0);
       expect(protoEnum.values.ADMIN).toBeGreaterThan(0);
@@ -359,7 +359,7 @@ describe('Request Builder', () => {
         throw new Error('Invalid enum type');
       }
 
-      const protoEnum = buildEnumType(enumType as any);
+      const protoEnum = buildEnumType(enumType as GraphQLEnumType);
 
       expect(protoEnum.values.UNSPECIFIED).toBe(0);
       expect(protoEnum.values.LOW).toBe(1);

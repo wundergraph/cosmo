@@ -16,6 +16,11 @@ import {
   GraphQLInputObjectType,
   GraphQLEnumType,
   FragmentDefinitionNode,
+  TypeNode,
+  NonNullTypeNode,
+  ListTypeNode,
+  NamedTypeNode,
+  Kind,
 } from 'graphql';
 
 /**
@@ -94,7 +99,7 @@ export function compileOperationsToProto(
   }
 
   if (namedOperations.length > 1) {
-    const operationNames = namedOperations.map((op: any) => op.name.value).join(', ');
+    const operationNames = namedOperations.map((op) => (op as OperationDefinitionNode).name!.value).join(', ');
     throw new Error(
       `Multiple operations found in document: ${operationNames}. ` +
         'Only a single named operation per document is supported for proto reversibility. ' +
@@ -330,7 +335,7 @@ class OperationsToProtoVisitor {
   /**
    * Process input object types and enums referenced in a type node
    */
-  private processInputObjectTypes(typeNode: any): void {
+  private processInputObjectTypes(typeNode: TypeNode): void {
     // Handle NonNullType and ListType wrappers
     if (typeNode.kind === 'NonNullType' || typeNode.kind === 'ListType') {
       this.processInputObjectTypes(typeNode.type);
@@ -358,7 +363,8 @@ class OperationsToProtoVisitor {
           for (const field of Object.values(fields)) {
             const fieldType = getNamedType(field.type);
             if (isInputObjectType(fieldType)) {
-              this.processInputObjectTypes({ kind: 'NamedType', name: { value: fieldType.name } });
+              const namedTypeNode: NamedTypeNode = { kind: Kind.NAMED_TYPE, name: { kind: Kind.NAME, value: fieldType.name } };
+              this.processInputObjectTypes(namedTypeNode);
             } else if (isEnumType(fieldType)) {
               this.processEnumType(fieldType as GraphQLEnumType);
             }
