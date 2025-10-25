@@ -612,7 +612,7 @@ describe('Operations Field Ordering Stability', () => {
   });
 
   describe('Multiple Operations', () => {
-    test('should maintain field numbers across different operations', () => {
+    test('should reject multiple operations in a single document', () => {
       const schema = `
         type Query {
           user: User
@@ -626,8 +626,8 @@ describe('Operations Field Ordering Stability', () => {
         }
       `;
 
-      // First set of operations
-      const operations1 = `
+      // Multiple operations in one document
+      const operations = `
         query GetUser {
           user {
             id
@@ -644,47 +644,9 @@ describe('Operations Field Ordering Stability', () => {
         }
       `;
 
-      const result1 = compileOperationsToProto(operations1, schema);
-      expectValidProto(result1.proto);
-
-      const root1 = loadProtoFromText(result1.proto);
-      const getUserFields1 = getFieldNumbersFromMessage(root1, 'GetUserResponseUser');
-      const getUsersFields1 = getFieldNumbersFromMessage(root1, 'GetUsersResponseUsers');
-
-      // Second set with reordered fields
-      const operations2 = `
-        query GetUser {
-          user {
-            email
-            id
-            name
-          }
-        }
-        
-        query GetUsers {
-          users {
-            name
-            id
-          }
-        }
-      `;
-
-      const result2 = compileOperationsToProto(operations2, schema, {
-        lockData: result1.lockData,
-      });
-      expectValidProto(result2.proto);
-
-      const root2 = loadProtoFromText(result2.proto);
-      const getUserFields2 = getFieldNumbersFromMessage(root2, 'GetUserResponseUser');
-      const getUsersFields2 = getFieldNumbersFromMessage(root2, 'GetUsersResponseUsers');
-
-      // Verify field numbers are preserved in both operations
-      expect(getUserFields2['id']).toBe(getUserFields1['id']);
-      expect(getUserFields2['name']).toBe(getUserFields1['name']);
-      expect(getUserFields2['email']).toBe(getUserFields1['email']);
-
-      expect(getUsersFields2['id']).toBe(getUsersFields1['id']);
-      expect(getUsersFields2['name']).toBe(getUsersFields1['name']);
+      expect(() => compileOperationsToProto(operations, schema)).toThrow(
+        'Multiple operations found in document: GetUser, GetUsers'
+      );
     });
   });
 

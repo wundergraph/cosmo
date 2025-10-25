@@ -77,6 +77,29 @@ export function compileOperationsToProto(
 ): CompileOperationsToProtoResult {
   const document: DocumentNode = typeof operationSource === 'string' ? parse(operationSource) : operationSource;
 
+  // Validate that only a single named operation is present
+  const namedOperations = document.definitions.filter(
+    (def) => def.kind === 'OperationDefinition' && def.name
+  );
+
+  if (namedOperations.length === 0) {
+    throw new Error(
+      'No named operations found in document. ' +
+      'At least one named operation is required for proto compilation.'
+    );
+  }
+
+  if (namedOperations.length > 1) {
+    const operationNames = namedOperations
+      .map((op: any) => op.name.value)
+      .join(', ');
+    throw new Error(
+      `Multiple operations found in document: ${operationNames}. ` +
+      'Only a single named operation per document is supported for proto reversibility. ' +
+      'Please compile each operation separately.'
+    );
+  }
+
   const schema =
     typeof schemaOrSDL === 'string'
       ? buildSchema(schemaOrSDL, {
@@ -206,7 +229,20 @@ class OperationsToProtoVisitor {
       return;
     }
 
-    // 2. Create method name directly from operation name (no Query/Mutation prefix)
+    // 2. Validate no root-level field aliases (breaks reversibility)
+    if (node.selectionSet) {
+      for (const selection of node.selectionSet.selections) {
+        if (selection.kind === 'Field' && selection.alias) {
+          throw new Error(
+            `Root-level field alias "${selection.alias.value}: ${selection.name.value}" is not supported. ` +
+            'Field aliases at the root level break proto-to-GraphQL reversibility. ' +
+            'Please remove the alias or use it only on nested fields.'
+          );
+        }
+      }
+    }
+
+    // 3. Create method name directly from operation name (no Query/Mutation prefix)
     const methodName = upperFirst(camelCase(operationName));
 
     // 3. Create request message from variables
