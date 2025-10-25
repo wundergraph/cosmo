@@ -201,9 +201,9 @@ describe('Message Builder', () => {
       expect(message.fields.id).toBeDefined();
       expect(message.fields.profile).toBeDefined();
       
-      // Should have nested message for profile
+      // Should have nested message for profile (now with simple name)
       expect(message.nested).toBeDefined();
-      expect(message.nested!.UserResponseProfile).toBeDefined();
+      expect(message.nested!.Profile).toBeDefined();
     });
 
     test('should use field number manager', () => {
