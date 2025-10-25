@@ -90,7 +90,7 @@ func Main() {
 
 	logLevelAtomic := zap.NewAtomicLevelAt(result.Config.LogLevel)
 
-	baseLogger := logging.New(!result.Config.JSONLog, result.Config.DevelopmentMode, logLevelAtomic).
+	baseLogger := logging.New(!result.Config.JSONLog, result.Config.DevelopmentMode, result.Config.AccessLogs.AddStacktrace, logLevelAtomic).
 		With(
 			zap.String("service", "@wundergraph/router"),
 			zap.String("service_version", core.Version),
