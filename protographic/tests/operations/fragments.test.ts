@@ -37,11 +37,30 @@ describe('Fragment Support', () => {
 
       expectValidProto(proto);
 
-      // Check that all fragment fields are included in the response message
-      expect(proto).toContain('message GetUserResponse');
-      expect(proto).toMatch(/id.*=.*1/);
-      expect(proto).toMatch(/name.*=.*2/);
-      expect(proto).toMatch(/email.*=.*3/);
+      // Validate the complete proto structure with inline snapshot
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
+        }
+
+        message GetUserRequest {
+        }
+
+        message GetUserResponse {
+          message User {
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+            google.protobuf.StringValue email = 3;
+          }
+          User user = 1;
+        }
+        "
+      `);
     });
 
     test('should handle multiple fragment spreads', () => {
@@ -87,12 +106,32 @@ describe('Fragment Support', () => {
 
       expectValidProto(proto);
 
-      // All fields from all fragments should be present
-      expect(proto).toMatch(/id/);
-      expect(proto).toMatch(/name/);
-      expect(proto).toMatch(/email/);
-      expect(proto).toMatch(/age/);
-      expect(proto).toMatch(/active/);
+      // Validate the complete proto structure with inline snapshot
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
+        }
+
+        message GetUserRequest {
+        }
+
+        message GetUserResponse {
+          message User {
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+            google.protobuf.StringValue email = 3;
+            google.protobuf.Int32Value age = 4;
+            google.protobuf.BoolValue active = 5;
+          }
+          User user = 1;
+        }
+        "
+      `);
     });
 
     test('should handle nested fragment spreads (fragment within fragment)', () => {
@@ -138,13 +177,34 @@ describe('Fragment Support', () => {
 
       expectValidProto(proto);
 
-      expect(proto).toMatch(/id/);
-      expect(proto).toMatch(/name/);
-      expect(proto).toMatch(/profile/);
-      // The nested message is now simply named 'Profile' and nested inside 'User'
-      expect(proto).toContain('message Profile');
-      expect(proto).toMatch(/bio/);
-      expect(proto).toMatch(/avatar/);
+      // Validate the complete proto structure with inline snapshot
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
+        }
+
+        message GetUserRequest {
+        }
+
+        message GetUserResponse {
+          message User {
+            message Profile {
+              google.protobuf.StringValue bio = 1;
+              google.protobuf.StringValue avatar = 2;
+            }
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+            Profile profile = 3;
+          }
+          User user = 1;
+        }
+        "
+      `);
     });
 
     test('should handle fragment referencing another fragment', () => {
@@ -182,10 +242,30 @@ describe('Fragment Support', () => {
 
       expectValidProto(proto);
 
-      // All fields should be present
-      expect(proto).toMatch(/id/);
-      expect(proto).toMatch(/name/);
-      expect(proto).toMatch(/email/);
+      // Validate the complete proto structure with inline snapshot
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
+        }
+
+        message GetUserRequest {
+        }
+
+        message GetUserResponse {
+          message User {
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+            google.protobuf.StringValue email = 3;
+          }
+          User user = 1;
+        }
+        "
+      `);
     });
 
     test('should handle fragments mixed with regular fields', () => {
@@ -220,9 +300,30 @@ describe('Fragment Support', () => {
 
       expectValidProto(proto);
 
-      expect(proto).toMatch(/id/);
-      expect(proto).toMatch(/email/);
-      expect(proto).toMatch(/age/);
+      // Validate the complete proto structure with inline snapshot
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
+        }
+
+        message GetUserRequest {
+        }
+
+        message GetUserResponse {
+          message User {
+            string id = 1;
+            google.protobuf.StringValue email = 2;
+            google.protobuf.Int32Value age = 3;
+          }
+          User user = 1;
+        }
+        "
+      `);
     });
 
     test('should handle same fragment used multiple times', () => {
@@ -258,9 +359,34 @@ describe('Fragment Support', () => {
 
       expectValidProto(proto);
 
-      // Fragment fields should be reused consistently
-      expect(proto).toMatch(/id/);
-      expect(proto).toMatch(/name/);
+      // Validate the complete proto structure with inline snapshot
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetUsers(GetUsersRequest) returns (GetUsersResponse) {}
+        }
+
+        message GetUsersRequest {
+        }
+
+        message GetUsersResponse {
+          message User {
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+          }
+          message Admin {
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+          }
+          User user = 1;
+          Admin admin = 2;
+        }
+        "
+      `);
     });
 
     test('should handle fragments in mutations', () => {
@@ -294,10 +420,31 @@ describe('Fragment Support', () => {
 
       expectValidProto(proto);
 
-      expect(proto).toContain('rpc CreateUser');
-      expect(proto).toMatch(/id/);
-      expect(proto).toMatch(/name/);
-      expect(proto).toMatch(/created_at/);
+      // Validate the complete proto structure with inline snapshot
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {}
+        }
+
+        message CreateUserRequest {
+          string name = 1;
+        }
+
+        message CreateUserResponse {
+          message CreateUser {
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+            google.protobuf.StringValue created_at = 3;
+          }
+          CreateUser create_user = 1;
+        }
+        "
+      `);
     });
   });
 
@@ -331,9 +478,30 @@ describe('Fragment Support', () => {
 
       expectValidProto(proto);
 
-      expect(proto).toMatch(/id/);
-      expect(proto).toMatch(/name/);
-      expect(proto).toMatch(/email/);
+      // Validate the complete proto structure with inline snapshot
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
+        }
+
+        message GetUserRequest {
+        }
+
+        message GetUserResponse {
+          message User {
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+            google.protobuf.StringValue email = 3;
+          }
+          User user = 1;
+        }
+        "
+      `);
     });
 
     test('should handle inline fragment on interface', () => {
@@ -379,12 +547,33 @@ describe('Fragment Support', () => {
 
       expectValidProto(proto);
 
-      // All type-specific fields should be present
-      expect(proto).toMatch(/id/);
-      expect(proto).toMatch(/name/);
-      expect(proto).toMatch(/email/);
-      expect(proto).toMatch(/title/);
-      expect(proto).toMatch(/content/);
+      // Validate the complete proto structure with inline snapshot
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetNode(GetNodeRequest) returns (GetNodeResponse) {}
+        }
+
+        message GetNodeRequest {
+          string id = 1;
+        }
+
+        message GetNodeResponse {
+          message Node {
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+            google.protobuf.StringValue email = 3;
+            google.protobuf.StringValue title = 4;
+            google.protobuf.StringValue content = 5;
+          }
+          Node node = 1;
+        }
+        "
+      `);
     });
 
     test('should handle inline fragment on union', () => {
@@ -425,9 +614,31 @@ describe('Fragment Support', () => {
 
       expectValidProto(proto);
 
-      expect(proto).toMatch(/id/);
-      expect(proto).toMatch(/name/);
-      expect(proto).toMatch(/title/);
+      // Validate the complete proto structure with inline snapshot
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc Search(SearchRequest) returns (SearchResponse) {}
+        }
+
+        message SearchRequest {
+          string query = 1;
+        }
+
+        message SearchResponse {
+          message Search {
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+            google.protobuf.StringValue title = 3;
+          }
+          repeated Search search = 1;
+        }
+        "
+      `);
     });
 
     test('should handle nested inline fragments', () => {
@@ -479,9 +690,38 @@ describe('Fragment Support', () => {
 
       expectValidProto(proto);
 
-      expect(proto).toMatch(/name/);
-      expect(proto).toMatch(/bio/);
-      expect(proto).toMatch(/theme/);
+      // Validate the complete proto structure with inline snapshot
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetNode(GetNodeRequest) returns (GetNodeResponse) {}
+        }
+
+        message GetNodeRequest {
+          string id = 1;
+        }
+
+        message GetNodeResponse {
+          message Node {
+            message Profile {
+              message Settings {
+                google.protobuf.StringValue theme = 1;
+              }
+              google.protobuf.StringValue bio = 1;
+              Settings settings = 2;
+            }
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+            Profile profile = 3;
+          }
+          Node node = 1;
+        }
+        "
+      `);
     });
 
     test('should handle inline fragment without type condition', () => {
@@ -511,8 +751,29 @@ describe('Fragment Support', () => {
 
       expectValidProto(proto);
 
-      expect(proto).toMatch(/id/);
-      expect(proto).toMatch(/name/);
+      // Validate the complete proto structure with inline snapshot
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
+        }
+
+        message GetUserRequest {
+        }
+
+        message GetUserResponse {
+          message User {
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+          }
+          User user = 1;
+        }
+        "
+      `);
     });
   });
 
@@ -568,12 +829,38 @@ describe('Fragment Support', () => {
 
       expectValidProto(proto);
 
-      expect(proto).toMatch(/id/);
-      expect(proto).toMatch(/name/);
-      expect(proto).toMatch(/email/);
-      expect(proto).toMatch(/age/);
-      expect(proto).toMatch(/title/);
-      expect(proto).toMatch(/author/);
+      // Validate the complete proto structure with inline snapshot
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetNode(GetNodeRequest) returns (GetNodeResponse) {}
+        }
+
+        message GetNodeRequest {
+          string id = 1;
+        }
+
+        message GetNodeResponse {
+          message Node {
+            message Author {
+              google.protobuf.StringValue name = 1;
+              google.protobuf.StringValue email = 2;
+            }
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+            google.protobuf.StringValue email = 3;
+            google.protobuf.Int32Value age = 4;
+            google.protobuf.StringValue title = 5;
+            Author author = 6;
+          }
+          Node node = 1;
+        }
+        "
+      `);
     });
 
     test('should handle fragment spread inside inline fragment', () => {
@@ -613,9 +900,31 @@ describe('Fragment Support', () => {
 
       expectValidProto(proto);
 
-      expect(proto).toMatch(/id/);
-      expect(proto).toMatch(/name/);
-      expect(proto).toMatch(/email/);
+      // Validate the complete proto structure with inline snapshot
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetNode(GetNodeRequest) returns (GetNodeResponse) {}
+        }
+
+        message GetNodeRequest {
+          string id = 1;
+        }
+
+        message GetNodeResponse {
+          message Node {
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+            google.protobuf.StringValue email = 3;
+          }
+          Node node = 1;
+        }
+        "
+      `);
     });
 
     test('should handle inline fragment inside named fragment', () => {
@@ -668,10 +977,34 @@ describe('Fragment Support', () => {
 
       expectValidProto(proto);
 
-      expect(proto).toMatch(/id/);
-      expect(proto).toMatch(/name/);
-      expect(proto).toMatch(/plan/);
-      expect(proto).toMatch(/features/);
+      // Validate the complete proto structure with inline snapshot
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
+        }
+
+        message GetUserRequest {
+        }
+
+        message GetUserResponse {
+          message User {
+            message Account {
+              google.protobuf.StringValue plan = 1;
+              repeated google.protobuf.StringValue features = 2;
+            }
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+            Account account = 3;
+          }
+          User user = 1;
+        }
+        "
+      `);
     });
 
     test('should handle complex nested fragment composition', () => {
@@ -735,13 +1068,44 @@ describe('Fragment Support', () => {
 
       expectValidProto(proto);
 
-      expect(proto).toMatch(/id/);
-      expect(proto).toMatch(/name/);
-      expect(proto).toMatch(/title/);
-      expect(proto).toMatch(/text/);
-      expect(proto).toContain('posts');
-      expect(proto).toContain('comments');
-      expect(proto).toContain('author');
+      // Validate the complete proto structure with inline snapshot
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
+        }
+
+        message GetUserRequest {
+        }
+
+        message GetUserResponse {
+          message User {
+            message Posts {
+              message Comments {
+                message Author {
+                  string id = 1;
+                  google.protobuf.StringValue name = 2;
+                }
+                string id = 1;
+                google.protobuf.StringValue text = 2;
+                Author author = 3;
+              }
+              string id = 1;
+              google.protobuf.StringValue title = 2;
+              repeated Comments comments = 3;
+            }
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+            repeated Posts posts = 3;
+          }
+          User user = 1;
+        }
+        "
+      `);
     });
   });
 
@@ -781,9 +1145,29 @@ describe('Fragment Support', () => {
 
       expectValidProto(proto);
 
-      // Should not duplicate fields
-      expect(proto).toMatch(/id/);
-      expect(proto).toMatch(/name/);
+      // Validate the complete proto structure with inline snapshot
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
+        }
+
+        message GetUserRequest {
+        }
+
+        message GetUserResponse {
+          message User {
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+          }
+          User user = 1;
+        }
+        "
+      `);
     });
 
     test('should handle fragments with aliases', () => {
@@ -815,9 +1199,29 @@ describe('Fragment Support', () => {
 
       expectValidProto(proto);
 
-      // Should use actual field names, not aliases
-      expect(proto).toMatch(/id/);
-      expect(proto).toMatch(/name/);
+      // Validate the complete proto structure with inline snapshot
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
+        }
+
+        message GetUserRequest {
+        }
+
+        message GetUserResponse {
+          message User {
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+          }
+          User user = 1;
+        }
+        "
+      `);
     });
   });
 });
