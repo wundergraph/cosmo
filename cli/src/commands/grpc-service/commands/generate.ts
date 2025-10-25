@@ -29,7 +29,7 @@ type CLIOptions = {
   swiftPrefix?: string;
   protoLock?: string;
   withOperations?: string;
-  idempotentQueries?: boolean;
+  queryIdempotency?: string;
 };
 
 export default (opts: BaseCommandOptions) => {
@@ -60,9 +60,8 @@ export default (opts: BaseCommandOptions) => {
       'When provided, generates proto from operations instead of SDL types.',
   );
   command.option(
-    '--idempotent-queries',
-    'Mark all Query operations with NO_SIDE_EFFECTS idempotency level. Only applies with --with-operations.',
-    false,
+    '--query-idempotency <level>',
+    'Set idempotency level for Query operations. Valid values: NO_SIDE_EFFECTS, DEFAULT. Only applies with --with-operations.',
   );
   command.action(generateCommandAction);
 
@@ -111,9 +110,17 @@ async function generateCommandAction(name: string, options: CLIOptions) {
       }
     }
 
-    // Warn if idempotent-queries is used without with-operations
-    if (options.idempotentQueries && !options.withOperations) {
-      spinner.warn('--idempotent-queries flag is ignored when not using --with-operations');
+    // Validate and warn about query-idempotency usage
+    if (options.queryIdempotency) {
+      if (!options.withOperations) {
+        spinner.warn('--query-idempotency flag is ignored when not using --with-operations');
+      }
+      
+      const validLevels = ['NO_SIDE_EFFECTS', 'DEFAULT'];
+      const level = options.queryIdempotency.toUpperCase();
+      if (!validLevels.includes(level)) {
+        program.error(`Invalid --query-idempotency value: ${options.queryIdempotency}. Valid values are: ${validLevels.join(', ')}`);
+      }
     }
 
     const result = await generateProtoAndMapping({
@@ -134,7 +141,7 @@ async function generateCommandAction(name: string, options: CLIOptions) {
       swiftPrefix: options.swiftPrefix,
       lockFile: options.protoLock,
       operationsDir: options.withOperations,
-      idempotentQueries: options.idempotentQueries || false,
+      queryIdempotency: options.queryIdempotency?.toUpperCase(),
     });
 
     // Write the generated files
@@ -163,8 +170,8 @@ async function generateCommandAction(name: string, options: CLIOptions) {
       generated: generatedFiles.join(', '),
     };
 
-    if (result.isOperationsMode && options.idempotentQueries) {
-      resultInfo['idempotent queries'] = 'enabled';
+    if (result.isOperationsMode && options.queryIdempotency) {
+      resultInfo['query idempotency'] = options.queryIdempotency.toUpperCase();
     }
 
     renderResultTree(spinner, 'Generated protobuf schema', true, name, resultInfo);
@@ -194,7 +201,7 @@ type GenerationOptions = {
   swiftPrefix?: string;
   lockFile?: string;
   operationsDir?: string;
-  idempotentQueries?: boolean;
+  queryIdempotency?: string;
 };
 
 /**
@@ -242,7 +249,7 @@ async function generateProtoAndMapping({
   swiftPrefix,
   lockFile = resolve(outdir, 'service.proto.lock.json'),
   operationsDir,
-  idempotentQueries = false,
+  queryIdempotency,
 }: GenerationOptions): Promise<GenerationResult> {
   const schema = await readFile(schemaFile, 'utf8');
   const serviceName = upperFirst(camelCase(name));
@@ -277,7 +284,7 @@ async function generateProtoAndMapping({
       objcClassPrefix,
       swiftPrefix,
       includeComments: true,
-      queryNoSideEffects: idempotentQueries,
+      queryIdempotency: queryIdempotency,
       lockData,
     });
 
