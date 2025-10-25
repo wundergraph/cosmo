@@ -466,6 +466,433 @@ describe('Operations Field Ordering Stability', () => {
       expect(inputFields2['age']).toBe(ageNumber);
       expect(inputFields2['active']).toBe(activeNumber);
     });
+
+    test('should handle nested input objects with field reordering', () => {
+      const schema = `
+        type Query {
+          ping: String
+        }
+        
+        type Mutation {
+          filterUsers(filter: UserFilterInput!): [User]
+        }
+        
+        input UserFilterInput {
+          basic: BasicInfo
+          preferences: UserPreferences
+          metadata: [String!]
+        }
+        
+        input BasicInfo {
+          id: ID
+          name: String
+          email: String
+        }
+        
+        input UserPreferences {
+          active: Boolean
+          notifications: Boolean
+          theme: String
+        }
+        
+        type User {
+          id: ID!
+          name: String!
+        }
+      `;
+
+      // First operation with specific field order
+      const operation1 = `
+        mutation FilterUsers($filter: UserFilterInput!) {
+          filterUsers(filter: $filter) {
+            id
+            name
+          }
+        }
+      `;
+
+      const result1 = compileOperationsToProto(operation1, schema);
+      expectValidProto(result1.proto);
+
+      const root1 = loadProtoFromText(result1.proto);
+      const filterFields1 = getFieldNumbersFromMessage(root1, 'UserFilterInput');
+      const basicFields1 = getFieldNumbersFromMessage(root1, 'BasicInfo');
+      const prefsFields1 = getFieldNumbersFromMessage(root1, 'UserPreferences');
+
+      // Store original field numbers
+      const filterBasicNumber = filterFields1['basic'];
+      const filterPrefsNumber = filterFields1['preferences'];
+      const filterMetadataNumber = filterFields1['metadata'];
+
+      const basicIdNumber = basicFields1['id'];
+      const basicNameNumber = basicFields1['name'];
+      const basicEmailNumber = basicFields1['email'];
+
+      const prefsActiveNumber = prefsFields1['active'];
+      const prefsNotificationsNumber = prefsFields1['notifications'];
+      const prefsThemeNumber = prefsFields1['theme'];
+
+      // Get the generated lock data
+      const lockData = result1.lockData;
+      expect(lockData).not.toBeNull();
+
+      // Second operation - same schema, should preserve all field numbers
+      const operation2 = `
+        mutation FilterUsers($filter: UserFilterInput!) {
+          filterUsers(filter: $filter) {
+            id
+            name
+          }
+        }
+      `;
+
+      const result2 = compileOperationsToProto(operation2, schema, {
+        lockData: lockData,
+      });
+      expectValidProto(result2.proto);
+
+      const root2 = loadProtoFromText(result2.proto);
+      const filterFields2 = getFieldNumbersFromMessage(root2, 'UserFilterInput');
+      const basicFields2 = getFieldNumbersFromMessage(root2, 'BasicInfo');
+      const prefsFields2 = getFieldNumbersFromMessage(root2, 'UserPreferences');
+
+      // Verify parent input object field numbers are preserved
+      expect(filterFields2['basic']).toBe(filterBasicNumber);
+      expect(filterFields2['preferences']).toBe(filterPrefsNumber);
+      expect(filterFields2['metadata']).toBe(filterMetadataNumber);
+
+      // Verify nested BasicInfo field numbers are preserved
+      expect(basicFields2['id']).toBe(basicIdNumber);
+      expect(basicFields2['name']).toBe(basicNameNumber);
+      expect(basicFields2['email']).toBe(basicEmailNumber);
+
+      // Verify nested UserPreferences field numbers are preserved
+      expect(prefsFields2['active']).toBe(prefsActiveNumber);
+      expect(prefsFields2['notifications']).toBe(prefsNotificationsNumber);
+      expect(prefsFields2['theme']).toBe(prefsThemeNumber);
+    });
+
+    test('should handle adding and removing fields in nested input objects', () => {
+      const schema = `
+        type Query {
+          ping: String
+        }
+        
+        type Mutation {
+          updateUser(filter: UserFilterInput!): User
+        }
+        
+        input UserFilterInput {
+          basic: BasicInfo
+          preferences: UserPreferences
+        }
+        
+        input BasicInfo {
+          id: ID
+          name: String
+          email: String
+          phone: String
+        }
+        
+        input UserPreferences {
+          active: Boolean
+          notifications: Boolean
+          theme: String
+        }
+        
+        type User {
+          id: ID!
+          name: String!
+        }
+      `;
+
+      // First operation
+      const operation1 = `
+        mutation UpdateUser($filter: UserFilterInput!) {
+          updateUser(filter: $filter) {
+            id
+            name
+          }
+        }
+      `;
+
+      const result1 = compileOperationsToProto(operation1, schema);
+      expectValidProto(result1.proto);
+
+      const root1 = loadProtoFromText(result1.proto);
+      const basicFields1 = getFieldNumbersFromMessage(root1, 'BasicInfo');
+      const prefsFields1 = getFieldNumbersFromMessage(root1, 'UserPreferences');
+
+      // Store original field numbers
+      const basicIdNumber = basicFields1['id'];
+      const basicEmailNumber = basicFields1['email'];
+      const prefsActiveNumber = prefsFields1['active'];
+
+      const lockData1 = result1.lockData;
+
+      // Modified schema with some fields removed
+      const schema2 = `
+        type Query {
+          ping: String
+        }
+        
+        type Mutation {
+          updateUser(filter: UserFilterInput!): User
+        }
+        
+        input UserFilterInput {
+          basic: BasicInfo
+          preferences: UserPreferences
+        }
+        
+        input BasicInfo {
+          id: ID
+          email: String
+          # name: String  # removed
+          # phone: String # removed
+        }
+        
+        input UserPreferences {
+          active: Boolean
+          # notifications: Boolean # removed
+          # theme: String          # removed
+        }
+        
+        type User {
+          id: ID!
+          name: String!
+        }
+      `;
+
+      const operation2 = `
+        mutation UpdateUser($filter: UserFilterInput!) {
+          updateUser(filter: $filter) {
+            id
+            name
+          }
+        }
+      `;
+
+      const result2 = compileOperationsToProto(operation2, schema2, {
+        lockData: lockData1,
+      });
+      expectValidProto(result2.proto);
+
+      const root2 = loadProtoFromText(result2.proto);
+      const basicFields2 = getFieldNumbersFromMessage(root2, 'BasicInfo');
+      const prefsFields2 = getFieldNumbersFromMessage(root2, 'UserPreferences');
+
+      // Verify preserved fields kept their numbers
+      expect(basicFields2['id']).toBe(basicIdNumber);
+      expect(basicFields2['email']).toBe(basicEmailNumber);
+      expect(prefsFields2['active']).toBe(prefsActiveNumber);
+
+      // Verify removed fields are not present
+      expect(basicFields2['name']).toBeUndefined();
+      expect(basicFields2['phone']).toBeUndefined();
+      expect(prefsFields2['notifications']).toBeUndefined();
+      expect(prefsFields2['theme']).toBeUndefined();
+
+      const lockData2 = result2.lockData;
+
+      // Third schema with fields re-added and new fields
+      const schema3 = `
+        type Query {
+          ping: String
+        }
+        
+        type Mutation {
+          updateUser(filter: UserFilterInput!): User
+        }
+        
+        input UserFilterInput {
+          basic: BasicInfo
+          preferences: UserPreferences
+        }
+        
+        input BasicInfo {
+          id: ID
+          name: String        # re-added
+          email: String
+          phone: String       # re-added
+          address: String     # new field
+        }
+        
+        input UserPreferences {
+          active: Boolean
+          notifications: Boolean  # re-added
+          theme: String           # re-added
+          language: String        # new field
+        }
+        
+        type User {
+          id: ID!
+          name: String!
+        }
+      `;
+
+      const operation3 = `
+        mutation UpdateUser($filter: UserFilterInput!) {
+          updateUser(filter: $filter) {
+            id
+            name
+          }
+        }
+      `;
+
+      const result3 = compileOperationsToProto(operation3, schema3, {
+        lockData: lockData2,
+      });
+      expectValidProto(result3.proto);
+
+      const root3 = loadProtoFromText(result3.proto);
+      const basicFields3 = getFieldNumbersFromMessage(root3, 'BasicInfo');
+      const prefsFields3 = getFieldNumbersFromMessage(root3, 'UserPreferences');
+
+      // Verify original fields still have same numbers
+      expect(basicFields3['id']).toBe(basicIdNumber);
+      expect(basicFields3['email']).toBe(basicEmailNumber);
+      expect(prefsFields3['active']).toBe(prefsActiveNumber);
+
+      // Verify re-added fields exist (they get new numbers)
+      expect(basicFields3['name']).toBeDefined();
+      expect(basicFields3['phone']).toBeDefined();
+      expect(prefsFields3['notifications']).toBeDefined();
+      expect(prefsFields3['theme']).toBeDefined();
+
+      // Verify new fields exist
+      expect(basicFields3['address']).toBeDefined();
+      expect(prefsFields3['language']).toBeDefined();
+
+      // Re-added and new fields should have higher numbers than original fields
+      expect(basicFields3['name']).toBeGreaterThan(basicEmailNumber);
+      expect(basicFields3['address']).toBeGreaterThan(basicEmailNumber);
+      expect(prefsFields3['language']).toBeGreaterThan(prefsActiveNumber);
+    });
+
+    test('should handle deeply nested input objects (3 levels)', () => {
+      const schema = `
+        type Query {
+          ping: String
+        }
+        
+        type Mutation {
+          searchUsers(criteria: SearchCriteria!): [User]
+        }
+        
+        input SearchCriteria {
+          filters: FilterGroup
+          sorting: SortOptions
+        }
+        
+        input FilterGroup {
+          user: UserFilters
+          date: DateFilters
+        }
+        
+        input UserFilters {
+          name: String
+          email: String
+          active: Boolean
+        }
+        
+        input DateFilters {
+          from: String
+          to: String
+        }
+        
+        input SortOptions {
+          field: String
+          direction: String
+        }
+        
+        type User {
+          id: ID!
+          name: String!
+        }
+      `;
+
+      // First operation
+      const operation1 = `
+        mutation SearchUsers($criteria: SearchCriteria!) {
+          searchUsers(criteria: $criteria) {
+            id
+            name
+          }
+        }
+      `;
+
+      const result1 = compileOperationsToProto(operation1, schema);
+      expectValidProto(result1.proto);
+
+      const root1 = loadProtoFromText(result1.proto);
+      
+      // Get field numbers at all nesting levels
+      const criteriaFields1 = getFieldNumbersFromMessage(root1, 'SearchCriteria');
+      const filterGroupFields1 = getFieldNumbersFromMessage(root1, 'FilterGroup');
+      const userFiltersFields1 = getFieldNumbersFromMessage(root1, 'UserFilters');
+      const dateFiltersFields1 = getFieldNumbersFromMessage(root1, 'DateFilters');
+      const sortFields1 = getFieldNumbersFromMessage(root1, 'SortOptions');
+
+      // Store original field numbers at each level
+      const criteriaFiltersNumber = criteriaFields1['filters'];
+      const criteriaSortingNumber = criteriaFields1['sorting'];
+      
+      const filterGroupUserNumber = filterGroupFields1['user'];
+      const filterGroupDateNumber = filterGroupFields1['date'];
+      
+      const userFiltersNameNumber = userFiltersFields1['name'];
+      const userFiltersEmailNumber = userFiltersFields1['email'];
+      const userFiltersActiveNumber = userFiltersFields1['active'];
+      
+      const dateFiltersFromNumber = dateFiltersFields1['from'];
+      const dateFiltersToNumber = dateFiltersFields1['to'];
+      
+      const sortFieldNumber = sortFields1['field'];
+      const sortDirectionNumber = sortFields1['direction'];
+
+      const lockData = result1.lockData;
+
+      // Second operation - same schema, should preserve all field numbers
+      const operation2 = `
+        mutation SearchUsers($criteria: SearchCriteria!) {
+          searchUsers(criteria: $criteria) {
+            id
+            name
+          }
+        }
+      `;
+
+      const result2 = compileOperationsToProto(operation2, schema, {
+        lockData: lockData,
+      });
+      expectValidProto(result2.proto);
+
+      const root2 = loadProtoFromText(result2.proto);
+      
+      const criteriaFields2 = getFieldNumbersFromMessage(root2, 'SearchCriteria');
+      const filterGroupFields2 = getFieldNumbersFromMessage(root2, 'FilterGroup');
+      const userFiltersFields2 = getFieldNumbersFromMessage(root2, 'UserFilters');
+      const dateFiltersFields2 = getFieldNumbersFromMessage(root2, 'DateFilters');
+      const sortFields2 = getFieldNumbersFromMessage(root2, 'SortOptions');
+
+      // Verify all field numbers are preserved at all nesting levels
+      expect(criteriaFields2['filters']).toBe(criteriaFiltersNumber);
+      expect(criteriaFields2['sorting']).toBe(criteriaSortingNumber);
+      
+      expect(filterGroupFields2['user']).toBe(filterGroupUserNumber);
+      expect(filterGroupFields2['date']).toBe(filterGroupDateNumber);
+      
+      expect(userFiltersFields2['name']).toBe(userFiltersNameNumber);
+      expect(userFiltersFields2['email']).toBe(userFiltersEmailNumber);
+      expect(userFiltersFields2['active']).toBe(userFiltersActiveNumber);
+      
+      expect(dateFiltersFields2['from']).toBe(dateFiltersFromNumber);
+      expect(dateFiltersFields2['to']).toBe(dateFiltersToNumber);
+      
+      expect(sortFields2['field']).toBe(sortFieldNumber);
+      expect(sortFields2['direction']).toBe(sortDirectionNumber);
+    });
   });
 
   describe('Fragment Field Ordering', () => {
