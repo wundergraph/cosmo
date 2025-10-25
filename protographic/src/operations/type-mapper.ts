@@ -66,10 +66,7 @@ export interface TypeMapperOptions {
  * @param options - Optional type mapping configuration
  * @returns Proto type information including type name, repeated flag, etc.
  */
-export function mapGraphQLTypeToProto(
-  type: GraphQLType,
-  options?: TypeMapperOptions,
-): ProtoTypeInfo {
+export function mapGraphQLTypeToProto(type: GraphQLType, options?: TypeMapperOptions): ProtoTypeInfo {
   const useWrapperTypes = options?.useWrapperTypes ?? true;
   const customScalarMappings = options?.customScalarMappings ?? {};
 
@@ -77,12 +74,12 @@ export function mapGraphQLTypeToProto(
   if (isNonNullType(type)) {
     const innerType = type.ofType;
     const innerInfo = mapGraphQLTypeToProto(innerType, options);
-    
+
     // For non-null scalars, we don't use wrapper types
     if (isScalarType(getNamedType(innerType))) {
       const namedType = getNamedType(innerType) as GraphQLScalarType;
       const scalarName = namedType.name;
-      
+
       // Check custom mappings first
       if (customScalarMappings[scalarName]) {
         return {
@@ -92,7 +89,7 @@ export function mapGraphQLTypeToProto(
           isScalar: true,
         };
       }
-      
+
       // Use direct scalar type for non-null fields
       if (SCALAR_TYPE_MAP[scalarName]) {
         return {
@@ -103,7 +100,7 @@ export function mapGraphQLTypeToProto(
         };
       }
     }
-    
+
     return innerInfo;
   }
 
@@ -111,7 +108,7 @@ export function mapGraphQLTypeToProto(
   if (isListType(type)) {
     const itemType = type.ofType;
     const itemInfo = mapGraphQLTypeToProto(itemType, options);
-    
+
     return {
       typeName: itemInfo.typeName,
       isRepeated: true,
@@ -126,7 +123,7 @@ export function mapGraphQLTypeToProto(
   // Handle scalar types
   if (isScalarType(namedType)) {
     const scalarName = namedType.name;
-    
+
     // Check custom mappings first
     if (customScalarMappings[scalarName]) {
       return {
@@ -136,7 +133,7 @@ export function mapGraphQLTypeToProto(
         isScalar: true,
       };
     }
-    
+
     // Use wrapper types for nullable scalars
     if (useWrapperTypes && SCALAR_WRAPPER_TYPE_MAP[scalarName]) {
       return {
@@ -146,7 +143,7 @@ export function mapGraphQLTypeToProto(
         isScalar: true,
       };
     }
-    
+
     // Fallback to direct mapping
     const protoType = SCALAR_TYPE_MAP[scalarName] || 'string';
     return {
@@ -198,7 +195,7 @@ export function mapGraphQLTypeToProto(
 
 /**
  * Gets the Protocol Buffer type name for a GraphQL type
- * 
+ *
  * @param type - The GraphQL type
  * @param options - Optional type mapping configuration
  * @returns The proto type name as a string
@@ -210,7 +207,7 @@ export function getProtoTypeName(type: GraphQLType, options?: TypeMapperOptions)
 
 /**
  * Checks if a GraphQL type is a scalar type
- * 
+ *
  * @param type - The GraphQL type to check
  * @returns True if the type is a scalar
  */
@@ -220,7 +217,7 @@ export function isGraphQLScalarType(type: GraphQLType): boolean {
 
 /**
  * Checks if a GraphQL type requires a wrapper type in proto
- * 
+ *
  * @param type - The GraphQL type to check
  * @param options - Optional type mapping configuration
  * @returns True if the type needs a wrapper
@@ -232,21 +229,20 @@ export function requiresWrapperType(type: GraphQLType, options?: TypeMapperOptio
 
 /**
  * Gets the list of required proto imports based on the types used
- * 
+ *
  * @param types - Array of GraphQL types that will be mapped
  * @param options - Optional type mapping configuration
  * @returns Array of import statements needed
  */
 export function getRequiredImports(types: GraphQLType[], options?: TypeMapperOptions): string[] {
   const imports = new Set<string>();
-  
+
   for (const type of types) {
     const typeInfo = mapGraphQLTypeToProto(type, options);
     if (typeInfo.isWrapper) {
       imports.add('google/protobuf/wrappers.proto');
     }
   }
-  
+
   return Array.from(imports);
 }
-

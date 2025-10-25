@@ -18,7 +18,7 @@ describe('Fragment Support', () => {
           email: String
         }
       `;
-      
+
       const operation = `
         fragment UserFields on User {
           id
@@ -32,11 +32,11 @@ describe('Fragment Support', () => {
           }
         }
       `;
-      
+
       const { proto, root } = compileOperationsToProto(operation, schema);
-      
+
       expectValidProto(proto);
-      
+
       // Check that all fragment fields are included in the response message
       expect(proto).toContain('message GetUserResponse');
       expect(proto).toMatch(/id.*=.*1/);
@@ -58,7 +58,7 @@ describe('Fragment Support', () => {
           active: Boolean
         }
       `;
-      
+
       const operation = `
         fragment BasicInfo on User {
           id
@@ -82,11 +82,11 @@ describe('Fragment Support', () => {
           }
         }
       `;
-      
+
       const { proto, root } = compileOperationsToProto(operation, schema);
-      
+
       expectValidProto(proto);
-      
+
       // All fields from all fragments should be present
       expect(proto).toMatch(/id/);
       expect(proto).toMatch(/name/);
@@ -112,7 +112,7 @@ describe('Fragment Support', () => {
           avatar: String
         }
       `;
-      
+
       const operation = `
         fragment ProfileInfo on Profile {
           bio
@@ -133,11 +133,11 @@ describe('Fragment Support', () => {
           }
         }
       `;
-      
+
       const { proto, root } = compileOperationsToProto(operation, schema);
-      
+
       expectValidProto(proto);
-      
+
       expect(proto).toMatch(/id/);
       expect(proto).toMatch(/name/);
       expect(proto).toMatch(/profile/);
@@ -159,7 +159,7 @@ describe('Fragment Support', () => {
           email: String
         }
       `;
-      
+
       const operation = `
         fragment BasicFields on User {
           id
@@ -177,11 +177,11 @@ describe('Fragment Support', () => {
           }
         }
       `;
-      
+
       const { proto, root } = compileOperationsToProto(operation, schema);
-      
+
       expectValidProto(proto);
-      
+
       // All fields should be present
       expect(proto).toMatch(/id/);
       expect(proto).toMatch(/name/);
@@ -201,7 +201,7 @@ describe('Fragment Support', () => {
           age: Int
         }
       `;
-      
+
       const operation = `
         fragment UserContact on User {
           email
@@ -215,11 +215,11 @@ describe('Fragment Support', () => {
           }
         }
       `;
-      
+
       const { proto, root } = compileOperationsToProto(operation, schema);
-      
+
       expectValidProto(proto);
-      
+
       expect(proto).toMatch(/id/);
       expect(proto).toMatch(/email/);
       expect(proto).toMatch(/age/);
@@ -237,7 +237,7 @@ describe('Fragment Support', () => {
           name: String
         }
       `;
-      
+
       const operation = `
         fragment UserFields on User {
           id
@@ -253,11 +253,11 @@ describe('Fragment Support', () => {
           }
         }
       `;
-      
+
       const { proto, root } = compileOperationsToProto(operation, schema);
-      
+
       expectValidProto(proto);
-      
+
       // Fragment fields should be reused consistently
       expect(proto).toMatch(/id/);
       expect(proto).toMatch(/name/);
@@ -275,7 +275,7 @@ describe('Fragment Support', () => {
           createdAt: String
         }
       `;
-      
+
       const operation = `
         fragment NewUserFields on User {
           id
@@ -289,11 +289,11 @@ describe('Fragment Support', () => {
           }
         }
       `;
-      
+
       const { proto, root } = compileOperationsToProto(operation, schema);
-      
+
       expectValidProto(proto);
-      
+
       expect(proto).toContain('rpc CreateUser');
       expect(proto).toMatch(/id/);
       expect(proto).toMatch(/name/);
@@ -314,7 +314,7 @@ describe('Fragment Support', () => {
           email: String
         }
       `;
-      
+
       const operation = `
         query GetUser {
           user {
@@ -326,11 +326,11 @@ describe('Fragment Support', () => {
           }
         }
       `;
-      
+
       const { proto, root } = compileOperationsToProto(operation, schema);
-      
+
       expectValidProto(proto);
-      
+
       expect(proto).toMatch(/id/);
       expect(proto).toMatch(/name/);
       expect(proto).toMatch(/email/);
@@ -358,7 +358,7 @@ describe('Fragment Support', () => {
           content: String
         }
       `;
-      
+
       const operation = `
         query GetNode($id: ID!) {
           node(id: $id) {
@@ -374,11 +374,11 @@ describe('Fragment Support', () => {
           }
         }
       `;
-      
+
       const { proto, root } = compileOperationsToProto(operation, schema);
-      
+
       expectValidProto(proto);
-      
+
       // All type-specific fields should be present
       expect(proto).toMatch(/id/);
       expect(proto).toMatch(/name/);
@@ -405,7 +405,7 @@ describe('Fragment Support', () => {
           title: String
         }
       `;
-      
+
       const operation = `
         query Search($query: String!) {
           search(query: $query) {
@@ -420,11 +420,11 @@ describe('Fragment Support', () => {
           }
         }
       `;
-      
+
       const { proto, root } = compileOperationsToProto(operation, schema);
-      
+
       expectValidProto(proto);
-      
+
       expect(proto).toMatch(/id/);
       expect(proto).toMatch(/name/);
       expect(proto).toMatch(/title/);
@@ -455,7 +455,7 @@ describe('Fragment Support', () => {
           theme: String
         }
       `;
-      
+
       const operation = `
         query GetNode($id: ID!) {
           node(id: $id) {
@@ -474,11 +474,11 @@ describe('Fragment Support', () => {
           }
         }
       `;
-      
+
       const { proto, root } = compileOperationsToProto(operation, schema);
-      
+
       expectValidProto(proto);
-      
+
       expect(proto).toMatch(/name/);
       expect(proto).toMatch(/bio/);
       expect(proto).toMatch(/theme/);
@@ -495,7 +495,7 @@ describe('Fragment Support', () => {
           name: String
         }
       `;
-      
+
       const operation = `
         query GetUser {
           user {
@@ -506,11 +506,11 @@ describe('Fragment Support', () => {
           }
         }
       `;
-      
+
       const { proto, root } = compileOperationsToProto(operation, schema);
-      
+
       expectValidProto(proto);
-      
+
       expect(proto).toMatch(/id/);
       expect(proto).toMatch(/name/);
     });
@@ -540,7 +540,7 @@ describe('Fragment Support', () => {
           author: User
         }
       `;
-      
+
       const operation = `
         fragment UserBasics on User {
           name
@@ -563,11 +563,11 @@ describe('Fragment Support', () => {
           }
         }
       `;
-      
+
       const { proto, root } = compileOperationsToProto(operation, schema);
-      
+
       expectValidProto(proto);
-      
+
       expect(proto).toMatch(/id/);
       expect(proto).toMatch(/name/);
       expect(proto).toMatch(/email/);
@@ -592,7 +592,7 @@ describe('Fragment Support', () => {
           email: String
         }
       `;
-      
+
       const operation = `
         fragment UserDetails on User {
           name
@@ -608,11 +608,11 @@ describe('Fragment Support', () => {
           }
         }
       `;
-      
+
       const { proto, root } = compileOperationsToProto(operation, schema);
-      
+
       expectValidProto(proto);
-      
+
       expect(proto).toMatch(/id/);
       expect(proto).toMatch(/name/);
       expect(proto).toMatch(/email/);
@@ -641,7 +641,7 @@ describe('Fragment Support', () => {
           features: [String]
         }
       `;
-      
+
       const operation = `
         fragment UserWithAccount on User {
           id
@@ -663,11 +663,11 @@ describe('Fragment Support', () => {
           }
         }
       `;
-      
+
       const { proto, root } = compileOperationsToProto(operation, schema);
-      
+
       expectValidProto(proto);
-      
+
       expect(proto).toMatch(/id/);
       expect(proto).toMatch(/name/);
       expect(proto).toMatch(/plan/);
@@ -698,7 +698,7 @@ describe('Fragment Support', () => {
           author: User
         }
       `;
-      
+
       const operation = `
         fragment AuthorInfo on User {
           id
@@ -730,11 +730,11 @@ describe('Fragment Support', () => {
           }
         }
       `;
-      
+
       const { proto, root } = compileOperationsToProto(operation, schema);
-      
+
       expectValidProto(proto);
-      
+
       expect(proto).toMatch(/id/);
       expect(proto).toMatch(/name/);
       expect(proto).toMatch(/title/);
@@ -757,7 +757,7 @@ describe('Fragment Support', () => {
           name: String
         }
       `;
-      
+
       const operation = `
         fragment UserIdField on User {
           id
@@ -776,11 +776,11 @@ describe('Fragment Support', () => {
           }
         }
       `;
-      
+
       const { proto, root } = compileOperationsToProto(operation, schema);
-      
+
       expectValidProto(proto);
-      
+
       // Should not duplicate fields
       expect(proto).toMatch(/id/);
       expect(proto).toMatch(/name/);
@@ -797,7 +797,7 @@ describe('Fragment Support', () => {
           name: String
         }
       `;
-      
+
       const operation = `
         fragment UserFields on User {
           userId: id
@@ -810,15 +810,14 @@ describe('Fragment Support', () => {
           }
         }
       `;
-      
+
       const { proto, root } = compileOperationsToProto(operation, schema);
-      
+
       expectValidProto(proto);
-      
+
       // Should use actual field names, not aliases
       expect(proto).toMatch(/id/);
       expect(proto).toMatch(/name/);
     });
   });
 });
-
