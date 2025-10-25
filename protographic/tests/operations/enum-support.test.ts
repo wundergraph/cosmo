@@ -36,19 +36,37 @@ describe('Enum Support', () => {
       const { proto, root } = compileOperationsToProto(operation, schema);
 
       expectValidProto(proto);
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
 
-      // Should contain enum definition
-      expect(proto).toContain('enum UserStatus {');
-      expect(proto).toContain('UNSPECIFIED = 0;');
-      expect(proto).toContain('ACTIVE = 1;');
-      expect(proto).toContain('INACTIVE = 2;');
-      expect(proto).toContain('PENDING = 3;');
+        import "google/protobuf/wrappers.proto";
 
-      // Should use enum in request message
-      expect(proto).toContain('UserStatus status = 1;');
+        service DefaultService {
+          rpc GetUsers(GetUsersRequest) returns (GetUsersResponse) {}
+        }
 
-      // Should use enum in response message
-      expect(proto).toMatch(/UserStatus status/);
+        message GetUsersRequest {
+          UserStatus status = 1;
+        }
+
+        message GetUsersResponse {
+          message Users {
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+            UserStatus status = 3;
+          }
+          repeated Users users = 1;
+        }
+
+        enum UserStatus {
+          UNSPECIFIED = 0;
+          ACTIVE = 1;
+          INACTIVE = 2;
+          PENDING = 3;
+        }
+        "
+      `);
     });
 
     test('should handle non-null enum variable', () => {
@@ -80,12 +98,35 @@ describe('Enum Support', () => {
       const { proto } = compileOperationsToProto(operation, schema);
 
       expectValidProto(proto);
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
 
-      // Should contain enum definition
-      expect(proto).toContain('enum UserStatus {');
+        import "google/protobuf/wrappers.proto";
 
-      // Should use enum in request (non-null)
-      expect(proto).toContain('UserStatus status = 1;');
+        service DefaultService {
+          rpc GetUsers(GetUsersRequest) returns (GetUsersResponse) {}
+        }
+
+        message GetUsersRequest {
+          UserStatus status = 1;
+        }
+
+        message GetUsersResponse {
+          message Users {
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+          }
+          repeated Users users = 1;
+        }
+
+        enum UserStatus {
+          UNSPECIFIED = 0;
+          ACTIVE = 1;
+          INACTIVE = 2;
+        }
+        "
+      `);
     });
 
     test('should handle list of enums', () => {
@@ -117,12 +158,35 @@ describe('Enum Support', () => {
       const { proto } = compileOperationsToProto(operation, schema);
 
       expectValidProto(proto);
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
 
-      // Should contain enum definition
-      expect(proto).toContain('enum UserStatus {');
+        import "google/protobuf/wrappers.proto";
 
-      // Should use repeated enum in request
-      expect(proto).toContain('repeated UserStatus statuses = 1;');
+        service DefaultService {
+          rpc GetUsers(GetUsersRequest) returns (GetUsersResponse) {}
+        }
+
+        message GetUsersRequest {
+          repeated UserStatus statuses = 1;
+        }
+
+        message GetUsersResponse {
+          message Users {
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+          }
+          repeated Users users = 1;
+        }
+
+        enum UserStatus {
+          UNSPECIFIED = 0;
+          ACTIVE = 1;
+          INACTIVE = 2;
+        }
+        "
+      `);
     });
   });
 
@@ -159,15 +223,36 @@ describe('Enum Support', () => {
       const { proto } = compileOperationsToProto(operation, schema);
 
       expectValidProto(proto);
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
 
-      // Should contain enum definition
-      expect(proto).toContain('enum UserStatus {');
-      expect(proto).toContain('ACTIVE = 1;');
-      expect(proto).toContain('INACTIVE = 2;');
-      expect(proto).toContain('PENDING = 3;');
+        import "google/protobuf/wrappers.proto";
 
-      // Should use enum in response message
-      expect(proto).toMatch(/UserStatus status/);
+        service DefaultService {
+          rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
+        }
+
+        message GetUserRequest {
+        }
+
+        message GetUserResponse {
+          message User {
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+            UserStatus status = 3;
+          }
+          User user = 1;
+        }
+
+        enum UserStatus {
+          UNSPECIFIED = 0;
+          ACTIVE = 1;
+          INACTIVE = 2;
+          PENDING = 3;
+        }
+        "
+      `);
     });
 
     test('should handle non-null enum field in response', () => {
@@ -199,12 +284,34 @@ describe('Enum Support', () => {
       const { proto } = compileOperationsToProto(operation, schema);
 
       expectValidProto(proto);
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
 
-      // Should contain enum definition
-      expect(proto).toContain('enum UserStatus {');
+        import "google/protobuf/wrappers.proto";
 
-      // Should use enum in response
-      expect(proto).toMatch(/UserStatus status/);
+        service DefaultService {
+          rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
+        }
+
+        message GetUserRequest {
+        }
+
+        message GetUserResponse {
+          message User {
+            string id = 1;
+            UserStatus status = 2;
+          }
+          User user = 1;
+        }
+
+        enum UserStatus {
+          UNSPECIFIED = 0;
+          ACTIVE = 1;
+          INACTIVE = 2;
+        }
+        "
+      `);
     });
 
     test('should handle list of enums in response', () => {
@@ -237,12 +344,35 @@ describe('Enum Support', () => {
       const { proto } = compileOperationsToProto(operation, schema);
 
       expectValidProto(proto);
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
 
-      // Should contain enum definition
-      expect(proto).toContain('enum Role {');
+        import "google/protobuf/wrappers.proto";
 
-      // Should use repeated enum in response
-      expect(proto).toContain('repeated Role roles');
+        service DefaultService {
+          rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
+        }
+
+        message GetUserRequest {
+        }
+
+        message GetUserResponse {
+          message User {
+            string id = 1;
+            repeated Role roles = 2;
+          }
+          User user = 1;
+        }
+
+        enum Role {
+          UNSPECIFIED = 0;
+          ADMIN = 1;
+          USER = 2;
+          GUEST = 3;
+        }
+        "
+      `);
     });
 
     test('should handle nested object with enum field', () => {
@@ -281,12 +411,38 @@ describe('Enum Support', () => {
       const { proto } = compileOperationsToProto(operation, schema);
 
       expectValidProto(proto);
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
 
-      // Should contain enum definition
-      expect(proto).toContain('enum Visibility {');
-      expect(proto).toContain('PUBLIC = 1;');
-      expect(proto).toContain('PRIVATE = 2;');
-      expect(proto).toContain('FRIENDS_ONLY = 3;');
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
+        }
+
+        message GetUserRequest {
+        }
+
+        message GetUserResponse {
+          message User {
+            message Profile {
+              Visibility visibility = 1;
+            }
+            string id = 1;
+            Profile profile = 2;
+          }
+          User user = 1;
+        }
+
+        enum Visibility {
+          UNSPECIFIED = 0;
+          PUBLIC = 1;
+          PRIVATE = 2;
+          FRIENDS_ONLY = 3;
+        }
+        "
+      `);
     });
   });
 
@@ -329,16 +485,40 @@ describe('Enum Support', () => {
       const { proto } = compileOperationsToProto(operation, schema);
 
       expectValidProto(proto);
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
 
-      // Should contain enum definition
-      expect(proto).toContain('enum UserStatus {');
-      expect(proto).toContain('UNSPECIFIED = 0;');
-      expect(proto).toContain('ACTIVE = 1;');
-      expect(proto).toContain('INACTIVE = 2;');
+        import "google/protobuf/wrappers.proto";
 
-      // Should contain input message with enum field
-      expect(proto).toContain('message CreateUserInput {');
-      expect(proto).toMatch(/UserStatus status/);
+        service DefaultService {
+          rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {}
+        }
+
+        message CreateUserRequest {
+          CreateUserInput input = 1;
+        }
+
+        message CreateUserInput {
+          string name = 1;
+          UserStatus status = 2;
+        }
+
+        message CreateUserResponse {
+          message CreateUser {
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+          }
+          CreateUser create_user = 1;
+        }
+
+        enum UserStatus {
+          UNSPECIFIED = 0;
+          ACTIVE = 1;
+          INACTIVE = 2;
+        }
+        "
+      `);
     });
 
     test('should handle nested input object with enum', () => {
@@ -383,16 +563,44 @@ describe('Enum Support', () => {
       const { proto } = compileOperationsToProto(operation, schema);
 
       expectValidProto(proto);
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
 
-      // Should contain enum definition
-      expect(proto).toContain('enum Visibility {');
+        import "google/protobuf/wrappers.proto";
 
-      // Should contain both input messages
-      expect(proto).toContain('message CreateUserInput {');
-      expect(proto).toContain('message ProfileInput {');
+        service DefaultService {
+          rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {}
+        }
 
-      // ProfileInput should use enum
-      expect(proto).toMatch(/Visibility visibility/);
+        message CreateUserRequest {
+          CreateUserInput input = 1;
+        }
+
+        message CreateUserInput {
+          string name = 1;
+          ProfileInput profile = 2;
+        }
+
+        message ProfileInput {
+          Visibility visibility = 1;
+        }
+
+        message CreateUserResponse {
+          message CreateUser {
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+          }
+          CreateUser create_user = 1;
+        }
+
+        enum Visibility {
+          UNSPECIFIED = 0;
+          PUBLIC = 1;
+          PRIVATE = 2;
+        }
+        "
+      `);
     });
 
     test('should handle list of enums in input object', () => {
@@ -433,12 +641,40 @@ describe('Enum Support', () => {
       const { proto } = compileOperationsToProto(operation, schema);
 
       expectValidProto(proto);
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
 
-      // Should contain enum definition
-      expect(proto).toContain('enum Role {');
+        import "google/protobuf/wrappers.proto";
 
-      // Should use repeated enum in input
-      expect(proto).toContain('repeated Role roles');
+        service DefaultService {
+          rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse) {}
+        }
+
+        message UpdateUserRequest {
+          UpdateUserInput input = 1;
+        }
+
+        message UpdateUserInput {
+          string id = 1;
+          repeated Role roles = 2;
+        }
+
+        message UpdateUserResponse {
+          message UpdateUser {
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+          }
+          UpdateUser update_user = 1;
+        }
+
+        enum Role {
+          UNSPECIFIED = 0;
+          ADMIN = 1;
+          USER = 2;
+        }
+        "
+      `);
     });
   });
 
@@ -482,14 +718,45 @@ describe('Enum Support', () => {
       const { proto } = compileOperationsToProto(operation, schema);
 
       expectValidProto(proto);
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
 
-      // Should contain both enum definitions
-      expect(proto).toContain('enum UserStatus {');
-      expect(proto).toContain('enum Role {');
+        import "google/protobuf/wrappers.proto";
 
-      // Should use both enums in request
-      expect(proto).toMatch(/UserStatus status/);
-      expect(proto).toMatch(/Role role/);
+        service DefaultService {
+          rpc GetUsers(GetUsersRequest) returns (GetUsersResponse) {}
+        }
+
+        message GetUsersRequest {
+          UserStatus status = 1;
+          Role role = 2;
+        }
+
+        message GetUsersResponse {
+          message Users {
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+            UserStatus status = 3;
+            Role role = 4;
+          }
+          repeated Users users = 1;
+        }
+
+        enum UserStatus {
+          UNSPECIFIED = 0;
+          ACTIVE = 1;
+          INACTIVE = 2;
+        }
+
+        enum Role {
+          UNSPECIFIED = 0;
+          ADMIN = 1;
+          USER = 2;
+          GUEST = 3;
+        }
+        "
+      `);
     });
 
     test('should reject multiple operations even with shared enums', () => {
@@ -564,11 +831,33 @@ describe('Enum Support', () => {
       const { proto } = compileOperationsToProto(operation, schema);
 
       expectValidProto(proto);
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
 
-      // Should contain enum with UNSPECIFIED and single value
-      expect(proto).toContain('enum SingleValue {');
-      expect(proto).toContain('UNSPECIFIED = 0;');
-      expect(proto).toContain('ONLY_VALUE = 1;');
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
+        }
+
+        message GetUserRequest {
+        }
+
+        message GetUserResponse {
+          message User {
+            string id = 1;
+            SingleValue singleton = 2;
+          }
+          User user = 1;
+        }
+
+        enum SingleValue {
+          UNSPECIFIED = 0;
+          ONLY_VALUE = 1;
+        }
+        "
+      `);
     });
 
     test('should handle enum with many values', () => {
@@ -604,16 +893,38 @@ describe('Enum Support', () => {
       const { proto } = compileOperationsToProto(operation, schema);
 
       expectValidProto(proto);
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
 
-      // Should contain all enum values with sequential numbers
-      expect(proto).toContain('enum Priority {');
-      expect(proto).toContain('UNSPECIFIED = 0;');
-      expect(proto).toContain('P0 = 1;');
-      expect(proto).toContain('P1 = 2;');
-      expect(proto).toContain('P2 = 3;');
-      expect(proto).toContain('P3 = 4;');
-      expect(proto).toContain('P4 = 5;');
-      expect(proto).toContain('P5 = 6;');
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
+        }
+
+        message GetUserRequest {
+        }
+
+        message GetUserResponse {
+          message User {
+            string id = 1;
+            Priority priority = 2;
+          }
+          User user = 1;
+        }
+
+        enum Priority {
+          UNSPECIFIED = 0;
+          P0 = 1;
+          P1 = 2;
+          P2 = 3;
+          P3 = 4;
+          P4 = 5;
+          P5 = 6;
+        }
+        "
+      `);
     });
   });
 
@@ -653,12 +964,35 @@ describe('Enum Support', () => {
       const { proto } = compileOperationsToProto(operation, schema);
 
       expectValidProto(proto);
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
 
-      // Should contain enum definition
-      expect(proto).toContain('enum UserStatus {');
+        import "google/protobuf/wrappers.proto";
 
-      // Should use enum in response
-      expect(proto).toMatch(/UserStatus status/);
+        service DefaultService {
+          rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
+        }
+
+        message GetUserRequest {
+        }
+
+        message GetUserResponse {
+          message User {
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+            UserStatus status = 3;
+          }
+          User user = 1;
+        }
+
+        enum UserStatus {
+          UNSPECIFIED = 0;
+          ACTIVE = 1;
+          INACTIVE = 2;
+        }
+        "
+      `);
     });
   });
 
@@ -697,15 +1031,36 @@ describe('Enum Support', () => {
       const { proto } = compileOperationsToProto(operation, schema);
 
       expectValidProto(proto);
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
 
-      // Should contain enum definition
-      expect(proto).toContain('enum UserStatus {');
-      expect(proto).toContain('ONLINE = 1;');
-      expect(proto).toContain('OFFLINE = 2;');
-      expect(proto).toContain('AWAY = 3;');
+        import "google/protobuf/wrappers.proto";
 
-      // Should be server streaming
-      expect(proto).toContain('returns (stream OnUserStatusChangedResponse)');
+        service DefaultService {
+          rpc OnUserStatusChanged(OnUserStatusChangedRequest) returns (stream OnUserStatusChangedResponse) {}
+        }
+
+        message OnUserStatusChangedRequest {
+          string user_id = 1;
+        }
+
+        message OnUserStatusChangedResponse {
+          message UserStatusChanged {
+            string user_id = 1;
+            UserStatus new_status = 2;
+          }
+          UserStatusChanged user_status_changed = 1;
+        }
+
+        enum UserStatus {
+          UNSPECIFIED = 0;
+          ONLINE = 1;
+          OFFLINE = 2;
+          AWAY = 3;
+        }
+        "
+      `);
     });
   });
 });
