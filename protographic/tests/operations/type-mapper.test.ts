@@ -24,7 +24,7 @@ describe('Type Mapper', () => {
   describe('mapGraphQLTypeToProto', () => {
     test('should map String to StringValue wrapper for nullable fields', () => {
       const result = mapGraphQLTypeToProto(GraphQLString);
-      
+
       expect(result.typeName).toBe('google.protobuf.StringValue');
       expect(result.isRepeated).toBe(false);
       expect(result.isWrapper).toBe(true);
@@ -33,7 +33,7 @@ describe('Type Mapper', () => {
 
     test('should map String! to string for non-null fields', () => {
       const result = mapGraphQLTypeToProto(new GraphQLNonNull(GraphQLString));
-      
+
       expect(result.typeName).toBe('string');
       expect(result.isRepeated).toBe(false);
       expect(result.isWrapper).toBe(false);
@@ -42,7 +42,7 @@ describe('Type Mapper', () => {
 
     test('should map Int to Int32Value wrapper for nullable fields', () => {
       const result = mapGraphQLTypeToProto(GraphQLInt);
-      
+
       expect(result.typeName).toBe('google.protobuf.Int32Value');
       expect(result.isRepeated).toBe(false);
       expect(result.isWrapper).toBe(true);
@@ -51,7 +51,7 @@ describe('Type Mapper', () => {
 
     test('should map Int! to int32 for non-null fields', () => {
       const result = mapGraphQLTypeToProto(new GraphQLNonNull(GraphQLInt));
-      
+
       expect(result.typeName).toBe('int32');
       expect(result.isRepeated).toBe(false);
       expect(result.isWrapper).toBe(false);
@@ -60,7 +60,7 @@ describe('Type Mapper', () => {
 
     test('should map Float to DoubleValue wrapper for nullable fields', () => {
       const result = mapGraphQLTypeToProto(GraphQLFloat);
-      
+
       expect(result.typeName).toBe('google.protobuf.DoubleValue');
       expect(result.isRepeated).toBe(false);
       expect(result.isWrapper).toBe(true);
@@ -69,7 +69,7 @@ describe('Type Mapper', () => {
 
     test('should map Float! to double for non-null fields', () => {
       const result = mapGraphQLTypeToProto(new GraphQLNonNull(GraphQLFloat));
-      
+
       expect(result.typeName).toBe('double');
       expect(result.isRepeated).toBe(false);
       expect(result.isWrapper).toBe(false);
@@ -78,7 +78,7 @@ describe('Type Mapper', () => {
 
     test('should map Boolean to BoolValue wrapper for nullable fields', () => {
       const result = mapGraphQLTypeToProto(GraphQLBoolean);
-      
+
       expect(result.typeName).toBe('google.protobuf.BoolValue');
       expect(result.isRepeated).toBe(false);
       expect(result.isWrapper).toBe(true);
@@ -87,7 +87,7 @@ describe('Type Mapper', () => {
 
     test('should map Boolean! to bool for non-null fields', () => {
       const result = mapGraphQLTypeToProto(new GraphQLNonNull(GraphQLBoolean));
-      
+
       expect(result.typeName).toBe('bool');
       expect(result.isRepeated).toBe(false);
       expect(result.isWrapper).toBe(false);
@@ -96,7 +96,7 @@ describe('Type Mapper', () => {
 
     test('should map ID to StringValue wrapper for nullable fields', () => {
       const result = mapGraphQLTypeToProto(GraphQLID);
-      
+
       expect(result.typeName).toBe('google.protobuf.StringValue');
       expect(result.isRepeated).toBe(false);
       expect(result.isWrapper).toBe(true);
@@ -105,7 +105,7 @@ describe('Type Mapper', () => {
 
     test('should map ID! to string for non-null fields', () => {
       const result = mapGraphQLTypeToProto(new GraphQLNonNull(GraphQLID));
-      
+
       expect(result.typeName).toBe('string');
       expect(result.isRepeated).toBe(false);
       expect(result.isWrapper).toBe(false);
@@ -116,7 +116,7 @@ describe('Type Mapper', () => {
   describe('list types', () => {
     test('should map [String] to repeated string with wrapper', () => {
       const result = mapGraphQLTypeToProto(new GraphQLList(GraphQLString));
-      
+
       expect(result.typeName).toBe('google.protobuf.StringValue');
       expect(result.isRepeated).toBe(true);
       expect(result.isWrapper).toBe(true);
@@ -125,7 +125,7 @@ describe('Type Mapper', () => {
 
     test('should map [String!] to repeated string without wrapper', () => {
       const result = mapGraphQLTypeToProto(new GraphQLList(new GraphQLNonNull(GraphQLString)));
-      
+
       expect(result.typeName).toBe('string');
       expect(result.isRepeated).toBe(true);
       expect(result.isWrapper).toBe(false);
@@ -133,10 +133,8 @@ describe('Type Mapper', () => {
     });
 
     test('should map [Int!]! to repeated int32', () => {
-      const result = mapGraphQLTypeToProto(
-        new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(GraphQLInt))),
-      );
-      
+      const result = mapGraphQLTypeToProto(new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(GraphQLInt))));
+
       expect(result.typeName).toBe('int32');
       expect(result.isRepeated).toBe(true);
       expect(result.isWrapper).toBe(false);
@@ -153,9 +151,9 @@ describe('Type Mapper', () => {
           INACTIVE: { value: 'INACTIVE' },
         },
       });
-      
+
       const result = mapGraphQLTypeToProto(enumType);
-      
+
       expect(result.typeName).toBe('Status');
       expect(result.isRepeated).toBe(false);
       expect(result.isWrapper).toBe(false);
@@ -170,9 +168,9 @@ describe('Type Mapper', () => {
           USER: { value: 'USER' },
         },
       });
-      
+
       const result = mapGraphQLTypeToProto(enumType);
-      
+
       expect(result.typeName).toBe('Role');
       expect(result.isWrapper).toBe(false);
     });
@@ -187,9 +185,9 @@ describe('Type Mapper', () => {
           name: { type: GraphQLString },
         },
       });
-      
+
       const result = mapGraphQLTypeToProto(objectType);
-      
+
       expect(result.typeName).toBe('User');
       expect(result.isRepeated).toBe(false);
       expect(result.isWrapper).toBe(false);
@@ -203,11 +201,9 @@ describe('Type Mapper', () => {
           id: { type: GraphQLID },
         },
       });
-      
-      const result = mapGraphQLTypeToProto(
-        new GraphQLList(new GraphQLNonNull(objectType)),
-      );
-      
+
+      const result = mapGraphQLTypeToProto(new GraphQLList(new GraphQLNonNull(objectType)));
+
       expect(result.typeName).toBe('User');
       expect(result.isRepeated).toBe(true);
       expect(result.isWrapper).toBe(false);
@@ -220,13 +216,13 @@ describe('Type Mapper', () => {
       const customScalar = new GraphQLScalarType({
         name: 'DateTime',
       });
-      
+
       const result = mapGraphQLTypeToProto(customScalar, {
         customScalarMappings: {
           DateTime: 'google.protobuf.Timestamp',
         },
       });
-      
+
       expect(result.typeName).toBe('google.protobuf.Timestamp');
       expect(result.isScalar).toBe(true);
     });
@@ -235,9 +231,9 @@ describe('Type Mapper', () => {
       const customScalar = new GraphQLScalarType({
         name: 'Unknown',
       });
-      
+
       const result = mapGraphQLTypeToProto(customScalar);
-      
+
       expect(result.typeName).toBe('string');
       expect(result.isScalar).toBe(true);
     });
@@ -248,14 +244,14 @@ describe('Type Mapper', () => {
       const result = mapGraphQLTypeToProto(GraphQLString, {
         useWrapperTypes: false,
       });
-      
+
       expect(result.typeName).toBe('string');
       expect(result.isWrapper).toBe(false);
     });
 
     test('should use wrapper types by default', () => {
       const result = mapGraphQLTypeToProto(GraphQLString);
-      
+
       expect(result.isWrapper).toBe(true);
     });
   });
@@ -286,7 +282,7 @@ describe('Type Mapper', () => {
           id: { type: GraphQLID },
         },
       });
-      
+
       expect(isGraphQLScalarType(objectType)).toBe(false);
     });
   });
@@ -310,26 +306,22 @@ describe('Type Mapper', () => {
   describe('getRequiredImports', () => {
     test('should return wrapper import for nullable scalars', () => {
       const imports = getRequiredImports([GraphQLString, GraphQLInt]);
-      
+
       expect(imports).toContain('google/protobuf/wrappers.proto');
     });
 
     test('should not return wrapper import for non-null scalars', () => {
-      const imports = getRequiredImports([
-        new GraphQLNonNull(GraphQLString),
-        new GraphQLNonNull(GraphQLInt),
-      ]);
-      
+      const imports = getRequiredImports([new GraphQLNonNull(GraphQLString), new GraphQLNonNull(GraphQLInt)]);
+
       // Still includes it because default options use wrappers
       expect(imports.length).toBeGreaterThanOrEqual(0);
     });
 
     test('should return unique imports', () => {
       const imports = getRequiredImports([GraphQLString, GraphQLInt, GraphQLBoolean]);
-      
+
       const uniqueImports = [...new Set(imports)];
       expect(imports.length).toBe(uniqueImports.length);
     });
   });
 });
-

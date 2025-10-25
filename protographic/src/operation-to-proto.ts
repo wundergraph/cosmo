@@ -79,7 +79,7 @@ export function compileOperationsToProto(
   const root = visitor.visit();
 
   const proto = visitor.toProtoText(root);
-  
+
   // Get the updated lock data for field number stability
   const lockData = visitor.getLockData();
 
@@ -107,7 +107,7 @@ class OperationsToProtoVisitor {
 
   // Lock manager for field number stability
   private readonly lockManager: ProtoLockManager;
-  
+
   // Field number manager
   private readonly fieldNumberManager;
 
@@ -125,12 +125,12 @@ class OperationsToProtoVisitor {
 
     // Initialize lock manager with previous lock data if provided
     this.lockManager = new ProtoLockManager(options?.lockData);
-    
+
     // Create field number manager with lock manager integration
     this.fieldNumberManager = createFieldNumberManager(this.lockManager);
 
     this.root = new protobuf.Root();
-    
+
     // Collect all fragment definitions from the document
     this.collectFragments();
   }
@@ -203,20 +203,14 @@ class OperationsToProtoVisitor {
     const responseMessageName = createResponseMessageName(methodName);
     if (node.selectionSet) {
       const rootType = this.getRootType(node.operation);
-      const responseMessage = buildMessageFromSelectionSet(
-        responseMessageName,
-        node.selectionSet,
-        rootType,
-        typeInfo,
-        {
-          includeComments: this.includeComments,
-          root: this.root,
-          fieldNumberManager: this.fieldNumberManager,
-          fragments: this.fragments,
-          schema: this.schema,
-          createdEnums: this.createdEnums,
-        },
-      );
+      const responseMessage = buildMessageFromSelectionSet(responseMessageName, node.selectionSet, rootType, typeInfo, {
+        includeComments: this.includeComments,
+        root: this.root,
+        fieldNumberManager: this.fieldNumberManager,
+        fragments: this.fragments,
+        schema: this.schema,
+        createdEnums: this.createdEnums,
+      });
 
       // Add response message to root
       if (!this.createdMessages.has(responseMessageName)) {
@@ -300,7 +294,7 @@ class OperationsToProtoVisitor {
    */
   private processEnumType(enumType: GraphQLEnumType): void {
     const typeName = enumType.name;
-    
+
     if (!this.createdEnums.has(typeName)) {
       const protoEnum = buildEnumType(enumType, {
         includeComments: this.includeComments,
@@ -323,7 +317,7 @@ class OperationsToProtoVisitor {
         return this.schema.getSubscriptionType()!;
     }
   }
-  
+
   /**
    * Get the current lock data for field number stability
    */

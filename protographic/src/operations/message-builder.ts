@@ -60,11 +60,11 @@ export function buildMessageFromSelectionSet(
 ): protobuf.Type {
   const message = new protobuf.Type(messageName);
   const fieldNumberManager = options?.fieldNumberManager;
-  
+
   // First pass: collect all field names that will be in this message
   const fieldNames: string[] = [];
   const fieldSelections = new Map<string, { selection: FieldNode; type: GraphQLObjectType }>();
-  
+
   const collectFields = (selections: readonly any[], currentType: any) => {
     for (const selection of selections) {
       if (selection.kind === 'Field') {
@@ -99,15 +99,15 @@ export function buildMessageFromSelectionSet(
       }
     }
   };
-  
+
   collectFields(selectionSet.selections, parentType);
-  
+
   // Reconcile field order using lock manager if available
   let orderedFieldNames = fieldNames;
   if (fieldNumberManager && 'reconcileFieldOrder' in fieldNumberManager) {
     orderedFieldNames = fieldNumberManager.reconcileFieldOrder(messageName, fieldNames);
   }
-  
+
   // Second pass: process fields in reconciled order
   // Pre-assign field numbers from lock data if available
   if (fieldNumberManager?.getLockManager) {
@@ -125,21 +125,14 @@ export function buildMessageFromSelectionSet(
       }
     }
   }
-  
+
   for (const protoFieldName of orderedFieldNames) {
     const fieldData = fieldSelections.get(protoFieldName);
     if (fieldData) {
-      processFieldSelection(
-        fieldData.selection,
-        message,
-        fieldData.type,
-        typeInfo,
-        options,
-        fieldNumberManager,
-      );
+      processFieldSelection(fieldData.selection, message, fieldData.type, typeInfo, options, fieldNumberManager);
     }
   }
-  
+
   return message;
 }
 
@@ -156,31 +149,31 @@ function processFieldSelection(
 ): void {
   const fieldName = field.name.value;
   const protoFieldName = graphqlFieldToProtoField(fieldName);
-  
+
   // Check if field already exists in the message (avoid duplicates)
   if (message.fields[protoFieldName]) {
     return; // Field already added, skip
   }
-  
+
   // Get the field definition from the parent type
   const fieldDef = parentType.getFields()[fieldName];
   if (!fieldDef) {
     return; // Skip unknown fields
   }
-  
+
   const fieldType = fieldDef.type;
-  
+
   // If the field has a selection set, we need a nested message
   if (field.selectionSet) {
     const namedType = getNamedType(fieldType);
     if (isObjectType(namedType) || isInterfaceType(namedType) || isUnionType(namedType)) {
       // Use simple name since message will be nested inside parent
       const nestedMessageName = upperFirst(camelCase(fieldName));
-      
+
       // For interfaces and unions, we use the base type to collect fields from inline fragments
       // For object types, we process normally
-      const typeForSelection = isObjectType(namedType) ? namedType : namedType as any;
-      
+      const typeForSelection = isObjectType(namedType) ? namedType : (namedType as any);
+
       const nestedMessage = buildMessageFromSelectionSet(
         nestedMessageName,
         field.selectionSet,
@@ -188,13 +181,13 @@ function processFieldSelection(
         typeInfo,
         options,
       );
-      
+
       // Add nested message to the parent message
       message.add(nestedMessage);
-      
+
       // Get field number - check if already assigned from reconciliation
       const existingFieldNumber = fieldNumberManager?.getFieldNumber(message.name, protoFieldName);
-      
+
       let fieldNumber: number;
       if (existingFieldNumber !== undefined) {
         // Use existing field number from reconciliation
@@ -207,54 +200,50 @@ function processFieldSelection(
         // No field number manager, use sequential numbering
         fieldNumber = message.fieldsArray.length + 1;
       }
-      
+
       // Determine if field should be repeated
       const protoTypeInfo = mapGraphQLTypeToProto(fieldType);
-      
-      const protoField = new protobuf.Field(
-        protoFieldName,
-        fieldNumber,
-        nestedMessageName,
-      );
-      
+
+      const protoField = new protobuf.Field(protoFieldName, fieldNumber, nestedMessageName);
+
       if (protoTypeInfo.isRepeated) {
         protoField.repeated = true;
       }
-      
+
       if (options?.includeComments && fieldDef.description) {
         protoField.comment = fieldDef.description;
       }
-      
+
       message.add(protoField);
     }
   } else {
     // Scalar or enum field
     const namedType = getNamedType(fieldType);
-    
+
     // If this is an enum type, ensure it's added to the root
     if (isEnumType(namedType) && options?.root) {
       const enumTypeName = namedType.name;
       const createdEnums = options.createdEnums || new Set<string>();
-      
+
       if (!createdEnums.has(enumTypeName)) {
         const protoEnum = buildEnumType(namedType as GraphQLEnumType, {
           includeComments: options.includeComments,
         });
         options.root.add(protoEnum);
         createdEnums.add(enumTypeName);
-        
+
         // Update the set in options if it was provided
         if (options.createdEnums) {
           options.createdEnums.add(enumTypeName);
         }
       }
     }
-    
+
     const protoTypeInfo = mapGraphQLTypeToProto(fieldType);
-    
+
     // Get field number - check if already assigned from reconciliation
     const existingFieldNumber = fieldNumberManager?.getFieldNumber(message.name, protoFieldName);
-    
+
     let fieldNumber: number;
     if (existingFieldNumber !== undefined) {
       // Use existing field number from reconciliation
@@ -267,21 +256,17 @@ function processFieldSelection(
       // No field number manager, use sequential numbering
       fieldNumber = message.fieldsArray.length + 1;
     }
-    
-    const protoField = new protobuf.Field(
-      protoFieldName,
-      fieldNumber,
-      protoTypeInfo.typeName,
-    );
-    
+
+    const protoField = new protobuf.Field(protoFieldName, fieldNumber, protoTypeInfo.typeName);
+
     if (protoTypeInfo.isRepeated) {
       protoField.repeated = true;
     }
-    
+
     if (options?.includeComments && fieldDef.description) {
       protoField.comment = fieldDef.description;
     }
-    
+
     message.add(protoField);
   }
 }
@@ -300,60 +285,39 @@ function processInlineFragment(
 ): void {
   // Determine the type for this inline fragment
   let fragmentType: GraphQLObjectType;
-  
+
   if (fragment.typeCondition) {
     // Type condition specified: ... on User
     const typeName = fragment.typeCondition.name.value;
     const schema = options?.schema;
-    
+
     if (!schema) {
       // Without schema, we can't resolve the type - skip
       return;
     }
-    
+
     const type = schema.getType(typeName);
     if (!type || !isObjectType(type)) {
       // Type not found or not an object type - skip
       return;
     }
-    
+
     fragmentType = type;
   } else {
     // No type condition: just process with parent type
     fragmentType = parentType;
   }
-  
+
   // Process all selections in the inline fragment with the resolved type
   if (fragment.selectionSet) {
     for (const selection of fragment.selectionSet.selections) {
       if (selection.kind === 'Field') {
-        processFieldSelection(
-          selection,
-          message,
-          fragmentType,
-          typeInfo,
-          options,
-          fieldNumberManager,
-        );
+        processFieldSelection(selection, message, fragmentType, typeInfo, options, fieldNumberManager);
       } else if (selection.kind === 'InlineFragment') {
         // Nested inline fragment
-        processInlineFragment(
-          selection,
-          message,
-          fragmentType,
-          typeInfo,
-          options,
-          fieldNumberManager,
-        );
+        processInlineFragment(selection, message, fragmentType, typeInfo, options, fieldNumberManager);
       } else if (selection.kind === 'FragmentSpread') {
-        processFragmentSpread(
-          selection,
-          message,
-          fragmentType,
-          typeInfo,
-          options,
-          fieldNumberManager,
-        );
+        processFragmentSpread(selection, message, fragmentType, typeInfo, options, fieldNumberManager);
       }
     }
   }
@@ -373,63 +337,42 @@ function processFragmentSpread(
 ): void {
   const fragmentName = spread.name.value;
   const fragments = options?.fragments;
-  
+
   if (!fragments) {
     // No fragments provided - skip
     return;
   }
-  
+
   const fragmentDef = fragments.get(fragmentName);
   if (!fragmentDef) {
     // Fragment definition not found - skip
     return;
   }
-  
+
   // Resolve the fragment's type condition
   const typeName = fragmentDef.typeCondition.name.value;
   const schema = options?.schema;
-  
+
   if (!schema) {
     // Without schema, we can't resolve the type - skip
     return;
   }
-  
+
   const type = schema.getType(typeName);
   if (!type || !isObjectType(type)) {
     // Type not found or not an object type - skip
     return;
   }
-  
+
   // Process the fragment's selection set with the resolved type
   for (const selection of fragmentDef.selectionSet.selections) {
     if (selection.kind === 'Field') {
-      processFieldSelection(
-        selection,
-        message,
-        type,
-        typeInfo,
-        options,
-        fieldNumberManager,
-      );
+      processFieldSelection(selection, message, type, typeInfo, options, fieldNumberManager);
     } else if (selection.kind === 'InlineFragment') {
-      processInlineFragment(
-        selection,
-        message,
-        type,
-        typeInfo,
-        options,
-        fieldNumberManager,
-      );
+      processInlineFragment(selection, message, type, typeInfo, options, fieldNumberManager);
     } else if (selection.kind === 'FragmentSpread') {
       // Nested fragment spread (fragment inside fragment)
-      processFragmentSpread(
-        selection,
-        message,
-        type,
-        typeInfo,
-        options,
-        fieldNumberManager,
-      );
+      processFragmentSpread(selection, message, type, typeInfo, options, fieldNumberManager);
     }
   }
 }
@@ -451,17 +394,13 @@ export function buildFieldDefinition(
 ): protobuf.Field {
   const protoFieldName = graphqlFieldToProtoField(fieldName);
   const typeInfo = mapGraphQLTypeToProto(fieldType);
-  
-  const field = new protobuf.Field(
-    protoFieldName,
-    fieldNumber,
-    typeInfo.typeName,
-  );
-  
+
+  const field = new protobuf.Field(protoFieldName, fieldNumber, typeInfo.typeName);
+
   if (typeInfo.isRepeated) {
     field.repeated = true;
   }
-  
+
   return field;
 }
 
@@ -480,24 +419,23 @@ export function buildNestedMessage(
 ): protobuf.Type {
   const message = new protobuf.Type(messageName);
   const fieldNumberManager = options?.fieldNumberManager;
-  
+
   let fieldNumber = 1;
   for (const [fieldName, fieldType] of fields.entries()) {
     const protoFieldName = graphqlFieldToProtoField(fieldName);
-    
+
     if (fieldNumberManager) {
       fieldNumber = fieldNumberManager.getNextFieldNumber(messageName);
       fieldNumberManager.assignFieldNumber(messageName, protoFieldName, fieldNumber);
     }
-    
+
     const field = buildFieldDefinition(fieldName, fieldType, fieldNumber, options);
     message.add(field);
-    
+
     if (!fieldNumberManager) {
       fieldNumber++;
     }
   }
-  
+
   return message;
 }
-

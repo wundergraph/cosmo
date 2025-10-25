@@ -21,7 +21,7 @@ describe('Message Builder', () => {
   describe('buildFieldDefinition', () => {
     test('should build field for nullable String', () => {
       const field = buildFieldDefinition('name', GraphQLString, 1);
-      
+
       expect(field.name).toBe('name');
       expect(field.id).toBe(1);
       expect(field.type).toBe('google.protobuf.StringValue');
@@ -29,7 +29,7 @@ describe('Message Builder', () => {
 
     test('should build field for non-null String', () => {
       const field = buildFieldDefinition('name', new GraphQLNonNull(GraphQLString), 1);
-      
+
       expect(field.name).toBe('name');
       expect(field.id).toBe(1);
       expect(field.type).toBe('string');
@@ -37,7 +37,7 @@ describe('Message Builder', () => {
 
     test('should build field for list type', () => {
       const field = buildFieldDefinition('tags', new GraphQLList(GraphQLString), 1);
-      
+
       expect(field.name).toBe('tags');
       expect(field.id).toBe(1);
       expect(field.repeated).toBe(true);
@@ -45,7 +45,7 @@ describe('Message Builder', () => {
 
     test('should convert field name to snake_case', () => {
       const field = buildFieldDefinition('firstName', GraphQLString, 1);
-      
+
       expect(field.name).toBe('first_name');
     });
   });
@@ -57,9 +57,9 @@ describe('Message Builder', () => {
         ['name', GraphQLString],
         ['age', GraphQLInt],
       ]);
-      
+
       const message = buildNestedMessage('User', fields);
-      
+
       expect(message.name).toBe('User');
       expect(message.fieldsArray).toHaveLength(3);
       expect(message.fields.id).toBeDefined();
@@ -73,9 +73,9 @@ describe('Message Builder', () => {
         ['second', GraphQLString],
         ['third', GraphQLString],
       ]);
-      
+
       const message = buildNestedMessage('TestMessage', fields);
-      
+
       expect(message.fields.first.id).toBe(1);
       expect(message.fields.second.id).toBe(2);
       expect(message.fields.third.id).toBe(3);
@@ -87,11 +87,11 @@ describe('Message Builder', () => {
         ['field1', GraphQLString],
         ['field2', GraphQLInt],
       ]);
-      
+
       const message = buildNestedMessage('TestMessage', fields, {
         fieldNumberManager: manager,
       });
-      
+
       // Field names are stored in snake_case in the manager
       expect(manager.getFieldNumber('TestMessage', 'field_1')).toBe(1);
       expect(manager.getFieldNumber('TestMessage', 'field_2')).toBe(2);
@@ -111,7 +111,7 @@ describe('Message Builder', () => {
           email: String
         }
       `);
-      
+
       const query = parse(`
         query GetUser {
           user {
@@ -121,27 +121,22 @@ describe('Message Builder', () => {
           }
         }
       `);
-      
+
       const operation = query.definitions[0];
       if (operation.kind !== 'OperationDefinition' || !operation.selectionSet) {
         throw new Error('Invalid operation');
       }
-      
+
       const userSelection = operation.selectionSet.selections[0];
       if (userSelection.kind !== 'Field' || !userSelection.selectionSet) {
         throw new Error('Invalid selection');
       }
-      
+
       const typeInfo = new TypeInfo(schema);
       const userType = schema.getType('User') as GraphQLObjectType;
-      
-      const message = buildMessageFromSelectionSet(
-        'UserResponse',
-        userSelection.selectionSet,
-        userType,
-        typeInfo,
-      );
-      
+
+      const message = buildMessageFromSelectionSet('UserResponse', userSelection.selectionSet, userType, typeInfo);
+
       expect(message.name).toBe('UserResponse');
       expect(message.fields.id).toBeDefined();
       expect(message.fields.name).toBeDefined();
@@ -164,7 +159,7 @@ describe('Message Builder', () => {
           avatar: String
         }
       `);
-      
+
       const query = parse(`
         query GetUser {
           user {
@@ -176,31 +171,26 @@ describe('Message Builder', () => {
           }
         }
       `);
-      
+
       const operation = query.definitions[0];
       if (operation.kind !== 'OperationDefinition' || !operation.selectionSet) {
         throw new Error('Invalid operation');
       }
-      
+
       const userSelection = operation.selectionSet.selections[0];
       if (userSelection.kind !== 'Field' || !userSelection.selectionSet) {
         throw new Error('Invalid selection');
       }
-      
+
       const typeInfo = new TypeInfo(schema);
       const userType = schema.getType('User') as GraphQLObjectType;
-      
-      const message = buildMessageFromSelectionSet(
-        'UserResponse',
-        userSelection.selectionSet,
-        userType,
-        typeInfo,
-      );
-      
+
+      const message = buildMessageFromSelectionSet('UserResponse', userSelection.selectionSet, userType, typeInfo);
+
       expect(message.name).toBe('UserResponse');
       expect(message.fields.id).toBeDefined();
       expect(message.fields.profile).toBeDefined();
-      
+
       // Should have nested message for profile (now with simple name)
       expect(message.nested).toBeDefined();
       expect(message.nested!.Profile).toBeDefined();
@@ -217,7 +207,7 @@ describe('Message Builder', () => {
           name: String
         }
       `);
-      
+
       const query = parse(`
         query GetUser {
           user {
@@ -226,31 +216,25 @@ describe('Message Builder', () => {
           }
         }
       `);
-      
+
       const operation = query.definitions[0];
       if (operation.kind !== 'OperationDefinition' || !operation.selectionSet) {
         throw new Error('Invalid operation');
       }
-      
+
       const userSelection = operation.selectionSet.selections[0];
       if (userSelection.kind !== 'Field' || !userSelection.selectionSet) {
         throw new Error('Invalid selection');
       }
-      
+
       const typeInfo = new TypeInfo(schema);
       const userType = schema.getType('User') as GraphQLObjectType;
       const manager = createFieldNumberManager();
-      
-      const message = buildMessageFromSelectionSet(
-        'UserResponse',
-        userSelection.selectionSet,
-        userType,
-        typeInfo,
-        {
-          fieldNumberManager: manager,
-        },
-      );
-      
+
+      const message = buildMessageFromSelectionSet('UserResponse', userSelection.selectionSet, userType, typeInfo, {
+        fieldNumberManager: manager,
+      });
+
       expect(manager.getFieldNumber('UserResponse', 'id')).toBeDefined();
       expect(manager.getFieldNumber('UserResponse', 'name')).toBeDefined();
     });
@@ -266,7 +250,7 @@ describe('Message Builder', () => {
           name: String
         }
       `);
-      
+
       const query = parse(`
         query GetUsers {
           users {
@@ -275,27 +259,22 @@ describe('Message Builder', () => {
           }
         }
       `);
-      
+
       const operation = query.definitions[0];
       if (operation.kind !== 'OperationDefinition' || !operation.selectionSet) {
         throw new Error('Invalid operation');
       }
-      
+
       const usersSelection = operation.selectionSet.selections[0];
       if (usersSelection.kind !== 'Field' || !usersSelection.selectionSet) {
         throw new Error('Invalid selection');
       }
-      
+
       const typeInfo = new TypeInfo(schema);
       const userType = schema.getType('User') as GraphQLObjectType;
-      
-      const message = buildMessageFromSelectionSet(
-        'UsersResponse',
-        usersSelection.selectionSet,
-        userType,
-        typeInfo,
-      );
-      
+
+      const message = buildMessageFromSelectionSet('UsersResponse', usersSelection.selectionSet, userType, typeInfo);
+
       expect(message.name).toBe('UsersResponse');
       expect(message.fields.id).toBeDefined();
       expect(message.fields.name).toBeDefined();
@@ -312,7 +291,7 @@ describe('Message Builder', () => {
           name: String
         }
       `);
-      
+
       const query = parse(`
         query GetUser {
           user {
@@ -321,27 +300,22 @@ describe('Message Builder', () => {
           }
         }
       `);
-      
+
       const operation = query.definitions[0];
       if (operation.kind !== 'OperationDefinition' || !operation.selectionSet) {
         throw new Error('Invalid operation');
       }
-      
+
       const userSelection = operation.selectionSet.selections[0];
       if (userSelection.kind !== 'Field' || !userSelection.selectionSet) {
         throw new Error('Invalid selection');
       }
-      
+
       const typeInfo = new TypeInfo(schema);
       const userType = schema.getType('User') as GraphQLObjectType;
-      
-      const message = buildMessageFromSelectionSet(
-        'UserResponse',
-        userSelection.selectionSet,
-        userType,
-        typeInfo,
-      );
-      
+
+      const message = buildMessageFromSelectionSet('UserResponse', userSelection.selectionSet, userType, typeInfo);
+
       // Should use actual field names, not aliases
       expect(message.fields.id).toBeDefined();
       expect(message.fields.name).toBeDefined();
@@ -355,17 +329,17 @@ describe('Message Builder', () => {
           ping: String
         }
       `);
-      
+
       const typeInfo = new TypeInfo(schema);
       const queryType = schema.getQueryType()!;
-      
+
       const message = buildMessageFromSelectionSet(
         'EmptyResponse',
         { kind: Kind.SELECTION_SET, selections: [] },
         queryType,
         typeInfo,
       );
-      
+
       expect(message.name).toBe('EmptyResponse');
       expect(message.fieldsArray).toHaveLength(0);
     });
@@ -380,7 +354,7 @@ describe('Message Builder', () => {
           id: ID!
         }
       `);
-      
+
       // This query references a field that doesn't exist
       const query = parse(`
         query GetUser {
@@ -389,30 +363,24 @@ describe('Message Builder', () => {
           }
         }
       `);
-      
+
       const operation = query.definitions[0];
       if (operation.kind !== 'OperationDefinition' || !operation.selectionSet) {
         throw new Error('Invalid operation');
       }
-      
+
       const userSelection = operation.selectionSet.selections[0];
       if (userSelection.kind !== 'Field' || !userSelection.selectionSet) {
         throw new Error('Invalid selection');
       }
-      
+
       const typeInfo = new TypeInfo(schema);
       const userType = schema.getType('User') as GraphQLObjectType;
-      
+
       // Should not throw
-      const message = buildMessageFromSelectionSet(
-        'UserResponse',
-        userSelection.selectionSet,
-        userType,
-        typeInfo,
-      );
-      
+      const message = buildMessageFromSelectionSet('UserResponse', userSelection.selectionSet, userType, typeInfo);
+
       expect(message.name).toBe('UserResponse');
     });
   });
 });
-

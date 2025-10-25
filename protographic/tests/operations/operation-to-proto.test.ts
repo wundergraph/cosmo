@@ -10,18 +10,18 @@ describe('Operation to Proto - Integration Tests', () => {
           hello: String
         }
       `;
-      
+
       const operation = `
         query GetHello {
           hello
         }
       `;
-      
+
       const { proto, root } = compileOperationsToProto(operation, schema);
-      
+
       // Validate proto
       expectValidProto(proto);
-      
+
       // Check structure
       expect(proto).toContain('syntax = "proto3"');
       expect(proto).toContain('package service.v1');
@@ -42,7 +42,7 @@ describe('Operation to Proto - Integration Tests', () => {
           name: String
         }
       `;
-      
+
       const operation = `
         query GetUser($id: ID!) {
           user(id: $id) {
@@ -51,11 +51,11 @@ describe('Operation to Proto - Integration Tests', () => {
           }
         }
       `;
-      
+
       const { proto, root } = compileOperationsToProto(operation, schema);
-      
+
       expectValidProto(proto);
-      
+
       expect(proto).toContain('message GetUserRequest');
       expect(proto).toContain('string id = 1');
       expect(proto).toContain('message GetUserResponse');
@@ -77,7 +77,7 @@ describe('Operation to Proto - Integration Tests', () => {
           avatar: String
         }
       `;
-      
+
       const operation = `
         query GetUserProfile {
           user {
@@ -89,11 +89,11 @@ describe('Operation to Proto - Integration Tests', () => {
           }
         }
       `;
-      
+
       const { proto, root } = compileOperationsToProto(operation, schema);
-      
+
       expectValidProto(proto);
-      
+
       expect(proto).toContain('message GetUserProfileResponse');
       // Should have nested message for profile
       expect(proto).toMatch(/message.*profile/i);
@@ -110,7 +110,7 @@ describe('Operation to Proto - Integration Tests', () => {
           name: String
         }
       `;
-      
+
       const operation = `
         query GetUsers {
           users {
@@ -119,11 +119,11 @@ describe('Operation to Proto - Integration Tests', () => {
           }
         }
       `;
-      
+
       const { proto, root } = compileOperationsToProto(operation, schema);
-      
+
       expectValidProto(proto);
-      
+
       expect(proto).toContain('message GetUsersResponse');
     });
 
@@ -144,7 +144,7 @@ describe('Operation to Proto - Integration Tests', () => {
           title: String
         }
       `;
-      
+
       const operations = `
         query GetUser {
           user {
@@ -160,11 +160,11 @@ describe('Operation to Proto - Integration Tests', () => {
           }
         }
       `;
-      
+
       const { proto, root } = compileOperationsToProto(operations, schema);
-      
+
       expectValidProto(proto);
-      
+
       expect(proto).toContain('rpc GetUser');
       expect(proto).toContain('rpc GetPosts');
       expect(proto).toContain('message GetUserRequest');
@@ -190,7 +190,7 @@ describe('Operation to Proto - Integration Tests', () => {
           content: String
         }
       `;
-      
+
       const operation = `
         subscription OnMessageAdded {
           messageAdded {
@@ -199,11 +199,11 @@ describe('Operation to Proto - Integration Tests', () => {
           }
         }
       `;
-      
+
       const { proto, root } = compileOperationsToProto(operation, schema);
-      
+
       expectValidProto(proto);
-      
+
       // Should have server streaming (stream keyword before response)
       expect(proto).toContain('rpc OnMessageAdded(OnMessageAddedRequest) returns (stream OnMessageAddedResponse)');
       expect(proto).toContain('message OnMessageAddedRequest');
@@ -226,7 +226,7 @@ describe('Operation to Proto - Integration Tests', () => {
           channelId: ID!
         }
       `;
-      
+
       const operation = `
         subscription OnMessageAdded($channelId: ID!) {
           messageAdded(channelId: $channelId) {
@@ -236,11 +236,11 @@ describe('Operation to Proto - Integration Tests', () => {
           }
         }
       `;
-      
+
       const { proto, root } = compileOperationsToProto(operation, schema);
-      
+
       expectValidProto(proto);
-      
+
       // Should be server streaming
       expect(proto).toContain('rpc OnMessageAdded(OnMessageAddedRequest) returns (stream OnMessageAddedResponse)');
       // Should have variable in request
@@ -269,7 +269,7 @@ describe('Operation to Proto - Integration Tests', () => {
           online: Boolean
         }
       `;
-      
+
       const operations = `
         subscription OnMessageAdded {
           messageAdded {
@@ -285,14 +285,16 @@ describe('Operation to Proto - Integration Tests', () => {
           }
         }
       `;
-      
+
       const { proto, root } = compileOperationsToProto(operations, schema);
-      
+
       expectValidProto(proto);
-      
+
       // Both should be server streaming
       expect(proto).toContain('rpc OnMessageAdded(OnMessageAddedRequest) returns (stream OnMessageAddedResponse)');
-      expect(proto).toContain('rpc OnUserStatusChanged(OnUserStatusChangedRequest) returns (stream OnUserStatusChangedResponse)');
+      expect(proto).toContain(
+        'rpc OnUserStatusChanged(OnUserStatusChangedRequest) returns (stream OnUserStatusChangedResponse)',
+      );
     });
 
     test('should handle subscription with nested selections', () => {
@@ -316,7 +318,7 @@ describe('Operation to Proto - Integration Tests', () => {
           name: String
         }
       `;
-      
+
       const operation = `
         subscription OnPostAdded {
           postAdded {
@@ -329,11 +331,11 @@ describe('Operation to Proto - Integration Tests', () => {
           }
         }
       `;
-      
+
       const { proto, root } = compileOperationsToProto(operation, schema);
-      
+
       expectValidProto(proto);
-      
+
       // Should be server streaming
       expect(proto).toContain('rpc OnPostAdded(OnPostAddedRequest) returns (stream OnPostAddedResponse)');
       expect(proto).toContain('message OnPostAddedResponse');
@@ -354,7 +356,7 @@ describe('Operation to Proto - Integration Tests', () => {
           content: String
         }
       `;
-      
+
       const operation = `
         subscription OnMessageAdded {
           messageAdded {
@@ -363,13 +365,13 @@ describe('Operation to Proto - Integration Tests', () => {
           }
         }
       `;
-      
+
       const { proto } = compileOperationsToProto(operation, schema, {
         queryNoSideEffects: true,
       });
-      
+
       expectValidProto(proto);
-      
+
       // Should be server streaming but no idempotency level
       expect(proto).toContain('rpc OnMessageAdded(OnMessageAddedRequest) returns (stream OnMessageAddedResponse) {}');
       expect(proto).not.toContain('idempotency_level');
@@ -396,7 +398,7 @@ describe('Operation to Proto - Integration Tests', () => {
           content: String
         }
       `;
-      
+
       const operations = `
         query GetMessages {
           messages {
@@ -419,11 +421,11 @@ describe('Operation to Proto - Integration Tests', () => {
           }
         }
       `;
-      
+
       const { proto } = compileOperationsToProto(operations, schema);
-      
+
       expectValidProto(proto);
-      
+
       // Query should be unary
       expect(proto).toContain('rpc GetMessages(GetMessagesRequest) returns (GetMessagesResponse)');
       // Mutation should be unary
@@ -451,7 +453,7 @@ describe('Operation to Proto - Integration Tests', () => {
           content: String
         }
       `;
-      
+
       const operations = `
         query GetMessages {
           messages {
@@ -474,23 +476,23 @@ describe('Operation to Proto - Integration Tests', () => {
           }
         }
       `;
-      
+
       const { proto } = compileOperationsToProto(operations, schema, {
         queryNoSideEffects: true,
       });
-      
+
       expectValidProto(proto);
-      
+
       // Query should have idempotency level
       expect(proto).toContain('rpc GetMessages(GetMessagesRequest) returns (GetMessagesResponse) {');
       expect(proto).toContain('option idempotency_level = NO_SIDE_EFFECTS;');
-      
+
       // Mutation should not have idempotency level
       expect(proto).toContain('rpc AddMessage(AddMessageRequest) returns (AddMessageResponse) {}');
-      
+
       // Subscription should be streaming but no idempotency level
       expect(proto).toContain('rpc OnMessageAdded(OnMessageAddedRequest) returns (stream OnMessageAddedResponse) {}');
-      
+
       // Only one idempotency option (for the query)
       const matches = proto.match(/option idempotency_level = NO_SIDE_EFFECTS;/g);
       expect(matches).toHaveLength(1);
@@ -513,7 +515,7 @@ describe('Operation to Proto - Integration Tests', () => {
           name: String
         }
       `;
-      
+
       const operation = `
         mutation CreateUser($name: String!) {
           createUser(name: $name) {
@@ -522,11 +524,11 @@ describe('Operation to Proto - Integration Tests', () => {
           }
         }
       `;
-      
+
       const { proto, root } = compileOperationsToProto(operation, schema);
-      
+
       expectValidProto(proto);
-      
+
       expect(proto).toContain('rpc CreateUser');
       expect(proto).toContain('message CreateUserRequest');
       expect(proto).toContain('message CreateUserResponse');
@@ -553,7 +555,7 @@ describe('Operation to Proto - Integration Tests', () => {
           name: String
         }
       `;
-      
+
       const operation = `
         mutation UpdateUser($input: UserInput!) {
           updateUser(input: $input) {
@@ -562,11 +564,11 @@ describe('Operation to Proto - Integration Tests', () => {
           }
         }
       `;
-      
+
       const { proto, root } = compileOperationsToProto(operation, schema);
-      
+
       expectValidProto(proto);
-      
+
       expect(proto).toContain('rpc UpdateUser');
       expect(proto).toContain('UserInput input = 1');
     });
@@ -579,17 +581,17 @@ describe('Operation to Proto - Integration Tests', () => {
           hello: String
         }
       `;
-      
+
       const operation = `
         query GetHello {
           hello
         }
       `;
-      
+
       const { proto } = compileOperationsToProto(operation, schema, {
         serviceName: 'CustomService',
       });
-      
+
       expect(proto).toContain('service CustomService');
     });
 
@@ -599,17 +601,17 @@ describe('Operation to Proto - Integration Tests', () => {
           hello: String
         }
       `;
-      
+
       const operation = `
         query GetHello {
           hello
         }
       `;
-      
+
       const { proto } = compileOperationsToProto(operation, schema, {
         packageName: 'custom.api.v1',
       });
-      
+
       expect(proto).toContain('package custom.api.v1');
     });
 
@@ -619,17 +621,17 @@ describe('Operation to Proto - Integration Tests', () => {
           hello: String
         }
       `;
-      
+
       const operation = `
         query GetHello {
           hello
         }
       `;
-      
+
       const { proto } = compileOperationsToProto(operation, schema, {
         goPackage: 'github.com/example/api/v1',
       });
-      
+
       expect(proto).toContain('option go_package = "github.com/example/api/v1"');
     });
 
@@ -640,17 +642,17 @@ describe('Operation to Proto - Integration Tests', () => {
           hello: String
         }
       `;
-      
+
       const operation = `
         query GetHello {
           hello
         }
       `;
-      
+
       const { proto } = compileOperationsToProto(operation, schema, {
         includeComments: true,
       });
-      
+
       expectValidProto(proto);
       // Comments should be present
       expect(proto).toContain('//');
@@ -668,7 +670,7 @@ describe('Operation to Proto - Integration Tests', () => {
           name: String
         }
       `;
-      
+
       const operation = `
         query GetHello {
           hello
@@ -681,18 +683,18 @@ describe('Operation to Proto - Integration Tests', () => {
           }
         }
       `;
-      
+
       const { proto } = compileOperationsToProto(operation, schema, {
         queryNoSideEffects: true,
       });
-      
+
       expectValidProto(proto);
-      
+
       // Both query methods should have idempotency level
       expect(proto).toContain('rpc GetHello(GetHelloRequest) returns (GetHelloResponse) {');
       expect(proto).toContain('option idempotency_level = NO_SIDE_EFFECTS;');
       expect(proto).toContain('rpc GetUser(GetUserRequest) returns (GetUserResponse) {');
-      
+
       // Count occurrences - should have idempotency option for each query
       const matches = proto.match(/option idempotency_level = NO_SIDE_EFFECTS;/g);
       expect(matches).toHaveLength(2);
@@ -704,19 +706,19 @@ describe('Operation to Proto - Integration Tests', () => {
           hello: String
         }
       `;
-      
+
       const operation = `
         query GetHello {
           hello
         }
       `;
-      
+
       const { proto } = compileOperationsToProto(operation, schema, {
         queryNoSideEffects: false,
       });
-      
+
       expectValidProto(proto);
-      
+
       // Should use single-line format without options
       expect(proto).toContain('rpc GetHello(GetHelloRequest) returns (GetHelloResponse) {}');
       expect(proto).not.toContain('idempotency_level');
@@ -738,7 +740,7 @@ describe('Operation to Proto - Integration Tests', () => {
           name: String
         }
       `;
-      
+
       const operations = `
         mutation CreateUser($name: String!) {
           createUser(name: $name) {
@@ -754,13 +756,13 @@ describe('Operation to Proto - Integration Tests', () => {
           }
         }
       `;
-      
+
       const { proto } = compileOperationsToProto(operations, schema, {
         queryNoSideEffects: true,
       });
-      
+
       expectValidProto(proto);
-      
+
       // Mutations should not have idempotency level
       expect(proto).toContain('rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {}');
       expect(proto).toContain('rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse) {}');
@@ -782,7 +784,7 @@ describe('Operation to Proto - Integration Tests', () => {
           name: String
         }
       `;
-      
+
       const operations = `
         query GetUser {
           user {
@@ -798,20 +800,20 @@ describe('Operation to Proto - Integration Tests', () => {
           }
         }
       `;
-      
+
       const { proto } = compileOperationsToProto(operations, schema, {
         queryNoSideEffects: true,
       });
-      
+
       expectValidProto(proto);
-      
+
       // Query should have idempotency level
       expect(proto).toContain('rpc GetUser(GetUserRequest) returns (GetUserResponse) {');
       expect(proto).toContain('option idempotency_level = NO_SIDE_EFFECTS;');
-      
+
       // Mutation should not
       expect(proto).toContain('rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {}');
-      
+
       // Only one idempotency option (for the query)
       const matches = proto.match(/option idempotency_level = NO_SIDE_EFFECTS;/g);
       expect(matches).toHaveLength(1);
@@ -839,7 +841,7 @@ describe('Operation to Proto - Integration Tests', () => {
           notifications: Boolean
         }
       `;
-      
+
       const operation = `
         query GetUserSettings {
           user {
@@ -853,11 +855,11 @@ describe('Operation to Proto - Integration Tests', () => {
           }
         }
       `;
-      
+
       const { proto, root } = compileOperationsToProto(operation, schema);
-      
+
       expectValidProto(proto);
-      
+
       expect(proto).toContain('message GetUserSettingsResponse');
     });
 
@@ -877,7 +879,7 @@ describe('Operation to Proto - Integration Tests', () => {
           name: String
         }
       `;
-      
+
       const operation = `
         query SearchUsers(
           $name: String
@@ -896,11 +898,11 @@ describe('Operation to Proto - Integration Tests', () => {
           }
         }
       `;
-      
+
       const { proto, root } = compileOperationsToProto(operation, schema);
-      
+
       expectValidProto(proto);
-      
+
       expect(proto).toContain('message SearchUsersRequest');
       expect(proto).toMatch(/name.*=.*1/);
       expect(proto).toMatch(/email.*=.*2/);
@@ -923,7 +925,7 @@ describe('Operation to Proto - Integration Tests', () => {
           name: String
         }
       `;
-      
+
       const operations = `
         query GetUser {
           user {
@@ -939,11 +941,11 @@ describe('Operation to Proto - Integration Tests', () => {
           }
         }
       `;
-      
+
       const { proto, root } = compileOperationsToProto(operations, schema);
-      
+
       expectValidProto(proto);
-      
+
       expect(proto).toContain('rpc GetUser');
       expect(proto).toContain('rpc CreateUser');
     });
@@ -961,7 +963,7 @@ describe('Operation to Proto - Integration Tests', () => {
           age: Int
         }
       `;
-      
+
       const operation = `
         query GetUser {
           user {
@@ -972,10 +974,10 @@ describe('Operation to Proto - Integration Tests', () => {
           }
         }
       `;
-      
+
       const { proto: proto1 } = compileOperationsToProto(operation, schema);
       const { proto: proto2 } = compileOperationsToProto(operation, schema);
-      
+
       // Should produce identical output
       expect(proto1).toBe(proto2);
     });
@@ -988,15 +990,15 @@ describe('Operation to Proto - Integration Tests', () => {
           hello: String
         }
       `;
-      
+
       const operation = `
         {
           hello
         }
       `;
-      
+
       const { proto, root } = compileOperationsToProto(operation, schema);
-      
+
       // Should still be valid proto but with no operations
       expect(proto).toContain('syntax = "proto3"');
       expect(proto).toContain('service DefaultService');
@@ -1009,17 +1011,17 @@ describe('Operation to Proto - Integration Tests', () => {
           ping: String
         }
       `;
-      
+
       const operation = `
         query Ping {
           ping
         }
       `;
-      
+
       const { proto, root } = compileOperationsToProto(operation, schema);
-      
+
       expectValidProto(proto);
-      
+
       expect(proto).toContain('message PingResponse');
     });
 
@@ -1034,7 +1036,7 @@ describe('Operation to Proto - Integration Tests', () => {
           name: String
         }
       `;
-      
+
       const operation = `
         query GetUser {
           currentUser: user {
@@ -1043,11 +1045,11 @@ describe('Operation to Proto - Integration Tests', () => {
           }
         }
       `;
-      
+
       const { proto, root } = compileOperationsToProto(operation, schema);
-      
+
       expectValidProto(proto);
-      
+
       // Should use actual field names, not aliases
       expect(proto).toContain('message GetUserResponse');
     });
@@ -1060,15 +1062,15 @@ describe('Operation to Proto - Integration Tests', () => {
           hello: String
         }
       `;
-      
+
       const operation = `
         query GetHello {
           hello
         }
       `;
-      
+
       const result = compileOperationsToProto(operation, schema);
-      
+
       expect(result).toHaveProperty('proto');
       expect(result).toHaveProperty('root');
       expect(typeof result.proto).toBe('string');
@@ -1081,23 +1083,22 @@ describe('Operation to Proto - Integration Tests', () => {
           hello: String
         }
       `;
-      
+
       const operation = `
         query GetHello {
           hello
         }
       `;
-      
+
       const { root } = compileOperationsToProto(operation, schema);
-      
+
       // Root should have nested types
       expect(root.nestedArray).toBeDefined();
       expect(root.nestedArray.length).toBeGreaterThan(0);
-      
+
       // Should have a service
       const services = root.nestedArray.filter((n: any) => n.constructor.name === 'Service');
       expect(services.length).toBeGreaterThan(0);
     });
   });
 });
-
