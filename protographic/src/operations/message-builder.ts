@@ -16,6 +16,7 @@ import {
   FragmentSpreadNode,
   isInterfaceType,
   isUnionType,
+  GraphQLInterfaceType,
 } from 'graphql';
 import { mapGraphQLTypeToProto, ProtoTypeInfo } from './type-mapper.js';
 import { FieldNumberManager } from './field-numbering.js';
@@ -65,13 +66,14 @@ export function buildMessageFromSelectionSet(
 
   // First pass: collect all field names that will be in this message
   const fieldNames: string[] = [];
-  const fieldSelections = new Map<string, { selection: FieldNode; type: GraphQLObjectType }>();
+  const fieldSelections = new Map<string, { selection: FieldNode; type: GraphQLObjectType | GraphQLInterfaceType }>();
 
   const collectFields = (selections: readonly any[], currentType: any) => {
     for (const selection of selections) {
       if (selection.kind === 'Field') {
-        // Check if type has getFields method (objects and interfaces)
-        if (typeof currentType.getFields === 'function') {
+        // Only object and interface types have fields that can be selected
+        // Union types require inline fragments to access their constituent types
+        if (isObjectType(currentType) || isInterfaceType(currentType)) {
           const fieldName = selection.name.value;
           const protoFieldName = graphqlFieldToProtoField(fieldName);
           if (!fieldNames.includes(protoFieldName)) {
@@ -86,7 +88,8 @@ export function buildMessageFromSelectionSet(
           if (type && (isObjectType(type) || isInterfaceType(type))) {
             collectFields(selection.selectionSet.selections, type);
           }
-        } else if (typeof currentType.getFields === 'function') {
+        } else if (isObjectType(currentType) || isInterfaceType(currentType)) {
+          // No type condition, but parent type supports fields
           collectFields(selection.selectionSet.selections, currentType);
         }
       } else if (selection.kind === 'FragmentSpread' && options?.fragments) {
@@ -144,7 +147,7 @@ export function buildMessageFromSelectionSet(
 function processFieldSelection(
   field: FieldNode,
   message: protobuf.Type,
-  parentType: GraphQLObjectType,
+  parentType: GraphQLObjectType | GraphQLInterfaceType,
   typeInfo: TypeInfo,
   options?: MessageBuilderOptions,
   fieldNumberManager?: FieldNumberManager,
