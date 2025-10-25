@@ -1,6 +1,7 @@
 import protobuf from 'protobufjs';
 import {
   SelectionSetNode,
+  SelectionNode,
   FieldNode,
   GraphQLObjectType,
   GraphQLType,
@@ -68,7 +69,10 @@ export function buildMessageFromSelectionSet(
   const fieldNames: string[] = [];
   const fieldSelections = new Map<string, { selection: FieldNode; type: GraphQLObjectType | GraphQLInterfaceType }>();
 
-  const collectFields = (selections: readonly any[], currentType: any) => {
+  const collectFields = (
+    selections: readonly SelectionNode[],
+    currentType: GraphQLObjectType | GraphQLInterfaceType,
+  ) => {
     for (const selection of selections) {
       if (selection.kind === 'Field') {
         // Only object and interface types have fields that can be selected
@@ -153,12 +157,12 @@ function processFieldSelection(
   fieldNumberManager?: FieldNumberManager,
 ): void {
   const fieldName = field.name.value;
-  
+
   // Skip __typename - it's a GraphQL introspection field that doesn't need to be in proto
   if (fieldName === '__typename') {
     return;
   }
-  
+
   const protoFieldName = graphqlFieldToProtoField(fieldName);
 
   // Check if field already exists in the message (avoid duplicates)
@@ -171,7 +175,7 @@ function processFieldSelection(
   if (!fieldDef) {
     throw new Error(
       `Field "${fieldName}" does not exist on type "${parentType.name}". ` +
-      `GraphQL validation should be performed before proto compilation.`
+        `GraphQL validation should be performed before proto compilation.`,
     );
   }
 
