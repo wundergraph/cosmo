@@ -12,12 +12,14 @@ import {
   visitWithTypeInfo,
   getNamedType,
   isInputObjectType,
+  isEnumType,
   GraphQLInputObjectType,
+  GraphQLEnumType,
   FragmentDefinitionNode,
 } from 'graphql';
 import { createFieldNumberManager } from './operations/field-numbering.js';
 import { buildMessageFromSelectionSet } from './operations/message-builder.js';
-import { buildRequestMessage, buildInputObjectMessage } from './operations/request-builder.js';
+import { buildRequestMessage, buildInputObjectMessage, buildEnumType } from './operations/request-builder.js';
 import { rootToProtoText } from './operations/proto-text-generator.js';
 import {
   createRequestMessageName,
@@ -99,8 +101,9 @@ class OperationsToProtoVisitor {
   // Proto AST root
   private readonly root: protobuf.Root;
 
-  // For tracking / avoiding duplicate messages
+  // For tracking / avoiding duplicate messages and enums
   private createdMessages = new Set<string>();
+  private createdEnums = new Set<string>();
 
   // Lock manager for field number stability
   private readonly lockManager: ProtoLockManager;
@@ -211,6 +214,7 @@ class OperationsToProtoVisitor {
           fieldNumberManager: this.fieldNumberManager,
           fragments: this.fragments,
           schema: this.schema,
+          createdEnums: this.createdEnums,
         },
       );
 
@@ -249,7 +253,7 @@ class OperationsToProtoVisitor {
   }
 
   /**
-   * Process input object types referenced in a type node
+   * Process input object types and enums referenced in a type node
    */
   private processInputObjectTypes(typeNode: any): void {
     // Handle NonNullType and ListType wrappers
@@ -273,16 +277,36 @@ class OperationsToProtoVisitor {
           this.root.add(inputMessage);
           this.createdMessages.add(typeName);
 
-          // Recursively process nested input objects
+          // Recursively process nested input objects and enums
           const fields = (type as GraphQLInputObjectType).getFields();
           for (const field of Object.values(fields)) {
             const fieldType = getNamedType(field.type);
             if (isInputObjectType(fieldType)) {
               this.processInputObjectTypes({ kind: 'NamedType', name: { value: fieldType.name } });
+            } else if (isEnumType(fieldType)) {
+              this.processEnumType(fieldType as GraphQLEnumType);
             }
           }
         }
+      } else if (type && isEnumType(type)) {
+        // Create enum type if not already created
+        this.processEnumType(type as GraphQLEnumType);
       }
+    }
+  }
+
+  /**
+   * Process and add an enum type to the proto root
+   */
+  private processEnumType(enumType: GraphQLEnumType): void {
+    const typeName = enumType.name;
+    
+    if (!this.createdEnums.has(typeName)) {
+      const protoEnum = buildEnumType(enumType, {
+        includeComments: this.includeComments,
+      });
+      this.root.add(protoEnum);
+      this.createdEnums.add(typeName);
     }
   }
 
