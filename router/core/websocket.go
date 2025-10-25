@@ -1004,21 +1004,6 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 			return
 		}
 	}
-	resolveCtx := &resolve.Context{
-		Variables: operationCtx.Variables(),
-		Request: resolve.Request{
-			Header: registration.clientRequest.Header,
-			ID:     operationCtx.internalHash,
-		},
-		RenameTypeNames: h.graphqlHandler.executor.RenameTypeNames,
-		RemapVariables:  operationCtx.remapVariables,
-		TracingOptions:  operationCtx.traceOptions,
-		Extensions:      operationCtx.extensions,
-	}
-	if h.forwardInitialPayload && operationCtx.initialPayload != nil {
-		resolveCtx.InitialPayload = operationCtx.initialPayload
-	}
-
 	reqContext := buildRequestContext(requestContextOptions{
 		operationContext:    operationCtx,
 		requestLogger:       h.logger,
@@ -1026,6 +1011,26 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 		w:                   nil,
 		r:                   registration.clientRequest,
 	})
+
+	reqContext.operation.protocol = OperationProtocolWS
+	reqContext.operation.executionOptions = h.plannerOptions.ExecutionOptions
+	reqContext.operation.traceOptions = h.plannerOptions.TraceOptions
+
+	resolveCtx := &resolve.Context{
+		Variables:      operationCtx.Variables(),
+		RemapVariables: operationCtx.remapVariables,
+		Request: resolve.Request{
+			Header: registration.clientRequest.Header,
+			ID:     operationCtx.internalHash,
+		},
+		RenameTypeNames:  h.graphqlHandler.executor.RenameTypeNames,
+		TracingOptions:   operationCtx.traceOptions,
+		Extensions:       operationCtx.extensions,
+		ExecutionOptions: operationCtx.executionOptions,
+	}
+	if h.forwardInitialPayload && operationCtx.initialPayload != nil {
+		resolveCtx.InitialPayload = operationCtx.initialPayload
+	}
 
 	if origCtx := getRequestContext(h.request.Context()); origCtx != nil {
 		reqContext.expressionContext = *origCtx.expressionContext.Clone()

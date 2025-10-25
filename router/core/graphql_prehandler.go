@@ -1141,9 +1141,7 @@ func (h *PreHandler) parseExecutionAndTraceOptions(r *http.Request, clientInfo *
 	// 1. enableRequestDeduplication
 	// 2. hasPreOriginHandlers
 	// 3. forceEnableRequestDeduplication
-	if h.enableRequestDeduplication {
-		ex.DisableRequestDeduplication = false
-	}
+	ex.DisableRequestDeduplication = !h.enableRequestDeduplication
 	if h.hasPreOriginHandlers {
 		// if we have pre origin handlers, we cannot guarantee that these handlers won't modify headers
 		// as such, we're automatically disabling request deduplication
