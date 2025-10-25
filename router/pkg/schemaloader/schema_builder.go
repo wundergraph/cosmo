@@ -2,7 +2,6 @@ package schemaloader
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/jsonschema"
@@ -48,8 +47,12 @@ func (b *SchemaBuilder) buildSchemaForOperation(operation *Operation) error {
 		}
 		operation.JSONSchema = s
 		
-		// Merge descriptions (operation takes priority)
-		operation.Description = strings.TrimSpace(operation.Description + " " + schema.Description)
+		// Use operation description if provided, otherwise fall back to schema description
+		// This ensures user-provided descriptions take absolute priority
+		if operation.Description == "" {
+			operation.Description = schema.Description
+		}
+		// If operation.Description is not empty, keep it as-is (don't merge with schema description)
 	}
 
 	return nil
