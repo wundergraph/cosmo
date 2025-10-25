@@ -826,7 +826,7 @@ describe('Operations Field Ordering Stability', () => {
       expectValidProto(result1.proto);
 
       const root1 = loadProtoFromText(result1.proto);
-      
+
       // Get field numbers at all nesting levels
       const criteriaFields1 = getFieldNumbersFromMessage(root1, 'SearchCriteria');
       const filterGroupFields1 = getFieldNumbersFromMessage(root1, 'FilterGroup');
@@ -837,17 +837,17 @@ describe('Operations Field Ordering Stability', () => {
       // Store original field numbers at each level
       const criteriaFiltersNumber = criteriaFields1['filters'];
       const criteriaSortingNumber = criteriaFields1['sorting'];
-      
+
       const filterGroupUserNumber = filterGroupFields1['user'];
       const filterGroupDateNumber = filterGroupFields1['date'];
-      
+
       const userFiltersNameNumber = userFiltersFields1['name'];
       const userFiltersEmailNumber = userFiltersFields1['email'];
       const userFiltersActiveNumber = userFiltersFields1['active'];
-      
+
       const dateFiltersFromNumber = dateFiltersFields1['from'];
       const dateFiltersToNumber = dateFiltersFields1['to'];
-      
+
       const sortFieldNumber = sortFields1['field'];
       const sortDirectionNumber = sortFields1['direction'];
 
@@ -869,7 +869,7 @@ describe('Operations Field Ordering Stability', () => {
       expectValidProto(result2.proto);
 
       const root2 = loadProtoFromText(result2.proto);
-      
+
       const criteriaFields2 = getFieldNumbersFromMessage(root2, 'SearchCriteria');
       const filterGroupFields2 = getFieldNumbersFromMessage(root2, 'FilterGroup');
       const userFiltersFields2 = getFieldNumbersFromMessage(root2, 'UserFilters');
@@ -879,17 +879,17 @@ describe('Operations Field Ordering Stability', () => {
       // Verify all field numbers are preserved at all nesting levels
       expect(criteriaFields2['filters']).toBe(criteriaFiltersNumber);
       expect(criteriaFields2['sorting']).toBe(criteriaSortingNumber);
-      
+
       expect(filterGroupFields2['user']).toBe(filterGroupUserNumber);
       expect(filterGroupFields2['date']).toBe(filterGroupDateNumber);
-      
+
       expect(userFiltersFields2['name']).toBe(userFiltersNameNumber);
       expect(userFiltersFields2['email']).toBe(userFiltersEmailNumber);
       expect(userFiltersFields2['active']).toBe(userFiltersActiveNumber);
-      
+
       expect(dateFiltersFields2['from']).toBe(dateFiltersFromNumber);
       expect(dateFiltersFields2['to']).toBe(dateFiltersToNumber);
-      
+
       expect(sortFields2['field']).toBe(sortFieldNumber);
       expect(sortFields2['direction']).toBe(sortDirectionNumber);
     });
@@ -1072,7 +1072,7 @@ describe('Operations Field Ordering Stability', () => {
       `;
 
       expect(() => compileOperationsToProto(operations, schema)).toThrow(
-        'Multiple operations found in document: GetUser, GetUsers'
+        'Multiple operations found in document: GetUser, GetUsers',
       );
     });
   });
