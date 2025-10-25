@@ -367,7 +367,7 @@ describe('Operation to Proto - Integration Tests', () => {
       `;
 
       const { proto } = compileOperationsToProto(operation, schema, {
-        queryNoSideEffects: true,
+        queryIdempotency: 'NO_SIDE_EFFECTS',
       });
 
       expectValidProto(proto);
@@ -478,7 +478,7 @@ describe('Operation to Proto - Integration Tests', () => {
       `;
 
       const { proto } = compileOperationsToProto(operations, schema, {
-        queryNoSideEffects: true,
+        queryIdempotency: 'NO_SIDE_EFFECTS',
       });
 
       expectValidProto(proto);
@@ -909,7 +909,7 @@ describe('Operation to Proto - Integration Tests', () => {
       `;
 
       const { proto } = compileOperationsToProto(operation, schema, {
-        queryNoSideEffects: true,
+        queryIdempotency: 'NO_SIDE_EFFECTS',
       });
 
       expectValidProto(proto);
@@ -924,7 +924,7 @@ describe('Operation to Proto - Integration Tests', () => {
       expect(matches).toHaveLength(2);
     });
 
-    test('should not add idempotency level to queries when disabled', () => {
+    test('should not add idempotency level to queries when omitted', () => {
       const schema = `
         type Query {
           hello: String
@@ -937,9 +937,7 @@ describe('Operation to Proto - Integration Tests', () => {
         }
       `;
 
-      const { proto } = compileOperationsToProto(operation, schema, {
-        queryNoSideEffects: false,
-      });
+      const { proto } = compileOperationsToProto(operation, schema);
 
       expectValidProto(proto);
 
@@ -982,7 +980,7 @@ describe('Operation to Proto - Integration Tests', () => {
       `;
 
       const { proto } = compileOperationsToProto(operations, schema, {
-        queryNoSideEffects: true,
+        queryIdempotency: 'NO_SIDE_EFFECTS',
       });
 
       expectValidProto(proto);
@@ -993,7 +991,7 @@ describe('Operation to Proto - Integration Tests', () => {
       expect(proto).not.toContain('idempotency_level');
     });
 
-    test('should handle mixed queries and mutations with queryNoSideEffects enabled', () => {
+    test('should handle mixed queries and mutations with queryIdempotency enabled', () => {
       const schema = `
         type Query {
           user: User
@@ -1026,7 +1024,7 @@ describe('Operation to Proto - Integration Tests', () => {
       `;
 
       const { proto } = compileOperationsToProto(operations, schema, {
-        queryNoSideEffects: true,
+        queryIdempotency: 'NO_SIDE_EFFECTS',
       });
 
       expectValidProto(proto);
@@ -1041,6 +1039,30 @@ describe('Operation to Proto - Integration Tests', () => {
       // Only one idempotency option (for the query)
       const matches = proto.match(/option idempotency_level = NO_SIDE_EFFECTS;/g);
       expect(matches).toHaveLength(1);
+    });
+    
+    test('should support DEFAULT idempotency level', () => {
+      const schema = `
+        type Query {
+          hello: String
+        }
+      `;
+
+      const operation = `
+        query GetHello {
+          hello
+        }
+      `;
+
+      const { proto } = compileOperationsToProto(operation, schema, {
+        queryIdempotency: 'DEFAULT',
+      });
+
+      expectValidProto(proto);
+
+      // Should have DEFAULT idempotency level
+      expect(proto).toContain('rpc GetHello(GetHelloRequest) returns (GetHelloResponse) {');
+      expect(proto).toContain('option idempotency_level = DEFAULT;');
     });
   });
 

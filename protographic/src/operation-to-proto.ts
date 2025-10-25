@@ -46,7 +46,7 @@ export interface OperationsToProtoOptions {
   objcClassPrefix?: string;
   swiftPrefix?: string;
   includeComments?: boolean;
-  queryNoSideEffects?: boolean;
+  queryIdempotency?: 'NO_SIDE_EFFECTS' | 'DEFAULT';
   /** Lock data from previous compilation for field number stability */
   lockData?: ProtoLock;
 }
@@ -114,7 +114,7 @@ class OperationsToProtoVisitor {
   private readonly objcClassPrefix?: string;
   private readonly swiftPrefix?: string;
   private readonly includeComments: boolean;
-  private readonly queryNoSideEffects: boolean;
+  private readonly queryIdempotency?: 'NO_SIDE_EFFECTS' | 'DEFAULT';
 
   // Proto AST root
   private readonly root: protobuf.Root;
@@ -148,7 +148,7 @@ class OperationsToProtoVisitor {
     this.objcClassPrefix = options?.objcClassPrefix;
     this.swiftPrefix = options?.swiftPrefix;
     this.includeComments = options?.includeComments ?? true;
-    this.queryNoSideEffects = options?.queryNoSideEffects ?? false;
+    this.queryIdempotency = options?.queryIdempotency;
 
     // Initialize lock manager with previous lock data if provided
     this.lockManager = new ProtoLockManager(options?.lockData);
@@ -254,9 +254,9 @@ class OperationsToProtoVisitor {
       method.responseStream = true;
     }
 
-    // Mark Query operations with NO_SIDE_EFFECTS if enabled
-    if (this.queryNoSideEffects && node.operation === OperationTypeNode.QUERY) {
-      (method as any).idempotencyLevel = 'NO_SIDE_EFFECTS';
+    // Mark Query operations with idempotency level if specified
+    if (this.queryIdempotency && node.operation === OperationTypeNode.QUERY) {
+      (method as any).idempotencyLevel = this.queryIdempotency;
     }
 
     service.add(method);
