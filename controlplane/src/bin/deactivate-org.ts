@@ -1,6 +1,6 @@
 import process from 'node:process';
 import { pino } from 'pino';
-import { DeactivateOrganizationQueue } from '../core/workers/DeactivateOrganizationWorker.js';
+import { DeactivateOrganizationQueue } from '../core/workers/DeactivateOrganization.js';
 import { createRedisConnections } from '../core/plugins/redis.js';
 import { getConfig } from './get-config.js';
 
