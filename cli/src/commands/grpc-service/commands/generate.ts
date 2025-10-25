@@ -120,9 +120,13 @@ async function generateCommandAction(name: string, options: CLIOptions) {
     }
 
     const generatedFiles = [];
-    if (result.mapping) generatedFiles.push('mapping.json');
+    if (result.mapping) {
+      generatedFiles.push('mapping.json');
+    }
     generatedFiles.push('service.proto');
-    if (result.lockData) generatedFiles.push('service.proto.lock.json');
+    if (result.lockData) {
+      generatedFiles.push('service.proto.lock.json');
+    }
 
     const resultInfo: Record<string, string> = {
       'input file': inputFile,
