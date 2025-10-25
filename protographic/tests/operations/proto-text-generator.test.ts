@@ -9,6 +9,13 @@ import {
 } from '../../src/operations/proto-text-generator';
 import { expectValidProto } from '../util';
 
+/**
+ * Extended Method interface that includes custom properties
+ */
+interface MethodWithIdempotency extends protobuf.Method {
+  idempotencyLevel?: 'NO_SIDE_EFFECTS' | 'DEFAULT';
+}
+
 describe('Proto Text Generator', () => {
   describe('rootToProtoText', () => {
     test('should generate valid proto text with service and messages', () => {
@@ -149,7 +156,8 @@ describe('Proto Text Generator', () => {
     test('should include idempotency_level option for marked methods', () => {
       const service = new protobuf.Service('UserService');
       const method = new protobuf.Method('GetUser', 'rpc', 'GetUserRequest', 'GetUserResponse');
-      (method as any).idempotencyLevel = 'NO_SIDE_EFFECTS';
+      const methodWithIdempotency = method as MethodWithIdempotency;
+      methodWithIdempotency.idempotencyLevel = 'NO_SIDE_EFFECTS';
       service.add(method);
 
       const lines = serviceToProtoText(service);
@@ -176,7 +184,8 @@ describe('Proto Text Generator', () => {
       const service = new protobuf.Service('UserService');
 
       const queryMethod = new protobuf.Method('GetUser', 'rpc', 'GetUserRequest', 'GetUserResponse');
-      (queryMethod as any).idempotencyLevel = 'NO_SIDE_EFFECTS';
+      const methodWithIdempotency = queryMethod as MethodWithIdempotency;
+      methodWithIdempotency.idempotencyLevel = 'NO_SIDE_EFFECTS';
       service.add(queryMethod);
 
       const mutationMethod = new protobuf.Method('CreateUser', 'rpc', 'CreateUserRequest', 'CreateUserResponse');
