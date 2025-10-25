@@ -18,6 +18,7 @@ import {
   isInterfaceType,
   isUnionType,
   GraphQLInterfaceType,
+  GraphQLUnionType,
 } from 'graphql';
 import { mapGraphQLTypeToProto, ProtoTypeInfo } from './type-mapper.js';
 import { FieldNumberManager } from './field-numbering.js';
@@ -58,7 +59,7 @@ export interface MessageBuilderOptions {
 export function buildMessageFromSelectionSet(
   messageName: string,
   selectionSet: SelectionSetNode,
-  parentType: GraphQLObjectType,
+  parentType: GraphQLObjectType | GraphQLInterfaceType | GraphQLUnionType,
   typeInfo: TypeInfo,
   options?: MessageBuilderOptions,
 ): protobuf.Type {
@@ -71,7 +72,7 @@ export function buildMessageFromSelectionSet(
 
   const collectFields = (
     selections: readonly SelectionNode[],
-    currentType: GraphQLObjectType | GraphQLInterfaceType,
+    currentType: GraphQLObjectType | GraphQLInterfaceType | GraphQLUnionType,
   ) => {
     for (const selection of selections) {
       if (selection.kind === 'Field') {
@@ -151,7 +152,7 @@ export function buildMessageFromSelectionSet(
 function processFieldSelection(
   field: FieldNode,
   message: protobuf.Type,
-  parentType: GraphQLObjectType | GraphQLInterfaceType,
+  parentType: GraphQLObjectType | GraphQLInterfaceType | GraphQLUnionType,
   typeInfo: TypeInfo,
   options?: MessageBuilderOptions,
   fieldNumberManager?: FieldNumberManager,
@@ -171,6 +172,13 @@ function processFieldSelection(
   }
 
   // Get the field definition from the parent type
+  // Union types don't have fields directly, so skip field validation for them
+  if (isUnionType(parentType)) {
+    // Union types should only be processed through inline fragments
+    // This shouldn't happen in normal GraphQL, but we'll handle it gracefully
+    return;
+  }
+  
   const fieldDef = parentType.getFields()[fieldName];
   if (!fieldDef) {
     throw new Error(
@@ -188,9 +196,9 @@ function processFieldSelection(
       // Use simple name since message will be nested inside parent
       const nestedMessageName = upperFirst(camelCase(fieldName));
 
-      // For interfaces and unions, we use the base type to collect fields from inline fragments
-      // For object types, we process normally
-      const typeForSelection = isObjectType(namedType) ? namedType : (namedType as any);
+      // For interfaces and unions, we use the type directly for processing
+      // Union types will only work with inline fragments that specify concrete types
+      const typeForSelection = namedType;
 
       const nestedMessage = buildMessageFromSelectionSet(
         nestedMessageName,
@@ -300,13 +308,13 @@ function processFieldSelection(
 function processInlineFragment(
   fragment: InlineFragmentNode,
   message: protobuf.Type,
-  parentType: GraphQLObjectType,
+  parentType: GraphQLObjectType | GraphQLInterfaceType | GraphQLUnionType,
   typeInfo: TypeInfo,
   options?: MessageBuilderOptions,
   fieldNumberManager?: FieldNumberManager,
 ): void {
   // Determine the type for this inline fragment
-  let fragmentType: GraphQLObjectType;
+  let fragmentType: GraphQLObjectType | GraphQLInterfaceType | GraphQLUnionType;
 
   if (fragment.typeCondition) {
     // Type condition specified: ... on User
@@ -319,8 +327,8 @@ function processInlineFragment(
     }
 
     const type = schema.getType(typeName);
-    if (!type || !isObjectType(type)) {
-      // Type not found or not an object type - skip
+    if (!type || !(isObjectType(type) || isInterfaceType(type) || isUnionType(type))) {
+      // Type not found or not a supported type - skip
       return;
     }
 
@@ -352,7 +360,7 @@ function processInlineFragment(
 function processFragmentSpread(
   spread: FragmentSpreadNode,
   message: protobuf.Type,
-  parentType: GraphQLObjectType,
+  parentType: GraphQLObjectType | GraphQLInterfaceType | GraphQLUnionType,
   typeInfo: TypeInfo,
   options?: MessageBuilderOptions,
   fieldNumberManager?: FieldNumberManager,

@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest';
+import protobuf from 'protobufjs';
 import { compileOperationsToProto } from '../../src/operation-to-proto';
 import { expectValidProto } from '../util';
 
@@ -1555,7 +1556,7 @@ describe('Operation to Proto - Integration Tests', () => {
       expect(root.nestedArray.length).toBeGreaterThan(0);
 
       // Should have a service
-      const services = root.nestedArray.filter((n: any) => n.constructor.name === 'Service');
+      const services = root.nestedArray.filter((n) => n instanceof protobuf.Service);
       expect(services.length).toBeGreaterThan(0);
     });
   });
