@@ -188,7 +188,7 @@ describe('SDL to Proto Options', () => {
     });
 
     expectValidProto(protoText);
-    
+
     // Verify all options are present
     expect(protoText).toContain('option go_package = "github.com/example/myservice";');
     expect(protoText).toContain('option java_package = "com.example.myservice";');
@@ -208,11 +208,11 @@ describe('SDL to Proto Options', () => {
     });
 
     expectValidProto(protoText);
-    
+
     // Extract the options section
     const lines = protoText.split('\n');
-    const optionLines = lines.filter(line => line.trim().startsWith('option '));
-    
+    const optionLines = lines.filter((line) => line.trim().startsWith('option '));
+
     // Verify options are sorted alphabetically
     expect(optionLines.length).toBeGreaterThan(0);
     const sortedOptions = [...optionLines].sort();
