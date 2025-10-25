@@ -777,6 +777,675 @@ describe('Fragment Support', () => {
     });
   });
 
+  describe('Nested Interface and Union Field Resolvers', () => {
+    test('should handle interface field returning another interface', () => {
+      const schema = `
+        type Query {
+          node(id: ID!): Node
+        }
+        
+        interface Node {
+          id: ID!
+          relatedNode: Node
+        }
+        
+        type User implements Node {
+          id: ID!
+          name: String
+          email: String
+          relatedNode: Node
+        }
+        
+        type Post implements Node {
+          id: ID!
+          title: String
+          content: String
+          relatedNode: Node
+        }
+      `;
+
+      const operation = `
+        query GetNode($id: ID!) {
+          node(id: $id) {
+            id
+            ... on User {
+              name
+              email
+              relatedNode {
+                id
+                ... on User {
+                  name
+                }
+                ... on Post {
+                  title
+                }
+              }
+            }
+            ... on Post {
+              title
+              content
+              relatedNode {
+                id
+                ... on User {
+                  email
+                }
+                ... on Post {
+                  content
+                }
+              }
+            }
+          }
+        }
+      `;
+
+      const { proto, root } = compileOperationsToProto(operation, schema);
+
+      expectValidProto(proto);
+
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetNode(GetNodeRequest) returns (GetNodeResponse) {}
+        }
+
+        message GetNodeRequest {
+          string id = 1;
+        }
+
+        message GetNodeResponse {
+          message Node {
+            message RelatedNode {
+              string id = 1;
+              google.protobuf.StringValue name = 2;
+              google.protobuf.StringValue title = 3;
+            }
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+            google.protobuf.StringValue email = 3;
+            RelatedNode related_node = 4;
+            google.protobuf.StringValue title = 5;
+            google.protobuf.StringValue content = 6;
+          }
+          Node node = 1;
+        }
+        "
+      `);
+    });
+
+    test('should handle union field returning another union', () => {
+      const schema = `
+        type Query {
+          search(query: String!): SearchResult
+        }
+        
+        union SearchResult = User | Post | Comment
+        
+        type User {
+          id: ID!
+          name: String
+          relatedContent: SearchResult
+        }
+        
+        type Post {
+          id: ID!
+          title: String
+          relatedContent: SearchResult
+        }
+        
+        type Comment {
+          id: ID!
+          text: String
+          relatedContent: SearchResult
+        }
+      `;
+
+      const operation = `
+        query Search($query: String!) {
+          search(query: $query) {
+            ... on User {
+              id
+              name
+              relatedContent {
+                ... on User {
+                  id
+                  name
+                }
+                ... on Post {
+                  id
+                  title
+                }
+              }
+            }
+            ... on Post {
+              id
+              title
+              relatedContent {
+                ... on Comment {
+                  id
+                  text
+                }
+              }
+            }
+          }
+        }
+      `;
+
+      const { proto, root } = compileOperationsToProto(operation, schema);
+
+      expectValidProto(proto);
+
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc Search(SearchRequest) returns (SearchResponse) {}
+        }
+
+        message SearchRequest {
+          string query = 1;
+        }
+
+        message SearchResponse {
+          message Search {
+            message RelatedContent {
+              string id = 1;
+              google.protobuf.StringValue name = 2;
+              google.protobuf.StringValue title = 3;
+            }
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+            RelatedContent related_content = 3;
+            google.protobuf.StringValue title = 4;
+          }
+          Search search = 1;
+        }
+        "
+      `);
+    });
+
+    test('should handle interface containing union field', () => {
+      const schema = `
+        type Query {
+          node(id: ID!): Node
+        }
+        
+        interface Node {
+          id: ID!
+          content: Content
+        }
+        
+        union Content = TextContent | MediaContent
+        
+        type TextContent {
+          text: String
+          wordCount: Int
+        }
+        
+        type MediaContent {
+          url: String
+          mediaType: String
+        }
+        
+        type Article implements Node {
+          id: ID!
+          title: String
+          content: Content
+        }
+        
+        type Page implements Node {
+          id: ID!
+          slug: String
+          content: Content
+        }
+      `;
+
+      const operation = `
+        query GetNode($id: ID!) {
+          node(id: $id) {
+            id
+            ... on Article {
+              title
+              content {
+                ... on TextContent {
+                  text
+                  wordCount
+                }
+                ... on MediaContent {
+                  url
+                  mediaType
+                }
+              }
+            }
+            ... on Page {
+              slug
+              content {
+                ... on TextContent {
+                  text
+                }
+                ... on MediaContent {
+                  url
+                }
+              }
+            }
+          }
+        }
+      `;
+
+      const { proto, root } = compileOperationsToProto(operation, schema);
+
+      expectValidProto(proto);
+
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetNode(GetNodeRequest) returns (GetNodeResponse) {}
+        }
+
+        message GetNodeRequest {
+          string id = 1;
+        }
+
+        message GetNodeResponse {
+          message Node {
+            message Content {
+              google.protobuf.StringValue text = 1;
+              google.protobuf.Int32Value word_count = 2;
+              google.protobuf.StringValue url = 3;
+              google.protobuf.StringValue media_type = 4;
+            }
+            string id = 1;
+            google.protobuf.StringValue title = 2;
+            Content content = 3;
+            google.protobuf.StringValue slug = 4;
+          }
+          Node node = 1;
+        }
+        "
+      `);
+    });
+
+    test('should handle union containing interface field', () => {
+      const schema = `
+        type Query {
+          feed: [FeedItem]
+        }
+        
+        union FeedItem = Post | Event
+        
+        interface Node {
+          id: ID!
+        }
+        
+        type Post {
+          id: ID!
+          title: String
+          author: Node
+        }
+        
+        type Event {
+          id: ID!
+          name: String
+          organizer: Node
+        }
+        
+        type User implements Node {
+          id: ID!
+          name: String
+          email: String
+        }
+        
+        type Organization implements Node {
+          id: ID!
+          name: String
+          website: String
+        }
+      `;
+
+      const operation = `
+        query GetFeed {
+          feed {
+            ... on Post {
+              id
+              title
+              author {
+                id
+                ... on User {
+                  name
+                  email
+                }
+                ... on Organization {
+                  name
+                  website
+                }
+              }
+            }
+            ... on Event {
+              id
+              name
+              organizer {
+                id
+                ... on User {
+                  name
+                }
+                ... on Organization {
+                  name
+                  website
+                }
+              }
+            }
+          }
+        }
+      `;
+
+      const { proto, root } = compileOperationsToProto(operation, schema);
+
+      expectValidProto(proto);
+
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetFeed(GetFeedRequest) returns (GetFeedResponse) {}
+        }
+
+        message GetFeedRequest {
+        }
+
+        message GetFeedResponse {
+          message Feed {
+            message Author {
+              string id = 1;
+              google.protobuf.StringValue name = 2;
+              google.protobuf.StringValue email = 3;
+              google.protobuf.StringValue website = 4;
+            }
+            message Organizer {
+              string id = 1;
+              google.protobuf.StringValue name = 2;
+              google.protobuf.StringValue website = 3;
+            }
+            string id = 1;
+            google.protobuf.StringValue title = 2;
+            Author author = 3;
+            google.protobuf.StringValue name = 4;
+            Organizer organizer = 5;
+          }
+          repeated Feed feed = 1;
+        }
+        "
+      `);
+    });
+
+    test('should handle deeply nested interface chains', () => {
+      const schema = `
+        type Query {
+          root: Node
+        }
+        
+        interface Node {
+          id: ID!
+          child: Node
+        }
+        
+        type Level1 implements Node {
+          id: ID!
+          level: Int
+          child: Node
+        }
+        
+        type Level2 implements Node {
+          id: ID!
+          name: String
+          child: Node
+        }
+        
+        type Level3 implements Node {
+          id: ID!
+          value: String
+          child: Node
+        }
+      `;
+
+      const operation = `
+        query GetRoot {
+          root {
+            id
+            ... on Level1 {
+              level
+              child {
+                id
+                ... on Level2 {
+                  name
+                  child {
+                    id
+                    ... on Level3 {
+                      value
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      `;
+
+      const { proto, root } = compileOperationsToProto(operation, schema);
+
+      expectValidProto(proto);
+
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetRoot(GetRootRequest) returns (GetRootResponse) {}
+        }
+
+        message GetRootRequest {
+        }
+
+        message GetRootResponse {
+          message Root {
+            message Child {
+              message Child {
+                string id = 1;
+                google.protobuf.StringValue value = 4;
+              }
+              string id = 1;
+              google.protobuf.StringValue name = 2;
+              Child child = 3;
+            }
+            string id = 1;
+            google.protobuf.Int32Value level = 2;
+            Child child = 3;
+          }
+          Root root = 1;
+        }
+        "
+      `);
+    });
+
+    test('should handle named fragments on nested interfaces', () => {
+      const schema = `
+        type Query {
+          node(id: ID!): Node
+        }
+        
+        interface Node {
+          id: ID!
+          related: Node
+        }
+        
+        type User implements Node {
+          id: ID!
+          name: String
+          related: Node
+        }
+        
+        type Post implements Node {
+          id: ID!
+          title: String
+          related: Node
+        }
+      `;
+
+      const operation = `
+        fragment NodeFields on Node {
+          id
+          ... on User {
+            name
+          }
+          ... on Post {
+            title
+          }
+        }
+        
+        query GetNode($id: ID!) {
+          node(id: $id) {
+            ...NodeFields
+            related {
+              ...NodeFields
+            }
+          }
+        }
+      `;
+
+      const { proto, root } = compileOperationsToProto(operation, schema);
+
+      expectValidProto(proto);
+
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetNode(GetNodeRequest) returns (GetNodeResponse) {}
+        }
+
+        message GetNodeRequest {
+          string id = 1;
+        }
+
+        message GetNodeResponse {
+          message Node {
+            message Related {
+              string id = 1;
+              google.protobuf.StringValue name = 2;
+              google.protobuf.StringValue title = 3;
+            }
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+            google.protobuf.StringValue title = 3;
+            Related related = 4;
+          }
+          Node node = 1;
+        }
+        "
+      `);
+    });
+
+    test('should handle named fragments on nested unions', () => {
+      const schema = `
+        type Query {
+          search(query: String!): SearchResult
+        }
+        
+        union SearchResult = User | Post
+        
+        type User {
+          id: ID!
+          name: String
+          bestMatch: SearchResult
+        }
+        
+        type Post {
+          id: ID!
+          title: String
+          relatedPost: SearchResult
+        }
+      `;
+
+      const operation = `
+        fragment SearchFields on SearchResult {
+          ... on User {
+            id
+            name
+          }
+          ... on Post {
+            id
+            title
+          }
+        }
+        
+        query Search($query: String!) {
+          search(query: $query) {
+            ...SearchFields
+            ... on User {
+              bestMatch {
+                ...SearchFields
+              }
+            }
+            ... on Post {
+              relatedPost {
+                ...SearchFields
+              }
+            }
+          }
+        }
+      `;
+
+      const { proto, root } = compileOperationsToProto(operation, schema);
+
+      expectValidProto(proto);
+
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc Search(SearchRequest) returns (SearchResponse) {}
+        }
+
+        message SearchRequest {
+          string query = 1;
+        }
+
+        message SearchResponse {
+          message Search {
+            message BestMatch {
+            }
+            message RelatedPost {
+            }
+            BestMatch best_match = 1;
+            RelatedPost related_post = 2;
+          }
+          Search search = 1;
+        }
+        "
+      `);
+    });
+  });
+
   describe('Mixed Fragment Types', () => {
     test('should handle both named and inline fragments together', () => {
       const schema = `
