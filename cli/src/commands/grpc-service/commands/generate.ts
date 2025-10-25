@@ -18,6 +18,15 @@ type CLIOptions = {
   output: string;
   packageName?: string;
   goPackage?: string;
+  javaPackage?: string;
+  javaOuterClassname?: string;
+  javaMultipleFiles?: boolean;
+  csharpNamespace?: string;
+  rubyPackage?: string;
+  phpNamespace?: string;
+  phpMetadataNamespace?: string;
+  objcClassPrefix?: string;
+  swiftPrefix?: string;
   protoLock?: string;
   withOperations?: string;
   idempotentQueries?: boolean;
@@ -31,6 +40,15 @@ export default (opts: BaseCommandOptions) => {
   command.option('-o, --output <path-to-output>', 'The output directory for the protobuf schema. (default ".").', '.');
   command.option('-p, --package-name <name>', 'The name of the proto package. (default "service.v1")', 'service.v1');
   command.option('-g, --go-package <name>', 'Adds an `option go_package` to the proto file.');
+  command.option('--java-package <name>', 'Adds an `option java_package` to the proto file.');
+  command.option('--java-outer-classname <name>', 'Adds an `option java_outer_classname` to the proto file.');
+  command.option('--java-multiple-files', 'Adds `option java_multiple_files = true` to the proto file.');
+  command.option('--csharp-namespace <name>', 'Adds an `option csharp_namespace` to the proto file.');
+  command.option('--ruby-package <name>', 'Adds an `option ruby_package` to the proto file.');
+  command.option('--php-namespace <name>', 'Adds an `option php_namespace` to the proto file.');
+  command.option('--php-metadata-namespace <name>', 'Adds an `option php_metadata_namespace` to the proto file.');
+  command.option('--objc-class-prefix <name>', 'Adds an `option objc_class_prefix` to the proto file.');
+  command.option('--swift-prefix <name>', 'Adds an `option swift_prefix` to the proto file.');
   command.option(
     '-l, --proto-lock <path-to-proto-lock>',
     'The path to the existing proto lock file to use as the starting point for the updated proto lock file. ' +
@@ -105,6 +123,15 @@ async function generateCommandAction(name: string, options: CLIOptions) {
       spinner,
       packageName: options.packageName,
       goPackage: options.goPackage,
+      javaPackage: options.javaPackage,
+      javaOuterClassname: options.javaOuterClassname,
+      javaMultipleFiles: options.javaMultipleFiles,
+      csharpNamespace: options.csharpNamespace,
+      rubyPackage: options.rubyPackage,
+      phpNamespace: options.phpNamespace,
+      phpMetadataNamespace: options.phpMetadataNamespace,
+      objcClassPrefix: options.objcClassPrefix,
+      swiftPrefix: options.swiftPrefix,
       lockFile: options.protoLock,
       operationsDir: options.withOperations,
       idempotentQueries: options.idempotentQueries || false,
@@ -156,6 +183,15 @@ type GenerationOptions = {
   spinner: Ora;
   packageName?: string;
   goPackage?: string;
+  javaPackage?: string;
+  javaOuterClassname?: string;
+  javaMultipleFiles?: boolean;
+  csharpNamespace?: string;
+  rubyPackage?: string;
+  phpNamespace?: string;
+  phpMetadataNamespace?: string;
+  objcClassPrefix?: string;
+  swiftPrefix?: string;
   lockFile?: string;
   operationsDir?: string;
   idempotentQueries?: boolean;
@@ -195,6 +231,15 @@ async function generateProtoAndMapping({
   spinner,
   packageName,
   goPackage,
+  javaPackage,
+  javaOuterClassname,
+  javaMultipleFiles,
+  csharpNamespace,
+  rubyPackage,
+  phpNamespace,
+  phpMetadataNamespace,
+  objcClassPrefix,
+  swiftPrefix,
   lockFile = resolve(outdir, 'service.proto.lock.json'),
   operationsDir,
   idempotentQueries = false,
@@ -222,6 +267,15 @@ async function generateProtoAndMapping({
       serviceName,
       packageName: packageName || 'service.v1',
       goPackage,
+      javaPackage,
+      javaOuterClassname,
+      javaMultipleFiles,
+      csharpNamespace,
+      rubyPackage,
+      phpNamespace,
+      phpMetadataNamespace,
+      objcClassPrefix,
+      swiftPrefix,
       includeComments: true,
       queryNoSideEffects: idempotentQueries,
       lockData,
@@ -244,6 +298,15 @@ async function generateProtoAndMapping({
       serviceName,
       packageName,
       goPackage,
+      javaPackage,
+      javaOuterClassname,
+      javaMultipleFiles,
+      csharpNamespace,
+      rubyPackage,
+      phpNamespace,
+      phpMetadataNamespace,
+      objcClassPrefix,
+      swiftPrefix,
       lockData,
     });
 

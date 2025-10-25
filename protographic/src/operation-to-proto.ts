@@ -36,6 +36,15 @@ export interface OperationsToProtoOptions {
   serviceName?: string;
   packageName?: string;
   goPackage?: string;
+  javaPackage?: string;
+  javaOuterClassname?: string;
+  javaMultipleFiles?: boolean;
+  csharpNamespace?: string;
+  rubyPackage?: string;
+  phpNamespace?: string;
+  phpMetadataNamespace?: string;
+  objcClassPrefix?: string;
+  swiftPrefix?: string;
   includeComments?: boolean;
   queryNoSideEffects?: boolean;
   /** Lock data from previous compilation for field number stability */
@@ -95,6 +104,15 @@ class OperationsToProtoVisitor {
   private readonly serviceName: string;
   private readonly packageName: string;
   private readonly goPackage?: string;
+  private readonly javaPackage?: string;
+  private readonly javaOuterClassname?: string;
+  private readonly javaMultipleFiles?: boolean;
+  private readonly csharpNamespace?: string;
+  private readonly rubyPackage?: string;
+  private readonly phpNamespace?: string;
+  private readonly phpMetadataNamespace?: string;
+  private readonly objcClassPrefix?: string;
+  private readonly swiftPrefix?: string;
   private readonly includeComments: boolean;
   private readonly queryNoSideEffects: boolean;
 
@@ -120,6 +138,15 @@ class OperationsToProtoVisitor {
     this.serviceName = options?.serviceName || 'DefaultService';
     this.packageName = options?.packageName || 'service.v1';
     this.goPackage = options?.goPackage;
+    this.javaPackage = options?.javaPackage;
+    this.javaOuterClassname = options?.javaOuterClassname;
+    this.javaMultipleFiles = options?.javaMultipleFiles;
+    this.csharpNamespace = options?.csharpNamespace;
+    this.rubyPackage = options?.rubyPackage;
+    this.phpNamespace = options?.phpNamespace;
+    this.phpMetadataNamespace = options?.phpMetadataNamespace;
+    this.objcClassPrefix = options?.objcClassPrefix;
+    this.swiftPrefix = options?.swiftPrefix;
     this.includeComments = options?.includeComments ?? true;
     this.queryNoSideEffects = options?.queryNoSideEffects ?? false;
 
@@ -242,6 +269,15 @@ class OperationsToProtoVisitor {
     return rootToProtoText(root, {
       packageName: this.packageName,
       goPackage: this.goPackage,
+      javaPackage: this.javaPackage,
+      javaOuterClassname: this.javaOuterClassname,
+      javaMultipleFiles: this.javaMultipleFiles,
+      csharpNamespace: this.csharpNamespace,
+      rubyPackage: this.rubyPackage,
+      phpNamespace: this.phpNamespace,
+      phpMetadataNamespace: this.phpMetadataNamespace,
+      objcClassPrefix: this.objcClassPrefix,
+      swiftPrefix: this.swiftPrefix,
       includeComments: this.includeComments,
     });
   }

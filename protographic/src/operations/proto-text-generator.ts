@@ -8,6 +8,24 @@ export interface ProtoTextOptions {
   packageName?: string;
   /** Go package option */
   goPackage?: string;
+  /** Java package option */
+  javaPackage?: string;
+  /** Java outer classname option */
+  javaOuterClassname?: string;
+  /** Java multiple files option */
+  javaMultipleFiles?: boolean;
+  /** C# namespace option */
+  csharpNamespace?: string;
+  /** Ruby package option */
+  rubyPackage?: string;
+  /** PHP namespace option */
+  phpNamespace?: string;
+  /** PHP metadata namespace option */
+  phpMetadataNamespace?: string;
+  /** Objective-C class prefix option */
+  objcClassPrefix?: string;
+  /** Swift prefix option */
+  swiftPrefix?: string;
   /** Additional imports to include */
   imports?: string[];
   /** Additional options to include */
@@ -87,18 +105,55 @@ function generateHeader(options?: ProtoTextOptions): string[] {
   }
 
   // Options
+  const protoOptions: string[] = [];
+  
   if (options?.goPackage) {
-    lines.push(`option go_package = "${options.goPackage}";`);
-    lines.push('');
+    protoOptions.push(`option go_package = "${options.goPackage}";`);
+  }
+  
+  if (options?.javaPackage) {
+    protoOptions.push(`option java_package = "${options.javaPackage}";`);
+  }
+  
+  if (options?.javaOuterClassname) {
+    protoOptions.push(`option java_outer_classname = "${options.javaOuterClassname}";`);
+  }
+  
+  if (options?.javaMultipleFiles) {
+    protoOptions.push(`option java_multiple_files = true;`);
+  }
+  
+  if (options?.csharpNamespace) {
+    protoOptions.push(`option csharp_namespace = "${options.csharpNamespace}";`);
+  }
+  
+  if (options?.rubyPackage) {
+    protoOptions.push(`option ruby_package = "${options.rubyPackage}";`);
+  }
+  
+  if (options?.phpNamespace) {
+    protoOptions.push(`option php_namespace = "${options.phpNamespace}";`);
+  }
+  
+  if (options?.phpMetadataNamespace) {
+    protoOptions.push(`option php_metadata_namespace = "${options.phpMetadataNamespace}";`);
+  }
+  
+  if (options?.objcClassPrefix) {
+    protoOptions.push(`option objc_class_prefix = "${options.objcClassPrefix}";`);
+  }
+  
+  if (options?.swiftPrefix) {
+    protoOptions.push(`option swift_prefix = "${options.swiftPrefix}";`);
   }
 
   if (options?.options) {
-    for (const opt of options.options) {
-      lines.push(opt);
-    }
-    if (options.options.length > 0) {
-      lines.push('');
-    }
+    protoOptions.push(...options.options);
+  }
+  
+  if (protoOptions.length > 0) {
+    lines.push(...protoOptions);
+    lines.push('');
   }
 
   return lines;
