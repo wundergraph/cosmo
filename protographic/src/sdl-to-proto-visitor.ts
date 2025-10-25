@@ -83,6 +83,15 @@ export interface GraphQLToProtoTextVisitorOptions {
   serviceName?: string;
   packageName?: string;
   goPackage?: string;
+  javaPackage?: string;
+  javaOuterClassname?: string;
+  javaMultipleFiles?: boolean;
+  csharpNamespace?: string;
+  rubyPackage?: string;
+  phpNamespace?: string;
+  phpMetadataNamespace?: string;
+  objcClassPrefix?: string;
+  swiftPrefix?: string;
   lockData?: ProtoLock;
   /** Whether to include descriptions/comments from GraphQL schema */
   includeComments?: boolean;
@@ -179,6 +188,15 @@ export class GraphQLToProtoTextVisitor {
       serviceName = 'DefaultService',
       packageName = 'service.v1',
       goPackage,
+      javaPackage,
+      javaOuterClassname,
+      javaMultipleFiles,
+      csharpNamespace,
+      rubyPackage,
+      phpNamespace,
+      phpMetadataNamespace,
+      objcClassPrefix,
+      swiftPrefix,
       lockData,
       includeComments = true,
     } = options;
@@ -200,6 +218,42 @@ export class GraphQLToProtoTextVisitor {
       const defaultGoPackage = `cosmo/pkg/proto/${packageName};${packageName.replace('.', '')}`;
       const goPackageOption = goPackage || defaultGoPackage;
       this.options.push(`option go_package = "${goPackageOption}";`);
+    }
+    
+    if (javaPackage) {
+      this.options.push(`option java_package = "${javaPackage}";`);
+    }
+    
+    if (javaOuterClassname) {
+      this.options.push(`option java_outer_classname = "${javaOuterClassname}";`);
+    }
+    
+    if (javaMultipleFiles) {
+      this.options.push(`option java_multiple_files = true;`);
+    }
+    
+    if (csharpNamespace) {
+      this.options.push(`option csharp_namespace = "${csharpNamespace}";`);
+    }
+    
+    if (rubyPackage) {
+      this.options.push(`option ruby_package = "${rubyPackage}";`);
+    }
+    
+    if (phpNamespace) {
+      this.options.push(`option php_namespace = "${phpNamespace}";`);
+    }
+    
+    if (phpMetadataNamespace) {
+      this.options.push(`option php_metadata_namespace = "${phpMetadataNamespace}";`);
+    }
+    
+    if (objcClassPrefix) {
+      this.options.push(`option objc_class_prefix = "${objcClassPrefix}";`);
+    }
+    
+    if (swiftPrefix) {
+      this.options.push(`option swift_prefix = "${swiftPrefix}";`);
     }
   }
 
