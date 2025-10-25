@@ -1,6 +1,13 @@
 import protobuf from 'protobufjs';
 
 /**
+ * Extended Method interface that includes custom properties
+ */
+interface MethodWithIdempotency extends protobuf.Method {
+  idempotencyLevel?: 'NO_SIDE_EFFECTS' | 'DEFAULT';
+}
+
+/**
  * Options for generating proto text
  */
 export interface ProtoTextOptions {
@@ -205,7 +212,8 @@ export function serviceToProtoText(service: protobuf.Service, options?: ProtoTex
     methodLine += ')';
 
     // Check if method has idempotency level option
-    const idempotencyLevel = (method as any).idempotencyLevel;
+    const methodWithIdempotency = method as MethodWithIdempotency;
+    const idempotencyLevel = methodWithIdempotency.idempotencyLevel;
     if (idempotencyLevel) {
       methodLine += ' {';
       lines.push(methodLine);
