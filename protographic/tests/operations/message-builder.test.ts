@@ -344,7 +344,7 @@ describe('Message Builder', () => {
       expect(message.fieldsArray).toHaveLength(0);
     });
 
-    test('should skip unknown fields gracefully', () => {
+    test('should throw error for unknown fields', () => {
       const schema = buildSchema(`
         type Query {
           user: User
@@ -378,10 +378,10 @@ describe('Message Builder', () => {
       const typeInfo = new TypeInfo(schema);
       const userType = schema.getType('User') as GraphQLObjectType;
 
-      // Should not throw
-      const message = buildMessageFromSelectionSet('UserResponse', userSelection.selectionSet, userType, typeInfo);
-
-      expect(message.name).toBe('UserResponse');
+      // Should throw an error for unknown field
+      expect(() => {
+        buildMessageFromSelectionSet('UserResponse', userSelection.selectionSet, userType, typeInfo);
+      }).toThrow();
     });
   });
 });
