@@ -355,11 +355,12 @@ describe('Message Builder', () => {
         }
       `);
 
-      // This query references a field that doesn't exist
+      // This query references a field (nonExistentField) that doesn't exist in the schema
       const query = parse(`
         query GetUser {
           user {
             id
+            nonExistentField
           }
         }
       `);

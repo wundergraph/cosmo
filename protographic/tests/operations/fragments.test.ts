@@ -1170,6 +1170,64 @@ describe('Fragment Support', () => {
       `);
     });
 
+    test('should handle __typename field in fragments', () => {
+      const schema = `
+        type Query {
+          user: User
+        }
+        
+        type User {
+          id: ID!
+          name: String
+          email: String
+        }
+      `;
+
+      const operation = `
+        fragment UserFields on User {
+          __typename
+          id
+          name
+          email
+        }
+        
+        query GetUser {
+          user {
+            ...UserFields
+          }
+        }
+      `;
+
+      const { proto, root } = compileOperationsToProto(operation, schema);
+
+      expectValidProto(proto);
+
+      // Validate the complete proto structure with inline snapshot
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
+        }
+
+        message GetUserRequest {
+        }
+
+        message GetUserResponse {
+          message User {
+            string id = 2;
+            google.protobuf.StringValue name = 3;
+            google.protobuf.StringValue email = 4;
+          }
+          User user = 1;
+        }
+        "
+      `);
+    });
+
     test('should handle fragments with aliases', () => {
       const schema = `
         type Query {
