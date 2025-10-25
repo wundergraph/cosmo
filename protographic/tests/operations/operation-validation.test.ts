@@ -190,7 +190,7 @@ describe('Operation Validation', () => {
       `;
 
       const result = compileOperationsToProto(operation, schema);
-      
+
       // Verify the proto can be generated
       expect(result.proto).toContain('rpc GetUser');
       expect(result.proto).toContain('message GetUserRequest');

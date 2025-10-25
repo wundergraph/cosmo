@@ -232,7 +232,7 @@ describe('Operation to Proto - Integration Tests', () => {
       `;
 
       expect(() => compileOperationsToProto(operations, schema)).toThrow(
-        'Multiple operations found in document: GetUser, GetPosts'
+        'Multiple operations found in document: GetUser, GetPosts',
       );
     });
   });
@@ -385,7 +385,7 @@ describe('Operation to Proto - Integration Tests', () => {
       `;
 
       expect(() => compileOperationsToProto(operations, schema)).toThrow(
-        'Multiple operations found in document: OnMessageAdded, OnUserStatusChanged'
+        'Multiple operations found in document: OnMessageAdded, OnUserStatusChanged',
       );
     });
 
@@ -556,7 +556,7 @@ describe('Operation to Proto - Integration Tests', () => {
       `;
 
       expect(() => compileOperationsToProto(operations, schema)).toThrow(
-        'Multiple operations found in document: GetMessages, AddMessage, OnMessageAdded'
+        'Multiple operations found in document: GetMessages, AddMessage, OnMessageAdded',
       );
     });
 
@@ -606,7 +606,7 @@ describe('Operation to Proto - Integration Tests', () => {
       expect(() =>
         compileOperationsToProto(operations, schema, {
           queryIdempotency: 'NO_SIDE_EFFECTS',
-        })
+        }),
       ).toThrow('Multiple operations found in document: GetMessages, AddMessage, OnMessageAdded');
     });
   });
@@ -1066,7 +1066,7 @@ describe('Operation to Proto - Integration Tests', () => {
       expect(() =>
         compileOperationsToProto(operation, schema, {
           queryIdempotency: 'NO_SIDE_EFFECTS',
-        })
+        }),
       ).toThrow('Multiple operations found in document: GetHello, GetUser');
     });
 
@@ -1142,7 +1142,7 @@ describe('Operation to Proto - Integration Tests', () => {
       expect(() =>
         compileOperationsToProto(operations, schema, {
           queryIdempotency: 'NO_SIDE_EFFECTS',
-        })
+        }),
       ).toThrow('Multiple operations found in document: CreateUser, UpdateUser');
     });
 
@@ -1181,7 +1181,7 @@ describe('Operation to Proto - Integration Tests', () => {
       expect(() =>
         compileOperationsToProto(operations, schema, {
           queryIdempotency: 'NO_SIDE_EFFECTS',
-        })
+        }),
       ).toThrow('Multiple operations found in document: GetUser, CreateUser');
     });
 
@@ -1396,7 +1396,7 @@ describe('Operation to Proto - Integration Tests', () => {
       `;
 
       expect(() => compileOperationsToProto(operations, schema)).toThrow(
-        'Multiple operations found in document: GetUser, CreateUser'
+        'Multiple operations found in document: GetUser, CreateUser',
       );
     });
 
@@ -1447,9 +1447,7 @@ describe('Operation to Proto - Integration Tests', () => {
         }
       `;
 
-      expect(() => compileOperationsToProto(operation, schema)).toThrow(
-        'No named operations found in document'
-      );
+      expect(() => compileOperationsToProto(operation, schema)).toThrow('No named operations found in document');
     });
 
     test('should handle empty selection sets', () => {
@@ -1510,7 +1508,7 @@ describe('Operation to Proto - Integration Tests', () => {
       `;
 
       expect(() => compileOperationsToProto(operation, schema)).toThrow(
-        'Root-level field alias "currentUser: user" is not supported'
+        'Root-level field alias "currentUser: user" is not supported',
       );
     });
   });

@@ -797,7 +797,7 @@ describe('Enum Support', () => {
       `;
 
       expect(() => compileOperationsToProto(operations, schema)).toThrow(
-        'Multiple operations found in document: GetUser, UpdateUser'
+        'Multiple operations found in document: GetUser, UpdateUser',
       );
     });
   });
