@@ -31,15 +31,26 @@ describe('Proto Text Generator', () => {
 
       const protoText = rootToProtoText(root);
 
-      // Should be valid proto
       expectValidProto(protoText);
+      expect(protoText).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
 
-      // Should contain basic structure
-      expect(protoText).toContain('syntax = "proto3"');
-      expect(protoText).toContain('package service.v1');
-      expect(protoText).toContain('service TestService');
-      expect(protoText).toContain('message GetUserRequest');
-      expect(protoText).toContain('message GetUserResponse');
+        import "google/protobuf/wrappers.proto";
+
+        service TestService {
+          rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
+        }
+
+        message GetUserRequest {
+          string id = 1;
+        }
+
+        message GetUserResponse {
+          string name = 1;
+        }
+        "
+      `);
     });
 
     test('should include custom package name', () => {
@@ -391,16 +402,43 @@ describe('Proto Text Generator', () => {
         goPackage: 'github.com/example/books/v1',
       });
 
-      // Validate the generated proto
       expectValidProto(protoText);
+      expect(protoText).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package books.v1;
 
-      // Verify structure
-      expect(protoText).toContain('syntax = "proto3"');
-      expect(protoText).toContain('package books.v1');
-      expect(protoText).toContain('option go_package = "github.com/example/books/v1"');
-      expect(protoText).toContain('service BookService');
-      expect(protoText).toContain('message Book');
-      expect(protoText).toContain('repeated Book books = 1;');
+        import "google/protobuf/wrappers.proto";
+
+        option go_package = "github.com/example/books/v1";
+
+        service BookService {
+          rpc GetBook(GetBookRequest) returns (GetBookResponse) {}
+
+          rpc ListBooks(ListBooksRequest) returns (ListBooksResponse) {}
+        }
+
+        message GetBookRequest {
+          string id = 1;
+        }
+
+        message GetBookResponse {
+          string title = 1;
+          string author = 2;
+        }
+
+        message ListBooksRequest {
+        }
+
+        message ListBooksResponse {
+          repeated Book books = 1;
+        }
+
+        message Book {
+          string id = 1;
+          string title = 2;
+        }
+        "
+      `);
     });
   });
 });

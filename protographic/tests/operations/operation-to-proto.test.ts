@@ -19,16 +19,25 @@ describe('Operation to Proto - Integration Tests', () => {
 
       const { proto, root } = compileOperationsToProto(operation, schema);
 
-      // Validate proto
       expectValidProto(proto);
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
 
-      // Check structure
-      expect(proto).toContain('syntax = "proto3"');
-      expect(proto).toContain('package service.v1');
-      expect(proto).toContain('service DefaultService');
-      expect(proto).toContain('rpc GetHello');
-      expect(proto).toContain('message GetHelloRequest');
-      expect(proto).toContain('message GetHelloResponse');
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetHello(GetHelloRequest) returns (GetHelloResponse) {}
+        }
+
+        message GetHelloRequest {
+        }
+
+        message GetHelloResponse {
+          google.protobuf.StringValue hello = 1;
+        }
+        "
+      `);
     });
 
     test('should handle query with variables', () => {
@@ -55,10 +64,29 @@ describe('Operation to Proto - Integration Tests', () => {
       const { proto, root } = compileOperationsToProto(operation, schema);
 
       expectValidProto(proto);
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
 
-      expect(proto).toContain('message GetUserRequest');
-      expect(proto).toContain('string id = 1');
-      expect(proto).toContain('message GetUserResponse');
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
+        }
+
+        message GetUserRequest {
+          string id = 1;
+        }
+
+        message GetUserResponse {
+          message User {
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+          }
+          User user = 1;
+        }
+        "
+      `);
     });
 
     test('should handle nested selections', () => {
@@ -93,10 +121,32 @@ describe('Operation to Proto - Integration Tests', () => {
       const { proto, root } = compileOperationsToProto(operation, schema);
 
       expectValidProto(proto);
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
 
-      expect(proto).toContain('message GetUserProfileResponse');
-      // Should have nested message for profile
-      expect(proto).toMatch(/message.*profile/i);
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetUserProfile(GetUserProfileRequest) returns (GetUserProfileResponse) {}
+        }
+
+        message GetUserProfileRequest {
+        }
+
+        message GetUserProfileResponse {
+          message User {
+            message Profile {
+              google.protobuf.StringValue bio = 1;
+              google.protobuf.StringValue avatar = 2;
+            }
+            string id = 1;
+            Profile profile = 2;
+          }
+          User user = 1;
+        }
+        "
+      `);
     });
 
     test('should handle list types', () => {
@@ -123,8 +173,28 @@ describe('Operation to Proto - Integration Tests', () => {
       const { proto, root } = compileOperationsToProto(operation, schema);
 
       expectValidProto(proto);
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
 
-      expect(proto).toContain('message GetUsersResponse');
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetUsers(GetUsersRequest) returns (GetUsersResponse) {}
+        }
+
+        message GetUsersRequest {
+        }
+
+        message GetUsersResponse {
+          message Users {
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+          }
+          repeated Users users = 1;
+        }
+        "
+      `);
     });
 
     test('should reject multiple queries', () => {
@@ -196,11 +266,28 @@ describe('Operation to Proto - Integration Tests', () => {
       const { proto, root } = compileOperationsToProto(operation, schema);
 
       expectValidProto(proto);
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
 
-      // Should have server streaming (stream keyword before response)
-      expect(proto).toContain('rpc OnMessageAdded(OnMessageAddedRequest) returns (stream OnMessageAddedResponse)');
-      expect(proto).toContain('message OnMessageAddedRequest');
-      expect(proto).toContain('message OnMessageAddedResponse');
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc OnMessageAdded(OnMessageAddedRequest) returns (stream OnMessageAddedResponse) {}
+        }
+
+        message OnMessageAddedRequest {
+        }
+
+        message OnMessageAddedResponse {
+          message MessageAdded {
+            string id = 1;
+            google.protobuf.StringValue content = 2;
+          }
+          MessageAdded message_added = 1;
+        }
+        "
+      `);
     });
 
     test('should handle subscription with variables', () => {
@@ -233,12 +320,30 @@ describe('Operation to Proto - Integration Tests', () => {
       const { proto, root } = compileOperationsToProto(operation, schema);
 
       expectValidProto(proto);
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
 
-      // Should be server streaming
-      expect(proto).toContain('rpc OnMessageAdded(OnMessageAddedRequest) returns (stream OnMessageAddedResponse)');
-      // Should have variable in request
-      expect(proto).toContain('message OnMessageAddedRequest');
-      expect(proto).toContain('string channel_id = 1');
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc OnMessageAdded(OnMessageAddedRequest) returns (stream OnMessageAddedResponse) {}
+        }
+
+        message OnMessageAddedRequest {
+          string channel_id = 1;
+        }
+
+        message OnMessageAddedResponse {
+          message MessageAdded {
+            string id = 1;
+            google.protobuf.StringValue content = 2;
+            string channel_id = 3;
+          }
+          MessageAdded message_added = 1;
+        }
+        "
+      `);
     });
 
     test('should reject multiple subscriptions', () => {
@@ -322,10 +427,33 @@ describe('Operation to Proto - Integration Tests', () => {
       const { proto, root } = compileOperationsToProto(operation, schema);
 
       expectValidProto(proto);
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
 
-      // Should be server streaming
-      expect(proto).toContain('rpc OnPostAdded(OnPostAddedRequest) returns (stream OnPostAddedResponse)');
-      expect(proto).toContain('message OnPostAddedResponse');
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc OnPostAdded(OnPostAddedRequest) returns (stream OnPostAddedResponse) {}
+        }
+
+        message OnPostAddedRequest {
+        }
+
+        message OnPostAddedResponse {
+          message PostAdded {
+            message Author {
+              string id = 1;
+              google.protobuf.StringValue name = 2;
+            }
+            string id = 1;
+            google.protobuf.StringValue title = 2;
+            Author author = 3;
+          }
+          PostAdded post_added = 1;
+        }
+        "
+      `);
     });
 
     test('should not add idempotency level to subscriptions', () => {
@@ -358,10 +486,28 @@ describe('Operation to Proto - Integration Tests', () => {
       });
 
       expectValidProto(proto);
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
 
-      // Should be server streaming but no idempotency level
-      expect(proto).toContain('rpc OnMessageAdded(OnMessageAddedRequest) returns (stream OnMessageAddedResponse) {}');
-      expect(proto).not.toContain('idempotency_level');
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc OnMessageAdded(OnMessageAddedRequest) returns (stream OnMessageAddedResponse) {}
+        }
+
+        message OnMessageAddedRequest {
+        }
+
+        message OnMessageAddedResponse {
+          message MessageAdded {
+            string id = 1;
+            google.protobuf.StringValue content = 2;
+          }
+          MessageAdded message_added = 1;
+        }
+        "
+      `);
     });
   });
 
@@ -494,11 +640,29 @@ describe('Operation to Proto - Integration Tests', () => {
       const { proto, root } = compileOperationsToProto(operation, schema);
 
       expectValidProto(proto);
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
 
-      expect(proto).toContain('rpc CreateUser');
-      expect(proto).toContain('message CreateUserRequest');
-      expect(proto).toContain('message CreateUserResponse');
-      expect(proto).toContain('string name = 1');
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {}
+        }
+
+        message CreateUserRequest {
+          string name = 1;
+        }
+
+        message CreateUserResponse {
+          message CreateUser {
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+          }
+          CreateUser create_user = 1;
+        }
+        "
+      `);
     });
 
     test('should handle mutation with input object', () => {
@@ -534,9 +698,34 @@ describe('Operation to Proto - Integration Tests', () => {
       const { proto, root } = compileOperationsToProto(operation, schema);
 
       expectValidProto(proto);
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
 
-      expect(proto).toContain('rpc UpdateUser');
-      expect(proto).toContain('UserInput input = 1');
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse) {}
+        }
+
+        message UpdateUserRequest {
+          UserInput input = 1;
+        }
+
+        message UserInput {
+          google.protobuf.StringValue name = 1;
+          google.protobuf.StringValue email = 2;
+        }
+
+        message UpdateUserResponse {
+          message UpdateUser {
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+          }
+          UpdateUser update_user = 1;
+        }
+        "
+      `);
     });
   });
 
@@ -897,10 +1086,24 @@ describe('Operation to Proto - Integration Tests', () => {
       const { proto } = compileOperationsToProto(operation, schema);
 
       expectValidProto(proto);
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
 
-      // Should use single-line format without options
-      expect(proto).toContain('rpc GetHello(GetHelloRequest) returns (GetHelloResponse) {}');
-      expect(proto).not.toContain('idempotency_level');
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetHello(GetHelloRequest) returns (GetHelloResponse) {}
+        }
+
+        message GetHelloRequest {
+        }
+
+        message GetHelloResponse {
+          google.protobuf.StringValue hello = 1;
+        }
+        "
+      `);
     });
 
     test('should reject multiple mutations even when idempotency enabled', () => {
@@ -1000,10 +1203,26 @@ describe('Operation to Proto - Integration Tests', () => {
       });
 
       expectValidProto(proto);
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
 
-      // Should have DEFAULT idempotency level
-      expect(proto).toContain('rpc GetHello(GetHelloRequest) returns (GetHelloResponse) {');
-      expect(proto).toContain('option idempotency_level = DEFAULT;');
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetHello(GetHelloRequest) returns (GetHelloResponse) {
+            option idempotency_level = DEFAULT;
+          }
+        }
+
+        message GetHelloRequest {
+        }
+
+        message GetHelloResponse {
+          google.protobuf.StringValue hello = 1;
+        }
+        "
+      `);
     });
   });
 
@@ -1046,8 +1265,35 @@ describe('Operation to Proto - Integration Tests', () => {
       const { proto, root } = compileOperationsToProto(operation, schema);
 
       expectValidProto(proto);
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
 
-      expect(proto).toContain('message GetUserSettingsResponse');
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetUserSettings(GetUserSettingsRequest) returns (GetUserSettingsResponse) {}
+        }
+
+        message GetUserSettingsRequest {
+        }
+
+        message GetUserSettingsResponse {
+          message User {
+            message Profile {
+              message Settings {
+                google.protobuf.StringValue theme = 1;
+                google.protobuf.BoolValue notifications = 2;
+              }
+              Settings settings = 1;
+            }
+            string id = 1;
+            Profile profile = 2;
+          }
+          User user = 1;
+        }
+        "
+      `);
     });
 
     test('should handle operations with multiple variables', () => {
@@ -1089,12 +1335,32 @@ describe('Operation to Proto - Integration Tests', () => {
       const { proto, root } = compileOperationsToProto(operation, schema);
 
       expectValidProto(proto);
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
 
-      expect(proto).toContain('message SearchUsersRequest');
-      expect(proto).toMatch(/name.*=.*1/);
-      expect(proto).toMatch(/email.*=.*2/);
-      expect(proto).toMatch(/min_age.*=.*3/);
-      expect(proto).toMatch(/active.*=.*4/);
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc SearchUsers(SearchUsersRequest) returns (SearchUsersResponse) {}
+        }
+
+        message SearchUsersRequest {
+          google.protobuf.StringValue name = 1;
+          google.protobuf.StringValue email = 2;
+          google.protobuf.Int32Value min_age = 3;
+          google.protobuf.BoolValue active = 4;
+        }
+
+        message SearchUsersResponse {
+          message SearchUsers {
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+          }
+          repeated SearchUsers search_users = 1;
+        }
+        "
+      `);
     });
 
     test('should reject mixed queries and mutations', () => {
@@ -1202,8 +1468,24 @@ describe('Operation to Proto - Integration Tests', () => {
       const { proto, root } = compileOperationsToProto(operation, schema);
 
       expectValidProto(proto);
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
 
-      expect(proto).toContain('message PingResponse');
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc Ping(PingRequest) returns (PingResponse) {}
+        }
+
+        message PingRequest {
+        }
+
+        message PingResponse {
+          google.protobuf.StringValue ping = 1;
+        }
+        "
+      `);
     });
 
     test('should reject root-level field aliases', () => {
