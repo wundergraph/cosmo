@@ -150,6 +150,12 @@ function processFieldSelection(
   fieldNumberManager?: FieldNumberManager,
 ): void {
   const fieldName = field.name.value;
+  
+  // Skip __typename - it's a GraphQL introspection field that doesn't need to be in proto
+  if (fieldName === '__typename') {
+    return;
+  }
+  
   const protoFieldName = graphqlFieldToProtoField(fieldName);
 
   // Check if field already exists in the message (avoid duplicates)
@@ -160,7 +166,10 @@ function processFieldSelection(
   // Get the field definition from the parent type
   const fieldDef = parentType.getFields()[fieldName];
   if (!fieldDef) {
-    return; // Skip unknown fields
+    throw new Error(
+      `Field "${fieldName}" does not exist on type "${parentType.name}". ` +
+      `GraphQL validation should be performed before proto compilation.`
+    );
   }
 
   const fieldType = fieldDef.type;
