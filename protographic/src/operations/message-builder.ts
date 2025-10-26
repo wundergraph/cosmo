@@ -44,6 +44,10 @@ export interface MessageBuilderOptions {
   createdEnums?: Set<string>;
   /** Custom scalar type mappings (scalar name -> proto type) */
   customScalarMappings?: Record<string, string>;
+  /** Maximum recursion depth to prevent stack overflow (default: 50) */
+  maxDepth?: number;
+  /** Internal: Current recursion depth */
+  _depth?: number;
 }
 
 /**
@@ -70,10 +74,39 @@ export function buildMessageFromSelectionSet(
   const fieldNames: string[] = [];
   const fieldSelections = new Map<string, { selection: FieldNode; type: GraphQLObjectType | GraphQLInterfaceType }>();
 
+  // Maximum recursion depth to prevent stack overflow
+  const maxDepth = options?.maxDepth ?? 50;
+  const currentDepth = options?._depth ?? 0;
+
+  // Check depth limit at the start of building each message
+  if (currentDepth > maxDepth) {
+    throw new Error(
+      `Maximum recursion depth (${maxDepth}) exceeded while processing selection set. ` +
+      `This may indicate deeply nested selections or circular fragment references. ` +
+      `You can increase the limit using the maxDepth option.`
+    );
+  }
+
+  /**
+   * Recursively collects fields from selections with protection against excessive recursion depth.
+   *
+   * Note: Circular fragment references are invalid GraphQL per the spec's NoFragmentCyclesRule.
+   * GraphQL validation should catch these before reaching proto compilation.
+   */
   const collectFields = (
     selections: readonly SelectionNode[],
-    currentType: GraphQLObjectType | GraphQLInterfaceType | GraphQLUnionType,
+    currentType: GraphQLObjectType | GraphQLInterfaceType,
+    depth: number,
   ) => {
+    // Stop condition: Check depth limit
+    if (depth > maxDepth) {
+      throw new Error(
+        `Maximum recursion depth (${maxDepth}) exceeded while processing selection set. ` +
+        `This may indicate deeply nested selections or circular fragment references. ` +
+        `You can increase the limit using the maxDepth option.`
+      );
+    }
+
     for (const selection of selections) {
       if (selection.kind === 'Field') {
         // Only object and interface types have fields that can be selected
@@ -91,11 +124,11 @@ export function buildMessageFromSelectionSet(
           const typeName = selection.typeCondition.name.value;
           const type = options.schema.getType(typeName);
           if (type && (isObjectType(type) || isInterfaceType(type))) {
-            collectFields(selection.selectionSet.selections, type);
+            collectFields(selection.selectionSet.selections, type, depth + 1);
           }
         } else if (isObjectType(currentType) || isInterfaceType(currentType)) {
           // No type condition, but parent type supports fields
-          collectFields(selection.selectionSet.selections, currentType);
+          collectFields(selection.selectionSet.selections, currentType, depth + 1);
         }
       } else if (selection.kind === 'FragmentSpread' && options?.fragments) {
         const fragmentDef = options.fragments.get(selection.name.value);
@@ -103,14 +136,14 @@ export function buildMessageFromSelectionSet(
           const typeName = fragmentDef.typeCondition.name.value;
           const type = options.schema.getType(typeName);
           if (type && (isObjectType(type) || isInterfaceType(type))) {
-            collectFields(fragmentDef.selectionSet.selections, type);
+            collectFields(fragmentDef.selectionSet.selections, type, depth + 1);
           }
         }
       }
     }
   };
 
-  collectFields(selectionSet.selections, parentType);
+  collectFields(selectionSet.selections, parentType, currentDepth);
 
   // Reconcile field order using lock manager if available
   let orderedFieldNames = fieldNames;
@@ -139,7 +172,11 @@ export function buildMessageFromSelectionSet(
   for (const protoFieldName of orderedFieldNames) {
     const fieldData = fieldSelections.get(protoFieldName);
     if (fieldData) {
-      processFieldSelection(fieldData.selection, message, fieldData.type, typeInfo, options, fieldNumberManager);
+      const fieldOptions = {
+        ...options,
+        _depth: currentDepth,
+      };
+      processFieldSelection(fieldData.selection, message, fieldData.type, typeInfo, fieldOptions, fieldNumberManager);
     }
   }
 
@@ -200,12 +237,17 @@ function processFieldSelection(
       // Union types will only work with inline fragments that specify concrete types
       const typeForSelection = namedType;
 
+      const nestedOptions = {
+        ...options,
+        _depth: (options?._depth ?? 0) + 1,
+      };
+      
       const nestedMessage = buildMessageFromSelectionSet(
         nestedMessageName,
         field.selectionSet,
         typeForSelection,
         typeInfo,
-        options,
+        nestedOptions,
       );
 
       // Add nested message to the parent message
