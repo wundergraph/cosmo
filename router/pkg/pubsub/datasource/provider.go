@@ -55,6 +55,21 @@ const (
 	ProviderTypeRedis ProviderType = "redis"
 )
 
+// StreamEvents is a slice which contains original stream events.
+// Be careful when modifying this as it might be shared with other
+// handlers and can cause unwanted side effects and race conditions.
+// Use Clone() to avoid this.
+type StreamEvents []StreamEvent
+
+// Clone returns a deep copy of s.
+func (s StreamEvents) Clone() StreamEvents {
+	res := make(StreamEvents, len(s))
+	for i := range s {
+		res[i] = s[i].Clone()
+	}
+	return res
+}
+
 // StreamEvent is a generic interface for all stream events
 // Each provider will have its own event type that implements this interface
 // there could be other common fields in the future, but for now we only have data

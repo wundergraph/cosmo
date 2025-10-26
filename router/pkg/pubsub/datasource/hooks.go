@@ -8,9 +8,9 @@ import (
 
 type SubscriptionOnStartFn func(ctx resolve.StartupHookContext, subConf SubscriptionEventConfiguration) error
 
-type OnPublishEventsFn func(ctx context.Context, pubConf PublishEventConfiguration, evts []StreamEvent) ([]StreamEvent, error)
+type OnPublishEventsFn func(ctx context.Context, pubConf PublishEventConfiguration, evts StreamEvents) (StreamEvents, error)
 
-type OnReceiveEventsFn func(ctx context.Context, subConf SubscriptionEventConfiguration, evts []StreamEvent) ([]StreamEvent, error)
+type OnReceiveEventsFn func(ctx context.Context, subConf SubscriptionEventConfiguration, evts StreamEvents) (StreamEvents, error)
 
 // Hooks contains hooks for the pubsub providers and data sources
 type Hooks struct {
