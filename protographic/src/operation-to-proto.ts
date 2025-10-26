@@ -378,7 +378,10 @@ class OperationsToProtoVisitor {
           for (const field of Object.values(fields)) {
             const fieldType = getNamedType(field.type);
             if (isInputObjectType(fieldType)) {
-              const namedTypeNode: NamedTypeNode = { kind: Kind.NAMED_TYPE, name: { kind: Kind.NAME, value: fieldType.name } };
+              const namedTypeNode: NamedTypeNode = {
+                kind: Kind.NAMED_TYPE,
+                name: { kind: Kind.NAME, value: fieldType.name },
+              };
               this.processInputObjectTypes(namedTypeNode);
             } else if (isEnumType(fieldType)) {
               this.processEnumType(fieldType as GraphQLEnumType);
