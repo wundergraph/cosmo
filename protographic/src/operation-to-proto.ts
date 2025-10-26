@@ -21,6 +21,8 @@ import {
   ListTypeNode,
   NamedTypeNode,
   Kind,
+  validate,
+  specifiedRules,
 } from 'graphql';
 
 /**
@@ -63,6 +65,8 @@ export interface OperationsToProtoOptions {
   lockData?: ProtoLock;
   /** Custom scalar type mappings (scalar name -> proto type) */
   customScalarMappings?: Record<string, string>;
+  /** Maximum recursion depth to prevent stack overflow (default: 50) */
+  maxDepth?: number;
 }
 
 /**
@@ -115,6 +119,14 @@ export function compileOperationsToProto(
         })
       : schemaOrSDL;
 
+  // Validate the GraphQL operation document against the schema
+  // This catches invalid operations including circular fragment references (NoFragmentCyclesRule)
+  const validationErrors = validate(schema, document, specifiedRules);
+  if (validationErrors.length > 0) {
+    const errorMessages = validationErrors.map((error) => error.message).join('\n');
+    throw new Error(`Invalid GraphQL operation:\n${errorMessages}`);
+  }
+
   const visitor = new OperationsToProtoVisitor(document, schema, options);
 
   const root = visitor.visit();
@@ -148,6 +160,7 @@ class OperationsToProtoVisitor {
   private readonly includeComments: boolean;
   private readonly queryIdempotency?: 'NO_SIDE_EFFECTS' | 'DEFAULT';
   private readonly customScalarMappings?: Record<string, string>;
+  private readonly maxDepth?: number;
 
   // Proto AST root
   private readonly root: protobuf.Root;
@@ -183,6 +196,7 @@ class OperationsToProtoVisitor {
     this.includeComments = options?.includeComments ?? true;
     this.queryIdempotency = options?.queryIdempotency;
     this.customScalarMappings = options?.customScalarMappings;
+    this.maxDepth = options?.maxDepth;
 
     // Initialize lock manager with previous lock data if provided
     this.lockManager = new ProtoLockManager(options?.lockData);
@@ -286,6 +300,7 @@ class OperationsToProtoVisitor {
         schema: this.schema,
         createdEnums: this.createdEnums,
         customScalarMappings: this.customScalarMappings,
+        maxDepth: this.maxDepth,
       });
 
       // Add response message to root

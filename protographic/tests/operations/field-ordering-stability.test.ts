@@ -365,9 +365,9 @@ describe('Operations Field Ordering Stability', () => {
       expect(requestFields2['age']).toBeUndefined();
       expect(requestFields2['email']).toBeUndefined();
 
-      // Third operation with variables re-added and new variable
+      // Third operation with variables re-added (no unused variables)
       const operation3 = `
-        query FilterUsers($name: String, $active: Boolean, $id: ID, $status: String) {
+        query FilterUsers($name: String, $active: Boolean, $id: ID) {
           filterUsers(id: $id, name: $name, active: $active) {
             id
             name
@@ -390,10 +390,6 @@ describe('Operations Field Ordering Stability', () => {
       // Verify re-added variable exists (gets new number, not reusing old one)
       expect(requestFields3['id']).toBeDefined();
       expect(requestFields3['id']).toBeGreaterThan(activeNumber);
-
-      // Verify new variable exists
-      expect(requestFields3['status']).toBeDefined();
-      expect(requestFields3['status']).toBeGreaterThan(activeNumber);
     });
   });
 
