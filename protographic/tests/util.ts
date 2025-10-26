@@ -159,7 +159,7 @@ export function getReservedNumbers(root: protobufjs.Root, typeName: string, isEn
       }
     }
   }
-  
+
   return numbers;
 }
 

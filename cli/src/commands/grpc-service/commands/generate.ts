@@ -152,8 +152,8 @@ async function generateCommandAction(name: string, options: CLIOptions) {
     // Parse maxDepth if provided
     let maxDepth: number | undefined;
     if (options.maxDepth) {
-      const parsed = parseInt(options.maxDepth, 10);
-      if (isNaN(parsed) || parsed < 1) {
+      const parsed = Number.parseInt(options.maxDepth, 10);
+      if (Number.isNaN(parsed) || parsed < 1) {
         program.error(`Invalid --max-depth value: ${options.maxDepth}. Must be a positive integer.`);
       }
       maxDepth = parsed;
