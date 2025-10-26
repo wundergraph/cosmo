@@ -31,6 +31,7 @@ type CLIOptions = {
   withOperations?: string;
   queryIdempotency?: string;
   customScalarMapping?: string;
+  maxDepth?: string;
 };
 
 export default (opts: BaseCommandOptions) => {
@@ -68,6 +69,11 @@ export default (opts: BaseCommandOptions) => {
     '--custom-scalar-mapping <json-or-path>',
     'Custom scalar type mappings as JSON string or path to JSON file. ' +
       'Example: \'{"DateTime":"google.protobuf.Timestamp","UUID":"string"}\'',
+  );
+  command.option(
+    '--max-depth <number>',
+    'Maximum recursion depth for processing nested selections and fragments (default: 50). ' +
+      'Increase this if you have deeply nested queries or decrease to catch potential circular references earlier.',
   );
   command.action(generateCommandAction);
 
@@ -143,6 +149,16 @@ async function generateCommandAction(name: string, options: CLIOptions) {
       }
     }
 
+    // Parse maxDepth if provided
+    let maxDepth: number | undefined;
+    if (options.maxDepth) {
+      const parsed = parseInt(options.maxDepth, 10);
+      if (isNaN(parsed) || parsed < 1) {
+        program.error(`Invalid --max-depth value: ${options.maxDepth}. Must be a positive integer.`);
+      }
+      maxDepth = parsed;
+    }
+
     const result = await generateProtoAndMapping({
       outdir: options.output,
       schemaFile: inputFile,
@@ -163,6 +179,7 @@ async function generateCommandAction(name: string, options: CLIOptions) {
       operationsDir: options.withOperations,
       queryIdempotency: options.queryIdempotency?.toUpperCase(),
       customScalarMappings,
+      maxDepth,
     });
 
     // Write the generated files
@@ -224,6 +241,7 @@ type GenerationOptions = {
   operationsDir?: string;
   queryIdempotency?: string;
   customScalarMappings?: Record<string, string>;
+  maxDepth?: number;
 };
 
 /**
@@ -273,6 +291,7 @@ async function generateProtoAndMapping({
   operationsDir,
   queryIdempotency,
   customScalarMappings,
+  maxDepth,
 }: GenerationOptions): Promise<GenerationResult> {
   const schema = await readFile(schemaFile, 'utf8');
   const serviceName = upperFirst(camelCase(name));
@@ -310,6 +329,7 @@ async function generateProtoAndMapping({
       queryIdempotency: queryIdempotency as 'NO_SIDE_EFFECTS' | 'DEFAULT' | undefined,
       lockData,
       customScalarMappings,
+      maxDepth,
     });
 
     return {
