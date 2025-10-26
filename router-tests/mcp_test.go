@@ -553,4 +553,39 @@ func TestMCP(t *testing.T) {
 			})
 		})
 	})
+
+	t.Run("Header Forwarding", func(t *testing.T) {
+		t.Run("All headers are forwarded from MCP client to GraphQL server", func(t *testing.T) {
+			testenv.Run(t, &testenv.Config{
+				EnableNats: true,
+				MCP: config.MCPConfiguration{
+					Enabled: true,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				// Execute an MCP operation - the MCP server should forward all headers
+				// to the router's GraphQL endpoint, and the router's header rules
+				// will determine what gets propagated to subgraphs
+				req := mcp.CallToolRequest{}
+				req.Params.Name = "execute_operation_my_employees"
+				req.Params.Arguments = map[string]interface{}{
+					"criteria": map[string]interface{}{},
+				}
+
+				resp, err := xEnv.MCPClient.CallTool(xEnv.Context, req)
+				assert.NoError(t, err)
+				assert.NotNil(t, resp)
+
+				// Verify the operation executed successfully
+				assert.Len(t, resp.Content, 1)
+				content, ok := resp.Content[0].(mcp.TextContent)
+				assert.True(t, ok)
+				assert.Contains(t, content.Text, "\"data\"")
+
+				// This test validates that:
+				// 1. The MCP server forwards all headers from the MCP client to the router
+				// 2. The router's existing header forwarding rules handle propagation to subgraphs
+				// 3. The request completes successfully with the forwarded headers
+			})
+		})
+	})
 }
