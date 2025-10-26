@@ -30,9 +30,7 @@ describe('Recursion Protection', () => {
         }
       `;
 
-      expect(() => compileOperationsToProto(operation, schema)).toThrow(
-        /Maximum recursion depth.*exceeded/
-      );
+      expect(() => compileOperationsToProto(operation, schema)).toThrow(/Maximum recursion depth.*exceeded/);
     });
 
     test('should respect custom maxDepth option', () => {
@@ -62,9 +60,9 @@ describe('Recursion Protection', () => {
       `;
 
       // Should fail with maxDepth of 10
-      expect(() => 
-        compileOperationsToProto(operation, schema, { maxDepth: 10 })
-      ).toThrow(/Maximum recursion depth.*10.*exceeded/);
+      expect(() => compileOperationsToProto(operation, schema, { maxDepth: 10 })).toThrow(
+        /Maximum recursion depth.*10.*exceeded/,
+      );
 
       // Should succeed with maxDepth of 20
       const { proto } = compileOperationsToProto(operation, schema, { maxDepth: 20 });
@@ -198,7 +196,7 @@ describe('Recursion Protection', () => {
 
       const { proto } = compileOperationsToProto(operation, schema);
       expectValidProto(proto);
-      
+
       // Inline snapshot to verify recursion handling produces correct nested structure
       expect(proto).toMatchInlineSnapshot(`
         "syntax = "proto3";
@@ -427,7 +425,7 @@ describe('Recursion Protection', () => {
 
       expectValidProto(proto);
       expect(proto).toContain('message GetNodeResponse');
-      
+
       // Should complete in reasonable time (less than 1 second)
       expect(endTime - startTime).toBeLessThan(1000);
     });

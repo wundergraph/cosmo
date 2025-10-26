@@ -82,8 +82,8 @@ export function buildMessageFromSelectionSet(
   if (currentDepth > maxDepth) {
     throw new Error(
       `Maximum recursion depth (${maxDepth}) exceeded while processing selection set. ` +
-      `This may indicate deeply nested selections or circular fragment references. ` +
-      `You can increase the limit using the maxDepth option.`
+        `This may indicate deeply nested selections or circular fragment references. ` +
+        `You can increase the limit using the maxDepth option.`,
     );
   }
 
@@ -95,15 +95,15 @@ export function buildMessageFromSelectionSet(
    */
   const collectFields = (
     selections: readonly SelectionNode[],
-    currentType: GraphQLObjectType | GraphQLInterfaceType,
+    currentType: GraphQLObjectType | GraphQLInterfaceType | GraphQLUnionType,
     depth: number,
   ) => {
     // Stop condition: Check depth limit
     if (depth > maxDepth) {
       throw new Error(
         `Maximum recursion depth (${maxDepth}) exceeded while processing selection set. ` +
-        `This may indicate deeply nested selections or circular fragment references. ` +
-        `You can increase the limit using the maxDepth option.`
+          `This may indicate deeply nested selections or circular fragment references. ` +
+          `You can increase the limit using the maxDepth option.`,
       );
     }
 
@@ -143,6 +143,8 @@ export function buildMessageFromSelectionSet(
     }
   };
 
+  // Collect fields from the selection set
+  // For union types, only inline fragments will contribute fields (handled in collectFields)
   collectFields(selectionSet.selections, parentType, currentDepth);
 
   // Reconcile field order using lock manager if available
@@ -215,7 +217,7 @@ function processFieldSelection(
     // This shouldn't happen in normal GraphQL, but we'll handle it gracefully
     return;
   }
-  
+
   const fieldDef = parentType.getFields()[fieldName];
   if (!fieldDef) {
     throw new Error(
@@ -241,7 +243,7 @@ function processFieldSelection(
         ...options,
         _depth: (options?._depth ?? 0) + 1,
       };
-      
+
       const nestedMessage = buildMessageFromSelectionSet(
         nestedMessageName,
         field.selectionSet,
