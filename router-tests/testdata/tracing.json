@@ -591,9 +591,6 @@
                             "gzip",
                             "deflate"
                           ],
-                          "Content-Length": [
-                            "64"
-                          ],
                           "Content-Type": [
                             "application/json"
                           ]
@@ -969,9 +966,6 @@
                               "Accept-Encoding": [
                                 "gzip",
                                 "deflate"
-                              ],
-                              "Content-Length": [
-                                "527"
                               ],
                               "Content-Type": [
                                 "application/json"
@@ -1602,9 +1596,6 @@
                                 "gzip",
                                 "deflate"
                               ],
-                              "Content-Length": [
-                                "738"
-                              ],
                               "Content-Type": [
                                 "application/json"
                               ]
@@ -1930,9 +1921,6 @@
                           "Accept-Encoding": [
                             "gzip",
                             "deflate"
-                          ],
-                          "Content-Length": [
-                            "715"
                           ],
                           "Content-Type": [
                             "application/json"

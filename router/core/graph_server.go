@@ -1420,7 +1420,7 @@ func (s *graphServer) buildGraphMux(
 		EnableRequestDeduplication:      s.engineExecutionConfiguration.EnableSingleFlight,
 		ForceEnableRequestDeduplication: s.engineExecutionConfiguration.ForceEnableSingleFlight,
 		HasPreOriginHandlers:            len(s.preOriginHandlers) != 0,
-		OperationContentAttributes: s.traceConfig.OperationContentAttributes,
+		OperationContentAttributes:      s.traceConfig.OperationContentAttributes,
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
