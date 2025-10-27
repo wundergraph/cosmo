@@ -356,7 +356,7 @@ export class SDLValidationVisitor {
     );
     const idFields =
       parent.fields?.filter((field) => this.getUnderlyingType(field.type).name.value === GraphQLID.name) ?? [];
-    switch (idFields?.length) {
+    switch (idFields.length) {
       case 1:
         return;
       case 0:
@@ -473,11 +473,11 @@ export class SDLValidationVisitor {
       let parentField = parentFields.find((p) => p.name.value === contextField);
       if (!parentField) continue;
 
-      const resolverContext = this.getResolverContext(parentField);
-      if (!resolverContext) continue;
+      const parentContext = this.getResolverContext(parentField);
+      if (!parentContext) continue;
 
-      const contextFields = this.getContextFields(resolverContext);
-      if (contextFields.includes(fieldName)) {
+      const parentContextFields = this.getContextFields(parentContext);
+      if (parentContextFields.includes(fieldName)) {
         return { contains: true, fieldName: parentField.name.value };
       }
     }
