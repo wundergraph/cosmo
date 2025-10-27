@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import pino from 'pino';
 import { v4 } from 'uuid';
+import z from 'zod';
 import * as schema from '../../db/schema.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
@@ -13,8 +14,7 @@ import { WebhookDeliveryInfo } from '../../db/models.js';
 import { webhookAxiosRetryCond } from '../util.js';
 import {
   FederatedGraphDTO,
-  Label,
-  LintIssueResult,
+  Label, LintIssueResult,
   NamespaceDTO,
   SchemaGraphPruningIssues,
   SchemaLintIssues,
@@ -28,6 +28,27 @@ import { BlobStorage } from '../blobstorage/index.js';
 import { audiences, nowInSeconds, signJwtHS256 } from '../crypto/jwt.js';
 import { InspectorOperationResult } from '../services/SchemaUsageTrafficInspector.js';
 import { makeWebhookRequest } from './utils.js';
+
+const subgraphCheckExtensionSchema = z.object({
+  errorMessage: z.string().trim().optional(),
+  overwrite: z
+    .object({
+      lintIssues: z.array(
+        z.object({
+          lintRuleType: z.string().trim(),
+          severity: z.nativeEnum(LintSeverity),
+          message: z.string().trim(),
+          issueLocation: z.object({
+            line: z.number().int().positive(),
+            column: z.number().int().positive(),
+            endLine: z.number().int().positive().optional(),
+            endColumn: z.number().int().positive().optional(),
+          }),
+        }),
+      ),
+    })
+    .optional(),
+});
 
 export interface FederatedGraphSchemaUpdate {
   eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED;
@@ -86,12 +107,7 @@ export interface ProposalStateUpdated {
 
 type OrganizationEventData = FederatedGraphSchemaUpdate | MonographSchemaUpdate | ProposalStateUpdated;
 
-export interface SubgraphCheckExtensionResponse {
-  errorMessage?: string;
-  overwrite?: {
-    lintIssues: LintIssueResult[];
-  };
-}
+export type SubgraphCheckExtensionResponse = z.infer<typeof subgraphCheckExtensionSchema>;
 
 type Config = {
   url?: string;
@@ -500,6 +516,8 @@ export class OrganizationWebhookService {
     });
 
     // @TODO Use a queue to send the events
+    // @NOTE: Once we have a queue, we might need to move the subgraph check extension out of the queue as we
+    // need the response to overwrite lint issues and any other data that we need updated from the check extension
     let res: AxiosResponse | undefined;
     try {
       res = await makeWebhookRequest<any, TResponse>(this.httpClient, data, endpoint, secretKey);
@@ -704,32 +722,62 @@ export class OrganizationWebhookService {
       this.logger,
     );
 
-    if (
-      response &&
-      ((response.status !== 200 && response.status !== 204) ||
-        (response.data && typeof response.data.errorMessage === 'string'))
-    ) {
-      //
-      deliveryInfo.errorMessage =
-        response.data?.errorMessage ??
-        `Check extension returned status code '${response?.status}'. Allowed values are 200 and 204.`;
+    if (!response?.data) {
+      return {
+        deliveryInfo,
+        overwriteLintIssues: false,
+        lintIssues: input.lintIssues,
+      };
+    }
 
+    // Validate the response and maybe overwrite the error message based on it
+    let overwriteErrorMessage = false;
+    let overwriteLintIssues = false;
+    let overwrittenLintIssues: LintIssueResult[] = [];
+
+    if (response?.status !== 200 && response?.status !== 204) {
+      // We expect the response status to be either 200 (OK) or 204 (No Content)
+      overwriteErrorMessage = true;
+      deliveryInfo.errorMessage = `Check extension returned status code '${response?.status}'. Allowed values are 200 and 204.`;
+    } else if (response?.data) {
+      // Validate that the response data matches our expected schema
+      const parsedResponse = subgraphCheckExtensionSchema.safeParse(response.data);
+      if (parsedResponse.success) {
+        // The response data is valid, overwrite values if needed
+        if (parsedResponse.data.errorMessage?.length) {
+          overwriteErrorMessage = true;
+          deliveryInfo.errorMessage = parsedResponse.data.errorMessage;
+        }
+
+        if (parsedResponse.data.overwrite && Array.isArray(parsedResponse.data.overwrite?.lintIssues)) {
+          overwriteLintIssues = true;
+          overwrittenLintIssues = parsedResponse.data.overwrite.lintIssues as LintIssueResult[];
+        }
+      } else {
+        overwriteErrorMessage = true;
+        deliveryInfo.errorMessage = `Check extension returned an invalid response: ${parsedResponse.error.message}.`;
+      }
+    }
+
+    if (overwriteErrorMessage) {
+      // The error message was overwritten by the response, either the response provided an error message
+      // or the data validation failed
       await this.db
         .update(schema.webhookDeliveries)
-        .set({ errorMessage: response.data.errorMessage })
+        .set({ errorMessage: deliveryInfo.errorMessage })
         .where(eq(schema.webhookDeliveries.id, deliveryInfo.id!))
         .execute();
     }
 
-    const overwriteLintIssues = Array.isArray(response?.data?.overwrite?.lintIssues);
+    // We are done!
     return {
       deliveryInfo,
       overwriteLintIssues,
       lintIssues: overwriteLintIssues
-        ? {
-            warnings: response.data.overwrite!.lintIssues!.filter((issue) => issue.severity === LintSeverity.warn),
-            errors: response.data.overwrite!.lintIssues!.filter((issue) => issue.severity === LintSeverity.error),
-          }
+        ? ({
+            warnings: overwrittenLintIssues.filter((issue) => issue.severity === LintSeverity.warn),
+            errors: overwrittenLintIssues.filter((issue) => issue.severity === LintSeverity.error),
+          } as SchemaLintIssues)
         : input.lintIssues,
     };
   }
