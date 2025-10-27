@@ -81,8 +81,8 @@ export function createEnumUnspecifiedValue(enumTypeName: string): string {
 
 /**
  * Creates a response result name for a resolver response
- * @param responseName - The name of the response
- * @returns The name of the response result
+ * @param methodName - The name of the method
+ * @returns The name of the response result built from the method name
  */
 export function resolverResponseResultName(methodName: string): string {
   return `${upperFirst(camelCase(methodName))}Result`;
@@ -90,9 +90,8 @@ export function resolverResponseResultName(methodName: string): string {
 
 /**
  * Creates a type field arguments name for a type field
- * @param typeName - The name of the type
- * @param fieldName - The name of the field
- * @returns The name of the type field arguments
+ * @param methodName - The method name
+ * @returns The name of the type field arguments built from the method name
  */
 export function typeFieldArgsName(methodName: string): string {
   return `${methodName}Args`;
@@ -100,9 +99,8 @@ export function typeFieldArgsName(methodName: string): string {
 
 /**
  * Creates a type field context name for a type field
- * @param typeName - The name of the type
- * @param fieldName - The name of the field
- * @returns The name of the type field context
+ * @param methodName - The method name
+ * @returns The name of the type field context built from the method name
  */
 export function typeFieldContextName(methodName: string): string {
   return `${methodName}Context`;
