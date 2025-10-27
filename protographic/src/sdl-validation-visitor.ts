@@ -354,7 +354,8 @@ export class SDLValidationVisitor {
       `No @${CONNECT_CONFIGURE_RESOLVER} directive found on the field ${ctx.node.name.value} - falling back to ID field`,
       ctx.node.loc,
     );
-    const idFields = parent.fields?.filter((field) => this.getUnderlyingType(field.type).name.value === GraphQLID.name);
+    const idFields =
+      parent.fields?.filter((field) => this.getUnderlyingType(field.type).name.value === GraphQLID.name) ?? [];
     switch (idFields?.length) {
       case 1:
         return;
