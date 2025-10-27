@@ -252,6 +252,9 @@ importers:
       graphql:
         specifier: 16.9.0
         version: 16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly)
+      handlebars:
+        specifier: ^4.7.8
+        version: 4.7.8
       https-proxy-agent:
         specifier: ^7.0.5
         version: 7.0.5

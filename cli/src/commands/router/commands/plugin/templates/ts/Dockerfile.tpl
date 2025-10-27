@@ -20,12 +20,13 @@ COPY generated/ ./generated/
 ARG TARGETOS
 ARG TARGETARCH
 
-RUN BUN_TARGET="bun-${TARGETOS}-$([ "$TARGETARCH" = "amd64" ] && echo "x64" || echo "$TARGETARCH")" && \
+RUN BUN_TARGET="bun-$\\{TARGETOS\\}-$([ "$TARGETARCH" = "amd64" ] && echo "x64" || echo "$TARGETARCH")" && \
     echo "Building for $BUN_TARGET" && \
     bun build src/plugin.ts --compile --outfile bin/plugin --target=$BUN_TARGET
 
 FROM --platform=$BUILDPLATFORM scratch
 
-COPY --from=builder /build/bin/plugin ./student-plugin
+COPY --from=builder /build/bin/plugin ./{originalPluginName}-plugin
 
-ENTRYPOINT ["./student-plugin"]
+ENTRYPOINT ["./{originalPluginName}-plugin"]
+

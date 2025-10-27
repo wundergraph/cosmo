@@ -1,5 +1,4 @@
-// Template files embedded as strings (templating is done by pupa)
-const pluginServerTs = `import * as grpc from '@grpc/grpc-js';
+import * as grpc from '@grpc/grpc-js';
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -74,7 +73,7 @@ export class PluginServer {
 
     constructor(socketDir: string = os.tmpdir()) {
         // Generate a unique temporary file path
-        const tempPath = path.join(socketDir, \`plugin_\${Date.now()}\${Math.floor(Math.random() * 1000000)}\`);
+        const tempPath = path.join(socketDir, `plugin_${Date.now()}${Math.floor(Math.random() * 1000000)}`);
         this.socketPath = tempPath;
 
         // Ensure the socket file doesn't exist
@@ -126,124 +125,3 @@ export class PluginServer {
     }
 }
 
-`;
-
-const pluginTs = `#!/usr/bin/env bun
-
-import * as grpc from '@grpc/grpc-js';
-import { PluginServer } from './plugin-server';
-
-// Import generated gRPC code
-import { 
-  {serviceName}Service, 
-  I{serviceName}Server 
-} from '../generated/service_grpc_pb';
-import { 
-  QueryHelloRequest, 
-  QueryHelloResponse, 
-  World 
-} from '../generated/service_pb';
-
-// Counter for generating unique IDs
-let counter = 0;
-
-// Define the service implementation using the generated types
-const {serviceName}Implementation: I{serviceName}Server = {
-  queryHello: (call: grpc.ServerUnaryCall<QueryHelloRequest, QueryHelloResponse>, callback: grpc.sendUnaryData<QueryHelloResponse>) => {
-    const name = call.request.getName();
-
-    counter += 1;
-
-    const world = new World();
-    world.setId(\`world-\`+counter);
-    world.setName(\`Hello from {serviceName} plugin! \`+ name);
-
-    const response = new QueryHelloResponse();
-    response.setHello(world);
-
-    callback(null, response);
-  }
-};
-
-function run() {
-  // Create the plugin server (health check automatically initialized)
-  const pluginServer = new PluginServer();
-  
-  // Add the {serviceName} service
-  pluginServer.addService({serviceName}Service, {serviceName}Implementation);
-
-  // Start the server
-  pluginServer.serve().catch((error) => {
-    process.exit(1);
-  });
-}
-
-run();
-
-`;
-
-const packageJson = `{
-  "name": "awesome-plugin-bun",
-  "version": "1.0.0",
-  "description": "Awesome gRPC Plugin using Bun runtime",
-  "type": "module",
-  "scripts": {
-    "build": "bun build src/plugin.ts --compile --outfile dist/plugin",
-    "dev": "bun run src/plugin.ts",
-    "client": "bun run src/client.ts"
-  },
-  "dependencies": {
-    "@grpc/grpc-js": "^1.14.0",
-    "google-protobuf": "^4.0.0",
-    "grpc-health-check": "^2.0.0"
-  },
-  "devDependencies": {
-    "@types/bun": "latest",
-    "@types/node": "^20.11.5",
-    "grpc-tools": "^1.12.4",
-    "grpc_tools_node_protoc_ts": "^5.3.3"
-  }
-}
-
-`;
-
-const dockerfileTs = `FROM --platform=$BUILDPLATFORM oven/bun:1.3.0-alpine AS builder
-
-# Multi-platform build arguments
-ARG TARGETOS
-ARG TARGETARCH
-
-WORKDIR /build
-
-# Copy package files
-COPY package.json bun.lock* ./
-
-# Install dependencies
-RUN bun install
-
-# Copy all source code
-COPY src/ ./src/
-COPY generated/ ./generated/
-
-# Set BUN_TARGET based on OS and architecture
-ARG TARGETOS
-ARG TARGETARCH
-
-RUN BUN_TARGET="bun-$TARGETOS-$([ "$TARGETARCH" = "amd64" ] && echo "x64" || echo "$TARGETARCH")" && \\
-    echo "Building for $BUN_TARGET" && \\
-    bun build src/plugin.ts --compile --outfile bin/plugin --target=$BUN_TARGET
-
-FROM --platform=$BUILDPLATFORM scratch
-
-COPY --from=builder /build/bin/plugin ./{originalPluginName}-plugin
-
-ENTRYPOINT ["./{originalPluginName}-plugin"]
-
-`;
-
-export default {
-    pluginServerTs,
-    pluginTs,
-    packageJson,
-    dockerfileTs,
-}

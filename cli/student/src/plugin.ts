@@ -9,8 +9,8 @@ import {
   IStudentServiceServer 
 } from '../generated/service_grpc_pb';
 import { 
-  QueryHello2Request,
-  QueryHello2Response,
+  QueryHelloRequest, 
+  QueryHelloResponse, 
   World 
 } from '../generated/service_pb';
 
@@ -19,17 +19,17 @@ let counter = 0;
 
 // Define the service implementation using the generated types
 const StudentServiceImplementation: IStudentServiceServer = {
-  queryHello2: (call: grpc.ServerUnaryCall<QueryHello2Request, QueryHello2Response>, callback: grpc.sendUnaryData<QueryHello2Response>) => {
+  queryHello: (call: grpc.ServerUnaryCall<QueryHelloRequest, QueryHelloResponse>, callback: grpc.sendUnaryData<QueryHelloResponse>) => {
     const name = call.request.getName();
 
     counter += 1;
 
     const world = new World();
     world.setId(`world-`+counter);
-    world.setName(`Hello Awesome aeqwerqwe7, `+ name);
+    world.setName(`Hello from StudentService plugin! `+ name);
 
-    const response = new QueryHello2Response();
-    response.setHello2(world);
+    const response = new QueryHelloResponse();
+    response.setHello(world);
 
     callback(null, response);
   }
@@ -39,7 +39,7 @@ function run() {
   // Create the plugin server (health check automatically initialized)
   const pluginServer = new PluginServer();
   
-  // Add the student service
+  // Add the StudentService service
   pluginServer.addService(StudentServiceService, StudentServiceImplementation);
 
   // Start the server

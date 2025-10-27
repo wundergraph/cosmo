@@ -5,12 +5,12 @@ import { PluginServer } from './plugin-server';
 
 // Import generated gRPC code
 import { 
-  StudentServiceService, 
-  IStudentServiceServer 
+  {serviceName}Service, 
+  I{serviceName}Server 
 } from '../generated/service_grpc_pb';
 import { 
-  QueryHello2Request,
-  QueryHello2Response,
+  QueryHelloRequest, 
+  QueryHelloResponse, 
   World 
 } from '../generated/service_pb';
 
@@ -18,18 +18,18 @@ import {
 let counter = 0;
 
 // Define the service implementation using the generated types
-const StudentServiceImplementation: IStudentServiceServer = {
-  queryHello2: (call: grpc.ServerUnaryCall<QueryHello2Request, QueryHello2Response>, callback: grpc.sendUnaryData<QueryHello2Response>) => {
+const {serviceName}Implementation: I{serviceName}Server = {
+  queryHello: (call: grpc.ServerUnaryCall<QueryHelloRequest, QueryHelloResponse>, callback: grpc.sendUnaryData<QueryHelloResponse>) => {
     const name = call.request.getName();
 
     counter += 1;
 
     const world = new World();
     world.setId(`world-`+counter);
-    world.setName(`Hello Awesome aeqwerqwe7, `+ name);
+    world.setName(`Hello from {serviceName} plugin! `+ name);
 
-    const response = new QueryHello2Response();
-    response.setHello2(world);
+    const response = new QueryHelloResponse();
+    response.setHello(world);
 
     callback(null, response);
   }
@@ -39,8 +39,8 @@ function run() {
   // Create the plugin server (health check automatically initialized)
   const pluginServer = new PluginServer();
   
-  // Add the student service
-  pluginServer.addService(StudentServiceService, StudentServiceImplementation);
+  // Add the {serviceName} service
+  pluginServer.addService({serviceName}Service, {serviceName}Implementation);
 
   // Start the server
   pluginServer.serve().catch((error) => {

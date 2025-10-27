@@ -62,7 +62,7 @@ export default (opts: BaseCommandOptions) => {
       spinner.text = 'Checkout templates...';
 
       options.language = options.language.toLowerCase();
-      if (options.language !== 'go' || options.language !== 'ts') {
+      if (options.language !== 'go' && options.language !== 'ts') {
         spinner.fail(pc.yellow(`Language '${options.language}' is not supported yet. Using 'go' instead.`));
       }
 
@@ -88,14 +88,14 @@ export default (opts: BaseCommandOptions) => {
           await writeFile(resolve(srcDir, 'main.go'), pupa(GoTemplates.mainGo, { serviceName }));
           await writeFile(resolve(srcDir, 'main_test.go'), pupa(GoTemplates.mainGoTest, { serviceName }));
           await writeFile(resolve(tempDir, 'go.mod'), pupa(GoTemplates.goMod, { modulePath: goModulePath }));
-          await writeFile(resolve(pluginDir, 'Dockerfile'), pupa(GoTemplates.dockerfileGo, { originalPluginName }));
+          await writeFile(resolve(tempDir, 'Dockerfile'), pupa(GoTemplates.dockerfileGo, { originalPluginName }));
           break;
         }
         case 'ts': {
           await writeFile(resolve(srcDir, 'plugin.ts'), pupa(TsTemplates.pluginTs, { serviceName }));
           await writeFile(resolve(srcDir, 'plugin-server.ts'), pupa(TsTemplates.pluginServerTs, { serviceName }));
           await writeFile(resolve(tempDir, 'package.json'), pupa(TsTemplates.packageJson, { serviceName }));
-          await writeFile(resolve(pluginDir, 'Dockerfile'), pupa(TsTemplates.dockerfileTs, { originalPluginName }));
+          await writeFile(resolve(tempDir, 'Dockerfile'), pupa(TsTemplates.dockerfileTs, { originalPluginName }));
           break;
         }
       }
