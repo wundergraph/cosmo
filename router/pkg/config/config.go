@@ -963,6 +963,16 @@ type CacheWarmupConfiguration struct {
 	Timeout        time.Duration     `yaml:"timeout" envDefault:"30s" env:"CACHE_WARMUP_TIMEOUT"`
 }
 
+type ConnectRPCServer struct {
+	ListenAddr string `yaml:"listen_addr" envDefault:"localhost:5026" env:"CONNECT_RPC_SERVER_LISTEN_ADDR"`
+}
+
+type ConnectRPCConfiguration struct {
+	Enabled    bool              `yaml:"enabled" envDefault:"false" env:"CONNECT_RPC_ENABLED"`
+	Server     ConnectRPCServer  `yaml:"server,omitempty"`
+	ProtoPaths []string          `yaml:"proto_paths,omitempty" env:"CONNECT_RPC_PROTO_PATHS"`
+}
+
 type MCPConfiguration struct {
 	Enabled                   bool             `yaml:"enabled" envDefault:"false" env:"MCP_ENABLED"`
 	Server                    MCPServer        `yaml:"server,omitempty"`
@@ -1012,11 +1022,12 @@ type Config struct {
 	GraphqlMetrics GraphqlMetrics     `yaml:"graphql_metrics,omitempty"`
 	CORS           CORS               `yaml:"cors,omitempty"`
 	Cluster        Cluster            `yaml:"cluster,omitempty"`
-	Compliance     ComplianceConfig   `yaml:"compliance,omitempty"`
-	TLS            TLSConfiguration   `yaml:"tls,omitempty"`
-	CacheControl   CacheControlPolicy `yaml:"cache_control_policy"`
-	MCP            MCPConfiguration   `yaml:"mcp,omitempty"`
-	DemoMode       bool               `yaml:"demo_mode,omitempty" envDefault:"false" env:"DEMO_MODE"`
+	Compliance     ComplianceConfig        `yaml:"compliance,omitempty"`
+	TLS            TLSConfiguration        `yaml:"tls,omitempty"`
+	CacheControl   CacheControlPolicy      `yaml:"cache_control_policy"`
+	ConnectRPC     ConnectRPCConfiguration `yaml:"connect_rpc,omitempty"`
+	MCP            MCPConfiguration        `yaml:"mcp,omitempty"`
+	DemoMode       bool                    `yaml:"demo_mode,omitempty" envDefault:"false" env:"DEMO_MODE"`
 
 	Modules        map[string]interface{} `yaml:"modules,omitempty"`
 	Headers        HeaderRules            `yaml:"headers,omitempty"`

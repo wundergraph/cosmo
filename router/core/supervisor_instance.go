@@ -272,6 +272,12 @@ func optionsFromResources(logger *zap.Logger, config *config.Config) []Option {
 		WithDemoMode(config.DemoMode),
 	}
 
+	// Add Connect RPC configuration if enabled
+	if config.ConnectRPC.Enabled && len(config.ConnectRPC.ProtoPaths) > 0 {
+		options = append(options, WithConnectRpcProtoPaths(config.ConnectRPC.ProtoPaths))
+		options = append(options, WithConnectRpcListenAddr(config.ConnectRPC.Server.ListenAddr))
+	}
+
 	return options
 }
 

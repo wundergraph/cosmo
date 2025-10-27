@@ -25,6 +25,8 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.uber.org/zap"
 
+	"github.com/jhump/protoreflect/desc"
+	"github.com/jhump/protoreflect/desc/protoparse"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/circuit"
@@ -41,6 +43,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/internal/stringsx"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/connect_rpc"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/selfregister"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
@@ -53,6 +56,7 @@ import (
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"github.com/wundergraph/cosmo/router/pkg/watcher"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
+	"google.golang.org/protobuf/types/descriptorpb"
 )
 
 type IPAnonymizationMethod string
@@ -850,6 +854,47 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		}
 	}
 
+	// Bootstrap Buf Connect Server if proto files are provided
+	if len(r.connectRpcProtoPaths) > 0 {
+		r.logger.Info("Initializing Buf Connect RPC server",
+			zap.Int("proto_count", len(r.connectRpcProtoPaths)),
+			zap.Strings("proto_paths", r.connectRpcProtoPaths),
+			zap.String("listen_addr", r.connectRpcListenAddr),
+		)
+
+		// Parse .proto files directly at runtime (no pre-compilation needed)
+		fds, err := loadAndMergeFileDescriptorSets(r.connectRpcProtoPaths)
+		if err != nil {
+			return fmt.Errorf("failed to parse proto files for connect RPC: %w", err)
+		}
+
+		// Create the Vanguard handler with dynamic proto support
+		connectHandler, err := connect_rpc.SetupVanguardWithDynamicProto(fds)
+		if err != nil {
+			return fmt.Errorf("failed to setup connect RPC handler: %w", err)
+		}
+
+		// Create and start the Connect RPC HTTP server on a separate port
+		r.connectRpcServer = &http.Server{
+			Addr:    r.connectRpcListenAddr,
+			Handler: connectHandler,
+		}
+
+		go func() {
+			r.logger.Info("Connect RPC server listening",
+				zap.String("addr", r.connectRpcListenAddr),
+			)
+			if err := r.connectRpcServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				r.logger.Error("Connect RPC server error", zap.Error(err))
+			}
+		}()
+
+		r.logger.Info("Buf Connect RPC server initialized successfully",
+			zap.Int("proto_count", len(r.connectRpcProtoPaths)),
+			zap.String("listen_addr", r.connectRpcListenAddr),
+		)
+	}
+
 	if r.mcp.Enabled {
 		var operationsDir string
 
@@ -1438,6 +1483,16 @@ func (r *Router) Shutdown(ctx context.Context) error {
 			defer wg.Done()
 			if subErr := r.mcpServer.Stop(ctx); subErr != nil {
 				err.Append(fmt.Errorf("failed to shutdown mcp server: %w", subErr))
+			}
+		}()
+	}
+
+	if r.connectRpcServer != nil {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if subErr := r.connectRpcServer.Shutdown(ctx); subErr != nil {
+				err.Append(fmt.Errorf("failed to shutdown connect RPC server: %w", subErr))
 			}
 		}()
 	}
@@ -2118,6 +2173,127 @@ func WithDemoMode(demoMode bool) Option {
 	return func(r *Router) {
 		r.demoMode = demoMode
 	}
+}
+
+func WithConnectRpcProtoPaths(protoPaths []string) Option {
+	return func(r *Router) {
+		r.connectRpcProtoPaths = protoPaths
+	}
+}
+
+func WithConnectRpcListenAddr(addr string) Option {
+	return func(r *Router) {
+		r.connectRpcListenAddr = addr
+	}
+}
+
+// parseProtoFile parses a .proto file directly using protoparse and returns its FileDescriptorProto.
+// This eliminates the need for pre-compiled .protoset files.
+func parseProtoFile(protoPath string) (*descriptorpb.FileDescriptorProto, error) {
+	// Create a parser
+	parser := protoparse.Parser{
+		// Allow importing standard proto files
+		ImportPaths: []string{
+			path.Dir(protoPath), // Include the directory of the proto file
+			".",                 // Current directory
+		},
+		// Include source code info for better error messages
+		IncludeSourceCodeInfo: true,
+	}
+
+	// Parse the proto file
+	fds, err := parser.ParseFiles(path.Base(protoPath))
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse proto file %s: %w", protoPath, err)
+	}
+
+	if len(fds) == 0 {
+		return nil, fmt.Errorf("no file descriptors found in %s", protoPath)
+	}
+
+	// Convert to FileDescriptorProto
+	return fds[0].AsFileDescriptorProto(), nil
+}
+
+// loadAndMergeFileDescriptorSets parses multiple .proto files directly and merges them into a single FileDescriptorSet.
+// This allows supporting multiple proto files that may have dependencies on each other.
+// No pre-compilation step is needed - just provide the .proto files directly.
+func loadAndMergeFileDescriptorSets(protoPaths []string) (*descriptorpb.FileDescriptorSet, error) {
+	if len(protoPaths) == 0 {
+		return nil, fmt.Errorf("no proto paths provided")
+	}
+
+	// Collect all import paths from the proto file directories
+	importPaths := make([]string, 0, len(protoPaths)+1)
+	importPaths = append(importPaths, ".") // Current directory
+
+	seenDirs := make(map[string]bool)
+	for _, protoPath := range protoPaths {
+		dir := path.Dir(protoPath)
+		if !seenDirs[dir] {
+			importPaths = append(importPaths, dir)
+			seenDirs[dir] = true
+		}
+	}
+
+	// Create a parser with all import paths
+	// InferImportPaths allows the parser to find standard Google protobuf imports
+	parser := protoparse.Parser{
+		ImportPaths:           importPaths,
+		IncludeSourceCodeInfo: true,
+		InferImportPaths:      true, // Automatically find standard proto imports
+	}
+
+	// Extract just the base names for parsing
+	baseNames := make([]string, len(protoPaths))
+	for i, protoPath := range protoPaths {
+		baseNames[i] = path.Base(protoPath)
+	}
+
+	// Parse all proto files at once (this handles dependencies automatically)
+	fds, err := parser.ParseFiles(baseNames...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse proto files: %w", err)
+	}
+
+	if len(fds) == 0 {
+		return nil, fmt.Errorf("no file descriptors found in provided proto files")
+	}
+
+	// Create a merged FileDescriptorSet with all dependencies
+	merged := &descriptorpb.FileDescriptorSet{
+		File: make([]*descriptorpb.FileDescriptorProto, 0),
+	}
+
+	// Track seen files to avoid duplicates
+	seenFiles := make(map[string]bool)
+
+	// Helper function to recursively add a file and its dependencies
+	// This uses desc.FileDescriptor.GetDependencies() to access ALL transitive dependencies
+	var addFileWithDeps func(fd *desc.FileDescriptor)
+	addFileWithDeps = func(fd *desc.FileDescriptor) {
+		fileName := fd.GetName()
+		if seenFiles[fileName] {
+			return
+		}
+		seenFiles[fileName] = true
+
+		// First, recursively add all dependencies using GetDependencies()
+		// This method returns ALL dependencies including transitive ones
+		for _, dep := range fd.GetDependencies() {
+			addFileWithDeps(dep)
+		}
+
+		// Then add this file
+		merged.File = append(merged.File, fd.AsFileDescriptorProto())
+	}
+
+	// Add all parsed files with their dependencies in the correct order
+	for _, fd := range fds {
+		addFileWithDeps(fd)
+	}
+
+	return merged, nil
 }
 
 type ProxyFunc func(req *http.Request) (*url.URL, error)

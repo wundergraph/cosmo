@@ -3121,6 +3121,39 @@
         }
       }
     },
+    "connect_rpc": {
+      "type": "object",
+      "description": "The configuration for Connect RPC. Connect RPC allows you to expose RPC services defined in protocol buffers alongside your GraphQL API. The Connect RPC server runs on a separate port from the main GraphQL router.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable the Connect RPC server. If the value is true, the Connect RPC server will be started on a separate port and handle requests for the configured proto services."
+        },
+        "server": {
+          "type": "object",
+          "description": "Server configuration for the Connect RPC server.",
+          "additionalProperties": false,
+          "properties": {
+            "listen_addr": {
+              "type": "string",
+              "description": "The address on which the Connect RPC server listens for incoming requests. The address is specified as a string with the format 'host:port'.",
+              "default": "localhost:5026",
+              "format": "hostname-port"
+            }
+          }
+        },
+        "proto_paths": {
+          "type": "array",
+          "description": "List of paths to .proto files. These files contain the service definitions that will be exposed via Connect RPC. The router will parse these files directly at runtime - no pre-compilation step is needed. Multiple files can be specified to support services with dependencies.",
+          "items": {
+            "type": "string",
+            "format": "file-path"
+          }
+        }
+      }
+    },
     "client_header": {
       "type": "object",
       "description": "The configuration to set custom client name and version header.",
