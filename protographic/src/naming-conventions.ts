@@ -1,4 +1,4 @@
-import { camelCase, lowerFirst, snakeCase, upperFirst } from 'lodash-es';
+import { camelCase, snakeCase, upperFirst } from 'lodash-es';
 
 /**
  * Shared naming conventions for converting GraphQL to Protocol Buffers

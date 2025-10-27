@@ -330,7 +330,7 @@ export class SDLValidationVisitor {
    * @private
    */
   private validateInvalidResolverContext(ctx: VisitContext<FieldDefinitionNode>): void {
-    if (ctx.node.name.value.startsWith('_') || ctx.node.arguments?.length === 0) {
+    if (ctx.node.name.value.startsWith('_') || (ctx.node.arguments?.length ?? 0) === 0) {
       return;
     }
 
