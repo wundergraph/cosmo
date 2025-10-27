@@ -36,6 +36,7 @@ type pubSubPublishEventHookContext struct {
 	operation                 OperationContext
 	authentication            authentication.Authentication
 	publishEventConfiguration datasource.PublishEventConfiguration
+	eventBuilder              datasource.EventBuilderFn
 }
 
 func (c *pubSubPublishEventHookContext) Request() *http.Request {
@@ -56,6 +57,10 @@ func (c *pubSubPublishEventHookContext) Authentication() authentication.Authenti
 
 func (c *pubSubPublishEventHookContext) PublishEventConfiguration() datasource.PublishEventConfiguration {
 	return c.publishEventConfiguration
+}
+
+func (c *pubSubPublishEventHookContext) NewEvent(data []byte) datasource.StreamEvent {
+	return c.eventBuilder(data)
 }
 
 type pubSubSubscriptionOnStartHookContext struct {
@@ -237,6 +242,8 @@ type StreamPublishEventHandlerContext interface {
 	Authentication() authentication.Authentication
 	// PublishEventConfiguration the publish event configuration
 	PublishEventConfiguration() datasource.PublishEventConfiguration
+	// NewEvent creates a new event from the given data
+	NewEvent(data []byte) datasource.StreamEvent
 }
 
 type StreamPublishEventHandler interface {
@@ -251,7 +258,7 @@ func NewPubSubOnPublishEventsHook(fn func(ctx StreamPublishEventHandlerContext, 
 		return nil
 	}
 
-	return func(ctx context.Context, pubConf datasource.PublishEventConfiguration, evts []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
+	return func(ctx context.Context, pubConf datasource.PublishEventConfiguration, evts []datasource.StreamEvent, eventBuilder datasource.EventBuilderFn) ([]datasource.StreamEvent, error) {
 		requestContext := getRequestContext(ctx)
 		hookCtx := &pubSubPublishEventHookContext{
 			request:                   requestContext.Request(),
@@ -259,6 +266,7 @@ func NewPubSubOnPublishEventsHook(fn func(ctx StreamPublishEventHandlerContext, 
 			operation:                 requestContext.Operation(),
 			authentication:            requestContext.Authentication(),
 			publishEventConfiguration: pubConf,
+			eventBuilder:              eventBuilder,
 		}
 
 		return fn(hookCtx, evts)
