@@ -4,42 +4,42 @@
 var grpc = require('@grpc/grpc-js');
 var service_pb = require('./service_pb.js');
 
-function serialize_service_QueryHelloRequest(arg) {
-  if (!(arg instanceof service_pb.QueryHelloRequest)) {
-    throw new Error('Expected argument of type service.QueryHelloRequest');
+function serialize_service_QueryHello2Request(arg) {
+  if (!(arg instanceof service_pb.QueryHello2Request)) {
+    throw new Error('Expected argument of type service.QueryHello2Request');
   }
   return Buffer.from(arg.serializeBinary());
 }
 
-function deserialize_service_QueryHelloRequest(buffer_arg) {
-  return service_pb.QueryHelloRequest.deserializeBinary(new Uint8Array(buffer_arg));
+function deserialize_service_QueryHello2Request(buffer_arg) {
+  return service_pb.QueryHello2Request.deserializeBinary(new Uint8Array(buffer_arg));
 }
 
-function serialize_service_QueryHelloResponse(arg) {
-  if (!(arg instanceof service_pb.QueryHelloResponse)) {
-    throw new Error('Expected argument of type service.QueryHelloResponse');
+function serialize_service_QueryHello2Response(arg) {
+  if (!(arg instanceof service_pb.QueryHello2Response)) {
+    throw new Error('Expected argument of type service.QueryHello2Response');
   }
   return Buffer.from(arg.serializeBinary());
 }
 
-function deserialize_service_QueryHelloResponse(buffer_arg) {
-  return service_pb.QueryHelloResponse.deserializeBinary(new Uint8Array(buffer_arg));
+function deserialize_service_QueryHello2Response(buffer_arg) {
+  return service_pb.QueryHello2Response.deserializeBinary(new Uint8Array(buffer_arg));
 }
 
 
 // Service definition for StudentService
 var StudentServiceService = exports.StudentServiceService = {
   // The hello query
-queryHello: {
-    path: '/service.StudentService/QueryHello',
+queryHello2: {
+    path: '/service.StudentService/QueryHello2',
     requestStream: false,
     responseStream: false,
-    requestType: service_pb.QueryHelloRequest,
-    responseType: service_pb.QueryHelloResponse,
-    requestSerialize: serialize_service_QueryHelloRequest,
-    requestDeserialize: deserialize_service_QueryHelloRequest,
-    responseSerialize: serialize_service_QueryHelloResponse,
-    responseDeserialize: deserialize_service_QueryHelloResponse,
+    requestType: service_pb.QueryHello2Request,
+    responseType: service_pb.QueryHello2Response,
+    requestSerialize: serialize_service_QueryHello2Request,
+    requestDeserialize: deserialize_service_QueryHello2Request,
+    responseSerialize: serialize_service_QueryHello2Response,
+    responseDeserialize: deserialize_service_QueryHello2Response,
   },
 };
 

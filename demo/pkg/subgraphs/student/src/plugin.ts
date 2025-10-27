@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 import * as grpc from '@grpc/grpc-js';
-import { PluginServer } from '../../../../../router-plugin-ts/src';
+import { PluginServer } from 'router-plugin-ts';
 
 // Import generated gRPC code
 import { 
@@ -9,8 +9,8 @@ import {
   IStudentServiceServer 
 } from '../generated/service_grpc_pb';
 import { 
-  QueryHelloRequest, 
-  QueryHelloResponse, 
+  QueryHello2Request,
+  QueryHello2Response,
   World 
 } from '../generated/service_pb';
 
@@ -19,17 +19,17 @@ let counter = 0;
 
 // Define the service implementation using the generated types
 const StudentServiceImplementation: IStudentServiceServer = {
-  queryHello: (call: grpc.ServerUnaryCall<QueryHelloRequest, QueryHelloResponse>, callback: grpc.sendUnaryData<QueryHelloResponse>) => {
+  queryHello2: (call: grpc.ServerUnaryCall<QueryHello2Request, QueryHello2Response>, callback: grpc.sendUnaryData<QueryHello2Response>) => {
     const name = call.request.getName();
 
     counter += 1;
 
     const world = new World();
     world.setId(`world-`+counter);
-    world.setName(`Hello There 7, `+ name);
+    world.setName(`Hello Awesome aeqwerqwe7, `+ name);
 
-    const response = new QueryHelloResponse();
-    response.setHello(world);
+    const response = new QueryHello2Response();
+    response.setHello2(world);
 
     callback(null, response);
   }

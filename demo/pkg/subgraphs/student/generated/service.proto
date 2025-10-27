@@ -6,17 +6,17 @@ option go_package = "github.com/wundergraph/cosmo/plugin";
 // Service definition for StudentService
 service StudentService {
   // The hello query
-  rpc QueryHello(QueryHelloRequest) returns (QueryHelloResponse) {}
+  rpc QueryHello2(QueryHello2Request) returns (QueryHello2Response) {}
 }
 
-// Request message for hello operation: The hello query.
-message QueryHelloRequest {
+// Request message for hello2 operation: The hello query.
+message QueryHello2Request {
   string name = 1;
 }
-// Response message for hello operation: The hello query.
-message QueryHelloResponse {
+// Response message for hello2 operation: The hello query.
+message QueryHello2Response {
   // The hello query
-  World hello = 1;
+  World hello_2 = 1;
 }
 
 message World {

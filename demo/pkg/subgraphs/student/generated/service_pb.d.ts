@@ -6,46 +6,46 @@
 
 import * as jspb from "google-protobuf";
 
-export class QueryHelloRequest extends jspb.Message { 
+export class QueryHello2Request extends jspb.Message { 
     getName(): string;
-    setName(value: string): QueryHelloRequest;
+    setName(value: string): QueryHello2Request;
 
     serializeBinary(): Uint8Array;
-    toObject(includeInstance?: boolean): QueryHelloRequest.AsObject;
-    static toObject(includeInstance: boolean, msg: QueryHelloRequest): QueryHelloRequest.AsObject;
+    toObject(includeInstance?: boolean): QueryHello2Request.AsObject;
+    static toObject(includeInstance: boolean, msg: QueryHello2Request): QueryHello2Request.AsObject;
     static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
     static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-    static serializeBinaryToWriter(message: QueryHelloRequest, writer: jspb.BinaryWriter): void;
-    static deserializeBinary(bytes: Uint8Array): QueryHelloRequest;
-    static deserializeBinaryFromReader(message: QueryHelloRequest, reader: jspb.BinaryReader): QueryHelloRequest;
+    static serializeBinaryToWriter(message: QueryHello2Request, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): QueryHello2Request;
+    static deserializeBinaryFromReader(message: QueryHello2Request, reader: jspb.BinaryReader): QueryHello2Request;
 }
 
-export namespace QueryHelloRequest {
+export namespace QueryHello2Request {
     export type AsObject = {
         name: string,
     }
 }
 
-export class QueryHelloResponse extends jspb.Message { 
+export class QueryHello2Response extends jspb.Message { 
 
-    hasHello(): boolean;
-    clearHello(): void;
-    getHello(): World | undefined;
-    setHello(value?: World): QueryHelloResponse;
+    hasHello2(): boolean;
+    clearHello2(): void;
+    getHello2(): World | undefined;
+    setHello2(value?: World): QueryHello2Response;
 
     serializeBinary(): Uint8Array;
-    toObject(includeInstance?: boolean): QueryHelloResponse.AsObject;
-    static toObject(includeInstance: boolean, msg: QueryHelloResponse): QueryHelloResponse.AsObject;
+    toObject(includeInstance?: boolean): QueryHello2Response.AsObject;
+    static toObject(includeInstance: boolean, msg: QueryHello2Response): QueryHello2Response.AsObject;
     static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
     static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-    static serializeBinaryToWriter(message: QueryHelloResponse, writer: jspb.BinaryWriter): void;
-    static deserializeBinary(bytes: Uint8Array): QueryHelloResponse;
-    static deserializeBinaryFromReader(message: QueryHelloResponse, reader: jspb.BinaryReader): QueryHelloResponse;
+    static serializeBinaryToWriter(message: QueryHello2Response, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): QueryHello2Response;
+    static deserializeBinaryFromReader(message: QueryHello2Response, reader: jspb.BinaryReader): QueryHello2Response;
 }
 
-export namespace QueryHelloResponse {
+export namespace QueryHello2Response {
     export type AsObject = {
-        hello?: World.AsObject,
+        hello2?: World.AsObject,
     }
 }
 

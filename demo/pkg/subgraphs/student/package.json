@@ -11,7 +11,8 @@
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.14.0",
-    "google-protobuf": "^4.0.0"
+    "google-protobuf": "^4.0.0",
+    "router-plugin-ts": "file:../../../../router-plugin-ts"
   },
   "devDependencies": {
     "@types/bun": "latest",

@@ -13,5 +13,5 @@ type Query {
   """
   The hello query
   """
-  hello(name: String!): World!
+  hello2(name: String!): World!
 }

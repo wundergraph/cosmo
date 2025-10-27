@@ -4,10 +4,10 @@
   "operationMappings": [
     {
       "type": "OPERATION_TYPE_QUERY",
-      "original": "hello",
-      "mapped": "QueryHello",
-      "request": "QueryHelloRequest",
-      "response": "QueryHelloResponse"
+      "original": "hello2",
+      "mapped": "QueryHello2",
+      "request": "QueryHello2Request",
+      "response": "QueryHello2Response"
     }
   ],
   "entityMappings": [],
@@ -16,8 +16,8 @@
       "type": "Query",
       "fieldMappings": [
         {
-          "original": "hello",
-          "mapped": "hello",
+          "original": "hello2",
+          "mapped": "hello_2",
           "argumentMappings": [
             {
               "original": "name",
