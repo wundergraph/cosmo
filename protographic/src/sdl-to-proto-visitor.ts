@@ -1285,7 +1285,7 @@ Example:
       ...this.buildMessage({
         messageName: contextMessageName,
         fields: fieldFilter.map((field) => ({
-          fieldName: field.name,
+          fieldName: graphqlFieldToProtoField(field.name),
           typeName: this.getProtoTypeFromGraphQL(field.type).typeName,
           fieldNumber: ++fieldNumber,
         })),

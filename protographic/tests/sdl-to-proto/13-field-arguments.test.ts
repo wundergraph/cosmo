@@ -770,4 +770,81 @@ describe('SDL to Proto Field Arguments', () => {
       'Invalid field context for resolver. Multiple fields with type ID found - provide a context with the fields you want to use in the @connect__fieldResolver directive',
     );
   });
+  it('should correctly convert camelCase field names to snake_case in context messages', () => {
+    const sdl = `
+    type User {
+        id: ID!
+        myLongFieldName: String!
+        anotherVeryLongField: Int!
+        post(upper: Boolean!): Post! @connect__fieldResolver(context: "id myLongFieldName anotherVeryLongField")
+    }
+
+    type Post {
+        id: ID!
+        title: String!
+    }
+
+    type Query {
+        user(id: ID!): User
+    }
+  `;
+
+    const { proto: protoText } = compileGraphQLToProto(sdl);
+
+    expectValidProto(protoText);
+    expect(protoText).toMatchInlineSnapshot(`
+      "syntax = "proto3";
+      package service.v1;
+
+      // Service definition for DefaultService
+      service DefaultService {
+        rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
+        rpc ResolveUserPost(ResolveUserPostRequest) returns (ResolveUserPostResponse) {}
+      }
+
+      // Request message for user operation.
+      message QueryUserRequest {
+        string id = 1;
+      }
+      // Response message for user operation.
+      message QueryUserResponse {
+        User user = 1;
+      }
+      message ResolveUserPostArgs {
+        bool upper = 1;
+      }
+
+      message ResolveUserPostContext {
+        string id = 1;
+        string my_long_field_name = 2;
+        int32 another_very_long_field = 3;
+      }
+
+      message ResolveUserPostRequest {
+        // context provides the resolver context for the field post of type User.
+        repeated ResolveUserPostContext context = 1;
+        // field_args provides the arguments for the resolver field post of type User.
+        ResolveUserPostArgs field_args = 2;
+      }
+
+      message ResolveUserPostResult {
+        Post post = 1;
+      }
+
+      message ResolveUserPostResponse {
+        repeated ResolveUserPostResult result = 1;
+      }
+
+      message User {
+        string id = 1;
+        string my_long_field_name = 2;
+        int32 another_very_long_field = 3;
+      }
+
+      message Post {
+        string id = 1;
+        string title = 2;
+      }"
+    `);
+  });
 });
