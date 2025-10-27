@@ -26,6 +26,8 @@ type SubscriptionOnStartHandlerContext interface {
 	// WriteEvent writes an event to the stream of the current subscription
 	// It returns true if the event was written to the stream, false if the event was dropped
 	WriteEvent(event datasource.StreamEvent) bool
+	// NewEvent creates a new event from the given data
+	NewEvent(data []byte) datasource.StreamEvent
 }
 
 type pubSubPublishEventHookContext struct {
@@ -63,6 +65,7 @@ type pubSubSubscriptionOnStartHookContext struct {
 	authentication                 authentication.Authentication
 	subscriptionEventConfiguration datasource.SubscriptionEventConfiguration
 	writeEventHook                 func(data []byte)
+	eventBuilder                   datasource.EventBuilderFn
 }
 
 func (c *pubSubSubscriptionOnStartHookContext) Request() *http.Request {
@@ -89,6 +92,10 @@ func (c *pubSubSubscriptionOnStartHookContext) WriteEvent(event datasource.Strea
 	c.writeEventHook(event.GetData())
 
 	return true
+}
+
+func (c *pubSubSubscriptionOnStartHookContext) NewEvent(data []byte) datasource.StreamEvent {
+	return c.eventBuilder(data)
 }
 
 // EngineEvent is the event used to write to the engine subscription
@@ -136,6 +143,12 @@ func (c *engineSubscriptionOnStartHookContext) WriteEvent(event datasource.Strea
 	return true
 }
 
+func (c *engineSubscriptionOnStartHookContext) NewEvent(data []byte) datasource.StreamEvent {
+	return &EngineEvent{
+		Data: data,
+	}
+}
+
 func (c *engineSubscriptionOnStartHookContext) SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration {
 	return nil
 }
@@ -152,7 +165,7 @@ func NewPubSubSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHandlerCont
 		return nil
 	}
 
-	return func(resolveCtx resolve.StartupHookContext, subConf datasource.SubscriptionEventConfiguration) error {
+	return func(resolveCtx resolve.StartupHookContext, subConf datasource.SubscriptionEventConfiguration, eventBuilder datasource.EventBuilderFn) error {
 		requestContext := getRequestContext(resolveCtx.Context)
 		hookCtx := &pubSubSubscriptionOnStartHookContext{
 			request:                        requestContext.Request(),
@@ -161,6 +174,7 @@ func NewPubSubSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHandlerCont
 			authentication:                 requestContext.Authentication(),
 			subscriptionEventConfiguration: subConf,
 			writeEventHook:                 resolveCtx.Updater,
+			eventBuilder:                   eventBuilder,
 		}
 
 		return fn(hookCtx)
@@ -198,6 +212,8 @@ type StreamReceiveEventHandlerContext interface {
 	Authentication() authentication.Authentication
 	// SubscriptionEventConfiguration the subscription event configuration
 	SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration
+	// NewEvent creates a new event from the given data
+	NewEvent(data []byte) datasource.StreamEvent
 }
 
 type StreamReceiveEventHandler interface {
@@ -255,6 +271,7 @@ type pubSubStreamReceiveEventHookContext struct {
 	operation                      OperationContext
 	authentication                 authentication.Authentication
 	subscriptionEventConfiguration datasource.SubscriptionEventConfiguration
+	eventBuilder                   datasource.EventBuilderFn
 }
 
 func (c *pubSubStreamReceiveEventHookContext) Request() *http.Request {
@@ -277,12 +294,16 @@ func (c *pubSubStreamReceiveEventHookContext) SubscriptionEventConfiguration() d
 	return c.subscriptionEventConfiguration
 }
 
+func (c *pubSubStreamReceiveEventHookContext) NewEvent(data []byte) datasource.StreamEvent {
+	return c.eventBuilder(data)
+}
+
 func NewPubSubOnReceiveEventsHook(fn func(ctx StreamReceiveEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error)) datasource.OnReceiveEventsFn {
 	if fn == nil {
 		return nil
 	}
 
-	return func(ctx context.Context, subConf datasource.SubscriptionEventConfiguration, evts []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
+	return func(ctx context.Context, subConf datasource.SubscriptionEventConfiguration, eventBuilder datasource.EventBuilderFn, evts []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
 		requestContext := getRequestContext(ctx)
 		hookCtx := &pubSubStreamReceiveEventHookContext{
 			request:                        requestContext.Request(),
@@ -290,6 +311,7 @@ func NewPubSubOnReceiveEventsHook(fn func(ctx StreamReceiveEventHandlerContext, 
 			operation:                      requestContext.Operation(),
 			authentication:                 requestContext.Authentication(),
 			subscriptionEventConfiguration: subConf,
+			eventBuilder:                   eventBuilder,
 		}
 
 		return fn(hookCtx, evts)

@@ -76,27 +76,33 @@ func (c *EngineDataSourceFactory) ResolveDataSourceInput(eventData []byte) (stri
 }
 
 func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (datasource.SubscriptionDataSource, error) {
+	uniqueRequestIdFn := func(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
+		val, _, _, err := jsonparser.Get(input, "subjects")
+		if err != nil {
+			return err
+		}
+
+		_, err = xxh.Write(val)
+		if err != nil {
+			return err
+		}
+
+		val, _, _, err = jsonparser.Get(input, "providerId")
+		if err != nil {
+			return err
+		}
+
+		_, err = xxh.Write(val)
+		return err
+	}
+
+	createEventFn := func(data []byte) datasource.StreamEvent {
+		return &Event{Data: data}
+	}
+
 	return datasource.NewPubSubSubscriptionDataSource[*SubscriptionEventConfiguration](
 		c.NatsAdapter,
-		func(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
-			val, _, _, err := jsonparser.Get(input, "subjects")
-			if err != nil {
-				return err
-			}
-
-			_, err = xxh.Write(val)
-			if err != nil {
-				return err
-			}
-
-			val, _, _, err = jsonparser.Get(input, "providerId")
-			if err != nil {
-				return err
-			}
-
-			_, err = xxh.Write(val)
-			return err
-		}, c.logger), nil
+		uniqueRequestIdFn, c.logger, createEventFn), nil
 }
 
 func (c *EngineDataSourceFactory) ResolveDataSourceSubscriptionInput() (string, error) {

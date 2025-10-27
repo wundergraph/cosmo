@@ -23,6 +23,7 @@ type subscriptionEventUpdater struct {
 	subscriptionEventConfiguration SubscriptionEventConfiguration
 	hooks                          Hooks
 	logger                         *zap.Logger
+	eventBuilder                   EventBuilderFn
 }
 
 func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
@@ -70,30 +71,6 @@ func (s *subscriptionEventUpdater) SetHooks(hooks Hooks) {
 	s.hooks = hooks
 }
 
-// applyReceiveEventHooks processes events through a chain of hook functions
-// Each hook receives the result from the previous hook, creating a proper middleware pipeline
-func applyReceiveEventHooks(
-	ctx context.Context,
-	cfg SubscriptionEventConfiguration,
-	events []StreamEvent,
-	hooks []OnReceiveEventsFn) ([]StreamEvent, error) {
-	// Copy the events to avoid modifying the original slice
-	currentEvents := make([]StreamEvent, len(events))
-	for i, event := range events {
-		currentEvents[i] = event.Clone()
-	}
-	// Apply each hook in sequence, passing the result of one as the input to the next
-	// If any hook returns an error, stop processing and return the error
-	for _, hook := range hooks {
-		var err error
-		currentEvents, err = hook(ctx, cfg, currentEvents)
-		if err != nil {
-			return currentEvents, err
-		}
-	}
-	return currentEvents, nil
-}
-
 func copyEvents(in []StreamEvent) []StreamEvent {
 	out := make([]StreamEvent, len(in))
 	for i := range in {
@@ -113,7 +90,7 @@ func (s *subscriptionEventUpdater) updateSubscription(ctx context.Context, wg *s
 	// modify events with hooks
 	var err error
 	for i := range hooks {
-		events, err = hooks[i](ctx, s.subscriptionEventConfiguration, events)
+		events, err = hooks[i](ctx, s.subscriptionEventConfiguration, s.eventBuilder, events)
 		if err != nil {
 			errCh <- err
 		}
@@ -167,11 +144,13 @@ func NewSubscriptionEventUpdater(
 	hooks Hooks,
 	eventUpdater resolve.SubscriptionUpdater,
 	logger *zap.Logger,
+	eventBuilder EventBuilderFn,
 ) SubscriptionEventUpdater {
 	return &subscriptionEventUpdater{
 		subscriptionEventConfiguration: cfg,
 		hooks:                          hooks,
 		eventUpdater:                   eventUpdater,
 		logger:                         logger,
+		eventBuilder:                   eventBuilder,
 	}
 }
