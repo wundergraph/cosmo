@@ -12,7 +12,6 @@ dist
 /.husky
 /.run
 docs
-demo
 cli
 **/dist
 **/gen

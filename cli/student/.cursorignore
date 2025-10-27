@@ -1,0 +1,7 @@
+# Ignore the mapping and lock files
+generated/mapping.json
+generated/service.proto.lock.json
+# Ignore the proto to avoid interpretation issues
+generated/service.proto
+# Ignore the plugin binary
+bin/
