@@ -224,6 +224,11 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)
 	return gs, nil
 }
 
+// SetHTTPClient allows setting a custom HTTP client (useful for testing)
+func (s *GraphQLSchemaServer) SetHTTPClient(client *http.Client) {
+	s.httpClient = client
+}
+
 // WithGraphName sets the graph name
 func WithGraphName(graphName string) func(*Options) {
 	return func(o *Options) {

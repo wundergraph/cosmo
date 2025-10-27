@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
@@ -212,7 +214,6 @@ func TestMCP(t *testing.T) {
 			t.Run("Execute Query", func(t *testing.T) {
 				t.Run("Execute operation of type query with valid input", func(t *testing.T) {
 					testenv.Run(t, &testenv.Config{
-						EnableNats: true,
 						MCP: config.MCPConfiguration{
 							Enabled: true,
 						},
@@ -555,36 +556,121 @@ func TestMCP(t *testing.T) {
 	})
 
 	t.Run("Header Forwarding", func(t *testing.T) {
-		t.Run("All headers are forwarded from MCP client to GraphQL server", func(t *testing.T) {
+		t.Run("All request headers are forwarded from MCP client through to subgraphs", func(t *testing.T) {
+			// This test validates that ALL headers sent by MCP clients are forwarded
+			// through the complete chain: MCP Client -> MCP Server -> Router -> Subgraphs
+			//
+			// The router's header forwarding rules (configured with wildcard `.*`) determine
+			// what gets propagated to subgraphs. The MCP server acts as a transparent proxy,
+			// forwarding all headers without filtering.
+			//
+			// Note: We use direct HTTP POST requests instead of the mcp-go client library
+			// because transport.WithHTTPHeaders() in mcp-go sets headers at the SSE connection
+			// level, not on individual tool execution requests. Direct HTTP requests allow us
+			// to test per-request headers, which is what real MCP clients (like Claude Desktop) send.
+
+			var capturedSubgraphRequest *http.Request
+			var subgraphMutex sync.Mutex
+
 			testenv.Run(t, &testenv.Config{
-				EnableNats: true,
 				MCP: config.MCPConfiguration{
 					Enabled: true,
+					Session: config.MCPSessionConfig{
+						Stateless: true, // Enable stateless mode so we don't need session IDs
+					},
+				},
+				RouterOptions: []core.Option{
+					// Forward all headers including custom ones
+					core.WithHeaderRules(config.HeaderRules{
+						All: &config.GlobalHeaderRule{
+							Request: []*config.RequestHeaderRule{
+								{
+									Operation: config.HeaderRuleOperationPropagate,
+									Matching:  ".*", // Forward all headers
+								},
+							},
+						},
+					}),
+				},
+				Subgraphs: testenv.SubgraphsConfig{
+					GlobalMiddleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							subgraphMutex.Lock()
+							capturedSubgraphRequest = r.Clone(r.Context())
+							subgraphMutex.Unlock()
+							handler.ServeHTTP(w, r)
+						})
+					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
-				// Execute an MCP operation - the MCP server should forward all headers
-				// to the router's GraphQL endpoint, and the router's header rules
-				// will determine what gets propagated to subgraphs
-				req := mcp.CallToolRequest{}
-				req.Params.Name = "execute_operation_my_employees"
-				req.Params.Arguments = map[string]interface{}{
-					"criteria": map[string]interface{}{},
+				// With stateless mode enabled, we can make direct HTTP POST requests
+				// without needing to establish a session first
+				mcpAddr := xEnv.GetMCPServerAddr()
+
+				// Make a direct HTTP POST request with custom headers
+				// This simulates a real MCP client sending custom headers on tool calls
+				mcpRequest := map[string]interface{}{
+					"jsonrpc": "2.0",
+					"id":      1,
+					"method":  "tools/call",
+					"params": map[string]interface{}{
+						"name": "execute_operation_my_employees",
+						"arguments": map[string]interface{}{
+							"criteria": map[string]interface{}{},
+						},
+					},
 				}
 
-				resp, err := xEnv.MCPClient.CallTool(xEnv.Context, req)
-				assert.NoError(t, err)
-				assert.NotNil(t, resp)
+				requestBody, err := json.Marshal(mcpRequest)
+				require.NoError(t, err)
 
-				// Verify the operation executed successfully
-				assert.Len(t, resp.Content, 1)
-				content, ok := resp.Content[0].(mcp.TextContent)
-				assert.True(t, ok)
-				assert.Contains(t, content.Text, "\"data\"")
+				req, err := http.NewRequest("POST", mcpAddr, strings.NewReader(string(requestBody)))
+				require.NoError(t, err)
 
-				// This test validates that:
-				// 1. The MCP server forwards all headers from the MCP client to the router
-				// 2. The router's existing header forwarding rules handle propagation to subgraphs
-				// 3. The request completes successfully with the forwarded headers
+				// Add various headers to test forwarding
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("foo", "bar")                         // Non-standard header
+				req.Header.Set("X-Custom-Header", "custom-value")    // Custom X- header
+				req.Header.Set("X-Trace-Id", "trace-123")            // Tracing header
+				req.Header.Set("Authorization", "Bearer test-token") // Auth header
+
+				// Make the request
+				resp, err := xEnv.RouterClient.Do(req)
+				require.NoError(t, err)
+				defer resp.Body.Close()
+
+				// With stateless mode, the request should succeed
+				t.Logf("Response Status: %d", resp.StatusCode)
+				require.Equal(t, http.StatusOK, resp.StatusCode, "Request should succeed in stateless mode")
+
+				// Verify headers reached subgraph
+				subgraphMutex.Lock()
+				defer subgraphMutex.Unlock()
+
+				require.NotNil(t, capturedSubgraphRequest, "Subgraph should have received a request")
+
+				// Log all headers that the subgraph received
+				t.Logf("Headers received by subgraph:")
+				for key, values := range capturedSubgraphRequest.Header {
+					for _, value := range values {
+						t.Logf("  %s: %s", key, value)
+					}
+				}
+
+				// Verify that all headers were forwarded through the entire chain:
+				// MCP Client -> MCP Server -> Router -> Subgraph
+				assert.Equal(t, "bar", capturedSubgraphRequest.Header.Get("Foo"),
+					"'foo' header should be forwarded to subgraph")
+				assert.Equal(t, "custom-value", capturedSubgraphRequest.Header.Get("X-Custom-Header"),
+					"X-Custom-Header should be forwarded to subgraph")
+				assert.Equal(t, "trace-123", capturedSubgraphRequest.Header.Get("X-Trace-Id"),
+					"X-Trace-Id should be forwarded to subgraph")
+				assert.Equal(t, "Bearer test-token", capturedSubgraphRequest.Header.Get("Authorization"),
+					"Authorization header should be forwarded to subgraph")
+
+				// This test proves that ALL headers sent by MCP clients are forwarded
+				// through the complete chain. The router's header rules determine what
+				// ultimately reaches the subgraphs.
 			})
 		})
 	})
