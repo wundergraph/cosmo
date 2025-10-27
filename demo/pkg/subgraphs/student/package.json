@@ -12,7 +12,7 @@
   "dependencies": {
     "@grpc/grpc-js": "^1.14.0",
     "google-protobuf": "^4.0.0",
-    "router-plugin-ts": "file:../../../../router-plugin-ts"
+    "grpc-health-check": "^2.0.0"
   },
   "devDependencies": {
     "@types/bun": "latest",

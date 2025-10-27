@@ -4,19 +4,7 @@ FROM --platform=$BUILDPLATFORM oven/bun:1.3.0-alpine AS builder
 ARG TARGETOS
 ARG TARGETARCH
 
-# Build router-plugin-ts first
-WORKDIR /router-plugin-ts
-COPY --from=router-plugin-ts package.json bun.lock* ./
-RUN bun install
-COPY --from=router-plugin-ts src ./src/
-COPY --from=router-plugin-ts tsconfig.json ./
-RUN bun run build
-
-# Now build the student plugin
 WORKDIR /build
-
-# Copy built router-plugin-ts
-RUN ln -s /router-plugin-ts /build/../../../router-plugin-ts
 
 # Copy package files
 COPY package.json bun.lock* ./
@@ -24,21 +12,21 @@ COPY package.json bun.lock* ./
 # Install dependencies
 RUN bun install
 
-# Copy source code and generated files
+# Copy all source code
 COPY src/ ./src/
+COPY lib/ ./lib/
 COPY generated/ ./generated/
 
-# Build the plugin - output to bin directory with platform-specific name
-RUN bun build src/plugin.ts --compile --outfile bin/darwin_arm64 #${TARGETOS}_${TARGETARCH}
-
-FROM --platform=$BUILDPLATFORM alpine:latest
-
+# Set BUN_TARGET based on OS and architecture
 ARG TARGETOS
 ARG TARGETARCH
 
-# Install minimal runtime dependencies
-RUN apk add --no-cache libstdc++ libgcc
+RUN BUN_TARGET="bun-${TARGETOS}-$([ "$TARGETARCH" = "amd64" ] && echo "x64" || echo "$TARGETARCH")" && \
+    echo "Building for $BUN_TARGET" && \
+    bun build src/plugin.ts --compile --outfile bin/plugin --target=$BUN_TARGET
 
-COPY --from=builder /build/bin/darwin_arm64 ./student-plugin
+FROM --platform=$BUILDPLATFORM scratch
+
+COPY --from=builder /build/bin/plugin ./student-plugin
 
 ENTRYPOINT ["./student-plugin"]

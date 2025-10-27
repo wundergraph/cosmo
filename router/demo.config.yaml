@@ -21,11 +21,11 @@ events:
         urls:
         - "redis://localhost:6379/2"
 
-
-execution_config:
-  file:
-    path: /Users/milindadias/Work/cosmo/router-tests/testenv/testdata/configWithPlugins.json
-    watch: false
+#
+#execution_config:
+#  file:
+#    path: /Users/milindadias/Work/cosmo/router-tests/testenv/testdata/configWithPlugins.json
+#    watch: false
 
 plugins:
   enabled: true
