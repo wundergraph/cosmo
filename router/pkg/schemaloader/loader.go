@@ -178,7 +178,7 @@ func getOperationNameAndType(doc *ast.Document) (string, string, error) {
 			}
 
 			if opDef.Name.Length() > 0 {
-				return doc.Input.ByteSliceString(opDef.Name), opType, nil
+				return string(doc.Input.ByteSlice(opDef.Name)), opType, nil
 			}
 			return "", opType, nil
 		}
@@ -192,7 +192,7 @@ func extractOperationDescription(doc *ast.Document) string {
 		if ref.Kind == ast.NodeKindOperationDefinition {
 			opDef := doc.OperationDefinitions[ref.Ref]
 			if opDef.Description.IsDefined && opDef.Description.Content.Length() > 0 {
-				description := doc.Input.ByteSliceString(opDef.Description.Content)
+				description := string(doc.Input.ByteSlice(opDef.Description.Content))
 				return strings.TrimSpace(description)
 			}
 			return ""
