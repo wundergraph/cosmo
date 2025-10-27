@@ -22,27 +22,28 @@ import (
 	"go.uber.org/zap"
 )
 
-// authKey is a custom context key for storing the auth token.
-type authKey struct{}
+// requestHeadersKey is a custom context key for storing request headers.
+type requestHeadersKey struct{}
 
-// withAuthKey adds an auth key to the context.
-func withAuthKey(ctx context.Context, auth string) context.Context {
-	return context.WithValue(ctx, authKey{}, auth)
+// withRequestHeaders adds request headers to the context.
+func withRequestHeaders(ctx context.Context, headers http.Header) context.Context {
+	return context.WithValue(ctx, requestHeadersKey{}, headers)
 }
 
-// authFromRequest extracts the auth token from the request headers.
-func authFromRequest(ctx context.Context, r *http.Request) context.Context {
-	return withAuthKey(ctx, r.Header.Get("Authorization"))
+// requestHeadersFromRequest extracts all headers from the request and stores them in context.
+func requestHeadersFromRequest(ctx context.Context, r *http.Request) context.Context {
+	// Clone the headers to avoid any mutation issues
+	headers := r.Header.Clone()
+	return withRequestHeaders(ctx, headers)
 }
 
-// tokenFromContext extracts the auth token from the context.
-// This can be used by clients to pass the auth token to the server.
-func tokenFromContext(ctx context.Context) (string, error) {
-	auth, ok := ctx.Value(authKey{}).(string)
+// headersFromContext extracts the request headers from the context.
+func headersFromContext(ctx context.Context) (http.Header, error) {
+	headers, ok := ctx.Value(requestHeadersKey{}).(http.Header)
 	if !ok {
-		return "", fmt.Errorf("missing auth")
+		return nil, fmt.Errorf("missing request headers")
 	}
-	return auth, nil
+	return headers, nil
 }
 
 // Options represents configuration options for the GraphQLSchemaServer
@@ -223,6 +224,11 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)
 	return gs, nil
 }
 
+// SetHTTPClient allows setting a custom HTTP client (useful for testing)
+func (s *GraphQLSchemaServer) SetHTTPClient(client *http.Client) {
+	s.httpClient = client
+}
+
 // WithGraphName sets the graph name
 func WithGraphName(graphName string) func(*Options) {
 	return func(o *Options) {
@@ -299,7 +305,7 @@ func (s *GraphQLSchemaServer) Serve() (*server.StreamableHTTPServer, error) {
 		server.WithStreamableHTTPServer(httpServer),
 		server.WithLogger(NewZapAdapter(s.logger.With(zap.String("component", "mcp-server")))),
 		server.WithStateLess(s.stateless),
-		server.WithHTTPContextFunc(authFromRequest),
+		server.WithHTTPContextFunc(requestHeadersFromRequest),
 		server.WithHeartbeatInterval(10*time.Second),
 	)
 
@@ -672,17 +678,23 @@ func (s *GraphQLSchemaServer) executeGraphQLQuery(ctx context.Context, query str
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Content-Type", "application/json; charset=utf-8")
-
-	token, err := tokenFromContext(ctx)
+	// Forward all headers from the original MCP request to the GraphQL server
+	// The router's header forwarding rules will then determine what gets sent to subgraphs
+	headers, err := headersFromContext(ctx)
 	if err != nil {
-		s.logger.Debug("failed to get token from context", zap.Error(err))
-	} else if token != "" {
-		req.Header.Set("Authorization", token)
+		s.logger.Debug("failed to get headers from context", zap.Error(err))
+	} else {
+		// Copy all headers from the MCP request
+		for key, values := range headers {
+			for _, value := range values {
+				req.Header.Add(key, value)
+			}
+		}
 	}
 
-	// Forward Authorization header if provided
+	// Override specific headers that must be set for GraphQL requests
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
