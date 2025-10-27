@@ -58,6 +58,7 @@ const TOOL_VERSIONS: Record<string, ToolVersion> = {
   protocGenGo: { range: '^1.34.2', envVar: 'PROTOC_GEN_GO_VERSION', scriptVersion: '1.34.2' },
   protocGenGoGrpc: { range: '^1.5.1', envVar: 'PROTOC_GEN_GO_GRPC_VERSION', scriptVersion: '1.5.1' },
   go: { range: '>=1.22.0', envVar: 'GO_VERSION', scriptVersion: '1.24.1' },
+  bun: { range: '^1.3.1', envVar: 'BUN_VERSION', scriptVersion: '1.3.1' },
 };
 
 /**
@@ -88,6 +89,7 @@ async function shouldReinstallTools(force = false): Promise<boolean> {
     return true;
   }
 
+  console.log(TOOLS_VERSIONS_FILE)
   // If a version file exists, we assume the user manages the tools via toolchain
   if (existsSync(TOOLS_VERSIONS_FILE)) {
     try {
@@ -177,6 +179,12 @@ async function areToolsInstalledOnHost(): Promise<boolean> {
           `protoc-gen-go-grpc version mismatch: found ${protocGenGoGrpcVersion}, required ${TOOL_VERSIONS.protocGenGoGrpc.range}`,
         ),
       );
+      return false;
+    }
+
+    const bunVersion = await getCommandVersion('bun', '--version');
+    if (!isSemverSatisfied(goVersion, TOOL_VERSIONS.bun.range)) {
+      console.log(pc.yellow(`Bun version mismatch: found ${bunVersion}, required ${TOOL_VERSIONS.bun.range}`));
       return false;
     }
 
@@ -548,7 +556,6 @@ export async function installTsDependencies(pluginDir: string, spinner: any) {
  * Build binaries for specified platforms
  */
 export async function buildTsBinaries(pluginDir: string, platforms: string[], debug: boolean, spinner: any) {
-
   spinner.text = 'Building binaries...';
 
   const binDir = resolve(pluginDir, 'bin');
