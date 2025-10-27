@@ -30,7 +30,8 @@
     "aws-lambda-router",
     "playground",
     "protographic",
-    "router-plugin"
+    "router-plugin",
+    "router-plugin-ts"
   ],
   "npmClient": "pnpm",
   "loglevel": "verbose"
