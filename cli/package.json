@@ -20,7 +20,7 @@
   },
   "scripts": {
     "build": "rm -rf dist && tsc",
-    "build:bun": "bun build --compile --production --outfile wgc src/index.ts",
+    "build:bun": "bun build --compile --production --outfile wgc src/index.ts --target=bun-linux-arm64",
     "wgc": "tsx --env-file .env src/index.ts",
     "test": "pnpm lint && vitest run test/",
     "coverage": "vitest run --coverage",
@@ -61,6 +61,7 @@
     "execa": "^9.5.2",
     "fs-extra": "^11.3.0",
     "graphql": "^16.9.0",
+    "handlebars": "^4.7.8",
     "https-proxy-agent": "^7.0.5",
     "inquirer": "^9.2.7",
     "js-yaml": "^4.1.0",

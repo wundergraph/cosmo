@@ -1,51 +1,136 @@
 
-const clientTs = `#!/usr/bin/env bun
+const pluginServerTs = `import * as grpc from '@grpc/grpc-js';
+import * as os from 'os';
+import * as path from 'path';
+import * as fs from 'fs';
 
-import * as grpc from '@grpc/grpc-js';
+/**
+ * Simple health check service implementation compatible with Bun
+ */
+class SimpleHealthCheck {
+    private statuses: Map<string, number> = new Map();
 
-// Import generated gRPC code
-import { {serviceName}Client } from '../generated/service_grpc_pb';
-import { QueryHelloRequest } from '../generated/service_pb';
-
-async function run() {
-  // Create a client using the generated client class
-  const client = new {serviceName}Client(
-    'localhost:1234',
-    grpc.credentials.createInsecure()
-  );
-
-  // Create a request using the generated message class
-  const request = new QueryHelloRequest();
-  request.setName('World');
-
-  // Make the gRPC call
-  client.queryHello(request, (error, response) => {
-    if (error) {
-      console.error('Error:', error.message);
-      process.exit(1);
+    constructor() {
+        // Default to serving
+        this.setStatus('', 1); // SERVING = 1
     }
 
-    const hello = response.getHello();
-    if (hello) {
-      console.log(\`Awesome client received\`);
-    } else {
-      console.log('No hello received');
+    setStatus(service: string, status: number): void {
+        this.statuses.set(service, status);
     }
-    
-    process.exit(0);
-  });
+
+    check(call: grpc.ServerUnaryCall<any, any>, callback: grpc.sendUnaryData<any>): void {
+        const service = call.request.service || '';
+        const status = this.statuses.get(service) ?? 1; // Default to SERVING
+
+        callback(null, { status });
+    }
+
+    watch(call: grpc.ServerWritableStream<any, any>): void {
+        const service = call.request.service || '';
+        const status = this.statuses.get(service) ?? 1;
+
+        call.write({ status });
+    }
+
+    addToServer(server: grpc.Server): void {
+        const healthCheckService = {
+            check: {
+                path: '/grpc.health.v1.Health/Check',
+                requestStream: false,
+                responseStream: false,
+                requestSerialize: (value: any) => Buffer.from(JSON.stringify(value)),
+                requestDeserialize: (value: Buffer) => JSON.parse(value.toString()),
+                responseSerialize: (value: any) => Buffer.from(JSON.stringify(value)),
+                responseDeserialize: (value: Buffer) => JSON.parse(value.toString()),
+            },
+            watch: {
+                path: '/grpc.health.v1.Health/Watch',
+                requestStream: false,
+                responseStream: true,
+                requestSerialize: (value: any) => Buffer.from(JSON.stringify(value)),
+                requestDeserialize: (value: Buffer) => JSON.parse(value.toString()),
+                responseSerialize: (value: any) => Buffer.from(JSON.stringify(value)),
+                responseDeserialize: (value: Buffer) => JSON.parse(value.toString()),
+            },
+        };
+
+        server.addService(healthCheckService as any, {
+            check: this.check.bind(this),
+            watch: this.watch.bind(this),
+        });
+    }
 }
 
-run().catch((error) => {
-  console.error('Failed to run client:', error.message);
-  process.exit(1);
-});
+/**
+ * Plugin server that manages gRPC server with Unix domain socket
+ */
+export class PluginServer {
+    private readonly socketPath: string;
+    private readonly network: string = 'unix';
+
+    private server: grpc.Server;
+    private healthImpl: SimpleHealthCheck;
+
+    constructor(socketDir: string = os.tmpdir()) {
+        // Generate a unique temporary file path
+        const tempPath = path.join(socketDir, \`plugin_${Date.now()}${Math.floor(Math.random() * 1000000)}\`);
+        this.socketPath = tempPath;
+
+        // Ensure the socket file doesn't exist
+        if (fs.existsSync(tempPath)) {
+            fs.unlinkSync(tempPath);
+        }
+
+        // Create the gRPC server
+        this.server = new grpc.Server();
+
+        // Initialize health check service with overall server status and plugin service
+        this.healthImpl = new SimpleHealthCheck();
+        this.healthImpl.setStatus('plugin', 1); // SERVING = 1
+        this.healthImpl.addToServer(this.server);
+    }
+
+    /**
+     * Add a service implementation to the server
+     */
+    public addService(service: grpc.ServiceDefinition, implementation: grpc.UntypedServiceImplementation): void {
+        this.server.addService(service, implementation);
+    }
+
+    /**
+     * Start the server and output handshake information for go-plugin
+     */
+    public serve(): Promise<void> {
+        const address = this.network + "://" + this.socketPath;
+
+        return new Promise<void>((resolve, reject) => {
+            this.server.bindAsync(
+                address,
+                grpc.ServerCredentials.createInsecure(),
+                (error, port) => {
+                    if (error) {
+                        reject(error);
+                        return;
+                    }
+
+                    // Output the handshake information for go-plugin
+                    // Format: VERSION|PROTOCOL_VERSION|NETWORK|ADDRESS|PROTOCOL
+                    const logEntry = "1|1|" +this.network + "|" + this.socketPath + "|grpc
+                    console.log(logEntry);
+
+                    resolve();
+                }
+            );
+        });
+    }
+}
 `
 
 const pluginTs = `#!/usr/bin/env bun
 
 import * as grpc from '@grpc/grpc-js';
-import { PluginServer } from '@wundergraph/cosmo-router-plugin';
+import { PluginServer } from '../lib/router-plugin';
 
 // Import generated gRPC code
 import { 
@@ -53,34 +138,13 @@ import {
   I{serviceName}Server 
 } from '../generated/service_grpc_pb';
 import { 
-  QueryHelloRequest, 
+  QueryHel\`lo\`Request, 
   QueryHelloResponse, 
   World 
 } from '../generated/service_pb';
 
 // Counter for generating unique IDs
 let counter = 0;
-
-// Logger implementation
-class Logger {
-  log(level: string, message: string): void {
-    const timestamp = new Date().toISOString();
-  }
-
-  info(message: string): void {
-    this.log('INFO', message);
-  }
-
-  debug(message: string): void {
-    this.log('DEBUG', message);
-  }
-
-  error(message: string): void {
-    this.log('ERROR', message);
-  }
-}
-
-const logger = new Logger();
 
 // Define the service implementation using the generated types
 const {serviceName}Implementation: I{serviceName}Server = {
@@ -96,7 +160,6 @@ const {serviceName}Implementation: I{serviceName}Server = {
     const response = new QueryHelloResponse();
     response.setHello(world);
 
-    logger.info("Returning world: id="+world.getId()+", name="+world.getName()+", counter="+counter);
     callback(null, response);
   }
 };
@@ -110,7 +173,6 @@ function run() {
 
   // Start the server
   pluginServer.serve().catch((error) => {
-    logger.error(\`Failed to start server: \`+ error.message);
     process.exit(1);
   });
 }
@@ -144,8 +206,43 @@ const packageJson = `
 }
 `
 
+const dockerfileTs = `
+FROM --platform=$BUILDPLATFORM oven/bun:1.3.0-alpine AS builder
+
+# Multi-platform build arguments
+ARG TARGETOS
+ARG TARGETARCH
+
+WORKDIR /build
+
+# Copy package files
+COPY package.json bun.lock* ./
+
+# Install dependencies
+RUN bun install
+
+# Copy all source code
+COPY src/ ./src/
+COPY generated/ ./generated/
+
+# Set BUN_TARGET based on OS and architecture
+ARG TARGETOS
+ARG TARGETARCH
+
+RUN BUN_TARGET="bun-\${TARGETOS}-$([ "$TARGETARCH" = "amd64" ] && echo "x64" || echo "$TARGETARCH")" && \\
+    echo "Building for $BUN_TARGET" && \\
+    bun build src/plugin.ts --compile --outfile bin/plugin --target=$BUN_TARGET
+
+FROM --platform=$BUILDPLATFORM scratch
+
+COPY --from=builder /build/bin/plugin ./student-plugin
+
+ENTRYPOINT ["./student-plugin"]
+`
+
 export default {
-    clientTs,
+    pluginServerTs,
     pluginTs,
     packageJson,
+    dockerfileTs,
 }

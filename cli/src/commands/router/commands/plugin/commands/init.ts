@@ -82,20 +82,23 @@ export default (opts: BaseCommandOptions) => {
       await writeFile(resolve(generatedDir, 'service.proto'), proto.proto);
       await writeFile(resolve(generatedDir, 'service.proto.lock.json'), JSON.stringify(proto.lockData, null, 2));
 
+      // Language Specific
       switch (options.language) {
         case 'go': {
           await writeFile(resolve(srcDir, 'main.go'), pupa(GoTemplates.mainGo, { serviceName }));
           await writeFile(resolve(srcDir, 'main_test.go'), pupa(GoTemplates.mainGoTest, { serviceName }));
-          await writeFile(resolve(tempDir, 'go.mod'), pupa(PluginTemplates.goMod, { modulePath: goModulePath }));
+          await writeFile(resolve(tempDir, 'go.mod'), pupa(GoTemplates.goMod, { modulePath: goModulePath }));
+          await writeFile(resolve(pluginDir, 'Dockerfile'), pupa(GoTemplates.dockerfileGo, { originalPluginName }));
           break;
         }
         case 'ts': {
           await writeFile(resolve(srcDir, 'plugin.ts'), pupa(TsTemplates.pluginTs, { serviceName }));
-          await writeFile(resolve(srcDir, 'client.ts'), pupa(TsTemplates.clientTs, { serviceName }));
+          await writeFile(resolve(srcDir, 'plugin-server.ts'), pupa(TsTemplates.pluginServerTs, { serviceName }));
           await writeFile(resolve(tempDir, 'package.json'), pupa(TsTemplates.packageJson, { serviceName }));
+          await writeFile(resolve(pluginDir, 'Dockerfile'), pupa(TsTemplates.dockerfileTs, { originalPluginName }));
+          break;
         }
       }
-      // Language Specific
 
       if (options.project) {
         await writeFile(resolve(tempDir, 'README.md'), pupa(ProjectTemplates.readme, { name, originalPluginName }));
@@ -136,8 +139,6 @@ export default (opts: BaseCommandOptions) => {
         await mkdir(projectDir, { recursive: true });
         await rename(tempDir, pluginDir);
       }
-
-      await writeFile(resolve(pluginDir, 'Dockerfile'), pupa(PluginTemplates.dockerfile, { originalPluginName }));
 
       const endTime = performance.now();
       const elapsedTimeMs = endTime - startTime;
