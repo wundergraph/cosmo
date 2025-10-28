@@ -1075,6 +1075,7 @@ func (s *graphServer) buildGraphMux(
 			requestlogger.WithFields(baseLogFields...),
 			requestlogger.WithAttributes(accessLogAttributes),
 			requestlogger.WithExprAttributes(exprAttributes),
+			requestlogger.WithLogLevelHandler(LogLevelHandler),
 			requestlogger.WithFieldsHandler(RouterAccessLogsFieldHandler),
 			requestlogger.WithIgnoreQueryParamsList(s.accessLogsConfig.IgnoreQueryParamsList),
 		}

@@ -1,5 +1,5 @@
 import { Warning } from '../warnings/types';
-import { DocumentNode, GraphQLSchema, OperationTypeNode } from 'graphql';
+import { DirectiveDefinitionNode, DocumentNode, GraphQLSchema, OperationTypeNode } from 'graphql';
 import { ConfigurationData } from '../router-configuration/types';
 import {
   AuthorizationData,
@@ -11,6 +11,7 @@ import {
 } from '../schema-building/types';
 import { Graph } from '../resolvability-graph/graph';
 import { InternalSubgraph } from '../subgraph/types';
+import { DirectiveName } from '../types/types';
 
 export type NormalizationFailure = {
   errors: Array<Error>;
@@ -23,6 +24,7 @@ export type NormalizationSuccess = {
   concreteTypeNamesByAbstractTypeName: Map<string, Set<string>>;
   conditionalFieldDataByCoordinates: Map<string, ConditionalFieldData>;
   configurationDataByTypeName: Map<string, ConfigurationData>;
+  directiveDefinitionByDirectiveName: Map<DirectiveName, DirectiveDefinitionNode>;
   entityInterfaces: Map<string, EntityInterfaceSubgraphData>;
   entityDataByTypeName: Map<string, EntityData>;
   fieldCoordsByNamedTypeName: Map<string, Set<string>>;

@@ -361,6 +361,26 @@ proto3.util.setEnumType(Feature, "wg.cosmo.platform.v1.Feature", [
 ]);
 
 /**
+ * @generated from enum wg.cosmo.platform.v1.ProposalOrigin
+ */
+export enum ProposalOrigin {
+  /**
+   * @generated from enum value: INTERNAL = 0;
+   */
+  INTERNAL = 0,
+
+  /**
+   * @generated from enum value: EXTERNAL = 1;
+   */
+  EXTERNAL = 1,
+}
+// Retrieve enum metadata with: proto3.getEnumType(ProposalOrigin)
+proto3.util.setEnumType(ProposalOrigin, "wg.cosmo.platform.v1.ProposalOrigin", [
+  { no: 0, name: "INTERNAL" },
+  { no: 1, name: "EXTERNAL" },
+]);
+
+/**
  * @generated from enum wg.cosmo.platform.v1.ProposalNamingConvention
  */
 export enum ProposalNamingConvention {
@@ -21354,6 +21374,11 @@ export class Proposal extends Message<Proposal> {
    */
   latestCheckId = "";
 
+  /**
+   * @generated from field: wg.cosmo.platform.v1.ProposalOrigin origin = 11;
+   */
+  origin = ProposalOrigin.INTERNAL;
+
   constructor(data?: PartialMessage<Proposal>) {
     super();
     proto3.util.initPartial(data, this);
@@ -21372,6 +21397,7 @@ export class Proposal extends Message<Proposal> {
     { no: 8, name: "subgraphs", kind: "message", T: ProposalSubgraph, repeated: true },
     { no: 9, name: "latestCheckSuccess", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 10, name: "latestCheckId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 11, name: "origin", kind: "enum", T: proto3.getEnumType(ProposalOrigin) },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Proposal {
@@ -21481,6 +21507,11 @@ export class CreateProposalRequest extends Message<CreateProposalRequest> {
    */
   namingConvention = ProposalNamingConvention.NORMAL;
 
+  /**
+   * @generated from field: wg.cosmo.platform.v1.ProposalOrigin origin = 6;
+   */
+  origin = ProposalOrigin.INTERNAL;
+
   constructor(data?: PartialMessage<CreateProposalRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -21494,6 +21525,7 @@ export class CreateProposalRequest extends Message<CreateProposalRequest> {
     { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "subgraphs", kind: "message", T: ProposalSubgraph, repeated: true },
     { no: 5, name: "namingConvention", kind: "enum", T: proto3.getEnumType(ProposalNamingConvention) },
+    { no: 6, name: "origin", kind: "enum", T: proto3.getEnumType(ProposalOrigin) },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateProposalRequest {
