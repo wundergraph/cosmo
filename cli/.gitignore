@@ -5,3 +5,8 @@ node_modules
 .env
 .eslintcache
 e2e/config.json
+# Generated template files
+src/commands/router/commands/plugin/templates/goplugin.ts
+src/commands/router/commands/plugin/templates/tsplugin.ts
+src/commands/router/commands/plugin/templates/plugin.ts
+src/commands/router/commands/plugin/templates/project.ts
