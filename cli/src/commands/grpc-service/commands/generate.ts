@@ -42,15 +42,15 @@ export default (opts: BaseCommandOptions) => {
   command.option('-o, --output <path-to-output>', 'The output directory for the protobuf schema. (default ".").', '.');
   command.option('-p, --package-name <name>', 'The name of the proto package. (default "service.v1")', 'service.v1');
   command.option('-g, --go-package <name>', 'Adds an `option go_package` to the proto file.');
-  command.option('--java-package <name>', 'Adds an `option java_package` to the proto file.');
-  command.option('--java-outer-classname <name>', 'Adds an `option java_outer_classname` to the proto file.');
-  command.option('--java-multiple-files', 'Adds `option java_multiple_files = true` to the proto file.');
-  command.option('--csharp-namespace <name>', 'Adds an `option csharp_namespace` to the proto file.');
-  command.option('--ruby-package <name>', 'Adds an `option ruby_package` to the proto file.');
-  command.option('--php-namespace <name>', 'Adds an `option php_namespace` to the proto file.');
-  command.option('--php-metadata-namespace <name>', 'Adds an `option php_metadata_namespace` to the proto file.');
-  command.option('--objc-class-prefix <name>', 'Adds an `option objc_class_prefix` to the proto file.');
-  command.option('--swift-prefix <name>', 'Adds an `option swift_prefix` to the proto file.');
+  // command.option('--java-package <name>', 'Adds an `option java_package` to the proto file.');
+  // command.option('--java-outer-classname <name>', 'Adds an `option java_outer_classname` to the proto file.');
+  // command.option('--java-multiple-files', 'Adds `option java_multiple_files = true` to the proto file.');
+  // command.option('--csharp-namespace <name>', 'Adds an `option csharp_namespace` to the proto file.');
+  // command.option('--ruby-package <name>', 'Adds an `option ruby_package` to the proto file.');
+  // command.option('--php-namespace <name>', 'Adds an `option php_namespace` to the proto file.');
+  // command.option('--php-metadata-namespace <name>', 'Adds an `option php_metadata_namespace` to the proto file.');
+  // command.option('--objc-class-prefix <name>', 'Adds an `option objc_class_prefix` to the proto file.');
+  // command.option('--swift-prefix <name>', 'Adds an `option swift_prefix` to the proto file.');
   command.option(
     '-l, --proto-lock <path-to-proto-lock>',
     'The path to the existing proto lock file to use as the starting point for the updated proto lock file. ' +
