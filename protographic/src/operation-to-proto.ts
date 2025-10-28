@@ -67,6 +67,8 @@ export interface OperationsToProtoOptions {
   customScalarMappings?: Record<string, string>;
   /** Maximum recursion depth to prevent stack overflow (default: 50) */
   maxDepth?: number;
+  /** Prefix RPC method names with operation type (e.g., QueryGetUser, MutationCreateUser) */
+  prefixOperationType?: boolean;
 }
 
 /**
@@ -161,6 +163,7 @@ class OperationsToProtoVisitor {
   private readonly queryIdempotency?: 'NO_SIDE_EFFECTS' | 'DEFAULT';
   private readonly customScalarMappings?: Record<string, string>;
   private readonly maxDepth?: number;
+  private readonly prefixOperationType: boolean;
 
   // Proto AST root
   private readonly root: protobuf.Root;
@@ -200,6 +203,7 @@ class OperationsToProtoVisitor {
     this.queryIdempotency = options?.queryIdempotency;
     this.customScalarMappings = options?.customScalarMappings;
     this.maxDepth = options?.maxDepth;
+    this.prefixOperationType = options?.prefixOperationType ?? false;
 
     // Initialize lock manager with previous lock data if provided
     this.lockManager = new ProtoLockManager(options?.lockData);
@@ -274,10 +278,16 @@ class OperationsToProtoVisitor {
       }
     }
 
-    // 3. Create method name directly from operation name (no Query/Mutation prefix)
-    const methodName = upperFirst(camelCase(operationName));
+    // 3. Create method name from operation name, optionally prefixed with operation type
+    let methodName = upperFirst(camelCase(operationName));
 
-    // 3. Create request message from variables
+    // Add operation type prefix if requested
+    if (this.prefixOperationType) {
+      const operationTypePrefix = upperFirst(node.operation.toLowerCase());
+      methodName = `${operationTypePrefix}${methodName}` as any;
+    }
+
+    // 4. Create request message from variables
     const requestMessageName = createRequestMessageName(methodName);
     const requestMessage = buildRequestMessage(requestMessageName, node.variableDefinitions || [], this.schema, {
       includeComments: this.includeComments,
@@ -300,7 +310,7 @@ class OperationsToProtoVisitor {
       }
     }
 
-    // 4. Create response message from selection set
+    // 6. Create response message from selection set
     const responseMessageName = createResponseMessageName(methodName);
     if (node.selectionSet) {
       const rootType = this.getRootType(node.operation);
@@ -323,7 +333,7 @@ class OperationsToProtoVisitor {
       }
     }
 
-    // 5. Add method to service
+    // 7. Add method to service
     const method = new protobuf.Method(methodName, 'rpc', requestMessageName, responseMessageName);
 
     // Mark subscriptions as server streaming

@@ -33,14 +33,31 @@ describe('Operations Field Ordering Stability', () => {
       const result1 = compileOperationsToProto(operation1, schema);
       expectValidProto(result1.proto);
 
-      const root1 = loadProtoFromText(result1.proto);
-      const userFields1 = getFieldNumbersFromMessage(root1, 'GetUserResponse.User');
+      // Snapshot shows initial field number assignment
+      expect(result1.proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
 
-      // Store original field numbers
-      const idNumber = userFields1['id'];
-      const nameNumber = userFields1['name'];
-      const emailNumber = userFields1['email'];
-      const ageNumber = userFields1['age'];
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
+        }
+
+        message GetUserRequest {
+        }
+
+        message GetUserResponse {
+          message User {
+            string id = 1;
+            string name = 2;
+            string email = 3;
+            google.protobuf.Int32Value age = 4;
+          }
+          User user = 1;
+        }
+        "
+      `);
 
       // Second operation with completely different field order
       const operation2 = `
@@ -59,14 +76,47 @@ describe('Operations Field Ordering Stability', () => {
       });
       expectValidProto(result2.proto);
 
+      // Snapshot proves field numbers are preserved despite reordering!
+      // Note: age, email, id, name are in different order in the GraphQL query,
+      // but the proto field numbers remain: id=1, name=2, email=3, age=4
+      expect(result2.proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
+        }
+
+        message GetUserRequest {
+        }
+
+        message GetUserResponse {
+          message User {
+            string id = 1;
+            string name = 2;
+            string email = 3;
+            google.protobuf.Int32Value age = 4;
+          }
+          User user = 1;
+        }
+        "
+      `);
+
+      // Also verify programmatically for extra confidence
+      const root1 = loadProtoFromText(result1.proto);
       const root2 = loadProtoFromText(result2.proto);
+      const userFields1 = getFieldNumbersFromMessage(root1, 'GetUserResponse.User');
       const userFields2 = getFieldNumbersFromMessage(root2, 'GetUserResponse.User');
 
-      // Verify field numbers are preserved despite reordering
-      expect(userFields2['id']).toBe(idNumber);
-      expect(userFields2['name']).toBe(nameNumber);
-      expect(userFields2['email']).toBe(emailNumber);
-      expect(userFields2['age']).toBe(ageNumber);
+      expect(userFields2).toEqual(userFields1);
+      expect(userFields2).toEqual({
+        id: 1,
+        name: 2,
+        email: 3,
+        age: 4,
+      });
     });
 
     test('should handle adding and removing fields while preserving field numbers', () => {
@@ -152,6 +202,34 @@ describe('Operations Field Ordering Stability', () => {
         lockData: result2.lockData,
       });
       expectValidProto(result3.proto);
+
+      // Snapshot shows re-added fields get new numbers, original fields keep their numbers
+      expect(result3.proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetProduct(GetProductRequest) returns (GetProductResponse) {}
+        }
+
+        message GetProductRequest {
+        }
+
+        message GetProductResponse {
+          message Product {
+            string id = 1;
+            double price = 3;
+            string name = 6;
+            google.protobuf.StringValue description = 7;
+            google.protobuf.BoolValue in_stock = 8;
+            google.protobuf.StringValue category = 9;
+          }
+          Product product = 1;
+        }
+        "
+      `);
 
       const root3 = loadProtoFromText(result3.proto);
       const productFields3 = getFieldNumbersFromMessage(root3, 'GetProductResponse.Product');
@@ -379,6 +457,33 @@ describe('Operations Field Ordering Stability', () => {
         lockData: result2.lockData,
       });
       expectValidProto(result3.proto);
+
+      // Snapshot shows re-added id gets new number, originals preserved
+      expect(result3.proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc FilterUsers(FilterUsersRequest) returns (FilterUsersResponse) {}
+        }
+
+        message FilterUsersRequest {
+          google.protobuf.StringValue name = 2;
+          google.protobuf.BoolValue active = 5;
+          google.protobuf.StringValue id = 6;
+        }
+
+        message FilterUsersResponse {
+          message FilterUsers {
+            string id = 1;
+            string name = 2;
+          }
+          repeated FilterUsers filter_users = 1;
+        }
+        "
+      `);
 
       const root3 = loadProtoFromText(result3.proto);
       const requestFields3 = getFieldNumbersFromMessage(root3, 'FilterUsersRequest');
@@ -864,6 +969,57 @@ describe('Operations Field Ordering Stability', () => {
       });
       expectValidProto(result2.proto);
 
+      // Snapshot proves all 3 levels preserve field numbers
+      expect(result2.proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc SearchUsers(SearchUsersRequest) returns (SearchUsersResponse) {}
+        }
+
+        message SearchUsersRequest {
+          SearchCriteria criteria = 1;
+        }
+
+        message SearchCriteria {
+          FilterGroup filters = 1;
+          SortOptions sorting = 2;
+        }
+
+        message FilterGroup {
+          UserFilters user = 1;
+          DateFilters date = 2;
+        }
+
+        message UserFilters {
+          google.protobuf.StringValue name = 1;
+          google.protobuf.StringValue email = 2;
+          google.protobuf.BoolValue active = 3;
+        }
+
+        message DateFilters {
+          google.protobuf.StringValue from = 1;
+          google.protobuf.StringValue to = 2;
+        }
+
+        message SortOptions {
+          google.protobuf.StringValue field = 1;
+          google.protobuf.StringValue direction = 2;
+        }
+
+        message SearchUsersResponse {
+          message SearchUsers {
+            string id = 1;
+            string name = 2;
+          }
+          repeated SearchUsers search_users = 1;
+        }
+        "
+      `);
+
       const root2 = loadProtoFromText(result2.proto);
 
       const criteriaFields2 = getFieldNumbersFromMessage(root2, 'SearchCriteria');
@@ -1121,6 +1277,34 @@ describe('Operations Field Ordering Stability', () => {
       });
       expectValidProto(result2.proto);
 
+      // Snapshot proves mutation variable reordering preserves numbers
+      expect(result2.proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse) {}
+        }
+
+        message UpdateUserRequest {
+          string id = 1;
+          google.protobuf.StringValue name = 2;
+          google.protobuf.StringValue email = 3;
+          google.protobuf.Int32Value age = 4;
+        }
+
+        message UpdateUserResponse {
+          message UpdateUser {
+            string id = 1;
+            string name = 2;
+          }
+          UpdateUser update_user = 1;
+        }
+        "
+      `);
+
       const root2 = loadProtoFromText(result2.proto);
       const requestFields2 = getFieldNumbersFromMessage(root2, 'UpdateUserRequest');
 
@@ -1274,6 +1458,39 @@ describe('Operations Field Ordering Stability', () => {
       });
       expectValidProto(result2.proto);
 
+      // Snapshot proves both request and response reordering preserves all numbers
+      expect(result2.proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc SearchUsers(SearchUsersRequest) returns (SearchUsersResponse) {}
+        }
+
+        message SearchUsersRequest {
+          string query = 1;
+          google.protobuf.Int32Value limit = 2;
+          google.protobuf.Int32Value offset = 3;
+        }
+
+        message SearchUsersResponse {
+          message SearchUsers {
+            message Users {
+              string id = 1;
+              string name = 2;
+              string email = 3;
+            }
+            repeated Users users = 1;
+            int32 total = 2;
+            bool has_more = 3;
+          }
+          SearchUsers search_users = 1;
+        }
+        "
+      `);
+
       const root2 = loadProtoFromText(result2.proto);
       const requestFields2 = getFieldNumbersFromMessage(root2, 'SearchUsersRequest');
       const resultFields2 = getFieldNumbersFromMessage(root2, 'SearchUsersResponse.SearchUsers');
@@ -1398,12 +1615,92 @@ describe('Operations Field Ordering Stability', () => {
       `;
 
       const result1 = compileOperationsToProto(operation, schema);
+
+      // Snapshot shows first compilation
+      expect(result1.proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
+        }
+
+        message GetUserRequest {
+          string id = 1;
+        }
+
+        message GetUserResponse {
+          message User {
+            string id = 1;
+            string name = 2;
+            string email = 3;
+          }
+          User user = 1;
+        }
+        "
+      `);
+
       const result2 = compileOperationsToProto(operation, schema, {
         lockData: result1.lockData,
       });
+
+      // Snapshot proves second compilation is identical
+      expect(result2.proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
+        }
+
+        message GetUserRequest {
+          string id = 1;
+        }
+
+        message GetUserResponse {
+          message User {
+            string id = 1;
+            string name = 2;
+            string email = 3;
+          }
+          User user = 1;
+        }
+        "
+      `);
+
       const result3 = compileOperationsToProto(operation, schema, {
         lockData: result2.lockData,
       });
+
+      // Snapshot proves third compilation is identical
+      expect(result3.proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
+        }
+
+        message GetUserRequest {
+          string id = 1;
+        }
+
+        message GetUserResponse {
+          message User {
+            string id = 1;
+            string name = 2;
+            string email = 3;
+          }
+          User user = 1;
+        }
+        "
+      `);
 
       // All three should produce identical proto output
       expect(result1.proto).toBe(result2.proto);
@@ -1629,6 +1926,68 @@ describe('Operations Field Ordering Stability', () => {
         lockData: result1.lockData,
       });
       expectValidProto(result2.proto);
+
+      // Snapshot proves complete reordering at all levels preserves all field numbers
+      expect(result2.proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc SearchContent(SearchContentRequest) returns (SearchContentResponse) {}
+        }
+
+        message SearchContentRequest {
+          string query = 1;
+          SearchFilters filters = 2;
+          PaginationInput pagination = 3;
+        }
+
+        message PaginationInput {
+          google.protobuf.Int32Value limit = 1;
+          google.protobuf.Int32Value offset = 2;
+        }
+
+        message SearchFilters {
+          repeated string types = 1;
+          repeated string tags = 2;
+          DateRangeInput date_range = 3;
+        }
+
+        message DateRangeInput {
+          google.protobuf.StringValue start = 1;
+          google.protobuf.StringValue end = 2;
+        }
+
+        message SearchContentResponse {
+          message SearchContent {
+            message Items {
+              message Author {
+                string id = 1;
+                string name = 2;
+                google.protobuf.StringValue avatar = 3;
+              }
+              message Creator {
+                string id = 1;
+                string name = 2;
+                google.protobuf.StringValue avatar = 3;
+              }
+              string id = 1;
+              string title = 2;
+              Author author = 3;
+              string published_at = 4;
+              int32 duration = 5;
+              Creator creator = 6;
+            }
+            repeated Items items = 1;
+            int32 total = 2;
+            bool has_more = 3;
+          }
+          SearchContent search_content = 1;
+        }
+        "
+      `);
 
       const root2 = loadProtoFromText(result2.proto);
       const requestFields2 = getFieldNumbersFromMessage(root2, 'SearchContentRequest');

@@ -242,6 +242,7 @@ type GenerationOptions = {
   queryIdempotency?: string;
   customScalarMappings?: Record<string, string>;
   maxDepth?: number;
+  prefixOperationType?: boolean;
 };
 
 /**
@@ -292,6 +293,7 @@ async function generateProtoAndMapping({
   queryIdempotency,
   customScalarMappings,
   maxDepth,
+  prefixOperationType,
 }: GenerationOptions): Promise<GenerationResult> {
   const schema = await readFile(schemaFile, 'utf8');
   const serviceName = upperFirst(camelCase(name));
@@ -330,6 +332,7 @@ async function generateProtoAndMapping({
       lockData,
       customScalarMappings,
       maxDepth,
+      prefixOperationType,
     });
 
     return {
