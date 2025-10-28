@@ -1,7 +1,7 @@
 {
-  "name": "awesome-plugin-bun",
+  "name": "plugin-bun",
   "version": "1.0.0",
-  "description": "Awesome gRPC Plugin using Bun runtime",
+  "description": "gRPC Plugin using Bun runtime",
   "type": "module",
   "scripts": {
     "build": "bun build src/plugin.ts --compile --outfile dist/plugin",

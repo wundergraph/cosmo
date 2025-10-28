@@ -1,7 +1,5 @@
-#!/usr/bin/env bun
-
-import { readFileSync, writeFileSync, readdirSync } from 'fs';
-import { join, basename } from 'path';
+import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
+import { join, basename } from 'node:path';
 
 interface TemplateMap {
   [key: string]: string;
@@ -23,12 +21,17 @@ function fileNameToPropertyName(fileName: string): string {
   
   return parts
     .map((part, index) => {
-      if (index === 0) {
-        // First part stays lowercase
-        return part.toLowerCase();
+      // Normalize all-caps words (like README -> Readme)
+      if (part === part.toUpperCase() && part.length > 1) {
+        part = part.charAt(0) + part.slice(1).toLowerCase();
       }
-      // Capitalize first letter of subsequent parts
-      return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
+      
+      if (index === 0) {
+        // First part: lowercase first char, preserve rest
+        return part.charAt(0).toLowerCase() + part.slice(1);
+      }
+      // Subsequent parts: uppercase first char, preserve rest
+      return part.charAt(0).toUpperCase() + part.slice(1);
     })
     .join('');
 }
@@ -45,7 +48,7 @@ function compileTemplates(dir: string, outputFile: string, comment?: string) {
   
   for (const file of files) {
     const filePath = join(dir, file);
-    const content = readFileSync(filePath, 'utf-8');
+    const content = readFileSync(filePath, 'utf8');
     
     // Convert file name to property name
     const key = fileNameToPropertyName(file);
@@ -75,7 +78,7 @@ function compileTemplates(dir: string, outputFile: string, comment?: string) {
   lines.push('};');
   lines.push('');
 
-  writeFileSync(outputFile, lines.join('\n'), 'utf-8');
+  writeFileSync(outputFile, lines.join('\n'), 'utf8');
   console.log(`Generated ${outputFile} with ${files.length} templates`);
 }
 
@@ -106,4 +109,4 @@ compileTemplates(
   'Project scaffolding templates (templating is done by pupa)'
 );
 
-console.log('✅ All templates compiled successfully!');
+console.log('All templates compiled successfully');
