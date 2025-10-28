@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"encoding/binary"
 	"errors"
 	"net/http"
 	"net/url"
@@ -11,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cespare/xxhash/v2"
 	rcontext "github.com/wundergraph/cosmo/router/internal/context"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -288,9 +290,10 @@ func (c *headerBuilder) HeadersForSubgraph(subgraphName string) (http.Header, ui
 
 func SubgraphHeadersBuilder(ctx *requestContext, headerPropagation *HeaderPropagation, executionPlan plan.Plan) resolve.SubgraphHeadersBuilder {
 
+	keyGen := xxhash.New()
+
 	switch p := executionPlan.(type) {
 	case *plan.SynchronousResponsePlan:
-		var allHash uint64
 		headers := make(map[string]*HeaderWithHash, len(p.Response.DataSources))
 		for i := range p.Response.DataSources {
 			h, hh := headerPropagation.BuildRequestHeaderForSubgraph(p.Response.DataSources[i].Name, ctx)
@@ -298,14 +301,15 @@ func SubgraphHeadersBuilder(ctx *requestContext, headerPropagation *HeaderPropag
 				Header: h,
 				Hash:   hh,
 			}
-			allHash += hh
+			var b [8]byte
+			binary.LittleEndian.PutUint64(b[:], hh)
+			_, _ = keyGen.Write(b[:])
 		}
 		return &headerBuilder{
 			headers: headers,
-			allHash: allHash,
+			allHash: keyGen.Sum64(),
 		}
 	case *plan.SubscriptionResponsePlan:
-		var allHash uint64
 		headers := make(map[string]*HeaderWithHash, len(p.Response.Response.DataSources)+1)
 		for i := range p.Response.Response.DataSources {
 			h, hh := headerPropagation.BuildRequestHeaderForSubgraph(p.Response.Response.DataSources[i].Name, ctx)
@@ -313,17 +317,21 @@ func SubgraphHeadersBuilder(ctx *requestContext, headerPropagation *HeaderPropag
 				Header: h,
 				Hash:   hh,
 			}
-			allHash += hh
+			var b [8]byte
+			binary.LittleEndian.PutUint64(b[:], hh)
+			_, _ = keyGen.Write(b[:])
 		}
 		h, hh := headerPropagation.BuildRequestHeaderForSubgraph(p.Response.Trigger.SourceName, ctx)
 		headers[p.Response.Trigger.SourceName] = &HeaderWithHash{
 			Header: h,
 			Hash:   hh,
 		}
-		allHash += hh
+		var b [8]byte
+		binary.LittleEndian.PutUint64(b[:], hh)
+		_, _ = keyGen.Write(b[:])
 		return &headerBuilder{
 			headers: headers,
-			allHash: allHash,
+			allHash: keyGen.Sum64(),
 		}
 	}
 	return &headerBuilder{
