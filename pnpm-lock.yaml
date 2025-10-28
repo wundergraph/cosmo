@@ -252,9 +252,6 @@ importers:
       graphql:
         specifier: 16.9.0
         version: 16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly)
-      handlebars:
-        specifier: ^4.7.8
-        version: 4.7.8
       https-proxy-agent:
         specifier: ^7.0.5
         version: 7.0.5
@@ -902,7 +899,7 @@ importers:
         specifier: ^3.2.4
         version: 3.2.4(@types/debug@4.1.12)(@types/node@20.12.12)(jsdom@23.2.0)(terser@5.43.1)
 
-  router-plugin/ts:
+  router-plugin-ts:
     dependencies:
       '@grpc/grpc-js':
         specifier: ^1.12.4
@@ -17667,7 +17664,7 @@ snapshots:
     dependencies:
       lodash.camelcase: 4.3.0
       long: 5.3.2
-      protobufjs: 7.5.0
+      protobufjs: 7.5.4
       yargs: 17.7.2
 
   '@grpc/proto-loader@0.8.0':
