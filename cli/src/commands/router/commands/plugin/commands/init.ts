@@ -64,6 +64,7 @@ export default (opts: BaseCommandOptions) => {
       options.language = options.language.toLowerCase();
       if (options.language !== 'go' && options.language !== 'ts') {
         spinner.fail(pc.yellow(`Language '${options.language}' is not supported yet. Using 'go' instead.`));
+        options.language = 'go';
       }
 
       const goModulePath = 'github.com/wundergraph/cosmo/plugin';
