@@ -38,7 +38,7 @@ const ALL_BUN_PLATFORMS_WITH_GO_MAPPING: Record<string, string> = {
 };
 
 const installScriptUrl =
-  'https://raw.githubusercontent.com/wundergraph/cosmo/2f4a1cc3e9cc4effdb817ce652028103c962b00f/scripts/install-proto-tools.sh';
+  'https://raw.githubusercontent.com/wundergraph/cosmo/52adc57f27ea3c821d0917f0098a1147a25aef5f/scripts/install-proto-tools.sh';
 
 // Get paths for tool installation
 const TOOLS_DIR = join(dataDir, 'proto-tools');
@@ -464,6 +464,7 @@ export async function generateGRPCCode(pluginDir: string, spinner: any, language
       const protocGenTsPath = resolve(pluginDir, 'node_modules/.bin/protoc-gen-ts');
       const protocGenGrpcPath = resolve(pluginDir, 'node_modules/.bin/grpc_tools_node_protoc_plugin');
       const generatedDir = resolve(pluginDir, 'generated');
+      const protoGenJsPath = resolve(pluginDir, 'node_modules/.bin/protoc-gen-js');
       const protoFile = resolve(pluginDir, 'generated/service.proto');
 
       if (!existsSync(protocGenTsPath)) {
@@ -471,6 +472,9 @@ export async function generateGRPCCode(pluginDir: string, spinner: any, language
       }
       if (!existsSync(protocGenGrpcPath)) {
         throw new Error(`grpc_tools_node_protoc_plugin not found at ${protocGenGrpcPath}.`);
+      }
+      if (!existsSync(protoGenJsPath)) {
+        throw new Error(`protoc-gen-js not found at ${protoGenJsPath}.`);
       }
 
       // Make plugins executable
@@ -482,6 +486,7 @@ export async function generateGRPCCode(pluginDir: string, spinner: any, language
           [
             `--plugin=protoc-gen-ts=${protocGenTsPath}`,
             `--plugin=protoc-gen-grpc=${protocGenGrpcPath}`,
+            `--plugin=protoc-gen-js=${protoGenJsPath}`,
             `--ts_out=grpc_js:${generatedDir}`,
             `--js_out=import_style=commonjs,binary:${generatedDir}`,
             `--grpc_out=grpc_js:${generatedDir}`,

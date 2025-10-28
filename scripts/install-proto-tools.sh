@@ -226,64 +226,12 @@ download_protoc_gen_go_grpc() {
     success "protoc-gen-go-grpc $PROTOC_GEN_GO_GRPC_VERSION downloaded successfully!"
 }
 
-# Install TypeScript protoc plugins using Bun
-install_ts_protoc_plugins() {
-    info "Installing TypeScript protoc plugins..."
-
-    # Install required packages globally with Bun
-    "$BIN_DIR/bun" install -g \
-        @grpc/grpc-js \
-        @grpc/proto-loader \
-        grpc-tools \
-        grpc_tools_node_protoc_ts \
-        protoc-gen-ts \
-        ts-proto \
-        google-protobuf ||
-        error "Failed to install TypeScript protoc plugins"
-
-    success "TypeScript protoc plugins installed successfully!"
-}
-
-# Install protoc-gen-js (JavaScript code generator)
-install_protoc_gen_js() {
-    info "Installing protoc-gen-js..."
-
-    # grpc-tools package includes protoc-gen-js
-    # Create a symlink to make it accessible as protoc-gen-js
-    local grpc_tools_bin="$("$BIN_DIR/bun" pm bin -g)/grpc_tools_node_protoc_plugin"
-    
-    if [ -f "$grpc_tools_bin" ]; then
-        ln -sf "$grpc_tools_bin" "$BIN_DIR/protoc-gen-js" ||
-            error "Failed to link protoc-gen-js"
-        chmod +x "$BIN_DIR/protoc-gen-js" ||
-            error "Failed to make protoc-gen-js executable"
-        success "protoc-gen-js installed successfully!"
-    else
-        # Alternative: Install google-protobuf which includes protoc-gen-js
-        info "Installing google-protobuf for protoc-gen-js..."
-        "$BIN_DIR/bun" install -g google-protobuf ||
-            error "Failed to install google-protobuf"
-        
-        # The protoc-gen-js binary should be in the global bin directory
-        local js_plugin="$("$BIN_DIR/bun" pm bin -g)/protoc-gen-js"
-        if [ -f "$js_plugin" ]; then
-            ln -sf "$js_plugin" "$BIN_DIR/protoc-gen-js" ||
-                error "Failed to link protoc-gen-js"
-            success "protoc-gen-js installed successfully!"
-        else
-            error "protoc-gen-js not found after installation"
-        fi
-    fi
-}
-
 # Main installation process
 download_go
 download_protoc
 download_protoc_gen_go
 download_protoc_gen_go_grpc
 download_bun
-install_ts_protoc_plugins
-install_protoc_gen_js
 
 # Clean up temporary files
 rm -rf "$TMP_DIR"
@@ -304,9 +252,7 @@ if [[ "$PRINT_INSTRUCTIONS" != "false" ]]; then
     info_bold "  $BIN_DIR/protoc-gen-go-grpc"
     info_bold "  $BIN_DIR/protoc-gen-js"
     info_bold "  $BIN_DIR/bun"
-    info_bold "  bun bin protoc-gen-ts"
-    info_bold "  bun bin protoc-gen-grpc"
-    echo 
+    echo
 else
     echo
     info_bold "Installation complete!"

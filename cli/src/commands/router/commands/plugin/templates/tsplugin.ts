@@ -198,7 +198,8 @@ const packageJson = `{
     "grpc-health-check": "^2.0.0"
   },
   "devDependencies": {
-    "@types/bun": "latest",
+    "@protocolbuffers/protoc-gen-js": "4.0.0",
+    "@types/bun": "^1.3.1",
     "@types/node": "^20.11.5",
     "grpc-tools": "^1.12.4",
     "grpc_tools_node_protoc_ts": "^5.3.3"
