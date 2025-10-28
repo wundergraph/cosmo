@@ -1,3 +1,4 @@
+// TypeScript plugin templates (templating is done by pupa)
 // This file is auto-generated. Do not edit manually.
 /* eslint-disable no-template-curly-in-string */
 

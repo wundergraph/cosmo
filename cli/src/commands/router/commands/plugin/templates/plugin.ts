@@ -1,5 +1,6 @@
 // Plugin scaffolding templates (templating is done by pupa)
 // This file is auto-generated. Do not edit manually.
+/* eslint-disable no-template-curly-in-string */
 
 const schema = "type World {\n  \"\"\"\n  The ID of the world\n  \"\"\"\n  id: ID!\n  \"\"\"\n  The name of the world\n  \"\"\"\n  name: String!\n}\n\ntype Query {\n  \"\"\"\n  The hello query\n  \"\"\"\n  hello(name: String!): World!\n}\n\n";
 
