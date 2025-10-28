@@ -12,12 +12,12 @@ function fileNameToPropertyName(fileName: string): string {
   
   // Handle special cases for dotfiles
   if (name.startsWith('.')) {
-    name = name.substring(1); // Remove the dot
+    name = name.slice(1); // Remove the dot
   }
   
   // Convert to camelCase
   // Split by dots, dashes, underscores, and spaces
-  const parts = name.split(/[.\-_ ]/);
+  const parts = name.split(/[ ._-]/);
   
   return parts
     .map((part, index) => {
@@ -62,6 +62,7 @@ function compileTemplates(dir: string, outputFile: string, comment?: string) {
     lines.push(`// ${comment}`);
   }
   lines.push('// This file is auto-generated. Do not edit manually.');
+  lines.push('/* eslint-disable no-template-curly-in-string */');
   lines.push('');
 
   // Create const declarations
