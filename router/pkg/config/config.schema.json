@@ -668,7 +668,14 @@
         },
         "level": {
           "type": "string",
-          "enum": ["debug", "info", "warn", "error", "panic", "fatal"],
+          "enum": [
+            "debug",
+            "info",
+            "warn",
+            "error",
+            "panic",
+            "fatal"
+          ],
           "description": "The log level for access logs. The log level is used to control the verbosity of the access logs. The default value is 'info'.",
           "default": "info"
         },
@@ -2895,6 +2902,16 @@
           "type": "boolean",
           "default": false,
           "description": "Force enable single flight. Single flight is used to deduplicate identical in-flight subgraph requests. This flag always enables single flight, except for mutations. By default, SingleFlight / Request Deduplication is disabled when PreOriginHandlers are configured. This is because PreOriginHandlers can modify request headers, which has influence on the request deduplication key. If you're sure that your PreOriginHandlers won't interfere with the request deduplication key, you can enable it with this flag. For example, if you have a PreOriginHandler that only logs request headers, you can enable this flag to ensure that subgraph requests are still deduplicated."
+        },
+        "enable_inbound_request_deduplication": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the inbound request deduplication. Inbound request deduplication hashes the normalized GraphQL operation, the variables, and the headers that will be forwarded to the subgraph to determine if the request is identical to an already in-flight request."
+        },
+        "force_enable_inbound_request_deduplication": {
+          "type": "boolean",
+          "default": false,
+          "description": "Force enable inbound request deduplication, even when PreOriginHandlers are configured."
         },
         "enable_request_tracing": {
           "type": "boolean",

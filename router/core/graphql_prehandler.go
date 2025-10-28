@@ -53,62 +53,66 @@ type PreHandlerOptions struct {
 	MaxUploadFiles     int
 	MaxUploadFileSize  int
 
-	FlushTelemetryAfterResponse bool
-	FileUploadEnabled           bool
-	TraceExportVariables        bool
-	DevelopmentMode             bool
-	EnableRequestTracing        bool
-	AlwaysIncludeQueryPlan      bool
-	AlwaysSkipLoader            bool
-	QueryPlansEnabled           bool
-	QueryPlansLoggingEnabled    bool
-	TrackSchemaUsageInfo        bool
-	ClientHeader                config.ClientHeader
-	ComputeOperationSha256      bool
-	ApolloCompatibilityFlags    *config.ApolloCompatibilityFlags
-	DisableVariablesRemapping   bool
-	ExprManager                 *expr.Manager
-	OmitBatchExtensions         bool
-	OperationContentAttributes bool
-	EnableRequestDeduplication      bool
-	ForceEnableRequestDeduplication bool
-	HasPreOriginHandlers            bool
+	FlushTelemetryAfterResponse            bool
+	FileUploadEnabled                      bool
+	TraceExportVariables                   bool
+	DevelopmentMode                        bool
+	EnableRequestTracing                   bool
+	AlwaysIncludeQueryPlan                 bool
+	AlwaysSkipLoader                       bool
+	QueryPlansEnabled                      bool
+	QueryPlansLoggingEnabled               bool
+	TrackSchemaUsageInfo                   bool
+	ClientHeader                           config.ClientHeader
+	ComputeOperationSha256                 bool
+	ApolloCompatibilityFlags               *config.ApolloCompatibilityFlags
+	DisableVariablesRemapping              bool
+	ExprManager                            *expr.Manager
+	OmitBatchExtensions                    bool
+	OperationContentAttributes             bool
+	EnableRequestDeduplication             bool
+	ForceEnableRequestDeduplication        bool
+	HasPreOriginHandlers                   bool
+	EnableInboundRequestDeduplication      bool
+	ForceEnableInboundRequestDeduplication bool
 }
 
 type PreHandler struct {
-	log                         *zap.Logger
-	executor                    *Executor
-	metrics                     RouterMetrics
-	operationProcessor          *OperationProcessor
-	planner                     *OperationPlanner
-	accessController            *AccessController
-	operationBlocker            *OperationBlocker
-	developmentMode             bool
-	alwaysIncludeQueryPlan      bool
-	alwaysSkipLoader            bool
-	queryPlansEnabled           bool // queryPlansEnabled is a flag to enable query plans output in the extensions
-	queryPlansLoggingEnabled    bool // queryPlansLoggingEnabled is a flag to enable logging of query plans
-	routerPublicKey             *ecdsa.PublicKey
-	enableRequestTracing        bool
-	tracerProvider              *sdktrace.TracerProvider
-	flushTelemetryAfterResponse bool
-	tracer                      trace.Tracer
-	traceExportVariables        bool
-	fileUploadEnabled           bool
-	maxUploadFiles              int
-	maxUploadFileSize           int
-	complexityLimits            *config.ComplexityLimits
-	trackSchemaUsageInfo        bool
-	clientHeader                config.ClientHeader
-	computeOperationSha256      bool
-	apolloCompatibilityFlags    *config.ApolloCompatibilityFlags
-	disableVariablesRemapping   bool
-	exprManager                 *expr.Manager
-	omitBatchExtensions         bool
-	operationContentAttributes bool
-	enableRequestDeduplication      bool
-	forceEnableRequestDeduplication bool
-	hasPreOriginHandlers            bool
+	log                                    *zap.Logger
+	executor                               *Executor
+	metrics                                RouterMetrics
+	operationProcessor                     *OperationProcessor
+	planner                                *OperationPlanner
+	accessController                       *AccessController
+	operationBlocker                       *OperationBlocker
+	developmentMode                        bool
+	alwaysIncludeQueryPlan                 bool
+	alwaysSkipLoader                       bool
+	queryPlansEnabled                      bool // queryPlansEnabled is a flag to enable query plans output in the extensions
+	queryPlansLoggingEnabled               bool // queryPlansLoggingEnabled is a flag to enable logging of query plans
+	routerPublicKey                        *ecdsa.PublicKey
+	enableRequestTracing                   bool
+	tracerProvider                         *sdktrace.TracerProvider
+	flushTelemetryAfterResponse            bool
+	tracer                                 trace.Tracer
+	traceExportVariables                   bool
+	fileUploadEnabled                      bool
+	maxUploadFiles                         int
+	maxUploadFileSize                      int
+	complexityLimits                       *config.ComplexityLimits
+	trackSchemaUsageInfo                   bool
+	clientHeader                           config.ClientHeader
+	computeOperationSha256                 bool
+	apolloCompatibilityFlags               *config.ApolloCompatibilityFlags
+	disableVariablesRemapping              bool
+	exprManager                            *expr.Manager
+	omitBatchExtensions                    bool
+	operationContentAttributes             bool
+	enableRequestDeduplication             bool
+	forceEnableRequestDeduplication        bool
+	hasPreOriginHandlers                   bool
+	enableInboundRequestDeduplication      bool
+	forceEnableInboundRequestDeduplication bool
 }
 
 type httpOperation struct {
@@ -140,25 +144,27 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 			"wundergraph/cosmo/router/pre_handler",
 			trace.WithInstrumentationVersion("0.0.1"),
 		),
-		fileUploadEnabled:               opts.FileUploadEnabled,
-		maxUploadFiles:                  opts.MaxUploadFiles,
-		maxUploadFileSize:               opts.MaxUploadFileSize,
-		complexityLimits:                opts.ComplexityLimits,
-		alwaysIncludeQueryPlan:          opts.AlwaysIncludeQueryPlan,
-		alwaysSkipLoader:                opts.AlwaysSkipLoader,
-		queryPlansEnabled:               opts.QueryPlansEnabled,
-		queryPlansLoggingEnabled:        opts.QueryPlansLoggingEnabled,
-		trackSchemaUsageInfo:            opts.TrackSchemaUsageInfo,
-		clientHeader:                    opts.ClientHeader,
-		computeOperationSha256:          opts.ComputeOperationSha256,
-		apolloCompatibilityFlags:        opts.ApolloCompatibilityFlags,
-		disableVariablesRemapping:       opts.DisableVariablesRemapping,
-		exprManager:                     opts.ExprManager,
-		omitBatchExtensions:             opts.OmitBatchExtensions,
-		operationContentAttributes: opts.OperationContentAttributes,
-		enableRequestDeduplication:      opts.EnableRequestDeduplication,
-		forceEnableRequestDeduplication: opts.ForceEnableRequestDeduplication,
-		hasPreOriginHandlers:            opts.HasPreOriginHandlers,
+		fileUploadEnabled:                      opts.FileUploadEnabled,
+		maxUploadFiles:                         opts.MaxUploadFiles,
+		maxUploadFileSize:                      opts.MaxUploadFileSize,
+		complexityLimits:                       opts.ComplexityLimits,
+		alwaysIncludeQueryPlan:                 opts.AlwaysIncludeQueryPlan,
+		alwaysSkipLoader:                       opts.AlwaysSkipLoader,
+		queryPlansEnabled:                      opts.QueryPlansEnabled,
+		queryPlansLoggingEnabled:               opts.QueryPlansLoggingEnabled,
+		trackSchemaUsageInfo:                   opts.TrackSchemaUsageInfo,
+		clientHeader:                           opts.ClientHeader,
+		computeOperationSha256:                 opts.ComputeOperationSha256,
+		apolloCompatibilityFlags:               opts.ApolloCompatibilityFlags,
+		disableVariablesRemapping:              opts.DisableVariablesRemapping,
+		exprManager:                            opts.ExprManager,
+		omitBatchExtensions:                    opts.OmitBatchExtensions,
+		operationContentAttributes:             opts.OperationContentAttributes,
+		enableRequestDeduplication:             opts.EnableRequestDeduplication,
+		forceEnableRequestDeduplication:        opts.ForceEnableRequestDeduplication,
+		hasPreOriginHandlers:                   opts.HasPreOriginHandlers,
+		enableInboundRequestDeduplication:      opts.EnableInboundRequestDeduplication,
+		forceEnableInboundRequestDeduplication: opts.ForceEnableInboundRequestDeduplication,
 	}
 }
 
@@ -535,6 +541,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	}
 
 	requestContext.operation.extensions = operationKit.parsedOperation.Request.Extensions
+	requestContext.operation.variablesHash = operationKit.parsedOperation.VariablesHash
 	requestContext.operation.variables, err = astjson.ParseBytes(operationKit.parsedOperation.Request.Variables)
 	if err != nil {
 		return &httpGraphqlError{
@@ -856,6 +863,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 
 	requestContext.operation.rawContent = operationKit.parsedOperation.Request.Query
 	requestContext.operation.content = operationKit.parsedOperation.NormalizedRepresentation
+	requestContext.operation.variablesHash = operationKit.parsedOperation.VariablesHash
 	requestContext.operation.variables, err = astjson.ParseBytes(operationKit.parsedOperation.Request.Variables)
 	if err != nil {
 		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
@@ -1133,16 +1141,29 @@ func (h *PreHandler) parseExecutionAndTraceOptions(r *http.Request, clientInfo *
 	// 1. enableRequestDeduplication
 	// 2. hasPreOriginHandlers
 	// 3. forceEnableRequestDeduplication
-	ex.DisableRequestDeduplication = !h.enableRequestDeduplication
+
+	// Disable subgraph request deduplication if request deduplication is disabled
+	ex.DisableSubgraphRequestDeduplication = !h.enableRequestDeduplication
+	// Disable inbound request deduplication if request deduplication is disabled
+	ex.DisableInboundRequestDeduplication = !h.enableInboundRequestDeduplication
+	if !h.enableRequestDeduplication {
+		// DisableInboundRequestDeduplication is disabled when RequestDeduplication in general is disabled
+		ex.DisableInboundRequestDeduplication = true
+	}
 	if h.hasPreOriginHandlers {
 		// if we have pre origin handlers, we cannot guarantee that these handlers won't modify headers
 		// as such, we're automatically disabling request deduplication
-		ex.DisableRequestDeduplication = true
+		ex.DisableSubgraphRequestDeduplication = true
+		ex.DisableInboundRequestDeduplication = true
 	}
 	if h.forceEnableRequestDeduplication {
 		// if the user has pre origin handlers but knows for sure that they don't affect request deduplication
 		// they can make an override (via config) to force enable it
-		ex.DisableRequestDeduplication = false
+		ex.DisableSubgraphRequestDeduplication = false
+	}
+	if h.forceEnableInboundRequestDeduplication {
+		// same as above, force enable even with PreHandlers
+		ex.DisableInboundRequestDeduplication = false
 	}
 	return ex, tr, nil
 }
