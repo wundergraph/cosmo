@@ -1420,7 +1420,9 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		core.WithTLSConfig(testConfig.TLSConfig),
 		core.WithInstanceID("test-instance"),
 		core.WithGracePeriod(15 * time.Second),
-		core.WithIntrospection(true),
+		core.WithIntrospection(true, config.IntrospectionConfiguration{
+			Enabled: true,
+		}),
 		core.WithQueryPlans(true),
 		core.WithEvents(eventsConfiguration),
 	}
