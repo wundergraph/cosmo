@@ -1,211 +1,35 @@
-/* eslint-disable no-tabs */
+// Project scaffolding templates (templating is done by pupa)
+// This file is auto-generated. Do not edit manually.
 
-// We store the templates in code to avoid dealing with file system issues when
-// building for bun and transpiling TypeScript.
+const gitignore = "# Ignore the binary files\nrelease/\n\n";
 
-const gitignore = `# Ignore the binary files
-release/
-`;
+const makefile = "";
 
-const makefile = `
-.PHONY: install-wgc build download start compose
+const readmeMd = "# {name} - Cosmo Router Plugin Project\n\nDesign your API with GraphQL Federation and implement with gRPC using Cosmo Router Plugins\n\n## ✨ Features\n\n- **GraphQL Schema + gRPC Implementation**: Design your API with GraphQL SDL and implement it using gRPC methods\n- **Embedded Subgraphs**: Run subgraphs directly inside the Cosmo Router for improved performance\n- **End-to-End Type Safety**: Auto-generated Go code from your GraphQL schema\n- **Simplified Testing**: Unit test your gRPC implementation with no external dependencies\n\n## 📝 Project Structure\n\nThis project sets up a complete environment for developing and testing Cosmo Router plugins:\n\n```\nproject-root/\n├── plugins/          # Contains all the plugins\n├── graph.yaml        # Supergraph configuration\n├── config.json       # Composed supergraph (generated)\n├── config.yaml       # Router configuration\n├── release/          # Router binary location\n│   └── router        # Router binary\n└── Makefile          # Automation scripts\n```\n\n## 🚀 Getting Started\n\n### Setup\n\n1. Clone this repository\n2. Run the included Makefile commands\n\n### Available Make Commands\n\nThe Makefile automates the entire workflow with these commands:\n\n- `make`: Runs all commands in sequence (download, build, compose, start)\n- `make download`: Downloads the Cosmo Router binary to the `release` directory\n- `make build`: Builds the plugin from your source code with debug symbols enabled\n- `make generate`: Generates Go code from your GraphQL schema without compilation\n- `make test`: Validates your implementation with integration tests\n- `make compose`: Composes your supergraph from the configuration in `graph.yaml`\n- `make start`: Starts the Cosmo Router with your plugin\n\n### Quick Start\n\nTo get everything running with a single command:\n\n```bash\nmake\n```\n\nThis will:\n1. Download the Cosmo Router binary\n2. Build your plugin from source\n3. Compose your supergraph\n4. Start the router on port 3010\n\n## 🧪 Testing Your Plugin\n\nOnce running, open the GraphQL Playground at [http://localhost:3010](http://localhost:3010) and try this query:\n\n```graphql\nquery {\n  hello(name: \"World\") {\n    id\n    name\n  }\n}\n```\n\n## 🔧 Customizing Your Plugin\n\n1. Modify `src/schema.graphql` to define your GraphQL types and operations\n2. Edit `src/main.go` to implement the corresponding gRPC service methods\n3. Run `make generate` to regenerate code from your updated schema\n4. Run `make build` to compile your plugin\n5. Run `make test` to validate your implementation with integration tests\n6. Run `make compose` to update your supergraph\n7. Run `make start` to restart the router with your changes\n\n## 📚 Learn More\n\nFor more information about Cosmo and building router plugins:\n- [Cosmo Documentation](https://cosmo-docs.wundergraph.com/)\n- [Cosmo Router Plugins Guide](https://cosmo-docs.wundergraph.com/connect/plugins)\n\n---\n\n<p align=\"center\">Made with ❤️ by <a href=\"https://wundergraph.com\">WunderGraph</a></p>\n\n";
 
-make: install-wgc download build compose start
+const configYaml = "# yaml-language-server: $schema=https://raw.githubusercontent.com/wundergraph/cosmo/main/router/pkg/config/config.schema.json\n\nversion: \"1\"\n\nlisten_addr: localhost:3010\n\ndev_mode: true\n\nexecution_config:\n  file:\n    path: config.json\n\nplugins:\n  enabled: true\n  path: plugins\n\n";
 
-install-wgc:
-\t@which wgc > /dev/null 2>&1 || npm install -g wgc@latest
+const graphYaml = "version: 1\nsubgraphs:\n  # Add your other subgraphs here\n  - plugin:\n      version: 0.0.1\n      path: plugins/{originalPluginName}\n\n";
 
-start:
-\t./release/router
+const graphconfig = "version: 1\nsubgraphs:\n  # Add your other subgraphs here\n  - plugin:\n      version: 0.0.1\n      path: plugins/{originalPluginName}\n\n";
 
-compose: install-wgc
-\twgc router compose -i graph.yaml -o config.json
+const pluginReadmeMd = "# {name} Plugin - Cosmo Router Example\n\nThis repository contains a simple Cosmo Router plugin that showcases how to design APIs with GraphQL Federation but implement them using gRPC methods instead of traditional resolvers.\n\n## What is this demo about?\n\nThis demo illustrates a key pattern in Cosmo Router plugin development:\n- **Design with GraphQL**: Define your API using GraphQL schema\n- **Implement with gRPC**: Instead of writing GraphQL resolvers, implement gRPC service methods\n- **Bridge the gap**: The Cosmo router connects GraphQL operations to your gRPC implementations\n- **Test-Driven Development**: Test your gRPC service implementation with gRPC client and server without external dependencies\n\nThe plugin demonstrates:\n- How GraphQL types and operations map to gRPC RPC methods\n- Simple \"Hello World\" implementation\n- Proper structure for a Cosmo Router plugin\n- How to test your gRPC implementation with gRPC client and server without external dependencies\n\n## Getting Started\n\nPlugin structure:\n\n   ```\n    plugins/{originalPluginName}/\n    ├── go.mod                # Go module file with dependencies\n    ├── go.sum                # Go checksums file\n    ├── src/\n    │   ├── main.go           # Main plugin implementation\n    │   ├── main_test.go      # Tests for the plugin\n    │   └── schema.graphql    # GraphQL schema defining the API\n    ├── generated/            # Generated code (created during build)\n    └── bin/                  # Compiled binaries (created during build)\n        └── plugin            # The compiled plugin binary\n   ```\n\n## 🔧 Customizing Your Plugin\n\n- Change the GraphQL schema in `src/schema.graphql` and regenerate the code with `make generate`.\n- Implement the changes in `src/main.go` and test your implementation with `make test`.\n- Compose your supergraph with `make compose` and restart the router with `make start`.\n\n## 📚 Learn More\n\nFor more information about Cosmo and building router plugins:\n- [Cosmo Documentation](https://cosmo-docs.wundergraph.com/)\n- [Cosmo Router Plugins Guide](https://cosmo-docs.wundergraph.com/connect/plugins)\n\n---\n\n<p align=\"center\">Made with ❤️ by <a href=\"https://wundergraph.com\">WunderGraph</a></p>\n";
 
-download: install-wgc
-\t@if [ ! -f release/router ]; then \\
-\t\trm -rf release && wgc router download-binary -o release && chmod +x release/router; \\
-\telse \\
-\t\techo "Router binary already exists, skipping download"; \\
-\tfi
+const projectreadme = "# {name} - Cosmo Router Plugin Project\n\nDesign your API with GraphQL Federation and implement with gRPC using Cosmo Router Plugins\n\n## ✨ Features\n\n- **GraphQL Schema + gRPC Implementation**: Design your API with GraphQL SDL and implement it using gRPC methods\n- **Embedded Subgraphs**: Run subgraphs directly inside the Cosmo Router for improved performance\n- **End-to-End Type Safety**: Auto-generated Go code from your GraphQL schema\n- **Simplified Testing**: Unit test your gRPC implementation with no external dependencies\n\n## 📝 Project Structure\n\nThis project sets up a complete environment for developing and testing Cosmo Router plugins:\n\n```\nproject-root/\n├── plugins/          # Contains all the plugins\n├── graph.yaml        # Supergraph configuration\n├── config.json       # Composed supergraph (generated)\n├── config.yaml       # Router configuration\n├── release/          # Router binary location\n│   └── router        # Router binary\n└── Makefile          # Automation scripts\n```\n\n## 🚀 Getting Started\n\n### Setup\n\n1. Clone this repository\n2. Run the included Makefile commands\n\n### Available Make Commands\n\nThe Makefile automates the entire workflow with these commands:\n\n- `make`: Runs all commands in sequence (download, build, compose, start)\n- `make download`: Downloads the Cosmo Router binary to the `release` directory\n- `make build`: Builds the plugin from your source code with debug symbols enabled\n- `make generate`: Generates Go code from your GraphQL schema without compilation\n- `make test`: Validates your implementation with integration tests\n- `make compose`: Composes your supergraph from the configuration in `graph.yaml`\n- `make start`: Starts the Cosmo Router with your plugin\n\n### Quick Start\n\nTo get everything running with a single command:\n\n```bash\nmake\n```\n\nThis will:\n1. Download the Cosmo Router binary\n2. Build your plugin from source\n3. Compose your supergraph\n4. Start the router on port 3010\n\n## 🧪 Testing Your Plugin\n\nOnce running, open the GraphQL Playground at [http://localhost:3010](http://localhost:3010) and try this query:\n\n```graphql\nquery {\n  hello(name: \"World\") {\n    id\n    name\n  }\n}\n```\n\n## 🔧 Customizing Your Plugin\n\n1. Modify `src/schema.graphql` to define your GraphQL types and operations\n2. Edit `src/main.go` to implement the corresponding gRPC service methods\n3. Run `make generate` to regenerate code from your updated schema\n4. Run `make build` to compile your plugin\n5. Run `make test` to validate your implementation with integration tests\n6. Run `make compose` to update your supergraph\n7. Run `make start` to restart the router with your changes\n\n## 📚 Learn More\n\nFor more information about Cosmo and building router plugins:\n- [Cosmo Documentation](https://cosmo-docs.wundergraph.com/)\n- [Cosmo Router Plugins Guide](https://cosmo-docs.wundergraph.com/connect/plugins)\n\n---\n\n<p align=\"center\">Made with ❤️ by <a href=\"https://wundergraph.com\">WunderGraph</a></p>\n\n";
 
-build:
-\tcd plugins/{originalPluginName} && make build
-`;
+const readme = "# {name} Plugin - Cosmo Router Example\n\nThis repository contains a simple Cosmo Router plugin that showcases how to design APIs with GraphQL Federation but implement them using gRPC methods instead of traditional resolvers.\n\n## What is this demo about?\n\nThis demo illustrates a key pattern in Cosmo Router plugin development:\n- **Design with GraphQL**: Define your API using GraphQL schema\n- **Implement with gRPC**: Instead of writing GraphQL resolvers, implement gRPC service methods\n- **Bridge the gap**: The Cosmo router connects GraphQL operations to your gRPC implementations\n- **Test-Driven Development**: Test your gRPC service implementation with gRPC client and server without external dependencies\n\nThe plugin demonstrates:\n- How GraphQL types and operations map to gRPC RPC methods\n- Simple \"Hello World\" implementation\n- Proper structure for a Cosmo Router plugin\n- How to test your gRPC implementation with gRPC client and server without external dependencies\n\n## Getting Started\n\nPlugin structure:\n\n   ```\n    plugins/{originalPluginName}/\n    ├── go.mod                # Go module file with dependencies\n    ├── go.sum                # Go checksums file\n    ├── src/\n    │   ├── main.go           # Main plugin implementation\n    │   ├── main_test.go      # Tests for the plugin\n    │   └── schema.graphql    # GraphQL schema defining the API\n    ├── generated/            # Generated code (created during build)\n    └── bin/                  # Compiled binaries (created during build)\n        └── plugin            # The compiled plugin binary\n   ```\n\n## 🔧 Customizing Your Plugin\n\n- Change the GraphQL schema in `src/schema.graphql` and regenerate the code with `make generate`.\n- Implement the changes in `src/main.go` and test your implementation with `make test`.\n- Compose your supergraph with `make compose` and restart the router with `make start`.\n\n## 📚 Learn More\n\nFor more information about Cosmo and building router plugins:\n- [Cosmo Documentation](https://cosmo-docs.wundergraph.com/)\n- [Cosmo Router Plugins Guide](https://cosmo-docs.wundergraph.com/connect/plugins)\n\n---\n\n<p align=\"center\">Made with ❤️ by <a href=\"https://wundergraph.com\">WunderGraph</a></p>\n";
 
-const graphConfig = `version: 1
-subgraphs:
-  # Add your other subgraphs here
-  - plugin:
-      version: 0.0.1
-      path: plugins/{originalPluginName}
-`;
-
-const routerConfig = `# yaml-language-server: $schema=https://raw.githubusercontent.com/wundergraph/cosmo/main/router/pkg/config/config.schema.json
-
-version: "1"
-
-listen_addr: localhost:3010
-
-dev_mode: true
-
-execution_config:
-  file:
-    path: config.json
-
-plugins:
-  enabled: true
-  path: plugins
-`;
-
-const projectReadme = `# {name} - Cosmo Router Plugin Project
-
-Design your API with GraphQL Federation and implement with gRPC using Cosmo Router Plugins
-
-## ✨ Features
-
-- **GraphQL Schema + gRPC Implementation**: Design your API with GraphQL SDL and implement it using gRPC methods
-- **Embedded Subgraphs**: Run subgraphs directly inside the Cosmo Router for improved performance
-- **End-to-End Type Safety**: Auto-generated Go code from your GraphQL schema
-- **Simplified Testing**: Unit test your gRPC implementation with no external dependencies
-
-## 📝 Project Structure
-
-This project sets up a complete environment for developing and testing Cosmo Router plugins:
-
-\`\`\`
-project-root/
-├── plugins/          # Contains all the plugins
-├── graph.yaml        # Supergraph configuration
-├── config.json       # Composed supergraph (generated)
-├── config.yaml       # Router configuration
-├── release/          # Router binary location
-│   └── router        # Router binary
-└── Makefile          # Automation scripts
-\`\`\`
-
-## 🚀 Getting Started
-
-### Setup
-
-1. Clone this repository
-2. Run the included Makefile commands
-
-### Available Make Commands
-
-The Makefile automates the entire workflow with these commands:
-
-- \`make\`: Runs all commands in sequence (download, build, compose, start)
-- \`make download\`: Downloads the Cosmo Router binary to the \`release\` directory
-- \`make build\`: Builds the plugin from your source code with debug symbols enabled
-- \`make generate\`: Generates Go code from your GraphQL schema without compilation
-- \`make test\`: Validates your implementation with integration tests
-- \`make compose\`: Composes your supergraph from the configuration in \`graph.yaml\`
-- \`make start\`: Starts the Cosmo Router with your plugin
-
-### Quick Start
-
-To get everything running with a single command:
-
-\`\`\`bash
-make
-\`\`\`
-
-This will:
-1. Download the Cosmo Router binary
-2. Build your plugin from source
-3. Compose your supergraph
-4. Start the router on port 3010
-
-## 🧪 Testing Your Plugin
-
-Once running, open the GraphQL Playground at [http://localhost:3010](http://localhost:3010) and try this query:
-
-\`\`\`graphql
-query {
-  hello(name: "World") {
-    id
-    name
-  }
-}
-\`\`\`
-
-## 🔧 Customizing Your Plugin
-
-1. Modify \`src/schema.graphql\` to define your GraphQL types and operations
-2. Edit \`src/main.go\` to implement the corresponding gRPC service methods
-3. Run \`make generate\` to regenerate code from your updated schema
-4. Run \`make build\` to compile your plugin
-5. Run \`make test\` to validate your implementation with integration tests
-6. Run \`make compose\` to update your supergraph
-7. Run \`make start\` to restart the router with your changes
-
-## 📚 Learn More
-
-For more information about Cosmo and building router plugins:
-- [Cosmo Documentation](https://cosmo-docs.wundergraph.com/)
-- [Cosmo Router Plugins Guide](https://cosmo-docs.wundergraph.com/connect/plugins)
-
----
-
-<p align="center">Made with ❤️ by <a href="https://wundergraph.com">WunderGraph</a></p>
-`;
-
-const pluginReadme = `# {name} Plugin - Cosmo Router Example
-
-This repository contains a simple Cosmo Router plugin that showcases how to design APIs with GraphQL Federation but implement them using gRPC methods instead of traditional resolvers.
-
-## What is this demo about?
-
-This demo illustrates a key pattern in Cosmo Router plugin development:
-- **Design with GraphQL**: Define your API using GraphQL schema
-- **Implement with gRPC**: Instead of writing GraphQL resolvers, implement gRPC service methods
-- **Bridge the gap**: The Cosmo router connects GraphQL operations to your gRPC implementations
-- **Test-Driven Development**: Test your gRPC service implementation with gRPC client and server without external dependencies
-
-The plugin demonstrates:
-- How GraphQL types and operations map to gRPC RPC methods
-- Simple "Hello World" implementation
-- Proper structure for a Cosmo Router plugin
-- How to test your gRPC implementation with gRPC client and server without external dependencies
-
-## Getting Started
-
-Plugin structure:
-
-   \`\`\`
-    plugins/{originalPluginName}/
-    ├── go.mod                # Go module file with dependencies
-    ├── go.sum                # Go checksums file
-    ├── src/
-    │   ├── main.go           # Main plugin implementation
-    │   ├── main_test.go      # Tests for the plugin
-    │   └── schema.graphql    # GraphQL schema defining the API
-    ├── generated/            # Generated code (created during build)
-    └── bin/                  # Compiled binaries (created during build)
-        └── plugin            # The compiled plugin binary
-   \`\`\`
-
-## 🔧 Customizing Your Plugin
-
-- Change the GraphQL schema in \`src/schema.graphql\` and regenerate the code with \`make generate\`.
-- Implement the changes in \`src/main.go\` and test your implementation with \`make test\`.
-- Compose your supergraph with \`make compose\` and restart the router with \`make start\`.
-
-## 📚 Learn More
-
-For more information about Cosmo and building router plugins:
-- [Cosmo Documentation](https://cosmo-docs.wundergraph.com/)
-- [Cosmo Router Plugins Guide](https://cosmo-docs.wundergraph.com/connect/plugins)
-
----
-
-<p align="center">Made with ❤️ by <a href="https://wundergraph.com">WunderGraph</a></p>`;
+const routerconfig = "# yaml-language-server: $schema=https://raw.githubusercontent.com/wundergraph/cosmo/main/router/pkg/config/config.schema.json\n\nversion: \"1\"\n\nlisten_addr: localhost:3010\n\ndev_mode: true\n\nexecution_config:\n  file:\n    path: config.json\n\nplugins:\n  enabled: true\n  path: plugins\n\n";
 
 export default {
-  readme: pluginReadme,
-  routerConfig,
-  graphConfig,
-  makefile,
-  projectReadme,
   gitignore,
+  makefile,
+  readmeMd,
+  configYaml,
+  graphYaml,
+  graphconfig,
+  pluginReadmeMd,
+  projectreadme,
+  readme,
+  routerconfig,
 };

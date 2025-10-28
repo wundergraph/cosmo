@@ -1,220 +1,32 @@
-/* eslint-disable no-tabs */
+// Plugin scaffolding templates (templating is done by pupa)
+// This file is auto-generated. Do not edit manually.
 
-// We store the templates in code to avoid dealing with file system issues when
-// building for bun and transpiling TypeScript.
+const cursorignore = "# Ignore the mapping and lock files\ngenerated/mapping.json\ngenerated/service.proto.lock.json\n# Ignore the proto to avoid interpretation issues\ngenerated/service.proto\n# Ignore the plugin binary\nbin/\n\n";
 
-const goMod = `
-module {modulePath}
+const cursorrules = "---\ndescription: {name} Plugin Guide\nglobs: src/**\nalwaysApply: false\n---\n\n# {name} Plugin Development Guide\n\nYou are an expert in developing Cosmo Router plugins. You are given a GraphQL schema, and you need to implement the Go code for the plugin.\nYour goal is to implement the plugin in a way that is easy to understand and maintain. You add tests to ensure the plugin works as expected.\n\nAll make commands need to be run from the plugin directory `{pluginDir}`.\n\n## Plugin Structure\n\nA plugin is structured as follows:\n\n```\nplugins/{originalPluginName}/\n├── Makefile                     # Build automation\n├── go.mod                       # Go module definition\n├── go.sum                       # Go module checksums\n├── src/\n│   ├── schema.graphql           # GraphQL schema (API contract)\n│   ├── main.go                  # Plugin implementation\n│   └── main_test.go             # Tests for the plugin\n├── generated/                   # Auto-generated files (DO NOT EDIT)\n│   ├── service.proto            # Generated Protocol Buffers\n│   ├── service.pb.go            # Generated Go structures\n│   ├── service.proto.lock.json  # Generated Protobuf lock file\n│   └── service_grpc.pb.go       # Generated gRPC service\n└── bin/                         # Compiled binaries\n    └── plugin                   # The compiled plugin binary\n```\n\n## Development Workflow\n\n1. When modifying the GraphQL schema in `src/schema.graphql`, you need to regenerate the code with `make generate`.\n2. Look into the generated code in `generated/service.proto` and `generated/service.pb.go` to understand the updated API contract and service methods.\n3. Implement the new RPC methods in `src/main.go`.\n4. Add tests to `src/main_test.go` to ensure the plugin works as expected. You need to run `make test` to ensure the tests pass.\n5. Finally, build the plugin with `make build` to ensure the plugin is working as expected.\n6. Your job is done after successfully building the plugin. Don't verify if the binary was created. The build command will take care of that.\n\n**Important**: Never manipulate the files inside `generated` directory yourself. Don't touch the `service.proto`,  `service.proto.lock.json`, `service.pb.go` and `service_grpc.pb.go` files.\n\nYou can update the Go dependencies by running `make test` to ensure the dependencies are up to date. It runs `go mod tidy` under the hood.\n\n## Implementation Pattern\n\n### Service Integration\n\nIf you need to integrate with other HTTP services, you should prefer to use the `github.com/wundergraph/cosmo/router-plugin/httpclient` package.\nAlways prefer a real integration over mocking. In the tests, you can mock the external service by bootstrapping an http server that returns the expected response.\nIn tests, focus on a well-defined contract and the expected behavior of your service. Structure tests by endpoint, use-cases and use table-driven tests when possible.\n\nHere is an example of how to use the `httpclient` package:\n\n```go\n// Initialize HTTP client for external API calls\n// The base URL is the URL of the external API\nclient := httpclient.New(\n  httpclient.WithBaseURL(\"<replace_with_base_url>\"),\n  httpclient.WithTimeout(5*time.Second),\n  httpclient.WithHeaders(map[string]string{}),\n)\n// A HTTP GET request to the external API\nresp, err := client.Get(ctx, \"/<replace_with_path>\")\n// A HTTP POST/PUT/DELETE request to the external API with a struct that is marshalled to JSON\nresp, err := client.Post(ctx, \"/<replace_with_path>\", payload)\n// Passing payload with custom request options\nresp, err := client.Put(ctx, \"/<replace_with_path>\", payload,\n  httpclient.WithHeaders(map[string]string{}),\n)\n// Unmarshal the JSON response into our data structure\ndata, err := httpclient.UnmarshalTo[[]ResponseType](resp)\n// The response offers the following fields:\ntype Response struct {\n\tStatusCode int\n\tHeaders    http.Header\n\tBody       []byte\n}\n// You can check for success (StatusCode >= 200 && StatusCode < 300)\nresp.IsSuccess()\n```\n\n";
 
-go 1.25.1
+const gitignore = "# Ignore the binary files\nbin/\n\n";
 
-require (
-  github.com/stretchr/testify v1.10.0
-  github.com/wundergraph/cosmo/router-plugin v0.0.0-20250824152218-8eebc34c4995 // v0.4.1
-  google.golang.org/grpc v1.68.1
-  google.golang.org/protobuf v1.36.5
-)
-`;
+const makefile = "";
 
-const makefile = `
-.PHONY: build test generate install-wgc
+const readmeMd = "# {name} Plugin - Cosmo gRPC Service Example\n\nThis repository contains a simple Cosmo gRPC service plugin that showcases how to design APIs with GraphQL Federation but implement them using gRPC methods instead of traditional resolvers.\n\n## What is this demo about?\n\nThis demo illustrates a key pattern in Cosmo gRPC service development:\n- **Design with GraphQL**: Define your API using GraphQL schema\n- **Implement with gRPC**: Instead of writing GraphQL resolvers, implement gRPC service methods\n- **Bridge the gap**: The Cosmo router connects GraphQL operations to your gRPC implementations\n- **Test-Driven Development**: Test your gRPC service implementation with gRPC client and server without external dependencies\n\nThe plugin demonstrates:\n- How GraphQL types and operations map to gRPC service methods\n- Simple \"Hello World\" implementation\n- Proper structure for a Cosmo gRPC service plugin\n- How to test your gRPC service implementation with gRPC client and server without external dependencies\n\n## Getting Started\n\nPlugin structure:\n\n   ```\n    plugins/{originalPluginName}/\n    ├── go.mod                # Go module file with dependencies\n    ├── go.sum                # Go checksums file\n    ├── src/\n    │   ├── main.go           # Main plugin implementation\n    │   ├── main_test.go      # Tests for the plugin\n    │   └── schema.graphql    # GraphQL schema defining the API\n    ├── generated/            # Generated code (created during build)\n    └── bin/                  # Compiled binaries (created during build)\n        └── plugin            # The compiled plugin binary\n   ```\n\n## 🔧 Customizing Your Plugin\n\n- Change the GraphQL schema in `src/schema.graphql` and regenerate the code with `make generate`.\n- Implement the changes in `src/main.go` and test your implementation with `make test`.\n- Build the plugin with `make build`.\n\n## 📚 Learn More\n\nFor more information about Cosmo and building router plugins:\n- [Cosmo Documentation](https://cosmo-docs.wundergraph.com/)\n- [Cosmo Router Plugins Guide](https://cosmo-docs.wundergraph.com/connect/plugins)\n\n---\n\n<p align=\"center\">Made with ❤️ by <a href=\"https://wundergraph.com\">WunderGraph</a></p>\n";
 
-install-wgc:
-\t@which wgc > /dev/null 2>&1 || npm install -g wgc@latest
+const goMod = "\nmodule {modulePath}\n\ngo 1.25.1\n\nrequire (\n  github.com/stretchr/testify v1.10.0\n  github.com/wundergraph/cosmo/router-plugin v0.0.0-20250824152218-8eebc34c4995 // v0.4.1\n  google.golang.org/grpc v1.68.1\n  google.golang.org/protobuf v1.36.5\n)\n\n";
 
-make: build
+const readme = "# {name} Plugin - Cosmo gRPC Service Example\n\nThis repository contains a simple Cosmo gRPC service plugin that showcases how to design APIs with GraphQL Federation but implement them using gRPC methods instead of traditional resolvers.\n\n## What is this demo about?\n\nThis demo illustrates a key pattern in Cosmo gRPC service development:\n- **Design with GraphQL**: Define your API using GraphQL schema\n- **Implement with gRPC**: Instead of writing GraphQL resolvers, implement gRPC service methods\n- **Bridge the gap**: The Cosmo router connects GraphQL operations to your gRPC implementations\n- **Test-Driven Development**: Test your gRPC service implementation with gRPC client and server without external dependencies\n\nThe plugin demonstrates:\n- How GraphQL types and operations map to gRPC service methods\n- Simple \"Hello World\" implementation\n- Proper structure for a Cosmo gRPC service plugin\n- How to test your gRPC service implementation with gRPC client and server without external dependencies\n\n## Getting Started\n\nPlugin structure:\n\n   ```\n    plugins/{originalPluginName}/\n    ├── go.mod                # Go module file with dependencies\n    ├── go.sum                # Go checksums file\n    ├── src/\n    │   ├── main.go           # Main plugin implementation\n    │   ├── main_test.go      # Tests for the plugin\n    │   └── schema.graphql    # GraphQL schema defining the API\n    ├── generated/            # Generated code (created during build)\n    └── bin/                  # Compiled binaries (created during build)\n        └── plugin            # The compiled plugin binary\n   ```\n\n## 🔧 Customizing Your Plugin\n\n- Change the GraphQL schema in `src/schema.graphql` and regenerate the code with `make generate`.\n- Implement the changes in `src/main.go` and test your implementation with `make test`.\n- Build the plugin with `make build`.\n\n## 📚 Learn More\n\nFor more information about Cosmo and building router plugins:\n- [Cosmo Documentation](https://cosmo-docs.wundergraph.com/)\n- [Cosmo Router Plugins Guide](https://cosmo-docs.wundergraph.com/connect/plugins)\n\n---\n\n<p align=\"center\">Made with ❤️ by <a href=\"https://wundergraph.com\">WunderGraph</a></p>\n";
 
-test: install-wgc
-\twgc router plugin test .
+const schemaGraphql = "type World {\n  \"\"\"\n  The ID of the world\n  \"\"\"\n  id: ID!\n  \"\"\"\n  The name of the world\n  \"\"\"\n  name: String!\n}\n\ntype Query {\n  \"\"\"\n  The hello query\n  \"\"\"\n  hello(name: String!): World!\n}\n\n";
 
-generate: install-wgc
-\twgc router plugin generate .
-
-publish: generate
-\twgc router plugin publish .
-
-build: install-wgc
-\twgc router plugin build . --debug
-`;
-
-const gitignore = `# Ignore the binary files
-bin/
-`;
-
-
-
-const readme = `# {name} Plugin - Cosmo gRPC Service Example
-
-This repository contains a simple Cosmo gRPC service plugin that showcases how to design APIs with GraphQL Federation but implement them using gRPC methods instead of traditional resolvers.
-
-## What is this demo about?
-
-This demo illustrates a key pattern in Cosmo gRPC service development:
-- **Design with GraphQL**: Define your API using GraphQL schema
-- **Implement with gRPC**: Instead of writing GraphQL resolvers, implement gRPC service methods
-- **Bridge the gap**: The Cosmo router connects GraphQL operations to your gRPC implementations
-- **Test-Driven Development**: Test your gRPC service implementation with gRPC client and server without external dependencies
-
-The plugin demonstrates:
-- How GraphQL types and operations map to gRPC service methods
-- Simple "Hello World" implementation
-- Proper structure for a Cosmo gRPC service plugin
-- How to test your gRPC service implementation with gRPC client and server without external dependencies
-
-## Getting Started
-
-Plugin structure:
-
-   \`\`\`
-    plugins/{originalPluginName}/
-    ├── go.mod                # Go module file with dependencies
-    ├── go.sum                # Go checksums file
-    ├── src/
-    │   ├── main.go           # Main plugin implementation
-    │   ├── main_test.go      # Tests for the plugin
-    │   └── schema.graphql    # GraphQL schema defining the API
-    ├── generated/            # Generated code (created during build)
-    └── bin/                  # Compiled binaries (created during build)
-        └── plugin            # The compiled plugin binary
-   \`\`\`
-
-## 🔧 Customizing Your Plugin
-
-- Change the GraphQL schema in \`src/schema.graphql\` and regenerate the code with \`make generate\`.
-- Implement the changes in \`src/main.go\` and test your implementation with \`make test\`.
-- Build the plugin with \`make build\`.
-
-## 📚 Learn More
-
-For more information about Cosmo and building router plugins:
-- [Cosmo Documentation](https://cosmo-docs.wundergraph.com/)
-- [Cosmo Router Plugins Guide](https://cosmo-docs.wundergraph.com/connect/plugins)
-
----
-
-<p align="center">Made with ❤️ by <a href="https://wundergraph.com">WunderGraph</a></p>`;
-
-const schema = `type World {
-  """
-  The ID of the world
-  """
-  id: ID!
-  """
-  The name of the world
-  """
-  name: String!
-}
-
-type Query {
-  """
-  The hello query
-  """
-  hello(name: String!): World!
-}
-`;
-
-const cursorRules = `---
-description: {name} Plugin Guide
-globs: src/**
-alwaysApply: false
----
-
-# {name} Plugin Development Guide
-
-You are an expert in developing Cosmo Router plugins. You are given a GraphQL schema, and you need to implement the Go code for the plugin.
-Your goal is to implement the plugin in a way that is easy to understand and maintain. You add tests to ensure the plugin works as expected.
-
-All make commands need to be run from the plugin directory \`{pluginDir}\`.
-
-## Plugin Structure
-
-A plugin is structured as follows:
-
-\`\`\`
-plugins/{originalPluginName}/
-├── Makefile                     # Build automation
-├── go.mod                       # Go module definition
-├── go.sum                       # Go module checksums
-├── src/
-│   ├── schema.graphql           # GraphQL schema (API contract)
-│   ├── main.go                  # Plugin implementation
-│   └── main_test.go             # Tests for the plugin
-├── generated/                   # Auto-generated files (DO NOT EDIT)
-│   ├── service.proto            # Generated Protocol Buffers
-│   ├── service.pb.go            # Generated Go structures
-│   ├── service.proto.lock.json  # Generated Protobuf lock file
-│   └── service_grpc.pb.go       # Generated gRPC service
-└── bin/                         # Compiled binaries
-    └── plugin                   # The compiled plugin binary
-\`\`\`
-
-## Development Workflow
-
-1. When modifying the GraphQL schema in \`src/schema.graphql\`, you need to regenerate the code with \`make generate\`.
-2. Look into the generated code in \`generated/service.proto\` and \`generated/service.pb.go\` to understand the updated API contract and service methods.
-3. Implement the new RPC methods in \`src/main.go\`.
-4. Add tests to \`src/main_test.go\` to ensure the plugin works as expected. You need to run \`make test\` to ensure the tests pass.
-5. Finally, build the plugin with \`make build\` to ensure the plugin is working as expected.
-6. Your job is done after successfully building the plugin. Don't verify if the binary was created. The build command will take care of that.
-
-**Important**: Never manipulate the files inside \`generated\` directory yourself. Don't touch the \`service.proto\`,  \`service.proto.lock.json\`, \`service.pb.go\` and \`service_grpc.pb.go\` files.
-
-You can update the Go dependencies by running \`make test\` to ensure the dependencies are up to date. It runs \`go mod tidy\` under the hood.
-
-## Implementation Pattern
-
-### Service Integration
-
-If you need to integrate with other HTTP services, you should prefer to use the \`github.com/wundergraph/cosmo/router-plugin/httpclient\` package.
-Always prefer a real integration over mocking. In the tests, you can mock the external service by bootstrapping an http server that returns the expected response.
-In tests, focus on a well-defined contract and the expected behavior of your service. Structure tests by endpoint, use-cases and use table-driven tests when possible.
-
-Here is an example of how to use the \`httpclient\` package:
-
-\`\`\`go
-// Initialize HTTP client for external API calls
-// The base URL is the URL of the external API
-client := httpclient.New(
-  httpclient.WithBaseURL("<replace_with_base_url>"),
-  httpclient.WithTimeout(5*time.Second),
-  httpclient.WithHeaders(map[string]string{}),
-)
-// A HTTP GET request to the external API
-resp, err := client.Get(ctx, "/<replace_with_path>")
-// A HTTP POST/PUT/DELETE request to the external API with a struct that is marshalled to JSON
-resp, err := client.Post(ctx, "/<replace_with_path>", payload)
-// Passing payload with custom request options
-resp, err := client.Put(ctx, "/<replace_with_path>", payload,
-  httpclient.WithHeaders(map[string]string{}),
-)
-// Unmarshal the JSON response into our data structure
-data, err := httpclient.UnmarshalTo[[]ResponseType](resp)
-// The response offers the following fields:
-type Response struct {
-	StatusCode int
-	Headers    http.Header
-	Body       []byte
-}
-// You can check for success (StatusCode >= 200 && StatusCode < 300)
-resp.IsSuccess()
-\`\`\`
-`;
-
-const cursorIgnore = `# Ignore the mapping and lock files
-generated/mapping.json
-generated/service.proto.lock.json
-# Ignore the proto to avoid interpretation issues
-generated/service.proto
-# Ignore the plugin binary
-bin/
-`;
+const schema = "type World {\n  \"\"\"\n  The ID of the world\n  \"\"\"\n  id: ID!\n  \"\"\"\n  The name of the world\n  \"\"\"\n  name: String!\n}\n\ntype Query {\n  \"\"\"\n  The hello query\n  \"\"\"\n  hello(name: String!): World!\n}\n\n";
 
 export default {
-  goMod,
-  readme,
-  schema,
+  cursorignore,
+  cursorrules,
   gitignore,
   makefile,
-  cursorRules,
-  cursorIgnore,
+  readmeMd,
+  goMod,
+  readme,
+  schemaGraphql,
+  schema,
 };
