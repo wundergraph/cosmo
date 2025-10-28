@@ -62,16 +62,18 @@ func TestPublishHook(t *testing.T) {
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
 				"publishModule": stream_publish.PublishModule{
-					Callback: func(ctx core.StreamPublishEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
-						for _, event := range events {
-							evt, ok := event.(*kafka.Event)
+					Callback: func(ctx core.StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
+						newEvts := make([]datasource.StreamEvent, 0, len(events.UnsafeStreamEvents()))
+						for _, event := range events.UnsafeStreamEvents() {
+							evt, ok := event.GetUnsafeEvent().(*kafka.UnsafeEvent)
 							if !ok {
 								continue
 							}
 							evt.Headers["x-test"] = []byte("test")
+							newEvts = append(newEvts, kafka.NewEvent(evt))
 						}
 
-						return events, nil
+						return datasource.NewStreamEvents(newEvts), nil
 					},
 				},
 			},
@@ -114,7 +116,7 @@ func TestPublishHook(t *testing.T) {
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
 				"publishModule": stream_publish.PublishModule{
-					Callback: func(ctx core.StreamPublishEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
+					Callback: func(ctx core.StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
 						return events, core.NewHttpGraphqlError("test", http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 					},
 				},
@@ -159,7 +161,7 @@ func TestPublishHook(t *testing.T) {
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
 				"publishModule": stream_publish.PublishModule{
-					Callback: func(ctx core.StreamPublishEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
+					Callback: func(ctx core.StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
 						return events, core.NewHttpGraphqlError("test", http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 					},
 				},
@@ -213,7 +215,7 @@ func TestPublishHook(t *testing.T) {
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
 				"publishModule": stream_publish.PublishModule{
-					Callback: func(ctx core.StreamPublishEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
+					Callback: func(ctx core.StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
 						return events, core.NewHttpGraphqlError("test", http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 					},
 				},
@@ -257,26 +259,28 @@ func TestPublishHook(t *testing.T) {
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
 				"publishModule": stream_publish.PublishModule{
-					Callback: func(ctx core.StreamPublishEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
+					Callback: func(ctx core.StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
 						if ctx.PublishEventConfiguration().RootFieldName() != "updateEmployeeMyKafka" {
 							return events, nil
 						}
 
 						employeeID := ctx.Operation().Variables().GetInt("employeeID")
 
-						newEvents := []datasource.StreamEvent{}
-						for _, event := range events {
-							evt, ok := event.(*kafka.Event)
+						newEvents := make([]datasource.StreamEvent, 0, len(events.UnsafeStreamEvents()))
+						for _, event := range events.UnsafeStreamEvents() {
+							newEvt, ok := event.GetUnsafeEvent().Clone().(*kafka.UnsafeEvent)
 							if !ok {
 								continue
 							}
-							if evt.Headers == nil {
-								evt.Headers = map[string][]byte{}
+							newEvt.SetData([]byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`))
+							if newEvt.Headers == nil {
+								newEvt.Headers = map[string][]byte{}
 							}
-							evt.Headers["x-employee-id"] = []byte(strconv.Itoa(employeeID))
-							newEvents = append(newEvents, event)
+							newEvt.Headers["x-employee-id"] = []byte(strconv.Itoa(employeeID))
+							newEvents = append(newEvents, kafka.NewEvent(newEvt))
 						}
-						return newEvents, nil
+
+						return datasource.NewStreamEvents(newEvents), nil
 					},
 				},
 			},

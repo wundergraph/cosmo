@@ -11,7 +11,7 @@ const myModuleID = "streamReceiveModule"
 
 type StreamReceiveModule struct {
 	Logger   *zap.Logger
-	Callback func(ctx core.StreamReceiveEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error)
+	Callback func(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error)
 }
 
 func (m *StreamReceiveModule) Provision(ctx *core.ModuleContext) error {
@@ -21,7 +21,7 @@ func (m *StreamReceiveModule) Provision(ctx *core.ModuleContext) error {
 	return nil
 }
 
-func (m *StreamReceiveModule) OnReceiveEvents(ctx core.StreamReceiveEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
+func (m *StreamReceiveModule) OnReceiveEvents(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
 	m.Logger.Info("Stream Hook has been run")
 
 	if m.Callback != nil {

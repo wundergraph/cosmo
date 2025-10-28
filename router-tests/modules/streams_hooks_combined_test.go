@@ -36,33 +36,39 @@ func TestStreamsHooksCombined(t *testing.T) {
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
 				"streamReceiveModule": stream_receive.StreamReceiveModule{
-					Callback: func(ctx core.StreamReceiveEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
-						for _, event := range events {
-							evt, ok := event.(*kafka.Event)
+					Callback: func(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
+						newEvents := make([]datasource.StreamEvent, 0, len(events.UnsafeStreamEvents()))
+						for _, event := range events.UnsafeStreamEvents() {
+							newEvt, ok := event.GetUnsafeEvent().Clone().(*kafka.UnsafeEvent)
 							if !ok {
 								continue
 							}
-
-							if string(evt.Headers["x-publishModule"]) == "i_was_here" {
-								evt.Data = []byte(`{"__typename":"Employee","id": 2,"update":{"name":"irrelevant"}}`)
+							if string(newEvt.Headers["x-publishModule"]) == "i_was_here" {
+								newEvt.SetData([]byte(`{"__typename":"Employee","id": 2,"update":{"name":"irrelevant"}}`))
 							}
+							newEvents = append(newEvents, kafka.NewEvent(newEvt))
 						}
 
-						return events, nil
+						return datasource.NewStreamEvents(newEvents), nil
 					},
 				},
 				"publishModule": stream_publish.PublishModule{
-					Callback: func(ctx core.StreamPublishEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
+					Callback: func(ctx core.StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
 						if ctx.PublishEventConfiguration().RootFieldName() != "updateEmployeeMyKafka" {
 							return events, nil
 						}
 
-						for _, event := range events {
-							evt, ok := event.(*kafka.Event)
+						newEvents := make([]datasource.StreamEvent, 0, len(events.UnsafeStreamEvents()))
+						for _, event := range events.UnsafeStreamEvents() {
+							newEvt, ok := event.GetUnsafeEvent().Clone().(*kafka.UnsafeEvent)
 							if !ok {
 								continue
 							}
-							evt.Headers["x-publishModule"] = []byte("i_was_here")
+							if newEvt.Headers == nil {
+								newEvt.Headers = make(map[string][]byte)
+							}
+							newEvt.Headers["x-publishModule"] = []byte("i_was_here")
+							newEvents = append(newEvents, kafka.NewEvent(newEvt))
 						}
 
 						return events, nil

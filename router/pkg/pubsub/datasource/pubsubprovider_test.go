@@ -1,9 +1,9 @@
 package datasource
 
 import (
-	"bytes"
 	"context"
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,18 +12,30 @@ import (
 )
 
 // Test helper types
+type unsafeTestEvent []byte
+
+func (e unsafeTestEvent) Clone() UnsafeStreamEvent {
+	return slices.Clone(e)
+}
+
+func (e unsafeTestEvent) GetData() []byte {
+	return e
+}
+
+func (e unsafeTestEvent) SetData(data []byte) {
+	copy(e, data)
+}
+
 type testEvent struct {
-	data []byte
+	evt unsafeTestEvent
 }
 
 func (e *testEvent) GetData() []byte {
-	return e.data
+	return slices.Clone(e.evt.GetData())
 }
 
-func (e *testEvent) Clone() StreamEvent {
-	return &testEvent{
-		data: bytes.Clone(e.data),
-	}
+func (e *testEvent) GetUnsafeEvent() UnsafeStreamEvent {
+	return e.evt
 }
 
 type testSubscriptionConfig struct {
@@ -158,8 +170,8 @@ func TestProvider_Publish_NoHooks_Success(t *testing.T) {
 		fieldName:    "testField",
 	}
 	events := []StreamEvent{
-		&testEvent{data: []byte("test data 1")},
-		&testEvent{data: []byte("test data 2")},
+		&testEvent{unsafeTestEvent("test data 1")},
+		&testEvent{unsafeTestEvent("test data 2")},
 	}
 
 	mockAdapter.On("Publish", mock.Anything, config, events).Return(nil)
@@ -181,7 +193,7 @@ func TestProvider_Publish_NoHooks_Error(t *testing.T) {
 		fieldName:    "testField",
 	}
 	events := []StreamEvent{
-		&testEvent{data: []byte("test data")},
+		&testEvent{unsafeTestEvent("test data")},
 	}
 	expectedError := errors.New("publish error")
 
@@ -205,10 +217,10 @@ func TestProvider_Publish_WithHooks_Success(t *testing.T) {
 		fieldName:    "testField",
 	}
 	originalEvents := []StreamEvent{
-		&testEvent{data: []byte("original data")},
+		&testEvent{unsafeTestEvent("original data")},
 	}
 	modifiedEvents := []StreamEvent{
-		&testEvent{data: []byte("modified data")},
+		&testEvent{unsafeTestEvent("modified data")},
 	}
 
 	// Define hook that modifies events
@@ -237,7 +249,7 @@ func TestProvider_Publish_WithHooks_HookError(t *testing.T) {
 		fieldName:    "testField",
 	}
 	events := []StreamEvent{
-		&testEvent{data: []byte("test data")},
+		&testEvent{unsafeTestEvent("test data")},
 	}
 	hookError := errors.New("hook processing error")
 
@@ -270,10 +282,10 @@ func TestProvider_Publish_WithHooks_AdapterError(t *testing.T) {
 		fieldName:    "testField",
 	}
 	originalEvents := []StreamEvent{
-		&testEvent{data: []byte("original data")},
+		&testEvent{unsafeTestEvent("original data")},
 	}
 	processedEvents := []StreamEvent{
-		&testEvent{data: []byte("processed data")},
+		&testEvent{unsafeTestEvent("processed data")},
 	}
 	adapterError := errors.New("adapter publish error")
 
@@ -304,15 +316,15 @@ func TestProvider_Publish_WithMultipleHooks_Success(t *testing.T) {
 		fieldName:    "testField",
 	}
 	originalEvents := []StreamEvent{
-		&testEvent{data: []byte("original")},
+		&testEvent{unsafeTestEvent("original")},
 	}
 
 	// Chain of hooks that modify the data
 	hook1 := func(ctx context.Context, cfg PublishEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
-		return []StreamEvent{&testEvent{data: []byte("modified by hook1")}}, nil
+		return []StreamEvent{&testEvent{unsafeTestEvent("modified by hook1")}}, nil
 	}
 	hook2 := func(ctx context.Context, cfg PublishEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
-		return []StreamEvent{&testEvent{data: []byte("modified by hook2")}}, nil
+		return []StreamEvent{&testEvent{unsafeTestEvent("modified by hook2")}}, nil
 	}
 
 	mockAdapter.On("Publish", mock.Anything, config, mock.MatchedBy(func(events []StreamEvent) bool {
@@ -370,7 +382,7 @@ func TestApplyPublishEventHooks_NoHooks(t *testing.T) {
 		fieldName:    "testField",
 	}
 	originalEvents := []StreamEvent{
-		&testEvent{data: []byte("test data")},
+		&testEvent{unsafeTestEvent("test data")},
 	}
 
 	result, err := applyPublishEventHooks(ctx, config, originalEvents, []OnPublishEventsFn{})
@@ -387,10 +399,10 @@ func TestApplyPublishEventHooks_SingleHook_Success(t *testing.T) {
 		fieldName:    "testField",
 	}
 	originalEvents := []StreamEvent{
-		&testEvent{data: []byte("original")},
+		&testEvent{unsafeTestEvent("original")},
 	}
 	modifiedEvents := []StreamEvent{
-		&testEvent{data: []byte("modified")},
+		&testEvent{unsafeTestEvent("modified")},
 	}
 
 	hook := func(ctx context.Context, cfg PublishEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
@@ -411,7 +423,7 @@ func TestApplyPublishEventHooks_SingleHook_Error(t *testing.T) {
 		fieldName:    "testField",
 	}
 	originalEvents := []StreamEvent{
-		&testEvent{data: []byte("original")},
+		&testEvent{unsafeTestEvent("original")},
 	}
 	hookError := errors.New("hook processing failed")
 
@@ -434,17 +446,17 @@ func TestApplyPublishEventHooks_MultipleHooks_Success(t *testing.T) {
 		fieldName:    "testField",
 	}
 	originalEvents := []StreamEvent{
-		&testEvent{data: []byte("original")},
+		&testEvent{unsafeTestEvent("original")},
 	}
 
 	hook1 := func(ctx context.Context, cfg PublishEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
-		return []StreamEvent{&testEvent{data: []byte("step1")}}, nil
+		return []StreamEvent{&testEvent{unsafeTestEvent("step1")}}, nil
 	}
 	hook2 := func(ctx context.Context, cfg PublishEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
-		return []StreamEvent{&testEvent{data: []byte("step2")}}, nil
+		return []StreamEvent{&testEvent{unsafeTestEvent("step2")}}, nil
 	}
 	hook3 := func(ctx context.Context, cfg PublishEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
-		return []StreamEvent{&testEvent{data: []byte("final")}}, nil
+		return []StreamEvent{&testEvent{unsafeTestEvent("final")}}, nil
 	}
 
 	result, err := applyPublishEventHooks(ctx, config, originalEvents, []OnPublishEventsFn{hook1, hook2, hook3})
@@ -462,18 +474,18 @@ func TestApplyPublishEventHooks_MultipleHooks_MiddleHookError(t *testing.T) {
 		fieldName:    "testField",
 	}
 	originalEvents := []StreamEvent{
-		&testEvent{data: []byte("original")},
+		&testEvent{unsafeTestEvent("original")},
 	}
 	middleHookError := errors.New("middle hook failed")
 
 	hook1 := func(ctx context.Context, cfg PublishEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
-		return []StreamEvent{&testEvent{data: []byte("step1")}}, nil
+		return []StreamEvent{&testEvent{unsafeTestEvent("step1")}}, nil
 	}
 	hook2 := func(ctx context.Context, cfg PublishEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
 		return nil, middleHookError
 	}
 	hook3 := func(ctx context.Context, cfg PublishEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
-		return []StreamEvent{&testEvent{data: []byte("final")}}, nil
+		return []StreamEvent{&testEvent{unsafeTestEvent("final")}}, nil
 	}
 
 	result, err := applyPublishEventHooks(ctx, config, originalEvents, []OnPublishEventsFn{hook1, hook2, hook3})

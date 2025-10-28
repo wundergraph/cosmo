@@ -15,17 +15,48 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
-// Event represents an event from Redis
 type Event struct {
+	evt *UnsafeEvent
+}
+
+func (e Event) GetData() []byte {
+	if e.evt == nil {
+		return nil
+	}
+	return slices.Clone(e.evt.Data)
+}
+
+func (e Event) GetUnsafeEvent() datasource.UnsafeStreamEvent {
+	return e.evt
+}
+
+func NewEvent(evt *UnsafeEvent) datasource.StreamEvent {
+	return &Event{evt: evt}
+}
+
+type UnsafeEvent struct {
 	Data json.RawMessage `json:"data"`
 }
 
-func (e *Event) GetData() []byte {
+func (e *UnsafeEvent) GetData() []byte {
+	if e == nil {
+		return nil
+	}
 	return e.Data
 }
 
-func (e *Event) Clone() datasource.StreamEvent {
-	return &Event{
+func (e *UnsafeEvent) SetData(data []byte) {
+	if e == nil {
+		return
+	}
+	e.Data = data
+}
+
+func (e *UnsafeEvent) Clone() datasource.UnsafeStreamEvent {
+	if e == nil {
+		return (*UnsafeEvent)(nil)
+	}
+	return &UnsafeEvent{
 		Data: slices.Clone(e.Data),
 	}
 }
@@ -55,10 +86,10 @@ func (s *SubscriptionEventConfiguration) RootFieldName() string {
 // publishData is a private type that is used to pass data from the engine to the provider
 
 type publishData struct {
-	Provider  string `json:"providerId"`
-	Channel   string `json:"channel"`
-	Event     Event  `json:"event"`
-	FieldName string `json:"rootFieldName"`
+	Provider  string      `json:"providerId"`
+	Channel   string      `json:"channel"`
+	Event     UnsafeEvent `json:"event"`
+	FieldName string      `json:"rootFieldName"`
 }
 
 func (p *publishData) PublishEventConfiguration() datasource.PublishEventConfiguration {
@@ -162,7 +193,7 @@ func (s *PublishDataSource) Load(ctx context.Context, input []byte, out *bytes.B
 		return err
 	}
 
-	if err := s.pubSub.Publish(ctx, publishData.PublishEventConfiguration(), []datasource.StreamEvent{&publishData.Event}); err != nil {
+	if err := s.pubSub.Publish(ctx, publishData.PublishEventConfiguration(), []datasource.StreamEvent{Event{evt: &publishData.Event}}); err != nil {
 		// err will not be returned but only logged inside PubSubProvider.Publish to avoid a "unable to fetch from subgraph" error
 		_, errWrite := io.WriteString(out, `{"success": false}`)
 		return errWrite
@@ -180,3 +211,4 @@ func (s *PublishDataSource) LoadWithFiles(ctx context.Context, input []byte, fil
 var _ datasource.SubscriptionEventConfiguration = (*SubscriptionEventConfiguration)(nil)
 var _ datasource.PublishEventConfiguration = (*PublishEventConfiguration)(nil)
 var _ datasource.StreamEvent = (*Event)(nil)
+var _ datasource.UnsafeStreamEvent = (*UnsafeEvent)(nil)

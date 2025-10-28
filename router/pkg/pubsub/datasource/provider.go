@@ -2,6 +2,8 @@ package datasource
 
 import (
 	"context"
+	"iter"
+	"slices"
 
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 )
@@ -59,15 +61,20 @@ const (
 // Be careful when modifying this as it might be shared with other
 // handlers and can cause unwanted side effects and race conditions.
 // Use Clone() to avoid this.
-type StreamEvents []StreamEvent
+type StreamEvents struct {
+	evts []StreamEvent
+}
 
-// Clone returns a deep copy of s.
-func (s StreamEvents) Clone() StreamEvents {
-	res := make(StreamEvents, len(s))
-	for i := range s {
-		res[i] = s[i].Clone()
-	}
-	return res
+func (e StreamEvents) All() iter.Seq2[int, StreamEvent] {
+	return slices.All(e.evts)
+}
+
+func (e StreamEvents) UnsafeStreamEvents() []StreamEvent {
+	return e.evts
+}
+
+func NewStreamEvents(evts []StreamEvent) StreamEvents {
+	return StreamEvents{evts: evts}
 }
 
 // StreamEvent is a generic interface for all stream events
@@ -75,7 +82,16 @@ func (s StreamEvents) Clone() StreamEvents {
 // there could be other common fields in the future, but for now we only have data
 type StreamEvent interface {
 	GetData() []byte
-	Clone() StreamEvent
+	GetUnsafeEvent() UnsafeStreamEvent
+}
+
+// UnsafeStreamEvent is a generic interface for all stream events
+// Each provider will have its own event type that implements this interface
+// there could be other common fields in the future, but for now we only have data
+type UnsafeStreamEvent interface {
+	GetData() []byte
+	SetData([]byte)
+	Clone() UnsafeStreamEvent
 }
 
 // SubscriptionEventConfiguration is the interface that all subscription event configurations must implement

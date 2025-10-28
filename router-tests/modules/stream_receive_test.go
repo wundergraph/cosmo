@@ -115,16 +115,15 @@ func TestReceiveHook(t *testing.T) {
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
 				"streamReceiveModule": stream_receive.StreamReceiveModule{
-					Callback: func(ctx core.StreamReceiveEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
-						for _, event := range events {
-							evt, ok := event.(*kafka.Event)
-							if !ok {
-								continue
-							}
-							evt.Data = []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`)
+					Callback: func(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
+						newEvents := make([]datasource.StreamEvent, 0, len(events.UnsafeStreamEvents()))
+						for _, event := range events.UnsafeStreamEvents() {
+							newEvt := event.GetUnsafeEvent().Clone()
+							newEvt.SetData([]byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`))
+							newEvents = append(newEvents, kafka.NewEvent(newEvt.(*kafka.UnsafeEvent)))
 						}
 
-						return events, nil
+						return datasource.NewStreamEvents(newEvents), nil
 					},
 				},
 			},
@@ -200,22 +199,22 @@ func TestReceiveHook(t *testing.T) {
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
 				"streamReceiveModule": stream_receive.StreamReceiveModule{
-					Callback: func(ctx core.StreamReceiveEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
+					Callback: func(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
 						if ctx.Authentication() == nil {
 							return events, nil
 						}
 						if val, ok := ctx.Authentication().Claims()["sub"]; !ok || val != "user-2" {
 							return events, nil
 						}
-						for _, event := range events {
-							evt, ok := event.(*kafka.Event)
-							if !ok {
-								continue
-							}
-							evt.Data = []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`)
+
+						newEvents := make([]datasource.StreamEvent, 0, len(events.UnsafeStreamEvents()))
+						for _, event := range events.UnsafeStreamEvents() {
+							newEvt := event.GetUnsafeEvent().Clone()
+							newEvt.SetData([]byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`))
+							newEvents = append(newEvents, kafka.NewEvent(newEvt.(*kafka.UnsafeEvent)))
 						}
 
-						return events, nil
+						return datasource.NewStreamEvents(newEvents), nil
 					},
 				},
 			},
@@ -356,19 +355,19 @@ func TestReceiveHook(t *testing.T) {
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
 				"streamReceiveModule": stream_receive.StreamReceiveModule{
-					Callback: func(ctx core.StreamReceiveEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
+					Callback: func(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
 						if val, ok := ctx.Request().Header[customHeader]; !ok || val[0] != "Test" {
 							return events, nil
 						}
-						for _, event := range events {
-							evt, ok := event.(*kafka.Event)
-							if !ok {
-								continue
-							}
-							evt.Data = []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`)
+
+						newEvents := make([]datasource.StreamEvent, 0, len(events.UnsafeStreamEvents()))
+						for _, event := range events.UnsafeStreamEvents() {
+							newEvt := event.GetUnsafeEvent().Clone()
+							newEvt.SetData([]byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`))
+							newEvents = append(newEvents, kafka.NewEvent(newEvt.(*kafka.UnsafeEvent)))
 						}
 
-						return events, nil
+						return datasource.NewStreamEvents(newEvents), nil
 					},
 				},
 			},
@@ -452,8 +451,8 @@ func TestReceiveHook(t *testing.T) {
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
 				"streamReceiveModule": stream_receive.StreamReceiveModule{
-					Callback: func(ctx core.StreamReceiveEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
-						return nil, errors.New("test error from streamevents hook")
+					Callback: func(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
+						return datasource.NewStreamEvents(nil), errors.New("test error from streamevents hook")
 					},
 				},
 			},
@@ -526,8 +525,8 @@ func TestReceiveHook(t *testing.T) {
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
 				"streamReceiveModule": stream_receive.StreamReceiveModule{
-					Callback: func(ctx core.StreamReceiveEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
-						return nil, errors.New("deduplicated error")
+					Callback: func(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
+						return datasource.NewStreamEvents(nil), errors.New("deduplicated error")
 					},
 				},
 			},
@@ -621,9 +620,9 @@ func TestReceiveHook(t *testing.T) {
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
 				"streamReceiveModule": stream_receive.StreamReceiveModule{
-					Callback: func(ctx core.StreamReceiveEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
+					Callback: func(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
 						count := errorCounter.Add(1)
-						return nil, fmt.Errorf("unique error %d", count)
+						return datasource.NewStreamEvents(nil), fmt.Errorf("unique error %d", count)
 					},
 				},
 			},
@@ -764,7 +763,7 @@ func TestReceiveHook(t *testing.T) {
 					Graph: config.Graph{},
 					Modules: map[string]interface{}{
 						"streamReceiveModule": stream_receive.StreamReceiveModule{
-							Callback: func(ctx core.StreamReceiveEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
+							Callback: func(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
 								currentHandlers.Add(1)
 
 								// wait for other handlers in the batch

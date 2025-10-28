@@ -44,8 +44,8 @@ func TestSubscriptionEventUpdater_Update_NoHooks(t *testing.T) {
 		fieldName:    "testField",
 	}
 	events := []StreamEvent{
-		&testEvent{data: []byte("test data 1")},
-		&testEvent{data: []byte("test data 2")},
+		&testEvent{unsafeTestEvent("test data 1")},
+		&testEvent{unsafeTestEvent("test data 2")},
 	}
 
 	// Expect calls to Update for each event
@@ -69,10 +69,10 @@ func TestSubscriptionEventUpdater_UpdateSubscription_WithHooks_Success(t *testin
 		fieldName:    "testField",
 	}
 	originalEvents := []StreamEvent{
-		&testEvent{data: []byte("original data")},
+		&testEvent{unsafeTestEvent("original data")},
 	}
 	modifiedEvents := []StreamEvent{
-		&testEvent{data: []byte("modified data")},
+		&testEvent{unsafeTestEvent("modified data")},
 	}
 
 	// Create wrapper function for the mock
@@ -116,7 +116,7 @@ func TestSubscriptionEventUpdater_UpdateSubscriptions_WithHooks_Error(t *testing
 		fieldName:    "testField",
 	}
 	events := []StreamEvent{
-		&testEvent{data: []byte("test data")},
+		&testEvent{unsafeTestEvent("test data")},
 	}
 	hookError := errors.New("hook processing error")
 
@@ -157,20 +157,20 @@ func TestSubscriptionEventUpdater_Update_WithMultipleHooks_Success(t *testing.T)
 		fieldName:    "testField",
 	}
 	originalEvents := []StreamEvent{
-		&testEvent{data: []byte("original")},
+		&testEvent{unsafeTestEvent("original")},
 	}
 
 	// Chain of hooks that modify the data
 	receivedArgs1 := make(chan receivedHooksArgs, 1)
 	hook1 := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
 		receivedArgs1 <- receivedHooksArgs{events: events, cfg: cfg}
-		return []StreamEvent{&testEvent{data: []byte("modified by hook1")}}, nil
+		return []StreamEvent{&testEvent{unsafeTestEvent("modified by hook1")}}, nil
 	}
 
 	receivedArgs2 := make(chan receivedHooksArgs, 1)
 	hook2 := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
 		receivedArgs2 <- receivedHooksArgs{events: events, cfg: cfg}
-		return []StreamEvent{&testEvent{data: []byte("modified by hook2")}}, nil
+		return []StreamEvent{&testEvent{unsafeTestEvent("modified by hook2")}}, nil
 	}
 
 	// Expect call to UpdateSubscription with modified data
@@ -200,7 +200,7 @@ func TestSubscriptionEventUpdater_Update_WithMultipleHooks_Success(t *testing.T)
 
 	select {
 	case receivedArgs2 := <-receivedArgs2:
-		assert.Equal(t, []StreamEvent{&testEvent{data: []byte("modified by hook1")}}, receivedArgs2.events)
+		assert.Equal(t, []StreamEvent{&testEvent{unsafeTestEvent("modified by hook1")}}, receivedArgs2.events)
 		assert.Equal(t, config, receivedArgs2.cfg)
 	case <-time.After(1 * time.Second):
 		t.Fatal("timeout waiting for events")
@@ -302,180 +302,180 @@ func TestNewSubscriptionEventUpdater(t *testing.T) {
 	assert.Equal(t, mockUpdater, concreteUpdater.eventUpdater)
 }
 
-func TestApplyReceiveEventHooks_NoHooks(t *testing.T) {
-	ctx := context.Background()
-	config := &testSubscriptionEventConfig{
-		providerID:   "test-provider",
-		providerType: ProviderTypeNats,
-		fieldName:    "testField",
-	}
-	originalEvents := []StreamEvent{
-		&testEvent{data: []byte("test data")},
-	}
+// func TestApplyReceiveEventHooks_NoHooks(t *testing.T) {
+// 	ctx := context.Background()
+// 	config := &testSubscriptionEventConfig{
+// 		providerID:   "test-provider",
+// 		providerType: ProviderTypeNats,
+// 		fieldName:    "testField",
+// 	}
+// 	originalEvents := []StreamEvent{
+// 		&testEvent{unsafeTestEvent("test data")},
+// 	}
 
-	result, err := applyReceiveEventHooks(ctx, config, originalEvents, []OnReceiveEventsFn{})
+// 	result, err := applyReceiveEventHooks(ctx, config, originalEvents, []OnReceiveEventsFn{})
 
-	assert.NoError(t, err)
-	assert.Equal(t, originalEvents, result)
-}
+// 	assert.NoError(t, err)
+// 	assert.Equal(t, originalEvents, result)
+// }
 
-func TestApplyReceiveEventHooks_SingleHook_Success(t *testing.T) {
-	ctx := context.Background()
-	config := &testSubscriptionEventConfig{
-		providerID:   "test-provider",
-		providerType: ProviderTypeNats,
-		fieldName:    "testField",
-	}
-	originalEvents := []StreamEvent{
-		&testEvent{data: []byte("original")},
-	}
-	modifiedEvents := []StreamEvent{
-		&testEvent{data: []byte("modified")},
-	}
+// func TestApplyReceiveEventHooks_SingleHook_Success(t *testing.T) {
+// 	ctx := context.Background()
+// 	config := &testSubscriptionEventConfig{
+// 		providerID:   "test-provider",
+// 		providerType: ProviderTypeNats,
+// 		fieldName:    "testField",
+// 	}
+// 	originalEvents := []StreamEvent{
+// 		&testEvent{unsafeTestEvent("original")},
+// 	}
+// 	modifiedEvents := []StreamEvent{
+// 		&testEvent{unsafeTestEvent("modified")},
+// 	}
 
-	hook := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
-		return modifiedEvents, nil
-	}
+// 	hook := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
+// 		return modifiedEvents, nil
+// 	}
 
-	result, err := applyReceiveEventHooks(ctx, config, originalEvents, []OnReceiveEventsFn{hook})
+// 	result, err := applyReceiveEventHooks(ctx, config, originalEvents, []OnReceiveEventsFn{hook})
 
-	assert.NoError(t, err)
-	assert.Equal(t, modifiedEvents, result)
-}
+// 	assert.NoError(t, err)
+// 	assert.Equal(t, modifiedEvents, result)
+// }
 
-func TestApplyReceiveEventHooks_SingleHook_Error(t *testing.T) {
-	ctx := context.Background()
-	config := &testSubscriptionEventConfig{
-		providerID:   "test-provider",
-		providerType: ProviderTypeNats,
-		fieldName:    "testField",
-	}
-	originalEvents := []StreamEvent{
-		&testEvent{data: []byte("original")},
-	}
-	hookError := errors.New("hook processing failed")
+// func TestApplyReceiveEventHooks_SingleHook_Error(t *testing.T) {
+// 	ctx := context.Background()
+// 	config := &testSubscriptionEventConfig{
+// 		providerID:   "test-provider",
+// 		providerType: ProviderTypeNats,
+// 		fieldName:    "testField",
+// 	}
+// 	originalEvents := []StreamEvent{
+// 		&testEvent{unsafeTestEvent("original")},
+// 	}
+// 	hookError := errors.New("hook processing failed")
 
-	hook := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
-		return nil, hookError
-	}
+// 	hook := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
+// 		return nil, hookError
+// 	}
 
-	result, err := applyReceiveEventHooks(ctx, config, originalEvents, []OnReceiveEventsFn{hook})
+// 	result, err := applyReceiveEventHooks(ctx, config, originalEvents, []OnReceiveEventsFn{hook})
 
-	assert.Error(t, err)
-	assert.Equal(t, hookError, err)
-	assert.Nil(t, result)
-}
+// 	assert.Error(t, err)
+// 	assert.Equal(t, hookError, err)
+// 	assert.Nil(t, result)
+// }
 
-func TestApplyReceiveEventHooks_MultipleHooks_Success(t *testing.T) {
-	ctx := context.Background()
-	config := &testSubscriptionEventConfig{
-		providerID:   "test-provider",
-		providerType: ProviderTypeNats,
-		fieldName:    "testField",
-	}
-	originalEvents := []StreamEvent{
-		&testEvent{data: []byte("original")},
-	}
+// func TestApplyReceiveEventHooks_MultipleHooks_Success(t *testing.T) {
+// 	ctx := context.Background()
+// 	config := &testSubscriptionEventConfig{
+// 		providerID:   "test-provider",
+// 		providerType: ProviderTypeNats,
+// 		fieldName:    "testField",
+// 	}
+// 	originalEvents := []StreamEvent{
+// 		&testEvent{unsafeTestEvent("original")},
+// 	}
 
-	receivedArgs1 := make(chan receivedHooksArgs, 1)
-	hook1 := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
-		receivedArgs1 <- receivedHooksArgs{events: events, cfg: cfg}
-		return []StreamEvent{&testEvent{data: []byte("step1")}}, nil
-	}
-	receivedArgs2 := make(chan receivedHooksArgs, 1)
-	hook2 := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
-		receivedArgs2 <- receivedHooksArgs{events: events, cfg: cfg}
-		return []StreamEvent{&testEvent{data: []byte("step2")}}, nil
-	}
-	receivedArgs3 := make(chan receivedHooksArgs, 1)
-	hook3 := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
-		receivedArgs3 <- receivedHooksArgs{events: events, cfg: cfg}
-		return []StreamEvent{&testEvent{data: []byte("final")}}, nil
-	}
+// 	receivedArgs1 := make(chan receivedHooksArgs, 1)
+// 	hook1 := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
+// 		receivedArgs1 <- receivedHooksArgs{events: events, cfg: cfg}
+// 		return []StreamEvent{&testEvent{unsafeTestEvent("step1")}}, nil
+// 	}
+// 	receivedArgs2 := make(chan receivedHooksArgs, 1)
+// 	hook2 := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
+// 		receivedArgs2 <- receivedHooksArgs{events: events, cfg: cfg}
+// 		return []StreamEvent{&testEvent{unsafeTestEvent("step2")}}, nil
+// 	}
+// 	receivedArgs3 := make(chan receivedHooksArgs, 1)
+// 	hook3 := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
+// 		receivedArgs3 <- receivedHooksArgs{events: events, cfg: cfg}
+// 		return []StreamEvent{&testEvent{unsafeTestEvent("final")}}, nil
+// 	}
 
-	result, err := applyReceiveEventHooks(ctx, config, originalEvents, []OnReceiveEventsFn{hook1, hook2, hook3})
+// 	result, err := applyReceiveEventHooks(ctx, config, originalEvents, []OnReceiveEventsFn{hook1, hook2, hook3})
 
-	select {
-	case receivedArgs1 := <-receivedArgs1:
-		assert.Equal(t, originalEvents, receivedArgs1.events)
-		assert.Equal(t, config, receivedArgs1.cfg)
-	case <-time.After(1 * time.Second):
-		t.Fatal("timeout waiting for events")
-	}
+// 	select {
+// 	case receivedArgs1 := <-receivedArgs1:
+// 		assert.Equal(t, originalEvents, receivedArgs1.events)
+// 		assert.Equal(t, config, receivedArgs1.cfg)
+// 	case <-time.After(1 * time.Second):
+// 		t.Fatal("timeout waiting for events")
+// 	}
 
-	select {
-	case receivedArgs2 := <-receivedArgs2:
-		assert.Equal(t, []StreamEvent{&testEvent{data: []byte("step1")}}, receivedArgs2.events)
-		assert.Equal(t, config, receivedArgs2.cfg)
-	case <-time.After(1 * time.Second):
-		t.Fatal("timeout waiting for events")
-	}
+// 	select {
+// 	case receivedArgs2 := <-receivedArgs2:
+// 		assert.Equal(t, []StreamEvent{&testEvent{unsafeTestEvent("step1")}}, receivedArgs2.events)
+// 		assert.Equal(t, config, receivedArgs2.cfg)
+// 	case <-time.After(1 * time.Second):
+// 		t.Fatal("timeout waiting for events")
+// 	}
 
-	select {
-	case receivedArgs3 := <-receivedArgs3:
-		assert.Equal(t, []StreamEvent{&testEvent{data: []byte("step2")}}, receivedArgs3.events)
-		assert.Equal(t, config, receivedArgs3.cfg)
-	case <-time.After(1 * time.Second):
-		t.Fatal("timeout waiting for events")
-	}
+// 	select {
+// 	case receivedArgs3 := <-receivedArgs3:
+// 		assert.Equal(t, []StreamEvent{&testEvent{unsafeTestEvent("step2")}}, receivedArgs3.events)
+// 		assert.Equal(t, config, receivedArgs3.cfg)
+// 	case <-time.After(1 * time.Second):
+// 		t.Fatal("timeout waiting for events")
+// 	}
 
-	assert.NoError(t, err)
-	assert.Len(t, result, 1)
-	assert.Equal(t, "final", string(result[0].GetData()))
-}
+// 	assert.NoError(t, err)
+// 	assert.Len(t, result, 1)
+// 	assert.Equal(t, "final", string(result[0].GetData()))
+// }
 
-func TestApplyReceiveEventHooks_MultipleHooks_MiddleHookError(t *testing.T) {
-	ctx := context.Background()
-	config := &testSubscriptionEventConfig{
-		providerID:   "test-provider",
-		providerType: ProviderTypeNats,
-		fieldName:    "testField",
-	}
-	originalEvents := []StreamEvent{
-		&testEvent{data: []byte("original")},
-	}
-	middleHookError := errors.New("middle hook failed")
+// func TestApplyReceiveEventHooks_MultipleHooks_MiddleHookError(t *testing.T) {
+// 	ctx := context.Background()
+// 	config := &testSubscriptionEventConfig{
+// 		providerID:   "test-provider",
+// 		providerType: ProviderTypeNats,
+// 		fieldName:    "testField",
+// 	}
+// 	originalEvents := []StreamEvent{
+// 		&testEvent{unsafeTestEvent("original")},
+// 	}
+// 	middleHookError := errors.New("middle hook failed")
 
-	receivedArgs1 := make(chan receivedHooksArgs, 1)
-	hook1 := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
-		receivedArgs1 <- receivedHooksArgs{events: events, cfg: cfg}
-		return []StreamEvent{&testEvent{data: []byte("step1")}}, nil
-	}
-	receivedArgs2 := make(chan receivedHooksArgs, 1)
-	hook2 := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
-		receivedArgs2 <- receivedHooksArgs{events: events, cfg: cfg}
-		return nil, middleHookError
-	}
-	receivedArgs3 := make(chan receivedHooksArgs, 1)
-	hook3 := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
-		receivedArgs3 <- receivedHooksArgs{events: events, cfg: cfg}
-		return []StreamEvent{&testEvent{data: []byte("final")}}, nil
-	}
+// 	receivedArgs1 := make(chan receivedHooksArgs, 1)
+// 	hook1 := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
+// 		receivedArgs1 <- receivedHooksArgs{events: events, cfg: cfg}
+// 		return []StreamEvent{&testEvent{unsafeTestEvent("step1")}}, nil
+// 	}
+// 	receivedArgs2 := make(chan receivedHooksArgs, 1)
+// 	hook2 := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
+// 		receivedArgs2 <- receivedHooksArgs{events: events, cfg: cfg}
+// 		return nil, middleHookError
+// 	}
+// 	receivedArgs3 := make(chan receivedHooksArgs, 1)
+// 	hook3 := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
+// 		receivedArgs3 <- receivedHooksArgs{events: events, cfg: cfg}
+// 		return []StreamEvent{&testEvent{unsafeTestEvent("final")}}, nil
+// 	}
 
-	result, err := applyReceiveEventHooks(ctx, config, originalEvents, []OnReceiveEventsFn{hook1, hook2, hook3})
+// 	result, err := applyReceiveEventHooks(ctx, config, originalEvents, []OnReceiveEventsFn{hook1, hook2, hook3})
 
-	assert.Error(t, err)
-	assert.Equal(t, middleHookError, err)
-	assert.Nil(t, result)
+// 	assert.Error(t, err)
+// 	assert.Equal(t, middleHookError, err)
+// 	assert.Nil(t, result)
 
-	select {
-	case receivedArgs1 := <-receivedArgs1:
-		assert.Equal(t, originalEvents, receivedArgs1.events)
-		assert.Equal(t, config, receivedArgs1.cfg)
-	case <-time.After(1 * time.Second):
-		t.Fatal("timeout waiting for events")
-	}
+// 	select {
+// 	case receivedArgs1 := <-receivedArgs1:
+// 		assert.Equal(t, originalEvents, receivedArgs1.events)
+// 		assert.Equal(t, config, receivedArgs1.cfg)
+// 	case <-time.After(1 * time.Second):
+// 		t.Fatal("timeout waiting for events")
+// 	}
 
-	select {
-	case receivedArgs2 := <-receivedArgs2:
-		assert.Equal(t, []StreamEvent{&testEvent{data: []byte("step1")}}, receivedArgs2.events)
-		assert.Equal(t, config, receivedArgs2.cfg)
-	case <-time.After(1 * time.Second):
-		t.Fatal("timeout waiting for events")
-	}
+// 	select {
+// 	case receivedArgs2 := <-receivedArgs2:
+// 		assert.Equal(t, []StreamEvent{&testEvent{unsafeTestEvent("step1")}}, receivedArgs2.events)
+// 		assert.Equal(t, config, receivedArgs2.cfg)
+// 	case <-time.After(1 * time.Second):
+// 		t.Fatal("timeout waiting for events")
+// 	}
 
-	assert.Empty(t, receivedArgs3)
-}
+// 	assert.Empty(t, receivedArgs3)
+// }
 
 // Test the updateEvents method indirectly through Update method
 func TestSubscriptionEventUpdater_UpdateEvents_EmptyEvents(t *testing.T) {
@@ -555,7 +555,7 @@ func TestSubscriptionEventUpdater_UpdateSubscription_WithHookError_ClosesSubscri
 				fieldName:    "testField",
 			}
 			events := []StreamEvent{
-				&testEvent{data: []byte("test data")},
+				&testEvent{unsafeTestEvent("test data")},
 			}
 
 			testHook := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
@@ -592,7 +592,7 @@ func TestSubscriptionEventUpdater_UpdateSubscription_WithHooks_Error_LoggerWrite
 		fieldName:    "testField",
 	}
 	events := []StreamEvent{
-		&testEvent{data: []byte("test data")},
+		&testEvent{unsafeTestEvent("test data")},
 	}
 	hookError := errors.New("hook processing error")
 

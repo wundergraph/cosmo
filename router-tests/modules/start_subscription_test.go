@@ -94,10 +94,10 @@ func TestStartSubscriptionHook(t *testing.T) {
 						if ctx.SubscriptionEventConfiguration().RootFieldName() != "employeeUpdatedMyKafka" {
 							return nil
 						}
-						ctx.WriteEvent(&kafka.Event{
+						ctx.WriteEvent(kafka.NewEvent(&kafka.UnsafeEvent{
 							Key:  []byte("1"),
 							Data: []byte(`{"id": 1, "__typename": "Employee"}`),
-						})
+						}))
 						return nil
 					},
 				},
@@ -266,9 +266,9 @@ func TestStartSubscriptionHook(t *testing.T) {
 						if employeeId != 1 {
 							return nil
 						}
-						ctx.WriteEvent(&kafka.Event{
+						ctx.WriteEvent(kafka.NewEvent(&kafka.UnsafeEvent{
 							Data: []byte(`{"id": 1, "__typename": "Employee"}`),
-						})
+						}))
 						return nil
 					},
 				},
