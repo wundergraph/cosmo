@@ -20,7 +20,7 @@
   },
   "scripts": {
     "build": "rm -rf dist && tsc",
-    "build:bun": "bun build --compile --production --outfile wgc src/index.ts --target=bun-linux-arm64",
+    "build:bun": "bun build --compile --production --outfile wgc src/index.ts",
     "wgc": "tsx --env-file .env src/index.ts",
     "test": "pnpm lint && vitest run test/",
     "coverage": "vitest run --coverage",
