@@ -61,7 +61,6 @@
     "execa": "^9.5.2",
     "fs-extra": "^11.3.0",
     "graphql": "^16.9.0",
-    "handlebars": "^4.7.8",
     "https-proxy-agent": "^7.0.5",
     "inquirer": "^9.2.7",
     "js-yaml": "^4.1.0",
