@@ -1722,7 +1722,7 @@ func TestConcurrentQueriesWithDelay(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: query,
 				})
-				require.JSONEq(t, fmt.Sprintf(`{"data":{"delay":"%s"}}`, resp), res.Body, "query %d failed", ii)
+				require.Equal(t, fmt.Sprintf(`{"data":{"delay":"%s"}}`, resp), res.Body, "query %d failed", ii)
 			}(ii)
 		}
 		wg.Wait()

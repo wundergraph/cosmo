@@ -621,4 +621,243 @@ func TestSingleFlight(t *testing.T) {
 			require.Equal(t, numOfOperations, actualSubgraphRequests)
 		})
 	})
+	t.Run("mutation with multiple subgraphs deduplication", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalDelay: time.Millisecond * 100,
+			},
+			RouterOptions: []core.Option{
+				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableSingleFlight:      true,
+					ForceEnableSingleFlight: false,
+					MaxConcurrentResolvers:  0,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			var (
+				numOfOperations = int64(10)
+				ready, done     sync.WaitGroup
+			)
+			ready.Add(int(numOfOperations))
+			done.Add(int(numOfOperations))
+			trigger := make(chan struct{})
+			for i := int64(0); i < numOfOperations; i++ {
+				go func() {
+					ready.Done()
+					defer done.Done()
+					<-trigger
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `mutation { updateMood(employeeID: 1, mood: HAPPY) { id currentMood isAvailable tag } }`,
+					})
+					require.Contains(t, res.Body, `"updateMood"`)
+				}()
+			}
+			ready.Wait()
+			close(trigger)
+			done.Wait()
+
+			// The mutation is called 10 times (mutations must not be deduplicated at the root level)
+			// However, the subgraph requests for fetching additional fields (like isAvailable, tag, currentMood)
+			// should be deduplicated since they are queries to other subgraphs
+			moodRequests := xEnv.SubgraphRequestCount.Mood.Load()
+			availabilityRequests := xEnv.SubgraphRequestCount.Availability.Load()
+
+			// The mood subgraph receives the mutation, but the additional field requests to availability
+			// and global subgraphs should be deduplicated
+			require.Equal(t, numOfOperations, moodRequests) // Mutation calls mood subgraph 10 times
+			require.Less(t, availabilityRequests, numOfOperations)
+		})
+	})
+	t.Run("mutation with EnableInboundRequestDeduplication enabled - should not deduplicate", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalDelay: time.Millisecond * 100,
+			},
+			RouterOptions: []core.Option{
+				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableSingleFlight:                true,
+					ForceEnableSingleFlight:           false,
+					EnableInboundRequestDeduplication: true,
+					MaxConcurrentResolvers:            0,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			var (
+				numOfOperations = int64(10)
+				ready, done     sync.WaitGroup
+			)
+			ready.Add(int(numOfOperations))
+			done.Add(int(numOfOperations))
+			trigger := make(chan struct{})
+			for i := int64(0); i < numOfOperations; i++ {
+				go func() {
+					ready.Done()
+					defer done.Done()
+					<-trigger
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `mutation { updateMood(employeeID: 1, mood: HAPPY) { id currentMood } }`,
+					})
+					require.Contains(t, res.Body, `"updateMood"`)
+				}()
+			}
+			ready.Wait()
+			close(trigger)
+			done.Wait()
+
+			// Even with EnableInboundRequestDeduplication enabled, mutations should not be deduplicated
+			moodRequests := xEnv.SubgraphRequestCount.Mood.Load()
+			require.Equal(t, numOfOperations, moodRequests)
+		})
+	})
+	t.Run("query with both SingleFlight and InboundRequestDeduplication enabled - should deduplicate both", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalDelay: time.Millisecond * 100,
+			},
+			RouterOptions: []core.Option{
+				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableSingleFlight:                true,
+					ForceEnableSingleFlight:           false,
+					EnableInboundRequestDeduplication: true,
+					MaxConcurrentResolvers:            0,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			var (
+				numOfOperations = int64(10)
+				ready, done     sync.WaitGroup
+			)
+			ready.Add(int(numOfOperations))
+			done.Add(int(numOfOperations))
+			trigger := make(chan struct{})
+			for i := int64(0); i < numOfOperations; i++ {
+				go func() {
+					ready.Done()
+					defer done.Done()
+					<-trigger
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `{ employee(id: 1) { id details { forename surname } isAvailable currentMood } }`,
+					})
+					require.Contains(t, res.Body, `"employee"`)
+				}()
+			}
+			ready.Wait()
+			close(trigger)
+			done.Wait()
+
+			// With both flags enabled, we should see deduplication at both levels
+			globalRequests := xEnv.SubgraphRequestCount.Global.Load()
+			familyRequests := xEnv.SubgraphRequestCount.Family.Load()
+			availabilityRequests := xEnv.SubgraphRequestCount.Availability.Load()
+			moodRequests := xEnv.SubgraphRequestCount.Mood.Load()
+
+			// The root operation should be deduplicated (less than 10 inbound requests)
+			// and the subgraph requests should also be deduplicated
+			require.Less(t, globalRequests, numOfOperations)
+			require.Less(t, familyRequests, numOfOperations)
+			require.Less(t, availabilityRequests, numOfOperations)
+			require.Less(t, moodRequests, numOfOperations)
+		})
+	})
+	t.Run("query with unique variables - should not deduplicate", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalDelay: time.Millisecond * 100,
+			},
+			RouterOptions: []core.Option{
+				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableSingleFlight:                true,
+					ForceEnableSingleFlight:           false,
+					EnableInboundRequestDeduplication: true,
+					MaxConcurrentResolvers:            0,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			var (
+				numOfOperations = int64(10)
+				ready, done     sync.WaitGroup
+			)
+			ready.Add(int(numOfOperations))
+			done.Add(int(numOfOperations))
+			trigger := make(chan struct{})
+			for i := int64(0); i < numOfOperations; i++ {
+				go func(index int64) {
+					ready.Done()
+					defer done.Done()
+					<-trigger
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query:     `query($id: Int!) { employee(id: $id) { id tag } }`,
+						Variables: []byte(fmt.Sprintf(`{"id": %d}`, index)),
+					})
+					require.Contains(t, res.Body, `"employee"`)
+				}(i)
+			}
+			ready.Wait()
+			close(trigger)
+			done.Wait()
+
+			// With unique variables in each request, we should see no deduplication
+			globalRequests := xEnv.SubgraphRequestCount.Global.Load()
+			require.Equal(t, numOfOperations, globalRequests)
+		})
+	})
+	t.Run("query with unique headers - should not deduplicate", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalDelay: time.Millisecond * 100,
+			},
+			RouterOptions: []core.Option{
+				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableSingleFlight:                true,
+					ForceEnableSingleFlight:           false,
+					EnableInboundRequestDeduplication: true,
+					MaxConcurrentResolvers:            0,
+				}),
+				core.WithHeaderRules(config.HeaderRules{
+					All: &config.GlobalHeaderRule{
+						Request: []*config.RequestHeaderRule{
+							{
+								Named:     "X-Request-ID",
+								Operation: config.HeaderRuleOperationPropagate,
+							},
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			var (
+				numOfOperations = int64(10)
+				ready, done     sync.WaitGroup
+			)
+			ready.Add(int(numOfOperations))
+			done.Add(int(numOfOperations))
+			trigger := make(chan struct{})
+			for i := int64(0); i < numOfOperations; i++ {
+				go func(index int64) {
+					ready.Done()
+					defer done.Done()
+					<-trigger
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `{ employee(id: 1) { id tag } }`,
+						Header: http.Header{
+							"X-Request-ID": []string{fmt.Sprintf("request-%d", index)},
+						},
+					})
+					require.Contains(t, res.Body, `"employee"`)
+				}(i)
+			}
+			ready.Wait()
+			close(trigger)
+			done.Wait()
+
+			// With unique headers in each request, we should see no deduplication
+			globalRequests := xEnv.SubgraphRequestCount.Global.Load()
+			require.Equal(t, numOfOperations, globalRequests)
+		})
+	})
 }

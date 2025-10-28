@@ -616,7 +616,7 @@
                 "duration_since_start_pretty": "1ns",
                 "duration_load_nanoseconds": 1,
                 "duration_load_pretty": "1ns",
-                "single_flight_used": false,
+                "single_flight_used": true,
                 "single_flight_shared_response": false,
                 "load_skipped": false,
                 "load_stats": {
@@ -992,7 +992,7 @@
                     "duration_since_start_pretty": "1ns",
                     "duration_load_nanoseconds": 1,
                     "duration_load_pretty": "1ns",
-                    "single_flight_used": false,
+                    "single_flight_used": true,
                     "single_flight_shared_response": false,
                     "load_skipped": false,
                     "load_stats": {
@@ -1618,7 +1618,7 @@
                     "duration_since_start_pretty": "1ns",
                     "duration_load_nanoseconds": 1,
                     "duration_load_pretty": "1ns",
-                    "single_flight_used": false,
+                    "single_flight_used": true,
                     "single_flight_shared_response": false,
                     "load_skipped": false,
                     "load_stats": {
@@ -1947,7 +1947,7 @@
                 "duration_since_start_pretty": "1ns",
                 "duration_load_nanoseconds": 1,
                 "duration_load_pretty": "1ns",
-                "single_flight_used": false,
+                "single_flight_used": true,
                 "single_flight_shared_response": false,
                 "load_skipped": false,
                 "load_stats": {

@@ -1302,6 +1302,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	engineExecutionConfig := config.EngineExecutionConfiguration{
 		EnableNetPoll:                          true,
 		EnableSingleFlight:                     true,
+		EnableInboundRequestDeduplication:      false,
 		EnableRequestTracing:                   true,
 		EnableExecutionPlanCacheResponseHeader: true,
 		EnableNormalizationCache:               true,
