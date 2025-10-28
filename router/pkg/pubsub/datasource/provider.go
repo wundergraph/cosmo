@@ -69,6 +69,10 @@ func (e StreamEvents) All() iter.Seq2[int, StreamEvent] {
 	return slices.All(e.evts)
 }
 
+func (e StreamEvents) Len() int {
+	return len(e.evts)
+}
+
 func (e StreamEvents) UnsafeStreamEvents() []StreamEvent {
 	return e.evts
 }
