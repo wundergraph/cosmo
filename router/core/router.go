@@ -869,7 +869,11 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		}
 
 		// Create the Vanguard handler with dynamic proto support
-		connectHandler, err := connect_rpc.SetupVanguardWithDynamicProto(fds)
+		// Use BackendCodecProto to force Vanguard to transcode JSON->Protobuf
+		// Change to BackendCodecJSON if your backend handler prefers JSON
+		// The handler will proxy requests to the GraphQL endpoint
+		graphqlEndpoint := "http://localhost:3002/graphql" // TODO: Make this configurable
+		connectHandler, err := connect_rpc.SetupVanguardWithDynamicProto(fds, connect_rpc.BackendCodecJSON, graphqlEndpoint)
 		if err != nil {
 			return fmt.Errorf("failed to setup connect RPC handler: %w", err)
 		}
