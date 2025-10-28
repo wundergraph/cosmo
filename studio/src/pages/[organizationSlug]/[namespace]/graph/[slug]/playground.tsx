@@ -56,7 +56,10 @@ import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { useHydratePlaygroundStateFromUrl } from "@/hooks/use-hydrate-playground-state-from-url";
 import { useLocalStorage } from "@/hooks/use-local-storage";
-import { PLAYGROUND_DEFAULT_HEADERS_TEMPLATE, PLAYGROUND_DEFAULT_QUERY_TEMPLATE } from "@/lib/constants";
+import {
+  PLAYGROUND_DEFAULT_HEADERS_TEMPLATE,
+  PLAYGROUND_DEFAULT_QUERY_TEMPLATE,
+} from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
 import { parseSchema } from "@/lib/schema-helpers";
 import { cn } from "@/lib/utils";
@@ -84,11 +87,7 @@ import {
 import { sentenceCase } from "change-case";
 import crypto from "crypto";
 import { GraphiQL } from "graphiql";
-import {
-  GraphQLSchema,
-  parse,
-  validate,
-} from "graphql";
+import { GraphQLSchema, parse, validate } from "graphql";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/router";
 import { ReactNode, useContext, useEffect, useMemo, useState } from "react";
@@ -102,7 +101,7 @@ import { TbDevicesCheck } from "react-icons/tb";
 import { useDebounce } from "use-debounce";
 import { z } from "zod";
 
-const validateHeaders = (headers: Record<string, string>) => {
+const validateHeaders = (headers: Record) => {
   for (const headersKey in headers) {
     if (!/^[\^`\-\w!#$%&'*+.|~]+$/.test(headersKey)) {
       throw new TypeError(
@@ -112,18 +111,15 @@ const validateHeaders = (headers: Record<string, string>) => {
   }
 };
 
-const substituteHeadersFromEnv = (
-  headers: Record<string, string>,
-  graphId: string,
-) => {
+const substituteHeadersFromEnv = (headers: Record, graphId: string) => {
   const env = JSON.parse(localStorage.getItem("playground:env") || "{}");
-  const graphEnv: Record<string, any> | undefined = env[graphId];
+  const graphEnv: Record | undefined = env[graphId];
 
   if (!graphEnv) {
     return headers;
   }
 
-  const storedHeaders: Record<string, any> = {};
+  const storedHeaders: Record = {};
 
   Object.entries(graphEnv).forEach(([key, value]) => {
     if (value === "true" || value === "false") {
@@ -240,8 +236,8 @@ const graphiQLFetch = async (
   featureFlagName?: string,
 ) => {
   try {
-    let headers: Record<string, string> = {
-      ...(init.headers as Record<string, string>),
+    let headers: Record = {
+      ...(init.headers as Record),
     };
 
     headers = substituteHeadersFromEnv(headers, graphId);
@@ -341,7 +337,7 @@ const FormSchema = z.object({
   clientName: z.string().trim().min(1, "The name cannot be empty"),
 });
 
-type Input = z.infer<typeof FormSchema>;
+type Input = z.infer;
 
 const PersistOperation = () => {
   const router = useRouter();
@@ -402,7 +398,7 @@ const PersistOperation = () => {
     schema: FormSchema,
   });
 
-  const onSubmit: SubmitHandler<Input> = (formData) => {
+  const onSubmit: SubmitHandler = (formData) => {
     const clientName = formData.clientId
       ? data?.clients.find((c) => c.id === formData.clientId)?.name
       : formData.clientName;
@@ -925,7 +921,14 @@ const PlaygroundPage: NextPageWithLayout = () => {
   });
 
   const [isHydrated, setIsHydrated] = useState(false);
-  useHydratePlaygroundStateFromUrl(tabsState, setQuery, setUpdatedVariables, setHeaders, setTabsState, isGraphiqlRendered);
+  useHydratePlaygroundStateFromUrl(
+    tabsState,
+    setQuery,
+    setUpdatedVariables,
+    setHeaders,
+    setTabsState,
+    isGraphiqlRendered,
+  );
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -1176,7 +1179,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
 
         const existingHeaders = JSON.parse(debouncedHeaders || "{}");
         delete existingHeaders["X-WG-TRACE"];
-        let requestHeaders: Record<string, string> = {
+        let requestHeaders: Record = {
           ...existingHeaders,
           "X-WG-Token": graphContext.graphRequestToken,
           "X-WG-Include-Query-Plan": "true",
@@ -1253,7 +1256,6 @@ const PlaygroundPage: NextPageWithLayout = () => {
     };
   }, [theme]);
 
-
   if (!graphContext?.graph) return null;
 
   return (
@@ -1289,7 +1291,12 @@ const PlaygroundPage: NextPageWithLayout = () => {
             query={query}
             variables={updatedVariables}
             onEditQuery={setQuery}
-            headers={headers}
+            headers={
+              headers === PLAYGROUND_DEFAULT_HEADERS_TEMPLATE
+                ? undefined
+                : headers
+            }
+            defaultHeaders={PLAYGROUND_DEFAULT_HEADERS_TEMPLATE}
             onEditHeaders={setHeaders}
             plugins={[
               explorerPlugin({
