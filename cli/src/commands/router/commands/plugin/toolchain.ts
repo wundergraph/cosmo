@@ -38,7 +38,7 @@ const ALL_BUN_PLATFORMS_WITH_GO_MAPPING: Record<string, string> = {
 };
 
 const installScriptUrl =
-  'https://raw.githubusercontent.com/wundergraph/cosmo/52adc57f27ea3c821d0917f0098a1147a25aef5f/scripts/install-proto-tools.sh';
+  'https://raw.githubusercontent.com/wundergraph/cosmo/11347a8300eb71e06348cef203716e560585a20f/scripts/install-proto-tools.sh';
 
 // Get paths for tool installation
 const TOOLS_DIR = join(dataDir, 'proto-tools');

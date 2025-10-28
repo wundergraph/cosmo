@@ -190,7 +190,8 @@ const packageJson = `{
   "scripts": {
     "build": "bun build src/plugin.ts --compile --outfile dist/plugin",
     "dev": "bun run src/plugin.ts",
-    "client": "bun run src/client.ts"
+    "client": "bun run src/client.ts",
+    "postinstall": "bun ./node_modules/@protocolbuffers/protoc-gen-js/download-protoc-gen-js.js"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.14.0",
