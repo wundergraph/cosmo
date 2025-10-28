@@ -12,6 +12,7 @@ import {
   getNamedType,
   GraphQLScalarType,
 } from 'graphql';
+import { unwrapNonNullType, isNestedListType, calculateNestingLevel } from './list-type-utils.js';
 
 /**
  * Maps GraphQL scalar types to Protocol Buffer types
@@ -47,6 +48,10 @@ export interface ProtoTypeInfo {
   isWrapper: boolean;
   /** Whether this is a scalar type */
   isScalar: boolean;
+  /** Whether this requires a nested list wrapper message */
+  requiresNestedWrapper?: boolean;
+  /** The nesting level for nested lists (e.g., 2 for [[String]]) */
+  nestingLevel?: number;
 }
 
 /**
@@ -69,6 +74,11 @@ export interface TypeMapperOptions {
 export function mapGraphQLTypeToProto(type: GraphQLType, options?: TypeMapperOptions): ProtoTypeInfo {
   const useWrapperTypes = options?.useWrapperTypes ?? true;
   const customScalarMappings = options?.customScalarMappings ?? {};
+
+  // Check for nested lists first (before handling non-null)
+  if (isListType(type) || (isNonNullType(type) && isListType(type.ofType))) {
+    return handleListType(type, options);
+  }
 
   // Handle non-null types
   if (isNonNullType(type)) {
@@ -102,19 +112,6 @@ export function mapGraphQLTypeToProto(type: GraphQLType, options?: TypeMapperOpt
     }
 
     return innerInfo;
-  }
-
-  // Handle list types
-  if (isListType(type)) {
-    const itemType = type.ofType;
-    const itemInfo = mapGraphQLTypeToProto(itemType, options);
-
-    return {
-      typeName: itemInfo.typeName,
-      isRepeated: true,
-      isWrapper: itemInfo.isWrapper,
-      isScalar: itemInfo.isScalar,
-    };
   }
 
   // Get the named type
@@ -190,6 +187,70 @@ export function mapGraphQLTypeToProto(type: GraphQLType, options?: TypeMapperOpt
     isRepeated: false,
     isWrapper: false,
     isScalar: true,
+  };
+}
+
+/**
+ * Handles GraphQL list types, including nested lists
+ * Similar to sdl-to-proto-visitor.ts handleListType
+ */
+function handleListType(graphqlType: GraphQLType, options?: TypeMapperOptions): ProtoTypeInfo {
+  const listType = unwrapNonNullType(graphqlType);
+  const isNullableList = !isNonNullType(graphqlType);
+
+  // Only check for nested lists if we have a list type
+  if (!isListType(listType)) {
+    // This shouldn't happen, but handle gracefully
+    return mapGraphQLTypeToProto(listType, options);
+  }
+
+  const isNestedList = isNestedListType(listType);
+
+  // Simple non-nullable lists can use repeated fields directly
+  if (!isNullableList && !isNestedList) {
+    const baseType = getNamedType(listType);
+    const baseTypeInfo = mapGraphQLTypeToProto(baseType, { ...options, useWrapperTypes: false });
+    return {
+      ...baseTypeInfo,
+      isRepeated: true,
+    };
+  }
+
+  // Only nested lists need wrapper messages
+  // Single-level nullable lists use repeated + wrapper types for nullable items
+  if (isNestedList) {
+    const baseType = getNamedType(listType);
+    const nestingLevel = calculateNestingLevel(listType);
+
+    // Generate wrapper message name
+    const wrapperName = `${'ListOf'.repeat(nestingLevel)}${baseType.name}`;
+
+    // For nested lists, never use repeated at field level to preserve nullability
+    return {
+      typeName: wrapperName,
+      isRepeated: false,
+      isWrapper: false,
+      isScalar: false,
+      requiresNestedWrapper: true,
+      nestingLevel: nestingLevel,
+    };
+  }
+
+  // Single-level nullable lists: [String], [String!], etc.
+  // Use repeated with appropriate item type (wrapper type for nullable items)
+  if (!isListType(listType)) {
+    // Safety check - shouldn't happen
+    return mapGraphQLTypeToProto(listType, options);
+  }
+
+  const itemType = listType.ofType;
+  const itemTypeInfo = mapGraphQLTypeToProto(itemType, options);
+
+  return {
+    typeName: itemTypeInfo.typeName,
+    isRepeated: true,
+    isWrapper: itemTypeInfo.isWrapper,
+    isScalar: itemTypeInfo.isScalar,
   };
 }
 

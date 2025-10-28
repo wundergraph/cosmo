@@ -48,6 +48,8 @@ export interface MessageBuilderOptions {
   maxDepth?: number;
   /** Internal: Current recursion depth */
   _depth?: number;
+  /** Callback to ensure nested list wrapper messages are created */
+  ensureNestedListWrapper?: (graphqlType: GraphQLOutputType) => string;
 }
 
 /**
@@ -276,9 +278,19 @@ function processFieldSelection(
         customScalarMappings: options?.customScalarMappings,
       });
 
-      const protoField = new protobuf.Field(protoFieldName, fieldNumber, nestedMessageName);
+      // Handle nested list wrappers for nested messages
+      let finalTypeName = nestedMessageName;
+      let isRepeated = protoTypeInfo.isRepeated;
 
-      if (protoTypeInfo.isRepeated) {
+      if (protoTypeInfo.requiresNestedWrapper && options?.ensureNestedListWrapper) {
+        // Create wrapper message and use its name
+        finalTypeName = options.ensureNestedListWrapper(fieldType) as any;
+        isRepeated = false; // Wrapper handles the repetition
+      }
+
+      const protoField = new protobuf.Field(protoFieldName, fieldNumber, finalTypeName);
+
+      if (isRepeated) {
         protoField.repeated = true;
       }
 
@@ -315,6 +327,16 @@ function processFieldSelection(
       customScalarMappings: options?.customScalarMappings,
     });
 
+    // Handle nested list wrappers
+    let finalTypeName = protoTypeInfo.typeName;
+    let isRepeated = protoTypeInfo.isRepeated;
+
+    if (protoTypeInfo.requiresNestedWrapper && options?.ensureNestedListWrapper) {
+      // Create wrapper message and use its name
+      finalTypeName = options.ensureNestedListWrapper(fieldType) as any;
+      isRepeated = false; // Wrapper handles the repetition
+    }
+
     // Get field number - check if already assigned from reconciliation
     const existingFieldNumber = fieldNumberManager?.getFieldNumber(message.name, protoFieldName);
 
@@ -331,9 +353,9 @@ function processFieldSelection(
       fieldNumber = message.fieldsArray.length + 1;
     }
 
-    const protoField = new protobuf.Field(protoFieldName, fieldNumber, protoTypeInfo.typeName);
+    const protoField = new protobuf.Field(protoFieldName, fieldNumber, finalTypeName);
 
-    if (protoTypeInfo.isRepeated) {
+    if (isRepeated) {
       protoField.repeated = true;
     }
 
