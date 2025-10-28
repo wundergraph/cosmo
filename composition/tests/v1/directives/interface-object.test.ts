@@ -26,14 +26,13 @@ import {
   normalizeString,
   schemaToSortedNormalizedString,
 } from '../../utils/utils';
-import { versionTwoRouterDefinitions } from '../utils/utils';
+import { SCHEMA_QUERY_DEFINITION } from '../utils/utils';
 
 describe('@interfaceObject tests', () => {
   test('that an error is returned if implementations are defined alongside an entity declared with @interfaceObject', () => {
-    const result = federateSubgraphsFailure([faa, fab], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    const { errors } = federateSubgraphsFailure([faa, fab], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       invalidInterfaceObjectImplementationDefinitionsError('Interface', faa.name, ['EntityOne', 'EntityTwo']),
     );
   });
@@ -45,7 +44,7 @@ describe('@interfaceObject tests', () => {
     );
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
       type EntityA implements InterfaceA {
         id: ID!
@@ -84,8 +83,6 @@ describe('@interfaceObject tests', () => {
         interfaceAs: [InterfaceA!]!
         interfaceBs: [InterfaceB!]!
       }
-      
-      scalar openfed__Scope
       `,
       ),
     );
@@ -169,7 +166,7 @@ describe('@interfaceObject tests', () => {
     );
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
       type EntityA implements InterfaceA {
         id: ID!
@@ -208,8 +205,6 @@ describe('@interfaceObject tests', () => {
         interfaceAs: [InterfaceA!]!
         interfaceBs: [InterfaceB!]!
       }
-      
-      scalar openfed__Scope
       `,
       ),
     );
@@ -293,7 +288,7 @@ describe('@interfaceObject tests', () => {
     );
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
       type EntityA implements InterfaceA & InterfaceB {
         entity: EntityC!
@@ -333,8 +328,6 @@ describe('@interfaceObject tests', () => {
         interfaceAs: [InterfaceA!]!
         interfaceBs: [InterfaceB!]!
       }
-      
-      scalar openfed__Scope
       `,
       ),
     );
@@ -418,7 +411,7 @@ describe('@interfaceObject tests', () => {
     );
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
       type EntityA implements InterfaceA & InterfaceB {
         entity: EntityC!
@@ -458,8 +451,6 @@ describe('@interfaceObject tests', () => {
         interfaceAs: [InterfaceA!]!
         interfaceBs: [InterfaceB!]!
       }
-      
-      scalar openfed__Scope
       `,
       ),
     );
@@ -540,7 +531,7 @@ describe('@interfaceObject tests', () => {
     const { federatedGraphSchema } = federateSubgraphsSuccess([fca, fcb], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
       type EntityA implements EntityInterfaceA {
         id: ID!
@@ -568,8 +559,6 @@ describe('@interfaceObject tests', () => {
       type Query {
         dummy: String!
       }
-      
-      scalar openfed__Scope
       `,
       ),
     );
@@ -644,7 +633,7 @@ describe('@interfaceObject tests', () => {
     const { federatedGraphSchema } = federateSubgraphsSuccess([fca, fce, fcf], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
       type EntityA implements EntityInterfaceA {
         id: ID!
@@ -674,8 +663,6 @@ describe('@interfaceObject tests', () => {
       type Query {
         dummy: String!
       }
-      
-      scalar openfed__Scope
       `,
       ),
     );
@@ -685,7 +672,7 @@ describe('@interfaceObject tests', () => {
     const { federatedGraphSchema } = federateSubgraphsSuccess([fda, fdb], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
       type Entity implements EntityInterfaceA & EntityInterfaceB {
         id: ID!
@@ -708,8 +695,6 @@ describe('@interfaceObject tests', () => {
         interfacesA: [EntityInterfaceA]
         interfacesB: [EntityInterfaceB]
       }
-      
-      scalar openfed__Scope
       `,
       ),
     );
@@ -719,7 +704,7 @@ describe('@interfaceObject tests', () => {
     const { federatedGraphSchema } = federateSubgraphsSuccess([fda, fdc], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
       type Entity implements EntityInterfaceA & EntityInterfaceB {
         id: ID!
@@ -742,8 +727,6 @@ describe('@interfaceObject tests', () => {
         interfacesA: [EntityInterfaceA]
         interfacesB: [EntityInterfaceB]
       }
-      
-      scalar openfed__Scope
       `,
       ),
     );
@@ -788,7 +771,7 @@ describe('@interfaceObject tests', () => {
     const { federatedGraphSchema } = federateSubgraphsSuccess([ffa, ffb], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
       type EntityA implements EntityInterfaceA & EntityInterfaceB {
         id: ID!
@@ -835,8 +818,6 @@ describe('@interfaceObject tests', () => {
         interfacesB: [EntityInterfaceB]
         interfacesC: [EntityInterfaceC]
       }
-      
-      scalar openfed__Scope
       `,
       ),
     );

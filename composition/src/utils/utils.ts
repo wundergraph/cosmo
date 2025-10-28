@@ -61,6 +61,15 @@ export function addIterableValuesToSet<T>(source: Array<T> | Iterable<T>, target
   }
 }
 
+export function addOptionalIterableValuesToSet<T>(target: Set<T>, source?: Array<T> | Iterable<T>) {
+  if (!source) {
+    return;
+  }
+  for (const value of source) {
+    target.add(value);
+  }
+}
+
 export function addSets<T>(a: Set<T>, b: Set<T>): Set<T> {
   const output = new Set<T>(a);
   for (const item of b) {

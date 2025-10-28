@@ -27,6 +27,12 @@ export * from './utils/utils';
 export * from './warnings/types';
 
 // v1
+export * from './v1/constants/constants';
+export * from './v1/constants/directive-definitions';
+export * from './v1/constants/integers';
+export * from './v1/constants/non-directive-definitions';
+export * from './v1/constants/strings';
+export * from './v1/constants/type-nodes';
 export * from './v1/federation/utils';
 export * from './v1/federation/walkers';
 export * from './v1/federation/types';
@@ -36,7 +42,5 @@ export * from './v1/normalization/types';
 export * from './v1/normalization/walkers';
 export * from './v1/schema-building/type-merging';
 export * from './v1/subgraph/subgraph';
-export * from './v1/utils/constants';
 export * from './v1/utils/utils';
-export * from './v1/utils/string-constants';
 export * from './v1/warnings/warnings';

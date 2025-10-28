@@ -17,7 +17,7 @@ import {
 import { expect } from 'vitest';
 
 export function normalizeString(input: string): string {
-  return input.replaceAll(/\n| {2,}/g, '');
+  return input.replaceAll(/\s+|\\n\s*/g, ' ').trim();
 }
 
 export function documentNodeToNormalizedString(document: DocumentNode): string {
@@ -42,6 +42,9 @@ export function normalizeSubgraphSuccess(
   version: SupportedRouterCompatibilityVersion,
 ): NormalizationSuccess {
   const result = normalizeSubgraph(subgraph.definitions, subgraph.name, undefined, version);
+  if (!result.success) {
+    console.dir(result.errors);
+  }
   expect(result.success, 'normalizeSubgraph failed when expected to succeed').toBe(true);
   return result as NormalizationSuccess;
 }

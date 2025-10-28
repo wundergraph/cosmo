@@ -14,9 +14,7 @@ import {
   LIST,
   nonKeyComposingObjectTypeNamesEventDrivenErrorMessage,
   nonLeafSubscriptionFieldConditionFieldPathFinalFieldErrorMessage,
-  NormalizationFailure,
   NormalizationSuccess,
-  normalizeSubgraph,
   NULL,
   OBJECT,
   parse,
@@ -33,54 +31,39 @@ import {
   subscriptionFilterConditionInvalidInputFieldErrorMessage,
   subscriptionFilterConditionInvalidInputFieldTypeErrorMessage,
 } from '../../../src';
-import { versionOnePersistedDirectiveDefinitions } from '../utils/utils';
 import {
   federateSubgraphsFailure,
   federateSubgraphsSuccess,
   normalizeString,
+  normalizeSubgraphFailure,
+  normalizeSubgraphSuccess,
   schemaToSortedNormalizedString,
 } from '../../utils/utils';
 
 describe('@openfed__subscriptionFilter tests', () => {
   describe('Normalization tests', () => {
     test('that an error is returned if the directive is defined on a non-subscription root field', () => {
-      const result = normalizeSubgraph(
-        subgraphA.definitions,
-        subgraphA.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(2);
-      expect(result.errors[0]).toStrictEqual(invalidSubscriptionFilterLocationError('Object.field'));
-      expect(result.errors[1]).toStrictEqual(
+      const { errors } = normalizeSubgraphFailure(subgraphA, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(2);
+      expect(errors[0]).toStrictEqual(invalidSubscriptionFilterLocationError('Object.field'));
+      expect(errors[1]).toStrictEqual(
         invalidEventDrivenGraphError([nonKeyComposingObjectTypeNamesEventDrivenErrorMessage([OBJECT])]),
       );
     });
 
     test('that subscriptionFilter inputs and scalar are injected', () => {
-      const result = normalizeSubgraph(
-        subgraphC.definitions,
-        subgraphC.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationSuccess;
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.schema)).toBe(
+      const { schema } = normalizeSubgraphSuccess(subgraphC, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(`
         schema {
           subscription: Subscription
         }
         
         directive @edfs__kafkaSubscribe(providerId: String! = "default", topics: [String!]!) on FIELD_DEFINITION
-        directive @extends on INTERFACE | OBJECT
         directive @external on FIELD_DEFINITION | OBJECT
         directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
         directive @openfed__subscriptionFilter(condition: openfed__SubscriptionFilterCondition!) on FIELD_DEFINITION
-        directive @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION
-        directive @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION
-        directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
-        
+
         type Entity @key(fields: "id", resolvable: false) {
           id: ID! @external
         }
@@ -109,28 +92,18 @@ describe('@openfed__subscriptionFilter tests', () => {
     });
 
     test('that inputs and scalars that are injected can be self-defined', () => {
-      const result = normalizeSubgraph(
-        subgraphG.definitions,
-        subgraphG.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationSuccess;
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.schema)).toBe(
+      const { schema } = normalizeSubgraphSuccess(subgraphG, ROUTER_COMPATIBILITY_VERSION_ONE) as NormalizationSuccess;
+      expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(`
         schema {
           subscription: Subscription
         }
         
         directive @edfs__kafkaSubscribe(providerId: String! = "default", topics: [String!]!) on FIELD_DEFINITION
-        directive @extends on INTERFACE | OBJECT
         directive @external on FIELD_DEFINITION | OBJECT
         directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
         directive @openfed__subscriptionFilter(condition: openfed__SubscriptionFilterCondition!) on FIELD_DEFINITION
-        directive @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION
-        directive @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION
-        directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
-        
+
         type Entity @key(fields: "id", resolvable: false) {
           id: ID! @external
         }
@@ -159,14 +132,9 @@ describe('@openfed__subscriptionFilter tests', () => {
     });
 
     test('that an error is returned if @openfed__subscriptionFilter is repeated', () => {
-      const result = normalizeSubgraph(
-        subgraphK.definitions,
-        subgraphK.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationFailure;
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors).toStrictEqual([
+      const { errors } = normalizeSubgraphFailure(subgraphK, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors).toStrictEqual([
         invalidDirectiveError('openfed__subscriptionFilter', 'Subscription.one', FIRST_ORDINAL, [
           invalidRepeatedDirectiveErrorMessage('openfed__subscriptionFilter'),
         ]),
@@ -500,17 +468,17 @@ describe('@openfed__subscriptionFilter tests', () => {
     });
 
     test('that an entity can be defined as an extension in an EDG', () => {
-      const result = federateSubgraphsSuccess([subgraphQ, subgraphR], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      const { federatedGraphSchema } = federateSubgraphsSuccess(
+        [subgraphQ, subgraphR],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
           `schema {
           query: Query
           subscription: Subscription
         }
-        ` +
-            versionOnePersistedDirectiveDefinitions +
-            `
+        
         type Entity {
           id: ID!
           name: String!
@@ -523,20 +491,6 @@ describe('@openfed__subscriptionFilter tests', () => {
         type Subscription {
           field: Entity!
         }
-
-        input openfed__SubscriptionFieldCondition {
-          fieldPath: String!
-          values: [openfed__SubscriptionFilterValue]!
-        }
-        
-        input openfed__SubscriptionFilterCondition {
-          AND: [openfed__SubscriptionFilterCondition!]
-          IN: openfed__SubscriptionFieldCondition
-          NOT: openfed__SubscriptionFilterCondition
-          OR: [openfed__SubscriptionFilterCondition!]
-        }
-        
-        scalar openfed__SubscriptionFilterValue
       `,
         ),
       );

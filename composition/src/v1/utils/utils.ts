@@ -30,11 +30,11 @@ import {
 } from '../../utils/string-constants';
 import { addIterableValuesToSet, addSets } from '../../utils/utils';
 import type { KeyFieldSetData } from '../normalization/types';
-import { MAX_OR_SCOPES } from './constants';
+import { MAX_OR_SCOPES } from '../constants/constants';
 import 'core-js/modules/esnext.set.is-subset-of.v2';
 import 'core-js/modules/esnext.set.is-superset-of.v2';
 import type { CompositeOutputNodeKind } from '../../ast/utils';
-import { COMPOSITE_OUTPUT_NODE_KINDS } from './string-constants';
+import { COMPOSITE_OUTPUT_NODE_KINDS } from '../constants/strings';
 import { SubgraphName, TypeName } from '../../types/types';
 
 export function subtractSet<T>(source: Set<T>, target: Set<T>) {

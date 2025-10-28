@@ -16,7 +16,7 @@ import {
   normalizeSubgraphSuccess,
   schemaToSortedNormalizedString,
 } from '../../utils/utils';
-import { baseDirectiveDefinitions, schemaQueryDefinition, versionOneRouterDefinitions } from '../utils/utils';
+import { SCHEMA_QUERY_DEFINITION } from '../utils/utils';
 
 describe('@oneOf tests', () => {
   describe('normalization tests', () => {
@@ -57,8 +57,7 @@ describe('@oneOf tests', () => {
       const { schema } = normalizeSubgraphSuccess(ndaa, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
-          baseDirectiveDefinitions +
-            `
+          `
         input Input @oneOf {
           a: ID
           b: String
@@ -69,8 +68,6 @@ describe('@oneOf tests', () => {
         input NestedInput {
           a: Float
         }
-        
-        scalar openfed__FieldSet
       `,
         ),
       );
@@ -78,15 +75,13 @@ describe('@oneOf tests', () => {
 
     test('that a single Input field with @oneOf produces a warning', () => {
       const { schema, warnings } = normalizeSubgraphSuccess(neaa, ROUTER_COMPATIBILITY_VERSION_ONE);
+      // The @oneOf directive is removed by the printer because it's built-in
       expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
-          baseDirectiveDefinitions +
-            `
+          `
         input Input @oneOf {
           a: ID
         }
-        
-        scalar openfed__FieldSet
       `,
         ),
       );
@@ -109,7 +104,7 @@ describe('@oneOf tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             input Input @oneOf {
               a: ID
@@ -123,7 +118,7 @@ describe('@oneOf tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
         normalizeString(
-          schemaQueryDefinition +
+          SCHEMA_QUERY_DEFINITION +
             `
             input Input @oneOf {
               a: ID
@@ -156,7 +151,7 @@ describe('@oneOf tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             input Input @oneOf {
               a: ID
@@ -170,7 +165,7 @@ describe('@oneOf tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
         normalizeString(
-          schemaQueryDefinition +
+          SCHEMA_QUERY_DEFINITION +
             `
             input Input @oneOf {
               a: ID
@@ -208,7 +203,7 @@ describe('@oneOf tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             input Input @oneOf {
               a: ID
@@ -222,7 +217,7 @@ describe('@oneOf tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
         normalizeString(
-          schemaQueryDefinition +
+          SCHEMA_QUERY_DEFINITION +
             `
             input Input @oneOf {
               a: ID
@@ -260,7 +255,7 @@ describe('@oneOf tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             input Input @oneOf {
               a: ID
@@ -274,7 +269,7 @@ describe('@oneOf tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
         normalizeString(
-          schemaQueryDefinition +
+          SCHEMA_QUERY_DEFINITION +
             `
             input Input @oneOf {
               a: ID
@@ -307,7 +302,7 @@ describe('@oneOf tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             input Input @oneOf {
               c: Int
@@ -321,7 +316,7 @@ describe('@oneOf tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
         normalizeString(
-          schemaQueryDefinition +
+          SCHEMA_QUERY_DEFINITION +
             `
             input Input @oneOf {
               c: Int

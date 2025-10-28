@@ -10,11 +10,7 @@ import {
 } from '../../../src';
 import { parse } from 'graphql';
 import { federateSubgraphsSuccess, normalizeString, schemaToSortedNormalizedString } from '../../utils/utils';
-import {
-  baseDirectiveDefinitionsWithRequireFetchReasons,
-  schemaQueryDefinition,
-  versionOneRouterDefinitions,
-} from '../utils/utils';
+import { REQUEST_FETCH_REASONS_DIRECTIVE, SCHEMA_QUERY_DEFINITION } from '../utils/utils';
 
 describe('@openfed__requireFetchReasons tests', () => {
   test('that @openfed__requireFetchReasons is propagated into the router configuration from the field level', () => {
@@ -24,7 +20,7 @@ describe('@openfed__requireFetchReasons tests', () => {
     );
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
         interface Interface {
           a: ID
@@ -68,7 +64,7 @@ describe('@openfed__requireFetchReasons tests', () => {
     );
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
         interface Interface {
           a: ID
@@ -118,7 +114,7 @@ describe('@openfed__requireFetchReasons tests', () => {
     );
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
         interface Interface {
           a: ID
@@ -168,7 +164,7 @@ describe('@openfed__requireFetchReasons tests', () => {
     );
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
         interface Interface {
           a: ID
@@ -218,7 +214,7 @@ describe('@openfed__requireFetchReasons tests', () => {
     );
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
         interface Interface {
           a: ID
@@ -268,7 +264,7 @@ describe('@openfed__requireFetchReasons tests', () => {
     );
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
         interface Interface {
           a: ID
@@ -318,7 +314,7 @@ describe('@openfed__requireFetchReasons tests', () => {
     );
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
         interface Interface {
           a: ID
@@ -368,7 +364,7 @@ describe('@openfed__requireFetchReasons tests', () => {
     );
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
         interface Interface {
           a: ID
@@ -393,8 +389,8 @@ describe('@openfed__requireFetchReasons tests', () => {
     )!;
     expect(schemaToSortedNormalizedString(nhaaSchema)).toBe(
       normalizeString(
-        schemaQueryDefinition +
-          baseDirectiveDefinitionsWithRequireFetchReasons +
+        SCHEMA_QUERY_DEFINITION +
+          REQUEST_FETCH_REASONS_DIRECTIVE +
           `
         interface Interface {
           a: ID
@@ -409,8 +405,6 @@ describe('@openfed__requireFetchReasons tests', () => {
           c: ID @openfed__requireFetchReasons
           d: ID @openfed__requireFetchReasons
         }
-        
-        scalar openfed__FieldSet
       `,
       ),
     );
@@ -441,8 +435,8 @@ describe('@openfed__requireFetchReasons tests', () => {
     )!;
     expect(schemaToSortedNormalizedString(nhabSchema)).toBe(
       normalizeString(
-        schemaQueryDefinition +
-          baseDirectiveDefinitionsWithRequireFetchReasons +
+        SCHEMA_QUERY_DEFINITION +
+          REQUEST_FETCH_REASONS_DIRECTIVE +
           `
         interface Interface {
           a: ID @openfed__requireFetchReasons
@@ -459,8 +453,6 @@ describe('@openfed__requireFetchReasons tests', () => {
           d: ID @openfed__requireFetchReasons
           e: ID @openfed__requireFetchReasons
         }
-        
-        scalar openfed__FieldSet
       `,
       ),
     );

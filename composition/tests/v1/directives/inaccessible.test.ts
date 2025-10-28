@@ -1,8 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import {
   allChildDefinitionsAreInaccessibleError,
-  FederationFailure,
-  FederationSuccess,
   FIELD,
   FieldData,
   ImplementationErrors,
@@ -21,7 +19,7 @@ import {
   Subgraph,
   UNION,
 } from '../../../src';
-import { schemaQueryDefinition, versionTwoRouterDefinitions } from '../utils/utils';
+import { INACCESSIBLE_DIRECTIVE, SCHEMA_QUERY_DEFINITION } from '../utils/utils';
 import {
   federateSubgraphsFailure,
   federateSubgraphsSuccess,
@@ -32,11 +30,14 @@ import { Kind } from 'graphql';
 
 describe('@inaccessible tests', () => {
   test('that inaccessible fields are included in client schema but not the router schema', () => {
-    const result = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+      [subgraphA, subgraphB],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
+          INACCESSIBLE_DIRECTIVE +
           `
       type Entity {
         age: Int!
@@ -47,14 +48,12 @@ describe('@inaccessible tests', () => {
       type Query {
         entity: Entity!
       }
-      
-      scalar openfed__Scope
     `,
       ),
     );
-    expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema!)).toBe(
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
       normalizeString(
-        schemaQueryDefinition +
+        SCHEMA_QUERY_DEFINITION +
           `
       type Entity {
         age: Int!
@@ -95,11 +94,14 @@ describe('@inaccessible tests', () => {
   });
 
   test('that composition is successful if a field is declared @inaccessible in both the interface definition and its implementation,', () => {
-    const result = federateSubgraphsSuccess([subgraphA, subgraphD], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+      [subgraphA, subgraphD],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
+          INACCESSIBLE_DIRECTIVE +
           `
       type Entity implements Interface {
         id: ID!
@@ -114,14 +116,12 @@ describe('@inaccessible tests', () => {
       type Query {
         entity: Entity!
       }
-      
-      scalar openfed__Scope
     `,
       ),
     );
-    expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema!)).toBe(
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema!)).toBe(
       normalizeString(
-        schemaQueryDefinition +
+        SCHEMA_QUERY_DEFINITION +
           `
       type Entity implements Interface {
         id: ID!
@@ -140,11 +140,14 @@ describe('@inaccessible tests', () => {
   });
 
   test('that composition is successful if a field is declared @inaccessible in the interface but not in the implementation,', () => {
-    const result = federateSubgraphsSuccess([subgraphB, subgraphH], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+      [subgraphB, subgraphH],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
+          INACCESSIBLE_DIRECTIVE +
           `
       type Entity implements Interface {
         age: Int!
@@ -160,14 +163,12 @@ describe('@inaccessible tests', () => {
       type Query {
         entity: Entity!
       }
-      
-      scalar openfed__Scope
     `,
       ),
     );
-    expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
       normalizeString(
-        schemaQueryDefinition +
+        SCHEMA_QUERY_DEFINITION +
           `
       type Entity implements Interface {
         age: Int!
@@ -263,11 +264,14 @@ describe('@inaccessible tests', () => {
   });
 
   test('that an inaccessible interface without accessible references is removed from the client schema', () => {
-    const result = federateSubgraphsSuccess([subgraphM, subgraphN], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+      [subgraphM, subgraphN],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
+          INACCESSIBLE_DIRECTIVE +
           `
       interface Interface @inaccessible {
         name: String!
@@ -281,14 +285,12 @@ describe('@inaccessible tests', () => {
         dummy: String!
         interface: Interface! @inaccessible
       }
-      
-      scalar openfed__Scope
     `,
       ),
     );
-    expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
       normalizeString(
-        schemaQueryDefinition +
+        SCHEMA_QUERY_DEFINITION +
           `
       type Object {
         name: String!
@@ -303,11 +305,14 @@ describe('@inaccessible tests', () => {
   });
 
   test('that an inaccessible object is removed from a union', () => {
-    const result = federateSubgraphsSuccess([subgraphO, subgraphP], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+      [subgraphO, subgraphP],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
+          INACCESSIBLE_DIRECTIVE +
           `
       type ObjectOne @inaccessible {
         name: String!
@@ -325,14 +330,12 @@ describe('@inaccessible tests', () => {
       }
       
       union Union = ObjectOne | ObjectTwo
-      
-      scalar openfed__Scope
     `,
       ),
     );
-    expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
       normalizeString(
-        schemaQueryDefinition +
+        SCHEMA_QUERY_DEFINITION +
           `
       type ObjectTwo {
         name: String!
@@ -350,11 +353,14 @@ describe('@inaccessible tests', () => {
   });
 
   test('that the @inaccessible state is propagated to children and arguments', () => {
-    const result = federateSubgraphsSuccess([subgraphP, subgraphQ], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+      [subgraphP, subgraphQ],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
+          INACCESSIBLE_DIRECTIVE +
           `
       type ObjectOne @inaccessible {
         scalar: Scalar!
@@ -376,14 +382,12 @@ describe('@inaccessible tests', () => {
       }
       
       scalar Scalar @inaccessible
-      
-      scalar openfed__Scope
     `,
       ),
     );
-    expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
       normalizeString(
-        schemaQueryDefinition +
+        SCHEMA_QUERY_DEFINITION +
           `
       type ObjectThree {
         name: String!
@@ -399,11 +403,14 @@ describe('@inaccessible tests', () => {
   });
 
   test('that the @inaccessible state is propagated across subgraphs #1.1', () => {
-    const result = federateSubgraphsSuccess([subgraphR, subgraphS], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+      [subgraphR, subgraphS],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
+          INACCESSIBLE_DIRECTIVE +
           `
       type Object @inaccessible {
         scalar(scalar: Scalar!): Scalar!
@@ -416,14 +423,12 @@ describe('@inaccessible tests', () => {
       }
       
       scalar Scalar @inaccessible
-      
-      scalar openfed__Scope
     `,
       ),
     );
-    expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
       normalizeString(
-        schemaQueryDefinition +
+        SCHEMA_QUERY_DEFINITION +
           `
       type Query {
         dummy: String!
@@ -434,10 +439,14 @@ describe('@inaccessible tests', () => {
   });
 
   test('that the @inaccessible state is propagated across subgraphs #1.2', () => {
-    const result = federateSubgraphsSuccess([subgraphS, subgraphR], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+      [subgraphS, subgraphR],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
+          INACCESSIBLE_DIRECTIVE +
           `
       type Object @inaccessible {
         scalar(scalar: Scalar!): Scalar!
@@ -450,14 +459,12 @@ describe('@inaccessible tests', () => {
       }
       
       scalar Scalar @inaccessible
-      
-      scalar openfed__Scope
     `,
       ),
     );
-    expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
       normalizeString(
-        schemaQueryDefinition +
+        SCHEMA_QUERY_DEFINITION +
           `
       type Query {
         dummy: String!
@@ -468,11 +475,14 @@ describe('@inaccessible tests', () => {
   });
 
   test('that @inaccessible fields do not affect resolvability #1.1', () => {
-    const result = federateSubgraphsSuccess([subgraphT, subgraphU], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+      [subgraphT, subgraphU],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
+          INACCESSIBLE_DIRECTIVE +
           `
       type Object {
         scalar(scalar: Scalar!): Scalar!
@@ -485,14 +495,12 @@ describe('@inaccessible tests', () => {
       }
       
       scalar Scalar
-      
-      scalar openfed__Scope
     `,
       ),
     );
-    expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
       normalizeString(
-        schemaQueryDefinition +
+        SCHEMA_QUERY_DEFINITION +
           `
       type Object {
         scalar(scalar: Scalar!): Scalar!
@@ -510,11 +518,14 @@ describe('@inaccessible tests', () => {
   });
 
   test('that @inaccessible fields do not affect resolvability #1.2', () => {
-    const result = federateSubgraphsSuccess([subgraphU, subgraphT], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+      [subgraphU, subgraphT],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
+          INACCESSIBLE_DIRECTIVE +
           `
       type Object {
         scalar(scalar: Scalar!): Scalar!
@@ -527,14 +538,12 @@ describe('@inaccessible tests', () => {
       }
       
       scalar Scalar
-      
-      scalar openfed__Scope
     `,
       ),
     );
-    expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
       normalizeString(
-        schemaQueryDefinition +
+        SCHEMA_QUERY_DEFINITION +
           `
       type Object {
         scalar(scalar: Scalar!): Scalar!
@@ -567,10 +576,14 @@ describe('@inaccessible tests', () => {
   });
 
   test('that a required field argument can be declared @inaccessible if its field or parent is declared @inaccessible', () => {
-    const result = federateSubgraphsSuccess([subgraphW, subgraphP], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+      [subgraphW, subgraphP],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
+          INACCESSIBLE_DIRECTIVE +
           `
       type Object {
         name: String!
@@ -588,14 +601,12 @@ describe('@inaccessible tests', () => {
       }
       
       scalar Scalar
-      
-      scalar openfed__Scope
     `,
       ),
     );
-    expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
       normalizeString(
-        schemaQueryDefinition +
+        SCHEMA_QUERY_DEFINITION +
           `
       type Object {
         name: String!
@@ -742,10 +753,11 @@ describe('@inaccessible tests', () => {
   });
 
   test('that a field argument can be declared @inaccessible if the field is also declared @inaccessible #1.1', () => {
-    const result = federateSubgraphsSuccess([fac, fad], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess([fac, fad], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
+          INACCESSIBLE_DIRECTIVE +
           `
         type Entity {
           id: ID!
@@ -755,18 +767,17 @@ describe('@inaccessible tests', () => {
         type Query {
           entities: [Entity!]!
         }
-        
-        scalar openfed__Scope
     `,
       ),
     );
   });
 
   test('that a field argument can be declared @inaccessible if the field is also declared @inaccessible #1.2', () => {
-    const result = federateSubgraphsSuccess([fad, fac], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess([fad, fac], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
+          INACCESSIBLE_DIRECTIVE +
           `
         type Entity {
           id: ID!
@@ -776,18 +787,17 @@ describe('@inaccessible tests', () => {
         type Query {
           entities: [Entity!]!
         }
-        
-        scalar openfed__Scope
     `,
       ),
     );
   });
 
   test('that a field argument can be declared @inaccessible if the parent Object is also declared @inaccessible #1.1', () => {
-    const result = federateSubgraphsSuccess([fae, faf], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess([fae, faf], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
+          INACCESSIBLE_DIRECTIVE +
           `
         type Entity @inaccessible {
           id: ID!
@@ -797,18 +807,17 @@ describe('@inaccessible tests', () => {
         type Query {
           dummy: String!
         }
-        
-        scalar openfed__Scope
     `,
       ),
     );
   });
 
   test('that a field argument can be declared @inaccessible if the parent Object is also declared @inaccessible #1.2', () => {
-    const result = federateSubgraphsSuccess([faf, fae], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess([faf, fae], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
+          INACCESSIBLE_DIRECTIVE +
           `
         type Entity @inaccessible {
           id: ID!
@@ -818,18 +827,17 @@ describe('@inaccessible tests', () => {
         type Query {
           dummy: String!
         }
-        
-        scalar openfed__Scope
     `,
       ),
     );
   });
 
   test('that an Input field can be declared @inaccessible if the parent Input Object is also declared @inaccessible #1.1', () => {
-    const result = federateSubgraphsSuccess([faj, fak], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess([faj, fak], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
+          INACCESSIBLE_DIRECTIVE +
           `
         input Input @inaccessible {
           id: ID!
@@ -839,18 +847,17 @@ describe('@inaccessible tests', () => {
         type Query {
           dummy: String!
         }
-        
-        scalar openfed__Scope
     `,
       ),
     );
   });
 
   test('that an Input field can be declared @inaccessible if the parent Input Object is also declared @inaccessible #1.2', () => {
-    const result = federateSubgraphsSuccess([fak, faj], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess([fak, faj], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
+          INACCESSIBLE_DIRECTIVE +
           `
         input Input @inaccessible {
           id: ID!
@@ -860,8 +867,6 @@ describe('@inaccessible tests', () => {
         type Query {
           dummy: String!
         }
-        
-        scalar openfed__Scope
     `,
       ),
     );

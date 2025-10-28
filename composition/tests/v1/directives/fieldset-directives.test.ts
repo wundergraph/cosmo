@@ -28,12 +28,19 @@ import {
   ROUTER_COMPATIBILITY_VERSION_ONE,
   SCALAR,
   Subgraph,
+  TypeName,
   undefinedFieldInFieldSetErrorMessage,
   unexpectedArgumentErrorMessage,
   UNION,
   unparsableFieldSetErrorMessage,
 } from '../../../src';
-import { schemaQueryDefinition, versionTwoDirectiveDefinitions } from '../utils/utils';
+import {
+  EXTERNAL_DIRECTIVE,
+  INACCESSIBLE_DIRECTIVE,
+  KEY_DIRECTIVE,
+  REQUIRES_DIRECTIVE,
+  SCHEMA_QUERY_DEFINITION,
+} from '../utils/utils';
 import {
   federateSubgraphsSuccess,
   normalizeString,
@@ -830,23 +837,22 @@ describe('openfed_FieldSet tests', () => {
     });
 
     test('that a @requires FieldSet allows inline fragments #1', () => {
-      const result = normalizeSubgraph(
-        subgraphH.definitions,
-        subgraphH.name,
-        undefined,
+      const { configurationDataByTypeName, schema } = normalizeSubgraphSuccess(
+        subgraphH,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationSuccess;
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.schema)).toBe(
+      );
+      expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
-          schemaQueryDefinition +
-            versionTwoDirectiveDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            EXTERNAL_DIRECTIVE +
+            INACCESSIBLE_DIRECTIVE +
+            KEY_DIRECTIVE +
+            REQUIRES_DIRECTIVE +
             `
             type Entity @key(fields: "id") {
               id: ID!
               interface: InterfaceOne @external
-              requirerOne: String! @requires(
-                fields: """
+              requirerOne: String! @requires(fields: """
                 interface {
                   ... on InterfaceTwo {
                     ... on ObjectOne {
@@ -859,17 +865,14 @@ describe('openfed_FieldSet tests', () => {
                   }
                   age
                 }
-                """
-              )
-              requirerTwo: String! @requires(
-                fields: """
+                """)
+              requirerTwo: String! @requires(fields: """
                 interface {
                   ... on InterfaceOne {
                     age
                   }
                 }
-                """
-              )
+                """)
             }
 
             interface InterfaceOne {
@@ -898,13 +901,11 @@ describe('openfed_FieldSet tests', () => {
             }
             
             scalar openfed__FieldSet
-            
-            scalar openfed__Scope
           `,
         ),
       );
-      expect(result.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+      expect(configurationDataByTypeName).toStrictEqual(
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
