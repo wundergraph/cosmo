@@ -8,8 +8,10 @@ import { renderResultTree } from '../helper.js';
 import {
   checkAndInstallTools,
   generateGRPCCode,
-  generateProtoAndMapping, getLanguage,
-  installGoDependencies, installTsDependencies,
+  generateProtoAndMapping,
+  getLanguage,
+  installGoDependencies,
+  installTsDependencies,
 } from '../toolchain.js';
 
 export default (opts: BaseCommandOptions) => {
@@ -36,7 +38,7 @@ export default (opts: BaseCommandOptions) => {
     const goModulePath = options.goModulePath;
 
     try {
-      const language = getLanguage(pluginDir)
+      const language = getLanguage(pluginDir);
 
       // Check and install tools if needed
       if (!options.skipToolsInstallation) {

@@ -9,9 +9,12 @@ import {
   buildGoBinaries,
   checkAndInstallTools,
   generateGRPCCode,
-  generateProtoAndMapping, getLanguage,
+  generateProtoAndMapping,
+  getLanguage,
   getHostPlatform,
-  installGoDependencies, installTsDependencies, buildTsBinaries,
+  installGoDependencies,
+  installTsDependencies,
+  buildTsBinaries,
   normalizePlatforms,
 } from '../toolchain.js';
 
@@ -21,7 +24,11 @@ export default (opts: BaseCommandOptions) => {
   command.argument('[directory]', 'Directory of the plugin', '.');
   command.option('--generate-only', 'Generate only the proto and mapping files, do not compile the plugin');
   command.option('--debug', 'Build the binary with debug information', false);
-  command.option('--platform [platforms...]', 'Platform-architecture combinations (e.g., darwin-arm64 linux-amd64)', []);
+  command.option(
+    '--platform [platforms...]',
+    'Platform-architecture combinations (e.g., darwin-arm64 linux-amd64)',
+    [],
+  );
   command.option('--all-platforms', 'Build for all supported platforms', false);
   command.option('--skip-tools-installation', 'Skip tool installation', false);
   command.option(
@@ -44,7 +51,7 @@ export default (opts: BaseCommandOptions) => {
     let platforms: string[] = [];
 
     try {
-      const language = getLanguage(pluginDir)
+      const language = getLanguage(pluginDir);
 
       // Check and install tools if needed
       if (!options.skipToolsInstallation) {

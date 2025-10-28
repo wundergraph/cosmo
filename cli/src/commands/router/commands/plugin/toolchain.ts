@@ -71,7 +71,7 @@ function getToolPath(toolName: string): string {
 function getOSArch(language: string): string {
   const arch = os.arch();
   if (language !== 'go') {
-    return arch
+    return arch;
   }
 
   if (arch === 'x64') {
@@ -89,7 +89,7 @@ async function shouldReinstallTools(force = false): Promise<boolean> {
     return true;
   }
 
-  console.log(TOOLS_VERSIONS_FILE)
+  console.log(TOOLS_VERSIONS_FILE);
   // If a version file exists, we assume the user manages the tools via toolchain
   if (existsSync(TOOLS_VERSIONS_FILE)) {
     try {
@@ -482,18 +482,18 @@ export async function generateGRPCCode(pluginDir: string, spinner: any, language
       await chmod(protocGenGrpcPath, 0o755);
 
       await execa(
-          protocPath,
-          [
-            `--plugin=protoc-gen-ts=${protocGenTsPath}`,
-            `--plugin=protoc-gen-grpc=${protocGenGrpcPath}`,
-            `--plugin=protoc-gen-js=${protoGenJsPath}`,
-            `--ts_out=grpc_js:${generatedDir}`,
-            `--js_out=import_style=commonjs,binary:${generatedDir}`,
-            `--grpc_out=grpc_js:${generatedDir}`,
-            `--proto_path=${generatedDir}`,
-            protoFile,
-          ],
-          { cwd: pluginDir, stdout: 'inherit', stderr: 'inherit', env },
+        protocPath,
+        [
+          `--plugin=protoc-gen-ts=${protocGenTsPath}`,
+          `--plugin=protoc-gen-grpc=${protocGenGrpcPath}`,
+          `--plugin=protoc-gen-js=${protoGenJsPath}`,
+          `--ts_out=grpc_js:${generatedDir}`,
+          `--js_out=import_style=commonjs,binary:${generatedDir}`,
+          `--grpc_out=grpc_js:${generatedDir}`,
+          `--proto_path=${generatedDir}`,
+          protoFile,
+        ],
+        { cwd: pluginDir, stdout: 'inherit', stderr: 'inherit', env },
       );
 
       break;
@@ -570,37 +570,42 @@ export async function buildTsBinaries(pluginDir: string, platforms: string[], de
   const bunPath = getToolPath('bun');
 
   await Promise.all(
-      platforms.map(async (originalPlatformArch: string) => {
-        const platformArch = ALL_BUN_PLATFORMS_WITH_GO_MAPPING[originalPlatformArch];
-        if (!platformArch) {
-          throw new Error(`Unsupported platform for Bun: ${platformArch}`);
-        }
+    platforms.map(async (originalPlatformArch: string) => {
+      const platformArch = ALL_BUN_PLATFORMS_WITH_GO_MAPPING[originalPlatformArch];
+      if (!platformArch) {
+        throw new Error(`Unsupported platform for Bun: ${platformArch}`);
+      }
 
-        const [platform, arch] = platformArch.split('-');
-        if (!platform || !arch) {
-          throw new Error(`Invalid platform-architecture format: ${originalPlatformArch}. Use format like 'bun-darwin-arm64'`);
-        }
-        const binaryName = `${platform}_${arch}`;
-
-        spinner.text = `Building ${originalPlatformArch}...`;
-        const flags = ['build', 'src/plugin.ts', '--compile', '--outfile', `bin/${binaryName}`, `--target=${originalPlatformArch}`];
-
-        if (debug) {
-          // TODO: To verify if we can actually debug sourcemaps
-          flags.push('--sourcemap');
-        }
-
-        await execa(
-            bunPath,
-            flags,
-            {
-              cwd: pluginDir,
-              stdout: 'inherit',
-              stderr: 'inherit',
-              env,
-            },
+      const [platform, arch] = platformArch.split('-');
+      if (!platform || !arch) {
+        throw new Error(
+          `Invalid platform-architecture format: ${originalPlatformArch}. Use format like 'bun-darwin-arm64'`,
         );
-      }),
+      }
+      const binaryName = `${platform}_${arch}`;
+
+      spinner.text = `Building ${originalPlatformArch}...`;
+      const flags = [
+        'build',
+        'src/plugin.ts',
+        '--compile',
+        '--outfile',
+        `bin/${binaryName}`,
+        `--target=${originalPlatformArch}`,
+      ];
+
+      if (debug) {
+        // TODO: To verify if we can actually debug sourcemaps
+        flags.push('--sourcemap');
+      }
+
+      await execa(bunPath, flags, {
+        cwd: pluginDir,
+        stdout: 'inherit',
+        stderr: 'inherit',
+        env,
+      });
+    }),
   );
 }
 
@@ -666,11 +671,11 @@ export function normalizePlatforms(platforms: string[], allPlatforms: boolean, l
 
   switch (language) {
     case 'go': {
-      return [...new Set([...platforms, ...ALL_GO_PLATFORMS])]
+      return [...new Set([...platforms, ...ALL_GO_PLATFORMS])];
     }
     case 'ts': {
       const allPlatforms = Object.keys(ALL_BUN_PLATFORMS_WITH_GO_MAPPING);
-      return [...new Set([...platforms, ...allPlatforms])]
+      return [...new Set([...platforms, ...allPlatforms])];
     }
   }
 
