@@ -272,6 +272,11 @@ type requestContext struct {
 
 type headerBuilder struct {
 	headers map[string]*HeaderWithHash
+	allHash uint64
+}
+
+func (c *headerBuilder) HashAll() (out uint64) {
+	return c.allHash
 }
 
 func (c *headerBuilder) HeadersForSubgraph(subgraphName string) (http.Header, uint64) {
@@ -285,6 +290,7 @@ func SubgraphHeadersBuilder(ctx *requestContext, headerPropagation *HeaderPropag
 
 	switch p := executionPlan.(type) {
 	case *plan.SynchronousResponsePlan:
+		var allHash uint64
 		headers := make(map[string]*HeaderWithHash, len(p.Response.DataSources))
 		for i := range p.Response.DataSources {
 			h, hh := headerPropagation.BuildRequestHeaderForSubgraph(p.Response.DataSources[i].Name, ctx)
@@ -292,11 +298,14 @@ func SubgraphHeadersBuilder(ctx *requestContext, headerPropagation *HeaderPropag
 				Header: h,
 				Hash:   hh,
 			}
+			allHash += hh
 		}
 		return &headerBuilder{
 			headers: headers,
+			allHash: allHash,
 		}
 	case *plan.SubscriptionResponsePlan:
+		var allHash uint64
 		headers := make(map[string]*HeaderWithHash, len(p.Response.Response.DataSources)+1)
 		for i := range p.Response.Response.DataSources {
 			h, hh := headerPropagation.BuildRequestHeaderForSubgraph(p.Response.Response.DataSources[i].Name, ctx)
@@ -304,14 +313,17 @@ func SubgraphHeadersBuilder(ctx *requestContext, headerPropagation *HeaderPropag
 				Header: h,
 				Hash:   hh,
 			}
+			allHash += hh
 		}
 		h, hh := headerPropagation.BuildRequestHeaderForSubgraph(p.Response.Trigger.SourceName, ctx)
 		headers[p.Response.Trigger.SourceName] = &HeaderWithHash{
 			Header: h,
 			Hash:   hh,
 		}
+		allHash += hh
 		return &headerBuilder{
 			headers: headers,
+			allHash: allHash,
 		}
 	}
 	return &headerBuilder{
@@ -561,10 +573,11 @@ type operationContext struct {
 	// RawContent is the raw content of the operation
 	rawContent string
 	// Content is the normalized content of the operation
-	content    string
-	variables  *astjson.Value
-	files      []*httpclient.FileUpload
-	clientInfo *ClientInfo
+	content       string
+	variables     *astjson.Value
+	variablesHash uint64
+	files         []*httpclient.FileUpload
+	clientInfo    *ClientInfo
 	// preparedPlan is the prepared plan of the operation
 	preparedPlan     *planWithMetaData
 	traceOptions     resolve.TraceOptions

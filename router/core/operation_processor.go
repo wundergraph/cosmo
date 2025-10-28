@@ -58,6 +58,7 @@ type ParsedOperation struct {
 	// "query", "mutation", "subscription"
 	Type           string
 	Variables      *fastjson.Object
+	VariablesHash  uint64
 	RemapVariables map[string]string
 	// NormalizedRepresentation is the normalized representation of the operation
 	// as a string. This is provided for modules to be able to access the
@@ -379,6 +380,13 @@ func (o *OperationKit) unmarshalOperation() error {
 	}
 
 	return nil
+}
+
+func (o *OperationKit) computeVariablesHash() {
+	o.kit.keyGen.Reset()
+	_, _ = o.kit.keyGen.Write(o.kit.doc.Input.Variables)
+	o.parsedOperation.VariablesHash = o.kit.keyGen.Sum64()
+	o.kit.keyGen.Reset()
 }
 
 func (o *OperationKit) ComputeOperationSha256() error {
@@ -886,6 +894,7 @@ func (o *OperationKit) NormalizeVariables() ([]uploads.UploadPathMapping, error)
 	}
 
 	o.parsedOperation.ID = o.kit.keyGen.Sum64()
+	o.computeVariablesHash()
 
 	// If the normalized form of the operation didn't change, we don't need to print it again
 	if bytes.Equal(o.kit.doc.Input.Variables, variablesBefore) && bytes.Equal(o.kit.doc.Input.RawBytes, operationRawBytesBefore) {

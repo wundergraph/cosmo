@@ -922,6 +922,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 
 	opContext.normalizationTime = time.Since(startNormalization)
 	opContext.content = operationKit.parsedOperation.NormalizedRepresentation
+	opContext.variablesHash = operationKit.parsedOperation.VariablesHash
 	opContext.variables, err = astjson.ParseBytes(operationKit.parsedOperation.Request.Variables)
 	if err != nil {
 		return nil, nil, err
@@ -1019,6 +1020,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 	resolveCtx := &resolve.Context{
 		Variables:      operationCtx.Variables(),
 		RemapVariables: operationCtx.remapVariables,
+		VariablesHash:  operationCtx.variablesHash,
 		Request: resolve.Request{
 			Header: registration.clientRequest.Header,
 			ID:     operationCtx.internalHash,
