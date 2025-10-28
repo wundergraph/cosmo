@@ -462,6 +462,10 @@
   },
   "PlaygroundEnabled": true,
   "IntrospectionEnabled": true,
+  "IntrospectionConfig": {
+    "Enabled": true,
+    "Secret": "AN_EXAMPLE_PLACEHOLDER_SECRET_ONLY"
+  },
   "QueryPlansEnabled": true,
   "LogLevel": "info",
   "JSONLog": true,
@@ -545,7 +549,8 @@
           "ValuePrefixes": null
         }
       ]
-    }
+    },
+    "IgnoreIntrospection": false
   },
   "Authorization": {
     "RequireAuthentication": false,
