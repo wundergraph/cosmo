@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { useQuery } from "@connectrpc/connect-query";
 import {
+  BoltIcon,
   ChartBarIcon,
   ClipboardIcon,
   ExclamationTriangleIcon,
@@ -125,6 +126,12 @@ export const GraphLayout = ({ children }: LayoutProps) => {
         href: basePath + "/analytics",
         matchExact: false,
         icon: <ChartBarIcon className="h-4 w-4" />,
+      },
+      {
+        title: "Operations",
+        href: basePath + "/operations",
+        matchExact: false,
+        icon: <BoltIcon className="h-4 w-4" />,
       },
       {
         title: "Routers",
