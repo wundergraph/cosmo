@@ -42,11 +42,7 @@ export function verifyAPIKeyGraphAccess(
         code: EnumStatusCode.OK,
       },
       hasOrganizationAdminOrDeveloperPermissions: authContext.rbac.isOrganizationAdminOrDeveloper,
-      hasWriteAccessToGraph: authContext.rbac.hasFederatedGraphWriteAccess({
-        targetId: federatedGraph.targetId,
-        namespaceId: federatedGraph.namespaceId,
-        creatorUserId: federatedGraph.creatorUserId,
-      }),
+      hasWriteAccessToGraph: authContext.rbac.hasFederatedGraphWriteAccess(federatedGraph),
     };
   });
 }
