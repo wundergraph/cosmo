@@ -20,14 +20,3 @@ events:
       - id: my-redis
         urls:
         - "redis://localhost:6379/2"
-
-#
-#execution_config:
-#  file:
-#    path: /Users/milindadias/Work/cosmo/router-tests/testenv/testdata/configWithPlugins.json
-#    watch: false
-
-plugins:
-  enabled: true
-
-

@@ -60,7 +60,6 @@ func (d *GRPCPlugin) PreparePlugin(img v1.Image) (*exec.Cmd, error) {
 	}
 	finalArgs := cmdArgs[1:]
 
-	fmt.Println(execPath)
 	cmd := exec.Command(execPath, finalArgs...)
 	cmd.Dir = workDir
 

@@ -250,7 +250,6 @@ if [[ "$PRINT_INSTRUCTIONS" != "false" ]]; then
     info_bold "  $BIN_DIR/protoc"
     info_bold "  $BIN_DIR/protoc-gen-go"
     info_bold "  $BIN_DIR/protoc-gen-go-grpc"
-    info_bold "  $BIN_DIR/protoc-gen-js"
     info_bold "  $BIN_DIR/bun"
     echo
 else
