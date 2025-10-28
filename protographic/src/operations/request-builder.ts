@@ -27,6 +27,8 @@ export interface RequestBuilderOptions {
   schema?: GraphQLSchema;
   /** Custom scalar type mappings (scalar name -> proto type) */
   customScalarMappings?: Record<string, string>;
+  /** Callback to ensure nested list wrapper messages are created */
+  ensureNestedListWrapper?: (graphqlType: GraphQLInputType) => string;
 }
 
 /**
@@ -130,6 +132,16 @@ export function buildVariableField(
     customScalarMappings: options?.customScalarMappings,
   });
 
+  // Handle nested list wrappers
+  let finalTypeName = typeInfo.typeName;
+  let isRepeated = typeInfo.isRepeated;
+
+  if (typeInfo.requiresNestedWrapper && options?.ensureNestedListWrapper) {
+    // Create wrapper message and use its name
+    finalTypeName = options.ensureNestedListWrapper(graphqlType);
+    isRepeated = false; // Wrapper handles the repetition
+  }
+
   // Get field number - check if already assigned from reconciliation
   const existingFieldNumber = fieldNumberManager?.getFieldNumber(messageName, protoFieldName);
 
@@ -146,9 +158,9 @@ export function buildVariableField(
     fieldNumber = defaultFieldNumber;
   }
 
-  const field = new protobuf.Field(protoFieldName, fieldNumber, typeInfo.typeName);
+  const field = new protobuf.Field(protoFieldName, fieldNumber, finalTypeName);
 
-  if (typeInfo.isRepeated) {
+  if (isRepeated) {
     field.repeated = true;
   }
 
@@ -212,6 +224,16 @@ export function buildInputObjectMessage(
       customScalarMappings: options?.customScalarMappings,
     });
 
+    // Handle nested list wrappers
+    let finalTypeName = typeInfo.typeName;
+    let isRepeated = typeInfo.isRepeated;
+
+    if (typeInfo.requiresNestedWrapper && options?.ensureNestedListWrapper) {
+      // Create wrapper message and use its name
+      finalTypeName = options.ensureNestedListWrapper(inputField.type);
+      isRepeated = false; // Wrapper handles the repetition
+    }
+
     // Get field number - check if already assigned from reconciliation
     let fieldNumber = fieldNumberManager?.getFieldNumber(message.name, protoFieldName);
 
@@ -222,9 +244,9 @@ export function buildInputObjectMessage(
       fieldNumber = orderedFieldNames.indexOf(protoFieldName) + 1;
     }
 
-    const field = new protobuf.Field(protoFieldName, fieldNumber, typeInfo.typeName);
+    const field = new protobuf.Field(protoFieldName, fieldNumber, finalTypeName);
 
-    if (typeInfo.isRepeated) {
+    if (isRepeated) {
       field.repeated = true;
     }
 
