@@ -116,14 +116,24 @@ type PreHandler struct {
 }
 
 type httpOperation struct {
-	requestContext   *requestContext
-	body             []byte
-	files            []*httpclient.FileUpload
-	requestLogger    *zap.Logger
-	routerSpan       trace.Span
-	operationMetrics *OperationMetrics
-	traceTimings     *art.TraceTimings
+	requestContext     *requestContext
+	body               []byte
+	files              []*httpclient.FileUpload
+	requestLogger      *zap.Logger
+	routerSpan         trace.Span
+	operationMetrics   *OperationMetrics
+	traceTimings       *art.TraceTimings
+	authenticationPass authenticationPass
 }
+
+type authenticationPass int
+
+const (
+	authenticationPassNone authenticationPass = iota
+	authenticationPassNormal
+	authenticationPassIntrospectionSecret
+	authenticationPassSkip
+)
 
 func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 	return &PreHandler{
@@ -337,7 +347,8 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			readOperationBodySpan.End()
 		}
 
-		// If we have authenticators, we try to authenticate the request
+		authenticationPass := authenticationPassNone
+
 		if h.accessController != nil {
 			_, authenticateSpan := h.tracer.Start(r.Context(), "Authenticate",
 				trace.WithSpanKind(trace.SpanKindServer),
@@ -346,39 +357,51 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 			validatedReq, err := h.accessController.Access(w, r)
 			if err != nil {
-				requestContext.SetError(err)
-				requestLogger.Debug("Failed to authenticate request", zap.Error(err))
+				// Auth failed but introspection queries might be allowed to skip auth.
+				// At this early stage we don't know wether this query is an introspection query or not.
+				// We verify if the operation is allowed to skip auth, remember the result in authMode and continue.
+				// At a later stage, when we know the operation type, we recall this decision, to either reject or allow
+				// the operation based on wether this is an introspection query or not.
 
-				// Mark the root span of the router as failed, so we can easily identify failed requests
-				rtrace.AttachErrToSpan(routerSpan, err)
-				rtrace.AttachErrToSpan(authenticateSpan, err)
+				if !h.accessController.skipIntrospectionQueries {
+					// Reject the request since auth has failed
+					// and skipping auth for introspection queries is not allowed,
+					// so it does not matter wether this is an introspection query or not.
+					h.handleAuthenticationFailure(requestContext, requestLogger, err, routerSpan, authenticateSpan, r, w)
+					authenticateSpan.End()
+					return
+				}
 
-				authenticateSpan.End()
-
-				writeOperationError(r, w, requestLogger, &httpGraphqlError{
-					message:    err.Error(),
-					statusCode: http.StatusUnauthorized,
-				})
-				return
+				if h.accessController.IntrospectionSecretConfigured() {
+					if !h.accessController.IntrospectionAccess(r, body) {
+						h.handleAuthenticationFailure(requestContext, requestLogger, err, routerSpan, authenticateSpan, r, w)
+						authenticateSpan.End()
+						return
+					}
+					authenticationPass = authenticationPassIntrospectionSecret
+				} else {
+					authenticationPass = authenticationPassSkip
+				}
+			} else {
+				r = validatedReq
+				requestContext.expressionContext.Request.Auth = expr.LoadAuth(r.Context())
+				authenticationPass = authenticationPassNormal
 			}
 
 			authenticateSpan.End()
-
-			r = validatedReq
-
-			requestContext.expressionContext.Request.Auth = expr.LoadAuth(r.Context())
 		}
 
 		setTelemetryAttributes(r.Context(), requestContext, expr.BucketAuth)
 
 		err = h.handleOperation(r, &httpOperation{
-			requestContext:   requestContext,
-			requestLogger:    requestLogger,
-			routerSpan:       routerSpan,
-			operationMetrics: metrics,
-			traceTimings:     traceTimings,
-			files:            files,
-			body:             body,
+			requestContext:     requestContext,
+			requestLogger:      requestLogger,
+			routerSpan:         routerSpan,
+			operationMetrics:   metrics,
+			traceTimings:       traceTimings,
+			files:              files,
+			body:               body,
+			authenticationPass: authenticationPass,
 		})
 		if err != nil {
 			requestContext.SetError(err)
@@ -628,6 +651,37 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		}
 
 		engineParseSpan.End()
+	}
+
+	if h.accessController != nil {
+		// Based on the authentication result, the introspection config,
+		// and wether this is an introspection query,
+		// we decide here if we need to abort the request or not.
+		isIntrospection, err := operationKit.isIntrospectionQuery()
+		if err != nil {
+			requestContext.logger.Error("failed to check if operation is introspection, treat it like non-introspection operation", zap.Error(err))
+			isIntrospection = false
+		}
+
+		// non-introspection queries are only allowed when authenticated via normal authentication
+		if !isIntrospection && httpOperation.authenticationPass != authenticationPassNormal {
+			return &httpGraphqlError{
+				message:    "unauthorized",
+				statusCode: http.StatusUnauthorized,
+			}
+		}
+
+		// introspection queries are only allowed when authenticated normally or via dedicated token, or when auth skip is enabled
+		// note: httpOperation.authMethod is only set when authentication is successful and the config allows such authentication.
+		if isIntrospection &&
+			httpOperation.authenticationPass != authenticationPassNormal &&
+			httpOperation.authenticationPass != authenticationPassIntrospectionSecret &&
+			httpOperation.authenticationPass != authenticationPassSkip {
+			return &httpGraphqlError{
+				message:    "unauthorized",
+				statusCode: http.StatusUnauthorized,
+			}
+		}
 	}
 
 	requestContext.operation.name = operationKit.parsedOperation.Request.OperationName
@@ -1096,6 +1150,20 @@ func (h *PreHandler) getErrorCodes(err error) []string {
 
 // flushMetrics flushes all metrics to the respective exporters
 // only used for serverless router build
+func (h *PreHandler) handleAuthenticationFailure(requestContext *requestContext, requestLogger *zap.Logger, err error, routerSpan trace.Span, authenticateSpan trace.Span, r *http.Request, w http.ResponseWriter) {
+	requestContext.SetError(err)
+	requestLogger.Debug("Failed to authenticate request", zap.Error(err))
+
+	// Mark the root span of the router as failed, so we can easily identify failed requests
+	rtrace.AttachErrToSpan(routerSpan, err)
+	rtrace.AttachErrToSpan(authenticateSpan, err)
+
+	writeOperationError(r, w, requestLogger, &httpGraphqlError{
+		message:    err.Error(),
+		statusCode: http.StatusUnauthorized,
+	})
+}
+
 func (h *PreHandler) flushMetrics(ctx context.Context, requestLogger *zap.Logger) {
 	requestLogger.Debug("Flushing metrics ...")
 

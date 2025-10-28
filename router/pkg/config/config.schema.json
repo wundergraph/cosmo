@@ -1467,12 +1467,31 @@
       "description": "Enable the GraphQL Playground. The GraphQL Playground is a web-based GraphQL IDE that allows you to interact with the GraphQL API. The default value is true. If the value is false, the GraphQL Playground is disabled.",
       "default": true,
       "deprecated": true,
-      "deprecationMessage": "playground_enabled is deprecated. Please use the playground.enabled configuration instead."
+      "deprecationMessage": "This option is deprecated. Please use the playground.enabled configuration instead."
     },
     "introspection_enabled": {
       "type": "boolean",
       "description": "Enable the GraphQL introspection. The GraphQL introspection allows you to query the schema of the GraphQL API. The default value is true. If the value is false, the GraphQL introspection is disabled. In production, it is recommended to disable the introspection.",
-      "default": true
+      "default": true,
+      "deprecated": true,
+      "deprecationMessage": "This option is deprecated. Please use the introspection.enabled configuration instead."
+    },
+    "introspection": {
+      "type": "object",
+      "description": "",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable the GraphQL introspection. The GraphQL introspection allows you to query the schema of the GraphQL API. The default value is true. If the value is false, the GraphQL introspection is disabled. In production, it is recommended to disable the introspection.",
+          "default": true
+        },
+        "secret": {
+          "type": "string",
+          "description": "A dedicated secret to protect introspection when skipping standard authentication. Needs to be passed via the 'Authorization' header. Effective only when /authentication/ignore_introspection is true.",
+          "minLength": 32
+        }
+      }
     },
     "query_plans_enabled": {
       "type": "boolean",
@@ -1991,6 +2010,11 @@
               }
             }
           }
+        },
+        "ignore_introspection": {
+          "type": "boolean",
+          "description": "If the value is true, introspection requests not need to be authenticated. The default value is false.",
+          "default": false
         }
       }
     },
