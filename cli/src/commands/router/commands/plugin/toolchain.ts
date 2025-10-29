@@ -89,7 +89,6 @@ async function shouldReinstallTools(force = false): Promise<boolean> {
     return true;
   }
 
-  console.log(TOOLS_VERSIONS_FILE);
   // If a version file exists, we assume the user manages the tools via toolchain
   if (existsSync(TOOLS_VERSIONS_FILE)) {
     try {
@@ -183,7 +182,7 @@ async function areToolsInstalledOnHost(): Promise<boolean> {
     }
 
     const bunVersion = await getCommandVersion('bun', '--version');
-    if (!isSemverSatisfied(goVersion, TOOL_VERSIONS.bun.range)) {
+    if (!isSemverSatisfied(bunVersion, TOOL_VERSIONS.bun.range)) {
       console.log(pc.yellow(`Bun version mismatch: found ${bunVersion}, required ${TOOL_VERSIONS.bun.range}`));
       return false;
     }
