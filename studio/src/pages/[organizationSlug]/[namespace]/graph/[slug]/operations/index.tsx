@@ -3,9 +3,7 @@ import {
   GraphPageLayout,
   getGraphLayout,
 } from "@/components/layout/graph-layout";
-import {
-  OperationPageItem,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { OperationPageItem } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getOperationsPage } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { Button } from "@/components/ui/button";
@@ -25,10 +23,34 @@ import { useQuery } from "@connectrpc/connect-query";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useRouter } from "next/router";
 import { useContext } from "react";
+import type { ReactNode } from "react";
+
+const OperationsTableRow = ({
+  id,
+  children,
+}: {
+  id: string;
+  children: ReactNode;
+}) => {
+  const router = useRouter();
+
+  const handleRowClick = () => {
+    const route = `${router.asPath.split("?")[0]}/${id}`;
+
+    router.push(route);
+  };
+
+  return (
+    <TableRow
+      className=" group cursor-pointer py-1 hover:bg-secondary/30"
+      onClick={handleRowClick}
+    >
+      {children}
+    </TableRow>
+  );
+};
 
 const OperationsPage: NextPageWithLayout = () => {
-  // TODO - probably will need pagination later
-  /* const router = useRouter(); */
   const graphContext = useContext(GraphContext);
 
   const { data, isLoading, error, refetch } = useQuery(getOperationsPage, {
@@ -69,20 +91,18 @@ const OperationsPage: NextPageWithLayout = () => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Id</TableHead>
               <TableHead>Operation name</TableHead>
               <TableHead>Timestamp</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {data.operations.map((operation: OperationPageItem) => (
-              <TableRow key={operation.id}>
-                <TableCell>{operation.id}</TableCell>
+              <OperationsTableRow id={operation.id} key={operation.id}>
                 <TableCell>{operation.operationName}</TableCell>
                 <TableCell>
                   {new Date(operation.timestamp).toLocaleString()}
                 </TableCell>
-              </TableRow>
+              </OperationsTableRow>
             ))}
           </TableBody>
         </Table>
