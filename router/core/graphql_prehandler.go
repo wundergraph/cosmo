@@ -439,9 +439,9 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 	})
 }
 
-func (h *PreHandler) shouldComputeOperationSha256(operationKit *OperationKit) bool {
+func (h *PreHandler) shouldComputeOperationSha256(operationKit *OperationKit, reqCtx *requestContext) bool {
 	// If forced, always compute the hash
-	if h.computeOperationSha256 {
+	if h.computeOperationSha256 || reqCtx.forceSha256Compute {
 		return true
 	}
 
@@ -523,7 +523,7 @@ func (h *PreHandler) handleOperation(w http.ResponseWriter, req *http.Request, v
 	}
 
 	// Compute the operation sha256 hash as soon as possible for observability reasons
-	if h.shouldComputeOperationSha256(operationKit) {
+	if h.shouldComputeOperationSha256(operationKit, requestContext) {
 		if err := operationKit.ComputeOperationSha256(); err != nil {
 			return &httpGraphqlError{
 				message:    fmt.Sprintf("error hashing operation: %s", err),
