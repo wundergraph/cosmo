@@ -11,7 +11,6 @@ import {
   generateGRPCCode,
   generateProtoAndMapping,
   getLanguage,
-  getHostPlatform,
   installGoDependencies,
   installTsDependencies,
   typeCheckTs,

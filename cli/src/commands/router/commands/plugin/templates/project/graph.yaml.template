@@ -1,7 +1,0 @@
-version: 1
-subgraphs:
-  # Add your other subgraphs here
-  - plugin:
-      version: 0.0.1
-      path: plugins/{originalPluginName}
-

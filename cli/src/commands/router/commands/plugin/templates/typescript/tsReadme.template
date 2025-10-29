@@ -1,0 +1,15 @@
+## Getting Started
+
+Plugin structure:
+
+   ```
+    plugins/{originalPluginName}/
+    ├── go.mod                # Go module file with dependencies
+    ├── go.sum                # Ts checksums file
+    ├── src/
+    │   ├── plugin.ts           # Main plugin implementation
+    │   └── schema.graphql    # GraphQL schema defining the API
+    ├── generated/            # Generated code (created during build)
+    └── bin/                  # Compiled binaries (created during build)
+        └── plugin            # The compiled plugin binary
+   ```

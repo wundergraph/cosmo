@@ -16,27 +16,12 @@ The plugin demonstrates:
 - Proper structure for a Cosmo gRPC service plugin
 - How to test your gRPC service implementation with gRPC client and server without external dependencies
 
-## Getting Started
-
-Plugin structure:
-
-   ```
-    plugins/{originalPluginName}/
-    ├── go.mod                # Go module file with dependencies
-    ├── go.sum                # Go checksums file
-    ├── src/
-    │   ├── main.go           # Main plugin implementation
-    │   ├── main_test.go      # Tests for the plugin
-    │   └── schema.graphql    # GraphQL schema defining the API
-    ├── generated/            # Generated code (created during build)
-    └── bin/                  # Compiled binaries (created during build)
-        └── plugin            # The compiled plugin binary
-   ```
+{readmeText}
 
 ## 🔧 Customizing Your Plugin
 
 - Change the GraphQL schema in `src/schema.graphql` and regenerate the code with `make generate`.
-- Implement the changes in `src/main.go` and test your implementation with `make test`.
+- Implement the changes in `src/{mainFile}` and test your implementation with `make test`.
 - Build the plugin with `make build`.
 
 ## 📚 Learn More

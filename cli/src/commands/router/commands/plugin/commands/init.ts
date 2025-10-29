@@ -12,8 +12,8 @@ import { camelCase, upperFirst } from 'lodash-es';
 import { BaseCommandOptions } from '../../../../../core/types/types.js';
 import PluginTemplates from '../templates/plugin.js';
 import ProjectTemplates from '../templates/project.js';
-import GoTemplates from '../templates/goplugin.js';
-import TsTemplates from '../templates/tsplugin.js';
+import GoTemplates from '../templates/go.js';
+import TsTemplates from '../templates/typescript.js';
 import { renderResultTree } from '../helper.js';
 
 export default (opts: BaseCommandOptions) => {
@@ -87,6 +87,9 @@ export default (opts: BaseCommandOptions) => {
       await writeFile(resolve(generatedDir, 'service.proto'), proto.proto);
       await writeFile(resolve(generatedDir, 'service.proto.lock.json'), JSON.stringify(proto.lockData, null, 2));
 
+      let readmeTemplate = '';
+      let mainFileName = '';
+
       // Language Specific
       switch (options.language) {
         case 'go': {
@@ -94,6 +97,8 @@ export default (opts: BaseCommandOptions) => {
           await writeFile(resolve(srcDir, 'main_test.go'), pupa(GoTemplates.mainGoTest, { serviceName }));
           await writeFile(resolve(tempDir, 'go.mod'), pupa(GoTemplates.goMod, { modulePath: goModulePath }));
           await writeFile(resolve(tempDir, 'Dockerfile'), pupa(GoTemplates.dockerfileGo, { originalPluginName }));
+          readmeTemplate = GoTemplates.goReadme;
+          mainFileName = 'main.go';
           break;
         }
         case 'ts': {
@@ -101,12 +106,15 @@ export default (opts: BaseCommandOptions) => {
           await writeFile(resolve(srcDir, 'plugin-server.ts'), pupa(TsTemplates.pluginServerTs, { serviceName }));
           await writeFile(resolve(tempDir, 'package.json'), pupa(TsTemplates.packageJson, { serviceName }));
           await writeFile(resolve(tempDir, 'Dockerfile'), pupa(TsTemplates.dockerfileTs, { originalPluginName }));
+          await writeFile(resolve(tempDir, 'tsconfig.json'), pupa(TsTemplates.tsconfig, { serviceName }));
+          readmeTemplate = TsTemplates.tsReadme;
+          mainFileName = 'plugin.ts';
           break;
         }
       }
 
       if (options.project) {
-        await writeFile(resolve(tempDir, 'README.md'), pupa(ProjectTemplates.readme, { name, originalPluginName }));
+        await writeFile(resolve(tempDir, 'README.md'), pupa(ProjectTemplates.readme, { name, originalPluginName, mainFile: mainFileName, readmeText: readmeTemplate }));
 
         // Create cursor rules in .cursor/rules
         await mkdir(resolve(tempDir, '.cursor', 'rules'), { recursive: true });
@@ -125,14 +133,17 @@ export default (opts: BaseCommandOptions) => {
         await writeFile(resolve(projectDir, 'Makefile'), pupa(ProjectTemplates.makefile, { originalPluginName }));
         await writeFile(resolve(projectDir, '.gitignore'), ProjectTemplates.gitignore);
         await writeFile(
-          resolve(projectDir, 'README.md'),
-          pupa(ProjectTemplates.projectReadme, { name, originalPluginName }),
+            resolve(projectDir, 'README.md'),
+            pupa(ProjectTemplates.projectReadme, { name, originalPluginName })
         );
 
         // Move plugin from temp directory to project plugins directory
         await rename(tempDir, pluginDir);
       } else {
-        await writeFile(resolve(tempDir, 'README.md'), pupa(PluginTemplates.readme, { name, originalPluginName }));
+        await writeFile(
+            resolve(tempDir, 'README.md'),
+            pupa(PluginTemplates.readme, { name, originalPluginName, mainFile: mainFileName, readmeText: readmeTemplate })
+        );
 
         // Create cursor rules in .cursor/rules
         await mkdir(resolve(tempDir, '.cursor', 'rules'), { recursive: true });

@@ -83,31 +83,21 @@ function compileTemplates(dir: string, outputFile: string, comment?: string) {
   console.log(`Generated ${outputFile} with ${files.length} templates`);
 }
 
-// Compile all template directories
+// Compile all template subdirectories, generating <templates>/<folder>.ts in the templates root
 const templatesDir = 'src/commands/router/commands/plugin/templates';
 
-compileTemplates(
-  join(templatesDir, 'go'),
-  join(templatesDir, 'goplugin.ts'),
-  'Go plugin templates (templating is done by pupa)'
-);
+const entries = readdirSync(templatesDir, { withFileTypes: true });
+const subdirs = entries.filter((e: any) => e.isDirectory());
 
-compileTemplates(
-  join(templatesDir, 'ts'),
-  join(templatesDir, 'tsplugin.ts'),
-  'TypeScript plugin templates (templating is done by pupa)'
-);
-
-compileTemplates(
-  join(templatesDir, 'plugin'),
-  join(templatesDir, 'plugin.ts'),
-  'Plugin scaffolding templates (templating is done by pupa)'
-);
-
-compileTemplates(
-  join(templatesDir, 'project'),
-  join(templatesDir, 'project.ts'),
-  'Project scaffolding templates (templating is done by pupa)'
-);
-
-console.log('All templates compiled successfully');
+if (subdirs.length === 0) {
+  console.log(`No template subdirectories found in ${templatesDir}`);
+} else {
+  for (const dirent of subdirs) {
+    const dirName = dirent.name;
+    const dirPath = join(templatesDir, dirName);
+    const outFile = join(templatesDir, `${dirName}.ts`);
+    const comment = `Templates for ${dirName} (templating is done by pupa)`;
+    compileTemplates(dirPath, outFile, comment);
+  }
+  console.log('All templates compiled successfully');
+}
