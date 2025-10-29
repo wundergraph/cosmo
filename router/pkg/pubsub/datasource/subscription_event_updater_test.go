@@ -3,6 +3,7 @@ package datasource
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -44,8 +45,8 @@ func TestSubscriptionEventUpdater_Update_NoHooks(t *testing.T) {
 		fieldName:    "testField",
 	}
 	events := []StreamEvent{
-		&testEvent{unsafeTestEvent("test data 1")},
-		&testEvent{unsafeTestEvent("test data 2")},
+		&testEvent{mutableTestEvent("test data 1")},
+		&testEvent{mutableTestEvent("test data 2")},
 	}
 
 	// Expect calls to Update for each event
@@ -69,10 +70,10 @@ func TestSubscriptionEventUpdater_UpdateSubscription_WithHooks_Success(t *testin
 		fieldName:    "testField",
 	}
 	originalEvents := []StreamEvent{
-		&testEvent{unsafeTestEvent("original data")},
+		&testEvent{mutableTestEvent("original data")},
 	}
 	modifiedEvents := []StreamEvent{
-		&testEvent{unsafeTestEvent("modified data")},
+		&testEvent{mutableTestEvent("modified data")},
 	}
 
 	// Create wrapper function for the mock
@@ -116,7 +117,7 @@ func TestSubscriptionEventUpdater_UpdateSubscriptions_WithHooks_Error(t *testing
 		fieldName:    "testField",
 	}
 	events := []StreamEvent{
-		&testEvent{unsafeTestEvent("test data")},
+		&testEvent{mutableTestEvent("test data")},
 	}
 	hookError := errors.New("hook processing error")
 
@@ -157,20 +158,20 @@ func TestSubscriptionEventUpdater_Update_WithMultipleHooks_Success(t *testing.T)
 		fieldName:    "testField",
 	}
 	originalEvents := []StreamEvent{
-		&testEvent{unsafeTestEvent("original")},
+		&testEvent{mutableTestEvent("original")},
 	}
 
 	// Chain of hooks that modify the data
 	receivedArgs1 := make(chan receivedHooksArgs, 1)
 	hook1 := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
 		receivedArgs1 <- receivedHooksArgs{events: events, cfg: cfg}
-		return []StreamEvent{&testEvent{unsafeTestEvent("modified by hook1")}}, nil
+		return []StreamEvent{&testEvent{mutableTestEvent("modified by hook1")}}, nil
 	}
 
 	receivedArgs2 := make(chan receivedHooksArgs, 1)
 	hook2 := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
 		receivedArgs2 <- receivedHooksArgs{events: events, cfg: cfg}
-		return []StreamEvent{&testEvent{unsafeTestEvent("modified by hook2")}}, nil
+		return []StreamEvent{&testEvent{mutableTestEvent("modified by hook2")}}, nil
 	}
 
 	// Expect call to UpdateSubscription with modified data
@@ -200,7 +201,7 @@ func TestSubscriptionEventUpdater_Update_WithMultipleHooks_Success(t *testing.T)
 
 	select {
 	case receivedArgs2 := <-receivedArgs2:
-		assert.Equal(t, []StreamEvent{&testEvent{unsafeTestEvent("modified by hook1")}}, receivedArgs2.events)
+		assert.Equal(t, []StreamEvent{&testEvent{mutableTestEvent("modified by hook1")}}, receivedArgs2.events)
 		assert.Equal(t, config, receivedArgs2.cfg)
 	case <-time.After(1 * time.Second):
 		t.Fatal("timeout waiting for events")
@@ -302,180 +303,261 @@ func TestNewSubscriptionEventUpdater(t *testing.T) {
 	assert.Equal(t, mockUpdater, concreteUpdater.eventUpdater)
 }
 
-// func TestApplyReceiveEventHooks_NoHooks(t *testing.T) {
-// 	ctx := context.Background()
-// 	config := &testSubscriptionEventConfig{
-// 		providerID:   "test-provider",
-// 		providerType: ProviderTypeNats,
-// 		fieldName:    "testField",
-// 	}
-// 	originalEvents := []StreamEvent{
-// 		&testEvent{unsafeTestEvent("test data")},
-// 	}
+func TestSubscriptionEventUpdater_Update_PassthroughWithNoHooks(t *testing.T) {
+	mockUpdater := NewMockSubscriptionUpdater(t)
+	config := &testSubscriptionEventConfig{
+		providerID:   "test-provider",
+		providerType: ProviderTypeNats,
+		fieldName:    "testField",
+	}
+	events := []StreamEvent{
+		&testEvent{mutableTestEvent("event data 1")},
+		&testEvent{mutableTestEvent("event data 2")},
+		&testEvent{mutableTestEvent("event data 3")},
+	}
 
-// 	result, err := applyReceiveEventHooks(ctx, config, originalEvents, []OnReceiveEventsFn{})
+	// With no hooks, Update should call the underlying eventUpdater.Update for each event
+	mockUpdater.On("Update", []byte("event data 1")).Return()
+	mockUpdater.On("Update", []byte("event data 2")).Return()
+	mockUpdater.On("Update", []byte("event data 3")).Return()
 
-// 	assert.NoError(t, err)
-// 	assert.Equal(t, originalEvents, result)
-// }
+	updater := &subscriptionEventUpdater{
+		eventUpdater:                   mockUpdater,
+		subscriptionEventConfiguration: config,
+		hooks:                          Hooks{}, // No hooks
+	}
 
-// func TestApplyReceiveEventHooks_SingleHook_Success(t *testing.T) {
-// 	ctx := context.Background()
-// 	config := &testSubscriptionEventConfig{
-// 		providerID:   "test-provider",
-// 		providerType: ProviderTypeNats,
-// 		fieldName:    "testField",
-// 	}
-// 	originalEvents := []StreamEvent{
-// 		&testEvent{unsafeTestEvent("original")},
-// 	}
-// 	modifiedEvents := []StreamEvent{
-// 		&testEvent{unsafeTestEvent("modified")},
-// 	}
+	updater.Update(events)
 
-// 	hook := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
-// 		return modifiedEvents, nil
-// 	}
+	// Verify all events were passed through without modification
+	mockUpdater.AssertCalled(t, "Update", []byte("event data 1"))
+	mockUpdater.AssertCalled(t, "Update", []byte("event data 2"))
+	mockUpdater.AssertCalled(t, "Update", []byte("event data 3"))
+	mockUpdater.AssertNumberOfCalls(t, "Update", 3)
+}
 
-// 	result, err := applyReceiveEventHooks(ctx, config, originalEvents, []OnReceiveEventsFn{hook})
+func TestSubscriptionEventUpdater_Update_WithSingleHookModification(t *testing.T) {
+	mockUpdater := NewMockSubscriptionUpdater(t)
+	config := &testSubscriptionEventConfig{
+		providerID:   "test-provider",
+		providerType: ProviderTypeNats,
+		fieldName:    "testField",
+	}
+	originalEvents := []StreamEvent{
+		&testEvent{mutableTestEvent("original data 1")},
+		&testEvent{mutableTestEvent("original data 2")},
+	}
 
-// 	assert.NoError(t, err)
-// 	assert.Equal(t, modifiedEvents, result)
-// }
+	// Hook that modifies events by adding a prefix
+	hook := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
+		modifiedEvents := make([]StreamEvent, len(events))
+		for i, event := range events {
+			modifiedData := "modified: " + string(event.GetData())
+			modifiedEvents[i] = &testEvent{mutableTestEvent(modifiedData)}
+		}
+		return modifiedEvents, nil
+	}
 
-// func TestApplyReceiveEventHooks_SingleHook_Error(t *testing.T) {
-// 	ctx := context.Background()
-// 	config := &testSubscriptionEventConfig{
-// 		providerID:   "test-provider",
-// 		providerType: ProviderTypeNats,
-// 		fieldName:    "testField",
-// 	}
-// 	originalEvents := []StreamEvent{
-// 		&testEvent{unsafeTestEvent("original")},
-// 	}
-// 	hookError := errors.New("hook processing failed")
+	subId := resolve.SubscriptionIdentifier{ConnectionID: 1, SubscriptionID: 1}
+	mockUpdater.On("Subscriptions").Return(map[context.Context]resolve.SubscriptionIdentifier{
+		context.Background(): subId,
+	})
 
-// 	hook := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
-// 		return nil, hookError
-// 	}
+	// With hooks, UpdateSubscription should be called with modified data
+	mockUpdater.On("UpdateSubscription", subId, []byte("modified: original data 1")).Return()
+	mockUpdater.On("UpdateSubscription", subId, []byte("modified: original data 2")).Return()
 
-// 	result, err := applyReceiveEventHooks(ctx, config, originalEvents, []OnReceiveEventsFn{hook})
+	updater := &subscriptionEventUpdater{
+		eventUpdater:                   mockUpdater,
+		subscriptionEventConfiguration: config,
+		hooks: Hooks{
+			OnReceiveEvents: []OnReceiveEventsFn{hook},
+		},
+	}
 
-// 	assert.Error(t, err)
-// 	assert.Equal(t, hookError, err)
-// 	assert.Nil(t, result)
-// }
+	updater.Update(originalEvents)
 
-// func TestApplyReceiveEventHooks_MultipleHooks_Success(t *testing.T) {
-// 	ctx := context.Background()
-// 	config := &testSubscriptionEventConfig{
-// 		providerID:   "test-provider",
-// 		providerType: ProviderTypeNats,
-// 		fieldName:    "testField",
-// 	}
-// 	originalEvents := []StreamEvent{
-// 		&testEvent{unsafeTestEvent("original")},
-// 	}
+	// Verify modified events were sent to UpdateSubscription, not the original events
+	mockUpdater.AssertCalled(t, "UpdateSubscription", subId, []byte("modified: original data 1"))
+	mockUpdater.AssertCalled(t, "UpdateSubscription", subId, []byte("modified: original data 2"))
+	mockUpdater.AssertNumberOfCalls(t, "UpdateSubscription", 2)
+	// Update should NOT be called when hooks are present
+	mockUpdater.AssertNotCalled(t, "Update")
+}
 
-// 	receivedArgs1 := make(chan receivedHooksArgs, 1)
-// 	hook1 := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
-// 		receivedArgs1 <- receivedHooksArgs{events: events, cfg: cfg}
-// 		return []StreamEvent{&testEvent{unsafeTestEvent("step1")}}, nil
-// 	}
-// 	receivedArgs2 := make(chan receivedHooksArgs, 1)
-// 	hook2 := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
-// 		receivedArgs2 <- receivedHooksArgs{events: events, cfg: cfg}
-// 		return []StreamEvent{&testEvent{unsafeTestEvent("step2")}}, nil
-// 	}
-// 	receivedArgs3 := make(chan receivedHooksArgs, 1)
-// 	hook3 := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
-// 		receivedArgs3 <- receivedHooksArgs{events: events, cfg: cfg}
-// 		return []StreamEvent{&testEvent{unsafeTestEvent("final")}}, nil
-// 	}
+func TestSubscriptionEventUpdater_Update_WithSingleHookError_ClosesSubscriptionAndLogsError(t *testing.T) {
+	mockUpdater := NewMockSubscriptionUpdater(t)
+	config := &testSubscriptionEventConfig{
+		providerID:   "test-provider",
+		providerType: ProviderTypeNats,
+		fieldName:    "testField",
+	}
+	events := []StreamEvent{
+		&testEvent{mutableTestEvent("test data")},
+	}
+	hookError := errors.New("hook processing failed")
 
-// 	result, err := applyReceiveEventHooks(ctx, config, originalEvents, []OnReceiveEventsFn{hook1, hook2, hook3})
+	// Hook that returns an error
+	hook := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
+		// Return the events but also return an error
+		return events, hookError
+	}
 
-// 	select {
-// 	case receivedArgs1 := <-receivedArgs1:
-// 		assert.Equal(t, originalEvents, receivedArgs1.events)
-// 		assert.Equal(t, config, receivedArgs1.cfg)
-// 	case <-time.After(1 * time.Second):
-// 		t.Fatal("timeout waiting for events")
-// 	}
+	// Set up logger with observer to verify error logging
+	zCore, logObserver := observer.New(zap.InfoLevel)
+	logger := zap.New(zCore)
 
-// 	select {
-// 	case receivedArgs2 := <-receivedArgs2:
-// 		assert.Equal(t, []StreamEvent{&testEvent{unsafeTestEvent("step1")}}, receivedArgs2.events)
-// 		assert.Equal(t, config, receivedArgs2.cfg)
-// 	case <-time.After(1 * time.Second):
-// 		t.Fatal("timeout waiting for events")
-// 	}
+	subId := resolve.SubscriptionIdentifier{ConnectionID: 1, SubscriptionID: 1}
+	mockUpdater.On("Subscriptions").Return(map[context.Context]resolve.SubscriptionIdentifier{
+		context.Background(): subId,
+	})
+	// Events are still sent even when hook returns error
+	mockUpdater.On("UpdateSubscription", subId, []byte("test data")).Return()
+	// Subscription should be closed due to the error
+	mockUpdater.On("CloseSubscription", resolve.SubscriptionCloseKindNormal, subId).Return()
 
-// 	select {
-// 	case receivedArgs3 := <-receivedArgs3:
-// 		assert.Equal(t, []StreamEvent{&testEvent{unsafeTestEvent("step2")}}, receivedArgs3.events)
-// 		assert.Equal(t, config, receivedArgs3.cfg)
-// 	case <-time.After(1 * time.Second):
-// 		t.Fatal("timeout waiting for events")
-// 	}
+	updater := NewSubscriptionEventUpdater(config, Hooks{
+		OnReceiveEvents: []OnReceiveEventsFn{hook},
+	}, mockUpdater, logger)
 
-// 	assert.NoError(t, err)
-// 	assert.Len(t, result, 1)
-// 	assert.Equal(t, "final", string(result[0].GetData()))
-// }
+	updater.Update(events)
 
-// func TestApplyReceiveEventHooks_MultipleHooks_MiddleHookError(t *testing.T) {
-// 	ctx := context.Background()
-// 	config := &testSubscriptionEventConfig{
-// 		providerID:   "test-provider",
-// 		providerType: ProviderTypeNats,
-// 		fieldName:    "testField",
-// 	}
-// 	originalEvents := []StreamEvent{
-// 		&testEvent{unsafeTestEvent("original")},
-// 	}
-// 	middleHookError := errors.New("middle hook failed")
+	// Verify events were still sent despite the error
+	mockUpdater.AssertCalled(t, "UpdateSubscription", subId, []byte("test data"))
+	// Verify subscription was closed due to the error
+	mockUpdater.AssertCalled(t, "CloseSubscription", resolve.SubscriptionCloseKindNormal, subId)
+	// Update should NOT be called when hooks are present
+	mockUpdater.AssertNotCalled(t, "Update")
 
-// 	receivedArgs1 := make(chan receivedHooksArgs, 1)
-// 	hook1 := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
-// 		receivedArgs1 <- receivedHooksArgs{events: events, cfg: cfg}
-// 		return []StreamEvent{&testEvent{unsafeTestEvent("step1")}}, nil
-// 	}
-// 	receivedArgs2 := make(chan receivedHooksArgs, 1)
-// 	hook2 := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
-// 		receivedArgs2 <- receivedHooksArgs{events: events, cfg: cfg}
-// 		return nil, middleHookError
-// 	}
-// 	receivedArgs3 := make(chan receivedHooksArgs, 1)
-// 	hook3 := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
-// 		receivedArgs3 <- receivedHooksArgs{events: events, cfg: cfg}
-// 		return []StreamEvent{&testEvent{unsafeTestEvent("final")}}, nil
-// 	}
+	// Verify error was logged (logging happens asynchronously)
+	assert.Eventually(t, func() bool {
+		logs := logObserver.FilterMessageSnippet("some handlers have thrown an error").TakeAll()
+		if len(logs) != 1 {
+			return false
+		}
+		// Verify the logged error message contains our error
+		return logs[0].ContextMap()["error"] == hookError.Error()
+	}, time.Second, 10*time.Millisecond, "expected error to be logged")
+}
 
-// 	result, err := applyReceiveEventHooks(ctx, config, originalEvents, []OnReceiveEventsFn{hook1, hook2, hook3})
+func TestSubscriptionEventUpdater_Update_WithMultipleHooksChaining(t *testing.T) {
+	mockUpdater := NewMockSubscriptionUpdater(t)
+	config := &testSubscriptionEventConfig{
+		providerID:   "test-provider",
+		providerType: ProviderTypeNats,
+		fieldName:    "testField",
+	}
+	originalEvents := []StreamEvent{
+		&testEvent{mutableTestEvent("original")},
+	}
 
-// 	assert.Error(t, err)
-// 	assert.Equal(t, middleHookError, err)
-// 	assert.Nil(t, result)
+	// Track what each hook receives and when it's called
+	hookCallOrder := make([]int, 0, 3)
+	var mu sync.Mutex
 
-// 	select {
-// 	case receivedArgs1 := <-receivedArgs1:
-// 		assert.Equal(t, originalEvents, receivedArgs1.events)
-// 		assert.Equal(t, config, receivedArgs1.cfg)
-// 	case <-time.After(1 * time.Second):
-// 		t.Fatal("timeout waiting for events")
-// 	}
+	// Hook 1: Adds "step1: " prefix
+	receivedArgs1 := make(chan receivedHooksArgs, 1)
+	hook1 := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
+		mu.Lock()
+		hookCallOrder = append(hookCallOrder, 1)
+		mu.Unlock()
+		receivedArgs1 <- receivedHooksArgs{events: events, cfg: cfg}
+		modifiedEvents := make([]StreamEvent, len(events))
+		for i, event := range events {
+			modifiedData := "step1: " + string(event.GetData())
+			modifiedEvents[i] = &testEvent{mutableTestEvent(modifiedData)}
+		}
+		return modifiedEvents, nil
+	}
 
-// 	select {
-// 	case receivedArgs2 := <-receivedArgs2:
-// 		assert.Equal(t, []StreamEvent{&testEvent{unsafeTestEvent("step1")}}, receivedArgs2.events)
-// 		assert.Equal(t, config, receivedArgs2.cfg)
-// 	case <-time.After(1 * time.Second):
-// 		t.Fatal("timeout waiting for events")
-// 	}
+	// Hook 2: Adds "step2: " prefix
+	receivedArgs2 := make(chan receivedHooksArgs, 1)
+	hook2 := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
+		mu.Lock()
+		hookCallOrder = append(hookCallOrder, 2)
+		mu.Unlock()
+		receivedArgs2 <- receivedHooksArgs{events: events, cfg: cfg}
+		modifiedEvents := make([]StreamEvent, len(events))
+		for i, event := range events {
+			modifiedData := "step2: " + string(event.GetData())
+			modifiedEvents[i] = &testEvent{mutableTestEvent(modifiedData)}
+		}
+		return modifiedEvents, nil
+	}
 
-// 	assert.Empty(t, receivedArgs3)
-// }
+	// Hook 3: Adds "step3: " prefix
+	receivedArgs3 := make(chan receivedHooksArgs, 1)
+	hook3 := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
+		mu.Lock()
+		hookCallOrder = append(hookCallOrder, 3)
+		mu.Unlock()
+		receivedArgs3 <- receivedHooksArgs{events: events, cfg: cfg}
+		modifiedEvents := make([]StreamEvent, len(events))
+		for i, event := range events {
+			modifiedData := "step3: " + string(event.GetData())
+			modifiedEvents[i] = &testEvent{mutableTestEvent(modifiedData)}
+		}
+		return modifiedEvents, nil
+	}
+
+	subId := resolve.SubscriptionIdentifier{ConnectionID: 1, SubscriptionID: 1}
+	mockUpdater.On("Subscriptions").Return(map[context.Context]resolve.SubscriptionIdentifier{
+		context.Background(): subId,
+	})
+	// Final modified data should have all three transformations applied
+	mockUpdater.On("UpdateSubscription", subId, []byte("step3: step2: step1: original")).Return()
+
+	updater := &subscriptionEventUpdater{
+		eventUpdater:                   mockUpdater,
+		subscriptionEventConfiguration: config,
+		hooks: Hooks{
+			OnReceiveEvents: []OnReceiveEventsFn{hook1, hook2, hook3},
+		},
+	}
+
+	updater.Update(originalEvents)
+
+	// Verify hook 1 received original events
+	select {
+	case args1 := <-receivedArgs1:
+		assert.Equal(t, originalEvents, args1.events, "Hook 1 should receive original events")
+		assert.Equal(t, config, args1.cfg)
+		assert.Len(t, args1.events, 1)
+		assert.Equal(t, "original", string(args1.events[0].GetData()))
+	case <-time.After(1 * time.Second):
+		t.Fatal("timeout waiting for hook 1")
+	}
+
+	// Verify hook 2 received events modified by hook 1
+	select {
+	case args2 := <-receivedArgs2:
+		assert.Equal(t, config, args2.cfg)
+		assert.Len(t, args2.events, 1)
+		assert.Equal(t, "step1: original", string(args2.events[0].GetData()), "Hook 2 should receive output from hook 1")
+	case <-time.After(1 * time.Second):
+		t.Fatal("timeout waiting for hook 2")
+	}
+
+	// Verify hook 3 received events modified by hook 2
+	select {
+	case args3 := <-receivedArgs3:
+		assert.Equal(t, config, args3.cfg)
+		assert.Len(t, args3.events, 1)
+		assert.Equal(t, "step2: step1: original", string(args3.events[0].GetData()), "Hook 3 should receive output from hook 2")
+	case <-time.After(1 * time.Second):
+		t.Fatal("timeout waiting for hook 3")
+	}
+
+	// Verify hooks were called in correct order
+	mu.Lock()
+	assert.Equal(t, []int{1, 2, 3}, hookCallOrder, "Hooks should be called in order")
+	mu.Unlock()
+
+	// Verify final modified events were sent to UpdateSubscription
+	mockUpdater.AssertCalled(t, "UpdateSubscription", subId, []byte("step3: step2: step1: original"))
+	mockUpdater.AssertNumberOfCalls(t, "UpdateSubscription", 1)
+	mockUpdater.AssertNotCalled(t, "Update")
+}
 
 // Test the updateEvents method indirectly through Update method
 func TestSubscriptionEventUpdater_UpdateEvents_EmptyEvents(t *testing.T) {
@@ -555,7 +637,7 @@ func TestSubscriptionEventUpdater_UpdateSubscription_WithHookError_ClosesSubscri
 				fieldName:    "testField",
 			}
 			events := []StreamEvent{
-				&testEvent{unsafeTestEvent("test data")},
+				&testEvent{mutableTestEvent("test data")},
 			}
 
 			testHook := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
@@ -592,7 +674,7 @@ func TestSubscriptionEventUpdater_UpdateSubscription_WithHooks_Error_LoggerWrite
 		fieldName:    "testField",
 	}
 	events := []StreamEvent{
-		&testEvent{unsafeTestEvent("test data")},
+		&testEvent{mutableTestEvent("test data")},
 	}
 	hookError := errors.New("hook processing error")
 

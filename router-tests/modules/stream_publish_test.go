@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -22,6 +23,53 @@ import (
 
 func TestPublishHook(t *testing.T) {
 	t.Parallel()
+
+	t.Run("Test Publish hook can't assert to mutable types", func(t *testing.T) {
+		t.Parallel()
+
+		var taPossible atomic.Bool
+		taPossible.Store(true)
+
+		cfg := config.Config{
+			Graph: config.Graph{},
+			Modules: map[string]interface{}{
+				"publishModule": stream_publish.PublishModule{
+					Callback: func(ctx core.StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
+						for _, evt := range events.All() {
+							_, ok := evt.(datasource.MutableStreamEvent)
+							if !ok {
+								taPossible.Store(false)
+							}
+						}
+						return events, nil
+					},
+				},
+			},
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
+			RouterOptions: []core.Option{
+				core.WithModulesConfig(cfg.Modules),
+				core.WithCustomModules(&stream_publish.PublishModule{}),
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `mutation { updateEmployeeMyKafka(employeeID: 3, update: {name: "name test"}) { success } }`,
+			})
+			require.JSONEq(t, `{"data":{"updateEmployeeMyKafka":{"success":false}}}`, resOne.Body)
+
+			requestLog := xEnv.Observer().FilterMessage("Publish Hook has been run")
+			assert.Len(t, requestLog.All(), 1)
+
+			assert.False(t, taPossible.Load(), "invalid type assertion was possible")
+		})
+	})
 
 	t.Run("Test Publish hook is called", func(t *testing.T) {
 		t.Parallel()
