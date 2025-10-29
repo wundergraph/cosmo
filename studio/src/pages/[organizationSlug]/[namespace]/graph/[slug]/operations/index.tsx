@@ -5,13 +5,9 @@ import {
 } from "@/components/layout/graph-layout";
 import {
   OperationPageItem,
-  GetOperationsPageRequest,
-  GetOperationsPageResponse,
-} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import {
-  getOperationsPage,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { getOperationsPage } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/loader";
 import {
@@ -23,11 +19,9 @@ import {
   TableRow,
   TableWrapper,
 } from "@/components/ui/table";
-import {
-  GraphContext,
-} from "@/components/layout/graph-layout";
+import { GraphContext } from "@/components/layout/graph-layout";
 import { NextPageWithLayout } from "@/lib/page";
-import { createConnectQueryKey, useQuery } from "@connectrpc/connect-query";
+import { useQuery } from "@connectrpc/connect-query";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { useRouter } from "next/router";
 import { useContext } from "react";
@@ -37,13 +31,10 @@ const OperationsPage: NextPageWithLayout = () => {
   /* const router = useRouter(); */
   const graphContext = useContext(GraphContext);
 
-  const { data, isLoading, error, refetch } = useQuery(
-    getOperationsPage,
-    {
-      namespace: graphContext?.graph?.namespace,
-      federatedGraphName: graphContext?.graph?.name,
-    }
-  )
+  const { data, isLoading, error, refetch } = useQuery(getOperationsPage, {
+    namespace: graphContext?.graph?.namespace,
+    federatedGraphName: graphContext?.graph?.name,
+  });
 
   if (isLoading) return <Loader fullscreen />;
 
@@ -62,12 +53,12 @@ const OperationsPage: NextPageWithLayout = () => {
     );
   }
 
-  if (!data)
+  if (!data || !data.operations || data.operations.length === 0)
     return (
       <EmptyState
         icon={<ExclamationTriangleIcon />}
         title="Could not retrieve operations"
-        description={""/* TBD */}
+        description={"" /* TBD */}
         actions={<Button onClick={() => undefined}>Retry</Button>}
       />
     );
@@ -84,19 +75,15 @@ const OperationsPage: NextPageWithLayout = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data ? (
-              <TableRow>
-                <TableCell>-</TableCell>
-                <TableCell>-</TableCell>
-                <TableCell>-</TableCell>
-              </TableRow>
-            ) : (
-              <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
-                  No results.
+            {data.operations.map((operation: OperationPageItem) => (
+              <TableRow key={operation.id}>
+                <TableCell>{operation.id}</TableCell>
+                <TableCell>{operation.operationName}</TableCell>
+                <TableCell>
+                  {new Date(operation.timestamp).toLocaleString()}
                 </TableCell>
               </TableRow>
-            )}
+            ))}
           </TableBody>
         </Table>
       </TableWrapper>
