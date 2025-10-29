@@ -1,0 +1,27 @@
+syntax = "proto3";
+package service;
+
+option go_package = "github.com/wundergraph/cosmo/plugin";
+
+// Service definition for AwesomeService
+service AwesomeService {
+  // The hello query
+  rpc QueryHello(QueryHelloRequest) returns (QueryHelloResponse) {}
+}
+
+// Request message for hello operation: The hello query.
+message QueryHelloRequest {
+  string name = 1;
+}
+// Response message for hello operation: The hello query.
+message QueryHelloResponse {
+  // The hello query
+  World hello = 1;
+}
+
+message World {
+  // The ID of the world
+  string id = 1;
+  // The name of the world
+  string name = 2;
+}
