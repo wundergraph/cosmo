@@ -6,12 +6,13 @@
   "scripts": {
     "build": "bun build src/plugin.ts --compile --outfile bin/plugin",
     "dev": "bun run src/plugin.ts",
+    "client": "bun run src/client.ts",
     "postinstall": "bun ./node_modules/@protocolbuffers/protoc-gen-js/download-protoc-gen-js.js"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.14.0",
     "google-protobuf": "^4.0.0",
-    "grpc-health-check": "^2.1.0"
+    "grpc-health-check": "^2.0.0"
   },
   "devDependencies": {
     "@protocolbuffers/protoc-gen-js": "4.0.0",
@@ -21,3 +22,4 @@
     "grpc_tools_node_protoc_ts": "^5.3.3"
   }
 }
+

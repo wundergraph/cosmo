@@ -20,3 +20,6 @@ events:
       - id: my-redis
         urls:
         - "redis://localhost:6379/2"
+
+plugins:
+  enabled: true

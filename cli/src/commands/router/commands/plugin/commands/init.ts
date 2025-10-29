@@ -104,6 +104,7 @@ export default (opts: BaseCommandOptions) => {
         case 'ts': {
           await writeFile(resolve(srcDir, 'plugin.ts'), pupa(TsTemplates.pluginTs, { serviceName }));
           await writeFile(resolve(srcDir, 'plugin-server.ts'), pupa(TsTemplates.pluginServerTs, { serviceName }));
+          await writeFile(resolve(srcDir, 'fs-polyfill.ts'), pupa(TsTemplates.pluginTs, { serviceName }));
           await writeFile(resolve(tempDir, 'package.json'), pupa(TsTemplates.packageJson, { serviceName }));
           await writeFile(resolve(tempDir, 'Dockerfile'), pupa(TsTemplates.dockerfileTs, { originalPluginName }));
           await writeFile(resolve(tempDir, 'tsconfig.json'), pupa(TsTemplates.tsconfig, { serviceName }));

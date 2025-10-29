@@ -2,9 +2,7 @@ import * as grpc from '@grpc/grpc-js';
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
-import { HealthImplementation, ServingStatusMap } from 'grpc-health-check';
-
-
+import { HealthImplementation } from 'grpc-health-check';
 
 /**
  * Plugin server that manages gRPC server with Unix domain socket
@@ -32,7 +30,7 @@ export class PluginServer {
         // Initialize health check service with overall server status and plugin service
         this.healthImpl = new HealthImplementation();
         this.healthImpl.addToServer(this.server);
-        this.healthImpl.setStatus('serviceBar', 'SERVING');
+        this.healthImpl.setStatus('plugin', 'SERVING');
     }
 
     /**
@@ -57,8 +55,6 @@ export class PluginServer {
                         reject(error);
                         return;
                     }
-
-                    console.log("awesome ", __dirname)
 
                     // Output the handshake information for go-plugin
                     // Format: VERSION|PROTOCOL_VERSION|NETWORK|ADDRESS|PROTOCOL

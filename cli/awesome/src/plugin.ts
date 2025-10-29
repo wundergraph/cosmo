@@ -1,3 +1,6 @@
+// MUST be imported first to polyfill fs for protobufjs
+import './fs-polyfill';
+
 import * as grpc from '@grpc/grpc-js';
 import { PluginServer } from './plugin-server';
 
