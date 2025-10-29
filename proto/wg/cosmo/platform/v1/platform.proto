@@ -2950,6 +2950,22 @@ message UnlinkSubgraphResponse {
   Response response = 1;
 }
 
+message OperationPageItem {
+  string id = 1;
+  string operationName = 2;
+  string timestamp = 3;
+}
+
+message GetOperationsPageRequest {
+  string namespace = 1;
+  string federatedGraphName = 2;
+}
+
+message GetOperationsPageResponse {
+  Response response = 1;
+  repeated OperationPageItem operations = 2;
+}
+
 service PlatformService {
   // PlaygroundScripts
   rpc CreatePlaygroundScript(CreatePlaygroundScriptRequest) returns (CreatePlaygroundScriptResponse) {}
@@ -3314,6 +3330,8 @@ service PlatformService {
   rpc GetProposalChecks(GetProposalChecksRequest) returns (GetProposalChecksResponse) {}
   // GetOperations returns the operations of a federated graph.
   rpc GetOperations(GetOperationsRequest) returns (GetOperationsResponse) {}
+  // GetOperationsPage returns the operations page data from gql_metrics_operations table.
+  rpc GetOperationsPage(GetOperationsPageRequest) returns (GetOperationsPageResponse) {}
   // GetClientsFromAnalytics returns all the clients of the federated graph from the analytics
   rpc GetClientsFromAnalytics(GetClientsFromAnalyticsRequest) returns (GetClientsFromAnalyticsResponse) {}
 
