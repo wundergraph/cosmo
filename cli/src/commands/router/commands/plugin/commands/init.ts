@@ -107,6 +107,7 @@ export default (opts: BaseCommandOptions) => {
           await writeFile(resolve(srcDir, 'fs-polyfill.ts'), pupa(TsTemplates.fsPolyfill, { serviceName }));
           await writeFile(resolve(tempDir, 'package.json'), pupa(TsTemplates.packageJson, { serviceName }));
           await writeFile(resolve(tempDir, 'Dockerfile'), pupa(TsTemplates.dockerfileTs, { originalPluginName }));
+          await writeFile(resolve(srcDir, 'plugin.test.ts'), pupa(TsTemplates.pluginTestTs, { serviceName }));
           await writeFile(resolve(tempDir, 'tsconfig.json'), pupa(TsTemplates.tsconfig, { serviceName }));
           readmeTemplate = TsTemplates.tsReadme;
           mainFileName = 'plugin.ts';
@@ -114,15 +115,15 @@ export default (opts: BaseCommandOptions) => {
         }
       }
 
-      if (options.project) {
-        await writeFile(resolve(tempDir, 'README.md'), pupa(ProjectTemplates.readme, { name, originalPluginName, mainFile: mainFileName, readmeText: readmeTemplate }));
-
-        // Create cursor rules in .cursor/rules
-        await mkdir(resolve(tempDir, '.cursor', 'rules'), { recursive: true });
-        await writeFile(
+      // Create cursor rules in .cursor/rules
+      await mkdir(resolve(tempDir, '.cursor', 'rules'), { recursive: true });
+      await writeFile(
           resolve(tempDir, '.cursor', 'rules', 'plugin-development.mdc'),
           pupa(PluginTemplates.cursorRules, { name, originalPluginName, pluginDir }),
-        );
+      );
+
+      if (options.project) {
+        await writeFile(resolve(tempDir, 'README.md'), pupa(ProjectTemplates.readme, { name, originalPluginName, mainFile: mainFileName, readmeText: readmeTemplate }));
 
         // Create a project directory structure
         await mkdir(projectDir, { recursive: true });
@@ -137,25 +138,15 @@ export default (opts: BaseCommandOptions) => {
             resolve(projectDir, 'README.md'),
             pupa(ProjectTemplates.projectReadme, { name, originalPluginName })
         );
-
-        // Move plugin from temp directory to project plugins directory
-        await rename(tempDir, pluginDir);
       } else {
         await writeFile(
             resolve(tempDir, 'README.md'),
             pupa(PluginTemplates.readme, { name, originalPluginName, mainFile: mainFileName, readmeText: readmeTemplate })
         );
-
-        // Create cursor rules in .cursor/rules
-        await mkdir(resolve(tempDir, '.cursor', 'rules'), { recursive: true });
-        await writeFile(
-          resolve(tempDir, '.cursor', 'rules', 'plugin-development.mdc'),
-          pupa(PluginTemplates.cursorRules, { name, originalPluginName, pluginDir }),
-        );
-
         await mkdir(projectDir, { recursive: true });
-        await rename(tempDir, pluginDir);
       }
+
+      await rename(tempDir, pluginDir);
 
       const endTime = performance.now();
       const elapsedTimeMs = endTime - startTime;

@@ -4,7 +4,7 @@
 
 const gitignore = "# Ignore the binary files\nbin/\n\n";
 
-const makefile = "";
+const makefile = ".PHONY: build test generate install-wgc\n\ninstall-wgc:\n\\t@which wgc > /dev/null 2>&1 || npm install -g wgc@latest\n\nmake: build\n\ntest: install-wgc\n\\twgc router plugin test .\n\ngenerate: install-wgc\n\\twgc router plugin generate .\n\npublish: generate\n\\twgc router plugin publish .\n\nbuild: install-wgc\n\\twgc router plugin build . --debug";
 
 const cursorIgnore = "# Ignore the mapping and lock files\ngenerated/mapping.json\ngenerated/service.proto.lock.json\n# Ignore the proto to avoid interpretation issues\ngenerated/service.proto\n# Ignore the plugin binary\nbin/\n\n";
 

@@ -4,10 +4,12 @@ Plugin structure:
 
    ```
     plugins/{originalPluginName}/
-    ├── go.mod                # Go module file with dependencies
-    ├── go.sum                # Ts checksums file
+    ├── package.json                # Package.json file with dependencies
     ├── src/
-    │   ├── plugin.ts           # Main plugin implementation
+    │   ├── plugin.ts         # Main plugin implementation
+    │   ├── plugin.test.ts    # Main plugin implementation tests
+    │   ├── fs-polyfill.ts    # Polyfill to help bundling into a binary
+    │   ├── plugin-server.ts  # Used to initialize the plugin as a server
     │   └── schema.graphql    # GraphQL schema defining the API
     ├── generated/            # Generated code (created during build)
     └── bin/                  # Compiled binaries (created during build)

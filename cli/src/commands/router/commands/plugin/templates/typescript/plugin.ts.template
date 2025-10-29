@@ -5,12 +5,12 @@ import { PluginServer } from './plugin-server';
 import { 
   {serviceName}Service, 
   I{serviceName}Server 
-} from '../generated/service_grpc_pb';
+} from '../generated/service_grpc_pb.js';
 import { 
   QueryHelloRequest, 
   QueryHelloResponse, 
   World 
-} from '../generated/service_pb';
+} from '../generated/service_pb.js';
 
 // Counter for generating unique IDs
 let counter = 0;
