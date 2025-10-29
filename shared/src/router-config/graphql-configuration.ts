@@ -29,6 +29,7 @@ import {
   PROVIDER_TYPE_REDIS,
   RequiredFieldConfiguration,
   SubscriptionCondition,
+  TypeName,
 } from '@wundergraph/composition';
 
 export type DataSourceConfiguration = {
@@ -110,7 +111,7 @@ function eventType(type: CompositionEventType) {
 }
 
 export function configurationDatasToDataSourceConfiguration(
-  dataByTypeName: Map<string, ConfigurationData>,
+  dataByTypeName: Map<TypeName, ConfigurationData>,
 ): DataSourceConfiguration {
   const output: DataSourceConfiguration = {
     rootNodes: [],

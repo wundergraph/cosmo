@@ -16,7 +16,7 @@ import {
   unknownTypeInFieldSetErrorMessage,
   unparsableFieldSetSelectionErrorMessage,
 } from '../../errors/errors';
-import { BASE_SCALARS, EDFS_ARGS_REGEXP } from '../utils/constants';
+import { BASE_SCALARS, EDFS_ARGS_REGEXP } from '../constants/constants';
 import { RequiredFieldConfiguration } from '../../router-configuration/types';
 import { CompositeOutputData, DirectiveDefinitionData, InputValueData } from '../../schema-building/types';
 import { getTypeNodeNamedTypeName } from '../../schema-building/ast';

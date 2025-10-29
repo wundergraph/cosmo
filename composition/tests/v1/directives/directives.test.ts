@@ -11,12 +11,7 @@ import {
   Subgraph,
 } from '../../../src';
 import { describe, expect, test } from 'vitest';
-import {
-  baseDirectiveDefinitions,
-  schemaQueryDefinition,
-  versionOneRouterDefinitions,
-  versionTwoDirectiveDefinitions,
-} from '../utils/utils';
+import { INACCESSIBLE_DIRECTIVE, SCHEMA_QUERY_DEFINITION } from '../utils/utils';
 import { federateSubgraphsSuccess, normalizeString, schemaToSortedNormalizedString } from '../../utils/utils';
 
 describe('Directive tests', () => {
@@ -48,16 +43,13 @@ describe('Directive tests', () => {
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
-          schemaQueryDefinition +
-            baseDirectiveDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             directive @z(list: [[String!]!]!) on FIELD_DEFINITION
     
             type Query {
               dummy: String! @z(list: "test")
             }
-            
-            scalar openfed__FieldSet
         `,
         ),
       );
@@ -91,16 +83,13 @@ describe('Directive tests', () => {
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
-          schemaQueryDefinition +
-            baseDirectiveDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             directive @z(list: [[String!]!]) on FIELD_DEFINITION
     
             type Query {
               dummy: String! @z(list: null)
             }
-            
-            scalar openfed__FieldSet
         `,
         ),
       );
@@ -117,8 +106,7 @@ describe('Directive tests', () => {
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
-          schemaQueryDefinition +
-            baseDirectiveDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             directive @z(list: [[Input!]!]!) on FIELD_DEFINITION
             
@@ -129,8 +117,6 @@ describe('Directive tests', () => {
             type Query {
               dummy: String! @z(list: {name: String})
             }
-            
-            scalar openfed__FieldSet
         `,
         ),
       );
@@ -164,8 +150,8 @@ describe('Directive tests', () => {
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
-          schemaQueryDefinition +
-            versionTwoDirectiveDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            INACCESSIBLE_DIRECTIVE +
             `
             directive @z(list: [[Enum!]!]!) on FIELD_DEFINITION
 
@@ -177,10 +163,6 @@ describe('Directive tests', () => {
             type Query {
               dummy: String! @z(list: A)
             }
-
-            scalar openfed__FieldSet
-            
-            scalar openfed__Scope
         `,
         ),
       );
@@ -197,8 +179,7 @@ describe('Directive tests', () => {
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
-          schemaQueryDefinition +
-            baseDirectiveDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             directive @z(list: [[Int!]!]!) on FIELD_DEFINITION
             
@@ -206,8 +187,6 @@ describe('Directive tests', () => {
             type Query {
               dummy: String! @z(list: 1)
             }
-            
-            scalar openfed__FieldSet
         `,
         ),
       );
@@ -224,8 +203,7 @@ describe('Directive tests', () => {
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
-          schemaQueryDefinition +
-            baseDirectiveDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             directive @z(list: [[Float!]!]!) on FIELD_DEFINITION
             
@@ -233,8 +211,6 @@ describe('Directive tests', () => {
             type Query {
               dummy: String! @z(list: 1.1)
             }
-            
-            scalar openfed__FieldSet
         `,
         ),
       );
@@ -251,8 +227,7 @@ describe('Directive tests', () => {
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
-          schemaQueryDefinition +
-            baseDirectiveDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             directive @z(list: [[Scalar!]!]!) on FIELD_DEFINITION
             
@@ -262,8 +237,6 @@ describe('Directive tests', () => {
             }
             
             scalar Scalar
-            
-            scalar openfed__FieldSet
         `,
         ),
       );
@@ -280,8 +253,7 @@ describe('Directive tests', () => {
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
-          schemaQueryDefinition +
-            baseDirectiveDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             directive @z(float: Float!) on FIELD_DEFINITION
             
@@ -289,8 +261,6 @@ describe('Directive tests', () => {
             type Query {
               dummy: String! @z(float: 1)
             }
-            
-            scalar openfed__FieldSet
         `,
         ),
       );
@@ -336,14 +306,11 @@ describe('Directive tests', () => {
         }
         
         directive @directiveOne(argOne: String!) on SCHEMA
-        directive @directiveTwo(argOne: String!) on SCHEMA` +
-            baseDirectiveDefinitions +
-            `
+        directive @directiveTwo(argOne: String!) on SCHEMA
+        
         type Queries {
           dummy: String!
         }
-        
-        scalar openfed__FieldSet
       `,
         ),
       );
@@ -368,9 +335,7 @@ describe('Directive tests', () => {
         normalizeString(
           `
         directive @directiveOne(argOne: String!) on SCHEMA
-        directive @directiveTwo(argOne: String!) on SCHEMA` +
-            baseDirectiveDefinitions +
-            `scalar openfed__FieldSet`,
+        directive @directiveTwo(argOne: String!) on SCHEMA`,
         ),
       );
     });
@@ -382,7 +347,7 @@ describe('Directive tests', () => {
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
         scalar JSON
         

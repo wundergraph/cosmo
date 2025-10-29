@@ -28,13 +28,13 @@ import {
   STRING_SCALAR,
   UNION,
 } from '../../utils/string-constants';
-import { addIterableValuesToSet, addSets } from '../../utils/utils';
+import { addIterableToSet, addSets } from '../../utils/utils';
 import type { KeyFieldSetData } from '../normalization/types';
-import { MAX_OR_SCOPES } from './constants';
+import { MAX_OR_SCOPES } from '../constants/constants';
 import 'core-js/modules/esnext.set.is-subset-of.v2';
 import 'core-js/modules/esnext.set.is-superset-of.v2';
 import type { CompositeOutputNodeKind } from '../../ast/utils';
-import { COMPOSITE_OUTPUT_NODE_KINDS } from './string-constants';
+import { COMPOSITE_OUTPUT_NODE_KINDS } from '../constants/strings';
 import { SubgraphName, TypeName } from '../../types/types';
 
 export function subtractSet<T>(source: Set<T>, target: Set<T>) {
@@ -160,11 +160,20 @@ export function upsertEntityInterfaceFederationData(
   subgraphData: EntityInterfaceSubgraphData,
   subgraphName: string,
 ) {
-  addIterableValuesToSet(subgraphData.concreteTypeNames, federationData.concreteTypeNames);
+  addIterableToSet({
+    source: subgraphData.concreteTypeNames,
+    target: federationData.concreteTypeNames,
+  });
   federationData.subgraphDataByTypeName.set(subgraphName, subgraphData);
   federationData.fieldDatasBySubgraphName.set(subgraphName, subgraphData.fieldDatas);
-  addIterableValuesToSet(subgraphData.interfaceFieldNames, federationData.interfaceFieldNames);
-  addIterableValuesToSet(subgraphData.interfaceObjectFieldNames, federationData.interfaceObjectFieldNames);
+  addIterableToSet({
+    source: subgraphData.interfaceFieldNames,
+    target: federationData.interfaceFieldNames,
+  });
+  addIterableToSet({
+    source: subgraphData.interfaceObjectFieldNames,
+    target: federationData.interfaceObjectFieldNames,
+  });
   if (subgraphData.isInterfaceObject) {
     federationData.interfaceObjectSubgraphNames.add(subgraphName);
   }

@@ -263,7 +263,7 @@ export function getMutableUnionNode(nameNode: NameNode): MutableUnionNode {
   };
 }
 
-export type MutableTypeDefinitionNode =
+export type MutableDefinitionNode =
   | MutableDirectiveDefinitionNode
   | MutableEnumNode
   | MutableInputObjectNode

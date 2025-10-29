@@ -1,9 +1,9 @@
 import {
-  BASE_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME,
   incompatibleParentTypeMergeError,
   INPUT_OBJECT,
   InputObjectDefinitionData,
   invalidSubgraphNamesError,
+  KEY,
   noBaseDefinitionForExtensionError,
   noQueryRootTypeError,
   OBJECT,
@@ -12,23 +12,25 @@ import {
   ROUTER_COMPATIBILITY_VERSION_ONE,
   SCALAR,
   ScalarDefinitionData,
+  SHAREABLE,
   Subgraph,
   SubgraphName,
-  V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME,
 } from '../../src';
 import { describe, expect, test } from 'vitest';
 import {
-  schemaQueryDefinition,
-  versionOnePersistedBaseSchema,
-  versionOneRouterDefinitions,
-  versionTwoRouterDefinitions,
-  versionTwoRouterDirectiveDefinitions,
+  AUTHENTICATED_DIRECTIVE,
+  INACCESSIBLE_DIRECTIVE,
+  OPENFED_FIELD_SET,
+  OPENFED_SCOPE,
+  REQUIRES_SCOPES_DIRECTIVE,
+  SCHEMA_ALL_ROOTS_DEFINITION,
+  SCHEMA_QUERY_DEFINITION,
+  TAG_DIRECTIVE,
 } from './utils/utils';
 import fs from 'node:fs';
 import path, { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  documentNodeToNormalizedString,
   federateSubgraphsFailure,
   federateSubgraphsSuccess,
   normalizeString,
@@ -85,21 +87,16 @@ describe('FederationFactory tests', () => {
   });
 
   test('that the demo subgraphs federate to generate the correct federated graph', () => {
-    const result = federateSubgraphsSuccess(
+    const { federatedGraphSchema } = federateSubgraphsSuccess(
       [demoEmployees, demoFamily, demoHobbies, demoProducts],
       ROUTER_COMPATIBILITY_VERSION_ONE,
     );
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        `
-      schema {
-        query: Query
-        mutation: Mutation
-        subscription: Subscription
-      }
-      ` +
-          versionTwoRouterDirectiveDefinitions +
-          `
+        SCHEMA_ALL_ROOTS_DEFINITION +
+          AUTHENTICATED_DIRECTIVE +
+          REQUIRES_SCOPES_DIRECTIVE +
+          ` 
       type Alligator implements Animal & Pet {
         class: Class!
         dangerous: String!
@@ -432,18 +429,21 @@ describe('FederationFactory tests', () => {
       type Travelling {
         countriesLived: [Country!]!
       }
-      
-      scalar openfed__Scope
-    `,
+    ` +
+          OPENFED_SCOPE,
       ),
     );
   });
 
   test('that subgraphs are federated #1', () => {
-    const result = federateSubgraphsSuccess([pandas, products, reviews, users], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess(
+      [pandas, products, reviews, users],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
+          TAG_DIRECTIVE +
           `
       type Panda {
         favoriteFood: String @tag(name: "nom-nom-nom")
@@ -516,8 +516,6 @@ describe('FederationFactory tests', () => {
         name: String
         totalProductsCreated: Int
       }
-      
-      scalar openfed__Scope
     `,
       ),
     );
@@ -530,7 +528,7 @@ describe('FederationFactory tests', () => {
     );
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
       type Move {
         hasEffect: Boolean!
@@ -554,8 +552,6 @@ describe('FederationFactory tests', () => {
         name: String
         pokemon: [Pokemon!]!
       }
-      
-      scalar openfed__Scope
       `,
       ),
     );
@@ -566,20 +562,14 @@ describe('FederationFactory tests', () => {
     const subgraphBConfig = subgraphConfigBySubgraphName.get(subgraphB.name);
     expect(subgraphBConfig).toBeDefined();
 
-    expect(subgraphAConfig!.directiveDefinitionByDirectiveName).toHaveLength(22);
-    expect(subgraphBConfig!.directiveDefinitionByDirectiveName).toHaveLength(23);
+    expect(subgraphAConfig!.directiveDefinitionByName).toHaveLength(2);
+    expect(subgraphAConfig!.directiveDefinitionByName.has(KEY)).toBe(true);
+    expect(subgraphAConfig!.directiveDefinitionByName.has(SHAREABLE)).toBe(true);
 
-    for (const directiveName of BASE_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME.keys()) {
-      expect(subgraphAConfig!.directiveDefinitionByDirectiveName.has(directiveName));
-      expect(subgraphBConfig!.directiveDefinitionByDirectiveName.has(directiveName));
-    }
-
-    for (const directiveName of V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME.keys()) {
-      expect(subgraphAConfig!.directiveDefinitionByDirectiveName.has(directiveName));
-      expect(subgraphBConfig!.directiveDefinitionByDirectiveName.has(directiveName));
-    }
-
-    expect(subgraphBConfig!.directiveDefinitionByDirectiveName.has('a'));
+    expect(subgraphBConfig!.directiveDefinitionByName).toHaveLength(3);
+    expect(subgraphBConfig!.directiveDefinitionByName.has('a')).toBe(true);
+    expect(subgraphBConfig!.directiveDefinitionByName.has(KEY)).toBe(true);
+    expect(subgraphBConfig!.directiveDefinitionByName.has(SHAREABLE)).toBe(true);
   });
 
   test('that extension orphans return an error', () => {
@@ -589,10 +579,10 @@ describe('FederationFactory tests', () => {
   });
 
   test('that root types are promoted', () => {
-    const result = federateSubgraphsSuccess([subgraphE], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(documentNodeToNormalizedString(result.federatedGraphAST)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess([subgraphE], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOnePersistedBaseSchema +
+        SCHEMA_QUERY_DEFINITION +
           `
       type Query {
         string: String
@@ -603,26 +593,26 @@ describe('FederationFactory tests', () => {
   });
 
   test('that version one subgraph is assigned correctly', () => {
-    const result = federateSubgraphsSuccess([subgraphE], ROUTER_COMPATIBILITY_VERSION_ONE);
+    const { subgraphConfigBySubgraphName } = federateSubgraphsSuccess([subgraphE], ROUTER_COMPATIBILITY_VERSION_ONE);
 
-    const subgraphConfig = result.subgraphConfigBySubgraphName.get(subgraphE.name);
+    const subgraphConfig = subgraphConfigBySubgraphName.get(subgraphE.name);
     expect(subgraphConfig).toBeDefined();
     expect(subgraphConfig?.isVersionTwo).toBe(false);
   });
 
   test('that version two subgraph is assigned correctly', () => {
-    const result = federateSubgraphsSuccess([subgraphJ], ROUTER_COMPATIBILITY_VERSION_ONE);
+    const { subgraphConfigBySubgraphName } = federateSubgraphsSuccess([subgraphJ], ROUTER_COMPATIBILITY_VERSION_ONE);
 
-    const subgraphConfig = result.subgraphConfigBySubgraphName.get(subgraphJ.name);
+    const subgraphConfig = subgraphConfigBySubgraphName.get(subgraphJ.name);
     expect(subgraphConfig).toBeDefined();
     expect(subgraphConfig?.isVersionTwo).toBe(true);
   });
 
   test('that custom root types are renamed', () => {
-    const result = federateSubgraphsSuccess([subgraphF], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(documentNodeToNormalizedString(result.federatedGraphAST)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess([subgraphF], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOnePersistedBaseSchema +
+        SCHEMA_QUERY_DEFINITION +
           `
       type Query {
         string: String
@@ -633,10 +623,10 @@ describe('FederationFactory tests', () => {
   });
 
   test('that _Any, _Entity, _Service, _service, _entities, are not included in the federated graph', () => {
-    const result = federateSubgraphsSuccess([subgraphG, subgraphH], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(documentNodeToNormalizedString(result.federatedGraphAST)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess([subgraphG, subgraphH], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOnePersistedBaseSchema +
+        SCHEMA_QUERY_DEFINITION +
           `
       type Query {
         string: String
@@ -651,10 +641,15 @@ describe('FederationFactory tests', () => {
   });
 
   test('that @tag and @inaccessible persist correctly #1.1', () => {
-    const result = federateSubgraphsSuccess([subgraphI, subgraphJ], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+      [subgraphI, subgraphJ],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
+          INACCESSIBLE_DIRECTIVE +
+          TAG_DIRECTIVE +
           `
       type Entity {
         enum: Enum!
@@ -700,14 +695,12 @@ describe('FederationFactory tests', () => {
       scalar Scalar @tag(name: "scalar1") @tag(name: "scalar2") @inaccessible
       
       union Union = Entity | Object
-
-      scalar openfed__Scope
     `,
       ),
     );
-    expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
       normalizeString(
-        schemaQueryDefinition +
+        SCHEMA_QUERY_DEFINITION +
           `
       type Entity {
         enum: Enum!
@@ -737,10 +730,15 @@ describe('FederationFactory tests', () => {
   });
 
   test('that @tag and @inaccessible persist correctly #1.2', () => {
-    const result = federateSubgraphsSuccess([subgraphJ, subgraphI], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+      [subgraphJ, subgraphI],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
+          INACCESSIBLE_DIRECTIVE +
+          TAG_DIRECTIVE +
           `
       type Entity {
         enum: Enum!
@@ -786,14 +784,12 @@ describe('FederationFactory tests', () => {
       scalar Scalar @tag(name: "scalar1") @tag(name: "scalar2") @inaccessible
       
       union Union = Entity | Object
-
-      scalar openfed__Scope
     `,
       ),
     );
-    expect(schemaToSortedNormalizedString(result.federatedGraphClientSchema)).toBe(
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
       normalizeString(
-        schemaQueryDefinition +
+        SCHEMA_QUERY_DEFINITION +
           `
       type Entity {
         enum: Enum!
@@ -826,10 +822,9 @@ describe('FederationFactory tests', () => {
     const result = federateSubgraphsSuccess([subgraphK, subgraphL], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
       normalizeString(
-        schemaQueryDefinition +
+        SCHEMA_QUERY_DEFINITION +
           `
         directive @executableDirective(optionalArgInAll: Float, requiredArgInAll: String!, requiredArgInSome: Int!) on FIELD
-        directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION  
         
         type Query {
           dummy: String
@@ -840,10 +835,10 @@ describe('FederationFactory tests', () => {
   });
 
   test('that all nested entity keys are considered to be shareable', () => {
-    const result = federateSubgraphsSuccess([subgraphM, subgraphN], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess([subgraphM, subgraphN], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
     type InnerNestedObject {
       fieldOne: String!
@@ -868,18 +863,16 @@ describe('FederationFactory tests', () => {
       nestedObjectOne: NestedObjectOne!
       nestedObjectTwo: NestedObjectTwo!
     }
-    
-    scalar openfed__Scope
       `,
       ),
     );
   });
 
   test('that _entities and _service are removed even if a root type is renamed', () => {
-    const result = federateSubgraphsSuccess([subgraphF, subgraphO], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(documentNodeToNormalizedString(result.federatedGraphAST)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess([subgraphF, subgraphO], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOnePersistedBaseSchema +
+        SCHEMA_QUERY_DEFINITION +
           `
       type Query {
         string: String
@@ -978,10 +971,10 @@ describe('FederationFactory tests', () => {
   });
 
   test('that renaming a root type also renames field return types of the same type #1.1', () => {
-    const result = federateSubgraphsSuccess([subgraphV, subgraphW], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toStrictEqual(
+    const { federatedGraphSchema } = federateSubgraphsSuccess([subgraphV, subgraphW], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toStrictEqual(
       normalizeString(
-        versionOneRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `        
         type NestedObject {
           query: [[[[Query!]]]]!
@@ -1004,10 +997,10 @@ describe('FederationFactory tests', () => {
   });
 
   test('that renaming a root type also renames field return types of the same type #1.2', () => {
-    const result = federateSubgraphsSuccess([subgraphW, subgraphV], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toStrictEqual(
+    const { federatedGraphSchema } = federateSubgraphsSuccess([subgraphW, subgraphV], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toStrictEqual(
       normalizeString(
-        versionOneRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `        
         type NestedObject {
           query: [[[[Query!]]]]!
@@ -1030,10 +1023,10 @@ describe('FederationFactory tests', () => {
   });
 
   test('that renaming a root type also renames field return types of the same type #2.1', () => {
-    const result = federateSubgraphsSuccess([subgraphV, subgraphX], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toStrictEqual(
+    const { federatedGraphSchema } = federateSubgraphsSuccess([subgraphV, subgraphX], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toStrictEqual(
       normalizeString(
-        versionOneRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `        
         type NestedObject {
           query: [[[[Query!]]]]!
@@ -1057,10 +1050,10 @@ describe('FederationFactory tests', () => {
   });
 
   test('that renaming a root type also renames field return types of the same type #2.2', () => {
-    const result = federateSubgraphsSuccess([subgraphX, subgraphV], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toStrictEqual(
+    const { federatedGraphSchema } = federateSubgraphsSuccess([subgraphX, subgraphV], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toStrictEqual(
       normalizeString(
-        versionOneRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `        
         type NestedObject {
           query: [[[[Query!]]]]!
@@ -1111,7 +1104,8 @@ const demoProducts: Subgraph = {
 const subgraphA: Subgraph = {
   name: 'subgraph-a',
   url: '',
-  definitions: parse(`
+  definitions: parse(
+    `
     directive @external on FIELD_DEFINITION | OBJECT
     directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
     directive @provides(fields: String!) on FIELD_DEFINITION
@@ -1137,9 +1131,8 @@ const subgraphA: Subgraph = {
       name: String! @shareable
       pp: Int! @shareable
     }
-    
-    scalar openfed__FieldSet
-  `),
+  ` + OPENFED_FIELD_SET,
+  ),
 };
 
 const subgraphB: Subgraph = {

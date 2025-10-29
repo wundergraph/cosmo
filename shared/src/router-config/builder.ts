@@ -7,6 +7,7 @@ import {
   ROOT_TYPE_NAMES,
   ROUTER_COMPATIBILITY_VERSIONS,
   SupportedRouterCompatibilityVersion,
+  TypeName,
 } from '@wundergraph/composition';
 import {
   GraphQLSubscriptionProtocol,
@@ -72,7 +73,7 @@ export interface ComposedSubgraph {
   subscriptionProtocol?: SubscriptionProtocol | undefined;
   websocketSubprotocol?: WebsocketSubprotocol | undefined;
   // The intermediate representation of the engine configuration for the subgraph
-  configurationDataByTypeName?: Map<string, ConfigurationData>;
+  configurationDataByTypeName?: Map<TypeName, ConfigurationData>;
   // The normalized GraphQL schema for the subgraph
   schema?: GraphQLSchema;
 }
@@ -87,7 +88,7 @@ export interface ComposedSubgraphPlugin {
   protoSchema: string;
   mapping: GRPCMapping;
   // The intermediate representation of the engine configuration for the subgraph
-  configurationDataByTypeName?: Map<string, ConfigurationData>;
+  configurationDataByTypeName?: Map<TypeName, ConfigurationData>;
   // The normalized GraphQL schema for the subgraph
   schema?: GraphQLSchema;
   imageReference?: ImageReference;
@@ -102,7 +103,7 @@ export interface ComposedSubgraphGRPC {
   protoSchema: string;
   mapping: GRPCMapping;
   // The intermediate representation of the engine configuration for the subgraph
-  configurationDataByTypeName?: Map<string, ConfigurationData>;
+  configurationDataByTypeName?: Map<TypeName, ConfigurationData>;
   // The normalized GraphQL schema for the subgraph
   schema?: GraphQLSchema;
 }

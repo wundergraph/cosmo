@@ -12,8 +12,6 @@ const expectedFederatedGraphSDL = `schema {
   query: Query
 }
 
-directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
-
 type Query {
   hello: String!
 }`;

@@ -21,6 +21,7 @@ import {
 } from './string-constants';
 import { invalidKeyFatalError } from '../errors/errors';
 import { stringToNameNode } from '../ast/utils';
+import { AddMapEntriesParams, AddOptionalToSetParams, AddToSetParams } from './params';
 
 export function getOrThrowError<K, V>(map: Map<K, V>, key: K, mapName: string): V {
   const value = map.get(key);
@@ -55,7 +56,16 @@ export function numberToOrdinal(num: number): string {
   }
 }
 
-export function addIterableValuesToSet<T>(source: Array<T> | Iterable<T>, target: Set<T>) {
+export function addIterableToSet<T>({ source, target }: AddToSetParams<T>) {
+  for (const value of source) {
+    target.add(value);
+  }
+}
+
+export function addOptionalIterableToSet<T>({ source, target }: AddOptionalToSetParams<T>) {
+  if (!source) {
+    return;
+  }
   for (const value of source) {
     target.add(value);
   }
@@ -242,7 +252,7 @@ export function copyArrayValueMap<K, V>(source: Map<K, Array<V>>): Map<K, Array<
   return output;
 }
 
-export function addMapEntries<K, V>(source: Map<K, V>, target: Map<K, V>) {
+export function addMapEntries<K, V>({ source, target }: AddMapEntriesParams<K, V>) {
   for (const [key, value] of source) {
     target.set(key, value);
   }

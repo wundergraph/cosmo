@@ -111,7 +111,9 @@ describe('BreakingChanges', () => {
       expect(schemaChanges.nonBreakingChanges.length).toBe(1);
       expect(schemaChanges.nonBreakingChanges[0].message).toBe("Directive 'shareable' was added to field 'User.name'");
       expect(schemaChanges.nonBreakingChanges[0].path).toBe('User.name.shareable');
-      expect(schemaChanges.nonBreakingChanges[0].changeType).toBe(SchemaChangeType.DIRECTIVE_USAGE_FIELD_DEFINITION_ADDED);
+      expect(schemaChanges.nonBreakingChanges[0].changeType).toBe(
+        SchemaChangeType.DIRECTIVE_USAGE_FIELD_DEFINITION_ADDED,
+      );
     }
   });
 
@@ -125,9 +127,13 @@ describe('BreakingChanges', () => {
 
     if (schemaChanges.kind === 'success') {
       expect(schemaChanges.nonBreakingChanges.length).toBe(1);
-      expect(schemaChanges.nonBreakingChanges[0].message).toBe("Directive 'shareable' was removed from field 'User.name'");
+      expect(schemaChanges.nonBreakingChanges[0].message).toBe(
+        "Directive 'shareable' was removed from field 'User.name'",
+      );
       expect(schemaChanges.nonBreakingChanges[0].path).toBe('User.name.shareable');
-      expect(schemaChanges.nonBreakingChanges[0].changeType).toBe(SchemaChangeType.DIRECTIVE_USAGE_FIELD_DEFINITION_REMOVED);
+      expect(schemaChanges.nonBreakingChanges[0].changeType).toBe(
+        SchemaChangeType.DIRECTIVE_USAGE_FIELD_DEFINITION_REMOVED,
+      );
     }
   });
 
@@ -140,10 +146,27 @@ describe('BreakingChanges', () => {
     expect(schemaChanges.kind).toBe('success');
 
     if (schemaChanges.kind === 'success') {
-      expect(schemaChanges.nonBreakingChanges.length).toBe(1);
-      expect(schemaChanges.nonBreakingChanges[0].message).toBe("Directive 'key' was added to object 'User'");
-      expect(schemaChanges.nonBreakingChanges[0].path).toBe('User.key');
-      expect(schemaChanges.nonBreakingChanges[0].changeType).toBe(SchemaChangeType.DIRECTIVE_USAGE_OBJECT_ADDED);
+      expect(schemaChanges.nonBreakingChanges).toHaveLength(3);
+      expect(schemaChanges.nonBreakingChanges).toStrictEqual([
+        {
+          message: "Type 'openfed__FieldSet' was added",
+          changeType: SchemaChangeType.TYPE_ADDED,
+          path: 'openfed__FieldSet',
+          isBreaking: false,
+        },
+        {
+          message: "Directive 'key' was added to object 'User'",
+          changeType: SchemaChangeType.DIRECTIVE_USAGE_OBJECT_ADDED,
+          path: 'User.key',
+          isBreaking: false,
+        },
+        {
+          message: "Directive 'key' was added",
+          changeType: SchemaChangeType.DIRECTIVE_ADDED,
+          path: '@key',
+          isBreaking: false,
+        },
+      ]);
     }
   });
 

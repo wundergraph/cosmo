@@ -22,7 +22,7 @@ import {
   SetupTest,
 } from './test-util.js';
 
-const schemaDefinition = `schema {\n  query: Query\n}\n\n`
+const schemaDefinition = `schema {\n  query: Query\n}\n\n`;
 let dbname = '';
 
 vi.mock('../src/core/clickhouse/index.js', () => {
@@ -162,7 +162,7 @@ describe('Contract tests', () => {
   });
 
   test('that an error is returned if a contract is created with both excluded and included tags', async () => {
-    const { client, server, } = await SetupTest({ dbname, chClient });
+    const { client, server } = await SetupTest({ dbname, chClient });
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -1038,9 +1038,12 @@ describe('Contract tests', () => {
       namespace: DEFAULT_NAMESPACE,
     });
     expect(sdlResponse.response?.code).toEqual(EnumStatusCode.OK);
-    expect(sdlResponse.clientSchema).toEqual(schemaDefinition + `type Query {
+    expect(sdlResponse.clientSchema).toEqual(
+      schemaDefinition +
+        `type Query {
   hello: String!
-}`);
+}`,
+    );
 
     await client.publishFederatedSubgraph({
       name: subgraphName,
@@ -1156,10 +1159,13 @@ describe('Contract tests', () => {
       namespace: DEFAULT_NAMESPACE,
     });
     expect(sdlResponse.response?.code).toEqual(EnumStatusCode.OK);
-    expect(sdlResponse.clientSchema).toEqual(schemaDefinition + `type Query {
+    expect(sdlResponse.clientSchema).toEqual(
+      schemaDefinition +
+        `type Query {
   hello: String!
   test: String!
-}`);
+}`,
+    );
 
     await client.deleteFederatedSubgraph({
       subgraphName: subgraph2Name,
@@ -1171,9 +1177,12 @@ describe('Contract tests', () => {
       namespace: DEFAULT_NAMESPACE,
     });
     expect(sdlResponse2.response?.code).toEqual(EnumStatusCode.OK);
-    expect(sdlResponse2.clientSchema).toEqual(schemaDefinition + `type Query {
+    expect(sdlResponse2.clientSchema).toEqual(
+      schemaDefinition +
+        `type Query {
   hello: String!
-}`);
+}`,
+    );
 
     await server.close();
   });
@@ -1289,10 +1298,13 @@ describe('Contract tests', () => {
       namespace: DEFAULT_NAMESPACE,
     });
     expect(sdlResponse.response?.code).toEqual(EnumStatusCode.OK);
-    expect(sdlResponse.clientSchema).toEqual(schemaDefinition + `type Query {
+    expect(sdlResponse.clientSchema).toEqual(
+      schemaDefinition +
+        `type Query {
   hello: String!
   test: String!
-}`);
+}`,
+    );
 
     await client.moveSubgraph({
       name: subgraph2Name,
@@ -1305,9 +1317,12 @@ describe('Contract tests', () => {
       namespace: DEFAULT_NAMESPACE,
     });
     expect(sdlResponse2.response?.code).toEqual(EnumStatusCode.OK);
-    expect(sdlResponse2.clientSchema).toEqual(schemaDefinition + `type Query {
+    expect(sdlResponse2.clientSchema).toEqual(
+      schemaDefinition +
+        `type Query {
   hello: String!
-}`);
+}`,
+    );
 
     await server.close();
   });
@@ -1349,10 +1364,13 @@ describe('Contract tests', () => {
       namespace: DEFAULT_NAMESPACE,
     });
     expect(sdlResponse.response?.code).toEqual(EnumStatusCode.OK);
-    expect(sdlResponse.clientSchema).toEqual(schemaDefinition + `type Query {
+    expect(sdlResponse.clientSchema).toEqual(
+      schemaDefinition +
+        `type Query {
   hello: String!
   test: String!
-}`);
+}`,
+    );
 
     const publishRes2 = await client.publishMonograph({
       name: monographName,
@@ -1366,9 +1384,12 @@ describe('Contract tests', () => {
       namespace: DEFAULT_NAMESPACE,
     });
     expect(sdlResponse2.response?.code).toEqual(EnumStatusCode.OK);
-    expect(sdlResponse2.clientSchema).toEqual(schemaDefinition + `type Query {
+    expect(sdlResponse2.clientSchema).toEqual(
+      schemaDefinition +
+        `type Query {
   hello: String!
-}`);
+}`,
+    );
 
     await server.close();
   });
@@ -1429,10 +1450,13 @@ describe('Contract tests', () => {
       namespace: DEFAULT_NAMESPACE,
     });
     expect(sdlResponse.response?.code).toEqual(EnumStatusCode.OK);
-    expect(sdlResponse.clientSchema).toEqual(schemaDefinition + `type Query {
+    expect(sdlResponse.clientSchema).toEqual(
+      schemaDefinition +
+        `type Query {
   hello: String!
   test: String!
-}`);
+}`,
+    );
 
     const updateRes = await client.updateFederatedGraph({
       name: fedGraphName,
@@ -1690,6 +1714,7 @@ describe('Contract tests', () => {
         query: Query
         mutation: Mutation
       }
+      
       directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
       directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
       
@@ -1949,12 +1974,9 @@ describe('Contract tests', () => {
         query: Query
         mutation: Mutation
       }
-      directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
-      directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
-      directive @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
+      
       directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
-
-      scalar openfed__Scope
+      directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
       
       type Query {
         internalUser(id: ID!): InternalUser! @tag(name: "dev-only")
@@ -2054,12 +2076,8 @@ describe('Contract tests', () => {
         mutation: Mutation
       }
       
-      directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
-      directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
-      directive @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
       directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
-
-      scalar openfed__Scope
+      directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
       
       type Query {
         internalUser(id: ID!): InternalUser! @tag(name: "dev-only")

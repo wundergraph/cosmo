@@ -7,27 +7,21 @@ import {
   invalidNamedTypeError,
   noBaseDefinitionForExtensionError,
   noFieldDefinitionsError,
-  NormalizationFailure,
   NormalizationSuccess,
-  normalizeSubgraph,
   normalizeSubgraphFromString,
   OBJECT,
   parse,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   Subgraph,
+  TypeName,
 } from '../../../src';
-import {
-  baseDirectiveDefinitions,
-  stringToTypeNode,
-  versionOneBaseSchema,
-  versionOneRouterDefinitions,
-  versionTwoRouterDefinitions,
-} from '../utils/utils';
+import { SCHEMA_QUERY_DEFINITION, stringToTypeNode, TAG_DIRECTIVE } from '../utils/utils';
 import {
   federateSubgraphsFailure,
   federateSubgraphsSuccess,
   normalizeString,
   normalizeSubgraphFailure,
+  normalizeSubgraphSuccess,
   schemaToSortedNormalizedString,
 } from '../../utils/utils';
 import { Kind } from 'graphql';
@@ -35,379 +29,223 @@ import { Kind } from 'graphql';
 describe('Object tests', () => {
   describe('Normalization tests', () => {
     test('that an Object extension orphan is valid', () => {
-      const result = normalizeSubgraph(
-        subgraphJ.definitions,
-        subgraphJ.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationSuccess;
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.schema)).toBe(
+      const { schema } = normalizeSubgraphSuccess(subgraphJ, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
-          baseDirectiveDefinitions +
-            `
+          `
           type Object {
             name: String!
           }
-          
-          scalar openfed__FieldSet
         `,
         ),
       );
     });
 
     test('that an Object can be extended #1', () => {
-      const result = normalizeSubgraph(
-        subgraphN.definitions,
-        subgraphN.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationSuccess;
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.schema)).toBe(
+      const { schema } = normalizeSubgraphSuccess(subgraphN, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
-          baseDirectiveDefinitions +
-            `
+          `
           type Object {
             age: Int!
             name: String!
           }
-          
-          scalar openfed__FieldSet
         `,
         ),
       );
     });
 
     test('that an Object can be extended #2', () => {
-      const result = normalizeSubgraph(
-        subgraphO.definitions,
-        subgraphO.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationSuccess;
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.schema)).toBe(
+      const { schema } = normalizeSubgraphSuccess(subgraphO, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
-          baseDirectiveDefinitions +
-            `
+          `
           type Object {
             age: Int!
             name: String!
           }
-          
-          scalar openfed__FieldSet
         `,
         ),
       );
     });
 
     test('that an Object stub can be extended #1', () => {
-      const result = normalizeSubgraph(
-        subgraphP.definitions,
-        subgraphP.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationSuccess;
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.schema)).toBe(
+      const { schema } = normalizeSubgraphSuccess(subgraphP, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
-          baseDirectiveDefinitions +
-            `
+          `
           type Object {
             name: String!
           }
-          
-          scalar openfed__FieldSet
         `,
         ),
       );
     });
 
     test('that an Object stub can be extended #2', () => {
-      const result = normalizeSubgraph(
-        subgraphQ.definitions,
-        subgraphQ.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationSuccess;
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.schema)).toBe(
+      const { schema } = normalizeSubgraphSuccess(subgraphQ, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
-          baseDirectiveDefinitions +
-            `
+          `
           type Object {
             name: String!
           }
-          
-          scalar openfed__FieldSet
         `,
         ),
       );
     });
 
     test('that an Object stub can be extended #3', () => {
-      const result = normalizeSubgraph(
-        subgraphR.definitions,
-        subgraphR.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationSuccess;
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.schema)).toBe(
+      const { schema } = normalizeSubgraphSuccess(subgraphR, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
-          baseDirectiveDefinitions +
+          TAG_DIRECTIVE +
             `
           type Object @tag(name: "name") {
             name: String!
           }
-          
-          scalar openfed__FieldSet
         `,
         ),
       );
     });
 
     test('that an Object stub can be extended #4', () => {
-      const result = normalizeSubgraph(
-        subgraphS.definitions,
-        subgraphS.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationSuccess;
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.schema)).toBe(
+      const { schema } = normalizeSubgraphSuccess(subgraphS, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
-          baseDirectiveDefinitions +
+          TAG_DIRECTIVE +
             `
           type Object @tag(name: "name") {
             name: String!
           }
-          
-          scalar openfed__FieldSet
         `,
         ),
       );
     });
 
     test('that an Object stub can be extended #5', () => {
-      const result = normalizeSubgraph(
-        subgraphT.definitions,
-        subgraphT.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationSuccess;
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.schema)).toBe(
+      const { schema } = normalizeSubgraphSuccess(subgraphT, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
-          baseDirectiveDefinitions +
+          TAG_DIRECTIVE +
             `
           type Object @tag(name: "name") {
             name: String!
           }
-          
-          scalar openfed__FieldSet
         `,
         ),
       );
     });
 
     test('that an Object can be extended with just a directive #1', () => {
-      const result = normalizeSubgraph(
-        subgraphU.definitions,
-        subgraphU.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationSuccess;
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.schema)).toBe(
+      const { schema } = normalizeSubgraphSuccess(subgraphU, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
-          baseDirectiveDefinitions +
+          TAG_DIRECTIVE +
             `
           type Object @tag(name: "name") {
             name: String!
           }
-          
-          scalar openfed__FieldSet
         `,
         ),
       );
     });
 
     test('that an Object can be extended with just a directive #2', () => {
-      const result = normalizeSubgraph(
-        subgraphV.definitions,
-        subgraphV.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationSuccess;
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.schema)).toBe(
+      const { schema } = normalizeSubgraphSuccess(subgraphV, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
-          baseDirectiveDefinitions +
+          TAG_DIRECTIVE +
             `
           type Object @tag(name: "name") {
             name: String!
           }
-          
-          scalar openfed__FieldSet
         `,
         ),
       );
     });
 
     test('that an Object extension can be extended with just a directive #1', () => {
-      const result = normalizeSubgraph(
-        subgraphW.definitions,
-        subgraphW.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationSuccess;
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.schema)).toBe(
+      const { schema } = normalizeSubgraphSuccess(subgraphW, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
-          baseDirectiveDefinitions +
+          TAG_DIRECTIVE +
             `
           type Object @tag(name: "name") {
             name: String!
           }
-          
-          scalar openfed__FieldSet
         `,
         ),
       );
     });
 
     test('that an Object extension can be extended with just a directive #2', () => {
-      const result = normalizeSubgraph(
-        subgraphX.definitions,
-        subgraphX.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationSuccess;
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.schema)).toBe(
+      const { schema } = normalizeSubgraphSuccess(subgraphX, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
-          baseDirectiveDefinitions +
+          TAG_DIRECTIVE +
             `
           type Object @tag(name: "name") {
             name: String!
           }
-          
-          scalar openfed__FieldSet
         `,
         ),
       );
     });
 
     test('that an error is returned if a final Object defines no Fields', () => {
-      const result = normalizeSubgraph(
-        subgraphA.definitions,
-        subgraphA.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(noFieldDefinitionsError(OBJECT, OBJECT));
+      const { errors } = normalizeSubgraphFailure(subgraphA, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(noFieldDefinitionsError(OBJECT, OBJECT));
     });
 
     test('that an error is returned if a final Object extension defines no Fields', () => {
-      const result = normalizeSubgraph(
-        subgraphB.definitions,
-        subgraphB.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(noFieldDefinitionsError(OBJECT, OBJECT));
+      const { errors } = normalizeSubgraphFailure(subgraphB, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(noFieldDefinitionsError(OBJECT, OBJECT));
     });
 
     test('that an error is returned if a final extended Object defines no Fields #1', () => {
-      const result = normalizeSubgraph(
-        subgraphC.definitions,
-        subgraphC.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(noFieldDefinitionsError(OBJECT, OBJECT));
+      const { errors } = normalizeSubgraphFailure(subgraphC, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(noFieldDefinitionsError(OBJECT, OBJECT));
     });
 
     test('that an error is returned if a final extended Object defines no Fields #2', () => {
-      const result = normalizeSubgraph(
-        subgraphD.definitions,
-        subgraphD.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(noFieldDefinitionsError(OBJECT, OBJECT));
+      const { errors } = normalizeSubgraphFailure(subgraphD, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(noFieldDefinitionsError(OBJECT, OBJECT));
     });
 
     test('that an error is returned if an Object defines a duplicate Field', () => {
-      const result = normalizeSubgraph(
-        subgraphE.definitions,
-        subgraphE.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(duplicateFieldDefinitionError(OBJECT, OBJECT, 'name'));
+      const { errors } = normalizeSubgraphFailure(subgraphE, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(duplicateFieldDefinitionError(OBJECT, OBJECT, 'name'));
     });
 
     test('that an error is returned if an Object extension defines a duplicate Field', () => {
-      const result = normalizeSubgraph(
-        subgraphF.definitions,
-        subgraphF.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(duplicateFieldDefinitionError(OBJECT, OBJECT, 'name'));
+      const { errors } = normalizeSubgraphFailure(subgraphF, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(duplicateFieldDefinitionError(OBJECT, OBJECT, 'name'));
     });
 
     test('that an error is returned if an extended Object defines a duplicate Field #1', () => {
-      const result = normalizeSubgraph(
-        subgraphG.definitions,
-        subgraphG.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(duplicateFieldDefinitionError(OBJECT, OBJECT, 'name'));
+      const { errors } = normalizeSubgraphFailure(subgraphG, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(duplicateFieldDefinitionError(OBJECT, OBJECT, 'name'));
     });
 
     test('that an error is returned if an extended Object defines a duplicate Field #2', () => {
-      const result = normalizeSubgraph(
-        subgraphH.definitions,
-        subgraphH.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(duplicateFieldDefinitionError(OBJECT, OBJECT, 'name'));
+      const { errors } = normalizeSubgraphFailure(subgraphH, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(duplicateFieldDefinitionError(OBJECT, OBJECT, 'name'));
     });
 
     test('that a Query root type that defines no Fields is valid', () => {
-      const result = normalizeSubgraphFromString(
-        `
-        type Query
-      `,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationSuccess;
-      expect(result.success).toBe(true);
-      expect(normalizeString(result.subgraphString)).toBe(
+      const { schema } = normalizeSubgraphSuccess(naaaa, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
-          versionOneBaseSchema +
+          SCHEMA_QUERY_DEFINITION +
             `
         type Query
       `,
@@ -416,22 +254,10 @@ describe('Object tests', () => {
     });
 
     test('that a renamed Query root type that defines no Fields is valid', () => {
-      const result = normalizeSubgraphFromString(
-        `
-        schema {
-          query: Queries
-        }
-        
-        type Queries
-      `,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationSuccess;
-      expect(result.success).toBe(true);
-      expect(normalizeString(result.subgraphString)).toBe(
+      const { schema } = normalizeSubgraphSuccess(nbaaa, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
-          versionOneBaseSchema +
-            `
+          `
         schema {
           query: Queries
         }
@@ -444,7 +270,7 @@ describe('Object tests', () => {
   });
 
   test('that an error is returned if a field returns an input node type', () => {
-    const { errors } = normalizeSubgraphFailure(naa, ROUTER_COMPATIBILITY_VERSION_ONE);
+    const { errors } = normalizeSubgraphFailure(ncaaa, ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(errors).toHaveLength(1);
     expect(errors[0]).toStrictEqual(
       invalidNamedTypeError({
@@ -462,11 +288,13 @@ describe('Object tests', () => {
 
   describe('Federation tests', () => {
     test('that an Object type and extension definition federate successfully #1.1', () => {
-      const result = federateSubgraphsSuccess([subgraphI, subgraphJ, subgraphM], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      const { federatedGraphSchema } = federateSubgraphsSuccess(
+        [subgraphI, subgraphJ, subgraphM],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
           type Object {
             age: Int!
@@ -482,11 +310,13 @@ describe('Object tests', () => {
     });
 
     test('that an Object type and extension definition federate successfully #1.2', () => {
-      const result = federateSubgraphsSuccess([subgraphI, subgraphM, subgraphJ], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      const { federatedGraphSchema } = federateSubgraphsSuccess(
+        [subgraphI, subgraphM, subgraphJ],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
           type Object {
             age: Int!
@@ -502,18 +332,19 @@ describe('Object tests', () => {
     });
 
     test('that an error is returned if federation results in an Object extension orphan', () => {
-      const result = federateSubgraphsFailure([subgraphI, subgraphJ], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(noBaseDefinitionForExtensionError(OBJECT, OBJECT));
+      const { errors } = federateSubgraphsFailure([subgraphI, subgraphJ], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(noBaseDefinitionForExtensionError(OBJECT, OBJECT));
     });
 
     test('that a V1 Object with @extends directive federates with a base definition #1.1', () => {
-      const result = federateSubgraphsSuccess([subgraphI, subgraphK, subgraphM], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      const { federatedGraphSchema } = federateSubgraphsSuccess(
+        [subgraphI, subgraphK, subgraphM],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
           type Object {
             age: Int!
@@ -529,11 +360,13 @@ describe('Object tests', () => {
     });
 
     test('that a V1 Object with @extends directive federates with a base definition #1.2', () => {
-      const result = federateSubgraphsSuccess([subgraphI, subgraphM, subgraphK], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      const { federatedGraphSchema } = federateSubgraphsSuccess(
+        [subgraphI, subgraphM, subgraphK],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
           type Object {
             age: Int!
@@ -549,32 +382,31 @@ describe('Object tests', () => {
     });
 
     test('that an error is returned if federation results in a V1 Object with @extends directive orphan #1', () => {
-      const result = federateSubgraphsFailure([subgraphI, subgraphK], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(noBaseDefinitionForExtensionError(OBJECT, OBJECT));
+      const { errors } = federateSubgraphsFailure([subgraphI, subgraphK], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(noBaseDefinitionForExtensionError(OBJECT, OBJECT));
     });
 
     test('that an error is returned if federation results in a V1 Object with @extends directive orphan #2.1', () => {
-      const result = federateSubgraphsFailure([subgraphI, subgraphJ, subgraphK], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(noBaseDefinitionForExtensionError(OBJECT, OBJECT));
+      const { errors } = federateSubgraphsFailure([subgraphI, subgraphJ, subgraphK], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(noBaseDefinitionForExtensionError(OBJECT, OBJECT));
     });
 
     test('that an error is returned if federation results in a V1 Object with @extends directive orphan #2.2', () => {
-      const result = federateSubgraphsFailure([subgraphI, subgraphK, subgraphJ], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(noBaseDefinitionForExtensionError(OBJECT, OBJECT));
+      const { errors } = federateSubgraphsFailure([subgraphI, subgraphK, subgraphJ], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(noBaseDefinitionForExtensionError(OBJECT, OBJECT));
     });
 
     test('that a V2 Object @extends directive orphan is valid #1', () => {
-      const result = federateSubgraphsSuccess([subgraphI, subgraphL], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      const { federatedGraphSchema } = federateSubgraphsSuccess(
+        [subgraphI, subgraphL],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
           type Object {
             name: String!
@@ -583,19 +415,19 @@ describe('Object tests', () => {
           type Query {
             dummy: String!
           }
-          
-          scalar openfed__Scope
         `,
         ),
       );
     });
 
     test('that a V2 Object @extends directive orphan is valid with another base type #1.1', () => {
-      const result = federateSubgraphsSuccess([subgraphI, subgraphL, subgraphM], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      const { federatedGraphSchema } = federateSubgraphsSuccess(
+        [subgraphI, subgraphL, subgraphM],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
                 type Object {
                   age: Int!
@@ -605,19 +437,19 @@ describe('Object tests', () => {
                 type Query {
                   dummy: String!
                 }
-
-                scalar openfed__Scope
         `,
         ),
       );
     });
 
     test('that a V2 Object @extends directive orphan is valid with another base type #1.2', () => {
-      const result = federateSubgraphsSuccess([subgraphI, subgraphL, subgraphM], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      const { federatedGraphSchema } = federateSubgraphsSuccess(
+        [subgraphI, subgraphL, subgraphM],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
                 type Object {
                   age: Int!
@@ -627,19 +459,19 @@ describe('Object tests', () => {
                 type Query {
                   dummy: String!
                 }
-
-                scalar openfed__Scope
         `,
         ),
       );
     });
 
     test('that a V2 Object @extends directive orphan is valid with another extension #1.1', () => {
-      const result = federateSubgraphsSuccess([subgraphI, subgraphJ, subgraphL], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      const { federatedGraphSchema } = federateSubgraphsSuccess(
+        [subgraphI, subgraphJ, subgraphL],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
           type Object {
             name: String!
@@ -648,19 +480,19 @@ describe('Object tests', () => {
           type Query {
             dummy: String!
           }
-          
-          scalar openfed__Scope
         `,
         ),
       );
     });
 
     test('that a V2 Object @extends directive orphan is valid with another extension #1.2', () => {
-      const result = federateSubgraphsSuccess([subgraphI, subgraphL, subgraphJ], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      const { federatedGraphSchema } = federateSubgraphsSuccess(
+        [subgraphI, subgraphL, subgraphJ],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
           type Object {
             name: String!
@@ -669,8 +501,6 @@ describe('Object tests', () => {
           type Query {
             dummy: String!
           }
-          
-          scalar openfed__Scope
         `,
         ),
       );
@@ -679,23 +509,9 @@ describe('Object tests', () => {
 
   describe('Router configuration tests', () => {
     test('that an object extended within the same graph generates the correct router configuration', () => {
-      const result = normalizeSubgraphFromString(
-        `
-        type Object {
-          name: String!
-        }
-        
-        extend type Object {
-          age: Int!
-        }
-      `,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationSuccess;
-
-      expect(result.success).toBe(true);
-      expect(result.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+      const { configurationDataByTypeName } = normalizeSubgraphSuccess(ndaaa, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(configurationDataByTypeName).toStrictEqual(
+        new Map<TypeName, ConfigurationData>([
           [
             'Object',
             {
@@ -709,6 +525,54 @@ describe('Object tests', () => {
     });
   });
 });
+
+const naaaa: Subgraph = {
+  name: 'naaaa',
+  url: '',
+  definitions: parse(`
+    type Query
+  `),
+};
+
+const nbaaa: Subgraph = {
+  name: 'nbaaa',
+  url: '',
+  definitions: parse(`
+    schema {
+      query: Queries
+    }
+    
+    type Queries
+  `),
+};
+
+const ncaaa: Subgraph = {
+  name: 'ncaaa',
+  url: '',
+  definitions: parse(`
+    type Object {
+      field: Input!
+    }
+    
+    input Input {
+      name: String!
+    }
+  `),
+};
+
+const ndaaa: Subgraph = {
+  name: 'ndaaa',
+  url: '',
+  definitions: parse(`
+    type Object {
+      name: String!
+    }
+    
+    extend type Object {
+      age: Int!
+    }
+  `),
+};
 
 const subgraphA: Subgraph = {
   name: 'subgraph-a',
@@ -981,20 +845,6 @@ const subgraphX: Subgraph = {
     extend type Object @tag(name: "name")
     
     extend type Object {
-      name: String!
-    }
-  `),
-};
-
-const naa: Subgraph = {
-  name: 'naa',
-  url: '',
-  definitions: parse(`
-    type Object {
-      field: Input!
-    }
-    
-    input Input {
       name: String!
     }
   `),
