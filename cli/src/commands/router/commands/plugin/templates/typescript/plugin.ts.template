@@ -12,18 +12,20 @@ import {
   World 
 } from '../generated/service_pb.js';
 
-// Counter for generating unique IDs
-let counter = 0;
+// Thread-safe counter for generating unique IDs using atomics
+const counterBuffer = new SharedArrayBuffer(4);
+const counterArray = new Int32Array(counterBuffer);
+Atomics.store(counterArray, 0, 0); // Initialize counter to 0
 
 // Define the service implementation using the generated types
 const {serviceName}Implementation: I{serviceName}Server = {
   queryHello: (call: grpc.ServerUnaryCall<QueryHelloRequest, QueryHelloResponse>, callback: grpc.sendUnaryData<QueryHelloResponse>) => {
     const name = call.request.getName();
 
-    counter += 1;
+    const currentCounter = Atomics.add(counterArray, 0, 1) + 1;
 
     const world = new World();
-    world.setId(`world-`+counter);
+    world.setId(`world-`+currentCounter);
     world.setName(`Hello from {serviceName} plugin! `+ name);
 
     const response = new QueryHelloResponse();
