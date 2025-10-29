@@ -31,13 +31,18 @@ func (t testSubscriptionEventConfiguration) RootFieldName() string {
 	return "testSubscription"
 }
 
+// testSubscriptionDataSourceEventBuilder is a reusable event builder for tests
+func testSubscriptionDataSourceEventBuilder(data []byte) StreamEvent {
+	return &testEvent{data: data}
+}
+
 func TestPubSubSubscriptionDataSource_SubscriptionEventConfiguration_Success(t *testing.T) {
 	mockAdapter := NewMockProvider(t)
 	uniqueRequestIDFn := func(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
 		return nil
 	}
 
-	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop())
+	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop(), testSubscriptionDataSourceEventBuilder)
 
 	testConfig := testSubscriptionEventConfiguration{
 		Topic:   "test-topic",
@@ -62,7 +67,7 @@ func TestPubSubSubscriptionDataSource_SubscriptionEventConfiguration_InvalidJSON
 		return nil
 	}
 
-	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop())
+	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop(), testSubscriptionDataSourceEventBuilder)
 
 	invalidInput := []byte(`{"invalid": json}`)
 	result, err := dataSource.SubscriptionEventConfiguration(invalidInput)
@@ -76,7 +81,7 @@ func TestPubSubSubscriptionDataSource_UniqueRequestID_Success(t *testing.T) {
 		return nil
 	}
 
-	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop())
+	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop(), testSubscriptionDataSourceEventBuilder)
 
 	ctx := &resolve.Context{}
 	input := []byte(`{"test": "data"}`)
@@ -93,7 +98,7 @@ func TestPubSubSubscriptionDataSource_UniqueRequestID_Error(t *testing.T) {
 		return expectedError
 	}
 
-	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop())
+	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop(), testSubscriptionDataSourceEventBuilder)
 
 	ctx := &resolve.Context{}
 	input := []byte(`{"test": "data"}`)
@@ -110,7 +115,7 @@ func TestPubSubSubscriptionDataSource_Start_Success(t *testing.T) {
 		return nil
 	}
 
-	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop())
+	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop(), testSubscriptionDataSourceEventBuilder)
 
 	testConfig := testSubscriptionEventConfiguration{
 		Topic:   "test-topic",
@@ -135,7 +140,7 @@ func TestPubSubSubscriptionDataSource_Start_NoConfiguration(t *testing.T) {
 		return nil
 	}
 
-	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop())
+	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop(), testSubscriptionDataSourceEventBuilder)
 
 	invalidInput := []byte(`{"invalid": json}`)
 	ctx := resolve.NewContext(context.Background())
@@ -152,7 +157,7 @@ func TestPubSubSubscriptionDataSource_Start_SubscribeError(t *testing.T) {
 		return nil
 	}
 
-	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop())
+	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop(), testSubscriptionDataSourceEventBuilder)
 
 	testConfig := testSubscriptionEventConfiguration{
 		Topic:   "test-topic",
@@ -179,7 +184,7 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnStart_Success(t *testing.T) 
 		return nil
 	}
 
-	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop())
+	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop(), testSubscriptionDataSourceEventBuilder)
 
 	testConfig := testSubscriptionEventConfiguration{
 		Topic:   "test-topic",
@@ -203,18 +208,18 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnStart_WithHooks(t *testing.T
 		return nil
 	}
 
-	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop())
+	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop(), testSubscriptionDataSourceEventBuilder)
 
 	// Add subscription start hooks
 	hook1Called := false
 	hook2Called := false
 
-	hook1 := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration) error {
+	hook1 := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration, eventBuilder EventBuilderFn) error {
 		hook1Called = true
 		return nil
 	}
 
-	hook2 := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration) error {
+	hook2 := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration, eventBuilder EventBuilderFn) error {
 		hook2Called = true
 		return nil
 	}
@@ -247,10 +252,10 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnStart_HookReturnsClose(t *te
 		return nil
 	}
 
-	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop())
+	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop(), testSubscriptionDataSourceEventBuilder)
 
 	// Add hook that returns close=true
-	hook := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration) error {
+	hook := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration, eventBuilder EventBuilderFn) error {
 		return nil
 	}
 
@@ -280,11 +285,11 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnStart_HookReturnsError(t *te
 		return nil
 	}
 
-	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop())
+	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop(), testSubscriptionDataSourceEventBuilder)
 
 	expectedError := errors.New("hook error")
 	// Add hook that returns an error
-	hook := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration) error {
+	hook := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration, eventBuilder EventBuilderFn) error {
 		return expectedError
 	}
 
@@ -315,16 +320,16 @@ func TestPubSubSubscriptionDataSource_SetSubscriptionOnStartFns(t *testing.T) {
 		return nil
 	}
 
-	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop())
+	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop(), testSubscriptionDataSourceEventBuilder)
 
 	// Initially should have no hooks
 	assert.Len(t, dataSource.hooks.SubscriptionOnStart, 0)
 
 	// Add hooks
-	hook1 := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration) error {
+	hook1 := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration, eventBuilder EventBuilderFn) error {
 		return nil
 	}
-	hook2 := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration) error {
+	hook2 := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration, eventBuilder EventBuilderFn) error {
 		return nil
 	}
 
@@ -345,7 +350,7 @@ func TestNewPubSubSubscriptionDataSource(t *testing.T) {
 		return nil
 	}
 
-	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop())
+	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop(), testSubscriptionDataSourceEventBuilder)
 
 	assert.NotNil(t, dataSource)
 	assert.Equal(t, mockAdapter, dataSource.pubSub)
@@ -359,7 +364,7 @@ func TestPubSubSubscriptionDataSource_InterfaceCompliance(t *testing.T) {
 		return nil
 	}
 
-	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop())
+	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop(), testSubscriptionDataSourceEventBuilder)
 
 	// Test that it implements SubscriptionDataSource interface
 	var _ SubscriptionDataSource = dataSource
