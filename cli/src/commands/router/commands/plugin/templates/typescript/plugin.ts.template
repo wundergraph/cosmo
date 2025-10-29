@@ -42,6 +42,7 @@ function run() {
 
   // Start the server
   pluginServer.serve().catch((error) => {
+    console.error('Failed to start plugin server:', error);
     process.exit(1);
   });
 }
