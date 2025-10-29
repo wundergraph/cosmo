@@ -11,6 +11,7 @@ import {
   parse,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   Subgraph,
+  TypeName,
   undefinedRequiredArgumentsErrorMessage,
   unexpectedDirectiveArgumentErrorMessage,
 } from '../../src';
@@ -150,7 +151,7 @@ describe('Entity tests', () => {
       );
     });
 
-    test('that ancestors of resolvable entities that are not in the same subgraph return an error', () => {
+    test('that an entity and its descendants in another subgraph are determined to be resolvable', () => {
       const { federatedGraphSchema } = federateSubgraphsSuccess(
         [subgraphC, subgraphF],
         ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -322,7 +323,7 @@ describe('Entity tests', () => {
       const j = subgraphConfigBySubgraphName.get('subgraph-j');
       expect(j).toBeDefined();
       expect(i!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -343,7 +344,7 @@ describe('Entity tests', () => {
         ]),
       );
       expect(j!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Entity',
             {
@@ -367,7 +368,7 @@ describe('Entity tests', () => {
       const k = subgraphConfigBySubgraphName.get('subgraph-k');
       expect(k).toBeDefined();
       expect(j!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Entity',
             {
@@ -380,7 +381,7 @@ describe('Entity tests', () => {
         ]),
       );
       expect(k!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -412,7 +413,7 @@ describe('Entity tests', () => {
       const l = subgraphConfigBySubgraphName.get('subgraph-l');
       expect(l).toBeDefined();
       expect(k!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -433,7 +434,7 @@ describe('Entity tests', () => {
         ]),
       );
       expect(l!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Entity',
             {
@@ -472,7 +473,7 @@ describe('Entity tests', () => {
       const r = subgraphConfigBySubgraphName.get('subgraph-r');
       expect(r).toBeDefined();
       expect(o!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -512,7 +513,7 @@ describe('Entity tests', () => {
         ]),
       );
       expect(p!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Entity',
             {
@@ -528,7 +529,7 @@ describe('Entity tests', () => {
         ]),
       );
       expect(q!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Entity',
             {
@@ -560,7 +561,7 @@ describe('Entity tests', () => {
         ]),
       );
       expect(r!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Entity',
             {
@@ -579,7 +580,7 @@ describe('Entity tests', () => {
       const s = subgraphConfigBySubgraphName.get('subgraph-s');
       expect(s).toBeDefined();
       expect(s!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -604,7 +605,7 @@ describe('Entity tests', () => {
       );
     });
 
-    test('that if a target key can be satisfied, it will included in the router configuration #1.1', () => {
+    test('that if a target key can be satisfied, it will be included in the router configuration #1.1', () => {
       const { federatedGraphSchema, subgraphConfigBySubgraphName } = federateSubgraphsSuccess(
         [subgraphU, subgraphV],
         ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -631,7 +632,7 @@ describe('Entity tests', () => {
       const v = subgraphConfigBySubgraphName.get('subgraph-v');
       expect(v).toBeDefined();
       expect(u!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -655,7 +656,7 @@ describe('Entity tests', () => {
         ]),
       );
       expect(v!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Entity',
             {
@@ -669,7 +670,7 @@ describe('Entity tests', () => {
       );
     });
 
-    test('that if a target key can be satisfied, it will included in the router configuration #1.2', () => {
+    test('that if a target key can be satisfied, it will be included in the router configuration #1.2', () => {
       const { federatedGraphSchema, subgraphConfigBySubgraphName } = federateSubgraphsSuccess(
         [subgraphV, subgraphU],
         ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -696,7 +697,7 @@ describe('Entity tests', () => {
       const v = subgraphConfigBySubgraphName.get('subgraph-v');
       expect(v).toBeDefined();
       expect(u!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -720,7 +721,7 @@ describe('Entity tests', () => {
         ]),
       );
       expect(v!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Entity',
             {
@@ -734,7 +735,7 @@ describe('Entity tests', () => {
       );
     });
 
-    test('that if a target key can be satisfied, it will included in the router configuration #2.1', () => {
+    test('that if a target key can be satisfied, it will be included in the router configuration #2.1', () => {
       const { federatedGraphSchema, subgraphConfigBySubgraphName } = federateSubgraphsSuccess(
         [subgraphW, subgraphX, subgraphY],
         ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -774,7 +775,7 @@ describe('Entity tests', () => {
       const y = subgraphConfigBySubgraphName.get('subgraph-y');
       expect(y).toBeDefined();
       expect(w!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -816,7 +817,7 @@ describe('Entity tests', () => {
         ]),
       );
       expect(x!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Entity',
             {
@@ -837,7 +838,7 @@ describe('Entity tests', () => {
         ]),
       );
       expect(y!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Entity',
             {
@@ -872,7 +873,7 @@ describe('Entity tests', () => {
       );
     });
 
-    test('that if a target key can be satisfied, it will included in the router configuration #2.2', () => {
+    test('that if a target key can be satisfied, it will be included in the router configuration #2.2', () => {
       const { federatedGraphSchema, subgraphConfigBySubgraphName } = federateSubgraphsSuccess(
         [subgraphW, subgraphY, subgraphX],
         ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -912,7 +913,7 @@ describe('Entity tests', () => {
       const y = subgraphConfigBySubgraphName.get('subgraph-y');
       expect(y).toBeDefined();
       expect(w!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -954,7 +955,7 @@ describe('Entity tests', () => {
         ]),
       );
       expect(x!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Entity',
             {
@@ -975,7 +976,7 @@ describe('Entity tests', () => {
         ]),
       );
       expect(y!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Entity',
             {
@@ -1010,7 +1011,7 @@ describe('Entity tests', () => {
       );
     });
 
-    test('that if a target key can be satisfied, it will included in the router configuration #2.3', () => {
+    test('that if a target key can be satisfied, it will be included in the router configuration #2.3', () => {
       const { federatedGraphSchema, subgraphConfigBySubgraphName } = federateSubgraphsSuccess(
         [subgraphX, subgraphW, subgraphY],
         ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -1050,7 +1051,7 @@ describe('Entity tests', () => {
       const y = subgraphConfigBySubgraphName.get('subgraph-y');
       expect(y).toBeDefined();
       expect(w!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -1092,7 +1093,7 @@ describe('Entity tests', () => {
         ]),
       );
       expect(x!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Entity',
             {
@@ -1113,7 +1114,7 @@ describe('Entity tests', () => {
         ]),
       );
       expect(y!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Entity',
             {
@@ -1148,7 +1149,7 @@ describe('Entity tests', () => {
       );
     });
 
-    test('that if a target key can be satisfied, it will included in the router configuration #2.4', () => {
+    test('that if a target key can be satisfied, it will be included in the router configuration #2.4', () => {
       const { federatedGraphSchema, subgraphConfigBySubgraphName } = federateSubgraphsSuccess(
         [subgraphX, subgraphY, subgraphW],
         ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -1188,7 +1189,7 @@ describe('Entity tests', () => {
       const y = subgraphConfigBySubgraphName.get('subgraph-y');
       expect(y).toBeDefined();
       expect(w!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -1230,7 +1231,7 @@ describe('Entity tests', () => {
         ]),
       );
       expect(x!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Entity',
             {
@@ -1251,7 +1252,7 @@ describe('Entity tests', () => {
         ]),
       );
       expect(y!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Entity',
             {
@@ -1286,7 +1287,7 @@ describe('Entity tests', () => {
       );
     });
 
-    test('that if a target key can be satisfied, it will included in the router configuration #2.5', () => {
+    test('that if a target key can be satisfied, it will be included in the router configuration #2.5', () => {
       const { federatedGraphSchema, subgraphConfigBySubgraphName } = federateSubgraphsSuccess(
         [subgraphY, subgraphW, subgraphX],
         ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -1326,7 +1327,7 @@ describe('Entity tests', () => {
       const y = subgraphConfigBySubgraphName.get('subgraph-y');
       expect(y).toBeDefined();
       expect(w!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -1368,7 +1369,7 @@ describe('Entity tests', () => {
         ]),
       );
       expect(x!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Entity',
             {
@@ -1389,7 +1390,7 @@ describe('Entity tests', () => {
         ]),
       );
       expect(y!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Entity',
             {
@@ -1424,7 +1425,7 @@ describe('Entity tests', () => {
       );
     });
 
-    test('that if a target key can be satisfied, it will included in the router configuration #2.6', () => {
+    test('that if a target key can be satisfied, it will be included in the router configuration #2.6', () => {
       const { federatedGraphSchema, subgraphConfigBySubgraphName } = federateSubgraphsSuccess(
         [subgraphY, subgraphX, subgraphW],
         ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -1464,7 +1465,7 @@ describe('Entity tests', () => {
       const y = subgraphConfigBySubgraphName.get('subgraph-y');
       expect(y).toBeDefined();
       expect(w!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -1506,7 +1507,7 @@ describe('Entity tests', () => {
         ]),
       );
       expect(x!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Entity',
             {
@@ -1527,7 +1528,7 @@ describe('Entity tests', () => {
         ]),
       );
       expect(y!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Entity',
             {

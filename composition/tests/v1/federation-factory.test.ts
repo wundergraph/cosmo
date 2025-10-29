@@ -20,6 +20,7 @@ import { describe, expect, test } from 'vitest';
 import {
   AUTHENTICATED_DIRECTIVE,
   INACCESSIBLE_DIRECTIVE,
+  OPENFED_FIELD_SET,
   OPENFED_SCOPE,
   REQUIRES_SCOPES_DIRECTIVE,
   SCHEMA_ALL_ROOTS_DEFINITION,
@@ -1103,7 +1104,8 @@ const demoProducts: Subgraph = {
 const subgraphA: Subgraph = {
   name: 'subgraph-a',
   url: '',
-  definitions: parse(`
+  definitions: parse(
+    `
     directive @external on FIELD_DEFINITION | OBJECT
     directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
     directive @provides(fields: String!) on FIELD_DEFINITION
@@ -1129,9 +1131,8 @@ const subgraphA: Subgraph = {
       name: String! @shareable
       pp: Int! @shareable
     }
-    
-    scalar openfed__FieldSet
-  `),
+  ` + OPENFED_FIELD_SET,
+  ),
 };
 
 const subgraphB: Subgraph = {

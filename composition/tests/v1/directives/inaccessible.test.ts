@@ -119,7 +119,7 @@ describe('@inaccessible tests', () => {
     `,
       ),
     );
-    expect(schemaToSortedNormalizedString(federatedGraphClientSchema!)).toBe(
+    expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
       normalizeString(
         SCHEMA_QUERY_DEFINITION +
           `
@@ -647,17 +647,17 @@ describe('@inaccessible tests', () => {
     expect(result.success).toBe(true);
   });
 
-  test('that an @inaccessible only needs to be declared on a single field #1.3', () => {
+  test('that an @inaccessible only needs to be declared on a single field #1.4', () => {
     const result = federateSubgraphsSuccess([subgraphZ, subgraphAA, subgraphY], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
   });
 
-  test('that an @inaccessible only needs to be declared on a single field #1.3', () => {
+  test('that an @inaccessible only needs to be declared on a single field #1.5', () => {
     const result = federateSubgraphsSuccess([subgraphAA, subgraphY, subgraphZ], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
   });
 
-  test('that an @inaccessible only needs to be declared on a single field #1.3', () => {
+  test('that an @inaccessible only needs to be declared on a single field #1.6', () => {
     const result = federateSubgraphsSuccess([subgraphAA, subgraphZ, subgraphY], ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.success).toBe(true);
   });

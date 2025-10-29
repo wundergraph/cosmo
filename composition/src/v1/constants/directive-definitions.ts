@@ -304,7 +304,7 @@ export const EDFS_NATS_PUBLISH_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-// directive @edfs__natsRequest(subject: String!, providerId String! = "default") on FIELD_DEFINITION
+// directive @edfs__natsRequest(subject: String!, providerId: String! = "default") on FIELD_DEFINITION
 export const EDFS_NATS_REQUEST_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
@@ -568,10 +568,7 @@ export const REQUIRES_DEFINITION: DirectiveDefinitionNode = {
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
       name: stringToNameNode(FIELDS),
-      type: {
-        kind: Kind.NON_NULL_TYPE,
-        type: stringToNamedTypeNode(FIELD_SET_SCALAR),
-      },
+      type: REQUIRED_FIELDSET_TYPE_NODE,
     },
   ],
   kind: Kind.DIRECTIVE_DEFINITION,

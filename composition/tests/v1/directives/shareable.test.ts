@@ -79,9 +79,8 @@ describe('@shareable directive tests', () => {
             field: String! @shareable
             id: ID! @shareable
            }
-           
-           scalar openfed__FieldSet
-          `,
+          ` +
+            OPENFED_FIELD_SET,
         ),
       );
     });

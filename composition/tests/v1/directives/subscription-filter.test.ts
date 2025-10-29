@@ -39,6 +39,12 @@ import {
   normalizeSubgraphSuccess,
   schemaToSortedNormalizedString,
 } from '../../utils/utils';
+import {
+  OPENFED_FIELD_SET,
+  OPENFED_SUBSCRIPTION_FIELD_CONDITION,
+  OPENFED_SUBSCRIPTION_FILTER_CONDITION,
+  OPENFED_SUBSCRIPTION_FILTER_VALUE,
+} from '../utils/utils';
 
 describe('@openfed__subscriptionFilter tests', () => {
   describe('Normalization tests', () => {
@@ -54,7 +60,8 @@ describe('@openfed__subscriptionFilter tests', () => {
     test('that subscriptionFilter inputs and scalar are injected', () => {
       const { schema } = normalizeSubgraphSuccess(subgraphC, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(schema)).toBe(
-        normalizeString(`
+        normalizeString(
+          `
         schema {
           subscription: Subscription
         }
@@ -71,30 +78,20 @@ describe('@openfed__subscriptionFilter tests', () => {
         type Subscription {
           field: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: {IN: {fieldPath: "id", values: ["1"]}})
         }
-        
-        scalar openfed__FieldSet
-        
-        input openfed__SubscriptionFieldCondition {
-          fieldPath: String!
-          values: [openfed__SubscriptionFilterValue]!
-        }
-        
-        input openfed__SubscriptionFilterCondition {
-          AND: [openfed__SubscriptionFilterCondition!]
-          IN: openfed__SubscriptionFieldCondition
-          NOT: openfed__SubscriptionFilterCondition
-          OR: [openfed__SubscriptionFilterCondition!]
-        }
-        
-        scalar openfed__SubscriptionFilterValue
-      `),
+      ` +
+            OPENFED_FIELD_SET +
+            OPENFED_SUBSCRIPTION_FIELD_CONDITION +
+            OPENFED_SUBSCRIPTION_FILTER_CONDITION +
+            OPENFED_SUBSCRIPTION_FILTER_VALUE,
+        ),
       );
     });
 
     test('that inputs and scalars that are injected can be self-defined', () => {
       const { schema } = normalizeSubgraphSuccess(subgraphG, ROUTER_COMPATIBILITY_VERSION_ONE) as NormalizationSuccess;
       expect(schemaToSortedNormalizedString(schema)).toBe(
-        normalizeString(`
+        normalizeString(
+          `
         schema {
           subscription: Subscription
         }
@@ -111,23 +108,12 @@ describe('@openfed__subscriptionFilter tests', () => {
         type Subscription {
           field: Entity! @edfs__kafkaSubscribe(topics: ["employeeUpdated"]) @openfed__subscriptionFilter(condition: {IN: {fieldPath: "id", values: [1]}})
         }
-        
-        scalar openfed__FieldSet
-
-        input openfed__SubscriptionFieldCondition {
-          fieldPath: String!
-          values: [openfed__SubscriptionFilterValue]!
-        }
-        
-        input openfed__SubscriptionFilterCondition {
-          AND: [openfed__SubscriptionFilterCondition!]
-          IN: openfed__SubscriptionFieldCondition
-          NOT: openfed__SubscriptionFilterCondition
-          OR: [openfed__SubscriptionFilterCondition!]
-        }
-        
-        scalar openfed__SubscriptionFilterValue
-      `),
+      ` +
+            OPENFED_FIELD_SET +
+            OPENFED_SUBSCRIPTION_FIELD_CONDITION +
+            OPENFED_SUBSCRIPTION_FILTER_CONDITION +
+            OPENFED_SUBSCRIPTION_FILTER_VALUE,
+        ),
       );
     });
 

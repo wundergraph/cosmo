@@ -18,6 +18,7 @@ import {
   ROUTER_COMPATIBILITY_VERSION_ONE,
   Subgraph,
   subgraphValidationError,
+  TypeName,
 } from '../../../src';
 import { SCHEMA_QUERY_DEFINITION } from '../utils/utils';
 import { batchNormalize } from '../../../src/v1/normalization/normalization-factory';
@@ -51,7 +52,7 @@ describe('@override directive tests', () => {
       const g = result.internalSubgraphBySubgraphName.get('subgraph-f');
       expect(g).toBeDefined();
       expect(a!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -72,7 +73,7 @@ describe('@override directive tests', () => {
         ]),
       );
       expect(e!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Entity',
             {
@@ -85,7 +86,7 @@ describe('@override directive tests', () => {
         ]),
       );
       expect(g!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Entity',
             {
@@ -638,7 +639,7 @@ describe('@override directive tests', () => {
       const t = subgraphConfigBySubgraphName.get('subgraph-t');
       expect(t).toBeDefined();
       expect(t!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -652,7 +653,7 @@ describe('@override directive tests', () => {
       const u = subgraphConfigBySubgraphName.get('subgraph-u');
       expect(u).toBeDefined();
       expect(u!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -691,7 +692,7 @@ describe('@override directive tests', () => {
       const t = subgraphConfigBySubgraphName.get('subgraph-t');
       expect(t).toBeDefined();
       expect(t!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -705,7 +706,7 @@ describe('@override directive tests', () => {
       const u = subgraphConfigBySubgraphName.get('subgraph-u');
       expect(u).toBeDefined();
       expect(u!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -733,11 +734,11 @@ describe('@override directive tests', () => {
       );
       const v = result.subgraphConfigBySubgraphName.get('subgraph-v');
       expect(v).toBeDefined();
-      expect(v!.configurationDataByTypeName).toStrictEqual(new Map<string, ConfigurationData>());
+      expect(v!.configurationDataByTypeName).toStrictEqual(new Map<TypeName, ConfigurationData>());
       const w = result.subgraphConfigBySubgraphName.get('subgraph-w');
       expect(w).toBeDefined();
       expect(w!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -767,11 +768,11 @@ describe('@override directive tests', () => {
       );
       const v = subgraphConfigBySubgraphName.get('subgraph-v');
       expect(v).toBeDefined();
-      expect(v!.configurationDataByTypeName).toStrictEqual(new Map<string, ConfigurationData>());
+      expect(v!.configurationDataByTypeName).toStrictEqual(new Map<TypeName, ConfigurationData>());
       const w = subgraphConfigBySubgraphName.get('subgraph-w');
       expect(w).toBeDefined();
       expect(w!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {

@@ -47,7 +47,7 @@ import {
   UNION_UPPER,
 } from '../../utils/string-constants';
 import { DefinitionNode, Kind } from 'graphql';
-import { DirectiveName, TypeName } from '../../types/types';
+import { DirectiveName, FieldName, TypeName } from '../../types/types';
 import {
   EDFS_NATS_STREAM_CONFIGURATION_DEFINITION,
   FIELD_SET_SCALAR_DEFINITION,
@@ -59,7 +59,7 @@ import {
   SUBSCRIPTION_FILTER_VALUE_DEFINITION,
 } from './non-directive-definitions';
 
-export const TYPE_SYSTEM_DIRECTIVE_LOCATIONS = new Set<string>([
+export const TYPE_SYSTEM_DIRECTIVE_LOCATIONS: ReadonlySet<string> = new Set<string>([
   ARGUMENT_DEFINITION_UPPER,
   ENUM_UPPER,
   ENUM_VALUE_UPPER,
@@ -73,7 +73,7 @@ export const TYPE_SYSTEM_DIRECTIVE_LOCATIONS = new Set<string>([
   UNION_UPPER,
 ]);
 
-export const EVENT_DIRECTIVE_NAMES = new Set<string>([
+export const EVENT_DIRECTIVE_NAMES: ReadonlySet<DirectiveName> = new Set<DirectiveName>([
   EDFS_KAFKA_PUBLISH,
   EDFS_KAFKA_SUBSCRIBE,
   EDFS_NATS_PUBLISH,
@@ -83,14 +83,19 @@ export const EVENT_DIRECTIVE_NAMES = new Set<string>([
   EDFS_REDIS_SUBSCRIBE,
 ]);
 
-export const STREAM_CONFIGURATION_FIELD_NAMES = new Set<string>([
+export const STREAM_CONFIGURATION_FIELD_NAMES: ReadonlySet<FieldName> = new Set<FieldName>([
   CONSUMER_INACTIVE_THRESHOLD,
   CONSUMER_NAME,
   STREAM_NAME,
 ]);
 
-export const SUBSCRIPTION_FILTER_INPUT_NAMES = new Set<string>([AND_UPPER, IN_UPPER, NOT_UPPER, OR_UPPER]);
-export const SUBSCRIPTION_FILTER_LIST_INPUT_NAMES = new Set<string>([AND_UPPER, OR_UPPER]);
+export const SUBSCRIPTION_FILTER_INPUT_NAMES: ReadonlySet<string> = new Set<string>([
+  AND_UPPER,
+  IN_UPPER,
+  NOT_UPPER,
+  OR_UPPER,
+]);
+export const SUBSCRIPTION_FILTER_LIST_INPUT_NAMES: ReadonlySet<string> = new Set<string>([AND_UPPER, OR_UPPER]);
 
 export const COMPOSITE_OUTPUT_NODE_KINDS: ReadonlySet<Kind> = new Set<Kind>([
   Kind.INTERFACE_TYPE_DEFINITION,
@@ -99,7 +104,6 @@ export const COMPOSITE_OUTPUT_NODE_KINDS: ReadonlySet<Kind> = new Set<Kind>([
   Kind.OBJECT_TYPE_EXTENSION,
 ]);
 
-// `edfs__natsSubscribe` dependencies are added in `validateEventDrivenSubgraph`
 export const DEPENDENCIES_BY_DIRECTIVE_NAME: ReadonlyMap<DirectiveName, Array<DefinitionNode>> = new Map<
   DirectiveName,
   Array<DefinitionNode>

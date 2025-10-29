@@ -322,7 +322,7 @@ export class FederationFactory {
         continue;
       }
       this.referencedPersistedDirectiveNames.add(directiveName);
-      if (AUTHORIZATION_DIRECTIVES.has(directiveName)) {
+      if (AUTHORIZATION_DIRECTIVES.has(directiveName) || directiveNodes.length < 1) {
         continue;
       }
       switch (directiveName) {

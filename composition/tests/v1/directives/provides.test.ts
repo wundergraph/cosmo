@@ -12,13 +12,14 @@ import {
   invalidSelectionOnUnionErrorMessage,
   nonExternalConditionalFieldError,
   nonExternalConditionalFieldWarning,
+  parse,
   PROVIDES,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   Subgraph,
   subgraphValidationError,
+  TypeName,
   UNION,
 } from '../../../src';
-import { parse } from 'graphql';
 import {
   federateSubgraphsFailure,
   federateSubgraphsSuccess,
@@ -32,7 +33,7 @@ describe('@provides directive tests', () => {
     test.skip('that a @provides directive is ignored when declared on a non-entity response type', () => {
       const { configurationDataByTypeName, warnings } = normalizeSubgraphSuccess(a, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Object',
             {
@@ -49,7 +50,7 @@ describe('@provides directive tests', () => {
     test('that a @provides field set supports an immediate inline fragment', () => {
       const { configurationDataByTypeName, warnings } = normalizeSubgraphSuccess(b, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Object',
             {
@@ -94,7 +95,7 @@ describe('@provides directive tests', () => {
     test('that a @provides field set supports multiple inline fragments', () => {
       const { configurationDataByTypeName, warnings } = normalizeSubgraphSuccess(d, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Object',
             {
@@ -140,7 +141,7 @@ describe('@provides directive tests', () => {
     test('that a @provides field set supports an inline fragment with a valid type condition', () => {
       const { configurationDataByTypeName, warnings } = normalizeSubgraphSuccess(e, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Object',
             {
@@ -202,7 +203,7 @@ describe('@provides directive tests', () => {
     test('that a @provides field set supports an inline fragment with a valid type condition on a Union', () => {
       const { configurationDataByTypeName, warnings } = normalizeSubgraphSuccess(g, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Object',
             {
@@ -268,7 +269,7 @@ describe('@provides directive tests', () => {
     test('that a @provides field set allows undefined optional arguments', () => {
       const { configurationDataByTypeName, warnings } = normalizeSubgraphSuccess(j, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Object',
             {
@@ -304,7 +305,7 @@ describe('@provides directive tests', () => {
     test('that a @provides field set allows defined optional arguments', () => {
       const { configurationDataByTypeName, warnings } = normalizeSubgraphSuccess(k, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Object',
             {
@@ -478,7 +479,7 @@ describe('@provides directive tests', () => {
     test('that a warning is returned if a non-external V1 field is part of both a @provides and @key field set', () => {
       const { configurationDataByTypeName, warnings } = normalizeSubgraphSuccess(o, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -521,7 +522,7 @@ describe('@provides directive tests', () => {
     test('that a warning is returned if a nested non-external V1 field is part of both a @provides and @key field set', () => {
       const { configurationDataByTypeName, warnings } = normalizeSubgraphSuccess(t, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -564,7 +565,7 @@ describe('@provides directive tests', () => {
       const { configurationDataByTypeName, warnings } = normalizeSubgraphSuccess(ag, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(warnings).toHaveLength(0);
       expect(configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -616,7 +617,7 @@ describe('@provides directive tests', () => {
       const { configurationDataByTypeName, warnings } = normalizeSubgraphSuccess(ah, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(warnings).toHaveLength(0);
       expect(configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -668,7 +669,7 @@ describe('@provides directive tests', () => {
       const { configurationDataByTypeName, warnings } = normalizeSubgraphSuccess(ai, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(warnings).toHaveLength(0);
       expect(configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -721,7 +722,7 @@ describe('@provides directive tests', () => {
       const { configurationDataByTypeName, warnings } = normalizeSubgraphSuccess(aj, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(warnings).toHaveLength(0);
       expect(configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -799,7 +800,7 @@ describe('@provides directive tests', () => {
       const rConfig = subgraphConfigBySubgraphName.get(u.name);
       expect(rConfig).toBeDefined();
       expect(rConfig!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Entity',
             {
@@ -844,7 +845,7 @@ describe('@provides directive tests', () => {
       const sConfig = subgraphConfigBySubgraphName.get(v.name);
       expect(sConfig).toBeDefined();
       expect(sConfig!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -905,7 +906,7 @@ describe('@provides directive tests', () => {
       const xConfig = subgraphConfigBySubgraphName.get(x.name);
       expect(xConfig).toBeDefined();
       expect(xConfig!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -939,7 +940,7 @@ describe('@provides directive tests', () => {
           ],
         ]),
       );
-      expect(warnings.length).toBe(0);
+      expect(warnings).toHaveLength(0);
     });
 
     test.skip('that a provided implicit key that is part of a key generates the correct router configuration', () => {
@@ -950,7 +951,7 @@ describe('@provides directive tests', () => {
       const yConfig = subgraphConfigBySubgraphName.get(y.name);
       expect(yConfig).toBeDefined();
       expect(yConfig!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -983,7 +984,7 @@ describe('@provides directive tests', () => {
           ],
         ]),
       );
-      expect(warnings.length).toBe(0);
+      expect(warnings).toHaveLength(0);
     });
 
     test.skip('that a provided implicit key generates the correct router configuration #1', () => {
@@ -991,7 +992,7 @@ describe('@provides directive tests', () => {
       const zConfig = subgraphConfigBySubgraphName.get(z.name);
       expect(zConfig).toBeDefined();
       expect(zConfig!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -1060,7 +1061,7 @@ describe('@provides directive tests', () => {
       const abConfig = subgraphConfigBySubgraphName.get(ab.name);
       expect(abConfig).toBeDefined();
       expect(abConfig!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -1129,7 +1130,7 @@ describe('@provides directive tests', () => {
           ],
         ]),
       );
-      expect(warnings.length).toBe(0);
+      expect(warnings).toHaveLength(0);
     });
 
     test('that a warning is returned if an external V1 extension entity key field is provided', () => {
@@ -1140,7 +1141,7 @@ describe('@provides directive tests', () => {
       const adConfig = subgraphConfigBySubgraphName.get(ad.name);
       expect(adConfig).toBeDefined();
       expect(adConfig!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -1203,7 +1204,7 @@ describe('@provides directive tests', () => {
     // TODO
     test.skip('that provides on Interface is valid', () => {
       const { warnings } = federateSubgraphsSuccess([q, r, s], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(warnings.length).toBe(0);
+      expect(warnings).toHaveLength(0);
     });
   });
 });

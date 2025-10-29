@@ -1056,7 +1056,7 @@ describe('Field resolvability tests', () => {
     );
   });
 
-  test('that shared entity fields frm a root field do not produce false positives', () => {
+  test('that shared entity fields from a root field do not produce false positives', () => {
     const { federatedGraphSchema } = federateSubgraphsSuccess(
       [subgraphBF, subgraphBG],
       ROUTER_COMPATIBILITY_VERSION_ONE,

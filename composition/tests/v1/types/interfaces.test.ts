@@ -478,7 +478,7 @@ describe('Interface tests', () => {
       );
     });
 
-    test('that an Interface type and extension definition federate successfully #1.1', () => {
+    test('that an Interface type and extension definition federate successfully #1.2', () => {
       const { federatedGraphSchema } = federateSubgraphsSuccess(
         [subgraphQ, subgraphU, subgraphR],
         ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -601,7 +601,7 @@ describe('Interface tests', () => {
       );
     });
 
-    test('that errors are returned if implemented Interface Fields are invalid #1', () => {
+    test('that errors are returned if implemented Interface Fields are invalid #2', () => {
       const { errors } = federateSubgraphsFailure([subgraphE, subgraphF], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(2);
       expect(errors[0]).toStrictEqual(
@@ -797,7 +797,7 @@ describe('Interface tests', () => {
 
     test('that a V2 Interface @extends directive orphan is valid with another base type #1.2', () => {
       const { federatedGraphSchema } = federateSubgraphsSuccess(
-        [subgraphQ, subgraphT, subgraphU],
+        [subgraphQ, subgraphU, subgraphT],
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(

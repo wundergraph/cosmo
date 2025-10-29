@@ -24,7 +24,7 @@ export type SubgraphConfig = {
 
 export type InternalSubgraph = {
   conditionalFieldDataByCoordinates: Map<string, ConditionalFieldData>;
-  configurationDataByTypeName: Map<string, ConfigurationData>;
+  configurationDataByTypeName: Map<TypeName, ConfigurationData>;
   definitions: DocumentNode;
   directiveDefinitionByDirectiveName: Map<DirectiveName, DirectiveDefinitionNode>;
   entityInterfaces: Map<string, EntityInterfaceSubgraphData>;

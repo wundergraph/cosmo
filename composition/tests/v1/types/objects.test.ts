@@ -13,6 +13,7 @@ import {
   parse,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   Subgraph,
+  TypeName,
 } from '../../../src';
 import { SCHEMA_QUERY_DEFINITION, stringToTypeNode, TAG_DIRECTIVE } from '../utils/utils';
 import {
@@ -109,7 +110,7 @@ describe('Object tests', () => {
     });
 
     test('that an Object stub can be extended #4', () => {
-      const { schema } = normalizeSubgraphSuccess(subgraphS, ROUTER_COMPATIBILITY_VERSION_ONE) as NormalizationSuccess;
+      const { schema } = normalizeSubgraphSuccess(subgraphS, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
           TAG_DIRECTIVE +
@@ -269,7 +270,7 @@ describe('Object tests', () => {
   });
 
   test('that an error is returned if a field returns an input node type', () => {
-    const { errors } = normalizeSubgraphFailure(naa, ROUTER_COMPATIBILITY_VERSION_ONE);
+    const { errors } = normalizeSubgraphFailure(ncaaa, ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(errors).toHaveLength(1);
     expect(errors[0]).toStrictEqual(
       invalidNamedTypeError({
@@ -508,23 +509,9 @@ describe('Object tests', () => {
 
   describe('Router configuration tests', () => {
     test('that an object extended within the same graph generates the correct router configuration', () => {
-      const result = normalizeSubgraphFromString(
-        `
-        type Object {
-          name: String!
-        }
-        
-        extend type Object {
-          age: Int!
-        }
-      `,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationSuccess;
-
-      expect(result.success).toBe(true);
-      expect(result.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+      const { configurationDataByTypeName } = normalizeSubgraphSuccess(ndaaa, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(configurationDataByTypeName).toStrictEqual(
+        new Map<TypeName, ConfigurationData>([
           [
             'Object',
             {
@@ -556,6 +543,34 @@ const nbaaa: Subgraph = {
     }
     
     type Queries
+  `),
+};
+
+const ncaaa: Subgraph = {
+  name: 'ncaaa',
+  url: '',
+  definitions: parse(`
+    type Object {
+      field: Input!
+    }
+    
+    input Input {
+      name: String!
+    }
+  `),
+};
+
+const ndaaa: Subgraph = {
+  name: 'ndaaa',
+  url: '',
+  definitions: parse(`
+    type Object {
+      name: String!
+    }
+    
+    extend type Object {
+      age: Int!
+    }
   `),
 };
 
@@ -830,20 +845,6 @@ const subgraphX: Subgraph = {
     extend type Object @tag(name: "name")
     
     extend type Object {
-      name: String!
-    }
-  `),
-};
-
-const naa: Subgraph = {
-  name: 'naa',
-  url: '',
-  definitions: parse(`
-    type Object {
-      field: Input!
-    }
-    
-    input Input {
       name: String!
     }
   `),

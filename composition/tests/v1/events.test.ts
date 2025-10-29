@@ -35,6 +35,7 @@ import {
   Subgraph,
   subgraphValidationError,
   SUBJECTS,
+  TypeName,
   undefinedEventSubjectsArgumentErrorMessage,
   undefinedRequiredArgumentsErrorMessage,
   unexpectedDirectiveArgumentErrorMessage,
@@ -69,7 +70,7 @@ describe('events Configuration tests', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -198,7 +199,7 @@ describe('events Configuration tests', () => {
     test('that events configuration is correctly generated if Subscription is renamed', () => {
       const { configurationDataByTypeName } = normalizeSubgraphSuccess(nbaaa, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Subscription',
             {
@@ -233,7 +234,7 @@ describe('events Configuration tests', () => {
     test('that events configuration is correctly generated if providerId is specified', () => {
       const { configurationDataByTypeName } = normalizeSubgraphSuccess(ncaaa, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -385,7 +386,7 @@ describe('events Configuration tests', () => {
     test('that edfs__NatsStreamConfiguration does not need to be defined if @edfs__natsSubscribe is not defined', () => {
       const result = normalizeSubgraphSuccess(subgraphU, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Entity',
             {
@@ -600,37 +601,6 @@ describe('events Configuration tests', () => {
     );
   });
 
-  test('test', () => {
-    const { schema } = normalizeSubgraphSuccess(
-      {
-        name: 'a',
-        url: '',
-        definitions: parse(`
-        input X {
-          name: Int! = 30
-        }
-        `),
-      },
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    );
-
-    expect(schemaToSortedNormalizedString(schema)).toBe(
-      normalizeString(
-        `input X {
-        name: Int! = 30
-      }`,
-      ),
-    );
-    const s = buildASTSchema(
-      {
-        kind: Kind.DOCUMENT,
-        definitions: [EDFS_NATS_STREAM_CONFIGURATION_DEFINITION],
-      },
-      { assumeValid: true, assumeValidSDL: true },
-    );
-    console.log(printSchema(s));
-  });
-
   test('that no error is returned if a NATS request subject is without streamConfiguration and there is a wrong definition of edfs__NatsStreamConfiguration', () => {
     const { schema } = normalizeSubgraphSuccess(subgraphAO, ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(schemaToSortedNormalizedString(schema)).toBe(
@@ -768,7 +738,7 @@ describe('events Configuration tests', () => {
   test('that Redis configuration is correctly generated', () => {
     const result = normalizeSubgraphSuccess(subgraphAW, ROUTER_COMPATIBILITY_VERSION_ONE);
     expect(result.configurationDataByTypeName).toStrictEqual(
-      new Map<string, ConfigurationData>([
+      new Map<TypeName, ConfigurationData>([
         [
           'Entity',
           {

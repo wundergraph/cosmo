@@ -3,12 +3,12 @@ import {
   ConfigurationData,
   FieldName,
   INTERFACE,
+  parse,
   QUERY,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   Subgraph,
   TypeName,
 } from '../../../src';
-import { parse } from 'graphql';
 import { federateSubgraphsSuccess, normalizeString, schemaToSortedNormalizedString } from '../../utils/utils';
 import { REQUEST_FETCH_REASONS_DIRECTIVE, SCHEMA_QUERY_DEFINITION } from '../utils/utils';
 

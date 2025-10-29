@@ -358,7 +358,7 @@ import {
 } from './types';
 import { newConfigurationData, newFieldSetConditionData } from '../../router-configuration/utils';
 import { ImplementationErrors, InvalidFieldImplementation } from '../../utils/types';
-import { DirectiveName, FieldName, SubgraphName } from '../../types/types';
+import { DirectiveName, FieldName, SubgraphName, TypeName } from '../../types/types';
 import { HandleFieldInheritableDirectivesParams, ValidateOneOfDirectiveParams } from './params';
 import { EDFS_NATS_STREAM_CONFIGURATION_DEFINITION } from '../constants/non-directive-definitions';
 
@@ -385,7 +385,7 @@ export class NormalizationFactory {
   authorizationDataByParentTypeName = new Map<string, AuthorizationData>();
   concreteTypeNamesByAbstractTypeName = new Map<string, Set<string>>();
   conditionalFieldDataByCoords = new Map<string, ConditionalFieldData>();
-  configurationDataByTypeName = new Map<string, ConfigurationData>();
+  configurationDataByTypeName = new Map<TypeName, ConfigurationData>();
   customDirectiveDefinitionByName = new Map<DirectiveName, DirectiveDefinitionNode>();
   definedDirectiveNames = new Set<string>();
   directiveDefinitionByName = new Map<DirectiveName, DirectiveDefinitionNode>();
@@ -1095,6 +1095,7 @@ export class NormalizationFactory {
     // Add the V2 directive definitions regardless of use so the subgraph can be recognised as a V2 subgraph.
     if (definition) {
       this.directiveDefinitionByName.set(name, definition);
+      // Uses of the directive also set this boolean in the walker.
       this.isSubgraphVersionTwo = true;
       return false;
     }
@@ -3000,6 +3001,11 @@ export class NormalizationFactory {
             originalParentTypeName: EDFS_NATS_STREAM_CONFIGURATION,
           });
         }
+      } else {
+        /* Should never happen, but if somehow it did, an error has already been appended from the
+         * `upsertInputObjectByNode` method.
+         */
+        return;
       }
     }
 

@@ -17,11 +17,7 @@ import {
 import { expect } from 'vitest';
 
 export function normalizeString(input: string): string {
-  return input.replaceAll(/\s+|\\n\s*/g, ' ').trim();
-}
-
-export function documentNodeToNormalizedString(document: DocumentNode): string {
-  return normalizeString(print(document));
+  return input.replace(/\s+/g, ' ').trim();
 }
 
 export function schemaToSortedNormalizedString(schema: GraphQLSchema): string {

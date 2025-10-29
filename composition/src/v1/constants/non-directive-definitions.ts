@@ -1,4 +1,4 @@
-import { InputObjectTypeDefinitionNode, Kind, ScalarTypeDefinitionNode } from 'graphql/index';
+import { EnumTypeDefinitionNode, InputObjectTypeDefinitionNode, Kind, ScalarTypeDefinitionNode } from 'graphql';
 import { stringToNamedTypeNode, stringToNameNode } from '../../ast/utils';
 import {
   AND_UPPER,
@@ -24,7 +24,6 @@ import {
   VALUES,
 } from '../../utils/string-constants';
 import { DEFAULT_CONSUMER_INACTIVE_THRESHOLD } from './integers';
-import { EnumTypeDefinitionNode } from 'graphql';
 
 /*
  * input edfs__NatsStreamConfiguration {
@@ -39,6 +38,18 @@ export const EDFS_NATS_STREAM_CONFIGURATION_DEFINITION: InputObjectTypeDefinitio
   fields: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(CONSUMER_INACTIVE_THRESHOLD),
+      type: {
+        kind: Kind.NON_NULL_TYPE,
+        type: stringToNamedTypeNode(INT_SCALAR),
+      },
+      defaultValue: {
+        kind: Kind.INT,
+        value: DEFAULT_CONSUMER_INACTIVE_THRESHOLD.toString(),
+      },
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
       name: stringToNameNode(CONSUMER_NAME),
       type: {
         kind: Kind.NON_NULL_TYPE,
@@ -51,18 +62,6 @@ export const EDFS_NATS_STREAM_CONFIGURATION_DEFINITION: InputObjectTypeDefinitio
       type: {
         kind: Kind.NON_NULL_TYPE,
         type: stringToNamedTypeNode(STRING_SCALAR),
-      },
-    },
-    {
-      kind: Kind.INPUT_VALUE_DEFINITION,
-      name: stringToNameNode(CONSUMER_INACTIVE_THRESHOLD),
-      type: {
-        kind: Kind.NON_NULL_TYPE,
-        type: stringToNamedTypeNode(INT_SCALAR),
-      },
-      defaultValue: {
-        kind: Kind.INT,
-        value: DEFAULT_CONSUMER_INACTIVE_THRESHOLD.toString(),
       },
     },
   ],

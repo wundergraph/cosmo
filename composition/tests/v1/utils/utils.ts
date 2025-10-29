@@ -62,6 +62,26 @@ export const OPENFED_FIELD_SET = `  scalar openfed__FieldSet`;
 
 export const OPENFED_SCOPE = `  scalar openfed__Scope`;
 
+export const OPENFED_SUBSCRIPTION_FIELD_CONDITION = `
+  input openfed__SubscriptionFieldCondition {
+    fieldPath: String!
+    values: [openfed__SubscriptionFilterValue]!
+  }
+`;
+
+export const OPENFED_SUBSCRIPTION_FILTER_CONDITION = `
+  input openfed__SubscriptionFilterCondition {
+    AND: [openfed__SubscriptionFilterCondition!]
+    IN: openfed__SubscriptionFieldCondition
+    NOT: openfed__SubscriptionFilterCondition
+    OR: [openfed__SubscriptionFilterCondition!]
+  }
+`;
+
+export const OPENFED_SUBSCRIPTION_FILTER_VALUE = `
+  scalar openfed__SubscriptionFilterValue
+`;
+
 export const ONE_OF_DIRECTIVE = `
   directive @oneOf on INPUT_OBJECT
 `;
@@ -109,26 +129,6 @@ export const baseDirectiveDefinitions = `
   directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
 `;
 
-export const baseDirectiveDefinitionsWithConfigureDescription = `
-  directive @extends on INTERFACE | OBJECT
-  directive @external on FIELD_DEFINITION | OBJECT
-  directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
-  directive @openfed__configureDescription(descriptionOverride: String, propagate: Boolean! = true) on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | SCHEMA | UNION
-  directive @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION
-  directive @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION
-  directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
-`;
-
-export const baseDirectiveDefinitionsWithRequireFetchReasons = `
-  directive @extends on INTERFACE | OBJECT
-  directive @external on FIELD_DEFINITION | OBJECT
-  directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
-  directive @openfed__requireFetchReasons repeatable on FIELD_DEFINITION | INTERFACE | OBJECT
-  directive @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION
-  directive @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION
-  directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
-`;
-
 export const versionTwoDirectiveDefinitions = `
   directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
   directive @composeDirective(name: String!) repeatable on SCHEMA
@@ -143,27 +143,6 @@ export const versionTwoDirectiveDefinitions = `
   directive @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
   directive @shareable repeatable on FIELD_DEFINITION | OBJECT
   directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
-`;
-
-// The V1 definitions that are persisted in the raw federated schema
-export const versionOnePersistedBaseSchema = `
-  directive @deprecated(reason: String = "No longer supported") on ARGUMENT_DEFINITION | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION
-  directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
-`;
-
-// The V2 definitions that are required during normalization
-export const versionTwoBaseSchema =
-  versionOneBaseSchema +
-  `
-  directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
-  directive @composeDirective(name: String!) repeatable on SCHEMA
-  directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
-  directive @interfaceObject on OBJECT
-  directive @override(from: String!) on FIELD_DEFINITION
-  directive @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
-  directive @shareable repeatable on FIELD_DEFINITION | OBJECT
-  
-  scalar openfed__Scope
 `;
 
 export const SCHEMA_QUERY_DEFINITION = `
@@ -205,16 +184,12 @@ export const eventDirectiveDefinitions = `
 
 export const semanticNonNullDefinition = `directive @semanticNonNull(levels: [Int!]! = [0]) on FIELD_DEFINITION`;
 
-export const versionOneRouterDefinitions = SCHEMA_QUERY_DEFINITION + versionOnePersistedDirectiveDefinitions;
-
 export const versionTwoRouterDirectiveDefinitions = `
     directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
     directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
     directive @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
     directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
 `;
-
-export const versionTwoRouterDefinitions = SCHEMA_QUERY_DEFINITION + versionTwoRouterDirectiveDefinitions;
 
 export function stringToTypeNode(input: string): TypeNode {
   input = input.replaceAll('[', '');

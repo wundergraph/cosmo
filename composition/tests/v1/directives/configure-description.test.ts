@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'vitest';
-import { parse } from 'graphql';
 import {
   CONFIGURE_DESCRIPTION,
   configureDescriptionNoDescriptionError,
@@ -12,6 +11,7 @@ import {
   invalidArgumentValueErrorMessage,
   invalidDirectiveError,
   invalidRepeatedDirectiveErrorMessage,
+  parse,
   PROPAGATE,
   QUERY,
   ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -667,7 +667,7 @@ describe('@openfed__configureDescription tests', () => {
       );
     });
 
-    test('that an error is returned if multiple instances of an Input Object attempt to propagate a description', () => {
+    test('that an error is returned if multiple instances of a Scalar attempt to propagate a description', () => {
       const { errors, warnings } = federateSubgraphsFailure([feb, fee], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(configureDescriptionPropagationError(SCALAR, [feb.name, fee.name]));

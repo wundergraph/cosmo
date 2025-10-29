@@ -13,13 +13,14 @@ import {
   invalidInterfaceImplementationError,
   invalidInterfaceObjectImplementationDefinitionsError,
   ObjectDefinitionData,
+  parse,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   SimpleFieldData,
   Subgraph,
   SubgraphName,
+  TypeName,
   undefinedEntityInterfaceImplementationsError,
 } from '../../../src';
-import { parse } from 'graphql';
 import {
   federateSubgraphsFailure,
   federateSubgraphsSuccess,
@@ -89,7 +90,7 @@ describe('@interfaceObject tests', () => {
     const fbcConfig = subgraphConfigBySubgraphName.get(fbc.name);
     expect(fbcConfig).toBeDefined();
     expect(fbcConfig!.configurationDataByTypeName).toStrictEqual(
-      new Map<string, ConfigurationData>([
+      new Map<TypeName, ConfigurationData>([
         [
           'InterfaceA',
           {
@@ -211,7 +212,7 @@ describe('@interfaceObject tests', () => {
     const fbcConfig = subgraphConfigBySubgraphName.get(fbc.name);
     expect(fbcConfig).toBeDefined();
     expect(fbcConfig!.configurationDataByTypeName).toStrictEqual(
-      new Map<string, ConfigurationData>([
+      new Map<TypeName, ConfigurationData>([
         [
           'InterfaceA',
           {
@@ -334,7 +335,7 @@ describe('@interfaceObject tests', () => {
     const fbcConfig = subgraphConfigBySubgraphName.get(fbc.name);
     expect(fbcConfig).toBeDefined();
     expect(fbcConfig!.configurationDataByTypeName).toStrictEqual(
-      new Map<string, ConfigurationData>([
+      new Map<TypeName, ConfigurationData>([
         [
           'InterfaceA',
           {
@@ -457,7 +458,7 @@ describe('@interfaceObject tests', () => {
     const fbcConfig = subgraphConfigBySubgraphName.get(fbc.name);
     expect(fbcConfig).toBeDefined();
     expect(fbcConfig!.configurationDataByTypeName).toStrictEqual(
-      new Map<string, ConfigurationData>([
+      new Map<TypeName, ConfigurationData>([
         [
           'InterfaceA',
           {

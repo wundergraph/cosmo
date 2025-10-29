@@ -1,11 +1,6 @@
 import { ContractTagOptions, FederationSuccess, parse, ROUTER_COMPATIBILITY_VERSION_ONE, Subgraph } from '../../src';
 import { describe, expect, test } from 'vitest';
-import {
-  INACCESSIBLE_DIRECTIVE,
-  SCHEMA_QUERY_DEFINITION,
-  TAG_DIRECTIVE,
-  versionOneRouterDefinitions,
-} from './utils/utils';
+import { INACCESSIBLE_DIRECTIVE, SCHEMA_QUERY_DEFINITION, TAG_DIRECTIVE } from './utils/utils';
 import {
   federateSubgraphsContractSuccess,
   federateSubgraphsSuccess,
@@ -1076,7 +1071,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             type Object @tag(name: "one") {
               age: Int!
@@ -1112,7 +1108,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             type Object @tag(name: "one") {
               age: Int!
@@ -1185,7 +1182,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             type Object {
               age: Int!
@@ -1221,7 +1219,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             type Object {
               age: Int!
@@ -1257,7 +1256,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             type Object {
               age: Int!
@@ -1293,7 +1293,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             type Object {
               name: String! @tag(name: "one")
@@ -1327,7 +1328,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             type Object {
               name: String! @tag(name: "one")
@@ -1361,7 +1363,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             type Object {
               name(arg: String! @tag(name: "one")): String!
@@ -1395,7 +1398,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             type Object {
               name(arg: String! @tag(name: "one")): String!
@@ -1429,7 +1433,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             type Entity @tag(name: "one") {
               age: Int!
@@ -1467,7 +1472,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             type Entity @tag(name: "one") {
               age: Int!
@@ -1505,7 +1511,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             type Entity {
               age: Int!
@@ -1543,7 +1550,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             type Entity {
               age: Int!
@@ -1581,7 +1589,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             type Entity {
               age: Int!
@@ -1619,7 +1628,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             type Entity {
               age: Int!
@@ -1657,7 +1667,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             type Entity {
               id: ID!
@@ -1693,7 +1704,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             type Entity {
               id: ID!
@@ -1729,7 +1741,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             type Entity {
               id: ID!
@@ -1765,7 +1778,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             type Entity {
               id: ID!
@@ -1801,7 +1815,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             interface Interface @tag(name: "one") {
               age: Int!
@@ -1837,7 +1852,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             interface Interface @tag(name: "one") {
               age: Int!
@@ -1873,7 +1889,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             interface Interface {
               age: Int!
@@ -1909,7 +1926,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             interface Interface {
               age: Int!
@@ -1945,7 +1963,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             interface Interface {
               age: Int!
@@ -1981,7 +2000,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             interface Interface {
               age: Int!
@@ -2017,7 +2037,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             interface Interface {
               name: String! @tag(name: "one")
@@ -2051,7 +2072,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             interface Interface {
               name: String! @tag(name: "one")
@@ -2085,7 +2107,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             interface Interface {
               name(arg: String! @tag(name: "one")): String!
@@ -2119,7 +2142,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             interface Interface {
               name(arg: String! @tag(name: "one")): String!
@@ -2153,7 +2177,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             input Input @tag(name: "one") {
               name: String
@@ -2187,7 +2212,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             input Input @tag(name: "one") {
               name: String
@@ -2221,7 +2247,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             input Input {
               name: String @tag(name: "one")
@@ -2255,7 +2282,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             input Input {
               name: String @tag(name: "one")
@@ -2289,7 +2317,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             enum Enum @tag(name: "one") {
               ONE
@@ -2326,7 +2355,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             enum Enum @tag(name: "one") {
               ONE
@@ -2363,7 +2393,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             enum Enum {
               ONE
@@ -2400,7 +2431,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             enum Enum {
               ONE
@@ -2437,7 +2469,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             type Query {
               dummy: String!
@@ -2468,7 +2501,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             type Query {
               dummy: String!
@@ -2499,7 +2533,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             type Entity @tag(name: "includeMe") {
               age: Int!
@@ -2542,7 +2577,8 @@ describe('Contract tests', () => {
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            TAG_DIRECTIVE +
             `
             type Entity @tag(name: "includeMe") {
               age: Int!

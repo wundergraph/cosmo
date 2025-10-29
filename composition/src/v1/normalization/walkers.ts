@@ -553,7 +553,7 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
     UnionTypeDefinition: {
       enter(node) {
         if (node.name.value === ENTITY_UNION) {
-          return;
+          return false;
         }
         nf.upsertUnionByNode(node);
       },

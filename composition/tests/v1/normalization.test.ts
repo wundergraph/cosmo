@@ -929,7 +929,7 @@ describe('Normalization tests', () => {
     ) as NormalizationFailure;
     expect(errors).toHaveLength(1);
     expect(errors[0]).toStrictEqual(
-      invalidDirectiveError('key', 'User', FIRST_ORDINAL, [
+      invalidDirectiveError(KEY, 'User', FIRST_ORDINAL, [
         invalidDirectiveLocationErrorMessage(KEY, INPUT_OBJECT_UPPER),
       ]),
     );

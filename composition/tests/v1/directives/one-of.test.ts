@@ -75,7 +75,7 @@ describe('@oneOf tests', () => {
 
     test('that a single Input field with @oneOf produces a warning', () => {
       const { schema, warnings } = normalizeSubgraphSuccess(neaa, ROUTER_COMPATIBILITY_VERSION_ONE);
-      // The @oneOf directive is removed by the printer because it's built-in
+      // The @oneOf directive definition is removed by the printer because it's a native directive
       expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
           `

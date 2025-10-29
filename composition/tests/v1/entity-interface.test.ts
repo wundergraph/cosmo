@@ -12,6 +12,7 @@ import {
   SimpleFieldData,
   Subgraph,
   SubgraphName,
+  TypeName,
   undefinedEntityInterfaceImplementationsError,
 } from '../../src';
 import { describe, expect, test } from 'vitest';
@@ -84,7 +85,7 @@ describe('Entity Interface Tests', () => {
       ROUTER_COMPATIBILITY_VERSION_ONE,
     );
     expect(subgraphConfigBySubgraphName.get('subgraph-a')!.configurationDataByTypeName).toStrictEqual(
-      new Map<string, ConfigurationData>([
+      new Map<TypeName, ConfigurationData>([
         [
           'Interface',
           {
@@ -108,7 +109,7 @@ describe('Entity Interface Tests', () => {
       ]),
     );
     expect(subgraphConfigBySubgraphName.get('subgraph-b')!.configurationDataByTypeName).toStrictEqual(
-      new Map<string, ConfigurationData>([
+      new Map<TypeName, ConfigurationData>([
         [
           'Query',
           {

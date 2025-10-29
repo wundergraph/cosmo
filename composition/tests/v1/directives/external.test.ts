@@ -15,6 +15,7 @@ import {
   requiresDefinedOnNonEntityFieldWarning,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   Subgraph,
+  TypeName,
 } from '../../../src';
 import { EXTERNAL_DIRECTIVE, KEY_DIRECTIVE, OPENFED_FIELD_SET, SCHEMA_QUERY_DEFINITION } from '../utils/utils';
 import {
@@ -233,7 +234,7 @@ describe('@external directive tests', () => {
       const result = normalizeSubgraphSuccess(subgraphAC, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Entity',
             {
@@ -287,7 +288,7 @@ describe('@external directive tests', () => {
       const result = normalizeSubgraphSuccess(subgraphAD, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Entity',
             {
@@ -793,7 +794,7 @@ describe('@external directive tests', () => {
       const q = subgraphConfigBySubgraphName.get(subgraphQ.name);
       expect(q).toBeDefined();
       expect(q!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -851,7 +852,7 @@ describe('@external directive tests', () => {
       const r = subgraphConfigBySubgraphName.get(subgraphR.name);
       expect(r).toBeDefined();
       expect(r!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -996,7 +997,7 @@ describe('@external directive tests', () => {
       const w = subgraphConfigBySubgraphName.get(subgraphW.name);
       expect(w).toBeDefined();
       expect(w!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -1052,7 +1053,7 @@ describe('@external directive tests', () => {
       const x = subgraphConfigBySubgraphName.get(subgraphX.name);
       expect(x).toBeDefined();
       expect(x!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
