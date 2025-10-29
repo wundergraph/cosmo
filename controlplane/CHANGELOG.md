@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.169.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.168.5...controlplane@0.169.0) (2025-10-29)
+
+### Features
+
+* add an api to validate the token's permissions ([#2271](https://github.com/wundergraph/cosmo/issues/2271)) ([7852d42](https://github.com/wundergraph/cosmo/commit/7852d42a0ff8ed97024d79771e3181aac000b97e)) (@JivusAyrus)
+
 ## [0.168.5](https://github.com/wundergraph/cosmo/compare/controlplane@0.168.4...controlplane@0.168.5) (2025-10-23)
 
 **Note:** Version bump only for package controlplane
