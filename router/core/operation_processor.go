@@ -849,11 +849,13 @@ func (o *OperationKit) setAndParseOperationDoc() error {
 }
 
 func (o *OperationKit) NormalizeVariables() ([]uploads.UploadPathMapping, error) {
-	variablesBefore := make([]byte, len(o.kit.doc.Input.Variables))
-	copy(variablesBefore, o.kit.doc.Input.Variables)
+	o.kit.keyGen.Reset()
+	_, _ = o.kit.keyGen.Write(o.kit.doc.Input.Variables)
+	variablesHashBefore := o.kit.keyGen.Sum64()
 
-	operationRawBytesBefore := make([]byte, len(o.kit.doc.Input.RawBytes))
-	copy(operationRawBytesBefore, o.kit.doc.Input.RawBytes)
+	o.kit.keyGen.Reset()
+	_, _ = o.kit.keyGen.Write(o.kit.doc.Input.RawBytes)
+	operationsHashBefore := o.kit.keyGen.Sum64()
 
 	report := &operationreport.Report{}
 	uploadsMapping := o.kit.variablesNormalizer.NormalizeOperation(o.kit.doc, o.operationProcessor.executor.ClientSchema, report)
@@ -896,8 +898,17 @@ func (o *OperationKit) NormalizeVariables() ([]uploads.UploadPathMapping, error)
 	o.parsedOperation.ID = o.kit.keyGen.Sum64()
 	o.computeVariablesHash()
 
+	o.kit.keyGen.Reset()
+	_, _ = o.kit.keyGen.Write(o.kit.doc.Input.Variables)
+	variablesHashAfter := o.kit.keyGen.Sum64()
+
+	o.kit.keyGen.Reset()
+	_, _ = o.kit.keyGen.Write(o.kit.doc.Input.RawBytes)
+	operationsHashAfter := o.kit.keyGen.Sum64()
+	o.kit.keyGen.Reset()
+
 	// If the normalized form of the operation didn't change, we don't need to print it again
-	if bytes.Equal(o.kit.doc.Input.Variables, variablesBefore) && bytes.Equal(o.kit.doc.Input.RawBytes, operationRawBytesBefore) {
+	if variablesHashBefore == variablesHashAfter && operationsHashBefore == operationsHashAfter {
 		return uploadsMapping, nil
 	}
 
@@ -954,7 +965,6 @@ func (o *OperationKit) RemapVariables(disabled bool) error {
 
 	// Generate the operation ID
 	o.parsedOperation.InternalID = o.kit.keyGen.Sum64()
-	o.kit.keyGen.Reset()
 
 	o.kit.normalizedOperation.Reset()
 	err = o.kit.printer.Print(o.kit.doc, o.kit.normalizedOperation)
