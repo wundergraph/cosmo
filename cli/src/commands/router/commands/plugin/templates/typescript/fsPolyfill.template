@@ -1,4 +1,4 @@
-import * as fs from 'node:fs';
+import * as fs from 'fs';
 
 // Polyfill for protobufjs which fails to load fs in bundled binaries
 // protobufjs uses eval("require")("fs") which returns null in Bun compiled binaries
@@ -17,19 +17,17 @@ try {
   }
 
   // Also try to patch via require if available
-  // eslint-disable-next-line unicorn/prefer-module
   if (typeof require !== 'undefined') {
     try {
-      // eslint-disable-next-line unicorn/prefer-module
       const util = require('protobufjs/src/util');
-      if (util && !util.fs) {
+      if (util) {
         util.fs = fs;
       }
-    } catch {
+    } catch (e) {
       // Module might not be available
     }
   }
-} catch {
+} catch (e) {
   // Silently fail - not critical
 }
 
