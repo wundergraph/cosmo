@@ -1,0 +1,26 @@
+version: '3'
+
+vars:
+  step: bench_planning_01
+
+tasks:
+  bench:
+    go test -benchtime 60s -bench=. -benchmem -memprofile {{.step}}_mem.out -cpuprofile {{.step}}_cpu.out > {{.step}}_benchmark.txt
+
+  bench-cpu:
+    go test -benchtime 60s -bench=. -cpuprofile {{.step}}_cpu.out
+
+  bench-mem:
+    go test -benchtime 60s -bench=. -memprofile {{.step}}_mem.out
+
+  profile-cpu-web:
+    go tool pprof -http=localhost:8080 {{.step}}_cpu.out
+
+  profile-cpu:
+    go tool pprof {{.step}}_cpu.out
+
+  profile-mem-web:
+    go tool pprof -http=localhost:8080 {{.step}}_mem.out
+
+  profile-mem:
+    go tool pprof {{.step}}_mem.out

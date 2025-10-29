@@ -74,28 +74,14 @@ func NewPlanner(planConfiguration *plan.Configuration, definition *ast.Document,
 	}, nil
 }
 
+// PlanOperation creates a query plan from an operation file in a pretty-printed text or JSON format
 func (pl *Planner) PlanOperation(operationFilePath string, outputFormat PlanOutputFormat) (string, error) {
-	operation, err := pl.parseOperation(operationFilePath)
+	operation, err := pl.ParseAndPrepareOperation(operationFilePath)
 	if err != nil {
-		return "", &PlannerOperationValidationError{err: err}
+		return "", err
 	}
 
-	operationName := findOperationName(operation)
-	if operationName == nil {
-		return "", &PlannerOperationValidationError{err: errors.New("operation name not found")}
-	}
-
-	err = pl.normalizeOperation(operation, operationName)
-	if err != nil {
-		return "", &PlannerOperationValidationError{err: err}
-	}
-
-	err = pl.validateOperation(operation)
-	if err != nil {
-		return "", &PlannerOperationValidationError{err: err}
-	}
-
-	rawPlan, err := pl.planOperation(operation)
+	rawPlan, err := pl.PlanPreparedOperation(operation)
 	if err != nil {
 		return "", fmt.Errorf("failed to plan operation: %w", err)
 	}
@@ -111,31 +97,35 @@ func (pl *Planner) PlanOperation(operationFilePath string, outputFormat PlanOutp
 		return string(marshal), nil
 	}
 
-	return "", fmt.Errorf("invalid type specified: %q", outputFormat)
+	return "", fmt.Errorf("invalid outputFormat specified: %q", outputFormat)
 }
 
-func (pl *Planner) PlanParsedOperation(operation *ast.Document) (*resolve.FetchTreeQueryPlanNode, error) {
-	operationName := findOperationName(operation)
-	if operationName == nil {
-		return nil, errors.New("operation name not found")
-	}
-
-	err := pl.normalizeOperation(operation, operationName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to normalize operation: %w", err)
-	}
-
-	err = pl.validateOperation(operation)
+// ParseAndPrepareOperation parses, normalizes and validates the operation
+func (pl *Planner) ParseAndPrepareOperation(operationFilePath string) (*ast.Document, error) {
+	operation, err := pl.parseOperation(operationFilePath)
 	if err != nil {
 		return nil, &PlannerOperationValidationError{err: err}
 	}
 
-	rawPlan, err := pl.planOperation(operation)
-	if err != nil {
-		return nil, fmt.Errorf("failed to plan operation: %w", err)
+	return pl.PrepareOperation(operation)
+}
+
+// PrepareOperation normalizes and validates the operation
+func (pl *Planner) PrepareOperation(operation *ast.Document) (*ast.Document, error) {
+	operationName := findOperationName(operation)
+	if operationName == nil {
+		return nil, &PlannerOperationValidationError{err: errors.New("operation name not found")}
 	}
 
-	return rawPlan, nil
+	if err := pl.normalizeOperation(operation, operationName); err != nil {
+		return nil, &PlannerOperationValidationError{err: err}
+	}
+
+	if err := pl.validateOperation(operation); err != nil {
+		return nil, &PlannerOperationValidationError{err: err}
+	}
+
+	return operation, nil
 }
 
 func (pl *Planner) normalizeOperation(operation *ast.Document, operationName []byte) (err error) {
@@ -169,7 +159,8 @@ func (pl *Planner) normalizeOperation(operation *ast.Document, operationName []b
 	return nil
 }
 
-func (pl *Planner) planOperation(operation *ast.Document) (planNode *resolve.FetchTreeQueryPlanNode, err error) {
+// PlanPreparedOperation creates a query plan from a normalized and validated operation
+func (pl *Planner) PlanPreparedOperation(operation *ast.Document) (planNode *resolve.FetchTreeQueryPlanNode, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("panic during plan generation: %v", r)
@@ -358,8 +349,8 @@ func (pg *PlanGenerator) loadConfiguration(routerConfig *nodev1.RouterConfig, lo
 	// we need to merge the base schema, it contains the __schema and __type queries
 	// these are not usually part of a regular GraphQL schema
 	// the engine needs to have them defined, otherwise it cannot resolve such fields
-	err = asttransform.MergeDefinitionWithBaseSchema(&definition)
-	if err != nil {
+
+	if err := asttransform.MergeDefinitionWithBaseSchema(&definition); err != nil {
 		return fmt.Errorf("failed to merge graphql schema with base schema: %w", err)
 	}
 
@@ -410,5 +401,6 @@ func findOperationName(operation *ast.Document) (operationName []byte) {
 			return operation.OperationDefinitionNameBytes(operation.RootNodes[i].Ref)
 		}
 	}
+	// TODO: assign static operation name if we have single anonymous operation
 	return nil
 }
