@@ -37,16 +37,16 @@ func TestStreamsHooksCombined(t *testing.T) {
 			Modules: map[string]interface{}{
 				"streamReceiveModule": stream_receive.StreamReceiveModule{
 					Callback: func(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
-						newEvents := make([]datasource.StreamEvent, 0, len(events.UnsafeStreamEvents()))
-						for _, event := range events.UnsafeStreamEvents() {
-							newEvt, ok := event.GetUnsafeEvent().Clone().(*kafka.UnsafeEvent)
+						newEvents := make([]datasource.StreamEvent, 0, events.Len())
+						for _, event := range events.ChangeableEvents() {
+							newEvt, ok := event.(*kafka.ChangeableEvent)
 							if !ok {
 								continue
 							}
 							if string(newEvt.Headers["x-publishModule"]) == "i_was_here" {
 								newEvt.SetData([]byte(`{"__typename":"Employee","id": 2,"update":{"name":"irrelevant"}}`))
 							}
-							newEvents = append(newEvents, kafka.NewEvent(newEvt))
+							newEvents = append(newEvents, newEvt.ToStreamEvent())
 						}
 
 						return datasource.NewStreamEvents(newEvents), nil
@@ -58,9 +58,9 @@ func TestStreamsHooksCombined(t *testing.T) {
 							return events, nil
 						}
 
-						newEvents := make([]datasource.StreamEvent, 0, len(events.UnsafeStreamEvents()))
-						for _, event := range events.UnsafeStreamEvents() {
-							newEvt, ok := event.GetUnsafeEvent().Clone().(*kafka.UnsafeEvent)
+						newEvents := make([]datasource.StreamEvent, 0, events.Len())
+						for _, event := range events.ChangeableEvents() {
+							newEvt, ok := event.(*kafka.ChangeableEvent)
 							if !ok {
 								continue
 							}
@@ -68,10 +68,10 @@ func TestStreamsHooksCombined(t *testing.T) {
 								newEvt.Headers = make(map[string][]byte)
 							}
 							newEvt.Headers["x-publishModule"] = []byte("i_was_here")
-							newEvents = append(newEvents, kafka.NewEvent(newEvt))
+							newEvents = append(newEvents, newEvt.ToStreamEvent())
 						}
 
-						return events, nil
+						return datasource.NewStreamEvents(newEvents), nil
 					},
 				},
 			},

@@ -25,7 +25,7 @@ func TestPublishEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 			config: publishData{
 				Provider:  "test-provider",
 				Channel:   "test-channel",
-				Event:     UnsafeEvent{Data: json.RawMessage(`{"message":"hello"}`)},
+				Event:     ChangeableEvent{Data: json.RawMessage(`{"message":"hello"}`)},
 				FieldName: "test-field",
 			},
 			wantPattern: `{"channel":"test-channel", "event": {"data": {"message":"hello"}}, "providerId":"test-provider", "rootFieldName":"test-field"}`,
@@ -35,7 +35,7 @@ func TestPublishEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 			config: publishData{
 				Provider:  "test-provider-id",
 				Channel:   "channel-with-hyphens",
-				Event:     UnsafeEvent{Data: json.RawMessage(`{"message":"special \"quotes\" here"}`)},
+				Event:     ChangeableEvent{Data: json.RawMessage(`{"message":"special \"quotes\" here"}`)},
 				FieldName: "test-field",
 			},
 			wantPattern: `{"channel":"channel-with-hyphens", "event": {"data": {"message":"special \"quotes\" here"}}, "providerId":"test-provider-id", "rootFieldName":"test-field"}`,

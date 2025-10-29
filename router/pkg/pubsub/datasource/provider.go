@@ -73,8 +73,20 @@ func (e StreamEvents) Len() int {
 	return len(e.evts)
 }
 
-func (e StreamEvents) UnsafeStreamEvents() []StreamEvent {
+// Unsafe returns the underlying slice of stream events. Never use it to modify the events directly.
+func (e StreamEvents) Unsafe() []StreamEvent {
 	return e.evts
+}
+
+func (e StreamEvents) ChangeableEvents() iter.Seq2[int, ChangeableStreamEvent] {
+	// get the unsafe events already cloned
+	return func(yield func(int, ChangeableStreamEvent) bool) {
+		for k := range e.evts {
+			if !yield(k, e.evts[k].ChangeableEvent()) {
+				return
+			}
+		}
+	}
 }
 
 func NewStreamEvents(evts []StreamEvent) StreamEvents {
@@ -86,16 +98,17 @@ func NewStreamEvents(evts []StreamEvent) StreamEvents {
 // there could be other common fields in the future, but for now we only have data
 type StreamEvent interface {
 	GetData() []byte
-	GetUnsafeEvent() UnsafeStreamEvent
+	ChangeableEvent() ChangeableStreamEvent
 }
 
-// UnsafeStreamEvent is a generic interface for all stream events
+// ChangeableStreamEvent is a generic interface for all stream events
 // Each provider will have its own event type that implements this interface
 // there could be other common fields in the future, but for now we only have data
-type UnsafeStreamEvent interface {
+type ChangeableStreamEvent interface {
 	GetData() []byte
 	SetData([]byte)
-	Clone() UnsafeStreamEvent
+	Clone() ChangeableStreamEvent
+	ToStreamEvent() StreamEvent
 }
 
 // SubscriptionEventConfiguration is the interface that all subscription event configurations must implement

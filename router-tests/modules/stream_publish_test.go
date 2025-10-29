@@ -63,14 +63,14 @@ func TestPublishHook(t *testing.T) {
 			Modules: map[string]interface{}{
 				"publishModule": stream_publish.PublishModule{
 					Callback: func(ctx core.StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
-						newEvts := make([]datasource.StreamEvent, 0, len(events.UnsafeStreamEvents()))
-						for _, event := range events.UnsafeStreamEvents() {
-							evt, ok := event.GetUnsafeEvent().(*kafka.UnsafeEvent)
+						newEvts := make([]datasource.StreamEvent, 0, events.Len())
+						for _, event := range events.ChangeableEvents() {
+							evt, ok := event.(*kafka.ChangeableEvent)
 							if !ok {
 								continue
 							}
 							evt.Headers["x-test"] = []byte("test")
-							newEvts = append(newEvts, kafka.NewEvent(evt))
+							newEvts = append(newEvts, evt.ToStreamEvent())
 						}
 
 						return datasource.NewStreamEvents(newEvts), nil
@@ -266,9 +266,9 @@ func TestPublishHook(t *testing.T) {
 
 						employeeID := ctx.Operation().Variables().GetInt("employeeID")
 
-						newEvents := make([]datasource.StreamEvent, 0, len(events.UnsafeStreamEvents()))
-						for _, event := range events.UnsafeStreamEvents() {
-							newEvt, ok := event.GetUnsafeEvent().Clone().(*kafka.UnsafeEvent)
+						newEvents := make([]datasource.StreamEvent, 0, events.Len())
+						for _, event := range events.ChangeableEvents() {
+							newEvt, ok := event.(*kafka.ChangeableEvent)
 							if !ok {
 								continue
 							}
@@ -277,7 +277,7 @@ func TestPublishHook(t *testing.T) {
 								newEvt.Headers = map[string][]byte{}
 							}
 							newEvt.Headers["x-employee-id"] = []byte(strconv.Itoa(employeeID))
-							newEvents = append(newEvents, kafka.NewEvent(newEvt))
+							newEvents = append(newEvents, newEvt.ToStreamEvent())
 						}
 
 						return datasource.NewStreamEvents(newEvents), nil

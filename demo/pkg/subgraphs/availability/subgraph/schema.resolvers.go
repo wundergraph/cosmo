@@ -20,9 +20,9 @@ func (r *mutationResolver) UpdateAvailability(ctx context.Context, employeeID in
 	conf := &nats.PublishAndRequestEventConfiguration{
 		Subject: r.GetPubSubName(fmt.Sprintf("employeeUpdated.%d", employeeID)),
 	}
-	evt := &nats.Event{Data: []byte(fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, employeeID))}
+	evt := &nats.ChangeableEvent{Data: []byte(fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, employeeID))}
 
-	err := r.NatsPubSubByProviderID["default"].Publish(ctx, conf, []datasource.StreamEvent{evt})
+	err := r.NatsPubSubByProviderID["default"].Publish(ctx, conf, []datasource.StreamEvent{evt.ToStreamEvent()})
 	if err != nil {
 		return nil, err
 	}
@@ -30,8 +30,8 @@ func (r *mutationResolver) UpdateAvailability(ctx context.Context, employeeID in
 	conf2 := &nats.PublishAndRequestEventConfiguration{
 		Subject: r.GetPubSubName(fmt.Sprintf("employeeUpdatedMyNats.%d", employeeID)),
 	}
-	evt2 := &nats.Event{Data: []byte(fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, employeeID))}
-	err = r.NatsPubSubByProviderID["my-nats"].Publish(ctx, conf2, []datasource.StreamEvent{evt2})
+	evt2 := &nats.ChangeableEvent{Data: []byte(fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, employeeID))}
+	err = r.NatsPubSubByProviderID["my-nats"].Publish(ctx, conf2, []datasource.StreamEvent{evt2.ToStreamEvent()})
 
 	if err != nil {
 		return nil, err

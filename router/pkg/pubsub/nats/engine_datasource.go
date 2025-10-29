@@ -16,7 +16,7 @@ import (
 )
 
 type Event struct {
-	evt *UnsafeEvent
+	evt *ChangeableEvent
 }
 
 func (e Event) GetData() []byte {
@@ -33,41 +33,45 @@ func (e Event) GetHeaders() map[string][]string {
 	return cloneHeaders(e.evt.Headers)
 }
 
-func (e Event) GetUnsafeEvent() datasource.UnsafeStreamEvent {
-	return e.evt
+func (e Event) ChangeableEvent() datasource.ChangeableStreamEvent {
+	return e.evt.Clone()
 }
 
-func NewEvent(evt *UnsafeEvent) datasource.StreamEvent {
+func NewEvent(evt *ChangeableEvent) datasource.StreamEvent {
 	return &Event{evt: evt}
 }
 
-type UnsafeEvent struct {
+type ChangeableEvent struct {
 	Data    json.RawMessage     `json:"data"`
 	Headers map[string][]string `json:"headers"`
 }
 
-func (e *UnsafeEvent) GetData() []byte {
+func (e *ChangeableEvent) GetData() []byte {
 	if e == nil {
 		return nil
 	}
 	return e.Data
 }
 
-func (e *UnsafeEvent) SetData(data []byte) {
+func (e *ChangeableEvent) SetData(data []byte) {
 	if e == nil {
 		return
 	}
 	e.Data = slices.Clone(data)
 }
 
-func (e *UnsafeEvent) Clone() datasource.UnsafeStreamEvent {
+func (e *ChangeableEvent) Clone() datasource.ChangeableStreamEvent {
 	if e == nil {
-		return (*UnsafeEvent)(nil)
+		return (*ChangeableEvent)(nil)
 	}
-	return &UnsafeEvent{
+	return &ChangeableEvent{
 		Data:    slices.Clone(e.Data),
 		Headers: cloneHeaders(e.Headers),
 	}
+}
+
+func (e *ChangeableEvent) ToStreamEvent() datasource.StreamEvent {
+	return &Event{evt: e}
 }
 
 func cloneHeaders(src map[string][]string) map[string][]string {
@@ -111,10 +115,10 @@ func (s *SubscriptionEventConfiguration) RootFieldName() string {
 
 // publishData is a private type that is used to pass data from the engine to the provider
 type publishData struct {
-	Provider  string      `json:"providerId"`
-	Subject   string      `json:"subject"`
-	Event     UnsafeEvent `json:"event"`
-	FieldName string      `json:"rootFieldName"`
+	Provider  string          `json:"providerId"`
+	Subject   string          `json:"subject"`
+	Event     ChangeableEvent `json:"event"`
+	FieldName string          `json:"rootFieldName"`
 }
 
 func (p *publishData) PublishEventConfiguration() datasource.PublishEventConfiguration {
@@ -254,4 +258,4 @@ func (s *NatsRequestDataSource) LoadWithFiles(ctx context.Context, input []byte,
 var _ datasource.SubscriptionEventConfiguration = (*SubscriptionEventConfiguration)(nil)
 var _ datasource.PublishEventConfiguration = (*PublishAndRequestEventConfiguration)(nil)
 var _ datasource.StreamEvent = (*Event)(nil)
-var _ datasource.UnsafeStreamEvent = (*UnsafeEvent)(nil)
+var _ datasource.ChangeableStreamEvent = (*ChangeableEvent)(nil)

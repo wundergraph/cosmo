@@ -14,8 +14,10 @@ import (
 // Test helper types
 type unsafeTestEvent []byte
 
-func (e unsafeTestEvent) Clone() UnsafeStreamEvent {
-	return slices.Clone(e)
+func (e unsafeTestEvent) Clone() ChangeableStreamEvent {
+	var evt unsafeTestEvent = make([]byte, len(e))
+	copy(evt, e)
+	return evt
 }
 
 func (e unsafeTestEvent) GetData() []byte {
@@ -26,6 +28,10 @@ func (e unsafeTestEvent) SetData(data []byte) {
 	copy(e, data)
 }
 
+func (e unsafeTestEvent) ToStreamEvent() StreamEvent {
+	return &testEvent{evt: e}
+}
+
 type testEvent struct {
 	evt unsafeTestEvent
 }
@@ -34,8 +40,8 @@ func (e *testEvent) GetData() []byte {
 	return slices.Clone(e.evt.GetData())
 }
 
-func (e *testEvent) GetUnsafeEvent() UnsafeStreamEvent {
-	return e.evt
+func (e *testEvent) ChangeableEvent() ChangeableStreamEvent {
+	return e.evt.Clone()
 }
 
 type testSubscriptionConfig struct {

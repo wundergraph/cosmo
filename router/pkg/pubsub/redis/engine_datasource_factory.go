@@ -66,7 +66,7 @@ func (c *EngineDataSourceFactory) ResolveDataSourceInput(eventData []byte) (stri
 		Provider:  providerId,
 		Channel:   channel,
 		FieldName: c.fieldName,
-		Event:     UnsafeEvent{Data: eventData},
+		Event:     ChangeableEvent{Data: eventData},
 	}
 
 	return evtCfg.MarshalJSONTemplate()

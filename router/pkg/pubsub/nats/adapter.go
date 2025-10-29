@@ -150,7 +150,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, cfg datasource.Subscrip
 						})
 
 						updater.Update([]datasource.StreamEvent{
-							Event{evt: &UnsafeEvent{
+							Event{evt: &ChangeableEvent{
 								Data:    msg.Data(),
 								Headers: map[string][]string(msg.Headers()),
 							}},
@@ -198,7 +198,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, cfg datasource.Subscrip
 					DestinationName:     msg.Subject,
 				})
 				updater.Update([]datasource.StreamEvent{
-					Event{evt: &UnsafeEvent{
+					Event{evt: &ChangeableEvent{
 						Data:    msg.Data,
 						Headers: map[string][]string(msg.Header),
 					}},
@@ -249,7 +249,7 @@ func (p *ProviderAdapter) Publish(ctx context.Context, conf datasource.PublishEv
 	log.Debug("publish", zap.Int("event_count", len(events)))
 
 	for _, streamEvent := range events {
-		natsEvent, ok := streamEvent.GetUnsafeEvent().(*UnsafeEvent)
+		natsEvent, ok := streamEvent.ChangeableEvent().(*ChangeableEvent)
 		if !ok {
 			return datasource.NewError("invalid event type for NATS adapter", nil)
 		}
@@ -300,7 +300,7 @@ func (p *ProviderAdapter) Request(ctx context.Context, cfg datasource.PublishEve
 		return datasource.NewError("nats client not initialized", nil)
 	}
 
-	natsEvent, ok := event.GetUnsafeEvent().(*UnsafeEvent)
+	natsEvent, ok := event.ChangeableEvent().(*ChangeableEvent)
 	if !ok {
 		return datasource.NewError("invalid event type for NATS adapter", nil)
 	}

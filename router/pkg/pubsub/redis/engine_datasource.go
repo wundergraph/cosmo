@@ -16,7 +16,7 @@ import (
 )
 
 type Event struct {
-	evt *UnsafeEvent
+	evt *ChangeableEvent
 }
 
 func (e Event) GetData() []byte {
@@ -26,39 +26,43 @@ func (e Event) GetData() []byte {
 	return slices.Clone(e.evt.Data)
 }
 
-func (e Event) GetUnsafeEvent() datasource.UnsafeStreamEvent {
-	return e.evt
+func (e Event) ChangeableEvent() datasource.ChangeableStreamEvent {
+	return e.evt.Clone()
 }
 
-func NewEvent(evt *UnsafeEvent) datasource.StreamEvent {
+func NewEvent(evt *ChangeableEvent) datasource.StreamEvent {
 	return &Event{evt: evt}
 }
 
-type UnsafeEvent struct {
+type ChangeableEvent struct {
 	Data json.RawMessage `json:"data"`
 }
 
-func (e *UnsafeEvent) GetData() []byte {
+func (e *ChangeableEvent) GetData() []byte {
 	if e == nil {
 		return nil
 	}
 	return e.Data
 }
 
-func (e *UnsafeEvent) SetData(data []byte) {
+func (e *ChangeableEvent) SetData(data []byte) {
 	if e == nil {
 		return
 	}
 	e.Data = data
 }
 
-func (e *UnsafeEvent) Clone() datasource.UnsafeStreamEvent {
+func (e *ChangeableEvent) Clone() datasource.ChangeableStreamEvent {
 	if e == nil {
-		return (*UnsafeEvent)(nil)
+		return (*ChangeableEvent)(nil)
 	}
-	return &UnsafeEvent{
+	return &ChangeableEvent{
 		Data: slices.Clone(e.Data),
 	}
+}
+
+func (e *ChangeableEvent) ToStreamEvent() datasource.StreamEvent {
+	return Event{e}
 }
 
 // SubscriptionEventConfiguration contains configuration for subscription events
@@ -86,10 +90,10 @@ func (s *SubscriptionEventConfiguration) RootFieldName() string {
 // publishData is a private type that is used to pass data from the engine to the provider
 
 type publishData struct {
-	Provider  string      `json:"providerId"`
-	Channel   string      `json:"channel"`
-	Event     UnsafeEvent `json:"event"`
-	FieldName string      `json:"rootFieldName"`
+	Provider  string          `json:"providerId"`
+	Channel   string          `json:"channel"`
+	Event     ChangeableEvent `json:"event"`
+	FieldName string          `json:"rootFieldName"`
 }
 
 func (p *publishData) PublishEventConfiguration() datasource.PublishEventConfiguration {
@@ -211,4 +215,4 @@ func (s *PublishDataSource) LoadWithFiles(ctx context.Context, input []byte, fil
 var _ datasource.SubscriptionEventConfiguration = (*SubscriptionEventConfiguration)(nil)
 var _ datasource.PublishEventConfiguration = (*PublishEventConfiguration)(nil)
 var _ datasource.StreamEvent = (*Event)(nil)
-var _ datasource.UnsafeStreamEvent = (*UnsafeEvent)(nil)
+var _ datasource.ChangeableStreamEvent = (*ChangeableEvent)(nil)

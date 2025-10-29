@@ -20,7 +20,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -116,11 +115,10 @@ func TestReceiveHook(t *testing.T) {
 			Modules: map[string]interface{}{
 				"streamReceiveModule": stream_receive.StreamReceiveModule{
 					Callback: func(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
-						newEvents := make([]datasource.StreamEvent, 0, len(events.UnsafeStreamEvents()))
-						for _, event := range events.UnsafeStreamEvents() {
-							newEvt := event.GetUnsafeEvent().Clone()
-							newEvt.SetData([]byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`))
-							newEvents = append(newEvents, kafka.NewEvent(newEvt.(*kafka.UnsafeEvent)))
+						newEvents := make([]datasource.StreamEvent, 0, events.Len())
+						for _, event := range events.ChangeableEvents() {
+							event.SetData([]byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`))
+							newEvents = append(newEvents, event.ToStreamEvent())
 						}
 
 						return datasource.NewStreamEvents(newEvents), nil
@@ -207,11 +205,10 @@ func TestReceiveHook(t *testing.T) {
 							return events, nil
 						}
 
-						newEvents := make([]datasource.StreamEvent, 0, len(events.UnsafeStreamEvents()))
-						for _, event := range events.UnsafeStreamEvents() {
-							newEvt := event.GetUnsafeEvent().Clone()
-							newEvt.SetData([]byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`))
-							newEvents = append(newEvents, kafka.NewEvent(newEvt.(*kafka.UnsafeEvent)))
+						newEvents := make([]datasource.StreamEvent, 0, events.Len())
+						for _, event := range events.ChangeableEvents() {
+							event.SetData([]byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`))
+							newEvents = append(newEvents, event.ToStreamEvent())
 						}
 
 						return datasource.NewStreamEvents(newEvents), nil
@@ -360,11 +357,10 @@ func TestReceiveHook(t *testing.T) {
 							return events, nil
 						}
 
-						newEvents := make([]datasource.StreamEvent, 0, len(events.UnsafeStreamEvents()))
-						for _, event := range events.UnsafeStreamEvents() {
-							newEvt := event.GetUnsafeEvent().Clone()
-							newEvt.SetData([]byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`))
-							newEvents = append(newEvents, kafka.NewEvent(newEvt.(*kafka.UnsafeEvent)))
+						newEvents := make([]datasource.StreamEvent, 0, events.Len())
+						for _, event := range events.ChangeableEvents() {
+							event.SetData([]byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`))
+							newEvents = append(newEvents, event.ToStreamEvent())
 						}
 
 						return datasource.NewStreamEvents(newEvents), nil

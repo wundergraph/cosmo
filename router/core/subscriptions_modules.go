@@ -91,31 +91,35 @@ func (c *pubSubSubscriptionOnStartHookContext) WriteEvent(event datasource.Strea
 	return true
 }
 
-type UnsafeEngineEvent []byte
+type ChangeableEngineEvent []byte
 
-func (e UnsafeEngineEvent) GetData() []byte {
+func (e ChangeableEngineEvent) GetData() []byte {
 	return e
 }
 
-func (e UnsafeEngineEvent) SetData(data []byte) {
+func (e ChangeableEngineEvent) SetData(data []byte) {
 	copy(e, data)
 }
 
-func (e UnsafeEngineEvent) Clone() datasource.UnsafeStreamEvent {
+func (e ChangeableEngineEvent) Clone() datasource.ChangeableStreamEvent {
 	return slices.Clone(e)
+}
+
+func (e ChangeableEngineEvent) ToStreamEvent() datasource.StreamEvent {
+	return &EngineEvent{data: e}
 }
 
 // EngineEvent is the event used to write to the engine subscription
 type EngineEvent struct {
-	Data UnsafeEngineEvent
+	data ChangeableEngineEvent
 }
 
 func (e *EngineEvent) GetData() []byte {
-	return e.Data
+	return e.data
 }
 
-func (e *EngineEvent) GetUnsafeEvent() datasource.UnsafeStreamEvent {
-	return e.Data
+func (e *EngineEvent) ChangeableEvent() datasource.ChangeableStreamEvent {
+	return e.data.Clone()
 }
 
 type engineSubscriptionOnStartHookContext struct {
@@ -262,7 +266,7 @@ func NewPubSubOnPublishEventsHook(fn func(ctx StreamPublishEventHandlerContext, 
 
 		newEvts, err := fn(hookCtx, datasource.NewStreamEvents(evts))
 
-		return newEvts.UnsafeStreamEvents(), err
+		return newEvts.Unsafe(), err
 	}
 }
 
@@ -309,6 +313,6 @@ func NewPubSubOnReceiveEventsHook(fn func(ctx StreamReceiveEventHandlerContext, 
 			subscriptionEventConfiguration: subConf,
 		}
 		newEvts, err := fn(hookCtx, datasource.NewStreamEvents(evts))
-		return newEvts.UnsafeStreamEvents(), err
+		return newEvts.Unsafe(), err
 	}
 }

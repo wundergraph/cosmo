@@ -16,7 +16,7 @@ import (
 )
 
 type Event struct {
-	evt *UnsafeEvent
+	evt *ChangeableEvent
 }
 
 func (e Event) GetData() []byte {
@@ -51,33 +51,29 @@ func (e Event) GetHeaders() map[string][]byte {
 	return cloneHeaders(e.evt.Headers)
 }
 
-func (e Event) GetUnsafeEvent() datasource.UnsafeStreamEvent {
-	return e.evt
+func (e Event) ChangeableEvent() datasource.ChangeableStreamEvent {
+	return e.evt.Clone()
 }
 
-func NewEvent(evt *UnsafeEvent) datasource.StreamEvent {
-	return &Event{evt: evt}
-}
-
-// UnsafeEvent represents an event from Kafka
-type UnsafeEvent struct {
+// ChangeableEvent represents an event from Kafka
+type ChangeableEvent struct {
 	Key     []byte            `json:"key"`
 	Data    json.RawMessage   `json:"data"`
 	Headers map[string][]byte `json:"headers"`
 }
 
-func (e *UnsafeEvent) GetData() []byte {
+func (e *ChangeableEvent) GetData() []byte {
 	return e.Data
 }
 
-func (e *UnsafeEvent) SetData(data []byte) {
+func (e *ChangeableEvent) SetData(data []byte) {
 	if e == nil {
 		return
 	}
 	e.Data = data
 }
 
-func (e *UnsafeEvent) Clone() datasource.UnsafeStreamEvent {
+func (e *ChangeableEvent) Clone() datasource.ChangeableStreamEvent {
 	e2 := *e
 	e2.Data = slices.Clone(e.Data)
 	e2.Headers = make(map[string][]byte, len(e.Headers))
@@ -85,6 +81,10 @@ func (e *UnsafeEvent) Clone() datasource.UnsafeStreamEvent {
 		e2.Headers[k] = slices.Clone(v)
 	}
 	return &e2
+}
+
+func (e *ChangeableEvent) ToStreamEvent() datasource.StreamEvent {
+	return Event{evt: e}
 }
 
 // SubscriptionEventConfiguration is a public type that is used to allow access to custom fields
@@ -112,10 +112,10 @@ func (s *SubscriptionEventConfiguration) RootFieldName() string {
 
 // publishData is a private type that is used to pass data from the engine to the provider
 type publishData struct {
-	Provider  string      `json:"providerId"`
-	Topic     string      `json:"topic"`
-	Event     UnsafeEvent `json:"event"`
-	FieldName string      `json:"rootFieldName"`
+	Provider  string          `json:"providerId"`
+	Topic     string          `json:"topic"`
+	Event     ChangeableEvent `json:"event"`
+	FieldName string          `json:"rootFieldName"`
 }
 
 // PublishEventConfiguration returns the publish event configuration from the publishData type
@@ -243,4 +243,4 @@ func (s *PublishDataSource) LoadWithFiles(ctx context.Context, input []byte, fil
 var _ datasource.SubscriptionEventConfiguration = (*SubscriptionEventConfiguration)(nil)
 var _ datasource.PublishEventConfiguration = (*PublishEventConfiguration)(nil)
 var _ datasource.StreamEvent = (*Event)(nil)
-var _ datasource.UnsafeStreamEvent = (*UnsafeEvent)(nil)
+var _ datasource.ChangeableStreamEvent = (*ChangeableEvent)(nil)
