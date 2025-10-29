@@ -6,6 +6,7 @@ package wg.cosmo.platform.v1;
 
 import "wg/cosmo/common/common.proto";
 import "wg/cosmo/notifications/events.proto";
+import "wg/cosmo/graphqlmetrics/v1/graphqlmetrics.proto";
 
 message Label {
   string key = 1;
@@ -2966,6 +2967,23 @@ message GetOperationsPageResponse {
   repeated OperationPageItem operations = 2;
 }
 
+message OperationDetailPageItem {
+  string id = 1;
+  string operationName = 2;
+  string timestamp = 3;
+  wg.cosmo.graphqlmetrics.v1.OperationType operationType = 4;
+  string operationContent = 5;
+}
+
+message GetOperationDetailPageRequest {
+  string id = 1;
+}
+
+message GetOperationDetailPageResponse {
+  Response response = 1;
+  OperationDetailPageItem detail = 2;
+}
+
 service PlatformService {
   // PlaygroundScripts
   rpc CreatePlaygroundScript(CreatePlaygroundScriptRequest) returns (CreatePlaygroundScriptResponse) {}
@@ -3332,6 +3350,8 @@ service PlatformService {
   rpc GetOperations(GetOperationsRequest) returns (GetOperationsResponse) {}
   // GetOperationsPage returns the operations page data from gql_metrics_operations table.
   rpc GetOperationsPage(GetOperationsPageRequest) returns (GetOperationsPageResponse) {}
+  // GetOperationDetailPage returns the operations details page data from gql_metrics_operations table.
+  rpc GetOperationDetailPage(GetOperationDetailPageRequest) returns (GetOperationDetailPageResponse) {}
   // GetClientsFromAnalytics returns all the clients of the federated graph from the analytics
   rpc GetClientsFromAnalytics(GetClientsFromAnalyticsRequest) returns (GetClientsFromAnalyticsResponse) {}
 

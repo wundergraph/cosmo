@@ -15,7 +15,7 @@ export function getOperationsPage(
   opts: RouterOptions,
   req: GetOperationsPageRequest,
   ctx: HandlerContext,
-) : Promise<PlainMessage<GetOperationsPageResponse>> {
+): Promise<PlainMessage<GetOperationsPageResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<GetOperationsPageResponse>>(ctx, logger, async () => {
@@ -43,12 +43,11 @@ export function getOperationsPage(
       };
     }
 
-
     const repo = new OperationsRepository(opts.chClient);
     const view = await repo.getOperationsPage({
       organizationId: authContext.organizationId,
       graphId: graph.id,
-    })
+    });
 
     return {
       response: {

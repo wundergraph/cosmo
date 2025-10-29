@@ -165,6 +165,7 @@ import { getNamespaceProposalConfig } from './proposal/getNamespaceProposalConfi
 import { configureNamespaceProposalConfig } from './proposal/configureNamespaceProposalConfig.js';
 import { getOperations } from './analytics/getOperations.js';
 import { getOperationsPage } from './operations/getOperationsPage.js';
+import { getOperationDetailPage } from './operations/getOperationDetailPage.js';
 import { getClientsFromAnalytics } from './federated-graph/getClientsFromAnalytics.js';
 import { validateAndFetchPluginData } from './plugin/validateAndFetchPluginData.js';
 import { linkSubgraph } from './subgraph/linkSubgraph.js';
@@ -526,6 +527,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     getOperationsPage: (req, ctx) => {
       return getOperationsPage(opts, req, ctx);
+    },
+
+    getOperationDetailPage: (req, ctx) => {
+      return getOperationDetailPage(opts, req, ctx);
     },
 
     getMetricsErrorRate: (req, ctx) => {
