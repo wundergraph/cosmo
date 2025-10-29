@@ -6,6 +6,7 @@ import {
 import { OperationPageItem } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getOperationsPage } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { formatDateTime } from "@/lib/format-date";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/loader";
 import {
@@ -80,7 +81,7 @@ const OperationsPage: NextPageWithLayout = () => {
       <EmptyState
         icon={<ExclamationTriangleIcon />}
         title="Could not retrieve operations"
-        description={"" /* TBD */}
+        description={data?.response?.details}
         actions={<Button onClick={() => undefined}>Retry</Button>}
       />
     );
@@ -92,7 +93,7 @@ const OperationsPage: NextPageWithLayout = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Operation name</TableHead>
-              <TableHead>Timestamp</TableHead>
+              <TableHead>Last seen at</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -100,7 +101,7 @@ const OperationsPage: NextPageWithLayout = () => {
               <OperationsTableRow id={operation.id} key={operation.id}>
                 <TableCell>{operation.operationName}</TableCell>
                 <TableCell>
-                  {new Date(operation.timestamp).toLocaleString()}
+                  {formatDateTime(new Date(operation.timestamp))}
                 </TableCell>
               </OperationsTableRow>
             ))}

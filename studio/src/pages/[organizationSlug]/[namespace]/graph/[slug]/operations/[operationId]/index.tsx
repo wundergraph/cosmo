@@ -3,14 +3,13 @@ import {
   GraphPageLayout,
   getGraphLayout,
 } from "@/components/layout/graph-layout";
+import { formatDateTime } from "@/lib/format-date";
 import { useRouter } from "next/router";
 import { NextPageWithLayout } from "@/lib/page";
 import { useCurrentOrganization } from "@/hooks/use-current-organization";
 import { useWorkspace } from "@/hooks/use-workspace";
-import { OperationDetailPageItem } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getOperationDetailPage } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { OperationType } from "@wundergraph/cosmo-connect/dist/graphqlmetrics/v1/graphqlmetrics_pb";
 import { useQuery } from "@connectrpc/connect-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,28 +31,6 @@ const OperationDefinitionRow = ({
   </div>
 );
 
-const OperationTypeBadge = ({
-  operationType,
-}: {
-  operationType: OperationType;
-}) => {
-  let label = "UNKNOWN";
-
-  switch (operationType) {
-    case OperationType.QUERY:
-      label = "QUERY";
-      break;
-    case OperationType.MUTATION:
-      label = "MUTATION";
-      break;
-    case OperationType.SUBSCRIPTION:
-      label = "SUBSCRIPTION";
-      break;
-  }
-
-  return <Badge variant="secondary">{label}</Badge>;
-}
-
 const OperationDetailsPage: NextPageWithLayout = () => {
   const router = useRouter();
   const id = router.query.operationId as string;
@@ -65,6 +42,8 @@ const OperationDetailsPage: NextPageWithLayout = () => {
 
   const { data, isLoading, error, refetch } = useQuery(getOperationDetailPage, {
     id,
+    namespace,
+    federatedGraphName: slug,
   });
 
   if (isLoading) return <Loader fullscreen />;
@@ -115,10 +94,17 @@ const OperationDetailsPage: NextPageWithLayout = () => {
               {data.detail.operationName}
             </OperationDefinitionRow>
             <OperationDefinitionRow label="Type">
-              <OperationTypeBadge operationType={data.detail.operationType} />
+              <Badge variant="secondary">
+                {data.detail.operationType.toLocaleUpperCase()}
+              </Badge>
             </OperationDefinitionRow>
             <OperationDefinitionRow label="Last seen at">
-              {new Date(data.detail.timestamp).toLocaleString()}
+              {formatDateTime(new Date(data.detail.timestamp))}
+            </OperationDefinitionRow>
+            <OperationDefinitionRow label="Content">
+              <pre className="max-h-96 overflow-auto whitespace-pre-wrap rounded-md bg-muted p-4 text-xs">
+                {data.detail.operationContent}
+              </pre>
             </OperationDefinitionRow>
           </dl>
         </div>

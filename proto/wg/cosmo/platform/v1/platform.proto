@@ -6,7 +6,6 @@ package wg.cosmo.platform.v1;
 
 import "wg/cosmo/common/common.proto";
 import "wg/cosmo/notifications/events.proto";
-import "wg/cosmo/graphqlmetrics/v1/graphqlmetrics.proto";
 
 message Label {
   string key = 1;
@@ -2971,12 +2970,14 @@ message OperationDetailPageItem {
   string id = 1;
   string operationName = 2;
   string timestamp = 3;
-  wg.cosmo.graphqlmetrics.v1.OperationType operationType = 4;
+  string operationType = 4;
   string operationContent = 5;
 }
 
 message GetOperationDetailPageRequest {
   string id = 1;
+  string namespace = 2;
+  string federatedGraphName = 3;
 }
 
 message GetOperationDetailPageResponse {

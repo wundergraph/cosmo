@@ -9,7 +9,6 @@ import type { BinaryReadOptions, FieldList, JsonReadOptions, JsonValue, PartialM
 import { Message, proto3, protoInt64 } from "@bufbuild/protobuf";
 import { EnumStatusCode, GraphQLSubscriptionProtocol, GraphQLWebsocketSubprotocol } from "../../common/common_pb.js";
 import { EventMeta } from "../../notifications/events_pb.js";
-import { OperationType } from "../../graphqlmetrics/v1/graphqlmetrics_pb.js";
 
 /**
  * @generated from enum wg.cosmo.platform.v1.LintSeverity
@@ -23295,9 +23294,9 @@ export class OperationDetailPageItem extends Message<OperationDetailPageItem> {
   timestamp = "";
 
   /**
-   * @generated from field: wg.cosmo.graphqlmetrics.v1.OperationType operationType = 4;
+   * @generated from field: string operationType = 4;
    */
-  operationType = OperationType.QUERY;
+  operationType = "";
 
   /**
    * @generated from field: string operationContent = 5;
@@ -23315,7 +23314,7 @@ export class OperationDetailPageItem extends Message<OperationDetailPageItem> {
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "operationName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "timestamp", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "operationType", kind: "enum", T: proto3.getEnumType(OperationType) },
+    { no: 4, name: "operationType", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "operationContent", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
@@ -23345,6 +23344,16 @@ export class GetOperationDetailPageRequest extends Message<GetOperationDetailPag
    */
   id = "";
 
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
+  /**
+   * @generated from field: string federatedGraphName = 3;
+   */
+  federatedGraphName = "";
+
   constructor(data?: PartialMessage<GetOperationDetailPageRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -23354,6 +23363,8 @@ export class GetOperationDetailPageRequest extends Message<GetOperationDetailPag
   static readonly typeName = "wg.cosmo.platform.v1.GetOperationDetailPageRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOperationDetailPageRequest {
