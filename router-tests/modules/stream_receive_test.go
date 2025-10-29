@@ -116,9 +116,10 @@ func TestReceiveHook(t *testing.T) {
 				"streamReceiveModule": stream_receive.StreamReceiveModule{
 					Callback: func(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
 						newEvents := make([]datasource.StreamEvent, 0, events.Len())
-						for _, event := range events.ChangeableEvents() {
-							event.SetData([]byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`))
-							newEvents = append(newEvents, event.ToStreamEvent())
+						for _, event := range events.All() {
+							eventCopy := event.Clone()
+							eventCopy.SetData([]byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`))
+							newEvents = append(newEvents, eventCopy)
 						}
 
 						return datasource.NewStreamEvents(newEvents), nil
@@ -206,9 +207,10 @@ func TestReceiveHook(t *testing.T) {
 						}
 
 						newEvents := make([]datasource.StreamEvent, 0, events.Len())
-						for _, event := range events.ChangeableEvents() {
-							event.SetData([]byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`))
-							newEvents = append(newEvents, event.ToStreamEvent())
+						for _, event := range events.All() {
+							eventCopy := event.Clone()
+							eventCopy.SetData([]byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`))
+							newEvents = append(newEvents, eventCopy)
 						}
 
 						return datasource.NewStreamEvents(newEvents), nil
@@ -358,9 +360,10 @@ func TestReceiveHook(t *testing.T) {
 						}
 
 						newEvents := make([]datasource.StreamEvent, 0, events.Len())
-						for _, event := range events.ChangeableEvents() {
-							event.SetData([]byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`))
-							newEvents = append(newEvents, event.ToStreamEvent())
+						for _, event := range events.All() {
+							eventCopy := event.Clone()
+							eventCopy.SetData([]byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`))
+							newEvents = append(newEvents, eventCopy)
 						}
 
 						return datasource.NewStreamEvents(newEvents), nil

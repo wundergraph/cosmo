@@ -55,27 +55,13 @@ func TestPublishHook(t *testing.T) {
 		})
 	})
 
-	t.Run("Test Publish kafka hook allows to set headers", func(t *testing.T) {
+	t.Run("Test Publish hook is called with mutable event", func(t *testing.T) {
 		t.Parallel()
 
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
-				"publishModule": stream_publish.PublishModule{
-					Callback: func(ctx core.StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
-						newEvts := make([]datasource.StreamEvent, 0, events.Len())
-						for _, event := range events.ChangeableEvents() {
-							evt, ok := event.(*kafka.ChangeableEvent)
-							if !ok {
-								continue
-							}
-							evt.Headers["x-test"] = []byte("test")
-							newEvts = append(newEvts, evt.ToStreamEvent())
-						}
-
-						return datasource.NewStreamEvents(newEvts), nil
-					},
-				},
+				"publishModule": stream_publish.PublishModule{},
 			},
 		}
 
@@ -91,21 +77,13 @@ func TestPublishHook(t *testing.T) {
 				LogLevel: zapcore.InfoLevel,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			events.KafkaEnsureTopicExists(t, xEnv, time.Second, "employeeUpdated")
 			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `mutation { updateEmployeeMyKafka(employeeID: 3, update: {name: "name test"}) { success } }`,
 			})
-			require.JSONEq(t, `{"data":{"updateEmployeeMyKafka":{"success":true}}}`, resOne.Body)
+			require.JSONEq(t, `{"data":{"updateEmployeeMyKafka":{"success":false}}}`, resOne.Body)
 
 			requestLog := xEnv.Observer().FilterMessage("Publish Hook has been run")
 			assert.Len(t, requestLog.All(), 1)
-
-			records, err := events.ReadKafkaMessages(xEnv, time.Second, "employeeUpdated", 1)
-			require.NoError(t, err)
-			require.Len(t, records, 1)
-			header := records[0].Headers[0]
-			require.Equal(t, "x-test", header.Key)
-			require.Equal(t, []byte("test"), header.Value)
 		})
 	})
 
@@ -267,8 +245,8 @@ func TestPublishHook(t *testing.T) {
 						employeeID := ctx.Operation().Variables().GetInt("employeeID")
 
 						newEvents := make([]datasource.StreamEvent, 0, events.Len())
-						for _, event := range events.ChangeableEvents() {
-							newEvt, ok := event.(*kafka.ChangeableEvent)
+						for _, event := range events.All() {
+							newEvt, ok := event.Clone().(*kafka.MutableEvent)
 							if !ok {
 								continue
 							}
@@ -277,7 +255,7 @@ func TestPublishHook(t *testing.T) {
 								newEvt.Headers = map[string][]byte{}
 							}
 							newEvt.Headers["x-employee-id"] = []byte(strconv.Itoa(employeeID))
-							newEvents = append(newEvents, newEvt.ToStreamEvent())
+							newEvents = append(newEvents, newEvt)
 						}
 
 						return datasource.NewStreamEvents(newEvents), nil

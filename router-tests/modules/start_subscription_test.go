@@ -94,10 +94,10 @@ func TestStartSubscriptionHook(t *testing.T) {
 						if ctx.SubscriptionEventConfiguration().RootFieldName() != "employeeUpdatedMyKafka" {
 							return nil
 						}
-						ctx.WriteEvent((&kafka.ChangeableEvent{
+						ctx.WriteEvent((&kafka.MutableEvent{
 							Key:  []byte("1"),
 							Data: []byte(`{"id": 1, "__typename": "Employee"}`),
-						}).ToStreamEvent())
+						}))
 						return nil
 					},
 				},
@@ -266,9 +266,9 @@ func TestStartSubscriptionHook(t *testing.T) {
 						if employeeId != 1 {
 							return nil
 						}
-						ctx.WriteEvent((&kafka.ChangeableEvent{
+						ctx.WriteEvent((&kafka.MutableEvent{
 							Data: []byte(`{"id": 1, "__typename": "Employee"}`),
-						}).ToStreamEvent())
+						}))
 						return nil
 					},
 				},
@@ -510,7 +510,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 			Modules: map[string]interface{}{
 				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
 					Callback: func(ctx core.SubscriptionOnStartHandlerContext) error {
-						ctx.WriteEvent(core.ChangeableEngineEvent([]byte(`{"data":{"countEmp":1000}}`)).ToStreamEvent())
+						ctx.WriteEvent(core.MutableEngineEvent([]byte(`{"data":{"countEmp":1000}}`)))
 						return nil
 					},
 				},

@@ -38,15 +38,15 @@ func TestStreamsHooksCombined(t *testing.T) {
 				"streamReceiveModule": stream_receive.StreamReceiveModule{
 					Callback: func(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
 						newEvents := make([]datasource.StreamEvent, 0, events.Len())
-						for _, event := range events.ChangeableEvents() {
-							newEvt, ok := event.(*kafka.ChangeableEvent)
+						for _, event := range events.All() {
+							newEvt, ok := event.Clone().(*kafka.MutableEvent)
 							if !ok {
 								continue
 							}
 							if string(newEvt.Headers["x-publishModule"]) == "i_was_here" {
 								newEvt.SetData([]byte(`{"__typename":"Employee","id": 2,"update":{"name":"irrelevant"}}`))
 							}
-							newEvents = append(newEvents, newEvt.ToStreamEvent())
+							newEvents = append(newEvents, newEvt)
 						}
 
 						return datasource.NewStreamEvents(newEvents), nil
@@ -59,8 +59,8 @@ func TestStreamsHooksCombined(t *testing.T) {
 						}
 
 						newEvents := make([]datasource.StreamEvent, 0, events.Len())
-						for _, event := range events.ChangeableEvents() {
-							newEvt, ok := event.(*kafka.ChangeableEvent)
+						for _, event := range events.All() {
+							newEvt, ok := event.Clone().(*kafka.MutableEvent)
 							if !ok {
 								continue
 							}
@@ -68,7 +68,7 @@ func TestStreamsHooksCombined(t *testing.T) {
 								newEvt.Headers = make(map[string][]byte)
 							}
 							newEvt.Headers["x-publishModule"] = []byte("i_was_here")
-							newEvents = append(newEvents, newEvt.ToStreamEvent())
+							newEvents = append(newEvents, newEvt)
 						}
 
 						return datasource.NewStreamEvents(newEvents), nil
