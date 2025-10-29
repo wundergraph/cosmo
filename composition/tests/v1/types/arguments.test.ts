@@ -25,6 +25,7 @@ import {
   federateSubgraphsFailure,
   federateSubgraphsSuccess,
   normalizeString,
+  normalizeSubgraphFailure,
   schemaToSortedNormalizedString,
 } from '../../utils/utils';
 import { Kind } from 'graphql';
@@ -119,7 +120,7 @@ describe('Argument federation tests', () => {
     );
   });
 
-  test('that if arguments of the same name are not the same type, an error is returned`', () => {
+  test('that if arguments of the same name are not the same type, an error is returned', () => {
     const { errors } = federateSubgraphsFailure(
       [subgraphWithArgument('subgraph-a', STRING_SCALAR), subgraphWithArgument('subgraph-b', FLOAT_SCALAR)],
       ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -151,7 +152,7 @@ describe('Argument federation tests', () => {
     );
   });
 
-  test('that if arguments have different boolean default values, an error is returned`', () => {
+  test('that if arguments have different boolean default values, an error is returned', () => {
     const { errors } = federateSubgraphsFailure(
       [
         subgraphWithArgumentAndDefaultValue('subgraph-a', 'Boolean', 'true'),
@@ -166,16 +167,15 @@ describe('Argument federation tests', () => {
   });
 
   test('that if arguments have incompatible default values, an error is returned', () => {
-    const result = federateSubgraphsFailure(
+    const { errors } = federateSubgraphsFailure(
       [
         subgraphWithArgumentAndDefaultValue('subgraph-a', BOOLEAN_SCALAR, '1'),
         subgraphWithArgumentAndDefaultValue('subgraph-b', BOOLEAN_SCALAR, 'false'),
       ],
       ROUTER_COMPATIBILITY_VERSION_ONE,
     );
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       subgraphValidationError('subgraph-a', [
         incompatibleInputValueDefaultValueTypeError(prefix, argumentCoords, BOOLEAN_SCALAR, '1'),
       ]),
@@ -236,41 +236,10 @@ describe('Argument federation tests', () => {
   });
 
   test('that if an argument is not a valid input type or defined more than once, an error is returned', () => {
-    const result = normalizeSubgraphFromString(
-      `
-      enum Enum {
-        A
-        B
-        C
-      }
-      
-      input Input {
-        a: String!
-        b: Int!
-        c: Float!
-      }
-      
-      interface Interface {
-        a: String!
-      }
-      
-      type AnotherObject implements Interface {
-        a: String!
-        b: Int!
-        c: Float!
-      }
-      
-      type Object {
-        field(argOne: Enum!, argTwo: Input!, argThree: [Interface!]! argThree: String!, argOne: Enum!): String!
-      }
-    `,
-      true,
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(2);
-    expect(result.errors[0]).toStrictEqual(duplicateArgumentsError('Object.field', ['argThree', 'argOne']));
-    expect(result.errors[1]).toStrictEqual(
+    const { errors } = normalizeSubgraphFailure(naaaa, ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(2);
+    expect(errors[0]).toStrictEqual(duplicateArgumentsError('Object.field', ['argThree', 'argOne']));
+    expect(errors[1]).toStrictEqual(
       invalidNamedTypeError({
         data: {
           kind: 'InputValueDefinition',
@@ -548,6 +517,38 @@ const subgraphH: Subgraph = {
     extend type Entity @key(fields: "id") {
       id: Int!
       test: Float!
+    }
+  `),
+};
+
+const naaaa: Subgraph = {
+  name: 'naaaa',
+  url: '',
+  definitions: parse(`
+    enum Enum {
+      A
+      B
+      C
+    }
+    
+    input Input {
+      a: String!
+      b: Int!
+      c: Float!
+    }
+    
+    interface Interface {
+      a: String!
+    }
+    
+    type AnotherObject implements Interface {
+      a: String!
+      b: Int!
+      c: Float!
+    }
+    
+    type Object {
+      field(argOne: Enum!, argTwo: Input!, argThree: [Interface!]! argThree: String!, argOne: Enum!): String!
     }
   `),
 };

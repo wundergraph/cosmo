@@ -107,6 +107,8 @@ import {
 } from '../constants/directive-definitions';
 import { REQUIRED_FIELDSET_TYPE_NODE, REQUIRED_STRING_TYPE_NODE } from '../constants/type-nodes';
 
+// Note that arguments with default values are classed as optional and should be placed into `optionalArgumentNames`.
+
 export const AUTHENTICATED_DEFINITION_DATA: DirectiveDefinitionData = {
   argumentTypeNodeByName: new Map<string, ArgumentData>([]),
   isRepeatable: false,
@@ -442,7 +444,7 @@ export const NATS_SUBSCRIBE_DEFINITION_DATA: DirectiveDefinitionData = {
   locations: new Set<string>([FIELD_DEFINITION_UPPER]),
   name: EDFS_NATS_SUBSCRIBE,
   node: EDFS_NATS_SUBSCRIBE_DEFINITION,
-  optionalArgumentNames: new Set<string>([PROVIDER_ID]),
+  optionalArgumentNames: new Set<string>([PROVIDER_ID, STREAM_CONFIGURATION]),
   requiredArgumentNames: new Set<string>([SUBJECTS]),
 };
 

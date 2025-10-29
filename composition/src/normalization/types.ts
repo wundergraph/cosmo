@@ -24,7 +24,7 @@ export type NormalizationSuccess = {
   concreteTypeNamesByAbstractTypeName: Map<string, Set<string>>;
   conditionalFieldDataByCoordinates: Map<string, ConditionalFieldData>;
   configurationDataByTypeName: Map<TypeName, ConfigurationData>;
-  directiveDefinitionByDirectiveName: Map<DirectiveName, DirectiveDefinitionNode>;
+  directiveDefinitionByName: Map<DirectiveName, DirectiveDefinitionNode>;
   entityInterfaces: Map<string, EntityInterfaceSubgraphData>;
   entityDataByTypeName: Map<string, EntityData>;
   fieldCoordsByNamedTypeName: Map<string, Set<string>>;

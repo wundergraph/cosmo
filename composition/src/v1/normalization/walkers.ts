@@ -181,10 +181,12 @@ export function upsertDirectiveSchemaAndEntityDefinitions(nf: NormalizationFacto
         const definitionNode = nf.schemaData.operationTypes.get(operationType);
         const namedTypeName = getTypeNodeNamedTypeName(node.type);
         if (definitionNode) {
-          duplicateOperationTypeDefinitionError(
-            operationType,
-            namedTypeName,
-            getTypeNodeNamedTypeName(definitionNode.type),
+          nf.errors.push(
+            duplicateOperationTypeDefinitionError(
+              operationType,
+              namedTypeName,
+              getTypeNodeNamedTypeName(definitionNode.type),
+            ),
           );
           return false;
         }

@@ -29,6 +29,12 @@ export const EDFS_NATS_STREAM_CONFIGURATION_INPUT = `
   }
 `;
 
+export const EDFS_PUBLISH_RESULT_OBJECT = `
+  type edfs__PublishResult {
+   success: Boolean!
+  }
+`;
+
 export const EXTENDS_DIRECTIVE = `
   directive @extends on INTERFACE | OBJECT
 `;
@@ -181,8 +187,6 @@ export const eventDirectiveDefinitions = `
   directive @edfs__natsRequest(providerId: String! = "default", subject: String!) on FIELD_DEFINITION
   directive @edfs__natsSubscribe(providerId: String! = "default", streamConfiguration: edfs__NatsStreamConfiguration, subjects: [String!]!) on FIELD_DEFINITION
 `;
-
-export const semanticNonNullDefinition = `directive @semanticNonNull(levels: [Int!]! = [0]) on FIELD_DEFINITION`;
 
 export const versionTwoRouterDirectiveDefinitions = `
     directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR

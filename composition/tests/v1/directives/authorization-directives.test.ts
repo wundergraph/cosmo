@@ -1652,7 +1652,7 @@ const fcb: Subgraph = {
 };
 
 const fda: Subgraph = {
-  name: 'ng',
+  name: 'fda',
   url: '',
   definitions: parse(`
     type Query {

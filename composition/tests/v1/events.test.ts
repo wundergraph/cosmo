@@ -6,7 +6,6 @@ import {
   duplicateDirectiveArgumentDefinitionsErrorMessage,
   EDFS_NATS_PUBLISH,
   EDFS_NATS_REQUEST,
-  EDFS_NATS_STREAM_CONFIGURATION_DEFINITION,
   EDFS_NATS_SUBSCRIBE,
   FIRST_ORDINAL,
   invalidArgumentValueErrorMessage,
@@ -45,6 +44,7 @@ import {
   EDFS_NATS_REQUEST_DIRECTIVE,
   EDFS_NATS_STREAM_CONFIGURATION_INPUT,
   EDFS_NATS_SUBSCRIBE_DIRECTIVE,
+  EDFS_PUBLISH_RESULT_OBJECT,
   EXTERNAL_DIRECTIVE,
   KEY_DIRECTIVE,
   OPENFED_FIELD_SET,
@@ -60,7 +60,6 @@ import {
   normalizeSubgraphSuccess,
   schemaToSortedNormalizedString,
 } from '../utils/utils';
-import { buildASTSchema, Kind, printSchema } from 'graphql';
 
 describe('events Configuration tests', () => {
   describe('Normalization tests', () => {
@@ -179,19 +178,10 @@ describe('events Configuration tests', () => {
           entitySubscription(id: ID!): Entity! @edfs__natsSubscribe(subjects: ["entities.{{ args.id }}"], providerId: "my-provider")
           entitySubscriptionTwo(firstID: ID!, secondID: ID!): Entity! @edfs__natsSubscribe(subjects: ["firstSub.{{ args.firstID }}", "secondSub.{{ args.secondID }}"], providerId: "double", streamConfiguration: {consumerName: "consumer", streamName: "streamName", consumerInactiveThreshold: 300})
         }
-
-        input edfs__NatsStreamConfiguration {
-          consumerInactiveThreshold: Int! = 30
-          consumerName: String!
-          streamName: String!
-        }
-
-        type edfs__PublishResult {
-         success: Boolean!
-        }
-
-        scalar openfed__FieldSet
-      `,
+      ` +
+            EDFS_NATS_STREAM_CONFIGURATION_INPUT +
+            EDFS_PUBLISH_RESULT_OBJECT +
+            OPENFED_FIELD_SET,
         ),
       );
     });
@@ -1702,7 +1692,7 @@ const subgraphAG: Subgraph = {
 };
 
 const subgraphAH: Subgraph = {
-  name: 'subgraph-aH',
+  name: 'subgraph-ah',
   url: '',
   definitions: parse(`
     type Query {
@@ -1953,50 +1943,6 @@ const subgraphAW: Subgraph = {
 
     type Subscription {
       redisSubscription: Entity! @edfs__redisSubscribe(channels: ["entityAdded", "entityUpdated"], providerId: "myRedis")
-    }
-
-    type edfs__PublishResult {
-      success: Boolean!
-    }
-  `),
-};
-
-const subgraphAX: Subgraph = {
-  name: 'subgraph-ax',
-  url: '',
-  definitions: parse(`
-    type Entity @key(fields: "id", resolvable: false) {
-      id: ID! @external
-    }
-
-    type Mutation {
-      redisMutation: edfs__PublishResult! @edfs__redisPublish(channel: "entityAdded", providerId: "myRedis", providerId: "myRedis2")
-    }
-
-    type Subscription {
-      redisSubscription: Entity! @edfs__redisSubscribe(channels: ["entityAdded", "entityUpdated"], providerId: "myRedis", channels: ["entityAdded1", "entityUpdated1"])
-    }
-
-    type edfs__PublishResult {
-      success: Boolean!
-    }
-  `),
-};
-
-const subgraphAY: Subgraph = {
-  name: 'subgraph-ay',
-  url: '',
-  definitions: parse(`
-    type Entity @key(fields: "id", resolvable: false) {
-      id: ID! @external
-    }
-
-    type Mutation {
-      redisMutation: edfs__PublishResult! @edfs__redisPublish(channel: "entityAdded", providerId: "myRedis", wrongArgument: "test")
-    }
-
-    type Subscription {
-      redisSubscription: Entity! @edfs__redisSubscribe(channels: ["entityAdded", "entityUpdated"], providerId: "myRedis", anotherWrongArgument: "test2")
     }
 
     type edfs__PublishResult {

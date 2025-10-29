@@ -562,14 +562,14 @@ describe('FederationFactory tests', () => {
     const subgraphBConfig = subgraphConfigBySubgraphName.get(subgraphB.name);
     expect(subgraphBConfig).toBeDefined();
 
-    expect(subgraphAConfig!.directiveDefinitionByDirectiveName).toHaveLength(2);
-    expect(subgraphAConfig!.directiveDefinitionByDirectiveName.has(KEY)).toBe(true);
-    expect(subgraphAConfig!.directiveDefinitionByDirectiveName.has(SHAREABLE)).toBe(true);
+    expect(subgraphAConfig!.directiveDefinitionByName).toHaveLength(2);
+    expect(subgraphAConfig!.directiveDefinitionByName.has(KEY)).toBe(true);
+    expect(subgraphAConfig!.directiveDefinitionByName.has(SHAREABLE)).toBe(true);
 
-    expect(subgraphBConfig!.directiveDefinitionByDirectiveName).toHaveLength(3);
-    expect(subgraphBConfig!.directiveDefinitionByDirectiveName.has('a')).toBe(true);
-    expect(subgraphBConfig!.directiveDefinitionByDirectiveName.has(KEY)).toBe(true);
-    expect(subgraphBConfig!.directiveDefinitionByDirectiveName.has(SHAREABLE)).toBe(true);
+    expect(subgraphBConfig!.directiveDefinitionByName).toHaveLength(3);
+    expect(subgraphBConfig!.directiveDefinitionByName.has('a')).toBe(true);
+    expect(subgraphBConfig!.directiveDefinitionByName.has(KEY)).toBe(true);
+    expect(subgraphBConfig!.directiveDefinitionByName.has(SHAREABLE)).toBe(true);
   });
 
   test('that extension orphans return an error', () => {

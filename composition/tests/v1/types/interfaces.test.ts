@@ -436,7 +436,7 @@ describe('Interface tests', () => {
       expect(warnings![0].subgraph.name).toBe(subgraphAM.name);
     });
 
-    test('that an Interface without implementations is valid if it not used as an output type', () => {
+    test('that an Interface without implementations is valid if it is not used as an output type', () => {
       const { schema } = normalizeSubgraphSuccess(subgraphAN, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(

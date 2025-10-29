@@ -333,8 +333,8 @@ import {
 } from '../../utils/string-constants';
 import { MAX_INT32 } from '../../utils/integer-constants';
 import {
-  addIterableValuesToSet,
-  addOptionalIterableValuesToSet,
+  addIterableToSet,
+  addOptionalIterableToSet,
   generateSimpleDirective,
   getEntriesNotInHashSet,
   getFirstEntry,
@@ -3446,7 +3446,10 @@ export class NormalizationFactory {
         continue;
       }
       this.directiveDefinitionByName.set(directiveName, definition);
-      addOptionalIterableValuesToSet(dependencies, DEPENDENCIES_BY_DIRECTIVE_NAME.get(directiveName));
+      addOptionalIterableToSet({
+        source: DEPENDENCIES_BY_DIRECTIVE_NAME.get(directiveName),
+        target: dependencies,
+      });
       definitions.push(definition);
     }
     // Always include custom directive definitions regardless of use.
@@ -3594,7 +3597,10 @@ export class NormalizationFactory {
             entityInterfaceData.fieldDatas = fieldDatasToSimpleFieldDatas(parentData.fieldDataByName.values());
             const concreteTypeNames = this.concreteTypeNamesByAbstractTypeName.get(parentTypeName);
             if (concreteTypeNames) {
-              addIterableValuesToSet(concreteTypeNames, entityInterfaceData.concreteTypeNames);
+              addIterableToSet({
+                source: concreteTypeNames,
+                target: entityInterfaceData.concreteTypeNames,
+              });
             }
             configurationData.isInterfaceObject = entityInterfaceData.isInterfaceObject;
             configurationData.entityInterfaceConcreteTypeNames = entityInterfaceData.concreteTypeNames;
@@ -3731,7 +3737,7 @@ export class NormalizationFactory {
       concreteTypeNamesByAbstractTypeName: this.concreteTypeNamesByAbstractTypeName,
       conditionalFieldDataByCoordinates: this.conditionalFieldDataByCoords,
       configurationDataByTypeName: this.configurationDataByTypeName,
-      directiveDefinitionByDirectiveName: this.directiveDefinitionByName,
+      directiveDefinitionByName: this.directiveDefinitionByName,
       entityDataByTypeName: this.entityDataByTypeName,
       entityInterfaces: this.entityInterfaceDataByTypeName,
       fieldCoordsByNamedTypeName: this.fieldCoordsByNamedTypeName,
@@ -3801,10 +3807,10 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationResult 
       upsertAuthorizationData(authorizationDataByParentTypeName, authorizationData, invalidORScopesCoords);
     }
     for (const [namedTypeName, fieldCoords] of normalizationResult.fieldCoordsByNamedTypeName) {
-      addIterableValuesToSet(
-        fieldCoords,
-        getValueOrDefault(fieldCoordsByNamedTypeName, namedTypeName, () => new Set<string>()),
-      );
+      addIterableToSet({
+        source: fieldCoords,
+        target: getValueOrDefault(fieldCoordsByNamedTypeName, namedTypeName, () => new Set<string>()),
+      });
     }
     for (const [
       abstractTypeName,
@@ -3815,7 +3821,10 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationResult 
         concreteTypeNamesByAbstractTypeName.set(abstractTypeName, new Set<string>(incomingConcreteTypeNames));
         continue;
       }
-      addIterableValuesToSet(incomingConcreteTypeNames, existingConcreteTypeNames);
+      addIterableToSet({
+        source: incomingConcreteTypeNames,
+        target: existingConcreteTypeNames,
+      });
     }
     for (const [typeName, entityData] of normalizationResult.entityDataByTypeName) {
       const keyFieldSetDataByFieldSet = entityData.keyFieldSetDatasBySubgraphName.get(subgraphName);
@@ -3834,7 +3843,7 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationResult 
         conditionalFieldDataByCoordinates: normalizationResult.conditionalFieldDataByCoordinates,
         configurationDataByTypeName: normalizationResult.configurationDataByTypeName,
         definitions: normalizationResult.subgraphAST,
-        directiveDefinitionByDirectiveName: normalizationResult.directiveDefinitionByDirectiveName,
+        directiveDefinitionByName: normalizationResult.directiveDefinitionByName,
         entityInterfaces: normalizationResult.entityInterfaces,
         isVersionTwo: normalizationResult.isVersionTwo,
         keyFieldNamesByParentTypeName: normalizationResult.keyFieldNamesByParentTypeName,
@@ -3878,7 +3887,10 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationResult 
             parentTypeName,
             () => new Set<string>(fieldNames),
           );
-          addIterableValuesToSet(fieldNames, existingFieldNames);
+          addIterableToSet({
+            source: fieldNames,
+            target: existingFieldNames,
+          });
         }
         for (const fieldName of fieldNames) {
           const fieldCoords = `${originalParentTypeName}.${fieldName}`;

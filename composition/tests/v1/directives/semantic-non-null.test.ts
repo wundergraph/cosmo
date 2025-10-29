@@ -21,7 +21,7 @@ import {
   normalizeSubgraphSuccess,
   schemaToSortedNormalizedString,
 } from '../../utils/utils';
-import { SCHEMA_QUERY_DEFINITION, SEMANTIC_NON_NULL_DIRECTIVE, semanticNonNullDefinition } from '../utils/utils';
+import { SCHEMA_QUERY_DEFINITION, SEMANTIC_NON_NULL_DIRECTIVE } from '../utils/utils';
 
 describe('@semanticNonNull tests', () => {
   describe('normalization tests', () => {
@@ -132,7 +132,7 @@ describe('@semanticNonNull tests', () => {
       expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
         normalizeString(
           SCHEMA_QUERY_DEFINITION +
-            semanticNonNullDefinition +
+            SEMANTIC_NON_NULL_DIRECTIVE +
             `
             type Query {
               a: ID @semanticNonNull(levels: [0])
@@ -161,7 +161,7 @@ describe('@semanticNonNull tests', () => {
       expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
         normalizeString(
           SCHEMA_QUERY_DEFINITION +
-            semanticNonNullDefinition +
+            SEMANTIC_NON_NULL_DIRECTIVE +
             `
             type Query {
               a: ID @semanticNonNull(levels: [0])
@@ -190,7 +190,7 @@ describe('@semanticNonNull tests', () => {
       expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
         normalizeString(
           SCHEMA_QUERY_DEFINITION +
-            semanticNonNullDefinition +
+            SEMANTIC_NON_NULL_DIRECTIVE +
             `
             type Query {
               a: ID @semanticNonNull(levels: [0])
@@ -219,7 +219,7 @@ describe('@semanticNonNull tests', () => {
       expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
         normalizeString(
           SCHEMA_QUERY_DEFINITION +
-            semanticNonNullDefinition +
+            SEMANTIC_NON_NULL_DIRECTIVE +
             `
             type Query {
               a: [ID] @semanticNonNull(levels: [1])
@@ -248,7 +248,7 @@ describe('@semanticNonNull tests', () => {
       expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
         normalizeString(
           SCHEMA_QUERY_DEFINITION +
-            semanticNonNullDefinition +
+            SEMANTIC_NON_NULL_DIRECTIVE +
             `
             type Query {
               a: [ID] @semanticNonNull(levels: [0, 1])
@@ -277,7 +277,7 @@ describe('@semanticNonNull tests', () => {
       expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
         normalizeString(
           SCHEMA_QUERY_DEFINITION +
-            semanticNonNullDefinition +
+            SEMANTIC_NON_NULL_DIRECTIVE +
             `
             type Query {
               a: [ID]! @semanticNonNull(levels: [1])
@@ -306,7 +306,7 @@ describe('@semanticNonNull tests', () => {
       expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
         normalizeString(
           SCHEMA_QUERY_DEFINITION +
-            semanticNonNullDefinition +
+            SEMANTIC_NON_NULL_DIRECTIVE +
             `
             type Query {
               a: [[[ID]!]!] @semanticNonNull(levels: [0, 3])
@@ -335,7 +335,7 @@ describe('@semanticNonNull tests', () => {
       expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
         normalizeString(
           SCHEMA_QUERY_DEFINITION +
-            semanticNonNullDefinition +
+            SEMANTIC_NON_NULL_DIRECTIVE +
             `
             type Query {
                a: ID @semanticNonNull(levels: [0])
@@ -364,7 +364,7 @@ describe('@semanticNonNull tests', () => {
       expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
         normalizeString(
           SCHEMA_QUERY_DEFINITION +
-            semanticNonNullDefinition +
+            SEMANTIC_NON_NULL_DIRECTIVE +
             `
             type Query {
                a: ID @semanticNonNull(levels: [0])

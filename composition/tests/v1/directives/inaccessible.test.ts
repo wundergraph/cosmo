@@ -10,8 +10,6 @@ import {
   InvalidFieldImplementation,
   invalidFieldShareabilityError,
   invalidInterfaceImplementationError,
-  NormalizationFailure,
-  normalizeSubgraph,
   OBJECT,
   ObjectDefinitionData,
   parse,
@@ -24,6 +22,7 @@ import {
   federateSubgraphsFailure,
   federateSubgraphsSuccess,
   normalizeString,
+  normalizeSubgraphFailure,
   schemaToSortedNormalizedString,
 } from '../../utils/utils';
 import { Kind } from 'graphql';
@@ -69,10 +68,9 @@ describe('@inaccessible tests', () => {
   });
 
   test('that inaccessible fields are still subject to @shareable errors', () => {
-    const result = federateSubgraphsFailure([subgraphA, subgraphC], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    const { errors } = federateSubgraphsFailure([subgraphA, subgraphC], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       invalidFieldShareabilityError(
         {
           name: 'Entity',
@@ -189,15 +187,9 @@ describe('@inaccessible tests', () => {
   });
 
   test('that an error is returned if an interface field is @inaccessible but the implementation field is not defined,', () => {
-    const result = normalizeSubgraph(
-      subgraphE.definitions,
-      subgraphE.name,
-      undefined,
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    const { errors } = normalizeSubgraphFailure(subgraphE, ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       invalidInterfaceImplementationError(
         'Entity',
         OBJECT,
@@ -215,10 +207,9 @@ describe('@inaccessible tests', () => {
   });
 
   test('that an error is returned if an interface field is @inaccessible but the implementation field is not defined #2,', () => {
-    const result = federateSubgraphsFailure([subgraphF, subgraphG], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    const { errors } = federateSubgraphsFailure([subgraphF, subgraphG], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       invalidInterfaceImplementationError(
         'Entity',
         OBJECT,
@@ -236,31 +227,27 @@ describe('@inaccessible tests', () => {
   });
 
   test('that an error is returned if all fields defined on an object are declared @inaccessible', () => {
-    const result = federateSubgraphsFailure([subgraphA, subgraphI], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(allChildDefinitionsAreInaccessibleError(OBJECT, OBJECT, FIELD));
+    const { errors } = federateSubgraphsFailure([subgraphA, subgraphI], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(allChildDefinitionsAreInaccessibleError(OBJECT, OBJECT, FIELD));
   });
 
   test('that an error is returned if all fields defined on an extended object are declared @inaccessible', () => {
-    const result = federateSubgraphsFailure([subgraphA, subgraphJ], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(allChildDefinitionsAreInaccessibleError(OBJECT, OBJECT, FIELD));
+    const { errors } = federateSubgraphsFailure([subgraphA, subgraphJ], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(allChildDefinitionsAreInaccessibleError(OBJECT, OBJECT, FIELD));
   });
 
   test('that an error is returned if all fields defined on an interface are declared @inaccessible', () => {
-    const result = federateSubgraphsFailure([subgraphA, subgraphK], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(allChildDefinitionsAreInaccessibleError(INTERFACE, INTERFACE, FIELD));
+    const { errors } = federateSubgraphsFailure([subgraphA, subgraphK], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(allChildDefinitionsAreInaccessibleError(INTERFACE, INTERFACE, FIELD));
   });
 
   test('that an error is returned if all fields defined on an extended interface are declared @inaccessible', () => {
-    const result = federateSubgraphsFailure([subgraphA, subgraphL], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(allChildDefinitionsAreInaccessibleError(INTERFACE, INTERFACE, FIELD));
+    const { errors } = federateSubgraphsFailure([subgraphA, subgraphL], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(allChildDefinitionsAreInaccessibleError(INTERFACE, INTERFACE, FIELD));
   });
 
   test('that an inaccessible interface without accessible references is removed from the client schema', () => {
@@ -561,9 +548,9 @@ describe('@inaccessible tests', () => {
   });
 
   test('that an error is returned if a required field argument is declared @inaccessible in isolation', () => {
-    const result = federateSubgraphsFailure([subgraphV, subgraphP], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    const { errors } = federateSubgraphsFailure([subgraphV, subgraphP], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       inaccessibleRequiredInputValueError(
         {
           federatedCoords: 'Object.scalar(scalar: ...)',
@@ -624,48 +611,45 @@ describe('@inaccessible tests', () => {
   });
 
   test('that an error is returned if all members of a union are inaccessible', () => {
-    const result = federateSubgraphsFailure([subgraphX, subgraphP], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
-      allChildDefinitionsAreInaccessibleError(UNION, 'Union', 'union member type'),
-    );
+    const { errors } = federateSubgraphsFailure([subgraphX, subgraphP], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(allChildDefinitionsAreInaccessibleError(UNION, 'Union', 'union member type'));
   });
 
   test('that an @inaccessible only needs to be declared on a single field #1.1', () => {
-    const result = federateSubgraphsSuccess([subgraphY, subgraphZ, subgraphAA], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
+    const { success } = federateSubgraphsSuccess([subgraphY, subgraphZ, subgraphAA], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(success).toBe(true);
   });
 
   test('that an @inaccessible only needs to be declared on a single field #1.2', () => {
-    const result = federateSubgraphsSuccess([subgraphY, subgraphAA, subgraphZ], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
+    const { success } = federateSubgraphsSuccess([subgraphY, subgraphAA, subgraphZ], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(success).toBe(true);
   });
 
   test('that an @inaccessible only needs to be declared on a single field #1.3', () => {
-    const result = federateSubgraphsSuccess([subgraphZ, subgraphY, subgraphAA], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
+    const { success } = federateSubgraphsSuccess([subgraphZ, subgraphY, subgraphAA], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(success).toBe(true);
   });
 
   test('that an @inaccessible only needs to be declared on a single field #1.4', () => {
-    const result = federateSubgraphsSuccess([subgraphZ, subgraphAA, subgraphY], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
+    const { success } = federateSubgraphsSuccess([subgraphZ, subgraphAA, subgraphY], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(success).toBe(true);
   });
 
   test('that an @inaccessible only needs to be declared on a single field #1.5', () => {
-    const result = federateSubgraphsSuccess([subgraphAA, subgraphY, subgraphZ], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
+    const { success } = federateSubgraphsSuccess([subgraphAA, subgraphY, subgraphZ], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(success).toBe(true);
   });
 
   test('that an @inaccessible only needs to be declared on a single field #1.6', () => {
-    const result = federateSubgraphsSuccess([subgraphAA, subgraphZ, subgraphY], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
+    const { success } = federateSubgraphsSuccess([subgraphAA, subgraphZ, subgraphY], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(success).toBe(true);
   });
 
   test('that an error is returned if a required argument is declared @inaccessible in isolation #1', () => {
-    const result = federateSubgraphsFailure([faa], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    const { errors } = federateSubgraphsFailure([faa], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       inaccessibleRequiredInputValueError(
         {
           federatedCoords: 'Object.name(input: ...)',
@@ -678,9 +662,9 @@ describe('@inaccessible tests', () => {
   });
 
   test('that an error is returned if a required argument is declared @inaccessible in isolation #2.1', () => {
-    const result = federateSubgraphsFailure([fab, fac], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    const { errors } = federateSubgraphsFailure([fab, fac], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       inaccessibleRequiredInputValueError(
         {
           federatedCoords: 'Entity.name(input: ...)',
@@ -693,9 +677,9 @@ describe('@inaccessible tests', () => {
   });
 
   test('that an error is returned if a required argument is declared @inaccessible in isolation #2.2', () => {
-    const result = federateSubgraphsFailure([fac, fab], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    const { errors } = federateSubgraphsFailure([fac, fab], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       inaccessibleRequiredInputValueError(
         {
           federatedCoords: 'Entity.name(input: ...)',
@@ -708,9 +692,9 @@ describe('@inaccessible tests', () => {
   });
 
   test('that an error is returned if a required Input field is declared @inaccessible in isolation #1', () => {
-    const result = federateSubgraphsFailure([fag], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    const { errors } = federateSubgraphsFailure([fag], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       inaccessibleRequiredInputValueError(
         {
           federatedCoords: 'Input.name',
@@ -723,9 +707,9 @@ describe('@inaccessible tests', () => {
   });
 
   test('that an error is returned if a required Input field is declared @inaccessible in isolation #2.1', () => {
-    const result = federateSubgraphsFailure([fah, fai], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    const { errors } = federateSubgraphsFailure([fah, fai], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       inaccessibleRequiredInputValueError(
         {
           federatedCoords: 'Input.name',
@@ -738,9 +722,9 @@ describe('@inaccessible tests', () => {
   });
 
   test('that an error is returned if a required Input field is declared @inaccessible in isolation #2.2', () => {
-    const result = federateSubgraphsFailure([fai, fah], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    const { errors } = federateSubgraphsFailure([fai, fah], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       inaccessibleRequiredInputValueError(
         {
           federatedCoords: 'Input.name',

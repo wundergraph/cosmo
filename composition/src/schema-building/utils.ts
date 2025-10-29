@@ -431,17 +431,6 @@ export function getClientPersistedDirectiveNodes<T extends NodeData>(nodeData: T
   return persistedDirectiveNodes;
 }
 
-export function getNodeForRouterSchemaByData<T extends ParentDefinitionData | EnumValueData>(
-  data: T,
-  persistedDirectiveDefinitionByDirectiveName: Map<DirectiveName, DirectiveDefinitionNode>,
-  errors: Error[],
-): T['node'] {
-  data.node.name = stringToNameNode(data.name);
-  data.node.description = data.description;
-  data.node.directives = getRouterPersistedDirectiveNodes(data, persistedDirectiveDefinitionByDirectiveName, errors);
-  return data.node;
-}
-
 export function getClientSchemaFieldNodeByFieldData(fieldData: FieldData): MutableFieldNode {
   const directives = getClientPersistedDirectiveNodes(fieldData);
   const argumentNodes: MutableInputValueNode[] = [];

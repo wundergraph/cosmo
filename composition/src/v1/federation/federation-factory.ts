@@ -146,7 +146,6 @@ import {
   getClientSchemaFieldNodeByFieldData,
   getDefinitionDataCoords,
   getInitialFederatedDescription,
-  getNodeForRouterSchemaByData,
   getSubscriptionFilterValue,
   isFieldData,
   isLeafKind,
@@ -218,7 +217,7 @@ import {
 } from '../../utils/string-constants';
 import { MAX_SUBSCRIPTION_FILTER_DEPTH, MAXIMUM_TYPE_NESTING } from '../../utils/integer-constants';
 import {
-  addIterableValuesToSet,
+  addIterableToSet,
   addMapEntries,
   addNewObjectValueMapEntries,
   copyArrayValueMap,
@@ -665,7 +664,10 @@ export class FederationFactory {
       targetData.configureDescriptionDataBySubgraphName,
     );
     setLongestDescription(targetData, incomingData);
-    addIterableValuesToSet(incomingData.subgraphNames, targetData.subgraphNames);
+    addIterableToSet({
+      source: incomingData.subgraphNames,
+      target: targetData.subgraphNames,
+    });
   }
 
   // To facilitate the splitting of tag paths, field arguments do not use the renamedPath property for tagNamesByPath
@@ -695,8 +697,14 @@ export class FederationFactory {
       targetData.configureDescriptionDataBySubgraphName,
     );
     setLongestDescription(targetData, incomingData);
-    addIterableValuesToSet(incomingData.requiredSubgraphNames, targetData.requiredSubgraphNames);
-    addIterableValuesToSet(incomingData.subgraphNames, targetData.subgraphNames);
+    addIterableToSet({
+      source: incomingData.requiredSubgraphNames,
+      target: targetData.requiredSubgraphNames,
+    });
+    addIterableToSet({
+      source: incomingData.subgraphNames,
+      target: targetData.subgraphNames,
+    });
     this.handleInputValueInaccessibility(isParentInaccessible, targetData, parentCoords);
     // TODO refactor type merging
     const mergeResult = getMostRestrictiveMergedTypeNode(
@@ -842,10 +850,10 @@ export class FederationFactory {
     if (!subgraphNamesByNamedTypeName) {
       return;
     }
-    addIterableValuesToSet(
-      incomingData.subgraphNames,
-      getValueOrDefault(subgraphNamesByNamedTypeName, incomingData.namedTypeName, () => new Set<String>()),
-    );
+    addIterableToSet({
+      source: incomingData.subgraphNames,
+      target: getValueOrDefault(subgraphNamesByNamedTypeName, incomingData.namedTypeName, () => new Set<String>()),
+    });
   }
 
   upsertFieldData(
@@ -904,10 +912,10 @@ export class FederationFactory {
             }
           }
         }
-        addIterableValuesToSet(
-          incomingData.subgraphNames,
-          getValueOrDefault(subgraphNamesByNamedTypeName, incomingData.namedTypeName, () => new Set<String>()),
-        );
+        addIterableToSet({
+          source: incomingData.subgraphNames,
+          target: getValueOrDefault(subgraphNamesByNamedTypeName, incomingData.namedTypeName, () => new Set<String>()),
+        });
       } else {
         /* If the named types match but there has already been a disparity in the named type names returned by the
          * field, add the incoming subgraph name to the existing subgraph name set for that named type name.
@@ -933,9 +941,18 @@ export class FederationFactory {
       incomingData.externalFieldDataBySubgraphName,
       targetData.externalFieldDataBySubgraphName,
     );
-    addMapEntries(incomingData.isShareableBySubgraphName, targetData.isShareableBySubgraphName);
-    addMapEntries(incomingData.nullLevelsBySubgraphName, targetData.nullLevelsBySubgraphName);
-    addIterableValuesToSet(incomingData.subgraphNames, targetData.subgraphNames);
+    addMapEntries({
+      source: incomingData.isShareableBySubgraphName,
+      target: targetData.isShareableBySubgraphName,
+    });
+    addMapEntries({
+      source: incomingData.nullLevelsBySubgraphName,
+      target: targetData.nullLevelsBySubgraphName,
+    });
+    addIterableToSet({
+      source: incomingData.subgraphNames,
+      target: targetData.subgraphNames,
+    });
   }
 
   getClientSchemaUnionMembers(unionData: UnionDefinitionData): NamedTypeNode[] {
@@ -1295,7 +1312,10 @@ export class FederationFactory {
         }
         targetData.appearances += 1;
         targetData.isInaccessible ||= isParentInaccessible;
-        addIterableValuesToSet(incomingData.subgraphNames, targetData.subgraphNames);
+        addIterableToSet({
+          source: incomingData.subgraphNames,
+          target: targetData.subgraphNames,
+        });
         for (const data of incomingData.enumValueDataByName.values()) {
           this.upsertEnumValueData(targetData.enumValueDataByName, data, isParentInaccessible);
         }
@@ -1309,7 +1329,10 @@ export class FederationFactory {
           this.propagateInaccessibilityToExistingChildren(targetData);
         }
         targetData.isInaccessible ||= isParentInaccessible;
-        addIterableValuesToSet(incomingData.subgraphNames, targetData.subgraphNames);
+        addIterableToSet({
+          source: incomingData.subgraphNames,
+          target: targetData.subgraphNames,
+        });
         for (const inputValueData of incomingData.inputValueDataByName.values()) {
           this.upsertInputValueData(
             targetData.inputValueDataByName,
@@ -1329,11 +1352,14 @@ export class FederationFactory {
           this.propagateInaccessibilityToExistingChildren(targetData);
         }
         targetData.isInaccessible ||= isParentInaccessible;
-        addIterableValuesToSet(
-          compositeOutputData.implementedInterfaceTypeNames,
-          targetData.implementedInterfaceTypeNames,
-        );
-        addIterableValuesToSet(compositeOutputData.subgraphNames, targetData.subgraphNames);
+        addIterableToSet({
+          source: compositeOutputData.implementedInterfaceTypeNames,
+          target: targetData.implementedInterfaceTypeNames,
+        });
+        addIterableToSet({
+          source: compositeOutputData.subgraphNames,
+          target: targetData.subgraphNames,
+        });
         for (const fieldData of compositeOutputData.fieldDataByName.values()) {
           this.upsertFieldData(targetData.fieldDataByName, fieldData, targetData.isInaccessible);
         }
@@ -1342,12 +1368,21 @@ export class FederationFactory {
         if (!areKindsEqual(targetData, incomingData)) {
           return;
         }
-        addMapEntries(incomingData.memberByMemberTypeName, targetData.memberByMemberTypeName);
-        addIterableValuesToSet(incomingData.subgraphNames, targetData.subgraphNames);
+        addMapEntries({
+          source: incomingData.memberByMemberTypeName,
+          target: targetData.memberByMemberTypeName,
+        });
+        addIterableToSet({
+          source: incomingData.subgraphNames,
+          target: targetData.subgraphNames,
+        });
         return;
       default:
         // Scalar
-        addIterableValuesToSet(incomingData.subgraphNames, targetData.subgraphNames);
+        addIterableToSet({
+          source: incomingData.subgraphNames,
+          target: targetData.subgraphNames,
+        });
         return;
     }
   }
@@ -1411,7 +1446,10 @@ export class FederationFactory {
     }
     setLongestDescription(existingData, incomingData);
     existingData.repeatable &&= incomingData.repeatable;
-    addIterableValuesToSet(incomingData.subgraphNames, existingData.subgraphNames);
+    addIterableToSet({
+      source: incomingData.subgraphNames,
+      target: existingData.subgraphNames,
+    });
   }
 
   shouldUpdateFederatedFieldAbstractNamedType(abstractTypeName: string, objectTypeNames: Set<string>): boolean {
@@ -1681,7 +1719,10 @@ export class FederationFactory {
           entityData.subgraphNames.add(subgraphName);
           const configurationData = configurationDataByTypeName.get(concreteTypeName);
           if (configurationData) {
-            addIterableValuesToSet(interfaceObjectConfiguration.fieldNames, configurationData.fieldNames);
+            addIterableToSet({
+              source: interfaceObjectConfiguration.fieldNames,
+              target: configurationData.fieldNames,
+            });
             if (!configurationData.keys) {
               configurationData.keys = [...keys];
             } else {
@@ -1951,11 +1992,7 @@ export class FederationFactory {
           const mergeMethod = this.getEnumValueMergeMethod(parentTypeName);
           propagateAuthDirectives(parentDefinitionData, this.authorizationDataByParentTypeName.get(parentTypeName));
           for (const enumValueData of parentDefinitionData.enumValueDataByName.values()) {
-            const enumValueNode = getNodeForRouterSchemaByData(
-              enumValueData,
-              this.persistedDirectiveDefinitionByDirectiveName,
-              this.errors,
-            );
+            const enumValueNode = this.getNodeForRouterSchemaByData(enumValueData);
             const isValueInaccessible = isNodeDataInaccessible(enumValueData);
             const clientEnumValueNode: MutableEnumValueNode = {
               ...enumValueData.node,
@@ -2243,7 +2280,7 @@ export class FederationFactory {
     this.handleEntityInterfaces();
     // generate the map of tag data that is used by contracts
     this.generateTagData();
-    this.addDirectiveDefinitionsAndDepsToRouterAndClientSchemas();
+    this.#addDirectiveDefinitionsAndDepsToRouterAndClientSchemas();
     // The named type auth data can only be pushed to the field once it has all been consolidated
     this.pushNamedTypeAuthDataToFields();
   }
@@ -2253,9 +2290,7 @@ export class FederationFactory {
   ) {
     for (const { data, clientSchemaFieldNodes } of interfaceImplementations) {
       data.node.interfaces = this.getValidImplementedInterfaces(data);
-      this.routerDefinitions.push(
-        getNodeForRouterSchemaByData(data, this.persistedDirectiveDefinitionByDirectiveName, this.errors),
-      );
+      this.routerDefinitions.push(this.getNodeForRouterSchemaByData(data));
       if (isNodeDataInaccessible(data)) {
         this.validateReferencesOfInaccessibleType(data);
         this.internalGraph.setNodeInaccessible(data.name);
@@ -2280,7 +2315,9 @@ export class FederationFactory {
     }
   }
 
-  addDirectiveDefinitionsAndDepsToRouterAndClientSchemas() {
+  #addDirectiveDefinitionsAndDepsToRouterAndClientSchemas() {
+    const clientDependencies = new Set<DefinitionNode>();
+    const routerDependencies = new Set<DefinitionNode>();
     for (const directiveName of this.referencedPersistedDirectiveNames) {
       const definition = DIRECTIVE_DEFINITION_BY_NAME.get(directiveName);
       if (!definition) {
@@ -2289,11 +2326,19 @@ export class FederationFactory {
       const dependencies = DEPENDENCIES_BY_DIRECTIVE_NAME.get(directiveName) ?? [];
       if (CLIENT_PERSISTED_DIRECTIVE_NAMES.has(directiveName)) {
         this.clientDefinitions.push(definition);
-        this.clientDefinitions.push(...dependencies);
+        addIterableToSet({
+          source: dependencies,
+          target: clientDependencies,
+        });
       }
       this.routerDefinitions.push(definition);
-      this.routerDefinitions.push(...dependencies);
+      addIterableToSet({
+        source: dependencies,
+        target: routerDependencies,
+      });
     }
+    this.clientDefinitions.push(...clientDependencies);
+    this.routerDefinitions.push(...routerDependencies);
   }
 
   validatePathSegmentInaccessibility(path: string): boolean {
@@ -2841,7 +2886,7 @@ export class FederationFactory {
     for (const subgraph of this.internalSubgraphBySubgraphName.values()) {
       subgraphConfigBySubgraphName.set(subgraph.name, {
         configurationDataByTypeName: subgraph.configurationDataByTypeName,
-        directiveDefinitionByDirectiveName: subgraph.directiveDefinitionByDirectiveName,
+        directiveDefinitionByName: subgraph.directiveDefinitionByName,
         isVersionTwo: subgraph.isVersionTwo,
         parentDefinitionDataByTypeName: subgraph.parentDefinitionDataByTypeName,
         schema: subgraph.schema,
@@ -3133,7 +3178,7 @@ export class FederationFactory {
     for (const subgraph of this.internalSubgraphBySubgraphName.values()) {
       subgraphConfigBySubgraphName.set(subgraph.name, {
         configurationDataByTypeName: subgraph.configurationDataByTypeName,
-        directiveDefinitionByDirectiveName: subgraph.directiveDefinitionByDirectiveName,
+        directiveDefinitionByName: subgraph.directiveDefinitionByName,
         isVersionTwo: subgraph.isVersionTwo,
         parentDefinitionDataByTypeName: subgraph.parentDefinitionDataByTypeName,
         schema: subgraph.schema,
@@ -3211,7 +3256,10 @@ function initializeFederationFactory({
         subgraphName,
         () => new Set<TypeName>(),
       );
-      addIterableValuesToSet(subgraphData.concreteTypeNames, definedConcreteTypeNames);
+      addIterableToSet({
+        source: subgraphData.concreteTypeNames,
+        target: definedConcreteTypeNames,
+      });
       if (!subgraphData.isInterfaceObject) {
         if (subgraphData.resolvable && subgraphData.concreteTypeNames.size !== implementations) {
           getValueOrDefault(
@@ -3226,7 +3274,10 @@ function initializeFederationFactory({
         }
         continue;
       }
-      addIterableValuesToSet(entityInterfaceData.concreteTypeNames, definedConcreteTypeNames);
+      addIterableToSet({
+        source: entityInterfaceData.concreteTypeNames,
+        target: definedConcreteTypeNames,
+      });
       const { parentDefinitionDataByTypeName } = getOrThrowError(
         result.internalSubgraphBySubgraphName,
         subgraphName,

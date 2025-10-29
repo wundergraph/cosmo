@@ -39,7 +39,7 @@ export function normalizeSubgraphSuccess(
 ): NormalizationSuccess {
   const result = normalizeSubgraph(subgraph.definitions, subgraph.name, undefined, version);
   if (!result.success) {
-    console.dir(result.errors);
+    console.dir(result.errors, { depth: null });
   }
   expect(result.success, 'normalizeSubgraph failed when expected to succeed').toBe(true);
   return result as NormalizationSuccess;
