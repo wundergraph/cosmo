@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.260.0](https://github.com/wundergraph/cosmo/compare/router@0.259.1...router@0.260.0) (2025-10-29)
+
+### Features
+
+* **mcp:** 8245 header forwarding ([#2305](https://github.com/wundergraph/cosmo/issues/2305)) ([db4c780](https://github.com/wundergraph/cosmo/commit/db4c780fe93b4cd42e4a585a8fea63100a156c36)) (@asoorm)
+* **router:** add introspection authentication bypass feature ([#2192](https://github.com/wundergraph/cosmo/issues/2192)) ([d6a443e](https://github.com/wundergraph/cosmo/commit/d6a443e448470dac7391a4e68210d0fcdd95741d)) (@dkorittki)
+
 ## [0.259.1](https://github.com/wundergraph/cosmo/compare/router@0.259.0...router@0.259.1) (2025-10-22)
 
 ### Bug Fixes
