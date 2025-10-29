@@ -44,7 +44,3 @@ subgraphs:
     plugin:
       version: 0.0.1
       path: ./pkg/subgraphs/projects
-  - name: student
-    plugin:
-      version: 0.0.1
-      path: ./pkg/subgraphs/student
