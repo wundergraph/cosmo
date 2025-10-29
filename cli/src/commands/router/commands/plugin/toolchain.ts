@@ -590,7 +590,7 @@ export async function buildTsBinaries(pluginDir: string, platforms: string[], de
     platforms.map(async (originalPlatformArch: string) => {
       const platformArch = ALL_BUN_PLATFORMS_WITH_GO_MAPPING[originalPlatformArch];
       if (!platformArch) {
-        throw new Error(`Unsupported platform for Bun: ${platformArch}`);
+        throw new Error(`Unsupported platform for Bun: ${originalPlatformArch}`);
       }
 
       const [platform, arch] = platformArch.split('-');
