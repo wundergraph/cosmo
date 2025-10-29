@@ -90,6 +90,9 @@ export default (opts: BaseCommandOptions) => {
       let readmeTemplate = '';
       let mainFileName = '';
 
+      // Create cursor rules in .cursor/rules
+      await mkdir(resolve(tempDir, '.cursor', 'rules'), { recursive: true });
+
       // Language Specific
       switch (options.language) {
         case 'go': {
@@ -97,6 +100,10 @@ export default (opts: BaseCommandOptions) => {
           await writeFile(resolve(srcDir, 'main_test.go'), pupa(GoTemplates.mainGoTest, { serviceName }));
           await writeFile(resolve(tempDir, 'go.mod'), pupa(GoTemplates.goMod, { modulePath: goModulePath }));
           await writeFile(resolve(tempDir, 'Dockerfile'), pupa(GoTemplates.dockerfileGo, { originalPluginName }));
+          await writeFile(
+              resolve(tempDir, '.cursor', 'rules', 'plugin-development.mdc'),
+              pupa(GoTemplates.goCursorRules, { name, originalPluginName, pluginDir }),
+          );
           readmeTemplate = GoTemplates.goReadme;
           mainFileName = 'main.go';
           break;
@@ -109,18 +116,15 @@ export default (opts: BaseCommandOptions) => {
           await writeFile(resolve(tempDir, 'Dockerfile'), pupa(TsTemplates.dockerfileTs, { originalPluginName }));
           await writeFile(resolve(srcDir, 'plugin.test.ts'), pupa(TsTemplates.pluginTestTs, { serviceName }));
           await writeFile(resolve(tempDir, 'tsconfig.json'), pupa(TsTemplates.tsconfig, { serviceName }));
+          await writeFile(
+              resolve(tempDir, '.cursor', 'rules', 'plugin-development.mdc'),
+              pupa(TsTemplates.tsCursorRules, { name, originalPluginName, pluginDir }),
+          );
           readmeTemplate = TsTemplates.tsReadme;
           mainFileName = 'plugin.ts';
           break;
         }
       }
-
-      // Create cursor rules in .cursor/rules
-      await mkdir(resolve(tempDir, '.cursor', 'rules'), { recursive: true });
-      await writeFile(
-        resolve(tempDir, '.cursor', 'rules', 'plugin-development.mdc'),
-        pupa(PluginTemplates.cursorRules, { name, originalPluginName, pluginDir }),
-      );
 
       if (options.project) {
         await writeFile(
