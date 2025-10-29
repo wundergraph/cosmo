@@ -31,7 +31,7 @@ require (
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/sjson v1.2.5
 	github.com/twmb/franz-go v1.16.1
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.234
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.235
 	// Do not upgrade, it renames attributes we rely on
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.58.0
 	go.opentelemetry.io/contrib/propagators/b3 v1.23.0
@@ -52,11 +52,13 @@ require (
 	go.withmatt.com/connect-brotli v0.4.0
 	golang.org/x/sync v0.17.0
 	golang.org/x/sys v0.37.0 // indirect
-	google.golang.org/grpc v1.68.1
+	google.golang.org/grpc v1.71.0
 	google.golang.org/protobuf v1.36.9
 )
 
 require (
+	buf.build/go/hyperpb v0.1.3
+	connectrpc.com/vanguard v0.3.0
 	github.com/KimMachineGun/automemlimit v0.6.1
 	github.com/MicahParks/jwkset v0.11.0
 	github.com/MicahParks/keyfunc/v3 v3.6.2
@@ -82,7 +84,7 @@ require (
 	github.com/wundergraph/astjson v0.0.0-20250106123708-be463c97e083
 	go.uber.org/goleak v1.3.0
 	go.uber.org/ratelimit v0.3.1
-	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8
+	golang.org/x/exp v0.0.0-20250813145105-42675adae3e6
 	golang.org/x/text v0.30.0
 	golang.org/x/time v0.9.0
 )
@@ -153,6 +155,7 @@ require (
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
+	github.com/timandy/routine v1.1.5 // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/twmb/franz-go/pkg/kmsg v1.7.0 // indirect
@@ -166,8 +169,8 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.43.0 // indirect
 	golang.org/x/net v0.46.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20250106144421-5f5ef82da422 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250115164207-1a7da9e5054f // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20250811230008-5f3141c8851a // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250811230008-5f3141c8851a // indirect
 	gopkg.in/cenkalti/backoff.v1 v1.1.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
@@ -194,4 +197,4 @@ replace (
 // Remember you can use Go workspaces to avoid using replace directives in multiple go.mod files
 // Use what is best for your personal workflow. See CONTRIBUTING.md for more information
 
-// replace github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
+//replace github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
