@@ -9,23 +9,23 @@ interface TemplateMap {
 function fileNameToPropertyName(fileName: string): string {
   // Remove .template extension
   let name = fileName.replace('.template', '');
-  
+
   // Handle special cases for dotfiles
   if (name.startsWith('.')) {
     name = name.slice(1); // Remove the dot
   }
-  
+
   // Convert to camelCase
   // Split by dots, dashes, underscores, and spaces
   const parts = name.split(/[ ._-]/);
-  
+
   return parts
     .map((part, index) => {
       // Normalize all-caps words (like README -> Readme)
       if (part === part.toUpperCase() && part.length > 1) {
         part = part.charAt(0) + part.slice(1).toLowerCase();
       }
-      
+
       if (index === 0) {
         // First part: lowercase first char, preserve rest
         return part.charAt(0).toLowerCase() + part.slice(1);
@@ -37,19 +37,19 @@ function fileNameToPropertyName(fileName: string): string {
 }
 
 function compileTemplates(dir: string, outputFile: string, comment?: string) {
-  const files = readdirSync(dir).filter(f => f.endsWith('.template'));
-  
+  const files = readdirSync(dir).filter((f) => f.endsWith('.template'));
+
   if (files.length === 0) {
     console.log(`No templates found in ${dir}`);
     return;
   }
 
   const templates: TemplateMap = {};
-  
+
   for (const file of files) {
     const filePath = join(dir, file);
     const content = readFileSync(filePath, 'utf8');
-    
+
     // Convert file name to property name
     const key = fileNameToPropertyName(file);
     templates[key] = content;
@@ -57,7 +57,7 @@ function compileTemplates(dir: string, outputFile: string, comment?: string) {
 
   // Generate TypeScript file
   const lines: string[] = [];
-  
+
   if (comment) {
     lines.push(`// ${comment}`);
   }

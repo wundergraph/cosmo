@@ -118,12 +118,20 @@ export default (opts: BaseCommandOptions) => {
       // Create cursor rules in .cursor/rules
       await mkdir(resolve(tempDir, '.cursor', 'rules'), { recursive: true });
       await writeFile(
-          resolve(tempDir, '.cursor', 'rules', 'plugin-development.mdc'),
-          pupa(PluginTemplates.cursorRules, { name, originalPluginName, pluginDir }),
+        resolve(tempDir, '.cursor', 'rules', 'plugin-development.mdc'),
+        pupa(PluginTemplates.cursorRules, { name, originalPluginName, pluginDir }),
       );
 
       if (options.project) {
-        await writeFile(resolve(tempDir, 'README.md'), pupa(ProjectTemplates.readme, { name, originalPluginName, mainFile: mainFileName, readmeText: readmeTemplate }));
+        await writeFile(
+          resolve(tempDir, 'README.md'),
+          pupa(ProjectTemplates.readme, {
+            name,
+            originalPluginName,
+            mainFile: mainFileName,
+            readmeText: readmeTemplate,
+          }),
+        );
 
         // Create a project directory structure
         await mkdir(projectDir, { recursive: true });
@@ -135,13 +143,18 @@ export default (opts: BaseCommandOptions) => {
         await writeFile(resolve(projectDir, 'Makefile'), pupa(PluginTemplates.makefile, { originalPluginName }));
         await writeFile(resolve(projectDir, '.gitignore'), ProjectTemplates.gitignore);
         await writeFile(
-            resolve(projectDir, 'README.md'),
-            pupa(ProjectTemplates.projectReadme, { name, originalPluginName })
+          resolve(projectDir, 'README.md'),
+          pupa(ProjectTemplates.projectReadme, { name, originalPluginName }),
         );
       } else {
         await writeFile(
-            resolve(tempDir, 'README.md'),
-            pupa(PluginTemplates.readme, { name, originalPluginName, mainFile: mainFileName, readmeText: readmeTemplate })
+          resolve(tempDir, 'README.md'),
+          pupa(PluginTemplates.readme, {
+            name,
+            originalPluginName,
+            mainFile: mainFileName,
+            readmeText: readmeTemplate,
+          }),
         );
         await mkdir(projectDir, { recursive: true });
       }
