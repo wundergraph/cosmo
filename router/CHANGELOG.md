@@ -4,6 +4,29 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.261.0](https://github.com/wundergraph/cosmo/compare/router@0.260.0...router@0.261.0) (2025-10-29)
+
+### Bug Fixes
+
+* improve query planning time ([#2303](https://github.com/wundergraph/cosmo/issues/2303)) ([f9f15e3](https://github.com/wundergraph/cosmo/commit/f9f15e38b4ce85a43701afb6fa40c5bd3f2c566e)) (@devsergiy)
+
+### Features
+
+* add getter for sha256Hash for modules ([#2300](https://github.com/wundergraph/cosmo/issues/2300)) ([83e0ed6](https://github.com/wundergraph/cosmo/commit/83e0ed695ded353373bbf69667d0b4ebf35896b6)) (@SkArchon)
+
+# [0.260.0](https://github.com/wundergraph/cosmo/compare/router@0.259.1...router@0.260.0) (2025-10-29)
+
+### Features
+
+* **mcp:** 8245 header forwarding ([#2305](https://github.com/wundergraph/cosmo/issues/2305)) ([db4c780](https://github.com/wundergraph/cosmo/commit/db4c780fe93b4cd42e4a585a8fea63100a156c36)) (@asoorm)
+* **router:** add introspection authentication bypass feature ([#2192](https://github.com/wundergraph/cosmo/issues/2192)) ([d6a443e](https://github.com/wundergraph/cosmo/commit/d6a443e448470dac7391a4e68210d0fcdd95741d)) (@dkorittki)
+
+## [0.259.1](https://github.com/wundergraph/cosmo/compare/router@0.259.0...router@0.259.1) (2025-10-22)
+
+### Bug Fixes
+
+* correct SSE subgraph subscription complete behaviour ([#2262](https://github.com/wundergraph/cosmo/issues/2262)) ([e849bb9](https://github.com/wundergraph/cosmo/commit/e849bb9b4e28c09cdce4717bd5cfe422545dd062)) (@endigma)
+
 # [0.259.0](https://github.com/wundergraph/cosmo/compare/router@0.258.7...router@0.259.0) (2025-10-20)
 
 ### Features
