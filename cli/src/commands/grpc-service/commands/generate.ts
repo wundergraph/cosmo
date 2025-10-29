@@ -10,6 +10,7 @@ import { Command, program } from 'commander';
 import { camelCase, upperFirst } from 'lodash-es';
 import Spinner, { type Ora } from 'ora';
 import { resolve, extname } from 'pathe';
+import { parse, OperationDefinitionNode, FragmentDefinitionNode, print, visit } from 'graphql';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { renderResultTree, renderValidationResults } from '../../router/commands/plugin/helper.js';
 
@@ -32,6 +33,7 @@ type CLIOptions = {
   queryIdempotency?: string;
   customScalarMapping?: string;
   maxDepth?: string;
+  prefixOperationType?: boolean;
 };
 
 export default (opts: BaseCommandOptions) => {
@@ -74,6 +76,11 @@ export default (opts: BaseCommandOptions) => {
     '--max-depth <number>',
     'Maximum recursion depth for processing nested selections and fragments (default: 50). ' +
       'Increase this if you have deeply nested queries or decrease to catch potential circular references earlier.',
+  );
+  command.option(
+    '--prefix-operation-type',
+    'Prefix RPC method names with operation type (Query, Mutation, Subscription). ' +
+      'Only applies with --with-operations. Example: "GetUser" becomes "QueryGetUser".',
   );
   command.action(generateCommandAction);
 
@@ -159,6 +166,11 @@ async function generateCommandAction(name: string, options: CLIOptions) {
       maxDepth = parsed;
     }
 
+    // Validate prefix-operation-type usage
+    if (options.prefixOperationType && !options.withOperations) {
+      spinner.warn('--prefix-operation-type flag is ignored when not using --with-operations');
+    }
+
     const result = await generateProtoAndMapping({
       outdir: options.output,
       schemaFile: inputFile,
@@ -180,6 +192,7 @@ async function generateCommandAction(name: string, options: CLIOptions) {
       queryIdempotency: options.queryIdempotency?.toUpperCase(),
       customScalarMappings,
       maxDepth,
+      prefixOperationType: options.prefixOperationType,
     });
 
     // Write the generated files
@@ -245,9 +258,11 @@ type GenerationOptions = {
 };
 
 /**
- * Read all GraphQL operation files from a directory
+ * Read all GraphQL operation files from a directory and extract individual named operations
+ * Returns an array of operation documents, where each document contains a single named operation
+ * along with only the fragments it actually uses
  */
-async function readOperationFiles(operationsDir: string): Promise<string> {
+async function readOperationFiles(operationsDir: string): Promise<Array<{ operation: string; name: string }>> {
   const files = await readdir(operationsDir);
   const operationFiles = files.filter((file) => {
     const ext = extname(file).toLowerCase();
@@ -258,14 +273,102 @@ async function readOperationFiles(operationsDir: string): Promise<string> {
     throw new Error(`No GraphQL operation files (.graphql, .gql, .graphqls, .gqls) found in ${operationsDir}`);
   }
 
-  const operations: string[] = [];
+  // Read all files and collect their content
+  const allContent: string[] = [];
   for (const file of operationFiles) {
     const filePath = resolve(operationsDir, file);
     const content = await readFile(filePath, 'utf8');
-    operations.push(content);
+    allContent.push(content);
   }
 
-  return operations.join('\n\n');
+  // Parse all content to extract operations and fragments
+  const combinedContent = allContent.join('\n\n');
+  const document = parse(combinedContent);
+
+  // Strip custom directives from the document
+  const cleanedDocument = visit(document, {
+    Directive(node) {
+      // Remove custom directives (keep only standard GraphQL directives)
+      const standardDirectives = ['skip', 'include', 'deprecated', 'specifiedBy'];
+      if (!standardDirectives.includes(node.name.value)) {
+        return null; // Remove this directive
+      }
+    },
+  });
+
+  // Collect all fragments
+  const fragmentsMap = new Map<string, FragmentDefinitionNode>();
+  for (const def of cleanedDocument.definitions) {
+    if (def.kind === 'FragmentDefinition') {
+      fragmentsMap.set(def.name.value, def);
+    }
+  }
+
+  // Extract each named operation as a separate document
+  const operations = cleanedDocument.definitions.filter(
+    (def) => def.kind === 'OperationDefinition' && def.name,
+  ) as OperationDefinitionNode[];
+
+  if (operations.length === 0) {
+    throw new Error(`No named operations found in ${operationsDir}. All operations must have a name.`);
+  }
+
+  // Create a separate document for each operation with only the fragments it uses
+  const operationDocuments = operations.map((op) => {
+    // Find all fragment spreads used in this operation
+    const usedFragments = new Set<string>();
+    const findFragmentSpreads = (node: any) => {
+      visit(node, {
+        FragmentSpread(spreadNode) {
+          usedFragments.add(spreadNode.name.value);
+        },
+      });
+    };
+    findFragmentSpreads(op);
+
+    // Recursively find fragments used by other fragments
+    const allUsedFragments = new Set<string>(usedFragments);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const fragName of allUsedFragments) {
+        const frag = fragmentsMap.get(fragName);
+        if (frag) {
+          const nestedFragments = new Set<string>();
+          findFragmentSpreads(frag);
+          visit(frag, {
+            FragmentSpread(spreadNode) {
+              if (!allUsedFragments.has(spreadNode.name.value)) {
+                allUsedFragments.add(spreadNode.name.value);
+                changed = true;
+              }
+            },
+          });
+        }
+      }
+    }
+
+    // Build document with operation and only its used fragments
+    const parts: string[] = [];
+    
+    // Add used fragments first
+    for (const fragName of allUsedFragments) {
+      const frag = fragmentsMap.get(fragName);
+      if (frag) {
+        parts.push(print(frag));
+      }
+    }
+
+    // Add the operation
+    parts.push(print(op));
+
+    return {
+      operation: parts.join('\n\n'),
+      name: op.name!.value,
+    };
+  });
+
+  return operationDocuments;
 }
 
 /**
@@ -306,11 +409,14 @@ async function generateProtoAndMapping({
     // Operations-based generation
     spinner.text = 'Reading operation files...';
     const operationsPath = resolve(operationsDir);
-    const operations = await readOperationFiles(operationsPath);
+    const operationDocuments = await readOperationFiles(operationsPath);
+
+    spinner.text = `Found ${operationDocuments.length} operations, compiling each separately...`;
 
     // Load lock data for field number stability
-    const lockData = await fetchLockData(lockFile);
+    let lockData = await fetchLockData(lockFile);
 
+<<<<<<< Updated upstream
     spinner.text = 'Generating proto from operations...';
     const result = compileOperationsToProto(operations, schema, {
       serviceName,
@@ -331,11 +437,57 @@ async function generateProtoAndMapping({
       customScalarMappings,
       maxDepth,
     });
+=======
+    // Compile each operation separately and merge results
+    const protoResults: string[] = [];
+    const serviceDefinitions: string[] = [];
+
+    for (const { operation, name: operationName } of operationDocuments) {
+      spinner.text = `Compiling operation: ${operationName}...`;
+
+      const result = compileOperationsToProto(operation, schema, {
+        serviceName,
+        packageName: packageName || 'service.v1',
+        goPackage,
+        javaPackage,
+        javaOuterClassname,
+        javaMultipleFiles,
+        csharpNamespace,
+        rubyPackage,
+        phpNamespace,
+        phpMetadataNamespace,
+        objcClassPrefix,
+        swiftPrefix,
+        includeComments: true,
+        queryIdempotency: queryIdempotency as 'NO_SIDE_EFFECTS' | 'DEFAULT' | undefined,
+        lockData,
+        customScalarMappings,
+        maxDepth,
+        prefixOperationType,
+      });
+
+      // Update lock data for next operation
+      lockData = result.lockData;
+
+      // Extract service definition (RPC method) from this operation's proto
+      const serviceMatch = result.proto.match(/service\s+\w+\s*\{([^}]+)\}/s);
+      if (serviceMatch) {
+        serviceDefinitions.push(serviceMatch[1].trim());
+      }
+
+      // Store the proto (we'll merge them later)
+      protoResults.push(result.proto);
+    }
+
+    // Merge all protos into a single file
+    spinner.text = 'Merging proto definitions...';
+    const mergedProto = mergeProtoResults(protoResults, serviceName, serviceDefinitions);
+>>>>>>> Stashed changes
 
     return {
       mapping: null,
-      proto: result.proto,
-      lockData: result.lockData,
+      proto: mergedProto,
+      lockData: lockData ?? null,
       isOperationsMode: true,
     };
   } else {
@@ -377,6 +529,63 @@ async function fetchLockData(lockFile: string): Promise<ProtoLock | undefined> {
 
   const existingLockData = JSON.parse(await readFile(lockFile, 'utf8'));
   return existingLockData == null ? undefined : existingLockData;
+}
+
+/**
+ * Merge multiple proto compilation results into a single proto file
+ * Combines all message definitions and creates a single service with all RPC methods
+ */
+function mergeProtoResults(protoResults: string[], serviceName: string, serviceDefinitions: string[]): string {
+  if (protoResults.length === 0) {
+    throw new Error('No proto results to merge');
+  }
+
+  // Use the first proto as the base (it has the header, package, imports)
+  const firstProto = protoResults[0];
+
+  // Extract header (everything before the first message or service)
+  const headerMatch = firstProto.match(/^([\s\S]*?)(?=message|service)/);
+  const header = headerMatch ? headerMatch[1].trim() : '';
+
+  // Collect all unique message and enum definitions from all protos
+  const allMessages = new Set<string>();
+  const allEnums = new Set<string>();
+
+  for (const proto of protoResults) {
+    // Extract message definitions
+    const messageMatches = proto.matchAll(/message\s+\w+\s*\{[\s\S]*?\n\}/g);
+    for (const match of messageMatches) {
+      allMessages.add(match[0]);
+    }
+
+    // Extract enum definitions
+    const enumMatches = proto.matchAll(/enum\s+\w+\s*\{[\s\S]*?\n\}/g);
+    for (const match of enumMatches) {
+      allEnums.add(match[0]);
+    }
+  }
+
+  // Build the merged proto
+  const parts: string[] = [header, ''];
+
+  // Add service with all RPC methods
+  parts.push(`service ${serviceName} {`);
+  for (const serviceDef of serviceDefinitions) {
+    parts.push(`  ${serviceDef}`);
+  }
+  parts.push('}', '');
+
+  // Add all unique messages
+  for (const message of allMessages) {
+    parts.push(message, '');
+  }
+
+  // Add all unique enums
+  for (const enumDef of allEnums) {
+    parts.push(enumDef, '');
+  }
+
+  return parts.join('\n');
 }
 
 /**
