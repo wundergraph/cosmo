@@ -286,16 +286,10 @@ func (o *OperationKit) UnmarshalOperationFromURL(url *url.URL) error {
 // but extension and variables will be unmarshalled as JSON.RawMessage.
 // We always compact the variables and extensions to ensure that we produce easy to parse JSON for the engine
 func (o *OperationKit) UnmarshalOperationFromBody(data []byte) error {
-	buf := bytes.NewBuffer(make([]byte, len(data))[:0])
-	err := json.Compact(buf, data)
+	err := json.Unmarshal(data, &o.parsedOperation.Request)
 	if err != nil {
 		return err
 	}
-	err = json.Unmarshal(buf.Bytes(), &o.parsedOperation.Request)
-	if err != nil {
-		return err
-	}
-
 	return o.unmarshalOperation()
 }
 
