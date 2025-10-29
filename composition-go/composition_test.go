@@ -72,10 +72,9 @@ func TestFederateSubgraphs(t *testing.T) {
 		expectedSDL = `
 			directive @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR 
 			
-			scalar openfed__Scope
-
 			directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
 
+			scalar openfed__Scope
 
 			type Query {
 				query(arg: String!): Nested
