@@ -10,6 +10,7 @@ import { useCurrentOrganization } from "@/hooks/use-current-organization";
 import { useWorkspace } from "@/hooks/use-workspace";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { getOperationDetailPage } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { CodeViewer } from "@/components/code-viewer";
 import { useQuery } from "@connectrpc/connect-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -102,9 +103,11 @@ const OperationDetailsPage: NextPageWithLayout = () => {
               {formatDateTime(new Date(data.detail.timestamp))}
             </OperationDefinitionRow>
             <OperationDefinitionRow label="Content">
-              <pre className="max-h-96 overflow-auto whitespace-pre-wrap rounded-md bg-muted p-4 text-xs">
-                {data.detail.operationContent}
-              </pre>
+              <CodeViewer
+                prettyPrint
+                code={data.detail.operationContent}
+                language="graphql"
+              />
             </OperationDefinitionRow>
           </dl>
         </div>
