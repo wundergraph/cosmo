@@ -14,6 +14,7 @@ import {
   getHostPlatform,
   installGoDependencies,
   installTsDependencies,
+  typeCheckTs,
   buildTsBinaries,
   normalizePlatforms,
 } from '../toolchain.js';
@@ -85,6 +86,7 @@ export default (opts: BaseCommandOptions) => {
             break;
           }
           case 'ts': {
+            await typeCheckTs(pluginDir, spinner);
             await buildTsBinaries(pluginDir, platforms, options.debug, spinner);
             break;
           }

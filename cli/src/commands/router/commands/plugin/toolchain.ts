@@ -558,6 +558,24 @@ export async function installTsDependencies(pluginDir: string, spinner: any) {
 }
 
 /**
+ * Run TypeScript type-check (no emit) to fail build on TS errors
+ */
+export async function typeCheckTs(pluginDir: string, spinner: any) {
+  spinner.text = 'Type-checking Plugin...\n';
+
+  const env = getToolsEnv();
+  const bunPath = getToolPath('bun');
+
+  // Use `bun x tsc` to ensure TypeScript is available without requiring it as a dependency
+  await execa(bunPath, ['tsc', '--noEmit'], {
+    cwd: pluginDir,
+    stdout: 'inherit',
+    stderr: 'inherit',
+    env,
+  });
+}
+
+/**
  * Build binaries for specified platforms
  */
 export async function buildTsBinaries(pluginDir: string, platforms: string[], debug: boolean, spinner: any) {
