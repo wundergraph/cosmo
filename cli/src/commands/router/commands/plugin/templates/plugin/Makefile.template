@@ -1,0 +1,18 @@
+.PHONY: build test generate install-wgc
+
+install-wgc:
+\t@which wgc > /dev/null 2>&1 || npm install -g wgc@latest
+
+make: build
+
+test: install-wgc
+\twgc router plugin test .
+
+generate: install-wgc
+\twgc router plugin generate .
+
+publish: generate
+\twgc router plugin publish .
+
+build: install-wgc
+\twgc router plugin build . --debug
