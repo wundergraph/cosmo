@@ -101,8 +101,8 @@ export default (opts: BaseCommandOptions) => {
           await writeFile(resolve(tempDir, 'go.mod'), pupa(GoTemplates.goMod, { modulePath: goModulePath }));
           await writeFile(resolve(tempDir, 'Dockerfile'), pupa(GoTemplates.dockerfile, { originalPluginName }));
           await writeFile(
-              resolve(tempDir, '.cursor', 'rules', 'plugin-development.mdc'),
-              pupa(GoTemplates.cursorRules, { name, originalPluginName, pluginDir }),
+            resolve(tempDir, '.cursor', 'rules', 'plugin-development.mdc'),
+            pupa(GoTemplates.cursorRules, { name, originalPluginName, pluginDir }),
           );
           readmeTemplate = GoTemplates.readmePartialMd;
           mainFileName = 'main.go';
@@ -117,8 +117,8 @@ export default (opts: BaseCommandOptions) => {
           await writeFile(resolve(srcDir, 'plugin.test.ts'), pupa(TsTemplates.pluginTestTs, { serviceName }));
           await writeFile(resolve(tempDir, 'tsconfig.json'), pupa(TsTemplates.tsconfig, { serviceName }));
           await writeFile(
-              resolve(tempDir, '.cursor', 'rules', 'plugin-development.mdc'),
-              pupa(TsTemplates.cursorRules, { name, originalPluginName, pluginDir, serviceName }),
+            resolve(tempDir, '.cursor', 'rules', 'plugin-development.mdc'),
+            pupa(TsTemplates.cursorRules, { name, originalPluginName, pluginDir, serviceName }),
           );
           readmeTemplate = TsTemplates.readmePartialMd;
           mainFileName = 'plugin.ts';
