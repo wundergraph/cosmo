@@ -71,15 +71,15 @@ export default (opts: BaseCommandOptions) => {
 
       spinner.text = 'Generating mapping and proto files...';
 
-      await writeFile(resolve(srcDir, 'schema.graphql'), pupa(PluginTemplates.schema, { name }));
-      const mapping = compileGraphQLToMapping(PluginTemplates.schema, serviceName);
+      await writeFile(resolve(srcDir, 'schema.graphql'), pupa(PluginTemplates.schemaGraphql, { name }));
+      const mapping = compileGraphQLToMapping(PluginTemplates.schemaGraphql, serviceName);
       await writeFile(resolve(generatedDir, 'mapping.json'), JSON.stringify(mapping, null, 2));
       await writeFile(resolve(tempDir, 'Makefile'), pupa(PluginTemplates.makefile, { originalPluginName }));
 
       await writeFile(resolve(tempDir, '.gitignore'), PluginTemplates.gitignore);
-      await writeFile(resolve(tempDir, '.cursorignore'), PluginTemplates.cursorIgnore);
+      await writeFile(resolve(tempDir, '.cursorignore'), PluginTemplates.cursorignore);
 
-      const proto = compileGraphQLToProto(PluginTemplates.schema, {
+      const proto = compileGraphQLToProto(PluginTemplates.schemaGraphql, {
         serviceName,
         packageName: 'service',
         goPackage: goModulePath,
@@ -97,30 +97,30 @@ export default (opts: BaseCommandOptions) => {
       switch (options.language) {
         case 'go': {
           await writeFile(resolve(srcDir, 'main.go'), pupa(GoTemplates.mainGo, { serviceName }));
-          await writeFile(resolve(srcDir, 'main_test.go'), pupa(GoTemplates.mainGoTest, { serviceName }));
+          await writeFile(resolve(srcDir, 'main_test.go'), pupa(GoTemplates.mainTestGo, { serviceName }));
           await writeFile(resolve(tempDir, 'go.mod'), pupa(GoTemplates.goMod, { modulePath: goModulePath }));
-          await writeFile(resolve(tempDir, 'Dockerfile'), pupa(GoTemplates.dockerfileGo, { originalPluginName }));
+          await writeFile(resolve(tempDir, 'Dockerfile'), pupa(GoTemplates.dockerfile, { originalPluginName }));
           await writeFile(
               resolve(tempDir, '.cursor', 'rules', 'plugin-development.mdc'),
-              pupa(GoTemplates.goCursorRules, { name, originalPluginName, pluginDir }),
+              pupa(GoTemplates.cursorRules, { name, originalPluginName, pluginDir }),
           );
-          readmeTemplate = GoTemplates.goReadme;
+          readmeTemplate = GoTemplates.readmePartialMd;
           mainFileName = 'main.go';
           break;
         }
         case 'ts': {
           await writeFile(resolve(srcDir, 'plugin.ts'), pupa(TsTemplates.pluginTs, { serviceName }));
           await writeFile(resolve(srcDir, 'plugin-server.ts'), pupa(TsTemplates.pluginServerTs, { serviceName }));
-          await writeFile(resolve(srcDir, 'fs-polyfill.ts'), pupa(TsTemplates.fsPolyfill, { serviceName }));
+          await writeFile(resolve(srcDir, 'fs-polyfill.ts'), pupa(TsTemplates.fsPolyfillTs, { serviceName }));
           await writeFile(resolve(tempDir, 'package.json'), pupa(TsTemplates.packageJson, { serviceName }));
-          await writeFile(resolve(tempDir, 'Dockerfile'), pupa(TsTemplates.dockerfileTs, { originalPluginName }));
+          await writeFile(resolve(tempDir, 'Dockerfile'), pupa(TsTemplates.dockerfile, { originalPluginName }));
           await writeFile(resolve(srcDir, 'plugin.test.ts'), pupa(TsTemplates.pluginTestTs, { serviceName }));
           await writeFile(resolve(tempDir, 'tsconfig.json'), pupa(TsTemplates.tsconfig, { serviceName }));
           await writeFile(
               resolve(tempDir, '.cursor', 'rules', 'plugin-development.mdc'),
-              pupa(TsTemplates.tsCursorRules, { name, originalPluginName, pluginDir }),
+              pupa(TsTemplates.cursorRules, { name, originalPluginName, pluginDir, serviceName }),
           );
-          readmeTemplate = TsTemplates.tsReadme;
+          readmeTemplate = TsTemplates.readmePartialMd;
           mainFileName = 'plugin.ts';
           break;
         }
@@ -129,7 +129,7 @@ export default (opts: BaseCommandOptions) => {
       if (options.project) {
         await writeFile(
           resolve(tempDir, 'README.md'),
-          pupa(ProjectTemplates.readme, {
+          pupa(ProjectTemplates.readmePluginMd, {
             name,
             originalPluginName,
             mainFile: mainFileName,
@@ -142,18 +142,18 @@ export default (opts: BaseCommandOptions) => {
         await mkdir(resolve(projectDir, 'plugins'), { recursive: true });
 
         // Write router config to the project root
-        await writeFile(resolve(projectDir, 'config.yaml'), ProjectTemplates.routerConfig);
-        await writeFile(resolve(projectDir, 'graph.yaml'), pupa(ProjectTemplates.graphConfig, { originalPluginName }));
+        await writeFile(resolve(projectDir, 'config.yaml'), ProjectTemplates.routerConfigYaml);
+        await writeFile(resolve(projectDir, 'graph.yaml'), pupa(ProjectTemplates.graphYaml, { originalPluginName }));
         await writeFile(resolve(projectDir, 'Makefile'), pupa(PluginTemplates.makefile, { originalPluginName }));
         await writeFile(resolve(projectDir, '.gitignore'), ProjectTemplates.gitignore);
         await writeFile(
           resolve(projectDir, 'README.md'),
-          pupa(ProjectTemplates.projectReadme, { name, originalPluginName }),
+          pupa(ProjectTemplates.readmeProjectMd, { name, originalPluginName }),
         );
       } else {
         await writeFile(
           resolve(tempDir, 'README.md'),
-          pupa(PluginTemplates.readme, {
+          pupa(PluginTemplates.readmePluginMd, {
             name,
             originalPluginName,
             mainFile: mainFileName,

@@ -68,14 +68,14 @@ const headers = {
 };
 
 // A HTTP GET request to the external API
-const getResponse = await fetch(`${baseURL}/<replace_with_path>`, {
+const getResponse = await fetch(`<replace_with_base_url>/<replace_with_path>`, {
   method: 'GET',
   headers,
 });
 const getData = await getResponse.json();
 
 // A HTTP POST request to the external API with JSON payload
-const postResponse = await fetch(`${baseURL}/<replace_with_path>`, {
+const postResponse = await fetch(`<replace_with_base_url>/<replace_with_path>`, {
   method: 'POST',
   headers,
   body: JSON.stringify(payload),
