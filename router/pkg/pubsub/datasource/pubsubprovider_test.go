@@ -14,7 +14,7 @@ import (
 // Test helper types
 type unsafeTestEvent []byte
 
-func (e unsafeTestEvent) Clone() ChangeableStreamEvent {
+func (e unsafeTestEvent) Clone() MutableStreamEvent {
 	var evt unsafeTestEvent = make([]byte, len(e))
 	copy(evt, e)
 	return evt
@@ -28,10 +28,6 @@ func (e unsafeTestEvent) SetData(data []byte) {
 	copy(e, data)
 }
 
-func (e unsafeTestEvent) ToStreamEvent() StreamEvent {
-	return &testEvent{evt: e}
-}
-
 type testEvent struct {
 	evt unsafeTestEvent
 }
@@ -40,7 +36,7 @@ func (e *testEvent) GetData() []byte {
 	return slices.Clone(e.evt.GetData())
 }
 
-func (e *testEvent) ChangeableEvent() ChangeableStreamEvent {
+func (e *testEvent) Clone() MutableStreamEvent {
 	return e.evt.Clone()
 }
 

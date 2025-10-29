@@ -69,7 +69,7 @@ func (c *EngineDataSourceFactory) ResolveDataSourceInput(eventData []byte) (stri
 		Provider:  c.providerId,
 		Subject:   subject,
 		FieldName: c.fieldName,
-		Event:     ChangeableEvent{Data: eventData},
+		Event:     MutableEvent{Data: eventData},
 	}
 
 	return evtCfg.MarshalJSONTemplate()

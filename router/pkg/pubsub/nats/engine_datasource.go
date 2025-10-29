@@ -16,7 +16,7 @@ import (
 )
 
 type Event struct {
-	evt *ChangeableEvent
+	evt *MutableEvent
 }
 
 func (e Event) GetData() []byte {
@@ -33,44 +33,40 @@ func (e Event) GetHeaders() map[string][]string {
 	return cloneHeaders(e.evt.Headers)
 }
 
-func (e Event) ChangeableEvent() datasource.ChangeableStreamEvent {
+func (e Event) Clone() datasource.MutableStreamEvent {
 	return e.evt.Clone()
 }
 
-func NewEvent(evt *ChangeableEvent) datasource.StreamEvent {
-	return &Event{evt: evt}
-}
-
-type ChangeableEvent struct {
+type MutableEvent struct {
 	Data    json.RawMessage     `json:"data"`
 	Headers map[string][]string `json:"headers"`
 }
 
-func (e *ChangeableEvent) GetData() []byte {
+func (e *MutableEvent) GetData() []byte {
 	if e == nil {
 		return nil
 	}
 	return e.Data
 }
 
-func (e *ChangeableEvent) SetData(data []byte) {
+func (e *MutableEvent) SetData(data []byte) {
 	if e == nil {
 		return
 	}
 	e.Data = slices.Clone(data)
 }
 
-func (e *ChangeableEvent) Clone() datasource.ChangeableStreamEvent {
+func (e *MutableEvent) Clone() datasource.MutableStreamEvent {
 	if e == nil {
-		return (*ChangeableEvent)(nil)
+		return nil
 	}
-	return &ChangeableEvent{
+	return &MutableEvent{
 		Data:    slices.Clone(e.Data),
 		Headers: cloneHeaders(e.Headers),
 	}
 }
 
-func (e *ChangeableEvent) ToStreamEvent() datasource.StreamEvent {
+func (e *MutableEvent) ToStreamEvent() datasource.StreamEvent {
 	return &Event{evt: e}
 }
 
@@ -115,10 +111,10 @@ func (s *SubscriptionEventConfiguration) RootFieldName() string {
 
 // publishData is a private type that is used to pass data from the engine to the provider
 type publishData struct {
-	Provider  string          `json:"providerId"`
-	Subject   string          `json:"subject"`
-	Event     ChangeableEvent `json:"event"`
-	FieldName string          `json:"rootFieldName"`
+	Provider  string       `json:"providerId"`
+	Subject   string       `json:"subject"`
+	Event     MutableEvent `json:"event"`
+	FieldName string       `json:"rootFieldName"`
 }
 
 func (p *publishData) PublishEventConfiguration() datasource.PublishEventConfiguration {
@@ -258,4 +254,4 @@ func (s *NatsRequestDataSource) LoadWithFiles(ctx context.Context, input []byte,
 var _ datasource.SubscriptionEventConfiguration = (*SubscriptionEventConfiguration)(nil)
 var _ datasource.PublishEventConfiguration = (*PublishAndRequestEventConfiguration)(nil)
 var _ datasource.StreamEvent = (*Event)(nil)
-var _ datasource.ChangeableStreamEvent = (*ChangeableEvent)(nil)
+var _ datasource.MutableStreamEvent = (*MutableEvent)(nil)

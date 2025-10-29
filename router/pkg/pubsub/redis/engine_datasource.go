@@ -16,7 +16,7 @@ import (
 )
 
 type Event struct {
-	evt *ChangeableEvent
+	evt *MutableEvent
 }
 
 func (e Event) GetData() []byte {
@@ -26,42 +26,39 @@ func (e Event) GetData() []byte {
 	return slices.Clone(e.evt.Data)
 }
 
-func (e Event) ChangeableEvent() datasource.ChangeableStreamEvent {
+func (e Event) Clone() datasource.MutableStreamEvent {
 	return e.evt.Clone()
 }
 
-func NewEvent(evt *ChangeableEvent) datasource.StreamEvent {
-	return &Event{evt: evt}
-}
-
-type ChangeableEvent struct {
+type MutableEvent struct {
 	Data json.RawMessage `json:"data"`
 }
 
-func (e *ChangeableEvent) GetData() []byte {
+func (e *MutableEvent) GetData() []byte {
 	if e == nil {
 		return nil
 	}
 	return e.Data
 }
 
-func (e *ChangeableEvent) SetData(data []byte) {
+func (e *MutableEvent) SetData(data []byte) {
 	if e == nil {
 		return
 	}
 	e.Data = data
 }
 
-func (e *ChangeableEvent) Clone() datasource.ChangeableStreamEvent {
+func (e *MutableEvent) Clone() datasource.MutableStreamEvent {
 	if e == nil {
-		return (*ChangeableEvent)(nil)
+		return nil
 	}
-	return &ChangeableEvent{
+
+	return &MutableEvent{
 		Data: slices.Clone(e.Data),
 	}
 }
 
-func (e *ChangeableEvent) ToStreamEvent() datasource.StreamEvent {
+func (e *MutableEvent) ToStreamEvent() datasource.StreamEvent {
 	return Event{e}
 }
 
@@ -90,10 +87,10 @@ func (s *SubscriptionEventConfiguration) RootFieldName() string {
 // publishData is a private type that is used to pass data from the engine to the provider
 
 type publishData struct {
-	Provider  string          `json:"providerId"`
-	Channel   string          `json:"channel"`
-	Event     ChangeableEvent `json:"event"`
-	FieldName string          `json:"rootFieldName"`
+	Provider  string       `json:"providerId"`
+	Channel   string       `json:"channel"`
+	Event     MutableEvent `json:"event"`
+	FieldName string       `json:"rootFieldName"`
 }
 
 func (p *publishData) PublishEventConfiguration() datasource.PublishEventConfiguration {
@@ -215,4 +212,4 @@ func (s *PublishDataSource) LoadWithFiles(ctx context.Context, input []byte, fil
 var _ datasource.SubscriptionEventConfiguration = (*SubscriptionEventConfiguration)(nil)
 var _ datasource.PublishEventConfiguration = (*PublishEventConfiguration)(nil)
 var _ datasource.StreamEvent = (*Event)(nil)
-var _ datasource.ChangeableStreamEvent = (*ChangeableEvent)(nil)
+var _ datasource.MutableStreamEvent = (*MutableEvent)(nil)

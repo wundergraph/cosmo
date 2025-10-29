@@ -25,7 +25,7 @@ func TestPublishData_MarshalJSONTemplate(t *testing.T) {
 			config: publishData{
 				Provider:  "test-provider",
 				Topic:     "test-topic",
-				Event:     ChangeableEvent{Data: json.RawMessage(`{"message":"hello"}`)},
+				Event:     MutableEvent{Data: json.RawMessage(`{"message":"hello"}`)},
 				FieldName: "test-field",
 			},
 			wantPattern: `{"topic":"test-topic", "event": {"data": {"message":"hello"}, "key": "", "headers": {}}, "providerId":"test-provider", "rootFieldName":"test-field"}`,
@@ -35,7 +35,7 @@ func TestPublishData_MarshalJSONTemplate(t *testing.T) {
 			config: publishData{
 				Provider:  "test-provider-id",
 				Topic:     "topic-with-hyphens",
-				Event:     ChangeableEvent{Data: json.RawMessage(`{"message":"special \"quotes\" here"}`)},
+				Event:     MutableEvent{Data: json.RawMessage(`{"message":"special \"quotes\" here"}`)},
 				FieldName: "test-field",
 			},
 			wantPattern: `{"topic":"topic-with-hyphens", "event": {"data": {"message":"special \"quotes\" here"}, "key": "", "headers": {}}, "providerId":"test-provider-id", "rootFieldName":"test-field"}`,
@@ -45,7 +45,7 @@ func TestPublishData_MarshalJSONTemplate(t *testing.T) {
 			config: publishData{
 				Provider:  "test-provider-id",
 				Topic:     "topic-with-hyphens",
-				Event:     ChangeableEvent{Key: []byte("blablabla"), Data: json.RawMessage(`{}`)},
+				Event:     MutableEvent{Key: []byte("blablabla"), Data: json.RawMessage(`{}`)},
 				FieldName: "test-field",
 			},
 			wantPattern: `{"topic":"topic-with-hyphens", "event": {"data": {}, "key": "blablabla", "headers": {}}, "providerId":"test-provider-id", "rootFieldName":"test-field"}`,
@@ -55,7 +55,7 @@ func TestPublishData_MarshalJSONTemplate(t *testing.T) {
 			config: publishData{
 				Provider:  "test-provider-id",
 				Topic:     "topic-with-hyphens",
-				Event:     ChangeableEvent{Headers: map[string][]byte{"key": []byte(`blablabla`)}, Data: json.RawMessage(`{}`)},
+				Event:     MutableEvent{Headers: map[string][]byte{"key": []byte(`blablabla`)}, Data: json.RawMessage(`{}`)},
 				FieldName: "test-field",
 			},
 			wantPattern: `{"topic":"topic-with-hyphens", "event": {"data": {}, "key": "", "headers": {"key":"YmxhYmxhYmxh"}}, "providerId":"test-provider-id", "rootFieldName":"test-field"}`,

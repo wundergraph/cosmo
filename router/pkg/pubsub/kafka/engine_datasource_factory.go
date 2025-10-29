@@ -55,7 +55,7 @@ func (c *EngineDataSourceFactory) ResolveDataSourceInput(eventData []byte) (stri
 	evtCfg := publishData{
 		Provider:  c.providerId,
 		Topic:     c.topics[0],
-		Event:     ChangeableEvent{Data: eventData},
+		Event:     MutableEvent{Data: eventData},
 		FieldName: c.fieldName,
 	}
 

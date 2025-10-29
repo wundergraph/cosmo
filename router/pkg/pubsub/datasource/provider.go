@@ -48,7 +48,7 @@ type ProviderBuilder[P, E any] interface {
 	BuildEngineDataSourceFactory(data E, providers map[string]Provider) (EngineDataSourceFactory, error)
 }
 
-// ProviderType represents the type of pubsub provider
+// ProviderType represents the type of pubsub provider.
 type ProviderType string
 
 const (
@@ -57,58 +57,44 @@ const (
 	ProviderTypeRedis ProviderType = "redis"
 )
 
-// StreamEvents is a slice which contains original stream events.
-// Be careful when modifying this as it might be shared with other
-// handlers and can cause unwanted side effects and race conditions.
-// Use Clone() to avoid this.
+// StreamEvents is a list of streamevents coming from or going to event providers.
 type StreamEvents struct {
 	evts []StreamEvent
 }
 
+// All is an iterator, which iterates over all events.
 func (e StreamEvents) All() iter.Seq2[int, StreamEvent] {
 	return slices.All(e.evts)
 }
 
+// Len returns the number of events.
 func (e StreamEvents) Len() int {
 	return len(e.evts)
 }
 
-// Unsafe returns the underlying slice of stream events. Never use it to modify the events directly.
+// Unsafe returns the underlying slice of stream events.
+// This slice is not thread safe and should not be modified.
 func (e StreamEvents) Unsafe() []StreamEvent {
 	return e.evts
-}
-
-func (e StreamEvents) ChangeableEvents() iter.Seq2[int, ChangeableStreamEvent] {
-	// get the unsafe events already cloned
-	return func(yield func(int, ChangeableStreamEvent) bool) {
-		for k := range e.evts {
-			if !yield(k, e.evts[k].ChangeableEvent()) {
-				return
-			}
-		}
-	}
 }
 
 func NewStreamEvents(evts []StreamEvent) StreamEvents {
 	return StreamEvents{evts: evts}
 }
 
-// StreamEvent is a generic interface for all stream events
-// Each provider will have its own event type that implements this interface
-// there could be other common fields in the future, but for now we only have data
+// A StreamEvent is a single event coming from or going to an event provider.
 type StreamEvent interface {
+	// GetData returns the data of the event.
 	GetData() []byte
-	ChangeableEvent() ChangeableStreamEvent
+	// Clone returns a mutable copy of the event.
+	Clone() MutableStreamEvent
 }
 
-// ChangeableStreamEvent is a generic interface for all stream events
-// Each provider will have its own event type that implements this interface
-// there could be other common fields in the future, but for now we only have data
-type ChangeableStreamEvent interface {
-	GetData() []byte
+// A MutableStreamEvent is a stream event that can be modified.
+type MutableStreamEvent interface {
+	StreamEvent
+	// SetData sets the data of the event.
 	SetData([]byte)
-	Clone() ChangeableStreamEvent
-	ToStreamEvent() StreamEvent
 }
 
 // SubscriptionEventConfiguration is the interface that all subscription event configurations must implement
