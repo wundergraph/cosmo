@@ -61,9 +61,17 @@ func TestCustomModuleSetScopes(t *testing.T) {
 			},
 		}
 		authenticators, authServer := configureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 				core.WithModulesConfig(cfg.Modules),
 				core.WithCustomModules(&module.MyModule{}, &setScopesModule.SetScopesModule{}),
 			},
@@ -101,9 +109,17 @@ func TestCustomModuleSetScopes(t *testing.T) {
 			},
 		}
 		authenticators, authServer := configureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 				core.WithModulesConfig(cfg.Modules),
 				core.WithCustomModules(&module.MyModule{}, &setScopesModule.SetScopesModule{}),
 			},
