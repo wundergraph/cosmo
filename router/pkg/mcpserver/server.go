@@ -510,10 +510,10 @@ func (s *GraphQLSchemaServer) registerTools() error {
 		// Convert the operation name to snake_case for consistent tool naming
 		operationToolName := strcase.ToSnake(op.Name)
 
+		// Use the operation description directly if provided, otherwise generate a default description
 		var toolDescription string
-
 		if op.Description != "" {
-			toolDescription = fmt.Sprintf("Executes the GraphQL operation '%s' of type %s. %s", op.Name, op.OperationType, op.Description)
+			toolDescription = op.Description
 		} else {
 			toolDescription = fmt.Sprintf("Executes the GraphQL operation '%s' of type %s.", op.Name, op.OperationType)
 		}
