@@ -73,7 +73,8 @@ const graphAreasWithParameters: readonly string[] = [
   'checks',
   'compositions',
   'feature-flags',
-  'proposals'
+  'proposals',
+  'operations'
 ];
 
 function GraphCommandItem({

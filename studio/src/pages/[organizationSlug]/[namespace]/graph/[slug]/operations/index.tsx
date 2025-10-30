@@ -76,7 +76,7 @@ const OperationsPage: NextPageWithLayout = () => {
     );
   }
 
-  if (!data || !data.operations || data.operations.length === 0)
+  if (!data || !data.operations) {
     return (
       <EmptyState
         icon={<ExclamationTriangleIcon />}
@@ -85,6 +85,17 @@ const OperationsPage: NextPageWithLayout = () => {
         actions={<Button onClick={() => undefined}>Retry</Button>}
       />
     );
+  }
+
+  if (data.operations.length === 0) {
+    return (
+      <EmptyState
+        icon={<ExclamationTriangleIcon />}
+        title="No operations found"
+        description="No operations have been recorded for this graph."
+      />
+    );
+  }
 
   return (
     <div className="flex h-full flex-col gap-y-3">
