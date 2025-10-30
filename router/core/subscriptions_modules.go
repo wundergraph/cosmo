@@ -26,8 +26,8 @@ type SubscriptionOnStartHandlerContext interface {
 	// WriteEvent writes an event to the stream of the current subscription
 	// It returns true if the event was written to the stream, false if the event was dropped
 	WriteEvent(event datasource.StreamEvent) bool
-	// NewRawEvent creates a new event that can be used in the subscription.
-	NewRawEvent(data []byte) datasource.MutableStreamEvent
+	// NewEvent creates a new event that can be used in the subscription.
+	NewEvent(data []byte) datasource.MutableStreamEvent
 }
 
 type pubSubPublishEventHookContext struct {
@@ -59,7 +59,7 @@ func (c *pubSubPublishEventHookContext) PublishEventConfiguration() datasource.P
 	return c.publishEventConfiguration
 }
 
-func (c *pubSubPublishEventHookContext) NewRawEvent(data []byte) datasource.MutableStreamEvent {
+func (c *pubSubPublishEventHookContext) NewEvent(data []byte) datasource.MutableStreamEvent {
 	return c.eventBuilder(data)
 }
 
@@ -99,7 +99,7 @@ func (c *pubSubSubscriptionOnStartHookContext) WriteEvent(event datasource.Strea
 	return true
 }
 
-func (c *pubSubSubscriptionOnStartHookContext) NewRawEvent(data []byte) datasource.MutableStreamEvent {
+func (c *pubSubSubscriptionOnStartHookContext) NewEvent(data []byte) datasource.MutableStreamEvent {
 	return c.eventBuilder(data)
 }
 
@@ -169,7 +169,7 @@ func (c *engineSubscriptionOnStartHookContext) WriteEvent(event datasource.Strea
 	return true
 }
 
-func (c *engineSubscriptionOnStartHookContext) NewRawEvent(data []byte) datasource.MutableStreamEvent {
+func (c *engineSubscriptionOnStartHookContext) NewEvent(data []byte) datasource.MutableStreamEvent {
 	return &MutableEngineEvent{data: data}
 }
 
@@ -236,8 +236,8 @@ type StreamReceiveEventHandlerContext interface {
 	Authentication() authentication.Authentication
 	// SubscriptionEventConfiguration the subscription event configuration
 	SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration
-	// NewRawEvent creates a new event that can be used in the subscription.
-	NewRawEvent(data []byte) datasource.MutableStreamEvent
+	// NewEvent creates a new event that can be used in the subscription.
+	NewEvent(data []byte) datasource.MutableStreamEvent
 }
 
 type StreamReceiveEventHandler interface {
@@ -263,8 +263,8 @@ type StreamPublishEventHandlerContext interface {
 	Authentication() authentication.Authentication
 	// PublishEventConfiguration the publish event configuration
 	PublishEventConfiguration() datasource.PublishEventConfiguration
-	// NewRawEvent creates a new event that can be used in the subscription.
-	NewRawEvent(data []byte) datasource.MutableStreamEvent
+	// NewEvent creates a new event that can be used in the subscription.
+	NewEvent(data []byte) datasource.MutableStreamEvent
 }
 
 type StreamPublishEventHandler interface {
@@ -327,7 +327,7 @@ func (c *pubSubStreamReceiveEventHookContext) SubscriptionEventConfiguration() d
 	return c.subscriptionEventConfiguration
 }
 
-func (c *pubSubStreamReceiveEventHookContext) NewRawEvent(data []byte) datasource.MutableStreamEvent {
+func (c *pubSubStreamReceiveEventHookContext) NewEvent(data []byte) datasource.MutableStreamEvent {
 	return c.eventBuilder(data)
 }
 
