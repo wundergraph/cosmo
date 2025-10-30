@@ -19,6 +19,11 @@ import (
 	"go.uber.org/zap"
 )
 
+// testNatsEventBuilder is a reusable event builder for tests
+func testNatsEventBuilder(data []byte) datasource.MutableStreamEvent {
+	return &MutableEvent{Data: data}
+}
+
 func TestNatsEngineDataSourceFactory(t *testing.T) {
 	// Create the data source to test with a real adapter
 	adapter := &ProviderAdapter{}
@@ -172,7 +177,7 @@ func TestNatsEngineDataSourceFactoryWithStreamConfiguration(t *testing.T) {
 func TestEngineDataSourceFactory_RequestDataSource(t *testing.T) {
 	// Create mock adapter
 	mockAdapter := NewMockAdapter(t)
-	provider := datasource.NewPubSubProvider("test-provider", "nats", mockAdapter, zap.NewNop())
+	provider := datasource.NewPubSubProvider("test-provider", "nats", mockAdapter, zap.NewNop(), testNatsEventBuilder)
 
 	// Configure mock expectations for Request
 	mockAdapter.On("Request", mock.Anything, mock.MatchedBy(func(event *PublishAndRequestEventConfiguration) bool {

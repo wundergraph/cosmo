@@ -24,6 +24,7 @@ type subscriptionEventUpdater struct {
 	subscriptionEventConfiguration SubscriptionEventConfiguration
 	hooks                          Hooks
 	logger                         *zap.Logger
+	eventBuilder                   EventBuilderFn
 }
 
 func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
@@ -84,7 +85,7 @@ func (s *subscriptionEventUpdater) updateSubscription(ctx context.Context, wg *s
 	// modify events with hooks
 	var err error
 	for i := range hooks {
-		events, err = hooks[i](ctx, s.subscriptionEventConfiguration, events)
+		events, err = hooks[i](ctx, s.subscriptionEventConfiguration, s.eventBuilder, events)
 		if err != nil {
 			errCh <- err
 		}
@@ -149,11 +150,13 @@ func NewSubscriptionEventUpdater(
 	hooks Hooks,
 	eventUpdater resolve.SubscriptionUpdater,
 	logger *zap.Logger,
+	eventBuilder EventBuilderFn,
 ) SubscriptionEventUpdater {
 	return &subscriptionEventUpdater{
 		subscriptionEventConfiguration: cfg,
 		hooks:                          hooks,
 		eventUpdater:                   eventUpdater,
 		logger:                         logger,
+		eventBuilder:                   eventBuilder,
 	}
 }

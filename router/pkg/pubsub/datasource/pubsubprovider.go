@@ -9,11 +9,12 @@ import (
 )
 
 type PubSubProvider struct {
-	id      string
-	typeID  string
-	Adapter Adapter
-	Logger  *zap.Logger
-	hooks   Hooks
+	id           string
+	typeID       string
+	Adapter      Adapter
+	Logger       *zap.Logger
+	hooks        Hooks
+	eventBuilder EventBuilderFn
 }
 
 // applyPublishEventHooks processes events through a chain of hook functions
@@ -40,7 +41,8 @@ func (p *PubSubProvider) applyPublishEventHooks(ctx context.Context, cfg Publish
 
 	currentEvents = events
 	for _, hook := range p.hooks.OnPublishEvents {
-		currentEvents, err = hook(ctx, cfg, currentEvents)
+		var err error
+		currentEvents, err = hook(ctx, cfg, currentEvents, p.eventBuilder)
 		if err != nil {
 			p.Logger.Error(
 				"error applying publish event hooks",
@@ -101,11 +103,12 @@ func (p *PubSubProvider) SetHooks(hooks Hooks) {
 	p.hooks = hooks
 }
 
-func NewPubSubProvider(id string, typeID string, adapter Adapter, logger *zap.Logger) *PubSubProvider {
+func NewPubSubProvider(id string, typeID string, adapter Adapter, logger *zap.Logger, eventBuilder EventBuilderFn) *PubSubProvider {
 	return &PubSubProvider{
-		id:      id,
-		typeID:  typeID,
-		Adapter: adapter,
-		Logger:  logger,
+		id:           id,
+		typeID:       typeID,
+		Adapter:      adapter,
+		Logger:       logger,
+		eventBuilder: eventBuilder,
 	}
 }

@@ -74,27 +74,33 @@ func (c *EngineDataSourceFactory) ResolveDataSourceInput(eventData []byte) (stri
 
 // ResolveDataSourceSubscription returns the subscription data source
 func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (datasource.SubscriptionDataSource, error) {
-	return datasource.NewPubSubSubscriptionDataSource[*SubscriptionEventConfiguration](
-		c.RedisAdapter,
-		func(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
-			val, _, _, err := jsonparser.Get(input, "channels")
-			if err != nil {
-				return err
-			}
-
-			_, err = xxh.Write(val)
-			if err != nil {
-				return err
-			}
-
-			val, _, _, err = jsonparser.Get(input, "providerId")
-			if err != nil {
-				return err
-			}
-
-			_, err = xxh.Write(val)
+	uniqueRequestIdFn := func(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
+		val, _, _, err := jsonparser.Get(input, "channels")
+		if err != nil {
 			return err
-		}, c.logger), nil
+		}
+
+		_, err = xxh.Write(val)
+		if err != nil {
+			return err
+		}
+
+		val, _, _, err = jsonparser.Get(input, "providerId")
+		if err != nil {
+			return err
+		}
+
+		_, err = xxh.Write(val)
+		return err
+	}
+
+	eventCreateFn := func(data []byte) datasource.MutableStreamEvent {
+		return &MutableEvent{Data: data}
+	}
+
+	return datasource.NewPubSubSubscriptionDataSource[*SubscriptionEventConfiguration](
+		c.RedisAdapter, uniqueRequestIdFn, c.logger, eventCreateFn,
+	), nil
 }
 
 // ResolveDataSourceSubscriptionInput builds the input for the subscription data source
