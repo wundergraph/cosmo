@@ -40,4 +40,3 @@ func (s *{serviceName}) QueryHello(ctx context.Context, req *service.QueryHelloR
   s.nextID++
   return response, nil
 }
-

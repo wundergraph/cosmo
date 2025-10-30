@@ -20,4 +20,3 @@ FROM --platform=$BUILDPLATFORM scratch
 COPY --from=builder /build/dist/plugin ./{originalPluginName}-plugin
 
 ENTRYPOINT ["./{originalPluginName}-plugin"]
-

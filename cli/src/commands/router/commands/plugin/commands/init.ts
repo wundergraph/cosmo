@@ -104,7 +104,7 @@ export default (opts: BaseCommandOptions) => {
             resolve(tempDir, '.cursor', 'rules', 'plugin-development.mdc'),
             pupa(GoTemplates.cursorRules, { name, originalPluginName, pluginDir }),
           );
-          readmeTemplate = GoTemplates.readmePartialMd;
+          readmeTemplate = pupa(GoTemplates.readmePartialMd, { originalPluginName });
           mainFileName = 'main.go';
           break;
         }
@@ -120,7 +120,7 @@ export default (opts: BaseCommandOptions) => {
             resolve(tempDir, '.cursor', 'rules', 'plugin-development.mdc'),
             pupa(TsTemplates.cursorRules, { name, originalPluginName, pluginDir, serviceName }),
           );
-          readmeTemplate = TsTemplates.readmePartialMd;
+          readmeTemplate = pupa(TsTemplates.readmePartialMd, { originalPluginName });
           mainFileName = 'plugin.ts';
           break;
         }

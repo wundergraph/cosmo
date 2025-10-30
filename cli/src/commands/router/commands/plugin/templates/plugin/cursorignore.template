@@ -5,4 +5,3 @@ generated/service.proto.lock.json
 generated/service.proto
 # Ignore the plugin binary
 bin/
-

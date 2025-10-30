@@ -15,4 +15,3 @@ type Query {
   """
   hello(name: String!): World!
 }
-

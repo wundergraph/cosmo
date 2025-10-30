@@ -83,4 +83,3 @@ type Response struct {
 // You can check for success (StatusCode >= 200 && StatusCode < 300)
 resp.IsSuccess()
 ```
-

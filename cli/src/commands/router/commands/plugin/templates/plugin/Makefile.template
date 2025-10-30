@@ -16,3 +16,4 @@ publish: generate
 
 build: install-wgc
 	wgc router plugin build . --debug
+
