@@ -2,8 +2,10 @@ package datasource
 
 import (
 	"context"
+	"fmt"
 
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 type PubSubProvider struct {
@@ -16,12 +18,35 @@ type PubSubProvider struct {
 
 // applyPublishEventHooks processes events through a chain of hook functions
 // Each hook receives the result from the previous hook, creating a proper middleware pipeline
-func applyPublishEventHooks(ctx context.Context, cfg PublishEventConfiguration, events []StreamEvent, hooks []OnPublishEventsFn) ([]StreamEvent, error) {
-	currentEvents := events
-	for _, hook := range hooks {
-		var err error
+func (p *PubSubProvider) applyPublishEventHooks(ctx context.Context, cfg PublishEventConfiguration, events []StreamEvent) (currentEvents []StreamEvent, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			p.Logger.
+				WithOptions(zap.AddStacktrace(zapcore.ErrorLevel)).
+				Error("[Recovery from handler panic]",
+					zap.Any("error", r),
+				)
+			switch v := r.(type) {
+			case error:
+				err = v
+			default:
+				err = fmt.Errorf("%v", r)
+			}
+		}
+	}()
+
+	currentEvents = events
+	for _, hook := range p.hooks.OnPublishEvents {
 		currentEvents, err = hook(ctx, cfg, currentEvents)
 		if err != nil {
+			p.Logger.Error(
+				"error applying publish event hooks",
+				zap.Error(err),
+				zap.String("provider_id", cfg.ProviderID()),
+				zap.String("provider_type_id", string(cfg.ProviderType())),
+				zap.String("field_name", cfg.RootFieldName()),
+			)
+
 			return currentEvents, err
 		}
 	}
@@ -59,16 +84,7 @@ func (p *PubSubProvider) Publish(ctx context.Context, cfg PublishEventConfigurat
 		return p.Adapter.Publish(ctx, cfg, events)
 	}
 
-	processedEvents, hooksErr := applyPublishEventHooks(ctx, cfg, events, p.hooks.OnPublishEvents)
-	if hooksErr != nil {
-		p.Logger.Error(
-			"error applying publish event hooks",
-			zap.Error(hooksErr),
-			zap.String("provider_id", cfg.ProviderID()),
-			zap.String("provider_type_id", string(cfg.ProviderType())),
-			zap.String("field_name", cfg.RootFieldName()),
-		)
-	}
+	processedEvents, hooksErr := p.applyPublishEventHooks(ctx, cfg, events)
 
 	errPublish := p.Adapter.Publish(ctx, cfg, processedEvents)
 	if errPublish != nil {

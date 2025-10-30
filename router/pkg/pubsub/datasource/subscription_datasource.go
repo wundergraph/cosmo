@@ -3,10 +3,12 @@ package datasource
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 
 	"github.com/cespare/xxhash/v2"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 type uniqueRequestIdFn func(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error
@@ -45,6 +47,22 @@ func (s *PubSubSubscriptionDataSource[C]) Start(ctx *resolve.Context, input []by
 }
 
 func (s *PubSubSubscriptionDataSource[C]) SubscriptionOnStart(ctx resolve.StartupHookContext, input []byte) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			s.logger.
+				WithOptions(zap.AddStacktrace(zapcore.ErrorLevel)).
+				Error("[Recovery from handler panic]",
+					zap.Any("error", r),
+				)
+			switch v := r.(type) {
+			case error:
+				err = v
+			default:
+				err = fmt.Errorf("%v", r)
+			}
+		}
+	}()
+
 	for _, fn := range s.hooks.SubscriptionOnStart {
 		conf, errConf := s.SubscriptionEventConfiguration(input)
 		if errConf != nil {
