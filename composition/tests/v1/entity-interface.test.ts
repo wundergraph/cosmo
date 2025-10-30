@@ -2,17 +2,23 @@ import {
   ConfigurationData,
   EntityInterfaceFederationData,
   EntityInterfaceSubgraphData,
+  incompatibleParentTypeMergeError,
   INTERFACE,
+  InterfaceDefinitionData,
   InvalidEntityInterface,
+  OBJECT,
+  ObjectDefinitionData,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   SimpleFieldData,
   Subgraph,
+  SubgraphName,
+  TypeName,
   undefinedEntityInterfaceImplementationsError,
 } from '../../src';
 import { describe, expect, test } from 'vitest';
-import { versionOneRouterDefinitions, versionTwoRouterDefinitions } from './utils/utils';
+import { SCHEMA_QUERY_DEFINITION } from './utils/utils';
 
-import { parse } from 'graphql';
+import { Kind, parse } from 'graphql';
 import {
   federateSubgraphsFailure,
   federateSubgraphsSuccess,
@@ -22,11 +28,10 @@ import {
 
 describe('Entity Interface Tests', () => {
   test('that an @interfaceObject does not need to contribute new fields', () => {
-    const result = federateSubgraphsSuccess([subgraphC, subgraphD], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess([subgraphC, subgraphD], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
       type Entity implements Interface {
         age: Int!
@@ -43,19 +48,16 @@ describe('Entity Interface Tests', () => {
       type Query {
         dummy: String!
       }
-      
-      scalar openfed__Scope
     `,
       ),
     );
   });
 
   test('that fields contributed by an interface object are added to each concrete type', () => {
-    const result = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
       type Entity implements Interface {
         age: Int!
@@ -72,20 +74,18 @@ describe('Entity Interface Tests', () => {
       type Query {
         interface: Interface!
       }
-
-      scalar openfed__Scope
     `,
       ),
     );
   });
 
   test('that interface objects produce the correct engine configuration', () => {
-    const result = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
-    const subgraphConfigBySubgraphName = result.subgraphConfigBySubgraphName;
-    expect(subgraphConfigBySubgraphName).toBeDefined();
+    const { federatedGraphSchema, subgraphConfigBySubgraphName } = federateSubgraphsSuccess(
+      [subgraphA, subgraphB],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
     expect(subgraphConfigBySubgraphName.get('subgraph-a')!.configurationDataByTypeName).toStrictEqual(
-      new Map<string, ConfigurationData>([
+      new Map<TypeName, ConfigurationData>([
         [
           'Interface',
           {
@@ -109,7 +109,7 @@ describe('Entity Interface Tests', () => {
       ]),
     );
     expect(subgraphConfigBySubgraphName.get('subgraph-b')!.configurationDataByTypeName).toStrictEqual(
-      new Map<string, ConfigurationData>([
+      new Map<TypeName, ConfigurationData>([
         [
           'Query',
           {
@@ -183,12 +183,14 @@ describe('Entity Interface Tests', () => {
   });
 
   test('that an entity Interface with a @key defining resolvable: false does not need to define all implementations', () => {
-    const result = federateSubgraphsSuccess([subgraphG, subgraphH], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
-    expect(result.warnings).toHaveLength(0);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphSchema, warnings } = federateSubgraphsSuccess(
+      [subgraphG, subgraphH],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(warnings).toHaveLength(0);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
       type EntityOne implements Interface {
         id: ID!
@@ -213,11 +215,10 @@ describe('Entity Interface Tests', () => {
   });
 
   test('that @interfaceObject works correctly with implicit key checks #.1.1', () => {
-    const result = federateSubgraphsSuccess([subgraphI, subgraphJ], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess([subgraphI, subgraphJ], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
       interface Interface {
         id: ID!
@@ -249,19 +250,16 @@ describe('Entity Interface Tests', () => {
         name: String!
         two: Int!
       }
-
-      scalar openfed__Scope
     `,
       ),
     );
   });
 
-  test('that  @interfaceObject works correctly with implicit key checks #1.2', () => {
-    const result = federateSubgraphsSuccess([subgraphJ, subgraphI], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+  test('that @interfaceObject works correctly with implicit key checks #1.2', () => {
+    const { federatedGraphSchema } = federateSubgraphsSuccess([subgraphJ, subgraphI], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
       interface Interface {
         id: ID!
@@ -293,11 +291,47 @@ describe('Entity Interface Tests', () => {
         name: String!
         two: Int!
       }
-
-      scalar openfed__Scope
     `,
       ),
     );
+  });
+
+  test('that error is returned if an entity Interface is defined as a regular Object type #1', () => {
+    const { errors } = federateSubgraphsFailure([kaaa, kaab, kaac], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    const existingData = {
+      kind: Kind.INTERFACE_TYPE_DEFINITION,
+      name: INTERFACE,
+      subgraphNames: new Set<SubgraphName>([kaaa.name, kaab.name]),
+    } as InterfaceDefinitionData;
+    expect(errors).toStrictEqual([
+      incompatibleParentTypeMergeError({
+        existingData,
+        incomingNodeType: OBJECT,
+        incomingSubgraphName: kaac.name,
+      }),
+    ]);
+  });
+
+  test('that error is returned if an entity Interface is defined as a regular Object type #2', () => {
+    const { errors } = federateSubgraphsFailure([kaac, kaab, kaaa], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(2);
+    const existingData = {
+      kind: Kind.OBJECT_TYPE_DEFINITION,
+      name: INTERFACE,
+      subgraphNames: new Set<SubgraphName>([kaac.name]),
+    } as ObjectDefinitionData;
+    expect(errors).toStrictEqual([
+      incompatibleParentTypeMergeError({
+        existingData,
+        incomingSubgraphName: kaab.name,
+      }),
+      incompatibleParentTypeMergeError({
+        existingData,
+        incomingNodeType: INTERFACE,
+        incomingSubgraphName: kaaa.name,
+      }),
+    ]);
   });
 
   test.skip('that an error is returned if a type declared with @interfaceObject is not an interface in other subgraphs', () => {});
@@ -501,6 +535,40 @@ const subgraphJ: Subgraph = {
     
     type Query {
       objects: [Object!]!
+    }
+  `),
+};
+
+const kaaa: Subgraph = {
+  name: 'kaaa',
+  url: '',
+  definitions: parse(`
+    interface Interface @key(fields: "id", resolvable: false) {
+      id: ID!
+    }
+    
+    type Query {
+      a: ID
+    }
+  `),
+};
+
+const kaab: Subgraph = {
+  name: 'kaab',
+  url: '',
+  definitions: parse(`
+    type Interface @key(fields: "id", resolvable: false) @interfaceObject {
+      id: ID!
+    }
+  `),
+};
+
+const kaac: Subgraph = {
+  name: 'kaac',
+  url: '',
+  definitions: parse(`
+    type Interface @key(fields: "id", resolvable: false) {
+      id: ID!
     }
   `),
 };

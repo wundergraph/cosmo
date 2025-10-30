@@ -2,6 +2,7 @@ import {
   BooleanValueNode,
   ConstDirectiveNode,
   ConstValueNode,
+  DefinitionNode,
   DirectiveDefinitionNode,
   EnumValueDefinitionNode,
   EnumValueNode,
@@ -26,6 +27,7 @@ import {
   ExtensionType,
   ExternalFieldData,
   FieldData,
+  InputObjectDefinitionData,
   InputValueData,
   InterfaceDefinitionData,
   NodeData,
@@ -35,7 +37,7 @@ import {
   PersistedDirectivesData,
   SchemaData,
 } from './types';
-import { MutableFieldNode, MutableInputValueNode, MutableTypeDefinitionNode } from './ast';
+import { MutableDefinitionNode, MutableFieldNode, MutableInputValueNode } from './ast';
 import { ObjectTypeNode, setToNameNodeArray, stringToNameNode } from '../ast/utils';
 import {
   incompatibleInputValueDefaultValuesError,
@@ -46,7 +48,6 @@ import { SubscriptionFilterValue } from '../router-configuration/types';
 import {
   ARGUMENT,
   AUTHENTICATED,
-  AUTHORIZATION_DIRECTIVES,
   BOOLEAN_SCALAR,
   DEPRECATED,
   DEPRECATED_DEFAULT_ARGUMENT_VALUE,
@@ -58,7 +59,6 @@ import {
   INPUT_NODE_KINDS,
   INT_SCALAR,
   MUTATION,
-  NON_REPEATABLE_PERSISTED_DIRECTIVES,
   OUTPUT_NODE_KINDS,
   PERSISTED_CLIENT_DIRECTIVES,
   QUERY,
@@ -69,7 +69,6 @@ import {
   SHAREABLE,
   STRING_SCALAR,
   SUBSCRIPTION,
-  TAG,
 } from '../utils/string-constants';
 import {
   generateRequiresScopesDirective,
@@ -285,7 +284,7 @@ export function setParentDataExtensionType(existingData: ParentDefinitionData, i
   existingData.extensionType = ExtensionType.NONE;
 }
 
-function upsertDeprecatedDirective(
+export function upsertDeprecatedDirective(
   persistedDirectivesData: PersistedDirectivesData,
   incomingDirectiveNode: ConstDirectiveNode,
 ) {
@@ -299,7 +298,7 @@ function upsertDeprecatedDirective(
   }
 }
 
-function upsertTagDirectives(
+export function upsertTagDirectives(
   persistedDirectivesData: PersistedDirectivesData,
   incomingDirectiveNodes: ConstDirectiveNode[],
 ) {
@@ -308,42 +307,6 @@ function upsertTagDirectives(
     const incomingNameString = (incomingDirectiveNode.arguments![0].value as StringValueNode).value;
     persistedDirectivesData.tagDirectiveByName.set(incomingNameString, incomingDirectiveNode);
   }
-}
-
-export function extractPersistedDirectives(
-  persistedDirectivesData: PersistedDirectivesData,
-  directivesByDirectiveName: Map<DirectiveName, ConstDirectiveNode[]>,
-  persistedDirectiveDefinitionByDirectiveName: Map<DirectiveName, DirectiveDefinitionNode>,
-): PersistedDirectivesData {
-  for (const [directiveName, directiveNodes] of directivesByDirectiveName) {
-    // @authenticated and @requiresScopes are handled differently
-    if (
-      AUTHORIZATION_DIRECTIVES.has(directiveName) ||
-      !persistedDirectiveDefinitionByDirectiveName.has(directiveName)
-    ) {
-      continue;
-    }
-    if (directiveName === DEPRECATED) {
-      persistedDirectivesData.isDeprecated = true;
-      upsertDeprecatedDirective(persistedDirectivesData, directiveNodes[0]);
-      continue;
-    }
-    if (directiveName === TAG) {
-      upsertTagDirectives(persistedDirectivesData, directiveNodes);
-      continue;
-    }
-    const existingDirectives = persistedDirectivesData.directivesByDirectiveName.get(directiveName);
-    if (!existingDirectives) {
-      persistedDirectivesData.directivesByDirectiveName.set(directiveName, [...directiveNodes]);
-      continue;
-    }
-    // Only add one instance of certain directives.
-    if (NON_REPEATABLE_PERSISTED_DIRECTIVES.has(directiveName)) {
-      continue;
-    }
-    existingDirectives.push(...directiveNodes);
-  }
-  return persistedDirectivesData;
 }
 
 export function propagateAuthDirectives(parentData: ParentDefinitionData, authData?: AuthorizationData) {
@@ -468,17 +431,6 @@ export function getClientPersistedDirectiveNodes<T extends NodeData>(nodeData: T
   return persistedDirectiveNodes;
 }
 
-export function getNodeForRouterSchemaByData<T extends ParentDefinitionData | EnumValueData>(
-  data: T,
-  persistedDirectiveDefinitionByDirectiveName: Map<DirectiveName, DirectiveDefinitionNode>,
-  errors: Error[],
-): T['node'] {
-  data.node.name = stringToNameNode(data.name);
-  data.node.description = data.description;
-  data.node.directives = getRouterPersistedDirectiveNodes(data, persistedDirectiveDefinitionByDirectiveName, errors);
-  return data.node;
-}
-
 export function getClientSchemaFieldNodeByFieldData(fieldData: FieldData): MutableFieldNode {
   const directives = getClientPersistedDirectiveNodes(fieldData);
   const argumentNodes: MutableInputValueNode[] = [];
@@ -557,7 +509,7 @@ function addValidatedArgumentNodes(
 }
 
 export function addValidPersistedDirectiveDefinitionNodeByData(
-  definitions: MutableTypeDefinitionNode[],
+  definitions: (MutableDefinitionNode | DefinitionNode)[],
   data: PersistedDirectiveDefinitionData,
   persistedDirectiveDefinitionByDirectiveName: Map<DirectiveName, DirectiveDefinitionNode>,
   errors: Error[],
@@ -781,6 +733,10 @@ export function areKindsEqual<T extends ParentDefinitionData>(a: T, b: ParentDef
 
 export function isFieldData(data: ChildData | NodeData | SchemaData): data is FieldData {
   return data.kind === Kind.FIELD_DEFINITION;
+}
+
+export function isInputObjectDefinitionData(data: ParentDefinitionData): data is InputObjectDefinitionData {
+  return data.kind === Kind.INPUT_OBJECT_TYPE_DEFINITION;
 }
 
 export function isInputNodeKind(kind: Kind): kind is InputNodeKind {

@@ -136,9 +136,17 @@ func TestWebSockets(t *testing.T) {
 		require.NoError(t, err)
 		authenticators := []authentication.Authenticator{authenticator}
 
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
 					RejectOperationIfUnauthorized: true,
 				}),
@@ -185,9 +193,17 @@ func TestWebSockets(t *testing.T) {
 		require.NoError(t, err)
 		authenticators := []authentication.Authenticator{authenticator}
 
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
 					RejectOperationIfUnauthorized: false,
 				}),
@@ -233,12 +249,19 @@ func TestWebSockets(t *testing.T) {
 		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
 		require.NoError(t, err)
 		authenticators := []authentication.Authenticator{authenticator}
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 			EnableNats:               true,
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
 					RejectOperationIfUnauthorized: false,
 				}),
@@ -292,12 +315,19 @@ func TestWebSockets(t *testing.T) {
 		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
 		require.NoError(t, err)
 		authenticators := []authentication.Authenticator{authenticator}
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 			EnableNats:               true,
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
 					RejectOperationIfUnauthorized: true,
 				}),
@@ -350,6 +380,13 @@ func TestWebSockets(t *testing.T) {
 		authenticator, err := authentication.NewWebsocketInitialPayloadAuthenticator(authOptions)
 		require.NoError(t, err)
 		authenticators := []authentication.Authenticator{authenticator}
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
@@ -359,7 +396,7 @@ func TestWebSockets(t *testing.T) {
 				cfg.Enabled = true
 			},
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, true)),
+				core.WithAccessController(accessController),
 				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
 					RejectOperationIfUnauthorized: true,
 				}),
@@ -412,6 +449,13 @@ func TestWebSockets(t *testing.T) {
 		authenticator, err := authentication.NewWebsocketInitialPayloadAuthenticator(authOptions)
 		require.NoError(t, err)
 		authenticators := []authentication.Authenticator{authenticator}
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
 
 		testenv.Run(t, &testenv.Config{
 			ModifyWebsocketConfiguration: func(cfg *config.WebSocketConfiguration) {
@@ -419,7 +463,7 @@ func TestWebSockets(t *testing.T) {
 				cfg.Enabled = true
 			},
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, true)),
+				core.WithAccessController(accessController),
 				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
 					RejectOperationIfUnauthorized: true,
 				}),
@@ -461,6 +505,13 @@ func TestWebSockets(t *testing.T) {
 		authenticator, err := authentication.NewWebsocketInitialPayloadAuthenticator(authOptions)
 		require.NoError(t, err)
 		authenticators := []authentication.Authenticator{authenticator}
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
 
 		testenv.Run(t, &testenv.Config{
 			ModifyWebsocketConfiguration: func(cfg *config.WebSocketConfiguration) {
@@ -468,7 +519,7 @@ func TestWebSockets(t *testing.T) {
 				cfg.Enabled = true
 			},
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, true)),
+				core.WithAccessController(accessController),
 				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
 					RejectOperationIfUnauthorized: false,
 				}),
@@ -862,6 +913,13 @@ func TestWebSockets(t *testing.T) {
 		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
 		require.NoError(t, err)
 		authenticators := []authentication.Authenticator{authenticator}
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
 
 		headerRules := config.HeaderRules{
 			All: &config.GlobalHeaderRule{
@@ -883,7 +941,7 @@ func TestWebSockets(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(headerRules),
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 			},
 			Subgraphs: testenv.SubgraphsConfig{
 				GlobalMiddleware: func(next http.Handler) http.Handler {
@@ -935,6 +993,7 @@ func TestWebSockets(t *testing.T) {
 				},
 			},
 		}
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 500
@@ -972,9 +1031,25 @@ func TestWebSockets(t *testing.T) {
 								http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
 								return
 							}
+							_, err = io.WriteString(w, "event: next\n")
+							require.NoError(t, err)
 							_, err = fmt.Fprintf(w, "data: %s\n\n", `{"data":{"currentTime":{"unixTime":1,"timeStamp":"2021-09-01T12:00:00Z"}}}`)
 							require.NoError(t, err)
 							flusher.Flush()
+
+							ticker := time.NewTicker(50 * time.Millisecond)
+							defer ticker.Stop()
+
+							for {
+								select {
+								case <-r.Context().Done():
+									return
+								case <-ticker.C:
+									_, err = io.WriteString(w, ":heartbeat\n\n")
+									require.NoError(t, err)
+									flusher.Flush()
+								}
+							}
 						})
 					},
 				},
@@ -1038,6 +1113,7 @@ func TestWebSockets(t *testing.T) {
 			}
 		})
 	})
+
 	t.Run("subscription with header propagation sse subgraph get", func(t *testing.T) {
 		t.Parallel()
 
@@ -1088,9 +1164,25 @@ func TestWebSockets(t *testing.T) {
 								http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
 								return
 							}
-							_, err := fmt.Fprintf(w, "data: %s\n\n", `{"data":{"currentTime":{"unixTime":1,"timeStamp":"2021-09-01T12:00:00Z"}}}`)
+							_, err := io.WriteString(w, "event: next\n")
+							require.NoError(t, err)
+							_, err = fmt.Fprintf(w, "data: %s\n\n", `{"data":{"currentTime":{"unixTime":1,"timeStamp":"2021-09-01T12:00:00Z"}}}`)
 							require.NoError(t, err)
 							flusher.Flush()
+
+							ticker := time.NewTicker(50 * time.Millisecond)
+							defer ticker.Stop()
+
+							for {
+								select {
+								case <-r.Context().Done():
+									return
+								case <-ticker.C:
+									_, err = io.WriteString(w, ":heartbeat\n\n")
+									require.NoError(t, err)
+									flusher.Flush()
+								}
+							}
 						})
 					},
 				},

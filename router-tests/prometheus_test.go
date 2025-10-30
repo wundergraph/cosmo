@@ -4119,6 +4119,14 @@ func TestPrometheus(t *testing.T) {
 		const claimVal = "customClaimValue"
 
 		authenticators, authServer := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		exporter := tracetest.NewInMemoryExporter(t)
 		metricReader := metric.NewManualReader()
 		promRegistry := prometheus.NewRegistry()
@@ -4128,7 +4136,7 @@ func TestPrometheus(t *testing.T) {
 			MetricReader:       metricReader,
 			PrometheusRegistry: promRegistry,
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, true)),
+				core.WithAccessController(accessController),
 			},
 			CustomMetricAttributes: []config.CustomAttribute{
 				{

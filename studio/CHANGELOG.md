@@ -4,6 +4,28 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.136.2](https://github.com/wundergraph/cosmo/compare/studio@0.136.1...studio@0.136.2) (2025-10-29)
+
+**Note:** Version bump only for package studio
+
+## [0.136.1](https://github.com/wundergraph/cosmo/compare/studio@0.136.0...studio@0.136.1) (2025-10-23)
+
+**Note:** Version bump only for package studio
+
+# [0.136.0](https://github.com/wundergraph/cosmo/compare/studio@0.135.2...studio@0.136.0) (2025-10-22)
+
+### Features
+
+* fix playground tab duplication ([#2291](https://github.com/wundergraph/cosmo/issues/2291)) ([943cf41](https://github.com/wundergraph/cosmo/commit/943cf411c5bb7ac1d5040cf4bf4bf6b91aa3c53d)) (@wilsonrivera)
+
+## [0.135.2](https://github.com/wundergraph/cosmo/compare/studio@0.135.1...studio@0.135.2) (2025-10-17)
+
+**Note:** Version bump only for package studio
+
+## [0.135.1](https://github.com/wundergraph/cosmo/compare/studio@0.135.0...studio@0.135.1) (2025-10-16)
+
+**Note:** Version bump only for package studio
+
 # [0.135.0](https://github.com/wundergraph/cosmo/compare/studio@0.134.1...studio@0.135.0) (2025-10-10)
 
 ### Features
