@@ -23303,6 +23303,36 @@ export class OperationDetailPageItem extends Message<OperationDetailPageItem> {
    */
   operationContent = "";
 
+  /**
+   * @generated from field: string clientName = 6;
+   */
+  clientName = "";
+
+  /**
+   * @generated from field: string clientVersion = 7;
+   */
+  clientVersion = "";
+
+  /**
+   * @generated from field: uint64 totalExecutionCount = 8;
+   */
+  totalExecutionCount = protoInt64.zero;
+
+  /**
+   * @generated from field: double minDurationMs = 9;
+   */
+  minDurationMs = 0;
+
+  /**
+   * @generated from field: double maxDurationMs = 10;
+   */
+  maxDurationMs = 0;
+
+  /**
+   * @generated from field: double avgDurationMs = 11;
+   */
+  avgDurationMs = 0;
+
   constructor(data?: PartialMessage<OperationDetailPageItem>) {
     super();
     proto3.util.initPartial(data, this);
@@ -23316,6 +23346,12 @@ export class OperationDetailPageItem extends Message<OperationDetailPageItem> {
     { no: 3, name: "timestamp", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "operationType", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "operationContent", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "clientName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "clientVersion", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 8, name: "totalExecutionCount", kind: "scalar", T: 4 /* ScalarType.UINT64 */ },
+    { no: 9, name: "minDurationMs", kind: "scalar", T: 1 /* ScalarType.DOUBLE */ },
+    { no: 10, name: "maxDurationMs", kind: "scalar", T: 1 /* ScalarType.DOUBLE */ },
+    { no: 11, name: "avgDurationMs", kind: "scalar", T: 1 /* ScalarType.DOUBLE */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): OperationDetailPageItem {

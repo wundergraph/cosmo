@@ -26,7 +26,7 @@ const OperationDefinitionRow = ({
   label: string;
   children: ReactNode;
 }) => (
-  <div className="flex-start flex min-w-[240px] flex-col gap-2">
+  <div className="flex flex-col gap-2">
     <dt className="text-sm text-muted-foreground">{label}</dt>
     <dd className="text-sm">{children}</dd>
   </div>
@@ -87,29 +87,64 @@ const OperationDetailsPage: NextPageWithLayout = () => {
         </Link>,
       ]}
     >
-      <div className="flex h-full flex-col">
-        <div className="flex-shrink-0 overflow-x-auto border-b scrollbar-thin">
-          <dl className="flex w-full flex-col flex-wrap gap-x-8 gap-y-4 px-4 py-4 text-sm xl:flex-row">
-            <OperationDefinitionRow label="ID">{id}</OperationDefinitionRow>
-            <OperationDefinitionRow label="Name">
-              {data.detail.operationName}
-            </OperationDefinitionRow>
-            <OperationDefinitionRow label="Type">
-              <Badge variant="secondary">
-                {data.detail.operationType.toLocaleUpperCase()}
-              </Badge>
-            </OperationDefinitionRow>
-            <OperationDefinitionRow label="Last seen at">
-              {formatDateTime(new Date(data.detail.timestamp))}
-            </OperationDefinitionRow>
-            <OperationDefinitionRow label="Content">
-              <CodeViewer
-                prettyPrint
-                code={data.detail.operationContent}
-                language="graphql"
-              />
-            </OperationDefinitionRow>
-          </dl>
+      <div className="flex min-h-0 flex-1 flex-col gap-4 p-4 lg:px-6">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="flex flex-col rounded-md border">
+            <h3 className="border-b px-4 py-2 font-semibold tracking-tight">
+              Operation Details
+            </h3>
+            <dl className="flex flex-col gap-4 px-4 py-4">
+              <OperationDefinitionRow label="ID">{id}</OperationDefinitionRow>
+              <OperationDefinitionRow label="Name">
+                {data.detail.operationName}
+              </OperationDefinitionRow>
+              <OperationDefinitionRow label="Type">
+                <Badge variant="secondary">
+                  {data.detail.operationType.toLocaleUpperCase()}
+                </Badge>
+              </OperationDefinitionRow>
+              <OperationDefinitionRow label="Last seen at">
+                {formatDateTime(new Date(data.detail.timestamp))}
+              </OperationDefinitionRow>
+              <OperationDefinitionRow label="Client">
+                {data.detail.clientName}
+              </OperationDefinitionRow>
+              <OperationDefinitionRow label="Version">
+                {data.detail.clientVersion}
+              </OperationDefinitionRow>
+            </dl>
+          </div>
+          <div className="flex flex-col rounded-md border">
+            <h3 className="border-b px-4 py-2 font-semibold tracking-tight">
+              Execution Stats
+            </h3>
+            <dl className="flex flex-col gap-4 px-4 py-4">
+              <OperationDefinitionRow label="Total Executions">
+                {BigInt(data.detail.totalExecutionCount).toLocaleString()}
+              </OperationDefinitionRow>
+              <OperationDefinitionRow label="Executions Minimum Duration (ms)">
+                {data.detail.minDurationMs}
+              </OperationDefinitionRow>
+              <OperationDefinitionRow label="Executions Maximum Duration (ms)">
+                {data.detail.maxDurationMs}
+              </OperationDefinitionRow>
+              <OperationDefinitionRow label="Executions Average Duration (ms)">
+                {data.detail.avgDurationMs}
+              </OperationDefinitionRow>
+            </dl>
+          </div>
+        </div>
+        <div className="flex flex-col rounded-md border">
+          <h3 className="border-b px-4 py-2 font-semibold tracking-tight">
+            Content
+          </h3>
+          <div className="px-4 py-4">
+            <CodeViewer
+              prettyPrint
+              code={data.detail.operationContent}
+              language="graphql"
+            />
+          </div>
         </div>
       </div>
     </GraphPageLayout>
