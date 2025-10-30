@@ -266,9 +266,8 @@ func TestStartSubscriptionHook(t *testing.T) {
 						if employeeId != 1 {
 							return nil
 						}
-						ctx.WriteEvent((&kafka.MutableEvent{
-							Data: []byte(`{"id": 1, "__typename": "Employee"}`),
-						}))
+						evt := ctx.NewRawEvent([]byte(`{"id": 1, "__typename": "Employee"}`))
+						ctx.WriteEvent(evt)
 						return nil
 					},
 				},
@@ -510,7 +509,8 @@ func TestStartSubscriptionHook(t *testing.T) {
 			Modules: map[string]interface{}{
 				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
 					Callback: func(ctx core.SubscriptionOnStartHandlerContext) error {
-						ctx.WriteEvent(core.MutableEngineEvent([]byte(`{"data":{"countEmp":1000}}`)))
+						evt := ctx.NewRawEvent([]byte(`{"data":{"countEmp":1000}}`))
+						ctx.WriteEvent(evt)
 						return nil
 					},
 				},
