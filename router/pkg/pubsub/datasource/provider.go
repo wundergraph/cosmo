@@ -57,12 +57,12 @@ const (
 	ProviderTypeRedis ProviderType = "redis"
 )
 
-// StreamEvents is a list of streamevents coming from or going to event providers.
+// StreamEvents is a list of stream events coming from or going to event providers.
 type StreamEvents struct {
 	evts []StreamEvent
 }
 
-// All is an iterator, which iterates over all events.
+// All is an iterator, which can be used to iterate through all events.
 func (e StreamEvents) All() iter.Seq2[int, StreamEvent] {
 	return slices.All(e.evts)
 }
@@ -73,7 +73,7 @@ func (e StreamEvents) Len() int {
 }
 
 // Unsafe returns the underlying slice of stream events.
-// This slice is not thread safe and should not be modified.
+// This slice is not thread safe and should not be modified directly.
 func (e StreamEvents) Unsafe() []StreamEvent {
 	return e.evts
 }
@@ -84,7 +84,7 @@ func NewStreamEvents(evts []StreamEvent) StreamEvents {
 
 // A StreamEvent is a single event coming from or going to an event provider.
 type StreamEvent interface {
-	// GetData returns the data of the event.
+	// GetData returns the payload data of the event.
 	GetData() []byte
 	// Clone returns a mutable copy of the event.
 	Clone() MutableStreamEvent

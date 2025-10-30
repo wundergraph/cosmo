@@ -58,10 +58,6 @@ func (e *MutableEvent) Clone() datasource.MutableStreamEvent {
 	}
 }
 
-func (e *MutableEvent) ToStreamEvent() datasource.StreamEvent {
-	return Event{e}
-}
-
 // SubscriptionEventConfiguration contains configuration for subscription events
 type SubscriptionEventConfiguration struct {
 	Provider  string   `json:"providerId"`

@@ -84,10 +84,6 @@ func (e *MutableEvent) Clone() datasource.MutableStreamEvent {
 	return &e2
 }
 
-// func (e *Event) ToStreamEvent() datasource.StreamEvent {
-// 	return Event{evt: e}
-// }
-
 // SubscriptionEventConfiguration is a public type that is used to allow access to custom fields
 // of the provider
 type SubscriptionEventConfiguration struct {

@@ -213,15 +213,14 @@ type StreamReceiveEventHandlerContext interface {
 }
 
 type StreamReceiveEventHandler interface {
-	// OnReceiveEvents is called each time a batch of events is received from the provider before delivering them to the
-	// client. So for a single batch of events received from the provider, this hook will be called once for each
-	// active subscribers on the subscription this events belongs to.
-	// Be careful when modifying events, as it's elements are shared between all subscribers of that event.
-	// You can add, remove or sort the slice but modifying the elements itself will likely cause side effects or
-	// race conditions in other handler calls. Use events.Clone() when you need to modify slice elements.
-	// It is important to optimize the logic inside this hook to avoid performance issues.
-	// Returning an error will result in a GraphQL error being returned to the client, could be customized returning a
-	// StreamHookError.
+	// OnReceiveEvents is called whenever a batch of events is received from a provider,
+	// before delivering them to clients.
+	// The hook will be called once for each active subscription, therefore it is adviced to
+	// avoid resource heavy computation or blocking tasks whenever possible.
+	// The events argument contains all events from a batch and is shared between
+	// all active subscribers of these events.
+	// Use events.All() to iterate through them and event.Clone() to create mutable copies, when needed.
+	// Returning an error will result in the subscription being closed and the error being logged.
 	OnReceiveEvents(ctx StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error)
 }
 
@@ -239,7 +238,9 @@ type StreamPublishEventHandlerContext interface {
 }
 
 type StreamPublishEventHandler interface {
-	// OnPublishEvents is called each time a batch of events is going to be sent to the provider
+	// OnPublishEvents is called each time a batch of events is going to be sent to a provider.
+	// The events argument contains all events from a batch.
+	// Use events.All() to iterate through them and event.Clone() to create mutable copies, when needed.
 	// Returning an error will result in a GraphQL error being returned to the client, could be customized returning a
 	// StreamHookError.
 	OnPublishEvents(ctx StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error)
