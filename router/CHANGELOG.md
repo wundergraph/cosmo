@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.262.0](https://github.com/wundergraph/cosmo/compare/router@0.261.0...router@0.262.0) (2025-10-30)
+
+### Features
+
+* **mcp:** use GraphQL operation descriptions for MCP tool descriptions ([2f9b5b0](https://github.com/wundergraph/cosmo/commit/2f9b5b0bb14a66620165ec8c550ac907efd197af)) (@asoorm)
+
 # [0.261.0](https://github.com/wundergraph/cosmo/compare/router@0.260.0...router@0.261.0) (2025-10-29)
 
 ### Bug Fixes
