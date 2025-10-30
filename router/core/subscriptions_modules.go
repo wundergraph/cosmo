@@ -231,7 +231,7 @@ type StreamReceiveEventHandlerContext interface {
 	Authentication() authentication.Authentication
 	// SubscriptionEventConfiguration the subscription event configuration
 	SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration
-	// NewEvent creates a new event from the given data
+	// NewEvent creates a new event that can be used in the subscription.
 	NewEvent(data []byte) datasource.StreamEvent
 }
 
@@ -258,7 +258,7 @@ type StreamPublishEventHandlerContext interface {
 	Authentication() authentication.Authentication
 	// PublishEventConfiguration the publish event configuration
 	PublishEventConfiguration() datasource.PublishEventConfiguration
-	// NewEvent creates a new event from the given data
+	// NewEvent creates a new event that can be used in the subscription.
 	NewEvent(data []byte) datasource.StreamEvent
 }
 
