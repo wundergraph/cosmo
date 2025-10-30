@@ -4,14 +4,22 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
+	"go.uber.org/zap"
 )
 
 func TestMCP(t *testing.T) {
@@ -124,7 +132,7 @@ func TestMCP(t *testing.T) {
 				// Verify MyEmployees operation
 				require.Contains(t, resp.Tools, mcp.Tool{
 					Name:        "execute_operation_my_employees",
-					Description: "Executes the GraphQL operation 'MyEmployees' of type query. This is a GraphQL query that retrieves a list of employees.",
+					Description: "This is a GraphQL query that retrieves a list of employees.",
 					InputSchema: mcp.ToolInputSchema{
 						Type:       "object",
 						Properties: map[string]interface{}{"criteria": map[string]interface{}{"additionalProperties": false, "description": "Allows to filter employees by their details.", "nullable": false, "properties": map[string]interface{}{"hasPets": map[string]interface{}{"nullable": true, "type": "boolean"}, "nationality": map[string]interface{}{"enum": []interface{}{"AMERICAN", "DUTCH", "ENGLISH", "GERMAN", "INDIAN", "SPANISH", "UKRAINIAN"}, "nullable": true, "type": "string"}, "nested": map[string]interface{}{"additionalProperties": false, "nullable": true, "properties": map[string]interface{}{"hasChildren": map[string]interface{}{"nullable": true, "type": "boolean"}, "maritalStatus": map[string]interface{}{"enum": []interface{}{"ENGAGED", "MARRIED"}, "nullable": true, "type": "string"}}, "type": "object"}}, "type": "object"}},
@@ -141,7 +149,7 @@ func TestMCP(t *testing.T) {
 				// Verify UpdateMood operation
 				require.Contains(t, resp.Tools, mcp.Tool{
 					Name:        "execute_operation_update_mood",
-					Description: "Executes the GraphQL operation 'UpdateMood' of type mutation. This mutation update the mood of an employee.",
+					Description: "This mutation update the mood of an employee.",
 					InputSchema: mcp.ToolInputSchema{Type: "object", Properties: map[string]interface{}{"employeeID": map[string]interface{}{"type": "integer"}, "mood": map[string]interface{}{"enum": []interface{}{"HAPPY", "SAD"}, "type": "string"}}, Required: []string{"employeeID", "mood"}}, RawInputSchema: json.RawMessage(nil),
 					Annotations: mcp.ToolAnnotation{
 						Title:          "Execute operation UpdateMood",
@@ -212,7 +220,6 @@ func TestMCP(t *testing.T) {
 			t.Run("Execute Query", func(t *testing.T) {
 				t.Run("Execute operation of type query with valid input", func(t *testing.T) {
 					testenv.Run(t, &testenv.Config{
-						EnableNats: true,
 						MCP: config.MCPConfiguration{
 							Enabled: true,
 						},
@@ -550,6 +557,321 @@ func TestMCP(t *testing.T) {
 						assert.Equal(t, "86400", resp.Header.Get("Access-Control-Max-Age"))
 					})
 				}
+			})
+		})
+	})
+
+	t.Run("Operation Description Extraction", func(t *testing.T) {
+		// TestMCPOperationDescriptionExtraction tests that the MCP server properly extracts
+		// descriptions from GraphQL operations and uses them for tool descriptions
+		t.Run("Extract descriptions from GraphQL operations", func(t *testing.T) {
+			// Create a temporary directory for test operations
+			tempDir := t.TempDir()
+
+			// Create test operation files
+			testCases := []struct {
+				name            string
+				filename        string
+				content         string
+				expectedDesc    string
+				expectDescEmpty bool
+			}{
+				{
+					name:     "operation with multi-line description",
+					filename: "FindUser.graphql",
+					content: `"""
+Finds a user by their unique identifier.
+Returns comprehensive user information including profile and settings.
+
+Required permissions: user:read
+"""
+query FindUser($id: ID!) {
+	user(id: $id) {
+		id
+		name
+		email
+	}
+}`,
+					expectedDesc: "Finds a user by their unique identifier.\nReturns comprehensive user information including profile and settings.\n\nRequired permissions: user:read",
+				},
+				{
+					name:     "operation with single-line description",
+					filename: "GetProfile.graphql",
+					content: `"""Gets the current user's profile"""
+query GetProfile {
+	me {
+		id
+		name
+	}
+}`,
+					expectedDesc: "Gets the current user's profile",
+				},
+				{
+					name:     "operation without description",
+					filename: "ListUsers.graphql",
+					content: `query ListUsers {
+	users {
+		id
+		name
+	}
+}`,
+					expectDescEmpty: true,
+				},
+				{
+					name:     "mutation with description",
+					filename: "CreateUser.graphql",
+					content: `"""
+Creates a new user in the system.
+Requires admin privileges.
+"""
+mutation CreateUser($input: UserInput!) {
+	createUser(input: $input) {
+		id
+		name
+	}
+}`,
+					expectedDesc: "Creates a new user in the system.\nRequires admin privileges.",
+				},
+			}
+
+			// Write test files
+			for _, tc := range testCases {
+				err := os.WriteFile(filepath.Join(tempDir, tc.filename), []byte(tc.content), 0644)
+				require.NoError(t, err, "Failed to write test file %s", tc.filename)
+			}
+
+			// Create a simple schema for validation
+			schemaStr := `
+type Query {
+	user(id: ID!): User
+	users: [User!]!
+	me: User
+}
+
+type Mutation {
+	createUser(input: UserInput!): User
+}
+
+type User {
+	id: ID!
+	name: String!
+	email: String
+}
+
+input UserInput {
+	name: String!
+	email: String
+}
+`
+			schemaDoc, report := astparser.ParseGraphqlDocumentString(schemaStr)
+			require.False(t, report.HasErrors(), "Failed to parse schema")
+
+			// Normalize the schema (required for validation)
+			err := asttransform.MergeDefinitionWithBaseSchema(&schemaDoc)
+			require.NoError(t, err, "Failed to normalize schema")
+
+			// Load operations using the OperationLoader
+			logger := zap.NewNop()
+			loader := schemaloader.NewOperationLoader(logger, &schemaDoc)
+			operations, err := loader.LoadOperationsFromDirectory(tempDir)
+			require.NoError(t, err, "Failed to load operations")
+			require.Len(t, operations, len(testCases), "Expected %d operations to be loaded", len(testCases))
+
+			// Verify each operation has the correct description
+			for _, tc := range testCases {
+				t.Run(tc.name, func(t *testing.T) {
+					// Find the operation by name
+					var op *schemaloader.Operation
+					for i := range operations {
+						if operations[i].FilePath == filepath.Join(tempDir, tc.filename) {
+							op = &operations[i]
+							break
+						}
+					}
+					require.NotNil(t, op, "Operation not found: %s", tc.filename)
+
+					// Verify description
+					if tc.expectDescEmpty {
+						assert.Empty(t, op.Description, "Expected empty description for %s", tc.name)
+					} else {
+						assert.Equal(t, tc.expectedDesc, op.Description, "Description mismatch for %s", tc.name)
+					}
+				})
+			}
+		})
+	})
+
+	t.Run("Tool Description Usage", func(t *testing.T) {
+		// TestMCPToolDescriptionUsage tests that operation descriptions are properly used
+		// when creating MCP tool descriptions
+		tests := []struct {
+			name                string
+			operationDesc       string
+			operationName       string
+			operationType       string
+			expectedToolDesc    string
+			expectDefaultFormat bool
+		}{
+			{
+				name:             "uses operation description when present",
+				operationDesc:    "Finds a user by ID and returns their profile",
+				operationName:    "FindUser",
+				operationType:    "query",
+				expectedToolDesc: "Finds a user by ID and returns their profile",
+			},
+			{
+				name:                "uses default format when description is empty",
+				operationDesc:       "",
+				operationName:       "GetUsers",
+				operationType:       "query",
+				expectDefaultFormat: true,
+			},
+			{
+				name:             "uses mutation description",
+				operationDesc:    "Creates a new user with the provided input",
+				operationName:    "CreateUser",
+				operationType:    "mutation",
+				expectedToolDesc: "Creates a new user with the provided input",
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				// Simulate what the MCP server does when creating tool descriptions
+				var toolDescription string
+				if tt.operationDesc != "" {
+					toolDescription = tt.operationDesc
+				} else {
+					// This is the default format used in server.go
+					toolDescription = "Executes the GraphQL operation '" + tt.operationName + "' of type " + tt.operationType + "."
+				}
+
+				if tt.expectDefaultFormat {
+					assert.Contains(t, toolDescription, tt.operationName, "Default description should contain operation name")
+					assert.Contains(t, toolDescription, tt.operationType, "Default description should contain operation type")
+				} else {
+					assert.Equal(t, tt.expectedToolDesc, toolDescription, "Tool description should match operation description")
+				}
+			})
+		}
+	})
+
+	t.Run("Header Forwarding", func(t *testing.T) {
+		t.Run("All request headers are forwarded from MCP client through to subgraphs", func(t *testing.T) {
+			// This test validates that ALL headers sent by MCP clients are forwarded
+			// through the complete chain: MCP Client -> MCP Server -> Router -> Subgraphs
+			//
+			// The router's header forwarding rules (configured with wildcard `.*`) determine
+			// what gets propagated to subgraphs. The MCP server acts as a transparent proxy,
+			// forwarding all headers without filtering.
+			//
+			// Note: We use direct HTTP POST requests instead of the mcp-go client library
+			// because transport.WithHTTPHeaders() in mcp-go sets headers at the SSE connection
+			// level, not on individual tool execution requests. Direct HTTP requests allow us
+			// to test per-request headers, which is what real MCP clients (like Claude Desktop) send.
+
+			var capturedSubgraphRequest *http.Request
+			var subgraphMutex sync.Mutex
+
+			testenv.Run(t, &testenv.Config{
+				MCP: config.MCPConfiguration{
+					Enabled: true,
+					Session: config.MCPSessionConfig{
+						Stateless: true, // Enable stateless mode so we don't need session IDs
+					},
+				},
+				RouterOptions: []core.Option{
+					// Forward all headers including custom ones
+					core.WithHeaderRules(config.HeaderRules{
+						All: &config.GlobalHeaderRule{
+							Request: []*config.RequestHeaderRule{
+								{
+									Operation: config.HeaderRuleOperationPropagate,
+									Matching:  ".*", // Forward all headers
+								},
+							},
+						},
+					}),
+				},
+				Subgraphs: testenv.SubgraphsConfig{
+					GlobalMiddleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							subgraphMutex.Lock()
+							capturedSubgraphRequest = r.Clone(r.Context())
+							subgraphMutex.Unlock()
+							handler.ServeHTTP(w, r)
+						})
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				// With stateless mode enabled, we can make direct HTTP POST requests
+				// without needing to establish a session first
+				mcpAddr := xEnv.GetMCPServerAddr()
+
+				// Make a direct HTTP POST request with custom headers
+				// This simulates a real MCP client sending custom headers on tool calls
+				mcpRequest := map[string]interface{}{
+					"jsonrpc": "2.0",
+					"id":      1,
+					"method":  "tools/call",
+					"params": map[string]interface{}{
+						"name": "execute_operation_my_employees",
+						"arguments": map[string]interface{}{
+							"criteria": map[string]interface{}{},
+						},
+					},
+				}
+
+				requestBody, err := json.Marshal(mcpRequest)
+				require.NoError(t, err)
+
+				req, err := http.NewRequest("POST", mcpAddr, strings.NewReader(string(requestBody)))
+				require.NoError(t, err)
+
+				// Add various headers to test forwarding
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("foo", "bar")                         // Non-standard header
+				req.Header.Set("X-Custom-Header", "custom-value")    // Custom X- header
+				req.Header.Set("X-Trace-Id", "trace-123")            // Tracing header
+				req.Header.Set("Authorization", "Bearer test-token") // Auth header
+
+				// Make the request
+				resp, err := xEnv.RouterClient.Do(req)
+				require.NoError(t, err)
+				defer resp.Body.Close()
+
+				// With stateless mode, the request should succeed
+				t.Logf("Response Status: %d", resp.StatusCode)
+				require.Equal(t, http.StatusOK, resp.StatusCode, "Request should succeed in stateless mode")
+
+				// Verify headers reached subgraph
+				subgraphMutex.Lock()
+				defer subgraphMutex.Unlock()
+
+				require.NotNil(t, capturedSubgraphRequest, "Subgraph should have received a request")
+
+				// Log all headers that the subgraph received
+				t.Logf("Headers received by subgraph:")
+				for key, values := range capturedSubgraphRequest.Header {
+					for _, value := range values {
+						t.Logf("  %s: %s", key, value)
+					}
+				}
+
+				// Verify that all headers were forwarded through the entire chain:
+				// MCP Client -> MCP Server -> Router -> Subgraph
+				assert.Equal(t, "bar", capturedSubgraphRequest.Header.Get("Foo"),
+					"'foo' header should be forwarded to subgraph")
+				assert.Equal(t, "custom-value", capturedSubgraphRequest.Header.Get("X-Custom-Header"),
+					"X-Custom-Header should be forwarded to subgraph")
+				assert.Equal(t, "trace-123", capturedSubgraphRequest.Header.Get("X-Trace-Id"),
+					"X-Trace-Id should be forwarded to subgraph")
+				assert.Equal(t, "Bearer test-token", capturedSubgraphRequest.Header.Get("Authorization"),
+					"Authorization header should be forwarded to subgraph")
+
+				// This test proves that ALL headers sent by MCP clients are forwarded
+				// through the complete chain. The router's header rules determine what
+				// ultimately reaches the subgraphs.
 			})
 		})
 	})

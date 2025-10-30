@@ -13,7 +13,7 @@ import {
 } from '../../schema-building/types';
 import { Graph } from '../../resolvability-graph/graph';
 import { getTypeNodeNamedTypeName, MutableFieldNode } from '../../schema-building/ast';
-import { BASE_SCALARS } from '../utils/constants';
+import { BASE_SCALARS } from '../constants/constants';
 import { isKindAbstract } from '../../ast/utils';
 import { GraphNode } from '../../resolvability-graph/graph-nodes';
 

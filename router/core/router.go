@@ -211,15 +211,24 @@ func NewRouter(opts ...Option) (*Router, error) {
 	// this is set via the deprecated method
 	if !r.playground {
 		r.playgroundConfig.Enabled = r.playground
-		r.logger.Warn("The playground_enabled option is deprecated. Use the playground.enabled option in the config instead.")
+		r.logger.Warn("The playground_enabled option is deprecated. Use the /playground/enabled option in the config instead.")
 	}
 	if r.playgroundPath != "" && r.playgroundPath != "/" {
 		r.playgroundConfig.Path = r.playgroundPath
-		r.logger.Warn("The playground_path option is deprecated. Use the playground.path option in the config instead.")
+		r.logger.Warn("The playground_path option is deprecated. Use the /playground/path option in the config instead.")
 	}
 
 	if r.playgroundConfig.Path == "" {
 		r.playgroundConfig.Path = "/"
+	}
+
+	// handle introspection config deprecation
+	// if either the old deprecated or the new config is set to false, introspection is disabled
+	if !r.introspection {
+		r.introspectionConfig.Enabled = r.introspection
+		r.logger.Warn("The introspection_enabled option is deprecated. Use the /introspection/enabled option in the config instead.")
+	} else if !r.introspectionConfig.Enabled {
+		r.introspection = r.introspectionConfig.Enabled
 	}
 
 	if r.instanceID == "" {
@@ -1536,9 +1545,10 @@ func WithPlayground(enable bool) Option {
 	}
 }
 
-func WithIntrospection(enable bool) Option {
+func WithIntrospection(enable bool, config config.IntrospectionConfiguration) Option {
 	return func(r *Router) {
 		r.introspection = enable
+		r.introspectionConfig = config
 	}
 }
 
