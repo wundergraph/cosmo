@@ -26,7 +26,7 @@ type SubscriptionOnStartHandlerContext interface {
 	// WriteEvent writes an event to the stream of the current subscription
 	// It returns true if the event was written to the stream, false if the event was dropped
 	WriteEvent(event datasource.StreamEvent) bool
-	// NewEvent creates a new event from the given data
+	// NewEvent creates a new event that can be used in the subscription.
 	NewEvent(data []byte) datasource.StreamEvent
 }
 

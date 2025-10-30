@@ -33,7 +33,6 @@ func (s *PubSubSubscriptionDataSource[C]) UniqueRequestID(ctx *resolve.Context, 
 	return s.uniqueRequestID(ctx, input, xxh)
 }
 
-// s = kafka.SubscriptionEventConfiguration
 func (s *PubSubSubscriptionDataSource[C]) Start(ctx *resolve.Context, input []byte, updater resolve.SubscriptionUpdater) error {
 	subConf, err := s.SubscriptionEventConfiguration(input)
 	if err != nil {
