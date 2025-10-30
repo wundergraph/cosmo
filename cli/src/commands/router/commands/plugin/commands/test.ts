@@ -2,7 +2,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { Command } from 'commander';
 import { resolve } from 'pathe';
-import Spinner, {Ora} from 'ora';
+import Spinner from 'ora';
 import { BaseCommandOptions } from '../../../../../core/types/types.js';
 import {
   checkAndInstallTools,
@@ -10,7 +10,7 @@ import {
   installGoDependencies,
   installTsDependencies,
   runGoTests,
-  runTsTests
+  runTsTests,
 } from '../toolchain.js';
 import { renderResultTree } from '../helper.js';
 
@@ -107,4 +107,3 @@ export default (opts: BaseCommandOptions) => {
 
   return command;
 };
-
