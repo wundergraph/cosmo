@@ -29,7 +29,13 @@ const ALL_GO_PLATFORMS = ['linux-amd64', 'linux-arm64', 'darwin-amd64', 'darwin-
 
 // Both bun-linux-x64 share the same bun-linux-x64-musl target name of linux-amd64, thus we prefer musl, since it seems to be
 // more compatible, users can still override this by explicitly specifying what they want
-const ALL_BUN_PLATFORMS = ['bun-linux-x64-musl', 'bun-linux-arm64-musl', 'bun-windows-x64', 'bun-darwin-arm64', 'bun-darwin-x64'];
+const ALL_BUN_PLATFORMS = [
+  'bun-linux-x64-musl',
+  'bun-linux-arm64-musl',
+  'bun-windows-x64',
+  'bun-darwin-arm64',
+  'bun-darwin-x64',
+];
 
 const ALL_BUN_PLATFORM_MAPPINGS: Record<string, string> = {
   'bun-linux-x64': 'linux-amd64',
