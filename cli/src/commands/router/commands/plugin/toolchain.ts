@@ -529,6 +529,22 @@ export function runGoTests(pluginDir: string, spinner: any, debug = false) {
   });
 }
 
+export function runTsTests(pluginDir: string, spinner: any) {
+  spinner.text = 'Running tests...\n';
+
+  const env = getToolsEnv();
+  const bunPath = getToolPath('bun');
+
+  const args = ['test'];
+
+  return execa(bunPath, args, {
+    cwd: pluginDir,
+    stdout: 'inherit',
+    stderr: 'inherit',
+    env,
+  });
+}
+
 /**
  * Install Go dependencies
  */
