@@ -419,10 +419,10 @@ export class SDLValidationVisitor {
       );
     }
 
-    const { contains, fieldName } = this.isFieldInOtherFieldContext(ctx.node, fieldNames, parentFields.fields);
-    if (contains) {
+    const { hasCycle, path } = this.isFieldInOtherFieldContext(ctx.node, fieldNames, parentFields.fields);
+    if (hasCycle) {
       this.addError(
-        `Cycle detected in context: field ${ctx.node.name.value} is referenced in the context of field ${fieldName}`,
+        `Cycle detected in context: field "${ctx.node.name.value}" is referenced in the following path: "${path}"`,
         ctx.node.loc,
       );
     }
@@ -454,35 +454,63 @@ export class SDLValidationVisitor {
    * Check if a field is in the context of another field. This is used to detect cycles in the context.
    * @param field - The field to check
    * @param contextFields - The fields in the context
-   * @param parentFields - The fields in the parent
+   * @param typeFields - The fields in the parent
    * @returns true if the field is in the context of another field, false otherwise
    * @private
    */
   private isFieldInOtherFieldContext(
     field: FieldDefinitionNode,
     contextFields: string[],
-    parentFields: FieldDefinitionNode[],
-  ): { contains: boolean; fieldName: string } {
-    if (parentFields.length === 0) return { contains: false, fieldName: '' };
+    typeFields: FieldDefinitionNode[],
+  ): { hasCycle: boolean; path: string } {
+    let visited = new Set<string>();
+    return this.checkFieldCycle(field, contextFields, typeFields, visited, []);
+  }
 
+  private checkFieldCycle(
+    field: FieldDefinitionNode,
+    contextFields: string[],
+    typeFields: FieldDefinitionNode[],
+    visited: Set<string>,
+    currentPath: string[],
+  ): { hasCycle: boolean; path: string } {
     const fieldName = field.name.value;
-
+    if (visited.has(fieldName)) {
+      return { hasCycle: true, path: currentPath.join('.') };
+    }
+    
+    currentPath.push(fieldName);
+    visited.add(fieldName);
     for (const contextField of contextFields) {
       if (contextField === fieldName) continue;
 
-      let parentField = parentFields.find((p) => p.name.value === contextField);
-      if (!parentField) continue;
+      let typeField = typeFields.find((p) => p.name.value === contextField);
+      if (!typeField) continue;
 
-      const parentContext = this.getResolverContext(parentField);
-      if (!parentContext) continue;
+      const typeFieldContext = this.getResolverContext(typeField);
+      if (!typeFieldContext) continue;
 
-      const parentContextFields = this.getContextFields(parentContext);
-      if (parentContextFields.includes(fieldName)) {
-        return { contains: true, fieldName: parentField.name.value };
+      const typeFieldContextFields = this.getContextFields(typeFieldContext);
+      if (typeFieldContextFields.includes(fieldName)) {
+        return { hasCycle: true, path: [...currentPath, typeField.name.value].join('.') };
+      }
+
+      const checkCycleResult = this.checkFieldCycle(
+        typeField,
+        typeFieldContextFields,
+        typeFields,
+        visited,
+        currentPath,
+      );
+      if (checkCycleResult.hasCycle) {
+        return checkCycleResult;
       }
     }
 
-    return { contains: false, fieldName: '' };
+    currentPath.pop();
+    visited.delete(fieldName);
+
+    return { hasCycle: false, path: '' };
   }
 
   /**

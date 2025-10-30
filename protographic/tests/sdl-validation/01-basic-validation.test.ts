@@ -419,10 +419,10 @@ describe('SDL Validation', () => {
     expect(result.errors).toHaveLength(2);
     expect(result.warnings).toHaveLength(0);
     expect(result.errors[0]).toContain(
-      'Cycle detected in context: field foo is referenced in the context of field parent',
+      '[Error] Cycle detected in context: field "foo" is referenced in the following path: "foo.parent"',
     );
     expect(result.errors[1]).toContain(
-      'Cycle detected in context: field parent is referenced in the context of field foo',
+      '[Error] Cycle detected in context: field "parent" is referenced in the following path: "parent.foo"',
     );
   });
 
@@ -444,5 +444,35 @@ describe('SDL Validation', () => {
 
     expect(result.errors).toHaveLength(0);
     expect(result.warnings).toHaveLength(0);
+  });
+
+  test('should return an error if a field contains a deep cycle in the context', () => {
+    const sdl = `
+        type Query {
+            user: User!
+        }
+
+        type User @key(fields: "id name") {
+            id: ID!
+            foo(a: String!): String! @connect__fieldResolver(context: "baz")
+            bar(context: String!): String! @connect__fieldResolver(context: "foo")
+            baz(context: String!): String! @connect__fieldResolver(context: "bar")
+        }
+    `;
+
+    const visitor = new SDLValidationVisitor(sdl);
+    const result = visitor.visit();
+
+    expect(result.errors).toHaveLength(3);
+    expect(result.warnings).toHaveLength(0);
+    expect(result.errors[0]).toContain(
+      '[Error] Cycle detected in context: field "foo" is referenced in the following path: "foo.baz.bar"',
+    );
+    expect(result.errors[1]).toContain(
+      '[Error] Cycle detected in context: field "bar" is referenced in the following path: "bar.foo.baz"',
+    );
+    expect(result.errors[2]).toContain(
+      '[Error] Cycle detected in context: field "baz" is referenced in the following path: "baz.bar.foo"',
+    );
   });
 });
