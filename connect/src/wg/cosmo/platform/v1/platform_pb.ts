@@ -23314,11 +23314,6 @@ export class OperationDetailPageItem extends Message<OperationDetailPageItem> {
   clientVersion = "";
 
   /**
-   * @generated from field: uint64 totalExecutionCount = 8;
-   */
-  totalExecutionCount = protoInt64.zero;
-
-  /**
    * @generated from field: double minDurationMs = 9;
    */
   minDurationMs = 0;
@@ -23332,6 +23327,16 @@ export class OperationDetailPageItem extends Message<OperationDetailPageItem> {
    * @generated from field: double avgDurationMs = 11;
    */
   avgDurationMs = 0;
+
+  /**
+   * @generated from field: uint64 totalRequests = 12;
+   */
+  totalRequests = protoInt64.zero;
+
+  /**
+   * @generated from field: uint64 totalErrors = 13;
+   */
+  totalErrors = protoInt64.zero;
 
   constructor(data?: PartialMessage<OperationDetailPageItem>) {
     super();
@@ -23348,10 +23353,11 @@ export class OperationDetailPageItem extends Message<OperationDetailPageItem> {
     { no: 5, name: "operationContent", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 6, name: "clientName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 7, name: "clientVersion", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 8, name: "totalExecutionCount", kind: "scalar", T: 4 /* ScalarType.UINT64 */ },
     { no: 9, name: "minDurationMs", kind: "scalar", T: 1 /* ScalarType.DOUBLE */ },
     { no: 10, name: "maxDurationMs", kind: "scalar", T: 1 /* ScalarType.DOUBLE */ },
     { no: 11, name: "avgDurationMs", kind: "scalar", T: 1 /* ScalarType.DOUBLE */ },
+    { no: 12, name: "totalRequests", kind: "scalar", T: 4 /* ScalarType.UINT64 */ },
+    { no: 13, name: "totalErrors", kind: "scalar", T: 4 /* ScalarType.UINT64 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): OperationDetailPageItem {

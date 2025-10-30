@@ -41,7 +41,6 @@ export function getOperationDetailPage(
       };
     }
 
-
     const repo = new OperationsRepository(opts.chClient);
     const view = await repo.getOperationDetail({
       operationId: req.id,

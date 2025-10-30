@@ -2974,10 +2974,11 @@ message OperationDetailPageItem {
   string operationContent = 5;
   string clientName = 6;
   string clientVersion = 7;
-  uint64 totalExecutionCount = 8;
   double minDurationMs = 9;
   double maxDurationMs = 10;
   double avgDurationMs = 11;
+  uint64 totalRequests = 12;
+  uint64 totalErrors = 13;
 }
 
 message GetOperationDetailPageRequest {

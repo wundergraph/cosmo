@@ -49,17 +49,22 @@ export class OperationsRepository {
         max(operations.Timestamp) as timestamp,
         operations.OperationType as operationType,
         anyLast(operations.OperationContent) as operationContent,
-        lm.ClientName as clientName,
-        lm.ClientVersion as clientVersion,
-        sum(lm.Count) as totalExecutionCount,
+        rm.ClientName as clientName,
+        rm.ClientVersion as clientVersion,
         min(lm.MinDuration) as minDurationMs,
         max(lm.MaxDuration) as maxDurationMs,
-        round(sum(lm.Sum) / sum(lm.Count), 2) as avgDurationMs
+        round(sum(lm.Sum) / sum(lm.Count), 2) as avgDurationMs,
+        max(rm.TotalRequests) as totalRequests,
+        max(rm.TotalErrors) as totalErrors
       FROM cosmo.gql_metrics_operations operations
       INNER JOIN cosmo.operation_latency_metrics_5_30 lm
       ON operations.OperationHash = lm.OperationHash
+      INNER JOIN cosmo.operation_request_metrics_5_30 rm
+      ON operations.OperationHash = rm.OperationHash
       AND operations.OrganizationID = lm.OrganizationID
       AND operations.FederatedGraphID = lm.FederatedGraphID
+      AND operations.OrganizationID = rm.OrganizationID
+      AND operations.FederatedGraphID = rm.FederatedGraphID
       WHERE operations.OrganizationID = '${organizationId}'
       AND operations.FederatedGraphID = '${graphId}'
       AND operations.OperationHash = '${operationId}'
@@ -67,8 +72,8 @@ export class OperationsRepository {
         operations.OperationHash,
         operations.OperationName,
         operations.OperationType,
-        lm.ClientName,
-        lm.ClientVersion`;
+        rm.ClientName,
+        rm.ClientVersion`;
 
     const result = await this.client.queryPromise<{
       id: string;
@@ -78,10 +83,11 @@ export class OperationsRepository {
       operationContent: string;
       clientName: string;
       clientVersion: string;
-      totalExecutionCount: string;
       minDurationMs: number;
       maxDurationMs: number;
       avgDurationMs: number;
+      totalRequests: string;
+      totalErrors: string;
     }>(query, { organizationId, graphId, operationId });
 
     const firstResult = result[0];
@@ -89,9 +95,10 @@ export class OperationsRepository {
     return {
       detail: firstResult
         ? {
-          ...firstResult,
-          totalExecutionCount: BigInt(firstResult.totalExecutionCount),
-        }
+            ...firstResult,
+            totalRequests: BigInt(firstResult.totalRequests),
+            totalErrors: BigInt(firstResult.totalErrors),
+          }
         : undefined,
     };
   }

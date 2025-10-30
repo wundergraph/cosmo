@@ -116,12 +116,9 @@ const OperationDetailsPage: NextPageWithLayout = () => {
           </div>
           <div className="flex flex-col rounded-md border">
             <h3 className="border-b px-4 py-2 font-semibold tracking-tight">
-              Execution Stats
+              Latency Stats
             </h3>
             <dl className="flex flex-col gap-4 px-4 py-4">
-              <OperationDefinitionRow label="Total Executions">
-                {BigInt(data.detail.totalExecutionCount).toLocaleString()}
-              </OperationDefinitionRow>
               <OperationDefinitionRow label="Executions Minimum Duration (ms)">
                 {data.detail.minDurationMs}
               </OperationDefinitionRow>
@@ -130,6 +127,17 @@ const OperationDetailsPage: NextPageWithLayout = () => {
               </OperationDefinitionRow>
               <OperationDefinitionRow label="Executions Average Duration (ms)">
                 {data.detail.avgDurationMs}
+              </OperationDefinitionRow>
+            </dl>
+            <h3 className="border-b px-4 py-2 font-semibold tracking-tight">
+              Request Stats
+            </h3>
+            <dl className="flex flex-col gap-4 px-4 py-4">
+              <OperationDefinitionRow label="Total Requests">
+                {Number(data.detail.totalRequests)}
+              </OperationDefinitionRow>
+              <OperationDefinitionRow label="Total Errors">
+                {Number(data.detail.totalErrors)}
               </OperationDefinitionRow>
             </dl>
           </div>
