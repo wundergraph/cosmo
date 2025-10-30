@@ -128,10 +128,8 @@ func buildProvider(ctx context.Context, provider config.NatsEventSource, logger 
 		return nil, fmt.Errorf("failed to create adapter for Nats provider with ID \"%s\": %w", provider.ID, err)
 	}
 
-	eventBuilder := func(data []byte) datasource.StreamEvent {
-		return &Event{
-			evt: &MutableEvent{Data: data},
-		}
+	eventBuilder := func(data []byte) datasource.MutableStreamEvent {
+		return &MutableEvent{Data: data}
 	}
 
 	pubSubProvider := datasource.NewPubSubProvider(provider.ID, providerTypeID, adapter, logger, eventBuilder)

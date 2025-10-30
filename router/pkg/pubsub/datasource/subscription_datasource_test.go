@@ -32,8 +32,8 @@ func (t testSubscriptionEventConfiguration) RootFieldName() string {
 }
 
 // testSubscriptionDataSourceEventBuilder is a reusable event builder for tests
-func testSubscriptionDataSourceEventBuilder(data []byte) StreamEvent {
-	return &testEvent{evt: data}
+func testSubscriptionDataSourceEventBuilder(data []byte) MutableStreamEvent {
+	return mutableTestEvent(data)
 }
 
 func TestPubSubSubscriptionDataSource_SubscriptionEventConfiguration_Success(t *testing.T) {

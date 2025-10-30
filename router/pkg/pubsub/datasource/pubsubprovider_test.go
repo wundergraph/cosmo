@@ -77,8 +77,8 @@ func (c *testPublishConfig) RootFieldName() string {
 }
 
 // testPubSubEventBuilder is a reusable event builder for tests
-func testPubSubEventBuilder(data []byte) StreamEvent {
-	return &testEvent{evt: data}
+func testPubSubEventBuilder(data []byte) MutableStreamEvent {
+	return mutableTestEvent(data)
 }
 
 func TestProvider_Startup_Success(t *testing.T) {

@@ -38,8 +38,8 @@ type receivedHooksArgs struct {
 }
 
 // testEventBuilder is a reusable event builder for tests
-func testEventBuilder(data []byte) StreamEvent {
-	return &testEvent{evt: data}
+func testEventBuilder(data []byte) MutableStreamEvent {
+	return mutableTestEvent(data)
 }
 
 func TestSubscriptionEventUpdater_Update_NoHooks(t *testing.T) {

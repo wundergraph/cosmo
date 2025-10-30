@@ -94,8 +94,8 @@ func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (datasource.Su
 		return err
 	}
 
-	eventCreateFn := func(data []byte) datasource.StreamEvent {
-		return &Event{evt: &MutableEvent{data}}
+	eventCreateFn := func(data []byte) datasource.MutableStreamEvent {
+		return &MutableEvent{Data: data}
 	}
 
 	return datasource.NewPubSubSubscriptionDataSource[*SubscriptionEventConfiguration](

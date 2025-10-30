@@ -11,7 +11,7 @@ import (
 
 type uniqueRequestIdFn func(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error
 
-type EventBuilderFn func(data []byte) StreamEvent
+type EventBuilderFn func(data []byte) MutableStreamEvent
 
 // PubSubSubscriptionDataSource is a data source for handling subscriptions using a Pub/Sub mechanism.
 // It implements the SubscriptionDataSource interface and HookableSubscriptionDataSource
