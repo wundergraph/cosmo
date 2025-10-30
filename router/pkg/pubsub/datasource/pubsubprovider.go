@@ -7,20 +7,21 @@ import (
 )
 
 type PubSubProvider struct {
-	id      string
-	typeID  string
-	Adapter Adapter
-	Logger  *zap.Logger
-	hooks   Hooks
+	id           string
+	typeID       string
+	Adapter      Adapter
+	Logger       *zap.Logger
+	hooks        Hooks
+	eventBuilder EventBuilderFn
 }
 
 // applyPublishEventHooks processes events through a chain of hook functions
 // Each hook receives the result from the previous hook, creating a proper middleware pipeline
-func applyPublishEventHooks(ctx context.Context, cfg PublishEventConfiguration, events []StreamEvent, hooks []OnPublishEventsFn) ([]StreamEvent, error) {
+func applyPublishEventHooks(ctx context.Context, cfg PublishEventConfiguration, events []StreamEvent, eventBuilder EventBuilderFn, hooks []OnPublishEventsFn) ([]StreamEvent, error) {
 	currentEvents := events
 	for _, hook := range hooks {
 		var err error
-		currentEvents, err = hook(ctx, cfg, currentEvents)
+		currentEvents, err = hook(ctx, cfg, currentEvents, eventBuilder)
 		if err != nil {
 			return currentEvents, err
 		}
@@ -59,7 +60,7 @@ func (p *PubSubProvider) Publish(ctx context.Context, cfg PublishEventConfigurat
 		return p.Adapter.Publish(ctx, cfg, events)
 	}
 
-	processedEvents, hooksErr := applyPublishEventHooks(ctx, cfg, events, p.hooks.OnPublishEvents)
+	processedEvents, hooksErr := applyPublishEventHooks(ctx, cfg, events, p.eventBuilder, p.hooks.OnPublishEvents)
 	if hooksErr != nil {
 		p.Logger.Error(
 			"error applying publish event hooks",
@@ -82,11 +83,12 @@ func (p *PubSubProvider) SetHooks(hooks Hooks) {
 	p.hooks = hooks
 }
 
-func NewPubSubProvider(id string, typeID string, adapter Adapter, logger *zap.Logger) *PubSubProvider {
+func NewPubSubProvider(id string, typeID string, adapter Adapter, logger *zap.Logger, eventBuilder EventBuilderFn) *PubSubProvider {
 	return &PubSubProvider{
-		id:      id,
-		typeID:  typeID,
-		Adapter: adapter,
-		Logger:  logger,
+		id:           id,
+		typeID:       typeID,
+		Adapter:      adapter,
+		Logger:       logger,
+		eventBuilder: eventBuilder,
 	}
 }
