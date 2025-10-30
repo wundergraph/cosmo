@@ -14,7 +14,7 @@ import {
   GraphQLID,
   ConstArgumentNode,
 } from 'graphql';
-import { CONNECT_CONFIGURE_RESOLVER, CONTEXT } from './string-constants.js';
+import { CONNECT_FIELD_RESOLVER, CONTEXT } from './string-constants.js';
 
 /**
  * Type mapping from Kind enum values to their corresponding AST node types
@@ -351,7 +351,7 @@ export class SDLValidationVisitor {
     }
 
     this.addWarning(
-      `No @${CONNECT_CONFIGURE_RESOLVER} directive found on the field ${ctx.node.name.value} - falling back to ID field`,
+      `No @${CONNECT_FIELD_RESOLVER} directive found on the field ${ctx.node.name.value} - falling back to ID field`,
       ctx.node.loc,
     );
     const idFields =
@@ -364,7 +364,7 @@ export class SDLValidationVisitor {
         return;
       default:
         this.addError(
-          `Invalid context provided for resolver. Multiple fields with type ID found - provide a context with the fields you want to use in the @${CONNECT_CONFIGURE_RESOLVER} directive`,
+          `Invalid context provided for resolver. Multiple fields with type ID found - provide a context with the fields you want to use in the @${CONNECT_FIELD_RESOLVER} directive`,
           ctx.node.loc,
         );
     }
@@ -372,7 +372,7 @@ export class SDLValidationVisitor {
 
   private getResolverContext(node: FieldDefinitionNode): ConstArgumentNode | undefined {
     return node.directives
-      ?.find((directive) => directive.name.value === CONNECT_CONFIGURE_RESOLVER)
+      ?.find((directive) => directive.name.value === CONNECT_FIELD_RESOLVER)
       ?.arguments?.find((arg) => arg.name.value === CONTEXT);
   }
 

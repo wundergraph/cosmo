@@ -44,7 +44,7 @@ import {
 } from './naming-conventions.js';
 import { camelCase } from 'lodash-es';
 import { ProtoLock, ProtoLockManager } from './proto-lock.js';
-import { CONNECT_CONFIGURE_RESOLVER, CONTEXT, FIELD_ARGS, RESULT } from './string-constants.js';
+import { CONNECT_FIELD_RESOLVER, CONTEXT, FIELD_ARGS, RESULT } from './string-constants.js';
 
 /**
  * Maps GraphQL scalar types to Protocol Buffer types
@@ -1178,7 +1178,7 @@ Example:
       default:
         return {
           context: '',
-          error: `Multiple fields with type ID found - provide a context with the fields you want to use in the @${CONNECT_CONFIGURE_RESOLVER} directive`,
+          error: `Multiple fields with type ID found - provide a context with the fields you want to use in the @${CONNECT_FIELD_RESOLVER} directive`,
         };
     }
   }
@@ -1213,7 +1213,7 @@ Example:
       return undefined;
     }
 
-    return directives.find((d) => d.name.value === CONNECT_CONFIGURE_RESOLVER);
+    return directives.find((d) => d.name.value === CONNECT_FIELD_RESOLVER);
   }
 
   /**

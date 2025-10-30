@@ -14,7 +14,7 @@ import {
   CONDITION,
   CONFIGURE_CHILD_DESCRIPTIONS,
   CONFIGURE_DESCRIPTION,
-  CONNECT_CONFIGURE_RESOLVER,
+  CONNECT_FIELD_RESOLVER,
   CONTEXT,
   DEFAULT_EDFS_PROVIDER_ID,
   DEPRECATED,
@@ -186,7 +186,7 @@ export const CONFIGURE_DESCRIPTION_DEFINITION: DirectiveDefinitionNode = {
 };
 
 // directive @connect__fieldResolver(context: openfed__FieldSet!) on FIELD_DEFINITION
-export const CONNECT_CONFIGURE_RESOLVER_DEFINITION: DirectiveDefinitionNode = {
+export const CONNECT_FIELD_RESOLVER_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
@@ -196,7 +196,7 @@ export const CONNECT_CONFIGURE_RESOLVER_DEFINITION: DirectiveDefinitionNode = {
   ],
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER]),
-  name: stringToNameNode(CONNECT_CONFIGURE_RESOLVER),
+  name: stringToNameNode(CONNECT_FIELD_RESOLVER),
   repeatable: false,
 };
 

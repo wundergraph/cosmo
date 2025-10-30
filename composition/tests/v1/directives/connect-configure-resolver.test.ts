@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import {
-  CONNECT_CONFIGURE_RESOLVER,
+  CONNECT_FIELD_RESOLVER,
   CONTEXT,
   invalidDirectiveError,
   NormalizationFailure,
@@ -53,8 +53,8 @@ describe('@connect__fieldResolver tests', () => {
 
     expect(errors).toHaveLength(1);
     expect(errors[0]).toStrictEqual(
-      invalidDirectiveError(CONNECT_CONFIGURE_RESOLVER, `Foo.bar`, `1st`, [
-        undefinedRequiredArgumentsErrorMessage(CONNECT_CONFIGURE_RESOLVER, [CONTEXT], []),
+      invalidDirectiveError(CONNECT_FIELD_RESOLVER, `Foo.bar`, `1st`, [
+        undefinedRequiredArgumentsErrorMessage(CONNECT_FIELD_RESOLVER, [CONTEXT], []),
       ]),
     );
   });
