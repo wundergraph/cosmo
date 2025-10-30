@@ -382,3 +382,72 @@ func TestPubSubSubscriptionDataSource_InterfaceCompliance(t *testing.T) {
 	// Test that it implements HookableSubscriptionDataSource interface
 	var _ resolve.HookableSubscriptionDataSource = dataSource
 }
+
+func TestPubSubSubscriptionDataSource_SubscriptionOnStart_PanicRecovery(t *testing.T) {
+	panicErr := errors.New("panic error")
+
+	tests := []struct {
+		name            string
+		panicValue      any
+		expectedErr     error
+		expectedErrText string
+	}{
+		{
+			name:        "error type",
+			panicValue:  panicErr,
+			expectedErr: panicErr,
+		},
+		{
+			name:            "string type",
+			panicValue:      "panic string message",
+			expectedErrText: "panic string message",
+		},
+		{
+			name:            "other type",
+			panicValue:      42,
+			expectedErrText: "42",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockAdapter := NewMockProvider(t)
+			uniqueRequestIDFn := func(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
+				return nil
+			}
+
+			dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop(), testSubscriptionDataSourceEventBuilder)
+
+			// Add hook that panics
+			hook := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration, eventBuilder EventBuilderFn) error {
+				panic(tt.panicValue)
+			}
+
+			dataSource.SetHooks(Hooks{
+				SubscriptionOnStart: []SubscriptionOnStartFn{hook},
+			})
+
+			testConfig := testSubscriptionEventConfiguration{
+				Topic:   "test-topic",
+				Subject: "test-subject",
+			}
+			input, err := json.Marshal(testConfig)
+			assert.NoError(t, err)
+
+			hookCtx := resolve.StartupHookContext{
+				Context: context.Background(),
+				Updater: func(data []byte) {},
+			}
+
+			err = dataSource.SubscriptionOnStart(hookCtx, input)
+
+			assert.Error(t, err)
+			if tt.expectedErr != nil {
+				assert.Equal(t, tt.expectedErr, err)
+			}
+			if tt.expectedErrText != "" {
+				assert.Contains(t, err.Error(), tt.expectedErrText)
+			}
+		})
+	}
+}

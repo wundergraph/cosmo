@@ -719,3 +719,81 @@ func TestSubscriptionEventUpdater_UpdateSubscription_WithHooks_Error_LoggerWrite
 		return len(logObserver.FilterMessageSnippet("some handlers have thrown an error").TakeAll()) == 1
 	}, time.Second, 10*time.Millisecond, "expected one deduplicated error log")
 }
+
+func TestSubscriptionEventUpdater_OnReceiveEvents_PanicRecovery(t *testing.T) {
+	panicErr := errors.New("panic error")
+
+	tests := []struct {
+		name       string
+		panicValue any
+	}{
+		{
+			name:       "error type",
+			panicValue: panicErr,
+		},
+		{
+			name:       "string type",
+			panicValue: "panic string message",
+		},
+		{
+			name:       "other type",
+			panicValue: 42,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			core, logObserver := observer.New(zap.InfoLevel)
+			logger := zap.New(core)
+
+			mockUpdater := NewMockSubscriptionUpdater(t)
+			config := &testSubscriptionEventConfig{
+				providerID:   "test-provider",
+				providerType: ProviderTypeNats,
+				fieldName:    "testField",
+			}
+			events := []StreamEvent{
+				&testEvent{mutableTestEvent("test data")},
+			}
+
+			// Create hook that panics
+			testHook := func(ctx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
+				panic(tt.panicValue)
+			}
+
+			subId := resolve.SubscriptionIdentifier{ConnectionID: 1, SubscriptionID: 1}
+			mockUpdater.On("Subscriptions").Return(map[context.Context]resolve.SubscriptionIdentifier{
+				context.Background(): subId,
+			})
+			mockUpdater.On("CloseSubscription", resolve.SubscriptionCloseKindDownstreamServiceError, subId).Return()
+
+			updater := &subscriptionEventUpdater{
+				eventUpdater:                   mockUpdater,
+				subscriptionEventConfiguration: config,
+				hooks: Hooks{
+					OnReceiveEvents: []OnReceiveEventsFn{testHook},
+				},
+				logger: logger,
+			}
+
+			updater.Update(events)
+
+			// Wait for async processing to complete and assert panic was logged
+			assert.Eventually(t, func() bool {
+				logs := logObserver.FilterMessage("[Recovery from handler panic]").All()
+				return len(logs) == 1
+			}, 10*time.Millisecond, time.Millisecond, "expected panic recovery log")
+
+			// Assert that subscription was closed due to panic
+			mockUpdater.AssertCalled(t, "CloseSubscription", resolve.SubscriptionCloseKindDownstreamServiceError, subId)
+			mockUpdater.AssertNotCalled(t, "UpdateSubscription")
+
+			// Assert that panic was logged with correct details
+			logs := logObserver.FilterMessage("[Recovery from handler panic]").All()
+			assert.Len(t, logs, 1)
+			assert.Equal(t, zap.ErrorLevel, logs[0].Level)
+			assert.Equal(t, int64(1), logs[0].ContextMap()["subscription_id"])
+			assert.NotNil(t, logs[0].ContextMap()["error"])
+		})
+	}
+}

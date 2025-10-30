@@ -401,8 +401,14 @@ func TestApplyPublishEventHooks_NoHooks(t *testing.T) {
 	originalEvents := []StreamEvent{
 		&testEvent{mutableTestEvent("test data")},
 	}
+	provider := &PubSubProvider{
+		Logger: zap.NewNop(),
+		hooks: Hooks{
+			OnPublishEvents: []OnPublishEventsFn{},
+		},
+	}
 
-	result, err := applyPublishEventHooks(ctx, config, originalEvents, testPubSubEventBuilder, []OnPublishEventsFn{})
+	result, err := provider.applyPublishEventHooks(ctx, config, originalEvents)
 
 	assert.NoError(t, err)
 	assert.Equal(t, originalEvents, result)
@@ -426,7 +432,14 @@ func TestApplyPublishEventHooks_SingleHook_Success(t *testing.T) {
 		return modifiedEvents, nil
 	}
 
-	result, err := applyPublishEventHooks(ctx, config, originalEvents, testPubSubEventBuilder, []OnPublishEventsFn{hook})
+	provider := &PubSubProvider{
+		Logger: zap.NewNop(),
+		hooks: Hooks{
+			OnPublishEvents: []OnPublishEventsFn{hook},
+		},
+	}
+
+	result, err := provider.applyPublishEventHooks(ctx, config, originalEvents)
 
 	assert.NoError(t, err)
 	assert.Equal(t, modifiedEvents, result)
@@ -448,7 +461,14 @@ func TestApplyPublishEventHooks_SingleHook_Error(t *testing.T) {
 		return nil, hookError
 	}
 
-	result, err := applyPublishEventHooks(ctx, config, originalEvents, testPubSubEventBuilder, []OnPublishEventsFn{hook})
+	provider := &PubSubProvider{
+		Logger: zap.NewNop(),
+		hooks: Hooks{
+			OnPublishEvents: []OnPublishEventsFn{hook},
+		},
+	}
+
+	result, err := provider.applyPublishEventHooks(ctx, config, originalEvents)
 
 	assert.Error(t, err)
 	assert.Equal(t, hookError, err)
@@ -476,7 +496,14 @@ func TestApplyPublishEventHooks_MultipleHooks_Success(t *testing.T) {
 		return []StreamEvent{&testEvent{mutableTestEvent("final")}}, nil
 	}
 
-	result, err := applyPublishEventHooks(ctx, config, originalEvents, testPubSubEventBuilder, []OnPublishEventsFn{hook1, hook2, hook3})
+	provider := &PubSubProvider{
+		Logger: zap.NewNop(),
+		hooks: Hooks{
+			OnPublishEvents: []OnPublishEventsFn{hook1, hook2, hook3},
+		},
+	}
+
+	result, err := provider.applyPublishEventHooks(ctx, config, originalEvents)
 
 	assert.NoError(t, err)
 	assert.Len(t, result, 1)
@@ -505,9 +532,79 @@ func TestApplyPublishEventHooks_MultipleHooks_MiddleHookError(t *testing.T) {
 		return []StreamEvent{&testEvent{mutableTestEvent("final")}}, nil
 	}
 
-	result, err := applyPublishEventHooks(ctx, config, originalEvents, testPubSubEventBuilder, []OnPublishEventsFn{hook1, hook2, hook3})
+	provider := &PubSubProvider{
+		Logger: zap.NewNop(),
+		hooks: Hooks{
+			OnPublishEvents: []OnPublishEventsFn{hook1, hook2, hook3},
+		},
+	}
+
+	result, err := provider.applyPublishEventHooks(ctx, config, originalEvents)
 
 	assert.Error(t, err)
 	assert.Equal(t, middleHookError, err)
 	assert.Nil(t, result)
+}
+
+func TestApplyPublishEventHooks_PanicRecovery(t *testing.T) {
+	panicErr := errors.New("panic error")
+
+	tests := []struct {
+		name            string
+		panicValue      any
+		expectedErr     error
+		expectedErrText string
+	}{
+		{
+			name:        "error type",
+			panicValue:  panicErr,
+			expectedErr: panicErr,
+		},
+		{
+			name:            "string type",
+			panicValue:      "panic string message",
+			expectedErrText: "panic string message",
+		},
+		{
+			name:            "other type",
+			panicValue:      42,
+			expectedErrText: "42",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			config := &testPublishConfig{
+				providerID:   "test-provider",
+				providerType: ProviderTypeKafka,
+				fieldName:    "testField",
+			}
+			originalEvents := []StreamEvent{
+				&testEvent{mutableTestEvent("original")},
+			}
+
+			hook := func(ctx context.Context, cfg PublishEventConfiguration, events []StreamEvent, eventBuilder EventBuilderFn) ([]StreamEvent, error) {
+				panic(tt.panicValue)
+			}
+
+			provider := &PubSubProvider{
+				Logger: zap.NewNop(),
+				hooks: Hooks{
+					OnPublishEvents: []OnPublishEventsFn{hook},
+				},
+			}
+
+			result, err := provider.applyPublishEventHooks(ctx, config, originalEvents)
+
+			assert.Error(t, err)
+			if tt.expectedErr != nil {
+				assert.Equal(t, tt.expectedErr, err)
+			}
+			if tt.expectedErrText != "" {
+				assert.Contains(t, err.Error(), tt.expectedErrText)
+			}
+			assert.Equal(t, originalEvents, result)
+		})
+	}
 }
