@@ -118,6 +118,10 @@ func (e *EngineEvent) WriteCopy() datasource.MutableStreamEvent {
 	return e.data.Clone()
 }
 
+func (e *EngineEvent) Clone() datasource.MutableStreamEvent {
+	return slices.Clone(e.data)
+}
+
 type engineSubscriptionOnStartHookContext struct {
 	request        *http.Request
 	logger         *zap.Logger
