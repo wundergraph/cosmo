@@ -30,9 +30,9 @@ describe("{serviceName}Service.queryHello", () => {
     const client = createClient(address);
     try {
       const cases = [
-        { name: "Alice", wantId: "world-1", wantName: "Hello from {serviceName}Service plugin! Alice" },
-        { name: "", wantId: "world-2", wantName: "Hello from {serviceName}Service plugin! " },
-        { name: "John & Jane", wantId: "world-3", wantName: "Hello from {serviceName}Service plugin! John & Jane" },
+        { name: "Alice", wantId: "world-1", wantName: "Hello from {serviceName} plugin! Alice" },
+        { name: "", wantId: "world-2", wantName: "Hello from {serviceName} plugin! " },
+        { name: "John & Jane", wantId: "world-3", wantName: "Hello from {serviceName} plugin! John & Jane" },
       ];
 
       for (const c of cases) {
@@ -92,6 +92,6 @@ async function startPluginProcess(): Promise<[Subprocess, string]> {
 }
 
 function createClient(address: string): {serviceName}Client {
-  const target = `unix://${address}`;
+  const target = 'unix://' + address;
   return new {serviceName}Client(target, grpc.credentials.createInsecure());
 }
