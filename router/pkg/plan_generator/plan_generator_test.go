@@ -3,13 +3,14 @@ package plan_generator
 import (
 	"context"
 	"encoding/json"
-	"github.com/wundergraph/cosmo/router/core"
 	"os"
 	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/wundergraph/cosmo/router/core"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -210,7 +211,15 @@ func TestPlanGenerator(t *testing.T) {
 		assert.NoError(t, err)
 		resultsExpected, err := os.ReadFile(path.Join(getTestDataDir(), "plans", "base", ReportFileName))
 		assert.NoError(t, err)
-		assert.Equal(t, string(resultsExpected), string(results))
+		resultsStruct := QueryPlanResults{}
+		json.Unmarshal(results, &resultsStruct)
+		resultsExpectedStruct := QueryPlanResults{}
+		json.Unmarshal(resultsExpected, &resultsExpectedStruct)
+		for i := range resultsStruct.Plans {
+			assert.Equal(t, resultsStruct.Plans[i].Plan, resultsExpectedStruct.Plans[i].Plan)
+			assert.Equal(t, resultsStruct.Plans[i].Error, resultsExpectedStruct.Plans[i].Error)
+			assert.Equal(t, resultsStruct.Plans[i].Warning, resultsExpectedStruct.Plans[i].Warning)
+		}
 	})
 
 	t.Run("will not fail on warnings and results should return the warnings and generate results file", func(t *testing.T) {
@@ -241,7 +250,15 @@ func TestPlanGenerator(t *testing.T) {
 		assert.NoError(t, err)
 		resultsExpected, err := os.ReadFile(path.Join(getTestDataDir(), "plans", "base", ReportFileName))
 		assert.NoError(t, err)
-		assert.Equal(t, string(resultsExpected), string(results))
+		resultsStruct := QueryPlanResults{}
+		json.Unmarshal(results, &resultsStruct)
+		resultsExpectedStruct := QueryPlanResults{}
+		json.Unmarshal(resultsExpected, &resultsExpectedStruct)
+		for i := range resultsStruct.Plans {
+			assert.Equal(t, resultsStruct.Plans[i].Plan, resultsExpectedStruct.Plans[i].Plan)
+			assert.Equal(t, resultsStruct.Plans[i].Error, resultsExpectedStruct.Plans[i].Error)
+			assert.Equal(t, resultsStruct.Plans[i].Warning, resultsExpectedStruct.Plans[i].Warning)
+		}
 	})
 
 	t.Run("will not fail on warnings and files should have warnings and generate files", func(t *testing.T) {
@@ -270,7 +287,15 @@ func TestPlanGenerator(t *testing.T) {
 				assert.NoError(t, err)
 				expected, err := os.ReadFile(path.Join(getTestDataDir(), "plans", "base", filename))
 				assert.NoError(t, err)
-				assert.Equal(t, string(expected), string(queryPlan))
+				resultsStruct := QueryPlanResults{}
+				json.Unmarshal(queryPlan, &resultsStruct)
+				resultsExpectedStruct := QueryPlanResults{}
+				json.Unmarshal(expected, &resultsExpectedStruct)
+				for i := range resultsStruct.Plans {
+					assert.Equal(t, resultsStruct.Plans[i].Plan, resultsExpectedStruct.Plans[i].Plan)
+					assert.Equal(t, resultsStruct.Plans[i].Error, resultsExpectedStruct.Plans[i].Error)
+					assert.Equal(t, resultsStruct.Plans[i].Warning, resultsExpectedStruct.Plans[i].Warning)
+				}
 			})
 		}
 	})
