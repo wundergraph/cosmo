@@ -27,7 +27,11 @@ export function getHostPlatform(language: string) {
 
 const ALL_GO_PLATFORMS = ['linux-amd64', 'linux-arm64', 'darwin-amd64', 'darwin-arm64', 'windows-amd64'];
 
-const ALL_BUN_PLATFORMS_WITH_GO_MAPPING: Record<string, string> = {
+// Both bun-linux-x64 share the same bun-linux-x64-musl target name of linux-amd64, thus we prefer musl, since it seems to be
+// more compatible, users can still override this by explicitly specifying what they want
+const ALL_BUN_PLATFORMS = ['bun-linux-x64-musl', 'bun-linux-arm64-musl', 'bun-windows-x64', 'bun-darwin-arm64', 'bun-darwin-x64'];
+
+const ALL_BUN_PLATFORM_MAPPINGS: Record<string, string> = {
   'bun-linux-x64': 'linux-amd64',
   'bun-linux-arm64': 'linux-arm64',
   'bun-darwin-x64': 'darwin-amd64',
@@ -476,10 +480,6 @@ export async function generateGRPCCode(pluginDir: string, spinner: any, language
         throw new Error(`protoc-gen-js not found at ${protoGenJsPath}.`);
       }
 
-      // Make plugins executable
-      await chmod(protocGenTsPath, 0o755);
-      await chmod(protocGenGrpcPath, 0o755);
-
       await execa(
         protocPath,
         [
@@ -588,7 +588,7 @@ export async function buildTsBinaries(pluginDir: string, platforms: string[], de
 
   await Promise.all(
     platforms.map(async (originalPlatformArch: string) => {
-      const platformArch = ALL_BUN_PLATFORMS_WITH_GO_MAPPING[originalPlatformArch];
+      const platformArch = ALL_BUN_PLATFORM_MAPPINGS[originalPlatformArch];
       if (!platformArch) {
         throw new Error(`Unsupported platform for Bun: ${originalPlatformArch}`);
       }
@@ -691,8 +691,7 @@ export function normalizePlatforms(platforms: string[], allPlatforms: boolean, l
       return [...new Set([...platforms, ...ALL_GO_PLATFORMS])];
     }
     case 'ts': {
-      const allPlatforms = Object.keys(ALL_BUN_PLATFORMS_WITH_GO_MAPPING);
-      return [...new Set([...platforms, ...allPlatforms])];
+      return [...new Set([...platforms, ...ALL_BUN_PLATFORMS])];
     }
   }
 
