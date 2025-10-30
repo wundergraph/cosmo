@@ -7,7 +7,7 @@ status: Accepted
 
 # ADR - Cosmo Streams V1
 
-- **Author:** Alessandro Pagnin
+- **Author:** Alessandro Pagnin, Dominik Korittki
 - **Date:** 2025-07-16
 - **Status:** Accepted
 - **RFC:** ../rfcs/cosmo-streams-v1.md
@@ -33,23 +33,39 @@ const (
     ProviderTypeRedis ProviderType = "redis"
 }
 
-// OperationContext already exists, we just have to add the Variables() method
 type OperationContext interface {
     Name() string
-    // the variables are currently not available, so we need to expose them here
     Variables() *astjson.Value
 }
+
+// StreamEvents is a wrapper around a list of stream events providing safe iteration
+type StreamEvents struct {
+    evts []StreamEvent
+}
+
+func (e StreamEvents) All() iter.Seq2[int, StreamEvent]  // iterator for all events
+func (e StreamEvents) Len() int                          // returns the number of events
+func (e StreamEvents) Unsafe() []StreamEvent             // returns the underlying slice
+
+func NewStreamEvents(evts []StreamEvent) StreamEvents
 
 // each provider will have its own event type with custom fields
 // the StreamEvent interface is used to allow the hooks system to be provider-agnostic
 type StreamEvent interface {
     GetData() []byte
+    Clone() MutableStreamEvent  // returns a mutable copy of the event
+}
+
+// MutableStreamEvent is a stream event that can be modified
+type MutableStreamEvent interface {
+    StreamEvent
+    SetData([]byte)  // sets the data of the event
 }
 
 // SubscriptionEventConfiguration is the common interface for the subscription event configuration
 type SubscriptionEventConfiguration interface {
     ProviderID() string
-    ProviderType() string
+    ProviderType() ProviderType
     // the root field name of the subscription in the schema
     RootFieldName() string
 }
@@ -57,7 +73,7 @@ type SubscriptionEventConfiguration interface {
 // PublishEventConfiguration is the common interface for the publish event configuration
 type PublishEventConfiguration interface {
     ProviderID() string
-    ProviderType() string
+    ProviderType() ProviderType
     // the root field name of the mutation in the schema
     RootFieldName() string
 }
@@ -98,11 +114,15 @@ type StreamReceiveEventHandlerContext interface {
 }
 
 type StreamReceiveEventHandler interface {
-    // OnReceiveEvents is called each time a batch of events is received from the provider before delivering them to the client
-    // So for a single batch of events received from the provider, this hook will be called one time for each active subscription.
-    // It is important to optimize the logic inside this hook to avoid performance issues.
-    // Returning an error will result in a GraphQL error being returned to the client
-    OnReceiveEvents(ctx StreamReceiveEventHandlerContext, events []StreamEvent) ([]StreamEvent, error)
+    // OnReceiveEvents is called whenever a batch of events is received from a provider,
+    // before delivering them to clients.
+    // The hook will be called once for each active subscription, therefore it is advised to
+    // avoid resource heavy computation or blocking tasks whenever possible.
+    // The events argument contains all events from a batch and is shared between
+    // all active subscribers of these events.
+    // Use events.All() to iterate through them and event.Clone() to create mutable copies, when needed.
+    // Returning an error will result in the subscription being closed and the error being logged.
+    OnReceiveEvents(ctx StreamReceiveEventHandlerContext, events StreamEvents) (StreamEvents, error)
 }
 
 type StreamPublishEventHandlerContext interface {
@@ -119,9 +139,11 @@ type StreamPublishEventHandlerContext interface {
 }
 
 type StreamPublishEventHandler interface {
-    // OnPublishEvents is called each time a batch of events is going to be sent to the provider
-    // Returning an error will result in an error being returned and the client will see the mutation failing
-    OnPublishEvents(ctx StreamPublishEventHandlerContext, events []StreamEvent) ([]StreamEvent, error)
+    // OnPublishEvents is called each time a batch of events is going to be sent to a provider.
+    // The events argument contains all events from a batch.
+    // Use events.All() to iterate through them and event.Clone() to create mutable copies, when needed.
+    // Returning an error will result in a GraphQL error being returned to the client.
+    OnPublishEvents(ctx StreamPublishEventHandlerContext, events StreamEvents) (StreamEvents, error)
 }
 ```
 
@@ -144,7 +166,7 @@ When the new module system will be released, the Cosmo Streams hooks:
 
 # Example Modules
 
-__All examples are pseudocode and not tested, but they are as close as possible to the final implementation__
+__All examples reflect the current implementation and match the actual API__
 
 ## Filter and remap events
 
@@ -174,9 +196,10 @@ package mymodule
 
 import (
     "encoding/json"
+    "fmt"
     "slices"
     "github.com/wundergraph/cosmo/router/core"
-    "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
+    "github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 )
 
 func init() {
@@ -186,9 +209,9 @@ func init() {
 
 type MyModule struct {}
 
-func (m *MyModule) OnReceiveEvents(ctx StreamReceiveEventHandlerContext, events []core.StreamEvent) ([]core.StreamEvent, error) {
+func (m *MyModule) OnReceiveEvents(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
     // check if the provider is nats
-    if ctx.SubscriptionEventConfiguration().ProviderType() != pubsub.ProviderTypeNats {
+    if ctx.SubscriptionEventConfiguration().ProviderType() != datasource.ProviderTypeNats {
         return events, nil
     }
 
@@ -202,33 +225,27 @@ func (m *MyModule) OnReceiveEvents(ctx StreamReceiveEventHandlerContext, events 
 		return events, nil
 	}
 
-	newEvents := make([]core.StreamEvent, 0, len(events))
+	newEvents := make([]datasource.StreamEvent, 0, events.Len())
 
     // check if the client is authenticated
     if ctx.Authentication() == nil {
         // if the client is not authenticated, return no events
-        return newEvents, nil
+        return datasource.NewStreamEvents(newEvents), nil
     }
 
     // check if the client is allowed to subscribe to the stream
     clientAllowedEntitiesIds, found := ctx.Authentication().Claims()["allowedEntitiesIds"]
     if !found {
-        return newEvents, fmt.Errorf("client is not allowed to subscribe to the stream")
+        return datasource.NewStreamEvents(newEvents), fmt.Errorf("client is not allowed to subscribe to the stream")
     }
 
-    for _, evt := range events {
-        natsEvent, ok := evt.(*nats.NatsEvent)
-        if !ok {
-            newEvents = append(newEvents, evt)
-            continue
-        }
-
+    for _, evt := range events.All() {
         // decode the event data coming from the provider
         var dataReceived struct {
             EmployeeId string `json:"EmployeeId"`
             OtherField string `json:"OtherField"`
         }
-        err := json.Unmarshal(natsEvent.Data, &dataReceived)
+        err := json.Unmarshal(evt.GetData(), &dataReceived)
         if err != nil {
             return events, fmt.Errorf("error unmarshalling data: %w", err)
         }
@@ -252,14 +269,12 @@ func (m *MyModule) OnReceiveEvents(ctx StreamReceiveEventHandlerContext, events 
             return events, fmt.Errorf("error marshalling data: %w", err)
         }
 
-        // create the new event
-        newEvent := &nats.NatsEvent{
-            Data: dataToSendMarshalled,
-            Metadata: natsEvent.Metadata,
-        }
+        // create the new event by cloning the original and setting new data
+        newEvent := evt.Clone()
+        newEvent.SetData(dataToSendMarshalled)
         newEvents = append(newEvents, newEvent)
     }
-    return newEvents, nil
+    return datasource.NewStreamEvents(newEvents), nil
 }
 
 func (m *MyModule) Module() core.ModuleInfo {
@@ -316,10 +331,9 @@ The developer will need to write the custom module that will be used to check th
 package mymodule
 
 import (
-    "encoding/json"
-    "slices"
+    "net/http"
     "github.com/wundergraph/cosmo/router/core"
-    "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
+    "github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 )
 
 func init() {
@@ -329,9 +343,9 @@ func init() {
 
 type MyModule struct {}
 
-func (m *MyModule) SubscriptionOnStart(ctx SubscriptionOnStartHandlerContext) error {
+func (m *MyModule) SubscriptionOnStart(ctx core.SubscriptionOnStartHandlerContext) error {
     // check if the provider is nats
-    if ctx.SubscriptionEventConfiguration().ProviderType() != pubsub.ProviderTypeNats {
+    if ctx.SubscriptionEventConfiguration().ProviderType() != datasource.ProviderTypeNats {
         return nil
     }
 
@@ -348,21 +362,21 @@ func (m *MyModule) SubscriptionOnStart(ctx SubscriptionOnStartHandlerContext) er
     // check if the client is authenticated
     if ctx.Authentication() == nil {
         // if the client is not authenticated, return an error
-        return &core.HttpError{
-            Code: http.StatusUnauthorized,
-            Message: "client is not authenticated",
-            CloseSubscription: true,
-        }
+        return core.NewHttpGraphqlError(
+            "client is not authenticated",
+            http.StatusText(http.StatusUnauthorized),
+            http.StatusUnauthorized,
+        )
     }
 
     // check if the client is allowed to subscribe to the stream
-    clientAllowedEntitiesIds, found := ctx.Authentication().Claims()["readEmployee"]
+    _, found := ctx.Authentication().Claims()["readEmployee"]
     if !found {
-        return &core.HttpError{
-            Code: http.StatusForbidden,
-            Message: "client is not allowed to read employees",
-            CloseSubscription: true,
-        }
+        return core.NewHttpGraphqlError(
+            "client is not allowed to read employees",
+            http.StatusText(http.StatusForbidden),
+            http.StatusForbidden,
+        )
     }
 
     return nil
