@@ -42,9 +42,8 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 
 	for ctx, subId := range subscriptions {
 		semaphore <- struct{}{} // Acquire a slot
-		eventsCopy := copyEvents(events)
 		wg.Add(1)
-		go s.updateSubscription(ctx, &wg, errCh, semaphore, subId, eventsCopy)
+		go s.updateSubscription(ctx, &wg, errCh, semaphore, subId, events)
 	}
 
 	doneLogging := make(chan struct{})
@@ -69,14 +68,6 @@ func (s *subscriptionEventUpdater) Close(kind resolve.SubscriptionCloseKind) {
 
 func (s *subscriptionEventUpdater) SetHooks(hooks Hooks) {
 	s.hooks = hooks
-}
-
-func copyEvents(in []StreamEvent) []StreamEvent {
-	out := make([]StreamEvent, len(in))
-	for i := range in {
-		out[i] = in[i].Clone()
-	}
-	return out
 }
 
 func (s *subscriptionEventUpdater) updateSubscription(ctx context.Context, wg *sync.WaitGroup, errCh chan error, semaphore chan struct{}, subID resolve.SubscriptionIdentifier, events []StreamEvent) {

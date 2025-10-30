@@ -161,7 +161,7 @@ func buildProvider(ctx context.Context, provider config.KafkaEventSource, logger
 
 	eventBuilder := func(data []byte) datasource.StreamEvent {
 		return &Event{
-			Data: data,
+			evt: &MutableEvent{Data: data},
 		}
 	}
 

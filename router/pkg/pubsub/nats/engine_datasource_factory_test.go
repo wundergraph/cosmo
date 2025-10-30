@@ -21,7 +21,7 @@ import (
 
 // testNatsEventBuilder is a reusable event builder for tests
 func testNatsEventBuilder(data []byte) datasource.StreamEvent {
-	return &Event{Data: data}
+	return &Event{evt: &MutableEvent{Data: data}}
 }
 
 func TestNatsEngineDataSourceFactory(t *testing.T) {

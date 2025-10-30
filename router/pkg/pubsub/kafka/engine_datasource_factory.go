@@ -55,7 +55,7 @@ func (c *EngineDataSourceFactory) ResolveDataSourceInput(eventData []byte) (stri
 	evtCfg := publishData{
 		Provider:  c.providerId,
 		Topic:     c.topics[0],
-		Event:     Event{Data: eventData},
+		Event:     MutableEvent{Data: eventData},
 		FieldName: c.fieldName,
 	}
 
@@ -84,7 +84,7 @@ func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (datasource.Su
 	}
 
 	eventCreateFn := func(data []byte) datasource.StreamEvent {
-		return &Event{Data: data}
+		return &Event{evt: &MutableEvent{Data: data}}
 	}
 
 	return datasource.NewPubSubSubscriptionDataSource[*SubscriptionEventConfiguration](

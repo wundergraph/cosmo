@@ -28,8 +28,8 @@ import (
 
 type subscriptionHooks struct {
 	onStart                     []func(ctx SubscriptionOnStartHandlerContext) error
-	onPublishEvents             []func(ctx StreamPublishEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error)
-	onReceiveEvents             []func(ctx StreamReceiveEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error)
+	onPublishEvents             []func(ctx StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error)
+	onReceiveEvents             []func(ctx StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error)
 	maxConcurrentOnReceiveHooks int
 }
 

@@ -73,7 +73,7 @@ func (b *ProviderBuilder) BuildProvider(provider config.RedisEventSource, provid
 	adapter := NewProviderAdapter(b.ctx, b.logger, provider.URLs, provider.ClusterEnabled, providerOpts)
 	eventBuilder := func(data []byte) datasource.StreamEvent {
 		return &Event{
-			Data: data,
+			evt: &MutableEvent{Data: data},
 		}
 	}
 

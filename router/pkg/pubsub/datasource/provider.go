@@ -2,6 +2,8 @@ package datasource
 
 import (
 	"context"
+	"iter"
+	"slices"
 
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 )
@@ -46,7 +48,7 @@ type ProviderBuilder[P, E any] interface {
 	BuildEngineDataSourceFactory(data E, providers map[string]Provider) (EngineDataSourceFactory, error)
 }
 
-// ProviderType represents the type of pubsub provider
+// ProviderType represents the type of pubsub provider.
 type ProviderType string
 
 const (
@@ -55,12 +57,44 @@ const (
 	ProviderTypeRedis ProviderType = "redis"
 )
 
-// StreamEvent is a generic interface for all stream events
-// Each provider will have its own event type that implements this interface
-// there could be other common fields in the future, but for now we only have data
+// StreamEvents is a list of stream events coming from or going to event providers.
+type StreamEvents struct {
+	evts []StreamEvent
+}
+
+// All is an iterator, which can be used to iterate through all events.
+func (e StreamEvents) All() iter.Seq2[int, StreamEvent] {
+	return slices.All(e.evts)
+}
+
+// Len returns the number of events.
+func (e StreamEvents) Len() int {
+	return len(e.evts)
+}
+
+// Unsafe returns the underlying slice of stream events.
+// This slice is not thread safe and should not be modified directly.
+func (e StreamEvents) Unsafe() []StreamEvent {
+	return e.evts
+}
+
+func NewStreamEvents(evts []StreamEvent) StreamEvents {
+	return StreamEvents{evts: evts}
+}
+
+// A StreamEvent is a single event coming from or going to an event provider.
 type StreamEvent interface {
+	// GetData returns the payload data of the event.
 	GetData() []byte
-	Clone() StreamEvent
+	// Clone returns a mutable copy of the event.
+	Clone() MutableStreamEvent
+}
+
+// A MutableStreamEvent is a stream event that can be modified.
+type MutableStreamEvent interface {
+	StreamEvent
+	// SetData sets the data of the event.
+	SetData([]byte)
 }
 
 // SubscriptionEventConfiguration is the interface that all subscription event configurations must implement

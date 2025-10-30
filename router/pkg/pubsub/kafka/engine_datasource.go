@@ -15,18 +15,66 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
-// Event represents an event from Kafka
+// Event implements datasource.StreamEvent
 type Event struct {
+	evt *MutableEvent
+}
+
+func (e *Event) GetData() []byte {
+	if e.evt == nil {
+		return nil
+	}
+	return slices.Clone(e.evt.Data)
+}
+
+func (e *Event) GetKey() []byte {
+	if e.evt == nil {
+		return nil
+	}
+	return slices.Clone(e.evt.Key)
+}
+
+func (e *Event) GetHeaders() map[string][]byte {
+	if e.evt == nil {
+		return nil
+	}
+	return cloneHeaders(e.evt.Headers)
+}
+
+func (e Event) Clone() datasource.MutableStreamEvent {
+	return e.evt.Clone()
+}
+
+func cloneHeaders(src map[string][]byte) map[string][]byte {
+	if src == nil {
+		return nil
+	}
+	dst := make(map[string][]byte, len(src))
+	for k, v := range src {
+		dst[k] = slices.Clone(v)
+	}
+	return dst
+}
+
+// MutableEvent implements datasource.MutableEvent
+type MutableEvent struct {
 	Key     []byte            `json:"key"`
 	Data    json.RawMessage   `json:"data"`
 	Headers map[string][]byte `json:"headers"`
 }
 
-func (e *Event) GetData() []byte {
+func (e *MutableEvent) GetData() []byte {
 	return e.Data
 }
 
-func (e *Event) Clone() datasource.StreamEvent {
+func (e *MutableEvent) SetData(data []byte) {
+	if e == nil {
+		return
+	}
+	e.Data = data
+}
+
+func (e *MutableEvent) Clone() datasource.MutableStreamEvent {
 	e2 := *e
 	e2.Data = slices.Clone(e.Data)
 	e2.Headers = make(map[string][]byte, len(e.Headers))
@@ -61,10 +109,10 @@ func (s *SubscriptionEventConfiguration) RootFieldName() string {
 
 // publishData is a private type that is used to pass data from the engine to the provider
 type publishData struct {
-	Provider  string `json:"providerId"`
-	Topic     string `json:"topic"`
-	Event     Event  `json:"event"`
-	FieldName string `json:"rootFieldName"`
+	Provider  string       `json:"providerId"`
+	Topic     string       `json:"topic"`
+	Event     MutableEvent `json:"event"`
+	FieldName string       `json:"rootFieldName"`
 }
 
 // PublishEventConfiguration returns the publish event configuration from the publishData type
@@ -172,7 +220,7 @@ func (s *PublishDataSource) Load(ctx context.Context, input []byte, out *bytes.B
 		return err
 	}
 
-	if err := s.pubSub.Publish(ctx, publishData.PublishEventConfiguration(), []datasource.StreamEvent{&publishData.Event}); err != nil {
+	if err := s.pubSub.Publish(ctx, publishData.PublishEventConfiguration(), []datasource.StreamEvent{&Event{&publishData.Event}}); err != nil {
 		// err will not be returned but only logged inside PubSubProvider.Publish to avoid a "unable to fetch from subgraph" error
 		_, errWrite := io.WriteString(out, `{"success": false}`)
 		return errWrite
@@ -192,3 +240,4 @@ func (s *PublishDataSource) LoadWithFiles(ctx context.Context, input []byte, fil
 var _ datasource.SubscriptionEventConfiguration = (*SubscriptionEventConfiguration)(nil)
 var _ datasource.PublishEventConfiguration = (*PublishEventConfiguration)(nil)
 var _ datasource.StreamEvent = (*Event)(nil)
+var _ datasource.MutableStreamEvent = (*MutableEvent)(nil)

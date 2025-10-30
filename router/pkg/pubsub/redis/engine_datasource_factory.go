@@ -66,7 +66,7 @@ func (c *EngineDataSourceFactory) ResolveDataSourceInput(eventData []byte) (stri
 		Provider:  providerId,
 		Channel:   channel,
 		FieldName: c.fieldName,
-		Event:     Event{Data: eventData},
+		Event:     MutableEvent{Data: eventData},
 	}
 
 	return evtCfg.MarshalJSONTemplate()
@@ -95,7 +95,7 @@ func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (datasource.Su
 	}
 
 	eventCreateFn := func(data []byte) datasource.StreamEvent {
-		return &Event{Data: data}
+		return &Event{evt: &MutableEvent{data}}
 	}
 
 	return datasource.NewPubSubSubscriptionDataSource[*SubscriptionEventConfiguration](

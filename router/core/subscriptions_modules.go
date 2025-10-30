@@ -103,19 +103,35 @@ func (c *pubSubSubscriptionOnStartHookContext) NewEvent(data []byte) datasource.
 	return c.eventBuilder(data)
 }
 
+type MutableEngineEvent []byte
+
+func (e MutableEngineEvent) GetData() []byte {
+	return e
+}
+
+func (e MutableEngineEvent) SetData(data []byte) {
+	copy(e, data)
+}
+
+func (e MutableEngineEvent) Clone() datasource.MutableStreamEvent {
+	return slices.Clone(e)
+}
+
 // EngineEvent is the event used to write to the engine subscription
 type EngineEvent struct {
-	Data []byte
+	data MutableEngineEvent
 }
 
 func (e *EngineEvent) GetData() []byte {
-	return e.Data
+	return e.data
 }
 
-func (e *EngineEvent) Clone() datasource.StreamEvent {
-	return &EngineEvent{
-		Data: slices.Clone(e.Data),
-	}
+func (e *EngineEvent) WriteCopy() datasource.MutableStreamEvent {
+	return e.data.Clone()
+}
+
+func (e *EngineEvent) Clone() datasource.MutableStreamEvent {
+	return slices.Clone(e.data)
 }
 
 type engineSubscriptionOnStartHookContext struct {
@@ -149,9 +165,7 @@ func (c *engineSubscriptionOnStartHookContext) WriteEvent(event datasource.Strea
 }
 
 func (c *engineSubscriptionOnStartHookContext) NewEvent(data []byte) datasource.StreamEvent {
-	return &EngineEvent{
-		Data: data,
-	}
+	return &EngineEvent{data: data}
 }
 
 func (c *engineSubscriptionOnStartHookContext) SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration {
@@ -222,13 +236,15 @@ type StreamReceiveEventHandlerContext interface {
 }
 
 type StreamReceiveEventHandler interface {
-	// OnReceiveEvents is called each time a batch of events is received from the provider before delivering them to the
-	// client. So for a single batch of events received from the provider, this hook will be called one time for each
-	// active subscription.
-	// It is important to optimize the logic inside this hook to avoid performance issues.
-	// Returning an error will result in a GraphQL error being returned to the client, could be customized returning a
-	// StreamHookError.
-	OnReceiveEvents(ctx StreamReceiveEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error)
+	// OnReceiveEvents is called whenever a batch of events is received from a provider,
+	// before delivering them to clients.
+	// The hook will be called once for each active subscription, therefore it is adviced to
+	// avoid resource heavy computation or blocking tasks whenever possible.
+	// The events argument contains all events from a batch and is shared between
+	// all active subscribers of these events.
+	// Use events.All() to iterate through them and event.Clone() to create mutable copies, when needed.
+	// Returning an error will result in the subscription being closed and the error being logged.
+	OnReceiveEvents(ctx StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error)
 }
 
 type StreamPublishEventHandlerContext interface {
@@ -247,13 +263,15 @@ type StreamPublishEventHandlerContext interface {
 }
 
 type StreamPublishEventHandler interface {
-	// OnPublishEvents is called each time a batch of events is going to be sent to the provider
+	// OnPublishEvents is called each time a batch of events is going to be sent to a provider.
+	// The events argument contains all events from a batch.
+	// Use events.All() to iterate through them and event.Clone() to create mutable copies, when needed.
 	// Returning an error will result in a GraphQL error being returned to the client, could be customized returning a
 	// StreamHookError.
-	OnPublishEvents(ctx StreamPublishEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error)
+	OnPublishEvents(ctx StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error)
 }
 
-func NewPubSubOnPublishEventsHook(fn func(ctx StreamPublishEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error)) datasource.OnPublishEventsFn {
+func NewPubSubOnPublishEventsHook(fn func(ctx StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error)) datasource.OnPublishEventsFn {
 	if fn == nil {
 		return nil
 	}
@@ -269,7 +287,9 @@ func NewPubSubOnPublishEventsHook(fn func(ctx StreamPublishEventHandlerContext, 
 			eventBuilder:              eventBuilder,
 		}
 
-		return fn(hookCtx, evts)
+		newEvts, err := fn(hookCtx, datasource.NewStreamEvents(evts))
+
+		return newEvts.Unsafe(), err
 	}
 }
 
@@ -306,7 +326,7 @@ func (c *pubSubStreamReceiveEventHookContext) NewEvent(data []byte) datasource.S
 	return c.eventBuilder(data)
 }
 
-func NewPubSubOnReceiveEventsHook(fn func(ctx StreamReceiveEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error)) datasource.OnReceiveEventsFn {
+func NewPubSubOnReceiveEventsHook(fn func(ctx StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error)) datasource.OnReceiveEventsFn {
 	if fn == nil {
 		return nil
 	}
@@ -321,7 +341,7 @@ func NewPubSubOnReceiveEventsHook(fn func(ctx StreamReceiveEventHandlerContext, 
 			subscriptionEventConfiguration: subConf,
 			eventBuilder:                   eventBuilder,
 		}
-
-		return fn(hookCtx, evts)
+		newEvts, err := fn(hookCtx, datasource.NewStreamEvents(evts))
+		return newEvts.Unsafe(), err
 	}
 }

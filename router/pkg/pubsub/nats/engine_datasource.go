@@ -15,24 +15,70 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
-// Event represents an event from NATS
 type Event struct {
+	evt *MutableEvent
+}
+
+func (e Event) GetData() []byte {
+	if e.evt == nil {
+		return nil
+	}
+	return slices.Clone(e.evt.Data)
+}
+
+func (e Event) GetHeaders() map[string][]string {
+	if e.evt == nil || e.evt.Headers == nil {
+		return nil
+	}
+	return cloneHeaders(e.evt.Headers)
+}
+
+func (e Event) Clone() datasource.MutableStreamEvent {
+	return e.evt.Clone()
+}
+
+type MutableEvent struct {
 	Data    json.RawMessage     `json:"data"`
 	Headers map[string][]string `json:"headers"`
 }
 
-func (e *Event) GetData() []byte {
+func (e *MutableEvent) GetData() []byte {
+	if e == nil {
+		return nil
+	}
 	return e.Data
 }
 
-func (e *Event) Clone() datasource.StreamEvent {
-	e2 := *e
-	e2.Data = slices.Clone(e.Data)
-	e2.Headers = make(map[string][]string, len(e.Headers))
-	for k, v := range e.Headers {
-		e2.Headers[k] = slices.Clone(v)
+func (e *MutableEvent) SetData(data []byte) {
+	if e == nil {
+		return
 	}
-	return &e2
+	e.Data = slices.Clone(data)
+}
+
+func (e *MutableEvent) Clone() datasource.MutableStreamEvent {
+	if e == nil {
+		return nil
+	}
+	return &MutableEvent{
+		Data:    slices.Clone(e.Data),
+		Headers: cloneHeaders(e.Headers),
+	}
+}
+
+func (e *MutableEvent) ToStreamEvent() datasource.StreamEvent {
+	return &Event{evt: e}
+}
+
+func cloneHeaders(src map[string][]string) map[string][]string {
+	if src == nil {
+		return nil
+	}
+	dst := make(map[string][]string, len(src))
+	for k, v := range src {
+		dst[k] = slices.Clone(v)
+	}
+	return dst
 }
 
 type StreamConfiguration struct {
@@ -65,10 +111,10 @@ func (s *SubscriptionEventConfiguration) RootFieldName() string {
 
 // publishData is a private type that is used to pass data from the engine to the provider
 type publishData struct {
-	Provider  string `json:"providerId"`
-	Subject   string `json:"subject"`
-	Event     Event  `json:"event"`
-	FieldName string `json:"rootFieldName"`
+	Provider  string       `json:"providerId"`
+	Subject   string       `json:"subject"`
+	Event     MutableEvent `json:"event"`
+	FieldName string       `json:"rootFieldName"`
 }
 
 func (p *publishData) PublishEventConfiguration() datasource.PublishEventConfiguration {
@@ -164,7 +210,7 @@ func (s *NatsPublishDataSource) Load(ctx context.Context, input []byte, out *byt
 		return err
 	}
 
-	if err := s.pubSub.Publish(ctx, publishData.PublishEventConfiguration(), []datasource.StreamEvent{&publishData.Event}); err != nil {
+	if err := s.pubSub.Publish(ctx, publishData.PublishEventConfiguration(), []datasource.StreamEvent{Event{evt: &publishData.Event}}); err != nil {
 		// err will not be returned but only logged inside PubSubProvider.Publish to avoid a "unable to fetch from subgraph" error
 		_, errWrite := io.WriteString(out, `{"success": false}`)
 		return errWrite
@@ -197,7 +243,7 @@ func (s *NatsRequestDataSource) Load(ctx context.Context, input []byte, out *byt
 		return fmt.Errorf("adapter for provider %s is not of the right type", publishData.Provider)
 	}
 
-	return adapter.Request(ctx, publishData.PublishEventConfiguration(), &publishData.Event, out)
+	return adapter.Request(ctx, publishData.PublishEventConfiguration(), Event{evt: &publishData.Event}, out)
 }
 
 func (s *NatsRequestDataSource) LoadWithFiles(ctx context.Context, input []byte, files []*httpclient.FileUpload, out *bytes.Buffer) error {
@@ -208,3 +254,4 @@ func (s *NatsRequestDataSource) LoadWithFiles(ctx context.Context, input []byte,
 var _ datasource.SubscriptionEventConfiguration = (*SubscriptionEventConfiguration)(nil)
 var _ datasource.PublishEventConfiguration = (*PublishAndRequestEventConfiguration)(nil)
 var _ datasource.StreamEvent = (*Event)(nil)
+var _ datasource.MutableStreamEvent = (*MutableEvent)(nil)
