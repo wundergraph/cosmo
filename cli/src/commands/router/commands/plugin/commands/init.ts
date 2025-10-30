@@ -144,7 +144,7 @@ export default (opts: BaseCommandOptions) => {
         // Write router config to the project root
         await writeFile(resolve(projectDir, 'config.yaml'), ProjectTemplates.routerConfigYaml);
         await writeFile(resolve(projectDir, 'graph.yaml'), pupa(ProjectTemplates.graphYaml, { originalPluginName }));
-        await writeFile(resolve(projectDir, 'Makefile'), pupa(PluginTemplates.makefile, { originalPluginName }));
+        await writeFile(resolve(projectDir, 'Makefile'), pupa(ProjectTemplates.makefile, { originalPluginName }));
         await writeFile(resolve(projectDir, '.gitignore'), ProjectTemplates.gitignore);
         await writeFile(
           resolve(projectDir, 'README.md'),

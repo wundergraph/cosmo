@@ -4,4 +4,3 @@ subgraphs:
   - plugin:
       version: 0.0.1
       path: plugins/{originalPluginName}
-

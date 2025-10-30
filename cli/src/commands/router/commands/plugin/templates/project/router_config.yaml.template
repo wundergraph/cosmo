@@ -13,4 +13,3 @@ execution_config:
 plugins:
   enabled: true
   path: plugins
-
