@@ -21,11 +21,14 @@ type PubSubProvider struct {
 func (p *PubSubProvider) applyPublishEventHooks(ctx context.Context, cfg PublishEventConfiguration, events []StreamEvent) (currentEvents []StreamEvent, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			p.Logger.
-				WithOptions(zap.AddStacktrace(zapcore.ErrorLevel)).
-				Error("[Recovery from handler panic]",
-					zap.Any("error", r),
-				)
+			if p.Logger != nil {
+				p.Logger.
+					WithOptions(zap.AddStacktrace(zapcore.ErrorLevel)).
+					Error("[Recovery from handler panic]",
+						zap.Any("error", r),
+					)
+			}
+
 			switch v := r.(type) {
 			case error:
 				err = v
