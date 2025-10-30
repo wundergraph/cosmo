@@ -25,6 +25,7 @@ export function getOperationsPage(
           code: EnumStatusCode.ERR_ANALYTICS_DISABLED,
         },
         operations: [],
+        count: 0,
       };
     }
 
@@ -40,6 +41,7 @@ export function getOperationsPage(
           details: `Federated graph '${req.federatedGraphName}' not found`,
         },
         operations: [],
+        count: 0,
       };
     }
 
@@ -47,6 +49,8 @@ export function getOperationsPage(
     const view = await repo.getOperationsPage({
       organizationId: authContext.organizationId,
       graphId: graph.id,
+      limit: req.limit,
+      offset: req.offset,
     });
 
     return {

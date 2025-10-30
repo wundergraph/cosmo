@@ -23202,6 +23202,16 @@ export class GetOperationsPageRequest extends Message<GetOperationsPageRequest> 
    */
   federatedGraphName = "";
 
+  /**
+   * @generated from field: int32 limit = 3;
+   */
+  limit = 0;
+
+  /**
+   * @generated from field: int32 offset = 4;
+   */
+  offset = 0;
+
   constructor(data?: PartialMessage<GetOperationsPageRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -23212,6 +23222,8 @@ export class GetOperationsPageRequest extends Message<GetOperationsPageRequest> 
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 4, name: "offset", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOperationsPageRequest {
@@ -23245,6 +23257,11 @@ export class GetOperationsPageResponse extends Message<GetOperationsPageResponse
    */
   operations: OperationPageItem[] = [];
 
+  /**
+   * @generated from field: int32 count = 3;
+   */
+  count = 0;
+
   constructor(data?: PartialMessage<GetOperationsPageResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -23255,6 +23272,7 @@ export class GetOperationsPageResponse extends Message<GetOperationsPageResponse
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "operations", kind: "message", T: OperationPageItem, repeated: true },
+    { no: 3, name: "count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOperationsPageResponse {

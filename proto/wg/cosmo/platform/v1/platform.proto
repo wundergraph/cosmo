@@ -2959,11 +2959,14 @@ message OperationPageItem {
 message GetOperationsPageRequest {
   string namespace = 1;
   string federatedGraphName = 2;
+  int32 limit = 3;
+  int32 offset = 4;
 }
 
 message GetOperationsPageResponse {
   Response response = 1;
   repeated OperationPageItem operations = 2;
+  int32 count = 3;
 }
 
 message OperationDetailPageItem {

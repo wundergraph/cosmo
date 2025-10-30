@@ -6,26 +6,40 @@ export class OperationsRepository {
   /**
    * Get operations page data
    */
-  public async getOperationsPage({ organizationId, graphId }: { organizationId: string; graphId: string }) {
+  public async getOperationsPage({
+    organizationId,
+    graphId,
+    limit,
+    offset,
+  }: {
+    organizationId: string;
+    graphId: string;
+    limit: number;
+    offset: number;
+  }) {
     const query = `
       SELECT
         OperationHash as id,
         OperationName as operationName,
-        max(Timestamp) as timestamp
+        max(Timestamp) as timestamp,
+        count(*) OVER() as count 
       FROM ${this.client.database}.gql_metrics_operations
       WHERE OrganizationID = '${organizationId}'
         AND FederatedGraphID = '${graphId}'
       GROUP BY OperationHash, OperationName
       ORDER BY timestamp DESC
+      LIMIT ${limit} OFFSET ${offset}
     `;
 
     const result = await this.client.queryPromise<{
       id: string;
       operationName: string;
       timestamp: string;
-    }>(query, { organizationId, graphId });
+      count: number;
+    }>(query, { organizationId, graphId, limit, offset });
 
     return {
+      count: result.length > 0 ? Number(result[0].count) : 0,
       operations: result,
     };
   }

@@ -9,6 +9,7 @@ import { getOperationsPage } from "@wundergraph/cosmo-connect/dist/platform/v1/p
 import { formatDateTime } from "@/lib/format-date";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/loader";
+import { Pagination } from "@/components/ui/pagination";
 import {
   Table,
   TableBody,
@@ -52,12 +53,21 @@ const OperationsTableRow = ({
 };
 
 const OperationsPage: NextPageWithLayout = () => {
+  const router = useRouter();
   const graphContext = useContext(GraphContext);
+  const pageNumber = router.query.page
+    ? parseInt(router.query.page as string)
+    : 1;
+  const limit = Number.parseInt((router.query.pageSize as string) || "10");
 
   const { data, isLoading, error, refetch } = useQuery(getOperationsPage, {
     namespace: graphContext?.graph?.namespace,
     federatedGraphName: graphContext?.graph?.name,
-  });
+    limit: limit > 50 ? 50 : limit,
+    offset: (pageNumber - 1) * limit,
+  }, {
+      placeholderData: (prev) => prev,
+    });
 
   if (isLoading) return <Loader fullscreen />;
 
@@ -97,6 +107,8 @@ const OperationsPage: NextPageWithLayout = () => {
     );
   }
 
+  const noOfPages = Math.ceil(data.count / limit);
+
   return (
     <div className="flex h-full flex-col gap-y-3">
       <TableWrapper>
@@ -119,6 +131,7 @@ const OperationsPage: NextPageWithLayout = () => {
           </TableBody>
         </Table>
       </TableWrapper>
+      <Pagination limit={limit} noOfPages={noOfPages} pageNumber={pageNumber} />
     </div>
   );
 };
