@@ -20,7 +20,7 @@ func (r *mutationResolver) UpdateAvailability(ctx context.Context, employeeID in
 	conf := &nats.PublishAndRequestEventConfiguration{
 		Subject: r.GetPubSubName(fmt.Sprintf("employeeUpdated.%d", employeeID)),
 	}
-	evt := &nats.Event{Data: []byte(fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, employeeID))}
+	evt := &nats.MutableEvent{Data: []byte(fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, employeeID))}
 
 	err := r.NatsPubSubByProviderID["default"].Publish(ctx, conf, []datasource.StreamEvent{evt})
 	if err != nil {
@@ -30,7 +30,7 @@ func (r *mutationResolver) UpdateAvailability(ctx context.Context, employeeID in
 	conf2 := &nats.PublishAndRequestEventConfiguration{
 		Subject: r.GetPubSubName(fmt.Sprintf("employeeUpdatedMyNats.%d", employeeID)),
 	}
-	evt2 := &nats.Event{Data: []byte(fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, employeeID))}
+	evt2 := &nats.MutableEvent{Data: []byte(fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, employeeID))}
 	err = r.NatsPubSubByProviderID["my-nats"].Publish(ctx, conf2, []datasource.StreamEvent{evt2})
 
 	if err != nil {

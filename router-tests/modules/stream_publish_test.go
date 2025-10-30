@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -22,6 +23,53 @@ import (
 
 func TestPublishHook(t *testing.T) {
 	t.Parallel()
+
+	t.Run("Test Publish hook can't assert to mutable types", func(t *testing.T) {
+		t.Parallel()
+
+		var taPossible atomic.Bool
+		taPossible.Store(true)
+
+		cfg := config.Config{
+			Graph: config.Graph{},
+			Modules: map[string]interface{}{
+				"publishModule": stream_publish.PublishModule{
+					Callback: func(ctx core.StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
+						for _, evt := range events.All() {
+							_, ok := evt.(datasource.MutableStreamEvent)
+							if !ok {
+								taPossible.Store(false)
+							}
+						}
+						return events, nil
+					},
+				},
+			},
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
+			RouterOptions: []core.Option{
+				core.WithModulesConfig(cfg.Modules),
+				core.WithCustomModules(&stream_publish.PublishModule{}),
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `mutation { updateEmployeeMyKafka(employeeID: 3, update: {name: "name test"}) { success } }`,
+			})
+			require.JSONEq(t, `{"data":{"updateEmployeeMyKafka":{"success":false}}}`, resOne.Body)
+
+			requestLog := xEnv.Observer().FilterMessage("Publish Hook has been run")
+			assert.Len(t, requestLog.All(), 1)
+
+			assert.False(t, taPossible.Load(), "invalid type assertion was possible")
+		})
+	})
 
 	t.Run("Test Publish hook is called", func(t *testing.T) {
 		t.Parallel()
@@ -55,25 +103,13 @@ func TestPublishHook(t *testing.T) {
 		})
 	})
 
-	t.Run("Test Publish kafka hook allows to set headers", func(t *testing.T) {
+	t.Run("Test Publish hook is called with mutable event", func(t *testing.T) {
 		t.Parallel()
 
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
-				"publishModule": stream_publish.PublishModule{
-					Callback: func(ctx core.StreamPublishEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
-						for _, event := range events {
-							evt, ok := event.(*kafka.Event)
-							if !ok {
-								continue
-							}
-							evt.Headers["x-test"] = []byte("test")
-						}
-
-						return events, nil
-					},
-				},
+				"publishModule": stream_publish.PublishModule{},
 			},
 		}
 
@@ -89,21 +125,13 @@ func TestPublishHook(t *testing.T) {
 				LogLevel: zapcore.InfoLevel,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			events.KafkaEnsureTopicExists(t, xEnv, time.Second, "employeeUpdated")
 			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `mutation { updateEmployeeMyKafka(employeeID: 3, update: {name: "name test"}) { success } }`,
 			})
-			require.JSONEq(t, `{"data":{"updateEmployeeMyKafka":{"success":true}}}`, resOne.Body)
+			require.JSONEq(t, `{"data":{"updateEmployeeMyKafka":{"success":false}}}`, resOne.Body)
 
 			requestLog := xEnv.Observer().FilterMessage("Publish Hook has been run")
 			assert.Len(t, requestLog.All(), 1)
-
-			records, err := events.ReadKafkaMessages(xEnv, time.Second, "employeeUpdated", 1)
-			require.NoError(t, err)
-			require.Len(t, records, 1)
-			header := records[0].Headers[0]
-			require.Equal(t, "x-test", header.Key)
-			require.Equal(t, []byte("test"), header.Value)
 		})
 	})
 
@@ -114,7 +142,7 @@ func TestPublishHook(t *testing.T) {
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
 				"publishModule": stream_publish.PublishModule{
-					Callback: func(ctx core.StreamPublishEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
+					Callback: func(ctx core.StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
 						return events, core.NewHttpGraphqlError("test", http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 					},
 				},
@@ -159,7 +187,7 @@ func TestPublishHook(t *testing.T) {
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
 				"publishModule": stream_publish.PublishModule{
-					Callback: func(ctx core.StreamPublishEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
+					Callback: func(ctx core.StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
 						return events, core.NewHttpGraphqlError("test", http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 					},
 				},
@@ -213,7 +241,7 @@ func TestPublishHook(t *testing.T) {
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
 				"publishModule": stream_publish.PublishModule{
-					Callback: func(ctx core.StreamPublishEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
+					Callback: func(ctx core.StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
 						return events, core.NewHttpGraphqlError("test", http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 					},
 				},
@@ -257,26 +285,28 @@ func TestPublishHook(t *testing.T) {
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
 				"publishModule": stream_publish.PublishModule{
-					Callback: func(ctx core.StreamPublishEventHandlerContext, events []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
+					Callback: func(ctx core.StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
 						if ctx.PublishEventConfiguration().RootFieldName() != "updateEmployeeMyKafka" {
 							return events, nil
 						}
 
 						employeeID := ctx.Operation().Variables().GetInt("employeeID")
 
-						newEvents := []datasource.StreamEvent{}
-						for _, event := range events {
-							evt, ok := event.(*kafka.Event)
+						newEvents := make([]datasource.StreamEvent, 0, events.Len())
+						for _, event := range events.All() {
+							newEvt, ok := event.Clone().(*kafka.MutableEvent)
 							if !ok {
 								continue
 							}
-							if evt.Headers == nil {
-								evt.Headers = map[string][]byte{}
+							newEvt.SetData([]byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`))
+							if newEvt.Headers == nil {
+								newEvt.Headers = map[string][]byte{}
 							}
-							evt.Headers["x-employee-id"] = []byte(strconv.Itoa(employeeID))
-							newEvents = append(newEvents, event)
+							newEvt.Headers["x-employee-id"] = []byte(strconv.Itoa(employeeID))
+							newEvents = append(newEvents, newEvt)
 						}
-						return newEvents, nil
+
+						return datasource.NewStreamEvents(newEvents), nil
 					},
 				},
 			},

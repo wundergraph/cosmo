@@ -149,10 +149,12 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, cfg datasource.Subscrip
 							DestinationName:     msg.Subject(),
 						})
 
-						updater.Update([]datasource.StreamEvent{&Event{
-							Data:    msg.Data(),
-							Headers: msg.Headers(),
-						}})
+						updater.Update([]datasource.StreamEvent{
+							Event{evt: &MutableEvent{
+								Data:    msg.Data(),
+								Headers: map[string][]string(msg.Headers()),
+							}},
+						})
 
 						// Acknowledge the message after it has been processed
 						ackErr := msg.Ack()
@@ -195,10 +197,12 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, cfg datasource.Subscrip
 					ProviderType:        metric.ProviderTypeNats,
 					DestinationName:     msg.Subject,
 				})
-				updater.Update([]datasource.StreamEvent{&Event{
-					Data:    msg.Data,
-					Headers: msg.Header,
-				}})
+				updater.Update([]datasource.StreamEvent{
+					Event{evt: &MutableEvent{
+						Data:    msg.Data,
+						Headers: map[string][]string(msg.Header),
+					}},
+				})
 			case <-p.ctx.Done():
 				// When the application context is done, we stop the subscriptions
 				for _, subscription := range subscriptions {
@@ -245,7 +249,7 @@ func (p *ProviderAdapter) Publish(ctx context.Context, conf datasource.PublishEv
 	log.Debug("publish", zap.Int("event_count", len(events)))
 
 	for _, streamEvent := range events {
-		natsEvent, ok := streamEvent.(*Event)
+		natsEvent, ok := streamEvent.Clone().(*MutableEvent)
 		if !ok {
 			return datasource.NewError("invalid event type for NATS adapter", nil)
 		}
@@ -296,7 +300,7 @@ func (p *ProviderAdapter) Request(ctx context.Context, cfg datasource.PublishEve
 		return datasource.NewError("nats client not initialized", nil)
 	}
 
-	natsEvent, ok := event.(*Event)
+	natsEvent, ok := event.Clone().(*MutableEvent)
 	if !ok {
 		return datasource.NewError("invalid event type for NATS adapter", nil)
 	}

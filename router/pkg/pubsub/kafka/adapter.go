@@ -108,11 +108,15 @@ func (p *ProviderAdapter) topicPoller(ctx context.Context, client *kgo.Client, u
 					DestinationName:     r.Topic,
 				})
 
-				updater.Update([]datasource.StreamEvent{&Event{
-					Data:    r.Value,
-					Headers: headers,
-					Key:     r.Key,
-				}})
+				updater.Update([]datasource.StreamEvent{
+					&Event{
+						evt: &MutableEvent{
+							Data:    r.Value,
+							Headers: headers,
+							Key:     r.Key,
+						},
+					},
+				})
 			}
 		}
 	}
@@ -212,7 +216,7 @@ func (p *ProviderAdapter) Publish(ctx context.Context, conf datasource.PublishEv
 	var errMutex sync.Mutex
 
 	for _, streamEvent := range events {
-		kafkaEvent, ok := streamEvent.(*Event)
+		kafkaEvent, ok := streamEvent.Clone().(*MutableEvent)
 		if !ok {
 			return datasource.NewError("invalid event type for Kafka adapter", nil)
 		}

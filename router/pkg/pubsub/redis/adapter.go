@@ -128,9 +128,11 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 					ProviderType:        metric.ProviderTypeRedis,
 					DestinationName:     msg.Channel,
 				})
-				updater.Update([]datasource.StreamEvent{&Event{
-					Data: []byte(msg.Payload),
-				}})
+				updater.Update([]datasource.StreamEvent{
+					Event{evt: &MutableEvent{
+						Data: []byte(msg.Payload),
+					}},
+				})
 			case <-p.ctx.Done():
 				// When the application context is done, we stop the subscription if it is not already done
 				log.Debug("application context done, stopping subscription")
@@ -171,7 +173,7 @@ func (p *ProviderAdapter) Publish(ctx context.Context, conf datasource.PublishEv
 	log.Debug("publish", zap.Int("event_count", len(events)))
 
 	for _, streamEvent := range events {
-		redisEvent, ok := streamEvent.(*Event)
+		redisEvent, ok := streamEvent.Clone().(*MutableEvent)
 		if !ok {
 			return datasource.NewError("invalid event type for Redis adapter", nil)
 		}

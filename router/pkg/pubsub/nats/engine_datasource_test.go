@@ -25,9 +25,9 @@ func TestPublishAndRequestEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 		{
 			name: "simple configuration",
 			config: publishData{
-				Provider: "test-provider",
-				Subject:  "test-subject",
-				Event:    Event{Data: json.RawMessage(`{"message":"hello"}`)},
+				Provider:  "test-provider",
+				Subject:   "test-subject",
+				Event:     MutableEvent{Data: json.RawMessage(`{"message":"hello"}`)},
 				FieldName: "test-field",
 			},
 			wantPattern: `{"subject":"test-subject", "event": {"data": {"message":"hello"}}, "providerId":"test-provider", "rootFieldName":"test-field"}`,
@@ -35,9 +35,9 @@ func TestPublishAndRequestEventConfiguration_MarshalJSONTemplate(t *testing.T) {
 		{
 			name: "with special characters",
 			config: publishData{
-				Provider: "test-provider-id",
-				Subject:  "subject-with-hyphens",
-				Event:    Event{Data: json.RawMessage(`{"message":"special \"quotes\" here"}`)},
+				Provider:  "test-provider-id",
+				Subject:   "subject-with-hyphens",
+				Event:     MutableEvent{Data: json.RawMessage(`{"message":"special \"quotes\" here"}`)},
 				FieldName: "test-field",
 			},
 			wantPattern: `{"subject":"subject-with-hyphens", "event": {"data": {"message":"special \"quotes\" here"}}, "providerId":"test-provider-id", "rootFieldName":"test-field"}`,
