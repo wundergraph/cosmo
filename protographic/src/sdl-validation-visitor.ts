@@ -478,7 +478,7 @@ export class SDLValidationVisitor {
     if (visited.has(fieldName)) {
       return { hasCycle: true, path: currentPath.join('.') };
     }
-    
+
     currentPath.push(fieldName);
     visited.add(fieldName);
     for (const contextField of contextFields) {
