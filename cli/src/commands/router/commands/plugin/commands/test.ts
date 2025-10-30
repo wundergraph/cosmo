@@ -4,7 +4,7 @@ import { Command } from 'commander';
 import { resolve } from 'pathe';
 import Spinner from 'ora';
 import { BaseCommandOptions } from '../../../../../core/types/types.js';
-import { checkAndInstallTools, installGoDependencies, runGoTests } from '../toolchain.js';
+import { checkAndInstallTools, getLanguage, installGoDependencies, installTsDependencies, runGoTests } from '../toolchain.js';
 import { renderResultTree } from '../helper.js';
 
 export default (opts: BaseCommandOptions) => {
@@ -26,14 +26,26 @@ export default (opts: BaseCommandOptions) => {
     try {
       spinner.start();
 
+      const language = getLanguage(pluginDir);
+
       // Check and install tools if needed
       if (!options.skipToolsInstallation) {
         await checkAndInstallTools(options.forceToolsInstallation);
       }
 
-      spinner.text = 'Installing Go dependencies...';
+      switch (language) {
+        case 'go': {
+          spinner.text = 'Installing Go dependencies...';
+          await installGoDependencies(pluginDir, spinner);
+          break;
+        }
+        case 'ts': {
+          spinner.text = 'Installing Ts dependencies...';
+          await installTsDependencies(pluginDir, spinner);
+          break;
+        }
+      }
 
-      await installGoDependencies(pluginDir, spinner);
 
       const srcDir = resolve(pluginDir, 'src');
 

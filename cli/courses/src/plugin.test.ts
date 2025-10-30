@@ -3,10 +3,10 @@ import * as grpc from "@grpc/grpc-js";
 import type { Subprocess } from "bun";
 
 // Generated gRPC types
-import { {serviceName}Client } from '../generated/service_grpc_pb.js';
+import { CoursesServiceClient } from '../generated/service_grpc_pb.js';
 import { QueryHelloRequest, QueryHelloResponse } from "../generated/service_pb.js";
 
-function queryHello(client: {serviceName}Client, name: string): Promise<QueryHelloResponse> {
+function queryHello(client: CoursesServiceClient, name: string): Promise<QueryHelloResponse> {
   return new Promise((resolve, reject) => {
     const req = new QueryHelloRequest();
     req.setName(name);
@@ -24,15 +24,15 @@ function queryHello(client: {serviceName}Client, name: string): Promise<QueryHel
   });
 }
 
-describe("{serviceName}Service.queryHello", () => {
+describe("CoursesServiceService.queryHello", () => {
   test("returns greeting with sequential world IDs", async () => {
     const [subprocess, address] = await startPluginProcess();
     const client = createClient(address);
     try {
       const cases = [
-        { name: "Alice", wantId: "world-1", wantName: "Hello from {serviceName}Service plugin! Alice" },
-        { name: "", wantId: "world-2", wantName: "Hello from {serviceName}Service plugin! " },
-        { name: "John & Jane", wantId: "world-3", wantName: "Hello from {serviceName}Service plugin! John & Jane" },
+        { name: "Alice", wantId: "world-1", wantName: "Hello from CoursesServiceService plugin! Alice" },
+        { name: "", wantId: "world-2", wantName: "Hello from CoursesServiceService plugin! " },
+        { name: "John & Jane", wantId: "world-3", wantName: "Hello from CoursesServiceService plugin! John & Jane" },
       ];
 
       for (const c of cases) {
@@ -91,7 +91,7 @@ async function startPluginProcess(): Promise<[Subprocess, string]> {
   return [proc, address];
 }
 
-function createClient(address: string): {serviceName}Client {
-  const target = `unix://${address}`;
-  return new {serviceName}Client(target, grpc.credentials.createInsecure());
+function createClient(address: string): CoursesServiceClient {
+  const target = `unix://$\\{address\\}`;
+  return new CoursesServiceClient(target, grpc.credentials.createInsecure());
 }

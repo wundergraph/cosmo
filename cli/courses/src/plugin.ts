@@ -1,0 +1,52 @@
+import * as grpc from '@grpc/grpc-js';
+import { PluginServer } from './plugin-server';
+
+// Import generated gRPC code
+import { 
+  CoursesServiceService, 
+  ICoursesServiceServer 
+} from '../generated/service_grpc_pb.js';
+import { 
+  QueryHelloRequest, 
+  QueryHelloResponse, 
+  World 
+} from '../generated/service_pb.js';
+
+// Thread-safe counter for generating unique IDs using atomics
+const counterBuffer = new SharedArrayBuffer(4);
+const counterArray = new Int32Array(counterBuffer);
+Atomics.store(counterArray, 0, 0); // Initialize counter to 0
+
+// Define the service implementation using the generated types
+const CoursesServiceImplementation: ICoursesServiceServer = {
+  queryHello: (call: grpc.ServerUnaryCall<QueryHelloRequest, QueryHelloResponse>, callback: grpc.sendUnaryData<QueryHelloResponse>) => {
+    const name = call.request.getName();
+
+    const currentCounter = Atomics.add(counterArray, 0, 1) + 1;
+
+    const world = new World();
+    world.setId(`world-`+currentCounter);
+    world.setName(`Hello from CoursesService plugin! `+ name);
+
+    const response = new QueryHelloResponse();
+    response.setHello(world);
+
+    callback(null, response);
+  }
+};
+
+function run() {
+  // Create the plugin server (health check automatically initialized)
+  const pluginServer = new PluginServer();
+  
+  // Add the CoursesService service
+  pluginServer.addService(CoursesServiceService, CoursesServiceImplementation);
+
+  // Start the server
+  pluginServer.serve().catch((error) => {
+    console.error('Failed to start plugin server:', error);
+    process.exit(1);
+  });
+}
+
+run();

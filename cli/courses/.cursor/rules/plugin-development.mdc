@@ -1,0 +1,115 @@
+---
+description: Courses Plugin Guide
+globs: src/**
+alwaysApply: false
+---
+
+# Courses Plugin Development Guide
+
+You are an expert in developing Cosmo Router plugins. You are given a GraphQL schema, and you need to implement the TypeScript code for the plugin.
+Your goal is to implement the plugin in a way that is easy to understand and maintain. You add tests to ensure the plugin works as expected.
+
+All make commands need to be run from the plugin directory `/Users/milindadias/Work/cosmo/cli/courses`.
+
+## Plugin Structure
+
+A plugin is structured as follows:
+
+```
+plugins/courses/
+├── Makefile                     # Build automation
+├── package.json                 # Node.js package definition
+├── tsconfig.json                # TypeScript configuration
+├── src/
+│   ├── schema.graphql           # GraphQL schema (API contract)
+│   ├── plugin.ts                # Plugin implementation
+│   ├── plugin.test.ts           # Tests for the plugin
+│   ├── plugin-server.ts         # gRPC server setup
+│   └── fs-polyfill.ts           # File system polyfill for bundling
+├── generated/                   # Auto-generated files (DO NOT EDIT)
+│   ├── service.proto            # Generated Protocol Buffers
+│   ├── service_pb.js            # Generated JavaScript structures
+│   ├── service_grpc_pb.js       # Generated gRPC service
+│   ├── service.proto.lock.json  # Generated Protobuf lock file
+│   └── service_pb.d.ts          # TypeScript definitions
+└── bin/                         # Compiled binaries
+    └── plugin                   # The compiled plugin binary
+```
+
+## Development Workflow
+
+1. When modifying the GraphQL schema in `src/schema.graphql`, you need to regenerate the code with `make generate`.
+2. Look into the generated code in `generated/service.proto`, `generated/service_pb.js`, and `generated/service_grpc_pb.js` to understand the updated API contract and service methods.
+3. Implement the new RPC methods in `src/plugin.ts`.
+4. Add tests to `src/plugin.test.ts` to ensure the plugin works as expected. You need to run `make test` to ensure the tests pass.
+5. Finally, build the plugin with `make build` to ensure the plugin is working as expected.
+6. Your job is done after successfully building the plugin. Don't verify if the binary was created. The build command will take care of that.
+
+**Important**: Never manipulate the files inside `generated` directory yourself. Don't touch the `service.proto`, `service.proto.lock.json`, `service_pb.js`, `service_grpc_pb.js` and TypeScript definition files.
+
+You can update the TypeScript dependencies by running `bun install` to ensure the dependencies are up to date.
+
+## Implementation Pattern
+
+### Service Integration
+
+If you need to integrate with other HTTP services, you should use the built-in `fetch` API or a library like `axios`.
+Always prefer a real integration over mocking. In the tests, you can mock the external service by bootstrapping an HTTP server that returns the expected response.
+In tests, focus on a well-defined contract and the expected behavior of your service. Structure tests by endpoint, use-cases and use descriptive test names.
+
+Here is an example of how to use the `fetch` API:
+
+```typescript
+// Initialize HTTP client for external API calls
+const baseURL = "<replace_with_base_url>";
+const headers = {
+  'Content-Type': 'application/json',
+  // Add other headers as needed
+};
+
+// A HTTP GET request to the external API
+const getResponse = await fetch(`<replace_with_base_url>/<replace_with_path>`, {
+  method: 'GET',
+  headers,
+});
+const getData = await getResponse.json();
+
+// A HTTP POST request to the external API with JSON payload
+const postResponse = await fetch(`<replace_with_base_url>/<replace_with_path>`, {
+  method: 'POST',
+  headers,
+  body: JSON.stringify(payload),
+});
+const postData = await postResponse.json();
+
+// Check for success
+if (postResponse.ok) {
+  // StatusCode >= 200 && StatusCode < 300
+  console.log('Success:', postData);
+}
+```
+
+### gRPC Service Implementation
+
+Your plugin implementation should follow the pattern of implementing the gRPC service interface generated from the GraphQL schema. The service methods receive requests and return responses using the generated protobuf types.
+
+```typescript
+import { ICoursesServiceServer } from '../generated/service_grpc_pb.js';
+import { QueryRequest, QueryResponse } from '../generated/service_pb.js';
+
+const CoursesServiceImplementation: ICoursesServiceServer = {
+  queryMethod: (call, callback) => {
+    // Access request data
+    const input = call.request.getFieldName();
+    
+    // Create and populate response
+    const response = new QueryResponse();
+    response.setFieldName(value);
+    
+    // Send response
+    callback(null, response);
+  }
+};
+```
+
+
