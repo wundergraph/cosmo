@@ -103,35 +103,40 @@ func (c *pubSubSubscriptionOnStartHookContext) NewRawEvent(data []byte) datasour
 	return c.eventBuilder(data)
 }
 
-type MutableEngineEvent []byte
-
-func (e MutableEngineEvent) GetData() []byte {
-	return e
+// MutableEngineEvent is comparable to EngineEvent, but is mutable.
+type MutableEngineEvent struct {
+	data []byte
 }
 
-func (e MutableEngineEvent) SetData(data []byte) {
-	copy(e, data)
+func (e *MutableEngineEvent) GetData() []byte {
+	return e.data
 }
 
-func (e MutableEngineEvent) Clone() datasource.MutableStreamEvent {
-	return slices.Clone(e)
+func (e *MutableEngineEvent) SetData(data []byte) {
+	e.data = data
+}
+
+func (e *MutableEngineEvent) Clone() datasource.MutableStreamEvent {
+	return &MutableEngineEvent{data: slices.Clone(e.data)}
 }
 
 // EngineEvent is the event used to write to the engine subscription
 type EngineEvent struct {
-	data MutableEngineEvent
+	evt *MutableEngineEvent
 }
 
 func (e *EngineEvent) GetData() []byte {
-	return e.data
-}
-
-func (e *EngineEvent) WriteCopy() datasource.MutableStreamEvent {
-	return e.data.Clone()
+	if e.evt == nil {
+		return nil
+	}
+	return slices.Clone(e.evt.data)
 }
 
 func (e *EngineEvent) Clone() datasource.MutableStreamEvent {
-	return slices.Clone(e.data)
+	if e.evt == nil {
+		return &MutableEngineEvent{}
+	}
+	return e.evt.Clone()
 }
 
 type engineSubscriptionOnStartHookContext struct {
@@ -165,7 +170,7 @@ func (c *engineSubscriptionOnStartHookContext) WriteEvent(event datasource.Strea
 }
 
 func (c *engineSubscriptionOnStartHookContext) NewRawEvent(data []byte) datasource.MutableStreamEvent {
-	return MutableEngineEvent(data)
+	return &MutableEngineEvent{data: data}
 }
 
 func (c *engineSubscriptionOnStartHookContext) SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration {
