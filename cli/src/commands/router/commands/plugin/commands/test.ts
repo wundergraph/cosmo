@@ -25,8 +25,6 @@ export default (opts: BaseCommandOptions) => {
     false,
   );
 
-
-
   command.action(async (directory, options) => {
     const startTime = performance.now();
     const pluginDir = resolve(directory);
