@@ -230,8 +230,13 @@ func TestProvider_Publish_WithHooks_Success(t *testing.T) {
 		&testEvent{mutableTestEvent("modified data")},
 	}
 
+	var eventBuilderExists bool
+
 	// Define hook that modifies events
 	testHook := func(ctx context.Context, cfg PublishEventConfiguration, events []StreamEvent, eventBuilder EventBuilderFn) ([]StreamEvent, error) {
+		if eventBuilder != nil {
+			eventBuilderExists = true
+		}
 		return modifiedEvents, nil
 	}
 
@@ -247,6 +252,7 @@ func TestProvider_Publish_WithHooks_Success(t *testing.T) {
 	err := provider.Publish(context.Background(), config, originalEvents)
 
 	assert.NoError(t, err)
+	assert.True(t, eventBuilderExists)
 }
 
 func TestProvider_Publish_WithHooks_HookError(t *testing.T) {

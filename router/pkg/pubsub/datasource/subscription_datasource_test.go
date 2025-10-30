@@ -213,14 +213,22 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnStart_WithHooks(t *testing.T
 	// Add subscription start hooks
 	hook1Called := false
 	hook2Called := false
+	hook1EventBuilderExists := false
+	hook2EventBuilderExists := false
 
 	hook1 := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration, eventBuilder EventBuilderFn) error {
 		hook1Called = true
+		if eventBuilder != nil {
+			hook1EventBuilderExists = true
+		}
 		return nil
 	}
 
 	hook2 := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration, eventBuilder EventBuilderFn) error {
 		hook2Called = true
+		if eventBuilder != nil {
+			hook2EventBuilderExists = true
+		}
 		return nil
 	}
 
@@ -244,6 +252,8 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnStart_WithHooks(t *testing.T
 	assert.NoError(t, err)
 	assert.True(t, hook1Called)
 	assert.True(t, hook2Called)
+	assert.True(t, hook1EventBuilderExists)
+	assert.True(t, hook2EventBuilderExists)
 }
 
 func TestPubSubSubscriptionDataSource_SubscriptionOnStart_HookReturnsClose(t *testing.T) {
