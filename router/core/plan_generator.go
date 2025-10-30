@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 
@@ -53,6 +54,28 @@ type Planner struct {
 	operationValidator *astvalidation.OperationValidator
 }
 
+type OperationTimes struct {
+	ParseTime       time.Duration
+	NormalizeTime   time.Duration
+	ValidateTime    time.Duration
+	PostProcessTime time.Duration
+	PlanTime        time.Duration
+}
+
+func (ot *OperationTimes) TotalTime() time.Duration {
+	return ot.ParseTime + ot.NormalizeTime + ot.ValidateTime + ot.PostProcessTime + ot.PlanTime
+}
+
+func (ot OperationTimes) Merge(other OperationTimes) OperationTimes {
+	return OperationTimes{
+		ParseTime:       ot.ParseTime + other.ParseTime,
+		NormalizeTime:   ot.NormalizeTime + other.NormalizeTime,
+		ValidateTime:    ot.ValidateTime + other.ValidateTime,
+		PostProcessTime: ot.PostProcessTime + other.PostProcessTime,
+		PlanTime:        ot.PlanTime + other.PlanTime,
+	}
+}
+
 type PlanOutputFormat string
 
 const (
@@ -75,57 +98,76 @@ func NewPlanner(planConfiguration *plan.Configuration, definition *ast.Document,
 }
 
 // PlanOperation creates a query plan from an operation file in a pretty-printed text or JSON format
-func (pl *Planner) PlanOperation(operationFilePath string, outputFormat PlanOutputFormat) (string, error) {
-	operation, err := pl.ParseAndPrepareOperation(operationFilePath)
+func (pl *Planner) PlanOperation(operationFilePath string, outputFormat PlanOutputFormat) (string, OperationTimes, error) {
+	operation, opTimes, err := pl.ParseAndPrepareOperation(operationFilePath)
 	if err != nil {
-		return "", err
+		return "", OperationTimes{}, err
 	}
 
-	rawPlan, err := pl.PlanPreparedOperation(operation)
+	start := time.Now()
+	rawPlan, opTimes2, err := pl.PlanPreparedOperation(operation)
+	opTimes = opTimes.Merge(opTimes2)
 	if err != nil {
-		return "", fmt.Errorf("failed to plan operation: %w", err)
+		return "", opTimes, fmt.Errorf("failed to plan operation: %w", err)
 	}
+	opTimes.PlanTime = time.Since(start)
 
 	switch outputFormat {
 	case PlanOutputFormatText:
-		return rawPlan.PrettyPrint(), nil
+		return rawPlan.PrettyPrint(), opTimes, nil
 	case PlanOutputFormatJSON:
 		marshal, err := json.Marshal(rawPlan)
 		if err != nil {
-			return "", fmt.Errorf("failed to marshal raw plan: %w", err)
+			return "", opTimes, fmt.Errorf("failed to marshal raw plan: %w", err)
 		}
-		return string(marshal), nil
+		return string(marshal), opTimes, nil
 	}
 
-	return "", fmt.Errorf("invalid outputFormat specified: %q", outputFormat)
+	return "", opTimes, fmt.Errorf("invalid outputFormat specified: %q", outputFormat)
 }
 
 // ParseAndPrepareOperation parses, normalizes and validates the operation
-func (pl *Planner) ParseAndPrepareOperation(operationFilePath string) (*ast.Document, error) {
+func (pl *Planner) ParseAndPrepareOperation(operationFilePath string) (*ast.Document, OperationTimes, error) {
+	start := time.Now()
 	operation, err := pl.parseOperation(operationFilePath)
+	parseTime := time.Since(start)
 	if err != nil {
-		return nil, &PlannerOperationValidationError{err: err}
+		return nil, OperationTimes{ParseTime: parseTime}, &PlannerOperationValidationError{err: err}
 	}
 
-	return pl.PrepareOperation(operation)
+	operation, opTimes, err := pl.PrepareOperation(operation)
+	opTimes.ParseTime = parseTime
+	if err != nil {
+		return nil, opTimes, err
+	}
+
+	return operation, opTimes, nil
 }
 
 // PrepareOperation normalizes and validates the operation
-func (pl *Planner) PrepareOperation(operation *ast.Document) (*ast.Document, error) {
+func (pl *Planner) PrepareOperation(operation *ast.Document) (*ast.Document, OperationTimes, error) {
 	operationName := findOperationName(operation)
 	if operationName == nil {
-		return nil, &PlannerOperationValidationError{err: errors.New("operation name not found")}
+		return nil, OperationTimes{}, &PlannerOperationValidationError{err: errors.New("operation name not found")}
 	}
 
+	opTimes := OperationTimes{}
+
+	start := time.Now()
 	if err := pl.normalizeOperation(operation, operationName); err != nil {
-		return nil, &PlannerOperationValidationError{err: err}
+		opTimes.NormalizeTime = time.Since(start)
+		return nil, opTimes, &PlannerOperationValidationError{err: err}
 	}
+	opTimes.NormalizeTime = time.Since(start)
 
+	start = time.Now()
 	if err := pl.validateOperation(operation); err != nil {
-		return nil, &PlannerOperationValidationError{err: err}
+		opTimes.ValidateTime = time.Since(start)
+		return nil, opTimes, &PlannerOperationValidationError{err: err}
 	}
+	opTimes.ValidateTime = time.Since(start)
 
-	return operation, nil
+	return operation, opTimes, nil
 }
 
 func (pl *Planner) normalizeOperation(operation *ast.Document, operationName []byte) (err error) {
@@ -160,7 +202,7 @@ func (pl *Planner) normalizeOperation(operation *ast.Document, operationName []b
 }
 
 // PlanPreparedOperation creates a query plan from a normalized and validated operation
-func (pl *Planner) PlanPreparedOperation(operation *ast.Document) (planNode *resolve.FetchTreeQueryPlanNode, err error) {
+func (pl *Planner) PlanPreparedOperation(operation *ast.Document) (planNode *resolve.FetchTreeQueryPlanNode, opTimes OperationTimes, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("panic during plan generation: %v", r)
@@ -172,25 +214,30 @@ func (pl *Planner) PlanPreparedOperation(operation *ast.Document) (planNode *res
 	operationName := findOperationName(operation)
 
 	if operationName == nil {
-		return nil, errors.New("operation name not found")
+		return nil, opTimes, errors.New("operation name not found")
 	}
 
 	// create and postprocess the plan
+	start := time.Now()
 	preparedPlan := pl.planner.Plan(operation, pl.definition, string(operationName), &report, plan.IncludeQueryPlanInResponse())
+	opTimes.PlanTime = time.Since(start)
 	if report.HasErrors() {
-		return nil, errors.New(report.Error())
+		return nil, opTimes, errors.New(report.Error())
 	}
+
+	start = time.Now()
 	post := postprocess.NewProcessor()
 	post.Process(preparedPlan)
+	opTimes.PostProcessTime = time.Since(start)
 
 	switch p := preparedPlan.(type) {
 	case *plan.SynchronousResponsePlan:
-		return p.Response.Fetches.QueryPlan(), nil
+		return p.Response.Fetches.QueryPlan(), opTimes, nil
 	case *plan.SubscriptionResponsePlan:
-		return p.Response.Response.Fetches.QueryPlan(), nil
+		return p.Response.Response.Fetches.QueryPlan(), opTimes, nil
 	}
 
-	return &resolve.FetchTreeQueryPlanNode{}, nil
+	return &resolve.FetchTreeQueryPlanNode{}, opTimes, nil
 }
 
 func (pl *Planner) validateOperation(operation *ast.Document) (err error) {
