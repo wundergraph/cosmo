@@ -23407,3 +23407,89 @@ export class UnlinkSubgraphResponse extends Message<UnlinkSubgraphResponse> {
   }
 }
 
+/**
+ * @generated from message wg.cosmo.platform.v1.VerifyAPIKeyGraphAccessRequest
+ */
+export class VerifyAPIKeyGraphAccessRequest extends Message<VerifyAPIKeyGraphAccessRequest> {
+  /**
+   * @generated from field: string federatedGraphId = 1;
+   */
+  federatedGraphId = "";
+
+  constructor(data?: PartialMessage<VerifyAPIKeyGraphAccessRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.VerifyAPIKeyGraphAccessRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "federatedGraphId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): VerifyAPIKeyGraphAccessRequest {
+    return new VerifyAPIKeyGraphAccessRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): VerifyAPIKeyGraphAccessRequest {
+    return new VerifyAPIKeyGraphAccessRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): VerifyAPIKeyGraphAccessRequest {
+    return new VerifyAPIKeyGraphAccessRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: VerifyAPIKeyGraphAccessRequest | PlainMessage<VerifyAPIKeyGraphAccessRequest> | undefined, b: VerifyAPIKeyGraphAccessRequest | PlainMessage<VerifyAPIKeyGraphAccessRequest> | undefined): boolean {
+    return proto3.util.equals(VerifyAPIKeyGraphAccessRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.VerifyAPIKeyGraphAccessResponse
+ */
+export class VerifyAPIKeyGraphAccessResponse extends Message<VerifyAPIKeyGraphAccessResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: bool hasOrganizationAdminOrDeveloperPermissions = 2;
+   */
+  hasOrganizationAdminOrDeveloperPermissions = false;
+
+  /**
+   * @generated from field: bool hasWriteAccessToGraph = 3;
+   */
+  hasWriteAccessToGraph = false;
+
+  constructor(data?: PartialMessage<VerifyAPIKeyGraphAccessResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.VerifyAPIKeyGraphAccessResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "hasOrganizationAdminOrDeveloperPermissions", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 3, name: "hasWriteAccessToGraph", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): VerifyAPIKeyGraphAccessResponse {
+    return new VerifyAPIKeyGraphAccessResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): VerifyAPIKeyGraphAccessResponse {
+    return new VerifyAPIKeyGraphAccessResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): VerifyAPIKeyGraphAccessResponse {
+    return new VerifyAPIKeyGraphAccessResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: VerifyAPIKeyGraphAccessResponse | PlainMessage<VerifyAPIKeyGraphAccessResponse> | undefined, b: VerifyAPIKeyGraphAccessResponse | PlainMessage<VerifyAPIKeyGraphAccessResponse> | undefined): boolean {
+    return proto3.util.equals(VerifyAPIKeyGraphAccessResponse, a, b);
+  }
+}
+

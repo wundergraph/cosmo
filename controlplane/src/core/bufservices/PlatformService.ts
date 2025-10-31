@@ -169,8 +169,7 @@ import { validateAndFetchPluginData } from './plugin/validateAndFetchPluginData.
 import { linkSubgraph } from './subgraph/linkSubgraph.js';
 import { unlinkSubgraph } from './subgraph/unlinkSubgraph.js';
 import { getWorkspace } from './workspace/getWorkspace.js';
-import { getSubgraphCheckExtensionsConfig } from './check-extensions/getSubgraphCheckExtensionsConfig.js';
-import { configureSubgraphCheckExtensions } from './check-extensions/configureSubgraphCheckExtensions.js';
+import { verifyAPIKeyGraphAccess } from './api-key/verifyAPIKeyGraphAccess.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -779,14 +778,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return getCacheWarmerConfig(opts, req, ctx);
     },
 
-    getSubgraphCheckExtensionsConfig: (req, ctx) => {
-      return getSubgraphCheckExtensionsConfig(opts, req, ctx);
-    },
-
-    configureSubgraphCheckExtensions: (req, ctx) => {
-      return configureSubgraphCheckExtensions(opts, req, ctx);
-    },
-
     // apis used by the terraform provider
 
     getSubgraphById: (req, ctx) => {
@@ -863,6 +854,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     unlinkSubgraph: (req, ctx) => {
       return unlinkSubgraph(opts, req, ctx);
+    },
+
+    verifyAPIKeyGraphAccess: (req, ctx) => {
+      return verifyAPIKeyGraphAccess(opts, req, ctx);
     },
   };
 }

@@ -275,13 +275,21 @@ func TestHeaderSetWithExpression(t *testing.T) {
 		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
 		require.NoError(t, err)
 
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           []authentication.Authenticator{authenticator},
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		token, err := authServer.TokenForKID(rsa1.KID(), map[string]any{"user_id": "TestId"}, false)
 		require.NoError(t, err)
 
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: append(
 				global(customHeader, `request.auth.claims.user_id`),
-				core.WithAccessController(core.NewAccessController([]authentication.Authenticator{authenticator}, true)),
+				core.WithAccessController(accessController),
 			),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
