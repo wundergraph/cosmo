@@ -208,6 +208,7 @@ import (
     "slices"
     "github.com/wundergraph/cosmo/router/core"
     "github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
+    "go.uber.org/zap"
 )
 
 func init() {
@@ -261,7 +262,8 @@ func (m *MyModule) OnReceiveEvents(ctx core.StreamReceiveEventHandlerContext, ev
         }
         err := json.Unmarshal(evt.GetData(), &dataReceived)
         if err != nil {
-            return events, fmt.Errorf("error unmarshalling data: %w", err)
+            ctx.Logger().Error("error unmarshalling event data", zap.Error(err))
+            continue
         }
 
         // filter the events based on the client's scopes
@@ -280,7 +282,8 @@ func (m *MyModule) OnReceiveEvents(ctx core.StreamReceiveEventHandlerContext, ev
         // marshal the data to send to the client
         dataToSendMarshalled, err := json.Marshal(dataToSend)
         if err != nil {
-            return events, fmt.Errorf("error marshalling data: %w", err)
+            ctx.Logger().Error("error marshalling event data", zap.Error(err))
+            continue
         }
 
         // create a new event using the context's NewEvent method
@@ -303,6 +306,162 @@ func (m *MyModule) Module() core.ModuleInfo {
 // Interface guards
 var (
     _ core.StreamReceiveEventHandler = (*MyModule)(nil)
+)
+```
+
+## Filter events based on HTTP headers
+
+This example demonstrates how to use HTTP headers from the client request to filter events in the `OnReceiveEvents` handler.
+
+### Example: OnReceiveEvents with header-based filtering
+
+```go
+package mymodule
+
+import (
+    "encoding/json"
+    "fmt"
+    "github.com/wundergraph/cosmo/router/core"
+    "github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
+)
+
+func init() {
+    core.RegisterModule(&HeaderFilterModule{})
+}
+
+type HeaderFilterModule struct {}
+
+func (m *HeaderFilterModule) OnReceiveEvents(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
+    // Get the tenant ID from the request header
+    tenantID := ctx.Request().Header.Get("X-Tenant-ID")
+    if tenantID == "" {
+        // No tenant header provided, return empty events
+        return datasource.NewStreamEvents([]datasource.StreamEvent{}), nil
+    }
+
+    newEvents := make([]datasource.StreamEvent, 0, events.Len())
+
+    for _, evt := range events.All() {
+        // Decode event to check tenant field
+        var eventData struct {
+            TenantID string `json:"tenantId"`
+            Data     json.RawMessage `json:"data"`
+        }
+        
+        err := json.Unmarshal(evt.GetData(), &eventData)
+        if err != nil {
+            // If we can't parse, skip this event
+            continue
+        }
+
+        // Only include events that match the tenant ID from the header
+        if eventData.TenantID == tenantID {
+            newEvents = append(newEvents, evt)
+        }
+    }
+
+    return datasource.NewStreamEvents(newEvents), nil
+}
+
+func (m *HeaderFilterModule) Module() core.ModuleInfo {
+    return core.ModuleInfo{
+        ID: "headerFilterModule",
+        Priority: 1,
+        New: func() core.Module {
+            return &HeaderFilterModule{}
+        },
+    }
+}
+
+// Interface guards
+var (
+    _ core.StreamReceiveEventHandler = (*HeaderFilterModule)(nil)
+)
+```
+
+## Add metadata to published events based on headers
+
+This example shows how to use HTTP headers to add metadata to events before publishing them using the `OnPublishEvents` handler.
+
+### Example: OnPublishEvents with header-based enrichment
+
+```go
+package mymodule
+
+import (
+    "encoding/json"
+    "fmt"
+    "time"
+    "github.com/wundergraph/cosmo/router/core"
+    "github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
+    "go.uber.org/zap"
+)
+
+func init() {
+    core.RegisterModule(&PublishEnrichmentModule{})
+}
+
+type PublishEnrichmentModule struct {}
+
+func (m *PublishEnrichmentModule) OnPublishEvents(ctx core.StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
+    // Extract metadata from request headers
+    userID := ctx.Request().Header.Get("X-User-ID")
+    clientVersion := ctx.Request().Header.Get("X-Client-Version")
+    
+    if userID == "" {
+        // User ID is required for publishing
+        return events, fmt.Errorf("X-User-ID header is required")
+    }
+
+    newEvents := make([]datasource.StreamEvent, 0, events.Len())
+
+    for _, evt := range events.All() {
+        // Parse the original event data
+        var originalData map[string]interface{}
+        err := json.Unmarshal(evt.GetData(), &originalData)
+        if err != nil {
+            ctx.Logger().Error("failed to parse event data", zap.Error(err))
+            continue
+        }
+
+        // Add metadata from headers
+        enrichedData := map[string]interface{}{
+            "data": originalData,
+            "metadata": map[string]interface{}{
+                "publishedBy": userID,
+                "clientVersion": clientVersion,
+                "timestamp": time.Now().Unix(),
+            },
+        }
+
+        // Marshal the enriched data
+        enrichedBytes, err := json.Marshal(enrichedData)
+        if err != nil {
+            ctx.Logger().Error("failed to marshal enriched data", zap.Error(err))
+            continue
+        }
+
+        // Create a new event with enriched data
+        newEvent := ctx.NewEvent(enrichedBytes)
+        newEvents = append(newEvents, newEvent)
+    }
+
+    return datasource.NewStreamEvents(newEvents), nil
+}
+
+func (m *PublishEnrichmentModule) Module() core.ModuleInfo {
+    return core.ModuleInfo{
+        ID: "publishEnrichmentModule",
+        Priority: 1,
+        New: func() core.Module {
+            return &PublishEnrichmentModule{}
+        },
+    }
+}
+
+// Interface guards
+var (
+    _ core.StreamPublishEventHandler = (*PublishEnrichmentModule)(nil)
 )
 ```
 
