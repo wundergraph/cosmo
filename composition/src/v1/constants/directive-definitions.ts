@@ -14,6 +14,8 @@ import {
   CONDITION,
   CONFIGURE_CHILD_DESCRIPTIONS,
   CONFIGURE_DESCRIPTION,
+  CONNECT_FIELD_RESOLVER,
+  CONTEXT,
   DEFAULT_EDFS_PROVIDER_ID,
   DEPRECATED,
   DESCRIPTION_OVERRIDE,
@@ -30,7 +32,6 @@ import {
   EXTENDS,
   EXTERNAL,
   FIELD_DEFINITION_UPPER,
-  FIELD_SET_SCALAR,
   FIELDS,
   FOR,
   FROM,
@@ -181,6 +182,21 @@ export const CONFIGURE_DESCRIPTION_DEFINITION: DirectiveDefinitionNode = {
     UNION_UPPER,
   ]),
   name: stringToNameNode(CONFIGURE_DESCRIPTION),
+  repeatable: false,
+};
+
+// directive @connect__fieldResolver(context: openfed__FieldSet!) on FIELD_DEFINITION
+export const CONNECT_FIELD_RESOLVER_DEFINITION: DirectiveDefinitionNode = {
+  arguments: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(CONTEXT),
+      type: REQUIRED_FIELDSET_TYPE_NODE,
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER]),
+  name: stringToNameNode(CONNECT_FIELD_RESOLVER),
   repeatable: false,
 };
 

@@ -77,7 +77,7 @@ type User {
 `
 	schemaDoc, report := astparser.ParseGraphqlDocumentString(schemaStr)
 	require.False(t, report.HasErrors(), "Failed to parse schema")
-	
+
 	// Normalize the schema (required for validation)
 	err := asttransform.MergeDefinitionWithBaseSchema(&schemaDoc)
 	require.NoError(t, err, "Failed to normalize schema")
@@ -87,13 +87,13 @@ type User {
 	loader := NewOperationLoader(logger, &schemaDoc)
 	operations, err := loader.LoadOperationsFromDirectory(tempDir)
 	require.NoError(t, err, "Failed to load operations")
-	
+
 	// Debug: print what we got
 	t.Logf("Loaded %d operations", len(operations))
 	for _, op := range operations {
 		t.Logf("Operation: %s (type: %s, desc: %q)", op.Name, op.OperationType, op.Description)
 	}
-	
+
 	require.Len(t, operations, 3, "Expected 3 operations to be loaded")
 
 	// Verify operations

@@ -570,11 +570,11 @@ func TestMCP(t *testing.T) {
 
 			// Create test operation files
 			testCases := []struct {
-				name             string
-				filename         string
-				content          string
-				expectedDesc     string
-				expectDescEmpty  bool
+				name            string
+				filename        string
+				content         string
+				expectedDesc    string
+				expectDescEmpty bool
 			}{
 				{
 					name:     "operation with multi-line description",
