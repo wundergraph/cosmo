@@ -193,7 +193,7 @@ func TestNatsRequestDataSource_Load(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockAdapter := NewMockAdapter(t)
-			provider := datasource.NewPubSubProvider("test-provider", "nats", mockAdapter, zap.NewNop())
+			provider := datasource.NewPubSubProvider("test-provider", "nats", mockAdapter, zap.NewNop(), testNatsEventBuilder)
 			tt.mockSetup(mockAdapter)
 
 			dataSource := &NatsRequestDataSource{

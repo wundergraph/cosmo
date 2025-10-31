@@ -6,6 +6,7 @@ import (
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 // SubscriptionEventUpdater is a wrapper around the SubscriptionUpdater interface
@@ -23,6 +24,7 @@ type subscriptionEventUpdater struct {
 	subscriptionEventConfiguration SubscriptionEventConfiguration
 	hooks                          Hooks
 	logger                         *zap.Logger
+	eventBuilder                   EventBuilderFn
 }
 
 func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
@@ -72,7 +74,10 @@ func (s *subscriptionEventUpdater) SetHooks(hooks Hooks) {
 func (s *subscriptionEventUpdater) updateSubscription(ctx context.Context, wg *sync.WaitGroup, errCh chan error, semaphore chan struct{}, subID resolve.SubscriptionIdentifier, events []StreamEvent) {
 	defer wg.Done()
 	defer func() {
-		<-semaphore // Release the slot when done
+		if r := recover(); r != nil {
+			s.recoverPanic(subID, r)
+		}
+		<-semaphore // release the slot when done
 	}()
 
 	hooks := s.hooks.OnReceiveEvents
@@ -80,7 +85,7 @@ func (s *subscriptionEventUpdater) updateSubscription(ctx context.Context, wg *s
 	// modify events with hooks
 	var err error
 	for i := range hooks {
-		events, err = hooks[i](ctx, s.subscriptionEventConfiguration, events)
+		events, err = hooks[i](ctx, s.subscriptionEventConfiguration, s.eventBuilder, events)
 		if err != nil {
 			errCh <- err
 		}
@@ -97,6 +102,17 @@ func (s *subscriptionEventUpdater) updateSubscription(ctx context.Context, wg *s
 	if err != nil {
 		s.eventUpdater.CloseSubscription(resolve.SubscriptionCloseKindNormal, subID)
 	}
+}
+
+func (s *subscriptionEventUpdater) recoverPanic(subID resolve.SubscriptionIdentifier, err any) {
+	s.logger.
+		WithOptions(zap.AddStacktrace(zapcore.ErrorLevel)).
+		Error("[Recovery from handler panic]",
+			zap.Int64("subscription_id", subID.SubscriptionID),
+			zap.Any("error", err),
+		)
+
+	s.eventUpdater.CloseSubscription(resolve.SubscriptionCloseKindDownstreamServiceError, subID)
 }
 
 // deduplicateAndLogErrors collects errors from errCh
@@ -134,11 +150,13 @@ func NewSubscriptionEventUpdater(
 	hooks Hooks,
 	eventUpdater resolve.SubscriptionUpdater,
 	logger *zap.Logger,
+	eventBuilder EventBuilderFn,
 ) SubscriptionEventUpdater {
 	return &subscriptionEventUpdater{
 		subscriptionEventConfiguration: cfg,
 		hooks:                          hooks,
 		eventUpdater:                   eventUpdater,
 		logger:                         logger,
+		eventBuilder:                   eventBuilder,
 	}
 }

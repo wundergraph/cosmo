@@ -153,11 +153,17 @@ func buildProvider(ctx context.Context, provider config.KafkaEventSource, logger
 	if err != nil {
 		return nil, fmt.Errorf("failed to build options for Kafka provider with ID \"%s\": %w", provider.ID, err)
 	}
+
 	adapter, err := NewProviderAdapter(ctx, logger, kafkaOpts, providerOpts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create adapter for Kafka provider with ID \"%s\": %w", provider.ID, err)
 	}
-	pubSubProvider := datasource.NewPubSubProvider(provider.ID, providerTypeID, adapter, logger)
+
+	eventBuilder := func(data []byte) datasource.MutableStreamEvent {
+		return &MutableEvent{Data: data}
+	}
+
+	pubSubProvider := datasource.NewPubSubProvider(provider.ID, providerTypeID, adapter, logger, eventBuilder)
 
 	return pubSubProvider, nil
 }

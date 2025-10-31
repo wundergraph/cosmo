@@ -37,6 +37,11 @@ type receivedHooksArgs struct {
 	cfg    SubscriptionEventConfiguration
 }
 
+// testEventBuilder is a reusable event builder for tests
+func testEventBuilder(data []byte) MutableStreamEvent {
+	return mutableTestEvent(data)
+}
+
 func TestSubscriptionEventUpdater_Update_NoHooks(t *testing.T) {
 	mockUpdater := NewMockSubscriptionUpdater(t)
 	config := &testSubscriptionEventConfig{
@@ -78,7 +83,7 @@ func TestSubscriptionEventUpdater_UpdateSubscription_WithHooks_Success(t *testin
 
 	// Create wrapper function for the mock
 	receivedArgs := make(chan receivedHooksArgs, 1)
-	testHook := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
+	testHook := func(ctx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
 		receivedArgs <- receivedHooksArgs{events: events, cfg: cfg}
 		return modifiedEvents, nil
 	}
@@ -96,6 +101,7 @@ func TestSubscriptionEventUpdater_UpdateSubscription_WithHooks_Success(t *testin
 		hooks: Hooks{
 			OnReceiveEvents: []OnReceiveEventsFn{testHook},
 		},
+		eventBuilder: testEventBuilder,
 	}
 
 	updater.Update(originalEvents)
@@ -122,7 +128,7 @@ func TestSubscriptionEventUpdater_UpdateSubscriptions_WithHooks_Error(t *testing
 	hookError := errors.New("hook processing error")
 
 	// Define hook that returns an error
-	testHook := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
+	testHook := func(ctx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
 		return nil, hookError
 	}
 
@@ -140,6 +146,7 @@ func TestSubscriptionEventUpdater_UpdateSubscriptions_WithHooks_Error(t *testing
 		hooks: Hooks{
 			OnReceiveEvents: []OnReceiveEventsFn{testHook},
 		},
+		eventBuilder: testEventBuilder,
 	}
 
 	updater.Update(events)
@@ -163,13 +170,13 @@ func TestSubscriptionEventUpdater_Update_WithMultipleHooks_Success(t *testing.T)
 
 	// Chain of hooks that modify the data
 	receivedArgs1 := make(chan receivedHooksArgs, 1)
-	hook1 := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
+	hook1 := func(ctx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
 		receivedArgs1 <- receivedHooksArgs{events: events, cfg: cfg}
 		return []StreamEvent{&testEvent{mutableTestEvent("modified by hook1")}}, nil
 	}
 
 	receivedArgs2 := make(chan receivedHooksArgs, 1)
-	hook2 := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
+	hook2 := func(ctx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
 		receivedArgs2 <- receivedHooksArgs{events: events, cfg: cfg}
 		return []StreamEvent{&testEvent{mutableTestEvent("modified by hook2")}}, nil
 	}
@@ -187,6 +194,7 @@ func TestSubscriptionEventUpdater_Update_WithMultipleHooks_Success(t *testing.T)
 		hooks: Hooks{
 			OnReceiveEvents: []OnReceiveEventsFn{hook1, hook2},
 		},
+		eventBuilder: testEventBuilder,
 	}
 
 	updater.Update(originalEvents)
@@ -255,7 +263,7 @@ func TestSubscriptionEventUpdater_SetHooks(t *testing.T) {
 		fieldName:    "testField",
 	}
 
-	testHook := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
+	testHook := func(ctx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
 		return events, nil
 	}
 
@@ -267,6 +275,7 @@ func TestSubscriptionEventUpdater_SetHooks(t *testing.T) {
 		eventUpdater:                   mockUpdater,
 		subscriptionEventConfiguration: config,
 		hooks:                          Hooks{},
+		eventBuilder:                   testEventBuilder,
 	}
 
 	updater.SetHooks(hooks)
@@ -282,7 +291,7 @@ func TestNewSubscriptionEventUpdater(t *testing.T) {
 		fieldName:    "testField",
 	}
 
-	testHook := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
+	testHook := func(ctx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
 		return events, nil
 	}
 
@@ -290,7 +299,7 @@ func TestNewSubscriptionEventUpdater(t *testing.T) {
 		OnReceiveEvents: []OnReceiveEventsFn{testHook},
 	}
 
-	updater := NewSubscriptionEventUpdater(config, hooks, mockUpdater, zap.NewNop())
+	updater := NewSubscriptionEventUpdater(config, hooks, mockUpdater, zap.NewNop(), testEventBuilder)
 
 	assert.NotNil(t, updater)
 
@@ -349,7 +358,7 @@ func TestSubscriptionEventUpdater_Update_WithSingleHookModification(t *testing.T
 	}
 
 	// Hook that modifies events by adding a prefix
-	hook := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
+	hook := func(ctx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
 		modifiedEvents := make([]StreamEvent, len(events))
 		for i, event := range events {
 			modifiedData := "modified: " + string(event.GetData())
@@ -398,7 +407,7 @@ func TestSubscriptionEventUpdater_Update_WithSingleHookError_ClosesSubscriptionA
 	hookError := errors.New("hook processing failed")
 
 	// Hook that returns an error
-	hook := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
+	hook := func(ctx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
 		// Return the events but also return an error
 		return events, hookError
 	}
@@ -418,7 +427,7 @@ func TestSubscriptionEventUpdater_Update_WithSingleHookError_ClosesSubscriptionA
 
 	updater := NewSubscriptionEventUpdater(config, Hooks{
 		OnReceiveEvents: []OnReceiveEventsFn{hook},
-	}, mockUpdater, logger)
+	}, mockUpdater, logger, testEventBuilder)
 
 	updater.Update(events)
 
@@ -457,7 +466,7 @@ func TestSubscriptionEventUpdater_Update_WithMultipleHooksChaining(t *testing.T)
 
 	// Hook 1: Adds "step1: " prefix
 	receivedArgs1 := make(chan receivedHooksArgs, 1)
-	hook1 := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
+	hook1 := func(ctx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
 		mu.Lock()
 		hookCallOrder = append(hookCallOrder, 1)
 		mu.Unlock()
@@ -472,7 +481,7 @@ func TestSubscriptionEventUpdater_Update_WithMultipleHooksChaining(t *testing.T)
 
 	// Hook 2: Adds "step2: " prefix
 	receivedArgs2 := make(chan receivedHooksArgs, 1)
-	hook2 := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
+	hook2 := func(ctx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
 		mu.Lock()
 		hookCallOrder = append(hookCallOrder, 2)
 		mu.Unlock()
@@ -487,7 +496,7 @@ func TestSubscriptionEventUpdater_Update_WithMultipleHooksChaining(t *testing.T)
 
 	// Hook 3: Adds "step3: " prefix
 	receivedArgs3 := make(chan receivedHooksArgs, 1)
-	hook3 := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
+	hook3 := func(ctx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
 		mu.Lock()
 		hookCallOrder = append(hookCallOrder, 3)
 		mu.Unlock()
@@ -640,7 +649,7 @@ func TestSubscriptionEventUpdater_UpdateSubscription_WithHookError_ClosesSubscri
 				&testEvent{mutableTestEvent("test data")},
 			}
 
-			testHook := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
+			testHook := func(ctx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
 				return events, tc.hookError
 			}
 
@@ -650,6 +659,7 @@ func TestSubscriptionEventUpdater_UpdateSubscription_WithHookError_ClosesSubscri
 				hooks: Hooks{
 					OnReceiveEvents: []OnReceiveEventsFn{testHook},
 				},
+				eventBuilder: testEventBuilder,
 			}
 
 			subId := resolve.SubscriptionIdentifier{ConnectionID: 1, SubscriptionID: 1}
@@ -679,7 +689,7 @@ func TestSubscriptionEventUpdater_UpdateSubscription_WithHooks_Error_LoggerWrite
 	hookError := errors.New("hook processing error")
 
 	// Define hook that returns an error
-	testHook := func(ctx context.Context, cfg SubscriptionEventConfiguration, events []StreamEvent) ([]StreamEvent, error) {
+	testHook := func(ctx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
 		return nil, hookError
 	}
 
@@ -690,7 +700,7 @@ func TestSubscriptionEventUpdater_UpdateSubscription_WithHooks_Error_LoggerWrite
 	// The logger.Error() call should be executed when an error occurs
 	updater := NewSubscriptionEventUpdater(config, Hooks{
 		OnReceiveEvents: []OnReceiveEventsFn{testHook},
-	}, mockUpdater, logger)
+	}, mockUpdater, logger, testEventBuilder)
 
 	subId := resolve.SubscriptionIdentifier{ConnectionID: 1, SubscriptionID: 1}
 	mockUpdater.On("Subscriptions").Return(map[context.Context]resolve.SubscriptionIdentifier{
@@ -708,4 +718,82 @@ func TestSubscriptionEventUpdater_UpdateSubscription_WithHooks_Error_LoggerWrite
 	assert.Eventually(t, func() bool {
 		return len(logObserver.FilterMessageSnippet("some handlers have thrown an error").TakeAll()) == 1
 	}, time.Second, 10*time.Millisecond, "expected one deduplicated error log")
+}
+
+func TestSubscriptionEventUpdater_OnReceiveEvents_PanicRecovery(t *testing.T) {
+	panicErr := errors.New("panic error")
+
+	tests := []struct {
+		name       string
+		panicValue any
+	}{
+		{
+			name:       "error type",
+			panicValue: panicErr,
+		},
+		{
+			name:       "string type",
+			panicValue: "panic string message",
+		},
+		{
+			name:       "other type",
+			panicValue: 42,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			core, logObserver := observer.New(zap.InfoLevel)
+			logger := zap.New(core)
+
+			mockUpdater := NewMockSubscriptionUpdater(t)
+			config := &testSubscriptionEventConfig{
+				providerID:   "test-provider",
+				providerType: ProviderTypeNats,
+				fieldName:    "testField",
+			}
+			events := []StreamEvent{
+				&testEvent{mutableTestEvent("test data")},
+			}
+
+			// Create hook that panics
+			testHook := func(ctx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
+				panic(tt.panicValue)
+			}
+
+			subId := resolve.SubscriptionIdentifier{ConnectionID: 1, SubscriptionID: 1}
+			mockUpdater.On("Subscriptions").Return(map[context.Context]resolve.SubscriptionIdentifier{
+				context.Background(): subId,
+			})
+			mockUpdater.On("CloseSubscription", resolve.SubscriptionCloseKindDownstreamServiceError, subId).Return()
+
+			updater := &subscriptionEventUpdater{
+				eventUpdater:                   mockUpdater,
+				subscriptionEventConfiguration: config,
+				hooks: Hooks{
+					OnReceiveEvents: []OnReceiveEventsFn{testHook},
+				},
+				logger: logger,
+			}
+
+			updater.Update(events)
+
+			// Wait for async processing to complete and assert panic was logged
+			assert.Eventually(t, func() bool {
+				logs := logObserver.FilterMessage("[Recovery from handler panic]").All()
+				return len(logs) == 1
+			}, 10*time.Millisecond, time.Millisecond, "expected panic recovery log")
+
+			// Assert that subscription was closed due to panic
+			mockUpdater.AssertCalled(t, "CloseSubscription", resolve.SubscriptionCloseKindDownstreamServiceError, subId)
+			mockUpdater.AssertNotCalled(t, "UpdateSubscription")
+
+			// Assert that panic was logged with correct details
+			logs := logObserver.FilterMessage("[Recovery from handler panic]").All()
+			assert.Len(t, logs, 1)
+			assert.Equal(t, zap.ErrorLevel, logs[0].Level)
+			assert.Equal(t, int64(1), logs[0].ContextMap()["subscription_id"])
+			assert.NotNil(t, logs[0].ContextMap()["error"])
+		})
+	}
 }
