@@ -38,6 +38,7 @@ import {
 } from './naming-conventions.js';
 import { camelCase } from 'lodash-es';
 import { ProtoLock, ProtoLockManager } from './proto-lock.js';
+import { unwrapNonNullType, isNestedListType, calculateNestingLevel } from './operations/list-type-utils.js';
 
 /**
  * Maps GraphQL scalar types to Protocol Buffer types
@@ -83,6 +84,15 @@ export interface GraphQLToProtoTextVisitorOptions {
   serviceName?: string;
   packageName?: string;
   goPackage?: string;
+  javaPackage?: string;
+  javaOuterClassname?: string;
+  javaMultipleFiles?: boolean;
+  csharpNamespace?: string;
+  rubyPackage?: string;
+  phpNamespace?: string;
+  phpMetadataNamespace?: string;
+  objcClassPrefix?: string;
+  swiftPrefix?: string;
   lockData?: ProtoLock;
   /** Whether to include descriptions/comments from GraphQL schema */
   includeComments?: boolean;
@@ -179,6 +189,15 @@ export class GraphQLToProtoTextVisitor {
       serviceName = 'DefaultService',
       packageName = 'service.v1',
       goPackage,
+      javaPackage,
+      javaOuterClassname,
+      javaMultipleFiles,
+      csharpNamespace,
+      rubyPackage,
+      phpNamespace,
+      phpMetadataNamespace,
+      objcClassPrefix,
+      swiftPrefix,
       lockData,
       includeComments = true,
     } = options;
@@ -200,6 +219,42 @@ export class GraphQLToProtoTextVisitor {
       const defaultGoPackage = `cosmo/pkg/proto/${packageName};${packageName.replace('.', '')}`;
       const goPackageOption = goPackage || defaultGoPackage;
       this.options.push(`option go_package = "${goPackageOption}";`);
+    }
+
+    if (javaPackage) {
+      this.options.push(`option java_package = "${javaPackage}";`);
+    }
+
+    if (javaOuterClassname) {
+      this.options.push(`option java_outer_classname = "${javaOuterClassname}";`);
+    }
+
+    if (javaMultipleFiles) {
+      this.options.push(`option java_multiple_files = true;`);
+    }
+
+    if (csharpNamespace) {
+      this.options.push(`option csharp_namespace = "${csharpNamespace}";`);
+    }
+
+    if (rubyPackage) {
+      this.options.push(`option ruby_package = "${rubyPackage}";`);
+    }
+
+    if (phpNamespace) {
+      this.options.push(`option php_namespace = "${phpNamespace}";`);
+    }
+
+    if (phpMetadataNamespace) {
+      this.options.push(`option php_metadata_namespace = "${phpMetadataNamespace}";`);
+    }
+
+    if (objcClassPrefix) {
+      this.options.push(`option objc_class_prefix = "${objcClassPrefix}";`);
+    }
+
+    if (swiftPrefix) {
+      this.options.push(`option swift_prefix = "${swiftPrefix}";`);
     }
   }
 
@@ -1658,22 +1713,22 @@ Example:
    * @returns ProtoType object containing the type name and whether it should be repeated
    */
   private handleListType(graphqlType: GraphQLList<GraphQLType> | GraphQLNonNull<GraphQLList<GraphQLType>>): ProtoType {
-    const listType = this.unwrapNonNullType(graphqlType);
+    const listType = unwrapNonNullType(graphqlType);
     const isNullableList = !isNonNullType(graphqlType);
-    const isNestedList = this.isNestedListType(listType);
+    const isNested = isNestedListType(listType);
 
     // Simple non-nullable lists can use repeated fields directly
-    if (!isNullableList && !isNestedList) {
+    if (!isNullableList && !isNested) {
       return { ...this.getProtoTypeFromGraphQL(getNamedType(listType), true), isRepeated: true };
     }
 
     // Nullable or nested lists need wrapper messages
     const baseType = getNamedType(listType);
-    const nestingLevel = this.calculateNestingLevel(listType);
+    const nestingLevel = calculateNestingLevel(listType);
 
     // For nested lists, always use full nesting level to preserve inner list nullability
     // For single-level nullable lists, use nesting level 1
-    const wrapperNestingLevel = isNestedList ? nestingLevel : 1;
+    const wrapperNestingLevel = isNested ? nestingLevel : 1;
 
     // Generate all required wrapper messages
     let wrapperName = '';
@@ -1683,44 +1738,6 @@ Example:
 
     // For nested lists, never use repeated at field level to preserve nullability
     return { typeName: wrapperName, isRepeated: false };
-  }
-
-  /**
-   * Unwraps a GraphQL type from a GraphQLNonNull type
-   */
-  private unwrapNonNullType<T extends GraphQLType>(graphqlType: T | GraphQLNonNull<T>): T {
-    return isNonNullType(graphqlType) ? (graphqlType.ofType as T) : graphqlType;
-  }
-
-  /**
-   * Checks if a GraphQL list type contains nested lists
-   * Type guard that narrows the input type when nested lists are detected
-   */
-  private isNestedListType(
-    listType: GraphQLList<GraphQLType>,
-  ): listType is GraphQLList<GraphQLList<GraphQLType> | GraphQLNonNull<GraphQLList<GraphQLType>>> {
-    return isListType(listType.ofType) || (isNonNullType(listType.ofType) && isListType(listType.ofType.ofType));
-  }
-
-  /**
-   * Calculates the nesting level of a GraphQL list type
-   */
-  private calculateNestingLevel(listType: GraphQLList<GraphQLType>): number {
-    let level = 1;
-    let currentType: GraphQLType = listType.ofType;
-
-    while (true) {
-      if (isNonNullType(currentType)) {
-        currentType = currentType.ofType;
-      } else if (isListType(currentType)) {
-        currentType = currentType.ofType;
-        level++;
-      } else {
-        break;
-      }
-    }
-
-    return level;
   }
 
   /**
