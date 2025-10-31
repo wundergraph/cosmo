@@ -158,6 +158,20 @@ type StreamPublishEventHandler interface {
 }
 ```
 
+## Immutable vs Mutable events
+
+The design of `StreamEvent` and `MutableStreamEvent` interfaces addresses a critical performance and safety trade-off in the event handling system. When events are received from a provider, they are typically delivered to multiple active subscriptions simultaneously. The `OnReceiveEvents` handler is called once for each active subscription, meaning the same batch of events needs to be processed by multiple handlers concurrently.
+
+The primary design challenge was avoiding unnecessary memory allocations and data copying while maintaining safety guarantees. If we automatically created a deep copy of all events before each handler invocation, the performance cost would be significant, especially under high load with many active subscriptions. However, if we simply passed mutable references to all handlers, we would risk handlers inadvertently modifying shared event data, causing unexpected behavior for other subscribers processing the same events.
+
+The current solution leverages immutability as the default behavior with explicit opt-in mutability. The `StreamEvent` interface is designed to be immutable: the `GetData()` method returns a copy of the payload data, ensuring that read operations are safe by default. When a handler needs to modify an event, it must explicitly call the `Clone()` method to obtain a `MutableStreamEvent`. This creates a conscious decision point where developers understand they are creating a new copy that can be safely modified without affecting other subscriptions.
+
+The `MutableStreamEvent` interface extends `StreamEvent` and adds the `SetData()` method, allowing modifications only on explicitly cloned copies. This design pattern ensures that:
+1. Handlers that only read event data incur no copying overhead
+2. Multiple subscriptions can safely share the same underlying event data
+3. Modifications are isolated to the specific subscription that cloned the event
+4. The API makes the performance implications of cloning explicit and intentional
+
 ## Example Use Cases
 
 - **Authorization**: Implementing authorization checks at the start of subscriptions
