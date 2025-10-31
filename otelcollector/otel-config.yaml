@@ -29,6 +29,7 @@ processors:
     send_batch_size: 10000
     send_batch_max_size: 20000
     timeout: 15s
+  cumulativetodelta: {}
 
 exporters:
   clickhouse:
@@ -62,7 +63,7 @@ service:
     traces:
       receivers: [otlp]
       # Order is important here. Otherwise, the attributes processor will not be able to read the attributes from the auth context.
-      processors: [attributes/from_auth_context, attributes/delete_operation_bodies, batch]
+      processors: [attributes/from_auth_context, attributes/delete_operation_bodies, cumulativetodelta, batch]
       exporters: [clickhouse]
   telemetry:
     metrics:
