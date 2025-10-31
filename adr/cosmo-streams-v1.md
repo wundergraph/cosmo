@@ -17,7 +17,7 @@ This ADR describes new hooks that will be added to the router to support more cu
 The goal is to allow developers to customize the cosmo streams behavior.
 
 ## Decision
-The following interfaces will extend the existing logic in the custom modules.
+The following interfaces will extend the existing logic in custom modules.
 These provide additional control over subscriptions by providing hooks, which are invoked during specific events.
 
 - `SubscriptionOnStartHandler`: Called once at subscription start.
@@ -25,7 +25,7 @@ These provide additional control over subscriptions by providing hooks, which ar
 - `StreamPublishEventHandler`: Called each time a batch of events is going to be sent to the provider.
 
 ```go
-// STRUCTURES TO BE ADDED TO PUBSUB PACKAGE
+// STRUCTURES TO BE ADDED TO PUBSUB/DATASOURCE PACKAGE
 type ProviderType string
 const (
     ProviderTypeNats  ProviderType = "nats"
@@ -33,6 +33,7 @@ const (
     ProviderTypeRedis ProviderType = "redis"
 }
 
+// OperationContext provides information about the GraphQL operation
 type OperationContext interface {
     Name() string
     Variables() *astjson.Value
@@ -92,6 +93,8 @@ type SubscriptionOnStartHandlerContext interface {
     // WriteEvent writes an event to the stream of the current subscription
     // It returns true if the event was written to the stream, false if the event was dropped
     WriteEvent(event datasource.StreamEvent) bool
+    // NewEvent creates a new event that can be used in the subscription.
+    NewEvent(data []byte) datasource.MutableStreamEvent
 }
 
 type SubscriptionOnStartHandler interface {
@@ -111,6 +114,8 @@ type StreamReceiveEventHandlerContext interface {
     Authentication() authentication.Authentication
     // SubscriptionEventConfiguration is the subscription event configuration
     SubscriptionEventConfiguration() SubscriptionEventConfiguration
+    // NewEvent creates a new event that can be used in the subscription.
+    NewEvent(data []byte) datasource.MutableStreamEvent
 }
 
 type StreamReceiveEventHandler interface {
@@ -136,6 +141,8 @@ type StreamPublishEventHandlerContext interface {
     Authentication() authentication.Authentication
     // PublishEventConfiguration is the publish event configuration
     PublishEventConfiguration() PublishEventConfiguration
+    // NewEvent creates a new event that can be used in the subscription.
+    NewEvent(data []byte) datasource.MutableStreamEvent
 }
 
 type StreamPublishEventHandler interface {
@@ -153,6 +160,7 @@ type StreamPublishEventHandler interface {
 - **Initial message**: Sending an initial message to clients upon subscription start
 - **Data mapping**: Transforming events data from the format that could be used by the external system to/from Federation compatible Router events
 - **Event filtering**: Filtering events using custom logic
+- **Event creation**: Creating new events from scratch using `ctx.NewEvent(data)` method available in all handler contexts
 
 ## Backwards Compatibility
 
@@ -234,9 +242,15 @@ func (m *MyModule) OnReceiveEvents(ctx core.StreamReceiveEventHandlerContext, ev
     }
 
     // check if the client is allowed to subscribe to the stream
-    clientAllowedEntitiesIds, found := ctx.Authentication().Claims()["allowedEntitiesIds"]
+    allowedEntitiesIdsRaw, found := ctx.Authentication().Claims()["allowedEntitiesIds"]
     if !found {
         return datasource.NewStreamEvents(newEvents), fmt.Errorf("client is not allowed to subscribe to the stream")
+    }
+    
+    // type assert to string slice
+    clientAllowedEntitiesIds, ok := allowedEntitiesIdsRaw.([]string)
+    if !ok {
+        return datasource.NewStreamEvents(newEvents), fmt.Errorf("allowedEntitiesIds claim is not a string slice")
     }
 
     for _, evt := range events.All() {
@@ -269,9 +283,8 @@ func (m *MyModule) OnReceiveEvents(ctx core.StreamReceiveEventHandlerContext, ev
             return events, fmt.Errorf("error marshalling data: %w", err)
         }
 
-        // create the new event by cloning the original and setting new data
-        newEvent := evt.Clone()
-        newEvent.SetData(dataToSendMarshalled)
+        // create a new event using the context's NewEvent method
+        newEvent := ctx.NewEvent(dataToSendMarshalled)
         newEvents = append(newEvents, newEvent)
     }
     return datasource.NewStreamEvents(newEvents), nil
