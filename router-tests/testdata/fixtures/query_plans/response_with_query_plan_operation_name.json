@@ -41,8 +41,8 @@
               "fetch": {
                 "kind": "BatchEntity",
                 "path": "products.@.lead",
-                "subgraphName": "mood",
-                "subgraphId": "6",
+                "subgraphName": "availability",
+                "subgraphId": "5",
                 "fetchId": 1,
                 "dependsOnFetchIds": [
                   0
@@ -54,12 +54,12 @@
                     "fragment": "fragment Key on Employee {\n    __typename\n    id\n}"
                   }
                 ],
-                "query": "query Requires__mood__1($representations: [_Any!]!){\n    _entities(representations: $representations){\n        ... on Employee {\n            __typename\n            currentMood\n        }\n    }\n}",
+                "query": "query Requires__availability__1($representations: [_Any!]!){\n    _entities(representations: $representations){\n        ... on Employee {\n            __typename\n            isAvailable\n        }\n    }\n}",
                 "dependencies": [
                   {
                     "coordinate": {
                       "typeName": "Employee",
-                      "fieldName": "currentMood"
+                      "fieldName": "isAvailable"
                     },
                     "isUserRequested": false,
                     "dependsOn": [
@@ -83,8 +83,8 @@
               "fetch": {
                 "kind": "BatchEntity",
                 "path": "products.@.lead",
-                "subgraphName": "availability",
-                "subgraphId": "5",
+                "subgraphName": "mood",
+                "subgraphId": "6",
                 "fetchId": 2,
                 "dependsOnFetchIds": [
                   0
@@ -96,12 +96,12 @@
                     "fragment": "fragment Key on Employee {\n    __typename\n    id\n}"
                   }
                 ],
-                "query": "query Requires__availability__2($representations: [_Any!]!){\n    _entities(representations: $representations){\n        ... on Employee {\n            __typename\n            isAvailable\n        }\n    }\n}",
+                "query": "query Requires__mood__2($representations: [_Any!]!){\n    _entities(representations: $representations){\n        ... on Employee {\n            __typename\n            currentMood\n        }\n    }\n}",
                 "dependencies": [
                   {
                     "coordinate": {
                       "typeName": "Employee",
-                      "fieldName": "isAvailable"
+                      "fieldName": "currentMood"
                     },
                     "isUserRequested": false,
                     "dependsOn": [
@@ -135,7 +135,7 @@
                 "fetchId": 3,
                 "dependsOnFetchIds": [
                   0,
-                  1
+                  2
                 ],
                 "representations": [
                   {
@@ -160,7 +160,7 @@
                     "isUserRequested": true,
                     "dependsOn": [
                       {
-                        "fetchId": 1,
+                        "fetchId": 2,
                         "subgraph": "mood",
                         "coordinate": {
                           "typeName": "Employee",
@@ -194,7 +194,7 @@
                 "fetchId": 4,
                 "dependsOnFetchIds": [
                   0,
-                  2
+                  1
                 ],
                 "representations": [
                   {
@@ -230,7 +230,7 @@
                       },
                       {
                         "fetchId": 2,
-                        "subgraph": "availability",
+                        "subgraph": "mood",
                         "coordinate": {
                           "typeName": "Consultancy",
                           "fieldName": "lead"
@@ -240,7 +240,7 @@
                       },
                       {
                         "fetchId": 1,
-                        "subgraph": "mood",
+                        "subgraph": "availability",
                         "coordinate": {
                           "typeName": "Consultancy",
                           "fieldName": "lead"
@@ -259,7 +259,7 @@
                         "isRequires": true
                       },
                       {
-                        "fetchId": 2,
+                        "fetchId": 1,
                         "subgraph": "availability",
                         "coordinate": {
                           "typeName": "Employee",

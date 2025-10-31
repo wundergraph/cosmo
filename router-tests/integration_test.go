@@ -665,7 +665,7 @@ func TestPropagateOperationName(t *testing.T) {
 							var req core.GraphQLRequest
 							require.NoError(t, json.Unmarshal(body, &req))
 
-							require.Contains(t, req.Query, "query Requires__mood__1")
+							require.Contains(t, req.Query, "query Requires__mood__2")
 
 							r.Body = io.NopCloser(bytes.NewReader(body))
 							handler.ServeHTTP(w, r)
@@ -680,7 +680,7 @@ func TestPropagateOperationName(t *testing.T) {
 							var req core.GraphQLRequest
 							require.NoError(t, json.Unmarshal(body, &req))
 
-							require.Contains(t, req.Query, "query Requires__availability__2")
+							require.Contains(t, req.Query, "query Requires__availability__1")
 
 							r.Body = io.NopCloser(bytes.NewReader(body))
 							handler.ServeHTTP(w, r)

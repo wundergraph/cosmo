@@ -41,51 +41,9 @@
               "fetch": {
                 "kind": "BatchEntity",
                 "path": "products.@.lead",
-                "subgraphName": "mood",
-                "subgraphId": "6",
-                "fetchId": 1,
-                "dependsOnFetchIds": [
-                  0
-                ],
-                "representations": [
-                  {
-                    "kind": "@key",
-                    "typeName": "Employee",
-                    "fragment": "fragment Key on Employee {\n    __typename\n    id\n}"
-                  }
-                ],
-                "query": "query($representations: [_Any!]!){\n    _entities(representations: $representations){\n        ... on Employee {\n            __typename\n            currentMood\n        }\n    }\n}",
-                "dependencies": [
-                  {
-                    "coordinate": {
-                      "typeName": "Employee",
-                      "fieldName": "currentMood"
-                    },
-                    "isUserRequested": false,
-                    "dependsOn": [
-                      {
-                        "fetchId": 0,
-                        "subgraph": "employees",
-                        "coordinate": {
-                          "typeName": "Employee",
-                          "fieldName": "id"
-                        },
-                        "isKey": true,
-                        "isRequires": false
-                      }
-                    ]
-                  }
-                ]
-              }
-            },
-            {
-              "kind": "Single",
-              "fetch": {
-                "kind": "BatchEntity",
-                "path": "products.@.lead",
                 "subgraphName": "availability",
                 "subgraphId": "5",
-                "fetchId": 2,
+                "fetchId": 1,
                 "dependsOnFetchIds": [
                   0
                 ],
@@ -119,6 +77,48 @@
                   }
                 ]
               }
+            },
+            {
+              "kind": "Single",
+              "fetch": {
+                "kind": "BatchEntity",
+                "path": "products.@.lead",
+                "subgraphName": "mood",
+                "subgraphId": "6",
+                "fetchId": 2,
+                "dependsOnFetchIds": [
+                  0
+                ],
+                "representations": [
+                  {
+                    "kind": "@key",
+                    "typeName": "Employee",
+                    "fragment": "fragment Key on Employee {\n    __typename\n    id\n}"
+                  }
+                ],
+                "query": "query($representations: [_Any!]!){\n    _entities(representations: $representations){\n        ... on Employee {\n            __typename\n            currentMood\n        }\n    }\n}",
+                "dependencies": [
+                  {
+                    "coordinate": {
+                      "typeName": "Employee",
+                      "fieldName": "currentMood"
+                    },
+                    "isUserRequested": false,
+                    "dependsOn": [
+                      {
+                        "fetchId": 0,
+                        "subgraph": "employees",
+                        "coordinate": {
+                          "typeName": "Employee",
+                          "fieldName": "id"
+                        },
+                        "isKey": true,
+                        "isRequires": false
+                      }
+                    ]
+                  }
+                ]
+              }
             }
           ]
         },
@@ -135,7 +135,7 @@
                 "fetchId": 3,
                 "dependsOnFetchIds": [
                   0,
-                  1
+                  2
                 ],
                 "representations": [
                   {
@@ -160,7 +160,7 @@
                     "isUserRequested": true,
                     "dependsOn": [
                       {
-                        "fetchId": 1,
+                        "fetchId": 2,
                         "subgraph": "mood",
                         "coordinate": {
                           "typeName": "Employee",
@@ -194,7 +194,7 @@
                 "fetchId": 4,
                 "dependsOnFetchIds": [
                   0,
-                  2
+                  1
                 ],
                 "representations": [
                   {
@@ -230,7 +230,7 @@
                       },
                       {
                         "fetchId": 2,
-                        "subgraph": "availability",
+                        "subgraph": "mood",
                         "coordinate": {
                           "typeName": "Consultancy",
                           "fieldName": "lead"
@@ -240,7 +240,7 @@
                       },
                       {
                         "fetchId": 1,
-                        "subgraph": "mood",
+                        "subgraph": "availability",
                         "coordinate": {
                           "typeName": "Consultancy",
                           "fieldName": "lead"
@@ -259,7 +259,7 @@
                         "isRequires": true
                       },
                       {
-                        "fetchId": 2,
+                        "fetchId": 1,
                         "subgraph": "availability",
                         "coordinate": {
                           "typeName": "Employee",
