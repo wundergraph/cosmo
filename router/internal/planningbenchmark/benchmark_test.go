@@ -17,10 +17,12 @@ type BenchmarkConfig struct {
 	OperationPath       string `json:"operationPath"`
 }
 
+const configFileName = "benchmark_config.json"
+
 func TestPlanning(t *testing.T) {
-	cfgContent, err := os.ReadFile("benchmark_config.json")
+	cfgContent, err := os.ReadFile(configFileName)
 	if err != nil {
-		t.Skipf("unable to read benchmark_config.json: %v", err)
+		t.Skipf("unable to read %s: %v", configFileName, err)
 	}
 
 	var cfg BenchmarkConfig
@@ -38,15 +40,17 @@ func TestPlanning(t *testing.T) {
 	require.NoError(t, err)
 
 	start := time.Now()
-	_, err = pl.PlanPreparedOperation(opDoc)
+	p, err := pl.PlanPreparedOperation(opDoc)
 	require.NoError(t, err)
 	t.Logf("Planning completed in %v", time.Since(start))
+
+	t.Log(p.PrettyPrint())
 }
 
 func BenchmarkPlanning(b *testing.B) {
-	cfgContent, err := os.ReadFile("benchmark_config.json")
+	cfgContent, err := os.ReadFile(configFileName)
 	if err != nil {
-		b.Skipf("unable to read benchmark_config.json: %v", err)
+		b.Skipf("unable to read %s: %v", configFileName, err)
 	}
 
 	var cfg BenchmarkConfig
