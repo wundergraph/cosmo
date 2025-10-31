@@ -3,6 +3,7 @@ package datasource
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -90,6 +91,9 @@ func (p *PubSubProvider) Publish(ctx context.Context, cfg PublishEventConfigurat
 	}
 
 	processedEvents, hooksErr := p.applyPublishEventHooks(ctx, cfg, events)
+	processedEvents = slices.DeleteFunc(processedEvents, func(event StreamEvent) bool {
+		return event == nil
+	})
 
 	errPublish := p.Adapter.Publish(ctx, cfg, processedEvents)
 	if errPublish != nil {

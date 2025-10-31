@@ -225,9 +225,17 @@ func TestProvider_Publish_WithHooks_Success(t *testing.T) {
 	}
 	originalEvents := []StreamEvent{
 		&testEvent{mutableTestEvent("original data")},
+		&testEvent{mutableTestEvent("original data 2")},
 	}
 	modifiedEvents := []StreamEvent{
 		&testEvent{mutableTestEvent("modified data")},
+		nil, // should be ignored by publisher
+		&testEvent{mutableTestEvent("modified data 2")},
+		nil, // should be ignored by publisher
+	}
+	expectedEvents := []StreamEvent{
+		&testEvent{mutableTestEvent("modified data")},
+		&testEvent{mutableTestEvent("modified data 2")},
 	}
 
 	var eventBuilderExists bool
@@ -240,7 +248,7 @@ func TestProvider_Publish_WithHooks_Success(t *testing.T) {
 		return modifiedEvents, nil
 	}
 
-	mockAdapter.On("Publish", mock.Anything, config, modifiedEvents).Return(nil)
+	mockAdapter.On("Publish", mock.Anything, config, expectedEvents).Return(nil)
 
 	provider := PubSubProvider{
 		Adapter: mockAdapter,

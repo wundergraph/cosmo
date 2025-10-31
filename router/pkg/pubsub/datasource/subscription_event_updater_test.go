@@ -79,6 +79,7 @@ func TestSubscriptionEventUpdater_UpdateSubscription_WithHooks_Success(t *testin
 	}
 	modifiedEvents := []StreamEvent{
 		&testEvent{mutableTestEvent("modified data")},
+		nil, // this should simply be ignored
 	}
 
 	// Create wrapper function for the mock

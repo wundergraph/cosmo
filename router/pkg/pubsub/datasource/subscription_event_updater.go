@@ -95,6 +95,9 @@ func (s *subscriptionEventUpdater) updateSubscription(ctx context.Context, wg *s
 	// regardless if there was an error during hook processing.
 	// If no events should be sent, hook must return no events.
 	for _, event := range events {
+		if event == nil {
+			continue
+		}
 		s.eventUpdater.UpdateSubscription(subID, event.GetData())
 	}
 
