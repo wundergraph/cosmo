@@ -55,6 +55,10 @@ func (p *PubSubProvider) applyPublishEventHooks(ctx context.Context, cfg Publish
 
 			return currentEvents, err
 		}
+
+		currentEvents = slices.DeleteFunc(currentEvents, func(event StreamEvent) bool {
+			return event == nil
+		})
 	}
 	return currentEvents, nil
 }
@@ -91,9 +95,6 @@ func (p *PubSubProvider) Publish(ctx context.Context, cfg PublishEventConfigurat
 	}
 
 	processedEvents, hooksErr := p.applyPublishEventHooks(ctx, cfg, events)
-	processedEvents = slices.DeleteFunc(processedEvents, func(event StreamEvent) bool {
-		return event == nil
-	})
 
 	errPublish := p.Adapter.Publish(ctx, cfg, processedEvents)
 	if errPublish != nil {

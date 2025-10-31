@@ -2,6 +2,7 @@ package datasource
 
 import (
 	"context"
+	"slices"
 	"sync"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -86,6 +87,10 @@ func (s *subscriptionEventUpdater) updateSubscription(ctx context.Context, wg *s
 	var err error
 	for i := range hooks {
 		events, err = hooks[i](ctx, s.subscriptionEventConfiguration, s.eventBuilder, events)
+		events = slices.DeleteFunc(events, func(event StreamEvent) bool {
+			return event == nil
+		})
+
 		if err != nil {
 			errCh <- err
 		}
@@ -95,9 +100,6 @@ func (s *subscriptionEventUpdater) updateSubscription(ctx context.Context, wg *s
 	// regardless if there was an error during hook processing.
 	// If no events should be sent, hook must return no events.
 	for _, event := range events {
-		if event == nil {
-			continue
-		}
 		s.eventUpdater.UpdateSubscription(subID, event.GetData())
 	}
 
