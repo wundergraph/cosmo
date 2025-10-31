@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/klauspost/compress/gzip"
@@ -96,7 +97,7 @@ func (c Client) getConfigFile(ctx context.Context, modifiedSince time.Time) ([]b
 
 	var configReader io.Reader
 
-	switch filepath.Ext(c.options.ObjectPath) {
+	switch strings.ToLower(filepath.Ext(c.options.ObjectPath)) {
 	case ".gz":
 		gzipReader, err := gzip.NewReader(minioReader)
 		if err != nil {
