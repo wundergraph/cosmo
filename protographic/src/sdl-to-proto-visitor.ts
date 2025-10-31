@@ -38,34 +38,16 @@ import {
 } from './naming-conventions.js';
 import { camelCase } from 'lodash-es';
 import { ProtoLock, ProtoLockManager } from './proto-lock.js';
-
-/**
- * Maps GraphQL scalar types to Protocol Buffer types
- *
- * GraphQL has a smaller set of primitive types compared to Protocol Buffers.
- * This mapping ensures consistent representation between the two type systems.
- */
-const SCALAR_TYPE_MAP: Record<string, string> = {
-  ID: 'string', // GraphQL IDs map to Proto strings
-  String: 'string', // Direct mapping
-  Int: 'int32', // GraphQL Int is 32-bit signed
-  Float: 'double', // Using double for GraphQL Float gives better precision
-  Boolean: 'bool', // Direct mapping
-};
-
-/**
- * Maps GraphQL scalar types to Protocol Buffer wrapper types for nullable fields
- *
- * These wrapper types allow distinguishing between unset fields and zero values
- * in Protocol Buffers, which is important for GraphQL nullable semantics.
- */
-const SCALAR_WRAPPER_TYPE_MAP: Record<string, string> = {
-  ID: 'google.protobuf.StringValue',
-  String: 'google.protobuf.StringValue',
-  Int: 'google.protobuf.Int32Value',
-  Float: 'google.protobuf.DoubleValue',
-  Boolean: 'google.protobuf.BoolValue',
-};
+import {
+    SCALAR_TYPE_MAP,
+    SCALAR_WRAPPER_TYPE_MAP,
+    ProtoType,
+    getProtoTypeFromGraphQL,
+    handleListType,
+    isGraphQLListType,
+    getRootTypeForOperation,
+    buildProtoHeader, createRpcMethod, formatComment,
+} from './proto-utils.js';
 
 /**
  * Generic structure for returning RPC and message definitions
@@ -75,6 +57,7 @@ interface CollectionResult {
   methodNames: string[];
   messageDefinitions: string[];
 }
+
 
 /**
  * Options for GraphQLToProtoTextVisitor
@@ -86,14 +69,6 @@ export interface GraphQLToProtoTextVisitorOptions {
   lockData?: ProtoLock;
   /** Whether to include descriptions/comments from GraphQL schema */
   includeComments?: boolean;
-}
-
-/**
- * Data structure for formatting message fields
- */
-interface ProtoType {
-  typeName: string;
-  isRepeated: boolean;
 }
 
 /**
@@ -402,41 +377,7 @@ export class GraphQLToProtoTextVisitor {
     }
   }
 
-  /**
-   * Build the proto file header with syntax, package, imports, and options
-   */
-  private buildProtoHeader(): string[] {
-    const header: string[] = [];
 
-    // Add syntax declaration
-    header.push('syntax = "proto3";');
-
-    // Add package declaration
-    header.push(`package ${this.packageName};`);
-    header.push('');
-
-    // Add options if any (options come before imports)
-    if (this.options.length > 0) {
-      // Sort options for consistent output
-      const sortedOptions = [...this.options].sort();
-      for (const option of sortedOptions) {
-        header.push(option);
-      }
-      header.push('');
-    }
-
-    // Add imports if any
-    if (this.imports.length > 0) {
-      // Sort imports for consistent output
-      const sortedImports = [...this.imports].sort();
-      for (const importPath of sortedImports) {
-        header.push(`import "${importPath}";`);
-      }
-      header.push('');
-    }
-
-    return header;
-  }
 
   /**
    * Visit the GraphQL schema to generate Proto buffer definition
@@ -474,12 +415,12 @@ export class GraphQLToProtoTextVisitor {
     let protoContent: string[] = [];
 
     // Add the header (syntax, package, imports, options)
-    protoContent.push(...this.buildProtoHeader());
+    protoContent.push(...buildProtoHeader(this.packageName, this.imports, this.options));
 
     // Add a service description comment
     if (this.includeComments) {
       const serviceComment = `Service definition for ${this.serviceName}`;
-      protoContent.push(...this.formatComment(serviceComment, 0)); // Top-level comment, no indent
+      protoContent.push(...formatComment(serviceComment, this.includeComments, 0)); // Top-level comment, no indent
     }
 
     // Add service block containing RPC methods
@@ -497,6 +438,7 @@ export class GraphQLToProtoTextVisitor {
         const rpcMethodText = allRpcMethods[methodIndex];
         if (rpcMethodText.includes('\n')) {
           // For multi-line RPC method definitions (with comments), add each line separately
+          // The comment lines already have proper indentation from createRpcMethod
           const lines = rpcMethodText.split('\n');
           protoContent.push(...lines);
         } else {
@@ -629,7 +571,7 @@ export class GraphQLToProtoTextVisitor {
             const description = `Lookup ${typeName} entity by ${keyDescription}${
               type.description ? ': ' + type.description : ''
             }`;
-            result.rpcMethods.push(this.createRpcMethod(methodName, requestName, responseName, description));
+            result.rpcMethods.push(createRpcMethod(methodName, requestName, responseName, this.includeComments, description));
 
             // Create request and response messages for this key combination
             result.messageDefinitions.push(
@@ -692,7 +634,7 @@ export class GraphQLToProtoTextVisitor {
 
       // Add method name and RPC method with the field description
       result.methodNames.push(mappedName);
-      result.rpcMethods.push(this.createRpcMethod(mappedName, requestName, responseName, field.description));
+      result.rpcMethods.push(createRpcMethod(mappedName, requestName, responseName, this.includeComments, field.description));
 
       // Create request and response messages
       result.messageDefinitions.push(...this.createFieldRequestMessage(requestName, field));
@@ -725,32 +667,6 @@ export class GraphQLToProtoTextVisitor {
   }
 
   /**
-   * Create an RPC method definition with optional comment
-   *
-   * @param methodName - The name of the RPC method
-   * @param requestName - The request message name
-   * @param responseName - The response message name
-   * @param description - Optional description for the method
-   * @returns The RPC method definition with or without comment
-   */
-  private createRpcMethod(
-    methodName: string,
-    requestName: string,
-    responseName: string,
-    description?: string | null,
-  ): string {
-    if (!this.includeComments || !description) {
-      return `rpc ${methodName}(${requestName}) returns (${responseName}) {}`;
-    }
-
-    // RPC method comments should be indented 1 level (2 spaces)
-    const commentLines = this.formatComment(description, 1);
-    const methodLine = `  rpc ${methodName}(${requestName}) returns (${responseName}) {}`;
-
-    return [...commentLines, methodLine].join('\n');
-  }
-
-  /**
    * Creates a request message for entity lookup without adding to protoText
    */
   private createKeyRequestMessage(
@@ -766,7 +682,7 @@ export class GraphQLToProtoTextVisitor {
     // First create the key message
     if (this.includeComments) {
       const keyMessageComment = `Key message for ${typeName} entity lookup`;
-      messageLines.push(...this.formatComment(keyMessageComment, 0)); // Top-level comment, no indent
+      messageLines.push(...formatComment(keyMessageComment, this.includeComments, 0)); // Top-level comment, no indent
     }
     messageLines.push(`message ${keyMessageName} {`);
 
@@ -796,7 +712,7 @@ export class GraphQLToProtoTextVisitor {
 
       if (this.includeComments) {
         const keyFieldComment = `Key field for ${typeName} entity lookup.`;
-        messageLines.push(...this.formatComment(keyFieldComment, 1)); // Field comment, indent 1 level
+        messageLines.push(...formatComment(keyFieldComment, this.includeComments, 1)); // Field comment, indent 1 level
       }
       messageLines.push(`  string ${protoKeyField} = ${keyFieldNumber};`);
     });
@@ -817,7 +733,7 @@ export class GraphQLToProtoTextVisitor {
 
     if (this.includeComments) {
       const requestComment = `Request message for ${typeName} entity lookup.`;
-      messageLines.push(...this.formatComment(requestComment, 0)); // Top-level comment, no indent
+      messageLines.push(...formatComment(requestComment, this.includeComments, 0)); // Top-level comment, no indent
     }
     messageLines.push(`message ${requestName} {`);
 
@@ -833,7 +749,7 @@ export class GraphQLToProtoTextVisitor {
     if (this.includeComments) {
       const keysComment = `List of keys to look up ${typeName} entities.
 Order matters - each key maps to one entity in ${responseName}.`;
-      messageLines.push(...this.formatComment(keysComment, 1)); // Field comment, indent 1 level
+      messageLines.push(...formatComment(keysComment, this.includeComments, 1)); // Field comment, indent 1 level
     }
     messageLines.push(`  repeated ${keyMessageName} keys = ${repeatFieldNumber};`);
     messageLines.push('}');
@@ -862,7 +778,7 @@ Order matters - each key maps to one entity in ${responseName}.`;
     // Create the response message with repeated entity directly
     if (this.includeComments) {
       const responseComment = `Response message for ${typeName} entity lookup.`;
-      messageLines.push(...this.formatComment(responseComment, 0)); // Top-level comment, no indent
+      messageLines.push(...formatComment(responseComment, this.includeComments, 0)); // Top-level comment, no indent
     }
     messageLines.push(`message ${responseName} {`);
 
@@ -889,7 +805,7 @@ Example:
       - id: 1 # User with id 1 found
       - null  # User with id 2 not found
 `;
-      messageLines.push(...this.formatComment(resultComment, 1)); // Field comment, indent 1 level
+      messageLines.push(...formatComment(resultComment, this.includeComments, 1)); // Field comment, indent 1 level
     }
     messageLines.push(`  repeated ${typeName} result = ${responseFieldNumber};`);
     messageLines.push('}');
@@ -918,7 +834,7 @@ Example:
       const description = field.description
         ? `Request message for ${field.name} operation${field.description ? ': ' + field.description : ''}.`
         : `Request message for ${field.name} operation.`;
-      messageLines.push(...this.formatComment(description, 0)); // Top-level comment, no indent
+      messageLines.push(...formatComment(description, this.includeComments, 0)); // Top-level comment, no indent
     }
 
     messageLines.push(`message ${requestName} {`);
@@ -955,7 +871,7 @@ Example:
         // Add argument description as comment
         if (arg.description) {
           // Use 1 level indent for field comments
-          messageLines.push(...this.formatComment(arg.description, 1));
+          messageLines.push(...formatComment(arg.description, this.includeComments, 1));
         }
 
         // Check if the argument is a list type and add the repeated keyword if needed
@@ -1004,7 +920,7 @@ Example:
       const description = field.description
         ? `Response message for ${fieldName} operation${field.description ? ': ' + field.description : ''}.`
         : `Response message for ${fieldName} operation.`;
-      messageLines.push(...this.formatComment(description, 0)); // Top-level comment, no indent
+      messageLines.push(...formatComment(description, this.includeComments, 0)); // Top-level comment, no indent
     }
 
     messageLines.push(`message ${responseName} {`);
@@ -1022,7 +938,7 @@ Example:
     // Add description for the response field based on field description
     if (field.description) {
       // Use 1 level indent for field comments
-      messageLines.push(...this.formatComment(field.description, 1));
+      messageLines.push(...formatComment(field.description, this.includeComments, 1));
     }
 
     if (returnType.isRepeated) {
@@ -1182,7 +1098,7 @@ Example:
 
     // Add type description as comment before message definition
     if (type.description) {
-      this.protoText.push(...this.formatComment(type.description, 0)); // Top-level comment, no indent
+      this.protoText.push(...formatComment(type.description, this.includeComments, 0)); // Top-level comment, no indent
     }
 
     this.protoText.push(`message ${type.name} {`);
@@ -1213,11 +1129,11 @@ Example:
 
       // Add field description as comment
       if (field.description) {
-        this.protoText.push(...this.formatComment(field.description, 1)); // Field comment, indent 1 level
+        this.protoText.push(...formatComment(field.description, this.includeComments, 1)); // Field comment, indent 1 level
       }
 
       if (deprecationInfo.deprecated && deprecationInfo.reason && deprecationInfo.reason.length > 0) {
-        this.protoText.push(...this.formatComment(`Deprecation notice: ${deprecationInfo.reason}`, 1));
+        this.protoText.push(...formatComment(`Deprecation notice: ${deprecationInfo.reason}`, this.includeComments, 1));
       }
 
       const fieldOptions = [];
@@ -1322,7 +1238,7 @@ Example:
 
     // Add type description as comment before message definition
     if (type.description) {
-      this.protoText.push(...this.formatComment(type.description, 0)); // Top-level comment, no indent
+      this.protoText.push(...formatComment(type.description, this.includeComments, 0)); // Top-level comment, no indent
     }
 
     this.protoText.push(`message ${type.name} {`);
@@ -1353,11 +1269,11 @@ Example:
 
       // Add field description as comment
       if (field.description) {
-        this.protoText.push(...this.formatComment(field.description, 1)); // Field comment, indent 1 level
+        this.protoText.push(...formatComment(field.description, this.includeComments, 1)); // Field comment, indent 1 level
       }
 
       if (deprecationInfo.deprecated && deprecationInfo.reason && deprecationInfo.reason.length > 0) {
-        this.protoText.push(...this.formatComment(`Deprecation notice: ${deprecationInfo.reason}`, 1));
+        this.protoText.push(...formatComment(`Deprecation notice: ${deprecationInfo.reason}`, this.includeComments, 1));
       }
 
       const fieldOptions = [];
@@ -1411,7 +1327,7 @@ Example:
 
     // Add interface description as comment
     if (type.description) {
-      this.protoText.push(...this.formatComment(type.description, 0)); // Top-level comment, no indent
+      this.protoText.push(...formatComment(type.description, this.includeComments, 0)); // Top-level comment, no indent
     }
 
     this.protoText.push(`message ${type.name} {`);
@@ -1432,7 +1348,7 @@ Example:
 
       // Add implementing type description as comment if available
       if (implType.description) {
-        this.protoText.push(...this.formatComment(implType.description, 1)); // Field comment, indent 1 level
+        this.protoText.push(...formatComment(implType.description, this.includeComments, 1)); // Field comment, indent 1 level
       }
 
       this.protoText.push(`  ${implType.name} ${graphqlFieldToProtoField(implType.name)} = ${i + 1};`);
@@ -1469,7 +1385,7 @@ Example:
 
     // Add union description as comment
     if (type.description) {
-      this.protoText.push(...this.formatComment(type.description, 0)); // Top-level comment, no indent
+      this.protoText.push(...formatComment(type.description, this.includeComments, 0)); // Top-level comment, no indent
     }
 
     this.protoText.push(`message ${type.name} {`);
@@ -1491,7 +1407,7 @@ Example:
 
       // Add member type description as comment if available
       if (memberType.description) {
-        this.protoText.push(...this.formatComment(memberType.description, 1)); // Field comment, indent 1 level
+        this.protoText.push(...formatComment(memberType.description, this.includeComments, 1)); // Field comment, indent 1 level
       }
 
       this.protoText.push(`  ${memberType.name} ${graphqlFieldToProtoField(memberType.name)} = ${i + 1};`);
@@ -1530,7 +1446,7 @@ Example:
 
     // Add enum description as comment
     if (type.description) {
-      this.protoText.push(...this.formatComment(type.description, 0)); // Top-level comment, no indent
+      this.protoText.push(...formatComment(type.description, this.includeComments, 0)); // Top-level comment, no indent
     }
 
     this.protoText.push(`enum ${type.name} {`);
@@ -1561,11 +1477,11 @@ Example:
 
       // Add enum value description as comment
       if (value.description) {
-        this.protoText.push(...this.formatComment(value.description, 1)); // Field comment, indent 1 level
+        this.protoText.push(...formatComment(value.description, this.includeComments, 1)); // Field comment, indent 1 level
       }
 
       if (deprecationInfo.deprecated && (deprecationInfo.reason?.length ?? 0) > 0) {
-        this.protoText.push(...this.formatComment(`Deprecation notice: ${deprecationInfo.reason}`, 1));
+        this.protoText.push(...formatComment(`Deprecation notice: ${deprecationInfo.reason}`, this.includeComments, 1));
       }
 
       // Get value number from lock data
@@ -1591,6 +1507,8 @@ Example:
     this.indent--;
     this.protoText.push('}');
   }
+
+
 
   /**
    * Map GraphQL type to Protocol Buffer type
@@ -1664,7 +1582,10 @@ Example:
 
     // Simple non-nullable lists can use repeated fields directly
     if (!isNullableList && !isNestedList) {
-      return { ...this.getProtoTypeFromGraphQL(getNamedType(listType), true), isRepeated: true };
+      const wrapperTracker = { usesWrapperTypes: this.usesWrapperTypes };
+      const result = { ...getProtoTypeFromGraphQL(getNamedType(listType), true, wrapperTracker), isRepeated: true };
+      this.usesWrapperTypes = wrapperTracker.usesWrapperTypes;
+      return result;
     }
 
     // Nullable or nested lists need wrapper messages
@@ -1770,7 +1691,7 @@ Example:
 
     // Add comment if enabled
     if (this.includeComments) {
-      lines.push(...this.formatComment(`Wrapper message for a list of ${baseType.name}.`, 0));
+      lines.push(...formatComment(`Wrapper message for a list of ${baseType.name}.`, this.includeComments, 0));
     }
 
     const formatIndent = (indent: number, content: string) => {
@@ -1782,7 +1703,9 @@ Example:
     if (level > 1) {
       innerWrapperName = `${'ListOf'.repeat(level - 1)}${baseType.name}`;
     } else {
-      innerWrapperName = this.getProtoTypeFromGraphQL(baseType, true).typeName;
+      const wrapperTracker = { usesWrapperTypes: this.usesWrapperTypes };
+      innerWrapperName = getProtoTypeFromGraphQL(baseType, true, wrapperTracker).typeName;
+      this.usesWrapperTypes = wrapperTracker.usesWrapperTypes;
     }
 
     lines.push(
@@ -1866,27 +1789,5 @@ Example:
         }
       })
       .join(', ');
-  }
-
-  /**
-   * Convert a GraphQL description to Protocol Buffer comment
-   * @param description - The GraphQL description text
-   * @param indentLevel - The level of indentation for the comment (in number of 2-space blocks)
-   * @returns Array of comment lines with proper indentation
-   */
-  private formatComment(description: string | undefined | null, indentLevel: number = 0): string[] {
-    if (!this.includeComments || !description) {
-      return [];
-    }
-
-    // Use 2-space indentation consistently
-    const indent = '  '.repeat(indentLevel);
-    const lines = description.trim().split('\n');
-
-    if (lines.length === 1) {
-      return [`${indent}// ${lines[0]}`];
-    } else {
-      return [`${indent}/*`, ...lines.map((line) => `${indent} * ${line}`), `${indent} */`];
-    }
   }
 }
