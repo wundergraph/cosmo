@@ -17,10 +17,38 @@ import { dataDir } from '../../../../core/config.js';
 import { renderValidationResults } from './helper.js';
 
 // Define platform-architecture combinations
-export const HOST_PLATFORM = `${os.platform()}-${getOSArch()}`;
-const ALL_PLATFORMS = ['linux-amd64', 'linux-arm64', 'darwin-amd64', 'darwin-arm64', 'windows-amd64'];
+export function getHostPlatform(language: string) {
+  const basePlatform = `${os.platform()}-${getOSArch(language)}`;
+  if (language === 'ts') {
+    return `bun-${basePlatform}`;
+  }
+  return basePlatform;
+}
+
+const ALL_GO_PLATFORMS = ['linux-amd64', 'linux-arm64', 'darwin-amd64', 'darwin-arm64', 'windows-amd64'];
+
+// Both bun-linux-x64 share the same bun-linux-x64-musl target name of linux-amd64, thus we prefer musl, since it seems to be
+// more compatible, users can still override this by explicitly specifying what they want
+const ALL_BUN_PLATFORMS = [
+  'bun-linux-x64-musl',
+  'bun-linux-arm64-musl',
+  'bun-windows-x64',
+  'bun-darwin-arm64',
+  'bun-darwin-x64',
+];
+
+const ALL_BUN_PLATFORM_MAPPINGS: Record<string, string> = {
+  'bun-linux-x64': 'linux-amd64',
+  'bun-linux-arm64': 'linux-arm64',
+  'bun-darwin-x64': 'darwin-amd64',
+  'bun-darwin-arm64': 'darwin-arm64',
+  'bun-windows-x64': 'windows-amd64',
+  'bun-linux-x64-musl': 'linux-amd64',
+  'bun-linux-arm64-musl': 'linux-arm64',
+};
+
 const installScriptUrl =
-  'https://raw.githubusercontent.com/wundergraph/cosmo/refs/tags/wgc%400.80.0/scripts/install-proto-tools.sh';
+  'https://raw.githubusercontent.com/wundergraph/cosmo/11347a8300eb71e06348cef203716e560585a20f/scripts/install-proto-tools.sh';
 
 // Get paths for tool installation
 const TOOLS_DIR = join(dataDir, 'proto-tools');
@@ -40,6 +68,7 @@ const TOOL_VERSIONS: Record<string, ToolVersion> = {
   protocGenGo: { range: '^1.34.2', envVar: 'PROTOC_GEN_GO_VERSION', scriptVersion: '1.34.2' },
   protocGenGoGrpc: { range: '^1.5.1', envVar: 'PROTOC_GEN_GO_GRPC_VERSION', scriptVersion: '1.5.1' },
   go: { range: '>=1.22.0', envVar: 'GO_VERSION', scriptVersion: '1.24.1' },
+  bun: { range: '^1.3.1', envVar: 'BUN_VERSION', scriptVersion: '1.3.1' },
 };
 
 /**
@@ -49,8 +78,12 @@ function getToolPath(toolName: string): string {
   return existsSync(join(TOOLS_BIN_DIR, toolName)) ? join(TOOLS_BIN_DIR, toolName) : toolName;
 }
 
-function getOSArch(): string {
+function getOSArch(language: string): string {
   const arch = os.arch();
+  if (language !== 'go') {
+    return arch;
+  }
+
   if (arch === 'x64') {
     return 'amd64';
   }
@@ -155,6 +188,12 @@ async function areToolsInstalledOnHost(): Promise<boolean> {
           `protoc-gen-go-grpc version mismatch: found ${protocGenGoGrpcVersion}, required ${TOOL_VERSIONS.protocGenGoGrpc.range}`,
         ),
       );
+      return false;
+    }
+
+    const bunVersion = await getCommandVersion('bun', '--version');
+    if (!isSemverSatisfied(bunVersion, TOOL_VERSIONS.bun.range)) {
+      console.log(pc.yellow(`Bun version mismatch: found ${bunVersion}, required ${TOOL_VERSIONS.bun.range}`));
       return false;
     }
 
@@ -407,7 +446,7 @@ export async function generateProtoAndMapping(pluginDir: string, goModulePath: s
 /**
  * Generate gRPC code using protoc
  */
-export async function generateGRPCCode(pluginDir: string, spinner: any) {
+export async function generateGRPCCode(pluginDir: string, spinner: any, language: string) {
   spinner.text = 'Generating gRPC code...\n';
 
   const env = getToolsEnv();
@@ -415,17 +454,56 @@ export async function generateGRPCCode(pluginDir: string, spinner: any) {
 
   console.log('');
 
-  await execa(
-    protocPath,
-    [
-      '--go_out=.',
-      '--go_opt=paths=source_relative',
-      '--go-grpc_out=.',
-      '--go-grpc_opt=paths=source_relative',
-      'generated/service.proto',
-    ],
-    { cwd: pluginDir, stdout: 'inherit', stderr: 'inherit', env },
-  );
+  switch (language) {
+    case 'go': {
+      await execa(
+        protocPath,
+        [
+          '--go_out=.',
+          '--go_opt=paths=source_relative',
+          '--go-grpc_out=.',
+          '--go-grpc_opt=paths=source_relative',
+          'generated/service.proto',
+        ],
+        { cwd: pluginDir, stdout: 'inherit', stderr: 'inherit', env },
+      );
+      break;
+    }
+    case 'ts': {
+      const protocGenTsPath = resolve(pluginDir, 'node_modules/.bin/protoc-gen-ts');
+      const protocGenGrpcPath = resolve(pluginDir, 'node_modules/.bin/grpc_tools_node_protoc_plugin');
+      const generatedDir = resolve(pluginDir, 'generated');
+      const protoGenJsPath = resolve(pluginDir, 'node_modules/.bin/protoc-gen-js');
+      const protoFile = resolve(pluginDir, 'generated/service.proto');
+
+      if (!existsSync(protocGenTsPath)) {
+        throw new Error(`protoc-gen-ts not found at ${protocGenTsPath}.`);
+      }
+      if (!existsSync(protocGenGrpcPath)) {
+        throw new Error(`grpc_tools_node_protoc_plugin not found at ${protocGenGrpcPath}.`);
+      }
+      if (!existsSync(protoGenJsPath)) {
+        throw new Error(`protoc-gen-js not found at ${protoGenJsPath}.`);
+      }
+
+      await execa(
+        protocPath,
+        [
+          `--plugin=protoc-gen-ts=${protocGenTsPath}`,
+          `--plugin=protoc-gen-grpc=${protocGenGrpcPath}`,
+          `--plugin=protoc-gen-js=${protoGenJsPath}`,
+          `--ts_out=grpc_js:${generatedDir}`,
+          `--js_out=import_style=commonjs,binary:${generatedDir}`,
+          `--grpc_out=grpc_js:${generatedDir}`,
+          `--proto_path=${generatedDir}`,
+          protoFile,
+        ],
+        { cwd: pluginDir, stdout: 'inherit', stderr: 'inherit', env },
+      );
+
+      break;
+    }
+  }
 }
 
 /**
@@ -451,6 +529,22 @@ export function runGoTests(pluginDir: string, spinner: any, debug = false) {
   });
 }
 
+export function runTsTests(pluginDir: string, spinner: any) {
+  spinner.text = 'Running tests...\n';
+
+  const env = getToolsEnv();
+  const bunPath = getToolPath('bun');
+
+  const args = ['test'];
+
+  return execa(bunPath, args, {
+    cwd: pluginDir,
+    stdout: 'inherit',
+    stderr: 'inherit',
+    env,
+  });
+}
+
 /**
  * Install Go dependencies
  */
@@ -468,10 +562,96 @@ export async function installGoDependencies(pluginDir: string, spinner: any) {
   });
 }
 
+export async function installTsDependencies(pluginDir: string, spinner: any) {
+  spinner.text = 'Installing dependencies...\n';
+
+  const env = getToolsEnv();
+  const bunPath = getToolPath('bun');
+
+  await execa(bunPath, ['install'], {
+    cwd: pluginDir,
+    stdout: 'inherit',
+    stderr: 'inherit',
+    env,
+  });
+
+  spinner.text = 'Installing node modules...\n';
+}
+
+/**
+ * Run TypeScript type-check (no emit) to fail build on TS errors
+ */
+export async function typeCheckTs(pluginDir: string, spinner: any) {
+  spinner.text = 'Type-checking Plugin...\n';
+
+  const env = getToolsEnv();
+  const bunPath = getToolPath('bun');
+
+  // Use `bun x tsc` to ensure TypeScript is available without requiring it as a dependency
+  await execa(bunPath, ['tsc', '--noEmit'], {
+    cwd: pluginDir,
+    stdout: 'inherit',
+    stderr: 'inherit',
+    env,
+  });
+}
+
 /**
  * Build binaries for specified platforms
  */
-export async function buildBinaries(pluginDir: string, platforms: string[], debug: boolean, spinner: any) {
+export async function buildTsBinaries(pluginDir: string, platforms: string[], debug: boolean, spinner: any) {
+  spinner.text = 'Building binaries...';
+
+  const binDir = resolve(pluginDir, 'bin');
+  await mkdir(binDir, { recursive: true });
+
+  const env = getToolsEnv();
+  const bunPath = getToolPath('bun');
+
+  await Promise.all(
+    platforms.map(async (originalPlatformArch: string) => {
+      const platformArch = ALL_BUN_PLATFORM_MAPPINGS[originalPlatformArch];
+      if (!platformArch) {
+        throw new Error(`Unsupported platform for Bun: ${originalPlatformArch}`);
+      }
+
+      const [platform, arch] = platformArch.split('-');
+      if (!platform || !arch) {
+        throw new Error(
+          `Invalid platform-architecture format: ${originalPlatformArch}. Use format like 'bun-darwin-arm64'`,
+        );
+      }
+      const binaryName = `${platform}_${arch}`;
+
+      spinner.text = `Building ${originalPlatformArch}...`;
+      const flags = [
+        'build',
+        'src/plugin.ts',
+        '--compile',
+        '--outfile',
+        `bin/${binaryName}`,
+        `--target=${originalPlatformArch}`,
+      ];
+
+      if (debug) {
+        // TODO: To verify if we can actually debug sourcemaps
+        flags.push('--sourcemap');
+      }
+
+      await execa(bunPath, flags, {
+        cwd: pluginDir,
+        stdout: 'inherit',
+        stderr: 'inherit',
+        env,
+      });
+    }),
+  );
+}
+
+/**
+ * Build binaries for specified platforms
+ */
+export async function buildGoBinaries(pluginDir: string, platforms: string[], debug: boolean, spinner: any) {
   spinner.text = 'Building binaries...';
   const binDir = resolve(pluginDir, 'bin');
 
@@ -519,11 +699,39 @@ export async function buildBinaries(pluginDir: string, platforms: string[], debu
 /**
  * Normalize a platform list based on options
  */
-export function normalizePlatforms(platforms: string[], allPlatforms: boolean): string[] {
+export function normalizePlatforms(platforms: string[], allPlatforms: boolean, language: string): string[] {
+  if (platforms.length === 0) {
+    platforms = [getHostPlatform(language)];
+  }
+
   if (!allPlatforms) {
     return platforms;
   }
 
-  // Add all platforms and remove duplicates
-  return [...new Set([...platforms, ...ALL_PLATFORMS])];
+  switch (language) {
+    case 'go': {
+      return [...new Set([...platforms, ...ALL_GO_PLATFORMS])];
+    }
+    case 'ts': {
+      return [...new Set([...platforms, ...ALL_BUN_PLATFORMS])];
+    }
+  }
+
+  throw new Error(`Unsupported language for platform normalization: ${language}`);
+}
+
+export function getLanguage(pluginDir: string) {
+  const goModFile = resolve(pluginDir, 'go.mod');
+  const packageJsonFile = resolve(pluginDir, 'package.json');
+
+  // TODO: Make Async
+  if (existsSync(goModFile)) {
+    return 'go';
+  }
+
+  if (existsSync(packageJsonFile)) {
+    return 'ts';
+  }
+
+  throw new Error('Could not detect language: neither go.mod nor package.json found in plugin directory');
 }

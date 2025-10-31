@@ -44,3 +44,7 @@ subgraphs:
     plugin:
       version: 0.0.1
       path: ./pkg/subgraphs/projects
+  - name: courses
+    plugin:
+      version: 0.0.1
+      path: ./pkg/subgraphs/courses
