@@ -50,17 +50,21 @@ func (e StreamEvents) Unsafe() []StreamEvent             // returns the underlyi
 
 func NewStreamEvents(evts []StreamEvent) StreamEvents
 
-// each provider will have its own event type with custom fields
-// the StreamEvent interface is used to allow the hooks system to be provider-agnostic
+// StreamEvent is a generic immutable event.
+// Every provider will have it's distinct implementation with additionals fields.
+// Common to all providers is that their events have a payload.
 type StreamEvent interface {
+    // GetData returns a copy of payload data of the event
     GetData() []byte
-    Clone() MutableStreamEvent  // returns a mutable copy of the event
+    // Clone returns a mutable copy of the event
+    Clone() MutableStreamEvent
 }
 
-// MutableStreamEvent is a stream event that can be modified
+// MutableStreamEvent is a StreamEvent that can be modified.
 type MutableStreamEvent interface {
     StreamEvent
-    SetData([]byte)  // sets the data of the event
+    // SetData sets the payload data for this event
+    SetData([]byte)
 }
 
 // SubscriptionEventConfiguration is the common interface for the subscription event configuration
