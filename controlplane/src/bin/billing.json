@@ -179,7 +179,8 @@
           "id": "plugins",
           "description": "Unlimited Plugins",
           "limit": 30
-        }
+        },
+        { "id": "subgraph-check-extensions" }
       ]
     }
   }
