@@ -14,7 +14,8 @@ import { WebhookDeliveryInfo } from '../../db/models.js';
 import { webhookAxiosRetryCond } from '../util.js';
 import {
   FederatedGraphDTO,
-  Label, LintIssueResult,
+  Label,
+  LintIssueResult,
   NamespaceDTO,
   SchemaGraphPruningIssues,
   SchemaLintIssues,
