@@ -633,8 +633,6 @@ export class OrganizationWebhookService {
       fileContent.subgraph = {
         id: input.subgraph?.id,
         name: input.subgraph?.name,
-        newComposedSdl: input.newSchemaSDL,
-        oldComposedSdl: input.subgraph?.schemaSDL,
       };
 
       fileContent.composition = input.composedGraphs.map((c) => ({
@@ -700,6 +698,8 @@ export class OrganizationWebhookService {
         id: input.subgraph.id,
         name: input.subgraph.name,
         isDeleted: input.isDeleted,
+        oldSchema: input.subgraph.schemaSDL,
+        newSchema: input.newSchemaSDL,
       };
     }
 
