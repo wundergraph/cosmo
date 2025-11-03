@@ -1156,13 +1156,7 @@ Example:
     const resolvedDirective = this.findResolverDirective(field);
     if (resolvedDirective) {
       const valueNode = resolvedDirective.arguments?.find((arg) => arg.name.value === CONTEXT)?.value;
-      const context = (() => {
-        if (!valueNode || valueNode.kind !== 'StringValue') {
-          return '';
-        }
-
-        return valueNode.value.trim();
-      })();
+      const context = !valueNode || valueNode.kind !== Kind.STRING ? '' : valueNode.value.trim();
 
       if (context.length > 0) {
         return { context, error: undefined };
