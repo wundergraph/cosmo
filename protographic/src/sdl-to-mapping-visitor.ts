@@ -95,8 +95,8 @@ export class GraphQLToProtoVisitor {
     // Process subscription type
     this.processSubscriptionType();
 
-    // Process resolveable fields
-    this.processResolveableFields();
+    // Process resolvable fields
+    this.processResolvableFields();
 
     // Process all other types for field mappings
     this.processAllTypes();
@@ -113,9 +113,7 @@ export class GraphQLToProtoVisitor {
   private processEntityTypes(): void {
     const typeMap = this.schema.getTypeMap();
 
-    for (const typeName in typeMap) {
-      const type = typeMap[typeName];
-
+    for (const [typeName, type] of Object.entries(typeMap)) {
       // Skip built-in types and query/mutation/subscription types
       if (this.shouldSkipRootType(type)) continue;
 
@@ -218,7 +216,12 @@ export class GraphQLToProtoVisitor {
     this.processType('Subscription', OperationType.SUBSCRIPTION, this.schema.getSubscriptionType());
   }
 
-  private processResolveableFields(): void {
+  /**
+   * Process the resolvable fields to generate lookup mappings
+   *
+   * Each field with arguments that is marked with @connect__fieldResolver is a resolvable field.
+   */
+  private processResolvableFields(): void {
     const typeMap = this.schema.getTypeMap();
 
     for (const typeName in typeMap) {
