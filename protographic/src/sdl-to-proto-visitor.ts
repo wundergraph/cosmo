@@ -1121,14 +1121,14 @@ Example:
     const typeMap = this.schema.getTypeMap();
     const result: CollectionResult = { rpcMethods: [], methodNames: [], messageDefinitions: [] };
 
-    Object.entries(typeMap).forEach(([_, type]) => {
+    Object.values(typeMap).forEach((type) => {
       if (!isObjectType(type) || this.isOperationType(type)) {
         return;
       }
 
       const fields = type.getFields();
 
-      Object.entries(fields).forEach(([_, field]) => {
+      Object.values(fields).forEach((field) => {
         if (field.args.length === 0) {
           return;
         }
