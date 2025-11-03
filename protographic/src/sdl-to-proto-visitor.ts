@@ -1266,9 +1266,7 @@ Example:
 
     // filter the fields in the parent type that are in the context
     const searchFields = context.split(/[,\s]+/).filter((field) => field.length > 0);
-    const fieldFilter = Object.entries(parent.getFields())
-      .filter(([_, field]) => searchFields.includes(field.name))
-      .map(([_, field]) => field);
+    const fieldFilter = Object.values(parent.getFields()).filter((field) => searchFields.includes(field.name));
     if (searchFields.length !== fieldFilter.length) {
       throw new Error(`Invalid field context for resolver. Could not find all fields in the parent type: ${context}`);
     }
