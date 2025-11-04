@@ -5,6 +5,7 @@ import {
   CompositionError,
   CompositionWarning,
   DeploymentError,
+  LintSeverity,
   VCSContext,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, normalizeURL, splitLabel } from '@wundergraph/cosmo-shared';
@@ -2088,7 +2089,7 @@ export class SubgraphRepository {
       }
     }
 
-    let lintIssues: SchemaLintIssues = await schemaLintRepo.performSchemaLintCheck({
+    const lintIssues: SchemaLintIssues = await schemaLintRepo.performSchemaLintCheck({
       schemaCheckID,
       newSchemaSDL,
       namespaceId: namespace.id,
@@ -2139,19 +2140,19 @@ export class SubgraphRepository {
       inspectedOperations,
     });
 
-    if (sceResult && sceResult.overwriteLintIssues) {
-      lintIssues = sceResult.lintIssues;
+    if (sceResult && sceResult.additionalLintIssues.length > 0) {
+      const additionalLintIssues: SchemaLintIssues = {
+        warnings: sceResult.additionalLintIssues.filter((issue) => issue.severity === LintSeverity.warn),
+        errors: sceResult.additionalLintIssues.filter((issue) => issue.severity === LintSeverity.error),
+      };
 
-      // We need to replace the lint issues in the database with the ones returned by the webhook
-      await schemaLintRepo.deleteExistingSchemaCheckLintIssues({
-        schemaCheckId: schemaCheckID,
-        schemaCheckSubgraphId,
-      });
+      lintIssues.warnings.push(...additionalLintIssues.warnings);
+      lintIssues.errors.push(...additionalLintIssues.errors);
 
       // Then, we need to add the overwritten lint issues
       await schemaLintRepo.addSchemaCheckLintIssues({
         schemaCheckId: schemaCheckID,
-        lintIssues: [...lintIssues.warnings, ...lintIssues.errors],
+        lintIssues: sceResult.additionalLintIssues,
         schemaCheckSubgraphId,
       });
     }

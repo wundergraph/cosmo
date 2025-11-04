@@ -31,23 +31,21 @@ import { InspectorOperationResult } from '../services/SchemaUsageTrafficInspecto
 import { makeWebhookRequest } from './utils.js';
 
 const subgraphCheckExtensionSchema = z.object({
-  errorMessage: z.string().trim().optional(),
-  overwrite: z
-    .object({
-      lintIssues: z.array(
-        z.object({
-          lintRuleType: z.string().trim(),
-          severity: z.nativeEnum(LintSeverity),
-          message: z.string().trim(),
-          issueLocation: z.object({
-            line: z.number().int().positive(),
-            column: z.number().int().positive(),
-            endLine: z.number().int().positive().optional(),
-            endColumn: z.number().int().positive().optional(),
-          }),
+  errors: z.array(z.string()).optional(),
+  lintIssues: z
+    .array(
+      z.object({
+        lintRuleType: z.string().trim(),
+        severity: z.nativeEnum(LintSeverity),
+        message: z.string().trim(),
+        issueLocation: z.object({
+          line: z.number().int().positive(),
+          column: z.number().int().positive(),
+          endLine: z.number().int().positive().optional(),
+          endColumn: z.number().int().positive().optional(),
         }),
-      ),
-    })
+      }),
+    )
     .optional(),
 });
 
@@ -597,8 +595,7 @@ export class OrganizationWebhookService {
   }): Promise<
     | {
         deliveryInfo: WebhookDeliveryInfo;
-        overwriteLintIssues: boolean;
-        lintIssues: SchemaLintIssues;
+        additionalLintIssues: LintIssueResult[];
       }
     | undefined
   > {
@@ -630,18 +627,24 @@ export class OrganizationWebhookService {
 
     // Compose the contents of the file that we'll provide to the webhook
     const fileContent: Record<string, unknown> = {};
-    if (sceConfig.includeComposedSdl) {
-      fileContent.subgraph = {
-        id: input.subgraph?.id,
-        name: input.subgraph?.name,
-      };
+    if (input.subgraph) {
+      fileContent.subgraphs = [
+        {
+          id: input.subgraph.id,
+          name: input.subgraph.name,
+          newComposedSdl: sceConfig.includeLintingIssues ? input.newSchemaSDL : undefined,
+          oldComposedSdl: sceConfig.includeLintingIssues ? input.subgraph.schemaSDL : undefined,
+        },
+      ];
+    }
 
+    if (sceConfig.includeComposedSdl) {
       fileContent.composition = input.composedGraphs.map((c) => ({
         id: c.id,
         name: c.name,
         composedSchema: c.composedSchema,
         federatedClientSchema: c.federatedClientSchema,
-        subgraphs: c.subgraphs.map((sg) => ({ id: sg.id, name: sg.name })),
+        subgraphs: c.subgraphs.map((sg) => ({ id: sg.id, name: sg.name, sdl: sg.sdl })),
       }));
     }
 
@@ -673,7 +676,7 @@ export class OrganizationWebhookService {
     const token = await signJwtHS256({
       secret: input.admissionConfig.jwtSecret,
       token: {
-        exp: nowInSeconds() + 15 * 60, // 15 minutes,
+        exp: nowInSeconds() + 5 * 60, // 5 minutes,
         aud: audiences.cosmoCDNAdmission,
         organization_id: input.organization.id,
       },
@@ -695,13 +698,13 @@ export class OrganizationWebhookService {
     };
 
     if (input.subgraph) {
-      payload.subgraph = {
-        id: input.subgraph.id,
-        name: input.subgraph.name,
-        isDeleted: input.isDeleted,
-        oldSchema: input.subgraph.schemaSDL,
-        newSchema: input.newSchemaSDL,
-      };
+      payload.subgraphs = [
+        {
+          id: input.subgraph.id,
+          name: input.subgraph.name,
+          isDeleted: input.isDeleted,
+        },
+      ];
     }
 
     // Deliver the webhook
@@ -724,17 +727,12 @@ export class OrganizationWebhookService {
     );
 
     if (!response?.data) {
-      return {
-        deliveryInfo,
-        overwriteLintIssues: false,
-        lintIssues: input.lintIssues,
-      };
+      return { deliveryInfo, additionalLintIssues: [] };
     }
 
     // Validate the response and maybe overwrite the error message based on it
     let overwriteErrorMessage = false;
-    let overwriteLintIssues = false;
-    let overwrittenLintIssues: LintIssueResult[] = [];
+    let additionalLintIssues: LintIssueResult[] = [];
 
     if (response?.status !== 200 && response?.status !== 204) {
       // We expect the response status to be either 200 (OK) or 204 (No Content)
@@ -745,14 +743,13 @@ export class OrganizationWebhookService {
       const parsedResponse = subgraphCheckExtensionSchema.safeParse(response.data);
       if (parsedResponse.success) {
         // The response data is valid, overwrite values if needed
-        if (parsedResponse.data.errorMessage?.length) {
+        if (Array.isArray(parsedResponse.data.errors) && parsedResponse.data.errors.length > 0) {
           overwriteErrorMessage = true;
-          deliveryInfo.errorMessage = parsedResponse.data.errorMessage;
+          deliveryInfo.errorMessage = parsedResponse.data.errors.filter(Boolean).join('\n');
         }
 
-        if (parsedResponse.data.overwrite && Array.isArray(parsedResponse.data.overwrite?.lintIssues)) {
-          overwriteLintIssues = true;
-          overwrittenLintIssues = parsedResponse.data.overwrite.lintIssues as LintIssueResult[];
+        if (Array.isArray(parsedResponse.data.lintIssues)) {
+          additionalLintIssues = parsedResponse.data.lintIssues as LintIssueResult[];
         }
       } else {
         overwriteErrorMessage = true;
@@ -771,15 +768,6 @@ export class OrganizationWebhookService {
     }
 
     // We are done!
-    return {
-      deliveryInfo,
-      overwriteLintIssues,
-      lintIssues: overwriteLintIssues
-        ? ({
-            warnings: overwrittenLintIssues.filter((issue) => issue.severity === LintSeverity.warn),
-            errors: overwrittenLintIssues.filter((issue) => issue.severity === LintSeverity.error),
-          } as SchemaLintIssues)
-        : input.lintIssues,
-    };
+    return { deliveryInfo, additionalLintIssues };
   }
 }
