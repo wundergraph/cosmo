@@ -5,7 +5,7 @@ import { ConfigureSubgraphCheckExtensionsRequest } from "@wundergraph/cosmo-conn
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import * as z from "zod";
-import { useEffect, useState } from "react";
+import { ReactNode, useEffect, useMemo, useState } from "react";
 import { docsBaseURL } from "@/lib/constants";
 import { useZodForm } from "@/hooks/use-form";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -16,6 +16,10 @@ import {
   AlertDialogFooter,
   AlertDialogTitle
 } from "@/components/ui/alert-dialog";
+import { clsx } from "clsx";
+import { useCurrentOrganization } from "@/hooks/use-current-organization";
+import { useWorkspace } from "@/hooks/use-workspace";
+import Link from "next/link";
 
 export type SubgraphCheckExtensionsConfig = Omit<PlainMessage<ConfigureSubgraphCheckExtensionsRequest>, 'namespace'>;
 
@@ -62,6 +66,8 @@ const validationSchema = z.object({
 interface CheckExtensionsConfigProps {
   config: SubgraphCheckExtensionsConfig;
   isSecretKeyAssigned: boolean;
+  isLintingEnabledForNamespace: boolean;
+  isGraphPruningEnabledForNamespace: boolean;
   isUpdatingConfig: boolean;
   onSaveChanges(
     newConfig: SubgraphCheckExtensionsConfig,
@@ -69,35 +75,24 @@ interface CheckExtensionsConfigProps {
   ): void;
 }
 
-const toggleableOptions: { key: keyof z.infer<typeof validationSchema>, label: string, description?: string }[] = [
-  {
-    key: 'includeComposedSdl',
-    label: 'Include Composed SDL',
-  },
-  {
-    key: 'includeLintingIssues',
-    label: 'Include Lint Warnings and Errors',
-  },
-  {
-    key: 'includePruningIssues',
-    label: 'Include Graph Pruning Warnings and Errors',
-  },
-  {
-    key: 'includeSchemaChanges',
-    label: 'Include Schema Changes',
-  },
-  {
-    key: 'includeAffectedOperations',
-    label: 'Include Affected Operations',
-  },
-];
+interface ToggleableOptionsType {
+  key: keyof z.infer<typeof validationSchema>;
+  label: string;
+  description?: ReactNode;
+  docsLink?: string;
+  isDisabled?: boolean;
+}
 
 export function CheckExtensionsConfig({
   config,
   isSecretKeyAssigned,
+  isLintingEnabledForNamespace,
+  isGraphPruningEnabledForNamespace,
   isUpdatingConfig,
   onSaveChanges
 }: CheckExtensionsConfigProps) {
+  const { namespace } = useWorkspace();
+  const organizationSlug = useCurrentOrganization()?.slug;
   const isDisabled = isUpdatingConfig || !config.enableSubgraphCheckExtensions;
   const [showConfirmationDialog, setShowConfirmationDialog] = useState(false);
   const [forceShowSecretKeyInput, setForceShowSecretKeyInput] = useState<boolean | undefined>(undefined);
@@ -127,6 +122,71 @@ export function CheckExtensionsConfig({
     }
   };
 
+  const toggleableOptions = useMemo<ToggleableOptionsType[]>(() => [
+    {
+      key: 'includeComposedSdl',
+      label: 'Composed SDL',
+      description:
+        "Provides both the previous and newly composed Schema Definition Language (SDL) documents for the subgraph " +
+        "being checked, along with the composed SDL for the federated graph.",
+      docsLink: "/studio/alerts-and-notifications/webhooks#verification"
+    },
+    {
+      key: "includeLintingIssues",
+      label: "Lint Warnings and Errors",
+      description: isLintingEnabledForNamespace
+        ? "Linting issues identified based on the configured rules for the namespace."
+        : (
+          <>
+            <>
+              You must{" "}
+              <Link
+                href={`/${organizationSlug}/policies?namespace=${namespace.name}`}
+                className="text-primary"
+              >
+                enable the linter
+              </Link>
+              {" "}for the namespace to be able to receive lint warnings and errors.
+            </>
+          </>
+        ),
+      docsLink: "/studio/alerts-and-notifications/webhooks#verification",
+      isDisabled: !isLintingEnabledForNamespace,
+    },
+    {
+      key: "includePruningIssues",
+      label: "Graph Pruning Warnings and Errors",
+      description: isGraphPruningEnabledForNamespace
+        ? "Graph pruning issues identified based on the configured rules for the namespace."
+        : (
+          <>
+            You must{" "}
+            <Link
+              href={`/${organizationSlug}/policies?namespace=${namespace.name}`}
+              className="text-primary"
+            >
+              enable the graph pruning linter
+            </Link>
+            {" "}for the namespace to be able to receive graph pruning warnings and errors.
+          </>
+        ),
+      docsLink: "/studio/alerts-and-notifications/webhooks#verification",
+      isDisabled: !isGraphPruningEnabledForNamespace,
+    },
+    {
+      key: "includeSchemaChanges",
+      label: "Schema Changes",
+      description: "Lists the changes detected in the subgraph schema, including additions, removals, and modifications.",
+      docsLink: "/studio/alerts-and-notifications/webhooks#verification",
+    },
+    {
+      key: "includeAffectedOperations",
+      label: "Affected Operations",
+      description: "Lists the operations that may be impacted by changes to the subgraph schema.",
+      docsLink: "/studio/alerts-and-notifications/webhooks#verification",
+    },
+  ], [isLintingEnabledForNamespace, isGraphPruningEnabledForNamespace, namespace.name, organizationSlug]);
+
   const showSecretKeyInput = forceShowSecretKeyInput || !config.enableSubgraphCheckExtensions || !isSecretKeyAssigned;
   return (
     <>
@@ -134,7 +194,7 @@ export function CheckExtensionsConfig({
         <AlertDialogContent>
           <AlertDialogTitle>Secret key removed</AlertDialogTitle>
           <AlertDialogDescription>
-            You are about to update the webhook configuration and remove the secret key.{' '}
+            You are about to update the webhook configuration and remove the secret key.{" "}
             Are you sure you want to do this?
           </AlertDialogDescription>
           <AlertDialogFooter>
@@ -224,7 +284,7 @@ export function CheckExtensionsConfig({
                           className="p-0 h-auto"
                           onClick={() => {
                             setForceShowSecretKeyInput(true);
-                            form.setValue('secretKey', '');
+                            form.setValue("secretKey", "");
                           }}
                         >
                           Change secret key
@@ -248,33 +308,68 @@ export function CheckExtensionsConfig({
                 )}
               />
 
-              {toggleableOptions.map((item) => (
-                <FormField
-                  key={`opt-${item.key}`}
-                  control={form.control}
-                  name={item.key}
-                  render={({ field }) => (
-                    <FormItem
-                      className="w-full flex justify-between items-center gap-4"
-                    >
-                      <FormLabel className="w-full py-2 space-y-1">
-                        <span>{item.label}</span>
-                        {item.description && (<p className="text-sm text-muted-foreground">{item.description}</p>)}
-                      </FormLabel>
+              <div className="py-2 text-sm space-y-1">
+                <p className="font-medium leading-none">Included fields</p>
+                <p className="text-muted-foreground">
+                  Specifies which data elements should be included in the generated file delivered via the webhook..{" "}
+                  <a
+                    href={docsBaseURL + "/"}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-primary ml-1"
+                  >
+                    Learn more
+                  </a>.
+                </p>
+              </div>
 
-                      <div className="ml-8 flex gap-x-3 flex-shrink-0">
+              {toggleableOptions.map((item) => {
+                const isItemDisabled = isDisabled || Boolean(item.isDisabled);
+                return (
+                  <FormField
+                    key={`opt-${item.key}`}
+                    control={form.control}
+                    name={item.key}
+                    render={({ field }) => (
+                      <FormItem className="w-full flex justify-start items-start gap-3 rounded-md border p-4 space-y-0">
                         <FormControl>
                           <Checkbox
-                            checked={!config.enableSubgraphCheckExtensions || field.value === true}
-                            disabled={isDisabled}
+                            checked={!item.isDisabled && (!config.enableSubgraphCheckExtensions || field.value === true)}
+                            disabled={isDisabled || item.isDisabled}
+                            className="w-5 h-5 flex-shrink-0"
                             onCheckedChange={(checked) => field.onChange(checked === true)}
                           />
                         </FormControl>
-                      </div>
-                    </FormItem>
-                  )}
-                />
-              ))}
+
+                        <div className="flex flex-col gap-y-1">
+                          <FormLabel
+                            className={clsx(isItemDisabled && "text-muted-foreground cursor-not-allowed")}
+                          >
+                            {item.label}
+                          </FormLabel>
+                          {(item.description || item.docsLink) && (
+                            <p className="text-sm text-muted-foreground">
+                              <span>{item.description}</span>
+                              {item.docsLink && (
+                                <>
+                                  <a
+                                    href={docsBaseURL + item.docsLink}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-primary ml-1"
+                                  >
+                                    Learn more
+                                  </a>.
+                                </>
+                              )}
+                            </p>
+                          )}
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                );
+              })}
             </CardContent>
           </Card>
         </form>

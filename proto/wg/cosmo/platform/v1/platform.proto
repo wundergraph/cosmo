@@ -2670,13 +2670,15 @@ message GetSubgraphCheckExtensionsConfigRequest {
 message GetSubgraphCheckExtensionsConfigResponse {
   Response response = 1;
   bool isEnabledForNamespace = 2;
-  string endpoint = 3;
-  bool isSecretKeyAssigned = 4;
-  bool includeComposedSdl = 5;
-  bool includeLintingIssues = 6;
-  bool includePruningIssues = 7;
-  bool includeSchemaChanges = 8;
-  bool includeAffectedOperations = 9;
+  bool isLintingEnabledForNamespace = 3;
+  bool isGraphPruningEnabledForNamespace = 4;
+  string endpoint = 5;
+  bool isSecretKeyAssigned = 6;
+  bool includeComposedSdl = 7;
+  bool includeLintingIssues = 8;
+  bool includePruningIssues = 9;
+  bool includeSchemaChanges = 10;
+  bool includeAffectedOperations = 11;
 }
 
 message ConfigureSubgraphCheckExtensionsRequest {

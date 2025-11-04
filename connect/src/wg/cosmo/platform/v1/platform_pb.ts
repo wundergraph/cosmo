@@ -21028,37 +21028,47 @@ export class GetSubgraphCheckExtensionsConfigResponse extends Message<GetSubgrap
   isEnabledForNamespace = false;
 
   /**
-   * @generated from field: string endpoint = 3;
+   * @generated from field: bool isLintingEnabledForNamespace = 3;
+   */
+  isLintingEnabledForNamespace = false;
+
+  /**
+   * @generated from field: bool isGraphPruningEnabledForNamespace = 4;
+   */
+  isGraphPruningEnabledForNamespace = false;
+
+  /**
+   * @generated from field: string endpoint = 5;
    */
   endpoint = "";
 
   /**
-   * @generated from field: bool isSecretKeyAssigned = 4;
+   * @generated from field: bool isSecretKeyAssigned = 6;
    */
   isSecretKeyAssigned = false;
 
   /**
-   * @generated from field: bool includeComposedSdl = 5;
+   * @generated from field: bool includeComposedSdl = 7;
    */
   includeComposedSdl = false;
 
   /**
-   * @generated from field: bool includeLintingIssues = 6;
+   * @generated from field: bool includeLintingIssues = 8;
    */
   includeLintingIssues = false;
 
   /**
-   * @generated from field: bool includePruningIssues = 7;
+   * @generated from field: bool includePruningIssues = 9;
    */
   includePruningIssues = false;
 
   /**
-   * @generated from field: bool includeSchemaChanges = 8;
+   * @generated from field: bool includeSchemaChanges = 10;
    */
   includeSchemaChanges = false;
 
   /**
-   * @generated from field: bool includeAffectedOperations = 9;
+   * @generated from field: bool includeAffectedOperations = 11;
    */
   includeAffectedOperations = false;
 
@@ -21072,13 +21082,15 @@ export class GetSubgraphCheckExtensionsConfigResponse extends Message<GetSubgrap
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "isEnabledForNamespace", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 3, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "isSecretKeyAssigned", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 5, name: "includeComposedSdl", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 6, name: "includeLintingIssues", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 7, name: "includePruningIssues", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 8, name: "includeSchemaChanges", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
-    { no: 9, name: "includeAffectedOperations", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 3, name: "isLintingEnabledForNamespace", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "isGraphPruningEnabledForNamespace", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 5, name: "endpoint", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "isSecretKeyAssigned", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 7, name: "includeComposedSdl", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 8, name: "includeLintingIssues", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 9, name: "includePruningIssues", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 10, name: "includeSchemaChanges", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 11, name: "includeAffectedOperations", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetSubgraphCheckExtensionsConfigResponse {

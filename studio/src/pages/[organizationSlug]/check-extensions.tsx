@@ -41,6 +41,8 @@ const CheckExtensionsPage: NextPageWithLayout = () => {
           code: res.response?.code,
           details: res.response?.details,
           isSecretKeyAssigned: res.isSecretKeyAssigned,
+          isLintingEnabledForNamespace: res.isLintingEnabledForNamespace,
+          isGraphPruningEnabledForNamespace: res.isGraphPruningEnabledForNamespace,
           config: {
             ...res,
             enableSubgraphCheckExtensions: res.isEnabledForNamespace,
@@ -154,6 +156,8 @@ const CheckExtensionsPage: NextPageWithLayout = () => {
       <CheckExtensionsConfig
         config={data.config}
         isSecretKeyAssigned={data.isSecretKeyAssigned}
+        isLintingEnabledForNamespace={data.isLintingEnabledForNamespace}
+        isGraphPruningEnabledForNamespace={data.isGraphPruningEnabledForNamespace}
         isUpdatingConfig={isPending || isRefetching}
         onSaveChanges={(newConfig, onConfigUpdated) => saveChanges(
           newConfig,
