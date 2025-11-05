@@ -932,13 +932,14 @@ func (o *OperationKit) NormalizeVariables() ([]uploads.UploadPathMapping, error)
 	// Reset the doc with the original name
 	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = nameRef
 
-	o.kit.keyGen.Reset()
+	o.kit.keyGen.Reset() // should not be needed if we properly reset after use - check do we have any remaining places where we do not reset keygen - maybe wrap into a type which will reset once we got key
 	_, err = o.kit.keyGen.Write(o.kit.normalizedOperation.Bytes())
 	if err != nil {
 		return nil, err
 	}
 
 	o.parsedOperation.ID = o.kit.keyGen.Sum64()
+	o.kit.keyGen.Reset()
 
 	// If the normalized form of the operation didn't change, we don't need to print it again
 	if bytes.Equal(o.kit.doc.Input.Variables, variablesBefore) && bytes.Equal(o.kit.doc.Input.RawBytes, operationRawBytesBefore) {
@@ -981,6 +982,7 @@ func (o *OperationKit) NormalizeVariables() ([]uploads.UploadPathMapping, error)
 }
 
 func (o *OperationKit) remapVariablesCacheKey() uint64 {
+	// fmt.Println("####### RemapVariables: normalized representation len:", len(o.parsedOperation.NormalizedRepresentation))
 	_, _ = o.kit.keyGen.WriteString(o.parsedOperation.NormalizedRepresentation)
 	// fmt.Println("####### RemapVariables: normalizedRepresentation:", o.parsedOperation.NormalizedRepresentation)
 	sum := o.kit.keyGen.Sum64()
