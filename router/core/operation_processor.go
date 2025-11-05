@@ -107,6 +107,8 @@ type OperationProcessorOptions struct {
 	PersistedOpsNormalizationCache                   *ristretto.Cache[uint64, NormalizationCacheEntry]
 	NormalizationCache                               *ristretto.Cache[uint64, NormalizationCacheEntry]
 	QueryDepthCache                                  *ristretto.Cache[uint64, ComplexityCacheEntry]
+	VariablesNormalizationCache                      *ristretto.Cache[uint64, VariablesNormalizationCacheEntry]
+	RemapVariablesCache                              *ristretto.Cache[uint64, RemapVariablesCacheEntry]
 	ValidationCache                                  *ristretto.Cache[uint64, bool]
 	OperationHashCache                               *ristretto.Cache[uint64, string]
 	ParseKitPoolSize                                 int
@@ -160,6 +162,8 @@ type OperationCache struct {
 
 	persistedOperationNormalizationCache *ristretto.Cache[uint64, NormalizationCacheEntry]
 	normalizationCache                   *ristretto.Cache[uint64, NormalizationCacheEntry]
+	variablesNormalizationCache          *ristretto.Cache[uint64, VariablesNormalizationCacheEntry]
+	remapVariablesCache                  *ristretto.Cache[uint64, RemapVariablesCacheEntry]
 	complexityCache                      *ristretto.Cache[uint64, ComplexityCacheEntry]
 	validationCache                      *ristretto.Cache[uint64, bool]
 	operationHashCache                   *ristretto.Cache[uint64, string]
@@ -755,6 +759,20 @@ type NormalizationCacheEntry struct {
 	operationDefinitionRef   int
 }
 
+type VariablesNormalizationCacheEntry struct {
+	normalizedRepresentation string
+	uploadsMapping           []uploads.UploadPathMapping
+	id                       uint64
+	variables                json.RawMessage
+	reparse                  bool
+}
+
+type RemapVariablesCacheEntry struct {
+	internalID               uint64
+	normalizedRepresentation string
+	remapVariables           map[string]string
+}
+
 type ComplexityCacheEntry struct {
 	Depth            int
 	TotalFields      int
@@ -790,7 +808,7 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 		}
 	}
 
-	// reset with the original variables
+	// set variables to the normalized variables as skip inlude variables will be removed after normalization
 	o.parsedOperation.Request.Variables = o.kit.doc.Input.Variables
 
 	// Hash the normalized operation with the static operation name & original variables to avoid different IDs for the same operation
@@ -840,7 +858,33 @@ func (o *OperationKit) setAndParseOperationDoc() error {
 	return nil
 }
 
+func (o *OperationKit) normalizeVariablesCacheKey() uint64 {
+	_, _ = o.kit.keyGen.Write(o.kit.doc.Input.Variables)
+	_, _ = o.kit.keyGen.WriteString(o.parsedOperation.NormalizedRepresentation)
+
+	sum := o.kit.keyGen.Sum64()
+	o.kit.keyGen.Reset()
+	return sum
+}
+
 func (o *OperationKit) NormalizeVariables() ([]uploads.UploadPathMapping, error) {
+	cacheKey := o.normalizeVariablesCacheKey()
+	if o.cache != nil && o.cache.variablesNormalizationCache != nil {
+		entry, ok := o.cache.variablesNormalizationCache.Get(cacheKey)
+		if ok {
+			o.parsedOperation.NormalizedRepresentation = entry.normalizedRepresentation
+			o.parsedOperation.ID = entry.id
+			o.parsedOperation.Request.Variables = entry.variables
+
+			if entry.reparse {
+				if err := o.setAndParseOperationDoc(); err != nil {
+					return nil, err
+				}
+			}
+			return entry.uploadsMapping, nil
+		}
+	}
+
 	variablesBefore := make([]byte, len(o.kit.doc.Input.Variables))
 	copy(variablesBefore, o.kit.doc.Input.Variables)
 
@@ -889,6 +933,17 @@ func (o *OperationKit) NormalizeVariables() ([]uploads.UploadPathMapping, error)
 
 	// If the normalized form of the operation didn't change, we don't need to print it again
 	if bytes.Equal(o.kit.doc.Input.Variables, variablesBefore) && bytes.Equal(o.kit.doc.Input.RawBytes, operationRawBytesBefore) {
+		if o.cache != nil && o.cache.variablesNormalizationCache != nil {
+			entry := VariablesNormalizationCacheEntry{
+				uploadsMapping:           uploadsMapping,
+				id:                       o.parsedOperation.ID,
+				normalizedRepresentation: o.parsedOperation.NormalizedRepresentation,
+				variables:                o.parsedOperation.Request.Variables,
+				reparse:                  false,
+			}
+			o.cache.variablesNormalizationCache.Set(cacheKey, entry, 1)
+		}
+
 		return uploadsMapping, nil
 	}
 
@@ -902,10 +957,43 @@ func (o *OperationKit) NormalizeVariables() ([]uploads.UploadPathMapping, error)
 	o.parsedOperation.NormalizedRepresentation = o.kit.normalizedOperation.String()
 	o.parsedOperation.Request.Variables = o.kit.doc.Input.Variables
 
+	if o.cache != nil && o.cache.variablesNormalizationCache != nil {
+		entry := VariablesNormalizationCacheEntry{
+			uploadsMapping:           uploadsMapping,
+			id:                       o.parsedOperation.ID,
+			normalizedRepresentation: o.parsedOperation.NormalizedRepresentation,
+			variables:                o.parsedOperation.Request.Variables,
+			reparse:                  true,
+		}
+		o.cache.variablesNormalizationCache.Set(cacheKey, entry, 1)
+	}
+
 	return uploadsMapping, nil
 }
 
+func (o *OperationKit) remapVariablesCacheKey() uint64 {
+	_, _ = o.kit.keyGen.WriteString(o.parsedOperation.NormalizedRepresentation)
+	sum := o.kit.keyGen.Sum64()
+	o.kit.keyGen.Reset()
+	return sum
+}
+
 func (o *OperationKit) RemapVariables(disabled bool) error {
+	cacheKey := o.remapVariablesCacheKey()
+	if o.cache != nil && o.cache.remapVariablesCache != nil {
+		entry, ok := o.cache.remapVariablesCache.Get(cacheKey)
+		if ok {
+			o.parsedOperation.NormalizedRepresentation = entry.normalizedRepresentation
+			o.parsedOperation.InternalID = entry.internalID
+			o.parsedOperation.RemapVariables = entry.remapVariables
+
+			if err := o.setAndParseOperationDoc(); err != nil {
+				return err
+			}
+			return nil
+		}
+	}
+
 	report := &operationreport.Report{}
 
 	// even if the variables are disabled, we still need to execute rest of the method,
@@ -954,6 +1042,15 @@ func (o *OperationKit) RemapVariables(disabled bool) error {
 	}
 
 	o.parsedOperation.NormalizedRepresentation = o.kit.normalizedOperation.String()
+
+	if o.cache != nil && o.cache.remapVariablesCache != nil {
+		entry := RemapVariablesCacheEntry{
+			internalID:               o.parsedOperation.InternalID,
+			normalizedRepresentation: o.parsedOperation.NormalizedRepresentation,
+			remapVariables:           o.parsedOperation.RemapVariables,
+		}
+		o.cache.remapVariablesCache.Set(cacheKey, entry, 1)
+	}
 
 	return nil
 }
@@ -1317,12 +1414,15 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		processor.parseKitSemaphore <- i
 		processor.parseKits[i] = createParseKit(i, processor.parseKitOptions)
 	}
-	if opts.NormalizationCache != nil || opts.ValidationCache != nil || opts.QueryDepthCache != nil || opts.OperationHashCache != nil || opts.EnablePersistedOperationsCache {
+	if opts.NormalizationCache != nil || opts.ValidationCache != nil || opts.QueryDepthCache != nil || opts.OperationHashCache != nil || opts.EnablePersistedOperationsCache ||
+		opts.VariablesNormalizationCache != nil || opts.RemapVariablesCache != nil {
 		processor.operationCache = &OperationCache{
-			normalizationCache: opts.NormalizationCache,
-			validationCache:    opts.ValidationCache,
-			complexityCache:    opts.QueryDepthCache,
-			operationHashCache: opts.OperationHashCache,
+			normalizationCache:          opts.NormalizationCache,
+			validationCache:             opts.ValidationCache,
+			complexityCache:             opts.QueryDepthCache,
+			operationHashCache:          opts.OperationHashCache,
+			variablesNormalizationCache: opts.VariablesNormalizationCache,
+			remapVariablesCache:         opts.RemapVariablesCache,
 		}
 	}
 	if opts.EnablePersistedOperationsCache {
