@@ -30,11 +30,11 @@ export const config = {
 
 function setCookie(res: NextResponse, key: string, value: string) {
   let domain: string | undefined = undefined;
-  if (process.env.TRACKING_COOKIE_DOMAIN_NAME) {
-    domain = process.env.TRACKING_COOKIE_DOMAIN_NAME;
+  if (process.env.NEXT_PUBLIC_TRACKING_COOKIE_DOMAIN_NAME) {
+    domain = process.env.NEXT_PUBLIC_TRACKING_COOKIE_DOMAIN_NAME;
   }
 
-  res.cookies.set(key, encodeURIComponent(value), {
+  res.cookies.set(key, value, {
     path: '/',
     domain,
     maxAge: 30 * 24 * 60 * 60, // 1 month
@@ -61,11 +61,8 @@ export function middleware(req: NextRequest) {
       let forcedValue: string;
       if (key === 'utm_medium') {
         forcedValue = 'website';
-      } else if (key === 'utm_source') {
-        forcedValue = 'direct';
       } else {
-        // We don't have a default value for this key, so we don't set the cookie
-        continue;
+        forcedValue = 'direct';
       }
 
       setCookie(res, key, forcedValue);
