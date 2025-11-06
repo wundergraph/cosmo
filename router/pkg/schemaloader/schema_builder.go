@@ -46,7 +46,13 @@ func (b *SchemaBuilder) buildSchemaForOperation(operation *Operation) error {
 			return fmt.Errorf("failed to marshal schema: %w", err)
 		}
 		operation.JSONSchema = s
-		operation.Description = schema.Description
+		
+		// Use operation description if provided, otherwise fall back to schema description
+		// This ensures user-provided descriptions take absolute priority
+		if operation.Description == "" {
+			operation.Description = schema.Description
+		}
+		// If operation.Description is not empty, keep it as-is (don't merge with schema description)
 	}
 
 	return nil

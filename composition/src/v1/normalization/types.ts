@@ -3,6 +3,7 @@ import {
   CompositeOutputData,
   DirectiveDefinitionData,
   FieldData,
+  InputObjectDefinitionData,
   InputValueData,
   NodeData,
   SchemaData,
@@ -75,3 +76,14 @@ export type AddInputValueDataByNodeParams = {
   fieldName?: string;
   renamedParentTypeName?: string;
 };
+
+export type ExecutionFailure = {
+  success: false;
+};
+
+export type UpsertInputObjectSuccess = {
+  data: InputObjectDefinitionData;
+  success: true;
+};
+
+export type UpsertInputObjectResult = ExecutionFailure | UpsertInputObjectSuccess;
