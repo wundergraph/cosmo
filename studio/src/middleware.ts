@@ -22,12 +22,6 @@ const TRACKING_KEYS = [
   'wbraid',
 ];
 
-export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|.well-known|favicon.ico|favicon/manifest.json|manifest.json|.*\\.(?:svg|png|jpg|jpeg|gif|webp|woff2)$).*)',
-  ],
-};
-
 function setCookie(res: NextResponse, key: string, value: string) {
   let domain: string | undefined = undefined;
   if (process.env.NEXT_PUBLIC_TRACKING_COOKIE_DOMAIN_NAME) {
@@ -70,4 +64,10 @@ export function middleware(req: NextRequest) {
   }
 
   return res;
+}
+
+export const config = {
+  matcher: [
+    '/((?!_next/static|_next/image|.well-known|favicon.ico|favicon/manifest.json|manifest.json|.*\\.(?:svg|png|jpg|jpeg|gif|webp|woff2)$).*)',
+  ],
 };
