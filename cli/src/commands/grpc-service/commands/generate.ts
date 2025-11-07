@@ -32,6 +32,7 @@ type CLIOptions = {
   queryIdempotency?: string;
   customScalarMapping?: string;
   maxDepth?: string;
+  prefixOperationType?: boolean;
 };
 
 export default (opts: BaseCommandOptions) => {
@@ -74,6 +75,11 @@ export default (opts: BaseCommandOptions) => {
     '--max-depth <number>',
     'Maximum recursion depth for processing nested selections and fragments (default: 50). ' +
       'Increase this if you have deeply nested queries or decrease to catch potential circular references earlier.',
+  );
+  command.option(
+    '--prefix-operation-type',
+    'Prefix RPC method names with the operation type (Query/Mutation). Only applies with --with-operations. ' +
+      'Subscriptions are not prefixed.',
   );
   command.action(generateCommandAction);
 
@@ -159,6 +165,11 @@ async function generateCommandAction(name: string, options: CLIOptions) {
       maxDepth = parsed;
     }
 
+    // Validate prefix-operation-type usage
+    if (options.prefixOperationType && !options.withOperations) {
+      spinner.warn('--prefix-operation-type flag is ignored when not using --with-operations');
+    }
+
     const result = await generateProtoAndMapping({
       outdir: options.output,
       schemaFile: inputFile,
@@ -180,6 +191,7 @@ async function generateCommandAction(name: string, options: CLIOptions) {
       queryIdempotency: options.queryIdempotency?.toUpperCase(),
       customScalarMappings,
       maxDepth,
+      prefixOperationType: options.prefixOperationType,
     });
 
     // Write the generated files
