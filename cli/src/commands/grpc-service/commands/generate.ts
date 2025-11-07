@@ -259,8 +259,9 @@ type GenerationOptions = {
 
 /**
  * Read all GraphQL operation files from a directory
+ * Returns an array of {filename, content} objects
  */
-async function readOperationFiles(operationsDir: string): Promise<string> {
+async function readOperationFiles(operationsDir: string): Promise<Array<{ filename: string; content: string }>> {
   const files = await readdir(operationsDir);
   const operationFiles = files.filter((file) => {
     const ext = extname(file).toLowerCase();
@@ -271,14 +272,233 @@ async function readOperationFiles(operationsDir: string): Promise<string> {
     throw new Error(`No GraphQL operation files (.graphql, .gql, .graphqls, .gqls) found in ${operationsDir}`);
   }
 
-  const operations: string[] = [];
+  const operations: Array<{ filename: string; content: string }> = [];
   for (const file of operationFiles) {
     const filePath = resolve(operationsDir, file);
     const content = await readFile(filePath, 'utf8');
-    operations.push(content);
+    operations.push({ filename: file, content });
   }
 
-  return operations.join('\n\n');
+  return operations;
+}
+
+/**
+ * Merge multiple proto compilation results into a single proto file
+ * Extracts all messages, enums, and RPC methods and combines them into one service
+ */
+function mergeProtoResults(
+  results: Array<{ proto: string; lockData: ProtoLock }>,
+  options: {
+    serviceName: string;
+    packageName: string;
+    goPackage?: string;
+    javaPackage?: string;
+    javaOuterClassname?: string;
+    javaMultipleFiles?: boolean;
+    csharpNamespace?: string;
+    rubyPackage?: string;
+    phpNamespace?: string;
+    phpMetadataNamespace?: string;
+    objcClassPrefix?: string;
+    swiftPrefix?: string;
+  },
+): string {
+  if (results.length === 0) {
+    throw new Error('No proto results to merge');
+  }
+
+  if (results.length === 1) {
+    return results[0].proto;
+  }
+
+  // Parse each proto file to extract components
+  const allMessages = new Set<string>();
+  const allEnums = new Set<string>();
+  const allRpcMethods: string[] = [];
+
+  for (const result of results) {
+    const lines = result.proto.split('\n');
+    let inService = false;
+    let inMessage = false;
+    let inEnum = false;
+    let braceCount = 0;
+    let currentBlock: string[] = [];
+
+    for (const line of lines) {
+      const trimmed = line.trim();
+
+      // Track service block
+      if (trimmed.startsWith('service ')) {
+        inService = true;
+        braceCount = 0;
+        continue;
+      }
+
+      if (inService) {
+        if (trimmed.includes('{')) {
+          braceCount++;
+        }
+        if (trimmed.includes('}')) {
+          braceCount--;
+        }
+
+        // Extract RPC methods
+        if (trimmed.startsWith('rpc ')) {
+          allRpcMethods.push(line);
+        }
+
+        if (braceCount === 0) {
+          inService = false;
+        }
+        continue;
+      }
+
+      // Track message blocks - only start a new message if not already in one
+      if (!inMessage && !inEnum && trimmed.startsWith('message ')) {
+        inMessage = true;
+        braceCount = 0;
+        currentBlock = [line];
+        // Count braces on the message declaration line
+        if (trimmed.includes('{')) {
+          braceCount++;
+        }
+        if (trimmed.includes('}')) {
+          braceCount--;
+        }
+        continue;
+      }
+
+      if (inMessage) {
+        currentBlock.push(line);
+        if (trimmed.includes('{')) {
+          braceCount++;
+        }
+        if (trimmed.includes('}')) {
+          braceCount--;
+        }
+
+        if (braceCount === 0) {
+          const messageText = currentBlock.join('\n');
+          allMessages.add(messageText);
+          inMessage = false;
+          currentBlock = [];
+        }
+        continue;
+      }
+
+      // Track enum blocks - only start a new enum if not already in one
+      if (!inMessage && !inEnum && trimmed.startsWith('enum ')) {
+        inEnum = true;
+        braceCount = 0;
+        currentBlock = [line];
+        // Count braces on the enum declaration line
+        if (trimmed.includes('{')) {
+          braceCount++;
+        }
+        if (trimmed.includes('}')) {
+          braceCount--;
+        }
+        continue;
+      }
+
+      if (inEnum) {
+        currentBlock.push(line);
+        if (trimmed.includes('{')) {
+          braceCount++;
+        }
+        if (trimmed.includes('}')) {
+          braceCount--;
+        }
+
+        if (braceCount === 0) {
+          const enumText = currentBlock.join('\n');
+          allEnums.add(enumText);
+          inEnum = false;
+          currentBlock = [];
+        }
+        continue;
+      }
+    }
+  }
+
+  // Build the merged proto file
+  const parts: string[] = [];
+
+  // Add syntax
+  parts.push('syntax = "proto3";');
+  parts.push('');
+
+  // Add package
+  parts.push(`package ${options.packageName};`);
+  parts.push('');
+
+  // Add language-specific options
+  if (options.goPackage) {
+    parts.push(`option go_package = "${options.goPackage}";`);
+  }
+  if (options.javaPackage) {
+    parts.push(`option java_package = "${options.javaPackage}";`);
+  }
+  if (options.javaOuterClassname) {
+    parts.push(`option java_outer_classname = "${options.javaOuterClassname}";`);
+  }
+  if (options.javaMultipleFiles) {
+    parts.push('option java_multiple_files = true;');
+  }
+  if (options.csharpNamespace) {
+    parts.push(`option csharp_namespace = "${options.csharpNamespace}";`);
+  }
+  if (options.rubyPackage) {
+    parts.push(`option ruby_package = "${options.rubyPackage}";`);
+  }
+  if (options.phpNamespace) {
+    parts.push(`option php_namespace = "${options.phpNamespace}";`);
+  }
+  if (options.phpMetadataNamespace) {
+    parts.push(`option php_metadata_namespace = "${options.phpMetadataNamespace}";`);
+  }
+  if (options.objcClassPrefix) {
+    parts.push(`option objc_class_prefix = "${options.objcClassPrefix}";`);
+  }
+  if (options.swiftPrefix) {
+    parts.push(`option swift_prefix = "${options.swiftPrefix}";`);
+  }
+
+  if (
+    options.goPackage ||
+    options.javaPackage ||
+    options.javaOuterClassname ||
+    options.javaMultipleFiles ||
+    options.csharpNamespace ||
+    options.rubyPackage ||
+    options.phpNamespace ||
+    options.phpMetadataNamespace ||
+    options.objcClassPrefix ||
+    options.swiftPrefix
+  ) {
+    parts.push('');
+  }
+
+  // Add all unique messages
+  for (const message of allMessages) {
+    parts.push(message);
+    parts.push('');
+  }
+
+  // Add all unique enums
+  for (const enumDef of allEnums) {
+    parts.push(enumDef);
+    parts.push('');
+  }
+
+  // Add service with all RPC methods
+  parts.push(`service ${options.serviceName} {`);
+  for (const rpcMethod of allRpcMethods) {
+    parts.push(rpcMethod);
+  }
+  parts.push('}');
+
+  return parts.join('\n');
 }
 
 /**
@@ -320,13 +540,52 @@ async function generateProtoAndMapping({
     // Operations-based generation
     spinner.text = 'Reading operation files...';
     const operationsPath = resolve(operationsDir);
-    const operations = await readOperationFiles(operationsPath);
+    const operationFiles = await readOperationFiles(operationsPath);
+
+    spinner.text = `Processing ${operationFiles.length} operation files...`;
 
     // Load lock data for field number stability
-    const lockData = await fetchLockData(lockFile);
+    let currentLockData = await fetchLockData(lockFile);
 
-    spinner.text = 'Generating proto from operations...';
-    const result = compileOperationsToProto(operations, schema, {
+    // Process each operation file separately to maintain reversibility
+    // Then merge all results into a single proto file
+    const results: Array<{ proto: string; lockData: ProtoLock }> = [];
+
+    for (const { filename, content } of operationFiles) {
+      try {
+        const result = compileOperationsToProto(content, schema, {
+          serviceName,
+          packageName: packageName || 'service.v1',
+          goPackage,
+          javaPackage,
+          javaOuterClassname,
+          javaMultipleFiles,
+          csharpNamespace,
+          rubyPackage,
+          phpNamespace,
+          phpMetadataNamespace,
+          objcClassPrefix,
+          swiftPrefix,
+          includeComments: true,
+          queryIdempotency: queryIdempotency as 'NO_SIDE_EFFECTS' | 'DEFAULT' | undefined,
+          lockData: currentLockData,
+          customScalarMappings,
+          maxDepth,
+          prefixOperationType,
+        });
+
+        results.push(result);
+        // Use the updated lock data for the next operation to maintain field number stability
+        currentLockData = result.lockData;
+      } catch (error) {
+        throw new Error(
+          `Failed to process operation file ${filename}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
+
+    // Merge all proto results into a single proto file
+    const mergedProto = mergeProtoResults(results, {
       serviceName,
       packageName: packageName || 'service.v1',
       goPackage,
@@ -339,18 +598,12 @@ async function generateProtoAndMapping({
       phpMetadataNamespace,
       objcClassPrefix,
       swiftPrefix,
-      includeComments: true,
-      queryIdempotency: queryIdempotency as 'NO_SIDE_EFFECTS' | 'DEFAULT' | undefined,
-      lockData,
-      customScalarMappings,
-      maxDepth,
-      prefixOperationType,
     });
 
     return {
       mapping: null,
-      proto: result.proto,
-      lockData: result.lockData,
+      proto: mergedProto,
+      lockData: currentLockData,
       isOperationsMode: true,
     };
   } else {
