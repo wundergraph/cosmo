@@ -2,223 +2,798 @@
 
 > **Note**: This feature is currently in alpha. The API may change in future releases.
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Concepts](#concepts)
+  - [Named Operations Requirement](#named-operations-requirement)
+  - [Generation Modes](#generation-modes)
+  - [Field Number Stability](#field-number-stability)
+  - [Idempotency Levels](#idempotency-levels)
+- [CLI Reference](#cli-reference)
+  - [Command Options](#command-options)
+  - [Examples](#examples)
+- [API Reference](#api-reference)
+  - [compileOperationsToProto](#compileoperationstoproto)
+  - [Options Interface](#options-interface)
+- [Tutorial](#tutorial)
+  - [Basic Usage](#basic-usage)
+  - [Working with Fragments](#working-with-fragments)
+  - [Handling Subscriptions](#handling-subscriptions)
+  - [Maintaining Field Stability](#maintaining-field-stability)
+- [Advanced Topics](#advanced-topics)
+  - [Multi-Language Support](#multi-language-support)
+  - [Custom Scalar Mappings](#custom-scalar-mappings)
+  - [Proto Lock Files](#proto-lock-files)
+- [Troubleshooting](#troubleshooting)
+- [Best Practices](#best-practices)
+- [FAQ](#faq)
+
+---
+
 ## Overview
 
-The operations-to-proto compiler generates Protocol Buffer service definitions directly from GraphQL operations, enabling an operation-first development approach where you define your API through GraphQL operations rather than schema types.
+The operations-to-proto compiler generates Protocol Buffer service definitions directly from named GraphQL operations (trusted documents/persisted operations), allowing you to define your API through the specific GraphQL operations your clients actually use rather than exposing the entire schema.
 
-## Basic Usage
+### Benefits
+
+- **Precise API Surface**: Only generates proto messages for the fields actually used in your operations
+- **Client-Driven Design**: The proto schema reflects your actual client needs
+- **Smaller Proto Files**: Eliminates unused types and fields
+- **Better Performance**: Reduced message sizes and faster serialization
+- **Type Safety**: Ensures your proto definitions match your actual queries
+
+### When to Use Operations-Based Generation
+
+Use operations-based generation when:
+- You want to minimize the proto API surface area
+- You have a large GraphQL schema but only use a subset of it
+- You want proto definitions that exactly match your client operations
+- You need to maintain multiple proto versions for different clients
+
+Use SDL-based generation when:
+- You want a complete proto representation of your GraphQL schema
+- You're building a general-purpose gRPC service
+- You need to support arbitrary queries at runtime
+
+---
+
+## Concepts
+
+### Named Operations Requirement
+
+All operations must have a name. The operation name becomes the RPC method name in the generated proto.
+
+**✅ Correct: Named operation**
+```graphql
+query GetUser($id: ID!) {
+  user(id: $id) {
+    name
+  }
+}
+```
+
+**❌ Incorrect: Anonymous operation**
+```graphql
+query {
+  user(id: "123") {
+    name
+  }
+}
+```
+
+Anonymous operations will throw an error during compilation.
+
+### Generation Modes
+
+#### SDL-Based Mode (Default)
+
+Generates proto from the complete GraphQL schema definition:
+
+```bash
+wgc grpc-service generate my-service \
+  --input schema.graphql \
+  --output ./proto
+```
+
+**Generates:**
+- Complete proto messages for all GraphQL types
+- All fields from the schema
+- `mapping.json` for runtime query translation
+- `service.proto.lock.json` for field number stability
+
+#### Operations-Based Mode
+
+Generates proto from GraphQL operation files:
+
+```bash
+wgc grpc-service generate MyService \
+  --input schema.graphql \
+  --output ./proto \
+  --with-operations ./operations
+```
+
+**Generates:**
+- Proto messages only for fields used in operations
+- Request/response messages per operation
+- `service.proto.lock.json` for field number stability
+
+### Field Number Stability
+
+Protocol Buffers require stable field numbers to maintain backward compatibility. The system uses a lock file (`service.proto.lock.json`) to track field numbers across regenerations.
+
+**How it works:**
+
+1. **First Generation**: Assigns sequential field numbers (1, 2, 3, ...)
+2. **Lock File Created**: Records message names and field numbers
+3. **Subsequent Generations**: Preserves existing field numbers
+4. **New Fields**: Assigned the next available number
+5. **Removed Fields**: Numbers are reserved (not reused)
+
+**Benefits:**
+
+- **Backward Compatibility**: Old clients work with new proto definitions
+- **Safe Refactoring**: Reorder fields without breaking compatibility
+- **Version Management**: Track proto evolution over time
+
+### Idempotency Levels
+
+gRPC supports idempotency levels to indicate whether operations have side effects:
+
+- **NO_SIDE_EFFECTS**: Safe to retry, doesn't modify state (GET-like)
+- **DEFAULT**: May have side effects, retry with caution (POST-like)
+
+The `queryIdempotency` option explicitly sets the idempotency level for all Query operations:
+
+```typescript
+compileOperationsToProto(operation, schema, {
+  queryIdempotency: 'NO_SIDE_EFFECTS'
+});
+```
+
+**Valid values:**
+- `NO_SIDE_EFFECTS` - Marks queries as safe to retry without side effects
+- `DEFAULT` - Explicitly marks queries with default behavior (may have side effects)
+- Omit the option - No idempotency level is set (default gRPC behavior)
+
+**Note:** Mutations and Subscriptions are never marked with idempotency levels, regardless of this option.
+
+---
+
+## CLI Reference
+
+### Command Options
+
+```bash
+wgc grpc-service generate [name] [options]
+```
+
+#### Required Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `name` | The name of the proto service (e.g., `UserService`) |
+
+#### Required Options
+
+| Option | Description |
+|--------|-------------|
+| `-i, --input <path>` | Path to the GraphQL schema file |
+
+#### Output Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `-o, --output <path>` | `.` | Output directory for generated files |
+| `-p, --package-name <name>` | `service.v1` | Proto package name |
+
+#### Operations Mode Options
+
+| Option | Description |
+|--------|-------------|
+| `-w, --with-operations <path>` | Path to directory containing `.graphql` or `.gql` operation files. Enables operations-based generation. |
+| `--prefix-operation-type` | Prefix RPC method names with operation type (Query/Mutation/Subscription) |
+| `--query-idempotency <level>` | Set idempotency level for Query operations. Valid values: `NO_SIDE_EFFECTS`, `DEFAULT`. Only applies with `--with-operations`. |
+
+#### Language-Specific Options
+
+| Option | Description |
+|--------|-------------|
+| `-g, --go-package <name>` | Adds `option go_package` to the proto file |
+| `--java-package <name>` | Adds `option java_package` to the proto file |
+| `--java-outer-classname <name>` | Adds `option java_outer_classname` to the proto file |
+| `--java-multiple-files` | Adds `option java_multiple_files = true` to the proto file |
+| `--csharp-namespace <name>` | Adds `option csharp_namespace` to the proto file |
+| `--ruby-package <name>` | Adds `option ruby_package` to the proto file |
+| `--php-namespace <name>` | Adds `option php_namespace` to the proto file |
+| `--php-metadata-namespace <name>` | Adds `option php_metadata_namespace` to the proto file |
+| `--objc-class-prefix <name>` | Adds `option objc_class_prefix` to the proto file |
+| `--swift-prefix <name>` | Adds `option swift_prefix` to the proto file |
+
+### Examples
+
+#### Basic Operations-Based Generation
+
+```bash
+wgc grpc-service generate UserService \
+  --input schema.graphql \
+  --output ./proto \
+  --with-operations ./operations
+```
+
+#### With Operation Type Prefixing
+
+```bash
+wgc grpc-service generate UserService \
+  --input schema.graphql \
+  --output ./proto \
+  --with-operations ./operations \
+  --prefix-operation-type
+```
+
+#### With Idempotent Queries
+
+```bash
+wgc grpc-service generate UserService \
+  --input schema.graphql \
+  --output ./proto \
+  --with-operations ./operations \
+  --query-idempotency NO_SIDE_EFFECTS
+```
+
+#### With Go Package
+
+```bash
+wgc grpc-service generate UserService \
+  --input schema.graphql \
+  --output ./proto \
+  --with-operations ./operations \
+  --go-package github.com/myorg/myapp/proto/user/v1
+```
+
+#### With Multiple Language Options
+
+```bash
+wgc grpc-service generate UserService \
+  --input schema.graphql \
+  --output ./proto \
+  --with-operations ./operations \
+  --go-package github.com/myorg/myapp/proto/user/v1 \
+  --java-package com.myorg.myapp.proto.user.v1 \
+  --java-multiple-files \
+  --csharp-namespace MyOrg.MyApp.Proto.User.V1
+```
+
+---
+
+## API Reference
+
+### compileOperationsToProto
+
+Compiles GraphQL operations to Protocol Buffer definitions.
+
+```typescript
+function compileOperationsToProto(
+  operationSource: string | DocumentNode,
+  schemaOrSDL: GraphQLSchema | string,
+  options?: OperationsToProtoOptions
+): CompileOperationsToProtoResult
+```
+
+#### Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `operationSource` | `string \| DocumentNode` | GraphQL operations as a string or parsed DocumentNode |
+| `schemaOrSDL` | `GraphQLSchema \| string` | GraphQL schema or SDL string |
+| `options` | `OperationsToProtoOptions` | Optional configuration |
+
+#### Returns
+
+```typescript
+interface CompileOperationsToProtoResult {
+  proto: string;              // Generated proto text
+  root: protobuf.Root;        // Protobufjs AST root
+  lockData: ProtoLock;        // Lock data for field stability
+}
+```
+
+### Options Interface
+
+```typescript
+interface OperationsToProtoOptions {
+  // Service Configuration
+  serviceName?: string;           // Default: "DefaultService"
+  packageName?: string;           // Default: "service.v1"
+  
+  // Language Options
+  goPackage?: string;
+  javaPackage?: string;
+  javaOuterClassname?: string;
+  javaMultipleFiles?: boolean;
+  csharpNamespace?: string;
+  rubyPackage?: string;
+  phpNamespace?: string;
+  phpMetadataNamespace?: string;
+  objcClassPrefix?: string;
+  swiftPrefix?: string;
+  
+  // Generation Options
+  includeComments?: boolean;           // Default: true
+  prefixOperationType?: boolean;       // Default: false
+  queryIdempotency?: 'NO_SIDE_EFFECTS' | 'DEFAULT';  // Optional
+  maxDepth?: number;                   // Default: 50
+  
+  // Field Stability
+  lockData?: ProtoLock;           // Previous lock data
+}
+```
+
+#### Example Usage
 
 ```typescript
 import { compileOperationsToProto } from '@wundergraph/protographic';
+import { readFileSync } from 'fs';
 
-const schema = `
+const schema = readFileSync('schema.graphql', 'utf8');
+const operations = readFileSync('operations.graphql', 'utf8');
+
+const result = compileOperationsToProto(operations, schema, {
+  serviceName: 'UserService',
+  packageName: 'myorg.user.v1',
+  goPackage: 'github.com/myorg/myapp/proto/user/v1',
+  prefixOperationType: true,
+  queryIdempotency: 'NO_SIDE_EFFECTS',
+  includeComments: true,
+});
+
+console.log(result.proto);
+// Save lock data for next generation
+writeFileSync('service.proto.lock.json', JSON.stringify(result.lockData, null, 2));
+```
+
+---
+
+## Tutorial
+
+### Basic Usage
+
+Let's walk through a complete example of generating proto from GraphQL operations.
+
+#### Step 1: Create Your GraphQL Schema
+
+**schema.graphql:**
+
+```graphql
+type Query {
+  user(id: ID!): User
+  users(limit: Int, offset: Int): [User!]!
+}
+
+type Mutation {
+  createUser(input: CreateUserInput!): User
+  updateUser(id: ID!, input: UpdateUserInput!): User
+}
+
 type User {
   id: ID!
   name: String!
   email: String!
+  age: Int
+  createdAt: String!
 }
 
-type Query {
-  user(id: ID!): User
-  users: [User!]!
+input CreateUserInput {
+  name: String!
+  email: String!
+  age: Int
 }
 
-type Mutation {
-  createUser(name: String!, email: String!): User!
+input UpdateUserInput {
+  name: String
+  email: String
+  age: Int
 }
-`;
+```
 
-const operation = `
-query GetUser($userId: ID!) {
-  user(id: $userId) {
+#### Step 2: Create Your Operations
+
+Create a directory for your operations:
+
+```bash
+mkdir operations
+```
+
+**operations/get-user.graphql:**
+
+```graphql
+query GetUser($id: ID!) {
+  user(id: $id) {
     id
     name
     email
   }
 }
-`;
-
-const result = compileOperationsToProto(
-  operation,  // GraphQL operation
-  schema,     // GraphQL schema
-  {
-    serviceName: 'UserService',
-    packageName: 'user.v1',
-    goPackage: 'github.com/example/user/v1',
-    prefixOperationType: true,  // Prefix RPC names with Query/Mutation
-    queryIdempotency: 'NO_SIDE_EFFECTS',  // Mark queries as idempotent
-    maxDepth: 50,  // Maximum recursion depth for nested queries
-    lockData: previousLockData  // For field number stability
-  }
-);
-
-console.log(result.proto);
-// Outputs proto with:
-// - QueryGetUser RPC method (prefixed with operation type)
-// - QueryGetUserRequest message (with userId field)
-// - QueryGetUserResponse message (with user field containing id, name, email)
 ```
 
-## Features
+**operations/list-users.graphql:**
 
-### Operation Type Prefixing
-
-When `prefixOperationType: true`, RPC method names are prefixed with their operation type:
-- Queries: `QueryGetUser`, `QueryListUsers`
-- Mutations: `MutationCreateUser`, `MutationUpdateUser`
-- Subscriptions: `SubscriptionOnMessageAdded`
-
-Without this flag, RPC names match the operation names directly (e.g., `GetUser`, `CreateUser`, `OnMessageAdded`).
-
-This helps distinguish operations in the generated proto service definition.
-
-### Single Operation Per Document
-
-For proto reversibility (ability to reconstruct the original GraphQL operation from the proto), each operation must be compiled separately:
-
-```typescript
-// ✅ Correct: Single operation
-const operation1 = `query GetUser($id: ID!) { user(id: $id) { name } }`;
-compileOperationsToProto(operation1, schema);
-
-// ❌ Incorrect: Multiple operations
-const operations = `
-  query GetUser($id: ID!) { user(id: $id) { name } }
-  query ListUsers { users { name } }
-`;
-// This will throw an error
-```
-
-### Fragment Support
-
-Operations can include fragments, which are properly resolved during compilation:
-
-```typescript
-const operation = `
-query GetUser($id: ID!) {
-  user(id: $id) {
-    ...UserFields
+```graphql
+query ListUsers($limit: Int, $offset: Int) {
+  users(limit: $limit, offset: $offset) {
+    id
+    name
+    email
+    createdAt
   }
 }
+```
 
+**operations/create-user.graphql:**
+
+```graphql
+mutation CreateUser($input: CreateUserInput!) {
+  createUser(input: $input) {
+    id
+    name
+    email
+    createdAt
+  }
+}
+```
+
+#### Step 3: Generate Proto
+
+```bash
+wgc grpc-service generate UserService \
+  --input schema.graphql \
+  --output ./proto \
+  --with-operations ./operations \
+  --go-package github.com/myorg/myapp/proto/user/v1
+```
+
+#### Step 4: Review Generated Files
+
+**proto/service.proto:**
+
+```protobuf
+syntax = "proto3";
+
+package service.v1;
+
+import "google/protobuf/wrappers.proto";
+
+option go_package = "github.com/myorg/myapp/proto/user/v1";
+
+service UserService {
+  rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
+  
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse) {}
+  
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {}
+}
+
+message GetUserRequest {
+  string id = 1;
+}
+
+message GetUserResponse {
+  message User {
+    string id = 1;
+    string name = 2;
+    google.protobuf.StringValue email = 3;
+  }
+  
+  User user = 1;
+}
+
+// ... more messages
+```
+
+### Working with Fragments
+
+Fragments are fully supported in operations-based generation.
+
+**operations/user-fields.graphql:**
+
+```graphql
 fragment UserFields on User {
   id
   name
   email
 }
-`;
 
-compileOperationsToProto(operation, schema);
+fragment UserWithTimestamp on User {
+  ...UserFields
+  createdAt
+}
+
+query GetUserWithFragment($id: ID!) {
+  user(id: $id) {
+    ...UserWithTimestamp
+  }
+}
 ```
 
-### Custom Directives
+The generated proto will include all fields from the fragments.
 
-Unknown directives are ignored during validation, allowing dev tools to use custom directives:
+### Handling Subscriptions
 
-```typescript
-const operation = `
-query GetUser($id: ID!) @customDirective {
+Subscriptions are generated as server-streaming RPC methods.
+
+**operations/user-updates.graphql:**
+
+```graphql
+subscription OnUserUpdated($userId: ID!) {
+  userUpdated(userId: $userId) {
+    id
+    name
+    email
+  }
+}
+```
+
+**Generated proto:**
+
+```protobuf
+service UserService {
+  rpc OnUserUpdated(OnUserUpdatedRequest) returns (stream OnUserUpdatedResponse) {}
+}
+```
+
+### Maintaining Field Stability
+
+Field number stability is crucial for backward compatibility.
+
+#### Initial Generation
+
+```bash
+wgc grpc-service generate UserService \
+  --input schema.graphql \
+  --with-operations ./operations \
+  --output ./proto
+```
+
+**Generated lock file:**
+
+```json
+{
+  "messages": {
+    "GetUserResponse": {
+      "fields": {
+        "id": 1,
+        "name": 2,
+        "email": 3
+      }
+    }
+  }
+}
+```
+
+#### Adding a New Field
+
+Update your operation to include a new field:
+
+```graphql
+query GetUser($id: ID!) {
   user(id: $id) {
     id
     name
+    email
+    age  # New field
   }
 }
-`;
-
-// Custom directives are ignored, operation compiles successfully
-compileOperationsToProto(operation, schema);
 ```
 
-### Recursion Protection
+Regenerate - the lock file preserves existing field numbers and assigns the next available number to the new field.
 
-The `maxDepth` option prevents stack overflow from deeply nested queries:
+---
 
-```typescript
-compileOperationsToProto(operation, schema, {
-  maxDepth: 50  // Default: 50
-});
+## Advanced Topics
+
+### Multi-Language Support
+
+Generate proto files optimized for multiple languages:
+
+```bash
+wgc grpc-service generate UserService \
+  --input schema.graphql \
+  --with-operations ./operations \
+  --output ./proto \
+  --go-package github.com/myorg/myapp/proto/user/v1 \
+  --java-package com.myorg.myapp.proto.user.v1 \
+  --java-outer-classname UserServiceProto \
+  --java-multiple-files \
+  --csharp-namespace MyOrg.MyApp.Proto.User.V1 \
+  --swift-prefix MSU
 ```
 
-### Query Idempotency
+### Custom Scalar Mappings
 
-Mark query operations with idempotency levels for gRPC:
+GraphQL custom scalars are mapped to proto types. Common mappings:
 
-```typescript
-compileOperationsToProto(operation, schema, {
-  queryIdempotency: 'NO_SIDE_EFFECTS'  // or 'DEFAULT'
-});
+| GraphQL Scalar | Recommended Proto Type |
+|----------------|----------------------|
+| `DateTime` | `google.protobuf.Timestamp` |
+| `Date` | `google.protobuf.Timestamp` |
+| `JSON` | `google.protobuf.Struct` |
+| `UUID` | `string` |
+| `BigInt` | `int64` |
+
+### Proto Lock Files
+
+The lock file maintains field number stability across generations.
+
+#### Lock File Structure
+
+```json
+{
+  "messages": {
+    "MessageName": {
+      "fields": {
+        "field_name": 1,
+        "another_field": 2
+      },
+      "reservedNumbers": [3, 5],
+      "reservedNames": ["old_field"]
+    }
+  }
+}
 ```
 
-### Subscription Streaming
+#### Best Practices
 
-Subscription operations are automatically marked as server streaming in the proto:
+1. **Commit Lock Files**: Always commit lock files to version control
+2. **Never Edit Manually**: Let the tool manage the lock file
+3. **Backup Before Major Changes**: Keep a backup before significant refactoring
+4. **Review Changes**: Check lock file diffs in code reviews
 
-```typescript
-const subscription = `
-subscription OnUserUpdate($userId: ID!) {
-  userUpdated(id: $userId) {
-    id
+---
+
+## Troubleshooting
+
+### Common Issues
+
+#### No Operation Files Found
+
+**Error:**
+```
+No GraphQL operation files (.graphql, .gql) found in ./operations
+```
+
+**Solution:**
+- Ensure your operation files have `.graphql` or `.gql` extensions
+- Check the path to your operations directory
+- Verify files contain valid GraphQL operations
+
+#### Anonymous Operations Not Supported
+
+**Error:**
+```
+Operations must be named
+```
+
+**Solution:**
+Name all your operations:
+
+```graphql
+# ❌ Bad - anonymous
+query {
+  user(id: "1") {
     name
   }
 }
-`;
 
-// Generates: rpc SubscriptionOnUserUpdate(...) returns (stream ...)
-compileOperationsToProto(subscription, schema);
+# ✅ Good - named
+query GetUser {
+  user(id: "1") {
+    name
+  }
+}
 ```
 
-## Configuration Options
+#### Field Number Conflicts
 
-| Option | Type | Description |
-|--------|------|-------------|
-| `serviceName` | `string` | Name of the generated proto service (default: `'DefaultService'`) |
-| `packageName` | `string` | Proto package name (default: `'service.v1'`) |
-| `goPackage` | `string` | Go package option for proto file |
-| `javaPackage` | `string` | Java package option for proto file |
-| `javaOuterClassname` | `string` | Java outer classname option |
-| `javaMultipleFiles` | `boolean` | Java multiple files option |
-| `csharpNamespace` | `string` | C# namespace option |
-| `rubyPackage` | `string` | Ruby package option |
-| `phpNamespace` | `string` | PHP namespace option |
-| `phpMetadataNamespace` | `string` | PHP metadata namespace option |
-| `objcClassPrefix` | `string` | Objective-C class prefix option |
-| `swiftPrefix` | `string` | Swift prefix option |
-| `includeComments` | `boolean` | Include GraphQL descriptions as proto comments (default: `true`) |
-| `queryIdempotency` | `'NO_SIDE_EFFECTS' \| 'DEFAULT'` | Idempotency level for query operations |
-| `lockData` | `ProtoLock` | Lock data from previous compilation for field number stability |
-| `maxDepth` | `number` | Maximum recursion depth to prevent stack overflow (default: `50`) |
-| `prefixOperationType` | `boolean` | Prefix RPC method names with operation type (default: `false`) |
-
-## Field Number Stability
-
-Like SDL-to-Proto, operations-to-proto supports field number stability through lock data:
-
-```typescript
-// First generation
-const result1 = compileOperationsToProto(operation1, schema);
-const lockData = result1.lockData;
-
-// Later generation with the same lock data
-const result2 = compileOperationsToProto(operation2, schema, {
-  lockData: lockData
-});
+**Error:**
+```
+Field number conflict in message X
 ```
 
-This ensures backward compatibility when operations evolve over time.
+**Solution:**
+- Delete the lock file and regenerate (breaking change)
+- Or manually resolve conflicts in the lock file (advanced)
+
+---
+
+## Best Practices
+
+### Operation Organization
+
+1. **One Operation Per File**: Makes operations easier to find and manage
+2. **Descriptive Names**: Use clear, descriptive operation names
+3. **Group by Feature**: Organize operations by feature or domain
+
+**Example structure:**
+
+```
+operations/
+├── users/
+│   ├── get-user.graphql
+│   ├── list-users.graphql
+│   └── create-user.graphql
+├── posts/
+│   ├── get-post.graphql
+│   └── list-posts.graphql
+└── fragments/
+    ├── user-fields.graphql
+    └── post-fields.graphql
+```
+
+### Field Naming
+
+1. **Use snake_case**: Proto convention uses snake_case for fields
+2. **Be Consistent**: Match your GraphQL naming conventions
+3. **Avoid Reserved Words**: Don't use proto reserved words
+
+### Version Management
+
+1. **Semantic Versioning**: Use semver for proto packages
+2. **Package Naming**: Include version in package name (`myorg.user.v1`)
+3. **Breaking Changes**: Increment major version for breaking changes
+4. **Lock File Commits**: Always commit lock files with proto changes
+
+---
+
+## FAQ
+
+### Q: Can I mix SDL-based and operations-based generation?
+
+**A:** No, you must choose one mode per service. However, you can have multiple services, each using different modes.
+
+### Q: What happens to unused types in operations-based mode?
+
+**A:** Unused types are not included in the generated proto. Only types referenced in your operations are generated.
+
+### Q: Can I use the same lock file for both modes?
+
+**A:** No, lock files are mode-specific. SDL-based and operations-based modes generate different message structures.
+
+### Q: How do I handle breaking changes?
+
+**A:** 
+1. Version your proto package (e.g., `v1` → `v2`)
+2. Generate new proto with a new package name
+3. Maintain both versions during migration
+4. Deprecate old version after migration
+
+### Q: Can I customize the generated proto?
+
+**A:** The generated proto should not be manually edited. Instead:
+- Modify your GraphQL operations
+- Use CLI options for language-specific settings
+- Regenerate the proto
+
+### Q: How do I handle large schemas?
+
+**A:** Operations-based generation is ideal for large schemas:
+- Only generates what you use
+- Smaller proto files
+- Faster compilation
+- Better performance
+
+### Q: Why must operations be named?
+
+**A:** Named operations are required because:
+- The operation name becomes the RPC method name in the proto
+- It enables clear, semantic API definitions
+- It supports proto reversibility (reconstructing GraphQL from proto)
+- It follows GraphQL best practices for production applications
+
+---
 
 ## Limitations
 
+- **Named operations only**: All operations must have a name. Anonymous operations are not supported
 - **Single operation per document**: Multiple operations in one document are not supported for proto reversibility
 - **No root-level field aliases**: Field aliases at the root level break proto-to-GraphQL reversibility
 - **Alpha status**: The API may change in future releases
-
-## Return Value
-
-The `compileOperationsToProto` function returns an object with:
-
-```typescript
-{
-  proto: string;           // Generated proto text
-  root: protobuf.Root;     // Protobufjs root object
-  lockData: ProtoLock;     // Lock data for field number stability
-}

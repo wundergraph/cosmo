@@ -185,8 +185,6 @@ Protographic follows a set of conventions when converting GraphQL SDL to Protoco
 1. GraphQL SDL to Mapping, see [SDL_MAPPING_RULES.md](SDL_MAPPING_RULES.md)
 2. GraphQL SDL to Proto, see [SDL_PROTO_RULES.md](SDL_PROTO_RULES.md)
 
-> **Note**: These rules apply to SDL-to-Proto conversion. For operations-to-proto conversion rules, see [OPERATIONS_TO_PROTO.md](OPERATIONS_TO_PROTO.md).
-
 ## Integration with graphql-go-tools
 
 Protographic generates a mapping file as well as a proto file that can be used with [graphql-go-tools](https://github.com/wundergraph/graphql-go-tools) to enable seamless GraphQL-to-gRPC translation. This integration allows you to:
