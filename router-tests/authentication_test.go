@@ -28,11 +28,13 @@ import (
 )
 
 const (
-	employeesQuery                = `{"query":"{ employees { id } }"}`
-	employeesQueryRequiringClaims = `{"query":"{ employees { id startDate } }"}`
-	employeesExpectedData         = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
-	unauthorizedExpectedData      = `{"errors":[{"message":"unauthorized"}]}`
-	xAuthenticatedByHeader        = "X-Authenticated-By"
+	employeesQuery                  = `{"query":"{ employees { id } }"}`
+	employeesQueryRequiringClaims   = `{"query":"{ employees { id startDate } }"}`
+	employeesExpectedData           = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
+	unauthorizedExpectedData        = `{"errors":[{"message":"unauthorized"}]}`
+	xAuthenticatedByHeader          = "X-Authenticated-By"
+	simpleIntrospectionQuery        = `{"query":"{ __type(name: \"Query\") { name } }"}`
+	simpleIntrospectionExpectedData = `{"data":{"__type":{"name":"Query"}}}`
 )
 
 func TestAuthentication(t *testing.T) {
@@ -42,10 +44,17 @@ func TestAuthentication(t *testing.T) {
 		t.Parallel()
 
 		authenticators, _ := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
 
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Operations without token should succeed
@@ -79,9 +88,17 @@ func TestAuthentication(t *testing.T) {
 			},
 		})
 
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, true)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			token, err := authServer.TokenForKID("unknown_kid", nil, true)
@@ -129,9 +146,17 @@ func TestAuthentication(t *testing.T) {
 			},
 		})
 
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, true)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			token, err := authServer.TokenForKID("unknown_kid", nil, true)
@@ -183,9 +208,17 @@ func TestAuthentication(t *testing.T) {
 			},
 		})
 
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, true)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			token, err := authServer.TokenForKID("unknown_kid", nil, true)
@@ -234,9 +267,17 @@ func TestAuthentication(t *testing.T) {
 			},
 		})
 
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, true)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			token, err := authServer.TokenForKID("unknown_kid", nil, true)
@@ -289,9 +330,17 @@ func TestAuthentication(t *testing.T) {
 			},
 		})
 
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, true)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			token, err := authServer.TokenForKID("unknown_kid", nil, true)
@@ -357,9 +406,17 @@ func TestAuthentication(t *testing.T) {
 			},
 		})
 
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, true)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Create a token signed with a valid key but with an unknown kid header
@@ -391,9 +448,17 @@ func TestAuthentication(t *testing.T) {
 		t.Parallel()
 
 		authenticators, _ := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Operations with an invalid token should fail
@@ -415,9 +480,17 @@ func TestAuthentication(t *testing.T) {
 		t.Parallel()
 
 		authenticators, authServer := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Operations with a token should succeed
@@ -441,9 +514,17 @@ func TestAuthentication(t *testing.T) {
 		t.Parallel()
 
 		authenticators, _ := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", nil, strings.NewReader(employeesQueryRequiringClaims))
@@ -459,9 +540,17 @@ func TestAuthentication(t *testing.T) {
 		t.Parallel()
 
 		authenticators, authServer := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Operations with a token should succeed
@@ -484,9 +573,17 @@ func TestAuthentication(t *testing.T) {
 		t.Parallel()
 
 		authenticators, authServer := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Operations with a token should succeed
@@ -511,9 +608,17 @@ func TestAuthentication(t *testing.T) {
 		t.Parallel()
 
 		authenticators, authServer := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Operations with a token should succeed
@@ -537,9 +642,17 @@ func TestAuthentication(t *testing.T) {
 		t.Parallel()
 
 		authenticators, authServer := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Operations with an token should succeed
@@ -564,9 +677,17 @@ func TestAuthentication(t *testing.T) {
 		t.Parallel()
 
 		authenticators, authServer := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
 					RejectOperationIfUnauthorized: true,
 				}),
@@ -595,9 +716,17 @@ func TestAuthentication(t *testing.T) {
 		t.Parallel()
 
 		authenticators, authServer := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
 					RejectOperationIfUnauthorized: true,
 				}),
@@ -624,9 +753,17 @@ func TestAuthentication(t *testing.T) {
 		t.Parallel()
 
 		authenticators, _ := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
 					RejectOperationIfUnauthorized: true,
 				}),
@@ -649,9 +786,17 @@ func TestAuthentication(t *testing.T) {
 		t.Parallel()
 
 		authenticators, _ := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
 					RejectOperationIfUnauthorized: true,
 				}),
@@ -672,9 +817,17 @@ func TestAuthentication(t *testing.T) {
 		t.Parallel()
 
 		authenticators, authServer := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Operations with a token should succeed
@@ -699,9 +852,17 @@ func TestAuthentication(t *testing.T) {
 		t.Parallel()
 
 		authenticators, authServer := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Operations with a token should succeed
@@ -726,9 +887,17 @@ func TestAuthentication(t *testing.T) {
 		t.Parallel()
 
 		authenticators, authServer := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Operations with a token should succeed
@@ -755,9 +924,17 @@ func TestAuthentication(t *testing.T) {
 		t.Parallel()
 
 		authenticators, _ := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", nil, strings.NewReader(`
@@ -775,9 +952,17 @@ func TestAuthentication(t *testing.T) {
 		t.Parallel()
 
 		authenticators, _ := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", nil, strings.NewReader(`
@@ -795,9 +980,17 @@ func TestAuthentication(t *testing.T) {
 		t.Parallel()
 
 		authenticators, _ := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", nil, strings.NewReader(`
@@ -815,9 +1008,17 @@ func TestAuthentication(t *testing.T) {
 		t.Parallel()
 
 		authenticators, authServer := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			token, err := authServer.Token(nil)
@@ -840,9 +1041,17 @@ func TestAuthentication(t *testing.T) {
 		t.Parallel()
 
 		authenticators, authServer := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			token, err := authServer.Token(map[string]any{
@@ -867,9 +1076,17 @@ func TestAuthentication(t *testing.T) {
 		t.Parallel()
 
 		authenticators, authServer := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			token, err := authServer.Token(map[string]any{
@@ -894,9 +1111,17 @@ func TestAuthentication(t *testing.T) {
 		t.Parallel()
 
 		authenticators, authServer := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			token, err := authServer.Token(map[string]any{
@@ -921,9 +1146,17 @@ func TestAuthentication(t *testing.T) {
 		t.Parallel()
 
 		authenticators, authServer := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
 					RejectOperationIfUnauthorized: true,
 				}),
@@ -974,13 +1207,21 @@ func TestAuthenticationWithCustomHeaders(t *testing.T) {
 	require.NoError(t, err)
 	authenticators := []authentication.Authenticator{authenticator}
 
+	accessController, err := core.NewAccessController(core.AccessControllerOptions{
+		Authenticators:           authenticators,
+		AuthenticationRequired:   false,
+		SkipIntrospectionQueries: false,
+		IntrospectionSkipSecret:  "",
+	})
+	require.NoError(t, err)
+
 	token, err := authServer.Token(nil)
 	require.NoError(t, err)
 
 	runTest := func(t *testing.T, headerValue string) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 
@@ -1039,9 +1280,17 @@ func TestHttpJwksAuthorization(t *testing.T) {
 		t.Parallel()
 
 		authenticators, _ := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, true)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Operations without token should fail
@@ -1060,9 +1309,17 @@ func TestHttpJwksAuthorization(t *testing.T) {
 		t.Parallel()
 
 		authenticators, _ := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, true)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Operations with an invalid token should fail
@@ -1084,11 +1341,19 @@ func TestHttpJwksAuthorization(t *testing.T) {
 		t.Parallel()
 
 		authenticators, authServer := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		token, err := authServer.Token(nil)
 		require.NoError(t, err)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, true)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Operations with a token should succeed
@@ -1139,9 +1404,17 @@ func TestHttpJwksAuthorization(t *testing.T) {
 			},
 		})
 
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, true)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Operations with a token should succeed
@@ -1197,11 +1470,19 @@ func TestNonHttpAuthorization(t *testing.T) {
 			},
 		})
 
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		token := generateToken(t, kid, secret, jwt.SigningMethodHS256, nil)
 
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, true)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Operations with a token should succeed
@@ -1240,11 +1521,19 @@ func TestNonHttpAuthorization(t *testing.T) {
 			},
 		})
 
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		token := generateToken(t, kid, secret, jwt.SigningMethodHS256, nil)
 
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, true)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Operations with a token should succeed
@@ -1279,11 +1568,19 @@ func TestNonHttpAuthorization(t *testing.T) {
 			},
 		})
 
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		token := generateToken(t, "differentKID", secret, jwt.SigningMethodHS256, nil)
 
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, true)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			header := http.Header{
@@ -1320,7 +1617,13 @@ func TestAuthenticationValuePrefixes(t *testing.T) {
 	require.NoError(t, err)
 
 	authenticators := []authentication.Authenticator{authenticator1}
-	accessController := core.NewAccessController(authenticators, false)
+	accessController, err := core.NewAccessController(core.AccessControllerOptions{
+		Authenticators:           authenticators,
+		AuthenticationRequired:   false,
+		SkipIntrospectionQueries: false,
+		IntrospectionSkipSecret:  "",
+	})
+	require.NoError(t, err)
 
 	t.Run("no prefix", func(t *testing.T) {
 		t.Parallel()
@@ -1407,7 +1710,13 @@ func TestAuthenticationMultipleProviders(t *testing.T) {
 	})
 	require.NoError(t, err)
 	authenticators := []authentication.Authenticator{authenticator1, authenticator2}
-	accessController := core.NewAccessController(authenticators, false)
+	accessController, err := core.NewAccessController(core.AccessControllerOptions{
+		Authenticators:           authenticators,
+		AuthenticationRequired:   false,
+		SkipIntrospectionQueries: false,
+		IntrospectionSkipSecret:  "",
+	})
+	require.NoError(t, err)
 
 	t.Run("authenticate with first provider due to matching prefix", func(t *testing.T) {
 		t.Parallel()
@@ -1540,12 +1849,20 @@ func TestAlgorithmMismatch(t *testing.T) {
 			Bytes: x509.MarshalPKCS1PublicKey(&publicKey),
 		}
 
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		token, err := signer.SignedString(pem.EncodeToMemory(publicKeyPEM))
 		require.NoError(t, err)
 
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, true)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Operation with forged token should fail
@@ -1568,12 +1885,20 @@ func TestAlgorithmMismatch(t *testing.T) {
 		// We will create a token with none algorithm
 		_, authenticators := testSetup(t, rsaCrypto)
 
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		token, err := jwt.New(jwt.SigningMethodNone).SignedString(jwt.UnsafeAllowNoneSignatureType)
 		require.NoError(t, err)
 
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, true)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			header := http.Header{
@@ -1691,10 +2016,17 @@ func TestOidcDiscovery(t *testing.T) {
 		require.NoError(t, err)
 
 		tokens, authenticators := testSetup(t, rsa)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
 
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, true)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			for _, token := range tokens {
@@ -1775,9 +2107,17 @@ func TestMultipleKeys(t *testing.T) {
 
 			tokens, authenticators := testSetup(t, rsa1, rsa2)
 
+			accessController, err := core.NewAccessController(core.AccessControllerOptions{
+				Authenticators:           authenticators,
+				AuthenticationRequired:   true,
+				SkipIntrospectionQueries: false,
+				IntrospectionSkipSecret:  "",
+			})
+			require.NoError(t, err)
+
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, true)),
+					core.WithAccessController(accessController),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				for _, token := range tokens {
@@ -1797,9 +2137,17 @@ func TestMultipleKeys(t *testing.T) {
 
 			tokens, authenticators := testSetup(t, ec1, ec2)
 
+			accessController, err := core.NewAccessController(core.AccessControllerOptions{
+				Authenticators:           authenticators,
+				AuthenticationRequired:   true,
+				SkipIntrospectionQueries: false,
+				IntrospectionSkipSecret:  "",
+			})
+			require.NoError(t, err)
+
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, true)),
+					core.WithAccessController(accessController),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				for _, token := range tokens {
@@ -1819,9 +2167,17 @@ func TestMultipleKeys(t *testing.T) {
 
 			tokens, authenticators := testSetup(t, rsa, ec)
 
+			accessController, err := core.NewAccessController(core.AccessControllerOptions{
+				Authenticators:           authenticators,
+				AuthenticationRequired:   true,
+				SkipIntrospectionQueries: false,
+				IntrospectionSkipSecret:  "",
+			})
+			require.NoError(t, err)
+
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, true)),
+					core.WithAccessController(accessController),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				for _, token := range tokens {
@@ -1845,9 +2201,17 @@ func TestMultipleKeys(t *testing.T) {
 
 			tokens, authenticators := testSetup(t, hs1, hs2)
 
+			accessController, err := core.NewAccessController(core.AccessControllerOptions{
+				Authenticators:           authenticators,
+				AuthenticationRequired:   true,
+				SkipIntrospectionQueries: false,
+				IntrospectionSkipSecret:  "",
+			})
+			require.NoError(t, err)
+
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, true)),
+					core.WithAccessController(accessController),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				for _, token := range tokens {
@@ -1871,9 +2235,17 @@ func TestMultipleKeys(t *testing.T) {
 
 			tokens, authenticators := testSetup(t, rsa, hs)
 
+			accessController, err := core.NewAccessController(core.AccessControllerOptions{
+				Authenticators:           authenticators,
+				AuthenticationRequired:   true,
+				SkipIntrospectionQueries: false,
+				IntrospectionSkipSecret:  "",
+			})
+			require.NoError(t, err)
+
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, true)),
+					core.WithAccessController(accessController),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				for _, token := range tokens {
@@ -1952,9 +2324,17 @@ func TestSupportedAlgorithms(t *testing.T) {
 
 			token, authenticators := testSetup(t, rsaCrypto)
 
+			accessController, err := core.NewAccessController(core.AccessControllerOptions{
+				Authenticators:           authenticators,
+				AuthenticationRequired:   true,
+				SkipIntrospectionQueries: false,
+				IntrospectionSkipSecret:  "",
+			})
+			require.NoError(t, err)
+
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, true)),
+					core.WithAccessController(accessController),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				t.Run("Should succeed when providing token", func(t *testing.T) {
@@ -1981,9 +2361,17 @@ func TestSupportedAlgorithms(t *testing.T) {
 
 			token, authenticators := testSetup(t, rsaCrypto)
 
+			accessController, err := core.NewAccessController(core.AccessControllerOptions{
+				Authenticators:           authenticators,
+				AuthenticationRequired:   true,
+				SkipIntrospectionQueries: false,
+				IntrospectionSkipSecret:  "",
+			})
+			require.NoError(t, err)
+
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, true)),
+					core.WithAccessController(accessController),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				t.Run("Should succeed when providing token", func(t *testing.T) {
@@ -2010,9 +2398,17 @@ func TestSupportedAlgorithms(t *testing.T) {
 
 			token, authenticators := testSetup(t, rsaCrypto)
 
+			accessController, err := core.NewAccessController(core.AccessControllerOptions{
+				Authenticators:           authenticators,
+				AuthenticationRequired:   true,
+				SkipIntrospectionQueries: false,
+				IntrospectionSkipSecret:  "",
+			})
+			require.NoError(t, err)
+
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, true)),
+					core.WithAccessController(accessController),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				t.Run("Should succeed when providing token", func(t *testing.T) {
@@ -2039,9 +2435,17 @@ func TestSupportedAlgorithms(t *testing.T) {
 
 			token, authenticators := testSetup(t, rsaCrypto)
 
+			accessController, err := core.NewAccessController(core.AccessControllerOptions{
+				Authenticators:           authenticators,
+				AuthenticationRequired:   true,
+				SkipIntrospectionQueries: false,
+				IntrospectionSkipSecret:  "",
+			})
+			require.NoError(t, err)
+
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, true)),
+					core.WithAccessController(accessController),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				t.Run("Should succeed when providing token", func(t *testing.T) {
@@ -2068,9 +2472,17 @@ func TestSupportedAlgorithms(t *testing.T) {
 
 			token, authenticators := testSetup(t, rsaCrypto)
 
+			accessController, err := core.NewAccessController(core.AccessControllerOptions{
+				Authenticators:           authenticators,
+				AuthenticationRequired:   true,
+				SkipIntrospectionQueries: false,
+				IntrospectionSkipSecret:  "",
+			})
+			require.NoError(t, err)
+
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, true)),
+					core.WithAccessController(accessController),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				t.Run("Should succeed when providing token", func(t *testing.T) {
@@ -2097,9 +2509,17 @@ func TestSupportedAlgorithms(t *testing.T) {
 
 			token, authenticators := testSetup(t, rsaCrypto)
 
+			accessController, err := core.NewAccessController(core.AccessControllerOptions{
+				Authenticators:           authenticators,
+				AuthenticationRequired:   true,
+				SkipIntrospectionQueries: false,
+				IntrospectionSkipSecret:  "",
+			})
+			require.NoError(t, err)
+
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, true)),
+					core.WithAccessController(accessController),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				t.Run("Should succeed when providing token", func(t *testing.T) {
@@ -2130,9 +2550,17 @@ func TestSupportedAlgorithms(t *testing.T) {
 
 			token, authenticators := testSetup(t, hmac)
 
+			accessController, err := core.NewAccessController(core.AccessControllerOptions{
+				Authenticators:           authenticators,
+				AuthenticationRequired:   true,
+				SkipIntrospectionQueries: false,
+				IntrospectionSkipSecret:  "",
+			})
+			require.NoError(t, err)
+
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, true)),
+					core.WithAccessController(accessController),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				t.Run("Should succeed when providing token", func(t *testing.T) {
@@ -2159,9 +2587,17 @@ func TestSupportedAlgorithms(t *testing.T) {
 
 			token, authenticators := testSetup(t, hmac)
 
+			accessController, err := core.NewAccessController(core.AccessControllerOptions{
+				Authenticators:           authenticators,
+				AuthenticationRequired:   true,
+				SkipIntrospectionQueries: false,
+				IntrospectionSkipSecret:  "",
+			})
+			require.NoError(t, err)
+
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, true)),
+					core.WithAccessController(accessController),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				t.Run("Should succeed when providing token", func(t *testing.T) {
@@ -2188,9 +2624,17 @@ func TestSupportedAlgorithms(t *testing.T) {
 
 			token, authenticators := testSetup(t, hmac)
 
+			accessController, err := core.NewAccessController(core.AccessControllerOptions{
+				Authenticators:           authenticators,
+				AuthenticationRequired:   true,
+				SkipIntrospectionQueries: false,
+				IntrospectionSkipSecret:  "",
+			})
+			require.NoError(t, err)
+
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, true)),
+					core.WithAccessController(accessController),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				t.Run("Should succeed when providing token", func(t *testing.T) {
@@ -2221,9 +2665,17 @@ func TestSupportedAlgorithms(t *testing.T) {
 
 			token, authenticators := testSetup(t, ed25519Crypto)
 
+			accessController, err := core.NewAccessController(core.AccessControllerOptions{
+				Authenticators:           authenticators,
+				AuthenticationRequired:   true,
+				SkipIntrospectionQueries: false,
+				IntrospectionSkipSecret:  "",
+			})
+			require.NoError(t, err)
+
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, true)),
+					core.WithAccessController(accessController),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				t.Run("Should succeed when providing token", func(t *testing.T) {
@@ -2253,9 +2705,17 @@ func TestSupportedAlgorithms(t *testing.T) {
 
 			token, authenticators := testSetup(t, es256Crypto)
 
+			accessController, err := core.NewAccessController(core.AccessControllerOptions{
+				Authenticators:           authenticators,
+				AuthenticationRequired:   true,
+				SkipIntrospectionQueries: false,
+				IntrospectionSkipSecret:  "",
+			})
+			require.NoError(t, err)
+
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, true)),
+					core.WithAccessController(accessController),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				t.Run("Should succeed when providing token", func(t *testing.T) {
@@ -2282,9 +2742,17 @@ func TestSupportedAlgorithms(t *testing.T) {
 
 			token, authenticators := testSetup(t, es384Crypto)
 
+			accessController, err := core.NewAccessController(core.AccessControllerOptions{
+				Authenticators:           authenticators,
+				AuthenticationRequired:   true,
+				SkipIntrospectionQueries: false,
+				IntrospectionSkipSecret:  "",
+			})
+			require.NoError(t, err)
+
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, true)),
+					core.WithAccessController(accessController),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				t.Run("Should succeed when providing token", func(t *testing.T) {
@@ -2311,9 +2779,17 @@ func TestSupportedAlgorithms(t *testing.T) {
 
 			token, authenticators := testSetup(t, es512Crypto)
 
+			accessController, err := core.NewAccessController(core.AccessControllerOptions{
+				Authenticators:           authenticators,
+				AuthenticationRequired:   true,
+				SkipIntrospectionQueries: false,
+				IntrospectionSkipSecret:  "",
+			})
+			require.NoError(t, err)
+
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, true)),
+					core.WithAccessController(accessController),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				t.Run("Should succeed when providing token", func(t *testing.T) {
@@ -2342,9 +2818,17 @@ func TestSupportedAlgorithms(t *testing.T) {
 		// We are adding an RSA key but only allow HMAC
 		token, authenticators := testSetup(t, rsaCrypto, jwkset.AlgHS256.String())
 
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, true)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Operations with a token should fail
@@ -2377,9 +2861,17 @@ func TestAuthenticationOverWebsocket(t *testing.T) {
 	require.NoError(t, err)
 	authenticators := []authentication.Authenticator{authenticator}
 
+	accessController, err := core.NewAccessController(core.AccessControllerOptions{
+		Authenticators:           authenticators,
+		AuthenticationRequired:   true,
+		SkipIntrospectionQueries: false,
+		IntrospectionSkipSecret:  "",
+	})
+	require.NoError(t, err)
+
 	testenv.Run(t, &testenv.Config{
 		RouterOptions: []core.Option{
-			core.WithAccessController(core.NewAccessController(authenticators, true)),
+			core.WithAccessController(accessController),
 		},
 	}, func(t *testing.T, xEnv *testenv.Environment) {
 
@@ -2433,9 +2925,17 @@ func TestAudienceValidation(t *testing.T) {
 					},
 				})
 
+				accessController, err := core.NewAccessController(core.AccessControllerOptions{
+					Authenticators:           authenticators,
+					AuthenticationRequired:   true,
+					SkipIntrospectionQueries: false,
+					IntrospectionSkipSecret:  "",
+				})
+				require.NoError(t, err)
+
 				testenv.Run(t, &testenv.Config{
 					RouterOptions: []core.Option{
-						core.WithAccessController(core.NewAccessController(authenticators, true)),
+						core.WithAccessController(accessController),
 					},
 				}, func(t *testing.T, xEnv *testenv.Environment) {
 					// Operations with a token should succeed
@@ -2473,9 +2973,17 @@ func TestAudienceValidation(t *testing.T) {
 					"aud": tokenAudiences,
 				})
 
+				accessController, err := core.NewAccessController(core.AccessControllerOptions{
+					Authenticators:           authenticators,
+					AuthenticationRequired:   true,
+					SkipIntrospectionQueries: false,
+					IntrospectionSkipSecret:  "",
+				})
+				require.NoError(t, err)
+
 				testenv.Run(t, &testenv.Config{
 					RouterOptions: []core.Option{
-						core.WithAccessController(core.NewAccessController(authenticators, true)),
+						core.WithAccessController(accessController),
 					},
 				}, func(t *testing.T, xEnv *testenv.Environment) {
 					// Operations with a token should succeed
@@ -2517,9 +3025,17 @@ func TestAudienceValidation(t *testing.T) {
 					},
 				})
 
+				accessController, err := core.NewAccessController(core.AccessControllerOptions{
+					Authenticators:           authenticators,
+					AuthenticationRequired:   true,
+					SkipIntrospectionQueries: false,
+					IntrospectionSkipSecret:  "",
+				})
+				require.NoError(t, err)
+
 				testenv.Run(t, &testenv.Config{
 					RouterOptions: []core.Option{
-						core.WithAccessController(core.NewAccessController(authenticators, true)),
+						core.WithAccessController(accessController),
 					},
 				}, func(t *testing.T, xEnv *testenv.Environment) {
 					// Operations with a token should succeed
@@ -2553,13 +3069,21 @@ func TestAudienceValidation(t *testing.T) {
 					},
 				})
 
+				accessController, err := core.NewAccessController(core.AccessControllerOptions{
+					Authenticators:           authenticators,
+					AuthenticationRequired:   true,
+					SkipIntrospectionQueries: false,
+					IntrospectionSkipSecret:  "",
+				})
+				require.NoError(t, err)
+
 				token := generateToken(t, kid, secret, jwt.SigningMethodHS256, jwt.MapClaims{
 					"aud": tokenAudience,
 				})
 
 				testenv.Run(t, &testenv.Config{
 					RouterOptions: []core.Option{
-						core.WithAccessController(core.NewAccessController(authenticators, true)),
+						core.WithAccessController(accessController),
 					},
 				}, func(t *testing.T, xEnv *testenv.Environment) {
 					// Operations with a token should succeed
@@ -2606,9 +3130,17 @@ func TestAudienceValidation(t *testing.T) {
 					},
 				})
 
+				accessController, err := core.NewAccessController(core.AccessControllerOptions{
+					Authenticators:           authenticators,
+					AuthenticationRequired:   true,
+					SkipIntrospectionQueries: false,
+					IntrospectionSkipSecret:  "",
+				})
+				require.NoError(t, err)
+
 				testenv.Run(t, &testenv.Config{
 					RouterOptions: []core.Option{
-						core.WithAccessController(core.NewAccessController(authenticators, true)),
+						core.WithAccessController(accessController),
 					},
 				}, func(t *testing.T, xEnv *testenv.Environment) {
 					// Operations with a token should succeed
@@ -2643,13 +3175,21 @@ func TestAudienceValidation(t *testing.T) {
 					},
 				})
 
+				accessController, err := core.NewAccessController(core.AccessControllerOptions{
+					Authenticators:           authenticators,
+					AuthenticationRequired:   true,
+					SkipIntrospectionQueries: false,
+					IntrospectionSkipSecret:  "",
+				})
+				require.NoError(t, err)
+
 				token := generateToken(t, kid, secret, jwt.SigningMethodHS256, jwt.MapClaims{
 					"aud": tokenAudiences,
 				})
 
 				testenv.Run(t, &testenv.Config{
 					RouterOptions: []core.Option{
-						core.WithAccessController(core.NewAccessController(authenticators, true)),
+						core.WithAccessController(accessController),
 					},
 				}, func(t *testing.T, xEnv *testenv.Environment) {
 					// Operations with a token should succeed
@@ -2691,9 +3231,17 @@ func TestAudienceValidation(t *testing.T) {
 					},
 				})
 
+				accessController, err := core.NewAccessController(core.AccessControllerOptions{
+					Authenticators:           authenticators,
+					AuthenticationRequired:   true,
+					SkipIntrospectionQueries: false,
+					IntrospectionSkipSecret:  "",
+				})
+				require.NoError(t, err)
+
 				testenv.Run(t, &testenv.Config{
 					RouterOptions: []core.Option{
-						core.WithAccessController(core.NewAccessController(authenticators, true)),
+						core.WithAccessController(accessController),
 					},
 				}, func(t *testing.T, xEnv *testenv.Environment) {
 					// Operations with a token should succeed
@@ -2727,13 +3275,21 @@ func TestAudienceValidation(t *testing.T) {
 					},
 				})
 
+				accessController, err := core.NewAccessController(core.AccessControllerOptions{
+					Authenticators:           authenticators,
+					AuthenticationRequired:   true,
+					SkipIntrospectionQueries: false,
+					IntrospectionSkipSecret:  "",
+				})
+				require.NoError(t, err)
+
 				token := generateToken(t, kid, secret, jwt.SigningMethodHS256, jwt.MapClaims{
 					"aud": matchingAud,
 				})
 
 				testenv.Run(t, &testenv.Config{
 					RouterOptions: []core.Option{
-						core.WithAccessController(core.NewAccessController(authenticators, true)),
+						core.WithAccessController(accessController),
 					},
 				}, func(t *testing.T, xEnv *testenv.Environment) {
 					// Operations with a token should succeed
@@ -2773,9 +3329,17 @@ func TestAudienceValidation(t *testing.T) {
 			},
 		})
 
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, true)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Operations with a token should succeed
@@ -2825,9 +3389,17 @@ func TestAudienceValidation(t *testing.T) {
 				},
 			})
 
+			accessController, err := core.NewAccessController(core.AccessControllerOptions{
+				Authenticators:           authenticators,
+				AuthenticationRequired:   true,
+				SkipIntrospectionQueries: false,
+				IntrospectionSkipSecret:  "",
+			})
+			require.NoError(t, err)
+
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, true)),
+					core.WithAccessController(accessController),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				// Operations with a token should succeed
@@ -2871,9 +3443,17 @@ func TestAudienceValidation(t *testing.T) {
 				"aud": matchingAud,
 			})
 
+			accessController, err := core.NewAccessController(core.AccessControllerOptions{
+				Authenticators:           authenticators,
+				AuthenticationRequired:   true,
+				SkipIntrospectionQueries: false,
+				IntrospectionSkipSecret:  "",
+			})
+			require.NoError(t, err)
+
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, true)),
+					core.WithAccessController(accessController),
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				// Operations with a token should succeed
@@ -2911,9 +3491,17 @@ func TestAudienceValidation(t *testing.T) {
 			},
 		})
 
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, true)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Operations with a token should succeed
@@ -2948,9 +3536,17 @@ func TestAudienceValidation(t *testing.T) {
 			},
 		})
 
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Operations with a token should succeed
@@ -2992,9 +3588,17 @@ func TestAudienceValidation(t *testing.T) {
 			},
 		})
 
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Fail with RS512
@@ -3027,9 +3631,17 @@ func TestAudienceValidation(t *testing.T) {
 			toJWKSConfig(authServer.JWKSURL(), time.Second*5),
 		})
 
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, true)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Manually craft a JWT with an unregistered/unknown alg value
@@ -3079,9 +3691,17 @@ func TestAudienceValidation(t *testing.T) {
 			},
 		})
 
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Operations with a token should succeed
@@ -3100,6 +3720,298 @@ func TestAudienceValidation(t *testing.T) {
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
 			require.Equal(t, employeesExpectedData, string(data))
+		})
+	})
+}
+
+func TestIntrospectionAuthentication(t *testing.T) {
+	t.Run("unauthenticated introspection query fails on full auth", func(t *testing.T) {
+		t.Parallel()
+
+		authenticators, _ := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(accessController),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", http.Header{},
+				strings.NewReader(simpleIntrospectionQuery))
+			require.NoError(t, err)
+			defer res.Body.Close()
+
+			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+			require.Equal(t, "", res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, unauthorizedExpectedData, string(data))
+		})
+	})
+
+	t.Run("introspection query skips auth when allowed to skip", func(t *testing.T) {
+		t.Parallel()
+
+		authenticators, _ := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: true,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(accessController),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", nil, strings.NewReader(simpleIntrospectionQuery))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, "", res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, simpleIntrospectionExpectedData, string(data))
+		})
+	})
+
+	t.Run("introspection query auth skip works over http get", func(t *testing.T) {
+		t.Parallel()
+
+		// introspection queries over http get should be recognized and
+		// handled equally to introspection queries over http post.
+
+		authenticators, _ := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: true,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(accessController),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
+				Query: "{ __type(name: \"Query\") { name } }",
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, res.Response.StatusCode)
+			require.Equal(t, "", res.Response.Header.Get(xAuthenticatedByHeader))
+			require.Equal(t, simpleIntrospectionExpectedData, res.Body)
+		})
+	})
+
+	t.Run("introspection query with bearer token is authenticated even with auth skip", func(t *testing.T) {
+		t.Parallel()
+
+		// though auth skip is enabled, the introspection query is authenticated
+		// normally because it contains a valid jwt token
+
+		authenticators, authServer := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: true,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(accessController),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			token, err := authServer.Token(nil)
+			require.NoError(t, err)
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(simpleIntrospectionQuery))
+			require.NoError(t, err)
+			defer res.Body.Close()
+
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, simpleIntrospectionExpectedData, string(data))
+		})
+	})
+
+	t.Run("introspection query with invalid token still succeeds on auth skip", func(t *testing.T) {
+		t.Parallel()
+
+		authenticators, _ := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: true,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(accessController),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := http.Header{
+				"Authorization": []string{"Bearer invalid"},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(simpleIntrospectionQuery))
+			require.NoError(t, err)
+			defer res.Body.Close()
+
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, "", res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, simpleIntrospectionExpectedData, string(data))
+		})
+	})
+
+	t.Run("introspection query with valid token succeeds when token is required", func(t *testing.T) {
+		t.Parallel()
+
+		authenticators, _ := ConfigureAuth(t)
+		secret := "wg_test_introspection_secret"
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: true,
+			IntrospectionSkipSecret:  secret,
+		})
+		require.NoError(t, err)
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(accessController),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := http.Header{
+				"Authorization": []string{secret},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(simpleIntrospectionQuery))
+			require.NoError(t, err)
+			defer res.Body.Close()
+
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, "", res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, simpleIntrospectionExpectedData, string(data))
+		})
+	})
+
+	t.Run("introspection query with invalid token fails when token is required", func(t *testing.T) {
+		t.Parallel()
+
+		authenticators, _ := ConfigureAuth(t)
+		secret := "wg_test_introspection_secret"
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: true,
+			IntrospectionSkipSecret:  secret,
+		})
+		require.NoError(t, err)
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(accessController),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := http.Header{
+				"Authorization": []string{"doesnotmatchtoken"},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(simpleIntrospectionQuery))
+			require.NoError(t, err)
+			defer res.Body.Close()
+
+			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+			require.Equal(t, "", res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, unauthorizedExpectedData, string(data))
+		})
+	})
+
+	t.Run("normal query passes auth with valid bearer token when auth skip is enabled", func(t *testing.T) {
+		t.Parallel()
+
+		authenticators, authServer := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: true,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(accessController),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			token, err := authServer.Token(nil)
+			require.NoError(t, err)
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer res.Body.Close()
+
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, employeesExpectedData, string(data))
+		})
+	})
+
+	t.Run("normal query fails auth with invalid bearer token when auth skip is enabled", func(t *testing.T) {
+		t.Parallel()
+
+		// This ensures auth skip is only allowed for introspection queries, not others.
+
+		authenticators, _ := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: true,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(accessController),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := http.Header{
+				"Authorization": []string{"Bearer invalid"},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+			require.NoError(t, err)
+			defer res.Body.Close()
+
+			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+			require.Equal(t, "", res.Header.Get(xAuthenticatedByHeader))
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, unauthorizedExpectedData, string(data))
 		})
 	})
 }

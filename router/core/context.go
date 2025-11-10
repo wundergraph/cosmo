@@ -131,9 +131,14 @@ type RequestContext interface {
 	// SetAuthenticationScopes sets the scopes for the request on Authentication
 	// If Authentication is not set, it will be initialized with the scopes
 	SetAuthenticationScopes(scopes []string)
+
 	// SetCustomFieldValueRenderer overrides the default field value rendering behavior
 	// This can be used, e.g. to obfuscate sensitive data in the response
 	SetCustomFieldValueRenderer(renderer resolve.FieldValueRenderer)
+
+	// SetForceSha256Compute forces the computation of the Sha256Hash of the operation
+	// This is useful if the Sha256Hash is needed in custom modules but not used anywhere else
+	SetForceSha256Compute()
 }
 
 var metricAttrsPool = sync.Pool{
@@ -263,6 +268,8 @@ type requestContext struct {
 	expressionContext expr.Context
 	// customFieldValueRenderer is used to override the default field value rendering behavior
 	customFieldValueRenderer resolve.FieldValueRenderer
+	// forceSha256Compute indicates whether the Sha256Hash of the operation should definitely be computed
+	forceSha256Compute bool
 }
 
 func (c *requestContext) SetCustomFieldValueRenderer(renderer resolve.FieldValueRenderer) {
@@ -462,6 +469,10 @@ func (c *requestContext) SetAuthenticationScopes(scopes []string) {
 	auth.SetScopes(scopes)
 }
 
+func (c *requestContext) SetForceSha256Compute() {
+	c.forceSha256Compute = true
+}
+
 type OperationContext interface {
 	// Name is the name of the operation
 	Name() string
@@ -475,6 +486,12 @@ type OperationContext interface {
 	Variables() *astjson.Value
 	// ClientInfo returns information about the client that initiated this operation
 	ClientInfo() ClientInfo
+
+	// Sha256Hash returns the SHA256 hash of the original operation
+	// It is important to note that this hash is not calculated just because this method has been called
+	// and is only calculated based on other existing logic (such as if sha256Hash is used in expressions)
+	Sha256Hash() string
+
 	// QueryPlanStats returns some statistics about the query plan for the operation
 	// if called too early in request chain, it may be inaccurate for modules, using
 	// in Middleware is recommended
@@ -574,6 +591,10 @@ func (o *operationContext) Protocol() OperationProtocol {
 
 func (o *operationContext) ClientInfo() ClientInfo {
 	return *o.clientInfo
+}
+
+func (o *operationContext) Sha256Hash() string {
+	return o.sha256Hash
 }
 
 type QueryPlanStats struct {
