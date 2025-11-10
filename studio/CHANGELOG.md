@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.138.0](https://github.com/wundergraph/cosmo/compare/studio@0.137.0...studio@0.138.0) (2025-11-10)
+
+### Features
+
+* enable GTM script ([#2322](https://github.com/wundergraph/cosmo/issues/2322)) ([1bdc79c](https://github.com/wundergraph/cosmo/commit/1bdc79c1e9d13e3948ee47ba5ada3de1bc5d9d29)) (@wilsonrivera)
+
+# [0.137.0](https://github.com/wundergraph/cosmo/compare/studio@0.136.2...studio@0.137.0) (2025-11-10)
+
+### Features
+
+* preserve tracking cookies ([#2319](https://github.com/wundergraph/cosmo/issues/2319)) ([c054c29](https://github.com/wundergraph/cosmo/commit/c054c2968bda15ad7a08cdc4f8c3f4fa891658ae)) (@wilsonrivera)
+
 ## [0.136.2](https://github.com/wundergraph/cosmo/compare/studio@0.136.1...studio@0.136.2) (2025-10-29)
 
 **Note:** Version bump only for package studio
