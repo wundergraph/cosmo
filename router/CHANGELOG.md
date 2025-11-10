@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.263.0](https://github.com/wundergraph/cosmo/compare/router@0.262.1...router@0.263.0) (2025-11-10)
+
+### Features
+
+* **router:** add support for compressed config files ([#2316](https://github.com/wundergraph/cosmo/issues/2316)) ([b1a136b](https://github.com/wundergraph/cosmo/commit/b1a136ba76582f3837f05708cca46e5b1a8aaa75)) (@endigma)
+
 ## [0.262.1](https://github.com/wundergraph/cosmo/compare/router@0.262.0...router@0.262.1) (2025-10-31)
 
 ### Bug Fixes
