@@ -16,7 +16,7 @@ index 1bfe43a2488ea06e541da92773176d2a822aef1d..c3f3ca4a013ec81eafca1b14678eca7e
  }
  exports.HealthImplementation = HealthImplementation;
 -exports.protoPath = path.resolve(__dirname, '../../proto/health/v1/health.proto');
-+exports.protoPath = path.resolve(path.dirname(process.execPath), '/grpc-health-check/proto/health/v1/health.proto');
++exports.protoPath = path.resolve(path.dirname(process.execPath), 'grpc-health-check/proto/health/v1/health.proto');
  //# sourceMappingURL=health.js.map
 \ No newline at end of file
 diff --git a/src/health.ts b/src/health.ts
@@ -37,4 +37,4 @@ index b0a8769e7fb2691f9a6abfffaee1ac86858bca8f..2167a5112fe1738aec3f0c27e8cda570
  }
 
 -export const protoPath = path.resolve(__dirname, '../../proto/health/v1/health.proto');
-+export const protoPath =  path.resolve(path.dirname(process.execPath), '/grpc-health-check/proto/health/v1/health.proto');
++export const protoPath =  path.resolve(path.dirname(process.execPath), 'grpc-health-check/proto/health/v1/health.proto');
