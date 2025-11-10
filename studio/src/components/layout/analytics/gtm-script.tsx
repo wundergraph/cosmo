@@ -1,5 +1,3 @@
-import Script from "next/script";
-
 export interface GtmScriptProps {
   gtmId: string | undefined;
 };
