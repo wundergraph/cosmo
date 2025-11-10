@@ -7,14 +7,15 @@ ARG TARGETARCH
 WORKDIR /build
 
 # Copy package files
-COPY package.json bun.lock* ./
+COPY package.json tsconfig.json bun.lock* ./
+COPY patches/ ./patches/
+COPY src/ ./src/
+COPY generated/ ./generated/
 
 # Install dependencies
 RUN bun install
 
-# Copy all source code
-COPY src/ ./src/
-COPY generated/ ./generated/
+RUN bun x tsc --noEmit
 
 # Set BUN_TARGET based on OS and architecture
 RUN BUN_TARGET="bun-$TARGETOS-$([ "$TARGETARCH" = "amd64" ] && echo "x64" || echo "$TARGETARCH")" && \
@@ -24,6 +25,7 @@ RUN BUN_TARGET="bun-$TARGETOS-$([ "$TARGETARCH" = "amd64" ] && echo "x64" || ech
 FROM --platform=$BUILDPLATFORM scratch
 
 COPY --from=builder /build/bin/plugin ./{originalPluginName}-plugin
+COPY --from=builder /build/node_modules/grpc-health-check/proto/health/v1/health.proto /grpc-health-check/proto/health/v1/health.proto
 
 ENTRYPOINT ["./{originalPluginName}-plugin"]
 

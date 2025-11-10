@@ -110,16 +110,21 @@ export default (opts: BaseCommandOptions) => {
         }
         case 'ts': {
           await writeFile(resolve(srcDir, 'plugin.ts'), pupa(TsTemplates.pluginTs, { serviceName }));
-          await writeFile(resolve(srcDir, 'plugin-server.ts'), pupa(TsTemplates.pluginServerTs, { serviceName }));
-          await writeFile(resolve(srcDir, 'fs-polyfill.ts'), pupa(TsTemplates.fsPolyfillTs, { serviceName }));
+          await writeFile(resolve(srcDir, 'plugin-server.ts'), pupa(TsTemplates.pluginServerTs, {}));
+          await writeFile(resolve(srcDir, 'fs-polyfill.ts'), pupa(TsTemplates.fsPolyfillTs, {}));
           await writeFile(resolve(tempDir, 'package.json'), pupa(TsTemplates.packageJson, { serviceName }));
           await writeFile(resolve(tempDir, 'Dockerfile'), pupa(TsTemplates.dockerfile, { originalPluginName }));
           await writeFile(resolve(srcDir, 'plugin.test.ts'), pupa(TsTemplates.pluginTestTs, { serviceName }));
-          await writeFile(resolve(tempDir, 'tsconfig.json'), pupa(TsTemplates.tsconfig, { serviceName }));
+          await writeFile(resolve(tempDir, 'tsconfig.json'), pupa(TsTemplates.tsconfig, {}));
           await writeFile(
             resolve(tempDir, '.cursor', 'rules', 'plugin-development.mdc'),
             pupa(TsTemplates.cursorRules, { name, originalPluginName, pluginDir, serviceName }),
           );
+
+          const patchDir = resolve(tempDir, 'patches');
+          await mkdir(patchDir, { recursive: true });
+          await writeFile(resolve(patchDir, 'grpc-health-check@2.1.0.patch'), TsTemplates.grpcHealthCheckFilePatch);
+
           readmeTemplate = pupa(TsTemplates.readmePartialMd, { originalPluginName });
           mainFileName = 'plugin.ts';
           break;
