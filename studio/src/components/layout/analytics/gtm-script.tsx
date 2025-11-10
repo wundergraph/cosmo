@@ -1,11 +1,19 @@
 import Script from "next/script";
 
-export function GtmScript() {
-  const gtmId = process.env.NEXT_PUBLIC_GOOGLE_TAG_MANAGER_ID;
+export interface GtmScriptProps {
+  gtmId: string | undefined;
+};
+
+export function GtmScript({ gtmId }: GtmScriptProps) {
+  if (!gtmId) {
+    return null;
+  }
 
   return (
     <>
-      <Script id="gtm" strategy="afterInteractive">{`
+      <script
+        id="gtm"
+        dangerouslySetInnerHTML={{__html: `
         (function(w,d,s,l,i){
           w[l]=w[l]||[];
           w[l].push({'gtm.start': new Date().getTime(), event:'gtm.js'});
@@ -14,9 +22,13 @@ export function GtmScript() {
           j.async=true; j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;
           f.parentNode.insertBefore(j,f);
         })(window,document,'script','dataLayer',${JSON.stringify(gtmId)});
-      `}</Script>
+      `
+      }}
+      />
 
-      <Script id="gtm-consent" strategy="afterInteractive">{`
+      <script
+        id="gtm-consent"
+        dangerouslySetInnerHTML={{ __html: `
 (function(){
   function updateConsentFromOsano() {
     const consent = window.Osano && Osano.cm && Osano.cm.getConsent ? Osano.cm.getConsent() : null;
@@ -45,14 +57,13 @@ export function GtmScript() {
     window.addEventListener('osano-cm-initialized', onOsanoReady, { once: true });
   }
 })();
-      `}</Script>
+      `}}/>
     </>
   );
 }
 
-export function GtmNoScript() {
-  const gtmId = process.env.NEXT_PUBLIC_GOOGLE_TAG_MANAGER_ID;
-  if (!gtmId || process.env.NODE_ENV !== 'production') {
+export function GtmNoScript({ gtmId }: GtmScriptProps) {
+  if (!gtmId) {
     return null;
   }
 
