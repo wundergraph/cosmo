@@ -60,15 +60,19 @@ func TestComplexityLimits(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
-					core.WithIntrospection(true),
+					core.WithIntrospection(false, config.IntrospectionConfiguration{
+						Enabled: false,
+					}),
 				},
-				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-					if securityConfiguration.DepthLimit == nil {
-						securityConfiguration.DepthLimit = &config.QueryDepthConfiguration{}
+				ModifySecurityConfiguration: func(c *config.SecurityConfiguration) {
+					if c.ComplexityLimits == nil {
+						c.ComplexityLimits = &config.ComplexityLimits{
+							Depth: &config.ComplexityLimit{
+								Enabled: true,
+								Limit:    1,
+							},
+						}
 					}
-					securityConfiguration.DepthLimit.Enabled = true
-					securityConfiguration.DepthLimit.Limit = 1
-					securityConfiguration.DepthLimit.CacheSize = 1024
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{

@@ -437,10 +437,11 @@ type ComplexityCalculationCache struct {
 }
 
 type ComplexityLimits struct {
-	Depth            *ComplexityLimit `yaml:"depth"`
-	TotalFields      *ComplexityLimit `yaml:"total_fields"`
-	RootFields       *ComplexityLimit `yaml:"root_fields"`
-	RootFieldAliases *ComplexityLimit `yaml:"root_field_aliases"`
+	Depth             *ComplexityLimit `yaml:"depth"`
+	TotalFields       *ComplexityLimit `yaml:"total_fields"`
+	RootFields        *ComplexityLimit `yaml:"root_fields"`
+	RootFieldAliases  *ComplexityLimit `yaml:"root_field_aliases"`
+	SkipIntrospection bool             `yaml:"skip_introspection" envDefault:"false"`
 }
 
 type ComplexityLimit struct {
@@ -450,7 +451,7 @@ type ComplexityLimit struct {
 }
 
 func (c *ComplexityLimit) ApplyLimit(isPersistent bool) bool {
-	return c.Enabled && (!isPersistent || isPersistent && !c.IgnorePersistedOperations)
+	return c.Enabled && (!isPersistent || !c.IgnorePersistedOperations)
 }
 
 type OverrideRoutingURLConfiguration struct {
