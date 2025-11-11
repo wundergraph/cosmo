@@ -108,7 +108,7 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 		usageCounts := make(map[usageKey]int)
 
 		for _, field := range reqContext.operation.typeFieldUsageInfo {
-			if field.ExactParentTypeName == "" {
+			if field.ExactParentTypeName == "" || len(field.Path) == 0 {
 				continue
 			}
 

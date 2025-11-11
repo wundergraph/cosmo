@@ -378,7 +378,7 @@ query myQuery {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Make 10 requests
-			for i := 0; i < 10; i++ {
+			for range 10 {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query myQuery { employee(id: 1) { id } }`,
 				})
@@ -424,7 +424,7 @@ query myQuery {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Make 10 requests
-			for i := 0; i < 10; i++ {
+			for range 10 {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query myQuery { employee(id: 1) { id } }`,
 				})
