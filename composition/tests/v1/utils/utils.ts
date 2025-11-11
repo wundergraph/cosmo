@@ -9,6 +9,10 @@ export const CONFIGURE_DESCRIPTION_DIRECTIVE = `
   directive @openfed__configureDescription(descriptionOverride: String, propagate: Boolean! = true) on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | SCHEMA | UNION
 `;
 
+export const CONNECT_FIELD_RESOLVER_DIRECTIVE = `
+  directive @connect__fieldResolver(context: openfed__FieldSet!) on FIELD_DEFINITION
+`;
+
 export const EDFS_NATS_PUBLISH_DIRECTIVE = `
   directive @edfs__natsPublish(providerId: String! = "default", subject: String!) on FIELD_DEFINITION
 `;

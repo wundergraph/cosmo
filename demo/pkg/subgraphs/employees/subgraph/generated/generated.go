@@ -956,8 +956,10 @@ directive @goField(
   omittable: Boolean
 ) on INPUT_FIELD_DEFINITION | FIELD_DEFINITION
 
+directive @openfed__requireFetchReasons repeatable on FIELD_DEFINITION | INTERFACE | OBJECT
+
 type Query {
-  employee(id: Int!): Employee
+  employee(id: Int!): Employee @openfed__requireFetchReasons
   employeeAsList(id: Int!): [Employee]
   employees: [Employee]
   products: [Products!]!
@@ -1013,7 +1015,7 @@ enum EngineerType {
   FULLSTACK
 }
 
-interface Identifiable {
+interface Identifiable @openfed__requireFetchReasons {
   id: Int!
 }
 
