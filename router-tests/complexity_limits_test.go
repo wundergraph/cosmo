@@ -56,12 +56,12 @@ func TestComplexityLimits(t *testing.T) {
 			})
 		})
 
-		t.Run("allows introspection queries without limits", func(t *testing.T) {
+		t.Run("limits are checked for introspection queries by default", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
-					core.WithIntrospection(false, config.IntrospectionConfiguration{
-						Enabled: false,
+					core.WithIntrospection(true, config.IntrospectionConfiguration{
+						Enabled: true,
 					}),
 				},
 				ModifySecurityConfiguration: func(c *config.SecurityConfiguration) {
@@ -69,7 +69,77 @@ func TestComplexityLimits(t *testing.T) {
 						c.ComplexityLimits = &config.ComplexityLimits{
 							Depth: &config.ComplexityLimit{
 								Enabled: true,
-								Limit:    1,
+								Limit:   1,
+							},
+						}
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res, _ := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query: `
+						query IntrospectionQuery {
+						  __schema {
+							types { ...FullType }
+						  }
+						}
+						fragment FullType on __Type {
+						  kind
+						  name
+						  description
+						  fields(includeDeprecated: true) {
+							name
+							description
+							type {
+							  ...TypeRef
+							}
+							isDeprecated
+							deprecationReason
+						  }
+						  possibleTypes {
+							...TypeRef
+						  }
+						}
+						fragment TypeRef on __Type {
+						  kind
+						  name
+						  ofType {
+							kind
+							name
+							ofType {
+							  kind
+							  name
+							  ofType {
+								kind
+								name
+								ofType {
+								  kind
+								  name
+								}
+							  }
+							}
+						  }
+						}`,
+				})
+				require.Equal(t, 400, res.Response.StatusCode)
+				require.Equal(t, `{"errors":[{"message":"The query depth 9 exceeds the max query depth allowed (1)"}]}`, res.Body)
+			})
+		})
+
+		t.Run("skipped limits for introspection queries", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithIntrospection(true, config.IntrospectionConfiguration{
+						Enabled: true,
+					}),
+				},
+				ModifySecurityConfiguration: func(c *config.SecurityConfiguration) {
+					if c.ComplexityLimits == nil {
+						c.ComplexityLimits = &config.ComplexityLimits{
+							SkipIntrospection: true,
+							Depth: &config.ComplexityLimit{
+								Enabled: true,
+								Limit:   1,
 							},
 						}
 					}
@@ -114,18 +184,6 @@ func TestComplexityLimits(t *testing.T) {
 								ofType {
 								  kind
 								  name
-								  ofType {
-									kind
-									name
-									ofType {
-									  kind
-									  name
-									  ofType {
-										kind
-										name
-									  }
-									}
-								  }
 								}
 							  }
 							}

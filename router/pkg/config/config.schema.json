@@ -2596,6 +2596,11 @@
                   "default": false
                 }
               }
+            },
+            "skip_introspection": {
+              "type": "boolean",
+              "default": false,
+              "description": "Set to to true to skip introspection queries when calculating complexity limits."
             }
           }
         },
