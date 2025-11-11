@@ -347,16 +347,24 @@ query myQuery {
 
 			schemaUsageMetrics := schemaUsage.GetMetric()
 
-			// With 10% sampling and 100 requests, we expect roughly 10 sampled request
-			// Each request has 2 fields (employee, id), so we expect ~20 metrics total
-			// We verify that it's significantly less than 200 (which would be 100% sampling)
 			require.Greater(t, len(schemaUsageMetrics), 0, "At least 1 request should be sampled")
-			require.Less(t, len(schemaUsageMetrics), 50, "Should sample significantly less than 100% of requests (expected ~2 metrics, allowing up to 50)")
+
+			// With 10% sampling and 100 requests, each sampled request increments two field counters (`employee` and `id`).
+			// 100% sampling would produce 200 total field counts (100 requests * 2 fields), so a reduced total confirms sampling worked.
+			totalFieldCounts := 0.0
+			for _, m := range schemaUsageMetrics {
+				counter := m.GetCounter()
+				require.NotNil(t, counter)
+				totalFieldCounts += counter.GetValue()
+			}
+
+			require.Greater(t, totalFieldCounts, 0.0, "At least one sampled field is expected with a 10% sample rate")
+			require.Less(t, totalFieldCounts, 200.0, "Sampling should record fewer than 100% of requests (200 total field counts)")
 
 			// Verify that the sampled metrics have correct structure
-			for _, metric := range schemaUsageMetrics {
-				assertLabelValue(t, metric.Label, otel.WgOperationName, "myQuery")
-				assertLabelValue(t, metric.Label, otel.WgOperationType, "query")
+			for _, m := range schemaUsageMetrics {
+				assertLabelValue(t, m.Label, otel.WgOperationName, "myQuery")
+				assertLabelValue(t, m.Label, otel.WgOperationType, "query")
 			}
 		})
 	})
