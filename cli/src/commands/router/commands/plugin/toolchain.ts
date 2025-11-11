@@ -1,4 +1,4 @@
-import { chmod, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, readFile, rm, writeFile, copyFile } from 'node:fs/promises';
 import os from 'node:os';
 import { existsSync } from 'node:fs';
 import { basename, join, resolve } from 'pathe';
@@ -607,6 +607,15 @@ export async function buildTsBinaries(pluginDir: string, platforms: string[], de
 
   const env = getToolsEnv();
   const bunPath = getToolPath('bun');
+
+  // Ensure grpc-health-check proto is available in bin for runtime
+  const healthProtoRelDir = 'grpc-health-check/proto/health/v1';
+  const healthProtoFile = 'health.proto';
+  await mkdir(resolve(pluginDir, join('bin', healthProtoRelDir)), { recursive: true });
+  await copyFile(
+    resolve(pluginDir, join('node_modules', healthProtoRelDir, healthProtoFile)),
+    resolve(pluginDir, join('bin', healthProtoRelDir, healthProtoFile))
+  );
 
   await Promise.all(
     platforms.map(async (originalPlatformArch: string) => {
