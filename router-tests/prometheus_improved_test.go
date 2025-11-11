@@ -37,7 +37,8 @@ func TestPrometheusSchemaUsage(t *testing.T) {
 			PrometheusRegistry: promRegistry,
 			MetricOptions: testenv.MetricOptions{
 				PrometheusSchemaFieldUsage: testenv.PrometheusSchemaFieldUsage{
-					Enabled: true,
+					Enabled:    true,
+					SampleRate: 1.0,
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -129,7 +130,8 @@ query myQuery {
 			PrometheusRegistry: promRegistry,
 			MetricOptions: testenv.MetricOptions{
 				PrometheusSchemaFieldUsage: testenv.PrometheusSchemaFieldUsage{
-					Enabled: true,
+					Enabled:    true,
+					SampleRate: 1.0,
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -204,6 +206,7 @@ query myQuery {
 				PrometheusSchemaFieldUsage: testenv.PrometheusSchemaFieldUsage{
 					Enabled:             true,
 					IncludeOperationSha: false,
+					SampleRate:          1.0,
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -241,6 +244,7 @@ query myQuery {
 				PrometheusSchemaFieldUsage: testenv.PrometheusSchemaFieldUsage{
 					Enabled:             true,
 					IncludeOperationSha: true,
+					SampleRate:          1.0,
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -284,6 +288,7 @@ query myQuery {
 				PrometheusSchemaFieldUsage: testenv.PrometheusSchemaFieldUsage{
 					Enabled:             true,
 					IncludeOperationSha: false,
+					SampleRate:          1.0,
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -322,7 +327,7 @@ query myQuery {
 			MetricOptions: testenv.MetricOptions{
 				PrometheusSchemaFieldUsage: testenv.PrometheusSchemaFieldUsage{
 					Enabled:    true,
-					SampleRate: 0.01, // 1% sampling
+					SampleRate: 0.1, // 10% sampling
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -342,8 +347,8 @@ query myQuery {
 
 			schemaUsageMetrics := schemaUsage.GetMetric()
 
-			// With 1% sampling and 100 requests, we expect roughly 1 sampled request
-			// Each request has 2 fields (employee, id), so we expect ~2 metrics total
+			// With 10% sampling and 100 requests, we expect roughly 10 sampled request
+			// Each request has 2 fields (employee, id), so we expect ~20 metrics total
 			// We verify that it's significantly less than 200 (which would be 100% sampling)
 			require.Greater(t, len(schemaUsageMetrics), 0, "At least 1 request should be sampled")
 			require.Less(t, len(schemaUsageMetrics), 20, "Should sample significantly less than 100%% of requests (expected ~2 metrics, allowing up to 20)")
