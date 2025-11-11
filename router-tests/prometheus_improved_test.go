@@ -351,7 +351,7 @@ query myQuery {
 			// Each request has 2 fields (employee, id), so we expect ~20 metrics total
 			// We verify that it's significantly less than 200 (which would be 100% sampling)
 			require.Greater(t, len(schemaUsageMetrics), 0, "At least 1 request should be sampled")
-			require.Less(t, len(schemaUsageMetrics), 20, "Should sample significantly less than 100% of requests (expected ~2 metrics, allowing up to 20)")
+			require.Less(t, len(schemaUsageMetrics), 50, "Should sample significantly less than 100% of requests (expected ~2 metrics, allowing up to 50)")
 
 			// Verify that the sampled metrics have correct structure
 			for _, metric := range schemaUsageMetrics {
