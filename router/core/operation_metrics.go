@@ -2,7 +2,7 @@ package core
 
 import (
 	"context"
-	"math/rand"
+	"math/rand/v2"
 	"slices"
 	"time"
 
