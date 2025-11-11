@@ -90,42 +90,45 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 
 	// Prometheus usage metrics, disabled by default
 	if m.promSchemaUsageEnabled && reqContext.operation != nil {
-		// Apply sampling if configured
-		if m.shouldSampleOperation() {
-			opAttrs := []attribute.KeyValue{
-				rotel.WgOperationName.String(reqContext.operation.name),
-				rotel.WgOperationType.String(reqContext.operation.opType),
-			}
 
-			// Include operation SHA256 if enabled
-			if m.promSchemaUsageIncludeOpSha && reqContext.operation.sha256Hash != "" {
-				opAttrs = append(opAttrs, rotel.WgOperationSha256.String(reqContext.operation.sha256Hash))
-			}
-
-			usageCounts := make(map[usageKey]int)
-
-			for _, field := range reqContext.operation.typeFieldUsageInfo {
-				if field.ExactParentTypeName == "" {
-					continue
-				}
-
-				key := usageKey{
-					fieldName:  field.Path[len(field.Path)-1],
-					parentType: field.ExactParentTypeName,
-				}
-
-				usageCounts[key]++
-			}
-
-			for key, count := range usageCounts {
-				fieldAttrs := []attribute.KeyValue{
-					rotel.WgGraphQLFieldName.String(key.fieldName),
-					rotel.WgGraphQLParentType.String(key.parentType),
-				}
-
-				rm.MeasureSchemaFieldUsage(ctx, int64(count), []attribute.KeyValue{}, otelmetric.WithAttributeSet(attribute.NewSet(slices.Concat(opAttrs, fieldAttrs)...)))
-			}
+		if !m.shouldSampleOperation() {
+			return
 		}
+
+		opAttrs := []attribute.KeyValue{
+			rotel.WgOperationName.String(reqContext.operation.name),
+			rotel.WgOperationType.String(reqContext.operation.opType),
+		}
+
+		// Include operation SHA256 if enabled
+		if m.promSchemaUsageIncludeOpSha && reqContext.operation.sha256Hash != "" {
+			opAttrs = append(opAttrs, rotel.WgOperationSha256.String(reqContext.operation.sha256Hash))
+		}
+
+		usageCounts := make(map[usageKey]int)
+
+		for _, field := range reqContext.operation.typeFieldUsageInfo {
+			if field.ExactParentTypeName == "" {
+				continue
+			}
+
+			key := usageKey{
+				fieldName:  field.Path[len(field.Path)-1],
+				parentType: field.ExactParentTypeName,
+			}
+
+			usageCounts[key]++
+		}
+
+		for key, count := range usageCounts {
+			fieldAttrs := []attribute.KeyValue{
+				rotel.WgGraphQLFieldName.String(key.fieldName),
+				rotel.WgGraphQLParentType.String(key.parentType),
+			}
+
+			rm.MeasureSchemaFieldUsage(ctx, int64(count), []attribute.KeyValue{}, otelmetric.WithAttributeSet(attribute.NewSet(slices.Concat(opAttrs, fieldAttrs)...)))
+		}
+
 	}
 }
 
