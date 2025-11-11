@@ -92,7 +92,8 @@
         "ExcludeScopeInfo": true,
         "SchemaFieldUsage": {
           "Enabled": true,
-          "IncludeOperationSha": false
+          "IncludeOperationSha": true,
+          "SampleRate": 1
         }
       },
       "CardinalityLimit": 2000
