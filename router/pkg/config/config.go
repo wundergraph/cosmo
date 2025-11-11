@@ -113,8 +113,9 @@ type Prometheus struct {
 }
 
 type PrometheusSchemaFieldUsage struct {
-	Enabled             bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
-	IncludeOperationSha bool `yaml:"include_operation_sha" envDefault:"false" env:"INCLUDE_OPERATION_SHA"`
+	Enabled             bool    `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	IncludeOperationSha bool    `yaml:"include_operation_sha" envDefault:"false" env:"INCLUDE_OPERATION_SHA"`
+	SampleRate          float64 `yaml:"sample_rate" envDefault:"1.0" env:"SAMPLE_RATE"`
 }
 
 type MetricsOTLPExporter struct {
@@ -505,7 +506,8 @@ type JWTAuthenticationConfiguration struct {
 }
 
 type AuthenticationConfiguration struct {
-	JWT JWTAuthenticationConfiguration `yaml:"jwt"`
+	JWT                 JWTAuthenticationConfiguration `yaml:"jwt"`
+	IgnoreIntrospection bool                           `yaml:"ignore_introspection" envDefault:"false"`
 }
 
 type AuthorizationConfiguration struct {
@@ -1002,6 +1004,11 @@ type PluginRegistryConfiguration struct {
 	URL string `yaml:"url" env:"URL" envDefault:"cosmo-registry.wundergraph.com"`
 }
 
+type IntrospectionConfiguration struct {
+	Enabled bool   `yaml:"enabled" envDefault:"true" env:"INTROSPECTION_ENABLED"`
+	Secret  string `yaml:"secret" env:"INTROSPECTION_SECRET"`
+}
+
 type Config struct {
 	Version string `yaml:"version,omitempty" ignored:"true"`
 
@@ -1028,7 +1035,8 @@ type Config struct {
 	ControlplaneURL               string                      `yaml:"controlplane_url" envDefault:"https://cosmo-cp.wundergraph.com" env:"CONTROLPLANE_URL"`
 	PlaygroundConfig              PlaygroundConfig            `yaml:"playground,omitempty"`
 	PlaygroundEnabled             bool                        `yaml:"playground_enabled" envDefault:"true" env:"PLAYGROUND_ENABLED"`
-	IntrospectionEnabled          bool                        `yaml:"introspection_enabled" envDefault:"true" env:"INTROSPECTION_ENABLED"`
+	IntrospectionEnabled          bool                        `yaml:"introspection_enabled" envDefault:"true"` // deprecated, use IntrospectionConfiguration instead
+	IntrospectionConfig           IntrospectionConfiguration  `yaml:"introspection,omitempty"`
 	QueryPlansEnabled             bool                        `yaml:"query_plans_enabled" envDefault:"true" env:"QUERY_PLANS_ENABLED"`
 	LogLevel                      zapcore.Level               `yaml:"log_level" envDefault:"info" env:"LOG_LEVEL"`
 	JSONLog                       bool                        `yaml:"json_log" envDefault:"true" env:"JSON_LOG"`

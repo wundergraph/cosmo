@@ -20,6 +20,9 @@ playground:
   path: '/my-playground'
   concurrency_limit: 1500
 introspection_enabled: true
+introspection:
+  enabled: true
+  secret: 'AN_EXAMPLE_PLACEHOLDER_SECRET_ONLY'
 json_log: true
 shutdown_delay: 15s
 grace_period: 20s
@@ -173,7 +176,8 @@ telemetry:
 
       schema_usage:
         enabled: true
-        include_operation_sha: false
+        include_operation_sha: true
+        sample_rate: 1.0  # Supports any rate: 1.0, 0.8, 0.5, 0.1, 0.01, etc.
 
 cache_control_policy:
   enabled: true
@@ -267,6 +271,7 @@ headers:
 # Authentication and Authorization
 # See https://cosmo-docs.wundergraph.com/router/authentication-and-authorization for more information
 authentication:
+  ignore_introspection: false
   jwt:
     jwks:
       - url: 'https://example.com/.well-known/jwks.json'

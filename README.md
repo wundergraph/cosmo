@@ -23,8 +23,8 @@ WunderGraph Cosmo is a comprehensive Lifecycle API Management platform tailored 
 
 ## The State of GraphQL Federation 2024
 
-Get insights from industry experts and Federation practicioners across all industries and learn how companies are using GraphQL Federation.
-Head over to the [State of GraphQL Federation 2024](https://wundergraph.com/state-of-graphql-federation/2024) page and download the full **48 page PDF report** for free!
+Get insights from industry experts and Federation practitioners across all industries and learn how companies are using GraphQL Federation.
+Head over to the [State of GraphQL Federation 2024](https://wundergraph.com/state-of-graphql-federation/2024) page and download the full **48-page PDF report** for free!
 
 ### Why Federated GraphQL?
 

@@ -665,7 +665,7 @@ func TestPropagateOperationName(t *testing.T) {
 							var req core.GraphQLRequest
 							require.NoError(t, json.Unmarshal(body, &req))
 
-							require.Contains(t, req.Query, "query Requires__mood__1")
+							require.Contains(t, req.Query, "query Requires__mood__2")
 
 							r.Body = io.NopCloser(bytes.NewReader(body))
 							handler.ServeHTTP(w, r)
@@ -680,7 +680,7 @@ func TestPropagateOperationName(t *testing.T) {
 							var req core.GraphQLRequest
 							require.NoError(t, json.Unmarshal(body, &req))
 
-							require.Contains(t, req.Query, "query Requires__availability__2")
+							require.Contains(t, req.Query, "query Requires__availability__1")
 
 							r.Body = io.NopCloser(bytes.NewReader(body))
 							handler.ServeHTTP(w, r)
@@ -1309,6 +1309,85 @@ func TestIntegrationWithUndefinedField(t *testing.T) {
 			Query: `{ employees { id notDefined } }`,
 		})
 		require.JSONEq(t, `{"errors":[{"message":"Cannot query field \"notDefined\" on type \"Employee\".","path":["query","employees"]}]}`, res.Body)
+	})
+}
+
+func TestOneOfDirective(t *testing.T) {
+	t.Parallel()
+
+	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+		t.Run("find employees by id", func(t *testing.T) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query {
+					findEmployeesBy(criteria: { id: 1 }) {
+						id
+						details { forename surname }
+					}
+				}`,
+			})
+			expected := `{"data": {"findEmployeesBy": [{
+				"id": 1, "details": { "forename": "Jens", "surname": "Neuse" }
+			}]}}`
+			require.JSONEq(t, expected, res.Body)
+		})
+
+		t.Run("find employees by department", func(t *testing.T) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query {
+					findEmployeesBy(criteria: { department: ENGINEERING }) {
+						id
+						details { forename }
+					}
+				}`,
+			})
+			require.Contains(t, res.Body, `"forename":"Jens"`)
+			require.Contains(t, res.Body, `"forename":"Dustin"`)
+			require.Contains(t, res.Body, `"forename":"Sergiy"`)
+			require.NotContains(t, res.Body, `error`)
+		})
+
+		t.Run("find employees with variables", func(t *testing.T) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query($criteria: FindEmployeeCriteria!) {
+					findEmployeesBy(criteria: $criteria) {
+						id
+						details { forename }
+					} }`,
+				Variables: json.RawMessage(`{"criteria": { "id": 2 }}`),
+			})
+			expected := `{"data":{
+				"findEmployeesBy": [{ "id": 2, "details": { "forename": "Dustin" } }]}}`
+			require.JSONEq(t, expected, res.Body)
+		})
+
+		// Errors:
+		t.Run("no fields", func(t *testing.T) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query($criteria: FindEmployeeCriteria!) {
+					findEmployeesBy(criteria: $criteria) {
+						id
+						details { forename }
+					} }`,
+				Variables: json.RawMessage(`{"criteria": {}}`),
+			})
+			expected := `{
+				"errors": [{
+					"message": "Variable \"$criteria\" got invalid value {}; OneOf input object \"FindEmployeeCriteria\" must have exactly one field provided, but 0 fields were provided."
+				}]}`
+			require.JSONEq(t, expected, res.Body)
+		})
+		t.Run("explicit null value", func(t *testing.T) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query($criteria: FindEmployeeCriteria!) {
+					findEmployeesBy(criteria: $criteria) {
+						id
+						details { forename }
+					}}`,
+				Variables: json.RawMessage(`{"criteria": {"department": null}}`),
+			})
+			require.Contains(t, res.Body, `"errors"`)
+			require.Contains(t, res.Body, `field \"department\" value must be non-null`)
+		})
 	})
 }
 

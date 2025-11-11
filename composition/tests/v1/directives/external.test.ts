@@ -15,8 +15,9 @@ import {
   requiresDefinedOnNonEntityFieldWarning,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   Subgraph,
+  TypeName,
 } from '../../../src';
-import { baseDirectiveDefinitions, versionOneRouterDefinitions, versionTwoRouterDefinitions } from '../utils/utils';
+import { EXTERNAL_DIRECTIVE, KEY_DIRECTIVE, OPENFED_FIELD_SET, SCHEMA_QUERY_DEFINITION } from '../utils/utils';
 import {
   federateSubgraphsFailure,
   federateSubgraphsSuccess,
@@ -29,34 +30,34 @@ import {
 describe('@external directive tests', () => {
   describe('Normalization tests', () => {
     test('that @external declared on the Object level applies to its defined fields #1', () => {
-      const result = normalizeSubgraphSuccess(na, ROUTER_COMPATIBILITY_VERSION_ONE);
+      const result = normalizeSubgraphSuccess(naaaa, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
-          baseDirectiveDefinitions +
+          EXTERNAL_DIRECTIVE +
             `
             type Object {
-              """
-              This is the description for Object.externalFieldFour
-              """
+              """This is the description for Object.externalFieldFour"""
               externalFieldFour: String! @external
               externalFieldOne(argOne: String!, argTwo: Boolean!): String @external
               externalFieldThree: Float @external
               externalFieldTwo: Int! @external
               nonExternalFieldOne: Boolean!
               nonExternalFieldThree: Boolean
-              nonExternalFieldTwo(argOne: Int"""This is a description for Object.nonExternalFieldTwo.argTwo"""argTwo: Boolean!): Float!
+              nonExternalFieldTwo(
+              argOne: Int
+                """This is a description for Object.nonExternalFieldTwo.argTwo"""
+                argTwo: Boolean!
+              ): Float!
             }
-
-            scalar openfed__FieldSet
           `,
         ),
       );
       expect(result.warnings).toHaveLength(4);
-      expect(result.warnings[0]).toStrictEqual(invalidExternalFieldWarning('Object.externalFieldOne', na.name));
-      expect(result.warnings[1]).toStrictEqual(invalidExternalFieldWarning('Object.externalFieldTwo', na.name));
-      expect(result.warnings[2]).toStrictEqual(invalidExternalFieldWarning('Object.externalFieldThree', na.name));
-      expect(result.warnings[3]).toStrictEqual(invalidExternalFieldWarning('Object.externalFieldFour', na.name));
+      expect(result.warnings[0]).toStrictEqual(invalidExternalFieldWarning('Object.externalFieldOne', naaaa.name));
+      expect(result.warnings[1]).toStrictEqual(invalidExternalFieldWarning('Object.externalFieldTwo', naaaa.name));
+      expect(result.warnings[2]).toStrictEqual(invalidExternalFieldWarning('Object.externalFieldThree', naaaa.name));
+      expect(result.warnings[3]).toStrictEqual(invalidExternalFieldWarning('Object.externalFieldFour', naaaa.name));
     });
 
     test('that @external declared on the Object level applies to all its defined fields #2', () => {
@@ -64,22 +65,22 @@ describe('@external directive tests', () => {
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
-          baseDirectiveDefinitions +
+          EXTERNAL_DIRECTIVE +
             `
             type Object {
-              """
-              This is the description for Object.externalFieldFour
-              """
+              """This is the description for Object.externalFieldFour"""
               externalFieldFour: String! @external
               externalFieldOne(argOne: String!, argTwo: Boolean!): String @external
               externalFieldThree: Float @external
               externalFieldTwo: Int! @external
               nonExternalFieldOne: Boolean!
               nonExternalFieldThree: Boolean
-              nonExternalFieldTwo(argOne: Int"""This is a description for Object.nonExternalFieldTwo.argTwo"""argTwo: Boolean!): Float!
+              nonExternalFieldTwo(
+                argOne: Int
+                """This is a description for Object.nonExternalFieldTwo.argTwo"""
+                argTwo: Boolean!
+              ): Float!
             }
-
-            scalar openfed__FieldSet
           `,
         ),
       );
@@ -95,15 +96,15 @@ describe('@external directive tests', () => {
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
-          baseDirectiveDefinitions +
+          EXTERNAL_DIRECTIVE +
+            KEY_DIRECTIVE +
             `
             type Entity @key(fields: "id") {
               field: String! @external
               id: ID! @external
             }
-
-            scalar openfed__FieldSet
-          `,
+          ` +
+            OPENFED_FIELD_SET,
         ),
       );
     });
@@ -233,7 +234,7 @@ describe('@external directive tests', () => {
       const result = normalizeSubgraphSuccess(subgraphAC, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Entity',
             {
@@ -287,7 +288,7 @@ describe('@external directive tests', () => {
       const result = normalizeSubgraphSuccess(subgraphAD, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(result.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Entity',
             {
@@ -334,11 +335,13 @@ describe('@external directive tests', () => {
 
   describe('Federation tests', () => {
     test('that @external does not contribute to shareability checks #1.1', () => {
-      const result = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      const { federatedGraphSchema } = federateSubgraphsSuccess(
+        [subgraphA, subgraphB],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             type Entity implements Interface {
               age: Int!
@@ -363,19 +366,19 @@ describe('@external directive tests', () => {
               entity: Entity!
               entityTwo: EntityTwo!
             }
-
-            scalar openfed__Scope
           `,
         ),
       );
     });
 
     test('that @external does not contribute to shareability checks #1.2', () => {
-      const result = federateSubgraphsSuccess([subgraphB, subgraphA], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      const { federatedGraphSchema } = federateSubgraphsSuccess(
+        [subgraphB, subgraphA],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             type Entity implements Interface {
               age: Int!
@@ -400,19 +403,19 @@ describe('@external directive tests', () => {
               entity: Entity!
               entityTwo: EntityTwo!
             }
-
-            scalar openfed__Scope
           `,
         ),
       );
     });
 
     test('that @external does not contribute to shareability checks #2.1', () => {
-      const result = federateSubgraphsSuccess([subgraphA, subgraphB, subgraphC], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      const { federatedGraphSchema } = federateSubgraphsSuccess(
+        [subgraphA, subgraphB, subgraphC],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             type Entity implements Interface {
               age: Int!
@@ -439,19 +442,19 @@ describe('@external directive tests', () => {
               entity: Entity!
               entityTwo: EntityTwo!
             }
-
-            scalar openfed__Scope
           `,
         ),
       );
     });
 
     test('that @external does not contribute to shareability checks #2.2', () => {
-      const result = federateSubgraphsSuccess([subgraphA, subgraphC, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      const { federatedGraphSchema } = federateSubgraphsSuccess(
+        [subgraphA, subgraphC, subgraphB],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             type Entity implements Interface {
               age: Int!
@@ -478,19 +481,19 @@ describe('@external directive tests', () => {
               entity: Entity!
               entityTwo: EntityTwo!
             }
-
-            scalar openfed__Scope
           `,
         ),
       );
     });
 
     test('that @external does not contribute to shareability checks #2.3', () => {
-      const result = federateSubgraphsSuccess([subgraphB, subgraphA, subgraphC], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      const { federatedGraphSchema } = federateSubgraphsSuccess(
+        [subgraphB, subgraphA, subgraphC],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             type Entity implements Interface {
               age: Int!
@@ -517,19 +520,19 @@ describe('@external directive tests', () => {
               entity: Entity!
               entityTwo: EntityTwo!
             }
-
-            scalar openfed__Scope
           `,
         ),
       );
     });
 
     test('that @external does not contribute to shareability checks #2.4', () => {
-      const result = federateSubgraphsSuccess([subgraphB, subgraphC, subgraphA], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      const { federatedGraphSchema } = federateSubgraphsSuccess(
+        [subgraphB, subgraphC, subgraphA],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             type Entity implements Interface {
               age: Int!
@@ -556,19 +559,19 @@ describe('@external directive tests', () => {
               entity: Entity!
               entityTwo: EntityTwo!
             }
-
-            scalar openfed__Scope
           `,
         ),
       );
     });
 
     test('that @external does not contribute to shareability checks #2.5', () => {
-      const result = federateSubgraphsSuccess([subgraphC, subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      const { federatedGraphSchema } = federateSubgraphsSuccess(
+        [subgraphC, subgraphA, subgraphB],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             type Entity implements Interface {
               age: Int!
@@ -595,19 +598,19 @@ describe('@external directive tests', () => {
               entity: Entity!
               entityTwo: EntityTwo!
             }
-
-            scalar openfed__Scope
           `,
         ),
       );
     });
 
     test('that @external does not contribute to shareability checks #2.6', () => {
-      const result = federateSubgraphsSuccess([subgraphC, subgraphB, subgraphA], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      const { federatedGraphSchema } = federateSubgraphsSuccess(
+        [subgraphC, subgraphB, subgraphA],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             type Entity implements Interface {
               age: Int!
@@ -634,19 +637,19 @@ describe('@external directive tests', () => {
               entity: Entity!
               entityTwo: EntityTwo!
             }
-
-            scalar openfed__Scope
           `,
         ),
       );
     });
 
     test('that @external does not contribute to shareability checks #3.1', () => {
-      const result = federateSubgraphsSuccess([subgraphD, subgraphE], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      const { federatedGraphSchema } = federateSubgraphsSuccess(
+        [subgraphD, subgraphE],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             type Entity {
               field: String!
@@ -657,19 +660,19 @@ describe('@external directive tests', () => {
               anotherField: Entity!
               field: Entity!
             }
-
-            scalar openfed__Scope
           `,
         ),
       );
     });
 
     test('that @external does not contribute to shareability checks #3.2', () => {
-      const result = federateSubgraphsSuccess([subgraphE, subgraphD], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      const { federatedGraphSchema } = federateSubgraphsSuccess(
+        [subgraphE, subgraphD],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             type Entity {
               field: String!
@@ -680,18 +683,15 @@ describe('@external directive tests', () => {
               anotherField: Entity!
               field: Entity!
             }
-
-            scalar openfed__Scope
           `,
         ),
       );
     });
 
     test('that an error is returned if all instances of a field are declared @external #1', () => {
-      const result = federateSubgraphsFailure([subgraphH, subgraphI], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(
+      const { errors } = federateSubgraphsFailure([subgraphH, subgraphI], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
         allExternalFieldInstancesError(
           'Entity',
           new Map<string, Array<string>>([['name', ['subgraph-h', 'subgraph-i']]]),
@@ -700,11 +700,13 @@ describe('@external directive tests', () => {
     });
 
     test('that composition is successful if at least one field is not declared @external #1', () => {
-      const result = federateSubgraphsSuccess([subgraphJ, subgraphK], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      const { federatedGraphSchema } = federateSubgraphsSuccess(
+        [subgraphJ, subgraphK],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             type Entity {
               id: ID!
@@ -719,11 +721,13 @@ describe('@external directive tests', () => {
     });
 
     test('that composition is successful if at least one field is not declared @external #2.1', () => {
-      const result = federateSubgraphsSuccess([subgraphL, subgraphM], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      const { federatedGraphSchema } = federateSubgraphsSuccess(
+        [subgraphL, subgraphM],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             type Entity {
               id: ID!
@@ -739,11 +743,13 @@ describe('@external directive tests', () => {
     });
 
     test('that composition is successful if at least one field is not declared @external #2.2', () => {
-      const result = federateSubgraphsSuccess([subgraphM, subgraphL], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      const { federatedGraphSchema } = federateSubgraphsSuccess(
+        [subgraphM, subgraphL],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             type Entity {
               id: ID!
@@ -759,11 +765,13 @@ describe('@external directive tests', () => {
     });
 
     test('that unique direct @external key fields on V1 entity extensions are valid', () => {
-      const result = federateSubgraphsSuccess([subgraphP, subgraphQ], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      const { federatedGraphSchema, subgraphConfigBySubgraphName, warnings } = federateSubgraphsSuccess(
+        [subgraphP, subgraphQ],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             type Entity {
               id: ID!
@@ -776,17 +784,17 @@ describe('@external directive tests', () => {
           `,
         ),
       );
-      expect(result.warnings).toHaveLength(2);
-      expect(result.warnings[0]).toStrictEqual(
+      expect(warnings).toHaveLength(2);
+      expect(warnings[0]).toStrictEqual(
         externalEntityExtensionKeyFieldWarning('Entity', 'id', ['Entity.id'], subgraphQ.name),
       );
-      expect(result.warnings[1]).toStrictEqual(
+      expect(warnings[1]).toStrictEqual(
         externalEntityExtensionKeyFieldWarning('Entity', 'name', ['Entity.name'], subgraphQ.name),
       );
-      const q = result.subgraphConfigBySubgraphName.get(subgraphQ.name);
+      const q = subgraphConfigBySubgraphName.get(subgraphQ.name);
       expect(q).toBeDefined();
       expect(q!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -814,11 +822,13 @@ describe('@external directive tests', () => {
     // Apollo returns an error for only this case, but it's not meaningful nor necessary.
     // For consistency, we apply the same behaviour for the other cases of @external on extensions.
     test('that unique nested @external key fields on V1 entity extensions are valid', () => {
-      const result = federateSubgraphsSuccess([subgraphP, subgraphR], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      const { federatedGraphSchema, subgraphConfigBySubgraphName, warnings } = federateSubgraphsSuccess(
+        [subgraphP, subgraphR],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             type Entity {
               id: ID!
@@ -835,14 +845,14 @@ describe('@external directive tests', () => {
           `,
         ),
       );
-      expect(result.warnings).toHaveLength(1);
-      expect(result.warnings[0]).toStrictEqual(
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]).toStrictEqual(
         externalEntityExtensionKeyFieldWarning('Entity', 'object { id }', ['Object.id'], subgraphR.name),
       );
-      const r = result.subgraphConfigBySubgraphName.get(subgraphR.name);
+      const r = subgraphConfigBySubgraphName.get(subgraphR.name);
       expect(r).toBeDefined();
       expect(r!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -876,11 +886,13 @@ describe('@external directive tests', () => {
     });
 
     test('that unique direct @external key fields on V1 entities with @extends are valid', () => {
-      const result = federateSubgraphsSuccess([subgraphP, subgraphS], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      const { federatedGraphSchema, warnings } = federateSubgraphsSuccess(
+        [subgraphP, subgraphS],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             type Entity {
               id: ID!
@@ -893,21 +905,23 @@ describe('@external directive tests', () => {
           `,
         ),
       );
-      expect(result.warnings).toHaveLength(2);
-      expect(result.warnings[0]).toStrictEqual(
+      expect(warnings).toHaveLength(2);
+      expect(warnings[0]).toStrictEqual(
         externalEntityExtensionKeyFieldWarning('Entity', 'id', ['Entity.id'], subgraphS.name),
       );
-      expect(result.warnings[1]).toStrictEqual(
+      expect(warnings[1]).toStrictEqual(
         externalEntityExtensionKeyFieldWarning('Entity', 'name', ['Entity.name'], subgraphS.name),
       );
     });
 
     test('that unique nested @external key fields on V1 entities with @extends are valid', () => {
-      const result = federateSubgraphsSuccess([subgraphP, subgraphT], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      const { federatedGraphSchema, warnings } = federateSubgraphsSuccess(
+        [subgraphP, subgraphT],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             type Entity {
               id: ID!
@@ -924,17 +938,16 @@ describe('@external directive tests', () => {
           `,
         ),
       );
-      expect(result.warnings).toHaveLength(1);
-      expect(result.warnings[0]).toStrictEqual(
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]).toStrictEqual(
         externalEntityExtensionKeyFieldWarning('Entity', 'object { id }', ['Object.id'], subgraphT.name),
       );
     });
 
     test('that errors are returned for unique direct @external key fields on V1 entities', () => {
-      const result = federateSubgraphsFailure([subgraphU], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(
+      const { errors } = federateSubgraphsFailure([subgraphU], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
         allExternalFieldInstancesError(
           'Entity',
           new Map<string, Array<string>>([
@@ -946,21 +959,22 @@ describe('@external directive tests', () => {
     });
 
     test('that errors are returned for unique nested @external key fields on V1 entities', () => {
-      const result = federateSubgraphsFailure([subgraphV], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(
+      const { errors } = federateSubgraphsFailure([subgraphV], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
         allExternalFieldInstancesError('Object', new Map<string, Array<string>>([['id', [subgraphV.name]]])),
       );
     });
 
     //V2
     test('that unique direct @external key fields on V2 entity extensions are valid', () => {
-      const result = federateSubgraphsSuccess([subgraphP, subgraphW], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      const { federatedGraphSchema, subgraphConfigBySubgraphName, warnings } = federateSubgraphsSuccess(
+        [subgraphP, subgraphW],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             type Entity {
               id: ID!
@@ -970,22 +984,20 @@ describe('@external directive tests', () => {
             type Query {
               entity: Entity!
             }
-            
-            scalar openfed__Scope
           `,
         ),
       );
-      expect(result.warnings).toHaveLength(2);
-      expect(result.warnings[0]).toStrictEqual(
+      expect(warnings).toHaveLength(2);
+      expect(warnings[0]).toStrictEqual(
         externalEntityExtensionKeyFieldWarning('Entity', 'id', ['Entity.id'], subgraphW.name),
       );
-      expect(result.warnings[1]).toStrictEqual(
+      expect(warnings[1]).toStrictEqual(
         externalEntityExtensionKeyFieldWarning('Entity', 'name', ['Entity.name'], subgraphW.name),
       );
-      const w = result.subgraphConfigBySubgraphName.get(subgraphW.name);
+      const w = subgraphConfigBySubgraphName.get(subgraphW.name);
       expect(w).toBeDefined();
       expect(w!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -1011,11 +1023,13 @@ describe('@external directive tests', () => {
     });
 
     test('that unique nested @external key fields on V2 entity extensions are valid', () => {
-      const result = federateSubgraphsSuccess([subgraphP, subgraphX], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      const { federatedGraphSchema, subgraphConfigBySubgraphName, warnings } = federateSubgraphsSuccess(
+        [subgraphP, subgraphX],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             type Entity {
               id: ID!
@@ -1029,19 +1043,17 @@ describe('@external directive tests', () => {
             type Query {
               entity: Entity!
             }
-
-            scalar openfed__Scope
           `,
         ),
       );
-      expect(result.warnings).toHaveLength(1);
-      expect(result.warnings[0]).toStrictEqual(
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]).toStrictEqual(
         externalEntityExtensionKeyFieldWarning('Entity', 'object { id }', ['Object.id'], subgraphX.name),
       );
-      const x = result.subgraphConfigBySubgraphName.get(subgraphX.name);
+      const x = subgraphConfigBySubgraphName.get(subgraphX.name);
       expect(x).toBeDefined();
       expect(x!.configurationDataByTypeName).toStrictEqual(
-        new Map<string, ConfigurationData>([
+        new Map<TypeName, ConfigurationData>([
           [
             'Query',
             {
@@ -1075,11 +1087,13 @@ describe('@external directive tests', () => {
     });
 
     test('that unique direct @external key fields on V2 entities with @extends are valid', () => {
-      const result = federateSubgraphsSuccess([subgraphP, subgraphY], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      const { federatedGraphSchema, warnings } = federateSubgraphsSuccess(
+        [subgraphP, subgraphY],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             type Entity {
               id: ID!
@@ -1089,26 +1103,26 @@ describe('@external directive tests', () => {
             type Query {
               entity: Entity!
             }
-
-            scalar openfed__Scope
           `,
         ),
       );
-      expect(result.warnings).toHaveLength(2);
-      expect(result.warnings[0]).toStrictEqual(
+      expect(warnings).toHaveLength(2);
+      expect(warnings[0]).toStrictEqual(
         externalEntityExtensionKeyFieldWarning('Entity', 'id', ['Entity.id'], subgraphY.name),
       );
-      expect(result.warnings[1]).toStrictEqual(
+      expect(warnings[1]).toStrictEqual(
         externalEntityExtensionKeyFieldWarning('Entity', 'name', ['Entity.name'], subgraphY.name),
       );
     });
 
     test('that unique nested @external key fields on V2 entities with @extends are valid', () => {
-      const result = federateSubgraphsSuccess([subgraphP, subgraphZ], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      const { federatedGraphSchema, warnings } = federateSubgraphsSuccess(
+        [subgraphP, subgraphZ],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             type Entity {
               id: ID!
@@ -1122,22 +1136,19 @@ describe('@external directive tests', () => {
             type Query {
               entity: Entity!
             }
-
-            scalar openfed__Scope
           `,
         ),
       );
-      expect(result.warnings).toHaveLength(1);
-      expect(result.warnings[0]).toStrictEqual(
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]).toStrictEqual(
         externalEntityExtensionKeyFieldWarning('Entity', 'object { id }', ['Object.id'], subgraphZ.name),
       );
     });
 
     test('that errors are returned for unique direct @external key fields on V2 entities', () => {
-      const result = federateSubgraphsFailure([subgraphAA], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(
+      const { errors } = federateSubgraphsFailure([subgraphAA], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
         allExternalFieldInstancesError(
           'Entity',
           new Map<string, Array<string>>([
@@ -1149,18 +1160,17 @@ describe('@external directive tests', () => {
     });
 
     test('that errors are returned for unique nested @external key fields on V2 entities', () => {
-      const result = federateSubgraphsFailure([subgraphAB], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(
+      const { errors } = federateSubgraphsFailure([subgraphAB], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
         allExternalFieldInstancesError('Object', new Map<string, Array<string>>([['id', [subgraphAB.name]]])),
       );
     });
   });
 });
 
-const na: Subgraph = {
-  name: 'na',
+const naaaa: Subgraph = {
+  name: 'naaaa',
   url: '',
   definitions: parse(`
       type Object {

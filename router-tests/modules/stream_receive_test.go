@@ -237,6 +237,11 @@ func TestReceiveHook(t *testing.T) {
 		authenticator, err := authentication.NewHttpHeaderAuthenticator(jwksOpts)
 		require.NoError(t, err)
 		authenticators := []authentication.Authenticator{authenticator}
+		controller, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:         authenticators,
+			AuthenticationRequired: false,
+		})
+		require.NoError(t, err)
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
@@ -244,7 +249,7 @@ func TestReceiveHook(t *testing.T) {
 			RouterOptions: []core.Option{
 				core.WithModulesConfig(cfg.Modules),
 				core.WithCustomModules(&stream_receive.StreamReceiveModule{}),
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(controller),
 			},
 			LogObservation: testenv.LogObservationConfig{
 				Enabled:  true,

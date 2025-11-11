@@ -660,12 +660,14 @@ telemetry:
       schema_usage:
         enabled: true
         include_operation_sha: true
+        sample_rate: 0.5  # Supports any rate: 1.0, 0.8, 0.5, 0.1, 0.01, etc.
 `)
 		c, err := LoadConfig([]string{f})
 		require.NoError(t, err)
 
 		require.True(t, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.Enabled)
 		require.True(t, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.IncludeOperationSha)
+		require.Equal(t, 0.5, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.SampleRate)
 	})
 
 	t.Run("from environment", func(t *testing.T) {
@@ -677,16 +679,16 @@ version: "1"
 		require.NoError(t, err)
 
 		require.False(t, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.Enabled)
-		require.False(t, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.IncludeOperationSha)
+		require.Equal(t, 1.0, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.SampleRate)
 
 		t.Setenv("PROMETHEUS_SCHEMA_FIELD_USAGE_ENABLED", "true")
-		t.Setenv("PROMETHEUS_SCHEMA_FIELD_USAGE_INCLUDE_OPERATION_SHA", "true")
+		t.Setenv("PROMETHEUS_SCHEMA_FIELD_USAGE_SAMPLE_RATE", "0.25")
 
 		c, err = LoadConfig([]string{f})
 		require.NoError(t, err)
 
 		require.True(t, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.Enabled)
-		require.True(t, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.IncludeOperationSha)
+		require.Equal(t, 0.25, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.SampleRate)
 	})
 }
 
@@ -1292,6 +1294,60 @@ authentication:
 
 	})
 
+}
+
+func TestValidateIntrospectionAuthConfig(t *testing.T) {
+	t.Parallel()
+
+	t.Run("verify authentication can be skipped for introspection queries", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+introspection:
+  enabled: true
+
+authentication:
+  ignore_introspection: true
+`)
+		_, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+	})
+
+	t.Run("verify a secret can be set for introspection query authentication skip", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+introspection:
+  enabled: true
+  secret: dedicated_secret_for_introspection
+
+authentication:
+  ignore_introspection: true
+`)
+		_, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+	})
+
+	t.Run("A secret too short is invalid", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+introspection:
+  enabled: true
+  secret: too_short_token
+
+authentication:
+  ignore_introspection: true
+`)
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, "at '/introspection/secret': minLength: got 15, want 32")
+	})
 }
 
 func TestValidateAccessLogFileMode(t *testing.T) {

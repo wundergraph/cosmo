@@ -58,6 +58,7 @@ type Config struct {
 	graphqlPath                     string
 	playground                      bool
 	introspection                   bool
+	introspectionConfig             config.IntrospectionConfiguration
 	queryPlansEnabled               bool
 	graphApiToken                   string
 	healthCheckPath                 string

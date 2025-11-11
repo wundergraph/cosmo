@@ -660,9 +660,10 @@ func toGRPCConfiguration(config *nodev1.GRPCConfiguration, pluginsEnabled bool) 
 
 	result := &grpcdatasource.GRPCMapping{
 		Service:          in.Service,
-		QueryRPCs:        make(grpcdatasource.RPCConfigMap),
-		MutationRPCs:     make(grpcdatasource.RPCConfigMap),
-		SubscriptionRPCs: make(grpcdatasource.RPCConfigMap),
+		QueryRPCs:        make(grpcdatasource.RPCConfigMap[grpcdatasource.RPCConfig]),
+		MutationRPCs:     make(grpcdatasource.RPCConfigMap[grpcdatasource.RPCConfig]),
+		SubscriptionRPCs: make(grpcdatasource.RPCConfigMap[grpcdatasource.RPCConfig]),
+		ResolveRPCs:      make(grpcdatasource.RPCConfigMap[grpcdatasource.ResolveRPCMapping]),
 		EntityRPCs:       make(map[string][]grpcdatasource.EntityRPCConfig),
 		Fields:           make(map[string]grpcdatasource.FieldMap),
 		EnumValues:       make(map[string][]grpcdatasource.EnumValueMapping),
@@ -695,17 +696,32 @@ func toGRPCConfiguration(config *nodev1.GRPCConfiguration, pluginsEnabled bool) 
 		})
 	}
 
+	for _, resolve := range in.ResolveMappings {
+		resolveMap, ok := result.ResolveRPCs[resolve.LookupMapping.Type]
+		if !ok {
+			resolveMap = make(grpcdatasource.ResolveRPCMapping)
+		}
+
+		resolveMap[resolve.LookupMapping.FieldMapping.Original] = grpcdatasource.ResolveRPCTypeField{
+			FieldMappingData: grpcdatasource.FieldMapData{
+				TargetName:       resolve.LookupMapping.FieldMapping.Mapped,
+				ArgumentMappings: toFieldArgumentsMap(resolve.LookupMapping.FieldMapping.ArgumentMappings),
+			},
+			RPC:      resolve.Rpc,
+			Request:  resolve.Request,
+			Response: resolve.Response,
+		}
+
+		result.ResolveRPCs[resolve.LookupMapping.Type] = resolveMap
+	}
+
 	for _, field := range in.TypeFieldMappings {
 		fieldMap := grpcdatasource.FieldMap{}
 
 		for _, fieldMapping := range field.FieldMappings {
 			fieldMap[fieldMapping.Original] = grpcdatasource.FieldMapData{
 				TargetName:       fieldMapping.Mapped,
-				ArgumentMappings: grpcdatasource.FieldArgumentMap{},
-			}
-
-			for _, argumentMapping := range fieldMapping.ArgumentMappings {
-				fieldMap[fieldMapping.Original].ArgumentMappings[argumentMapping.Original] = argumentMapping.Mapped
+				ArgumentMappings: toFieldArgumentsMap(fieldMapping.ArgumentMappings),
 			}
 		}
 
@@ -732,4 +748,13 @@ func toGRPCConfiguration(config *nodev1.GRPCConfiguration, pluginsEnabled bool) 
 		Mapping:  result,
 		Disabled: disabled,
 	}
+}
+
+// toFieldArgumentsMap converts a list of nodev1.ArgumentMapping to a grpcdatasource.FieldArgumentMap.
+func toFieldArgumentsMap(arguments []*nodev1.ArgumentMapping) grpcdatasource.FieldArgumentMap {
+	fieldArguments := make(grpcdatasource.FieldArgumentMap)
+	for _, argument := range arguments {
+		fieldArguments[argument.Original] = argument.Mapped
+	}
+	return fieldArguments
 }

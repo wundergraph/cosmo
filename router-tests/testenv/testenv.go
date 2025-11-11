@@ -279,6 +279,7 @@ type MetricOptions struct {
 type PrometheusSchemaFieldUsage struct {
 	Enabled             bool
 	IncludeOperationSha bool
+	SampleRate          float64
 }
 
 type Config struct {
@@ -1420,7 +1421,9 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		core.WithTLSConfig(testConfig.TLSConfig),
 		core.WithInstanceID("test-instance"),
 		core.WithGracePeriod(15 * time.Second),
-		core.WithIntrospection(true),
+		core.WithIntrospection(true, config.IntrospectionConfiguration{
+			Enabled: true,
+		}),
 		core.WithQueryPlans(true),
 		core.WithEvents(eventsConfiguration),
 	}
@@ -1514,6 +1517,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			PromSchemaFieldUsage: rmetric.PrometheusSchemaFieldUsage{
 				Enabled:             testConfig.MetricOptions.PrometheusSchemaFieldUsage.Enabled,
 				IncludeOperationSha: testConfig.MetricOptions.PrometheusSchemaFieldUsage.IncludeOperationSha,
+				SampleRate:          testConfig.MetricOptions.PrometheusSchemaFieldUsage.SampleRate,
 			},
 		}
 	}
