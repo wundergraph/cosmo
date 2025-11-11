@@ -35,7 +35,8 @@ export default function Document() {
             )}
 
             {gtmId && (
-              <Script id="gtm-default" strategy="beforeInteractive">{`window.dataLayer = window.dataLayer || [];
+              <>
+                <Script id="gtm-default" strategy="beforeInteractive">{`window.dataLayer = window.dataLayer || [];
 function gtag(){ dataLayer.push(arguments); }
 gtag('consent', 'default', {
   ad_storage: 'denied',
@@ -45,10 +46,11 @@ gtag('consent', 'default', {
   functionality_storage: 'granted', // essentials
   security_storage: 'granted'
 });`}</Script>
+                <GtmScript gtmId={gtmId} />
+              </>
             )}
           </>
         )}
-        {isProduction && <GtmScript />}
 
         <link
           rel="apple-touch-icon"
@@ -128,7 +130,7 @@ gtag('consent', 'default', {
         <meta name="theme-color" content="#ffffff" />
       </Head>
       <body>
-        {isProduction && <GtmNoScript />}
+        {isProduction && <GtmNoScript gtmId={gtmId} />}
         <Main />
         <NextScript />
 
