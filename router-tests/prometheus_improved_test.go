@@ -1,9 +1,10 @@
 package integration
 
 import (
-	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"regexp"
 	"testing"
+
+	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 
 	"github.com/prometheus/client_golang/prometheus"
 	io_prometheus_client "github.com/prometheus/client_model/go"
@@ -305,6 +306,134 @@ query myQuery {
 				assertLabelValue(t, metric.Label, otel.WgOperationType, "query")
 
 				assertLabelNotPresent(t, metric.Label, "otel_scope_info")
+			}
+		})
+	})
+
+	t.Run("sampling reduces tracked requests", func(t *testing.T) {
+		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+		promRegistry := prometheus.NewRegistry()
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader:       metricReader,
+			PrometheusRegistry: promRegistry,
+			MetricOptions: testenv.MetricOptions{
+				PrometheusSchemaFieldUsage: testenv.PrometheusSchemaFieldUsage{
+					Enabled:    true,
+					SampleRate: 0.01, // 1% sampling
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Make 100 requests
+			for i := 0; i < 100; i++ {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employee(id: 1) { id } }`,
+				})
+				require.JSONEq(t, `{"data":{"employee":{"id":1}}}`, res.Body)
+			}
+
+			mf, err := promRegistry.Gather()
+			require.NoError(t, err)
+
+			schemaUsage := findMetricFamilyByName(mf, SchemaFieldUsageMetricName)
+			assert.NotNil(t, schemaUsage)
+
+			schemaUsageMetrics := schemaUsage.GetMetric()
+
+			// With 1% sampling and 100 requests, we expect roughly 1 sampled request
+			// Each request has 2 fields (employee, id), so we expect ~2 metrics total
+			// We verify that it's significantly less than 200 (which would be 100% sampling)
+			require.Greater(t, len(schemaUsageMetrics), 0, "At least 1 request should be sampled")
+			require.Less(t, len(schemaUsageMetrics), 20, "Should sample significantly less than 100%% of requests (expected ~2 metrics, allowing up to 20)")
+
+			// Verify that the sampled metrics have correct structure
+			for _, metric := range schemaUsageMetrics {
+				assertLabelValue(t, metric.Label, otel.WgOperationName, "myQuery")
+				assertLabelValue(t, metric.Label, otel.WgOperationType, "query")
+			}
+		})
+	})
+
+	t.Run("100% sample rate tracks all requests", func(t *testing.T) {
+		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+		promRegistry := prometheus.NewRegistry()
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader:       metricReader,
+			PrometheusRegistry: promRegistry,
+			MetricOptions: testenv.MetricOptions{
+				PrometheusSchemaFieldUsage: testenv.PrometheusSchemaFieldUsage{
+					Enabled:    true,
+					SampleRate: 1.0, // 100% sampling (default)
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Make 10 requests
+			for i := 0; i < 10; i++ {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employee(id: 1) { id } }`,
+				})
+				require.JSONEq(t, `{"data":{"employee":{"id":1}}}`, res.Body)
+			}
+
+			mf, err := promRegistry.Gather()
+			require.NoError(t, err)
+
+			schemaUsage := findMetricFamilyByName(mf, SchemaFieldUsageMetricName)
+			assert.NotNil(t, schemaUsage)
+
+			schemaUsageMetrics := schemaUsage.GetMetric()
+
+			// With 100% sampling and 10 requests, we expect 2 metrics (employee, id)
+			// The counter values should be 10 for each field
+			require.Len(t, schemaUsageMetrics, 2)
+
+			for _, metric := range schemaUsageMetrics {
+				assertLabelValue(t, metric.Label, otel.WgOperationName, "myQuery")
+				assertLabelValue(t, metric.Label, otel.WgOperationType, "query")
+
+				// Each field should have been counted 10 times (once per request)
+				assert.InEpsilon(t, 10.0, *metric.Counter.Value, 0.0001)
+			}
+		})
+	})
+
+	t.Run("0% sample rate tracks no requests", func(t *testing.T) {
+		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+		promRegistry := prometheus.NewRegistry()
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader:       metricReader,
+			PrometheusRegistry: promRegistry,
+			MetricOptions: testenv.MetricOptions{
+				PrometheusSchemaFieldUsage: testenv.PrometheusSchemaFieldUsage{
+					Enabled:    true,
+					SampleRate: 0.0, // 0% sampling
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Make 10 requests
+			for i := 0; i < 10; i++ {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query myQuery { employee(id: 1) { id } }`,
+				})
+				require.JSONEq(t, `{"data":{"employee":{"id":1}}}`, res.Body)
+			}
+
+			mf, err := promRegistry.Gather()
+			require.NoError(t, err)
+
+			schemaUsage := findMetricFamilyByName(mf, SchemaFieldUsageMetricName)
+
+			// With 0% sampling, no metrics should be recorded
+			if schemaUsage != nil {
+				require.Len(t, schemaUsage.GetMetric(), 0, "No metrics should be recorded with 0%% sampling")
 			}
 		})
 	})

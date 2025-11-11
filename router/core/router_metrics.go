@@ -27,8 +27,9 @@ type routerMetrics struct {
 	logger              *zap.Logger
 	exportEnabled       bool
 
-	promSchemaUsageEnabled             bool
-	promSchemaUsageIncludeOperationSha bool
+	promSchemaUsageEnabled      bool
+	promSchemaUsageIncludeOpSha bool
+	promSchemaUsageSampleRate   float64
 }
 
 type routerMetricsConfig struct {
@@ -38,8 +39,9 @@ type routerMetricsConfig struct {
 	logger              *zap.Logger
 	exportEnabled       bool
 
-	promSchemaUsageEnabled             bool
-	promSchemaUsageIncludeOperationSha bool
+	promSchemaUsageEnabled      bool
+	promSchemaUsageIncludeOpSha bool
+	promSchemaUsageSampleRate   float64
 }
 
 func NewRouterMetrics(cfg *routerMetricsConfig) RouterMetrics {
@@ -50,8 +52,9 @@ func NewRouterMetrics(cfg *routerMetricsConfig) RouterMetrics {
 		logger:              cfg.logger,
 		exportEnabled:       cfg.exportEnabled,
 
-		promSchemaUsageEnabled:             cfg.promSchemaUsageEnabled,
-		promSchemaUsageIncludeOperationSha: cfg.promSchemaUsageIncludeOperationSha,
+		promSchemaUsageEnabled:      cfg.promSchemaUsageEnabled,
+		promSchemaUsageIncludeOpSha: cfg.promSchemaUsageIncludeOpSha,
+		promSchemaUsageSampleRate:   cfg.promSchemaUsageSampleRate,
 	}
 }
 
@@ -68,8 +71,9 @@ func (m *routerMetrics) StartOperation(logger *zap.Logger, requestContentLength 
 		InFlightAddOption:    inFlightAddOption,
 		SliceAttributes:      sliceAttr,
 
-		PrometheusSchemaUsageEnabled:    m.promSchemaUsageEnabled,
-		PrometheusSchemaUsageIncludeSha: m.promSchemaUsageIncludeOperationSha,
+		PrometheusSchemaUsageEnabled:      m.promSchemaUsageEnabled,
+		PrometheusSchemaUsageIncludeOpSha: m.promSchemaUsageIncludeOpSha,
+		PrometheusSchemaUsageSampleRate:   m.promSchemaUsageSampleRate,
 	})
 	return metrics
 }
