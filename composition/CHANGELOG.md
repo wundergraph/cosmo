@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.48.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.47.2...@wundergraph/composition@0.48.0) (2025-11-11)
+
+### Features
+
+* initial support for field resolvers in connect ([#2290](https://github.com/wundergraph/cosmo/issues/2290)) ([6f28c5d](https://github.com/wundergraph/cosmo/commit/6f28c5d203ef4fd95db83dfe22143e565df6d463)) (@Noroth)
+
 ## [0.47.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.47.1...@wundergraph/composition@0.47.2) (2025-10-29)
 
 **Note:** Version bump only for package @wundergraph/composition
