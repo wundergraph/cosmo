@@ -567,6 +567,44 @@
           "original": "priorityMatrix",
           "mapped": "priority_matrix",
           "argumentMappings": []
+        },
+        {
+          "original": "filteredTasks",
+          "mapped": "filtered_tasks",
+          "argumentMappings": [
+            {
+              "original": "status",
+              "mapped": "status"
+            },
+            {
+              "original": "priority",
+              "mapped": "priority"
+            },
+            {
+              "original": "limit",
+              "mapped": "limit"
+            }
+          ]
+        },
+        {
+          "original": "completionRate",
+          "mapped": "completion_rate",
+          "argumentMappings": [
+            {
+              "original": "includeSubtasks",
+              "mapped": "include_subtasks"
+            }
+          ]
+        },
+        {
+          "original": "estimatedDaysRemaining",
+          "mapped": "estimated_days_remaining",
+          "argumentMappings": [
+            {
+              "original": "fromDate",
+              "mapped": "from_date"
+            }
+          ]
         }
       ]
     },
@@ -627,6 +665,26 @@
           "original": "reviewers",
           "mapped": "reviewers",
           "argumentMappings": []
+        },
+        {
+          "original": "isAtRisk",
+          "mapped": "is_at_risk",
+          "argumentMappings": [
+            {
+              "original": "threshold",
+              "mapped": "threshold"
+            }
+          ]
+        },
+        {
+          "original": "daysUntilDue",
+          "mapped": "days_until_due",
+          "argumentMappings": [
+            {
+              "original": "fromDate",
+              "mapped": "from_date"
+            }
+          ]
         }
       ]
     },
@@ -717,6 +775,26 @@
           "original": "reviewerIds",
           "mapped": "reviewer_ids",
           "argumentMappings": []
+        },
+        {
+          "original": "isBlocked",
+          "mapped": "is_blocked",
+          "argumentMappings": [
+            {
+              "original": "checkDependencies",
+              "mapped": "check_dependencies"
+            }
+          ]
+        },
+        {
+          "original": "totalEffort",
+          "mapped": "total_effort",
+          "argumentMappings": [
+            {
+              "original": "includeSubtasks",
+              "mapped": "include_subtasks"
+            }
+          ]
         }
       ]
     },
@@ -797,6 +875,34 @@
           "original": "projectHistory",
           "mapped": "project_history",
           "argumentMappings": []
+        },
+        {
+          "original": "currentWorkload",
+          "mapped": "current_workload",
+          "argumentMappings": [
+            {
+              "original": "includeCompleted",
+              "mapped": "include_completed"
+            },
+            {
+              "original": "projectId",
+              "mapped": "project_id"
+            }
+          ]
+        },
+        {
+          "original": "averageTaskCompletionDays",
+          "mapped": "average_task_completion_days",
+          "argumentMappings": [
+            {
+              "original": "projectId",
+              "mapped": "project_id"
+            },
+            {
+              "original": "priority",
+              "mapped": "priority"
+            }
+          ]
         }
       ]
     },
@@ -934,6 +1040,195 @@
           "mapped": "PROJECT_UPDATE_TYPE_TEAM_CHANGE"
         }
       ]
+    }
+  ],
+  "resolveMappings": [
+    {
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
+        "type": "Project",
+        "fieldMapping": {
+          "original": "filteredTasks",
+          "mapped": "filtered_tasks",
+          "argumentMappings": [
+            {
+              "original": "status",
+              "mapped": "status"
+            },
+            {
+              "original": "priority",
+              "mapped": "priority"
+            },
+            {
+              "original": "limit",
+              "mapped": "limit"
+            }
+          ]
+        }
+      },
+      "rpc": "ResolveProjectFilteredTasks",
+      "request": "ResolveProjectFilteredTasksRequest",
+      "response": "ResolveProjectFilteredTasksResponse"
+    },
+    {
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
+        "type": "Project",
+        "fieldMapping": {
+          "original": "completionRate",
+          "mapped": "completion_rate",
+          "argumentMappings": [
+            {
+              "original": "includeSubtasks",
+              "mapped": "include_subtasks"
+            }
+          ]
+        }
+      },
+      "rpc": "ResolveProjectCompletionRate",
+      "request": "ResolveProjectCompletionRateRequest",
+      "response": "ResolveProjectCompletionRateResponse"
+    },
+    {
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
+        "type": "Project",
+        "fieldMapping": {
+          "original": "estimatedDaysRemaining",
+          "mapped": "estimated_days_remaining",
+          "argumentMappings": [
+            {
+              "original": "fromDate",
+              "mapped": "from_date"
+            }
+          ]
+        }
+      },
+      "rpc": "ResolveProjectEstimatedDaysRemaining",
+      "request": "ResolveProjectEstimatedDaysRemainingRequest",
+      "response": "ResolveProjectEstimatedDaysRemainingResponse"
+    },
+    {
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
+        "type": "Milestone",
+        "fieldMapping": {
+          "original": "isAtRisk",
+          "mapped": "is_at_risk",
+          "argumentMappings": [
+            {
+              "original": "threshold",
+              "mapped": "threshold"
+            }
+          ]
+        }
+      },
+      "rpc": "ResolveMilestoneIsAtRisk",
+      "request": "ResolveMilestoneIsAtRiskRequest",
+      "response": "ResolveMilestoneIsAtRiskResponse"
+    },
+    {
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
+        "type": "Milestone",
+        "fieldMapping": {
+          "original": "daysUntilDue",
+          "mapped": "days_until_due",
+          "argumentMappings": [
+            {
+              "original": "fromDate",
+              "mapped": "from_date"
+            }
+          ]
+        }
+      },
+      "rpc": "ResolveMilestoneDaysUntilDue",
+      "request": "ResolveMilestoneDaysUntilDueRequest",
+      "response": "ResolveMilestoneDaysUntilDueResponse"
+    },
+    {
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
+        "type": "Task",
+        "fieldMapping": {
+          "original": "isBlocked",
+          "mapped": "is_blocked",
+          "argumentMappings": [
+            {
+              "original": "checkDependencies",
+              "mapped": "check_dependencies"
+            }
+          ]
+        }
+      },
+      "rpc": "ResolveTaskIsBlocked",
+      "request": "ResolveTaskIsBlockedRequest",
+      "response": "ResolveTaskIsBlockedResponse"
+    },
+    {
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
+        "type": "Task",
+        "fieldMapping": {
+          "original": "totalEffort",
+          "mapped": "total_effort",
+          "argumentMappings": [
+            {
+              "original": "includeSubtasks",
+              "mapped": "include_subtasks"
+            }
+          ]
+        }
+      },
+      "rpc": "ResolveTaskTotalEffort",
+      "request": "ResolveTaskTotalEffortRequest",
+      "response": "ResolveTaskTotalEffortResponse"
+    },
+    {
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
+        "type": "Employee",
+        "fieldMapping": {
+          "original": "currentWorkload",
+          "mapped": "current_workload",
+          "argumentMappings": [
+            {
+              "original": "includeCompleted",
+              "mapped": "include_completed"
+            },
+            {
+              "original": "projectId",
+              "mapped": "project_id"
+            }
+          ]
+        }
+      },
+      "rpc": "ResolveEmployeeCurrentWorkload",
+      "request": "ResolveEmployeeCurrentWorkloadRequest",
+      "response": "ResolveEmployeeCurrentWorkloadResponse"
+    },
+    {
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
+        "type": "Employee",
+        "fieldMapping": {
+          "original": "averageTaskCompletionDays",
+          "mapped": "average_task_completion_days",
+          "argumentMappings": [
+            {
+              "original": "projectId",
+              "mapped": "project_id"
+            },
+            {
+              "original": "priority",
+              "mapped": "priority"
+            }
+          ]
+        }
+      },
+      "rpc": "ResolveEmployeeAverageTaskCompletionDays",
+      "request": "ResolveEmployeeAverageTaskCompletionDaysRequest",
+      "response": "ResolveEmployeeAverageTaskCompletionDaysResponse"
     }
   ]
 }
