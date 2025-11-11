@@ -438,7 +438,7 @@ query myQuery {
 
 			// With 0% sampling, no metrics should be recorded
 			if schemaUsage != nil {
-				require.Len(t, schemaUsage.GetMetric(), 0, "No metrics should be recorded with 0%% sampling")
+				require.Len(t, schemaUsage.GetMetric(), 0, "No metrics should be recorded with 0% sampling")
 			}
 		})
 	})
