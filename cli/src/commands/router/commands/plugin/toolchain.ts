@@ -574,8 +574,6 @@ export async function installTsDependencies(pluginDir: string, spinner: any) {
     stderr: 'inherit',
     env,
   });
-
-  spinner.text = 'Installing node modules...\n';
 }
 
 /**
