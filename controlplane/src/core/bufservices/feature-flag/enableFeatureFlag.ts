@@ -119,6 +119,7 @@ export function enableFeatureFlag(
         },
         blobStorage: opts.blobStorage,
         chClient: opts.chClient!,
+        composeWorkerPool: opts.composeWorkerPool,
         compositionOptions: newCompositionOptions(req.disableResolvabilityValidation),
         federatedGraphs,
       });

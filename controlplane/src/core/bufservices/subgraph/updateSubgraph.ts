@@ -184,6 +184,7 @@ export function updateSubgraph(
           webhookJWTSecret: opts.admissionWebhookJWTSecret,
         },
         opts.chClient!,
+        opts.composeWorkerPool,
         newCompositionOptions(req.disableResolvabilityValidation),
       );
 

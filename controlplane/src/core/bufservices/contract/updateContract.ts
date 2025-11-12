@@ -140,6 +140,7 @@ export function updateContract(
       },
       labelMatchers: [],
       chClient: opts.chClient!,
+      composeWorkerPool: opts.composeWorkerPool,
       compositionOptions: newCompositionOptions(req.disableResolvabilityValidation),
     });
 
@@ -155,6 +156,7 @@ export function updateContract(
       },
       blobStorage: opts.blobStorage,
       chClient: opts.chClient!,
+      composeWorkerPool: opts.composeWorkerPool,
       compositionOptions: newCompositionOptions(req.disableResolvabilityValidation),
       federatedGraphs: [
         {

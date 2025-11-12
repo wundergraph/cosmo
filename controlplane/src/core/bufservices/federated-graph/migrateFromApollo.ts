@@ -156,6 +156,7 @@ export function migrateFromApollo(
           webhookJWTSecret: opts.admissionWebhookJWTSecret,
         },
         chClient: opts.chClient!,
+        composeWorkerPool: opts.composeWorkerPool,
         compositionOptions: {
           disableResolvabilityValidation: true,
         },

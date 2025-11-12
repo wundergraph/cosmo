@@ -152,6 +152,7 @@ export function publishMonograph(
           webhookJWTSecret: opts.admissionWebhookJWTSecret,
         },
         opts.chClient!,
+        opts.composeWorkerPool,
       );
 
     for (const graph of updatedFederatedGraphs) {

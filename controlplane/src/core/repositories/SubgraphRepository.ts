@@ -13,6 +13,7 @@ import { and, asc, count, desc, eq, getTableName, gt, inArray, like, lt, notInAr
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { GraphQLSchema } from 'graphql';
+import { Tinypool } from 'tinypool';
 import { DBSubgraphType, WebsocketSubprotocol } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
@@ -242,6 +243,7 @@ export class SubgraphRepository {
       cdnBaseUrl: string;
     },
     chClient: ClickHouseClient,
+    composeWorkerPool: Tinypool,
     compositionOptions?: CompositionOptions,
   ): Promise<{
     compositionErrors: PlainMessage<CompositionError>[];
@@ -470,6 +472,7 @@ export class SubgraphRepository {
         chClient,
         compositionOptions,
         federatedGraphs: updatedFederatedGraphs.filter((g) => !g.contract),
+        composeWorkerPool,
       });
 
       compositionErrors.push(...cErrors);
@@ -501,6 +504,7 @@ export class SubgraphRepository {
       cdnBaseUrl: string;
     },
     chClient: ClickHouseClient,
+    composeWorkerPool: Tinypool,
     compositionOptions?: CompositionOptions,
   ): Promise<{
     compositionErrors: PlainMessage<CompositionError>[];
@@ -554,6 +558,7 @@ export class SubgraphRepository {
         actorId: data.updatedBy,
         chClient,
         compositionOptions,
+        composeWorkerPool,
       });
 
       return { compositionErrors, updatedFederatedGraphs, deploymentErrors, compositionWarnings };

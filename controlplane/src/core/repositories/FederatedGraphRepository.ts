@@ -29,6 +29,7 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { parse } from 'graphql';
 import { generateKeyPair, importPKCS8, SignJWT } from 'jose';
+import { Tinypool } from 'tinypool';
 import { uid } from 'uid/secure';
 import {
   ContractTagOptions,
@@ -205,6 +206,7 @@ export class FederatedGraphRepository {
     targetId: string;
     updatedBy: string;
     chClient: ClickHouseClient;
+    composeWorkerPool: Tinypool;
     admissionWebhookSecret?: string;
     admissionWebhookURL?: string;
     compositionOptions?: CompositionOptions;
@@ -337,6 +339,7 @@ export class FederatedGraphRepository {
           actorId: data.updatedBy,
           chClient: data.chClient,
           compositionOptions: data.compositionOptions,
+          composeWorkerPool: data.composeWorkerPool,
         });
 
         return {
@@ -369,6 +372,7 @@ export class FederatedGraphRepository {
       cdnBaseUrl: string;
     },
     chClient: ClickHouseClient,
+    composeWorkerPool: Tinypool,
     compositionOptions?: CompositionOptions,
   ): Promise<{
     compositionErrors: PlainMessage<CompositionError>[];
@@ -430,6 +434,7 @@ export class FederatedGraphRepository {
           chClient,
           compositionOptions,
           federatedGraphs: [movedContractGraph],
+          composeWorkerPool,
         });
 
         return {
@@ -449,6 +454,7 @@ export class FederatedGraphRepository {
         },
         chClient,
         compositionOptions,
+        composeWorkerPool,
       });
 
       return {
@@ -1505,6 +1511,7 @@ export class FederatedGraphRepository {
     chClient,
     blobStorage,
     federatedGraphs,
+    composeWorkerPool,
   }: {
     actorId: string;
     admissionConfig: {
@@ -1515,6 +1522,7 @@ export class FederatedGraphRepository {
     chClient: ClickHouseClient;
     federatedGraphs: FederatedGraphDTO[];
     compositionOptions?: CompositionOptions;
+    composeWorkerPool: Tinypool;
   }) => {
     return this.db.transaction(async (tx) => {
       const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
@@ -1524,7 +1532,7 @@ export class FederatedGraphRepository {
       const graphCompositionRepo = new GraphCompositionRepository(this.logger, tx);
       const composer = new Composer(
         this.logger,
-        this.db,
+        tx,
         fedGraphRepo,
         subgraphRepo,
         contractRepo,
@@ -1577,7 +1585,8 @@ export class FederatedGraphRepository {
         const contractBaseCompositionDataByContractId = new Map<string, ContractBaseCompositionData>();
 
         for (const subgraphsToCompose of allSubgraphsToCompose) {
-          const result: FederationResult | FederationResultWithContracts = getFederationResultWithPotentialContracts(
+          const result: FederationResult | FederationResultWithContracts = await getFederationResultWithPotentialContracts(
+            composeWorkerPool,
             federatedGraph,
             subgraphsToCompose,
             tagOptionsByContractName,

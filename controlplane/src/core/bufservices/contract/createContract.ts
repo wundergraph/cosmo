@@ -206,6 +206,7 @@ export function createContract(
         chClient: opts.chClient!,
         compositionOptions: newCompositionOptions(req.disableResolvabilityValidation),
         federatedGraphs: [{ ...contractGraph, contract }],
+        composeWorkerPool: opts.composeWorkerPool,
       });
 
       compositionErrors.push(...composition.compositionErrors);

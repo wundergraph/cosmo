@@ -8,6 +8,7 @@ import { compressionBrotli, compressionGzip } from '@connectrpc/connect-node';
 import fastifyGracefulShutdown from 'fastify-graceful-shutdown';
 import { App } from 'octokit';
 import { Worker } from 'bullmq';
+import { Tinypool } from 'tinypool';
 import routes from './routes.js';
 import fastifyHealth from './plugins/health.js';
 import fastifyMetrics, { MetricsPluginOptions } from './plugins/metrics.js';
@@ -53,6 +54,7 @@ import {
   createReactivateOrganizationWorker,
   ReactivateOrganizationQueue,
 } from './workers/ReactivateOrganizationWorker.js';
+import { getWorkerPool } from '../workers/compose.js';
 
 export interface BuildConfig {
   logger: LoggerOptions;
@@ -135,6 +137,9 @@ export interface BuildConfig {
       ca?: string; // e.g. string or '/path/to/my/server-ca.pem'
       key?: string; // e.g. string or '/path/to/my/client-key.pem'
     };
+  };
+  composeWorkers?: {
+    maxCount: number;
   };
 }
 
@@ -469,6 +474,8 @@ export default async function build(opts: BuildConfig) {
     keycloakRealm: opts.keycloak.realm,
   });
 
+  const composeWorkerPool: Tinypool = getWorkerPool(opts.composeWorkers?.maxCount)!;
+
   // Must be registered after custom fastify routes
   // Because it registers an all-catch route for connect handlers
 
@@ -502,6 +509,7 @@ export default async function build(opts: BuildConfig) {
       stripeSecretKey: opts.stripe?.secret,
       admissionWebhookJWTSecret: opts.admissionWebhook.secret,
       cdnBaseUrl: opts.cdnBaseUrl,
+      composeWorkerPool: composeWorkerPool,
     }),
     contextValues(req) {
       return createContextValues().set<FastifyBaseLogger>({ id: fastifyLoggerId, defaultValue: req.log }, req.log);
@@ -522,6 +530,12 @@ export default async function build(opts: BuildConfig) {
   });
 
   fastify.gracefulShutdown(async () => {
+    fastify.log.debug('Shutting down compose worker pool');
+
+    await composeWorkerPool.destroy();
+
+    fastify.log.debug('Compose worker pool shut down');
+
     fastify.log.debug('Shutting down bull workers');
 
     await Promise.all(bullWorkers.map((worker) => worker.close()));
