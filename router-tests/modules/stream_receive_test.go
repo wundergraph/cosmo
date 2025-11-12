@@ -1,6 +1,7 @@
 package module_test
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"sync/atomic"
@@ -694,19 +695,31 @@ func TestReceiveHook(t *testing.T) {
 		}
 	})
 
-	t.Run("Test timeout mechanism logs warning when handler exceeds timeout", func(t *testing.T) {
+	t.Run("Test timeout mechanism allows out-of-order event delivery", func(t *testing.T) {
 		t.Parallel()
 
-		hookDelay := 300 * time.Millisecond
+		// One subscriber receives three consecutive events.
+		// The first event's hook is delayed, exceeding the timeout.
+		// The second and third events' hooks process immediately without delay.
+		// Because the first hook exceeds the timeout, the system abandons waiting for it
+		// and processes the second and third events.
+		// The first event will be delivered later when its hook finally completes.
+		// This should result in event order [2, 3, 1] at the client.
+
+		hookDelay := 500 * time.Millisecond
 		hookTimeout := 100 * time.Millisecond
+
+		var callCount atomic.Int32
 
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
 				"streamReceiveModule": stream_receive.StreamReceiveModule{
 					Callback: func(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
-						// Sleep longer than the configured timeout
-						time.Sleep(hookDelay)
+						// Only the first call should delay
+						if callCount.Add(1) == 1 {
+							time.Sleep(hookDelay)
+						}
 						return events, nil
 					},
 				},
@@ -721,7 +734,7 @@ func TestReceiveHook(t *testing.T) {
 				core.WithCustomModules(&stream_receive.StreamReceiveModule{}),
 				core.WithSubscriptionHooks(config.SubscriptionHooksConfiguration{
 					OnReceiveEvents: config.OnReceiveEventsConfiguration{
-						MaxConcurrentHandlers: 1,
+						MaxConcurrentHandlers: 3,
 						HandlerTimeout:        hookTimeout,
 					},
 				}),
@@ -747,7 +760,7 @@ func TestReceiveHook(t *testing.T) {
 			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
 
-			subscriptionArgsCh := make(chan kafkaSubscriptionArgs)
+			subscriptionArgsCh := make(chan kafkaSubscriptionArgs, 3)
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
 				subscriptionArgsCh <- kafkaSubscriptionArgs{
 					dataValue: dataValue,
@@ -765,27 +778,41 @@ func TestReceiveHook(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, Timeout)
 
-			events.ProduceKafkaMessage(t, xEnv, Timeout, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+			events.ProduceKafkaMessage(t, xEnv, Timeout, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"first"}}`)
+			events.ProduceKafkaMessage(t, xEnv, Timeout, topics[0], `{"__typename":"Employee","id": 2,"update":{"name":"second"}}`)
+			events.ProduceKafkaMessage(t, xEnv, Timeout, topics[0], `{"__typename":"Employee","id": 3,"update":{"name":"third"}}`)
 
-			// Even though the hook times out, the event should still be delivered
-			// (the hook completes in the background)
-			testenv.AwaitChannelWithT(t, Timeout, subscriptionArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
-				require.NoError(t, args.errValue)
-				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
-			})
+			// Collect all 3 events
+			receivedIDs := make([]float64, 0, 3)
+			for i := 0; i < 3; i++ {
+				testenv.AwaitChannelWithT(t, Timeout, subscriptionArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
+					require.NoError(t, args.errValue)
+
+					var response struct {
+						EmployeeUpdatedMyKafka struct {
+							ID float64 `json:"id"`
+						} `json:"employeeUpdatedMyKafka"`
+					}
+					err := json.Unmarshal(args.dataValue, &response)
+					require.NoError(t, err)
+					receivedIDs = append(receivedIDs, response.EmployeeUpdatedMyKafka.ID)
+				})
+			}
 
 			require.NoError(t, client.Close())
 			testenv.AwaitChannelWithT(t, Timeout, clientRunCh, func(t *testing.T, err error) {
 				require.NoError(t, err)
 			}, "unable to close client before timeout")
 
-			// Verify that the timeout warning was logged
+			// Verify events arrived out of order: event 2 and 3 before event 1
+			assert.Equal(t, []float64{2, 3, 1}, receivedIDs, "expected events to arrive out of order due to timeout")
+
 			timeoutLog := xEnv.Observer().FilterMessage("Timeout exceeded during subscription updates, events may arrive out of order")
 			assert.Len(t, timeoutLog.All(), 1, "expected timeout warning to be logged")
 
-			// Verify the hook was still executed
+			// Verify all hooks were executed
 			hookLog := xEnv.Observer().FilterMessage("Stream Hook has been run")
-			assert.Len(t, hookLog.All(), 1)
+			assert.Len(t, hookLog.All(), 3)
 		})
 	})
 }
