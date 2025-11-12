@@ -255,13 +255,14 @@ export class FederationFactory {
   authorizationDataByParentTypeName: Map<TypeName, AuthorizationData>;
   coordsByNamedTypeName = new Map<TypeName, Set<string>>();
   disableResolvabilityValidation: boolean = false;
-  clientDefinitions: (MutableDefinitionNode | DefinitionNode)[] = [];
+  directiveDefinitionByName = new Map<DirectiveName, DirectiveDefinitionNode>();
+  clientDefinitions: Array<MutableDefinitionNode | DefinitionNode> = [];
   currentSubgraphName = '';
   concreteTypeNamesByAbstractTypeName: Map<TypeName, Set<TypeName>>;
   subgraphNamesByNamedTypeNameByFieldCoords = new Map<string, Map<string, Set<string>>>();
   entityDataByTypeName: Map<TypeName, EntityData>;
   entityInterfaceFederationDataByTypeName: Map<string, EntityInterfaceFederationData>;
-  errors: Error[] = [];
+  errors: Array<Error> = [];
   fieldConfigurationByFieldCoords = new Map<string, FieldConfiguration>();
   fieldCoordsByNamedTypeName: Map<TypeName, Set<FieldCoords>>;
   inaccessibleCoords = new Set<string>();
@@ -286,10 +287,10 @@ export class FederationFactory {
   ]);
   potentialPersistedDirectiveDefinitionDataByDirectiveName = new Map<string, PersistedDirectiveDefinitionData>();
   referencedPersistedDirectiveNames = new Set<DirectiveName>();
-  routerDefinitions: (MutableDefinitionNode | DefinitionNode)[] = [];
+  routerDefinitions: Array<MutableDefinitionNode | DefinitionNode> = [];
   subscriptionFilterDataByFieldPath = new Map<string, SubscriptionFilterData>();
   tagNamesByCoords = new Map<string, Set<string>>();
-  warnings: Warning[];
+  warnings: Array<Warning>;
 
   constructor({
     authorizationDataByParentTypeName,
@@ -2324,6 +2325,7 @@ export class FederationFactory {
         continue;
       }
       const dependencies = DEPENDENCIES_BY_DIRECTIVE_NAME.get(directiveName) ?? [];
+      this.directiveDefinitionByName.set(directiveName, definition);
       if (CLIENT_PERSISTED_DIRECTIVE_NAMES.has(directiveName)) {
         this.clientDefinitions.push(definition);
         addIterableToSet({
@@ -2896,12 +2898,13 @@ export class FederationFactory {
       upsertAuthorizationConfiguration(this.fieldConfigurationByFieldCoords, authorizationData);
     }
     return {
+      directiveDefinitionByName: this.directiveDefinitionByName,
       fieldConfigurations: Array.from(this.fieldConfigurationByFieldCoords.values()),
-      subgraphConfigBySubgraphName,
       federatedGraphAST: newRouterAST,
       federatedGraphSchema: buildASTSchema(newRouterAST, { assumeValid: true, assumeValidSDL: true }),
       federatedGraphClientSchema: newClientSchema,
       parentDefinitionDataByTypeName: this.parentDefinitionDataByTypeName,
+      subgraphConfigBySubgraphName,
       success: true,
       warnings: this.warnings,
       ...this.getClientSchemaObjectBoolean(),
@@ -3188,12 +3191,13 @@ export class FederationFactory {
       upsertAuthorizationConfiguration(this.fieldConfigurationByFieldCoords, authorizationData);
     }
     return {
+      directiveDefinitionByName: this.directiveDefinitionByName,
       fieldConfigurations: Array.from(this.fieldConfigurationByFieldCoords.values()),
-      subgraphConfigBySubgraphName,
       federatedGraphAST: newRouterAST,
       federatedGraphSchema: buildASTSchema(newRouterAST, { assumeValid: true, assumeValidSDL: true }),
       federatedGraphClientSchema: newClientSchema,
       parentDefinitionDataByTypeName: this.parentDefinitionDataByTypeName,
+      subgraphConfigBySubgraphName,
       success: true,
       warnings: this.warnings,
       ...this.getClientSchemaObjectBoolean(),

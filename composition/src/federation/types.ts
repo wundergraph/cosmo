@@ -1,5 +1,5 @@
 import { Warning } from '../warnings/types';
-import { ConstDirectiveNode, DocumentNode, GraphQLSchema, StringValueNode } from 'graphql';
+import { ConstDirectiveNode, DirectiveDefinitionNode, DocumentNode, GraphQLSchema, StringValueNode } from 'graphql';
 import {
   ConfigureDescriptionData,
   ExtensionType,
@@ -9,7 +9,7 @@ import {
 import { FieldConfiguration } from '../router-configuration/types';
 import { Subgraph, SubgraphConfig } from '../subgraph/types';
 import { SupportedRouterCompatibilityVersion } from '../router-compatibility-version/router-compatibility-version';
-import { ContractName } from '../types/types';
+import { ContractName, DirectiveName } from '../types/types';
 
 export type FederationFailure = {
   errors: Array<Error>;
@@ -18,6 +18,7 @@ export type FederationFailure = {
 };
 
 export type FederationSuccess = {
+  directiveDefinitionByName: Map<DirectiveName, DirectiveDefinitionNode>;
   fieldConfigurations: Array<FieldConfiguration>;
   federatedGraphAST: DocumentNode;
   federatedGraphClientSchema: GraphQLSchema;
