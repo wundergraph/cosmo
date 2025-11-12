@@ -126,7 +126,7 @@ export function compileOperationsToProto(
   // This catches invalid operations including circular fragment references (NoFragmentCyclesRule)
   // Filter out KnownDirectivesRule to allow unknown directives (e.g., @wg_openapi_operation)
   // since directives may be used by dev tools and don't affect proto generation
-  const validationRules = specifiedRules.filter(rule => rule !== KnownDirectivesRule);
+  const validationRules = specifiedRules.filter((rule) => rule !== KnownDirectivesRule);
   const validationErrors = validate(schema, document, validationRules);
   if (validationErrors.length > 0) {
     const errorMessages = validationErrors.map((error) => error.message).join('\n');
