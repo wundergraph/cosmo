@@ -226,6 +226,9 @@ func NewEngineSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHandlerCont
 }
 
 type StreamReceiveEventHandlerContext interface {
+	// Context is a timeout based context.
+	// It signals a timeout when the handler should stop processing.
+	Context() context.Context
 	// Request is the initial client request that started the subscription
 	Request() *http.Request
 	// Logger is the logger for the request
@@ -305,6 +308,11 @@ type pubSubStreamReceiveEventHookContext struct {
 	authentication                 authentication.Authentication
 	subscriptionEventConfiguration datasource.SubscriptionEventConfiguration
 	eventBuilder                   datasource.EventBuilderFn
+	context                        context.Context
+}
+
+func (c *pubSubStreamReceiveEventHookContext) Context() context.Context {
+	return c.context
 }
 
 func (c *pubSubStreamReceiveEventHookContext) Request() *http.Request {
@@ -345,6 +353,7 @@ func NewPubSubOnReceiveEventsHook(fn func(ctx StreamReceiveEventHandlerContext, 
 			authentication:                 requestContext.Authentication(),
 			subscriptionEventConfiguration: subConf,
 			eventBuilder:                   eventBuilder,
+			context:                        ctx,
 		}
 		newEvts, err := fn(hookCtx, datasource.NewStreamEvents(evts))
 		return newEvts.Unsafe(), err

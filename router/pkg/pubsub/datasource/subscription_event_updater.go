@@ -4,6 +4,7 @@ import (
 	"context"
 	"slices"
 	"sync"
+	"time"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
@@ -26,6 +27,7 @@ type subscriptionEventUpdater struct {
 	hooks                          Hooks
 	logger                         *zap.Logger
 	eventBuilder                   EventBuilderFn
+	semaphore                      chan struct{}
 }
 
 func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
@@ -37,27 +39,35 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 	}
 
 	subscriptions := s.eventUpdater.Subscriptions()
-	limit := max(s.hooks.MaxConcurrentOnReceiveHandlers, 1)
-	semaphore := make(chan struct{}, limit)
 	wg := sync.WaitGroup{}
-	errCh := make(chan error, len(subscriptions))
+	timeout := time.Second
+	deadline := time.Now().Add(timeout)
 
-	for ctx, subId := range subscriptions {
-		semaphore <- struct{}{} // Acquire a slot
-		wg.Add(1)
-		go s.updateSubscription(ctx, &wg, errCh, semaphore, subId, events)
-	}
+	done := make(chan struct{})
 
-	doneLogging := make(chan struct{})
 	go func() {
-		s.deduplicateAndLogErrors(errCh, len(subscriptions))
-		doneLogging <- struct{}{}
+		for ctx, subId := range subscriptions {
+			s.semaphore <- struct{}{} // Acquire slot, blocks if all slots are taken
+			wg.Add(1)
+			ctx, cancel := context.WithDeadline(ctx, deadline)
+			defer cancel()
+			go s.updateSubscription(ctx, &wg, subId, events)
+		}
+
+		wg.Wait()
+		close(done)
 	}()
 
-	wg.Wait()
-	close(semaphore)
-	close(errCh)
-	<-doneLogging
+	select {
+	case <-done:
+		s.logger.Debug("All subscription updates completed")
+		// All subscriptions completed successfully
+	case <-time.After(timeout + time.Millisecond*100):
+		// Timeout exceeded, some subscription updates may still be running.
+		// They will continue to hold their semaphore slots until they complete,
+		// which means the next Update() call will have fewer available slots.
+		s.logger.Debug("Timeout exceeded, some subscription updates may still be running")
+	}
 }
 
 func (s *subscriptionEventUpdater) Complete() {
@@ -66,19 +76,20 @@ func (s *subscriptionEventUpdater) Complete() {
 
 func (s *subscriptionEventUpdater) Close(kind resolve.SubscriptionCloseKind) {
 	s.eventUpdater.Close(kind)
+	close(s.semaphore)
 }
 
 func (s *subscriptionEventUpdater) SetHooks(hooks Hooks) {
 	s.hooks = hooks
 }
 
-func (s *subscriptionEventUpdater) updateSubscription(ctx context.Context, wg *sync.WaitGroup, errCh chan error, semaphore chan struct{}, subID resolve.SubscriptionIdentifier, events []StreamEvent) {
+func (s *subscriptionEventUpdater) updateSubscription(ctx context.Context, wg *sync.WaitGroup, subID resolve.SubscriptionIdentifier, events []StreamEvent) {
 	defer wg.Done()
 	defer func() {
 		if r := recover(); r != nil {
 			s.recoverPanic(subID, r)
 		}
-		<-semaphore // release the slot when done
+		<-s.semaphore // release the slot when done
 	}()
 
 	hooks := s.hooks.OnReceiveEvents
@@ -90,10 +101,6 @@ func (s *subscriptionEventUpdater) updateSubscription(ctx context.Context, wg *s
 		events = slices.DeleteFunc(events, func(event StreamEvent) bool {
 			return event == nil
 		})
-
-		if err != nil {
-			errCh <- err
-		}
 	}
 
 	// send events to the subscription,
@@ -120,36 +127,6 @@ func (s *subscriptionEventUpdater) recoverPanic(subID resolve.SubscriptionIdenti
 	s.eventUpdater.CloseSubscription(resolve.SubscriptionCloseKindDownstreamServiceError, subID)
 }
 
-// deduplicateAndLogErrors collects errors from errCh
-// and deduplicates them based on their err.Error() value.
-// Afterwards it uses s.logger to log the message.
-func (s *subscriptionEventUpdater) deduplicateAndLogErrors(errCh chan error, size int) {
-	if s.logger == nil {
-		return
-	}
-
-	errs := make(map[string]int, size)
-	for err := range errCh {
-		amount, found := errs[err.Error()]
-		if found {
-			errs[err.Error()] = amount + 1
-			continue
-		}
-		errs[err.Error()] = 1
-	}
-
-	for err, amount := range errs {
-		s.logger.Error(
-			"some handlers have thrown an error",
-			zap.String("error", err),
-			zap.Int("amount_handlers", amount),
-			zap.String("provider_type", string(s.subscriptionEventConfiguration.ProviderType())),
-			zap.String("provider_id", s.subscriptionEventConfiguration.ProviderID()),
-			zap.String("field_name", s.subscriptionEventConfiguration.RootFieldName()),
-		)
-	}
-}
-
 func NewSubscriptionEventUpdater(
 	cfg SubscriptionEventConfiguration,
 	hooks Hooks,
@@ -157,11 +134,13 @@ func NewSubscriptionEventUpdater(
 	logger *zap.Logger,
 	eventBuilder EventBuilderFn,
 ) SubscriptionEventUpdater {
+	limit := max(hooks.MaxConcurrentOnReceiveHandlers, 1)
 	return &subscriptionEventUpdater{
 		subscriptionEventConfiguration: cfg,
 		hooks:                          hooks,
 		eventUpdater:                   eventUpdater,
 		logger:                         logger,
 		eventBuilder:                   eventBuilder,
+		semaphore:                      make(chan struct{}, limit),
 	}
 }
