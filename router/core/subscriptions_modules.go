@@ -191,9 +191,22 @@ func NewPubSubSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHandlerCont
 
 	return func(resolveCtx resolve.StartupHookContext, subConf datasource.SubscriptionEventConfiguration, eventBuilder datasource.EventBuilderFn) error {
 		requestContext := getRequestContext(resolveCtx.Context)
+
+		logger := requestContext.Logger()
+		if logger != nil {
+			logger = logger.With(zap.String("component", "subscription_on_start_hook"))
+			if subConf != nil {
+				logger = logger.With(
+					zap.String("provider_id", subConf.ProviderID()),
+					zap.String("provider_type", string(subConf.ProviderType())),
+					zap.String("field_name", subConf.RootFieldName()),
+				)
+			}
+		}
+
 		hookCtx := &pubSubSubscriptionOnStartHookContext{
 			request:                        requestContext.Request(),
-			logger:                         requestContext.Logger(),
+			logger:                         logger,
 			operation:                      requestContext.Operation(),
 			authentication:                 requestContext.Authentication(),
 			subscriptionEventConfiguration: subConf,
@@ -213,6 +226,12 @@ func NewEngineSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHandlerCont
 
 	return func(resolveCtx resolve.StartupHookContext, input []byte) error {
 		requestContext := getRequestContext(resolveCtx.Context)
+
+		logger := requestContext.Logger()
+		if logger != nil {
+			logger = logger.With(zap.String("component", "on_publish_events_hook"))
+		}
+
 		hookCtx := &engineSubscriptionOnStartHookContext{
 			request:        requestContext.Request(),
 			logger:         requestContext.Logger(),
@@ -286,9 +305,22 @@ func NewPubSubOnPublishEventsHook(fn func(ctx StreamPublishEventHandlerContext, 
 
 	return func(ctx context.Context, pubConf datasource.PublishEventConfiguration, evts []datasource.StreamEvent, eventBuilder datasource.EventBuilderFn) ([]datasource.StreamEvent, error) {
 		requestContext := getRequestContext(ctx)
+
+		logger := requestContext.Logger()
+		if logger != nil {
+			logger = logger.With(zap.String("component", "on_publish_events_hook"))
+			if pubConf != nil {
+				logger = logger.With(
+					zap.String("provider_id", pubConf.ProviderID()),
+					zap.String("provider_type", string(pubConf.ProviderType())),
+					zap.String("field_name", pubConf.RootFieldName()),
+				)
+			}
+		}
+
 		hookCtx := &pubSubPublishEventHookContext{
 			request:                   requestContext.Request(),
-			logger:                    requestContext.Logger(),
+			logger:                    logger,
 			operation:                 requestContext.Operation(),
 			authentication:            requestContext.Authentication(),
 			publishEventConfiguration: pubConf,
@@ -346,9 +378,22 @@ func NewPubSubOnReceiveEventsHook(fn func(ctx StreamReceiveEventHandlerContext, 
 
 	return func(ctx context.Context, subConf datasource.SubscriptionEventConfiguration, eventBuilder datasource.EventBuilderFn, evts []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
 		requestContext := getRequestContext(ctx)
+
+		logger := requestContext.Logger()
+		if logger != nil {
+			logger = logger.With(zap.String("component", "on_receive_events_hook"))
+			if subConf != nil {
+				logger = logger.With(
+					zap.String("provider_id", subConf.ProviderID()),
+					zap.String("provider_type", string(subConf.ProviderType())),
+					zap.String("field_name", subConf.RootFieldName()),
+				)
+			}
+		}
+
 		hookCtx := &pubSubStreamReceiveEventHookContext{
 			request:                        requestContext.Request(),
-			logger:                         requestContext.Logger(),
+			logger:                         logger,
 			operation:                      requestContext.Operation(),
 			authentication:                 requestContext.Authentication(),
 			subscriptionEventConfiguration: subConf,

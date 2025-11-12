@@ -46,7 +46,14 @@ func (s *PubSubSubscriptionDataSource[C]) Start(ctx *resolve.Context, input []by
 		return errors.New("invalid subscription configuration")
 	}
 
-	return s.pubSub.Subscribe(ctx.Context(), conf, NewSubscriptionEventUpdater(conf, s.hooks, updater, s.logger, s.eventBuilder))
+	logger := s.logger.With(
+		zap.String("component", "subscription_event_updater"),
+		zap.String("provider_id", conf.ProviderID()),
+		zap.String("provider_type", string(conf.ProviderType())),
+		zap.String("field_name", conf.RootFieldName()),
+	)
+
+	return s.pubSub.Subscribe(ctx.Context(), conf, NewSubscriptionEventUpdater(conf, s.hooks, updater, logger, s.eventBuilder))
 }
 
 func (s *PubSubSubscriptionDataSource[C]) SubscriptionOnStart(ctx resolve.StartupHookContext, input []byte) (err error) {

@@ -64,9 +64,13 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 		// All subscriptions completed successfully
 	case <-time.After(timeout + time.Millisecond*100):
 		// Timeout exceeded, some subscription updates may still be running.
+		// We can't stop them but we will also not wait for them, basically abandoning them.
 		// They will continue to hold their semaphore slots until they complete,
 		// which means the next Update() call will have fewer available slots.
-		s.logger.Debug("Timeout exceeded, some subscription updates may still be running")
+		// Also since we will process the next batch of events while having abandoned updaters,
+		// those updaters might eventually push their events to the subscription late,
+		// which means events might arrive out of order.
+		s.logger.Warn("Timeout exceeded during subscription updates, events may arrive out of order")
 	}
 }
 
