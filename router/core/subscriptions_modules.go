@@ -234,7 +234,7 @@ func NewEngineSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHandlerCont
 
 		hookCtx := &engineSubscriptionOnStartHookContext{
 			request:        requestContext.Request(),
-			logger:         requestContext.Logger(),
+			logger:         logger,
 			operation:      requestContext.Operation(),
 			authentication: requestContext.Authentication(),
 			writeEventHook: resolveCtx.Updater,
