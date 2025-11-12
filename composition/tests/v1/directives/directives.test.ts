@@ -604,7 +604,7 @@ const naaaa: Subgraph = {
 };
 
 const nbaaa: Subgraph = {
-  name: 'naaaa',
+  name: 'nbaaa',
   url: '',
   definitions: parse(`
     extend schema @directiveOne(argOne: "value")
