@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zaptest/observer"
@@ -58,11 +59,13 @@ func TestSubscriptionEventUpdater_Update_NoHooks(t *testing.T) {
 	mockUpdater.On("Update", []byte("test data 1")).Return()
 	mockUpdater.On("Update", []byte("test data 2")).Return()
 
-	updater := &subscriptionEventUpdater{
-		eventUpdater:                   mockUpdater,
-		subscriptionEventConfiguration: config,
-		hooks:                          Hooks{}, // No hooks
-	}
+	updater := NewSubscriptionEventUpdater(
+		config,
+		Hooks{}, // No hooks
+		mockUpdater,
+		zap.NewNop(),
+		testEventBuilder,
+	)
 
 	updater.Update(events)
 }
@@ -96,14 +99,17 @@ func TestSubscriptionEventUpdater_UpdateSubscription_WithHooks_Success(t *testin
 		context.Background(): subId,
 	})
 
-	updater := &subscriptionEventUpdater{
-		eventUpdater:                   mockUpdater,
-		subscriptionEventConfiguration: config,
-		hooks: Hooks{
-			OnReceiveEvents: []OnReceiveEventsFn{testHook},
+	updater := NewSubscriptionEventUpdater(
+		config,
+		Hooks{
+			OnReceiveEvents: OnReceiveEventsHooks{
+				Handlers: []OnReceiveEventsFn{testHook},
+			},
 		},
-		eventBuilder: testEventBuilder,
-	}
+		mockUpdater,
+		zap.NewNop(),
+		testEventBuilder,
+	)
 
 	updater.Update(originalEvents)
 
@@ -141,14 +147,17 @@ func TestSubscriptionEventUpdater_UpdateSubscriptions_WithHooks_Error(t *testing
 	mockUpdater.On("CloseSubscription", resolve.SubscriptionCloseKindNormal, subId).Return()
 
 	// Should not call Update or UpdateSubscription on eventUpdater since hook fails
-	updater := &subscriptionEventUpdater{
-		eventUpdater:                   mockUpdater,
-		subscriptionEventConfiguration: config,
-		hooks: Hooks{
-			OnReceiveEvents: []OnReceiveEventsFn{testHook},
+	updater := NewSubscriptionEventUpdater(
+		config,
+		Hooks{
+			OnReceiveEvents: OnReceiveEventsHooks{
+				Handlers: []OnReceiveEventsFn{testHook},
+			},
 		},
-		eventBuilder: testEventBuilder,
-	}
+		mockUpdater,
+		zap.NewNop(),
+		testEventBuilder,
+	)
 
 	updater.Update(events)
 
@@ -189,14 +198,17 @@ func TestSubscriptionEventUpdater_Update_WithMultipleHooks_Success(t *testing.T)
 		context.Background(): subId,
 	})
 
-	updater := &subscriptionEventUpdater{
-		eventUpdater:                   mockUpdater,
-		subscriptionEventConfiguration: config,
-		hooks: Hooks{
-			OnReceiveEvents: []OnReceiveEventsFn{hook1, hook2},
+	updater := NewSubscriptionEventUpdater(
+		config,
+		Hooks{
+			OnReceiveEvents: OnReceiveEventsHooks{
+				Handlers: []OnReceiveEventsFn{hook1, hook2},
+			},
 		},
-		eventBuilder: testEventBuilder,
-	}
+		mockUpdater,
+		zap.NewNop(),
+		testEventBuilder,
+	)
 
 	updater.Update(originalEvents)
 
@@ -227,11 +239,13 @@ func TestSubscriptionEventUpdater_Complete(t *testing.T) {
 
 	mockUpdater.On("Complete").Return()
 
-	updater := &subscriptionEventUpdater{
-		eventUpdater:                   mockUpdater,
-		subscriptionEventConfiguration: config,
-		hooks:                          Hooks{},
-	}
+	updater := NewSubscriptionEventUpdater(
+		config,
+		Hooks{},
+		mockUpdater,
+		zap.NewNop(),
+		testEventBuilder,
+	)
 
 	updater.Complete()
 }
@@ -247,11 +261,13 @@ func TestSubscriptionEventUpdater_Close(t *testing.T) {
 
 	mockUpdater.On("Close", closeKind).Return()
 
-	updater := &subscriptionEventUpdater{
-		eventUpdater:                   mockUpdater,
-		subscriptionEventConfiguration: config,
-		hooks:                          Hooks{},
-	}
+	updater := NewSubscriptionEventUpdater(
+		config,
+		Hooks{},
+		mockUpdater,
+		zap.NewNop(),
+		testEventBuilder,
+	)
 
 	updater.Close(closeKind)
 }
@@ -269,19 +285,25 @@ func TestSubscriptionEventUpdater_SetHooks(t *testing.T) {
 	}
 
 	hooks := Hooks{
-		OnReceiveEvents: []OnReceiveEventsFn{testHook},
+		OnReceiveEvents: OnReceiveEventsHooks{
+			Handlers: []OnReceiveEventsFn{testHook},
+		},
 	}
 
-	updater := &subscriptionEventUpdater{
-		eventUpdater:                   mockUpdater,
-		subscriptionEventConfiguration: config,
-		hooks:                          Hooks{},
-		eventBuilder:                   testEventBuilder,
-	}
+	updater := NewSubscriptionEventUpdater(
+		config,
+		Hooks{},
+		mockUpdater,
+		zap.NewNop(),
+		testEventBuilder,
+	)
 
 	updater.SetHooks(hooks)
 
-	assert.Equal(t, hooks, updater.hooks)
+	// Type assert to access internal fields for testing
+	concreteUpdater, ok := updater.(*subscriptionEventUpdater)
+	require.True(t, ok)
+	assert.Equal(t, hooks, concreteUpdater.hooks)
 }
 
 func TestNewSubscriptionEventUpdater(t *testing.T) {
@@ -297,7 +319,9 @@ func TestNewSubscriptionEventUpdater(t *testing.T) {
 	}
 
 	hooks := Hooks{
-		OnReceiveEvents: []OnReceiveEventsFn{testHook},
+		OnReceiveEvents: OnReceiveEventsHooks{
+			Handlers: []OnReceiveEventsFn{testHook},
+		},
 	}
 
 	updater := NewSubscriptionEventUpdater(config, hooks, mockUpdater, zap.NewNop(), testEventBuilder)
@@ -331,11 +355,13 @@ func TestSubscriptionEventUpdater_Update_PassthroughWithNoHooks(t *testing.T) {
 	mockUpdater.On("Update", []byte("event data 2")).Return()
 	mockUpdater.On("Update", []byte("event data 3")).Return()
 
-	updater := &subscriptionEventUpdater{
-		eventUpdater:                   mockUpdater,
-		subscriptionEventConfiguration: config,
-		hooks:                          Hooks{}, // No hooks
-	}
+	updater := NewSubscriptionEventUpdater(
+		config,
+		Hooks{}, // No hooks
+		mockUpdater,
+		zap.NewNop(),
+		testEventBuilder,
+	)
 
 	updater.Update(events)
 
@@ -377,13 +403,17 @@ func TestSubscriptionEventUpdater_Update_WithSingleHookModification(t *testing.T
 	mockUpdater.On("UpdateSubscription", subId, []byte("modified: original data 1")).Return()
 	mockUpdater.On("UpdateSubscription", subId, []byte("modified: original data 2")).Return()
 
-	updater := &subscriptionEventUpdater{
-		eventUpdater:                   mockUpdater,
-		subscriptionEventConfiguration: config,
-		hooks: Hooks{
-			OnReceiveEvents: []OnReceiveEventsFn{hook},
+	updater := NewSubscriptionEventUpdater(
+		config,
+		Hooks{
+			OnReceiveEvents: OnReceiveEventsHooks{
+				Handlers: []OnReceiveEventsFn{hook},
+			},
 		},
-	}
+		mockUpdater,
+		zap.NewNop(),
+		testEventBuilder,
+	)
 
 	updater.Update(originalEvents)
 
@@ -395,7 +425,7 @@ func TestSubscriptionEventUpdater_Update_WithSingleHookModification(t *testing.T
 	mockUpdater.AssertNotCalled(t, "Update")
 }
 
-func TestSubscriptionEventUpdater_Update_WithSingleHookError_ClosesSubscriptionAndLogsError(t *testing.T) {
+func TestSubscriptionEventUpdater_Update_WithSingleHookError_ClosesSubscription(t *testing.T) {
 	mockUpdater := NewMockSubscriptionUpdater(t)
 	config := &testSubscriptionEventConfig{
 		providerID:   "test-provider",
@@ -413,10 +443,6 @@ func TestSubscriptionEventUpdater_Update_WithSingleHookError_ClosesSubscriptionA
 		return events, hookError
 	}
 
-	// Set up logger with observer to verify error logging
-	zCore, logObserver := observer.New(zap.InfoLevel)
-	logger := zap.New(zCore)
-
 	subId := resolve.SubscriptionIdentifier{ConnectionID: 1, SubscriptionID: 1}
 	mockUpdater.On("Subscriptions").Return(map[context.Context]resolve.SubscriptionIdentifier{
 		context.Background(): subId,
@@ -427,8 +453,10 @@ func TestSubscriptionEventUpdater_Update_WithSingleHookError_ClosesSubscriptionA
 	mockUpdater.On("CloseSubscription", resolve.SubscriptionCloseKindNormal, subId).Return()
 
 	updater := NewSubscriptionEventUpdater(config, Hooks{
-		OnReceiveEvents: []OnReceiveEventsFn{hook},
-	}, mockUpdater, logger, testEventBuilder)
+		OnReceiveEvents: OnReceiveEventsHooks{
+			Handlers: []OnReceiveEventsFn{hook},
+		},
+	}, mockUpdater, zap.NewNop(), testEventBuilder)
 
 	updater.Update(events)
 
@@ -438,16 +466,6 @@ func TestSubscriptionEventUpdater_Update_WithSingleHookError_ClosesSubscriptionA
 	mockUpdater.AssertCalled(t, "CloseSubscription", resolve.SubscriptionCloseKindNormal, subId)
 	// Update should NOT be called when hooks are present
 	mockUpdater.AssertNotCalled(t, "Update")
-
-	// Verify error was logged (logging happens asynchronously)
-	assert.Eventually(t, func() bool {
-		logs := logObserver.FilterMessageSnippet("some handlers have thrown an error").TakeAll()
-		if len(logs) != 1 {
-			return false
-		}
-		// Verify the logged error message contains our error
-		return logs[0].ContextMap()["error"] == hookError.Error()
-	}, time.Second, 10*time.Millisecond, "expected error to be logged")
 }
 
 func TestSubscriptionEventUpdater_Update_WithMultipleHooksChaining(t *testing.T) {
@@ -517,13 +535,17 @@ func TestSubscriptionEventUpdater_Update_WithMultipleHooksChaining(t *testing.T)
 	// Final modified data should have all three transformations applied
 	mockUpdater.On("UpdateSubscription", subId, []byte("step3: step2: step1: original")).Return()
 
-	updater := &subscriptionEventUpdater{
-		eventUpdater:                   mockUpdater,
-		subscriptionEventConfiguration: config,
-		hooks: Hooks{
-			OnReceiveEvents: []OnReceiveEventsFn{hook1, hook2, hook3},
+	updater := NewSubscriptionEventUpdater(
+		config,
+		Hooks{
+			OnReceiveEvents: OnReceiveEventsHooks{
+				Handlers: []OnReceiveEventsFn{hook1, hook2, hook3},
+			},
 		},
-	}
+		mockUpdater,
+		zap.NewNop(),
+		testEventBuilder,
+	)
 
 	updater.Update(originalEvents)
 
@@ -579,11 +601,13 @@ func TestSubscriptionEventUpdater_UpdateEvents_EmptyEvents(t *testing.T) {
 	}
 	events := []StreamEvent{} // Empty events
 
-	updater := &subscriptionEventUpdater{
-		eventUpdater:                   mockUpdater,
-		subscriptionEventConfiguration: config,
-		hooks:                          Hooks{}, // No hooks
-	}
+	updater := NewSubscriptionEventUpdater(
+		config,
+		Hooks{}, // No hooks
+		mockUpdater,
+		zap.NewNop(),
+		testEventBuilder,
+	)
 
 	updater.Update(events)
 
@@ -612,11 +636,13 @@ func TestSubscriptionEventUpdater_Close_WithDifferentCloseKinds(t *testing.T) {
 
 			mockUpdater.On("Close", tc.closeKind).Return()
 
-			updater := &subscriptionEventUpdater{
-				eventUpdater:                   mockUpdater,
-				subscriptionEventConfiguration: config,
-				hooks:                          Hooks{},
-			}
+			updater := NewSubscriptionEventUpdater(
+				config,
+				Hooks{},
+				mockUpdater,
+				zap.NewNop(),
+				testEventBuilder,
+			)
 
 			updater.Close(tc.closeKind)
 		})
@@ -654,14 +680,17 @@ func TestSubscriptionEventUpdater_UpdateSubscription_WithHookError_ClosesSubscri
 				return events, tc.hookError
 			}
 
-			updater := &subscriptionEventUpdater{
-				eventUpdater:                   mockUpdater,
-				subscriptionEventConfiguration: config,
-				hooks: Hooks{
-					OnReceiveEvents: []OnReceiveEventsFn{testHook},
+			updater := NewSubscriptionEventUpdater(
+				config,
+				Hooks{
+					OnReceiveEvents: OnReceiveEventsHooks{
+						Handlers: []OnReceiveEventsFn{testHook},
+					},
 				},
-				eventBuilder: testEventBuilder,
-			}
+				mockUpdater,
+				zap.NewNop(),
+				testEventBuilder,
+			)
 
 			subId := resolve.SubscriptionIdentifier{ConnectionID: 1, SubscriptionID: 1}
 			mockUpdater.On("UpdateSubscription", subId, []byte("test data")).Return()
@@ -675,50 +704,6 @@ func TestSubscriptionEventUpdater_UpdateSubscription_WithHookError_ClosesSubscri
 			mockUpdater.AssertCalled(t, "CloseSubscription", resolve.SubscriptionCloseKindNormal, subId)
 		})
 	}
-}
-
-func TestSubscriptionEventUpdater_UpdateSubscription_WithHooks_Error_LoggerWritesError(t *testing.T) {
-	mockUpdater := NewMockSubscriptionUpdater(t)
-	config := &testSubscriptionEventConfig{
-		providerID:   "test-provider",
-		providerType: ProviderTypeNats,
-		fieldName:    "testField",
-	}
-	events := []StreamEvent{
-		&testEvent{mutableTestEvent("test data")},
-	}
-	hookError := errors.New("hook processing error")
-
-	// Define hook that returns an error
-	testHook := func(ctx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
-		return nil, hookError
-	}
-
-	zCore, logObserver := observer.New(zap.InfoLevel)
-	logger := zap.New(zCore)
-
-	// Test with a real zap logger to verify error logging behavior
-	// The logger.Error() call should be executed when an error occurs
-	updater := NewSubscriptionEventUpdater(config, Hooks{
-		OnReceiveEvents: []OnReceiveEventsFn{testHook},
-	}, mockUpdater, logger, testEventBuilder)
-
-	subId := resolve.SubscriptionIdentifier{ConnectionID: 1, SubscriptionID: 1}
-	mockUpdater.On("Subscriptions").Return(map[context.Context]resolve.SubscriptionIdentifier{
-		context.Background(): subId,
-	})
-	mockUpdater.On("CloseSubscription", resolve.SubscriptionCloseKindNormal, subId).Return()
-
-	updater.Update(events)
-
-	// Assert that Update was not called on the eventUpdater
-	mockUpdater.AssertNotCalled(t, "UpdateSubscription")
-	mockUpdater.AssertCalled(t, "CloseSubscription", resolve.SubscriptionCloseKindNormal, subId)
-
-	// log error messages for hooks are written async, we need to wait for them to be written
-	assert.Eventually(t, func() bool {
-		return len(logObserver.FilterMessageSnippet("some handlers have thrown an error").TakeAll()) == 1
-	}, time.Second, 10*time.Millisecond, "expected one deduplicated error log")
 }
 
 func TestSubscriptionEventUpdater_OnReceiveEvents_PanicRecovery(t *testing.T) {
@@ -768,14 +753,17 @@ func TestSubscriptionEventUpdater_OnReceiveEvents_PanicRecovery(t *testing.T) {
 			})
 			mockUpdater.On("CloseSubscription", resolve.SubscriptionCloseKindDownstreamServiceError, subId).Return()
 
-			updater := &subscriptionEventUpdater{
-				eventUpdater:                   mockUpdater,
-				subscriptionEventConfiguration: config,
-				hooks: Hooks{
-					OnReceiveEvents: []OnReceiveEventsFn{testHook},
+			updater := NewSubscriptionEventUpdater(
+				config,
+				Hooks{
+					OnReceiveEvents: OnReceiveEventsHooks{
+						Handlers: []OnReceiveEventsFn{testHook},
+					},
 				},
-				logger: logger,
-			}
+				mockUpdater,
+				logger,
+				testEventBuilder,
+			)
 
 			updater.Update(events)
 

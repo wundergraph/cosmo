@@ -331,7 +331,9 @@ events:
           - 'redis://localhost:6379/11'
         cluster_enabled: true
   subscription_hooks:
-    max_concurrent_event_receive_handlers: 100
+    on_receive_events:
+      max_concurrent_handlers: 100
+      handler_timeout: 1000
 
 engine:
   enable_single_flight: true

@@ -32,7 +32,7 @@ type subscriptionEventUpdater struct {
 }
 
 func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
-	if len(s.hooks.OnReceiveEvents) == 0 {
+	if len(s.hooks.OnReceiveEvents.Handlers) == 0 {
 		for _, event := range events {
 			s.eventUpdater.Update(event.GetData())
 		}
@@ -96,7 +96,7 @@ func (s *subscriptionEventUpdater) updateSubscription(ctx context.Context, wg *s
 		<-s.semaphore // release the slot when done
 	}()
 
-	hooks := s.hooks.OnReceiveEvents
+	hooks := s.hooks.OnReceiveEvents.Handlers
 
 	// modify events with hooks
 	var err error
@@ -138,8 +138,13 @@ func NewSubscriptionEventUpdater(
 	logger *zap.Logger,
 	eventBuilder EventBuilderFn,
 ) SubscriptionEventUpdater {
-	limit := max(hooks.MaxConcurrentOnReceiveHandlers, 1)
-	timeout := time.Duration(hooks.EventReceiveTimeout) * time.Millisecond
+	limit := max(hooks.OnReceiveEvents.MaxConcurrentHandlers, 1)
+	duration := hooks.OnReceiveEvents.TimeoutMS
+	if duration == 0 {
+		duration = 5000
+	}
+
+	timeout := time.Duration(duration) * time.Millisecond
 	return &subscriptionEventUpdater{
 		subscriptionEventConfiguration: cfg,
 		hooks:                          hooks,

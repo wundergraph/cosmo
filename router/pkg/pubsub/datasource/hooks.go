@@ -14,9 +14,24 @@ type OnReceiveEventsFn func(ctx context.Context, subConf SubscriptionEventConfig
 
 // Hooks contains hooks for the pubsub providers and data sources
 type Hooks struct {
-	SubscriptionOnStart            []SubscriptionOnStartFn
-	OnReceiveEvents                []OnReceiveEventsFn
-	OnPublishEvents                []OnPublishEventsFn
-	MaxConcurrentOnReceiveHandlers int
-	EventReceiveTimeout            int // timeout in milliseconds
+	SubscriptionOnStart SubscriptionOnStartHooks
+	OnPublishEvents     OnPublishEventsHooks
+	OnReceiveEvents     OnReceiveEventsHooks
+}
+
+// SubscriptionOnStartHooks contains hooks with settings for subscription starts
+type SubscriptionOnStartHooks struct {
+	Handlers []SubscriptionOnStartFn
+}
+
+// OnPublishEventsHooks contains hooks with settings for event publishing
+type OnPublishEventsHooks struct {
+	Handlers []OnPublishEventsFn
+}
+
+// OnReceiveEventsHooks contains hooks with settings for event receiving
+type OnReceiveEventsHooks struct {
+	Handlers              []OnReceiveEventsFn
+	MaxConcurrentHandlers int
+	TimeoutMS               int
 }

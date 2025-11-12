@@ -73,7 +73,7 @@ func (s *PubSubSubscriptionDataSource[C]) SubscriptionOnStart(ctx resolve.Startu
 		}
 	}()
 
-	for _, fn := range s.hooks.SubscriptionOnStart {
+	for _, fn := range s.hooks.SubscriptionOnStart.Handlers {
 		conf, errConf := s.SubscriptionEventConfiguration(input)
 		if errConf != nil {
 			return err

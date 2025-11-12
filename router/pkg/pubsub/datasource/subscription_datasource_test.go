@@ -233,7 +233,9 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnStart_WithHooks(t *testing.T
 	}
 
 	dataSource.SetHooks(Hooks{
-		SubscriptionOnStart: []SubscriptionOnStartFn{hook1, hook2},
+		SubscriptionOnStart: SubscriptionOnStartHooks{
+			Handlers: []SubscriptionOnStartFn{hook1, hook2},
+		},
 	})
 
 	testConfig := testSubscriptionEventConfiguration{
@@ -270,7 +272,9 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnStart_HookReturnsClose(t *te
 	}
 
 	dataSource.SetHooks(Hooks{
-		SubscriptionOnStart: []SubscriptionOnStartFn{hook},
+		SubscriptionOnStart: SubscriptionOnStartHooks{
+			Handlers: []SubscriptionOnStartFn{hook},
+		},
 	})
 
 	testConfig := testSubscriptionEventConfiguration{
@@ -304,7 +308,9 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnStart_HookReturnsError(t *te
 	}
 
 	dataSource.SetHooks(Hooks{
-		SubscriptionOnStart: []SubscriptionOnStartFn{hook},
+		SubscriptionOnStart: SubscriptionOnStartHooks{
+			Handlers: []SubscriptionOnStartFn{hook},
+		},
 	})
 
 	testConfig := testSubscriptionEventConfiguration{
@@ -333,7 +339,7 @@ func TestPubSubSubscriptionDataSource_SetSubscriptionOnStartFns(t *testing.T) {
 	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop(), testSubscriptionDataSourceEventBuilder)
 
 	// Initially should have no hooks
-	assert.Len(t, dataSource.hooks.SubscriptionOnStart, 0)
+	assert.Len(t, dataSource.hooks.SubscriptionOnStart.Handlers, 0)
 
 	// Add hooks
 	hook1 := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration, eventBuilder EventBuilderFn) error {
@@ -344,14 +350,18 @@ func TestPubSubSubscriptionDataSource_SetSubscriptionOnStartFns(t *testing.T) {
 	}
 
 	dataSource.SetHooks(Hooks{
-		SubscriptionOnStart: []SubscriptionOnStartFn{hook1},
+		SubscriptionOnStart: SubscriptionOnStartHooks{
+			Handlers: []SubscriptionOnStartFn{hook1},
+		},
 	})
-	assert.Len(t, dataSource.hooks.SubscriptionOnStart, 1)
+	assert.Len(t, dataSource.hooks.SubscriptionOnStart.Handlers, 1)
 
 	dataSource.SetHooks(Hooks{
-		SubscriptionOnStart: []SubscriptionOnStartFn{hook2},
+		SubscriptionOnStart: SubscriptionOnStartHooks{
+			Handlers: []SubscriptionOnStartFn{hook2},
+		},
 	})
-	assert.Len(t, dataSource.hooks.SubscriptionOnStart, 1)
+	assert.Len(t, dataSource.hooks.SubscriptionOnStart.Handlers, 1)
 }
 
 func TestNewPubSubSubscriptionDataSource(t *testing.T) {
@@ -365,7 +375,7 @@ func TestNewPubSubSubscriptionDataSource(t *testing.T) {
 	assert.NotNil(t, dataSource)
 	assert.Equal(t, mockAdapter, dataSource.pubSub)
 	assert.NotNil(t, dataSource.uniqueRequestID)
-	assert.Empty(t, dataSource.hooks.SubscriptionOnStart)
+	assert.Empty(t, dataSource.hooks.SubscriptionOnStart.Handlers)
 }
 
 func TestPubSubSubscriptionDataSource_InterfaceCompliance(t *testing.T) {
@@ -424,7 +434,9 @@ func TestPubSubSubscriptionDataSource_SubscriptionOnStart_PanicRecovery(t *testi
 			}
 
 			dataSource.SetHooks(Hooks{
-				SubscriptionOnStart: []SubscriptionOnStartFn{hook},
+				SubscriptionOnStart: SubscriptionOnStartHooks{
+					Handlers: []SubscriptionOnStartFn{hook},
+				},
 			})
 
 			testConfig := testSubscriptionEventConfiguration{

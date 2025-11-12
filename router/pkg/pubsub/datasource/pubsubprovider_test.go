@@ -253,7 +253,9 @@ func TestProvider_Publish_WithHooks_Success(t *testing.T) {
 	provider := PubSubProvider{
 		Adapter: mockAdapter,
 		hooks: Hooks{
-			OnPublishEvents: []OnPublishEventsFn{testHook},
+			OnPublishEvents: OnPublishEventsHooks{
+				Handlers: []OnPublishEventsFn{testHook},
+			},
 		},
 		eventBuilder: testPubSubEventBuilder,
 	}
@@ -286,7 +288,9 @@ func TestProvider_Publish_WithHooks_HookError(t *testing.T) {
 	provider := PubSubProvider{
 		Adapter: mockAdapter,
 		hooks: Hooks{
-			OnPublishEvents: []OnPublishEventsFn{testHook},
+			OnPublishEvents: OnPublishEventsHooks{
+				Handlers: []OnPublishEventsFn{testHook},
+			},
 		},
 		Logger:       zap.NewNop(),
 		eventBuilder: testPubSubEventBuilder,
@@ -322,7 +326,9 @@ func TestProvider_Publish_WithHooks_AdapterError(t *testing.T) {
 	provider := PubSubProvider{
 		Adapter: mockAdapter,
 		hooks: Hooks{
-			OnPublishEvents: []OnPublishEventsFn{testHook},
+			OnPublishEvents: OnPublishEventsHooks{
+				Handlers: []OnPublishEventsFn{testHook},
+			},
 		},
 		eventBuilder: testPubSubEventBuilder,
 	}
@@ -358,7 +364,9 @@ func TestProvider_Publish_WithMultipleHooks_Success(t *testing.T) {
 	provider := PubSubProvider{
 		Adapter: mockAdapter,
 		hooks: Hooks{
-			OnPublishEvents: []OnPublishEventsFn{hook1, hook2},
+			OnPublishEvents: OnPublishEventsHooks{
+				Handlers: []OnPublishEventsFn{hook1, hook2},
+			},
 		},
 		eventBuilder: testPubSubEventBuilder,
 	}
@@ -375,7 +383,9 @@ func TestProvider_SetHooks(t *testing.T) {
 	}
 
 	hooks := Hooks{
-		OnPublishEvents: []OnPublishEventsFn{testHook},
+		OnPublishEvents: OnPublishEventsHooks{
+			Handlers: []OnPublishEventsFn{testHook},
+		},
 	}
 
 	provider.SetHooks(hooks)
@@ -396,7 +406,7 @@ func TestNewPubSubProvider(t *testing.T) {
 	assert.Equal(t, typeID, provider.TypeID())
 	assert.Equal(t, mockAdapter, provider.Adapter)
 	assert.Equal(t, logger, provider.Logger)
-	assert.Empty(t, provider.hooks.OnPublishEvents)
+	assert.Empty(t, provider.hooks.OnPublishEvents.Handlers)
 }
 
 func TestApplyPublishEventHooks_NoHooks(t *testing.T) {
@@ -412,7 +422,9 @@ func TestApplyPublishEventHooks_NoHooks(t *testing.T) {
 	provider := &PubSubProvider{
 		Logger: zap.NewNop(),
 		hooks: Hooks{
-			OnPublishEvents: []OnPublishEventsFn{},
+			OnPublishEvents: OnPublishEventsHooks{
+				Handlers: []OnPublishEventsFn{},
+			},
 		},
 	}
 
@@ -443,7 +455,9 @@ func TestApplyPublishEventHooks_SingleHook_Success(t *testing.T) {
 	provider := &PubSubProvider{
 		Logger: zap.NewNop(),
 		hooks: Hooks{
-			OnPublishEvents: []OnPublishEventsFn{hook},
+			OnPublishEvents: OnPublishEventsHooks{
+				Handlers: []OnPublishEventsFn{hook},
+			},
 		},
 	}
 
@@ -472,7 +486,9 @@ func TestApplyPublishEventHooks_SingleHook_Error(t *testing.T) {
 	provider := &PubSubProvider{
 		Logger: zap.NewNop(),
 		hooks: Hooks{
-			OnPublishEvents: []OnPublishEventsFn{hook},
+			OnPublishEvents: OnPublishEventsHooks{
+				Handlers: []OnPublishEventsFn{hook},
+			},
 		},
 	}
 
@@ -507,7 +523,9 @@ func TestApplyPublishEventHooks_MultipleHooks_Success(t *testing.T) {
 	provider := &PubSubProvider{
 		Logger: zap.NewNop(),
 		hooks: Hooks{
-			OnPublishEvents: []OnPublishEventsFn{hook1, hook2, hook3},
+			OnPublishEvents: OnPublishEventsHooks{
+				Handlers: []OnPublishEventsFn{hook1, hook2, hook3},
+			},
 		},
 	}
 
@@ -543,7 +561,9 @@ func TestApplyPublishEventHooks_MultipleHooks_MiddleHookError(t *testing.T) {
 	provider := &PubSubProvider{
 		Logger: zap.NewNop(),
 		hooks: Hooks{
-			OnPublishEvents: []OnPublishEventsFn{hook1, hook2, hook3},
+			OnPublishEvents: OnPublishEventsHooks{
+				Handlers: []OnPublishEventsFn{hook1, hook2, hook3},
+			},
 		},
 	}
 
@@ -599,7 +619,9 @@ func TestApplyPublishEventHooks_PanicRecovery(t *testing.T) {
 			provider := &PubSubProvider{
 				Logger: zap.NewNop(),
 				hooks: Hooks{
-					OnPublishEvents: []OnPublishEventsFn{hook},
+					OnPublishEvents: OnPublishEventsHooks{
+						Handlers: []OnPublishEventsFn{hook},
+					},
 				},
 			}
 
