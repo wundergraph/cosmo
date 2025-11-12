@@ -1,4 +1,6 @@
 import {
+  DEPRECATED,
+  DEPRECATED_DEFINITION,
   DirectiveName,
   FIRST_ORDINAL,
   INACCESSIBLE,
@@ -301,7 +303,8 @@ describe('Directive tests', () => {
       );
     });
 
-    test('that directives declared after schema definitions and extensions are still valid #2', () => {
+    // Schema extensions cannot be added to the SDL currently because it breaks the engine
+    test.skip('that directives declared after schema definitions and extensions are still valid #2', () => {
       const { schema } = normalizeSubgraphSuccess(nbaaa, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
@@ -400,11 +403,13 @@ describe('Directive tests', () => {
           type Query {
             a: ID @inaccessible
             b: ID @tag(name: "name")
+            c: ID @deprecated(reason: "No longer supported")
           }`,
       ),
     );
     expect(directiveDefinitionByName).toStrictEqual(
       new Map<DirectiveName, DirectiveDefinitionNode>([
+        [DEPRECATED, DEPRECATED_DEFINITION],
         [INACCESSIBLE, INACCESSIBLE_DEFINITION],
         [TAG, TAG_DEFINITION],
       ]),
@@ -634,6 +639,7 @@ const faaaa: Subgraph = {
     type Query {
       a: ID @inaccessible
       b: ID @tag(name: "name")
+      c: ID @deprecated
     }
   `),
 };

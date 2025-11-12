@@ -20,6 +20,7 @@ import {
   OperationTypeNode,
   print,
   SchemaDefinitionNode,
+  SchemaExtensionNode,
   StringValueNode,
   TypeDefinitionNode,
   TypeExtensionNode,
@@ -41,7 +42,6 @@ import {
   SchemaNode,
   setToNamedTypeNodeArray,
   stringToNamedTypeNode,
-  stringToNameNode,
   UnionTypeNode,
 } from '../../ast/utils';
 import {
@@ -262,7 +262,6 @@ import {
   CONSUMER_INACTIVE_THRESHOLD,
   CONSUMER_NAME,
   DEFAULT_EDFS_PROVIDER_ID,
-  DEPRECATED,
   DESCRIPTION_OVERRIDE,
   EDFS_KAFKA_PUBLISH,
   EDFS_KAFKA_SUBSCRIBE,
@@ -308,7 +307,6 @@ import {
   PROVIDER_TYPE_REDIS,
   PUBLISH,
   QUERY,
-  REASON,
   REQUEST,
   REQUIRE_FETCH_REASONS,
   REQUIRES_SCOPES,
@@ -365,7 +363,6 @@ import { ImplementationErrors, InvalidFieldImplementation } from '../../utils/ty
 import { DirectiveName, FieldName, SubgraphName, TypeName } from '../../types/types';
 import { HandleFieldInheritableDirectivesParams, ValidateOneOfDirectiveParams } from './params';
 import { EDFS_NATS_STREAM_CONFIGURATION_DEFINITION } from '../constants/non-directive-definitions';
-import { DEFAULT_DEPRECATION_REASON } from 'graphql/index';
 
 export function normalizeSubgraphFromString(subgraphSDL: string, noLocation = true): NormalizationResult {
   const { error, documentNode } = safeParse(subgraphSDL, noLocation);
@@ -3486,18 +3483,25 @@ export class NormalizationFactory {
     definitions.push(...dependencies);
   }
 
-  #addSchemaDefinitionNode(definitions: Array<DefinitionNode>): void {
+  #addSchemaDefinitionNode(definitions: Array<DefinitionNode>): SchemaDefinitionNode | SchemaExtensionNode | undefined {
     const schemaNode = this.getSchemaNodeByData(this.schemaData);
     if (schemaNode.operationTypes.length > 0) {
       definitions.push(schemaNode);
+      return schemaNode;
+    }
+
+    if (!schemaNode.directives?.length) {
       return;
     }
-    if (schemaNode.directives?.length) {
-      definitions.push({
-        directives: schemaNode.directives,
-        kind: Kind.SCHEMA_EXTENSION,
-      });
-    }
+    return {
+      directives: schemaNode.directives,
+      kind: Kind.SCHEMA_EXTENSION,
+    };
+    // @TODO this currently breaks engine
+    // definitions.push({
+    //   directives: schemaNode.directives,
+    //   kind: Kind.SCHEMA_EXTENSION,
+    // });
   }
 
   normalize(document: DocumentNode): NormalizationResult {
@@ -3507,7 +3511,7 @@ export class NormalizationFactory {
     const definitions: DefinitionNode[] = [];
     this.#addDirectiveDefinitionsToDocument(definitions);
     this.validateDirectives(this.schemaData, SCHEMA);
-    this.#addSchemaDefinitionNode(definitions);
+    const schemaNode = this.#addSchemaDefinitionNode(definitions);
     for (const [parentTypeName, parentData] of this.parentDefinitionDataByTypeName) {
       this.validateDirectives(parentData, parentTypeName);
     }
@@ -3789,6 +3793,7 @@ export class NormalizationFactory {
       overridesByTargetSubgraphName: this.overridesByTargetSubgraphName,
       parentDefinitionDataByTypeName: this.parentDefinitionDataByTypeName,
       persistedDirectiveDefinitionDataByDirectiveName,
+      schemaNode,
       subgraphAST: newAST,
       subgraphString: print(newAST),
       schema: buildASTSchema(newAST, { addInvalidExtensionOrphans: true, assumeValid: true, assumeValidSDL: true }),
