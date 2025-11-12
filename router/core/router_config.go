@@ -43,7 +43,7 @@ type onPublishEventsHooks struct {
 type onReceiveEventsHooks struct {
 	handlers              []func(ctx StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error)
 	maxConcurrentHandlers int
-	timeoutMS             int
+	timeout               time.Duration
 }
 
 type Config struct {

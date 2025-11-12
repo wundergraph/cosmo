@@ -139,12 +139,11 @@ func NewSubscriptionEventUpdater(
 	eventBuilder EventBuilderFn,
 ) SubscriptionEventUpdater {
 	limit := max(hooks.OnReceiveEvents.MaxConcurrentHandlers, 1)
-	duration := hooks.OnReceiveEvents.TimeoutMS
-	if duration == 0 {
-		duration = 5000
+	timeout := hooks.OnReceiveEvents.Timeout
+	if timeout == 0 {
+		timeout = 5 * time.Second
 	}
 
-	timeout := time.Duration(duration) * time.Millisecond
 	return &subscriptionEventUpdater{
 		subscriptionEventConfiguration: cfg,
 		hooks:                          hooks,

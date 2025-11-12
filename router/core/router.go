@@ -253,14 +253,12 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.metricConfig = rmetric.DefaultConfig(Version)
 	}
 
-	// Default value for maxConcurrentHandlers
 	if r.subscriptionHooks.onReceiveEvents.maxConcurrentHandlers == 0 {
 		r.subscriptionHooks.onReceiveEvents.maxConcurrentHandlers = 100
 	}
 
-	// Default value for timeout
-	if r.subscriptionHooks.onReceiveEvents.timeoutMS == 0 {
-		r.subscriptionHooks.onReceiveEvents.timeoutMS = 1000 // 1 second
+	if r.subscriptionHooks.onReceiveEvents.timeout == 0 {
+		r.subscriptionHooks.onReceiveEvents.timeout = 5 * time.Second
 	}
 
 	if r.corsOptions == nil {
@@ -2145,7 +2143,7 @@ func WithDemoMode(demoMode bool) Option {
 func WithSubscriptionHooks(cfg config.SubscriptionHooksConfiguration) Option {
 	return func(r *Router) {
 		r.subscriptionHooks.onReceiveEvents.maxConcurrentHandlers = cfg.OnReceiveEvents.MaxConcurrentHandlers
-		r.subscriptionHooks.onReceiveEvents.timeoutMS = cfg.OnReceiveEvents.HandlerTimeout
+		r.subscriptionHooks.onReceiveEvents.timeout = cfg.OnReceiveEvents.HandlerTimeout
 	}
 }
 

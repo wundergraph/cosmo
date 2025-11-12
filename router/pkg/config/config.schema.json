@@ -2322,10 +2322,9 @@
                   "default": 100
                 },
                 "handler_timeout": {
-                  "type": "integer",
-                  "description": "The amount of time in milliseconds that OnReceiveEvents handlers can run in total for a single batch of events.",
-                  "minimum": 1,
-                  "default": 1000
+                  "type": "string",
+                  "description": "The amount of time that OnReceiveEvents handlers can run in total for a single batch of events. Specify as a duration string (e.g., '5s', '1m', '500ms').",
+                  "default": "5s"
                 }
               }
             }

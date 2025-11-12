@@ -650,8 +650,8 @@ type SubscriptionHooksConfiguration struct {
 }
 
 type OnReceiveEventsConfiguration struct {
-	MaxConcurrentHandlers int `yaml:"max_concurrent_handlers" envDefault:"100"`
-	HandlerTimeout        int `yaml:"handler_timeout" envDefault:"1000"`
+	MaxConcurrentHandlers int           `yaml:"max_concurrent_handlers" envDefault:"100"`
+	HandlerTimeout        time.Duration `yaml:"handler_timeout" envDefault:"5s"`
 }
 
 type Cluster struct {

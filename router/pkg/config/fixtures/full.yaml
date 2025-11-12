@@ -333,7 +333,7 @@ events:
   subscription_hooks:
     on_receive_events:
       max_concurrent_handlers: 100
-      handler_timeout: 1000
+      handler_timeout: 5s
 
 engine:
   enable_single_flight: true

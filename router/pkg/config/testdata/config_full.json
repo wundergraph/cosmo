@@ -645,7 +645,7 @@
     "SubscriptionHooks": {
       "OnReceiveEvents": {
         "MaxConcurrentHandlers": 100,
-        "HandlerTimeout": 1000
+        "HandlerTimeout": 5000000000
       }
     }
   },

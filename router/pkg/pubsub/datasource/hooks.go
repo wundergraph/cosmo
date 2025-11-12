@@ -2,6 +2,7 @@ package datasource
 
 import (
 	"context"
+	"time"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
@@ -33,5 +34,5 @@ type OnPublishEventsHooks struct {
 type OnReceiveEventsHooks struct {
 	Handlers              []OnReceiveEventsFn
 	MaxConcurrentHandlers int
-	TimeoutMS               int
+	Timeout               time.Duration
 }

@@ -510,7 +510,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 			OnReceiveEvents: pubsub_datasource.OnReceiveEventsHooks{
 				Handlers:              onReceiveEventsFns,
 				MaxConcurrentHandlers: l.subscriptionHooks.onReceiveEvents.maxConcurrentHandlers,
-				TimeoutMS:             l.subscriptionHooks.onReceiveEvents.timeoutMS,
+				Timeout:               l.subscriptionHooks.onReceiveEvents.timeout,
 			},
 		},
 	)
