@@ -603,7 +603,7 @@ async function generateProtoAndMapping({
     return {
       mapping: null,
       proto: mergedProto,
-      lockData: currentLockData,
+      lockData: currentLockData ?? null,
       isOperationsMode: true,
     };
   } else {

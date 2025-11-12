@@ -145,16 +145,6 @@ const result = compileOperationsToProto(operation, schema, {
 });
 ```
 
-See [OPERATIONS_TO_PROTO.md](OPERATIONS_TO_PROTO.md) for:
-- Complete configuration options
-- Operation type prefixing
-- Fragment support
-- Recursion protection
-- Query idempotency
-- Subscription streaming
-- Field number stability
-- Limitations and best practices
-
 ### Generating Mapping Definitions
 
 ```typescript
