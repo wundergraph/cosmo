@@ -18,4 +18,5 @@ type Hooks struct {
 	OnReceiveEvents                []OnReceiveEventsFn
 	OnPublishEvents                []OnPublishEventsFn
 	MaxConcurrentOnReceiveHandlers int
+	EventReceiveTimeout            int // timeout in milliseconds
 }

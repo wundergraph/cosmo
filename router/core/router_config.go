@@ -31,6 +31,7 @@ type subscriptionHooks struct {
 	onPublishEvents             []func(ctx StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error)
 	onReceiveEvents             []func(ctx StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error)
 	maxConcurrentOnReceiveHooks int
+	eventReceiveTimeout         int // timeout in milliseconds
 }
 
 type Config struct {

@@ -28,6 +28,7 @@ type subscriptionEventUpdater struct {
 	logger                         *zap.Logger
 	eventBuilder                   EventBuilderFn
 	semaphore                      chan struct{}
+	timeout                        time.Duration
 }
 
 func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
@@ -40,8 +41,7 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 
 	subscriptions := s.eventUpdater.Subscriptions()
 	wg := sync.WaitGroup{}
-	timeout := time.Second
-	deadline := time.Now().Add(timeout)
+	deadline := time.Now().Add(s.timeout)
 
 	done := make(chan struct{})
 
@@ -62,7 +62,7 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 	case <-done:
 		s.logger.Debug("All subscription updates completed")
 		// All subscriptions completed successfully
-	case <-time.After(timeout + time.Millisecond*100):
+	case <-time.After(s.timeout + time.Millisecond*50):
 		// Timeout exceeded, some subscription updates may still be running.
 		// We can't stop them but we will also not wait for them, basically abandoning them.
 		// They will continue to hold their semaphore slots until they complete,
@@ -139,6 +139,7 @@ func NewSubscriptionEventUpdater(
 	eventBuilder EventBuilderFn,
 ) SubscriptionEventUpdater {
 	limit := max(hooks.MaxConcurrentOnReceiveHandlers, 1)
+	timeout := time.Duration(hooks.EventReceiveTimeout) * time.Millisecond
 	return &subscriptionEventUpdater{
 		subscriptionEventConfiguration: cfg,
 		hooks:                          hooks,
@@ -146,5 +147,6 @@ func NewSubscriptionEventUpdater(
 		logger:                         logger,
 		eventBuilder:                   eventBuilder,
 		semaphore:                      make(chan struct{}, limit),
+		timeout:                        timeout,
 	}
 }

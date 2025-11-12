@@ -611,7 +611,9 @@ func TestReceiveHook(t *testing.T) {
 						core.WithModulesConfig(cfg.Modules),
 						core.WithCustomModules(&stream_receive.StreamReceiveModule{}),
 						core.WithSubscriptionHooks(config.SubscriptionHooksConfiguration{
-							MaxConcurrentEventReceiveHandlers: tc.maxConcurrent,
+							OnReceiveEvents: config.OnReceiveEventsConfiguration{
+								MaxConcurrentHandlers: tc.maxConcurrent,
+							},
 						}),
 					},
 					LogObservation: testenv.LogObservationConfig{

@@ -646,7 +646,12 @@ type EventsConfiguration struct {
 }
 
 type SubscriptionHooksConfiguration struct {
-	MaxConcurrentEventReceiveHandlers int `yaml:"max_concurrent_event_receive_handlers" envDefault:"100"`
+	OnReceiveEvents OnReceiveEventsConfiguration `yaml:"on_receive_events"`
+}
+
+type OnReceiveEventsConfiguration struct {
+	MaxConcurrentHandlers int `yaml:"max_concurrent_handlers" envDefault:"100"`
+	HandlerTimeout        int `yaml:"handler_timeout" envDefault:"1000"`
 }
 
 type Cluster struct {

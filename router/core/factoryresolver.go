@@ -505,6 +505,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 			OnReceiveEvents:                onReceiveEventsFns,
 			OnPublishEvents:                onPublishEventsFns,
 			MaxConcurrentOnReceiveHandlers: l.subscriptionHooks.maxConcurrentOnReceiveHooks,
+			EventReceiveTimeout:            l.subscriptionHooks.eventReceiveTimeout,
 		},
 	)
 	if err != nil {

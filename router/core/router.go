@@ -258,6 +258,11 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.subscriptionHooks.maxConcurrentOnReceiveHooks = 100
 	}
 
+	// Default value for eventReceiveTimeout
+	if r.subscriptionHooks.eventReceiveTimeout == 0 {
+		r.subscriptionHooks.eventReceiveTimeout = 1000 // 1 second
+	}
+
 	if r.corsOptions == nil {
 		r.corsOptions = CorsDefaultOptions()
 	}
@@ -2139,7 +2144,8 @@ func WithDemoMode(demoMode bool) Option {
 
 func WithSubscriptionHooks(cfg config.SubscriptionHooksConfiguration) Option {
 	return func(r *Router) {
-		r.subscriptionHooks.maxConcurrentOnReceiveHooks = cfg.MaxConcurrentEventReceiveHandlers
+		r.subscriptionHooks.maxConcurrentOnReceiveHooks = cfg.OnReceiveEvents.MaxConcurrentHandlers
+		r.subscriptionHooks.eventReceiveTimeout = cfg.OnReceiveEvents.HandlerTimeout
 	}
 }
 
