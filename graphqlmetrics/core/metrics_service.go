@@ -163,6 +163,7 @@ func (s *MetricsService) Shutdown(timeout time.Duration) {
 
 // buildOperationCacheKey creates a composite key that uniquely identifies an operation
 // across organizations, federated graphs, and operation details to prevent collisions.
+// Matches the primary key used in the operation storage database (clickhouse).
 // Uses FNV-1a hash for efficient cache lookups with minimal memory overhead.
 func buildOperationCacheKey(federatedGraphID, organizationID, operationHash, operationName, operationType string) uint64 {
 	h := fnv.New64a()
