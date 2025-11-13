@@ -1,18 +1,30 @@
 import {
+  DEPRECATED,
+  DEPRECATED_DEFINITION,
+  DirectiveName,
   FIRST_ORDINAL,
+  INACCESSIBLE,
+  INACCESSIBLE_DEFINITION,
   invalidArgumentValueErrorMessage,
   invalidDirectiveError,
   NormalizationFailure,
   NormalizationSuccess,
   normalizeSubgraph,
-  normalizeSubgraphFromString,
   parse,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   Subgraph,
+  TAG,
+  TAG_DEFINITION,
 } from '../../../src';
 import { describe, expect, test } from 'vitest';
-import { INACCESSIBLE_DIRECTIVE, SCHEMA_QUERY_DEFINITION } from '../utils/utils';
-import { federateSubgraphsSuccess, normalizeString, schemaToSortedNormalizedString } from '../../utils/utils';
+import { INACCESSIBLE_DIRECTIVE, SCHEMA_QUERY_DEFINITION, TAG_DIRECTIVE } from '../utils/utils';
+import {
+  federateSubgraphsSuccess,
+  normalizeString,
+  normalizeSubgraphSuccess,
+  schemaToSortedNormalizedString,
+} from '../../utils/utils';
+import { DirectiveDefinitionNode } from 'graphql/language';
 
 describe('Directive tests', () => {
   describe('Normalization tests', () => {
@@ -97,14 +109,8 @@ describe('Directive tests', () => {
     });
 
     test('that an object can be coerced into a List of Input Object type', () => {
-      const result = normalizeSubgraph(
-        ne.definitions,
-        ne.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationSuccess;
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.schema)).toBe(
+      const { schema, warnings } = normalizeSubgraphSuccess(ne, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
           SCHEMA_QUERY_DEFINITION +
             `
@@ -115,12 +121,12 @@ describe('Directive tests', () => {
             }
             
             type Query {
-              dummy: String! @z(list: {name: String})
+              dummy: String! @z(list: {name: "String"})
             }
         `,
         ),
       );
-      expect(result.warnings).toHaveLength(0);
+      expect(warnings).toHaveLength(0);
     });
 
     test('that an error is returned if an @inaccessible Enum attempts to coerce into a List type', () => {
@@ -278,27 +284,8 @@ describe('Directive tests', () => {
     });
 
     test('that directives declared after schema definitions and extensions are still valid #1', () => {
-      const result = normalizeSubgraphFromString(
-        `
-        schema @directiveOne(argOne: "value") {
-          query: Queries
-        }
-        
-        type Queries {
-          dummy: String!
-        }
-      
-        extend schema @directiveTwo(argOne: "value")
-        
-        directive @directiveOne(argOne: String!) on SCHEMA
-        
-        directive @directiveTwo(argOne: String!) on SCHEMA
-      `,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationSuccess;
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.schema)).toBe(
+      const { schema } = normalizeSubgraphSuccess(naaaa, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
           `
         schema @directiveOne(argOne: "value") @directiveTwo(argOne: "value") {
@@ -316,26 +303,28 @@ describe('Directive tests', () => {
       );
     });
 
-    test('that directives declared after schema definitions and extensions are still valid #2', () => {
-      const result = normalizeSubgraphFromString(
-        `
-        extend schema @directiveOne(argOne: "value")
-        
-        extend schema @directiveTwo(argOne: "value")
-        
-        directive @directiveOne(argOne: String!) on SCHEMA
-        
-        directive @directiveTwo(argOne: String!) on SCHEMA
-      `,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationSuccess;
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.schema)).toBe(
+    // Schema extensions cannot be added to the SDL currently because it breaks the engine
+    test.skip('that directives declared after schema definitions and extensions are still valid #2', () => {
+      const { schema } = normalizeSubgraphSuccess(nbaaa, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
           `
-        directive @directiveOne(argOne: String!) on SCHEMA
-        directive @directiveTwo(argOne: String!) on SCHEMA`,
+          extend schema @directiveOne(argOne: "value") @directiveTwo(argOne: "value")
+          directive @directiveOne(argOne: String!) on SCHEMA
+          directive @directiveTwo(argOne: String!) on SCHEMA`,
+        ),
+      );
+    });
+
+    test('that @deprecated  propagates its default argument if none is provided', () => {
+      const { schema } = normalizeSubgraphSuccess(ncaaa, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+          type Query {
+            a: ID @deprecated(reason: "No longer supported")
+          }`,
         ),
       );
     });
@@ -397,6 +386,33 @@ describe('Directive tests', () => {
         },
       ],
       ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+  });
+
+  test('that directive definitions are added to federation result', () => {
+    const { directiveDefinitionByName, federatedGraphSchema } = federateSubgraphsSuccess(
+      [faaaa],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+      normalizeString(
+        SCHEMA_QUERY_DEFINITION +
+          INACCESSIBLE_DIRECTIVE +
+          TAG_DIRECTIVE +
+          `
+          type Query {
+            a: ID @inaccessible
+            b: ID @tag(name: "name")
+            c: ID @deprecated(reason: "No longer supported")
+          }`,
+      ),
+    );
+    expect(directiveDefinitionByName).toStrictEqual(
+      new Map<DirectiveName, DirectiveDefinitionNode>([
+        [DEPRECATED, DEPRECATED_DEFINITION],
+        [INACCESSIBLE, INACCESSIBLE_DEFINITION],
+        [TAG, TAG_DEFINITION],
+      ]),
     );
   });
 });
@@ -461,7 +477,7 @@ const ne: Subgraph = {
     directive @z(list: [[Input!]!]!) on FIELD_DEFINITION
     
     type Query {
-      dummy: String! @z(list: { name: String })
+      dummy: String! @z(list: { name: "String" })
     }
     
     input Input {
@@ -573,4 +589,57 @@ const subgraphB: Subgraph = {
   type Query {
     field: String!
   }`),
+};
+
+const naaaa: Subgraph = {
+  name: 'naaaa',
+  url: '',
+  definitions: parse(`
+    schema @directiveOne(argOne: "value") @directiveTwo(argOne: "value") {
+      query: Queries
+    }
+    
+    directive @directiveOne(argOne: String!) on SCHEMA
+    directive @directiveTwo(argOne: String!) on SCHEMA
+    
+    type Queries {
+      dummy: String!
+    }
+  `),
+};
+
+const nbaaa: Subgraph = {
+  name: 'nbaaa',
+  url: '',
+  definitions: parse(`
+    extend schema @directiveOne(argOne: "value")
+    
+    extend schema @directiveTwo(argOne: "value")
+    
+    directive @directiveOne(argOne: String!) on SCHEMA
+    
+    directive @directiveTwo(argOne: String!) on SCHEMA
+  `),
+};
+
+const ncaaa: Subgraph = {
+  name: 'ncaaa',
+  url: '',
+  definitions: parse(`
+    type Query {
+      a: ID @deprecated
+    }
+  `),
+};
+
+const faaaa: Subgraph = {
+  name: 'faaaa',
+  url: '',
+  definitions: parse(`
+    type Query {
+      a: ID @inaccessible
+      b: ID @tag(name: "name")
+      c: ID @deprecated
+    }
+  `),
 };
