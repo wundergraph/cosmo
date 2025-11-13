@@ -2920,7 +2920,6 @@ message GetOperationsResponse {
       float errorPercentage = 8;
     }
   }
-
   Response response = 1;
   repeated Operation operations = 2;
 }

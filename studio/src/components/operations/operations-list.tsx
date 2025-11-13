@@ -23,10 +23,12 @@ interface Operation {
 
 interface OperationsListProps {
   operations: Operation[];
-  selectedOperation: {
-    hash: string;
-    name: string;
-  } | undefined;
+  selectedOperation:
+    | {
+        hash: string;
+        name: string;
+      }
+    | undefined;
   onOperationSelect: (operationHash: string, operationName: string) => void;
   isLoading?: boolean;
   searchQuery?: string;
@@ -81,9 +83,10 @@ const OperationItem = ({
     const safeQuery = _.escapeRegExp(query);
     const regex = new RegExp(`(${safeQuery})`, "gi");
     const parts = text.split(regex);
+    const queryLower = query.toLowerCase();
 
     return parts.map((part, index) =>
-      regex.test(part) ? (
+      part.toLowerCase() === queryLower ? (
         <span key={index} className="bg-yellow-200 dark:bg-yellow-900">
           {part}
         </span>

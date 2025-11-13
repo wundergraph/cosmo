@@ -68,8 +68,10 @@ export const useOperationsFilters = (filters: AnalyticsViewResultFilter[]) => {
         const index = newSelected.findIndex((f) => f.id === filter.columnName);
 
         if (!value || value.length === 0) {
-          newSelected.splice(index, 1);
-        } else if (newSelected[index]) {
+          if (index !== -1) {
+            newSelected.splice(index, 1);
+          }
+        } else if (index !== -1 && newSelected[index]) {
           newSelected[index].value = value;
         } else {
           newSelected.push({

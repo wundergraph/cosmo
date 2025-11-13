@@ -130,8 +130,10 @@ export const useMetricsFilters = (filters: AnalyticsViewResultFilter[]) => {
         const index = newSelected.findIndex((f) => f.id === filter.columnName);
 
         if (!value || value.length === 0) {
-          newSelected.splice(index, 1);
-        } else if (newSelected[index]) {
+          if (index !== -1) {
+            newSelected.splice(index, 1);
+          }
+        } else if (index !== -1 && newSelected[index]) {
           newSelected[index].value = value;
         } else {
           newSelected.push({
@@ -255,7 +257,9 @@ const TopList: React.FC<{
   queryParams?: Record<string, string | number>;
 }> = ({ title, items, formatter, isSubgraphAnalytics, queryParams = {} }) => {
   const router = useRouter();
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const organizationSlug = useCurrentOrganization()?.slug;
 
   const range = router.query.range;

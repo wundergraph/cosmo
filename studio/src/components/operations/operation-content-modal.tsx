@@ -44,7 +44,14 @@ export const OperationContentModal = ({
   );
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) {
+          onClose();
+        }
+      }}
+    >
       <DialogContent className="flex max-h-[80vh] max-w-4xl flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle>Operation Content</DialogTitle>

@@ -606,10 +606,17 @@ const OperationsPage: NextPageWithLayout = () => {
   // Clear operation selection when deprecated fields filter is enabled
   useEffect(() => {
     if (includeDeprecatedFields && selectedOperation) {
+      let filterState: Array<{ id: string }>;
+      try {
+        filterState = JSON.parse((router.query.filterState as string) || "[]");
+      } catch {
+        filterState = [];
+      }
+
       // Check if operation filters actually exist before trying to remove them
-      // This prevents unnecessary applyParams calls when currentFilterState changes
+      // This prevents unnecessary applyParams calls when filterState changes
       // for other reasons (e.g., other filters) but operation filters are already removed
-      const hasOperationFilters = currentFilterState.some(
+      const hasOperationFilters = filterState.some(
         (f: { id: string }) =>
           f.id === "operationHash" || f.id === "operationName",
       );
@@ -617,7 +624,7 @@ const OperationsPage: NextPageWithLayout = () => {
       // Only update if operation filters exist (prevents unnecessary updates)
       if (hasOperationFilters) {
         // Remove operationHash and operationName filters from filterState
-        const filteredState = currentFilterState.filter(
+        const filteredState = filterState.filter(
           (f: { id: string }) =>
             f.id !== "operationHash" && f.id !== "operationName",
         );
@@ -627,12 +634,8 @@ const OperationsPage: NextPageWithLayout = () => {
         });
       }
     }
-  }, [
-    includeDeprecatedFields,
-    selectedOperation,
-    currentFilterState,
-    applyParams,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [includeDeprecatedFields, selectedOperation, applyParams]);
 
   // Only show fullscreen loader on initial load, not during refetches
   if (isLoadingOperations && !operationsData) {
