@@ -70,7 +70,8 @@ export function getOperationClients(
     const parsedDateRange = isoDateRangeToTimestamps(validatedDateRange, range || 24);
     const [startTimestamp, endTimestamp] = getDateRange(parsedDateRange);
 
-    const operationNameFilter = req.operationName === undefined ? '' : `AND OperationName = '${req.operationName.replace(/'/g, "''")}'`;
+    const operationNameFilter =
+      req.operationName === undefined ? '' : `AND OperationName = '${req.operationName.replace(/'/g, "''")}'`;
 
     const query = `
     WITH
