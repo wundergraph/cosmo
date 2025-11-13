@@ -113,9 +113,16 @@ type Prometheus struct {
 }
 
 type PrometheusSchemaFieldUsage struct {
-	Enabled             bool    `yaml:"enabled" envDefault:"false" env:"ENABLED"`
-	IncludeOperationSha bool    `yaml:"include_operation_sha" envDefault:"false" env:"INCLUDE_OPERATION_SHA"`
-	SampleRate          float64 `yaml:"sample_rate" envDefault:"1.0" env:"SAMPLE_RATE"`
+	Enabled             bool                               `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	IncludeOperationSha bool                               `yaml:"include_operation_sha" envDefault:"false" env:"INCLUDE_OPERATION_SHA"`
+	Exporter            PrometheusSchemaFieldUsageExporter `yaml:"exporter" envPrefix:"EXPORTER_"`
+}
+
+type PrometheusSchemaFieldUsageExporter struct {
+	BatchSize     int           `yaml:"batch_size" envDefault:"8192" env:"BATCH_SIZE"`
+	QueueSize     int           `yaml:"queue_size" envDefault:"16384" env:"QUEUE_SIZE"`
+	Interval      time.Duration `yaml:"interval" envDefault:"10s" env:"INTERVAL"`
+	ExportTimeout time.Duration `yaml:"export_timeout" envDefault:"10s" env:"EXPORT_TIMEOUT"`
 }
 
 type MetricsOTLPExporter struct {

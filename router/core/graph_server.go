@@ -36,6 +36,7 @@ import (
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/circuit"
 	"github.com/wundergraph/cosmo/router/internal/expr"
+	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
 	rjwt "github.com/wundergraph/cosmo/router/internal/jwt"
 	rmiddleware "github.com/wundergraph/cosmo/router/internal/middleware"
 	"github.com/wundergraph/cosmo/router/internal/recoveryhandler"
@@ -518,6 +519,7 @@ type graphMux struct {
 	prometheusCacheMetrics     *rmetric.CacheMetrics
 	otelCacheMetrics           *rmetric.CacheMetrics
 	streamMetricStore          rmetric.StreamMetricStore
+	prometheusMetricsExporter  *graphqlmetrics.PrometheusMetricsExporter
 }
 
 // buildOperationCaches creates the caches for the graph mux.
@@ -765,6 +767,12 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 		}
 	}
 
+	if s.prometheusMetricsExporter != nil {
+		if aErr := s.prometheusMetricsExporter.Shutdown(ctx); aErr != nil {
+			err = errors.Join(err, aErr)
+		}
+	}
+
 	if err != nil {
 		return fmt.Errorf("shutdown graph mux: %w", err)
 	}
@@ -912,16 +920,40 @@ func (s *graphServer) buildGraphMux(
 		return nil, err
 	}
 
-	metrics := NewRouterMetrics(&routerMetricsConfig{
-		metrics:             gm.metricStore,
-		gqlMetricsExporter:  s.gqlMetricsExporter,
-		exportEnabled:       s.graphqlMetricsConfig.Enabled,
-		routerConfigVersion: opts.RouterConfigVersion,
-		logger:              s.logger,
+	// Create Prometheus metrics exporter for schema field usage if enabled
+	if s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled {
+		cfg := s.metricConfig.Prometheus.PromSchemaFieldUsage
+		settings := &graphqlmetrics.ExporterSettings{
+			BatchSize:     cfg.Exporter.BatchSize,
+			QueueSize:     cfg.Exporter.QueueSize,
+			Interval:      cfg.Exporter.Interval,
+			ExportTimeout: cfg.Exporter.ExportTimeout,
+			RetryOptions: graphqlmetrics.RetryOptions{
+				Enabled:     false, // Retry is disabled for Prometheus metrics
+				MaxRetry:    1,     // Provide valid defaults even when disabled
+				MaxDuration: time.Second * 1,
+				Interval:    time.Millisecond * 100,
+			},
+		}
+		promExporter, err := graphqlmetrics.NewPrometheusMetricsExporter(
+			s.logger,
+			gm.metricStore,
+			cfg.IncludeOperationSha,
+			settings,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create prometheus metrics exporter: %w", err)
+		}
+		gm.prometheusMetricsExporter = promExporter
+	}
 
-		promSchemaUsageEnabled:      s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled,
-		promSchemaUsageIncludeOpSha: s.metricConfig.Prometheus.PromSchemaFieldUsage.IncludeOperationSha,
-		promSchemaUsageSampleRate:   s.metricConfig.Prometheus.PromSchemaFieldUsage.SampleRate,
+	metrics := NewRouterMetrics(&routerMetricsConfig{
+		metrics:                   gm.metricStore,
+		gqlMetricsExporter:        s.gqlMetricsExporter,
+		prometheusMetricsExporter: gm.prometheusMetricsExporter,
+		exportEnabled:             s.graphqlMetricsConfig.Enabled,
+		routerConfigVersion:       opts.RouterConfigVersion,
+		logger:                    s.logger,
 	})
 
 	baseLogFields := []zapcore.Field{

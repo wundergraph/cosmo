@@ -2,29 +2,26 @@ package graphqlmetrics
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
-	"connectrpc.com/connect"
 	"github.com/cloudflare/backoff"
-	graphqlmetrics "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
-	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 )
 
-type Exporter struct {
-	settings *ExporterSettings
-	logger   *zap.Logger
-	client   graphqlmetricsv1connect.GraphQLMetricsServiceClient
-	apiToken string
-
+// Exporter is a generic, thread-safe batch exporter that queues items and sends them
+// to a sink in batches at regular intervals or when the batch size is reached.
+// It supports configurable retry logic and graceful shutdown.
+type Exporter[T any] struct {
+	settings          *ExporterSettings
+	logger            *zap.Logger
+	sink              Sink[T]
+	isRetryableError  SinkErrorHandler
 	shutdownSignal    chan struct{}
 	acceptTrafficSema chan struct{}
-
-	queue           chan *graphqlmetrics.SchemaUsageInfo
-	inflightBatches *atomic.Int64
+	queue             chan T
+	inflightBatches   *atomic.Int64
 
 	// exportRequestContext is used to cancel all requests that started before the shutdown
 	exportRequestContext context.Context
@@ -78,17 +75,28 @@ func NewDefaultExporterSettings() *ExporterSettings {
 	}
 }
 
-// NewExporter creates a new GraphQL metrics exporter. The collectorEndpoint is the endpoint to which the metrics
-// are sent. The apiToken is the token used to authenticate with the collector. The collector supports Brotli compression
-// and retries on failure. Underling queue implementation sends batches of metrics at the specified interval and batch size.
-func NewExporter(logger *zap.Logger, client graphqlmetricsv1connect.GraphQLMetricsServiceClient, apiToken string, settings *ExporterSettings) (*Exporter, error) {
+// NewExporter creates a new generic batch exporter.
+// The sink is responsible for actually sending the batches to their destination.
+// The isRetryableError function determines whether failed exports should be retried.
+// If isRetryableError is nil, all errors are considered retryable.
+func NewExporter[T any](logger *zap.Logger, sink Sink[T], isRetryableError SinkErrorHandler, settings *ExporterSettings) (*Exporter[T], error) {
+	if sink == nil {
+		return nil, fmt.Errorf("sink cannot be nil")
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
-	e := &Exporter{
-		logger:                  logger.With(zap.String("component", "graphqlmetrics_exporter")),
+
+	// Default error handler treats all errors as retryable
+	if isRetryableError == nil {
+		isRetryableError = func(err error) bool { return true }
+	}
+
+	e := &Exporter[T]{
+		logger:                  logger.With(zap.String("component", "exporter")),
 		settings:                settings,
-		client:                  client,
-		apiToken:                apiToken,
-		queue:                   make(chan *graphqlmetrics.SchemaUsageInfo, settings.QueueSize),
+		sink:                    sink,
+		isRetryableError:        isRetryableError,
+		queue:                   make(chan T, settings.QueueSize),
 		shutdownSignal:          make(chan struct{}),
 		acceptTrafficSema:       make(chan struct{}),
 		inflightBatches:         atomic.NewInt64(0),
@@ -102,39 +110,39 @@ func NewExporter(logger *zap.Logger, client graphqlmetricsv1connect.GraphQLMetri
 	return e, nil
 }
 
-func (e *Exporter) validate() error {
+func (e *Exporter[T]) validate() error {
 	if e.settings.BatchSize <= 0 {
-		return errors.New("batch size must be positive")
+		return fmt.Errorf("batch size must be positive")
 	}
 
 	if e.settings.QueueSize <= 0 {
-		return errors.New("queue size must be positive")
+		return fmt.Errorf("queue size must be positive")
 	}
 
 	if e.settings.Interval <= 0 {
-		return errors.New("interval must be positive")
+		return fmt.Errorf("interval must be positive")
 	}
 
 	if e.settings.ExportTimeout <= 0 {
-		return errors.New("export timeout must be positive")
+		return fmt.Errorf("export timeout must be positive")
 	}
 
 	if e.settings.RetryOptions.MaxDuration <= 0 {
-		return errors.New("retry max duration must be positive")
+		return fmt.Errorf("retry max duration must be positive")
 	}
 
 	if e.settings.RetryOptions.Interval <= 0 {
-		return errors.New("retry interval must be positive")
+		return fmt.Errorf("retry interval must be positive")
 	}
 
 	if e.settings.RetryOptions.MaxRetry <= 0 {
-		return errors.New("retry max retry must be positive")
+		return fmt.Errorf("retry max retry must be positive")
 	}
 
 	return nil
 }
 
-func (e *Exporter) acceptTraffic() bool {
+func (e *Exporter[T]) acceptTraffic() bool {
 	// while the channel is not closed, the select will always return the default case
 	// once it's closed, the select will always return _,false (closed channel) from the channel
 	select {
@@ -145,25 +153,37 @@ func (e *Exporter) acceptTraffic() bool {
 	}
 }
 
-func (e *Exporter) RecordUsage(usageInfo *graphqlmetrics.SchemaUsageInfo, synchronous bool) (ok bool) {
+// Record adds an item to the export queue.
+// If synchronous is true, the item is sent immediately in the current goroutine.
+// Otherwise, it's added to the queue for batch processing.
+// Returns false if the queue is full or if the exporter is shutting down.
+func (e *Exporter[T]) Record(item T, synchronous bool) (ok bool) {
 	if synchronous {
-		_ = e.sendItems([]*graphqlmetrics.SchemaUsageInfo{usageInfo})
+		var batch []T
+		batch = append(batch, item)
+		_ = e.exportBatch(batch)
 		return true
 	}
 	if !e.acceptTraffic() {
 		return false
 	}
 	select {
-	case e.queue <- usageInfo:
+	case e.queue <- item:
 		return true
 	default:
-		e.logger.Warn("RecordAsync: Queue is full, dropping item")
+		e.logger.Warn("Record: Queue is full, dropping item")
 		return false
 	}
 }
 
-func (e *Exporter) sendItems(items []*graphqlmetrics.SchemaUsageInfo) error {
-	e.logger.Debug("sending batch", zap.Int("size", len(items)))
+// exportBatch sends a batch of items to the sink with timeout handling.
+func (e *Exporter[T]) exportBatch(batch []T) error {
+	if len(batch) == 0 {
+		return nil
+	}
+
+	e.logger.Debug("Exporting batch", zap.Int("size", len(batch)))
+
 	ctx := e.exportRequestContext
 	if e.settings.ExportTimeout > 0 {
 		var cancel context.CancelFunc
@@ -171,80 +191,49 @@ func (e *Exporter) sendItems(items []*graphqlmetrics.SchemaUsageInfo) error {
 		defer cancel()
 	}
 
-	req := connect.NewRequest(&graphqlmetrics.PublishGraphQLRequestMetricsRequest{
-		SchemaUsage: items,
-	})
-
-	req.Header().Set("Authorization", fmt.Sprintf("Bearer %s", e.apiToken))
-
-	_, err := e.client.PublishGraphQLMetrics(ctx, req)
+	err := e.sink.Export(ctx, batch)
 	if err != nil {
-		e.logger.Debug("Failed to export batch", zap.Error(err), zap.Int("batch_size", len(items)))
+		e.logger.Debug("Failed to export batch", zap.Error(err), zap.Int("batch_size", len(batch)))
 		return err
 	}
 
-	e.logger.Debug("Successfully exported batch", zap.Int("batch_size", len(items)))
-
+	e.logger.Debug("Successfully exported batch", zap.Int("batch_size", len(batch)))
 	return nil
 }
 
-func (e *Exporter) sendAggregation(ctx context.Context, request *graphqlmetrics.PublishAggregatedGraphQLRequestMetricsRequest) error {
-	e.logger.Debug("sendAggregation", zap.Int("size", len(request.Aggregation)))
-	if e.settings.ExportTimeout > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, e.settings.ExportTimeout)
-		defer cancel()
-	}
-
-	req := connect.NewRequest(request)
-
-	req.Header().Set("Authorization", fmt.Sprintf("Bearer %s", e.apiToken))
-
-	_, err := e.client.PublishAggregatedGraphQLMetrics(ctx, req)
-	if err != nil {
-		e.logger.Debug("sendAggregation failed", zap.Error(err), zap.Int("batch_size", len(request.Aggregation)))
-		return err
-	}
-
-	e.logger.Debug("sendAggregation success", zap.Int("batch_size", len(request.Aggregation)))
-
-	return nil
-}
-
-func (e *Exporter) prepareAndSendBatch(batch []*graphqlmetrics.SchemaUsageInfo) {
-	e.logger.Debug("Exporter.prepareAndSendBatch", zap.Int("batch_size", len(batch)))
+// prepareAndSendBatch starts a goroutine to export the batch with retry logic.
+func (e *Exporter[T]) prepareAndSendBatch(batch []T) {
+	e.logger.Debug("Preparing to send batch", zap.Int("batch_size", len(batch)))
 	e.inflightBatches.Inc()
 	go func() {
 		defer e.inflightBatches.Dec()
-		e.aggregateAndSendBatch(batch)
+		e.exportBatchWithRetry(batch)
 	}()
 }
 
-// export sends the batch to the configured endpoint.
-func (e *Exporter) aggregateAndSendBatch(batch []*graphqlmetrics.SchemaUsageInfo) {
+// exportBatchWithRetry attempts to export a batch with exponential backoff retry logic.
+func (e *Exporter[T]) exportBatchWithRetry(batch []T) {
 	b := backoff.New(e.settings.RetryOptions.MaxDuration, e.settings.RetryOptions.Interval)
 	defer b.Reset()
 
-	request := AggregateSchemaUsageInfoBatch(batch)
-
-	err := e.sendAggregation(e.exportRequestContext, request)
+	err := e.exportBatch(batch)
 	if err == nil {
 		return
 	}
 
-	var connectErr *connect.Error
-	if errors.As(err, &connectErr) && connectErr.Code() == connect.CodeUnauthenticated {
-		e.logger.Error("Failed to export batch due to unauthenticated error, not retrying",
+	// Check if error is retryable
+	if !e.isRetryableError(err) {
+		e.logger.Error("Failed to export batch with non-retryable error",
 			zap.Error(err),
-			zap.Int("batch_size", len(request.Aggregation)),
+			zap.Int("batch_size", len(batch)),
 		)
 		return
 	}
 
 	if !e.settings.RetryOptions.Enabled {
-		e.logger.Error("Failed to export batch",
+		e.logger.Error("Failed to export batch, retries disabled",
 			zap.Error(err),
-			zap.Int("batch_size", len(request.Aggregation)),
+			zap.Int("batch_size", len(batch)),
 		)
 		return
 	}
@@ -252,45 +241,48 @@ func (e *Exporter) aggregateAndSendBatch(batch []*graphqlmetrics.SchemaUsageInfo
 	var retry int
 	var lastErr error
 
-	for retry <= e.settings.RetryOptions.MaxRetry {
-
+	for retry < e.settings.RetryOptions.MaxRetry {
 		retry++
 
 		// Wait for the specified backoff period
 		sleepDuration := b.Duration()
 
-		e.logger.Debug(fmt.Sprintf("Retrying export in %s ...", sleepDuration.String()),
-			zap.Int("batch_size", len(request.Aggregation)),
+		e.logger.Debug("Retrying export after backoff",
+			zap.Int("batch_size", len(batch)),
 			zap.Int("retry", retry),
 			zap.Duration("sleep", sleepDuration),
 		)
 
-		// Wait for the specified backoff period
 		time.Sleep(sleepDuration)
 
-		err = e.sendAggregation(e.exportRequestContext, request)
+		err = e.exportBatch(batch)
 		if err == nil {
+			e.logger.Debug("Export succeeded after retry", zap.Int("retry", retry))
 			return
 		}
-		if errors.As(err, &connectErr) && connectErr.Code() == connect.CodeUnauthenticated {
-			e.logger.Error("Failed to export batch due to unauthenticated error, not retrying",
+
+		// Check if the new error is retryable
+		if !e.isRetryableError(err) {
+			e.logger.Error("Failed to export batch with non-retryable error during retry",
 				zap.Error(err),
-				zap.Int("batch_size", len(request.Aggregation)),
+				zap.Int("batch_size", len(batch)),
+				zap.Int("retry", retry),
 			)
 			return
 		}
+
 		lastErr = err
 	}
 
-	e.logger.Error("Failed to export batch after retries",
+	e.logger.Error("Failed to export batch after all retries",
 		zap.Error(lastErr),
-		zap.Int("batch_size", len(request.Aggregation)),
+		zap.Int("batch_size", len(batch)),
 		zap.Int("retries", retry),
 	)
 }
 
 // start starts the exporter and blocks until the exporter is shutdown.
-func (e *Exporter) start() {
+func (e *Exporter[T]) start() {
 	e.logger.Debug("Starting exporter")
 	ticker := time.NewTicker(e.settings.Interval)
 	defer func() {
@@ -298,36 +290,37 @@ func (e *Exporter) start() {
 		e.logger.Debug("Exporter stopped")
 	}()
 
-	var buffer []*graphqlmetrics.SchemaUsageInfo
+	var buffer []T
 
 	for {
 		if buffer == nil {
-			buffer = make([]*graphqlmetrics.SchemaUsageInfo, 0, e.settings.BatchSize)
+			buffer = make([]T, 0, e.settings.BatchSize)
 		}
 		select {
 		case <-ticker.C:
-			e.logger.Debug("Exporter.start: tick")
+			e.logger.Debug("Tick: flushing buffer", zap.Int("buffer_size", len(buffer)))
 			if len(buffer) > 0 {
 				e.prepareAndSendBatch(buffer)
 				buffer = nil
 			}
 		case item := <-e.queue:
-			e.logger.Debug("Exporter.start: item")
 			buffer = append(buffer, item)
 			if len(buffer) == e.settings.BatchSize {
+				e.logger.Debug("Buffer full, sending batch", zap.Int("batch_size", len(buffer)))
 				e.prepareAndSendBatch(buffer)
 				buffer = nil
 			}
 		case <-e.shutdownSignal:
-			e.logger.Debug("Exporter.start: shutdown")
+			e.logger.Debug("Shutdown signal received, draining queue")
 			e.drainQueue(buffer)
 			return
 		}
 	}
 }
 
-func (e *Exporter) drainQueue(buffer []*graphqlmetrics.SchemaUsageInfo) {
-	e.logger.Debug("Exporter.closeAndDrainQueue")
+// drainQueue processes all remaining items in the queue during shutdown.
+func (e *Exporter[T]) drainQueue(buffer []T) {
+	e.logger.Debug("Draining queue")
 	drainedItems := 0
 	for {
 		select {
@@ -336,41 +329,48 @@ func (e *Exporter) drainQueue(buffer []*graphqlmetrics.SchemaUsageInfo) {
 			buffer = append(buffer, item)
 			if len(buffer) == e.settings.BatchSize {
 				e.prepareAndSendBatch(buffer)
-				buffer = make([]*graphqlmetrics.SchemaUsageInfo, 0, e.settings.BatchSize)
+				buffer = make([]T, 0, e.settings.BatchSize)
 			}
 		default:
 			if len(buffer) > 0 {
 				e.prepareAndSendBatch(buffer)
 			}
-			e.logger.Debug("Exporter.closeAndDrainQueue: done", zap.Int("drained_items", drainedItems))
+			e.logger.Debug("Queue drained", zap.Int("drained_items", drainedItems))
 			return
 		}
 	}
 }
 
-// Shutdown the exporter but waits until all export jobs has been finished or timeout.
-// If the context is canceled, the exporter will be shutdown immediately.
-func (e *Exporter) Shutdown(ctx context.Context) error {
+// Shutdown gracefully shuts down the exporter.
+// It stops accepting new items, drains the queue, waits for in-flight batches to complete,
+// and closes the sink. If the context is cancelled, shutdown is forced.
+func (e *Exporter[T]) Shutdown(ctx context.Context) error {
+	e.logger.Debug("Shutdown started")
+
 	ticker := time.NewTicker(time.Millisecond * 100)
 	defer func() {
 		ticker.Stop()
-		// cancel all requests
+		// Cancel all export requests
 		e.cancelAllExportRequests()
-		e.logger.Debug("Exporter.Shutdown: done")
+		// Close the sink
+		if err := e.sink.Close(ctx); err != nil {
+			e.logger.Error("Error closing sink", zap.Error(err))
+		}
+		e.logger.Debug("Shutdown complete")
 	}()
 
-	// first close the acceptTrafficSema to stop accepting new items
+	// First close the acceptTrafficSema to stop accepting new items
 	close(e.acceptTrafficSema)
-	// then trigger the shutdown signal for the exporter goroutine to stop
-	// it will then drain the queue and send the remaining items
+	// Then trigger the shutdown signal for the exporter goroutine to stop
+	// It will drain the queue and send the remaining items
 	close(e.shutdownSignal)
 
-	// we're polling the inflightBatches to wait for all inflight batches to finish or timeout
-	// we're not using a wait group here because you can't wait for a wait group with a timeout
-
+	// Poll the inflightBatches to wait for all in-flight batches to finish or timeout
+	// We're not using a wait group here because you can't wait for a wait group with a timeout
 	for {
 		select {
 		case <-ctx.Done():
+			e.logger.Warn("Shutdown cancelled by context", zap.Error(ctx.Err()))
 			return ctx.Err()
 		case <-ticker.C:
 			if e.inflightBatches.Load() == 0 {
