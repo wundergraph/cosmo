@@ -245,8 +245,8 @@ func NewEngineSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHandlerCont
 }
 
 type StreamReceiveEventHandlerContext interface {
-	// Context is a timeout based context.
-	// It signals a timeout when the handler should stop processing.
+	// Context is a context for handlers.
+	// If it is cancelled, the handler should stop processing.
 	Context() context.Context
 	// Request is the initial client request that started the subscription
 	Request() *http.Request
