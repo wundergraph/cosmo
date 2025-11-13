@@ -50,11 +50,7 @@ Use operations-based generation when:
 - You have a large GraphQL schema but only use a subset of it
 - You want proto definitions that exactly match your client operations
 - You need to maintain multiple proto versions for different clients
-
-Use SDL-based generation when:
-- You want a complete proto representation of your GraphQL schema
-- You're building a general-purpose gRPC service
-- You need to support arbitrary queries at runtime
+- You're working with trusted documents or persisted operations
 
 ---
 
@@ -84,27 +80,9 @@ query {
 
 Anonymous operations will throw an error during compilation.
 
-### Generation Modes
+### How It Works
 
-#### SDL-Based Mode (Default)
-
-Generates proto from the complete GraphQL schema definition:
-
-```bash
-wgc grpc-service generate my-service \
-  --input schema.graphql \
-  --output ./proto
-```
-
-**Generates:**
-- Complete proto messages for all GraphQL types
-- All fields from the schema
-- `mapping.json` for runtime query translation
-- `service.proto.lock.json` for field number stability
-
-#### Operations-Based Mode
-
-Generates proto from GraphQL operation files:
+The compiler generates proto from GraphQL operation files:
 
 ```bash
 wgc grpc-service generate MyService \
@@ -140,8 +118,8 @@ Protocol Buffers require stable field numbers to maintain backward compatibility
 
 gRPC supports idempotency levels to indicate whether operations have side effects:
 
-- **NO_SIDE_EFFECTS**: Safe to retry, doesn't modify state (GET-like)
-- **DEFAULT**: May have side effects, retry with caution (POST-like)
+- **NO_SIDE_EFFECTS**: Safe to retry, doesn't modify state
+- **DEFAULT**: May have side effects, retry with caution
 
 The `queryIdempotency` option explicitly sets the idempotency level for all Query operations:
 
@@ -200,15 +178,6 @@ wgc grpc-service generate [name] [options]
 | Option | Description |
 |--------|-------------|
 | `-g, --go-package <name>` | Adds `option go_package` to the proto file |
-| `--java-package <name>` | Adds `option java_package` to the proto file |
-| `--java-outer-classname <name>` | Adds `option java_outer_classname` to the proto file |
-| `--java-multiple-files` | Adds `option java_multiple_files = true` to the proto file |
-| `--csharp-namespace <name>` | Adds `option csharp_namespace` to the proto file |
-| `--ruby-package <name>` | Adds `option ruby_package` to the proto file |
-| `--php-namespace <name>` | Adds `option php_namespace` to the proto file |
-| `--php-metadata-namespace <name>` | Adds `option php_metadata_namespace` to the proto file |
-| `--objc-class-prefix <name>` | Adds `option objc_class_prefix` to the proto file |
-| `--swift-prefix <name>` | Adds `option swift_prefix` to the proto file |
 
 ### Examples
 
@@ -251,18 +220,6 @@ wgc grpc-service generate UserService \
   --go-package github.com/myorg/myapp/proto/user/v1
 ```
 
-#### With Multiple Language Options
-
-```bash
-wgc grpc-service generate UserService \
-  --input schema.graphql \
-  --output ./proto \
-  --with-operations ./operations \
-  --go-package github.com/myorg/myapp/proto/user/v1 \
-  --java-package com.myorg.myapp.proto.user.v1 \
-  --java-multiple-files \
-  --csharp-namespace MyOrg.MyApp.Proto.User.V1
-```
 
 ---
 
@@ -591,22 +548,6 @@ Regenerate - the lock file preserves existing field numbers and assigns the next
 
 ## Advanced Topics
 
-### Multi-Language Support
-
-Generate proto files optimized for multiple languages:
-
-```bash
-wgc grpc-service generate UserService \
-  --input schema.graphql \
-  --with-operations ./operations \
-  --output ./proto \
-  --go-package github.com/myorg/myapp/proto/user/v1 \
-  --java-package com.myorg.myapp.proto.user.v1 \
-  --java-outer-classname UserServiceProto \
-  --java-multiple-files \
-  --csharp-namespace MyOrg.MyApp.Proto.User.V1 \
-  --swift-prefix MSU
-```
 
 ### Custom Scalar Mappings
 
@@ -662,9 +603,10 @@ No GraphQL operation files (.graphql, .gql) found in ./operations
 ```
 
 **Solution:**
-- Ensure your operation files have `.graphql` or `.gql` extensions
+- Ensure your operation files have `.graphql`, `.gql`, `.graphqls`, or `.gqls` extensions
 - Check the path to your operations directory
 - Verify files contain valid GraphQL operations
+- Note: Only files in the top-level directory are read; subdirectories are not traversed
 
 #### Anonymous Operations Not Supported
 
@@ -705,89 +647,12 @@ Field number conflict in message X
 
 ---
 
-## Best Practices
-
-### Operation Organization
-
-1. **One Operation Per File**: Makes operations easier to find and manage
-2. **Descriptive Names**: Use clear, descriptive operation names
-3. **Group by Feature**: Organize operations by feature or domain
-
-**Example structure:**
-
-```
-operations/
-├── users/
-│   ├── get-user.graphql
-│   ├── list-users.graphql
-│   └── create-user.graphql
-├── posts/
-│   ├── get-post.graphql
-│   └── list-posts.graphql
-└── fragments/
-    ├── user-fields.graphql
-    └── post-fields.graphql
-```
-
-### Field Naming
-
-1. **Use snake_case**: Proto convention uses snake_case for fields
-2. **Be Consistent**: Match your GraphQL naming conventions
-3. **Avoid Reserved Words**: Don't use proto reserved words
-
 ### Version Management
 
 1. **Semantic Versioning**: Use semver for proto packages
 2. **Package Naming**: Include version in package name (`myorg.user.v1`)
 3. **Breaking Changes**: Increment major version for breaking changes
 4. **Lock File Commits**: Always commit lock files with proto changes
-
----
-
-## FAQ
-
-### Q: Can I mix SDL-based and operations-based generation?
-
-**A:** No, you must choose one mode per service. However, you can have multiple services, each using different modes.
-
-### Q: What happens to unused types in operations-based mode?
-
-**A:** Unused types are not included in the generated proto. Only types referenced in your operations are generated.
-
-### Q: Can I use the same lock file for both modes?
-
-**A:** No, lock files are mode-specific. SDL-based and operations-based modes generate different message structures.
-
-### Q: How do I handle breaking changes?
-
-**A:** 
-1. Version your proto package (e.g., `v1` → `v2`)
-2. Generate new proto with a new package name
-3. Maintain both versions during migration
-4. Deprecate old version after migration
-
-### Q: Can I customize the generated proto?
-
-**A:** The generated proto should not be manually edited. Instead:
-- Modify your GraphQL operations
-- Use CLI options for language-specific settings
-- Regenerate the proto
-
-### Q: How do I handle large schemas?
-
-**A:** Operations-based generation is ideal for large schemas:
-- Only generates what you use
-- Smaller proto files
-- Faster compilation
-- Better performance
-
-### Q: Why must operations be named?
-
-**A:** Named operations are required because:
-- The operation name becomes the RPC method name in the proto
-- It enables clear, semantic API definitions
-- It supports proto reversibility (reconstructing GraphQL from proto)
-- It follows GraphQL best practices for production applications
 
 ---
 
