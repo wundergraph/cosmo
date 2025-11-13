@@ -194,7 +194,7 @@ func NewPubSubSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHandlerCont
 
 		logger := requestContext.Logger()
 		if logger != nil {
-			logger = logger.With(zap.String("component", "subscription_on_start_hook"))
+			logger = logger.With(zap.String("component", "pubsub_subscription_on_start_hook"))
 			if subConf != nil {
 				logger = logger.With(
 					zap.String("provider_id", subConf.ProviderID()),
@@ -229,7 +229,7 @@ func NewEngineSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHandlerCont
 
 		logger := requestContext.Logger()
 		if logger != nil {
-			logger = logger.With(zap.String("component", "on_publish_events_hook"))
+			logger = logger.With(zap.String("component", "engine_subscription_on_start_hook"))
 		}
 
 		hookCtx := &engineSubscriptionOnStartHookContext{
