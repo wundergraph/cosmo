@@ -87,7 +87,7 @@ func TestSubscriptionEventUpdater_UpdateSubscription_WithHooks_Success(t *testin
 
 	// Create wrapper function for the mock
 	receivedArgs := make(chan receivedHooksArgs, 1)
-	testHook := func(ctx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
+	testHook := func(subCtx context.Context, updaterCtx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
 		receivedArgs <- receivedHooksArgs{events: events, cfg: cfg}
 		return modifiedEvents, nil
 	}
@@ -135,7 +135,7 @@ func TestSubscriptionEventUpdater_UpdateSubscriptions_WithHooks_Error(t *testing
 	hookError := errors.New("hook processing error")
 
 	// Define hook that returns an error
-	testHook := func(ctx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
+	testHook := func(subCtx context.Context, updaterCtx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
 		return nil, hookError
 	}
 
@@ -180,13 +180,13 @@ func TestSubscriptionEventUpdater_Update_WithMultipleHooks_Success(t *testing.T)
 
 	// Chain of hooks that modify the data
 	receivedArgs1 := make(chan receivedHooksArgs, 1)
-	hook1 := func(ctx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
+	hook1 := func(subCtx context.Context, updaterCtx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
 		receivedArgs1 <- receivedHooksArgs{events: events, cfg: cfg}
 		return []StreamEvent{&testEvent{mutableTestEvent("modified by hook1")}}, nil
 	}
 
 	receivedArgs2 := make(chan receivedHooksArgs, 1)
-	hook2 := func(ctx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
+	hook2 := func(subCtx context.Context, updaterCtx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
 		receivedArgs2 <- receivedHooksArgs{events: events, cfg: cfg}
 		return []StreamEvent{&testEvent{mutableTestEvent("modified by hook2")}}, nil
 	}
@@ -280,7 +280,7 @@ func TestSubscriptionEventUpdater_SetHooks(t *testing.T) {
 		fieldName:    "testField",
 	}
 
-	testHook := func(ctx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
+	testHook := func(subCtx context.Context, updaterCtx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
 		return events, nil
 	}
 
@@ -314,7 +314,7 @@ func TestNewSubscriptionEventUpdater(t *testing.T) {
 		fieldName:    "testField",
 	}
 
-	testHook := func(ctx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
+	testHook := func(subCtx context.Context, updaterCtx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
 		return events, nil
 	}
 
@@ -385,7 +385,7 @@ func TestSubscriptionEventUpdater_Update_WithSingleHookModification(t *testing.T
 	}
 
 	// Hook that modifies events by adding a prefix
-	hook := func(ctx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
+	hook := func(subCtx context.Context, updaterCtx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
 		modifiedEvents := make([]StreamEvent, len(events))
 		for i, event := range events {
 			modifiedData := "modified: " + string(event.GetData())
@@ -438,7 +438,7 @@ func TestSubscriptionEventUpdater_Update_WithSingleHookError_ClosesSubscription(
 	hookError := errors.New("hook processing failed")
 
 	// Hook that returns an error
-	hook := func(ctx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
+	hook := func(subCtx context.Context, updaterCtx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
 		// Return the events but also return an error
 		return events, hookError
 	}
@@ -485,7 +485,7 @@ func TestSubscriptionEventUpdater_Update_WithMultipleHooksChaining(t *testing.T)
 
 	// Hook 1: Adds "step1: " prefix
 	receivedArgs1 := make(chan receivedHooksArgs, 1)
-	hook1 := func(ctx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
+	hook1 := func(subCtx context.Context, updaterCtx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
 		mu.Lock()
 		hookCallOrder = append(hookCallOrder, 1)
 		mu.Unlock()
@@ -500,7 +500,7 @@ func TestSubscriptionEventUpdater_Update_WithMultipleHooksChaining(t *testing.T)
 
 	// Hook 2: Adds "step2: " prefix
 	receivedArgs2 := make(chan receivedHooksArgs, 1)
-	hook2 := func(ctx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
+	hook2 := func(subCtx context.Context, updaterCtx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
 		mu.Lock()
 		hookCallOrder = append(hookCallOrder, 2)
 		mu.Unlock()
@@ -515,7 +515,7 @@ func TestSubscriptionEventUpdater_Update_WithMultipleHooksChaining(t *testing.T)
 
 	// Hook 3: Adds "step3: " prefix
 	receivedArgs3 := make(chan receivedHooksArgs, 1)
-	hook3 := func(ctx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
+	hook3 := func(subCtx context.Context, updaterCtx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
 		mu.Lock()
 		hookCallOrder = append(hookCallOrder, 3)
 		mu.Unlock()
@@ -676,7 +676,7 @@ func TestSubscriptionEventUpdater_UpdateSubscription_WithHookError_ClosesSubscri
 				&testEvent{mutableTestEvent("test data")},
 			}
 
-			testHook := func(ctx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
+			testHook := func(subCtx context.Context, updaterCtx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
 				return events, tc.hookError
 			}
 
@@ -743,7 +743,7 @@ func TestSubscriptionEventUpdater_OnReceiveEvents_PanicRecovery(t *testing.T) {
 			}
 
 			// Create hook that panics
-			testHook := func(ctx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
+			testHook := func(subCtx context.Context, updaterCtx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
 				panic(tt.panicValue)
 			}
 
