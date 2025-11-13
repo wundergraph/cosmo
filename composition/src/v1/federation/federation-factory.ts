@@ -268,7 +268,7 @@ export class FederationFactory {
   inaccessibleCoords = new Set<string>();
   inaccessibleRequiredInputValueErrorByCoords = new Map<string, Error>();
   internalGraph: Graph;
-  internalSubgraphBySubgraphName: Map<string, InternalSubgraph>;
+  internalSubgraphBySubgraphName: Map<SubgraphName, InternalSubgraph>;
   invalidORScopesCoords = new Set<string>();
   isMaxDepth = false;
   isVersionTwo = false;
@@ -2884,14 +2884,23 @@ export class FederationFactory {
       },
       { assumeValid: true, assumeValidSDL: true },
     );
-    const subgraphConfigBySubgraphName = new Map<string, SubgraphConfig>();
-    for (const subgraph of this.internalSubgraphBySubgraphName.values()) {
-      subgraphConfigBySubgraphName.set(subgraph.name, {
-        configurationDataByTypeName: subgraph.configurationDataByTypeName,
-        directiveDefinitionByName: subgraph.directiveDefinitionByName,
-        isVersionTwo: subgraph.isVersionTwo,
-        parentDefinitionDataByTypeName: subgraph.parentDefinitionDataByTypeName,
-        schema: subgraph.schema,
+    const subgraphConfigBySubgraphName = new Map<SubgraphName, SubgraphConfig>();
+    for (const {
+      configurationDataByTypeName,
+      directiveDefinitionByName,
+      isVersionTwo,
+      name,
+      parentDefinitionDataByTypeName,
+      schema,
+      schemaNode,
+    } of this.internalSubgraphBySubgraphName.values()) {
+      subgraphConfigBySubgraphName.set(name, {
+        configurationDataByTypeName: configurationDataByTypeName,
+        directiveDefinitionByName: directiveDefinitionByName,
+        isVersionTwo: isVersionTwo,
+        parentDefinitionDataByTypeName: parentDefinitionDataByTypeName,
+        schema: schema,
+        schemaNode,
       });
     }
     for (const authorizationData of this.authorizationDataByParentTypeName.values()) {

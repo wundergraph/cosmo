@@ -6,11 +6,12 @@ import {
   ParentDefinitionData,
   PersistedDirectiveDefinitionData,
 } from '../schema-building/types';
-import { DirectiveName, TypeName } from '../types/types';
+import { DirectiveName, SubgraphName, TypeName } from '../types/types';
+import { SchemaDefinitionNode, SchemaExtensionNode } from 'graphql/index';
 
 export type Subgraph = {
   definitions: DocumentNode;
-  name: string;
+  name: SubgraphName;
   url: string;
 };
 
@@ -20,6 +21,7 @@ export type SubgraphConfig = {
   isVersionTwo: boolean;
   parentDefinitionDataByTypeName: Map<TypeName, ParentDefinitionData>;
   schema: GraphQLSchema;
+  schemaNode?: SchemaDefinitionNode | SchemaExtensionNode;
 };
 
 export type InternalSubgraph = {
@@ -36,5 +38,6 @@ export type InternalSubgraph = {
   parentDefinitionDataByTypeName: Map<string, ParentDefinitionData>;
   persistedDirectiveDefinitionDataByDirectiveName: Map<DirectiveName, PersistedDirectiveDefinitionData>;
   schema: GraphQLSchema;
+  schemaNode?: SchemaDefinitionNode | SchemaExtensionNode;
   url: string;
 };
