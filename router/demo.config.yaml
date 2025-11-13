@@ -20,7 +20,3 @@ events:
       - id: my-redis
         urls:
         - "redis://localhost:6379/2"
-  subscription_hooks:
-    on_receive_events:
-      max_concurrent_handlers: 97
-      handler_timeout: 8800
