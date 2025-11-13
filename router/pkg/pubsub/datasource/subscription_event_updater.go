@@ -11,6 +11,11 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+const (
+	timeoutGracePeriod = 50 * time.Millisecond
+	defaultTimeout     = 5 * time.Second
+)
+
 // SubscriptionEventUpdater is a wrapper around the SubscriptionUpdater interface
 // that provides a way to send the event struct instead of the raw data
 // It is used to give access to the event additional fields to the hooks.
@@ -61,7 +66,7 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 	case <-done:
 		s.logger.Debug("All subscription updates completed")
 		// All subscriptions completed successfully
-	case <-time.After(s.timeout + time.Millisecond*50):
+	case <-time.After(s.timeout + timeoutGracePeriod):
 		// Timeout exceeded, some subscription updates may still be running.
 		// We can't stop them but we will also not wait for them, basically abandoning them.
 		// They will continue to hold their semaphore slots until they complete,
@@ -140,7 +145,7 @@ func NewSubscriptionEventUpdater(
 	limit := max(hooks.OnReceiveEvents.MaxConcurrentHandlers, 1)
 	timeout := hooks.OnReceiveEvents.Timeout
 	if timeout == 0 {
-		timeout = 5 * time.Second
+		timeout = defaultTimeout
 	}
 
 	return &subscriptionEventUpdater{
