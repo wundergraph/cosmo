@@ -2,6 +2,7 @@ import { useCallback, useMemo } from "react";
 import { useRouter } from "next/router";
 import {
   AnalyticsViewResultFilter,
+  AnalyticsViewFilterOperator,
   OperationsFetchBasedOn,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { AnalyticsFilter } from "@/components/analytics/filters";
@@ -94,8 +95,8 @@ export const useOperationsFilters = (filters: AnalyticsViewResultFilter[]) => {
       options: filter.options.map((each) =>
         optionConstructor({
           label: each.label || "-",
-          operator: each.operator as unknown as string,
-          value: each.value as unknown as string,
+          operator: AnalyticsViewFilterOperator[each.operator] as string,
+          value: each.value ?? "",
         }),
       ),
     } as AnalyticsFilter;

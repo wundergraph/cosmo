@@ -171,7 +171,7 @@ export function getOperations(
       offset: shouldFetchAll ? 0 : req.offset,
       fetchBasedOn: sortField,
       sortDirection: req.sortDirection || 'desc',
-      searchQuery: (req as any).searchQuery,
+      searchQuery: req.searchQuery,
       fetchAll: shouldFetchAll,
     });
 

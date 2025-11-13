@@ -84,10 +84,6 @@ export const DeprecatedFieldsTable = ({
     });
   };
 
-  if (isLoading) {
-    return null;
-  }
-
   return (
     <div className={className}>
       <div className="mb-4">
@@ -105,7 +101,13 @@ export const DeprecatedFieldsTable = ({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {hasDeprecatedFields &&
+            {isLoading ? (
+              <TableRow>
+                <TableCell colSpan={2} className="h-24 text-center">
+                  <Loader />
+                </TableCell>
+              </TableRow>
+            ) : hasDeprecatedFields ? (
               deprecatedFields.map((field, index) => (
                 <TableRow key={`${field.path}-${index}`}>
                   <TableCell>
@@ -123,8 +125,8 @@ export const DeprecatedFieldsTable = ({
                     </Button>
                   </TableCell>
                 </TableRow>
-              ))}
-            {!hasDeprecatedFields && (
+              ))
+            ) : (
               <TableRow>
                 <TableCell
                   colSpan={2}
