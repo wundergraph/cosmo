@@ -8,6 +8,7 @@ import { formatDurationMetric, formatMetric } from "@/lib/format-metric";
 import { cn } from "@/lib/utils";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import copy from "copy-to-clipboard";
+import _ from "lodash";
 import { useState, useEffect, useRef } from "react";
 
 interface Operation {
@@ -77,7 +78,8 @@ const OperationItem = ({
   const highlightText = (text: string, query: string) => {
     if (!query) return text;
 
-    const regex = new RegExp(`(${query})`, "gi");
+    const safeQuery = _.escapeRegExp(query);
+    const regex = new RegExp(`(${safeQuery})`, "gi");
     const parts = text.split(regex);
 
     return parts.map((part, index) =>
