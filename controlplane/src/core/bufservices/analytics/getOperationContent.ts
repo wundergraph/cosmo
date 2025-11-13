@@ -43,12 +43,17 @@ export function getOperationContent(
       };
     }
 
+    // Escape operation hash and name for SQL injection prevention
+    const escapedHash = req.hash.replace(/'/g, "''");
+    const operationNameFilter = req.name === undefined ? '' : `AND OperationName = '${req.name.replace(/'/g, "''")}'`;
+
     const query = `
       SELECT OperationContent as operationContent
       FROM ${opts.chClient?.database}.gql_metrics_operations
       WHERE OrganizationID = '${authContext.organizationId}' 
       AND FederatedGraphID = '${graph.id}'
-      AND OperationHash = '${req.hash}'
+      AND OperationHash = '${escapedHash}'
+      ${operationNameFilter}
       LIMIT 1 SETTINGS use_query_cache = true, query_cache_ttl = 2629800
     `;
 

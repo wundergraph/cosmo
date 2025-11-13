@@ -719,44 +719,145 @@ export class MetricsRepository {
     });
   }
 
-  public async getOperations(props: GetMetricsViewProps & { limit: number }) {
+  public async getOperations(
+    props: GetMetricsViewProps & {
+      limit: number;
+      offset?: number;
+      fetchBasedOn?: string; // 'requests', 'latency', or 'errors'
+      sortDirection?: string; // 'asc' or 'desc'
+      searchQuery?: string;
+      fetchAll?: boolean; // When true, fetch all operations without limit/offset
+    },
+  ) {
     const { dateRange, organizationId, graphId, whereSql, queryParams } = this.getMetricsProps(props);
+    const sortField = props.fetchBasedOn || 'latency';
+    const sortDirection = props.sortDirection || 'desc';
+    const searchQuery = props.searchQuery;
+    const offset = props.offset || 0;
+    const fetchAll = props.fetchAll || false;
 
-    const query = `
-    WITH
-      toDateTime('${dateRange.start}') AS startDate,
-      toDateTime('${dateRange.end}') AS endDate
-    SELECT
-      OperationHash as operationHash,
-      OperationName as operationName,
-      OperationType as operationType,
-      func_rank(0.95, BucketCounts) as rank,
-      func_rank_bucket_lower_index(rank, BucketCounts) as b,
-      round(func_histogram_v2(
-          rank,
-          b,
-          BucketCounts,
-          anyLast(ExplicitBounds)
-      ), 2) as latency,
+    // Build search filter SQL
+    let searchSql = '';
+    if (searchQuery) {
+      const escapedSearch = searchQuery.replace(/'/g, "''").toLowerCase();
+      searchSql = `AND (lower(OperationName) LIKE '%${escapedSearch}%' OR lower(OperationHash) LIKE '%${escapedSearch}%')`;
+    }
 
-      -- Histogram aggregations
-      sumForEachMerge(BucketCounts) as BucketCounts
-    FROM ${this.client.database}.operation_latency_metrics_5_30
-    WHERE Timestamp >= startDate AND Timestamp <= endDate
-      AND OrganizationID = '${organizationId}'
-      AND FederatedGraphID = '${graphId}'
-      ${whereSql ? `AND ${whereSql}` : ''}
-    GROUP BY OperationName, OperationHash, OperationType ORDER BY latency DESC LIMIT {limit:UInt32}`;
+    // Exclude introspection queries (operation name is 'IntrospectionQuery')
+    const introspectionFilter = `AND OperationName != 'IntrospectionQuery'`;
 
-    const res: {
+    let query: string;
+    let res: Array<{
       operationHash: string;
       operationName: string;
       operationType: string;
       latency: number;
-    }[] = await this.client.queryPromise(query, { ...queryParams, limit: props.limit });
+      requestCount?: number;
+      errorCount?: number;
+    }>;
+
+    // Build LIMIT/OFFSET clause
+    const limitOffsetClause = fetchAll ? '' : `LIMIT {limit:UInt32} OFFSET {offset:UInt32}`;
+
+    if (sortField === 'latency') {
+      // Use operation_latency_metrics_5_30 table - only fetch latency
+      query = `
+      WITH
+        toDateTime('${dateRange.start}') AS startDate,
+        toDateTime('${dateRange.end}') AS endDate
+      SELECT
+        OperationHash as operationHash,
+        OperationName as operationName,
+        OperationType as operationType,
+        func_rank(0.95, BucketCounts) as rank,
+        func_rank_bucket_lower_index(rank, BucketCounts) as b,
+        round(func_histogram_v2(
+            rank,
+            b,
+            BucketCounts,
+            anyLast(ExplicitBounds)
+        ), 2) as latency,
+        0 as requestCount,
+        0 as errorCount,
+        -- Histogram aggregations
+        sumForEachMerge(BucketCounts) as BucketCounts
+      FROM ${this.client.database}.operation_latency_metrics_5_30
+      WHERE Timestamp >= startDate AND Timestamp <= endDate
+        AND OrganizationID = '${organizationId}'
+        AND FederatedGraphID = '${graphId}'
+        ${whereSql ? `AND ${whereSql}` : ''}
+        ${searchSql}
+        ${introspectionFilter}
+      GROUP BY OperationName, OperationHash, OperationType ORDER BY latency ${sortDirection.toUpperCase()} ${limitOffsetClause}`;
+
+      const queryParamsWithPagination = fetchAll ? queryParams : { ...queryParams, limit: props.limit, offset };
+      res = await this.client.queryPromise(query, queryParamsWithPagination);
+
+      // Don't fetch requestCount/errorCount for latency sort - not needed
+    } else if (sortField === 'requests') {
+      // Use operation_request_metrics_5_30 table - only fetch requestCount
+      query = `
+      WITH
+        toDateTime('${dateRange.start}') AS startDate,
+        toDateTime('${dateRange.end}') AS endDate
+      SELECT
+        OperationHash as operationHash,
+        OperationName as operationName,
+        OperationType as operationType,
+        0 as latency,
+        sum(TotalRequests) as requestCount,
+        0 as errorCount
+      FROM ${this.client.database}.operation_request_metrics_5_30
+      WHERE Timestamp >= startDate AND Timestamp <= endDate
+        AND OrganizationID = '${organizationId}'
+        AND FederatedGraphID = '${graphId}'
+        ${whereSql ? `AND ${whereSql}` : ''}
+        ${searchSql}
+        ${introspectionFilter}
+      GROUP BY OperationName, OperationHash, OperationType ORDER BY requestCount ${sortDirection.toUpperCase()} ${limitOffsetClause}`;
+
+      const queryParamsWithPagination = fetchAll ? queryParams : { ...queryParams, limit: props.limit, offset };
+      res = await this.client.queryPromise(query, queryParamsWithPagination);
+
+      // Don't fetch latency/errorCount for requests sort - not needed
+    } else {
+      // sortField === 'errors' - Use operation_request_metrics_5_30 table - only fetch errorCount
+      query = `
+      WITH
+        toDateTime('${dateRange.start}') AS startDate,
+        toDateTime('${dateRange.end}') AS endDate
+      SELECT
+        OperationHash as operationHash,
+        OperationName as operationName,
+        OperationType as operationType,
+        0 as latency,
+        sum(TotalRequests) as requestCount,
+        sum(TotalErrors) as errorCount,
+        if(requestCount > 0, round(errorCount / requestCount * 100, 2), 0) as errorPercentage
+      FROM ${this.client.database}.operation_request_metrics_5_30
+      WHERE Timestamp >= startDate AND Timestamp <= endDate
+        AND OrganizationID = '${organizationId}'
+        AND FederatedGraphID = '${graphId}'
+        ${whereSql ? `AND ${whereSql}` : ''}
+        ${searchSql}
+        ${introspectionFilter}
+      GROUP BY OperationName, OperationHash, OperationType ORDER BY errorPercentage ${sortDirection.toUpperCase()} ${limitOffsetClause}`;
+
+      const queryParamsWithPagination = fetchAll ? queryParams : { ...queryParams, limit: props.limit, offset };
+      res = await this.client.queryPromise(query, queryParamsWithPagination);
+
+      // Don't fetch latency for errors sort - not needed
+    }
 
     if (Array.isArray(res)) {
-      return res;
+      return res.map((op) => ({
+        operationHash: op.operationHash,
+        operationName: op.operationName,
+        operationType: op.operationType,
+        latency: op.latency || 0,
+        requestCount: op.requestCount || 0,
+        errorCount: op.errorCount || 0,
+      }));
     }
 
     return [];

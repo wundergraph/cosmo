@@ -302,4 +302,154 @@ export class UsageRepository {
 
     return [];
   }
+
+  public async getOperationsUsingDeprecatedFields({
+    organizationId,
+    federatedGraphId,
+    range,
+    dateRange,
+    deprecatedFields,
+  }: {
+    organizationId: string;
+    federatedGraphId: string;
+    range?: number;
+    dateRange?: DateRange;
+    deprecatedFields: { name: string; typeNames: string[] }[];
+  }): Promise<
+    {
+      operationHash: string;
+      operationName: string;
+    }[]
+  > {
+    if (deprecatedFields.length === 0) {
+      return [];
+    }
+
+    const {
+      dateRange: { end, start },
+    } = parseTimeFilters(dateRange, range);
+
+    // Build the deprecated fields array for the CTE
+    // Each deprecated field is represented as a tuple: (name, typeNames_array)
+    const deprecatedFieldsArray = deprecatedFields
+      .map((field) => `('${field.name}', [${field.typeNames.map((tn) => `'${tn}'`).join(', ')}])`)
+      .join(', ');
+
+    const query = `
+      WITH 
+        toStartOfDay(toDateTime('${start}')) AS startDate,
+        toDateTime('${end}') AS endDate,
+        deprecated_fields AS (
+          SELECT
+            field.1 as Name,
+            field.2 as TypeNames
+          FROM (
+            SELECT
+              arrayJoin([ ${deprecatedFieldsArray} ]) as field
+          )
+        )
+      SELECT DISTINCT
+        OperationHash as operationHash,
+        OperationName as operationName
+      FROM ${this.client.database}.gql_metrics_schema_usage_lite_1d_90d
+      INNER JOIN deprecated_fields AS df
+        ON FieldName = df.Name
+      WHERE 
+        Timestamp >= startDate 
+        AND Timestamp <= endDate
+        AND OrganizationID = '${organizationId}'
+        AND FederatedGraphID = '${federatedGraphId}'
+        AND hasAny(TypeNames, df.TypeNames) = 1
+    `;
+
+    const res = await this.client.queryPromise(query);
+
+    if (Array.isArray(res)) {
+      return res.map((item) => ({
+        operationHash: item.operationHash,
+        operationName: item.operationName,
+      }));
+    }
+
+    return [];
+  }
+
+  public async getDeprecatedFieldsUsedInOperation({
+    organizationId,
+    federatedGraphId,
+    operationHash,
+    operationName,
+    range,
+    dateRange,
+    deprecatedFields,
+  }: {
+    organizationId: string;
+    federatedGraphId: string;
+    operationHash: string;
+    operationName?: string;
+    range?: number;
+    dateRange?: DateRange;
+    deprecatedFields: { name: string; typeNames: string[] }[];
+  }): Promise<
+    {
+      deprecatedFieldName: string;
+      deprecatedFieldTypeNames: string[];
+    }[]
+  > {
+    if (deprecatedFields.length === 0) {
+      return [];
+    }
+
+    const {
+      dateRange: { end, start },
+    } = parseTimeFilters(dateRange, range);
+
+    // Build the deprecated fields array for the CTE
+    // Each deprecated field is represented as a tuple: (name, typeNames_array)
+    const deprecatedFieldsArray = deprecatedFields
+      .map((field) => `('${field.name}', [${field.typeNames.map((tn) => `'${tn}'`).join(', ')}])`)
+      .join(', ');
+
+    const operationNameCondition = operationName ? `AND OperationName = '${operationName}'` : '';
+
+    const query = `
+      WITH 
+        toStartOfDay(toDateTime('${start}')) AS startDate,
+        toDateTime('${end}') AS endDate,
+        deprecated_fields AS (
+          SELECT
+            field.1 as Name,
+            field.2 as TypeNames
+          FROM (
+            SELECT
+              arrayJoin([ ${deprecatedFieldsArray} ]) as field
+          )
+        )
+      SELECT DISTINCT
+        df.Name as deprecatedFieldName,
+        df.TypeNames as deprecatedFieldTypeNames
+      FROM ${this.client.database}.gql_metrics_schema_usage_lite_1d_90d
+      INNER JOIN deprecated_fields AS df
+        ON FieldName = df.Name
+      WHERE 
+        Timestamp >= startDate 
+        AND Timestamp <= endDate
+        AND OrganizationID = '${organizationId}'
+        AND FederatedGraphID = '${federatedGraphId}'
+        AND OperationHash = '${operationHash}'
+        ${operationNameCondition}
+        AND hasAny(TypeNames, df.TypeNames) = 1
+    `;
+
+    const res = await this.client.queryPromise(query);
+
+    if (Array.isArray(res)) {
+      return res.map((item) => ({
+        deprecatedFieldName: item.deprecatedFieldName,
+        deprecatedFieldTypeNames: Array.isArray(item.deprecatedFieldTypeNames) ? item.deprecatedFieldTypeNames : [],
+      }));
+    }
+
+    return [];
+  }
 }
