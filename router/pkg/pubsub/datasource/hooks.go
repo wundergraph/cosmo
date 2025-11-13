@@ -11,7 +11,7 @@ type SubscriptionOnStartFn func(ctx resolve.StartupHookContext, subConf Subscrip
 
 type OnPublishEventsFn func(ctx context.Context, pubConf PublishEventConfiguration, evts []StreamEvent, eventBuilder EventBuilderFn) ([]StreamEvent, error)
 
-type OnReceiveEventsFn func(ctx context.Context, subConf SubscriptionEventConfiguration, eventBuilder EventBuilderFn, evts []StreamEvent) ([]StreamEvent, error)
+type OnReceiveEventsFn func(subscriptionCtx context.Context, updaterCtx context.Context, subConf SubscriptionEventConfiguration, eventBuilder EventBuilderFn, evts []StreamEvent) ([]StreamEvent, error)
 
 // Hooks contains hooks for the pubsub providers and data sources
 type Hooks struct {

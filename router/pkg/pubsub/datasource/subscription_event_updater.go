@@ -41,17 +41,16 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 
 	subscriptions := s.eventUpdater.Subscriptions()
 	wg := sync.WaitGroup{}
-	deadline := time.Now().Add(s.timeout)
+	updaterCtx, cancel := context.WithDeadline(context.Background(), time.Now().Add(s.timeout))
+	defer cancel()
 
 	done := make(chan struct{})
 
 	go func() {
-		for ctx, subId := range subscriptions {
+		for subCtx, subId := range subscriptions {
 			s.semaphore <- struct{}{} // Acquire slot, blocks if all slots are taken
 			wg.Add(1)
-			ctx, cancel := context.WithDeadline(ctx, deadline)
-			defer cancel()
-			go s.updateSubscription(ctx, &wg, subId, events)
+			go s.updateSubscription(subCtx, updaterCtx, &wg, subId, events)
 		}
 
 		wg.Wait()
@@ -87,7 +86,7 @@ func (s *subscriptionEventUpdater) SetHooks(hooks Hooks) {
 	s.hooks = hooks
 }
 
-func (s *subscriptionEventUpdater) updateSubscription(ctx context.Context, wg *sync.WaitGroup, subID resolve.SubscriptionIdentifier, events []StreamEvent) {
+func (s *subscriptionEventUpdater) updateSubscription(subscriptionCtx context.Context, updaterCtx context.Context, wg *sync.WaitGroup, subID resolve.SubscriptionIdentifier, events []StreamEvent) {
 	defer wg.Done()
 	defer func() {
 		if r := recover(); r != nil {
@@ -101,7 +100,7 @@ func (s *subscriptionEventUpdater) updateSubscription(ctx context.Context, wg *s
 	// modify events with hooks
 	var err error
 	for i := range hooks {
-		events, err = hooks[i](ctx, s.subscriptionEventConfiguration, s.eventBuilder, events)
+		events, err = hooks[i](subscriptionCtx, updaterCtx, s.subscriptionEventConfiguration, s.eventBuilder, events)
 		events = slices.DeleteFunc(events, func(event StreamEvent) bool {
 			return event == nil
 		})

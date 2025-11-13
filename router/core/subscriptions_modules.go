@@ -376,8 +376,8 @@ func NewPubSubOnReceiveEventsHook(fn func(ctx StreamReceiveEventHandlerContext, 
 		return nil
 	}
 
-	return func(ctx context.Context, subConf datasource.SubscriptionEventConfiguration, eventBuilder datasource.EventBuilderFn, evts []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
-		requestContext := getRequestContext(ctx)
+	return func(subscriptionCtx context.Context, updaterCtx context.Context, subConf datasource.SubscriptionEventConfiguration, eventBuilder datasource.EventBuilderFn, evts []datasource.StreamEvent) ([]datasource.StreamEvent, error) {
+		requestContext := getRequestContext(subscriptionCtx)
 
 		logger := requestContext.Logger()
 		if logger != nil {
@@ -398,7 +398,7 @@ func NewPubSubOnReceiveEventsHook(fn func(ctx StreamReceiveEventHandlerContext, 
 			authentication:                 requestContext.Authentication(),
 			subscriptionEventConfiguration: subConf,
 			eventBuilder:                   eventBuilder,
-			context:                        ctx,
+			context:                        updaterCtx,
 		}
 		newEvts, err := fn(hookCtx, datasource.NewStreamEvents(evts))
 		return newEvts.Unsafe(), err
