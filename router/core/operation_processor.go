@@ -1170,10 +1170,11 @@ func (o *OperationKit) ValidateQueryComplexity() (ok bool, cacheEntry Complexity
 	}
 
 	report := operationreport.Report{}
-	globalComplexityResult, rootFieldStats := operation_complexity.CalculateOperationComplexity(o.kit.doc, o.operationProcessor.executor.ClientSchema, limits.SkipIntrospection, &report)
+	estimator := operation_complexity.NewOperationComplexityEstimator(limits.SkipIntrospection)
+	globalComplexity, rootFieldStats := estimator.Do(o.kit.doc, o.operationProcessor.executor.ClientSchema, &report)
 	cacheResult := ComplexityCacheEntry{
-		Depth:       globalComplexityResult.Depth,
-		TotalFields: globalComplexityResult.NodeCount,
+		Depth:       globalComplexity.Depth,
+		TotalFields: globalComplexity.NodeCount,
 	}
 	for _, entry := range rootFieldStats {
 		if entry.Alias == "" {
