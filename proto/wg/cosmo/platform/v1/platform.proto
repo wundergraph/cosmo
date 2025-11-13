@@ -2912,11 +2912,13 @@ message GetOperationsResponse {
     string hash = 1;
     string name = 2;
     string content = 3;
-    float latency = 4;
-    OperationType type = 5;
-    int64 requestCount = 6;
-    int64 errorCount = 7;
-    bool hasDeprecatedFields = 8;
+    OperationType type = 4;
+    bool hasDeprecatedFields = 5;
+    oneof metric {
+      float latency = 6;
+      int64 requestCount = 7;
+      float errorPercentage = 8;
+    }
   }
 
   Response response = 1;

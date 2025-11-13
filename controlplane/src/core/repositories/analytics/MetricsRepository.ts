@@ -753,7 +753,7 @@ export class MetricsRepository {
       operationType: string;
       latency: number;
       requestCount?: number;
-      errorCount?: number;
+      errorPercentage?: number;
     }>;
 
     // Build LIMIT/OFFSET clause
@@ -856,7 +856,7 @@ export class MetricsRepository {
         operationType: op.operationType,
         latency: op.latency || 0,
         requestCount: op.requestCount || 0,
-        errorCount: op.errorCount || 0,
+        errorPercentage: op.errorPercentage || 0,
       }));
     }
 

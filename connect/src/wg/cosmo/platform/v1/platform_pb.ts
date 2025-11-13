@@ -22799,29 +22799,37 @@ export class GetOperationsResponse_Operation extends Message<GetOperationsRespon
   content = "";
 
   /**
-   * @generated from field: float latency = 4;
-   */
-  latency = 0;
-
-  /**
-   * @generated from field: wg.cosmo.platform.v1.GetOperationsResponse.OperationType type = 5;
+   * @generated from field: wg.cosmo.platform.v1.GetOperationsResponse.OperationType type = 4;
    */
   type = GetOperationsResponse_OperationType.QUERY;
 
   /**
-   * @generated from field: int64 requestCount = 6;
-   */
-  requestCount = protoInt64.zero;
-
-  /**
-   * @generated from field: int64 errorCount = 7;
-   */
-  errorCount = protoInt64.zero;
-
-  /**
-   * @generated from field: bool hasDeprecatedFields = 8;
+   * @generated from field: bool hasDeprecatedFields = 5;
    */
   hasDeprecatedFields = false;
+
+  /**
+   * @generated from oneof wg.cosmo.platform.v1.GetOperationsResponse.Operation.metric
+   */
+  metric: {
+    /**
+     * @generated from field: float latency = 6;
+     */
+    value: number;
+    case: "latency";
+  } | {
+    /**
+     * @generated from field: int64 requestCount = 7;
+     */
+    value: bigint;
+    case: "requestCount";
+  } | {
+    /**
+     * @generated from field: float errorPercentage = 8;
+     */
+    value: number;
+    case: "errorPercentage";
+  } | { case: undefined; value?: undefined } = { case: undefined };
 
   constructor(data?: PartialMessage<GetOperationsResponse_Operation>) {
     super();
@@ -22834,11 +22842,11 @@ export class GetOperationsResponse_Operation extends Message<GetOperationsRespon
     { no: 1, name: "hash", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "content", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 4, name: "latency", kind: "scalar", T: 2 /* ScalarType.FLOAT */ },
-    { no: 5, name: "type", kind: "enum", T: proto3.getEnumType(GetOperationsResponse_OperationType) },
-    { no: 6, name: "requestCount", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 7, name: "errorCount", kind: "scalar", T: 3 /* ScalarType.INT64 */ },
-    { no: 8, name: "hasDeprecatedFields", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "type", kind: "enum", T: proto3.getEnumType(GetOperationsResponse_OperationType) },
+    { no: 5, name: "hasDeprecatedFields", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 6, name: "latency", kind: "scalar", T: 2 /* ScalarType.FLOAT */, oneof: "metric" },
+    { no: 7, name: "requestCount", kind: "scalar", T: 3 /* ScalarType.INT64 */, oneof: "metric" },
+    { no: 8, name: "errorPercentage", kind: "scalar", T: 2 /* ScalarType.FLOAT */, oneof: "metric" },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOperationsResponse_Operation {

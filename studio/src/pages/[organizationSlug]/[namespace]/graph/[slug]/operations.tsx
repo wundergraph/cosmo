@@ -167,23 +167,41 @@ const OperationsLeftPanel = ({
 
   const computedOperations = useMemo(() => {
     // Backend handles sorting, so we just map the data
-    return operations.map((op) => ({
-      hash: op.hash,
-      name: op.name,
-      type:
-        op.type === GetOperationsResponse_OperationType.QUERY
-          ? ("query" as const)
-          : op.type === GetOperationsResponse_OperationType.MUTATION
-          ? ("mutation" as const)
-          : ("subscription" as const),
-      latency: op.latency,
-      requestCount: Number(op.requestCount || 0),
-      errorRate:
-        op.requestCount && op.requestCount > 0
-          ? (Number(op.errorCount || 0) / Number(op.requestCount)) * 100
-          : 0,
-      hasDeprecatedFields: op.hasDeprecatedFields || false,
-    }));
+    return operations.map((op) => {
+      // Handle oneof metric field
+      let latency: number | undefined;
+      let requestCount: number | undefined;
+      let errorRate: number | undefined;
+
+      if (op.metric) {
+        switch (op.metric.case) {
+          case "latency":
+            latency = op.metric.value;
+            break;
+          case "requestCount":
+            requestCount = Number(op.metric.value ?? BigInt(0));
+            break;
+          case "errorPercentage":
+            errorRate = op.metric.value;
+            break;
+        }
+      }
+
+      return {
+        hash: op.hash,
+        name: op.name,
+        type:
+          op.type === GetOperationsResponse_OperationType.QUERY
+            ? ("query" as const)
+            : op.type === GetOperationsResponse_OperationType.MUTATION
+            ? ("mutation" as const)
+            : ("subscription" as const),
+        latency: latency ?? 0,
+        requestCount: requestCount ?? 0,
+        errorRate: errorRate ?? 0,
+        hasDeprecatedFields: op.hasDeprecatedFields || false,
+      };
+    });
   }, [operations]);
 
   return (

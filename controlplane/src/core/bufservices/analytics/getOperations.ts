@@ -234,23 +234,40 @@ export function getOperations(
         (op) => op.operationHash === operation.operationHash && op.operationName === operation.operationName,
       );
 
-      computedOperations.push(
-        new GetOperationsResponse_Operation({
-          name: operation.operationName,
-          hash: operation.operationHash,
-          latency: operation.latency,
-          hasDeprecatedFields,
-          type:
-            operation.operationType === 'query'
-              ? GetOperationsResponse_OperationType.QUERY
-              : operation.operationType === 'mutation'
-                ? GetOperationsResponse_OperationType.MUTATION
-                : GetOperationsResponse_OperationType.SUBSCRIPTION,
-          content: operationContent,
-          requestCount: BigInt(operation.requestCount || 0),
-          errorCount: BigInt(operation.errorCount || 0),
-        }),
-      );
+      // Build operation with only the relevant metric based on fetchBasedOn
+      const operationData: any = {
+        name: operation.operationName,
+        hash: operation.operationHash,
+        hasDeprecatedFields,
+        type:
+          operation.operationType === 'query'
+            ? GetOperationsResponse_OperationType.QUERY
+            : operation.operationType === 'mutation'
+              ? GetOperationsResponse_OperationType.MUTATION
+              : GetOperationsResponse_OperationType.SUBSCRIPTION,
+        content: operationContent,
+      };
+
+      // Set only the relevant metric based on fetchBasedOn using oneof structure
+      if (fetchBasedOn === OperationsFetchBasedOn.REQUESTS) {
+        operationData.metric = {
+          case: 'requestCount',
+          value: BigInt(operation.requestCount || 0),
+        };
+      } else if (fetchBasedOn === OperationsFetchBasedOn.ERRORS) {
+        operationData.metric = {
+          case: 'errorPercentage',
+          value: operation.errorPercentage || 0,
+        };
+      } else {
+        // Default to latency
+        operationData.metric = {
+          case: 'latency',
+          value: operation.latency,
+        };
+      }
+
+      computedOperations.push(new GetOperationsResponse_Operation(operationData));
     }
 
     return {
