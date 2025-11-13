@@ -255,19 +255,20 @@ export class FederationFactory {
   authorizationDataByParentTypeName: Map<TypeName, AuthorizationData>;
   coordsByNamedTypeName = new Map<TypeName, Set<string>>();
   disableResolvabilityValidation: boolean = false;
-  clientDefinitions: (MutableDefinitionNode | DefinitionNode)[] = [];
+  directiveDefinitionByName = new Map<DirectiveName, DirectiveDefinitionNode>();
+  clientDefinitions: Array<MutableDefinitionNode | DefinitionNode> = [];
   currentSubgraphName = '';
   concreteTypeNamesByAbstractTypeName: Map<TypeName, Set<TypeName>>;
   subgraphNamesByNamedTypeNameByFieldCoords = new Map<string, Map<string, Set<string>>>();
   entityDataByTypeName: Map<TypeName, EntityData>;
   entityInterfaceFederationDataByTypeName: Map<string, EntityInterfaceFederationData>;
-  errors: Error[] = [];
+  errors: Array<Error> = [];
   fieldConfigurationByFieldCoords = new Map<string, FieldConfiguration>();
   fieldCoordsByNamedTypeName: Map<TypeName, Set<FieldCoords>>;
   inaccessibleCoords = new Set<string>();
   inaccessibleRequiredInputValueErrorByCoords = new Map<string, Error>();
   internalGraph: Graph;
-  internalSubgraphBySubgraphName: Map<string, InternalSubgraph>;
+  internalSubgraphBySubgraphName: Map<SubgraphName, InternalSubgraph>;
   invalidORScopesCoords = new Set<string>();
   isMaxDepth = false;
   isVersionTwo = false;
@@ -286,10 +287,10 @@ export class FederationFactory {
   ]);
   potentialPersistedDirectiveDefinitionDataByDirectiveName = new Map<string, PersistedDirectiveDefinitionData>();
   referencedPersistedDirectiveNames = new Set<DirectiveName>();
-  routerDefinitions: (MutableDefinitionNode | DefinitionNode)[] = [];
+  routerDefinitions: Array<MutableDefinitionNode | DefinitionNode> = [];
   subscriptionFilterDataByFieldPath = new Map<string, SubscriptionFilterData>();
   tagNamesByCoords = new Map<string, Set<string>>();
-  warnings: Warning[];
+  warnings: Array<Warning>;
 
   constructor({
     authorizationDataByParentTypeName,
@@ -2324,6 +2325,7 @@ export class FederationFactory {
         continue;
       }
       const dependencies = DEPENDENCIES_BY_DIRECTIVE_NAME.get(directiveName) ?? [];
+      this.directiveDefinitionByName.set(directiveName, definition);
       if (CLIENT_PERSISTED_DIRECTIVE_NAMES.has(directiveName)) {
         this.clientDefinitions.push(definition);
         addIterableToSet({
@@ -2882,26 +2884,36 @@ export class FederationFactory {
       },
       { assumeValid: true, assumeValidSDL: true },
     );
-    const subgraphConfigBySubgraphName = new Map<string, SubgraphConfig>();
-    for (const subgraph of this.internalSubgraphBySubgraphName.values()) {
-      subgraphConfigBySubgraphName.set(subgraph.name, {
-        configurationDataByTypeName: subgraph.configurationDataByTypeName,
-        directiveDefinitionByName: subgraph.directiveDefinitionByName,
-        isVersionTwo: subgraph.isVersionTwo,
-        parentDefinitionDataByTypeName: subgraph.parentDefinitionDataByTypeName,
-        schema: subgraph.schema,
+    const subgraphConfigBySubgraphName = new Map<SubgraphName, SubgraphConfig>();
+    for (const {
+      configurationDataByTypeName,
+      directiveDefinitionByName,
+      isVersionTwo,
+      name,
+      parentDefinitionDataByTypeName,
+      schema,
+      schemaNode,
+    } of this.internalSubgraphBySubgraphName.values()) {
+      subgraphConfigBySubgraphName.set(name, {
+        configurationDataByTypeName: configurationDataByTypeName,
+        directiveDefinitionByName: directiveDefinitionByName,
+        isVersionTwo: isVersionTwo,
+        parentDefinitionDataByTypeName: parentDefinitionDataByTypeName,
+        schema: schema,
+        schemaNode,
       });
     }
     for (const authorizationData of this.authorizationDataByParentTypeName.values()) {
       upsertAuthorizationConfiguration(this.fieldConfigurationByFieldCoords, authorizationData);
     }
     return {
+      directiveDefinitionByName: this.directiveDefinitionByName,
       fieldConfigurations: Array.from(this.fieldConfigurationByFieldCoords.values()),
-      subgraphConfigBySubgraphName,
       federatedGraphAST: newRouterAST,
       federatedGraphSchema: buildASTSchema(newRouterAST, { assumeValid: true, assumeValidSDL: true }),
       federatedGraphClientSchema: newClientSchema,
       parentDefinitionDataByTypeName: this.parentDefinitionDataByTypeName,
+      subgraphConfigBySubgraphName,
       success: true,
       warnings: this.warnings,
       ...this.getClientSchemaObjectBoolean(),
@@ -3174,26 +3186,36 @@ export class FederationFactory {
       },
       { assumeValid: true, assumeValidSDL: true },
     );
-    const subgraphConfigBySubgraphName = new Map<string, SubgraphConfig>();
-    for (const subgraph of this.internalSubgraphBySubgraphName.values()) {
-      subgraphConfigBySubgraphName.set(subgraph.name, {
-        configurationDataByTypeName: subgraph.configurationDataByTypeName,
-        directiveDefinitionByName: subgraph.directiveDefinitionByName,
-        isVersionTwo: subgraph.isVersionTwo,
-        parentDefinitionDataByTypeName: subgraph.parentDefinitionDataByTypeName,
-        schema: subgraph.schema,
+    const subgraphConfigBySubgraphName = new Map<SubgraphName, SubgraphConfig>();
+    for (const {
+      configurationDataByTypeName,
+      directiveDefinitionByName,
+      isVersionTwo,
+      name,
+      parentDefinitionDataByTypeName,
+      schema,
+      schemaNode,
+    } of this.internalSubgraphBySubgraphName.values()) {
+      subgraphConfigBySubgraphName.set(name, {
+        configurationDataByTypeName,
+        directiveDefinitionByName,
+        isVersionTwo,
+        parentDefinitionDataByTypeName,
+        schema,
+        schemaNode,
       });
     }
     for (const authorizationData of this.authorizationDataByParentTypeName.values()) {
       upsertAuthorizationConfiguration(this.fieldConfigurationByFieldCoords, authorizationData);
     }
     return {
+      directiveDefinitionByName: this.directiveDefinitionByName,
       fieldConfigurations: Array.from(this.fieldConfigurationByFieldCoords.values()),
-      subgraphConfigBySubgraphName,
       federatedGraphAST: newRouterAST,
       federatedGraphSchema: buildASTSchema(newRouterAST, { assumeValid: true, assumeValidSDL: true }),
       federatedGraphClientSchema: newClientSchema,
       parentDefinitionDataByTypeName: this.parentDefinitionDataByTypeName,
+      subgraphConfigBySubgraphName,
       success: true,
       warnings: this.warnings,
       ...this.getClientSchemaObjectBoolean(),

@@ -954,8 +954,9 @@ func (s *graphServer) buildGraphMux(
 		routerConfigVersion: opts.RouterConfigVersion,
 		logger:              s.logger,
 
-		promSchemaUsageEnabled:             s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled,
-		promSchemaUsageIncludeOperationSha: s.metricConfig.Prometheus.PromSchemaFieldUsage.IncludeOperationSha,
+		promSchemaUsageEnabled:      s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled,
+		promSchemaUsageIncludeOpSha: s.metricConfig.Prometheus.PromSchemaFieldUsage.IncludeOperationSha,
+		promSchemaUsageSampleRate:   s.metricConfig.Prometheus.PromSchemaFieldUsage.SampleRate,
 	})
 
 	baseLogFields := []zapcore.Field{

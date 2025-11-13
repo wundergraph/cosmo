@@ -10,7 +10,7 @@ import { camelCase, snakeCase, upperFirst } from 'lodash-es';
 /**
  * The names of the GraphQL operation types
  */
-export type OperationTypeName = 'Query' | 'Mutation' | 'Subscription';
+export type OperationTypeName = 'Query' | 'Mutation' | 'Subscription' | 'Resolve';
 
 /**
  * Converts a GraphQL field name to a Protocol Buffer field name (snake_case)
@@ -31,6 +31,10 @@ export function graphqlArgumentToProtoField(argName: string): string {
  */
 export function createOperationMethodName(operationType: OperationTypeName, fieldName: string): string {
   return `${operationType}${upperFirst(camelCase(fieldName))}`;
+}
+
+export function createResolverMethodName(parentTypeName: string, fieldName: string): string {
+  return `Resolve${upperFirst(camelCase(parentTypeName))}${upperFirst(camelCase(fieldName))}`;
 }
 
 /**
@@ -73,4 +77,31 @@ export function graphqlEnumValueToProtoEnumValue(enumTypeName: string, enumValue
  */
 export function createEnumUnspecifiedValue(enumTypeName: string): string {
   return `${snakeCase(enumTypeName).toUpperCase()}_UNSPECIFIED`;
+}
+
+/**
+ * Creates a response result name for a resolver response
+ * @param methodName - The name of the method
+ * @returns The name of the response result built from the method name
+ */
+export function resolverResponseResultName(methodName: string): string {
+  return `${upperFirst(camelCase(methodName))}Result`;
+}
+
+/**
+ * Creates a type field arguments name for a type field
+ * @param methodName - The method name
+ * @returns The name of the type field arguments built from the method name
+ */
+export function typeFieldArgsName(methodName: string): string {
+  return `${methodName}Args`;
+}
+
+/**
+ * Creates a type field context name for a type field
+ * @param methodName - The method name
+ * @returns The name of the type field context built from the method name
+ */
+export function typeFieldContextName(methodName: string): string {
+  return `${methodName}Context`;
 }

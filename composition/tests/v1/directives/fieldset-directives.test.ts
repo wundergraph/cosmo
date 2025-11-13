@@ -852,27 +852,23 @@ describe('openfed_FieldSet tests', () => {
             type Entity @key(fields: "id") {
               id: ID!
               interface: InterfaceOne @external
-              requirerOne: String! @requires(fields: """
-                interface {
-                  ... on InterfaceTwo {
-                    ... on ObjectOne {
-                      isObjectOne
-                    }
-                    name
-                    ... on ObjectTwo {
-                      isObjectTwo
-                    }
+              requirerOne: String! @requires(fields: "interface {
+                ... on InterfaceTwo {
+                  ... on ObjectOne {
+                    isObjectOne
                   }
+                  name
+                  ... on ObjectTwo {
+                    isObjectTwo
+                  }
+                }
+                age
+              }")
+              requirerTwo: String! @requires(fields: "interface {
+                ... on InterfaceOne {
                   age
                 }
-                """)
-              requirerTwo: String! @requires(fields: """
-                interface {
-                  ... on InterfaceOne {
-                    age
-                  }
-                }
-                """)
+              }")
             }
 
             interface InterfaceOne {
@@ -1439,30 +1435,11 @@ const subgraphH: Subgraph = {
       interface: InterfaceOne @external
       requirerOne: String!
       @requires(
-        fields: """
-        interface {
-          ... on InterfaceTwo {
-            ... on ObjectOne {
-              isObjectOne
-            }
-            name
-            ... on ObjectTwo {
-              isObjectTwo
-            }
-          }
-          age
-        }
-        """
+        fields: "interface { ... on InterfaceTwo { ... on ObjectOne { isObjectOne } name ... on ObjectTwo { isObjectTwo } } age }"
       )
       requirerTwo: String!
       @requires(
-        fields: """
-          interface {
-            ... on InterfaceOne {
-              age
-            }
-          }
-        """
+        fields: "interface { ... on InterfaceOne { age } }"
       )
     }
 
