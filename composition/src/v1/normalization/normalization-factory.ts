@@ -3814,7 +3814,7 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationResult 
   const parentDefinitionDataMapsBySubgraphName = new Map<SubgraphName, Map<TypeName, ParentDefinitionData>>();
   const subgraphNames = new Set<SubgraphName>();
   const nonUniqueSubgraphNames = new Set<SubgraphName>();
-  const invalidNameErrorMessages: Array<SubgraphName> = [];
+  const invalidNameErrorMessages: Array<string> = [];
   const invalidORScopesCoords = new Set<string>();
   const fieldCoordsByNamedTypeName = new Map<TypeName, Set<string>>();
   const warnings: Array<Warning> = [];
