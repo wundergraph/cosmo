@@ -3804,19 +3804,19 @@ export class NormalizationFactory {
 }
 
 export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationResult {
-  const authorizationDataByParentTypeName = new Map<string, AuthorizationData>();
-  const concreteTypeNamesByAbstractTypeName = new Map<string, Set<string>>();
-  const entityDataByTypeName = new Map<string, EntityData>();
-  const internalSubgraphBySubgraphName = new Map<string, InternalSubgraph>();
+  const authorizationDataByParentTypeName = new Map<TypeName, AuthorizationData>();
+  const concreteTypeNamesByAbstractTypeName = new Map<TypeName, Set<TypeName>>();
+  const entityDataByTypeName = new Map<TypeName, EntityData>();
+  const internalSubgraphBySubgraphName = new Map<SubgraphName, InternalSubgraph>();
   const allOverridesByTargetSubgraphName = new Map<string, Map<string, Set<string>>>();
   const overrideSourceSubgraphNamesByFieldPath = new Map<string, string[]>();
   const duplicateOverriddenFieldPaths = new Set<string>();
-  const parentDefinitionDataMapsBySubgraphName = new Map<string, Map<string, ParentDefinitionData>>();
-  const subgraphNames = new Set<string>();
-  const nonUniqueSubgraphNames = new Set<string>();
-  const invalidNameErrorMessages: string[] = [];
+  const parentDefinitionDataMapsBySubgraphName = new Map<SubgraphName, Map<TypeName, ParentDefinitionData>>();
+  const subgraphNames = new Set<SubgraphName>();
+  const nonUniqueSubgraphNames = new Set<SubgraphName>();
+  const invalidNameErrorMessages: Array<string> = [];
   const invalidORScopesCoords = new Set<string>();
-  const fieldCoordsByNamedTypeName = new Map<string, Set<string>>();
+  const fieldCoordsByNamedTypeName = new Map<TypeName, Set<string>>();
   const warnings: Array<Warning> = [];
   const validationErrors: Array<Error> = [];
   // Record the subgraph names first, so that subgraph references can be validated
@@ -3893,11 +3893,12 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationResult 
         keyFieldNamesByParentTypeName: normalizationResult.keyFieldNamesByParentTypeName,
         name: subgraphName,
         operationTypes: normalizationResult.operationTypes,
-        overriddenFieldNamesByParentTypeName: new Map<string, Set<string>>(),
+        overriddenFieldNamesByParentTypeName: new Map<TypeName, Set<FieldName>>(),
         parentDefinitionDataByTypeName: normalizationResult.parentDefinitionDataByTypeName,
         persistedDirectiveDefinitionDataByDirectiveName:
           normalizationResult.persistedDirectiveDefinitionDataByDirectiveName,
         schema: normalizationResult.schema,
+        schemaNode: normalizationResult.schemaNode,
         url: subgraph.url,
       });
     }
