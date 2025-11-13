@@ -660,14 +660,12 @@ telemetry:
       schema_usage:
         enabled: true
         include_operation_sha: true
-        sample_rate: 0.5  # Supports any rate: 1.0, 0.8, 0.5, 0.1, 0.01, etc.
 `)
 		c, err := LoadConfig([]string{f})
 		require.NoError(t, err)
 
 		require.True(t, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.Enabled)
 		require.True(t, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.IncludeOperationSha)
-		require.Equal(t, 0.5, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.SampleRate)
 	})
 
 	t.Run("from environment", func(t *testing.T) {
@@ -679,16 +677,113 @@ version: "1"
 		require.NoError(t, err)
 
 		require.False(t, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.Enabled)
-		require.Equal(t, 1.0, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.SampleRate)
 
 		t.Setenv("PROMETHEUS_SCHEMA_FIELD_USAGE_ENABLED", "true")
-		t.Setenv("PROMETHEUS_SCHEMA_FIELD_USAGE_SAMPLE_RATE", "0.25")
 
 		c, err = LoadConfig([]string{f})
 		require.NoError(t, err)
 
 		require.True(t, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.Enabled)
-		require.Equal(t, 0.25, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.SampleRate)
+	})
+
+	t.Run("exporter defaults", func(t *testing.T) {
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+telemetry:
+  metrics:
+    prometheus:
+      schema_usage:
+        enabled: true
+`)
+		c, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+
+		exporter := c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.Exporter
+		require.Equal(t, 8192, exporter.BatchSize)
+		require.Equal(t, 16384, exporter.QueueSize)
+		require.Equal(t, 10*time.Second, exporter.Interval)
+		require.Equal(t, 10*time.Second, exporter.ExportTimeout)
+	})
+
+	t.Run("exporter custom config from file", func(t *testing.T) {
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+telemetry:
+  metrics:
+    prometheus:
+      schema_usage:
+        enabled: true
+        include_operation_sha: true
+        exporter:
+          batch_size: 4096
+          queue_size: 8192
+          interval: 30s
+          export_timeout: 15s
+`)
+		c, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+
+		require.True(t, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.Enabled)
+		require.True(t, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.IncludeOperationSha)
+
+		exporter := c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.Exporter
+		require.Equal(t, 4096, exporter.BatchSize)
+		require.Equal(t, 8192, exporter.QueueSize)
+		require.Equal(t, 30*time.Second, exporter.Interval)
+		require.Equal(t, 15*time.Second, exporter.ExportTimeout)
+	})
+
+	t.Run("exporter config from environment", func(t *testing.T) {
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+telemetry:
+  metrics:
+    prometheus:
+      schema_usage:
+        enabled: true
+`)
+
+		t.Setenv("PROMETHEUS_SCHEMA_FIELD_USAGE_EXPORTER_BATCH_SIZE", "2048")
+		t.Setenv("PROMETHEUS_SCHEMA_FIELD_USAGE_EXPORTER_QUEUE_SIZE", "4096")
+		t.Setenv("PROMETHEUS_SCHEMA_FIELD_USAGE_EXPORTER_INTERVAL", "20s")
+		t.Setenv("PROMETHEUS_SCHEMA_FIELD_USAGE_EXPORTER_EXPORT_TIMEOUT", "25s")
+
+		c, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+
+		exporter := c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.Exporter
+		require.Equal(t, 2048, exporter.BatchSize)
+		require.Equal(t, 4096, exporter.QueueSize)
+		require.Equal(t, 20*time.Second, exporter.Interval)
+		require.Equal(t, 25*time.Second, exporter.ExportTimeout)
+	})
+
+	t.Run("file config takes precedence over environment", func(t *testing.T) {
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+telemetry:
+  metrics:
+    prometheus:
+      schema_usage:
+        enabled: true
+        exporter:
+          batch_size: 1024
+          interval: 5s
+`)
+
+		t.Setenv("PROMETHEUS_SCHEMA_FIELD_USAGE_EXPORTER_BATCH_SIZE", "9999")
+		t.Setenv("PROMETHEUS_SCHEMA_FIELD_USAGE_EXPORTER_INTERVAL", "99s")
+
+		c, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+
+		exporter := c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.Exporter
+		require.Equal(t, 1024, exporter.BatchSize)
+		require.Equal(t, 5*time.Second, exporter.Interval)
 	})
 }
 
