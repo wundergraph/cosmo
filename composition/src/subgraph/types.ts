@@ -6,7 +6,7 @@ import {
   ParentDefinitionData,
   PersistedDirectiveDefinitionData,
 } from '../schema-building/types';
-import { DirectiveName, SubgraphName, TypeName } from '../types/types';
+import { DirectiveName, FieldName, SubgraphName, TypeName } from '../types/types';
 import { SchemaDefinitionNode, SchemaExtensionNode } from 'graphql/index';
 
 export type Subgraph = {
@@ -31,10 +31,10 @@ export type InternalSubgraph = {
   directiveDefinitionByName: Map<DirectiveName, DirectiveDefinitionNode>;
   entityInterfaces: Map<string, EntityInterfaceSubgraphData>;
   isVersionTwo: boolean;
-  keyFieldNamesByParentTypeName: Map<string, Set<string>>;
+  keyFieldNamesByParentTypeName: Map<TypeName, Set<string>>;
   name: string;
   operationTypes: Map<string, OperationTypeNode>;
-  overriddenFieldNamesByParentTypeName: Map<string, Set<string>>;
+  overriddenFieldNamesByParentTypeName: Map<TypeName, Set<FieldName>>;
   parentDefinitionDataByTypeName: Map<string, ParentDefinitionData>;
   persistedDirectiveDefinitionDataByDirectiveName: Map<DirectiveName, PersistedDirectiveDefinitionData>;
   schema: GraphQLSchema;

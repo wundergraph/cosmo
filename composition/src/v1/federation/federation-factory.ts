@@ -3197,12 +3197,12 @@ export class FederationFactory {
       schemaNode,
     } of this.internalSubgraphBySubgraphName.values()) {
       subgraphConfigBySubgraphName.set(name, {
-        configurationDataByTypeName: configurationDataByTypeName,
-        directiveDefinitionByName: directiveDefinitionByName,
-        isVersionTwo: isVersionTwo,
-        parentDefinitionDataByTypeName: parentDefinitionDataByTypeName,
-        schema: schema,
-        schemaNode: schemaNode,
+        configurationDataByTypeName,
+        directiveDefinitionByName,
+        isVersionTwo,
+        parentDefinitionDataByTypeName,
+        schema,
+        schemaNode,
       });
     }
     for (const authorizationData of this.authorizationDataByParentTypeName.values()) {
