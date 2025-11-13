@@ -13,6 +13,8 @@ import {
   SCALAR,
   ScalarDefinitionData,
   SHAREABLE,
+  stringToNamedTypeNode,
+  stringToNameNode,
   Subgraph,
   SubgraphName,
 } from '../../src';
@@ -1023,7 +1025,10 @@ describe('FederationFactory tests', () => {
   });
 
   test('that renaming a root type also renames field return types of the same type #2.1', () => {
-    const { federatedGraphSchema } = federateSubgraphsSuccess([subgraphV, subgraphX], ROUTER_COMPATIBILITY_VERSION_ONE);
+    const { federatedGraphSchema, subgraphConfigBySubgraphName } = federateSubgraphsSuccess(
+      [subgraphV, subgraphX],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toStrictEqual(
       normalizeString(
         SCHEMA_QUERY_DEFINITION +
@@ -1047,6 +1052,20 @@ describe('FederationFactory tests', () => {
     `,
       ),
     );
+    const xConfig = subgraphConfigBySubgraphName.get(subgraphX.name);
+    expect(xConfig).toBeDefined();
+    expect(xConfig!.schemaNode).toStrictEqual({
+      description: undefined,
+      directives: [],
+      kind: Kind.SCHEMA_DEFINITION,
+      operationTypes: [
+        {
+          kind: Kind.OPERATION_TYPE_DEFINITION,
+          operation: 'query',
+          type: stringToNamedTypeNode('Queries'),
+        },
+      ],
+    });
   });
 
   test('that renaming a root type also renames field return types of the same type #2.2', () => {
