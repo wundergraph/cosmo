@@ -325,7 +325,7 @@
                 },
                 "object_path": {
                   "type": "string",
-                  "description": "The path to the execution config in the storage provider. The path is used to download the execution config from the storage provider."
+                  "description": "The path to the execution config in the storage provider. The path is used to download the execution config from the storage provider. If the path ends with `.zst` (zstd compressed) or `.gz` (gzip compressed), the file will be decompressed before reading."
                 }
               }
             }
