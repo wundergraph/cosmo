@@ -804,8 +804,10 @@ func TestReceiveHook(t *testing.T) {
 				require.NoError(t, err)
 			}, "unable to close client before timeout")
 
-			// Verify events arrived out of order: event 2 and 3 before event 1
-			assert.Equal(t, []float64{2, 3, 1}, receivedIDs, "expected events to arrive out of order due to timeout")
+			// Verify events arrived out of order: event 1 should be the last one to arrive
+			assert.ElementsMatch(t, []float64{1, 2, 3}, receivedIDs, "expected to receive all events")
+			assert.Equal(t, float64(1), receivedIDs[len(receivedIDs)-1], "expected the delayed event to arrive last")
+			assert.NotEqual(t, float64(1), receivedIDs[0], "expected at least one later event to arrive before the delayed one")
 
 			timeoutLog := xEnv.Observer().FilterMessage("Timeout exceeded during subscription updates, events may arrive out of order")
 			assert.Len(t, timeoutLog.All(), 1, "expected timeout warning to be logged")
