@@ -643,7 +643,10 @@
       ]
     },
     "SubscriptionHooks": {
-      "MaxConcurrentEventReceiveHandlers": 100
+      "OnReceiveEvents": {
+        "MaxConcurrentHandlers": 100,
+        "HandlerTimeout": 5000000000
+      }
     }
   },
   "CacheWarmup": {

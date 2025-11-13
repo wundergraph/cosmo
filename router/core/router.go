@@ -253,9 +253,12 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.metricConfig = rmetric.DefaultConfig(Version)
 	}
 
-	// Default value for maxConcurrentOnReceiveHooks
-	if r.subscriptionHooks.maxConcurrentOnReceiveHooks == 0 {
-		r.subscriptionHooks.maxConcurrentOnReceiveHooks = 100
+	if r.subscriptionHooks.onReceiveEvents.maxConcurrentHandlers == 0 {
+		r.subscriptionHooks.onReceiveEvents.maxConcurrentHandlers = 100
+	}
+
+	if r.subscriptionHooks.onReceiveEvents.timeout == 0 {
+		r.subscriptionHooks.onReceiveEvents.timeout = 5 * time.Second
 	}
 
 	if r.corsOptions == nil {
@@ -681,15 +684,15 @@ func (r *Router) initModules(ctx context.Context) error {
 		}
 
 		if handler, ok := moduleInstance.(SubscriptionOnStartHandler); ok {
-			r.subscriptionHooks.onStart = append(r.subscriptionHooks.onStart, handler.SubscriptionOnStart)
+			r.subscriptionHooks.onStart.handlers = append(r.subscriptionHooks.onStart.handlers, handler.SubscriptionOnStart)
 		}
 
 		if handler, ok := moduleInstance.(StreamPublishEventHandler); ok {
-			r.subscriptionHooks.onPublishEvents = append(r.subscriptionHooks.onPublishEvents, handler.OnPublishEvents)
+			r.subscriptionHooks.onPublishEvents.handlers = append(r.subscriptionHooks.onPublishEvents.handlers, handler.OnPublishEvents)
 		}
 
 		if handler, ok := moduleInstance.(StreamReceiveEventHandler); ok {
-			r.subscriptionHooks.onReceiveEvents = append(r.subscriptionHooks.onReceiveEvents, handler.OnReceiveEvents)
+			r.subscriptionHooks.onReceiveEvents.handlers = append(r.subscriptionHooks.onReceiveEvents.handlers, handler.OnReceiveEvents)
 		}
 
 		r.modules = append(r.modules, moduleInstance)
@@ -2139,7 +2142,8 @@ func WithDemoMode(demoMode bool) Option {
 
 func WithSubscriptionHooks(cfg config.SubscriptionHooksConfiguration) Option {
 	return func(r *Router) {
-		r.subscriptionHooks.maxConcurrentOnReceiveHooks = cfg.MaxConcurrentEventReceiveHandlers
+		r.subscriptionHooks.onReceiveEvents.maxConcurrentHandlers = cfg.OnReceiveEvents.MaxConcurrentHandlers
+		r.subscriptionHooks.onReceiveEvents.timeout = cfg.OnReceiveEvents.HandlerTimeout
 	}
 }
 

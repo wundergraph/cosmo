@@ -41,7 +41,7 @@ func (p *PubSubProvider) applyPublishEventHooks(ctx context.Context, cfg Publish
 	}()
 
 	currentEvents = events
-	for _, hook := range p.hooks.OnPublishEvents {
+	for _, hook := range p.hooks.OnPublishEvents.Handlers {
 		var err error
 		currentEvents, err = hook(ctx, cfg, currentEvents, p.eventBuilder)
 		currentEvents = slices.DeleteFunc(currentEvents, func(event StreamEvent) bool {
@@ -90,7 +90,7 @@ func (p *PubSubProvider) Subscribe(ctx context.Context, cfg SubscriptionEventCon
 }
 
 func (p *PubSubProvider) Publish(ctx context.Context, cfg PublishEventConfiguration, events []StreamEvent) error {
-	if len(p.hooks.OnPublishEvents) == 0 {
+	if len(p.hooks.OnPublishEvents.Handlers) == 0 {
 		return p.Adapter.Publish(ctx, cfg, events)
 	}
 

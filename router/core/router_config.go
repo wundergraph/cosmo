@@ -27,10 +27,23 @@ import (
 )
 
 type subscriptionHooks struct {
-	onStart                     []func(ctx SubscriptionOnStartHandlerContext) error
-	onPublishEvents             []func(ctx StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error)
-	onReceiveEvents             []func(ctx StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error)
-	maxConcurrentOnReceiveHooks int
+	onStart         onStartHooks
+	onPublishEvents onPublishEventsHooks
+	onReceiveEvents onReceiveEventsHooks
+}
+
+type onStartHooks struct {
+	handlers []func(ctx SubscriptionOnStartHandlerContext) error
+}
+
+type onPublishEventsHooks struct {
+	handlers []func(ctx StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error)
+}
+
+type onReceiveEventsHooks struct {
+	handlers              []func(ctx StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error)
+	maxConcurrentHandlers int
+	timeout               time.Duration
 }
 
 type Config struct {

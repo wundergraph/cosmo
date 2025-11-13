@@ -418,8 +418,8 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				}
 			}
 
-			subscriptionOnStartFns := make([]graphql_datasource.SubscriptionOnStartFn, len(l.subscriptionHooks.onStart))
-			for i, fn := range l.subscriptionHooks.onStart {
+			subscriptionOnStartFns := make([]graphql_datasource.SubscriptionOnStartFn, len(l.subscriptionHooks.onStart.handlers))
+			for i, fn := range l.subscriptionHooks.onStart.handlers {
 				subscriptionOnStartFns[i] = NewEngineSubscriptionOnStartHook(fn)
 			}
 			customConfiguration, err := graphql_datasource.NewConfiguration(graphql_datasource.ConfigurationInput{
@@ -477,18 +477,18 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 		}
 	}
 
-	subscriptionOnStartFns := make([]pubsub_datasource.SubscriptionOnStartFn, len(l.subscriptionHooks.onStart))
-	for i, fn := range l.subscriptionHooks.onStart {
+	subscriptionOnStartFns := make([]pubsub_datasource.SubscriptionOnStartFn, len(l.subscriptionHooks.onStart.handlers))
+	for i, fn := range l.subscriptionHooks.onStart.handlers {
 		subscriptionOnStartFns[i] = NewPubSubSubscriptionOnStartHook(fn)
 	}
 
-	onPublishEventsFns := make([]pubsub_datasource.OnPublishEventsFn, len(l.subscriptionHooks.onPublishEvents))
-	for i, fn := range l.subscriptionHooks.onPublishEvents {
+	onPublishEventsFns := make([]pubsub_datasource.OnPublishEventsFn, len(l.subscriptionHooks.onPublishEvents.handlers))
+	for i, fn := range l.subscriptionHooks.onPublishEvents.handlers {
 		onPublishEventsFns[i] = NewPubSubOnPublishEventsHook(fn)
 	}
 
-	onReceiveEventsFns := make([]pubsub_datasource.OnReceiveEventsFn, len(l.subscriptionHooks.onReceiveEvents))
-	for i, fn := range l.subscriptionHooks.onReceiveEvents {
+	onReceiveEventsFns := make([]pubsub_datasource.OnReceiveEventsFn, len(l.subscriptionHooks.onReceiveEvents.handlers))
+	for i, fn := range l.subscriptionHooks.onReceiveEvents.handlers {
 		onReceiveEventsFns[i] = NewPubSubOnReceiveEventsHook(fn)
 	}
 
@@ -501,10 +501,17 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 		l.resolver.InstanceData().HostName,
 		l.resolver.InstanceData().ListenAddress,
 		pubsub_datasource.Hooks{
-			SubscriptionOnStart:            subscriptionOnStartFns,
-			OnReceiveEvents:                onReceiveEventsFns,
-			OnPublishEvents:                onPublishEventsFns,
-			MaxConcurrentOnReceiveHandlers: l.subscriptionHooks.maxConcurrentOnReceiveHooks,
+			SubscriptionOnStart: pubsub_datasource.SubscriptionOnStartHooks{
+				Handlers: subscriptionOnStartFns,
+			},
+			OnPublishEvents: pubsub_datasource.OnPublishEventsHooks{
+				Handlers: onPublishEventsFns,
+			},
+			OnReceiveEvents: pubsub_datasource.OnReceiveEventsHooks{
+				Handlers:              onReceiveEventsFns,
+				MaxConcurrentHandlers: l.subscriptionHooks.onReceiveEvents.maxConcurrentHandlers,
+				Timeout:               l.subscriptionHooks.onReceiveEvents.timeout,
+			},
 		},
 	)
 	if err != nil {

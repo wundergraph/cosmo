@@ -4,10 +4,16 @@ import (
 	"context"
 	"slices"
 	"sync"
+	"time"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+)
+
+const (
+	timeoutGracePeriod = 50 * time.Millisecond
+	defaultTimeout     = 5 * time.Second
 )
 
 // SubscriptionEventUpdater is a wrapper around the SubscriptionUpdater interface
@@ -26,10 +32,12 @@ type subscriptionEventUpdater struct {
 	hooks                          Hooks
 	logger                         *zap.Logger
 	eventBuilder                   EventBuilderFn
+	semaphore                      chan struct{}
+	timeout                        time.Duration
 }
 
 func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
-	if len(s.hooks.OnReceiveEvents) == 0 {
+	if len(s.hooks.OnReceiveEvents.Handlers) == 0 {
 		for _, event := range events {
 			s.eventUpdater.Update(event.GetData())
 		}
@@ -37,27 +45,37 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 	}
 
 	subscriptions := s.eventUpdater.Subscriptions()
-	limit := max(s.hooks.MaxConcurrentOnReceiveHandlers, 1)
-	semaphore := make(chan struct{}, limit)
 	wg := sync.WaitGroup{}
-	errCh := make(chan error, len(subscriptions))
+	updaterCtx, cancel := context.WithDeadline(context.Background(), time.Now().Add(s.timeout))
+	defer cancel()
 
-	for ctx, subId := range subscriptions {
-		semaphore <- struct{}{} // Acquire a slot
-		wg.Add(1)
-		go s.updateSubscription(ctx, &wg, errCh, semaphore, subId, events)
-	}
+	done := make(chan struct{})
 
-	doneLogging := make(chan struct{})
 	go func() {
-		s.deduplicateAndLogErrors(errCh, len(subscriptions))
-		doneLogging <- struct{}{}
+		for subCtx, subId := range subscriptions {
+			s.semaphore <- struct{}{} // Acquire slot, blocks if all slots are taken
+			wg.Add(1)
+			go s.updateSubscription(subCtx, updaterCtx, &wg, subId, events)
+		}
+
+		wg.Wait()
+		close(done)
 	}()
 
-	wg.Wait()
-	close(semaphore)
-	close(errCh)
-	<-doneLogging
+	select {
+	case <-done:
+		s.logger.Debug("All subscription updates completed")
+		// All subscriptions completed successfully
+	case <-time.After(s.timeout + timeoutGracePeriod):
+		// Timeout exceeded, some subscription updates may still be running.
+		// We can't stop them but we will also not wait for them, basically abandoning them.
+		// They will continue to hold their semaphore slots until they complete,
+		// which means the next Update() call will have fewer available slots.
+		// Also since we will process the next batch of events while having abandoned updaters,
+		// those updaters might eventually push their events to the subscription late,
+		// which means events might arrive out of order.
+		s.logger.Warn("Timeout exceeded during subscription updates, events may arrive out of order")
+	}
 }
 
 func (s *subscriptionEventUpdater) Complete() {
@@ -66,34 +84,31 @@ func (s *subscriptionEventUpdater) Complete() {
 
 func (s *subscriptionEventUpdater) Close(kind resolve.SubscriptionCloseKind) {
 	s.eventUpdater.Close(kind)
+	close(s.semaphore)
 }
 
 func (s *subscriptionEventUpdater) SetHooks(hooks Hooks) {
 	s.hooks = hooks
 }
 
-func (s *subscriptionEventUpdater) updateSubscription(ctx context.Context, wg *sync.WaitGroup, errCh chan error, semaphore chan struct{}, subID resolve.SubscriptionIdentifier, events []StreamEvent) {
+func (s *subscriptionEventUpdater) updateSubscription(subscriptionCtx context.Context, updaterCtx context.Context, wg *sync.WaitGroup, subID resolve.SubscriptionIdentifier, events []StreamEvent) {
 	defer wg.Done()
 	defer func() {
 		if r := recover(); r != nil {
 			s.recoverPanic(subID, r)
 		}
-		<-semaphore // release the slot when done
+		<-s.semaphore // release the slot when done
 	}()
 
-	hooks := s.hooks.OnReceiveEvents
+	hooks := s.hooks.OnReceiveEvents.Handlers
 
 	// modify events with hooks
 	var err error
 	for i := range hooks {
-		events, err = hooks[i](ctx, s.subscriptionEventConfiguration, s.eventBuilder, events)
+		events, err = hooks[i](subscriptionCtx, updaterCtx, s.subscriptionEventConfiguration, s.eventBuilder, events)
 		events = slices.DeleteFunc(events, func(event StreamEvent) bool {
 			return event == nil
 		})
-
-		if err != nil {
-			errCh <- err
-		}
 	}
 
 	// send events to the subscription,
@@ -120,36 +135,6 @@ func (s *subscriptionEventUpdater) recoverPanic(subID resolve.SubscriptionIdenti
 	s.eventUpdater.CloseSubscription(resolve.SubscriptionCloseKindDownstreamServiceError, subID)
 }
 
-// deduplicateAndLogErrors collects errors from errCh
-// and deduplicates them based on their err.Error() value.
-// Afterwards it uses s.logger to log the message.
-func (s *subscriptionEventUpdater) deduplicateAndLogErrors(errCh chan error, size int) {
-	if s.logger == nil {
-		return
-	}
-
-	errs := make(map[string]int, size)
-	for err := range errCh {
-		amount, found := errs[err.Error()]
-		if found {
-			errs[err.Error()] = amount + 1
-			continue
-		}
-		errs[err.Error()] = 1
-	}
-
-	for err, amount := range errs {
-		s.logger.Error(
-			"some handlers have thrown an error",
-			zap.String("error", err),
-			zap.Int("amount_handlers", amount),
-			zap.String("provider_type", string(s.subscriptionEventConfiguration.ProviderType())),
-			zap.String("provider_id", s.subscriptionEventConfiguration.ProviderID()),
-			zap.String("field_name", s.subscriptionEventConfiguration.RootFieldName()),
-		)
-	}
-}
-
 func NewSubscriptionEventUpdater(
 	cfg SubscriptionEventConfiguration,
 	hooks Hooks,
@@ -157,11 +142,19 @@ func NewSubscriptionEventUpdater(
 	logger *zap.Logger,
 	eventBuilder EventBuilderFn,
 ) SubscriptionEventUpdater {
+	limit := max(hooks.OnReceiveEvents.MaxConcurrentHandlers, 1)
+	timeout := hooks.OnReceiveEvents.Timeout
+	if timeout == 0 {
+		timeout = defaultTimeout
+	}
+
 	return &subscriptionEventUpdater{
 		subscriptionEventConfiguration: cfg,
 		hooks:                          hooks,
 		eventUpdater:                   eventUpdater,
 		logger:                         logger,
 		eventBuilder:                   eventBuilder,
+		semaphore:                      make(chan struct{}, limit),
+		timeout:                        timeout,
 	}
 }
