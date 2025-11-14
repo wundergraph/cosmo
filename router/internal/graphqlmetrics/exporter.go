@@ -228,11 +228,13 @@ func (e *Exporter[T]) exportBatch(batch []T) error {
 }
 
 // prepareAndSendBatch starts a goroutine to export the batch with retry logic.
+// The goroutine takes ownership of the batch slice and will return it to the pool when done.
 func (e *Exporter[T]) prepareAndSendBatch(batch []T) {
 	e.logger.Debug("Preparing to send batch", zap.Int("batch_size", len(batch)))
 	e.inflightBatches.Inc()
 	go func() {
 		defer e.inflightBatches.Dec()
+		defer e.putBatchBuffer(batch) // Return buffer to pool after export completes
 		e.exportBatchWithRetry(batch)
 	}()
 }
@@ -328,8 +330,7 @@ func (e *Exporter[T]) start() {
 			e.logger.Debug("Tick: flushing buffer", zap.Int("buffer_size", len(buffer)))
 			if len(buffer) > 0 {
 				e.prepareAndSendBatch(buffer)
-				// Return buffer to pool after sending
-				e.putBatchBuffer(buffer)
+				// Ownership transferred to goroutine, get a new buffer
 				buffer = nil
 			}
 		case item := <-e.queue:
@@ -337,8 +338,7 @@ func (e *Exporter[T]) start() {
 			if len(buffer) == e.settings.BatchSize {
 				e.logger.Debug("Buffer full, sending batch", zap.Int("batch_size", len(buffer)))
 				e.prepareAndSendBatch(buffer)
-				// Return buffer to pool after sending
-				e.putBatchBuffer(buffer)
+				// Ownership transferred to goroutine, get a new buffer
 				buffer = nil
 			}
 		case <-e.shutdownSignal:
@@ -360,15 +360,13 @@ func (e *Exporter[T]) drainQueue(buffer []T) {
 			buffer = append(buffer, item)
 			if len(buffer) == e.settings.BatchSize {
 				e.prepareAndSendBatch(buffer)
-				// Return buffer to pool and get a new one
-				e.putBatchBuffer(buffer)
+				// Ownership transferred to goroutine, get a new buffer
 				buffer = e.getBatchBuffer()
 			}
 		default:
 			if len(buffer) > 0 {
 				e.prepareAndSendBatch(buffer)
-				// Return buffer to pool before returning
-				e.putBatchBuffer(buffer)
+				// Ownership transferred to goroutine
 			}
 			e.logger.Debug("Queue drained", zap.Int("drained_items", drainedItems))
 			return

@@ -175,6 +175,10 @@ func TestExportBatchesWithUniqueSchemaUsages(t *testing.T) {
 			SchemaInfo: &graphqlmetricsv1.SchemaInfo{
 				Version: "1",
 			},
+			RequestInfo: &graphqlmetricsv1.RequestInfo{
+				Error:      false,
+				StatusCode: http.StatusOK,
+			},
 			Attributes: map[string]string{},
 		}
 
@@ -246,6 +250,10 @@ func TestForceFlushSync(t *testing.T) {
 			SchemaInfo: &graphqlmetricsv1.SchemaInfo{
 				Version: "1",
 			},
+			RequestInfo: &graphqlmetricsv1.RequestInfo{
+				Error:      false,
+				StatusCode: http.StatusOK,
+			},
 			Attributes: map[string]string{},
 		}
 
@@ -290,6 +298,10 @@ func TestForceFlushSync(t *testing.T) {
 			},
 			SchemaInfo: &graphqlmetricsv1.SchemaInfo{
 				Version: "1",
+			},
+			RequestInfo: &graphqlmetricsv1.RequestInfo{
+				Error:      false,
+				StatusCode: http.StatusOK,
 			},
 			Attributes: map[string]string{},
 		}
@@ -359,6 +371,10 @@ func TestExportBatchInterval(t *testing.T) {
 			},
 			SchemaInfo: &graphqlmetricsv1.SchemaInfo{
 				Version: "1",
+			},
+			RequestInfo: &graphqlmetricsv1.RequestInfo{
+				Error:      false,
+				StatusCode: http.StatusOK,
 			},
 			Attributes: map[string]string{},
 		}

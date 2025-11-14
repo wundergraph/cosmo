@@ -702,7 +702,7 @@ telemetry:
 		exporter := c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.Exporter
 		require.Equal(t, 4096, exporter.BatchSize)
 		require.Equal(t, 12800, exporter.QueueSize)
-		require.Equal(t, 10*time.Second, exporter.Interval)
+		require.Equal(t, 2*time.Second, exporter.Interval)
 		require.Equal(t, 10*time.Second, exporter.ExportTimeout)
 	})
 
