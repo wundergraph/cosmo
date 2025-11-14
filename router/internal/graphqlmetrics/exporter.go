@@ -3,6 +3,7 @@ package graphqlmetrics
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/cloudflare/backoff"
@@ -22,6 +23,7 @@ type Exporter[T any] struct {
 	acceptTrafficSema chan struct{}
 	queue             chan T
 	inflightBatches   *atomic.Int64
+	batchBufferPool   *sync.Pool // Pool for batch slice buffers to reduce allocations
 
 	// exportRequestContext is used to cancel all requests that started before the shutdown
 	exportRequestContext context.Context
@@ -102,6 +104,13 @@ func NewExporter[T any](logger *zap.Logger, sink Sink[T], isRetryableError SinkE
 		inflightBatches:         atomic.NewInt64(0),
 		exportRequestContext:    ctx,
 		cancelAllExportRequests: cancel,
+		batchBufferPool: &sync.Pool{
+			New: func() any {
+				// Pre-allocate slice with batch size capacity
+				buffer := make([]T, 0, settings.BatchSize)
+				return &buffer
+			},
+		},
 	}
 	if err := e.validate(); err != nil {
 		return nil, err
@@ -140,6 +149,23 @@ func (e *Exporter[T]) validate() error {
 	}
 
 	return nil
+}
+
+// getBatchBuffer retrieves a batch buffer from the pool.
+// The returned buffer is ready to use with zero length and appropriate capacity.
+func (e *Exporter[T]) getBatchBuffer() []T {
+	bufferPtr := e.batchBufferPool.Get().(*[]T)
+	buffer := *bufferPtr
+	// Ensure the buffer is empty (should already be, but be defensive)
+	return buffer[:0]
+}
+
+// putBatchBuffer returns a batch buffer to the pool for reuse.
+// The buffer is reset to zero length before being pooled.
+func (e *Exporter[T]) putBatchBuffer(buffer []T) {
+	// Reset the slice to zero length while keeping capacity
+	buffer = buffer[:0]
+	e.batchBufferPool.Put(&buffer)
 }
 
 func (e *Exporter[T]) acceptTraffic() bool {
@@ -294,13 +320,16 @@ func (e *Exporter[T]) start() {
 
 	for {
 		if buffer == nil {
-			buffer = make([]T, 0, e.settings.BatchSize)
+			// Get a buffer from the pool instead of allocating
+			buffer = e.getBatchBuffer()
 		}
 		select {
 		case <-ticker.C:
 			e.logger.Debug("Tick: flushing buffer", zap.Int("buffer_size", len(buffer)))
 			if len(buffer) > 0 {
 				e.prepareAndSendBatch(buffer)
+				// Return buffer to pool after sending
+				e.putBatchBuffer(buffer)
 				buffer = nil
 			}
 		case item := <-e.queue:
@@ -308,6 +337,8 @@ func (e *Exporter[T]) start() {
 			if len(buffer) == e.settings.BatchSize {
 				e.logger.Debug("Buffer full, sending batch", zap.Int("batch_size", len(buffer)))
 				e.prepareAndSendBatch(buffer)
+				// Return buffer to pool after sending
+				e.putBatchBuffer(buffer)
 				buffer = nil
 			}
 		case <-e.shutdownSignal:
@@ -329,11 +360,15 @@ func (e *Exporter[T]) drainQueue(buffer []T) {
 			buffer = append(buffer, item)
 			if len(buffer) == e.settings.BatchSize {
 				e.prepareAndSendBatch(buffer)
-				buffer = make([]T, 0, e.settings.BatchSize)
+				// Return buffer to pool and get a new one
+				e.putBatchBuffer(buffer)
+				buffer = e.getBatchBuffer()
 			}
 		default:
 			if len(buffer) > 0 {
 				e.prepareAndSendBatch(buffer)
+				// Return buffer to pool before returning
+				e.putBatchBuffer(buffer)
 			}
 			e.logger.Debug("Queue drained", zap.Int("drained_items", drainedItems))
 			return

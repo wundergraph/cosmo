@@ -121,7 +121,7 @@ type PrometheusSchemaFieldUsage struct {
 type PrometheusSchemaFieldUsageExporter struct {
 	BatchSize     int           `yaml:"batch_size" envDefault:"4096" env:"BATCH_SIZE"`
 	QueueSize     int           `yaml:"queue_size" envDefault:"12800" env:"QUEUE_SIZE"`
-	Interval      time.Duration `yaml:"interval" envDefault:"10s" env:"INTERVAL"`
+	Interval      time.Duration `yaml:"interval" envDefault:"1s" env:"INTERVAL"`
 	ExportTimeout time.Duration `yaml:"export_timeout" envDefault:"10s" env:"EXPORT_TIMEOUT"`
 }
 

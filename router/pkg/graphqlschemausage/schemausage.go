@@ -1,8 +1,6 @@
 package graphqlschemausage
 
 import (
-	"slices"
-
 	"github.com/wundergraph/astjson"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvisitor"
@@ -66,11 +64,23 @@ type typeFieldUsageInfoVisitor struct {
 func (p *typeFieldUsageInfoVisitor) visitNode(node resolve.Node, path []string) {
 	switch t := node.(type) {
 	case *resolve.Object:
+		// Pre-allocate the typeFieldUsageInfo slice with a reasonable capacity
+		// to reduce allocations during traversal
+		if p.typeFieldUsageInfo == nil {
+			// Estimate: average query has ~20-50 fields
+			p.typeFieldUsageInfo = make([]*TypeFieldUsageInfo, 0, 32)
+		}
+
 		for _, field := range t.Fields {
 			if field.Info == nil {
 				continue
 			}
-			pathCopy := slices.Clone(append(path, field.Info.Name))
+
+			// create a new slice with exact capacity and copy elements
+			pathCopy := make([]string, len(path)+1)
+			copy(pathCopy, path)
+			pathCopy[len(path)] = field.Info.Name
+
 			p.typeFieldUsageInfo = append(p.typeFieldUsageInfo, &TypeFieldUsageInfo{
 				Path:                pathCopy,
 				ParentTypeNames:     field.Info.ParentTypeNames,
@@ -100,6 +110,8 @@ func GetArgumentUsageInfo(operation, definition *ast.Document) ([]*graphqlmetric
 		definition: definition,
 		operation:  operation,
 		walker:     &walker,
+		// Pre-allocate with reasonable capacity to reduce allocations
+		usage: make([]*graphqlmetrics.ArgumentUsageInfo, 0, 16),
 	}
 	walker.RegisterEnterArgumentVisitor(visitor)
 	walker.RegisterEnterFieldVisitor(visitor)
@@ -136,6 +148,7 @@ func (a *argumentUsageInfoVisitor) EnterArgument(ref int) {
 	}
 	argType := a.definition.InputValueDefinitionType(argDef)
 	typeName := a.definition.ResolveTypeNameBytes(argType)
+
 	a.usage = append(a.usage, &graphqlmetrics.ArgumentUsageInfo{
 		Path:      []string{string(fieldName), string(argName)},
 		TypeName:  string(enclosingTypeName),
@@ -148,6 +161,8 @@ func GetInputUsageInfo(operation, definition *ast.Document, variables *astjson.V
 		operation:  operation,
 		definition: definition,
 		variables:  variables,
+		// Pre-allocate with reasonable capacity to reduce allocations
+		usage: make([]*graphqlmetrics.InputUsageInfo, 0, 16),
 	}
 	for i := range operation.VariableDefinitions {
 		visitor.EnterVariableDefinition(i)
@@ -182,6 +197,7 @@ func (v *inputUsageInfoVisitor) traverseVariable(jsonValue *astjson.Value, field
 	}
 	if parentTypeName != "" {
 		usageInfo.TypeName = parentTypeName
+		// Pre-allocate Path slice with exact capacity
 		usageInfo.Path = []string{parentTypeName, fieldName}
 	}
 
@@ -216,6 +232,7 @@ func (v *inputUsageInfoVisitor) traverseVariable(jsonValue *astjson.Value, field
 			usageInfo.EnumValues = []string{string(jsonValue.GetStringBytes())}
 		case astjson.TypeArray:
 			arr := jsonValue.GetArray()
+			// Pre-allocate EnumValues slice with exact capacity
 			usageInfo.EnumValues = make([]string, len(arr))
 			for i, arrayValue := range arr {
 				usageInfo.EnumValues[i] = string(arrayValue.GetStringBytes())
