@@ -94,8 +94,8 @@
           "Enabled": true,
           "IncludeOperationSha": true,
           "Exporter": {
-            "BatchSize": 8192,
-            "QueueSize": 16384,
+            "BatchSize": 4096,
+            "QueueSize": 12800,
             "Interval": 10000000000,
             "ExportTimeout": 10000000000
           }
