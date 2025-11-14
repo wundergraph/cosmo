@@ -33,7 +33,6 @@ import {
 } from '../types/index.js';
 import { isAuthenticationError, isAuthorizationError, isPublicError } from './errors/errors.js';
 import { GraphKeyAuthContext } from './services/GraphApiTokenAuthenticator.js';
-import { composeFederatedContract, composeFederatedGraphWithPotentialContracts } from './composition/composition.js';
 import { SubgraphsToCompose } from './repositories/FeatureFlagRepository.js';
 
 const labelRegex = /^[\dA-Za-z](?:[\w.-]{0,61}[\dA-Za-z])?$/;
@@ -539,15 +538,12 @@ export async function getFederationResultWithPotentialContracts(
   tagOptionsByContractName: Map<string, ContractTagOptions>,
   compositionOptions?: CompositionOptions,
 ): Promise<FederationResult | FederationResultWithContracts> {
-  return await composeWorkerPool.run(
-    {
-      federatedGraph,
-      subgraphsToCompose,
-      tagOptionsByContractName,
-      compositionOptions,
-    },
-    { name: 'composeFederatedGraph' },
-  );
+  return await composeWorkerPool.run({
+    federatedGraph,
+    subgraphsToCompose,
+    tagOptionsByContractName: Object.fromEntries(tagOptionsByContractName),
+    compositionOptions,
+  });
 }
 
 export function getFederatedGraphRouterCompatibilityVersion(federatedGraphDTOs: Array<FederatedGraphDTO>): string {

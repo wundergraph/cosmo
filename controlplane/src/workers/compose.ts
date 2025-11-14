@@ -21,7 +21,7 @@ import { SubgraphsToCompose } from '../core/repositories/FeatureFlagRepository.j
 interface Inputs {
   federatedGraph: FederatedGraphDTO;
   subgraphsToCompose: SubgraphsToCompose;
-  tagOptionsByContractName: Map<string, ContractTagOptions>;
+  tagOptionsByContractName: Record<string, ContractTagOptions>;
   compositionOptions?: CompositionOptions;
 }
 
@@ -42,7 +42,7 @@ export default function ({
   }
   return composeFederatedGraphWithPotentialContracts(
     subgraphsToCompose.compositionSubgraphs,
-    tagOptionsByContractName,
+    new Map(Object.entries(tagOptionsByContractName)),
     federatedGraph.routerCompatibilityVersion,
     compositionOptions,
   );
