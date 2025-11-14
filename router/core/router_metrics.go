@@ -1,12 +1,13 @@
 package core
 
 import (
+	"strings"
+
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
-	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 	"go.uber.org/zap"
 )
@@ -85,6 +86,10 @@ func (m *routerMetrics) ExportSchemaUsageInfo(operationContext *operationContext
 		return
 	}
 
+	if m.gqlMetricsExporter == nil {
+		return
+	}
+
 	var opType graphqlmetricsv1.OperationType
 	switch operationContext.opType {
 	case OperationTypeQuery:
@@ -114,7 +119,7 @@ func (m *routerMetrics) ExportSchemaUsageInfo(operationContext *operationContext
 			Hash: operationContext.HashString(),
 			// parsed operation names are re-used across requests
 			// for that reason, we need to copy the name, or it might get corrupted
-			Name: m.strCopy(operationContext.name),
+			Name: strings.Clone(operationContext.name),
 		},
 		SchemaInfo: &graphqlmetricsv1.SchemaInfo{
 			Version: m.routerConfigVersion,
@@ -133,6 +138,10 @@ func (m *routerMetrics) ExportSchemaUsageInfo(operationContext *operationContext
 }
 
 func (m *routerMetrics) ExportSchemaUsageInfoPrometheus(operationContext *operationContext, statusCode int, hasError bool, exportSynchronous bool) {
+	if m.prometheusMetricsExporter == nil {
+		return
+	}
+
 	var opType graphqlmetricsv1.OperationType
 	switch operationContext.opType {
 	case OperationTypeQuery:
@@ -148,7 +157,9 @@ func (m *routerMetrics) ExportSchemaUsageInfoPrometheus(operationContext *operat
 		OperationInfo: &graphqlmetricsv1.OperationInfo{
 			Type: opType,
 			Hash: operationContext.sha256Hash,
-			Name: m.strCopy(operationContext.name),
+			// parsed operation names are re-used across requests
+			// for that reason, we need to copy the name, or it might get corrupted
+			Name: strings.Clone(operationContext.name),
 		},
 		SchemaInfo: &graphqlmetricsv1.SchemaInfo{
 			Version: m.routerConfigVersion,
@@ -156,10 +167,4 @@ func (m *routerMetrics) ExportSchemaUsageInfoPrometheus(operationContext *operat
 	}
 
 	m.prometheusMetricsExporter.RecordUsage(item, exportSynchronous)
-}
-
-func (m *routerMetrics) strCopy(s string) string {
-	b := make([]byte, len(s))
-	copy(b, s)
-	return unsafebytes.BytesToString(b)
 }
