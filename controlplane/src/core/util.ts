@@ -539,12 +539,15 @@ export async function getFederationResultWithPotentialContracts(
   tagOptionsByContractName: Map<string, ContractTagOptions>,
   compositionOptions?: CompositionOptions,
 ): Promise<FederationResult | FederationResultWithContracts> {
-  return await composeWorkerPool.run({
-    federatedGraph,
-    subgraphsToCompose,
-    tagOptionsByContractName,
-    compositionOptions,
-  }, { name: 'composeFederatedGraph' });
+  return await composeWorkerPool.run(
+    {
+      federatedGraph,
+      subgraphsToCompose,
+      tagOptionsByContractName,
+      compositionOptions,
+    },
+    { name: 'composeFederatedGraph' },
+  );
 }
 
 export function getFederatedGraphRouterCompatibilityVersion(federatedGraphDTOs: Array<FederatedGraphDTO>): string {

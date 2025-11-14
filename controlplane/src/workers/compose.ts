@@ -1,22 +1,22 @@
 /**
-  * This file is intended to be used with a worker thread.
-  * In watch mode changes aren't immediately applied. You have to rebuild the project with tsc before changes are applied.
-  */
+ * This file is intended to be used with a worker thread.
+ * In watch mode changes aren't immediately applied. You have to rebuild the project with tsc before changes are applied.
+ */
+import { isMainThread } from 'node:worker_threads';
+import { join } from 'node:path';
 import {
   ContractTagOptions,
   FederationResult,
   FederationResultWithContracts,
   newContractTagOptionsFromArrays,
 } from '@wundergraph/composition';
-import { composeFederatedContract, composeFederatedGraphWithPotentialContracts } from '../core/composition/composition.js';
-import {
-  CompositionOptions,
-  FederatedGraphDTO,
-} from '../types/index.js';
-import { SubgraphsToCompose } from '../core/repositories/FeatureFlagRepository.js';
 import { Tinypool } from 'tinypool';
-import { isMainThread } from 'worker_threads';
-import { join } from 'path';
+import {
+  composeFederatedContract,
+  composeFederatedGraphWithPotentialContracts,
+} from '../core/composition/composition.js';
+import { CompositionOptions, FederatedGraphDTO } from '../types/index.js';
+import { SubgraphsToCompose } from '../core/repositories/FeatureFlagRepository.js';
 
 interface Inputs {
   federatedGraph: FederatedGraphDTO;
@@ -27,12 +27,10 @@ interface Inputs {
 
 export function getWorkerPool(maxCount?: number): Tinypool | undefined {
   if (isMainThread) {
-    const filename = import.meta.url.endsWith('.ts') ?
-      join(process.cwd(), 'dist/workers/compose.js') :
-      import.meta.url;
-    return new Tinypool({ filename: filename, name: 'composeFederatedGraph', maxThreads: maxCount });
+    const filename = import.meta.url.endsWith('.ts') ? join(process.cwd(), 'dist/workers/compose.js') : import.meta.url;
+    return new Tinypool({ filename, name: 'composeFederatedGraph', maxThreads: maxCount });
   } else {
-    return undefined
+    return undefined;
   }
 }
 

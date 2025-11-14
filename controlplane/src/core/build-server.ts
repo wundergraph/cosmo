@@ -9,6 +9,7 @@ import fastifyGracefulShutdown from 'fastify-graceful-shutdown';
 import { App } from 'octokit';
 import { Worker } from 'bullmq';
 import { Tinypool } from 'tinypool';
+import { getWorkerPool } from '../workers/compose.js';
 import routes from './routes.js';
 import fastifyHealth from './plugins/health.js';
 import fastifyMetrics, { MetricsPluginOptions } from './plugins/metrics.js';
@@ -54,7 +55,6 @@ import {
   createReactivateOrganizationWorker,
   ReactivateOrganizationQueue,
 } from './workers/ReactivateOrganizationWorker.js';
-import { getWorkerPool } from '../workers/compose.js';
 
 export interface BuildConfig {
   logger: LoggerOptions;
@@ -509,7 +509,7 @@ export default async function build(opts: BuildConfig) {
       stripeSecretKey: opts.stripe?.secret,
       admissionWebhookJWTSecret: opts.admissionWebhook.secret,
       cdnBaseUrl: opts.cdnBaseUrl,
-      composeWorkerPool: composeWorkerPool,
+      composeWorkerPool,
     }),
     contextValues(req) {
       return createContextValues().set<FastifyBaseLogger>({ id: fastifyLoggerId, defaultValue: req.log }, req.log);

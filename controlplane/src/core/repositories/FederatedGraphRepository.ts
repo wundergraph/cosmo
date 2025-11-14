@@ -1585,13 +1585,14 @@ export class FederatedGraphRepository {
         const contractBaseCompositionDataByContractId = new Map<string, ContractBaseCompositionData>();
 
         for (const subgraphsToCompose of allSubgraphsToCompose) {
-          const result: FederationResult | FederationResultWithContracts = await getFederationResultWithPotentialContracts(
-            composeWorkerPool,
-            federatedGraph,
-            subgraphsToCompose,
-            tagOptionsByContractName,
-            compositionOptions,
-          );
+          const result: FederationResult | FederationResultWithContracts =
+            await getFederationResultWithPotentialContracts(
+              composeWorkerPool,
+              federatedGraph,
+              subgraphsToCompose,
+              tagOptionsByContractName,
+              compositionOptions,
+            );
 
           if (!result.success) {
             // Collect all composition errors
