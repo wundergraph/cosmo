@@ -232,6 +232,7 @@ export function createFederatedGraph(
         },
         blobStorage: opts.blobStorage,
         chClient: opts.chClient!,
+        composeWorkerPool: opts.composeWorkerPool,
         compositionOptions: newCompositionOptions(req.disableResolvabilityValidation),
         federatedGraphs: [federatedGraph],
       });

@@ -125,6 +125,7 @@ export function moveFederatedGraph(
           jwtSecret: opts.admissionWebhookJWTSecret,
         },
         opts.chClient!,
+        opts.composeWorkerPool,
       );
 
       const allDeploymentErrors: PlainMessage<DeploymentError>[] = [];
@@ -163,6 +164,7 @@ export function moveFederatedGraph(
             jwtSecret: opts.admissionWebhookJWTSecret,
           },
           opts.chClient!,
+          opts.composeWorkerPool,
         );
 
         allCompositionErrors.push(...contractErrors);

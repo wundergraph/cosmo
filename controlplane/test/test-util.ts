@@ -12,6 +12,7 @@ import { drizzle } from 'drizzle-orm/postgres-js';
 import Fastify from 'fastify';
 import { pino } from 'pino';
 import postgres from 'postgres';
+import { Tinypool } from 'tinypool';
 import { expect } from 'vitest';
 import { BlobNotFoundError, BlobObject, BlobStorage } from '../src/core/blobstorage/index.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
@@ -152,6 +153,11 @@ export const SetupTest = async function ({
   const deleteUserQueue = new DeleteUserQueue(log, server.redisForQueue);
   const reactivateOrganizationQueue = new ReactivateOrganizationQueue(log, server.redisForQueue);
 
+  const composeWorkerPool = new Tinypool({
+    filename: join(process.cwd(), 'dist/workers/compose.js'),
+    maxThreads: 1,
+  });
+
   const blobStorage = new InMemoryBlobStorage();
   await server.register(fastifyConnectPlugin, {
     routes: routes({
@@ -182,6 +188,7 @@ export const SetupTest = async function ({
         reactivateOrganizationQueue,
         deleteUserQueue,
       },
+      composeWorkerPool,
     }),
   });
 

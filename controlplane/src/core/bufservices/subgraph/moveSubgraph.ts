@@ -117,6 +117,7 @@ export function moveSubgraph(
               jwtSecret: opts.admissionWebhookJWTSecret,
             },
             opts.chClient!,
+            opts.composeWorkerPool,
             newCompositionOptions(req.disableResolvabilityValidation),
           );
 

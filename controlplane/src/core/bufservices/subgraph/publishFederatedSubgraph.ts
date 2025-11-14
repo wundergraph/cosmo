@@ -574,6 +574,7 @@ export function publishFederatedSubgraph(
           webhookJWTSecret: opts.admissionWebhookJWTSecret,
         },
         opts.chClient!,
+        opts.composeWorkerPool,
         newCompositionOptions(req.disableResolvabilityValidation),
       );
 

@@ -11,6 +11,7 @@ import { isNetworkError, isRetryableError } from 'axios-retry';
 import { formatISO, subHours } from 'date-fns';
 import { FastifyBaseLogger } from 'fastify';
 import { parse, visit } from 'graphql';
+import { Tinypool } from 'tinypool';
 import { uid } from 'uid/secure';
 import {
   ContractTagOptions,
@@ -32,7 +33,6 @@ import {
 } from '../types/index.js';
 import { isAuthenticationError, isAuthorizationError, isPublicError } from './errors/errors.js';
 import { GraphKeyAuthContext } from './services/GraphApiTokenAuthenticator.js';
-import { composeFederatedContract, composeFederatedGraphWithPotentialContracts } from './composition/composition.js';
 import { SubgraphsToCompose } from './repositories/FeatureFlagRepository.js';
 
 const labelRegex = /^[\dA-Za-z](?:[\w.-]{0,61}[\dA-Za-z])?$/;
@@ -531,27 +531,19 @@ export const checkIfLabelMatchersChanged = (data: {
   return false;
 };
 
-export function getFederationResultWithPotentialContracts(
+export async function getFederationResultWithPotentialContracts(
+  composeWorkerPool: Tinypool,
   federatedGraph: FederatedGraphDTO,
   subgraphsToCompose: SubgraphsToCompose,
   tagOptionsByContractName: Map<string, ContractTagOptions>,
   compositionOptions?: CompositionOptions,
-): FederationResult | FederationResultWithContracts {
-  // This condition is only true when entering the method to specifically create/update a contract
-  if (federatedGraph.contract) {
-    return composeFederatedContract(
-      subgraphsToCompose.compositionSubgraphs,
-      newContractTagOptionsFromArrays(federatedGraph.contract.excludeTags, federatedGraph.contract.includeTags),
-      federatedGraph.routerCompatibilityVersion,
-      compositionOptions,
-    );
-  }
-  return composeFederatedGraphWithPotentialContracts(
-    subgraphsToCompose.compositionSubgraphs,
-    tagOptionsByContractName,
-    federatedGraph.routerCompatibilityVersion,
+): Promise<FederationResult | FederationResultWithContracts> {
+  return await composeWorkerPool.run({
+    federatedGraph,
+    subgraphsToCompose,
+    tagOptionsByContractName: Object.fromEntries(tagOptionsByContractName),
     compositionOptions,
-  );
+  });
 }
 
 export function getFederatedGraphRouterCompatibilityVersion(federatedGraphDTOs: Array<FederatedGraphDTO>): string {

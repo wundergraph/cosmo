@@ -5,6 +5,7 @@ import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/pla
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import pino from 'pino';
 import { App } from 'octokit';
+import { Tinypool } from 'tinypool';
 import * as schema from '../db/schema.js';
 import NodeServiceImpl from './bufservices/NodeService.js';
 import PlatformServiceImpl from './bufservices/PlatformService.js';
@@ -51,6 +52,7 @@ export interface RouterOptions {
   };
   stripeSecretKey?: string;
   cdnBaseUrl: string;
+  composeWorkerPool: Tinypool;
 }
 const handlerOptions: Partial<ConnectRouterOptions> = {
   maxTimeoutMs: 80_000,

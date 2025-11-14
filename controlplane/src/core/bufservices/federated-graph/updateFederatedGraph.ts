@@ -119,6 +119,7 @@ export function updateFederatedGraph(
       admissionWebhookURL: req.admissionWebhookURL,
       blobStorage: opts.blobStorage,
       chClient: opts.chClient!,
+      composeWorkerPool: opts.composeWorkerPool,
       compositionOptions: newCompositionOptions(req.disableResolvabilityValidation),
       labelMatchers: req.labelMatchers,
       namespaceId: federatedGraph.namespaceId,
