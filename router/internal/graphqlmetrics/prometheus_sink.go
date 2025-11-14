@@ -2,7 +2,6 @@ package graphqlmetrics
 
 import (
 	"context"
-	"slices"
 
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
@@ -61,22 +60,24 @@ func (s *PrometheusSink) Export(ctx context.Context, batch []*graphqlmetrics.Sch
 
 	// Record metrics for each unique combination of operation + field attributes
 	for key, count := range aggregatedCounts {
-		opAttrs := []attribute.KeyValue{
+		// Pre-allocate with max capacity (3 operation attrs + 2 field attrs)
+		allAttrs := make([]attribute.KeyValue, 0, 5)
+
+		allAttrs = append(allAttrs,
 			rotel.WgOperationName.String(key.operationName),
 			rotel.WgOperationType.String(key.operationType),
-		}
+		)
 
 		// Include operation SHA256 if it was provided
 		if key.operationHash != "" {
-			opAttrs = append(opAttrs, rotel.WgOperationSha256.String(key.operationHash))
+			allAttrs = append(allAttrs, rotel.WgOperationSha256.String(key.operationHash))
 		}
 
-		fieldAttrs := []attribute.KeyValue{
+		allAttrs = append(allAttrs,
 			rotel.WgGraphQLFieldName.String(key.fieldName),
 			rotel.WgGraphQLParentType.String(key.parentType),
-		}
+		)
 
-		allAttrs := slices.Concat(opAttrs, fieldAttrs)
 		s.metricStore.MeasureSchemaFieldUsage(
 			ctx,
 			int64(count),
