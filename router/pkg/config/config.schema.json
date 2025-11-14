@@ -355,7 +355,7 @@
                 },
                 "object_path": {
                   "type": "string",
-                  "description": "The path to the execution config in the storage provider. The path is used to download the execution config from the storage provider."
+                  "description": "The path to the execution config in the storage provider. The path is used to download the execution config from the storage provider. If the path ends with `.zst` (zstd compressed) or `.gz` (gzip compressed), the file will be decompressed before reading."
                 }
               }
             }
@@ -1325,6 +1325,13 @@
                       "type": "boolean",
                       "default": false,
                       "description": "Include the operation SHA256 in the metric labels, this can be an expensive operation. The default value is false."
+                    },
+                    "sample_rate": {
+                      "type": "number",
+                      "default": 1.0,
+                      "minimum": 0.0,
+                      "maximum": 1.0,
+                      "description": "Sample rate for schema field usage metrics (0.0 to 1.0). Uses probabilistic random sampling, ensuring all operations get ~X% statistical coverage with uniform distribution. Only recommended for large scale deployments. Default is 1.0 (100% sampling)."
                     }
                   }
                 }

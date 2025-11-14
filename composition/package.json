@@ -1,6 +1,6 @@
 {
   "name": "@wundergraph/composition",
-  "version": "0.47.1",
+  "version": "0.48.3",
   "author": {
     "name": "WunderGraph Maintainers",
     "email": "info@wundergraph.com"
@@ -30,7 +30,7 @@
   "dependencies": {
     "@graphql-tools/merge": "^9.0.0",
     "@graphql-tools/schema": "^10.0.0",
-    "@graphql-tools/utils": "^10.1.0",
+    "@graphql-tools/utils": "^10.10.2",
     "core-js": "^3.41.0",
     "graphql": "^16.9.0",
     "lodash": "^4.17.21",

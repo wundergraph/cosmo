@@ -23,11 +23,11 @@ require (
 	github.com/twmb/franz-go v1.16.1
 	github.com/twmb/franz-go/pkg/kadm v1.11.0
 	github.com/wundergraph/astjson v0.0.0-20250106123708-be463c97e083
-	github.com/wundergraph/cosmo/demo v0.0.0-20250912064154-106e871ee32e
+	github.com/wundergraph/cosmo/demo v0.0.0-20251030234733-8ed574a0296f
 	github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects v0.0.0-20250715110703-10f2e5f9c79e
-	github.com/wundergraph/cosmo/router v0.0.0-20250912064154-106e871ee32e
+	github.com/wundergraph/cosmo/router v0.0.0-20251030234733-8ed574a0296f
 	github.com/wundergraph/cosmo/router-plugin v0.0.0-20250808194725-de123ba1c65e
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.232
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.237
 	go.opentelemetry.io/otel v1.36.0
 	go.opentelemetry.io/otel/sdk v1.36.0
 	go.opentelemetry.io/otel/sdk/metric v1.36.0
@@ -36,7 +36,7 @@ require (
 	go.uber.org/goleak v1.3.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/net v0.46.0
-	google.golang.org/grpc v1.68.1
+	google.golang.org/grpc v1.71.0
 	google.golang.org/protobuf v1.36.9
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -170,15 +170,15 @@ require (
 	go.uber.org/ratelimit v0.3.1 // indirect
 	go.withmatt.com/connect-brotli v0.4.0 // indirect
 	golang.org/x/crypto v0.43.0 // indirect
-	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8 // indirect
+	golang.org/x/exp v0.0.0-20250813145105-42675adae3e6 // indirect
 	golang.org/x/mod v0.29.0 // indirect
 	golang.org/x/sync v0.17.0 // indirect
 	golang.org/x/sys v0.37.0 // indirect
 	golang.org/x/text v0.30.0 // indirect
 	golang.org/x/time v0.9.0 // indirect
 	golang.org/x/tools v0.38.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20250106144421-5f5ef82da422 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250218202821-56aae31c358a // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20250811230008-5f3141c8851a // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250811230008-5f3141c8851a // indirect
 	gopkg.in/cenkalti/backoff.v1 v1.1.0 // indirect
 )
 

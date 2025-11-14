@@ -279,6 +279,7 @@ type MetricOptions struct {
 type PrometheusSchemaFieldUsage struct {
 	Enabled             bool
 	IncludeOperationSha bool
+	SampleRate          float64
 }
 
 type Config struct {
@@ -1517,6 +1518,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			PromSchemaFieldUsage: rmetric.PrometheusSchemaFieldUsage{
 				Enabled:             testConfig.MetricOptions.PrometheusSchemaFieldUsage.Enabled,
 				IncludeOperationSha: testConfig.MetricOptions.PrometheusSchemaFieldUsage.IncludeOperationSha,
+				SampleRate:          testConfig.MetricOptions.PrometheusSchemaFieldUsage.SampleRate,
 			},
 		}
 	}

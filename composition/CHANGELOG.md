@@ -4,6 +4,30 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.48.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.48.2...@wundergraph/composition@0.48.3) (2025-11-13)
+
+**Note:** Version bump only for package @wundergraph/composition
+
+## [0.48.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.48.1...@wundergraph/composition@0.48.2) (2025-11-12)
+
+### Bug Fixes
+
+* revert propagating schema extension node to router ([#2328](https://github.com/wundergraph/cosmo/issues/2328)) ([dcb6b3b](https://github.com/wundergraph/cosmo/commit/dcb6b3b680dfc616f6e86968f62c6494f83ee8ed)) (@Aenimus)
+
+## [0.48.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.48.0...@wundergraph/composition@0.48.1) (2025-11-12)
+
+**Note:** Version bump only for package @wundergraph/composition
+
+# [0.48.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.47.2...@wundergraph/composition@0.48.0) (2025-11-11)
+
+### Features
+
+* initial support for field resolvers in connect ([#2290](https://github.com/wundergraph/cosmo/issues/2290)) ([6f28c5d](https://github.com/wundergraph/cosmo/commit/6f28c5d203ef4fd95db83dfe22143e565df6d463)) (@Noroth)
+
+## [0.47.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.47.1...@wundergraph/composition@0.47.2) (2025-10-29)
+
+**Note:** Version bump only for package @wundergraph/composition
+
 ## [0.47.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.47.0...@wundergraph/composition@0.47.1) (2025-10-23)
 
 ### Bug Fixes

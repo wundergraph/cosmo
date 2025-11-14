@@ -113,8 +113,9 @@ type Prometheus struct {
 }
 
 type PrometheusSchemaFieldUsage struct {
-	Enabled             bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
-	IncludeOperationSha bool `yaml:"include_operation_sha" envDefault:"false" env:"INCLUDE_OPERATION_SHA"`
+	Enabled             bool    `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	IncludeOperationSha bool    `yaml:"include_operation_sha" envDefault:"false" env:"INCLUDE_OPERATION_SHA"`
+	SampleRate          float64 `yaml:"sample_rate" envDefault:"1.0" env:"SAMPLE_RATE"`
 }
 
 type MetricsOTLPExporter struct {
