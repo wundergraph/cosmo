@@ -9,6 +9,7 @@ import (
 	"github.com/cespare/xxhash/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
 )
@@ -391,6 +392,40 @@ func TestPubSubSubscriptionDataSource_InterfaceCompliance(t *testing.T) {
 
 	// Test that it implements HookableSubscriptionDataSource interface
 	var _ resolve.HookableSubscriptionDataSource = dataSource
+}
+
+func TestPubSubSubscriptionDataSource_SubscriptionOnStart_InvalidEventConfigInput(t *testing.T) {
+	mockAdapter := NewMockProvider(t)
+	uniqueRequestIDFn := func(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
+		return nil
+	}
+
+	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop(), testSubscriptionDataSourceEventBuilder)
+
+	hookCalled := false
+	hook := func(ctx resolve.StartupHookContext, config SubscriptionEventConfiguration, eventBuilder EventBuilderFn) error {
+		hookCalled = true
+		return nil
+	}
+
+	dataSource.SetHooks(Hooks{
+		SubscriptionOnStart: SubscriptionOnStartHooks{
+			Handlers: []SubscriptionOnStartFn{hook},
+		},
+	})
+
+	invalidInput := []byte(`{"invalid": json}`)
+
+	ctx := resolve.StartupHookContext{
+		Context: context.Background(),
+		Updater: func(data []byte) {},
+	}
+
+	err := dataSource.SubscriptionOnStart(ctx, invalidInput)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid character 'j' looking for beginning of value")
+	assert.False(t, hookCalled)
 }
 
 func TestPubSubSubscriptionDataSource_SubscriptionOnStart_PanicRecovery(t *testing.T) {
