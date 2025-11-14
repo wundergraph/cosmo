@@ -1266,7 +1266,7 @@
                           "type": "string",
                           "default": "10s",
                           "duration": {
-                            "minimum": "1s"
+                            "minimum": "100ms"
                           },
                           "description": "The interval at which the schema usage queue is flushed. The period is specified as a string with a number and a unit, e.g. 10s, 1m. The supported units are 's', 'm', 'h'."
                         },
