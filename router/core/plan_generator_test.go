@@ -29,7 +29,7 @@ func TestPlanOperationPanic(t *testing.T) {
 	}
 
 	assert.NotPanics(t, func() {
-		_, err = planner.PlanPreparedOperation(invalidOperation)
+		_, _, err = planner.PlanPreparedOperation(invalidOperation)
 		assert.Error(t, err)
 	})
 }
