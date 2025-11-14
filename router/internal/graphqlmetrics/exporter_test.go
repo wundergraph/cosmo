@@ -49,7 +49,7 @@ func TestExportAggregationSameSchemaUsages(t *testing.T) {
 	totalItems := 100
 	batchSize := 100
 
-	e, err := NewExporter(
+	e, err := NewGraphQLMetricsExporter(
 		zap.NewNop(),
 		c,
 		"secret",
@@ -128,7 +128,7 @@ func TestExportBatchesWithUniqueSchemaUsages(t *testing.T) {
 	totalItems := 100
 	batchSize := 5
 
-	e, err := NewExporter(
+	e, err := NewGraphQLMetricsExporter(
 		zap.NewNop(),
 		c,
 		"secret",
@@ -175,6 +175,10 @@ func TestExportBatchesWithUniqueSchemaUsages(t *testing.T) {
 			SchemaInfo: &graphqlmetricsv1.SchemaInfo{
 				Version: "1",
 			},
+			RequestInfo: &graphqlmetricsv1.RequestInfo{
+				Error:      false,
+				StatusCode: http.StatusOK,
+			},
 			Attributes: map[string]string{},
 		}
 
@@ -189,15 +193,14 @@ func TestExportBatchesWithUniqueSchemaUsages(t *testing.T) {
 
 func TestForceFlushSync(t *testing.T) {
 	c := &MyClient{
-		t:                t,
-		publishedBatches: make([][]*graphqlmetricsv1.SchemaUsageInfo, 0),
+		t: t,
 	}
 
 	queueSize := 100
 	totalItems := 10
 	batchSize := 5
 
-	e, err := NewExporter(
+	e, err := NewGraphQLMetricsExporter(
 		zap.NewNop(),
 		c,
 		"secret",
@@ -247,6 +250,10 @@ func TestForceFlushSync(t *testing.T) {
 			SchemaInfo: &graphqlmetricsv1.SchemaInfo{
 				Version: "1",
 			},
+			RequestInfo: &graphqlmetricsv1.RequestInfo{
+				Error:      false,
+				StatusCode: http.StatusOK,
+			},
 			Attributes: map[string]string{},
 		}
 
@@ -254,13 +261,14 @@ func TestForceFlushSync(t *testing.T) {
 	}
 
 	c.mu.Lock()
-	require.Equal(t, 10, len(c.publishedBatches))
-	require.Equal(t, 1, len(c.publishedBatches[0]))
+	// Synchronous mode now sends items through aggregation, so they appear as aggregations
+	require.Equal(t, 10, len(c.publishedAggregations))
+	require.Equal(t, 1, len(c.publishedAggregations[0]))
 
 	// Make sure that the exporter is still working after a forced flush
 
-	// Reset the published batches
-	c.publishedBatches = c.publishedBatches[:0]
+	// Reset the published aggregations
+	c.publishedAggregations = c.publishedAggregations[:0]
 	c.mu.Unlock()
 
 	for i := 0; i < totalItems; i++ {
@@ -291,6 +299,10 @@ func TestForceFlushSync(t *testing.T) {
 			SchemaInfo: &graphqlmetricsv1.SchemaInfo{
 				Version: "1",
 			},
+			RequestInfo: &graphqlmetricsv1.RequestInfo{
+				Error:      false,
+				StatusCode: http.StatusOK,
+			},
 			Attributes: map[string]string{},
 		}
 
@@ -299,8 +311,8 @@ func TestForceFlushSync(t *testing.T) {
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	require.Equal(t, 10, len(c.publishedBatches))
-	require.Equal(t, 1, len(c.publishedBatches[0]))
+	require.Equal(t, 10, len(c.publishedAggregations))
+	require.Equal(t, 1, len(c.publishedAggregations[0]))
 }
 
 func TestExportBatchInterval(t *testing.T) {
@@ -312,7 +324,7 @@ func TestExportBatchInterval(t *testing.T) {
 	totalItems := 5
 	batchSize := 10
 
-	e, err := NewExporter(
+	e, err := NewGraphQLMetricsExporter(
 		zap.NewNop(),
 		c,
 		"secret",
@@ -360,6 +372,10 @@ func TestExportBatchInterval(t *testing.T) {
 			SchemaInfo: &graphqlmetricsv1.SchemaInfo{
 				Version: "1",
 			},
+			RequestInfo: &graphqlmetricsv1.RequestInfo{
+				Error:      false,
+				StatusCode: http.StatusOK,
+			},
 			Attributes: map[string]string{},
 		}
 
@@ -384,7 +400,7 @@ func TestExportFullQueue(t *testing.T) {
 	totalItems := 100
 	batchSize := 1
 
-	e, err := NewExporter(
+	e, err := NewGraphQLMetricsExporter(
 		zap.NewNop(),
 		c,
 		"secret",
