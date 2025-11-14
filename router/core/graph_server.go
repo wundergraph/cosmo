@@ -506,16 +506,17 @@ func (s *graphServer) setupEngineStatistics(baseAttributes []attribute.KeyValue)
 }
 
 type graphMux struct {
-	mux                         *chi.Mux
+	mux *chi.Mux
+
 	planCache                   *ristretto.Cache[uint64, *planWithMetaData]
 	persistedOperationCache     *ristretto.Cache[uint64, NormalizationCacheEntry]
 	normalizationCache          *ristretto.Cache[uint64, NormalizationCacheEntry]
 	complexityCalculationCache  *ristretto.Cache[uint64, ComplexityCacheEntry]
 	variablesNormalizationCache *ristretto.Cache[uint64, VariablesNormalizationCacheEntry]
 	remapVariablesCache         *ristretto.Cache[uint64, RemapVariablesCacheEntry]
+	validationCache             *ristretto.Cache[uint64, bool]
+	operationHashCache          *ristretto.Cache[uint64, string]
 
-	validationCache        *ristretto.Cache[uint64, bool]
-	operationHashCache     *ristretto.Cache[uint64, string]
 	accessLogsFileLogger   *logging.BufferedLogger
 	metricStore            rmetric.Store
 	prometheusCacheMetrics *rmetric.CacheMetrics
@@ -736,39 +737,16 @@ func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []
 }
 
 func (s *graphMux) Shutdown(ctx context.Context) error {
+	s.planCache.Close()
+	s.persistedOperationCache.Close()
+	s.normalizationCache.Close()
+	s.variablesNormalizationCache.Close()
+	s.remapVariablesCache.Close()
+	s.complexityCalculationCache.Close()
+	s.validationCache.Close()
+	s.operationHashCache.Close()
+
 	var err error
-
-	if s.planCache != nil {
-		s.planCache.Close()
-	}
-
-	if s.persistedOperationCache != nil {
-		s.persistedOperationCache.Close()
-	}
-
-	if s.normalizationCache != nil {
-		s.normalizationCache.Close()
-	}
-
-	if s.variablesNormalizationCache != nil {
-		s.variablesNormalizationCache.Close()
-	}
-
-	if s.remapVariablesCache != nil {
-		s.remapVariablesCache.Close()
-	}
-
-	if s.complexityCalculationCache != nil {
-		s.complexityCalculationCache.Close()
-	}
-
-	if s.validationCache != nil {
-		s.validationCache.Close()
-	}
-
-	if s.operationHashCache != nil {
-		s.operationHashCache.Close()
-	}
 
 	if s.accessLogsFileLogger != nil {
 		if aErr := s.accessLogsFileLogger.Close(); aErr != nil {

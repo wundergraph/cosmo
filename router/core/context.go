@@ -540,8 +540,10 @@ type operationContext struct {
 	sha256Hash string
 	protocol   OperationProtocol
 
-	persistedOperationCacheHit bool
-	normalizationCacheHit      bool
+	persistedOperationCacheHit     bool
+	normalizationCacheHit          bool
+	variablesNormalizationCacheHit bool
+	variablesRemappingCacheHit     bool
 
 	typeFieldUsageInfo graphqlschemausage.TypeFieldMetrics
 	argumentUsageInfo  []*graphqlmetrics.ArgumentUsageInfo
