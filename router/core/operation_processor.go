@@ -879,12 +879,8 @@ func (o *OperationKit) setAndParseOperationDoc() error {
 
 func (o *OperationKit) normalizeVariablesCacheKey() uint64 {
 	_, _ = o.kit.keyGen.Write(o.kit.doc.Input.Variables)
-
-	// fmt.Println("####### NormalizeVariables: variables len:", len(o.kit.doc.Input.Variables))
-	// fmt.Println("####### NormalizeVariables: variables:", string(o.kit.doc.Input.Variables))
 	_, _ = o.kit.keyGen.WriteString(o.parsedOperation.NormalizedRepresentation)
 
-	// fmt.Println("####### NormalizeVariables: normalizedRepresentation:", o.parsedOperation.NormalizedRepresentation)
 	sum := o.kit.keyGen.Sum64()
 	o.kit.keyGen.Reset()
 	return sum
@@ -892,7 +888,6 @@ func (o *OperationKit) normalizeVariablesCacheKey() uint64 {
 
 func (o *OperationKit) NormalizeVariables() (cached bool, mapping []uploads.UploadPathMapping, err error) {
 	cacheKey := o.normalizeVariablesCacheKey()
-	// fmt.Println("####### NormalizeVariables: cacheKey:", cacheKey, "#######")
 	if o.cache != nil && o.cache.variablesNormalizationCache != nil {
 		entry, ok := o.cache.variablesNormalizationCache.Get(cacheKey)
 		if ok {
@@ -995,9 +990,7 @@ func (o *OperationKit) NormalizeVariables() (cached bool, mapping []uploads.Uplo
 }
 
 func (o *OperationKit) remapVariablesCacheKey() uint64 {
-	// fmt.Println("####### RemapVariables: normalized representation len:", len(o.parsedOperation.NormalizedRepresentation))
 	_, _ = o.kit.keyGen.WriteString(o.parsedOperation.NormalizedRepresentation)
-	// fmt.Println("####### RemapVariables: normalizedRepresentation:", o.parsedOperation.NormalizedRepresentation)
 	sum := o.kit.keyGen.Sum64()
 	o.kit.keyGen.Reset()
 	return sum
@@ -1005,7 +998,6 @@ func (o *OperationKit) remapVariablesCacheKey() uint64 {
 
 func (o *OperationKit) RemapVariables(disabled bool) (cached bool, err error) {
 	cacheKey := o.remapVariablesCacheKey()
-	// fmt.Println("####### RemapVariables: cacheKey:", cacheKey, "#######")
 	if o.cache != nil && o.cache.remapVariablesCache != nil {
 		entry, ok := o.cache.remapVariablesCache.Get(cacheKey)
 		if ok {
