@@ -104,10 +104,8 @@ func (pl *Planner) PlanOperation(operationFilePath string, outputFormat PlanOutp
 		return "", opTimes, err
 	}
 
-	start := time.Now()
 	rawPlan, opTimes2, err := pl.PlanPreparedOperation(operation)
 	opTimes = opTimes.Merge(opTimes2)
-	opTimes.PlanTime = time.Since(start)
 	if err != nil {
 		return "", opTimes, fmt.Errorf("failed to plan operation: %w", err)
 	}
