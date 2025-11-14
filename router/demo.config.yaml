@@ -5,6 +5,24 @@
 
 version: "1"
 
+graphql_metrics:
+  enabled: false
+
+traffic_shaping:
+  all:
+    retry:
+      enabled: false
+
+telemetry:
+  metrics:
+    otlp:
+      enabled: false
+    prometheus:
+      schema_usage:
+        enabled: true
+        exporter:
+          interval: 3s
+
 events:
   providers:
     nats:
@@ -19,4 +37,4 @@ events:
     redis:
       - id: my-redis
         urls:
-        - "redis://localhost:6379/2"
+          - "redis://localhost:6379/2"

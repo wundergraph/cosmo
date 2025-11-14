@@ -27,6 +27,7 @@ type TypeFieldMetrics []*TypeFieldUsageInfo
 
 // IntoGraphQLMetrics converts the TypeFieldMetrics into a []*graphqlmetrics.TypeFieldUsageInfo
 func (t TypeFieldMetrics) IntoGraphQLMetrics() []*graphqlmetrics.TypeFieldUsageInfo {
+	// Pre-allocate slice with exact capacity
 	metrics := make([]*graphqlmetrics.TypeFieldUsageInfo, len(t))
 	for i, info := range t {
 		metrics[i] = info.IntoGraphQLMetrics()

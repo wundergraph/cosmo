@@ -1264,7 +1264,7 @@
                         },
                         "interval": {
                           "type": "string",
-                          "default": "1s",
+                          "default": "2s",
                           "duration": {
                             "minimum": "100ms"
                           },

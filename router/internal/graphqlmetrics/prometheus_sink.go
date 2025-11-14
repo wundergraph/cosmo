@@ -82,7 +82,7 @@ func (s *PrometheusSink) Export(ctx context.Context, batch []*graphqlmetrics.Sch
 			ctx,
 			int64(count),
 			[]attribute.KeyValue{},
-			otelmetric.WithAttributeSet(attribute.NewSet(allAttrs...)),
+			otelmetric.WithAttributes(allAttrs...),
 		)
 	}
 
