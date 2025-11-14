@@ -215,6 +215,7 @@ func TestPlanGenerator(t *testing.T) {
 		json.Unmarshal(results, &resultsStruct)
 		resultsExpectedStruct := QueryPlanResults{}
 		json.Unmarshal(resultsExpected, &resultsExpectedStruct)
+		require.Len(t, resultsStruct.Plans, len(resultsExpectedStruct.Plans))
 		for i := range resultsStruct.Plans {
 			assert.Equal(t, resultsStruct.Plans[i].Plan, resultsExpectedStruct.Plans[i].Plan)
 			assert.Equal(t, resultsStruct.Plans[i].Error, resultsExpectedStruct.Plans[i].Error)
@@ -254,6 +255,7 @@ func TestPlanGenerator(t *testing.T) {
 		json.Unmarshal(results, &resultsStruct)
 		resultsExpectedStruct := QueryPlanResults{}
 		json.Unmarshal(resultsExpected, &resultsExpectedStruct)
+		require.Len(t, resultsStruct.Plans, len(resultsExpectedStruct.Plans))
 		for i := range resultsStruct.Plans {
 			assert.Equal(t, resultsStruct.Plans[i].Plan, resultsExpectedStruct.Plans[i].Plan)
 			assert.Equal(t, resultsStruct.Plans[i].Error, resultsExpectedStruct.Plans[i].Error)

@@ -101,16 +101,16 @@ func NewPlanner(planConfiguration *plan.Configuration, definition *ast.Document,
 func (pl *Planner) PlanOperation(operationFilePath string, outputFormat PlanOutputFormat) (string, OperationTimes, error) {
 	operation, opTimes, err := pl.ParseAndPrepareOperation(operationFilePath)
 	if err != nil {
-		return "", OperationTimes{}, err
+		return "", opTimes, err
 	}
 
 	start := time.Now()
 	rawPlan, opTimes2, err := pl.PlanPreparedOperation(operation)
 	opTimes = opTimes.Merge(opTimes2)
+	opTimes.PlanTime = time.Since(start)
 	if err != nil {
 		return "", opTimes, fmt.Errorf("failed to plan operation: %w", err)
 	}
-	opTimes.PlanTime = time.Since(start)
 
 	switch outputFormat {
 	case PlanOutputFormatText:
@@ -154,18 +154,18 @@ func (pl *Planner) PrepareOperation(operation *ast.Document) (*ast.Document, Ope
 	opTimes := OperationTimes{}
 
 	start := time.Now()
-	if err := pl.normalizeOperation(operation, operationName); err != nil {
-		opTimes.NormalizeTime = time.Since(start)
+	err := pl.normalizeOperation(operation, operationName)
+	opTimes.NormalizeTime = time.Since(start)
+	if err != nil {
 		return nil, opTimes, &PlannerOperationValidationError{err: err}
 	}
-	opTimes.NormalizeTime = time.Since(start)
 
 	start = time.Now()
-	if err := pl.validateOperation(operation); err != nil {
-		opTimes.ValidateTime = time.Since(start)
+	err = pl.validateOperation(operation)
+	opTimes.ValidateTime = time.Since(start)
+	if err != nil {
 		return nil, opTimes, &PlannerOperationValidationError{err: err}
 	}
-	opTimes.ValidateTime = time.Since(start)
 
 	return operation, opTimes, nil
 }
