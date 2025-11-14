@@ -163,6 +163,21 @@ func TestGRPCSubgraph(t *testing.T) {
 				}`,
 				expected: `{"data":{"nodesById":[{"__typename":"Project","id":"1","name":"Cloud Migration Overhaul"},{"__typename":"Milestone","id":"1","name":"Infrastructure Assessment"},{"__typename":"Task","id":"1"},{"__typename":"ProjectUpdate","id":"1"}]}}`,
 			},
+			{
+				name:     "query project with field resolver",
+				query:    `query { project(id:1) { filteredTasks(limit: 3) { name status }}}`,
+				expected: `{"data":{"project":{"filteredTasks":[{"name":"Current Infrastructure Audit","status":"COMPLETED"},{"name":"Cloud Provider Selection","status":"COMPLETED"},{"name":"Network Setup","status":"IN_PROGRESS"}]}}}`,
+			},
+			{
+				name:     "query projects with multiple field resolvers",
+				query:    `query { projects { name status completionRate(includeSubtasks: true) filteredTasks(limit: 3) { name status } } }`,
+				expected: `{"data":{"projects":[{"name":"Cloud Migration Overhaul","status":"ACTIVE","completionRate":50,"filteredTasks":[{"name":"Current Infrastructure Audit","status":"COMPLETED"},{"name":"Cloud Provider Selection","status":"COMPLETED"},{"name":"Network Setup","status":"IN_PROGRESS"}]},{"name":"Microservices Revolution","status":"ACTIVE","completionRate":50,"filteredTasks":[{"name":"Domain Model Analysis","status":"COMPLETED"},{"name":"API Gateway Configuration","status":"IN_PROGRESS"}]},{"name":"AI-Powered Analytics","status":"ACTIVE","completionRate":0,"filteredTasks":[{"name":"Machine Learning Model Research","status":"IN_PROGRESS"},{"name":"Data Pipeline Design","status":"TODO"}]},{"name":"DevOps Transformation","status":"PLANNING","completionRate":0,"filteredTasks":[{"name":"CI/CD Pipeline Setup","status":"TODO"}]},{"name":"Security Overhaul","status":"ON_HOLD","completionRate":0,"filteredTasks":[{"name":"Security Assessment","status":"BLOCKED"}]},{"name":"Mobile App Development","status":"ACTIVE","completionRate":100,"filteredTasks":[{"name":"User Experience Testing","status":"COMPLETED"},{"name":"Flutter App Development","status":"COMPLETED"}]},{"name":"Data Lake Implementation","status":"ACTIVE","completionRate":50,"filteredTasks":[{"name":"Data Schema Design","status":"COMPLETED"},{"name":"Apache Spark Integration","status":"IN_PROGRESS"}]}]}}`,
+			},
+			{
+				name:     "query employee current workload",
+				query:    "query { employees { assignedTasks { name status } completedTasks { name status } currentWorkload(includeCompleted: false) } }",
+				expected: `{"data":{"employees":[{"assignedTasks":[{"name":"CI/CD Pipeline Setup","status":"TODO"},{"name":"Database Migration","status":"TODO"}],"completedTasks":[{"name":"Current Infrastructure Audit","status":"COMPLETED"}],"currentWorkload":2},{"assignedTasks":[{"name":"Security Assessment","status":"BLOCKED"}],"completedTasks":[{"name":"Cloud Provider Selection","status":"COMPLETED"}],"currentWorkload":1},{"assignedTasks":[{"name":"Network Setup","status":"IN_PROGRESS"}],"completedTasks":[{"name":"User Experience Testing","status":"COMPLETED"}],"currentWorkload":1},{"assignedTasks":[],"completedTasks":[],"currentWorkload":0},{"assignedTasks":[],"completedTasks":[{"name":"Data Schema Design","status":"COMPLETED"}],"currentWorkload":0},{"assignedTasks":[{"name":"Data Pipeline Design","status":"TODO"}],"completedTasks":[{"name":"Domain Model Analysis","status":"COMPLETED"}],"currentWorkload":1},{"assignedTasks":[{"name":"API Gateway Configuration","status":"IN_PROGRESS"}],"completedTasks":[],"currentWorkload":1},{"assignedTasks":[],"completedTasks":[],"currentWorkload":0},{"assignedTasks":[],"completedTasks":[{"name":"Flutter App Development","status":"COMPLETED"}],"currentWorkload":0},{"assignedTasks":[{"name":"Apache Spark Integration","status":"IN_PROGRESS"}],"completedTasks":[],"currentWorkload":1}]}}`,
+			},
 		}
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: testenv.ConfigWithGRPCJSONTemplate,
