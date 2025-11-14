@@ -82,6 +82,7 @@ const ChecksPage: NextPageWithLayout = () => {
 
   const graphContext = useContext(GraphContext);
   const proposalsFeature = useFeature("proposals");
+  const subgraphCheckExtensionsFeature = useFeature("subgraph-check-extensions");
 
   const [, setRouteCache] = useSessionStorage("checks.route", router.asPath);
 
@@ -189,6 +190,8 @@ const ChecksPage: NextPageWithLayout = () => {
                   compositionSkipped,
                   breakingChangesSkipped,
                   linkedChecks,
+                  checkExtensionDeliveryId,
+                  checkExtensionErrorMessage,
                 }) => {
                   const isLinkedTrafficCheckFailed = linkedChecks.some(
                     (linkedCheck) =>
@@ -210,6 +213,7 @@ const ChecksPage: NextPageWithLayout = () => {
                     proposalMatch === "error",
                     isLinkedTrafficCheckFailed,
                     isLinkedPruningCheckFailed,
+                    checkExtensionErrorMessage,
                   );
 
                   const path = `${router.asPath.split("?")[0]}/${id}`;
@@ -348,6 +352,24 @@ const ChecksPage: NextPageWithLayout = () => {
                               )}
                               <span className="flex-1 truncate">
                                 Proposal Match
+                              </span>
+                            </Badge>
+                          )}
+                          {subgraphCheckExtensionsFeature?.enabled && (
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "gap-2 py-1.5",
+                                !checkExtensionDeliveryId && "text-muted-foreground",
+                              )}
+                            >
+                              {!checkExtensionDeliveryId ? (
+                                <NoSymbolIcon className="h-4 w-4" />
+                              ) : (
+                                getCheckIcon(!checkExtensionErrorMessage)
+                              )}
+                              <span className="flex-1 truncate">
+                                Extension
                               </span>
                             </Badge>
                           )}

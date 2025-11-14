@@ -5,6 +5,7 @@ import {
   CompositionError,
   CompositionWarning,
   DeploymentError,
+  LintSeverity,
   VCSContext,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, normalizeURL, splitLabel } from '@wundergraph/cosmo-shared';
@@ -37,6 +38,7 @@ import {
   NamespaceDTO,
   ProtoSubgraph,
   SchemaCheckDetailsDTO,
+  SchemaCheckDTO,
   SchemaCheckSummaryDTO,
   SchemaGraphPruningDTO,
   SchemaGraphPruningIssues,
@@ -62,6 +64,7 @@ import {
   newCompositionOptions,
   normalizeLabels,
 } from '../util.js';
+import { OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 import { ContractRepository } from './ContractRepository.js';
 import { FeatureFlagRepository } from './FeatureFlagRepository.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
@@ -1157,6 +1160,8 @@ export class SubgraphRepository {
         compositionSkipped: schemaChecks.compositionSkipped,
         breakingChangesSkipped: schemaChecks.breakingChangesSkipped,
         errorMessage: schemaChecks.errorMessage,
+        checkExtensionDeliveryId: schemaChecks.checkExtensionDeliveryId,
+        checkExtensionErrorMessage: schemaChecks.checkExtensionErrorMessage,
       })
       .from(schemaChecks)
       .where(
@@ -1214,7 +1219,9 @@ export class SubgraphRepository {
           breakingChangesSkipped: c.breakingChangesSkipped ?? false,
           errorMessage: c.errorMessage || undefined,
           linkedChecks,
-        };
+          checkExtensionDeliveryId: c.checkExtensionDeliveryId || undefined,
+          checkExtensionErrorMessage: c.checkExtensionErrorMessage || undefined,
+        } satisfies SchemaCheckDTO;
       }),
     );
 
@@ -1297,6 +1304,8 @@ export class SubgraphRepository {
       breakingChangesSkipped: check.breakingChangesSkipped ?? false,
       errorMessage: check.errorMessage || undefined,
       linkedChecks,
+      checkExtensionDeliveryId: check.checkExtensionDeliveryId || undefined,
+      checkExtensionErrorMessage: check.checkExtensionErrorMessage || undefined,
     };
   }
 
@@ -1783,6 +1792,9 @@ export class SubgraphRepository {
   }
 
   public async performSchemaCheck({
+    actorId,
+    blobStorage,
+    admissionConfig,
     organizationSlug,
     namespace,
     subgraphName,
@@ -1798,7 +1810,14 @@ export class SubgraphRepository {
     chClient,
     newGraphQLSchema,
     disableResolvabilityValidation,
+    webhookService,
   }: {
+    actorId: string;
+    blobStorage: BlobStorage;
+    admissionConfig: {
+      jwtSecret: string;
+      cdnBaseUrl: string;
+    };
     organizationSlug: string;
     namespace: NamespaceDTO;
     subgraphName: string;
@@ -1815,6 +1834,7 @@ export class SubgraphRepository {
     chClient?: ClickHouseClient;
     newGraphQLSchema?: GraphQLSchema;
     disableResolvabilityValidation?: boolean;
+    webhookService: OrganizationWebhookService;
   }): Promise<PlainMessage<CheckSubgraphSchemaResponse> & { hasClientTraffic: boolean }> {
     const schemaCheckRepo = new SchemaCheckRepository(this.db);
     const proposalRepo = new ProposalRepository(this.db);
@@ -2099,6 +2119,44 @@ export class SubgraphRepository {
       });
     }
 
+    // Execute the subgraph check extension webhook
+    const sceResult = await webhookService.sendSubgraphCheckExtension({
+      actorId,
+      schemaCheckID,
+      labels,
+      blobStorage,
+      admissionConfig,
+      organization: { id: this.organizationId, slug: organizationSlug },
+      namespace,
+      vcsContext,
+      subgraph,
+      newSchemaSDL,
+      isDeleted,
+      affectedGraphs: federatedGraphs,
+      composedGraphs,
+      schemaChanges,
+      lintIssues,
+      pruneIssues: graphPruningIssues,
+      inspectedOperations,
+    });
+
+    if (sceResult && sceResult.additionalLintIssues.length > 0) {
+      const additionalLintIssues: SchemaLintIssues = {
+        warnings: sceResult.additionalLintIssues.filter((issue) => issue.severity === LintSeverity.warn),
+        errors: sceResult.additionalLintIssues.filter((issue) => issue.severity === LintSeverity.error),
+      };
+
+      lintIssues.warnings.push(...additionalLintIssues.warnings);
+      lintIssues.errors.push(...additionalLintIssues.errors);
+
+      // Then, we need to add the overwritten lint issues
+      await schemaLintRepo.addSchemaCheckLintIssues({
+        schemaCheckId: schemaCheckID,
+        lintIssues: sceResult.additionalLintIssues,
+        schemaCheckSubgraphId,
+      });
+    }
+
     // Update the overall schema check with the results
     await schemaCheckRepo.update({
       schemaCheckID,
@@ -2106,6 +2164,8 @@ export class SubgraphRepository {
       hasBreakingChanges,
       hasLintErrors: lintIssues.errors.length > 0,
       hasGraphPruningErrors: graphPruningIssues.errors.length > 0,
+      checkExtensionDeliveryId: sceResult?.deliveryInfo?.id,
+      checkExtensionErrorMessage: sceResult?.deliveryInfo?.errorMessage ?? undefined,
     });
 
     return {
@@ -2130,6 +2190,8 @@ export class SubgraphRepository {
       compositionWarnings,
       proposalMatchMessage,
       hasClientTraffic,
+      isCheckExtensionSkipped: !sceResult?.deliveryInfo?.id,
+      checkExtensionErrorMessage: sceResult?.deliveryInfo?.errorMessage ?? undefined,
     };
   }
 }

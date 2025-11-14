@@ -13,7 +13,7 @@ import { addDays } from "date-fns";
 import { useRouter } from "next/router";
 import { Dispatch, SetStateAction, useMemo } from "react";
 import { AiOutlineAudit } from "react-icons/ai";
-import { MdOutlineFeaturedPlayList, MdOutlinePolicy } from "react-icons/md";
+import { MdOutlineFeaturedPlayList, MdOutlinePolicy, MdOutlineExtension } from "react-icons/md";
 import {
   PiBell,
   PiChartDonut,
@@ -161,6 +161,11 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
           title: "Policies",
           href: basePath + "/policies",
           icon: <MdOutlinePolicy className="size-4" />,
+        },
+        {
+          title: "Check Extensions",
+          href: basePath + "/check-extensions",
+          icon: <MdOutlineExtension className="size-4" />,
         },
         {
           title: "Cache Warmer",
