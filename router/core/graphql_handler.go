@@ -34,9 +34,11 @@ var (
 )
 
 const (
-	ExecutionPlanCacheHeader      = "X-WG-Execution-Plan-Cache"
-	PersistedOperationCacheHeader = "X-WG-Persisted-Operation-Cache"
-	NormalizationCacheHeader      = "X-WG-Normalization-Cache"
+	ExecutionPlanCacheHeader          = "X-WG-Execution-Plan-Cache"
+	PersistedOperationCacheHeader     = "X-WG-Persisted-Operation-Cache"
+	NormalizationCacheHeader          = "X-WG-Normalization-Cache"
+	VariablesNormalizationCacheHeader = "X-WG-Variables-Normalization-Cache"
+	VariablesRemappingCacheHeader     = "X-WG-Variables-Remapping-Cache"
 )
 
 type ReportError interface {
@@ -428,25 +430,22 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 }
 
 func (h *GraphQLHandler) setDebugCacheHeaders(w http.ResponseWriter, opCtx *operationContext) {
-	if h.enableNormalizationCacheResponseHeader {
-		if opCtx.normalizationCacheHit {
-			w.Header().Set(NormalizationCacheHeader, "HIT")
-		} else {
-			w.Header().Set(NormalizationCacheHeader, "MISS")
+	s := func(hit bool) string {
+		if hit {
+			return "HIT"
 		}
+		return "MISS"
+	}
+
+	if h.enableNormalizationCacheResponseHeader {
+		w.Header().Set(NormalizationCacheHeader, s(opCtx.normalizationCacheHit))
+		w.Header().Set(VariablesNormalizationCacheHeader, s(opCtx.variablesNormalizationCacheHit))
+		w.Header().Set(VariablesRemappingCacheHeader, s(opCtx.variablesRemappingCacheHit))
 	}
 	if h.enablePersistedOperationCacheResponseHeader {
-		if opCtx.persistedOperationCacheHit {
-			w.Header().Set(PersistedOperationCacheHeader, "HIT")
-		} else {
-			w.Header().Set(PersistedOperationCacheHeader, "MISS")
-		}
+		w.Header().Set(PersistedOperationCacheHeader, s(opCtx.persistedOperationCacheHit))
 	}
 	if h.enableExecutionPlanCacheResponseHeader {
-		if opCtx.planCacheHit {
-			w.Header().Set(ExecutionPlanCacheHeader, "HIT")
-		} else {
-			w.Header().Set(ExecutionPlanCacheHeader, "MISS")
-		}
+		w.Header().Set(ExecutionPlanCacheHeader, s(opCtx.planCacheHit))
 	}
 }

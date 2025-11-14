@@ -295,12 +295,12 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		return nil, err
 	}
 
-	_, err = k.NormalizeVariables()
+	_, _, err = k.NormalizeVariables()
 	if err != nil {
 		return nil, err
 	}
 
-	err = k.RemapVariables(c.disableVariablesRemapping)
+	_, err = k.RemapVariables(c.disableVariablesRemapping)
 	if err != nil {
 		return nil, err
 	}
