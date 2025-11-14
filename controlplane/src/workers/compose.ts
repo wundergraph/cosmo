@@ -27,8 +27,7 @@ interface Inputs {
 
 export function getWorkerPool(maxCount?: number): Tinypool | undefined {
   if (isMainThread) {
-    const filename = import.meta.url.endsWith('.ts') ? join(process.cwd(), 'dist/workers/compose.js') : import.meta.url;
-    return new Tinypool({ filename, name: 'composeFederatedGraph', maxThreads: maxCount });
+    return new Tinypool({ filename: join(process.cwd(), 'dist/workers/compose.js'), name: 'composeFederatedGraph', maxThreads: maxCount });
   } else {
     return undefined;
   }
