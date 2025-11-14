@@ -106,7 +106,7 @@ func (m *routerMetrics) ExportSchemaUsageInfo(operationContext *operationContext
 	// which seems to be efficient in terms of memory usage and CPU
 	item := &graphqlmetricsv1.SchemaUsageInfo{
 		RequestDocument:  operationContext.content,
-		TypeFieldMetrics: operationContext.typeFieldUsageInfo.IntoGraphQLMetrics(),
+		TypeFieldMetrics: operationContext.GetTypeFieldUsageInfoMetrics(),
 		ArgumentMetrics:  operationContext.argumentUsageInfo,
 		InputMetrics:     operationContext.inputUsageInfo,
 		OperationInfo: &graphqlmetricsv1.OperationInfo{
@@ -144,7 +144,7 @@ func (m *routerMetrics) ExportSchemaUsageInfoPrometheus(operationContext *operat
 	}
 
 	item := &graphqlmetricsv1.SchemaUsageInfo{
-		TypeFieldMetrics: operationContext.typeFieldUsageInfo.IntoGraphQLMetrics(),
+		TypeFieldMetrics: operationContext.GetTypeFieldUsageInfoMetrics(),
 		OperationInfo: &graphqlmetricsv1.OperationInfo{
 			Type: opType,
 			Hash: operationContext.sha256Hash,
