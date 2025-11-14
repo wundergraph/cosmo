@@ -991,10 +991,24 @@ func TestPrepareClickhouseBatches(t *testing.T) {
 			msvc := NewMetricsService(zap.NewNop(), db, defaultConfig())
 
 			for _, hash := range tt.input.preCachedHashes {
-				msvc.opGuardCache.Set(hash, struct{}{}, 1)
+				// Build the composite cache key matching the actual implementation
+				for _, item := range tt.input.batch {
+					for _, su := range item.SchemaUsage {
+						if su.OperationInfo.Hash == hash {
+							opCacheKey := buildOperationCacheKey(
+								item.Claims.FederatedGraphID,
+								item.Claims.OrganizationID,
+								su.OperationInfo.Hash,
+								su.OperationInfo.Name,
+								strings.ToLower(su.OperationInfo.Type.String()),
+							)
+							msvc.opGuardCache.Set(opCacheKey, struct{}{}, 1)
+						}
+					}
+				}
 			}
 
-			opBatch, metricsBatch, _ := msvc.prepareClickhouseBatches(context.Background(), time.Now(), tt.input.batch)
+			opBatch, metricsBatch, _, _ := msvc.prepareClickhouseBatches(context.Background(), time.Now(), tt.input.batch)
 			require.Equal(t, tt.expected.expectedPrepareBatchCalls, numPrepareBatchCalls)
 
 			if tt.expected.operationBatchCreated {
