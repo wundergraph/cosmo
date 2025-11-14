@@ -1252,15 +1252,15 @@
                       "properties": {
                         "batch_size": {
                           "type": "integer",
-                          "default": 8192,
+                          "default": 4096,
                           "minimum": 1,
-                          "description": "The maximum number of schema usage items to be applied in a single batch. The default value is 8192."
+                          "description": "The maximum number of schema usage items to be applied in a single batch. The default value is 4096."
                         },
                         "queue_size": {
                           "type": "integer",
-                          "default": 16384,
+                          "default": 12800,
                           "minimum": 1,
-                          "description": "The maximum number of schema usage items allowed in queue at a given time. The default value is 16384."
+                          "description": "The maximum number of schema usage items allowed in queue at a given time. The default value is 12800."
                         },
                         "interval": {
                           "type": "string",

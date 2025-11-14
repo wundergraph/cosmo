@@ -700,8 +700,8 @@ telemetry:
 		require.NoError(t, err)
 
 		exporter := c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.Exporter
-		require.Equal(t, 8192, exporter.BatchSize)
-		require.Equal(t, 16384, exporter.QueueSize)
+		require.Equal(t, 4096, exporter.BatchSize)
+		require.Equal(t, 12800, exporter.QueueSize)
 		require.Equal(t, 10*time.Second, exporter.Interval)
 		require.Equal(t, 10*time.Second, exporter.ExportTimeout)
 	})
@@ -718,7 +718,7 @@ telemetry:
         include_operation_sha: true
         exporter:
           batch_size: 4096
-          queue_size: 8192
+          queue_size: 12800
           interval: 30s
           export_timeout: 15s
 `)
@@ -730,7 +730,7 @@ telemetry:
 
 		exporter := c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.Exporter
 		require.Equal(t, 4096, exporter.BatchSize)
-		require.Equal(t, 8192, exporter.QueueSize)
+		require.Equal(t, 12800, exporter.QueueSize)
 		require.Equal(t, 30*time.Second, exporter.Interval)
 		require.Equal(t, 15*time.Second, exporter.ExportTimeout)
 	})
