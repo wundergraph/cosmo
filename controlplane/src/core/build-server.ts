@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import Fastify, { FastifyBaseLogger } from 'fastify';
 import { S3Client } from '@aws-sdk/client-s3';
 import { fastifyConnectPlugin } from '@connectrpc/connect-fastify';
@@ -9,7 +10,6 @@ import fastifyGracefulShutdown from 'fastify-graceful-shutdown';
 import { App } from 'octokit';
 import { Worker } from 'bullmq';
 import { Tinypool } from 'tinypool';
-import { getWorkerPool } from '../workers/compose.js';
 import routes from './routes.js';
 import fastifyHealth from './plugins/health.js';
 import fastifyMetrics, { MetricsPluginOptions } from './plugins/metrics.js';
@@ -474,7 +474,10 @@ export default async function build(opts: BuildConfig) {
     keycloakRealm: opts.keycloak.realm,
   });
 
-  const composeWorkerPool: Tinypool = getWorkerPool(opts.composeWorkers?.maxCount)!;
+  const composeWorkerPool = new Tinypool({
+    filename: join(process.cwd(), 'dist/workers/compose.js'),
+    maxThreads: opts.composeWorkers?.maxCount,
+  });
 
   // Must be registered after custom fastify routes
   // Because it registers an all-catch route for connect handlers

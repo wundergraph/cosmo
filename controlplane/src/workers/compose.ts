@@ -25,15 +25,7 @@ interface Inputs {
   compositionOptions?: CompositionOptions;
 }
 
-export function getWorkerPool(maxCount?: number): Tinypool | undefined {
-  if (isMainThread) {
-    return new Tinypool({ filename: join(process.cwd(), 'dist/workers/compose.js'), name: 'composeFederatedGraph', maxThreads: maxCount });
-  } else {
-    return undefined;
-  }
-}
-
-export function composeFederatedGraph({
+export default function ({
   federatedGraph,
   subgraphsToCompose,
   tagOptionsByContractName,
