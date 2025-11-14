@@ -1191,6 +1191,7 @@ func (s *graphServer) buildGraphMux(
 			EnableTraceClient:             enableTraceClient,
 			CircuitBreaker:                s.circuitBreakerManager,
 		},
+		subscriptionHooks: s.subscriptionHooks,
 	}
 
 	executor, providers, err := ecb.Build(

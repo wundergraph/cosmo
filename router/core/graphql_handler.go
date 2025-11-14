@@ -400,6 +400,22 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 		if isHttpResponseWriter {
 			httpWriter.WriteHeader(http.StatusInternalServerError)
 		}
+	case errorTypeHttpError:
+		var httpErr *httpGraphqlError
+		if !errors.As(err, &httpErr) {
+			response.Errors[0].Message = "Internal server error"
+			return
+		}
+		response.Errors[0].Message = httpErr.Message()
+		if httpErr.ExtensionCode() != "" || httpErr.StatusCode() != 0 {
+			response.Errors[0].Extensions = &Extensions{
+				Code:       httpErr.ExtensionCode(),
+				StatusCode: httpErr.StatusCode(),
+			}
+		}
+		if isHttpResponseWriter {
+			httpWriter.WriteHeader(httpErr.StatusCode())
+		}
 	}
 
 	if ctx.TracingOptions.Enable && ctx.TracingOptions.IncludeTraceOutputInResponseExtensions {
