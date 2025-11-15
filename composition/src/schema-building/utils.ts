@@ -58,6 +58,7 @@ import {
   INPUT_FIELD,
   INPUT_NODE_KINDS,
   INT_SCALAR,
+  KEY,
   MUTATION,
   OUTPUT_NODE_KINDS,
   PERSISTED_CLIENT_DIRECTIVES,
@@ -80,6 +81,7 @@ import {
 import { InputNodeKind, InvalidRequiredInputValueData, OutputNodeKind } from '../utils/types';
 import { getDescriptionFromString } from '../v1/federation/utils';
 import { DirectiveName, FieldName, SubgraphName, TypeName } from '../types/types';
+import { DEFAULT_DEPRECATION_REASON } from 'graphql';
 
 export function newPersistedDirectivesData(): PersistedDirectivesData {
   return {
@@ -237,7 +239,32 @@ export function childMapToValueArray<T extends ChildData, U extends ChildDefinit
     if (isFieldData(childData)) {
       propagateFieldDataArguments(childData);
     }
-    for (const directiveNodes of childData.directivesByDirectiveName.values()) {
+    for (const [directiveName, directiveNodes] of childData.directivesByDirectiveName) {
+      if (directiveName === DEPRECATED) {
+        // @deprecated is non-repeatable
+        const directiveNode = directiveNodes[0];
+        if (!directiveNode) {
+          continue;
+        }
+        if (directiveNode.arguments?.length) {
+          childData.node.directives.push(directiveNode);
+          continue;
+        }
+        childData.node.directives.push({
+          ...directiveNode,
+          arguments: [
+            {
+              kind: Kind.ARGUMENT,
+              value: {
+                kind: Kind.STRING,
+                value: DEFAULT_DEPRECATION_REASON,
+              },
+              name: stringToNameNode(REASON),
+            },
+          ],
+        });
+        continue;
+      }
       childData.node.directives.push(...directiveNodes);
     }
     valueArray.push(childData.node);

@@ -16,6 +16,7 @@ Rules should follow [Proto Best Practices](https://protobuf.dev/best-practices/d
 
 - ✓ Query operations
 - ✓ Mutation operations
+- ✓ Field resolvers with custom context
 - ✓ Federation entity lookups with a single key
 - ✓ Federation entity lookups with multiple keys
 - ✓ Federation entity lookups with compound keys
@@ -47,7 +48,6 @@ Rules should follow [Proto Best Practices](https://protobuf.dev/best-practices/d
 
 - ✗ Subscriptions (only Query and Mutation operations)
 - ✗ Custom scalar conversion (fixed mappings only)
-- ✗ Field resolvers
 - ✗ Nullable list items (not supported in Protobuf)
 
 </td>
@@ -139,6 +139,249 @@ message LookupProductByIdRequestKey {
 
 message LookupProductByIdResponse {
   repeated Product result = 1;
+}
+```
+
+## Field Resolvers
+
+Field resolvers allow you to define custom resolution logic for specific fields within a GraphQL type. Using the `@connect__fieldResolver` directive, you can specify which fields should be resolved through dedicated RPC methods, enabling lazy loading, computed fields, or integration with external data sources.
+
+### Basic Field Resolver
+
+Fields marked with `@connect__fieldResolver` generate dedicated RPC methods with request and response messages:
+
+```graphql
+type User {
+  id: ID!
+  name: String!
+  posts(limit: Int!): [Post!]! @connect__fieldResolver(context: "id")
+}
+
+type Post {
+  id: ID!
+  title: String!
+}
+
+type Query {
+  user(id: ID!): User
+}
+```
+
+Maps to:
+
+```protobuf
+rpc ResolveUserPosts(ResolveUserPostsRequest) returns (ResolveUserPostsResponse) {}
+
+// Request message includes context and field arguments
+message ResolveUserPostsRequest {
+  // context provides the resolver context for the field posts of type User.
+  repeated ResolveUserPostsContext context = 1;
+  // field_args provides the arguments for the resolver field posts of type User.
+  ResolveUserPostsArgs field_args = 2;
+}
+
+message ResolveUserPostsContext {
+  string id = 1;  // Context field from parent type
+}
+
+message ResolveUserPostsArgs {
+  int32 limit = 1;  // Field argument
+}
+
+message ResolveUserPostsResult {
+  repeated Post posts = 1;
+}
+
+message ResolveUserPostsResponse {
+  repeated ResolveUserPostsResult result = 1;
+}
+```
+
+### Field Resolver Components
+
+Each field resolver generates four message types:
+
+1. **Context Message** (`Resolve{Type}{Field}Context`): Contains fields from the parent type needed to resolve the field
+2. **Args Message** (`Resolve{Type}{Field}Args`): Contains the arguments passed to the field
+3. **Result Message** (`Resolve{Type}{Field}Result`): Contains the resolved field value
+4. **Request/Response Messages**: Standard request/response pattern for the RPC method
+
+### Context Specification
+
+The `context` parameter in `@connect__fieldResolver` is **required** and specifies which fields from the parent type should be available to the resolver:
+
+```graphql
+type User {
+  id: ID!
+  name: String!
+  email: String!
+  post(upper: Boolean!): Post! @connect__fieldResolver(context: "id name")
+}
+```
+
+Maps to:
+
+```protobuf
+message ResolveUserPostContext {
+  string id = 1;
+  string name = 2;
+}
+```
+
+#### Automatic Context Inference (Without Directive)
+
+If the `@connect__fieldResolver` directive is **not specified** on a field with arguments, Protographic automatically infers that it needs resolution and uses the first field of type `ID` found in the parent type as context:
+
+```graphql
+type User {
+  id: ID!
+  name: String!
+  posts(limit: Int!): [Post!]!  # No directive: automatically uses "id" as context
+}
+```
+
+#### Context Validation Rules
+
+When the `@connect__fieldResolver` directive is specified:
+- The `context` parameter is **required** - you must explicitly specify which field(s) to use
+
+When the directive is NOT specified (automatic inference):
+- If no `ID` field exists, an error is raised
+- If multiple `ID` fields exist, an error is raised (you must use the directive with explicit context)
+
+In all cases:
+- Context fields are converted from camelCase to snake_case following Protocol Buffer naming conventions
+
+### Field Name Conversion
+
+Following Protocol Buffer best practices, GraphQL camelCase field names are converted to snake_case in all generated messages:
+
+```graphql
+type User {
+  id: ID!
+  myLongFieldName: String!
+  anotherVeryLongField: Int!
+  post: Post! @connect__fieldResolver(context: "id myLongFieldName anotherVeryLongField")
+}
+```
+
+Maps to:
+
+```protobuf
+message ResolveUserPostContext {
+  string id = 1;
+  string my_long_field_name = 2;      // Converted to snake_case
+  int32 another_very_long_field = 3;  // Converted to snake_case
+}
+```
+
+This conversion applies to:
+- Context field names
+- Argument field names
+- Result field names
+- All fields in the parent type message
+
+### Complex Field Arguments
+
+Field resolvers support complex input types as arguments:
+
+```graphql
+type Product {
+  id: ID!
+  count(filters: ProductCountFilter): Int! @connect__fieldResolver(context: "id")
+}
+
+input ProductCountFilter {
+  minPrice: Float
+  maxPrice: Float
+  inStock: Boolean
+  searchTerm: String
+}
+```
+
+Maps to:
+
+```protobuf
+message ResolveProductCountArgs {
+  ProductCountFilter filters = 1;
+}
+
+message ResolveProductCountContext {
+  string id = 1;
+}
+
+message ProductCountFilter {
+  google.protobuf.DoubleValue min_price = 1;
+  google.protobuf.DoubleValue max_price = 2;
+  google.protobuf.BoolValue in_stock = 3;
+  google.protobuf.StringValue search_term = 4;
+}
+```
+
+### Nested Field Resolvers
+
+Field resolvers can be defined on types that are themselves returned by other field resolvers, enabling multi-level lazy loading:
+
+```graphql
+type User {
+  id: ID!
+  post(upper: Boolean!): Post! @connect__fieldResolver(context: "id")
+}
+
+type Post {
+  id: ID!
+  comment(upper: Boolean!): Comment! @connect__fieldResolver(context: "id")
+}
+
+type Comment {
+  content: String!
+}
+```
+
+Maps to:
+
+```protobuf
+// First level resolver
+rpc ResolveUserPost(ResolveUserPostRequest) returns (ResolveUserPostResponse) {}
+
+// Second level resolver
+rpc ResolvePostComment(ResolvePostCommentRequest) returns (ResolvePostCommentResponse) {}
+```
+
+### Batch Resolution
+
+Field resolver requests support batch processing through repeated context messages, allowing efficient resolution of fields for multiple parent instances:
+
+```protobuf
+message ResolveUserPostsRequest {
+  repeated ResolveUserPostsContext context = 1;  // Multiple contexts for batch processing
+  ResolveUserPostsArgs field_args = 2;
+}
+
+message ResolveUserPostsResponse {
+  repeated ResolveUserPostsResult result = 1;  // Results in same order as contexts
+}
+```
+
+The service implementation must return results in the same order as the provided contexts to ensure correct mapping back to parent instances.
+
+### List Return Types
+
+Field resolvers can return both scalar and list types:
+
+```graphql
+type User {
+  id: ID!
+  posts(limit: Int!): [Post!]!  # Returns list
+  activePost: Post               # Returns single item (nullable)
+}
+```
+
+For nullable list returns, wrapper messages are used following the same rules as described in the "List Types" section:
+
+```protobuf
+message ResolveUserCommentsResult {
+  ListOfComment comments = 1;  // Uses wrapper for nullable list
 }
 ```
 
