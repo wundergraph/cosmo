@@ -60,10 +60,10 @@ describe('Enum Support', () => {
         }
 
         enum UserStatus {
-          UNSPECIFIED = 0;
-          ACTIVE = 1;
-          INACTIVE = 2;
-          PENDING = 3;
+          USER_STATUS_UNSPECIFIED = 0;
+          USER_STATUS_ACTIVE = 1;
+          USER_STATUS_INACTIVE = 2;
+          USER_STATUS_PENDING = 3;
         }
         "
       `);
@@ -121,9 +121,9 @@ describe('Enum Support', () => {
         }
 
         enum UserStatus {
-          UNSPECIFIED = 0;
-          ACTIVE = 1;
-          INACTIVE = 2;
+          USER_STATUS_UNSPECIFIED = 0;
+          USER_STATUS_ACTIVE = 1;
+          USER_STATUS_INACTIVE = 2;
         }
         "
       `);
@@ -181,9 +181,9 @@ describe('Enum Support', () => {
         }
 
         enum UserStatus {
-          UNSPECIFIED = 0;
-          ACTIVE = 1;
-          INACTIVE = 2;
+          USER_STATUS_UNSPECIFIED = 0;
+          USER_STATUS_ACTIVE = 1;
+          USER_STATUS_INACTIVE = 2;
         }
         "
       `);
@@ -246,10 +246,10 @@ describe('Enum Support', () => {
         }
 
         enum UserStatus {
-          UNSPECIFIED = 0;
-          ACTIVE = 1;
-          INACTIVE = 2;
-          PENDING = 3;
+          USER_STATUS_UNSPECIFIED = 0;
+          USER_STATUS_ACTIVE = 1;
+          USER_STATUS_INACTIVE = 2;
+          USER_STATUS_PENDING = 3;
         }
         "
       `);
@@ -306,9 +306,9 @@ describe('Enum Support', () => {
         }
 
         enum UserStatus {
-          UNSPECIFIED = 0;
-          ACTIVE = 1;
-          INACTIVE = 2;
+          USER_STATUS_UNSPECIFIED = 0;
+          USER_STATUS_ACTIVE = 1;
+          USER_STATUS_INACTIVE = 2;
         }
         "
       `);
@@ -366,10 +366,10 @@ describe('Enum Support', () => {
         }
 
         enum Role {
-          UNSPECIFIED = 0;
-          ADMIN = 1;
-          USER = 2;
-          GUEST = 3;
+          ROLE_UNSPECIFIED = 0;
+          ROLE_ADMIN = 1;
+          ROLE_USER = 2;
+          ROLE_GUEST = 3;
         }
         "
       `);
@@ -436,10 +436,10 @@ describe('Enum Support', () => {
         }
 
         enum Visibility {
-          UNSPECIFIED = 0;
-          PUBLIC = 1;
-          PRIVATE = 2;
-          FRIENDS_ONLY = 3;
+          VISIBILITY_UNSPECIFIED = 0;
+          VISIBILITY_PUBLIC = 1;
+          VISIBILITY_PRIVATE = 2;
+          VISIBILITY_FRIENDS_ONLY = 3;
         }
         "
       `);
@@ -513,9 +513,9 @@ describe('Enum Support', () => {
         }
 
         enum UserStatus {
-          UNSPECIFIED = 0;
-          ACTIVE = 1;
-          INACTIVE = 2;
+          USER_STATUS_UNSPECIFIED = 0;
+          USER_STATUS_ACTIVE = 1;
+          USER_STATUS_INACTIVE = 2;
         }
         "
       `);
@@ -595,9 +595,9 @@ describe('Enum Support', () => {
         }
 
         enum Visibility {
-          UNSPECIFIED = 0;
-          PUBLIC = 1;
-          PRIVATE = 2;
+          VISIBILITY_UNSPECIFIED = 0;
+          VISIBILITY_PUBLIC = 1;
+          VISIBILITY_PRIVATE = 2;
         }
         "
       `);
@@ -669,9 +669,9 @@ describe('Enum Support', () => {
         }
 
         enum Role {
-          UNSPECIFIED = 0;
-          ADMIN = 1;
-          USER = 2;
+          ROLE_UNSPECIFIED = 0;
+          ROLE_ADMIN = 1;
+          ROLE_USER = 2;
         }
         "
       `);
@@ -744,16 +744,16 @@ describe('Enum Support', () => {
         }
 
         enum UserStatus {
-          UNSPECIFIED = 0;
-          ACTIVE = 1;
-          INACTIVE = 2;
+          USER_STATUS_UNSPECIFIED = 0;
+          USER_STATUS_ACTIVE = 1;
+          USER_STATUS_INACTIVE = 2;
         }
 
         enum Role {
-          UNSPECIFIED = 0;
-          ADMIN = 1;
-          USER = 2;
-          GUEST = 3;
+          ROLE_UNSPECIFIED = 0;
+          ROLE_ADMIN = 1;
+          ROLE_USER = 2;
+          ROLE_GUEST = 3;
         }
         "
       `);
@@ -853,8 +853,8 @@ describe('Enum Support', () => {
         }
 
         enum SingleValue {
-          UNSPECIFIED = 0;
-          ONLY_VALUE = 1;
+          SINGLE_VALUE_UNSPECIFIED = 0;
+          SINGLE_VALUE_ONLY_VALUE = 1;
         }
         "
       `);
@@ -915,13 +915,13 @@ describe('Enum Support', () => {
         }
 
         enum Priority {
-          UNSPECIFIED = 0;
-          P0 = 1;
-          P1 = 2;
-          P2 = 3;
-          P3 = 4;
-          P4 = 5;
-          P5 = 6;
+          PRIORITY_UNSPECIFIED = 0;
+          PRIORITY_P0 = 1;
+          PRIORITY_P1 = 2;
+          PRIORITY_P2 = 3;
+          PRIORITY_P3 = 4;
+          PRIORITY_P4 = 5;
+          PRIORITY_P5 = 6;
         }
         "
       `);
@@ -987,9 +987,9 @@ describe('Enum Support', () => {
         }
 
         enum UserStatus {
-          UNSPECIFIED = 0;
-          ACTIVE = 1;
-          INACTIVE = 2;
+          USER_STATUS_UNSPECIFIED = 0;
+          USER_STATUS_ACTIVE = 1;
+          USER_STATUS_INACTIVE = 2;
         }
         "
       `);
@@ -1054,10 +1054,10 @@ describe('Enum Support', () => {
         }
 
         enum UserStatus {
-          UNSPECIFIED = 0;
-          ONLINE = 1;
-          OFFLINE = 2;
-          AWAY = 3;
+          USER_STATUS_UNSPECIFIED = 0;
+          USER_STATUS_ONLINE = 1;
+          USER_STATUS_OFFLINE = 2;
+          USER_STATUS_AWAY = 3;
         }
         "
       `);

@@ -319,10 +319,10 @@ describe('Request Builder', () => {
       const protoEnum = buildEnumType(enumType as GraphQLEnumType);
 
       expect(protoEnum.name).toBe('Status');
-      expect(protoEnum.values.UNSPECIFIED).toBe(0);
-      expect(protoEnum.values.ACTIVE).toBeDefined();
-      expect(protoEnum.values.INACTIVE).toBeDefined();
-      expect(protoEnum.values.PENDING).toBeDefined();
+      expect(protoEnum.values.STATUS_UNSPECIFIED).toBe(0);
+      expect(protoEnum.values.STATUS_ACTIVE).toBeDefined();
+      expect(protoEnum.values.STATUS_INACTIVE).toBeDefined();
+      expect(protoEnum.values.STATUS_PENDING).toBeDefined();
     });
 
     test('should include UNSPECIFIED as first value', () => {
@@ -340,9 +340,9 @@ describe('Request Builder', () => {
 
       const protoEnum = buildEnumType(enumType as GraphQLEnumType);
 
-      expect(protoEnum.values.UNSPECIFIED).toBe(0);
-      expect(protoEnum.values.ADMIN).toBeGreaterThan(0);
-      expect(protoEnum.values.USER).toBeGreaterThan(0);
+      expect(protoEnum.values.ROLE_UNSPECIFIED).toBe(0);
+      expect(protoEnum.values.ROLE_ADMIN).toBeGreaterThan(0);
+      expect(protoEnum.values.ROLE_USER).toBeGreaterThan(0);
     });
 
     test('should assign sequential numbers', () => {
@@ -361,10 +361,10 @@ describe('Request Builder', () => {
 
       const protoEnum = buildEnumType(enumType as GraphQLEnumType);
 
-      expect(protoEnum.values.UNSPECIFIED).toBe(0);
-      expect(protoEnum.values.LOW).toBe(1);
-      expect(protoEnum.values.MEDIUM).toBe(2);
-      expect(protoEnum.values.HIGH).toBe(3);
+      expect(protoEnum.values.PRIORITY_UNSPECIFIED).toBe(0);
+      expect(protoEnum.values.PRIORITY_LOW).toBe(1);
+      expect(protoEnum.values.PRIORITY_MEDIUM).toBe(2);
+      expect(protoEnum.values.PRIORITY_HIGH).toBe(3);
     });
   });
 
