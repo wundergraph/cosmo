@@ -132,6 +132,11 @@ jobs:
       - name: Install tools
         run: make setup-build-tools
 
+      - name: Install Bun For Plugin Building
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.0.35
+
       - name: Generate code
         run: make generate-go
 
@@ -304,6 +309,12 @@ jobs:
             router-tests/go.sum
       - name: Install tools
         run: make setup-build-tools
+
+      - name: Install Bun For Plugin Building
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.0.35
+
       - name: Install dependencies
         working-directory: ./router-tests
         run: go mod download
