@@ -612,7 +612,7 @@ export async function buildTsBinaries(pluginDir: string, platforms: string[], de
   await mkdir(resolve(pluginDir, join('bin', healthProtoRelDir)), { recursive: true });
   await copyFile(
     resolve(pluginDir, join('node_modules', healthProtoRelDir, healthProtoFile)),
-    resolve(pluginDir, join('bin', healthProtoRelDir, healthProtoFile))
+    resolve(pluginDir, join('bin', healthProtoRelDir, healthProtoFile)),
   );
 
   await Promise.all(
