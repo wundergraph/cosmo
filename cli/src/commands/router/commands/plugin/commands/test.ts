@@ -4,7 +4,14 @@ import { Command } from 'commander';
 import { resolve } from 'pathe';
 import Spinner from 'ora';
 import { BaseCommandOptions } from '../../../../../core/types/types.js';
-import { checkAndInstallTools, installGoDependencies, runGoTests } from '../toolchain.js';
+import {
+  checkAndInstallTools,
+  getLanguage,
+  installGoDependencies,
+  installTsDependencies,
+  runGoTests,
+  runTsTests,
+} from '../toolchain.js';
 import { renderResultTree } from '../helper.js';
 
 export default (opts: BaseCommandOptions) => {
@@ -17,6 +24,7 @@ export default (opts: BaseCommandOptions) => {
     'Force tools installation regardless of version check or confirmation',
     false,
   );
+
   command.action(async (directory, options) => {
     const startTime = performance.now();
     const pluginDir = resolve(directory);
@@ -26,21 +34,44 @@ export default (opts: BaseCommandOptions) => {
     try {
       spinner.start();
 
+      const language = getLanguage(pluginDir);
+
       // Check and install tools if needed
       if (!options.skipToolsInstallation) {
         await checkAndInstallTools(options.forceToolsInstallation);
       }
 
-      spinner.text = 'Installing Go dependencies...';
-
-      await installGoDependencies(pluginDir, spinner);
+      switch (language) {
+        case 'go': {
+          spinner.text = 'Installing Go dependencies...';
+          await installGoDependencies(pluginDir, spinner);
+          break;
+        }
+        case 'ts': {
+          spinner.text = 'Installing Ts dependencies...';
+          await installTsDependencies(pluginDir, spinner);
+          break;
+        }
+      }
 
       const srcDir = resolve(pluginDir, 'src');
 
       spinner.text = 'Running tests...';
 
       try {
-        const { failed } = await runGoTests(srcDir, spinner, false);
+        let failed = false;
+        switch (language) {
+          case 'go': {
+            const result = await runGoTests(srcDir, spinner, false);
+            failed = result.failed;
+            break;
+          }
+          case 'ts': {
+            const result = await runTsTests(pluginDir, spinner);
+            failed = result.failed;
+            break;
+          }
+        }
 
         // Calculate elapsed time
         const endTime = performance.now();

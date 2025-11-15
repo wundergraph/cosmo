@@ -9,7 +9,10 @@ import {
   checkAndInstallTools,
   generateGRPCCode,
   generateProtoAndMapping,
+  getLanguage,
   installGoDependencies,
+  installTsDependencies,
+  validateAndGetGoModulePath,
 } from '../toolchain.js';
 
 export default (opts: BaseCommandOptions) => {
@@ -22,23 +25,31 @@ export default (opts: BaseCommandOptions) => {
     'Force tools installation regardless of version check or confirmation',
     false,
   );
-  command.option(
-    '--go-module-path <path>',
-    'Go module path to use for the plugin',
-    'github.com/wundergraph/cosmo/plugin',
-  );
+  command.option('--go-module-path <path>', 'Go module path to use for the plugin');
 
   command.action(async (directory, options) => {
     const startTime = performance.now();
     const pluginDir = resolve(directory);
     const spinner = Spinner();
     const pluginName = path.basename(pluginDir);
-    const goModulePath = options.goModulePath;
+
+    let goModulePath = options.goModulePath;
 
     try {
+      const language = getLanguage(pluginDir);
+
+      goModulePath = validateAndGetGoModulePath(language, goModulePath);
+
       // Check and install tools if needed
       if (!options.skipToolsInstallation) {
         await checkAndInstallTools(options.forceToolsInstallation);
+      }
+
+      switch (language) {
+        case 'ts': {
+          await installTsDependencies(pluginDir, spinner);
+          break;
+        }
       }
 
       // Start the generation process
@@ -48,10 +59,14 @@ export default (opts: BaseCommandOptions) => {
       await generateProtoAndMapping(pluginDir, goModulePath, spinner);
 
       // Generate gRPC code
-      await generateGRPCCode(pluginDir, spinner);
+      await generateGRPCCode(pluginDir, spinner, language);
 
-      // Install Go dependencies
-      await installGoDependencies(pluginDir, spinner);
+      switch (language) {
+        case 'go': {
+          await installGoDependencies(pluginDir, spinner);
+          break;
+        }
+      }
 
       // Calculate and format elapsed time
       const endTime = performance.now();
