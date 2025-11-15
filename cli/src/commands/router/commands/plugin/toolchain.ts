@@ -13,10 +13,10 @@ import {
 import prompts from 'prompts';
 import semver from 'semver';
 import { camelCase, upperFirst } from 'lodash-es';
-import TsTemplates from './templates/typescript.js';
+import pupa from 'pupa';
 import { dataDir } from '../../../../core/config.js';
+import TsTemplates from './templates/typescript.js';
 import { renderValidationResults } from './helper.js';
-import pupa from "pupa";
 
 // Define platform-architecture combinations
 export function getHostPlatform(language: string) {
