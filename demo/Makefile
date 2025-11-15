@@ -22,7 +22,7 @@ plugin-generate:
 
 plugin-build-binary:
 	cd pkg/subgraphs/projects/ && go build -o ./bin/$(shell go env GOOS)_$(shell go env GOARCH) ./src
-	cd pkg/subgraphs/courses/ && bun run build
+	cd pkg/subgraphs/courses/ && bun install && bun run build
 
 plugin-compose:
 	$(wgc_router) compose -i ./graph-with-plugin.yaml -o ./configWithPlugins.json

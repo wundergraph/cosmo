@@ -52,7 +52,7 @@ jobs:
       - name: Install Bun For Plugin Building
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.0.35
+          bun-version: 1.2.15
 
       - name: Generate code
         run: make generate-go
@@ -135,7 +135,7 @@ jobs:
       - name: Install Bun For Plugin Building
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.0.35
+          bun-version: 1.2.15
 
       - name: Generate code
         run: make generate-go
@@ -313,7 +313,7 @@ jobs:
       - name: Install Bun For Plugin Building
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.0.35
+          bun-version: 1.2.15
 
       - name: Install dependencies
         working-directory: ./router-tests
