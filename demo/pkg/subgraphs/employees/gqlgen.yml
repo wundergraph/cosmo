@@ -25,6 +25,10 @@ resolver:
   dir: subgraph
   package: subgraph
 
+directives:
+  openfed__requireFetchReasons:
+    skip_runtime: true
+
 # Optional: turn on use `gqlgen:"fieldName"` tags in your models
 # struct_tag: json
 

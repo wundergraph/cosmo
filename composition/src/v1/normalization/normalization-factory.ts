@@ -20,6 +20,7 @@ import {
   OperationTypeNode,
   print,
   SchemaDefinitionNode,
+  SchemaExtensionNode,
   StringValueNode,
   TypeDefinitionNode,
   TypeExtensionNode,
@@ -40,6 +41,7 @@ import {
   ScalarTypeNode,
   SchemaNode,
   setToNamedTypeNodeArray,
+  stringToNamedTypeNode,
   UnionTypeNode,
 } from '../../ast/utils';
 import {
@@ -3106,7 +3108,7 @@ export class NormalizationFactory {
     directiveCoords: string,
     removeInheritedDirectives = false,
   ): ConstDirectiveNode[] {
-    const flattenedArray: ConstDirectiveNode[] = [];
+    const flattenedArray: Array<ConstDirectiveNode> = [];
     for (const [directiveName, directiveNodes] of directivesByDirectiveName) {
       if (removeInheritedDirectives && INHERITABLE_DIRECTIVE_NAMES.has(directiveName)) {
         continue;
@@ -3198,11 +3200,33 @@ export class NormalizationFactory {
   }
 
   getSchemaNodeByData(schemaData: SchemaData): SchemaDefinitionNode {
+    const operationTypes: Array<OperationTypeDefinitionNode> = [];
+    for (const operationTypeNode of Object.values(OperationTypeNode)) {
+      const node = schemaData.operationTypes.get(operationTypeNode);
+      if (node) {
+        operationTypes.push(node);
+        continue;
+      }
+      const defaultRootTypeName = getOrThrowError(
+        operationTypeNodeToDefaultType,
+        operationTypeNode,
+        'operationTypeNodeToDefaultType',
+      );
+      if (!this.parentDefinitionDataByTypeName.has(defaultRootTypeName)) {
+        continue;
+      }
+      operationTypes.push({
+        kind: Kind.OPERATION_TYPE_DEFINITION,
+        operation: operationTypeNode,
+        type: stringToNamedTypeNode(defaultRootTypeName),
+      });
+    }
+
     return {
       description: schemaData.description,
       directives: this.getValidFlattenedDirectiveArray(schemaData.directivesByDirectiveName, schemaData.name),
       kind: schemaData.kind,
-      operationTypes: mapToArrayOfValues(schemaData.operationTypes),
+      operationTypes,
     };
   }
 
@@ -3459,6 +3483,27 @@ export class NormalizationFactory {
     definitions.push(...dependencies);
   }
 
+  #addSchemaDefinitionNode(definitions: Array<DefinitionNode>): SchemaDefinitionNode | SchemaExtensionNode | undefined {
+    const schemaNode = this.getSchemaNodeByData(this.schemaData);
+    if (schemaNode.operationTypes.length > 0) {
+      definitions.push(schemaNode);
+      return schemaNode;
+    }
+
+    if (!schemaNode.directives?.length) {
+      return;
+    }
+    return {
+      directives: schemaNode.directives,
+      kind: Kind.SCHEMA_EXTENSION,
+    };
+    // @TODO this currently breaks engine
+    // definitions.push({
+    //   directives: schemaNode.directives,
+    //   kind: Kind.SCHEMA_EXTENSION,
+    // });
+  }
+
   normalize(document: DocumentNode): NormalizationResult {
     // Collect any renamed root types
     upsertDirectiveSchemaAndEntityDefinitions(this, document);
@@ -3466,14 +3511,12 @@ export class NormalizationFactory {
     const definitions: DefinitionNode[] = [];
     this.#addDirectiveDefinitionsToDocument(definitions);
     this.validateDirectives(this.schemaData, SCHEMA);
+    const schemaNode = this.#addSchemaDefinitionNode(definitions);
     for (const [parentTypeName, parentData] of this.parentDefinitionDataByTypeName) {
       this.validateDirectives(parentData, parentTypeName);
     }
     if (this.invalidORScopesCoords.size > 0) {
       this.errors.push(orScopesLimitError(MAX_OR_SCOPES, [...this.invalidORScopesCoords]));
-    }
-    if (this.schemaData.operationTypes.size > 0) {
-      definitions.push(this.getSchemaNodeByData(this.schemaData));
     }
     /*
      * Sometimes an @openfed__configureDescription directive is defined before a description is, e.g., on an extension.
@@ -3750,9 +3793,10 @@ export class NormalizationFactory {
       overridesByTargetSubgraphName: this.overridesByTargetSubgraphName,
       parentDefinitionDataByTypeName: this.parentDefinitionDataByTypeName,
       persistedDirectiveDefinitionDataByDirectiveName,
+      schemaNode,
       subgraphAST: newAST,
       subgraphString: print(newAST),
-      schema: buildASTSchema(newAST, { assumeValid: true, assumeValidSDL: true }),
+      schema: buildASTSchema(newAST, { addInvalidExtensionOrphans: true, assumeValid: true, assumeValidSDL: true }),
       success: true,
       warnings: this.warnings,
     };

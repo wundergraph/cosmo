@@ -140,6 +140,97 @@ describe('Type Mapper', () => {
       expect(result.isWrapper).toBe(false);
       expect(result.isScalar).toBe(true);
     });
+
+    describe('comprehensive list type scenarios', () => {
+      test('[String] - nullable list of nullable strings', () => {
+        const result = mapGraphQLTypeToProto(new GraphQLList(GraphQLString));
+
+        expect(result).toMatchInlineSnapshot(`
+          {
+            "isRepeated": true,
+            "isScalar": true,
+            "isWrapper": true,
+            "typeName": "google.protobuf.StringValue",
+          }
+        `);
+      });
+
+      test('[String!] - nullable list of non-null strings', () => {
+        const result = mapGraphQLTypeToProto(new GraphQLList(new GraphQLNonNull(GraphQLString)));
+
+        expect(result).toMatchInlineSnapshot(`
+          {
+            "isRepeated": true,
+            "isScalar": true,
+            "isWrapper": false,
+            "typeName": "string",
+          }
+        `);
+      });
+
+      test('[String]! - non-null list of nullable strings', () => {
+        const result = mapGraphQLTypeToProto(new GraphQLNonNull(new GraphQLList(GraphQLString)));
+
+        expect(result).toMatchInlineSnapshot(`
+          {
+            "isRepeated": true,
+            "isScalar": true,
+            "isWrapper": false,
+            "typeName": "string",
+          }
+        `);
+      });
+
+      test('[String!]! - non-null list of non-null strings', () => {
+        const result = mapGraphQLTypeToProto(new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(GraphQLString))));
+
+        expect(result).toMatchInlineSnapshot(`
+          {
+            "isRepeated": true,
+            "isScalar": true,
+            "isWrapper": false,
+            "typeName": "string",
+          }
+        `);
+      });
+
+      // Lists of lists - currently not supported properly
+      // These tests document the current behavior and are skipped
+      // TODO: Implement proper support for nested lists
+      test('[[String]] - list of lists', () => {
+        const result = mapGraphQLTypeToProto(new GraphQLList(new GraphQLList(GraphQLString)));
+
+        // Now properly creates wrapper message for nested lists
+        expect(result).toMatchInlineSnapshot(`
+          {
+            "isRepeated": false,
+            "isScalar": false,
+            "isWrapper": false,
+            "nestingLevel": 2,
+            "requiresNestedWrapper": true,
+            "typeName": "ListOfListOfString",
+          }
+        `);
+      });
+
+      test('[[String!]!] - list of non-null lists of non-null string', () => {
+        const result = mapGraphQLTypeToProto(
+          new GraphQLList(new GraphQLNonNull(new GraphQLList(new GraphQLNonNull(GraphQLString)))),
+        );
+
+        // Now properly creates wrapper message for nested lists
+        expect(result).toMatchInlineSnapshot(`
+          {
+            "isRepeated": false,
+            "isScalar": false,
+            "isWrapper": false,
+            "nestingLevel": 2,
+            "requiresNestedWrapper": true,
+            "typeName": "ListOfListOfString",
+          }
+        `);
+      });
+    });
   });
 
   describe('enum types', () => {

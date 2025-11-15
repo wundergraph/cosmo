@@ -4,6 +4,28 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.264.0](https://github.com/wundergraph/cosmo/compare/router@0.263.0...router@0.264.0) (2025-11-11)
+
+### Bug Fixes
+
+* improve prometheus schema usage collection and implement sampling ([#2323](https://github.com/wundergraph/cosmo/issues/2323)) ([1a0cb7b](https://github.com/wundergraph/cosmo/commit/1a0cb7beff04043cd58a3632f786f1f85a63b933)) (@StarpTech)
+
+### Features
+
+* initial support for field resolvers in connect ([#2290](https://github.com/wundergraph/cosmo/issues/2290)) ([6f28c5d](https://github.com/wundergraph/cosmo/commit/6f28c5d203ef4fd95db83dfe22143e565df6d463)) (@Noroth)
+
+# [0.263.0](https://github.com/wundergraph/cosmo/compare/router@0.262.1...router@0.263.0) (2025-11-10)
+
+### Features
+
+* **router:** add support for compressed config files ([#2316](https://github.com/wundergraph/cosmo/issues/2316)) ([b1a136b](https://github.com/wundergraph/cosmo/commit/b1a136ba76582f3837f05708cca46e5b1a8aaa75)) (@endigma)
+
+## [0.262.1](https://github.com/wundergraph/cosmo/compare/router@0.262.0...router@0.262.1) (2025-10-31)
+
+### Bug Fixes
+
+* fix conflict of rewriter and required fields ([#2313](https://github.com/wundergraph/cosmo/issues/2313)) ([2c7cf9e](https://github.com/wundergraph/cosmo/commit/2c7cf9e6f5e6d3561b099af1236dffcc6fa4bcf7)) (@devsergiy)
+
 # [0.262.0](https://github.com/wundergraph/cosmo/compare/router@0.261.0...router@0.262.0) (2025-10-30)
 
 ### Features

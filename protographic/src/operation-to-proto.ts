@@ -23,6 +23,7 @@ import {
   Kind,
   validate,
   specifiedRules,
+  KnownDirectivesRule,
 } from 'graphql';
 
 /**
@@ -67,6 +68,8 @@ export interface OperationsToProtoOptions {
   customScalarMappings?: Record<string, string>;
   /** Maximum recursion depth to prevent stack overflow (default: 50) */
   maxDepth?: number;
+  /** Prefix RPC method names with operation type (e.g., QueryGetUser, MutationCreateUser) */
+  prefixOperationType?: boolean;
 }
 
 /**
@@ -121,7 +124,10 @@ export function compileOperationsToProto(
 
   // Validate the GraphQL operation document against the schema
   // This catches invalid operations including circular fragment references (NoFragmentCyclesRule)
-  const validationErrors = validate(schema, document, specifiedRules);
+  // Filter out KnownDirectivesRule to allow unknown directives (e.g., @wg_openapi_operation)
+  // since directives may be used by dev tools and don't affect proto generation
+  const validationRules = specifiedRules.filter((rule) => rule !== KnownDirectivesRule);
+  const validationErrors = validate(schema, document, validationRules);
   if (validationErrors.length > 0) {
     const errorMessages = validationErrors.map((error) => error.message).join('\n');
     throw new Error(`Invalid GraphQL operation:\n${errorMessages}`);
@@ -161,6 +167,7 @@ class OperationsToProtoVisitor {
   private readonly queryIdempotency?: 'NO_SIDE_EFFECTS' | 'DEFAULT';
   private readonly customScalarMappings?: Record<string, string>;
   private readonly maxDepth?: number;
+  private readonly prefixOperationType: boolean;
 
   // Proto AST root
   private readonly root: protobuf.Root;
@@ -168,6 +175,9 @@ class OperationsToProtoVisitor {
   // For tracking / avoiding duplicate messages and enums
   private createdMessages = new Set<string>();
   private createdEnums = new Set<string>();
+
+  // Track generated nested list wrapper messages
+  private nestedListWrappers = new Map<string, protobuf.Type>();
 
   // Lock manager for field number stability
   private readonly lockManager: ProtoLockManager;
@@ -197,6 +207,7 @@ class OperationsToProtoVisitor {
     this.queryIdempotency = options?.queryIdempotency;
     this.customScalarMappings = options?.customScalarMappings;
     this.maxDepth = options?.maxDepth;
+    this.prefixOperationType = options?.prefixOperationType ?? false;
 
     // Initialize lock manager with previous lock data if provided
     this.lockManager = new ProtoLockManager(options?.lockData);
@@ -237,6 +248,14 @@ class OperationsToProtoVisitor {
       }),
     );
 
+    // Add all wrapper messages to root before adding service
+    for (const wrapperMessage of this.nestedListWrappers.values()) {
+      if (!this.createdMessages.has(wrapperMessage.name)) {
+        this.root.add(wrapperMessage);
+        this.createdMessages.add(wrapperMessage.name);
+      }
+    }
+
     this.root.add(service);
 
     return this.root;
@@ -263,16 +282,23 @@ class OperationsToProtoVisitor {
       }
     }
 
-    // 3. Create method name directly from operation name (no Query/Mutation prefix)
-    const methodName = upperFirst(camelCase(operationName));
+    // 3. Create method name from operation name, optionally prefixed with operation type
+    let methodName = upperFirst(camelCase(operationName));
 
-    // 3. Create request message from variables
+    // Add operation type prefix if requested
+    if (this.prefixOperationType) {
+      const operationTypePrefix = upperFirst(node.operation.toLowerCase());
+      methodName = `${operationTypePrefix}${methodName}` as any;
+    }
+
+    // 4. Create request message from variables
     const requestMessageName = createRequestMessageName(methodName);
     const requestMessage = buildRequestMessage(requestMessageName, node.variableDefinitions || [], this.schema, {
       includeComments: this.includeComments,
       fieldNumberManager: this.fieldNumberManager,
       schema: this.schema,
       customScalarMappings: this.customScalarMappings,
+      ensureNestedListWrapper: this.createNestedListWrapperCallback.bind(this),
     });
 
     // Add request message to root
@@ -288,7 +314,7 @@ class OperationsToProtoVisitor {
       }
     }
 
-    // 4. Create response message from selection set
+    // 6. Create response message from selection set
     const responseMessageName = createResponseMessageName(methodName);
     if (node.selectionSet) {
       const rootType = this.getRootType(node.operation);
@@ -301,6 +327,7 @@ class OperationsToProtoVisitor {
         createdEnums: this.createdEnums,
         customScalarMappings: this.customScalarMappings,
         maxDepth: this.maxDepth,
+        ensureNestedListWrapper: this.createNestedListWrapperCallback.bind(this),
       });
 
       // Add response message to root
@@ -310,7 +337,7 @@ class OperationsToProtoVisitor {
       }
     }
 
-    // 5. Add method to service
+    // 7. Add method to service
     const method = new protobuf.Method(methodName, 'rpc', requestMessageName, responseMessageName);
 
     // Mark subscriptions as server streaming
@@ -369,6 +396,7 @@ class OperationsToProtoVisitor {
             includeComments: this.includeComments,
             fieldNumberManager: this.fieldNumberManager,
             customScalarMappings: this.customScalarMappings,
+            ensureNestedListWrapper: this.createNestedListWrapperCallback.bind(this),
           });
           this.root.add(inputMessage);
           this.createdMessages.add(typeName);
@@ -429,5 +457,98 @@ class OperationsToProtoVisitor {
    */
   public getLockData(): ProtoLock {
     return this.lockManager.getLockData();
+  }
+
+  /**
+   * Creates wrapper messages for nested GraphQL lists
+   * Similar to sdl-to-proto-visitor.ts createNestedListWrapper
+   *
+   * @param level - The nesting level (1 for simple wrapper, >1 for nested structures)
+   * @param baseTypeName - The base type name being wrapped (e.g., "String", "User")
+   * @returns The generated wrapper message
+   */
+  private createNestedListWrapper(level: number, baseTypeName: string): protobuf.Type {
+    const wrapperName = `${'ListOf'.repeat(level)}${baseTypeName}`;
+
+    // Return existing wrapper if already created
+    if (this.nestedListWrappers.has(wrapperName)) {
+      return this.nestedListWrappers.get(wrapperName)!;
+    }
+
+    // Create the wrapper message
+    const wrapperMessage = new protobuf.Type(wrapperName);
+
+    // Create nested List message
+    const listMessage = new protobuf.Type('List');
+
+    // Determine the inner type name
+    let innerTypeName: string;
+    if (level > 1) {
+      // For nested lists, reference the previous level wrapper
+      innerTypeName = `${'ListOf'.repeat(level - 1)}${baseTypeName}`;
+      // Ensure the inner wrapper exists
+      if (!this.nestedListWrappers.has(innerTypeName)) {
+        this.createNestedListWrapper(level - 1, baseTypeName);
+      }
+    } else {
+      // For level 1, use the base type directly
+      innerTypeName = baseTypeName;
+    }
+
+    // Add repeated items field to List message
+    const itemsField = new protobuf.Field('items', 1, innerTypeName);
+    itemsField.repeated = true;
+    listMessage.add(itemsField);
+
+    // Add List message to wrapper
+    wrapperMessage.add(listMessage);
+
+    // Add list field to wrapper message
+    const listField = new protobuf.Field('list', 1, 'List');
+    wrapperMessage.add(listField);
+
+    // Store the wrapper
+    this.nestedListWrappers.set(wrapperName, wrapperMessage);
+
+    return wrapperMessage;
+  }
+
+  /**
+   * Callback for builders to create nested list wrappers
+   * This method is called by request-builder and message-builder when they encounter
+   * a GraphQL type that requires a nested list wrapper
+   *
+   * @param graphqlType - The GraphQL type that needs a wrapper
+   * @returns The wrapper message name
+   */
+  private createNestedListWrapperCallback(graphqlType: any): string {
+    // Import mapGraphQLTypeToProto to get type info
+    const { mapGraphQLTypeToProto } = require('./operations/type-mapper.js');
+
+    const typeInfo = mapGraphQLTypeToProto(graphqlType, {
+      customScalarMappings: this.customScalarMappings,
+    });
+
+    if (!typeInfo.requiresNestedWrapper) {
+      // This shouldn't happen, but return the type name as fallback
+      return typeInfo.typeName;
+    }
+
+    // Create the wrapper message
+    const wrapperName = typeInfo.typeName;
+    const nestingLevel = typeInfo.nestingLevel || 1;
+
+    // Extract base type name from wrapper name
+    // e.g., "ListOfListOfString" -> "String"
+    const baseTypeName = wrapperName.replace(/^(ListOf)+/, '');
+
+    // Ensure all wrapper levels are created
+    if (!this.nestedListWrappers.has(wrapperName) && !this.createdMessages.has(wrapperName)) {
+      for (let i = 1; i <= nestingLevel; i++) {
+        this.createNestedListWrapper(i, baseTypeName);
+      }
+    }
+
+    return wrapperName;
   }
 }

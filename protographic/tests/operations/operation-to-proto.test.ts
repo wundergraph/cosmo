@@ -1514,6 +1514,266 @@ describe('Operation to Proto - Integration Tests', () => {
     });
   });
 
+  describe('prefixOperationType option', () => {
+    test('should prefix query operation with Query', () => {
+      const schema = `
+        type Query {
+          user: User
+        }
+        
+        type User {
+          id: ID!
+          name: String
+        }
+      `;
+
+      const operation = `
+        query GetUser {
+          user {
+            id
+            name
+          }
+        }
+      `;
+
+      const { proto } = compileOperationsToProto(operation, schema, {
+        prefixOperationType: true,
+      });
+
+      expectValidProto(proto);
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc QueryGetUser(QueryGetUserRequest) returns (QueryGetUserResponse) {}
+        }
+
+        message QueryGetUserRequest {
+        }
+
+        message QueryGetUserResponse {
+          message User {
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+          }
+          User user = 1;
+        }
+        "
+      `);
+    });
+
+    test('should prefix mutation operation with Mutation', () => {
+      const schema = `
+        type Query {
+          ping: String
+        }
+        
+        type Mutation {
+          createUser(name: String!): User
+        }
+        
+        type User {
+          id: ID!
+          name: String
+        }
+      `;
+
+      const operation = `
+        mutation CreateUser($name: String!) {
+          createUser(name: $name) {
+            id
+            name
+          }
+        }
+      `;
+
+      const { proto } = compileOperationsToProto(operation, schema, {
+        prefixOperationType: true,
+      });
+
+      expectValidProto(proto);
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc MutationCreateUser(MutationCreateUserRequest) returns (MutationCreateUserResponse) {}
+        }
+
+        message MutationCreateUserRequest {
+          string name = 1;
+        }
+
+        message MutationCreateUserResponse {
+          message CreateUser {
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+          }
+          CreateUser create_user = 1;
+        }
+        "
+      `);
+    });
+
+    test('should prefix subscription operation with Subscription', () => {
+      const schema = `
+        type Query {
+          ping: String
+        }
+        
+        type Subscription {
+          messageAdded: Message
+        }
+        
+        type Message {
+          id: ID!
+          content: String
+        }
+      `;
+
+      const operation = `
+        subscription OnMessageAdded {
+          messageAdded {
+            id
+            content
+          }
+        }
+      `;
+
+      const { proto } = compileOperationsToProto(operation, schema, {
+        prefixOperationType: true,
+      });
+
+      expectValidProto(proto);
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc SubscriptionOnMessageAdded(SubscriptionOnMessageAddedRequest) returns (stream SubscriptionOnMessageAddedResponse) {}
+        }
+
+        message SubscriptionOnMessageAddedRequest {
+        }
+
+        message SubscriptionOnMessageAddedResponse {
+          message MessageAdded {
+            string id = 1;
+            google.protobuf.StringValue content = 2;
+          }
+          MessageAdded message_added = 1;
+        }
+        "
+      `);
+    });
+
+    test('should not prefix when option is false', () => {
+      const schema = `
+        type Query {
+          user: User
+        }
+        
+        type User {
+          id: ID!
+          name: String
+        }
+      `;
+
+      const operation = `
+        query GetUser {
+          user {
+            id
+            name
+          }
+        }
+      `;
+
+      const { proto } = compileOperationsToProto(operation, schema, {
+        prefixOperationType: false,
+      });
+
+      expectValidProto(proto);
+      expect(proto).toContain('rpc GetUser(GetUserRequest) returns (GetUserResponse)');
+      expect(proto).not.toContain('QueryGetUser');
+    });
+
+    test('should not prefix when option is omitted', () => {
+      const schema = `
+        type Query {
+          user: User
+        }
+        
+        type User {
+          id: ID!
+          name: String
+        }
+      `;
+
+      const operation = `
+        query GetUser {
+          user {
+            id
+            name
+          }
+        }
+      `;
+
+      const { proto } = compileOperationsToProto(operation, schema);
+
+      expectValidProto(proto);
+      expect(proto).toContain('rpc GetUser(GetUserRequest) returns (GetUserResponse)');
+      expect(proto).not.toContain('QueryGetUser');
+    });
+
+    test('should work with queryIdempotency option', () => {
+      const schema = `
+        type Query {
+          hello: String
+        }
+      `;
+
+      const operation = `
+        query GetHello {
+          hello
+        }
+      `;
+
+      const { proto } = compileOperationsToProto(operation, schema, {
+        prefixOperationType: true,
+        queryIdempotency: 'NO_SIDE_EFFECTS',
+      });
+
+      expectValidProto(proto);
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc QueryGetHello(QueryGetHelloRequest) returns (QueryGetHelloResponse) {
+            option idempotency_level = NO_SIDE_EFFECTS;
+          }
+        }
+
+        message QueryGetHelloRequest {
+        }
+
+        message QueryGetHelloResponse {
+          google.protobuf.StringValue hello = 1;
+        }
+        "
+      `);
+    });
+  });
+
   describe('return values', () => {
     test('should return both proto text and root object', () => {
       const schema = `
