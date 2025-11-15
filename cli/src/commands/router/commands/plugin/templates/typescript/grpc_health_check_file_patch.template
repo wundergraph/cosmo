@@ -1,40 +1,59 @@
 diff --git a/build/src/health.js b/build/src/health.js
-index 1bfe43a2488ea06e541da92773176d2a822aef1d..c3f3ca4a013ec81eafca1b14678eca7ed4011a6e 100644
+index 1bfe43a2488ea06e541da92773176d2a822aef1d..a486bf31a46fecbfbb2047828e1d7f8303b1176c 100644
 --- a/build/src/health.js
 +++ b/build/src/health.js
-@@ -26,7 +26,7 @@ const loadedProto = (0, proto_loader_1.loadSync)('health/v1/health.proto', {
+@@ -20,13 +20,17 @@ Object.defineProperty(exports, "__esModule", { value: true });
+ exports.protoPath = exports.HealthImplementation = exports.service = void 0;
+ const path = require("path");
+ const proto_loader_1 = require("@grpc/proto-loader");
++
++const healthProtoPath = (process.env.NODE_ENV === 'test') ? __dirname : path.dirname(process.execPath);
++const healthProtoSuffix = (process.env.NODE_ENV === 'test') ? '../../proto' : `grpc-health-check/proto;`
++
+ const loadedProto = (0, proto_loader_1.loadSync)('health/v1/health.proto', {
+     keepCase: true,
+     longs: String,
      enums: String,
      defaults: true,
      oneofs: true,
 -    includeDirs: [`${__dirname}/../../proto`],
-+    includeDirs: [`${path.dirname(process.execPath)}/grpc-health-check/proto`],
++    includeDirs: [`${healthProtoPath}/${healthProtoSuffix}`],
  });
  exports.service = loadedProto['grpc.health.v1.Health'];
  const GRPC_STATUS_NOT_FOUND = 5;
-@@ -114,5 +114,5 @@ class HealthImplementation {
+@@ -114,5 +118,5 @@ class HealthImplementation {
      }
  }
  exports.HealthImplementation = HealthImplementation;
 -exports.protoPath = path.resolve(__dirname, '../../proto/health/v1/health.proto');
-+exports.protoPath = path.resolve(path.dirname(process.execPath), 'grpc-health-check/proto/health/v1/health.proto');
++exports.protoPath = path.resolve(healthProtoPath, healthProtoSuffix, '/health/v1/health.proto');
  //# sourceMappingURL=health.js.map
 \ No newline at end of file
 diff --git a/src/health.ts b/src/health.ts
-index b0a8769e7fb2691f9a6abfffaee1ac86858bca8f..2167a5112fe1738aec3f0c27e8cda570db3cc28b 100644
+index b0a8769e7fb2691f9a6abfffaee1ac86858bca8f..82c0f581c79166a43450a93f4e19c8b942f3d0ca 100644
 --- a/src/health.ts
 +++ b/src/health.ts
-@@ -30,7 +30,7 @@ const loadedProto = loadSync('health/v1/health.proto', {
+@@ -24,13 +24,16 @@ import { sendUnaryData, Server, ServerUnaryCall, ServerWritableStream } from './
+ import { HealthListRequest } from './generated/grpc/health/v1/HealthListRequest';
+ import { HealthListResponse } from './generated/grpc/health/v1/HealthListResponse';
+
++const healthProtoPath = (process.env.NODE_ENV === 'test') ? __dirname : path.dirname(process.execPath);
++const healthProtoSuffix = (process.env.NODE_ENV === 'test') ? '../../proto' : `grpc-health-check/proto;`
++
+ const loadedProto = loadSync('health/v1/health.proto', {
+   keepCase: true,
+   longs: String,
    enums: String,
    defaults: true,
    oneofs: true,
 -  includeDirs: [`${__dirname}/../../proto`],
-+  includeDirs: [`${path.dirname(process.execPath)}/grpc-health-check/proto`],
++  includeDirs: [`${healthProtoPath}/${healthProtoSuffix}`],
  });
 
  export const service = loadedProto['grpc.health.v1.Health'] as ServiceDefinition;
-@@ -131,4 +131,4 @@ export class HealthImplementation {
+@@ -131,4 +134,4 @@ export class HealthImplementation {
    }
  }
 
 -export const protoPath = path.resolve(__dirname, '../../proto/health/v1/health.proto');
-+export const protoPath =  path.resolve(path.dirname(process.execPath), 'grpc-health-check/proto/health/v1/health.proto');
++export const protoPath = path.resolve(healthProtoPath, healthProtoSuffix, '/health/v1/health.proto');
