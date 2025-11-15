@@ -13,7 +13,12 @@ import {
 } from 'graphql';
 import { mapGraphQLTypeToProto } from './type-mapper.js';
 import { FieldNumberManager } from './field-numbering.js';
-import { graphqlFieldToProtoField, graphqlArgumentToProtoField } from '../naming-conventions.js';
+import {
+  graphqlFieldToProtoField,
+  graphqlArgumentToProtoField,
+  createEnumUnspecifiedValue,
+  graphqlEnumValueToProtoEnumValue,
+} from '../naming-conventions.js';
 
 /**
  * Options for building request messages
@@ -271,12 +276,16 @@ export function buildEnumType(enumType: GraphQLEnumType, options?: RequestBuilde
   const protoEnum = new protobuf.Enum(enumType.name);
 
   // Proto3 requires the first enum value to be 0 (unspecified)
-  protoEnum.add('UNSPECIFIED', 0);
+  // Use prefixed UNSPECIFIED to avoid collisions when multiple enums are in the same scope
+  const unspecifiedValue = createEnumUnspecifiedValue(enumType.name);
+  protoEnum.add(unspecifiedValue, 0);
 
   let enumNumber = 1;
   const enumValues = enumType.getValues();
   for (const enumValue of enumValues) {
-    protoEnum.add(enumValue.name, enumNumber);
+    // Prefix enum values with the enum type name to avoid collisions
+    const protoEnumValue = graphqlEnumValueToProtoEnumValue(enumType.name, enumValue.name);
+    protoEnum.add(protoEnumValue, enumNumber);
 
     if (options?.includeComments && enumValue.description) {
       // Note: protobufjs doesn't have direct comment support for enum values
