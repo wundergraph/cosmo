@@ -18,6 +18,9 @@
       },
     },
   },
+  "patchedDependencies": {
+    "grpc-health-check@2.1.0": "patches/grpc-health-check@2.1.0.patch",
+  },
   "packages": {
     "@grpc/grpc-js": ["@grpc/grpc-js@1.14.0", "", { "dependencies": { "@grpc/proto-loader": "^0.8.0", "@js-sdsl/ordered-map": "^4.4.2" } }, "sha512-N8Jx6PaYzcTRNzirReJCtADVoq4z7+1KQ4E70jTg/koQiMoUSN1kbNjPOqpPbhMFhfU1/l7ixspPl8dNY+FoUg=="],
 

@@ -10,7 +10,7 @@ compose-integration:
 bump-deps:
 	./bump-deps.sh
 
-PHONY: plugin-build plugin-generate plugin-build-binary plugin-build-integration
+PHONY: plugin-build plugin-generate plugin-build-bun-binary plugin-build-go-binary plugin-build-integration
 
 plugin-build:
 	$(wgc_router) plugin build ./pkg/subgraphs/projects --debug --go-module-path github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects
@@ -20,9 +20,14 @@ plugin-generate:
 	$(wgc_router) plugin build ./pkg/subgraphs/projects --generate-only --go-module-path github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects
 	$(wgc_router) plugin build ./pkg/subgraphs/courses --generate-only
 
-plugin-build-binary:
+plugin-build-bun-binary:
+	cd pkg/subgraphs/courses/ && \
+	bun install && bun build src/plugin.ts --compile --outfile bin/$(shell go env GOOS)_$(shell go env GOARCH) && \
+    mkdir -p bin/grpc-health-check && \
+    cp -r node_modules/grpc-health-check/proto bin/grpc-health-check
+
+plugin-build-go-binary:
 	cd pkg/subgraphs/projects/ && go build -o ./bin/$(shell go env GOOS)_$(shell go env GOARCH) ./src
-	cd pkg/subgraphs/courses/ && bun install && bun run build
 
 plugin-compose:
 	$(wgc_router) compose -i ./graph-with-plugin.yaml -o ./configWithPlugins.json
@@ -34,7 +39,7 @@ plugin-build-integration: plugin-build plugin-compose
 	cp -a pkg/subgraphs/courses ../router/plugins/
 	mv configWithPlugins.json ../router-tests/testenv/testdata/configWithPlugins.json
 	
-plugin-build-ci: plugin-build-binary
+plugin-build-ci: plugin-build-go-binary plugin-build-bun-binary
 	rm -rf ../router/plugins/*
 	mkdir -p ../router/plugins/projects/bin
 	mkdir -p ../router/plugins/courses/bin
