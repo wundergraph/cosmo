@@ -1,8 +1,6 @@
 syntax = "proto3";
 package service;
 
-option go_package = "github.com/wundergraph/cosmo/plugin";
-
 import "google/protobuf/wrappers.proto";
 
 // Service definition for CoursesService

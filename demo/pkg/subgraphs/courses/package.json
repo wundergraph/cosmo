@@ -25,4 +25,3 @@
     "grpc-health-check@2.1.0": "patches/grpc-health-check@2.1.0.patch"
   }
 }
-

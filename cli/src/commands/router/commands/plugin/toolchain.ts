@@ -13,8 +13,10 @@ import {
 import prompts from 'prompts';
 import semver from 'semver';
 import { camelCase, upperFirst } from 'lodash-es';
+import TsTemplates from './templates/typescript.js';
 import { dataDir } from '../../../../core/config.js';
 import { renderValidationResults } from './helper.js';
+import pupa from "pupa";
 
 // Define platform-architecture combinations
 export function getHostPlatform(language: string) {
@@ -651,26 +653,27 @@ export async function buildTsBinaries(pluginDir: string, platforms: string[], de
       const binaryName = `${platform}_${arch}`;
 
       spinner.text = `Building ${originalPlatformArch}...`;
-      const flags = [
-        'build',
-        'src/plugin.ts',
-        '--compile',
-        '--outfile',
-        `bin/${binaryName}`,
-        `--target=${originalPlatformArch}`,
-      ];
 
       if (debug) {
-        // TODO: To verify if we can actually debug sourcemaps
-        flags.push('--sourcemap');
+        const debugScript = resolve(pluginDir, join('bin', originalPlatformArch));
+        await writeFile(debugScript, pupa(TsTemplates.debugBuild, {}));
+        await chmod(debugScript, 0o755);
+      } else {
+        const flags = [
+          'build',
+          'src/plugin.ts',
+          '--compile',
+          '--outfile',
+          `bin/${binaryName}`,
+          `--target=${originalPlatformArch}`,
+        ];
+        await execa(bunPath, flags, {
+          cwd: pluginDir,
+          stdout: 'inherit',
+          stderr: 'inherit',
+          env,
+        });
       }
-
-      await execa(bunPath, flags, {
-        cwd: pluginDir,
-        stdout: 'inherit',
-        stderr: 'inherit',
-        env,
-      });
     }),
   );
 }
