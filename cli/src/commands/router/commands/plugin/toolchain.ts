@@ -50,6 +50,8 @@ const ALL_BUN_PLATFORM_MAPPINGS: Record<string, string> = {
 const installScriptUrl =
   'https://raw.githubusercontent.com/wundergraph/cosmo/11347a8300eb71e06348cef203716e560585a20f/scripts/install-proto-tools.sh';
 
+const defaultGoModulePath = 'github.com/wundergraph/cosmo/plugin';
+
 // Get paths for tool installation
 const TOOLS_DIR = join(dataDir, 'proto-tools');
 const TOOLS_BIN_DIR = join(TOOLS_DIR, 'bin');
@@ -257,6 +259,24 @@ async function getCommandVersion(command: string, versionFlag: string): Promise<
   } catch (error) {
     throw new Error(`Failed to get version for ${command}: ${error}`);
   }
+}
+
+export function validateAndGetGoModulePath(language: string, goModulePath: string | undefined): string | undefined {
+  switch (language) {
+    case 'go': {
+      if (goModulePath === undefined) {
+        goModulePath = defaultGoModulePath;
+      }
+      break;
+    }
+    default: {
+      if (goModulePath !== undefined) {
+        throw new Error(`Go Module Path not supported for language '${language}'`);
+      }
+      break;
+    }
+  }
+  return goModulePath;
 }
 
 /**
@@ -731,7 +751,6 @@ export function getLanguage(pluginDir: string) {
   const goModFile = resolve(pluginDir, 'go.mod');
   const packageJsonFile = resolve(pluginDir, 'package.json');
 
-  // TODO: Make Async
   if (existsSync(goModFile)) {
     return 'go';
   }

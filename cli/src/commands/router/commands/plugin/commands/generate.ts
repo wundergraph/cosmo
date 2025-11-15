@@ -12,6 +12,7 @@ import {
   getLanguage,
   installGoDependencies,
   installTsDependencies,
+  validateAndGetGoModulePath,
 } from '../toolchain.js';
 
 export default (opts: BaseCommandOptions) => {
@@ -24,21 +25,20 @@ export default (opts: BaseCommandOptions) => {
     'Force tools installation regardless of version check or confirmation',
     false,
   );
-  command.option(
-    '--go-module-path <path>',
-    'Go module path to use for the plugin',
-    'github.com/wundergraph/cosmo/plugin',
-  );
+  command.option('--go-module-path <path>', 'Go module path to use for the plugin');
 
   command.action(async (directory, options) => {
     const startTime = performance.now();
     const pluginDir = resolve(directory);
     const spinner = Spinner();
     const pluginName = path.basename(pluginDir);
-    const goModulePath = options.goModulePath;
+
+    let goModulePath = options.goModulePath;
 
     try {
       const language = getLanguage(pluginDir);
+
+      goModulePath = validateAndGetGoModulePath(language, goModulePath);
 
       // Check and install tools if needed
       if (!options.skipToolsInstallation) {
