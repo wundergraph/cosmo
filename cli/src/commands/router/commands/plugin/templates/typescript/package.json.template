@@ -11,7 +11,7 @@
   "dependencies": {
     "@grpc/grpc-js": "^1.14.0",
     "google-protobuf": "^4.0.0",
-    "grpc-health-check": "^2.0.0"
+    "grpc-health-check": "2.1.0"
   },
   "devDependencies": {
     "@protocolbuffers/protoc-gen-js": "4.0.0",
