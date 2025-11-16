@@ -35,7 +35,7 @@ import { isAuthenticationError, isAuthorizationError, isPublicError } from './er
 import { GraphKeyAuthContext } from './services/GraphApiTokenAuthenticator.js';
 import { composeFederatedContract, composeFederatedGraphWithPotentialContracts } from './composition/composition.js';
 import { SubgraphsToCompose } from './repositories/FeatureFlagRepository.js';
-import { envVariables } from "./env.schema.js";
+import { envVariables } from './env.schema.js';
 
 const labelRegex = /^[\dA-Za-z](?:[\w.-]{0,61}[\dA-Za-z])?$/;
 const organizationSlugRegex = /^[\da-z]+(?:-[\da-z]+)*$/;
@@ -43,10 +43,7 @@ const namespaceRegex = /^[\da-z]+(?:[_-][\da-z]+)*$/;
 const schemaTagRegex = /^(?![/-])[\d/A-Za-z-]+(?<![/-])$/;
 const graphNameRegex = /^[\dA-Za-z]+(?:[./@_-][\dA-Za-z]+)*$/;
 const pluginVersionRegex = /^v\d+$/;
-const {
-  SENTRY_ENABLED,
-  SENTRY_DSN,
-} = envVariables.parse(process.env);
+const { SENTRY_ENABLED, SENTRY_DSN } = envVariables.parse(process.env);
 
 
 /**
