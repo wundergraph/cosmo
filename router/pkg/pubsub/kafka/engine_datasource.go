@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"io"
 	"slices"
+	"strings"
 
 	"github.com/buger/jsonparser"
 	"github.com/cespare/xxhash/v2"
+	goccyjson "github.com/goccy/go-json"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -125,19 +127,60 @@ func (p *publishData) PublishEventConfiguration() datasource.PublishEventConfigu
 }
 
 func (p *publishData) MarshalJSONTemplate() (string, error) {
-	// The content of the data field could be not valid JSON, so we can't use json.Marshal
-	// e.g. {"id":$$0$$,"update":$$1$$}
+	// The content of p.Event.Data containa template placeholders like $$0$$, $$1$$
+	// which are not valid JSON. We can't use json.Marshal for these parts.
+	// Instead, we use json.Marshal for the safe parts (headers, topic, providerId, rootFieldName, key)
+	// and manually construct the final JSON string.
+
 	headers := p.Event.Headers
 	if headers == nil {
 		headers = make(map[string][]byte)
 	}
 
-	headersBytes, err := json.Marshal(headers)
+	var builder strings.Builder
+	builder.Grow(256 + len(p.Event.Data))
+
+	builder.WriteString(`{"topic":`)
+	topicBytes, err := goccyjson.Marshal(p.Topic)
 	if err != nil {
 		return "", err
 	}
+	builder.Write(topicBytes)
 
-	return fmt.Sprintf(`{"topic":"%s", "event": {"data": %s, "key": "%s", "headers": %s}, "providerId":"%s", "rootFieldName":"%s"}`, p.Topic, p.Event.Data, p.Event.Key, headersBytes, p.Provider, p.FieldName), nil
+	builder.WriteString(`, "event": {"data": `)
+	builder.Write(p.Event.Data)
+
+	builder.WriteString(`, "key": `)
+	keyBytes, err := goccyjson.Marshal(string(p.Event.Key))
+	if err != nil {
+		return "", err
+	}
+	builder.Write(keyBytes)
+
+	builder.WriteString(`, "headers": `)
+	headersBytes, err := goccyjson.Marshal(headers)
+	if err != nil {
+		return "", err
+	}
+	builder.Write(headersBytes)
+
+	builder.WriteString(`}, "providerId":`)
+	providerBytes, err := goccyjson.Marshal(p.Provider)
+	if err != nil {
+		return "", err
+	}
+	builder.Write(providerBytes)
+
+	builder.WriteString(`, "rootFieldName":`)
+	rootFieldNameBytes, err := goccyjson.Marshal(p.FieldName)
+	if err != nil {
+		return "", err
+	}
+	builder.Write(rootFieldNameBytes)
+
+	builder.WriteString(`}`)
+
+	return builder.String(), nil
 }
 
 // PublishEventConfiguration is a public type that is used to allow access to custom fields

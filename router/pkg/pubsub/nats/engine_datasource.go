@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"io"
 	"slices"
+	"strings"
 
 	"github.com/buger/jsonparser"
 	"github.com/cespare/xxhash/v2"
+	goccyjson "github.com/goccy/go-json"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -126,9 +128,41 @@ func (p *publishData) PublishEventConfiguration() datasource.PublishEventConfigu
 }
 
 func (p *publishData) MarshalJSONTemplate() (string, error) {
-	// The content of the data field could be not valid JSON, so we can't use json.Marshal
-	// e.g. {"id":$$0$$,"update":$$1$$}
-	return fmt.Sprintf(`{"subject":"%s", "event": {"data": %s}, "providerId":"%s", "rootFieldName":"%s"}`, p.Subject, p.Event.Data, p.Provider, p.FieldName), nil
+	// The content of p.Event.Data containa template placeholders like $$0$$, $$1$$
+	// which are not valid JSON. We can't use json.Marshal for these parts.
+	// Instead, we use json.Marshal for the safe parts (subject, providerId, rootFieldName)
+	// and manually construct the final JSON string.
+
+	var builder strings.Builder
+	builder.Grow(256 + len(p.Event.Data))
+
+	builder.WriteString(`{"subject":`)
+	topicBytes, err := goccyjson.Marshal(p.Subject)
+	if err != nil {
+		return "", err
+	}
+	builder.Write(topicBytes)
+
+	builder.WriteString(`, "event": {"data": `)
+	builder.Write(p.Event.Data)
+
+	builder.WriteString(`}, "providerId":`)
+	providerBytes, err := goccyjson.Marshal(p.Provider)
+	if err != nil {
+		return "", err
+	}
+	builder.Write(providerBytes)
+
+	builder.WriteString(`, "rootFieldName":`)
+	rootFieldNameBytes, err := goccyjson.Marshal(p.FieldName)
+	if err != nil {
+		return "", err
+	}
+	builder.Write(rootFieldNameBytes)
+
+	builder.WriteString(`}`)
+
+	return builder.String(), nil
 }
 
 type PublishAndRequestEventConfiguration struct {
