@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -227,6 +228,85 @@ func TestSubscriptionEventUpdater_Update_WithMultipleHooks_Success(t *testing.T)
 	case <-time.After(1 * time.Second):
 		t.Fatal("timeout waiting for events")
 	}
+}
+
+func TestSubscriptionEventUpdater_Update_WithMultipleHooks_Error(t *testing.T) {
+	mockUpdater := NewMockSubscriptionUpdater(t)
+	config := &testSubscriptionEventConfig{
+		providerID:   "test-provider",
+		providerType: ProviderTypeNats,
+		fieldName:    "testField",
+	}
+	originalEvents := []StreamEvent{
+		&testEvent{mutableTestEvent("original data")},
+	}
+	hookError := errors.New("first hook error")
+
+	var hook1Called, hook2Called, hook3Called atomic.Bool
+
+	// Hook 1: Returns an error
+	hook1 := func(subCtx context.Context, updaterCtx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
+		hook1Called.Store(true)
+		// Return the original events but with an error
+		return events, hookError
+	}
+
+	// Hook 2: Should not be called since hook1 returned an error
+	hook2 := func(subCtx context.Context, updaterCtx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
+		hook2Called.Store(true)
+		return []StreamEvent{&testEvent{mutableTestEvent("modified by hook2")}}, nil
+	}
+
+	// Hook 3: Should not be called since hook1 returned an error
+	hook3 := func(subCtx context.Context, updaterCtx context.Context, cfg SubscriptionEventConfiguration, eventBuilder EventBuilderFn, events []StreamEvent) ([]StreamEvent, error) {
+		hook3Called.Store(true)
+		return []StreamEvent{&testEvent{mutableTestEvent("modified by hook3")}}, nil
+	}
+
+	subId := resolve.SubscriptionIdentifier{ConnectionID: 1, SubscriptionID: 1}
+	mockUpdater.On("Subscriptions").Return(map[context.Context]resolve.SubscriptionIdentifier{
+		context.Background(): subId,
+	})
+	// Events from hook1 should still be sent despite the error
+	mockUpdater.On("UpdateSubscription", subId, []byte("original data")).Return()
+	// Subscription should be closed due to the error from hook1
+	mockUpdater.On("CloseSubscription", resolve.SubscriptionCloseKindNormal, subId).Return()
+
+	updater := NewSubscriptionEventUpdater(
+		config,
+		Hooks{
+			OnReceiveEvents: OnReceiveEventsHooks{
+				Handlers: []OnReceiveEventsFn{hook1, hook2, hook3},
+			},
+		},
+		mockUpdater,
+		zap.NewNop(),
+		testEventBuilder,
+	)
+
+	updater.Update(originalEvents)
+
+	// Verify hook1 was called
+	assert.Eventually(t, func() bool {
+		return hook1Called.Load()
+	}, 1*time.Second, 10*time.Millisecond, "hook1 should have been called")
+
+	// Verify hook2 was NOT called
+	assert.Never(t, func() bool {
+		return hook2Called.Load()
+	}, 100*time.Millisecond, 10*time.Millisecond, "hook2 should not have been called after hook1 returned an error")
+
+	// Verify hook3 was NOT called
+	assert.Never(t, func() bool {
+		return hook3Called.Load()
+	}, 100*time.Millisecond, 10*time.Millisecond, "hook3 should not have been called after hook1 returned an error")
+
+	// Verify events from hook1 were still sent
+	mockUpdater.AssertCalled(t, "UpdateSubscription", subId, []byte("original data"))
+	// Verify subscription was closed due to hook1's error
+	mockUpdater.AssertCalled(t, "CloseSubscription", resolve.SubscriptionCloseKindNormal, subId)
+	// Verify Update was not called (since hooks are present)
+	mockUpdater.AssertNotCalled(t, "Update")
 }
 
 func TestSubscriptionEventUpdater_Complete(t *testing.T) {

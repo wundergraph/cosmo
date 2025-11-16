@@ -104,6 +104,9 @@ func (s *subscriptionEventUpdater) updateSubscription(subscriptionCtx context.Co
 	var err error
 	for i := range hooks {
 		events, err = hooks[i](subscriptionCtx, updaterCtx, s.subscriptionEventConfiguration, s.eventBuilder, events)
+		if err != nil {
+			break
+		}
 	}
 
 	// send events to the subscription,
