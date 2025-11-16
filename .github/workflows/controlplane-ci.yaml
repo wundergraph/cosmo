@@ -80,6 +80,9 @@ jobs:
       - name: Setup Keycloak
         run: nohup .github/scripts/setup-keycloak.sh &
 
+      - name: Copy dummy env file
+        run: cp .env.example .env
+
       - name: Test
         run: pnpm run --filter controlplane test
         env:
