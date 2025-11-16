@@ -83,7 +83,6 @@ func (s *subscriptionEventUpdater) Complete() {
 
 func (s *subscriptionEventUpdater) Close(kind resolve.SubscriptionCloseKind) {
 	s.eventUpdater.Close(kind)
-	close(s.semaphore)
 }
 
 func (s *subscriptionEventUpdater) SetHooks(hooks Hooks) {
