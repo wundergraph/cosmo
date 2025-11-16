@@ -81,7 +81,7 @@ jobs:
         run: nohup .github/scripts/setup-keycloak.sh &
 
       - name: Copy dummy env file
-        run: cp .env.example .env
+        run: cp ./controlplane/.env.example ./controlplane/.env
 
       - name: Test
         run: pnpm run --filter controlplane test
