@@ -8,5 +8,6 @@ export default defineConfig({
     teardownTimeout: 10_000,
     // Ensure always the CJS version is used otherwise we might conflict with multiple versions of graphql
     alias: [{ find: /^graphql$/, replacement: 'graphql/index.js' }],
+    setupFiles: ['dotenv/config'],
   },
 });
