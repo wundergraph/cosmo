@@ -1,4 +1,5 @@
 import { randomFill } from 'node:crypto';
+import * as Sentry from '@sentry/node';
 import { S3ClientConfig } from '@aws-sdk/client-s3';
 import { HandlerContext } from '@connectrpc/connect';
 import {
@@ -34,6 +35,7 @@ import { isAuthenticationError, isAuthorizationError, isPublicError } from './er
 import { GraphKeyAuthContext } from './services/GraphApiTokenAuthenticator.js';
 import { composeFederatedContract, composeFederatedGraphWithPotentialContracts } from './composition/composition.js';
 import { SubgraphsToCompose } from './repositories/FeatureFlagRepository.js';
+import { envVariables } from "./env.schema.js";
 
 const labelRegex = /^[\dA-Za-z](?:[\w.-]{0,61}[\dA-Za-z])?$/;
 const organizationSlugRegex = /^[\da-z]+(?:-[\da-z]+)*$/;
@@ -41,6 +43,11 @@ const namespaceRegex = /^[\da-z]+(?:[_-][\da-z]+)*$/;
 const schemaTagRegex = /^(?![/-])[\d/A-Za-z-]+(?<![/-])$/;
 const graphNameRegex = /^[\dA-Za-z]+(?:[./@_-][\dA-Za-z]+)*$/;
 const pluginVersionRegex = /^v\d+$/;
+const {
+  SENTRY_ENABLED,
+  SENTRY_DSN,
+} = envVariables.parse(process.env);
+
 
 /**
  * Wraps a function with a try/catch block and logs any errors that occur.
@@ -106,6 +113,39 @@ export const enrichLogger = (
       organizationId: authContext.organizationId,
     },
   });
+
+  if (SENTRY_ENABLED && SENTRY_DSN) {
+    try {
+      if (authContext.userId) {
+        Sentry.setUser({
+          id: authContext.userId,
+          username: authContext.userDisplayName,
+        });
+      }
+
+      if (authContext.organizationId) {
+        Sentry.setTag('org.id', authContext.organizationId);
+      }
+
+      if ('organizationSlug' in authContext && authContext.organizationSlug) {
+        Sentry.setTag('org.slug', authContext.organizationSlug);
+      }
+
+      if ('apiKeyName' in authContext && authContext.apiKeyName) {
+        Sentry.setTag('api.key', authContext.apiKeyName);
+      }
+
+      if ('federatedGraphId' in authContext && authContext.federatedGraphId) {
+        Sentry.setTag('graph.id', authContext.federatedGraphId);
+      }
+
+      if ('auth' in authContext && authContext.auth) {
+        Sentry.setTag('auth.kind', authContext.auth);
+      }
+    } catch (error) {
+      newLogger.debug({ err: error }, 'Failed to enrich Sentry context');
+    }
+  }
 
   ctx.values.set<FastifyBaseLogger>({ id: fastifyLoggerId, defaultValue: newLogger }, newLogger);
 
