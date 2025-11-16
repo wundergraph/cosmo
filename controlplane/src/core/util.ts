@@ -115,32 +115,33 @@ export const enrichLogger = (
   });
 
   if (SENTRY_ENABLED && SENTRY_DSN) {
+    const sentryScope = Sentry.getCurrentScope();
     try {
       if (authContext.userId) {
-        Sentry.setUser({
+        sentryScope.setUser({
           id: authContext.userId,
           username: authContext.userDisplayName,
         });
       }
 
       if (authContext.organizationId) {
-        Sentry.setTag('org.id', authContext.organizationId);
+        sentryScope.setTag('org.id', authContext.organizationId);
       }
 
       if ('organizationSlug' in authContext && authContext.organizationSlug) {
-        Sentry.setTag('org.slug', authContext.organizationSlug);
+        sentryScope.setTag('org.slug', authContext.organizationSlug);
       }
 
       if ('apiKeyName' in authContext && authContext.apiKeyName) {
-        Sentry.setTag('api.key', authContext.apiKeyName);
+        sentryScope.setTag('api.key', authContext.apiKeyName);
       }
 
       if ('federatedGraphId' in authContext && authContext.federatedGraphId) {
-        Sentry.setTag('graph.id', authContext.federatedGraphId);
+        sentryScope.setTag('graph.id', authContext.federatedGraphId);
       }
 
       if ('auth' in authContext && authContext.auth) {
-        Sentry.setTag('auth.kind', authContext.auth);
+        sentryScope.setTag('auth.kind', authContext.auth);
       }
     } catch (error) {
       newLogger.debug({ err: error }, 'Failed to enrich Sentry context');
