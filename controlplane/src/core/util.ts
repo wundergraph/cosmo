@@ -45,7 +45,6 @@ const graphNameRegex = /^[\dA-Za-z]+(?:[./@_-][\dA-Za-z]+)*$/;
 const pluginVersionRegex = /^v\d+$/;
 const { SENTRY_ENABLED, SENTRY_DSN } = envVariables.parse(process.env);
 
-
 /**
  * Wraps a function with a try/catch block and logs any errors that occur.
  * If the error is a public error, it is returned as a response message.
