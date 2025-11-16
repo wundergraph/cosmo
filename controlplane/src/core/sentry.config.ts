@@ -1,8 +1,8 @@
-import { createRequire } from 'node:module';
 import * as Sentry from '@sentry/node';
 import { nodeProfilingIntegration } from '@sentry/profiling-node';
 import { eventLoopBlockIntegration } from '@sentry/node-native';
 import { fastifyIntegration, pinoIntegration } from '@sentry/node';
+import { version } from '../../package.json';
 import { envVariables } from './env.schema.js';
 
 const {
@@ -17,18 +17,9 @@ const {
 } = envVariables.parse(process.env);
 
 if (SENTRY_ENABLED && SENTRY_DSN) {
-  const require = createRequire(import.meta.url);
-  let release: string | undefined;
-  try {
-    const pkg = require('../../package.json') as { version?: string };
-    release = pkg.version;
-  } catch (error) {
-    console.debug('Sentry: failed to read package.json version for release', error);
-  }
-
   Sentry.init({
     dsn: SENTRY_DSN,
-    release,
+    release: version,
     integrations: [
       fastifyIntegration(),
       eventLoopBlockIntegration({ threshold: SENTRY_EVENT_LOOP_BLOCK_THRESHOLD_MS }),
