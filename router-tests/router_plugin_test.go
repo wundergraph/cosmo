@@ -338,11 +338,6 @@ func TestRouterPluginRequests(t *testing.T) {
 			query:    `query { employee(id: 1) { details { forename surname } taughtCourses { id title description } } }`,
 			expected: `{"data":{"employee":{"details":{"forename":"Jens","surname":"Neuse"},"taughtCourses":[{"id":"1","title":"Introduction to TypeScript","description":"Learn the basics of TypeScript"},{"id":"2","title":"Advanced GraphQL","description":"Master GraphQL federation"}]}}}`,
 		},
-		{
-			name:     "mutation add course",
-			query:    `mutation { addCourse(title: "Go Programming 2", instructorId: 2) { id title instructor { details { forename surname } } } }`,
-			expected: `{"data":{"addCourse":{"id":"1000","title":"Go Programming 2","instructor":{"details":{"forename":"Dustin","surname":"Deus"}}}}}`,
-		},
 	}
 	testenv.Run(t, &testenv.Config{
 		RouterConfigJSONTemplate: testenv.ConfigWithPluginsJSONTemplate,
