@@ -819,6 +819,7 @@ message AnalyticsViewColumn {
 enum CustomOptions {
   Text = 0;
   Range = 1;
+  Boolean = 2;
 }
 
 message AnalyticsViewResultFilter {

@@ -101,11 +101,17 @@ export enum CustomOptions {
    * @generated from enum value: Range = 1;
    */
   Range = 1,
+
+  /**
+   * @generated from enum value: Boolean = 2;
+   */
+  Boolean = 2,
 }
 // Retrieve enum metadata with: proto3.getEnumType(CustomOptions)
 proto3.util.setEnumType(CustomOptions, "wg.cosmo.platform.v1.CustomOptions", [
   { no: 0, name: "Text" },
   { no: 1, name: "Range" },
+  { no: 2, name: "Boolean" },
 ]);
 
 /**

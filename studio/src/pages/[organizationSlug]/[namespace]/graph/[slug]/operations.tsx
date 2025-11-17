@@ -1,3 +1,5 @@
+import { createFilterState } from "@/components/analytics/constructAnalyticsTableQueryState";
+import { FieldUsageSheet } from "@/components/analytics/field-usage";
 import {
   ErrorMetricsCard,
   LatencyMetricsCard,
@@ -18,10 +20,9 @@ import {
 } from "@/components/layout/graph-layout";
 import { ClientUsageTable } from "@/components/operations/client-usage-table";
 import { DeprecatedFieldsTable } from "@/components/operations/deprecated-fields-table";
-import { OperationsList } from "@/components/operations/operations-list";
-import { FieldUsageSheet } from "@/components/analytics/field-usage";
-import { OperationsSearch } from "@/components/operations/operations-search";
 import { OperationContentModal } from "@/components/operations/operation-content-modal";
+import { OperationsList } from "@/components/operations/operations-list";
+import { OperationsSearch } from "@/components/operations/operations-search";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CopyButton } from "@/components/ui/copy-button";
@@ -30,13 +31,16 @@ import { Pagination } from "@/components/ui/pagination";
 import { Separator } from "@/components/ui/separator";
 import { Spacer } from "@/components/ui/spacer";
 import { Toolbar } from "@/components/ui/toolbar";
+import { useCurrentOrganization } from "@/hooks/use-current-organization";
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import { useOperationsFilters } from "@/hooks/use-operations-filters";
+import { useWorkspace } from "@/hooks/use-workspace";
 import { NextPageWithLayout } from "@/lib/page";
+import { PlainMessage } from "@bufbuild/protobuf";
 import { createConnectQueryKey, useQuery } from "@connectrpc/connect-query";
 import {
-  ExclamationTriangleIcon,
   ChartBarIcon,
+  ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
 import { UpdateIcon } from "@radix-ui/react-icons";
 import {
@@ -54,15 +58,16 @@ import {
   GetOperationsResponse_OperationType,
   OperationsFetchBasedOn,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { PlainMessage } from "@bufbuild/protobuf";
 import { formatISO } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useContext, useEffect, useMemo, useState } from "react";
+import {
+  useContext,
+  useEffect,
+  useMemo,
+  useState
+} from "react";
 import { useDebounce } from "use-debounce";
-import { createFilterState } from "@/components/analytics/constructAnalyticsTableQueryState";
-import { useWorkspace } from "@/hooks/use-workspace";
-import { useCurrentOrganization } from "@/hooks/use-current-organization";
 
 const OperationsToolbar = () => {
   const graphContext = useContext(GraphContext);
@@ -663,31 +668,32 @@ const OperationsPage: NextPageWithLayout = () => {
     });
   };
 
-  // Clear operation selection when deprecated fields filter is enabled
+  // Check and clear operation selection when query succeeds (after filters change)
   useEffect(() => {
-    if (includeDeprecatedFields && selectedOperation?.hash) {
-      // Read filterState directly from router to avoid circular dependency
-      // This effect should only run when includeDeprecatedFields or selectedOperation changes,
-      // not when filterState changes (since we're modifying it)
-      let filterState: Array<{ id: string }>;
-      try {
-        filterState = JSON.parse((router.query.filterState as string) || "[]");
-      } catch {
-        filterState = [];
-      }
+    if (!selectedOperation || !operationsData?.operations) {
+      return;
+    }
 
-      // Check if operation filters actually exist before trying to remove them
-      // This prevents unnecessary applyParams calls when filterState changes
-      // for other reasons (e.g., other filters) but operation filters are already removed
-      const hasOperationFilters = filterState.some(
+    // Check if the selected operation exists in the current filtered operations list
+    const operationExists = operationsData.operations.some((op) => {
+      const matchesHash = op.hash === selectedOperation.hash;
+      if (!matchesHash) return false;
+
+      // Match by name (including empty string for unnamed operations)
+      const opName = op.name || "";
+      const selectedName = selectedOperation.name || "";
+      return opName === selectedName;
+    });
+
+    // If operation doesn't exist in the filtered list, remove it from filterState
+    if (!operationExists) {
+      const hasOperationFilters = currentFilterState.some(
         (f: { id: string }) =>
           f.id === "operationHash" || f.id === "operationName",
       );
 
-      // Only update if operation filters exist (prevents unnecessary updates)
       if (hasOperationFilters) {
-        // Remove operationHash and operationName filters from filterState
-        const filteredState = filterState.filter(
+        const filteredState = currentFilterState.filter(
           (f: { id: string }) =>
             f.id !== "operationHash" && f.id !== "operationName",
         );
@@ -698,7 +704,7 @@ const OperationsPage: NextPageWithLayout = () => {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [includeDeprecatedFields, selectedOperation?.hash, applyParams]);
+  }, [operationsData?.operations, selectedOperation]);
 
   // Only show fullscreen loader on initial load, not during refetches
   if (isLoadingOperations && !operationsData) {

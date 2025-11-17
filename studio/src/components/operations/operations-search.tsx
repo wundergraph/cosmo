@@ -19,6 +19,7 @@ import { optionConstructor } from "@/components/analytics/getDataTableFilters";
 import {
   AnalyticsViewFilterOperator,
   OperationsFetchBasedOn,
+  CustomOptions,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import type { AnalyticsFilter } from "@/components/analytics/filters";
 
@@ -67,40 +68,18 @@ export const OperationsSearch = ({
     [onIncludeDeprecatedFieldsChange],
   );
 
-  const deprecatedFieldsFilterOptions = useMemo(
-    () => [
-      optionConstructor({
-        label: "Operations with deprecated fields",
-        operator: AnalyticsViewFilterOperator.EQUALS as unknown as string,
-        value: "true",
-      }),
-    ],
-    [],
-  );
-
-  const selectedDeprecatedFieldsOptions = useMemo(
-    () =>
-      includeDeprecatedFields && deprecatedFieldsFilterOptions.length > 0
-        ? [deprecatedFieldsFilterOptions[0].value]
-        : [],
-    [includeDeprecatedFields, deprecatedFieldsFilterOptions],
-  );
-
   const filtersList: AnalyticsFilter[] = useMemo(
     () => [
       {
         id: "deprecatedFields",
-        title: "Deprecated Fields",
-        options: deprecatedFieldsFilterOptions,
-        selectedOptions: selectedDeprecatedFieldsOptions,
+        title: "Operations with deprecated fields",
+        options: [],
+        selectedOptions: includeDeprecatedFields ? ["true"] : [],
         onSelect: handleDeprecatedFieldsFilterSelect,
+        customOptions: CustomOptions.Boolean,
       },
     ],
-    [
-      deprecatedFieldsFilterOptions,
-      selectedDeprecatedFieldsOptions,
-      handleDeprecatedFieldsFilterSelect,
-    ],
+    [handleDeprecatedFieldsFilterSelect, includeDeprecatedFields],
   );
 
   return (
@@ -131,7 +110,7 @@ export const OperationsSearch = ({
       <div className="flex w-full flex-wrap items-center justify-between gap-2">
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-2">
-          <AnalyticsFilters filters={filtersList} />{" "}
+          <AnalyticsFilters filters={filtersList} className="w-72" />{" "}
         </div>
 
         {/* Sort Controls */}

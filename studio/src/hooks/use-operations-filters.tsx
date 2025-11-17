@@ -26,7 +26,7 @@ export const useOperationsFilters = (filters: AnalyticsViewResultFilter[]) => {
   const router = useRouter();
 
   const applyNewParams = useCallback(
-    (newParams: Record<string, string | boolean | null>, unset?: string[]) => {
+    (newParams: Record<string, string | null>, unset?: string[]) => {
       // Get keys that are being set to null (should be removed)
       const keysToRemove = Object.keys(newParams).filter(
         (key) => newParams[key] === null || newParams[key] === undefined,
@@ -113,11 +113,38 @@ export const useOperationsFilters = (filters: AnalyticsViewResultFilter[]) => {
   // Operations-specific filter management
   const applyDeprecatedFieldsFilter = useCallback(
     (includeDeprecatedFields: boolean) => {
-      applyNewParams({
+      const params: Record<string, string | null> = {
         includeDeprecatedFields: includeDeprecatedFields ? "true" : null,
-      });
+      };
+
+      // When enabling deprecated fields filter, clear operation selection
+      if (includeDeprecatedFields) {
+        const hasOperationFilters = selectedFilters.some(
+          (f: { id: string }) =>
+            f.id === "operationHash" || f.id === "operationName",
+        );
+
+        if (hasOperationFilters) {
+          // Remove operationHash and operationName filters
+          const filteredState = selectedFilters.filter(
+            (f: { id: string }) =>
+              f.id !== "operationHash" && f.id !== "operationName",
+          );
+
+          let stringifiedFilters;
+          try {
+            stringifiedFilters = JSON.stringify(filteredState);
+          } catch {
+            stringifiedFilters = "[]";
+          }
+
+          params.filterState = stringifiedFilters;
+        }
+      }
+
+      applyNewParams(params);
     },
-    [applyNewParams],
+    [applyNewParams, selectedFilters],
   );
 
   const applyClientNameFilter = useCallback(
