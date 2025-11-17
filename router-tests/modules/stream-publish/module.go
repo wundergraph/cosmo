@@ -1,4 +1,4 @@
-package publish
+package stream_publish
 
 import (
 	"go.uber.org/zap"

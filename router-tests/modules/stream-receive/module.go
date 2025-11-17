@@ -1,4 +1,4 @@
-package batch
+package stream_receive
 
 import (
 	"go.uber.org/zap"

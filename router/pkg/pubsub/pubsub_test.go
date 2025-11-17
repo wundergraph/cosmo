@@ -65,7 +65,7 @@ func TestBuild_OK(t *testing.T) {
 	mockPubSubProvider.On("SetHooks", datasource.Hooks{
 		OnReceiveEvents: datasource.OnReceiveEventsHooks{Handlers: []datasource.OnReceiveEventsFn(nil)},
 		OnPublishEvents: datasource.OnPublishEventsHooks{Handlers: []datasource.OnPublishEventsFn(nil)},
-	}).Return(nil)
+	})
 
 	mockBuilder.On("TypeID").Return("nats")
 	mockBuilder.On("BuildProvider", natsEventSources[0], mock.Anything).Return(mockPubSubProvider, nil)
@@ -244,7 +244,7 @@ func TestBuild_ShouldNotInitializeProviderIfNotUsed(t *testing.T) {
 	mockPubSubUsedProvider.On("SetHooks", datasource.Hooks{
 		OnReceiveEvents: datasource.OnReceiveEventsHooks{Handlers: []datasource.OnReceiveEventsFn(nil)},
 		OnPublishEvents: datasource.OnPublishEventsHooks{Handlers: []datasource.OnPublishEventsFn(nil)},
-	}).Return(nil)
+	})
 
 	mockBuilder.On("TypeID").Return("nats")
 	mockBuilder.On("BuildProvider", natsEventSources[1], mock.Anything).
