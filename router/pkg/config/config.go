@@ -442,6 +442,8 @@ type ComplexityLimits struct {
 	TotalFields       *ComplexityLimit `yaml:"total_fields"`
 	RootFields        *ComplexityLimit `yaml:"root_fields"`
 	RootFieldAliases  *ComplexityLimit `yaml:"root_field_aliases"`
+
+	// When true, introspection operations are excluded from all complexity checks.
 	SkipIntrospection bool             `yaml:"skip_introspection" envDefault:"false"`
 }
 
