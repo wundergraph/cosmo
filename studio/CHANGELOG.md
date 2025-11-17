@@ -4,6 +4,10 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.138.5](https://github.com/wundergraph/cosmo/compare/studio@0.138.4...studio@0.138.5) (2025-11-17)
+
+**Note:** Version bump only for package studio
+
 ## [0.138.4](https://github.com/wundergraph/cosmo/compare/studio@0.138.3...studio@0.138.4) (2025-11-13)
 
 **Note:** Version bump only for package studio
