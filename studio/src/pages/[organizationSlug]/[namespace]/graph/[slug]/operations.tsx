@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CopyButton } from "@/components/ui/copy-button";
 import { Loader } from "@/components/ui/loader";
+import { Pagination } from "@/components/ui/pagination";
 import { Separator } from "@/components/ui/separator";
 import { Spacer } from "@/components/ui/spacer";
 import { Toolbar } from "@/components/ui/toolbar";
@@ -143,6 +144,9 @@ const OperationsLeftPanel = ({
   isLoading,
   localSearchQuery,
   onSearchQueryChange,
+  pageNumber,
+  pageSize,
+  noOfPages,
 }: {
   selectedOperation:
     | {
@@ -155,6 +159,9 @@ const OperationsLeftPanel = ({
   isLoading: boolean;
   localSearchQuery: string;
   onSearchQueryChange: (query: string) => void;
+  pageNumber: number;
+  pageSize: number;
+  noOfPages: number;
 }) => {
   const {
     fetchBasedOn,
@@ -231,6 +238,16 @@ const OperationsLeftPanel = ({
         isLoading={isLoading}
         className="w-full flex-1"
       />
+
+      {operations.length > 0 && (
+        <div className="flex justify-start">
+          <Pagination
+            limit={pageSize}
+            noOfPages={noOfPages}
+            pageNumber={pageNumber}
+          />
+        </div>
+      )}
     </div>
   );
 };
@@ -488,12 +505,38 @@ const OperationsPage: NextPageWithLayout = () => {
     setLocalSearchQuery(urlSearchQuery);
   }, [urlSearchQuery]);
 
+  // Pagination state from URL
+  const pageNumber = useMemo(() => {
+    const page = parseInt(router.query.page as string, 10);
+    return isNaN(page) || page < 1 ? 1 : page;
+  }, [router.query.page]);
+
   // Update URL when debounced search query changes (only if different)
+  // Reset to page 1 when search changes
   useEffect(() => {
     if (debouncedSearchQuery !== urlSearchQuery) {
       applySearchQuery(debouncedSearchQuery);
+      // Reset to page 1 when search changes
+      if (pageNumber !== 1) {
+        applyParams({ page: "1" });
+      }
     }
-  }, [debouncedSearchQuery, urlSearchQuery, applySearchQuery]);
+  }, [
+    debouncedSearchQuery,
+    urlSearchQuery,
+    applySearchQuery,
+    pageNumber,
+    applyParams,
+  ]);
+
+  const pageSize = useMemo(() => {
+    const size = parseInt(router.query.pageSize as string, 10);
+    return isNaN(size) || size < 1 ? 20 : size;
+  }, [router.query.pageSize]);
+
+  const offset = useMemo(() => {
+    return (pageNumber - 1) * pageSize;
+  }, [pageNumber, pageSize]);
 
   const {
     data: operationsData,
@@ -517,8 +560,8 @@ const OperationsPage: NextPageWithLayout = () => {
       fetchBasedOn: fetchBasedOn || OperationsFetchBasedOn.REQUESTS,
       sortDirection: sortDirection || "desc",
       includeContent: true,
-      limit: 100,
-      offset: 0, // TODO: Add pagination support
+      limit: pageSize,
+      offset: offset,
       includeDeprecatedFields: includeDeprecatedFields || undefined,
       includeOperationsWithDeprecatedFieldsOnly: includeDeprecatedFields
         ? true
@@ -535,6 +578,23 @@ const OperationsPage: NextPageWithLayout = () => {
       gcTime: 0,
     },
   );
+
+  // Calculate number of pages
+  // If we get fewer results than pageSize, we're on the last page
+  // Otherwise, assume there might be more pages (optimistic approach)
+  const noOfPages = useMemo(() => {
+    if (!operationsData?.operations) {
+      return 0;
+    }
+    const operationsCount = operationsData.operations.length;
+    if (operationsCount < pageSize) {
+      // We're on the last page
+      return pageNumber;
+    }
+    // We got a full page, assume there might be more
+    // Add 1 to current page to indicate there might be more pages
+    return pageNumber + 1;
+  }, [operationsData?.operations, pageSize, pageNumber]);
 
   // Use URL filters as single source of truth for selected operation
   const selectedOperation = useMemo(() => {
@@ -671,6 +731,9 @@ const OperationsPage: NextPageWithLayout = () => {
               isLoading={isFetchingOperations}
               localSearchQuery={localSearchQuery}
               onSearchQueryChange={setLocalSearchQuery}
+              pageNumber={pageNumber}
+              pageSize={pageSize}
+              noOfPages={noOfPages}
             />
           </Card>
         </div>
