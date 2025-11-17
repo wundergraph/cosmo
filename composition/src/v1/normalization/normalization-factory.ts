@@ -3502,7 +3502,7 @@ export class NormalizationFactory {
      * would only be compatible with newer routers that support schema extension orphans.
      * For now, only a valid schema definition node is pushed.
      */
-    if (schemaNode) {
+    if (schemaNode?.kind === Kind.SCHEMA_DEFINITION) {
       definitions.push(schemaNode);
     }
     for (const [parentTypeName, parentData] of this.parentDefinitionDataByTypeName) {

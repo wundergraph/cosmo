@@ -2030,6 +2030,25 @@ describe('Normalization tests', () => {
       ],
     });
   });
+
+  // @TODO: schema extension orphans are not supported by old versions of the router, so it's a v1 breaking change.
+  test('that a schema extension orphan is not persisted', () => {
+    const { schema, schemaNode } = normalizeSubgraphSuccess(naaag, ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(schema)).toBe(normalizeString(`directive @a on SCHEMA`));
+    expect(schemaNode).toStrictEqual({
+      directives: [
+        {
+          arguments: [],
+          kind: Kind.DIRECTIVE,
+          name: {
+            kind: Kind.NAME,
+            value: 'a',
+          },
+        },
+      ],
+      kind: Kind.SCHEMA_EXTENSION,
+    });
+  });
 });
 
 const naa: Subgraph = {
@@ -2221,5 +2240,15 @@ const naaaf: Subgraph = {
     type _Service {
       sdl: String
     }
+  `),
+};
+
+const naaag: Subgraph = {
+  name: 'naaag',
+  url: '',
+  definitions: parse(`
+    extend schema @a
+    
+    directive @a on SCHEMA
   `),
 };
