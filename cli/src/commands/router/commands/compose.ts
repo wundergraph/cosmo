@@ -28,6 +28,8 @@ import { FederationSuccess, ROUTER_COMPATIBILITY_VERSION_ONE } from '@wundergrap
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { composeSubgraphs, introspectSubgraph } from '../../../utils.js';
 
+const STATIC_SCHEMA_VERSION_ID = '00000000-0000-0000-0000-000000000000';
+
 type ConfigSubgraph = StandardSubgraphConfig | SubgraphPluginConfig | GRPCSubgraphConfig;
 
 type StandardSubgraphConfig = {
@@ -249,7 +251,7 @@ export default (opts: BaseCommandOptions) => {
       fieldConfigurations: result.fieldConfigurations,
       // @TODO get router compatibility version programmatically
       routerCompatibilityVersion: ROUTER_COMPATIBILITY_VERSION_ONE,
-      schemaVersionId: '00000000-0000-0000-0000-000000000000',
+      schemaVersionId: STATIC_SCHEMA_VERSION_ID,
       subgraphs: subgraphs.map((s, index) => constructRouterSubgraph(result, s, index)),
     });
 
@@ -662,7 +664,7 @@ async function buildFeatureFlagsConfig(
       engineConfig: featureRouterConfig.engineConfig,
     });
 
-    ffConfigs.configByFeatureFlagName[ff.name].version = `00000000-0000-0000-0000-000000000000`;
+    ffConfigs.configByFeatureFlagName[ff.name].version = STATIC_SCHEMA_VERSION_ID;
   }
 
   return ffConfigs;
