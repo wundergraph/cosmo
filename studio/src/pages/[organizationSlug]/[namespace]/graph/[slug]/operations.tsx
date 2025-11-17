@@ -186,7 +186,7 @@ const OperationsLeftPanel = ({
             latency = op.metric.value;
             break;
           case "requestCount":
-            requestCount = Number(op.metric.value ?? BigInt(0));
+            requestCount = Number(op.metric.value) ?? 0;
             break;
           case "errorPercentage":
             errorRate = op.metric.value;
@@ -665,7 +665,10 @@ const OperationsPage: NextPageWithLayout = () => {
 
   // Clear operation selection when deprecated fields filter is enabled
   useEffect(() => {
-    if (includeDeprecatedFields && selectedOperation) {
+    if (includeDeprecatedFields && selectedOperation?.hash) {
+      // Read filterState directly from router to avoid circular dependency
+      // This effect should only run when includeDeprecatedFields or selectedOperation changes,
+      // not when filterState changes (since we're modifying it)
       let filterState: Array<{ id: string }>;
       try {
         filterState = JSON.parse((router.query.filterState as string) || "[]");
@@ -695,7 +698,7 @@ const OperationsPage: NextPageWithLayout = () => {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [includeDeprecatedFields, selectedOperation, applyParams]);
+  }, [includeDeprecatedFields, selectedOperation?.hash, applyParams]);
 
   // Only show fullscreen loader on initial load, not during refetches
   if (isLoadingOperations && !operationsData) {

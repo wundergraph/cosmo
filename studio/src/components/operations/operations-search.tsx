@@ -120,6 +120,7 @@ export const OperationsSearch = ({
             size="sm"
             onClick={handleClearSearch}
             className="absolute right-1 top-1/2 h-6 w-6 -translate-y-1/2 p-0 hover:bg-muted"
+            aria-label="Clear search"
           >
             <XMarkIcon className="h-4 w-4" />
           </Button>
@@ -134,12 +135,15 @@ export const OperationsSearch = ({
         </div>
 
         {/* Sort Controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <Button
             variant="ghost"
             size="icon"
             onClick={handleSortDirectionToggle}
-            className="h-4 w-4"
+            className="h-6 w-6"
+            aria-label={`Sort ${
+              sortDirection === "desc" ? "ascending" : "descending"
+            }`}
           >
             {sortDirection === "desc" ? (
               <BarsArrowDownIcon className="h-4 w-4" />
