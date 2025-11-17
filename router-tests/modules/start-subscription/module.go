@@ -24,8 +24,9 @@ func (m *StartSubscriptionModule) Provision(ctx *core.ModuleContext) error {
 }
 
 func (m *StartSubscriptionModule) SubscriptionOnStart(ctx core.SubscriptionOnStartHandlerContext) error {
-
-	m.Logger.Info("SubscriptionOnStart Hook has been run")
+	if m.Logger != nil {
+		m.Logger.Info("SubscriptionOnStart Hook has been run")
+	}
 
 	if m.Callback != nil {
 		return m.Callback(ctx)

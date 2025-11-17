@@ -22,7 +22,9 @@ func (m *PublishModule) Provision(ctx *core.ModuleContext) error {
 }
 
 func (m *PublishModule) OnPublishEvents(ctx core.StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
-	m.Logger.Info("Publish Hook has been run")
+	if m.Logger != nil {
+		m.Logger.Info("Publish Hook has been run")
+	}
 
 	if m.Callback != nil {
 		return m.Callback(ctx, events)

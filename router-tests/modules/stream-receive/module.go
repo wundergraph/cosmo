@@ -22,7 +22,9 @@ func (m *StreamReceiveModule) Provision(ctx *core.ModuleContext) error {
 }
 
 func (m *StreamReceiveModule) OnReceiveEvents(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
-	m.Logger.Info("Stream Hook has been run")
+	if m.Logger != nil {
+		m.Logger.Info("Stream Hook has been run")
+	}
 
 	if m.Callback != nil {
 		return m.Callback(ctx, events)

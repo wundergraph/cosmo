@@ -583,7 +583,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 		})
 	})
 
-	t.Run("Test StartSubscription hook is called, return StreamHookError, response on OnOriginResponse should still be set", func(t *testing.T) {
+	t.Run("Test when StartSubscription hook returns an error, the OnOriginResponse hook is not called", func(t *testing.T) {
 		t.Parallel()
 		originResponseCalled := make(chan *http.Response, 1)
 
