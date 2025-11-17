@@ -61,12 +61,7 @@ import {
 import { formatISO } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import {
-  useContext,
-  useEffect,
-  useMemo,
-  useState
-} from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { useDebounce } from "use-debounce";
 
 const OperationsToolbar = () => {
@@ -126,10 +121,12 @@ const OperationsToolbar = () => {
               namespace: graphContext?.graph?.namespace,
               federatedGraphName: graphContext?.graph?.name,
               range,
-              dateRange: range ? undefined : {
-                start: formatISO(dateRange.start),
-                end: formatISO(dateRange.end),
-              },
+              dateRange: range
+                ? undefined
+                : {
+                    start: formatISO(dateRange.start),
+                    end: formatISO(dateRange.end),
+                  },
             }),
           });
         }}
@@ -672,7 +669,7 @@ const OperationsPage: NextPageWithLayout = () => {
     });
   };
 
-  // Check and clear operation selection when query succeeds (after filters change)
+  // Check and clear operation selection when operations data changes (after filters change or refetch)
   useEffect(() => {
     if (!selectedOperation || !operationsData?.operations) {
       return;
@@ -708,7 +705,7 @@ const OperationsPage: NextPageWithLayout = () => {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [operationsData?.operations, selectedOperation]);
+  }, [operationsData?.operations]);
 
   // Only show fullscreen loader on initial load, not during refetches
   if (isLoadingOperations && !operationsData) {
