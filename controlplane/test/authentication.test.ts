@@ -72,6 +72,10 @@ describe('Authentication', (ctx) => {
       admissionWebhook: {
         secret: 'secret',
       },
+      sentry: {
+        enabled: false,
+        dsn: '',
+      }
     });
 
     testContext.onTestFailed(async () => {

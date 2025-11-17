@@ -158,6 +158,10 @@ const options: BuildConfig = {
           }
         : undefined,
   },
+  sentry: {
+    enabled: SENTRY_ENABLED,
+    dsn: SENTRY_DSN,
+  },
 };
 
 if (STRIPE_SECRET_KEY) {

@@ -12,6 +12,8 @@ import { RBACEvaluator } from './RBACEvaluator.js';
 // The maximum time to cache the user auth context for the web session authentication.
 const maxAuthCacheTtl = 30 * 1000; // 30 seconds
 
+export type PostAuthHook = (authContext: AuthContext) => void;
+
 export interface Authenticator {
   authenticate(headers: Headers): Promise<AuthContext>;
   authenticateRouter(headers: Headers): Promise<GraphKeyAuthContext>;
@@ -26,6 +28,7 @@ export class Authentication implements Authenticator {
     private accessTokenAuth: AccessTokenAuthenticator,
     private graphKeyAuth: GraphApiTokenAuthenticator,
     private orgRepo: OrganizationRepository,
+    private postAuthHook?: PostAuthHook,
   ) {}
 
   /**
@@ -44,11 +47,19 @@ export class Authentication implements Authenticator {
       const authorization = headers.get('authorization');
       if (authorization) {
         const token = authorization.replace(/^bearer\s+/i, '');
+        let authContext: AuthContext;
         if (token.startsWith('cosmo')) {
-          return await this.keyAuth.authenticate(token);
+          authContext = await this.keyAuth.authenticate(token);
+        } else {
+          const organizationSlug = headers.get('cosmo-org-slug');
+          authContext = await this.accessTokenAuth.authenticate(token, organizationSlug);
         }
-        const organizationSlug = headers.get('cosmo-org-slug');
-        return await this.accessTokenAuth.authenticate(token, organizationSlug);
+
+        if (this.postAuthHook) {
+          this.postAuthHook(authContext);
+        }
+
+        return authContext;
       }
 
       /**
@@ -66,6 +77,10 @@ export class Authentication implements Authenticator {
       const cachedUserContext = this.#cache.get(cacheKey);
 
       if (cachedUserContext) {
+        if (this.postAuthHook) {
+          this.postAuthHook(cachedUserContext);
+        }
+
         return cachedUserContext;
       }
 
@@ -99,6 +114,10 @@ export class Authentication implements Authenticator {
         rbac,
         userDisplayName: user.userDisplayName,
       };
+
+      if (this.postAuthHook) {
+        this.postAuthHook(userContext);
+      }
 
       this.#cache.set(cacheKey, userContext);
 

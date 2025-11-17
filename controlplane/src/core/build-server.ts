@@ -8,6 +8,7 @@ import { compressionBrotli, compressionGzip } from '@connectrpc/connect-node';
 import fastifyGracefulShutdown from 'fastify-graceful-shutdown';
 import { App } from 'octokit';
 import { Worker } from 'bullmq';
+import * as Sentry from '@sentry/node';
 import routes from './routes.js';
 import fastifyHealth from './plugins/health.js';
 import fastifyMetrics, { MetricsPluginOptions } from './plugins/metrics.js';
@@ -136,6 +137,10 @@ export interface BuildConfig {
       key?: string; // e.g. string or '/path/to/my/client-key.pem'
     };
   };
+  sentry: {
+    enabled: boolean;
+    dsn?: string;
+  };
 }
 
 export interface MetricsOptions {
@@ -249,7 +254,37 @@ export default async function build(opts: BuildConfig) {
   const webAuth = new WebSessionAuthenticator(opts.auth.secret, userRepo);
   const graphKeyAuth = new GraphApiTokenAuthenticator(opts.auth.secret);
   const accessTokenAuth = new AccessTokenAuthenticator(organizationRepository, authUtils);
-  const authenticator = new Authentication(webAuth, apiKeyAuth, accessTokenAuth, graphKeyAuth, organizationRepository);
+  const authenticator = new Authentication(
+    webAuth,
+    apiKeyAuth,
+    accessTokenAuth,
+    graphKeyAuth,
+    organizationRepository,
+    (authContext) => {
+      if (opts.sentry.enabled && opts.sentry.dsn) {
+        try {
+          Sentry.setUser({
+            id: authContext.userId,
+            username: authContext.userDisplayName,
+          });
+
+          Sentry.setTag('org.id', authContext.organizationId);
+
+          if (authContext.organizationSlug) {
+            Sentry.setTag('org.slug', authContext.organizationSlug);
+          }
+
+          if (authContext.apiKeyName) {
+            Sentry.setTag('api.key', authContext.apiKeyName);
+          }
+
+          Sentry.setTag('auth.kind', authContext.auth);
+        } catch (error) {
+          logger.debug({ err: error }, 'Failed to enrich Sentry user context');
+        }
+      }
+    },
+  );
 
   const authorizer = new Authorization(logger, opts.stripe?.defaultPlanId);
 
