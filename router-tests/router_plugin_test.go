@@ -54,15 +54,19 @@ func TestRouterPlugin(t *testing.T) {
 				Path:    "../router/plugins",
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			response := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			response1 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { project(id: 1) { id } }`,
 			})
+			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'projects'.","extensions":{"errors":[{"message":"gRPC datasource needs to be enabled to be used","extensions":{"code":"Internal"}}]}}],"data":{"project":null}}`, response1.Body)
 
-			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'projects'.","extensions":{"errors":[{"message":"gRPC datasource needs to be enabled to be used","extensions":{"code":"Internal"}}]}}],"data":{"project":null}}`, response.Body)
+			response2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { course(id: 1) { id } }`,
+			})
+			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'courses'.","extensions":{"errors":[{"message":"gRPC datasource needs to be enabled to be used","extensions":{"code":"Internal"}}]}}],"data":{"course":null}}`, response2.Body)
 		})
 	})
 
-	t.Run("Should restart plugin if it exits", func(t *testing.T) {
+	t.Run("Should restart plugin if it exits for projects", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: testenv.ConfigWithPluginsJSONTemplate,
@@ -318,6 +322,26 @@ func TestRouterPluginRequests(t *testing.T) {
 			name:     "query employee current workload",
 			query:    "query { employees { assignedTasks { name status } completedTasks { name status } currentWorkload(includeCompleted: false) } }",
 			expected: `{"data":{"employees":[{"assignedTasks":[{"name":"CI/CD Pipeline Setup","status":"TODO"},{"name":"Database Migration","status":"TODO"}],"completedTasks":[{"name":"Current Infrastructure Audit","status":"COMPLETED"}],"currentWorkload":2},{"assignedTasks":[{"name":"Security Assessment","status":"BLOCKED"}],"completedTasks":[{"name":"Cloud Provider Selection","status":"COMPLETED"}],"currentWorkload":1},{"assignedTasks":[{"name":"Network Setup","status":"IN_PROGRESS"}],"completedTasks":[{"name":"User Experience Testing","status":"COMPLETED"}],"currentWorkload":1},{"assignedTasks":[],"completedTasks":[],"currentWorkload":0},{"assignedTasks":[],"completedTasks":[{"name":"Data Schema Design","status":"COMPLETED"}],"currentWorkload":0},{"assignedTasks":[{"name":"Data Pipeline Design","status":"TODO"}],"completedTasks":[{"name":"Domain Model Analysis","status":"COMPLETED"}],"currentWorkload":1},{"assignedTasks":[{"name":"API Gateway Configuration","status":"IN_PROGRESS"}],"completedTasks":[],"currentWorkload":1},{"assignedTasks":[],"completedTasks":[],"currentWorkload":0},{"assignedTasks":[],"completedTasks":[{"name":"Flutter App Development","status":"COMPLETED"}],"currentWorkload":0},{"assignedTasks":[{"name":"Apache Spark Integration","status":"IN_PROGRESS"}],"completedTasks":[],"currentWorkload":1}]}}`,
+		},
+		{
+			name:     "query courses simple",
+			query:    `query { courses { id title description } }`,
+			expected: `{"data":{"courses":[{"id":"1","title":"Introduction to TypeScript","description":"Learn the basics of TypeScript"},{"id":"2","title":"Advanced GraphQL","description":"Master GraphQL federation"},{"id":"3","title":"Go Programming","description":"Build services with Go"}]}}`,
+		},
+		{
+			name:     "query courses with argument",
+			query:    `query { course(id: 1) { id title description } }`,
+			expected: `{"data":{"course":{"id":"1","title":"Introduction to TypeScript","description":"Learn the basics of TypeScript"}}}`,
+		},
+		{
+			name:     "query employees teaching a course",
+			query:    `query { employee(id: 1) { details { forename surname } taughtCourses { id title description } } }`,
+			expected: `{"data":{"employee":{"details":{"forename":"Jens","surname":"Neuse"},"taughtCourses":[{"id":"1","title":"Introduction to TypeScript","description":"Learn the basics of TypeScript"},{"id":"2","title":"Advanced GraphQL","description":"Master GraphQL federation"}]}}}`,
+		},
+		{
+			name:     "mutation add course",
+			query:    `mutation { addCourse(title: "Go Programming 2", instructorId: 2) { id title instructor { details { forename surname } } } }`,
+			expected: `{"data":{"addCourse":{"id":"1000","title":"Go Programming 2","instructor":{"details":{"forename":"Dustin","surname":"Deus"}}}}}`,
 		},
 	}
 	testenv.Run(t, &testenv.Config{

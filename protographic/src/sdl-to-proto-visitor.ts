@@ -89,10 +89,11 @@ interface CollectionResult {
 export interface GraphQLToProtoTextVisitorOptions {
   serviceName?: string;
   packageName?: string;
-  goPackage?: string;
   lockData?: ProtoLock;
   /** Whether to include descriptions/comments from GraphQL schema */
   includeComments?: boolean;
+  /** Custom options printed as proto options */
+  customOptions?: string[];
 }
 
 /**
@@ -197,13 +198,7 @@ export class GraphQLToProtoTextVisitor {
    * @param options - Configuration options for the visitor
    */
   constructor(schema: GraphQLSchema, options: GraphQLToProtoTextVisitorOptions = {}) {
-    const {
-      serviceName = 'DefaultService',
-      packageName = 'service.v1',
-      goPackage,
-      lockData,
-      includeComments = true,
-    } = options;
+    const { serviceName = 'DefaultService', packageName = 'service.v1', lockData, includeComments = true } = options;
 
     this.schema = schema;
     this.serviceName = serviceName;
@@ -216,12 +211,8 @@ export class GraphQLToProtoTextVisitor {
       this.initializeFieldNumbersMap(lockData);
     }
 
-    // Initialize options
-    if (goPackage && goPackage !== '') {
-      // Generate default go_package if not provided
-      const defaultGoPackage = `cosmo/pkg/proto/${packageName};${packageName.replace('.', '')}`;
-      const goPackageOption = goPackage || defaultGoPackage;
-      this.options.push(`option go_package = "${goPackageOption}";`);
+    if (options.customOptions && options.customOptions.length > 0) {
+      this.options.push(...options.customOptions);
     }
   }
 
@@ -412,15 +403,6 @@ export class GraphQLToProtoTextVisitor {
   private addImport(importPath: string): void {
     if (!this.imports.includes(importPath)) {
       this.imports.push(importPath);
-    }
-  }
-
-  /**
-   * Add an option statement to the proto file
-   */
-  private addOption(optionStatement: string): void {
-    if (!this.options.includes(optionStatement)) {
-      this.options.push(optionStatement);
     }
   }
 

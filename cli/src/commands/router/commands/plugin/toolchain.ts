@@ -264,21 +264,16 @@ async function getCommandVersion(command: string, versionFlag: string): Promise<
 }
 
 export function validateAndGetGoModulePath(language: string, goModulePath: string | undefined): string | undefined {
-  switch (language) {
-    case 'go': {
-      if (goModulePath === undefined) {
-        goModulePath = defaultGoModulePath;
-      }
-      break;
+  if (language === 'go') {
+    if (goModulePath === undefined) {
+      goModulePath = defaultGoModulePath;
     }
-    default: {
-      if (goModulePath !== undefined) {
-        throw new Error(`Go Module Path not supported for language '${language}'`);
-      }
-      break;
-    }
+    return goModulePath;
   }
-  return goModulePath;
+
+  if (goModulePath !== undefined) {
+    throw new Error(`Go Module Path not supported for language '${language}'`);
+  }
 }
 
 /**
@@ -418,7 +413,7 @@ async function installTools() {
 /**
  * Generate proto and mapping files from schema
  */
-export async function generateProtoAndMapping(pluginDir: string, goModulePath: string, spinner: any) {
+export async function generateProtoAndMapping(pluginDir: string, customOptions: string[], spinner: any) {
   const srcDir = resolve(pluginDir, 'src');
   const generatedDir = resolve(pluginDir, 'generated');
 
@@ -455,7 +450,7 @@ export async function generateProtoAndMapping(pluginDir: string, goModulePath: s
   const proto = compileGraphQLToProto(schema, {
     serviceName,
     packageName: 'service',
-    goPackage: goModulePath,
+    customOptions,
     lockData,
   });
 
@@ -596,6 +591,10 @@ export async function installTsDependencies(pluginDir: string, spinner: any) {
     stderr: 'inherit',
     env,
   });
+}
+
+export function getGoModulePathProtoOption(goModulePath: string) {
+  return `option go_package = "${goModulePath}";`;
 }
 
 /**
@@ -762,5 +761,5 @@ export function getLanguage(pluginDir: string) {
     return 'ts';
   }
 
-  throw new Error('Could not detect language: neither go.mod nor package.json found in plugin directory');
+  return null;
 }

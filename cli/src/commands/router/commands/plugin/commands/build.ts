@@ -17,6 +17,7 @@ import {
   buildTsBinaries,
   normalizePlatforms,
   validateAndGetGoModulePath,
+  getGoModulePathProtoOption,
 } from '../toolchain.js';
 
 export default (opts: BaseCommandOptions) => {
@@ -45,14 +46,18 @@ export default (opts: BaseCommandOptions) => {
     const spinner = Spinner();
     const pluginName = path.basename(pluginDir);
 
-    let goModulePath = options.goModulePath;
+    const language = getLanguage(pluginDir);
+    if (!language) {
+      renderResultTree(spinner, 'Plugin language detection failed!', false, pluginName, {
+        output: pluginDir,
+      });
+      program.error('');
+    }
+
+    const customOptions: string[] = [];
     let platforms: string[] = [];
 
     try {
-      const language = getLanguage(pluginDir);
-
-      goModulePath = validateAndGetGoModulePath(language, goModulePath);
-
       // Check and install tools if needed
       if (!options.skipToolsInstallation) {
         await checkAndInstallTools(options.forceToolsInstallation);
@@ -61,9 +66,15 @@ export default (opts: BaseCommandOptions) => {
       // Start the main build process
       spinner.start('Building plugin...');
 
+      const goModulePath = validateAndGetGoModulePath(language, options.goModulePath);
+
       switch (language) {
         case 'ts': {
           await installTsDependencies(pluginDir, spinner);
+          break;
+        }
+        case 'go': {
+          customOptions.push(getGoModulePathProtoOption(goModulePath!));
           break;
         }
       }
@@ -72,7 +83,7 @@ export default (opts: BaseCommandOptions) => {
       platforms = normalizePlatforms(options.platform, options.allPlatforms, language);
 
       // Generate proto and mapping files
-      await generateProtoAndMapping(pluginDir, goModulePath, spinner);
+      await generateProtoAndMapping(pluginDir, customOptions, spinner);
 
       // Generate gRPC code
       await generateGRPCCode(pluginDir, spinner, language);
@@ -100,24 +111,24 @@ export default (opts: BaseCommandOptions) => {
 
       renderResultTree(spinner, 'Plugin built successfully!', true, pluginName, {
         output: pluginDir,
-        'go module': goModulePath,
         platforms: platforms.join(', '),
         env: `${os.platform()} ${os.arch()}`,
         build: options.debug ? 'debug' : 'release',
         type: options.generateOnly ? 'generate-only' : 'full',
         time: formattedTime,
+        customOptions: customOptions.join(','),
       });
     } catch (error: any) {
-      renderResultTree(spinner, 'Plugin build failed!', false, pluginName, {
+      const details: Record<string, any> = {
         output: pluginDir,
-        'go module': goModulePath,
         platforms: platforms.join(', '),
         env: `${os.platform()} ${os.arch()}`,
         build: options.debug ? 'debug' : 'release',
         type: options.generateOnly ? 'generate-only' : 'full',
         error: error.message,
-      });
-
+        customOptions: customOptions.join(','),
+      };
+      renderResultTree(spinner, 'Plugin build failed!', false, pluginName, details);
       program.error('');
     }
   });

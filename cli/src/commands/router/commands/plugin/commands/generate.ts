@@ -9,6 +9,7 @@ import {
   checkAndInstallTools,
   generateGRPCCode,
   generateProtoAndMapping,
+  getGoModulePathProtoOption,
   getLanguage,
   installGoDependencies,
   installTsDependencies,
@@ -33,21 +34,31 @@ export default (opts: BaseCommandOptions) => {
     const spinner = Spinner();
     const pluginName = path.basename(pluginDir);
 
-    let goModulePath = options.goModulePath;
+    const language = getLanguage(pluginDir);
+    if (!language) {
+      renderResultTree(spinner, 'Plugin language detection failed!', false, pluginName, {
+        output: pluginDir,
+      });
+      program.error('');
+    }
+
+    const customOptions: string[] = [];
 
     try {
-      const language = getLanguage(pluginDir);
-
-      goModulePath = validateAndGetGoModulePath(language, goModulePath);
-
       // Check and install tools if needed
       if (!options.skipToolsInstallation) {
         await checkAndInstallTools(options.forceToolsInstallation);
       }
 
+      const goModulePath = validateAndGetGoModulePath(language, options.goModulePath);
+
       switch (language) {
         case 'ts': {
           await installTsDependencies(pluginDir, spinner);
+          break;
+        }
+        case 'go': {
+          customOptions.push(getGoModulePathProtoOption(goModulePath!));
           break;
         }
       }
@@ -56,7 +67,7 @@ export default (opts: BaseCommandOptions) => {
       spinner.start('Generating plugin code...');
 
       // Generate proto and mapping files
-      await generateProtoAndMapping(pluginDir, goModulePath, spinner);
+      await generateProtoAndMapping(pluginDir, customOptions, spinner);
 
       // Generate gRPC code
       await generateGRPCCode(pluginDir, spinner, language);
@@ -76,8 +87,8 @@ export default (opts: BaseCommandOptions) => {
 
       renderResultTree(spinner, 'Plugin code generated successfully!', true, pluginName, {
         output: pluginDir,
-        'go module': goModulePath,
         time: formattedTime,
+        customOptions: customOptions.join(','),
       });
 
       console.log('');
@@ -87,8 +98,8 @@ export default (opts: BaseCommandOptions) => {
     } catch (error: any) {
       renderResultTree(spinner, 'Plugin code generation failed!', false, pluginName, {
         output: pluginDir,
-        'go module': goModulePath,
         error: error.message,
+        customOptions: customOptions.join(','),
       });
 
       program.error('');

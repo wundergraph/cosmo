@@ -19,7 +19,7 @@ type Mutation {
   addLesson(courseId: ID!, title: String!, order: Int!): Lesson!
 }
 
-type Course @key(fields: "id") {
+type Course {
   id: ID!
   title: String!
   description: String
@@ -31,7 +31,7 @@ type Course @key(fields: "id") {
   lessons: [Lesson!]!
 }
 
-type Lesson @key(fields: "id") {
+type Lesson {
   id: ID!
   courseId: ID!
   title: String!

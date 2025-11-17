@@ -79,10 +79,18 @@ export default (opts: BaseCommandOptions) => {
       await writeFile(resolve(tempDir, '.gitignore'), PluginTemplates.gitignore);
       await writeFile(resolve(tempDir, '.cursorignore'), PluginTemplates.cursorignore);
 
+      const customOptions = [];
+      switch (options.language) {
+        case 'go': {
+          customOptions.push(`option go_package = "${goModulePath}";`);
+          break;
+        }
+      }
+
       const proto = compileGraphQLToProto(PluginTemplates.schemaGraphql, {
         serviceName,
         packageName: 'service',
-        goPackage: goModulePath,
+        customOptions,
       });
       await writeFile(resolve(generatedDir, 'service.proto'), proto.proto);
       await writeFile(resolve(generatedDir, 'service.proto.lock.json'), JSON.stringify(proto.lockData, null, 2));

@@ -291,7 +291,7 @@ describe('SDL to Proto - Basic Types', () => {
     const { proto: protoText } = compileGraphQLToProto(sdl, {
       serviceName: 'CustomService',
       packageName: 'custom.v1',
-      goPackage: customGoPackage,
+      customOptions: [customGoPackage],
     });
 
     // Validate Proto definition

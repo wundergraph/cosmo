@@ -11,6 +11,7 @@ import Spinner, { type Ora } from 'ora';
 import { resolve } from 'pathe';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { renderResultTree, renderValidationResults } from '../../router/commands/plugin/helper.js';
+import { getGoModulePathProtoOption } from '../../router/commands/plugin/toolchain.js';
 
 type CLIOptions = {
   input: string;
@@ -135,11 +136,17 @@ async function generateProtoAndMapping({
   // Continue with generation if validation passed (no errors)
   spinner.text = 'Generating mapping and proto files...';
   const mapping = compileGraphQLToMapping(schema, serviceName);
+
+  const customOptions: string[] = [];
+  if (goPackage) {
+    customOptions.push(getGoModulePathProtoOption(goPackage!));
+  }
+
   const proto = compileGraphQLToProto(schema, {
     serviceName,
     packageName,
-    goPackage,
     lockData,
+    customOptions,
   });
 
   return {

@@ -10,7 +10,7 @@ compose-integration:
 bump-deps:
 	./bump-deps.sh
 
-PHONY: plugin-build plugin-generate plugin-build-bun-binary plugin-build-go-binary plugin-build-integration
+.PHONY: plugin-build plugin-generate plugin-build-bun-binary plugin-build-go-binary plugin-build-integration
 
 plugin-build:
 	$(wgc_router) plugin build ./pkg/subgraphs/projects --debug --go-module-path github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects
