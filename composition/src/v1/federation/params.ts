@@ -1,7 +1,6 @@
 import { DirectiveName, FieldName } from '../../types/types';
 import { InputObjectDefinitionData, PersistedDirectivesData } from '../../schema-building/types';
-import { InputValueDefinitionNode } from 'graphql';
-import { ConstDirectiveNode } from 'graphql/index';
+import { ConstDirectiveNode, InputValueDefinitionNode } from 'graphql';
 
 export type ValidateOneOfDirectiveParams = {
   data: InputObjectDefinitionData;

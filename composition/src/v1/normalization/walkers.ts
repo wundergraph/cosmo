@@ -203,12 +203,12 @@ export function upsertDirectiveSchemaAndEntityDefinitions(nf: NormalizationFacto
     SchemaDefinition: {
       enter(node) {
         nf.schemaData.description = node.description;
-        nf.extractDirectives(node, nf.schemaData.directivesByDirectiveName);
+        nf.extractDirectives(node, nf.schemaData.directivesByName);
       },
     },
     SchemaExtension: {
       enter(node) {
-        nf.extractDirectives(node, nf.schemaData.directivesByDirectiveName);
+        nf.extractDirectives(node, nf.schemaData.directivesByName);
       },
     },
   });
@@ -268,7 +268,7 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
         parentData.enumValueDataByName.set(name, {
           appearances: 1,
           configureDescriptionDataBySubgraphName: new Map<string, ConfigureDescriptionData>(),
-          directivesByDirectiveName: nf.extractDirectives(node, new Map<string, ConstDirectiveNode[]>()),
+          directivesByName: nf.extractDirectives(node, new Map<string, ConstDirectiveNode[]>()),
           federatedCoords: `${nf.originalParentTypeName}.${name}`,
           kind: Kind.ENUM_VALUE_DEFINITION,
           name,
@@ -329,12 +329,12 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
           nf.errors.push(duplicateFieldDefinitionError(kindToNodeType(parentData.kind), parentData.name, fieldName));
           return;
         }
-        const argumentDataByArgumentName = nf.extractArguments(new Map<string, InputValueData>(), node);
-        const directivesByDirectiveName = nf.extractDirectives(node, new Map<string, ConstDirectiveNode[]>());
+        const argumentDataByName = nf.extractArguments(new Map<string, InputValueData>(), node);
+        const directivesByName = nf.extractDirectives(node, new Map<string, ConstDirectiveNode[]>());
         const inheritedDirectiveNames = new Set<string>();
         // Add parent-level shareable and external to the field extraction and repeatable validation
         nf.handleFieldInheritableDirectives({
-          directivesByDirectiveName,
+          directivesByName: directivesByName,
           fieldName,
           inheritedDirectiveNames,
           parentData,
@@ -342,15 +342,15 @@ export function upsertParentsAndChildren(nf: NormalizationFactory, document: Doc
         const fieldData = nf.addFieldDataByNode(
           parentData.fieldDataByName,
           node,
-          argumentDataByArgumentName,
-          directivesByDirectiveName,
+          argumentDataByName,
+          directivesByName,
           inheritedDirectiveNames,
         );
         if (isParentRootType) {
-          nf.extractEventDirectivesToConfiguration(node, argumentDataByArgumentName);
+          nf.extractEventDirectivesToConfiguration(node, argumentDataByName);
         }
-        const providesDirectives = fieldData.directivesByDirectiveName.get(PROVIDES);
-        const requiresDirectives = fieldData.directivesByDirectiveName.get(REQUIRES);
+        const providesDirectives = fieldData.directivesByName.get(PROVIDES);
+        const requiresDirectives = fieldData.directivesByName.get(REQUIRES);
         // return early to avoid creating unnecessary FieldSetDatas
         if (!requiresDirectives && !providesDirectives) {
           return;

@@ -1,5 +1,5 @@
 import { MutableIntermediateTypeNode, MutableTypeNode } from '../../../src';
-import { Kind, TypeNode } from 'graphql/index';
+import { Kind, TypeNode } from 'graphql';
 
 export const AUTHENTICATED_DIRECTIVE = `
   directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR

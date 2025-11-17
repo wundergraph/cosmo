@@ -14,7 +14,6 @@ import {
   ScalarDefinitionData,
   SHAREABLE,
   stringToNamedTypeNode,
-  stringToNameNode,
   Subgraph,
   SubgraphName,
 } from '../../src';
@@ -1055,7 +1054,6 @@ describe('FederationFactory tests', () => {
     const xConfig = subgraphConfigBySubgraphName.get(subgraphX.name);
     expect(xConfig).toBeDefined();
     expect(xConfig!.schemaNode).toStrictEqual({
-      description: undefined,
       directives: [],
       kind: Kind.SCHEMA_DEFINITION,
       operationTypes: [

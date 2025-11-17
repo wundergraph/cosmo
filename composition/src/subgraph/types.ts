@@ -1,4 +1,11 @@
-import { DirectiveDefinitionNode, DocumentNode, GraphQLSchema, OperationTypeNode } from 'graphql';
+import {
+  DirectiveDefinitionNode,
+  DocumentNode,
+  GraphQLSchema,
+  OperationTypeNode,
+  SchemaDefinitionNode,
+  SchemaExtensionNode,
+} from 'graphql';
 import { ConfigurationData } from '../router-configuration/types';
 import {
   ConditionalFieldData,
@@ -7,7 +14,6 @@ import {
   PersistedDirectiveDefinitionData,
 } from '../schema-building/types';
 import { DirectiveName, FieldName, SubgraphName, TypeName } from '../types/types';
-import { SchemaDefinitionNode, SchemaExtensionNode } from 'graphql/index';
 
 export type Subgraph = {
   definitions: DocumentNode;
@@ -31,11 +37,11 @@ export type InternalSubgraph = {
   directiveDefinitionByName: Map<DirectiveName, DirectiveDefinitionNode>;
   entityInterfaces: Map<string, EntityInterfaceSubgraphData>;
   isVersionTwo: boolean;
-  keyFieldNamesByParentTypeName: Map<TypeName, Set<string>>;
-  name: string;
+  keyFieldNamesByParentTypeName: Map<TypeName, Set<FieldName>>;
+  name: SubgraphName;
   operationTypes: Map<string, OperationTypeNode>;
   overriddenFieldNamesByParentTypeName: Map<TypeName, Set<FieldName>>;
-  parentDefinitionDataByTypeName: Map<string, ParentDefinitionData>;
+  parentDefinitionDataByTypeName: Map<TypeName, ParentDefinitionData>;
   persistedDirectiveDefinitionDataByDirectiveName: Map<DirectiveName, PersistedDirectiveDefinitionData>;
   schema: GraphQLSchema;
   schemaNode?: SchemaDefinitionNode | SchemaExtensionNode;
