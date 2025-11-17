@@ -965,7 +965,7 @@ func (_c *MockProviderBuilder_BuildEngineDataSourceFactory_Call[P, E]) RunAndRet
 
 // BuildProvider provides a mock function for the type MockProviderBuilder
 func (_mock *MockProviderBuilder[P, E]) BuildProvider(options P, providerOpts ProviderOpts) (Provider, error) {
-	ret := _mock.Called(options)
+	ret := _mock.Called(options, providerOpts)
 
 	if len(ret) == 0 {
 		panic("no return value specified for BuildProvider")
@@ -973,18 +973,18 @@ func (_mock *MockProviderBuilder[P, E]) BuildProvider(options P, providerOpts Pr
 
 	var r0 Provider
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(P) (Provider, error)); ok {
-		return returnFunc(options)
+	if returnFunc, ok := ret.Get(0).(func(P, ProviderOpts) (Provider, error)); ok {
+		return returnFunc(options, providerOpts)
 	}
-	if returnFunc, ok := ret.Get(0).(func(P) Provider); ok {
-		r0 = returnFunc(options)
+	if returnFunc, ok := ret.Get(0).(func(P, ProviderOpts) Provider); ok {
+		r0 = returnFunc(options, providerOpts)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(Provider)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(P) error); ok {
-		r1 = returnFunc(options)
+	if returnFunc, ok := ret.Get(1).(func(P, ProviderOpts) error); ok {
+		r1 = returnFunc(options, providerOpts)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -998,18 +998,24 @@ type MockProviderBuilder_BuildProvider_Call[P any, E any] struct {
 
 // BuildProvider is a helper method to define mock.On call
 //   - options P
-func (_e *MockProviderBuilder_Expecter[P, E]) BuildProvider(options interface{}) *MockProviderBuilder_BuildProvider_Call[P, E] {
-	return &MockProviderBuilder_BuildProvider_Call[P, E]{Call: _e.mock.On("BuildProvider", options)}
+//   - providerOpts ProviderOpts
+func (_e *MockProviderBuilder_Expecter[P, E]) BuildProvider(options interface{}, providerOpts interface{}) *MockProviderBuilder_BuildProvider_Call[P, E] {
+	return &MockProviderBuilder_BuildProvider_Call[P, E]{Call: _e.mock.On("BuildProvider", options, providerOpts)}
 }
 
-func (_c *MockProviderBuilder_BuildProvider_Call[P, E]) Run(run func(options P)) *MockProviderBuilder_BuildProvider_Call[P, E] {
+func (_c *MockProviderBuilder_BuildProvider_Call[P, E]) Run(run func(options P, providerOpts ProviderOpts)) *MockProviderBuilder_BuildProvider_Call[P, E] {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 P
 		if args[0] != nil {
 			arg0 = args[0].(P)
 		}
+		var arg1 ProviderOpts
+		if args[1] != nil {
+			arg1 = args[1].(ProviderOpts)
+		}
 		run(
 			arg0,
+			arg1,
 		)
 	})
 	return _c
@@ -1020,7 +1026,7 @@ func (_c *MockProviderBuilder_BuildProvider_Call[P, E]) Return(provider Provider
 	return _c
 }
 
-func (_c *MockProviderBuilder_BuildProvider_Call[P, E]) RunAndReturn(run func(options P) (Provider, error)) *MockProviderBuilder_BuildProvider_Call[P, E] {
+func (_c *MockProviderBuilder_BuildProvider_Call[P, E]) RunAndReturn(run func(options P, providerOpts ProviderOpts) (Provider, error)) *MockProviderBuilder_BuildProvider_Call[P, E] {
 	_c.Call.Return(run)
 	return _c
 }

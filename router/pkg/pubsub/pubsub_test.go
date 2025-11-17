@@ -68,7 +68,7 @@ func TestBuild_OK(t *testing.T) {
 	}).Return(nil)
 
 	mockBuilder.On("TypeID").Return("nats")
-	mockBuilder.On("BuildProvider", natsEventSources[0]).Return(mockPubSubProvider, nil)
+	mockBuilder.On("BuildProvider", natsEventSources[0], mock.Anything).Return(mockPubSubProvider, nil)
 
 	// ctx, kafkaBuilder, config.Providers.Kafka, kafkaDsConfsWithEvents
 	// Execute the function
