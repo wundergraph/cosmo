@@ -3,6 +3,7 @@ import {
   CompositeOutputData,
   DirectiveDefinitionData,
   FieldData,
+  InputObjectDefinitionData,
   InputValueData,
   NodeData,
   SchemaData,
@@ -34,7 +35,7 @@ export type FieldSetParentResult = {
 };
 
 export type ExtractArgumentDataResult = {
-  argumentTypeNodeByArgumentName: Map<string, ArgumentData>;
+  argumentTypeNodeByName: Map<string, ArgumentData>;
   optionalArgumentNames: Set<string>;
   requiredArgumentNames: Set<string>;
 };
@@ -75,3 +76,14 @@ export type AddInputValueDataByNodeParams = {
   fieldName?: string;
   renamedParentTypeName?: string;
 };
+
+export type ExecutionFailure = {
+  success: false;
+};
+
+export type UpsertInputObjectSuccess = {
+  data: InputObjectDefinitionData;
+  success: true;
+};
+
+export type UpsertInputObjectResult = ExecutionFailure | UpsertInputObjectSuccess;

@@ -4,6 +4,76 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.138.4](https://github.com/wundergraph/cosmo/compare/studio@0.138.3...studio@0.138.4) (2025-11-13)
+
+**Note:** Version bump only for package studio
+
+## [0.138.3](https://github.com/wundergraph/cosmo/compare/studio@0.138.2...studio@0.138.3) (2025-11-12)
+
+**Note:** Version bump only for package studio
+
+## [0.138.2](https://github.com/wundergraph/cosmo/compare/studio@0.138.1...studio@0.138.2) (2025-11-12)
+
+**Note:** Version bump only for package studio
+
+## [0.138.1](https://github.com/wundergraph/cosmo/compare/studio@0.138.0...studio@0.138.1) (2025-11-11)
+
+**Note:** Version bump only for package studio
+
+# [0.138.0](https://github.com/wundergraph/cosmo/compare/studio@0.137.0...studio@0.138.0) (2025-11-10)
+
+### Features
+
+* enable GTM script ([#2322](https://github.com/wundergraph/cosmo/issues/2322)) ([1bdc79c](https://github.com/wundergraph/cosmo/commit/1bdc79c1e9d13e3948ee47ba5ada3de1bc5d9d29)) (@wilsonrivera)
+
+# [0.137.0](https://github.com/wundergraph/cosmo/compare/studio@0.136.2...studio@0.137.0) (2025-11-10)
+
+### Features
+
+* preserve tracking cookies ([#2319](https://github.com/wundergraph/cosmo/issues/2319)) ([c054c29](https://github.com/wundergraph/cosmo/commit/c054c2968bda15ad7a08cdc4f8c3f4fa891658ae)) (@wilsonrivera)
+
+## [0.136.2](https://github.com/wundergraph/cosmo/compare/studio@0.136.1...studio@0.136.2) (2025-10-29)
+
+**Note:** Version bump only for package studio
+
+## [0.136.1](https://github.com/wundergraph/cosmo/compare/studio@0.136.0...studio@0.136.1) (2025-10-23)
+
+**Note:** Version bump only for package studio
+
+# [0.136.0](https://github.com/wundergraph/cosmo/compare/studio@0.135.2...studio@0.136.0) (2025-10-22)
+
+### Features
+
+* fix playground tab duplication ([#2291](https://github.com/wundergraph/cosmo/issues/2291)) ([943cf41](https://github.com/wundergraph/cosmo/commit/943cf411c5bb7ac1d5040cf4bf4bf6b91aa3c53d)) (@wilsonrivera)
+
+## [0.135.2](https://github.com/wundergraph/cosmo/compare/studio@0.135.1...studio@0.135.2) (2025-10-17)
+
+**Note:** Version bump only for package studio
+
+## [0.135.1](https://github.com/wundergraph/cosmo/compare/studio@0.135.0...studio@0.135.1) (2025-10-16)
+
+**Note:** Version bump only for package studio
+
+# [0.135.0](https://github.com/wundergraph/cosmo/compare/studio@0.134.1...studio@0.135.0) (2025-10-10)
+
+### Features
+
+* disallow reviewing proposals not created by Cosmo ([#2218](https://github.com/wundergraph/cosmo/issues/2218)) ([d4aee49](https://github.com/wundergraph/cosmo/commit/d4aee4905c1a3f1d409c3892621a0d2a1ce8d147)) (@wilsonrivera)
+
+## [0.134.1](https://github.com/wundergraph/cosmo/compare/studio@0.134.0...studio@0.134.1) (2025-10-06)
+
+**Note:** Version bump only for package studio
+
+# [0.134.0](https://github.com/wundergraph/cosmo/compare/studio@0.133.1...studio@0.134.0) (2025-10-03)
+
+### Features
+
+* retrieve operation body from gqlmetrics instead of traces ([#2235](https://github.com/wundergraph/cosmo/issues/2235)) ([52cecf4](https://github.com/wundergraph/cosmo/commit/52cecf4cea2ef1ea33ecd79a1859f4bc2fd55991)) (@endigma)
+
+## [0.133.1](https://github.com/wundergraph/cosmo/compare/studio@0.133.0...studio@0.133.1) (2025-10-01)
+
+**Note:** Version bump only for package studio
+
 # [0.133.0](https://github.com/wundergraph/cosmo/compare/studio@0.132.1...studio@0.133.0) (2025-09-22)
 
 ### Features

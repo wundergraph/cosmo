@@ -2,18 +2,15 @@ import { describe, expect, test } from 'vitest';
 import {
   ConfigurationData,
   FieldName,
+  INTERFACE,
+  parse,
   QUERY,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   Subgraph,
   TypeName,
 } from '../../../src';
-import { parse } from 'graphql';
 import { federateSubgraphsSuccess, normalizeString, schemaToSortedNormalizedString } from '../../utils/utils';
-import {
-  baseDirectiveDefinitionsWithRequireFetchReasons,
-  schemaQueryDefinition,
-  versionOneRouterDefinitions,
-} from '../utils/utils';
+import { REQUEST_FETCH_REASONS_DIRECTIVE, SCHEMA_QUERY_DEFINITION } from '../utils/utils';
 
 describe('@openfed__requireFetchReasons tests', () => {
   test('that @openfed__requireFetchReasons is propagated into the router configuration from the field level', () => {
@@ -23,8 +20,12 @@ describe('@openfed__requireFetchReasons tests', () => {
     );
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
+        interface Interface {
+          a: ID
+        }
+        
         type Query {
           a: ID
         }
@@ -34,6 +35,15 @@ describe('@openfed__requireFetchReasons tests', () => {
     const { configurationDataByTypeName } = subgraphConfigBySubgraphName.get(naaa.name)!;
     expect(configurationDataByTypeName).toStrictEqual(
       new Map<TypeName, ConfigurationData>([
+        [
+          INTERFACE,
+          {
+            isRootNode: false,
+            fieldNames: new Set<FieldName>(['a']),
+            requireFetchReasonsFieldNames: ['a'],
+            typeName: INTERFACE,
+          },
+        ],
         [
           QUERY,
           {
@@ -54,8 +64,15 @@ describe('@openfed__requireFetchReasons tests', () => {
     );
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
+        interface Interface {
+          a: ID
+          b: ID
+          c: ID
+          d: ID
+        }
+        
         type Query {
           a: ID
           b: ID
@@ -68,6 +85,15 @@ describe('@openfed__requireFetchReasons tests', () => {
     const { configurationDataByTypeName } = subgraphConfigBySubgraphName.get(nbaa.name)!;
     expect(configurationDataByTypeName).toStrictEqual(
       new Map<TypeName, ConfigurationData>([
+        [
+          INTERFACE,
+          {
+            isRootNode: false,
+            fieldNames: new Set<FieldName>(['a', 'b', 'c', 'd']),
+            requireFetchReasonsFieldNames: ['a', 'd'],
+            typeName: INTERFACE,
+          },
+        ],
         [
           QUERY,
           {
@@ -88,8 +114,15 @@ describe('@openfed__requireFetchReasons tests', () => {
     );
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
+        interface Interface {
+          a: ID
+          b: ID
+          c: ID
+          d: ID
+        }
+        
         type Query {
           a: ID
           b: ID
@@ -102,6 +135,15 @@ describe('@openfed__requireFetchReasons tests', () => {
     const { configurationDataByTypeName } = subgraphConfigBySubgraphName.get(ncaa.name)!;
     expect(configurationDataByTypeName).toStrictEqual(
       new Map<TypeName, ConfigurationData>([
+        [
+          INTERFACE,
+          {
+            isRootNode: false,
+            fieldNames: new Set<FieldName>(['a', 'b', 'c', 'd']),
+            requireFetchReasonsFieldNames: ['a', 'b', 'c', 'd'],
+            typeName: INTERFACE,
+          },
+        ],
         [
           QUERY,
           {
@@ -122,8 +164,15 @@ describe('@openfed__requireFetchReasons tests', () => {
     );
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
+        interface Interface {
+          a: ID
+          b: ID
+          c: ID
+          d: ID
+        }
+        
         type Query {
           a: ID
           b: ID
@@ -136,6 +185,15 @@ describe('@openfed__requireFetchReasons tests', () => {
     const { configurationDataByTypeName } = subgraphConfigBySubgraphName.get(ndaa.name)!;
     expect(configurationDataByTypeName).toStrictEqual(
       new Map<TypeName, ConfigurationData>([
+        [
+          INTERFACE,
+          {
+            isRootNode: false,
+            fieldNames: new Set<FieldName>(['a', 'b', 'c', 'd']),
+            requireFetchReasonsFieldNames: ['a'],
+            typeName: INTERFACE,
+          },
+        ],
         [
           QUERY,
           {
@@ -156,8 +214,15 @@ describe('@openfed__requireFetchReasons tests', () => {
     );
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
+        interface Interface {
+          a: ID
+          b: ID
+          c: ID
+          d: ID
+        }
+        
         type Query {
           a: ID
           b: ID
@@ -170,6 +235,15 @@ describe('@openfed__requireFetchReasons tests', () => {
     const { configurationDataByTypeName } = subgraphConfigBySubgraphName.get(neaa.name)!;
     expect(configurationDataByTypeName).toStrictEqual(
       new Map<TypeName, ConfigurationData>([
+        [
+          INTERFACE,
+          {
+            isRootNode: false,
+            fieldNames: new Set<FieldName>(['a', 'b', 'c', 'd']),
+            requireFetchReasonsFieldNames: ['a', 'd'],
+            typeName: INTERFACE,
+          },
+        ],
         [
           QUERY,
           {
@@ -190,8 +264,15 @@ describe('@openfed__requireFetchReasons tests', () => {
     );
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
+        interface Interface {
+          a: ID
+          b: ID
+          c: ID
+          d: ID
+        }
+        
         type Query {
           a: ID
           b: ID
@@ -204,6 +285,15 @@ describe('@openfed__requireFetchReasons tests', () => {
     const { configurationDataByTypeName } = subgraphConfigBySubgraphName.get(nfaa.name)!;
     expect(configurationDataByTypeName).toStrictEqual(
       new Map<TypeName, ConfigurationData>([
+        [
+          INTERFACE,
+          {
+            isRootNode: false,
+            fieldNames: new Set<FieldName>(['a', 'b', 'c', 'd']),
+            requireFetchReasonsFieldNames: ['a', 'b', 'c'],
+            typeName: INTERFACE,
+          },
+        ],
         [
           QUERY,
           {
@@ -224,8 +314,15 @@ describe('@openfed__requireFetchReasons tests', () => {
     );
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
+        interface Interface {
+          a: ID
+          b: ID
+          c: ID
+          d: ID
+        }
+        
         type Query {
           a: ID
           b: ID
@@ -238,6 +335,15 @@ describe('@openfed__requireFetchReasons tests', () => {
     const { configurationDataByTypeName } = subgraphConfigBySubgraphName.get(ngaa.name)!;
     expect(configurationDataByTypeName).toStrictEqual(
       new Map<TypeName, ConfigurationData>([
+        [
+          INTERFACE,
+          {
+            isRootNode: false,
+            fieldNames: new Set<FieldName>(['a', 'b', 'c', 'd']),
+            requireFetchReasonsFieldNames: ['a', 'b', 'c'],
+            typeName: INTERFACE,
+          },
+        ],
         [
           QUERY,
           {
@@ -258,8 +364,16 @@ describe('@openfed__requireFetchReasons tests', () => {
     );
     expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
+        interface Interface {
+          a: ID
+          b: ID
+          c: ID
+          d: ID
+          e: ID
+        }
+        
         type Query {
           a: ID
           b: ID
@@ -275,22 +389,36 @@ describe('@openfed__requireFetchReasons tests', () => {
     )!;
     expect(schemaToSortedNormalizedString(nhaaSchema)).toBe(
       normalizeString(
-        schemaQueryDefinition +
-          baseDirectiveDefinitionsWithRequireFetchReasons +
+        SCHEMA_QUERY_DEFINITION +
+          REQUEST_FETCH_REASONS_DIRECTIVE +
           `
-        type Query {
+        interface Interface {
           a: ID
           b: ID @openfed__requireFetchReasons
           c: ID @openfed__requireFetchReasons
           d: ID @openfed__requireFetchReasons
         }
         
-        scalar openfed__FieldSet
+        type Query {
+          a: ID
+          b: ID @openfed__requireFetchReasons
+          c: ID @openfed__requireFetchReasons
+          d: ID @openfed__requireFetchReasons
+        }
       `,
       ),
     );
     expect(nhaaConfig).toStrictEqual(
       new Map<TypeName, ConfigurationData>([
+        [
+          INTERFACE,
+          {
+            isRootNode: false,
+            fieldNames: new Set<FieldName>(['a', 'b', 'c', 'd']),
+            requireFetchReasonsFieldNames: ['b', 'c', 'd'],
+            typeName: INTERFACE,
+          },
+        ],
         [
           QUERY,
           {
@@ -307,10 +435,10 @@ describe('@openfed__requireFetchReasons tests', () => {
     )!;
     expect(schemaToSortedNormalizedString(nhabSchema)).toBe(
       normalizeString(
-        schemaQueryDefinition +
-          baseDirectiveDefinitionsWithRequireFetchReasons +
+        SCHEMA_QUERY_DEFINITION +
+          REQUEST_FETCH_REASONS_DIRECTIVE +
           `
-        type Query {
+        interface Interface {
           a: ID @openfed__requireFetchReasons
           b: ID @openfed__requireFetchReasons
           c: ID @openfed__requireFetchReasons
@@ -318,12 +446,27 @@ describe('@openfed__requireFetchReasons tests', () => {
           e: ID @openfed__requireFetchReasons
         }
         
-        scalar openfed__FieldSet
+        type Query {
+          a: ID @openfed__requireFetchReasons
+          b: ID @openfed__requireFetchReasons
+          c: ID @openfed__requireFetchReasons
+          d: ID @openfed__requireFetchReasons
+          e: ID @openfed__requireFetchReasons
+        }
       `,
       ),
     );
     expect(nhabConfig).toStrictEqual(
       new Map<TypeName, ConfigurationData>([
+        [
+          INTERFACE,
+          {
+            isRootNode: false,
+            fieldNames: new Set<FieldName>(['a', 'b', 'c', 'd', 'e']),
+            requireFetchReasonsFieldNames: ['a', 'b', 'c', 'd', 'e'],
+            typeName: INTERFACE,
+          },
+        ],
         [
           QUERY,
           {
@@ -342,6 +485,10 @@ const naaa: Subgraph = {
   name: 'naaa',
   url: '',
   definitions: parse(`
+    interface Interface {
+      a: ID @openfed__requireFetchReasons
+    }
+    
     type Query {
       a: ID @openfed__requireFetchReasons
     }
@@ -352,6 +499,13 @@ const nbaa: Subgraph = {
   name: 'nbaa',
   url: '',
   definitions: parse(`
+    interface Interface {
+      a: ID @openfed__requireFetchReasons
+      b: ID
+      c: ID
+      d: ID @openfed__requireFetchReasons
+    }
+    
     type Query {
       a: ID @openfed__requireFetchReasons
       b: ID
@@ -365,6 +519,12 @@ const ncaa: Subgraph = {
   name: 'ncaa',
   url: '',
   definitions: parse(`
+    interface Interface @openfed__requireFetchReasons {
+      a: ID
+      b: ID
+      c: ID
+      d: ID
+    }
     type Query @openfed__requireFetchReasons {
       a: ID
       b: ID
@@ -378,6 +538,16 @@ const ndaa: Subgraph = {
   name: 'ndaa',
   url: '',
   definitions: parse(`
+    interface Interface @openfed__requireFetchReasons {
+      a: ID
+    }
+    
+    extend interface Interface {
+      b: ID
+      c: ID
+      d: ID
+    }
+    
     type Query @openfed__requireFetchReasons {
       a: ID
     }
@@ -394,6 +564,16 @@ const neaa: Subgraph = {
   name: 'neaa',
   url: '',
   definitions: parse(`
+    interface Interface @openfed__requireFetchReasons {
+      a: ID
+    }
+    
+    extend interface Interface {
+      b: ID
+      c: ID
+      d: ID @openfed__requireFetchReasons
+    }
+    
     type Query @openfed__requireFetchReasons {
       a: ID
     }
@@ -410,6 +590,19 @@ const nfaa: Subgraph = {
   name: 'nfaa',
   url: '',
   definitions: parse(`
+    interface Interface @openfed__requireFetchReasons {
+      a: ID
+    }
+    
+    extend interface Interface @openfed__requireFetchReasons {
+      b: ID
+      c: ID
+    }
+    
+    extend interface Interface {
+      d: ID
+    }
+    
     type Query @openfed__requireFetchReasons {
       a: ID
     }
@@ -429,6 +622,19 @@ const ngaa: Subgraph = {
   name: 'ngaa',
   url: '',
   definitions: parse(`
+    interface Interface @openfed__requireFetchReasons {
+      a: ID
+    }
+    
+    extend interface Interface @openfed__requireFetchReasons {
+      b: ID
+      c: ID @openfed__requireFetchReasons
+    }
+    
+    extend interface Interface {
+      d: ID
+    }
+    
     type Query @openfed__requireFetchReasons {
       a: ID
     }
@@ -448,6 +654,19 @@ const nhaa: Subgraph = {
   name: 'nhaa',
   url: '',
   definitions: parse(`
+    interface Interface {
+      a: ID
+    }
+    
+    extend interface Interface @openfed__requireFetchReasons {
+      b: ID
+      c: ID
+    }
+    
+    extend interface Interface {
+      d: ID @openfed__requireFetchReasons
+    }
+    
     type Query {
       a: ID
     }
@@ -467,6 +686,20 @@ const nhab: Subgraph = {
   name: 'nhab',
   url: '',
   definitions: parse(`
+    interface Interface {
+      a: ID @openfed__requireFetchReasons
+    }
+    
+    extend interface Interface {
+      b: ID @openfed__requireFetchReasons
+      c: ID @openfed__requireFetchReasons
+    }
+    
+    extend interface Interface @openfed__requireFetchReasons {
+      d: ID @openfed__requireFetchReasons
+      e: ID
+    }
+    
     type Query {
       a: ID @openfed__requireFetchReasons
     }

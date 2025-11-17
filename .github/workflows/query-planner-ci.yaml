@@ -22,24 +22,25 @@ concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}
   cancel-in-progress: true
 jobs:
-  check-label-and-engine-changes:
+  check-labels-and-engine-changes:
     runs-on: ubuntu-latest
     outputs:
       has_label: ${{ steps.check_label.outputs.has_label }}
+      has_skip_label: ${{ steps.check_label_skip.outputs.has_label }}
       engine_changed: ${{ steps.check_engine_changes.outputs.engine_changed }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Setup Go  
+      - name: Setup Go
         uses: actions/setup-go@v5
         with:
           go-version-file: router/go.mod
           cache: true
       - name: Check for query-planner label
         id: check_label
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           script: |
             const labels = await github.rest.issues.listLabelsOnIssue({
@@ -48,6 +49,18 @@ jobs:
               issue_number: context.issue.number
             });
             const hasLabel = labels.data.some(label => label.name === 'query-planner');
+            core.setOutput('has_label', hasLabel ? 'true' : 'false');
+      - name: Check for query-planner-skip label
+        id: check_label_skip
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const labels = await github.rest.issues.listLabelsOnIssue({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number
+            });
+            const hasLabel = labels.data.some(label => label.name === 'query-planner-skip');
             core.setOutput('has_label', hasLabel ? 'true' : 'false');
       - name: Check for changes of engine
         id: check_engine_changes
@@ -89,10 +102,10 @@ jobs:
               - 'connect/**/*'
               - '.github/workflows/cli-ci.yaml'
   build-router:
-    needs: filter-changes
+    needs: [filter-changes, check-labels-and-engine-changes]
     # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
     # For now, we will disable the push to the GitHub Container Registry for external contributor
-    if: ${{ needs.filter-changes.outputs.router_changed == 'true' && github.event.pull_request.head.repo.full_name == github.repository}}
+    if: ${{ needs.filter-changes.outputs.router_changed == 'true' && github.event.pull_request.head.repo.full_name == github.repository && needs.check-labels-and-engine-changes.outputs.has_skip_label != 'true'}}
     runs-on: ubuntu-latest
     outputs:
       image_ref: ${{ steps.build_push_image.outputs.image_ref }}
@@ -110,10 +123,9 @@ jobs:
           image_name: router-qp
           image_description: 'Cosmo Router Query Planner'
           image_platforms: linux/amd64
-          with_tests: "false"
   build-cli:
-    needs: filter-changes
-    if: ${{ needs.filter-changes.outputs.cli_changed == 'true' }}
+    needs: [filter-changes, check-labels-and-engine-changes]
+    if: ${{ needs.filter-changes.outputs.cli_changed == 'true' && needs.check-labels-and-engine-changes.outputs.has_skip_label != 'true'}}
     runs-on: ubuntu-latest
     outputs:
       wgc: ${{ steps.cli-build.outputs.artifact-url }}
@@ -125,8 +137,9 @@ jobs:
           github-sha: ${{ github.sha }}
           target: bun-linux-x64
   cli-release-url:
+    needs: [filter-changes, check-labels-and-engine-changes]
     runs-on: ubuntu-latest
-    if: ${{ needs.filter-changes.outputs.cli_changed != 'true' }}
+    if: ${{ needs.filter-changes.outputs.cli_changed != 'true' && needs.check-labels-and-engine-changes.outputs.has_skip_label != 'true'}}
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
@@ -139,13 +152,13 @@ jobs:
   build_test: # This job is use to lock the merge of the PR if anything fails in the query planner
     runs-on: ubuntu-latest
     if: ${{ always() }}
-    needs: [ build-router, build-cli, cli-release-url, check-label-and-engine-changes ]
+    needs: [build-router, build-cli, cli-release-url, check-labels-and-engine-changes]
     outputs:
       workflow_url: ${{ steps.trigger_workflow.outputs.workflow_url }}
       workflow_id: ${{ steps.trigger_workflow.outputs.workflow_id }}
     steps:
       - uses: convictional/trigger-workflow-and-wait@v1.6.5
-        if: ${{ needs.check-label-and-engine-changes.outputs.has_label == 'true' || needs.check-label-and-engine-changes.outputs.engine_changed == 'true' }}
+        if: ${{ (needs.check-labels-and-engine-changes.outputs.has_label == 'true' || needs.check-labels-and-engine-changes.outputs.engine_changed == 'true') && needs.check-labels-and-engine-changes.outputs.has_skip_label != 'true' }}
         id: trigger_workflow
         name: Trigger Query Planner CI
         with:
@@ -162,9 +175,9 @@ jobs:
               "wgc": "${{ needs.build-cli.outputs.wgc || needs.cli-release-url.outputs.wgc }}"
             }
   get_pr_url:
-    needs: [ build_test, check-label-and-engine-changes ]
+    needs: [build_test, check-labels-and-engine-changes]
     runs-on: ubuntu-latest
-    if: ${{ always() && (needs.check-label-and-engine-changes.outputs.has_label == 'true' || needs.check-label-and-engine-changes.outputs.engine_changed == 'true') }}
+    if: ${{ always() && (needs.check-labels-and-engine-changes.outputs.has_label == 'true' || needs.check-labels-and-engine-changes.outputs.engine_changed == 'true') && needs.check-labels-and-engine-changes.outputs.has_skip_label != 'true' }}
     outputs:
       pullrequest_url: ${{ steps.get_url.outputs.pr_url }}
     steps:
@@ -200,8 +213,8 @@ jobs:
           pr_url=$(cat pr-url.txt)
           echo "pr_url=$pr_url" >> $GITHUB_OUTPUT
   comment-on-failure:
-    needs: [build_test, get_pr_url, check-label-and-engine-changes]
-    if: ${{ (needs.check-label-and-engine-changes.outputs.has_label == 'true' || needs.check-label-and-engine-changes.outputs.engine_changed == 'true') && failure() }}
+    needs: [build_test, get_pr_url, check-labels-and-engine-changes]
+    if: ${{ (needs.check-labels-and-engine-changes.outputs.has_label == 'true' || needs.check-labels-and-engine-changes.outputs.engine_changed == 'true') && needs.check-labels-and-engine-changes.outputs.has_skip_label != 'true' && failure() }}
     runs-on: ubuntu-latest
     steps:
       - name: Comment PR on failure
@@ -219,8 +232,8 @@ jobs:
             The Internal Query Planner CI checks failed in the celestial repository, and this is going to stop the merge of this PR.
             If you are part of the WunderGraph organization, you can [see the PR with more details](${{ needs.get_pr_url.outputs.pullrequest_url }}).
   comment-on-success:
-    needs: [build_test, get_pr_url, check-label-and-engine-changes]
-    if: ${{ (needs.check-label-and-engine-changes.outputs.has_label == 'true' || needs.check-label-and-engine-changes.outputs.engine_changed == 'true') && success() }}
+    needs: [build_test, get_pr_url, check-labels-and-engine-changes]
+    if: ${{ (needs.check-labels-and-engine-changes.outputs.has_label == 'true' || needs.check-labels-and-engine-changes.outputs.engine_changed == 'true') && needs.check-labels-and-engine-changes.outputs.has_skip_label != 'true' && success() }}
     runs-on: ubuntu-latest
     steps:
       - name: Comment PR on failure
@@ -231,4 +244,3 @@ jobs:
             # ✅ Internal Query Planner CI checks passed
             The Internal Query Planner CI checks passed in the celestial repository, and this is going to allow the merge of this PR.
             If you are part of the WunderGraph organization, you can [see the PR with more details](${{ needs.get_pr_url.outputs.pullrequest_url }}).
-      

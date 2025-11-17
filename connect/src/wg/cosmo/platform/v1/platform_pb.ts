@@ -361,6 +361,26 @@ proto3.util.setEnumType(Feature, "wg.cosmo.platform.v1.Feature", [
 ]);
 
 /**
+ * @generated from enum wg.cosmo.platform.v1.ProposalOrigin
+ */
+export enum ProposalOrigin {
+  /**
+   * @generated from enum value: INTERNAL = 0;
+   */
+  INTERNAL = 0,
+
+  /**
+   * @generated from enum value: EXTERNAL = 1;
+   */
+  EXTERNAL = 1,
+}
+// Retrieve enum metadata with: proto3.getEnumType(ProposalOrigin)
+proto3.util.setEnumType(ProposalOrigin, "wg.cosmo.platform.v1.ProposalOrigin", [
+  { no: 0, name: "INTERNAL" },
+  { no: 1, name: "EXTERNAL" },
+]);
+
+/**
  * @generated from enum wg.cosmo.platform.v1.ProposalNamingConvention
  */
 export enum ProposalNamingConvention {
@@ -21354,6 +21374,11 @@ export class Proposal extends Message<Proposal> {
    */
   latestCheckId = "";
 
+  /**
+   * @generated from field: wg.cosmo.platform.v1.ProposalOrigin origin = 11;
+   */
+  origin = ProposalOrigin.INTERNAL;
+
   constructor(data?: PartialMessage<Proposal>) {
     super();
     proto3.util.initPartial(data, this);
@@ -21372,6 +21397,7 @@ export class Proposal extends Message<Proposal> {
     { no: 8, name: "subgraphs", kind: "message", T: ProposalSubgraph, repeated: true },
     { no: 9, name: "latestCheckSuccess", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
     { no: 10, name: "latestCheckId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 11, name: "origin", kind: "enum", T: proto3.getEnumType(ProposalOrigin) },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): Proposal {
@@ -21481,6 +21507,11 @@ export class CreateProposalRequest extends Message<CreateProposalRequest> {
    */
   namingConvention = ProposalNamingConvention.NORMAL;
 
+  /**
+   * @generated from field: wg.cosmo.platform.v1.ProposalOrigin origin = 6;
+   */
+  origin = ProposalOrigin.INTERNAL;
+
   constructor(data?: PartialMessage<CreateProposalRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -21494,6 +21525,7 @@ export class CreateProposalRequest extends Message<CreateProposalRequest> {
     { no: 3, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "subgraphs", kind: "message", T: ProposalSubgraph, repeated: true },
     { no: 5, name: "namingConvention", kind: "enum", T: proto3.getEnumType(ProposalNamingConvention) },
+    { no: 6, name: "origin", kind: "enum", T: proto3.getEnumType(ProposalOrigin) },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateProposalRequest {
@@ -21616,6 +21648,11 @@ export class CreateProposalResponse extends Message<CreateProposalResponse> {
    */
   isLinkedPruningCheckFailed?: boolean;
 
+  /**
+   * @generated from field: optional bool hasLinkedSchemaChecks = 20;
+   */
+  hasLinkedSchemaChecks?: boolean;
+
   constructor(data?: PartialMessage<CreateProposalResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -21643,6 +21680,7 @@ export class CreateProposalResponse extends Message<CreateProposalResponse> {
     { no: 17, name: "proposalName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 18, name: "isLinkedTrafficCheckFailed", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 19, name: "isLinkedPruningCheckFailed", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 20, name: "hasLinkedSchemaChecks", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateProposalResponse {
@@ -22210,6 +22248,11 @@ export class UpdateProposalResponse extends Message<UpdateProposalResponse> {
    */
   isLinkedPruningCheckFailed?: boolean;
 
+  /**
+   * @generated from field: optional bool hasLinkedSchemaChecks = 17;
+   */
+  hasLinkedSchemaChecks?: boolean;
+
   constructor(data?: PartialMessage<UpdateProposalResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -22234,6 +22277,7 @@ export class UpdateProposalResponse extends Message<UpdateProposalResponse> {
     { no: 14, name: "checkUrl", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 15, name: "isLinkedTrafficCheckFailed", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 16, name: "isLinkedPruningCheckFailed", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 17, name: "hasLinkedSchemaChecks", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): UpdateProposalResponse {
@@ -23092,6 +23136,92 @@ export class UnlinkSubgraphResponse extends Message<UnlinkSubgraphResponse> {
 
   static equals(a: UnlinkSubgraphResponse | PlainMessage<UnlinkSubgraphResponse> | undefined, b: UnlinkSubgraphResponse | PlainMessage<UnlinkSubgraphResponse> | undefined): boolean {
     return proto3.util.equals(UnlinkSubgraphResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.VerifyAPIKeyGraphAccessRequest
+ */
+export class VerifyAPIKeyGraphAccessRequest extends Message<VerifyAPIKeyGraphAccessRequest> {
+  /**
+   * @generated from field: string federatedGraphId = 1;
+   */
+  federatedGraphId = "";
+
+  constructor(data?: PartialMessage<VerifyAPIKeyGraphAccessRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.VerifyAPIKeyGraphAccessRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "federatedGraphId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): VerifyAPIKeyGraphAccessRequest {
+    return new VerifyAPIKeyGraphAccessRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): VerifyAPIKeyGraphAccessRequest {
+    return new VerifyAPIKeyGraphAccessRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): VerifyAPIKeyGraphAccessRequest {
+    return new VerifyAPIKeyGraphAccessRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: VerifyAPIKeyGraphAccessRequest | PlainMessage<VerifyAPIKeyGraphAccessRequest> | undefined, b: VerifyAPIKeyGraphAccessRequest | PlainMessage<VerifyAPIKeyGraphAccessRequest> | undefined): boolean {
+    return proto3.util.equals(VerifyAPIKeyGraphAccessRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.VerifyAPIKeyGraphAccessResponse
+ */
+export class VerifyAPIKeyGraphAccessResponse extends Message<VerifyAPIKeyGraphAccessResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: bool hasOrganizationAdminOrDeveloperPermissions = 2;
+   */
+  hasOrganizationAdminOrDeveloperPermissions = false;
+
+  /**
+   * @generated from field: bool hasWriteAccessToGraph = 3;
+   */
+  hasWriteAccessToGraph = false;
+
+  constructor(data?: PartialMessage<VerifyAPIKeyGraphAccessResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.VerifyAPIKeyGraphAccessResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "hasOrganizationAdminOrDeveloperPermissions", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 3, name: "hasWriteAccessToGraph", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): VerifyAPIKeyGraphAccessResponse {
+    return new VerifyAPIKeyGraphAccessResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): VerifyAPIKeyGraphAccessResponse {
+    return new VerifyAPIKeyGraphAccessResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): VerifyAPIKeyGraphAccessResponse {
+    return new VerifyAPIKeyGraphAccessResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: VerifyAPIKeyGraphAccessResponse | PlainMessage<VerifyAPIKeyGraphAccessResponse> | undefined, b: VerifyAPIKeyGraphAccessResponse | PlainMessage<VerifyAPIKeyGraphAccessResponse> | undefined): boolean {
+    return proto3.util.equals(VerifyAPIKeyGraphAccessResponse, a, b);
   }
 }
 

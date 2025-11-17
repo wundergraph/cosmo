@@ -211,15 +211,24 @@ func NewRouter(opts ...Option) (*Router, error) {
 	// this is set via the deprecated method
 	if !r.playground {
 		r.playgroundConfig.Enabled = r.playground
-		r.logger.Warn("The playground_enabled option is deprecated. Use the playground.enabled option in the config instead.")
+		r.logger.Warn("The playground_enabled option is deprecated. Use the /playground/enabled option in the config instead.")
 	}
 	if r.playgroundPath != "" && r.playgroundPath != "/" {
 		r.playgroundConfig.Path = r.playgroundPath
-		r.logger.Warn("The playground_path option is deprecated. Use the playground.path option in the config instead.")
+		r.logger.Warn("The playground_path option is deprecated. Use the /playground/path option in the config instead.")
 	}
 
 	if r.playgroundConfig.Path == "" {
 		r.playgroundConfig.Path = "/"
+	}
+
+	// handle introspection config deprecation
+	// if either the old deprecated or the new config is set to false, introspection is disabled
+	if !r.introspection {
+		r.introspectionConfig.Enabled = r.introspection
+		r.logger.Warn("The introspection_enabled option is deprecated. Use the /introspection/enabled option in the config instead.")
+	} else if !r.introspectionConfig.Enabled {
+		r.introspection = r.introspectionConfig.Enabled
 	}
 
 	if r.instanceID == "" {
@@ -512,7 +521,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 				IgnorePersistedOperations: r.securityConfiguration.DepthLimit.IgnorePersistedOperations,
 			}
 		} else {
-			r.logger.Warn("Ignoring deprecated security configuration field 'depth_limit', in favor of the `security_complexity_limits.depth` configuration")
+			r.logger.Warn("Ignoring deprecated security configuration field 'depth_limit', in favor of the `security.complexity_limits.depth` configuration")
 		}
 	}
 
@@ -1399,12 +1408,6 @@ func (r *Router) Shutdown(ctx context.Context) error {
 		ctx = ctxWithTimer
 	}
 
-	if r.configPoller != nil {
-		if subErr := r.configPoller.Stop(ctx); subErr != nil {
-			err.Append(fmt.Errorf("failed to stop config poller: %w", subErr))
-		}
-	}
-
 	if r.httpServer != nil {
 		if subErr := r.httpServer.Shutdown(ctx); subErr != nil {
 			if errors.Is(subErr, context.DeadlineExceeded) {
@@ -1542,9 +1545,10 @@ func WithPlayground(enable bool) Option {
 	}
 }
 
-func WithIntrospection(enable bool) Option {
+func WithIntrospection(enable bool, config config.IntrospectionConfiguration) Option {
 	return func(r *Router) {
 		r.introspection = enable
+		r.introspectionConfig = config
 	}
 }
 
@@ -2200,10 +2204,11 @@ func TraceConfigFromTelemetry(cfg *config.Telemetry) *rtrace.Config {
 		ExportGraphQLVariables: rtrace.ExportGraphQLVariables{
 			Enabled: cfg.Tracing.ExportGraphQLVariables,
 		},
-		ResourceAttributes:  buildResourceAttributes(cfg.ResourceAttributes),
-		Exporters:           exporters,
-		Propagators:         propagators,
-		ResponseTraceHeader: cfg.Tracing.ResponseTraceHeader,
+		ResourceAttributes:         buildResourceAttributes(cfg.ResourceAttributes),
+		Exporters:                  exporters,
+		Propagators:                propagators,
+		ResponseTraceHeader:        cfg.Tracing.ResponseTraceHeader,
+		OperationContentAttributes: cfg.Tracing.OperationContentAttributes,
 	}
 }
 
@@ -2307,6 +2312,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			PromSchemaFieldUsage: rmetric.PrometheusSchemaFieldUsage{
 				Enabled:             cfg.Metrics.Prometheus.SchemaFieldUsage.Enabled,
 				IncludeOperationSha: cfg.Metrics.Prometheus.SchemaFieldUsage.IncludeOperationSha,
+				SampleRate:          cfg.Metrics.Prometheus.SchemaFieldUsage.SampleRate,
 			},
 		},
 	}

@@ -91,8 +91,6 @@ var (
 	ConfigWithPluginsJSONTemplate string
 	//go:embed testdata/configWithGRPC.json
 	ConfigWithGRPCJSONTemplate string
-	//go:embed testdata/configWithRequireFetchReasons.json
-	ConfigWithRequireFetchReasonsJSONTemplate string
 
 	DemoNatsProviders  = []string{natsDefaultSourceName, myNatsProviderID}
 	DemoKafkaProviders = []string{myKafkaProviderID}
@@ -281,6 +279,7 @@ type MetricOptions struct {
 type PrometheusSchemaFieldUsage struct {
 	Enabled             bool
 	IncludeOperationSha bool
+	SampleRate          float64
 }
 
 type Config struct {
@@ -306,6 +305,7 @@ type Config struct {
 	CustomTelemetryAttributes          []config.CustomAttribute
 	CustomTracingAttributes            []config.CustomAttribute
 	CustomResourceAttributes           []config.CustomStaticAttribute
+	OperationContentAttributes         bool
 	MetricReader                       metric.Reader
 	PrometheusRegistry                 *prometheus.Registry
 	PrometheusPort                     int
@@ -444,14 +444,14 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	if oc := cfg.LogObservation; oc.Enabled {
 		var zCore zapcore.Core
 		zCore, logObserver = observer.New(oc.LogLevel)
-		cfg.Logger = logging.NewZapLoggerWithCore(zCore, true)
+		cfg.Logger = logging.NewZapLoggerWithCore(zCore, true, true)
 	} else {
 		ec := zap.NewProductionEncoderConfig()
 		ec.EncodeDuration = zapcore.SecondsDurationEncoder
 		ec.TimeKey = "time"
 
 		syncer := zapcore.AddSync(os.Stderr)
-		cfg.Logger = logging.NewZapLogger(syncer, false, true, zapcore.ErrorLevel)
+		cfg.Logger = logging.NewZapLogger(syncer, false, true, true, zapcore.ErrorLevel)
 	}
 
 	if cfg.AccessLogger == nil {
@@ -871,14 +871,14 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	if oc := cfg.LogObservation; oc.Enabled {
 		var zCore zapcore.Core
 		zCore, logObserver = observer.New(oc.LogLevel)
-		cfg.Logger = logging.NewZapLoggerWithCore(zCore, true)
+		cfg.Logger = logging.NewZapLoggerWithCore(zCore, true, true)
 	} else {
 		ec := zap.NewProductionEncoderConfig()
 		ec.EncodeDuration = zapcore.SecondsDurationEncoder
 		ec.TimeKey = "time"
 
 		syncer := zapcore.AddSync(os.Stderr)
-		cfg.Logger = logging.NewZapLogger(syncer, false, true, zapcore.ErrorLevel)
+		cfg.Logger = logging.NewZapLogger(syncer, false, true, true, zapcore.ErrorLevel)
 	}
 
 	if cfg.AccessLogger == nil {
@@ -1421,7 +1421,9 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		core.WithTLSConfig(testConfig.TLSConfig),
 		core.WithInstanceID("test-instance"),
 		core.WithGracePeriod(15 * time.Second),
-		core.WithIntrospection(true),
+		core.WithIntrospection(true, config.IntrospectionConfiguration{
+			Enabled: true,
+		}),
 		core.WithQueryPlans(true),
 		core.WithEvents(eventsConfiguration),
 	}
@@ -1468,13 +1470,14 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			ServiceName:        "cosmo-router",
 			ResourceAttributes: testConfig.CustomResourceAttributes,
 			Tracing: config.Tracing{
-				Enabled:               true,
-				SamplingRate:          1,
-				ParentBasedSampler:    !testConfig.DisableParentBasedSampler,
-				Exporters:             []config.TracingExporter{},
-				Propagation:           testConfig.PropagationConfig,
-				TracingGlobalFeatures: config.TracingGlobalFeatures{},
-				ResponseTraceHeader:   testConfig.ResponseTraceHeader,
+				Enabled:                    true,
+				SamplingRate:               1,
+				ParentBasedSampler:         !testConfig.DisableParentBasedSampler,
+				OperationContentAttributes: testConfig.OperationContentAttributes,
+				Exporters:                  []config.TracingExporter{},
+				Propagation:                testConfig.PropagationConfig,
+				TracingGlobalFeatures:      config.TracingGlobalFeatures{},
+				ResponseTraceHeader:        testConfig.ResponseTraceHeader,
 			},
 		})
 
@@ -1514,6 +1517,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			PromSchemaFieldUsage: rmetric.PrometheusSchemaFieldUsage{
 				Enabled:             testConfig.MetricOptions.PrometheusSchemaFieldUsage.Enabled,
 				IncludeOperationSha: testConfig.MetricOptions.PrometheusSchemaFieldUsage.IncludeOperationSha,
+				SampleRate:          testConfig.MetricOptions.PrometheusSchemaFieldUsage.SampleRate,
 			},
 		}
 	}

@@ -4,6 +4,34 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.123.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.122.0...@wundergraph/cosmo-connect@0.123.0) (2025-11-11)
+
+### Features
+
+* initial support for field resolvers in connect ([#2290](https://github.com/wundergraph/cosmo/issues/2290)) ([6f28c5d](https://github.com/wundergraph/cosmo/commit/6f28c5d203ef4fd95db83dfe22143e565df6d463)) (@Noroth)
+
+# [0.122.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.121.0...@wundergraph/cosmo-connect@0.122.0) (2025-10-29)
+
+### Features
+
+* add an api to validate the token's permissions ([#2271](https://github.com/wundergraph/cosmo/issues/2271)) ([7852d42](https://github.com/wundergraph/cosmo/commit/7852d42a0ff8ed97024d79771e3181aac000b97e)) (@JivusAyrus)
+
+# [0.121.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.120.0...@wundergraph/cosmo-connect@0.121.0) (2025-10-10)
+
+### Features
+
+* disallow reviewing proposals not created by Cosmo ([#2218](https://github.com/wundergraph/cosmo/issues/2218)) ([d4aee49](https://github.com/wundergraph/cosmo/commit/d4aee4905c1a3f1d409c3892621a0d2a1ce8d147)) (@wilsonrivera)
+
+# [0.120.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.119.1...@wundergraph/cosmo-connect@0.120.0) (2025-10-06)
+
+### Features
+
+* return additional linked check info when proposals are created/updated ([#2258](https://github.com/wundergraph/cosmo/issues/2258)) ([81ac616](https://github.com/wundergraph/cosmo/commit/81ac61679fe140961fcd610f2f6a419955dff23e)) (@JivusAyrus)
+
+## [0.119.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.119.0...@wundergraph/cosmo-connect@0.119.1) (2025-10-03)
+
+**Note:** Version bump only for package @wundergraph/cosmo-connect
+
 # [0.119.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.118.0...@wundergraph/cosmo-connect@0.119.0) (2025-09-16)
 
 ### Features

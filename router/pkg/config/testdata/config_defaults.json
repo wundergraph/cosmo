@@ -26,6 +26,7 @@
         "HeaderName": "x-wg-trace-id"
       },
       "Attributes": null,
+      "OperationContentAttributes": false,
       "ExportGraphQLVariables": false,
       "WithNewRoot": false
     },
@@ -61,7 +62,8 @@
         "ExcludeScopeInfo": false,
         "SchemaFieldUsage": {
           "Enabled": false,
-          "IncludeOperationSha": false
+          "IncludeOperationSha": false,
+          "SampleRate": 1
         }
       },
       "CardinalityLimit": 2000
@@ -187,6 +189,8 @@
   },
   "AccessLogs": {
     "Enabled": true,
+    "Level": "info",
+    "AddStacktrace": false,
     "Buffer": {
       "Enabled": false,
       "Size": 256000,
@@ -228,6 +232,10 @@
   },
   "PlaygroundEnabled": true,
   "IntrospectionEnabled": true,
+  "IntrospectionConfig": {
+    "Enabled": true,
+    "Secret": ""
+  },
   "QueryPlansEnabled": true,
   "LogLevel": "info",
   "JSONLog": true,
@@ -246,7 +254,8 @@
       "HeaderName": "Authorization",
       "HeaderValuePrefix": "Bearer",
       "HeaderSources": null
-    }
+    },
+    "IgnoreIntrospection": false
   },
   "Authorization": {
     "RequireAuthentication": false,

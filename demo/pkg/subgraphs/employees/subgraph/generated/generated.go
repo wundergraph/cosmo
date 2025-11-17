@@ -147,6 +147,7 @@ type ComplexityRoot struct {
 		Employee           func(childComplexity int, id int) int
 		EmployeeAsList     func(childComplexity int, id int) int
 		Employees          func(childComplexity int) int
+		FindEmployeesBy    func(childComplexity int, criteria model.FindEmployeeCriteria) int
 		FirstEmployee      func(childComplexity int) int
 		Products           func(childComplexity int) int
 		Teammates          func(childComplexity int, team model.Department) int
@@ -213,6 +214,7 @@ type QueryResolver interface {
 	Products(ctx context.Context) ([]model.Products, error)
 	Teammates(ctx context.Context, team model.Department) ([]*model.Employee, error)
 	FirstEmployee(ctx context.Context) (*model.Employee, error)
+	FindEmployeesBy(ctx context.Context, criteria model.FindEmployeeCriteria) ([]*model.Employee, error)
 }
 type SubscriptionResolver interface {
 	CurrentTime(ctx context.Context) (<-chan *model.Time, error)
@@ -654,6 +656,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Query.Employees(childComplexity), true
 
+	case "Query.findEmployeesBy":
+		if e.complexity.Query.FindEmployeesBy == nil {
+			break
+		}
+
+		args, err := ec.field_Query_findEmployeesBy_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.FindEmployeesBy(childComplexity, args["criteria"].(model.FindEmployeeCriteria)), true
+
 	case "Query.firstEmployee":
 		if e.complexity.Query.FirstEmployee == nil {
 			break
@@ -801,6 +815,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
 		ec.unmarshalInputDeeplyNestedFileUpload,
 		ec.unmarshalInputFileUpload,
+		ec.unmarshalInputFindEmployeeCriteria,
 	)
 	first := true
 
@@ -941,13 +956,16 @@ directive @goField(
   omittable: Boolean
 ) on INPUT_FIELD_DEFINITION | FIELD_DEFINITION
 
+directive @openfed__requireFetchReasons repeatable on FIELD_DEFINITION | INTERFACE | OBJECT
+
 type Query {
-  employee(id: Int!): Employee
+  employee(id: Int!): Employee @openfed__requireFetchReasons
   employeeAsList(id: Int!): [Employee]
   employees: [Employee]
   products: [Products!]!
   teammates(team: Department!): [Employee!]!
   firstEmployee: Employee! @tag(name: "internal")
+  findEmployeesBy(criteria: FindEmployeeCriteria!): [Employee!]!
 }
 
 scalar Upload
@@ -997,7 +1015,7 @@ enum EngineerType {
   FULLSTACK
 }
 
-interface Identifiable {
+interface Identifiable @openfed__requireFetchReasons {
   id: Int!
 }
 
@@ -1106,7 +1124,12 @@ type SDK implements IProduct @key(fields: "upc") {
   owner: Employee!
   unicode: String!
 }
-`, BuiltIn: false},
+
+input FindEmployeeCriteria @oneOf {
+    id: Int
+    department: Department
+    title: String
+}`, BuiltIn: false},
 	{Name: "../../federation/directives.graphql", Input: `
 	directive @authenticated on FIELD_DEFINITION | OBJECT | INTERFACE | SCALAR | ENUM
 	directive @composeDirective(name: String!) repeatable on SCHEMA
@@ -1542,6 +1565,34 @@ func (ec *executionContext) field_Query_employee_argsID(
 	}
 
 	var zeroVal int
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_findEmployeesBy_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Query_findEmployeesBy_argsCriteria(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["criteria"] = arg0
+	return args, nil
+}
+func (ec *executionContext) field_Query_findEmployeesBy_argsCriteria(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (model.FindEmployeeCriteria, error) {
+	if _, ok := rawArgs["criteria"]; !ok {
+		var zeroVal model.FindEmployeeCriteria
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("criteria"))
+	if tmp, ok := rawArgs["criteria"]; ok {
+		return ec.unmarshalNFindEmployeeCriteria2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐFindEmployeeCriteria(ctx, tmp)
+	}
+
+	var zeroVal model.FindEmployeeCriteria
 	return zeroVal, nil
 }
 
@@ -4727,6 +4778,87 @@ func (ec *executionContext) fieldContext_Query_firstEmployee(_ context.Context, 
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_findEmployeesBy(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_findEmployeesBy(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().FindEmployeesBy(rctx, fc.Args["criteria"].(model.FindEmployeeCriteria))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.Employee)
+	fc.Result = res
+	return ec.marshalNEmployee2ᚕᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐEmployeeᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_findEmployeesBy(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "details":
+				return ec.fieldContext_Employee_details(ctx, field)
+			case "id":
+				return ec.fieldContext_Employee_id(ctx, field)
+			case "tag":
+				return ec.fieldContext_Employee_tag(ctx, field)
+			case "role":
+				return ec.fieldContext_Employee_role(ctx, field)
+			case "notes":
+				return ec.fieldContext_Employee_notes(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_Employee_updatedAt(ctx, field)
+			case "startDate":
+				return ec.fieldContext_Employee_startDate(ctx, field)
+			case "currentMood":
+				return ec.fieldContext_Employee_currentMood(ctx, field)
+			case "derivedMood":
+				return ec.fieldContext_Employee_derivedMood(ctx, field)
+			case "isAvailable":
+				return ec.fieldContext_Employee_isAvailable(ctx, field)
+			case "rootFieldThrowsError":
+				return ec.fieldContext_Employee_rootFieldThrowsError(ctx, field)
+			case "rootFieldErrorWrapper":
+				return ec.fieldContext_Employee_rootFieldErrorWrapper(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Employee", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_findEmployeesBy_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query__entities(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Query__entities(ctx, field)
 	if err != nil {
@@ -7601,6 +7733,47 @@ func (ec *executionContext) unmarshalInputFileUpload(ctx context.Context, obj an
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputFindEmployeeCriteria(ctx context.Context, obj any) (model.FindEmployeeCriteria, error) {
+	var it model.FindEmployeeCriteria
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"id", "department", "title"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "id":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ID = data
+		case "department":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("department"))
+			data, err := ec.unmarshalODepartment2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐDepartment(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Department = data
+		case "title":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("title"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Title = data
+		}
+	}
+
+	return it, nil
+}
+
 // endregion **************************** input.gotpl *****************************
 
 // region    ************************** interface.gotpl ***************************
@@ -8829,6 +9002,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "findEmployeesBy":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_findEmployeesBy(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "_entities":
 			field := field
 
@@ -9682,6 +9877,11 @@ func (ec *executionContext) marshalNFieldSet2string(ctx context.Context, sel ast
 
 func (ec *executionContext) unmarshalNFileUpload2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐFileUpload(ctx context.Context, v any) (model.FileUpload, error) {
 	res, err := ec.unmarshalInputFileUpload(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNFindEmployeeCriteria2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐFindEmployeeCriteria(ctx context.Context, v any) (model.FindEmployeeCriteria, error) {
+	res, err := ec.unmarshalInputFindEmployeeCriteria(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
@@ -10546,6 +10746,22 @@ func (ec *executionContext) unmarshalODeeplyNestedFileUpload2ᚖgithubᚗcomᚋw
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) unmarshalODepartment2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐDepartment(ctx context.Context, v any) (*model.Department, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res = new(model.Department)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalODepartment2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐDepartment(ctx context.Context, sel ast.SelectionSet, v *model.Department) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
+}
+
 func (ec *executionContext) marshalOEmployee2ᚕᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐEmployee(ctx context.Context, sel ast.SelectionSet, v []*model.Employee) graphql.Marshaler {
 	if v == nil {
 		return graphql.Null
@@ -10599,6 +10815,24 @@ func (ec *executionContext) marshalOErrorWrapper2ᚖgithubᚗcomᚋwundergraph�
 		return graphql.Null
 	}
 	return ec._ErrorWrapper(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalOInt2ᚖint(ctx context.Context, v any) (*int, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := graphql.UnmarshalInt(v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.SelectionSet, v *int) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	_ = sel
+	_ = ctx
+	res := graphql.MarshalInt(*v)
+	return res
 }
 
 func (ec *executionContext) unmarshalOString2string(ctx context.Context, v any) (string, error) {
