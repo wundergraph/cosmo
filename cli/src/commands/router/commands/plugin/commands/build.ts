@@ -3,6 +3,7 @@ import os from 'node:os';
 import { Command, program } from 'commander';
 import { resolve } from 'pathe';
 import Spinner from 'ora';
+import { ProtoOption } from '@wundergraph/protographic';
 import { BaseCommandOptions } from '../../../../../core/types/types.js';
 import { renderResultTree } from '../helper.js';
 import {
@@ -54,7 +55,7 @@ export default (opts: BaseCommandOptions) => {
       program.error('');
     }
 
-    const customOptions: string[] = [];
+    const protoOptions: ProtoOption[] = [];
     let platforms: string[] = [];
 
     try {
@@ -74,7 +75,7 @@ export default (opts: BaseCommandOptions) => {
           break;
         }
         case 'go': {
-          customOptions.push(getGoModulePathProtoOption(goModulePath!));
+          protoOptions.push(getGoModulePathProtoOption(goModulePath!));
           break;
         }
       }
@@ -83,7 +84,7 @@ export default (opts: BaseCommandOptions) => {
       platforms = normalizePlatforms(options.platform, options.allPlatforms, language);
 
       // Generate proto and mapping files
-      await generateProtoAndMapping(pluginDir, customOptions, spinner);
+      await generateProtoAndMapping(pluginDir, protoOptions, spinner);
 
       // Generate gRPC code
       await generateGRPCCode(pluginDir, spinner, language);
@@ -116,7 +117,7 @@ export default (opts: BaseCommandOptions) => {
         build: options.debug ? 'debug' : 'release',
         type: options.generateOnly ? 'generate-only' : 'full',
         time: formattedTime,
-        customOptions: customOptions.join(','),
+        protoOptions: protoOptions.join(','),
       });
     } catch (error: any) {
       const details: Record<string, any> = {
@@ -126,7 +127,7 @@ export default (opts: BaseCommandOptions) => {
         build: options.debug ? 'debug' : 'release',
         type: options.generateOnly ? 'generate-only' : 'full',
         error: error.message,
-        customOptions: customOptions.join(','),
+        protoOptions: protoOptions.join(','),
       };
       renderResultTree(spinner, 'Plugin build failed!', false, pluginName, details);
       program.error('');

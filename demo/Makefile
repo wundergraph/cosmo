@@ -23,8 +23,8 @@ plugin-generate:
 plugin-build-bun-binary:
 	cd pkg/subgraphs/courses/ && \
 	bun install && bun build src/plugin.ts --compile --outfile bin/$(shell go env GOOS)_$(shell go env GOARCH) && \
-    mkdir -p bin/grpc-health-check && \
-    cp -r node_modules/grpc-health-check/proto bin/grpc-health-check
+	mkdir -p bin/grpc-health-check && \
+	cp -r node_modules/grpc-health-check/proto bin/grpc-health-check
 
 plugin-build-go-binary:
 	cd pkg/subgraphs/projects/ && go build -o ./bin/$(shell go env GOOS)_$(shell go env GOARCH) ./src

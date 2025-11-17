@@ -93,7 +93,15 @@ export interface GraphQLToProtoTextVisitorOptions {
   /** Whether to include descriptions/comments from GraphQL schema */
   includeComments?: boolean;
   /** Custom options printed as proto options */
-  customOptions?: string[];
+  protoOptions?: ProtoOption[];
+}
+
+/**
+ * Format based on https://protobuf.dev/reference/protobuf/proto3-spec/#option
+ */
+export interface ProtoOption {
+  name: string;
+  constant: string;
 }
 
 /**
@@ -211,8 +219,9 @@ export class GraphQLToProtoTextVisitor {
       this.initializeFieldNumbersMap(lockData);
     }
 
-    if (options.customOptions && options.customOptions.length > 0) {
-      this.options.push(...options.customOptions);
+    if (options.protoOptions && options.protoOptions.length > 0) {
+      const processedOptions = options.protoOptions.map((opt) => `option ${opt.name} = ${opt.constant};`);
+      this.options.push(...processedOptions);
     }
   }
 

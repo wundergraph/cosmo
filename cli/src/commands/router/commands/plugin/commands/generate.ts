@@ -3,6 +3,7 @@ import { Command, program } from 'commander';
 import Spinner from 'ora';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
+import { ProtoOption } from '@wundergraph/protographic';
 import { BaseCommandOptions } from '../../../../../core/types/types.js';
 import { renderResultTree } from '../helper.js';
 import {
@@ -42,7 +43,7 @@ export default (opts: BaseCommandOptions) => {
       program.error('');
     }
 
-    const customOptions: string[] = [];
+    const protoOptions: ProtoOption[] = [];
 
     try {
       // Check and install tools if needed
@@ -58,7 +59,7 @@ export default (opts: BaseCommandOptions) => {
           break;
         }
         case 'go': {
-          customOptions.push(getGoModulePathProtoOption(goModulePath!));
+          protoOptions.push(getGoModulePathProtoOption(goModulePath!));
           break;
         }
       }
@@ -67,7 +68,7 @@ export default (opts: BaseCommandOptions) => {
       spinner.start('Generating plugin code...');
 
       // Generate proto and mapping files
-      await generateProtoAndMapping(pluginDir, customOptions, spinner);
+      await generateProtoAndMapping(pluginDir, protoOptions, spinner);
 
       // Generate gRPC code
       await generateGRPCCode(pluginDir, spinner, language);
@@ -88,7 +89,7 @@ export default (opts: BaseCommandOptions) => {
       renderResultTree(spinner, 'Plugin code generated successfully!', true, pluginName, {
         output: pluginDir,
         time: formattedTime,
-        customOptions: customOptions.join(','),
+        protoOptions: protoOptions.join(','),
       });
 
       console.log('');
@@ -99,7 +100,7 @@ export default (opts: BaseCommandOptions) => {
       renderResultTree(spinner, 'Plugin code generation failed!', false, pluginName, {
         output: pluginDir,
         error: error.message,
-        customOptions: customOptions.join(','),
+        protoOptions: protoOptions.join(','),
       });
 
       program.error('');

@@ -15,7 +15,12 @@ describe('SDL to Proto Options', () => {
     `;
 
     const { proto: protoText } = compileGraphQLToProto(sdl, {
-      customOptions: ['github.com/wundergraph/cosmo/protographic'],
+      protoOptions: [
+        {
+          name: 'go_package',
+          constant: `"github.com/wundergraph/cosmo/protographic"`,
+        },
+      ],
     });
 
     expectValidProto(protoText);

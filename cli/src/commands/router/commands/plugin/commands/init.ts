@@ -15,6 +15,7 @@ import ProjectTemplates from '../templates/project.js';
 import GoTemplates from '../templates/go.js';
 import TsTemplates from '../templates/typescript.js';
 import { renderResultTree } from '../helper.js';
+import { getGoModulePathProtoOption } from '../toolchain.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('init');
@@ -79,10 +80,10 @@ export default (opts: BaseCommandOptions) => {
       await writeFile(resolve(tempDir, '.gitignore'), PluginTemplates.gitignore);
       await writeFile(resolve(tempDir, '.cursorignore'), PluginTemplates.cursorignore);
 
-      const customOptions = [];
+      const protoOptions = [];
       switch (options.language) {
         case 'go': {
-          customOptions.push(`option go_package = "${goModulePath}";`);
+          protoOptions.push(getGoModulePathProtoOption(goModulePath!));
           break;
         }
       }
@@ -90,7 +91,7 @@ export default (opts: BaseCommandOptions) => {
       const proto = compileGraphQLToProto(PluginTemplates.schemaGraphql, {
         serviceName,
         packageName: 'service',
-        customOptions,
+        protoOptions,
       });
       await writeFile(resolve(generatedDir, 'service.proto'), proto.proto);
       await writeFile(resolve(generatedDir, 'service.proto.lock.json'), JSON.stringify(proto.lockData, null, 2));

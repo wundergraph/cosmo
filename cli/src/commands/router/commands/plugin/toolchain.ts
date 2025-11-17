@@ -8,6 +8,7 @@ import {
   compileGraphQLToMapping,
   compileGraphQLToProto,
   ProtoLock,
+  ProtoOption,
   validateGraphQLSDL,
 } from '@wundergraph/protographic';
 import prompts from 'prompts';
@@ -413,7 +414,7 @@ async function installTools() {
 /**
  * Generate proto and mapping files from schema
  */
-export async function generateProtoAndMapping(pluginDir: string, customOptions: string[], spinner: any) {
+export async function generateProtoAndMapping(pluginDir: string, protoOptions: ProtoOption[], spinner: any) {
   const srcDir = resolve(pluginDir, 'src');
   const generatedDir = resolve(pluginDir, 'generated');
 
@@ -450,7 +451,7 @@ export async function generateProtoAndMapping(pluginDir: string, customOptions: 
   const proto = compileGraphQLToProto(schema, {
     serviceName,
     packageName: 'service',
-    customOptions,
+    protoOptions,
     lockData,
   });
 
@@ -593,8 +594,11 @@ export async function installTsDependencies(pluginDir: string, spinner: any) {
   });
 }
 
-export function getGoModulePathProtoOption(goModulePath: string) {
-  return `option go_package = "${goModulePath}";`;
+export function getGoModulePathProtoOption(goModulePath: string): ProtoOption {
+  return {
+    name: 'go_package',
+    constant: `"${goModulePath}"`,
+  };
 }
 
 /**

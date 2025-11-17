@@ -3,6 +3,7 @@ import {
   compileGraphQLToMapping,
   compileGraphQLToProto,
   ProtoLock,
+  ProtoOption,
   validateGraphQLSDL,
 } from '@wundergraph/protographic';
 import { Command, program } from 'commander';
@@ -137,16 +138,16 @@ async function generateProtoAndMapping({
   spinner.text = 'Generating mapping and proto files...';
   const mapping = compileGraphQLToMapping(schema, serviceName);
 
-  const customOptions: string[] = [];
+  const protoOptions: ProtoOption[] = [];
   if (goPackage) {
-    customOptions.push(getGoModulePathProtoOption(goPackage!));
+    protoOptions.push(getGoModulePathProtoOption(goPackage!));
   }
 
   const proto = compileGraphQLToProto(schema, {
     serviceName,
     packageName,
     lockData,
-    customOptions,
+    protoOptions,
   });
 
   return {
