@@ -245,7 +245,7 @@ const OperationsLeftPanel = ({
       />
 
       {operations.length > 0 && (
-        <div className="flex justify-start">
+        <div className="flex justify-center">
           <Pagination
             limit={pageSize}
             noOfPages={noOfPages}
@@ -536,7 +536,7 @@ const OperationsPage: NextPageWithLayout = () => {
 
   const pageSize = useMemo(() => {
     const size = parseInt(router.query.pageSize as string, 10);
-    return isNaN(size) || size < 1 ? 20 : size;
+    return isNaN(size) || size < 1 ? 10 : size;
   }, [router.query.pageSize]);
 
   const offset = useMemo(() => {
