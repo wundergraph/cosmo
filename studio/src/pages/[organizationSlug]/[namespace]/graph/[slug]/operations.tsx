@@ -126,6 +126,10 @@ const OperationsToolbar = () => {
               namespace: graphContext?.graph?.namespace,
               federatedGraphName: graphContext?.graph?.name,
               range,
+              dateRange: range ? undefined : {
+                start: formatISO(dateRange.start),
+                end: formatISO(dateRange.end),
+              },
             }),
           });
         }}
