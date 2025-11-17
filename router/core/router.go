@@ -521,7 +521,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 				IgnorePersistedOperations: r.securityConfiguration.DepthLimit.IgnorePersistedOperations,
 			}
 		} else {
-			r.logger.Warn("Ignoring deprecated security configuration field 'depth_limit', in favor of the `security_complexity_limits.depth` configuration")
+			r.logger.Warn("Ignoring deprecated security configuration field 'depth_limit', in favor of the `security.complexity_limits.depth` configuration")
 		}
 	}
 
