@@ -4,6 +4,120 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.48.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.48.2...@wundergraph/composition@0.48.3) (2025-11-13)
+
+**Note:** Version bump only for package @wundergraph/composition
+
+## [0.48.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.48.1...@wundergraph/composition@0.48.2) (2025-11-12)
+
+### Bug Fixes
+
+* revert propagating schema extension node to router ([#2328](https://github.com/wundergraph/cosmo/issues/2328)) ([dcb6b3b](https://github.com/wundergraph/cosmo/commit/dcb6b3b680dfc616f6e86968f62c6494f83ee8ed)) (@Aenimus)
+
+## [0.48.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.48.0...@wundergraph/composition@0.48.1) (2025-11-12)
+
+**Note:** Version bump only for package @wundergraph/composition
+
+# [0.48.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.47.2...@wundergraph/composition@0.48.0) (2025-11-11)
+
+### Features
+
+* initial support for field resolvers in connect ([#2290](https://github.com/wundergraph/cosmo/issues/2290)) ([6f28c5d](https://github.com/wundergraph/cosmo/commit/6f28c5d203ef4fd95db83dfe22143e565df6d463)) (@Noroth)
+
+## [0.47.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.47.1...@wundergraph/composition@0.47.2) (2025-10-29)
+
+**Note:** Version bump only for package @wundergraph/composition
+
+## [0.47.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.47.0...@wundergraph/composition@0.47.1) (2025-10-23)
+
+### Bug Fixes
+
+* handle internal graph edge case with shared root field and nested entities ([#2298](https://github.com/wundergraph/cosmo/issues/2298)) ([3a50788](https://github.com/wundergraph/cosmo/commit/3a50788408b268e914d17b1f4a16e252022d2306)) (@wilsonrivera)
+
+# [0.47.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.46.4...@wundergraph/composition@0.47.0) (2025-10-17)
+
+### Features
+
+* expose subgraph defined directives ([#2287](https://github.com/wundergraph/cosmo/issues/2287)) ([d77a760](https://github.com/wundergraph/cosmo/commit/d77a760fc42d9d537ce2a9af9144a2fd05bb5bf6)) (@wilsonrivera)
+
+## [0.46.4](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.46.3...@wundergraph/composition@0.46.4) (2025-10-16)
+
+**Note:** Version bump only for package @wundergraph/composition
+
+## [0.46.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.46.2...@wundergraph/composition@0.46.3) (2025-10-10)
+
+### Bug Fixes
+
+* propagate [@openfed](https://github.com/openfed)__requireFetchReasons on Interfaces ([#2256](https://github.com/wundergraph/cosmo/issues/2256)) ([2a31f95](https://github.com/wundergraph/cosmo/commit/2a31f95f2c184bab5f9b02fef27ba2961c9f9e8c)) (@Aenimus)
+
+## [0.46.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.46.1...@wundergraph/composition@0.46.2) (2025-10-03)
+
+**Note:** Version bump only for package @wundergraph/composition
+
+## [0.46.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.46.0...@wundergraph/composition@0.46.1) (2025-10-01)
+
+### Bug Fixes
+
+* internal graph bugs ([#2240](https://github.com/wundergraph/cosmo/issues/2240)) ([7f2e3f4](https://github.com/wundergraph/cosmo/commit/7f2e3f46a777640e3146f5950cac6b6d46688b17)) (@Aenimus)
+
+# [0.46.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.45.0...@wundergraph/composition@0.46.0) (2025-09-22)
+
+### Bug Fixes
+
+* print client schema with select directives ([#2232](https://github.com/wundergraph/cosmo/issues/2232)) ([fe41836](https://github.com/wundergraph/cosmo/commit/fe4183640a008b328807f6d0f8a6557ec7b03245)) (@Aenimus)
+
+### Features
+
+* add [@one](https://github.com/one)Of composition support ([#2225](https://github.com/wundergraph/cosmo/issues/2225)) ([9a55be8](https://github.com/wundergraph/cosmo/commit/9a55be87e97c2f130cb783873f069eb5bda9ceb1)) (@Aenimus)
+
+# [0.45.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.44.0...@wundergraph/composition@0.45.0) (2025-09-16)
+
+### Features
+
+* add [@semantic](https://github.com/semantic)NonNull support ([#2221](https://github.com/wundergraph/cosmo/issues/2221)) ([933d9f7](https://github.com/wundergraph/cosmo/commit/933d9f784c09ab7c396c48e469bdf73089a9e4ce)) (@Aenimus)
+
+# [0.44.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.43.3...@wundergraph/composition@0.44.0) (2025-09-10)
+
+### Features
+
+* implement openfed__requireFetchReasons ([#2170](https://github.com/wundergraph/cosmo/issues/2170)) ([cfb097f](https://github.com/wundergraph/cosmo/commit/cfb097fb6ccc29a81cfca55fec6b71fdf6e1b61c)) (@Aenimus)
+
+## [0.43.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.43.2...@wundergraph/composition@0.43.3) (2025-08-18)
+
+### Bug Fixes
+
+* propagate [@external](https://github.com/external) interface object fields ([#2145](https://github.com/wundergraph/cosmo/issues/2145)) ([783f875](https://github.com/wundergraph/cosmo/commit/783f875850e83f13bccb8b89faf2a87e69304537)) (@Aenimus)
+
+## [0.43.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.43.1...@wundergraph/composition@0.43.2) (2025-08-07)
+
+**Note:** Version bump only for package @wundergraph/composition
+
+## [0.43.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.43.0...@wundergraph/composition@0.43.1) (2025-08-06)
+
+### Bug Fixes
+
+* interface object implementing entity interface ([#2117](https://github.com/wundergraph/cosmo/issues/2117)) ([e999a8c](https://github.com/wundergraph/cosmo/commit/e999a8c8e34dd39f5e6718503e2f5f6bd1903f3e)) (@Aenimus)
+
+# [0.43.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.42.2...@wundergraph/composition@0.43.0) (2025-07-21)
+
+### Features
+
+* add disable resolvability validation flag ([#2065](https://github.com/wundergraph/cosmo/issues/2065)) ([0c920cc](https://github.com/wundergraph/cosmo/commit/0c920cc95065099667fc378b50e9278e8a99c286)) (@Aenimus)
+
+## [0.42.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.42.1...@wundergraph/composition@0.42.2) (2025-07-03)
+
+**Note:** Version bump only for package @wundergraph/composition
+
+## [0.42.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.42.0...@wundergraph/composition@0.42.1) (2025-07-03)
+
+**Note:** Version bump only for package @wundergraph/composition
+
+# [0.42.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.41.1...@wundergraph/composition@0.42.0) (2025-06-30)
+
+### Features
+
+* add isVersionTwo to SubgraphConfig ([#1997](https://github.com/wundergraph/cosmo/issues/1997)) ([09baaa8](https://github.com/wundergraph/cosmo/commit/09baaa8a3d4c963f1278fe672b3d55bce1346294)) (@wilsonrivera)
+
 ## [0.41.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.41.0...@wundergraph/composition@0.41.1) (2025-06-26)
 
 ### Bug Fixes

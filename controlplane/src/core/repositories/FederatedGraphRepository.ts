@@ -51,6 +51,7 @@ import {
   users,
 } from '../../db/schema.js';
 import {
+  CompositionOptions,
   DateRange,
   FederatedGraphChangelogDTO,
   FederatedGraphDTO,
@@ -187,27 +188,29 @@ export class FederatedGraphRepository {
         namespaceId: data.namespaceId,
         supportsFederation: insertedGraph[0].supportsFederation,
         routerCompatibilityVersion: insertedGraph[0].routerCompatibilityVersion,
+        organizationId: this.organizationId,
       };
     });
   }
 
   public update(data: {
-    targetId: string;
-    routingUrl: string;
-    labelMatchers: string[];
-    updatedBy: string;
-    readme?: string;
-    blobStorage: BlobStorage;
-    namespaceId: string;
-    unsetLabelMatchers?: boolean;
-    unsetAdmissionWebhookURL?: boolean;
-    admissionWebhookURL?: string;
-    admissionWebhookSecret?: string;
     admissionConfig: {
       jwtSecret: string;
       cdnBaseUrl: string;
     };
+    blobStorage: BlobStorage;
+    labelMatchers: string[];
+    namespaceId: string;
+    routingUrl: string;
+    targetId: string;
+    updatedBy: string;
     chClient: ClickHouseClient;
+    admissionWebhookSecret?: string;
+    admissionWebhookURL?: string;
+    compositionOptions?: CompositionOptions;
+    readme?: string;
+    unsetAdmissionWebhookURL?: boolean;
+    unsetLabelMatchers?: boolean;
   }): Promise<
     | {
         compositionErrors: PlainMessage<CompositionError>[];
@@ -333,6 +336,7 @@ export class FederatedGraphRepository {
           },
           actorId: data.updatedBy,
           chClient: data.chClient,
+          compositionOptions: data.compositionOptions,
         });
 
         return {
@@ -365,6 +369,7 @@ export class FederatedGraphRepository {
       cdnBaseUrl: string;
     },
     chClient: ClickHouseClient,
+    compositionOptions?: CompositionOptions,
   ): Promise<{
     compositionErrors: PlainMessage<CompositionError>[];
     deploymentErrors: PlainMessage<DeploymentError>[];
@@ -416,14 +421,15 @@ export class FederatedGraphRepository {
         }
 
         const composition = await this.composeAndDeployGraphs({
-          federatedGraphs: [movedContractGraph],
           actorId: data.updatedBy,
-          blobStorage,
           admissionConfig: {
             cdnBaseUrl: admissionConfig.cdnBaseUrl,
             webhookJWTSecret: admissionConfig.jwtSecret,
           },
+          blobStorage,
           chClient,
+          compositionOptions,
+          federatedGraphs: [movedContractGraph],
         });
 
         return {
@@ -442,6 +448,7 @@ export class FederatedGraphRepository {
           webhookJWTSecret: admissionConfig.jwtSecret,
         },
         chClient,
+        compositionOptions,
       });
 
       return {
@@ -499,8 +506,8 @@ export class FederatedGraphRepository {
       eq(schema.targets.organizationId, this.organizationId),
     ];
 
-    if (opts.namespaceId) {
-      conditions.push(eq(schema.targets.namespaceId, opts.namespaceId));
+    if (opts.namespaceIds && opts.namespaceIds.length > 0) {
+      conditions.push(inArray(schema.targets.namespaceId, opts.namespaceIds));
     }
 
     if (opts.supportsFederation !== undefined) {
@@ -579,6 +586,7 @@ export class FederatedGraphRepository {
         admissionWebhookSecret: schema.federatedGraphs.admissionWebhookSecret,
         supportsFederation: schema.federatedGraphs.supportsFederation,
         routerCompatibilityVersion: schema.federatedGraphs.routerCompatibilityVersion,
+        organizationId: schema.targets.organizationId,
       })
       .from(targets)
       .where(and(...conditions))
@@ -639,6 +647,7 @@ export class FederatedGraphRepository {
       supportsFederation: resp[0].supportsFederation,
       contract,
       routerCompatibilityVersion: resp[0].routerCompatibilityVersion,
+      organizationId: resp[0].organizationId,
     };
   }
 
@@ -879,6 +888,7 @@ export class FederatedGraphRepository {
         namespace: fedGraph.namespace,
         namespaceId: fedGraph.namespaceId,
         routerCompatibilityVersion: fedGraph.routerCompatibilityVersion,
+        organizationId: fedGraph.organizationId,
       };
     });
   }
@@ -1489,20 +1499,22 @@ export class FederatedGraphRepository {
    * This method recomposes and deploys federated graphs and their respective contract graphs.
    */
   public composeAndDeployGraphs = ({
-    federatedGraphs,
-    blobStorage,
-    admissionConfig,
     actorId,
+    admissionConfig,
+    compositionOptions,
     chClient,
+    blobStorage,
+    federatedGraphs,
   }: {
-    federatedGraphs: FederatedGraphDTO[];
-    blobStorage: BlobStorage;
+    actorId: string;
     admissionConfig: {
       webhookJWTSecret: string;
       cdnBaseUrl: string;
     };
-    actorId: string;
+    blobStorage: BlobStorage;
     chClient: ClickHouseClient;
+    federatedGraphs: FederatedGraphDTO[];
+    compositionOptions?: CompositionOptions;
   }) => {
     return this.db.transaction(async (tx) => {
       const subgraphRepo = new SubgraphRepository(this.logger, tx, this.organizationId);
@@ -1569,6 +1581,7 @@ export class FederatedGraphRepository {
             federatedGraph,
             subgraphsToCompose,
             tagOptionsByContractName,
+            compositionOptions,
           );
 
           if (!result.success) {
@@ -1727,7 +1740,7 @@ export class FederatedGraphRepository {
 
         const federatedGraphDTO = await this.byId(federatedGraph.id);
         if (!federatedGraphDTO) {
-          throw new Error(`Fatal:The federated graph "${federatedGraph.name}" was not found.`);
+          throw new Error(`Fatal: The federated graph "${federatedGraph.name}" was not found.`);
         }
         if (!baseCompositionData.routerExecutionConfig) {
           throw new Error(

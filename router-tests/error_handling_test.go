@@ -21,54 +21,317 @@ func compareErrors(t *testing.T, expectedErrors []testenv.GraphQLError, actualEr
 
 	for _, expectedErr := range expectedErrors {
 		for _, err := range actualErrors {
-			if err.Message == expectedErr.Message {
-				if slices.CompareFunc(err.Path, expectedErr.Path, func(s1 any, s2 any) int {
-					if s1 == nil && s2 == nil {
-						return 0
-					}
-					s1Str, s1StrOk := s1.(string)
-					s2Str, s2StrOk := s2.(string)
-					if s1StrOk && s2StrOk {
-						return cmp.Compare(s1Str, s2Str)
-					}
-					s1Float, s1FloatOk := s1.(float64)
-					s2Float, s2FloatOk := s2.(float64)
-					if s1FloatOk && s2FloatOk {
-						return cmp.Compare(s1Float, s2Float)
-					}
-					// in all the other cases, let's just return 1
-					return 1
-				}) != 0 {
-					continue
-				}
-				if err.Extensions.Code != expectedErr.Extensions.Code {
-					continue
-				}
-				if err.Extensions.StatusCode != expectedErr.Extensions.StatusCode {
-					continue
-				}
-				if len(err.Extensions.Errors) != len(expectedErr.Extensions.Errors) {
-					continue
-				}
-				compareErrors(t, expectedErr.Extensions.Errors, err.Extensions.Errors)
-				matchedErrors++
-				break
+			if err.Message != expectedErr.Message {
+				t.Logf("message did not match\n\t-%s\n\t+%s", expectedErr.Message, err.Message)
+				continue
 			}
+
+			if slices.CompareFunc(err.Path, expectedErr.Path, func(s1 any, s2 any) int {
+				if s1 == nil && s2 == nil {
+					return 0
+				}
+
+				s1Str, s1StrOk := s1.(string)
+				s2Str, s2StrOk := s2.(string)
+				if s1StrOk && s2StrOk {
+					return cmp.Compare(s1Str, s2Str)
+				}
+
+				s1Float, s1FloatOk := s1.(float64)
+				s2Float, s2FloatOk := s2.(float64)
+				if s1FloatOk && s2FloatOk {
+					return cmp.Compare(s1Float, s2Float)
+				}
+
+				// in all the other cases, let's just return 1
+				return 1
+			}) != 0 {
+				t.Logf("path did not match")
+				continue
+			}
+
+			if err.Extensions.Code != expectedErr.Extensions.Code {
+				t.Logf("extensions.code did not match, expected %s, got %s", expectedErr.Extensions.Code, err.Extensions.Code)
+				continue
+			}
+			if err.Extensions.StatusCode != expectedErr.Extensions.StatusCode {
+				t.Logf("extensions status code did not match, expected %d, got %d", expectedErr.Extensions.StatusCode, err.Extensions.StatusCode)
+				continue
+			}
+			if len(err.Extensions.Errors) != len(expectedErr.Extensions.Errors) {
+				t.Logf("extensions errors did not match, expected %d errors, got %d", len(expectedErr.Extensions.Errors), len(err.Extensions.Errors))
+				continue
+			}
+
+			compareErrors(t, expectedErr.Extensions.Errors, err.Extensions.Errors)
+
+			matchedErrors++
+			break
 		}
 	}
-	require.Len(t, actualErrors, matchedErrors)
+
+	require.Lenf(t, actualErrors, matchedErrors, "not all expected errors were matched, matched %d/%d", matchedErrors, len(actualErrors))
 }
 
 func checkContentAndErrors(t *testing.T, expectedContent string, expectedErrors []testenv.GraphQLError, body string) {
+	t.Helper()
+
 	res := testenv.GraphQLResponse{}
 	require.NoError(t, json.Unmarshal([]byte(body), &res))
-	require.Len(t, res.Errors, len(expectedErrors))
 
 	compareErrors(t, expectedErrors, res.Errors)
 	content, contentErr := res.Data.MarshalJSON()
 	require.NoError(t, contentErr)
 
 	require.Equal(t, expectedContent, string(content))
+}
+
+func TestFallbackErrors(t *testing.T) {
+	t.Parallel()
+
+	t.Run("when subgraph returns malformed JSON with 418 status, should get fallback error", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags{
+					SuppressFetchErrors: config.ApolloCompatibilityFlag{
+						Enabled: true,
+					},
+				}),
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Test1: testenv.SubgraphConfig{
+					Middleware: func(h http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							w.Header().Set("Content-Type", "application/json")
+							w.WriteHeader(418)
+							_, _ = w.Write([]byte(`{"error":"invalid appliance"}`))
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employee(id: 1) { id currentMood fieldThrowsError } }`,
+			})
+
+			checkContentAndErrors(t, `{"employee":{"id":1,"currentMood":"HAPPY","fieldThrowsError":null}}`, []testenv.GraphQLError{
+				{
+					Message: "418: I'm a teapot",
+					Extensions: testenv.GraphQLErrorExtensions{
+						StatusCode: 418,
+					},
+				},
+			}, res.Body)
+		})
+	})
+
+	t.Run("when subgraph returns malformed JSON with 200 status, should get invalid shape error", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				Test1: testenv.SubgraphConfig{
+					Middleware: func(h http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							w.Header().Set("Content-Type", "application/json")
+							w.WriteHeader(200)
+							_, _ = w.Write([]byte(`{"state":"nothing is wrong but I am not valid GraphQL response"}`))
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employee(id: 1) { id currentMood fieldThrowsError } }`,
+			})
+
+			checkContentAndErrors(t, `{"employee":{"id":1,"currentMood":"HAPPY","fieldThrowsError":null}}`, []testenv.GraphQLError{
+				{
+					Message: "Failed to fetch from Subgraph 'test1' at Path 'employee', Reason: no data or errors in response.",
+					Extensions: testenv.GraphQLErrorExtensions{
+						StatusCode: 200,
+					},
+				},
+			}, res.Body)
+		})
+	})
+
+	t.Run("when subgraph returns non JSON response with 418 status, should get fallback error", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				Test1: testenv.SubgraphConfig{
+					Middleware: func(h http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							w.Header().Set("Content-Type", "text/html")
+							w.WriteHeader(418)
+
+							// the semantic correctness of this is irrelevant, it just matters that it's not valid JSON
+							// HTML-ish text response is just used as a representative example of a non-JSON response
+							_, _ = w.Write([]byte(`<html><body>418: I'm a teapot</body></html>`))
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employee(id: 1) { id currentMood fieldThrowsError } }`,
+			})
+
+			checkContentAndErrors(t, `{"employee":{"id":1,"currentMood":"HAPPY","fieldThrowsError":null}}`, []testenv.GraphQLError{
+				{
+					Message: "418: I'm a teapot",
+					Extensions: testenv.GraphQLErrorExtensions{
+						StatusCode: 418,
+					},
+				},
+			}, res.Body)
+		})
+	})
+
+	t.Run("when subgraph returns non JSON response with 200 status, should get invalid JSON error", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				Test1: testenv.SubgraphConfig{
+					Middleware: func(h http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							w.Header().Set("Content-Type", "text/html")
+							w.WriteHeader(200)
+
+							// the semantic correctness of this is irrelevant, it just matters that it's not valid JSON
+							// HTML-ish text response is just used as a representative example of a non-JSON response
+							_, _ = w.Write([]byte(`<html><body>Everything is fine!</body></html>`))
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employee(id: 1) { id currentMood fieldThrowsError } }`,
+			})
+
+			checkContentAndErrors(t, `{"employee":{"id":1,"currentMood":"HAPPY","fieldThrowsError":null}}`, []testenv.GraphQLError{
+				{
+					Message: "Failed to fetch from Subgraph 'test1' at Path 'employee', Reason: invalid JSON.",
+					Extensions: testenv.GraphQLErrorExtensions{
+						StatusCode: 200,
+					},
+				},
+			}, res.Body)
+		})
+	})
+}
+
+func TestAllowedExtensions(t *testing.T) {
+	t.Parallel()
+
+	t.Run("in wrapped mode, only allowed extensions should be included in the propagated error", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+				cfg.Enabled = true
+				cfg.Mode = config.SubgraphErrorPropagationModeWrapped
+				cfg.AllowedExtensionFields = []string{"allowed"}
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							w.Header().Set("Content-Type", "application/json")
+							w.WriteHeader(http.StatusForbidden)
+							_, wErr := w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"allowed":"allowed","notAllowed":"notAllowed"}}]}`))
+							require.NoError(t, wErr)
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employees { id } }`,
+			})
+			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees'.","extensions":{"errors":[{"message":"Unauthorized","extensions":{"allowed":"allowed"}}],"statusCode":403}}],"data":{"employees":null}}`, res.Body)
+		})
+	})
+
+	t.Run("in wrapped mode, with AllowAllExtensionFields set, all extensions should be included in the propagated error", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+				cfg.Enabled = true
+				cfg.Mode = config.SubgraphErrorPropagationModeWrapped
+				cfg.AllowedExtensionFields = []string{"allowed"}
+				cfg.AllowAllExtensionFields = true
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							w.Header().Set("Content-Type", "application/json")
+							w.WriteHeader(http.StatusForbidden)
+							_, wErr := w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"allowed":"allowed","notAllowed":"notAllowed"}}]}`))
+							require.NoError(t, wErr)
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employees { id } }`,
+			})
+			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees'.","extensions":{"errors":[{"message":"Unauthorized","extensions":{"allowed":"allowed","notAllowed":"notAllowed"}}],"statusCode":403}}],"data":{"employees":null}}`, res.Body)
+		})
+	})
+
+	t.Run("in passthrough mode, only allowed extensions should be included in the propagated error", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+				cfg.Enabled = true
+				cfg.Mode = config.SubgraphErrorPropagationModePassthrough
+				cfg.AllowedExtensionFields = []string{"allowed"}
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							w.Header().Set("Content-Type", "application/json")
+							w.WriteHeader(http.StatusForbidden)
+							_, wErr := w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"allowed":"allowed","notAllowed":"notAllowed"}}]}`))
+							require.NoError(t, wErr)
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employees { id } }`,
+			})
+			require.Equal(t, `{"errors":[{"message":"Unauthorized","extensions":{"allowed":"allowed","statusCode":403}}],"data":{"employees":null}}`, res.Body)
+		})
+	})
+
+	t.Run("in passthrough mode, with AllowAllExtensionFields set, all extensions should be included in the propagated error", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+				cfg.Enabled = true
+				cfg.Mode = config.SubgraphErrorPropagationModePassthrough
+				cfg.AllowedExtensionFields = []string{"allowed"}
+				cfg.AllowAllExtensionFields = true
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							w.Header().Set("Content-Type", "application/json")
+							w.WriteHeader(http.StatusForbidden)
+							_, wErr := w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"allowed":"allowed","notAllowed":"notAllowed"}}]}`))
+							require.NoError(t, wErr)
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employees { id } }`,
+			})
+			require.Equal(t, `{"errors":[{"message":"Unauthorized","extensions":{"allowed":"allowed","notAllowed":"notAllowed","statusCode":403}}],"data":{"employees":null}}`, res.Body)
+		})
+	})
+
 }
 
 func TestErrorPropagation(t *testing.T) {
@@ -305,7 +568,8 @@ func TestErrorPropagation(t *testing.T) {
 				Products: testenv.SubgraphConfig{
 					Middleware: func(handler http.Handler) http.Handler {
 						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-							w.WriteHeader(http.StatusUnauthorized)
+							// if this writes a non-2XX code it will get picked up by the fallback error handler
+							w.WriteHeader(http.StatusOK)
 							_, _ = w.Write([]byte(`unauthorized`))
 						})
 					},
@@ -315,7 +579,7 @@ func TestErrorPropagation(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id details { forename surname } notes } }`,
 			})
-			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'products' at Path 'employees', Reason: invalid JSON.","extensions":{"statusCode":401}}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
+			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'products' at Path 'employees', Reason: invalid JSON.","extensions":{"statusCode":200}}],"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"},"notes":null},{"id":2,"details":{"forename":"Dustin","surname":"Deus"},"notes":null},{"id":3,"details":{"forename":"Stefan","surname":"Avram"},"notes":null},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"},"notes":null},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"},"notes":null},{"id":7,"details":{"forename":"Suvij","surname":"Surya"},"notes":null},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"},"notes":null},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"},"notes":null},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"},"notes":null},{"id":12,"details":{"forename":"David","surname":"Stutt"},"notes":null}]}}`, res.Body)
 		})
 	})
 
@@ -1116,7 +1380,7 @@ func TestErrorPropagation(t *testing.T) {
 					EnableSingleFlight:     true,
 					MaxConcurrentResolvers: 1,
 				}),
-				core.WithSubgraphRetryOptions(false, 0, 0, 0),
+				core.WithSubgraphRetryOptions(false, "", 0, 0, 0, "", nil),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			resp, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
@@ -1148,7 +1412,7 @@ func TestErrorPropagation(t *testing.T) {
 					EnableSingleFlight:     true,
 					MaxConcurrentResolvers: 1,
 				}),
-				core.WithSubgraphRetryOptions(false, 0, 0, 0),
+				core.WithSubgraphRetryOptions(false, "", 0, 0, 0, "", nil),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			resp, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
@@ -1180,7 +1444,7 @@ func TestErrorPropagation(t *testing.T) {
 					EnableSingleFlight:     true,
 					MaxConcurrentResolvers: 1,
 				}),
-				core.WithSubgraphRetryOptions(false, 0, 0, 0),
+				core.WithSubgraphRetryOptions(false, "", 0, 0, 0, "", nil),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			resp, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
@@ -1212,7 +1476,7 @@ func TestErrorPropagation(t *testing.T) {
 					EnableSingleFlight:     true,
 					MaxConcurrentResolvers: 1,
 				}),
-				core.WithSubgraphRetryOptions(false, 0, 0, 0),
+				core.WithSubgraphRetryOptions(false, "", 0, 0, 0, "", nil),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			resp, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{

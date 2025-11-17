@@ -4,12 +4,12 @@ import { extendSchemaImpl } from './extendSchema';
 import { GraphQLSchemaValidationOptions } from 'graphql/type/schema';
 
 export interface BuildASTSchemaOptions extends GraphQLSchemaValidationOptions {
+  addInvalidExtensionOrphans?: boolean;
   /**
    * Set to true to assume the SDL is valid.
    *
    * Default: false
    */
-  addInvalidExtensionOrphans?: boolean;
   assumeValidSDL?: boolean | undefined;
 }
 

@@ -12,7 +12,13 @@ import {
 import { SDLViewerActions } from "@/components/schema/sdl-viewer";
 import { SDLViewerMonaco } from "@/components/schema/sdl-viewer-monaco";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Label } from "@/components/ui/label";
 import { Loader } from "@/components/ui/loader";
 import { Pagination } from "@/components/ui/pagination";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio";
@@ -41,6 +47,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
+import { useUser } from "@/hooks/use-user";
 import { formatDateTime } from "@/lib/format-date";
 import { NextPageWithLayout } from "@/lib/page";
 import { cn } from "@/lib/utils";
@@ -51,33 +58,27 @@ import {
 } from "@heroicons/react/24/outline";
 import {
   CheckCircledIcon,
+  ChevronDownIcon,
   Component2Icon,
   GitHubLogoIcon,
   ReaderIcon,
-  ChevronDownIcon,
 } from "@radix-ui/react-icons";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
-  getProposalChecks,
   getProposal,
+  getProposalChecks,
   updateProposal,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import {
   GetProposalResponse_CurrentSubgraph,
   Proposal,
+  ProposalOrigin,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useContext, useState } from "react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Label } from "@/components/ui/label";
-import { useUser } from "@/hooks/use-user";
+import { useWorkspace } from "@/hooks/use-workspace";
 
 export const ProposalDetails = ({
   proposal,
@@ -92,7 +93,7 @@ export const ProposalDetails = ({
   const user = useUser();
   const graphData = useContext(GraphContext);
 
-  const namespace = router.query.namespace as string;
+  const { namespace: { name: namespace } } = useWorkspace();
   const slug = router.query.slug as string;
   const id = router.query.proposalId as string;
   const tab = router.query.tab as string;
@@ -226,6 +227,7 @@ export const ProposalDetails = ({
     state,
     subgraphs,
     latestCheckSuccess,
+    origin,
   } = proposal;
 
   return (
@@ -303,11 +305,32 @@ export const ProposalDetails = ({
           <div className="flex flex-1 items-center justify-end gap-1">
             {state === "DRAFT" && (
               <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button className="ml-4" disabled={isApproving || isClosing}>
-                    Review Changes
-                    <ChevronDownIcon className="ml-2 h-4 w-4" />
-                  </Button>
+                <DropdownMenuTrigger asChild disabled={origin !== ProposalOrigin.INTERNAL}>
+                  {origin === ProposalOrigin.INTERNAL ? (
+                    <Button
+                      className="ml-4"
+                      disabled={isApproving || isClosing}
+                    >
+                      Review Changes
+                      <ChevronDownIcon className="ml-2 h-4 w-4" />
+                    </Button>
+                  ) : (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span
+                          className={buttonVariants({
+                            className: "ml-4 cursor-not-allowed opacity-60 hover:!bg-primary",
+                          })}
+                        >
+                          Review Changes
+                          <ChevronDownIcon className="ml-2 h-4 w-4" />
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        This proposal was created outside of Cosmo and cannot be updated within Cosmo.
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-[500px] p-3">
                   <div className="flex flex-col space-y-4 px-2 py-1">
@@ -560,6 +583,7 @@ export const ProposalDetails = ({
                               graphPruningSkipped,
                               checkedSubgraphs,
                               proposalMatch,
+                              linkedChecks,
                             }) => {
                               const isSuccessful = isCheckSuccessful(
                                 isComposable,
@@ -569,6 +593,16 @@ export const ProposalDetails = ({
                                 hasGraphPruningErrors,
                                 clientTrafficCheckSkipped,
                                 proposalMatch === "error",
+                                linkedChecks.some(
+                                  (linkedCheck) =>
+                                    linkedCheck.hasClientTraffic &&
+                                    !linkedCheck.isForcedSuccess,
+                                ),
+                                linkedChecks.some(
+                                  (linkedCheck) =>
+                                    linkedCheck.hasGraphPruningErrors &&
+                                    !linkedCheck.isForcedSuccess,
+                                ),
                               );
 
                               const path = `/${user?.currentOrganization.slug}/${graphData?.graph?.namespace}/graph/${graphData?.graph?.name}/checks/${id}`;

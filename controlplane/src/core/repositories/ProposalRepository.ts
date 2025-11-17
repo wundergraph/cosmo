@@ -1,11 +1,11 @@
-import { and, desc, eq, gt, lt } from 'drizzle-orm';
+import { and, count, desc, eq, gt, lt } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
-import { ProposalState } from '../../db/models.js';
+import { ProposalState, ProposalOrigin } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import { GetChecksResponse, Label, LintSeverityLevel, ProposalDTO, ProposalSubgraphDTO } from '../../types/index.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
-import { normalizeLabels } from '../util.js';
+import { isCheckSuccessful, normalizeLabels } from '../util.js';
 import { SchemaCheckRepository } from './SchemaCheckRepository.js';
 
 /**
@@ -19,6 +19,7 @@ export class ProposalRepository {
     name,
     userId,
     proposalSubgraphs,
+    origin,
   }: {
     federatedGraphId: string;
     name: string;
@@ -32,6 +33,7 @@ export class ProposalRepository {
       currentSchemaVersionId?: string;
       labels: Label[];
     }[];
+    origin: ProposalOrigin;
   }): Promise<ProposalDTO> {
     const proposal = await this.db
       .insert(schema.proposals)
@@ -40,6 +42,7 @@ export class ProposalRepository {
         name,
         createdById: userId,
         state: 'DRAFT',
+        origin,
       })
       .returning();
 
@@ -63,6 +66,7 @@ export class ProposalRepository {
       createdById: proposal[0].createdById || '',
       state: proposal[0].state,
       federatedGraphId: proposal[0].federatedGraphId,
+      origin: proposal[0].origin,
     };
   }
 
@@ -78,6 +82,7 @@ export class ProposalRepository {
         createdByEmail: schema.users.email,
         state: schema.proposals.state,
         federatedGraphId: schema.proposals.federatedGraphId,
+        origin: schema.proposals.origin,
       })
       .from(schema.proposals)
       .leftJoin(schema.users, eq(schema.proposals.createdById, schema.users.id))
@@ -109,6 +114,7 @@ export class ProposalRepository {
         createdByEmail: proposal[0].createdByEmail || '',
         state: proposal[0].state,
         federatedGraphId: proposal[0].federatedGraphId,
+        origin: proposal[0].origin,
       },
       proposalSubgraphs: proposalSubgraphs.map((subgraph) => ({
         id: subgraph.id,
@@ -139,6 +145,7 @@ export class ProposalRepository {
         createdByEmail: schema.users.email,
         state: schema.proposals.state,
         federatedGraphId: schema.proposals.federatedGraphId,
+        origin: schema.proposals.origin,
       })
       .from(schema.proposals)
       .leftJoin(schema.users, eq(schema.proposals.createdById, schema.users.id))
@@ -171,6 +178,7 @@ export class ProposalRepository {
         createdByEmail: proposal[0].createdByEmail || '',
         state: proposal[0].state,
         federatedGraphId: proposal[0].federatedGraphId,
+        origin: proposal[0].origin,
       },
       proposalSubgraphs: proposalSubgraphs.map((subgraph) => ({
         id: subgraph.id,
@@ -218,6 +226,7 @@ export class ProposalRepository {
         createdByEmail: schema.users.email,
         state: schema.proposals.state,
         federatedGraphId: schema.proposals.federatedGraphId,
+        origin: schema.proposals.origin,
       })
       .from(schema.proposals)
       .leftJoin(schema.users, eq(schema.proposals.createdById, schema.users.id))
@@ -263,6 +272,7 @@ export class ProposalRepository {
           createdByEmail: proposal.createdByEmail || '',
           state: proposal.state,
           federatedGraphId: proposal.federatedGraphId,
+          origin: proposal.origin,
         },
         proposalSubgraphs: proposalSubgraphs.map((subgraph) => ({
           id: subgraph.id,
@@ -279,6 +289,35 @@ export class ProposalRepository {
     return {
       proposals: proposalsWithSubgraphs,
     };
+  }
+
+  public async countByFederatedGraphId({
+    federatedGraphId,
+    startDate,
+    endDate,
+  }: {
+    federatedGraphId: string;
+    startDate?: string;
+    endDate?: string;
+  }): Promise<number> {
+    let whereCondition: any = eq(schema.proposals.federatedGraphId, federatedGraphId);
+
+    if (startDate && endDate) {
+      whereCondition = and(
+        whereCondition,
+        gt(schema.proposals.createdAt, new Date(startDate)),
+        lt(schema.proposals.createdAt, new Date(endDate)),
+      );
+    }
+
+    const result = await this.db
+      .select({
+        count: count(),
+      })
+      .from(schema.proposals)
+      .where(whereCondition);
+
+    return result[0]?.count || 0;
   }
 
   public async updateProposal({
@@ -481,6 +520,7 @@ export class ProposalRepository {
 
   public async getLatestCheckForProposal(
     proposalId: string,
+    organizationId: string,
   ): Promise<{ checkId: string; isSuccessful: boolean } | null> {
     const latestCheck = await this.db
       .select({
@@ -521,11 +561,29 @@ export class ProposalRepository {
     const hasGraphPruningErrors = Boolean(check[0].hasGraphPruningErrors);
     const clientTrafficCheckSkipped = Boolean(check[0].clientTrafficCheckSkipped);
 
-    const isSuccessful =
-      isComposable &&
-      (!isBreaking || (isBreaking && !hasClientTraffic && !clientTrafficCheckSkipped)) &&
-      !hasLintErrors &&
-      !hasGraphPruningErrors;
+    const schemaCheckRepo = new SchemaCheckRepository(this.db);
+    const linkedChecks = await schemaCheckRepo.getLinkedSchemaChecks({
+      schemaCheckID: check[0].id,
+      organizationId,
+    });
+    const isLinkedTrafficCheckFailed = linkedChecks.some(
+      (linkedCheck) => linkedCheck.hasClientTraffic && !linkedCheck.isForcedSuccess,
+    );
+    const isLinkedPruningCheckFailed = linkedChecks.some(
+      (linkedCheck) => linkedCheck.hasGraphPruningErrors && !linkedCheck.isForcedSuccess,
+    );
+
+    const isSuccessful = isCheckSuccessful({
+      isComposable,
+      isBreaking,
+      hasClientTraffic,
+      hasLintErrors,
+      hasGraphPruningErrors,
+      clientTrafficCheckSkipped,
+      hasProposalMatchError: false,
+      isLinkedTrafficCheckFailed,
+      isLinkedPruningCheckFailed,
+    });
 
     return {
       checkId: check[0].id,
@@ -536,6 +594,7 @@ export class ProposalRepository {
   public async getChecksByProposalId({
     proposalId,
     federatedGraphId,
+    organizationId,
     limit,
     offset,
     startDate,
@@ -543,6 +602,7 @@ export class ProposalRepository {
   }: {
     proposalId: string;
     federatedGraphId: string;
+    organizationId: string;
     limit: number;
     offset: number;
     startDate?: string;
@@ -610,6 +670,11 @@ export class ProposalRepository {
           federatedGraphId,
         });
 
+        const linkedChecks = await schemaCheckRepo.getLinkedSchemaChecks({
+          schemaCheckID: c.id,
+          organizationId,
+        });
+
         return {
           id: c.id,
           timestamp: c.createdAt.toISOString(),
@@ -636,6 +701,7 @@ export class ProposalRepository {
           compositionSkipped: c.compositionSkipped ?? false,
           breakingChangesSkipped: c.breakingChangesSkipped ?? false,
           errorMessage: c.errorMessage || undefined,
+          linkedChecks,
         };
       }),
     );

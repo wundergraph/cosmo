@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"sort"
 	"strconv"
 	"strings"
@@ -48,20 +49,20 @@ type MetricsService struct {
 	conn clickhouse.Conn
 
 	// opGuardCache is used to prevent duplicate writes of the same operation
-	opGuardCache *ristretto.Cache[string, struct{}]
+	opGuardCache *ristretto.Cache[uint64, struct{}]
 
 	processor *batchprocessor.BatchProcessor[SchemaUsageRequestItem]
 }
 
 // NewMetricsService creates a new metrics service
 func NewMetricsService(logger *zap.Logger, chConn clickhouse.Conn, processorConfig ProcessorConfig) *MetricsService {
-	cacheConfig := &ristretto.Config[string, struct{}]{
+	cacheConfig := &ristretto.Config[uint64, struct{}]{
 		MaxCost:            50_000,
 		NumCounters:        50_000 * 10,
 		BufferItems:        64,
 		IgnoreInternalCost: true,
 	}
-	opGuardCache, err := ristretto.NewCache[string, struct{}](cacheConfig)
+	opGuardCache, err := ristretto.NewCache[uint64, struct{}](cacheConfig)
 	if err != nil {
 		panic(err)
 	}
@@ -160,23 +161,45 @@ func (s *MetricsService) Shutdown(timeout time.Duration) {
 	}
 }
 
+// buildOperationCacheKey creates a composite key that uniquely identifies an operation
+// across organizations, federated graphs, and operation details to prevent collisions.
+// Matches the primary key used in the operation storage database (clickhouse).
+// Uses FNV-1a hash for efficient cache lookups with minimal memory overhead.
+func buildOperationCacheKey(federatedGraphID, organizationID, operationHash, operationName, operationType string) uint64 {
+	h := fnv.New64a()
+	// Write all components to the hash
+	// No need to check errors as hash.Hash.Write never returns an error
+	_, _ = h.Write([]byte(federatedGraphID))
+	_, _ = h.Write([]byte(":"))
+	_, _ = h.Write([]byte(organizationID))
+	_, _ = h.Write([]byte(":"))
+	_, _ = h.Write([]byte(operationHash))
+	_, _ = h.Write([]byte(":"))
+	_, _ = h.Write([]byte(operationName))
+	_, _ = h.Write([]byte(":"))
+	_, _ = h.Write([]byte(operationType))
+	return h.Sum64()
+}
+
 // prepareClickhouseBatches prepares the clickhouse batches for the given batch
-// of schema usage items. It returns the operation, metric and request count batches.
+// of schema usage items. It returns the operation, metric and request count batches,
+// along with a slice of cache keys for operations that were added to the batch.
 // If there is nothing to be processed, the corresponding batch will be nil.
 func (s *MetricsService) prepareClickhouseBatches(
 	ctx context.Context, insertTime time.Time, batch []SchemaUsageRequestItem,
-) (driver.Batch, driver.Batch, driver.Batch) {
+) (driver.Batch, driver.Batch, driver.Batch, []uint64) {
 	var (
 		err               error
 		operationBatch    driver.Batch
 		metricBatch       driver.Batch
 		requestCountBatch driver.Batch
 
-		hasMetrics = false
+		hasMetrics  = false
+		opCacheKeys []uint64
 	)
 
 	if len(batch) == 0 {
-		return nil, nil, nil
+		return nil, nil, nil, nil
 	}
 
 	if requestCountBatch, err = s.conn.PrepareBatch(ctx, `INSERT INTO gql_metrics_router_requests`); err != nil {
@@ -203,7 +226,15 @@ func (s *MetricsService) prepareClickhouseBatches(
 				hasMetrics = true
 			}
 
-			if _, exists := s.opGuardCache.Get(su.OperationInfo.Hash); su.RequestDocument == "" || exists {
+			opCacheKey := buildOperationCacheKey(
+				item.Claims.FederatedGraphID,
+				item.Claims.OrganizationID,
+				su.OperationInfo.Hash,
+				su.OperationInfo.Name,
+				strings.ToLower(su.OperationInfo.Type.String()),
+			)
+
+			if _, exists := s.opGuardCache.Get(opCacheKey); su.RequestDocument == "" || exists {
 				continue
 			}
 
@@ -234,12 +265,15 @@ func (s *MetricsService) prepareClickhouseBatches(
 				s.logger.Error("Failed to append operation to batch", zap.Error(err))
 				continue
 			}
+
+			// Store the cache key to avoid recomputing it later
+			opCacheKeys = append(opCacheKeys, opCacheKey)
 		}
 	}
 
 	// If we do not have any metrics to process, we can return early.
 	if !hasMetrics {
-		return operationBatch, nil, requestCountBatch
+		return operationBatch, nil, requestCountBatch, opCacheKeys
 	}
 
 	for _, item := range batch {
@@ -265,7 +299,7 @@ func (s *MetricsService) prepareClickhouseBatches(
 		}
 	}
 
-	return operationBatch, metricBatch, requestCountBatch
+	return operationBatch, metricBatch, requestCountBatch, opCacheKeys
 }
 
 func (s *MetricsService) appendUsageMetrics(
@@ -381,7 +415,7 @@ func (s *MetricsService) processBatch(_ context.Context, batch []SchemaUsageRequ
 	insertTime := time.Now()
 	insertCtx := context.Background()
 
-	operationsBatch, metricsBatch, requestCountBatch := s.prepareClickhouseBatches(insertCtx, insertTime, batch)
+	operationsBatch, metricsBatch, requestCountBatch, opCacheKeys := s.prepareClickhouseBatches(insertCtx, insertTime, batch)
 
 	var wg sync.WaitGroup
 
@@ -398,13 +432,11 @@ func (s *MetricsService) processBatch(_ context.Context, batch []SchemaUsageRequ
 				return fmt.Errorf("failed to send operation batch: %w", err)
 			}
 
-			for _, item := range batch {
-				for _, su := range item.SchemaUsage {
-					// Add the operation to the cache once it has been written
-					// We use a TTL of 30 days to prevent caching of operations that are no in our database
-					// due to storage retention policies
-					s.opGuardCache.SetWithTTL(su.OperationInfo.Hash, struct{}{}, 1, 30*24*time.Hour)
-				}
+			// Add all operations to the cache once they have been written
+			// We use a TTL of 30 days to prevent caching of operations that are not in our database
+			// due to storage retention policies
+			for _, opCacheKey := range opCacheKeys {
+				s.opGuardCache.SetWithTTL(opCacheKey, struct{}{}, 1, 30*24*time.Hour)
 			}
 
 			s.opGuardCache.Wait()

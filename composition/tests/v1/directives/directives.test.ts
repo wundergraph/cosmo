@@ -1,25 +1,30 @@
 import {
-  federateSubgraphs,
-  FederationResultSuccess,
+  DEPRECATED,
+  DEPRECATED_DEFINITION,
+  DirectiveName,
   FIRST_ORDINAL,
+  INACCESSIBLE,
+  INACCESSIBLE_DEFINITION,
   invalidArgumentValueErrorMessage,
   invalidDirectiveError,
-  NormalizationResultFailure,
-  NormalizationResultSuccess,
+  NormalizationFailure,
+  NormalizationSuccess,
   normalizeSubgraph,
-  normalizeSubgraphFromString,
   parse,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   Subgraph,
+  TAG,
+  TAG_DEFINITION,
 } from '../../../src';
 import { describe, expect, test } from 'vitest';
+import { INACCESSIBLE_DIRECTIVE, SCHEMA_QUERY_DEFINITION, TAG_DIRECTIVE } from '../utils/utils';
 import {
-  baseDirectiveDefinitions,
-  schemaQueryDefinition,
-  versionOneRouterDefinitions,
-  versionTwoDirectiveDefinitions,
-} from '../utils/utils';
-import { normalizeString, schemaToSortedNormalizedString } from '../../utils/utils';
+  federateSubgraphsSuccess,
+  normalizeString,
+  normalizeSubgraphSuccess,
+  schemaToSortedNormalizedString,
+} from '../../utils/utils';
+import { DirectiveDefinitionNode } from 'graphql/language';
 
 describe('Directive tests', () => {
   describe('Normalization tests', () => {
@@ -29,7 +34,7 @@ describe('Directive tests', () => {
         na.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -46,20 +51,17 @@ describe('Directive tests', () => {
         nb.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
-          schemaQueryDefinition +
-            baseDirectiveDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             directive @z(list: [[String!]!]!) on FIELD_DEFINITION
     
             type Query {
               dummy: String! @z(list: "test")
             }
-            
-            scalar openfed__FieldSet
         `,
         ),
       );
@@ -72,7 +74,7 @@ describe('Directive tests', () => {
         nc.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -89,20 +91,17 @@ describe('Directive tests', () => {
         nd.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
-          schemaQueryDefinition +
-            baseDirectiveDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             directive @z(list: [[String!]!]) on FIELD_DEFINITION
     
             type Query {
               dummy: String! @z(list: null)
             }
-            
-            scalar openfed__FieldSet
         `,
         ),
       );
@@ -110,17 +109,10 @@ describe('Directive tests', () => {
     });
 
     test('that an object can be coerced into a List of Input Object type', () => {
-      const result = normalizeSubgraph(
-        ne.definitions,
-        ne.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.schema)).toBe(
+      const { schema, warnings } = normalizeSubgraphSuccess(ne, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
-          schemaQueryDefinition +
-            baseDirectiveDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             directive @z(list: [[Input!]!]!) on FIELD_DEFINITION
             
@@ -129,14 +121,12 @@ describe('Directive tests', () => {
             }
             
             type Query {
-              dummy: String! @z(list: {name: String})
+              dummy: String! @z(list: {name: "String"})
             }
-            
-            scalar openfed__FieldSet
         `,
         ),
       );
-      expect(result.warnings).toHaveLength(0);
+      expect(warnings).toHaveLength(0);
     });
 
     test('that an error is returned if an @inaccessible Enum attempts to coerce into a List type', () => {
@@ -145,7 +135,7 @@ describe('Directive tests', () => {
         nf.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultFailure;
+      ) as NormalizationFailure;
       expect(result.success).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toStrictEqual(
@@ -162,12 +152,12 @@ describe('Directive tests', () => {
         ng.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
-          schemaQueryDefinition +
-            versionTwoDirectiveDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            INACCESSIBLE_DIRECTIVE +
             `
             directive @z(list: [[Enum!]!]!) on FIELD_DEFINITION
 
@@ -179,10 +169,6 @@ describe('Directive tests', () => {
             type Query {
               dummy: String! @z(list: A)
             }
-
-            scalar openfed__FieldSet
-            
-            scalar openfed__Scope
         `,
         ),
       );
@@ -195,12 +181,11 @@ describe('Directive tests', () => {
         nh.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
-          schemaQueryDefinition +
-            baseDirectiveDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             directive @z(list: [[Int!]!]!) on FIELD_DEFINITION
             
@@ -208,8 +193,6 @@ describe('Directive tests', () => {
             type Query {
               dummy: String! @z(list: 1)
             }
-            
-            scalar openfed__FieldSet
         `,
         ),
       );
@@ -222,12 +205,11 @@ describe('Directive tests', () => {
         ni.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
-          schemaQueryDefinition +
-            baseDirectiveDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             directive @z(list: [[Float!]!]!) on FIELD_DEFINITION
             
@@ -235,8 +217,6 @@ describe('Directive tests', () => {
             type Query {
               dummy: String! @z(list: 1.1)
             }
-            
-            scalar openfed__FieldSet
         `,
         ),
       );
@@ -249,12 +229,11 @@ describe('Directive tests', () => {
         nj.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
-          schemaQueryDefinition +
-            baseDirectiveDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             directive @z(list: [[Scalar!]!]!) on FIELD_DEFINITION
             
@@ -264,8 +243,6 @@ describe('Directive tests', () => {
             }
             
             scalar Scalar
-            
-            scalar openfed__FieldSet
         `,
         ),
       );
@@ -278,12 +255,11 @@ describe('Directive tests', () => {
         nk.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
-          schemaQueryDefinition +
-            baseDirectiveDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
             directive @z(float: Float!) on FIELD_DEFINITION
             
@@ -291,8 +267,6 @@ describe('Directive tests', () => {
             type Query {
               dummy: String! @z(float: 1)
             }
-            
-            scalar openfed__FieldSet
         `,
         ),
       );
@@ -305,32 +279,13 @@ describe('Directive tests', () => {
         subgraphA.name,
         undefined,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
+      ) as NormalizationSuccess;
       expect(result.success).toBe(true);
     });
 
     test('that directives declared after schema definitions and extensions are still valid #1', () => {
-      const result = normalizeSubgraphFromString(
-        `
-        schema @directiveOne(argOne: "value") {
-          query: Queries
-        }
-        
-        type Queries {
-          dummy: String!
-        }
-      
-        extend schema @directiveTwo(argOne: "value")
-        
-        directive @directiveOne(argOne: String!) on SCHEMA
-        
-        directive @directiveTwo(argOne: String!) on SCHEMA
-      `,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.schema)).toBe(
+      const { schema } = normalizeSubgraphSuccess(naaaa, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
           `
         schema @directiveOne(argOne: "value") @directiveTwo(argOne: "value") {
@@ -338,41 +293,38 @@ describe('Directive tests', () => {
         }
         
         directive @directiveOne(argOne: String!) on SCHEMA
-        directive @directiveTwo(argOne: String!) on SCHEMA` +
-            baseDirectiveDefinitions +
-            `
+        directive @directiveTwo(argOne: String!) on SCHEMA
+        
         type Queries {
           dummy: String!
         }
-        
-        scalar openfed__FieldSet
       `,
         ),
       );
     });
 
-    test('that directives declared after schema definitions and extensions are still valid #2', () => {
-      const result = normalizeSubgraphFromString(
-        `
-        extend schema @directiveOne(argOne: "value")
-        
-        extend schema @directiveTwo(argOne: "value")
-        
-        directive @directiveOne(argOne: String!) on SCHEMA
-        
-        directive @directiveTwo(argOne: String!) on SCHEMA
-      `,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.schema)).toBe(
+    // Schema extensions cannot be added to the SDL currently because it breaks the engine
+    test.skip('that directives declared after schema definitions and extensions are still valid #2', () => {
+      const { schema } = normalizeSubgraphSuccess(nbaaa, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
           `
-        directive @directiveOne(argOne: String!) on SCHEMA
-        directive @directiveTwo(argOne: String!) on SCHEMA` +
-            baseDirectiveDefinitions +
-            `scalar openfed__FieldSet`,
+          extend schema @directiveOne(argOne: "value") @directiveTwo(argOne: "value")
+          directive @directiveOne(argOne: String!) on SCHEMA
+          directive @directiveTwo(argOne: String!) on SCHEMA`,
+        ),
+      );
+    });
+
+    test('that @deprecated  propagates its default argument if none is provided', () => {
+      const { schema } = normalizeSubgraphSuccess(ncaaa, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+          type Query {
+            a: ID @deprecated(reason: "No longer supported")
+          }`,
         ),
       );
     });
@@ -380,14 +332,11 @@ describe('Directive tests', () => {
 
   describe('Federation tests', () => {
     test('that @specifiedBy is supported', () => {
-      const result = federateSubgraphs(
-        [subgraphA, subgraphB],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
+      const result = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(result.success).toBe(true);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
-          versionOneRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
         scalar JSON
         
@@ -402,18 +351,18 @@ describe('Directive tests', () => {
   });
 
   test('that directives compose', () => {
-    const result = federateSubgraphs(
+    const result = federateSubgraphsSuccess(
       [
         { name: 'a', url: '', definitions: parse(`directive @test on OBJECT type Query { dummy: String! }`) },
         { name: 'b', url: '', definitions: parse(`directive @test(a: String!) on OBJECT`) },
       ],
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
+    );
     expect(result.success).toBe(true);
   });
 
   test('that schema directives are supported', () => {
-    const result = federateSubgraphs(
+    federateSubgraphsSuccess(
       [
         {
           name: 'test',
@@ -437,8 +386,34 @@ describe('Directive tests', () => {
         },
       ],
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
-    expect(result.success).toBe(true);
+    );
+  });
+
+  test('that directive definitions are added to federation result', () => {
+    const { directiveDefinitionByName, federatedGraphSchema } = federateSubgraphsSuccess(
+      [faaaa],
+      ROUTER_COMPATIBILITY_VERSION_ONE,
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+      normalizeString(
+        SCHEMA_QUERY_DEFINITION +
+          INACCESSIBLE_DIRECTIVE +
+          TAG_DIRECTIVE +
+          `
+          type Query {
+            a: ID @inaccessible
+            b: ID @tag(name: "name")
+            c: ID @deprecated(reason: "No longer supported")
+          }`,
+      ),
+    );
+    expect(directiveDefinitionByName).toStrictEqual(
+      new Map<DirectiveName, DirectiveDefinitionNode>([
+        [DEPRECATED, DEPRECATED_DEFINITION],
+        [INACCESSIBLE, INACCESSIBLE_DEFINITION],
+        [TAG, TAG_DEFINITION],
+      ]),
+    );
   });
 });
 
@@ -502,7 +477,7 @@ const ne: Subgraph = {
     directive @z(list: [[Input!]!]!) on FIELD_DEFINITION
     
     type Query {
-      dummy: String! @z(list: { name: String })
+      dummy: String! @z(list: { name: "String" })
     }
     
     input Input {
@@ -614,4 +589,57 @@ const subgraphB: Subgraph = {
   type Query {
     field: String!
   }`),
+};
+
+const naaaa: Subgraph = {
+  name: 'naaaa',
+  url: '',
+  definitions: parse(`
+    schema @directiveOne(argOne: "value") @directiveTwo(argOne: "value") {
+      query: Queries
+    }
+    
+    directive @directiveOne(argOne: String!) on SCHEMA
+    directive @directiveTwo(argOne: String!) on SCHEMA
+    
+    type Queries {
+      dummy: String!
+    }
+  `),
+};
+
+const nbaaa: Subgraph = {
+  name: 'nbaaa',
+  url: '',
+  definitions: parse(`
+    extend schema @directiveOne(argOne: "value")
+    
+    extend schema @directiveTwo(argOne: "value")
+    
+    directive @directiveOne(argOne: String!) on SCHEMA
+    
+    directive @directiveTwo(argOne: String!) on SCHEMA
+  `),
+};
+
+const ncaaa: Subgraph = {
+  name: 'ncaaa',
+  url: '',
+  definitions: parse(`
+    type Query {
+      a: ID @deprecated
+    }
+  `),
+};
+
+const faaaa: Subgraph = {
+  name: 'faaaa',
+  url: '',
+  definitions: parse(`
+    type Query {
+      a: ID @inaccessible
+      b: ID @tag(name: "name")
+      c: ID @deprecated
+    }
+  `),
 };

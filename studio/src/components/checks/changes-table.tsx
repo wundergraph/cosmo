@@ -33,6 +33,8 @@ import {
 } from "../ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { useToast } from "../ui/use-toast";
+import { useWorkspace } from "@/hooks/use-workspace";
+import { useCurrentOrganization } from "@/hooks/use-current-organization";
 
 export const ChangesTable = ({
   changes,
@@ -150,6 +152,8 @@ const Row = ({
 }) => {
   const router = useRouter();
   const { toast } = useToast();
+  const { namespace: { name: namespace } } = useWorkspace();
+  const organizationSlug = useCurrentOrganization()?.slug;
   const graphContext = useContext(GraphContext);
   const pageNumber = router.query.page
     ? parseInt(router.query.page as string)
@@ -296,8 +300,8 @@ const Row = ({
                       ? {
                           pathname: `/[organizationSlug]/[namespace]/graph/[slug]/schema`,
                           query: {
-                            organizationSlug: router.query.organizationSlug,
-                            namespace: router.query.namespace,
+                            organizationSlug,
+                            namespace,
                             slug: router.query.slug,
                             typename: path?.split(".")?.[0],
                           },

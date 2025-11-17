@@ -20,6 +20,9 @@ playground:
   path: '/my-playground'
   concurrency_limit: 1500
 introspection_enabled: true
+introspection:
+  enabled: true
+  secret: 'AN_EXAMPLE_PLACEHOLDER_SECRET_ONLY'
 json_log: true
 shutdown_delay: 15s
 grace_period: 20s
@@ -84,6 +87,9 @@ access_logs:
       - key: 'request_information'
         value_from:
           expression: "request.error ?? 'success'"
+    ignore_query_params_list:
+      - variables
+      - anothervalue
   subgraphs:
     enabled: true
     fields:
@@ -170,7 +176,8 @@ telemetry:
 
       schema_usage:
         enabled: true
-        include_operation_sha: false
+        include_operation_sha: true
+        sample_rate: 1.0  # Supports any rate: 1.0, 0.8, 0.5, 0.1, 0.01, etc.
 
 cache_control_policy:
   enabled: true
@@ -198,6 +205,7 @@ traffic_shaping:
     max_request_body_size: 5MB
     max_header_bytes: 4MiB
     decompression_enabled: false
+    response_compression_min_size: 4KiB
   all: # Rules are applied to all subgraph requests.
     # Subgraphs transport options
     request_timeout: 60s
@@ -263,6 +271,7 @@ headers:
 # Authentication and Authorization
 # See https://cosmo-docs.wundergraph.com/router/authentication-and-authorization for more information
 authentication:
+  ignore_introspection: false
   jwt:
     jwks:
       - url: 'https://example.com/.well-known/jwks.json'
@@ -270,7 +279,12 @@ authentication:
         algorithms: ['RS256']
       - url: 'https://example.com/.well-known/jwks2.json'
         refresh_interval: 2m
-        algorithms: ['RS256', 'HS256']
+        algorithms: ['RS256', 'ES256']
+        refresh_unknown_kid:
+          enabled: true
+          max_wait: 10s
+          interval: 5s
+          burst: 3
       - url: 'https://example.com/.well-known/jwks3.json'
     header_name: Authorization
     header_value_prefix: Bearer
@@ -314,7 +328,7 @@ events:
     redis:
       - id: my-redis
         urls:
-          - "redis://localhost:6379/11"
+          - 'redis://localhost:6379/11'
         cluster_enabled: true
 
 engine:
@@ -426,6 +440,7 @@ security:
       enabled: true
       limit: 4
       ignore_persisted_operations: true
+  operation_name_length_limit: 2000
 persisted_operations:
   safelist:
     enabled: true
@@ -444,6 +459,19 @@ automatic_persisted_queries:
   storage:
     provider_id: redis
     object_prefix: 'cosmo_apq'
+
+subgraph_error_propagation:
+  mode: pass-through
+  rewrite_paths: true
+  attach_service_name: true
+  default_extension_code: DOWNSTREAM_SERVICE_ERROR
+  omit_locations: true
+  omit_extensions: true
+  propagate_status_codes: false
+  allowed_extension_fields:
+    - 'field1'
+    - 'field2'
+  allow_all_extension_fields: true
 
 execution_config:
   storage:

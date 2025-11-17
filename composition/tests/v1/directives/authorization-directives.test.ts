@@ -5,10 +5,16 @@ import {
   MAX_OR_SCOPES,
   orScopesLimitError,
   parse,
+  QUERY,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   Subgraph,
 } from '../../../src';
-import { schemaQueryDefinition, versionTwoDirectiveDefinitions, versionTwoRouterDefinitions } from '../utils/utils';
+import {
+  AUTHENTICATED_DIRECTIVE,
+  OPENFED_SCOPE,
+  REQUIRES_SCOPES_DIRECTIVE,
+  SCHEMA_QUERY_DEFINITION,
+} from '../utils/utils';
 import {
   federateSubgraphsFailure,
   federateSubgraphsSuccess,
@@ -54,8 +60,8 @@ describe('Authorization directives tests', () => {
       );
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
-          schemaQueryDefinition +
-            versionTwoDirectiveDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            AUTHENTICATED_DIRECTIVE +
             `
           type Object {
             b: Boolean!
@@ -64,10 +70,6 @@ describe('Authorization directives tests', () => {
           type Query {
             object: Object! @authenticated
           }
-          
-          scalar openfed__FieldSet
-          
-          scalar openfed__Scope
         `,
         ),
       );
@@ -91,8 +93,8 @@ describe('Authorization directives tests', () => {
       );
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
-          schemaQueryDefinition +
-            versionTwoDirectiveDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            AUTHENTICATED_DIRECTIVE +
             `
           type Object @authenticated {
             b: Boolean!
@@ -101,10 +103,6 @@ describe('Authorization directives tests', () => {
           type Query {
             object: Object!
           }
-          
-          scalar openfed__FieldSet
-          
-          scalar openfed__Scope
         `,
         ),
       );
@@ -154,8 +152,8 @@ describe('Authorization directives tests', () => {
       );
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
-          schemaQueryDefinition +
-            versionTwoDirectiveDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            REQUIRES_SCOPES_DIRECTIVE +
             `
           type Object @requiresScopes(scopes: [["a", "b"], ["c"]]) {
             b: Boolean!
@@ -164,11 +162,8 @@ describe('Authorization directives tests', () => {
           type Query {
             object: Object @requiresScopes(scopes: [["a"], ["b"]])
           }
-          
-          scalar openfed__FieldSet
-          
-          scalar openfed__Scope
-        `,
+        ` +
+            OPENFED_SCOPE,
         ),
       );
     });
@@ -217,8 +212,8 @@ describe('Authorization directives tests', () => {
       );
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
-          schemaQueryDefinition +
-            versionTwoDirectiveDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            REQUIRES_SCOPES_DIRECTIVE +
             `
           type Object @requiresScopes(scopes: [["a"], ["b"], ["c"]]) {
             b: Boolean!
@@ -227,11 +222,8 @@ describe('Authorization directives tests', () => {
           type Query {
             object: Object @requiresScopes(scopes: [["a", "b"]])
           }
-          
-          scalar openfed__FieldSet
-          
-          scalar openfed__Scope
-        `,
+        ` +
+            OPENFED_SCOPE,
         ),
       );
     });
@@ -306,8 +298,9 @@ describe('Authorization directives tests', () => {
       );
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
-          schemaQueryDefinition +
-            versionTwoDirectiveDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            AUTHENTICATED_DIRECTIVE +
+            REQUIRES_SCOPES_DIRECTIVE +
             `
           type Object @authenticated @requiresScopes(scopes: [["b", "c"], ["d"]]) {
             b: Boolean! @authenticated @requiresScopes(scopes: [["f"], ["c"]])
@@ -319,11 +312,8 @@ describe('Authorization directives tests', () => {
           }
           
           scalar Scalar @authenticated @requiresScopes(scopes: [["c", "e"], ["d"]])
-          
-          scalar openfed__FieldSet
-          
-          scalar openfed__Scope
-        `,
+        ` +
+            OPENFED_SCOPE,
         ),
       );
     });
@@ -380,19 +370,16 @@ describe('Authorization directives tests', () => {
       );
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
-          schemaQueryDefinition +
-            versionTwoDirectiveDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            REQUIRES_SCOPES_DIRECTIVE +
             `
           type Query {
             scalar: Scalar! @requiresScopes(scopes: [["a"], ["b"], ["c"]])
           }
           
           scalar Scalar @requiresScopes(scopes: [["a"], ["b"], ["c"]])
-          
-          scalar openfed__FieldSet
-          
-          scalar openfed__Scope
-        `,
+        ` +
+            OPENFED_SCOPE,
         ),
       );
     });
@@ -446,19 +433,16 @@ describe('Authorization directives tests', () => {
       );
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
-          schemaQueryDefinition +
-            versionTwoDirectiveDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            REQUIRES_SCOPES_DIRECTIVE +
             `
           type Query {
             scalar: Scalar! @requiresScopes(scopes: [["a"], ["b"], ["c"]])
           }
           
           scalar Scalar @requiresScopes(scopes: [["a"], ["b"], ["c"], ["d"]])
-                
-          scalar openfed__FieldSet
-          
-          scalar openfed__Scope
-        `,
+          ` +
+            OPENFED_SCOPE,
         ),
       );
     });
@@ -507,40 +491,41 @@ describe('Authorization directives tests', () => {
       );
       expect(schemaToSortedNormalizedString(result.schema)).toBe(
         normalizeString(
-          schemaQueryDefinition +
-            versionTwoDirectiveDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            REQUIRES_SCOPES_DIRECTIVE +
             `
           type Query {
             scalar: Scalar! @requiresScopes(scopes: [["a", "b", "c"]])
           }
           
           scalar Scalar @requiresScopes(scopes: [["a", "b"], ["a"]])
-                
-          scalar openfed__FieldSet
-          
-          scalar openfed__Scope
-        `,
+        ` +
+            OPENFED_SCOPE,
         ),
       );
     });
   });
 
-  describe('Federation Tests', () => {
+  describe('Federation tests', () => {
     test('that @authenticated is persisted in the federated schema', () => {
-      const result = federateSubgraphsSuccess([faa, fab], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.fieldConfigurations).toStrictEqual([
+      const { fieldConfigurations, federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+        [faa, fab],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(fieldConfigurations).toStrictEqual([
         {
           argumentNames: [],
           fieldName: 'object',
-          typeName: 'Query',
+          typeName: QUERY,
           requiresAuthentication: true,
           requiredScopes: [],
           requiredScopesByOR: [],
         },
       ]);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            AUTHENTICATED_DIRECTIVE +
             `
           type Object @authenticated {
             age: Int!
@@ -551,28 +536,46 @@ describe('Authorization directives tests', () => {
           type Query {
             object: Object!
           }
+        `,
+        ),
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+          type Object {
+            age: Int!
+            id: ID!
+            name: String!
+          }
           
-          scalar openfed__Scope
+          type Query {
+            object: Object!
+          }
         `,
         ),
       );
     });
 
     test('that @requiresScopes is persisted in the federated schema', () => {
-      const result = federateSubgraphsSuccess([fab, fac], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.fieldConfigurations).toStrictEqual([
+      const { fieldConfigurations, federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+        [fab, fac],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(fieldConfigurations).toStrictEqual([
         {
           argumentNames: [],
           fieldName: 'object',
-          typeName: 'Query',
+          typeName: QUERY,
           requiresAuthentication: false,
           requiredScopes: [['b']],
           requiredScopesByOR: [['b']],
         },
       ]);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            REQUIRES_SCOPES_DIRECTIVE +
             `
           type Object @requiresScopes(scopes: [["b"]]) {
             age: Int!
@@ -583,8 +586,23 @@ describe('Authorization directives tests', () => {
           type Query {
             object: Object!
           }
+        ` +
+            OPENFED_SCOPE,
+        ),
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+          type Object {
+            age: Int!
+            id: ID!
+            name: String!
+          }
           
-          scalar openfed__Scope
+          type Query {
+            object: Object!
+          }
         `,
         ),
       );
@@ -612,7 +630,9 @@ describe('Authorization directives tests', () => {
       ]);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            AUTHENTICATED_DIRECTIVE +
+            REQUIRES_SCOPES_DIRECTIVE +
             `
           type Object @requiresScopes(scopes: [["b"]]) {
             age: Int!
@@ -623,9 +643,8 @@ describe('Authorization directives tests', () => {
           type Query {
             object: Object!
           }
-          
-          scalar openfed__Scope
-        `,
+        ` +
+            OPENFED_SCOPE,
         ),
       );
     });
@@ -680,7 +699,9 @@ describe('Authorization directives tests', () => {
       ]);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            AUTHENTICATED_DIRECTIVE +
+            REQUIRES_SCOPES_DIRECTIVE +
             `
         type Entity @authenticated @requiresScopes(scopes: [["b"]]) {
           age: Int!
@@ -696,9 +717,8 @@ describe('Authorization directives tests', () => {
         }
 
         scalar Scalar @authenticated
-        
-        scalar openfed__Scope
-      `,
+      ` +
+            OPENFED_SCOPE,
         ),
       );
     });
@@ -775,7 +795,9 @@ describe('Authorization directives tests', () => {
       ]);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            AUTHENTICATED_DIRECTIVE +
+            REQUIRES_SCOPES_DIRECTIVE +
             `
         type Entity implements Interface @requiresScopes(scopes: [["b"], ["d"]]) {
           age: Int!
@@ -798,9 +820,8 @@ describe('Authorization directives tests', () => {
         }
 
         scalar Scalar @requiresScopes(scopes: [["j", "e"]])
-        
-        scalar openfed__Scope
-      `,
+      ` +
+            OPENFED_SCOPE,
         ),
       );
     });
@@ -871,7 +892,9 @@ describe('Authorization directives tests', () => {
       ]);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            AUTHENTICATED_DIRECTIVE +
+            REQUIRES_SCOPES_DIRECTIVE +
             `
         type Entity implements Interface @requiresScopes(scopes: [["b"], ["d"]]) {
           age: Int!
@@ -894,9 +917,8 @@ describe('Authorization directives tests', () => {
         }
 
         scalar Scalar @requiresScopes(scopes: [["e", "j"]])
-        
-        scalar openfed__Scope
-      `,
+      ` +
+            OPENFED_SCOPE,
         ),
       );
     });
@@ -941,7 +963,9 @@ describe('Authorization directives tests', () => {
       ]);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            AUTHENTICATED_DIRECTIVE +
+            REQUIRES_SCOPES_DIRECTIVE +
             `
           type Entity @authenticated @requiresScopes(scopes: [["b", "a"]]) {
             age: Int!
@@ -956,9 +980,8 @@ describe('Authorization directives tests', () => {
           }
           
           scalar Scalar @authenticated @requiresScopes(scopes: [["f"], ["e"]])
-          
-          scalar openfed__Scope
-      `,
+      ` +
+            OPENFED_SCOPE,
         ),
       );
     });
@@ -1003,7 +1026,9 @@ describe('Authorization directives tests', () => {
       ]);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            AUTHENTICATED_DIRECTIVE +
+            REQUIRES_SCOPES_DIRECTIVE +
             `
           type Entity @authenticated @requiresScopes(scopes: [["a", "b"]]) {
             age: Int!
@@ -1018,9 +1043,8 @@ describe('Authorization directives tests', () => {
           }
           
           scalar Scalar @authenticated @requiresScopes(scopes: [["f"], ["e"]])
-          
-          scalar openfed__Scope
-      `,
+      ` +
+            OPENFED_SCOPE,
         ),
       );
     });
@@ -1119,7 +1143,9 @@ describe('Authorization directives tests', () => {
       ]);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            AUTHENTICATED_DIRECTIVE +
+            REQUIRES_SCOPES_DIRECTIVE +
             `
         type EntityOne implements Interface @requiresScopes(scopes: [["b"]]) {
           id: ID!
@@ -1153,9 +1179,8 @@ describe('Authorization directives tests', () => {
         }
         
         scalar Scalar @authenticated @requiresScopes(scopes: [["d"], ["e"]])
-        
-        scalar openfed__Scope
-      `,
+      ` +
+            OPENFED_SCOPE,
         ),
       );
     });
@@ -1254,7 +1279,9 @@ describe('Authorization directives tests', () => {
       ]);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            AUTHENTICATED_DIRECTIVE +
+            REQUIRES_SCOPES_DIRECTIVE +
             `
         type EntityOne implements Interface @requiresScopes(scopes: [["b"]]) {
           id: ID!
@@ -1288,9 +1315,8 @@ describe('Authorization directives tests', () => {
         }
         
         scalar Scalar @authenticated @requiresScopes(scopes: [["d"], ["e"]])
-        
-        scalar openfed__Scope
-      `,
+      ` +
+            OPENFED_SCOPE,
         ),
       );
     });
@@ -1326,7 +1352,9 @@ describe('Authorization directives tests', () => {
       ]);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            AUTHENTICATED_DIRECTIVE +
+            REQUIRES_SCOPES_DIRECTIVE +
             `
         enum Enum @requiresScopes(scopes: [["e", "d"]]) {
           VALUE
@@ -1338,9 +1366,8 @@ describe('Authorization directives tests', () => {
         }
         
         scalar Scalar @authenticated @requiresScopes(scopes: [["b"], ["c"]])
-        
-        scalar openfed__Scope
-      `,
+      ` +
+            OPENFED_SCOPE,
         ),
       );
     });
@@ -1376,7 +1403,9 @@ describe('Authorization directives tests', () => {
       ]);
       expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
+            AUTHENTICATED_DIRECTIVE +
+            REQUIRES_SCOPES_DIRECTIVE +
             `
         enum Enum @requiresScopes(scopes: [["d", "e"]]) {
           VALUE
@@ -1388,9 +1417,8 @@ describe('Authorization directives tests', () => {
         }
         
         scalar Scalar @authenticated @requiresScopes(scopes: [["b"], ["c"]])
-        
-        scalar openfed__Scope
-      `,
+      ` +
+            OPENFED_SCOPE,
         ),
       );
     });
@@ -1624,7 +1652,7 @@ const fcb: Subgraph = {
 };
 
 const fda: Subgraph = {
-  name: 'ng',
+  name: 'fda',
   url: '',
   definitions: parse(`
     type Query {

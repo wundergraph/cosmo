@@ -13,10 +13,9 @@ import {
 } from 'graphql';
 import {
   createEntityLookupMethodName,
-  createEntityLookupRequestName,
-  createEntityLookupResponseName,
   createOperationMethodName,
   createRequestMessageName,
+  createResolverMethodName,
   createResponseMessageName,
   graphqlArgumentToProtoField,
   graphqlEnumValueToProtoEnumValue,
@@ -30,6 +29,9 @@ import {
   EnumValueMapping,
   FieldMapping,
   GRPCMapping,
+  LookupFieldMapping,
+  LookupMapping,
+  LookupType,
   OperationMapping,
   OperationType,
   TypeFieldMapping,
@@ -93,6 +95,9 @@ export class GraphQLToProtoVisitor {
     // Process subscription type
     this.processSubscriptionType();
 
+    // Process resolvable fields
+    this.processResolvableFields();
+
     // Process all other types for field mappings
     this.processAllTypes();
 
@@ -108,34 +113,35 @@ export class GraphQLToProtoVisitor {
   private processEntityTypes(): void {
     const typeMap = this.schema.getTypeMap();
 
-    for (const typeName in typeMap) {
-      const type = typeMap[typeName];
-
+    for (const [typeName, type] of Object.entries(typeMap)) {
       // Skip built-in types and query/mutation/subscription types
       if (this.shouldSkipRootType(type)) continue;
 
       // Check if this is an entity type (has @key directive)
       if (isObjectType(type)) {
-        const keyDirective = this.getKeyDirective(type);
-        if (!keyDirective) continue;
+        const keyDirectives = this.getKeyDirectives(type);
+        if (keyDirectives.length === 0) continue;
 
-        const keyFields = this.getKeyFieldsFromDirective(keyDirective);
-        if (keyFields.length > 0) {
-          // Create entity mapping using the first key field
-          this.createEntityMapping(typeName, keyFields[0]);
+        // Process each @key directive separately
+        for (const keyDirective of keyDirectives) {
+          const key = this.getKeyFromDirective(keyDirective);
+          if (key) {
+            // Create entity mapping for each key combination
+            this.createEntityMapping(typeName, key);
+          }
         }
       }
     }
   }
 
   /**
-   * Extract the key directive from a GraphQL object type
+   * Extract all key directives from a GraphQL object type
    *
-   * @param type - The GraphQL object type to check for key directive
-   * @returns The key directive if found, undefined otherwise
+   * @param type - The GraphQL object type to check for key directives
+   * @returns Array of all key directives found
    */
-  private getKeyDirective(type: GraphQLObjectType): DirectiveNode | undefined {
-    return type.astNode?.directives?.find((d) => d.name.value === 'key');
+  private getKeyDirectives(type: GraphQLObjectType): DirectiveNode[] {
+    return type.astNode?.directives?.filter((d) => d.name.value === 'key') || [];
   }
 
   /**
@@ -148,13 +154,15 @@ export class GraphQLToProtoVisitor {
    * @param keyField - The field that serves as the entity's key
    */
   private createEntityMapping(typeName: string, keyField: string): void {
+    const rpc = createEntityLookupMethodName(typeName, keyField);
+
     const entityMapping = new EntityMapping({
       typeName,
       kind: 'entity',
       key: keyField,
-      rpc: createEntityLookupMethodName(typeName, keyField),
-      request: createEntityLookupRequestName(typeName, keyField),
-      response: createEntityLookupResponseName(typeName, keyField),
+      rpc: rpc,
+      request: createRequestMessageName(rpc),
+      response: createResponseMessageName(rpc),
     });
 
     this.mapping.entityMappings.push(entityMapping);
@@ -164,18 +172,18 @@ export class GraphQLToProtoVisitor {
    * Extract key fields from a @key directive
    *
    * The @key directive specifies which fields form the entity's primary key
-   * in Federation. This method extracts those field names.
+   * in Federation. This method extracts the key string as-is.
    *
    * @param directive - The @key directive from the GraphQL AST
-   * @returns Array of field names that form the key
+   * @returns The key string (e.g. "id" or "id upc")
    */
-  private getKeyFieldsFromDirective(directive: DirectiveNode): string[] {
+  private getKeyFromDirective(directive: DirectiveNode): string | null {
     // Extract fields argument from the key directive
     const fieldsArg = directive.arguments?.find((arg) => arg.name.value === 'fields');
     if (fieldsArg && fieldsArg.value.kind === Kind.STRING) {
-      return fieldsArg.value.value.split(' ');
+      return fieldsArg.value.value;
     }
-    return [];
+    return null;
   }
 
   /**
@@ -206,6 +214,30 @@ export class GraphQLToProtoVisitor {
    */
   private processSubscriptionType(): void {
     this.processType('Subscription', OperationType.SUBSCRIPTION, this.schema.getSubscriptionType());
+  }
+
+  /**
+   * Process the resolvable fields to generate lookup mappings
+   *
+   * Each field with arguments that is marked with @connect__fieldResolver is a resolvable field.
+   */
+  private processResolvableFields(): void {
+    const typeMap = this.schema.getTypeMap();
+
+    for (const typeName in typeMap) {
+      const type = typeMap[typeName];
+      if (this.shouldSkipRootType(type)) continue;
+
+      if (!isObjectType(type)) continue;
+
+      const fields = type.getFields();
+
+      for (const field of Object.values(fields)) {
+        if (field.args.length === 0) continue;
+
+        this.createLookupMapping(LookupType.RESOLVE, type.name, field);
+      }
+    }
   }
 
   /**
@@ -240,7 +272,7 @@ export class GraphQLToProtoVisitor {
       const mappedName = createOperationMethodName(operationTypeName, fieldName);
       this.createOperationMapping(operationType, fieldName, mappedName);
 
-      const fieldMapping = this.createFieldMapping(operationTypeName, field);
+      const fieldMapping = this.createFieldMapping(field);
       typeFieldMapping.fieldMappings.push(fieldMapping);
     }
 
@@ -264,6 +296,20 @@ export class GraphQLToProtoVisitor {
     });
 
     this.mapping.operationMappings.push(operationMapping);
+  }
+
+  private createLookupMapping(type: LookupType, typeName: string, field: GraphQLField<any, any>): void {
+    const methodName = createResolverMethodName(typeName, field.name);
+
+    const lookupMapping = new LookupMapping({
+      type,
+      lookupMapping: this.createLookupFieldMapping(typeName, field),
+      rpc: methodName,
+      request: createRequestMessageName(methodName),
+      response: createResponseMessageName(methodName),
+    });
+
+    this.mapping.resolveMappings.push(lookupMapping);
   }
 
   /**
@@ -327,7 +373,7 @@ export class GraphQLToProtoVisitor {
 
     for (const fieldName in fields) {
       const field = fields[fieldName];
-      const fieldMapping = this.createFieldMapping(type.name, field);
+      const fieldMapping = this.createFieldMapping(field);
       typeFieldMapping.fieldMappings.push(fieldMapping);
     }
 
@@ -409,7 +455,7 @@ export class GraphQLToProtoVisitor {
    * @param field - The GraphQL field to create a mapping for
    * @returns The created field mapping
    */
-  private createFieldMapping(type: string, field: GraphQLField<any, any>): FieldMapping {
+  private createFieldMapping(field: GraphQLField<any, any>): FieldMapping {
     const fieldName = field.name;
     // Convert field names to snake_case for Protocol Buffers
     const mappedFieldName = graphqlFieldToProtoField(fieldName);
@@ -419,6 +465,22 @@ export class GraphQLToProtoVisitor {
       original: fieldName,
       mapped: mappedFieldName,
       argumentMappings,
+    });
+  }
+
+  /**
+   * Create a lookup field mapping between a GraphQL type and Protocol Buffer type
+   *
+   * This includes mapping the type name and any fields the type may have.
+   *
+   * @param type - The name of the containing GraphQL type
+   * @param field - The GraphQL field to create a mapping for
+   * @returns The created lookup field mapping
+   */
+  private createLookupFieldMapping(type: string, field: GraphQLField<any, any>): LookupFieldMapping {
+    return new LookupFieldMapping({
+      type,
+      fieldMapping: this.createFieldMapping(field),
     });
   }
 

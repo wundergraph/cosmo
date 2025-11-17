@@ -13,12 +13,12 @@ import (
 )
 
 type Manager struct {
-	VisitorManager *visitorGroup
+	VisitorManager *VisitorGroup
 }
 
 func CreateNewExprManager() *Manager {
 	return &Manager{
-		VisitorManager: createVisitorMGroup(),
+		VisitorManager: createVisitorGroup(),
 	}
 }
 

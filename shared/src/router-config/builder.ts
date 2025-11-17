@@ -7,13 +7,14 @@ import {
   ROOT_TYPE_NAMES,
   ROUTER_COMPATIBILITY_VERSIONS,
   SupportedRouterCompatibilityVersion,
+  TypeName,
 } from '@wundergraph/composition';
-import { GraphQLSchema, lexicographicSortSchema } from 'graphql';
 import {
   GraphQLSubscriptionProtocol,
   GraphQLWebsocketSubprotocol,
 } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-
+import { GraphQLSchema, lexicographicSortSchema } from 'graphql';
+import { PartialMessage } from '@bufbuild/protobuf';
 import {
   ConfigurationVariable,
   ConfigurationVariableKind,
@@ -26,14 +27,14 @@ import {
   GRPCConfiguration,
   GRPCMapping,
   HTTPMethod,
+  ImageReference,
   InternedString,
   PluginConfiguration,
   RouterConfig,
   TypeField,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import { PartialMessage } from '@bufbuild/protobuf';
-import { configurationDatasToDataSourceConfiguration, generateFieldConfigurations } from './graphql-configuration.js';
 import { invalidRouterCompatibilityVersion, normalizationFailureError } from './errors.js';
+import { configurationDatasToDataSourceConfiguration, generateFieldConfigurations } from './graphql-configuration.js';
 
 export interface Input {
   federatedClientSDL: string;
@@ -63,23 +64,22 @@ export enum SubgraphKind {
 export type RouterSubgraph = ComposedSubgraph | ComposedSubgraphPlugin | ComposedSubgraphGRPC;
 
 export interface ComposedSubgraph {
-  kind: SubgraphKind.Standard;
+  readonly kind: SubgraphKind.Standard;
   id: string;
   name: string;
   sdl: string;
   url: string;
-  schemaVersionId?: string;
   subscriptionUrl: string;
   subscriptionProtocol?: SubscriptionProtocol | undefined;
   websocketSubprotocol?: WebsocketSubprotocol | undefined;
   // The intermediate representation of the engine configuration for the subgraph
-  configurationDataByTypeName?: Map<string, ConfigurationData>;
+  configurationDataByTypeName?: Map<TypeName, ConfigurationData>;
   // The normalized GraphQL schema for the subgraph
   schema?: GraphQLSchema;
 }
 
 export interface ComposedSubgraphPlugin {
-  kind: SubgraphKind.Plugin;
+  readonly kind: SubgraphKind.Plugin;
   id: string;
   version: string;
   name: string;
@@ -88,13 +88,14 @@ export interface ComposedSubgraphPlugin {
   protoSchema: string;
   mapping: GRPCMapping;
   // The intermediate representation of the engine configuration for the subgraph
-  configurationDataByTypeName?: Map<string, ConfigurationData>;
+  configurationDataByTypeName?: Map<TypeName, ConfigurationData>;
   // The normalized GraphQL schema for the subgraph
   schema?: GraphQLSchema;
+  imageReference?: ImageReference;
 }
 
 export interface ComposedSubgraphGRPC {
-  kind: SubgraphKind.GRPC;
+  readonly kind: SubgraphKind.GRPC;
   id: string;
   name: string;
   sdl: string;
@@ -102,7 +103,7 @@ export interface ComposedSubgraphGRPC {
   protoSchema: string;
   mapping: GRPCMapping;
   // The intermediate representation of the engine configuration for the subgraph
-  configurationDataByTypeName?: Map<string, ConfigurationData>;
+  configurationDataByTypeName?: Map<TypeName, ConfigurationData>;
   // The normalized GraphQL schema for the subgraph
   schema?: GraphQLSchema;
 }
@@ -200,6 +201,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
           plugin: new PluginConfiguration({
             name: subgraph.name,
             version: subgraph.version,
+            imageReference: subgraph.imageReference,
           }),
         });
 

@@ -189,6 +189,7 @@ describe('List Subgraphs', (ctx) => {
   test.each([
     'subgraph-admin',
     'subgraph-publisher',
+    'subgraph-viewer',
   ])('%s should be able to list subgraphs from allowed namespaces', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
 

@@ -15,7 +15,7 @@ import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError, isValidLabels } from '../../util.js';
+import { enrichLogger, getLogger, handleError, isValidLabels, newCompositionOptions } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
@@ -167,14 +167,15 @@ export function updateFeatureFlag(
       const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
 
       const composition = await fedGraphRepo.composeAndDeployGraphs({
-        federatedGraphs: allFederatedGraphsToCompose,
         actorId: authContext.userId,
-        blobStorage: opts.blobStorage,
         admissionConfig: {
           cdnBaseUrl: opts.cdnBaseUrl,
           webhookJWTSecret: opts.admissionWebhookJWTSecret,
         },
+        blobStorage: opts.blobStorage,
         chClient: opts.chClient!,
+        compositionOptions: newCompositionOptions(req.disableResolvabilityValidation),
+        federatedGraphs: allFederatedGraphsToCompose,
       });
 
       compositionErrors.push(...composition.compositionErrors);

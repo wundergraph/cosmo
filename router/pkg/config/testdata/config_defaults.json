@@ -26,6 +26,7 @@
         "HeaderName": "x-wg-trace-id"
       },
       "Attributes": null,
+      "OperationContentAttributes": false,
       "ExportGraphQLVariables": false,
       "WithNewRoot": false
     },
@@ -39,6 +40,8 @@
         "EngineStats": {
           "Subscriptions": false
         },
+        "CircuitBreaker": false,
+        "Streams": false,
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
         "Exporters": null
@@ -49,17 +52,21 @@
         "ListenAddr": "127.0.0.1:8088",
         "GraphqlCache": false,
         "ConnectionStats": false,
+        "Streams": false,
         "EngineStats": {
           "Subscriptions": false
         },
+        "CircuitBreaker": false,
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
         "ExcludeScopeInfo": false,
         "SchemaFieldUsage": {
           "Enabled": false,
-          "IncludeOperationSha": false
+          "IncludeOperationSha": false,
+          "SampleRate": 1
         }
-      }
+      },
+      "CardinalityLimit": 2000
     }
   },
   "GraphqlMetrics": {
@@ -118,6 +125,9 @@
     "Storage": {
       "ProviderID": ""
     },
+    "Session": {
+      "Stateless": true
+    },
     "GraphName": "mygraph",
     "ExcludeMutations": false,
     "EnableArbitraryOperations": false,
@@ -138,7 +148,20 @@
         "Algorithm": "backoff_jitter",
         "MaxAttempts": 5,
         "MaxDuration": 10000000000,
-        "Interval": 3000000000
+        "Interval": 3000000000,
+        "Expression": "IsRetryableStatusCode() || IsConnectionError() || IsTimeout()"
+      },
+      "CircuitBreaker": {
+        "Enabled": false,
+        "ErrorThresholdPercentage": 50,
+        "RequestThreshold": 20,
+        "SleepWindow": 5000000000,
+        "HalfOpenAttempts": 1,
+        "RequiredSuccessfulAttempts": 1,
+        "RollingDuration": 10000000000,
+        "NumBuckets": 10,
+        "ExecutionTimeout": 60000000000,
+        "MaxConcurrentRequests": -1
       },
       "RequestTimeout": 60000000000,
       "DialTimeout": 30000000000,
@@ -154,7 +177,8 @@
     "Router": {
       "MaxRequestBodyBytes": 5000000,
       "MaxHeaderBytes": 0,
-      "DecompressionEnabled": true
+      "DecompressionEnabled": true,
+      "ResponseCompressionMinSize": 4096
     },
     "Subgraphs": null
   },
@@ -165,6 +189,8 @@
   },
   "AccessLogs": {
     "Enabled": true,
+    "Level": "info",
+    "AddStacktrace": false,
     "Buffer": {
       "Enabled": false,
       "Size": 256000,
@@ -176,11 +202,15 @@
       },
       "File": {
         "Enabled": false,
-        "Path": "access.log"
+        "Path": "access.log",
+        "Mode": 416
       }
     },
     "Router": {
-      "Fields": null
+      "Fields": null,
+      "IgnoreQueryParamsList": [
+        "variables"
+      ]
     },
     "Subgraphs": {
       "Enabled": false,
@@ -202,6 +232,10 @@
   },
   "PlaygroundEnabled": true,
   "IntrospectionEnabled": true,
+  "IntrospectionConfig": {
+    "Enabled": true,
+    "Secret": ""
+  },
   "QueryPlansEnabled": true,
   "LogLevel": "info",
   "JSONLog": true,
@@ -220,7 +254,8 @@
       "HeaderName": "Authorization",
       "HeaderValuePrefix": "Bearer",
       "HeaderSources": null
-    }
+    },
+    "IgnoreIntrospection": false
   },
   "Authorization": {
     "RequireAuthentication": false,
@@ -292,9 +327,18 @@
       "Enabled": false,
       "Condition": ""
     },
+    "BlockPersistedOperations": {
+      "Enabled": false,
+      "Condition": ""
+    },
     "ComplexityCalculationCache": null,
     "ComplexityLimits": null,
-    "DepthLimit": null
+    "DepthLimit": null,
+    "ParserLimits": {
+      "ApproximateDepthLimit": 200,
+      "TotalFieldsLimit": 3500
+    },
+    "OperationNameLengthLimit": 512
   },
   "EngineExecutionConfiguration": {
     "Debug": {
@@ -340,7 +384,9 @@
     "ResolverMaxRecyclableParserSize": 32768,
     "EnableSubgraphFetchOperationName": false,
     "DisableVariablesRemapping": false,
-    "SubscriptionFetchTimeout": 30000000000
+    "EnableRequireFetchReasons": false,
+    "SubscriptionFetchTimeout": 30000000000,
+    "ValidateRequiredExternalFields": false
   },
   "WebSocket": {
     "Enabled": true,
@@ -391,6 +437,7 @@
     "OmitExtensions": false,
     "AttachServiceName": true,
     "DefaultExtensionCode": "DOWNSTREAM_SERVICE_ERROR",
+    "AllowAllExtensionFields": false,
     "AllowedExtensionFields": [
       "code"
     ],
@@ -419,6 +466,7 @@
     }
   },
   "PersistedOperationsConfig": {
+    "Disabled": false,
     "LogUnknown": false,
     "Safelist": {
       "Enabled": false
@@ -483,7 +531,10 @@
   },
   "Plugins": {
     "Enabled": false,
-    "Path": "plugins"
+    "Path": "plugins",
+    "Registry": {
+      "URL": "cosmo-registry.wundergraph.com"
+    }
   },
   "WatchConfig": {
     "Enabled": false,

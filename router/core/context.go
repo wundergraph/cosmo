@@ -5,10 +5,13 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	rcontext "github.com/wundergraph/cosmo/router/internal/context"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
@@ -25,14 +28,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/graphqlschemausage"
 	ctrace "github.com/wundergraph/cosmo/router/pkg/trace"
-)
-
-type contextKey int
-
-const (
-	requestContextKey contextKey = iota
-	subgraphResolverContextKey
-	engineLoaderHooksContextKey
 )
 
 var _ RequestContext = (*requestContext)(nil)
@@ -136,9 +131,14 @@ type RequestContext interface {
 	// SetAuthenticationScopes sets the scopes for the request on Authentication
 	// If Authentication is not set, it will be initialized with the scopes
 	SetAuthenticationScopes(scopes []string)
+
 	// SetCustomFieldValueRenderer overrides the default field value rendering behavior
 	// This can be used, e.g. to obfuscate sensitive data in the response
 	SetCustomFieldValueRenderer(renderer resolve.FieldValueRenderer)
+
+	// SetForceSha256Compute forces the computation of the Sha256Hash of the operation
+	// This is useful if the Sha256Hash is needed in custom modules but not used anywhere else
+	SetForceSha256Compute()
 }
 
 var metricAttrsPool = sync.Pool{
@@ -268,6 +268,8 @@ type requestContext struct {
 	expressionContext expr.Context
 	// customFieldValueRenderer is used to override the default field value rendering behavior
 	customFieldValueRenderer resolve.FieldValueRenderer
+	// forceSha256Compute indicates whether the Sha256Hash of the operation should definitely be computed
+	forceSha256Compute bool
 }
 
 func (c *requestContext) SetCustomFieldValueRenderer(renderer resolve.FieldValueRenderer) {
@@ -288,14 +290,14 @@ func (c *requestContext) Request() *http.Request {
 }
 
 func withRequestContext(ctx context.Context, operation *requestContext) context.Context {
-	return context.WithValue(ctx, requestContextKey, operation)
+	return context.WithValue(ctx, rcontext.RequestContextKey, operation)
 }
 
 func getRequestContext(ctx context.Context) *requestContext {
 	if ctx == nil {
 		return nil
 	}
-	op := ctx.Value(requestContextKey)
+	op := ctx.Value(rcontext.RequestContextKey)
 	if op == nil {
 		return nil
 	}
@@ -467,6 +469,10 @@ func (c *requestContext) SetAuthenticationScopes(scopes []string) {
 	auth.SetScopes(scopes)
 }
 
+func (c *requestContext) SetForceSha256Compute() {
+	c.forceSha256Compute = true
+}
+
 type OperationContext interface {
 	// Name is the name of the operation
 	Name() string
@@ -476,8 +482,16 @@ type OperationContext interface {
 	Hash() uint64
 	// Content is the content of the operation
 	Content() string
+	// Variables is the variables of the operation
+	Variables() *astjson.Value
 	// ClientInfo returns information about the client that initiated this operation
 	ClientInfo() ClientInfo
+
+	// Sha256Hash returns the SHA256 hash of the original operation
+	// It is important to note that this hash is not calculated just because this method has been called
+	// and is only calculated based on other existing logic (such as if sha256Hash is used in expressions)
+	Sha256Hash() string
+
 	// QueryPlanStats returns some statistics about the query plan for the operation
 	// if called too early in request chain, it may be inaccurate for modules, using
 	// in Middleware is recommended
@@ -579,31 +593,79 @@ func (o *operationContext) ClientInfo() ClientInfo {
 	return *o.clientInfo
 }
 
+func (o *operationContext) Sha256Hash() string {
+	return o.sha256Hash
+}
+
 type QueryPlanStats struct {
 	TotalSubgraphFetches int
 	SubgraphFetches      map[string]int
+	SubgraphRootFields   []SubgraphRootField
 }
 
-func (p *QueryPlanStats) analyzePlanNode(plan *resolve.FetchTreeQueryPlanNode) {
-	switch plan.Kind {
+type SubgraphRootField struct {
+	SubgraphName string
+	TypeName     string
+	FieldName    string
+	Count        int
+}
+
+func (p *QueryPlanStats) analyzePlanNode(fetchNode *resolve.FetchTreeNode) {
+	switch fetchNode.Kind {
 	case resolve.FetchTreeNodeKindSingle:
-		p.analyzeSingleFetch(plan)
+		p.analyzeSingleFetch(fetchNode)
 	case resolve.FetchTreeNodeKindSequence, resolve.FetchTreeNodeKindParallel:
-		for _, child := range plan.Children {
+		for _, child := range fetchNode.ChildNodes {
 			p.analyzePlanNode(child)
 		}
 	}
 }
 
-func (p *QueryPlanStats) analyzeSingleFetch(plan *resolve.FetchTreeQueryPlanNode) {
-	key := plan.Fetch.SubgraphName
+func (p *QueryPlanStats) analyzeSingleFetch(fetchNode *resolve.FetchTreeNode) {
+	info := fetchNode.Item.Fetch.FetchInfo()
+	depsInfo := fetchNode.Item.Fetch.Dependencies()
+
+	if info == nil || depsInfo == nil {
+		return
+	}
+
+	subgraphName := info.DataSourceName
 
 	p.TotalSubgraphFetches++
 
-	if entry, ok := p.SubgraphFetches[key]; ok {
-		p.SubgraphFetches[key] = entry + 1
+	fetches := 1
+	if entry, ok := p.SubgraphFetches[subgraphName]; ok {
+		fetches += entry
+	}
+	p.SubgraphFetches[subgraphName] = fetches
+
+	// If the fetch has dependencies, it means it is a nested entity fetch,
+	// and we count it as an _entities root field fetch
+	if len(depsInfo.DependsOnFetchIDs) > 0 {
+		p.storeRootField(subgraphName, "Query", "_entities")
+		return
+	}
+
+	// If the fetch is for a named query or mutation, we count it as a root field fetch
+	for _, rootField := range info.RootFields {
+		p.storeRootField(subgraphName, rootField.TypeName, rootField.FieldName)
+	}
+}
+
+func (p *QueryPlanStats) storeRootField(subgraphName, typeName, fieldName string) {
+	idx := slices.IndexFunc(p.SubgraphRootFields, func(srf SubgraphRootField) bool {
+		return srf.SubgraphName == subgraphName && srf.TypeName == typeName && srf.FieldName == fieldName
+	})
+
+	if idx >= 0 {
+		p.SubgraphRootFields[idx].Count++
 	} else {
-		p.SubgraphFetches[key] = 1
+		p.SubgraphRootFields = append(p.SubgraphRootFields, SubgraphRootField{
+			SubgraphName: subgraphName,
+			TypeName:     typeName,
+			FieldName:    fieldName,
+			Count:        1,
+		})
 	}
 }
 
@@ -619,6 +681,7 @@ func (o *operationContext) QueryPlanStats() (QueryPlanStats, error) {
 	qps := QueryPlanStats{
 		TotalSubgraphFetches: 0,
 		SubgraphFetches:      make(map[string]int),
+		SubgraphRootFields:   make([]SubgraphRootField, 0, 2),
 	}
 
 	if p, ok := o.preparedPlan.preparedPlan.(*plan.SynchronousResponsePlan); ok {
@@ -630,21 +693,12 @@ func (o *operationContext) QueryPlanStats() (QueryPlanStats, error) {
 			return QueryPlanStats{}, errors.New("synchronous response plan has no fetches")
 		}
 
-		qps.analyzePlanNode(p.Response.Fetches.QueryPlan())
+		qps.analyzePlanNode(p.Response.Fetches)
 	} else {
 		return QueryPlanStats{}, errors.New("query plan stats currently only support synchronous response plans")
 	}
 
 	return qps, nil
-}
-
-// isMutationRequest returns true if the current request is a mutation request
-func isMutationRequest(ctx context.Context) bool {
-	op := getRequestContext(ctx)
-	if op == nil {
-		return false
-	}
-	return op.Operation().Type() == "mutation"
 }
 
 type SubgraphResolver struct {
@@ -664,6 +718,8 @@ func NewSubgraphResolver(subgraphs []Subgraph) *SubgraphResolver {
 			Url:       subgraphs[i].Url,
 			UrlString: subgraphs[i].UrlString,
 		}
+		// TODO: In case there are multiple subgraphs with the same URL, the previous
+		// one will be overwritten. To investigate if this causes an issue.
 		if sg.UrlString != "" {
 			resolver.subgraphsByURL[sg.UrlString] = &sg
 		}
@@ -691,11 +747,11 @@ func (s *SubgraphResolver) BySubgraphURL(u string) *Subgraph {
 }
 
 func withSubgraphResolver(ctx context.Context, resolver *SubgraphResolver) context.Context {
-	return context.WithValue(ctx, subgraphResolverContextKey, resolver)
+	return context.WithValue(ctx, rcontext.SubgraphResolverContextKey, resolver)
 }
 
 func subgraphResolverFromContext(ctx context.Context) *SubgraphResolver {
-	resolver, _ := ctx.Value(subgraphResolverContextKey).(*SubgraphResolver)
+	resolver, _ := ctx.Value(rcontext.SubgraphResolverContextKey).(*SubgraphResolver)
 	return resolver
 }
 

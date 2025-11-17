@@ -250,6 +250,7 @@ describe('Update feature subgraph tests', () => {
     'graph-admin',
     'graph-viewer',
     'subgraph-publisher',
+    'subgraph-viewer',
   ])('%s should not be able to update feature subgraph from allowed namespaces', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
 

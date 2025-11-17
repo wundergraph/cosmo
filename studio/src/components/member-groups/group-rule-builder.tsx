@@ -12,7 +12,7 @@ import useWindowSize from "@/hooks/use-window-size";
 import { useFeature } from "@/hooks/use-feature";
 import { GroupRolesCommand, GroupRolesAccordion } from "./group-roles-command";
 import { GroupResourceSelector } from "@/components/member-groups/group-resource-selector";
-import { PopoverContentWithScrollableContent } from "./popover-content-with-scrollable-content";
+import { PopoverContentWithScrollableContent } from "../popover-content-with-scrollable-content";
 
 export function GroupRuleBuilder({ builtin, roles, rule, accessibleResources, disabled, onRuleUpdated, onRemoveRule }: {
   builtin: boolean;

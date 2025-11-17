@@ -1,180 +1,104 @@
 import { describe, expect, test } from 'vitest';
 import {
-  federateSubgraphs,
-  FederationResultSuccess,
   FieldData,
   invalidFieldShareabilityError,
-  NormalizationResultSuccess,
-  normalizeSubgraph,
-  normalizeSubgraphFromString,
   ObjectDefinitionData,
   parse,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   Subgraph,
 } from '../../../src';
-import { versionTwoDirectiveDefinitions, versionTwoRouterDefinitions } from '../utils/utils';
+import { KEY_DIRECTIVE, OPENFED_FIELD_SET, SCHEMA_QUERY_DEFINITION, SHAREABLE_DIRECTIVE } from '../utils/utils';
 import {
   federateSubgraphsFailure,
   federateSubgraphsSuccess,
   normalizeString,
+  normalizeSubgraphSuccess,
   schemaToSortedNormalizedString,
 } from '../../utils/utils';
 
 describe('@shareable directive tests', () => {
   describe('Normalization tests', () => {
     test('that @shareable declared on the object level applies to all its defined fields #1.1', () => {
-      const result = normalizeSubgraphFromString(
-        `
-        type Object {
-          shareableFieldOne(argOne: String!, argTwo: Boolean!): String @shareable
-          nonShareableFieldOne: Boolean!
-        }
-        
-        extend type Object @shareable {
-          shareableFieldTwo: Int!
-          shareableFieldThree: Float
-        }
-        
-        extend type Object @shareable {
-          """
-            This is the description for Object.shareableFieldFour
-          """
-          shareableFieldFour: String!
-        }
-        
-        extend type Object {
-          nonShareableFieldTwo(argOne: Int, """This is a description for Object.nonShareableFieldTwo.argTwo""" argTwo: Boolean!): Float!
-          nonShareableFieldThree: Boolean
-        }
-      `,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.schema)).toBe(
+      const { schema } = normalizeSubgraphSuccess(naaaa, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
-          versionTwoDirectiveDefinitions +
+          SHAREABLE_DIRECTIVE +
             `
          type Object {
           nonShareableFieldOne: Boolean!
           nonShareableFieldThree: Boolean
-          nonShareableFieldTwo(argOne: Int"""This is a description for Object.nonShareableFieldTwo.argTwo"""argTwo: Boolean!): Float!
-          """
-            This is the description for Object.shareableFieldFour
-          """
+          nonShareableFieldTwo(
+            argOne: Int
+            """This is a description for Object.nonShareableFieldTwo.argTwo"""
+            argTwo: Boolean!
+          ): Float!
+          """This is the description for Object.shareableFieldFour"""
           shareableFieldFour: String! @shareable
           shareableFieldOne(argOne: String!, argTwo: Boolean!): String @shareable
           shareableFieldThree: Float @shareable
           shareableFieldTwo: Int! @shareable
         }
-        
-        scalar openfed__FieldSet
-        scalar openfed__Scope
       `,
         ),
       );
     });
 
     test('that @shareable declared on the object level applies to all its defined fields #1.2', () => {
-      const result = normalizeSubgraphFromString(
-        `
-        extend type Object @shareable {
-          """
-            This is the description for Object.shareableFieldFour
-          """
-          shareableFieldFour: String!
-        }
-        
-        extend type Object {
-          nonShareableFieldTwo(argOne: Int, """This is a description for Object.nonShareableFieldTwo.argTwo""" argTwo: Boolean!): Float!
-          nonShareableFieldThree: Boolean
-        }
-        
-        extend type Object @shareable {
-          shareableFieldTwo: Int!
-          shareableFieldThree: Float
-        }
-        
-        type Object {
-          shareableFieldOne(argOne: String!, argTwo: Boolean!): String @shareable
-          nonShareableFieldOne: Boolean!
-        }
-      `,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.schema)).toBe(
+      const { schema } = normalizeSubgraphSuccess(nbaaa, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
-          versionTwoDirectiveDefinitions +
+          SHAREABLE_DIRECTIVE +
             `
          type Object {
           nonShareableFieldOne: Boolean!
           nonShareableFieldThree: Boolean
-          nonShareableFieldTwo(argOne: Int"""This is a description for Object.nonShareableFieldTwo.argTwo"""argTwo: Boolean!): Float!
-          """
-            This is the description for Object.shareableFieldFour
-          """
+          nonShareableFieldTwo(
+            argOne: Int
+            """This is a description for Object.nonShareableFieldTwo.argTwo"""
+            argTwo: Boolean!
+          ): Float!
+          """This is the description for Object.shareableFieldFour"""
           shareableFieldFour: String! @shareable
           shareableFieldOne(argOne: String!, argTwo: Boolean!): String @shareable
           shareableFieldThree: Float @shareable
           shareableFieldTwo: Int! @shareable
         }
-        
-        scalar openfed__FieldSet
-        scalar openfed__Scope
       `,
         ),
       );
     });
 
     test('that @shareable declared on both the parent and field level is not repeated', () => {
-      const result = normalizeSubgraph(
-        subgraphD.definitions,
-        subgraphD.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.schema)).toBe(
+      const { schema } = normalizeSubgraphSuccess(subgraphD, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
-          versionTwoDirectiveDefinitions +
+          KEY_DIRECTIVE +
+            SHAREABLE_DIRECTIVE +
             `
            type Entity @key(fields: "id") {
             field: String! @shareable
             id: ID! @shareable
            }
-           
-           scalar openfed__FieldSet
-           
-           scalar openfed__Scope
-          `,
+          ` +
+            OPENFED_FIELD_SET,
         ),
       );
     });
 
     test('that @shareable can be repeated', () => {
-      const result = normalizeSubgraph(
-        subgraphE.definitions,
-        subgraphE.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationResultSuccess;
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.schema)).toStrictEqual(
+      const { schema } = normalizeSubgraphSuccess(subgraphE, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toStrictEqual(
         normalizeString(
-          versionTwoDirectiveDefinitions +
+          KEY_DIRECTIVE +
+            SHAREABLE_DIRECTIVE +
             `
           type Entity @key(fields: "id") {
             field: String! @shareable
             id: ID!
             name: String! @shareable
           }
-          
-          scalar openfed__FieldSet
-          
-          scalar openfed__Scope
-        `,
+        ` +
+            OPENFED_FIELD_SET,
         ),
       );
     });
@@ -182,14 +106,13 @@ describe('@shareable directive tests', () => {
 
   describe('Federation tests', () => {
     test('that @shareable functions with extensions correctly #1.1', () => {
-      const result = federateSubgraphs(
+      const { federatedGraphSchema } = federateSubgraphsSuccess(
         [subgraphA, subgraphB, subgraphC],
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
         type Entity implements Interface {
           field: String!
@@ -203,21 +126,19 @@ describe('@shareable directive tests', () => {
         type Query {
           entities: [Entity!]!
         }
-        
-        scalar openfed__Scope`,
+        `,
         ),
       );
     });
 
     test('that @shareable functions with extensions correctly #1.2', () => {
-      const result = federateSubgraphs(
+      const { federatedGraphSchema } = federateSubgraphsSuccess(
         [subgraphA, subgraphC, subgraphB],
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
         type Entity implements Interface {
           field: String!
@@ -231,21 +152,19 @@ describe('@shareable directive tests', () => {
         type Query {
           entities: [Entity!]!
         }
-        
-        scalar openfed__Scope`,
+        `,
         ),
       );
     });
 
     test('that @shareable functions with extensions correctly #1.3', () => {
-      const result = federateSubgraphs(
+      const { federatedGraphSchema } = federateSubgraphsSuccess(
         [subgraphB, subgraphA, subgraphC],
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
         type Entity implements Interface {
           field: String!
@@ -259,21 +178,19 @@ describe('@shareable directive tests', () => {
         type Query {
           entities: [Entity!]!
         }
-        
-        scalar openfed__Scope`,
+        `,
         ),
       );
     });
 
     test('that @shareable functions with extensions correctly #1.4', () => {
-      const result = federateSubgraphs(
+      const { federatedGraphSchema } = federateSubgraphsSuccess(
         [subgraphB, subgraphC, subgraphA],
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
         type Entity implements Interface {
           field: String!
@@ -287,21 +204,19 @@ describe('@shareable directive tests', () => {
         type Query {
           entities: [Entity!]!
         }
-        
-        scalar openfed__Scope`,
+        `,
         ),
       );
     });
 
     test('that @shareable functions with extensions correctly #1.5', () => {
-      const result = federateSubgraphs(
+      const { federatedGraphSchema } = federateSubgraphsSuccess(
         [subgraphC, subgraphA, subgraphB],
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
         type Entity implements Interface {
           field: String!
@@ -315,21 +230,19 @@ describe('@shareable directive tests', () => {
         type Query {
           entities: [Entity!]!
         }
-        
-        scalar openfed__Scope`,
+        `,
         ),
       );
     });
 
     test('that @shareable functions with extensions correctly #1.6', () => {
-      const result = federateSubgraphs(
+      const { federatedGraphSchema } = federateSubgraphsSuccess(
         [subgraphC, subgraphB, subgraphA],
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as FederationResultSuccess;
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
-          versionTwoRouterDefinitions +
+          SCHEMA_QUERY_DEFINITION +
             `
         type Entity implements Interface {
           field: String!
@@ -343,18 +256,16 @@ describe('@shareable directive tests', () => {
         type Query {
           entities: [Entity!]!
         }
-        
-        scalar openfed__Scope`,
+        `,
         ),
       );
     });
   });
 
   test('that an error is returned if a V2 implicit key field is not declared @shareable #1.1', () => {
-    const result = federateSubgraphsFailure([subgraphF, subgraphG], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    const { errors } = federateSubgraphsFailure([subgraphF, subgraphG], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       invalidFieldShareabilityError(
         {
           name: 'Entity',
@@ -376,10 +287,9 @@ describe('@shareable directive tests', () => {
   });
 
   test('that an error is returned if a V2 implicit key field is not declared @shareable #1.2', () => {
-    const result = federateSubgraphsFailure([subgraphG, subgraphF], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    const { errors } = federateSubgraphsFailure([subgraphG, subgraphF], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       invalidFieldShareabilityError(
         {
           name: 'Entity',
@@ -401,10 +311,10 @@ describe('@shareable directive tests', () => {
   });
 
   test('that an @external key field does not contribute to @shareable errors #1.1', () => {
-    const result = federateSubgraphsSuccess([subgraphG, subgraphH], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess([subgraphG, subgraphH], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
         type Entity {
           field: String!
@@ -415,17 +325,16 @@ describe('@shareable directive tests', () => {
         type Query {
           entities: [Entity!]!
         }
-        
-        scalar openfed__Scope`,
+        `,
       ),
     );
   });
 
   test('that an @external key field does not contribute to @shareable errors #1.2', () => {
-    const result = federateSubgraphsSuccess([subgraphH, subgraphG], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess([subgraphH, subgraphG], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
         type Entity {
           field: String!
@@ -436,8 +345,7 @@ describe('@shareable directive tests', () => {
         type Query {
           entities: [Entity!]!
         }
-        
-        scalar openfed__Scope`,
+        `,
       ),
     );
   });
@@ -468,6 +376,69 @@ describe('@shareable directive tests', () => {
     );
   });
 });
+
+const naaaa: Subgraph = {
+  name: 'naaaa',
+  url: '',
+  definitions: parse(`
+    type Object {
+      shareableFieldOne(
+        argOne: String!
+        argTwo: Boolean!
+      ): String @shareable
+      nonShareableFieldOne: Boolean!
+    }
+    
+    extend type Object @shareable {
+      shareableFieldTwo: Int!
+      shareableFieldThree: Float
+    }
+    
+    extend type Object @shareable {
+      """
+        This is the description for Object.shareableFieldFour
+      """
+      shareableFieldFour: String!
+    }
+    
+    extend type Object {
+      nonShareableFieldTwo(
+        argOne: Int
+        """This is a description for Object.nonShareableFieldTwo.argTwo"""
+        argTwo: Boolean!
+      ): Float!
+      nonShareableFieldThree: Boolean
+    }
+  `),
+};
+
+const nbaaa: Subgraph = {
+  name: 'nbaaa',
+  url: '',
+  definitions: parse(`
+    extend type Object @shareable {
+      """
+        This is the description for Object.shareableFieldFour
+      """
+      shareableFieldFour: String!
+    }
+    
+    extend type Object {
+      nonShareableFieldTwo(argOne: Int, """This is a description for Object.nonShareableFieldTwo.argTwo""" argTwo: Boolean!): Float!
+      nonShareableFieldThree: Boolean
+    }
+    
+    extend type Object @shareable {
+      shareableFieldTwo: Int!
+      shareableFieldThree: Float
+    }
+    
+    type Object {
+      shareableFieldOne(argOne: String!, argTwo: Boolean!): String @shareable
+      nonShareableFieldOne: Boolean!
+    }
+  `),
+};
 
 const subgraphA: Subgraph = {
   name: 'subgraph-a',

@@ -3,38 +3,6 @@ import { compileGraphQLToProto } from '../../src';
 import { expectValidProto } from '../util';
 
 describe('SDL to Proto - Edge Cases and Error Handling', () => {
-  test('should handle empty schema correctly', () => {
-    const sdl = `
-      type Query {
-        dummy: String
-      }
-    `;
-
-    const { proto: protoText } = compileGraphQLToProto(sdl);
-
-    // Validate Proto definition
-    expectValidProto(protoText);
-
-    // Check that all required components are present
-    expect(protoText).toMatchInlineSnapshot(`
-      "syntax = "proto3";
-      package service.v1;
-
-      // Service definition for DefaultService
-      service DefaultService {
-        rpc QueryDummy(QueryDummyRequest) returns (QueryDummyResponse) {}
-      }
-
-      // Request message for dummy operation.
-      message QueryDummyRequest {
-      }
-      // Response message for dummy operation.
-      message QueryDummyResponse {
-        string dummy = 1;
-      }"
-    `);
-  });
-
   test('should handle schema with only scalar fields correctly', () => {
     const sdl = `
       type Query {
@@ -56,6 +24,8 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/wrappers.proto";
+
       // Service definition for DefaultService
       service DefaultService {
         rpc QueryBoolean(QueryBooleanRequest) returns (QueryBooleanResponse) {}
@@ -70,35 +40,35 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
       }
       // Response message for string operation.
       message QueryStringResponse {
-        string string = 1;
+        google.protobuf.StringValue string = 1;
       }
       // Request message for int operation.
       message QueryIntRequest {
       }
       // Response message for int operation.
       message QueryIntResponse {
-        int32 int = 1;
+        google.protobuf.Int32Value int = 1;
       }
       // Request message for float operation.
       message QueryFloatRequest {
       }
       // Response message for float operation.
       message QueryFloatResponse {
-        double float = 1;
+        google.protobuf.DoubleValue float = 1;
       }
       // Request message for boolean operation.
       message QueryBooleanRequest {
       }
       // Response message for boolean operation.
       message QueryBooleanResponse {
-        bool boolean = 1;
+        google.protobuf.BoolValue boolean = 1;
       }
       // Request message for id operation.
       message QueryIdRequest {
       }
       // Response message for id operation.
       message QueryIdResponse {
-        string id = 1;
+        google.protobuf.StringValue id = 1;
       }"
     `);
   });
@@ -137,6 +107,8 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/wrappers.proto";
+
       // Service definition for DefaultService
       service DefaultService {
         rpc QueryEnumValue(QueryEnumValueRequest) returns (QueryEnumValueResponse) {}
@@ -166,7 +138,7 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
       }
       // Response message for enumValue operation.
       message QueryEnumValueResponse {
-        string enum_value = 1;
+        google.protobuf.StringValue enum_value = 1;
       }
 
       message MessageType {
@@ -216,6 +188,8 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/wrappers.proto";
+
       // Service definition for DefaultService
       service DefaultService {
         rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
@@ -232,14 +206,14 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
 
       message User {
         string id = 1;
-        string message = 2;
-        string service = 3;
-        string enum = 4;
-        string syntax = 5;
-        string package = 6;
-        string option = 7;
-        string import = 8;
-        string reserved = 9;
+        google.protobuf.StringValue message = 2;
+        google.protobuf.StringValue service = 3;
+        google.protobuf.StringValue enum = 4;
+        google.protobuf.StringValue syntax = 5;
+        google.protobuf.StringValue package = 6;
+        google.protobuf.StringValue option = 7;
+        google.protobuf.StringValue import = 8;
+        google.protobuf.StringValue reserved = 9;
       }"
     `);
   });
@@ -367,6 +341,8 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
       "syntax = "proto3";
       package service.v1;
 
+      import "google/protobuf/wrappers.proto";
+
       // Service definition for DefaultService
       service DefaultService {
         // Lookup Post entity by id
@@ -388,6 +364,27 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
         rpc QueryUsers(QueryUsersRequest) returns (QueryUsersResponse) {}
       }
 
+      // Wrapper message for a list of Comment.
+      message ListOfComment {
+        message List {
+          repeated Comment items = 1;
+        }
+        List list = 1;
+      }
+      // Wrapper message for a list of Post.
+      message ListOfPost {
+        message List {
+          repeated Post items = 1;
+        }
+        List list = 1;
+      }
+      // Wrapper message for a list of String.
+      message ListOfString {
+        message List {
+          repeated string items = 1;
+        }
+        List list = 1;
+      }
       // Key message for User entity lookup
       message LookupUserByIdRequestKey {
         // Key field for User entity lookup.
@@ -466,8 +463,8 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
       }
       // Request message for users operation.
       message QueryUsersRequest {
-        int32 limit = 1;
-        int32 offset = 2;
+        google.protobuf.Int32Value limit = 1;
+        google.protobuf.Int32Value offset = 2;
       }
       // Response message for users operation.
       message QueryUsersResponse {
@@ -483,8 +480,8 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
       }
       // Request message for posts operation.
       message QueryPostsRequest {
-        int32 limit = 1;
-        int32 offset = 2;
+        google.protobuf.Int32Value limit = 1;
+        google.protobuf.Int32Value offset = 2;
         PostStatus status = 3;
       }
       // Response message for posts operation.
@@ -502,8 +499,8 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
       // Request message for comments operation.
       message QueryCommentsRequest {
         string post_id = 1;
-        int32 limit = 2;
-        int32 offset = 3;
+        google.protobuf.Int32Value limit = 2;
+        google.protobuf.Int32Value offset = 3;
       }
       // Response message for comments operation.
       message QueryCommentsResponse {
@@ -574,9 +571,9 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
         string name = 2;
         string email = 3;
         string created_at = 4;
-        string metadata = 5;
+        google.protobuf.StringValue metadata = 5;
         UserStatus status = 6;
-        repeated Post posts = 7;
+        ListOfPost posts = 7;
         UserProfile profile = 8;
       }
 
@@ -585,11 +582,11 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
         string title = 2;
         string content = 3;
         User author = 4;
-        repeated string tags = 5;
+        ListOfString tags = 5;
         string created_at = 6;
-        string updated_at = 7;
+        google.protobuf.StringValue updated_at = 7;
         PostStatus status = 8;
-        repeated Comment comments = 9;
+        ListOfComment comments = 9;
       }
 
       message Comment {
@@ -598,14 +595,14 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
         User author = 3;
         string content = 4;
         string created_at = 5;
-        string updated_at = 6;
+        google.protobuf.StringValue updated_at = 6;
       }
 
       message SearchInput {
         string query = 1;
-        int32 limit = 2;
-        int32 offset = 3;
-        repeated string types = 4;
+        google.protobuf.Int32Value limit = 2;
+        google.protobuf.Int32Value offset = 3;
+        ListOfString types = 4;
       }
 
       message SearchResult {
@@ -632,7 +629,7 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
       message PostInput {
         string title = 1;
         string content = 2;
-        repeated string tags = 3;
+        ListOfString tags = 3;
         PostStatus status = 4;
       }
 
@@ -649,10 +646,10 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
       }
 
       message UserProfile {
-        string bio = 1;
-        string avatar_url = 2;
-        string location = 3;
-        string website = 4;
+        google.protobuf.StringValue bio = 1;
+        google.protobuf.StringValue avatar_url = 2;
+        google.protobuf.StringValue location = 3;
+        google.protobuf.StringValue website = 4;
       }
 
       enum PostStatus {

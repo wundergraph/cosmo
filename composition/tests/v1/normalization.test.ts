@@ -21,8 +21,8 @@ import {
   invalidSelectionSetErrorMessage,
   KEY,
   NAME,
-  NormalizationResultFailure,
-  NormalizationResultSuccess,
+  NormalizationFailure,
+  NormalizationSuccess,
   normalizeSubgraphFromString,
   numberToOrdinal,
   OBJECT,
@@ -48,10 +48,14 @@ import { readFileSync } from 'fs';
 import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
 import {
-  baseDirectiveDefinitions,
-  schemaQueryDefinition,
-  versionOneBaseSchema,
-  versionTwoBaseSchema,
+  AUTHENTICATED_DIRECTIVE,
+  KEY_DIRECTIVE,
+  OPENFED_FIELD_SET,
+  OPENFED_SCOPE,
+  REQUIRES_SCOPES_DIRECTIVE,
+  SCHEMA_QUERY_DEFINITION,
+  SHAREABLE_DIRECTIVE,
+  TAG_DIRECTIVE,
 } from './utils/utils';
 import { normalizeString, normalizeSubgraphSuccess, schemaToSortedNormalizedString } from '../utils/utils';
 import { Kind, parse } from 'graphql';
@@ -59,20 +63,15 @@ import { printTypeNode } from '@graphql-tools/merge';
 
 describe('Normalization tests', () => {
   test('that an unparsable graph returns an error', () => {
-    const result = normalizeSubgraphFromString(
-      '',
-      true,
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0].message).toContain(
+    const { errors } = normalizeSubgraphFromString('', true, ROUTER_COMPATIBILITY_VERSION_ONE) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0].message).toContain(
       `The subgraph has syntax errors and could not be parsed.\n` + ` The reason provided was: Syntax Error`,
     );
   });
 
   test('that an undefined type that is referenced in the schema returns an error', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
       type Example {
         field: Unknown
@@ -80,14 +79,13 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(undefinedTypeError('Unknown'));
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(undefinedTypeError('Unknown'));
   });
 
   test('that the base scalars are identified', () => {
-    const result = normalizeSubgraphFromString(
+    const { schema } = normalizeSubgraphFromString(
       `
       type Example {
         boolean: Boolean!
@@ -99,18 +97,15 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultSuccess;
-    expect(result.success).toBe(true);
-    const subgraphString = result.subgraphString;
-    expect(normalizeString(subgraphString!)).toBe(
+    ) as NormalizationSuccess;
+    expect(schemaToSortedNormalizedString(schema)).toBe(
       normalizeString(
-        versionOneBaseSchema +
-          `
+        `
       type Example {
         boolean: Boolean!
         float: Float
-        int: Int!
         id: ID
+        int: Int!
         string: String!
       }`,
       ),
@@ -118,7 +113,7 @@ describe('Normalization tests', () => {
   });
 
   test('that undefined directives return an error', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
       type Example {
         string: String @UnknownDirective
@@ -126,14 +121,13 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(undefinedDirectiveError('UnknownDirective', 'Example.string'));
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(undefinedDirectiveError('UnknownDirective', 'Example.string'));
   });
 
   test('that duplicate directive definitions return an error', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
       directive @KnownDirective on FIELD_DEFINITION
       directive @KnownDirective on FIELD_DEFINITION
@@ -144,14 +138,13 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(duplicateDirectiveDefinitionError('KnownDirective'));
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(duplicateDirectiveDefinitionError('KnownDirective'));
   });
 
   test('that extending an entity with its key field is valid', () => {
-    const result = normalizeSubgraphFromString(
+    const { schema } = normalizeSubgraphFromString(
       `
       type Entity @key(fields: "id") {
         name: String!
@@ -163,24 +156,23 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultSuccess;
-    expect(result.success).toBe(true);
-    const subgraphString = result.subgraphString;
-    expect(normalizeString(subgraphString!)).toBe(
+    ) as NormalizationSuccess;
+    expect(schemaToSortedNormalizedString(schema!)).toBe(
       normalizeString(
-        versionOneBaseSchema +
+        KEY_DIRECTIVE +
           `
       type Entity @key(fields: "id") {
-        name: String!
         id: ID!
+        name: String!
       }  
-    `,
+    ` +
+          OPENFED_FIELD_SET,
       ),
     );
   });
 
   test('that extending an object with the key directive is valid', () => {
-    const result = normalizeSubgraphFromString(
+    const { schema } = normalizeSubgraphFromString(
       `
       type Entity {
         id: ID!
@@ -192,24 +184,23 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultSuccess;
-    expect(result.success).toBe(true);
-    const subgraphString = result.subgraphString;
-    expect(normalizeString(subgraphString!)).toBe(
+    ) as NormalizationSuccess;
+    expect(schemaToSortedNormalizedString(schema)).toBe(
       normalizeString(
-        versionOneBaseSchema +
+        KEY_DIRECTIVE +
           `
       type Entity @key(fields: "id") {
         id: ID!
         name: String!
       }  
-    `,
+    ` +
+          OPENFED_FIELD_SET,
       ),
     );
   });
 
   test('that an undefined key field returns an error #1', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
       type Entity @key(fields: "unknown") {
         name: String!
@@ -217,10 +208,9 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
         undefinedFieldInFieldSetErrorMessage('unknown', 'Entity', 'unknown'),
       ]),
@@ -228,7 +218,7 @@ describe('Normalization tests', () => {
   });
 
   test('that an undefined key field returns an error #2', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
       type Entity {
         id: ID!
@@ -240,10 +230,9 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
         undefinedFieldInFieldSetErrorMessage('unknown', 'Entity', 'unknown'),
       ]),
@@ -251,7 +240,7 @@ describe('Normalization tests', () => {
   });
 
   test('that an undefined key field returns an error #3', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
       extend type Entity @key(fields: "unknown") {
         name: String!
@@ -259,10 +248,9 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
         undefinedFieldInFieldSetErrorMessage('unknown', 'Entity', 'unknown'),
       ]),
@@ -270,7 +258,7 @@ describe('Normalization tests', () => {
   });
 
   test('that extending an entity with the same key directive does not duplicate the directive', () => {
-    const result = normalizeSubgraphFromString(
+    const { schema } = normalizeSubgraphFromString(
       `
       type Entity @key(fields: "id") {
         id: ID!
@@ -282,24 +270,23 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultSuccess;
-    expect(result.success).toBe(true);
-    const subgraphString = result.subgraphString;
-    expect(normalizeString(subgraphString!)).toBe(
+    ) as NormalizationSuccess;
+    expect(schemaToSortedNormalizedString(schema)).toBe(
       normalizeString(
-        versionOneBaseSchema +
+        KEY_DIRECTIVE +
           `
       type Entity @key(fields: "id") {
         id: ID!
         name: String!
       }  
-    `,
+    ` +
+          OPENFED_FIELD_SET,
       ),
     );
   });
 
   test('that enums are normalized', () => {
-    const result = normalizeSubgraphFromString(
+    const { schema } = normalizeSubgraphFromString(
       `
       directive @CustomDirectiveOne on ENUM
       directive @CustomDirectiveTwo on ENUM_VALUE
@@ -319,17 +306,14 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultSuccess;
-    expect(result.success).toBe(true);
-    const subgraphString = result.subgraphString;
-    expect(normalizeString(subgraphString!)).toBe(
+    ) as NormalizationSuccess;
+    expect(schemaToSortedNormalizedString(schema)).toBe(
       normalizeString(
-        versionOneBaseSchema +
-          `
-      directive @CustomDirectiveOne on ENUM
-      directive @CustomDirectiveTwo on ENUM_VALUE
-      directive @CustomDirectiveThree on ENUM
+        `
       directive @CustomDirectiveFour on ENUM_VALUE
+      directive @CustomDirectiveOne on ENUM
+      directive @CustomDirectiveThree on ENUM
+      directive @CustomDirectiveTwo on ENUM_VALUE
       
       enum Alphabet @CustomDirectiveOne @CustomDirectiveThree {
         A
@@ -343,7 +327,7 @@ describe('Normalization tests', () => {
   });
 
   test('that extending an enum with a value that already exists returns an error', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
       enum Alphabet {
         A
@@ -358,14 +342,13 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(duplicateEnumValueDefinitionError('Alphabet', 'D'));
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(duplicateEnumValueDefinitionError('Alphabet', 'D'));
   });
 
   test('that redefining an enum returns an error', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
       enum Alphabet {
         A
@@ -377,14 +360,13 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(duplicateTypeDefinitionError(ENUM, 'Alphabet'));
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(duplicateTypeDefinitionError(ENUM, 'Alphabet'));
   });
 
   test('that interfaces are normalized', () => {
-    const result = normalizeSubgraphFromString(
+    const { schema } = normalizeSubgraphFromString(
       `
       directive @CustomDirectiveOne on INTERFACE
       directive @CustomDirectiveTwo on FIELD_DEFINITION
@@ -402,29 +384,26 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultSuccess;
-    expect(result.success).toBe(true);
-    const subgraphString = result.subgraphString;
-    expect(normalizeString(subgraphString!)).toBe(
+    ) as NormalizationSuccess;
+    expect(schemaToSortedNormalizedString(schema)).toBe(
       normalizeString(
-        versionOneBaseSchema +
-          `
-      directive @CustomDirectiveOne on INTERFACE
-      directive @CustomDirectiveTwo on FIELD_DEFINITION
-      directive @CustomDirectiveThree on INTERFACE
+        `
       directive @CustomDirectiveFour on FIELD_DEFINITION
+      directive @CustomDirectiveOne on INTERFACE
+      directive @CustomDirectiveThree on INTERFACE
+      directive @CustomDirectiveTwo on FIELD_DEFINITION
     
       interface Human @CustomDirectiveOne @CustomDirectiveThree {
-        name: String
         age: Int @CustomDirectiveTwo
         height: Int @CustomDirectiveFour
+        name: String
       }`,
       ),
     );
   });
 
   test('that Input Objects are normalized', () => {
-    const result = normalizeSubgraphFromString(
+    const { schema } = normalizeSubgraphFromString(
       `
       directive @CustomDirectiveOne on INPUT_OBJECT
       directive @CustomDirectiveTwo on INPUT_FIELD_DEFINITION
@@ -442,29 +421,26 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultSuccess;
-    expect(result.success).toBe(true);
-    const subgraphString = result.subgraphString;
-    expect(normalizeString(subgraphString!)).toBe(
+    ) as NormalizationSuccess;
+    expect(schemaToSortedNormalizedString(schema)).toBe(
       normalizeString(
-        versionOneBaseSchema +
-          `
-      directive @CustomDirectiveOne on INPUT_OBJECT
-      directive @CustomDirectiveTwo on INPUT_FIELD_DEFINITION
-      directive @CustomDirectiveThree on INPUT_OBJECT
+        `
       directive @CustomDirectiveFour on INPUT_FIELD_DEFINITION
+      directive @CustomDirectiveOne on INPUT_OBJECT
+      directive @CustomDirectiveThree on INPUT_OBJECT
+      directive @CustomDirectiveTwo on INPUT_FIELD_DEFINITION
     
       input Input @CustomDirectiveOne @CustomDirectiveThree {
-        name: String
         age: Int @CustomDirectiveTwo
         height: Int @CustomDirectiveFour
+        name: String
       }`,
       ),
     );
   });
 
   test('that object types are normalized successfully', () => {
-    const result = normalizeSubgraphFromString(
+    const { schema } = normalizeSubgraphFromString(
       `
       type Object {
         name: String!
@@ -476,33 +452,29 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultSuccess;
-    expect(result.success).toBe(true);
-    const subgraphString = result.subgraphString;
-    expect(normalizeString(subgraphString!)).toBe(
+    ) as NormalizationSuccess;
+    expect(schemaToSortedNormalizedString(schema)).toBe(
       normalizeString(
-        versionOneBaseSchema +
-          `
+        `
     type Object {
-      name: String!
       age: Int!
+      name: String!
     }`,
       ),
     );
   });
 
   test('that an object with no fields returns an error', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
       type Object {
       }
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0].message).toBe(
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0].message).toBe(
       `The subgraph has syntax errors and could not be parsed.\n` +
         ` The reason provided was: Syntax Error: Expected Name, found "}".`,
     );
@@ -520,13 +492,12 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultSuccess;
+    ) as NormalizationSuccess;
     expect(result.success).toBe(true);
     const subgraphString = result.subgraphString;
     expect(normalizeString(subgraphString!)).toBe(
       normalizeString(
-        versionOneBaseSchema +
-          `
+        `
       directive @CustomDirectiveOne on SCALAR
       directive @CustomDirectiveTwo on SCALAR
       
@@ -562,18 +533,15 @@ describe('Normalization tests', () => {
       type Pepper {
         age: Int
       }
-      
-      scalar openfed__FieldSet
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultSuccess;
+    ) as NormalizationSuccess;
     expect(result.success).toBe(true);
     const subgraphString = result.subgraphString;
     expect(normalizeString(subgraphString!)).toBe(
       normalizeString(
-        versionOneBaseSchema +
-          `
+        `
       directive @CustomDirectiveOne on UNION
       directive @CustomDirectiveTwo on UNION
       
@@ -590,15 +558,13 @@ describe('Normalization tests', () => {
       type Pepper {
         age: Int
       }
-      
-      scalar openfed__FieldSet
      `,
       ),
     );
   });
 
   test('that a union without members returns an error', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
       union Cats =
       
@@ -608,30 +574,28 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0].message).toBe(
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0].message).toBe(
       `The subgraph has syntax errors and could not be parsed.\n` +
         ` The reason provided was: Syntax Error: Unexpected Name "Pepper".`,
     );
   });
 
   test('that undefined union members return an error', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
       union Cats = Pepper 
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(undefinedTypeError('Pepper'));
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(undefinedTypeError('Pepper'));
   });
 
   test('Should return an error when a enum has values with type Int', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
       enum UserRole {
         ADMIN
@@ -641,16 +605,15 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors[0].message).toBe(
+    ) as NormalizationFailure;
+    expect(errors[0].message).toBe(
       `The subgraph has syntax errors and could not be parsed.\n` +
         ` The reason provided was: Syntax Error: Expected Name, found Int "1".`,
     );
   });
 
   test('Should return an error when a enum has duplicate values', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
       enum UserRole {
         ADMIN
@@ -660,14 +623,13 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(duplicateEnumValueDefinitionError('UserRole', 'ADMIN'));
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(duplicateEnumValueDefinitionError('UserRole', 'ADMIN'));
   });
 
   test('Should return an error when a enum values have special characters', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
      enum Continent {
         AFR!CA
@@ -677,9 +639,8 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors[0].message).toBe(
+    ) as NormalizationFailure;
+    expect(errors[0].message).toBe(
       `The subgraph has syntax errors and could not be parsed.\n` +
         ` The reason provided was: Syntax Error: Expected Name, found "!".`,
     );
@@ -696,7 +657,7 @@ describe('Normalization tests', () => {
   });
 
   test('Should normalize type extensions', () => {
-    const result = normalizeSubgraphFromString(
+    const { schema } = normalizeSubgraphFromString(
       `
         directive @tag(name: String!) repeatable on FIELD_DEFINITION
 
@@ -722,17 +683,21 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultSuccess;
-    expect(result.success).toBe(true);
-    const subgraphString = result.subgraphString;
-    expect(normalizeString(subgraphString!)).toBe(
+    ) as NormalizationSuccess;
+    expect(schemaToSortedNormalizedString(schema)).toBe(
       normalizeString(
-        versionOneBaseSchema +
+        KEY_DIRECTIVE +
+          TAG_DIRECTIVE +
           `
+        type DeliveryEstimates {
+          estimatedDelivery: String
+          fastestDelivery: String
+        }
+        
         type Product @key(fields: "id") {
-          id: ID! @tag(name: "hi-from-inventory")
-          dimensions: ProductDimension
           delivery(zip: String): DeliveryEstimates
+          dimensions: ProductDimension
+          id: ID! @tag(name: "hi-from-inventory")
           name: String
         }
         
@@ -740,17 +705,14 @@ describe('Normalization tests', () => {
           size: String
           weight: Float @tag(name: "hi-from-inventory-value-type-field")
         }
-        
-        type DeliveryEstimates {
-          estimatedDelivery: String
-          fastestDelivery: String
-        }`,
+        ` +
+          OPENFED_FIELD_SET,
       ),
     );
   });
 
   test('Should normalize root type extensions', () => {
-    const result = normalizeSubgraphFromString(
+    const { schema } = normalizeSubgraphFromString(
       `
         directive @tag(name: String!) repeatable on FIELD_DEFINITION
 
@@ -784,12 +746,12 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultSuccess;
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.schema)).toBe(
+    ) as NormalizationSuccess;
+    expect(schemaToSortedNormalizedString(schema)).toBe(
       normalizeString(
-        schemaQueryDefinition +
-          baseDirectiveDefinitions +
+        SCHEMA_QUERY_DEFINITION +
+          KEY_DIRECTIVE +
+          TAG_DIRECTIVE +
           `
       type Product @key(fields: "id") @key(fields: "sku package") @key(fields: "sku variation { id }") {
         createdBy: User
@@ -818,76 +780,40 @@ describe('Normalization tests', () => {
         email: ID!
         totalProductsCreated: Int
       }
-
-      scalar openfed__FieldSet
-      `,
+      ` +
+          OPENFED_FIELD_SET,
       ),
     );
   });
 
   test('that undefined version two directives are injected', () => {
-    const schema = readFileSync(join(__dirname, 'test-data/testNormalization.graphql'), {
+    const sdl = readFileSync(join(__dirname, 'test-data/testNormalization.graphql'), {
       encoding: 'utf8',
     });
-    const result = normalizeSubgraphFromString(
-      schema,
-      true,
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultSuccess;
-    expect(result.success).toBe(true);
-    const subgraphString = result.subgraphString;
-    expect(normalizeString(subgraphString!)).toBe(
+    const { schema } = normalizeSubgraphFromString(sdl, true, ROUTER_COMPATIBILITY_VERSION_ONE) as NormalizationSuccess;
+    expect(schemaToSortedNormalizedString(schema)).toBe(
       normalizeString(
-        versionTwoBaseSchema +
+        SCHEMA_QUERY_DEFINITION +
+          `directive @hello on FIELD_DEFINITION` +
+          KEY_DIRECTIVE +
+          `directive @myDirective(a: String!) on FIELD_DEFINITION` +
+          SHAREABLE_DIRECTIVE +
+          TAG_DIRECTIVE +
           `
-      directive @myDirective(a: String!) on FIELD_DEFINITION
-      directive @hello on FIELD_DEFINITION
-        
-      type Query {
-        allProducts: [ProductItf]
-        product(id: ID!): ProductItf
-      }
-      
-      interface SkuItf {
-        sku: String
-      }
-      
-      interface ProductItf implements SkuItf {
-        id: ID!
-        sku: String
-        name: String
-        package: String
-        variation: ProductVariation
-        dimensions: ProductDimension
-        createdBy: User
-        hidden: String
-        oldField: String @deprecated(reason: "refactored out")
-      }
-      
       type Product implements ProductItf & SkuItf 
         @key(fields: "id") 
         @key(fields: "sku package") 
         @key(fields: "sku variation { id }") {
-        id: ID! @tag(name: "hi-from-products")
-        sku: String
-        name: String @hello
-        package: String
-        variation: ProductVariation
-        dimensions: ProductDimension
         createdBy: User
+        dimensions: ProductDimension
         hidden: String
-        reviewsScore: Float! @shareable
+        id: ID! @tag(name: "hi-from-products")
+        name: String @hello
         oldField: String
-      }
-      
-      enum ShippingClass {
-        STANDARD
-        EXPRESS
-      }
-      
-      type ProductVariation {
-        id: ID!
-        name: String
+        package: String
+        reviewsScore: Float! @shareable
+        sku: String
+        variation: ProductVariation
       }
       
       type ProductDimension {
@@ -895,10 +821,42 @@ describe('Normalization tests', () => {
         weight: Float @shareable
       }
       
+      interface ProductItf implements SkuItf {
+        createdBy: User
+        dimensions: ProductDimension
+        hidden: String
+        id: ID!
+        name: String
+        oldField: String @deprecated(reason: "refactored out")
+        package: String
+        sku: String
+        variation: ProductVariation
+      }
+      
+      type ProductVariation {
+        id: ID!
+        name: String
+      }
+      
+      type Query {
+        allProducts: [ProductItf]
+        product(id: ID!): ProductItf
+      }
+      
+      enum ShippingClass {
+        EXPRESS
+        STANDARD
+      }
+      
+      interface SkuItf {
+        sku: String
+      }
+      
       type User @key(fields: "email") {
         email: ID!
         totalProductsCreated: Int @shareable
-      }`,
+      }` +
+          OPENFED_FIELD_SET,
       ),
     );
   });
@@ -925,7 +883,7 @@ describe('Normalization tests', () => {
   });
 
   test('Should give errors when key directive points to a field which doesnt exist', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
       type User @key(fields: "id") {
         name: String!
@@ -934,16 +892,15 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       invalidDirectiveError(KEY, 'User', FIRST_ORDINAL, [undefinedFieldInFieldSetErrorMessage('id', 'User', 'id')]),
     );
   });
 
   test('Should give errors when key directive is applied to a enum', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
       enum User @key(fields: "name") {
         USER1
@@ -952,16 +909,15 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       invalidDirectiveError(KEY, 'User', FIRST_ORDINAL, [invalidDirectiveLocationErrorMessage(KEY, ENUM_UPPER)]),
     );
   });
 
   test('Should give errors when key directive is applied to an Input', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
       input User @key(fields: "name") {
         name: String!
@@ -970,11 +926,10 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
-      invalidDirectiveError('key', 'User', FIRST_ORDINAL, [
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
+      invalidDirectiveError(KEY, 'User', FIRST_ORDINAL, [
         invalidDirectiveLocationErrorMessage(KEY, INPUT_OBJECT_UPPER),
       ]),
     );
@@ -992,7 +947,7 @@ describe('Normalization tests', () => {
   });
 
   test('that declaring the @tag directive on a parent without the required name argument returns an error', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
       type User @tag {
         name: String!
@@ -1001,16 +956,15 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       invalidDirectiveError(TAG, 'User', FIRST_ORDINAL, [undefinedRequiredArgumentsErrorMessage(TAG, [NAME], [])]),
     );
   });
 
   test('that declaring the @tag directive on a child without the required name argument returns an error', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
       type User {
         name: String! @tag
@@ -1019,10 +973,9 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       invalidDirectiveError('tag', 'User.name', FIRST_ORDINAL, [
         undefinedRequiredArgumentsErrorMessage(TAG, [NAME], []),
       ]),
@@ -1041,7 +994,7 @@ describe('Normalization tests', () => {
   });
 
   test('Should give errors when external directive is applied to a interface', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
       interface User @external {
         name: String!
@@ -1050,10 +1003,9 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       invalidDirectiveError(EXTERNAL, 'User', FIRST_ORDINAL, [
         invalidDirectiveLocationErrorMessage(EXTERNAL, INTERFACE_UPPER),
       ]),
@@ -1061,7 +1013,7 @@ describe('Normalization tests', () => {
   });
 
   test('Should give errors when external directive is applied to an enum', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
       enum User @external {
         USER1
@@ -1070,10 +1022,9 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       invalidDirectiveError(EXTERNAL, 'User', FIRST_ORDINAL, [
         invalidDirectiveLocationErrorMessage(EXTERNAL, ENUM_UPPER),
       ]),
@@ -1081,7 +1032,7 @@ describe('Normalization tests', () => {
   });
 
   test('Should give errors when external directive is applied to a input', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
       input User @external {
         name: String!
@@ -1090,10 +1041,9 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       invalidDirectiveError(EXTERNAL, 'User', FIRST_ORDINAL, [
         invalidDirectiveLocationErrorMessage(EXTERNAL, INPUT_OBJECT_UPPER),
       ]),
@@ -1117,7 +1067,7 @@ describe('Normalization tests', () => {
   });
 
   test('that an error is returned if @provides refers to a non-existent field', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
      type Review @key(fields : "id") {
       id: String!
@@ -1131,17 +1081,16 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0].message).toStrictEqual(
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0].message).toStrictEqual(
       `The following "provides" directive is invalid:\n On field "Review.user":\n -` +
         undefinedFieldInFieldSetErrorMessage('age', 'User', 'age'),
     );
   });
 
   test('that declaring the @provides directive without the required fields argument returns an error', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
      type Review @key(fields : "id") {
       id: String!
@@ -1155,10 +1104,9 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       invalidDirectiveError(PROVIDES, 'Review.user', FIRST_ORDINAL, [
         undefinedRequiredArgumentsErrorMessage(PROVIDES, [FIELDS], []),
       ]),
@@ -1166,7 +1114,7 @@ describe('Normalization tests', () => {
   });
 
   test('Should give errors when provides directive is applied to a object', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
       type User @provides(fields : "age") {
         name: String!
@@ -1175,10 +1123,9 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       invalidDirectiveError(PROVIDES, 'User', FIRST_ORDINAL, [
         invalidDirectiveLocationErrorMessage(PROVIDES, OBJECT_UPPER),
       ]),
@@ -1186,7 +1133,7 @@ describe('Normalization tests', () => {
   });
 
   test('Should give errors when provides directive is applied to a interface', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
       interface User @provides(fields : "age") {
         name: String!
@@ -1195,10 +1142,9 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       invalidDirectiveError(PROVIDES, 'User', FIRST_ORDINAL, [
         invalidDirectiveLocationErrorMessage(PROVIDES, INTERFACE_UPPER),
       ]),
@@ -1206,7 +1152,7 @@ describe('Normalization tests', () => {
   });
 
   test('Should give errors when provides directive is applied to a enum', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
       enum User @provides(fields : "age") {
         USER1
@@ -1215,10 +1161,9 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       invalidDirectiveError(PROVIDES, 'User', FIRST_ORDINAL, [
         invalidDirectiveLocationErrorMessage(PROVIDES, ENUM_UPPER),
       ]),
@@ -1226,7 +1171,7 @@ describe('Normalization tests', () => {
   });
 
   test('Should give errors when provides directive is applied to a input', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
       input User @provides(fields : "age") {
         name: String!
@@ -1235,10 +1180,9 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       invalidDirectiveError(PROVIDES, 'User', FIRST_ORDINAL, [
         invalidDirectiveLocationErrorMessage(PROVIDES, INPUT_OBJECT_UPPER),
       ]),
@@ -1257,7 +1201,7 @@ describe('Normalization tests', () => {
   });
 
   test('Should give errors if the requires directive points to a field which does not exist ', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
      type Product @key(fields : "id") {
         id: String!
@@ -1267,10 +1211,9 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       invalidProvidesOrRequiresDirectivesError(REQUIRES, [
         ` On field "Product.shippingCost":\n -` + undefinedFieldInFieldSetErrorMessage('age', 'Product', 'age'),
       ]),
@@ -1289,7 +1232,7 @@ describe('Normalization tests', () => {
   });
 
   test('Should give errors when requires directive is applied to a object', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
       type User @requires(fields : "age") {
         name: String!
@@ -1298,10 +1241,9 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       invalidDirectiveError(REQUIRES, 'User', FIRST_ORDINAL, [
         invalidDirectiveLocationErrorMessage(REQUIRES, OBJECT_UPPER),
       ]),
@@ -1309,7 +1251,7 @@ describe('Normalization tests', () => {
   });
 
   test('Should give errors when requires directive is applied to a interface', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
       interface User @requires(fields : "age") {
         name: String!
@@ -1318,10 +1260,9 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       invalidDirectiveError(REQUIRES, 'User', FIRST_ORDINAL, [
         invalidDirectiveLocationErrorMessage(REQUIRES, INTERFACE_UPPER),
       ]),
@@ -1329,7 +1270,7 @@ describe('Normalization tests', () => {
   });
 
   test('Should give errors when requires directive is applied to a enum', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
       enum User @requires(fields : "age") {
         USER1
@@ -1338,10 +1279,9 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       invalidDirectiveError(REQUIRES, 'User', FIRST_ORDINAL, [
         invalidDirectiveLocationErrorMessage(REQUIRES, ENUM_UPPER),
       ]),
@@ -1349,7 +1289,7 @@ describe('Normalization tests', () => {
   });
 
   test('Should give errors when provides directive is applied to a input', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
       input User @requires(fields : "age") {
         name: String!
@@ -1358,10 +1298,9 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       invalidDirectiveError(REQUIRES, 'User', FIRST_ORDINAL, [
         invalidDirectiveLocationErrorMessage(REQUIRES, INPUT_OBJECT_UPPER),
       ]),
@@ -1391,7 +1330,7 @@ describe('Normalization tests', () => {
   });
 
   test('that providing @shareable directive with an argument returns an error', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
      type User @shareable(fields: "email") {
         email: String
@@ -1400,10 +1339,9 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       invalidDirectiveError(SHAREABLE, 'User', FIRST_ORDINAL, [
         unexpectedDirectiveArgumentErrorMessage(SHAREABLE, [FIELDS]),
       ]),
@@ -1411,7 +1349,7 @@ describe('Normalization tests', () => {
   });
 
   test('that declaring @shareable on an interface returns an error', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
       interface User @shareable {
         name: String!
@@ -1420,10 +1358,9 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       invalidDirectiveError(SHAREABLE, 'User', FIRST_ORDINAL, [
         invalidDirectiveLocationErrorMessage(SHAREABLE, INTERFACE_UPPER),
       ]),
@@ -1431,7 +1368,7 @@ describe('Normalization tests', () => {
   });
 
   test('that declaring @shareable on an enum returns an error', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
       enum User @shareable {
         USER1
@@ -1440,10 +1377,9 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       invalidDirectiveError(SHAREABLE, 'User', FIRST_ORDINAL, [
         invalidDirectiveLocationErrorMessage(SHAREABLE, ENUM_UPPER),
       ]),
@@ -1451,7 +1387,7 @@ describe('Normalization tests', () => {
   });
 
   test('that declaring @shareable on an input object returns an error', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
       input User @shareable {
         name: String!
@@ -1460,10 +1396,9 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       invalidDirectiveError(SHAREABLE, 'User', FIRST_ORDINAL, [
         invalidDirectiveLocationErrorMessage(SHAREABLE, INPUT_OBJECT_UPPER),
       ]),
@@ -1512,7 +1447,7 @@ describe('Normalization tests', () => {
   });
 
   test('that declaring the @inaccessible directive with an argument returns an error', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
        type User @inaccessible(fields: "name") {
           email: String
@@ -1521,10 +1456,9 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       invalidDirectiveError(INACCESSIBLE, 'User', FIRST_ORDINAL, [
         unexpectedDirectiveArgumentErrorMessage(INACCESSIBLE, [FIELDS]),
       ]),
@@ -1574,7 +1508,7 @@ describe('Normalization tests', () => {
   });
 
   test('that invalid fields in composite keys return an error', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
        type Entity @key(fields: "id email") @key(fields: "id organization { id details { id age } }") {
          id: ID!
@@ -1594,10 +1528,9 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       invalidDirectiveError(KEY, 'Entity', numberToOrdinal(2), [
         undefinedFieldInFieldSetErrorMessage('id organization { id details { id age } }', 'Details', 'age'),
       ]),
@@ -1605,7 +1538,7 @@ describe('Normalization tests', () => {
   });
 
   test('that an empty selection set in a composite key returns a parse error', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
        type Entity @key(fields: "id email") @key(fields: "id organization { id details { } }") {
          id: ID!
@@ -1625,10 +1558,9 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       invalidDirectiveError(KEY, 'Entity', numberToOrdinal(2), [
         unparsableFieldSetErrorMessage(
           'id organization { id details { } }',
@@ -1639,7 +1571,7 @@ describe('Normalization tests', () => {
   });
 
   test('that an error is returned if a composite type selection does not define a selection set of its own  #1.1', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
        type Entity @key(fields: "id email") @key(fields: "id organization { id details }") {
          id: ID!
@@ -1659,10 +1591,9 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       invalidDirectiveError(KEY, 'Entity', numberToOrdinal(2), [
         invalidSelectionSetErrorMessage('id organization { id details }', ['Organization.details'], 'Details', OBJECT),
       ]),
@@ -1670,7 +1601,7 @@ describe('Normalization tests', () => {
   });
 
   test('that an error is returned if a composite type selection does not define a selection set of its own  #1.2', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
        type Entity @key(fields: "id email") @key(fields: "id organization { details id }") {
          id: ID!
@@ -1690,10 +1621,9 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toBeDefined();
-    expect(result.errors[0]).toStrictEqual(
+    ) as NormalizationFailure;
+    expect(errors).toBeDefined();
+    expect(errors[0]).toStrictEqual(
       invalidDirectiveError(KEY, 'Entity', '2nd', [
         invalidSelectionSetErrorMessage('id organization { details id }', ['Organization.details'], 'Details', OBJECT),
       ]),
@@ -1701,7 +1631,7 @@ describe('Normalization tests', () => {
   });
 
   test('that an error is returned if a composite type selection does not define a selection set of its own #2.1', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
        type Entity @key(fields: "id email") @key(fields: "id organization { uuid details }") {
          id: ID!
@@ -1721,10 +1651,9 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       invalidDirectiveError(KEY, 'Entity', numberToOrdinal(2), [
         invalidSelectionSetErrorMessage(
           'id organization { uuid details }',
@@ -1737,7 +1666,7 @@ describe('Normalization tests', () => {
   });
 
   test('that an error is returned if a composite type selection does not define a selection set of its own  #2.2', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
        type Entity @key(fields: "id email") @key(fields: "id organization { details uuid }") {
          id: ID!
@@ -1757,10 +1686,9 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toBeDefined();
-    expect(result.errors[0]).toStrictEqual(
+    ) as NormalizationFailure;
+    expect(errors).toBeDefined();
+    expect(errors[0]).toStrictEqual(
       invalidDirectiveError(KEY, 'Entity', '2nd', [
         invalidSelectionSetErrorMessage(
           'id organization { details uuid }',
@@ -1796,11 +1724,10 @@ describe('Normalization tests', () => {
          name: String!
         }
     `);
-    expect(result.success).toBe(true);
   });
 
   test('that if multiple nested objects with invalid fields are passed in composite keys gives an error', () => {
-    const result = normalizeSubgraphFromString(
+    const { errors } = normalizeSubgraphFromString(
       `
        type Entity @key(fields: "id email") @key(fields: "id organization { details { id } somethingElse { id } }") {
          id: ID!
@@ -1825,10 +1752,9 @@ describe('Normalization tests', () => {
     `,
       true,
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    ) as NormalizationFailure;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       invalidDirectiveError(KEY, 'Entity', numberToOrdinal(2), [
         undefinedFieldInFieldSetErrorMessage(
           'id organization { details { id } somethingElse { id } }',
@@ -1840,53 +1766,32 @@ describe('Normalization tests', () => {
   });
 
   test('that a subgraph is normalized correctly', () => {
-    const result = normalizeSubgraphSuccess(nab, ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(schemaToSortedNormalizedString(result.schema)).toBe(
-      normalizeString(`
-      directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
-      directive @composeDirective(name: String!) repeatable on SCHEMA
-      directive @extends on INTERFACE | OBJECT
-      directive @external on FIELD_DEFINITION | OBJECT
-      directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
-      directive @interfaceObject on OBJECT
-      directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
-      directive @override(from: String!) on FIELD_DEFINITION
-      directive @provides(fields: openfed__FieldSet!) on FIELD_DEFINITION
-      directive @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION
-      directive @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
-      directive @shareable repeatable on FIELD_DEFINITION | OBJECT
-      directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
-      
+    const { schema } = normalizeSubgraphSuccess(nab, ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(schema)).toBe(
+      normalizeString(
+        AUTHENTICATED_DIRECTIVE +
+          REQUIRES_SCOPES_DIRECTIVE +
+          `
       enum Enum @requiresScopes(scopes: [["read:enum"]]) {
         VALUE
       }
       
-      """
-        This is the description for Interface
-      """
+      """This is the description for Interface"""
       interface Interface @requiresScopes(scopes: [["read:private"]]) {
         field(argumentOne: String!): Enum! @authenticated
       }
 
-      """
-        This is the description for Object
-      """
+      """This is the description for Object"""
       type Object implements Interface @requiresScopes(scopes: [["read:object"]]) {
-        """
-          This is the description for Object.field
-        """
+        """This is the description for Object.field"""
         field(
-          """
-            This is the description for the argumentOne argument of Object.field
-          """
+          """This is the description for the argumentOne argument of Object.field"""
           argumentOne: String!
         ): Enum!
       }
-      
-      scalar openfed__FieldSet
-      
-      scalar openfed__Scope
-    `),
+    ` +
+          OPENFED_SCOPE,
+      ),
     );
   });
 

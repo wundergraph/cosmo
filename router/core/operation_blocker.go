@@ -3,28 +3,32 @@ package core
 import (
 	"errors"
 	"fmt"
+	"reflect"
+
 	"github.com/expr-lang/expr/vm"
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"go.uber.org/zap"
-	"reflect"
 )
 
 var (
 	ErrMutationOperationBlocked     = errors.New("operation type 'mutation' is blocked")
 	ErrSubscriptionOperationBlocked = errors.New("operation type 'subscription' is blocked")
 	ErrNonPersistedOperationBlocked = errors.New("non-persisted operation is blocked")
+	ErrPersistedOperationBlocked    = errors.New("persisted operation is blocked")
 )
 
 type OperationBlocker struct {
-	SafelistEnabled             bool
-	LogUnknownOperationsEnabled bool
-
 	blockMutations     BlockMutationOptions
 	blockSubscriptions BlockSubscriptionOptions
 	blockNonPersisted  BlockNonPersistedOptions
+	blockPersisted     BlockPersistedOptions
 	mutationExpr       *vm.Program
 	subscriptionExpr   *vm.Program
 	nonPersistedExpr   *vm.Program
+	persistedExpr      *vm.Program
+
+	safelistEnabled             bool
+	logUnknownOperationsEnabled bool
 }
 
 type BlockMutationOptions struct {
@@ -42,6 +46,11 @@ type BlockNonPersistedOptions struct {
 	Condition string
 }
 
+type BlockPersistedOptions struct {
+	Enabled   bool
+	Condition string
+}
+
 type SafelistPersistedOptions struct {
 	Enabled bool
 }
@@ -50,6 +59,7 @@ type OperationBlockerOptions struct {
 	BlockMutations              BlockMutationOptions
 	BlockSubscriptions          BlockSubscriptionOptions
 	BlockNonPersisted           BlockNonPersistedOptions
+	BlockPersisted              BlockPersistedOptions
 	SafelistEnabled             bool
 	LogUnknownOperationsEnabled bool
 	exprManager                 *expr.Manager
@@ -57,11 +67,13 @@ type OperationBlockerOptions struct {
 
 func NewOperationBlocker(opts *OperationBlockerOptions) (*OperationBlocker, error) {
 	ob := &OperationBlocker{
-		blockMutations:              opts.BlockMutations,
-		blockSubscriptions:          opts.BlockSubscriptions,
-		blockNonPersisted:           opts.BlockNonPersisted,
-		SafelistEnabled:             opts.SafelistEnabled,
-		LogUnknownOperationsEnabled: opts.LogUnknownOperationsEnabled,
+		blockMutations:     opts.BlockMutations,
+		blockSubscriptions: opts.BlockSubscriptions,
+		blockNonPersisted:  opts.BlockNonPersisted,
+		blockPersisted:     opts.BlockPersisted,
+
+		safelistEnabled:             opts.SafelistEnabled,
+		logUnknownOperationsEnabled: opts.LogUnknownOperationsEnabled,
 	}
 
 	if err := ob.compileExpressions(opts.exprManager); err != nil {
@@ -97,13 +109,19 @@ func (o *OperationBlocker) compileExpressions(exprManager *expr.Manager) error {
 		o.nonPersistedExpr = v
 	}
 
+	if o.blockPersisted.Enabled && o.blockPersisted.Condition != "" {
+		v, err := exprManager.CompileExpression(o.blockPersisted.Condition, reflect.Bool)
+		if err != nil {
+			return fmt.Errorf("failed to compile persisted expression: %w", err)
+		}
+		o.persistedExpr = v
+	}
+
 	return nil
 }
 
 func (o *OperationBlocker) OperationIsBlocked(requestLogger *zap.Logger, exprContext expr.Context, operation *ParsedOperation) error {
-
 	if !operation.IsPersistedOperation && o.blockNonPersisted.Enabled {
-
 		// Block all non-persisted operations when no expression is provided
 		if o.nonPersistedExpr == nil {
 			return ErrNonPersistedOperationBlocked
@@ -117,6 +135,23 @@ func (o *OperationBlocker) OperationIsBlocked(requestLogger *zap.Logger, exprCon
 
 		if ok {
 			return ErrNonPersistedOperationBlocked
+		}
+	}
+
+	if operation.IsPersistedOperation && o.blockPersisted.Enabled {
+		// Block all persisted operations when no expression is provided
+		if o.persistedExpr == nil {
+			return ErrPersistedOperationBlocked
+		}
+
+		ok, err := expr.ResolveBoolExpression(o.persistedExpr, exprContext)
+		if err != nil {
+			requestLogger.Error("failed to resolve persisted block expression", zap.Error(err))
+			return ErrPersistedOperationBlocked
+		}
+
+		if ok {
+			return ErrPersistedOperationBlocked
 		}
 	}
 

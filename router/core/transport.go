@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/wundergraph/cosmo/router/internal/circuit"
+
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/internal/traceclient"
 
@@ -68,33 +70,44 @@ func NewCustomTransport(
 	metricStore metric.Store,
 	connectionMetricStore metric.ConnectionMetricStore,
 	enableSingleFlight bool,
+	breaker *circuit.Manager,
 	enableTraceClient bool,
 ) *CustomTransport {
 	ct := &CustomTransport{
 		metricStore: metricStore,
 	}
 
+	// The round trip method is almost always called via the http.Client roundTripper interface
+	// as a result we cannot pass in the request context logger directly, since this will break the interface
+	// The roundTripper is also not in the core package so it does not have access to the
+	// getRequestContext function since its private to only the core package
+	// As a workaround we pass in a function that can be used to get the logger from within the round tripper
+	getRequestContextLogger := func(req *http.Request) *zap.Logger {
+		reqContext := getRequestContext(req.Context())
+		return reqContext.Logger()
+	}
+
 	if enableTraceClient {
-		getExprContext := func(ctx context.Context) *expr.Context {
+		getValuesFromRequest := func(ctx context.Context, req *http.Request) (*expr.Context, string) {
 			reqContext := getRequestContext(ctx)
 			if reqContext == nil {
-				return &expr.Context{}
+				return &expr.Context{}, ""
 			}
-			return &reqContext.expressionContext
+
+			var activeSubgraphName string
+			if activeSubgraph := reqContext.ActiveSubgraph(req); activeSubgraph != nil {
+				activeSubgraphName = activeSubgraph.Name
+			}
+			return &reqContext.expressionContext, activeSubgraphName
 		}
-		baseRoundTripper = traceclient.NewTraceInjectingRoundTripper(baseRoundTripper, connectionMetricStore, getExprContext)
+		baseRoundTripper = traceclient.NewTraceInjectingRoundTripper(baseRoundTripper, connectionMetricStore, getValuesFromRequest)
+	}
+
+	if breaker.HasCircuits() {
+		baseRoundTripper = circuit.NewCircuitTripper(baseRoundTripper, breaker, getRequestContextLogger)
 	}
 
 	if retryOptions.Enabled {
-		// The round trip method is almost always called via the http.Client RoundTripper interface
-		// as a result we cannot pass in the request context logger directly, since this will break the interface
-		// The RoundTripper is also not in the core package so it does not have access to the
-		// getRequestContext function since its private to only the core package
-		// As a workaround we pass in a function that can be used to get the logger from within the round tripper
-		getRequestContextLogger := func(req *http.Request) *zap.Logger {
-			reqContext := getRequestContext(req.Context())
-			return reqContext.Logger()
-		}
 		ct.roundTripper = retrytransport.NewRetryHTTPTransport(baseRoundTripper, retryOptions, getRequestContextLogger)
 	} else {
 		ct.roundTripper = baseRoundTripper
@@ -122,7 +135,7 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 
 	attributes = append(attributes, reqContext.telemetry.metricAttrs...)
 	if reqContext.telemetry.metricAttributeExpressions != nil {
-		additionalAttrs, err := reqContext.telemetry.metricAttributeExpressions.expressionsAttributes(&reqContext.expressionContext)
+		additionalAttrs, err := reqContext.telemetry.metricAttributeExpressions.expressionsAttributes(&reqContext.expressionContext, expr.BucketDefault)
 		if err != nil {
 			ct.logger.Error("failed to resolve metric attribute expressions", zap.Error(err))
 		}
@@ -335,6 +348,7 @@ type TransportFactory struct {
 	localhostFallbackInsideDocker bool
 	metricStore                   metric.Store
 	connectionMetricStore         metric.ConnectionMetricStore
+	circuitBreaker                *circuit.Manager
 	logger                        *zap.Logger
 	tracerProvider                *sdktrace.TracerProvider
 	tracePropagators              propagation.TextMapPropagator
@@ -351,6 +365,7 @@ type TransportOptions struct {
 	LocalhostFallbackInsideDocker bool
 	MetricStore                   metric.Store
 	ConnectionMetricStore         metric.ConnectionMetricStore
+	CircuitBreaker                *circuit.Manager
 	Logger                        *zap.Logger
 	TracerProvider                *sdktrace.TracerProvider
 	TracePropagators              propagation.TextMapPropagator
@@ -375,6 +390,7 @@ func NewTransport(opts *TransportOptions) *TransportFactory {
 		logger:                        opts.Logger,
 		tracerProvider:                opts.TracerProvider,
 		tracePropagators:              opts.TracePropagators,
+		circuitBreaker:                opts.CircuitBreaker,
 		enableTraceClient:             opts.EnableTraceClient,
 	}
 }
@@ -420,6 +436,7 @@ func (t TransportFactory) RoundTripper(enableSingleFlight bool, baseTransport ht
 		t.metricStore,
 		t.connectionMetricStore,
 		enableSingleFlight,
+		t.circuitBreaker,
 		t.enableTraceClient,
 	)
 
@@ -450,4 +467,50 @@ func GetSpanName(operationName string, operationType string) string {
 		return fmt.Sprintf("%s %s", operationType, operationName)
 	}
 	return fmt.Sprintf("%s %s", operationType, "unnamed")
+}
+
+func CreateGRPCTraceGetter(
+	telemetryAttributeExpressions *attributeExpressions,
+	tracingAttributeExpressions *attributeExpressions,
+) func(context.Context) (string, otrace.SpanStartEventOption) {
+	return func(ctx context.Context) (string, otrace.SpanStartEventOption) {
+		reqCtx := getRequestContext(ctx)
+		if reqCtx == nil {
+			return "GRPC Plugin Client - Invoke", otrace.WithAttributes()
+		}
+
+		traceAttrs := *reqCtx.telemetry.AcquireAttributes()
+		defer reqCtx.telemetry.ReleaseAttributes(&traceAttrs)
+
+		attrs := make([]attribute.KeyValue, 0, len(reqCtx.telemetry.traceAttrs))
+
+		attrs = append(attrs, traceAttrs...)
+		attrs = append(attrs, reqCtx.telemetry.traceAttrs...)
+
+		spanAttrFunc := func(telemetryValues ...attribute.KeyValue) {
+			attrs = append(attrs, telemetryValues...)
+		}
+
+		addExpressions(AddExprOpts{
+			logger:      reqCtx.logger,
+			expressions: telemetryAttributeExpressions,
+			key:         expr.BucketSubgraph,
+			exprCtx:     &reqCtx.expressionContext,
+			attrAddFunc: spanAttrFunc,
+		})
+
+		addExpressions(AddExprOpts{
+			logger:      reqCtx.logger,
+			expressions: tracingAttributeExpressions,
+			key:         expr.BucketSubgraph,
+			exprCtx:     &reqCtx.expressionContext,
+			attrAddFunc: spanAttrFunc,
+		})
+
+		// Override http operation protocol with grpc
+		attrs = append(attrs, otel.EngineTransportAttribute, otel.WgOperationProtocol.String(OperationProtocolGRPC.String()))
+
+		spanName := SpanNameFormatter("", reqCtx.request)
+		return spanName, otrace.WithAttributes(attrs...)
+	}
 }

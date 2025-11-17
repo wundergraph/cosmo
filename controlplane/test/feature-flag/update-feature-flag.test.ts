@@ -337,6 +337,7 @@ describe('Update feature flag tests', () => {
     'graph-viewer',
     'subgraph-admin',
     'subgraph-publisher',
+    'subgraph-viewer',
   ])('%s should not be able to update feature flag', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
 

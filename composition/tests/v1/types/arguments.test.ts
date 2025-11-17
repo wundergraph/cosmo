@@ -1,9 +1,6 @@
 import {
   BOOLEAN_SCALAR,
   duplicateArgumentsError,
-  federateSubgraphs,
-  FederationResultFailure,
-  FederationResultSuccess,
   FIELD,
   FLOAT_SCALAR,
   incompatibleInputValueDefaultValuesError,
@@ -14,7 +11,7 @@ import {
   invalidNamedTypeError,
   InvalidRequiredInputValueData,
   invalidRequiredInputValueError,
-  NormalizationResultFailure,
+  NormalizationFailure,
   normalizeSubgraphFromString,
   parse,
   ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -23,8 +20,14 @@ import {
   subgraphValidationError,
 } from '../../../src';
 import { describe, expect, test } from 'vitest';
-import { stringToTypeNode, versionOneRouterDefinitions, versionTwoRouterDefinitions } from '../utils/utils';
-import { normalizeString, schemaToSortedNormalizedString } from '../../utils/utils';
+import { SCHEMA_QUERY_DEFINITION, stringToTypeNode, TAG_DIRECTIVE } from '../utils/utils';
+import {
+  federateSubgraphsFailure,
+  federateSubgraphsSuccess,
+  normalizeString,
+  normalizeSubgraphFailure,
+  schemaToSortedNormalizedString,
+} from '../../utils/utils';
 import { Kind } from 'graphql';
 
 describe('Argument federation tests', () => {
@@ -32,14 +35,13 @@ describe('Argument federation tests', () => {
   const argumentCoords = 'Object.field(input: ...)';
 
   test('that equal arguments merge', () => {
-    const result = federateSubgraphs(
+    const { federatedGraphSchema } = federateSubgraphsSuccess(
       [subgraphWithArgument('subgraph-a', 'String'), subgraphWithArgument('subgraph-b', 'String')],
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
         type Object {
           field(input: String): String
@@ -47,22 +49,19 @@ describe('Argument federation tests', () => {
         type Query {
           dummy: String!
         }
-        
-        scalar openfed__Scope
     `,
       ),
     );
   });
 
   test('that arguments merge into their most restrictive form #1', () => {
-    const result = federateSubgraphs(
+    const { federatedGraphSchema } = federateSubgraphsSuccess(
       [subgraphWithArgument('subgraph-a', 'Float!'), subgraphWithArgument('subgraph-b', 'Float')],
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
       type Object {
         field(input: Float!): String
@@ -71,22 +70,19 @@ describe('Argument federation tests', () => {
       type Query {
         dummy: String!
       }
-  
-      scalar openfed__Scope
     `,
       ),
     );
   });
 
   test('that if not all arguments have a default value, the default value is ignored', () => {
-    const result = federateSubgraphs(
+    const { federatedGraphSchema } = federateSubgraphsSuccess(
       [subgraphWithArgument('subgraph-a', 'Int'), subgraphWithArgumentAndDefaultValue('subgraph-b', 'Int', '1337')],
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
       type Object {
         field(input: Int): String
@@ -95,25 +91,22 @@ describe('Argument federation tests', () => {
       type Query {
         dummy: String!
       }
-
-      scalar openfed__Scope
     `,
       ),
     );
   });
 
   test('that if all arguments have the same default value, the default value is included', () => {
-    const result = federateSubgraphs(
+    const { federatedGraphSchema } = federateSubgraphsSuccess(
       [
         subgraphWithArgumentAndDefaultValue('subgraph-a', 'Boolean', 'false'),
         subgraphWithArgumentAndDefaultValue('subgraph-b', 'Boolean', 'false'),
       ],
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
       type Object {
         field(input: Boolean = false): String
@@ -122,20 +115,18 @@ describe('Argument federation tests', () => {
       type Query {
         dummy: String!
       }
-
-      scalar openfed__Scope
     `,
       ),
     );
   });
 
-  test('that if arguments of the same name are not the same type, an error is returned`', () => {
-    const result = federateSubgraphs(
+  test('that if arguments of the same name are not the same type, an error is returned', () => {
+    const { errors } = federateSubgraphsFailure(
       [subgraphWithArgument('subgraph-a', STRING_SCALAR), subgraphWithArgument('subgraph-b', FLOAT_SCALAR)],
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    );
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       incompatibleMergedTypesError({
         actualType: FLOAT_SCALAR,
         coords: argumentCoords,
@@ -148,44 +139,43 @@ describe('Argument federation tests', () => {
   test('that an error is returned if arguments have different string-converted default values', () => {
     const expectedType = '1';
     const actualType = '2';
-    const result = federateSubgraphs(
+    const { errors } = federateSubgraphsFailure(
       [
         subgraphWithArgumentAndDefaultValue('subgraph-a', 'Int', expectedType),
         subgraphWithArgumentAndDefaultValue('subgraph-b', 'Int', actualType),
       ],
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    );
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       incompatibleInputValueDefaultValuesError(prefix, argumentCoords, ['subgraph-b'], expectedType, actualType),
     );
   });
 
-  test('that if arguments have different boolean default values, an error is returned`', () => {
-    const result = federateSubgraphs(
+  test('that if arguments have different boolean default values, an error is returned', () => {
+    const { errors } = federateSubgraphsFailure(
       [
         subgraphWithArgumentAndDefaultValue('subgraph-a', 'Boolean', 'true'),
         subgraphWithArgumentAndDefaultValue('subgraph-b', 'Boolean', 'false'),
       ],
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    );
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       incompatibleInputValueDefaultValuesError(prefix, argumentCoords, ['subgraph-b'], 'true', 'false'),
     );
   });
 
   test('that if arguments have incompatible default values, an error is returned', () => {
-    const result = federateSubgraphs(
+    const { errors } = federateSubgraphsFailure(
       [
         subgraphWithArgumentAndDefaultValue('subgraph-a', BOOLEAN_SCALAR, '1'),
         subgraphWithArgumentAndDefaultValue('subgraph-b', BOOLEAN_SCALAR, 'false'),
       ],
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    );
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       subgraphValidationError('subgraph-a', [
         incompatibleInputValueDefaultValueTypeError(prefix, argumentCoords, BOOLEAN_SCALAR, '1'),
       ]),
@@ -193,14 +183,10 @@ describe('Argument federation tests', () => {
   });
 
   test('that if an argument is optional but not included in all subgraphs, it is not present in the federated graph', () => {
-    const result = federateSubgraphs(
-      [subgraphA, subgraphB],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess([subgraphA, subgraphB], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
       interface Interface {
         field(optionalInAll: Boolean, requiredInAll: Int!, requiredOrOptionalInAll: String!): String
@@ -213,20 +199,14 @@ describe('Argument federation tests', () => {
       type Query {
         dummy: String!
       }
-      
-      scalar openfed__Scope
     `,
       ),
     );
   });
 
   test('that if a required argument is not defined in all definitions of a field, an error is returned', () => {
-    const result = federateSubgraphs(
-      [subgraphA, subgraphC],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(2);
+    const { errors } = federateSubgraphsFailure([subgraphA, subgraphC], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(2);
     const errorArrayOne: InvalidRequiredInputValueData[] = [
       {
         inputValueName: 'requiredInAll',
@@ -239,7 +219,7 @@ describe('Argument federation tests', () => {
         requiredSubgraphs: ['subgraph-a'],
       },
     ];
-    expect(result.errors[0]).toStrictEqual(invalidRequiredInputValueError(FIELD, 'Interface.field', errorArrayOne));
+    expect(errors[0]).toStrictEqual(invalidRequiredInputValueError(FIELD, 'Interface.field', errorArrayOne));
     const errorArrayTwo: InvalidRequiredInputValueData[] = [
       {
         inputValueName: 'requiredInAll',
@@ -252,45 +232,14 @@ describe('Argument federation tests', () => {
         requiredSubgraphs: ['subgraph-a'],
       },
     ];
-    expect(result.errors[1]).toStrictEqual(invalidRequiredInputValueError(FIELD, 'Object.field', errorArrayTwo));
+    expect(errors[1]).toStrictEqual(invalidRequiredInputValueError(FIELD, 'Object.field', errorArrayTwo));
   });
 
   test('that if an argument is not a valid input type or defined more than once, an error is returned', () => {
-    const result = normalizeSubgraphFromString(
-      `
-      enum Enum {
-        A
-        B
-        C
-      }
-      
-      input Input {
-        a: String!
-        b: Int!
-        c: Float!
-      }
-      
-      interface Interface {
-        a: String!
-      }
-      
-      type AnotherObject implements Interface {
-        a: String!
-        b: Int!
-        c: Float!
-      }
-      
-      type Object {
-        field(argOne: Enum!, argTwo: Input!, argThree: [Interface!]! argThree: String!, argOne: Enum!): String!
-      }
-    `,
-      true,
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as NormalizationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(2);
-    expect(result.errors[0]).toStrictEqual(duplicateArgumentsError('Object.field', ['argThree', 'argOne']));
-    expect(result.errors[1]).toStrictEqual(
+    const { errors } = normalizeSubgraphFailure(naaaa, ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(2);
+    expect(errors[0]).toStrictEqual(duplicateArgumentsError('Object.field', ['argThree', 'argOne']));
+    expect(errors[1]).toStrictEqual(
       invalidNamedTypeError({
         data: {
           kind: 'InputValueDefinition',
@@ -305,22 +254,20 @@ describe('Argument federation tests', () => {
   });
 
   test('that arguments are accounted for when merging extension and base definitions', () => {
-    const result = federateSubgraphs(
+    const { federatedGraphSchema } = federateSubgraphsSuccess(
       [subgraphD, subgraphE, subgraphF],
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
+          TAG_DIRECTIVE +
           `
       type Entity implements Interface @tag(name: "subgraph-f") {
-        field(
-          four: String = null @tag(name: "object"), 
+        field(four: String = null @tag(name: "object"), 
           one: Int = null @tag(name: "extension"), 
           three: String = null @deprecated(reason: "just because"), 
-          two: Int = null @tag(name: "extension") @tag(name: "object")
-        ): String
+          two: Int = null @tag(name: "extension") @tag(name: "object")): String
         id: ID!
       }
       
@@ -337,13 +284,12 @@ describe('Argument federation tests', () => {
   });
 
   test('that an error is returned if a required argument uses a null default value', () => {
-    const result = federateSubgraphs(
+    const { errors } = federateSubgraphsFailure(
       [subgraphWithArgument('subgraph', 'String! = null')],
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    );
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       subgraphValidationError('subgraph', [
         incompatibleInputValueDefaultValueTypeError('argument "input"', 'Object.field(input: ...)', 'String!', 'null'),
       ]),
@@ -351,13 +297,12 @@ describe('Argument federation tests', () => {
   });
 
   test('that an error is returned if a required argument defines an incompatible default value', () => {
-    const result = federateSubgraphs(
+    const { errors } = federateSubgraphsFailure(
       [subgraphWithArgument('subgraph', 'String = 1')],
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    );
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       subgraphValidationError('subgraph', [
         incompatibleInputValueDefaultValueTypeError('argument "input"', 'Object.field(input: ...)', 'String', '1'),
       ]),
@@ -365,17 +310,19 @@ describe('Argument federation tests', () => {
   });
 
   test('that the @deprecated directive is persisted on Arguments in the federated schema #1.1', () => {
-    const result = federateSubgraphs(
-      [subgraphG, subgraphH],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess([subgraphG, subgraphH], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
         type Entity implements Identifiable {
-          field("""one"""one: Int!three: String @deprecated(reason: "Just because")"""two"""two: String): String
+          field(
+            """one"""
+            one: Int!
+            three: String @deprecated(reason: "Just because")
+            """two"""
+            two: String
+          ): String
           id: Int!
           test: Float!
         }
@@ -393,17 +340,19 @@ describe('Argument federation tests', () => {
   });
 
   test('that the @deprecated directive is persisted on Arguments in the federated schema #1.2', () => {
-    const result = federateSubgraphs(
-      [subgraphH, subgraphG],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    const { federatedGraphSchema } = federateSubgraphsSuccess([subgraphH, subgraphG], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOneRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
         type Entity implements Identifiable {
-          field("""one"""one: Int!three: String @deprecated(reason: "Just because")"""two"""two: String): String
+          field(
+            """one"""
+            one: Int!
+            three: String @deprecated(reason: "Just because")
+            """two"""
+            two: String
+          ): String
           id: Int!
           test: Float!
         }
@@ -568,6 +517,38 @@ const subgraphH: Subgraph = {
     extend type Entity @key(fields: "id") {
       id: Int!
       test: Float!
+    }
+  `),
+};
+
+const naaaa: Subgraph = {
+  name: 'naaaa',
+  url: '',
+  definitions: parse(`
+    enum Enum {
+      A
+      B
+      C
+    }
+    
+    input Input {
+      a: String!
+      b: Int!
+      c: Float!
+    }
+    
+    interface Interface {
+      a: String!
+    }
+    
+    type AnotherObject implements Interface {
+      a: String!
+      b: Int!
+      c: Float!
+    }
+    
+    type Object {
+      field(argOne: Enum!, argTwo: Input!, argThree: [Interface!]! argThree: String!, argOne: Enum!): String!
     }
   `),
 };

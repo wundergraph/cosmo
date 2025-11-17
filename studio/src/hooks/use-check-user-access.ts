@@ -25,9 +25,9 @@ export function useCheckUserAccess() {
       return true;
     }
 
-    const roles = org.groups.flatMap((g) => g.rules?.map((r) => r.role) ?? []);
+    const roles = new Set(org.groups.flatMap((g) => g.rules?.map((r) => r.role) ?? []));
     for (const role of rolesToBe) {
-      if (roles.includes(role)) {
+      if (roles.has(role)) {
         return true;
       }
     }

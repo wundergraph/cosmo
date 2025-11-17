@@ -213,6 +213,8 @@ export const websocketSubprotocolEnum = pgEnum('websocket_subprotocol', [
   'graphql-transport-ws',
 ] as const);
 
+export const subgraphTypeEnum = pgEnum('subgraph_type', ['standard', 'grpc_plugin', 'grpc_service'] as const);
+
 export const subgraphs = pgTable(
   'subgraphs', // subgraphs
   {
@@ -232,11 +234,43 @@ export const subgraphs = pgTable(
       }),
     isFeatureSubgraph: boolean('is_feature_subgraph').notNull().default(false),
     isEventDrivenGraph: boolean('is_event_driven_graph').notNull().default(false),
+    type: subgraphTypeEnum('type').notNull().default('standard'),
   },
   (t) => {
     return {
       targetIdIndex: index('subgraphs_target_id_idx').on(t.targetId),
       schemaVersionIdIndex: index('subgraphs_schema_version_id_idx').on(t.schemaVersionId),
+    };
+  },
+);
+
+// The link is a one way link from source to target.
+// The source subgraph can be linked only to one target subgraph, thats why we have a unique constraint on the source subgraph.
+export const linkedSubgraphs = pgTable(
+  'linked_subgraphs', // ls
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    sourceSubgraphId: uuid('source_subgraph_id')
+      .notNull()
+      .references(() => subgraphs.id, {
+        onDelete: 'cascade',
+      })
+      .unique(),
+    targetSubgraphId: uuid('target_subgraph_id')
+      .notNull()
+      .references(() => subgraphs.id, {
+        onDelete: 'cascade',
+      }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    createdById: uuid('created_by_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+  },
+  (t) => {
+    return {
+      sourceSubgraphIdIndex: index('ls_source_subgraph_id_idx').on(t.sourceSubgraphId),
+      targetSubgraphIdIndex: index('ls_target_subgraph_id_idx').on(t.targetSubgraphId),
+      createdByIdIndex: index('ls_created_by_id_idx').on(t.createdById),
     };
   },
 );
@@ -792,6 +826,33 @@ export const schemaChecks = pgTable(
   },
 );
 
+export const linkedSchemaChecks = pgTable(
+  'linked_schema_checks', // lsc
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    schemaCheckId: uuid('schema_check_id')
+      .references(() => schemaChecks.id, {
+        onDelete: 'cascade',
+      })
+      .notNull(),
+    linkedSchemaCheckId: uuid('linked_schema_check_id')
+      .references(() => schemaChecks.id, {
+        onDelete: 'cascade',
+      })
+      .notNull(),
+  },
+  (t) => {
+    return {
+      uniqueLinkedSchemaCheck: uniqueIndex('lsc_schema_check_id_linked_schema_check_id_unique').on(
+        t.schemaCheckId,
+        t.linkedSchemaCheckId,
+      ),
+      schemaCheckIdIndex: index('lsc_schema_check_id_idx').on(t.schemaCheckId),
+      linkedSchemaCheckIdIndex: index('lsc_linked_schema_check_id_idx').on(t.linkedSchemaCheckId),
+    };
+  },
+);
+
 export const schemaCheckSubgraphs = pgTable(
   'schema_check_subgraphs', // scs
   {
@@ -820,6 +881,17 @@ export const schemaCheckSubgraphs = pgTable(
     };
   },
 );
+
+export const schemaCheckSubgraphRelations = relations(schemaCheckSubgraphs, ({ one }) => ({
+  schemaCheck: one(schemaChecks, {
+    fields: [schemaCheckSubgraphs.schemaCheckId],
+    references: [schemaChecks.id],
+  }),
+  namespace: one(namespaces, {
+    fields: [schemaCheckSubgraphs.namespaceId],
+    references: [namespaces.id],
+  }),
+}));
 
 export const schemaCheckChangeActionOperationUsage = pgTable(
   'schema_check_change_operation_usage', // sccou
@@ -1346,6 +1418,8 @@ export const organizationRoleEnum = pgEnum('organization_role', [
   'graph-viewer',
   'subgraph-admin',
   'subgraph-publisher',
+  'subgraph-checker',
+  'subgraph-viewer',
 ] as const);
 
 export const organizationGroups = pgTable('organization_groups', {
@@ -1526,7 +1600,6 @@ export const organizationInvitations = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     invitedBy: uuid('invited_by').references(() => users.id, { onDelete: 'cascade' }),
-    groupId: uuid('group_id').references(() => organizationGroups.id, { onDelete: 'set null' }),
     accepted: boolean('accepted').default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -1535,6 +1608,25 @@ export const organizationInvitations = pgTable(
       organizationIdIndex: index('orginv_organization_id_idx').on(t.organizationId),
       userIdIndex: index('orginv_user_id_idx').on(t.userId),
       invitedByIndex: index('orginv_invited_by_idx').on(t.invitedBy),
+    };
+  },
+);
+
+export const organizationInvitationGroups = pgTable(
+  'organization_invitation_groups',
+  {
+    id: uuid('id').notNull().primaryKey().defaultRandom(),
+    invitationId: uuid('invitation_id')
+      .notNull()
+      .references(() => organizationInvitations.id, { onDelete: 'cascade' }),
+    groupId: uuid('group_id')
+      .notNull()
+      .references(() => organizationGroups.id, { onDelete: 'cascade' }),
+  },
+  (t) => {
+    return {
+      invitationIdIndex: index('org_inv_invitation_idx').on(t.invitationId),
+      groupIdIndex: index('org_inv_group_id').on(t.groupId),
     };
   },
 );
@@ -2350,6 +2442,8 @@ export const namespaceCacheWarmerConfigRelations = relations(namespaceCacheWarme
 
 export const proposalStateEnum = pgEnum('proposal_state', ['DRAFT', 'APPROVED', 'PUBLISHED', 'CLOSED'] as const);
 
+export const proposalOriginEnum = pgEnum('proposal_origin', ['INTERNAL', 'EXTERNAL'] as const);
+
 export const proposals = pgTable(
   'proposals', // pr
   {
@@ -2365,10 +2459,12 @@ export const proposals = pgTable(
       onDelete: 'set null',
     }),
     state: proposalStateEnum('state').notNull(),
+    origin: proposalOriginEnum('origin').notNull().default('INTERNAL'),
   },
   (t) => ({
     uniqueFederatedGraphClientName: unique('federated_graph_proposal_name').on(t.federatedGraphId, t.name),
     createdByIdIndex: index('pr_created_by_id_idx').on(t.createdById),
+    federatedGraphIdIndex: index('pr_federated_graph_id_idx').on(t.federatedGraphId),
   }),
 );
 
@@ -2445,5 +2541,40 @@ export const schemaCheckProposalMatchRelations = relations(schemaCheckProposalMa
   proposal: one(proposals, {
     fields: [schemaCheckProposalMatch.proposalId],
     references: [proposals.id],
+  }),
+}));
+
+export const protobufSchemaVersions = pgTable('protobuf_schema_versions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  schemaVersionId: uuid('schema_version_id')
+    .notNull()
+    .references(() => schemaVersion.id, { onDelete: 'cascade' }),
+  protoSchema: text('proto_schema').notNull(),
+  protoMappings: text('proto_mappings').notNull(),
+  protoLock: text('proto_lock').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const protobufSchemaVersionsRelations = relations(protobufSchemaVersions, ({ one }) => ({
+  schemaVersion: one(schemaVersion, {
+    fields: [protobufSchemaVersions.schemaVersionId],
+    references: [schemaVersion.id],
+  }),
+}));
+
+export const pluginImageVersions = pgTable('plugin_image_versions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  schemaVersionId: uuid('schema_version_id')
+    .notNull()
+    .references(() => schemaVersion.id, { onDelete: 'cascade' }),
+  version: text('version').notNull(),
+  platform: text('platform').array().notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const pluginImageVersionsRelations = relations(pluginImageVersions, ({ one }) => ({
+  schemaVersion: one(schemaVersion, {
+    fields: [pluginImageVersions.schemaVersionId],
+    references: [schemaVersion.id],
   }),
 }));

@@ -4,6 +4,92 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.123.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.122.0...@wundergraph/cosmo-connect@0.123.0) (2025-11-11)
+
+### Features
+
+* initial support for field resolvers in connect ([#2290](https://github.com/wundergraph/cosmo/issues/2290)) ([6f28c5d](https://github.com/wundergraph/cosmo/commit/6f28c5d203ef4fd95db83dfe22143e565df6d463)) (@Noroth)
+
+# [0.122.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.121.0...@wundergraph/cosmo-connect@0.122.0) (2025-10-29)
+
+### Features
+
+* add an api to validate the token's permissions ([#2271](https://github.com/wundergraph/cosmo/issues/2271)) ([7852d42](https://github.com/wundergraph/cosmo/commit/7852d42a0ff8ed97024d79771e3181aac000b97e)) (@JivusAyrus)
+
+# [0.121.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.120.0...@wundergraph/cosmo-connect@0.121.0) (2025-10-10)
+
+### Features
+
+* disallow reviewing proposals not created by Cosmo ([#2218](https://github.com/wundergraph/cosmo/issues/2218)) ([d4aee49](https://github.com/wundergraph/cosmo/commit/d4aee4905c1a3f1d409c3892621a0d2a1ce8d147)) (@wilsonrivera)
+
+# [0.120.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.119.1...@wundergraph/cosmo-connect@0.120.0) (2025-10-06)
+
+### Features
+
+* return additional linked check info when proposals are created/updated ([#2258](https://github.com/wundergraph/cosmo/issues/2258)) ([81ac616](https://github.com/wundergraph/cosmo/commit/81ac61679fe140961fcd610f2f6a419955dff23e)) (@JivusAyrus)
+
+## [0.119.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.119.0...@wundergraph/cosmo-connect@0.119.1) (2025-10-03)
+
+**Note:** Version bump only for package @wundergraph/cosmo-connect
+
+# [0.119.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.118.0...@wundergraph/cosmo-connect@0.119.0) (2025-09-16)
+
+### Features
+
+* improve namespace selector UI/UX ([#2161](https://github.com/wundergraph/cosmo/issues/2161)) ([33f870e](https://github.com/wundergraph/cosmo/commit/33f870e8b33751ce547b33eb9ca6cb12578f4034)) (@wilsonrivera)
+
+# [0.118.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.117.0...@wundergraph/cosmo-connect@0.118.0) (2025-09-10)
+
+### Features
+
+* add a feature to link subgraphs across namespaces ([#2156](https://github.com/wundergraph/cosmo/issues/2156)) ([e1abdea](https://github.com/wundergraph/cosmo/commit/e1abdeab80ee2fe8ccdff1ce963787280a86dee9)) (@JivusAyrus)
+
+# [0.117.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.116.0...@wundergraph/cosmo-connect@0.117.0) (2025-09-10)
+
+### Features
+
+* implement openfed__requireFetchReasons ([#2170](https://github.com/wundergraph/cosmo/issues/2170)) ([cfb097f](https://github.com/wundergraph/cosmo/commit/cfb097fb6ccc29a81cfca55fec6b71fdf6e1b61c)) (@Aenimus)
+
+# [0.116.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.115.2...@wundergraph/cosmo-connect@0.116.0) (2025-08-12)
+
+### Features
+
+* add support for plugins ([#2079](https://github.com/wundergraph/cosmo/issues/2079)) ([05c923a](https://github.com/wundergraph/cosmo/commit/05c923aaa09a898a1662fc40d0e5751dfa5b8fe1)) (@JivusAyrus)
+
+## [0.115.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.115.1...@wundergraph/cosmo-connect@0.115.2) (2025-08-08)
+
+### Bug Fixes
+
+* use federated graph id and org id to fetch operation content ([#2107](https://github.com/wundergraph/cosmo/issues/2107)) ([cfe1036](https://github.com/wundergraph/cosmo/commit/cfe10361e0d756f803ef4210b5efa46c3f16d8bb)) (@JivusAyrus)
+
+## [0.115.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.115.0...@wundergraph/cosmo-connect@0.115.1) (2025-07-31)
+
+### Bug Fixes
+
+* take limit as input so the no of operations returned is always limited ([#2095](https://github.com/wundergraph/cosmo/issues/2095)) ([80691fe](https://github.com/wundergraph/cosmo/commit/80691fe5b30011f8212380ffea769b141fa121d5)) (@JivusAyrus)
+
+# [0.115.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.114.0...@wundergraph/cosmo-connect@0.115.0) (2025-07-21)
+
+### Features
+
+* add disable resolvability validation flag ([#2065](https://github.com/wundergraph/cosmo/issues/2065)) ([0c920cc](https://github.com/wundergraph/cosmo/commit/0c920cc95065099667fc378b50e9278e8a99c286)) (@Aenimus)
+
+# [0.114.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.113.0...@wundergraph/cosmo-connect@0.114.0) (2025-07-09)
+
+### Features
+
+* return the proposal name on the creation of proposal ([#2003](https://github.com/wundergraph/cosmo/issues/2003)) ([ff1b237](https://github.com/wundergraph/cosmo/commit/ff1b2376921db2db7ac2a9d1619824eb1ae1e76d)) (@JivusAyrus)
+
+# [0.113.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.112.0...@wundergraph/cosmo-connect@0.113.0) (2025-07-01)
+
+### Bug Fixes
+
+* toggle ui logic and search to consider all operations ([#1982](https://github.com/wundergraph/cosmo/issues/1982)) ([e6264bd](https://github.com/wundergraph/cosmo/commit/e6264bd5fc98962b2b36f21a3a20c802333192f1)) (@JivusAyrus)
+
+### Features
+
+* allow organization members to be assigned multiple groups ([#1919](https://github.com/wundergraph/cosmo/issues/1919)) ([1e67757](https://github.com/wundergraph/cosmo/commit/1e677576a32efb89673cdfc3900a4c863eec8b7e)) (@wilsonrivera)
+
 # [0.112.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.111.0...@wundergraph/cosmo-connect@0.112.0) (2025-06-26)
 
 ### Features

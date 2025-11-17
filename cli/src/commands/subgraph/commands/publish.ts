@@ -11,6 +11,7 @@ import {
   parseGraphQLWebsocketSubprotocol,
   splitLabel,
 } from '@wundergraph/cosmo-shared';
+import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { getBaseHeaders } from '../../../core/config.js';
 import { validateSubscriptionProtocols } from '../../../utils.js';
@@ -69,6 +70,10 @@ export default (opts: BaseCommandOptions) => {
     false,
   );
   command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
+  command.option(
+    '--disable-resolvability-validation',
+    'This flag will disable the validation for whether all nodes of the federated graph are resolvable. Do NOT use unless troubleshooting.',
+  );
 
   command.action(async (name, options) => {
     const schemaFile = resolve(options.schema);
@@ -97,6 +102,7 @@ export default (opts: BaseCommandOptions) => {
 
     const resp = await opts.client.platform.publishFederatedSubgraph(
       {
+        disableResolvabilityValidation: options.disableResolvabilityValidation,
         name,
         namespace: options.namespace,
         // Publish schema only
@@ -111,6 +117,7 @@ export default (opts: BaseCommandOptions) => {
           ? parseGraphQLWebsocketSubprotocol(options.websocketSubprotocol)
           : undefined,
         labels: options.label.map((label: string) => splitLabel(label)),
+        type: SubgraphType.STANDARD,
       },
       {
         headers: getBaseHeaders(),

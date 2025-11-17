@@ -1,10 +1,8 @@
 package logging
 
 import (
-	"fmt"
 	"math"
 	"os"
-	"strings"
 	"time"
 
 	"go.uber.org/zap"
@@ -15,12 +13,13 @@ const (
 	requestIDField               = "request_id"
 	traceIDField                 = "trace_id"
 	batchRequestOperationIDField = "batched_request_operation_id"
+	defaultFileMode              = 0640
 )
 
 type RequestIDKey struct{}
 
-func New(pretty bool, development bool, level zapcore.LevelEnabler) *zap.Logger {
-	return NewZapLogger(zapcore.AddSync(os.Stdout), pretty, development, level)
+func New(pretty bool, development bool, stacktrace bool, level zapcore.LevelEnabler) *zap.Logger {
+	return NewZapLogger(zapcore.AddSync(os.Stdout), pretty, development, stacktrace, level)
 }
 
 func zapBaseEncoderConfig() zapcore.EncoderConfig {
@@ -62,30 +61,32 @@ func attachBaseFields(logger *zap.Logger) *zap.Logger {
 	return logger
 }
 
-func defaultZapCoreOptions(development bool) []zap.Option {
+func defaultZapCoreOptions(development bool, stacktrace bool) []zap.Option {
 	var zapOpts []zap.Option
 
 	if development {
 		zapOpts = append(zapOpts, zap.AddCaller(), zap.Development())
 	}
 
-	// Stacktrace is included on logs of ErrorLevel and above.
-	zapOpts = append(zapOpts,
-		zap.AddStacktrace(zap.ErrorLevel),
-	)
+	if stacktrace {
+		// Stacktrace is included on logs of ErrorLevel and above.
+		zapOpts = append(zapOpts,
+			zap.AddStacktrace(zap.ErrorLevel),
+		)
+	}
 
 	return zapOpts
 }
 
-func NewZapLoggerWithCore(core zapcore.Core, development bool) *zap.Logger {
-	zapLogger := zap.New(core, defaultZapCoreOptions(development)...)
+func NewZapLoggerWithCore(core zapcore.Core, development bool, stacktrace bool) *zap.Logger {
+	zapLogger := zap.New(core, defaultZapCoreOptions(development, stacktrace)...)
 
 	zapLogger = attachBaseFields(zapLogger)
 
 	return zapLogger
 }
 
-func NewZapLogger(syncer zapcore.WriteSyncer, pretty, development bool, level zapcore.LevelEnabler) *zap.Logger {
+func NewZapLogger(syncer zapcore.WriteSyncer, pretty, development bool, stacktrace bool, level zapcore.LevelEnabler) *zap.Logger {
 	var encoder zapcore.Encoder
 
 	if pretty {
@@ -99,13 +100,13 @@ func NewZapLogger(syncer zapcore.WriteSyncer, pretty, development bool, level za
 		syncer,
 		level,
 	)
-	zapLogger := zap.New(c, defaultZapCoreOptions(development)...)
+	zapLogger := zap.New(c, defaultZapCoreOptions(development, stacktrace)...)
 	zapLogger = attachBaseFields(zapLogger)
 
 	return zapLogger
 }
 
-func NewZapAccessLogger(syncer zapcore.WriteSyncer, development, pretty bool) *zap.Logger {
+func NewZapAccessLogger(syncer zapcore.WriteSyncer, level zapcore.Level, development, pretty, stacktrace bool) *zap.Logger {
 	var encoder zapcore.Encoder
 
 	if pretty {
@@ -117,9 +118,9 @@ func NewZapAccessLogger(syncer zapcore.WriteSyncer, development, pretty bool) *z
 	c := zapcore.NewCore(
 		encoder,
 		syncer,
-		zapcore.InfoLevel,
+		level,
 	)
-	zapLogger := zap.New(c, defaultZapCoreOptions(development)...)
+	zapLogger := zap.New(c, defaultZapCoreOptions(development, stacktrace)...)
 	zapLogger = attachBaseFields(zapLogger)
 
 	return zapLogger
@@ -137,6 +138,7 @@ type BufferedLoggerOptions struct {
 	Development   bool
 	Level         zapcore.Level
 	Pretty        bool
+	StackTrace    bool
 }
 
 func NewJSONZapBufferedLogger(options BufferedLoggerOptions) (*BufferedLogger, error) {
@@ -148,7 +150,7 @@ func NewJSONZapBufferedLogger(options BufferedLoggerOptions) (*BufferedLogger, e
 		FlushInterval: options.FlushInterval,
 	}
 
-	fl.Logger = NewZapAccessLogger(fl.bufferedWriteSyncer, options.Development, options.Pretty)
+	fl.Logger = NewZapAccessLogger(fl.bufferedWriteSyncer, options.Level, options.Development, options.Pretty, options.StackTrace)
 
 	return fl, nil
 }
@@ -157,27 +159,12 @@ func (f *BufferedLogger) Close() error {
 	return f.bufferedWriteSyncer.Stop()
 }
 
-func NewLogFile(path string) (*os.File, error) {
-	return os.OpenFile(path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
-}
-
-func ZapLogLevelFromString(logLevel string) (zapcore.Level, error) {
-	switch strings.ToUpper(logLevel) {
-	case "DEBUG":
-		return zap.DebugLevel, nil
-	case "INFO":
-		return zap.InfoLevel, nil
-	case "WARNING":
-		return zap.WarnLevel, nil
-	case "ERROR":
-		return zap.ErrorLevel, nil
-	case "FATAL":
-		return zap.FatalLevel, nil
-	case "PANIC":
-		return zap.PanicLevel, nil
-	default:
-		return -1, fmt.Errorf("unknown log level: %s", logLevel)
+func NewLogFile(path string, fileMode os.FileMode) (*os.File, error) {
+	if fileMode == 0 {
+		fileMode = defaultFileMode
 	}
+
+	return os.OpenFile(path, os.O_WRONLY|os.O_APPEND|os.O_CREATE, fileMode)
 }
 
 func WithRequestID(reqID string) zap.Field {

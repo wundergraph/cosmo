@@ -6,6 +6,7 @@ on:
       - 'composition-go/**/*'
       - 'demo/**/*'
       - 'router/**/*'
+      - 'router-plugin/**/*'
       - 'router-tests/**/*'
       - 'connect/**/*'
       - '.github/workflows/router-ci.yaml'
@@ -75,6 +76,27 @@ jobs:
       - name: Build
         working-directory: ./router
         run: make build
+
+  # Runs for forks to test docker image is building
+  build_image_fork:
+    if: github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        docker_build_target: [ '', 'nonroot' ]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/build-push-image
+        with:
+          docker_context: router
+          dockerfile: router/Dockerfile
+          docker_build_target: ${{ matrix.docker_build_target }}
+          token: ${{secrets.GITHUB_TOKEN}}
+          image_name: router
+          image_description: 'Cosmo Router'
+          push: 'false'
 
   # Runs for people with write access to the repository
   # that have access to the secrets
@@ -165,13 +187,52 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-        credentials:
-          username: ${{secrets.DOCKER_USERNAME}}
-          password: ${{secrets.DOCKER_PASSWORD}}
         ports:
           - 6379:6379
+      redis-0:
+        image: bitnamilegacy/redis-cluster:7.2
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        env:
+          ALLOW_EMPTY_PASSWORD: "yes"
+          REDIS_NODES: "redis-0 redis-1 redis-2"
+          REDIS_CLUSTER_REPLICAS: "0"
+          REDIS_CLUSTER_CREATOR: "no"
+        ports:
+          - 7001:6379
+      redis-1:
+        image: bitnamilegacy/redis-cluster:7.2
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        env:
+          ALLOW_EMPTY_PASSWORD: "yes"
+          REDIS_NODES: "redis-0 redis-1 redis-2"
+          REDIS_CLUSTER_REPLICAS: "0"
+          REDIS_CLUSTER_CREATOR: "no"
+        ports:
+          - 7002:6379
+      redis-2:
+        image: bitnamilegacy/redis-cluster:7.2
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        env:
+          ALLOW_EMPTY_PASSWORD: "yes"
+          REDIS_NODES: "redis-0 redis-1 redis-2"
+          REDIS_CLUSTER_REPLICAS: "0"
+          REDIS_CLUSTER_CREATOR: "yes"
+        ports:
+          - 7003:6379
       kafka:
-        image: bitnami/kafka:3.7.0
+        image: bitnamilegacy/kafka:3.7.0
         options: >-
           --health-cmd "kafka-broker-api-versions.sh --version"
           --health-interval 10s
@@ -192,6 +253,45 @@ jobs:
         ports:
           - '9092:9092'
     steps:
+      - name: Wait for Redis Cluster
+        run: |
+          echo "[CHECK] Waiting for Redis Cluster to become healthy..."
+          cluster_containers=$(docker ps --quiet --filter "ancestor=bitnamilegacy/redis-cluster:7.2")
+
+          success=0
+          for i in {1..30}; do
+            if [ $i -eq 1 ]; then
+              echo "[INIT] Forcing cluster creation..."
+              # pick one container as the "creator"
+              creator=$(echo $cluster_containers | awk '{print $1}')
+              # run the cluster create command inside it
+              docker exec "$creator" redis-cli --cluster create redis-0:6379 redis-1:6379 redis-2:6379 --cluster-replicas 0 --cluster-yes || true
+            fi
+
+            for cid in $cluster_containers; do
+              docker exec "$cid" redis-cli -p 6379 cluster info
+              if docker exec "$cid" redis-cli -p 6379 cluster info 2>/dev/null | grep -q "cluster_state:ok"; then
+                echo "[SUCCESS] Redis Cluster is ready (reported by $cid)"
+                success=1
+                break 2
+              fi
+            done
+
+            echo "[WAITING] Cluster not ready yet (attempt $i)..."
+            sleep 2
+          done
+
+          if [ $success -eq 0 ]; then
+            echo "[ERROR] Redis Cluster did not become healthy in time"
+            for cid in $cluster_containers; do
+              echo "--- Cluster info for $cid ---"
+              docker exec "$cid" redis-cli -p 6379 cluster info || true
+              docker exec "$cid" redis-cli -p 6379 cluster nodes || true
+              echo "--- Logs for $cid ---"
+              docker logs "$cid" | tail -n 100
+            done
+            exit 1
+          fi
       - uses: actions/checkout@v4
       - uses: ./.github/actions/go
         with:
@@ -202,53 +302,45 @@ jobs:
       - name: Install dependencies
         working-directory: ./router-tests
         run: go mod download
-      - name: Setup Redis Cluster (for Cluster tests)
-        uses: vishnudxb/redis-cluster@1.0.9
-        with:
-          master1-port: 7001
-          master2-port: 7002
-          master3-port: 7003
-          slave1-port: 7004
-          slave2-port: 7005
-          slave3-port: 7006
-          sleep-duration: 5
       - name: Configure Redis Authentication & ACL
         run: |
-          sudo apt-get install -y redis-tools
           docker ps -a
           # Set a password for each master node
-          for port in 7001 7002 7003; do
-            redis-cli -h 127.0.0.1 -p $port ACL SETUSER cosmo on ">test" "~*" "+@all"
-            redis-cli -u "redis://cosmo:test@127.0.0.1:$port" ping
-            echo "ACL user 'cosmo' created with full access on port $port"
+          for cid in $(docker ps --format "{{.ID}} {{.Image}}" | grep "redis-cluster" | awk '{print $1}'); do
+            echo "Configuring ACLs in container $cid"
+            docker exec "$cid" redis-cli -p 6379 ACL SETUSER cosmo on ">test" "~*" "+@all"
+            docker exec "$cid" redis-cli -p 6379 ping
           done
+          cid=$(docker ps --format "{{.ID}} {{.Image}}" | grep "redis:7" | awk '{print $1}')
+          # Sanity checks
+          docker exec "$cid" redis-cli -p 6379 ping
+          docker exec "$cid" redis-cli -u "redis://cosmo:test@redis-0:6379" ping
+          docker exec "$cid" redis-cli -u "redis://cosmo:test@redis-0:6379" cluster nodes
       - name: Run Integration tests ${{ matrix.test_target }}
         working-directory: ./router-tests
-        run: make test test_params="-run '^Test[^(Flaky)]' --timeout=5m -p 1 --parallel 10" test_target="${{ matrix.test_target }}"
+        run: make test test_retry_count=0 test_params="-run '^Test[^(Flaky)]' --timeout=5m -p 1 --parallel 10" test_target="${{ matrix.test_target }}"
       - name: Run Flaky Integration tests ${{ matrix.test_target }}
-        uses: nick-fields/retry@v3
-        with:
-          timeout_minutes: 30
-          max_attempts: 5
-          retry_wait_seconds: 5
-          retry_on: error
-          command: |
-            cd router-tests
-            make test test_params="-run '^TestFlaky' --timeout=5m --parallel 1" test_target="${{ matrix.test_target }}"
+        working-directory: ./router-tests
+        run: make test test_retry_count=3 test_params="-run '^TestFlaky' --timeout=5m -p 1 --parallel 10" test_target="${{ matrix.test_target }}"
 
   image_scan:
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      matrix:
+        docker_build_target: [ '', 'nonroot' ]
     steps:
       - uses: actions/checkout@v4
 
       - uses: ./.github/actions/build-push-image
+        id: docker_build
         with:
           docker_username: ${{secrets.DOCKER_USERNAME}}
           docker_password: ${{secrets.DOCKER_PASSWORD}}
           docker_context: router
           dockerfile: router/Dockerfile
+          docker_build_target: ${{ matrix.docker_build_target }}
           token: ${{secrets.GITHUB_TOKEN}}
           image_name: router
           image_description: 'Cosmo Router'
@@ -258,9 +350,9 @@ jobs:
 
       - uses: ./.github/actions/image-scan
         with:
-          name: 'Router'
+          name: ${{ matrix.docker_build_target != '' && format('Router-{0}', matrix.docker_build_target) || 'Router' }}
           github_token: ${{secrets.GITHUB_TOKEN}}
-          image_ref: 'ghcr.io/wundergraph/cosmo/router:sha-${{ github.sha }}'
+          image_ref: ${{ steps.docker_build.outputs.image_ref }}${{ matrix.docker_build_target != '' && format('-{0}', matrix.docker_build_target) || '' }}
 
   build_push_image:
     # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
@@ -268,6 +360,9 @@ jobs:
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      matrix:
+        docker_build_target: [ '', 'nonroot' ]
     steps:
       - uses: actions/checkout@v4
 
@@ -277,6 +372,7 @@ jobs:
           docker_password: ${{secrets.DOCKER_PASSWORD}}
           docker_context: router
           dockerfile: router/Dockerfile
+          docker_build_target: ${{ matrix.docker_build_target }}
           token: ${{secrets.GITHUB_TOKEN}}
           image_name: router
           image_description: 'Cosmo Router'

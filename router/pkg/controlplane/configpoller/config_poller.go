@@ -26,8 +26,6 @@ type ConfigPoller interface {
 	// If the Config is nil, no new config is available and the current config should be used.
 	// and updates the latest router config version. This method is only used for the initial config
 	GetRouterConfig(ctx context.Context) (*routerconfig.Response, error)
-	// Stop stops the config poller. After calling stop, the config poller cannot be used again.
-	Stop(ctx context.Context) error
 }
 
 type configPoller struct {
@@ -63,11 +61,6 @@ func New(token string, opts ...Option) ConfigPoller {
 
 func (c *configPoller) Version() string {
 	return c.latestRouterConfigVersion
-}
-
-// Stop stops the config poller
-func (c *configPoller) Stop(_ context.Context) error {
-	return c.poller.Stop()
 }
 
 func (c *configPoller) Subscribe(ctx context.Context, handler func(newConfig *nodev1.RouterConfig, _ string) error) {
@@ -124,6 +117,15 @@ func (c *configPoller) Subscribe(ctx context.Context, handler func(newConfig *no
 }
 
 func (c *configPoller) getRouterConfig(ctx context.Context) (*routerconfig.Response, error) {
+	if c.configClient == nil && c.demoMode {
+		c.logger.Warn("The router is running in demo mode without an execution configuration source, using a demo execution config for testing purposes.")
+		return &routerconfig.Response{Config: routerconfig.GetDefaultConfig()}, nil
+	}
+
+	if c.configClient == nil {
+		return nil, errors.New("no execution configuration source found")
+	}
+
 	config, err := c.configClient.RouterConfig(ctx, c.latestRouterConfigVersion, c.latestRouterConfigDate)
 	if err == nil {
 		return config, nil
@@ -133,11 +135,8 @@ func (c *configPoller) getRouterConfig(ctx context.Context) (*routerconfig.Respo
 		return nil, err
 	}
 
-	if c.demoMode {
-		c.logger.Warn("The router is running in demo mode. If no execution config is found, the router will start with a demo execution config that can be used for testing purposes.")
-	}
-
 	if c.demoMode && c.fallbackConfigClient == nil && errors.Is(err, ErrConfigNotFound) {
+		c.logger.Warn("The router is running in demo mode and no execution config has been found, using a demo execution config for testing purposes.")
 		return &routerconfig.Response{Config: routerconfig.GetDefaultConfig()}, nil
 	}
 

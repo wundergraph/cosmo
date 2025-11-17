@@ -4,6 +4,226 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.138.4](https://github.com/wundergraph/cosmo/compare/studio@0.138.3...studio@0.138.4) (2025-11-13)
+
+**Note:** Version bump only for package studio
+
+## [0.138.3](https://github.com/wundergraph/cosmo/compare/studio@0.138.2...studio@0.138.3) (2025-11-12)
+
+**Note:** Version bump only for package studio
+
+## [0.138.2](https://github.com/wundergraph/cosmo/compare/studio@0.138.1...studio@0.138.2) (2025-11-12)
+
+**Note:** Version bump only for package studio
+
+## [0.138.1](https://github.com/wundergraph/cosmo/compare/studio@0.138.0...studio@0.138.1) (2025-11-11)
+
+**Note:** Version bump only for package studio
+
+# [0.138.0](https://github.com/wundergraph/cosmo/compare/studio@0.137.0...studio@0.138.0) (2025-11-10)
+
+### Features
+
+* enable GTM script ([#2322](https://github.com/wundergraph/cosmo/issues/2322)) ([1bdc79c](https://github.com/wundergraph/cosmo/commit/1bdc79c1e9d13e3948ee47ba5ada3de1bc5d9d29)) (@wilsonrivera)
+
+# [0.137.0](https://github.com/wundergraph/cosmo/compare/studio@0.136.2...studio@0.137.0) (2025-11-10)
+
+### Features
+
+* preserve tracking cookies ([#2319](https://github.com/wundergraph/cosmo/issues/2319)) ([c054c29](https://github.com/wundergraph/cosmo/commit/c054c2968bda15ad7a08cdc4f8c3f4fa891658ae)) (@wilsonrivera)
+
+## [0.136.2](https://github.com/wundergraph/cosmo/compare/studio@0.136.1...studio@0.136.2) (2025-10-29)
+
+**Note:** Version bump only for package studio
+
+## [0.136.1](https://github.com/wundergraph/cosmo/compare/studio@0.136.0...studio@0.136.1) (2025-10-23)
+
+**Note:** Version bump only for package studio
+
+# [0.136.0](https://github.com/wundergraph/cosmo/compare/studio@0.135.2...studio@0.136.0) (2025-10-22)
+
+### Features
+
+* fix playground tab duplication ([#2291](https://github.com/wundergraph/cosmo/issues/2291)) ([943cf41](https://github.com/wundergraph/cosmo/commit/943cf411c5bb7ac1d5040cf4bf4bf6b91aa3c53d)) (@wilsonrivera)
+
+## [0.135.2](https://github.com/wundergraph/cosmo/compare/studio@0.135.1...studio@0.135.2) (2025-10-17)
+
+**Note:** Version bump only for package studio
+
+## [0.135.1](https://github.com/wundergraph/cosmo/compare/studio@0.135.0...studio@0.135.1) (2025-10-16)
+
+**Note:** Version bump only for package studio
+
+# [0.135.0](https://github.com/wundergraph/cosmo/compare/studio@0.134.1...studio@0.135.0) (2025-10-10)
+
+### Features
+
+* disallow reviewing proposals not created by Cosmo ([#2218](https://github.com/wundergraph/cosmo/issues/2218)) ([d4aee49](https://github.com/wundergraph/cosmo/commit/d4aee4905c1a3f1d409c3892621a0d2a1ce8d147)) (@wilsonrivera)
+
+## [0.134.1](https://github.com/wundergraph/cosmo/compare/studio@0.134.0...studio@0.134.1) (2025-10-06)
+
+**Note:** Version bump only for package studio
+
+# [0.134.0](https://github.com/wundergraph/cosmo/compare/studio@0.133.1...studio@0.134.0) (2025-10-03)
+
+### Features
+
+* retrieve operation body from gqlmetrics instead of traces ([#2235](https://github.com/wundergraph/cosmo/issues/2235)) ([52cecf4](https://github.com/wundergraph/cosmo/commit/52cecf4cea2ef1ea33ecd79a1859f4bc2fd55991)) (@endigma)
+
+## [0.133.1](https://github.com/wundergraph/cosmo/compare/studio@0.133.0...studio@0.133.1) (2025-10-01)
+
+**Note:** Version bump only for package studio
+
+# [0.133.0](https://github.com/wundergraph/cosmo/compare/studio@0.132.1...studio@0.133.0) (2025-09-22)
+
+### Features
+
+* fix navigation sometimes not working when switching graph ([#2231](https://github.com/wundergraph/cosmo/issues/2231)) ([77396ff](https://github.com/wundergraph/cosmo/commit/77396ffa63e2b17acca78ef57b71a51dcde78887)) (@wilsonrivera)
+
+## [0.132.1](https://github.com/wundergraph/cosmo/compare/studio@0.132.0...studio@0.132.1) (2025-09-22)
+
+**Note:** Version bump only for package studio
+
+# [0.132.0](https://github.com/wundergraph/cosmo/compare/studio@0.131.0...studio@0.132.0) (2025-09-17)
+
+### Features
+
+* filter by namespace ([#2226](https://github.com/wundergraph/cosmo/issues/2226)) ([395372e](https://github.com/wundergraph/cosmo/commit/395372eefe33c52825e88925e2e76d616e426952)) (@wilsonrivera)
+
+# [0.131.0](https://github.com/wundergraph/cosmo/compare/studio@0.130.1...studio@0.131.0) (2025-09-17)
+
+### Features
+
+* add analytic scripts ([#2208](https://github.com/wundergraph/cosmo/issues/2208)) ([932eb83](https://github.com/wundergraph/cosmo/commit/932eb83ff75459eca536badd65e434534e1c48db)) (@wilsonrivera)
+
+## [0.130.1](https://github.com/wundergraph/cosmo/compare/studio@0.130.0...studio@0.130.1) (2025-09-16)
+
+**Note:** Version bump only for package studio
+
+# [0.130.0](https://github.com/wundergraph/cosmo/compare/studio@0.129.0...studio@0.130.0) (2025-09-16)
+
+### Features
+
+* improve namespace selector UI/UX ([#2161](https://github.com/wundergraph/cosmo/issues/2161)) ([33f870e](https://github.com/wundergraph/cosmo/commit/33f870e8b33751ce547b33eb9ca6cb12578f4034)) (@wilsonrivera)
+
+# [0.129.0](https://github.com/wundergraph/cosmo/compare/studio@0.128.0...studio@0.129.0) (2025-09-15)
+
+### Features
+
+* introduce the `subgraph-checker` role ([#2198](https://github.com/wundergraph/cosmo/issues/2198)) ([726b814](https://github.com/wundergraph/cosmo/commit/726b814b4a460acbbf98aed37b802fe6bfda8c2c)) (@wilsonrivera)
+
+# [0.128.0](https://github.com/wundergraph/cosmo/compare/studio@0.127.1...studio@0.128.0) (2025-09-10)
+
+### Features
+
+* add a feature to link subgraphs across namespaces ([#2156](https://github.com/wundergraph/cosmo/issues/2156)) ([e1abdea](https://github.com/wundergraph/cosmo/commit/e1abdeab80ee2fe8ccdff1ce963787280a86dee9)) (@JivusAyrus)
+
+## [0.127.1](https://github.com/wundergraph/cosmo/compare/studio@0.127.0...studio@0.127.1) (2025-09-10)
+
+### Bug Fixes
+
+* features popup for light theme ([#2196](https://github.com/wundergraph/cosmo/issues/2196)) ([5ca12dd](https://github.com/wundergraph/cosmo/commit/5ca12dde6c8f96b5da6e8949aa8eb2515b230812)) (@JivusAyrus)
+
+# [0.127.0](https://github.com/wundergraph/cosmo/compare/studio@0.126.0...studio@0.127.0) (2025-09-03)
+
+### Features
+
+* add a popup about new features on the dashboard ([#2182](https://github.com/wundergraph/cosmo/issues/2182)) ([fb0c48f](https://github.com/wundergraph/cosmo/commit/fb0c48f32c969cbe1e5dca129f8a905fa604f8e0)) (@JivusAyrus)
+
+# [0.126.0](https://github.com/wundergraph/cosmo/compare/studio@0.125.0...studio@0.126.0) (2025-08-28)
+
+### Features
+
+* add span for each grpc invocation ([#2158](https://github.com/wundergraph/cosmo/issues/2158)) ([4f0383f](https://github.com/wundergraph/cosmo/commit/4f0383f780371b0f3549f94a2e85312178f0dfaa)) (@SkArchon)
+
+# [0.125.0](https://github.com/wundergraph/cosmo/compare/studio@0.124.2...studio@0.125.0) (2025-08-19)
+
+### Features
+
+* add indicator when there are pending invitations ([#2146](https://github.com/wundergraph/cosmo/issues/2146)) ([1ae6242](https://github.com/wundergraph/cosmo/commit/1ae6242f96077ecfb1e0797f2eb8677b8404e754)) (@wilsonrivera)
+
+## [0.124.2](https://github.com/wundergraph/cosmo/compare/studio@0.124.1...studio@0.124.2) (2025-08-18)
+
+**Note:** Version bump only for package studio
+
+## [0.124.1](https://github.com/wundergraph/cosmo/compare/studio@0.124.0...studio@0.124.1) (2025-08-15)
+
+**Note:** Version bump only for package studio
+
+# [0.124.0](https://github.com/wundergraph/cosmo/compare/studio@0.123.3...studio@0.124.0) (2025-08-12)
+
+### Features
+
+* add support for plugins ([#2079](https://github.com/wundergraph/cosmo/issues/2079)) ([05c923a](https://github.com/wundergraph/cosmo/commit/05c923aaa09a898a1662fc40d0e5751dfa5b8fe1)) (@JivusAyrus)
+
+## [0.123.3](https://github.com/wundergraph/cosmo/compare/studio@0.123.2...studio@0.123.3) (2025-08-08)
+
+### Bug Fixes
+
+* use federated graph id and org id to fetch operation content ([#2107](https://github.com/wundergraph/cosmo/issues/2107)) ([cfe1036](https://github.com/wundergraph/cosmo/commit/cfe10361e0d756f803ef4210b5efa46c3f16d8bb)) (@JivusAyrus)
+
+## [0.123.2](https://github.com/wundergraph/cosmo/compare/studio@0.123.1...studio@0.123.2) (2025-08-07)
+
+**Note:** Version bump only for package studio
+
+## [0.123.1](https://github.com/wundergraph/cosmo/compare/studio@0.123.0...studio@0.123.1) (2025-08-06)
+
+**Note:** Version bump only for package studio
+
+# [0.123.0](https://github.com/wundergraph/cosmo/compare/studio@0.122.3...studio@0.123.0) (2025-08-06)
+
+### Features
+
+* add LinkedIn Insight and GTM scripts ([#2098](https://github.com/wundergraph/cosmo/issues/2098)) ([826a265](https://github.com/wundergraph/cosmo/commit/826a265f61f96dfaceb183eb16e0da1fa080f480)) (@wilsonrivera)
+
+## [0.122.3](https://github.com/wundergraph/cosmo/compare/studio@0.122.2...studio@0.122.3) (2025-07-31)
+
+**Note:** Version bump only for package studio
+
+## [0.122.2](https://github.com/wundergraph/cosmo/compare/studio@0.122.1...studio@0.122.2) (2025-07-21)
+
+**Note:** Version bump only for package studio
+
+## [0.122.1](https://github.com/wundergraph/cosmo/compare/studio@0.122.0...studio@0.122.1) (2025-07-18)
+
+### Bug Fixes
+
+* **studio:** fix broken doc links ([#2052](https://github.com/wundergraph/cosmo/issues/2052)) ([2fd6f40](https://github.com/wundergraph/cosmo/commit/2fd6f4017eee0cba6344cc99e4dc768689931bda)) (@Blacksmoke16)
+
+# [0.122.0](https://github.com/wundergraph/cosmo/compare/studio@0.121.0...studio@0.122.0) (2025-07-10)
+
+### Features
+
+* add the `subgraph-viewer` role ([#2022](https://github.com/wundergraph/cosmo/issues/2022)) ([902b3bc](https://github.com/wundergraph/cosmo/commit/902b3bcd8ae9efaab71f5e1a97012938af51a57f)) (@wilsonrivera)
+
+# [0.121.0](https://github.com/wundergraph/cosmo/compare/studio@0.120.2...studio@0.121.0) (2025-07-09)
+
+### Features
+
+* return the proposal name on the creation of proposal ([#2003](https://github.com/wundergraph/cosmo/issues/2003)) ([ff1b237](https://github.com/wundergraph/cosmo/commit/ff1b2376921db2db7ac2a9d1619824eb1ae1e76d)) (@JivusAyrus)
+
+## [0.120.2](https://github.com/wundergraph/cosmo/compare/studio@0.120.1...studio@0.120.2) (2025-07-03)
+
+**Note:** Version bump only for package studio
+
+## [0.120.1](https://github.com/wundergraph/cosmo/compare/studio@0.120.0...studio@0.120.1) (2025-07-03)
+
+**Note:** Version bump only for package studio
+
+# [0.120.0](https://github.com/wundergraph/cosmo/compare/studio@0.119.9...studio@0.120.0) (2025-07-01)
+
+### Bug Fixes
+
+* toggle ui logic and search to consider all operations ([#1982](https://github.com/wundergraph/cosmo/issues/1982)) ([e6264bd](https://github.com/wundergraph/cosmo/commit/e6264bd5fc98962b2b36f21a3a20c802333192f1)) (@JivusAyrus)
+
+### Features
+
+* allow organization members to be assigned multiple groups ([#1919](https://github.com/wundergraph/cosmo/issues/1919)) ([1e67757](https://github.com/wundergraph/cosmo/commit/1e677576a32efb89673cdfc3900a4c863eec8b7e)) (@wilsonrivera)
+
+## [0.119.9](https://github.com/wundergraph/cosmo/compare/studio@0.119.8...studio@0.119.9) (2025-06-30)
+
+**Note:** Version bump only for package studio
+
 ## [0.119.8](https://github.com/wundergraph/cosmo/compare/studio@0.119.7...studio@0.119.8) (2025-06-26)
 
 **Note:** Version bump only for package studio

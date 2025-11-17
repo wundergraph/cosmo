@@ -1,8 +1,5 @@
 import { describe, expect, test } from 'vitest';
 import {
-  federateSubgraphs,
-  FederationResultFailure,
-  FederationResultSuccess,
   FieldData,
   invalidFieldShareabilityError,
   ObjectDefinitionData,
@@ -10,19 +7,23 @@ import {
   ROUTER_COMPATIBILITY_VERSION_ONE,
   Subgraph,
 } from '../../../src';
-import { versionOnePersistedBaseSchema, versionTwoRouterDefinitions } from '../utils/utils';
-import { documentNodeToNormalizedString, normalizeString, schemaToSortedNormalizedString } from '../../utils/utils';
+import { SCHEMA_QUERY_DEFINITION } from '../utils/utils';
+import {
+  federateSubgraphsFailure,
+  federateSubgraphsSuccess,
+  normalizeString,
+  schemaToSortedNormalizedString,
+} from '../../utils/utils';
 
 describe('V2 Directives Tests', () => {
   test('that external fields do not produce shareable errors', () => {
-    const result = federateSubgraphs(
+    const { federatedGraphSchema } = federateSubgraphsSuccess(
       [subgraphA, subgraphB, subgraphC],
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
-    expect(result.success).toBe(true);
-    expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionTwoRouterDefinitions +
+        SCHEMA_QUERY_DEFINITION +
           `
         type Entity {
           age: Int!
@@ -33,30 +34,27 @@ describe('V2 Directives Tests', () => {
         type Query {
           query: Entity!
         }
-        
-        scalar openfed__Scope
       `,
       ),
     );
   });
 
   test('that if all fields but one are external, no shareable error is returned', () => {
-    const result = federateSubgraphs(
+    const { federatedGraphSchema } = federateSubgraphsSuccess(
       [subgraphA, subgraphB, subgraphE],
       ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultSuccess;
-    expect(result.success).toBe(true);
-    expect(documentNodeToNormalizedString(result.federatedGraphAST)).toBe(
+    );
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
       normalizeString(
-        versionOnePersistedBaseSchema +
+        SCHEMA_QUERY_DEFINITION +
           `
-        type Query {
-          query: Entity!
-        }
-        
         type Entity {
           id: ID!
           name: String!
+        }
+        
+        type Query {
+          query: Entity!
         }
       `,
       ),
@@ -64,13 +62,9 @@ describe('V2 Directives Tests', () => {
   });
 
   test('that unshareable fields defined in multiple subgraphs return an error', () => {
-    const result = federateSubgraphs(
-      [subgraphC, subgraphD],
-      ROUTER_COMPATIBILITY_VERSION_ONE,
-    ) as FederationResultFailure;
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
+    const { errors } = federateSubgraphsFailure([subgraphC, subgraphD], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
       invalidFieldShareabilityError(
         {
           name: 'Entity',

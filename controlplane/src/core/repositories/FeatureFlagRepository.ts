@@ -24,6 +24,7 @@ import {
   FeatureSubgraphDTO,
   FederatedGraphDTO,
   Label,
+  ProtoSubgraph,
   SubgraphDTO,
 } from '../../types/index.js';
 import { normalizeLabels } from '../util.js';
@@ -252,7 +253,8 @@ export class FeatureFlagRepository {
 
     const graphAdmin = rbac.ruleFor('subgraph-admin');
     const graphPublisher = rbac.ruleFor('subgraph-publisher');
-    if (!graphAdmin && !graphPublisher) {
+    const graphViewer = rbac.ruleFor('subgraph-viewer');
+    if (!graphAdmin && !graphPublisher && !graphViewer) {
       return false;
     }
 
@@ -267,6 +269,11 @@ export class FeatureFlagRepository {
     if (graphPublisher) {
       namespaces.push(...graphPublisher.namespaces);
       resources.push(...graphPublisher.resources);
+    }
+
+    if (graphViewer) {
+      namespaces.push(...graphViewer.namespaces);
+      resources.push(...graphViewer.resources);
     }
 
     if (namespaces.length > 0 && resources.length > 0) {
@@ -763,6 +770,7 @@ export class FeatureFlagRepository {
         baseSubgraphId: featureSubgraphsToBaseSubgraphs.baseSubgraphId,
         isEventDrivenGraph: subgraphs.isEventDrivenGraph,
         isFeatureSubgraph: subgraphs.isFeatureSubgraph,
+        type: subgraphs.type,
       })
       .from(featureFlagToFeatureSubgraphs)
       .innerJoin(
@@ -788,6 +796,8 @@ export class FeatureFlagRepository {
       let lastUpdatedAt = '';
       let schemaSDL = '';
       let schemaVersionId = '';
+      let isV2Graph: boolean | undefined;
+      let proto: ProtoSubgraph | undefined;
 
       if (fg.schemaVersionId !== null) {
         const sv = await this.db.query.schemaVersion.findFirst({
@@ -796,6 +806,41 @@ export class FeatureFlagRepository {
         lastUpdatedAt = sv?.createdAt?.toISOString() ?? '';
         schemaSDL = sv?.schemaSDL ?? '';
         schemaVersionId = sv?.id ?? '';
+        isV2Graph = sv?.isV2Graph || undefined;
+        if (fg.type === 'grpc_plugin' || fg.type === 'grpc_service') {
+          const protobufSchemaVersion = await this.db.query.protobufSchemaVersions.findFirst({
+            where: eq(schema.protobufSchemaVersions.schemaVersionId, fg.schemaVersionId),
+          });
+
+          if (!protobufSchemaVersion) {
+            this.logger.warn(
+              `Missing protobuf schema for ${fg.type} subgraph with schemaVersionId: ${fg.schemaVersionId}`,
+            );
+          }
+
+          proto = {
+            schema: protobufSchemaVersion?.protoSchema ?? '',
+            mappings: protobufSchemaVersion?.protoMappings ?? '',
+            lock: protobufSchemaVersion?.protoLock ?? '',
+          };
+
+          if (fg.type === 'grpc_plugin') {
+            const pluginImageVersion = await this.db.query.pluginImageVersions.findFirst({
+              where: eq(schema.pluginImageVersions.schemaVersionId, fg.schemaVersionId),
+            });
+
+            if (!pluginImageVersion) {
+              this.logger.warn(
+                `Missing plugin image version for ${fg.type} subgraph with schemaVersionId: ${fg.schemaVersionId}`,
+              );
+            }
+
+            proto.pluginData = {
+              platforms: pluginImageVersion?.platform ?? [],
+              version: pluginImageVersion?.version ?? 'v1',
+            };
+          }
+        }
       }
 
       const baseSubgraph = await subgraphRepo.byId(fg.baseSubgraphId);
@@ -815,6 +860,8 @@ export class FeatureFlagRepository {
         schemaSDL,
         lastUpdatedAt,
         baseSubgraphName: baseSubgraph.name,
+        isV2Graph,
+        proto,
       });
     }
     return featureGraphsByFlag;

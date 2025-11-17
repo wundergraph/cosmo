@@ -22,7 +22,7 @@ export class OrganizationInvitationRepository {
     offset?: number;
     limit?: number;
     search?: string;
-  }): Promise<OrganizationInvitationDTO[]> {
+  }): Promise<Omit<OrganizationInvitationDTO, 'groups'>[]> {
     const conditions: SQL<unknown>[] = [
       eq(organizationInvitations.organizationId, input.organizationId),
       eq(organizationInvitations.accepted, false),
@@ -116,10 +116,10 @@ export class OrganizationInvitationRepository {
 
     const orgMember = await this.db
       .select({
+        invitationId: schema.organizationInvitations.id,
         userID: users.id,
         email: users.email,
         invitedBy: users1.email,
-        groupId: organizationInvitations.groupId,
       })
       .from(organizationInvitations)
       .innerJoin(users, eq(users.id, organizationInvitations.userId))
@@ -142,8 +142,22 @@ export class OrganizationInvitationRepository {
       userID: orgMember[0].userID,
       email: orgMember[0].email,
       invitedBy: orgMember[0].invitedBy || undefined,
-      groupId: orgMember[0].groupId || undefined,
+      groups: await this.getPendingInvitationGroups(orgMember[0].invitationId),
     } as OrganizationInvitationDTO;
+  }
+
+  private getPendingInvitationGroups(invitationId: string): Promise<{ groupId: string; kcGroupId: string | null }[]> {
+    return this.db
+      .select({
+        groupId: schema.organizationInvitationGroups.groupId,
+        kcGroupId: schema.organizationGroups.kcGroupId,
+      })
+      .from(schema.organizationInvitationGroups)
+      .innerJoin(
+        schema.organizationGroups,
+        eq(schema.organizationGroups.id, schema.organizationInvitationGroups.groupId),
+      )
+      .where(eq(schema.organizationInvitationGroups.invitationId, invitationId));
   }
 
   public async inviteUser(input: {
@@ -152,7 +166,7 @@ export class OrganizationInvitationRepository {
     organizationId: string;
     dbUser: UserDTO | null;
     inviterUserId: string;
-    groupId: string;
+    groups: string[];
   }) {
     await this.db.transaction(async (tx) => {
       const userRepo = new UserRepository(this.logger, tx);
@@ -164,15 +178,29 @@ export class OrganizationInvitationRepository {
         });
       }
 
-      await tx
+      const inserted = await tx
         .insert(organizationInvitations)
         .values({
           userId: input.userId,
           organizationId: input.organizationId,
           accepted: false,
           invitedBy: input.inviterUserId,
-          groupId: input.groupId,
         })
+        .returning()
+        .execute();
+
+      if (inserted.length === 0) {
+        return;
+      }
+
+      await tx
+        .insert(schema.organizationInvitationGroups)
+        .values(
+          input.groups.map((groupId) => ({
+            invitationId: inserted[0].id,
+            groupId,
+          })),
+        )
         .execute();
     });
   }
@@ -187,6 +215,7 @@ export class OrganizationInvitationRepository {
           and(
             eq(organizationInvitations.userId, input.userId),
             eq(organizationInvitations.organizationId, input.organizationId),
+            eq(organizationInvitations.accepted, false),
           ),
         )
         .returning()
@@ -201,12 +230,16 @@ export class OrganizationInvitationRepository {
         organizationID: input.organizationId,
       });
 
-      const groupId = invitation[0]?.groupId;
-      if (groupId) {
-        const orgGroupRepo = new OrganizationGroupRepository(tx);
+      const invitationGroups = await this.getPendingInvitationGroups(invitation[0].id);
+      if (invitationGroups.length === 0) {
+        return;
+      }
+
+      const orgGroupRepo = new OrganizationGroupRepository(tx);
+      for (const group of invitationGroups) {
         await orgGroupRepo.addUserToGroup({
           organizationMemberId: insertedMember.id,
-          groupId,
+          groupId: group.groupId,
         });
       }
     });

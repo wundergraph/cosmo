@@ -148,7 +148,7 @@ export function DeleteGroupDialog({ open, group, existingGroups, onGroupDeleted,
                         <GroupSelect
                           value={value}
                           groups={otherGroups}
-                          onGroupChange={(group) => onChange(group.groupId)}
+                          onValueChange={(group) => onChange(group.groupId)}
                         />
                       </FormControl>
 

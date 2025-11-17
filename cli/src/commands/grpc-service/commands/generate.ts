@@ -1,12 +1,24 @@
-import { readFile, writeFile } from 'node:fs/promises';
-import { existsSync, lstatSync } from 'node:fs';
-import { resolve, dirname } from 'pathe';
-import Spinner from 'ora';
+import { access, constants, lstat, mkdir, readFile, writeFile } from 'node:fs/promises';
+import {
+  compileGraphQLToMapping,
+  compileGraphQLToProto,
+  ProtoLock,
+  validateGraphQLSDL,
+} from '@wundergraph/protographic';
 import { Command, program } from 'commander';
-import { compileGraphQLToMapping, compileGraphQLToProto, ProtoLock } from '@wundergraph/protographic';
 import { camelCase, upperFirst } from 'lodash-es';
+import Spinner, { type Ora } from 'ora';
+import { resolve } from 'pathe';
 import { BaseCommandOptions } from '../../../core/types/types.js';
-import { renderResultTree } from '../../router/commands/plugin/helper.js';
+import { renderResultTree, renderValidationResults } from '../../router/commands/plugin/helper.js';
+
+type CLIOptions = {
+  input: string;
+  output: string;
+  packageName?: string;
+  goPackage?: string;
+  protoLock?: string;
+};
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('generate');
@@ -16,6 +28,11 @@ export default (opts: BaseCommandOptions) => {
   command.option('-o, --output <path-to-output>', 'The output directory for the protobuf schema. (default ".").', '.');
   command.option('-p, --package-name <name>', 'The name of the proto package. (default "service.v1")', 'service.v1');
   command.option('-g, --go-package <name>', 'Adds an `option go_package` to the proto file.');
+  command.option(
+    '-l, --proto-lock <path-to-proto-lock>',
+    'The path to the existing proto lock file to use as the starting point for the updated proto lock file. ' +
+      'Default is to use and overwrite the output file "<outdir>/service.proto.lock.json".',
+  );
   command.action(generateCommandAction);
 
   return command;
@@ -27,7 +44,7 @@ type GenerationResult = {
   lockData: ProtoLock | null;
 };
 
-async function generateCommandAction(name: string, options: any) {
+async function generateCommandAction(name: string, options: CLIOptions) {
   if (!name) {
     program.error('A name is required for the proto service');
   }
@@ -38,19 +55,28 @@ async function generateCommandAction(name: string, options: any) {
   try {
     const inputFile = resolve(options.input);
 
-    if (!existsSync(options.output)) {
-      program.error(`Output directory ${options.output} does not exist`);
+    // Ensure output directory exists
+    if (!(await exists(options.output))) {
+      await mkdir(options.output, { recursive: true });
     }
 
-    if (!lstatSync(options.output).isDirectory()) {
+    if (!(await lstat(options.output)).isDirectory()) {
       program.error(`Output directory ${options.output} is not a directory`);
     }
 
-    if (!existsSync(inputFile)) {
+    if (!(await exists(inputFile))) {
       program.error(`Input file ${options.input} does not exist`);
     }
 
-    const result = await generateProtoAndMapping(options.output, inputFile, name, options, spinner);
+    const result = await generateProtoAndMapping({
+      outdir: options.output,
+      schemaFile: inputFile,
+      name,
+      spinner,
+      packageName: options.packageName,
+      goPackage: options.goPackage,
+      lockFile: options.protoLock,
+    });
 
     // Write the generated files
     await writeFile(resolve(options.output, 'mapping.json'), result.mapping);
@@ -71,37 +97,48 @@ async function generateCommandAction(name: string, options: any) {
   }
 }
 
+type GenerationOptions = {
+  name: string;
+  outdir: string;
+  schemaFile: string;
+  spinner: Ora;
+  packageName?: string;
+  goPackage?: string;
+  lockFile?: string;
+};
+
 /**
  * Generate proto and mapping data from schema
  */
-async function generateProtoAndMapping(
-  outdir: string,
-  schemaFile: string,
-  name: string,
-  options: any,
-  spinner: any,
-): Promise<GenerationResult> {
+async function generateProtoAndMapping({
+  name,
+  outdir,
+  schemaFile,
+  spinner,
+  packageName,
+  goPackage,
+  lockFile = resolve(outdir, 'service.proto.lock.json'),
+}: GenerationOptions): Promise<GenerationResult> {
   spinner.text = 'Generating proto schema...';
-  const lockFile = resolve(outdir, 'service.proto.lock.json');
 
   const schema = await readFile(schemaFile, 'utf8');
   const serviceName = upperFirst(camelCase(name)) + 'Service';
   spinner.text = 'Generating mapping and proto files...';
 
-  let lockData: ProtoLock | undefined;
+  const lockData = await fetchLockData(lockFile);
 
-  if (existsSync(lockFile)) {
-    const existingLockData = JSON.parse(await readFile(lockFile, 'utf8'));
-    if (existingLockData) {
-      lockData = existingLockData;
-    }
-  }
+  // Validate the GraphQL schema and render results
+  spinner.text = 'Validating GraphQL schema...';
+  const validationResult = validateGraphQLSDL(schema);
+  renderValidationResults(validationResult, schemaFile);
 
+  // Continue with generation if validation passed (no errors)
+  spinner.text = 'Generating mapping and proto files...';
   const mapping = compileGraphQLToMapping(schema, serviceName);
   const proto = compileGraphQLToProto(schema, {
     serviceName,
-    packageName: options.packageName,
-    goPackage: options.goPackage,
+    packageName,
+    goPackage,
     lockData,
   });
 
@@ -110,4 +147,23 @@ async function generateProtoAndMapping(
     proto: proto.proto,
     lockData: proto.lockData,
   };
+}
+
+async function fetchLockData(lockFile: string): Promise<ProtoLock | undefined> {
+  if (!(await exists(lockFile))) {
+    return undefined;
+  }
+
+  const existingLockData = JSON.parse(await readFile(lockFile, 'utf8'));
+  return existingLockData == null ? undefined : existingLockData;
+}
+
+// Usage of exists from node:fs is not recommended. Use access instead.
+async function exists(path: string): Promise<boolean> {
+  try {
+    await access(path, constants.R_OK);
+    return true;
+  } catch {
+    return false;
+  }
 }

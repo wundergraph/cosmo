@@ -3,9 +3,6 @@ package core
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"os"
-
 	"github.com/KimMachineGun/automemlimit/memlimit"
 	"github.com/dustin/go-humanize"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
@@ -15,6 +12,10 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"go.uber.org/automaxprocs/maxprocs"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"net/http"
+	"os"
+	"strings"
 )
 
 // newRouter creates a new router instance.
@@ -57,7 +58,26 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 	}
 
 	if len(authenticators) > 0 {
-		options = append(options, WithAccessController(NewAccessController(authenticators, cfg.Authorization.RequireAuthentication)))
+		accessController, err := NewAccessController(AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   cfg.Authorization.RequireAuthentication,
+			SkipIntrospectionQueries: cfg.Authentication.IgnoreIntrospection,
+			IntrospectionSkipSecret:  cfg.IntrospectionConfig.Secret,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("could not create access controller: %w", err)
+		}
+
+		options = append(options, WithAccessController(accessController))
+	}
+
+	if cfg.Authentication.IgnoreIntrospection && cfg.IntrospectionConfig.Secret == "" {
+		params.Logger.Warn("introspection operations are not authenticated. " +
+			"Consider setting introspection.secret configuration parameter or set authentication.ignore_introspection to false. Do not use this in production.")
+	}
+
+	if !cfg.Authentication.IgnoreIntrospection && cfg.IntrospectionConfig.Secret != "" {
+		params.Logger.Warn("introspection.secret configuration parameter is ignored because authentication.ignore_introspection is false.")
 	}
 
 	// HTTP_PROXY, HTTPS_PROXY and NO_PROXY
@@ -67,13 +87,23 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 
 	if cfg.AccessLogs.Enabled {
 		c := &AccessLogsConfig{
-			Attributes:         cfg.AccessLogs.Router.Fields,
-			SubgraphEnabled:    cfg.AccessLogs.Subgraphs.Enabled,
-			SubgraphAttributes: cfg.AccessLogs.Subgraphs.Fields,
+			Attributes:            cfg.AccessLogs.Router.Fields,
+			IgnoreQueryParamsList: cfg.AccessLogs.Router.IgnoreQueryParamsList,
+			SubgraphEnabled:       cfg.AccessLogs.Subgraphs.Enabled,
+			SubgraphAttributes:    cfg.AccessLogs.Subgraphs.Fields,
+		}
+
+		var level zapcore.Level
+		if cfg.AccessLogs.Level == "" {
+			level = zapcore.InfoLevel
+		} else {
+			if err := level.Set(strings.ToUpper(cfg.AccessLogs.Level)); err != nil {
+				return nil, fmt.Errorf("could not parse log level: %w for access logs", err)
+			}
 		}
 
 		if cfg.AccessLogs.Output.File.Enabled {
-			f, err := logging.NewLogFile(cfg.AccessLogs.Output.File.Path)
+			f, err := logging.NewLogFile(cfg.AccessLogs.Output.File.Path, os.FileMode(cfg.AccessLogs.Output.File.Mode))
 			if err != nil {
 				return nil, fmt.Errorf("could not create log file: %w", err)
 			}
@@ -83,7 +113,8 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 					BufferSize:    int(cfg.AccessLogs.Buffer.Size.Uint64()),
 					FlushInterval: cfg.AccessLogs.Buffer.FlushInterval,
 					Development:   cfg.DevelopmentMode,
-					Level:         zap.InfoLevel,
+					Level:         level,
+					StackTrace:    cfg.AccessLogs.AddStacktrace,
 					Pretty:        !cfg.JSONLog,
 				})
 				if err != nil {
@@ -91,7 +122,7 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 				}
 				c.Logger = bl.Logger
 			} else {
-				c.Logger = logging.NewZapAccessLogger(f, cfg.DevelopmentMode, !cfg.JSONLog)
+				c.Logger = logging.NewZapAccessLogger(f, level, cfg.DevelopmentMode, !cfg.JSONLog, cfg.AccessLogs.AddStacktrace)
 			}
 		} else if cfg.AccessLogs.Output.Stdout.Enabled {
 			if cfg.AccessLogs.Buffer.Enabled {
@@ -100,7 +131,8 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 					BufferSize:    int(cfg.AccessLogs.Buffer.Size.Uint64()),
 					FlushInterval: cfg.AccessLogs.Buffer.FlushInterval,
 					Development:   cfg.DevelopmentMode,
-					Level:         zap.InfoLevel,
+					Level:         level,
+					StackTrace:    cfg.AccessLogs.AddStacktrace,
 					Pretty:        !cfg.JSONLog,
 				})
 				if err != nil {
@@ -108,7 +140,7 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 				}
 				c.Logger = bl.Logger
 			} else {
-				c.Logger = logging.NewZapAccessLogger(os.Stdout, cfg.DevelopmentMode, !cfg.JSONLog)
+				c.Logger = logging.NewZapAccessLogger(os.Stdout, level, cfg.DevelopmentMode, !cfg.JSONLog, cfg.AccessLogs.AddStacktrace)
 			}
 		}
 
@@ -154,7 +186,7 @@ func optionsFromResources(logger *zap.Logger, config *config.Config) []Option {
 		WithOverrideRoutingURL(config.OverrideRoutingURL),
 		WithOverrides(config.Overrides),
 		WithLogger(logger),
-		WithIntrospection(config.IntrospectionEnabled),
+		WithIntrospection(config.IntrospectionEnabled, config.IntrospectionConfig),
 		WithQueryPlans(config.QueryPlansEnabled),
 		WithPlayground(config.PlaygroundEnabled),
 		WithGraphApiToken(config.Graph.Token),
@@ -191,11 +223,15 @@ func optionsFromResources(logger *zap.Logger, config *config.Config) []Option {
 		WithRouterTrafficConfig(&config.TrafficShaping.Router),
 		WithFileUploadConfig(&config.FileUpload),
 		WithSubgraphTransportOptions(NewSubgraphTransportOptions(config.TrafficShaping)),
+		WithSubgraphCircuitBreakerOptions(NewSubgraphCircuitBreakerOptions(config.TrafficShaping)),
 		WithSubgraphRetryOptions(
 			config.TrafficShaping.All.BackoffJitterRetry.Enabled,
+			config.TrafficShaping.All.BackoffJitterRetry.Algorithm,
 			config.TrafficShaping.All.BackoffJitterRetry.MaxAttempts,
 			config.TrafficShaping.All.BackoffJitterRetry.MaxDuration,
 			config.TrafficShaping.All.BackoffJitterRetry.Interval,
+			config.TrafficShaping.All.BackoffJitterRetry.Expression,
+			nil,
 		),
 		WithCors(&cors.Config{
 			Enabled:          config.CORS.Enabled,
@@ -254,6 +290,18 @@ func setupAuthenticators(ctx context.Context, logger *zap.Logger, cfg *config.Co
 			URL:               jwks.URL,
 			RefreshInterval:   jwks.RefreshInterval,
 			AllowedAlgorithms: jwks.Algorithms,
+
+			Secret:    jwks.Secret,
+			Algorithm: jwks.Algorithm,
+			KeyId:     jwks.KeyId,
+
+			Audiences: jwks.Audiences,
+			RefreshUnknownKID: authentication.RefreshUnknownKIDConfig{
+				Enabled:  jwks.RefreshUnknownKID.Enabled,
+				MaxWait:  jwks.RefreshUnknownKID.MaxWait,
+				Interval: jwks.RefreshUnknownKID.Interval,
+				Burst:    jwks.RefreshUnknownKID.Burst,
+			},
 		})
 	}
 

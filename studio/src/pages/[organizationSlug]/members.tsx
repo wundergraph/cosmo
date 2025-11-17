@@ -66,12 +66,12 @@ import { z } from "zod";
 import { usePaginationParams } from "@/hooks/use-pagination-params";
 import { UpdateMemberGroupDialog } from "@/components/members/update-member-group-dialog";
 import { useIsAdmin } from "@/hooks/use-is-admin";
-import { GroupSelect } from "@/components/group-select";
 import { formatDateTime } from "@/lib/format-date";
+import { MultiGroupSelect } from "@/components/multi-group-select";
 
 const emailInputSchema = z.object({
   email: z.string().email(),
-  groupId: z.string().uuid(),
+  groups: z.array(z.string().uuid()).min(1),
 });
 
 type EmailInput = z.infer<typeof emailInputSchema>;
@@ -89,6 +89,7 @@ const InviteForm = ({ onSuccess }: { onSuccess: () => void }) => {
     schema: emailInputSchema,
   });
 
+  const selectedGroups = watch('groups') ?? [];
 
   const { mutate, isPending } = useMutation(inviteUser);
 
@@ -100,7 +101,7 @@ const InviteForm = ({ onSuccess }: { onSuccess: () => void }) => {
 
   const onSubmit: SubmitHandler<EmailInput> = (data) => {
     mutate(
-      { email: data.email, groupId: data.groupId },
+      { email: data.email, groups: data.groups },
       {
         onSuccess: (d) => {
           sendToast(d.response?.details || "Invited member successfully.");
@@ -132,17 +133,18 @@ const InviteForm = ({ onSuccess }: { onSuccess: () => void }) => {
 
       <div className="space-y-2">
         <span>What group should the member be added to?</span>
-        <GroupSelect
-          value={watch('groupId')}
-          onGroupChange={(group) => setValue(
-            'groupId',
-            group.groupId,
+        <MultiGroupSelect
+          disabled={isPending}
+          value={selectedGroups}
+          onValueChange={(groups) => setValue(
+            'groups',
+            groups.map((g) => g.groupId),
             { shouldValidate: true, shouldDirty: true, shouldTouch: true },
           )}
         />
-        {errors.groupId && (
-          <span className="text-xs text-destructive">
-            {errors.groupId.message}
+        {errors.groups && (
+          <span className="text-sm text-destructive">
+            {errors.groups.message || "Please select at least one group."}
           </span>
         )}
       </div>

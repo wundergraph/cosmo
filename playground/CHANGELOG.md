@@ -4,6 +4,20 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.9.5](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.9.4...@wundergraph/playground@0.9.5) (2025-09-22)
+
+**Note:** Version bump only for package @wundergraph/playground
+
+## [0.9.4](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.9.3...@wundergraph/playground@0.9.4) (2025-08-15)
+
+**Note:** Version bump only for package @wundergraph/playground
+
+## [0.9.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.9.2...@wundergraph/playground@0.9.3) (2025-07-10)
+
+### Bug Fixes
+
+* enable input value deprecation in introspection query ([#2030](https://github.com/wundergraph/cosmo/issues/2030)) ([d53e9d6](https://github.com/wundergraph/cosmo/commit/d53e9d678b655cc178ee3c14888ff1ea45df23ec)) (@JivusAyrus)
+
 ## [0.9.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/playground@0.9.1...@wundergraph/playground@0.9.2) (2025-06-11)
 
 ### Bug Fixes

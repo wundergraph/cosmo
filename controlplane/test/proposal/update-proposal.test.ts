@@ -1,12 +1,14 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
+import { ProposalNamingConvention, ProposalOrigin } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import {
   afterAllSetup,
-  beforeAllSetup, createTestGroup,
+  beforeAllSetup,
+  createTestGroup,
   createTestRBACEvaluator,
   genID,
-  genUniqueLabel
+  genUniqueLabel,
 } from '../../src/core/test-util.js';
 import { ClickHouseClient } from '../../src/core/clickhouse/index.js';
 import {
@@ -47,14 +49,16 @@ async function createTestProposal(
     subgraphName: string;
     subgraphSchemaSDL: string;
     updatedSubgraphSDL: string;
+    origin?: ProposalOrigin,
   },
 ) {
-  const { federatedGraphName, proposalName, subgraphName, subgraphSchemaSDL, updatedSubgraphSDL } = options;
+  const { federatedGraphName, proposalName, subgraphName, subgraphSchemaSDL, updatedSubgraphSDL, origin } = options;
 
   const createProposalResponse = await client.createProposal({
     federatedGraphName,
     namespace: DEFAULT_NAMESPACE,
     name: proposalName,
+    origin: origin ?? ProposalOrigin.INTERNAL,
     subgraphs: [
       {
         name: subgraphName,
@@ -64,6 +68,7 @@ async function createTestProposal(
         labels: [],
       },
     ],
+    namingConvention: ProposalNamingConvention.INCREMENTAL,
   });
 
   return createProposalResponse;
@@ -88,91 +93,90 @@ describe('Update proposal tests', () => {
     await afterAllSetup(dbname);
   });
 
-  test.each([
-    'organization-admin',
-    'organization-developer',
-    'graph-admin',
-  ])('%s should update proposal state from DRAFT to APPROVED', async (role) => {
-    const { client, server, authenticator, users } = await SetupTest({
-      dbname,
-      chClient,
-      setupBilling: { plan: 'enterprise' },
-      enabledFeatures: ['proposals'],
-    });
+  test.each(['organization-admin', 'organization-developer', 'graph-admin'])(
+    '%s should update proposal state from DRAFT to APPROVED',
+    async (role) => {
+      const { client, server, authenticator, users } = await SetupTest({
+        dbname,
+        chClient,
+        setupBilling: { plan: 'enterprise' },
+        enabledFeatures: ['proposals'],
+      });
 
-    // Setup a federated graph with a single subgraph
-    const subgraphName = genID('subgraph1');
-    const fedGraphName = genID('fedGraph');
-    const label = genUniqueLabel('label');
-    const proposalName = genID('proposal');
+      // Setup a federated graph with a single subgraph
+      const subgraphName = genID('subgraph1');
+      const fedGraphName = genID('fedGraph');
+      const label = genUniqueLabel('label');
+      const proposalName = genID('proposal');
 
-    const subgraphSchemaSDL = `
+      const subgraphSchemaSDL = `
       type Query {
         hello: String!
       }
     `;
 
-    await createThenPublishSubgraph(
-      client,
-      subgraphName,
-      DEFAULT_NAMESPACE,
-      subgraphSchemaSDL,
-      [label],
-      DEFAULT_SUBGRAPH_URL_ONE,
-    );
+      await createThenPublishSubgraph(
+        client,
+        subgraphName,
+        DEFAULT_NAMESPACE,
+        subgraphSchemaSDL,
+        [label],
+        DEFAULT_SUBGRAPH_URL_ONE,
+      );
 
-    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], DEFAULT_ROUTER_URL);
+      await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], DEFAULT_ROUTER_URL);
 
-    // Enable proposals for the namespace
-    const enableResponse = await enableProposalsForNamespace(client);
-    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
+      // Enable proposals for the namespace
+      const enableResponse = await enableProposalsForNamespace(client);
+      expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
 
-    // Create a proposal with a schema change to the subgraph
-    const updatedSubgraphSDL = `
+      // Create a proposal with a schema change to the subgraph
+      const updatedSubgraphSDL = `
       type Query {
         hello: String!
         newField: Int!
       }
     `;
 
-    const createProposalResponse = await createTestProposal(client, {
-      federatedGraphName: fedGraphName,
-      proposalName,
-      subgraphName,
-      subgraphSchemaSDL,
-      updatedSubgraphSDL,
-    });
+      const createProposalResponse = await createTestProposal(client, {
+        federatedGraphName: fedGraphName,
+        proposalName,
+        subgraphName,
+        subgraphSchemaSDL,
+        updatedSubgraphSDL,
+      });
 
-    expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
+      expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
 
-    authenticator.changeUserWithSuppliedContext({
-      ...users.adminAliceCompanyA,
-      rbac: createTestRBACEvaluator(createTestGroup({ role })),
-    });
+      authenticator.changeUserWithSuppliedContext({
+        ...users.adminAliceCompanyA,
+        rbac: createTestRBACEvaluator(createTestGroup({ role })),
+      });
 
-    // Update the proposal state to APPROVED
-    const updateProposalResponse = await client.updateProposal({
-      proposalName,
-      federatedGraphName: fedGraphName,
-      namespace: DEFAULT_NAMESPACE,
-      updateAction: {
-        case: 'state',
-        value: 'APPROVED',
-      },
-    });
+      // Update the proposal state to APPROVED
+      const updateProposalResponse = await client.updateProposal({
+        proposalName: createProposalResponse.proposalName,
+        federatedGraphName: fedGraphName,
+        namespace: DEFAULT_NAMESPACE,
+        updateAction: {
+          case: 'state',
+          value: 'APPROVED',
+        },
+      });
 
-    expect(updateProposalResponse.response?.code).toBe(EnumStatusCode.OK);
+      expect(updateProposalResponse.response?.code).toBe(EnumStatusCode.OK);
 
-    // Verify the updated proposal state
-    const getProposalResponse = await client.getProposal({
-      proposalId: createProposalResponse.proposalId,
-    });
+      // Verify the updated proposal state
+      const getProposalResponse = await client.getProposal({
+        proposalId: createProposalResponse.proposalId,
+      });
 
-    expect(getProposalResponse.response?.code).toBe(EnumStatusCode.OK);
-    expect(getProposalResponse.proposal?.state).toBe('APPROVED');
+      expect(getProposalResponse.response?.code).toBe(EnumStatusCode.OK);
+      expect(getProposalResponse.proposal?.state).toBe('APPROVED');
 
-    await server.close();
-  });
+      await server.close();
+    },
+  );
 
   test.each([
     'organization-apikey-manager',
@@ -182,6 +186,7 @@ describe('Update proposal tests', () => {
     'graph-viewer',
     'subgraph-admin',
     'subgraph-publisher',
+    'subgraph-viewer',
   ])('%s should not update proposal state from DRAFT to APPROVED', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({
       dbname,
@@ -242,7 +247,7 @@ describe('Update proposal tests', () => {
 
     // Update the proposal state to APPROVED
     const updateProposalResponse = await client.updateProposal({
-      proposalName,
+      proposalName: createProposalResponse.proposalName,
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       updateAction: {
@@ -311,7 +316,7 @@ describe('Update proposal tests', () => {
 
     // Update the proposal state to REJECTED
     const updateProposalResponse = await client.updateProposal({
-      proposalName,
+      proposalName: createProposalResponse.proposalName,
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       updateAction: {
@@ -396,7 +401,7 @@ describe('Update proposal tests', () => {
     `;
 
     const updateProposalResponse = await client.updateProposal({
-      proposalName,
+      proposalName: createProposalResponse.proposalName,
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       updateAction: {
@@ -509,6 +514,7 @@ describe('Update proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      origin: ProposalOrigin.INTERNAL,
       subgraphs: [
         {
           name: subgraph1Name,
@@ -537,7 +543,7 @@ describe('Update proposal tests', () => {
     `;
 
     const updateProposalResponse = await client.updateProposal({
-      proposalName,
+      proposalName: createProposalResponse.proposalName,
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       updateAction: {
@@ -676,6 +682,7 @@ describe('Update proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      origin: ProposalOrigin.INTERNAL,
       subgraphs: [
         {
           name: subgraph1Name,
@@ -697,7 +704,7 @@ describe('Update proposal tests', () => {
 
     // Update the proposal to only include subgraph1 changes
     const updateProposalResponse = await client.updateProposal({
-      proposalName,
+      proposalName: createProposalResponse.proposalName,
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       updateAction: {
@@ -853,7 +860,7 @@ describe('Update proposal tests', () => {
     `;
 
     let updateProposalResponse = await client.updateProposal({
-      proposalName,
+      proposalName: createProposalResponse.proposalName,
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       updateAction: {
@@ -883,7 +890,7 @@ describe('Update proposal tests', () => {
 
     // Change proposal state to APPROVED
     await client.updateProposal({
-      proposalName,
+      proposalName: createProposalResponse.proposalName,
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       updateAction: {
@@ -910,7 +917,7 @@ describe('Update proposal tests', () => {
     `;
 
     updateProposalResponse = await client.updateProposal({
-      proposalName,
+      proposalName: createProposalResponse.proposalName,
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       updateAction: {
@@ -1001,7 +1008,7 @@ describe('Update proposal tests', () => {
 
     // Approve the proposal
     await client.updateProposal({
-      proposalName,
+      proposalName: createProposalResponse.proposalName,
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       updateAction: {
@@ -1034,7 +1041,7 @@ describe('Update proposal tests', () => {
     `;
 
     const updateProposalResponse = await client.updateProposal({
-      proposalName,
+      proposalName: createProposalResponse.proposalName,
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       updateAction: {
@@ -1125,7 +1132,7 @@ describe('Update proposal tests', () => {
 
     // Close the proposal
     await client.updateProposal({
-      proposalName,
+      proposalName: createProposalResponse.proposalName,
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       updateAction: {
@@ -1151,7 +1158,7 @@ describe('Update proposal tests', () => {
     `;
 
     const updateProposalResponse = await client.updateProposal({
-      proposalName,
+      proposalName: createProposalResponse.proposalName,
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       updateAction: {
@@ -1249,7 +1256,7 @@ describe('Update proposal tests', () => {
     `;
 
     const updateProposalResponse = await client.updateProposal({
-      proposalName,
+      proposalName: createProposalResponse.proposalName,
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       updateAction: {
@@ -1355,7 +1362,7 @@ describe('Update proposal tests', () => {
     `;
 
     await client.updateProposal({
-      proposalName,
+      proposalName: createProposalResponse.proposalName,
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       updateAction: {
@@ -1376,7 +1383,7 @@ describe('Update proposal tests', () => {
 
     // 3. Update the proposal state to APPROVED
     await client.updateProposal({
-      proposalName,
+      proposalName: createProposalResponse.proposalName,
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       updateAction: {
@@ -1499,6 +1506,7 @@ describe('Update proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      origin: ProposalOrigin.INTERNAL,
       subgraphs: [
         {
           name: subgraph1Name,
@@ -1521,7 +1529,7 @@ describe('Update proposal tests', () => {
 
     // Approve the proposal
     await client.updateProposal({
-      proposalName,
+      proposalName: createProposalResponse.proposalName,
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       updateAction: {
@@ -1646,6 +1654,7 @@ describe('Update proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      origin: ProposalOrigin.INTERNAL,
       subgraphs: [
         {
           name: subgraph1Name,
@@ -1668,7 +1677,7 @@ describe('Update proposal tests', () => {
 
     // Approve the proposal
     await client.updateProposal({
-      proposalName,
+      proposalName: createProposalResponse.proposalName,
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       updateAction: {
@@ -1773,6 +1782,7 @@ describe('Update proposal tests', () => {
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       name: proposalName,
+      origin: ProposalOrigin.INTERNAL,
       subgraphs: [
         {
           name: newSubgraphName,
@@ -1788,7 +1798,7 @@ describe('Update proposal tests', () => {
 
     // Approve the proposal
     await client.updateProposal({
-      proposalName,
+      proposalName: createProposalResponse.proposalName,
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       updateAction: {
@@ -1879,7 +1889,7 @@ describe('Update proposal tests', () => {
 
     // Try to update the proposal with an empty subgraphs array
     const updateProposalResponse = await client.updateProposal({
-      proposalName,
+      proposalName: createProposalResponse.proposalName,
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       updateAction: {
@@ -1978,7 +1988,7 @@ describe('Update proposal tests', () => {
     `;
 
     const updateProposalResponse = await client.updateProposal({
-      proposalName,
+      proposalName: createProposalResponse.proposalName,
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       updateAction: {
@@ -2091,7 +2101,7 @@ describe('Update proposal tests', () => {
 
     // Try to update the proposal with conflicting operations on the same subgraph
     const updateProposalResponse = await client.updateProposal({
-      proposalName,
+      proposalName: createProposalResponse.proposalName,
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       updateAction: {
@@ -2132,6 +2142,102 @@ describe('Update proposal tests', () => {
     expect(getProposalResponse.proposal?.subgraphs.length).toBe(1);
     expect(getProposalResponse.proposal?.subgraphs[0].name).toBe(existingSubgraphName);
     expect(getProposalResponse.proposal?.subgraphs[0].schemaSDL).toBe(updatedSubgraphSDL);
+
+    await server.close();
+  });
+
+  test('should fail to update a proposal created from hub', async () => {
+    const { client, server } = await SetupTest({
+      dbname,
+      chClient,
+      setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
+    });
+
+    // Setup a federated graph with a single subgraph
+    const existingSubgraphName = genID('existing-subgraph');
+    const fedGraphName = genID('fedGraph');
+    const label = genUniqueLabel('label');
+    const proposalName = genID('proposal');
+    const newSubgraphName = genID('new-subgraph');
+
+    const subgraphSchemaSDL = `
+      type Query {
+        hello: String!
+      }
+    `;
+
+    await createThenPublishSubgraph(
+      client,
+      existingSubgraphName,
+      DEFAULT_NAMESPACE,
+      subgraphSchemaSDL,
+      [label],
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
+
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], DEFAULT_ROUTER_URL);
+
+    // Enable proposals for the namespace
+    const enableResponse = await enableProposalsForNamespace(client);
+    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Create initial proposal with just an update to the existing subgraph
+    const updatedSubgraphSDL = `
+      type Query {
+        hello: String!
+        newField: Int!
+      }
+    `;
+
+    const createProposalResponse = await createTestProposal(client, {
+      federatedGraphName: fedGraphName,
+      proposalName,
+      subgraphName: existingSubgraphName,
+      subgraphSchemaSDL,
+      updatedSubgraphSDL,
+      origin: ProposalOrigin.EXTERNAL,
+    });
+
+    expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Define a schema for a new subgraph
+    const newSubgraphSchemaSDL = `
+      type Query {
+        products: [Product!]!
+      }
+      
+      type Product {
+        id: ID!
+        name: String!
+        price: Float!
+      }
+    `;
+
+    // Try to update the proposal with conflicting operations on the same subgraph
+    const updateProposalResponse = await client.updateProposal({
+      proposalName: createProposalResponse.proposalName,
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      updateAction: {
+        case: 'updatedSubgraphs',
+        value: {
+          subgraphs: [
+            {
+              name: newSubgraphName,
+              schemaSDL: newSubgraphSchemaSDL,
+              isDeleted: false,
+              isNew: true,
+              labels: [label],
+            },
+          ],
+        },
+      },
+    });
+
+    // Expect an error response
+    expect(updateProposalResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
+    expect(updateProposalResponse.response?.details).toMatch(new RegExp(`Proposal .*${proposalName} not found`));
 
     await server.close();
   });

@@ -5,6 +5,7 @@ on:
   pull_request:
     paths:
       - 'scripts/**'
+      - '.github/workflows/image-release.yml'
 jobs:
   build_test:
     timeout-minutes: 5

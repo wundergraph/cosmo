@@ -3,12 +3,14 @@ import {
   CompositeOutputData,
   DirectiveDefinitionData,
   FieldData,
+  InputObjectDefinitionData,
   InputValueData,
   NodeData,
   SchemaData,
 } from '../../schema-building/types';
 import { ConstDirectiveNode, DocumentNode, InputValueDefinitionNode, ValueNode } from 'graphql';
 import { RequiredFieldConfiguration } from '../../router-configuration/types';
+import { SubgraphName } from '../../types/types';
 
 export type KeyFieldSetData = {
   documentNode: DocumentNode;
@@ -33,7 +35,7 @@ export type FieldSetParentResult = {
 };
 
 export type ExtractArgumentDataResult = {
-  argumentTypeNodeByArgumentName: Map<string, ArgumentData>;
+  argumentTypeNodeByName: Map<string, ArgumentData>;
   optionalArgumentNames: Set<string>;
   requiredArgumentNames: Set<string>;
 };
@@ -51,13 +53,19 @@ export type HandleOverrideDirectiveParams = {
   data: FieldData;
   directiveCoords: string;
   errorMessages: Array<string>;
-  targetSubgraphName: string;
+  targetSubgraphName: SubgraphName;
 };
 
 export type HandleRequiresScopesDirectiveParams = {
   directiveCoords: string;
   orScopes: ReadonlyArray<ValueNode>;
   requiredScopes: Array<Set<string>>;
+};
+
+export type HandleSemanticNonNullDirectiveParams = {
+  data: FieldData;
+  directiveNode: ConstDirectiveNode;
+  errorMessages: Array<string>;
 };
 
 export type AddInputValueDataByNodeParams = {
@@ -68,3 +76,14 @@ export type AddInputValueDataByNodeParams = {
   fieldName?: string;
   renamedParentTypeName?: string;
 };
+
+export type ExecutionFailure = {
+  success: false;
+};
+
+export type UpsertInputObjectSuccess = {
+  data: InputObjectDefinitionData;
+  success: true;
+};
+
+export type UpsertInputObjectResult = ExecutionFailure | UpsertInputObjectSuccess;

@@ -8,6 +8,7 @@ on:
       - 'shared/**/*'
       - 'composition/**/*'
       - '.github/workflows/cli-ci.yaml'
+      - '.github/actions/cli-build/action.yml'
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}

@@ -151,6 +151,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         href: basePath + "/feature-flags",
         icon: <MdOutlineFeaturedPlayList className="size-4" />,
         matchExact: false,
+        separator: !isAdminOrDeveloper,
       },
     ];
 
@@ -246,9 +247,20 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
         title: "Account",
       },
       {
-        title: "Invitations",
+        title: (
+          <>
+            Invitations
+            {user?.invitations?.length ? (
+              <div className="relative ml-auto">
+                <div aria-hidden="true" className="absolute h-2 w-2 animate-ping rounded-full bg-blue-400" />
+                <div aria-hidden="true" className="h-2 w-2 rounded-full bg-blue-400" />
+              </div>
+            ) : null}
+          </>
+        ),
         href: "/account/invitations",
         icon: <EnvelopeClosedIcon className="size-4" />,
+        className: 'flex justify-between items-center w-full gap-x-1',
       },
       {
         title: "Manage",
@@ -264,6 +276,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
     user?.currentOrganization.slug,
     isAdmin,
     isAdminOrDeveloper,
+    user?.invitations,
   ]);
 
   return (

@@ -9,7 +9,7 @@ import {
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
+import { enrichLogger, fromProposalOriginEnum, getLogger, handleError, validateDateRanges } from '../../util.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
@@ -118,7 +118,10 @@ export function getProposalsByFederatedGraph(
     // Get the latest check success for each proposal
     const proposalsWithChecks = await Promise.all(
       proposals.map(async (proposal) => {
-        const latestCheck = await proposalRepo.getLatestCheckForProposal(proposal.proposal.id);
+        const latestCheck = await proposalRepo.getLatestCheckForProposal(
+          proposal.proposal.id,
+          authContext.organizationId,
+        );
         return {
           ...proposal,
           latestCheckSuccess: latestCheck?.isSuccessful || false,
@@ -150,6 +153,7 @@ export function getProposalsByFederatedGraph(
             })),
             latestCheckSuccess: proposal.latestCheckSuccess,
             latestCheckId: proposal.latestCheckId,
+            origin: fromProposalOriginEnum(proposal.proposal.origin),
           }),
       ),
       isProposalsEnabled: true,

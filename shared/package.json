@@ -1,6 +1,6 @@
 {
   "name": "@wundergraph/cosmo-shared",
-  "version": "0.39.1",
+  "version": "0.42.16",
   "description": "Shared code between WunderGraph Cosmo packages",
   "main": "./dist/index.js",
   "type": "module",
@@ -15,7 +15,7 @@
     "url": "https://github.com/wundergraph/cosmo"
   },
   "scripts": {
-    "build": "del dist && tsc",
+    "build": "rm -rf dist && tsc",
     "test": "pnpm lint && vitest run",
     "test:update": "vitest run -u",
     "lint": "eslint --cache --ext .ts,.mjs,.cjs . && prettier -c src",
@@ -45,6 +45,6 @@
     "del-cli": "^5.0.0",
     "tsx": "^3.14.0",
     "typescript": "5.5.2",
-    "vitest": "^3.1.2"
+    "vitest": "^3.2.4"
   }
 }

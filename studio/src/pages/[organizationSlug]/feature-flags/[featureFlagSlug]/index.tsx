@@ -1,4 +1,3 @@
-import { NamespaceSelector } from "@/components/dashboard/NamespaceSelector";
 import { EmptyState } from "@/components/empty-state";
 import { getDashboardLayout } from "@/components/layout/dashboard-layout";
 import { Loader } from "@/components/ui/loader";
@@ -11,10 +10,13 @@ import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { FeatureFlagDetails } from "@/components/feature-flag-details";
+import { useWorkspace } from "@/hooks/use-workspace";
+import { NamespaceSelector } from "@/components/dashboard/namespace-selector";
+import { useCurrentOrganization } from "@/hooks/use-current-organization";
 
 const FeatureFlagDetailsPage: NextPageWithLayout = () => {
   const router = useRouter();
-  const namespace = router.query.namespace as string;
+  const { namespace: { name: namespace } } = useWorkspace();
   const slug = router.query.featureFlagSlug as string;
 
   const { data, isLoading, error, refetch } = useQuery(getFeatureFlagByName, {
@@ -58,9 +60,8 @@ const FeatureFlagDetailsPage: NextPageWithLayout = () => {
 };
 
 const FeatureFlagBreadcrumb = () => {
-  const router = useRouter();
-  const organizationSlug = router.query.organizationSlug as string;
-  const namespace = router.query.namespace as string;
+  const organizationSlug = useCurrentOrganization()?.slug;
+  const { namespace: { name: namespace } } = useWorkspace();
 
   return (
     <div className="flex h-8 items-center justify-center">
@@ -89,9 +90,13 @@ FeatureFlagDetailsPage.getLayout = (page) => {
     undefined,
     undefined,
     [
-      <NamespaceSelector key={0} shouldRedirect />,
-      <FeatureFlagBreadcrumb key={1} />,
-      <FeatureFlagNameBreadcrumb key={2} />,
+      <NamespaceSelector
+        isViewingGraphOrSubgraph={false}
+        truncateNamespace
+        key={1}
+      />,
+      <FeatureFlagBreadcrumb key={2} />,
+      <FeatureFlagNameBreadcrumb key={3} />,
     ],
     true,
   );

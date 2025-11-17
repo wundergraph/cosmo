@@ -36,6 +36,11 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
   command.option('--readme <path-to-readme>', 'The markdown file which describes the subgraph.');
+  command.option(
+    '--disable-resolvability-validation',
+    'This flag will disable the validation for whether all nodes of the federated graph are resolvable. Do NOT use unless troubleshooting.',
+  );
+
   command.action(async (name, options) => {
     let readmeFile;
     if (options.readme) {
@@ -52,14 +57,15 @@ export default (opts: BaseCommandOptions) => {
     const spinner = ora('Federated Graph is being updated...').start();
     const resp = await opts.client.platform.updateFederatedGraph(
       {
+        admissionWebhookSecret: options.admissionWebhookSecret,
+        admissionWebhookURL: options.admissionWebhookUrl,
+        disableResolvabilityValidation: options.disableResolvabilityValidation,
+        labelMatchers: options.labelMatcher,
         name,
         namespace: options.namespace,
-        routingUrl: options.routingUrl,
-        labelMatchers: options.labelMatcher,
-        admissionWebhookURL: options.admissionWebhookUrl,
-        admissionWebhookSecret: options.admissionWebhookSecret,
-        unsetLabelMatchers: options.unsetLabelMatchers,
         readme: readmeFile ? await readFile(readmeFile, 'utf8') : undefined,
+        routingUrl: options.routingUrl,
+        unsetLabelMatchers: options.unsetLabelMatchers,
       },
       {
         headers: getBaseHeaders(),

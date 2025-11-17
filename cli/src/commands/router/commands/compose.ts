@@ -25,7 +25,7 @@ import {
   GRPCMapping,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import Table from 'cli-table3';
-import { FederationResultSuccess, ROUTER_COMPATIBILITY_VERSION_ONE } from '@wundergraph/composition';
+import { FederationSuccess, ROUTER_COMPATIBILITY_VERSION_ONE } from '@wundergraph/composition';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { composeSubgraphs, introspectSubgraph } from '../../../utils.js';
 
@@ -107,7 +107,7 @@ type Config = {
   subgraphs: ConfigSubgraph[];
 };
 
-function constructRouterSubgraph(result: FederationResultSuccess, s: SubgraphMetadata, index: number): RouterSubgraph {
+function constructRouterSubgraph(result: FederationSuccess, s: SubgraphMetadata, index: number): RouterSubgraph {
   const subgraphConfig = result.subgraphConfigBySubgraphName.get(s.name);
   const schema = subgraphConfig?.schema;
   const configurationDataByTypeName = subgraphConfig?.configurationDataByTypeName;
@@ -166,6 +166,11 @@ export default (opts: BaseCommandOptions) => {
   command.requiredOption('-i, --input <path-to-input>', 'The yaml file with data about graph and subgraphs.');
   command.option('-o, --out [string]', 'Destination file for the router config.');
   command.option('--suppress-warnings', 'This flag suppresses any warnings produced by composition.');
+  command.option(
+    '--disable-resolvability-validation',
+    'This flag will disable the validation for whether all nodes of the federated graph are resolvable. Do NOT use unless troubleshooting.',
+  );
+
   command.action(async (options) => {
     const inputFile = resolve(options.input);
     const inputFileLocation = dirname(inputFile);
@@ -201,6 +206,7 @@ export default (opts: BaseCommandOptions) => {
           definitions: parse(s.sdl),
         };
       }),
+      options.disableResolvabilityValidation,
     );
 
     if (!result.success) {
@@ -271,24 +277,24 @@ function toSubgraphMetadata(
   subgraphs: SubgraphMetadata[],
 ): Promise<SubgraphMetadata> {
   if ('plugin' in subgraphConfig) {
-    return toSubgraphMetadataPlugin(subgraphConfig, subgraphs);
+    return toSubgraphMetadataPlugin(inputFileLocation, subgraphConfig, subgraphs);
   }
 
   if ('grpc' in subgraphConfig) {
-    return toSubgraphMetadataGRPC(subgraphConfig);
+    return toSubgraphMetadataGRPC(inputFileLocation, subgraphConfig);
   }
 
   return toSubgraphMetadataStandard(inputFileLocation, index, subgraphConfig, subgraphs);
 }
 
-async function toSubgraphMetadataGRPC(s: GRPCSubgraphConfig): Promise<GRPCSubgraphMetadata> {
-  validateGRPCSubgraph(s);
+async function toSubgraphMetadataGRPC(inputFileLocation: string, s: GRPCSubgraphConfig): Promise<GRPCSubgraphMetadata> {
+  validateGRPCSubgraph(inputFileLocation, s);
 
-  const mappingFileContent = await readFile(s.grpc.mapping_file, 'utf8');
+  const mappingFileContent = await readFile(resolve(inputFileLocation, s.grpc.mapping_file), 'utf8');
   const mapping = GRPCMapping.fromJsonString(mappingFileContent);
 
-  const protoSchemaFileContent = await readFile(s.grpc.proto_file, 'utf8');
-  const sdl = await readFile(s.grpc.schema_file, 'utf8');
+  const protoSchemaFileContent = await readFile(resolve(inputFileLocation, s.grpc.proto_file), 'utf8');
+  const sdl = await readFile(resolve(inputFileLocation, s.grpc.schema_file), 'utf8');
 
   return {
     kind: SubgraphKind.GRPC,
@@ -301,6 +307,7 @@ async function toSubgraphMetadataGRPC(s: GRPCSubgraphConfig): Promise<GRPCSubgra
 }
 
 async function toSubgraphMetadataPlugin(
+  inputFileLocation: string,
   s: SubgraphPluginConfig,
   subgraphs: SubgraphMetadata[],
 ): Promise<SubgraphPluginMetadata> {
@@ -313,14 +320,14 @@ async function toSubgraphMetadataPlugin(
     );
   }
 
-  validateSubgraphPlugin(s);
+  validateSubgraphPlugin(inputFileLocation, s);
 
   // Check if a plugin with the same name already exists
-  const mappingFilePath = resolve(s.plugin.path, 'generated', 'mapping.json');
+  const mappingFilePath = resolve(inputFileLocation, s.plugin.path, 'generated', 'mapping.json');
   const mappingFile = await readFile(mappingFilePath, 'utf8');
-  const schemaFilePath = resolve(s.plugin.path, 'src', 'schema.graphql');
+  const schemaFilePath = resolve(inputFileLocation, s.plugin.path, 'src', 'schema.graphql');
   const sdl = await readFile(schemaFilePath, 'utf8');
-  const protoSchemaFilePath = resolve(s.plugin.path, 'generated', 'service.proto');
+  const protoSchemaFilePath = resolve(inputFileLocation, s.plugin.path, 'generated', 'service.proto');
   const protoSchema = await readFile(protoSchemaFilePath, 'utf8');
 
   return {
@@ -399,7 +406,7 @@ async function toSubgraphMetadataStandard(
   };
 }
 
-function validateGRPCSubgraph(s: GRPCSubgraphConfig) {
+function validateGRPCSubgraph(inputFileLocation: string, s: GRPCSubgraphConfig) {
   if (!s.name) {
     program.error(
       pc.red(pc.bold(`The subgraph name is missing in the input file. Please check the name and try again.`)),
@@ -430,7 +437,7 @@ function validateGRPCSubgraph(s: GRPCSubgraphConfig) {
     );
   }
 
-  if (!existsSync(s.grpc.schema_file)) {
+  if (!existsSync(resolve(inputFileLocation, s.grpc.schema_file))) {
     program.error(
       pc.red(
         pc.bold(
@@ -440,7 +447,7 @@ function validateGRPCSubgraph(s: GRPCSubgraphConfig) {
     );
   }
 
-  if (!existsSync(s.grpc.proto_file)) {
+  if (!existsSync(resolve(inputFileLocation, s.grpc.proto_file))) {
     program.error(
       pc.red(
         pc.bold(`The proto file '${pc.bold(s.grpc.proto_file)}' does not exist. Please check the path and try again.`),
@@ -448,7 +455,7 @@ function validateGRPCSubgraph(s: GRPCSubgraphConfig) {
     );
   }
 
-  if (!existsSync(s.grpc.mapping_file)) {
+  if (!existsSync(resolve(inputFileLocation, s.grpc.mapping_file))) {
     program.error(
       pc.red(
         pc.bold(
@@ -459,13 +466,13 @@ function validateGRPCSubgraph(s: GRPCSubgraphConfig) {
   }
 }
 
-function validateSubgraphPlugin(s: SubgraphPluginConfig) {
+function validateSubgraphPlugin(inputFileLocation: string, s: SubgraphPluginConfig) {
   if (!s.plugin.path) {
     program.error(
       pc.red(pc.bold(`The plugin path is missing in the input file. Please check the path and try again.`)),
     );
   }
-  if (!existsSync(s.plugin.path)) {
+  if (!existsSync(resolve(inputFileLocation, s.plugin.path))) {
     program.error(
       pc.red(
         pc.bold(`The plugin path '${pc.bold(s.plugin.path)}' does not exist. Please check the path and try again.`),
@@ -579,6 +586,7 @@ async function buildFeatureFlagsConfig(
         url: normalizeURL(s.routingUrl),
         definitions: parse(s.sdl),
       })),
+      options.disableResolvabilityValidation,
     );
 
     if (!featureResult.success) {

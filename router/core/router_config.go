@@ -8,7 +8,7 @@ import (
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
-	rd "github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/redis"
+	rd "github.com/wundergraph/cosmo/router/internal/rediscloser"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
@@ -50,6 +50,7 @@ type Config struct {
 	graphqlPath                     string
 	playground                      bool
 	introspection                   bool
+	introspectionConfig             config.IntrospectionConfiguration
 	queryPlansEnabled               bool
 	graphApiToken                   string
 	healthCheckPath                 string
@@ -59,7 +60,7 @@ type Config struct {
 	cacheControlPolicy              config.CacheControlPolicy
 	routerConfigPollerConfig        *RouterConfigPollerConfig
 	cdnConfig                       config.CDNConfiguration
-	persistedOperationClient        persistedoperation.SaveClient
+	persistedOperationClient        *persistedoperation.Client
 	persistedOperationsConfig       config.PersistedOperationsConfig
 	automaticPersistedQueriesConfig config.AutomaticPersistedQueriesConfig
 	apolloCompatibilityFlags        config.ApolloCompatibilityFlags
@@ -76,6 +77,7 @@ type Config struct {
 	postOriginHandlers              []TransportPostHandler
 	headerRules                     *config.HeaderRules
 	subgraphTransportOptions        *SubgraphTransportOptions
+	subgraphCircuitBreakerOptions   *SubgraphCircuitBreakerOptions
 	graphqlMetricsConfig            *GraphQLMetricsConfig
 	routerTrafficConfig             *config.RouterTrafficConfiguration
 	batchingConfig                  *BatchingConfig
@@ -105,18 +107,18 @@ type Config struct {
 	// should be removed once the users have migrated to the new overrides config
 	overrideRoutingURLConfiguration config.OverrideRoutingURLConfiguration
 	// the new overrides config
-	overrides                  config.OverridesConfiguration
-	authorization              *config.AuthorizationConfiguration
-	rateLimit                  *config.RateLimitConfiguration
-	webSocketConfiguration     *config.WebSocketConfiguration
-	subgraphErrorPropagation   config.SubgraphErrorPropagationConfiguration
-	clientHeader               config.ClientHeader
-	cacheWarmup                *config.CacheWarmupConfiguration
-	multipartHeartbeatInterval time.Duration
-	hostName                   string
-	mcp                        config.MCPConfiguration
-	plugins                    config.PluginsConfiguration
-	tracingAttributes          []config.CustomAttribute
+	overrides                     config.OverridesConfiguration
+	authorization                 *config.AuthorizationConfiguration
+	rateLimit                     *config.RateLimitConfiguration
+	webSocketConfiguration        *config.WebSocketConfiguration
+	subgraphErrorPropagation      config.SubgraphErrorPropagationConfiguration
+	clientHeader                  config.ClientHeader
+	cacheWarmup                   *config.CacheWarmupConfiguration
+	subscriptionHeartbeatInterval time.Duration
+	hostName                      string
+	mcp                           config.MCPConfiguration
+	plugins                       config.PluginsConfiguration
+	tracingAttributes             []config.CustomAttribute
 }
 
 // Usage returns an anonymized version of the config for usage tracking
@@ -184,6 +186,7 @@ func (c *Config) Usage() map[string]any {
 			usage["metrics_otel_engine_stats_enabled"] = c.metricConfig.OpenTelemetry.EngineStats.Enabled()
 			usage["metrics_otel_graphql_cache"] = c.metricConfig.OpenTelemetry.GraphqlCache
 			usage["metrics_otel_router_runtime"] = c.metricConfig.OpenTelemetry.RouterRuntime
+			usage["metrics_otel_connection_stats"] = c.metricConfig.OpenTelemetry.ConnectionStats
 		}
 		usage["metrics_prometheus_enabled"] = c.metricConfig.Prometheus.Enabled
 		if c.metricConfig.Prometheus.Enabled {
@@ -194,6 +197,7 @@ func (c *Config) Usage() map[string]any {
 			usage["metrics_prometheus_exclude_metrics_labels"] = c.metricConfig.Prometheus.ExcludeMetricLabels
 			usage["metrics_prometheus_exclude_scope_info"] = c.metricConfig.Prometheus.ExcludeScopeInfo
 			usage["metrics_prometheus_schema_field_usage_enabled"] = c.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled
+			usage["metrics_prometheus_connection_stats"] = c.metricConfig.Prometheus.ConnectionStats
 		}
 	}
 
@@ -204,6 +208,7 @@ func (c *Config) Usage() map[string]any {
 	usage["custom_modules"] = len(c.customModules) > 0
 	usage["header_rules"] = c.headerRules != nil && (c.headerRules.All != nil || len(c.headerRules.Subgraphs) > 0)
 	usage["subgraph_transport_options"] = c.subgraphTransportOptions != nil
+	usage["subgraph_circuit_breaker_options"] = c.subgraphCircuitBreakerOptions.IsEnabled()
 	usage["graphql_metrics"] = c.graphqlMetricsConfig != nil && c.graphqlMetricsConfig.Enabled
 	usage["batching"] = c.batchingConfig != nil && c.batchingConfig.Enabled
 	if c.batchingConfig != nil && c.batchingConfig.Enabled {

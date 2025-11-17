@@ -78,9 +78,7 @@ func main() {
 	)
 
 	// Register the service
-	projects.RegisterProjectsServiceServer(s, &service.ProjectsService{
-		NextID: 1,
-	})
+	projects.RegisterProjectsServiceServer(s, &service.ProjectsService{})
 
 	// Create a context that will be canceled on OS signals
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

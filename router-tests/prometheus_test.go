@@ -4,14 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
-	"github.com/wundergraph/cosmo/router/pkg/otel"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"net/http"
 	"regexp"
 	"strings"
 	"testing"
 	"time"
+
+	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
@@ -4118,6 +4119,14 @@ func TestPrometheus(t *testing.T) {
 		const claimVal = "customClaimValue"
 
 		authenticators, authServer := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		exporter := tracetest.NewInMemoryExporter(t)
 		metricReader := metric.NewManualReader()
 		promRegistry := prometheus.NewRegistry()
@@ -4127,7 +4136,7 @@ func TestPrometheus(t *testing.T) {
 			MetricReader:       metricReader,
 			PrometheusRegistry: promRegistry,
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, true)),
+				core.WithAccessController(accessController),
 			},
 			CustomMetricAttributes: []config.CustomAttribute{
 				{
@@ -4645,7 +4654,7 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 			All: config.GlobalSubgraphRequestRule{
 				RequestTimeout: PointerOf(200 * time.Millisecond),
 			},
-			Subgraphs: map[string]*config.GlobalSubgraphRequestRule{
+			Subgraphs: map[string]config.GlobalSubgraphRequestRule{
 				"availability": {
 					RequestTimeout: PointerOf(300 * time.Millisecond),
 				},
@@ -4859,6 +4868,134 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				requestDuration := findMetricFamilyByName(metricFamily, "router_http_request_duration_milliseconds")
 				requestDurationMetrics := requestDuration.GetMetric()[1]
 				require.Contains(t, requestDurationMetrics.Label, expected)
+			})
+		})
+	})
+
+	t.Run("validate recording connection stats for subscriptions", func(t *testing.T) {
+		t.Parallel()
+
+		promRegistry := prometheus.NewRegistry()
+		metricReader := metric.NewManualReader()
+		testenv.Run(t, &testenv.Config{
+			MetricReader:       metricReader,
+			PrometheusRegistry: promRegistry,
+			MetricOptions: testenv.MetricOptions{
+				EnablePrometheusConnectionMetrics: true,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+			defer func() {
+				_ = conn.Close()
+			}()
+
+			err := conn.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { countEmp2(max: 2, intervalMilliseconds: 100) }"}`),
+			})
+			require.NoError(t, err)
+
+			var msg testenv.WebSocketMessage
+			err = conn.ReadJSON(&msg)
+			require.NoError(t, err)
+			require.Equal(t, "1", msg.ID)
+			require.Equal(t, "next", msg.Type)
+			require.Equal(t, `{"data":{"countEmp2":0}}`, string(msg.Payload))
+
+			rm := metricdata.ResourceMetrics{}
+			err = metricReader.Collect(context.Background(), &rm)
+			require.NoError(t, err)
+
+			mf, err := promRegistry.Gather()
+			require.NoError(t, err)
+
+			t.Run("verify max connections", func(t *testing.T) {
+				metricFamily := findMetricFamilyByName(mf, "router_http_client_max_connections")
+
+				metrics := metricFamily.GetMetric()
+				require.Len(t, metrics, 1)
+
+				connectionTotal := metrics[0]
+
+				require.Equal(t, 100.0, *connectionTotal.Gauge.Value)
+
+				expected := []*io_prometheus_client.LabelPair{
+					{
+						Name:  PointerOf("otel_scope_name"),
+						Value: PointerOf("cosmo.router.connections.prometheus"),
+					},
+					{
+						Name:  PointerOf("otel_scope_version"),
+						Value: PointerOf("0.0.1"),
+					},
+				}
+				require.Equal(t, expected, connectionTotal.Label)
+
+			})
+
+			t.Run("verify connections active", func(t *testing.T) {
+				metricFamily := findMetricFamilyByName(mf, "router_http_client_active_connections")
+				metrics := metricFamily.GetMetric()
+				require.Len(t, metrics, 1)
+
+				metricDataPoint1 := metrics[0]
+				require.Greater(t, *metricDataPoint1.Gauge.Value, 0.0)
+				expected1 := []*io_prometheus_client.LabelPair{
+					{
+						Name:  PointerOf("otel_scope_name"),
+						Value: PointerOf("cosmo.router.connections.prometheus"),
+					},
+					{
+						Name:  PointerOf("otel_scope_version"),
+						Value: PointerOf("0.0.1"),
+					},
+					{
+						Name:  PointerOf("server_address"),
+						Value: PointerOf("127.0.0.1"),
+					},
+					{
+						Name:  PointerOf("server_port"),
+						Value: PointerOf(getPort(metricDataPoint1)),
+					},
+				}
+				require.Equal(t, expected1, metricDataPoint1.Label)
+			})
+
+			t.Run("verify connection total duration", func(t *testing.T) {
+				metricFamily := findMetricFamilyByName(mf, "router_http_client_connection_acquire_duration")
+				metrics := metricFamily.GetMetric()
+				require.Len(t, metrics, 1)
+
+				metricDataPoint1 := metrics[0]
+				require.Greater(t, *metricDataPoint1.Histogram.SampleSum, 0.0)
+				expected1 := []*io_prometheus_client.LabelPair{
+					{
+						Name:  PointerOf("otel_scope_name"),
+						Value: PointerOf("cosmo.router.connections.prometheus"),
+					},
+					{
+						Name:  PointerOf("otel_scope_version"),
+						Value: PointerOf("0.0.1"),
+					},
+					{
+						Name:  PointerOf("server_address"),
+						Value: PointerOf("127.0.0.1"),
+					},
+					{
+						Name:  PointerOf("server_port"),
+						Value: PointerOf(getPort(metricDataPoint1)),
+					},
+					{
+						Name:  PointerOf("wg_http_client_reused_connection"),
+						Value: PointerOf("false"),
+					},
+					{
+						Name:  PointerOf("wg_subgraph_name"),
+						Value: PointerOf("employees"),
+					},
+				}
+				require.Equal(t, expected1, metricDataPoint1.Label)
 			})
 		})
 	})

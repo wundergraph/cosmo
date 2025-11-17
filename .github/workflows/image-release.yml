@@ -40,6 +40,9 @@ jobs:
     if: github.ref_name == github.event.repository.default_branch
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      matrix:
+        docker_build_target: ${{ inputs.name == 'router' && fromJson('["", "nonroot"]') || fromJson('[""]') }}
     permissions:
       contents: read
       packages: write
@@ -61,6 +64,8 @@ jobs:
         with:
           images: |
             ${{ env.REGISTRY }}/${{ github.repository }}/${{ inputs.name }}
+          flavor: |
+            suffix=${{ matrix.docker_build_target != '' && format('-{0}', matrix.docker_build_target) || '' }},onlatest=true
           tags: |
             type=ref,event=branch
             type=sha
@@ -101,6 +106,7 @@ jobs:
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/${{ inputs.name }}:buildcache
           cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ github.repository }}/${{ inputs.name }}:buildcache,mode=max
           platforms: linux/amd64,linux/arm64
+          target: ${{ matrix.docker_build_target }}
           outputs:
             type=image,name=target,annotation-index.org.opencontainers.image.description=${{ inputs.name }}
             type=image,name=target,annotation-index.org.opencontainers.image.source=https://github.com/wundergraph/cosmo

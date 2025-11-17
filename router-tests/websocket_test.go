@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/buger/jsonparser"
 	"github.com/gorilla/websocket"
@@ -135,9 +136,17 @@ func TestWebSockets(t *testing.T) {
 		require.NoError(t, err)
 		authenticators := []authentication.Authenticator{authenticator}
 
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
 					RejectOperationIfUnauthorized: true,
 				}),
@@ -184,9 +193,17 @@ func TestWebSockets(t *testing.T) {
 		require.NoError(t, err)
 		authenticators := []authentication.Authenticator{authenticator}
 
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
 					RejectOperationIfUnauthorized: false,
 				}),
@@ -232,12 +249,19 @@ func TestWebSockets(t *testing.T) {
 		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
 		require.NoError(t, err)
 		authenticators := []authentication.Authenticator{authenticator}
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 			EnableNats:               true,
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
 					RejectOperationIfUnauthorized: false,
 				}),
@@ -291,12 +315,19 @@ func TestWebSockets(t *testing.T) {
 		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
 		require.NoError(t, err)
 		authenticators := []authentication.Authenticator{authenticator}
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
 			EnableNats:               true,
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
 					RejectOperationIfUnauthorized: true,
 				}),
@@ -349,6 +380,13 @@ func TestWebSockets(t *testing.T) {
 		authenticator, err := authentication.NewWebsocketInitialPayloadAuthenticator(authOptions)
 		require.NoError(t, err)
 		authenticators := []authentication.Authenticator{authenticator}
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
@@ -358,7 +396,7 @@ func TestWebSockets(t *testing.T) {
 				cfg.Enabled = true
 			},
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, true)),
+				core.WithAccessController(accessController),
 				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
 					RejectOperationIfUnauthorized: true,
 				}),
@@ -411,6 +449,13 @@ func TestWebSockets(t *testing.T) {
 		authenticator, err := authentication.NewWebsocketInitialPayloadAuthenticator(authOptions)
 		require.NoError(t, err)
 		authenticators := []authentication.Authenticator{authenticator}
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
 
 		testenv.Run(t, &testenv.Config{
 			ModifyWebsocketConfiguration: func(cfg *config.WebSocketConfiguration) {
@@ -418,7 +463,7 @@ func TestWebSockets(t *testing.T) {
 				cfg.Enabled = true
 			},
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, true)),
+				core.WithAccessController(accessController),
 				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
 					RejectOperationIfUnauthorized: true,
 				}),
@@ -460,6 +505,13 @@ func TestWebSockets(t *testing.T) {
 		authenticator, err := authentication.NewWebsocketInitialPayloadAuthenticator(authOptions)
 		require.NoError(t, err)
 		authenticators := []authentication.Authenticator{authenticator}
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
 
 		testenv.Run(t, &testenv.Config{
 			ModifyWebsocketConfiguration: func(cfg *config.WebSocketConfiguration) {
@@ -467,7 +519,7 @@ func TestWebSockets(t *testing.T) {
 				cfg.Enabled = true
 			},
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, true)),
+				core.WithAccessController(accessController),
 				core.WithAuthorizationConfig(&config.AuthorizationConfiguration{
 					RejectOperationIfUnauthorized: false,
 				}),
@@ -847,6 +899,87 @@ func TestWebSockets(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
 		})
 	})
+	t.Run("can use auth context in header expressions for subgraph requests", func(t *testing.T) {
+		t.Parallel()
+
+		authServer, err := jwks.NewServer(t)
+		require.NoError(t, err)
+		t.Cleanup(authServer.Close)
+		tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)})
+		authOptions := authentication.HttpHeaderAuthenticatorOptions{
+			Name:         JwksName,
+			TokenDecoder: tokenDecoder,
+		}
+		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
+		require.NoError(t, err)
+		authenticators := []authentication.Authenticator{authenticator}
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
+		headerRules := config.HeaderRules{
+			All: &config.GlobalHeaderRule{
+				Request: []*config.RequestHeaderRule{
+					{
+						Operation:  config.HeaderRuleOperationSet,
+						Name:       "x-authenticated",
+						Expression: "request.auth.isAuthenticated ? '1' : '0'",
+					},
+					{
+						Operation:  config.HeaderRuleOperationSet,
+						Name:       "x-favorite-animal",
+						Expression: "request.auth.claims.favorite_animal",
+					},
+				},
+			},
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithHeaderRules(headerRules),
+				core.WithAccessController(accessController),
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalMiddleware: func(next http.Handler) http.Handler {
+					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						authHeader := r.Header.Get("x-authenticated")
+						require.Equal(t, "1", authHeader)
+
+						favoriteAnimalHeader := r.Header.Get("x-favorite-animal")
+						require.Equal(t, "bear", favoriteAnimalHeader)
+						next.ServeHTTP(w, r)
+					})
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			token, err := authServer.Token(map[string]any{
+				"favorite_animal": "bear",
+			})
+			require.NoError(t, err)
+			header := http.Header{
+				"Authorization": []string{"Bearer " + token},
+			}
+			conn := xEnv.InitGraphQLWebSocketConnection(header, nil, nil)
+			err = testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp } }"}`),
+			})
+			require.NoError(t, err)
+			var res testenv.WebSocketMessage
+			err = testenv.WSReadJSON(t, conn, &res)
+			require.NoError(t, err)
+			require.Equal(t, "next", res.Type)
+			require.Equal(t, "1", res.ID)
+			require.NoError(t, conn.Close())
+			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+		})
+
+	})
 	t.Run("subscription with header propagation sse subgraph post", func(t *testing.T) {
 		t.Parallel()
 
@@ -860,6 +993,7 @@ func TestWebSockets(t *testing.T) {
 				},
 			},
 		}
+
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 500
@@ -897,9 +1031,25 @@ func TestWebSockets(t *testing.T) {
 								http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
 								return
 							}
+							_, err = io.WriteString(w, "event: next\n")
+							require.NoError(t, err)
 							_, err = fmt.Fprintf(w, "data: %s\n\n", `{"data":{"currentTime":{"unixTime":1,"timeStamp":"2021-09-01T12:00:00Z"}}}`)
 							require.NoError(t, err)
 							flusher.Flush()
+
+							ticker := time.NewTicker(50 * time.Millisecond)
+							defer ticker.Stop()
+
+							for {
+								select {
+								case <-r.Context().Done():
+									return
+								case <-ticker.C:
+									_, err = io.WriteString(w, ":heartbeat\n\n")
+									require.NoError(t, err)
+									flusher.Flush()
+								}
+							}
 						})
 					},
 				},
@@ -963,6 +1113,7 @@ func TestWebSockets(t *testing.T) {
 			}
 		})
 	})
+
 	t.Run("subscription with header propagation sse subgraph get", func(t *testing.T) {
 		t.Parallel()
 
@@ -1013,9 +1164,25 @@ func TestWebSockets(t *testing.T) {
 								http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
 								return
 							}
-							_, err := fmt.Fprintf(w, "data: %s\n\n", `{"data":{"currentTime":{"unixTime":1,"timeStamp":"2021-09-01T12:00:00Z"}}}`)
+							_, err := io.WriteString(w, "event: next\n")
+							require.NoError(t, err)
+							_, err = fmt.Fprintf(w, "data: %s\n\n", `{"data":{"currentTime":{"unixTime":1,"timeStamp":"2021-09-01T12:00:00Z"}}}`)
 							require.NoError(t, err)
 							flusher.Flush()
+
+							ticker := time.NewTicker(50 * time.Millisecond)
+							defer ticker.Stop()
+
+							for {
+								select {
+								case <-r.Context().Done():
+									return
+								case <-ticker.C:
+									_, err = io.WriteString(w, ":heartbeat\n\n")
+									require.NoError(t, err)
+									flusher.Flush()
+								}
+							}
 						})
 					},
 				},
@@ -1995,6 +2162,236 @@ func TestWebSockets(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
 		})
 	})
+
+	t.Run("unknown operation gets rejected when safelist is enabled", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
+					Safelist: config.SafelistConfiguration{Enabled: true},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, []byte(`{"graphql-client-name": "my-client"}`))
+			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { employeeUpdated(employeeID: 1) { id } }"}`),
+			})
+			require.NoError(t, err)
+			var res testenv.WebSocketMessage
+			err = testenv.WSReadJSON(t, conn, &res)
+			require.NoError(t, err)
+			require.Equal(t, "error", res.Type)
+			require.Equal(t, "1", res.ID)
+			require.JSONEq(t, `[{"message":"operation '9a41d21da2823195ad42c11d51e9ad3345824abdabf567b3615a235843a1fcc7' for client 'my-client' not found"}]`,
+				string(res.Payload))
+
+			require.NoError(t, conn.Close())
+		})
+	})
+
+	t.Run("known hash passes when safelist is enabled", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
+					Safelist: config.SafelistConfiguration{Enabled: true},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, []byte(`{"graphql-client-name": "my-client"}`))
+			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"extensions":{"persistedQuery":{"version":1,"sha256Hash":"6e94d99132b544a0d7522696a7d35643d56a26c7b8c2e0df29e2b9935636628c"}}}`),
+			})
+			require.NoError(t, err)
+			var res testenv.WebSocketMessage
+			err = testenv.WSReadJSON(t, conn, &res)
+			require.NoError(t, err)
+			require.Equal(t, "next", res.Type)
+			require.Equal(t, "1", res.ID)
+			require.Contains(t, string(res.Payload), `"data"`)
+			require.Contains(t, string(res.Payload), `"currentTime"`)
+
+			require.NoError(t, conn.Close())
+		})
+	})
+
+	t.Run("unknown operation gets logged when log_unknown is enabled", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
+					LogUnknown: true,
+					Safelist:   config.SafelistConfiguration{Enabled: false},
+				}),
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, []byte(`{"graphql-client-name": "my-client"}`))
+			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { currentTime { unixTime timeStamp } }"}`),
+			})
+			require.NoError(t, err)
+
+			var res testenv.WebSocketMessage
+			err = testenv.WSReadJSON(t, conn, &res)
+			require.NoError(t, err)
+			require.Equal(t, "next", res.Type)
+			require.Equal(t, "1", res.ID)
+			require.Contains(t, string(res.Payload), `"data"`)
+
+			// Verify the warning was logged
+			logEntries := xEnv.Observer().FilterMessageSnippet("Unknown persisted operation found").All()
+			require.Len(t, logEntries, 1)
+			requestContext := logEntries[0].ContextMap()
+			require.Contains(t, requestContext["query"], "subscription { currentTime { unixTime timeStamp } }")
+			require.Equal(t, "8ad544bda5b2ad7a59481e31fb6fa62705fd072b20fdaadba4f3908d01f2c132", requestContext["sha256Hash"])
+
+			require.NoError(t, conn.Close())
+		})
+	})
+
+	t.Run("operation with matching hash passes", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, []byte(`{"graphql-client-name": "my-client"}`))
+
+			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+				ID:   "1",
+				Type: "subscribe",
+				Payload: []byte(`{
+					"query": "subscription { currentTime { unixTime } }",
+					"extensions": {
+						"persistedQuery": {
+							"version": 1,
+							"sha256Hash": "6e94d99132b544a0d7522696a7d35643d56a26c7b8c2e0df29e2b9935636628c"
+						}
+					}
+				}`),
+			})
+			require.NoError(t, err)
+
+			var res testenv.WebSocketMessage
+			err = testenv.WSReadJSON(t, conn, &res)
+			require.NoError(t, err)
+			require.Equal(t, "next", res.Type)
+			require.Equal(t, "1", res.ID)
+			require.Contains(t, string(res.Payload), `"data"`)
+			require.Contains(t, string(res.Payload), `"currentTime"`)
+
+			require.NoError(t, conn.Close())
+		})
+	})
+
+	t.Run("operation with mismatched hash is rejected", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, []byte(`{"graphql-client-name": "my-client"}`))
+
+			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+				ID:   "1",
+				Type: "subscribe",
+				Payload: []byte(`{
+					"query": "subscription { currentTime { unixTime } }",
+					"extensions": {
+						"persistedQuery": {
+							"version": 1,
+							"sha256Hash": "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+						}
+					}
+				}`),
+			})
+			require.NoError(t, err)
+
+			var res testenv.WebSocketMessage
+			err = testenv.WSReadJSON(t, conn, &res)
+			require.NoError(t, err)
+			require.Equal(t, "error", res.Type)
+			require.Equal(t, "1", res.ID)
+			require.Contains(t, string(res.Payload), "persistedQuery sha256 hash does not match query body")
+
+			require.NoError(t, conn.Close())
+		})
+	})
+
+	t.Run("cache poisoning is tried but prevented", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			ApqConfig: config.AutomaticPersistedQueriesConfig{
+				Enabled: true,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, []byte(`{"graphql-client-name": "my-client"}`))
+
+			query1 := "subscription { employeeUpdated(employeeID: 3) { id } }"
+			hashOfQuery2 := "6e94d99132b544a0d7522696a7d35643d56a26c7b8c2e0df29e2b9935636628c"
+
+			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+				ID:   "1",
+				Type: "subscribe",
+				Payload: fmt.Appendf(nil, `{
+					"query": "%s",
+					"extensions": {
+						"persistedQuery": {
+							"version": 1,
+							"sha256Hash": "%s"
+						}
+					}
+				}`, query1, hashOfQuery2),
+			})
+			require.NoError(t, err)
+
+			var res1 testenv.WebSocketMessage
+			err = testenv.WSReadJSON(t, conn, &res1)
+			require.NoError(t, err)
+			require.Equal(t, "error", res1.Type)
+			require.Equal(t, "1", res1.ID)
+			require.Contains(t, string(res1.Payload), "persistedQuery sha256 hash does not match query body")
+
+			// even though we got an error we challenge that and still try
+			// out if our malicious query was cached with hash2.
+			err = testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+				ID:   "2",
+				Type: "subscribe",
+				Payload: fmt.Appendf(nil, `{
+					"extensions": {
+						"persistedQuery": {
+							"version": 1,
+							"sha256Hash": "%s"
+						}
+					}
+				}`, hashOfQuery2),
+			})
+			require.NoError(t, err)
+
+			var res2 testenv.WebSocketMessage
+			err = testenv.WSReadJSON(t, conn, &res2)
+			require.NoError(t, err)
+			require.Equal(t, "next", res2.Type)
+			require.Equal(t, "2", res2.ID)
+
+			// we expect the response to look like what we asked for via query2
+			require.Contains(t, string(res2.Payload), "currentTime")
+			require.Contains(t, string(res2.Payload), "unixTime")
+
+			require.NoError(t, conn.Close())
+		})
+	})
+
 }
 
 func TestFlakyWebSockets(t *testing.T) {

@@ -81,6 +81,19 @@ export class OrganizationGroupRepository {
     return orgGroups[0];
   }
 
+  public byIds(input: { organizationId: string; groupIds: string[] }): Promise<OrganizationGroupDTO[]> {
+    if (input.groupIds.length === 0) {
+      return Promise.resolve([]);
+    }
+
+    return this.findMany(
+      and(
+        eq(schema.organizationGroups.organizationId, input.organizationId),
+        inArray(schema.organizationGroups.id, input.groupIds),
+      ),
+    );
+  }
+
   public async byName(input: { organizationId: string; name: string }): Promise<OrganizationGroupDTO | undefined> {
     const orgGroups = await this.findMany(
       and(
@@ -190,15 +203,37 @@ export class OrganizationGroupRepository {
     ]);
   }
 
-  public changeMemberGroup({ fromGroupId, toGroupId }: { fromGroupId: string; toGroupId: string }) {
-    return this.db.transaction(async (tx) => {
-      await tx
-        .update(schema.organizationGroupMembers)
-        .set({ groupId: toGroupId })
-        .where(eq(schema.organizationGroupMembers.groupId, fromGroupId));
+  public async changeMemberGroup({ fromGroupId, toGroupId }: { fromGroupId: string; toGroupId: string }) {
+    // Update all members tied to the group by first deleting them and then linking them to the new group
+    const memberCondition = eq(schema.organizationGroupMembers.groupId, fromGroupId);
+    const members = await this.db
+      .select({
+        organizationMemberId: schema.organizationGroupMembers.organizationMemberId,
+      })
+      .from(schema.organizationGroupMembers)
+      .where(memberCondition);
 
-      await tx.update(schema.apiKeys).set({ groupId: toGroupId }).where(eq(schema.apiKeys.groupId, fromGroupId));
-    });
+    await this.db.delete(schema.organizationGroupMembers).where(memberCondition);
+    if (members.length > 0) {
+      await this.db
+        .insert(schema.organizationGroupMembers)
+        .values(
+          members.map((m) => ({
+            organizationMemberId: m.organizationMemberId,
+            groupId: toGroupId,
+          })),
+        )
+        .onConflictDoNothing();
+    }
+
+    // Update all API keys tied to the group
+    await this.db.update(schema.apiKeys).set({ groupId: toGroupId }).where(eq(schema.apiKeys.groupId, fromGroupId));
+
+    // Update all invited users
+    await this.db
+      .update(schema.organizationInvitationGroups)
+      .set({ groupId: toGroupId })
+      .where(eq(schema.organizationInvitationGroups.groupId, fromGroupId));
   }
 
   public addUserToGroup(input: { organizationMemberId: string; groupId: string }) {

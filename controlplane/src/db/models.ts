@@ -15,7 +15,10 @@ import {
   graphPruningRulesEnum,
   cacheWarmerOperations,
   proposalStateEnum,
+  proposalOriginEnum,
   proposalMatchEnum,
+  schemaChangeTypeEnum,
+  subgraphTypeEnum,
 } from './schema.js';
 
 export type FederatedGraph = typeof federatedGraphs.$inferSelect;
@@ -33,8 +36,11 @@ export type GraphPruningRuleEnum = (typeof graphPruningRulesEnum.enumValues)[num
 export type WebsocketSubprotocol = (typeof websocketSubprotocolEnum.enumValues)[number];
 export type CacheWarmupOperation = typeof cacheWarmerOperations.$inferInsert;
 export type ProposalState = (typeof proposalStateEnum.enumValues)[number];
+export type ProposalOrigin = (typeof proposalOriginEnum.enumValues)[number];
 export type ProposalMatch = (typeof proposalMatchEnum.enumValues)[number];
 export type WebhookDeliveryInfo = typeof webhookDeliveries.$inferInsert;
+export type DBSchemaChangeType = (typeof schemaChangeTypeEnum.enumValues)[number];
+export type DBSubgraphType = (typeof subgraphTypeEnum.enumValues)[number];
 
 export type AuditableType =
   | 'organization'
@@ -85,7 +91,11 @@ export type AuditLogAction =
   | 'left'
   | 'fetched'
   | 'disabled'
-  | 'enabled';
+  | 'enabled'
+  | 'added'
+  | 'removed'
+  | 'linked'
+  | 'unlinked';
 
 export type AuditLogFullAction =
   | 'namespace.created'
@@ -111,6 +121,8 @@ export type AuditLogFullAction =
   | 'subgraph.deleted'
   | 'subgraph.updated'
   | 'subgraph.moved'
+  | 'subgraph.linked'
+  | 'subgraph.unlinked'
   | 'feature_flag.created'
   | 'feature_flag.deleted'
   | 'feature_flag.disabled'
@@ -143,8 +155,9 @@ export type AuditLogFullAction =
   | 'organization.left'
   | 'organization_invitation.declined'
   | 'organization_member.deleted'
-  | 'member_role.updated'
   | 'member_group.updated'
+  | 'member_group.added'
+  | 'member_group.removed'
   | 'router_config.fetched'
   | 'operation_change_override.created'
   | 'operation_change_override.deleted'

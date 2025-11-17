@@ -29,6 +29,7 @@ describe('List namespaces', (ctx) => {
     'namespace-admin',
     'namespace-viewer',
     'subgraph-admin',
+    'subgraph-publisher',
     'subgraph-viewer',
   ])('%s should be able to retrieve all namespaces', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
@@ -76,6 +77,7 @@ describe('List namespaces', (ctx) => {
     'namespace-admin',
     'namespace-viewer',
     'subgraph-admin',
+    'subgraph-publisher',
     'subgraph-viewer',
   ])('%s should be able to retrieve only allowed namespaces', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
@@ -107,6 +109,7 @@ describe('List namespaces', (ctx) => {
 
   test.each([
     'subgraph-admin',
+    'subgraph-publisher',
     'subgraph-viewer',
   ])('%s should be able to retrieve namespaces for allowed resources', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
@@ -141,6 +144,7 @@ describe('List namespaces', (ctx) => {
 
   test.each([
     'subgraph-admin',
+    'subgraph-publisher',
     'subgraph-viewer',
   ])('%s should return only `default` when user does not have access to any valid namespace', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
@@ -205,6 +209,7 @@ describe('List namespaces', (ctx) => {
   test.each([
     'subgraph-admin',
     'subgraph-publisher',
+    'subgraph-viewer',
   ])('%s should be able to list namespaces where have been allowed subgraphs', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
 

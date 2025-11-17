@@ -81,9 +81,12 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 		AttachServiceNameToErrorExtensions: opts.RouterEngineConfig.SubgraphErrorPropagation.AttachServiceName,
 		DefaultErrorExtensionCode:          opts.RouterEngineConfig.SubgraphErrorPropagation.DefaultExtensionCode,
 		AllowedSubgraphErrorFields:         opts.RouterEngineConfig.SubgraphErrorPropagation.AllowedFields,
+		AllowAllErrorExtensionFields:       opts.RouterEngineConfig.SubgraphErrorPropagation.AllowAllExtensionFields,
 		MaxRecyclableParserSize:            opts.RouterEngineConfig.Execution.ResolverMaxRecyclableParserSize,
-		MultipartSubHeartbeatInterval:      opts.HeartbeatInterval,
+		SubscriptionHeartbeatInterval:      opts.HeartbeatInterval,
 		MaxSubscriptionFetchTimeout:        opts.RouterEngineConfig.Execution.SubscriptionFetchTimeout,
+		PropagateFetchReasons:              opts.RouterEngineConfig.Execution.EnableRequireFetchReasons,
+		ValidateRequiredExternalFields:     opts.RouterEngineConfig.Execution.ValidateRequiredExternalFields,
 	}
 
 	if opts.ApolloCompatibilityFlags.ValueCompletion.Enabled {
@@ -100,7 +103,7 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 	}
 
 	if opts.ApolloRouterCompatibilityFlags.SubrequestHTTPError.Enabled {
-		options.ResolvableOptions.ApolloRouterCompatibilitySubrequestHTTPError = true
+		options.ApolloRouterCompatibilitySubrequestHTTPError = true
 	}
 
 	switch opts.RouterEngineConfig.SubgraphErrorPropagation.Mode {
@@ -234,6 +237,9 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 	planConfig.MinifySubgraphOperations = routerEngineCfg.Execution.MinifySubgraphOperations
 
 	planConfig.EnableOperationNamePropagation = routerEngineCfg.Execution.EnableSubgraphFetchOperationName
+
+	planConfig.BuildFetchReasons = routerEngineCfg.Execution.EnableRequireFetchReasons || routerEngineCfg.Execution.ValidateRequiredExternalFields
+	planConfig.ValidateRequiredExternalFields = routerEngineCfg.Execution.ValidateRequiredExternalFields
 
 	return planConfig, providers, nil
 }

@@ -46,12 +46,19 @@ func ConfigureAuth(t *testing.T) ([]authentication.Authenticator, *jwks.Server) 
 	authServer, err := jwks.NewServer(t)
 	require.NoError(t, err)
 	t.Cleanup(authServer.Close)
-	tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{
+	authenticators := ConfigureAuthWithJwksConfig(t, []authentication.JWKSConfig{
 		{
 			URL:             authServer.JWKSURL(),
 			RefreshInterval: time.Second * 5,
 		},
 	})
+
+	return authenticators, authServer
+}
+
+func ConfigureAuthWithJwksConfig(t *testing.T, jwksConfig []authentication.JWKSConfig) []authentication.Authenticator {
+	tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), jwksConfig)
+	require.NoError(t, err)
 
 	authOptions := authentication.HttpHeaderAuthenticatorOptions{
 		Name:         JwksName,
@@ -59,7 +66,7 @@ func ConfigureAuth(t *testing.T) ([]authentication.Authenticator, *jwks.Server) 
 	}
 	authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
 	require.NoError(t, err)
-	return []authentication.Authenticator{authenticator}, authServer
+	return []authentication.Authenticator{authenticator}
 }
 
 func AssertAttributeNotInSet(t *testing.T, set attribute.Set, attr attribute.KeyValue) {

@@ -10,7 +10,7 @@ import { camelCase, snakeCase, upperFirst } from 'lodash-es';
 /**
  * The names of the GraphQL operation types
  */
-export type OperationTypeName = 'Query' | 'Mutation' | 'Subscription';
+export type OperationTypeName = 'Query' | 'Mutation' | 'Subscription' | 'Resolve';
 
 /**
  * Converts a GraphQL field name to a Protocol Buffer field name (snake_case)
@@ -33,6 +33,10 @@ export function createOperationMethodName(operationType: OperationTypeName, fiel
   return `${operationType}${upperFirst(camelCase(fieldName))}`;
 }
 
+export function createResolverMethodName(parentTypeName: string, fieldName: string): string {
+  return `Resolve${upperFirst(camelCase(parentTypeName))}${upperFirst(camelCase(fieldName))}`;
+}
+
 /**
  * Creates a request message name for an operation
  */
@@ -50,22 +54,15 @@ export function createResponseMessageName(methodName: string): string {
 /**
  * Creates an entity lookup method name for an entity type
  */
-export function createEntityLookupMethodName(typeName: string, keyField: string = 'id'): string {
-  return `Lookup${typeName}By${upperFirst(camelCase(keyField))}`;
-}
+export function createEntityLookupMethodName(typeName: string, keyString: string = 'id'): string {
+  const normalizedKey = keyString
+    .split(/[,\s]+/)
+    .filter((field) => field.length > 0)
+    .map((field) => upperFirst(camelCase(field)))
+    .sort()
+    .join('And');
 
-/**
- * Creates a request message name for an entity lookup
- */
-export function createEntityLookupRequestName(typeName: string, keyField: string = 'id'): string {
-  return `Lookup${typeName}By${upperFirst(camelCase(keyField))}Request`;
-}
-
-/**
- * Creates a response message name for an entity lookup
- */
-export function createEntityLookupResponseName(typeName: string, keyField: string = 'id'): string {
-  return `Lookup${typeName}By${upperFirst(camelCase(keyField))}Response`;
+  return `Lookup${typeName}By${normalizedKey}`;
 }
 
 /**
@@ -80,4 +77,31 @@ export function graphqlEnumValueToProtoEnumValue(enumTypeName: string, enumValue
  */
 export function createEnumUnspecifiedValue(enumTypeName: string): string {
   return `${snakeCase(enumTypeName).toUpperCase()}_UNSPECIFIED`;
+}
+
+/**
+ * Creates a response result name for a resolver response
+ * @param methodName - The name of the method
+ * @returns The name of the response result built from the method name
+ */
+export function resolverResponseResultName(methodName: string): string {
+  return `${upperFirst(camelCase(methodName))}Result`;
+}
+
+/**
+ * Creates a type field arguments name for a type field
+ * @param methodName - The method name
+ * @returns The name of the type field arguments built from the method name
+ */
+export function typeFieldArgsName(methodName: string): string {
+  return `${methodName}Args`;
+}
+
+/**
+ * Creates a type field context name for a type field
+ * @param methodName - The method name
+ * @returns The name of the type field context built from the method name
+ */
+export function typeFieldContextName(methodName: string): string {
+  return `${methodName}Context`;
 }

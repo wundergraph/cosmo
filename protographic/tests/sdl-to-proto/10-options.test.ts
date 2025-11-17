@@ -26,6 +26,8 @@ describe('SDL to Proto Options', () => {
 
       option go_package = "github.com/wundergraph/cosmo/protographic";
 
+      import "google/protobuf/wrappers.proto";
+
       // Service definition for DefaultService
       service DefaultService {
         rpc QueryBooleanField(QueryBooleanFieldRequest) returns (QueryBooleanFieldResponse) {}
@@ -40,35 +42,35 @@ describe('SDL to Proto Options', () => {
       }
       // Response message for stringField operation.
       message QueryStringFieldResponse {
-        string string_field = 1;
+        google.protobuf.StringValue string_field = 1;
       }
       // Request message for intField operation.
       message QueryIntFieldRequest {
       }
       // Response message for intField operation.
       message QueryIntFieldResponse {
-        int32 int_field = 1;
+        google.protobuf.Int32Value int_field = 1;
       }
       // Request message for floatField operation.
       message QueryFloatFieldRequest {
       }
       // Response message for floatField operation.
       message QueryFloatFieldResponse {
-        double float_field = 1;
+        google.protobuf.DoubleValue float_field = 1;
       }
       // Request message for booleanField operation.
       message QueryBooleanFieldRequest {
       }
       // Response message for booleanField operation.
       message QueryBooleanFieldResponse {
-        bool boolean_field = 1;
+        google.protobuf.BoolValue boolean_field = 1;
       }
       // Request message for idField operation.
       message QueryIdFieldRequest {
       }
       // Response message for idField operation.
       message QueryIdFieldResponse {
-        string id_field = 1;
+        google.protobuf.StringValue id_field = 1;
       }"
     `);
   });

@@ -3,6 +3,7 @@ import { withSentryConfig } from "@sentry/nextjs";
 import pkg from "./package.json" with { type: "json" };
 
 const isPreview = process.env.VERCEL_ENV === "preview";
+const isProduction = process.env.NODE_ENV === "production";
 // Allow it only for development once https://github.com/vercel/next.js/issues/23587 is fixed
 const allowUnsafeEval = true;
 // Report CSP violations to the console instead of blocking them
@@ -54,18 +55,28 @@ const lightweightCspHeader = `
   object-src 'none';
   base-uri 'self';
   font-src 'self' data:;
-  frame-src 'self' https://js.stripe.com https://hooks.stripe.com ${
+  frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://www.googletagmanager.com ${
     isPreview ? "https://vercel.live/ https://vercel.com" : ""
   };
-  img-src 'self' ${
+  img-src 'self'${
     isPreview
-      ? "https://vercel.live/ https://vercel.com *.pusher.com/ data: blob:"
+      ? " https://vercel.live/ https://vercel.com *.pusher.com/ data: blob:"
       : ""
-  };
+  } *.ads.linkedin.com *.google.com;
    script-src 'report-sample' 'self' 'unsafe-inline' ${
      allowUnsafeEval ? "'unsafe-eval'" : ""
-   } https://*.wundergraph.com https://js.stripe.com https://maps.googleapis.com https://plausible.io https://wundergraph.com https://static.reo.dev ${
-     isPreview ? "https://vercel.live https://vercel.com" : ""
+   } https://*.wundergraph.com https://js.stripe.com https://maps.googleapis.com https://plausible.io https://wundergraph.com https://static.reo.dev${
+     isPreview ? " https://vercel.live https://vercel.com" : ""
+   } ${
+     isProduction
+       ? [
+           "https://www.googletagmanager.com",
+           "https://snap.licdn.com",
+           "https://cmp.osano.com",
+           "https://googleads.g.doubleclick.net",
+           "https://*.clarity.ms",
+         ].join(" ")
+       : ""
    };
   manifest-src 'self';
   media-src 'self';

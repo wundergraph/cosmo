@@ -82,6 +82,25 @@ export function inviteUser(
 
     const user = await userRepo.byId(keycloakUserID!);
 
+    const groups: string[] = [];
+    for (const groupId of req.groups) {
+      const group = await orgGroupRepo.byId({
+        organizationId: authContext.organizationId,
+        groupId,
+      });
+
+      if (!group) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR_NOT_FOUND,
+            details: 'Group not found',
+          },
+        };
+      }
+
+      groups.push(group.groupId);
+    }
+
     if (user) {
       const orgMember = await orgRepo.getOrganizationMember({
         organizationID: authContext.organizationId,
@@ -145,6 +164,16 @@ export function inviteUser(
       }
     }
 
+    // We don't need the group when re-inviting a member
+    if (groups.length === 0) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: 'No group was provided',
+        },
+      };
+    }
+
     const userMemberships = await orgRepo.memberships({ userId: keycloakUserID! });
     // to verify if the user is a new user or not, we check the memberships of the user
     if (userMemberships.length > 0) {
@@ -165,21 +194,6 @@ export function inviteUser(
       });
     }
 
-    // We don't need the group when re-inviting a member
-    const group = await orgGroupRepo.byId({
-      organizationId: authContext.organizationId,
-      groupId: req.groupId,
-    });
-
-    if (!group) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_NOT_FOUND,
-          details: 'Group not found',
-        },
-      };
-    }
-
     // TODO: rate limit this
     await orgInvitationRepo.inviteUser({
       email: req.email,
@@ -187,7 +201,7 @@ export function inviteUser(
       organizationId: authContext.organizationId,
       dbUser: user,
       inviterUserId: authContext.userId,
-      groupId: group.groupId,
+      groups,
     });
 
     await auditLogRepo.addAuditLog({

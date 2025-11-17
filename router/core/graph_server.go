@@ -1,6 +1,7 @@
 package core
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"errors"
@@ -21,6 +22,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/klauspost/compress/gzhttp"
 	"github.com/klauspost/compress/gzip"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -32,16 +34,20 @@ import (
 
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/internal/circuit"
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	rjwt "github.com/wundergraph/cosmo/router/internal/jwt"
 	rmiddleware "github.com/wundergraph/cosmo/router/internal/middleware"
 	"github.com/wundergraph/cosmo/router/internal/recoveryhandler"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
-	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"github.com/wundergraph/cosmo/router/pkg/grpcconnector"
+	"github.com/wundergraph/cosmo/router/pkg/grpcconnector/grpccommon"
+	"github.com/wundergraph/cosmo/router/pkg/grpcconnector/grpcplugin"
+	"github.com/wundergraph/cosmo/router/pkg/grpcconnector/grpcpluginoci"
+	"github.com/wundergraph/cosmo/router/pkg/grpcconnector/grpcremote"
 	"github.com/wundergraph/cosmo/router/pkg/health"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
@@ -93,8 +99,22 @@ type (
 		pubSubProviders         []datasource.Provider
 		traceDialer             *TraceDialer
 		connector               *grpcconnector.Connector
+		circuitBreakerManager   *circuit.Manager
 	}
 )
+
+// BuildGraphMuxOptions contains the configuration options for building a graph mux.
+type BuildGraphMuxOptions struct {
+	FeatureFlagName     string
+	RouterConfigVersion string
+	EngineConfig        *nodev1.EngineConfiguration
+	ConfigSubgraphs     []*nodev1.Subgraph
+	RoutingUrlGroupings map[string]map[string]bool
+}
+
+func (b BuildGraphMuxOptions) IsBaseGraph() bool {
+	return b.FeatureFlagName == ""
+}
 
 // newGraphServer creates a new server instance.
 func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterConfig, proxy ProxyFunc) (*graphServer, error) {
@@ -220,11 +240,12 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		)
 	})))
 
-	// Request traffic shaping related middlewares
-	httpRouter.Use(rmiddleware.RequestSize(int64(s.routerTrafficConfig.MaxRequestBodyBytes)))
 	if s.routerTrafficConfig.DecompressionEnabled {
 		httpRouter.Use(rmiddleware.HandleCompression(s.logger))
 	}
+
+	// Request traffic shaping related middlewares, happens after decompression to prevent unbounded decompression attacks
+	httpRouter.Use(rmiddleware.RequestSize(int64(s.routerTrafficConfig.MaxRequestBodyBytes)))
 
 	httpRouter.Use(middleware.RequestID)
 	httpRouter.Use(middleware.RealIP)
@@ -232,7 +253,25 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		httpRouter.Use(cors.New(*s.corsOptions))
 	}
 
-	gm, err := s.buildGraphMux(ctx, "", s.baseRouterConfigVersion, routerConfig.GetEngineConfig(), routerConfig.GetSubgraphs())
+	if s.subgraphCircuitBreakerOptions.IsEnabled() {
+		manager, err := circuit.NewManager(s.subgraphCircuitBreakerOptions.CircuitBreaker)
+		if err != nil {
+			return nil, err
+		}
+		s.circuitBreakerManager = manager
+	}
+
+	routingUrlGroupings, err := getRoutingUrlGroupingForCircuitBreakers(routerConfig, s.overrideRoutingURLConfiguration, s.overrides)
+	if err != nil {
+		return nil, err
+	}
+
+	gm, err := s.buildGraphMux(ctx, BuildGraphMuxOptions{
+		RouterConfigVersion: s.baseRouterConfigVersion,
+		EngineConfig:        routerConfig.GetEngineConfig(),
+		ConfigSubgraphs:     routerConfig.GetSubgraphs(),
+		RoutingUrlGroupings: routingUrlGroupings,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to build base mux: %w", err)
 	}
@@ -248,7 +287,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	}
 
 	wrapper, err := gzhttp.NewWrapper(
-		gzhttp.MinSize(1024*4), // 4KB
+		gzhttp.MinSize(int(s.routerTrafficConfig.ResponseCompressionMinSize)),
 		gzhttp.CompressionLevel(gzip.DefaultCompression),
 		gzhttp.ContentTypes(CompressibleContentTypes),
 	)
@@ -340,7 +379,59 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	return s, nil
 }
 
-func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.Mux, featureFlagConfigs map[string]*nodev1.FeatureFlagRouterExecutionConfig) (http.HandlerFunc, error) {
+func getRoutingUrlGroupingForCircuitBreakers(
+	routerConfig *nodev1.RouterConfig,
+	overrideRoutingURLConfiguration config.OverrideRoutingURLConfiguration,
+	overridesConfiguration config.OverridesConfiguration,
+) (map[string]map[string]bool, error) {
+	routingUrlGroupings := make(map[string]map[string]bool)
+
+	overwrites, err := configureSubgraphOverwrites(
+		routerConfig.GetEngineConfig(),
+		routerConfig.GetSubgraphs(),
+		overrideRoutingURLConfiguration,
+		overridesConfiguration,
+		true,
+	)
+	if err != nil {
+		return nil, err
+	}
+	for _, subgraph := range overwrites {
+		if _, ok := routingUrlGroupings[subgraph.UrlString]; !ok {
+			routingUrlGroupings[subgraph.UrlString] = make(map[string]bool)
+		}
+		routingUrlGroupings[subgraph.UrlString][subgraph.Name] = true
+	}
+
+	if routerConfig.FeatureFlagConfigs != nil {
+		for _, ffConfig := range routerConfig.FeatureFlagConfigs.ConfigByFeatureFlagName {
+			ffOverwrites, err := configureSubgraphOverwrites(
+				ffConfig.GetEngineConfig(),
+				ffConfig.GetSubgraphs(),
+				overrideRoutingURLConfiguration,
+				overridesConfiguration,
+				true,
+			)
+			if err != nil {
+				return nil, err
+			}
+			for _, subgraph := range ffOverwrites {
+				if _, ok := routingUrlGroupings[subgraph.UrlString]; !ok {
+					routingUrlGroupings[subgraph.UrlString] = make(map[string]bool)
+				}
+				routingUrlGroupings[subgraph.UrlString][subgraph.Name] = true
+			}
+		}
+	}
+
+	return routingUrlGroupings, nil
+}
+
+func (s *graphServer) buildMultiGraphHandler(
+	ctx context.Context,
+	baseMux *chi.Mux,
+	featureFlagConfigs map[string]*nodev1.FeatureFlagRouterExecutionConfig,
+) (http.HandlerFunc, error) {
 	if len(featureFlagConfigs) == 0 {
 		return baseMux.ServeHTTP, nil
 	}
@@ -349,12 +440,12 @@ func (s *graphServer) buildMultiGraphHandler(ctx context.Context, baseMux *chi.M
 
 	// Build all the muxes for the feature flags in serial to avoid any race conditions
 	for featureFlagName, executionConfig := range featureFlagConfigs {
-		gm, err := s.buildGraphMux(ctx,
-			featureFlagName,
-			executionConfig.GetVersion(),
-			executionConfig.GetEngineConfig(),
-			executionConfig.Subgraphs,
-		)
+		gm, err := s.buildGraphMux(ctx, BuildGraphMuxOptions{
+			FeatureFlagName:     featureFlagName,
+			RouterConfigVersion: executionConfig.GetVersion(),
+			EngineConfig:        executionConfig.GetEngineConfig(),
+			ConfigSubgraphs:     executionConfig.Subgraphs,
+		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to build mux for feature flag '%s': %w", featureFlagName, err)
 		}
@@ -426,6 +517,7 @@ type graphMux struct {
 	metricStore                rmetric.Store
 	prometheusCacheMetrics     *rmetric.CacheMetrics
 	otelCacheMetrics           *rmetric.CacheMetrics
+	streamMetricStore          rmetric.StreamMetricStore
 }
 
 // buildOperationCaches creates the caches for the graph mux.
@@ -667,6 +759,12 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 		}
 	}
 
+	if s.streamMetricStore != nil {
+		if aErr := s.streamMetricStore.Shutdown(ctx); aErr != nil {
+			err = errors.Join(err, aErr)
+		}
+	}
+
 	if err != nil {
 		return fmt.Errorf("shutdown graph mux: %w", err)
 	}
@@ -677,23 +775,22 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 // buildGraphMux creates a new graph mux with the given feature flags and engine configuration.
 // It also creates a new execution plan cache for the mux. The mux is not mounted on the server.
 // The mux is appended internally to the graph server's list of muxes to clean up later when the server is swapped.
-func (s *graphServer) buildGraphMux(ctx context.Context,
-	featureFlagName string,
-	routerConfigVersion string,
-	engineConfig *nodev1.EngineConfiguration,
-	configSubgraphs []*nodev1.Subgraph,
+func (s *graphServer) buildGraphMux(
+	ctx context.Context,
+	opts BuildGraphMuxOptions,
 ) (*graphMux, error) {
 	gm := &graphMux{
-		metricStore: rmetric.NewNoopMetrics(),
+		metricStore:       rmetric.NewNoopMetrics(),
+		streamMetricStore: rmetric.NewNoopStreamMetricStore(),
 	}
 
 	httpRouter := chi.NewRouter()
 
 	// we only enable the attribute mapper if we are not using the default cloud exporter
-	baseMuxAttributes := append([]attribute.KeyValue{otel.WgRouterConfigVersion.String(routerConfigVersion)}, s.baseOtelAttributes...)
+	baseMuxAttributes := append([]attribute.KeyValue{otel.WgRouterConfigVersion.String(opts.RouterConfigVersion)}, s.baseOtelAttributes...)
 
-	if featureFlagName != "" {
-		baseMuxAttributes = append(baseMuxAttributes, otel.WgFeatureFlag.String(featureFlagName))
+	if !opts.IsBaseGraph() {
+		baseMuxAttributes = append(baseMuxAttributes, otel.WgFeatureFlag.String(opts.FeatureFlagName))
 	}
 
 	metricsEnabled := s.metricConfig.IsEnabled()
@@ -729,21 +826,30 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	// Prometheus metricStore rely on OTLP metricStore
 	if metricsEnabled {
 		attrKeyValues := []attribute.KeyValue{
-			otel.WgRouterConfigVersion.String(routerConfigVersion),
+			otel.WgRouterConfigVersion.String(opts.RouterConfigVersion),
 			otel.WgRouterVersion.String(Version),
 		}
-		if featureFlagName != "" {
-			attrKeyValues = append(attrKeyValues, otel.WgFeatureFlag.String(featureFlagName))
+		if !opts.IsBaseGraph() {
+			attrKeyValues = append(attrKeyValues, otel.WgFeatureFlag.String(opts.FeatureFlagName))
 		}
 		routerInfoBaseAttrs := otelmetric.WithAttributeSet(attribute.NewSet(attrKeyValues...))
 
-		m, err := rmetric.NewStore(
+		// From a users perspective this is similar to engine metrics, etc
+		// but in this case we use the same metric store
+		otlpOpts := rmetric.MetricOpts{
+			EnableCircuitBreaker: s.metricConfig.OpenTelemetry.Enabled,
+		}
+		promOpts := rmetric.MetricOpts{
+			EnableCircuitBreaker: s.metricConfig.Prometheus.Enabled,
+		}
+
+		m, err := rmetric.NewStore(otlpOpts, promOpts,
 			rmetric.WithPromMeterProvider(s.promMeterProvider),
 			rmetric.WithOtlpMeterProvider(s.otlpMeterProvider),
 			rmetric.WithBaseAttributes(baseMetricAttributes),
 			rmetric.WithLogger(s.logger),
 			rmetric.WithProcessStartTime(s.processStartTime),
-			rmetric.WithCardinalityLimit(rmetric.DefaultCardinalityLimit),
+			rmetric.WithCardinalityLimit(s.metricConfig.CardinalityLimit),
 			rmetric.WithRouterInfoAttributes(routerInfoBaseAttrs),
 		)
 		if err != nil {
@@ -753,11 +859,45 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		gm.metricStore = m
 	}
 
+	// We initialize circuit breakers for all subgraphs in the base configuration (non-ff)
+	// so we don't duplicate circuit breakers for subgraphs and they can be used in the feature flags even
+	// We initialize it in the buildGraphMux because we want to use the base metric configuration
+	if opts.IsBaseGraph() && s.subgraphCircuitBreakerOptions.IsEnabled() {
+		// If either otel or prom metrics are enabled for circuit breakers
+		// we will enable circuit breaker metric collections
+		isCircuitBreakerMetricsEnabled := s.metricConfig.OpenTelemetry.CircuitBreaker || s.metricConfig.Prometheus.CircuitBreaker
+
+		err := s.circuitBreakerManager.Initialize(circuit.ManagerOpts{
+			SubgraphCircuitBreakers: s.subgraphCircuitBreakerOptions.SubgraphMap,
+			MetricStore:             gm.metricStore,
+			UseMetrics:              metricsEnabled && isCircuitBreakerMetricsEnabled,
+			BaseOtelAttributes:      baseMetricAttributes,
+			AllGroupings:            opts.RoutingUrlGroupings,
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if s.metricConfig.OpenTelemetry.Streams || s.metricConfig.Prometheus.Streams {
+		store, err := rmetric.NewStreamMetricStore(
+			s.logger,
+			baseMetricAttributes,
+			s.otlpMeterProvider,
+			s.promMeterProvider,
+			s.metricConfig)
+		if err != nil {
+			return nil, err
+		}
+		gm.streamMetricStore = store
+	}
+
 	subgraphs, err := configureSubgraphOverwrites(
-		engineConfig,
-		configSubgraphs,
+		opts.EngineConfig,
+		opts.ConfigSubgraphs,
 		s.overrideRoutingURLConfiguration,
 		s.overrides,
+		false,
 	)
 	if err != nil {
 		return nil, err
@@ -776,19 +916,20 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		metrics:             gm.metricStore,
 		gqlMetricsExporter:  s.gqlMetricsExporter,
 		exportEnabled:       s.graphqlMetricsConfig.Enabled,
-		routerConfigVersion: routerConfigVersion,
+		routerConfigVersion: opts.RouterConfigVersion,
 		logger:              s.logger,
 
-		promSchemaUsageEnabled:             s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled,
-		promSchemaUsageIncludeOperationSha: s.metricConfig.Prometheus.PromSchemaFieldUsage.IncludeOperationSha,
+		promSchemaUsageEnabled:      s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled,
+		promSchemaUsageIncludeOpSha: s.metricConfig.Prometheus.PromSchemaFieldUsage.IncludeOperationSha,
+		promSchemaUsageSampleRate:   s.metricConfig.Prometheus.PromSchemaFieldUsage.SampleRate,
 	})
 
 	baseLogFields := []zapcore.Field{
-		zap.String("config_version", routerConfigVersion),
+		zap.String("config_version", opts.RouterConfigVersion),
 	}
 
-	if featureFlagName != "" {
-		baseLogFields = append(baseLogFields, zap.String("feature_flag", featureFlagName))
+	if !opts.IsBaseGraph() {
+		baseLogFields = append(baseLogFields, zap.String("feature_flag", opts.FeatureFlagName))
 	}
 
 	// Currently, we only support custom attributes from the context for OTLP metrics
@@ -799,6 +940,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	httpRouter.Use(func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			r = r.WithContext(withSubgraphResolver(r.Context(), subgraphResolver))
+
 			requestLogger := s.logger.With(logging.WithRequestID(middleware.GetReqID(r.Context())))
 			// If this is a batched request attach id to the logger
 			if batchedOperationId, ok := r.Context().Value(BatchedOperationId{}).(string); ok {
@@ -822,7 +964,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 
 			// For debugging purposes, we can validate from what version of the config the request is coming from
 			if s.setConfigVersionHeader {
-				w.Header().Set("X-Router-Config-Version", routerConfigVersion)
+				w.Header().Set("X-Router-Config-Version", opts.RouterConfigVersion)
 			}
 
 			h.ServeHTTP(w, r)
@@ -926,15 +1068,17 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			return nil, fmt.Errorf("failed building router access log expressions: %w", err)
 		}
 
-		s.accessLogsConfig.Attributes = requestlogger.CleanupExpressionAttributes(s.accessLogsConfig.Attributes)
+		accessLogAttributes := requestlogger.CleanupExpressionAttributes(s.accessLogsConfig.Attributes)
 
 		requestLoggerOpts := []requestlogger.Option{
 			requestlogger.WithDefaultOptions(),
 			requestlogger.WithNoTimeField(),
 			requestlogger.WithFields(baseLogFields...),
-			requestlogger.WithAttributes(s.accessLogsConfig.Attributes),
+			requestlogger.WithAttributes(accessLogAttributes),
 			requestlogger.WithExprAttributes(exprAttributes),
+			requestlogger.WithLogLevelHandler(LogLevelHandler),
 			requestlogger.WithFieldsHandler(RouterAccessLogsFieldHandler),
+			requestlogger.WithIgnoreQueryParamsList(s.accessLogsConfig.IgnoreQueryParamsList),
 		}
 
 		var ipAnonConfig *requestlogger.IPAnonymizationConfig
@@ -958,7 +1102,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 				return nil, fmt.Errorf("failed building router access log expressions: %w", err)
 			}
 
-			s.accessLogsConfig.SubgraphAttributes = requestlogger.CleanupExpressionAttributes(s.accessLogsConfig.SubgraphAttributes)
+			subgraphAttributes := requestlogger.CleanupExpressionAttributes(s.accessLogsConfig.SubgraphAttributes)
 
 			subgraphAccessLogger = requestlogger.NewSubgraphAccessLogger(
 				s.accessLogsConfig.Logger,
@@ -966,9 +1110,25 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 					IPAnonymizationConfig: ipAnonConfig,
 					FieldsHandler:         SubgraphAccessLogsFieldHandler,
 					Fields:                baseLogFields,
-					Attributes:            s.accessLogsConfig.SubgraphAttributes,
+					Attributes:            subgraphAttributes,
 					ExprAttributes:        subgraphExprAttributes,
 				})
+		}
+
+		if exprManager.VisitorManager.IsResponseBodyUsedInExpressions() {
+			httpRouter.Use(func(h http.Handler) http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					buf := bytes.Buffer{}
+					ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+
+					ww.Tee(&buf)
+
+					h.ServeHTTP(ww, r)
+
+					reqContext := getRequestContext(r.Context())
+					reqContext.expressionContext.Response.Body.Raw = buf.String()
+				})
+			})
 		}
 	}
 
@@ -977,6 +1137,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		Headers:                  s.headerRules,
 		Events:                   s.eventsConfig,
 		SubgraphErrorPropagation: s.subgraphErrorPropagation,
+		StreamMetricStore:        gm.streamMetricStore,
 	}
 
 	// map[string]*http.Transport cannot be coerced into map[string]http.RoundTripper, unfortunately
@@ -985,7 +1146,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		subgraphTippers[subgraph] = subgraphTransport
 	}
 
-	if err := s.setupConnector(ctx, engineConfig, configSubgraphs); err != nil {
+	if err := s.setupConnector(ctx, opts.EngineConfig, opts.ConfigSubgraphs, telemetryAttExpressions, tracingAttExpressions); err != nil {
 		return nil, fmt.Errorf("failed to setup plugin host: %w", err)
 	}
 
@@ -994,6 +1155,12 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	var baseConnMetricStore rmetric.ConnectionMetricStore = &rmetric.NoopConnectionMetricStore{}
 	if s.connectionMetrics != nil {
 		baseConnMetricStore = s.connectionMetrics
+	}
+
+	// Build retry options and handle any expression compilation errors
+	processedRetryOptions, err := ProcessRetryOptions(s.retryOptions)
+	if err != nil {
+		return nil, fmt.Errorf("failed to process retry options: %w", err)
 	}
 
 	ecb := &ExecutorConfigurationBuilder{
@@ -1011,38 +1178,31 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			FrameTimeout: s.engineExecutionConfiguration.WebSocketClientFrameTimeout,
 		},
 		transportOptions: &TransportOptions{
-			SubgraphTransportOptions: s.subgraphTransportOptions,
-			PreHandlers:              s.preOriginHandlers,
-			PostHandlers:             s.postOriginHandlers,
-			MetricStore:              gm.metricStore,
-			ConnectionMetricStore:    baseConnMetricStore,
-			RetryOptions: retrytransport.RetryOptions{
-				Enabled:       s.retryOptions.Enabled,
-				MaxRetryCount: s.retryOptions.MaxRetryCount,
-				MaxDuration:   s.retryOptions.MaxDuration,
-				Interval:      s.retryOptions.Interval,
-				ShouldRetry: func(err error, req *http.Request, resp *http.Response) bool {
-					return retrytransport.IsRetryableError(err, resp) && !isMutationRequest(req.Context())
-				},
-			},
+			SubgraphTransportOptions:      s.subgraphTransportOptions,
+			PreHandlers:                   s.preOriginHandlers,
+			PostHandlers:                  s.postOriginHandlers,
+			MetricStore:                   gm.metricStore,
+			ConnectionMetricStore:         baseConnMetricStore,
+			RetryOptions:                  *processedRetryOptions,
 			TracerProvider:                s.tracerProvider,
 			TracePropagators:              s.compositePropagator,
 			LocalhostFallbackInsideDocker: s.localhostFallbackInsideDocker,
 			Logger:                        s.logger,
 			EnableTraceClient:             enableTraceClient,
+			CircuitBreaker:                s.circuitBreakerManager,
 		},
 	}
 
 	executor, providers, err := ecb.Build(
 		ctx,
 		&ExecutorBuildOptions{
-			EngineConfig:                   engineConfig,
-			Subgraphs:                      configSubgraphs,
+			EngineConfig:                   opts.EngineConfig,
+			Subgraphs:                      opts.ConfigSubgraphs,
 			RouterEngineConfig:             routerEngineConfig,
 			Reporter:                       s.engineStats,
 			ApolloCompatibilityFlags:       s.apolloCompatibilityFlags,
 			ApolloRouterCompatibilityFlags: s.apolloRouterCompatibilityFlags,
-			HeartbeatInterval:              s.multipartHeartbeatInterval,
+			HeartbeatInterval:              s.subscriptionHeartbeatInterval,
 			PluginsEnabled:                 s.plugins.Enabled,
 			InstanceData:                   s.instanceData,
 		},
@@ -1057,26 +1217,32 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	}
 
 	operationProcessor := NewOperationProcessor(OperationProcessorOptions{
-		Executor:                                         executor,
-		MaxOperationSizeInBytes:                          int64(s.routerTrafficConfig.MaxRequestBodyBytes),
-		PersistedOperationClient:                         s.persistedOperationClient,
-		AutomaticPersistedOperationCacheTtl:              s.automaticPersistedQueriesConfig.Cache.TTL,
-		EnablePersistedOperationsCache:                   s.engineExecutionConfiguration.EnablePersistedOperationsCache,
-		PersistedOpsNormalizationCache:                   gm.persistedOperationCache,
-		NormalizationCache:                               gm.normalizationCache,
-		ValidationCache:                                  gm.validationCache,
-		QueryDepthCache:                                  gm.complexityCalculationCache,
-		OperationHashCache:                               gm.operationHashCache,
-		ParseKitPoolSize:                                 s.engineExecutionConfiguration.ParseKitPoolSize,
-		IntrospectionEnabled:                             s.Config.introspection,
+		Executor:                            executor,
+		MaxOperationSizeInBytes:             int64(s.routerTrafficConfig.MaxRequestBodyBytes),
+		PersistedOperationClient:            s.persistedOperationClient,
+		AutomaticPersistedOperationCacheTtl: s.automaticPersistedQueriesConfig.Cache.TTL,
+		EnablePersistedOperationsCache:      s.engineExecutionConfiguration.EnablePersistedOperationsCache,
+		PersistedOpsNormalizationCache:      gm.persistedOperationCache,
+		NormalizationCache:                  gm.normalizationCache,
+		ValidationCache:                     gm.validationCache,
+		QueryDepthCache:                     gm.complexityCalculationCache,
+		OperationHashCache:                  gm.operationHashCache,
+		ParseKitPoolSize:                    s.engineExecutionConfiguration.ParseKitPoolSize,
+		IntrospectionEnabled:                s.Config.introspection,
+		ParserTokenizerLimits: astparser.TokenizerLimits{
+			MaxDepth:  s.Config.securityConfiguration.ParserLimits.ApproximateDepthLimit,
+			MaxFields: s.Config.securityConfiguration.ParserLimits.TotalFieldsLimit,
+		},
+		OperationNameLengthLimit:                         s.securityConfiguration.OperationNameLengthLimit,
 		ApolloCompatibilityFlags:                         s.apolloCompatibilityFlags,
 		ApolloRouterCompatibilityFlags:                   s.apolloRouterCompatibilityFlags,
 		DisableExposingVariablesContentOnValidationError: s.engineExecutionConfiguration.DisableExposingVariablesContentOnValidationError,
+		ComplexityLimits:                                 s.securityConfiguration.ComplexityLimits,
 	})
 	operationPlanner := NewOperationPlanner(executor, gm.planCache)
 
 	// We support the MCP only on the base graph. Feature flags are not supported yet.
-	if featureFlagName == "" && s.mcpServer != nil {
+	if opts.IsBaseGraph() && s.mcpServer != nil {
 		if mErr := s.mcpServer.Reload(executor.ClientSchema); mErr != nil {
 			return nil, fmt.Errorf("failed to reload MCP server: %w", mErr)
 		}
@@ -1114,7 +1280,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 						otel.WgOperationName.String(item.OperationName),
 						otel.WgClientName.String(item.ClientName),
 						otel.WgClientVersion.String(item.ClientVersion),
-						otel.WgFeatureFlag.String(featureFlagName),
+						otel.WgFeatureFlag.String(opts.FeatureFlagName),
 						otel.WgOperationHash.String(item.OperationHash),
 						otel.WgOperationType.String(item.OperationType),
 						otel.WgEnginePlanCacheHit.Bool(false),
@@ -1143,7 +1309,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	}
 
 	authorizerOptions := &CosmoAuthorizerOptions{
-		FieldConfigurations:           engineConfig.FieldConfigurations,
+		FieldConfigurations:           opts.EngineConfig.FieldConfigurations,
 		RejectOperationIfUnauthorized: false,
 	}
 
@@ -1169,6 +1335,7 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			tracingAttExpressions,
 			telemetryAttExpressions,
 			metricAttExpressions,
+			exprManager.VisitorManager.IsSubgraphResponseBodyUsedInExpressions(),
 		),
 	}
 
@@ -1206,6 +1373,11 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 			Enabled:   s.securityConfiguration.BlockNonPersistedOperations.Enabled,
 			Condition: s.securityConfiguration.BlockNonPersistedOperations.Condition,
 		},
+		BlockPersisted: BlockPersistedOptions{
+			Enabled:   s.securityConfiguration.BlockPersistedOperations.Enabled,
+			Condition: s.securityConfiguration.BlockPersistedOperations.Condition,
+		},
+
 		SafelistEnabled:             s.persistedOperationsConfig.Safelist.Enabled,
 		LogUnknownOperationsEnabled: s.persistedOperationsConfig.LogUnknown,
 		exprManager:                 exprManager,
@@ -1243,6 +1415,8 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 		DisableVariablesRemapping:   s.engineExecutionConfiguration.DisableVariablesRemapping,
 		ExprManager:                 exprManager,
 		OmitBatchExtensions:         s.batchingConfig.OmitExtensions,
+
+		OperationContentAttributes: s.traceConfig.OperationContentAttributes,
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
@@ -1315,7 +1489,13 @@ func (s *graphServer) buildGraphMux(ctx context.Context,
 	return gm, nil
 }
 
-func (s *graphServer) setupConnector(ctx context.Context, config *nodev1.EngineConfiguration, configSubgraphs []*nodev1.Subgraph) error {
+func (s *graphServer) setupConnector(
+	ctx context.Context,
+	config *nodev1.EngineConfiguration,
+	configSubgraphs []*nodev1.Subgraph,
+	telemetryAttributeExpressions *attributeExpressions,
+	tracingAttributeExpressions *attributeExpressions,
+) error {
 	s.connector = grpcconnector.NewConnector()
 
 	for _, dsConfig := range config.DatasourceConfigurations {
@@ -1339,9 +1519,8 @@ func (s *graphServer) setupConnector(ctx context.Context, config *nodev1.EngineC
 
 		pluginConfig := grpcConfig.GetPlugin()
 		if pluginConfig == nil {
-			remoteProvider, err := grpcconnector.NewRemoteGRPCProvider(grpcconnector.RemoteGRPCProviderConfig{
+			remoteProvider, err := grpcremote.NewRemoteGRPCProvider(grpcremote.RemoteGRPCProviderConfig{
 				Logger:   s.logger,
-				Name:     sg.Name,
 				Endpoint: sg.RoutingUrl,
 			})
 
@@ -1367,23 +1546,60 @@ func (s *graphServer) setupConnector(ctx context.Context, config *nodev1.EngineC
 			basePath = s.plugins.Path
 		}
 
-		pluginPath, err := filepath.Abs(filepath.Join(basePath, pluginConfig.GetName(), "bin", fmt.Sprintf("%s_%s", runtime.GOOS, runtime.GOARCH)))
-		if err != nil {
-			return fmt.Errorf("failed to get plugin path: %w", err)
-		}
+		startupConfig := newGRPCStartupParams(s.traceConfig, s.ipAnonymization)
 
-		grpcPlugin, err := grpcconnector.NewGRPCPlugin(grpcconnector.GRPCPluginConfig{
-			Logger:     s.logger,
-			PluginName: pluginConfig.GetName(),
-			PluginPath: pluginPath,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to create grpc plugin for subgraph %s: %w", dsConfig.Id, err)
-		}
+		tracer := s.tracerProvider.Tracer("wundergraph/cosmo/router/engine/grpc", oteltrace.WithInstrumentationVersion("0.0.1"))
 
-		err = s.connector.RegisterClientProvider(sg.Name, grpcPlugin)
-		if err != nil {
-			return fmt.Errorf("failed to register grpc plugin: %w", err)
+		getTraceAttributes := CreateGRPCTraceGetter(
+			telemetryAttributeExpressions,
+			tracingAttributeExpressions,
+		)
+
+		if imgRef := pluginConfig.GetImageReference(); imgRef != nil {
+			ref := fmt.Sprintf("%s/%s:%s",
+				s.plugins.Registry.URL,
+				imgRef.GetRepository(),
+				imgRef.GetReference(),
+			)
+
+			grpcPlugin, err := grpcpluginoci.NewGRPCOCIPlugin(grpcpluginoci.GRPCPluginConfig{
+				Logger:             s.logger,
+				ImageRef:           ref,
+				RegistryToken:      s.graphApiToken,
+				StartupConfig:      startupConfig,
+				Tracer:             tracer,
+				GetTraceAttributes: getTraceAttributes,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to create grpc oci plugin for subgraph %s: %w", dsConfig.Id, err)
+			}
+
+			err = s.connector.RegisterClientProvider(sg.Name, grpcPlugin)
+			if err != nil {
+				return fmt.Errorf("failed to register grpc plugin: %w", err)
+			}
+		} else {
+			pluginPath, err := filepath.Abs(filepath.Join(basePath, pluginConfig.GetName(), "bin", fmt.Sprintf("%s_%s", runtime.GOOS, runtime.GOARCH)))
+			if err != nil {
+				return fmt.Errorf("failed to get plugin path: %w", err)
+			}
+
+			grpcPlugin, err := grpcplugin.NewGRPCPlugin(grpcplugin.GRPCPluginConfig{
+				Logger:             s.logger,
+				PluginName:         pluginConfig.GetName(),
+				PluginPath:         pluginPath,
+				StartupConfig:      startupConfig,
+				Tracer:             tracer,
+				GetTraceAttributes: getTraceAttributes,
+			})
+			if err != nil {
+				return fmt.Errorf("failed to create grpc plugin for subgraph %s: %w", dsConfig.Id, err)
+			}
+
+			err = s.connector.RegisterClientProvider(sg.Name, grpcPlugin)
+			if err != nil {
+				return fmt.Errorf("failed to register grpc plugin: %w", err)
+			}
 		}
 	}
 
@@ -1392,6 +1608,50 @@ func (s *graphServer) setupConnector(ctx context.Context, config *nodev1.EngineC
 	}
 
 	return nil
+}
+
+func newGRPCStartupParams(traceConfig *rtrace.Config, ipAnonymization *IPAnonymizationConfig) grpccommon.GRPCStartupParams {
+	startupConfig := grpccommon.GRPCStartupParams{}
+
+	if traceConfig.Enabled && len(traceConfig.Exporters) > 0 {
+		enabledExporters := make([]grpccommon.GRPCExporter, 0)
+		for _, exporter := range traceConfig.Exporters {
+			if exporter != nil && !exporter.Disabled {
+				transformedExporter := grpccommon.GRPCExporter{
+					Endpoint:      exporter.Endpoint,
+					Exporter:      string(exporter.Exporter),
+					BatchTimeout:  exporter.BatchTimeout,
+					ExportTimeout: exporter.ExportTimeout,
+					Headers:       exporter.Headers,
+					HTTPPath:      exporter.HTTPPath,
+				}
+				enabledExporters = append(enabledExporters, transformedExporter)
+			}
+		}
+
+		// Convert to []string
+		propagators := make([]string, 0, len(traceConfig.Propagators))
+		for _, propagator := range traceConfig.Propagators {
+			propagators = append(propagators, string(propagator))
+		}
+
+		startupConfig.Telemetry = &grpccommon.GRPCTelemetry{
+			Tracing: &grpccommon.GRPCTracing{
+				Exporters:   enabledExporters,
+				Propagators: propagators,
+				Sampler:     traceConfig.Sampler,
+			},
+		}
+	}
+
+	if ipAnonymization != nil {
+		startupConfig.IPAnonymization = &grpccommon.GRPCIPAnonymization{
+			Enabled: ipAnonymization.Enabled,
+			Method:  string(ipAnonymization.Method),
+		}
+	}
+
+	return startupConfig
 }
 
 // wait waits for all in-flight requests to finish. Similar to http.Server.Shutdown we wait in intervals + jitter
@@ -1473,10 +1733,6 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 		}
 	}
 
-	if err := s.shutdownPubSubProviders(ctx); err != nil {
-		finalErr = errors.Join(finalErr, err)
-	}
-
 	// Shutdown all graphs muxes to release resources
 	// e.g. planner cache
 	s.graphMuxListLock.Lock()
@@ -1491,6 +1747,11 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 	s.baseTransport.CloseIdleConnections()
 	for _, subgraphTransport := range s.subgraphTransports {
 		subgraphTransport.CloseIdleConnections()
+	}
+
+	// Shutdown pubsub providers
+	if err := s.shutdownPubSubProviders(ctx); err != nil {
+		finalErr = errors.Join(finalErr, err)
 	}
 
 	if s.connector != nil {
@@ -1557,7 +1818,8 @@ func configureSubgraphOverwrites(
 	engineConfig *nodev1.EngineConfiguration,
 	configSubgraphs []*nodev1.Subgraph,
 	overrideRoutingURLConfig config.OverrideRoutingURLConfiguration,
-	overrides config.OverridesConfiguration,
+	overridesConfig config.OverridesConfiguration,
+	skipOverrides bool,
 ) ([]Subgraph, error) {
 	var err error
 	subgraphs := make([]Subgraph, 0, len(configSubgraphs))
@@ -1576,7 +1838,7 @@ func configureSubgraphOverwrites(
 		subgraph.UrlString = subgraph.Url.String()
 
 		overrideURL, ok := overrideRoutingURLConfig.Subgraphs[sg.Name]
-		overrideSubgraph, overrideSubgraphOk := overrides.Subgraphs[sg.Name]
+		overrideSubgraph, overrideSubgraphOk := overridesConfig.Subgraphs[sg.Name]
 
 		var overrideSubscriptionURL string
 		var overrideSubscriptionProtocol *common.GraphQLSubscriptionProtocol
@@ -1629,24 +1891,28 @@ func configureSubgraphOverwrites(
 				subgraph.UrlString = subgraph.Url.String()
 			}
 
-			// Override datasource urls
-			for _, conf := range engineConfig.DatasourceConfigurations {
-				if conf.Id == sg.Id {
-					if overrideURL != "" {
-						conf.CustomGraphql.Fetch.Url.StaticVariableContent = overrideURL
-						sg.RoutingUrl = overrideURL
-					}
-					if overrideSubscriptionURL != "" {
-						conf.CustomGraphql.Subscription.Url.StaticVariableContent = overrideSubscriptionURL
-					}
-					if overrideSubscriptionProtocol != nil {
-						conf.CustomGraphql.Subscription.Protocol = overrideSubscriptionProtocol
-					}
-					if overrideSubscriptionWebsocketSubprotocol != nil {
-						conf.CustomGraphql.Subscription.WebsocketSubprotocol = overrideSubscriptionWebsocketSubprotocol
-					}
+			// If skipOverrides is true we do not want to update the references and only care about
+			// getting a subgraph result with the overridden url
+			if !skipOverrides {
+				// Override datasource urls
+				for _, conf := range engineConfig.DatasourceConfigurations {
+					if conf.Id == sg.Id {
+						if overrideURL != "" {
+							conf.CustomGraphql.Fetch.Url.StaticVariableContent = overrideURL
+							sg.RoutingUrl = overrideURL
+						}
+						if overrideSubscriptionURL != "" {
+							conf.CustomGraphql.Subscription.Url.StaticVariableContent = overrideSubscriptionURL
+						}
+						if overrideSubscriptionProtocol != nil {
+							conf.CustomGraphql.Subscription.Protocol = overrideSubscriptionProtocol
+						}
+						if overrideSubscriptionWebsocketSubprotocol != nil {
+							conf.CustomGraphql.Subscription.WebsocketSubprotocol = overrideSubscriptionWebsocketSubprotocol
+						}
 
-					break
+						break
+					}
 				}
 			}
 		}

@@ -4,8 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/wundergraph/cosmo/router/internal/expr"
+	"slices"
+	"sync/atomic"
+	"time"
+
+	rcontext "github.com/wundergraph/cosmo/router/internal/context"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
-	"github.com/wundergraph/cosmo/router/internal/traceclient"
 	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
@@ -18,8 +23,6 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
-	"slices"
-	"time"
 )
 
 var (
@@ -41,6 +44,8 @@ type engineLoaderHooks struct {
 	tracingAttributeExpressions   *attributeExpressions
 	telemetryAttributeExpressions *attributeExpressions
 	metricAttributeExpressions    *attributeExpressions
+
+	storeSubgraphResponseBody bool
 }
 
 type engineLoaderHooksRequestContext struct {
@@ -54,6 +59,7 @@ func NewEngineRequestHooks(
 	tracingAttributes *attributeExpressions,
 	telemetryAttributes *attributeExpressions,
 	metricAttributes *attributeExpressions,
+	storeSubgraphResponseBody bool,
 ) resolve.LoaderHooks {
 	var tracer trace.Tracer
 	if tracerProvider != nil {
@@ -75,6 +81,7 @@ func NewEngineRequestHooks(
 		tracingAttributeExpressions:   tracingAttributes,
 		metricAttributeExpressions:    metricAttributes,
 		accessLogger:                  logger,
+		storeSubgraphResponseBody:     storeSubgraphResponseBody,
 	}
 }
 
@@ -86,7 +93,10 @@ func (f *engineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInf
 
 	start := time.Now()
 
-	ctx = context.WithValue(ctx, traceclient.CurrentSubgraphContextKey{}, ds.Name)
+	ctx = context.WithValue(ctx, rcontext.CurrentSubgraphContextKey{}, ds.Name)
+
+	duration := atomic.Int64{}
+	ctx = context.WithValue(ctx, rcontext.FetchTimingKey, &duration)
 
 	reqContext := getRequestContext(ctx)
 	if reqContext == nil {
@@ -100,7 +110,7 @@ func (f *engineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInf
 		}...),
 	)
 
-	return context.WithValue(ctx, engineLoaderHooksContextKey, &engineLoaderHooksRequestContext{
+	return context.WithValue(ctx, rcontext.EngineLoaderHooksContextKey, &engineLoaderHooksRequestContext{
 		startTime: start,
 	})
 }
@@ -117,7 +127,7 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 		return
 	}
 
-	hookCtx, ok := ctx.Value(engineLoaderHooksContextKey).(*engineLoaderHooksRequestContext)
+	hookCtx, ok := ctx.Value(rcontext.EngineLoaderHooksContextKey).(*engineLoaderHooksRequestContext)
 	if !ok {
 		return
 	}
@@ -148,35 +158,51 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	exprCtx.Subgraph.Name = ds.Name
 	exprCtx.Subgraph.Request.Error = WrapExprError(responseInfo.Err)
 
+	if value := ctx.Value(rcontext.FetchTimingKey); value != nil {
+		if fetchTiming, ok := value.(*atomic.Int64); ok {
+			exprCtx.Subgraph.Request.ClientTrace.FetchDuration = time.Duration(fetchTiming.Load())
+		}
+	}
+
+	if f.storeSubgraphResponseBody {
+		exprCtx.Subgraph.Response.Body.Raw = responseInfo.GetResponseBody()
+	}
+
 	metricAttrs := *reqContext.telemetry.AcquireAttributes()
 	defer reqContext.telemetry.ReleaseAttributes(&metricAttrs)
 	metricAttrs = append(metricAttrs, reqContext.telemetry.metricAttrs...)
 	metricAttrs = append(metricAttrs, commonAttrs...)
 
-	if f.telemetryAttributeExpressions != nil {
-		telemetryValues, err := f.telemetryAttributeExpressions.expressionsAttributesWithSubgraph(exprCtx)
-		if err != nil {
-			reqContext.Logger().Warn("failed to resolve expression for telemetry", zap.Error(err))
-		}
-		traceAttrs = append(traceAttrs, telemetryValues...)
-		metricAttrs = append(metricAttrs, telemetryValues...)
-	}
-
-	if f.tracingAttributeExpressions != nil {
-		tracingValues, err := f.tracingAttributeExpressions.expressionsAttributesWithSubgraph(exprCtx)
-		if err != nil {
-			reqContext.Logger().Warn("failed to resolve expression for tracing", zap.Error(err))
-		}
-		traceAttrs = append(traceAttrs, tracingValues...)
-	}
-
-	if f.metricAttributeExpressions != nil {
-		metricValues, err := f.metricAttributeExpressions.expressionsAttributesWithSubgraph(exprCtx)
-		if err != nil {
-			reqContext.Logger().Warn("failed to resolve expression for metrics", zap.Error(err))
-		}
-		metricAttrs = append(metricAttrs, metricValues...)
-	}
+	addExpressions(AddExprOpts{
+		logger:      reqContext.logger,
+		expressions: f.telemetryAttributeExpressions,
+		key:         expr.BucketSubgraph,
+		currSpan:    span,
+		exprCtx:     exprCtx,
+		attrAddFunc: func(telemetryValues ...attribute.KeyValue) {
+			traceAttrs = append(traceAttrs, telemetryValues...)
+			metricAttrs = append(metricAttrs, telemetryValues...)
+		},
+	})
+	addExpressions(AddExprOpts{
+		logger:      reqContext.logger,
+		expressions: f.tracingAttributeExpressions,
+		key:         expr.BucketSubgraph,
+		currSpan:    span,
+		exprCtx:     exprCtx,
+		attrAddFunc: func(telemetryValues ...attribute.KeyValue) {
+			traceAttrs = append(traceAttrs, telemetryValues...)
+		},
+	})
+	addExpressions(AddExprOpts{
+		logger:      reqContext.logger,
+		expressions: f.metricAttributeExpressions,
+		key:         expr.BucketSubgraph,
+		exprCtx:     exprCtx,
+		attrAddFunc: func(telemetryValues ...attribute.KeyValue) {
+			metricAttrs = append(metricAttrs, telemetryValues...)
+		},
+	})
 
 	metricAddOpt := otelmetric.WithAttributeSet(attribute.NewSet(metricAttrs...))
 
@@ -194,7 +220,12 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 				path = responseInfo.Request.URL.Path
 			}
 		}
-		f.accessLogger.Info(path, fields)
+
+		if responseInfo.Err != nil {
+			f.accessLogger.Error(path, fields)
+		} else {
+			f.accessLogger.Info(path, fields)
+		}
 	}
 
 	if responseInfo.Err != nil {

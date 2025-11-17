@@ -272,7 +272,19 @@ export const roles = [
     category: "subgraph",
     displayName: "Publisher",
     description: "Grants publish access to the selected subgraphs.",
-  }
+  },
+  {
+    key: "subgraph-checker",
+    category: "subgraph",
+    displayName: "Checker",
+    description: "Grants access to creating checks for the selected subgraphs.",
+  },
+  {
+    key: "subgraph-viewer",
+    category: "subgraph",
+    displayName: "Viewer",
+    description: "Grants readonly access to the selected subgraphs.",
+  },
 ];
 
 export type OrganizationRole = typeof roles[number]["key"];

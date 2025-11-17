@@ -39,7 +39,7 @@ import { AIGraphReadmeQueue } from '../src/core/workers/AIGraphReadmeWorker.js';
 import { DeleteOrganizationQueue } from '../src/core/workers/DeleteOrganizationWorker.js';
 import * as schema from '../src/db/schema.js';
 import { FeatureIds, Label } from '../src/types/index.js';
-import { NewBillingPlan } from '../src/db/models.js';
+import { NewBillingPlan, OrganizationRole } from '../src/db/models.js';
 import { DeactivateOrganizationQueue } from '../src/core/workers/DeactivateOrganizationWorker.js';
 import { DeleteUserQueue } from '../src/core/workers/DeleteUserQueue.js';
 import { ReactivateOrganizationQueue } from '../src/core/workers/ReactivateOrganizationWorker.js';
@@ -61,7 +61,7 @@ const getKeycloakGroups = async (realm: string, keycloak: Keycloak, groupId: str
     id: group.id!,
     name: group.name!,
   }));
-}
+};
 
 export const SetupTest = async function ({
   dbname,
@@ -104,7 +104,9 @@ export const SetupTest = async function ({
   if (enableMultiUsers) {
     users.adminBobCompanyA = createTestContext('company-a', companyAOrganizationId);
     users.devJoeCompanyA = createTestContext('company-a', companyAOrganizationId, ['organization-developer']);
-    users.keyManagerSmithCompanyA = createTestContext('company-a', companyAOrganizationId, ['organization-apikey-manager']);
+    users.keyManagerSmithCompanyA = createTestContext('company-a', companyAOrganizationId, [
+      'organization-apikey-manager',
+    ]);
     users.viewerTimCompanyA = createTestContext('company-a', companyAOrganizationId, ['organization-viewer']);
     users.adminJimCompanyB = createTestContext('company-b', randomUUID());
   }
@@ -364,6 +366,30 @@ export const SetupTest = async function ({
   const transport = createConnectTransport({
     httpVersion: '1.1',
     baseUrl: addr,
+    interceptors: [
+      // Interceptor to handle cosmo-cli user-agent
+      (next) => (req) => {
+        // Check if x-cosmo-client header is set to cosmo-cli
+        const cosmoClient = req.header.get('x-cosmo-client');
+
+        if (cosmoClient === 'cosmo-cli' || cosmoClient === 'cosmo-hub') {
+          const modifiedHeaders = new Headers(req.header);
+          modifiedHeaders.set('user-agent', cosmoClient);
+          // Remove the temporary header
+          modifiedHeaders.delete('x-cosmo-client');
+
+          const modifiedReq = {
+            ...req,
+            header: modifiedHeaders,
+          };
+
+          return next(modifiedReq);
+        }
+
+        // Otherwise, proceed normally
+        return next(req);
+      },
+    ],
   });
 
   const platformClient = createPromiseClient(PlatformService, transport);
@@ -409,6 +435,7 @@ export const SetupKeycloak = async ({
       registrationEmailAsUsername: true,
     });
   } catch (e: any) {
+    console.error(e);
     if (e.response?.status !== 409) {
       e.message = `Failed to create keycloak realm: ${realmName}.` + e.message;
       throw e;
@@ -421,6 +448,40 @@ export const SetupKeycloak = async ({
     realmName,
   });
 };
+
+export async function createOrganizationGroup(
+  client: PromiseClient<typeof PlatformService>,
+  name: string,
+  ...rules: { role: OrganizationRole; namespaces?: string[]; resources?: string[] }[]
+) {
+  const createGroupResponse = await client.createOrganizationGroup({
+    name,
+    description: '',
+  });
+
+  expect(createGroupResponse.response?.code).toBe(EnumStatusCode.OK);
+  expect(createGroupResponse.group).toBeDefined();
+
+  if (rules.length === 0) {
+    // We don't need to update the group
+    return createGroupResponse.group!;
+  }
+
+  // Update the group with all the provided roles
+  const updateGroupResponse = await client.updateOrganizationGroup({
+    groupId: createGroupResponse.group!.groupId,
+    description: createGroupResponse.group!.description,
+    rules,
+  });
+
+  expect(updateGroupResponse.response?.code).toBe(EnumStatusCode.OK);
+
+  // Retrieve the group with the updated roles
+  const getGroupsResponse = await client.getOrganizationGroups({});
+  expect(getGroupsResponse.response?.code).toBe(EnumStatusCode.OK);
+
+  return getGroupsResponse.groups.find((group) => group.name === name) ?? createGroupResponse.group!;
+}
 
 export const addKeycloakUser = async ({
   keycloakClient,
@@ -898,3 +959,19 @@ export async function seedBilling(queryConnection: postgres.Sql) {
       .execute();
   }
 }
+
+export const resolvabilitySDLOne = `
+  type Object {
+    id: ID!
+  }
+  
+  type Query {
+    object: Object!
+  }
+`;
+
+export const resolvabilitySDLTwo = `
+  type Object {
+    name: String!
+  }
+`;

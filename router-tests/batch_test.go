@@ -78,7 +78,7 @@ func TestBatch(t *testing.T) {
 				}, nil)
 				require.NoError(t, err)
 				require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
-				require.JSONEq(t, `{"errors":[{"message":"error parsing request body"}]}`, res.Body)
+				require.JSONEq(t, `{"errors":[{"message":"invalid request body: json: cannot unmarshal array into Go value of type core.GraphQLRequest"}]}`, res.Body)
 			},
 		)
 	})
@@ -333,11 +333,18 @@ func TestBatch(t *testing.T) {
 		t.Parallel()
 
 		authenticators, authServer := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
 
 		testenv.Run(t,
 			&testenv.Config{
 				RouterOptions: []core.Option{
-					core.WithAccessController(core.NewAccessController(authenticators, false)),
+					core.WithAccessController(accessController),
 				},
 				BatchingConfig: config.BatchingConfig{
 					Enabled:            true,
@@ -562,52 +569,6 @@ func TestBatch(t *testing.T) {
 	t.Run("Batch Tracing", func(t *testing.T) {
 		t.Parallel()
 
-		t.Run("Verify primary root span attributes for batch request", func(t *testing.T) {
-			t.Parallel()
-
-			metricReader := metric.NewManualReader()
-			exporter := tracetest.NewInMemoryExporter(t)
-			defer exporter.Reset()
-
-			testenv.Run(t, &testenv.Config{
-				TraceExporter: exporter,
-				MetricReader:  metricReader,
-				BatchingConfig: config.BatchingConfig{
-					Enabled:            true,
-					MaxConcurrency:     10,
-					MaxEntriesPerBatch: 100,
-				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
-				operations := []testenv.GraphQLRequest{
-					{
-						Query: `query employees { employees { id } }`,
-					},
-					{
-						Query: `query employees { employees { id } }`,
-					},
-					{
-						Query: `query employee { employees { isAvailable } }`,
-					},
-				}
-				_, err := xEnv.MakeGraphQLBatchedRequestRequest(operations, nil)
-				require.NoError(t, err)
-
-				sn := exporter.GetSpans().Snapshots()
-				require.Len(t, sn, 29)
-				rootSpan := sn[len(sn)-1]
-
-				rootSpanAttributes := rootSpan.Attributes()
-				require.Contains(t, rootSpanAttributes, otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
-				require.Contains(t, rootSpanAttributes, otel.WgRouterRootSpan.Bool(true))
-				require.Contains(t, rootSpanAttributes, otel.WgIsBatchingOperation.Bool(true))
-				require.Contains(t, rootSpanAttributes, otel.WgBatchingOperationsCount.Int(len(operations)))
-
-				require.Contains(t, rootSpanAttributes, otel.WgOperationHash.String("12924042114100782429"))
-				require.Contains(t, rootSpanAttributes, otel.WgClientName.String("unknown"))
-				require.Contains(t, rootSpanAttributes, otel.WgClientVersion.String("missing"))
-			})
-		})
-
 		t.Run("Verify all root span attributes for batch requests", func(t *testing.T) {
 			t.Parallel()
 
@@ -738,6 +699,14 @@ func TestBatch(t *testing.T) {
 		t.Parallel()
 
 		authenticators, authServer := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   false,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
 		testenv.Run(t, &testenv.Config{
 			BatchingConfig: config.BatchingConfig{
 				Enabled:            true,
@@ -745,7 +714,7 @@ func TestBatch(t *testing.T) {
 				MaxEntriesPerBatch: 100,
 			},
 			RouterOptions: []core.Option{
-				core.WithAccessController(core.NewAccessController(authenticators, false)),
+				core.WithAccessController(accessController),
 				core.WithRouterTrafficConfig(&config.RouterTrafficConfiguration{
 					MaxRequestBodyBytes:  5 << 20, // 5MiB
 					DecompressionEnabled: true,
@@ -791,6 +760,61 @@ func TestBatch(t *testing.T) {
 		})
 	})
 
+}
+
+func TestFlakyBatch(t *testing.T) {
+	t.Parallel()
+
+	t.Run("Batch Tracing", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("Verify primary root span attributes for batch request", func(t *testing.T) {
+			t.Parallel()
+
+			metricReader := metric.NewManualReader()
+			exporter := tracetest.NewInMemoryExporter(t)
+			defer exporter.Reset()
+
+			testenv.Run(t, &testenv.Config{
+				TraceExporter: exporter,
+				MetricReader:  metricReader,
+				BatchingConfig: config.BatchingConfig{
+					Enabled:            true,
+					MaxConcurrency:     10,
+					MaxEntriesPerBatch: 100,
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				operations := []testenv.GraphQLRequest{
+					{
+						Query: `query employees { employees { id } }`,
+					},
+					{
+						Query: `query employees { employees { id } }`,
+					},
+					{
+						Query: `query employee { employees { isAvailable } }`,
+					},
+				}
+				_, err := xEnv.MakeGraphQLBatchedRequestRequest(operations, nil)
+				require.NoError(t, err)
+
+				sn := exporter.GetSpans().Snapshots()
+				require.Len(t, sn, 29)
+				rootSpan := sn[len(sn)-1]
+
+				rootSpanAttributes := rootSpan.Attributes()
+				require.Contains(t, rootSpanAttributes, otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
+				require.Contains(t, rootSpanAttributes, otel.WgRouterRootSpan.Bool(true))
+				require.Contains(t, rootSpanAttributes, otel.WgIsBatchingOperation.Bool(true))
+				require.Contains(t, rootSpanAttributes, otel.WgBatchingOperationsCount.Int(len(operations)))
+
+				require.Contains(t, rootSpanAttributes, otel.WgOperationHash.String("12924042114100782429"))
+				require.Contains(t, rootSpanAttributes, otel.WgClientName.String("unknown"))
+				require.Contains(t, rootSpanAttributes, otel.WgClientVersion.String("missing"))
+			})
+		})
+
+	})
 }
 
 func getChildSpanDetails(directChildSpans []sdktrace.ReadOnlySpan) ([]string, []string) {

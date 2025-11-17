@@ -9,7 +9,7 @@ services:
       OTEL_HTTP_ENDPOINT: ${OTEL_HTTP_ENDPOINT:-otelcollector:4318}
     build:
       context: ./demo
-      dockerfile: Dockerfile.employees
+      dockerfile: docker/employees.Dockerfile
     profiles:
       - subgraphs
     ports:
@@ -24,7 +24,7 @@ services:
       OTEL_HTTP_ENDPOINT: ${OTEL_HTTP_ENDPOINT:-otelcollector:4318}
     build:
       context: ./demo
-      dockerfile: Dockerfile.family
+      dockerfile: docker/family.Dockerfile
     profiles:
       - subgraphs
     ports:
@@ -39,7 +39,7 @@ services:
       OTEL_HTTP_ENDPOINT: ${OTEL_HTTP_ENDPOINT:-otelcollector:4318}
     build:
       context: ./demo
-      dockerfile: Dockerfile.hobbies
+      dockerfile: docker/hobbies.Dockerfile
     profiles:
       - subgraphs
     ports:
@@ -54,7 +54,7 @@ services:
     container_name: products
     build:
       context: ./demo
-      dockerfile: Dockerfile.products
+      dockerfile: docker/products.Dockerfile
     profiles:
       - subgraphs
     ports:
@@ -69,7 +69,7 @@ services:
       OTEL_HTTP_ENDPOINT: ${OTEL_HTTP_ENDPOINT:-otelcollector:4318}
     build:
       context: ./demo
-      dockerfile: Dockerfile.availability
+      dockerfile: docker/availability.Dockerfile
     profiles:
       - subgraphs
     ports:
@@ -84,7 +84,7 @@ services:
       OTEL_HTTP_ENDPOINT: ${OTEL_HTTP_ENDPOINT:-otelcollector:4318}
     build:
       context: ./demo
-      dockerfile: Dockerfile.mood
+      dockerfile: docker/mood.Dockerfile
     profiles:
       - subgraphs
     ports:
@@ -99,7 +99,7 @@ services:
       OTEL_HTTP_ENDPOINT: ${OTEL_HTTP_ENDPOINT:-otelcollector:4318}
     build:
       context: ./demo
-      dockerfile: Dockerfile.products_fg
+      dockerfile: docker/products_fg.Dockerfile
     profiles:
       - subgraphs
     ports:
@@ -172,7 +172,7 @@ services:
       - postgres
 
   minio:
-    image: bitnami/minio:${DC_MINIO_VERSION:-2024.7.16-debian-12-r0}
+    image: bitnamilegacy/minio:${DC_MINIO_VERSION:-2024.7.16-debian-12-r0}
     environment:
       - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minio}
       - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-changeme}
@@ -202,7 +202,7 @@ services:
       - primary
 
   kafka:
-    image: bitnami/kafka:3.7.0
+    image: bitnamilegacy/kafka:3.7.0
     profiles:
       - default
     environment:
@@ -321,6 +321,12 @@ services:
 
   redis:
     image: redis:${DC_REDIS_VERSION:-7.2.4}-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
     ports:
       - '6379:6379'
     volumes:
@@ -332,6 +338,9 @@ services:
       - primary
 
   router:
+    depends_on:
+      redis:
+        condition: service_healthy
     image: ghcr.io/wundergraph/cosmo/router:${DC_ROUTER_VERSION:-latest}
     environment:
       LOG_LEVEL: info
@@ -345,7 +354,7 @@ services:
       HTTPS_PROXY: ${HTTPS_PROXY}
       HTTP_PROXY: ${HTTP_PROXY}
       NO_PROXY: ${NO_PROXY}
-      NATS_URL: "nats://nats:4222"
+      NATS_URL: 'nats://nats:4222'
     restart: on-failure
     volumes:
       # Mount the example config from the repo into the working dir of the router binary location

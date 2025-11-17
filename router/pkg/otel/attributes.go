@@ -1,25 +1,27 @@
 package otel
 
 import (
-	"go.opentelemetry.io/otel/attribute"
 	"net"
+
+	"go.opentelemetry.io/otel/attribute"
 )
 
 const (
-	WgOperationName       = attribute.Key("wg.operation.name")
-	WgOperationType       = attribute.Key("wg.operation.type")
-	WgOperationContent    = attribute.Key("wg.operation.content")
-	WgOperationHash       = attribute.Key("wg.operation.hash")
-	WgOperationVariables  = attribute.Key("wg.operation.variables")
-	WgOperationProtocol   = attribute.Key("wg.operation.protocol")
-	WgComponentName       = attribute.Key("wg.component.name")
-	WgClientName          = attribute.Key("wg.client.name")
-	WgClientVersion       = attribute.Key("wg.client.version")
-	WgRouterVersion       = attribute.Key("wg.router.version")
-	WgRouterConfigVersion = attribute.Key("wg.router.config.version")
-	WgFederatedGraphID    = attribute.Key("wg.federated_graph.id")
-	WgSubgraphID          = attribute.Key("wg.subgraph.id")
-	WgSubgraphName        = attribute.Key("wg.subgraph.name")
+	WgOperationName              = attribute.Key("wg.operation.name")
+	WgOperationType              = attribute.Key("wg.operation.type")
+	WgOperationNormalizedContent = attribute.Key("wg.operation.normalized_content")
+	WgOperationOriginalContent   = attribute.Key("wg.operation.original_content")
+	WgOperationHash              = attribute.Key("wg.operation.hash")
+	WgOperationVariables         = attribute.Key("wg.operation.variables")
+	WgOperationProtocol          = attribute.Key("wg.operation.protocol")
+	WgComponentName              = attribute.Key("wg.component.name")
+	WgClientName                 = attribute.Key("wg.client.name")
+	WgClientVersion              = attribute.Key("wg.client.version")
+	WgRouterVersion              = attribute.Key("wg.router.version")
+	WgRouterConfigVersion        = attribute.Key("wg.router.config.version")
+	WgFederatedGraphID           = attribute.Key("wg.federated_graph.id")
+	WgSubgraphID                 = attribute.Key("wg.subgraph.id")
+	WgSubgraphName               = attribute.Key("wg.subgraph.name")
 	// WgRequestError is only used to annotate the request count metric to easily identify errored and non-errored requests
 	// with the same metric. This has simplified the query for the error and request count metric in Cloud.
 	WgRequestError                     = attribute.Key("wg.request.error")
@@ -57,6 +59,15 @@ const (
 	WgOperationSha256   = attribute.Key("wg.operation.sha256")
 	WgGraphQLFieldName  = attribute.Key("wg.graphql.field.name")
 	WgGraphQLParentType = attribute.Key("wg.graphql.parent_type")
+)
+
+// Messaging metrics attributes
+const (
+	WgStreamOperationName = attribute.Key("wg.stream.operation.name")
+	WgProviderType        = attribute.Key("wg.provider.type")
+	WgDestinationName     = attribute.Key("wg.destination.name")
+	WgProviderId          = attribute.Key("wg.provider.id")
+	WgErrorType           = attribute.Key("wg.error.type")
 )
 
 const (

@@ -168,7 +168,8 @@ describe('API Keys', (ctx) => {
     'graph-admin',
     'graph-viewer',
     'subgraph-admin',
-    'subgraph-publisher'
+    'subgraph-publisher',
+    'subgraph-viewer',
   ])('%s should not be able to create API keys', async (role) => {
     const { client, server, users, authenticator } = await SetupTest({ dbname, enableMultiUsers: true });
 
@@ -203,7 +204,8 @@ describe('API Keys', (ctx) => {
     'graph-admin',
     'graph-viewer',
     'subgraph-admin',
-    'subgraph-publisher'
+    'subgraph-publisher',
+    'subgraph-viewer',
   ])('%s should not be able to update API keys', async (role) => {
     const { client, server, users, authenticator } = await SetupTest({ dbname, enableMultiUsers: true });
 
@@ -247,7 +249,8 @@ describe('API Keys', (ctx) => {
     'graph-admin',
     'graph-viewer',
     'subgraph-admin',
-    'subgraph-publisher'
+    'subgraph-publisher',
+    'subgraph-viewer',
   ])('%s should not be able to delete API keys', async (role) => {
     const { client, server, users, authenticator } = await SetupTest({ dbname, enableMultiUsers: true });
 

@@ -1,8 +1,9 @@
 package cors
 
 import (
+	"maps"
 	"net/http"
-	"strings"
+	"slices"
 )
 
 type cors struct {
@@ -12,13 +13,13 @@ type cors struct {
 	allowOrigins     []string
 	normalHeaders    http.Header
 	preflightHeaders http.Header
-	wildcardOrigins  [][]string
+	wildcardOrigins  []*WildcardPattern
 	handler          http.Handler
 }
 
 var (
-	maxRecursionDepth = 10 // Safeguard against deep recursion
-	DefaultSchemas    = []string{
+	maxWildcardOriginLength = 4096 // Maximum length of an origin string for it to be eligible for wildcard matching
+	DefaultSchemas          = []string{
 		"http://",
 		"https://",
 	}
@@ -55,7 +56,7 @@ func newCors(handler http.Handler, config Config) *cors {
 		allowOrigins:     normalize(config.AllowOrigins),
 		normalHeaders:    generateNormalHeaders(config),
 		preflightHeaders: generatePreflightHeaders(config),
-		wildcardOrigins:  config.parseWildcardRules(),
+		wildcardOrigins:  config.parseNewWildcardRules(),
 		handler:          handler,
 	}
 }
@@ -102,10 +103,8 @@ func (cors *cors) validateOrigin(origin string) bool {
 	if cors.allowAllOrigins {
 		return true
 	}
-	for _, value := range cors.allowOrigins {
-		if value == origin {
-			return true
-		}
+	if slices.Contains(cors.allowOrigins, origin) {
+		return true
 	}
 	if len(cors.wildcardOrigins) > 0 && cors.validateWildcardOrigin(origin) {
 		return true
@@ -117,67 +116,25 @@ func (cors *cors) validateOrigin(origin string) bool {
 }
 
 func (cors *cors) validateWildcardOrigin(origin string) bool {
+	// Origin is >4KB, avoid matching it for performance
+	if len(origin) > maxWildcardOriginLength {
+		return false
+	}
+
 	for _, w := range cors.wildcardOrigins {
-		if matchOriginWithRule(origin, w, 0, map[string]bool{}) {
+		if w.Match(origin) {
 			return true
 		}
 	}
 	return false
 }
 
-// Recursive helper function with depth limit and memoization
-func matchOriginWithRule(origin string, rule []string, depth int, memo map[string]bool) bool {
-	if depth > maxRecursionDepth {
-		return false // Exceeded recursion depth
-	}
-
-	// Memoization key
-	key := origin + "|" + strings.Join(rule, "|")
-	if val, exists := memo[key]; exists {
-		return val
-	}
-
-	if len(rule) == 0 {
-		// Successfully matched if origin is also fully consumed
-		return origin == ""
-	}
-
-	part := rule[0]
-
-	if part == "*" {
-		// Try to match the remaining rule by advancing in origin
-		for i := 0; i <= len(origin); i++ {
-			if matchOriginWithRule(origin[i:], rule[1:], depth+1, memo) {
-				memo[key] = true
-				return true
-			}
-		}
-		memo[key] = false
-		return false
-	}
-
-	// Check if the origin starts with the current part
-	if strings.HasPrefix(origin, part) {
-		// Recursively check the rest of the origin and rule
-		result := matchOriginWithRule(origin[len(part):], rule[1:], depth+1, memo)
-		memo[key] = result
-		return result
-	}
-
-	memo[key] = false
-	return false
-}
-
 func (cors *cors) handlePreflight(w http.ResponseWriter) {
 	header := w.Header()
-	for key, value := range cors.preflightHeaders {
-		header[key] = value
-	}
+	maps.Copy(header, cors.preflightHeaders)
 }
 
 func (cors *cors) handleNormal(w http.ResponseWriter) {
 	header := w.Header()
-	for key, value := range cors.normalHeaders {
-		header[key] = value
-	}
+	maps.Copy(header, cors.normalHeaders)
 }

@@ -3,6 +3,7 @@
 package model
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"strconv"
@@ -49,9 +50,10 @@ func (Consultancy) IsProducts() {}
 func (Consultancy) IsEntity() {}
 
 type Cosmo struct {
-	Upc       string      `json:"upc"`
-	Engineers []*Employee `json:"engineers"`
-	Lead      *Employee   `json:"lead"`
+	Upc             string      `json:"upc"`
+	Engineers       []*Employee `json:"engineers"`
+	Lead            *Employee   `json:"lead"`
+	IsLeadAvailable *bool       `json:"isLeadAvailable,omitempty"`
 }
 
 func (Cosmo) IsProducts() {}
@@ -102,7 +104,7 @@ type Employee struct {
 	StartDate             string        `json:"startDate"`
 	CurrentMood           Mood          `json:"currentMood"`
 	DerivedMood           Mood          `json:"derivedMood"`
-	IsAvailable           bool          `json:"isAvailable"`
+	IsAvailable           *bool         `json:"isAvailable,omitempty"`
 	RootFieldThrowsError  *string       `json:"rootFieldThrowsError,omitempty"`
 	RootFieldErrorWrapper *ErrorWrapper `json:"rootFieldErrorWrapper,omitempty"`
 }
@@ -159,6 +161,12 @@ type ErrorWrapper struct {
 type FileUpload struct {
 	Nested     *DeeplyNestedFileUpload `json:"nested,omitempty"`
 	NestedList []*graphql.Upload       `json:"nestedList,omitempty"`
+}
+
+type FindEmployeeCriteria struct {
+	ID         *int        `json:"id,omitempty"`
+	Department *Department `json:"department,omitempty"`
+	Title      *string     `json:"title,omitempty"`
 }
 
 type Marketer struct {
@@ -319,6 +327,20 @@ func (e Department) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 
+func (e *Department) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e Department) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
 type EngineerType string
 
 const (
@@ -362,6 +384,20 @@ func (e EngineerType) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 
+func (e *EngineerType) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e EngineerType) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
 type Mood string
 
 const (
@@ -403,6 +439,20 @@ func (e Mood) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 
+func (e *Mood) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e Mood) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
 type OperationType string
 
 const (
@@ -442,4 +492,18 @@ func (e *OperationType) UnmarshalGQL(v any) error {
 
 func (e OperationType) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *OperationType) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e OperationType) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
 }

@@ -63,6 +63,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 )
 
@@ -260,20 +261,25 @@ type EngineStatOptions struct {
 }
 
 type MetricOptions struct {
-	MetricExclusions                  MetricExclusions
-	EnableRuntimeMetrics              bool
-	EnableOTLPRouterCache             bool
-	EnablePrometheusRouterCache       bool
-	OTLPEngineStatsOptions            EngineStatOptions
-	PrometheusEngineStatsOptions      EngineStatOptions
-	PrometheusSchemaFieldUsage        PrometheusSchemaFieldUsage
-	EnableOTLPConnectionMetrics       bool
-	EnablePrometheusConnectionMetrics bool
+	MetricExclusions                      MetricExclusions
+	EnableRuntimeMetrics                  bool
+	EnableOTLPRouterCache                 bool
+	EnablePrometheusRouterCache           bool
+	OTLPEngineStatsOptions                EngineStatOptions
+	PrometheusEngineStatsOptions          EngineStatOptions
+	PrometheusSchemaFieldUsage            PrometheusSchemaFieldUsage
+	EnableOTLPConnectionMetrics           bool
+	EnableOTLPCircuitBreakerMetrics       bool
+	EnableOTLPStreamMetrics               bool
+	EnablePrometheusConnectionMetrics     bool
+	EnablePrometheusCircuitBreakerMetrics bool
+	EnablePrometheusStreamMetrics         bool
 }
 
 type PrometheusSchemaFieldUsage struct {
 	Enabled             bool
 	IncludeOperationSha bool
+	SampleRate          float64
 }
 
 type Config struct {
@@ -299,6 +305,7 @@ type Config struct {
 	CustomTelemetryAttributes          []config.CustomAttribute
 	CustomTracingAttributes            []config.CustomAttribute
 	CustomResourceAttributes           []config.CustomStaticAttribute
+	OperationContentAttributes         bool
 	MetricReader                       metric.Reader
 	PrometheusRegistry                 *prometheus.Registry
 	PrometheusPort                     int
@@ -331,6 +338,7 @@ type Config struct {
 	EnableRedisCluster                 bool
 	Plugins                            PluginConfig
 	EnableGRPC                         bool
+	IgnoreQueryParamsList              []string
 }
 
 type PluginConfig struct {
@@ -436,14 +444,14 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	if oc := cfg.LogObservation; oc.Enabled {
 		var zCore zapcore.Core
 		zCore, logObserver = observer.New(oc.LogLevel)
-		cfg.Logger = logging.NewZapLoggerWithCore(zCore, true)
+		cfg.Logger = logging.NewZapLoggerWithCore(zCore, true, true)
 	} else {
 		ec := zap.NewProductionEncoderConfig()
 		ec.EncodeDuration = zapcore.SecondsDurationEncoder
 		ec.TimeKey = "time"
 
 		syncer := zapcore.AddSync(os.Stderr)
-		cfg.Logger = logging.NewZapLogger(syncer, false, true, zapcore.ErrorLevel)
+		cfg.Logger = logging.NewZapLogger(syncer, false, true, true, zapcore.ErrorLevel)
 	}
 
 	if cfg.AccessLogger == nil {
@@ -803,7 +811,7 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	if cfg.MCP.Enabled {
 		// Create MCP client connecting to the MCP server
 		mcpAddr := fmt.Sprintf("http://%s/mcp", cfg.MCP.Server.ListenAddr)
-		client, err := mcpclient.NewSSEMCPClient(mcpAddr)
+		client, err := mcpclient.NewStreamableHttpClient(mcpAddr)
 		if err != nil {
 			t.Fatalf("Failed to create MCP client: %v", err)
 		}
@@ -863,14 +871,14 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	if oc := cfg.LogObservation; oc.Enabled {
 		var zCore zapcore.Core
 		zCore, logObserver = observer.New(oc.LogLevel)
-		cfg.Logger = logging.NewZapLoggerWithCore(zCore, true)
+		cfg.Logger = logging.NewZapLoggerWithCore(zCore, true, true)
 	} else {
 		ec := zap.NewProductionEncoderConfig()
 		ec.EncodeDuration = zapcore.SecondsDurationEncoder
 		ec.TimeKey = "time"
 
 		syncer := zapcore.AddSync(os.Stderr)
-		cfg.Logger = logging.NewZapLogger(syncer, false, true, zapcore.ErrorLevel)
+		cfg.Logger = logging.NewZapLogger(syncer, false, true, true, zapcore.ErrorLevel)
 	}
 
 	if cfg.AccessLogger == nil {
@@ -1228,7 +1236,7 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	if cfg.MCP.Enabled {
 		// Create MCP client connecting to the MCP server
 		mcpAddr := fmt.Sprintf("http://%s/mcp", cfg.MCP.Server.ListenAddr)
-		client, err := mcpclient.NewSSEMCPClient(mcpAddr)
+		client, err := mcpclient.NewStreamableHttpClient(mcpAddr)
 		if err != nil {
 			t.Fatalf("Failed to create MCP client: %v", err)
 		}
@@ -1387,10 +1395,11 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		core.WithDisableUsageTracking(),
 		core.WithLogger(testConfig.Logger),
 		core.WithAccessLogs(&core.AccessLogsConfig{
-			Logger:             testConfig.AccessLogger,
-			Attributes:         testConfig.AccessLogFields,
-			SubgraphEnabled:    testConfig.SubgraphAccessLogsEnabled,
-			SubgraphAttributes: testConfig.SubgraphAccessLogFields,
+			Logger:                testConfig.AccessLogger,
+			Attributes:            testConfig.AccessLogFields,
+			IgnoreQueryParamsList: testConfig.IgnoreQueryParamsList,
+			SubgraphEnabled:       testConfig.SubgraphAccessLogsEnabled,
+			SubgraphAttributes:    testConfig.SubgraphAccessLogFields,
 		}),
 		core.WithGraphApiToken(graphApiToken),
 		core.WithDevelopmentMode(true),
@@ -1412,10 +1421,13 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		core.WithTLSConfig(testConfig.TLSConfig),
 		core.WithInstanceID("test-instance"),
 		core.WithGracePeriod(15 * time.Second),
-		core.WithIntrospection(true),
+		core.WithIntrospection(true, config.IntrospectionConfiguration{
+			Enabled: true,
+		}),
 		core.WithQueryPlans(true),
 		core.WithEvents(eventsConfiguration),
 	}
+
 	routerOpts = append(routerOpts, testConfig.RouterOptions...)
 
 	if testConfig.RouterConfig != nil {
@@ -1458,13 +1470,14 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			ServiceName:        "cosmo-router",
 			ResourceAttributes: testConfig.CustomResourceAttributes,
 			Tracing: config.Tracing{
-				Enabled:               true,
-				SamplingRate:          1,
-				ParentBasedSampler:    !testConfig.DisableParentBasedSampler,
-				Exporters:             []config.TracingExporter{},
-				Propagation:           testConfig.PropagationConfig,
-				TracingGlobalFeatures: config.TracingGlobalFeatures{},
-				ResponseTraceHeader:   testConfig.ResponseTraceHeader,
+				Enabled:                    true,
+				SamplingRate:               1,
+				ParentBasedSampler:         !testConfig.DisableParentBasedSampler,
+				OperationContentAttributes: testConfig.OperationContentAttributes,
+				Exporters:                  []config.TracingExporter{},
+				Propagation:                testConfig.PropagationConfig,
+				TracingGlobalFeatures:      config.TracingGlobalFeatures{},
+				ResponseTraceHeader:        testConfig.ResponseTraceHeader,
 			},
 		})
 
@@ -1496,12 +1509,15 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			EngineStats: rmetric.EngineStatsConfig{
 				Subscription: testConfig.MetricOptions.PrometheusEngineStatsOptions.EnableSubscription,
 			},
+			CircuitBreaker:      testConfig.MetricOptions.EnablePrometheusCircuitBreakerMetrics,
 			ExcludeMetrics:      testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetrics,
 			ExcludeMetricLabels: testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetricLabels,
+			Streams:             testConfig.MetricOptions.EnablePrometheusStreamMetrics,
 			ExcludeScopeInfo:    testConfig.MetricOptions.MetricExclusions.ExcludeScopeInfo,
 			PromSchemaFieldUsage: rmetric.PrometheusSchemaFieldUsage{
 				Enabled:             testConfig.MetricOptions.PrometheusSchemaFieldUsage.Enabled,
 				IncludeOperationSha: testConfig.MetricOptions.PrometheusSchemaFieldUsage.IncludeOperationSha,
+				SampleRate:          testConfig.MetricOptions.PrometheusSchemaFieldUsage.SampleRate,
 			},
 		}
 	}
@@ -1520,10 +1536,12 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 					Enabled:         true,
 					RouterRuntime:   testConfig.MetricOptions.EnableRuntimeMetrics,
 					GraphqlCache:    testConfig.MetricOptions.EnableOTLPRouterCache,
+					Streams:         testConfig.MetricOptions.EnableOTLPStreamMetrics,
 					ConnectionStats: testConfig.MetricOptions.EnableOTLPConnectionMetrics,
 					EngineStats: config.EngineStats{
 						Subscriptions: testConfig.MetricOptions.OTLPEngineStatsOptions.EnableSubscription,
 					},
+					CircuitBreaker:      testConfig.MetricOptions.EnableOTLPCircuitBreakerMetrics,
 					ExcludeMetrics:      testConfig.MetricOptions.MetricExclusions.ExcludedOTLPMetrics,
 					ExcludeMetricLabels: testConfig.MetricOptions.MetricExclusions.ExcludedOTLPMetricLabels,
 				},
@@ -1784,6 +1802,14 @@ func (e *Environment) Observer() *observer.ObservedLogs {
 	}
 
 	return e.logObserver
+}
+
+// GetMCPServerAddr returns the MCP server address for testing
+func (e *Environment) GetMCPServerAddr() string {
+	if e.cfg.MCP.Enabled {
+		return fmt.Sprintf("http://%s/mcp", e.cfg.MCP.Server.ListenAddr)
+	}
+	return ""
 }
 
 // Shutdown closes all resources associated with the test environment. Can be called multiple times but will only
@@ -2812,7 +2838,9 @@ func subgraphOptions(ctx context.Context, t testing.TB, logger *zap.Logger, nats
 	}
 	natsPubSubByProviderID := make(map[string]pubsubNats.Adapter, len(DemoNatsProviders))
 	for _, sourceName := range DemoNatsProviders {
-		adapter, err := pubsubNats.NewAdapter(ctx, logger, natsData.Params[0].Url, natsData.Params[0].Opts, "hostname", "listenaddr")
+		adapter, err := pubsubNats.NewAdapter(ctx, logger, natsData.Params[0].Url, natsData.Params[0].Opts, "hostname", "listenaddr", datasource.ProviderOpts{
+			StreamMetricStore: rmetric.NewNoopStreamMetricStore(),
+		})
 		require.NoError(t, err)
 		require.NoError(t, adapter.Startup(ctx))
 		t.Cleanup(func() {

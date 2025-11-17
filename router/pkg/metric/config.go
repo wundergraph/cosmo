@@ -14,6 +14,9 @@ import (
 // DefaultServerName Default resource name.
 const DefaultServerName = "cosmo-router"
 
+// DefaultCardinalityLimit is the hard limit on the number of metric streams that can be collected for a single instrument.
+const DefaultCardinalityLimit = 2000
+
 type PrometheusConfig struct {
 	Enabled         bool
 	ConnectionStats bool
@@ -21,6 +24,7 @@ type PrometheusConfig struct {
 	Path            string
 	GraphqlCache    bool
 	EngineStats     EngineStatsConfig
+	CircuitBreaker  bool
 	// Metrics to exclude from Prometheus exporter
 	ExcludeMetrics []*regexp.Regexp
 	// Metric labels to exclude from Prometheus exporter
@@ -31,11 +35,16 @@ type PrometheusConfig struct {
 	ExcludeScopeInfo bool
 	// Prometheus schema field usage configuration
 	PromSchemaFieldUsage PrometheusSchemaFieldUsage
+	Streams              bool
 }
 
 type PrometheusSchemaFieldUsage struct {
 	Enabled             bool
 	IncludeOperationSha bool
+	// SampleRate controls the percentage of requests to sample for schema field usage metrics (0.0 to 1.0).
+	// Uses probabilistic random sampling to ensure all operations get ~X% statistical coverage.
+	// Supports any rate: 1.0 (100%), 0.8 (80%), 0.5 (50%), 0.1 (10%), 0.01 (1%), etc.
+	SampleRate float64
 }
 
 type OpenTelemetryExporter struct {
@@ -66,6 +75,7 @@ type OpenTelemetry struct {
 	ConnectionStats bool
 	RouterRuntime   bool
 	GraphqlCache    bool
+	CircuitBreaker  bool
 	EngineStats     EngineStatsConfig
 	Exporters       []*OpenTelemetryExporter
 	// Metrics to exclude from the OTLP exporter.
@@ -74,6 +84,7 @@ type OpenTelemetry struct {
 	ExcludeMetricLabels []*regexp.Regexp
 	// TestReader is used for testing purposes. If set, the reader will be used instead of the configured exporters.
 	TestReader sdkmetric.Reader
+	Streams    bool
 }
 
 func GetDefaultExporter(cfg *Config) *OpenTelemetryExporter {
@@ -115,6 +126,9 @@ type Config struct {
 
 	Attributes []config.CustomAttribute
 
+	// CardinalityLimit is the hard limit on the number of metric streams that can be collected for a single instrument.
+	CardinalityLimit int
+
 	// IsUsingCloudExporter indicates whether the cloud exporter is used.
 	// This value is used for tests to enable/disable the simulated cloud exporter.
 	IsUsingCloudExporter bool
@@ -126,12 +140,12 @@ func (c *Config) IsEnabled() bool {
 
 // DefaultConfig returns the default config.
 func DefaultConfig(serviceVersion string) *Config {
-
 	return &Config{
 		Name:               DefaultServerName,
 		Version:            serviceVersion,
 		ResourceAttributes: make([]attribute.KeyValue, 0),
 		Attributes:         make([]config.CustomAttribute, 0),
+		CardinalityLimit:   DefaultCardinalityLimit,
 		OpenTelemetry: OpenTelemetry{
 			Enabled:       false,
 			RouterRuntime: true,

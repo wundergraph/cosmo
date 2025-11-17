@@ -1,5 +1,12 @@
 import { Warning } from '../warnings/types';
-import { DocumentNode, GraphQLSchema, OperationTypeNode } from 'graphql';
+import {
+  DirectiveDefinitionNode,
+  DocumentNode,
+  GraphQLSchema,
+  OperationTypeNode,
+  SchemaDefinitionNode,
+  SchemaExtensionNode,
+} from 'graphql';
 import { ConfigurationData } from '../router-configuration/types';
 import {
   AuthorizationData,
@@ -11,18 +18,20 @@ import {
 } from '../schema-building/types';
 import { Graph } from '../resolvability-graph/graph';
 import { InternalSubgraph } from '../subgraph/types';
+import { DirectiveName, TypeName } from '../types/types';
 
-export type NormalizationResultFailure = {
+export type NormalizationFailure = {
   errors: Array<Error>;
   success: false;
   warnings: Array<Warning>;
 };
 
-export type NormalizationResultSuccess = {
+export type NormalizationSuccess = {
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
   concreteTypeNamesByAbstractTypeName: Map<string, Set<string>>;
   conditionalFieldDataByCoordinates: Map<string, ConditionalFieldData>;
-  configurationDataByTypeName: Map<string, ConfigurationData>;
+  configurationDataByTypeName: Map<TypeName, ConfigurationData>;
+  directiveDefinitionByName: Map<DirectiveName, DirectiveDefinitionNode>;
   entityInterfaces: Map<string, EntityInterfaceSubgraphData>;
   entityDataByTypeName: Map<string, EntityData>;
   fieldCoordsByNamedTypeName: Map<string, Set<string>>;
@@ -40,17 +49,18 @@ export type NormalizationResultSuccess = {
   subgraphString: string;
   success: true;
   warnings: Array<Warning>;
+  schemaNode?: SchemaDefinitionNode | SchemaExtensionNode;
 };
 
-export type NormalizationResult = NormalizationResultFailure | NormalizationResultSuccess;
+export type NormalizationResult = NormalizationFailure | NormalizationSuccess;
 
-export type BatchNormalizationResultFailure = {
+export type BatchNormalizationFailure = {
   errors: Array<Error>;
   success: false;
   warnings: Array<Warning>;
 };
 
-export type BatchNormalizationResultSuccess = {
+export type BatchNormalizationSuccess = {
   success: true;
   authorizationDataByParentTypeName: Map<string, AuthorizationData>;
   concreteTypeNamesByAbstractTypeName: Map<string, Set<string>>;
@@ -61,4 +71,4 @@ export type BatchNormalizationResultSuccess = {
   warnings: Array<Warning>;
 };
 
-export type BatchNormalizationResult = BatchNormalizationResultFailure | BatchNormalizationResultSuccess;
+export type BatchNormalizationResult = BatchNormalizationFailure | BatchNormalizationSuccess;

@@ -35,6 +35,7 @@ var subgraphs = []*Subgraph{
 			name: String
 		  }`,
 		SubscriptionProtocol: "ws",
+		URL:                  "https://example.com/subgraph-a",
 	},
 	{
 		Name: "B",
@@ -58,6 +59,7 @@ var subgraphs = []*Subgraph{
 			age: Int @authenticated
 		  }`,
 		SubscriptionProtocol: "ws",
+		URL:                  "https://example.com/subgraph-b",
 	},
 }
 
@@ -68,15 +70,9 @@ func normalizeWhiteSpace(s string) string {
 func TestFederateSubgraphs(t *testing.T) {
 	const (
 		expectedSDL = `
-			directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
-
-			directive @deprecated(reason: String = "No longer supported") on ARGUMENT_DEFINITION | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION
-
-			directive @inaccessible on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
-
 			directive @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR 
-
-			directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
+			
+			directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
 
 			scalar openfed__Scope
 

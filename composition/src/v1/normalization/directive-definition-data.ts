@@ -1,9 +1,87 @@
 import { ArgumentData, DirectiveDefinitionData } from '../../schema-building/types';
+import { stringToNamedTypeNode } from '../../ast/utils';
+import { DEFAULT_DEPRECATION_REASON, Kind } from 'graphql';
+import {
+  ARGUMENT_DEFINITION_UPPER,
+  AS,
+  AUTHENTICATED,
+  BOOLEAN_SCALAR,
+  CHANNEL,
+  CHANNELS,
+  COMPOSE_DIRECTIVE,
+  CONDITION,
+  CONFIGURE_CHILD_DESCRIPTIONS,
+  CONFIGURE_DESCRIPTION,
+  CONNECT_FIELD_RESOLVER,
+  CONTEXT,
+  DEFAULT_EDFS_PROVIDER_ID,
+  DEPRECATED,
+  DESCRIPTION_OVERRIDE,
+  EDFS_KAFKA_PUBLISH,
+  EDFS_KAFKA_SUBSCRIBE,
+  EDFS_NATS_PUBLISH,
+  EDFS_NATS_REQUEST,
+  EDFS_NATS_STREAM_CONFIGURATION,
+  EDFS_NATS_SUBSCRIBE,
+  EDFS_REDIS_PUBLISH,
+  EDFS_REDIS_SUBSCRIBE,
+  ENUM_UPPER,
+  ENUM_VALUE_UPPER,
+  EXTENDS,
+  EXTERNAL,
+  FIELD_DEFINITION_UPPER,
+  FIELDS,
+  FOR,
+  FROM,
+  IMPORT,
+  INACCESSIBLE,
+  INPUT_FIELD_DEFINITION_UPPER,
+  INPUT_OBJECT_UPPER,
+  INT_SCALAR,
+  INTERFACE_OBJECT,
+  INTERFACE_UPPER,
+  KEY,
+  LEVELS,
+  LINK,
+  LINK_IMPORT,
+  LINK_PURPOSE,
+  NAME,
+  OBJECT_UPPER,
+  ONE_OF,
+  OVERRIDE,
+  PROPAGATE,
+  PROVIDER_ID,
+  PROVIDES,
+  REASON,
+  REQUIRE_FETCH_REASONS,
+  REQUIRES,
+  REQUIRES_SCOPES,
+  RESOLVABLE,
+  SCALAR_UPPER,
+  SCHEMA_UPPER,
+  SCOPE_SCALAR,
+  SCOPES,
+  SEMANTIC_NON_NULL,
+  SHAREABLE,
+  SPECIFIED_BY,
+  STREAM_CONFIGURATION,
+  STRING_SCALAR,
+  SUBJECT,
+  SUBJECTS,
+  SUBSCRIPTION_FILTER,
+  SUBSCRIPTION_FILTER_CONDITION,
+  TAG,
+  TOPIC,
+  TOPICS,
+  UNION_UPPER,
+  URL_LOWER,
+} from '../../utils/string-constants';
 import {
   AUTHENTICATED_DEFINITION,
   COMPOSE_DIRECTIVE_DEFINITION,
   CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION,
   CONFIGURE_DESCRIPTION_DEFINITION,
+  CONNECT_FIELD_RESOLVER_DEFINITION,
   DEPRECATED_DEFINITION,
   EDFS_KAFKA_PUBLISH_DEFINITION,
   EDFS_KAFKA_SUBSCRIBE_DEFINITION,
@@ -18,90 +96,24 @@ import {
   INTERFACE_OBJECT_DEFINITION,
   KEY_DEFINITION,
   LINK_DEFINITION,
+  ONE_OF_DEFINITION,
   OVERRIDE_DEFINITION,
   PROVIDES_DEFINITION,
-  REQUIRED_FIELDSET_TYPE_NODE,
-  REQUIRED_STRING_TYPE_NODE,
+  REQUIRE_FETCH_REASONS_DEFINITION,
   REQUIRES_DEFINITION,
   REQUIRES_SCOPES_DEFINITION,
+  SEMANTIC_NON_NULL_DEFINITION,
   SHAREABLE_DEFINITION,
   SPECIFIED_BY_DEFINITION,
   SUBSCRIPTION_FILTER_DEFINITION,
   TAG_DEFINITION,
-} from '../utils/constants';
-import { stringToNamedTypeNode } from '../../ast/utils';
-import { DEFAULT_DEPRECATION_REASON, Kind } from 'graphql';
-import {
-  ARGUMENT_DEFINITION_UPPER,
-  AS,
-  AUTHENTICATED,
-  BOOLEAN_SCALAR,
-  COMPOSE_DIRECTIVE,
-  CONDITION,
-  CONFIGURE_CHILD_DESCRIPTIONS,
-  CONFIGURE_DESCRIPTION,
-  DEFAULT_EDFS_PROVIDER_ID,
-  DEPRECATED,
-  DESCRIPTION_OVERRIDE,
-  EDFS_KAFKA_PUBLISH,
-  EDFS_KAFKA_SUBSCRIBE,
-  EDFS_NATS_PUBLISH,
-  EDFS_NATS_REQUEST,
-  EDFS_NATS_STREAM_CONFIGURATION,
-  EDFS_NATS_SUBSCRIBE,
-  ENUM_UPPER,
-  ENUM_VALUE_UPPER,
-  EXTENDS,
-  EXTERNAL,
-  FIELD_DEFINITION_UPPER,
-  FIELDS,
-  FOR,
-  FROM,
-  IMPORT,
-  INACCESSIBLE,
-  INPUT_FIELD_DEFINITION_UPPER,
-  INPUT_OBJECT_UPPER,
-  INTERFACE_OBJECT,
-  INTERFACE_UPPER,
-  KEY,
-  LINK,
-  LINK_IMPORT,
-  LINK_PURPOSE,
-  NAME,
-  OBJECT_UPPER,
-  OVERRIDE,
-  PROPAGATE,
-  PROVIDER_ID,
-  PROVIDES,
-  REASON,
-  REQUIRES,
-  REQUIRES_SCOPES,
-  RESOLVABLE,
-  SCALAR_UPPER,
-  SCHEMA_UPPER,
-  SCOPE_SCALAR,
-  SCOPES,
-  SHAREABLE,
-  SPECIFIED_BY,
-  STREAM_CONFIGURATION,
-  STRING_SCALAR,
-  SUBJECT,
-  SUBJECTS,
-  SUBSCRIPTION_FILTER,
-  SUBSCRIPTION_FILTER_CONDITION,
-  TAG,
-  TOPIC,
-  TOPICS,
-  UNION_UPPER,
-  URL_LOWER,
-  CHANNEL,
-  CHANNELS,
-  EDFS_REDIS_PUBLISH,
-  EDFS_REDIS_SUBSCRIBE,
-} from '../../utils/string-constants';
+} from '../constants/directive-definitions';
+import { REQUIRED_FIELDSET_TYPE_NODE, REQUIRED_STRING_TYPE_NODE } from '../constants/type-nodes';
+
+// Note that arguments with default values are classed as optional and should be placed into `optionalArgumentNames`.
 
 export const AUTHENTICATED_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([]),
+  argumentTypeNodeByName: new Map<string, ArgumentData>([]),
   isRepeatable: false,
   locations: new Set<string>([ENUM_UPPER, FIELD_DEFINITION_UPPER, INTERFACE_UPPER, OBJECT_UPPER, SCALAR_UPPER]),
   name: AUTHENTICATED,
@@ -111,7 +123,7 @@ export const AUTHENTICATED_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const COMPOSE_DIRECTIVE_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       NAME,
       {
@@ -129,7 +141,7 @@ export const COMPOSE_DIRECTIVE_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const CONFIGURE_DESCRIPTION_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       PROPAGATE,
       {
@@ -173,7 +185,7 @@ export const CONFIGURE_DESCRIPTION_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       PROPAGATE,
       {
@@ -197,8 +209,26 @@ export const CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION_DATA: DirectiveDefinitionDa
   requiredArgumentNames: new Set<string>(),
 };
 
+export const CONNECT_FIELD_RESOLVER_DEFINITION_DATA: DirectiveDefinitionData = {
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
+    [
+      CONTEXT,
+      {
+        name: CONTEXT,
+        typeNode: REQUIRED_FIELDSET_TYPE_NODE,
+      },
+    ],
+  ]),
+  isRepeatable: false,
+  locations: new Set<string>([FIELD_DEFINITION_UPPER]),
+  name: CONNECT_FIELD_RESOLVER,
+  node: CONNECT_FIELD_RESOLVER_DEFINITION,
+  optionalArgumentNames: new Set<string>(),
+  requiredArgumentNames: new Set<string>([CONTEXT]),
+};
+
 export const DEPRECATED_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       REASON,
       {
@@ -225,7 +255,7 @@ export const DEPRECATED_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const EXTENDS_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>(),
+  argumentTypeNodeByName: new Map<string, ArgumentData>(),
   isRepeatable: false,
   locations: new Set<string>([INTERFACE_UPPER, OBJECT_UPPER]),
   name: EXTENDS,
@@ -235,7 +265,7 @@ export const EXTENDS_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const EXTERNAL_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>(),
+  argumentTypeNodeByName: new Map<string, ArgumentData>(),
   isRepeatable: false,
   locations: new Set<string>([FIELD_DEFINITION_UPPER, OBJECT_UPPER]),
   name: EXTERNAL,
@@ -245,7 +275,7 @@ export const EXTERNAL_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const INACCESSIBLE_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>(),
+  argumentTypeNodeByName: new Map<string, ArgumentData>(),
   isRepeatable: false,
   locations: new Set<string>([
     ARGUMENT_DEFINITION_UPPER,
@@ -266,7 +296,7 @@ export const INACCESSIBLE_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const INTERFACE_OBJECT_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>(),
+  argumentTypeNodeByName: new Map<string, ArgumentData>(),
   isRepeatable: false,
   locations: new Set<string>([OBJECT_UPPER]),
   name: INTERFACE_OBJECT,
@@ -276,7 +306,7 @@ export const INTERFACE_OBJECT_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const KAFKA_PUBLISH_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       TOPIC,
       {
@@ -305,7 +335,7 @@ export const KAFKA_PUBLISH_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const KAFKA_SUBSCRIBE_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       TOPICS,
       {
@@ -340,7 +370,7 @@ export const KAFKA_SUBSCRIBE_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const NATS_PUBLISH_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       SUBJECT,
       {
@@ -369,7 +399,7 @@ export const NATS_PUBLISH_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const NATS_REQUEST_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       SUBJECT,
       {
@@ -398,7 +428,7 @@ export const NATS_REQUEST_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const NATS_SUBSCRIBE_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       SUBJECTS,
       {
@@ -435,76 +465,22 @@ export const NATS_SUBSCRIBE_DEFINITION_DATA: DirectiveDefinitionData = {
   locations: new Set<string>([FIELD_DEFINITION_UPPER]),
   name: EDFS_NATS_SUBSCRIBE,
   node: EDFS_NATS_SUBSCRIBE_DEFINITION,
-  optionalArgumentNames: new Set<string>([PROVIDER_ID]),
+  optionalArgumentNames: new Set<string>([PROVIDER_ID, STREAM_CONFIGURATION]),
   requiredArgumentNames: new Set<string>([SUBJECTS]),
 };
 
-export const REDIS_PUBLISH_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
-    [
-      CHANNEL,
-      {
-        name: CHANNEL,
-        typeNode: REQUIRED_STRING_TYPE_NODE,
-      },
-    ],
-    [
-      PROVIDER_ID,
-      {
-        name: PROVIDER_ID,
-        typeNode: REQUIRED_STRING_TYPE_NODE,
-        defaultValue: {
-          kind: Kind.STRING,
-          value: DEFAULT_EDFS_PROVIDER_ID,
-        },
-      },
-    ],
-  ]),
+export const ONE_OF_DEFINITION_DATA: DirectiveDefinitionData = {
+  argumentTypeNodeByName: new Map<string, ArgumentData>([]),
   isRepeatable: false,
-  locations: new Set<string>([FIELD_DEFINITION_UPPER]),
-  name: EDFS_REDIS_PUBLISH,
-  node: EDFS_REDIS_PUBLISH_DEFINITION,
-  optionalArgumentNames: new Set<string>([PROVIDER_ID]),
-  requiredArgumentNames: new Set<string>([CHANNEL]),
-};
-
-export const REDIS_SUBSCRIBE_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
-    [
-      CHANNELS,
-      {
-        name: CHANNELS,
-        typeNode: {
-          kind: Kind.NON_NULL_TYPE,
-          type: {
-            kind: Kind.LIST_TYPE,
-            type: REQUIRED_STRING_TYPE_NODE,
-          },
-        },
-      },
-    ],
-    [
-      PROVIDER_ID,
-      {
-        name: PROVIDER_ID,
-        typeNode: REQUIRED_STRING_TYPE_NODE,
-        defaultValue: {
-          kind: Kind.STRING,
-          value: DEFAULT_EDFS_PROVIDER_ID,
-        },
-      },
-    ],
-  ]),
-  isRepeatable: false,
-  locations: new Set<string>([FIELD_DEFINITION_UPPER]),
-  name: EDFS_REDIS_SUBSCRIBE,
-  node: EDFS_REDIS_SUBSCRIBE_DEFINITION,
-  optionalArgumentNames: new Set<string>([PROVIDER_ID]),
-  requiredArgumentNames: new Set<string>([CHANNELS]),
+  locations: new Set<string>([INPUT_OBJECT_UPPER]),
+  name: ONE_OF,
+  node: ONE_OF_DEFINITION,
+  optionalArgumentNames: new Set<string>(),
+  requiredArgumentNames: new Set<string>(),
 };
 
 export const OVERRIDE_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       FROM,
       {
@@ -522,7 +498,7 @@ export const OVERRIDE_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const KEY_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       FIELDS,
       {
@@ -551,7 +527,7 @@ export const KEY_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const LINK_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       URL_LOWER,
       {
@@ -593,7 +569,7 @@ export const LINK_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const PROVIDES_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       FIELDS,
       {
@@ -611,7 +587,7 @@ export const PROVIDES_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const REQUIRES_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       FIELDS,
       {
@@ -628,8 +604,82 @@ export const REQUIRES_DEFINITION_DATA: DirectiveDefinitionData = {
   requiredArgumentNames: new Set<string>([FIELDS]),
 };
 
+export const REDIS_PUBLISH_DEFINITION_DATA: DirectiveDefinitionData = {
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
+    [
+      CHANNEL,
+      {
+        name: CHANNEL,
+        typeNode: REQUIRED_STRING_TYPE_NODE,
+      },
+    ],
+    [
+      PROVIDER_ID,
+      {
+        name: PROVIDER_ID,
+        typeNode: REQUIRED_STRING_TYPE_NODE,
+        defaultValue: {
+          kind: Kind.STRING,
+          value: DEFAULT_EDFS_PROVIDER_ID,
+        },
+      },
+    ],
+  ]),
+  isRepeatable: false,
+  locations: new Set<string>([FIELD_DEFINITION_UPPER]),
+  name: EDFS_REDIS_PUBLISH,
+  node: EDFS_REDIS_PUBLISH_DEFINITION,
+  optionalArgumentNames: new Set<string>([PROVIDER_ID]),
+  requiredArgumentNames: new Set<string>([CHANNEL]),
+};
+
+export const REDIS_SUBSCRIBE_DEFINITION_DATA: DirectiveDefinitionData = {
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
+    [
+      CHANNELS,
+      {
+        name: CHANNELS,
+        typeNode: {
+          kind: Kind.NON_NULL_TYPE,
+          type: {
+            kind: Kind.LIST_TYPE,
+            type: REQUIRED_STRING_TYPE_NODE,
+          },
+        },
+      },
+    ],
+    [
+      PROVIDER_ID,
+      {
+        name: PROVIDER_ID,
+        typeNode: REQUIRED_STRING_TYPE_NODE,
+        defaultValue: {
+          kind: Kind.STRING,
+          value: DEFAULT_EDFS_PROVIDER_ID,
+        },
+      },
+    ],
+  ]),
+  isRepeatable: false,
+  locations: new Set<string>([FIELD_DEFINITION_UPPER]),
+  name: EDFS_REDIS_SUBSCRIBE,
+  node: EDFS_REDIS_SUBSCRIBE_DEFINITION,
+  optionalArgumentNames: new Set<string>([PROVIDER_ID]),
+  requiredArgumentNames: new Set<string>([CHANNELS]),
+};
+
+export const REQUIRE_FETCH_REASONS_DEFINITION_DATA: DirectiveDefinitionData = {
+  argumentTypeNodeByName: new Map<string, ArgumentData>(),
+  isRepeatable: true,
+  locations: new Set<string>([FIELD_DEFINITION_UPPER, INTERFACE_UPPER, OBJECT_UPPER]),
+  name: REQUIRE_FETCH_REASONS,
+  node: REQUIRE_FETCH_REASONS_DEFINITION,
+  optionalArgumentNames: new Set<string>(),
+  requiredArgumentNames: new Set<string>(),
+};
+
 export const REQUIRES_SCOPES_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       SCOPES,
       {
@@ -661,8 +711,44 @@ export const REQUIRES_SCOPES_DEFINITION_DATA: DirectiveDefinitionData = {
   requiredArgumentNames: new Set<string>([SCOPES]),
 };
 
+export const SEMANTIC_NON_NULL_DATA: DirectiveDefinitionData = {
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
+    [
+      LEVELS,
+      {
+        name: LEVELS,
+        typeNode: {
+          kind: Kind.NON_NULL_TYPE,
+          type: {
+            kind: Kind.LIST_TYPE,
+            type: {
+              kind: Kind.NON_NULL_TYPE,
+              type: stringToNamedTypeNode(INT_SCALAR),
+            },
+          },
+        },
+        defaultValue: {
+          kind: Kind.LIST,
+          values: [
+            {
+              kind: Kind.INT,
+              value: '0',
+            },
+          ],
+        },
+      },
+    ],
+  ]),
+  isRepeatable: false,
+  locations: new Set<string>([FIELD_DEFINITION_UPPER]),
+  name: SEMANTIC_NON_NULL,
+  node: SEMANTIC_NON_NULL_DEFINITION,
+  optionalArgumentNames: new Set<string>([LEVELS]),
+  requiredArgumentNames: new Set<string>(),
+};
+
 export const SPECIFIED_BY_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       URL_LOWER,
       {
@@ -680,7 +766,7 @@ export const SPECIFIED_BY_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const SHAREABLE_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>(),
+  argumentTypeNodeByName: new Map<string, ArgumentData>(),
   isRepeatable: true,
   locations: new Set<string>([FIELD_DEFINITION_UPPER, OBJECT_UPPER]),
   name: SHAREABLE,
@@ -690,7 +776,7 @@ export const SHAREABLE_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const SUBSCRIPTION_FILTER_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       CONDITION,
       {
@@ -711,7 +797,7 @@ export const SUBSCRIPTION_FILTER_DEFINITION_DATA: DirectiveDefinitionData = {
 };
 
 export const TAG_DEFINITION_DATA: DirectiveDefinitionData = {
-  argumentTypeNodeByArgumentName: new Map<string, ArgumentData>([
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
     [
       NAME,
       {

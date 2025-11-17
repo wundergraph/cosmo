@@ -1,10 +1,13 @@
 package config
 
 import (
-	"github.com/goccy/go-yaml"
+	"fmt"
 	"regexp"
 	"testing"
 	"time"
+
+	"github.com/goccy/go-yaml"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/caarlos0/env/v11"
 	"github.com/santhosh-tekuri/jsonschema/v6"
@@ -199,6 +202,61 @@ telemetry:
 	require.Len(t, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetricLabels, 1)
 	require.Equal(t, RegExArray{regexp.MustCompile("^go_.*"), regexp.MustCompile("^process_.*")}, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetrics)
 	require.Equal(t, RegExArray{regexp.MustCompile("^instance")}, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetricLabels)
+}
+
+func TestLogLevels(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		logLevel string
+		expected zapcore.Level
+	}{
+		{
+			name:     "debug level",
+			logLevel: "debug",
+			expected: zapcore.DebugLevel,
+		},
+		{
+			name:     "info level",
+			logLevel: "info",
+			expected: zapcore.InfoLevel,
+		},
+		{
+			name:     "warn level",
+			logLevel: "warn",
+			expected: zapcore.WarnLevel,
+		},
+		{
+			name:     "error level",
+			logLevel: "error",
+			expected: zapcore.ErrorLevel,
+		},
+		{
+			name:     "panic level",
+			logLevel: "panic",
+			expected: zapcore.PanicLevel,
+		},
+		{
+			name:     "fatal level",
+			logLevel: "fatal",
+			expected: zapcore.FatalLevel,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run("parses "+tt.name, func(t *testing.T) {
+			f := createTempFileFromFixture(t, fmt.Sprintf(`
+version: "1"
+log_level: %s
+`, tt.logLevel))
+
+			cfg, err := LoadConfig([]string{f})
+
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, cfg.Config.LogLevel)
+		})
+	}
 }
 
 func TestCustomGoDurationExtension(t *testing.T) {
@@ -602,12 +660,14 @@ telemetry:
       schema_usage:
         enabled: true
         include_operation_sha: true
+        sample_rate: 0.5  # Supports any rate: 1.0, 0.8, 0.5, 0.1, 0.01, etc.
 `)
 		c, err := LoadConfig([]string{f})
 		require.NoError(t, err)
 
 		require.True(t, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.Enabled)
 		require.True(t, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.IncludeOperationSha)
+		require.Equal(t, 0.5, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.SampleRate)
 	})
 
 	t.Run("from environment", func(t *testing.T) {
@@ -619,16 +679,16 @@ version: "1"
 		require.NoError(t, err)
 
 		require.False(t, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.Enabled)
-		require.False(t, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.IncludeOperationSha)
+		require.Equal(t, 1.0, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.SampleRate)
 
 		t.Setenv("PROMETHEUS_SCHEMA_FIELD_USAGE_ENABLED", "true")
-		t.Setenv("PROMETHEUS_SCHEMA_FIELD_USAGE_INCLUDE_OPERATION_SHA", "true")
+		t.Setenv("PROMETHEUS_SCHEMA_FIELD_USAGE_SAMPLE_RATE", "0.25")
 
 		c, err = LoadConfig([]string{f})
 		require.NoError(t, err)
 
 		require.True(t, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.Enabled)
-		require.True(t, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.IncludeOperationSha)
+		require.Equal(t, 0.25, c.Config.Telemetry.Metrics.Prometheus.SchemaFieldUsage.SampleRate)
 	})
 }
 
@@ -1055,4 +1115,402 @@ listen_addr: "localhost:3007"
 		require.ErrorContains(t, err, "- at '/execution_config': additional properties 'file' not allowed")
 	})
 
+}
+
+func TestCircuitBreakerConfig(t *testing.T) {
+	t.Parallel()
+
+	t.Run("verify max exceeding", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+traffic_shaping:
+  all:
+    circuit_breaker:
+      enabled: true
+      request_threshold: 900000
+      error_threshold_percentage: 50000
+      sleep_window: 3m
+      half_open_attempts: 9000
+      required_successful: 700
+      rolling_duration: 6m
+      num_buckets: 170
+`)
+		_, err := LoadConfig([]string{f})
+		require.Error(t, err)
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/request_threshold': maximum: got 900,000, want 10,000")
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/error_threshold_percentage': maximum: got 50,000, want 100")
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/sleep_window': duration must be less or equal than 2m0s")
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/half_open_attempts': maximum: got 9,000, want 100")
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/required_successful': maximum: got 700, want 100")
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/rolling_duration': duration must be less or equal than 2m0s")
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/num_buckets': maximum: got 170, want 120")
+	})
+
+	t.Run("verify min not exceeding", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+traffic_shaping:
+  all:
+    circuit_breaker:
+      enabled: true
+      request_threshold: 0
+      error_threshold_percentage: 0
+      sleep_window: 100ms
+      half_open_attempts: 0
+      required_successful: 0
+      rolling_duration: 2s
+      num_buckets: 0
+`)
+		_, err := LoadConfig([]string{f})
+		require.Error(t, err)
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/request_threshold': minimum: got 0, want 1")
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/error_threshold_percentage': minimum: got 0, want 1")
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/sleep_window': duration must be greater or equal than 250ms")
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/half_open_attempts': minimum: got 0, want 1")
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/required_successful': minimum: got 0, want 1")
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/rolling_duration': duration must be greater or equal than 5s")
+		require.ErrorContains(t, err, "'/traffic_shaping/all/circuit_breaker/num_buckets': minimum: got 0, want 1")
+	})
+
+	t.Run("verify valid configuration", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+traffic_shaping:
+  all:
+    circuit_breaker:
+      enabled: true
+      request_threshold: 5
+      error_threshold_percentage: 5
+      sleep_window: 500ms
+      half_open_attempts: 5
+      required_successful: 5
+      rolling_duration: 7s
+      num_buckets: 5
+`)
+		_, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+	})
+}
+
+func TestValidateJwksConfiguration(t *testing.T) {
+	t.Parallel()
+
+	t.Run("verify valid url config", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+authentication:
+  jwt:
+    jwks:
+      - url: "http://url/valid.json"
+
+`)
+		_, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+	})
+
+	t.Run("verify valid secret config", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+authentication:
+  jwt:
+    jwks:
+      - header_key_id: "givenKID"
+        secret: "example secret"
+        symmetric_algorithm: HS512
+
+`)
+		_, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+	})
+
+	t.Run("verify both secret and url are not allowed together", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+authentication:
+  jwt:
+    jwks:
+      - header_key_id: "givenKID"
+        url: "http://url/valid.json"
+        algorithms: []
+        secret: "example secret"
+        symmetric_algorithm: HS512
+`)
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, "at '/authentication/jwt/jwks/")
+		require.ErrorContains(t, err, "oneOf failed, none matched")
+
+	})
+
+	t.Run("verify secret parameters mandatory", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+authentication:
+  jwt:
+    jwks:
+      - secret: "example secret"
+`)
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, "at '/authentication/jwt/jwks/")
+		require.ErrorContains(t, err, "missing properties 'symmetric_algorithm', 'header_key_id'")
+
+	})
+
+	t.Run("verify url parameter is mandatory", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+authentication:
+  jwt:
+    jwks:
+      - algorithms: []
+
+`)
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, "at '/authentication/jwt/jwks/")
+		require.ErrorContains(t, err, "oneOf failed, none matched")
+
+	})
+
+}
+
+func TestValidateIntrospectionAuthConfig(t *testing.T) {
+	t.Parallel()
+
+	t.Run("verify authentication can be skipped for introspection queries", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+introspection:
+  enabled: true
+
+authentication:
+  ignore_introspection: true
+`)
+		_, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+	})
+
+	t.Run("verify a secret can be set for introspection query authentication skip", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+introspection:
+  enabled: true
+  secret: dedicated_secret_for_introspection
+
+authentication:
+  ignore_introspection: true
+`)
+		_, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+	})
+
+	t.Run("A secret too short is invalid", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+introspection:
+  enabled: true
+  secret: too_short_token
+
+authentication:
+  ignore_introspection: true
+`)
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, "at '/introspection/secret': minLength: got 15, want 32")
+	})
+}
+
+func TestValidateAccessLogFileMode(t *testing.T) {
+	t.Parallel()
+
+	t.Run("verify file mode is parsed correctly", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+access_logs:
+  enabled: true
+  output:
+    file:
+      enabled: true
+      path: ./access.log
+      mode: "640"
+`)
+		c, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+
+		require.Equal(t, FileMode(0640), c.Config.AccessLogs.Output.File.Mode)
+	})
+
+	t.Run("verify file mode is parsed correctly with leading zero", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+access_logs:
+  enabled: true
+  output:
+    file:
+      enabled: true
+      path: ./access.log
+      mode: "0640"
+`)
+		c, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+
+		require.Equal(t, FileMode(0640), c.Config.AccessLogs.Output.File.Mode)
+	})
+
+	t.Run("verify file mode throws an error when pattern is not matched", func(t *testing.T) {
+		t.Parallel()
+
+		invalidPatterns := []string{
+			// Too few digits
+			"0",
+			"00",
+			"64",
+
+			// Too many digits
+			"6440",
+			"06440",
+			"64400",
+			"640000",
+			"0640000",
+
+			// Invalid octal digits (8, 9)
+			"648",
+			"0648",
+			"659",
+			"0659",
+			"688",
+			"0688",
+			"789",
+			"0789",
+			"888",
+			"0888",
+			"999",
+			"0999",
+
+			// Non-numeric characters
+			"64A",
+			"064A",
+			"6BC",
+			"0ABC",
+			"invalid",
+			"abc",
+			"",
+
+			// Special characters
+			"64-",
+			"64+",
+			"64.",
+			"64/",
+			"64 ",
+			" 640",
+			"6 40",
+
+			// Leading zeros in wrong position
+			"6040",
+			"6400",
+			"64000",
+		}
+
+		for _, pattern := range invalidPatterns {
+			f := createTempFileFromFixture(t, `
+version: "1"
+
+access_logs:
+  enabled: true
+  output:
+    file:
+      enabled: true
+      path: ./access.log
+      mode: "`+pattern+`"
+`)
+			_, err := LoadConfig([]string{f})
+			require.Error(t, err, "Pattern '%s' should be invalid but was accepted", pattern)
+		}
+	})
+
+	t.Run("verify file mode accepts valid octal patterns", func(t *testing.T) {
+		t.Parallel()
+
+		validPatterns := []struct {
+			pattern string
+			mode    FileMode
+		}{
+			// 3 digits without leading zero
+			{"000", FileMode(0000)},
+			{"001", FileMode(0001)},
+			{"644", FileMode(0644)},
+			{"640", FileMode(0640)},
+			{"755", FileMode(0755)},
+			{"777", FileMode(0777)},
+			{"600", FileMode(0600)},
+			{"700", FileMode(0700)},
+			{"666", FileMode(0666)},
+			{"111", FileMode(0111)},
+
+			// 3 digits with leading zero
+			{"0000", FileMode(0000)},
+			{"0001", FileMode(0001)},
+			{"0644", FileMode(0644)},
+			{"0640", FileMode(0640)},
+			{"0755", FileMode(0755)},
+			{"0777", FileMode(0777)},
+			{"0600", FileMode(0600)},
+			{"0700", FileMode(0700)},
+			{"0666", FileMode(0666)},
+			{"0111", FileMode(0111)},
+		}
+
+		for _, tc := range validPatterns {
+			f := createTempFileFromFixture(t, `
+version: "1"
+
+access_logs:
+  enabled: true
+  output:
+    file:
+      enabled: true
+      path: ./access.log
+      mode: "`+tc.pattern+`"
+`)
+			c, err := LoadConfig([]string{f})
+			require.NoError(t, err, "Pattern '%s' should be valid but was rejected", tc.pattern)
+			require.Equal(t, tc.mode, c.Config.AccessLogs.Output.File.Mode, "Pattern '%s' should parse to mode %o but got %o", tc.pattern, tc.mode, c.Config.AccessLogs.Output.File.Mode)
+		}
+	})
 }

@@ -51,6 +51,7 @@ export function createIgnoreOverridesForAllOperations(
       const operationsRepo = new OperationsRepository(tx, graph.id);
       const affectedOperations = await schemaCheckRepo.getAffectedOperationsByCheckId({
         checkId: req.checkId,
+        search: req.search,
       });
 
       for (const affectedOperation of affectedOperations) {
