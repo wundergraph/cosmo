@@ -37,11 +37,11 @@ export type InternalSubgraph = {
   directiveDefinitionByName: Map<DirectiveName, DirectiveDefinitionNode>;
   entityInterfaces: Map<string, EntityInterfaceSubgraphData>;
   isVersionTwo: boolean;
-  keyFieldNamesByParentTypeName: Map<TypeName, Set<string>>;
-  name: string;
+  keyFieldNamesByParentTypeName: Map<TypeName, Set<FieldName>>;
+  name: SubgraphName;
   operationTypes: Map<string, OperationTypeNode>;
   overriddenFieldNamesByParentTypeName: Map<TypeName, Set<FieldName>>;
-  parentDefinitionDataByTypeName: Map<string, ParentDefinitionData>;
+  parentDefinitionDataByTypeName: Map<TypeName, ParentDefinitionData>;
   persistedDirectiveDefinitionDataByDirectiveName: Map<DirectiveName, PersistedDirectiveDefinitionData>;
   schema: GraphQLSchema;
   schemaNode?: SchemaDefinitionNode | SchemaExtensionNode;

@@ -8,7 +8,7 @@ export type ValidateOneOfDirectiveParams = {
 };
 
 export type HandleFieldInheritableDirectivesParams = {
-  directivesByName: Map<DirectiveName, ConstDirectiveNode[]>;
+  directivesByName: Map<DirectiveName, Array<ConstDirectiveNode>>;
   fieldName: FieldName;
   inheritedDirectiveNames: Set<DirectiveName>;
   parentData: CompositeOutputData;

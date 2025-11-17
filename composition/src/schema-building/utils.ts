@@ -86,7 +86,7 @@ import { DEFAULT_DEPRECATION_REASON } from 'graphql';
 export function newPersistedDirectivesData(): PersistedDirectivesData {
   return {
     deprecatedReason: '',
-    directivesByName: new Map<DirectiveName, ConstDirectiveNode[]>(),
+    directivesByName: new Map<DirectiveName, Array<ConstDirectiveNode>>(),
     isDeprecated: false,
     tagDirectiveByName: new Map<string, ConstDirectiveNode>(),
   };
@@ -100,7 +100,7 @@ type IsNodeExternalOrShareableResult = {
 export function isNodeExternalOrShareable(
   node: ObjectTypeNode | FieldDefinitionNode,
   areAllFieldsShareable: boolean,
-  directivesByName: Map<DirectiveName, ConstDirectiveNode[]>,
+  directivesByName: Map<DirectiveName, Array<ConstDirectiveNode>>,
 ): IsNodeExternalOrShareableResult {
   const result: IsNodeExternalOrShareableResult = {
     isExternal: directivesByName.has(EXTERNAL),
