@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, createHash } from 'node:crypto';
 import {
   buildRouterConfig,
   type ComposedSubgraph,
@@ -158,6 +158,27 @@ function constructRouterSubgraph(result: FederationSuccess, s: SubgraphMetadata,
   return composedSubgraphGRPC;
 }
 
+/**
+ * Converts a hash to a deterministic UUID format.
+ * Takes a SHA-256 hash and formats it as a UUID v4-like string.
+ * The same input will always produce the same UUID.
+ */
+function hashToUUID(input: string): string {
+  const hash = createHash('sha256').update(input).digest();
+  // Take first 16 bytes (128 bits) for UUID
+  const bytes = hash.subarray(0, 16);
+
+  // Set version (4) bits: bits 12-15 of byte 6 should be 0100
+  bytes[6] = (bytes[6] & 0x0f) | 0x40; // Version 4
+  // Set variant bits: bits 6-7 of byte 8 should be 10
+  bytes[8] = (bytes[8] & 0x3f) | 0x80; // Variant 10
+
+  // Format as UUID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+  const hex = [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('');
+
+  return [hex.slice(0, 8), hex.slice(8, 12), hex.slice(12, 16), hex.slice(16, 20), hex.slice(20, 32)].join('-');
+}
+
 export default (opts: BaseCommandOptions) => {
   const command = new Command('compose');
   command.description(
@@ -241,18 +262,19 @@ export default (opts: BaseCommandOptions) => {
       console.log(compositionWarningsTable.toString());
     }
 
-    const federatedClientSDL = result.shouldIncludeClientSchema ? printSchema(result.federatedGraphClientSchema) : '';
+    const federatedClientSDL = result.shouldIncludeClientSchema
+      ? printSchemaWithDirectives(result.federatedGraphClientSchema)
+      : '';
+    const federatedSDL = printSchemaWithDirectives(result.federatedGraphSchema);
     const routerConfig = buildRouterConfig({
       federatedClientSDL,
-      federatedSDL: printSchemaWithDirectives(result.federatedGraphSchema),
+      federatedSDL,
       fieldConfigurations: result.fieldConfigurations,
       // @TODO get router compatibility version programmatically
       routerCompatibilityVersion: ROUTER_COMPATIBILITY_VERSION_ONE,
-      schemaVersionId: 'static',
+      schemaVersionId: hashToUUID(federatedSDL),
       subgraphs: subgraphs.map((s, index) => constructRouterSubgraph(result, s, index)),
     });
-
-    routerConfig.version = randomUUID();
 
     if (config.feature_flags && config.feature_flags.length > 0) {
       const ffConfigs = await buildFeatureFlagsConfig(config, inputFileLocation, subgraphs, options);
