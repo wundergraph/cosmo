@@ -2603,6 +2603,11 @@
                   "default": false
                 }
               }
+            },
+            "ignore_introspection": {
+              "type": "boolean",
+              "default": false,
+              "description": "When set to true, complexity validation is ignored for all introspection queries."
             }
           }
         },
