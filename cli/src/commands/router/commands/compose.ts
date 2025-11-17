@@ -243,10 +243,9 @@ export default (opts: BaseCommandOptions) => {
     const federatedClientSDL = result.shouldIncludeClientSchema
       ? printSchemaWithDirectives(result.federatedGraphClientSchema)
       : '';
-    const federatedSDL = printSchemaWithDirectives(result.federatedGraphSchema);
     const routerConfig = buildRouterConfig({
       federatedClientSDL,
-      federatedSDL,
+      federatedSDL: printSchemaWithDirectives(result.federatedGraphSchema),
       fieldConfigurations: result.fieldConfigurations,
       // @TODO get router compatibility version programmatically
       routerCompatibilityVersion: ROUTER_COMPATIBILITY_VERSION_ONE,
