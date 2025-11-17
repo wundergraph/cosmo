@@ -28,12 +28,14 @@ import {
   OBJECT,
   OBJECT_UPPER,
   ObjectDefinitionData,
+  parse,
   PROVIDES,
   QUERY,
   REQUIRES,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   SCALAR,
   SHAREABLE,
+  stringToNamedTypeNode,
   Subgraph,
   TAG,
   undefinedDirectiveError,
@@ -58,7 +60,7 @@ import {
   TAG_DIRECTIVE,
 } from './utils/utils';
 import { normalizeString, normalizeSubgraphSuccess, schemaToSortedNormalizedString } from '../utils/utils';
-import { Kind, parse } from 'graphql';
+import { Kind, OperationTypeNode } from 'graphql';
 import { printTypeNode } from '@graphql-tools/merge';
 
 describe('Normalization tests', () => {
@@ -1887,6 +1889,147 @@ describe('Normalization tests', () => {
     expect(inputScalarField.namedTypeName).toBe(SCALAR);
     expect(printTypeNode(inputScalarField.type)).toBe('Scalar!');
   });
+
+  test('that the correct schema node is generated after boiler plate fields are removed', () => {
+    const { schema, schemaNode } = normalizeSubgraphSuccess(naaad, ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(schema)).toBe(
+      normalizeString(
+        `
+        schema @a {
+          query: Query
+        }
+          
+        directive @a on SCHEMA` +
+          KEY_DIRECTIVE +
+          `
+      
+        type Entity @key(fields: "id") {
+          id: ID!
+        }
+        
+        type Query
+        
+        scalar openfed__FieldSet
+    `,
+      ),
+    );
+    expect(schemaNode).toStrictEqual({
+      directives: [
+        {
+          arguments: [],
+          kind: Kind.DIRECTIVE,
+          name: {
+            kind: Kind.NAME,
+            value: 'a',
+          },
+        },
+      ],
+      kind: Kind.SCHEMA_DEFINITION,
+      operationTypes: [
+        {
+          kind: Kind.OPERATION_TYPE_DEFINITION,
+          operation: OperationTypeNode.QUERY,
+          type: stringToNamedTypeNode(QUERY),
+        },
+      ],
+    });
+  });
+
+  test('that the correct schema node is generated after boiler plate fields are removed for a renamed root type', () => {
+    const { schema, schemaNode } = normalizeSubgraphSuccess(naaae, ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(schema)).toBe(
+      normalizeString(
+        `
+        schema @a {
+          query: MyQuery
+        }
+        
+        directive @a on SCHEMA` +
+          KEY_DIRECTIVE +
+          `
+      
+        type Entity @key(fields: "id") {
+          id: ID!
+        }
+        
+        type MyQuery
+        
+        scalar openfed__FieldSet
+    `,
+      ),
+    );
+    expect(schemaNode).toStrictEqual({
+      directives: [
+        {
+          arguments: [],
+          kind: Kind.DIRECTIVE,
+          name: {
+            kind: Kind.NAME,
+            value: 'a',
+          },
+        },
+      ],
+      kind: Kind.SCHEMA_DEFINITION,
+      operationTypes: [
+        {
+          kind: Kind.OPERATION_TYPE_DEFINITION,
+          operation: OperationTypeNode.QUERY,
+          type: stringToNamedTypeNode('MyQuery'),
+        },
+      ],
+    });
+  });
+
+  test('that a schema node description is persisted', () => {
+    const { schema, schemaNode } = normalizeSubgraphSuccess(naaaf, ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(schema)).toBe(
+      normalizeString(
+        `
+        """This is a schema node"""
+        schema @a {
+          query: MyQuery
+        }
+        
+        directive @a on SCHEMA` +
+          KEY_DIRECTIVE +
+          `
+      
+        type Entity @key(fields: "id") {
+          id: ID!
+        }
+        
+        type MyQuery
+        
+        scalar openfed__FieldSet
+    `,
+      ),
+    );
+    expect(schemaNode).toStrictEqual({
+      description: {
+        block: true,
+        kind: Kind.STRING,
+        value: 'This is a schema node',
+      },
+      directives: [
+        {
+          arguments: [],
+          kind: Kind.DIRECTIVE,
+          name: {
+            kind: Kind.NAME,
+            value: 'a',
+          },
+        },
+      ],
+      kind: Kind.SCHEMA_DEFINITION,
+      operationTypes: [
+        {
+          kind: Kind.OPERATION_TYPE_DEFINITION,
+          operation: OperationTypeNode.QUERY,
+          type: stringToNamedTypeNode('MyQuery'),
+        },
+      ],
+    });
+  });
 });
 
 const naa: Subgraph = {
@@ -1990,5 +2133,93 @@ const nac: Subgraph = {
     union Union = Object
     
     scalar Scalar
+  `),
+};
+
+const naaad: Subgraph = {
+  name: 'naaad',
+  url: '',
+  definitions: parse(`
+    schema @a {
+      query: Query
+    }
+    
+    directive @a on SCHEMA
+    
+    type Entity @key(fields: "id") {
+      id: ID!
+    }
+    
+    type Query {
+      _entities(representations: [_Any!]!): [_Entity]!
+      _service: _Service!
+    }
+    
+    scalar _Any
+    
+    union _Entity = Entity
+    
+    type _Service {
+      sdl: String
+    }
+  `),
+};
+
+const naaae: Subgraph = {
+  name: 'naaae',
+  url: '',
+  definitions: parse(`
+    schema @a {
+      query: MyQuery
+    }
+    
+    directive @a on SCHEMA
+    
+    type Entity @key(fields: "id") {
+      id: ID!
+    }
+    
+    type MyQuery {
+      _entities(representations: [_Any!]!): [_Entity]!
+      _service: _Service!
+    }
+    
+    scalar _Any
+    
+    union _Entity = Entity
+    
+    type _Service {
+      sdl: String
+    }
+  `),
+};
+
+const naaaf: Subgraph = {
+  name: 'naaaf',
+  url: '',
+  definitions: parse(`
+    """This is a schema node"""
+    schema @a {
+      query: MyQuery
+    }
+    
+    directive @a on SCHEMA
+    
+    type Entity @key(fields: "id") {
+      id: ID!
+    }
+    
+    type MyQuery {
+      _entities(representations: [_Any!]!): [_Entity]!
+      _service: _Service!
+    }
+    
+    scalar _Any
+    
+    union _Entity = Entity
+    
+    type _Service {
+      sdl: String
+    }
   `),
 };

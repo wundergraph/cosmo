@@ -7,8 +7,6 @@ import {
   invalidNamedTypeError,
   noBaseDefinitionForExtensionError,
   noFieldDefinitionsError,
-  NormalizationSuccess,
-  normalizeSubgraphFromString,
   OBJECT,
   parse,
   ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -241,6 +239,10 @@ describe('Object tests', () => {
       expect(errors[0]).toStrictEqual(duplicateFieldDefinitionError(OBJECT, OBJECT, 'name'));
     });
 
+    /* Some Federation servers accept an empty query root type.
+     * This is so the query can be renamed without defining any fields.
+     * Then the server appends the boilerplate fields to the renamed node.
+     * */
     test('that a Query root type that defines no Fields is valid', () => {
       const { schema } = normalizeSubgraphSuccess(naaaa, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(schema)).toBe(
@@ -253,7 +255,10 @@ describe('Object tests', () => {
       );
     });
 
-    test('that a renamed Query root type that defines no Fields is valid', () => {
+    /* Some Federation servers accept an empty query root type.
+     * This is so the query can be renamed without defining any fields.
+     * Then the server appends the boilerplate fields to the renamed node.
+     * */ test('that a renamed Query root type that defines no Fields is valid', () => {
       const { schema } = normalizeSubgraphSuccess(nbaaa, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(

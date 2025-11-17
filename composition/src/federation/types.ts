@@ -61,7 +61,7 @@ export type ContractTagOptions = {
 
 export type MutualParentDefinitionData = {
   configureDescriptionDataBySubgraphName: Map<string, ConfigureDescriptionData>;
-  directivesByDirectiveName: Map<string, ConstDirectiveNode[]>;
+  directivesByName: Map<string, ConstDirectiveNode[]>;
   extensionType: ExtensionType;
   name: string;
   persistedDirectivesData: PersistedDirectivesData;
