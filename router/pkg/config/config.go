@@ -438,13 +438,13 @@ type ComplexityCalculationCache struct {
 }
 
 type ComplexityLimits struct {
-	Depth             *ComplexityLimit `yaml:"depth"`
-	TotalFields       *ComplexityLimit `yaml:"total_fields"`
-	RootFields        *ComplexityLimit `yaml:"root_fields"`
-	RootFieldAliases  *ComplexityLimit `yaml:"root_field_aliases"`
+	Depth            *ComplexityLimit `yaml:"depth"`
+	TotalFields      *ComplexityLimit `yaml:"total_fields"`
+	RootFields       *ComplexityLimit `yaml:"root_fields"`
+	RootFieldAliases *ComplexityLimit `yaml:"root_field_aliases"`
 
-	// When true, introspection operations are excluded from all complexity checks.
-	SkipIntrospection bool             `yaml:"skip_introspection" envDefault:"false"`
+	// When set to true, complexity validation is ignored for all introspection queries.
+	IgnoreIntrospection bool `yaml:"ignore_introspection" envDefault:"false" env:"SECURITY_COMPLEXITY_IGNORE_INTROSPECTION"`
 }
 
 type ComplexityLimit struct {

@@ -136,7 +136,7 @@ func TestComplexityLimits(t *testing.T) {
 				ModifySecurityConfiguration: func(c *config.SecurityConfiguration) {
 					if c.ComplexityLimits == nil {
 						c.ComplexityLimits = &config.ComplexityLimits{
-							SkipIntrospection: true,
+							IgnoreIntrospection: true,
 							Depth: &config.ComplexityLimit{
 								Enabled: true,
 								Limit:   1,

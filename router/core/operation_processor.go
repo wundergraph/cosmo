@@ -1170,7 +1170,7 @@ func (o *OperationKit) ValidateQueryComplexity() (ok bool, cacheEntry Complexity
 	}
 
 	report := operationreport.Report{}
-	estimator := operation_complexity.NewOperationComplexityEstimator(limits.SkipIntrospection)
+	estimator := operation_complexity.NewOperationComplexityEstimator(limits.IgnoreIntrospection)
 	globalComplexity, rootFieldStats := estimator.Do(o.kit.doc, o.operationProcessor.executor.ClientSchema, &report)
 	cacheResult := ComplexityCacheEntry{
 		Depth:       globalComplexity.Depth,
