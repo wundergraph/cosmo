@@ -36,7 +36,7 @@ interface OperationsSearchProps {
 
 const SORT_OPTIONS = [
   { value: OperationsFetchBasedOn.REQUESTS, label: "Requests" },
-  { value: OperationsFetchBasedOn.LATENCY, label: "Latency" },
+  { value: OperationsFetchBasedOn.LATENCY, label: "P95 Latency" },
   { value: OperationsFetchBasedOn.ERRORS, label: "Errors" },
 ];
 
@@ -103,21 +103,6 @@ export const OperationsSearch = ({
     ],
   );
 
-  const selectedFilters = useMemo(() => {
-    const filters: Array<{id: string; value: string[]}> = [];
-    if (includeDeprecatedFields) {
-      filters.push({
-        id: "deprecatedFields",
-        value: selectedDeprecatedFieldsOptions,
-      });
-    }
-    return filters;
-  }, [includeDeprecatedFields, selectedDeprecatedFieldsOptions]);
-
-  const handleResetFilters = useCallback(() => {
-    onIncludeDeprecatedFieldsChange(false);
-  }, [onIncludeDeprecatedFieldsChange]);
-
   return (
     <div className={`w-full space-y-4 ${className}`}>
       {/* Search Bar */}
@@ -145,12 +130,7 @@ export const OperationsSearch = ({
       <div className="flex w-full flex-wrap items-center justify-between gap-2">
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-2">
-          <AnalyticsFilters filters={filtersList} />
-          {/* <AnalyticsSelectedFilters
-            filters={filtersList}
-            selectedFilters={selectedFilters}
-            onReset={handleResetFilters}
-          /> */}
+          <AnalyticsFilters filters={filtersList} />{" "}
         </div>
 
         {/* Sort Controls */}
