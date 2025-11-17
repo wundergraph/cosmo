@@ -1016,7 +1016,7 @@ export class SchemaCheckRepository {
     for (const composition of composedGraphs) {
       for (const error of composition.errors) {
         compositionErrors.push({
-          message: error.message,
+          message: error,
           federatedGraphName: composition.name,
           namespace: composition.namespace,
           featureFlag: '',
@@ -1025,7 +1025,7 @@ export class SchemaCheckRepository {
 
       for (const warning of composition.warnings) {
         compositionWarnings.push({
-          message: warning.message,
+          message: warning,
           federatedGraphName: composition.name,
           namespace: composition.namespace,
           featureFlag: '',

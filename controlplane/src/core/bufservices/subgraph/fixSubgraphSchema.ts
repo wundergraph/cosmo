@@ -182,7 +182,7 @@ export function fixSubgraphSchema(
       if (composition.errors.length > 0) {
         for (const error of composition.errors) {
           compositionErrors.push({
-            message: error.message,
+            message: error,
             federatedGraphName: composition.name,
             namespace: composition.namespace,
             featureFlag: '',

@@ -5,13 +5,13 @@ import {
   GraphQLSubscriptionProtocol,
   GraphQLWebsocketSubprotocol,
 } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { SubgraphType, ProposalOrigin } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
 import { AxiosError } from 'axios';
 import { isNetworkError, isRetryableError } from 'axios-retry';
 import { formatISO, subHours } from 'date-fns';
 import { FastifyBaseLogger } from 'fastify';
 import { parse, visit } from 'graphql';
-import { Tinypool } from 'tinypool';
 import { uid } from 'uid/secure';
 import {
   ContractTagOptions,
@@ -20,7 +20,10 @@ import {
   LATEST_ROUTER_COMPATIBILITY_VERSION,
   newContractTagOptionsFromArrays,
 } from '@wundergraph/composition';
-import { SubgraphType, ProposalOrigin } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import {
+  composeFederatedContract,
+  composeFederatedGraphWithPotentialContracts,
+} from '../core/composition/composition.js';
 import { MemberRole, WebsocketSubprotocol, ProposalOrigin as ProposalOriginEnum } from '../db/models.js';
 import {
   AuthContext,
@@ -531,19 +534,28 @@ export const checkIfLabelMatchersChanged = (data: {
   return false;
 };
 
-export async function getFederationResultWithPotentialContracts(
-  composeWorkerPool: Tinypool,
+export function getFederationResultWithPotentialContracts(
   federatedGraph: FederatedGraphDTO,
   subgraphsToCompose: SubgraphsToCompose,
   tagOptionsByContractName: Map<string, ContractTagOptions>,
   compositionOptions?: CompositionOptions,
-): Promise<FederationResult | FederationResultWithContracts> {
-  return await composeWorkerPool.run({
-    federatedGraph,
-    subgraphsToCompose,
-    tagOptionsByContractName: Object.fromEntries(tagOptionsByContractName),
+): FederationResult | FederationResultWithContracts {
+  // This condition is only true when entering the method to specifically create/update a contract
+  if (federatedGraph.contract) {
+    return composeFederatedContract(
+      subgraphsToCompose.compositionSubgraphs,
+      newContractTagOptionsFromArrays(federatedGraph.contract.excludeTags, federatedGraph.contract.includeTags),
+      federatedGraph.routerCompatibilityVersion,
+      compositionOptions,
+    );
+  }
+
+  return composeFederatedGraphWithPotentialContracts(
+    subgraphsToCompose.compositionSubgraphs,
+    tagOptionsByContractName,
+    federatedGraph.routerCompatibilityVersion,
     compositionOptions,
-  });
+  );
 }
 
 export function getFederatedGraphRouterCompatibilityVersion(federatedGraphDTOs: Array<FederatedGraphDTO>): string {

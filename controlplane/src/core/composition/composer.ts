@@ -222,10 +222,10 @@ export function mapResultToComposedGraph(
     composedSchema: result.success ? printSchemaWithDirectives(result.federatedGraphSchema) : undefined,
     federatedClientSchema: result.success ? printSchemaWithDirectives(result.federatedGraphClientSchema) : undefined,
     shouldIncludeClientSchema: result.success ? result.shouldIncludeClientSchema : false,
-    errors: result.success ? [] : result.errors,
+    errors: result.success ? [] : result.errors.map((e) => e.toString()),
     subgraphs: subgraphDTOsToComposedSubgraphs(federatedGraph.organizationId, subgraphs, result),
     fieldConfigurations: result.success ? result.fieldConfigurations : [],
-    warnings: result.warnings,
+    warnings: result.warnings.map((w) => w.toString()),
   };
 }
 
@@ -236,12 +236,12 @@ export interface ComposedFederatedGraph {
   namespace: string;
   namespaceId: string;
   composedSchema?: string;
-  errors: Error[];
+  errors: string[];
   subgraphs: ComposedSubgraph[];
   fieldConfigurations: FieldConfiguration[];
   federatedClientSchema?: string;
   shouldIncludeClientSchema?: boolean;
-  warnings: Warning[];
+  warnings: string[];
 }
 
 export interface CompositionDeployResult {

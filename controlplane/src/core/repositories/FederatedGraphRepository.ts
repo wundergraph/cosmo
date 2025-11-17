@@ -1,5 +1,6 @@
 /* eslint-disable no-labels */
 import { KeyObject, randomUUID } from 'node:crypto';
+import { MessageChannel } from 'node:worker_threads';
 import { PlainMessage } from '@bufbuild/protobuf';
 import { FeatureFlagRouterExecutionConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import {
@@ -38,6 +39,12 @@ import {
   newContractTagOptionsFromArrays,
   Warning,
 } from '@wundergraph/composition';
+import {
+  Outputs as ComposeOutputs,
+  Inputs as ComposeInputs,
+  BaseMessage as ComposeBaseMessage,
+  BaseResult as ComposeBaseResult,
+} from '../../workers/compose.js';
 import * as schema from '../../db/schema.js';
 import {
   federatedGraphs,
@@ -80,7 +87,6 @@ import {
   normalizeLabelMatchers,
   normalizeLabels,
 } from '../util.js';
-import { unsuccessfulBaseCompositionError } from '../errors/errors.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { RBACEvaluator } from '../services/RBACEvaluator.js';
 import { ContractRepository } from './ContractRepository.js';
@@ -809,8 +815,8 @@ export class FederatedGraphRepository {
     schemaVersionId: string;
     composedSDL?: string;
     clientSchema?: string;
-    compositionErrors?: Error[];
-    compositionWarnings?: Warning[];
+    compositionErrors?: string[];
+    compositionWarnings?: string[];
     composedSubgraphs: ComposedSubgraph[];
     composedById: string;
     isFeatureFlagComposition: boolean;
@@ -828,11 +834,11 @@ export class FederatedGraphRepository {
       let compositionWarningString = '';
 
       if (compositionErrors && compositionErrors.length > 0) {
-        compositionErrorString = compositionErrors.map((e) => e.toString()).join('\n');
+        compositionErrorString = compositionErrors.join('\n');
       }
 
       if (compositionWarnings && compositionWarnings.length > 0) {
-        compositionWarningString = compositionWarnings.map((w) => w.toString()).join('\n');
+        compositionWarningString = compositionWarnings.join('\n');
       }
 
       const insertedVersion = await tx
@@ -1585,62 +1591,62 @@ export class FederatedGraphRepository {
         const contractBaseCompositionDataByContractId = new Map<string, ContractBaseCompositionData>();
 
         for (const subgraphsToCompose of allSubgraphsToCompose) {
-          const result: FederationResult | FederationResultWithContracts =
-            await getFederationResultWithPotentialContracts(
-              composeWorkerPool,
-              federatedGraph,
-              subgraphsToCompose,
-              tagOptionsByContractName,
-              compositionOptions,
+          const { port1: portMain, port2: portWorker } = new MessageChannel();
+          const inputs: ComposeInputs = {
+            federatedGraph,
+            subgraphsToCompose,
+            tagOptionsByContractName,
+            compositionOptions,
+            port: portWorker,
+          };
+          const outputPromise: Promise<ComposeOutputs> = composeWorkerPool.run(inputs, { transferList: [portWorker] });
+
+          portMain.on('message', async (resultJSON: string) => {
+            const result: ComposeBaseMessage = JSON.parse(resultJSON);
+
+            const routerExecutionConfig = buildRouterExecutionConfig(
+              result.composedGraph,
+              result.federatedSchemaVersionId,
+              federatedGraph.routerCompatibilityVersion,
             );
 
-          if (!result.success) {
-            // Collect all composition errors
-            allCompositionErrors.push(
-              ...result.errors.map((e) => ({
-                federatedGraphName: federatedGraph.name,
-                namespace: federatedGraph.namespace,
-                message: e.message,
-                featureFlag: subgraphsToCompose.featureFlagName || '',
-              })),
-            );
-          }
+            const baseComposition = await composer.saveComposition({
+              composedGraph: result.composedGraph,
+              composedById: actorId,
+              isFeatureFlagComposition: subgraphsToCompose.isFeatureFlagComposition,
+              federatedSchemaVersionId: result.federatedSchemaVersionId,
+              routerExecutionConfig,
+              featureFlagId: subgraphsToCompose.featureFlagId,
+            });
 
-          // Collect all composition warnings
-          allCompositionWarnings.push(
-            ...result.warnings.map((w) => ({
-              federatedGraphName: federatedGraph.name,
-              namespace: federatedGraph.namespace,
-              message: w.message,
-              featureFlag: subgraphsToCompose.featureFlagName || '',
-            })),
-          );
+            const contractGraphs: Map<string, FederatedGraphDTO> = new Map();
+            for (const contractName of result.contractNames) {
+              const contractGraph = await fedGraphRepo.byName(contractName, federatedGraph.namespace);
+              if (!contractGraph) {
+                throw new Error(`The contract graph "${contractName}" was not found.`);
+              }
+              contractGraphs.set(contractName, contractGraph);
+            }
 
-          if (!subgraphsToCompose.isFeatureFlagComposition && !result.success && !federatedGraph.contract) {
-            allCompositionErrors.push(unsuccessfulBaseCompositionError(federatedGraph.name, federatedGraph.namespace));
-          }
+            const baseResult: ComposeBaseResult = {
+              compositionDeployResult: baseComposition,
+              contractGraphs,
+            };
 
-          const composedGraph = mapResultToComposedGraph(federatedGraph, subgraphsToCompose.subgraphs, result);
+            portMain.postMessage(baseResult);
+          });
 
-          const federatedSchemaVersionId = randomUUID();
+          const outputs = await outputPromise;
+          portMain.close();
+          portWorker.close();
 
-          // Build the router execution config if the composed schema is valid
           const routerExecutionConfig = buildRouterExecutionConfig(
-            composedGraph,
-            federatedSchemaVersionId,
+            outputs.composedGraph,
+            outputs.federatedSchemaVersionId,
             federatedGraph.routerCompatibilityVersion,
           );
 
-          const baseComposition = await composer.saveComposition({
-            composedGraph,
-            composedById: actorId,
-            isFeatureFlagComposition: subgraphsToCompose.isFeatureFlagComposition,
-            federatedSchemaVersionId,
-            routerExecutionConfig,
-            featureFlagId: subgraphsToCompose.featureFlagId,
-          });
-
-          if (!result.success || !baseComposition.schemaVersionId || !routerExecutionConfig) {
+          if (!outputs.resultSuccess || !outputs.schemaVersionId || !routerExecutionConfig) {
             /* If the base composition failed to compose or deploy, return to the parent loop, because
              * contracts are not composed if the base composition fails.
              */
@@ -1655,65 +1661,36 @@ export class FederatedGraphRepository {
             );
             // Otherwise, this is the base composition, so store the schema version id
           } else {
-            baseCompositionData.schemaVersionId = baseComposition.schemaVersionId;
+            baseCompositionData.schemaVersionId = outputs.schemaVersionId;
             baseCompositionData.routerExecutionConfig = routerExecutionConfig;
           }
 
           // If there are no contracts, there is nothing further to do
-          if (!('federationResultByContractName' in result)) {
+          if (outputs.contractGraphs.length === 0) {
             continue;
           }
 
-          for (const [contractName, contractResult] of result.federationResultByContractName) {
-            const contractGraph = await fedGraphRepo.byName(contractName, federatedGraph.namespace);
-            if (!contractGraph) {
-              throw new Error(`The contract graph "${contractName}" was not found.`);
-            }
-            if (!contractResult.success) {
-              allCompositionErrors.push(
-                ...contractResult.errors.map((e) => ({
-                  federatedGraphName: contractGraph.name,
-                  namespace: contractGraph.namespace,
-                  message: e.message,
-                  featureFlag: subgraphsToCompose.featureFlagName,
-                })),
-              );
-            }
-
-            allCompositionWarnings.push(
-              ...contractResult.warnings.map((w) => ({
-                federatedGraphName: contractGraph.name,
-                namespace: contractGraph.namespace,
-                message: w.message,
-                featureFlag: subgraphsToCompose.featureFlagName,
-              })),
-            );
-
-            const composedContract = mapResultToComposedGraph(
-              contractGraph,
-              subgraphsToCompose.subgraphs,
-              contractResult,
-            );
-
-            const contractSchemaVersionId = randomUUID();
-
-            // Build the router execution config if the composed schema is valid
+          for (const contractGraph of outputs.contractGraphs) {
             const contractRouterExecutionConfig = buildRouterExecutionConfig(
-              composedContract,
-              contractSchemaVersionId,
+              contractGraph.composedContract,
+              contractGraph.contractSchemaVersionId,
               federatedGraph.routerCompatibilityVersion,
             );
 
             const contractComposition = await composer.saveComposition({
-              composedGraph: composedContract,
+              composedGraph: contractGraph.composedContract,
               composedById: actorId,
               isFeatureFlagComposition: subgraphsToCompose.isFeatureFlagComposition,
-              federatedSchemaVersionId: contractSchemaVersionId,
+              federatedSchemaVersionId: contractGraph.contractSchemaVersionId,
               routerExecutionConfig: contractRouterExecutionConfig,
               featureFlagId: subgraphsToCompose.featureFlagId,
             });
 
-            if (!contractResult.success || !contractComposition.schemaVersionId || !contractRouterExecutionConfig) {
+            if (
+              !contractGraph.contractResultSuccess ||
+              !contractComposition.schemaVersionId ||
+              !contractRouterExecutionConfig
+            ) {
               continue;
             }
 
@@ -1722,7 +1699,7 @@ export class FederatedGraphRepository {
              * The base composition is always the first item in the subgraphsToCompose array.
              * */
             if (!subgraphsToCompose.isFeatureFlagComposition) {
-              contractBaseCompositionDataByContractId.set(contractGraph.id, {
+              contractBaseCompositionDataByContractId.set(contractGraph.contractGraphId, {
                 schemaVersionId: contractComposition.schemaVersionId,
                 routerExecutionConfig: contractRouterExecutionConfig,
                 featureFlagRouterExecutionConfigByFeatureFlagName: new Map<string, FeatureFlagRouterExecutionConfig>(),
@@ -1733,7 +1710,9 @@ export class FederatedGraphRepository {
             /* If the contract has a feature flag, get the current array feature flag versions (or set a new one),
              * and then push the current schema version to the array
              * */
-            const existingContractBaseCompositionData = contractBaseCompositionDataByContractId.get(contractGraph.id);
+            const existingContractBaseCompositionData = contractBaseCompositionDataByContractId.get(
+              contractGraph.contractGraphId,
+            );
             /* If the existingContractSchemaVersions is undefined, it means the contract base composition failed.
              * In this case, simply continue, because when iterating a feature flag for the source graph composition,
              * there may not be any errors for the feature flag.
@@ -1746,6 +1725,9 @@ export class FederatedGraphRepository {
               routerConfigToFeatureFlagExecutionConfig(contractRouterExecutionConfig),
             );
           }
+
+          allCompositionErrors.push(...outputs.allCompositionErrors);
+          allCompositionWarnings.push(...outputs.allCompositionWarnings);
         }
 
         const federatedGraphDTO = await this.byId(federatedGraph.id);
