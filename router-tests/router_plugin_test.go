@@ -102,6 +102,43 @@ func TestRouterPlugin(t *testing.T) {
 			},
 		)
 	})
+
+	t.Run("Should restart plugin if it exits for courses", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithPluginsJSONTemplate,
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+			Plugins: testenv.PluginConfig{
+				Enabled: true,
+				Path:    "../router/plugins",
+			},
+		},
+			func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { killCoursesService }`, // this will kill the plugin
+				})
+
+				require.EventuallyWithT(t, func(c *assert.CollectT) {
+					logMessages := xEnv.Observer().All()
+					require.True(c, slices.ContainsFunc(logMessages, func(msg observer.LoggedEntry) bool {
+						return strings.Contains(msg.Message, "plugin process exited")
+					}), "expected to find 'plugin process exited' message in logs")
+				}, 20*time.Second, 500*time.Millisecond)
+
+				require.EventuallyWithT(t, func(c *assert.CollectT) {
+					// the service should restart the plugin automatically and the request should succeed
+					response := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query { courses { id } }`,
+					})
+
+					require.Equal(c, `{"data":{"courses":[{"id":"1"},{"id":"2"},{"id":"3"}]}}`, response.Body)
+				}, 30*time.Second, 200*time.Millisecond)
+			},
+		)
+	})
 }
 
 func TestVerifyTelemetryForRouterPluginRequests(t *testing.T) {

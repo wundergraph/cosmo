@@ -120,7 +120,6 @@ export default (opts: BaseCommandOptions) => {
         case 'ts': {
           await writeFile(resolve(srcDir, 'plugin.ts'), pupa(TsTemplates.pluginTs, { serviceName }));
           await writeFile(resolve(srcDir, 'plugin-server.ts'), pupa(TsTemplates.pluginServerTs, {}));
-          await writeFile(resolve(srcDir, 'fs-polyfill.ts'), pupa(TsTemplates.fsPolyfillTs, {}));
           await writeFile(resolve(tempDir, 'package.json'), pupa(TsTemplates.packageJson, { serviceName }));
           await writeFile(resolve(tempDir, 'Dockerfile'), pupa(TsTemplates.dockerfile, { originalPluginName }));
           await writeFile(resolve(srcDir, 'plugin.test.ts'), pupa(TsTemplates.pluginTestTs, { serviceName }));
@@ -132,7 +131,15 @@ export default (opts: BaseCommandOptions) => {
 
           const patchDir = resolve(tempDir, 'patches');
           await mkdir(patchDir, { recursive: true });
+
+          // Additionally grpc-node-health-check uses __dirname, which means that when we compile a bun binary
+          // the __dirname is hardcoded to the path of the compiled binary upon compilation, thus
+          // we need to modify the grpc-health-check package to not use __dirname unless explicitly requested
           await writeFile(resolve(patchDir, 'grpc-health-check@2.1.0.patch'), TsTemplates.grpcHealthCheckFilePatch);
+
+          // Due to the way that grpc-node-health-check loads fs using eval, we need to add a polyfill as
+          // protobufjs uses eval("require")("fs") returns null in Bun compiled binaries
+          await writeFile(resolve(srcDir, 'fs-polyfill.ts'), pupa(TsTemplates.fsPolyfillTs, {}));
 
           readmeTemplate = pupa(TsTemplates.readmePartialMd, { originalPluginName });
           mainFileName = 'plugin.ts';
