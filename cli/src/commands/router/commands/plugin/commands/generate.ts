@@ -51,6 +51,9 @@ export default (opts: BaseCommandOptions) => {
         await checkAndInstallTools(options.forceToolsInstallation, language);
       }
 
+      // Start the generation process
+      spinner.start('Generating plugin code...');
+
       const goModulePath = validateAndGetGoModulePath(language, options.goModulePath);
 
       switch (language) {
@@ -63,9 +66,6 @@ export default (opts: BaseCommandOptions) => {
           break;
         }
       }
-
-      // Start the generation process
-      spinner.start('Generating plugin code...');
 
       // Generate proto and mapping files
       await generateProtoAndMapping(pluginDir, protoOptions, spinner);

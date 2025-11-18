@@ -1,6 +1,6 @@
 import path from 'node:path';
 import os from 'node:os';
-import { Command } from 'commander';
+import {Command, program} from 'commander';
 import { resolve } from 'pathe';
 import Spinner from 'ora';
 import { BaseCommandOptions } from '../../../../../core/types/types.js';
@@ -31,15 +31,22 @@ export default (opts: BaseCommandOptions) => {
     const spinner = Spinner({ text: 'Running tests...' });
     const pluginName = path.basename(pluginDir);
 
+
+    const language = getLanguage(pluginDir);
+    if (!language) {
+      renderResultTree(spinner, 'Plugin language detection failed!', false, pluginName, {
+        output: pluginDir,
+      });
+      program.error('');
+    }
+
     try {
-      spinner.start();
-
-      const language = getLanguage(pluginDir);
-
       // Check and install tools if needed
       if (!options.skipToolsInstallation) {
         await checkAndInstallTools(options.forceToolsInstallation, language);
       }
+
+      spinner.start();
 
       switch (language) {
         case 'go': {
