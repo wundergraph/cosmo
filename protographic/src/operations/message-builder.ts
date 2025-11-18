@@ -120,37 +120,45 @@ export function buildMessageFromSelectionSet(
     }
 
     for (const selection of selections) {
-      if (selection.kind === 'Field') {
-        // Only object and interface types have fields that can be selected
-        // Union types require inline fragments to access their constituent types
-        if (isObjectType(currentType) || isInterfaceType(currentType)) {
-          const fieldName = selection.name.value;
-          const protoFieldName = graphqlFieldToProtoField(fieldName);
-          if (!fieldNames.includes(protoFieldName)) {
-            fieldNames.push(protoFieldName);
-            fieldSelections.set(protoFieldName, { selection, type: currentType });
+      switch (selection.kind) {
+        case 'Field':
+          // Only object and interface types have fields that can be selected
+          // Union types require inline fragments to access their constituent types
+          if (isObjectType(currentType) || isInterfaceType(currentType)) {
+            const fieldName = selection.name.value;
+            const protoFieldName = graphqlFieldToProtoField(fieldName);
+            if (!fieldNames.includes(protoFieldName)) {
+              fieldNames.push(protoFieldName);
+              fieldSelections.set(protoFieldName, { selection, type: currentType });
+            }
           }
-        }
-      } else if (selection.kind === 'InlineFragment') {
-        if (selection.typeCondition && options?.schema) {
-          const typeName = selection.typeCondition.name.value;
-          const type = options.schema.getType(typeName);
-          if (type && (isObjectType(type) || isInterfaceType(type))) {
-            collectFields(selection.selectionSet.selections, type, depth + 1);
+          break;
+
+        case 'InlineFragment':
+          if (selection.typeCondition && options?.schema) {
+            const typeName = selection.typeCondition.name.value;
+            const type = options.schema.getType(typeName);
+            if (type && (isObjectType(type) || isInterfaceType(type))) {
+              collectFields(selection.selectionSet.selections, type, depth + 1);
+            }
+          } else if (isObjectType(currentType) || isInterfaceType(currentType)) {
+            // No type condition, but parent type supports fields
+            collectFields(selection.selectionSet.selections, currentType, depth + 1);
           }
-        } else if (isObjectType(currentType) || isInterfaceType(currentType)) {
-          // No type condition, but parent type supports fields
-          collectFields(selection.selectionSet.selections, currentType, depth + 1);
-        }
-      } else if (selection.kind === 'FragmentSpread' && options?.fragments) {
-        const fragmentDef = options.fragments.get(selection.name.value);
-        if (fragmentDef && options?.schema) {
-          const typeName = fragmentDef.typeCondition.name.value;
-          const type = options.schema.getType(typeName);
-          if (type && (isObjectType(type) || isInterfaceType(type))) {
-            collectFields(fragmentDef.selectionSet.selections, type, depth + 1);
+          break;
+
+        case 'FragmentSpread':
+          if (options?.fragments) {
+            const fragmentDef = options.fragments.get(selection.name.value);
+            if (fragmentDef && options?.schema) {
+              const typeName = fragmentDef.typeCondition.name.value;
+              const type = options.schema.getType(typeName);
+              if (type && (isObjectType(type) || isInterfaceType(type))) {
+                collectFields(fragmentDef.selectionSet.selections, type, depth + 1);
+              }
+            }
           }
-        }
+          break;
       }
     }
   };
