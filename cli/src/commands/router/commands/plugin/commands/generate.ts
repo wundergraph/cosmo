@@ -89,7 +89,7 @@ export default (opts: BaseCommandOptions) => {
       renderResultTree(spinner, 'Plugin code generated successfully!', true, pluginName, {
         output: pluginDir,
         time: formattedTime,
-        protoOptions: protoOptions.join(','),
+        protoOptions: protoOptions.map(({ name, constant }) => `${name}=${constant}`).join(','),
       });
 
       console.log('');
@@ -100,7 +100,7 @@ export default (opts: BaseCommandOptions) => {
       renderResultTree(spinner, 'Plugin code generation failed!', false, pluginName, {
         output: pluginDir,
         error: error.message,
-        protoOptions: protoOptions.join(','),
+        protoOptions: protoOptions.map(({ name, constant }) => `${name}=${constant}`).join(','),
       });
 
       program.error('');

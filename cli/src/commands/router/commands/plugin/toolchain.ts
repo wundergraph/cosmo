@@ -119,7 +119,7 @@ const BUN_TOOL_VERSIONS: ToolVersionLanguageMapping = {
 // We combine all tool versions here, per language
 const LanguageSpecificTools: Record<string, ToolVersionLanguageMapping> = {
   go: { ...COMMON_TOOL_VERSIONS, ...GO_TOOL_VERSIONS },
-  bun: { ...COMMON_TOOL_VERSIONS, ...BUN_TOOL_VERSIONS },
+  ts: { ...COMMON_TOOL_VERSIONS, ...BUN_TOOL_VERSIONS },
 };
 
 /**

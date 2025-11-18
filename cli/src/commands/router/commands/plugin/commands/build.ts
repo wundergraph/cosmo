@@ -117,7 +117,7 @@ export default (opts: BaseCommandOptions) => {
         build: options.debug ? 'debug' : 'release',
         type: options.generateOnly ? 'generate-only' : 'full',
         time: formattedTime,
-        protoOptions: protoOptions.join(','),
+        protoOptions: protoOptions.map(({ name, constant }) => `${name}=${constant}`).join(','),
       });
     } catch (error: any) {
       const details: Record<string, any> = {
@@ -127,7 +127,7 @@ export default (opts: BaseCommandOptions) => {
         build: options.debug ? 'debug' : 'release',
         type: options.generateOnly ? 'generate-only' : 'full',
         error: error.message,
-        protoOptions: protoOptions.join(','),
+        protoOptions: protoOptions.map(({ name, constant }) => `${name}=${constant}`).join(','),
       };
       renderResultTree(spinner, 'Plugin build failed!', false, pluginName, details);
       program.error('');
