@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.36.1](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.36.0...graphqlmetrics@0.36.1) (2025-11-17)
+
+### Bug Fixes
+
+* **gqlmetrics:** cache key calculation ([#2327](https://github.com/wundergraph/cosmo/issues/2327)) ([f94a099](https://github.com/wundergraph/cosmo/commit/f94a099ca3ea1c7189535cdf5bd8cd9c1228ff47)) (@StarpTech)
+
 # [0.36.0](https://github.com/wundergraph/cosmo/compare/graphqlmetrics@0.35.0...graphqlmetrics@0.36.0) (2025-09-06)
 
 ### Features
