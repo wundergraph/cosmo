@@ -348,7 +348,16 @@ func (s *MetricsService) appendUsageMetrics(
 		}
 	}
 
+	fmt.Println(schemaUsage.OperationInfo.Name)
+
 	for _, argumentUsage := range schemaUsage.ArgumentMetrics {
+
+		// Sort stable for fields where the order doesn't matter
+		// This reduce cardinality and improves compression
+
+		sort.SliceStable(argumentUsage.SubgraphIDs, func(i, j int) bool {
+			return argumentUsage.SubgraphIDs[i] < argumentUsage.SubgraphIDs[j]
+		})
 
 		err := metricBatch.Append(
 			insertTime,
@@ -366,7 +375,7 @@ func (s *MetricsService) appendUsageMetrics(
 			schemaUsage.ClientInfo.Version,
 			strconv.FormatInt(int64(schemaUsage.RequestInfo.StatusCode), 10),
 			schemaUsage.RequestInfo.Error,
-			[]string{},
+			argumentUsage.SubgraphIDs,
 			true,
 			false,
 			schemaUsage.Attributes,
@@ -378,6 +387,13 @@ func (s *MetricsService) appendUsageMetrics(
 	}
 
 	for _, inputUsage := range schemaUsage.InputMetrics {
+
+		// Sort stable for fields where the order doesn't matter
+		// This reduce cardinality and improves compression
+
+		sort.SliceStable(inputUsage.SubgraphIDs, func(i, j int) bool {
+			return inputUsage.SubgraphIDs[i] < inputUsage.SubgraphIDs[j]
+		})
 
 		err := metricBatch.Append(
 			insertTime,
@@ -395,7 +411,7 @@ func (s *MetricsService) appendUsageMetrics(
 			schemaUsage.ClientInfo.Version,
 			strconv.FormatInt(int64(schemaUsage.RequestInfo.StatusCode), 10),
 			schemaUsage.RequestInfo.Error,
-			[]string{},
+			inputUsage.SubgraphIDs,
 			false,
 			true,
 			schemaUsage.Attributes,

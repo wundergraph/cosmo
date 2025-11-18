@@ -83,7 +83,7 @@ func (p *OperationPlanner) preparePlan(ctx *operationContext) (*planWithMetaData
 
 	if p.trackUsageInfo {
 		out.typeFieldUsageInfo = graphqlschemausage.GetTypeFieldUsageInfo(preparedPlan)
-		out.argumentUsageInfo, err = graphqlschemausage.GetArgumentUsageInfo(&doc, p.executor.RouterSchema)
+		out.argumentUsageInfo, err = graphqlschemausage.GetArgumentUsageInfo(&doc, p.executor.RouterSchema, preparedPlan)
 		if err != nil {
 			return nil, err
 		}
@@ -114,7 +114,7 @@ func (p *OperationPlanner) plan(opContext *operationContext, options PlanOptions
 		if options.TrackSchemaUsageInfo {
 			opContext.typeFieldUsageInfo = prepared.typeFieldUsageInfo
 			opContext.argumentUsageInfo = prepared.argumentUsageInfo
-			opContext.inputUsageInfo, err = graphqlschemausage.GetInputUsageInfo(prepared.operationDocument, p.executor.RouterSchema, opContext.variables)
+			opContext.inputUsageInfo, err = graphqlschemausage.GetInputUsageInfo(prepared.operationDocument, p.executor.RouterSchema, opContext.variables, prepared.preparedPlan, opContext.remapVariables)
 			if err != nil {
 				return err
 			}
@@ -152,7 +152,7 @@ func (p *OperationPlanner) plan(opContext *operationContext, options PlanOptions
 	if options.TrackSchemaUsageInfo {
 		opContext.typeFieldUsageInfo = opContext.preparedPlan.typeFieldUsageInfo
 		opContext.argumentUsageInfo = opContext.preparedPlan.argumentUsageInfo
-		opContext.inputUsageInfo, err = graphqlschemausage.GetInputUsageInfo(opContext.preparedPlan.operationDocument, p.executor.RouterSchema, opContext.variables)
+		opContext.inputUsageInfo, err = graphqlschemausage.GetInputUsageInfo(opContext.preparedPlan.operationDocument, p.executor.RouterSchema, opContext.variables, opContext.preparedPlan.preparedPlan, opContext.remapVariables)
 		if err != nil {
 			return err
 		}

@@ -89,6 +89,8 @@ message ArgumentUsageInfo {
   uint64 Count = 3;
   // NamedType is the underlying type of the argument
   string NamedType = 4;
+  // SubgraphIDs is the list of datasource IDs (e.g subgraph ID) that the argument is used from
+  repeated string SubgraphIDs = 5;
 }
 
 message InputUsageInfo {
@@ -102,6 +104,8 @@ message InputUsageInfo {
   string NamedType = 4;
   // EnumValues is an empty list if the input field is not an enum, otherwise it contains the list of used enum values
   repeated string EnumValues = 5;
+  // SubgraphIDs is the list of datasource IDs (e.g subgraph ID) that the input is used from
+  repeated string SubgraphIDs = 6;
 }
 
 message PublishGraphQLRequestMetricsRequest {

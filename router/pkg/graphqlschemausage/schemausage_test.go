@@ -210,9 +210,9 @@ func TestGetSchemaUsageInfo(t *testing.T) {
 	assert.NoError(t, err)
 
 	fieldUsageInfo := GetTypeFieldUsageInfo(generatedPlan)
-	argumentUsageInfo, err := GetArgumentUsageInfo(&op, &def)
+	argumentUsageInfo, err := GetArgumentUsageInfo(&op, &def, generatedPlan)
 	assert.NoError(t, err)
-	inputUsageInfo, err := GetInputUsageInfo(&op, &def, merged)
+	inputUsageInfo, err := GetInputUsageInfo(&op, &def, merged, generatedPlan, nil)
 	assert.NoError(t, err)
 
 	subscription := &plan.SubscriptionResponsePlan{
@@ -222,9 +222,9 @@ func TestGetSchemaUsageInfo(t *testing.T) {
 	}
 
 	subscriptionFieldUsageInfo := GetTypeFieldUsageInfo(subscription)
-	subscriptionArgumentUsageInfo, err := GetArgumentUsageInfo(&op, &def)
+	subscriptionArgumentUsageInfo, err := GetArgumentUsageInfo(&op, &def, subscription)
 	assert.NoError(t, err)
-	subscriptionInputUsageInfo, err := GetInputUsageInfo(&op, &def, merged)
+	subscriptionInputUsageInfo, err := GetInputUsageInfo(&op, &def, merged, subscription, nil)
 	assert.NoError(t, err)
 
 	assert.Equal(t, fieldUsageInfo, subscriptionFieldUsageInfo)
@@ -284,82 +284,98 @@ func TestGetSchemaUsageInfo(t *testing.T) {
 
 	expectedArgumentUsageInfo := []*graphqlmetricsv1.ArgumentUsageInfo{
 		{
-			TypeName:  "Query",
-			NamedType: "String",
-			Path:      []string{"searchResults", "name"},
+			TypeName:    "Query",
+			NamedType:   "String",
+			Path:        []string{"searchResults", "name"},
+			SubgraphIDs: []string{"https://swapi.dev/api"},
 		},
 		{
-			TypeName:  "Query",
-			NamedType: "SearchFilter",
-			Path:      []string{"searchResults", "filter"},
+			TypeName:    "Query",
+			NamedType:   "SearchFilter",
+			Path:        []string{"searchResults", "filter"},
+			SubgraphIDs: []string{"https://swapi.dev/api"},
 		},
 		{
-			TypeName:  "Query",
-			NamedType: "SearchFilter",
-			Path:      []string{"searchResults", "filter2"},
+			TypeName:    "Query",
+			NamedType:   "SearchFilter",
+			Path:        []string{"searchResults", "filter2"},
+			SubgraphIDs: []string{"https://swapi.dev/api"},
 		},
 		{
-			TypeName:  "Query",
-			NamedType: "Episode",
-			Path:      []string{"searchResults", "enumValue"},
+			TypeName:    "Query",
+			NamedType:   "Episode",
+			Path:        []string{"searchResults", "enumValue"},
+			SubgraphIDs: []string{"https://swapi.dev/api"},
 		},
 		{
-			TypeName:  "Query",
-			NamedType: "Episode",
-			Path:      []string{"searchResults", "enumList"},
+			TypeName:    "Query",
+			NamedType:   "Episode",
+			Path:        []string{"searchResults", "enumList"},
+			SubgraphIDs: []string{"https://swapi.dev/api"},
 		},
 		{
-			TypeName:  "Query",
-			NamedType: "Episode",
-			Path:      []string{"searchResults", "enumList2"},
+			TypeName:    "Query",
+			NamedType:   "Episode",
+			Path:        []string{"searchResults", "enumList2"},
+			SubgraphIDs: []string{"https://swapi.dev/api"},
 		},
 		{
-			TypeName:  "Query",
-			NamedType: "SearchFilter",
-			Path:      []string{"searchResults", "filterList"},
+			TypeName:    "Query",
+			NamedType:   "SearchFilter",
+			Path:        []string{"searchResults", "filterList"},
+			SubgraphIDs: []string{"https://swapi.dev/api"},
 		},
 		{
-			TypeName:  "Human",
-			NamedType: "String",
-			Path:      []string{"inlineName", "name"},
+			TypeName:    "Human",
+			NamedType:   "String",
+			Path:        []string{"inlineName", "name"},
+			SubgraphIDs: []string{"https://swapi.dev/api"},
 		},
 	}
 
 	expectedInputUsageInfo := []graphqlmetricsv1.InputUsageInfo{
 		{
-			NamedType: "String",
+			NamedType:   "String",
+			SubgraphIDs: []string{"https://swapi.dev/api"},
 		},
 		{
-			NamedType:  "Episode",
-			TypeName:   "SearchFilter",
-			EnumValues: []string{"NEWHOPE"},
-			Path:       []string{"SearchFilter", "enumField"},
+			NamedType:   "Episode",
+			TypeName:    "SearchFilter",
+			EnumValues:  []string{"NEWHOPE"},
+			Path:        []string{"SearchFilter", "enumField"},
+			SubgraphIDs: []string{"https://swapi.dev/api"},
 		},
 		{
-			NamedType: "SearchFilter",
+			NamedType:   "SearchFilter",
+			SubgraphIDs: []string{"https://swapi.dev/api"},
 		},
 		{
-			NamedType:  "Episode",
-			EnumValues: []string{"EMPIRE"},
+			NamedType:   "Episode",
+			EnumValues:  []string{"EMPIRE"},
+			SubgraphIDs: []string{"https://swapi.dev/api"},
 		},
 		{
-			NamedType:  "Episode",
-			EnumValues: []string{"JEDI", "EMPIRE", "NEWHOPE"},
+			NamedType:   "Episode",
+			EnumValues:  []string{"JEDI", "EMPIRE", "NEWHOPE"},
+			SubgraphIDs: []string{"https://swapi.dev/api"},
 		},
 		{
-			NamedType: "String",
-			TypeName:  "SearchFilter",
-			Path:      []string{"SearchFilter", "excludeName"},
+			NamedType:   "String",
+			TypeName:    "SearchFilter",
+			Path:        []string{"SearchFilter", "excludeName"},
+			SubgraphIDs: []string{"https://swapi.dev/api"},
 		},
 		{
-			NamedType:  "Episode",
-			TypeName:   "SearchFilter",
-			EnumValues: []string{"JEDI"},
-			Path:       []string{"SearchFilter", "enumField"},
+			NamedType:   "Episode",
+			TypeName:    "SearchFilter",
+			EnumValues:  []string{"JEDI"},
+			Path:        []string{"SearchFilter", "enumField"},
+			SubgraphIDs: []string{"https://swapi.dev/api"},
 		},
 		{
-			NamedType:  "Episode",
-			EnumValues: []string{"JEDI", "EMPIRE"},
+			NamedType:   "Episode",
+			EnumValues:  []string{"JEDI", "EMPIRE"},
+			SubgraphIDs: []string{"https://swapi.dev/api"},
 		},
 	}
 
@@ -456,9 +472,9 @@ func TestGetSchemaUsageInfoInterfaces(t *testing.T) {
 	}
 
 	fieldUsageInfo := GetTypeFieldUsageInfo(generatedPlan)
-	argumentUsageInfo, err := GetArgumentUsageInfo(&op, &def)
+	argumentUsageInfo, err := GetArgumentUsageInfo(&op, &def, generatedPlan)
 	assert.NoError(t, err)
-	inputUsageInfo, err := GetInputUsageInfo(&op, &def, astjson.MustParse(`{}`))
+	inputUsageInfo, err := GetInputUsageInfo(&op, &def, astjson.MustParse(`{}`), generatedPlan, nil)
 	assert.NoError(t, err)
 
 	subscription := &plan.SubscriptionResponsePlan{
@@ -468,9 +484,9 @@ func TestGetSchemaUsageInfoInterfaces(t *testing.T) {
 	}
 
 	subscriptionFieldUsageInfo := GetTypeFieldUsageInfo(subscription)
-	subscriptionArgumentUsageInfo, err := GetArgumentUsageInfo(&op, &def)
+	subscriptionArgumentUsageInfo, err := GetArgumentUsageInfo(&op, &def, subscription)
 	assert.NoError(t, err)
-	subscriptionInputUsageInfo, err := GetInputUsageInfo(&op, &def, astjson.MustParse(`{}`))
+	subscriptionInputUsageInfo, err := GetInputUsageInfo(&op, &def, astjson.MustParse(`{}`), subscription, nil)
 	assert.NoError(t, err)
 
 	assert.Equal(t, fieldUsageInfo, subscriptionFieldUsageInfo)
@@ -508,6 +524,743 @@ func TestGetSchemaUsageInfoInterfaces(t *testing.T) {
 	assert.Len(t, fieldUsageInfo, len(expectedFieldUsageInfo))
 	for i := range expectedFieldUsageInfo {
 		assert.Equal(t, prettyJSON(t, expectedFieldUsageInfo[i]), prettyJSON(t, fieldUsageInfo[i].IntoGraphQLMetrics()), "fieldUsageInfo[%d]", i)
+	}
+}
+
+// TestInputUsageWithNullVariables verifies that null variable values are not tracked as schema usage
+func TestInputUsageWithNullVariables(t *testing.T) {
+	schema := `
+		schema {
+			query: Query
+		}
+		
+		type Query {
+			findEmployees(criteria: EmployeeSearchInput): [Employee!]!
+		}
+		
+		type Employee {
+			id: ID!
+		}
+		
+		input EmployeeSearchInput {
+			hasPets: Boolean
+			department: String
+		}
+	`
+
+	operation := `
+		query FindEmployees($criteria: EmployeeSearchInput) {
+			findEmployees(criteria: $criteria) {
+				id
+			}
+		}
+	`
+
+	// Test with null value
+	variables := `{"criteria": null}`
+
+	def, rep := astparser.ParseGraphqlDocumentString(schema)
+	require.False(t, rep.HasErrors())
+	op, rep := astparser.ParseGraphqlDocumentString(operation)
+	require.False(t, rep.HasErrors())
+	err := asttransform.MergeDefinitionWithBaseSchema(&def)
+	require.NoError(t, err)
+
+	report := &operationreport.Report{}
+	norm := astnormalization.NewNormalizer(true, true)
+	norm.NormalizeOperation(&op, &def, report)
+	require.False(t, report.HasErrors())
+
+	valid := astvalidation.DefaultOperationValidator()
+	valid.Validate(&op, &def, report)
+	require.False(t, report.HasErrors())
+
+	dsCfg, err := plan.NewDataSourceConfiguration[any](
+		"employees-subgraph",
+		&FakeFactory[any]{upstreamSchema: &def},
+		&plan.DataSourceMetadata{
+			RootNodes: []plan.TypeField{
+				{TypeName: "Query", FieldNames: []string{"findEmployees"}},
+			},
+			ChildNodes: []plan.TypeField{
+				{TypeName: "Employee", FieldNames: []string{"id"}},
+			},
+		},
+		nil,
+	)
+	require.NoError(t, err)
+
+	planner, err := plan.NewPlanner(plan.Configuration{
+		DisableResolveFieldPositions: true,
+		DataSources:                  []plan.DataSource{dsCfg},
+	})
+	require.NoError(t, err)
+
+	generatedPlan := planner.Plan(&op, &def, "FindEmployees", report)
+	require.False(t, report.HasErrors())
+
+	vars, err := astjson.Parse(variables)
+	require.NoError(t, err)
+
+	inputUsageInfo, err := GetInputUsageInfo(&op, &def, vars, generatedPlan, nil)
+	require.NoError(t, err)
+
+	// Should be empty because the variable value is null
+	assert.Empty(t, inputUsageInfo, "Null variable values should not be tracked as usage")
+}
+
+// TestInputUsageWithPartialNullFields verifies that null fields within input objects are not tracked
+func TestInputUsageWithPartialNullFields(t *testing.T) {
+	schema := `
+		schema {
+			query: Query
+		}
+		
+		type Query {
+			findEmployees(criteria: EmployeeSearchInput): [Employee!]!
+		}
+		
+		type Employee {
+			id: ID!
+		}
+		
+		input EmployeeSearchInput {
+			hasPets: Boolean
+			department: String
+			minAge: Int
+		}
+	`
+
+	operation := `
+		query FindEmployees($criteria: EmployeeSearchInput) {
+			findEmployees(criteria: $criteria) {
+				id
+			}
+		}
+	`
+
+	// Test with some null fields - only hasPets should be tracked, not department or minAge
+	variables := `{"criteria": {"hasPets": true, "department": null, "minAge": null}}`
+
+	def, rep := astparser.ParseGraphqlDocumentString(schema)
+	require.False(t, rep.HasErrors())
+	op, rep := astparser.ParseGraphqlDocumentString(operation)
+	require.False(t, rep.HasErrors())
+	err := asttransform.MergeDefinitionWithBaseSchema(&def)
+	require.NoError(t, err)
+
+	report := &operationreport.Report{}
+	norm := astnormalization.NewNormalizer(true, true)
+	norm.NormalizeOperation(&op, &def, report)
+	require.False(t, report.HasErrors())
+
+	valid := astvalidation.DefaultOperationValidator()
+	valid.Validate(&op, &def, report)
+	require.False(t, report.HasErrors())
+
+	dsCfg, err := plan.NewDataSourceConfiguration[any](
+		"employees-subgraph",
+		&FakeFactory[any]{upstreamSchema: &def},
+		&plan.DataSourceMetadata{
+			RootNodes: []plan.TypeField{
+				{TypeName: "Query", FieldNames: []string{"findEmployees"}},
+			},
+			ChildNodes: []plan.TypeField{
+				{TypeName: "Employee", FieldNames: []string{"id"}},
+			},
+		},
+		nil,
+	)
+	require.NoError(t, err)
+
+	planner, err := plan.NewPlanner(plan.Configuration{
+		DisableResolveFieldPositions: true,
+		DataSources:                  []plan.DataSource{dsCfg},
+	})
+	require.NoError(t, err)
+
+	generatedPlan := planner.Plan(&op, &def, "FindEmployees", report)
+	require.False(t, report.HasErrors())
+
+	vars, err := astjson.Parse(variables)
+	require.NoError(t, err)
+
+	inputUsageInfo, err := GetInputUsageInfo(&op, &def, vars, generatedPlan, nil)
+	require.NoError(t, err)
+
+	// Should only track the input type and hasPets field, not the null fields
+	expectedUsage := []graphqlmetricsv1.InputUsageInfo{
+		{
+			NamedType:   "Boolean",
+			TypeName:    "EmployeeSearchInput",
+			Path:        []string{"EmployeeSearchInput", "hasPets"},
+			SubgraphIDs: []string{"employees-subgraph"},
+		},
+		{
+			NamedType:   "EmployeeSearchInput",
+			SubgraphIDs: []string{"employees-subgraph"},
+		},
+	}
+
+	assert.Len(t, inputUsageInfo, len(expectedUsage), "Should only track non-null fields")
+	for i := range expectedUsage {
+		assert.JSONEq(t, prettyJSON(t, &expectedUsage[i]), prettyJSON(t, inputUsageInfo[i]), "inputUsageInfo[%d]", i)
+	}
+}
+
+// TestInputScalarFieldsInVariables specifically tests that scalar fields inside input objects
+// are tracked when passed as variables (not inline)
+func TestInputScalarFieldsInVariables(t *testing.T) {
+	// Create a simple schema with input type containing scalar fields
+	schema := `
+		schema {
+			query: Query
+		}
+		
+		type Query {
+			findEmployees(criteria: EmployeeSearchInput!): [Employee!]!
+		}
+		
+		type Employee {
+			id: ID!
+		}
+		
+		input EmployeeSearchInput {
+			hasPets: Boolean!
+			minAge: Int
+			department: String
+		}
+	`
+
+	operation := `
+		query FindEmployeesWithVariable($criteria: EmployeeSearchInput!) {
+			findEmployees(criteria: $criteria) {
+				id
+			}
+		}
+	`
+
+	variables := `{"criteria": {"hasPets": true, "minAge": 25, "department": "Engineering"}}`
+
+	def, rep := astparser.ParseGraphqlDocumentString(schema)
+	require.False(t, rep.HasErrors())
+	op, rep := astparser.ParseGraphqlDocumentString(operation)
+	require.False(t, rep.HasErrors())
+	err := asttransform.MergeDefinitionWithBaseSchema(&def)
+	require.NoError(t, err)
+
+	report := &operationreport.Report{}
+	norm := astnormalization.NewNormalizer(true, true)
+	norm.NormalizeOperation(&op, &def, report)
+	require.False(t, report.HasErrors())
+
+	valid := astvalidation.DefaultOperationValidator()
+	valid.Validate(&op, &def, report)
+	require.False(t, report.HasErrors())
+
+	dsCfg, err := plan.NewDataSourceConfiguration[any](
+		"employees-subgraph",
+		&FakeFactory[any]{upstreamSchema: &def},
+		&plan.DataSourceMetadata{
+			RootNodes: []plan.TypeField{
+				{TypeName: "Query", FieldNames: []string{"findEmployees"}},
+			},
+			ChildNodes: []plan.TypeField{
+				{TypeName: "Employee", FieldNames: []string{"id"}},
+			},
+		},
+		nil,
+	)
+	require.NoError(t, err)
+
+	planner, err := plan.NewPlanner(plan.Configuration{
+		DisableResolveFieldPositions: true,
+		DataSources:                  []plan.DataSource{dsCfg},
+	})
+	require.NoError(t, err)
+
+	generatedPlan := planner.Plan(&op, &def, "FindEmployeesWithVariable", report)
+	require.False(t, report.HasErrors())
+
+	vars, err := astjson.Parse(variables)
+	require.NoError(t, err)
+
+	inputUsageInfo, err := GetInputUsageInfo(&op, &def, vars, generatedPlan, nil)
+	require.NoError(t, err)
+
+	expectedInputUsageInfo := []graphqlmetricsv1.InputUsageInfo{
+		{
+			NamedType:   "Boolean",
+			TypeName:    "EmployeeSearchInput",
+			Path:        []string{"EmployeeSearchInput", "hasPets"},
+			SubgraphIDs: []string{"employees-subgraph"},
+		},
+		{
+			NamedType:   "Int",
+			TypeName:    "EmployeeSearchInput",
+			Path:        []string{"EmployeeSearchInput", "minAge"},
+			SubgraphIDs: []string{"employees-subgraph"},
+		},
+		{
+			NamedType:   "String",
+			TypeName:    "EmployeeSearchInput",
+			Path:        []string{"EmployeeSearchInput", "department"},
+			SubgraphIDs: []string{"employees-subgraph"},
+		},
+		{
+			NamedType:   "EmployeeSearchInput",
+			SubgraphIDs: []string{"employees-subgraph"},
+		},
+	}
+
+	assert.Len(t, inputUsageInfo, len(expectedInputUsageInfo))
+	for i := range expectedInputUsageInfo {
+		assert.JSONEq(t, prettyJSON(t, &expectedInputUsageInfo[i]), prettyJSON(t, inputUsageInfo[i]), "inputUsageInfo[%d]", i)
+	}
+}
+
+// TestInputNestedScalarFields tests that scalar fields inside nested input objects
+// are tracked correctly with proper paths and subgraph IDs
+func TestInputNestedScalarFields(t *testing.T) {
+	schema := `
+		schema {
+			query: Query
+		}
+		
+		type Query {
+			search(filter: SearchFilter!): [Result!]!
+		}
+		
+		type Result {
+			id: ID!
+		}
+		
+		input SearchFilter {
+			name: String
+			criteria: SearchCriteria
+			tags: [String]
+		}
+		
+		input SearchCriteria {
+			minScore: Int!
+			maxScore: Int
+			isActive: Boolean
+			nested: NestedCriteria
+		}
+		
+		input NestedCriteria {
+			value: String!
+		}
+	`
+
+	operation := `
+		query SearchQuery($filter: SearchFilter!) {
+			search(filter: $filter) {
+				id
+			}
+		}
+	`
+
+	variables := `{
+		"filter": {
+			"name": "test",
+			"criteria": {
+				"minScore": 10,
+				"maxScore": 100,
+				"isActive": true,
+				"nested": {
+					"value": "deep"
+				}
+			},
+			"tags": ["tag1", "tag2"]
+		}
+	}`
+
+	def, rep := astparser.ParseGraphqlDocumentString(schema)
+	require.False(t, rep.HasErrors())
+	op, rep := astparser.ParseGraphqlDocumentString(operation)
+	require.False(t, rep.HasErrors())
+	err := asttransform.MergeDefinitionWithBaseSchema(&def)
+	require.NoError(t, err)
+
+	report := &operationreport.Report{}
+	norm := astnormalization.NewNormalizer(true, true)
+	norm.NormalizeOperation(&op, &def, report)
+	require.False(t, report.HasErrors())
+
+	valid := astvalidation.DefaultOperationValidator()
+	valid.Validate(&op, &def, report)
+	require.False(t, report.HasErrors())
+
+	dsCfg, err := plan.NewDataSourceConfiguration[any](
+		"search-subgraph",
+		&FakeFactory[any]{upstreamSchema: &def},
+		&plan.DataSourceMetadata{
+			RootNodes: []plan.TypeField{
+				{TypeName: "Query", FieldNames: []string{"search"}},
+			},
+			ChildNodes: []plan.TypeField{
+				{TypeName: "Result", FieldNames: []string{"id"}},
+			},
+		},
+		nil,
+	)
+	require.NoError(t, err)
+
+	planner, err := plan.NewPlanner(plan.Configuration{
+		DisableResolveFieldPositions: true,
+		DataSources:                  []plan.DataSource{dsCfg},
+	})
+	require.NoError(t, err)
+
+	generatedPlan := planner.Plan(&op, &def, "SearchQuery", report)
+	require.False(t, report.HasErrors())
+
+	vars, err := astjson.Parse(variables)
+	require.NoError(t, err)
+
+	inputUsageInfo, err := GetInputUsageInfo(&op, &def, vars, generatedPlan, nil)
+	require.NoError(t, err)
+
+	expectedInputUsageInfo := []graphqlmetricsv1.InputUsageInfo{
+		{
+			NamedType:   "String",
+			TypeName:    "SearchFilter",
+			Path:        []string{"SearchFilter", "name"},
+			SubgraphIDs: []string{"search-subgraph"},
+		},
+		{
+			NamedType:   "Int",
+			TypeName:    "SearchCriteria",
+			Path:        []string{"SearchCriteria", "minScore"},
+			SubgraphIDs: []string{"search-subgraph"},
+		},
+		{
+			NamedType:   "Int",
+			TypeName:    "SearchCriteria",
+			Path:        []string{"SearchCriteria", "maxScore"},
+			SubgraphIDs: []string{"search-subgraph"},
+		},
+		{
+			NamedType:   "Boolean",
+			TypeName:    "SearchCriteria",
+			Path:        []string{"SearchCriteria", "isActive"},
+			SubgraphIDs: []string{"search-subgraph"},
+		},
+		{
+			NamedType:   "String",
+			TypeName:    "NestedCriteria",
+			Path:        []string{"NestedCriteria", "value"},
+			SubgraphIDs: []string{"search-subgraph"},
+		},
+		{
+			NamedType:   "NestedCriteria",
+			TypeName:    "SearchCriteria",
+			Path:        []string{"SearchCriteria", "nested"},
+			SubgraphIDs: []string{"search-subgraph"},
+		},
+		{
+			NamedType:   "SearchCriteria",
+			TypeName:    "SearchFilter",
+			Path:        []string{"SearchFilter", "criteria"},
+			SubgraphIDs: []string{"search-subgraph"},
+		},
+		{
+			NamedType:   "String",
+			TypeName:    "SearchFilter",
+			Path:        []string{"SearchFilter", "tags"},
+			SubgraphIDs: []string{"search-subgraph"},
+		},
+		{
+			NamedType:   "SearchFilter",
+			SubgraphIDs: []string{"search-subgraph"},
+		},
+	}
+
+	assert.Len(t, inputUsageInfo, len(expectedInputUsageInfo))
+	for i := range expectedInputUsageInfo {
+		assert.JSONEq(t, prettyJSON(t, &expectedInputUsageInfo[i]), prettyJSON(t, inputUsageInfo[i]), "inputUsageInfo[%d]", i)
+	}
+}
+
+// TestMultipleSubgraphs tests that SubgraphIDs are correctly extracted when
+// fields, arguments, and inputs come from different subgraphs
+func TestMultipleSubgraphs(t *testing.T) {
+	schema := `
+		schema {
+			query: Query
+		}
+		
+		type Query {
+			user(id: ID!): User
+			product(filter: ProductFilter!): Product
+		}
+		
+		type User {
+			id: ID!
+			name: String!
+			orders: [Order!]!
+		}
+		
+		type Order {
+			id: ID!
+			total: Float!
+		}
+		
+		type Product {
+			id: ID!
+			name: String!
+			price: Float!
+		}
+		
+		input ProductFilter {
+			minPrice: Float
+			maxPrice: Float
+			category: String
+		}
+	`
+
+	operation := `
+		query GetData($userId: ID!, $productFilter: ProductFilter!) {
+			user(id: $userId) {
+				id
+				name
+				orders {
+					id
+					total
+				}
+			}
+			product(filter: $productFilter) {
+				id
+				name
+				price
+			}
+		}
+	`
+
+	variables := `{
+		"userId": "123",
+		"productFilter": {
+			"minPrice": 10.0,
+			"maxPrice": 100.0,
+			"category": "electronics"
+		}
+	}`
+
+	def, rep := astparser.ParseGraphqlDocumentString(schema)
+	require.False(t, rep.HasErrors())
+	op, rep := astparser.ParseGraphqlDocumentString(operation)
+	require.False(t, rep.HasErrors())
+	err := asttransform.MergeDefinitionWithBaseSchema(&def)
+	require.NoError(t, err)
+
+	report := &operationreport.Report{}
+	norm := astnormalization.NewNormalizer(true, true)
+	norm.NormalizeOperation(&op, &def, report)
+	require.False(t, report.HasErrors())
+
+	valid := astvalidation.DefaultOperationValidator()
+	valid.Validate(&op, &def, report)
+	require.False(t, report.HasErrors())
+
+	// Create multiple subgraphs - users and products come from different sources
+	usersSubgraph, err := plan.NewDataSourceConfiguration[any](
+		"users-subgraph",
+		&FakeFactory[any]{upstreamSchema: &def},
+		&plan.DataSourceMetadata{
+			RootNodes: []plan.TypeField{
+				{TypeName: "Query", FieldNames: []string{"user"}},
+			},
+			ChildNodes: []plan.TypeField{
+				{TypeName: "User", FieldNames: []string{"id", "name", "orders"}},
+				{TypeName: "Order", FieldNames: []string{"id", "total"}},
+			},
+		},
+		nil,
+	)
+	require.NoError(t, err)
+
+	productsSubgraph, err := plan.NewDataSourceConfiguration[any](
+		"products-subgraph",
+		&FakeFactory[any]{upstreamSchema: &def},
+		&plan.DataSourceMetadata{
+			RootNodes: []plan.TypeField{
+				{TypeName: "Query", FieldNames: []string{"product"}},
+			},
+			ChildNodes: []plan.TypeField{
+				{TypeName: "Product", FieldNames: []string{"id", "name", "price"}},
+			},
+		},
+		nil,
+	)
+	require.NoError(t, err)
+
+	planner, err := plan.NewPlanner(plan.Configuration{
+		DisableResolveFieldPositions: true,
+		DataSources:                  []plan.DataSource{usersSubgraph, productsSubgraph},
+	})
+	require.NoError(t, err)
+
+	generatedPlan := planner.Plan(&op, &def, "GetData", report)
+	require.False(t, report.HasErrors())
+
+	vars, err := astjson.Parse(variables)
+	require.NoError(t, err)
+
+	fieldUsageInfo := GetTypeFieldUsageInfo(generatedPlan)
+	argumentUsageInfo, err := GetArgumentUsageInfo(&op, &def, generatedPlan)
+	require.NoError(t, err)
+	inputUsageInfo, err := GetInputUsageInfo(&op, &def, vars, generatedPlan, nil)
+	require.NoError(t, err)
+
+	// Verify field usage - fields should be attributed to the correct subgraph
+	expectedFieldUsageInfo := []*graphqlmetricsv1.TypeFieldUsageInfo{
+		{
+			TypeNames:   []string{"Query"},
+			Path:        []string{"user"},
+			NamedType:   "User",
+			SubgraphIDs: []string{"users-subgraph"},
+		},
+		{
+			TypeNames:   []string{"User"},
+			Path:        []string{"user", "id"},
+			NamedType:   "ID",
+			SubgraphIDs: []string{"users-subgraph"},
+		},
+		{
+			TypeNames:   []string{"User"},
+			Path:        []string{"user", "name"},
+			NamedType:   "String",
+			SubgraphIDs: []string{"users-subgraph"},
+		},
+		{
+			TypeNames:   []string{"User"},
+			Path:        []string{"user", "orders"},
+			NamedType:   "Order",
+			SubgraphIDs: []string{"users-subgraph"},
+		},
+		{
+			TypeNames:   []string{"Order"},
+			Path:        []string{"user", "orders", "id"},
+			NamedType:   "ID",
+			SubgraphIDs: []string{"users-subgraph"},
+		},
+		{
+			TypeNames:   []string{"Order"},
+			Path:        []string{"user", "orders", "total"},
+			NamedType:   "Float",
+			SubgraphIDs: []string{"users-subgraph"},
+		},
+		{
+			TypeNames:   []string{"Query"},
+			Path:        []string{"product"},
+			NamedType:   "Product",
+			SubgraphIDs: []string{"products-subgraph"},
+		},
+		{
+			TypeNames:   []string{"Product"},
+			Path:        []string{"product", "id"},
+			NamedType:   "ID",
+			SubgraphIDs: []string{"products-subgraph"},
+		},
+		{
+			TypeNames:   []string{"Product"},
+			Path:        []string{"product", "name"},
+			NamedType:   "String",
+			SubgraphIDs: []string{"products-subgraph"},
+		},
+		{
+			TypeNames:   []string{"Product"},
+			Path:        []string{"product", "price"},
+			NamedType:   "Float",
+			SubgraphIDs: []string{"products-subgraph"},
+		},
+	}
+
+	// Verify argument usage - arguments should be attributed to the correct subgraph
+	expectedArgumentUsageInfo := []*graphqlmetricsv1.ArgumentUsageInfo{
+		{
+			TypeName:    "Query",
+			NamedType:   "ID",
+			Path:        []string{"user", "id"},
+			SubgraphIDs: []string{"users-subgraph"},
+		},
+		{
+			TypeName:    "Query",
+			NamedType:   "ProductFilter",
+			Path:        []string{"product", "filter"},
+			SubgraphIDs: []string{"products-subgraph"},
+		},
+	}
+
+	// Verify input usage - inputs should be attributed to the correct subgraph
+	expectedInputUsageInfo := []graphqlmetricsv1.InputUsageInfo{
+		{
+			NamedType:   "ID",
+			SubgraphIDs: []string{"users-subgraph"},
+		},
+		{
+			NamedType:   "Float",
+			TypeName:    "ProductFilter",
+			Path:        []string{"ProductFilter", "minPrice"},
+			SubgraphIDs: []string{"products-subgraph"},
+		},
+		{
+			NamedType:   "Float",
+			TypeName:    "ProductFilter",
+			Path:        []string{"ProductFilter", "maxPrice"},
+			SubgraphIDs: []string{"products-subgraph"},
+		},
+		{
+			NamedType:   "String",
+			TypeName:    "ProductFilter",
+			Path:        []string{"ProductFilter", "category"},
+			SubgraphIDs: []string{"products-subgraph"},
+		},
+		{
+			NamedType:   "ProductFilter",
+			SubgraphIDs: []string{"products-subgraph"},
+		},
+	}
+
+	// Assert all expectations
+	assert.Len(t, fieldUsageInfo, len(expectedFieldUsageInfo))
+	for i := range expectedFieldUsageInfo {
+		assert.JSONEq(t, prettyJSON(t, expectedFieldUsageInfo[i]), prettyJSON(t, fieldUsageInfo[i].IntoGraphQLMetrics()), "fieldUsageInfo[%d]", i)
+	}
+
+	assert.Len(t, argumentUsageInfo, len(expectedArgumentUsageInfo))
+	for i := range expectedArgumentUsageInfo {
+		assert.JSONEq(t, prettyJSON(t, expectedArgumentUsageInfo[i]), prettyJSON(t, argumentUsageInfo[i]), "argumentUsageInfo[%d]", i)
+	}
+
+	assert.Len(t, inputUsageInfo, len(expectedInputUsageInfo))
+	for i := range expectedInputUsageInfo {
+		assert.JSONEq(t, prettyJSON(t, &expectedInputUsageInfo[i]), prettyJSON(t, inputUsageInfo[i]), "inputUsageInfo[%d]", i)
+	}
+
+	// Additionally, verify that no field is wrongly attributed to the wrong subgraph
+	for _, info := range fieldUsageInfo {
+		if len(info.Path) > 0 {
+			firstPath := info.Path[0]
+			if firstPath == "user" {
+				assert.Equal(t, []string{"users-subgraph"}, info.SubgraphIDs, "user fields should only reference users-subgraph")
+			} else if firstPath == "product" {
+				assert.Equal(t, []string{"products-subgraph"}, info.SubgraphIDs, "product fields should only reference products-subgraph")
+			}
+		}
+	}
+
+	// Verify arguments are attributed correctly
+	for _, info := range argumentUsageInfo {
+		if len(info.Path) > 0 {
+			firstPath := info.Path[0]
+			if firstPath == "user" {
+				assert.Equal(t, []string{"users-subgraph"}, info.SubgraphIDs, "user arguments should reference users-subgraph")
+			} else if firstPath == "product" {
+				assert.Equal(t, []string{"products-subgraph"}, info.SubgraphIDs, "product arguments should reference products-subgraph")
+			}
+		}
 	}
 }
 
