@@ -131,15 +131,13 @@ export default (opts: BaseCommandOptions) => {
 
           const patchDir = resolve(tempDir, 'patches');
           await mkdir(patchDir, { recursive: true });
-
           // Additionally grpc-node-health-check uses __dirname, which means that when we compile a bun binary
           // the __dirname is hardcoded to the path of the compiled binary upon compilation, thus
           // we need to modify the grpc-health-check package to not use __dirname unless explicitly requested
           await writeFile(resolve(patchDir, 'grpc-health-check@2.1.0.patch'), TsTemplates.grpcHealthCheckFilePatch);
-
-          // Due to the way that grpc-node-health-check loads fs using eval, we need to add a polyfill as
-          // protobufjs uses eval("require")("fs") returns null in Bun compiled binaries
-          await writeFile(resolve(srcDir, 'fs-polyfill.ts'), pupa(TsTemplates.fsPolyfillTs, {}));
+          // This has been merged in to the repo https://github.com/protobufjs/protobuf.js/blob/master/lib/inquire/index.js
+          // However due to a build step fault there has been no releases to npm for years.
+          await writeFile(resolve(patchDir, '@protobufjs_inquire@1.1.0.patch'), TsTemplates.protobufjsInquirePatch);
 
           readmeTemplate = pupa(TsTemplates.readmePartialMd, { originalPluginName });
           mainFileName = 'plugin.ts';

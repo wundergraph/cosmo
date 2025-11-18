@@ -1,4 +1,3 @@
-import './fs-polyfill.js';
 import type * as grpc from '@grpc/grpc-js';
 import {
   QueryCoursesRequest,

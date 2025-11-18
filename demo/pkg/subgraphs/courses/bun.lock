@@ -19,6 +19,7 @@
     },
   },
   "patchedDependencies": {
+    "@protobufjs/inquire@1.1.0": "patches/@protobufjs_inquire@1.1.0.patch",
     "grpc-health-check@2.1.0": "patches/grpc-health-check@2.1.0.patch",
   },
   "packages": {
