@@ -193,7 +193,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
 					Callback: func(ctx core.SubscriptionOnStartHandlerContext) error {
 						callbackCalled <- true
-						return core.NewHttpGraphqlError("subscription closed", http.StatusText(http.StatusOK), http.StatusOK)
+						return &core.StreamHandlerError{Message: "my custom error"}
 					},
 				},
 			},
@@ -385,7 +385,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 			Modules: map[string]interface{}{
 				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
 					Callback: func(ctx core.SubscriptionOnStartHandlerContext) error {
-						return core.NewHttpGraphqlError("test error", http.StatusText(http.StatusLoopDetected), http.StatusLoopDetected)
+						return &core.StreamHandlerError{Message: "test error"}
 					},
 				},
 			},
@@ -441,14 +441,12 @@ func TestStartSubscriptionHook(t *testing.T) {
 
 			// Wait for the subscription to be closed
 			xEnv.WaitForSubscriptionCount(0, time.Second*10)
+			expectedError := graphql.Errors{graphql.Error{Message: "test error"}}
 
 			testenv.AwaitChannelWithT(t, time.Second*10, subscriptionOneArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
-				var graphqlErrs graphql.Errors
-				require.ErrorAs(t, args.errValue, &graphqlErrs)
-				statusCode, ok := graphqlErrs[0].Extensions["statusCode"].(float64)
-				require.True(t, ok, "statusCode is not a float64")
-				require.Equal(t, http.StatusLoopDetected, int(statusCode))
-				require.Equal(t, http.StatusText(http.StatusLoopDetected), graphqlErrs[0].Extensions["code"])
+				var actualError graphql.Errors
+				require.ErrorAs(t, args.errValue, &actualError)
+				assert.Equal(t, expectedError, actualError)
 			})
 
 			require.NoError(t, client.Close())
@@ -625,7 +623,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 			Modules: map[string]interface{}{
 				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
 					Callback: func(ctx core.SubscriptionOnStartHandlerContext) error {
-						return core.NewHttpGraphqlError("subscription closed", http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+						return &core.StreamHandlerError{Message: "hook error"}
 					},
 					CallbackOnOriginResponse: func(response *http.Response, ctx core.RequestContext) *http.Response {
 						originResponseCalled <- response

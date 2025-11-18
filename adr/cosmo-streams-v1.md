@@ -393,21 +393,17 @@ func (m *MyModule) SubscriptionOnStart(ctx core.SubscriptionOnStartHandlerContex
     // check if the client is authenticated
     if ctx.Authentication() == nil {
         // if the client is not authenticated, return an error
-        return core.NewHttpGraphqlError(
-            "client is not authenticated",
-            http.StatusText(http.StatusUnauthorized),
-            http.StatusUnauthorized,
-        )
+        return &core.StreamHandlerError{
+	    	Message: "client is not authenticated",
+	    }
     }
 
     // check if the client is allowed to subscribe to the stream
     _, found := ctx.Authentication().Claims()["readEmployee"]
     if !found {
-        return core.NewHttpGraphqlError(
-            "client is not allowed to read employees",
-            http.StatusText(http.StatusForbidden),
-            http.StatusForbidden,
-        )
+        return &core.StreamHandlerError{
+	    	Message: "client is not allowed to read employees",
+	    }
     }
 
     return nil

@@ -404,3 +404,16 @@ func NewPubSubOnReceiveEventsHook(fn func(ctx StreamReceiveEventHandlerContext, 
 		return newEvts.Unsafe(), err
 	}
 }
+
+// StreamHandlerError writes an error event with Reason to a subscription client and closes the
+// websocket connection with code 1000 (Normal closure).
+// It can returned from methods of the core.SubscriptionOnStartHandler interface.
+type StreamHandlerError struct {
+	// The message for this error.
+	Message string
+}
+
+// Error returns the reason of this error.
+func (e *StreamHandlerError) Error() string {
+	return e.Message
+}
