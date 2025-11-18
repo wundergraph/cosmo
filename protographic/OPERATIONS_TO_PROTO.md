@@ -26,8 +26,6 @@
   - [Custom Scalar Mappings](#custom-scalar-mappings)
   - [Proto Lock Files](#proto-lock-files)
 - [Troubleshooting](#troubleshooting)
-- [Best Practices](#best-practices)
-- [FAQ](#faq)
 
 ---
 
