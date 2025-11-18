@@ -213,11 +213,10 @@ async function generateCommandAction(name: string, options: CLIOptions) {
       await writeFile(resolve(options.output, 'service.proto.lock.json'), JSON.stringify(result.lockData, null, 2));
     }
 
-    const generatedFiles = [];
+    const generatedFiles = ['service.proto'];
     if (result.mapping) {
       generatedFiles.push('mapping.json');
     }
-    generatedFiles.push('service.proto');
     if (result.lockData) {
       generatedFiles.push('service.proto.lock.json');
     }
