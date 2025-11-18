@@ -382,14 +382,14 @@ describe('Proto Text Generator', () => {
           int32 age = 3;
         }
       `;
-      
+
       const root = new protobuf.Root();
       protobuf.parse(protoText, root);
       const message = root.lookupType('TestMessage');
-      
+
       const lines = messageToProtoText(message);
       const text = lines.join('\n');
-      
+
       expect(text).toMatchInlineSnapshot(`
         "message TestMessage {
           reserved 2, 5 to 10;
@@ -408,14 +408,14 @@ describe('Proto Text Generator', () => {
           string name = 1;
         }
       `;
-      
+
       const root = new protobuf.Root();
       protobuf.parse(protoText, root);
       const message = root.lookupType('TestMessage');
-      
+
       const lines = messageToProtoText(message);
       const text = lines.join('\n');
-      
+
       expect(text).toMatchInlineSnapshot(`
         "message TestMessage {
           reserved "old_field", "deprecated_field";
@@ -435,14 +435,14 @@ describe('Proto Text Generator', () => {
           int32 age = 3;
         }
       `;
-      
+
       const root = new protobuf.Root();
       protobuf.parse(protoText, root);
       const message = root.lookupType('TestMessage');
-      
+
       const lines = messageToProtoText(message);
       const text = lines.join('\n');
-      
+
       expect(text).toMatchInlineSnapshot(`
         "message TestMessage {
           reserved 2, 5 to 10, 15;

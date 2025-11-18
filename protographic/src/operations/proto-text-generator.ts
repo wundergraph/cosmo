@@ -1,4 +1,5 @@
 import protobuf from 'protobufjs';
+import { buildProtoOptions } from '../proto-options.js';
 
 /**
  * Extended Method interface that includes custom properties
@@ -118,49 +119,24 @@ function generateHeader(options?: ProtoTextOptions): string[] {
     lines.push('');
   }
 
-  // Options
-  const protoOptions: string[] = [];
+  // Options - use shared utility for standard options
+  const protoOptions: string[] = buildProtoOptions(
+    {
+      goPackage: options?.goPackage,
+      javaPackage: options?.javaPackage,
+      javaOuterClassname: options?.javaOuterClassname,
+      javaMultipleFiles: options?.javaMultipleFiles,
+      csharpNamespace: options?.csharpNamespace,
+      rubyPackage: options?.rubyPackage,
+      phpNamespace: options?.phpNamespace,
+      phpMetadataNamespace: options?.phpMetadataNamespace,
+      objcClassPrefix: options?.objcClassPrefix,
+      swiftPrefix: options?.swiftPrefix,
+    },
+    packageName,
+  );
 
-  if (options?.goPackage) {
-    protoOptions.push(`option go_package = "${options.goPackage}";`);
-  }
-
-  if (options?.javaPackage) {
-    protoOptions.push(`option java_package = "${options.javaPackage}";`);
-  }
-
-  if (options?.javaOuterClassname) {
-    protoOptions.push(`option java_outer_classname = "${options.javaOuterClassname}";`);
-  }
-
-  if (options?.javaMultipleFiles) {
-    protoOptions.push(`option java_multiple_files = true;`);
-  }
-
-  if (options?.csharpNamespace) {
-    protoOptions.push(`option csharp_namespace = "${options.csharpNamespace}";`);
-  }
-
-  if (options?.rubyPackage) {
-    protoOptions.push(`option ruby_package = "${options.rubyPackage}";`);
-  }
-
-  if (options?.phpNamespace) {
-    protoOptions.push(`option php_namespace = "${options.phpNamespace}";`);
-  }
-
-  if (options?.phpMetadataNamespace) {
-    protoOptions.push(`option php_metadata_namespace = "${options.phpMetadataNamespace}";`);
-  }
-
-  if (options?.objcClassPrefix) {
-    protoOptions.push(`option objc_class_prefix = "${options.objcClassPrefix}";`);
-  }
-
-  if (options?.swiftPrefix) {
-    protoOptions.push(`option swift_prefix = "${options.swiftPrefix}";`);
-  }
-
+  // Add any custom options
   if (options?.options) {
     protoOptions.push(...options.options);
   }
@@ -208,7 +184,7 @@ export function serviceToProtoText(service: protobuf.Service, options?: ProtoTex
     // Check if method has idempotency level option
     const methodWithIdempotency = method as MethodWithIdempotency;
     const idempotencyLevel = methodWithIdempotency.idempotencyLevel;
-    
+
     if (idempotencyLevel) {
       lines.push(formatIndent(1, `rpc ${method.name}(${requestPart}) returns (${responsePart}) {`));
       lines.push(formatIndent(2, `option idempotency_level = ${idempotencyLevel};`));
@@ -334,11 +310,11 @@ export function formatField(field: protobuf.Field, options?: ProtoTextOptions, i
  */
 export function formatReserved(reserved: Array<number[] | string>, indent: number = 1): string[] {
   const lines: string[] = [];
-  
+
   // Separate numbers and names
   const numbers: number[] = [];
   const names: string[] = [];
-  
+
   for (const item of reserved) {
     if (typeof item === 'string') {
       names.push(item);
@@ -350,19 +326,19 @@ export function formatReserved(reserved: Array<number[] | string>, indent: numbe
       }
     }
   }
-  
+
   // Format reserved numbers if any
   if (numbers.length > 0) {
     const formattedNumbers = formatReservedNumbers(numbers);
     lines.push(formatIndent(indent, `reserved ${formattedNumbers};`));
   }
-  
+
   // Format reserved names if any
   if (names.length > 0) {
-    const formattedNames = names.map(name => `"${name}"`).join(', ');
+    const formattedNames = names.map((name) => `"${name}"`).join(', ');
     lines.push(formatIndent(indent, `reserved ${formattedNames};`));
   }
-  
+
   return lines;
 }
 
@@ -372,20 +348,20 @@ export function formatReserved(reserved: Array<number[] | string>, indent: numbe
  */
 function formatReservedNumbers(numbers: number[]): string {
   if (numbers.length === 0) return '';
-  
+
   // Sort and deduplicate numbers
   const sortedNumbers = [...new Set(numbers)].sort((a, b) => a - b);
-  
+
   // Simple case: only one number
   if (sortedNumbers.length === 1) {
     return sortedNumbers[0].toString();
   }
-  
+
   // Find continuous ranges to compact the representation
   const ranges: Array<[number, number]> = [];
   let rangeStart = sortedNumbers[0];
   let rangeEnd = sortedNumbers[0];
-  
+
   for (let i = 1; i < sortedNumbers.length; i++) {
     if (sortedNumbers[i] === rangeEnd + 1) {
       // Extend the current range
@@ -397,10 +373,10 @@ function formatReservedNumbers(numbers: number[]): string {
       rangeEnd = sortedNumbers[i];
     }
   }
-  
+
   // Add the last range
   ranges.push([rangeStart, rangeEnd]);
-  
+
   // Format the ranges
   return ranges
     .map(([start, end]) => {

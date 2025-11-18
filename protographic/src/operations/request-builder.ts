@@ -283,10 +283,8 @@ export function buildEnumType(enumType: GraphQLEnumType, options?: RequestBuilde
     const protoEnumValue = graphqlEnumValueToProtoEnumValue(enumType.name, enumValue.name);
     protoEnum.add(protoEnumValue, enumNumber);
 
-    if (options?.includeComments && enumValue.description) {
-      // Note: protobufjs doesn't have direct comment support for enum values
-      // In a full implementation, you'd track these separately for text generation
-    }
+    // Note: protobufjs doesn't have direct comment support for enum values
+    // In a full implementation, you'd track these separately for text generation
 
     enumNumber++;
   }

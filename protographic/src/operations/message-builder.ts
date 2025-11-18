@@ -323,7 +323,7 @@ function processFieldSelection(
     // If this is an enum type, ensure it's added to the root
     if (isEnumType(namedType) && options?.root) {
       const enumTypeName = namedType.name;
-      
+
       // Initialize createdEnums in options if missing to ensure persistence across calls
       if (!options.createdEnums) {
         options.createdEnums = new Set<string>();

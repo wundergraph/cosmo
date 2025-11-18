@@ -46,6 +46,7 @@ import { camelCase } from 'lodash-es';
 import { ProtoLock, ProtoLockManager } from './proto-lock.js';
 import { CONNECT_FIELD_RESOLVER, CONTEXT, FIELD_ARGS, RESULT } from './string-constants.js';
 import { unwrapNonNullType, isNestedListType, calculateNestingLevel } from './operations/list-type-utils.js';
+import { buildProtoOptions } from './proto-options.js';
 
 /**
  * Maps GraphQL scalar types to Protocol Buffer types
@@ -235,49 +236,22 @@ export class GraphQLToProtoTextVisitor {
       this.initializeFieldNumbersMap(lockData);
     }
 
-    // Initialize options
-    if (goPackage && goPackage !== '') {
-      // Generate default go_package if not provided
-      const defaultGoPackage = `cosmo/pkg/proto/${packageName};${packageName.replace('.', '')}`;
-      const goPackageOption = goPackage || defaultGoPackage;
-      this.options.push(`option go_package = "${goPackageOption}";`);
-    }
-
-    if (javaPackage) {
-      this.options.push(`option java_package = "${javaPackage}";`);
-    }
-
-    if (javaOuterClassname) {
-      this.options.push(`option java_outer_classname = "${javaOuterClassname}";`);
-    }
-
-    if (javaMultipleFiles) {
-      this.options.push(`option java_multiple_files = true;`);
-    }
-
-    if (csharpNamespace) {
-      this.options.push(`option csharp_namespace = "${csharpNamespace}";`);
-    }
-
-    if (rubyPackage) {
-      this.options.push(`option ruby_package = "${rubyPackage}";`);
-    }
-
-    if (phpNamespace) {
-      this.options.push(`option php_namespace = "${phpNamespace}";`);
-    }
-
-    if (phpMetadataNamespace) {
-      this.options.push(`option php_metadata_namespace = "${phpMetadataNamespace}";`);
-    }
-
-    if (objcClassPrefix) {
-      this.options.push(`option objc_class_prefix = "${objcClassPrefix}";`);
-    }
-
-    if (swiftPrefix) {
-      this.options.push(`option swift_prefix = "${swiftPrefix}";`);
-    }
+    // Initialize options using the shared utility
+    this.options = buildProtoOptions(
+      {
+        goPackage,
+        javaPackage,
+        javaOuterClassname,
+        javaMultipleFiles,
+        csharpNamespace,
+        rubyPackage,
+        phpNamespace,
+        phpMetadataNamespace,
+        objcClassPrefix,
+        swiftPrefix,
+      },
+      packageName,
+    );
   }
 
   /**

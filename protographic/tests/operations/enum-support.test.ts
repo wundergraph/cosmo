@@ -1029,11 +1029,11 @@ describe('Enum Support', () => {
       const { proto } = compileOperationsToProto(operation, schema);
 
       expectValidProto(proto);
-      
+
       // Count occurrences of "enum UserStatus" - should only appear once
       const enumDeclarations = proto.match(/enum UserStatus \{/g);
       expect(enumDeclarations).toHaveLength(1);
-      
+
       expect(proto).toMatchInlineSnapshot(`
         "syntax = "proto3";
         package service.v1;
@@ -1111,11 +1111,11 @@ describe('Enum Support', () => {
       const { proto } = compileOperationsToProto(operation, schema);
 
       expectValidProto(proto);
-      
+
       // Count occurrences of "enum Visibility" - should only appear once
       const enumDeclarations = proto.match(/enum Visibility \{/g);
       expect(enumDeclarations).toHaveLength(1);
-      
+
       expect(proto).toMatchInlineSnapshot(`
         "syntax = "proto3";
         package service.v1;
