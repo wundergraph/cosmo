@@ -8,6 +8,13 @@ interface MethodWithIdempotency extends protobuf.Method {
 }
 
 /**
+ * Helper to format indentation
+ */
+function formatIndent(indent: number, content: string): string {
+  return '  '.repeat(indent) + content;
+}
+
+/**
  * Options for generating proto text
  */
 export interface ProtoTextOptions {
@@ -191,37 +198,23 @@ export function serviceToProtoText(service: protobuf.Service, options?: ProtoTex
     }
 
     if (options?.includeComments && method.comment) {
-      lines.push(`  // ${method.comment}`);
+      lines.push(formatIndent(1, `// ${method.comment}`));
     }
 
     // Build method signature with streaming support
-    let methodLine = `  rpc ${method.name}(`;
-
-    if (method.requestStream) {
-      methodLine += 'stream ';
-    }
-
-    methodLine += method.requestType;
-    methodLine += ') returns (';
-
-    if (method.responseStream) {
-      methodLine += 'stream ';
-    }
-
-    methodLine += method.responseType;
-    methodLine += ')';
+    const requestPart = method.requestStream ? `stream ${method.requestType}` : method.requestType;
+    const responsePart = method.responseStream ? `stream ${method.responseType}` : method.responseType;
 
     // Check if method has idempotency level option
     const methodWithIdempotency = method as MethodWithIdempotency;
     const idempotencyLevel = methodWithIdempotency.idempotencyLevel;
+    
     if (idempotencyLevel) {
-      methodLine += ' {';
-      lines.push(methodLine);
-      lines.push(`    option idempotency_level = ${idempotencyLevel};`);
-      lines.push(`  }`);
+      lines.push(formatIndent(1, `rpc ${method.name}(${requestPart}) returns (${responsePart}) {`));
+      lines.push(formatIndent(2, `option idempotency_level = ${idempotencyLevel};`));
+      lines.push(formatIndent(1, `}`));
     } else {
-      methodLine += ' {}';
-      lines.push(methodLine);
+      lines.push(formatIndent(1, `rpc ${method.name}(${requestPart}) returns (${responsePart}) {}`));
     }
   }
 
@@ -236,14 +229,13 @@ export function serviceToProtoText(service: protobuf.Service, options?: ProtoTex
  */
 export function messageToProtoText(message: protobuf.Type, options?: ProtoTextOptions, indent: number = 0): string[] {
   const lines: string[] = [];
-  const indentStr = '  '.repeat(indent);
 
   // Message comment
   if (options?.includeComments && message.comment) {
-    lines.push(`${indentStr}// ${message.comment}`);
+    lines.push(formatIndent(indent, `// ${message.comment}`));
   }
 
-  lines.push(`${indentStr}message ${message.name} {`);
+  lines.push(formatIndent(indent, `message ${message.name} {`));
 
   // First, add nested types (messages and enums)
   for (const nested of Object.values(message.nestedArray)) {
@@ -261,7 +253,7 @@ export function messageToProtoText(message: protobuf.Type, options?: ProtoTextOp
     lines.push(...formatField(field, options, indent + 1));
   }
 
-  lines.push(`${indentStr}}`);
+  lines.push(formatIndent(indent, `}`));
 
   // Add blank line after top-level messages
   if (indent === 0) {
@@ -276,21 +268,20 @@ export function messageToProtoText(message: protobuf.Type, options?: ProtoTextOp
  */
 export function enumToProtoText(enumType: protobuf.Enum, options?: ProtoTextOptions, indent: number = 0): string[] {
   const lines: string[] = [];
-  const indentStr = '  '.repeat(indent);
 
   // Enum comment
   if (options?.includeComments && enumType.comment) {
-    lines.push(`${indentStr}// ${enumType.comment}`);
+    lines.push(formatIndent(indent, `// ${enumType.comment}`));
   }
 
-  lines.push(`${indentStr}enum ${enumType.name} {`);
+  lines.push(formatIndent(indent, `enum ${enumType.name} {`));
 
   // Add enum values
   for (const [valueName, valueNumber] of Object.entries(enumType.values)) {
-    lines.push(`${indentStr}  ${valueName} = ${valueNumber};`);
+    lines.push(formatIndent(indent + 1, `${valueName} = ${valueNumber};`));
   }
 
-  lines.push(`${indentStr}}`);
+  lines.push(formatIndent(indent, `}`));
 
   // Add blank line after top-level enums
   if (indent === 0) {
@@ -305,25 +296,15 @@ export function enumToProtoText(enumType: protobuf.Enum, options?: ProtoTextOpti
  */
 export function formatField(field: protobuf.Field, options?: ProtoTextOptions, indent: number = 1): string[] {
   const lines: string[] = [];
-  const indentStr = '  '.repeat(indent);
 
   // Field comment
   if (options?.includeComments && field.comment) {
-    lines.push(`${indentStr}// ${field.comment}`);
+    lines.push(formatIndent(indent, `// ${field.comment}`));
   }
 
   // Build field line
-  let fieldLine = indentStr;
-
-  // Add repeated keyword if needed
-  if (field.repeated) {
-    fieldLine += 'repeated ';
-  }
-
-  // Add type and name
-  fieldLine += `${field.type} ${field.name} = ${field.id};`;
-
-  lines.push(fieldLine);
+  const repeated = field.repeated ? 'repeated ' : '';
+  lines.push(formatIndent(indent, `${repeated}${field.type} ${field.name} = ${field.id};`));
 
   return lines;
 }
@@ -333,31 +314,17 @@ export function formatField(field: protobuf.Field, options?: ProtoTextOptions, i
  */
 export function formatMethod(method: protobuf.Method, options?: ProtoTextOptions, indent: number = 1): string[] {
   const lines: string[] = [];
-  const indentStr = '  '.repeat(indent);
 
   // Method comment
   if (options?.includeComments && method.comment) {
-    lines.push(`${indentStr}// ${method.comment}`);
+    lines.push(formatIndent(indent, `// ${method.comment}`));
   }
 
-  // Build method line
-  let methodLine = `${indentStr}rpc ${method.name}(`;
+  // Build method signature with streaming support
+  const requestPart = method.requestStream ? `stream ${method.requestType}` : method.requestType;
+  const responsePart = method.responseStream ? `stream ${method.responseType}` : method.responseType;
 
-  if (method.requestStream) {
-    methodLine += 'stream ';
-  }
-
-  methodLine += method.requestType;
-  methodLine += ') returns (';
-
-  if (method.responseStream) {
-    methodLine += 'stream ';
-  }
-
-  methodLine += method.responseType;
-  methodLine += ') {}';
-
-  lines.push(methodLine);
+  lines.push(formatIndent(indent, `rpc ${method.name}(${requestPart}) returns (${responsePart}) {}`));
 
   return lines;
 }
