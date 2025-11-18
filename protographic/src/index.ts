@@ -5,6 +5,7 @@ import type { GraphQLToProtoTextVisitorOptions } from './sdl-to-proto-visitor.js
 import { GraphQLToProtoTextVisitor } from './sdl-to-proto-visitor.js';
 import type { ProtoLock } from './proto-lock.js';
 import { SDLValidationVisitor, type ValidationResult } from './sdl-validation-visitor.js';
+import protobuf from 'protobufjs';
 
 /**
  * Compiles a GraphQL schema to a mapping structure
@@ -145,3 +146,6 @@ export {
   EnumValueMapping,
   OperationType,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+
+// Export protobufjs for AST manipulation
+export { default as protobuf } from 'protobufjs';

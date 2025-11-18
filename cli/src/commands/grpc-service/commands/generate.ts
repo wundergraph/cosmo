@@ -5,6 +5,8 @@ import {
   compileOperationsToProto,
   ProtoLock,
   validateGraphQLSDL,
+  rootToProtoText,
+  protobuf,
 } from '@wundergraph/protographic';
 import { Command, program } from 'commander';
 import { camelCase, upperFirst } from 'lodash-es';
@@ -283,222 +285,55 @@ async function readOperationFiles(operationsDir: string): Promise<Array<{ filena
 }
 
 /**
- * Merge multiple proto compilation results into a single proto file
- * Extracts all messages, enums, and RPC methods and combines them into one service
+ * Merge multiple protobufjs Root ASTs into a single Root
+ * Combines all messages, enums, and RPC methods from multiple operations
  */
-function mergeProtoResults(
-  results: Array<{ proto: string; lockData: ProtoLock }>,
-  options: {
-    serviceName: string;
-    packageName: string;
-    goPackage?: string;
-    javaPackage?: string;
-    javaOuterClassname?: string;
-    javaMultipleFiles?: boolean;
-    csharpNamespace?: string;
-    rubyPackage?: string;
-    phpNamespace?: string;
-    phpMetadataNamespace?: string;
-    objcClassPrefix?: string;
-    swiftPrefix?: string;
-  },
-): string {
-  if (results.length === 0) {
-    throw new Error('No proto results to merge');
+function mergeProtoRoots(roots: protobuf.Root[], serviceName: string): protobuf.Root {
+  if (roots.length === 0) {
+    throw new Error('No proto roots to merge');
   }
 
-  if (results.length === 1) {
-    return results[0].proto;
+  if (roots.length === 1) {
+    return roots[0];
   }
 
-  // Parse each proto file to extract components
-  const allMessages = new Set<string>();
-  const allEnums = new Set<string>();
-  const allRpcMethods: string[] = [];
+  // Create a new merged root
+  const mergedRoot = new protobuf.Root();
+  const seenMessages = new Set<string>();
+  const seenEnums = new Set<string>();
+  const mergedService = new protobuf.Service(serviceName);
 
-  for (const result of results) {
-    const lines = result.proto.split('\n');
-    let inService = false;
-    let inMessage = false;
-    let inEnum = false;
-    let braceCount = 0;
-    let currentBlock: string[] = [];
-
-    for (const line of lines) {
-      const trimmed = line.trim();
-
-      // Track service block
-      if (trimmed.startsWith('service ')) {
-        inService = true;
-        braceCount = 0;
-        continue;
-      }
-
-      if (inService) {
-        if (trimmed.includes('{')) {
-          braceCount++;
+  for (const root of roots) {
+    // Iterate through all nested types in the root
+    for (const nested of Object.values(root.nestedArray)) {
+      if (nested instanceof protobuf.Type) {
+        // Add message if not already seen
+        const message = nested as protobuf.Type;
+        if (!seenMessages.has(message.name)) {
+          mergedRoot.add(message);
+          seenMessages.add(message.name);
         }
-        if (trimmed.includes('}')) {
-          braceCount--;
+      } else if (nested instanceof protobuf.Enum) {
+        // Add enum if not already seen
+        const enumType = nested as protobuf.Enum;
+        if (!seenEnums.has(enumType.name)) {
+          mergedRoot.add(enumType);
+          seenEnums.add(enumType.name);
         }
-
-        // Extract RPC methods
-        if (trimmed.startsWith('rpc ')) {
-          allRpcMethods.push(line);
+      } else if (nested instanceof protobuf.Service) {
+        // Merge all RPC methods from all services
+        const service = nested as protobuf.Service;
+        for (const method of Object.values(service.methods)) {
+          mergedService.add(method);
         }
-
-        if (braceCount === 0) {
-          inService = false;
-        }
-        continue;
-      }
-
-      // Track message blocks - only start a new message if not already in one
-      if (!inMessage && !inEnum && trimmed.startsWith('message ')) {
-        inMessage = true;
-        braceCount = 0;
-        currentBlock = [line];
-        // Count braces on the message declaration line
-        if (trimmed.includes('{')) {
-          braceCount++;
-        }
-        if (trimmed.includes('}')) {
-          braceCount--;
-        }
-        continue;
-      }
-
-      if (inMessage) {
-        currentBlock.push(line);
-        if (trimmed.includes('{')) {
-          braceCount++;
-        }
-        if (trimmed.includes('}')) {
-          braceCount--;
-        }
-
-        if (braceCount === 0) {
-          const messageText = currentBlock.join('\n');
-          allMessages.add(messageText);
-          inMessage = false;
-          currentBlock = [];
-        }
-        continue;
-      }
-
-      // Track enum blocks - only start a new enum if not already in one
-      if (!inMessage && !inEnum && trimmed.startsWith('enum ')) {
-        inEnum = true;
-        braceCount = 0;
-        currentBlock = [line];
-        // Count braces on the enum declaration line
-        if (trimmed.includes('{')) {
-          braceCount++;
-        }
-        if (trimmed.includes('}')) {
-          braceCount--;
-        }
-        continue;
-      }
-
-      if (inEnum) {
-        currentBlock.push(line);
-        if (trimmed.includes('{')) {
-          braceCount++;
-        }
-        if (trimmed.includes('}')) {
-          braceCount--;
-        }
-
-        if (braceCount === 0) {
-          const enumText = currentBlock.join('\n');
-          allEnums.add(enumText);
-          inEnum = false;
-          currentBlock = [];
-        }
-        continue;
       }
     }
   }
 
-  // Build the merged proto file
-  const parts: string[] = [];
+  // Add the merged service to the root
+  mergedRoot.add(mergedService);
 
-  // Add syntax
-  parts.push('syntax = "proto3";');
-  parts.push('');
-
-  // Add package
-  parts.push(`package ${options.packageName};`);
-  parts.push('');
-
-  // Add language-specific options
-  if (options.goPackage) {
-    parts.push(`option go_package = "${options.goPackage}";`);
-  }
-  if (options.javaPackage) {
-    parts.push(`option java_package = "${options.javaPackage}";`);
-  }
-  if (options.javaOuterClassname) {
-    parts.push(`option java_outer_classname = "${options.javaOuterClassname}";`);
-  }
-  if (options.javaMultipleFiles) {
-    parts.push('option java_multiple_files = true;');
-  }
-  if (options.csharpNamespace) {
-    parts.push(`option csharp_namespace = "${options.csharpNamespace}";`);
-  }
-  if (options.rubyPackage) {
-    parts.push(`option ruby_package = "${options.rubyPackage}";`);
-  }
-  if (options.phpNamespace) {
-    parts.push(`option php_namespace = "${options.phpNamespace}";`);
-  }
-  if (options.phpMetadataNamespace) {
-    parts.push(`option php_metadata_namespace = "${options.phpMetadataNamespace}";`);
-  }
-  if (options.objcClassPrefix) {
-    parts.push(`option objc_class_prefix = "${options.objcClassPrefix}";`);
-  }
-  if (options.swiftPrefix) {
-    parts.push(`option swift_prefix = "${options.swiftPrefix}";`);
-  }
-
-  if (
-    options.goPackage ||
-    options.javaPackage ||
-    options.javaOuterClassname ||
-    options.javaMultipleFiles ||
-    options.csharpNamespace ||
-    options.rubyPackage ||
-    options.phpNamespace ||
-    options.phpMetadataNamespace ||
-    options.objcClassPrefix ||
-    options.swiftPrefix
-  ) {
-    parts.push('');
-  }
-
-  // Add all unique messages
-  for (const message of allMessages) {
-    parts.push(message);
-    parts.push('');
-  }
-
-  // Add all unique enums
-  for (const enumDef of allEnums) {
-    parts.push(enumDef);
-    parts.push('');
-  }
-
-  // Add service with all RPC methods
-  parts.push(`service ${options.serviceName} {`);
-  for (const rpcMethod of allRpcMethods) {
-    parts.push(rpcMethod);
-  }
-  parts.push('}');
-
-  return parts.join('\n');
+  return mergedRoot;
 }
 
 /**
@@ -548,8 +383,8 @@ async function generateProtoAndMapping({
     let currentLockData = await fetchLockData(lockFile);
 
     // Process each operation file separately to maintain reversibility
-    // Then merge all results into a single proto file
-    const results: Array<{ proto: string; lockData: ProtoLock }> = [];
+    // Collect the AST roots instead of proto strings
+    const roots: protobuf.Root[] = [];
 
     for (const { filename, content } of operationFiles) {
       try {
@@ -574,7 +409,8 @@ async function generateProtoAndMapping({
           prefixOperationType,
         });
 
-        results.push(result);
+        // Keep the AST root instead of the string
+        roots.push(result.root);
         // Use the updated lock data for the next operation to maintain field number stability
         currentLockData = result.lockData;
       } catch (error) {
@@ -584,9 +420,11 @@ async function generateProtoAndMapping({
       }
     }
 
-    // Merge all proto results into a single proto file
-    const mergedProto = mergeProtoResults(results, {
-      serviceName,
+    // Merge all proto ASTs into a single root
+    const mergedRoot = mergeProtoRoots(roots, serviceName);
+
+    // Convert the merged AST to proto text once
+    const mergedProto = rootToProtoText(mergedRoot, {
       packageName: packageName || 'service.v1',
       goPackage,
       javaPackage,
@@ -598,6 +436,7 @@ async function generateProtoAndMapping({
       phpMetadataNamespace,
       objcClassPrefix,
       swiftPrefix,
+      includeComments: true,
     });
 
     return {
