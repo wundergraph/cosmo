@@ -15,10 +15,7 @@ import { resolve, extname } from 'pathe';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { renderResultTree, renderValidationResults } from '../../router/commands/plugin/helper.js';
 
-type CLIOptions = {
-  input: string;
-  output: string;
-  packageName?: string;
+type LanguageOptions = {
   goPackage?: string;
   javaPackage?: string;
   javaOuterClassname?: string;
@@ -29,13 +26,19 @@ type CLIOptions = {
   phpMetadataNamespace?: string;
   objcClassPrefix?: string;
   swiftPrefix?: string;
+};
+
+type CLIOptions = {
+  input: string;
+  output: string;
+  packageName?: string;
   protoLock?: string;
   withOperations?: string;
   queryIdempotency?: string;
   customScalarMapping?: string;
   maxDepth?: string;
   prefixOperationType?: boolean;
-};
+} & LanguageOptions;
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('generate');
@@ -173,12 +176,7 @@ async function generateCommandAction(name: string, options: CLIOptions) {
       spinner.warn('--prefix-operation-type flag is ignored when not using --with-operations');
     }
 
-    const result = await generateProtoAndMapping({
-      outdir: options.output,
-      schemaFile: inputFile,
-      name,
-      spinner,
-      packageName: options.packageName,
+    const languageOptions: LanguageOptions = {
       goPackage: options.goPackage,
       javaPackage: options.javaPackage,
       javaOuterClassname: options.javaOuterClassname,
@@ -189,6 +187,15 @@ async function generateCommandAction(name: string, options: CLIOptions) {
       phpMetadataNamespace: options.phpMetadataNamespace,
       objcClassPrefix: options.objcClassPrefix,
       swiftPrefix: options.swiftPrefix,
+    };
+
+    const result = await generateProtoAndMapping({
+      outdir: options.output,
+      schemaFile: inputFile,
+      name,
+      spinner,
+      packageName: options.packageName,
+      languageOptions,
       lockFile: options.protoLock,
       operationsDir: options.withOperations,
       queryIdempotency: options.queryIdempotency?.toUpperCase(),
@@ -242,16 +249,7 @@ type GenerationOptions = {
   schemaFile: string;
   spinner: Ora;
   packageName?: string;
-  goPackage?: string;
-  javaPackage?: string;
-  javaOuterClassname?: string;
-  javaMultipleFiles?: boolean;
-  csharpNamespace?: string;
-  rubyPackage?: string;
-  phpNamespace?: string;
-  phpMetadataNamespace?: string;
-  objcClassPrefix?: string;
-  swiftPrefix?: string;
+  languageOptions: LanguageOptions;
   lockFile?: string;
   operationsDir?: string;
   queryIdempotency?: string;
@@ -346,16 +344,7 @@ async function generateProtoAndMapping({
   schemaFile,
   spinner,
   packageName,
-  goPackage,
-  javaPackage,
-  javaOuterClassname,
-  javaMultipleFiles,
-  csharpNamespace,
-  rubyPackage,
-  phpNamespace,
-  phpMetadataNamespace,
-  objcClassPrefix,
-  swiftPrefix,
+  languageOptions,
   lockFile = resolve(outdir, 'service.proto.lock.json'),
   operationsDir,
   queryIdempotency,
@@ -392,16 +381,7 @@ async function generateProtoAndMapping({
         const result = compileOperationsToProto(content, schema, {
           serviceName,
           packageName: packageName || 'service.v1',
-          goPackage,
-          javaPackage,
-          javaOuterClassname,
-          javaMultipleFiles,
-          csharpNamespace,
-          rubyPackage,
-          phpNamespace,
-          phpMetadataNamespace,
-          objcClassPrefix,
-          swiftPrefix,
+          ...languageOptions,
           includeComments: true,
           queryIdempotency: queryIdempotency as 'NO_SIDE_EFFECTS' | 'DEFAULT' | undefined,
           lockData: currentLockData,
@@ -427,16 +407,7 @@ async function generateProtoAndMapping({
     // Convert the merged AST to proto text once
     const mergedProto = rootToProtoText(mergedRoot, {
       packageName: packageName || 'service.v1',
-      goPackage,
-      javaPackage,
-      javaOuterClassname,
-      javaMultipleFiles,
-      csharpNamespace,
-      rubyPackage,
-      phpNamespace,
-      phpMetadataNamespace,
-      objcClassPrefix,
-      swiftPrefix,
+      ...languageOptions,
       includeComments: true,
     });
 
@@ -456,16 +427,7 @@ async function generateProtoAndMapping({
     const proto = compileGraphQLToProto(schema, {
       serviceName,
       packageName,
-      goPackage,
-      javaPackage,
-      javaOuterClassname,
-      javaMultipleFiles,
-      csharpNamespace,
-      rubyPackage,
-      phpNamespace,
-      phpMetadataNamespace,
-      objcClassPrefix,
-      swiftPrefix,
+      ...languageOptions,
       lockData,
     });
 
