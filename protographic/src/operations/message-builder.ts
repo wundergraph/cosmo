@@ -153,7 +153,7 @@ export function buildMessageFromSelectionSet(
             if (fragmentDef && options?.schema) {
               const typeName = fragmentDef.typeCondition.name.value;
               const type = options.schema.getType(typeName);
-              if (type && (isObjectType(type) || isInterfaceType(type))) {
+              if (type && (isObjectType(type) || isInterfaceType(type) || isUnionType(type))) {
                 collectFields(fragmentDef.selectionSet.selections, type, depth + 1);
               }
             }
@@ -204,6 +204,97 @@ export function buildMessageFromSelectionSet(
 }
 
 /**
+ * Gets or assigns a field number for a proto field
+ */
+function getOrAssignFieldNumber(
+  message: protobuf.Type,
+  protoFieldName: string,
+  fieldNumberManager?: FieldNumberManager,
+): number {
+  const existingFieldNumber = fieldNumberManager?.getFieldNumber(message.name, protoFieldName);
+
+  if (existingFieldNumber !== undefined) {
+    return existingFieldNumber;
+  }
+
+  if (fieldNumberManager) {
+    const fieldNumber = fieldNumberManager.getNextFieldNumber(message.name);
+    fieldNumberManager.assignFieldNumber(message.name, protoFieldName, fieldNumber);
+    return fieldNumber;
+  }
+
+  return message.fieldsArray.length + 1;
+}
+
+/**
+ * Resolves the final type name and repetition flag, handling nested list wrappers
+ */
+function resolveTypeNameAndRepetition(
+  baseTypeName: string,
+  protoTypeInfo: ProtoTypeInfo,
+  fieldType: GraphQLOutputType,
+  options?: MessageBuilderOptions,
+): { typeName: string; isRepeated: boolean } {
+  let typeName = baseTypeName;
+  let isRepeated = protoTypeInfo.isRepeated;
+
+  if (protoTypeInfo.requiresNestedWrapper && options?.ensureNestedListWrapper) {
+    typeName = options.ensureNestedListWrapper(fieldType) as any;
+    isRepeated = false; // Wrapper handles the repetition
+  }
+
+  return { typeName, isRepeated };
+}
+
+/**
+ * Creates and configures a proto field with comments
+ */
+function createProtoField(
+  protoFieldName: string,
+  fieldNumber: number,
+  typeName: string,
+  isRepeated: boolean,
+  fieldDef: any,
+  options?: MessageBuilderOptions,
+): protobuf.Field {
+  const protoField = new protobuf.Field(protoFieldName, fieldNumber, typeName);
+
+  if (isRepeated) {
+    protoField.repeated = true;
+  }
+
+  if (options?.includeComments && fieldDef.description) {
+    protoField.comment = fieldDef.description;
+  }
+
+  return protoField;
+}
+
+/**
+ * Ensures an enum type is created and added to the root
+ */
+function ensureEnumCreated(namedType: GraphQLEnumType, options: MessageBuilderOptions): void {
+  if (!options.root) {
+    return;
+  }
+
+  const enumTypeName = namedType.name;
+
+  // Initialize createdEnums in options if missing to ensure persistence across calls
+  if (!options.createdEnums) {
+    options.createdEnums = new Set<string>();
+  }
+
+  if (!options.createdEnums.has(enumTypeName)) {
+    const protoEnum = buildEnumType(namedType, {
+      includeComments: options.includeComments,
+    });
+    options.root.add(protoEnum);
+    options.createdEnums.add(enumTypeName);
+  }
+}
+
+/**
  * Processes a field selection and adds it to the message
  */
 function processFieldSelection(
@@ -246,16 +337,14 @@ function processFieldSelection(
 
   const fieldType = fieldDef.type;
 
-  // If the field has a selection set, we need a nested message
+  // Determine the base type name based on whether we have a selection set
+  let baseTypeName: string;
+
   if (field.selectionSet) {
+    // Build nested message for object types
     const namedType = getNamedType(fieldType);
     if (isObjectType(namedType) || isInterfaceType(namedType) || isUnionType(namedType)) {
-      // Use simple name since message will be nested inside parent
       const nestedMessageName = upperFirst(camelCase(fieldName));
-
-      // For interfaces and unions, we use the type directly for processing
-      // Union types will only work with inline fragments that specify concrete types
-      const typeForSelection = namedType;
 
       const nestedOptions = {
         ...options,
@@ -265,122 +354,42 @@ function processFieldSelection(
       const nestedMessage = buildMessageFromSelectionSet(
         nestedMessageName,
         field.selectionSet,
-        typeForSelection,
+        namedType,
         typeInfo,
         nestedOptions,
       );
 
-      // Add nested message to the parent message
       message.add(nestedMessage);
-
-      // Get field number - check if already assigned from reconciliation
-      const existingFieldNumber = fieldNumberManager?.getFieldNumber(message.name, protoFieldName);
-
-      let fieldNumber: number;
-      if (existingFieldNumber !== undefined) {
-        // Use existing field number from reconciliation
-        fieldNumber = existingFieldNumber;
-      } else if (fieldNumberManager) {
-        // Get next field number and assign it
-        fieldNumber = fieldNumberManager.getNextFieldNumber(message.name);
-        fieldNumberManager.assignFieldNumber(message.name, protoFieldName, fieldNumber);
-      } else {
-        // No field number manager, use sequential numbering
-        fieldNumber = message.fieldsArray.length + 1;
-      }
-
-      // Determine if field should be repeated
-      const protoTypeInfo = mapGraphQLTypeToProto(fieldType, {
-        customScalarMappings: options?.customScalarMappings,
-      });
-
-      // Handle nested list wrappers for nested messages
-      let finalTypeName = nestedMessageName;
-      let isRepeated = protoTypeInfo.isRepeated;
-
-      if (protoTypeInfo.requiresNestedWrapper && options?.ensureNestedListWrapper) {
-        // Create wrapper message and use its name
-        finalTypeName = options.ensureNestedListWrapper(fieldType) as any;
-        isRepeated = false; // Wrapper handles the repetition
-      }
-
-      const protoField = new protobuf.Field(protoFieldName, fieldNumber, finalTypeName);
-
-      if (isRepeated) {
-        protoField.repeated = true;
-      }
-
-      if (options?.includeComments && fieldDef.description) {
-        protoField.comment = fieldDef.description;
-      }
-
-      message.add(protoField);
+      baseTypeName = nestedMessageName;
+    } else {
+      return; // Shouldn't happen with valid GraphQL
     }
   } else {
-    // Scalar or enum field
+    // Handle scalar/enum fields
     const namedType = getNamedType(fieldType);
 
-    // If this is an enum type, ensure it's added to the root
     if (isEnumType(namedType) && options?.root) {
-      const enumTypeName = namedType.name;
-
-      // Initialize createdEnums in options if missing to ensure persistence across calls
-      if (!options.createdEnums) {
-        options.createdEnums = new Set<string>();
-      }
-      const createdEnums = options.createdEnums;
-
-      if (!createdEnums.has(enumTypeName)) {
-        const protoEnum = buildEnumType(namedType as GraphQLEnumType, {
-          includeComments: options.includeComments,
-        });
-        options.root.add(protoEnum);
-        options.createdEnums.add(enumTypeName);
-      }
+      ensureEnumCreated(namedType as GraphQLEnumType, options);
     }
 
     const protoTypeInfo = mapGraphQLTypeToProto(fieldType, {
       customScalarMappings: options?.customScalarMappings,
     });
-
-    // Handle nested list wrappers
-    let finalTypeName = protoTypeInfo.typeName;
-    let isRepeated = protoTypeInfo.isRepeated;
-
-    if (protoTypeInfo.requiresNestedWrapper && options?.ensureNestedListWrapper) {
-      // Create wrapper message and use its name
-      finalTypeName = options.ensureNestedListWrapper(fieldType) as any;
-      isRepeated = false; // Wrapper handles the repetition
-    }
-
-    // Get field number - check if already assigned from reconciliation
-    const existingFieldNumber = fieldNumberManager?.getFieldNumber(message.name, protoFieldName);
-
-    let fieldNumber: number;
-    if (existingFieldNumber !== undefined) {
-      // Use existing field number from reconciliation
-      fieldNumber = existingFieldNumber;
-    } else if (fieldNumberManager) {
-      // Get next field number and assign it
-      fieldNumber = fieldNumberManager.getNextFieldNumber(message.name);
-      fieldNumberManager.assignFieldNumber(message.name, protoFieldName, fieldNumber);
-    } else {
-      // No field number manager, use sequential numbering
-      fieldNumber = message.fieldsArray.length + 1;
-    }
-
-    const protoField = new protobuf.Field(protoFieldName, fieldNumber, finalTypeName);
-
-    if (isRepeated) {
-      protoField.repeated = true;
-    }
-
-    if (options?.includeComments && fieldDef.description) {
-      protoField.comment = fieldDef.description;
-    }
-
-    message.add(protoField);
+    baseTypeName = protoTypeInfo.typeName;
   }
+
+  // Common logic for both branches
+  const protoTypeInfo = mapGraphQLTypeToProto(fieldType, {
+    customScalarMappings: options?.customScalarMappings,
+  });
+
+  const { typeName, isRepeated } = resolveTypeNameAndRepetition(baseTypeName, protoTypeInfo, fieldType, options);
+
+  const fieldNumber = getOrAssignFieldNumber(message, protoFieldName, fieldNumberManager);
+
+  const protoField = createProtoField(protoFieldName, fieldNumber, typeName, isRepeated, fieldDef, options);
+
+  message.add(protoField);
 }
 
 /**
@@ -471,8 +480,8 @@ function processFragmentSpread(
   }
 
   const type = schema.getType(typeName);
-  if (!type || !isObjectType(type)) {
-    // Type not found or not an object type - skip
+  if (!type || !(isObjectType(type) || isInterfaceType(type) || isUnionType(type))) {
+    // Type not found or not a supported type - skip
     return;
   }
 

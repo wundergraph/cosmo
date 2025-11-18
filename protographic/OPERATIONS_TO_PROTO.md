@@ -7,7 +7,6 @@
 - [Overview](#overview)
 - [Concepts](#concepts)
   - [Named Operations Requirement](#named-operations-requirement)
-  - [Generation Modes](#generation-modes)
   - [Field Number Stability](#field-number-stability)
   - [Idempotency Levels](#idempotency-levels)
 - [CLI Reference](#cli-reference)
@@ -22,7 +21,6 @@
   - [Handling Subscriptions](#handling-subscriptions)
   - [Maintaining Field Stability](#maintaining-field-stability)
 - [Advanced Topics](#advanced-topics)
-  - [Multi-Language Support](#multi-language-support)
   - [Custom Scalar Mappings](#custom-scalar-mappings)
   - [Proto Lock Files](#proto-lock-files)
 - [Troubleshooting](#troubleshooting)
@@ -596,7 +594,7 @@ The lock file maintains field number stability across generations.
 #### No Operation Files Found
 
 **Error:**
-```
+```text
 No GraphQL operation files (.graphql, .gql) found in ./operations
 ```
 
@@ -609,7 +607,7 @@ No GraphQL operation files (.graphql, .gql) found in ./operations
 #### Anonymous Operations Not Supported
 
 **Error:**
-```
+```text
 Operations must be named
 ```
 
@@ -635,7 +633,7 @@ query GetUser {
 #### Field Number Conflicts
 
 **Error:**
-```
+```text
 Field number conflict in message X
 ```
 

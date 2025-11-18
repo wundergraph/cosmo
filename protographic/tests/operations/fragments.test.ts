@@ -1433,11 +1433,20 @@ describe('Fragment Support', () => {
         message SearchResponse {
           message Search {
             message BestMatch {
+              string id = 1;
+              google.protobuf.StringValue name = 2;
+              google.protobuf.StringValue title = 3;
             }
             message RelatedPost {
+              string id = 1;
+              google.protobuf.StringValue name = 2;
+              google.protobuf.StringValue title = 3;
             }
-            BestMatch best_match = 1;
-            RelatedPost related_post = 2;
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+            google.protobuf.StringValue title = 3;
+            BestMatch best_match = 4;
+            RelatedPost related_post = 5;
           }
           Search search = 1;
         }
