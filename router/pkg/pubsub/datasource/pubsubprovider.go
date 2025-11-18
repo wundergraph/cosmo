@@ -45,14 +45,6 @@ func (p *PubSubProvider) applyPublishEventHooks(ctx context.Context, cfg Publish
 		})
 
 		if err != nil {
-			p.Logger.Error(
-				"error applying publish event hooks",
-				zap.Error(err),
-				zap.String("provider_id", cfg.ProviderID()),
-				zap.String("provider_type_id", string(cfg.ProviderType())),
-				zap.String("field_name", cfg.RootFieldName()),
-			)
-
 			return currentEvents, err
 		}
 	}

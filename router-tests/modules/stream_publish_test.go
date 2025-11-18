@@ -69,10 +69,11 @@ func TestPublishHook(t *testing.T) {
 				LogLevel: zapcore.InfoLevel,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
+			events.KafkaEnsureTopicExists(t, xEnv, time.Second, "employeeUpdated")
 			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `mutation { updateEmployeeMyKafka(employeeID: 3, update: {name: "name test"}) { success } }`,
 			})
-			require.JSONEq(t, `{"data":{"updateEmployeeMyKafka":{"success":false}}}`, resOne.Body)
+			require.JSONEq(t, `{"data":{"updateEmployeeMyKafka":{"success":true}}}`, resOne.Body)
 
 			requestLog := xEnv.Observer().FilterMessage("Publish Hook has been run")
 			assert.Len(t, requestLog.All(), 1)
@@ -111,10 +112,11 @@ func TestPublishHook(t *testing.T) {
 				LogLevel: zapcore.InfoLevel,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
+			events.KafkaEnsureTopicExists(t, xEnv, time.Second, "employeeUpdated")
 			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `mutation { updateEmployeeMyKafka(employeeID: 3, update: {name: "name test"}) { success } }`,
 			})
-			require.JSONEq(t, `{"data":{"updateEmployeeMyKafka":{"success":false}}}`, resOne.Body)
+			require.JSONEq(t, `{"data":{"updateEmployeeMyKafka":{"success":true}}}`, resOne.Body)
 
 			requestLog := xEnv.Observer().FilterMessage("Publish Hook has been run")
 			assert.Len(t, requestLog.All(), 1)
@@ -124,8 +126,8 @@ func TestPublishHook(t *testing.T) {
 	t.Run("Test kafka publish error is returned and messages sent", func(t *testing.T) {
 		t.Parallel()
 
-		// This test verifies that when the publish hook returns events and an error,
-		// the error is properly logged but the messages are still sent to Kafka.
+		// This test verifies that when the publish hook returns events and an error
+		// but the messages are still sent to Kafka.
 		// It ensures that hook errors don't prevent message delivery if the hook developer
 		// wants to do so. If he does not want this he must no return events.
 
@@ -162,9 +164,6 @@ func TestPublishHook(t *testing.T) {
 			requestLog := xEnv.Observer().FilterMessage("Publish Hook has been run")
 			assert.Len(t, requestLog.All(), 1)
 
-			requestLog2 := xEnv.Observer().FilterMessage("error applying publish event hooks")
-			assert.Len(t, requestLog2.All(), 1)
-
 			records, err := events.ReadKafkaMessages(xEnv, time.Second, "employeeUpdated", 1)
 			require.NoError(t, err)
 			require.Len(t, records, 1)
@@ -175,7 +174,7 @@ func TestPublishHook(t *testing.T) {
 		t.Parallel()
 
 		// This test verifies that when the publish hook returns an error for NATS events,
-		// the error is properly logged but the messages are still sent to NATS.
+		// but the messages are still sent to NATS.
 		// It ensures that hook errors don't prevent message delivery for NATS if the hook developer wants to do so.
 		// If he does not want this he must no return events.
 
@@ -219,9 +218,6 @@ func TestPublishHook(t *testing.T) {
 			requestLog := xEnv.Observer().FilterMessage("Publish Hook has been run")
 			assert.Len(t, requestLog.All(), 1)
 
-			requestLog2 := xEnv.Observer().FilterMessage("error applying publish event hooks")
-			assert.Len(t, requestLog2.All(), 1)
-
 			msgOne, err := firstSub.NextMsg(5 * time.Second)
 			require.NoError(t, err)
 			require.Equal(t, xEnv.GetPubSubName("employeeUpdatedMyNats.3"), msgOne.Subject)
@@ -233,8 +229,8 @@ func TestPublishHook(t *testing.T) {
 	t.Run("Test redis publish error is returned and messages sent", func(t *testing.T) {
 		t.Parallel()
 
-		// This test verifies that when the publish hook returns an error for Redis events,
-		// the error is properly logged but the messages are still sent to Redis (non-blocking behavior).
+		// This test verifies that when the publish hook returns an error for Redis events
+		// but the messages are still sent to Redis (non-blocking behavior).
 		// It ensures that hook errors don't prevent message delivery for Redis if the hook developer wants to do so.
 		// If he does not want this he must no return events.
 
@@ -271,9 +267,6 @@ func TestPublishHook(t *testing.T) {
 
 			requestLog := xEnv.Observer().FilterMessage("Publish Hook has been run")
 			assert.Len(t, requestLog.All(), 1)
-
-			requestLog2 := xEnv.Observer().FilterMessage("error applying publish event hooks")
-			assert.Len(t, requestLog2.All(), 1)
 
 			require.Len(t, records, 1)
 		})
