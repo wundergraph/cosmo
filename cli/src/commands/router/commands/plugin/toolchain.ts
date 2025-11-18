@@ -106,7 +106,7 @@ const GO_TOOL_VERSIONS: ToolVersionLanguageMapping = {
   },
 };
 
-const BUN_TOOL_VERSIONS: ToolVersionLanguageMapping = {
+const TS_TOOL_VERSIONS: ToolVersionLanguageMapping = {
   bun: {
     range: '^1.2.15',
     envVar: 'BUN_VERSION',
@@ -114,12 +114,20 @@ const BUN_TOOL_VERSIONS: ToolVersionLanguageMapping = {
     versionCommand: 'bun',
     versionFlag: '--version',
   },
+  // Node is needed for the protoc-gen-js plugins, for runtime we still only use bun
+  node: {
+    range: '^22.12.0',
+    envVar: 'NODE_VERSION',
+    scriptVersion: '22.12.0',
+    versionCommand: 'node',
+    versionFlag: '--version',
+  },
 };
 
 // We combine all tool versions here, per language
 const LanguageSpecificTools: Record<string, ToolVersionLanguageMapping> = {
   go: { ...COMMON_TOOL_VERSIONS, ...GO_TOOL_VERSIONS },
-  ts: { ...COMMON_TOOL_VERSIONS, ...BUN_TOOL_VERSIONS },
+  ts: { ...COMMON_TOOL_VERSIONS, ...TS_TOOL_VERSIONS },
 };
 
 /**
@@ -518,9 +526,9 @@ export async function generateGRPCCode(pluginDir: string, spinner: any, language
     }
     case 'ts': {
       const protocGenTsPath = resolve(pluginDir, 'node_modules/.bin/protoc-gen-ts');
+      const protoGenJsPath = resolve(pluginDir, 'node_modules/.bin/protoc-gen-js');
       const protocGenGrpcPath = resolve(pluginDir, 'node_modules/.bin/grpc_tools_node_protoc_plugin');
       const generatedDir = resolve(pluginDir, 'generated');
-      const protoGenJsPath = resolve(pluginDir, 'node_modules/.bin/protoc-gen-js');
       const protoFile = resolve(pluginDir, 'generated/service.proto');
 
       if (!existsSync(protocGenTsPath)) {
@@ -640,7 +648,7 @@ export async function typeCheckTs(pluginDir: string, spinner: any) {
   const bunPath = getToolPath('bun');
 
   // Use `bun x tsc` to ensure TypeScript is available without requiring it as a dependency
-  await execa(bunPath, ['tsc', '--noEmit'], {
+  await execa(bunPath, ['x', 'tsc', '--noEmit'], {
     cwd: pluginDir,
     stdout: 'inherit',
     stderr: 'inherit',

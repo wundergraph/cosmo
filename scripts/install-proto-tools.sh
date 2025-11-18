@@ -7,6 +7,7 @@ PROTOC_VERSION="${PROTOC_VERSION:-29.3}"
 PROTOC_GEN_GO_VERSION="${PROTOC_GEN_GO_VERSION:-1.36.5}"
 PROTOC_GEN_GO_GRPC_VERSION="${PROTOC_GEN_GO_GRPC_VERSION:-1.5.1}"
 BUN_VERSION="${BUN_VERSION:-1.2.15}"
+NODE_VERSION="${NODE_VERSION:-22.12.0}"
 
 # Language to install tools for (go or ts)
 LANGUAGE="${LANGUAGE}"
@@ -72,6 +73,7 @@ case $platform in
     grpc_platform="darwin.amd64"
     protoc_gen_go_platform="darwin.amd64"
     bun_platform="darwin-x64"
+    node_platform="darwin-x64"
     ;;
 'Darwin arm64')
     go_platform="darwin-arm64"
@@ -79,6 +81,7 @@ case $platform in
     grpc_platform="darwin.arm64"
     protoc_gen_go_platform="darwin.arm64"
     bun_platform="darwin-aarch64"
+    node_platform="darwin-arm64"
     ;;
 'Linux aarch64' | 'Linux arm64')
     go_platform="linux-arm64"
@@ -86,6 +89,7 @@ case $platform in
     grpc_platform="linux.arm64"
     protoc_gen_go_platform="linux.arm64"
     bun_platform="linux-aarch64"
+    node_platform="linux-arm64"
     ;;
 'Linux x86_64')
     go_platform="linux-amd64"
@@ -93,6 +97,7 @@ case $platform in
     grpc_platform="linux.amd64"
     protoc_gen_go_platform="linux.amd64"
     bun_platform="linux-x64"
+    node_platform="linux-x64"
     ;;
 *)
     error "Unsupported platform: $platform"
@@ -198,6 +203,35 @@ download_bun() {
     success "Bun $BUN_VERSION installed successfully!"
 }
 
+# Download and install Node.js
+download_node() {
+    info "Downloading Node.js $NODE_VERSION..."
+
+    node_url="https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-${node_platform}.tar.gz"
+    tmp_file="$TMP_DIR/node.tar.gz"
+
+    curl --fail --location --progress-bar --output "$tmp_file" "$node_url" ||
+        error "Failed to download Node.js from \"$node_url\""
+
+    info "Extracting Node.js..."
+    tar -xzf "$tmp_file" -C "$TMP_DIR" ||
+        error "Failed to extract Node.js"
+
+    # Move the extracted directory to INSTALL_DIR
+    mv "$TMP_DIR/node-v${NODE_VERSION}-${node_platform}" "$INSTALL_DIR/node" ||
+        error "Failed to move Node.js"
+
+    # Create symlinks to binaries
+    ln -sf "$INSTALL_DIR/node/bin/node" "$BIN_DIR/node" ||
+        error "Failed to link node binary"
+    ln -sf "$INSTALL_DIR/node/bin/npm" "$BIN_DIR/npm" ||
+        error "Failed to link npm binary"
+    ln -sf "$INSTALL_DIR/node/bin/npx" "$BIN_DIR/npx" ||
+        error "Failed to link npx binary"
+
+    success "Node.js $NODE_VERSION installed successfully!"
+}
+
 # Download protoc-gen-go-grpc directly from official GitHub releases
 download_protoc_gen_go_grpc() {
     info "Downloading protoc-gen-go-grpc $PROTOC_GEN_GO_GRPC_VERSION..."
@@ -242,6 +276,7 @@ go)
     ;;
 ts)
     download_bun
+    download_node
     ;;
 *)
     error "Unsupported language: $LANGUAGE. Must be 'go' or 'ts'."
@@ -269,6 +304,9 @@ if [[ "$PRINT_INSTRUCTIONS" != "false" ]]; then
     fi
     if [[ "$LANGUAGE" == "ts" ]]; then
         info_bold "  $BIN_DIR/bun"
+        info_bold "  $BIN_DIR/node"
+        info_bold "  $BIN_DIR/npm"
+        info_bold "  $BIN_DIR/npx"
     fi
     echo
 else
