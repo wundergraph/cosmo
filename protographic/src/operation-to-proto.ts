@@ -36,6 +36,7 @@ import { createFieldNumberManager } from './operations/field-numbering.js';
 import { buildMessageFromSelectionSet } from './operations/message-builder.js';
 import { buildRequestMessage, buildInputObjectMessage, buildEnumType } from './operations/request-builder.js';
 import { rootToProtoText } from './operations/proto-text-generator.js';
+import { mapGraphQLTypeToProto } from './operations/type-mapper.js';
 import {
   createRequestMessageName,
   createResponseMessageName,
@@ -522,9 +523,6 @@ class OperationsToProtoVisitor {
    * @returns The wrapper message name
    */
   private createNestedListWrapperCallback(graphqlType: any): string {
-    // Import mapGraphQLTypeToProto to get type info
-    const { mapGraphQLTypeToProto } = require('./operations/type-mapper.js');
-
     const typeInfo = mapGraphQLTypeToProto(graphqlType, {
       customScalarMappings: this.customScalarMappings,
     });
