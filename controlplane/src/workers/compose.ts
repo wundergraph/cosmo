@@ -5,6 +5,7 @@
 import { randomUUID } from 'node:crypto';
 import { MessagePort } from 'node:worker_threads';
 import { PlainMessage } from '@bufbuild/protobuf';
+import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { CompositionError, CompositionWarning } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { ContractTagOptions, FederationResult, FederationResultWithContracts } from '@wundergraph/composition';
 import { getFederationResultWithPotentialContracts } from '../core/util.js';
@@ -31,7 +32,7 @@ export interface ContractGraph {
   contractResultSuccess: boolean;
   contractGraphId: string;
   contractSchemaVersionId: `${string}-${string}-${string}-${string}-${string}`;
-  // contractRouterExecutionConfig?: RouterConfig;
+  contractRouterConfig: string;
 }
 
 export interface Outputs {
@@ -39,7 +40,7 @@ export interface Outputs {
   composedGraph: ComposedFederatedGraph;
   federatedSchemaVersionId: `${string}-${string}-${string}-${string}-${string}`;
   schemaVersionId: string;
-  // routerExecutionConfig?: RouterConfig;
+  routerConfig: string;
   allCompositionErrors: PlainMessage<CompositionError>[];
   allCompositionWarnings: PlainMessage<CompositionWarning>[];
   contractGraphs: ContractGraph[];
@@ -49,7 +50,8 @@ export interface BaseMessage {
   composedGraph: ComposedFederatedGraph;
   contractNames: string[];
   federatedSchemaVersionId: `${string}-${string}-${string}-${string}-${string}`;
-  // routerExecutionConfig?: RouterConfig;
+  routerConfig: string;
+  resultSuccess: boolean;
 }
 
 export interface BaseResult {
@@ -109,6 +111,8 @@ export default function ({
       federatedGraph.routerCompatibilityVersion,
     );
 
+    const routerConfig = routerExecutionConfig ? routerExecutionConfig.toJsonString() : '';
+
     const contractNames: string[] = [];
 
     if ('federationResultByContractName' in result) {
@@ -117,11 +121,22 @@ export default function ({
       }
     }
 
+    for (const subgraph of composedGraph.subgraphs) {
+      if ('schema' in subgraph) {
+        subgraph.schema = undefined;
+      }
+
+      if ('mapping' in subgraph) {
+        subgraph.mapping = JSON.parse(JSON.stringify(subgraph.mapping));
+      }
+    }
+
     const message: BaseMessage = {
       composedGraph,
       federatedSchemaVersionId,
-      // routerExecutionConfig,
+      routerConfig,
       contractNames,
+      resultSuccess: result.success,
     };
 
     port.postMessage(message);
@@ -133,7 +148,7 @@ export default function ({
           composedGraph,
           federatedSchemaVersionId,
           schemaVersionId: baseResult.compositionDeployResult.schemaVersionId,
-          // routerExecutionConfig,
+          routerConfig,
           contractGraphs: [],
           allCompositionErrors,
           allCompositionWarnings,
@@ -180,12 +195,16 @@ export default function ({
             federatedGraph.routerCompatibilityVersion,
           );
 
+          const contractRouterConfig = contractRouterExecutionConfig
+            ? contractRouterExecutionConfig.toJsonString()
+            : '';
+
           contractGraphs.push({
             composedContract,
             contractResultSuccess: contractResult.success,
             contractGraphId: contractGraph.id,
             contractSchemaVersionId,
-            // contractRouterExecutionConfig,
+            contractRouterConfig,
           });
         }
       }
@@ -195,7 +214,7 @@ export default function ({
         composedGraph,
         federatedSchemaVersionId,
         schemaVersionId: baseResult.compositionDeployResult.schemaVersionId,
-        // routerExecutionConfig,
+        routerConfig,
         contractGraphs,
         allCompositionErrors,
         allCompositionWarnings,

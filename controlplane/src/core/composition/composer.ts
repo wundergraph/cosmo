@@ -222,10 +222,10 @@ export function mapResultToComposedGraph(
     composedSchema: result.success ? printSchemaWithDirectives(result.federatedGraphSchema) : undefined,
     federatedClientSchema: result.success ? printSchemaWithDirectives(result.federatedGraphClientSchema) : undefined,
     shouldIncludeClientSchema: result.success ? result.shouldIncludeClientSchema : false,
-    errors: result.success ? [] : result.errors.map((e) => e.toString()),
+    errors: result.success ? [] : result.errors.map((e) => e.message),
     subgraphs: subgraphDTOsToComposedSubgraphs(federatedGraph.organizationId, subgraphs, result),
     fieldConfigurations: result.success ? result.fieldConfigurations : [],
-    warnings: result.warnings.map((w) => w.toString()),
+    warnings: result.warnings.map((e) => e.message),
   };
 }
 
