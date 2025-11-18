@@ -24,6 +24,10 @@ func TestStartSubscriptionHook(t *testing.T) {
 	t.Run("Test StartSubscription hook is called", func(t *testing.T) {
 		t.Parallel()
 
+		// This test verifies that the OnStartSubscription hook is invoked when a client initiates a subscription.
+		// It confirms the basic integration of the start subscription module by checking for the expected log message,
+		// ensuring the hook is called at the right moment in the subscription lifecycle.
+
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
@@ -85,6 +89,10 @@ func TestStartSubscriptionHook(t *testing.T) {
 
 	t.Run("Test StartSubscription write event works", func(t *testing.T) {
 		t.Parallel()
+
+		// This test verifies that the OnStartSubscription hook can emit a custom event to the subscription
+		// using WriteEvent(). It tests that a synthetic event injected by the hook is properly delivered
+		// to the client when the subscription starts, allowing for initialization data or welcome messages.
 
 		cfg := config.Config{
 			Graph: config.Graph{},
@@ -170,8 +178,12 @@ func TestStartSubscriptionHook(t *testing.T) {
 		})
 	})
 
-	t.Run("Test StartSubscription with close to true", func(t *testing.T) {
+	t.Run("Test StartSubscription closes client connection when hook returns an error", func(t *testing.T) {
 		t.Parallel()
+
+		// This test verifies that when the OnStartSubscription hook returns an error, the subscription
+		// is closed and the error is propagated to the client. It ensures that hooks can prevent
+		// subscriptions from starting by returning an error, which triggers proper cleanup.
 
 		callbackCalled := make(chan bool)
 
@@ -254,8 +266,12 @@ func TestStartSubscriptionHook(t *testing.T) {
 		})
 	})
 
-	t.Run("Test StartSubscription write event sends event only to the subscription", func(t *testing.T) {
+	t.Run("Test event emitted byStartSubscription sends event only to the client that triggered the hook", func(t *testing.T) {
 		t.Parallel()
+
+		// This test verifies that WriteEvent() in the OnStartSubscription hook sends events only to the specific
+		// subscription that triggered the hook, not to other subscriptions. It tests with multiple subscriptions
+		// to ensure event isolation and that hooks can target individual clients based on their context.
 
 		cfg := config.Config{
 			Graph: config.Graph{},
@@ -360,6 +376,10 @@ func TestStartSubscriptionHook(t *testing.T) {
 	t.Run("Test StartSubscription error is propagated to the client", func(t *testing.T) {
 		t.Parallel()
 
+		// This test verifies that errors returned by the OnStartSubscription hook are properly propagated to the client
+		// with correct HTTP status codes and error messages. It ensures clients receive detailed error information
+		// including custom status codes when a subscription is rejected by the hook.
+
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
@@ -448,6 +468,10 @@ func TestStartSubscriptionHook(t *testing.T) {
 	t.Run("Test StartSubscription hook is called for engine subscription", func(t *testing.T) {
 		t.Parallel()
 
+		// This test verifies that the OnStartSubscription hook is called for engine-based subscriptions
+		// (subscriptions resolved by the router's execution engine, not event-driven sources like Kafka).
+		// It ensures the hook works uniformly across different subscription types.
+
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
@@ -503,6 +527,10 @@ func TestStartSubscriptionHook(t *testing.T) {
 
 	t.Run("Test StartSubscription hook is called for engine subscription and write event works", func(t *testing.T) {
 		t.Parallel()
+
+		// This test verifies that WriteEvent() works for engine-based subscriptions, allowing hooks to inject
+		// custom events even for subscriptions that don't use event-driven sources. It tests that the synthetic
+		// event is delivered first, followed by the normal engine-generated subscription data.
 
 		cfg := config.Config{
 			Graph: config.Graph{},
@@ -585,6 +613,11 @@ func TestStartSubscriptionHook(t *testing.T) {
 
 	t.Run("Test when StartSubscription hook returns an error, the OnOriginResponse hook is not called", func(t *testing.T) {
 		t.Parallel()
+
+		// This test verifies that when the OnStartSubscription hook returns an error, subsequent hooks like
+		// OnOriginResponse are not executed. It ensures proper hook chain short-circuiting when errors occur,
+		// preventing unnecessary processing after a subscription has been rejected.
+
 		originResponseCalled := make(chan *http.Response, 1)
 
 		cfg := config.Config{

@@ -27,6 +27,16 @@ func TestPublishHook(t *testing.T) {
 	t.Run("Test Publish hook can't assert to mutable types", func(t *testing.T) {
 		t.Parallel()
 
+		// This test verifies that regular StreamEvents cannot be type-asserted to MutableStreamEvent.
+		// By default events are immutable in Cosmo Streams hooks, because it is not garantueed they aren't
+		// shared with other goroutines.
+		// The only acceptable way to get mutable events is to do a deep copy inside the hook by invoking
+		// event.Clone(), which returns a mutable copy of the event. If a type assertion would be successful
+		// it means the hook developer would have an event of type MutableEvent, but the deep copy never happened.
+		// Note: It's not as important in the OnPublishEvent hook, because events are isolated between hook calls.
+		// It's rather important in the OnReceiveEvent hook but both hooks share the same behaviour for consistency reasons
+		// and thats why we test it here as well.
+
 		var taPossible atomic.Bool
 		taPossible.Store(true)
 
@@ -74,42 +84,18 @@ func TestPublishHook(t *testing.T) {
 	t.Run("Test Publish hook is called", func(t *testing.T) {
 		t.Parallel()
 
-		cfg := config.Config{
-			Graph: config.Graph{},
-			Modules: map[string]interface{}{
-				"publishModule": stream_publish.PublishModule{},
-			},
-		}
-
-		testenv.Run(t, &testenv.Config{
-			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
-			EnableKafka:              true,
-			RouterOptions: []core.Option{
-				core.WithModulesConfig(cfg.Modules),
-				core.WithCustomModules(&stream_publish.PublishModule{}),
-			},
-			LogObservation: testenv.LogObservationConfig{
-				Enabled:  true,
-				LogLevel: zapcore.InfoLevel,
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `mutation { updateEmployeeMyKafka(employeeID: 3, update: {name: "name test"}) { success } }`,
-			})
-			require.JSONEq(t, `{"data":{"updateEmployeeMyKafka":{"success":false}}}`, resOne.Body)
-
-			requestLog := xEnv.Observer().FilterMessage("Publish Hook has been run")
-			assert.Len(t, requestLog.All(), 1)
-		})
-	})
-
-	t.Run("Test Publish hook is called with mutable event", func(t *testing.T) {
-		t.Parallel()
+		// This test verifies that the publish hook is invoked when a mutation with a Kafka publish is executed.
+		// It confirms the hook as been called by checking a log message, which is written by the custom module
+		// used in these tests right before the actual hook is being called.
 
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
-				"publishModule": stream_publish.PublishModule{},
+				"publishModule": stream_publish.PublishModule{
+					Callback: func(ctx core.StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
+						return events, nil
+					},
+				},
 			},
 		}
 
@@ -137,6 +123,11 @@ func TestPublishHook(t *testing.T) {
 
 	t.Run("Test kafka publish error is returned and messages sent", func(t *testing.T) {
 		t.Parallel()
+
+		// This test verifies that when the publish hook returns events and an error,
+		// the error is properly logged but the messages are still sent to Kafka.
+		// It ensures that hook errors don't prevent message delivery if the hook developer
+		// wants to do so. If he does not want this he must no return events.
 
 		cfg := config.Config{
 			Graph: config.Graph{},
@@ -182,6 +173,11 @@ func TestPublishHook(t *testing.T) {
 
 	t.Run("Test nats publish error is returned and messages sent", func(t *testing.T) {
 		t.Parallel()
+
+		// This test verifies that when the publish hook returns an error for NATS events,
+		// the error is properly logged but the messages are still sent to NATS.
+		// It ensures that hook errors don't prevent message delivery for NATS if the hook developer wants to do so.
+		// If he does not want this he must no return events.
 
 		cfg := config.Config{
 			Graph: config.Graph{},
@@ -237,6 +233,11 @@ func TestPublishHook(t *testing.T) {
 	t.Run("Test redis publish error is returned and messages sent", func(t *testing.T) {
 		t.Parallel()
 
+		// This test verifies that when the publish hook returns an error for Redis events,
+		// the error is properly logged but the messages are still sent to Redis (non-blocking behavior).
+		// It ensures that hook errors don't prevent message delivery for Redis if the hook developer wants to do so.
+		// If he does not want this he must no return events.
+
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
@@ -280,6 +281,12 @@ func TestPublishHook(t *testing.T) {
 
 	t.Run("Test kafka module publish with argument in header", func(t *testing.T) {
 		t.Parallel()
+
+		// This test verifies that the publish hook can modify Kafka events by cloning them,
+		// changing the event data, and adding custom headers. It tests the ability to access
+		// operation variables and inject them as headers into Kafka messages.
+		// The test ensures that concrete event types can be used and their
+		// distinct broker features (like headers for Kafka) are accessible for hook developers.
 
 		cfg := config.Config{
 			Graph: config.Graph{},

@@ -37,6 +37,10 @@ func TestReceiveHook(t *testing.T) {
 	t.Run("Test Receive hook is called", func(t *testing.T) {
 		t.Parallel()
 
+		// This test verifies that the receive hook is invoked when events are received from Kafka.
+		// It confirms the hook is called by checking for the expected log message
+		// and that subscription events are properly delivered to the client.
+
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
@@ -109,6 +113,11 @@ func TestReceiveHook(t *testing.T) {
 
 	t.Run("Test Receive hook could change events", func(t *testing.T) {
 		t.Parallel()
+
+		// This test verifies that the receive hook can modify events by cloning them first, so they become mutable,
+		// and then changing their data. This is the only way to get mutable events, because by default events are immutable.
+		// It tests that the modified events are properly delivered to subscribers with the updated data,
+		// demonstrating that hooks can transform stream events before they reach clients.
 
 		cfg := config.Config{
 			Graph: config.Graph{},
@@ -191,8 +200,108 @@ func TestReceiveHook(t *testing.T) {
 		})
 	})
 
+	t.Run("Test hook can't assert to mutable types", func(t *testing.T) {
+		t.Parallel()
+
+		// This test verifies that regular StreamEvents cannot be type-asserted to MutableStreamEvent.
+		// By default events are immutable in Cosmo Streams hooks, because it is not garantueed they aren't
+		// shared with other goroutines.
+		// The only acceptable way to get mutable events is to do a deep copy inside the hook by invoking
+		// event.Clone(), which returns a mutable copy of the event. If a type assertion would be successful
+		// it means the hook developer would have an event of type MutableEvent, but the deep copy never happened.
+
+		var taPossible atomic.Bool
+		taPossible.Store(true)
+
+		cfg := config.Config{
+			Graph: config.Graph{},
+			Modules: map[string]interface{}{
+				"streamReceiveModule": stream_receive.StreamReceiveModule{
+					Callback: func(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
+						for _, evt := range events.All() {
+							_, ok := evt.(datasource.MutableStreamEvent)
+							if !ok {
+								taPossible.Store(false)
+							}
+						}
+						return events, nil
+					},
+				},
+			},
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
+			RouterOptions: []core.Option{
+				core.WithModulesConfig(cfg.Modules),
+				core.WithCustomModules(&stream_receive.StreamReceiveModule{}),
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			topics := []string{"employeeUpdated"}
+			events.KafkaEnsureTopicExists(t, xEnv, time.Second, topics...)
+
+			var subscriptionOne struct {
+				employeeUpdatedMyKafka struct {
+					ID      float64 `graphql:"id"`
+					Details struct {
+						Forename string `graphql:"forename"`
+						Surname  string `graphql:"surname"`
+					} `graphql:"details"`
+				} `graphql:"employeeUpdatedMyKafka(employeeID: 3)"`
+			}
+
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
+			client := graphql.NewSubscriptionClient(surl)
+
+			subscriptionArgsCh := make(chan kafkaSubscriptionArgs)
+			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
+				subscriptionArgsCh <- kafkaSubscriptionArgs{
+					dataValue: dataValue,
+					errValue:  errValue,
+				}
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEmpty(t, subscriptionOneID)
+
+			clientRunCh := make(chan error)
+			go func() {
+				clientRunCh <- client.Run()
+			}()
+
+			xEnv.WaitForSubscriptionCount(1, Timeout)
+
+			events.ProduceKafkaMessage(t, xEnv, Timeout, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+
+			testenv.AwaitChannelWithT(t, Timeout, subscriptionArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
+				require.NoError(t, args.errValue)
+				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
+			})
+
+			require.NoError(t, client.Close())
+			testenv.AwaitChannelWithT(t, Timeout, clientRunCh, func(t *testing.T, err error) {
+				require.NoError(t, err)
+			}, "unable to close client before timeout")
+
+			requestLog := xEnv.Observer().FilterMessage("Stream Hook has been run")
+			assert.Len(t, requestLog.All(), 1)
+
+			assert.False(t, taPossible.Load(), "invalid type assertion was possible")
+		})
+	})
+
 	t.Run("Test Receive hook change events of one of multiple subscriptions", func(t *testing.T) {
 		t.Parallel()
+
+		// This test verifies that the receive hook can selectively modify events for specific subscriptions
+		// based on the clients authentication context. It tests that when multiple clients are subscribed, the hook can
+		// access JWT claims of individual clients and modify events only for authenticated users with specific claims,
+		// while leaving events for other clients unchanged.
 
 		cfg := config.Config{
 			Graph: config.Graph{},
@@ -353,6 +462,10 @@ func TestReceiveHook(t *testing.T) {
 	t.Run("Test Receive hook can access custom header", func(t *testing.T) {
 		t.Parallel()
 
+		// This test verifies that the receive hook can access custom HTTP headers from the WebSocket connection.
+		// It tests that hooks can read headers sent during subscription initialization and use them to
+		// conditionally modify events, enabling header-based event transformation logic.
+
 		customHeader := http.CanonicalHeaderKey("X-Custom-Header")
 
 		cfg := config.Config{
@@ -451,6 +564,10 @@ func TestReceiveHook(t *testing.T) {
 	t.Run("Test Batch hook error should close Kafka clients and subscriptions", func(t *testing.T) {
 		t.Parallel()
 
+		// This test verifies that when the receive hook returns an error, the router properly closes
+		// the subscription connection and cleans up Kafka clients. It ensures that hook errors trigger
+		// graceful shutdown of the subscription to prevent resource leaks or stuck connections.
+
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
@@ -525,6 +642,11 @@ func TestReceiveHook(t *testing.T) {
 	t.Run("Test concurrent handler execution works", func(t *testing.T) {
 		t.Parallel()
 
+		// This test verifies that the MaxConcurrentHandlers configuration properly limits the number of
+		// receive hooks executing simultaneously. It tests various concurrency levels (1, 2, 10, 20 handlers)
+		// with multiple clients to ensure the router respects the concurrency limit and never exceeds it,
+		// even under load with many active clients.
+
 		testCases := []struct {
 			name           string
 			maxConcurrent  int
@@ -569,7 +691,7 @@ func TestReceiveHook(t *testing.T) {
 							Callback: func(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
 								currentHandlers.Add(1)
 
-								// wait for other handlers in the batch
+								// Wait for other hooks in the same client update batch to start.
 								for {
 									current := currentHandlers.Load()
 									max := maxCurrentHandlers.Load()
@@ -579,7 +701,8 @@ func TestReceiveHook(t *testing.T) {
 									}
 
 									if current >= int32(tc.maxConcurrent) {
-										// wait to see if the updater spawns too many concurrent handlers
+										// wait to see if the subscription-updater spawns too many concurrent hooks,
+										// i.e. exceeding the number of configured max concurrent hooks.
 										deadline := time.Now().Add(300 * time.Millisecond)
 										for time.Now().Before(deadline) {
 											if currentHandlers.Load() > int32(tc.maxConcurrent) {
@@ -589,8 +712,14 @@ func TestReceiveHook(t *testing.T) {
 										break
 									}
 
-									// Let handlers continue if we never reach a batch size = tc.maxConcurrent
-									// because there are not enough remaining subscribers to be updated.
+									// Let hooks continue if we never reach a updater batch size = tc.maxConcurrent
+									// because there are not enough remaining clients to be updated.
+									// i.e. it could be the last round of updates:
+									// 100 clients, now in comes a new event from broker, max concurrent hooks = 30.
+									// First round: 30 hooks run, 70 remaining.
+									// Second round: 30 hooks run, 40 remaining.
+									// Third round: 30 hooks run, 10 remaining.
+									// Fourth round: 10 hooks run, then we end up here because remainingSubs < tc.maxConcurrent.
 									remainingSubs := tc.numSubscribers - int(finishedHandlers.Load())
 									if remainingSubs < tc.maxConcurrent {
 										break
@@ -699,12 +828,15 @@ func TestReceiveHook(t *testing.T) {
 		t.Parallel()
 
 		// One subscriber receives three consecutive events.
-		// The first event's hook is delayed, exceeding the timeout.
+		// The first event's hook is delayed, exceeding the configurable hook timeout.
 		// The second and third events' hooks process immediately without delay.
-		// Because the first hook exceeds the timeout, the system abandons waiting for it
-		// and processes the second and third events.
+		// Because the first hook exceeds the timeout, the subscription-updater gives up waiting for it
+		// and proceedes to process the second and third events immediately.
 		// The first event will be delivered later when its hook finally completes.
-		// This should result in event order [2, 3, 1] at the client.
+		// This should result in the first event being delivered last.
+		//
+		// Delivering events out of order is a tradeoff to ensure that hooks do not block the subscription-updater for too long.
+		// We try to keep the order but once the timeout is exceeded we need to move on and it's no longer guaranteed.
 
 		hookDelay := 500 * time.Millisecond
 		hookTimeout := 100 * time.Millisecond
