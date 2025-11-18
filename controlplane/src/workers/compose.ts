@@ -5,12 +5,7 @@
 import { randomUUID } from 'node:crypto';
 import { MessagePort } from 'node:worker_threads';
 import { PlainMessage } from '@bufbuild/protobuf';
-import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import {
-  CompositionError,
-  CompositionWarning,
-  DeploymentError,
-} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { CompositionError, CompositionWarning } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { ContractTagOptions, FederationResult, FederationResultWithContracts } from '@wundergraph/composition';
 import { getFederationResultWithPotentialContracts } from '../core/util.js';
 import { CompositionOptions, FederatedGraphDTO } from '../types/index.js';
@@ -128,9 +123,8 @@ export default function ({
       // routerExecutionConfig,
       contractNames,
     };
-    const messageJSON = JSON.stringify(message);
 
-    port.postMessage(messageJSON);
+    port.postMessage(message);
 
     port.on('message', (baseResult: BaseResult) => {
       if (!result.success || !baseResult.compositionDeployResult.schemaVersionId || !routerExecutionConfig) {

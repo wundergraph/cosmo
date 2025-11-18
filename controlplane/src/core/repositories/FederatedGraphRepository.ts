@@ -1601,9 +1601,7 @@ export class FederatedGraphRepository {
           };
           const outputPromise: Promise<ComposeOutputs> = composeWorkerPool.run(inputs, { transferList: [portWorker] });
 
-          portMain.on('message', async (resultJSON: string) => {
-            const result: ComposeBaseMessage = JSON.parse(resultJSON);
-
+          portMain.on('message', async (result: ComposeBaseMessage) => {
             const routerExecutionConfig = buildRouterExecutionConfig(
               result.composedGraph,
               result.federatedSchemaVersionId,
