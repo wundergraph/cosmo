@@ -260,7 +260,8 @@ type GenerationOptions = {
 
 /**
  * Read all GraphQL operation files from a directory
- * Returns an array of {filename, content} objects
+ * @param operationsDir - The directory path containing GraphQL operation files
+ * @returns An array of objects containing filename and content for each operation file
  */
 async function readOperationFiles(operationsDir: string): Promise<Array<{ filename: string; content: string }>> {
   const files = await readdir(operationsDir);
@@ -337,7 +338,130 @@ function mergeProtoRoots(roots: protobuf.Root[], serviceName: string): protobuf.
 }
 
 /**
+ * Generate proto from GraphQL operations
+ * @param schema - The GraphQL schema content
+ * @param serviceName - The name of the proto service
+ * @param operationsPath - The resolved path to the operations directory
+ * @param spinner - The spinner instance for progress updates
+ * @param packageName - The proto package name
+ * @param languageOptions - Language-specific proto options
+ * @param lockFile - Path to the proto lock file
+ * @param queryIdempotency - Query idempotency level
+ * @param customScalarMappings - Custom scalar type mappings
+ * @param maxDepth - Maximum recursion depth
+ * @param prefixOperationType - Whether to prefix operation types
+ * @returns Generation result with proto content and lock data
+ */
+async function generateFromOperations(
+  schema: string,
+  serviceName: string,
+  operationsPath: string,
+  spinner: Ora,
+  packageName: string,
+  languageOptions: LanguageOptions,
+  lockFile: string,
+  queryIdempotency?: string,
+  customScalarMappings?: Record<string, string>,
+  maxDepth?: number,
+  prefixOperationType?: boolean,
+): Promise<GenerationResult> {
+  spinner.text = 'Reading operation files...';
+  const operationFiles = await readOperationFiles(operationsPath);
+
+  spinner.text = `Processing ${operationFiles.length} operation files...`;
+
+  // Load lock data for field number stability
+  let currentLockData = await fetchLockData(lockFile);
+
+  // Process each operation file separately to maintain reversibility
+  // Collect the AST roots instead of proto strings
+  const roots: protobuf.Root[] = [];
+
+  for (const { filename, content } of operationFiles) {
+    try {
+      const result = compileOperationsToProto(content, schema, {
+        serviceName,
+        packageName: packageName || 'service.v1',
+        ...languageOptions,
+        includeComments: true,
+        queryIdempotency: queryIdempotency as 'NO_SIDE_EFFECTS' | 'DEFAULT' | undefined,
+        lockData: currentLockData,
+        customScalarMappings,
+        maxDepth,
+        prefixOperationType,
+      });
+
+      // Keep the AST root instead of the string
+      roots.push(result.root);
+      // Use the updated lock data for the next operation to maintain field number stability
+      currentLockData = result.lockData;
+    } catch (error) {
+      throw new Error(
+        `Failed to process operation file ${filename}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+
+  // Merge all proto ASTs into a single root
+  const mergedRoot = mergeProtoRoots(roots, serviceName);
+
+  // Convert the merged AST to proto text once
+  const mergedProto = rootToProtoText(mergedRoot, {
+    packageName: packageName || 'service.v1',
+    ...languageOptions,
+    includeComments: true,
+  });
+
+  return {
+    mapping: null,
+    proto: mergedProto,
+    lockData: currentLockData ?? null,
+    isOperationsMode: true,
+  };
+}
+
+/**
+ * Generate proto and mapping from GraphQL SDL
+ * @param schema - The GraphQL schema content
+ * @param serviceName - The name of the proto service
+ * @param spinner - The spinner instance for progress updates
+ * @param packageName - The proto package name
+ * @param languageOptions - Language-specific proto options
+ * @param lockFile - Path to the proto lock file
+ * @returns Generation result with proto, mapping, and lock data
+ */
+async function generateFromSDL(
+  schema: string,
+  serviceName: string,
+  spinner: Ora,
+  packageName: string | undefined,
+  languageOptions: LanguageOptions,
+  lockFile: string,
+): Promise<GenerationResult> {
+  spinner.text = 'Generating mapping and proto files...';
+
+  const lockData = await fetchLockData(lockFile);
+
+  const mapping = compileGraphQLToMapping(schema, serviceName);
+  const proto = compileGraphQLToProto(schema, {
+    serviceName,
+    packageName,
+    ...languageOptions,
+    lockData,
+  });
+
+  return {
+    mapping: JSON.stringify(mapping, null, 2),
+    proto: proto.proto,
+    lockData: proto.lockData,
+    isOperationsMode: false,
+  };
+}
+
+/**
  * Generate proto and mapping data from schema
+ * @param options - Generation options including schema file, output directory, and configuration
+ * @returns Generation result with proto content, optional mapping, and lock data
  */
 async function generateProtoAndMapping({
   name,
@@ -363,81 +487,22 @@ async function generateProtoAndMapping({
 
   // Determine generation mode
   if (operationsDir) {
-    // Operations-based generation
-    spinner.text = 'Reading operation files...';
     const operationsPath = resolve(operationsDir);
-    const operationFiles = await readOperationFiles(operationsPath);
-
-    spinner.text = `Processing ${operationFiles.length} operation files...`;
-
-    // Load lock data for field number stability
-    let currentLockData = await fetchLockData(lockFile);
-
-    // Process each operation file separately to maintain reversibility
-    // Collect the AST roots instead of proto strings
-    const roots: protobuf.Root[] = [];
-
-    for (const { filename, content } of operationFiles) {
-      try {
-        const result = compileOperationsToProto(content, schema, {
-          serviceName,
-          packageName: packageName || 'service.v1',
-          ...languageOptions,
-          includeComments: true,
-          queryIdempotency: queryIdempotency as 'NO_SIDE_EFFECTS' | 'DEFAULT' | undefined,
-          lockData: currentLockData,
-          customScalarMappings,
-          maxDepth,
-          prefixOperationType,
-        });
-
-        // Keep the AST root instead of the string
-        roots.push(result.root);
-        // Use the updated lock data for the next operation to maintain field number stability
-        currentLockData = result.lockData;
-      } catch (error) {
-        throw new Error(
-          `Failed to process operation file ${filename}: ${error instanceof Error ? error.message : String(error)}`,
-        );
-      }
-    }
-
-    // Merge all proto ASTs into a single root
-    const mergedRoot = mergeProtoRoots(roots, serviceName);
-
-    // Convert the merged AST to proto text once
-    const mergedProto = rootToProtoText(mergedRoot, {
-      packageName: packageName || 'service.v1',
-      ...languageOptions,
-      includeComments: true,
-    });
-
-    return {
-      mapping: null,
-      proto: mergedProto,
-      lockData: currentLockData ?? null,
-      isOperationsMode: true,
-    };
-  } else {
-    // SDL-based generation (original behavior)
-    spinner.text = 'Generating mapping and proto files...';
-
-    const lockData = await fetchLockData(lockFile);
-
-    const mapping = compileGraphQLToMapping(schema, serviceName);
-    const proto = compileGraphQLToProto(schema, {
+    return generateFromOperations(
+      schema,
       serviceName,
-      packageName,
-      ...languageOptions,
-      lockData,
-    });
-
-    return {
-      mapping: JSON.stringify(mapping, null, 2),
-      proto: proto.proto,
-      lockData: proto.lockData,
-      isOperationsMode: false,
-    };
+      operationsPath,
+      spinner,
+      packageName || 'service.v1',
+      languageOptions,
+      lockFile,
+      queryIdempotency,
+      customScalarMappings,
+      maxDepth,
+      prefixOperationType,
+    );
+  } else {
+    return generateFromSDL(schema, serviceName, spinner, packageName, languageOptions, lockFile);
   }
 }
 
