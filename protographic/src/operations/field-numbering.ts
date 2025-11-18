@@ -64,7 +64,7 @@ export interface FieldNumberManager {
   /**
    * Gets the lock manager if available
    */
-  getLockManager?(): ProtoLockManager | undefined;
+  getLockManager(): ProtoLockManager | undefined;
 }
 
 /**

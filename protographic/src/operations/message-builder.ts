@@ -175,17 +175,15 @@ export function buildMessageFromSelectionSet(
 
   // Second pass: process fields in reconciled order
   // Pre-assign field numbers from lock data if available
-  if (fieldNumberManager?.getLockManager) {
-    const lockManager = fieldNumberManager.getLockManager();
-    if (lockManager) {
-      const lockData = lockManager.getLockData();
-      if (lockData.messages[messageName]) {
-        const messageData = lockData.messages[messageName];
-        for (const protoFieldName of orderedFieldNames) {
-          const fieldNumber = messageData.fields[protoFieldName];
-          if (fieldNumber !== undefined) {
-            fieldNumberManager.assignFieldNumber(messageName, protoFieldName, fieldNumber);
-          }
+  const lockManager = fieldNumberManager?.getLockManager();
+  if (lockManager && fieldNumberManager) {
+    const lockData = lockManager.getLockData();
+    if (lockData.messages[messageName]) {
+      const messageData = lockData.messages[messageName];
+      for (const protoFieldName of orderedFieldNames) {
+        const fieldNumber = messageData.fields[protoFieldName];
+        if (fieldNumber !== undefined) {
+          fieldNumberManager.assignFieldNumber(messageName, protoFieldName, fieldNumber);
         }
       }
     }
