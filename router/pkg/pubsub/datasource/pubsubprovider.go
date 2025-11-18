@@ -37,18 +37,19 @@ func (p *PubSubProvider) applyPublishEventHooks(ctx context.Context, cfg Publish
 	}()
 
 	currentEvents = events
-	for _, hook := range p.hooks.OnPublishEvents.Handlers {
-		var err error
-		currentEvents, err = hook(ctx, cfg, currentEvents, p.eventBuilder)
-		currentEvents = slices.DeleteFunc(currentEvents, func(event StreamEvent) bool {
-			return event == nil
-		})
 
+	for _, hook := range p.hooks.OnPublishEvents.Handlers {
+		currentEvents, err = hook(ctx, cfg, currentEvents, p.eventBuilder)
 		if err != nil {
-			return currentEvents, err
+			break
 		}
 	}
-	return currentEvents, nil
+
+	currentEvents = slices.DeleteFunc(currentEvents, func(event StreamEvent) bool {
+		return event == nil
+	})
+
+	return currentEvents, err
 }
 
 func (p *PubSubProvider) ID() string {
