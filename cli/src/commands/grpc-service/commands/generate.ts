@@ -99,6 +99,14 @@ type GenerationResult = {
   isOperationsMode: boolean;
 };
 
+/**
+ * Generate a protobuf schema and related files from a GraphQL schema or a directory of GraphQL operation files.
+ *
+ * Generates service.proto (always), writes mapping.json when produced, and writes a lock file when lock data is available.
+ *
+ * @param name - The name to use for the generated proto service
+ * @param options - CLI options controlling input/output paths, language/package settings, operation-based mode, and generation flags
+ */
 async function generateCommandAction(name: string, options: CLIOptions) {
   if (!name) {
     program.error('A name is required for the proto service');
@@ -259,8 +267,13 @@ type GenerationOptions = {
 };
 
 /**
- * Read all GraphQL operation files from a directory
- * Returns an array of {filename, content} objects
+ * Collects GraphQL operation files from a directory and returns their filenames and contents.
+ *
+ * Filters files by the extensions `.graphql`, `.gql`, `.graphqls`, and `.gqls`.
+ *
+ * @param operationsDir - Path to the directory containing GraphQL operation files
+ * @returns An array of objects each containing `filename` and file `content`
+ * @throws If no GraphQL operation files are found in `operationsDir`
  */
 async function readOperationFiles(operationsDir: string): Promise<Array<{ filename: string; content: string }>> {
   const files = await readdir(operationsDir);
@@ -284,8 +297,15 @@ async function readOperationFiles(operationsDir: string): Promise<Array<{ filena
 }
 
 /**
- * Merge multiple protobufjs Root ASTs into a single Root
- * Combines all messages, enums, and RPC methods from multiple operations
+ * Merge multiple protobufjs AST roots into a single protobuf Root for the specified service.
+ *
+ * Combines unique message and enum types from the input roots and exposes all RPC methods
+ * under a single service named by `serviceName`.
+ *
+ * @param roots - The array of protobuf.Root ASTs to merge
+ * @param serviceName - The name to use for the merged service containing all RPC methods
+ * @returns A new protobuf.Root containing the merged types and a service with all RPC methods
+ * @throws Error if `roots` is empty
  */
 function mergeProtoRoots(roots: protobuf.Root[], serviceName: string): protobuf.Root {
   if (roots.length === 0) {
@@ -336,7 +356,28 @@ function mergeProtoRoots(roots: protobuf.Root[], serviceName: string): protobuf.
 }
 
 /**
- * Generate proto and mapping data from schema
+ * Generate a protobuf schema and optional mapping from a GraphQL SDL or from GraphQL operation files.
+ *
+ * When `operationsDir` is provided, each operation file is compiled to a proto AST, ASTs are merged into a single
+ * proto, and field-number stability is preserved using the lock file between operations. When `operationsDir` is not
+ * provided, the full GraphQL SDL is compiled to a mapping and a proto.
+ *
+ * @param name - Base name of the service used to derive the protobuf service name
+ * @param outdir - Output directory used to resolve default lock file path when `lockFile` is not provided
+ * @param schemaFile - Path to the GraphQL SDL file to compile
+ * @param packageName - Optional protobuf package name to use when rendering proto output
+ * @param languageOptions - Language and protobuf-specific options that influence proto generation
+ * @param lockFile - Path to a lock file used to read and persist field-number assignments for stable IDs
+ * @param operationsDir - If provided, path to a directory of GraphQL operation files to generate a proto from operations
+ * @param queryIdempotency - Controls query idempotency handling for operations-based generation (e.g., `NO_SIDE_EFFECTS` or `DEFAULT`)
+ * @param customScalarMappings - Optional map of GraphQL scalar names to protobuf types used during compilation
+ * @param maxDepth - Optional maximum traversal depth for operation-based compilation
+ * @param prefixOperationType - When true in operations mode, prefixes operation types in the generated proto
+ * @returns An object containing:
+ *  - `mapping`: a formatted JSON string of the generated mapping when compiled from SDL, or `null` when generated from operations;
+ *  - `proto`: the generated protobuf text content;
+ *  - `lockData`: the final lock data used/produced for field-number stability, or `null` if none;
+ *  - `isOperationsMode`: `true` when generation used operation files, `false` when using the SDL.
  */
 async function generateProtoAndMapping({
   name,
@@ -440,6 +481,12 @@ async function generateProtoAndMapping({
   }
 }
 
+/**
+ * Read and parse a protobuf lock file if it exists.
+ *
+ * @param lockFile - Filesystem path to the lock file containing JSON lock data
+ * @returns The parsed `ProtoLock` object, or `undefined` if the file does not exist or contains `null`
+ */
 async function fetchLockData(lockFile: string): Promise<ProtoLock | undefined> {
   if (!(await exists(lockFile))) {
     return undefined;
@@ -450,7 +497,11 @@ async function fetchLockData(lockFile: string): Promise<ProtoLock | undefined> {
 }
 
 /**
- * Parse custom scalar mapping from JSON string or file path
+ * Parse a custom scalar mapping from an inline JSON string or from a file path prefixed with `@`.
+ *
+ * @param input - Inline JSON (e.g. `{"Date":"string"}`) or a file path prefixed with `@` (e.g. `@./scalars.json`)
+ * @returns A record mapping GraphQL scalar names to target type strings
+ * @throws If a file path is provided but the referenced file does not exist
  */
 async function parseCustomScalarMapping(input: string): Promise<Record<string, string>> {
   // Check if input starts with @ to indicate a file path
@@ -467,7 +518,12 @@ async function parseCustomScalarMapping(input: string): Promise<Record<string, s
   return JSON.parse(input);
 }
 
-// Usage of exists from node:fs is not recommended. Use access instead.
+/**
+ * Check whether a filesystem path is readable.
+ *
+ * @param path - The filesystem path to check for read access
+ * @returns `true` if the path is accessible for reading, `false` otherwise
+ */
 async function exists(path: string): Promise<boolean> {
   try {
     await access(path, constants.R_OK);

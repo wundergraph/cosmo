@@ -68,10 +68,10 @@ export interface FieldNumberManager {
 }
 
 /**
- * Creates a new field number manager instance
+ * Create a FieldNumberManager that tracks and assigns protobuf field numbers for messages.
  *
- * @param lockManager - Optional ProtoLockManager for field number stability
- * @returns A new field number manager
+ * @param lockManager - Optional ProtoLockManager used to reconcile and preserve field numbers and ordering from lock data
+ * @returns A FieldNumberManager instance for assigning, retrieving, resetting, and reconciling per-message field numbers
  */
 export function createFieldNumberManager(lockManager?: ProtoLockManager): FieldNumberManager {
   // Map of message name to field name to field number

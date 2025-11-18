@@ -43,11 +43,12 @@ export function loadProtoFromText(protoText: string): protobufjs.Root {
 }
 
 /**
- * Gets field numbers from a message
+ * Map field names to their numeric field IDs for the specified message.
  *
- * @param root - The protobufjs Root
- * @param messagePath - The dot-notation path to the message (e.g., 'GetUserResponse.User' or 'UserInput')
- * @returns A record of field names to field numbers
+ * @param root - Protobuf root used to look up the message
+ * @param messagePath - Dot-notation path to the message (e.g., "GetUserResponse.User" or "UserInput")
+ * @returns A record mapping each field name to its field number
+ * @throws Error if the message cannot be found; the error lists available nested type names
  */
 export function getFieldNumbersFromMessage(root: protobufjs.Root, messagePath: string): Record<string, number> {
   try {
@@ -67,11 +68,20 @@ export function getFieldNumbersFromMessage(root: protobufjs.Root, messagePath: s
 }
 
 /**
- * Gets all nested type names from a root for debugging
+ * Collects fully-qualified nested type names from a protobuf root.
+ *
+ * @param root - The protobufjs Root to traverse
+ * @returns A flat array of nested type names (e.g. `package.Message.NestedType`)
  */
 function getAllNestedTypeNames(root: protobufjs.Root): string[] {
   const names: string[] = [];
 
+  /**
+   * Recursively traverses a protobuf ReflectionObject and appends each nested item's fully-qualified name to the outer-scope `names` array.
+   *
+   * @param obj - The ReflectionObject to traverse
+   * @param prefix - Optional namespace prefix to prepend to discovered names; when provided, nested names are joined with `.` to form fully-qualified names
+   */
   function collectNames(obj: protobufjs.ReflectionObject, prefix: string = '') {
     if ('nested' in obj && obj.nested) {
       for (const [name, nested] of Object.entries(obj.nested)) {
@@ -110,10 +120,11 @@ export function getEnumValuesWithNumbers(root: protobufjs.Root, enumName: string
 }
 
 /**
- * Gets service methods with their order from a loaded proto
- * @param root The loaded proto root
- * @param serviceName The name of the service to extract methods from
- * @returns Array of method names in order
+ * Retrieve the method names of a service in their declaration order.
+ *
+ * @param root - The protobufjs Root that contains the service
+ * @param serviceName - The fully-qualified name or lookup path of the service on the root
+ * @returns Method names in the order they are declared on the service
  */
 export function getServiceMethods(root: protobufjs.Root, serviceName: string): string[] {
   const service = root.lookup(serviceName) as protobufjs.Service | null;
@@ -125,10 +136,12 @@ export function getServiceMethods(root: protobufjs.Root, serviceName: string): s
 }
 
 /**
- * Gets reserved field numbers from a message
- * @param root The loaded proto root
- * @param messageName The name of the message to extract reserved numbers from
- * @returns Array of reserved field numbers or empty array if none
+ * Collects reserved numeric field numbers defined on the specified message or enum in the given root.
+ *
+ * @param root - The protobufjs Root containing the type.
+ * @param typeName - Fully-qualified name of the message or enum to inspect.
+ * @param isEnum - If true, treat the named type as an enum; otherwise treat it as a message.
+ * @returns All reserved numeric values for the type; an empty array if none or the type is not found.
  */
 export function getReservedNumbers(root: protobufjs.Root, typeName: string, isEnum = false): number[] {
   const type = root.lookup(typeName) as protobufjs.Type | protobufjs.Enum | null;
@@ -164,10 +177,13 @@ export function getReservedNumbers(root: protobufjs.Root, typeName: string, isEn
 }
 
 /**
- * Gets message content as a structured object
- * @param root The loaded proto root
- * @param messageName The name of the message to extract
- * @returns Object with field definitions and reserved numbers
+ * Retrieve field name-to-number mappings and reserved field numbers for a message type.
+ *
+ * @param root - The parsed protobuf root containing the message
+ * @param messageName - The fully-qualified path or name of the message within the root
+ * @returns An object with:
+ *   - `fields`: a map from each field name to its numeric field id
+ *   - `reserved`: an array of reserved field numbers for the message
  */
 export function getMessageContent(
   root: protobufjs.Root,
@@ -183,10 +199,11 @@ export function getMessageContent(
 }
 
 /**
- * Gets enum content as a structured object
- * @param root The loaded proto root
- * @param enumName The name of the enum to extract
- * @returns Object with enum values and reserved numbers
+ * Retrieve an enum's defined members and its reserved numeric identifiers.
+ *
+ * @param root - The protobuf Root containing the enum
+ * @param enumName - The name or fully-qualified path of the enum to inspect
+ * @returns An object with `values` mapping enum member names to their numeric values and `reserved` listing reserved numeric identifiers
  */
 export function getEnumContent(
   root: protobufjs.Root,

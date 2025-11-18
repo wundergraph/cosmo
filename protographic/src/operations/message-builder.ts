@@ -204,7 +204,16 @@ export function buildMessageFromSelectionSet(
 }
 
 /**
- * Processes a field selection and adds it to the message
+ * Add a GraphQL field selection to a protobuf message, creating nested messages or enums and assigning a field number.
+ *
+ * Handles fields with sub-selection sets by building and attaching nested messages, ensures enum types are added to the provided root once, applies list wrapper messages when required, and assigns or reconciles field numbers using the optional FieldNumberManager. Skips GraphQL introspection fields and union fields that must be handled via fragments.
+ *
+ * @param field - The GraphQL FieldNode to process
+ * @param message - The protobuf.Type representing the parent message to which the field will be added
+ * @param parentType - The GraphQL parent object/interface/union type that defines the field
+ * @param typeInfo - GraphQL TypeInfo used for type resolution during processing
+ * @param options - MessageBuilderOptions controlling comment inclusion, root enum registration, custom scalar mappings, depth tracking, and nested-list wrapper creation
+ * @param fieldNumberManager - Optional manager used to obtain and reconcile protobuf field numbers for the message
  */
 function processFieldSelection(
   field: FieldNode,
@@ -384,8 +393,17 @@ function processFieldSelection(
 }
 
 /**
- * Processes an inline fragment and adds its selections to the message
- * Inline fragments allow type-specific field selections on interfaces/unions
+ * Apply selections from an inline fragment to the given protobuf message using the fragment's resolved GraphQL type.
+ *
+ * Resolves the fragment's type condition via the provided schema when present, falls back to the parent type when absent,
+ * and delegates each selection to the appropriate processor (field, nested inline fragment, or fragment spread).
+ *
+ * @param fragment - Inline fragment AST node whose selections will be applied
+ * @param message - Protobuf message to which fields/nested messages will be added
+ * @param parentType - GraphQL type context used when the fragment has no type condition
+ * @param typeInfo - GraphQL TypeInfo for resolving field/type details during processing
+ * @param options - Message builder configuration and helpers
+ * @param fieldNumberManager - Optional manager for allocating or reconciling field numbers
  */
 function processInlineFragment(
   fragment: InlineFragmentNode,
@@ -436,8 +454,18 @@ function processInlineFragment(
 }
 
 /**
- * Processes a fragment spread and adds its selections to the message
- * Fragment spreads reference named fragment definitions
+ * Inlines the selections from a named fragment into the given protobuf message using the fragment's type condition.
+ *
+ * Looks up the fragment definition by name from `options.fragments`, resolves the fragment's type condition against
+ * `options.schema`, and applies each selection to `message`. If the fragment definition, schema, or resolved type
+ * cannot be found or is not an object type, the function is a no-op.
+ *
+ * @param spread - The fragment spread AST node to process
+ * @param message - The protobuf message to which selections will be added
+ * @param parentType - The GraphQL type in whose context the spread appears
+ * @param typeInfo - GraphQL TypeInfo used while processing selections
+ * @param options - Message builder options (may contain fragments, schema, and other builders settings)
+ * @param fieldNumberManager - Optional manager for assigning or reconciling field numbers
  */
 function processFragmentSpread(
   spread: FragmentSpreadNode,
@@ -519,12 +547,16 @@ export function buildFieldDefinition(
 }
 
 /**
- * Builds a nested message type
+ * Construct a protobuf message type from a map of GraphQL fields.
  *
- * @param messageName - The name for the nested message
- * @param fields - Map of field names to their GraphQL types
- * @param options - Optional configuration
- * @returns A protobuf Type object
+ * Uses the map's insertion order to add fields. If a FieldNumberManager is provided
+ * in `options`, it will be used to obtain and assign field numbers for each field;
+ * otherwise fields are numbered sequentially starting at 1.
+ *
+ * @param messageName - The name to assign to the created protobuf message
+ * @param fields - Map of GraphQL field names to their GraphQL types; insertion order determines field order
+ * @param options - Optional configuration (e.g., `fieldNumberManager`, custom scalar mappings)
+ * @returns The constructed protobuf.Type representing the nested message with its fields added
  */
 export function buildNestedMessage(
   messageName: string,

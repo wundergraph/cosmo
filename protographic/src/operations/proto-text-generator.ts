@@ -8,7 +8,11 @@ interface MethodWithIdempotency extends protobuf.Method {
 }
 
 /**
- * Helper to format indentation
+ * Prefixes `content` with two spaces for each indentation level.
+ *
+ * @param indent - The number of indentation levels to apply
+ * @param content - The string to prefix with indentation
+ * @returns The input `content` prefixed with two spaces per indentation level
  */
 function formatIndent(indent: number, content: string): string {
   return '  '.repeat(indent) + content;
@@ -49,11 +53,11 @@ export interface ProtoTextOptions {
 }
 
 /**
- * Converts a protobufjs Root to Protocol Buffer text definition
+ * Convert a protobufjs Root into a Protocol Buffer text representation.
  *
- * @param root - The protobufjs Root object containing all definitions
- * @param options - Optional configuration for text generation
- * @returns The proto text as a string
+ * @param root - The protobufjs Root containing services, messages, and enums to emit
+ * @param options - Optional generation settings (package name, language-specific options, imports, and comment inclusion)
+ * @returns The Protocol Buffer text representation of `root`
  */
 export function rootToProtoText(root: protobuf.Root, options?: ProtoTextOptions): string {
   const lines: string[] = [];
@@ -86,7 +90,10 @@ export function rootToProtoText(root: protobuf.Root, options?: ProtoTextOptions)
 }
 
 /**
- * Generates the proto file header (syntax, package, imports, options)
+ * Build the top-of-file proto header including syntax, package, imports, and file-level options.
+ *
+ * @param options - Configuration for package name, language-specific options, additional imports, and whether to include comments
+ * @returns An array of lines that form the proto file header (each entry is a single line)
  */
 function generateHeader(options?: ProtoTextOptions): string[] {
   const lines: string[] = [];
@@ -174,7 +181,11 @@ function generateHeader(options?: ProtoTextOptions): string[] {
 }
 
 /**
- * Converts a protobuf Service to proto text
+ * Emit the Protocol Buffer service definition as lines of .proto text.
+ *
+ * @param service - The protobufjs Service to convert
+ * @param options - Generation options; when `includeComments` is true, service and method comments are included
+ * @returns An array of lines that together form the service block (including braces and a trailing blank line)
  */
 export function serviceToProtoText(service: protobuf.Service, options?: ProtoTextOptions): string[] {
   const lines: string[] = [];
@@ -225,7 +236,12 @@ export function serviceToProtoText(service: protobuf.Service, options?: ProtoTex
 }
 
 /**
- * Converts a protobuf Type (message) to proto text
+ * Produce proto text lines for a protobuf message and its nested definitions.
+ *
+ * @param message - The protobuf message type to convert
+ * @param options - Generation options (package/layout overrides and includeComments)
+ * @param indent - Indentation level (each level adds two spaces)
+ * @returns An array of proto text lines representing the message, its nested types/enums, and fields; a trailing blank line is included when `indent` is 0
  */
 export function messageToProtoText(message: protobuf.Type, options?: ProtoTextOptions, indent: number = 0): string[] {
   const lines: string[] = [];
@@ -264,7 +280,15 @@ export function messageToProtoText(message: protobuf.Type, options?: ProtoTextOp
 }
 
 /**
- * Converts a protobuf Enum to proto text
+ * Generate proto text lines for a protobuf enum.
+ *
+ * Emits the enum declaration, its values, and optionally the enum comment when `options.includeComments` is true.
+ * If `indent` is 0, a trailing blank line is appended to the returned lines.
+ *
+ * @param enumType - The protobuf Enum to convert
+ * @param options - Generation options; when `options.includeComments` is true and the enum has a comment, the comment is emitted above the enum
+ * @param indent - Indentation level (each level equals two spaces) to apply to emitted lines
+ * @returns An array of lines representing the enum in proto text form
  */
 export function enumToProtoText(enumType: protobuf.Enum, options?: ProtoTextOptions, indent: number = 0): string[] {
   const lines: string[] = [];
@@ -292,7 +316,15 @@ export function enumToProtoText(enumType: protobuf.Enum, options?: ProtoTextOpti
 }
 
 /**
- * Formats a protobuf field as proto text
+ * Produce the proto text lines for a single protobuf field.
+ *
+ * Emits an optional comment line when `options?.includeComments` is true and the field has a comment,
+ * then emits the field declaration (with `repeated` when applicable).
+ *
+ * @param field - The protobuf field to format
+ * @param options - Generator options; when `includeComments` is true, `field.comment` will be emitted above the field
+ * @param indent - Indentation level (two spaces per level) to apply to emitted lines
+ * @returns An array of lines representing the field and any preceding comment suitable for inclusion in a .proto file
  */
 export function formatField(field: protobuf.Field, options?: ProtoTextOptions, indent: number = 1): string[] {
   const lines: string[] = [];
@@ -310,7 +342,12 @@ export function formatField(field: protobuf.Field, options?: ProtoTextOptions, i
 }
 
 /**
- * Helper to format method definitions for services
+ * Produce proto text lines for an RPC method, including an optional leading comment and streaming indicators.
+ *
+ * @param method - The RPC method definition to format
+ * @param options - Formatting options; when `includeComments` is true and `method.comment` exists, a comment line is emitted
+ * @param indent - Indentation level (each level adds two spaces)
+ * @returns Lines of proto text representing the `rpc` method signature and body; includes a leading comment line when comments are enabled
  */
 export function formatMethod(method: protobuf.Method, options?: ProtoTextOptions, indent: number = 1): string[] {
   const lines: string[] = [];

@@ -106,15 +106,15 @@ export function buildRequestMessage(
 }
 
 /**
- * Builds a proto field from a GraphQL variable definition
+ * Create a protobuf field representing a GraphQL operation variable.
  *
- * @param variableName - The name of the variable
- * @param typeNode - The GraphQL type node from the variable definition
- * @param schema - The GraphQL schema for type resolution
- * @param messageName - The name of the message this field belongs to
- * @param options - Optional configuration
- * @param defaultFieldNumber - Default field number if no manager is provided
- * @returns A protobuf Field object
+ * @param variableName - GraphQL variable name to convert to a proto field name
+ * @param typeNode - GraphQL TypeNode for the variable
+ * @param schema - Schema used to resolve the GraphQL type
+ * @param messageName - Protobuf message name that will contain the field (used for field-number reconciliation)
+ * @param options - Optional builder settings (field numbering, custom scalar mappings, nested-list wrapper hook)
+ * @param defaultFieldNumber - Fallback field number when no field-number manager is present
+ * @returns A `protobuf.Field` for the variable, or `null` if the GraphQL type could not be resolved
  */
 export function buildVariableField(
   variableName: string,
@@ -173,11 +173,18 @@ export function buildVariableField(
 }
 
 /**
- * Builds an input object message type from a GraphQL input object type
+ * Create a protobuf Type that represents the given GraphQL input object type.
  *
- * @param inputType - The GraphQL input object type
- * @param options - Optional configuration
- * @returns A protobuf Type object
+ * The returned Type contains fields corresponding to the GraphQL input fields, with proto field
+ * names and types mapped from GraphQL types, field numbers assigned or reconciled via a
+ * FieldNumberManager if provided, optional nested-list wrapper handling, and optional field
+ * comments when enabled.
+ *
+ * @param inputType - The GraphQL input object type to convert
+ * @param options - Optional configuration (e.g., includeComments, fieldNumberManager,
+ *                  customScalarMappings, ensureNestedListWrapper)
+ * @returns A protobuf Type whose fields mirror the GraphQL input object's fields with mapped
+ *          proto types and assigned field numbers
  */
 export function buildInputObjectMessage(
   inputType: GraphQLInputObjectType,
@@ -299,8 +306,9 @@ export function buildEnumType(enumType: GraphQLEnumType, options?: RequestBuilde
 }
 
 /**
- * Helper to convert a GraphQL TypeNode to a GraphQLType
- * Uses GraphQL's built-in typeFromAST to properly handle NonNull and List wrappers
+ * Convert a GraphQL TypeNode into the corresponding GraphQL input type.
+ *
+ * @returns The resolved GraphQLInputType, or `null` if the node cannot be resolved against the provided schema.
  */
 function typeNodeToGraphQLType(typeNode: TypeNode, schema: GraphQLSchema): GraphQLInputType | null {
   return typeFromAST(schema, typeNode) as GraphQLInputType | null;

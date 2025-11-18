@@ -65,11 +65,11 @@ export interface TypeMapperOptions {
 }
 
 /**
- * Maps a GraphQL type to its Protocol Buffer type representation
+ * Map a GraphQL type to its corresponding Protocol Buffer type information.
  *
  * @param type - The GraphQL type to map
- * @param options - Optional type mapping configuration
- * @returns Proto type information including type name, repeated flag, etc.
+ * @param options - Optional configuration controlling custom scalar mappings and wrapper usage
+ * @returns ProtoTypeInfo containing the proto type name and flags such as `isRepeated`, `isWrapper`, `isScalar`, and optional nested-list metadata
  */
 export function mapGraphQLTypeToProto(type: GraphQLType, options?: TypeMapperOptions): ProtoTypeInfo {
   const useWrapperTypes = options?.useWrapperTypes ?? true;
@@ -191,8 +191,14 @@ export function mapGraphQLTypeToProto(type: GraphQLType, options?: TypeMapperOpt
 }
 
 /**
- * Handles GraphQL list types, including nested lists
- * Similar to sdl-to-proto-visitor.ts handleListType
+ * Determine the ProtoTypeInfo for a GraphQL list type, handling single-level and nested lists and preserving nullability semantics.
+ *
+ * @param graphqlType - The GraphQL type expected to be a list or a wrapped list (may be NonNull/List wrappers).
+ * @param options - Mapping options that can override scalar mappings and control wrapper usage.
+ * @returns A ProtoTypeInfo describing how the list should be represented in protobuf:
+ * - For non-null single-level lists: `isRepeated: true` with the base item proto type.
+ * - For nullable single-level lists: `isRepeated: true` and item wrapper usage determined by item type info.
+ * - For nested lists: a generated wrapper message (`typeName`) is returned with `requiresNestedWrapper: true` and `isRepeated: false`.
  */
 function handleListType(graphqlType: GraphQLType, options?: TypeMapperOptions): ProtoTypeInfo {
   const listType = unwrapNonNullType(graphqlType);
@@ -255,11 +261,9 @@ function handleListType(graphqlType: GraphQLType, options?: TypeMapperOptions): 
 }
 
 /**
- * Gets the Protocol Buffer type name for a GraphQL type
+ * Retrieves the Protocol Buffer type name for a GraphQL type.
  *
- * @param type - The GraphQL type
- * @param options - Optional type mapping configuration
- * @returns The proto type name as a string
+ * @returns The Protocol Buffer type name.
  */
 export function getProtoTypeName(type: GraphQLType, options?: TypeMapperOptions): string {
   const typeInfo = mapGraphQLTypeToProto(type, options);
@@ -267,21 +271,21 @@ export function getProtoTypeName(type: GraphQLType, options?: TypeMapperOptions)
 }
 
 /**
- * Checks if a GraphQL type is a scalar type
+ * Determine whether a GraphQL type resolves to a scalar type.
  *
  * @param type - The GraphQL type to check
- * @returns True if the type is a scalar
+ * @returns `true` if the type is a scalar, `false` otherwise
  */
 export function isGraphQLScalarType(type: GraphQLType): boolean {
   return isScalarType(getNamedType(type));
 }
 
 /**
- * Checks if a GraphQL type requires a wrapper type in proto
+ * Determine whether a GraphQL type will be represented using a protobuf wrapper type.
  *
- * @param type - The GraphQL type to check
- * @param options - Optional type mapping configuration
- * @returns True if the type needs a wrapper
+ * @param type - The GraphQL type to evaluate
+ * @param options - Optional mapping configuration that can override scalar mappings and wrapper usage
+ * @returns `true` if the GraphQL type maps to a protobuf wrapper type, `false` otherwise
  */
 export function requiresWrapperType(type: GraphQLType, options?: TypeMapperOptions): boolean {
   const typeInfo = mapGraphQLTypeToProto(type, options);
@@ -289,11 +293,11 @@ export function requiresWrapperType(type: GraphQLType, options?: TypeMapperOptio
 }
 
 /**
- * Gets the list of required proto imports based on the types used
+ * Determine which protobuf import files are required for the given GraphQL types.
  *
- * @param types - Array of GraphQL types that will be mapped
- * @param options - Optional type mapping configuration
- * @returns Array of import statements needed
+ * @param types - GraphQL types to inspect for required proto imports
+ * @param options - Optional mapping configuration that affects wrapper detection
+ * @returns An array of import paths required by the provided types (for example, `google/protobuf/wrappers.proto`)
  */
 export function getRequiredImports(types: GraphQLType[], options?: TypeMapperOptions): string[] {
   const imports = new Set<string>();

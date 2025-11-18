@@ -84,11 +84,14 @@ export interface CompileOperationsToProtoResult {
 }
 
 /**
- * Compiles a collection of GraphQL operations to protocol buffer definition
- * @param operationSource - GraphQL operations as a string or DocumentNode
- * @param schemaOrSDL - GraphQL schema or SDL string
- * @param options - Configuration options for the compilation
- * @returns Proto text and protobufjs root object
+ * Compile a single named GraphQL operation into a Protocol Buffer definition.
+ *
+ * @param operationSource - GraphQL operations as a string or parsed DocumentNode; must contain exactly one named operation
+ * @param schemaOrSDL - GraphQLSchema instance or SDL string used for validation and type resolution
+ * @param options - Compilation options that control package/service names, language options, field-number locking, and scalar mappings
+ * @returns An object containing the generated proto text (`proto`), the protobufjs AST root (`root`), and the field-number lock data (`lockData`)
+ * @throws If the document contains no named operations or more than one named operation
+ * @throws If the operation document is invalid against the provided schema (validation errors are concatenated into the thrown error message)
  */
 export function compileOperationsToProto(
   operationSource: string | DocumentNode,
