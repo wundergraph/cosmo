@@ -248,7 +248,13 @@ export function messageToProtoText(message: protobuf.Type, options?: ProtoTextOp
     }
   }
 
-  // Then, add fields
+  // Then, add reserved declarations if any exist
+  if (message.reserved && Array.isArray(message.reserved) && message.reserved.length > 0) {
+    const reservedLines = formatReserved(message.reserved, indent + 1);
+    lines.push(...reservedLines);
+  }
+
+  // Finally, add fields
   for (const field of message.fieldsArray) {
     lines.push(...formatField(field, options, indent + 1));
   }
@@ -275,6 +281,12 @@ export function enumToProtoText(enumType: protobuf.Enum, options?: ProtoTextOpti
   }
 
   lines.push(formatIndent(indent, `enum ${enumType.name} {`));
+
+  // Add reserved declarations if any exist
+  if (enumType.reserved && Array.isArray(enumType.reserved) && enumType.reserved.length > 0) {
+    const reservedLines = formatReserved(enumType.reserved, indent + 1);
+    lines.push(...reservedLines);
+  }
 
   // Add enum values
   for (const [valueName, valueNumber] of Object.entries(enumType.values)) {
@@ -307,6 +319,98 @@ export function formatField(field: protobuf.Field, options?: ProtoTextOptions, i
   lines.push(formatIndent(indent, `${repeated}${field.type} ${field.name} = ${field.id};`));
 
   return lines;
+}
+
+/**
+ * Formats reserved field declarations from protobufjs reserved array
+ *
+ * The protobufjs reserved array can contain:
+ * - Arrays [start, end] representing ranges (e.g., [2, 2] for single number, [5, 10] for range)
+ * - Strings representing reserved field names
+ *
+ * This function separates them into proper proto3 reserved statements:
+ * - reserved 2, 5 to 10;
+ * - reserved "old_field", "deprecated_field";
+ */
+export function formatReserved(reserved: Array<number[] | string>, indent: number = 1): string[] {
+  const lines: string[] = [];
+  
+  // Separate numbers and names
+  const numbers: number[] = [];
+  const names: string[] = [];
+  
+  for (const item of reserved) {
+    if (typeof item === 'string') {
+      names.push(item);
+    } else if (Array.isArray(item) && item.length >= 2) {
+      // Extract all numbers from the range [start, end]
+      const [start, end] = item;
+      for (let i = start; i <= end; i++) {
+        numbers.push(i);
+      }
+    }
+  }
+  
+  // Format reserved numbers if any
+  if (numbers.length > 0) {
+    const formattedNumbers = formatReservedNumbers(numbers);
+    lines.push(formatIndent(indent, `reserved ${formattedNumbers};`));
+  }
+  
+  // Format reserved names if any
+  if (names.length > 0) {
+    const formattedNames = names.map(name => `"${name}"`).join(', ');
+    lines.push(formatIndent(indent, `reserved ${formattedNames};`));
+  }
+  
+  return lines;
+}
+
+/**
+ * Formats a list of reserved field numbers into proto3 syntax
+ * Handles both individual numbers and ranges (e.g., "2, 5 to 10, 15")
+ */
+function formatReservedNumbers(numbers: number[]): string {
+  if (numbers.length === 0) return '';
+  
+  // Sort and deduplicate numbers
+  const sortedNumbers = [...new Set(numbers)].sort((a, b) => a - b);
+  
+  // Simple case: only one number
+  if (sortedNumbers.length === 1) {
+    return sortedNumbers[0].toString();
+  }
+  
+  // Find continuous ranges to compact the representation
+  const ranges: Array<[number, number]> = [];
+  let rangeStart = sortedNumbers[0];
+  let rangeEnd = sortedNumbers[0];
+  
+  for (let i = 1; i < sortedNumbers.length; i++) {
+    if (sortedNumbers[i] === rangeEnd + 1) {
+      // Extend the current range
+      rangeEnd = sortedNumbers[i];
+    } else {
+      // End the current range and start a new one
+      ranges.push([rangeStart, rangeEnd]);
+      rangeStart = sortedNumbers[i];
+      rangeEnd = sortedNumbers[i];
+    }
+  }
+  
+  // Add the last range
+  ranges.push([rangeStart, rangeEnd]);
+  
+  // Format the ranges
+  return ranges
+    .map(([start, end]) => {
+      if (start === end) {
+        return start.toString();
+      } else {
+        return `${start} to ${end}`;
+      }
+    })
+    .join(', ');
 }
 
 /**

@@ -371,6 +371,90 @@ describe('Proto Text Generator', () => {
     });
   });
 
+  describe('messageToProtoText with reserved fields', () => {
+    test('should handle message with reserved field numbers', () => {
+      // Parse a proto with reserved fields to get a proper Type object
+      const protoText = `
+        syntax = "proto3";
+        message TestMessage {
+          reserved 2, 5 to 10;
+          string name = 1;
+          int32 age = 3;
+        }
+      `;
+      
+      const root = new protobuf.Root();
+      protobuf.parse(protoText, root);
+      const message = root.lookupType('TestMessage');
+      
+      const lines = messageToProtoText(message);
+      const text = lines.join('\n');
+      
+      expect(text).toMatchInlineSnapshot(`
+        "message TestMessage {
+          reserved 2, 5 to 10;
+          string name = 1;
+          int32 age = 3;
+        }
+        "
+      `);
+    });
+
+    test('should handle message with reserved field names', () => {
+      const protoText = `
+        syntax = "proto3";
+        message TestMessage {
+          reserved "old_field", "deprecated_field";
+          string name = 1;
+        }
+      `;
+      
+      const root = new protobuf.Root();
+      protobuf.parse(protoText, root);
+      const message = root.lookupType('TestMessage');
+      
+      const lines = messageToProtoText(message);
+      const text = lines.join('\n');
+      
+      expect(text).toMatchInlineSnapshot(`
+        "message TestMessage {
+          reserved "old_field", "deprecated_field";
+          string name = 1;
+        }
+        "
+      `);
+    });
+
+    test('should handle message with both reserved numbers and names', () => {
+      const protoText = `
+        syntax = "proto3";
+        message TestMessage {
+          reserved 2, 5 to 10, 15;
+          reserved "old_field", "deprecated_field";
+          string name = 1;
+          int32 age = 3;
+        }
+      `;
+      
+      const root = new protobuf.Root();
+      protobuf.parse(protoText, root);
+      const message = root.lookupType('TestMessage');
+      
+      const lines = messageToProtoText(message);
+      const text = lines.join('\n');
+      
+      expect(text).toMatchInlineSnapshot(`
+        "message TestMessage {
+          reserved 2, 5 to 10, 15;
+          reserved "old_field", "deprecated_field";
+          string name = 1;
+          int32 age = 3;
+        }
+        "
+      `);
+    });
+  });
+
   describe('integration tests', () => {
     test('should generate complete valid proto file', () => {
       const root = new protobuf.Root();
