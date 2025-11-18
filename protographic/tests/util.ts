@@ -147,7 +147,10 @@ export function getReservedNumbers(root: protobufjs.Root, typeName: string, isEn
       // Skip string reserved fields (field names)
       continue;
     }
-    if (Array.isArray(range)) {
+    if (typeof range === 'number') {
+      // Handle single numeric reserved tags (e.g., reserved 5;)
+      numbers.push(range);
+    } else if (Array.isArray(range)) {
       // Handle number arrays [start, end]
       if (range.length === 2) {
         const [start, end] = range;
