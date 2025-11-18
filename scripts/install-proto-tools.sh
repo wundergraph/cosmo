@@ -21,6 +21,10 @@ TMP_DIR="$INSTALL_DIR/tmp"
 # Can be overridden with the PRINT_INSTRUCTIONS environment variable
 PRINT_INSTRUCTIONS=${PRINT_INSTRUCTIONS:-true}
 
+# Flag to control common tools installation (default: true)
+# Can be overridden with the INSTALL_COMMON_TOOLS environment variable
+INSTALL_COMMON_TOOLS=${INSTALL_COMMON_TOOLS:-true}
+
 # Reset
 Color_Off=''
 
@@ -264,8 +268,9 @@ download_protoc_gen_go_grpc() {
 }
 
 # Main installation process
-# Protoc is always needed
-download_protoc
+if [[ "$INSTALL_COMMON_TOOLS" == "true" ]]; then
+    download_protoc
+fi
 
 # Language-specific tools
 case "$LANGUAGE" in

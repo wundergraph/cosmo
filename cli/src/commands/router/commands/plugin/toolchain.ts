@@ -51,7 +51,7 @@ const ALL_BUN_PLATFORM_MAPPINGS: Record<string, string> = {
 };
 
 const installScriptUrl =
-  'https://raw.githubusercontent.com/wundergraph/cosmo/fe4fe83a4c67cfc374ed35b2f94f616f51aab8c1/scripts/install-proto-tools.sh';
+  'https://raw.githubusercontent.com/wundergraph/cosmo/14702fb6a4ad89cda1effded23d16e4d56b93dff/scripts/install-proto-tools.sh';
 
 const defaultGoModulePath = 'github.com/wundergraph/cosmo/plugin';
 
@@ -152,10 +152,10 @@ function getOSArch(language: string): string {
 /**
  * Check if tools need to be reinstalled by comparing version matrices
  */
-async function shouldReinstallTools(force = false, language: string): Promise<boolean> {
-  // If forcing reinstallation, return true
+async function shouldReinstallTools(force = false, language: string): Promise<[boolean, boolean]> {
+  // If forcing reinstallation, return true for both
   if (force) {
-    return true;
+    return [true, true];
   }
 
   // If a version file exists, we assume the user manages the tools via toolchain
@@ -167,31 +167,73 @@ async function shouldReinstallTools(force = false, language: string): Promise<bo
 
       const toolVersionsForLanguage = LanguageSpecificTools[language];
 
-      // Compare each tool version
-      for (const [tool, version] of Object.entries(toolVersionsForLanguage)) {
-        // Check if the stored exact version satisfies the required range
-        if (!storedVersions[tool] || !isSemverSatisfied(storedVersions[tool], version.range)) {
+      // Separate common tools from language-specific tools
+      const commonToolNames = Object.keys(COMMON_TOOL_VERSIONS);
+      const languageSpecificToolNames = Object.keys(toolVersionsForLanguage).filter(
+        (tool) => !commonToolNames.includes(tool),
+      );
+
+      let commonToolsChanged = false;
+      let existingToolsNeedUpdate = false;
+      let newToolsNeeded = false;
+
+      // Check if common tools have changed versions
+      for (const commonTool of commonToolNames) {
+        const toolConfig = toolVersionsForLanguage[commonTool];
+        if (!toolConfig) {
+          continue;
+        }
+
+        const storedVersion = storedVersions[commonTool];
+        if (!storedVersion) {
+          commonToolsChanged = true;
+          break;
+        }
+
+        if (!isSemverSatisfied(storedVersion, toolConfig.range)) {
           console.log(
             pc.yellow(
-              `Version mismatch for ${tool}: found ${storedVersions[tool]}, required ${version.range}. Reinstalling...`,
+              `Common tool ${commonTool} version mismatch: found ${storedVersion}, required ${toolConfig.range}. Reinstalling...`,
             ),
           );
-          return true;
+          commonToolsChanged = true;
+          break;
         }
       }
 
-      // Check for any new tools that weren't in the stored versions
-      for (const tool of Object.keys(toolVersionsForLanguage)) {
-        if (!(tool in storedVersions)) {
-          return true;
+      // Check language-specific tools
+      for (const langTool of languageSpecificToolNames) {
+        const toolConfig = toolVersionsForLanguage[langTool];
+        const storedVersion = storedVersions[langTool];
+
+        if (!storedVersion) {
+          // Tool not installed - this is a new language being added
+          console.log(pc.yellow(`Language-specific tool ${langTool} not found. Installing ${language} toolchain...`));
+          newToolsNeeded = true;
+        } else if (!isSemverSatisfied(storedVersion, toolConfig.range)) {
+          // Tool exists but needs update
+          console.log(
+            pc.yellow(
+              `Language-specific tool ${langTool} version mismatch: found ${storedVersion}, required ${toolConfig.range}. Reinstalling...`,
+            ),
+          );
+          existingToolsNeedUpdate = true;
+          break;
         }
       }
 
-      // If we got here, all versions match
-      return false;
+      // Determine if we need to reinstall and cleanup
+      const shouldReinstall = commonToolsChanged || existingToolsNeedUpdate || newToolsNeeded;
+      if (!shouldReinstall) {
+        return [false, false];
+      }
+
+      // Only cleanup if common tools changed or existing tools need update, not for new tools
+      const shouldCleanup = commonToolsChanged || existingToolsNeedUpdate;
+      return [shouldReinstall, shouldCleanup];
     } catch {
       // If any error occurs during version checking, assume reinstallation is needed
-      return true;
+      return [true, true];
     }
   }
 
@@ -200,12 +242,12 @@ async function shouldReinstallTools(force = false, language: string): Promise<bo
   try {
     const toolsOnHost = await areToolsInstalledOnHost(language);
     if (toolsOnHost) {
-      return false;
+      return [false, false];
     }
-    return true;
+    return [true, true]; // Fresh install, cleanup needed
   } catch {
     // If error checking host tools, installation is needed
-    return true;
+    return [true, true];
   }
 }
 
@@ -313,7 +355,7 @@ export function validateAndGetGoModulePath(language: string, goModulePath: strin
  * Check if tools need installation and ask the user if needed
  */
 export async function checkAndInstallTools(force = false, language: string): Promise<boolean> {
-  const needsReinstall = await shouldReinstallTools(force, language);
+  const [needsReinstall, shouldCleanup] = await shouldReinstallTools(force, language);
 
   if (!needsReinstall) {
     return true;
@@ -356,7 +398,7 @@ export async function checkAndInstallTools(force = false, language: string): Pro
   }
 
   try {
-    await installTools(language);
+    await installTools(language, shouldCleanup);
     return true;
   } catch (error: any) {
     throw new Error(`Failed to install tools: ${error.message}`);
@@ -382,12 +424,12 @@ function getToolsEnv(): NodeJS.ProcessEnv {
 /**
  * Install tools using the install-proto-tools.sh script
  */
-async function installTools(language: string) {
+async function installTools(language: string, shouldCleanup: boolean) {
   const tmpDir = join(TOOLS_DIR, 'download');
   const scriptPath = join(tmpDir, 'install-proto-tools.sh');
 
   // Make installation idempotent - remove existing tools directory if it exists
-  if (existsSync(TOOLS_DIR)) {
+  if (shouldCleanup && existsSync(TOOLS_DIR)) {
     try {
       await rm(TOOLS_DIR, { recursive: true, force: true });
     } catch (error) {
@@ -418,6 +460,7 @@ async function installTools(language: string) {
       INSTALL_DIR: TOOLS_DIR,
       PRINT_INSTRUCTIONS: 'false',
       LANGUAGE: language,
+      INSTALL_COMMON_TOOLS: shouldCleanup ? 'true' : 'false',
     };
 
     // Store exact versions that we install
@@ -695,7 +738,7 @@ export async function buildTsBinaries(pluginDir: string, platforms: string[], de
       spinner.text = `Building ${originalPlatformArch}...`;
 
       if (debug) {
-        const debugScript = resolve(pluginDir, join('bin', originalPlatformArch));
+        const debugScript = resolve(pluginDir, join('bin', binaryName));
         await writeFile(debugScript, pupa(TsTemplates.debugBuild, {}));
         await chmod(debugScript, 0o755);
       } else {
