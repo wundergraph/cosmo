@@ -264,13 +264,14 @@ type GenerationOptions = {
  */
 async function readOperationFiles(operationsDir: string): Promise<Array<{ filename: string; content: string }>> {
   const files = await readdir(operationsDir);
+  const validExtensions = ['.graphql', '.gql', '.graphqls', '.gqls'];
   const operationFiles = files.filter((file) => {
     const ext = extname(file).toLowerCase();
-    return ext === '.graphql' || ext === '.gql' || ext === '.graphqls' || ext === '.gqls';
+    return validExtensions.includes(ext);
   });
 
   if (operationFiles.length === 0) {
-    throw new Error(`No GraphQL operation files (.graphql, .gql, .graphqls, .gqls) found in ${operationsDir}`);
+    throw new Error(`No GraphQL operation files (${validExtensions.join(', ')}) found in ${operationsDir}`);
   }
 
   const operations: Array<{ filename: string; content: string }> = [];
