@@ -27,6 +27,16 @@ import { buildEnumType } from './request-builder.js';
 import { upperFirst, camelCase } from 'lodash-es';
 
 /**
+ * Default maximum recursion depth to prevent stack overflow
+ */
+const DEFAULT_MAX_DEPTH = 50;
+
+/**
+ * Default starting depth for recursion tracking
+ */
+const DEFAULT_STARTING_DEPTH = 0;
+
+/**
  * Options for building proto messages
  */
 export interface MessageBuilderOptions {
@@ -77,8 +87,8 @@ export function buildMessageFromSelectionSet(
   const fieldSelections = new Map<string, { selection: FieldNode; type: GraphQLObjectType | GraphQLInterfaceType }>();
 
   // Maximum recursion depth to prevent stack overflow
-  const maxDepth = options?.maxDepth ?? 50;
-  const currentDepth = options?._depth ?? 0;
+  const maxDepth = options?.maxDepth ?? DEFAULT_MAX_DEPTH;
+  const currentDepth = options?._depth ?? DEFAULT_STARTING_DEPTH;
 
   // Check depth limit at the start of building each message
   if (currentDepth > maxDepth) {
