@@ -38,7 +38,7 @@ export default (opts: BaseCommandOptions) => {
 
       // Check and install tools if needed
       if (!options.skipToolsInstallation) {
-        await checkAndInstallTools(options.forceToolsInstallation);
+        await checkAndInstallTools(options.forceToolsInstallation, language);
       }
 
       switch (language) {

@@ -8,6 +8,9 @@ PROTOC_GEN_GO_VERSION="${PROTOC_GEN_GO_VERSION:-1.36.5}"
 PROTOC_GEN_GO_GRPC_VERSION="${PROTOC_GEN_GO_GRPC_VERSION:-1.5.1}"
 BUN_VERSION="${BUN_VERSION:-1.2.15}"
 
+# Language to install tools for (go or ts)
+LANGUAGE="${LANGUAGE}"
+
 # Directory to install tools
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.proto-tools}"
 BIN_DIR="$INSTALL_DIR/bin"
@@ -227,11 +230,23 @@ download_protoc_gen_go_grpc() {
 }
 
 # Main installation process
-download_go
+# Protoc is always needed
 download_protoc
-download_protoc_gen_go
-download_protoc_gen_go_grpc
-download_bun
+
+# Language-specific tools
+case "$LANGUAGE" in
+go)
+    download_go
+    download_protoc_gen_go
+    download_protoc_gen_go_grpc
+    ;;
+ts)
+    download_bun
+    ;;
+*)
+    error "Unsupported language: $LANGUAGE. Must be 'go' or 'ts'."
+    ;;
+esac
 
 # Clean up temporary files
 rm -rf "$TMP_DIR"
@@ -246,11 +261,15 @@ if [[ "$PRINT_INSTRUCTIONS" != "false" ]]; then
     echo
     info "You can also use the tools directly by running:"
     echo
-    info_bold "  $BIN_DIR/go"
     info_bold "  $BIN_DIR/protoc"
-    info_bold "  $BIN_DIR/protoc-gen-go"
-    info_bold "  $BIN_DIR/protoc-gen-go-grpc"
-    info_bold "  $BIN_DIR/bun"
+    if [[ "$LANGUAGE" == "go" ]]; then
+        info_bold "  $BIN_DIR/go"
+        info_bold "  $BIN_DIR/protoc-gen-go"
+        info_bold "  $BIN_DIR/protoc-gen-go-grpc"
+    fi
+    if [[ "$LANGUAGE" == "ts" ]]; then
+        info_bold "  $BIN_DIR/bun"
+    fi
     echo
 else
     echo

@@ -48,7 +48,7 @@ export default (opts: BaseCommandOptions) => {
     try {
       // Check and install tools if needed
       if (!options.skipToolsInstallation) {
-        await checkAndInstallTools(options.forceToolsInstallation);
+        await checkAndInstallTools(options.forceToolsInstallation, language);
       }
 
       const goModulePath = validateAndGetGoModulePath(language, options.goModulePath);

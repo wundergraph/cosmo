@@ -65,15 +65,61 @@ interface ToolVersion {
   range: string; // Semver range for version checking. Must be compatible with script version
   envVar: string; // Environment variable name used in install script
   scriptVersion: string; // Exact version to pass to install a script
+  versionCommand: string; // Command to check version (e.g. "go", "protoc")
+  versionFlag: string; // Flag to print the version (e.g. "--version")
 }
 
+type ToolVersionLanguageMapping = Record<string, ToolVersion>;
+
+const COMMON_TOOL_VERSIONS: ToolVersionLanguageMapping = {
+  protoc: {
+    range: '^29.3',
+    envVar: 'PROTOC_VERSION',
+    scriptVersion: '29.3',
+    versionCommand: 'protoc',
+    versionFlag: '--version',
+  },
+};
+
 // Exact tool versions to be installed for the script, but you can specify a semver range to express compatibility
-const TOOL_VERSIONS: Record<string, ToolVersion> = {
-  protoc: { range: '^29.3', envVar: 'PROTOC_VERSION', scriptVersion: '29.3' },
-  protocGenGo: { range: '^1.34.2', envVar: 'PROTOC_GEN_GO_VERSION', scriptVersion: '1.34.2' },
-  protocGenGoGrpc: { range: '^1.5.1', envVar: 'PROTOC_GEN_GO_GRPC_VERSION', scriptVersion: '1.5.1' },
-  go: { range: '>=1.22.0', envVar: 'GO_VERSION', scriptVersion: '1.24.1' },
-  bun: { range: '^1.3.1', envVar: 'BUN_VERSION', scriptVersion: '1.3.1' },
+const GO_TOOL_VERSIONS: ToolVersionLanguageMapping = {
+  go: {
+    range: '>=1.22.0',
+    envVar: 'GO_VERSION',
+    scriptVersion: '1.24.1',
+    versionCommand: 'go',
+    versionFlag: 'version',
+  },
+  protocGenGo: {
+    range: '^1.34.2',
+    envVar: 'PROTOC_GEN_GO_VERSION',
+    scriptVersion: '1.34.2',
+    versionCommand: 'protoc-gen-go',
+    versionFlag: '--version',
+  },
+  protocGenGoGrpc: {
+    range: '^1.5.1',
+    envVar: 'PROTOC_GEN_GO_GRPC_VERSION',
+    scriptVersion: '1.5.1',
+    versionCommand: 'protoc-gen-go-grpc',
+    versionFlag: '--version',
+  },
+};
+
+const BUN_TOOL_VERSIONS: ToolVersionLanguageMapping = {
+  bun: {
+    range: '^1.2.15',
+    envVar: 'BUN_VERSION',
+    scriptVersion: '1.2.15',
+    versionCommand: 'bun',
+    versionFlag: '--version',
+  },
+};
+
+// We combine all tool versions here, per language
+const LanguageSpecificTools: Record<string, ToolVersionLanguageMapping> = {
+  go: { ...COMMON_TOOL_VERSIONS, ...GO_TOOL_VERSIONS },
+  bun: { ...COMMON_TOOL_VERSIONS, ...BUN_TOOL_VERSIONS },
 };
 
 /**
@@ -98,7 +144,7 @@ function getOSArch(language: string): string {
 /**
  * Check if tools need to be reinstalled by comparing version matrices
  */
-async function shouldReinstallTools(force = false): Promise<boolean> {
+async function shouldReinstallTools(force = false, language: string): Promise<boolean> {
   // If forcing reinstallation, return true
   if (force) {
     return true;
@@ -111,8 +157,10 @@ async function shouldReinstallTools(force = false): Promise<boolean> {
       const storedVersionsStr = await readFile(TOOLS_VERSIONS_FILE, 'utf8');
       const storedVersions = JSON.parse(storedVersionsStr) as Record<string, string>;
 
+      const toolVersionsForLanguage = LanguageSpecificTools[language];
+
       // Compare each tool version
-      for (const [tool, version] of Object.entries(TOOL_VERSIONS)) {
+      for (const [tool, version] of Object.entries(toolVersionsForLanguage)) {
         // Check if the stored exact version satisfies the required range
         if (!storedVersions[tool] || !isSemverSatisfied(storedVersions[tool], version.range)) {
           console.log(
@@ -125,7 +173,7 @@ async function shouldReinstallTools(force = false): Promise<boolean> {
       }
 
       // Check for any new tools that weren't in the stored versions
-      for (const tool of Object.keys(TOOL_VERSIONS)) {
+      for (const tool of Object.keys(toolVersionsForLanguage)) {
         if (!(tool in storedVersions)) {
           return true;
         }
@@ -142,7 +190,7 @@ async function shouldReinstallTools(force = false): Promise<boolean> {
   // if we haven't installed the tools yet, we check first if the tools are installed on the host system,
   // and if they are not, we need to install them through the toolchain installation
   try {
-    const toolsOnHost = await areToolsInstalledOnHost();
+    const toolsOnHost = await areToolsInstalledOnHost(language);
     if (toolsOnHost) {
       return false;
     }
@@ -156,55 +204,31 @@ async function shouldReinstallTools(force = false): Promise<boolean> {
 /**
  * Check if all required tools are installed on the host system with correct versions
  */
-async function areToolsInstalledOnHost(): Promise<boolean> {
+async function areToolsInstalledOnHost(language: string): Promise<boolean> {
+  const languageSpecificTools = LanguageSpecificTools[language];
+
+  if (!languageSpecificTools) {
+    console.log(pc.yellow(`No toolchain configuration found for language '${language}'.`));
+    return false;
+  }
+
   try {
-    // Check Go version
-    const goVersion = await getCommandVersion('go', 'version');
-    if (!isSemverSatisfied(goVersion, TOOL_VERSIONS.go.range)) {
-      console.log(pc.yellow(`Go version mismatch: found ${goVersion}, required ${TOOL_VERSIONS.go.range}`));
-      return false;
-    }
+    for (const [toolName, toolConfig] of Object.entries(languageSpecificTools)) {
+      const installedVersion = await getCommandVersion(toolConfig.versionCommand, toolConfig.versionFlag);
 
-    // Check Protoc version
-    const protocVersion = await getCommandVersion('protoc', '--version');
-    if (!isSemverSatisfied(protocVersion, TOOL_VERSIONS.protoc.range)) {
-      console.log(pc.yellow(`Protoc version mismatch: found ${protocVersion}, required ${TOOL_VERSIONS.protoc.range}`));
-      return false;
-    }
-
-    // Check protoc-gen-go version
-    // The output format is typically "protoc-gen-go v1.36.5"
-    const protocGenGoVersion = await getCommandVersion('protoc-gen-go', '--version');
-    if (!isSemverSatisfied(protocGenGoVersion, TOOL_VERSIONS.protocGenGo.range)) {
-      console.log(
-        pc.yellow(
-          `protoc-gen-go version mismatch: found ${protocGenGoVersion}, required ${TOOL_VERSIONS.protocGenGo.range}`,
-        ),
-      );
-      return false;
-    }
-
-    // Check protoc-gen-go-grpc version
-    // The output format is typically "protoc-gen-go-grpc 1.5.1"
-    const protocGenGoGrpcVersion = await getCommandVersion('protoc-gen-go-grpc', '--version');
-    if (!isSemverSatisfied(protocGenGoGrpcVersion, TOOL_VERSIONS.protocGenGoGrpc.range)) {
-      console.log(
-        pc.yellow(
-          `protoc-gen-go-grpc version mismatch: found ${protocGenGoGrpcVersion}, required ${TOOL_VERSIONS.protocGenGoGrpc.range}`,
-        ),
-      );
-      return false;
-    }
-
-    const bunVersion = await getCommandVersion('bun', '--version');
-    if (!isSemverSatisfied(bunVersion, TOOL_VERSIONS.bun.range)) {
-      console.log(pc.yellow(`Bun version mismatch: found ${bunVersion}, required ${TOOL_VERSIONS.bun.range}`));
-      return false;
+      if (!isSemverSatisfied(installedVersion, toolConfig.range)) {
+        console.log(
+          pc.yellow(
+            `${pc.bold(toolName)} version mismatch on host: found ${installedVersion}, required ${toolConfig.range}`,
+          ),
+        );
+        return false;
+      }
     }
 
     return true;
   } catch (error: any) {
-    console.log(pc.yellow(`Error checking tools: ${error.message}`));
+    console.log(pc.yellow(`Error checking tools for language '${language}': ${error.message}`));
     return false;
   }
 }
@@ -280,8 +304,8 @@ export function validateAndGetGoModulePath(language: string, goModulePath: strin
 /**
  * Check if tools need installation and ask the user if needed
  */
-export async function checkAndInstallTools(force = false): Promise<boolean> {
-  const needsReinstall = await shouldReinstallTools(force);
+export async function checkAndInstallTools(force = false, language: string): Promise<boolean> {
+  const needsReinstall = await shouldReinstallTools(force, language);
 
   if (!needsReinstall) {
     return true;
@@ -292,8 +316,10 @@ export async function checkAndInstallTools(force = false): Promise<boolean> {
     ? 'Version changes detected. Install required toolchain?'
     : 'Install required toolchain?';
 
+  const toolVersionsForLanguage = LanguageSpecificTools[language];
+
   // Create a more informative message with simple formatting
-  const toolsInfo = Object.entries(TOOL_VERSIONS)
+  const toolsInfo = Object.entries(toolVersionsForLanguage)
     .map(([tool, { range: version }]) => `  ${pc.cyan('•')} ${pc.bold(tool)}: ${version}`)
     .join('\n');
 
@@ -322,7 +348,7 @@ export async function checkAndInstallTools(force = false): Promise<boolean> {
   }
 
   try {
-    await installTools();
+    await installTools(language);
     return true;
   } catch (error: any) {
     throw new Error(`Failed to install tools: ${error.message}`);
@@ -348,7 +374,7 @@ function getToolsEnv(): NodeJS.ProcessEnv {
 /**
  * Install tools using the install-proto-tools.sh script
  */
-async function installTools() {
+async function installTools(language: string) {
   const tmpDir = join(TOOLS_DIR, 'download');
   const scriptPath = join(tmpDir, 'install-proto-tools.sh');
 
@@ -383,13 +409,16 @@ async function installTools() {
       ...process.env,
       INSTALL_DIR: TOOLS_DIR,
       PRINT_INSTRUCTIONS: 'false',
+      LANGUAGE: language,
     };
 
     // Store exact versions that we install
     const exactVersions: Record<string, string> = {};
 
+    const toolVersions = LanguageSpecificTools[language];
+
     // Add version variables to env
-    for (const [tool, version] of Object.entries(TOOL_VERSIONS)) {
+    for (const [tool, version] of Object.entries(toolVersions)) {
       env[version.envVar] = version.scriptVersion;
       exactVersions[tool] = version.scriptVersion;
     }
