@@ -135,14 +135,15 @@ async function generateCommandAction(name: string, options: CLIOptions) {
     }
 
     // Validate and warn about query-idempotency usage
+    let queryIdempotency: string | undefined;
     if (options.queryIdempotency) {
       if (!options.withOperations) {
         spinner.warn('--query-idempotency flag is ignored when not using --with-operations');
       }
 
       const validLevels = ['NO_SIDE_EFFECTS', 'DEFAULT'];
-      const level = options.queryIdempotency.toUpperCase();
-      if (!validLevels.includes(level)) {
+      queryIdempotency = options.queryIdempotency.toUpperCase();
+      if (!validLevels.includes(queryIdempotency)) {
         program.error(
           `Invalid --query-idempotency value: ${options.queryIdempotency}. Valid values are: ${validLevels.join(', ')}`,
         );
@@ -198,7 +199,7 @@ async function generateCommandAction(name: string, options: CLIOptions) {
       languageOptions,
       lockFile: options.protoLock,
       operationsDir: options.withOperations,
-      queryIdempotency: options.queryIdempotency?.toUpperCase(),
+      queryIdempotency,
       customScalarMappings,
       maxDepth,
       prefixOperationType: options.prefixOperationType,
@@ -229,8 +230,8 @@ async function generateCommandAction(name: string, options: CLIOptions) {
       generated: generatedFiles.join(', '),
     };
 
-    if (result.isOperationsMode && options.queryIdempotency) {
-      resultInfo['query idempotency'] = options.queryIdempotency.toUpperCase();
+    if (result.isOperationsMode && queryIdempotency) {
+      resultInfo['query idempotency'] = queryIdempotency;
     }
 
     renderResultTree(spinner, 'Generated protobuf schema', true, name, resultInfo);
