@@ -45,6 +45,7 @@ export default (opts: BaseCommandOptions) => {
   command.option('-o, --output <path-to-output>', 'The output directory for the protobuf schema. (default ".").', '.');
   command.option('-p, --package-name <name>', 'The name of the proto package. (default "service.v1")', 'service.v1');
   command.option('-g, --go-package <name>', 'Adds an `option go_package` to the proto file.');
+  // NOTE: The following language-specific options are not enabled for the alpha release
   // command.option('--java-package <name>', 'Adds an `option java_package` to the proto file.');
   // command.option('--java-outer-classname <name>', 'Adds an `option java_outer_classname` to the proto file.');
   // command.option('--java-multiple-files', 'Adds `option java_multiple_files = true` to the proto file.');
@@ -70,8 +71,8 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option(
     '--custom-scalar-mapping <json-or-path>',
-    'Custom scalar type mappings as JSON string or path to JSON file. ' +
-      'Example: \'{"DateTime":"google.protobuf.Timestamp","UUID":"string"}\'',
+    'Custom scalar type mappings as JSON string or path to JSON file (prefix file paths with @). ' +
+      'Example: \'{"DateTime":"google.protobuf.Timestamp","UUID":"string"}\' or \'@mappings.json\'',
   );
   command.option(
     '--max-depth <number>',
