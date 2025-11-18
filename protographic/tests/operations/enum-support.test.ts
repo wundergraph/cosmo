@@ -996,6 +996,165 @@ describe('Enum Support', () => {
     });
   });
 
+  describe('Enum De-duplication', () => {
+    test('should not duplicate enum when used in both request and response', () => {
+      const schema = `
+        type Query {
+          users(status: UserStatus): [User]
+        }
+        
+        enum UserStatus {
+          ACTIVE
+          INACTIVE
+          PENDING
+        }
+        
+        type User {
+          id: ID!
+          name: String
+          status: UserStatus
+        }
+      `;
+
+      const operation = `
+        query GetUsers($status: UserStatus) {
+          users(status: $status) {
+            id
+            name
+            status
+          }
+        }
+      `;
+
+      const { proto } = compileOperationsToProto(operation, schema);
+
+      expectValidProto(proto);
+      
+      // Count occurrences of "enum UserStatus" - should only appear once
+      const enumDeclarations = proto.match(/enum UserStatus \{/g);
+      expect(enumDeclarations).toHaveLength(1);
+      
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetUsers(GetUsersRequest) returns (GetUsersResponse) {}
+        }
+
+        message GetUsersRequest {
+          UserStatus status = 1;
+        }
+
+        message GetUsersResponse {
+          message Users {
+            string id = 1;
+            google.protobuf.StringValue name = 2;
+            UserStatus status = 3;
+          }
+          repeated Users users = 1;
+        }
+
+        enum UserStatus {
+          USER_STATUS_UNSPECIFIED = 0;
+          USER_STATUS_ACTIVE = 1;
+          USER_STATUS_INACTIVE = 2;
+          USER_STATUS_PENDING = 3;
+        }
+        "
+      `);
+    });
+
+    test('should not duplicate enum when used in nested objects', () => {
+      const schema = `
+        type Query {
+          user: User
+        }
+        
+        type User {
+          id: ID!
+          profile: Profile
+          settings: Settings
+        }
+        
+        type Profile {
+          visibility: Visibility
+        }
+        
+        type Settings {
+          defaultVisibility: Visibility
+        }
+        
+        enum Visibility {
+          PUBLIC
+          PRIVATE
+          FRIENDS_ONLY
+        }
+      `;
+
+      const operation = `
+        query GetUser {
+          user {
+            id
+            profile {
+              visibility
+            }
+            settings {
+              defaultVisibility
+            }
+          }
+        }
+      `;
+
+      const { proto } = compileOperationsToProto(operation, schema);
+
+      expectValidProto(proto);
+      
+      // Count occurrences of "enum Visibility" - should only appear once
+      const enumDeclarations = proto.match(/enum Visibility \{/g);
+      expect(enumDeclarations).toHaveLength(1);
+      
+      expect(proto).toMatchInlineSnapshot(`
+        "syntax = "proto3";
+        package service.v1;
+
+        import "google/protobuf/wrappers.proto";
+
+        service DefaultService {
+          rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
+        }
+
+        message GetUserRequest {
+        }
+
+        message GetUserResponse {
+          message User {
+            message Profile {
+              Visibility visibility = 1;
+            }
+            message Settings {
+              Visibility default_visibility = 1;
+            }
+            string id = 1;
+            Profile profile = 2;
+            Settings settings = 3;
+          }
+          User user = 1;
+        }
+
+        enum Visibility {
+          VISIBILITY_UNSPECIFIED = 0;
+          VISIBILITY_PUBLIC = 1;
+          VISIBILITY_PRIVATE = 2;
+          VISIBILITY_FRIENDS_ONLY = 3;
+        }
+        "
+      `);
+    });
+  });
+
   describe('Enums in Subscriptions', () => {
     test('should handle enum in subscription', () => {
       const schema = `

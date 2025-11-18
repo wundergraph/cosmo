@@ -323,19 +323,19 @@ function processFieldSelection(
     // If this is an enum type, ensure it's added to the root
     if (isEnumType(namedType) && options?.root) {
       const enumTypeName = namedType.name;
-      const createdEnums = options.createdEnums || new Set<string>();
+      
+      // Initialize createdEnums in options if missing to ensure persistence across calls
+      if (!options.createdEnums) {
+        options.createdEnums = new Set<string>();
+      }
+      const createdEnums = options.createdEnums;
 
       if (!createdEnums.has(enumTypeName)) {
         const protoEnum = buildEnumType(namedType as GraphQLEnumType, {
           includeComments: options.includeComments,
         });
         options.root.add(protoEnum);
-        createdEnums.add(enumTypeName);
-
-        // Update the set in options if it was provided
-        if (options.createdEnums) {
-          options.createdEnums.add(enumTypeName);
-        }
+        options.createdEnums.add(enumTypeName);
       }
     }
 
