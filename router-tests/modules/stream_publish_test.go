@@ -2,7 +2,7 @@ package module_test
 
 import (
 	"encoding/json"
-	"net/http"
+	"errors"
 	"strconv"
 	"sync/atomic"
 	"testing"
@@ -134,7 +134,7 @@ func TestPublishHook(t *testing.T) {
 			Modules: map[string]interface{}{
 				"publishModule": stream_publish.PublishModule{
 					Callback: func(ctx core.StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
-						return events, core.NewHttpGraphqlError("test", http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+						return events, errors.New("test")
 					},
 				},
 			},
@@ -184,7 +184,7 @@ func TestPublishHook(t *testing.T) {
 			Modules: map[string]interface{}{
 				"publishModule": stream_publish.PublishModule{
 					Callback: func(ctx core.StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
-						return events, core.NewHttpGraphqlError("test", http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+						return events, errors.New("test")
 					},
 				},
 			},
@@ -243,7 +243,7 @@ func TestPublishHook(t *testing.T) {
 			Modules: map[string]interface{}{
 				"publishModule": stream_publish.PublishModule{
 					Callback: func(ctx core.StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
-						return events, core.NewHttpGraphqlError("test", http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+						return events, errors.New("test")
 					},
 				},
 			},
