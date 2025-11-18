@@ -71,17 +71,15 @@ export function buildRequestMessage(
   }
 
   // Pre-assign field numbers from lock data if available
-  if (fieldNumberManager?.getLockManager) {
-    const lockManager = fieldNumberManager.getLockManager();
-    if (lockManager) {
-      const lockData = lockManager.getLockData();
-      if (lockData.messages[messageName]) {
-        const messageData = lockData.messages[messageName];
-        for (const protoVariableName of orderedVariableNames) {
-          const fieldNumber = messageData.fields[protoVariableName];
-          if (fieldNumber !== undefined) {
-            fieldNumberManager.assignFieldNumber(messageName, protoVariableName, fieldNumber);
-          }
+  const lockManager = fieldNumberManager?.getLockManager();
+  if (lockManager && fieldNumberManager) {
+    const lockData = lockManager.getLockData();
+    if (lockData.messages[messageName]) {
+      const messageData = lockData.messages[messageName];
+      for (const protoVariableName of orderedVariableNames) {
+        const fieldNumber = messageData.fields[protoVariableName];
+        if (fieldNumber !== undefined) {
+          fieldNumberManager.assignFieldNumber(messageName, protoVariableName, fieldNumber);
         }
       }
     }
@@ -204,17 +202,15 @@ export function buildInputObjectMessage(
   }
 
   // Pre-assign field numbers from lock data if available
-  if (fieldNumberManager?.getLockManager) {
-    const lockManager = fieldNumberManager.getLockManager();
-    if (lockManager) {
-      const lockData = lockManager.getLockData();
-      if (lockData.messages[message.name]) {
-        const messageData = lockData.messages[message.name];
-        for (const protoFieldName of orderedFieldNames) {
-          const fieldNumber = messageData.fields[protoFieldName];
-          if (fieldNumber !== undefined) {
-            fieldNumberManager.assignFieldNumber(message.name, protoFieldName, fieldNumber);
-          }
+  const lockManager = fieldNumberManager?.getLockManager();
+  if (lockManager && fieldNumberManager) {
+    const lockData = lockManager.getLockData();
+    if (lockData.messages[message.name]) {
+      const messageData = lockData.messages[message.name];
+      for (const protoFieldName of orderedFieldNames) {
+        const fieldNumber = messageData.fields[protoFieldName];
+        if (fieldNumber !== undefined) {
+          fieldNumberManager.assignFieldNumber(message.name, protoFieldName, fieldNumber);
         }
       }
     }
