@@ -1,6 +1,6 @@
 import path from 'node:path';
 import os from 'node:os';
-import {Command, program} from 'commander';
+import { Command, program } from 'commander';
 import { resolve } from 'pathe';
 import Spinner from 'ora';
 import { BaseCommandOptions } from '../../../../../core/types/types.js';
@@ -30,7 +30,6 @@ export default (opts: BaseCommandOptions) => {
     const pluginDir = resolve(directory);
     const spinner = Spinner({ text: 'Running tests...' });
     const pluginName = path.basename(pluginDir);
-
 
     const language = getLanguage(pluginDir);
     if (!language) {
