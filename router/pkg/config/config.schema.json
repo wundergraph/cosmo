@@ -2305,9 +2305,9 @@
             }
           }
         },
-        "subscription_hooks": {
+        "handlers": {
           "type": "object",
-          "description": "Configuration for subscription custom modules that are executed when events are received from a broker.",
+          "description": "Configuration for Cosmo Streams / EDFS custom modules",
           "additionalProperties": false,
           "properties": {
             "on_receive_events": {

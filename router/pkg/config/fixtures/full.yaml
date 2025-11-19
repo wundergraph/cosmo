@@ -330,7 +330,7 @@ events:
         urls:
           - 'redis://localhost:6379/11'
         cluster_enabled: true
-  subscription_hooks:
+  handlers:
     on_receive_events:
       max_concurrent_handlers: 100
       handler_timeout: 5s

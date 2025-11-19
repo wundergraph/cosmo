@@ -740,7 +740,7 @@ func TestReceiveHook(t *testing.T) {
 					RouterOptions: []core.Option{
 						core.WithModulesConfig(cfg.Modules),
 						core.WithCustomModules(&stream_receive.StreamReceiveModule{}),
-						core.WithSubscriptionHooks(config.SubscriptionHooksConfiguration{
+						core.WithStreamsHandlerConfiguration(config.StreamsHandlerConfiguration{
 							OnReceiveEvents: config.OnReceiveEventsConfiguration{
 								MaxConcurrentHandlers: tc.maxConcurrent,
 							},
@@ -864,7 +864,7 @@ func TestReceiveHook(t *testing.T) {
 			RouterOptions: []core.Option{
 				core.WithModulesConfig(cfg.Modules),
 				core.WithCustomModules(&stream_receive.StreamReceiveModule{}),
-				core.WithSubscriptionHooks(config.SubscriptionHooksConfiguration{
+				core.WithStreamsHandlerConfiguration(config.StreamsHandlerConfiguration{
 					OnReceiveEvents: config.OnReceiveEventsConfiguration{
 						MaxConcurrentHandlers: 3,
 						HandlerTimeout:        hookTimeout,

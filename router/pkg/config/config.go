@@ -641,11 +641,11 @@ type EventProviders struct {
 }
 
 type EventsConfiguration struct {
-	Providers         EventProviders                 `yaml:"providers,omitempty"`
-	SubscriptionHooks SubscriptionHooksConfiguration `yaml:"subscription_hooks,omitempty"`
+	Providers EventProviders              `yaml:"providers,omitempty"`
+	Handlers  StreamsHandlerConfiguration `yaml:"handlers,omitempty"`
 }
 
-type SubscriptionHooksConfiguration struct {
+type StreamsHandlerConfiguration struct {
 	OnReceiveEvents OnReceiveEventsConfiguration `yaml:"on_receive_events"`
 }
 

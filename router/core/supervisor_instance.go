@@ -271,7 +271,7 @@ func optionsFromResources(logger *zap.Logger, config *config.Config) []Option {
 		WithMCP(config.MCP),
 		WithPlugins(config.Plugins),
 		WithDemoMode(config.DemoMode),
-		WithSubscriptionHooks(config.Events.SubscriptionHooks),
+		WithStreamsHandlerConfiguration(config.Events.Handlers),
 	}
 
 	return options

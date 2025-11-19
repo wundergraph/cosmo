@@ -2140,7 +2140,7 @@ func WithDemoMode(demoMode bool) Option {
 	}
 }
 
-func WithSubscriptionHooks(cfg config.SubscriptionHooksConfiguration) Option {
+func WithStreamsHandlerConfiguration(cfg config.StreamsHandlerConfiguration) Option {
 	return func(r *Router) {
 		r.subscriptionHooks.onReceiveEvents.maxConcurrentHandlers = cfg.OnReceiveEvents.MaxConcurrentHandlers
 		r.subscriptionHooks.onReceiveEvents.timeout = cfg.OnReceiveEvents.HandlerTimeout
