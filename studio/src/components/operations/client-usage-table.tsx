@@ -16,6 +16,8 @@ import {
   TableRow,
   TableWrapper,
 } from "@/components/ui/table";
+import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
+import { Button } from "../ui/button";
 
 interface ClientUsage {
   name: string;
@@ -38,7 +40,7 @@ export const ClientUsageTable = ({
   const graphContext = useContext(GraphContext);
   const { range, dateRange } = useAnalyticsQueryState();
 
-  const { data, isLoading, error } = useQuery(
+  const { data, isLoading, error, refetch } = useQuery(
     getOperationClients,
     {
       namespace: graphContext?.graph?.namespace,
@@ -54,7 +56,10 @@ export const ClientUsageTable = ({
           },
     },
     {
-      enabled: !!operationHash && !!graphContext?.graph?.name,
+      enabled:
+        !!operationHash &&
+        !!graphContext?.graph?.name &&
+        !!graphContext?.graph?.namespace,
     },
   );
 
@@ -63,7 +68,7 @@ export const ClientUsageTable = ({
       name: client.name || "",
       version: client.version || "",
       requestCount: Number(client.requestCount || 0),
-      lastUsed: new Date(client.lastUsed || new Date()),
+      lastUsed: new Date(client.lastUsed),
     })) || [];
 
   const totalClients = clientUsageData.length;
@@ -98,8 +103,27 @@ export const ClientUsageTable = ({
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="h-24 text-center">
+                  <TableCell colSpan={5} className="h-24 text-center">
                     <Loader />
+                  </TableCell>
+                </TableRow>
+              ) : error || data?.response?.code !== EnumStatusCode.OK ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={5}
+                    className="text-center text-muted-foreground"
+                  >
+                    <div className="flex flex-col items-center justify-center p-2">
+                      <h3 className="text-md">Failed to load clients</h3>
+                      <Button
+                        onClick={() => refetch()}
+                        className="mt-2"
+                        size="sm"
+                        variant="outline"
+                      >
+                        Retry
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : hasClients ? (
@@ -131,7 +155,7 @@ export const ClientUsageTable = ({
               ) : (
                 <TableRow>
                   <TableCell
-                    colSpan={4}
+                    colSpan={5}
                     className="text-center text-muted-foreground"
                   >
                     No clients found
@@ -145,7 +169,7 @@ export const ClientUsageTable = ({
           <Table className="w-full table-fixed border-t">
             <TableFooter>
               <TableRow className="border-b-0 bg-background hover:bg-background">
-                <TableCell colSpan={4}>
+                <TableCell colSpan={5}>
                   <div className="flex items-center justify-center space-x-1 text-xs text-muted-foreground">
                     <span>
                       {totalClients} {totalClients === 1 ? "client" : "clients"}
