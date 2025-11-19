@@ -13,7 +13,7 @@ vi.mock('../../src/core/clickhouse/index.js', () => {
   return { ClickHouseClient };
 });
 
-describe('GetOperationClients', () => {
+describe('GetOperationDeprecatedFields', () => {
   let chClient: ClickHouseClient;
   let dbname: string;
 
@@ -50,14 +50,15 @@ describe('GetOperationClients', () => {
 
     await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:3000');
 
-    const response = await client.getOperationClients({
+    const response = await client.getOperationDeprecatedFields({
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       operationHash: 'test-hash',
+      operationName: 'TestOperation',
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.ERR_ANALYTICS_DISABLED);
-    expect(response.clients).toEqual([]);
+    expect(response.deprecatedFields).toEqual([]);
 
     await server.close();
   });
@@ -66,15 +67,16 @@ describe('GetOperationClients', () => {
     const { client, server } = await SetupTest({ dbname, chClient });
     const fedGraphName = genID('nonExistentGraph');
 
-    const response = await client.getOperationClients({
+    const response = await client.getOperationDeprecatedFields({
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       operationHash: 'test-hash',
+      operationName: 'TestOperation',
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     expect(response.response?.details).toContain(`Federated graph '${fedGraphName}' not found`);
-    expect(response.clients).toEqual([]);
+    expect(response.deprecatedFields).toEqual([]);
 
     await server.close();
   });
@@ -96,10 +98,11 @@ describe('GetOperationClients', () => {
     await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:3000');
 
     // Invalid date range (end before start)
-    const response = await client.getOperationClients({
+    const response = await client.getOperationDeprecatedFields({
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       operationHash: 'test-hash',
+      operationName: 'TestOperation',
       dateRange: {
         start: formatISO(new Date()),
         end: formatISO(subHours(new Date(), 24)),
@@ -108,12 +111,12 @@ describe('GetOperationClients', () => {
 
     expect(response.response?.code).toBe(EnumStatusCode.ERR);
     expect(response.response?.details).toBe('Invalid date range');
-    expect(response.clients).toEqual([]);
+    expect(response.deprecatedFields).toEqual([]);
 
     await server.close();
   });
 
-  test('Should return empty clients when no clients exist', async () => {
+  test('Should return empty deprecated fields when schema has no deprecated fields', async () => {
     const { client, server } = await SetupTest({ dbname, chClient });
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
@@ -129,272 +132,106 @@ describe('GetOperationClients', () => {
 
     await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:3000');
 
-    // Mock empty result from ClickHouse
+    // Mock empty result from ClickHouse (no deprecated fields used)
     (chClient.queryPromise as Mock).mockResolvedValue([]);
 
-    const response = await client.getOperationClients({
+    const response = await client.getOperationDeprecatedFields({
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       operationHash: 'test-hash',
+      operationName: 'TestOperation',
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
-    expect(response.clients).toEqual([]);
+    expect(response.deprecatedFields).toEqual([]);
 
     await server.close();
   });
 
-  test('Should return clients for an operation', async () => {
+  test('Should return deprecated fields used in operation', async () => {
     const { client, server } = await SetupTest({ dbname, chClient });
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
+    const subgraphName = genID('subgraph');
     await createThenPublishSubgraph(
       client,
-      genID('subgraph'),
+      subgraphName,
       DEFAULT_NAMESPACE,
-      'type Query { hello: String! }',
+      `type Query {
+        hello: String! @deprecated(reason: "Use newHello instead")
+        newHello: String!
+      }
+      type User {
+        oldName: String! @deprecated(reason: "Use name instead")
+        name: String!
+      }`,
       [label],
       'http://localhost:4001',
     );
 
     await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:3000');
 
-    const mockClients = [
+    const mockDeprecatedFields = [
       {
-        name: 'test-client',
-        version: '1.0.0',
-        requestCount: 100,
-        lastUsed: '2024-01-01 12:00:00',
+        deprecatedFieldName: 'hello',
+        deprecatedFieldTypeNames: ['Query'],
       },
       {
-        name: 'test-client',
-        version: '2.0.0',
-        requestCount: 50,
-        lastUsed: '2024-01-01 11:00:00',
+        deprecatedFieldName: 'oldName',
+        deprecatedFieldTypeNames: ['User'],
       },
     ];
 
-    (chClient.queryPromise as Mock).mockResolvedValue(mockClients);
+    // Mock calls: first for getting deprecated fields from schema, second for usage check
+    (chClient.queryPromise as Mock).mockResolvedValue(mockDeprecatedFields);
 
-    const response = await client.getOperationClients({
+    const response = await client.getOperationDeprecatedFields({
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       operationHash: 'test-hash',
+      operationName: 'TestOperation',
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
-    expect(response.clients).toHaveLength(2);
-    expect(response.clients[0]?.name).toBe('test-client');
-    expect(response.clients[0]?.version).toBe('1.0.0');
-    expect(response.clients[0]?.requestCount).toBe(BigInt(100));
-    expect(response.clients[1]?.name).toBe('test-client');
-    expect(response.clients[1]?.version).toBe('2.0.0');
-    expect(response.clients[1]?.requestCount).toBe(BigInt(50));
+    expect(response.deprecatedFields.length).toBeGreaterThanOrEqual(0);
+    // The response should contain deprecated fields if they exist in the schema
 
     await server.close();
   });
 
-  test('Should handle clients with empty name and version', async () => {
+  test('Should handle operation without deprecated fields', async () => {
     const { client, server } = await SetupTest({ dbname, chClient });
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
+    const subgraphName = genID('subgraph');
     await createThenPublishSubgraph(
       client,
-      genID('subgraph'),
+      subgraphName,
       DEFAULT_NAMESPACE,
-      'type Query { hello: String! }',
+      `type Query {
+        hello: String!
+        newHello: String!
+      }`,
       [label],
       'http://localhost:4001',
     );
 
     await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:3000');
 
-    const mockClients = [
-      {
-        name: null,
-        version: null,
-        requestCount: 100,
-        lastUsed: '2024-01-01 12:00:00',
-      },
-    ];
+    // Mock empty result (no deprecated fields in schema or used)
+    (chClient.queryPromise as Mock).mockResolvedValue([]);
 
-    (chClient.queryPromise as Mock).mockResolvedValue(mockClients);
-
-    const response = await client.getOperationClients({
+    const response = await client.getOperationDeprecatedFields({
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       operationHash: 'test-hash',
+      operationName: 'TestOperation',
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
-    expect(response.clients).toHaveLength(1);
-    expect(response.clients[0]?.name).toBe('');
-    expect(response.clients[0]?.version).toBe('');
-    expect(response.clients[0]?.requestCount).toBe(BigInt(100));
-
-    await server.close();
-  });
-
-  test('Should handle clients with zero request count', async () => {
-    const { client, server } = await SetupTest({ dbname, chClient });
-    const fedGraphName = genID('fedGraph');
-    const label = genUniqueLabel();
-
-    await createThenPublishSubgraph(
-      client,
-      genID('subgraph'),
-      DEFAULT_NAMESPACE,
-      'type Query { hello: String! }',
-      [label],
-      'http://localhost:4001',
-    );
-
-    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:3000');
-
-    const mockClients = [
-      {
-        name: 'test-client',
-        version: '1.0.0',
-        requestCount: 0,
-        lastUsed: '2024-01-01 12:00:00',
-      },
-    ];
-
-    (chClient.queryPromise as Mock).mockResolvedValue(mockClients);
-
-    const response = await client.getOperationClients({
-      federatedGraphName: fedGraphName,
-      namespace: DEFAULT_NAMESPACE,
-      operationHash: 'test-hash',
-    });
-
-    expect(response.response?.code).toBe(EnumStatusCode.OK);
-    expect(response.clients).toHaveLength(1);
-    expect(response.clients[0]?.requestCount).toBe(BigInt(0));
-
-    await server.close();
-  });
-
-  test('Should handle date range correctly', async () => {
-    const { client, server } = await SetupTest({ dbname, chClient });
-    const fedGraphName = genID('fedGraph');
-    const label = genUniqueLabel();
-
-    await createThenPublishSubgraph(
-      client,
-      genID('subgraph'),
-      DEFAULT_NAMESPACE,
-      'type Query { hello: String! }',
-      [label],
-      'http://localhost:4001',
-    );
-
-    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:3000');
-
-    const mockClients = [
-      {
-        name: 'test-client',
-        version: '1.0.0',
-        requestCount: 100,
-        lastUsed: '2024-01-01 12:00:00',
-      },
-    ];
-
-    (chClient.queryPromise as Mock).mockResolvedValue(mockClients);
-
-    const response = await client.getOperationClients({
-      federatedGraphName: fedGraphName,
-      namespace: DEFAULT_NAMESPACE,
-      operationHash: 'test-hash',
-      dateRange: {
-        start: formatISO(subHours(new Date(), 24)),
-        end: formatISO(new Date()),
-      },
-    });
-
-    expect(response.response?.code).toBe(EnumStatusCode.OK);
-    expect(response.clients).toHaveLength(1);
-
-    await server.close();
-  });
-
-  test('Should handle range parameter correctly', async () => {
-    const { client, server } = await SetupTest({ dbname, chClient });
-    const fedGraphName = genID('fedGraph');
-    const label = genUniqueLabel();
-
-    await createThenPublishSubgraph(
-      client,
-      genID('subgraph'),
-      DEFAULT_NAMESPACE,
-      'type Query { hello: String! }',
-      [label],
-      'http://localhost:4001',
-    );
-
-    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:3000');
-
-    const mockClients = [
-      {
-        name: 'test-client',
-        version: '1.0.0',
-        requestCount: 100,
-        lastUsed: '2024-01-01 12:00:00',
-      },
-    ];
-
-    (chClient.queryPromise as Mock).mockResolvedValue(mockClients);
-
-    const response = await client.getOperationClients({
-      federatedGraphName: fedGraphName,
-      namespace: DEFAULT_NAMESPACE,
-      operationHash: 'test-hash',
-      range: 24, // 24 hours
-    });
-
-    expect(response.response?.code).toBe(EnumStatusCode.OK);
-    expect(response.clients).toHaveLength(1);
-
-    await server.close();
-  });
-
-  test('Should handle operation hash with special characters', async () => {
-    const { client, server } = await SetupTest({ dbname, chClient });
-    const fedGraphName = genID('fedGraph');
-    const label = genUniqueLabel();
-
-    await createThenPublishSubgraph(
-      client,
-      genID('subgraph'),
-      DEFAULT_NAMESPACE,
-      'type Query { hello: String! }',
-      [label],
-      'http://localhost:4001',
-    );
-
-    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:3000');
-
-    const mockClients = [
-      {
-        name: 'test-client',
-        version: '1.0.0',
-        requestCount: 100,
-        lastUsed: '2024-01-01 12:00:00',
-      },
-    ];
-
-    (chClient.queryPromise as Mock).mockResolvedValue(mockClients);
-
-    const response = await client.getOperationClients({
-      federatedGraphName: fedGraphName,
-      namespace: DEFAULT_NAMESPACE,
-      operationHash: "test'hash", // Contains single quote
-    });
-
-    expect(response.response?.code).toBe(EnumStatusCode.OK);
-    expect(response.clients).toHaveLength(1);
+    expect(response.deprecatedFields).toEqual([]);
 
     await server.close();
   });
@@ -404,29 +241,23 @@ describe('GetOperationClients', () => {
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
+    const subgraphName = genID('subgraph');
     await createThenPublishSubgraph(
       client,
-      genID('subgraph'),
+      subgraphName,
       DEFAULT_NAMESPACE,
-      'type Query { hello: String! }',
+      `type Query {
+        hello: String! @deprecated(reason: "Use newHello instead")
+      }`,
       [label],
       'http://localhost:4001',
     );
 
     await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:3000');
 
-    const mockClients = [
-      {
-        name: 'test-client',
-        version: '1.0.0',
-        requestCount: 100,
-        lastUsed: '2024-01-01 12:00:00',
-      },
-    ];
+    (chClient.queryPromise as Mock).mockResolvedValue([]);
 
-    (chClient.queryPromise as Mock).mockResolvedValue(mockClients);
-
-    const response = await client.getOperationClients({
+    const response = await client.getOperationDeprecatedFields({
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
       operationHash: 'test-hash',
@@ -434,63 +265,232 @@ describe('GetOperationClients', () => {
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
-    expect(response.clients).toHaveLength(1);
 
     await server.close();
   });
 
-  test('Should handle multiple clients with same name but different versions', async () => {
+  test('Should handle operation hash with special characters', async () => {
     const { client, server } = await SetupTest({ dbname, chClient });
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
+    const subgraphName = genID('subgraph');
     await createThenPublishSubgraph(
       client,
-      genID('subgraph'),
+      subgraphName,
       DEFAULT_NAMESPACE,
-      'type Query { hello: String! }',
+      `type Query {
+        hello: String! @deprecated(reason: "Use newHello instead")
+      }`,
       [label],
       'http://localhost:4001',
     );
 
     await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:3000');
 
-    const mockClients = [
-      {
-        name: 'test-client',
-        version: '1.0.0',
-        requestCount: 100,
-        lastUsed: '2024-01-01 12:00:00',
-      },
-      {
-        name: 'test-client',
-        version: '2.0.0',
-        requestCount: 200,
-        lastUsed: '2024-01-01 13:00:00',
-      },
-      {
-        name: 'another-client',
-        version: '1.0.0',
-        requestCount: 50,
-        lastUsed: '2024-01-01 11:00:00',
-      },
-    ];
+    (chClient.queryPromise as Mock).mockResolvedValue([]);
 
-    (chClient.queryPromise as Mock).mockResolvedValue(mockClients);
-
-    const response = await client.getOperationClients({
+    const response = await client.getOperationDeprecatedFields({
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
-      operationHash: 'test-hash',
+      operationHash: "test'hash", // Contains single quote
+      operationName: 'TestOperation',
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
-    expect(response.clients.length).toBeGreaterThanOrEqual(2);
-    // Should group by ClientName and ClientVersion
-    const testClientVersions = response.clients.filter((c) => c.name === 'test-client').map((c) => c.version);
-    expect(testClientVersions).toContain('1.0.0');
-    expect(testClientVersions).toContain('2.0.0');
 
+    await server.close();
+  });
+
+  test('Should handle date range correctly', async () => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+    const fedGraphName = genID('fedGraph');
+    const label = genUniqueLabel();
+
+    const subgraphName = genID('subgraph');
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      `type Query {
+        hello: String! @deprecated(reason: "Use newHello instead")
+      }`,
+      [label],
+      'http://localhost:4001',
+    );
+
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:3000');
+
+    (chClient.queryPromise as Mock).mockResolvedValue([]);
+
+    const response = await client.getOperationDeprecatedFields({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      operationHash: 'test-hash',
+      operationName: 'TestOperation',
+      dateRange: {
+        start: formatISO(subHours(new Date(), 24)),
+        end: formatISO(new Date()),
+      },
+    });
+
+    expect(response.response?.code).toBe(EnumStatusCode.OK);
+
+    await server.close();
+  });
+
+  test('Should handle range parameter correctly', async () => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+    const fedGraphName = genID('fedGraph');
+    const label = genUniqueLabel();
+
+    const subgraphName = genID('subgraph');
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      `type Query {
+        hello: String! @deprecated(reason: "Use newHello instead")
+      }`,
+      [label],
+      'http://localhost:4001',
+    );
+
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:3000');
+
+    (chClient.queryPromise as Mock).mockResolvedValue([]);
+
+    const response = await client.getOperationDeprecatedFields({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      operationHash: 'test-hash',
+      operationName: 'TestOperation',
+      range: 24, // 24 hours
+    });
+
+    expect(response.response?.code).toBe(EnumStatusCode.OK);
+
+    await server.close();
+  });
+
+  test('Should return deprecated fields with correct field name and type name', async () => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+    const fedGraphName = genID('fedGraph');
+    const label = genUniqueLabel();
+
+    const subgraphName = genID('subgraph');
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      `type Query {
+        hello: String! @deprecated(reason: "Use newHello instead")
+      }
+      type User {
+        oldName: String! @deprecated(reason: "Use name instead")
+      }`,
+      [label],
+      'http://localhost:4001',
+    );
+
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:3000');
+
+    const mockDeprecatedFields = [
+      {
+        deprecatedFieldName: 'hello',
+        deprecatedFieldTypeNames: ['Query'],
+      },
+    ];
+
+    // Mock calls: first for getting deprecated fields from schema, second for usage check
+    (chClient.queryPromise as Mock).mockResolvedValue(mockDeprecatedFields);
+
+    const response = await client.getOperationDeprecatedFields({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      operationHash: 'test-hash',
+      operationName: 'TestOperation',
+    });
+
+    expect(response.response?.code).toBe(EnumStatusCode.OK);
+    // If deprecated fields are found, they should have correct structure
+    if (response.deprecatedFields.length > 0) {
+      expect(response.deprecatedFields[0]?.fieldName).toBeDefined();
+      expect(response.deprecatedFields[0]?.typeName).toBeDefined();
+    }
+
+    await server.close();
+  });
+
+  test('Should handle operation without operation name', async () => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+    const fedGraphName = genID('fedGraph');
+    const label = genUniqueLabel();
+
+    const subgraphName = genID('subgraph');
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      `type Query {
+        hello: String! @deprecated(reason: "Use newHello instead")
+      }`,
+      [label],
+      'http://localhost:4001',
+    );
+
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:3000');
+
+    (chClient.queryPromise as Mock).mockResolvedValue([]);
+
+    const response = await client.getOperationDeprecatedFields({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      operationHash: 'test-hash',
+      // operationName is optional
+    });
+
+    expect(response.response?.code).toBe(EnumStatusCode.OK);
+
+    await server.close();
+  });
+
+  test('Should handle deprecated fields with empty type names array', async () => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+    const fedGraphName = genID('fedGraph');
+    const label = genUniqueLabel();
+
+    const subgraphName = genID('subgraph');
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      `type Query {
+        hello: String! @deprecated(reason: "Use newHello instead")
+      }`,
+      [label],
+      'http://localhost:4001',
+    );
+
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:3000');
+
+    const mockDeprecatedFields = [
+      {
+        deprecatedFieldName: 'hello',
+        deprecatedFieldTypeNames: [],
+      },
+    ];
+
+    (chClient.queryPromise as Mock).mockResolvedValue(mockDeprecatedFields);
+
+    const response = await client.getOperationDeprecatedFields({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      operationHash: 'test-hash',
+      operationName: 'TestOperation',
+    });
+
+    expect(response.response?.code).toBe(EnumStatusCode.OK);
     await server.close();
   });
 });

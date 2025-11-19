@@ -56,9 +56,11 @@ export function getOperationDeprecatedFields(
       featureId: 'analytics-retention',
     });
 
+    // Use provided range/dateRange or fall back to default
+    const inputRange = req.range ?? (req.dateRange ? undefined : 24);
     const { range, dateRange } = validateDateRanges({
       limit: analyticsRetention?.limit ?? 7,
-      range: req.range,
+      range: inputRange,
       dateRange: req.dateRange,
     });
 
