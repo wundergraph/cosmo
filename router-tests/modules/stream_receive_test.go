@@ -620,12 +620,7 @@ func TestReceiveHook(t *testing.T) {
 			surl := xEnv.GraphQLWebSocketSubscriptionURL()
 			client := graphql.NewSubscriptionClient(surl)
 
-			subscriptionArgsCh := make(chan kafkaSubscriptionArgs)
 			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				subscriptionArgsCh <- kafkaSubscriptionArgs{
-					dataValue: dataValue,
-					errValue:  errValue,
-				}
 				return nil
 			})
 			require.NoError(t, err)
