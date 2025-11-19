@@ -192,7 +192,7 @@ const OperationsLeftPanel = ({
             latency = op.metric.value;
             break;
           case "requestCount":
-            requestCount = Number(op.metric.value) ?? 0;
+            requestCount = op.metric.value ? Number(op.metric.value) : 0;
             break;
           case "errorPercentage":
             errorRate = op.metric.value;
