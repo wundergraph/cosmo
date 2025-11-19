@@ -709,6 +709,14 @@ func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []
 		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("query_normalization", srv.engineExecutionConfiguration.NormalizationCacheSize, s.normalizationCache.Metrics))
 	}
 
+	if s.variablesNormalizationCache != nil {
+		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("variables_normalization", srv.engineExecutionConfiguration.NormalizationCacheSize, s.variablesNormalizationCache.Metrics))
+	}
+
+	if s.remapVariablesCache != nil {
+		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("remap_variables", srv.engineExecutionConfiguration.NormalizationCacheSize, s.remapVariablesCache.Metrics))
+	}
+
 	if s.persistedOperationCache != nil {
 		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("persisted_query_normalization", 1024, s.persistedOperationCache.Metrics))
 	}
@@ -1237,11 +1245,11 @@ func (s *graphServer) buildGraphMux(
 		EnablePersistedOperationsCache:      s.engineExecutionConfiguration.EnablePersistedOperationsCache,
 		PersistedOpsNormalizationCache:      gm.persistedOperationCache,
 		NormalizationCache:                  gm.normalizationCache,
+		VariablesNormalizationCache:         gm.variablesNormalizationCache,
+		RemapVariablesCache:                 gm.remapVariablesCache,
 		ValidationCache:                     gm.validationCache,
 		QueryDepthCache:                     gm.complexityCalculationCache,
 		OperationHashCache:                  gm.operationHashCache,
-		VariablesNormalizationCache:         gm.variablesNormalizationCache,
-		RemapVariablesCache:                 gm.remapVariablesCache,
 		ParseKitPoolSize:                    s.engineExecutionConfiguration.ParseKitPoolSize,
 		IntrospectionEnabled:                s.Config.introspection,
 		ParserTokenizerLimits: astparser.TokenizerLimits{
