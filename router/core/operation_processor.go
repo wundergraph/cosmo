@@ -941,12 +941,10 @@ func (o *OperationKit) NormalizeVariables() (cached bool, mapping []uploads.Uplo
 	// Reset the doc with the original name
 	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = nameRef
 
-	o.kit.keyGen.Reset() // should not be needed if we properly reset after use - check do we have any remaining places where we do not reset keygen - maybe wrap into a type which will reset once we got key
 	_, err = o.kit.keyGen.Write(o.kit.normalizedOperation.Bytes())
 	if err != nil {
 		return false, nil, err
 	}
-
 	o.parsedOperation.ID = o.kit.keyGen.Sum64()
 	o.kit.keyGen.Reset()
 
@@ -1044,12 +1042,10 @@ func (o *OperationKit) RemapVariables(disabled bool) (cached bool, err error) {
 	// Reset the doc with the original name
 	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = nameRef
 
-	o.kit.keyGen.Reset()
 	_, err = o.kit.keyGen.Write(o.kit.normalizedOperation.Bytes())
 	if err != nil {
 		return false, err
 	}
-
 	// Generate the operation ID
 	o.parsedOperation.InternalID = o.kit.keyGen.Sum64()
 	o.kit.keyGen.Reset()

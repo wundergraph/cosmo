@@ -12,7 +12,7 @@ import (
 )
 
 // cacheHit represents the expected cache hit/miss status for all three normalization stages.
-// True values mean the cache hit.
+// True value means the cache was hit.
 type cacheHit struct {
 	normalization bool
 	variables     bool
@@ -87,7 +87,6 @@ func TestVarsNormalizationRemappingCaches(t *testing.T) {
 	t.Run("Variables normalization cache - query changes, but variables stay the same", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Test with unused variables that should be removed
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query:     `query MyQuery($id: Int!) { employee(id: $id) { id  } }`,
 				Variables: []byte(`{"id": 1}`),
@@ -106,6 +105,7 @@ func TestVarsNormalizationRemappingCaches(t *testing.T) {
 	})
 
 	t.Run("Cache key isolation - different operations don't collide", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Query A
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -131,6 +131,7 @@ func TestVarsNormalizationRemappingCaches(t *testing.T) {
 	})
 
 	t.Run("List coercion with variables normalization cache", func(t *testing.T) {
+		t.Parallel()
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Test that list coercion works correctly with caching
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -146,6 +147,9 @@ func TestVarsNormalizationRemappingCaches(t *testing.T) {
 				Variables: []byte(`{"arg": "different"}`),
 			})
 			require.Equal(t, `{"data":{"rootFieldWithListArg":["different"]}}`, res.Body)
+			// Normalization hits because the query structure is unchanged,
+			// variables misses because the value differs,
+			// and remapping hits because the structure remains the same.
 			assertCacheHeaders(t, res, cacheHit{true, false, true})
 		})
 	})
