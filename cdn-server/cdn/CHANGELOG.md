@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.10.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-cdn@0.9.5...@wundergraph/cosmo-cdn@0.10.0) (2025-11-19)
+
+### Features
+
+* **admission-server,cdn-server:** upgrade hono to v4.10.6 ([#2340](https://github.com/wundergraph/cosmo/issues/2340)) ([9f9faa0](https://github.com/wundergraph/cosmo/commit/9f9faa00eed1027e8d3cbe08e594c94e08028553)) (@pepol)
+
 ## [0.9.5](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-cdn@0.9.4...@wundergraph/cosmo-cdn@0.9.5) (2025-10-03)
 
 **Note:** Version bump only for package @wundergraph/cosmo-cdn
