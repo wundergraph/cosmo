@@ -1,0 +1,4 @@
+#!/bin/sh
+DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+
+WG_BUN_DEBUG="true" exec bun --inspect run "$DIR/../src/plugin.ts" "$@" 2>>"$DIR/plugin_stderr.log"

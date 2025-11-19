@@ -1,0 +1,49 @@
+extend schema
+@link(url: "https://specs.apollo.dev/federation/v2.5", import: ["@key", "@shareable"])
+
+schema {
+  query: Query
+  mutation: Mutation
+}
+
+type Query {
+  courses: [Course!]!
+  course(id: ID!): Course
+  lessons(courseId: ID!): [Lesson!]!
+  killCoursesService: Boolean!
+  throwErrorCourses: Boolean!
+}
+
+type Mutation {
+  addCourse(title: String!, instructorId: Int!): Course!
+  addLesson(courseId: ID!, title: String!, order: Int!): Lesson!
+}
+
+type Course {
+  id: ID!
+  title: String!
+  description: String
+  
+  # Federated reference to instructor
+  instructor: Employee!
+  
+  # Course lessons
+  lessons: [Lesson!]!
+}
+
+type Lesson {
+  id: ID!
+  courseId: ID!
+  title: String!
+  description: String
+  order: Int!
+  
+  # Reference back to course
+  course: Course!
+}
+
+type Employee @key(fields: "id") {
+  id: Int!
+  # Fields resolved by this subgraph
+  taughtCourses: [Course!]!
+}
