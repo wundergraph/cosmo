@@ -19,6 +19,9 @@
     "url": "https://github.com/wundergraph/cosmo"
   },
   "scripts": {
+    "compile-templates": "tsx scripts/compile-templates.ts && prettier --write src/commands/router/commands/plugin/templates/*.ts",
+    "prebuild": "npm run compile-templates",
+    "prebuild:bun": "bun run compile-templates",
     "build": "rm -rf dist && tsc",
     "build:bun": "bun build --compile --production --outfile wgc src/index.ts",
     "wgc": "tsx --env-file .env src/index.ts",
