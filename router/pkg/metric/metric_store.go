@@ -17,13 +17,19 @@ import (
 
 // Server HTTP metrics.
 const (
-	RequestCounter                = "router.http.requests"                      // Incoming request count total
+
+	// router.http.requests.error
+	// router.http.requests
+
 	ServerLatencyHistogram        = "router.http.request.duration_milliseconds" // Incoming end to end duration, milliseconds
 	RequestContentLengthCounter   = "router.http.request.content_length"        // Incoming request bytes total
 	ResponseContentLengthCounter  = "router.http.response.content_length"       // Outgoing response bytes total
 	InFlightRequestsUpDownCounter = "router.http.requests.in_flight"            // Number of requests in flight
-	RequestError                  = "router.http.requests.error"                // Total request error count
-	RouterInfo                    = "router.info"
+
+	RequestCounter = "router.http.requests"       // Incoming request count total
+	RequestError   = "router.http.requests.error" // Total request error count
+
+	RouterInfo = "router.info"
 
 	CircuitBreakerStateGauge           = "router.circuit_breaker.state"
 	CircuitBreakerShortCircuitsCounter = "router.circuit_breaker.short_circuits"

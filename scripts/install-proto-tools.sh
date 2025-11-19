@@ -281,7 +281,6 @@ go)
     ;;
 ts)
     download_bun
-    download_node
     ;;
 *)
     error "Unsupported language: $LANGUAGE. Must be 'go' or 'ts'."

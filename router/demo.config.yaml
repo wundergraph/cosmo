@@ -20,3 +20,26 @@ events:
       - id: my-redis
         urls:
         - "redis://localhost:6379/2"
+
+execution_config:
+  file:
+   path: /Users/milindadias/Work/cosmo/router-tests/testenv/testdata/configWithPlugins.json
+
+plugins:
+  enabled: true
+
+#traffic_shaping:
+#  all:
+#    retry:
+#      enabled: false
+#
+#access_logs:
+#  enabled: true
+#  router:
+#    fields:
+#      - key: req_error
+#        value_from:
+#          expression: request.error
+#
+
+#npx wgc subgraph update application -n milindatesting --label team=A
