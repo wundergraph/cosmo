@@ -37,7 +37,7 @@ func assertCacheHeaders(t *testing.T, res *testenv.TestResponse, expected cacheH
 		"Variables remapping cache hit mismatch")
 }
 
-func TestAdditionalNormalizationCaches(t *testing.T) {
+func TestVarsNormalizationRemappingCaches(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Basic normalization cache with skip/include", func(t *testing.T) {
@@ -53,15 +53,10 @@ func TestAdditionalNormalizationCaches(t *testing.T) {
 				require.Equal(t, `{"data":{"employee":{"details":{"pets":[{"name":"Abby","__typename":"Dog","breed":"GOLDEN_RETRIEVER","class":"MAMMAL","gender":"FEMALE"},{"name":"Survivor","__typename":"Pony"}]}}}}`, res.Body)
 			}
 
-			// First request: all caches miss
 			f(cacheHit{false, false, false}, true)
-			// Second request: all caches hit
 			f(cacheHit{true, true, true}, true)
-			// Third request: all caches hit
 			f(cacheHit{true, true, true}, true)
-			// Fourth request: different skip/include value, all caches miss
 			f(cacheHit{false, false, false}, false)
-			// Fifth request: back to original skip/include value, all caches hit
 			f(cacheHit{true, true, true}, true)
 		})
 	})
@@ -69,19 +64,19 @@ func TestAdditionalNormalizationCaches(t *testing.T) {
 	t.Run("Variables normalization cache - inline value extraction", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Test 1: Inline value gets extracted to variable - all caches miss
+			// Inline value gets extracted to variable
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employee(id: 1) { id details { forename } } }`,
 			})
 			assertCacheHeaders(t, res, cacheHit{false, false, false})
 
-			// Test 2: Same query - all caches hit
+			// Same query
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employee(id: 1) { id details { forename } } }`,
 			})
 			assertCacheHeaders(t, res, cacheHit{true, true, true})
 
-			// Test 3: Different inline value
+			// Different inline value
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employee(id: 2) { id details { forename } } }`,
 			})
@@ -92,7 +87,7 @@ func TestAdditionalNormalizationCaches(t *testing.T) {
 	t.Run("Variables normalization cache - query changes, but variables stay the same", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Test with unused variables that should be removed - all caches miss
+			// Test with unused variables that should be removed
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query:     `query MyQuery($id: Int!) { employee(id: $id) { id  } }`,
 				Variables: []byte(`{"id": 1}`),
@@ -100,7 +95,7 @@ func TestAdditionalNormalizationCaches(t *testing.T) {
 			require.Equal(t, `{"data":{"employee":{"id":1}}}`, res.Body)
 			assertCacheHeaders(t, res, cacheHit{false, false, false})
 
-			// Different query with same variable value.
+			// Different query with the same variable value.
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query:     `query MyQuery($id: Int!) { employee(id: $id) { id details { forename }} }`,
 				Variables: []byte(`{"id": 1}`),
@@ -112,21 +107,21 @@ func TestAdditionalNormalizationCaches(t *testing.T) {
 
 	t.Run("Cache key isolation - different operations don't collide", func(t *testing.T) {
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Test 1: Query A
+			// Query A
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query:     `query A($id: Int!) { employee(id: $id) { id } }`,
 				Variables: []byte(`{"id": 1}`),
 			})
 			assertCacheHeaders(t, res, cacheHit{false, false, false})
 
-			// Test 2: Query B with different structure should miss
+			// Query B with different structure should miss
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query:     `query B($id: Int!) { employee(id: $id) { id details { forename } } }`,
 				Variables: []byte(`{"id": 1}`),
 			})
 			assertCacheHeaders(t, res, cacheHit{false, false, false})
 
-			// Test 3: Query A again should hit its own cache
+			// Query A again should hit its own cache
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query:     `query A($id: Int!) { employee(id: $id) { id } }`,
 				Variables: []byte(`{"id": 1}`),
