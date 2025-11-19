@@ -101,7 +101,7 @@ importers:
     dependencies:
       '@hono/node-server':
         specifier: 1.13.7
-        version: 1.13.7(hono@4.6.12)
+        version: 1.13.7(hono@4.10.6)
       '@wundergraph/cosmo-shared':
         specifier: workspace:^
         version: link:../shared
@@ -109,8 +109,8 @@ importers:
         specifier: ^16.4.5
         version: 16.4.5
       hono:
-        specifier: 4.6.12
-        version: 4.6.12
+        specifier: 4.10.6
+        version: 4.10.6
     devDependencies:
       '@types/node':
         specifier: ^20.11.17
@@ -129,7 +129,7 @@ importers:
         version: 3.529.1
       '@hono/node-server':
         specifier: 1.13.7
-        version: 1.13.7(hono@4.6.12)
+        version: 1.13.7(hono@4.10.6)
       '@wundergraph/cosmo-cdn':
         specifier: workspace:*
         version: link:cdn
@@ -137,8 +137,8 @@ importers:
         specifier: ^16.4.5
         version: 16.4.5
       hono:
-        specifier: 4.6.12
-        version: 4.6.12
+        specifier: 4.10.6
+        version: 4.10.6
     devDependencies:
       '@types/node':
         specifier: ^20.9.0
@@ -159,8 +159,8 @@ importers:
   cdn-server/cdn:
     dependencies:
       hono:
-        specifier: 4.6.12
-        version: 4.6.12
+        specifier: 4.10.6
+        version: 4.10.6
       jose:
         specifier: ^5.2.4
         version: 5.2.4
@@ -7586,9 +7586,6 @@ packages:
   '@types/node-fetch@2.6.11':
     resolution: {integrity: sha512-24xFj9R5+rfQJLRyM56qh+wnVSYhyXC2tkoBndtY0U+vubqNsYXGjufB2nn8Q6gt0LrARwL6UBtMCSVCwl4B1g==}
 
-  '@types/node@18.19.122':
-    resolution: {integrity: sha512-yzegtT82dwTNEe/9y+CM8cgb42WrUfMMCg2QqSddzO1J6uPmBD7qKCZ7dOHZP2Yrpm/kb0eqdNMn2MUyEiqBmA==}
-
   '@types/node@18.19.21':
     resolution: {integrity: sha512-2Q2NeB6BmiTFQi4DHBzncSoq/cJMLDdhPaAoJFnFCyD9a8VPZRf7a1GAwp1Edb7ROaZc5Jz/tnZyL6EsWMRaqw==}
 
@@ -10545,8 +10542,8 @@ packages:
   hoist-non-react-statics@3.3.2:
     resolution: {integrity: sha512-/gGivxi8JPKWNm/W0jSmzcMPpfpPLc3dY/6GxhX2hQ9iGj3aDfklV4ET7NjKpSinLpJ5vafa9iiGIEZg10SfBw==}
 
-  hono@4.6.12:
-    resolution: {integrity: sha512-eHtf4kSDNw6VVrdbd5IQi16r22m3s7mWPLd7xOMhg1a/Yyb1A0qpUFq8xYMX4FMuDe1nTKeMX5rTx7Nmw+a+Ag==}
+  hono@4.10.6:
+    resolution: {integrity: sha512-BIdolzGpDO9MQ4nu3AUuDwHZZ+KViNm+EZ75Ae55eMXMqLVhDFqEMXxtUe9Qh8hjL+pIna/frs2j6Y2yD5Ua/g==}
     engines: {node: '>=16.9.0'}
 
   hosted-git-info@2.8.9:
@@ -17636,9 +17633,9 @@ snapshots:
     dependencies:
       react: 18.3.1
 
-  '@hono/node-server@1.13.7(hono@4.6.12)':
+  '@hono/node-server@1.13.7(hono@4.10.6)':
     dependencies:
-      hono: 4.6.12
+      hono: 4.10.6
 
   '@hookform/resolvers@3.3.1(react-hook-form@7.45.1(react@18.3.1))':
     dependencies:
@@ -22201,10 +22198,6 @@ snapshots:
       '@types/node': 20.12.12
       form-data: 4.0.4
 
-  '@types/node@18.19.122':
-    dependencies:
-      undici-types: 5.26.5
-
   '@types/node@18.19.21':
     dependencies:
       undici-types: 5.26.5
@@ -22251,7 +22244,7 @@ snapshots:
 
   '@types/pg@8.15.4':
     dependencies:
-      '@types/node': 18.19.122
+      '@types/node': 20.12.12
       pg-protocol: 1.10.3
       pg-types: 2.2.0
 
@@ -22263,7 +22256,7 @@ snapshots:
 
   '@types/pg@8.6.1':
     dependencies:
-      '@types/node': 18.19.122
+      '@types/node': 20.12.12
       pg-protocol: 1.10.3
       pg-types: 2.2.0
 
@@ -22313,7 +22306,7 @@ snapshots:
 
   '@types/tedious@4.0.14':
     dependencies:
-      '@types/node': 18.19.122
+      '@types/node': 20.12.12
 
   '@types/tern@0.23.5':
     dependencies:
@@ -25779,7 +25772,7 @@ snapshots:
     dependencies:
       react-is: 16.13.1
 
-  hono@4.6.12: {}
+  hono@4.10.6: {}
 
   hosted-git-info@2.8.9: {}
 

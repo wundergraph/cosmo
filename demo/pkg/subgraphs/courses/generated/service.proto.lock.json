@@ -1,0 +1,181 @@
+{
+  "version": "1.0.0",
+  "messages": {
+    "LookupCourseByIdRequestKey": {
+      "fields": {
+        "id": 1
+      }
+    },
+    "LookupCourseByIdRequest": {
+      "fields": {
+        "keys": 1
+      }
+    },
+    "LookupCourseByIdResponse": {
+      "fields": {
+        "result": 1
+      }
+    },
+    "LookupLessonByIdRequestKey": {
+      "fields": {
+        "id": 1
+      }
+    },
+    "LookupLessonByIdRequest": {
+      "fields": {
+        "keys": 1
+      }
+    },
+    "LookupLessonByIdResponse": {
+      "fields": {
+        "result": 1
+      }
+    },
+    "LookupEmployeeByIdRequestKey": {
+      "fields": {
+        "id": 1
+      }
+    },
+    "LookupEmployeeByIdRequest": {
+      "fields": {
+        "keys": 1
+      }
+    },
+    "LookupEmployeeByIdResponse": {
+      "fields": {
+        "result": 1
+      }
+    },
+    "Query": {
+      "fields": {
+        "courses": 1,
+        "course": 2,
+        "lessons": 3,
+        "killCoursesService": 4,
+        "throwErrorCourses": 5
+      }
+    },
+    "QueryCoursesRequest": {
+      "fields": {}
+    },
+    "QueryCoursesResponse": {
+      "fields": {
+        "courses": 1
+      }
+    },
+    "QueryCourseRequest": {
+      "fields": {
+        "id": 1
+      }
+    },
+    "QueryCourse": {
+      "fields": {
+        "id": 1
+      }
+    },
+    "QueryCourseResponse": {
+      "fields": {
+        "course": 1
+      }
+    },
+    "QueryLessonsRequest": {
+      "fields": {
+        "course_id": 1
+      }
+    },
+    "QueryLessons": {
+      "fields": {
+        "courseId": 1
+      }
+    },
+    "QueryLessonsResponse": {
+      "fields": {
+        "lessons": 1
+      }
+    },
+    "QueryKillCoursesServiceRequest": {
+      "fields": {}
+    },
+    "QueryKillCoursesServiceResponse": {
+      "fields": {
+        "kill_courses_service": 1
+      }
+    },
+    "QueryThrowErrorCoursesRequest": {
+      "fields": {}
+    },
+    "QueryThrowErrorCoursesResponse": {
+      "fields": {
+        "throw_error_courses": 1
+      }
+    },
+    "Mutation": {
+      "fields": {
+        "addCourse": 1,
+        "addLesson": 2
+      }
+    },
+    "MutationAddCourseRequest": {
+      "fields": {
+        "title": 1,
+        "instructor_id": 2
+      }
+    },
+    "MutationAddCourse": {
+      "fields": {
+        "title": 1,
+        "instructorId": 2
+      }
+    },
+    "MutationAddCourseResponse": {
+      "fields": {
+        "add_course": 1
+      }
+    },
+    "MutationAddLessonRequest": {
+      "fields": {
+        "course_id": 1,
+        "title": 2,
+        "order": 3
+      }
+    },
+    "MutationAddLesson": {
+      "fields": {
+        "courseId": 1,
+        "title": 2,
+        "order": 3
+      }
+    },
+    "MutationAddLessonResponse": {
+      "fields": {
+        "add_lesson": 1
+      }
+    },
+    "Course": {
+      "fields": {
+        "id": 1,
+        "title": 2,
+        "description": 3,
+        "instructor": 4,
+        "lessons": 5
+      }
+    },
+    "Lesson": {
+      "fields": {
+        "id": 1,
+        "courseId": 2,
+        "title": 3,
+        "description": 4,
+        "order": 5,
+        "course": 6
+      }
+    },
+    "Employee": {
+      "fields": {
+        "id": 1,
+        "taughtCourses": 2
+      }
+    }
+  },
+  "enums": {}
+}
