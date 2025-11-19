@@ -394,15 +394,14 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 		var errStreamHandlerError *StreamHandlerError
 		if !errors.As(err, &errStreamHandlerError) {
 			response.Errors[0].Message = "Internal server error"
-			// We could set response.Errors[0].Extensions, too
 			if isHttpResponseWriter {
 				httpWriter.WriteHeader(http.StatusInternalServerError)
 			}
-			return
-		}
-		response.Errors[0].Message = errStreamHandlerError.Message
-		if isHttpResponseWriter {
-			httpWriter.WriteHeader(http.StatusOK)
+		} else {
+			response.Errors[0].Message = errStreamHandlerError.Message
+			if isHttpResponseWriter {
+				httpWriter.WriteHeader(http.StatusOK)
+			}
 		}
 	case errorTypeInvalidWsSubprotocol:
 		response.Errors[0].Message = fmt.Sprintf("Invalid Subprotocol error: %s or configure the subprotocol to be used using `wgc subgraph update` command.", err.Error())
@@ -413,22 +412,6 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 		response.Errors[0].Message = "Invalid message received"
 		if isHttpResponseWriter {
 			httpWriter.WriteHeader(http.StatusInternalServerError)
-		}
-	case errorTypeHttpError:
-		var httpErr *httpGraphqlError
-		if !errors.As(err, &httpErr) {
-			response.Errors[0].Message = "Internal server error"
-			return
-		}
-		response.Errors[0].Message = httpErr.Message()
-		if httpErr.ExtensionCode() != "" || httpErr.StatusCode() != 0 {
-			response.Errors[0].Extensions = &Extensions{
-				Code:       httpErr.ExtensionCode(),
-				StatusCode: httpErr.StatusCode(),
-			}
-		}
-		if isHttpResponseWriter {
-			httpWriter.WriteHeader(httpErr.StatusCode())
 		}
 	}
 
