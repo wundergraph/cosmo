@@ -82,61 +82,69 @@ export const ClientUsageTable = ({
         </p>
       </div>
       <TableWrapper>
-        <Table>
+        <Table className="w-full table-fixed">
           <TableHeader>
             <TableRow>
-              <TableHead>Client Name</TableHead>
-              <TableHead>Version</TableHead>
-              <TableHead>Requests</TableHead>
-              <TableHead>Last Used</TableHead>
+              <TableHead className="w-[35%]">Client Name</TableHead>
+              <TableHead className="w-[25%]">Version</TableHead>
+              <TableHead className="w-[15%] text-center">Requests</TableHead>
+              <TableHead className="w-[5%]"></TableHead>
+              <TableHead className="w-[20%]">Last Used</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={4} className="h-24 text-center">
-                  <Loader />
-                </TableCell>
-              </TableRow>
-            ) : hasClients ? (
-              clientUsageData.map((client, index) => (
-                <TableRow key={`${client.name}-${client.version}-${index}`}>
-                  <TableCell>
-                    <span className="text-sm font-medium">{client.name}</span>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="text-xs">
-                      {client.version}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm text-muted-foreground">
-                      {client.requestCount.toLocaleString()}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm text-muted-foreground">
-                      {formatDistanceToNow(client.lastUsed, {
-                        addSuffix: true,
-                      })}
-                    </span>
+        </Table>
+        <div className="scrollbar-custom max-h-[232px] flex-1 overflow-y-auto">
+          <Table className="w-full table-fixed">
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="h-24 text-center">
+                    <Loader />
                   </TableCell>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={4}
-                  className="text-center text-muted-foreground"
-                >
-                  No clients found
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-          {!isLoading && hasClients && (
+              ) : hasClients ? (
+                clientUsageData.map((client, index) => (
+                  <TableRow key={`${client.name}-${client.version}-${index}`}>
+                    <TableCell className="w-[35%]">
+                      <span className="text-sm font-medium">{client.name}</span>
+                    </TableCell>
+                    <TableCell className="w-[25%]">
+                      <Badge variant="outline" className="text-xs">
+                        {client.version}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="w-[15%] text-center">
+                      <span className="text-sm text-muted-foreground">
+                        {client.requestCount.toLocaleString()}
+                      </span>
+                    </TableCell>
+                    <TableCell className="w-[5%]"></TableCell>
+                    <TableCell className="w-[20%]">
+                      <span className="text-sm text-muted-foreground">
+                        {formatDistanceToNow(client.lastUsed, {
+                          addSuffix: true,
+                        })}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={4}
+                    className="text-center text-muted-foreground"
+                  >
+                    No clients found
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+        {!isLoading && hasClients && (
+          <Table className="w-full table-fixed border-t">
             <TableFooter>
-              <TableRow className="bg-background hover:bg-background">
+              <TableRow className="border-b-0 bg-background hover:bg-background">
                 <TableCell colSpan={4}>
                   <div className="flex items-center justify-center space-x-1 text-xs text-muted-foreground">
                     <span>
@@ -148,8 +156,8 @@ export const ClientUsageTable = ({
                 </TableCell>
               </TableRow>
             </TableFooter>
-          )}
-        </Table>
+          </Table>
+        )}
       </TableWrapper>
     </div>
   );
