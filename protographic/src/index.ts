@@ -95,7 +95,7 @@ export { GraphQLToProtoTextVisitor } from './sdl-to-proto-visitor.js';
 export { ProtoLockManager } from './proto-lock.js';
 export { SDLValidationVisitor } from './sdl-validation-visitor.js';
 
-export type { GraphQLToProtoTextVisitorOptions } from './sdl-to-proto-visitor.js';
+export type { GraphQLToProtoTextVisitorOptions, ProtoOption } from './sdl-to-proto-visitor.js';
 export type { ProtoLock } from './proto-lock.js';
 export type { ValidationResult } from './sdl-validation-visitor.js';
 export {

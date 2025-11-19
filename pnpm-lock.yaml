@@ -101,7 +101,7 @@ importers:
     dependencies:
       '@hono/node-server':
         specifier: 1.13.7
-        version: 1.13.7(hono@4.6.12)
+        version: 1.13.7(hono@4.10.6)
       '@wundergraph/cosmo-shared':
         specifier: workspace:^
         version: link:../shared
@@ -109,8 +109,8 @@ importers:
         specifier: ^16.4.5
         version: 16.4.5
       hono:
-        specifier: 4.6.12
-        version: 4.6.12
+        specifier: 4.10.6
+        version: 4.10.6
     devDependencies:
       '@types/node':
         specifier: ^20.11.17
@@ -129,7 +129,7 @@ importers:
         version: 3.529.1
       '@hono/node-server':
         specifier: 1.13.7
-        version: 1.13.7(hono@4.6.12)
+        version: 1.13.7(hono@4.10.6)
       '@wundergraph/cosmo-cdn':
         specifier: workspace:*
         version: link:cdn
@@ -137,8 +137,8 @@ importers:
         specifier: ^16.4.5
         version: 16.4.5
       hono:
-        specifier: 4.6.12
-        version: 4.6.12
+        specifier: 4.10.6
+        version: 4.10.6
     devDependencies:
       '@types/node':
         specifier: ^20.9.0
@@ -159,8 +159,8 @@ importers:
   cdn-server/cdn:
     dependencies:
       hono:
-        specifier: 4.6.12
-        version: 4.6.12
+        specifier: 4.10.6
+        version: 4.10.6
       jose:
         specifier: ^5.2.4
         version: 5.2.4
@@ -10839,8 +10839,8 @@ packages:
   hoist-non-react-statics@3.3.2:
     resolution: {integrity: sha512-/gGivxi8JPKWNm/W0jSmzcMPpfpPLc3dY/6GxhX2hQ9iGj3aDfklV4ET7NjKpSinLpJ5vafa9iiGIEZg10SfBw==}
 
-  hono@4.6.12:
-    resolution: {integrity: sha512-eHtf4kSDNw6VVrdbd5IQi16r22m3s7mWPLd7xOMhg1a/Yyb1A0qpUFq8xYMX4FMuDe1nTKeMX5rTx7Nmw+a+Ag==}
+  hono@4.10.6:
+    resolution: {integrity: sha512-BIdolzGpDO9MQ4nu3AUuDwHZZ+KViNm+EZ75Ae55eMXMqLVhDFqEMXxtUe9Qh8hjL+pIna/frs2j6Y2yD5Ua/g==}
     engines: {node: '>=16.9.0'}
 
   hosted-git-info@2.8.9:
@@ -18343,9 +18343,9 @@ snapshots:
     dependencies:
       react: 18.3.1
 
-  '@hono/node-server@1.13.7(hono@4.6.12)':
+  '@hono/node-server@1.13.7(hono@4.10.6)':
     dependencies:
-      hono: 4.6.12
+      hono: 4.10.6
 
   '@hookform/resolvers@3.3.1(react-hook-form@7.45.1(react@18.3.1))':
     dependencies:
@@ -26749,7 +26749,7 @@ snapshots:
     dependencies:
       react-is: 16.13.1
 
-  hono@4.6.12: {}
+  hono@4.10.6: {}
 
   hosted-git-info@2.8.9: {}
 
