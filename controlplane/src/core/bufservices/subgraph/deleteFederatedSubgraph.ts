@@ -186,6 +186,7 @@ export function deleteFederatedSubgraph(
           chClient: opts.chClient!,
           compositionOptions: newCompositionOptions(req.disableResolvabilityValidation),
           federatedGraphs: affectedFederatedGraphs,
+          composeWorkerPool: opts.composeWorkerPool,
         });
 
         return { affectedFederatedGraphs, compositionErrors, deploymentErrors, compositionWarnings };

@@ -5,6 +5,7 @@ import {
   GraphQLSubscriptionProtocol,
   GraphQLWebsocketSubprotocol,
 } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { SubgraphType, ProposalOrigin } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
 import { AxiosError } from 'axios';
 import { isNetworkError, isRetryableError } from 'axios-retry';
@@ -19,7 +20,10 @@ import {
   LATEST_ROUTER_COMPATIBILITY_VERSION,
   newContractTagOptionsFromArrays,
 } from '@wundergraph/composition';
-import { SubgraphType, ProposalOrigin } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import {
+  composeFederatedContract,
+  composeFederatedGraphWithPotentialContracts,
+} from '../core/composition/composition.js';
 import { MemberRole, WebsocketSubprotocol, ProposalOrigin as ProposalOriginEnum } from '../db/models.js';
 import {
   AuthContext,
@@ -32,7 +36,6 @@ import {
 } from '../types/index.js';
 import { isAuthenticationError, isAuthorizationError, isPublicError } from './errors/errors.js';
 import { GraphKeyAuthContext } from './services/GraphApiTokenAuthenticator.js';
-import { composeFederatedContract, composeFederatedGraphWithPotentialContracts } from './composition/composition.js';
 import { SubgraphsToCompose } from './repositories/FeatureFlagRepository.js';
 
 const labelRegex = /^[\dA-Za-z](?:[\w.-]{0,61}[\dA-Za-z])?$/;
@@ -546,6 +549,7 @@ export function getFederationResultWithPotentialContracts(
       compositionOptions,
     );
   }
+
   return composeFederatedGraphWithPotentialContracts(
     subgraphsToCompose.compositionSubgraphs,
     tagOptionsByContractName,
