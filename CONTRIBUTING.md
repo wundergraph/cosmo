@@ -20,9 +20,9 @@ This guide assumes you have already installed the following software:
 
 ## Other Dependencies
 
-While these are not core dependencies, they are required for some parts of the development workflow:
+These are not core requirements, but they are needed for certain parts of the development workflow:
 
-- [bun](https://bun.com/docs/installation): We support router plugins with TypeScript and Bun, there are some integration tests for this which requires compilation of the bun binaries as part of the testing step.
+- [bun](https://bun.com/docs/installation): Used for building and testing TypeScript-based router plugins. Some integration tests compile Bun binaries as part of the testing process, so having Bun installed is required when working with those components.
 
 ## Monorepo
 
