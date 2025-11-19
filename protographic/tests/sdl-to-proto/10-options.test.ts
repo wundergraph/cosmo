@@ -88,7 +88,7 @@ describe('SDL to Proto Options', () => {
 
   it('should generate proto with java_package option', () => {
     const { proto: protoText } = compileGraphQLToProto(simpleSDL, {
-      javaPackage: 'com.example.myservice',
+      protoOptions: [{ name: 'java_package', constant: '"com.example.myservice"' }],
     });
 
     expectValidProto(protoText);
@@ -97,7 +97,7 @@ describe('SDL to Proto Options', () => {
 
   it('should generate proto with java_outer_classname option', () => {
     const { proto: protoText } = compileGraphQLToProto(simpleSDL, {
-      javaOuterClassname: 'MyServiceProto',
+      protoOptions: [{ name: 'java_outer_classname', constant: '"MyServiceProto"' }],
     });
 
     expectValidProto(protoText);
@@ -106,7 +106,7 @@ describe('SDL to Proto Options', () => {
 
   it('should generate proto with java_multiple_files option', () => {
     const { proto: protoText } = compileGraphQLToProto(simpleSDL, {
-      javaMultipleFiles: true,
+      protoOptions: [{ name: 'java_multiple_files', constant: 'true' }],
     });
 
     expectValidProto(protoText);
@@ -115,9 +115,11 @@ describe('SDL to Proto Options', () => {
 
   it('should generate proto with all Java options', () => {
     const { proto: protoText } = compileGraphQLToProto(simpleSDL, {
-      javaPackage: 'com.example.myservice',
-      javaOuterClassname: 'MyServiceProto',
-      javaMultipleFiles: true,
+      protoOptions: [
+        { name: 'java_package', constant: '"com.example.myservice"' },
+        { name: 'java_outer_classname', constant: '"MyServiceProto"' },
+        { name: 'java_multiple_files', constant: 'true' },
+      ],
     });
 
     expectValidProto(protoText);
@@ -128,7 +130,7 @@ describe('SDL to Proto Options', () => {
 
   it('should generate proto with csharp_namespace option', () => {
     const { proto: protoText } = compileGraphQLToProto(simpleSDL, {
-      csharpNamespace: 'Example.MyService',
+      protoOptions: [{ name: 'csharp_namespace', constant: '"Example.MyService"' }],
     });
 
     expectValidProto(protoText);
@@ -137,7 +139,7 @@ describe('SDL to Proto Options', () => {
 
   it('should generate proto with ruby_package option', () => {
     const { proto: protoText } = compileGraphQLToProto(simpleSDL, {
-      rubyPackage: 'MyService::Proto',
+      protoOptions: [{ name: 'ruby_package', constant: '"MyService::Proto"' }],
     });
 
     expectValidProto(protoText);
@@ -146,7 +148,7 @@ describe('SDL to Proto Options', () => {
 
   it('should generate proto with php_namespace option', () => {
     const { proto: protoText } = compileGraphQLToProto(simpleSDL, {
-      phpNamespace: 'Example\\MyService',
+      protoOptions: [{ name: 'php_namespace', constant: '"Example\\MyService"' }],
     });
 
     expectValidProto(protoText);
@@ -155,7 +157,7 @@ describe('SDL to Proto Options', () => {
 
   it('should generate proto with php_metadata_namespace option', () => {
     const { proto: protoText } = compileGraphQLToProto(simpleSDL, {
-      phpMetadataNamespace: 'Example\\MyService\\Metadata',
+      protoOptions: [{ name: 'php_metadata_namespace', constant: '"Example\\MyService\\Metadata"' }],
     });
 
     expectValidProto(protoText);
@@ -164,7 +166,7 @@ describe('SDL to Proto Options', () => {
 
   it('should generate proto with objc_class_prefix option', () => {
     const { proto: protoText } = compileGraphQLToProto(simpleSDL, {
-      objcClassPrefix: 'MS',
+      protoOptions: [{ name: 'objc_class_prefix', constant: '"MS"' }],
     });
 
     expectValidProto(protoText);
@@ -173,7 +175,7 @@ describe('SDL to Proto Options', () => {
 
   it('should generate proto with swift_prefix option', () => {
     const { proto: protoText } = compileGraphQLToProto(simpleSDL, {
-      swiftPrefix: 'MyService',
+      protoOptions: [{ name: 'swift_prefix', constant: '"MyService"' }],
     });
 
     expectValidProto(protoText);
@@ -182,14 +184,16 @@ describe('SDL to Proto Options', () => {
 
   it('should generate proto with multiple language options', () => {
     const { proto: protoText } = compileGraphQLToProto(simpleSDL, {
-      goPackage: 'github.com/example/myservice',
-      javaPackage: 'com.example.myservice',
-      javaOuterClassname: 'MyServiceProto',
-      javaMultipleFiles: true,
-      csharpNamespace: 'Example.MyService',
-      rubyPackage: 'MyService::Proto',
-      phpNamespace: 'Example\\MyService',
-      swiftPrefix: 'MS',
+      protoOptions: [
+        { name: 'go_package', constant: '"github.com/example/myservice"' },
+        { name: 'java_package', constant: '"com.example.myservice"' },
+        { name: 'java_outer_classname', constant: '"MyServiceProto"' },
+        { name: 'java_multiple_files', constant: 'true' },
+        { name: 'csharp_namespace', constant: '"Example.MyService"' },
+        { name: 'ruby_package', constant: '"MyService::Proto"' },
+        { name: 'php_namespace', constant: '"Example\\MyService"' },
+        { name: 'swift_prefix', constant: '"MS"' },
+      ],
     });
 
     expectValidProto(protoText);
@@ -207,9 +211,11 @@ describe('SDL to Proto Options', () => {
 
   it('should generate proto with options in sorted order', () => {
     const { proto: protoText } = compileGraphQLToProto(simpleSDL, {
-      swiftPrefix: 'MS',
-      goPackage: 'github.com/example/myservice',
-      javaPackage: 'com.example.myservice',
+      protoOptions: [
+        { name: 'swift_prefix', constant: '"MS"' },
+        { name: 'go_package', constant: '"github.com/example/myservice"' },
+        { name: 'java_package', constant: '"com.example.myservice"' },
+      ],
     });
 
     expectValidProto(protoText);
