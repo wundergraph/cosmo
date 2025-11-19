@@ -2,6 +2,7 @@ package start_subscription
 
 import (
 	"net/http"
+	"sync/atomic"
 
 	"go.uber.org/zap"
 
@@ -14,6 +15,7 @@ type StartSubscriptionModule struct {
 	Logger                   *zap.Logger
 	Callback                 func(ctx core.SubscriptionOnStartHandlerContext) error
 	CallbackOnOriginResponse func(response *http.Response, ctx core.RequestContext) *http.Response
+	HookCallCount            *atomic.Int32 // Counter to track how many times the hook is called
 }
 
 func (m *StartSubscriptionModule) Provision(ctx *core.ModuleContext) error {
@@ -26,6 +28,11 @@ func (m *StartSubscriptionModule) Provision(ctx *core.ModuleContext) error {
 func (m *StartSubscriptionModule) SubscriptionOnStart(ctx core.SubscriptionOnStartHandlerContext) error {
 	if m.Logger != nil {
 		m.Logger.Info("SubscriptionOnStart Hook has been run")
+	}
+
+	// Increment the hook call counter
+	if m.HookCallCount != nil {
+		m.HookCallCount.Add(1)
 	}
 
 	if m.Callback != nil {

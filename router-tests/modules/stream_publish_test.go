@@ -40,20 +40,23 @@ func TestPublishHook(t *testing.T) {
 		var taPossible atomic.Bool
 		taPossible.Store(true)
 
+		customModule := stream_publish.PublishModule{
+			HookCallCount: &atomic.Int32{},
+			Callback: func(ctx core.StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
+				for _, evt := range events.All() {
+					_, ok := evt.(datasource.MutableStreamEvent)
+					if !ok {
+						taPossible.Store(false)
+					}
+				}
+				return events, nil
+			},
+		}
+
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
-				"publishModule": stream_publish.PublishModule{
-					Callback: func(ctx core.StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
-						for _, evt := range events.All() {
-							_, ok := evt.(datasource.MutableStreamEvent)
-							if !ok {
-								taPossible.Store(false)
-							}
-						}
-						return events, nil
-					},
-				},
+				"publishModule": customModule,
 			},
 		}
 
@@ -75,8 +78,7 @@ func TestPublishHook(t *testing.T) {
 			})
 			require.JSONEq(t, `{"data":{"updateEmployeeMyKafka":{"success":true}}}`, resOne.Body)
 
-			requestLog := xEnv.Observer().FilterMessage("Publish Hook has been run")
-			assert.Len(t, requestLog.All(), 1)
+			assert.Equal(t, int32(1), customModule.HookCallCount.Load())
 
 			assert.False(t, taPossible.Load(), "invalid type assertion was possible")
 		})
@@ -89,14 +91,17 @@ func TestPublishHook(t *testing.T) {
 		// It confirms the hook as been called by checking a log message, which is written by the custom module
 		// used in these tests right before the actual hook is being called.
 
+		customModule := stream_publish.PublishModule{
+			HookCallCount: &atomic.Int32{},
+			Callback: func(ctx core.StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
+				return events, nil
+			},
+		}
+
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
-				"publishModule": stream_publish.PublishModule{
-					Callback: func(ctx core.StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
-						return events, nil
-					},
-				},
+				"publishModule": customModule,
 			},
 		}
 
@@ -118,8 +123,7 @@ func TestPublishHook(t *testing.T) {
 			})
 			require.JSONEq(t, `{"data":{"updateEmployeeMyKafka":{"success":true}}}`, resOne.Body)
 
-			requestLog := xEnv.Observer().FilterMessage("Publish Hook has been run")
-			assert.Len(t, requestLog.All(), 1)
+			assert.Equal(t, int32(1), customModule.HookCallCount.Load())
 		})
 	})
 
@@ -131,14 +135,17 @@ func TestPublishHook(t *testing.T) {
 		// It ensures that hook errors don't prevent message delivery if the hook developer
 		// wants to do so. If he does not want this he must no return events.
 
+		customModule := stream_publish.PublishModule{
+			HookCallCount: &atomic.Int32{},
+			Callback: func(ctx core.StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
+				return events, errors.New("test")
+			},
+		}
+
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
-				"publishModule": stream_publish.PublishModule{
-					Callback: func(ctx core.StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
-						return events, errors.New("test")
-					},
-				},
+				"publishModule": customModule,
 			},
 		}
 
@@ -161,8 +168,7 @@ func TestPublishHook(t *testing.T) {
 			require.JSONEq(t, `{"data": {"updateEmployeeMyKafka": {"success": false}}}`, resOne.Body)
 			require.Equal(t, resOne.Response.StatusCode, 200)
 
-			requestLog := xEnv.Observer().FilterMessage("Publish Hook has been run")
-			assert.Len(t, requestLog.All(), 1)
+			assert.Equal(t, int32(1), customModule.HookCallCount.Load())
 
 			records, err := events.ReadKafkaMessages(xEnv, time.Second, "employeeUpdated", 1)
 			require.NoError(t, err)
@@ -178,14 +184,17 @@ func TestPublishHook(t *testing.T) {
 		// It ensures that hook errors don't prevent message delivery for NATS if the hook developer wants to do so.
 		// If he does not want this he must no return events.
 
+		customModule := stream_publish.PublishModule{
+			HookCallCount: &atomic.Int32{},
+			Callback: func(ctx core.StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
+				return events, errors.New("test")
+			},
+		}
+
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
-				"publishModule": stream_publish.PublishModule{
-					Callback: func(ctx core.StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
-						return events, errors.New("test")
-					},
-				},
+				"publishModule": customModule,
 			},
 		}
 
@@ -215,8 +224,7 @@ func TestPublishHook(t *testing.T) {
 			})
 			assert.JSONEq(t, `{"data": {"updateEmployeeMyNats": {"success": false}}}`, resOne.Body)
 
-			requestLog := xEnv.Observer().FilterMessage("Publish Hook has been run")
-			assert.Len(t, requestLog.All(), 1)
+			assert.Equal(t, int32(1), customModule.HookCallCount.Load())
 
 			msgOne, err := firstSub.NextMsg(5 * time.Second)
 			require.NoError(t, err)
@@ -234,14 +242,17 @@ func TestPublishHook(t *testing.T) {
 		// It ensures that hook errors don't prevent message delivery for Redis if the hook developer wants to do so.
 		// If he does not want this he must no return events.
 
+		customModule := stream_publish.PublishModule{
+			HookCallCount: &atomic.Int32{},
+			Callback: func(ctx core.StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
+				return events, errors.New("test")
+			},
+		}
+
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
-				"publishModule": stream_publish.PublishModule{
-					Callback: func(ctx core.StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
-						return events, errors.New("test")
-					},
-				},
+				"publishModule": customModule,
 			},
 		}
 
@@ -265,8 +276,7 @@ func TestPublishHook(t *testing.T) {
 			})
 			require.JSONEq(t, `{"data": {"updateEmployeeMyRedis": {"success": false}}}`, resOne.Body)
 
-			requestLog := xEnv.Observer().FilterMessage("Publish Hook has been run")
-			assert.Len(t, requestLog.All(), 1)
+			assert.Equal(t, int32(1), customModule.HookCallCount.Load())
 
 			require.Len(t, records, 1)
 		})
@@ -281,34 +291,37 @@ func TestPublishHook(t *testing.T) {
 		// The test ensures that concrete event types can be used and their
 		// distinct broker features (like headers for Kafka) are accessible for hook developers.
 
+		customModule := stream_publish.PublishModule{
+			HookCallCount: &atomic.Int32{},
+			Callback: func(ctx core.StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
+				if ctx.PublishEventConfiguration().RootFieldName() != "updateEmployeeMyKafka" {
+					return events, nil
+				}
+
+				employeeID := ctx.Operation().Variables().GetInt("employeeID")
+
+				newEvents := make([]datasource.StreamEvent, 0, events.Len())
+				for _, event := range events.All() {
+					newEvt, ok := event.Clone().(*kafka.MutableEvent)
+					if !ok {
+						continue
+					}
+					newEvt.SetData([]byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`))
+					if newEvt.Headers == nil {
+						newEvt.Headers = map[string][]byte{}
+					}
+					newEvt.Headers["x-employee-id"] = []byte(strconv.Itoa(employeeID))
+					newEvents = append(newEvents, newEvt)
+				}
+
+				return datasource.NewStreamEvents(newEvents), nil
+			},
+		}
+
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
-				"publishModule": stream_publish.PublishModule{
-					Callback: func(ctx core.StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
-						if ctx.PublishEventConfiguration().RootFieldName() != "updateEmployeeMyKafka" {
-							return events, nil
-						}
-
-						employeeID := ctx.Operation().Variables().GetInt("employeeID")
-
-						newEvents := make([]datasource.StreamEvent, 0, events.Len())
-						for _, event := range events.All() {
-							newEvt, ok := event.Clone().(*kafka.MutableEvent)
-							if !ok {
-								continue
-							}
-							newEvt.SetData([]byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`))
-							if newEvt.Headers == nil {
-								newEvt.Headers = map[string][]byte{}
-							}
-							newEvt.Headers["x-employee-id"] = []byte(strconv.Itoa(employeeID))
-							newEvents = append(newEvents, newEvt)
-						}
-
-						return datasource.NewStreamEvents(newEvents), nil
-					},
-				},
+				"publishModule": customModule,
 			},
 		}
 
@@ -331,8 +344,7 @@ func TestPublishHook(t *testing.T) {
 			})
 			require.JSONEq(t, `{"data": {"updateEmployeeMyKafka": {"success": true}}}`, resOne.Body)
 
-			requestLog := xEnv.Observer().FilterMessage("Publish Hook has been run")
-			assert.Len(t, requestLog.All(), 1)
+			assert.Equal(t, int32(1), customModule.HookCallCount.Load())
 
 			records, err := events.ReadKafkaMessages(xEnv, time.Second, "employeeUpdated", 1)
 			require.NoError(t, err)

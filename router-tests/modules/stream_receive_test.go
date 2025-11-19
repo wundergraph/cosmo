@@ -41,10 +41,14 @@ func TestReceiveHook(t *testing.T) {
 		// It confirms the hook is called by checking for the expected log message
 		// and that subscription events are properly delivered to the client.
 
+		customModule := stream_receive.StreamReceiveModule{
+			HookCallCount: &atomic.Int32{},
+		}
+
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
-				"streamReceiveModule": stream_receive.StreamReceiveModule{},
+				"streamReceiveModule": customModule,
 			},
 		}
 
@@ -106,8 +110,7 @@ func TestReceiveHook(t *testing.T) {
 				require.NoError(t, err)
 			}, "unable to close client before timeout")
 
-			requestLog := xEnv.Observer().FilterMessage("Stream Hook has been run")
-			assert.Len(t, requestLog.All(), 1)
+			assert.Equal(t, int32(1), customModule.HookCallCount.Load())
 		})
 	})
 
@@ -119,21 +122,24 @@ func TestReceiveHook(t *testing.T) {
 		// It tests that the modified events are properly delivered to subscribers with the updated data,
 		// demonstrating that hooks can transform stream events before they reach clients.
 
+		customModule := stream_receive.StreamReceiveModule{
+			HookCallCount: &atomic.Int32{},
+			Callback: func(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
+				newEvents := make([]datasource.StreamEvent, 0, events.Len())
+				for _, event := range events.All() {
+					eventCopy := event.Clone()
+					eventCopy.SetData([]byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`))
+					newEvents = append(newEvents, eventCopy)
+				}
+
+				return datasource.NewStreamEvents(newEvents), nil
+			},
+		}
+
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
-				"streamReceiveModule": stream_receive.StreamReceiveModule{
-					Callback: func(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
-						newEvents := make([]datasource.StreamEvent, 0, events.Len())
-						for _, event := range events.All() {
-							eventCopy := event.Clone()
-							eventCopy.SetData([]byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`))
-							newEvents = append(newEvents, eventCopy)
-						}
-
-						return datasource.NewStreamEvents(newEvents), nil
-					},
-				},
+				"streamReceiveModule": customModule,
 			},
 		}
 
@@ -195,8 +201,7 @@ func TestReceiveHook(t *testing.T) {
 				require.NoError(t, err)
 			}, "unable to close client before timeout")
 
-			requestLog := xEnv.Observer().FilterMessage("Stream Hook has been run")
-			assert.Len(t, requestLog.All(), 1)
+			assert.Equal(t, int32(1), customModule.HookCallCount.Load())
 		})
 	})
 
@@ -213,20 +218,23 @@ func TestReceiveHook(t *testing.T) {
 		var taPossible atomic.Bool
 		taPossible.Store(true)
 
+		customModule := stream_receive.StreamReceiveModule{
+			HookCallCount: &atomic.Int32{},
+			Callback: func(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
+				for _, evt := range events.All() {
+					_, ok := evt.(datasource.MutableStreamEvent)
+					if !ok {
+						taPossible.Store(false)
+					}
+				}
+				return events, nil
+			},
+		}
+
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
-				"streamReceiveModule": stream_receive.StreamReceiveModule{
-					Callback: func(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
-						for _, evt := range events.All() {
-							_, ok := evt.(datasource.MutableStreamEvent)
-							if !ok {
-								taPossible.Store(false)
-							}
-						}
-						return events, nil
-					},
-				},
+				"streamReceiveModule": customModule,
 			},
 		}
 
@@ -288,8 +296,7 @@ func TestReceiveHook(t *testing.T) {
 				require.NoError(t, err)
 			}, "unable to close client before timeout")
 
-			requestLog := xEnv.Observer().FilterMessage("Stream Hook has been run")
-			assert.Len(t, requestLog.All(), 1)
+			assert.Equal(t, int32(1), customModule.HookCallCount.Load())
 
 			assert.False(t, taPossible.Load(), "invalid type assertion was possible")
 		})
@@ -303,28 +310,31 @@ func TestReceiveHook(t *testing.T) {
 		// access JWT claims of individual clients and modify events only for authenticated users with specific claims,
 		// while leaving events for other clients unchanged.
 
+		customModule := stream_receive.StreamReceiveModule{
+			HookCallCount: &atomic.Int32{},
+			Callback: func(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
+				if ctx.Authentication() == nil {
+					return events, nil
+				}
+				if val, ok := ctx.Authentication().Claims()["sub"]; !ok || val != "user-2" {
+					return events, nil
+				}
+
+				newEvents := make([]datasource.StreamEvent, 0, events.Len())
+				for _, event := range events.All() {
+					eventCopy := event.Clone()
+					eventCopy.SetData([]byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`))
+					newEvents = append(newEvents, eventCopy)
+				}
+
+				return datasource.NewStreamEvents(newEvents), nil
+			},
+		}
+
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
-				"streamReceiveModule": stream_receive.StreamReceiveModule{
-					Callback: func(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
-						if ctx.Authentication() == nil {
-							return events, nil
-						}
-						if val, ok := ctx.Authentication().Claims()["sub"]; !ok || val != "user-2" {
-							return events, nil
-						}
-
-						newEvents := make([]datasource.StreamEvent, 0, events.Len())
-						for _, event := range events.All() {
-							eventCopy := event.Clone()
-							eventCopy.SetData([]byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`))
-							newEvents = append(newEvents, eventCopy)
-						}
-
-						return datasource.NewStreamEvents(newEvents), nil
-					},
-				},
+				"streamReceiveModule": customModule,
 			},
 		}
 
@@ -454,8 +464,7 @@ func TestReceiveHook(t *testing.T) {
 				require.NoError(t, err)
 			}, "unable to close client before timeout")
 
-			requestLog := xEnv.Observer().FilterMessage("Stream Hook has been run")
-			assert.Len(t, requestLog.All(), 2)
+			assert.Equal(t, int32(2), customModule.HookCallCount.Load())
 		})
 	})
 
@@ -467,26 +476,28 @@ func TestReceiveHook(t *testing.T) {
 		// conditionally modify events, enabling header-based event transformation logic.
 
 		customHeader := http.CanonicalHeaderKey("X-Custom-Header")
+		customModule := stream_receive.StreamReceiveModule{
+			HookCallCount: &atomic.Int32{},
+			Callback: func(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
+				if val, ok := ctx.Request().Header[customHeader]; !ok || val[0] != "Test" {
+					return events, nil
+				}
+
+				newEvents := make([]datasource.StreamEvent, 0, events.Len())
+				for _, event := range events.All() {
+					eventCopy := event.Clone()
+					eventCopy.SetData([]byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`))
+					newEvents = append(newEvents, eventCopy)
+				}
+
+				return datasource.NewStreamEvents(newEvents), nil
+			},
+		}
 
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
-				"streamReceiveModule": stream_receive.StreamReceiveModule{
-					Callback: func(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
-						if val, ok := ctx.Request().Header[customHeader]; !ok || val[0] != "Test" {
-							return events, nil
-						}
-
-						newEvents := make([]datasource.StreamEvent, 0, events.Len())
-						for _, event := range events.All() {
-							eventCopy := event.Clone()
-							eventCopy.SetData([]byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`))
-							newEvents = append(newEvents, eventCopy)
-						}
-
-						return datasource.NewStreamEvents(newEvents), nil
-					},
-				},
+				"streamReceiveModule": customModule,
 			},
 		}
 
@@ -556,8 +567,7 @@ func TestReceiveHook(t *testing.T) {
 				require.NoError(t, err)
 			}, "unable to close client before timeout")
 
-			requestLog := xEnv.Observer().FilterMessage("Stream Hook has been run")
-			assert.Len(t, requestLog.All(), 1)
+			assert.Equal(t, int32(1), customModule.HookCallCount.Load())
 		})
 	})
 
@@ -568,14 +578,17 @@ func TestReceiveHook(t *testing.T) {
 		// the subscription connection and cleans up Kafka clients. It ensures that hook errors trigger
 		// graceful shutdown of the subscription to prevent resource leaks or stuck connections.
 
+		customModule := stream_receive.StreamReceiveModule{
+			HookCallCount: &atomic.Int32{},
+			Callback: func(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
+				return datasource.NewStreamEvents(nil), errors.New("test error from streamevents hook")
+			},
+		}
+
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
-				"streamReceiveModule": stream_receive.StreamReceiveModule{
-					Callback: func(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
-						return datasource.NewStreamEvents(nil), errors.New("test error from streamevents hook")
-					},
-				},
+				"streamReceiveModule": customModule,
 			},
 		}
 
@@ -684,53 +697,56 @@ func TestReceiveHook(t *testing.T) {
 					finishedHandlers   atomic.Int32
 				)
 
-				cfg := config.Config{
-					Graph: config.Graph{},
-					Modules: map[string]interface{}{
-						"streamReceiveModule": stream_receive.StreamReceiveModule{
-							Callback: func(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
-								currentHandlers.Add(1)
+				customModule := stream_receive.StreamReceiveModule{
+					HookCallCount: &atomic.Int32{},
+					Callback: func(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
+						currentHandlers.Add(1)
 
-								// Wait for other hooks in the same client update batch to start.
-								for {
-									current := currentHandlers.Load()
-									max := maxCurrentHandlers.Load()
+						// Wait for other hooks in the same client update batch to start.
+						for {
+							current := currentHandlers.Load()
+							max := maxCurrentHandlers.Load()
 
-									if current > max {
-										maxCurrentHandlers.CompareAndSwap(max, current)
-									}
+							if current > max {
+								maxCurrentHandlers.CompareAndSwap(max, current)
+							}
 
-									if current >= int32(tc.maxConcurrent) {
-										// wait to see if the subscription-updater spawns too many concurrent hooks,
-										// i.e. exceeding the number of configured max concurrent hooks.
-										deadline := time.Now().Add(300 * time.Millisecond)
-										for time.Now().Before(deadline) {
-											if currentHandlers.Load() > int32(tc.maxConcurrent) {
-												break
-											}
-										}
-										break
-									}
-
-									// Let hooks continue if we never reach a updater batch size = tc.maxConcurrent
-									// because there are not enough remaining clients to be updated.
-									// i.e. it could be the last round of updates:
-									// 100 clients, now in comes a new event from broker, max concurrent hooks = 30.
-									// First round: 30 hooks run, 70 remaining.
-									// Second round: 30 hooks run, 40 remaining.
-									// Third round: 30 hooks run, 10 remaining.
-									// Fourth round: 10 hooks run, then we end up here because remainingSubs < tc.maxConcurrent.
-									remainingSubs := tc.numSubscribers - int(finishedHandlers.Load())
-									if remainingSubs < tc.maxConcurrent {
+							if current >= int32(tc.maxConcurrent) {
+								// wait to see if the subscription-updater spawns too many concurrent hooks,
+								// i.e. exceeding the number of configured max concurrent hooks.
+								deadline := time.Now().Add(300 * time.Millisecond)
+								for time.Now().Before(deadline) {
+									if currentHandlers.Load() > int32(tc.maxConcurrent) {
 										break
 									}
 								}
+								break
+							}
 
-								currentHandlers.Add(-1)
-								finishedHandlers.Add(1)
-								return events, nil
-							},
-						},
+							// Let hooks continue if we never reach a updater batch size = tc.maxConcurrent
+							// because there are not enough remaining clients to be updated.
+							// i.e. it could be the last round of updates:
+							// 100 clients, now in comes a new event from broker, max concurrent hooks = 30.
+							// First round: 30 hooks run, 70 remaining.
+							// Second round: 30 hooks run, 40 remaining.
+							// Third round: 30 hooks run, 10 remaining.
+							// Fourth round: 10 hooks run, then we end up here because remainingSubs < tc.maxConcurrent.
+							remainingSubs := tc.numSubscribers - int(finishedHandlers.Load())
+							if remainingSubs < tc.maxConcurrent {
+								break
+							}
+						}
+
+						currentHandlers.Add(-1)
+						finishedHandlers.Add(1)
+						return events, nil
+					},
+				}
+
+				cfg := config.Config{
+					Graph: config.Graph{},
+					Modules: map[string]interface{}{
+						"streamReceiveModule": customModule,
 					},
 				}
 
@@ -817,8 +833,7 @@ func TestReceiveHook(t *testing.T) {
 
 					assert.Equal(t, int32(tc.maxConcurrent), maxCurrentHandlers.Load(), "amount of concurrent handlers not what was expected")
 
-					requestLog := xEnv.Observer().FilterMessage("Stream Hook has been run")
-					assert.Len(t, requestLog.All(), tc.numSubscribers)
+					assert.Equal(t, int32(tc.numSubscribers), customModule.HookCallCount.Load())
 				})
 			})
 		}
@@ -843,18 +858,21 @@ func TestReceiveHook(t *testing.T) {
 
 		var callCount atomic.Int32
 
+		customModule := stream_receive.StreamReceiveModule{
+			HookCallCount: &atomic.Int32{},
+			Callback: func(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
+				// Only the first call should delay
+				if callCount.Add(1) == 1 {
+					time.Sleep(hookDelay)
+				}
+				return events, nil
+			},
+		}
+
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
-				"streamReceiveModule": stream_receive.StreamReceiveModule{
-					Callback: func(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
-						// Only the first call should delay
-						if callCount.Add(1) == 1 {
-							time.Sleep(hookDelay)
-						}
-						return events, nil
-					},
-				},
+				"streamReceiveModule": customModule,
 			},
 		}
 
@@ -945,8 +963,7 @@ func TestReceiveHook(t *testing.T) {
 			assert.Len(t, timeoutLog.All(), 1, "expected timeout warning to be logged")
 
 			// Verify all hooks were executed
-			hookLog := xEnv.Observer().FilterMessage("Stream Hook has been run")
-			assert.Len(t, hookLog.All(), 3)
+			assert.Equal(t, int32(3), customModule.HookCallCount.Load())
 		})
 	})
 }

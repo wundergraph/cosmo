@@ -3,6 +3,7 @@ package module_test
 import (
 	"errors"
 	"net/http"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -28,10 +29,14 @@ func TestStartSubscriptionHook(t *testing.T) {
 		// It confirms the basic integration of the start subscription module by checking for the expected log message,
 		// ensuring the hook is called at the right moment in the subscription lifecycle.
 
+		customModule := &start_subscription.StartSubscriptionModule{
+			HookCallCount: &atomic.Int32{},
+		}
+
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
-				"startSubscriptionModule": start_subscription.StartSubscriptionModule{},
+				"startSubscriptionModule": customModule,
 			},
 		}
 
@@ -82,8 +87,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 
 			}, "unable to close client before timeout")
 
-			requestLog := xEnv.Observer().FilterMessage("SubscriptionOnStart Hook has been run")
-			assert.Len(t, requestLog.All(), 1)
+			assert.Equal(t, int32(1), customModule.HookCallCount.Load())
 		})
 	})
 
@@ -94,21 +98,24 @@ func TestStartSubscriptionHook(t *testing.T) {
 		// using WriteEvent(). It tests that a synthetic event injected by the hook is properly delivered
 		// to the client when the subscription starts, allowing for initialization data or welcome messages.
 
+		customModule := &start_subscription.StartSubscriptionModule{
+			HookCallCount: &atomic.Int32{},
+			Callback: func(ctx core.SubscriptionOnStartHandlerContext) error {
+				if ctx.SubscriptionEventConfiguration().RootFieldName() != "employeeUpdatedMyKafka" {
+					return nil
+				}
+				ctx.EmitLocalEvent((&kafka.MutableEvent{
+					Key:  []byte("1"),
+					Data: []byte(`{"id": 1, "__typename": "Employee"}`),
+				}))
+				return nil
+			},
+		}
+
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
-				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
-					Callback: func(ctx core.SubscriptionOnStartHandlerContext) error {
-						if ctx.SubscriptionEventConfiguration().RootFieldName() != "employeeUpdatedMyKafka" {
-							return nil
-						}
-						ctx.EmitLocalEvent((&kafka.MutableEvent{
-							Key:  []byte("1"),
-							Data: []byte(`{"id": 1, "__typename": "Employee"}`),
-						}))
-						return nil
-					},
-				},
+				"startSubscriptionModule": customModule,
 			},
 		}
 
@@ -173,8 +180,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 
 			}, "unable to close client before timeout")
 
-			requestLog := xEnv.Observer().FilterMessage("SubscriptionOnStart Hook has been run")
-			assert.Len(t, requestLog.All(), 1)
+			assert.Equal(t, int32(1), customModule.HookCallCount.Load())
 		})
 	})
 
@@ -187,15 +193,18 @@ func TestStartSubscriptionHook(t *testing.T) {
 
 		callbackCalled := make(chan bool)
 
+		customModule := &start_subscription.StartSubscriptionModule{
+			HookCallCount: &atomic.Int32{},
+			Callback: func(ctx core.SubscriptionOnStartHandlerContext) error {
+				callbackCalled <- true
+				return &core.StreamHandlerError{Message: "my custom error"}
+			},
+		}
+
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
-				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
-					Callback: func(ctx core.SubscriptionOnStartHandlerContext) error {
-						callbackCalled <- true
-						return &core.StreamHandlerError{Message: "my custom error"}
-					},
-				},
+				"startSubscriptionModule": customModule,
 			},
 		}
 
@@ -256,8 +265,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 
 			}, "unable to close client before timeout")
 
-			requestLog := xEnv.Observer().FilterMessage("SubscriptionOnStart Hook has been run")
-			assert.Len(t, requestLog.All(), 1)
+			assert.Equal(t, int32(1), customModule.HookCallCount.Load())
 
 			require.Len(t, subscriptionArgsCh, 1)
 			subscriptionArgs := <-subscriptionArgsCh
@@ -273,20 +281,23 @@ func TestStartSubscriptionHook(t *testing.T) {
 		// subscription that triggered the hook, not to other subscriptions. It tests with multiple subscriptions
 		// to ensure event isolation and that hooks can target individual clients based on their context.
 
+		customModule := &start_subscription.StartSubscriptionModule{
+			HookCallCount: &atomic.Int32{},
+			Callback: func(ctx core.SubscriptionOnStartHandlerContext) error {
+				employeeId := ctx.Operation().Variables().GetInt64("employeeID")
+				if employeeId != 1 {
+					return nil
+				}
+				evt := ctx.NewEvent([]byte(`{"id": 1, "__typename": "Employee"}`))
+				ctx.EmitLocalEvent(evt)
+				return nil
+			},
+		}
+
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
-				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
-					Callback: func(ctx core.SubscriptionOnStartHandlerContext) error {
-						employeeId := ctx.Operation().Variables().GetInt64("employeeID")
-						if employeeId != 1 {
-							return nil
-						}
-						evt := ctx.NewEvent([]byte(`{"id": 1, "__typename": "Employee"}`))
-						ctx.EmitLocalEvent(evt)
-						return nil
-					},
-				},
+				"startSubscriptionModule": customModule,
 			},
 		}
 
@@ -365,8 +376,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 
 			}, "unable to close client before timeout")
 
-			requestLog := xEnv.Observer().FilterMessage("SubscriptionOnStart Hook has been run")
-			assert.Len(t, requestLog.All(), 2)
+			assert.Equal(t, int32(2), customModule.HookCallCount.Load())
 			t.Cleanup(func() {
 				require.Len(t, subscriptionOneArgsCh, 0)
 			})
@@ -380,14 +390,17 @@ func TestStartSubscriptionHook(t *testing.T) {
 		// with correct HTTP status codes and error messages. It ensures clients receive detailed error information
 		// including custom status codes when a subscription is rejected by the hook.
 
+		customModule := &start_subscription.StartSubscriptionModule{
+			HookCallCount: &atomic.Int32{},
+			Callback: func(ctx core.SubscriptionOnStartHandlerContext) error {
+				return &core.StreamHandlerError{Message: "test error"}
+			},
+		}
+
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
-				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
-					Callback: func(ctx core.SubscriptionOnStartHandlerContext) error {
-						return &core.StreamHandlerError{Message: "test error"}
-					},
-				},
+				"startSubscriptionModule": customModule,
 			},
 		}
 
@@ -455,8 +468,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 
 			}, "unable to close client before timeout")
 
-			requestLog := xEnv.Observer().FilterMessage("SubscriptionOnStart Hook has been run")
-			assert.Len(t, requestLog.All(), 1)
+			assert.Equal(t, int32(1), customModule.HookCallCount.Load())
 			t.Cleanup(func() {
 				require.Len(t, subscriptionOneArgsCh, 0)
 			})
@@ -470,10 +482,14 @@ func TestStartSubscriptionHook(t *testing.T) {
 		// (subscriptions resolved by the router's execution engine, not event-driven sources like Kafka).
 		// It ensures the hook works uniformly across different subscription types.
 
+		customModule := &start_subscription.StartSubscriptionModule{
+			HookCallCount: &atomic.Int32{},
+		}
+
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
-				"startSubscriptionModule": start_subscription.StartSubscriptionModule{},
+				"startSubscriptionModule": customModule,
 			},
 		}
 
@@ -518,8 +534,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 
 			}, "unable to close client before timeout")
 
-			requestLog := xEnv.Observer().FilterMessage("SubscriptionOnStart Hook has been run")
-			assert.Len(t, requestLog.All(), 1)
+			assert.Equal(t, int32(1), customModule.HookCallCount.Load())
 		})
 	})
 
@@ -530,16 +545,19 @@ func TestStartSubscriptionHook(t *testing.T) {
 		// custom events even for subscriptions that don't use event-driven sources. It tests that the synthetic
 		// event is delivered first, followed by the normal engine-generated subscription data.
 
+		customModule := &start_subscription.StartSubscriptionModule{
+			HookCallCount: &atomic.Int32{},
+			Callback: func(ctx core.SubscriptionOnStartHandlerContext) error {
+				evt := ctx.NewEvent([]byte(`{"data":{"countEmp":1000}}`))
+				ctx.EmitLocalEvent(evt)
+				return nil
+			},
+		}
+
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
-				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
-					Callback: func(ctx core.SubscriptionOnStartHandlerContext) error {
-						evt := ctx.NewEvent([]byte(`{"data":{"countEmp":1000}}`))
-						ctx.EmitLocalEvent(evt)
-						return nil
-					},
-				},
+				"startSubscriptionModule": customModule,
 			},
 		}
 
@@ -604,8 +622,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 
 			}, "unable to close client before timeout")
 
-			requestLog := xEnv.Observer().FilterMessage("SubscriptionOnStart Hook has been run")
-			assert.Len(t, requestLog.All(), 1)
+			assert.Equal(t, int32(1), customModule.HookCallCount.Load())
 		})
 	})
 
@@ -618,18 +635,21 @@ func TestStartSubscriptionHook(t *testing.T) {
 
 		originResponseCalled := make(chan *http.Response, 1)
 
+		customModule := &start_subscription.StartSubscriptionModule{
+			HookCallCount: &atomic.Int32{},
+			Callback: func(ctx core.SubscriptionOnStartHandlerContext) error {
+				return &core.StreamHandlerError{Message: "hook error"}
+			},
+			CallbackOnOriginResponse: func(response *http.Response, ctx core.RequestContext) *http.Response {
+				originResponseCalled <- response
+				return response
+			},
+		}
+
 		cfg := config.Config{
 			Graph: config.Graph{},
 			Modules: map[string]interface{}{
-				"startSubscriptionModule": start_subscription.StartSubscriptionModule{
-					Callback: func(ctx core.SubscriptionOnStartHandlerContext) error {
-						return &core.StreamHandlerError{Message: "hook error"}
-					},
-					CallbackOnOriginResponse: func(response *http.Response, ctx core.RequestContext) *http.Response {
-						originResponseCalled <- response
-						return response
-					},
-				},
+				"startSubscriptionModule": customModule,
 			},
 		}
 
@@ -686,8 +706,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 
 			require.Empty(t, originResponseCalled)
 
-			requestLog := xEnv.Observer().FilterMessage("SubscriptionOnStart Hook has been run")
-			assert.Len(t, requestLog.All(), 1)
+			assert.Equal(t, int32(1), customModule.HookCallCount.Load())
 		})
 	})
 }

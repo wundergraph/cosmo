@@ -1,6 +1,8 @@
 package stream_publish
 
 import (
+	"sync/atomic"
+
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/cosmo/router/core"
@@ -10,8 +12,9 @@ import (
 const myModuleID = "publishModule"
 
 type PublishModule struct {
-	Logger   *zap.Logger
-	Callback func(ctx core.StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error)
+	Logger        *zap.Logger
+	HookCallCount *atomic.Int32 // Counter to track how many times the hook is called
+	Callback      func(ctx core.StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error)
 }
 
 func (m *PublishModule) Provision(ctx *core.ModuleContext) error {
@@ -24,6 +27,10 @@ func (m *PublishModule) Provision(ctx *core.ModuleContext) error {
 func (m *PublishModule) OnPublishEvents(ctx core.StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
 	if m.Logger != nil {
 		m.Logger.Info("Publish Hook has been run")
+	}
+
+	if m.HookCallCount != nil {
+		m.HookCallCount.Add(1)
 	}
 
 	if m.Callback != nil {

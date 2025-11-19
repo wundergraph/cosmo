@@ -1,6 +1,8 @@
 package stream_receive
 
 import (
+	"sync/atomic"
+
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/cosmo/router/core"
@@ -10,8 +12,9 @@ import (
 const myModuleID = "streamReceiveModule"
 
 type StreamReceiveModule struct {
-	Logger   *zap.Logger
-	Callback func(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error)
+	Logger        *zap.Logger
+	Callback      func(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error)
+	HookCallCount *atomic.Int32 // Counter to track how many times the hook is called
 }
 
 func (m *StreamReceiveModule) Provision(ctx *core.ModuleContext) error {
@@ -24,6 +27,10 @@ func (m *StreamReceiveModule) Provision(ctx *core.ModuleContext) error {
 func (m *StreamReceiveModule) OnReceiveEvents(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
 	if m.Logger != nil {
 		m.Logger.Info("Stream Hook has been run")
+	}
+
+	if m.HookCallCount != nil {
+		m.HookCallCount.Add(1)
 	}
 
 	if m.Callback != nil {
