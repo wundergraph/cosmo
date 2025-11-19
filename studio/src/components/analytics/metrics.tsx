@@ -19,6 +19,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useToast } from "@/components/ui/use-toast";
 import useWindowSize from "@/hooks/use-window-size";
 import {
   formatDurationMetric,
@@ -43,7 +44,13 @@ import {
 import { differenceInHours, formatISO } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import React, { useCallback, useContext, useId, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useContext,
+  useId,
+  useMemo,
+  useState,
+} from "react";
 import {
   Area,
   AreaChart,
@@ -56,6 +63,55 @@ import {
 } from "recharts";
 import { useWorkspace } from "@/hooks/use-workspace";
 import { useCurrentOrganization } from "@/hooks/use-current-organization";
+
+const MAX_URL_LENGTH = 10000;
+
+/**
+ * Calculates the length of the URL that would be generated from the given query parameters.
+ * This simulates what the URL would look like after applying the new parameters.
+ */
+const calculateUrlLength = (router: ReturnType<typeof useRouter>, newParams: Record<string, string | null>): number => {
+  // Step 1: Merge existing query params with new params
+  // Keep existing params that aren't being replaced, or that are being set to null
+  const existingParams = Object.fromEntries(
+    Object.entries(router.query).filter(
+      ([key]) => !newParams.hasOwnProperty(key) || newParams[key] !== null,
+    ),
+  );
+
+  // Step 2: Add new params (excluding null values)
+  const updatedParams = Object.fromEntries(
+    Object.entries(newParams).filter(([_, value]) => value !== null),
+  );
+
+  // Step 3: Combine all params (new params override existing ones)
+  const allQueryParams = { ...existingParams, ...updatedParams };
+
+  // Step 4: Build the query string from the combined params
+  const queryStringParts = Object.entries(allQueryParams)
+    .map(([key, value]) => {
+      if (value === null || value === undefined) {
+        return null;
+      }
+      const encodedKey = encodeURIComponent(key);
+      const encodedValue = encodeURIComponent(String(value));
+      return `${encodedKey}=${encodedValue}`;
+    })
+    .filter((part): part is string => part !== null);
+
+  const queryString = queryStringParts.join("&");
+
+  // Step 5: Get the pathname (without existing query string)
+  const pathname = router.asPath.split("?")[0];
+
+  // Step 6: Construct the full URL (origin + pathname + query string)
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const fullUrl = queryString
+    ? `${origin}${pathname}?${queryString}`
+    : `${origin}${pathname}`;
+
+  return fullUrl.length;
+};
 
 export const getInfoTip = (range?: number) => {
   switch (range) {
@@ -74,8 +130,11 @@ export const getInfoTip = (range?: number) => {
 
 const useTimeRange = () => {
   const { range, dateRange } = useAnalyticsQueryState();
-  return (dateRange ? differenceInHours(dateRange.end, dateRange.start) : range) ?? 24;
-}
+  return (
+    (dateRange ? differenceInHours(dateRange.end, dateRange.start) : range) ??
+    24
+  );
+};
 
 const useSelectedFilters = () => {
   const router = useRouter();
@@ -93,6 +152,7 @@ const useSelectedFilters = () => {
 
 export const useMetricsFilters = (filters: AnalyticsViewResultFilter[]) => {
   const router = useRouter();
+  const { toast } = useToast();
 
   const applyNewParams = useCallback(
     (newParams: Record<string, string | null>, unset?: string[]) => {
@@ -137,6 +197,21 @@ export const useMetricsFilters = (filters: AnalyticsViewResultFilter[]) => {
         } catch {
           stringifiedFilters = "[]";
         }
+
+        // Check URL length before applying the filter
+        const urlLength = calculateUrlLength(router, {
+          filterState: stringifiedFilters,
+        });
+
+        if (urlLength > MAX_URL_LENGTH) {
+          toast({
+            title: "Filter limit reached",
+            description: `Maximum URL length of ${MAX_URL_LENGTH.toLocaleString()} characters reached. Please remove some filters before adding new ones.`,
+            variant: "destructive",
+          });
+          return;
+        }
+
         applyNewParams({
           filterState: stringifiedFilters,
         });
@@ -161,23 +236,46 @@ export const useMetricsFilters = (filters: AnalyticsViewResultFilter[]) => {
     });
   };
 
+  // Check if current URL is at or near the limit
+  const currentUrlLength = useMemo(() => {
+    return calculateUrlLength(router, {});
+  }, [router]);
+
+  const isUrlLimitReached = currentUrlLength >= MAX_URL_LENGTH;
+
   return {
     filtersList,
     selectedFilters,
     resetFilters,
+    isUrlLimitReached,
   };
 };
 
 interface MetricsFiltersProps {
   filters: AnalyticsViewResultFilter[];
+  disabled?: boolean;
 }
 
 export const MetricsFilters: React.FC<MetricsFiltersProps> = (props) => {
-  const { filters } = props;
+  const { filters, disabled } = props;
 
-  const { filtersList } = useMetricsFilters(filters);
+  const { filtersList, isUrlLimitReached } = useMetricsFilters(filters);
 
-  return <AnalyticsFilters filters={filtersList} />;
+  // Disable filters if explicitly disabled or URL limit is reached
+  const isDisabled = disabled || isUrlLimitReached;
+
+  const disabledFiltersList = filtersList.map((filter) => ({
+    ...filter,
+    onSelect: isDisabled
+      ? () => {
+          // No-op when disabled - prevents filter changes even if UI is somehow interacted with
+        }
+      : filter.onSelect,
+  }));
+
+  return (
+    <AnalyticsFilters filters={disabledFiltersList} disabled={isDisabled} />
+  );
 };
 
 const getDeltaType = (
@@ -246,7 +344,9 @@ const TopList: React.FC<{
   queryParams?: Record<string, string | number>;
 }> = ({ title, items, formatter, isSubgraphAnalytics, queryParams = {} }) => {
   const router = useRouter();
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const organizationSlug = useCurrentOrganization()?.slug;
 
   const range = router.query.range;
@@ -577,7 +677,9 @@ export const ErrorMetricsCard = (props: {
         <div className="flex-1">
           <div className="flex space-x-2 text-sm">
             <h4>Error Percentage</h4>
-            <InfoTooltip>Error percentage in {getInfoTip(timeRange)}</InfoTooltip>
+            <InfoTooltip>
+              Error percentage in {getInfoTip(timeRange)}
+            </InfoTooltip>
           </div>
           <p className="text-xl font-semibold">{formatter(value)}</p>
           <p className="text-sm text-muted-foreground">
@@ -834,8 +936,18 @@ export const ErrorRateOverTimeCard = ({ syncId }: { syncId?: string }) => {
   );
 };
 
-export const LatencyDistributionCard = ({ series, syncId } : { series: any[]; syncId?: string; }) => {
-  const [activeLatencies, setActiveLatencies] = useState({ p50: false, p90: false, p99: false });
+export const LatencyDistributionCard = ({
+  series,
+  syncId,
+}: {
+  series: any[];
+  syncId?: string;
+}) => {
+  const [activeLatencies, setActiveLatencies] = useState({
+    p50: false,
+    p90: false,
+    p99: false,
+  });
   const timeRange = useTimeRange();
   const formatter = (value: number) => {
     return formatDurationMetric(value, {
@@ -844,7 +956,10 @@ export const LatencyDistributionCard = ({ series, syncId } : { series: any[]; sy
   };
 
   const { isMobile } = useWindowSize();
-  const { data, ticks, domain, timeFormatter } = useChartData(timeRange, series);
+  const { data, ticks, domain, timeFormatter } = useChartData(
+    timeRange,
+    series,
+  );
 
   const p50StrokeColor = "hsl(var(--chart-primary))";
   const p90StrokeColor = "hsl(var(--warning))";
@@ -855,9 +970,7 @@ export const LatencyDistributionCard = ({ series, syncId } : { series: any[]; sy
       <CardHeader>
         <div className="flex space-x-2">
           <CardTitle>Latency</CardTitle>
-          <InfoTooltip>
-            Latency in {getInfoTip(timeRange)}
-          </InfoTooltip>
+          <InfoTooltip>Latency in {getInfoTip(timeRange)}</InfoTooltip>
         </div>
       </CardHeader>
 
@@ -924,7 +1037,7 @@ export const LatencyDistributionCard = ({ series, syncId } : { series: any[]; sy
               onClick={({ dataKey, inactive }) => {
                 setActiveLatencies({
                   ...activeLatencies,
-                  [dataKey]: !inactive
+                  [dataKey]: !inactive,
                 });
               }}
             />

@@ -20,14 +20,17 @@ export interface AnalyticsFilter {
 
 export interface AnalyticsFiltersProps {
   filters: AnalyticsFilter[];
+  disabled?: boolean;
 }
 
 export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = (props) => {
-  const { filters = [] } = props;
+  const { filters = [], disabled } = props;
 
   return (
     <>
-      {filters.length > 0 && <DataTablePrimaryFilterMenu filters={filters} />}
+      {filters.length > 0 && (
+        <DataTablePrimaryFilterMenu filters={filters} disabled={disabled} />
+      )}
     </>
   );
 };
