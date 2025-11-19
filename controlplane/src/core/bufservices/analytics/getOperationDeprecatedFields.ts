@@ -97,8 +97,8 @@ export function getOperationDeprecatedFields(
             name: field.name,
             typeNames: [field.typeName],
           })),
-          operationHash: req.operationHash,
-          operationName: req.operationName,
+          operationHash: req.operationHash.replace(/'/g, "''"),
+          operationName: req.operationName?.replace(/'/g, "''"),
         });
       }
     } catch (error) {

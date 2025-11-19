@@ -393,6 +393,12 @@ describe('GetOperationClients', () => {
       operationHash: "test'hash", // Contains single quote
     });
 
+    // Verify that the query was called and inspect the query string
+    expect(chClient.queryPromise).toHaveBeenCalledTimes(1);
+    const calledQuery = (chClient.queryPromise as Mock).mock.calls[0][0];
+    // Verify proper escaping or parameterization
+    expect(calledQuery).not.toContain("test'hash"); // Should be escaped/parameterized
+
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     expect(response.clients).toHaveLength(1);
 
@@ -432,6 +438,12 @@ describe('GetOperationClients', () => {
       operationHash: 'test-hash',
       operationName: "test'operation", // Contains single quote
     });
+
+    // Verify that the query was called and inspect the query string
+    expect(chClient.queryPromise).toHaveBeenCalledTimes(1);
+    const calledQuery = (chClient.queryPromise as Mock).mock.calls[0][0];
+    // Verify proper escaping or parameterization
+    expect(calledQuery).not.toContain("test'operation"); // Should be escaped/parameterized
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     expect(response.clients).toHaveLength(1);
@@ -485,7 +497,7 @@ describe('GetOperationClients', () => {
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
-    expect(response.clients.length).toBeGreaterThanOrEqual(2);
+    expect(response.clients.length).toBe(3);
     // Should group by ClientName and ClientVersion
     const testClientVersions = response.clients.filter((c) => c.name === 'test-client').map((c) => c.version);
     expect(testClientVersions).toContain('1.0.0');

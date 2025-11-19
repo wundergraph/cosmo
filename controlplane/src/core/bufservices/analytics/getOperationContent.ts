@@ -43,7 +43,7 @@ export function getOperationContent(
       };
     }
 
-    // Escape operation hash and name for SQL injection prevention
+    // Escape operation hash and name
     const escapedHash = req.hash.replace(/'/g, "''");
     const operationNameFilter = req.name === undefined ? '' : `AND OperationName = '${req.name.replace(/'/g, "''")}'`;
 
