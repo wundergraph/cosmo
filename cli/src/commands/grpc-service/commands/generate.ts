@@ -447,8 +447,35 @@ async function generateFromSDL(
   const mapping = compileGraphQLToMapping(schema, serviceName);
 
   const protoOptions: ProtoOption[] = [];
-  if (goPackage) {
-    protoOptions.push(getGoModulePathProtoOption(goPackage!));
+  if (languageOptions.goPackage) {
+    protoOptions.push(getGoModulePathProtoOption(languageOptions.goPackage));
+  }
+  if (languageOptions.javaPackage) {
+    protoOptions.push({ name: 'java_package', constant: `"${languageOptions.javaPackage}"` });
+  }
+  if (languageOptions.javaOuterClassname) {
+    protoOptions.push({ name: 'java_outer_classname', constant: `"${languageOptions.javaOuterClassname}"` });
+  }
+  if (languageOptions.javaMultipleFiles !== undefined) {
+    protoOptions.push({ name: 'java_multiple_files', constant: String(languageOptions.javaMultipleFiles) });
+  }
+  if (languageOptions.csharpNamespace) {
+    protoOptions.push({ name: 'csharp_namespace', constant: `"${languageOptions.csharpNamespace}"` });
+  }
+  if (languageOptions.rubyPackage) {
+    protoOptions.push({ name: 'ruby_package', constant: `"${languageOptions.rubyPackage}"` });
+  }
+  if (languageOptions.phpNamespace) {
+    protoOptions.push({ name: 'php_namespace', constant: `"${languageOptions.phpNamespace}"` });
+  }
+  if (languageOptions.phpMetadataNamespace) {
+    protoOptions.push({ name: 'php_metadata_namespace', constant: `"${languageOptions.phpMetadataNamespace}"` });
+  }
+  if (languageOptions.objcClassPrefix) {
+    protoOptions.push({ name: 'objc_class_prefix', constant: `"${languageOptions.objcClassPrefix}"` });
+  }
+  if (languageOptions.swiftPrefix) {
+    protoOptions.push({ name: 'swift_prefix', constant: `"${languageOptions.swiftPrefix}"` });
   }
 
   const proto = compileGraphQLToProto(schema, {
