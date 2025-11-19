@@ -132,7 +132,7 @@ export {
 } from './operations/proto-text-generator.js';
 export type { ProtoTextOptions } from './operations/proto-text-generator.js';
 
-export type { GraphQLToProtoTextVisitorOptions } from './sdl-to-proto-visitor.js';
+export type { GraphQLToProtoTextVisitorOptions, ProtoOption } from './sdl-to-proto-visitor.js';
 export type { ProtoLock } from './proto-lock.js';
 export type { ValidationResult } from './sdl-validation-visitor.js';
 export {

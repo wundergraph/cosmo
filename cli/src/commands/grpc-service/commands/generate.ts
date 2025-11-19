@@ -4,6 +4,7 @@ import {
   compileGraphQLToProto,
   compileOperationsToProto,
   ProtoLock,
+  ProtoOption,
   validateGraphQLSDL,
   rootToProtoText,
   protobuf,
@@ -14,6 +15,7 @@ import Spinner, { type Ora } from 'ora';
 import { resolve, extname } from 'pathe';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { renderResultTree, renderValidationResults } from '../../router/commands/plugin/helper.js';
+import { getGoModulePathProtoOption } from '../../router/commands/plugin/toolchain.js';
 
 type LanguageOptions = {
   goPackage?: string;
@@ -443,11 +445,17 @@ async function generateFromSDL(
   const lockData = await fetchLockData(lockFile);
 
   const mapping = compileGraphQLToMapping(schema, serviceName);
+
+  const protoOptions: ProtoOption[] = [];
+  if (goPackage) {
+    protoOptions.push(getGoModulePathProtoOption(goPackage!));
+  }
+
   const proto = compileGraphQLToProto(schema, {
     serviceName,
     packageName,
-    ...languageOptions,
     lockData,
+    protoOptions,
   });
 
   return {
