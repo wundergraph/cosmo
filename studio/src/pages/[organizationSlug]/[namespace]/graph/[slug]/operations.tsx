@@ -30,10 +30,18 @@ import { Loader } from "@/components/ui/loader";
 import { Pagination } from "@/components/ui/pagination";
 import { Separator } from "@/components/ui/separator";
 import { Spacer } from "@/components/ui/spacer";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { Toolbar } from "@/components/ui/toolbar";
 import { useCurrentOrganization } from "@/hooks/use-current-organization";
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import { useOperationsFilters } from "@/hooks/use-operations-filters";
+import useWindowSize from "@/hooks/use-window-size";
 import { useWorkspace } from "@/hooks/use-workspace";
 import { NextPageWithLayout } from "@/lib/page";
 import { PlainMessage } from "@bufbuild/protobuf";
@@ -41,6 +49,7 @@ import { createConnectQueryKey, useQuery } from "@connectrpc/connect-query";
 import {
   ChartBarIcon,
   ExclamationTriangleIcon,
+  MagnifyingGlassIcon,
 } from "@heroicons/react/24/outline";
 import { UpdateIcon } from "@radix-ui/react-icons";
 import {
@@ -105,40 +114,42 @@ const OperationsToolbar = () => {
   const analyticsRetention = useFeatureLimit("analytics-retention", 7);
 
   return (
-    <Toolbar className="lg:px-0 xl:px-0">
-      <Spacer />
-      <DatePickerWithRange
-        range={range}
-        dateRange={dateRange}
-        onChange={onDateRangeChange}
-        calendarDaysLimit={analyticsRetention}
-      />
-      <Button
-        isLoading={!!isFetching}
-        onClick={() => {
-          client.invalidateQueries({
-            queryKey: createConnectQueryKey(getGraphMetrics, {
-              namespace: graphContext?.graph?.namespace,
-              federatedGraphName: graphContext?.graph?.name,
-              range,
-              dateRange: range
-                ? undefined
-                : {
-                    start: formatISO(dateRange.start),
-                    end: formatISO(dateRange.end),
-                  },
-            }),
-          });
-        }}
-        variant="outline"
-        size="icon"
-      >
-        <UpdateIcon />
-      </Button>
-      <RefreshInterval
-        value={refreshInterval}
-        onChange={onRefreshIntervalChange}
-      />
+    <Toolbar className="flex-nowrap lg:px-0 xl:px-0">
+      <Spacer className="hidden md:flex" />
+      <div className="flex flex-1 items-center gap-2 md:flex-initial">
+        <DatePickerWithRange
+          range={range}
+          dateRange={dateRange}
+          onChange={onDateRangeChange}
+          calendarDaysLimit={analyticsRetention}
+        />
+        <Button
+          isLoading={!!isFetching}
+          onClick={() => {
+            client.invalidateQueries({
+              queryKey: createConnectQueryKey(getGraphMetrics, {
+                namespace: graphContext?.graph?.namespace,
+                federatedGraphName: graphContext?.graph?.name,
+                range,
+                dateRange: range
+                  ? undefined
+                  : {
+                      start: formatISO(dateRange.start),
+                      end: formatISO(dateRange.end),
+                    },
+              }),
+            });
+          }}
+          variant="outline"
+          size="icon"
+        >
+          <UpdateIcon />
+        </Button>
+        <RefreshInterval
+          value={refreshInterval}
+          onChange={onRefreshIntervalChange}
+        />
+      </div>
     </Toolbar>
   );
 };
@@ -169,6 +180,7 @@ const OperationsLeftPanel = ({
   pageSize: number;
   noOfPages: number;
 }) => {
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
   const {
     fetchBasedOn,
     fetchBasedOnStr,
@@ -217,8 +229,18 @@ const OperationsLeftPanel = ({
     });
   }, [operations]);
 
-  return (
-    <div className="flex h-full w-full flex-col space-y-4 p-4">
+  // Handle operation selection - close sheet on mobile when operation is selected
+  const handleOperationSelect = (
+    operationHash: string,
+    operationName: string,
+  ) => {
+    onOperationSelect(operationHash, operationName);
+    setIsSheetOpen(false);
+  };
+
+  // Full left panel content (used in both desktop and mobile sheet)
+  const LeftPanelContent = () => (
+    <div className="flex h-full w-full flex-col space-y-4 px-1 md:px-4 md:py-4">
       <OperationsSearch
         searchQuery={localSearchQuery}
         onSearchQueryChange={onSearchQueryChange}
@@ -235,18 +257,20 @@ const OperationsLeftPanel = ({
         className="w-full"
       />
 
-      <OperationsList
-        operations={computedOperations}
-        selectedOperation={selectedOperation}
-        onOperationSelect={onOperationSelect}
-        searchQuery={localSearchQuery}
-        sortField={fetchBasedOnStr}
-        isLoading={isLoading}
-        className="w-full flex-1"
-      />
+      <div className="flex min-h-0 flex-1 md:block">
+        <OperationsList
+          operations={computedOperations}
+          selectedOperation={selectedOperation}
+          onOperationSelect={handleOperationSelect}
+          searchQuery={localSearchQuery}
+          sortField={fetchBasedOnStr}
+          isLoading={isLoading}
+          className="h-full w-full"
+        />
+      </div>
 
       {operations.length > 0 && (
-        <div className="flex justify-center">
+        <div className="flex justify-center md:flex">
           <Pagination
             limit={pageSize}
             noOfPages={noOfPages}
@@ -255,6 +279,36 @@ const OperationsLeftPanel = ({
         </div>
       )}
     </div>
+  );
+
+  return (
+    <>
+      {/* Mobile: Search button that opens sheet */}
+      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+        <SheetTrigger asChild>
+          <Button
+            variant="outline"
+            className="w-full justify-start text-left font-normal md:hidden"
+          >
+            <MagnifyingGlassIcon className="mr-2 h-4 w-4" />
+            {localSearchQuery || "Search operations..."}
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="bottom" className="h-[85vh]">
+          <SheetHeader>
+            <SheetTitle>Search Operations</SheetTitle>
+          </SheetHeader>
+          <div className="mt-4 flex h-[calc(85vh-80px)] flex-col overflow-hidden">
+            <LeftPanelContent />
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Desktop: Full left panel */}
+      <div className="hidden h-full w-full md:block">
+        <LeftPanelContent />
+      </div>
+    </>
   );
 };
 
@@ -363,13 +417,13 @@ const OperationsRightPanel = ({
   }
 
   return (
-    <div className="scrollbar-custom h-full space-y-4 overflow-y-auto pr-1">
+    <div className="scrollbar-custom h-full space-y-4 overflow-y-auto px-1 md:px-0 md:pr-1">
       {selectedOperation ? (
         // Selected Operation State
         <>
           {/* Operation Header */}
 
-          <div className="flex items-center justify-between px-1">
+          <div className="flex flex-col gap-4 px-1 md:flex-row md:items-center md:justify-between md:gap-0">
             <div>
               <h3 className="text-lg font-semibold">
                 {operationName || "Unnamed Operation"}
@@ -387,8 +441,12 @@ const OperationsRightPanel = ({
                 />
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" asChild>
+            <div className="flex w-full items-center gap-2 md:w-auto">
+              <Button
+                variant="outline"
+                asChild
+                className="flex-1 md:flex-initial"
+              >
                 <Link
                   href={{
                     pathname: `/[organizationSlug]/[namespace]/graph/[slug]/analytics/traces`,
@@ -408,7 +466,10 @@ const OperationsRightPanel = ({
                   View Traces
                 </Link>
               </Button>
-              <Button onClick={() => setIsModalOpen(true)}>
+              <Button
+                onClick={() => setIsModalOpen(true)}
+                className="flex-1 md:flex-initial"
+              >
                 View Operation
               </Button>
             </div>
@@ -491,6 +552,7 @@ const OperationsRightPanel = ({
 
 const OperationsPage: NextPageWithLayout = () => {
   const router = useRouter();
+  const { isMobile } = useWindowSize();
   const applyParams = useApplyParams();
   const graphContext = useContext(GraphContext);
   const { filters, range, dateRange } = useAnalyticsQueryState();
@@ -728,11 +790,11 @@ const OperationsPage: NextPageWithLayout = () => {
   }
 
   return (
-    <div className="flex h-full w-full flex-col space-y-4 p-4 pr-1">
+    <div className="flex h-full w-full flex-col space-y-4 p-2 pr-1 md:p-4 md:pr-1">
       {/* Two-Panel Layout */}
-      <div className="flex min-h-0 flex-1 space-x-4 overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col space-y-4 overflow-hidden md:flex-row md:space-x-4 md:space-y-0">
         {/* Left Panel - Operations List */}
-        <div className="flex w-1/3 min-w-0 flex-col">
+        <div className="flex w-full min-w-0 flex-col md:w-1/3">
           <Card className="flex h-full flex-col overflow-hidden">
             <OperationsLeftPanel
               selectedOperation={selectedOperation}
@@ -749,7 +811,7 @@ const OperationsPage: NextPageWithLayout = () => {
         </div>
 
         {/* Right Panel - Charts */}
-        <div className="min-w-0 flex-1 overflow-hidden">
+        <div className="min-w-0 flex-1 overflow-hidden md:w-auto">
           <div className="h-full overflow-y-auto">
             <OperationsRightPanel
               selectedOperation={selectedOperation}
