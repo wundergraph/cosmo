@@ -287,7 +287,7 @@ ts)
     ;;
 esac
 
-# Clean up temporary files
+# Clean up temporary files there
 rm -rf "$TMP_DIR"
 
 # Instructions for updating PATH
