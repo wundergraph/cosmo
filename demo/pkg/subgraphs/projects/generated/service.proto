@@ -495,8 +495,8 @@ message ResolveProjectCompletionRateArgs {
 
 message ResolveProjectCompletionRateContext {
   string id = 1;
-  google.protobuf.StringValue startDate = 2;
-  google.protobuf.StringValue endDate = 3;
+  google.protobuf.StringValue start_date = 2;
+  google.protobuf.StringValue end_date = 3;
   ProjectStatus status = 4;
 }
 
@@ -521,7 +521,7 @@ message ResolveProjectEstimatedDaysRemainingArgs {
 
 message ResolveProjectEstimatedDaysRemainingContext {
   string id = 1;
-  google.protobuf.StringValue endDate = 2;
+  google.protobuf.StringValue end_date = 2;
   ProjectStatus status = 3;
 }
 
@@ -546,9 +546,9 @@ message ResolveMilestoneIsAtRiskArgs {
 
 message ResolveMilestoneIsAtRiskContext {
   string id = 1;
-  google.protobuf.StringValue endDate = 2;
+  google.protobuf.StringValue end_date = 2;
   MilestoneStatus status = 3;
-  google.protobuf.DoubleValue completionPercentage = 4;
+  google.protobuf.DoubleValue completion_percentage = 4;
 }
 
 message ResolveMilestoneIsAtRiskRequest {
@@ -571,7 +571,7 @@ message ResolveMilestoneDaysUntilDueArgs {
 }
 
 message ResolveMilestoneDaysUntilDueContext {
-  google.protobuf.StringValue endDate = 1;
+  google.protobuf.StringValue end_date = 1;
 }
 
 message ResolveMilestoneDaysUntilDueRequest {
@@ -619,8 +619,8 @@ message ResolveTaskTotalEffortArgs {
 
 message ResolveTaskTotalEffortContext {
   string id = 1;
-  google.protobuf.DoubleValue estimatedHours = 2;
-  google.protobuf.DoubleValue actualHours = 3;
+  google.protobuf.DoubleValue estimated_hours = 2;
+  google.protobuf.DoubleValue actual_hours = 3;
 }
 
 message ResolveTaskTotalEffortRequest {
