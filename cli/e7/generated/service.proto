@@ -1,0 +1,27 @@
+syntax = "proto3";
+package service;
+
+option go_package = "github.com/wundergraph/cosmo/plugin";
+
+// Service definition for E7Service
+service E7Service {
+  // The hello query
+  rpc QueryHelloNewer(QueryHelloNewerRequest) returns (QueryHelloNewerResponse) {}
+}
+
+// Request message for helloNewer operation: The hello query.
+message QueryHelloNewerRequest {
+  string name = 1;
+}
+// Response message for helloNewer operation: The hello query.
+message QueryHelloNewerResponse {
+  // The hello query
+  World hello_newer = 1;
+}
+
+message World {
+  // The ID of the world
+  string id = 1;
+  // The name of the world
+  string name = 2;
+}

@@ -1,0 +1,4 @@
+github.com/stretchr/testify v1.10.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
+github.com/wundergraph/cosmo/router-plugin v0.0.0-20250824152218-8eebc34c4995/go.mod h1:T16CXUm1euBIu0noDofJU0CcLCuYuVsMcDoLgOhuolg=
+google.golang.org/grpc v1.68.1/go.mod h1:+q1XYFJjShcqn0QZHvCyeR4CXPA+llXIeUIfIe00waw=
+google.golang.org/protobuf v1.36.5/go.mod h1:9fA7Ob0pmnwhb644+1+CVWFRbNajQ6iRojtC/QF5bRE=

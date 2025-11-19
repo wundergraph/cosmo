@@ -1,0 +1,50 @@
+{
+  "version": "1.0.0",
+  "messages": {
+    "Query": {
+      "fields": {
+        "helloNewer": 2
+      },
+      "reservedNumbers": [
+        1
+      ]
+    },
+    "QueryHelloRequest": {
+      "fields": {
+        "name": 1
+      }
+    },
+    "QueryHello": {
+      "fields": {
+        "name": 1
+      }
+    },
+    "QueryHelloResponse": {
+      "fields": {
+        "hello": 1
+      }
+    },
+    "World": {
+      "fields": {
+        "id": 1,
+        "name": 2
+      }
+    },
+    "QueryHelloNewerRequest": {
+      "fields": {
+        "name": 1
+      }
+    },
+    "QueryHelloNewer": {
+      "fields": {
+        "name": 1
+      }
+    },
+    "QueryHelloNewerResponse": {
+      "fields": {
+        "hello_newer": 1
+      }
+    }
+  },
+  "enums": {}
+}

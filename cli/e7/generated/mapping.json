@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "service": "E7Service",
+  "operationMappings": [
+    {
+      "type": "OPERATION_TYPE_QUERY",
+      "original": "helloNewer",
+      "mapped": "QueryHelloNewer",
+      "request": "QueryHelloNewerRequest",
+      "response": "QueryHelloNewerResponse"
+    }
+  ],
+  "entityMappings": [],
+  "typeFieldMappings": [
+    {
+      "type": "Query",
+      "fieldMappings": [
+        {
+          "original": "helloNewer",
+          "mapped": "hello_newer",
+          "argumentMappings": [
+            {
+              "original": "name",
+              "mapped": "name"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "World",
+      "fieldMappings": [
+        {
+          "original": "id",
+          "mapped": "id",
+          "argumentMappings": []
+        },
+        {
+          "original": "name",
+          "mapped": "name",
+          "argumentMappings": []
+        }
+      ]
+    }
+  ],
+  "enumMappings": [],
+  "resolveMappings": []
+}
