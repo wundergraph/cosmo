@@ -257,7 +257,9 @@ func TestStartSubscriptionHook(t *testing.T) {
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*10)
-			<-callbackCalled
+			testenv.AwaitChannelWithT(t, 10*time.Second, callbackCalled, func(t *testing.T, called bool) {
+				require.True(t, called)
+			}, "StartSubscription callback was not invoked")
 			xEnv.WaitForSubscriptionCount(0, time.Second*10)
 
 			testenv.AwaitChannelWithT(t, time.Second*10, clientRunCh, func(t *testing.T, err error) {
