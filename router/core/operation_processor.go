@@ -886,6 +886,7 @@ func (o *OperationKit) normalizeVariablesCacheKey() uint64 {
 	return sum
 }
 
+// NormalizeVariables returns a slice of upload mappings if there are any of them present in a query.
 func (o *OperationKit) NormalizeVariables() (cached bool, mapping []uploads.UploadPathMapping, err error) {
 	cacheKey := o.normalizeVariablesCacheKey()
 	if o.cache != nil && o.cache.variablesNormalizationCache != nil {
@@ -996,6 +997,7 @@ func (o *OperationKit) remapVariablesCacheKey() uint64 {
 	return sum
 }
 
+// RemapVariables updates and sorts variable names to have them in a predictable order.
 func (o *OperationKit) RemapVariables(disabled bool) (cached bool, err error) {
 	cacheKey := o.remapVariablesCacheKey()
 	if o.cache != nil && o.cache.remapVariablesCache != nil {

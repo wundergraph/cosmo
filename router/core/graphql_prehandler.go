@@ -783,12 +783,6 @@ func (h *PreHandler) handleOperation(w http.ResponseWriter, req *http.Request, v
 	* Normalize the variables
 	 */
 
-	// Normalize the variables returns list of uploads mapping if there are any of them present in a query
-	// type UploadPathMapping struct {
-	// 	VariableName       string - is a variable name holding the direct or nested value of type Upload, example "f"
-	// 	OriginalUploadPath string - is a path relative to variables which have an Upload type, example "variables.f"
-	// 	NewUploadPath      string - if variable was used in the inline object like this `arg: {f: $f}` this field will hold the new extracted path, example "variables.a.f", if it is an empty, there was no change in the path
-	// }
 	cached, uploadsMapping, err := operationKit.NormalizeVariables()
 	if err != nil {
 		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
@@ -807,17 +801,19 @@ func (h *PreHandler) handleOperation(w http.ResponseWriter, req *http.Request, v
 	engineNormalizeSpan.SetAttributes(otel.WgVariablesNormalizationCacheHit.Bool(cached))
 	requestContext.operation.variablesNormalizationCacheHit = cached
 
-	// update file uploads path if they were used in nested field in the extracted variables
+	// Update file upload paths if they were used in the nested field of the extracted variables.
 	for mapping := range slices.Values(uploadsMapping) {
-		// if the NewUploadPath is empty it means that there was no change in the path - e.g. upload was directly passed to the argument
-		// e.g. field(fileArgument: $file) will result in []UploadPathMapping{ {VariableName: "file", OriginalUploadPath: "variables.file", NewUploadPath: ""} }
+		// If the NewUploadPath is empty, there was no change in the path:
+		// upload was directly passed to the argument. For example, "field(fileArgument: $file)"
+		// will result in uploadsMapping containing such an item:
+		// {VariableName: "file", OriginalUploadPath: "variables.file", NewUploadPath: ""}
 		if mapping.NewUploadPath == "" {
 			continue
 		}
 
-		// look for the corresponding file which was used in the nested argument
-		// we are matching original upload path passed via uploads map with the mapping items
+		// Look for the corresponding file that was used in the nested argument.
 		idx := slices.IndexFunc(requestContext.operation.files, func(file *httpclient.FileUpload) bool {
+			// Match upload path passed via slice of FileUpload with the mapping items.
 			return file.VariablePath() == mapping.OriginalUploadPath
 		})
 
@@ -825,15 +821,18 @@ func (h *PreHandler) handleOperation(w http.ResponseWriter, req *http.Request, v
 			continue
 		}
 
-		// if NewUploadPath is not empty the file argument was used in the nested object, and we need to update the path
-		// e.g. field(arg: {file: $file}) normalized to field(arg: $a) will result in []UploadPathMapping{ {VariableName: "file", OriginalUploadPath: "variables.file", NewUploadPath: "variables.a.file"} }
-		// so "variables.file" should be updated to "variables.a.file"
+		// If NewUploadPath is not empty, the file argument was used in the nested object,
+		// and we need to update the path.
+		// For example, "field(arg: {file: $file})" normalized to "field(arg: $a)" will result in
+		// uploadsMapping containing such an item:
+		// {VariableName: "file", OriginalUploadPath: "variables.file", NewUploadPath: "variables.a.file"}
+		// In short, "variables.file" should be updated to "variables.a.file".
 		requestContext.operation.files[idx].SetVariablePath(uploadsMapping[idx].NewUploadPath)
 	}
 
-	// RemapVariables is updating and sort variables name to be able to have them in a predictable order
-	// after remapping requestContext.operation.remapVariables map will contain new names as a keys and old names as a values - to be able to extract the old values
-	// because it does not rename variables in a variables json
+	// requestContext.operation.remapVariables map will contain new names as keys and
+	// old names as values - to be able to extract the old values.
+	// It does not rename variables in variables JSON.
 	cached, err = operationKit.RemapVariables(h.disableVariablesRemapping)
 	if err != nil {
 		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
