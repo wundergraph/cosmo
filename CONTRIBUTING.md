@@ -18,6 +18,12 @@ This guide assumes you have already installed the following software:
   - [docker buildkit](https://docs.docker.com/build/buildkit/), with optionally: [docker buildx plugin](https://docs.docker.com/build/install-buildx/)
   - [docker compose plugin](https://docs.docker.com/compose/install/#scenario-two-install-the-compose-plugin)
 
+## Other Dependencies
+
+While these are not core dependencies, they are required for some parts of the development workflow:
+
+- [bun](https://bun.com/docs/installation): We support router plugins with TypeScript and Bun, there are some integration tests for this which requires compilation of the bun binaries as part of the testing step.
+
 ## Monorepo
 
 NPM packages are managed as a [pnpm workspace](https://pnpm.io/workspaces). This means during development all dependencies are linked.
