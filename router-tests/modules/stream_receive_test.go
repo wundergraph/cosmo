@@ -378,7 +378,7 @@ func TestReceiveHook(t *testing.T) {
 			topics := []string{"employeeUpdated"}
 			events.KafkaEnsureTopicExists(t, xEnv, time.Second, topics...)
 
-			var subscriptionOne struct {
+			var subscriptionQuery struct {
 				employeeUpdatedMyKafka struct {
 					ID      float64 `graphql:"id"`
 					Details struct {
@@ -405,7 +405,7 @@ func TestReceiveHook(t *testing.T) {
 			})
 
 			subscriptionArgsCh := make(chan kafkaSubscriptionArgs)
-			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
+			subscriptionOneID, err := client.Subscribe(&subscriptionQuery, nil, func(dataValue []byte, errValue error) error {
 				subscriptionArgsCh <- kafkaSubscriptionArgs{
 					dataValue: dataValue,
 					errValue:  errValue,
@@ -421,7 +421,7 @@ func TestReceiveHook(t *testing.T) {
 			}()
 
 			subscriptionArgsCh2 := make(chan kafkaSubscriptionArgs)
-			subscriptionTwoID, err := client2.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
+			subscriptionTwoID, err := client2.Subscribe(&subscriptionQuery, nil, func(dataValue []byte, errValue error) error {
 				subscriptionArgsCh2 <- kafkaSubscriptionArgs{
 					dataValue: dataValue,
 					errValue:  errValue,

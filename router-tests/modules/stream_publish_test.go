@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap/zapcore"
 
 	"github.com/stretchr/testify/assert"
@@ -278,7 +279,10 @@ func TestPublishHook(t *testing.T) {
 
 			assert.Equal(t, int32(1), customModule.HookCallCount.Load())
 
-			require.Len(t, records, 1)
+			testenv.AwaitChannelWithT(t, 5*time.Second, records, func(t *testing.T, msg *redis.Message) {
+				require.NotNil(t, msg, "expected to receive a redis message")
+				require.Equal(t, xEnv.GetPubSubName("employeeUpdatedMyRedis"), msg.Channel)
+			})
 		})
 	})
 
