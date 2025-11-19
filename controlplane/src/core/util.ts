@@ -365,6 +365,13 @@ export const validateDateRanges = ({
       validatedDateRange.start = formatISO(subHours(new Date(), limit * 24));
     }
   }
+  // validate if start date is before end date
+  if (validatedDateRange && validatedDateRange.start > validatedDateRange.end) {
+    return {
+      range: validatedRange,
+      dateRange: undefined,
+    };
+  }
 
   return {
     range: validatedRange,
