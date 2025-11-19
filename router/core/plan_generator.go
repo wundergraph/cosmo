@@ -55,24 +55,22 @@ type Planner struct {
 }
 
 type OperationTimes struct {
-	ParseTime       time.Duration
-	NormalizeTime   time.Duration
-	ValidateTime    time.Duration
-	PostProcessTime time.Duration
-	PlanTime        time.Duration
+	ParseTime     time.Duration
+	NormalizeTime time.Duration
+	ValidateTime  time.Duration
+	PlanTime      time.Duration
 }
 
 func (ot *OperationTimes) TotalTime() time.Duration {
-	return ot.ParseTime + ot.NormalizeTime + ot.ValidateTime + ot.PostProcessTime + ot.PlanTime
+	return ot.ParseTime + ot.NormalizeTime + ot.ValidateTime + ot.PlanTime
 }
 
 func (ot OperationTimes) Merge(other OperationTimes) OperationTimes {
 	return OperationTimes{
-		ParseTime:       ot.ParseTime + other.ParseTime,
-		NormalizeTime:   ot.NormalizeTime + other.NormalizeTime,
-		ValidateTime:    ot.ValidateTime + other.ValidateTime,
-		PostProcessTime: ot.PostProcessTime + other.PostProcessTime,
-		PlanTime:        ot.PlanTime + other.PlanTime,
+		ParseTime:     ot.ParseTime + other.ParseTime,
+		NormalizeTime: ot.NormalizeTime + other.NormalizeTime,
+		ValidateTime:  ot.ValidateTime + other.ValidateTime,
+		PlanTime:      ot.PlanTime + other.PlanTime,
 	}
 }
 
@@ -223,10 +221,10 @@ func (pl *Planner) PlanPreparedOperation(operation *ast.Document) (planNode *res
 		return nil, opTimes, errors.New(report.Error())
 	}
 
-	start = time.Now()
 	post := postprocess.NewProcessor()
 	post.Process(preparedPlan)
-	opTimes.PostProcessTime = time.Since(start)
+	// measure postprocessing time as part of planning time
+	opTimes.PlanTime = time.Since(start)
 
 	switch p := preparedPlan.(type) {
 	case *plan.SynchronousResponsePlan:
