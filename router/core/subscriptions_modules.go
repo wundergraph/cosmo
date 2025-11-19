@@ -23,10 +23,32 @@ type SubscriptionOnStartHandlerContext interface {
 	Authentication() authentication.Authentication
 	// SubscriptionEventConfiguration is the subscription event configuration (will return nil for engine subscription)
 	SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration
-	// WriteEvent writes an event to the stream of the current subscription
-	// It returns true if the event was written to the stream, false if the event was dropped
-	WriteEvent(event datasource.StreamEvent) bool
+	// EmitLocalEvent sends an event directly to the subscription stream of the
+	// currently connected client.
+	//
+	// This method triggers the router to resolve the client's operation and emit
+	// the resulting data as a stream event. The event exists only within the
+	// router; it is not forwarded to any message broker.
+	//
+	// The event is delivered exclusively to the client associated with the current
+	// handler execution. No other subscriptions are affected.
+	//
+	// The method returns true if the event was successfully emitted, or false if
+	// it was dropped.
+	EmitLocalEvent(event datasource.StreamEvent) bool
 	// NewEvent creates a new event that can be used in the subscription.
+	//
+	// The data parameter must contain valid JSON bytes. The format depends on the subscription type.
+	//
+	// For event-driven subscriptions (Cosmo Streams / EDFS), the data should contain:
+	// __typename : The name of the schema entity, which is expected to be returned to the client.
+	// {keyName} : The key of the entity as configured on the schema via @key directive.
+	// Example usage: ctx.NewEvent([]byte(`{"__typename": "Employee", "id": 1}`))
+	//
+	// For normal subscriptions, you need to provide the complete GraphQL response structure.
+	// Example usage: ctx.NewEvent([]byte(`{"data": {"fieldName": value}}`))
+	//
+	// You can use EmitLocalEvent to emit this event to subscriptions.
 	NewEvent(data []byte) datasource.MutableStreamEvent
 }
 
@@ -69,7 +91,7 @@ type pubSubSubscriptionOnStartHookContext struct {
 	operation                      OperationContext
 	authentication                 authentication.Authentication
 	subscriptionEventConfiguration datasource.SubscriptionEventConfiguration
-	writeEventHook                 func(data []byte)
+	emitLocalEventFn               func(data []byte)
 	eventBuilder                   datasource.EventBuilderFn
 }
 
@@ -93,8 +115,8 @@ func (c *pubSubSubscriptionOnStartHookContext) SubscriptionEventConfiguration() 
 	return c.subscriptionEventConfiguration
 }
 
-func (c *pubSubSubscriptionOnStartHookContext) WriteEvent(event datasource.StreamEvent) bool {
-	c.writeEventHook(event.GetData())
+func (c *pubSubSubscriptionOnStartHookContext) EmitLocalEvent(event datasource.StreamEvent) bool {
+	c.emitLocalEventFn(event.GetData())
 
 	return true
 }
@@ -140,11 +162,11 @@ func (e *EngineEvent) Clone() datasource.MutableStreamEvent {
 }
 
 type engineSubscriptionOnStartHookContext struct {
-	request        *http.Request
-	logger         *zap.Logger
-	operation      OperationContext
-	authentication authentication.Authentication
-	writeEventHook func(data []byte)
+	request          *http.Request
+	logger           *zap.Logger
+	operation        OperationContext
+	authentication   authentication.Authentication
+	emitLocalEventFn func(data []byte)
 }
 
 func (c *engineSubscriptionOnStartHookContext) Request() *http.Request {
@@ -163,8 +185,8 @@ func (c *engineSubscriptionOnStartHookContext) Authentication() authentication.A
 	return c.authentication
 }
 
-func (c *engineSubscriptionOnStartHookContext) WriteEvent(event datasource.StreamEvent) bool {
-	c.writeEventHook(event.GetData())
+func (c *engineSubscriptionOnStartHookContext) EmitLocalEvent(event datasource.StreamEvent) bool {
+	c.emitLocalEventFn(event.GetData())
 
 	return true
 }
@@ -210,7 +232,7 @@ func NewPubSubSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHandlerCont
 			operation:                      requestContext.Operation(),
 			authentication:                 requestContext.Authentication(),
 			subscriptionEventConfiguration: subConf,
-			writeEventHook:                 resolveCtx.Updater,
+			emitLocalEventFn:               resolveCtx.Updater,
 			eventBuilder:                   eventBuilder,
 		}
 
@@ -233,11 +255,11 @@ func NewEngineSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHandlerCont
 		}
 
 		hookCtx := &engineSubscriptionOnStartHookContext{
-			request:        requestContext.Request(),
-			logger:         logger,
-			operation:      requestContext.Operation(),
-			authentication: requestContext.Authentication(),
-			writeEventHook: resolveCtx.Updater,
+			request:          requestContext.Request(),
+			logger:           logger,
+			operation:        requestContext.Operation(),
+			authentication:   requestContext.Authentication(),
+			emitLocalEventFn: resolveCtx.Updater,
 		}
 
 		return fn(hookCtx)
@@ -259,6 +281,13 @@ type StreamReceiveEventHandlerContext interface {
 	// SubscriptionEventConfiguration the subscription event configuration
 	SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration
 	// NewEvent creates a new event that can be used in the subscription.
+	//
+	// The data parameter must contain valid JSON bytes representing the raw event payload
+	// from your message broker (Kafka, NATS, etc.). The JSON must have properly quoted
+	// property names and must include the __typename field required by GraphQL.
+	// For example: []byte(`{"__typename": "Employee", "id": 1, "update": {"name": "John"}}`).
+	//
+	// This method is typically used in OnReceiveEvents hooks to create new or modified events.
 	NewEvent(data []byte) datasource.MutableStreamEvent
 }
 
@@ -286,6 +315,14 @@ type StreamPublishEventHandlerContext interface {
 	// PublishEventConfiguration the publish event configuration
 	PublishEventConfiguration() datasource.PublishEventConfiguration
 	// NewEvent creates a new event that can be used in the subscription.
+	//
+	// The data parameter must contain valid JSON bytes representing the event payload
+	// that will be sent to your message broker (Kafka, NATS, etc.). The JSON must have
+	// properly quoted property names and must include the __typename field required by GraphQL.
+	// For example: []byte(`{"__typename": "Employee", "id": 1, "update": {"name": "John"}}`).
+	//
+	// This method is typically used in OnPublishEvents hooks to create new or modified events
+	// before they are sent to the message broker.
 	NewEvent(data []byte) datasource.MutableStreamEvent
 }
 
