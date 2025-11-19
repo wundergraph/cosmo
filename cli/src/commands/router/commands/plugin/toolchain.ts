@@ -51,7 +51,7 @@ const ALL_BUN_PLATFORM_MAPPINGS: Record<string, string> = {
 };
 
 const installScriptUrl =
-    'https://raw.githubusercontent.com/wundergraph/cosmo/refs/tags/wgc%400.96.0/scripts/install-proto-tools.sh';;
+  'https://raw.githubusercontent.com/wundergraph/cosmo/refs/tags/wgc%400.96.0/scripts/install-proto-tools.sh';
 
 const defaultGoModulePath = 'github.com/wundergraph/cosmo/plugin';
 
