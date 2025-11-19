@@ -35,7 +35,6 @@ const (
 	errorTypeInvalidWsSubprotocol
 	errorTypeEDFSInvalidMessage
 	errorTypeMergeResult
-	errorTypeHttpError
 	errorTypeEDFSHookError
 )
 
@@ -94,10 +93,6 @@ func getErrorType(err error) errorType {
 	var mergeResultErr resolve.ErrMergeResult
 	if errors.As(err, &mergeResultErr) {
 		return errorTypeMergeResult
-	}
-	var httpError *httpGraphqlError
-	if errors.As(err, &httpError) {
-		return errorTypeHttpError
 	}
 	return errorTypeUnknown
 }
