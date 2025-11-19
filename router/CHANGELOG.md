@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.265.1](https://github.com/wundergraph/cosmo/compare/router@0.265.0...router@0.265.1) (2025-11-19)
+
+### Bug Fixes
+
+* **mcp:** do not pass all headers to upstream ([#2345](https://github.com/wundergraph/cosmo/issues/2345)) ([d508fa1](https://github.com/wundergraph/cosmo/commit/d508fa17c046a5f239cb31752f2ae89a54a6d0c8)) (@StarpTech)
+
 # [0.265.0](https://github.com/wundergraph/cosmo/compare/router@0.264.1...router@0.265.0) (2025-11-19)
 
 ### Features
