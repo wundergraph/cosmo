@@ -13,3 +13,10 @@ export type HandleFieldInheritableDirectivesParams = {
   inheritedDirectiveNames: Set<DirectiveName>;
   parentData: CompositeOutputData;
 };
+
+export type HandleNonExternalConditionalFieldParams = {
+  currentFieldCoords: string;
+  directiveCoords: string;
+  directiveName: DirectiveName;
+  fieldSet: string;
+};

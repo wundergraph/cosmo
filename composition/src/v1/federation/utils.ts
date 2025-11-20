@@ -23,6 +23,7 @@ import { ContractTagOptions } from '../../federation/types';
 import { getOrThrowError, getValueOrDefault } from '../../utils/utils';
 import { KeyFieldSetData } from '../normalization/types';
 import { SubgraphName, TypeName } from '../../types/types';
+import { TYPENAME } from '../../utils/string-constants';
 
 export type FederationFactoryParams = {
   authorizationDataByParentTypeName: Map<TypeName, AuthorizationData>;
@@ -137,6 +138,9 @@ export function validateImplicitFieldSets({
             return BREAK;
           }
           const fieldName = node.name.value;
+          if (fieldName === TYPENAME) {
+            return;
+          }
           const fieldData = parentData.fieldDataByName.get(fieldName);
           // undefined if the field does not exist on the parent
           if (!fieldData || fieldData.argumentDataByName.size || definedFields[currentDepth].has(fieldName)) {

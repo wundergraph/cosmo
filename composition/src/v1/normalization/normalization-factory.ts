@@ -152,6 +152,7 @@ import {
   subgraphInvalidSyntaxError,
   subgraphValidationError,
   subgraphValidationFailureError,
+  typeNameAlreadyProvidedErrorMessage,
   undefinedCompositeOutputTypeError,
   undefinedDirectiveError,
   undefinedFieldInFieldSetErrorMessage,
@@ -332,6 +333,7 @@ import {
   SUCCESS,
   TOPIC,
   TOPICS,
+  TYPENAME,
 } from '../../utils/string-constants';
 import { MAX_INT32 } from '../../utils/integer-constants';
 import {
@@ -361,7 +363,11 @@ import {
 import { newConfigurationData, newFieldSetConditionData } from '../../router-configuration/utils';
 import { ImplementationErrors, InvalidFieldImplementation } from '../../utils/types';
 import { DirectiveName, FieldName, SubgraphName, TypeName } from '../../types/types';
-import { HandleFieldInheritableDirectivesParams, ValidateOneOfDirectiveParams } from './params';
+import {
+  HandleFieldInheritableDirectivesParams,
+  HandleNonExternalConditionalFieldParams,
+  ValidateOneOfDirectiveParams,
+} from './params';
 import { EDFS_NATS_STREAM_CONFIGURATION_DEFINITION } from '../constants/non-directive-definitions';
 
 export function normalizeSubgraphFromString(subgraphSDL: string, noLocation = true): NormalizationResult {
@@ -1639,20 +1645,68 @@ export class NormalizationFactory {
     }
     const fieldData = getOrThrowError(parentData.fieldDataByName, fieldName, `${parentTypeName}.fieldDataByFieldName`);
     const fieldNamedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
+    const fieldCoords = `${parentTypeName}.${fieldName}`;
+
+    if (BASE_SCALARS.has(fieldNamedTypeName)) {
+      return {
+        errorString: incompatibleTypeWithProvidesErrorMessage({
+          fieldCoords,
+          responseType: fieldNamedTypeName,
+          subgraphName: this.subgraphName,
+        }),
+      };
+    }
 
     const namedTypeData = this.parentDefinitionDataByTypeName.get(fieldNamedTypeName);
     // This error should never happen
     if (!namedTypeData) {
       return {
-        errorString: unknownNamedTypeErrorMessage(`${parentTypeName}.${fieldName}`, fieldNamedTypeName),
+        errorString: unknownNamedTypeErrorMessage(fieldCoords, fieldNamedTypeName),
       };
     }
+    // @TODO handle abstract types and fragments
     if (namedTypeData.kind !== Kind.INTERFACE_TYPE_DEFINITION && namedTypeData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
       return {
-        errorString: incompatibleTypeWithProvidesErrorMessage(`${parentTypeName}.${fieldName}`, fieldNamedTypeName),
+        errorString: incompatibleTypeWithProvidesErrorMessage({
+          fieldCoords,
+          responseType: fieldNamedTypeName,
+          subgraphName: this.subgraphName,
+        }),
       };
     }
     return { fieldSetParentData: namedTypeData };
+  }
+
+  #handleNonExternalConditionalField({
+    currentFieldCoords,
+    directiveCoords,
+    directiveName,
+    fieldSet,
+  }: HandleNonExternalConditionalFieldParams): void {
+    if (this.isSubgraphVersionTwo) {
+      this.errors.push(
+        nonExternalConditionalFieldError({
+          directiveCoords,
+          directiveName,
+          fieldSet,
+          subgraphName: this.subgraphName,
+          targetCoords: currentFieldCoords,
+        }),
+      );
+      return;
+    }
+    /* In V1, @requires and @provides do not need to declare any part of the field set @external.
+     * It would appear that any such non-external fields are treated as if they are non-conditionally provided.
+     * */
+    this.warnings.push(
+      nonExternalConditionalFieldWarning(
+        directiveCoords,
+        this.subgraphName,
+        currentFieldCoords,
+        fieldSet,
+        directiveName,
+      ),
+    );
   }
 
   validateConditionalFieldSet(
@@ -1712,6 +1766,21 @@ export class NormalizationFactory {
           fieldCoordsPath.push(currentFieldCoords);
           fieldPath.push(fieldName);
           lastFieldName = fieldName;
+          if (fieldName === TYPENAME) {
+            if (isProvides) {
+              errorMessages.push(typeNameAlreadyProvidedErrorMessage(currentFieldCoords, nf.subgraphName));
+              return BREAK;
+            }
+            if (externalAncestors.size < 1) {
+              nf.#handleNonExternalConditionalField({
+                currentFieldCoords,
+                directiveCoords,
+                directiveName,
+                fieldSet,
+              });
+            }
+            return;
+          }
           const fieldData = parentData.fieldDataByName.get(fieldName);
           // undefined if the field does not exist on the parent
           if (!fieldData) {
@@ -1742,30 +1811,12 @@ export class NormalizationFactory {
             namedTypeData?.kind === Kind.ENUM_TYPE_DEFINITION
           ) {
             if (externalAncestors.size < 1 && !isDefinedExternal) {
-              if (nf.isSubgraphVersionTwo) {
-                nf.errors.push(
-                  nonExternalConditionalFieldError(
-                    directiveCoords,
-                    nf.subgraphName,
-                    currentFieldCoords,
-                    fieldSet,
-                    directiveName,
-                  ),
-                );
-                return;
-              }
-              /* In V1, @requires and @provides do not need to declare any part of the field set @external.
-               * It would appear that any such non-external fields are treated as if they are non-conditionally provided.
-               * */
-              nf.warnings.push(
-                nonExternalConditionalFieldWarning(
-                  directiveCoords,
-                  nf.subgraphName,
-                  currentFieldCoords,
-                  fieldSet,
-                  directiveName,
-                ),
-              );
+              nf.#handleNonExternalConditionalField({
+                currentFieldCoords,
+                directiveCoords,
+                directiveName,
+                fieldSet,
+              });
               return;
             }
             if (externalAncestors.size < 1 && isUnconditionallyProvided) {
@@ -1926,6 +1977,17 @@ export class NormalizationFactory {
               errorMessages.push(unparsableFieldSetSelectionErrorMessage(fieldSet, lastFieldName));
               return BREAK;
             }
+            if (lastFieldName === TYPENAME) {
+              errorMessages.push(
+                invalidSelectionSetDefinitionErrorMessage(
+                  fieldSet,
+                  fieldCoordsPath,
+                  STRING_SCALAR,
+                  kindToNodeType(Kind.SCALAR_TYPE_DEFINITION),
+                ),
+              );
+              return BREAK;
+            }
             const fieldData = parentData.fieldDataByName.get(lastFieldName);
             if (!fieldData) {
               errorMessages.push(undefinedFieldInFieldSetErrorMessage(fieldSet, parentData.name, lastFieldName));
@@ -1987,8 +2049,8 @@ export class NormalizationFactory {
     fieldSetByFieldName: Map<string, string>,
     isProvides: boolean,
   ): RequiredFieldConfiguration[] | undefined {
-    const allErrorMessages: string[] = [];
-    const configurations: RequiredFieldConfiguration[] = [];
+    const allErrorMessages: Array<string> = [];
+    const configurations: Array<RequiredFieldConfiguration> = [];
     const parentTypeName = getParentTypeName(parentData);
     for (const [fieldName, fieldSet] of fieldSetByFieldName) {
       /* It is possible to encounter a field before encountering the type definition.

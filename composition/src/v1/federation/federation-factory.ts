@@ -205,7 +205,7 @@ import {
   ONE_OF,
   OR_UPPER,
   PARENT_DEFINITION_DATA,
-  PERIOD,
+  LITERAL_PERIOD,
   QUERY,
   REQUIRES_SCOPES,
   SEMANTIC_NON_NULL,
@@ -598,7 +598,7 @@ export class FederationFactory {
 
   generateTagData() {
     for (const [path, tagNames] of this.tagNamesByCoords) {
-      const paths = path.split(PERIOD);
+      const paths = path.split(LITERAL_PERIOD);
       if (paths.length < 1) {
         continue;
       }
@@ -1482,7 +1482,7 @@ export class FederationFactory {
 
   handleDisparateFieldNamedTypes() {
     for (const [fieldCoordinates, subgraphNamesByNamedTypeName] of this.subgraphNamesByNamedTypeNameByFieldCoords) {
-      const coordinates = fieldCoordinates.split(PERIOD);
+      const coordinates = fieldCoordinates.split(LITERAL_PERIOD);
       if (coordinates.length !== 2) {
         continue;
       }
@@ -2241,7 +2241,7 @@ export class FederationFactory {
       }
       for (const coords of fieldCoords) {
         // The coords should all be exactly <parentTypeName>.<fieldName>
-        const segments = coords.split(PERIOD);
+        const segments = coords.split(LITERAL_PERIOD);
         switch (segments.length) {
           case 2: {
             const parentAuthData = getValueOrDefault(this.authorizationDataByParentTypeName, segments[0], () =>
@@ -2348,7 +2348,7 @@ export class FederationFactory {
       return false;
     }
     const coordinates = path.split(LEFT_PARENTHESIS)[0];
-    const segments = coordinates.split(PERIOD);
+    const segments = coordinates.split(LITERAL_PERIOD);
     let segment = segments[0];
     for (let i = 0; i < segments.length; i++) {
       if (this.inaccessibleCoords.has(segment)) {
@@ -2399,7 +2399,7 @@ export class FederationFactory {
     directiveSubgraphName: string,
     fieldErrorMessages: Array<string>,
   ): string[] {
-    const paths = conditionFieldPath.split(PERIOD);
+    const paths = conditionFieldPath.split(LITERAL_PERIOD);
     if (paths.length < 1) {
       fieldErrorMessages.push(
         invalidSubscriptionFieldConditionFieldPathErrorMessage(inputFieldPath, conditionFieldPath),
