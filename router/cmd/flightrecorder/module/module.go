@@ -15,7 +15,6 @@ import (
 const flightRecorderID = "flightRecorder"
 
 func init() {
-	// Register your module here
 	core.RegisterModule(&FlightRecorder{})
 }
 
@@ -26,7 +25,6 @@ type FlightRecorder struct {
 
 	requestLatencyRecordThresholdDuration time.Duration
 
-	// Add a new property here
 	fl *trace.FlightRecorder
 
 	Logger *zap.Logger
