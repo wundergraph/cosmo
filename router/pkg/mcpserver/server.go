@@ -77,9 +77,6 @@ type Options struct {
 	OperationsDir string
 	// ListenAddr is the address where the server should listen to
 	ListenAddr string
-	// BaseURL of the MCP server. This is the URL advertised to the LLM clients.
-	// By default, the base URL is relative to the URL that the router is running on.
-	BaseURL string
 	// Enabled determines whether the MCP server should be started
 	Enabled bool
 	// Logger is the logger to be used
@@ -99,7 +96,6 @@ type Options struct {
 // GraphQLSchemaServer represents an MCP server that works with GraphQL schemas and operations
 type GraphQLSchemaServer struct {
 	server                    *server.MCPServer
-	baseURL                   string
 	graphName                 string
 	operationsDir             string
 	listenAddr                string
@@ -241,7 +237,6 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)
 		enableArbitraryOperations: options.EnableArbitraryOperations,
 		exposeSchema:              options.ExposeSchema,
 		stateless:                 options.Stateless,
-		baseURL:                   options.BaseURL,
 	}
 
 	return gs, nil
@@ -263,13 +258,6 @@ func WithGraphName(graphName string) func(*Options) {
 func WithOperationsDir(operationsDir string) func(*Options) {
 	return func(o *Options) {
 		o.OperationsDir = operationsDir
-	}
-}
-
-// WithBaseURL sets the base URL
-func WithBaseURL(baseURL string) func(*Options) {
-	return func(o *Options) {
-		o.BaseURL = baseURL
 	}
 }
 
