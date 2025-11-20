@@ -26,15 +26,6 @@ export const useOperationsFilters = () => {
     [applyNewParams],
   );
 
-  const applySearchQuery = useCallback(
-    (searchQuery: string) => {
-      applyNewParams({
-        searchQuery: searchQuery || null,
-      });
-    },
-    [applyNewParams],
-  );
-
   // Helper functions to convert between enum and string for URL params
   const enumToString = (enumValue: OperationsFetchBasedOn): string => {
     switch (enumValue) {
@@ -86,7 +77,6 @@ export const useOperationsFilters = () => {
 
   return {
     applyDeprecatedFieldsFilter,
-    applySearchQuery,
     applySorting,
     includeDeprecatedFields,
     clientNames,

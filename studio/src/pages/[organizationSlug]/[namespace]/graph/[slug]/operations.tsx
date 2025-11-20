@@ -578,7 +578,6 @@ const OperationsPage: NextPageWithLayout = () => {
     sortDirection,
     includeDeprecatedFields,
     clientNames,
-    applySearchQuery,
   } = useOperationsFilters();
 
   // Use URL as single source of truth, debounce for input responsiveness
@@ -600,19 +599,9 @@ const OperationsPage: NextPageWithLayout = () => {
   // Reset to page 1 when search changes
   useEffect(() => {
     if (debouncedSearchQuery !== urlSearchQuery) {
-      applySearchQuery(debouncedSearchQuery);
-      // Reset to page 1 when search changes
-      if (pageNumber !== 1) {
-        applyParams({ page: "1" });
-      }
+      applyParams({ searchQuery: debouncedSearchQuery || null, page: "1" });
     }
-  }, [
-    debouncedSearchQuery,
-    urlSearchQuery,
-    applySearchQuery,
-    pageNumber,
-    applyParams,
-  ]);
+  }, [debouncedSearchQuery, urlSearchQuery, applyParams]);
 
   const pageSize = useMemo(() => {
     const size = parseInt(router.query.pageSize as string, 10);
