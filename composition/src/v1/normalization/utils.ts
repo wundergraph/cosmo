@@ -73,9 +73,9 @@ import {
   INTERFACE_OBJECT,
   KEY,
   LINK,
+  LITERAL_PERIOD,
   ONE_OF,
   OVERRIDE,
-  PERIOD,
   PROVIDES,
   QUERY,
   REQUIRE_FETCH_REASONS,
@@ -84,8 +84,10 @@ import {
   SEMANTIC_NON_NULL,
   SHAREABLE,
   SPECIFIED_BY,
+  STRING_SCALAR,
   SUBSCRIPTION_FILTER,
   TAG,
+  TYPENAME,
 } from '../../utils/string-constants';
 import { getValueOrDefault, kindToNodeType, numberToOrdinal } from '../../utils/utils';
 import { FieldSetData, KeyFieldSetData } from './types';
@@ -140,7 +142,7 @@ export function validateKeyFieldSets(
 ): RequiredFieldConfiguration[] | undefined {
   const entityInterfaceData = nf.entityInterfaceDataByTypeName.get(entityParentData.name);
   const entityTypeName = entityParentData.name;
-  const configurations: RequiredFieldConfiguration[] = [];
+  const configurations: Array<RequiredFieldConfiguration> = [];
   const allKeyFieldSetPaths: Array<Set<string>> = [];
   // If the key is on an entity interface/interface object, an entity data node should not be propagated
   const entityDataNode = entityInterfaceData ? undefined : nf.internalGraph.addEntityDataNode(entityParentData.name);
@@ -203,6 +205,9 @@ export function validateKeyFieldSets(
           const fieldName = node.name.value;
           const fieldCoords = `${parentTypeName}.${fieldName}`;
           lastFieldName = fieldName;
+          if (fieldName === TYPENAME) {
+            return;
+          }
           const fieldData = parentData.fieldDataByName.get(fieldName);
           // undefined if the field does not exist on the parent
           if (!fieldData) {
@@ -236,7 +241,7 @@ export function validateKeyFieldSets(
           const namedTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
           // The base scalars are not in the parents map
           if (BASE_SCALARS.has(namedTypeName)) {
-            keyFieldSetPaths.add(currentPath.join(PERIOD));
+            keyFieldSetPaths.add(currentPath.join(LITERAL_PERIOD));
             currentPath.pop();
             return;
           }
@@ -264,7 +269,7 @@ export function validateKeyFieldSets(
             );
             return BREAK;
           }
-          keyFieldSetPaths.add(currentPath.join(PERIOD));
+          keyFieldSetPaths.add(currentPath.join(LITERAL_PERIOD));
           currentPath.pop();
         },
       },
@@ -280,6 +285,17 @@ export function validateKeyFieldSets(
             const parentData = parentDatas[currentDepth];
             const parentTypeName = parentData.name;
             const fieldCoordinates = `${parentTypeName}.${lastFieldName}`;
+            if (lastFieldName === TYPENAME) {
+              errorMessages.push(
+                invalidSelectionSetDefinitionErrorMessage(
+                  rawFieldSet,
+                  [fieldCoordinates],
+                  STRING_SCALAR,
+                  kindToNodeType(Kind.SCALAR_TYPE_DEFINITION),
+                ),
+              );
+              return BREAK;
+            }
             // If the last field is not an object-like
             const fieldData = parentData.fieldDataByName.get(lastFieldName);
             if (!fieldData) {
