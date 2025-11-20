@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.170.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.169.7...controlplane@0.170.0) (2025-11-20)
+
+### Features
+
+* **controlplane:** set bullmq worker redis retries to 'null' ([#2347](https://github.com/wundergraph/cosmo/issues/2347)) ([4a11711](https://github.com/wundergraph/cosmo/commit/4a11711464b10e9e0a2500e5f2c626bfb57adf70)) (@pepol)
+
 ## [0.169.7](https://github.com/wundergraph/cosmo/compare/controlplane@0.169.6...controlplane@0.169.7) (2025-11-20)
 
 **Note:** Version bump only for package controlplane
