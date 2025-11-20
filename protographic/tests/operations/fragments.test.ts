@@ -1,7 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { buildSchema, parse, TypeInfo, GraphQLObjectType, Kind } from 'graphql';
-import { buildMessageFromSelectionSet } from '../../src/operations/message-builder.js';
-import { compileOperationsToProto } from '../../src/operation-to-proto.js';
+import { compileOperationsToProto } from '../../src';
 import { expectValidProto } from '../util.js';
 
 describe('Fragment Support', () => {

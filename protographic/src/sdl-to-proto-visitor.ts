@@ -46,7 +46,7 @@ import { camelCase } from 'lodash-es';
 import { ProtoLock, ProtoLockManager } from './proto-lock.js';
 import { CONNECT_FIELD_RESOLVER, CONTEXT, FIELD_ARGS, RESULT } from './string-constants.js';
 import { unwrapNonNullType, isNestedListType, calculateNestingLevel } from './operations/list-type-utils.js';
-import { buildProtoOptions } from './proto-options.js';
+import { buildProtoOptions, type ProtoOptions } from './proto-options.js';
 
 /**
  * Maps GraphQL scalar types to Protocol Buffer types
@@ -88,7 +88,7 @@ interface CollectionResult {
 /**
  * Options for GraphQLToProtoTextVisitor
  */
-export interface GraphQLToProtoTextVisitorOptions {
+export interface GraphQLToProtoTextVisitorOptions extends ProtoOptions {
   serviceName?: string;
   packageName?: string;
   lockData?: ProtoLock;
@@ -221,6 +221,29 @@ export class GraphQLToProtoTextVisitor {
       this.initializeFieldNumbersMap(lockData);
     }
 
+    // Process language-specific proto options using buildProtoOptions
+    const protoOptionsFromLanguageProps = buildProtoOptions(
+      {
+        goPackage: options.goPackage,
+        javaPackage: options.javaPackage,
+        javaOuterClassname: options.javaOuterClassname,
+        javaMultipleFiles: options.javaMultipleFiles,
+        csharpNamespace: options.csharpNamespace,
+        rubyPackage: options.rubyPackage,
+        phpNamespace: options.phpNamespace,
+        phpMetadataNamespace: options.phpMetadataNamespace,
+        objcClassPrefix: options.objcClassPrefix,
+        swiftPrefix: options.swiftPrefix,
+      },
+      packageName,
+    );
+
+    // Add language-specific options
+    if (protoOptionsFromLanguageProps.length > 0) {
+      this.options.push(...protoOptionsFromLanguageProps);
+    }
+
+    // Process custom protoOptions array (for backward compatibility)
     if (options.protoOptions && options.protoOptions.length > 0) {
       const processedOptions = options.protoOptions.map((opt) => `option ${opt.name} = ${opt.constant};`);
       this.options.push(...processedOptions);

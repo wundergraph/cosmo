@@ -1,12 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import * as protobuf from 'protobufjs';
-import {
-  rootToProtoText,
-  serviceToProtoText,
-  messageToProtoText,
-  enumToProtoText,
-  formatField,
-} from '../../src/operations/proto-text-generator';
+import { rootToProtoText, serviceToProtoText, messageToProtoText, enumToProtoText, formatField } from '../../src';
 import { expectValidProto } from '../util';
 
 /**
@@ -42,8 +36,6 @@ describe('Proto Text Generator', () => {
       expect(protoText).toMatchInlineSnapshot(`
         "syntax = "proto3";
         package service.v1;
-
-        import "google/protobuf/wrappers.proto";
 
         service TestService {
           rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
@@ -96,14 +88,29 @@ describe('Proto Text Generator', () => {
       expect(protoText).toContain('import "google/protobuf/timestamp.proto"');
     });
 
-    test('should always include wrappers import', () => {
-      const root = new protobuf.Root();
+    test('should only include wrappers import when wrapper types are used', () => {
+      // Test without wrapper types - should not include import
+      const rootWithoutWrappers = new protobuf.Root();
       const service = new protobuf.Service('MyService');
-      root.add(service);
+      rootWithoutWrappers.add(service);
 
-      const protoText = rootToProtoText(root);
+      const message = new protobuf.Type('TestMessage');
+      message.add(new protobuf.Field('id', 1, 'string'));
+      rootWithoutWrappers.add(message);
 
-      expect(protoText).toContain('import "google/protobuf/wrappers.proto"');
+      const protoTextWithout = rootToProtoText(rootWithoutWrappers);
+      expect(protoTextWithout).not.toContain('import "google/protobuf/wrappers.proto"');
+
+      // Test with wrapper types - should include import
+      const rootWithWrappers = new protobuf.Root();
+      rootWithWrappers.add(service);
+
+      const messageWithWrapper = new protobuf.Type('TestMessage');
+      messageWithWrapper.add(new protobuf.Field('name', 1, 'google.protobuf.StringValue'));
+      rootWithWrappers.add(messageWithWrapper);
+
+      const protoTextWith = rootToProtoText(rootWithWrappers);
+      expect(protoTextWith).toContain('import "google/protobuf/wrappers.proto"');
     });
   });
 
@@ -499,8 +506,6 @@ describe('Proto Text Generator', () => {
       expect(protoText).toMatchInlineSnapshot(`
         "syntax = "proto3";
         package books.v1;
-
-        import "google/protobuf/wrappers.proto";
 
         option go_package = "github.com/example/books/v1";
 

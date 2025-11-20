@@ -15,8 +15,8 @@ import {
   buildMessageFromSelectionSet,
   buildFieldDefinition,
   buildNestedMessage,
-} from '../../src/operations/message-builder';
-import { createFieldNumberManager } from '../../src/operations/field-numbering';
+  createFieldNumberManager,
+} from '../../src';
 
 describe('Message Builder', () => {
   describe('buildFieldDefinition', () => {

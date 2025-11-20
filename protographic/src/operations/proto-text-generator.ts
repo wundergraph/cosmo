@@ -1,12 +1,6 @@
 import protobuf from 'protobufjs';
 import { buildProtoOptions } from '../proto-options.js';
-
-/**
- * Extended Method interface that includes custom properties
- */
-interface MethodWithIdempotency extends protobuf.Method {
-  idempotencyLevel?: 'NO_SIDE_EFFECTS' | 'DEFAULT';
-}
+import { MethodWithIdempotency } from '../types.js';
 
 /**
  * Helper to format indentation
@@ -57,10 +51,7 @@ export interface ProtoTextOptions {
  * @returns The proto text as a string
  */
 export function rootToProtoText(root: protobuf.Root, options?: ProtoTextOptions): string {
-  const lines: string[] = [];
-
-  // Generate header
-  lines.push(...generateHeader(options));
+  const lines: string[] = generateHeader(root, options);
 
   // Generate service definitions
   for (const nested of Object.values(root.nestedArray)) {
@@ -89,7 +80,7 @@ export function rootToProtoText(root: protobuf.Root, options?: ProtoTextOptions)
 /**
  * Generates the proto file header (syntax, package, imports, options)
  */
-function generateHeader(options?: ProtoTextOptions): string[] {
+function generateHeader(root: protobuf.Root, options?: ProtoTextOptions): string[] {
   const lines: string[] = [];
 
   // Syntax declaration
@@ -103,8 +94,10 @@ function generateHeader(options?: ProtoTextOptions): string[] {
   // Imports
   const imports = new Set<string>();
 
-  // Add default imports if using wrapper types
-  imports.add('google/protobuf/wrappers.proto');
+  // Only add wrapper types import if actually used
+  if (detectWrapperTypeUsage(root)) {
+    imports.add('google/protobuf/wrappers.proto');
+  }
 
   // Add custom imports
   if (options?.imports) {
@@ -387,6 +380,43 @@ function formatReservedNumbers(numbers: number[]): string {
       }
     })
     .join(', ');
+}
+
+/**
+ * Detects if any message in the root uses Google Protocol Buffer wrapper types
+ */
+function detectWrapperTypeUsage(root: protobuf.Root): boolean {
+  for (const nested of root.nestedArray) {
+    if (nested instanceof protobuf.Type) {
+      if (messageUsesWrapperTypes(nested)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * Recursively checks if a message or its nested messages use wrapper types
+ */
+function messageUsesWrapperTypes(message: protobuf.Type): boolean {
+  // Check fields in this message
+  for (const field of message.fieldsArray) {
+    if (field.type.startsWith('google.protobuf.')) {
+      return true;
+    }
+  }
+
+  // Check nested messages recursively
+  for (const nested of message.nestedArray) {
+    if (nested instanceof protobuf.Type) {
+      if (messageUsesWrapperTypes(nested)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 /**

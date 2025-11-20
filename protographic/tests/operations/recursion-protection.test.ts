@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { compileOperationsToProto } from '../../src/operation-to-proto';
+import { compileOperationsToProto } from '../../src';
 import { expectValidProto } from '../util';
 
 describe('Recursion Protection', () => {

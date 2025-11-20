@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { compileOperationsToProto } from '../../src/operation-to-proto.js';
+import { compileOperationsToProto } from '../../src';
 
 describe('Operation Validation', () => {
   const schema = `

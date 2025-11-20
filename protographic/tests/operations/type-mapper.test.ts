@@ -10,7 +10,6 @@ import {
   GraphQLObjectType,
   GraphQLEnumType,
   GraphQLScalarType,
-  GraphQLSchema,
 } from 'graphql';
 import {
   mapGraphQLTypeToProto,
@@ -18,7 +17,7 @@ import {
   isGraphQLScalarType,
   requiresWrapperType,
   getRequiredImports,
-} from '../../src/operations/type-mapper';
+} from '../../src';
 
 describe('Type Mapper', () => {
   describe('mapGraphQLTypeToProto', () => {
@@ -411,7 +410,7 @@ describe('Type Mapper', () => {
     test('should return unique imports', () => {
       const imports = getRequiredImports([GraphQLString, GraphQLInt, GraphQLBoolean]);
 
-      const uniqueImports = [...new Set(imports)];
+      const uniqueImports = Array.from(new Set(imports));
       expect(imports.length).toBe(uniqueImports.length);
     });
   });

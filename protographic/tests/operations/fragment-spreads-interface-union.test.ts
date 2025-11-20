@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { compileOperationsToProto } from '../../src/operation-to-proto.js';
+import { compileOperationsToProto } from '../../src';
 import { expectValidProto } from '../util.js';
 
 describe('Fragment Spreads on Interfaces and Unions', () => {

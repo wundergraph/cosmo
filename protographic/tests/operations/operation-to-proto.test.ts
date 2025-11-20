@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
-import protobuf from 'protobufjs';
-import { compileOperationsToProto } from '../../src/operation-to-proto';
+import { compileOperationsToProto } from '../../src';
 import { expectValidProto } from '../util';
+import * as protobuf from 'protobufjs';
 
 describe('Operation to Proto - Integration Tests', () => {
   describe('query operations', () => {

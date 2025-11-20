@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { compileOperationsToProto } from '../../src/operation-to-proto';
+import { compileOperationsToProto } from '../../src';
 import { expectValidProto, getFieldNumbersFromMessage, loadProtoFromText } from '../util';
 
 describe('Operations Field Ordering Stability', () => {
@@ -1621,8 +1621,6 @@ describe('Operations Field Ordering Stability', () => {
         "syntax = "proto3";
         package service.v1;
 
-        import "google/protobuf/wrappers.proto";
-
         service DefaultService {
           rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
         }
@@ -1651,8 +1649,6 @@ describe('Operations Field Ordering Stability', () => {
         "syntax = "proto3";
         package service.v1;
 
-        import "google/protobuf/wrappers.proto";
-
         service DefaultService {
           rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
         }
@@ -1680,8 +1676,6 @@ describe('Operations Field Ordering Stability', () => {
       expect(result3.proto).toMatchInlineSnapshot(`
         "syntax = "proto3";
         package service.v1;
-
-        import "google/protobuf/wrappers.proto";
 
         service DefaultService {
           rpc GetUser(GetUserRequest) returns (GetUserResponse) {}

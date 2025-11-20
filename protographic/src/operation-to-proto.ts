@@ -25,13 +25,6 @@ import {
   specifiedRules,
   KnownDirectivesRule,
 } from 'graphql';
-
-/**
- * Extended Method interface that includes custom properties
- */
-interface MethodWithIdempotency extends protobuf.Method {
-  idempotencyLevel?: 'NO_SIDE_EFFECTS' | 'DEFAULT';
-}
 import { createFieldNumberManager } from './operations/field-numbering.js';
 import { buildMessageFromSelectionSet } from './operations/message-builder.js';
 import { buildRequestMessage, buildInputObjectMessage, buildEnumType } from './operations/request-builder.js';
@@ -44,6 +37,7 @@ import {
 } from './naming-conventions.js';
 import { upperFirst, camelCase } from 'lodash-es';
 import { ProtoLock, ProtoLockManager } from './proto-lock.js';
+import { IdempotencyLevel, MethodWithIdempotency } from './types.js';
 
 /**
  * Options for converting operations to proto
@@ -62,7 +56,7 @@ export interface OperationsToProtoOptions {
   objcClassPrefix?: string;
   swiftPrefix?: string;
   includeComments?: boolean;
-  queryIdempotency?: 'NO_SIDE_EFFECTS' | 'DEFAULT';
+  queryIdempotency?: IdempotencyLevel;
   /** Lock data from previous compilation for field number stability */
   lockData?: ProtoLock;
   /** Custom scalar type mappings (scalar name -> proto type) */
@@ -165,7 +159,7 @@ class OperationsToProtoVisitor {
   private readonly objcClassPrefix?: string;
   private readonly swiftPrefix?: string;
   private readonly includeComments: boolean;
-  private readonly queryIdempotency?: 'NO_SIDE_EFFECTS' | 'DEFAULT';
+  private readonly queryIdempotency?: IdempotencyLevel;
   private readonly customScalarMappings?: Record<string, string>;
   private readonly maxDepth?: number;
   private readonly prefixOperationType: boolean;

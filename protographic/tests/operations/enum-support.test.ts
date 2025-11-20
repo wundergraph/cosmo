@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import { compileOperationsToProto } from '../../src/operation-to-proto';
-import { expectValidProto, loadProtoFromText } from '../util';
+import { compileOperationsToProto } from '../../src';
+import { expectValidProto } from '../util';
 
 describe('Enum Support', () => {
   describe('Enums in Query Variables', () => {
@@ -288,8 +288,6 @@ describe('Enum Support', () => {
         "syntax = "proto3";
         package service.v1;
 
-        import "google/protobuf/wrappers.proto";
-
         service DefaultService {
           rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
         }
@@ -347,8 +345,6 @@ describe('Enum Support', () => {
       expect(proto).toMatchInlineSnapshot(`
         "syntax = "proto3";
         package service.v1;
-
-        import "google/protobuf/wrappers.proto";
 
         service DefaultService {
           rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
@@ -414,8 +410,6 @@ describe('Enum Support', () => {
       expect(proto).toMatchInlineSnapshot(`
         "syntax = "proto3";
         package service.v1;
-
-        import "google/protobuf/wrappers.proto";
 
         service DefaultService {
           rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
@@ -835,8 +829,6 @@ describe('Enum Support', () => {
         "syntax = "proto3";
         package service.v1;
 
-        import "google/protobuf/wrappers.proto";
-
         service DefaultService {
           rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
         }
@@ -896,8 +888,6 @@ describe('Enum Support', () => {
       expect(proto).toMatchInlineSnapshot(`
         "syntax = "proto3";
         package service.v1;
-
-        import "google/protobuf/wrappers.proto";
 
         service DefaultService {
           rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
@@ -1120,8 +1110,6 @@ describe('Enum Support', () => {
         "syntax = "proto3";
         package service.v1;
 
-        import "google/protobuf/wrappers.proto";
-
         service DefaultService {
           rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
         }
@@ -1193,8 +1181,6 @@ describe('Enum Support', () => {
       expect(proto).toMatchInlineSnapshot(`
         "syntax = "proto3";
         package service.v1;
-
-        import "google/protobuf/wrappers.proto";
 
         service DefaultService {
           rpc OnUserStatusChanged(OnUserStatusChangedRequest) returns (stream OnUserStatusChangedResponse) {}
