@@ -84,21 +84,43 @@ type PublishEventConfiguration interface {
 }
 
 type SubscriptionOnStartHandlerContext interface {
-    // Request is the original request received by the router.
-    Request() *http.Request
-    // Logger is the logger for the request
-    Logger() *zap.Logger
-    // Operation is the GraphQL operation
-    Operation() OperationContext
-    // Authentication is the authentication for the request
-    Authentication() authentication.Authentication
-    // SubscriptionEventConfiguration is the subscription event configuration (will return nil for engine subscription)
-    SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration
-    // WriteEvent writes an event to the stream of the current subscription
-    // It returns true if the event was written to the stream, false if the event was dropped
-    WriteEvent(event datasource.StreamEvent) bool
-    // NewEvent creates a new event that can be used in the subscription.
-    NewEvent(data []byte) datasource.MutableStreamEvent
+	// Request is the original request received by the router.
+	Request() *http.Request
+	// Logger is the logger for the request
+	Logger() *zap.Logger
+	// Operation is the GraphQL operation
+	Operation() OperationContext
+	// Authentication is the authentication for the request
+	Authentication() authentication.Authentication
+	// SubscriptionEventConfiguration is the subscription event configuration (will return nil for engine subscription)
+	SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration
+	// EmitLocalEvent sends an event directly to the subscription stream of the
+	// currently connected client.
+	//
+	// This method triggers the router to resolve the client's operation and emit
+	// the resulting data as a stream event. The event exists only within the
+	// router; it is not forwarded to any message broker.
+	//
+	// The event is delivered exclusively to the client associated with the current
+	// handler execution. No other subscriptions are affected.
+	//
+	// The method returns true if the event was successfully emitted, or false if
+	// it was dropped.
+	EmitLocalEvent(event datasource.StreamEvent) bool
+	// NewEvent creates a new event that can be used in the subscription.
+	//
+	// The data parameter must contain valid JSON bytes. The format depends on the subscription type.
+	//
+	// For event-driven subscriptions (Cosmo Streams / EDFS), the data should contain:
+	// __typename : The name of the schema entity, which is expected to be returned to the client.
+	// {keyName} : The key of the entity as configured on the schema via @key directive.
+	// Example usage: ctx.NewEvent([]byte(`{"__typename": "Employee", "id": 1}`))
+	//
+	// For normal subscriptions, you need to provide the complete GraphQL response structure.
+	// Example usage: ctx.NewEvent([]byte(`{"data": {"fieldName": value}}`))
+	//
+	// You can use EmitLocalEvent to emit this event to subscriptions.
+	NewEvent(data []byte) datasource.MutableStreamEvent
 }
 
 type SubscriptionOnStartHandler interface {
@@ -108,18 +130,28 @@ type SubscriptionOnStartHandler interface {
 }
 
 type StreamReceiveEventHandlerContext interface {
-    // Request is the initial client request that started the subscription
-    Request() *http.Request
-    // Logger is the logger for the request
-    Logger() *zap.Logger
-    // Operation is the GraphQL operation
-    Operation() OperationContext
-    // Authentication is the authentication for the request
-    Authentication() authentication.Authentication
-    // SubscriptionEventConfiguration is the subscription event configuration
-    SubscriptionEventConfiguration() SubscriptionEventConfiguration
-    // NewEvent creates a new event that can be used in the subscription.
-    NewEvent(data []byte) datasource.MutableStreamEvent
+	// Context is a context for handlers.
+	// If it is cancelled, the handler should stop processing.
+	Context() context.Context
+	// Request is the initial client request that started the subscription
+	Request() *http.Request
+	// Logger is the logger for the request
+	Logger() *zap.Logger
+	// Operation is the GraphQL operation
+	Operation() OperationContext
+	// Authentication is the authentication for the request
+	Authentication() authentication.Authentication
+	// SubscriptionEventConfiguration the subscription event configuration
+	SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration
+	// NewEvent creates a new event that can be used in the subscription.
+	//
+	// The data parameter must contain valid JSON bytes representing the raw event payload
+	// from your message broker (Kafka, NATS, etc.). The JSON must have properly quoted
+	// property names and must include the __typename field required by GraphQL.
+	// For example: []byte(`{"__typename": "Employee", "id": 1, "update": {"name": "John"}}`).
+	//
+	// This method is typically used in OnReceiveEvents hooks to create new or modified events.
+	NewEvent(data []byte) datasource.MutableStreamEvent
 }
 
 type StreamReceiveEventHandler interface {
@@ -135,18 +167,26 @@ type StreamReceiveEventHandler interface {
 }
 
 type StreamPublishEventHandlerContext interface {
-    // Request is the original request received by the router.
-    Request() *http.Request
-    // Logger is the logger for the request
-    Logger() *zap.Logger
-    // Operation is the GraphQL operation
-    Operation() OperationContext
-    // Authentication is the authentication for the request
-    Authentication() authentication.Authentication
-    // PublishEventConfiguration is the publish event configuration
-    PublishEventConfiguration() PublishEventConfiguration
-    // NewEvent creates a new event that can be used in the subscription.
-    NewEvent(data []byte) datasource.MutableStreamEvent
+	// Request is the original request received by the router.
+	Request() *http.Request
+	// Logger is the logger for the request
+	Logger() *zap.Logger
+	// Operation is the GraphQL operation
+	Operation() OperationContext
+	// Authentication is the authentication for the request
+	Authentication() authentication.Authentication
+	// PublishEventConfiguration the publish event configuration
+	PublishEventConfiguration() datasource.PublishEventConfiguration
+	// NewEvent creates a new event that can be used in the subscription.
+	//
+	// The data parameter must contain valid JSON bytes representing the event payload
+	// that will be sent to your message broker (Kafka, NATS, etc.). The JSON must have
+	// properly quoted property names and must include the __typename field required by GraphQL.
+	// For example: []byte(`{"__typename": "Employee", "id": 1, "update": {"name": "John"}}`).
+	//
+	// This method is typically used in OnPublishEvents hooks to create new or modified events
+	// before they are sent to the message broker.
+	NewEvent(data []byte) datasource.MutableStreamEvent
 }
 
 type StreamPublishEventHandler interface {
