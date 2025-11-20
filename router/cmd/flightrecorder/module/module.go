@@ -69,7 +69,9 @@ func (m *FlightRecorder) Provision(ctx *core.ModuleContext) error {
 		MaxBytes: maxBytes,
 	})
 
-	m.fl.Start()
+	if err := m.fl.Start(); err != nil {
+		return fmt.Errorf("failed to start flight recorder: %w", err)
+	}
 
 	return nil
 }
