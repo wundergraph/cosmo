@@ -1,5 +1,5 @@
 import { FieldData, InputValueData, ParentDefinitionData } from '../schema-building/types';
-import { FieldName, SubgraphName, TypeName } from '../types/types';
+import { DirectiveName, FieldName, SubgraphName, TypeName } from '../types/types';
 
 export type InvalidRootTypeFieldEventsDirectiveData = {
   definesDirectives: boolean;
@@ -50,7 +50,7 @@ export type IncompatibleTypeWithProvidesErrorMessageParams = {
 export type NonExternalConditionalFieldErrorParams = {
   directiveCoords: string;
   fieldSet: string;
-  directiveName: string;
+  directiveName: DirectiveName;
   subgraphName: SubgraphName;
   targetCoords: string;
 };
