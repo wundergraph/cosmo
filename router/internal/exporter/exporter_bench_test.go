@@ -1,4 +1,4 @@
-package graphqlmetrics
+package exporter
 
 import (
 	"context"
@@ -48,10 +48,9 @@ func BenchmarkExporterBatchBufferAllocation(b *testing.B) {
 	}
 	defer exporter.Shutdown(context.Background())
 
-	b.ResetTimer()
 	b.ReportAllocs()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		// Get a buffer from the pool
 		buffer := exporter.getBatchBuffer()
 
@@ -96,10 +95,9 @@ func BenchmarkExporterHighThroughput(b *testing.B) {
 		},
 	}
 
-	b.ResetTimer()
 	b.ReportAllocs()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		exporter.Record(item, false)
 	}
 
@@ -141,10 +139,9 @@ func BenchmarkExporterBatchCycle(b *testing.B) {
 		},
 	}
 
-	b.ResetTimer()
 	b.ReportAllocs()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		// Fill exactly one batch
 		for j := 0; j < settings.BatchSize; j++ {
 			exporter.Record(item, false)
@@ -178,10 +175,9 @@ func BenchmarkExporterBufferGrowth(b *testing.B) {
 	}
 	defer exporter.Shutdown(context.Background())
 
-	b.ResetTimer()
 	b.ReportAllocs()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		// Get a buffer from the pool
 		buffer := exporter.getBatchBuffer()
 

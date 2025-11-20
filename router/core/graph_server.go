@@ -35,6 +35,7 @@ import (
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/circuit"
+	"github.com/wundergraph/cosmo/router/internal/exporter"
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
 	rjwt "github.com/wundergraph/cosmo/router/internal/jwt"
@@ -923,12 +924,12 @@ func (s *graphServer) buildGraphMux(
 	// Create Prometheus metrics exporter for schema field usage if enabled
 	if s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled {
 		cfg := s.metricConfig.Prometheus.PromSchemaFieldUsage
-		settings := &graphqlmetrics.ExporterSettings{
+		settings := &exporter.ExporterSettings{
 			BatchSize:     cfg.Exporter.BatchSize,
 			QueueSize:     cfg.Exporter.QueueSize,
 			Interval:      cfg.Exporter.Interval,
 			ExportTimeout: cfg.Exporter.ExportTimeout,
-			RetryOptions: graphqlmetrics.RetryOptions{
+			RetryOptions: exporter.RetryOptions{
 				Enabled:     false, // Retry is disabled for Prometheus metrics
 				MaxRetry:    1,     // Provide valid defaults even when disabled
 				MaxDuration: time.Second * 1,

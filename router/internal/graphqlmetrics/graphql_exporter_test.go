@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
+	"github.com/wundergraph/cosmo/router/internal/exporter"
 	"go.uber.org/zap"
 )
 
@@ -53,11 +54,11 @@ func TestExportAggregationSameSchemaUsages(t *testing.T) {
 		zap.NewNop(),
 		c,
 		"secret",
-		&ExporterSettings{
+		&exporter.ExporterSettings{
 			BatchSize: batchSize,
 			QueueSize: queueSize,
 			Interval:  500 * time.Millisecond,
-			RetryOptions: RetryOptions{
+			RetryOptions: exporter.RetryOptions{
 				Enabled:     false,
 				MaxDuration: 300 * time.Millisecond,
 				Interval:    100 * time.Millisecond,
@@ -69,7 +70,7 @@ func TestExportAggregationSameSchemaUsages(t *testing.T) {
 
 	require.Nil(t, err)
 
-	for i := 0; i < totalItems; i++ {
+	for i := range totalItems {
 
 		hash := fmt.Sprintf("hash-%d", i%2)
 
@@ -113,8 +114,10 @@ func TestExportAggregationSameSchemaUsages(t *testing.T) {
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	require.Equal(t, 1, len(c.publishedAggregations))
-	require.Equal(t, 2, len(c.publishedAggregations[0]))
+
+	require.Len(t, c.publishedAggregations, 1)
+	require.Len(t, c.publishedAggregations[0], 2)
+
 	require.Equal(t, 50, int(c.publishedAggregations[0][0].RequestCount))
 	require.Equal(t, 50, int(c.publishedAggregations[0][1].RequestCount))
 }
@@ -132,11 +135,11 @@ func TestExportBatchesWithUniqueSchemaUsages(t *testing.T) {
 		zap.NewNop(),
 		c,
 		"secret",
-		&ExporterSettings{
+		&exporter.ExporterSettings{
 			BatchSize: batchSize,
 			QueueSize: queueSize,
 			Interval:  time.Second * 5,
-			RetryOptions: RetryOptions{
+			RetryOptions: exporter.RetryOptions{
 				Enabled:     false,
 				MaxDuration: 300 * time.Millisecond,
 				Interval:    100 * time.Millisecond,
@@ -148,8 +151,7 @@ func TestExportBatchesWithUniqueSchemaUsages(t *testing.T) {
 
 	require.Nil(t, err)
 
-	for i := 0; i < totalItems; i++ {
-		i := i
+	for i := range totalItems {
 		usage := &graphqlmetricsv1.SchemaUsageInfo{
 			TypeFieldMetrics: []*graphqlmetricsv1.TypeFieldUsageInfo{
 				{
@@ -204,13 +206,13 @@ func TestForceFlushSync(t *testing.T) {
 		zap.NewNop(),
 		c,
 		"secret",
-		&ExporterSettings{
+		&exporter.ExporterSettings{
 			BatchSize: batchSize,
 			QueueSize: queueSize,
 			// Intentionally set to a high value to make sure that the exporter is forced to flush immediately
 			Interval:      5000 * time.Millisecond,
 			ExportTimeout: 5000 * time.Millisecond,
-			RetryOptions: RetryOptions{
+			RetryOptions: exporter.RetryOptions{
 				Enabled:     false,
 				MaxDuration: 300 * time.Millisecond,
 				Interval:    100 * time.Millisecond,
@@ -221,8 +223,7 @@ func TestForceFlushSync(t *testing.T) {
 
 	require.Nil(t, err)
 
-	for i := 0; i < totalItems; i++ {
-		i := i
+	for i := range totalItems {
 		usage := &graphqlmetricsv1.SchemaUsageInfo{
 			TypeFieldMetrics: []*graphqlmetricsv1.TypeFieldUsageInfo{
 				{
@@ -262,8 +263,8 @@ func TestForceFlushSync(t *testing.T) {
 
 	c.mu.Lock()
 	// Synchronous mode now sends items through aggregation, so they appear as aggregations
-	require.Equal(t, 10, len(c.publishedAggregations))
-	require.Equal(t, 1, len(c.publishedAggregations[0]))
+	require.Len(t, c.publishedAggregations, 10)
+	require.Len(t, c.publishedAggregations[0], 1)
 
 	// Make sure that the exporter is still working after a forced flush
 
@@ -271,7 +272,7 @@ func TestForceFlushSync(t *testing.T) {
 	c.publishedAggregations = c.publishedAggregations[:0]
 	c.mu.Unlock()
 
-	for i := 0; i < totalItems; i++ {
+	for i := range totalItems {
 		usage := &graphqlmetricsv1.SchemaUsageInfo{
 			TypeFieldMetrics: []*graphqlmetricsv1.TypeFieldUsageInfo{
 				{
@@ -311,8 +312,8 @@ func TestForceFlushSync(t *testing.T) {
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	require.Equal(t, 10, len(c.publishedAggregations))
-	require.Equal(t, 1, len(c.publishedAggregations[0]))
+	require.Len(t, c.publishedAggregations, 10)
+	require.Len(t, c.publishedAggregations[0], 1)
 }
 
 func TestExportBatchInterval(t *testing.T) {
@@ -328,11 +329,11 @@ func TestExportBatchInterval(t *testing.T) {
 		zap.NewNop(),
 		c,
 		"secret",
-		&ExporterSettings{
+		&exporter.ExporterSettings{
 			BatchSize: batchSize,
 			QueueSize: queueSize,
 			Interval:  100 * time.Millisecond,
-			RetryOptions: RetryOptions{
+			RetryOptions: exporter.RetryOptions{
 				Enabled:     false,
 				MaxDuration: 300 * time.Millisecond,
 				Interval:    100 * time.Millisecond,
@@ -344,7 +345,7 @@ func TestExportBatchInterval(t *testing.T) {
 
 	require.Nil(t, err)
 
-	for i := 0; i < totalItems; i++ {
+	for i := range totalItems {
 		usage := &graphqlmetricsv1.SchemaUsageInfo{
 			TypeFieldMetrics: []*graphqlmetricsv1.TypeFieldUsageInfo{
 				{
@@ -386,8 +387,8 @@ func TestExportBatchInterval(t *testing.T) {
 
 	defer require.Nil(t, e.Shutdown(context.Background()))
 
-	require.Equal(t, 1, len(c.publishedAggregations))
-	require.Equal(t, 5, len(c.publishedAggregations[0]))
+	require.Len(t, c.publishedAggregations, 1)
+	require.Len(t, c.publishedAggregations[0], 5)
 }
 
 func TestExportFullQueue(t *testing.T) {
@@ -404,11 +405,11 @@ func TestExportFullQueue(t *testing.T) {
 		zap.NewNop(),
 		c,
 		"secret",
-		&ExporterSettings{
+		&exporter.ExporterSettings{
 			BatchSize: batchSize,
 			QueueSize: queueSize,
 			Interval:  500 * time.Millisecond,
-			RetryOptions: RetryOptions{
+			RetryOptions: exporter.RetryOptions{
 				Enabled:     false,
 				MaxDuration: 300 * time.Millisecond,
 				Interval:    100 * time.Millisecond,

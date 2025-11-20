@@ -5,13 +5,14 @@ import (
 
 	graphqlmetrics "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
+	"github.com/wundergraph/cosmo/router/internal/exporter"
 	"go.uber.org/zap"
 )
 
 // GraphQLMetricsExporter wraps the generic Exporter for GraphQL metrics.
 // It provides a cleaner API and backward compatibility with the old interface.
 type GraphQLMetricsExporter struct {
-	exporter *Exporter[*graphqlmetrics.SchemaUsageInfo]
+	exporter *exporter.Exporter[*graphqlmetrics.SchemaUsageInfo]
 }
 
 // NewGraphQLMetricsExporter creates a new exporter specifically for GraphQL metrics.
@@ -20,7 +21,7 @@ func NewGraphQLMetricsExporter(
 	logger *zap.Logger,
 	client graphqlmetricsv1connect.GraphQLMetricsServiceClient,
 	apiToken string,
-	settings *ExporterSettings,
+	settings *exporter.ExporterSettings,
 ) (*GraphQLMetricsExporter, error) {
 	sink := NewGraphQLMetricsSink(GraphQLMetricsSinkConfig{
 		Client:   client,
@@ -28,7 +29,7 @@ func NewGraphQLMetricsExporter(
 		Logger:   logger,
 	})
 
-	exporter, err := NewExporter(logger, sink, IsRetryableError, settings)
+	exporter, err := exporter.NewExporter(logger, sink, IsRetryableError, settings)
 	if err != nil {
 		return nil, err
 	}

@@ -1,4 +1,4 @@
-package graphqlmetrics
+package exporter
 
 import (
 	"context"

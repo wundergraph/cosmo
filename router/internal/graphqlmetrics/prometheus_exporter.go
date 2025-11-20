@@ -4,6 +4,7 @@ import (
 	"context"
 
 	graphqlmetrics "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
+	"github.com/wundergraph/cosmo/router/internal/exporter"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 	"go.uber.org/zap"
 )
@@ -11,7 +12,7 @@ import (
 // PrometheusMetricsExporter wraps the generic Exporter for Prometheus metrics.
 // It provides a cleaner API for exporting schema field usage to Prometheus.
 type PrometheusMetricsExporter struct {
-	exporter *Exporter[*graphqlmetrics.SchemaUsageInfo]
+	exporter *exporter.Exporter[*graphqlmetrics.SchemaUsageInfo]
 }
 
 // NewPrometheusMetricsExporter creates a new exporter specifically for Prometheus metrics.
@@ -20,7 +21,7 @@ func NewPrometheusMetricsExporter(
 	logger *zap.Logger,
 	metricStore metric.Store,
 	includeOpSha bool,
-	settings *ExporterSettings,
+	settings *exporter.ExporterSettings,
 ) (*PrometheusMetricsExporter, error) {
 	sink := NewPrometheusSink(PrometheusSinkConfig{
 		MetricStore:  metricStore,
@@ -34,7 +35,7 @@ func NewPrometheusMetricsExporter(
 		return false // Don't retry Prometheus errors
 	}
 
-	exporter, err := NewExporter(logger, sink, errorHandler, settings)
+	exporter, err := exporter.NewExporter(logger, sink, errorHandler, settings)
 	if err != nil {
 		return nil, err
 	}

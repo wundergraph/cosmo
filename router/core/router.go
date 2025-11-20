@@ -30,6 +30,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/circuit"
 	"github.com/wundergraph/cosmo/router/internal/debug"
 	"github.com/wundergraph/cosmo/router/internal/docker"
+	"github.com/wundergraph/cosmo/router/internal/exporter"
 	"github.com/wundergraph/cosmo/router/internal/graphiql"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
@@ -848,7 +849,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			r.logger,
 			client,
 			r.graphApiToken,
-			graphqlmetrics.NewDefaultExporterSettings(),
+			exporter.NewDefaultExporterSettings(),
 		)
 		if err != nil {
 			return fmt.Errorf("failed to validate graphql metrics exporter: %w", err)
