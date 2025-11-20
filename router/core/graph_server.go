@@ -506,18 +506,22 @@ func (s *graphServer) setupEngineStatistics(baseAttributes []attribute.KeyValue)
 }
 
 type graphMux struct {
-	mux                        *chi.Mux
-	planCache                  *ristretto.Cache[uint64, *planWithMetaData]
-	persistedOperationCache    *ristretto.Cache[uint64, NormalizationCacheEntry]
-	normalizationCache         *ristretto.Cache[uint64, NormalizationCacheEntry]
-	complexityCalculationCache *ristretto.Cache[uint64, ComplexityCacheEntry]
-	validationCache            *ristretto.Cache[uint64, bool]
-	operationHashCache         *ristretto.Cache[uint64, string]
-	accessLogsFileLogger       *logging.BufferedLogger
-	metricStore                rmetric.Store
-	prometheusCacheMetrics     *rmetric.CacheMetrics
-	otelCacheMetrics           *rmetric.CacheMetrics
-	streamMetricStore          rmetric.StreamMetricStore
+	mux *chi.Mux
+
+	planCache                   *ristretto.Cache[uint64, *planWithMetaData]
+	persistedOperationCache     *ristretto.Cache[uint64, NormalizationCacheEntry]
+	normalizationCache          *ristretto.Cache[uint64, NormalizationCacheEntry]
+	complexityCalculationCache  *ristretto.Cache[uint64, ComplexityCacheEntry]
+	variablesNormalizationCache *ristretto.Cache[uint64, VariablesNormalizationCacheEntry]
+	remapVariablesCache         *ristretto.Cache[uint64, RemapVariablesCacheEntry]
+	validationCache             *ristretto.Cache[uint64, bool]
+	operationHashCache          *ristretto.Cache[uint64, string]
+
+	accessLogsFileLogger   *logging.BufferedLogger
+	metricStore            rmetric.Store
+	prometheusCacheMetrics *rmetric.CacheMetrics
+	otelCacheMetrics       *rmetric.CacheMetrics
+	streamMetricStore      rmetric.StreamMetricStore
 }
 
 // buildOperationCaches creates the caches for the graph mux.
@@ -569,6 +573,30 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 			BufferItems:        64,
 		}
 		s.normalizationCache, err = ristretto.NewCache[uint64, NormalizationCacheEntry](normalizationCacheConfig)
+		if err != nil {
+			return computeSha256, fmt.Errorf("failed to create normalization cache: %w", err)
+		}
+
+		variablesNormalizationCacheConfig := &ristretto.Config[uint64, VariablesNormalizationCacheEntry]{
+			Metrics:            srv.metricConfig.OpenTelemetry.GraphqlCache || srv.metricConfig.Prometheus.GraphqlCache,
+			MaxCost:            srv.engineExecutionConfiguration.NormalizationCacheSize,
+			NumCounters:        srv.engineExecutionConfiguration.NormalizationCacheSize * 10,
+			IgnoreInternalCost: true,
+			BufferItems:        64,
+		}
+		s.variablesNormalizationCache, err = ristretto.NewCache[uint64, VariablesNormalizationCacheEntry](variablesNormalizationCacheConfig)
+		if err != nil {
+			return computeSha256, fmt.Errorf("failed to create normalization cache: %w", err)
+		}
+
+		remapVariablesCacheConfig := &ristretto.Config[uint64, RemapVariablesCacheEntry]{
+			Metrics:            srv.metricConfig.OpenTelemetry.GraphqlCache || srv.metricConfig.Prometheus.GraphqlCache,
+			MaxCost:            srv.engineExecutionConfiguration.NormalizationCacheSize,
+			NumCounters:        srv.engineExecutionConfiguration.NormalizationCacheSize * 10,
+			IgnoreInternalCost: true,
+			BufferItems:        64,
+		}
+		s.remapVariablesCache, err = ristretto.NewCache[uint64, RemapVariablesCacheEntry](remapVariablesCacheConfig)
 		if err != nil {
 			return computeSha256, fmt.Errorf("failed to create normalization cache: %w", err)
 		}
@@ -681,6 +709,14 @@ func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []
 		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("query_normalization", srv.engineExecutionConfiguration.NormalizationCacheSize, s.normalizationCache.Metrics))
 	}
 
+	if s.variablesNormalizationCache != nil {
+		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("variables_normalization", srv.engineExecutionConfiguration.NormalizationCacheSize, s.variablesNormalizationCache.Metrics))
+	}
+
+	if s.remapVariablesCache != nil {
+		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("remap_variables", srv.engineExecutionConfiguration.NormalizationCacheSize, s.remapVariablesCache.Metrics))
+	}
+
 	if s.persistedOperationCache != nil {
 		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("persisted_query_normalization", 1024, s.persistedOperationCache.Metrics))
 	}
@@ -709,31 +745,16 @@ func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []
 }
 
 func (s *graphMux) Shutdown(ctx context.Context) error {
+	s.planCache.Close()
+	s.persistedOperationCache.Close()
+	s.normalizationCache.Close()
+	s.variablesNormalizationCache.Close()
+	s.remapVariablesCache.Close()
+	s.complexityCalculationCache.Close()
+	s.validationCache.Close()
+	s.operationHashCache.Close()
+
 	var err error
-
-	if s.planCache != nil {
-		s.planCache.Close()
-	}
-
-	if s.persistedOperationCache != nil {
-		s.persistedOperationCache.Close()
-	}
-
-	if s.normalizationCache != nil {
-		s.normalizationCache.Close()
-	}
-
-	if s.complexityCalculationCache != nil {
-		s.complexityCalculationCache.Close()
-	}
-
-	if s.validationCache != nil {
-		s.validationCache.Close()
-	}
-
-	if s.operationHashCache != nil {
-		s.operationHashCache.Close()
-	}
 
 	if s.accessLogsFileLogger != nil {
 		if aErr := s.accessLogsFileLogger.Close(); aErr != nil {
@@ -1224,6 +1245,8 @@ func (s *graphServer) buildGraphMux(
 		EnablePersistedOperationsCache:      s.engineExecutionConfiguration.EnablePersistedOperationsCache,
 		PersistedOpsNormalizationCache:      gm.persistedOperationCache,
 		NormalizationCache:                  gm.normalizationCache,
+		VariablesNormalizationCache:         gm.variablesNormalizationCache,
+		RemapVariablesCache:                 gm.remapVariablesCache,
 		ValidationCache:                     gm.validationCache,
 		QueryDepthCache:                     gm.complexityCalculationCache,
 		OperationHashCache:                  gm.operationHashCache,
