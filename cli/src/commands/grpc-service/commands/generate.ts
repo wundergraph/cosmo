@@ -56,7 +56,7 @@ export default (opts: BaseCommandOptions) => {
   command.option(
     '-w, --with-operations <path-to-operations>',
     'Path to directory containing GraphQL operation files (.graphql, .gql, .graphqls, .gqls). ' +
-      'When provided, generates proto from operations instead of SDL types.',
+      'Subdirectories are traversed recursively. When provided, generates proto from operations instead of SDL types.',
   );
   command.option(
     '--query-idempotency <level>',
@@ -249,12 +249,12 @@ type GenerationOptions = {
 };
 
 /**
- * Read all GraphQL operation files from a directory
+ * Read all GraphQL operation files from a directory recursively
  * @param operationsDir - The directory path containing GraphQL operation files
  * @returns An array of objects containing filename and content for each operation file
  */
 async function readOperationFiles(operationsDir: string): Promise<Array<{ filename: string; content: string }>> {
-  const files = await readdir(operationsDir);
+  const files = await readdir(operationsDir, { recursive: true });
   const validExtensions = ['.graphql', '.gql', '.graphqls', '.gqls'];
   const operationFiles = files.filter((file) => {
     const ext = extname(file).toLowerCase();

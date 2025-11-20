@@ -165,7 +165,7 @@ wgc grpc-service generate [name] [options]
 
 | Option | Description |
 |--------|-------------|
-| `-w, --with-operations <path>` | Path to directory containing `.graphql` or `.gql` operation files. Enables operations-based generation. |
+| `-w, --with-operations <path>` | Path to directory containing `.graphql` or `.gql` operation files. Subdirectories are traversed recursively. Enables operations-based generation. |
 | `--prefix-operation-type` | Prefix RPC method names with operation type (Query/Mutation/Subscription) |
 | `--query-idempotency <level>` | Set idempotency level for Query operations. Valid values: `NO_SIDE_EFFECTS`, `DEFAULT`. Only applies with `--with-operations`. |
 
@@ -351,13 +351,13 @@ input UpdateUserInput {
 
 #### Step 2: Create Your Operations
 
-Create a directory for your operations:
+Create a directory for your operations. You can organize them in subdirectories:
 
 ```bash
-mkdir operations
+mkdir -p operations/queries operations/mutations
 ```
 
-**operations/get-user.graphql:**
+**operations/queries/get-user.graphql:**
 
 ```graphql
 query GetUser($id: ID!) {
@@ -369,7 +369,7 @@ query GetUser($id: ID!) {
 }
 ```
 
-**operations/list-users.graphql:**
+**operations/queries/list-users.graphql:**
 
 ```graphql
 query ListUsers($limit: Int, $offset: Int) {
@@ -382,7 +382,7 @@ query ListUsers($limit: Int, $offset: Int) {
 }
 ```
 
-**operations/create-user.graphql:**
+**operations/mutations/create-user.graphql:**
 
 ```graphql
 mutation CreateUser($input: CreateUserInput!) {
@@ -394,6 +394,8 @@ mutation CreateUser($input: CreateUserInput!) {
   }
 }
 ```
+
+**Note:** The tool will recursively find all `.graphql`, `.gql`, `.graphqls`, and `.gqls` files in the operations directory and its subdirectories.
 
 #### Step 3: Generate Proto
 
@@ -602,7 +604,7 @@ No GraphQL operation files (.graphql, .gql) found in ./operations
 - Ensure your operation files have `.graphql`, `.gql`, `.graphqls`, or `.gqls` extensions
 - Check the path to your operations directory
 - Verify files contain valid GraphQL operations
-- Note: Only files in the top-level directory are read; subdirectories are not traversed
+- Note: The directory is traversed recursively, so operation files in subdirectories will be included
 
 #### Anonymous Operations Not Supported
 
