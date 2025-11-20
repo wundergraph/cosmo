@@ -70,13 +70,10 @@ export function getOperationClients(
     const parsedDateRange = isoDateRangeToTimestamps(validatedDateRange, range || 24);
     const [startTimestamp, endTimestamp] = getDateRange(parsedDateRange);
 
-    const operationNameFilter =
-      req.operationName === undefined ? '' : `AND OperationName = '${req.operationName.replace(/'/g, "''")}'`;
-
     const query = `
     WITH
-      toDateTime('${startTimestamp}') AS startDate,
-      toDateTime('${endTimestamp}') AS endDate
+      toDateTime({startTimestamp:String}) AS startDate,
+      toDateTime({endTimestamp:String}) AS endDate
     SELECT
       ClientName as name,
       ClientVersion as version,
@@ -84,19 +81,31 @@ export function getOperationClients(
       max(Timestamp) as lastUsed
     FROM ${opts.chClient.database}.operation_request_metrics_5_30
     WHERE Timestamp >= startDate AND Timestamp <= endDate
-      AND OrganizationID = '${authContext.organizationId}'
-      AND FederatedGraphID = '${graph.id}'
-      AND OperationHash = '${req.operationHash.replace(/'/g, "''")}'
-      ${operationNameFilter}
+      AND OrganizationID = {organizationId:String}
+      AND FederatedGraphID = {federatedGraphId:String}
+      AND OperationHash = {operationHash:String}
+      ${req.operationName === undefined ? '' : 'AND OperationName = {operationName:String}'}
     GROUP BY ClientName, ClientVersion
     ORDER BY lastUsed DESC`;
+
+    const params: Record<string, string | number | boolean> = {
+      startTimestamp,
+      endTimestamp,
+      organizationId: authContext.organizationId,
+      federatedGraphId: graph.id,
+      operationHash: req.operationHash.replace(/'/g, "''"),
+    };
+
+    if (req.operationName !== undefined) {
+      params.operationName = req.operationName.replace(/'/g, "''");
+    }
 
     const res: Array<{
       name: string;
       version: string;
       requestCount: number;
       lastUsed: string;
-    }> = await opts.chClient.queryPromise(query);
+    }> = await opts.chClient.queryPromise(query, params);
 
     const clients = res.map((client) => ({
       name: client.name || '',

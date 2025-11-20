@@ -404,18 +404,16 @@ export class UsageRepository {
       dateRange: { end, start },
     } = parseTimeFilters(dateRange, range);
 
-    // Build the deprecated fields array for the CTE
+    // Build the deprecated fields array
     // Each deprecated field is represented as a tuple: (name, typeNames_array)
     const deprecatedFieldsArray = deprecatedFields
       .map((field) => `('${field.name}', [${field.typeNames.map((tn) => `'${tn}'`).join(', ')}])`)
       .join(', ');
 
-    const operationNameCondition = operationName ? `AND OperationName = '${operationName}'` : '';
-
     const query = `
       WITH 
-        toStartOfDay(toDateTime('${start}')) AS startDate,
-        toDateTime('${end}') AS endDate,
+        toStartOfDay(toDateTime({startDate:String})) AS startDate,
+        toDateTime({endDate:String}) AS endDate,
         deprecated_fields AS (
           SELECT
             field.1 as Name,
@@ -434,14 +432,26 @@ export class UsageRepository {
       WHERE 
         Timestamp >= startDate 
         AND Timestamp <= endDate
-        AND OrganizationID = '${organizationId}'
-        AND FederatedGraphID = '${federatedGraphId}'
-        AND OperationHash = '${operationHash}'
-        ${operationNameCondition}
+        AND OrganizationID = {organizationId:String}
+        AND FederatedGraphID = {federatedGraphId:String}
+        AND OperationHash = {operationHash:String}
         AND hasAny(TypeNames, df.TypeNames) = 1
+        ${operationName === undefined ? '' : 'AND OperationName = {operationName:String}'}
     `;
 
-    const res = await this.client.queryPromise(query);
+    const params: Record<string, string | number | boolean> = {
+      startDate: start,
+      endDate: end,
+      organizationId,
+      federatedGraphId,
+      operationHash,
+    };
+
+    if (operationName !== undefined) {
+      params.operationName = operationName;
+    }
+
+    const res = await this.client.queryPromise(query, params);
 
     if (Array.isArray(res)) {
       return res.map((item) => ({
