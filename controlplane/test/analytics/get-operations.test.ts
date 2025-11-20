@@ -271,7 +271,6 @@ describe('GetOperations', () => {
     const response = await client.getOperations({
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
-      fetchBasedOn: OperationsFetchBasedOn.LATENCY,
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
@@ -470,7 +469,6 @@ describe('GetOperations', () => {
     const response = await client.getOperations({
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
-      includeContent: true,
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
@@ -783,7 +781,7 @@ describe('GetOperations', () => {
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     // Default limit is 100, so should return all 50 operations
-    expect(response.operations.length).toBeLessThanOrEqual(100);
+    expect(response.operations.length).toBe(50);
 
     await server.close();
   });
@@ -823,7 +821,8 @@ describe('GetOperations', () => {
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
-    expect(response.operations.length).toBeGreaterThanOrEqual(0);
+    expect(response.operations.length).toBe(1);
+    expect(response.operations[0]?.name).toBe('Operation1');
 
     await server.close();
   });
