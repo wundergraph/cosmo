@@ -73,12 +73,13 @@ export function DataTablePrimaryFilterMenu<T>({
                       filter.selectedOptions &&
                       filter.selectedOptions.length > 0
                     }
+                    checkboxPosition="right"
                     onCheckedChange={(checked) => {
                       filter.onSelect?.(checked ? ["true"] : undefined);
                     }}
                     onSelect={(e) => e.preventDefault()}
                   >
-                    <span>{filter.title}</span>
+                    {filter.title}
                   </DropdownMenuCheckboxItem>
                 );
               }

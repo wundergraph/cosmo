@@ -118,7 +118,7 @@ export const OperationsSearch = ({
     () => [
       {
         id: "clientName",
-        title: "Client",
+        title: "Clients",
         options: clients.map((client) => ({
           label: client.name,
           value: client.name,
@@ -198,7 +198,7 @@ export const OperationsSearch = ({
       <div className="flex w-full flex-wrap items-center justify-between gap-2">
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-2">
-          <AnalyticsFilters filters={filtersList} className="w-72" />
+          <AnalyticsFilters filters={filtersList} className="w-[280px]" />
           {hasActiveFilters && (
             <Button
               onClick={handleResetFilters}
