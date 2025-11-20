@@ -22,7 +22,7 @@ func init() {
 type FlightRecorder struct {
 	OutputPath                    string `mapstructure:"outputPath"`
 	RecordMultiple                bool   `mapstructure:"recordMultiple"`
-	RequestLatencyRecordThreshold int    `mapstructure:"requestLatencyRecordThreshold"`
+	RequestLatencyRecordThreshold uint64 `mapstructure:"requestLatencyRecordThreshold"`
 
 	requestLatencyRecordThresholdDuration time.Duration
 
@@ -53,11 +53,20 @@ func (m *FlightRecorder) Provision(ctx *core.ModuleContext) error {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
-	m.fl = trace.NewFlightRecorder(trace.FlightRecorderConfig{
-		MinAge: m.requestLatencyRecordThresholdDuration * 2,
+	// 10MB minimum
+	var maxBytes uint64 = 10 * 1024 * 1024
 
-		// 10 MB/s of MinAge
-		MaxBytes: 10 * 1024 * 1024 * uint64(m.requestLatencyRecordThresholdDuration*2/time.Second),
+	// We actually want ~10MB/s of MinAge
+	// 1000ms = 1 second, 1000 is close enough to 1024
+	// sub in the uint milliseconds count for one of the factors
+	// if it would result in a value greater than default maxBytes
+	if m.RequestLatencyRecordThreshold*2 > 1024 {
+		maxBytes = (m.RequestLatencyRecordThreshold * 2) * 1024 * 10
+	}
+
+	m.fl = trace.NewFlightRecorder(trace.FlightRecorderConfig{
+		MinAge:   m.requestLatencyRecordThresholdDuration,
+		MaxBytes: maxBytes,
 	})
 
 	m.fl.Start()
@@ -76,8 +85,6 @@ func (m *FlightRecorder) RouterOnRequest(ctx core.RequestContext, next http.Hand
 
 	next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
 
-	time.Sleep(150 * time.Millisecond)
-
 	requestDuration := time.Since(start)
 
 	if m.fl.Enabled() && requestDuration > m.requestLatencyRecordThresholdDuration {
@@ -92,10 +99,9 @@ func (m *FlightRecorder) RouterOnRequest(ctx core.RequestContext, next http.Hand
 func (m *FlightRecorder) RecordTrace(operationName string) {
 	// Generate timestamped filename
 	filename := fmt.Sprintf("trace-%s-%s.out", operationName, time.Now().Format("2006-01-02-15-04-05"))
-	filepath := filepath.Join(m.OutputPath, filename)
 
 	// Create the file
-	file, err := os.Create(filepath)
+	file, err := os.Create(filepath.Join(m.OutputPath, filename))
 	if err != nil {
 		m.Logger.Error("failed to create trace file: %w", zap.Error(err))
 		return
