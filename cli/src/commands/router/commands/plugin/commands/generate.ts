@@ -3,13 +3,18 @@ import { Command, program } from 'commander';
 import Spinner from 'ora';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
+import { ProtoOption } from '@wundergraph/protographic';
 import { BaseCommandOptions } from '../../../../../core/types/types.js';
 import { renderResultTree } from '../helper.js';
 import {
   checkAndInstallTools,
   generateGRPCCode,
   generateProtoAndMapping,
+  getGoModulePathProtoOption,
+  getLanguage,
   installGoDependencies,
+  installTsDependencies,
+  validateAndGetGoModulePath,
 } from '../toolchain.js';
 
 export default (opts: BaseCommandOptions) => {
@@ -22,36 +27,58 @@ export default (opts: BaseCommandOptions) => {
     'Force tools installation regardless of version check or confirmation',
     false,
   );
-  command.option(
-    '--go-module-path <path>',
-    'Go module path to use for the plugin',
-    'github.com/wundergraph/cosmo/plugin',
-  );
+  command.option('--go-module-path <path>', 'Go module path to use for the plugin');
 
   command.action(async (directory, options) => {
     const startTime = performance.now();
     const pluginDir = resolve(directory);
     const spinner = Spinner();
     const pluginName = path.basename(pluginDir);
-    const goModulePath = options.goModulePath;
+
+    const language = getLanguage(pluginDir);
+    if (!language) {
+      renderResultTree(spinner, 'Plugin language detection failed!', false, pluginName, {
+        output: pluginDir,
+      });
+      program.error('');
+    }
+
+    const protoOptions: ProtoOption[] = [];
 
     try {
       // Check and install tools if needed
       if (!options.skipToolsInstallation) {
-        await checkAndInstallTools(options.forceToolsInstallation);
+        await checkAndInstallTools(options.forceToolsInstallation, language);
       }
 
       // Start the generation process
       spinner.start('Generating plugin code...');
 
+      const goModulePath = validateAndGetGoModulePath(language, options.goModulePath);
+
+      switch (language) {
+        case 'ts': {
+          await installTsDependencies(pluginDir, spinner);
+          break;
+        }
+        case 'go': {
+          protoOptions.push(getGoModulePathProtoOption(goModulePath!));
+          break;
+        }
+      }
+
       // Generate proto and mapping files
-      await generateProtoAndMapping(pluginDir, goModulePath, spinner);
+      await generateProtoAndMapping(pluginDir, protoOptions, spinner);
 
       // Generate gRPC code
-      await generateGRPCCode(pluginDir, spinner);
+      await generateGRPCCode(pluginDir, spinner, language);
 
-      // Install Go dependencies
-      await installGoDependencies(pluginDir, spinner);
+      switch (language) {
+        case 'go': {
+          await installGoDependencies(pluginDir, spinner);
+          break;
+        }
+      }
 
       // Calculate and format elapsed time
       const endTime = performance.now();
@@ -61,8 +88,8 @@ export default (opts: BaseCommandOptions) => {
 
       renderResultTree(spinner, 'Plugin code generated successfully!', true, pluginName, {
         output: pluginDir,
-        'go module': goModulePath,
         time: formattedTime,
+        protoOptions: protoOptions.map(({ name, constant }) => `${name}=${constant}`).join(','),
       });
 
       console.log('');
@@ -72,8 +99,8 @@ export default (opts: BaseCommandOptions) => {
     } catch (error: any) {
       renderResultTree(spinner, 'Plugin code generation failed!', false, pluginName, {
         output: pluginDir,
-        'go module': goModulePath,
         error: error.message,
+        protoOptions: protoOptions.map(({ name, constant }) => `${name}=${constant}`).join(','),
       });
 
       program.error('');

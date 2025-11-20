@@ -7586,9 +7586,6 @@ packages:
   '@types/node-fetch@2.6.11':
     resolution: {integrity: sha512-24xFj9R5+rfQJLRyM56qh+wnVSYhyXC2tkoBndtY0U+vubqNsYXGjufB2nn8Q6gt0LrARwL6UBtMCSVCwl4B1g==}
 
-  '@types/node@18.19.122':
-    resolution: {integrity: sha512-yzegtT82dwTNEe/9y+CM8cgb42WrUfMMCg2QqSddzO1J6uPmBD7qKCZ7dOHZP2Yrpm/kb0eqdNMn2MUyEiqBmA==}
-
   '@types/node@18.19.21':
     resolution: {integrity: sha512-2Q2NeB6BmiTFQi4DHBzncSoq/cJMLDdhPaAoJFnFCyD9a8VPZRf7a1GAwp1Edb7ROaZc5Jz/tnZyL6EsWMRaqw==}
 
@@ -22201,10 +22198,6 @@ snapshots:
       '@types/node': 20.12.12
       form-data: 4.0.4
 
-  '@types/node@18.19.122':
-    dependencies:
-      undici-types: 5.26.5
-
   '@types/node@18.19.21':
     dependencies:
       undici-types: 5.26.5
@@ -22251,7 +22244,7 @@ snapshots:
 
   '@types/pg@8.15.4':
     dependencies:
-      '@types/node': 18.19.122
+      '@types/node': 20.12.12
       pg-protocol: 1.10.3
       pg-types: 2.2.0
 
@@ -22263,7 +22256,7 @@ snapshots:
 
   '@types/pg@8.6.1':
     dependencies:
-      '@types/node': 18.19.122
+      '@types/node': 20.12.12
       pg-protocol: 1.10.3
       pg-types: 2.2.0
 
@@ -22313,7 +22306,7 @@ snapshots:
 
   '@types/tedious@4.0.14':
     dependencies:
-      '@types/node': 18.19.122
+      '@types/node': 20.12.12
 
   '@types/tern@0.23.5':
     dependencies:

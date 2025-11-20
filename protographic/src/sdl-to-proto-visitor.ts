@@ -89,10 +89,19 @@ interface CollectionResult {
 export interface GraphQLToProtoTextVisitorOptions {
   serviceName?: string;
   packageName?: string;
-  goPackage?: string;
   lockData?: ProtoLock;
   /** Whether to include descriptions/comments from GraphQL schema */
   includeComments?: boolean;
+  /** Custom options printed as proto options */
+  protoOptions?: ProtoOption[];
+}
+
+/**
+ * Format based on https://protobuf.dev/reference/protobuf/proto3-spec/#option
+ */
+export interface ProtoOption {
+  name: string;
+  constant: string;
 }
 
 /**
@@ -197,13 +206,7 @@ export class GraphQLToProtoTextVisitor {
    * @param options - Configuration options for the visitor
    */
   constructor(schema: GraphQLSchema, options: GraphQLToProtoTextVisitorOptions = {}) {
-    const {
-      serviceName = 'DefaultService',
-      packageName = 'service.v1',
-      goPackage,
-      lockData,
-      includeComments = true,
-    } = options;
+    const { serviceName = 'DefaultService', packageName = 'service.v1', lockData, includeComments = true } = options;
 
     this.schema = schema;
     this.serviceName = serviceName;
@@ -216,12 +219,9 @@ export class GraphQLToProtoTextVisitor {
       this.initializeFieldNumbersMap(lockData);
     }
 
-    // Initialize options
-    if (goPackage && goPackage !== '') {
-      // Generate default go_package if not provided
-      const defaultGoPackage = `cosmo/pkg/proto/${packageName};${packageName.replace('.', '')}`;
-      const goPackageOption = goPackage || defaultGoPackage;
-      this.options.push(`option go_package = "${goPackageOption}";`);
+    if (options.protoOptions && options.protoOptions.length > 0) {
+      const processedOptions = options.protoOptions.map((opt) => `option ${opt.name} = ${opt.constant};`);
+      this.options.push(...processedOptions);
     }
   }
 
@@ -412,15 +412,6 @@ export class GraphQLToProtoTextVisitor {
   private addImport(importPath: string): void {
     if (!this.imports.includes(importPath)) {
       this.imports.push(importPath);
-    }
-  }
-
-  /**
-   * Add an option statement to the proto file
-   */
-  private addOption(optionStatement: string): void {
-    if (!this.options.includes(optionStatement)) {
-      this.options.push(optionStatement);
     }
   }
 
