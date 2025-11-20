@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.11.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.10.0...@wundergraph/protographic@0.11.0) (2025-11-19)
+
+### Features
+
+* support grpc plugins with ts and bun ([#2293](https://github.com/wundergraph/cosmo/issues/2293)) ([77e5996](https://github.com/wundergraph/cosmo/commit/77e5996412b0747f918a0a6145a2d738edd198f0)) (@SkArchon)
+
 # [0.10.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.9.8...@wundergraph/protographic@0.10.0) (2025-11-11)
 
 ### Features

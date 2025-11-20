@@ -716,7 +716,8 @@
         "Enabled": true,
         "Limit": 4,
         "IgnorePersistedOperations": true
-      }
+      },
+      "IgnoreIntrospection": false
     },
     "DepthLimit": null,
     "ParserLimits": {
