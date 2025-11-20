@@ -93,11 +93,11 @@ export function getOperationClients(
       endTimestamp,
       organizationId: authContext.organizationId,
       federatedGraphId: graph.id,
-      operationHash: req.operationHash.replace(/'/g, "''"),
+      operationHash: req.operationHash,
     };
 
     if (req.operationName !== undefined) {
-      params.operationName = req.operationName.replace(/'/g, "''");
+      params.operationName = req.operationName;
     }
 
     const res: Array<{
