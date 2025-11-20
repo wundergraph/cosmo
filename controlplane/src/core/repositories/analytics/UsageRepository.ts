@@ -329,16 +329,21 @@ export class UsageRepository {
       dateRange: { end, start },
     } = parseTimeFilters(dateRange, range);
 
-    // Build the deprecated fields array for the CTE
+    // Build the deprecated fields array
     // Each deprecated field is represented as a tuple: (name, typeNames_array)
+    // Escape single quotes
     const deprecatedFieldsArray = deprecatedFields
-      .map((field) => `('${field.name}', [${field.typeNames.map((tn) => `'${tn}'`).join(', ')}])`)
+      .map((field) => {
+        const escapedName = field.name.replace(/'/g, "''");
+        const quotedTypeNames = field.typeNames.map((tn) => `'${tn.replace(/'/g, "''")}'`).join(', ');
+        return `('${escapedName}', [${quotedTypeNames}])`;
+      })
       .join(', ');
 
     const query = `
       WITH 
-        toStartOfDay(toDateTime('${start}')) AS startDate,
-        toDateTime('${end}') AS endDate,
+        toStartOfDay(toDateTime({startDate:String})) AS startDate,
+        toDateTime({endDate:String}) AS endDate,
         deprecated_fields AS (
           SELECT
             field.1 as Name,
@@ -357,12 +362,19 @@ export class UsageRepository {
       WHERE 
         Timestamp >= startDate 
         AND Timestamp <= endDate
-        AND OrganizationID = '${organizationId}'
-        AND FederatedGraphID = '${federatedGraphId}'
+        AND OrganizationID = {organizationId:String}
+        AND FederatedGraphID = {federatedGraphId:String}
         AND hasAny(TypeNames, df.TypeNames) = 1
     `;
 
-    const res = await this.client.queryPromise(query);
+    const params: Record<string, string | number | boolean> = {
+      startDate: start,
+      endDate: end,
+      organizationId,
+      federatedGraphId,
+    };
+
+    const res = await this.client.queryPromise(query, params);
 
     if (Array.isArray(res)) {
       return res.map((item) => ({
@@ -406,8 +418,13 @@ export class UsageRepository {
 
     // Build the deprecated fields array
     // Each deprecated field is represented as a tuple: (name, typeNames_array)
+    // Escape single quotes
     const deprecatedFieldsArray = deprecatedFields
-      .map((field) => `('${field.name}', [${field.typeNames.map((tn) => `'${tn}'`).join(', ')}])`)
+      .map((field) => {
+        const escapedName = field.name.replace(/'/g, "''");
+        const quotedTypeNames = field.typeNames.map((tn) => `'${tn.replace(/'/g, "''")}'`).join(', ');
+        return `('${escapedName}', [${quotedTypeNames}])`;
+      })
       .join(', ');
 
     const query = `
