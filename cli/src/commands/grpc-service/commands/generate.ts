@@ -5,6 +5,7 @@ import {
   compileOperationsToProto,
   ProtoLock,
   ProtoOption,
+  ProtoOptions,
   validateGraphQLSDL,
   rootToProtoText,
   protobuf,
@@ -17,19 +18,6 @@ import { BaseCommandOptions } from '../../../core/types/types.js';
 import { renderResultTree, renderValidationResults } from '../../router/commands/plugin/helper.js';
 import { getGoModulePathProtoOption } from '../../router/commands/plugin/toolchain.js';
 
-type LanguageOptions = {
-  goPackage?: string;
-  javaPackage?: string;
-  javaOuterClassname?: string;
-  javaMultipleFiles?: boolean;
-  csharpNamespace?: string;
-  rubyPackage?: string;
-  phpNamespace?: string;
-  phpMetadataNamespace?: string;
-  objcClassPrefix?: string;
-  swiftPrefix?: string;
-};
-
 type CLIOptions = {
   input: string;
   output: string;
@@ -40,7 +28,7 @@ type CLIOptions = {
   customScalarMapping?: string;
   maxDepth?: string;
   prefixOperationType?: boolean;
-} & LanguageOptions;
+} & ProtoOptions;
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('generate');
@@ -179,7 +167,7 @@ async function generateCommandAction(name: string, options: CLIOptions) {
       spinner.warn('--prefix-operation-type flag is ignored when not using --with-operations');
     }
 
-    const languageOptions: LanguageOptions = {
+    const languageOptions: ProtoOptions = {
       goPackage: options.goPackage,
       javaPackage: options.javaPackage,
       javaOuterClassname: options.javaOuterClassname,
@@ -251,7 +239,7 @@ type GenerationOptions = {
   schemaFile: string;
   spinner: Ora;
   packageName?: string;
-  languageOptions: LanguageOptions;
+  languageOptions: ProtoOptions;
   lockFile?: string;
   operationsDir?: string;
   queryIdempotency?: string;
@@ -360,7 +348,7 @@ async function generateFromOperations(
   operationsPath: string,
   spinner: Ora,
   packageName: string,
-  languageOptions: LanguageOptions,
+  languageOptions: ProtoOptions,
   lockFile: string,
   queryIdempotency?: string,
   customScalarMappings?: Record<string, string>,
@@ -437,7 +425,7 @@ async function generateFromSDL(
   serviceName: string,
   spinner: Ora,
   packageName: string | undefined,
-  languageOptions: LanguageOptions,
+  languageOptions: ProtoOptions,
   lockFile: string,
 ): Promise<GenerationResult> {
   spinner.text = 'Generating mapping and proto files...';
