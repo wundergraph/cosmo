@@ -2048,6 +2048,8 @@
               "format": "hostname-port"
             },
             "base_url": {
+              "deprecated": true,
+              "deprecationMessage": "The base_url is deprecated. This property was related to the SSE protocol that is not supported anymore.",
               "type": "string",
               "description": "The base URL of the MCP server. This is the URL advertised to the LLM clients when SSE is used as primary transport. By default, the base URL is relative to the URL that the router is running on. The URL is specified as a string with the format 'scheme://host:port'.",
               "format": "http-url"
