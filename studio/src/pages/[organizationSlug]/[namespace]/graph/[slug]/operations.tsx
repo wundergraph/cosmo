@@ -29,7 +29,6 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { Loader } from "@/components/ui/loader";
 import { Pagination } from "@/components/ui/pagination";
 import { Separator } from "@/components/ui/separator";
-import { Spacer } from "@/components/ui/spacer";
 import {
   Sheet,
   SheetContent,
@@ -37,6 +36,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { Spacer } from "@/components/ui/spacer";
 import { Toolbar } from "@/components/ui/toolbar";
 import { useCurrentOrganization } from "@/hooks/use-current-organization";
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
@@ -219,8 +219,8 @@ const OperationsLeftPanel = ({
           op.type === GetOperationsResponse_OperationType.QUERY
             ? ("query" as const)
             : op.type === GetOperationsResponse_OperationType.MUTATION
-            ? ("mutation" as const)
-            : ("subscription" as const),
+              ? ("mutation" as const)
+              : ("subscription" as const),
         latency: latency ?? 0,
         requestCount: requestCount ?? 0,
         errorRate: errorRate ?? 0,
