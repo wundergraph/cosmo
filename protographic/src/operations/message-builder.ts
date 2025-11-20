@@ -21,7 +21,7 @@ import {
   GraphQLUnionType,
 } from 'graphql';
 import { mapGraphQLTypeToProto, ProtoTypeInfo } from './type-mapper.js';
-import { FieldNumberManager } from './field-numbering.js';
+import { assignFieldNumbersFromLockData, FieldNumberManager } from './field-numbering.js';
 import { graphqlFieldToProtoField } from '../naming-conventions.js';
 import { buildEnumType } from './request-builder.js';
 import { upperFirst, camelCase } from 'lodash-es';
@@ -175,19 +175,7 @@ export function buildMessageFromSelectionSet(
 
   // Second pass: process fields in reconciled order
   // Pre-assign field numbers from lock data if available
-  const lockManager = fieldNumberManager?.getLockManager();
-  if (lockManager && fieldNumberManager) {
-    const lockData = lockManager.getLockData();
-    if (lockData.messages[messageName]) {
-      const messageData = lockData.messages[messageName];
-      for (const protoFieldName of orderedFieldNames) {
-        const fieldNumber = messageData.fields[protoFieldName];
-        if (fieldNumber !== undefined) {
-          fieldNumberManager.assignFieldNumber(messageName, protoFieldName, fieldNumber);
-        }
-      }
-    }
-  }
+  assignFieldNumbersFromLockData(messageName, orderedFieldNames, fieldNumberManager);
 
   for (const protoFieldName of orderedFieldNames) {
     const fieldData = fieldSelections.get(protoFieldName);

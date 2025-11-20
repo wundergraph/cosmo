@@ -12,7 +12,7 @@ import {
   typeFromAST,
 } from 'graphql';
 import { mapGraphQLTypeToProto } from './type-mapper.js';
-import { FieldNumberManager } from './field-numbering.js';
+import { assignFieldNumbersFromLockData, FieldNumberManager } from './field-numbering.js';
 import {
   graphqlFieldToProtoField,
   graphqlArgumentToProtoField,
@@ -71,19 +71,7 @@ export function buildRequestMessage(
   }
 
   // Pre-assign field numbers from lock data if available
-  const lockManager = fieldNumberManager?.getLockManager();
-  if (lockManager && fieldNumberManager) {
-    const lockData = lockManager.getLockData();
-    if (lockData.messages[messageName]) {
-      const messageData = lockData.messages[messageName];
-      for (const protoVariableName of orderedVariableNames) {
-        const fieldNumber = messageData.fields[protoVariableName];
-        if (fieldNumber !== undefined) {
-          fieldNumberManager.assignFieldNumber(messageName, protoVariableName, fieldNumber);
-        }
-      }
-    }
-  }
+  assignFieldNumbersFromLockData(messageName, orderedVariableNames, fieldNumberManager);
 
   // Process variables in reconciled order
   let fieldNumber = 1;
@@ -202,19 +190,7 @@ export function buildInputObjectMessage(
   }
 
   // Pre-assign field numbers from lock data if available
-  const lockManager = fieldNumberManager?.getLockManager();
-  if (lockManager && fieldNumberManager) {
-    const lockData = lockManager.getLockData();
-    if (lockData.messages[message.name]) {
-      const messageData = lockData.messages[message.name];
-      for (const protoFieldName of orderedFieldNames) {
-        const fieldNumber = messageData.fields[protoFieldName];
-        if (fieldNumber !== undefined) {
-          fieldNumberManager.assignFieldNumber(message.name, protoFieldName, fieldNumber);
-        }
-      }
-    }
-  }
+  assignFieldNumbersFromLockData(message.name, orderedFieldNames, fieldNumberManager);
 
   // Process fields in reconciled order
   for (const protoFieldName of orderedFieldNames) {

@@ -202,3 +202,28 @@ export function createFieldNumberManager(lockManager?: ProtoLockManager): FieldN
     },
   };
 }
+
+/**
+ * Assigns field numbers to a message from lock data
+ * @param messageName - The name of the message
+ * @param fieldNames - The field names to assign numbers to
+ * @param fieldNumberManager - The field number manager to use
+ */
+export function assignFieldNumbersFromLockData(
+  messageName: string,
+  fieldNames: string[],
+  fieldNumberManager?: FieldNumberManager,
+): void {
+  const lockData = fieldNumberManager?.getLockManager()?.getLockData();
+  if (!lockData || !fieldNumberManager) return;
+
+  const messageData = lockData.messages[messageName];
+  if (!messageData) return;
+
+  for (const protoFieldName of fieldNames) {
+    const fieldNumber = messageData.fields[protoFieldName];
+    if (!fieldNumber) continue;
+
+    fieldNumberManager.assignFieldNumber(messageName, protoFieldName, fieldNumber);
+  }
+}
