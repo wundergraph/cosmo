@@ -105,7 +105,7 @@ func (m *FlightRecorder) RecordTrace(operationName string) {
 	// Create the file
 	file, err := os.Create(filepath.Join(m.OutputPath, filename))
 	if err != nil {
-		m.Logger.Error("failed to create trace file: %w", zap.Error(err))
+		m.Logger.Error("failed to create trace file", zap.Error(err))
 		return
 	}
 	defer file.Close()
