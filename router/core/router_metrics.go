@@ -16,7 +16,7 @@ type RouterMetrics interface {
 	StartOperation(logger *zap.Logger, requestContentLength int64, sliceAttr []attribute.KeyValue, inFlightAddOption otelmetric.AddOption) *OperationMetrics
 	ExportSchemaUsageInfo(operationContext *operationContext, statusCode int, hasError bool, exportSynchronous bool)
 	ExportSchemaUsageInfoPrometheus(operationContext *operationContext, statusCode int, hasError bool, exportSynchronous bool)
-	GqlMetricsExporter() *graphqlmetrics.GraphQLMetricsExporter
+	GQLMetricsExporter() *graphqlmetrics.GraphQLMetricsExporter
 	PrometheusMetricsExporter() *graphqlmetrics.PrometheusMetricsExporter
 	MetricStore() metric.Store
 }
@@ -73,7 +73,7 @@ func (m *routerMetrics) MetricStore() metric.Store {
 	return m.metrics
 }
 
-func (m *routerMetrics) GqlMetricsExporter() *graphqlmetrics.GraphQLMetricsExporter {
+func (m *routerMetrics) GQLMetricsExporter() *graphqlmetrics.GraphQLMetricsExporter {
 	return m.gqlMetricsExporter
 }
 
