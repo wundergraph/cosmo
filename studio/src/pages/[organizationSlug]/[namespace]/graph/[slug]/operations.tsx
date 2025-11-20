@@ -239,7 +239,7 @@ const OperationsLeftPanel = ({
   };
 
   // Full left panel content (used in both desktop and mobile sheet)
-  const LeftPanelContent = () => (
+  const leftPanelContent = (
     <div className="flex h-full w-full flex-col space-y-4 px-1 md:px-4 md:py-4">
       <OperationsSearch
         searchQuery={localSearchQuery}
@@ -299,15 +299,13 @@ const OperationsLeftPanel = ({
             <SheetTitle>Search Operations</SheetTitle>
           </SheetHeader>
           <div className="mt-4 flex h-[calc(85vh-80px)] flex-col overflow-hidden">
-            <LeftPanelContent />
+            {leftPanelContent}
           </div>
         </SheetContent>
       </Sheet>
 
       {/* Desktop: Full left panel */}
-      <div className="hidden h-full w-full md:block">
-        <LeftPanelContent />
-      </div>
+      <div className="hidden h-full w-full md:block">{leftPanelContent}</div>
     </>
   );
 };
