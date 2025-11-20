@@ -36,7 +36,7 @@ type OperationMetrics struct {
 	routerConfigVersion      string
 	logger                   *zap.Logger
 	trackUsageInfo           bool
-	prometheusUsageInfoTrack bool
+	prometheusTrackUsageInfo bool
 }
 
 func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, responseSize int, exportSynchronous bool) {
@@ -82,7 +82,7 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 		}
 
 		// Prometheus metrics export (to local Prometheus metrics)
-		if m.prometheusUsageInfoTrack {
+		if m.prometheusTrackUsageInfo {
 			m.routerMetrics.ExportSchemaUsageInfoPrometheus(reqContext.operation, statusCode, reqContext.error != nil, exportSynchronous)
 		}
 	}
@@ -96,7 +96,7 @@ type OperationMetricsOptions struct {
 	RouterMetrics            RouterMetrics
 	Logger                   *zap.Logger
 	TrackUsageInfo           bool
-	PrometheusUsageInfoTrack bool
+	PrometheusTrackUsageInfo bool
 }
 
 // newOperationMetrics creates a new OperationMetrics struct and starts the operation metrics.
@@ -113,6 +113,6 @@ func newOperationMetrics(opts OperationMetricsOptions) *OperationMetrics {
 		routerMetrics:            opts.RouterMetrics,
 		logger:                   opts.Logger,
 		trackUsageInfo:           opts.TrackUsageInfo,
-		prometheusUsageInfoTrack: opts.PrometheusUsageInfoTrack,
+		prometheusTrackUsageInfo: opts.PrometheusTrackUsageInfo,
 	}
 }

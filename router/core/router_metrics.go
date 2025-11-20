@@ -62,7 +62,7 @@ func (m *routerMetrics) StartOperation(logger *zap.Logger, requestContentLength 
 		RequestContentLength:     requestContentLength,
 		RouterConfigVersion:      m.routerConfigVersion,
 		TrackUsageInfo:           m.exportEnabled,
-		PrometheusUsageInfoTrack: m.prometheusMetricsExporter != nil,
+		PrometheusTrackUsageInfo: m.prometheusMetricsExporter != nil,
 		InFlightAddOption:        inFlightAddOption,
 		SliceAttributes:          sliceAttr,
 	})
