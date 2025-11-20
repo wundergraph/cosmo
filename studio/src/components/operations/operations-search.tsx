@@ -60,7 +60,7 @@ export const OperationsSearch = ({
   const graphContext = useContext(GraphContext);
   const router = useRouter();
   const applyParams = useApplyParams();
-  const { clientNames, applyClientNameFilter } = useOperationsFilters([]);
+  const { clientNames } = useOperationsFilters();
 
   // Fetch clients for the filter
   const { data: clientsData } = useQuery(
@@ -103,14 +103,15 @@ export const OperationsSearch = ({
 
   const handleClientNameFilterSelect = useCallback(
     (value?: string[]) => {
-      // value is already an array from the filter component
-      applyClientNameFilter(value && value.length > 0 ? value : null);
-      // Reset to page 1 when client filter changes
-      if (pageNumber !== 1) {
-        applyParams({ page: "1" });
-      }
+      const clientNamesValue =
+        value && value.length > 0 ? value.join(",") : null;
+
+      applyParams({
+        clientNames: clientNamesValue,
+        page: pageNumber !== 1 ? "1" : null,
+      });
     },
-    [applyClientNameFilter, pageNumber, applyParams],
+    [pageNumber, applyParams],
   );
 
   const filtersList: AnalyticsFilter[] = useMemo(

@@ -1,114 +1,11 @@
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 import { useRouter } from "next/router";
-import {
-  AnalyticsViewResultFilter,
-  AnalyticsViewFilterOperator,
-  OperationsFetchBasedOn,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { AnalyticsFilter } from "@/components/analytics/filters";
-import { optionConstructor } from "@/components/analytics/getDataTableFilters";
+import { OperationsFetchBasedOn } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { useApplyParams } from "@/components/analytics/use-apply-params";
 
-const useSelectedFilters = () => {
+export const useOperationsFilters = () => {
   const router = useRouter();
-
-  const selectedFilters = useMemo(() => {
-    try {
-      return JSON.parse(router.query.filterState?.toString() ?? "[]");
-    } catch {
-      return [];
-    }
-  }, [router.query.filterState]);
-
-  return selectedFilters as { id: string; value: string[] }[];
-};
-
-export const useOperationsFilters = (filters: AnalyticsViewResultFilter[]) => {
-  const router = useRouter();
-
-  const applyNewParams = useCallback(
-    (newParams: Record<string, string | null>, unset?: string[]) => {
-      // Get keys that are being set to null (should be removed)
-      const keysToRemove = Object.keys(newParams).filter(
-        (key) => newParams[key] === null || newParams[key] === undefined,
-      );
-
-      // Filter out removed keys and unset keys from existing query
-      const q = Object.fromEntries(
-        Object.entries(router.query).filter(
-          ([key]) => !unset?.includes(key) && !keysToRemove.includes(key),
-        ),
-      );
-
-      // Only include non-null values from newParams
-      const cleanedNewParams = Object.fromEntries(
-        Object.entries(newParams).filter(
-          ([_, value]) => value !== null && value !== undefined,
-        ),
-      );
-
-      router.push({
-        query: {
-          ...q,
-          ...cleanedNewParams,
-        },
-      });
-    },
-    [router],
-  );
-
-  const selectedFilters = useSelectedFilters();
-
-  const filtersList = (filters ?? []).map((filter) => {
-    return {
-      ...filter,
-      id: filter.columnName,
-      onSelect: (value) => {
-        const newSelected = [...selectedFilters];
-
-        const index = newSelected.findIndex((f) => f.id === filter.columnName);
-
-        if (!value || value.length === 0) {
-          if (index !== -1) {
-            newSelected.splice(index, 1);
-          }
-        } else if (index !== -1 && newSelected[index]) {
-          newSelected[index].value = value;
-        } else {
-          newSelected.push({
-            id: filter.columnName,
-            value: value ?? [],
-          });
-        }
-
-        let stringifiedFilters;
-        try {
-          stringifiedFilters = JSON.stringify(newSelected);
-        } catch {
-          stringifiedFilters = "[]";
-        }
-        applyNewParams({
-          filterState: stringifiedFilters,
-        });
-      },
-      selectedOptions:
-        selectedFilters.find(
-          (f: { id: string; value: string[] }) => f.id === filter.columnName,
-        )?.value ?? [],
-      options: filter.options.map((each) =>
-        optionConstructor({
-          label: each.label || "-",
-          operator: AnalyticsViewFilterOperator[each.operator] as string,
-          value: each.value ?? "",
-        }),
-      ),
-    } as AnalyticsFilter;
-  });
-
-  const resetFilters = () => {
-    applyNewParams({
-      filterState: null,
-    });
-  };
+  const applyNewParams = useApplyParams();
 
   // Operations-specific filter management
   const applyDeprecatedFieldsFilter = useCallback(
@@ -125,18 +22,6 @@ export const useOperationsFilters = (filters: AnalyticsViewResultFilter[]) => {
       }
 
       applyNewParams(params);
-    },
-    [applyNewParams],
-  );
-
-  const applyClientNameFilter = useCallback(
-    (clientNames: string[] | null) => {
-      // Store as comma-separated string in URL, or null if empty
-      const value =
-        clientNames && clientNames.length > 0 ? clientNames.join(",") : null;
-      applyNewParams({
-        clientNames: value,
-      });
     },
     [applyNewParams],
   );
@@ -200,11 +85,7 @@ export const useOperationsFilters = (filters: AnalyticsViewResultFilter[]) => {
   const sortDirection = (router.query.sortDirection as string) || "desc";
 
   return {
-    filtersList,
-    selectedFilters,
-    resetFilters,
     applyDeprecatedFieldsFilter,
-    applyClientNameFilter,
     applySearchQuery,
     applySorting,
     includeDeprecatedFields,

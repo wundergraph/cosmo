@@ -188,7 +188,7 @@ const OperationsLeftPanel = ({
     includeDeprecatedFields,
     applySorting,
     applyDeprecatedFieldsFilter,
-  } = useOperationsFilters([]);
+  } = useOperationsFilters();
 
   const computedOperations = useMemo(() => {
     // Backend handles sorting, so we just map the data
@@ -579,7 +579,7 @@ const OperationsPage: NextPageWithLayout = () => {
     includeDeprecatedFields,
     clientNames,
     applySearchQuery,
-  } = useOperationsFilters([]);
+  } = useOperationsFilters();
 
   // Use URL as single source of truth, debounce for input responsiveness
   const [localSearchQuery, setLocalSearchQuery] = useState(urlSearchQuery);
