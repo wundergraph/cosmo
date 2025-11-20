@@ -35,6 +35,7 @@ import {
   SUBSCRIPTION_FILTER,
   SUBSCRIPTION_FILTER_CONDITION,
   SUBSCRIPTION_FILTER_VALUE,
+  TYPENAME,
   UNION,
   VALUES,
 } from '../utils/string-constants';
@@ -1487,7 +1488,7 @@ export function nonExternalConditionalFieldError({
   targetCoords,
 }: NonExternalConditionalFieldErrorParams): Error {
   const segments = targetCoords.split(LITERAL_PERIOD);
-  const isTypeName = segments[segments.length - 1];
+  const isTypeName = segments[segments.length - 1] === TYPENAME;
   return new Error(
     `The field "${directiveCoords}" in subgraph "${subgraphName}" defines a "@${directiveName}"` +
       ` directive with the following field set:\n "${fieldSet}".` +

@@ -1,6 +1,5 @@
 import { FieldData, InputValueData, ParentDefinitionData } from '../schema-building/types';
 import { FieldName, SubgraphName, TypeName } from '../types/types';
-import { nonExternalConditionalFieldError } from './errors';
 
 export type InvalidRootTypeFieldEventsDirectiveData = {
   definesDirectives: boolean;
