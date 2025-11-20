@@ -22608,9 +22608,11 @@ export class GetOperationsRequest extends Message<GetOperationsRequest> {
   namespace = "";
 
   /**
-   * @generated from field: optional string clientName = 3;
+   * filter by client names
+   *
+   * @generated from field: repeated string clientNames = 3;
    */
-  clientName?: string;
+  clientNames: string[] = [];
 
   /**
    * @generated from field: optional int32 limit = 4;
@@ -22686,7 +22688,7 @@ export class GetOperationsRequest extends Message<GetOperationsRequest> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "clientName", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 3, name: "clientNames", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 4, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
     { no: 5, name: "offset", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
     { no: 6, name: "includeDeprecatedFields", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },

@@ -13,15 +13,20 @@ import {
   BarsArrowDownIcon,
   BarsArrowUpIcon,
 } from "@heroicons/react/24/outline";
-import { useCallback, useMemo } from "react";
+import { Cross2Icon } from "@radix-ui/react-icons";
+import { useCallback, useContext, useMemo } from "react";
 import { AnalyticsFilters } from "@/components/analytics/filters";
-import { optionConstructor } from "@/components/analytics/getDataTableFilters";
 import {
-  AnalyticsViewFilterOperator,
   OperationsFetchBasedOn,
   CustomOptions,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import type { AnalyticsFilter } from "@/components/analytics/filters";
+import { GraphContext } from "@/components/layout/graph-layout";
+import { useQuery } from "@connectrpc/connect-query";
+import { getClientsFromAnalytics } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { useOperationsFilters } from "@/hooks/use-operations-filters";
+import { useApplyParams } from "@/components/analytics/use-apply-params";
+import { useRouter } from "next/router";
 
 interface OperationsSearchProps {
   searchQuery: string;
@@ -52,6 +57,34 @@ export const OperationsSearch = ({
   onIncludeDeprecatedFieldsChange,
   className,
 }: OperationsSearchProps) => {
+  const graphContext = useContext(GraphContext);
+  const router = useRouter();
+  const applyParams = useApplyParams();
+  const { clientNames, applyClientNameFilter } = useOperationsFilters([]);
+
+  // Fetch clients for the filter
+  const { data: clientsData } = useQuery(
+    getClientsFromAnalytics,
+    {
+      namespace: graphContext?.graph?.namespace,
+      federatedGraphName: graphContext?.graph?.name,
+    },
+    {
+      enabled: !!graphContext?.graph?.name,
+    },
+  );
+
+  // Get current page number
+  const pageNumber = useMemo(() => {
+    const page = parseInt(router.query.page as string, 10);
+    return isNaN(page) || page < 1 ? 1 : page;
+  }, [router.query.page]);
+
+  const clients = useMemo(
+    () => clientsData?.clients || [],
+    [clientsData?.clients],
+  );
+
   const handleClearSearch = useCallback(() => {
     onSearchQueryChange("");
   }, [onSearchQueryChange]);
@@ -68,8 +101,30 @@ export const OperationsSearch = ({
     [onIncludeDeprecatedFieldsChange],
   );
 
+  const handleClientNameFilterSelect = useCallback(
+    (value?: string[]) => {
+      // value is already an array from the filter component
+      applyClientNameFilter(value && value.length > 0 ? value : null);
+      // Reset to page 1 when client filter changes
+      if (pageNumber !== 1) {
+        applyParams({ page: "1" });
+      }
+    },
+    [applyClientNameFilter, pageNumber, applyParams],
+  );
+
   const filtersList: AnalyticsFilter[] = useMemo(
     () => [
+      {
+        id: "clientName",
+        title: "Client",
+        options: clients.map((client) => ({
+          label: client.name,
+          value: client.name,
+        })),
+        selectedOptions: clientNames || [],
+        onSelect: handleClientNameFilterSelect,
+      },
       {
         id: "deprecatedFields",
         title: "Operations with deprecated fields",
@@ -79,8 +134,40 @@ export const OperationsSearch = ({
         customOptions: CustomOptions.Boolean,
       },
     ],
-    [handleDeprecatedFieldsFilterSelect, includeDeprecatedFields],
+    [
+      handleDeprecatedFieldsFilterSelect,
+      handleClientNameFilterSelect,
+      includeDeprecatedFields,
+      clients,
+      clientNames,
+    ],
   );
+
+  // Check if an operation is selected
+  const hasSelectedOperation = useMemo(() => {
+    return !!router.query.operationHash;
+  }, [router.query.operationHash]);
+
+  // Check if any filters are active
+  const hasActiveFilters = useMemo(() => {
+    return (
+      (clientNames && clientNames.length > 0) ||
+      includeDeprecatedFields ||
+      hasSelectedOperation
+    );
+  }, [clientNames, includeDeprecatedFields, hasSelectedOperation]);
+
+  // Reset all filters and operation selection
+  const handleResetFilters = useCallback(() => {
+    // Clear all filters and operation selection in a single update
+    applyParams({
+      clientNames: null,
+      includeDeprecatedFields: null,
+      operationHash: null,
+      operationName: null,
+      page: pageNumber !== 1 ? "1" : null,
+    });
+  }, [applyParams, pageNumber]);
 
   return (
     <div className={`w-full space-y-4 ${className}`}>
@@ -110,7 +197,18 @@ export const OperationsSearch = ({
       <div className="flex w-full flex-wrap items-center justify-between gap-2">
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-2">
-          <AnalyticsFilters filters={filtersList} className="w-72" />{" "}
+          <AnalyticsFilters filters={filtersList} className="w-72" />
+          {hasActiveFilters && (
+            <Button
+              onClick={handleResetFilters}
+              variant="outline"
+              size="sm"
+              className="border-dashed"
+            >
+              <Cross2Icon className="mr-2 h-4 w-4" />
+              Reset
+            </Button>
+          )}
         </div>
 
         {/* Sort Controls */}

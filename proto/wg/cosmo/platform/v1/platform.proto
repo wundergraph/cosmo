@@ -2889,7 +2889,7 @@ enum OperationsFetchBasedOn {
 message GetOperationsRequest {
   string federatedGraphName = 1;
   string namespace = 2;
-  optional string clientName = 3;
+  repeated string clientNames = 3; // filter by client names
   optional int32 limit = 4;
   optional int32 offset = 5; // pagination offset
   optional bool includeDeprecatedFields = 6;

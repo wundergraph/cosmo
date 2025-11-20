@@ -1,4 +1,3 @@
-import { createFilterState } from "@/components/analytics/constructAnalyticsTableQueryState";
 import { FieldUsageSheet } from "@/components/analytics/field-usage";
 import {
   ErrorMetricsCard,
@@ -41,7 +40,6 @@ import { Toolbar } from "@/components/ui/toolbar";
 import { useCurrentOrganization } from "@/hooks/use-current-organization";
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import { useOperationsFilters } from "@/hooks/use-operations-filters";
-import useWindowSize from "@/hooks/use-window-size";
 import { useWorkspace } from "@/hooks/use-workspace";
 import { NextPageWithLayout } from "@/lib/page";
 import { PlainMessage } from "@bufbuild/protobuf";
@@ -63,6 +61,8 @@ import {
   getOperations,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import {
+  AnalyticsFilter,
+  AnalyticsViewFilterOperator,
   GetOperationsResponse,
   GetOperationsResponse_OperationType,
   OperationsFetchBasedOn,
@@ -331,8 +331,7 @@ const OperationsRightPanel = ({
   } = useWorkspace();
   const organizationSlug = useCurrentOrganization()?.slug;
 
-  const { filters, range, dateRange, refreshInterval } =
-    useAnalyticsQueryState();
+  const { range, dateRange, refreshInterval } = useAnalyticsQueryState();
 
   const selectedOperationData = selectedOperation
     ? operations.find((op) => {
@@ -355,9 +354,31 @@ const OperationsRightPanel = ({
     : undefined;
   const operationName = selectedOperationData?.name || "";
 
-  // Filters from useAnalyticsQueryState already include operationHash if it's in filterState
-  // No need to manually add it - it's already there from the URL
-  const metricsFilters = filters;
+  // Add operationHash and operationName filters from URL params if operation is selected
+  const metricsFilters: AnalyticsFilter[] = useMemo(() => {
+    const operationFilters = [];
+    if (selectedOperation) {
+      operationFilters.push(
+        new AnalyticsFilter({
+          field: "operationHash",
+          value: selectedOperation.hash,
+          operator: AnalyticsViewFilterOperator.EQUALS,
+        }),
+      );
+      // Only add operationName filter if operation has a name (not unnamed)
+      if (selectedOperation.name) {
+        operationFilters.push(
+          new AnalyticsFilter({
+            field: "operationName",
+            value: selectedOperation.name,
+            operator: AnalyticsViewFilterOperator.EQUALS,
+          }),
+        );
+      }
+    }
+    // Include any existing filters from filterState (though typically empty on this page)
+    return operationFilters;
+  }, [selectedOperation]);
 
   let { data, isLoading, error, refetch } = useQuery(
     getGraphMetrics,
@@ -452,10 +473,8 @@ const OperationsRightPanel = ({
                       organizationSlug,
                       namespace,
                       slug: router.query.slug,
-                      filterState: createFilterState({
-                        operationHash: selectedOperation.hash,
-                        operationName: operationName || undefined,
-                      }),
+                      operationHash: selectedOperation.hash,
+                      operationName: operationName || undefined,
                       range: router.query.range,
                       dateRange: router.query.dateRange,
                     },
@@ -550,7 +569,6 @@ const OperationsRightPanel = ({
 
 const OperationsPage: NextPageWithLayout = () => {
   const router = useRouter();
-  const { isMobile } = useWindowSize();
   const applyParams = useApplyParams();
   const graphContext = useContext(GraphContext);
   const { filters, range, dateRange } = useAnalyticsQueryState();
@@ -559,6 +577,7 @@ const OperationsPage: NextPageWithLayout = () => {
     fetchBasedOn,
     sortDirection,
     includeDeprecatedFields,
+    clientNames,
     applySearchQuery,
   } = useOperationsFilters([]);
 
@@ -632,6 +651,7 @@ const OperationsPage: NextPageWithLayout = () => {
       includeOperationsWithDeprecatedFieldsOnly: includeDeprecatedFields
         ? true
         : undefined,
+      clientNames,
     },
     {
       enabled: !!graphContext?.graph?.name,
@@ -662,71 +682,42 @@ const OperationsPage: NextPageWithLayout = () => {
     return pageNumber + 1;
   }, [operationsData?.operations, pageSize, pageNumber]);
 
-  // Use URL filters as single source of truth for selected operation
+  // Use URL params as single source of truth for selected operation
   const selectedOperation = useMemo(() => {
-    const operationHashFilter = filters.find(
-      (f: { field: string; value: string }) => f.field === "operationHash",
-    );
-    const operationNameFilter = filters.find(
-      (f: { field: string; value: string }) => f.field === "operationName",
-    );
+    const operationHash = router.query.operationHash as string | undefined;
+    const operationName = router.query.operationName as string | undefined;
 
-    if (
-      !operationHashFilter?.value ||
-      operationNameFilter?.value === undefined ||
-      operationNameFilter?.value === null
-    ) {
+    // If operationHash exists but operationName doesn't, it's an unnamed operation (fallback to '')
+    if (!operationHash) {
       return undefined;
     }
 
     return {
-      hash: operationHashFilter.value as string,
-      name: operationNameFilter.value as string,
+      hash: operationHash,
+      name: operationName ?? "",
     };
-  }, [filters]);
+  }, [router.query.operationHash, router.query.operationName]);
 
-  // Read current filterState from URL
-  const currentFilterState = useMemo(() => {
-    try {
-      return JSON.parse((router.query.filterState as string) || "[]");
-    } catch {
-      return [];
-    }
-  }, [router.query.filterState]);
-
-  // Update URL filterState when operation is selected (merge with existing filters)
+  // Update URL params when operation is selected
   const handleOperationSelect = (
     operationHash: string,
     operationName: string,
   ) => {
-    // Normalize empty string to empty string (not null) for unnamed operations
+    // For unnamed operations, only set operationHash (don't include operationName in URL)
     const normalizedOperationName = operationName || "";
+    const params: Record<string, string | null> = {
+      operationHash: operationHash || null,
+    };
 
-    // Remove existing operationHash and operationName filters if any
-    const filteredState = currentFilterState.filter(
-      (f: { id: string }) =>
-        f.id !== "operationHash" && f.id !== "operationName",
-    );
-
-    // Always add operationHash filter
-    if (operationHash) {
-      const hashFilters = JSON.parse(createFilterState({ operationHash }));
-      filteredState.push(...hashFilters);
+    // Only include operationName if it's not empty (named operations)
+    if (normalizedOperationName) {
+      params.operationName = normalizedOperationName;
+    } else {
+      // Remove operationName from URL for unnamed operations
+      params.operationName = null;
     }
 
-    // Always add operationName filter (even if empty string for unnamed operations)
-    // This ensures we can distinguish between operations with the same hash
-    if (operationHash) {
-      const nameFilters = JSON.parse(
-        createFilterState({ operationName: normalizedOperationName }),
-      );
-      filteredState.push(...nameFilters);
-    }
-
-    // Update filterState in URL (this will automatically update selectedOperation via useMemo)
-    applyParams({
-      filterState: JSON.stringify(filteredState),
-    });
+    applyParams(params);
   };
 
   // Check and clear operation selection when operations data changes (after filters change or refetch)
@@ -746,23 +737,12 @@ const OperationsPage: NextPageWithLayout = () => {
       return opName === selectedName;
     });
 
-    // If operation doesn't exist in the filtered list, remove it from filterState
+    // If operation doesn't exist in the filtered list, clear it from URL params
     if (!operationExists) {
-      const hasOperationFilters = currentFilterState.some(
-        (f: { id: string }) =>
-          f.id === "operationHash" || f.id === "operationName",
-      );
-
-      if (hasOperationFilters) {
-        const filteredState = currentFilterState.filter(
-          (f: { id: string }) =>
-            f.id !== "operationHash" && f.id !== "operationName",
-        );
-
-        applyParams({
-          filterState: JSON.stringify(filteredState),
-        });
-      }
+      applyParams({
+        operationHash: null,
+        operationName: null,
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [operationsData?.operations]);

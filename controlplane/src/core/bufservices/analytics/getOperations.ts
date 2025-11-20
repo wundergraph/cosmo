@@ -153,20 +153,27 @@ export function getOperations(
     // Then filter and apply pagination in memory
     const shouldFetchAll = req.includeDeprecatedFields === true;
 
+    const filters: AnalyticsFilter[] = [];
+    if (req.clientNames && req.clientNames.length > 0) {
+      // Create an EQUALS filter for each client name
+      // Multiple filters with the same field are combined with OR
+      for (const clientName of req.clientNames) {
+        filters.push(
+          new AnalyticsFilter({
+            field: 'clientName',
+            operator: AnalyticsViewFilterOperator.EQUALS,
+            value: clientName,
+          }),
+        );
+      }
+    }
+
     const operations = await metricsRepo.getOperations({
       range,
       dateRange,
       organizationId: authContext.organizationId,
       graphId: graph.id,
-      filters: req.clientName
-        ? [
-            new AnalyticsFilter({
-              field: 'clientName',
-              operator: AnalyticsViewFilterOperator.EQUALS,
-              value: req.clientName,
-            }),
-          ]
-        : [],
+      filters,
       limit: req.limit,
       offset: shouldFetchAll ? 0 : req.offset,
       fetchBasedOn: sortField,

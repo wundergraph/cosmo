@@ -119,38 +119,23 @@ export const useOperationsFilters = (filters: AnalyticsViewResultFilter[]) => {
 
       // When enabling deprecated fields filter, clear operation selection
       if (includeDeprecatedFields) {
-        const hasOperationFilters = selectedFilters.some(
-          (f: { id: string }) =>
-            f.id === "operationHash" || f.id === "operationName",
-        );
-
-        if (hasOperationFilters) {
-          // Remove operationHash and operationName filters
-          const filteredState = selectedFilters.filter(
-            (f: { id: string }) =>
-              f.id !== "operationHash" && f.id !== "operationName",
-          );
-
-          let stringifiedFilters;
-          try {
-            stringifiedFilters = JSON.stringify(filteredState);
-          } catch {
-            stringifiedFilters = "[]";
-          }
-
-          params.filterState = stringifiedFilters;
-        }
+        // Clear operationHash and operationName from URL params
+        params.operationHash = null;
+        params.operationName = null;
       }
 
       applyNewParams(params);
     },
-    [applyNewParams, selectedFilters],
+    [applyNewParams],
   );
 
   const applyClientNameFilter = useCallback(
-    (clientName: string | null) => {
+    (clientNames: string[] | null) => {
+      // Store as comma-separated string in URL, or null if empty
+      const value =
+        clientNames && clientNames.length > 0 ? clientNames.join(",") : null;
       applyNewParams({
-        clientName: clientName || null,
+        clientNames: value,
       });
     },
     [applyNewParams],
@@ -205,7 +190,10 @@ export const useOperationsFilters = (filters: AnalyticsViewResultFilter[]) => {
   // Get current values from URL
   const includeDeprecatedFields =
     router.query.includeDeprecatedFields === "true";
-  const clientName = (router.query.clientName as string) || null;
+  const clientNamesParam = (router.query.clientNames as string) || null;
+  const clientNames = clientNamesParam
+    ? clientNamesParam.split(",").filter((name) => name.length > 0)
+    : [];
   const searchQuery = (router.query.searchQuery as string) || "";
   const fetchBasedOnStr = (router.query.fetchBasedOn as string) || "requests";
   const fetchBasedOn = stringToEnum(fetchBasedOnStr);
@@ -220,7 +208,7 @@ export const useOperationsFilters = (filters: AnalyticsViewResultFilter[]) => {
     applySearchQuery,
     applySorting,
     includeDeprecatedFields,
-    clientName,
+    clientNames,
     searchQuery,
     fetchBasedOn,
     fetchBasedOnStr, // Keep string version for backward compatibility
