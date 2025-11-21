@@ -211,13 +211,13 @@ func (p *ProviderAdapter) Publish(ctx context.Context, conf datasource.PublishEv
 	var errMutex sync.Mutex
 
 	for _, streamEvent := range events {
-		kafkaEvent, ok := streamEvent.Clone().(*MutableEvent)
-		if !ok {
-			return datasource.NewError("invalid event type for Kafka adapter", nil)
+		evt, err := castToMutableEvent(streamEvent)
+		if err != nil {
+			return datasource.NewError(err.Error(), nil)
 		}
 
-		headers := make([]kgo.RecordHeader, 0, len(kafkaEvent.Headers))
-		for key, value := range kafkaEvent.Headers {
+		headers := make([]kgo.RecordHeader, 0, len(evt.Headers))
+		for key, value := range evt.Headers {
 			headers = append(headers, kgo.RecordHeader{
 				Key:   key,
 				Value: value,
@@ -225,9 +225,9 @@ func (p *ProviderAdapter) Publish(ctx context.Context, conf datasource.PublishEv
 		}
 
 		p.writeClient.Produce(ctx, &kgo.Record{
-			Key:     kafkaEvent.Key,
+			Key:     evt.Key,
 			Topic:   pubConf.Topic,
-			Value:   kafkaEvent.Data,
+			Value:   evt.Data,
 			Headers: headers,
 		}, func(record *kgo.Record, err error) {
 			defer wg.Done()
@@ -321,4 +321,15 @@ func NewProviderAdapter(ctx context.Context, logger *zap.Logger, opts []kgo.Opt,
 		cancel:            cancel,
 		streamMetricStore: store,
 	}, nil
+}
+
+func castToMutableEvent(event datasource.StreamEvent) (*MutableEvent, error) {
+	switch evt := event.(type) {
+	case *Event:
+		return evt.evt, nil
+	case *MutableEvent:
+		return evt, nil
+	default:
+		return nil, errors.New("invalid event type for Kafka adapter")
+	}
 }
