@@ -88,6 +88,7 @@ require (
 )
 
 require (
+	connectrpc.com/vanguard v0.3.0 // indirect
 	github.com/alicebob/gopher-json v0.0.0-20230218143504-906a9b012302 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/benbjohnson/clock v1.3.0 // indirect

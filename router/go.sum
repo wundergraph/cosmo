@@ -1,5 +1,7 @@
 connectrpc.com/connect v1.16.2 h1:ybd6y+ls7GOlb7Bh5C8+ghA6SvCBajHwxssO2CGFjqE=
 connectrpc.com/connect v1.16.2/go.mod h1:n2kgwskMHXC+lVqb18wngEpF95ldBHXjZYJussz5FRc=
+connectrpc.com/vanguard v0.3.0 h1:prUKFm8rYDwvpvnOSoqdUowPMK0tRA0pbSrQoMd6Zng=
+connectrpc.com/vanguard v0.3.0/go.mod h1:nxQ7+N6qhBiQczqGwdTw4oCqx1rDryIt20cEdECqToM=
 github.com/99designs/gqlgen v0.17.76 h1:YsJBcfACWmXWU2t1yCjoGdOmqcTfOFpjbLAE443fmYI=
 github.com/99designs/gqlgen v0.17.76/go.mod h1:miiU+PkAnTIDKMQ1BseUOIVeQHoiwYDZGCswoxl7xec=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
