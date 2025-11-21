@@ -338,17 +338,16 @@ func (s *MetricsService) appendUsageMetrics(
 			strconv.FormatInt(int64(schemaUsage.RequestInfo.StatusCode), 10),
 			schemaUsage.RequestInfo.Error,
 			fieldUsage.SubgraphIDs,
-			false,
-			false,
+			false, // IsArgument
+			false, // IsInput
 			schemaUsage.Attributes,
 			fieldUsage.IndirectInterfaceField,
+			false, // IsNull - not applicable for field metrics
 		)
 		if err != nil {
 			return fmt.Errorf("failed to append field metric to batch: %w", err)
 		}
 	}
-
-	fmt.Println(schemaUsage.OperationInfo.Name)
 
 	for _, argumentUsage := range schemaUsage.ArgumentMetrics {
 
@@ -376,10 +375,11 @@ func (s *MetricsService) appendUsageMetrics(
 			strconv.FormatInt(int64(schemaUsage.RequestInfo.StatusCode), 10),
 			schemaUsage.RequestInfo.Error,
 			argumentUsage.SubgraphIDs,
-			true,
-			false,
+			true,  // IsArgument
+			false, // IsInput
 			schemaUsage.Attributes,
-			false,
+			false, // IsIndirectFieldUsage
+			argumentUsage.IsNull,
 		)
 		if err != nil {
 			return fmt.Errorf("failed to append argument metric to batch: %w", err)
@@ -416,6 +416,7 @@ func (s *MetricsService) appendUsageMetrics(
 			true,
 			schemaUsage.Attributes,
 			false,
+			inputUsage.IsNull,
 		)
 		if err != nil {
 			return fmt.Errorf("failed to append input metric to batch: %w", err)

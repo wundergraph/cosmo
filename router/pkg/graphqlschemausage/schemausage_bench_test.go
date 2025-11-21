@@ -119,13 +119,13 @@ func BenchmarkGetTypeFieldUsageInfo(b *testing.B) {
 
 // BenchmarkGetArgumentUsageInfo measures memory allocations when extracting argument usage
 func BenchmarkGetArgumentUsageInfo(b *testing.B) {
-	generatedPlan, operation, definition, _ := setupBenchmark(b)
+	generatedPlan, operation, definition, variables := setupBenchmark(b)
 
 	b.ResetTimer()
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		result, err := GetArgumentUsageInfo(operation, definition, generatedPlan)
+		result, err := GetArgumentUsageInfo(operation, definition, variables, generatedPlan, nil)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -179,7 +179,7 @@ func BenchmarkSchemaUsageEndToEnd(b *testing.B) {
 		_ = TypeFieldMetrics(typeFieldUsage).IntoGraphQLMetrics()
 
 		// Extract argument usage
-		argUsage, err := GetArgumentUsageInfo(operation, definition, generatedPlan)
+		argUsage, err := GetArgumentUsageInfo(operation, definition, variables, generatedPlan, nil)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -316,7 +316,7 @@ func BenchmarkSchemaUsageWithManyFields(b *testing.B) {
 				typeFieldUsage := GetTypeFieldUsageInfo(generatedPlan)
 
 				// Extract argument usage
-				argUsage, err := GetArgumentUsageInfo(operation, definition, generatedPlan)
+				argUsage, err := GetArgumentUsageInfo(operation, definition, variables, generatedPlan, nil)
 				if err != nil {
 					b.Fatal(err)
 				}
@@ -327,6 +327,7 @@ func BenchmarkSchemaUsageWithManyFields(b *testing.B) {
 					b.Fatal(err)
 				}
 
+				// Prevent compiler optimization
 				_ = typeFieldUsage
 				_ = argUsage
 				_ = inputUsage

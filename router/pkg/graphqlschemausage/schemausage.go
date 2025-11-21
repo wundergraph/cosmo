@@ -23,11 +23,29 @@
 // 2. ARGUMENT: Correlate AST arguments with plan field paths
 // 3. INPUT: Build field→subgraph and variable→subgraph maps, then traverse variable values
 //
-// Special handling: Variable remapping for normalized operations (e.g., $a → $criteria),
-// null value skipping (nulls don't represent actual usage).
+// # Input Null Tracking
+//
+// Input fields are ALWAYS tracked, even when null (explicit or implicit). This is critical for
+// detecting breaking changes when optional fields become required. Each input usage includes an
+// IsNull flag to indicate null propagation. When an input is null, the chain stops there—nested
+// fields are not traversed since the parent is null.
+//
+// # Design Components
+//
+// The package uses dependency injection and separation of concerns:
+//
+// - pathBuilder: Reusable path stack operations for field traversal
+// - nullValueDetector: Centralized null detection for values and variables with remapping support
+// - subgraphMapper: Unified interface for field and variable → subgraph ID resolution
+// - inputTypeResolver: Type system queries for input object field definitions
+// - inputTraverser: Input traversal with implicit null tracking
+//
+// These components are composed by visitor types to provide clean, testable, and maintainable
+// schema usage extraction.
 package graphqlschemausage
 
 import (
+	"bytes"
 	"strings"
 
 	"github.com/wundergraph/astjson"
@@ -40,6 +58,11 @@ import (
 	graphqlmetrics "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 )
 
+// ============================================
+// Public API
+// ============================================
+
+// GetTypeFieldUsageInfo extracts type and field usage from the execution plan.
 func GetTypeFieldUsageInfo(operationPlan plan.Plan) []*TypeFieldUsageInfo {
 	visitor := typeFieldUsageInfoVisitor{}
 	switch p := operationPlan.(type) {
@@ -51,12 +74,65 @@ func GetTypeFieldUsageInfo(operationPlan plan.Plan) []*TypeFieldUsageInfo {
 	return visitor.typeFieldUsageInfo
 }
 
+// GetArgumentUsageInfo extracts argument usage by correlating AST arguments with execution plan
+// field paths. Includes null tracking for both inline and variable-based argument values.
+func GetArgumentUsageInfo(operation, definition *ast.Document, variables *astjson.Value, operationPlan plan.Plan, remapVariables map[string]string) ([]*graphqlmetrics.ArgumentUsageInfo, error) {
+	subgraphMapper := newSubgraphMapper(operationPlan, operation, definition)
+	nullDetector := newNullValueDetector(operation, variables, remapVariables)
+
+	walker := astvisitor.NewWalker(48)
+	visitor := &argumentUsageInfoVisitor{
+		definition:              definition,
+		operation:               operation,
+		walker:                  &walker,
+		subgraphMapper:          subgraphMapper,
+		nullDetector:            nullDetector,
+		pathBuilder:             newPathBuilder(8),
+		usage:                   make([]*graphqlmetrics.ArgumentUsageInfo, 0, 16),
+		currentFieldRef:         -1,
+		providedArgumentsStack:  make([]map[string]struct{}, 0, 8),
+		fieldEnclosingNodeStack: make([]ast.Node, 0, 8),
+	}
+	walker.RegisterEnterArgumentVisitor(visitor)
+	walker.RegisterEnterFieldVisitor(visitor)
+	walker.RegisterLeaveFieldVisitor(visitor)
+	rep := &operationreport.Report{}
+	walker.Walk(operation, definition, rep)
+	if rep.HasErrors() {
+		return nil, rep
+	}
+
+	return visitor.usage, nil
+}
+
+// GetInputUsageInfo extracts input usage by traversing variable values. Tracks both explicit
+// nulls ({"field": null}) and implicit nulls (missing fields) for breaking change detection.
+// Also tracks input usage for implicitly null input type arguments (arguments not provided).
+func GetInputUsageInfo(operation, definition *ast.Document, variables *astjson.Value, operationPlan plan.Plan, remapVariables map[string]string) ([]*graphqlmetrics.InputUsageInfo, error) {
+	subgraphMapper := newSubgraphMapper(operationPlan, operation, definition)
+	traverser := newInputTraverser(definition, subgraphMapper)
+	nullDetector := newNullValueDetector(operation, variables, remapVariables)
+
+	// Track input usage from variable definitions
+	for i := range operation.VariableDefinitions {
+		processVariableDefinition(traverser, operation, variables, nullDetector, i)
+	}
+
+	// Track input usage from implicitly null input type arguments
+	collectImplicitArgumentInputUsage(operation, definition, subgraphMapper, traverser)
+
+	return traverser.usage, nil
+}
+
+// ============================================
+// Type Field Usage
+// ============================================
+
 // An array of TypeFieldUsageInfo, with a method to convert it into a []*graphqlmetrics.TypeFieldUsageInfo
 type TypeFieldMetrics []*TypeFieldUsageInfo
 
 // IntoGraphQLMetrics converts the TypeFieldMetrics into a []*graphqlmetrics.TypeFieldUsageInfo
 func (t TypeFieldMetrics) IntoGraphQLMetrics() []*graphqlmetrics.TypeFieldUsageInfo {
-	// Pre-allocate slice with exact capacity
 	metrics := make([]*graphqlmetrics.TypeFieldUsageInfo, len(t))
 	for i, info := range t {
 		metrics[i] = info.IntoGraphQLMetrics()
@@ -94,10 +170,7 @@ type typeFieldUsageInfoVisitor struct {
 func (p *typeFieldUsageInfoVisitor) visitNode(node resolve.Node, path []string) {
 	switch t := node.(type) {
 	case *resolve.Object:
-		// Pre-allocate the typeFieldUsageInfo slice with a reasonable capacity
-		// to reduce allocations during traversal
 		if p.typeFieldUsageInfo == nil {
-			// Estimate: average query has ~20-50 fields
 			p.typeFieldUsageInfo = make([]*TypeFieldUsageInfo, 0, 32)
 		}
 
@@ -106,7 +179,6 @@ func (p *typeFieldUsageInfoVisitor) visitNode(node resolve.Node, path []string) 
 				continue
 			}
 
-			// create a new slice with exact capacity and copy elements
 			pathCopy := make([]string, len(path)+1)
 			copy(pathCopy, path)
 			pathCopy[len(path)] = field.Info.Name
@@ -134,12 +206,122 @@ func (p *typeFieldUsageInfoVisitor) visitNode(node resolve.Node, path []string) 
 	}
 }
 
+// ============================================
+// Path Builder (Shared Infrastructure)
+// ============================================
+
+// pathBuilder provides reusable path stack operations for tracking field paths during traversal.
+type pathBuilder struct {
+	stack []string
+}
+
+func newPathBuilder(capacity int) *pathBuilder {
+	return &pathBuilder{stack: make([]string, 0, capacity)}
+}
+
+func (p *pathBuilder) push(segment string) {
+	p.stack = append(p.stack, segment)
+}
+
+func (p *pathBuilder) pop() {
+	if len(p.stack) > 0 {
+		p.stack = p.stack[:len(p.stack)-1]
+	}
+}
+
+func (p *pathBuilder) copy() []string {
+	result := make([]string, len(p.stack))
+	copy(result, p.stack)
+	return result
+}
+
+func (p *pathBuilder) key() string {
+	return strings.Join(p.stack, ".")
+}
+
+// ============================================
+// Null Value Detector (Shared Infrastructure)
+// ============================================
+
+// nullValueDetector handles null detection for inline values, variables, and name remapping.
+type nullValueDetector struct {
+	operation      *ast.Document
+	variables      *astjson.Value
+	remapVariables map[string]string
+}
+
+func newNullValueDetector(operation *ast.Document, variables *astjson.Value, remapVariables map[string]string) *nullValueDetector {
+	return &nullValueDetector{
+		operation:      operation,
+		variables:      variables,
+		remapVariables: remapVariables,
+	}
+}
+
+// isValueNull checks if an argument/variable value is null
+func (n *nullValueDetector) isValueNull(value ast.Value) bool {
+	if value.Kind == ast.ValueKindNull {
+		return true
+	}
+
+	if value.Kind == ast.ValueKindVariable && n.variables != nil {
+		varName := n.operation.VariableValueNameString(value.Ref)
+		return n.isVariableNull(varName)
+	}
+
+	return false
+}
+
+// isVariableNull checks if a variable (by name) has a null value
+func (n *nullValueDetector) isVariableNull(varName string) bool {
+	originalVarName := n.getOriginalVariableName(varName)
+	jsonField := n.variables.Get(originalVarName)
+	return jsonField != nil && jsonField.Type() == astjson.TypeNull
+}
+
+// getOriginalVariableName maps normalized variable names back to originals
+func (n *nullValueDetector) getOriginalVariableName(varName string) string {
+	if n.remapVariables != nil {
+		if remapped, exists := n.remapVariables[varName]; exists {
+			return remapped
+		}
+	}
+	return varName
+}
+
+// ============================================
+// Subgraph Mapper (Shared Infrastructure)
+// ============================================
+
+// subgraphMapper maps field paths and variable names to their subgraph IDs.
+type subgraphMapper struct {
+	fieldToSubgraphs    map[string][]string
+	variableToSubgraphs map[string][]string
+}
+
+func newSubgraphMapper(operationPlan plan.Plan, operation, definition *ast.Document) *subgraphMapper {
+	mapper := &subgraphMapper{
+		fieldToSubgraphs: buildFieldSubgraphIDMap(operationPlan),
+	}
+	mapper.variableToSubgraphs = buildVariableSubgraphMap(operation, definition, mapper.fieldToSubgraphs)
+	return mapper
+}
+
+// getFieldSubgraphs returns subgraph IDs for a field path
+func (s *subgraphMapper) getFieldSubgraphs(pathKey string) []string {
+	return s.fieldToSubgraphs[pathKey]
+}
+
+// getVariableSubgraphs returns subgraph IDs for a variable
+func (s *subgraphMapper) getVariableSubgraphs(varName string) []string {
+	return s.variableToSubgraphs[varName]
+}
+
 // buildFieldSubgraphIDMap extracts field → subgraph mappings from the execution plan.
-// Returns a map where keys are dot-separated paths (e.g., "user.orders") and values are subgraph IDs.
 func buildFieldSubgraphIDMap(operationPlan plan.Plan) map[string][]string {
 	collector := &subgraphIDCollector{
 		fieldMap:  make(map[string][]string),
-		pathStack: make([]string, 0, 8), // Pre-allocate for typical depth
+		pathStack: make([]string, 0, 8),
 	}
 	switch p := operationPlan.(type) {
 	case *plan.SynchronousResponsePlan:
@@ -152,7 +334,7 @@ func buildFieldSubgraphIDMap(operationPlan plan.Plan) map[string][]string {
 
 type subgraphIDCollector struct {
 	fieldMap  map[string][]string
-	pathStack []string // Reusable path stack to avoid allocations
+	pathStack []string
 }
 
 func (c *subgraphIDCollector) collectFromNode(node resolve.Node) {
@@ -162,16 +344,10 @@ func (c *subgraphIDCollector) collectFromNode(node resolve.Node) {
 			if field.Info == nil {
 				continue
 			}
-			// Push field name onto stack
 			c.pathStack = append(c.pathStack, field.Info.Name)
-
-			// Store the subgraph IDs for this field path
-			pathKey := pathToKey(c.pathStack)
+			pathKey := strings.Join(c.pathStack, ".")
 			c.fieldMap[pathKey] = field.Info.Source.IDs
-
 			c.collectFromNode(field.Value)
-
-			// Pop field name from stack
 			c.pathStack = c.pathStack[:len(c.pathStack)-1]
 		}
 	case *resolve.Array:
@@ -179,14 +355,7 @@ func (c *subgraphIDCollector) collectFromNode(node resolve.Node) {
 	}
 }
 
-// pathToKey converts a path slice to a string key for map lookups.
-func pathToKey(path []string) string {
-	return strings.Join(path, ".")
-}
-
 // buildVariableSubgraphMap maps variable names to subgraph IDs by analyzing which fields use them.
-// Walks the operation AST to find variable usage (e.g., user(id: $userId)), then looks up
-// the field's subgraph IDs from fieldSubgraphMap. Merges IDs if a variable is used by multiple fields.
 func buildVariableSubgraphMap(operation, definition *ast.Document, fieldSubgraphMap map[string][]string) map[string][]string {
 	variableMap := make(map[string][]string)
 	walker := astvisitor.NewWalker(48)
@@ -196,7 +365,7 @@ func buildVariableSubgraphMap(operation, definition *ast.Document, fieldSubgraph
 		definition:       definition,
 		fieldSubgraphMap: fieldSubgraphMap,
 		variableMap:      variableMap,
-		currentPath:      make([]string, 0, 8),
+		pathBuilder:      newPathBuilder(8),
 	}
 	walker.RegisterEnterFieldVisitor(collector)
 	walker.RegisterLeaveFieldVisitor(collector)
@@ -212,28 +381,21 @@ type variableSubgraphCollector struct {
 	definition       *ast.Document
 	fieldSubgraphMap map[string][]string
 	variableMap      map[string][]string
-	currentPath      []string
+	pathBuilder      *pathBuilder
 }
 
-// EnterField tracks the current field path for argument processing.
 func (v *variableSubgraphCollector) EnterField(ref int) {
 	fieldName := v.operation.FieldNameString(ref)
-	v.currentPath = append(v.currentPath, fieldName)
+	v.pathBuilder.push(fieldName)
 }
 
-// LeaveField pops the field from the path when leaving.
 func (v *variableSubgraphCollector) LeaveField(_ int) {
-	if len(v.currentPath) > 0 {
-		v.currentPath = v.currentPath[:len(v.currentPath)-1]
-	}
+	v.pathBuilder.pop()
 }
 
-// EnterArgument detects variable usage and associates variables with subgraph IDs.
-// For user(id: $userId), maps "userId" → subgraph IDs of "user" field.
 func (v *variableSubgraphCollector) EnterArgument(ref int) {
 	arg := v.operation.Arguments[ref]
 
-	// Only process arguments that use variables (not inline values)
 	if arg.Value.Kind != ast.ValueKindVariable {
 		return
 	}
@@ -243,19 +405,13 @@ func (v *variableSubgraphCollector) EnterArgument(ref int) {
 		return
 	}
 
-	// Get subgraph IDs for the current field path
-	if len(v.currentPath) > 0 {
-		pathKey := pathToKey(v.currentPath)
-		if subgraphIDs, exists := v.fieldSubgraphMap[pathKey]; exists {
-			// Merge subgraph IDs for this variable
-			// (in case the variable is used by multiple fields from different subgraphs)
-			v.variableMap[varName] = mergeSubgraphIDs(v.variableMap[varName], subgraphIDs)
-		}
+	pathKey := v.pathBuilder.key()
+	if subgraphIDs, exists := v.fieldSubgraphMap[pathKey]; exists {
+		v.variableMap[varName] = mergeSubgraphIDs(v.variableMap[varName], subgraphIDs)
 	}
 }
 
 // mergeSubgraphIDs combines two slices of subgraph IDs, removing duplicates.
-// Used when a variable is used by fields from different subgraphs.
 func mergeSubgraphIDs(a, b []string) []string {
 	if len(a) == 0 {
 		return b
@@ -284,50 +440,45 @@ func mergeSubgraphIDs(a, b []string) []string {
 	return result
 }
 
-func GetArgumentUsageInfo(operation, definition *ast.Document, operationPlan plan.Plan) ([]*graphqlmetrics.ArgumentUsageInfo, error) {
-	// Build a mapping of field paths to their subgraph IDs from the plan
-	subgraphIDMap := buildFieldSubgraphIDMap(operationPlan)
-
-	walker := astvisitor.NewWalker(48)
-	visitor := &argumentUsageInfoVisitor{
-		definition:    definition,
-		operation:     operation,
-		walker:        &walker,
-		subgraphIDMap: subgraphIDMap,
-		// Pre-allocate with reasonable capacity to reduce allocations
-		usage: make([]*graphqlmetrics.ArgumentUsageInfo, 0, 16),
-	}
-	walker.RegisterEnterArgumentVisitor(visitor)
-	walker.RegisterEnterFieldVisitor(visitor)
-	walker.RegisterLeaveFieldVisitor(visitor)
-	rep := &operationreport.Report{}
-	walker.Walk(operation, definition, rep)
-	if rep.HasErrors() {
-		return nil, rep
-	}
-	return visitor.usage, nil
-}
+// ============================================
+// Argument Usage Visitor
+// ============================================
 
 type argumentUsageInfoVisitor struct {
-	walker                *astvisitor.Walker
-	definition, operation *ast.Document
-	fieldEnclosingNode    ast.Node
-	subgraphIDMap         map[string][]string
-	currentPath           []string
-	usage                 []*graphqlmetrics.ArgumentUsageInfo
+	walker                  *astvisitor.Walker
+	definition              *ast.Document
+	operation               *ast.Document
+	fieldEnclosingNodeStack []ast.Node // Stack to track enclosing nodes for nested fields
+	subgraphMapper          *subgraphMapper
+	nullDetector            *nullValueDetector
+	pathBuilder             *pathBuilder
+	usage                   []*graphqlmetrics.ArgumentUsageInfo
+	currentFieldRef         int
+	providedArgumentsStack  []map[string]struct{} // Stack of maps to track which arguments were provided at each level
 }
 
 func (a *argumentUsageInfoVisitor) EnterField(ref int) {
-	a.fieldEnclosingNode = a.walker.EnclosingTypeDefinition
-	// Track the current field path for subgraph ID lookup
+	// Push current enclosing node onto stack
+	a.fieldEnclosingNodeStack = append(a.fieldEnclosingNodeStack, a.walker.EnclosingTypeDefinition)
+	a.currentFieldRef = ref
+	// Push nil - will lazily allocate map only if field has arguments
+	a.providedArgumentsStack = append(a.providedArgumentsStack, nil)
 	fieldName := a.operation.FieldNameString(ref)
-	a.currentPath = append(a.currentPath, fieldName)
+	a.pathBuilder.push(fieldName)
 }
 
-func (a *argumentUsageInfoVisitor) LeaveField(_ int) {
-	// Remove the current field from the path when leaving
-	if len(a.currentPath) > 0 {
-		a.currentPath = a.currentPath[:len(a.currentPath)-1]
+func (a *argumentUsageInfoVisitor) LeaveField(ref int) {
+	// Track implicit null arguments (arguments defined in schema but not provided in operation)
+	a.trackImplicitNullArguments(ref)
+	a.pathBuilder.pop()
+	a.currentFieldRef = -1
+	// Pop the enclosing node from stack
+	if len(a.fieldEnclosingNodeStack) > 0 {
+		a.fieldEnclosingNodeStack = a.fieldEnclosingNodeStack[:len(a.fieldEnclosingNodeStack)-1]
+	}
+	// Pop the provided arguments map
+	if len(a.providedArgumentsStack) > 0 {
+		a.providedArgumentsStack = a.providedArgumentsStack[:len(a.providedArgumentsStack)-1]
 	}
 }
 
@@ -337,195 +488,351 @@ func (a *argumentUsageInfoVisitor) EnterArgument(ref int) {
 	if anc.Kind != ast.NodeKindField {
 		return
 	}
+
+	// Track that this argument was provided in the current field's map
+	// Lazily allocate map only when first argument is encountered
+	if len(a.providedArgumentsStack) > 0 {
+		stackIdx := len(a.providedArgumentsStack) - 1
+		if a.providedArgumentsStack[stackIdx] == nil {
+			a.providedArgumentsStack[stackIdx] = make(map[string]struct{}, 4) // Capacity hint: most fields have 1-4 args
+		}
+		a.providedArgumentsStack[stackIdx][string(argName)] = struct{}{}
+	}
+
+	// Get enclosing node from top of stack
+	if len(a.fieldEnclosingNodeStack) == 0 {
+		return
+	}
+	fieldEnclosingNode := a.fieldEnclosingNodeStack[len(a.fieldEnclosingNodeStack)-1]
+
 	fieldName := a.operation.FieldNameBytes(anc.Ref)
-	enclosingTypeName := a.definition.NodeNameBytes(a.fieldEnclosingNode)
-	argDef := a.definition.NodeFieldDefinitionArgumentDefinitionByName(a.fieldEnclosingNode, fieldName, argName)
+	enclosingTypeName := a.definition.NodeNameBytes(fieldEnclosingNode)
+	argDef := a.definition.NodeFieldDefinitionArgumentDefinitionByName(fieldEnclosingNode, fieldName, argName)
 	if argDef == -1 {
 		return
 	}
 	argType := a.definition.InputValueDefinitionType(argDef)
 	typeName := a.definition.ResolveTypeNameBytes(argType)
 
-	// Look up subgraph IDs for the current field path
-	var subgraphIDs []string
-	if len(a.currentPath) > 0 {
-		pathKey := pathToKey(a.currentPath)
-		if ids, exists := a.subgraphIDMap[pathKey]; exists {
-			subgraphIDs = ids
-		}
-	}
+	// Get subgraph IDs using the path builder
+	subgraphIDs := a.subgraphMapper.getFieldSubgraphs(a.pathBuilder.key())
+
+	// Check if argument is null using null detector
+	arg := a.operation.Arguments[ref]
+	isNull := a.nullDetector.isValueNull(arg.Value)
 
 	a.usage = append(a.usage, &graphqlmetrics.ArgumentUsageInfo{
 		Path:        []string{string(fieldName), string(argName)},
 		TypeName:    string(enclosingTypeName),
 		NamedType:   string(typeName),
 		SubgraphIDs: subgraphIDs,
+		IsNull:      isNull,
 	})
 }
 
-// GetInputUsageInfo extracts usage for input types and fields from variable values.
-// Builds field/variable → subgraph mappings, then traverses variable values to apply subgraph IDs.
-// Handles nested inputs, scalars, and variable name remapping (e.g., normalized $a → original $criteria).
-// Skips null values as they don't represent actual usage.
-func GetInputUsageInfo(operation, definition *ast.Document, variables *astjson.Value, operationPlan plan.Plan, remapVariables map[string]string) ([]*graphqlmetrics.InputUsageInfo, error) {
-	// Build a mapping of field paths to their subgraph IDs from the plan
-	subgraphIDMap := buildFieldSubgraphIDMap(operationPlan)
-
-	// Build a mapping of variables to the fields that use them and their subgraph IDs
-	variableSubgraphMap := buildVariableSubgraphMap(operation, definition, subgraphIDMap)
-
-	visitor := &inputUsageInfoVisitor{
-		operation:           operation,
-		definition:          definition,
-		variables:           variables,
-		variableSubgraphMap: variableSubgraphMap,
-		remapVariables:      remapVariables,
-		// Pre-allocate with reasonable capacity to reduce allocations
-		usage: make([]*graphqlmetrics.InputUsageInfo, 0, 16),
+// trackImplicitNullArguments tracks arguments defined in the schema but not provided in the operation.
+// This is critical for breaking change detection - we need to know if arguments are being used or not.
+func (a *argumentUsageInfoVisitor) trackImplicitNullArguments(fieldRef int) {
+	// Get enclosing node from top of stack
+	if len(a.fieldEnclosingNodeStack) == 0 {
+		return
 	}
+	fieldEnclosingNode := a.fieldEnclosingNodeStack[len(a.fieldEnclosingNodeStack)-1]
 
-	for i := range operation.VariableDefinitions {
-		visitor.EnterVariableDefinition(i)
-	}
-
-	return visitor.usage, nil
-}
-
-type inputUsageInfoVisitor struct {
-	definition, operation *ast.Document
-	variables             *astjson.Value
-	variableSubgraphMap   map[string][]string
-	remapVariables        map[string]string
-	currentVariableName   string
-	usage                 []*graphqlmetrics.InputUsageInfo
-}
-
-func (v *inputUsageInfoVisitor) EnterVariableDefinition(ref int) {
-	varTypeRef := v.operation.VariableDefinitions[ref].Type
-	varTypeName := v.operation.ResolveTypeNameString(varTypeRef)
-
-	// Get the variable name from the (possibly normalized/minified) operation AST
-	// After normalization, variable names may be shortened: $criteria → $a
-	normalizedVarName := v.operation.VariableValueNameString(v.operation.VariableDefinitions[ref].VariableValue.Ref)
-
-	// Map the normalized name back to the original if remapping is available
-	// The variables JSON always uses original names, but the AST uses normalized names
-	// Example: AST has "$a", remapVariables["a"] = "criteria", JSON has {"criteria": {...}}
-	originalVarName := normalizedVarName
-	if v.remapVariables != nil {
-		if remapped, exists := v.remapVariables[normalizedVarName]; exists {
-			originalVarName = remapped
-		}
-	}
-
-	// Look up the variable value using the original name
-	jsonField := v.variables.Get(originalVarName)
-	if jsonField == nil {
+	if fieldEnclosingNode.Kind == ast.NodeKindUnknown {
 		return
 	}
 
-	// Skip null values - they don't represent actual schema usage
-	if jsonField.Type() == astjson.TypeNull {
+	// Skip introspection fields
+	fieldName := a.operation.FieldNameBytes(fieldRef)
+	if len(fieldName) > 1 && fieldName[0] == '_' && fieldName[1] == '_' {
 		return
 	}
 
-	// Use the normalized name for subgraph ID lookup (it matches the AST structure)
-	v.currentVariableName = normalizedVarName
-	v.traverseVariable(jsonField, originalVarName, varTypeName, "")
-}
+	enclosingTypeName := a.definition.NodeNameBytes(fieldEnclosingNode)
 
-// traverseVariable recursively processes variable values, tracking input types and fields.
-// Handles scalars, enums, input objects, and arrays. SubgraphIDs inherited from variableSubgraphMap.
-func (v *inputUsageInfoVisitor) traverseVariable(jsonValue *astjson.Value, fieldName, typeName, parentTypeName string) {
-	defNode, ok := v.definition.NodeByNameStr(typeName)
+	// Get subgraph IDs for this field
+	subgraphIDs := a.subgraphMapper.getFieldSubgraphs(a.pathBuilder.key())
 
-	usageInfo := &graphqlmetrics.InputUsageInfo{
-		NamedType: typeName,
-	}
-	if parentTypeName != "" {
-		usageInfo.TypeName = parentTypeName
-		// Pre-allocate Path slice with exact capacity
-		usageInfo.Path = []string{parentTypeName, fieldName}
-	}
-
-	// Get subgraph IDs for this variable from the mapping built in STEP 2
-	// All fields in this variable inherit the same subgraph IDs
-	if v.currentVariableName != "" {
-		if subgraphIDs, exists := v.variableSubgraphMap[v.currentVariableName]; exists {
-			usageInfo.SubgraphIDs = subgraphIDs
+	// Find all arguments defined for this field in the schema
+	var argumentRefs []int
+	switch fieldEnclosingNode.Kind {
+	case ast.NodeKindObjectTypeDefinition:
+		fieldDefs := a.definition.ObjectTypeDefinitions[fieldEnclosingNode.Ref].FieldsDefinition.Refs
+		for _, fieldDefRef := range fieldDefs {
+			fieldDef := a.definition.FieldDefinitions[fieldDefRef]
+			if bytes.Equal(a.definition.FieldDefinitionNameBytes(fieldDefRef), fieldName) {
+				if fieldDef.HasArgumentsDefinitions {
+					argumentRefs = fieldDef.ArgumentsDefinition.Refs
+				}
+				break
+			}
+		}
+	case ast.NodeKindInterfaceTypeDefinition:
+		fieldDefs := a.definition.InterfaceTypeDefinitions[fieldEnclosingNode.Ref].FieldsDefinition.Refs
+		for _, fieldDefRef := range fieldDefs {
+			fieldDef := a.definition.FieldDefinitions[fieldDefRef]
+			if bytes.Equal(a.definition.FieldDefinitionNameBytes(fieldDefRef), fieldName) {
+				if fieldDef.HasArgumentsDefinitions {
+					argumentRefs = fieldDef.ArgumentsDefinition.Refs
+				}
+				break
+			}
 		}
 	}
 
-	// If the type is not found in the definition (e.g., built-in scalars like Boolean, String, Int),
-	// we still want to track its usage.
-	// Built-in scalars don't have type definitions in the schema document.
+	// Get the provided arguments map for this field level
+	var providedArguments map[string]struct{}
+	if len(a.providedArgumentsStack) > 0 {
+		providedArguments = a.providedArgumentsStack[len(a.providedArgumentsStack)-1]
+	}
+
+	// Track arguments that are defined but not provided (implicitly null)
+	for _, argRef := range argumentRefs {
+		argName := string(a.definition.InputValueDefinitionNameString(argRef))
+
+		// Skip if this argument was already provided
+		if providedArguments != nil {
+			if _, provided := providedArguments[argName]; provided {
+				continue
+			}
+		}
+
+		argType := a.definition.InputValueDefinitionType(argRef)
+		typeName := a.definition.ResolveTypeNameString(argType)
+
+		// Track argument as implicitly null
+		a.usage = append(a.usage, &graphqlmetrics.ArgumentUsageInfo{
+			Path:        []string{string(fieldName), argName},
+			TypeName:    string(enclosingTypeName),
+			NamedType:   typeName,
+			SubgraphIDs: subgraphIDs,
+			IsNull:      true, // Implicitly null (not provided)
+		})
+	}
+}
+
+// ============================================
+// Input Type Resolver
+// ============================================
+
+// inputTypeResolver resolves input object field definitions from the schema.
+type inputTypeResolver struct {
+	definition *ast.Document
+}
+
+func newInputTypeResolver(definition *ast.Document) *inputTypeResolver {
+	return &inputTypeResolver{definition: definition}
+}
+
+// resolveInputFields returns all field definitions for an input object type
+func (r *inputTypeResolver) resolveInputFields(typeName string) []inputFieldInfo {
+	defNode, ok := r.definition.NodeByNameStr(typeName)
+	if !ok || defNode.Kind != ast.NodeKindInputObjectTypeDefinition {
+		return nil
+	}
+
+	inputObjectDef := r.definition.InputObjectTypeDefinitions[defNode.Ref]
+	fields := make([]inputFieldInfo, 0, len(inputObjectDef.InputFieldsDefinition.Refs))
+
+	for _, fieldRef := range inputObjectDef.InputFieldsDefinition.Refs {
+		fieldDef := r.definition.InputValueDefinitions[fieldRef]
+		fields = append(fields, inputFieldInfo{
+			name:     string(r.definition.Input.ByteSlice(fieldDef.Name)),
+			typeName: r.definition.ResolveTypeNameString(fieldDef.Type),
+			isList:   r.definition.TypeIsList(fieldDef.Type),
+		})
+	}
+
+	return fields
+}
+
+// getNodeRef returns the node ref for a type by name
+func (r *inputTypeResolver) getNodeRef(typeName string) int {
+	if node, ok := r.definition.NodeByNameStr(typeName); ok {
+		return node.Ref
+	}
+	return -1
+}
+
+// inputFieldInfo represents an input object field's name, type, and list indicator.
+type inputFieldInfo struct {
+	name     string
+	typeName string
+	isList   bool
+}
+
+// ============================================
+// Input Traverser
+// ============================================
+
+// inputTraverser traverses JSON variable values to extract input usage metrics.
+// Tracks explicit nulls, implicit nulls (missing fields), and enum values.
+type inputTraverser struct {
+	definition          *ast.Document
+	typeResolver        *inputTypeResolver
+	subgraphMapper      *subgraphMapper
+	currentVariableName string
+	usage               []*graphqlmetrics.InputUsageInfo
+}
+
+func newInputTraverser(definition *ast.Document, subgraphMapper *subgraphMapper) *inputTraverser {
+	return &inputTraverser{
+		definition:     definition,
+		typeResolver:   newInputTypeResolver(definition),
+		subgraphMapper: subgraphMapper,
+		usage:          make([]*graphqlmetrics.InputUsageInfo, 0, 16),
+	}
+}
+
+// traverse handles input value traversal, dispatching to specialized handlers by type kind.
+// Implements null propagation: when isNull is true, tracking stops at this level.
+func (t *inputTraverser) traverse(jsonValue *astjson.Value, fieldName, typeName, parentTypeName string, isNull bool) {
+	usageInfo := t.createUsageInfo(fieldName, typeName, parentTypeName, isNull)
+
+	defNode, ok := t.definition.NodeByNameStr(typeName)
 	if !ok {
-		// This is likely a built-in scalar type, track it and return
-		v.appendUniqueUsage(usageInfo)
+		// Built-in scalar
+		t.appendUniqueUsage(usageInfo)
 		return
 	}
 
+	// If null, track and stop propagation
+	if isNull {
+		t.appendUniqueUsage(usageInfo)
+		return
+	}
+
+	// Dispatch based on type kind
 	switch defNode.Kind {
 	case ast.NodeKindInputObjectTypeDefinition:
-		switch jsonValue.Type() {
-		case astjson.TypeArray:
-			for _, arrayValue := range jsonValue.GetArray() {
-				v.traverseVariable(arrayValue, fieldName, typeName, parentTypeName)
-			}
-		case astjson.TypeObject:
-			o := jsonValue.GetObject()
-			o.Visit(func(key []byte, value *astjson.Value) {
-				// Skip null fields - they don't represent actual schema usage
-				if value.Type() == astjson.TypeNull {
-					return
-				}
-
-				fieldRef := v.definition.InputObjectTypeDefinitionInputValueDefinitionByName(defNode.Ref, key)
-				if fieldRef == -1 {
-					return
-				}
-				fieldTypeName := v.definition.ResolveTypeNameString(v.definition.InputValueDefinitions[fieldRef].Type)
-				if v.definition.TypeIsList(v.definition.InputValueDefinitions[fieldRef].Type) {
-					for _, arrayValue := range value.GetArray() {
-						v.traverseVariable(arrayValue, string(key), fieldTypeName, typeName)
-					}
-				} else {
-					v.traverseVariable(value, string(key), fieldTypeName, typeName)
-				}
-			})
-		}
-
+		t.traverseInputObject(jsonValue, fieldName, typeName, parentTypeName, defNode, usageInfo)
 	case ast.NodeKindEnumTypeDefinition:
-		switch jsonValue.Type() {
-		case astjson.TypeString:
-			usageInfo.EnumValues = []string{string(jsonValue.GetStringBytes())}
-		case astjson.TypeArray:
-			arr := jsonValue.GetArray()
-			// Pre-allocate EnumValues slice with exact capacity
-			usageInfo.EnumValues = make([]string, len(arr))
-			for i, arrayValue := range arr {
-				usageInfo.EnumValues[i] = string(arrayValue.GetStringBytes())
-			}
-		}
+		t.traverseEnum(jsonValue, usageInfo)
 	case ast.NodeKindScalarTypeDefinition:
-		// Custom scalar types defined in the schema (e.g., DateTime, JSON, Upload)
-		// Just track the usage, no special handling needed since we can't inspect
-		// the internal structure of custom scalars
+		// Custom scalar - just track
 	}
 
-	v.appendUniqueUsage(usageInfo)
+	t.appendUniqueUsage(usageInfo)
 }
 
-func (v *inputUsageInfoVisitor) appendUniqueUsage(info *graphqlmetrics.InputUsageInfo) {
-	for _, u := range v.usage {
-		if v.infoEquals(u, info) {
+// createUsageInfo builds usage info with path, type names, and subgraph IDs.
+func (t *inputTraverser) createUsageInfo(fieldName, typeName, parentTypeName string, isNull bool) *graphqlmetrics.InputUsageInfo {
+	info := &graphqlmetrics.InputUsageInfo{
+		NamedType: typeName,
+		IsNull:    isNull,
+	}
+
+	if parentTypeName != "" {
+		info.TypeName = parentTypeName
+		info.Path = []string{parentTypeName, fieldName}
+	} else {
+		// For root input types, set Path to identify the type itself
+		info.Path = []string{typeName}
+	}
+
+	// Get subgraph IDs
+	if t.currentVariableName != "" {
+		info.SubgraphIDs = t.subgraphMapper.getVariableSubgraphs(t.currentVariableName)
+	}
+
+	return info
+}
+
+// traverseInputObject handles input object traversal with implicit null tracking
+func (t *inputTraverser) traverseInputObject(jsonValue *astjson.Value, fieldName, typeName, parentTypeName string, defNode ast.Node, usageInfo *graphqlmetrics.InputUsageInfo) {
+	switch jsonValue.Type() {
+	case astjson.TypeArray:
+		for _, arrayValue := range jsonValue.GetArray() {
+			t.traverse(arrayValue, fieldName, typeName, parentTypeName, false)
+		}
+	case astjson.TypeObject:
+		t.processObjectFields(jsonValue, typeName, usageInfo.SubgraphIDs)
+	}
+}
+
+// processObjectFields processes present fields and tracks implicit nulls (missing fields).
+func (t *inputTraverser) processObjectFields(jsonValue *astjson.Value, parentTypeName string, subgraphIDs []string) {
+	o := jsonValue.GetObject()
+	presentFields := make(map[string]bool, 8) // Capacity hint: most input objects have <8 fields
+
+	// Process present fields
+	o.Visit(func(key []byte, value *astjson.Value) {
+		keyStr := string(key)
+		presentFields[keyStr] = true
+		t.processField(keyStr, value, parentTypeName)
+	})
+
+	// Process missing fields (implicit nulls)
+	allFields := t.typeResolver.resolveInputFields(parentTypeName)
+	for _, fieldInfo := range allFields {
+		if !presentFields[fieldInfo.name] {
+			t.trackImplicitNull(fieldInfo, parentTypeName, subgraphIDs)
+		}
+	}
+}
+
+// processField handles a single field from the JSON object
+func (t *inputTraverser) processField(fieldName string, value *astjson.Value, parentTypeName string) {
+	nodeRef := t.typeResolver.getNodeRef(parentTypeName)
+	if nodeRef == -1 {
+		return
+	}
+
+	fieldRef := t.definition.InputObjectTypeDefinitionInputValueDefinitionByName(nodeRef, []byte(fieldName))
+	if fieldRef == -1 {
+		return
+	}
+
+	fieldDef := t.definition.InputValueDefinitions[fieldRef]
+	fieldTypeName := t.definition.ResolveTypeNameString(fieldDef.Type)
+	fieldIsNull := value.Type() == astjson.TypeNull
+
+	if t.definition.TypeIsList(fieldDef.Type) {
+		for _, arrayValue := range value.GetArray() {
+			t.traverse(arrayValue, fieldName, fieldTypeName, parentTypeName, false)
+		}
+	} else {
+		t.traverse(value, fieldName, fieldTypeName, parentTypeName, fieldIsNull)
+	}
+}
+
+// trackImplicitNull creates usage info for fields not present in JSON (implicitly null).
+func (t *inputTraverser) trackImplicitNull(fieldInfo inputFieldInfo, parentTypeName string, subgraphIDs []string) {
+	implicitUsageInfo := &graphqlmetrics.InputUsageInfo{
+		NamedType:   fieldInfo.typeName,
+		TypeName:    parentTypeName,
+		Path:        []string{parentTypeName, fieldInfo.name},
+		IsNull:      true,
+		SubgraphIDs: subgraphIDs,
+	}
+	t.appendUniqueUsage(implicitUsageInfo)
+}
+
+// traverseEnum handles enum value extraction
+func (t *inputTraverser) traverseEnum(jsonValue *astjson.Value, usageInfo *graphqlmetrics.InputUsageInfo) {
+	switch jsonValue.Type() {
+	case astjson.TypeString:
+		usageInfo.EnumValues = []string{string(jsonValue.GetStringBytes())}
+	case astjson.TypeArray:
+		arr := jsonValue.GetArray()
+		usageInfo.EnumValues = make([]string, len(arr))
+		for i, arrayValue := range arr {
+			usageInfo.EnumValues[i] = string(arrayValue.GetStringBytes())
+		}
+	}
+}
+
+func (t *inputTraverser) appendUniqueUsage(info *graphqlmetrics.InputUsageInfo) {
+	for _, u := range t.usage {
+		if t.infoEquals(u, info) {
 			return
 		}
 	}
-	v.usage = append(v.usage, info)
+	t.usage = append(t.usage, info)
 }
 
-func (v *inputUsageInfoVisitor) infoEquals(a, b *graphqlmetrics.InputUsageInfo) bool {
+func (t *inputTraverser) infoEquals(a, b *graphqlmetrics.InputUsageInfo) bool {
 	if a.Count != b.Count {
 		return false
 	}
@@ -533,6 +840,9 @@ func (v *inputUsageInfoVisitor) infoEquals(a, b *graphqlmetrics.InputUsageInfo) 
 		return false
 	}
 	if a.TypeName != b.TypeName {
+		return false
+	}
+	if a.IsNull != b.IsNull {
 		return false
 	}
 	if len(a.Path) != len(b.Path) {
@@ -560,4 +870,190 @@ func (v *inputUsageInfoVisitor) infoEquals(a, b *graphqlmetrics.InputUsageInfo) 
 		}
 	}
 	return true
+}
+
+// ============================================
+// Variable Definition Processing
+// ============================================
+
+// processVariableDefinition processes a variable definition and initiates input traversal.
+func processVariableDefinition(traverser *inputTraverser, operation *ast.Document, variables *astjson.Value, nullDetector *nullValueDetector, ref int) {
+	varDef := operation.VariableDefinitions[ref]
+	varTypeRef := varDef.Type
+	varTypeName := operation.ResolveTypeNameString(varTypeRef)
+
+	// Get normalized variable name from AST
+	normalizedVarName := operation.VariableValueNameString(varDef.VariableValue.Ref)
+
+	// Map back to original name for JSON lookup
+	originalVarName := nullDetector.getOriginalVariableName(normalizedVarName)
+
+	// Look up the variable value
+	jsonField := variables.Get(originalVarName)
+	if jsonField == nil {
+		return
+	}
+
+	// Use normalized name for subgraph lookup
+	traverser.currentVariableName = normalizedVarName
+
+	// Always track input usage, even when null
+	isNull := jsonField.Type() == astjson.TypeNull
+	traverser.traverse(jsonField, originalVarName, varTypeName, "", isNull)
+}
+
+// collectImplicitArgumentInputUsage walks the operation and tracks input usage for
+// implicitly null input type arguments (arguments defined in schema but not provided in operation).
+func collectImplicitArgumentInputUsage(operation, definition *ast.Document, subgraphMapper *subgraphMapper, traverser *inputTraverser) {
+	walker := astvisitor.NewWalker(48)
+	collector := &implicitArgumentInputCollector{
+		walker:         &walker,
+		definition:     definition,
+		operation:      operation,
+		subgraphMapper: subgraphMapper,
+		traverser:      traverser,
+		pathBuilder:    newPathBuilder(8),
+		argumentsStack: make([]map[string]struct{}, 0, 8),
+		enclosingStack: make([]ast.Node, 0, 8),
+	}
+	walker.RegisterEnterFieldVisitor(collector)
+	walker.RegisterLeaveFieldVisitor(collector)
+	walker.RegisterEnterArgumentVisitor(collector)
+	rep := &operationreport.Report{}
+	walker.Walk(operation, definition, rep)
+}
+
+// implicitArgumentInputCollector collects input usage for implicitly null input type arguments
+type implicitArgumentInputCollector struct {
+	walker         *astvisitor.Walker
+	definition     *ast.Document
+	operation      *ast.Document
+	subgraphMapper *subgraphMapper
+	traverser      *inputTraverser
+	pathBuilder    *pathBuilder
+	argumentsStack []map[string]struct{} // Track provided arguments per field
+	enclosingStack []ast.Node
+}
+
+func (c *implicitArgumentInputCollector) EnterField(ref int) {
+	c.enclosingStack = append(c.enclosingStack, c.walker.EnclosingTypeDefinition)
+	c.argumentsStack = append(c.argumentsStack, nil)
+	fieldName := c.operation.FieldNameString(ref)
+	c.pathBuilder.push(fieldName)
+}
+
+func (c *implicitArgumentInputCollector) LeaveField(ref int) {
+	// Check for implicit null input type arguments
+	c.trackImplicitInputTypeArguments(ref)
+
+	c.pathBuilder.pop()
+	if len(c.enclosingStack) > 0 {
+		c.enclosingStack = c.enclosingStack[:len(c.enclosingStack)-1]
+	}
+	if len(c.argumentsStack) > 0 {
+		c.argumentsStack = c.argumentsStack[:len(c.argumentsStack)-1]
+	}
+}
+
+func (c *implicitArgumentInputCollector) EnterArgument(ref int) {
+	argName := c.operation.ArgumentNameBytes(ref)
+	anc := c.walker.Ancestors[len(c.walker.Ancestors)-1]
+	if anc.Kind != ast.NodeKindField {
+		return
+	}
+
+	// Lazily allocate map and track provided argument
+	if len(c.argumentsStack) > 0 {
+		stackIdx := len(c.argumentsStack) - 1
+		if c.argumentsStack[stackIdx] == nil {
+			c.argumentsStack[stackIdx] = make(map[string]struct{}, 4)
+		}
+		c.argumentsStack[stackIdx][string(argName)] = struct{}{}
+	}
+}
+
+func (c *implicitArgumentInputCollector) trackImplicitInputTypeArguments(fieldRef int) {
+	if len(c.enclosingStack) == 0 {
+		return
+	}
+	enclosingNode := c.enclosingStack[len(c.enclosingStack)-1]
+	if enclosingNode.Kind == ast.NodeKindUnknown {
+		return
+	}
+
+	fieldName := c.operation.FieldNameBytes(fieldRef)
+	// Skip introspection fields
+	if len(fieldName) > 1 && fieldName[0] == '_' && fieldName[1] == '_' {
+		return
+	}
+
+	// Get subgraph IDs for this field
+	subgraphIDs := c.subgraphMapper.getFieldSubgraphs(c.pathBuilder.key())
+
+	// Find all arguments defined for this field
+	var argumentRefs []int
+	switch enclosingNode.Kind {
+	case ast.NodeKindObjectTypeDefinition:
+		fieldDefs := c.definition.ObjectTypeDefinitions[enclosingNode.Ref].FieldsDefinition.Refs
+		for _, fieldDefRef := range fieldDefs {
+			fieldDef := c.definition.FieldDefinitions[fieldDefRef]
+			if bytes.Equal(c.definition.FieldDefinitionNameBytes(fieldDefRef), fieldName) {
+				if fieldDef.HasArgumentsDefinitions {
+					argumentRefs = fieldDef.ArgumentsDefinition.Refs
+				}
+				break
+			}
+		}
+	case ast.NodeKindInterfaceTypeDefinition:
+		fieldDefs := c.definition.InterfaceTypeDefinitions[enclosingNode.Ref].FieldsDefinition.Refs
+		for _, fieldDefRef := range fieldDefs {
+			fieldDef := c.definition.FieldDefinitions[fieldDefRef]
+			if bytes.Equal(c.definition.FieldDefinitionNameBytes(fieldDefRef), fieldName) {
+				if fieldDef.HasArgumentsDefinitions {
+					argumentRefs = fieldDef.ArgumentsDefinition.Refs
+				}
+				break
+			}
+		}
+	}
+
+	// Get provided arguments for this field
+	var providedArgs map[string]struct{}
+	if len(c.argumentsStack) > 0 {
+		providedArgs = c.argumentsStack[len(c.argumentsStack)-1]
+	}
+
+	// Track input usage for implicitly null input type arguments
+	for _, argRef := range argumentRefs {
+		argName := string(c.definition.InputValueDefinitionNameString(argRef))
+
+		// Skip if argument was provided
+		if providedArgs != nil {
+			if _, provided := providedArgs[argName]; provided {
+				continue
+			}
+		}
+
+		argType := c.definition.InputValueDefinitionType(argRef)
+		typeName := c.definition.ResolveTypeNameString(argType)
+
+		// Check if this is an input object type
+		defNode, ok := c.definition.NodeByNameStr(typeName)
+		if !ok {
+			continue
+		}
+
+		// Only track input object types (not scalars or enums)
+		if defNode.Kind != ast.NodeKindInputObjectTypeDefinition {
+			continue
+		}
+
+		// Add input usage for the implicitly null input type
+		c.traverser.appendUniqueUsage(&graphqlmetrics.InputUsageInfo{
+			NamedType:   typeName,
+			Path:        []string{typeName},
+			SubgraphIDs: subgraphIDs,
+			IsNull:      true, // Implicitly null (not provided)
+		})
+	}
 }

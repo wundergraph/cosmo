@@ -83,7 +83,7 @@ func (p *OperationPlanner) preparePlan(ctx *operationContext) (*planWithMetaData
 
 	if p.trackUsageInfo {
 		out.typeFieldUsageInfo = graphqlschemausage.GetTypeFieldUsageInfo(preparedPlan)
-		out.argumentUsageInfo, err = graphqlschemausage.GetArgumentUsageInfo(&doc, p.executor.RouterSchema, preparedPlan)
+		out.argumentUsageInfo, err = graphqlschemausage.GetArgumentUsageInfo(&doc, p.executor.RouterSchema, ctx.variables, preparedPlan, ctx.remapVariables)
 		if err != nil {
 			return nil, err
 		}
