@@ -130,7 +130,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 					DestinationName:     msg.Channel,
 				})
 				updater.Update([]datasource.StreamEvent{
-					Event{evt: &MutableEvent{
+					&Event{evt: &MutableEvent{
 						Data: []byte(msg.Payload),
 					}},
 				})
@@ -176,9 +176,9 @@ func (p *ProviderAdapter) Publish(ctx context.Context, conf datasource.PublishEv
 	var errs []error
 
 	for _, streamEvent := range events {
-		redisEvent, ok := streamEvent.Clone().(*MutableEvent)
-		if !ok {
-			errs = append(errs, errors.New("invalid event type for Redis adapter"))
+		redisEvent, err := castToMutableEvent(streamEvent)
+		if err != nil {
+			errs = append(errs, err)
 			continue
 		}
 
@@ -224,4 +224,15 @@ func (p *ProviderAdapter) Publish(ctx context.Context, conf datasource.PublishEv
 	}
 
 	return nil
+}
+
+func castToMutableEvent(event datasource.StreamEvent) (*MutableEvent, error) {
+	switch evt := event.(type) {
+	case *Event:
+		return evt.evt, nil
+	case *MutableEvent:
+		return evt, nil
+	default:
+		return nil, errors.New("invalid event type for Redis adapter")
+	}
 }

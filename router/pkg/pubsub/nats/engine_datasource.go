@@ -21,14 +21,14 @@ type Event struct {
 	evt *MutableEvent
 }
 
-func (e Event) GetData() []byte {
+func (e *Event) GetData() []byte {
 	if e.evt == nil {
 		return nil
 	}
 	return slices.Clone(e.evt.Data)
 }
 
-func (e Event) GetHeaders() map[string][]string {
+func (e *Event) GetHeaders() map[string][]string {
 	if e.evt == nil || e.evt.Headers == nil {
 		return nil
 	}
@@ -244,7 +244,7 @@ func (s *NatsPublishDataSource) Load(ctx context.Context, input []byte, out *byt
 		return err
 	}
 
-	if err := s.pubSub.Publish(ctx, publishData.PublishEventConfiguration(), []datasource.StreamEvent{Event{evt: &publishData.Event}}); err != nil {
+	if err := s.pubSub.Publish(ctx, publishData.PublishEventConfiguration(), []datasource.StreamEvent{&Event{evt: &publishData.Event}}); err != nil {
 		// err will not be returned but only logged inside PubSubProvider.Publish to avoid a "unable to fetch from subgraph" error
 		_, errWrite := io.WriteString(out, `{"success": false}`)
 		return errWrite
@@ -277,7 +277,7 @@ func (s *NatsRequestDataSource) Load(ctx context.Context, input []byte, out *byt
 		return fmt.Errorf("adapter for provider %s is not of the right type", publishData.Provider)
 	}
 
-	return adapter.Request(ctx, publishData.PublishEventConfiguration(), Event{evt: &publishData.Event}, out)
+	return adapter.Request(ctx, publishData.PublishEventConfiguration(), &Event{evt: &publishData.Event}, out)
 }
 
 func (s *NatsRequestDataSource) LoadWithFiles(ctx context.Context, input []byte, files []*httpclient.FileUpload, out *bytes.Buffer) error {

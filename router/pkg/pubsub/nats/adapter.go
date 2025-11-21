@@ -150,7 +150,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, cfg datasource.Subscrip
 						})
 
 						updater.Update([]datasource.StreamEvent{
-							Event{evt: &MutableEvent{
+							&Event{evt: &MutableEvent{
 								Data:    msg.Data(),
 								Headers: map[string][]string(msg.Headers()),
 							}},
@@ -198,7 +198,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, cfg datasource.Subscrip
 					DestinationName:     msg.Subject,
 				})
 				updater.Update([]datasource.StreamEvent{
-					Event{evt: &MutableEvent{
+					&Event{evt: &MutableEvent{
 						Data:    msg.Data,
 						Headers: map[string][]string(msg.Header),
 					}},
@@ -251,13 +251,13 @@ func (p *ProviderAdapter) Publish(ctx context.Context, conf datasource.PublishEv
 	var errs []error
 
 	for _, streamEvent := range events {
-		natsEvent, ok := streamEvent.Clone().(*MutableEvent)
-		if !ok {
-			errs = append(errs, errors.New("invalid event type for NATS adapter"))
+		natsEvent, err := castToMutableEvent(streamEvent)
+		if err != nil {
+			errs = append(errs, err)
 			continue
 		}
 
-		err := p.client.Publish(pubConf.Subject, natsEvent.Data)
+		err = p.client.Publish(pubConf.Subject, natsEvent.Data)
 		if err != nil {
 			errs = append(errs, err)
 		}
@@ -440,4 +440,15 @@ func NewAdapter(ctx context.Context, logger *zap.Logger, url string, opts []nats
 		flushTimeout:      10 * time.Second,
 		streamMetricStore: store,
 	}, nil
+}
+
+func castToMutableEvent(event datasource.StreamEvent) (*MutableEvent, error) {
+	switch evt := event.(type) {
+	case *Event:
+		return evt.evt, nil
+	case *MutableEvent:
+		return evt, nil
+	default:
+		return nil, errors.New("invalid event type for NATS adapter")
+	}
 }
