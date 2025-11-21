@@ -23,7 +23,7 @@ type SubscriptionOnStartHandlerContext interface {
 	Authentication() authentication.Authentication
 	// SubscriptionEventConfiguration is the subscription event configuration (will return nil for engine subscription)
 	SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration
-	// EmitLocalEvent sends an event directly to the subscription stream of the
+	// EmitEvent sends an event directly to the subscription stream of the
 	// currently connected client.
 	//
 	// This method triggers the router to resolve the client's operation and emit
@@ -35,7 +35,7 @@ type SubscriptionOnStartHandlerContext interface {
 	//
 	// The method returns true if the event was successfully emitted, or false if
 	// it was dropped.
-	EmitLocalEvent(event datasource.StreamEvent) bool
+	EmitEvent(event datasource.StreamEvent) bool
 	// NewEvent creates a new event that can be used in the subscription.
 	//
 	// The data parameter must contain valid JSON bytes. The format depends on the subscription type.
@@ -48,7 +48,7 @@ type SubscriptionOnStartHandlerContext interface {
 	// For normal subscriptions, you need to provide the complete GraphQL response structure.
 	// Example usage: ctx.NewEvent([]byte(`{"data": {"fieldName": value}}`))
 	//
-	// You can use EmitLocalEvent to emit this event to subscriptions.
+	// You can use EmitEvent to emit this event to subscriptions.
 	NewEvent(data []byte) datasource.MutableStreamEvent
 }
 
@@ -91,7 +91,7 @@ type pubSubSubscriptionOnStartHookContext struct {
 	operation                      OperationContext
 	authentication                 authentication.Authentication
 	subscriptionEventConfiguration datasource.SubscriptionEventConfiguration
-	emitLocalEventFn               func(data []byte)
+	emitEventFn                    func(data []byte)
 	eventBuilder                   datasource.EventBuilderFn
 }
 
@@ -115,8 +115,8 @@ func (c *pubSubSubscriptionOnStartHookContext) SubscriptionEventConfiguration() 
 	return c.subscriptionEventConfiguration
 }
 
-func (c *pubSubSubscriptionOnStartHookContext) EmitLocalEvent(event datasource.StreamEvent) bool {
-	c.emitLocalEventFn(event.GetData())
+func (c *pubSubSubscriptionOnStartHookContext) EmitEvent(event datasource.StreamEvent) bool {
+	c.emitEventFn(event.GetData())
 
 	return true
 }
@@ -162,11 +162,11 @@ func (e *EngineEvent) Clone() datasource.MutableStreamEvent {
 }
 
 type engineSubscriptionOnStartHookContext struct {
-	request          *http.Request
-	logger           *zap.Logger
-	operation        OperationContext
-	authentication   authentication.Authentication
-	emitLocalEventFn func(data []byte)
+	request        *http.Request
+	logger         *zap.Logger
+	operation      OperationContext
+	authentication authentication.Authentication
+	emitEventFn    func(data []byte)
 }
 
 func (c *engineSubscriptionOnStartHookContext) Request() *http.Request {
@@ -185,8 +185,8 @@ func (c *engineSubscriptionOnStartHookContext) Authentication() authentication.A
 	return c.authentication
 }
 
-func (c *engineSubscriptionOnStartHookContext) EmitLocalEvent(event datasource.StreamEvent) bool {
-	c.emitLocalEventFn(event.GetData())
+func (c *engineSubscriptionOnStartHookContext) EmitEvent(event datasource.StreamEvent) bool {
+	c.emitEventFn(event.GetData())
 
 	return true
 }
@@ -232,7 +232,7 @@ func NewPubSubSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHandlerCont
 			operation:                      requestContext.Operation(),
 			authentication:                 requestContext.Authentication(),
 			subscriptionEventConfiguration: subConf,
-			emitLocalEventFn:               resolveCtx.Updater,
+			emitEventFn:                    resolveCtx.Updater,
 			eventBuilder:                   eventBuilder,
 		}
 
@@ -255,11 +255,11 @@ func NewEngineSubscriptionOnStartHook(fn func(ctx SubscriptionOnStartHandlerCont
 		}
 
 		hookCtx := &engineSubscriptionOnStartHookContext{
-			request:          requestContext.Request(),
-			logger:           logger,
-			operation:        requestContext.Operation(),
-			authentication:   requestContext.Authentication(),
-			emitLocalEventFn: resolveCtx.Updater,
+			request:        requestContext.Request(),
+			logger:         logger,
+			operation:      requestContext.Operation(),
+			authentication: requestContext.Authentication(),
+			emitEventFn:    resolveCtx.Updater,
 		}
 
 		return fn(hookCtx)

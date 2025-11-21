@@ -94,7 +94,7 @@ type SubscriptionOnStartHandlerContext interface {
 	Authentication() authentication.Authentication
 	// SubscriptionEventConfiguration is the subscription event configuration (will return nil for engine subscription)
 	SubscriptionEventConfiguration() datasource.SubscriptionEventConfiguration
-	// EmitLocalEvent sends an event directly to the subscription stream of the
+	// EmitEvent sends an event directly to the subscription stream of the
 	// currently connected client.
 	//
 	// This method triggers the router to resolve the client's operation and emit
@@ -106,7 +106,7 @@ type SubscriptionOnStartHandlerContext interface {
 	//
 	// The method returns true if the event was successfully emitted, or false if
 	// it was dropped.
-	EmitLocalEvent(event datasource.StreamEvent) bool
+	EmitEvent(event datasource.StreamEvent) bool
 	// NewEvent creates a new event that can be used in the subscription.
 	//
 	// The data parameter must contain valid JSON bytes. The format depends on the subscription type.
@@ -119,7 +119,7 @@ type SubscriptionOnStartHandlerContext interface {
 	// For normal subscriptions, you need to provide the complete GraphQL response structure.
 	// Example usage: ctx.NewEvent([]byte(`{"data": {"fieldName": value}}`))
 	//
-	// You can use EmitLocalEvent to emit this event to subscriptions.
+	// You can use EmitEvent to emit this event to subscriptions.
 	NewEvent(data []byte) datasource.MutableStreamEvent
 }
 
