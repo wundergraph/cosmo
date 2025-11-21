@@ -230,7 +230,7 @@ export class UserInviteService {
       }
 
       if (pendingInvitation?.lastSentAt && pendingInvitation.lastSentAt.getTime() + 1000 * 60 * 30 > Date.now()) {
-        // We are not sending the invitation more than once an hour
+        // We are not sending the invitation more than once every 30 minutes
         return;
       }
 

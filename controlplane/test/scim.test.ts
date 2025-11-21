@@ -1,5 +1,5 @@
 import { uid } from 'uid';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, beforeAll, describe, expect, vi, test } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { PromiseClient } from '@connectrpc/connect';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
@@ -113,10 +113,11 @@ describe('Scim server v2.0', (ctx) => {
     expect(response.userName).toBe(userTestData.email);
   });
 
-  // Skipping because the invitation is sent using the `studio` client which doesn't in the test context,
-  // so the operation fails and a rollback occurs
-  test.skip('that when a user does not exists an invitation is sent', async (testContext) => {
+  test('that when a user does not exists an invitation is sent', async (testContext) => {
     const email = uid(8) + '@wg.com';
+    const spy = vi.spyOn(keycloakClient, 'executeActionsEmail');
+    spy.mockImplementation(vi.fn());
+
     const createUserResp = await fetch(`${baseAddress}/scim/v2/Users`, {
       method: 'POST',
       headers: {
@@ -158,6 +159,9 @@ describe('Scim server v2.0', (ctx) => {
     const exists = emails.includes(email);
 
     expect(exists).toBe(true);
+    expect(spy).toHaveBeenCalledOnce();
+
+    spy.mockReset();
   });
 
   test('that adding an existing user from another organization, invitest the user', async (testContext) => {
