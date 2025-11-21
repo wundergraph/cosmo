@@ -88,7 +88,11 @@ type StreamEvent interface {
 	GetData() []byte
 	// Clone returns a mutable copy of the event.
 	Clone() MutableStreamEvent
-
+	// Decode efficiently unmarshalls StreamEvent into v.
+	// v needs to be a pointer to an object.
+	//
+	// It ensures unmarshalling happens only once per type of v on this event.
+	// It's best suited to be used when multiple routines need to decode the same event.
 	Decode(v any) error
 }
 
@@ -96,6 +100,7 @@ type StreamEvent interface {
 type MutableStreamEvent interface {
 	StreamEvent
 	// SetData sets the data of the event.
+	// It evicts the decode cache used by Decode() to avoid stale cache results.
 	SetData([]byte)
 }
 
