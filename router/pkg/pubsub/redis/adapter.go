@@ -88,7 +88,7 @@ func (p *ProviderAdapter) Shutdown(ctx context.Context) error {
 func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater) error {
 	subConf, ok := conf.(*SubscriptionEventConfiguration)
 	if !ok {
-		return datasource.NewError("subscription event not support by redis provider", nil)
+		return datasource.NewError("subscription event not supported by redis provider", nil)
 	}
 
 	log := p.logger.With(
@@ -154,7 +154,7 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 func (p *ProviderAdapter) Publish(ctx context.Context, conf datasource.PublishEventConfiguration, events []datasource.StreamEvent) error {
 	pubConf, ok := conf.(*PublishEventConfiguration)
 	if !ok {
-		return datasource.NewError("publish event not support by redis provider", nil)
+		return datasource.NewError("publish event not supported by redis provider", nil)
 	}
 
 	log := p.logger.With(
