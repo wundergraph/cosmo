@@ -8,6 +8,7 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"golang.org/x/sync/semaphore"
 )
 
 const defaultTimeout = 5 * time.Second
@@ -28,7 +29,7 @@ type subscriptionEventUpdater struct {
 	hooks                          Hooks
 	logger                         *zap.Logger
 	eventBuilder                   EventBuilderFn
-	semaphore                      chan struct{}
+	semaphore                      *semaphore.Weighted
 	timeout                        time.Duration
 }
 
@@ -49,7 +50,10 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 
 	go func() {
 		for subCtx, subId := range subscriptions {
-			s.semaphore <- struct{}{} // Acquire slot, blocks if all slots are taken
+			if err := s.semaphore.Acquire(updaterCtx, 1); err != nil {
+				// Context cancelled or timed out, stop acquiring
+				break
+			}
 			wg.Add(1)
 			go s.updateSubscription(subCtx, updaterCtx, &wg, subId, events)
 		}
@@ -94,7 +98,7 @@ func (s *subscriptionEventUpdater) updateSubscription(subscriptionCtx context.Co
 		if r := recover(); r != nil {
 			s.recoverPanic(subID, r)
 		}
-		<-s.semaphore // release the slot when done
+		s.semaphore.Release(1)
 	}()
 
 	hooks := s.hooks.OnReceiveEvents.Handlers
@@ -154,7 +158,7 @@ func NewSubscriptionEventUpdater(
 		eventUpdater:                   eventUpdater,
 		logger:                         logger,
 		eventBuilder:                   eventBuilder,
-		semaphore:                      make(chan struct{}, limit),
+		semaphore:                      semaphore.NewWeighted(int64(limit)),
 		timeout:                        timeout,
 	}
 }
