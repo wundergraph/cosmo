@@ -32,6 +32,10 @@ func (e Event) Clone() datasource.MutableStreamEvent {
 	return e.evt.Clone()
 }
 
+func (e Event) Decode(v any) error {
+	return e.evt.Decode(v)
+}
+
 type MutableEvent struct {
 	Data json.RawMessage `json:"data"`
 }
@@ -58,6 +62,10 @@ func (e *MutableEvent) Clone() datasource.MutableStreamEvent {
 	return &MutableEvent{
 		Data: slices.Clone(e.Data),
 	}
+}
+
+func (e *MutableEvent) Decode(v any) error {
+	return json.Unmarshal(e.Data, v)
 }
 
 // SubscriptionEventConfiguration contains configuration for subscription events

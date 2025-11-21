@@ -88,6 +88,8 @@ type StreamEvent interface {
 	GetData() []byte
 	// Clone returns a mutable copy of the event.
 	Clone() MutableStreamEvent
+
+	Decode(v any) error
 }
 
 // A MutableStreamEvent is a stream event that can be modified.

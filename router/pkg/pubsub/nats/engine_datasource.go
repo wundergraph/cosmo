@@ -39,6 +39,10 @@ func (e Event) Clone() datasource.MutableStreamEvent {
 	return e.evt.Clone()
 }
 
+func (e Event) Decode(v any) error {
+	return e.evt.Decode(v)
+}
+
 type MutableEvent struct {
 	Data    json.RawMessage     `json:"data"`
 	Headers map[string][]string `json:"headers"`
@@ -66,6 +70,10 @@ func (e *MutableEvent) Clone() datasource.MutableStreamEvent {
 		Data:    slices.Clone(e.Data),
 		Headers: cloneHeaders(e.Headers),
 	}
+}
+
+func (e *MutableEvent) Decode(v any) error {
+	return json.Unmarshal(e.Data, v)
 }
 
 func (e *MutableEvent) ToStreamEvent() datasource.StreamEvent {
