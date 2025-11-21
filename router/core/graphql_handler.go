@@ -390,7 +390,7 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 		if isHttpResponseWriter {
 			httpWriter.WriteHeader(http.StatusInternalServerError)
 		}
-	case errorTypeEDFSHookError:
+	case errorTypeStreamsHandlerError:
 		var errStreamHandlerError *StreamHandlerError
 		if !errors.As(err, &errStreamHandlerError) {
 			response.Errors[0].Message = "Internal server error"
