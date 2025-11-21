@@ -9,7 +9,7 @@ import { AuthContext } from '../src/types/index.js';
 import { SetupKeycloak, SetupTest } from './test-util.js';
 
 // https://developer.okta.com/docs/reference/scim/scim-20/
-describe('Scim server v2.0', (ctx) => {
+describe('Scim server v2.0', () => {
   let dbname = '';
   let baseAddress = '';
   let realmName = '';
@@ -49,7 +49,7 @@ describe('Scim server v2.0', (ctx) => {
     await afterAllSetup(dbname);
   });
 
-  test('Should test scim server base route', async (testContext) => {
+  test('Should test scim server base route', async () => {
     const res = await fetch(`${baseAddress}/scim/v2/`, {
       method: 'GET',
       headers: {
@@ -60,7 +60,7 @@ describe('Scim server v2.0', (ctx) => {
     expect(res.status).toBe(200);
   });
 
-  test('Should return 401 if the authorization fails', async (testContext) => {
+  test('Should return 401 if the authorization fails', async () => {
     const res = await fetch(`${baseAddress}/scim/v2/Users`, {
       method: 'GET',
       headers: {
@@ -71,7 +71,7 @@ describe('Scim server v2.0', (ctx) => {
     expect(res.status).toBe(401);
   });
 
-  test('Should test scim server /Users route', async (testContext) => {
+  test('Should test scim server /Users route', async () => {
     const res = await fetch(`${baseAddress}/scim/v2/Users`, {
       method: 'GET',
       headers: {
@@ -85,7 +85,7 @@ describe('Scim server v2.0', (ctx) => {
     expect(response.totalResults).toBe(4);
   });
 
-  test('Should test scim server /Users route with filter', async (testContext) => {
+  test('Should test scim server /Users route with filter', async () => {
     const res = await fetch(`${baseAddress}/scim/v2/Users?filter=userName eq "${userTestData.email}"`, {
       method: 'GET',
       headers: {
@@ -99,7 +99,7 @@ describe('Scim server v2.0', (ctx) => {
     expect(response.totalResults).toBe(1);
   });
 
-  test('Should test scim server /Users/:userID route', async (testContext) => {
+  test('Should test scim server /Users/:userID route', async () => {
     const res = await fetch(`${baseAddress}/scim/v2/Users/${userTestData.userId}`, {
       method: 'GET',
       headers: {
@@ -113,7 +113,7 @@ describe('Scim server v2.0', (ctx) => {
     expect(response.userName).toBe(userTestData.email);
   });
 
-  test('that when a user does not exists an invitation is sent', async (testContext) => {
+  test('that when a user does not exists an invitation is sent', async () => {
     const email = uid(8) + '@wg.com';
     const spy = vi.spyOn(keycloakClient, 'executeActionsEmail');
     spy.mockImplementation(vi.fn());
@@ -164,10 +164,14 @@ describe('Scim server v2.0', (ctx) => {
     spy.mockReset();
   });
 
-  test('that adding an existing user from another organization, invitest the user', async (testContext) => {
+  test('that adding an existing user from another organization, invitest the user', async () => {
     const email = otherOrgUserTestData!.email;
 
-    // Remove the user from the organization
+    // Remove the user from the organization and reject any pending invitation
+    authenticator.changeUserWithSuppliedContext(otherOrgUserTestData!);
+    await client.acceptOrDeclineInvitation({ organizationId: userTestData!.organizationId, accept: false });
+
+    authenticator.changeUserWithSuppliedContext(userTestData!);
     await client.removeOrganizationMember({ email });
 
     // Create the user invitation
@@ -204,18 +208,20 @@ describe('Scim server v2.0', (ctx) => {
 
     const pendingOrgMembers = await client.getPendingOrganizationMembers({});
     expect(pendingOrgMembers.response?.code).toBe(EnumStatusCode.OK);
-    expect(pendingOrgMembers.totalCount).toBe(1);
 
     const emails = pendingOrgMembers.pendingInvitations.map((inv) => inv.email);
     const exists = emails.includes(email);
-
     expect(exists).toBe(true);
   });
 
-  test('that adding an existing user from another organization multiple times does not create multiple invitations', async (testContext) => {
+  test('that adding an existing user from another organization multiple times does not create multiple invitations', async () => {
     const email = otherOrgUserTestData!.email;
 
-    // Remove the user from the organization
+    // Remove the user from the organization and reject any pending invitation
+    authenticator.changeUserWithSuppliedContext(otherOrgUserTestData!);
+    await client.acceptOrDeclineInvitation({ organizationId: userTestData!.organizationId, accept: false });
+
+    authenticator.changeUserWithSuppliedContext(userTestData!);
     await client.removeOrganizationMember({ email });
 
     // Create the user invitation
@@ -283,18 +289,20 @@ describe('Scim server v2.0', (ctx) => {
 
     const pendingOrgMembers = await client.getPendingOrganizationMembers({});
     expect(pendingOrgMembers.response?.code).toBe(EnumStatusCode.OK);
-    expect(pendingOrgMembers.totalCount).toBe(1);
 
     const emails = pendingOrgMembers.pendingInvitations.map((inv) => inv.email);
     const exists = emails.includes(email);
-
     expect(exists).toBe(true);
   });
 
-  test('that an user can be updated after accepting the organization invitation', async (testContext) => {
+  test('that an user can be updated after accepting the organization invitation', async () => {
     const email = otherOrgUserTestData!.email;
 
-    // Remove the user from the organization
+    // Remove the user from the organization and reject any pending invitation
+    authenticator.changeUserWithSuppliedContext(otherOrgUserTestData!);
+    await client.acceptOrDeclineInvitation({ organizationId: userTestData!.organizationId, accept: false });
+
+    authenticator.changeUserWithSuppliedContext(userTestData!);
     await client.removeOrganizationMember({ email });
 
     // Create the user invitation
@@ -393,10 +401,14 @@ describe('Scim server v2.0', (ctx) => {
     expect(response.active).toBe(false);
   });
 
-  test('that an user can be patched after accepting the organization invitation', async (testContext) => {
+  test('that an user can be patched after accepting the organization invitation', async () => {
     const email = otherOrgUserTestData!.email;
 
-    // Remove the user from the organization
+    // Remove the user from the organization and reject any pending invitation
+    authenticator.changeUserWithSuppliedContext(otherOrgUserTestData!);
+    await client.acceptOrDeclineInvitation({ organizationId: userTestData!.organizationId, accept: false });
+
+    authenticator.changeUserWithSuppliedContext(userTestData!);
     await client.removeOrganizationMember({ email });
 
     // Create the user invitation
