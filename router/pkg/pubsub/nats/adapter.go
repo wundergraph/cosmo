@@ -248,38 +248,49 @@ func (p *ProviderAdapter) Publish(ctx context.Context, conf datasource.PublishEv
 
 	log.Debug("publish", zap.Int("event_count", len(events)))
 
+	var errs []error
+
 	for _, streamEvent := range events {
 		natsEvent, ok := streamEvent.Clone().(*MutableEvent)
 		if !ok {
-			return datasource.NewError("invalid event type for NATS adapter", nil)
+			errs = append(errs, errors.New("invalid event type for NATS adapter"))
+			continue
 		}
 
 		err := p.client.Publish(pubConf.Subject, natsEvent.Data)
 		if err != nil {
-			p.streamMetricStore.Produce(ctx, metric.StreamsEvent{
-				ProviderId:          pubConf.ProviderID(),
-				StreamOperationName: natsPublish,
-				ProviderType:        metric.ProviderTypeNats,
-				ErrorType:           "publish_error",
-				DestinationName:     pubConf.Subject,
-			})
-			log.Error(
-				"publish error",
-				zap.Error(err),
-				zap.String("provider_id", pubConf.ProviderID()),
-				zap.String("provider_type", string(pubConf.ProviderType())),
-				zap.String("field_name", pubConf.RootFieldName()),
-			)
-			return datasource.NewError(fmt.Sprintf("error publishing to NATS subject %s", pubConf.Subject), err)
+			errs = append(errs, err)
 		}
 	}
 
-	p.streamMetricStore.Produce(ctx, metric.StreamsEvent{
-		ProviderId:          pubConf.ProviderID(),
-		StreamOperationName: natsPublish,
-		ProviderType:        metric.ProviderTypeNats,
-		DestinationName:     pubConf.Subject,
-	})
+	// Produce metrics for all failed and successfully published events
+	successCount := len(events) - len(errs)
+	for range successCount {
+		p.streamMetricStore.Produce(ctx, metric.StreamsEvent{
+			ProviderId:          pubConf.ProviderID(),
+			StreamOperationName: natsPublish,
+			ProviderType:        metric.ProviderTypeNats,
+			DestinationName:     pubConf.Subject,
+		})
+	}
+	for range len(errs) {
+		p.streamMetricStore.Produce(ctx, metric.StreamsEvent{
+			ProviderId:          pubConf.ProviderID(),
+			StreamOperationName: natsPublish,
+			ProviderType:        metric.ProviderTypeNats,
+			ErrorType:           "publish_error",
+			DestinationName:     pubConf.Subject,
+		})
+	}
+
+	// Collect and return all errors if any occurred
+	if len(errs) > 0 {
+		combinedErr := errors.Join(errs...)
+		log.Error("publish errors", zap.Error(combinedErr), zap.Int("failed_count", len(errs)), zap.Int("total_count", len(events)))
+		return datasource.NewError(
+			fmt.Sprintf("error publishing %d/%d events to NATS subject %s", len(errs), len(events), pubConf.Subject), combinedErr,
+		)
+	}
 
 	return nil
 }

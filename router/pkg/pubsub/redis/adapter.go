@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 
@@ -172,37 +173,55 @@ func (p *ProviderAdapter) Publish(ctx context.Context, conf datasource.PublishEv
 
 	log.Debug("publish", zap.Int("event_count", len(events)))
 
+	var errs []error
+
 	for _, streamEvent := range events {
 		redisEvent, ok := streamEvent.Clone().(*MutableEvent)
 		if !ok {
-			return datasource.NewError("invalid event type for Redis adapter", nil)
+			errs = append(errs, errors.New("invalid event type for Redis adapter"))
+			continue
 		}
 
 		data, dataErr := redisEvent.Data.MarshalJSON()
 		if dataErr != nil {
-			log.Error("error marshalling data", zap.Error(dataErr))
-			return datasource.NewError("error marshalling data", dataErr)
+			errs = append(errs, fmt.Errorf("error marshalling data: %w", dataErr))
+			continue
 		}
 
 		intCmd := p.conn.Publish(ctx, pubConf.Channel, data)
 		if intCmd.Err() != nil {
-			log.Error("publish error", zap.Error(intCmd.Err()))
-			p.streamMetricStore.Produce(ctx, metric.StreamsEvent{
-				ProviderId:          pubConf.ProviderID(),
-				StreamOperationName: redisPublish,
-				ProviderType:        metric.ProviderTypeRedis,
-				ErrorType:           "publish_error",
-				DestinationName:     pubConf.Channel,
-			})
-			return datasource.NewError(fmt.Sprintf("error publishing to Redis PubSub channel %s", pubConf.Channel), intCmd.Err())
+			errs = append(errs, intCmd.Err())
 		}
 	}
 
-	p.streamMetricStore.Produce(ctx, metric.StreamsEvent{
-		ProviderId:          pubConf.ProviderID(),
-		StreamOperationName: redisPublish,
-		ProviderType:        metric.ProviderTypeRedis,
-		DestinationName:     pubConf.Channel,
-	})
+	// Produce metrics for all failed and successfully published events
+	successCount := len(events) - len(errs)
+	for range successCount {
+		p.streamMetricStore.Produce(ctx, metric.StreamsEvent{
+			ProviderId:          pubConf.ProviderID(),
+			StreamOperationName: redisPublish,
+			ProviderType:        metric.ProviderTypeRedis,
+			DestinationName:     pubConf.Channel,
+		})
+	}
+	for range len(errs) {
+		p.streamMetricStore.Produce(ctx, metric.StreamsEvent{
+			ProviderId:          pubConf.ProviderID(),
+			StreamOperationName: redisPublish,
+			ProviderType:        metric.ProviderTypeRedis,
+			ErrorType:           "publish_error",
+			DestinationName:     pubConf.Channel,
+		})
+	}
+
+	// Collect and return all errors if any occurred
+	if len(errs) > 0 {
+		combinedErr := errors.Join(errs...)
+		log.Error("publish errors", zap.Error(combinedErr), zap.Int("failed_count", len(errs)), zap.Int("total_count", len(events)))
+		return datasource.NewError(
+			fmt.Sprintf("error publishing %d/%d events to Redis PubSub channel %s", len(errs), len(events), pubConf.Channel), combinedErr,
+		)
+	}
+
 	return nil
 }

@@ -207,13 +207,17 @@ func (p *ProviderAdapter) Publish(ctx context.Context, conf datasource.PublishEv
 	var wg sync.WaitGroup
 	wg.Add(len(events))
 
-	var pErr error
+	var errs []error
 	var errMutex sync.Mutex
 
 	for _, streamEvent := range events {
 		evt, err := castToMutableEvent(streamEvent)
 		if err != nil {
-			return datasource.NewError(err.Error(), nil)
+			wg.Done()
+			errMutex.Lock()
+			errs = append(errs, err)
+			errMutex.Unlock()
+			continue
 		}
 
 		headers := make([]kgo.RecordHeader, 0, len(evt.Headers))
@@ -233,7 +237,7 @@ func (p *ProviderAdapter) Publish(ctx context.Context, conf datasource.PublishEv
 			defer wg.Done()
 			if err != nil {
 				errMutex.Lock()
-				pErr = err
+				errs = append(errs, err)
 				errMutex.Unlock()
 			}
 		})
@@ -241,8 +245,17 @@ func (p *ProviderAdapter) Publish(ctx context.Context, conf datasource.PublishEv
 
 	wg.Wait()
 
-	if pErr != nil {
-		log.Error("publish error", zap.Error(pErr))
+	// Produce metrics for all failed and successfully published events
+	successCount := len(events) - len(errs)
+	for range successCount {
+		p.streamMetricStore.Produce(ctx, metric.StreamsEvent{
+			ProviderId:          pubConf.ProviderID(),
+			StreamOperationName: kafkaProduce,
+			ProviderType:        metric.ProviderTypeKafka,
+			DestinationName:     pubConf.Topic,
+		})
+	}
+	for range len(errs) {
 		p.streamMetricStore.Produce(ctx, metric.StreamsEvent{
 			ProviderId:          pubConf.ProviderID(),
 			StreamOperationName: kafkaProduce,
@@ -250,15 +263,17 @@ func (p *ProviderAdapter) Publish(ctx context.Context, conf datasource.PublishEv
 			ErrorType:           "publish_error",
 			DestinationName:     pubConf.Topic,
 		})
-		return datasource.NewError(fmt.Sprintf("error publishing to Kafka topic %s", pubConf.Topic), pErr)
 	}
 
-	p.streamMetricStore.Produce(ctx, metric.StreamsEvent{
-		ProviderId:          pubConf.ProviderID(),
-		StreamOperationName: kafkaProduce,
-		ProviderType:        metric.ProviderTypeKafka,
-		DestinationName:     pubConf.Topic,
-	})
+	// Log all errors, if any, as a single entry and return error
+	if len(errs) > 0 {
+		combinedErr := errors.Join(errs...)
+		log.Error("publish errors", zap.Error(combinedErr), zap.Int("failed_count", len(errs)), zap.Int("total_count", len(events)))
+		return datasource.NewError(
+			fmt.Sprintf("error publishing %d/%d events to Kafka topic %s", len(errs), len(events), pubConf.Topic), combinedErr,
+		)
+	}
+
 	return nil
 }
 
