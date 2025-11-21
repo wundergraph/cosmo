@@ -36,6 +36,10 @@ type MethodDefinition struct {
 	InputType string
 	// OutputType is the fully qualified output message type
 	OutputType string
+	// InputMessageDescriptor is the descriptor for the input message
+	InputMessageDescriptor *desc.MessageDescriptor
+	// OutputMessageDescriptor is the descriptor for the output message
+	OutputMessageDescriptor *desc.MessageDescriptor
 	// IsClientStreaming indicates if this is a client streaming RPC
 	IsClientStreaming bool
 	// IsServerStreaming indicates if this is a server streaming RPC
@@ -180,12 +184,14 @@ func (pl *ProtoLoader) extractServiceDefinition(service *desc.ServiceDescriptor)
 	methods := service.GetMethods()
 	for _, method := range methods {
 		methodDef := MethodDefinition{
-			Name:              method.GetName(),
-			FullName:          method.GetFullyQualifiedName(),
-			InputType:         method.GetInputType().GetFullyQualifiedName(),
-			OutputType:        method.GetOutputType().GetFullyQualifiedName(),
-			IsClientStreaming: method.IsClientStreaming(),
-			IsServerStreaming: method.IsServerStreaming(),
+			Name:                    method.GetName(),
+			FullName:                method.GetFullyQualifiedName(),
+			InputType:               method.GetInputType().GetFullyQualifiedName(),
+			OutputType:              method.GetOutputType().GetFullyQualifiedName(),
+			InputMessageDescriptor:  method.GetInputType(),
+			OutputMessageDescriptor: method.GetOutputType(),
+			IsClientStreaming:       method.IsClientStreaming(),
+			IsServerStreaming:       method.IsServerStreaming(),
 		}
 		serviceDef.Methods = append(serviceDef.Methods, methodDef)
 	}
