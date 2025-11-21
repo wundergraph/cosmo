@@ -132,6 +132,7 @@ export class OrganizationWebhookService {
 
     this.httpClient = axios.create({
       timeout: 30_000,
+      maxContentLength: 5 * 1024 * 1024, // ~5mb
     });
   }
 
@@ -649,11 +650,11 @@ export class OrganizationWebhookService {
     }
 
     if (sceConfig.includeLintingIssues) {
-      fileContent.lintIssues = input.lintIssues;
+      fileContent.lintIssues = [...input.lintIssues.warnings, ...input.lintIssues.errors];
     }
 
     if (sceConfig.includePruningIssues) {
-      fileContent.pruningIssues = input.pruneIssues;
+      fileContent.pruningIssues = [...input.pruneIssues.warnings, ...input.pruneIssues.errors];
     }
 
     if (sceConfig.includeSchemaChanges) {
