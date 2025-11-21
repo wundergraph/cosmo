@@ -1,4 +1,5 @@
 import { FieldUsageSheet } from "@/components/analytics/field-usage";
+import { createFilterState } from "@/components/analytics/constructAnalyticsTableQueryState";
 import {
   ErrorMetricsCard,
   LatencyMetricsCard,
@@ -473,8 +474,10 @@ const OperationsRightPanel = ({
                       organizationSlug,
                       namespace,
                       slug: router.query.slug,
-                      operationHash: selectedOperation.hash,
-                      operationName: operationName || undefined,
+                      filterState: createFilterState({
+                        operationHash: selectedOperation.hash,
+                        operationName: operationName || undefined,
+                      }),
                       range: router.query.range,
                       dateRange: router.query.dateRange,
                     },
