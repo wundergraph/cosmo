@@ -8,7 +8,7 @@ import { PublicError } from '../errors/errors.js';
 import { OrganizationGroupRepository } from '../repositories/OrganizationGroupRepository.js';
 import { OrganizationInvitationRepository } from '../repositories/OrganizationInvitationRepository.js';
 import { UserRepository } from '../repositories/UserRepository.js';
-import { OrganizationInvitationDTO } from '../../types/index.js';
+import { OrganizationInvitationDTO, UserDTO } from '../../types/index.js';
 import Keycloak from './Keycloak.js';
 import Mailer from './Mailer.js';
 
@@ -54,6 +54,7 @@ export class UserInviteService {
 
     if (!advisoryLockRows?.[0]?.acquired) {
       // Another request already acquired the lock for this invitation
+      throw new PublicError(EnumStatusCode.ERR, 'Slow down');
     }
 
     // Retrieve the organization by the provided organization ID
@@ -94,9 +95,15 @@ export class UserInviteService {
     });
 
     let keycloakUserId: string;
+    let user: UserDTO | null = null;
     if (keycloakUser?.id) {
       // The user already exists in Keycloak
       keycloakUserId = keycloakUser.id!;
+      user = await userRepo.byId(keycloakUserId);
+      if (!user) {
+        // Make sure the user exists in the database
+        await userRepo.addUser({ id: keycloakUserId, email: input.email });
+      }
     } else {
       // The user doesn't exist in Keycloak
       keycloakUserId = await this.keycloak.addKeycloakUser({
@@ -111,7 +118,10 @@ export class UserInviteService {
     }
 
     // Ensure that the user exists in the database
-    const user = await userRepo.byId(keycloakUserId);
+    if (!user) {
+      user = await userRepo.byId(keycloakUserId);
+    }
+
     if (!user) {
       throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, 'User not found');
     }
