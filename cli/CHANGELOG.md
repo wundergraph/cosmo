@@ -4,6 +4,20 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.97.1](https://github.com/wundergraph/cosmo/compare/wgc@0.97.0...wgc@0.97.1) (2025-11-21)
+
+**Note:** Version bump only for package wgc
+
+# [0.97.0](https://github.com/wundergraph/cosmo/compare/wgc@0.96.2...wgc@0.97.0) (2025-11-21)
+
+### Features
+
+* generate proto from operations and sdl ([#2302](https://github.com/wundergraph/cosmo/issues/2302)) ([4cb22f5](https://github.com/wundergraph/cosmo/commit/4cb22f517bfd8d4cf2f940ef0c8d8cf5d343f603)) (@asoorm)
+
+## [0.96.2](https://github.com/wundergraph/cosmo/compare/wgc@0.96.1...wgc@0.96.2) (2025-11-20)
+
+**Note:** Version bump only for package wgc
+
 ## [0.96.1](https://github.com/wundergraph/cosmo/compare/wgc@0.96.0...wgc@0.96.1) (2025-11-19)
 
 ### Bug Fixes
