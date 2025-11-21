@@ -1,5 +1,12 @@
 import { Warning } from '../warnings/types';
-import { DirectiveDefinitionNode, DocumentNode, GraphQLSchema, OperationTypeNode } from 'graphql';
+import {
+  DirectiveDefinitionNode,
+  DocumentNode,
+  GraphQLSchema,
+  OperationTypeNode,
+  SchemaDefinitionNode,
+  SchemaExtensionNode,
+} from 'graphql';
 import { ConfigurationData } from '../router-configuration/types';
 import {
   AuthorizationData,
@@ -42,6 +49,7 @@ export type NormalizationSuccess = {
   subgraphString: string;
   success: true;
   warnings: Array<Warning>;
+  schemaNode?: SchemaDefinitionNode | SchemaExtensionNode;
 };
 
 export type NormalizationResult = NormalizationFailure | NormalizationSuccess;

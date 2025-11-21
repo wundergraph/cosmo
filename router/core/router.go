@@ -521,7 +521,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 				IgnorePersistedOperations: r.securityConfiguration.DepthLimit.IgnorePersistedOperations,
 			}
 		} else {
-			r.logger.Warn("Ignoring deprecated security configuration field 'depth_limit', in favor of the `security_complexity_limits.depth` configuration")
+			r.logger.Warn("Ignoring deprecated security configuration field 'depth_limit', in favor of the `security.complexity_limits.depth` configuration")
 		}
 	}
 
@@ -889,7 +889,6 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			mcpserver.WithGraphName(r.mcp.GraphName),
 			mcpserver.WithOperationsDir(operationsDir),
 			mcpserver.WithListenAddr(r.mcp.Server.ListenAddr),
-			mcpserver.WithBaseURL(r.mcp.Server.BaseURL),
 			mcpserver.WithLogger(r.logger.With(logFields...)),
 			mcpserver.WithExcludeMutations(r.mcp.ExcludeMutations),
 			mcpserver.WithEnableArbitraryOperations(r.mcp.EnableArbitraryOperations),
@@ -2312,6 +2311,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			PromSchemaFieldUsage: rmetric.PrometheusSchemaFieldUsage{
 				Enabled:             cfg.Metrics.Prometheus.SchemaFieldUsage.Enabled,
 				IncludeOperationSha: cfg.Metrics.Prometheus.SchemaFieldUsage.IncludeOperationSha,
+				SampleRate:          cfg.Metrics.Prometheus.SchemaFieldUsage.SampleRate,
 			},
 		},
 	}

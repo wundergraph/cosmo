@@ -1,5 +1,5 @@
 import { Warning } from '../warnings/types';
-import { ConstDirectiveNode, DocumentNode, GraphQLSchema, StringValueNode } from 'graphql';
+import { ConstDirectiveNode, DirectiveDefinitionNode, DocumentNode, GraphQLSchema, StringValueNode } from 'graphql';
 import {
   ConfigureDescriptionData,
   ExtensionType,
@@ -9,7 +9,7 @@ import {
 import { FieldConfiguration } from '../router-configuration/types';
 import { Subgraph, SubgraphConfig } from '../subgraph/types';
 import { SupportedRouterCompatibilityVersion } from '../router-compatibility-version/router-compatibility-version';
-import { ContractName } from '../types/types';
+import { ContractName, DirectiveName, SubgraphName, TypeName } from '../types/types';
 
 export type FederationFailure = {
   errors: Array<Error>;
@@ -18,6 +18,7 @@ export type FederationFailure = {
 };
 
 export type FederationSuccess = {
+  directiveDefinitionByName: Map<DirectiveName, DirectiveDefinitionNode>;
   fieldConfigurations: Array<FieldConfiguration>;
   federatedGraphAST: DocumentNode;
   federatedGraphClientSchema: GraphQLSchema;
@@ -38,13 +39,14 @@ export type FederationResultWithContractsFailure = {
 };
 
 export type FederationResultWithContractsSuccess = {
+  directiveDefinitionByName: Map<DirectiveName, DirectiveDefinitionNode>;
   fieldConfigurations: Array<FieldConfiguration>;
   federatedGraphAST: DocumentNode;
   federatedGraphClientSchema: GraphQLSchema;
   federatedGraphSchema: GraphQLSchema;
   federationResultByContractName: Map<string, FederationResult>;
-  parentDefinitionDataByTypeName: Map<string, ParentDefinitionData>;
-  subgraphConfigBySubgraphName: Map<string, SubgraphConfig>;
+  parentDefinitionDataByTypeName: Map<TypeName, ParentDefinitionData>;
+  subgraphConfigBySubgraphName: Map<SubgraphName, SubgraphConfig>;
   success: true;
   warnings: Array<Warning>;
   shouldIncludeClientSchema?: boolean;
@@ -58,10 +60,10 @@ export type ContractTagOptions = {
 };
 
 export type MutualParentDefinitionData = {
-  configureDescriptionDataBySubgraphName: Map<string, ConfigureDescriptionData>;
-  directivesByDirectiveName: Map<string, ConstDirectiveNode[]>;
+  configureDescriptionDataBySubgraphName: Map<SubgraphName, ConfigureDescriptionData>;
+  directivesByName: Map<DirectiveName, Array<ConstDirectiveNode>>;
   extensionType: ExtensionType;
-  name: string;
+  name: TypeName;
   persistedDirectivesData: PersistedDirectivesData;
   description?: StringValueNode;
 };

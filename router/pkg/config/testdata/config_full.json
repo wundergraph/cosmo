@@ -92,7 +92,8 @@
         "ExcludeScopeInfo": true,
         "SchemaFieldUsage": {
           "Enabled": true,
-          "IncludeOperationSha": false
+          "IncludeOperationSha": true,
+          "SampleRate": 1
         }
       },
       "CardinalityLimit": 2000
@@ -709,7 +710,8 @@
         "Enabled": true,
         "Limit": 4,
         "IgnorePersistedOperations": true
-      }
+      },
+      "IgnoreIntrospection": false
     },
     "DepthLimit": null,
     "ParserLimits": {

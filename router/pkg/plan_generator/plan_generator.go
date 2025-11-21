@@ -42,10 +42,11 @@ type QueryPlanResults struct {
 }
 
 type QueryPlanResult struct {
-	FileName string `json:"file_name,omitempty"`
-	Plan     string `json:"plan,omitempty"`
-	Error    string `json:"error,omitempty"`
-	Warning  string `json:"warning,omitempty"`
+	FileName string              `json:"file_name,omitempty"`
+	Plan     string              `json:"plan,omitempty"`
+	Error    string              `json:"error,omitempty"`
+	Warning  string              `json:"warning,omitempty"`
+	Timings  core.OperationTimes `json:"timings,omitempty"`
 }
 
 func PlanGenerator(ctx context.Context, cfg QueryPlanConfig) error {
@@ -145,10 +146,11 @@ func PlanGenerator(ctx context.Context, cfg QueryPlanConfig) error {
 
 					queryFilePath := filepath.Join(queriesPath, queryFile.Name())
 
-					outContent, err := planner.PlanOperation(queryFilePath, cfg.OutputFormat)
+					outContent, opTimes, err := planner.PlanOperation(queryFilePath, cfg.OutputFormat)
 					res := QueryPlanResult{
-						FileName: queryFile.Name(),
-						Plan:     outContent,
+						FileName:      queryFile.Name(),
+						Plan:          outContent,
+						Timings:       opTimes,
 					}
 					if err != nil {
 						if _, ok := err.(*core.PlannerOperationValidationError); ok {

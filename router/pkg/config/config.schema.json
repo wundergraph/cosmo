@@ -325,7 +325,7 @@
                 },
                 "object_path": {
                   "type": "string",
-                  "description": "The path to the execution config in the storage provider. The path is used to download the execution config from the storage provider."
+                  "description": "The path to the execution config in the storage provider. The path is used to download the execution config from the storage provider. If the path ends with `.zst` (zstd compressed) or `.gz` (gzip compressed), the file will be decompressed before reading."
                 }
               }
             }
@@ -1245,6 +1245,13 @@
                       "type": "boolean",
                       "default": false,
                       "description": "Include the operation SHA256 in the metric labels, this can be an expensive operation. The default value is false."
+                    },
+                    "sample_rate": {
+                      "type": "number",
+                      "default": 1.0,
+                      "minimum": 0.0,
+                      "maximum": 1.0,
+                      "description": "Sample rate for schema field usage metrics (0.0 to 1.0). Uses probabilistic random sampling, ensuring all operations get ~X% statistical coverage with uniform distribution. Only recommended for large scale deployments. Default is 1.0 (100% sampling)."
                     }
                   }
                 }
@@ -2041,6 +2048,8 @@
               "format": "hostname-port"
             },
             "base_url": {
+              "deprecated": true,
+              "deprecationMessage": "The base_url is deprecated. This property was related to the SSE protocol that is not supported anymore.",
               "type": "string",
               "description": "The base URL of the MCP server. This is the URL advertised to the LLM clients when SSE is used as primary transport. By default, the base URL is relative to the URL that the router is running on. The URL is specified as a string with the format 'scheme://host:port'.",
               "format": "http-url"
@@ -2596,6 +2605,11 @@
                   "default": false
                 }
               }
+            },
+            "ignore_introspection": {
+              "type": "boolean",
+              "default": false,
+              "description": "When set to true, complexity validation is ignored for all introspection queries."
             }
           }
         },
