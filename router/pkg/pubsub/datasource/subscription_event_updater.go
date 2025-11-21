@@ -10,10 +10,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-const (
-	timeoutGracePeriod = 50 * time.Millisecond
-	defaultTimeout     = 5 * time.Second
-)
+const defaultTimeout = 5 * time.Second
 
 // SubscriptionEventUpdater is a wrapper around the SubscriptionUpdater interface
 // that provides a way to send the event struct instead of the raw data
@@ -65,7 +62,7 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 	case <-done:
 		s.logger.Debug("All subscription updates completed")
 		// All subscriptions completed successfully
-	case <-time.After(s.timeout + timeoutGracePeriod):
+	case <-updaterCtx.Done():
 		// Timeout exceeded, some subscription updates may still be running.
 		// We can't stop them but we will also not wait for them, basically abandoning them.
 		// They will continue to hold their semaphore slots until they complete,
@@ -73,7 +70,9 @@ func (s *subscriptionEventUpdater) Update(events []StreamEvent) {
 		// Also since we will process the next batch of events while having abandoned updaters,
 		// those updaters might eventually push their events to the subscription late,
 		// which means events might arrive out of order.
-		s.logger.Warn("Timeout exceeded during subscription updates, events may arrive out of order")
+		s.logger.Warn("Subscription update timeout exceeded because handler execution took too long. " +
+			"Consider increasing events.handler.on_receive_events.handler_timeout and/or max_concurrent_handlers or reduce handler execution time." +
+			"Events may arrive out of order.")
 	}
 }
 

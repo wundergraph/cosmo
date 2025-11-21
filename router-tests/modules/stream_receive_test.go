@@ -954,7 +954,9 @@ func TestReceiveHook(t *testing.T) {
 			assert.Equal(t, float64(1), receivedIDs[len(receivedIDs)-1], "expected the delayed event to arrive last")
 			assert.NotEqual(t, float64(1), receivedIDs[0], "expected at least one later event to arrive before the delayed one")
 
-			timeoutLog := xEnv.Observer().FilterMessage("Timeout exceeded during subscription updates, events may arrive out of order")
+			timeoutLog := xEnv.Observer().FilterMessage("Subscription update timeout exceeded because handler execution took too long. " +
+				"Consider increasing events.handler.on_receive_events.handler_timeout and/or max_concurrent_handlers or reduce handler execution time." +
+				"Events may arrive out of order.")
 			assert.Len(t, timeoutLog.All(), 1, "expected timeout warning to be logged")
 
 			// Verify all hooks were executed
