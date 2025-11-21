@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.12.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.12.0...@wundergraph/protographic@0.12.1) (2025-11-21)
+
+### Bug Fixes
+
+* **protographic:** move protobufjs to dependencies ([#2350](https://github.com/wundergraph/cosmo/issues/2350)) ([cb1126c](https://github.com/wundergraph/cosmo/commit/cb1126c7403eaea3bd3709650f285418bac7c6a3)) (@asoorm)
+
 # [0.12.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.11.0...@wundergraph/protographic@0.12.0) (2025-11-21)
 
 ### Features
