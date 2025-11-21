@@ -63,13 +63,16 @@ func (vs *VanguardService) registerServices() error {
 
 	vs.services = make([]*vanguard.Service, 0, len(protoServices))
 
-	for serviceName := range protoServices {
+	for serviceName, serviceDef := range protoServices {
 		// Create an HTTP handler for this service
 		serviceHandler := vs.createServiceHandler(serviceName)
 
-		// Create a Vanguard service
-		// The service name should be the fully qualified proto service name
-		vanguardService := vanguard.NewService(serviceName, serviceHandler)
+		// Create a Vanguard service with schema
+		// Use NewServiceWithSchema for dynamically loaded proto files
+		vanguardService := vanguard.NewServiceWithSchema(
+			serviceDef.ServiceDescriptor,
+			serviceHandler,
+		)
 
 		vs.services = append(vs.services, vanguardService)
 
