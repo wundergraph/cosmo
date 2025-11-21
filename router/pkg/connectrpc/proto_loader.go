@@ -24,6 +24,8 @@ type ServiceDefinition struct {
 	Methods []MethodDefinition
 	// FileDescriptor is the proto file descriptor
 	FileDescriptor protoreflect.FileDescriptor
+	// ServiceDescriptor is the service descriptor for Vanguard
+	ServiceDescriptor protoreflect.ServiceDescriptor
 }
 
 // MethodDefinition represents a parsed RPC method
@@ -171,13 +173,25 @@ func (pl *ProtoLoader) processFileDescriptor(fd *desc.FileDescriptor) error {
 func (pl *ProtoLoader) extractServiceDefinition(service *desc.ServiceDescriptor) *ServiceDefinition {
 	// Convert desc.FileDescriptor to protoreflect.FileDescriptor
 	fd := service.GetFile().UnwrapFile()
+	
+	// Get the service descriptor from the file descriptor
+	services := fd.Services()
+	var serviceDesc protoreflect.ServiceDescriptor
+	for i := 0; i < services.Len(); i++ {
+		sd := services.Get(i)
+		if string(sd.FullName()) == service.GetFullyQualifiedName() {
+			serviceDesc = sd
+			break
+		}
+	}
 
 	serviceDef := &ServiceDefinition{
-		FullName:       service.GetFullyQualifiedName(),
-		Package:        service.GetFile().GetPackage(),
-		ServiceName:    service.GetName(),
-		FileDescriptor: fd,
-		Methods:        make([]MethodDefinition, 0),
+		FullName:          service.GetFullyQualifiedName(),
+		Package:           service.GetFile().GetPackage(),
+		ServiceName:       service.GetName(),
+		FileDescriptor:    fd,
+		ServiceDescriptor: serviceDesc,
+		Methods:           make([]MethodDefinition, 0),
 	}
 
 	// Extract methods
