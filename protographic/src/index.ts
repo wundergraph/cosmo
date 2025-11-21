@@ -5,7 +5,6 @@ import type { GraphQLToProtoTextVisitorOptions } from './sdl-to-proto-visitor.js
 import { GraphQLToProtoTextVisitor } from './sdl-to-proto-visitor.js';
 import type { ProtoLock } from './proto-lock.js';
 import { SDLValidationVisitor, type ValidationResult } from './sdl-validation-visitor.js';
-import protobuf from 'protobufjs';
 
 /**
  * Compiles a GraphQL schema to a mapping structure
