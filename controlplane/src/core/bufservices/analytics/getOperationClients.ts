@@ -7,6 +7,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
+import { MetricsRepository } from '../../repositories/analytics/MetricsRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
 import { isoDateRangeToTimestamps, getDateRange } from '../../repositories/analytics/util.js';
@@ -70,48 +71,23 @@ export function getOperationClients(
     const parsedDateRange = isoDateRangeToTimestamps(validatedDateRange, range || 24);
     const [startTimestamp, endTimestamp] = getDateRange(parsedDateRange);
 
-    const query = `
-    WITH
-      toDateTime({startTimestamp:String}) AS startDate,
-      toDateTime({endTimestamp:String}) AS endDate
-    SELECT
-      ClientName as name,
-      ClientVersion as version,
-      sum(TotalRequests) as requestCount,
-      max(Timestamp) as lastUsed
-    FROM ${opts.chClient.database}.operation_request_metrics_5_30
-    WHERE Timestamp >= startDate AND Timestamp <= endDate
-      AND OrganizationID = {organizationId:String}
-      AND FederatedGraphID = {federatedGraphId:String}
-      AND OperationHash = {operationHash:String}
-      ${req.operationName === undefined ? '' : 'AND OperationName = {operationName:String}'}
-    GROUP BY ClientName, ClientVersion
-    ORDER BY lastUsed DESC`;
-
-    const params: Record<string, string | number | boolean> = {
-      startTimestamp,
-      endTimestamp,
+    const metricsRepo = new MetricsRepository(opts.chClient);
+    const clientsData = await metricsRepo.getClientsOfOperation({
+      dateRange: {
+        start: startTimestamp,
+        end: endTimestamp,
+      },
       organizationId: authContext.organizationId,
-      federatedGraphId: graph.id,
+      graphId: graph.id,
       operationHash: req.operationHash,
-    };
+      operationName: req.operationName,
+    });
 
-    if (req.operationName !== undefined) {
-      params.operationName = req.operationName;
-    }
-
-    const res: Array<{
-      name: string;
-      version: string;
-      requestCount: number;
-      lastUsed: string;
-    }> = await opts.chClient.queryPromise(query, params);
-
-    const clients = res.map((client) => ({
-      name: client.name || '',
-      version: client.version || '',
-      requestCount: BigInt(client.requestCount || 0),
-      lastUsed: new Date(client.lastUsed + 'Z').toISOString(),
+    const clients = clientsData.map((client) => ({
+      name: client.name,
+      version: client.version,
+      requestCount: BigInt(client.requestCount),
+      lastUsed: client.lastUsed,
     }));
 
     return {

@@ -2886,20 +2886,25 @@ enum OperationsFetchBasedOn {
   ERRORS = 2;
 }
 
+enum SortDirection {
+  ASC = 0;
+  DESC = 1;
+}
+
 message GetOperationsRequest {
   string federatedGraphName = 1;
   string namespace = 2;
   repeated string clientNames = 3; // filter by client names
   optional int32 limit = 4;
   optional int32 offset = 5; // pagination offset
-  optional bool includeDeprecatedFields = 6;
+  optional bool includeHasDeprecatedFields = 6;
   optional OperationsFetchBasedOn fetchBasedOn = 7; // determines which metric to fetch and sort by
-  optional string sortDirection = 13; // asc, desc - defaults to desc
-  optional bool includeContent = 8; // defaults to true
+  optional bool includeContent = 8; // defaults to false
   optional int32 range = 9; // range in hours
   optional DateRange dateRange = 10;
   optional string searchQuery = 11; // search by operation name or hash
   optional bool includeOperationsWithDeprecatedFieldsOnly = 12; // defaults to false
+  optional SortDirection sortDirection = 13; // defaults to DESC
 }
 
 message GetOperationsResponse {
@@ -2912,9 +2917,9 @@ message GetOperationsResponse {
   message Operation {
     string hash = 1;
     string name = 2;
-    string content = 3;
+    optional string content = 3;
     OperationType type = 4;
-    bool hasDeprecatedFields = 5;
+    optional bool hasDeprecatedFields = 5;
     oneof metric {
       float latency = 6;
       int64 requestCount = 7;

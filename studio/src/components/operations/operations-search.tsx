@@ -35,8 +35,8 @@ interface OperationsSearchProps {
   onFetchBasedOnChange: (fetchBasedOn: OperationsFetchBasedOn) => void;
   sortDirection: string;
   onSortDirectionChange: (direction: string) => void;
-  includeDeprecatedFields: boolean;
-  onIncludeDeprecatedFieldsChange: (include: boolean) => void;
+  includeOperationsWithDeprecatedFieldsOnly: boolean;
+  onIncludeOperationsWithDeprecatedFieldsOnlyChange: (include: boolean) => void;
   className?: string;
 }
 
@@ -53,8 +53,8 @@ export const OperationsSearch = ({
   onFetchBasedOnChange,
   sortDirection,
   onSortDirectionChange,
-  includeDeprecatedFields,
-  onIncludeDeprecatedFieldsChange,
+  includeOperationsWithDeprecatedFieldsOnly,
+  onIncludeOperationsWithDeprecatedFieldsOnlyChange,
   className,
 }: OperationsSearchProps) => {
   const graphContext = useContext(GraphContext);
@@ -96,9 +96,11 @@ export const OperationsSearch = ({
 
   const handleDeprecatedFieldsFilterSelect = useCallback(
     (value?: string[]) => {
-      onIncludeDeprecatedFieldsChange(!!value && value.length > 0);
+      onIncludeOperationsWithDeprecatedFieldsOnlyChange(
+        !!value && value.length > 0,
+      );
     },
-    [onIncludeDeprecatedFieldsChange],
+    [onIncludeOperationsWithDeprecatedFieldsOnlyChange],
   );
 
   const handleClientNameFilterSelect = useCallback(
@@ -130,7 +132,9 @@ export const OperationsSearch = ({
         id: "deprecatedFields",
         title: "Operations with deprecated fields",
         options: [],
-        selectedOptions: includeDeprecatedFields ? ["true"] : [],
+        selectedOptions: includeOperationsWithDeprecatedFieldsOnly
+          ? ["true"]
+          : [],
         onSelect: handleDeprecatedFieldsFilterSelect,
         customOptions: CustomOptions.Boolean,
       },
@@ -138,7 +142,7 @@ export const OperationsSearch = ({
     [
       handleDeprecatedFieldsFilterSelect,
       handleClientNameFilterSelect,
-      includeDeprecatedFields,
+      includeOperationsWithDeprecatedFieldsOnly,
       clients,
       clientNames,
     ],
@@ -153,17 +157,21 @@ export const OperationsSearch = ({
   const hasActiveFilters = useMemo(() => {
     return (
       (clientNames && clientNames.length > 0) ||
-      includeDeprecatedFields ||
+      includeOperationsWithDeprecatedFieldsOnly ||
       hasSelectedOperation
     );
-  }, [clientNames, includeDeprecatedFields, hasSelectedOperation]);
+  }, [
+    clientNames,
+    includeOperationsWithDeprecatedFieldsOnly,
+    hasSelectedOperation,
+  ]);
 
   // Reset all filters and operation selection
   const handleResetFilters = useCallback(() => {
     // Clear all filters and operation selection in a single update
     applyParams({
       clientNames: null,
-      includeDeprecatedFields: null,
+      includeOperationsWithDeprecatedFieldsOnly: null,
       operationHash: null,
       operationName: null,
       page: pageNumber !== 1 ? "1" : null,

@@ -10,6 +10,7 @@ import {
   GetOperationsResponse_Operation,
   GetOperationsResponse_OperationType,
   OperationsFetchBasedOn,
+  SortDirection,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { buildASTSchema } from '@wundergraph/composition';
 import { parse } from 'graphql';
@@ -117,41 +118,34 @@ export function getOperations(
       };
     }
 
-    // Default includeContent to true if not explicitly set to false
-    const shouldIncludeContent = req.includeContent !== false;
+    // Default includeContent to false if not explicitly set to true
+    const shouldIncludeContent = req.includeContent === true;
 
-    // Get deprecated fields info if needed
-    const latestValidSchemaVersion = await fedGraphRepo.getLatestValidSchemaVersion({
-      targetId: graph.targetId,
-    });
-    let operationsUsingDeprecatedFields: {
-      operationHash: string;
-      operationName: string;
-    }[] = [];
-    try {
-      if (latestValidSchemaVersion && latestValidSchemaVersion.schema) {
-        const parsedSchema = parse(latestValidSchemaVersion.schema);
-        const newGraphQLSchema = buildASTSchema(parsedSchema, { assumeValid: true, assumeValidSDL: true });
-        const schemaGraphPruner = new SchemaGraphPruner(fedGraphRepo, subgraphRepo, usageRepo, newGraphQLSchema);
-        const deprecatedFields = schemaGraphPruner.getAllFields({ schema: newGraphQLSchema, onlyDeprecated: true });
-        operationsUsingDeprecatedFields = await usageRepo.getOperationsUsingDeprecatedFields({
-          organizationId: authContext.organizationId,
-          federatedGraphId: graph.id,
-          range,
-          dateRange,
-          deprecatedFields: deprecatedFields.map((field) => ({
+    // Only fetch deprecated fields info when includeHasDeprecatedFields is true
+    const shouldIncludeHasDeprecatedFields = req.includeHasDeprecatedFields === true;
+    let deprecatedFields: { name: string; typeNames: string[] }[] = [];
+    if (shouldIncludeHasDeprecatedFields) {
+      try {
+        const latestValidSchemaVersion = await fedGraphRepo.getLatestValidSchemaVersion({
+          targetId: graph.targetId,
+        });
+        if (latestValidSchemaVersion && latestValidSchemaVersion.schema) {
+          const parsedSchema = parse(latestValidSchemaVersion.schema);
+          const newGraphQLSchema = buildASTSchema(parsedSchema, { assumeValid: true, assumeValidSDL: true });
+          const schemaGraphPruner = new SchemaGraphPruner(fedGraphRepo, subgraphRepo, usageRepo, newGraphQLSchema);
+          const deprecatedFieldsList = schemaGraphPruner.getAllFields({
+            schema: newGraphQLSchema,
+            onlyDeprecated: true,
+          });
+          deprecatedFields = deprecatedFieldsList.map((field) => ({
             name: field.name,
             typeNames: [field.typeName],
-          })),
-        });
+          }));
+        }
+      } catch (error) {
+        logger.error('Error getting latest valid schema version', { error });
       }
-    } catch (error) {
-      logger.error('Error getting latest valid schema version', { error });
     }
-
-    // If includeDeprecatedFields is true, fetch all operations without limit/offset
-    // Then filter and apply pagination in memory
-    const shouldFetchAll = req.includeDeprecatedFields === true;
 
     const filters: AnalyticsFilter[] = [];
     if (req.clientNames && req.clientNames.length > 0) {
@@ -168,6 +162,11 @@ export function getOperations(
       }
     }
 
+    // Only get hasDeprecatedFields information when includeHasDeprecatedFields is true
+    // Only filter by deprecated fields when includeOperationsWithDeprecatedFieldsOnly is true
+    const sortDirectionStr =
+      req.sortDirection === SortDirection.ASC ? 'asc' : req.sortDirection === SortDirection.DESC ? 'desc' : 'desc'; // default to desc
+
     const operations = await metricsRepo.getOperations({
       range,
       dateRange,
@@ -175,11 +174,12 @@ export function getOperations(
       graphId: graph.id,
       filters,
       limit: req.limit,
-      offset: shouldFetchAll ? 0 : req.offset,
+      offset: req.offset,
       fetchBasedOn: sortField,
-      sortDirection: req.sortDirection || 'desc',
+      sortDirection: sortDirectionStr,
       searchQuery: req.searchQuery,
-      fetchAll: shouldFetchAll,
+      deprecatedFields,
+      includeOperationsWithDeprecatedFieldsOnly: req.includeOperationsWithDeprecatedFieldsOnly === true,
     });
 
     if (operations.length === 0) {
@@ -191,40 +191,10 @@ export function getOperations(
       };
     }
 
-    const computedOperations: GetOperationsResponse_Operation[] = [];
-    let operationsToProcess = operations;
-
-    // If we fetched all operations (for deprecated fields), we need to:
-    // 1. Merge with operations that have deprecated fields
-    // 2. Filter by deprecated fields if needed
-    // 3. Apply pagination
-    if (shouldFetchAll) {
-      // Create a set of operations with deprecated fields for quick lookup
-      const deprecatedOpsSet = new Set(
-        operationsUsingDeprecatedFields.map((op) => `${op.operationHash}:${op.operationName}`),
-      );
-
-      // Mark operations with deprecated fields
-      const operationsWithDeprecatedInfo = operations.map((op) => ({
-        ...op,
-        hasDeprecatedFields: deprecatedOpsSet.has(`${op.operationHash}:${op.operationName}`),
-      }));
-
-      // Filter by deprecated fields if needed
-      if (req.includeOperationsWithDeprecatedFieldsOnly) {
-        operationsToProcess = operationsWithDeprecatedInfo.filter((op) => op.hasDeprecatedFields);
-      } else {
-        operationsToProcess = operationsWithDeprecatedInfo;
-      }
-
-      // Apply pagination
-      operationsToProcess = operationsToProcess.slice(req.offset, req.offset + req.limit);
-    }
-
     // Fetch operation content for the operations we'll return
     let operationContentMap = new Map<string, string>();
-    if (shouldIncludeContent && operationsToProcess.length > 0) {
-      const operationHashes = operationsToProcess.map((op) => op.operationHash);
+    if (shouldIncludeContent && operations.length > 0) {
+      const operationHashes = operations.map((op) => op.operationHash);
       operationContentMap = await cacheWarmerRepo.getOperationContent({
         operationHashes,
         federatedGraphID: graph.id,
@@ -234,26 +204,31 @@ export function getOperations(
       });
     }
 
-    for (const operation of operationsToProcess) {
-      const operationContent = shouldIncludeContent ? operationContentMap.get(operation.operationHash) || '' : '';
-
-      const hasDeprecatedFields = operationsUsingDeprecatedFields.some(
-        (op) => op.operationHash === operation.operationHash && op.operationName === operation.operationName,
-      );
-
+    const computedOperations: GetOperationsResponse_Operation[] = [];
+    for (const operation of operations) {
       // Build operation with only the relevant metric based on fetchBasedOn
       const operationData: any = {
         name: operation.operationName,
         hash: operation.operationHash,
-        hasDeprecatedFields,
         type:
           operation.operationType === 'query'
             ? GetOperationsResponse_OperationType.QUERY
             : operation.operationType === 'mutation'
               ? GetOperationsResponse_OperationType.MUTATION
               : GetOperationsResponse_OperationType.SUBSCRIPTION,
-        content: operationContent,
       };
+
+      // Only set content when includeContent is true
+      if (shouldIncludeContent) {
+        const operationContent = operationContentMap.get(operation.operationHash) || '';
+        operationData.content = operationContent;
+      }
+
+      // Only set hasDeprecatedFields when includeHasDeprecatedFields is true
+      // hasDeprecatedFields is set by getOperationsWithDeprecatedFields when deprecatedFields are provided
+      if (shouldIncludeHasDeprecatedFields) {
+        operationData.hasDeprecatedFields = operation.hasDeprecatedFields || false;
+      }
 
       // Set only the relevant metric based on fetchBasedOn using oneof structure
       if (fetchBasedOn === OperationsFetchBasedOn.REQUESTS) {

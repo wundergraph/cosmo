@@ -67,6 +67,7 @@ import {
   GetOperationsResponse,
   GetOperationsResponse_OperationType,
   OperationsFetchBasedOn,
+  SortDirection,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { formatISO } from "date-fns";
 import Link from "next/link";
@@ -186,7 +187,7 @@ const OperationsLeftPanel = ({
     fetchBasedOn,
     fetchBasedOnStr,
     sortDirection,
-    includeDeprecatedFields,
+    includeOperationsWithDeprecatedFieldsOnly,
     applySorting,
     applyDeprecatedFieldsFilter,
   } = useOperationsFilters();
@@ -253,8 +254,12 @@ const OperationsLeftPanel = ({
         onSortDirectionChange={(direction) =>
           applySorting(fetchBasedOn, direction)
         }
-        includeDeprecatedFields={includeDeprecatedFields}
-        onIncludeDeprecatedFieldsChange={applyDeprecatedFieldsFilter}
+        includeOperationsWithDeprecatedFieldsOnly={
+          includeOperationsWithDeprecatedFieldsOnly
+        }
+        onIncludeOperationsWithDeprecatedFieldsOnlyChange={
+          applyDeprecatedFieldsFilter
+        }
         className="w-full"
       />
 
@@ -574,12 +579,12 @@ const OperationsPage: NextPageWithLayout = () => {
   const router = useRouter();
   const applyParams = useApplyParams();
   const graphContext = useContext(GraphContext);
-  const { filters, range, dateRange } = useAnalyticsQueryState();
+  const { range, dateRange } = useAnalyticsQueryState();
   const {
     searchQuery: urlSearchQuery,
     fetchBasedOn,
     sortDirection,
-    includeDeprecatedFields,
+    includeOperationsWithDeprecatedFieldsOnly,
     clientNames,
   } = useOperationsFilters();
 
@@ -635,14 +640,18 @@ const OperationsPage: NextPageWithLayout = () => {
           },
       searchQuery: debouncedSearchQuery || undefined,
       fetchBasedOn: fetchBasedOn || OperationsFetchBasedOn.REQUESTS,
-      sortDirection: sortDirection || "desc",
-      includeContent: true,
+      sortDirection:
+        sortDirection === "asc"
+          ? SortDirection.ASC
+          : sortDirection === "desc"
+            ? SortDirection.DESC
+            : SortDirection.DESC,
+      includeContent: false,
       limit: pageSize,
       offset: offset,
-      includeDeprecatedFields: includeDeprecatedFields || undefined,
-      includeOperationsWithDeprecatedFieldsOnly: includeDeprecatedFields
-        ? true
-        : undefined,
+      includeHasDeprecatedFields: true,
+      includeOperationsWithDeprecatedFieldsOnly:
+        includeOperationsWithDeprecatedFieldsOnly ? true : undefined,
       clientNames,
     },
     {

@@ -254,7 +254,8 @@ describe('GetOperations', () => {
         operationType: 'query',
         latency: 100.5,
         requestCount: 0,
-        errorCount: 0,
+        errorPercentage: 0,
+        hasDeprecatedFields: 0,
       },
       {
         operationHash: 'hash2',
@@ -262,7 +263,8 @@ describe('GetOperations', () => {
         operationType: 'mutation',
         latency: 200.3,
         requestCount: 0,
-        errorCount: 0,
+        errorPercentage: 0,
+        hasDeprecatedFields: 0,
       },
     ];
 
@@ -305,7 +307,8 @@ describe('GetOperations', () => {
         operationType: 'query',
         latency: 0,
         requestCount: 1000,
-        errorCount: 0,
+        errorPercentage: 0,
+        hasDeprecatedFields: 0,
       },
       {
         operationHash: 'hash2',
@@ -313,7 +316,8 @@ describe('GetOperations', () => {
         operationType: 'mutation',
         latency: 0,
         requestCount: 500,
-        errorCount: 0,
+        errorPercentage: 0,
+        hasDeprecatedFields: 0,
       },
     ];
 
@@ -357,8 +361,8 @@ describe('GetOperations', () => {
         operationType: 'query',
         latency: 0,
         requestCount: 1000,
-        errorCount: 100,
         errorPercentage: 10,
+        hasDeprecatedFields: 0,
       },
       {
         operationHash: 'hash2',
@@ -366,8 +370,8 @@ describe('GetOperations', () => {
         operationType: 'mutation',
         latency: 0,
         requestCount: 500,
-        errorCount: 25,
         errorPercentage: 5,
+        hasDeprecatedFields: 0,
       },
     ];
 
@@ -411,7 +415,8 @@ describe('GetOperations', () => {
         operationType: 'query',
         latency: 100.5,
         requestCount: 0,
-        errorCount: 0,
+        errorPercentage: 0,
+        hasDeprecatedFields: 0,
       },
     ];
 
@@ -429,7 +434,7 @@ describe('GetOperations', () => {
     await server.close();
   });
 
-  test('Should include operation content when includeContent is true (default)', async () => {
+  test('Should not include operation content by default', async () => {
     const { client, server } = await SetupTest({ dbname, chClient });
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
@@ -452,7 +457,50 @@ describe('GetOperations', () => {
         operationType: 'query',
         latency: 100.5,
         requestCount: 0,
-        errorCount: 0,
+        errorPercentage: 0,
+        hasDeprecatedFields: 0,
+      },
+    ];
+
+    (chClient.queryPromise as Mock).mockResolvedValue(mockOperations);
+
+    const response = await client.getOperations({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+    });
+
+    expect(response.response?.code).toBe(EnumStatusCode.OK);
+    expect(response.operations).toHaveLength(1);
+    expect(response.operations[0]?.content).toBeUndefined();
+
+    await server.close();
+  });
+
+  test('Should include operation content when includeContent is true', async () => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+    const fedGraphName = genID('fedGraph');
+    const label = genUniqueLabel();
+
+    await createThenPublishSubgraph(
+      client,
+      genID('subgraph'),
+      DEFAULT_NAMESPACE,
+      'type Query { hello: String! }',
+      [label],
+      'http://localhost:4001',
+    );
+
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:3000');
+
+    const mockOperations = [
+      {
+        operationHash: 'hash1',
+        operationName: 'Operation1',
+        operationType: 'query',
+        latency: 100.5,
+        requestCount: 0,
+        errorPercentage: 0,
+        hasDeprecatedFields: 0,
       },
     ];
 
@@ -469,6 +517,7 @@ describe('GetOperations', () => {
     const response = await client.getOperations({
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
+      includeContent: true,
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
@@ -501,7 +550,8 @@ describe('GetOperations', () => {
         operationType: 'query',
         latency: 100.5,
         requestCount: 0,
-        errorCount: 0,
+        errorPercentage: 0,
+        hasDeprecatedFields: 0,
       },
     ];
 
@@ -523,7 +573,54 @@ describe('GetOperations', () => {
     await server.close();
   });
 
-  test('Should handle operations with deprecated fields', async () => {
+  test('Should not include hasDeprecatedFields by default', async () => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+    const fedGraphName = genID('fedGraph');
+    const label = genUniqueLabel();
+
+    const subgraphName = genID('subgraph');
+    await createThenPublishSubgraph(
+      client,
+      subgraphName,
+      DEFAULT_NAMESPACE,
+      `type Query {
+        hello: String!
+        newHello: String!
+      }`,
+      [label],
+      'http://localhost:4001',
+    );
+
+    await createFederatedGraph(client, fedGraphName, DEFAULT_NAMESPACE, [joinLabel(label)], 'http://localhost:3000');
+
+    const mockOperations = [
+      {
+        operationHash: 'hash1',
+        operationName: 'Operation1',
+        operationType: 'query',
+        latency: 100.5,
+        requestCount: 0,
+        errorPercentage: 0,
+        hasDeprecatedFields: 0,
+      },
+    ];
+
+    // Mock calls: operations (includes deprecated fields check in the same query)
+    (chClient.queryPromise as Mock).mockResolvedValueOnce(mockOperations);
+
+    const response = await client.getOperations({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+    });
+
+    expect(response.response?.code).toBe(EnumStatusCode.OK);
+    expect(response.operations).toHaveLength(1);
+    expect(response.operations[0]?.hasDeprecatedFields).toBeUndefined();
+
+    await server.close();
+  });
+
+  test('Should include hasDeprecatedFields when includeHasDeprecatedFields is true', async () => {
     const { client, server } = await SetupTest({ dbname, chClient });
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
@@ -550,27 +647,18 @@ describe('GetOperations', () => {
         operationType: 'query',
         latency: 100.5,
         requestCount: 0,
-        errorCount: 0,
+        errorPercentage: 0,
+        hasDeprecatedFields: 1,
       },
     ];
 
-    const mockDeprecatedFields = [
-      {
-        operationHash: 'hash1',
-        operationName: 'Operation1',
-      },
-    ];
-
-    // Mock calls: operations, deprecated fields check, operation content
-    (chClient.queryPromise as Mock)
-      .mockResolvedValueOnce(mockOperations)
-      .mockResolvedValueOnce(mockDeprecatedFields)
-      .mockResolvedValueOnce([]);
+    // Mock calls: operations (includes deprecated fields check in the same query)
+    (chClient.queryPromise as Mock).mockResolvedValueOnce(mockOperations);
 
     const response = await client.getOperations({
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
-      includeDeprecatedFields: true,
+      includeHasDeprecatedFields: true,
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
@@ -607,35 +695,18 @@ describe('GetOperations', () => {
         operationType: 'query',
         latency: 100.5,
         requestCount: 0,
-        errorCount: 0,
-      },
-      {
-        operationHash: 'hash2',
-        operationName: 'Operation2',
-        operationType: 'query',
-        latency: 200.5,
-        requestCount: 0,
-        errorCount: 0,
+        errorPercentage: 0,
+        hasDeprecatedFields: 1,
       },
     ];
 
-    const mockDeprecatedFields = [
-      {
-        operationHash: 'hash1',
-        operationName: 'Operation1',
-      },
-    ];
-
-    // Mock calls: operations (fetchAll=true), deprecated fields check, operation content
-    (chClient.queryPromise as Mock)
-      .mockResolvedValueOnce(mockOperations)
-      .mockResolvedValueOnce(mockDeprecatedFields)
-      .mockResolvedValueOnce([]);
+    // Mock calls: operations (includes deprecated fields check and filtering in the same query)
+    (chClient.queryPromise as Mock).mockResolvedValueOnce(mockOperations);
 
     const response = await client.getOperations({
       federatedGraphName: fedGraphName,
       namespace: DEFAULT_NAMESPACE,
-      includeDeprecatedFields: true,
+      includeHasDeprecatedFields: true,
       includeOperationsWithDeprecatedFieldsOnly: true,
     });
 
@@ -669,7 +740,8 @@ describe('GetOperations', () => {
         operationType: 'query',
         latency: 100.5,
         requestCount: 0,
-        errorCount: 0,
+        errorPercentage: 0,
+        hasDeprecatedFields: 0,
       },
     ];
 
@@ -711,7 +783,8 @@ describe('GetOperations', () => {
         operationType: 'query',
         latency: 100.5,
         requestCount: 0,
-        errorCount: 0,
+        errorPercentage: 0,
+        hasDeprecatedFields: 0,
       },
       {
         operationHash: 'hash2',
@@ -719,7 +792,8 @@ describe('GetOperations', () => {
         operationType: 'mutation',
         latency: 200.5,
         requestCount: 0,
-        errorCount: 0,
+        errorPercentage: 0,
+        hasDeprecatedFields: 0,
       },
       {
         operationHash: 'hash3',
@@ -727,7 +801,8 @@ describe('GetOperations', () => {
         operationType: 'subscription',
         latency: 300.5,
         requestCount: 0,
-        errorCount: 0,
+        errorPercentage: 0,
+        hasDeprecatedFields: 0,
       },
     ];
 
@@ -769,7 +844,8 @@ describe('GetOperations', () => {
       operationType: 'query',
       latency: 100.5,
       requestCount: 0,
-      errorCount: 0,
+      errorPercentage: 0,
+      hasDeprecatedFields: 0,
     }));
 
     (chClient.queryPromise as Mock).mockResolvedValue(mockOperations);
@@ -809,7 +885,8 @@ describe('GetOperations', () => {
         operationType: 'query',
         latency: 100.5,
         requestCount: 0,
-        errorCount: 0,
+        errorPercentage: 0,
+        hasDeprecatedFields: 0,
       },
     ];
 

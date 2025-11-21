@@ -433,6 +433,26 @@ proto3.util.setEnumType(OperationsFetchBasedOn, "wg.cosmo.platform.v1.Operations
 ]);
 
 /**
+ * @generated from enum wg.cosmo.platform.v1.SortDirection
+ */
+export enum SortDirection {
+  /**
+   * @generated from enum value: ASC = 0;
+   */
+  ASC = 0,
+
+  /**
+   * @generated from enum value: DESC = 1;
+   */
+  DESC = 1,
+}
+// Retrieve enum metadata with: proto3.getEnumType(SortDirection)
+proto3.util.setEnumType(SortDirection, "wg.cosmo.platform.v1.SortDirection", [
+  { no: 0, name: "ASC" },
+  { no: 1, name: "DESC" },
+]);
+
+/**
  * @generated from message wg.cosmo.platform.v1.Label
  */
 export class Label extends Message<Label> {
@@ -22627,9 +22647,9 @@ export class GetOperationsRequest extends Message<GetOperationsRequest> {
   offset?: number;
 
   /**
-   * @generated from field: optional bool includeDeprecatedFields = 6;
+   * @generated from field: optional bool includeHasDeprecatedFields = 6;
    */
-  includeDeprecatedFields?: boolean;
+  includeHasDeprecatedFields?: boolean;
 
   /**
    * determines which metric to fetch and sort by
@@ -22639,14 +22659,7 @@ export class GetOperationsRequest extends Message<GetOperationsRequest> {
   fetchBasedOn?: OperationsFetchBasedOn;
 
   /**
-   * asc, desc - defaults to desc
-   *
-   * @generated from field: optional string sortDirection = 13;
-   */
-  sortDirection?: string;
-
-  /**
-   * defaults to true
+   * defaults to false
    *
    * @generated from field: optional bool includeContent = 8;
    */
@@ -22678,6 +22691,13 @@ export class GetOperationsRequest extends Message<GetOperationsRequest> {
    */
   includeOperationsWithDeprecatedFieldsOnly?: boolean;
 
+  /**
+   * defaults to DESC
+   *
+   * @generated from field: optional wg.cosmo.platform.v1.SortDirection sortDirection = 13;
+   */
+  sortDirection?: SortDirection;
+
   constructor(data?: PartialMessage<GetOperationsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -22691,14 +22711,14 @@ export class GetOperationsRequest extends Message<GetOperationsRequest> {
     { no: 3, name: "clientNames", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 4, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
     { no: 5, name: "offset", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
-    { no: 6, name: "includeDeprecatedFields", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 6, name: "includeHasDeprecatedFields", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 7, name: "fetchBasedOn", kind: "enum", T: proto3.getEnumType(OperationsFetchBasedOn), opt: true },
-    { no: 13, name: "sortDirection", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 8, name: "includeContent", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 9, name: "range", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
     { no: 10, name: "dateRange", kind: "message", T: DateRange, opt: true },
     { no: 11, name: "searchQuery", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 12, name: "includeOperationsWithDeprecatedFieldsOnly", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 13, name: "sortDirection", kind: "enum", T: proto3.getEnumType(SortDirection), opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOperationsRequest {
@@ -22802,9 +22822,9 @@ export class GetOperationsResponse_Operation extends Message<GetOperationsRespon
   name = "";
 
   /**
-   * @generated from field: string content = 3;
+   * @generated from field: optional string content = 3;
    */
-  content = "";
+  content?: string;
 
   /**
    * @generated from field: wg.cosmo.platform.v1.GetOperationsResponse.OperationType type = 4;
@@ -22812,9 +22832,9 @@ export class GetOperationsResponse_Operation extends Message<GetOperationsRespon
   type = GetOperationsResponse_OperationType.QUERY;
 
   /**
-   * @generated from field: bool hasDeprecatedFields = 5;
+   * @generated from field: optional bool hasDeprecatedFields = 5;
    */
-  hasDeprecatedFields = false;
+  hasDeprecatedFields?: boolean;
 
   /**
    * @generated from oneof wg.cosmo.platform.v1.GetOperationsResponse.Operation.metric
@@ -22849,9 +22869,9 @@ export class GetOperationsResponse_Operation extends Message<GetOperationsRespon
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "hash", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "content", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "content", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 4, name: "type", kind: "enum", T: proto3.getEnumType(GetOperationsResponse_OperationType) },
-    { no: 5, name: "hasDeprecatedFields", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 5, name: "hasDeprecatedFields", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 6, name: "latency", kind: "scalar", T: 2 /* ScalarType.FLOAT */, oneof: "metric" },
     { no: 7, name: "requestCount", kind: "scalar", T: 3 /* ScalarType.INT64 */, oneof: "metric" },
     { no: 8, name: "errorPercentage", kind: "scalar", T: 2 /* ScalarType.FLOAT */, oneof: "metric" },

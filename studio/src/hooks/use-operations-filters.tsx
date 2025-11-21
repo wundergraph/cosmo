@@ -9,13 +9,14 @@ export const useOperationsFilters = () => {
 
   // Operations-specific filter management
   const applyDeprecatedFieldsFilter = useCallback(
-    (includeDeprecatedFields: boolean) => {
+    (includeOperationsWithDeprecatedFieldsOnly: boolean) => {
       const params: Record<string, string | null> = {
-        includeDeprecatedFields: includeDeprecatedFields ? "true" : null,
+        includeOperationsWithDeprecatedFieldsOnly:
+          includeOperationsWithDeprecatedFieldsOnly ? "true" : null,
       };
 
       // When enabling deprecated fields filter, clear operation selection
-      if (includeDeprecatedFields) {
+      if (includeOperationsWithDeprecatedFieldsOnly) {
         // Clear operationHash and operationName from URL params
         params.operationHash = null;
         params.operationName = null;
@@ -64,8 +65,8 @@ export const useOperationsFilters = () => {
   );
 
   // Get current values from URL
-  const includeDeprecatedFields =
-    router.query.includeDeprecatedFields === "true";
+  const includeOperationsWithDeprecatedFieldsOnly =
+    router.query.includeOperationsWithDeprecatedFieldsOnly === "true";
   const clientNamesParam = (router.query.clientNames as string) || null;
   const clientNames = clientNamesParam
     ? clientNamesParam.split(",").filter((name) => name.length > 0)
@@ -78,7 +79,7 @@ export const useOperationsFilters = () => {
   return {
     applyDeprecatedFieldsFilter,
     applySorting,
-    includeDeprecatedFields,
+    includeOperationsWithDeprecatedFieldsOnly,
     clientNames,
     searchQuery,
     fetchBasedOn,
