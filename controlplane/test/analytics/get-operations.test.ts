@@ -565,7 +565,7 @@ describe('GetOperations', () => {
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     expect(response.operations).toHaveLength(1);
-    expect(response.operations[0]?.content).toBe('');
+    expect(response.operations[0]?.content).toBeUndefined();
 
     // Should not call getOperationContent
     expect(chClient.queryPromise).toHaveBeenCalledTimes(1);
