@@ -1,0 +1,221 @@
+package connectrpc
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/jhump/protoreflect/desc"
+	"github.com/jhump/protoreflect/desc/protoparse"
+	"go.uber.org/zap"
+	"google.golang.org/protobuf/reflect/protoreflect"
+)
+
+// ServiceDefinition represents a parsed protobuf service
+type ServiceDefinition struct {
+	// FullName is the fully qualified service name (e.g., "mypackage.MyService")
+	FullName string
+	// Package is the protobuf package name
+	Package string
+	// ServiceName is the simple service name
+	ServiceName string
+	// Methods contains all RPC methods in this service
+	Methods []MethodDefinition
+	// FileDescriptor is the proto file descriptor
+	FileDescriptor protoreflect.FileDescriptor
+}
+
+// MethodDefinition represents a parsed RPC method
+type MethodDefinition struct {
+	// Name is the method name (e.g., "GetUser")
+	Name string
+	// FullName is the fully qualified method name
+	FullName string
+	// InputType is the fully qualified input message type
+	InputType string
+	// OutputType is the fully qualified output message type
+	OutputType string
+	// IsClientStreaming indicates if this is a client streaming RPC
+	IsClientStreaming bool
+	// IsServerStreaming indicates if this is a server streaming RPC
+	IsServerStreaming bool
+}
+
+// ProtoLoader handles loading and parsing of protobuf files
+type ProtoLoader struct {
+	logger *zap.Logger
+	// services maps service full names to their definitions
+	services map[string]*ServiceDefinition
+}
+
+// NewProtoLoader creates a new proto loader
+func NewProtoLoader(logger *zap.Logger) *ProtoLoader {
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+
+	return &ProtoLoader{
+		logger:   logger,
+		services: make(map[string]*ServiceDefinition),
+	}
+}
+
+// LoadFromDirectory loads all .proto files from a directory
+func (pl *ProtoLoader) LoadFromDirectory(dir string) error {
+	pl.logger.Info("loading proto files from directory", zap.String("dir", dir))
+
+	// Find all .proto files
+	protoFiles, err := pl.findProtoFiles(dir)
+	if err != nil {
+		return fmt.Errorf("failed to find proto files: %w", err)
+	}
+
+	if len(protoFiles) == 0 {
+		return fmt.Errorf("no proto files found in directory: %s", dir)
+	}
+
+	pl.logger.Info("found proto files", zap.Int("count", len(protoFiles)))
+
+	// Load each proto file
+	for _, protoFile := range protoFiles {
+		if err := pl.loadProtoFile(protoFile); err != nil {
+			pl.logger.Error("failed to load proto file",
+				zap.String("file", protoFile),
+				zap.Error(err))
+			return fmt.Errorf("failed to load proto file %s: %w", protoFile, err)
+		}
+	}
+
+	pl.logger.Info("successfully loaded proto files",
+		zap.Int("services", len(pl.services)))
+
+	return nil
+}
+
+// findProtoFiles recursively finds all .proto files in a directory
+func (pl *ProtoLoader) findProtoFiles(dir string) ([]string, error) {
+	var protoFiles []string
+
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if !info.IsDir() && strings.HasSuffix(path, ".proto") {
+			protoFiles = append(protoFiles, path)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return protoFiles, nil
+}
+
+// loadProtoFile loads and parses a single proto file using protoparse
+func (pl *ProtoLoader) loadProtoFile(path string) error {
+	pl.logger.Debug("loading proto file", zap.String("path", path))
+
+	// Get the directory containing the proto file for import resolution
+	dir := filepath.Dir(path)
+	filename := filepath.Base(path)
+
+	// Create a parser with the directory as import path
+	parser := protoparse.Parser{
+		ImportPaths:      []string{dir},
+		IncludeSourceCodeInfo: true,
+	}
+
+	// Parse the proto file
+	fds, err := parser.ParseFiles(filename)
+	if err != nil {
+		return fmt.Errorf("failed to parse proto file: %w", err)
+	}
+
+	// Process each file descriptor
+	for _, fd := range fds {
+		if err := pl.processFileDescriptor(fd); err != nil {
+			return fmt.Errorf("failed to process file descriptor: %w", err)
+		}
+	}
+
+	return nil
+}
+
+// processFileDescriptor extracts service definitions from a file descriptor
+func (pl *ProtoLoader) processFileDescriptor(fd *desc.FileDescriptor) error {
+	// Extract services
+	services := fd.GetServices()
+	for _, service := range services {
+		serviceDef := pl.extractServiceDefinition(service)
+		
+		pl.services[serviceDef.FullName] = serviceDef
+		
+		pl.logger.Debug("extracted service",
+			zap.String("service", serviceDef.FullName),
+			zap.Int("methods", len(serviceDef.Methods)))
+	}
+
+	return nil
+}
+
+// extractServiceDefinition extracts a service definition from a service descriptor
+func (pl *ProtoLoader) extractServiceDefinition(service *desc.ServiceDescriptor) *ServiceDefinition {
+	// Convert desc.FileDescriptor to protoreflect.FileDescriptor
+	fd := service.GetFile().UnwrapFile()
+
+	serviceDef := &ServiceDefinition{
+		FullName:       service.GetFullyQualifiedName(),
+		Package:        service.GetFile().GetPackage(),
+		ServiceName:    service.GetName(),
+		FileDescriptor: fd,
+		Methods:        make([]MethodDefinition, 0),
+	}
+
+	// Extract methods
+	methods := service.GetMethods()
+	for _, method := range methods {
+		methodDef := MethodDefinition{
+			Name:              method.GetName(),
+			FullName:          method.GetFullyQualifiedName(),
+			InputType:         method.GetInputType().GetFullyQualifiedName(),
+			OutputType:        method.GetOutputType().GetFullyQualifiedName(),
+			IsClientStreaming: method.IsClientStreaming(),
+			IsServerStreaming: method.IsServerStreaming(),
+		}
+		serviceDef.Methods = append(serviceDef.Methods, methodDef)
+	}
+
+	return serviceDef
+}
+
+// GetServices returns all loaded service definitions
+func (pl *ProtoLoader) GetServices() map[string]*ServiceDefinition {
+	return pl.services
+}
+
+// GetService returns a specific service definition by full name
+func (pl *ProtoLoader) GetService(fullName string) (*ServiceDefinition, bool) {
+	service, ok := pl.services[fullName]
+	return service, ok
+}
+
+// GetMethod finds a method by service and method name
+func (pl *ProtoLoader) GetMethod(serviceName, methodName string) (*MethodDefinition, error) {
+	service, ok := pl.services[serviceName]
+	if !ok {
+		return nil, fmt.Errorf("service not found: %s", serviceName)
+	}
+
+	for i := range service.Methods {
+		if service.Methods[i].Name == methodName {
+			return &service.Methods[i], nil
+		}
+	}
+
+	return nil, fmt.Errorf("method not found: %s.%s", serviceName, methodName)
+}
