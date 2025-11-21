@@ -24,8 +24,8 @@ type CLIOptions = {
   packageName?: string;
   protoLock?: string;
   withOperations?: string;
-  queryIdempotency?: string;
   customScalarMapping?: string;
+  customScalarMappingFile?: string;
   maxDepth?: string;
   prefixOperationType?: boolean;
 } & ProtoOptions;
@@ -59,13 +59,13 @@ export default (opts: BaseCommandOptions) => {
       'Subdirectories are traversed recursively. When provided, generates proto from operations instead of SDL types.',
   );
   command.option(
-    '--query-idempotency <level>',
-    'Set idempotency level for Query operations. Valid values: NO_SIDE_EFFECTS, DEFAULT. Only applies with --with-operations.',
+    '--custom-scalar-mapping <json>',
+    'Custom scalar type mappings as JSON string. ' +
+      'Example: \'{"DateTime":"google.protobuf.Timestamp","UUID":"string"}\'',
   );
   command.option(
-    '--custom-scalar-mapping <json-or-path>',
-    'Custom scalar type mappings as JSON string or path to JSON file (prefix file paths with @). ' +
-      'Example: \'{"DateTime":"google.protobuf.Timestamp","UUID":"string"}\' or \'@mappings.json\'',
+    '--custom-scalar-mapping-file <path>',
+    'Path to JSON file containing custom scalar type mappings. ' + 'Example: ./mappings.json',
   );
   command.option(
     '--max-depth <number>',
@@ -124,30 +124,31 @@ async function generateCommandAction(name: string, options: CLIOptions) {
       }
     }
 
-    // Validate and warn about query-idempotency usage
-    let queryIdempotency: string | undefined;
-    if (options.queryIdempotency) {
-      if (!options.withOperations) {
-        spinner.warn('--query-idempotency flag is ignored when not using --with-operations');
-      }
-
-      const validLevels = ['NO_SIDE_EFFECTS', 'DEFAULT'];
-      queryIdempotency = options.queryIdempotency.toUpperCase();
-      if (!validLevels.includes(queryIdempotency)) {
-        program.error(
-          `Invalid --query-idempotency value: ${options.queryIdempotency}. Valid values are: ${validLevels.join(', ')}`,
-        );
-      }
-    }
-
     // Parse custom scalar mappings if provided
     let customScalarMappings: Record<string, string> | undefined;
+    if (options.customScalarMapping && options.customScalarMappingFile) {
+      program.error('Cannot use both --custom-scalar-mapping and --custom-scalar-mapping-file. Please use only one.');
+    }
+
     if (options.customScalarMapping) {
       try {
-        customScalarMappings = await parseCustomScalarMapping(options.customScalarMapping);
+        customScalarMappings = JSON.parse(options.customScalarMapping);
       } catch (error) {
         program.error(
-          `Failed to parse custom scalar mapping: ${error instanceof Error ? error.message : String(error)}`,
+          `Failed to parse custom scalar mapping JSON: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    } else if (options.customScalarMappingFile) {
+      try {
+        const filePath = resolve(options.customScalarMappingFile);
+        if (!(await exists(filePath))) {
+          program.error(`Custom scalar mapping file not found: ${options.customScalarMappingFile}`);
+        }
+        const fileContent = await readFile(filePath, 'utf8');
+        customScalarMappings = JSON.parse(fileContent);
+      } catch (error) {
+        program.error(
+          `Failed to read or parse custom scalar mapping file: ${error instanceof Error ? error.message : String(error)}`,
         );
       }
     }
@@ -189,7 +190,6 @@ async function generateCommandAction(name: string, options: CLIOptions) {
       languageOptions,
       lockFile: options.protoLock,
       operationsDir: options.withOperations,
-      queryIdempotency,
       customScalarMappings,
       maxDepth,
       prefixOperationType: options.prefixOperationType,
@@ -220,8 +220,8 @@ async function generateCommandAction(name: string, options: CLIOptions) {
       generated: generatedFiles.join(', '),
     };
 
-    if (result.isOperationsMode && queryIdempotency) {
-      resultInfo['query idempotency'] = queryIdempotency;
+    if (result.isOperationsMode) {
+      resultInfo['query idempotency'] = 'NO_SIDE_EFFECTS';
     }
 
     renderResultTree(spinner, 'Generated protobuf schema', true, name, resultInfo);
@@ -242,7 +242,6 @@ type GenerationOptions = {
   languageOptions: ProtoOptions;
   lockFile?: string;
   operationsDir?: string;
-  queryIdempotency?: string;
   customScalarMappings?: Record<string, string>;
   maxDepth?: number;
   prefixOperationType?: boolean;
@@ -256,10 +255,8 @@ type GenerationOptions = {
 async function readOperationFiles(operationsDir: string): Promise<Array<{ filename: string; content: string }>> {
   const files = await readdir(operationsDir, { recursive: true });
   const validExtensions = ['.graphql', '.gql', '.graphqls', '.gqls'];
-  const operationFiles = files.filter((file) => {
-    const ext = extname(file).toLowerCase();
-    return validExtensions.includes(ext);
-  });
+  // Sort files to ensure deterministic output and consistent RPC/method ordering across platforms
+  const operationFiles = files.filter((file) => validExtensions.includes(extname(file).toLowerCase())).sort();
 
   if (operationFiles.length === 0) {
     throw new Error(`No GraphQL operation files (${validExtensions.join(', ')}) found in ${operationsDir}`);
@@ -336,11 +333,11 @@ function mergeProtoRoots(roots: protobuf.Root[], serviceName: string): protobuf.
  * @param packageName - The proto package name
  * @param languageOptions - Language-specific proto options
  * @param lockFile - Path to the proto lock file
- * @param queryIdempotency - Query idempotency level
  * @param customScalarMappings - Custom scalar type mappings
  * @param maxDepth - Maximum recursion depth
  * @param prefixOperationType - Whether to prefix operation types
  * @returns Generation result with proto content and lock data
+ * @note All Query operations are automatically marked with NO_SIDE_EFFECTS idempotency level
  */
 async function generateFromOperations(
   schema: string,
@@ -350,7 +347,6 @@ async function generateFromOperations(
   packageName: string,
   languageOptions: ProtoOptions,
   lockFile: string,
-  queryIdempotency?: string,
   customScalarMappings?: Record<string, string>,
   maxDepth?: number,
   prefixOperationType?: boolean,
@@ -374,7 +370,9 @@ async function generateFromOperations(
         packageName: packageName || 'service.v1',
         ...languageOptions,
         includeComments: true,
-        queryIdempotency: queryIdempotency as 'NO_SIDE_EFFECTS' | 'DEFAULT' | undefined,
+        // All Query operations are automatically marked as NO_SIDE_EFFECTS (idempotent).
+        // This ensures consistent, safe retry behavior for all query operations.
+        queryIdempotency: 'NO_SIDE_EFFECTS',
         lockData: currentLockData,
         customScalarMappings,
         maxDepth,
@@ -495,7 +493,6 @@ async function generateProtoAndMapping({
   languageOptions,
   lockFile = resolve(outdir, 'service.proto.lock.json'),
   operationsDir,
-  queryIdempotency,
   customScalarMappings,
   maxDepth,
   prefixOperationType,
@@ -519,7 +516,6 @@ async function generateProtoAndMapping({
       packageName || 'service.v1',
       languageOptions,
       lockFile,
-      queryIdempotency,
       customScalarMappings,
       maxDepth,
       prefixOperationType,
@@ -536,24 +532,6 @@ async function fetchLockData(lockFile: string): Promise<ProtoLock | undefined> {
 
   const existingLockData = JSON.parse(await readFile(lockFile, 'utf8'));
   return existingLockData == null ? undefined : existingLockData;
-}
-
-/**
- * Parse custom scalar mapping from JSON string or file path
- */
-async function parseCustomScalarMapping(input: string): Promise<Record<string, string>> {
-  // Check if input starts with @ to indicate a file path
-  if (input.startsWith('@')) {
-    const filePath = resolve(input.slice(1));
-    if (!(await exists(filePath))) {
-      throw new Error(`Custom scalar mapping file not found: ${filePath}`);
-    }
-    const fileContent = await readFile(filePath, 'utf8');
-    return JSON.parse(fileContent);
-  }
-
-  // Otherwise, treat as inline JSON
-  return JSON.parse(input);
 }
 
 // Usage of exists from node:fs is not recommended. Use access instead.

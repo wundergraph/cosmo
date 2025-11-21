@@ -117,20 +117,9 @@ gRPC supports idempotency levels to indicate whether operations have side effect
 - **NO_SIDE_EFFECTS**: Safe to retry, doesn't modify state
 - **DEFAULT**: May have side effects, retry with caution
 
-The `queryIdempotency` option explicitly sets the idempotency level for all Query operations:
+When using operations-based generation, all Query operations are automatically marked with `NO_SIDE_EFFECTS` idempotency level, indicating they are safe to retry without side effects.
 
-```typescript
-compileOperationsToProto(operation, schema, {
-  queryIdempotency: 'NO_SIDE_EFFECTS'
-});
-```
-
-**Valid values:**
-- `NO_SIDE_EFFECTS` - Marks queries as safe to retry without side effects
-- `DEFAULT` - Explicitly marks queries with default behavior (may have side effects)
-- Omit the option - No idempotency level is set (default gRPC behavior)
-
-**Note:** Mutations and Subscriptions are never marked with idempotency levels, regardless of this option.
+**Note:** Mutations and Subscriptions are never marked with idempotency levels.
 
 ---
 
@@ -167,7 +156,8 @@ wgc grpc-service generate [name] [options]
 |--------|-------------|
 | `-w, --with-operations <path>` | Path to directory containing `.graphql` or `.gql` operation files. Subdirectories are traversed recursively. Enables operations-based generation. |
 | `--prefix-operation-type` | Prefix RPC method names with operation type (Query/Mutation/Subscription) |
-| `--query-idempotency <level>` | Set idempotency level for Query operations. Valid values: `NO_SIDE_EFFECTS`, `DEFAULT`. Only applies with `--with-operations`. |
+| `--custom-scalar-mapping <json>` | Custom scalar type mappings as inline JSON string. Example: `'{"DateTime":"google.protobuf.Timestamp","UUID":"string"}'` |
+| `--custom-scalar-mapping-file <path>` | Path to JSON file containing custom scalar type mappings. Example: `./mappings.json` |
 
 #### Language-Specific Options
 
@@ -196,14 +186,24 @@ wgc grpc-service generate UserService \
   --prefix-operation-type
 ```
 
-#### With Idempotent Queries
+#### With Custom Scalar Mappings (Inline)
 
 ```bash
 wgc grpc-service generate UserService \
   --input schema.graphql \
   --output ./proto \
   --with-operations ./operations \
-  --query-idempotency NO_SIDE_EFFECTS
+  --custom-scalar-mapping '{"DateTime":"google.protobuf.Timestamp","UUID":"string"}'
+```
+
+#### With Custom Scalar Mappings (File)
+
+```bash
+wgc grpc-service generate UserService \
+  --input schema.graphql \
+  --output ./proto \
+  --with-operations ./operations \
+  --custom-scalar-mapping-file ./scalar-mappings.json
 ```
 
 #### With Go Package
@@ -296,8 +296,12 @@ const result = compileOperationsToProto(operations, schema, {
   packageName: 'myorg.user.v1',
   goPackage: 'github.com/myorg/myapp/proto/user/v1',
   prefixOperationType: true,
-  queryIdempotency: 'NO_SIDE_EFFECTS',
+  queryIdempotency: 'NO_SIDE_EFFECTS',  // All queries are marked as idempotent
   includeComments: true,
+  customScalarMappings: {
+    'DateTime': 'google.protobuf.Timestamp',
+    'UUID': 'string'
+  },
 });
 
 console.log(result.proto);
@@ -549,7 +553,9 @@ Regenerate - the lock file preserves existing field numbers and assigns the next
 
 ### Custom Scalar Mappings
 
-GraphQL custom scalars are mapped to proto types. Common mappings:
+GraphQL custom scalars can be mapped to proto types using either inline JSON or a separate configuration file.
+
+#### Common Scalar Mappings
 
 | GraphQL Scalar | Recommended Proto Type |
 |----------------|----------------------|
@@ -558,6 +564,59 @@ GraphQL custom scalars are mapped to proto types. Common mappings:
 | `JSON` | `google.protobuf.Struct` |
 | `UUID` | `string` |
 | `BigInt` | `int64` |
+
+#### Using Inline JSON
+
+Pass custom scalar mappings directly as a JSON string:
+
+```bash
+wgc grpc-service generate UserService \
+  --input schema.graphql \
+  --output ./proto \
+  --with-operations ./operations \
+  --custom-scalar-mapping '{"DateTime":"google.protobuf.Timestamp","UUID":"string"}'
+```
+
+#### Using a Configuration File
+
+Create a JSON file with your scalar mappings:
+
+**scalar-mappings.json:**
+```json
+{
+  "DateTime": "google.protobuf.Timestamp",
+  "Date": "google.protobuf.Timestamp",
+  "UUID": "string",
+  "JSON": "google.protobuf.Struct",
+  "BigInt": "int64"
+}
+```
+
+Then reference it in your command:
+
+```bash
+wgc grpc-service generate UserService \
+  --input schema.graphql \
+  --output ./proto \
+  --with-operations ./operations \
+  --custom-scalar-mapping-file ./scalar-mappings.json
+```
+
+**Note:** You cannot use both `--custom-scalar-mapping` and `--custom-scalar-mapping-file` simultaneously. Choose one approach based on your needs.
+
+#### In Code
+
+When using the API directly, pass the mappings as an object:
+
+```typescript
+const result = compileOperationsToProto(operations, schema, {
+  customScalarMappings: {
+    'DateTime': 'google.protobuf.Timestamp',
+    'UUID': 'string',
+    'JSON': 'google.protobuf.Struct'
+  }
+});
+```
 
 ### Proto Lock Files
 
