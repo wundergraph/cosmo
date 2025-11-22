@@ -46,6 +46,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/selfregister"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
+	"github.com/wundergraph/cosmo/router/pkg/connectrpc"
 	"github.com/wundergraph/cosmo/router/pkg/health"
 	"github.com/wundergraph/cosmo/router/pkg/mcpserver"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
@@ -959,6 +960,72 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		r.mcpServer = mcpss
 	}
 
+	if r.connectRPC.Enabled {
+		var protoDir string
+
+		// If storage provider ID is set, resolve it to a directory path
+		if r.connectRPC.Storage.ProviderID != "" {
+			r.logger.Debug("Resolving storage provider for ConnectRPC protos",
+				zap.String("provider_id", r.connectRPC.Storage.ProviderID))
+
+			// Find the provider in storage_providers
+			found := false
+
+			// Check for file_system providers
+			for _, provider := range r.storageProviders.FileSystem {
+				if provider.ID == r.connectRPC.Storage.ProviderID {
+					r.logger.Debug("Found file_system storage provider for ConnectRPC",
+						zap.String("id", provider.ID),
+						zap.String("path", provider.Path))
+
+					// Use the resolved file system path
+					protoDir = provider.Path
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				return fmt.Errorf("storage provider with id '%s' for connect_rpc server not found", r.connectRPC.Storage.ProviderID)
+			}
+		}
+
+		// Determine the router GraphQL endpoint
+		var routerGraphQLEndpoint string
+
+		// Use the custom URL if provided
+		if r.connectRPC.GraphQLEndpoint != "" {
+			routerGraphQLEndpoint = r.connectRPC.GraphQLEndpoint
+		} else {
+			routerGraphQLEndpoint = path.Join(r.listenAddr, r.graphqlPath)
+		}
+
+		logFields := []zap.Field{
+			zap.String("storage_provider_id", r.connectRPC.Storage.ProviderID),
+			zap.String("proto_dir", protoDir),
+		}
+
+		// Initialize the ConnectRPC server
+		serverConfig := connectrpc.ServerConfig{
+			ProtoDir:        protoDir,
+			ListenAddr:      r.connectRPC.Server.ListenAddr,
+			GraphQLEndpoint: routerGraphQLEndpoint,
+			Logger:          r.logger.With(logFields...),
+		}
+
+		crpcServer, err := connectrpc.NewServer(serverConfig)
+		if err != nil {
+			return fmt.Errorf("failed to create connect_rpc server: %w", err)
+		}
+
+		err = crpcServer.Start()
+		if err != nil {
+			return fmt.Errorf("failed to start ConnectRPC server: %w", err)
+		}
+
+		r.connectRPCServer = crpcServer
+	}
+
 	if r.metricConfig.OpenTelemetry.EngineStats.Enabled() || r.metricConfig.Prometheus.EngineStats.Enabled() || r.engineExecutionConfiguration.Debug.ReportWebSocketConnections {
 		r.EngineStats = statistics.NewEngineStats(ctx, r.logger, r.engineExecutionConfiguration.Debug.ReportWebSocketConnections)
 	}
@@ -1474,6 +1541,19 @@ func (r *Router) Shutdown(ctx context.Context) error {
 			defer wg.Done()
 			if subErr := r.mcpServer.Stop(ctx); subErr != nil {
 				err.Append(fmt.Errorf("failed to shutdown mcp server: %w", subErr))
+			}
+		}()
+	}
+
+	if r.connectRPCServer != nil {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			// Type assert to access Stop method
+			if server, ok := r.connectRPCServer.(interface{ Stop(context.Context) error }); ok {
+				if subErr := server.Stop(ctx); subErr != nil {
+					err.Append(fmt.Errorf("failed to shutdown connect_rpc server: %w", subErr))
+				}
 			}
 		}()
 	}
@@ -2147,6 +2227,12 @@ func WithMCP(cfg config.MCPConfiguration) Option {
 func WithPlugins(cfg config.PluginsConfiguration) Option {
 	return func(r *Router) {
 		r.plugins = cfg
+	}
+}
+
+func WithConnectRPC(cfg config.ConnectRPCConfiguration) Option {
+	return func(r *Router) {
+		r.connectRPC = cfg
 	}
 }
 
