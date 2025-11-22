@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"slices"
 
@@ -142,6 +143,10 @@ func (e *MutableEngineEvent) Clone() datasource.MutableStreamEvent {
 	return &MutableEngineEvent{data: slices.Clone(e.data)}
 }
 
+func (e *MutableEngineEvent) Decode(v any) error {
+	return json.Unmarshal(e.data, v)
+}
+
 // EngineEvent is the event used to write to the engine subscription
 type EngineEvent struct {
 	evt *MutableEngineEvent
@@ -159,6 +164,10 @@ func (e *EngineEvent) Clone() datasource.MutableStreamEvent {
 		return &MutableEngineEvent{}
 	}
 	return e.evt.Clone()
+}
+
+func (e *EngineEvent) Decode(v any) error {
+	return e.evt.Decode(v)
 }
 
 type engineSubscriptionOnStartHookContext struct {

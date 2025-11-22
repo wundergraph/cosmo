@@ -6,8 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"reflect"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/buger/jsonparser"
 	"github.com/cespare/xxhash/v2"
@@ -47,6 +49,10 @@ func (e Event) Clone() datasource.MutableStreamEvent {
 	return e.evt.Clone()
 }
 
+func (e *Event) Decode(v any) error {
+	return e.evt.Decode(v)
+}
+
 func cloneHeaders(src map[string][]byte) map[string][]byte {
 	if src == nil {
 		return nil
@@ -58,11 +64,21 @@ func cloneHeaders(src map[string][]byte) map[string][]byte {
 	return dst
 }
 
+// decodeCacheEntry holds a cached decoded value with sync.Once to ensure
+// only one goroutine performs the unmarshaling
+type decodeCacheEntry struct {
+	once  sync.Once
+	value any
+	err   error
+}
+
 // MutableEvent implements datasource.MutableEvent
 type MutableEvent struct {
 	Key     []byte            `json:"key"`
 	Data    json.RawMessage   `json:"data"`
 	Headers map[string][]byte `json:"headers"`
+
+	decodeCache sync.Map
 }
 
 func (e *MutableEvent) GetData() []byte {
@@ -73,17 +89,70 @@ func (e *MutableEvent) SetData(data []byte) {
 	if e == nil {
 		return
 	}
+	e.decodeCache.Clear()
 	e.Data = data
 }
 
 func (e *MutableEvent) Clone() datasource.MutableStreamEvent {
-	e2 := *e
-	e2.Data = slices.Clone(e.Data)
-	e2.Headers = make(map[string][]byte, len(e.Headers))
+	e2 := MutableEvent{
+		Key:     slices.Clone(e.Key),
+		Data:    slices.Clone(e.Data),
+		Headers: make(map[string][]byte, len(e.Headers)),
+	}
 	for k, v := range e.Headers {
 		e2.Headers[k] = slices.Clone(v)
 	}
 	return &e2
+}
+
+func (e *MutableEvent) Decode(v any) error {
+	// A design decision in this method is to not use a mutex here
+	// to manage concurrent access. This would result in poor performance
+	// in the case the callee only needs to read a cached result.
+	// We use a sync.Map to cache decoding results, but when many
+	// callees call this method simultaneously, many of them would get
+	// a cache miss since no one has unmarshalled and cached v yet.
+	// To solve this, we first use LoadOrStore(), which atomically ensures only one cache entry exists per type.
+	// sync.Once() inside the entry ensures only one goroutine performs the unmarshal,
+	// while all other concurrent goroutines wait for the result.
+	// This allows subsequent calls to proceed concurrently once the cache is populated,
+	// unlike a simple mutex which would serialize all access even for cache hits.
+
+	// Get the reflect value of the pointer
+	rv := reflect.ValueOf(v)
+	if rv.Kind() != reflect.Pointer || rv.IsNil() {
+		return fmt.Errorf("decode requires a non-nil pointer")
+	}
+
+	// Get the actual type (not the pointer type)
+	elemType := rv.Type().Elem()
+
+	// Use LoadOrStore to atomically get-or-create a cache entry
+	// This ensures only one entry exists per type, even with concurrent access
+	val, _ := e.decodeCache.LoadOrStore(elemType, &decodeCacheEntry{})
+	entry := val.(*decodeCacheEntry)
+
+	// Use sync.Once to ensure only one goroutine performs the unmarshal
+	// All other concurrent goroutines will wait here until it's done
+	entry.once.Do(func() {
+		// Unmarshal the data
+		err := json.Unmarshal(e.Data, v)
+		if err != nil {
+			entry.err = err
+			return
+		}
+		// Store the dereferenced value (not the pointer)
+		entry.value = rv.Elem().Interface()
+	})
+
+	// Check if unmarshaling failed
+	if entry.err != nil {
+		return entry.err
+	}
+
+	// Set the cached value into the provided pointer
+	rv.Elem().Set(reflect.ValueOf(entry.value))
+	return nil
 }
 
 // SubscriptionEventConfiguration is a public type that is used to allow access to custom fields
