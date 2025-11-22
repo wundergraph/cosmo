@@ -13,8 +13,30 @@ import (
 	"go.uber.org/zap"
 )
 
+// sharedProtoLoader is a package-level proto loader that's initialized once
+// to avoid proto registration conflicts across tests
+var (
+	sharedProtoLoader     *ProtoLoader
+	sharedProtoLoaderOnce sync.Once
+	sharedProtoLoaderErr  error
+)
+
+// getSharedProtoLoader returns a shared proto loader instance
+// This avoids proto registration conflicts by loading protos only once
+func getSharedProtoLoader() (*ProtoLoader, error) {
+	sharedProtoLoaderOnce.Do(func() {
+		sharedProtoLoader = NewProtoLoader(zap.NewNop())
+		sharedProtoLoaderErr = sharedProtoLoader.LoadFromDirectory("testdata")
+	})
+	return sharedProtoLoader, sharedProtoLoaderErr
+}
+
 // TestServerLifecycle_StartStopReload tests the complete lifecycle of the server
 func TestServerLifecycle_StartStopReload(t *testing.T) {
+	// Ensure protos are loaded once before running tests
+	_, err := getSharedProtoLoader()
+	require.NoError(t, err, "failed to load shared proto files")
+
 	t.Run("complete lifecycle: start -> reload -> stop", func(t *testing.T) {
 		// Create a mock GraphQL server
 		graphqlServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -248,6 +270,10 @@ func TestServerLifecycle_VanguardIntegration(t *testing.T) {
 
 // TestServerLifecycle_ErrorScenarios tests various error scenarios
 func TestServerLifecycle_ErrorScenarios(t *testing.T) {
+	// Ensure protos are loaded once before running tests
+	_, err := getSharedProtoLoader()
+	require.NoError(t, err, "failed to load shared proto files")
+
 	t.Run("start fails with invalid proto directory", func(t *testing.T) {
 		server, err := NewServer(ServerConfig{
 			ProtoDir:        "/nonexistent/path",
@@ -317,7 +343,7 @@ func TestServerLifecycle_ErrorScenarios(t *testing.T) {
 		_ = server.Stop(ctx)
 	})
 
-	t.Run("reload in predefined mode with invalid operations directory", func(t *testing.T) {
+	t.Run("start fails with invalid operations directory", func(t *testing.T) {
 		graphqlServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`{"data":{}}`))
@@ -333,19 +359,10 @@ func TestServerLifecycle_ErrorScenarios(t *testing.T) {
 		})
 		require.NoError(t, err)
 
+		// Start should fail because operations directory doesn't exist
 		err = server.Start()
-		require.NoError(t, err)
-
-		// Reload with invalid operations directory
-		err = server.Reload()
-		// Should handle gracefully or return error
-		if err != nil {
-			assert.Contains(t, err.Error(), "failed to reload RPC handler")
-		}
-
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		server.Stop(ctx)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to load operations")
 	})
 }
 
