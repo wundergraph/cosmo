@@ -1014,6 +1014,7 @@ type ConnectRPCConfiguration struct {
 	Server          ConnectRPCServer       `yaml:"server,omitempty"`
 	Storage         ConnectRPCStorageConfig `yaml:"storage,omitempty"`
 	GraphQLEndpoint string                 `yaml:"graphql_endpoint,omitempty" env:"CONNECT_RPC_GRAPHQL_ENDPOINT"`
+	OperationsDir   string                 `yaml:"operations_dir,omitempty" env:"CONNECT_RPC_OPERATIONS_DIR"`
 }
 
 type ConnectRPCStorageConfig struct {
