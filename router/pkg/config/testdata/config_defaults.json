@@ -295,6 +295,12 @@
       "Nats": null,
       "Kafka": null,
       "Redis": null
+    },
+    "Handlers": {
+      "OnReceiveEvents": {
+        "MaxConcurrentHandlers": 100,
+        "HandlerTimeout": 5000000000
+      }
     }
   },
   "CacheWarmup": {

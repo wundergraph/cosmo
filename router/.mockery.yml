@@ -13,17 +13,12 @@ template-schema: '{{.Template}}.schema.json'
 packages:
   github.com/wundergraph/cosmo/router/pkg/pubsub/datasource:
     interfaces:
-      ProviderLifecycle:
+      Lifecycle:
       ProviderBuilder:
       EngineDataSourceFactory:
       Provider:
+      SubscriptionEventUpdater:
   github.com/wundergraph/cosmo/router/pkg/pubsub/nats:
-    interfaces:
-      Adapter:
-  github.com/wundergraph/cosmo/router/pkg/pubsub/kafka:
-    interfaces:
-      Adapter:
-  github.com/wundergraph/cosmo/router/pkg/pubsub/redis:
     interfaces:
       Adapter:
   github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve:

@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/buger/jsonparser"
+	"github.com/cespare/xxhash/v2"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
-
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"go.uber.org/zap"
 )
 
 type EventType int
@@ -19,12 +21,13 @@ const (
 )
 
 type EngineDataSourceFactory struct {
-	NatsAdapter Adapter
+	NatsAdapter datasource.Adapter
 
 	fieldName  string
 	eventType  EventType
 	subjects   []string
 	providerId string
+	logger     *zap.Logger
 
 	withStreamConfiguration   bool
 	consumerName              string
@@ -62,25 +65,51 @@ func (c *EngineDataSourceFactory) ResolveDataSourceInput(eventData []byte) (stri
 
 	subject := c.subjects[0]
 
-	evtCfg := PublishAndRequestEventConfiguration{
-		ProviderID: c.providerId,
-		Subject:    subject,
-		Data:       eventData,
+	evtCfg := publishData{
+		Provider:  c.providerId,
+		Subject:   subject,
+		FieldName: c.fieldName,
+		Event:     MutableEvent{Data: eventData},
 	}
 
-	return evtCfg.MarshalJSONTemplate(), nil
+	return evtCfg.MarshalJSONTemplate()
 }
 
-func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (resolve.SubscriptionDataSource, error) {
-	return &SubscriptionSource{
-		pubSub: c.NatsAdapter,
-	}, nil
+func (c *EngineDataSourceFactory) ResolveDataSourceSubscription() (datasource.SubscriptionDataSource, error) {
+	uniqueRequestIdFn := func(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
+		val, _, _, err := jsonparser.Get(input, "subjects")
+		if err != nil {
+			return err
+		}
+
+		_, err = xxh.Write(val)
+		if err != nil {
+			return err
+		}
+
+		val, _, _, err = jsonparser.Get(input, "providerId")
+		if err != nil {
+			return err
+		}
+
+		_, err = xxh.Write(val)
+		return err
+	}
+
+	createEventFn := func(data []byte) datasource.MutableStreamEvent {
+		return &MutableEvent{Data: data}
+	}
+
+	return datasource.NewPubSubSubscriptionDataSource[*SubscriptionEventConfiguration](
+		c.NatsAdapter,
+		uniqueRequestIdFn, c.logger, createEventFn), nil
 }
 
 func (c *EngineDataSourceFactory) ResolveDataSourceSubscriptionInput() (string, error) {
 	evtCfg := SubscriptionEventConfiguration{
-		ProviderID: c.providerId,
-		Subjects:   c.subjects,
+		Provider:  c.providerId,
+		Subjects:  c.subjects,
+		FieldName: c.fieldName,
 	}
 	if c.withStreamConfiguration {
 		evtCfg.StreamConfiguration = &StreamConfiguration{

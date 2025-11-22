@@ -644,7 +644,17 @@ type EventProviders struct {
 }
 
 type EventsConfiguration struct {
-	Providers EventProviders `yaml:"providers,omitempty"`
+	Providers EventProviders              `yaml:"providers,omitempty"`
+	Handlers  StreamsHandlerConfiguration `yaml:"handlers,omitempty"`
+}
+
+type StreamsHandlerConfiguration struct {
+	OnReceiveEvents OnReceiveEventsConfiguration `yaml:"on_receive_events"`
+}
+
+type OnReceiveEventsConfiguration struct {
+	MaxConcurrentHandlers int           `yaml:"max_concurrent_handlers" envDefault:"100"`
+	HandlerTimeout        time.Duration `yaml:"handler_timeout" envDefault:"5s"`
 }
 
 type Cluster struct {

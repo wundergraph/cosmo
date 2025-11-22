@@ -9,7 +9,7 @@ import (
 	"io"
 
 	mock "github.com/stretchr/testify/mock"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 )
 
 // NewMockAdapter creates a new instance of MockAdapter. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
@@ -40,16 +40,16 @@ func (_m *MockAdapter) EXPECT() *MockAdapter_Expecter {
 }
 
 // Publish provides a mock function for the type MockAdapter
-func (_mock *MockAdapter) Publish(ctx context.Context, event PublishAndRequestEventConfiguration) error {
-	ret := _mock.Called(ctx, event)
+func (_mock *MockAdapter) Publish(ctx context.Context, cfg datasource.PublishEventConfiguration, events []datasource.StreamEvent) error {
+	ret := _mock.Called(ctx, cfg, events)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Publish")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, PublishAndRequestEventConfiguration) error); ok {
-		r0 = returnFunc(ctx, event)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, datasource.PublishEventConfiguration, []datasource.StreamEvent) error); ok {
+		r0 = returnFunc(ctx, cfg, events)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -63,24 +63,30 @@ type MockAdapter_Publish_Call struct {
 
 // Publish is a helper method to define mock.On call
 //   - ctx context.Context
-//   - event PublishAndRequestEventConfiguration
-func (_e *MockAdapter_Expecter) Publish(ctx interface{}, event interface{}) *MockAdapter_Publish_Call {
-	return &MockAdapter_Publish_Call{Call: _e.mock.On("Publish", ctx, event)}
+//   - cfg datasource.PublishEventConfiguration
+//   - events []datasource.StreamEvent
+func (_e *MockAdapter_Expecter) Publish(ctx interface{}, cfg interface{}, events interface{}) *MockAdapter_Publish_Call {
+	return &MockAdapter_Publish_Call{Call: _e.mock.On("Publish", ctx, cfg, events)}
 }
 
-func (_c *MockAdapter_Publish_Call) Run(run func(ctx context.Context, event PublishAndRequestEventConfiguration)) *MockAdapter_Publish_Call {
+func (_c *MockAdapter_Publish_Call) Run(run func(ctx context.Context, cfg datasource.PublishEventConfiguration, events []datasource.StreamEvent)) *MockAdapter_Publish_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 PublishAndRequestEventConfiguration
+		var arg1 datasource.PublishEventConfiguration
 		if args[1] != nil {
-			arg1 = args[1].(PublishAndRequestEventConfiguration)
+			arg1 = args[1].(datasource.PublishEventConfiguration)
+		}
+		var arg2 []datasource.StreamEvent
+		if args[2] != nil {
+			arg2 = args[2].([]datasource.StreamEvent)
 		}
 		run(
 			arg0,
 			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -91,22 +97,22 @@ func (_c *MockAdapter_Publish_Call) Return(err error) *MockAdapter_Publish_Call 
 	return _c
 }
 
-func (_c *MockAdapter_Publish_Call) RunAndReturn(run func(ctx context.Context, event PublishAndRequestEventConfiguration) error) *MockAdapter_Publish_Call {
+func (_c *MockAdapter_Publish_Call) RunAndReturn(run func(ctx context.Context, cfg datasource.PublishEventConfiguration, events []datasource.StreamEvent) error) *MockAdapter_Publish_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Request provides a mock function for the type MockAdapter
-func (_mock *MockAdapter) Request(ctx context.Context, event PublishAndRequestEventConfiguration, w io.Writer) error {
-	ret := _mock.Called(ctx, event, w)
+func (_mock *MockAdapter) Request(ctx context.Context, cfg datasource.PublishEventConfiguration, event datasource.StreamEvent, w io.Writer) error {
+	ret := _mock.Called(ctx, cfg, event, w)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Request")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, PublishAndRequestEventConfiguration, io.Writer) error); ok {
-		r0 = returnFunc(ctx, event, w)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, datasource.PublishEventConfiguration, datasource.StreamEvent, io.Writer) error); ok {
+		r0 = returnFunc(ctx, cfg, event, w)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -120,30 +126,36 @@ type MockAdapter_Request_Call struct {
 
 // Request is a helper method to define mock.On call
 //   - ctx context.Context
-//   - event PublishAndRequestEventConfiguration
+//   - cfg datasource.PublishEventConfiguration
+//   - event datasource.StreamEvent
 //   - w io.Writer
-func (_e *MockAdapter_Expecter) Request(ctx interface{}, event interface{}, w interface{}) *MockAdapter_Request_Call {
-	return &MockAdapter_Request_Call{Call: _e.mock.On("Request", ctx, event, w)}
+func (_e *MockAdapter_Expecter) Request(ctx interface{}, cfg interface{}, event interface{}, w interface{}) *MockAdapter_Request_Call {
+	return &MockAdapter_Request_Call{Call: _e.mock.On("Request", ctx, cfg, event, w)}
 }
 
-func (_c *MockAdapter_Request_Call) Run(run func(ctx context.Context, event PublishAndRequestEventConfiguration, w io.Writer)) *MockAdapter_Request_Call {
+func (_c *MockAdapter_Request_Call) Run(run func(ctx context.Context, cfg datasource.PublishEventConfiguration, event datasource.StreamEvent, w io.Writer)) *MockAdapter_Request_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 PublishAndRequestEventConfiguration
+		var arg1 datasource.PublishEventConfiguration
 		if args[1] != nil {
-			arg1 = args[1].(PublishAndRequestEventConfiguration)
+			arg1 = args[1].(datasource.PublishEventConfiguration)
 		}
-		var arg2 io.Writer
+		var arg2 datasource.StreamEvent
 		if args[2] != nil {
-			arg2 = args[2].(io.Writer)
+			arg2 = args[2].(datasource.StreamEvent)
+		}
+		var arg3 io.Writer
+		if args[3] != nil {
+			arg3 = args[3].(io.Writer)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
+			arg3,
 		)
 	})
 	return _c
@@ -154,7 +166,7 @@ func (_c *MockAdapter_Request_Call) Return(err error) *MockAdapter_Request_Call 
 	return _c
 }
 
-func (_c *MockAdapter_Request_Call) RunAndReturn(run func(ctx context.Context, event PublishAndRequestEventConfiguration, w io.Writer) error) *MockAdapter_Request_Call {
+func (_c *MockAdapter_Request_Call) RunAndReturn(run func(ctx context.Context, cfg datasource.PublishEventConfiguration, event datasource.StreamEvent, w io.Writer) error) *MockAdapter_Request_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -262,16 +274,16 @@ func (_c *MockAdapter_Startup_Call) RunAndReturn(run func(ctx context.Context) e
 }
 
 // Subscribe provides a mock function for the type MockAdapter
-func (_mock *MockAdapter) Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
-	ret := _mock.Called(ctx, event, updater)
+func (_mock *MockAdapter) Subscribe(ctx context.Context, cfg datasource.SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater) error {
+	ret := _mock.Called(ctx, cfg, updater)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Subscribe")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, SubscriptionEventConfiguration, resolve.SubscriptionUpdater) error); ok {
-		r0 = returnFunc(ctx, event, updater)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, datasource.SubscriptionEventConfiguration, datasource.SubscriptionEventUpdater) error); ok {
+		r0 = returnFunc(ctx, cfg, updater)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -285,25 +297,25 @@ type MockAdapter_Subscribe_Call struct {
 
 // Subscribe is a helper method to define mock.On call
 //   - ctx context.Context
-//   - event SubscriptionEventConfiguration
-//   - updater resolve.SubscriptionUpdater
-func (_e *MockAdapter_Expecter) Subscribe(ctx interface{}, event interface{}, updater interface{}) *MockAdapter_Subscribe_Call {
-	return &MockAdapter_Subscribe_Call{Call: _e.mock.On("Subscribe", ctx, event, updater)}
+//   - cfg datasource.SubscriptionEventConfiguration
+//   - updater datasource.SubscriptionEventUpdater
+func (_e *MockAdapter_Expecter) Subscribe(ctx interface{}, cfg interface{}, updater interface{}) *MockAdapter_Subscribe_Call {
+	return &MockAdapter_Subscribe_Call{Call: _e.mock.On("Subscribe", ctx, cfg, updater)}
 }
 
-func (_c *MockAdapter_Subscribe_Call) Run(run func(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater)) *MockAdapter_Subscribe_Call {
+func (_c *MockAdapter_Subscribe_Call) Run(run func(ctx context.Context, cfg datasource.SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater)) *MockAdapter_Subscribe_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 SubscriptionEventConfiguration
+		var arg1 datasource.SubscriptionEventConfiguration
 		if args[1] != nil {
-			arg1 = args[1].(SubscriptionEventConfiguration)
+			arg1 = args[1].(datasource.SubscriptionEventConfiguration)
 		}
-		var arg2 resolve.SubscriptionUpdater
+		var arg2 datasource.SubscriptionEventUpdater
 		if args[2] != nil {
-			arg2 = args[2].(resolve.SubscriptionUpdater)
+			arg2 = args[2].(datasource.SubscriptionEventUpdater)
 		}
 		run(
 			arg0,
@@ -319,7 +331,7 @@ func (_c *MockAdapter_Subscribe_Call) Return(err error) *MockAdapter_Subscribe_C
 	return _c
 }
 
-func (_c *MockAdapter_Subscribe_Call) RunAndReturn(run func(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error) *MockAdapter_Subscribe_Call {
+func (_c *MockAdapter_Subscribe_Call) RunAndReturn(run func(ctx context.Context, cfg datasource.SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater) error) *MockAdapter_Subscribe_Call {
 	_c.Call.Return(run)
 	return _c
 }
