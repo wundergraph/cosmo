@@ -159,14 +159,25 @@ func (pl *ProtoLoader) processFileDescriptor(fd *desc.FileDescriptor) error {
 	// This is required for Vanguard to find the service schema
 	protoFd := fd.UnwrapFile()
 	
-	// Register the file descriptor in the global registry
-	// This is required for Vanguard's transcoder to find the service schema
-	err := protoregistry.GlobalFiles.RegisterFile(protoFd)
-	if err != nil {
-		// If already registered, that's okay - it might be from a previous load
-		pl.logger.Debug("file descriptor registration",
-			zap.String("file", string(protoFd.Path())),
-			zap.Error(err))
+	// Check if the file is already registered to avoid panic
+	_, err := protoregistry.GlobalFiles.FindFileByPath(string(protoFd.Path()))
+	if err == nil {
+		// File is already registered, skip registration
+		pl.logger.Debug("file descriptor already registered, skipping",
+			zap.String("file", string(protoFd.Path())))
+	} else {
+		// Register the file descriptor in the global registry
+		// This is required for Vanguard's transcoder to find the service schema
+		err := protoregistry.GlobalFiles.RegisterFile(protoFd)
+		if err != nil {
+			// Log but don't fail - the file might have been registered concurrently
+			pl.logger.Debug("file descriptor registration failed (may already be registered)",
+				zap.String("file", string(protoFd.Path())),
+				zap.Error(err))
+		} else {
+			pl.logger.Debug("file descriptor registered successfully",
+				zap.String("file", string(protoFd.Path())))
+		}
 	}
 	
 	// Extract services
