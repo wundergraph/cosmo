@@ -12,6 +12,7 @@ import (
 
 	"connectrpc.com/vanguard"
 	"github.com/hashicorp/go-retryablehttp"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"go.uber.org/zap"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -110,6 +111,21 @@ func (s *Server) Start() error {
 	// Initialize components based on mode
 	if err := s.initializeComponents(); err != nil {
 		return fmt.Errorf("failed to initialize components: %w", err)
+	}
+
+	// Load operations from directory if configured
+	if s.config.OperationsDir != "" {
+		s.logger.Info("Loading operations from directory",
+			zap.String("operations_dir", s.config.OperationsDir))
+		
+		if err := s.operationRegistry.LoadFromDirectoryWithoutSchema(s.config.OperationsDir); err != nil {
+			return fmt.Errorf("failed to load operations: %w", err)
+		}
+		
+		s.logger.Info("Operations loaded successfully",
+			zap.Int("count", s.operationRegistry.Count()))
+	} else {
+		s.logger.Warn("No operations directory configured, operation registry will be empty")
 	}
 
 	// Create Vanguard service wrapper
@@ -255,6 +271,35 @@ func (s *Server) initializeComponents() error {
 	if err != nil {
 		return fmt.Errorf("failed to create RPC handler: %w", err)
 	}
+
+	return nil
+}
+
+// LoadOperations loads GraphQL operations from the configured directory
+// This should be called after the server has access to the GraphQL schema
+func (s *Server) LoadOperations(schemaDoc interface{}) error {
+	if s.config.OperationsDir == "" {
+		s.logger.Debug("No operations directory configured, skipping operation loading")
+		return nil
+	}
+
+	// Type assert to the expected schema document type
+	// The schema document type comes from graphql-go-tools
+	schema, ok := schemaDoc.(*ast.Document)
+	if !ok {
+		return fmt.Errorf("invalid schema document type: expected *ast.Document, got %T", schemaDoc)
+	}
+
+	s.logger.Info("loading operations from directory",
+		zap.String("operations_dir", s.config.OperationsDir))
+
+	if err := s.operationRegistry.LoadFromDirectory(s.config.OperationsDir, schema); err != nil {
+		return fmt.Errorf("failed to load operations: %w", err)
+	}
+
+	s.logger.Info("operations loaded successfully",
+		zap.Int("count", s.operationRegistry.Count()),
+		zap.String("operations_dir", s.config.OperationsDir))
 
 	return nil
 }

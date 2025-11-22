@@ -42,11 +42,11 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/internal/stringsx"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/connectrpc"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/selfregister"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
-	"github.com/wundergraph/cosmo/router/pkg/connectrpc"
 	"github.com/wundergraph/cosmo/router/pkg/health"
 	"github.com/wundergraph/cosmo/router/pkg/mcpserver"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
@@ -977,7 +977,9 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		zap.Bool("enabled", r.connectRPC.Enabled),
 		zap.String("provider_id", r.connectRPC.Storage.ProviderID),
 		zap.String("listen_addr", r.connectRPC.Server.ListenAddr),
-		zap.String("graphql_endpoint", r.connectRPC.GraphQLEndpoint))
+		zap.String("graphql_endpoint", r.connectRPC.GraphQLEndpoint),
+		zap.String("operations_dir", r.connectRPC.OperationsDir),
+	)
 
 	if r.connectRPC.Enabled {
 		var protoDir string
@@ -1027,6 +1029,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		// Initialize the ConnectRPC server
 		serverConfig := connectrpc.ServerConfig{
 			ProtoDir:        protoDir,
+			OperationsDir:   r.connectRPC.OperationsDir,
 			ListenAddr:      r.connectRPC.Server.ListenAddr,
 			GraphQLEndpoint: routerGraphQLEndpoint,
 			Logger:          r.logger.With(logFields...),

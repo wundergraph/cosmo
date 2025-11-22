@@ -2,10 +2,14 @@ package connectrpc
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"go.uber.org/zap"
 )
 
@@ -78,6 +82,141 @@ func (r *OperationRegistry) LoadFromDirectory(operationsDir string, schemaDoc *a
 		zap.String("directory", operationsDir))
 
 	return nil
+}
+
+// LoadFromDirectoryWithoutSchema loads GraphQL operations from a directory without schema validation.
+// This is a simpler version that just reads the .graphql files and extracts operation names.
+// Operations are treated as templates that will be executed against the GraphQL endpoint.
+func (r *OperationRegistry) LoadFromDirectoryWithoutSchema(operationsDir string) error {
+	if operationsDir == "" {
+		return fmt.Errorf("operations directory cannot be empty")
+	}
+
+	r.logger.Info("Loading operations from directory without schema validation",
+		zap.String("directory", operationsDir))
+
+	operations, err := r.loadOperationsSimple(operationsDir)
+	if err != nil {
+		return fmt.Errorf("failed to load operations: %w", err)
+	}
+
+	// Update the registry with loaded operations
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// Clear existing operations
+	r.operations = make(map[string]*schemaloader.Operation)
+
+	// Add new operations to the registry
+	for i := range operations {
+		op := &operations[i]
+		r.operations[op.Name] = op
+		r.logger.Debug("Loaded operation",
+			zap.String("name", op.Name),
+			zap.String("type", op.OperationType),
+			zap.String("file", op.FilePath))
+	}
+
+	r.logger.Info("Loaded operations into registry",
+		zap.Int("count", len(r.operations)),
+		zap.String("directory", operationsDir))
+
+	return nil
+}
+
+// loadOperationsSimple loads operations from files without schema validation
+func (r *OperationRegistry) loadOperationsSimple(dirPath string) ([]schemaloader.Operation, error) {
+	var operations []schemaloader.Operation
+	
+	entries, err := os.ReadDir(dirPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read directory %s: %w", dirPath, err)
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		// Only process .graphql and .gql files
+		name := entry.Name()
+		if !strings.HasSuffix(name, ".graphql") && !strings.HasSuffix(name, ".gql") {
+			continue
+		}
+
+		filePath := filepath.Join(dirPath, name)
+		content, err := os.ReadFile(filePath)
+		if err != nil {
+			r.logger.Warn("Failed to read operation file",
+				zap.String("file", filePath),
+				zap.Error(err))
+			continue
+		}
+
+		operationString := string(content)
+		
+		// Parse just to extract the operation name and type
+		opDoc, report := astparser.ParseGraphqlDocumentString(operationString)
+		if report.HasErrors() {
+			r.logger.Warn("Failed to parse operation file",
+				zap.String("file", filePath),
+				zap.String("error", report.Error()))
+			continue
+		}
+
+		// Extract operation name and type
+		opName, opType, err := r.extractOperationInfo(&opDoc)
+		if err != nil {
+			r.logger.Warn("Failed to extract operation info",
+				zap.String("file", filePath),
+				zap.Error(err))
+			continue
+		}
+
+		// If no operation name, use filename without extension
+		if opName == "" {
+			opName = strings.TrimSuffix(name, filepath.Ext(name))
+		}
+
+		operations = append(operations, schemaloader.Operation{
+			Name:            opName,
+			FilePath:        filePath,
+			Document:        opDoc,
+			OperationString: operationString,
+			OperationType:   opType,
+		})
+	}
+
+	return operations, nil
+}
+
+// extractOperationInfo extracts the name and type from an operation document
+func (r *OperationRegistry) extractOperationInfo(doc *ast.Document) (string, string, error) {
+	for _, ref := range doc.RootNodes {
+		if ref.Kind == ast.NodeKindOperationDefinition {
+			opDef := doc.OperationDefinitions[ref.Ref]
+			
+			opType := ""
+			switch opDef.OperationType {
+			case ast.OperationTypeQuery:
+				opType = "query"
+			case ast.OperationTypeMutation:
+				opType = "mutation"
+			case ast.OperationTypeSubscription:
+				opType = "subscription"
+			default:
+				return "", "", fmt.Errorf("unknown operation type")
+			}
+
+			opName := ""
+			if opDef.Name.Length() > 0 {
+				opName = string(doc.Input.ByteSlice(opDef.Name))
+			}
+			
+			return opName, opType, nil
+		}
+	}
+	return "", "", fmt.Errorf("no operation found in document")
 }
 
 // GetOperation retrieves an operation by name.

@@ -2174,6 +2174,10 @@
           },
           "required": ["provider_id"]
         },
+        "operations_dir": {
+          "type": "string",
+          "description": "Directory path containing predefined GraphQL operations (.graphql files) for ConnectRPC. These operations are loaded at startup and mapped to RPC methods defined in proto files. The path can be relative to the router working directory or absolute."
+        },
         "graphql_endpoint": {
           "type": "string",
           "description": "Custom URL to use for the router GraphQL endpoint in ConnectRPC. Use this when your router is behind a proxy. This URL is used to forward RPC requests as GraphQL operations.",

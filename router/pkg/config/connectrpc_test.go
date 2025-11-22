@@ -16,6 +16,7 @@ func TestConnectRPCConfiguration_Defaults(t *testing.T) {
 	assert.Empty(t, cfg.Storage.ProviderID, "Storage provider ID should be empty by default")
 	assert.Equal(t, "", cfg.Server.ListenAddr, "Listen address should use default")
 	assert.Empty(t, cfg.Server.BaseURL, "Base URL should be empty by default")
+	assert.Empty(t, cfg.OperationsDir, "Operations directory should be empty by default")
 }
 
 func TestConnectRPCConfiguration_WithValues(t *testing.T) {
@@ -29,6 +30,7 @@ func TestConnectRPCConfiguration_WithValues(t *testing.T) {
 			ProviderID: "fs-protos",
 		},
 		GraphQLEndpoint: "http://localhost:3002/graphql",
+		OperationsDir:   "./operations",
 	}
 	
 	assert.True(t, cfg.Enabled)
@@ -36,6 +38,7 @@ func TestConnectRPCConfiguration_WithValues(t *testing.T) {
 	assert.Equal(t, "http://localhost:5026", cfg.Server.BaseURL)
 	assert.Equal(t, "fs-protos", cfg.Storage.ProviderID)
 	assert.Equal(t, "http://localhost:3002/graphql", cfg.GraphQLEndpoint)
+	assert.Equal(t, "./operations", cfg.OperationsDir)
 }
 
 func TestConnectRPCConfiguration_StorageProvider(t *testing.T) {
@@ -96,6 +99,7 @@ func TestConnectRPCConfiguration_Integration(t *testing.T) {
 				ProviderID: "fs-protos",
 			},
 			GraphQLEndpoint: "http://localhost:3002/graphql",
+			OperationsDir:   "./operations",
 		},
 	}
 	
@@ -103,6 +107,7 @@ func TestConnectRPCConfiguration_Integration(t *testing.T) {
 	assert.True(t, mainCfg.ConnectRPC.Enabled)
 	assert.Equal(t, "0.0.0.0:5026", mainCfg.ConnectRPC.Server.ListenAddr)
 	assert.Equal(t, "fs-protos", mainCfg.ConnectRPC.Storage.ProviderID)
+	assert.Equal(t, "./operations", mainCfg.ConnectRPC.OperationsDir)
 }
 
 func TestConnectRPCServer_Defaults(t *testing.T) {

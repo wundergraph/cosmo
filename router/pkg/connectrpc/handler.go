@@ -119,7 +119,7 @@ func NewRPCHandler(config HandlerConfig) (*RPCHandler, error) {
 
 // HandleRPC processes an RPC request and returns a response
 // serviceName: fully qualified service name (e.g., "mypackage.MyService")
-// methodName: the RPC method name (e.g., "GetUser")
+// methodName: the RPC method name (e.g., "GetUser" or "QueryGetUser")
 // requestJSON: the JSON-encoded request body from Vanguard
 // ctx: request context with headers
 func (h *RPCHandler) HandleRPC(ctx context.Context, serviceName, methodName string, requestJSON []byte) ([]byte, error) {
@@ -127,13 +127,22 @@ func (h *RPCHandler) HandleRPC(ctx context.Context, serviceName, methodName stri
 		zap.String("service", serviceName),
 		zap.String("method", methodName))
 
-	// Look up operation from registry
-	operation := h.operationRegistry.GetOperation(methodName)
+	// Strip Query/Mutation/Subscription prefix from method name if present
+	// This allows RPC methods like "QueryGetUser" to map to GraphQL operations named "GetUser"
+	operationName := stripOperationTypePrefix(methodName)
+
+	// Look up operation from registry using the stripped name
+	operation := h.operationRegistry.GetOperation(operationName)
 	if operation == nil {
-		return nil, fmt.Errorf("operation not found in registry: %s", methodName)
+		// If not found with stripped name, try the original method name
+		operation = h.operationRegistry.GetOperation(methodName)
+		if operation == nil {
+			return nil, fmt.Errorf("operation not found in registry: %s (also tried: %s)", methodName, operationName)
+		}
 	}
 
 	h.logger.Debug("using predefined operation",
+		zap.String("rpc_method", methodName),
 		zap.String("operation", operation.Name),
 		zap.String("type", operation.OperationType))
 
@@ -195,6 +204,22 @@ func snakeToCamel(s string) string {
 		}
 	}
 	return result
+}
+
+// stripOperationTypePrefix removes Query/Mutation/Subscription prefix from method name
+// This allows RPC methods like "QueryGetUser" to map to GraphQL operations named "GetUser"
+func stripOperationTypePrefix(methodName string) string {
+	prefixes := []string{"Query", "Mutation", "Subscription"}
+	for _, prefix := range prefixes {
+		if strings.HasPrefix(methodName, prefix) {
+			stripped := strings.TrimPrefix(methodName, prefix)
+			// Only strip if there's something left after the prefix
+			if len(stripped) > 0 {
+				return stripped
+			}
+		}
+	}
+	return methodName
 }
 
 // executeGraphQL executes a GraphQL query against the router endpoint
