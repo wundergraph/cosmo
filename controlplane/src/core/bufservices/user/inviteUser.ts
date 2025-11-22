@@ -24,21 +24,19 @@ export function inviteUser(
       throw new UnauthorizedError();
     }
 
-    await opts.db.transaction(async (tx) => {
-      const service = new UserInviteService({
-        db: tx,
-        logger,
-        keycloakRealm: opts.keycloakRealm,
-        keycloak: opts.keycloakClient,
-        mailer: opts.mailerClient,
-      });
+    const service = new UserInviteService({
+      db: opts.db,
+      logger,
+      keycloakRealm: opts.keycloakRealm,
+      keycloak: opts.keycloakClient,
+      mailer: opts.mailerClient,
+    });
 
-      await service.inviteUser({
-        organizationId: authContext.organizationId,
-        inviterUserId: authContext.userId,
-        email: req.email,
-        groups: req.groups,
-      });
+    await service.inviteUser({
+      organizationId: authContext.organizationId,
+      inviterUserId: authContext.userId,
+      email: req.email,
+      groups: req.groups,
     });
 
     await auditLogRepo.addAuditLog({

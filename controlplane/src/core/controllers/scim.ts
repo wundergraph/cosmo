@@ -321,23 +321,21 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
     const email = emails.find((e) => e.primary)?.value || userName;
 
     try {
-      const userId = await opts.db.transaction((tx) => {
-        const service = new UserInviteService({
-          db: tx,
-          logger: req.log,
-          keycloakRealm: opts.keycloakRealm,
-          keycloak: opts.keycloakClient,
-          mailer: opts.mailer,
-        });
+      const service = new UserInviteService({
+        db: opts.db,
+        logger: req.log,
+        keycloakRealm: opts.keycloakRealm,
+        keycloak: opts.keycloakClient,
+        mailer: opts.mailer,
+      });
 
-        return service.inviteUser({
-          organizationId: authContext.organizationId,
-          inviterUserId: authContext.userId,
-          email,
-          firstName: name.givenName,
-          lastName: name.familyName,
-          password,
-        });
+      const userId = service.inviteUser({
+        organizationId: authContext.organizationId,
+        inviterUserId: authContext.userId,
+        email,
+        firstName: name.givenName,
+        lastName: name.familyName,
+        password,
       });
 
       const auditLogRepo = new AuditLogRepository(opts.db);
