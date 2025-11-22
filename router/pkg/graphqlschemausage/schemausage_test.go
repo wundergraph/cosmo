@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/jensneuse/abstractlogger"
@@ -2287,6 +2288,209 @@ func TestImplicitInputTypeArgumentUsage(t *testing.T) {
 	assert.Equal(t, []string{"SearchInput"}, searchInputUsage.Path)
 	assert.True(t, searchInputUsage.IsNull, "SearchInput should be marked as null since argument wasn't provided")
 	assert.Equal(t, []string{"employees-subgraph"}, searchInputUsage.SubgraphIDs, "Should have correct subgraph ID")
+}
+
+// TestSharedInputObjectAcrossSubgraphs verifies that when an input object variable is used by
+// multiple fields from different subgraphs, the input usage (including nested fields) is
+// attributed to all subgraphs that use it (merged).
+func TestSharedInputObjectAcrossSubgraphs(t *testing.T) {
+	schema := `
+		schema {
+			query: Query
+		}
+		
+		type Query {
+			findUsers(criteria: SearchInput!): [User!]!
+			findProducts(criteria: SearchInput!): [Product!]!
+			findOrders(criteria: SearchInput!): [Order!]!
+		}
+		
+		type User {
+			id: ID!
+			name: String!
+		}
+		
+		type Product {
+			id: ID!
+			title: String!
+		}
+		
+		type Order {
+			id: ID!
+			status: String!
+		}
+		
+		input SearchInput {
+			keyword: String
+			category: String
+			limit: Int
+		}
+	`
+
+	// Single input object variable used by three fields from three different subgraphs
+	operation := `
+		query Search($criteria: SearchInput!) {
+			findUsers(criteria: $criteria) {
+				id
+				name
+			}
+			findProducts(criteria: $criteria) {
+				id
+				title
+			}
+			findOrders(criteria: $criteria) {
+				id
+				status
+			}
+		}
+	`
+
+	variables := `{"criteria": {"keyword": "test", "category": "electronics"}}`
+
+	def, rep := astparser.ParseGraphqlDocumentString(schema)
+	require.False(t, rep.HasErrors())
+	op, rep := astparser.ParseGraphqlDocumentString(operation)
+	require.False(t, rep.HasErrors())
+	err := asttransform.MergeDefinitionWithBaseSchema(&def)
+	require.NoError(t, err)
+
+	report := &operationreport.Report{}
+	norm := astnormalization.NewNormalizer(true, true)
+	norm.NormalizeOperation(&op, &def, report)
+	require.False(t, report.HasErrors())
+
+	valid := astvalidation.DefaultOperationValidator()
+	valid.Validate(&op, &def, report)
+	require.False(t, report.HasErrors())
+
+	// Create three subgraphs - each serving one root field
+	usersSubgraph, err := plan.NewDataSourceConfiguration[any](
+		"users-subgraph",
+		&FakeFactory[any]{upstreamSchema: &def},
+		&plan.DataSourceMetadata{
+			RootNodes: []plan.TypeField{
+				{TypeName: "Query", FieldNames: []string{"findUsers"}},
+			},
+			ChildNodes: []plan.TypeField{
+				{TypeName: "User", FieldNames: []string{"id", "name"}},
+			},
+		},
+		nil,
+	)
+	require.NoError(t, err)
+
+	productsSubgraph, err := plan.NewDataSourceConfiguration[any](
+		"products-subgraph",
+		&FakeFactory[any]{upstreamSchema: &def},
+		&plan.DataSourceMetadata{
+			RootNodes: []plan.TypeField{
+				{TypeName: "Query", FieldNames: []string{"findProducts"}},
+			},
+			ChildNodes: []plan.TypeField{
+				{TypeName: "Product", FieldNames: []string{"id", "title"}},
+			},
+		},
+		nil,
+	)
+	require.NoError(t, err)
+
+	ordersSubgraph, err := plan.NewDataSourceConfiguration[any](
+		"orders-subgraph",
+		&FakeFactory[any]{upstreamSchema: &def},
+		&plan.DataSourceMetadata{
+			RootNodes: []plan.TypeField{
+				{TypeName: "Query", FieldNames: []string{"findOrders"}},
+			},
+			ChildNodes: []plan.TypeField{
+				{TypeName: "Order", FieldNames: []string{"id", "status"}},
+			},
+		},
+		nil,
+	)
+	require.NoError(t, err)
+
+	planner, err := plan.NewPlanner(plan.Configuration{
+		DisableResolveFieldPositions: true,
+		DataSources:                  []plan.DataSource{usersSubgraph, productsSubgraph, ordersSubgraph},
+	})
+	require.NoError(t, err)
+
+	generatedPlan := planner.Plan(&op, &def, "Search", report)
+	require.False(t, report.HasErrors())
+
+	vars, err := astjson.Parse(variables)
+	require.NoError(t, err)
+
+	argumentUsageInfo, err := GetArgumentUsageInfo(&op, &def, vars, generatedPlan, nil)
+	require.NoError(t, err)
+	inputUsageInfo, err := GetInputUsageInfo(&op, &def, vars, generatedPlan, nil)
+	require.NoError(t, err)
+
+	// The $criteria variable is used by findUsers, findProducts, and findOrders
+	// Each from a different subgraph, so we expect THREE argument entries
+	require.Len(t, argumentUsageInfo, 3, "Should have 3 argument usage entries")
+
+	// Verify each argument has its own subgraph
+	argumentsByField := make(map[string]*graphqlmetricsv1.ArgumentUsageInfo)
+	for _, arg := range argumentUsageInfo {
+		if len(arg.Path) == 2 && arg.Path[1] == "criteria" {
+			argumentsByField[arg.Path[0]] = arg
+		}
+	}
+
+	require.Contains(t, argumentsByField, "findUsers")
+	require.Contains(t, argumentsByField, "findProducts")
+	require.Contains(t, argumentsByField, "findOrders")
+
+	assert.Equal(t, []string{"users-subgraph"}, argumentsByField["findUsers"].SubgraphIDs)
+	assert.Equal(t, []string{"products-subgraph"}, argumentsByField["findProducts"].SubgraphIDs)
+	assert.Equal(t, []string{"orders-subgraph"}, argumentsByField["findOrders"].SubgraphIDs)
+
+	// CRITICAL: Input usage should merge all three subgraphs
+	// We should have entries for:
+	// 1. SearchInput (root) - merged subgraphs
+	// 2. SearchInput.keyword - merged subgraphs
+	// 3. SearchInput.category - merged subgraphs
+	// 4. SearchInput.limit (implicit null) - merged subgraphs
+
+	inputsByPath := make(map[string]*graphqlmetricsv1.InputUsageInfo)
+	for _, input := range inputUsageInfo {
+		pathKey := strings.Join(input.Path, ".")
+		inputsByPath[pathKey] = input
+	}
+
+	// Verify root SearchInput has all three subgraphs merged
+	require.Contains(t, inputsByPath, "SearchInput", "Should track root SearchInput")
+	searchInputRoot := inputsByPath["SearchInput"]
+	assert.Equal(t, "SearchInput", searchInputRoot.NamedType)
+	assert.False(t, searchInputRoot.IsNull)
+	assert.ElementsMatch(t, []string{"users-subgraph", "products-subgraph", "orders-subgraph"},
+		searchInputRoot.SubgraphIDs, "Root SearchInput should have all three subgraphs merged")
+	assert.Len(t, searchInputRoot.SubgraphIDs, 3, "Should have exactly 3 subgraphs (no duplicates)")
+
+	// Verify keyword field has all three subgraphs merged
+	require.Contains(t, inputsByPath, "SearchInput.keyword", "Should track SearchInput.keyword")
+	keywordField := inputsByPath["SearchInput.keyword"]
+	assert.Equal(t, "String", keywordField.NamedType)
+	assert.False(t, keywordField.IsNull)
+	assert.ElementsMatch(t, []string{"users-subgraph", "products-subgraph", "orders-subgraph"},
+		keywordField.SubgraphIDs, "keyword field should have all three subgraphs merged")
+
+	// Verify category field has all three subgraphs merged
+	require.Contains(t, inputsByPath, "SearchInput.category", "Should track SearchInput.category")
+	categoryField := inputsByPath["SearchInput.category"]
+	assert.Equal(t, "String", categoryField.NamedType)
+	assert.False(t, categoryField.IsNull)
+	assert.ElementsMatch(t, []string{"users-subgraph", "products-subgraph", "orders-subgraph"},
+		categoryField.SubgraphIDs, "category field should have all three subgraphs merged")
+
+	// Verify implicit null field (limit) has all three subgraphs merged
+	require.Contains(t, inputsByPath, "SearchInput.limit", "Should track implicitly null SearchInput.limit")
+	limitField := inputsByPath["SearchInput.limit"]
+	assert.Equal(t, "Int", limitField.NamedType)
+	assert.True(t, limitField.IsNull, "limit should be implicitly null (not provided)")
+	assert.ElementsMatch(t, []string{"users-subgraph", "products-subgraph", "orders-subgraph"},
+		limitField.SubgraphIDs, "implicit null field should also have all three subgraphs merged")
 }
 
 // TestSharedVariableAcrossSubgraphs verifies that when a variable is used by multiple fields
