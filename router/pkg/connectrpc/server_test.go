@@ -43,7 +43,7 @@ func TestNewServer(t *testing.T) {
 
 	t.Run("uses default listen address", func(t *testing.T) {
 		server, err := NewServer(ServerConfig{
-			ProtoDir:        "testdata",
+			ProtoDir:        "testdata/employee_only",
 			GraphQLEndpoint: "http://localhost:4000/graphql",
 			Mode:            HandlerModeDynamic,
 		})
@@ -301,7 +301,7 @@ func TestServer_GetServiceCount(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := NewServer(ServerConfig{
-			ProtoDir:        "testdata",
+			ProtoDir:        "testdata/employee_only",
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
@@ -314,7 +314,7 @@ func TestServer_GetServiceCount(t *testing.T) {
 		err = server.Start()
 		require.NoError(t, err)
 
-		// After start
+		// After start - should have exactly 1 service from employee_only directory
 		assert.Equal(t, 1, server.GetServiceCount())
 
 		// Cleanup
@@ -333,7 +333,7 @@ func TestServer_GetServiceNames(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := NewServer(ServerConfig{
-			ProtoDir:        "testdata",
+			ProtoDir:        "testdata/employee_only",
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
@@ -346,9 +346,9 @@ func TestServer_GetServiceNames(t *testing.T) {
 		err = server.Start()
 		require.NoError(t, err)
 
-		// After start
+		// After start - should have exactly 1 service from employee_only directory
 		names := server.GetServiceNames()
-		assert.Len(t, names, 1)
+		assert.Len(t, names, 1, "Should have exactly one service from employee_only directory")
 		assert.Contains(t, names, "employee.v1.EmployeeService")
 
 		// Cleanup
@@ -442,7 +442,8 @@ func TestServer_InitializeComponents(t *testing.T) {
 
 		assert.NotNil(t, server.operationBuilder)
 		assert.NotNil(t, server.rpcHandler)
-		assert.Nil(t, server.operationRegistry)
+		assert.NotNil(t, server.operationRegistry, "operation registry should be initialized in dynamic mode")
+		assert.Greater(t, server.operationRegistry.Count(), 0, "operation registry should be pre-populated")
 	})
 
 	t.Run("initializes predefined mode components", func(t *testing.T) {

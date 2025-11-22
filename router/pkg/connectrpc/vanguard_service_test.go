@@ -6,16 +6,18 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
 	"go.uber.org/zap"
 )
 
 func TestNewVanguardService(t *testing.T) {
 	t.Run("creates service successfully", func(t *testing.T) {
-		protoLoader := setupTestProtoLoaderFromDir(t, "testdata")
+		protoLoader := setupTestProtoLoaderFromDir(t, "testdata/employee_only")
 		handler := setupTestRPCHandler(t, protoLoader)
 
 		vs, err := NewVanguardService(VanguardServiceConfig{
@@ -26,11 +28,11 @@ func TestNewVanguardService(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.NotNil(t, vs)
-		assert.Equal(t, 1, vs.GetServiceCount())
+		assert.Equal(t, 1, vs.GetServiceCount(), "Should have exactly 1 service from employee_only directory")
 	})
 
 	t.Run("fails with nil handler", func(t *testing.T) {
-		protoLoader := setupTestProtoLoaderFromDir(t, "testdata")
+		protoLoader := setupTestProtoLoaderFromDir(t, "testdata/employee_only")
 
 		_, err := NewVanguardService(VanguardServiceConfig{
 			Handler:     nil,
@@ -56,7 +58,7 @@ func TestNewVanguardService(t *testing.T) {
 	})
 
 	t.Run("uses nop logger when nil", func(t *testing.T) {
-		protoLoader := setupTestProtoLoaderFromDir(t, "testdata")
+		protoLoader := setupTestProtoLoaderFromDir(t, "testdata/employee_only")
 		handler := setupTestRPCHandler(t, protoLoader)
 
 		vs, err := NewVanguardService(VanguardServiceConfig{
@@ -88,7 +90,7 @@ func TestNewVanguardService(t *testing.T) {
 }
 
 func TestVanguardService_GetServices(t *testing.T) {
-	protoLoader := setupTestProtoLoaderFromDir(t, "testdata")
+	protoLoader := setupTestProtoLoaderFromDir(t, "testdata/employee_only")
 	handler := setupTestRPCHandler(t, protoLoader)
 
 	vs, err := NewVanguardService(VanguardServiceConfig{
@@ -99,12 +101,12 @@ func TestVanguardService_GetServices(t *testing.T) {
 	require.NoError(t, err)
 
 	services := vs.GetServices()
-	assert.Len(t, services, 1)
+	assert.Len(t, services, 1, "Should have exactly 1 service from employee_only directory")
 	assert.NotNil(t, services[0])
 }
 
 func TestVanguardService_GetServiceNames(t *testing.T) {
-	protoLoader := setupTestProtoLoaderFromDir(t, "testdata")
+	protoLoader := setupTestProtoLoaderFromDir(t, "testdata/employee_only")
 	handler := setupTestRPCHandler(t, protoLoader)
 
 	vs, err := NewVanguardService(VanguardServiceConfig{
@@ -115,12 +117,12 @@ func TestVanguardService_GetServiceNames(t *testing.T) {
 	require.NoError(t, err)
 
 	names := vs.GetServiceNames()
-	assert.Len(t, names, 1)
+	assert.Len(t, names, 1, "Should have exactly 1 service from employee_only directory")
 	assert.Contains(t, names, "employee.v1.EmployeeService")
 }
 
 func TestVanguardService_ValidateService(t *testing.T) {
-	protoLoader := setupTestProtoLoaderFromDir(t, "testdata")
+	protoLoader := setupTestProtoLoaderFromDir(t, "testdata/employee_only")
 	handler := setupTestRPCHandler(t, protoLoader)
 
 	vs, err := NewVanguardService(VanguardServiceConfig{
@@ -143,7 +145,7 @@ func TestVanguardService_ValidateService(t *testing.T) {
 }
 
 func TestVanguardService_ValidateMethod(t *testing.T) {
-	protoLoader := setupTestProtoLoaderFromDir(t, "testdata")
+	protoLoader := setupTestProtoLoaderFromDir(t, "testdata/employee_only")
 	handler := setupTestRPCHandler(t, protoLoader)
 
 	vs, err := NewVanguardService(VanguardServiceConfig{
@@ -172,7 +174,7 @@ func TestVanguardService_ValidateMethod(t *testing.T) {
 }
 
 func TestVanguardService_GetMethodInfo(t *testing.T) {
-	protoLoader := setupTestProtoLoaderFromDir(t, "testdata")
+	protoLoader := setupTestProtoLoaderFromDir(t, "testdata/employee_only")
 	handler := setupTestRPCHandler(t, protoLoader)
 
 	vs, err := NewVanguardService(VanguardServiceConfig{
@@ -197,7 +199,7 @@ func TestVanguardService_GetMethodInfo(t *testing.T) {
 }
 
 func TestVanguardService_GetServiceInfo(t *testing.T) {
-	protoLoader := setupTestProtoLoaderFromDir(t, "testdata")
+	protoLoader := setupTestProtoLoaderFromDir(t, "testdata/employee_only")
 	handler := setupTestRPCHandler(t, protoLoader)
 
 	vs, err := NewVanguardService(VanguardServiceConfig{
@@ -224,7 +226,7 @@ func TestVanguardService_GetServiceInfo(t *testing.T) {
 }
 
 func TestVanguardService_ServiceHandler(t *testing.T) {
-	protoLoader := setupTestProtoLoaderFromDir(t, "testdata")
+	protoLoader := setupTestProtoLoaderFromDir(t, "testdata/employee_only")
 	handler := setupTestRPCHandler(t, protoLoader)
 
 	vs, err := NewVanguardService(VanguardServiceConfig{
@@ -244,15 +246,38 @@ func TestVanguardService_ServiceHandler(t *testing.T) {
 		defer graphqlServer.Close()
 
 		// Create handler with mock server
-		protoLoader := setupTestProtoLoaderFromDir(t, "testdata")
+		protoLoader := setupTestProtoLoaderFromDir(t, "testdata/employee_only")
 		opBuilder := NewOperationBuilder()
+		opRegistry := NewOperationRegistry(zap.NewNop())
+		
+		// Pre-populate registry with operations
+		services := protoLoader.GetServices()
+		for _, service := range services {
+			for _, method := range service.Methods {
+				graphqlQuery, err := opBuilder.BuildOperation(&method)
+				require.NoError(t, err)
+
+				opType := "query"
+				if strings.HasPrefix(method.Name, "Mutation") {
+					opType = "mutation"
+				}
+
+				opRegistry.AddOperation(&schemaloader.Operation{
+					Name:            method.Name,
+					OperationType:   opType,
+					OperationString: graphqlQuery,
+				})
+			}
+		}
+		
 		handler, err := NewRPCHandler(HandlerConfig{
-			Mode:             HandlerModeDynamic,
-			GraphQLEndpoint:  graphqlServer.URL,
-			HTTPClient:       &http.Client{},
-			Logger:           zap.NewNop(),
-			OperationBuilder: opBuilder,
-			ProtoLoader:      protoLoader,
+			Mode:              HandlerModeDynamic,
+			GraphQLEndpoint:   graphqlServer.URL,
+			HTTPClient:        &http.Client{},
+			Logger:            zap.NewNop(),
+			OperationBuilder:  opBuilder,
+			OperationRegistry: opRegistry,
+			ProtoLoader:       protoLoader,
 		})
 		require.NoError(t, err)
 
@@ -325,7 +350,7 @@ func TestVanguardService_ServiceHandler(t *testing.T) {
 }
 
 func TestVanguardService_ExtractMethodName(t *testing.T) {
-	protoLoader := setupTestProtoLoaderFromDir(t, "testdata")
+	protoLoader := setupTestProtoLoaderFromDir(t, "testdata/employee_only")
 	handler := setupTestRPCHandler(t, protoLoader)
 
 	vs, err := NewVanguardService(VanguardServiceConfig{
@@ -382,7 +407,7 @@ func TestVanguardService_ExtractMethodName(t *testing.T) {
 }
 
 func TestVanguardService_GetFileDescriptors(t *testing.T) {
-	protoLoader := setupTestProtoLoaderFromDir(t, "testdata")
+	protoLoader := setupTestProtoLoaderFromDir(t, "testdata/employee_only")
 	handler := setupTestRPCHandler(t, protoLoader)
 
 	vs, err := NewVanguardService(VanguardServiceConfig{
@@ -411,19 +436,41 @@ func setupTestProtoLoaderFromDir(t *testing.T, dir string) *ProtoLoader {
 func setupTestRPCHandler(t *testing.T, protoLoader *ProtoLoader) *RPCHandler {
 	t.Helper()
 
-	// Create operation builder
+	// Create operation builder and registry
 	opBuilder := NewOperationBuilder()
+	opRegistry := NewOperationRegistry(zap.NewNop())
+	
+	// Pre-populate registry with operations (simulating server startup)
+	services := protoLoader.GetServices()
+	for _, service := range services {
+		for _, method := range service.Methods {
+			graphqlQuery, err := opBuilder.BuildOperation(&method)
+			require.NoError(t, err)
+
+			opType := "query"
+			if strings.HasPrefix(method.Name, "Mutation") {
+				opType = "mutation"
+			}
+
+			opRegistry.AddOperation(&schemaloader.Operation{
+				Name:            method.Name,
+				OperationType:   opType,
+				OperationString: graphqlQuery,
+			})
+		}
+	}
 
 	// Create a mock HTTP client
 	httpClient := &http.Client{}
 
 	handler, err := NewRPCHandler(HandlerConfig{
-		Mode:             HandlerModeDynamic,
-		GraphQLEndpoint:  "http://localhost:4000/graphql",
-		HTTPClient:       httpClient,
-		Logger:           zap.NewNop(),
-		OperationBuilder: opBuilder,
-		ProtoLoader:      protoLoader,
+		Mode:              HandlerModeDynamic,
+		GraphQLEndpoint:   "http://localhost:4000/graphql",
+		HTTPClient:        httpClient,
+		Logger:            zap.NewNop(),
+		OperationBuilder:  opBuilder,
+		OperationRegistry: opRegistry,
+		ProtoLoader:       protoLoader,
 	})
 	require.NoError(t, err)
 
