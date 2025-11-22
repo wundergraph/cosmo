@@ -58,7 +58,7 @@
     "@lerna-lite/version": "4.1.1",
     "husky": "^8.0.3",
     "lint-staged": "^15.2.10",
-    "prettier": "^3.0.3",
+    "prettier": "^3.6.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.5.2",
     "vitest": "^3.2.4"

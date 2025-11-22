@@ -68,7 +68,9 @@ export const FieldUsage = ({
   usageData: GetFieldUsageResponse;
 }) => {
   const router = useRouter();
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const organizationSlug = useCurrentOrganization()?.slug;
   const slug = router.query.slug;
 
@@ -403,7 +405,6 @@ export const FieldUsageSheet = () => {
       onOpenChange={(isOpen) => {
         if (!isOpen) {
           const newQuery = { ...router.query };
-          delete newQuery["range"];
           delete newQuery["showUsage"];
           delete newQuery["isNamedType"];
           router.replace({

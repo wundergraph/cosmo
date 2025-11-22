@@ -719,44 +719,248 @@ export class MetricsRepository {
     });
   }
 
-  public async getOperations(props: GetMetricsViewProps & { limit: number }) {
-    const { dateRange, organizationId, graphId, whereSql, queryParams } = this.getMetricsProps(props);
+  public async getOperations(
+    props: GetMetricsViewProps & {
+      limit: number;
+      offset?: number;
+      fetchBasedOn?: string; // 'requests', 'latency', or 'errors'
+      sortDirection?: string; // 'asc' or 'desc'
+      searchQuery?: string;
+      deprecatedFields: { name: string; typeNames: string[] }[];
+      includeOperationsWithDeprecatedFieldsOnly: boolean;
+    },
+  ) {
+    const { dateRange: metricsDateRange, organizationId, graphId, whereSql, queryParams } = this.getMetricsProps(props);
+    const sortField = props.fetchBasedOn || 'latency';
+    const sortDirection = props.sortDirection || 'desc';
+    const searchQuery = props.searchQuery;
+    const offset = props.offset || 0;
+    const deprecatedFields = props.deprecatedFields;
+    const includeOperationsWithDeprecatedFieldsOnly = props.includeOperationsWithDeprecatedFieldsOnly;
 
-    const query = `
-    WITH
-      toDateTime('${dateRange.start}') AS startDate,
-      toDateTime('${dateRange.end}') AS endDate
-    SELECT
-      OperationHash as operationHash,
-      OperationName as operationName,
-      OperationType as operationType,
-      func_rank(0.95, BucketCounts) as rank,
-      func_rank_bucket_lower_index(rank, BucketCounts) as b,
-      round(func_histogram_v2(
-          rank,
-          b,
-          BucketCounts,
-          anyLast(ExplicitBounds)
-      ), 2) as latency,
+    const deprecatedStart = metricsDateRange.start;
+    const deprecatedEnd = metricsDateRange.end;
 
-      -- Histogram aggregations
-      sumForEachMerge(BucketCounts) as BucketCounts
-    FROM ${this.client.database}.operation_latency_metrics_5_30
-    WHERE Timestamp >= startDate AND Timestamp <= endDate
-      AND OrganizationID = '${organizationId}'
-      AND FederatedGraphID = '${graphId}'
-      ${whereSql ? `AND ${whereSql}` : ''}
-    GROUP BY OperationName, OperationHash, OperationType ORDER BY latency DESC LIMIT {limit:UInt32}`;
+    // Build search filter SQL
+    let searchSql = '';
+    if (searchQuery) {
+      const escapedSearch = searchQuery.replace(/'/g, "''").toLowerCase();
+      searchSql = `AND (lower(OperationName) LIKE '%${escapedSearch}%' OR lower(OperationHash) LIKE '%${escapedSearch}%')`;
+    }
 
-    const res: {
+    // Exclude introspection queries
+    const introspectionFilter = `AND OperationName != 'IntrospectionQuery'`;
+
+    // Build deprecated fields CTE if we have deprecated fields
+    let deprecatedFieldsCte = '';
+    let deprecatedFieldsJoin = '';
+
+    if (deprecatedFields.length > 0) {
+      // Build the deprecated fields array
+      const deprecatedFieldsArray = deprecatedFields
+        .map((field) => {
+          const escapedName = field.name.replace(/'/g, "''");
+          const quotedTypeNames = field.typeNames.map((tn) => `'${tn.replace(/'/g, "''")}'`).join(', ');
+          return `('${escapedName}', [${quotedTypeNames}])`;
+        })
+        .join(', ');
+
+      deprecatedFieldsCte = `
+        deprecated_fields AS (
+          SELECT
+            field.1 as Name,
+            field.2 as TypeNames
+          FROM (
+            SELECT
+              arrayJoin([ ${deprecatedFieldsArray} ]) as field
+          )
+        ),
+        operations_with_deprecated_fields AS (
+          SELECT DISTINCT
+            OperationHash as operationHash,
+            OperationName as operationName
+          FROM ${this.client.database}.gql_metrics_schema_usage_lite_1d_90d
+          INNER JOIN deprecated_fields AS df
+            ON FieldName = df.Name
+          WHERE 
+            Timestamp >= toStartOfDay(toDateTime({deprecatedStart:UInt32}))
+            AND Timestamp <= toDateTime({deprecatedEnd:UInt32})
+            AND OrganizationID = {organizationId:String}
+            AND FederatedGraphID = {federatedGraphId:String}
+            AND hasAny(TypeNames, df.TypeNames) = 1
+        ),`;
+
+      if (includeOperationsWithDeprecatedFieldsOnly) {
+        // Use INNER JOIN to only get operations that have both metrics and deprecated fields
+        deprecatedFieldsJoin = `
+        INNER JOIN operations_with_deprecated_fields AS dep
+          ON ops.operationHash = dep.operationHash
+          AND ops.operationName = dep.operationName`;
+      } else {
+        deprecatedFieldsJoin = `
+        LEFT JOIN operations_with_deprecated_fields AS dep
+          ON ops.operationHash = dep.operationHash
+          AND ops.operationName = dep.operationName`;
+      }
+    }
+
+    let query: string;
+    let res: Array<{
       operationHash: string;
       operationName: string;
       operationType: string;
       latency: number;
-    }[] = await this.client.queryPromise(query, { ...queryParams, limit: props.limit });
+      requestCount?: number;
+      errorPercentage?: number;
+      hasDeprecatedFields: number;
+    }>;
+
+    // Build LIMIT/OFFSET clause - always apply pagination at database level
+    const limitOffsetClause = `LIMIT {limit:UInt32} OFFSET {offset:UInt32}`;
+
+    const queryParamsWithPagination = {
+      ...queryParams,
+      limit: props.limit,
+      offset,
+      ...(deprecatedFields.length > 0
+        ? {
+            deprecatedStart,
+            deprecatedEnd,
+            organizationId,
+            federatedGraphId: graphId,
+          }
+        : {}),
+    };
+
+    if (sortField === 'latency') {
+      query = `
+      WITH
+        toDateTime('${metricsDateRange.start}') AS startDate,
+        toDateTime('${metricsDateRange.end}') AS endDate${deprecatedFieldsCte ? ',' : ''}
+        ${deprecatedFieldsCte}${deprecatedFieldsCte ? '' : ','}
+        ops AS (
+          SELECT
+            OperationHash as operationHash,
+            OperationName as operationName,
+            OperationType as operationType,
+            func_rank(0.95, BucketCounts) as rank,
+            func_rank_bucket_lower_index(rank, BucketCounts) as b,
+            round(func_histogram_v2(
+                rank,
+                b,
+                BucketCounts,
+                anyLast(ExplicitBounds)
+            ), 2) as latency,
+            -- Histogram aggregations
+            sumForEachMerge(BucketCounts) as BucketCounts
+          FROM ${this.client.database}.operation_latency_metrics_5_30
+          WHERE Timestamp >= startDate AND Timestamp <= endDate
+            AND OrganizationID = '${organizationId}'
+            AND FederatedGraphID = '${graphId}'
+            ${whereSql ? `AND ${whereSql}` : ''}
+            ${searchSql}
+            ${introspectionFilter}
+          GROUP BY OperationName, OperationHash, OperationType
+        )
+      SELECT
+        ops.operationHash,
+        ops.operationName,
+        ops.operationType,
+        ops.latency,
+        0 as requestCount,
+        0 as errorPercentage,
+        ${deprecatedFields.length > 0 ? "IF(dep.operationHash IS NOT NULL AND dep.operationHash != '', 1, 0)" : 0} as hasDeprecatedFields
+      FROM ops
+      ${deprecatedFieldsJoin}
+      ORDER BY ops.latency ${sortDirection.toUpperCase()}
+      ${limitOffsetClause}`;
+
+      res = await this.client.queryPromise(query, queryParamsWithPagination);
+    } else if (sortField === 'requests') {
+      query = `
+      WITH
+        toDateTime('${metricsDateRange.start}') AS startDate,
+        toDateTime('${metricsDateRange.end}') AS endDate${deprecatedFieldsCte ? ',' : ''}
+        ${deprecatedFieldsCte}${deprecatedFieldsCte ? '' : ','}
+        ops AS (
+          SELECT
+            OperationHash as operationHash,
+            OperationName as operationName,
+            OperationType as operationType,
+            sum(TotalRequests) as requestCount
+          FROM ${this.client.database}.operation_request_metrics_5_30
+          WHERE Timestamp >= startDate AND Timestamp <= endDate
+            AND OrganizationID = '${organizationId}'
+            AND FederatedGraphID = '${graphId}'
+            ${whereSql ? `AND ${whereSql}` : ''}
+            ${searchSql}
+            ${introspectionFilter}
+          GROUP BY OperationName, OperationHash, OperationType
+        )
+      SELECT
+        ops.operationHash,
+        ops.operationName,
+        ops.operationType,
+        0 as latency,
+        ops.requestCount,
+        0 as errorPercentage,
+        ${deprecatedFields.length > 0 ? "IF(dep.operationHash IS NOT NULL AND dep.operationHash != '', 1, 0)" : 0} as hasDeprecatedFields
+      FROM ops
+      ${deprecatedFieldsJoin}
+      ORDER BY ops.requestCount ${sortDirection.toUpperCase()}
+      ${limitOffsetClause}`;
+
+      res = await this.client.queryPromise(query, queryParamsWithPagination);
+    } else {
+      // sortField === 'errors'
+      query = `
+      WITH
+        toDateTime('${metricsDateRange.start}') AS startDate,
+        toDateTime('${metricsDateRange.end}') AS endDate${deprecatedFieldsCte ? ',' : ''}
+        ${deprecatedFieldsCte}${deprecatedFieldsCte ? '' : ','}
+        ops AS (
+          SELECT
+            OperationHash as operationHash,
+            OperationName as operationName,
+            OperationType as operationType,
+            sum(TotalRequests) as requestCount,
+            sum(TotalErrors) as errorCount,
+            if(sum(TotalRequests) > 0, round(sum(TotalErrors) / sum(TotalRequests) * 100, 2), 0) as errorPercentage
+          FROM ${this.client.database}.operation_request_metrics_5_30
+          WHERE Timestamp >= startDate AND Timestamp <= endDate
+            AND OrganizationID = '${organizationId}'
+            AND FederatedGraphID = '${graphId}'
+            ${whereSql ? `AND ${whereSql}` : ''}
+            ${searchSql}
+            ${introspectionFilter}
+          GROUP BY OperationName, OperationHash, OperationType
+        )
+      SELECT
+        ops.operationHash,
+        ops.operationName,
+        ops.operationType,
+        0 as latency,
+        ops.requestCount,
+        ops.errorPercentage,
+        ${deprecatedFields.length > 0 ? "IF(dep.operationHash IS NOT NULL AND dep.operationHash != '', 1, 0)" : 0} as hasDeprecatedFields
+      FROM ops
+      ${deprecatedFieldsJoin}
+      ORDER BY ops.errorPercentage ${sortDirection.toUpperCase()}
+      ${limitOffsetClause}`;
+
+      res = await this.client.queryPromise(query, queryParamsWithPagination);
+    }
 
     if (Array.isArray(res)) {
-      return res;
+      return res.map((op) => ({
+        operationHash: op.operationHash,
+        operationName: op.operationName,
+        operationType: op.operationType,
+        latency: op.latency || 0,
+        requestCount: op.requestCount || 0,
+        errorPercentage: op.errorPercentage || 0,
+        hasDeprecatedFields: op.hasDeprecatedFields === 1,
+      }));
     }
 
     return [];
@@ -788,5 +992,73 @@ export class MetricsRepository {
     }
 
     return [];
+  }
+
+  public async getClientsOfOperation({
+    dateRange,
+    organizationId,
+    graphId,
+    operationHash,
+    operationName,
+  }: {
+    dateRange: {
+      start: number;
+      end: number;
+    };
+    organizationId: string;
+    graphId: string;
+    operationHash: string;
+    operationName?: string;
+  }): Promise<
+    Array<{
+      name: string;
+      version: string;
+      requestCount: number;
+      lastUsed: string;
+    }>
+  > {
+    const query = `
+    WITH
+      toDateTime({startTimestamp:String}) AS startDate,
+      toDateTime({endTimestamp:String}) AS endDate
+    SELECT
+      ClientName as name,
+      ClientVersion as version,
+      sum(TotalRequests) as requestCount,
+      max(Timestamp) as lastUsed
+    FROM ${this.client.database}.operation_request_metrics_5_30
+    WHERE Timestamp >= startDate AND Timestamp <= endDate
+      AND OrganizationID = {organizationId:String}
+      AND FederatedGraphID = {federatedGraphId:String}
+      AND OperationHash = {operationHash:String}
+      ${operationName === undefined ? '' : 'AND OperationName = {operationName:String}'}
+    GROUP BY ClientName, ClientVersion
+    ORDER BY lastUsed DESC`;
+
+    const params: Record<string, string | number | boolean> = {
+      startTimestamp: dateRange.start,
+      endTimestamp: dateRange.end,
+      organizationId,
+      federatedGraphId: graphId,
+      operationHash,
+    };
+
+    if (operationName !== undefined) {
+      params.operationName = operationName;
+    }
+
+    const res: Array<{
+      name: string;
+      version: string;
+      requestCount: number;
+      lastUsed: string;
+    }> = await this.client.queryPromise(query, params);
+
+    return res.map((client) => ({
+      name: client.name || '',
+      version: client.version || '',
+      requestCount: client.requestCount || 0,
+      lastUsed: new Date(client.lastUsed + 'Z').toISOString(),
+    }));
   }
 }
