@@ -329,7 +329,7 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
         mailer: opts.mailer,
       });
 
-      const userId = service.inviteUser({
+      const userId = await service.inviteUser({
         organizationId: authContext.organizationId,
         inviterUserId: authContext.userId,
         email,
