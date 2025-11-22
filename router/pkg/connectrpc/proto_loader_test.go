@@ -12,13 +12,13 @@ func TestLoadEmployeeProto(t *testing.T) {
 	t.Run("loads and parses employee.proto successfully", func(t *testing.T) {
 		loader := NewProtoLoader(zap.NewNop())
 
-		// Load the employee.proto file from testdata
-		err := loader.LoadFromDirectory("testdata")
+		// Load the employee.proto file from testdata/employee_only
+		err := loader.LoadFromDirectory("testdata/employee_only")
 		require.NoError(t, err)
 
 		// Verify the service was loaded
 		services := loader.GetServices()
-		assert.Len(t, services, 1)
+		assert.Len(t, services, 1, "Should load exactly one service from employee_only directory")
 
 		// Check the EmployeeService
 		service, ok := loader.GetService("employee.v1.EmployeeService")
@@ -54,7 +54,7 @@ func TestLoadEmployeeProto(t *testing.T) {
 
 	t.Run("verifies mutation method details", func(t *testing.T) {
 		loader := NewProtoLoader(zap.NewNop())
-		err := loader.LoadFromDirectory("testdata")
+		err := loader.LoadFromDirectory("testdata/employee_only")
 		require.NoError(t, err)
 
 		method, err := loader.GetMethod("employee.v1.EmployeeService", "MutationUpdateEmployeeMood")
@@ -70,7 +70,7 @@ func TestLoadEmployeeProto(t *testing.T) {
 
 	t.Run("verifies query method details", func(t *testing.T) {
 		loader := NewProtoLoader(zap.NewNop())
-		err := loader.LoadFromDirectory("testdata")
+		err := loader.LoadFromDirectory("testdata/employee_only")
 		require.NoError(t, err)
 
 		method, err := loader.GetMethod("employee.v1.EmployeeService", "QueryGetEmployeeById")
@@ -86,7 +86,7 @@ func TestLoadEmployeeProto(t *testing.T) {
 
 	t.Run("verifies all query methods are present", func(t *testing.T) {
 		loader := NewProtoLoader(zap.NewNop())
-		err := loader.LoadFromDirectory("testdata")
+		err := loader.LoadFromDirectory("testdata/employee_only")
 		require.NoError(t, err)
 
 		queryMethods := []string{
@@ -109,7 +109,7 @@ func TestLoadEmployeeProto(t *testing.T) {
 
 	t.Run("verifies message types in request and response", func(t *testing.T) {
 		loader := NewProtoLoader(zap.NewNop())
-		err := loader.LoadFromDirectory("testdata")
+		err := loader.LoadFromDirectory("testdata/employee_only")
 		require.NoError(t, err)
 
 		// Check a method with complex nested messages
@@ -125,7 +125,7 @@ func TestLoadEmployeeProto(t *testing.T) {
 func TestGetMethod(t *testing.T) {
 	t.Run("returns method when found in employee service", func(t *testing.T) {
 		loader := NewProtoLoader(zap.NewNop())
-		err := loader.LoadFromDirectory("testdata")
+		err := loader.LoadFromDirectory("testdata/employee_only")
 		require.NoError(t, err)
 
 		method, err := loader.GetMethod("employee.v1.EmployeeService", "QueryGetEmployeeById")
@@ -139,7 +139,7 @@ func TestGetMethod(t *testing.T) {
 
 	t.Run("returns error when service not found", func(t *testing.T) {
 		loader := NewProtoLoader(zap.NewNop())
-		err := loader.LoadFromDirectory("testdata")
+		err := loader.LoadFromDirectory("testdata/employee_only")
 		require.NoError(t, err)
 
 		method, err := loader.GetMethod("employee.v1.NonExistentService", "GetUser")
@@ -151,7 +151,7 @@ func TestGetMethod(t *testing.T) {
 
 	t.Run("returns error when method not found", func(t *testing.T) {
 		loader := NewProtoLoader(zap.NewNop())
-		err := loader.LoadFromDirectory("testdata")
+		err := loader.LoadFromDirectory("testdata/employee_only")
 		require.NoError(t, err)
 
 		method, err := loader.GetMethod("employee.v1.EmployeeService", "NonExistentMethod")

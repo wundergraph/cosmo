@@ -48,14 +48,16 @@ func TestNewRPCHandler(t *testing.T) {
 	t.Run("creates handler with valid dynamic mode config", func(t *testing.T) {
 		protoLoader := NewProtoLoader(logger)
 		operationBuilder := NewOperationBuilder()
+		operationRegistry := NewOperationRegistry(logger)
 
 		handler, err := NewRPCHandler(HandlerConfig{
-			Mode:             HandlerModeDynamic,
-			GraphQLEndpoint:  "http://localhost:4000/graphql",
-			HTTPClient:       httpClient,
-			Logger:           logger,
-			OperationBuilder: operationBuilder,
-			ProtoLoader:      protoLoader,
+			Mode:              HandlerModeDynamic,
+			GraphQLEndpoint:   "http://localhost:4000/graphql",
+			HTTPClient:        httpClient,
+			Logger:            logger,
+			OperationBuilder:  operationBuilder,
+			OperationRegistry: operationRegistry,
+			ProtoLoader:       protoLoader,
 		})
 
 		require.NoError(t, err)
@@ -222,14 +224,19 @@ service UserService {
 		// Mock GraphQL response
 		graphqlResponse := `{"data":{"getUser":{"id":1,"name":"John Doe"}}}`
 		httpClient := mockHTTPClient(http.StatusOK, graphqlResponse)
+		operationRegistry := NewOperationRegistry(logger)
+		
+		// Pre-populate registry with operations
+		populateOperationRegistry(t, operationRegistry, protoLoader, operationBuilder)
 
 		handler, err := NewRPCHandler(HandlerConfig{
-			Mode:             HandlerModeDynamic,
-			GraphQLEndpoint:  "http://localhost:4000/graphql",
-			HTTPClient:       httpClient,
-			Logger:           logger,
-			OperationBuilder: operationBuilder,
-			ProtoLoader:      protoLoader,
+			Mode:              HandlerModeDynamic,
+			GraphQLEndpoint:   "http://localhost:4000/graphql",
+			HTTPClient:        httpClient,
+			Logger:            logger,
+			OperationBuilder:  operationBuilder,
+			OperationRegistry: operationRegistry,
+			ProtoLoader:       protoLoader,
 		})
 		require.NoError(t, err)
 
@@ -249,38 +256,50 @@ service UserService {
 		assert.Contains(t, string(responseJSON), "John Doe")
 	})
 
-	t.Run("returns error for non-existent service", func(t *testing.T) {
+	t.Run("returns error for non-existent service/method combination", func(t *testing.T) {
 		httpClient := mockHTTPClient(http.StatusOK, `{"data":{}}`)
+		operationRegistry := NewOperationRegistry(logger)
+		
+		// Pre-populate registry with operations
+		populateOperationRegistry(t, operationRegistry, protoLoader, operationBuilder)
 
 		handler, err := NewRPCHandler(HandlerConfig{
-			Mode:             HandlerModeDynamic,
-			GraphQLEndpoint:  "http://localhost:4000/graphql",
-			HTTPClient:       httpClient,
-			Logger:           logger,
-			OperationBuilder: operationBuilder,
-			ProtoLoader:      protoLoader,
+			Mode:              HandlerModeDynamic,
+			GraphQLEndpoint:   "http://localhost:4000/graphql",
+			HTTPClient:        httpClient,
+			Logger:            logger,
+			OperationBuilder:  operationBuilder,
+			OperationRegistry: operationRegistry,
+			ProtoLoader:       protoLoader,
 		})
 		require.NoError(t, err)
 
 		requestJSON := []byte(`{"id":1}`)
 		ctx := context.Background()
 
-		_, err = handler.HandleRPC(ctx, "test.NonExistentService", "QueryGetUser", requestJSON)
+		// In the new architecture, the service name is not validated separately
+		// The operation lookup is by method name only, so use a non-existent method
+		_, err = handler.HandleRPC(ctx, "test.NonExistentService", "QueryNonExistentMethod", requestJSON)
 
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "service not found")
+		assert.Contains(t, err.Error(), "operation not found in registry")
 	})
 
 	t.Run("returns error for non-existent method", func(t *testing.T) {
 		httpClient := mockHTTPClient(http.StatusOK, `{"data":{}}`)
+		operationRegistry := NewOperationRegistry(logger)
+		
+		// Pre-populate registry with operations
+		populateOperationRegistry(t, operationRegistry, protoLoader, operationBuilder)
 
 		handler, err := NewRPCHandler(HandlerConfig{
-			Mode:             HandlerModeDynamic,
-			GraphQLEndpoint:  "http://localhost:4000/graphql",
-			HTTPClient:       httpClient,
-			Logger:           logger,
-			OperationBuilder: operationBuilder,
-			ProtoLoader:      protoLoader,
+			Mode:              HandlerModeDynamic,
+			GraphQLEndpoint:   "http://localhost:4000/graphql",
+			HTTPClient:        httpClient,
+			Logger:            logger,
+			OperationBuilder:  operationBuilder,
+			OperationRegistry: operationRegistry,
+			ProtoLoader:       protoLoader,
 		})
 		require.NoError(t, err)
 
@@ -290,7 +309,7 @@ service UserService {
 		_, err = handler.HandleRPC(ctx, "test.UserService", "NonExistentMethod", requestJSON)
 
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "method not found")
+		assert.Contains(t, err.Error(), "operation not found in registry")
 	})
 }
 
@@ -502,15 +521,17 @@ func TestReload(t *testing.T) {
 	t.Run("does nothing in dynamic mode", func(t *testing.T) {
 		protoLoader := NewProtoLoader(logger)
 		operationBuilder := NewOperationBuilder()
+		operationRegistry := NewOperationRegistry(logger)
 		httpClient := &http.Client{}
 
 		handler, err := NewRPCHandler(HandlerConfig{
-			Mode:             HandlerModeDynamic,
-			GraphQLEndpoint:  "http://localhost:4000/graphql",
-			HTTPClient:       httpClient,
-			Logger:           logger,
-			OperationBuilder: operationBuilder,
-			ProtoLoader:      protoLoader,
+			Mode:              HandlerModeDynamic,
+			GraphQLEndpoint:   "http://localhost:4000/graphql",
+			HTTPClient:        httpClient,
+			Logger:            logger,
+			OperationBuilder:  operationBuilder,
+			OperationRegistry: operationRegistry,
+			ProtoLoader:       protoLoader,
 		})
 		require.NoError(t, err)
 
@@ -526,14 +547,16 @@ func TestGetMode(t *testing.T) {
 	t.Run("returns dynamic mode", func(t *testing.T) {
 		protoLoader := NewProtoLoader(logger)
 		operationBuilder := NewOperationBuilder()
+		operationRegistry := NewOperationRegistry(logger)
 
 		handler, err := NewRPCHandler(HandlerConfig{
-			Mode:             HandlerModeDynamic,
-			GraphQLEndpoint:  "http://localhost:4000/graphql",
-			HTTPClient:       httpClient,
-			Logger:           logger,
-			OperationBuilder: operationBuilder,
-			ProtoLoader:      protoLoader,
+			Mode:              HandlerModeDynamic,
+			GraphQLEndpoint:   "http://localhost:4000/graphql",
+			HTTPClient:        httpClient,
+			Logger:            logger,
+			OperationBuilder:  operationBuilder,
+			OperationRegistry: operationRegistry,
+			ProtoLoader:       protoLoader,
 		})
 		require.NoError(t, err)
 
@@ -575,14 +598,16 @@ service TestService {
 `
 		protoLoader := setupTestProtoLoader(t, protoContent)
 		operationBuilder := NewOperationBuilder()
+		operationRegistry := NewOperationRegistry(logger)
 
 		handler, err := NewRPCHandler(HandlerConfig{
-			Mode:             HandlerModeDynamic,
-			GraphQLEndpoint:  "http://localhost:4000/graphql",
-			HTTPClient:       httpClient,
-			Logger:           logger,
-			OperationBuilder: operationBuilder,
-			ProtoLoader:      protoLoader,
+			Mode:              HandlerModeDynamic,
+			GraphQLEndpoint:   "http://localhost:4000/graphql",
+			HTTPClient:        httpClient,
+			Logger:            logger,
+			OperationBuilder:  operationBuilder,
+			OperationRegistry: operationRegistry,
+			ProtoLoader:       protoLoader,
 		})
 		require.NoError(t, err)
 
@@ -628,14 +653,16 @@ service TestService {
 `
 		protoLoader := setupTestProtoLoader(t, protoContent)
 		operationBuilder := NewOperationBuilder()
+		operationRegistry := NewOperationRegistry(logger)
 
 		handler, err := NewRPCHandler(HandlerConfig{
-			Mode:             HandlerModeDynamic,
-			GraphQLEndpoint:  "http://localhost:4000/graphql",
-			HTTPClient:       httpClient,
-			Logger:           logger,
-			OperationBuilder: operationBuilder,
-			ProtoLoader:      protoLoader,
+			Mode:              HandlerModeDynamic,
+			GraphQLEndpoint:   "http://localhost:4000/graphql",
+			HTTPClient:        httpClient,
+			Logger:            logger,
+			OperationBuilder:  operationBuilder,
+			OperationRegistry: operationRegistry,
+			ProtoLoader:       protoLoader,
 		})
 		require.NoError(t, err)
 
@@ -687,6 +714,30 @@ func setupTestProtoLoader(t *testing.T, protoContent string) *ProtoLoader {
 	require.NoError(t, err)
 
 	return protoLoader
+}
+
+// populateOperationRegistry pre-generates operations for dynamic mode testing
+func populateOperationRegistry(t *testing.T, registry *OperationRegistry, protoLoader *ProtoLoader, builder *OperationBuilder) {
+	t.Helper()
+
+	services := protoLoader.GetServices()
+	for _, service := range services {
+		for _, method := range service.Methods {
+			graphqlQuery, err := builder.BuildOperation(&method)
+			require.NoError(t, err)
+
+			opType := "query"
+			if strings.HasPrefix(method.Name, "Mutation") {
+				opType = "mutation"
+			}
+
+			registry.AddOperation(&schemaloader.Operation{
+				Name:            method.Name,
+				OperationType:   opType,
+				OperationString: graphqlQuery,
+			})
+		}
+	}
 }
 
 func parseTestSchema(t *testing.T, schemaSDL string) *ast.Document {

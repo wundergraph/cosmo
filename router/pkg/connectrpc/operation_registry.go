@@ -124,6 +124,18 @@ func (r *OperationRegistry) Count() int {
 	return len(r.operations)
 }
 
+// AddOperation adds a single operation to the registry.
+// This method is thread-safe and is used by Dynamic Mode to cache generated operations.
+func (r *OperationRegistry) AddOperation(op *schemaloader.Operation) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	r.operations[op.Name] = op
+	r.logger.Debug("Added operation to registry",
+		zap.String("name", op.Name),
+		zap.String("type", op.OperationType))
+}
+
 // Clear removes all operations from the registry.
 // This method is thread-safe.
 func (r *OperationRegistry) Clear() {

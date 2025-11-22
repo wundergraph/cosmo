@@ -1,0 +1,213 @@
+syntax = "proto3";
+
+package examples.v1;
+
+option go_package = "github.com/wundergraph/cosmo/router/pkg/connectrpc/testdata/examples";
+
+// ProductService demonstrates advanced naming conventions and patterns
+// for ConnectRPC services with complex operations.
+//
+// IMPORTANT: Each RPC method must have its own dedicated Request and Response messages.
+service ProductService {
+  // Query operations - Read-only operations that fetch data
+  
+  // QueryGetProduct retrieves a single product by ID
+  rpc QueryGetProduct(QueryGetProductRequest) returns (QueryGetProductResponse) {}
+  
+  // QueryListProducts retrieves products with pagination and filtering
+  rpc QueryListProducts(QueryListProductsRequest) returns (QueryListProductsResponse) {}
+  
+  // QueryGetProductsByCategory retrieves products filtered by category
+  rpc QueryGetProductsByCategory(QueryGetProductsByCategoryRequest) returns (QueryGetProductsByCategoryResponse) {}
+  
+  // QuerySearchProducts performs full-text search on products
+  rpc QuerySearchProducts(QuerySearchProductsRequest) returns (QuerySearchProductsResponse) {}
+  
+  // QueryGetProductInventory retrieves inventory information for a product
+  rpc QueryGetProductInventory(QueryGetProductInventoryRequest) returns (QueryGetProductInventoryResponse) {}
+  
+  // Mutation operations - Write operations that modify data
+  
+  // MutationCreateProduct creates a new product
+  rpc MutationCreateProduct(MutationCreateProductRequest) returns (MutationCreateProductResponse) {}
+  
+  // MutationUpdateProduct updates an existing product
+  rpc MutationUpdateProduct(MutationUpdateProductRequest) returns (MutationUpdateProductResponse) {}
+  
+  // MutationDeleteProduct soft-deletes a product
+  rpc MutationDeleteProduct(MutationDeleteProductRequest) returns (MutationDeleteProductResponse) {}
+  
+  // MutationUpdateProductInventory updates product inventory levels
+  rpc MutationUpdateProductInventory(MutationUpdateProductInventoryRequest) returns (MutationUpdateProductInventoryResponse) {}
+  
+  // MutationBulkUpdatePrices updates prices for multiple products
+  rpc MutationBulkUpdatePrices(MutationBulkUpdatePricesRequest) returns (MutationBulkUpdatePricesResponse) {}
+  
+  // MutationPublishProduct publishes a draft product
+  rpc MutationPublishProduct(MutationPublishProductRequest) returns (MutationPublishProductResponse) {}
+}
+
+// Query Request/Response Messages
+
+message QueryGetProductRequest {
+  string id = 1;
+}
+
+message QueryGetProductResponse {
+  Product product = 1;
+}
+
+message QueryListProductsRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+  string sort_by = 3; // e.g., "price", "name", "created_at"
+  string sort_order = 4; // "asc" or "desc"
+  repeated string categories = 5;
+  PriceRange price_range = 6;
+}
+
+message QueryListProductsResponse {
+  repeated Product products = 1;
+  int32 total_count = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+  bool has_next_page = 5;
+}
+
+message QueryGetProductsByCategoryRequest {
+  string category = 1;
+  int32 limit = 2;
+  int32 offset = 3;
+}
+
+message QueryGetProductsByCategoryResponse {
+  repeated Product products = 1;
+  int32 total_count = 2;
+}
+
+message QuerySearchProductsRequest {
+  string query = 1;
+  int32 limit = 2;
+  repeated string categories = 3;
+}
+
+message QuerySearchProductsResponse {
+  repeated Product products = 1;
+  int32 total_count = 2;
+  repeated string suggested_queries = 3;
+}
+
+message QueryGetProductInventoryRequest {
+  string product_id = 1;
+  string warehouse_id = 2;
+}
+
+message QueryGetProductInventoryResponse {
+  ProductInventory inventory = 1;
+}
+
+// Mutation Request/Response Messages
+
+message MutationCreateProductRequest {
+  string name = 1;
+  string description = 2;
+  double price = 3;
+  string category = 4;
+  repeated string tags = 5;
+  ProductInventoryInput initial_inventory = 6;
+}
+
+message MutationCreateProductResponse {
+  Product product = 1;
+}
+
+message MutationUpdateProductRequest {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  double price = 4;
+  string category = 5;
+  repeated string tags = 6;
+}
+
+message MutationUpdateProductResponse {
+  Product product = 1;
+}
+
+message MutationDeleteProductRequest {
+  string id = 1;
+  bool hard_delete = 2; // If true, permanently delete; otherwise soft delete
+}
+
+message MutationDeleteProductResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message MutationUpdateProductInventoryRequest {
+  string product_id = 1;
+  string warehouse_id = 2;
+  int32 quantity = 3;
+  string operation = 4; // "set", "add", "subtract"
+}
+
+message MutationUpdateProductInventoryResponse {
+  ProductInventory inventory = 1;
+}
+
+message MutationBulkUpdatePricesRequest {
+  repeated PriceUpdate updates = 1;
+}
+
+message MutationBulkUpdatePricesResponse {
+  int32 updated_count = 1;
+  repeated string failed_product_ids = 2;
+  repeated string error_messages = 3;
+}
+
+message MutationPublishProductRequest {
+  string id = 1;
+}
+
+message MutationPublishProductResponse {
+  Product product = 1;
+}
+
+// Domain Models
+
+message Product {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  double price = 4;
+  string category = 5;
+  repeated string tags = 6;
+  string status = 7; // "draft", "published", "archived"
+  string created_at = 8;
+  string updated_at = 9;
+  ProductInventory inventory = 10;
+}
+
+message ProductInventory {
+  string product_id = 1;
+  string warehouse_id = 2;
+  int32 quantity = 3;
+  int32 reserved_quantity = 4;
+  int32 available_quantity = 5;
+  string last_updated = 6;
+}
+
+message ProductInventoryInput {
+  string warehouse_id = 1;
+  int32 quantity = 2;
+}
+
+message PriceRange {
+  double min_price = 1;
+  double max_price = 2;
+}
+
+message PriceUpdate {
+  string product_id = 1;
+  double new_price = 2;
+}

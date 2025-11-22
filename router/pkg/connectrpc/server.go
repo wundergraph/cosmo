@@ -10,6 +10,7 @@ import (
 
 	"connectrpc.com/vanguard"
 	"github.com/hashicorp/go-retryablehttp"
+	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"go.uber.org/zap"
 )
@@ -59,6 +60,10 @@ func NewServer(config ServerConfig) (*Server, error) {
 
 	if config.Mode == "" {
 		config.Mode = HandlerModeDynamic
+	}
+
+	if config.ListenAddr == "" {
+		config.ListenAddr = "0.0.0.0:50051"
 	}
 
 	if config.Logger == nil {
@@ -227,14 +232,23 @@ func (s *Server) initializeComponents() error {
 		// Create operation builder
 		s.operationBuilder = NewOperationBuilder()
 
+		// Create operation registry for storing dynamically generated operations
+		s.operationRegistry = NewOperationRegistry(s.logger)
+
+		// Pre-generate all operations from proto definitions and add to registry
+		if err := s.preGenerateOperations(); err != nil {
+			return fmt.Errorf("failed to pre-generate operations: %w", err)
+		}
+
 		// Create RPC handler in dynamic mode
 		s.rpcHandler, err = NewRPCHandler(HandlerConfig{
-			Mode:             HandlerModeDynamic,
-			GraphQLEndpoint:  s.config.GraphQLEndpoint,
-			HTTPClient:       s.httpClient,
-			Logger:           s.logger,
-			OperationBuilder: s.operationBuilder,
-			ProtoLoader:      s.protoLoader,
+			Mode:              HandlerModeDynamic,
+			GraphQLEndpoint:   s.config.GraphQLEndpoint,
+			HTTPClient:        s.httpClient,
+			Logger:            s.logger,
+			OperationBuilder:  s.operationBuilder,
+			OperationRegistry: s.operationRegistry,
+			ProtoLoader:       s.protoLoader,
 		})
 		if err != nil {
 			return fmt.Errorf("failed to create RPC handler: %w", err)
@@ -295,6 +309,45 @@ func (s *Server) GetMode() HandlerMode {
 		return ""
 	}
 	return s.rpcHandler.GetMode()
+}
+
+// preGenerateOperations generates GraphQL operations for all proto methods
+// and adds them to the operation registry (used in Dynamic Mode)
+func (s *Server) preGenerateOperations() error {
+	services := s.protoLoader.GetServices()
+	generatedCount := 0
+
+	for _, service := range services {
+		for _, method := range service.Methods {
+			// Build the GraphQL operation
+			graphqlQuery, err := s.operationBuilder.BuildOperation(&method)
+			if err != nil {
+				return fmt.Errorf("failed to build operation for %s.%s: %w", service.FullName, method.Name, err)
+			}
+
+			// Determine operation type from method name
+			opType := "query"
+			if strings.HasPrefix(method.Name, "Mutation") {
+				opType = "mutation"
+			}
+
+			// Add to registry
+			s.operationRegistry.AddOperation(&schemaloader.Operation{
+				Name:            method.Name,
+				OperationType:   opType,
+				OperationString: graphqlQuery,
+				Description:     fmt.Sprintf("Auto-generated from %s.%s", service.FullName, method.Name),
+			})
+
+			generatedCount++
+		}
+	}
+
+	s.logger.Info("pre-generated operations for dynamic mode",
+		zap.Int("count", generatedCount),
+		zap.Int("services", len(services)))
+
+	return nil
 }
 
 // GetOperationCount returns the number of operations/methods available

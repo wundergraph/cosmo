@@ -126,6 +126,10 @@ func NewRPCHandler(config HandlerConfig) (*RPCHandler, error) {
 		if config.ProtoLoader == nil {
 			return nil, fmt.Errorf("proto loader is required for dynamic mode")
 		}
+		// In dynamic mode, we also need an operation registry for caching
+		if config.OperationRegistry == nil {
+			return nil, fmt.Errorf("operation registry is required for dynamic mode (for caching)")
+		}
 	case HandlerModePredefined:
 		if config.OperationRegistry == nil {
 			return nil, fmt.Errorf("operation registry is required for predefined mode")
@@ -196,27 +200,22 @@ func (h *RPCHandler) HandleRPC(ctx context.Context, serviceName, methodName stri
 	return responseJSON, nil
 }
 
-// handleDynamicMode generates a GraphQL operation dynamically from proto definitions
+// handleDynamicMode looks up a dynamically generated operation from the registry
+// In Dynamic Mode, operations are pre-generated at startup and cached in the registry
 func (h *RPCHandler) handleDynamicMode(serviceName, methodName string, requestJSON []byte) (string, json.RawMessage, error) {
-	// Get the method definition from the proto loader
-	method, err := h.protoLoader.GetMethod(serviceName, methodName)
-	if err != nil {
-		return "", nil, fmt.Errorf("method not found: %w", err)
+	// Look up the operation in the registry (it was pre-generated at startup)
+	operation := h.operationRegistry.GetOperation(methodName)
+	if operation == nil {
+		return "", nil, fmt.Errorf("operation not found in registry: %s (this should have been generated at startup)", methodName)
 	}
 
-	// Build the GraphQL operation from the method definition
-	graphqlQuery, err := h.operationBuilder.BuildOperation(method)
-	if err != nil {
-		return "", nil, fmt.Errorf("failed to build GraphQL operation: %w", err)
-	}
-
-	h.logger.Debug("generated GraphQL operation",
+	h.logger.Debug("using dynamically generated operation from registry",
 		zap.String("service", serviceName),
 		zap.String("method", methodName),
-		zap.String("query", graphqlQuery))
+		zap.String("type", operation.OperationType))
 
-	// Use the request JSON as variables
-	return graphqlQuery, requestJSON, nil
+	// Use the operation string and request JSON as variables
+	return operation.OperationString, requestJSON, nil
 }
 
 // handlePredefinedMode looks up a pre-defined operation from the registry
