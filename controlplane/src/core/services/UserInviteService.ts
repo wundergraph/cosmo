@@ -75,7 +75,10 @@ export class UserInviteService {
       const limit = usersFeature?.limit === -1 ? undefined : usersFeature?.limit;
       if (limit && memberCount >= limit) {
         // The organization has reached the member limit
-        throw new PublicError(EnumStatusCode.ERR_LIMIT_REACHED, `The user limit for this organization has been reached`);
+        throw new PublicError(
+          EnumStatusCode.ERR_LIMIT_REACHED,
+          `The user limit for this organization has been reached`,
+        );
       }
 
       // Check whether the organization member already exists
