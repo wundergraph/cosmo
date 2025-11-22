@@ -64,45 +64,112 @@ func (vs *VanguardService) registerServices() error {
 	vs.services = make([]*vanguard.Service, 0, len(protoServices))
 
 	for serviceName, serviceDef := range protoServices {
+		vs.logger.Info("registering service with vanguard",
+			zap.String("service_name", serviceName),
+			zap.String("full_name", serviceDef.FullName),
+			zap.Int("method_count", len(serviceDef.Methods)))
+		
+		// Log all methods for this service
+		for _, method := range serviceDef.Methods {
+			vs.logger.Info("service method",
+				zap.String("service", serviceName),
+				zap.String("method", method.Name),
+				zap.String("input_type", method.InputType),
+				zap.String("output_type", method.OutputType))
+		}
+		
 		// Create an HTTP handler for this service
-		serviceHandler := vs.createServiceHandler(serviceName)
+		// The handler will receive requests at paths like: /Method (without the service prefix)
+		serviceHandler := vs.createServiceHandler(serviceName, serviceDef)
 
-		// Create a Vanguard service with schema
-		// Use NewServiceWithSchema for dynamically loaded proto files
-		vanguardService := vanguard.NewServiceWithSchema(
-			serviceDef.ServiceDescriptor,
+		// Now that we've registered the file descriptor in the global registry,
+		// we can use NewService instead of NewServiceWithSchema
+		// The service path should be the fully qualified service name with slashes
+		servicePath := "/" + serviceName + "/"
+		
+		vs.logger.Info("creating vanguard service",
+			zap.String("service_path", servicePath))
+		
+		// Configure Vanguard to always transcode to Connect protocol with JSON codec
+		// This ensures our handler always receives JSON, regardless of the incoming protocol
+		vanguardService := vanguard.NewService(
+			servicePath,
 			serviceHandler,
+			vanguard.WithTargetProtocols(vanguard.ProtocolConnect),
+			vanguard.WithTargetCodecs("json"),
 		)
 
 		vs.services = append(vs.services, vanguardService)
 
-		vs.logger.Debug("registered Vanguard service",
-			zap.String("service", serviceName))
+		vs.logger.Info("registered Vanguard service successfully",
+			zap.String("service", serviceName),
+			zap.String("service_path", servicePath),
+			zap.String("target_protocol", "connect"),
+			zap.String("target_codec", "json"))
 	}
 
 	return nil
 }
 
 // createServiceHandler creates an HTTP handler for a specific proto service
-func (vs *VanguardService) createServiceHandler(serviceName string) http.Handler {
+func (vs *VanguardService) createServiceHandler(serviceName string, serviceDef *ServiceDefinition) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Extract method name from the request path
-		// Vanguard sends requests to paths like: /package.Service/Method
-		methodName := vs.extractMethodName(r.URL.Path, serviceName)
-		if methodName == "" {
-			http.Error(w, "invalid method path", http.StatusNotFound)
+		// Extract method name from path: /employee.v1.EmployeeService/QueryGetEmployees
+		path := strings.TrimPrefix(r.URL.Path, "/")
+		parts := strings.Split(path, "/")
+		
+		var methodName string
+		if len(parts) == 2 {
+			methodName = parts[1]
+		} else if len(parts) == 1 {
+			methodName = parts[0]
+		} else {
+			http.Error(w, "invalid path format", http.StatusNotFound)
+			return
+		}
+		
+		// Validate method exists
+		methodExists := false
+		for _, method := range serviceDef.Methods {
+			if method.Name == methodName {
+				methodExists = true
+				break
+			}
+		}
+		
+		if !methodExists {
+			http.Error(w, fmt.Sprintf("method not found: %s", methodName), http.StatusNotFound)
 			return
 		}
 
-		// Read the request body (JSON from Vanguard)
-		requestBody, err := io.ReadAll(r.Body)
-		if err != nil {
-			vs.logger.Error("failed to read request body", zap.Error(err))
-			http.Error(w, "failed to read request", http.StatusBadRequest)
-			return
+		// For GET requests (Connect protocol), extract message from query parameter
+		// For POST requests, read from body
+		var requestBody []byte
+		var err error
+		
+		if r.Method == "GET" {
+			// Extract the 'message' query parameter (Connect protocol for GET requests)
+			messageParam := r.URL.Query().Get("message")
+			if messageParam == "" {
+				// For methods with no input parameters, use empty JSON object
+				requestBody = []byte("{}")
+			} else {
+				// The message parameter is already URL-decoded by r.URL.Query().Get()
+				requestBody = []byte(messageParam)
+			}
+			vs.logger.Debug("extracted message from GET query parameter",
+				zap.String("message", string(requestBody)))
+		} else {
+			// Read request body (JSON from Vanguard transcoder for POST requests)
+			requestBody, err = io.ReadAll(r.Body)
+			if err != nil {
+				vs.logger.Error("failed to read request body", zap.Error(err))
+				http.Error(w, "failed to read request", http.StatusBadRequest)
+				return
+			}
 		}
 
-		// Add headers to context for forwarding
+		// Add headers to context for forwarding to GraphQL
 		ctx := withRequestHeaders(r.Context(), r.Header)
 
 		// Handle the RPC request
@@ -116,7 +183,7 @@ func (vs *VanguardService) createServiceHandler(serviceName string) http.Handler
 			return
 		}
 
-		// Write the response
+		// Write JSON response (Vanguard will transcode to client's protocol)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		if _, err := w.Write(responseBody); err != nil {

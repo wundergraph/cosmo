@@ -9,18 +9,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"go.uber.org/zap"
-)
-
-// HandlerMode determines how the handler processes RPC requests
-type HandlerMode string
-
-const (
-	// HandlerModeDynamic generates GraphQL operations dynamically from proto definitions
-	HandlerModeDynamic HandlerMode = "dynamic"
-	// HandlerModePredefined uses pre-defined GraphQL operations from the registry
-	HandlerModePredefined HandlerMode = "predefined"
 )
 
 // requestHeadersKey is a custom context key for storing request headers
@@ -83,24 +72,18 @@ type GraphQLResponse struct {
 
 // RPCHandler handles RPC requests and orchestrates GraphQL execution
 type RPCHandler struct {
-	mode              HandlerMode
 	graphqlEndpoint   string
 	httpClient        *http.Client
 	logger            *zap.Logger
-	operationBuilder  *OperationBuilder
 	operationRegistry *OperationRegistry
-	protoLoader       *ProtoLoader
 }
 
 // HandlerConfig contains configuration for the RPC handler
 type HandlerConfig struct {
-	Mode              HandlerMode
 	GraphQLEndpoint   string
 	HTTPClient        *http.Client
 	Logger            *zap.Logger
-	OperationBuilder  *OperationBuilder
 	OperationRegistry *OperationRegistry
-	ProtoLoader       *ProtoLoader
 }
 
 // NewRPCHandler creates a new RPC handler
@@ -117,25 +100,8 @@ func NewRPCHandler(config HandlerConfig) (*RPCHandler, error) {
 		config.Logger = zap.NewNop()
 	}
 
-	// Validate mode-specific dependencies
-	switch config.Mode {
-	case HandlerModeDynamic:
-		if config.OperationBuilder == nil {
-			return nil, fmt.Errorf("operation builder is required for dynamic mode")
-		}
-		if config.ProtoLoader == nil {
-			return nil, fmt.Errorf("proto loader is required for dynamic mode")
-		}
-		// In dynamic mode, we also need an operation registry for caching
-		if config.OperationRegistry == nil {
-			return nil, fmt.Errorf("operation registry is required for dynamic mode (for caching)")
-		}
-	case HandlerModePredefined:
-		if config.OperationRegistry == nil {
-			return nil, fmt.Errorf("operation registry is required for predefined mode")
-		}
-	default:
-		return nil, fmt.Errorf("invalid handler mode: %s", config.Mode)
+	if config.OperationRegistry == nil {
+		return nil, fmt.Errorf("operation registry is required")
 	}
 
 	// Ensure the endpoint has a protocol
@@ -144,13 +110,10 @@ func NewRPCHandler(config HandlerConfig) (*RPCHandler, error) {
 	}
 
 	return &RPCHandler{
-		mode:              config.Mode,
 		graphqlEndpoint:   config.GraphQLEndpoint,
 		httpClient:        config.HTTPClient,
 		logger:            config.Logger,
-		operationBuilder:  config.OperationBuilder,
 		operationRegistry: config.OperationRegistry,
-		protoLoader:       config.ProtoLoader,
 	}, nil
 }
 
@@ -162,37 +125,26 @@ func NewRPCHandler(config HandlerConfig) (*RPCHandler, error) {
 func (h *RPCHandler) HandleRPC(ctx context.Context, serviceName, methodName string, requestJSON []byte) ([]byte, error) {
 	h.logger.Debug("handling RPC request",
 		zap.String("service", serviceName),
-		zap.String("method", methodName),
-		zap.String("mode", string(h.mode)))
+		zap.String("method", methodName))
 
-	var graphqlQuery string
-	var variables json.RawMessage
+	// Look up operation from registry
+	operation := h.operationRegistry.GetOperation(methodName)
+	if operation == nil {
+		return nil, fmt.Errorf("operation not found in registry: %s", methodName)
+	}
 
-	switch h.mode {
-	case HandlerModeDynamic:
-		// Dynamic mode: generate GraphQL operation from proto definition
-		query, vars, err := h.handleDynamicMode(serviceName, methodName, requestJSON)
-		if err != nil {
-			return nil, fmt.Errorf("failed to handle dynamic mode: %w", err)
-		}
-		graphqlQuery = query
-		variables = vars
+	h.logger.Debug("using predefined operation",
+		zap.String("operation", operation.Name),
+		zap.String("type", operation.OperationType))
 
-	case HandlerModePredefined:
-		// Predefined mode: look up operation from registry
-		query, vars, err := h.handlePredefinedMode(methodName, requestJSON)
-		if err != nil {
-			return nil, fmt.Errorf("failed to handle predefined mode: %w", err)
-		}
-		graphqlQuery = query
-		variables = vars
-
-	default:
-		return nil, fmt.Errorf("unsupported handler mode: %s", h.mode)
+	// Convert proto JSON (snake_case) to GraphQL variables (camelCase)
+	variables, err := h.convertProtoJSONToGraphQLVariables(requestJSON)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert proto JSON to GraphQL variables: %w", err)
 	}
 
 	// Execute the GraphQL query
-	responseJSON, err := h.executeGraphQL(ctx, graphqlQuery, variables)
+	responseJSON, err := h.executeGraphQL(ctx, operation.OperationString, variables)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute GraphQL query: %w", err)
 	}
@@ -200,39 +152,49 @@ func (h *RPCHandler) HandleRPC(ctx context.Context, serviceName, methodName stri
 	return responseJSON, nil
 }
 
-// handleDynamicMode looks up a dynamically generated operation from the registry
-// In Dynamic Mode, operations are pre-generated at startup and cached in the registry
-func (h *RPCHandler) handleDynamicMode(serviceName, methodName string, requestJSON []byte) (string, json.RawMessage, error) {
-	// Look up the operation in the registry (it was pre-generated at startup)
-	operation := h.operationRegistry.GetOperation(methodName)
-	if operation == nil {
-		return "", nil, fmt.Errorf("operation not found in registry: %s (this should have been generated at startup)", methodName)
+// convertProtoJSONToGraphQLVariables converts proto JSON (snake_case) to GraphQL variables (camelCase)
+func (h *RPCHandler) convertProtoJSONToGraphQLVariables(protoJSON []byte) (json.RawMessage, error) {
+	// Handle empty JSON - return empty object
+	if len(protoJSON) == 0 {
+		return json.RawMessage("{}"), nil
 	}
 
-	h.logger.Debug("using dynamically generated operation from registry",
-		zap.String("service", serviceName),
-		zap.String("method", methodName),
-		zap.String("type", operation.OperationType))
+	// Parse the proto JSON
+	var protoData map[string]interface{}
+	if err := json.Unmarshal(protoJSON, &protoData); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal proto JSON: %w", err)
+	}
 
-	// Use the operation string and request JSON as variables
-	return operation.OperationString, requestJSON, nil
+	// Convert keys from snake_case to camelCase
+	graphqlData := make(map[string]interface{})
+	for key, value := range protoData {
+		camelKey := snakeToCamel(key)
+		graphqlData[camelKey] = value
+	}
+
+	// Marshal back to JSON
+	graphqlJSON, err := json.Marshal(graphqlData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal GraphQL variables: %w", err)
+	}
+
+	return graphqlJSON, nil
 }
 
-// handlePredefinedMode looks up a pre-defined operation from the registry
-func (h *RPCHandler) handlePredefinedMode(methodName string, requestJSON []byte) (string, json.RawMessage, error) {
-	// Look up the operation in the registry
-	// The method name should match the operation name
-	operation := h.operationRegistry.GetOperation(methodName)
-	if operation == nil {
-		return "", nil, fmt.Errorf("operation not found in registry: %s", methodName)
+// snakeToCamel converts snake_case to camelCase
+func snakeToCamel(s string) string {
+	parts := strings.Split(s, "_")
+	if len(parts) == 1 {
+		return s
 	}
 
-	h.logger.Debug("using predefined operation",
-		zap.String("operation", operation.Name),
-		zap.String("type", operation.OperationType))
-
-	// Use the operation string and request JSON as variables
-	return operation.OperationString, requestJSON, nil
+	result := parts[0]
+	for i := 1; i < len(parts); i++ {
+		if len(parts[i]) > 0 {
+			result += strings.ToUpper(parts[i][:1]) + parts[i][1:]
+		}
+	}
+	return result
 }
 
 // executeGraphQL executes a GraphQL query against the router endpoint
@@ -292,7 +254,7 @@ func (h *RPCHandler) executeGraphQL(ctx context.Context, query string, variables
 		return nil, fmt.Errorf("GraphQL request failed with status %d: %s", resp.StatusCode, string(responseBody))
 	}
 
-	// Parse the GraphQL response to check for errors
+	// Parse the GraphQL response to unwrap the data field
 	var graphqlResponse GraphQLResponse
 	if err := json.Unmarshal(responseBody, &graphqlResponse); err != nil {
 		// If we can't parse it, return the raw response
@@ -300,33 +262,36 @@ func (h *RPCHandler) executeGraphQL(ctx context.Context, query string, variables
 		return responseBody, nil
 	}
 
-	// If there are GraphQL errors, log them but still return the response
-	// Vanguard will handle error transcoding
+	// Log GraphQL errors if present
 	if len(graphqlResponse.Errors) > 0 {
 		var errorMessages []string
 		for _, gqlErr := range graphqlResponse.Errors {
 			errorMessages = append(errorMessages, gqlErr.Message)
 		}
-		h.logger.Debug("GraphQL response contains errors",
+		h.logger.Warn("GraphQL response contains errors",
 			zap.Strings("errors", errorMessages))
 	}
 
+	// Return only the data field if it's not null/empty
+	// The proto response message expects just the data payload: {...}
+	// Not the GraphQL wrapper: {"data": {...}, "errors": [...]}
+	if len(graphqlResponse.Data) > 0 && string(graphqlResponse.Data) != "null" {
+		return graphqlResponse.Data, nil
+	}
+
+	// If there's no data or data is null, return the full response (which might contain errors)
 	return responseBody, nil
 }
 
-// Reload reloads the handler's dependencies (for predefined mode)
-func (h *RPCHandler) Reload(schema *ast.Document, operationsDir string) error {
-	if h.mode != HandlerModePredefined {
-		return nil // Nothing to reload in dynamic mode
-	}
-
+// Reload reloads the handler's dependencies
+func (h *RPCHandler) Reload(operationsDir string) error {
 	if h.operationRegistry == nil {
 		return fmt.Errorf("operation registry is nil")
 	}
 
 	// Reload operations from directory
 	if operationsDir != "" {
-		if err := h.operationRegistry.LoadFromDirectory(operationsDir, schema); err != nil {
+		if err := h.operationRegistry.LoadFromDirectory(operationsDir, nil); err != nil {
 			return fmt.Errorf("failed to reload operations: %w", err)
 		}
 		h.logger.Info("reloaded operations",
@@ -336,102 +301,41 @@ func (h *RPCHandler) Reload(schema *ast.Document, operationsDir string) error {
 	return nil
 }
 
-// GetMode returns the current handler mode
-func (h *RPCHandler) GetMode() HandlerMode {
-	return h.mode
-}
-
 // GetOperationCount returns the number of operations available
-// For dynamic mode, returns the number of methods in all services
-// For predefined mode, returns the number of operations in the registry
 func (h *RPCHandler) GetOperationCount() int {
-	switch h.mode {
-	case HandlerModeDynamic:
-		if h.protoLoader == nil {
-			return 0
-		}
-		count := 0
-		for _, service := range h.protoLoader.GetServices() {
-			count += len(service.Methods)
-		}
-		return count
-	case HandlerModePredefined:
-		if h.operationRegistry == nil {
-			return 0
-		}
-		return h.operationRegistry.Count()
-	default:
+	if h.operationRegistry == nil {
 		return 0
 	}
+	return h.operationRegistry.Count()
 }
 
 // GetOperations returns information about available operations
-// For dynamic mode, returns method definitions from proto loader
-// For predefined mode, returns operations from the registry
 func (h *RPCHandler) GetOperations() interface{} {
-	switch h.mode {
-	case HandlerModeDynamic:
-		if h.protoLoader == nil {
-			return nil
-		}
-		return h.protoLoader.GetServices()
-	case HandlerModePredefined:
-		if h.operationRegistry == nil {
-			return nil
-		}
-		return h.operationRegistry.GetAllOperations()
-	default:
+	if h.operationRegistry == nil {
 		return nil
 	}
+	return h.operationRegistry.GetAllOperations()
 }
 
 // ValidateOperation checks if an operation is available
 func (h *RPCHandler) ValidateOperation(serviceName, methodName string) error {
-	switch h.mode {
-	case HandlerModeDynamic:
-		if h.protoLoader == nil {
-			return fmt.Errorf("proto loader is not initialized")
-		}
-		_, err := h.protoLoader.GetMethod(serviceName, methodName)
-		if err != nil {
-			return fmt.Errorf("method not found: %w", err)
-		}
-		return nil
-	case HandlerModePredefined:
-		if h.operationRegistry == nil {
-			return fmt.Errorf("operation registry is not initialized")
-		}
-		if !h.operationRegistry.HasOperation(methodName) {
-			return fmt.Errorf("operation not found: %s", methodName)
-		}
-		return nil
-	default:
-		return fmt.Errorf("unsupported handler mode: %s", h.mode)
+	if h.operationRegistry == nil {
+		return fmt.Errorf("operation registry is not initialized")
 	}
+	if !h.operationRegistry.HasOperation(methodName) {
+		return fmt.Errorf("operation not found: %s", methodName)
+	}
+	return nil
 }
 
 // GetOperationInfo returns detailed information about a specific operation
 func (h *RPCHandler) GetOperationInfo(serviceName, methodName string) (interface{}, error) {
-	switch h.mode {
-	case HandlerModeDynamic:
-		if h.protoLoader == nil {
-			return nil, fmt.Errorf("proto loader is not initialized")
-		}
-		method, err := h.protoLoader.GetMethod(serviceName, methodName)
-		if err != nil {
-			return nil, fmt.Errorf("method not found: %w", err)
-		}
-		return method, nil
-	case HandlerModePredefined:
-		if h.operationRegistry == nil {
-			return nil, fmt.Errorf("operation registry is not initialized")
-		}
-		operation := h.operationRegistry.GetOperation(methodName)
-		if operation == nil {
-			return nil, fmt.Errorf("operation not found: %s", methodName)
-		}
-		return operation, nil
-	default:
-		return nil, fmt.Errorf("unsupported handler mode: %s", h.mode)
+	if h.operationRegistry == nil {
+		return nil, fmt.Errorf("operation registry is not initialized")
 	}
+	operation := h.operationRegistry.GetOperation(methodName)
+	if operation == nil {
+		return nil, fmt.Errorf("operation not found: %s", methodName)
+	}
+	return operation, nil
 }

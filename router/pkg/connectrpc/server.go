@@ -1,32 +1,32 @@
 package connectrpc
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"strings"
 	"time"
 
 	"connectrpc.com/vanguard"
 	"github.com/hashicorp/go-retryablehttp"
-	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"go.uber.org/zap"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 )
 
 // ServerConfig holds configuration for the ConnectRPC server
 type ServerConfig struct {
 	// ProtoDir is the directory containing proto files
 	ProtoDir string
-	// OperationsDir is the directory containing pre-defined GraphQL operations (optional, for predefined mode)
+	// OperationsDir is the directory containing pre-defined GraphQL operations (required)
 	OperationsDir string
 	// ListenAddr is the address to listen on
 	ListenAddr string
 	// GraphQLEndpoint is the router's GraphQL endpoint
 	GraphQLEndpoint string
-	// Mode determines whether to use dynamic or predefined operations
-	Mode HandlerMode
 	// Logger for structured logging
 	Logger *zap.Logger
 	// RequestTimeout for HTTP requests
@@ -40,7 +40,6 @@ type Server struct {
 	httpServer        *http.Server
 	transcoder        *vanguard.Transcoder
 	protoLoader       *ProtoLoader
-	operationBuilder  *OperationBuilder
 	operationRegistry *OperationRegistry
 	rpcHandler        *RPCHandler
 	vanguardService   *VanguardService
@@ -56,10 +55,6 @@ func NewServer(config ServerConfig) (*Server, error) {
 
 	if config.GraphQLEndpoint == "" {
 		return nil, fmt.Errorf("graphql endpoint cannot be empty")
-	}
-
-	if config.Mode == "" {
-		config.Mode = HandlerModeDynamic
 	}
 
 	if config.ListenAddr == "" {
@@ -99,7 +94,7 @@ func (s *Server) Start() error {
 	s.logger.Info("starting ConnectRPC server",
 		zap.String("listen_addr", s.config.ListenAddr),
 		zap.String("proto_dir", s.config.ProtoDir),
-		zap.String("mode", string(s.config.Mode)),
+		zap.String("operations_dir", s.config.OperationsDir),
 		zap.String("graphql_endpoint", s.config.GraphQLEndpoint))
 
 	// Load proto files
@@ -129,25 +124,46 @@ func (s *Server) Start() error {
 	s.vanguardService = vanguardService
 
 	// Create Vanguard transcoder
-	transcoder, err := vanguard.NewTranscoder(vanguardService.GetServices())
+	vanguardServices := vanguardService.GetServices()
+	s.logger.Info("creating vanguard transcoder",
+		zap.Int("service_count", len(vanguardServices)))
+	
+	// Log details about each service being passed to the transcoder
+	for i, svc := range vanguardServices {
+		s.logger.Info("vanguard service details",
+			zap.Int("index", i),
+			zap.String("type", fmt.Sprintf("%T", svc)))
+	}
+	
+	transcoder, err := vanguard.NewTranscoder(vanguardServices)
 	if err != nil {
 		return fmt.Errorf("failed to create vanguard transcoder: %w", err)
 	}
 	s.transcoder = transcoder
+	
+	s.logger.Info("vanguard transcoder created successfully",
+		zap.Int("registered_services", len(vanguardServices)))
 
-	// Create HTTP server
+	// Create HTTP server with HTTP/2 support
+	// Use h2c (HTTP/2 Cleartext) to support HTTP/2 without TLS
+	handler := s.createHandler()
+	h2cHandler := h2c.NewHandler(handler, &http2.Server{})
+	
 	s.httpServer = &http.Server{
 		Addr:         s.config.ListenAddr,
-		Handler:      s.createHandler(),
+		Handler:      h2cHandler,
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 30 * time.Second,
 		IdleTimeout:  60 * time.Second,
 	}
 
+	s.logger.Info("HTTP/2 (h2c) support enabled for gRPC compatibility")
+
 	// Start server in goroutine
 	go func() {
 		s.logger.Info("ConnectRPC server listening",
-			zap.String("addr", s.config.ListenAddr))
+			zap.String("addr", s.config.ListenAddr),
+			zap.Bool("http2_enabled", true))
 
 		if err := s.httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			s.logger.Error("server error", zap.Error(err))
@@ -177,7 +193,7 @@ func (s *Server) Stop(ctx context.Context) error {
 }
 
 // Reload reloads the server configuration and operations
-func (s *Server) Reload(schema *ast.Document) error {
+func (s *Server) Reload() error {
 	s.logger.Info("reloading ConnectRPC server")
 
 	// Reload proto files
@@ -191,9 +207,9 @@ func (s *Server) Reload(schema *ast.Document) error {
 		return fmt.Errorf("failed to reinitialize components: %w", err)
 	}
 
-	// Reload RPC handler
-	if s.config.Mode == HandlerModePredefined && schema != nil {
-		if err := s.rpcHandler.Reload(schema, s.config.OperationsDir); err != nil {
+	// Reload RPC handler operations if operations directory is configured
+	if s.config.OperationsDir != "" {
+		if err := s.rpcHandler.Reload(s.config.OperationsDir); err != nil {
 			return fmt.Errorf("failed to reload RPC handler: %w", err)
 		}
 	}
@@ -223,55 +239,21 @@ func (s *Server) Reload(schema *ast.Document) error {
 	return nil
 }
 
-// initializeComponents initializes the server components based on the mode
+// initializeComponents initializes the server components
 func (s *Server) initializeComponents() error {
+	// Create operation registry
+	s.operationRegistry = NewOperationRegistry(s.logger)
+
+	// Create RPC handler
 	var err error
-
-	switch s.config.Mode {
-	case HandlerModeDynamic:
-		// Create operation builder
-		s.operationBuilder = NewOperationBuilder()
-
-		// Create operation registry for storing dynamically generated operations
-		s.operationRegistry = NewOperationRegistry(s.logger)
-
-		// Pre-generate all operations from proto definitions and add to registry
-		if err := s.preGenerateOperations(); err != nil {
-			return fmt.Errorf("failed to pre-generate operations: %w", err)
-		}
-
-		// Create RPC handler in dynamic mode
-		s.rpcHandler, err = NewRPCHandler(HandlerConfig{
-			Mode:              HandlerModeDynamic,
-			GraphQLEndpoint:   s.config.GraphQLEndpoint,
-			HTTPClient:        s.httpClient,
-			Logger:            s.logger,
-			OperationBuilder:  s.operationBuilder,
-			OperationRegistry: s.operationRegistry,
-			ProtoLoader:       s.protoLoader,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to create RPC handler: %w", err)
-		}
-
-	case HandlerModePredefined:
-		// Create operation registry
-		s.operationRegistry = NewOperationRegistry(s.logger)
-
-		// Create RPC handler in predefined mode
-		s.rpcHandler, err = NewRPCHandler(HandlerConfig{
-			Mode:              HandlerModePredefined,
-			GraphQLEndpoint:   s.config.GraphQLEndpoint,
-			HTTPClient:        s.httpClient,
-			Logger:            s.logger,
-			OperationRegistry: s.operationRegistry,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to create RPC handler: %w", err)
-		}
-
-	default:
-		return fmt.Errorf("invalid handler mode: %s", s.config.Mode)
+	s.rpcHandler, err = NewRPCHandler(HandlerConfig{
+		GraphQLEndpoint:   s.config.GraphQLEndpoint,
+		HTTPClient:        s.httpClient,
+		Logger:            s.logger,
+		OperationRegistry: s.operationRegistry,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create RPC handler: %w", err)
 	}
 
 	return nil
@@ -281,8 +263,17 @@ func (s *Server) initializeComponents() error {
 func (s *Server) createHandler() http.Handler {
 	mux := http.NewServeMux()
 
+	// Wrap transcoder to capture response status
+	wrappedTranscoder := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Create a response writer that captures the status code and implements required interfaces
+		rw := &responseWriter{ResponseWriter: w, statusCode: 200}
+		
+		// The transcoder handles protocol translation and routing
+		s.transcoder.ServeHTTP(rw, r)
+	})
+	
 	// Mount transcoder at root
-	mux.Handle("/", s.transcoder)
+	mux.Handle("/", wrappedTranscoder)
 
 	return mux
 }
@@ -303,51 +294,40 @@ func (s *Server) GetServiceNames() []string {
 	return s.vanguardService.GetServiceNames()
 }
 
-// GetMode returns the current handler mode
-func (s *Server) GetMode() HandlerMode {
-	if s.rpcHandler == nil {
-		return ""
-	}
-	return s.rpcHandler.GetMode()
+
+// responseWriter wraps http.ResponseWriter to capture status code
+// and implements required interfaces for gRPC streaming
+type responseWriter struct {
+	http.ResponseWriter
+	statusCode int
 }
 
-// preGenerateOperations generates GraphQL operations for all proto methods
-// and adds them to the operation registry (used in Dynamic Mode)
-func (s *Server) preGenerateOperations() error {
-	services := s.protoLoader.GetServices()
-	generatedCount := 0
+func (rw *responseWriter) WriteHeader(code int) {
+	rw.statusCode = code
+	rw.ResponseWriter.WriteHeader(code)
+}
 
-	for _, service := range services {
-		for _, method := range service.Methods {
-			// Build the GraphQL operation
-			graphqlQuery, err := s.operationBuilder.BuildOperation(&method)
-			if err != nil {
-				return fmt.Errorf("failed to build operation for %s.%s: %w", service.FullName, method.Name, err)
-			}
-
-			// Determine operation type from method name
-			opType := "query"
-			if strings.HasPrefix(method.Name, "Mutation") {
-				opType = "mutation"
-			}
-
-			// Add to registry
-			s.operationRegistry.AddOperation(&schemaloader.Operation{
-				Name:            method.Name,
-				OperationType:   opType,
-				OperationString: graphqlQuery,
-				Description:     fmt.Sprintf("Auto-generated from %s.%s", service.FullName, method.Name),
-			})
-
-			generatedCount++
-		}
+// Flush implements http.Flusher interface (required for gRPC streaming)
+func (rw *responseWriter) Flush() {
+	if f, ok := rw.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
 	}
+}
 
-	s.logger.Info("pre-generated operations for dynamic mode",
-		zap.Int("count", generatedCount),
-		zap.Int("services", len(services)))
+// Push implements http.Pusher interface (for HTTP/2 server push)
+func (rw *responseWriter) Push(target string, opts *http.PushOptions) error {
+	if p, ok := rw.ResponseWriter.(http.Pusher); ok {
+		return p.Push(target, opts)
+	}
+	return http.ErrNotSupported
+}
 
-	return nil
+// Hijack implements http.Hijacker interface (for connection hijacking)
+func (rw *responseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	if h, ok := rw.ResponseWriter.(http.Hijacker); ok {
+		return h.Hijack()
+	}
+	return nil, nil, http.ErrNotSupported
 }
 
 // GetOperationCount returns the number of operations/methods available
