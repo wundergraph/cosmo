@@ -960,6 +960,12 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		r.mcpServer = mcpss
 	}
 
+	r.logger.Info("ConnectRPC configuration check",
+		zap.Bool("enabled", r.connectRPC.Enabled),
+		zap.String("provider_id", r.connectRPC.Storage.ProviderID),
+		zap.String("listen_addr", r.connectRPC.Server.ListenAddr),
+		zap.String("graphql_endpoint", r.connectRPC.GraphQLEndpoint))
+
 	if r.connectRPC.Enabled {
 		var protoDir string
 
@@ -1013,15 +1019,27 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			Logger:          r.logger.With(logFields...),
 		}
 
+		r.logger.Debug("Creating ConnectRPC server",
+			zap.String("proto_dir", protoDir),
+			zap.String("graphql_endpoint", routerGraphQLEndpoint),
+			zap.String("listen_addr", r.connectRPC.Server.ListenAddr))
+
 		crpcServer, err := connectrpc.NewServer(serverConfig)
 		if err != nil {
+			r.logger.Error("Failed to create ConnectRPC server", zap.Error(err))
 			return fmt.Errorf("failed to create connect_rpc server: %w", err)
 		}
 
+		r.logger.Info("ConnectRPC server created successfully")
+
 		err = crpcServer.Start()
 		if err != nil {
+			r.logger.Error("Failed to start ConnectRPC server", zap.Error(err))
 			return fmt.Errorf("failed to start ConnectRPC server: %w", err)
 		}
+
+		r.logger.Info("ConnectRPC server started successfully",
+			zap.String("listen_addr", r.connectRPC.Server.ListenAddr))
 
 		r.connectRPCServer = crpcServer
 	}

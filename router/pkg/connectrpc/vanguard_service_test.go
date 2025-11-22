@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -247,39 +246,32 @@ func TestVanguardService_ServiceHandler(t *testing.T) {
 
 		// Create handler with mock server
 		protoLoader := setupTestProtoLoaderFromDir(t, "testdata/employee_only")
-		opBuilder := NewOperationBuilder()
 		opRegistry := NewOperationRegistry(zap.NewNop())
 		
-		// Pre-populate registry with operations
-		services := protoLoader.GetServices()
-		for _, service := range services {
-			for _, method := range service.Methods {
-				graphqlQuery, err := opBuilder.BuildOperation(&method)
-				require.NoError(t, err)
-
-				opType := "query"
-				if strings.HasPrefix(method.Name, "Mutation") {
-					opType = "mutation"
-				}
-
-				opRegistry.AddOperation(&schemaloader.Operation{
-					Name:            method.Name,
-					OperationType:   opType,
-					OperationString: graphqlQuery,
-				})
-			}
-		}
+		// Manually add a test operation to the registry
+		opRegistry.AddOperation(&schemaloader.Operation{
+			Name:            "QueryGetEmployeeById",
+			OperationType:   "query",
+			OperationString: "query QueryGetEmployeeById($id: Int!) { employee(id: $id) { id name } }",
+		})
 		
 		handler, err := NewRPCHandler(HandlerConfig{
-			Mode:              HandlerModeDynamic,
 			GraphQLEndpoint:   graphqlServer.URL,
 			HTTPClient:        &http.Client{},
 			Logger:            zap.NewNop(),
-			OperationBuilder:  opBuilder,
 			OperationRegistry: opRegistry,
-			ProtoLoader:       protoLoader,
 		})
 		require.NoError(t, err)
+
+		// Get service definition
+		services := protoLoader.GetServices()
+		require.NotEmpty(t, services, "Should have at least one service")
+		var serviceDef *ServiceDefinition
+		for _, svc := range services {
+			serviceDef = svc
+			break
+		}
+		require.NotNil(t, serviceDef)
 
 		vs, err := NewVanguardService(VanguardServiceConfig{
 			Handler:     handler,
@@ -302,7 +294,7 @@ func TestVanguardService_ServiceHandler(t *testing.T) {
 		w := httptest.NewRecorder()
 
 		// Get the service handler
-		serviceHandler := vs.createServiceHandler("employee.v1.EmployeeService")
+		serviceHandler := vs.createServiceHandler("employee.v1.EmployeeService", serviceDef)
 
 		// Handle the request
 		serviceHandler.ServeHTTP(w, req)
@@ -318,31 +310,58 @@ func TestVanguardService_ServiceHandler(t *testing.T) {
 	})
 
 	t.Run("handles invalid method path", func(t *testing.T) {
+		services := protoLoader.GetServices()
+		require.NotEmpty(t, services)
+		var serviceDef *ServiceDefinition
+		for _, svc := range services {
+			serviceDef = svc
+			break
+		}
+		require.NotNil(t, serviceDef)
+
 		req := httptest.NewRequest("POST", "/invalid/path", nil)
 		w := httptest.NewRecorder()
 
-		serviceHandler := vs.createServiceHandler("employee.v1.EmployeeService")
+		serviceHandler := vs.createServiceHandler("employee.v1.EmployeeService", serviceDef)
 		serviceHandler.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusNotFound, w.Code)
 	})
 
 	t.Run("handles wrong service name in path", func(t *testing.T) {
+		services := protoLoader.GetServices()
+		require.NotEmpty(t, services)
+		var serviceDef *ServiceDefinition
+		for _, svc := range services {
+			serviceDef = svc
+			break
+		}
+		require.NotNil(t, serviceDef)
+
 		req := httptest.NewRequest("POST", "/wrong.Service/QueryGetUser", nil)
 		w := httptest.NewRecorder()
 
-		serviceHandler := vs.createServiceHandler("employee.v1.EmployeeService")
+		serviceHandler := vs.createServiceHandler("employee.v1.EmployeeService", serviceDef)
 		serviceHandler.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusNotFound, w.Code)
 	})
 
 	t.Run("handles request body read error", func(t *testing.T) {
+		services := protoLoader.GetServices()
+		require.NotEmpty(t, services)
+		var serviceDef *ServiceDefinition
+		for _, svc := range services {
+			serviceDef = svc
+			break
+		}
+		require.NotNil(t, serviceDef)
+
 		// Create a request with a body that will error on read
 		req := httptest.NewRequest("POST", "/employee.v1.EmployeeService/QueryGetEmployeeById", &errorReader{})
 		w := httptest.NewRecorder()
 
-		serviceHandler := vs.createServiceHandler("employee.v1.EmployeeService")
+		serviceHandler := vs.createServiceHandler("employee.v1.EmployeeService", serviceDef)
 		serviceHandler.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusBadRequest, w.Code)
@@ -436,41 +455,25 @@ func setupTestProtoLoaderFromDir(t *testing.T, dir string) *ProtoLoader {
 func setupTestRPCHandler(t *testing.T, protoLoader *ProtoLoader) *RPCHandler {
 	t.Helper()
 
-	// Create operation builder and registry
-	opBuilder := NewOperationBuilder()
+	// Create operation registry
 	opRegistry := NewOperationRegistry(zap.NewNop())
 	
-	// Pre-populate registry with operations (simulating server startup)
-	services := protoLoader.GetServices()
-	for _, service := range services {
-		for _, method := range service.Methods {
-			graphqlQuery, err := opBuilder.BuildOperation(&method)
-			require.NoError(t, err)
-
-			opType := "query"
-			if strings.HasPrefix(method.Name, "Mutation") {
-				opType = "mutation"
-			}
-
-			opRegistry.AddOperation(&schemaloader.Operation{
-				Name:            method.Name,
-				OperationType:   opType,
-				OperationString: graphqlQuery,
-			})
-		}
-	}
+	// Manually add test operations to the registry
+	// In a real scenario, these would be loaded from .graphql files
+	opRegistry.AddOperation(&schemaloader.Operation{
+		Name:            "QueryGetEmployeeById",
+		OperationType:   "query",
+		OperationString: "query QueryGetEmployeeById($id: Int!) { employee(id: $id) { id name } }",
+	})
 
 	// Create a mock HTTP client
 	httpClient := &http.Client{}
 
 	handler, err := NewRPCHandler(HandlerConfig{
-		Mode:              HandlerModeDynamic,
 		GraphQLEndpoint:   "http://localhost:4000/graphql",
 		HTTPClient:        httpClient,
 		Logger:            zap.NewNop(),
-		OperationBuilder:  opBuilder,
 		OperationRegistry: opRegistry,
-		ProtoLoader:       protoLoader,
 	})
 	require.NoError(t, err)
 

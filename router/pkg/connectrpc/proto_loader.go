@@ -10,6 +10,7 @@ import (
 	"github.com/jhump/protoreflect/desc/protoparse"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/reflect/protoregistry"
 )
 
 // ServiceDefinition represents a parsed protobuf service
@@ -154,6 +155,20 @@ func (pl *ProtoLoader) loadProtoFile(path string) error {
 
 // processFileDescriptor extracts service definitions from a file descriptor
 func (pl *ProtoLoader) processFileDescriptor(fd *desc.FileDescriptor) error {
+	// Convert to protoreflect.FileDescriptor and register it globally
+	// This is required for Vanguard to find the service schema
+	protoFd := fd.UnwrapFile()
+	
+	// Register the file descriptor in the global registry
+	// This is required for Vanguard's transcoder to find the service schema
+	err := protoregistry.GlobalFiles.RegisterFile(protoFd)
+	if err != nil {
+		// If already registered, that's okay - it might be from a previous load
+		pl.logger.Debug("file descriptor registration",
+			zap.String("file", string(protoFd.Path())),
+			zap.Error(err))
+	}
+	
 	// Extract services
 	services := fd.GetServices()
 	for _, service := range services {
