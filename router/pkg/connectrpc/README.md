@@ -16,10 +16,7 @@ This package provides ConnectRPC integration for the Cosmo Router, enabling gRPC
 
 ## Overview
 
-The ConnectRPC integration allows you to expose your GraphQL API through gRPC-compatible protocols. It uses [Vanguard](https://github.com/connectrpc/vanguard) for protocol transcoding and supports two modes:
-
-1. **Dynamic Mode**: Automatically generates GraphQL operations from proto definitions
-2. **Predefined Mode**: Uses pre-defined GraphQL operations mapped to RPC methods
+The ConnectRPC integration allows you to expose your GraphQL API through gRPC-compatible protocols. It uses [Vanguard](https://github.com/connectrpc/vanguard) for protocol transcoding and requires pre-defined GraphQL operations mapped to RPC methods.
 
 ## Features
 
@@ -32,88 +29,133 @@ The ConnectRPC integration allows you to expose your GraphQL API through gRPC-co
 
 ## Architecture
 
-The ConnectRPC server converts RPC calls to GraphQL queries and supports two operational modes:
+The ConnectRPC server provides a bridge between gRPC/Connect/gRPC-Web protocols and GraphQL, with automatic protocol transcoding via Vanguard.
 
 ```mermaid
 graph TB
-    subgraph Startup["Startup Phase"]
-        ProtoFiles["Proto Files<br/>(.proto)"]
-        ProtoLoader["ProtoLoader<br/>(Parses .proto files)"]
-        ServiceDefs["ServiceDefinitions<br/>(Methods + Message Descriptors)"]
+    subgraph Client["Client Layer"]
+        GRPCClient["gRPC Client<br/>(protobuf/HTTP2)"]
+        ConnectClient["Connect Client<br/>(JSON/HTTP)"]
+        WebClient["gRPC-Web Client<br/>(browser)"]
+    end
+    
+    subgraph Server["ConnectRPC Server"]
+        H2C["HTTP/2 Handler<br/>(h2c support)"]
+        Transcoder["Vanguard Transcoder<br/>(Protocol conversion)"]
         
-        ProtoFiles --> ProtoLoader
-        ProtoLoader --> ServiceDefs
-        
-        subgraph DynamicInit["Dynamic Mode Init"]
-            OpBuilder["OperationBuilder"]
-            OpRegistry1["OperationRegistry<br/>(Empty)"]
-            PreGen["preGenerateOperations()<br/>1. Iterate all methods<br/>2. Build GraphQL for each<br/>3. Add to registry"]
-            
-            ServiceDefs --> PreGen
-            OpBuilder -->|"Used by"| PreGen
-            PreGen --> OpRegistry1
-            OpRegistry1 -.->|"Cached operations"| OpRegistry1
+        subgraph Services["Service Layer"]
+            VanguardSvc["VanguardService<br/>(per proto service)"]
+            Handler["RPCHandler<br/>(request orchestration)"]
         end
         
-        subgraph PredefinedInit["Predefined Mode Init"]
-            GraphQLFiles["GraphQL Files<br/>(.graphql)"]
-            OpRegistry2["OperationRegistry<br/>(Loaded from files)"]
-            GraphQLFiles --> OpRegistry2
-            ServiceDefs -.->|"Validates against"| OpRegistry2
+        subgraph Core["Core Components"]
+            ProtoLoader["ProtoLoader<br/>(proto parsing)"]
+            OpRegistry["OperationRegistry<br/>(GraphQL operations)"]
         end
     end
     
-    subgraph Runtime["Request Flow (Runtime)"]
-        Client["Client<br/>(gRPC/Connect/gRPC-Web)"]
-        Vanguard["Vanguard Transcoder<br/>(Protocol → JSON)"]
-        VanguardSvc["VanguardService<br/>(Routes to handler)"]
-        RPCHandler["RPCHandler.HandleRPC()<br/>(Orchestrates request)"]
-        
-        Client -->|"RPC Request"| Vanguard
-        Vanguard -->|"JSON + Method"| VanguardSvc
-        VanguardSvc --> RPCHandler
-        
-        subgraph ModeSwitch["Mode-Specific Processing"]
-            DynamicPath["handleDynamicMode()<br/>1. Lookup operation in registry<br/>2. Get pre-built query"]
-            PredefinedPath["handlePredefinedMode()<br/>1. Lookup operation in registry<br/>2. Get pre-built query"]
-        end
-        
-        RPCHandler -->|"Dynamic"| DynamicPath
-        RPCHandler -->|"Predefined"| PredefinedPath
-        
-        GraphQLQuery["GraphQL Query<br/>+ Variables"]
-        DynamicPath --> GraphQLQuery
-        PredefinedPath --> GraphQLQuery
-        
-        ExecuteGQL["executeGraphQL()<br/>(HTTP POST)"]
-        GraphQLRouter["GraphQL Router<br/>(Executes query)"]
-        
-        GraphQLQuery --> ExecuteGQL
-        ExecuteGQL -->|"HTTP Request"| GraphQLRouter
-        GraphQLRouter -->|"GraphQL Response"| ExecuteGQL
-        ExecuteGQL --> RPCHandler
-        RPCHandler --> VanguardSvc
-        VanguardSvc --> Vanguard
-        Vanguard -->|"RPC Response"| Client
+    subgraph Backend["Backend"]
+        GraphQLRouter["Cosmo Router<br/>(GraphQL execution)"]
     end
     
-    OpRegistry1 -.->|"Used by"| DynamicPath
-    OpRegistry2 -.->|"Used by"| PredefinedPath
-    ServiceDefs -.->|"Used by"| VanguardSvc
+    subgraph Startup["Startup Flow"]
+        ProtoFiles["Proto Files"] --> ProtoLoader
+        ProtoLoader -->|"Register globally"| GlobalRegistry["protoregistry.GlobalFiles"]
+        ProtoLoader -->|"Extract services"| ServiceDefs["ServiceDefinitions"]
+        
+        GraphQLOps["GraphQL Operations<br/>(.graphql files)"] --> OpRegistry
+        
+        ServiceDefs -->|"Create handlers"| VanguardSvc
+        GlobalRegistry -.->|"Schema lookup"| Transcoder
+    end
     
-    style DynamicInit fill:#e1f5ff
-    style PredefinedInit fill:#fff4e1
-    style DynamicPath fill:#e1f5ff
-    style PredefinedPath fill:#fff4e1
+    subgraph Runtime["Request Flow"]
+        GRPCClient -->|"gRPC/protobuf"| H2C
+        ConnectClient -->|"Connect/JSON"| H2C
+        WebClient -->|"gRPC-Web"| H2C
+        
+        H2C --> Transcoder
+        Transcoder -->|"Transcode to<br/>Connect+JSON"| VanguardSvc
+        
+        VanguardSvc -->|"Extract method<br/>Read JSON body"| Handler
+        Handler -->|"Lookup operation"| OpRegistry
+        Handler -->|"Execute GraphQL"| GraphQLRouter
+        
+        GraphQLRouter -->|"GraphQL response<br/>{data, errors}"| Handler
+        Handler -->|"Unwrap data field<br/>Return JSON"| VanguardSvc
+        VanguardSvc -->|"JSON response"| Transcoder
+        
+        Transcoder -->|"Transcode to<br/>client protocol"| H2C
+        H2C -->|"gRPC response"| GRPCClient
+        H2C -->|"Connect response"| ConnectClient
+        H2C -->|"gRPC-Web response"| WebClient
+    end
+    
+    style Client fill:#e3f2fd
+    style Server fill:#f3e5f5
+    style Backend fill:#e8f5e9
+    style Startup fill:#fff3e0
+    style Runtime fill:#fce4ec
 ```
 
-**Key Points:**
-- **ProtoLoader**: Parses `.proto` files at startup into `ServiceDefinitions` (methods + message descriptors)
-- **Dynamic Mode**: Pre-generates ALL GraphQL operations **at startup** using `OperationBuilder` and caches them in `OperationRegistry`
-- **Predefined Mode**: Loads pre-defined GraphQL operations from `.graphql` files into `OperationRegistry`
-- **Both modes**: Normalize to using `OperationRegistry` for fast operation lookups at runtime
-- **Runtime**: Both modes simply lookup operations from the registry - no generation happens per request
-- **Vanguard**: Handles protocol translation (gRPC/Connect/gRPC-Web → JSON → gRPC/Connect/gRPC-Web)
+### Key Components
+
+1. **ProtoLoader**
+   - Parses `.proto` files at startup
+   - Registers file descriptors in `protoregistry.GlobalFiles` (required for Vanguard)
+   - Extracts service and method definitions
+
+2. **Vanguard Transcoder**
+   - Handles protocol conversion between gRPC, Connect, and gRPC-Web
+   - Configured to transcode all incoming requests to Connect protocol with JSON codec
+   - Transcodes responses back to the client's protocol
+
+3. **VanguardService**
+   - One instance per proto service
+   - Extracts method name from request path
+   - Validates method exists
+   - Delegates to RPCHandler
+
+4. **RPCHandler**
+   - Looks up GraphQL operation from OperationRegistry
+   - Executes GraphQL query against Cosmo Router
+   - **Unwraps GraphQL response**: Extracts `data` field from `{"data": {...}, "errors": [...]}` wrapper
+   - Returns JSON payload matching proto response message structure
+
+5. **OperationRegistry**
+   - Loaded from `.graphql` files at startup
+   - Provides O(1) operation lookup at runtime
+   - Maps RPC method names to GraphQL operations
+
+### Protocol Flow
+
+1. **Incoming Request**:
+   - Client sends request in any protocol (gRPC/Connect/gRPC-Web)
+   - Vanguard transcodes to Connect protocol with JSON codec
+   - Handler receives consistent JSON format
+
+2. **GraphQL Execution**:
+   - Handler looks up predefined GraphQL operation from registry
+   - Forwards request to Cosmo Router with headers
+   - Receives GraphQL response: `{"data": {...}, "errors": [...]}`
+
+3. **Response Processing**:
+   - Handler unwraps `data` field from GraphQL response
+   - Returns JSON matching proto response message structure
+   - Vanguard transcodes JSON back to client's protocol
+
+4. **Outgoing Response**:
+   - Client receives response in their original protocol
+   - gRPC clients get protobuf over HTTP/2
+   - Connect clients get JSON over HTTP
+   - gRPC-Web clients get browser-compatible format
+
+### Critical Implementation Details
+
+- **HTTP/2 Support**: Uses `h2c` (HTTP/2 Cleartext) for gRPC compatibility
+- **Response Writer**: Implements `http.Flusher`, `http.Pusher`, and `http.Hijacker` interfaces for streaming
+- **Global Registry**: Proto descriptors must be registered globally for Vanguard schema lookup
+- **GraphQL Unwrapping**: Response data field must be extracted to match proto message structure
 
 ## Getting Started
 
@@ -154,7 +196,22 @@ message User {
 // ... other messages
 ```
 
-### 2. Start the ConnectRPC Server
+### 2. Create GraphQL Operations
+
+Create `.graphql` files for each RPC method in your operations directory:
+
+```graphql
+# operations/QueryGetUser.graphql
+query QueryGetUser($id: Int!) {
+  user(id: $id) {
+    id
+    name
+    email
+  }
+}
+```
+
+### 3. Start the ConnectRPC Server
 
 ```go
 package main
@@ -169,9 +226,9 @@ func main() {
     
     server, err := connectrpc.NewServer(connectrpc.ServerConfig{
         ProtoDir:        "./proto",
+        OperationsDir:   "./operations",
         GraphQLEndpoint: "http://localhost:4000/graphql",
         ListenAddr:      "0.0.0.0:50051",
-        Mode:            connectrpc.HandlerModeDynamic,
         Logger:          logger,
     })
     if err != nil {
@@ -187,7 +244,7 @@ func main() {
 }
 ```
 
-### 3. Make Requests
+### 4. Make Requests
 
 See [Usage Examples](#usage-examples) below for detailed examples.
 
@@ -246,20 +303,34 @@ service UserService {
 grpcurl -plaintext localhost:50051 list
 
 # Describe a service
-grpcurl -plaintext localhost:50051 describe myapp.v1.UserService
+grpcurl -plaintext localhost:50051 describe employee.v1.EmployeeService
 
-# Call QueryGetUser
+# Call QueryGetEmployees (no parameters)
 grpcurl -plaintext \
-  -d '{"id": 1}' \
-  localhost:50051 \
-  myapp.v1.UserService/QueryGetUser
+  -d '{}' \
+  localhost:5026 \
+  employee.v1.EmployeeService/QueryGetEmployees
 
-# Call MutationCreateUser with headers
+# Call QueryGetEmployeeById with parameters
+grpcurl -plaintext \
+  -d '{"employee_id": 1}' \
+  localhost:5026 \
+  employee.v1.EmployeeService/QueryGetEmployeeById
+
+# Call MutationUpdateEmployeeMood with headers
 grpcurl -plaintext \
   -H "Authorization: Bearer YOUR_TOKEN" \
-  -d '{"name": "John Doe", "email": "john@example.com"}' \
-  localhost:50051 \
-  myapp.v1.UserService/MutationCreateUser
+  -d '{"employee_id": 1, "mood": "MOOD_HAPPY"}' \
+  localhost:5026 \
+  employee.v1.EmployeeService/MutationUpdateEmployeeMood
+
+# Using proto file for reflection
+grpcurl -plaintext \
+  -import-path router/pkg/connectrpc/testdata/employee_only \
+  -proto employee.proto \
+  -d '{"employee_id": 1}' \
+  localhost:5026 \
+  employee.v1.EmployeeService/QueryGetEmployeeById
 ```
 
 #### 2. Using Go Client
@@ -312,15 +383,17 @@ func main() {
 
 ### Using Connect Protocol
 
-#### 1. Using curl with Connect Protocol
+The Connect protocol supports both POST and GET requests. Methods marked with `option idempotency_level = NO_SIDE_EFFECTS;` in the proto file can use GET requests.
+
+#### 1. Using curl with Connect Protocol (POST)
 
 ```bash
-# Query operation
+# Query operation (POST)
 curl -X POST http://localhost:50051/myapp.v1.UserService/QueryGetUser \
   -H "Content-Type: application/json" \
   -d '{"id": 1}'
 
-# Mutation operation with authentication
+# Mutation operation with authentication (POST only)
 curl -X POST http://localhost:50051/myapp.v1.UserService/MutationCreateUser \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_TOKEN" \
@@ -329,7 +402,7 @@ curl -X POST http://localhost:50051/myapp.v1.UserService/MutationCreateUser \
     "email": "john@example.com"
   }'
 
-# List users with pagination
+# List users with pagination (POST)
 curl -X POST http://localhost:50051/myapp.v1.UserService/QueryListUsers \
   -H "Content-Type: application/json" \
   -d '{
@@ -338,6 +411,66 @@ curl -X POST http://localhost:50051/myapp.v1.UserService/QueryListUsers \
     "filter": "active"
   }'
 ```
+
+#### 2. Using curl with Connect Protocol (GET)
+
+For Query operations marked with `NO_SIDE_EFFECTS`, you can use GET requests. The Connect protocol requires specific query parameters:
+
+```bash
+# Simple query with no parameters (GET)
+# Required query params: encoding=json, connect=v1
+curl --get \
+  --data-urlencode 'encoding=json' \
+  --data-urlencode 'message={}' \
+  --data-urlencode 'connect=v1' \
+  http://localhost:5026/employee.v1.EmployeeService/QueryGetEmployees
+
+# Query with parameters using --data-urlencode (recommended)
+curl --get \
+  --data-urlencode 'encoding=json' \
+  --data-urlencode 'message={"employee_id":1}' \
+  --data-urlencode 'connect=v1' \
+  http://localhost:5026/employee.v1.EmployeeService/QueryGetEmployeeById
+
+# Query with boolean parameter
+curl --get \
+  --data-urlencode 'encoding=json' \
+  --data-urlencode 'message={"has_pets":true}' \
+  --data-urlencode 'connect=v1' \
+  http://localhost:5026/employee.v1.EmployeeService/QueryFindEmployeesByPets
+
+# With authentication header
+curl --get \
+  --data-urlencode 'encoding=json' \
+  --data-urlencode 'message={}' \
+  --data-urlencode 'connect=v1' \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  http://localhost:5026/employee.v1.EmployeeService/QueryGetEmployees
+
+# Manual URL encoding (if needed)
+curl "http://localhost:5026/employee.v1.EmployeeService/QueryGetEmployeeById?encoding=json&message=%7B%22employee_id%22%3A1%7D&connect=v1"
+
+# For binary proto encoding (base64)
+curl --get \
+  --data-urlencode 'encoding=proto' \
+  --data-urlencode 'base64=1' \
+  --data-urlencode 'message=CAE=' \
+  --data-urlencode 'connect=v1' \
+  http://localhost:5026/employee.v1.EmployeeService/QueryGetEmployeeById
+```
+
+**Connect Protocol GET Request Requirements:**
+- **Required query parameters:**
+  - `encoding`: Message codec (`json` or `proto`)
+  - `message`: URL-encoded request payload
+  - `connect`: Protocol version (use `v1`)
+- **Optional query parameters:**
+  - `base64`: Set to `1` for base64-encoded binary data (required when `encoding=proto`)
+  - `compression`: Content coding (e.g., `gzip`)
+- **Only works for methods with** `option idempotency_level = NO_SIDE_EFFECTS;`
+- **Mutations cannot use GET** (they must use POST)
+- **Cacheable** by HTTP intermediaries, browsers, and CDNs
+- **Use `--data-urlencode`** in curl to automatically handle URL encoding
 
 #### 2. Using TypeScript/JavaScript Client
 
@@ -487,19 +620,14 @@ type ServerConfig struct {
     // ProtoDir is the directory containing proto files (required)
     ProtoDir string
     
-    // OperationsDir is the directory containing pre-defined GraphQL operations
-    // (optional, only for predefined mode)
+    // OperationsDir is the directory containing pre-defined GraphQL operations (required)
     OperationsDir string
     
-    // ListenAddr is the address to listen on (default: "0.0.0.0:50051")
+    // ListenAddr is the address to listen on (default: "localhost:5026")
     ListenAddr string
     
     // GraphQLEndpoint is the router's GraphQL endpoint (required)
     GraphQLEndpoint string
-    
-    // Mode determines whether to use dynamic or predefined operations
-    // (default: HandlerModeDynamic)
-    Mode HandlerMode
     
     // Logger for structured logging (default: nop logger)
     Logger *zap.Logger
@@ -509,52 +637,28 @@ type ServerConfig struct {
 }
 ```
 
-### Handler Modes
+### Operation Files
 
-#### Dynamic Mode (Recommended)
+Each RPC method requires a corresponding `.graphql` file in the operations directory. The file should be named after the RPC method (e.g., `QueryGetUser.graphql` for the `QueryGetUser` RPC method).
 
-Automatically generates GraphQL operations from proto definitions:
-
-```go
-server, err := connectrpc.NewServer(connectrpc.ServerConfig{
-    ProtoDir:        "./proto",
-    GraphQLEndpoint: "http://localhost:4000/graphql",
-    Mode:            connectrpc.HandlerModeDynamic,
-})
+**Example:**
+```graphql
+# operations/QueryGetUser.graphql
+query QueryGetUser($id: Int!) {
+  user(id: $id) {
+    id
+    name
+    email
+  }
+}
 ```
 
-**Pros:**
-- No manual operation definition needed
-- Automatic schema synchronization
-- Faster development
-- Operations pre-generated at startup for optimal runtime performance
-
-**Cons:**
-- Less control over GraphQL queries
-- May generate suboptimal queries for complex cases
-- All operations generated at startup (small memory overhead)
-
-#### Predefined Mode
-
-Uses pre-defined GraphQL operations:
-
-```go
-server, err := connectrpc.NewServer(connectrpc.ServerConfig{
-    ProtoDir:        "./proto",
-    OperationsDir:   "./operations",
-    GraphQLEndpoint: "http://localhost:4000/graphql",
-    Mode:            connectrpc.HandlerModePredefined,
-})
-```
-
-**Pros:**
+**Benefits:**
 - Full control over GraphQL queries
 - Optimized queries for specific use cases
 - Better for complex operations
-
-**Cons:**
-- Manual operation definition required
-- Need to keep operations in sync with schema
+- Explicit and reviewable operations
+- Follows industry standards (Trusted Documents pattern)
 
 ## Testing
 

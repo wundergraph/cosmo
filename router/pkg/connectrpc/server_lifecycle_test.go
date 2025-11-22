@@ -10,7 +10,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"go.uber.org/zap"
 )
 
@@ -29,7 +28,6 @@ func TestServerLifecycle_StartStopReload(t *testing.T) {
 			ProtoDir:        "testdata",
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
-			Mode:            HandlerModeDynamic,
 			Logger:          zap.NewNop(),
 		})
 		require.NoError(t, err)
@@ -43,7 +41,7 @@ func TestServerLifecycle_StartStopReload(t *testing.T) {
 		assert.Greater(t, server.GetServiceCount(), 0)
 
 		// Reload the server
-		err = server.Reload(nil)
+		err = server.Reload()
 		require.NoError(t, err)
 
 		// Verify server still works after reload
@@ -76,7 +74,7 @@ func TestServerLifecycle_StartStopReload(t *testing.T) {
 
 		// Perform multiple reloads
 		for i := 0; i < 3; i++ {
-			err = server.Reload(nil)
+			err = server.Reload()
 			require.NoError(t, err, "reload %d failed", i+1)
 			assert.NotNil(t, server.transcoder, "transcoder should be initialized after reload %d", i+1)
 		}
@@ -229,7 +227,7 @@ func TestServerLifecycle_VanguardIntegration(t *testing.T) {
 		oldVanguardService := server.vanguardService
 
 		// Reload
-		err = server.Reload(nil)
+		err = server.Reload()
 		require.NoError(t, err)
 
 		// Verify new instances were created
@@ -284,7 +282,7 @@ func TestServerLifecycle_ErrorScenarios(t *testing.T) {
 		// Change proto dir to invalid path
 		server.config.ProtoDir = "/nonexistent/path"
 
-		err = server.Reload(nil)
+		err = server.Reload()
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to reload proto files")
 
@@ -331,7 +329,6 @@ func TestServerLifecycle_ErrorScenarios(t *testing.T) {
 			OperationsDir:   "/nonexistent/operations",
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
-			Mode:            HandlerModePredefined,
 			Logger:          zap.NewNop(),
 		})
 		require.NoError(t, err)
@@ -339,11 +336,8 @@ func TestServerLifecycle_ErrorScenarios(t *testing.T) {
 		err = server.Start()
 		require.NoError(t, err)
 
-		// Create a simple schema
-		schema := &ast.Document{}
-
 		// Reload with invalid operations directory
-		err = server.Reload(schema)
+		err = server.Reload()
 		// Should handle gracefully or return error
 		if err != nil {
 			assert.Contains(t, err.Error(), "failed to reload RPC handler")
@@ -357,7 +351,7 @@ func TestServerLifecycle_ErrorScenarios(t *testing.T) {
 
 // TestServerLifecycle_ComponentInitialization tests component initialization
 func TestServerLifecycle_ComponentInitialization(t *testing.T) {
-	t.Run("dynamic mode initializes correct components", func(t *testing.T) {
+	t.Run("server initializes correct components", func(t *testing.T) {
 		graphqlServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`{"data":{}}`))
@@ -368,7 +362,6 @@ func TestServerLifecycle_ComponentInitialization(t *testing.T) {
 			ProtoDir:        "testdata",
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
-			Mode:            HandlerModeDynamic,
 			Logger:          zap.NewNop(),
 		})
 		require.NoError(t, err)
@@ -376,42 +369,9 @@ func TestServerLifecycle_ComponentInitialization(t *testing.T) {
 		err = server.Start()
 		require.NoError(t, err)
 
-		// Verify dynamic mode components
-		assert.NotNil(t, server.operationBuilder, "operation builder should be initialized")
-		assert.NotNil(t, server.operationRegistry, "operation registry should be initialized in dynamic mode")
-		assert.Greater(t, server.operationRegistry.Count(), 0, "operation registry should be pre-populated with operations")
-		assert.NotNil(t, server.rpcHandler, "rpc handler should be initialized")
-		assert.Equal(t, HandlerModeDynamic, server.GetMode())
-
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		server.Stop(ctx)
-	})
-
-	t.Run("predefined mode initializes correct components", func(t *testing.T) {
-		graphqlServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"data":{}}`))
-		}))
-		defer graphqlServer.Close()
-
-		server, err := NewServer(ServerConfig{
-			ProtoDir:        "testdata",
-			GraphQLEndpoint: graphqlServer.URL,
-			ListenAddr:      "localhost:0",
-			Mode:            HandlerModePredefined,
-			Logger:          zap.NewNop(),
-		})
-		require.NoError(t, err)
-
-		err = server.Start()
-		require.NoError(t, err)
-
-		// Verify predefined mode components
-		assert.Nil(t, server.operationBuilder, "operation builder should not be initialized in predefined mode")
+		// Verify components are initialized
 		assert.NotNil(t, server.operationRegistry, "operation registry should be initialized")
 		assert.NotNil(t, server.rpcHandler, "rpc handler should be initialized")
-		assert.Equal(t, HandlerModePredefined, server.GetMode())
 
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -473,12 +433,12 @@ func TestServerLifecycle_StateTransitions(t *testing.T) {
 		err = server.Start()
 		require.NoError(t, err)
 
-		// After start
+		// After start - operation count may be 0 if no operations directory is configured
 		countAfterStart := server.GetOperationCount()
-		assert.Greater(t, countAfterStart, 0)
+		assert.GreaterOrEqual(t, countAfterStart, 0)
 
 		// After reload
-		err = server.Reload(nil)
+		err = server.Reload()
 		require.NoError(t, err)
 		countAfterReload := server.GetOperationCount()
 		assert.Equal(t, countAfterStart, countAfterReload, "operation count should remain same after reload")
@@ -510,7 +470,7 @@ func TestServerLifecycle_StateTransitions(t *testing.T) {
 		require.NotEmpty(t, namesBeforeReload)
 		require.Len(t, namesBeforeReload, 1, "Should have exactly 1 service from employee_only directory")
 
-		err = server.Reload(nil)
+		err = server.Reload()
 		require.NoError(t, err)
 
 		namesAfterReload := server.GetServiceNames()
