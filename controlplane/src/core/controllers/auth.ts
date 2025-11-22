@@ -1,7 +1,7 @@
 import { FastifyPluginCallback } from 'fastify';
 import fp from 'fastify-plugin';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { lru } from 'tiny-lru';
 import { uid } from 'uid';
 import { PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
@@ -271,7 +271,7 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
           const existingMemberships = await tx
             .select({ one: sql<number>`1`.as('one') })
             .from(organizationsMembers)
-            .where(eq(organizationsMembers.userId, userId))
+            .where(and(eq(organizationsMembers.userId, userId), eq(organizationsMembers.active, true)))
             .limit(1)
             .execute();
 
