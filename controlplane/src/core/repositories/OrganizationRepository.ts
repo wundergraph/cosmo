@@ -250,7 +250,7 @@ export class OrganizationRepository {
       .innerJoin(organizations, eq(organizations.id, input.organizationId))
       .innerJoin(users, eq(users.id, organizationsMembers.userId))
       .limit(1)
-      .where(eq(users.id, input.userId))
+      .where(and(eq(users.id, input.userId), eq(organizationsMembers.active, true)))
       .execute();
 
     return userOrganizations.length > 0;
@@ -279,13 +279,14 @@ export class OrganizationRepository {
         queuedForDeletionAt: organizations.queuedForDeletionAt,
         queuedForDeletionBy: organizations.queuedForDeletionBy,
         kcGroupId: organizations.kcGroupId,
+        active: organizationsMembers.active,
       })
       .from(organizationsMembers)
       .innerJoin(organizations, eq(organizations.id, organizationsMembers.organizationId))
       .innerJoin(users, eq(users.id, organizationsMembers.userId))
       .leftJoin(organizationBilling, eq(organizations.id, organizationBilling.organizationId))
       .leftJoin(billingSubscriptions, eq(organizations.id, billingSubscriptions.organizationId))
-      .where(eq(users.id, input.userId))
+      .where(and(eq(users.id, input.userId), eq(organizationsMembers.active, true)))
       .execute();
 
     return Promise.all(
@@ -365,7 +366,7 @@ export class OrganizationRepository {
         userID: users.id,
         email: users.email,
         memberID: organizationsMembers.id,
-        active: users.active,
+        active: organizationsMembers.active,
         createdAt: organizationsMembers.createdAt,
       })
       .from(organizationsMembers)
@@ -403,7 +404,7 @@ export class OrganizationRepository {
         userID: users.id,
         email: users.email,
         memberID: organizationsMembers.id,
-        active: users.active,
+        active: organizationsMembers.active,
         createdAt: organizationsMembers.createdAt,
       })
       .from(organizationsMembers)
@@ -459,7 +460,7 @@ export class OrganizationRepository {
         userID: users.id,
         email: users.email,
         memberID: organizationsMembers.id,
-        active: users.active,
+        active: organizationsMembers.active,
         createdAt: organizationsMembers.createdAt,
       })
       .from(organizationsMembers)
@@ -496,10 +497,18 @@ export class OrganizationRepository {
       .values({
         userId: input.userID,
         organizationId: input.organizationID,
+        active: true,
       })
       .returning()
       .execute();
     return insertedMember[0];
+  }
+
+  public setOrganizationMemberActive(input: { id: string; organizationId: string; active: boolean }) {
+    return this.db
+      .update(organizationsMembers)
+      .set({ active: input.active })
+      .where(and(eq(organizationsMembers.organizationId, input.organizationId), eq(organizationsMembers.id, input.id)));
   }
 
   public async removeOrganizationMember(input: { userID: string; organizationID: string }) {
