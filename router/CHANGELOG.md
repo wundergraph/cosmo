@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.266.0](https://github.com/wundergraph/cosmo/compare/router@0.265.2...router@0.266.0) (2025-11-23)
+
+### Features
+
+* **router:** implement Cosmo Streams v1 ([#2273](https://github.com/wundergraph/cosmo/issues/2273)) ([e4e5bfb](https://github.com/wundergraph/cosmo/commit/e4e5bfbdb6ae10098bf58c83b8e5119714f4ca29)) (@dkorittki)
+
 ## [0.265.2](https://github.com/wundergraph/cosmo/compare/router@0.265.1...router@0.265.2) (2025-11-20)
 
 **Note:** Version bump only for package router
