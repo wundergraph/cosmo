@@ -253,6 +253,14 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.metricConfig = rmetric.DefaultConfig(Version)
 	}
 
+	if r.subscriptionHooks.onReceiveEvents.maxConcurrentHandlers == 0 {
+		r.subscriptionHooks.onReceiveEvents.maxConcurrentHandlers = 100
+	}
+
+	if r.subscriptionHooks.onReceiveEvents.timeout == 0 {
+		r.subscriptionHooks.onReceiveEvents.timeout = 5 * time.Second
+	}
+
 	if r.corsOptions == nil {
 		r.corsOptions = CorsDefaultOptions()
 	}
@@ -673,6 +681,18 @@ func (r *Router) initModules(ctx context.Context) error {
 			if len(modulePropagators) > 0 {
 				r.tracePropagators = append(r.tracePropagators, modulePropagators...)
 			}
+		}
+
+		if handler, ok := moduleInstance.(SubscriptionOnStartHandler); ok {
+			r.subscriptionHooks.onStart.handlers = append(r.subscriptionHooks.onStart.handlers, handler.SubscriptionOnStart)
+		}
+
+		if handler, ok := moduleInstance.(StreamPublishEventHandler); ok {
+			r.subscriptionHooks.onPublishEvents.handlers = append(r.subscriptionHooks.onPublishEvents.handlers, handler.OnPublishEvents)
+		}
+
+		if handler, ok := moduleInstance.(StreamReceiveEventHandler); ok {
+			r.subscriptionHooks.onReceiveEvents.handlers = append(r.subscriptionHooks.onReceiveEvents.handlers, handler.OnReceiveEvents)
 		}
 
 		r.modules = append(r.modules, moduleInstance)
@@ -2116,6 +2136,13 @@ func WithPlugins(cfg config.PluginsConfiguration) Option {
 func WithDemoMode(demoMode bool) Option {
 	return func(r *Router) {
 		r.demoMode = demoMode
+	}
+}
+
+func WithStreamsHandlerConfiguration(cfg config.StreamsHandlerConfiguration) Option {
+	return func(r *Router) {
+		r.subscriptionHooks.onReceiveEvents.maxConcurrentHandlers = cfg.OnReceiveEvents.MaxConcurrentHandlers
+		r.subscriptionHooks.onReceiveEvents.timeout = cfg.OnReceiveEvents.HandlerTimeout
 	}
 }
 

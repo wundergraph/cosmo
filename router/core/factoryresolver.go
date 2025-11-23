@@ -31,8 +31,9 @@ import (
 )
 
 type Loader struct {
-	ctx      context.Context
-	resolver FactoryResolver
+	ctx               context.Context
+	resolver          FactoryResolver
+	subscriptionHooks subscriptionHooks
 	// includeInfo controls whether additional information like type usage and field usage is included in the plan de
 	includeInfo bool
 	logger      *zap.Logger
@@ -190,12 +191,13 @@ func (d *DefaultFactoryResolver) InstanceData() InstanceData {
 	return d.instanceData
 }
 
-func NewLoader(ctx context.Context, includeInfo bool, resolver FactoryResolver, logger *zap.Logger) *Loader {
+func NewLoader(ctx context.Context, includeInfo bool, resolver FactoryResolver, logger *zap.Logger, subscriptionHooks subscriptionHooks) *Loader {
 	return &Loader{
-		ctx:         ctx,
-		resolver:    resolver,
-		includeInfo: includeInfo,
-		logger:      logger,
+		ctx:               ctx,
+		resolver:          resolver,
+		includeInfo:       includeInfo,
+		logger:            logger,
+		subscriptionHooks: subscriptionHooks,
 	}
 }
 
@@ -416,6 +418,10 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				}
 			}
 
+			subscriptionOnStartFns := make([]graphql_datasource.SubscriptionOnStartFn, len(l.subscriptionHooks.onStart.handlers))
+			for i, fn := range l.subscriptionHooks.onStart.handlers {
+				subscriptionOnStartFns[i] = NewEngineSubscriptionOnStartHook(fn)
+			}
 			customConfiguration, err := graphql_datasource.NewConfiguration(graphql_datasource.ConfigurationInput{
 				Fetch: &graphql_datasource.FetchConfiguration{
 					URL:    fetchUrl,
@@ -429,6 +435,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 					ForwardedClientHeaderNames:              forwardedClientHeaders,
 					ForwardedClientHeaderRegularExpressions: forwardedClientRegexps,
 					WsSubProtocol:                           wsSubprotocol,
+					StartupHooks:                            subscriptionOnStartFns,
 				},
 				SchemaConfiguration:    schemaConfiguration,
 				CustomScalarTypeFields: customScalarTypeFields,
@@ -470,6 +477,21 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 		}
 	}
 
+	subscriptionOnStartFns := make([]pubsub_datasource.SubscriptionOnStartFn, len(l.subscriptionHooks.onStart.handlers))
+	for i, fn := range l.subscriptionHooks.onStart.handlers {
+		subscriptionOnStartFns[i] = NewPubSubSubscriptionOnStartHook(fn)
+	}
+
+	onPublishEventsFns := make([]pubsub_datasource.OnPublishEventsFn, len(l.subscriptionHooks.onPublishEvents.handlers))
+	for i, fn := range l.subscriptionHooks.onPublishEvents.handlers {
+		onPublishEventsFns[i] = NewPubSubOnPublishEventsHook(fn)
+	}
+
+	onReceiveEventsFns := make([]pubsub_datasource.OnReceiveEventsFn, len(l.subscriptionHooks.onReceiveEvents.handlers))
+	for i, fn := range l.subscriptionHooks.onReceiveEvents.handlers {
+		onReceiveEventsFns[i] = NewPubSubOnReceiveEventsHook(fn)
+	}
+
 	factoryProviders, factoryDataSources, err := pubsub.BuildProvidersAndDataSources(
 		l.ctx,
 		routerEngineConfig.Events,
@@ -478,6 +500,19 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 		pubSubDS,
 		l.resolver.InstanceData().HostName,
 		l.resolver.InstanceData().ListenAddress,
+		pubsub_datasource.Hooks{
+			SubscriptionOnStart: pubsub_datasource.SubscriptionOnStartHooks{
+				Handlers: subscriptionOnStartFns,
+			},
+			OnPublishEvents: pubsub_datasource.OnPublishEventsHooks{
+				Handlers: onPublishEventsFns,
+			},
+			OnReceiveEvents: pubsub_datasource.OnReceiveEventsHooks{
+				Handlers:              onReceiveEventsFns,
+				MaxConcurrentHandlers: l.subscriptionHooks.onReceiveEvents.maxConcurrentHandlers,
+				Timeout:               l.subscriptionHooks.onReceiveEvents.timeout,
+			},
+		},
 	)
 	if err != nil {
 		return nil, providers, err
