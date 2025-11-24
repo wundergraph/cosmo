@@ -1032,8 +1032,8 @@ export class MetricsRepository {
       const query = `
       WITH
         toDateTime({startDate:UInt32}) AS startDate,
-        toDateTime({endDate:UInt32}) AS endDate${deprecatedFieldsCte ? ',' : ''}
-        ${deprecatedFieldsCte}${deprecatedFieldsCte ? '' : ','}
+        toDateTime({endDate:UInt32}) AS endDate,
+        ${deprecatedFieldsCte}
         ops AS (
           SELECT
             OperationHash as operationHash,
