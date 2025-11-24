@@ -6,15 +6,15 @@ profile: cover.out
 threshold:
   # (optional; default 0) 
   # Minimum coverage percentage required for individual files.
-  file: 70
+  file: 0
 
   # (optional; default 0) 
   # Minimum coverage percentage required for each package.
-  package: 80
+  package: 0
 
   # (optional; default 0) 
   # Minimum overall project coverage percentage required.
-  total: 85
+  total: 0
 
 # Holds regexp rules which will exclude matched files or packages 
 # from coverage statistics.

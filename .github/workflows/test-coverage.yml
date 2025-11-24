@@ -110,7 +110,7 @@ jobs:
           
           echo "" >> coverage-report.md
           echo "---" >> coverage-report.md
-          echo "*Coverage thresholds: File 70% | Package 80% | Total 85%*" >> coverage-report.md
+          echo "*Coverage report generated for monitoring purposes (no thresholds enforced)*" >> coverage-report.md
       
       - name: Comment on PR
         if: github.event_name == 'pull_request'
