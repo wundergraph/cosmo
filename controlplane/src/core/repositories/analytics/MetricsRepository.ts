@@ -741,6 +741,11 @@ export class MetricsRepository {
     const deprecatedStart = metricsDateRange.start;
     const deprecatedEnd = metricsDateRange.end;
 
+    // If we are only fetching operations with deprecated fields and there are no deprecated fields, return an empty array
+    if (includeOperationsWithDeprecatedFieldsOnly && deprecatedFields.length === 0) {
+      return [];
+    }
+
     // Build search filter SQL
     let searchSql = '';
     let searchQueryPattern: string | undefined;
@@ -994,7 +999,9 @@ export class MetricsRepository {
     // Build deprecated fields CTE if we have deprecated fields
     let deprecatedFieldsCte = '';
 
-    if (deprecatedFields.length > 0 && includeOperationsWithDeprecatedFieldsOnly) {
+    if (includeOperationsWithDeprecatedFieldsOnly && deprecatedFields.length === 0) {
+      return 0;
+    } else if (deprecatedFields.length > 0 && includeOperationsWithDeprecatedFieldsOnly) {
       // Build the deprecated fields array
       const deprecatedFieldsArray = deprecatedFields
         .map((field) => {
