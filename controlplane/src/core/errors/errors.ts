@@ -30,7 +30,7 @@ export function isAuthenticationError(e: Error): e is AuthenticationError {
   return e instanceof AuthenticationError;
 }
 
-export function isPublicError(e: Error): e is PublicError {
+export function isPublicError(e: unknown): e is PublicError {
   return e instanceof PublicError;
 }
 
