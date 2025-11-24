@@ -52,7 +52,7 @@ const (
 type ExporterSettings struct {
 	// BatchSize is the maximum number of items to be sent in a single batch.
 	BatchSize int
-	// QueueSize is the maximum number of batches allowed in queue at a given time.
+	// QueueSize is the maximum number of items allowed in queue at a given time.
 	QueueSize int
 	// Interval is the interval at which the queue is flushed.
 	Interval time.Duration
