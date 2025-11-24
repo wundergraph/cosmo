@@ -43,7 +43,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-breakdown
-          path: router/coverage-breakdown.json
+          path: coverage-breakdown.json
           retention-days: 30
       
       # For PRs: Download base coverage and compare
@@ -62,7 +62,7 @@ jobs:
         continue-on-error: true
         run: |
           if [ -f coverage-breakdown.json ]; then
-            mv coverage-breakdown.json router/coverage-breakdown-base.json
+            mv coverage-breakdown.json coverage-breakdown-base.json
           else
             echo "No base coverage file found, skipping diff"
           fi
@@ -98,7 +98,7 @@ jobs:
           echo "" >> coverage-report.md
           
           # Check if we have base coverage for comparison
-          if [ -f ../coverage-breakdown-base.json ]; then
+          if [ -f ../coverage-breakdown-base.json ] || [ -f coverage-breakdown-base.json ]; then
             echo "### 📈 Coverage Comparison" >> coverage-report.md
             echo "" >> coverage-report.md
             echo "Coverage breakdown file exists for comparison with base branch." >> coverage-report.md
@@ -158,4 +158,5 @@ jobs:
           path: |
             router/cover.out
             router/coverage-report.md
+            coverage-breakdown.json
           retention-days: 7
