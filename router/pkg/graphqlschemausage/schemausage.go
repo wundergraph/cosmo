@@ -115,7 +115,7 @@ func GetInputUsageInfo(operation, definition *ast.Document, variables *astjson.V
 
 	// Track input usage from variable definitions
 	for i := range operation.VariableDefinitions {
-		processVariableDefinition(traverser, operation, variables, nullDetector, i)
+		processVariableDefinition(traverser, operation, definition, variables, nullDetector, subgraphMapper, i)
 	}
 
 	// Track input usage from implicitly null input type arguments
@@ -877,7 +877,8 @@ func (t *inputTraverser) infoEquals(a, b *graphqlmetrics.InputUsageInfo) bool {
 // ============================================
 
 // processVariableDefinition processes a variable definition and initiates input traversal.
-func processVariableDefinition(traverser *inputTraverser, operation *ast.Document, variables *astjson.Value, nullDetector *nullValueDetector, ref int) {
+// Tracks input usage even when the variable is not provided in the variables JSON (empty variables).
+func processVariableDefinition(traverser *inputTraverser, operation, definition *ast.Document, variables *astjson.Value, nullDetector *nullValueDetector, subgraphMapper *subgraphMapper, ref int) {
 	varDef := operation.VariableDefinitions[ref]
 	varTypeRef := varDef.Type
 	varTypeName := operation.ResolveTypeNameString(varTypeRef)
@@ -891,6 +892,22 @@ func processVariableDefinition(traverser *inputTraverser, operation *ast.Documen
 	// Look up the variable value
 	jsonField := variables.Get(originalVarName)
 	if jsonField == nil {
+		// Variable is not provided in variables JSON - still track input type usage if it's an input object type
+		// This is important for breaking change detection
+		defNode, ok := definition.NodeByNameStr(varTypeName)
+		if ok && defNode.Kind == ast.NodeKindInputObjectTypeDefinition {
+			// Use normalized name for subgraph lookup
+			traverser.currentVariableName = normalizedVarName
+			subgraphIDs := subgraphMapper.getVariableSubgraphs(normalizedVarName)
+
+			// Track the input type as implicitly null (variable not provided)
+			traverser.appendUniqueUsage(&graphqlmetrics.InputUsageInfo{
+				NamedType:   varTypeName,
+				Path:        []string{varTypeName},
+				SubgraphIDs: subgraphIDs,
+				IsNull:      true, // Variable not provided
+			})
+		}
 		return
 	}
 

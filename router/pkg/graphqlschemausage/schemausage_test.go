@@ -2290,6 +2290,110 @@ func TestImplicitInputTypeArgumentUsage(t *testing.T) {
 	assert.Equal(t, []string{"employees-subgraph"}, searchInputUsage.SubgraphIDs, "Should have correct subgraph ID")
 }
 
+// TestInputUsageWithEmptyVariables verifies that when a variable is defined and used in an argument,
+// but the variables JSON is empty, we still track the input type usage with IsNull: true.
+func TestInputUsageWithEmptyVariables(t *testing.T) {
+	schema := `
+		schema {
+			query: Query
+		}
+		
+		type Query {
+			findEmployees(criteria: SearchInput): [Employee!]!
+		}
+		
+		type Employee {
+			id: ID!
+			details: EmployeeDetails
+		}
+		
+		type EmployeeDetails {
+			forename: String
+		}
+		
+		input SearchInput {
+			department: String
+			title: String
+		}
+	`
+
+	// Operation with variable defined and used in argument, but variables JSON will be empty
+	operation := `
+		query FindEmployeesWithVariable($criteria: SearchInput) {
+			findEmployees(criteria: $criteria) {
+				id
+				details {
+					forename
+				}
+			}
+		}
+	`
+
+	variables := `{}`
+
+	def, rep := astparser.ParseGraphqlDocumentString(schema)
+	require.False(t, rep.HasErrors())
+	op, rep := astparser.ParseGraphqlDocumentString(operation)
+	require.False(t, rep.HasErrors())
+	err := asttransform.MergeDefinitionWithBaseSchema(&def)
+	require.NoError(t, err)
+
+	report := &operationreport.Report{}
+	norm := astnormalization.NewNormalizer(true, true)
+	norm.NormalizeOperation(&op, &def, report)
+	require.False(t, report.HasErrors())
+
+	valid := astvalidation.DefaultOperationValidator()
+	valid.Validate(&op, &def, report)
+	require.False(t, report.HasErrors())
+
+	dsCfg, err := plan.NewDataSourceConfiguration[any](
+		"employees-subgraph",
+		&FakeFactory[any]{upstreamSchema: &def},
+		&plan.DataSourceMetadata{
+			RootNodes: []plan.TypeField{
+				{TypeName: "Query", FieldNames: []string{"findEmployees"}},
+			},
+			ChildNodes: []plan.TypeField{
+				{TypeName: "Employee", FieldNames: []string{"id", "details"}},
+				{TypeName: "EmployeeDetails", FieldNames: []string{"forename"}},
+			},
+		},
+		nil,
+	)
+	require.NoError(t, err)
+
+	planner, err := plan.NewPlanner(plan.Configuration{
+		DisableResolveFieldPositions: true,
+		DataSources:                  []plan.DataSource{dsCfg},
+	})
+	require.NoError(t, err)
+
+	generatedPlan := planner.Plan(&op, &def, "FindEmployeesWithVariable", report)
+	require.False(t, report.HasErrors())
+
+	vars, err := astjson.Parse(variables)
+	require.NoError(t, err)
+
+	// Get input usage - should include SearchInput even though variable is not provided
+	inputUsageInfo, err := GetInputUsageInfo(&op, &def, vars, generatedPlan, nil)
+	require.NoError(t, err)
+
+	// Verify input usage includes SearchInput from the variable definition
+	var searchInputUsage *graphqlmetricsv1.InputUsageInfo
+	for _, input := range inputUsageInfo {
+		if input.NamedType == "SearchInput" && len(input.Path) == 1 && input.Path[0] == "SearchInput" {
+			searchInputUsage = input
+			break
+		}
+	}
+	require.NotNil(t, searchInputUsage, "Should track input usage for SearchInput type even though variable is not provided in empty variables JSON")
+	assert.Equal(t, "SearchInput", searchInputUsage.NamedType)
+	assert.Equal(t, []string{"SearchInput"}, searchInputUsage.Path)
+	assert.True(t, searchInputUsage.IsNull, "SearchInput should be marked as null since variable is not provided")
+	assert.Equal(t, []string{"employees-subgraph"}, searchInputUsage.SubgraphIDs, "Should have correct subgraph ID")
+}
+
 // TestSharedInputObjectAcrossSubgraphs verifies that when an input object variable is used by
 // multiple fields from different subgraphs, the input usage (including nested fields) is
 // attributed to all subgraphs that use it (merged).
