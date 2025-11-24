@@ -32,10 +32,10 @@ jobs:
       # For main/master/test-coverage-main branch: Generate and store coverage breakdown
       - name: Check test coverage and generate breakdown
         if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/test-coverage-main')
-        working-directory: router
         uses: vladopajic/go-test-coverage@v2
         with:
-          config: ./.testcoverage.yml
+          config: ./router/.testcoverage.yml
+          profile: ./router/cover.out
       
       - name: Store coverage breakdown as artifact (base branch only)
         if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/test-coverage-main')
@@ -69,11 +69,11 @@ jobs:
       - name: Check test coverage with diff
         if: github.event_name == 'pull_request'
         id: coverage-check
-        working-directory: router
         uses: vladopajic/go-test-coverage@v2
         continue-on-error: true
         with:
-          config: ./.testcoverage.yml
+          config: ./router/.testcoverage.yml
+          profile: ./router/cover.out
       
       - name: Generate coverage report
         if: github.event_name == 'pull_request'
