@@ -732,7 +732,7 @@ export class MetricsRepository {
   ) {
     const { dateRange: metricsDateRange, organizationId, graphId, whereSql, queryParams } = this.getMetricsProps(props);
     const sortField = props.fetchBasedOn || 'latency';
-    const sortDirection = props.sortDirection || 'desc';
+    const sortDirection: 'ASC' | 'DESC' = props.sortDirection === 'asc' ? 'ASC' : 'DESC';
     const searchQuery = props.searchQuery;
     const offset = props.offset || 0;
     const deprecatedFields = props.deprecatedFields;
@@ -876,7 +876,7 @@ export class MetricsRepository {
         ${deprecatedFields.length > 0 ? "IF(dep.operationHash IS NOT NULL AND dep.operationHash != '', 1, 0)" : 0} as hasDeprecatedFields
       FROM ops
       ${deprecatedFieldsJoin}
-      ORDER BY ops.latency ${sortDirection.toUpperCase()}
+      ORDER BY ops.latency ${sortDirection}
       ${limitOffsetClause}`;
 
       res = await this.client.queryPromise(query, queryParamsWithPagination);
@@ -911,7 +911,7 @@ export class MetricsRepository {
         ${deprecatedFields.length > 0 ? "IF(dep.operationHash IS NOT NULL AND dep.operationHash != '', 1, 0)" : 0} as hasDeprecatedFields
       FROM ops
       ${deprecatedFieldsJoin}
-      ORDER BY ops.requestCount ${sortDirection.toUpperCase()}
+      ORDER BY ops.requestCount ${sortDirection}
       ${limitOffsetClause}`;
 
       res = await this.client.queryPromise(query, queryParamsWithPagination);
@@ -949,7 +949,7 @@ export class MetricsRepository {
         ${deprecatedFields.length > 0 ? "IF(dep.operationHash IS NOT NULL AND dep.operationHash != '', 1, 0)" : 0} as hasDeprecatedFields
       FROM ops
       ${deprecatedFieldsJoin}
-      ORDER BY ops.errorPercentage ${sortDirection.toUpperCase()}
+      ORDER BY ops.errorPercentage ${sortDirection}
       ${limitOffsetClause}`;
 
       res = await this.client.queryPromise(query, queryParamsWithPagination);
