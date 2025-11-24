@@ -26,6 +26,7 @@ func createMeasures(meter otelmetric.Meter, opts MetricOpts) (*Measurements, err
 		observableGauges: map[string]otelmetric.Int64ObservableGauge{},
 	}
 
+	// THere
 	requestCounter, err := meter.Int64Counter(
 		RequestCounter,
 		RequestCounterOptions...,
