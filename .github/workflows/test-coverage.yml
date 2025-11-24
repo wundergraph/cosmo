@@ -36,6 +36,7 @@ jobs:
         with:
           config: ./router/.testcoverage.yml
           profile: ./router/cover.out
+          source-dir: ./router
       
       - name: Store coverage breakdown as artifact (base branch only)
         if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/test-coverage-main')
@@ -74,6 +75,7 @@ jobs:
         with:
           config: ./router/.testcoverage.yml
           profile: ./router/cover.out
+          source-dir: ./router
       
       - name: Generate coverage report
         if: github.event_name == 'pull_request'
