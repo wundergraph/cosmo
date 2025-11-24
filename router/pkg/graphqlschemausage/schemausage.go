@@ -27,10 +27,24 @@ type TypeFieldMetrics []*TypeFieldUsageInfo
 
 // IntoGraphQLMetrics converts the TypeFieldMetrics into a []*graphqlmetrics.TypeFieldUsageInfo
 func (t TypeFieldMetrics) IntoGraphQLMetrics() []*graphqlmetrics.TypeFieldUsageInfo {
-	// Pre-allocate slice with exact capacity
+	if len(t) == 0 {
+		return nil
+	}
+
+	// Pre-allocate backing array for all structs in one allocation to reduce heap allocations
+	backing := make([]graphqlmetrics.TypeFieldUsageInfo, len(t))
 	metrics := make([]*graphqlmetrics.TypeFieldUsageInfo, len(t))
+
 	for i, info := range t {
-		metrics[i] = info.IntoGraphQLMetrics()
+		backing[i] = graphqlmetrics.TypeFieldUsageInfo{
+			Path:                   info.Path,
+			TypeNames:              info.ParentTypeNames,
+			SubgraphIDs:            info.SubgraphIDs,
+			NamedType:              info.NamedType,
+			IndirectInterfaceField: info.IndirectInterfaceField,
+			Count:                  0,
+		}
+		metrics[i] = &backing[i]
 	}
 	return metrics
 }
@@ -47,6 +61,7 @@ type TypeFieldUsageInfo struct {
 }
 
 // IntoGraphQLMetrics converts the graphqlschemausage.TypeFieldUsageInfo into a *graphqlmetrics.TypeFieldUsageInfo
+// Use TypeFieldMetrics.IntoGraphQLMetrics where possible if processing in bulk, it's faster.
 func (t *TypeFieldUsageInfo) IntoGraphQLMetrics() *graphqlmetrics.TypeFieldUsageInfo {
 	return &graphqlmetrics.TypeFieldUsageInfo{
 		Path:                   t.Path,

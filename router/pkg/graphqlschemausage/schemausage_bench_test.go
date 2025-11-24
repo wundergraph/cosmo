@@ -61,7 +61,7 @@ func setupBenchmark(b *testing.B) (plan.Plan, *ast.Document, *ast.Document, *ast
 	require.False(b, report.HasErrors())
 
 	// Create data source configuration
-	dsCfg, err := plan.NewDataSourceConfiguration[any](
+	dsCfg, err := plan.NewDataSourceConfiguration(
 		"https://swapi.dev/api",
 		&FakeFactory[any]{upstreamSchema: &def},
 		&plan.DataSourceMetadata{
@@ -107,10 +107,9 @@ func setupBenchmark(b *testing.B) (plan.Plan, *ast.Document, *ast.Document, *ast
 func BenchmarkGetTypeFieldUsageInfo(b *testing.B) {
 	generatedPlan, _, _, _ := setupBenchmark(b)
 
-	b.ResetTimer()
 	b.ReportAllocs()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		result := GetTypeFieldUsageInfo(generatedPlan)
 		_ = result // Prevent compiler optimization
 	}
@@ -120,10 +119,9 @@ func BenchmarkGetTypeFieldUsageInfo(b *testing.B) {
 func BenchmarkGetArgumentUsageInfo(b *testing.B) {
 	_, operation, definition, _ := setupBenchmark(b)
 
-	b.ResetTimer()
 	b.ReportAllocs()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		result, err := GetArgumentUsageInfo(operation, definition)
 		if err != nil {
 			b.Fatal(err)
@@ -136,10 +134,9 @@ func BenchmarkGetArgumentUsageInfo(b *testing.B) {
 func BenchmarkGetInputUsageInfo(b *testing.B) {
 	_, operation, definition, variables := setupBenchmark(b)
 
-	b.ResetTimer()
 	b.ReportAllocs()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		result, err := GetInputUsageInfo(operation, definition, variables)
 		if err != nil {
 			b.Fatal(err)
@@ -153,10 +150,9 @@ func BenchmarkIntoGraphQLMetrics(b *testing.B) {
 	generatedPlan, _, _, _ := setupBenchmark(b)
 	typeFieldMetrics := TypeFieldMetrics(GetTypeFieldUsageInfo(generatedPlan))
 
-	b.ResetTimer()
 	b.ReportAllocs()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		result := typeFieldMetrics.IntoGraphQLMetrics()
 		_ = result // Prevent compiler optimization
 	}
@@ -167,10 +163,9 @@ func BenchmarkIntoGraphQLMetrics(b *testing.B) {
 func BenchmarkSchemaUsageEndToEnd(b *testing.B) {
 	generatedPlan, operation, definition, variables := setupBenchmark(b)
 
-	b.ResetTimer()
 	b.ReportAllocs()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		// Extract type field usage
 		typeFieldUsage := GetTypeFieldUsageInfo(generatedPlan)
 
