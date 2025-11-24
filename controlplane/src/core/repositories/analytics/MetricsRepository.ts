@@ -840,8 +840,8 @@ export class MetricsRepository {
       query = `
       WITH
         toDateTime({startDate:UInt32}) AS startDate,
-        toDateTime({endDate:UInt32}) AS endDate${deprecatedFieldsCte ? ',' : ''}
-        ${deprecatedFieldsCte}${deprecatedFieldsCte ? '' : ','}
+        toDateTime({endDate:UInt32}) AS endDate,
+        ${deprecatedFieldsCte}
         ops AS (
           SELECT
             OperationHash as operationHash,
@@ -884,8 +884,8 @@ export class MetricsRepository {
       query = `
       WITH
         toDateTime({startDate:UInt32}) AS startDate,
-        toDateTime({endDate:UInt32}) AS endDate${deprecatedFieldsCte ? ',' : ''}
-        ${deprecatedFieldsCte}${deprecatedFieldsCte ? '' : ','}
+        toDateTime({endDate:UInt32}) AS endDate,
+        ${deprecatedFieldsCte}
         ops AS (
           SELECT
             OperationHash as operationHash,
@@ -920,8 +920,8 @@ export class MetricsRepository {
       query = `
       WITH
         toDateTime({startDate:UInt32}) AS startDate,
-        toDateTime({endDate:UInt32}) AS endDate${deprecatedFieldsCte ? ',' : ''}
-        ${deprecatedFieldsCte}${deprecatedFieldsCte ? '' : ','}
+        toDateTime({endDate:UInt32}) AS endDate,
+        ${deprecatedFieldsCte}
         ops AS (
           SELECT
             OperationHash as operationHash,
@@ -1162,8 +1162,8 @@ export class MetricsRepository {
   > {
     const query = `
     WITH
-      toDateTime({startTimestamp:String}) AS startDate,
-      toDateTime({endTimestamp:String}) AS endDate
+      toDateTime({startTimestamp:UInt32}) AS startDate,
+      toDateTime({endTimestamp:UInt32}) AS endDate
     SELECT
       ClientName as name,
       ClientVersion as version,
