@@ -5,7 +5,6 @@ on:
     branches: [ main, master, test-coverage-main ]
   pull_request:
     branches: [ main, master, test-coverage-main ]
-
 jobs:
   test-coverage:
     runs-on: ubuntu-latest
@@ -23,14 +22,17 @@ jobs:
           go-version: '1.21'
       
       - name: Run tests
+        working-directory: router
         run: go test ./... -v
       
       - name: Generate test coverage
+        working-directory: router
         run: go test ./... -coverprofile=./cover.out -covermode=atomic -coverpkg=./...
       
       # For main/master/test-coverage-main branch: Generate and store coverage breakdown
       - name: Check test coverage and generate breakdown
         if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/test-coverage-main')
+        working-directory: router
         uses: vladopajic/go-test-coverage@v2
         with:
           config: ./.testcoverage.yml
@@ -40,7 +42,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-breakdown
-          path: coverage-breakdown.json
+          path: router/coverage-breakdown.json
           retention-days: 30
       
       # For PRs: Download base coverage and compare
@@ -67,6 +69,7 @@ jobs:
       - name: Check test coverage with diff
         if: github.event_name == 'pull_request'
         id: coverage-check
+        working-directory: router
         uses: vladopajic/go-test-coverage@v2
         continue-on-error: true
         with:
@@ -74,6 +77,7 @@ jobs:
       
       - name: Generate coverage report
         if: github.event_name == 'pull_request'
+        working-directory: router
         run: |
           # Generate coverage summary
           TOTAL_COV=$(go tool cover -func=cover.out | grep total | awk '{print $3}')
@@ -92,7 +96,7 @@ jobs:
           echo "" >> coverage-report.md
           
           # Check if we have base coverage for comparison
-          if [ -f coverage-breakdown-base.json ]; then
+          if [ -f ../coverage-breakdown-base.json ]; then
             echo "### 📈 Coverage Comparison" >> coverage-report.md
             echo "" >> coverage-report.md
             echo "Coverage breakdown file exists for comparison with base branch." >> coverage-report.md
@@ -113,7 +117,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
-            const coverageReport = fs.readFileSync('coverage-report.md', 'utf8');
+            const coverageReport = fs.readFileSync('router/coverage-report.md', 'utf8');
             
             // Find existing coverage comment
             const comments = await github.rest.issues.listComments({
@@ -150,6 +154,6 @@ jobs:
         with:
           name: pr-coverage
           path: |
-            cover.out
-            coverage-report.md
+            router/cover.out
+            router/coverage-report.md
           retention-days: 7
