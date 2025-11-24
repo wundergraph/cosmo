@@ -743,9 +743,10 @@ export class MetricsRepository {
 
     // Build search filter SQL
     let searchSql = '';
+    let searchQueryPattern: string | undefined;
     if (searchQuery) {
-      const escapedSearch = searchQuery.replace(/'/g, "''").toLowerCase();
-      searchSql = `AND (lower(OperationName) LIKE '%${escapedSearch}%' OR lower(OperationHash) LIKE '%${escapedSearch}%')`;
+      searchQueryPattern = `%${searchQuery.toLowerCase()}%`;
+      searchSql = `AND (lower(OperationName) LIKE {searchQueryPattern:String} OR lower(OperationHash) LIKE {searchQueryPattern:String})`;
     }
 
     // Exclude introspection queries
@@ -822,12 +823,13 @@ export class MetricsRepository {
       ...queryParams,
       limit: props.limit,
       offset,
+      organizationId,
+      federatedGraphId: graphId,
+      ...(searchQueryPattern ? { searchQueryPattern } : {}),
       ...(deprecatedFields.length > 0
         ? {
             deprecatedStart,
             deprecatedEnd,
-            organizationId,
-            federatedGraphId: graphId,
           }
         : {}),
     };
@@ -855,8 +857,8 @@ export class MetricsRepository {
             sumForEachMerge(BucketCounts) as BucketCounts
           FROM ${this.client.database}.operation_latency_metrics_5_30
           WHERE Timestamp >= startDate AND Timestamp <= endDate
-            AND OrganizationID = '${organizationId}'
-            AND FederatedGraphID = '${graphId}'
+            AND OrganizationID = {organizationId:String}
+            AND FederatedGraphID = {federatedGraphId:String}
             ${whereSql ? `AND ${whereSql}` : ''}
             ${searchSql}
             ${introspectionFilter}
@@ -890,8 +892,8 @@ export class MetricsRepository {
             sum(TotalRequests) as requestCount
           FROM ${this.client.database}.operation_request_metrics_5_30
           WHERE Timestamp >= startDate AND Timestamp <= endDate
-            AND OrganizationID = '${organizationId}'
-            AND FederatedGraphID = '${graphId}'
+            AND OrganizationID = {organizationId:String}
+            AND FederatedGraphID = {federatedGraphId:String}
             ${whereSql ? `AND ${whereSql}` : ''}
             ${searchSql}
             ${introspectionFilter}
@@ -928,8 +930,8 @@ export class MetricsRepository {
             if(sum(TotalRequests) > 0, round(sum(TotalErrors) / sum(TotalRequests) * 100, 2), 0) as errorPercentage
           FROM ${this.client.database}.operation_request_metrics_5_30
           WHERE Timestamp >= startDate AND Timestamp <= endDate
-            AND OrganizationID = '${organizationId}'
-            AND FederatedGraphID = '${graphId}'
+              AND OrganizationID = {organizationId:String}
+              AND FederatedGraphID = {federatedGraphId:String}
             ${whereSql ? `AND ${whereSql}` : ''}
             ${searchSql}
             ${introspectionFilter}
