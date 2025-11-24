@@ -69,7 +69,7 @@ describe('InviteUser', () => {
     await server.close();
   });
 
-  test('that an organization admin can remove an user invitation', async () => {
+  test('that an organization admin can remove a user invitation', async () => {
     const { authenticator, client, mailerClient, server, users: { adminAliceCompanyA, adminJimCompanyB } } = await SetupTest({ dbname, enableMultiUsers: true, });
 
     const spy = vi.spyOn(mailerClient, 'sendInviteEmail');
@@ -105,7 +105,7 @@ describe('InviteUser', () => {
     await server.close();
   });
 
-  test('that an organization developer cannot remove an user invitation', async () => {
+  test('that an organization developer cannot remove a user invitation', async () => {
     const { authenticator, client, mailerClient, server, users: { adminAliceCompanyA, devJoeCompanyA, adminJimCompanyB } } = await SetupTest({ dbname, enableMultiUsers: true, });
 
     const spy = vi.spyOn(mailerClient, 'sendInviteEmail');
