@@ -29,6 +29,14 @@ func NewGraphQLMetricsExporter(
 		Logger:   logger,
 	})
 
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+
+	if settings == nil {
+		settings = exporter.NewDefaultExporterSettings()
+	}
+
 	exporter, err := exporter.NewExporter(logger, sink, IsRetryableError, settings)
 	if err != nil {
 		return nil, err

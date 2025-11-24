@@ -29,6 +29,14 @@ func NewPrometheusMetricsExporter(
 		IncludeOpSha: includeOpSha,
 	})
 
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+
+	if settings == nil {
+		settings = exporter.NewDefaultExporterSettings()
+	}
+
 	// Prometheus metrics are local, so errors are generally not retryable
 	// (they indicate programming errors or resource exhaustion)
 	errorHandler := func(err error) bool {
