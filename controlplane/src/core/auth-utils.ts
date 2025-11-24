@@ -273,6 +273,11 @@ export default class AuthUtils {
         code,
         redirect_uri: this.getRedirectUri({ redirectURL, sso: ssoSlug }),
       }),
+      validateStatus: function (status: number): boolean {
+        // All user-level (4xx) errors are handled below by returning `AuthenticationError`.
+        // For any server errors (5xx), we want to surface those separately.
+        return status < 500;
+      },
     });
 
     if (resp.status !== 200) {
