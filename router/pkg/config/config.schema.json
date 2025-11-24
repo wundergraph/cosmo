@@ -2306,6 +2306,31 @@
               }
             }
           }
+        },
+        "handlers": {
+          "type": "object",
+          "description": "Configuration for Cosmo Streams / EDFS custom modules",
+          "additionalProperties": false,
+          "properties": {
+            "on_receive_events": {
+              "type": "object",
+              "description": "Configuration for the OnReceiveEvents hook that is called when events are received from a broker.",
+              "additionalProperties": false,
+              "properties": {
+                "max_concurrent_handlers": {
+                  "type": "integer",
+                  "description": "The maximum number of concurrent event receive handlers. This controls the concurrency of the OnReceiveEvents custom modules.",
+                  "minimum": 1,
+                  "default": 100
+                },
+                "handler_timeout": {
+                  "type": "string",
+                  "description": "The amount of time that OnReceiveEvents handlers can run in total for a single batch of events. Specify as a duration string (e.g., '5s', '1m', '500ms').",
+                  "default": "5s"
+                }
+              }
+            }
+          }
         }
       }
     },
