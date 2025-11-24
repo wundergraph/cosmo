@@ -78,9 +78,12 @@ export async function decrypt<Payload = JWTPayload>(params: JWTDecodeParams): Pr
     throw new Error('No token provided');
   }
   const encryptionSecret = await getDerivedEncryptionKey(secret);
-  const { payload } = await jwtDecrypt(token, encryptionSecret, {
-    clockTolerance: 15,
-  }).catch(function (err: any) {
+  try {
+    const { payload } = await jwtDecrypt(token, encryptionSecret, {
+      clockTolerance: 15,
+    });
+    return payload as Payload;
+  } catch (err: any) {
     if (
       err instanceof errors.JWTExpired ||
       err instanceof errors.JWTClaimValidationFailed ||
@@ -88,10 +91,8 @@ export async function decrypt<Payload = JWTPayload>(params: JWTDecodeParams): Pr
     ) {
       throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, err.message);
     }
-
     throw err;
-  });
-  return payload as Payload;
+  }
 }
 
 /**

@@ -37,20 +37,19 @@ export default class Keycloak {
   }
 
   public async authenticateClient() {
-    await this.client
-      .auth({
+    try {
+      await this.client.auth({
         grantType: 'password',
         username: this.adminUser,
         password: this.adminPassword,
         clientId: 'admin-cli',
-      })
-      .catch(function (err: any) {
-        if (err instanceof NetworkError) {
-          throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, err.message);
-        }
-
-        throw err;
       });
+    } catch (err: any) {
+      if (err instanceof NetworkError) {
+        throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, err.message);
+      }
+      throw err;
+    }
   }
 
   public async roleExists({ realm, roleName }: { realm?: string; roleName: string }): Promise<boolean> {
