@@ -23,12 +23,6 @@ func NewPrometheusMetricsExporter(
 	includeOpSha bool,
 	settings *exporter.ExporterSettings,
 ) (*PrometheusMetricsExporter, error) {
-	sink := NewPrometheusSink(PrometheusSinkConfig{
-		MetricStore:  metricStore,
-		Logger:       logger,
-		IncludeOpSha: includeOpSha,
-	})
-
 	if logger == nil {
 		logger = zap.NewNop()
 	}
@@ -36,6 +30,12 @@ func NewPrometheusMetricsExporter(
 	if settings == nil {
 		settings = exporter.NewDefaultExporterSettings()
 	}
+
+	sink := NewPrometheusSink(PrometheusSinkConfig{
+		MetricStore:  metricStore,
+		Logger:       logger,
+		IncludeOpSha: includeOpSha,
+	})
 
 	// Prometheus metrics are local, so errors are generally not retryable
 	// (they indicate programming errors or resource exhaustion)
