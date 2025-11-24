@@ -1,0 +1,155 @@
+name: Go Test Coverage Check
+
+on:
+  push:
+    branches: [ main, master, test-coverage-main ]
+  pull_request:
+    branches: [ main, master, test-coverage-main ]
+
+jobs:
+  test-coverage:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write  # Required to comment on PRs
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Run tests
+        run: go test ./... -v
+
+      - name: Generate test coverage
+        run: go test ./... -coverprofile=./cover.out -covermode=atomic -coverpkg=./...
+
+      # For main/master/test-coverage-main branch: Generate and store coverage breakdown
+      - name: Check test coverage and generate breakdown
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/test-coverage-main')
+        uses: vladopajic/go-test-coverage@v2
+        with:
+          config: ./.testcoverage.yml
+
+      - name: Store coverage breakdown as artifact (base branch only)
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/test-coverage-main')
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-breakdown
+          path: coverage-breakdown.json
+          retention-days: 30
+
+      # For PRs: Download base coverage and compare
+      - name: Download base coverage breakdown
+        if: github.event_name == 'pull_request'
+        uses: dawidd6/action-download-artifact@v2
+        continue-on-error: true
+        with:
+          workflow: test-coverage.yml
+          branch: ${{ github.base_ref }}
+          name: coverage-breakdown
+          path: .
+
+      - name: Rename base coverage file
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        run: |
+          if [ -f coverage-breakdown.json ]; then
+            mv coverage-breakdown.json coverage-breakdown-base.json
+          else
+            echo "No base coverage file found, skipping diff"
+          fi
+
+      - name: Check test coverage with diff
+        if: github.event_name == 'pull_request'
+        id: coverage-check
+        uses: vladopajic/go-test-coverage@v2
+        continue-on-error: true
+        with:
+          config: ./.testcoverage.yml
+
+      - name: Generate coverage report
+        if: github.event_name == 'pull_request'
+        run: |
+          # Generate coverage summary
+          TOTAL_COV=$(go tool cover -func=cover.out | grep total | awk '{print $3}')
+          echo "TOTAL_COVERAGE=$TOTAL_COV" >> $GITHUB_ENV
+          
+          # Generate coverage by package
+          echo "## 📊 Test Coverage Report" > coverage-report.md
+          echo "" >> coverage-report.md
+          echo "**Total Coverage:** \`$TOTAL_COV\`" >> coverage-report.md
+          echo "" >> coverage-report.md
+          echo "### Coverage by Package" >> coverage-report.md
+          echo "" >> coverage-report.md
+          echo "\`\`\`" >> coverage-report.md
+          go tool cover -func=cover.out | grep -v "total:" >> coverage-report.md
+          echo "\`\`\`" >> coverage-report.md
+          echo "" >> coverage-report.md
+          
+          # Check if we have base coverage for comparison
+          if [ -f coverage-breakdown-base.json ]; then
+            echo "### 📈 Coverage Comparison" >> coverage-report.md
+            echo "" >> coverage-report.md
+            echo "Coverage breakdown file exists for comparison with base branch." >> coverage-report.md
+          else
+            echo "### ℹ️ Note" >> coverage-report.md
+            echo "" >> coverage-report.md
+            echo "No base coverage data available for comparison. This is expected for the first PR after setting up coverage tracking." >> coverage-report.md
+          fi
+          
+          echo "" >> coverage-report.md
+          echo "---" >> coverage-report.md
+          echo "*Coverage thresholds: File 70% | Package 80% | Total 85%*" >> coverage-report.md
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const coverageReport = fs.readFileSync('coverage-report.md', 'utf8');
+            
+            // Find existing coverage comment
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.data.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('📊 Test Coverage Report')
+            );
+            
+            // Create or update comment
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: coverageReport
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: coverageReport
+              });
+            }
+
+      - name: Upload coverage files
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v3
+        with:
+          name: pr-coverage
+          path: |
+            cover.out
+            coverage-report.md
+          retention-days: 7

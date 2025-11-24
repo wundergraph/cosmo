@@ -4,6 +4,8 @@ else
  FORMAT := pkgname
 endif
 
+GOBIN ?= $$(go env GOPATH)/bin
+
 dev:
 	go run cmd/router/main.go
 
@@ -12,6 +14,18 @@ compose-demo-config:
 
 update-snapshot:
 	cd ./pkg/config && GOLDIE_UPDATE=1 go test -race ./...
+
+# Install go-test-coverage tool
+install-go-test-coverage:
+	@echo "Installing go-test-coverage..."
+	go install github.com/vladopajic/go-test-coverage/v2@latest
+
+# Run tests with coverage and check thresholds
+check-coverage: install-go-test-coverage
+	@echo "Running tests with coverage..."
+	go test ./... -coverprofile=./cover.out -covermode=atomic -coverpkg=./...
+	@echo "Checking coverage thresholds..."
+	${GOBIN}/go-test-coverage --config=./.testcoverage.yml
 
 test:
 	gotestsum -f $(FORMAT) -- -race ./...
