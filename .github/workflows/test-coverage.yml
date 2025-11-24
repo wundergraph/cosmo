@@ -62,7 +62,7 @@ jobs:
         continue-on-error: true
         run: |
           if [ -f coverage-breakdown.json ]; then
-            mv coverage-breakdown.json coverage-breakdown-base.json
+            mv coverage-breakdown.json router/coverage-breakdown-base.json
           else
             echo "No base coverage file found, skipping diff"
           fi
