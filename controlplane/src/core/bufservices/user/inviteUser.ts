@@ -20,7 +20,7 @@ export function inviteUser(
     logger = enrichLogger(ctx, logger, authContext);
 
     const auditLogRepo = new AuditLogRepository(opts.db);
-    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdminOrDeveloper) {
+    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdmin) {
       throw new UnauthorizedError();
     }
 
