@@ -38,7 +38,7 @@ The `requestLatencyRecordThreshold` is the threshold in milliseconds above which
 
 ### `recordMultiple`
 
-The `recordMultiple` is a boolean that indicates whether the flight recorder should record multiple traces or not. Defaults to `false`.
+The `recordMultiple` is a boolean that indicates whether the flight recorder should record multiple traces. Defaults to `false`.
 
 ## Run the Router
 
@@ -55,9 +55,3 @@ go run ./cmd/flightrecorder/main.go
 ```bash
 go build -o router ./cmd/flightrecorder/main.go
 ```
-
-## Run tests
-
-Tests for this module can be found within the [integration tests](../router-tests/module).
-
-_All commands are run from the root of the router directory._

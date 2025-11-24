@@ -63,7 +63,7 @@ func (m *FlightRecorder) Provision(ctx *core.ModuleContext) error {
 	}
 
 	m.fl = trace.NewFlightRecorder(trace.FlightRecorderConfig{
-		MinAge:   m.requestLatencyRecordThresholdDuration,
+		MinAge:   m.requestLatencyRecordThresholdDuration * 2,
 		MaxBytes: maxBytes,
 	})
 
