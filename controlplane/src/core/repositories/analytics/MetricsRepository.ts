@@ -825,6 +825,8 @@ export class MetricsRepository {
       offset,
       organizationId,
       federatedGraphId: graphId,
+      startDate: metricsDateRange.start,
+      endDate: metricsDateRange.end,
       ...(searchQueryPattern ? { searchQueryPattern } : {}),
       ...(deprecatedFields.length > 0
         ? {
@@ -837,8 +839,8 @@ export class MetricsRepository {
     if (sortField === 'latency') {
       query = `
       WITH
-        toDateTime('${metricsDateRange.start}') AS startDate,
-        toDateTime('${metricsDateRange.end}') AS endDate${deprecatedFieldsCte ? ',' : ''}
+        toDateTime({startDate:UInt32}) AS startDate,
+        toDateTime({endDate:UInt32}) AS endDate${deprecatedFieldsCte ? ',' : ''}
         ${deprecatedFieldsCte}${deprecatedFieldsCte ? '' : ','}
         ops AS (
           SELECT
@@ -881,8 +883,8 @@ export class MetricsRepository {
     } else if (sortField === 'requests') {
       query = `
       WITH
-        toDateTime('${metricsDateRange.start}') AS startDate,
-        toDateTime('${metricsDateRange.end}') AS endDate${deprecatedFieldsCte ? ',' : ''}
+        toDateTime({startDate:UInt32}) AS startDate,
+        toDateTime({endDate:UInt32}) AS endDate${deprecatedFieldsCte ? ',' : ''}
         ${deprecatedFieldsCte}${deprecatedFieldsCte ? '' : ','}
         ops AS (
           SELECT
@@ -917,8 +919,8 @@ export class MetricsRepository {
       // sortField === 'errors'
       query = `
       WITH
-        toDateTime('${metricsDateRange.start}') AS startDate,
-        toDateTime('${metricsDateRange.end}') AS endDate${deprecatedFieldsCte ? ',' : ''}
+        toDateTime({startDate:UInt32}) AS startDate,
+        toDateTime({endDate:UInt32}) AS endDate${deprecatedFieldsCte ? ',' : ''}
         ${deprecatedFieldsCte}${deprecatedFieldsCte ? '' : ','}
         ops AS (
           SELECT
@@ -966,6 +968,145 @@ export class MetricsRepository {
     }
 
     return [];
+  }
+
+  public async getOperationsCount(
+    props: GetMetricsViewProps & {
+      searchQuery?: string;
+      deprecatedFields: { name: string; typeNames: string[] }[];
+      includeOperationsWithDeprecatedFieldsOnly: boolean;
+    },
+  ) {
+    const { dateRange, organizationId, graphId, whereSql, queryParams } = this.getMetricsProps(props);
+    const searchQuery = props.searchQuery;
+    const deprecatedFields = props.deprecatedFields;
+    const includeOperationsWithDeprecatedFieldsOnly = props.includeOperationsWithDeprecatedFieldsOnly;
+
+    let searchSql = '';
+    let searchQueryPattern: string | undefined;
+    if (searchQuery) {
+      searchQueryPattern = `%${searchQuery.toLowerCase()}%`;
+      searchSql = `AND (lower(OperationName) LIKE {searchQueryPattern:String} OR lower(OperationHash) LIKE {searchQueryPattern:String})`;
+    }
+
+    const introspectionFilter = `AND OperationName != 'IntrospectionQuery'`;
+
+    // Build deprecated fields CTE if we have deprecated fields
+    let deprecatedFieldsCte = '';
+
+    if (deprecatedFields.length > 0 && includeOperationsWithDeprecatedFieldsOnly) {
+      // Build the deprecated fields array
+      const deprecatedFieldsArray = deprecatedFields
+        .map((field) => {
+          const escapedName = field.name.replace(/'/g, "''");
+          const quotedTypeNames = field.typeNames.map((tn) => `'${tn.replace(/'/g, "''")}'`).join(', ');
+          return `('${escapedName}', [${quotedTypeNames}])`;
+        })
+        .join(', ');
+
+      deprecatedFieldsCte = `
+        deprecated_fields AS (
+          SELECT
+            field.1 as Name,
+            field.2 as TypeNames
+          FROM (
+            SELECT
+              arrayJoin([ ${deprecatedFieldsArray} ]) as field
+          )
+        ),
+        operations_with_deprecated_fields AS (
+          SELECT DISTINCT
+            OperationHash as operationHash,
+            OperationName as operationName
+          FROM ${this.client.database}.gql_metrics_schema_usage_lite_1d_90d
+          INNER JOIN deprecated_fields AS df
+            ON FieldName = df.Name
+          WHERE 
+            Timestamp >= toStartOfDay(toDateTime({startDate:UInt32}))
+            AND Timestamp <= toDateTime({endDate:UInt32})
+            AND OrganizationID = {organizationId:String}
+            AND FederatedGraphID = {federatedGraphId:String}
+            AND hasAny(TypeNames, df.TypeNames) = 1
+        ),`;
+
+      const query = `
+      WITH
+        toDateTime({startDate:UInt32}) AS startDate,
+        toDateTime({endDate:UInt32}) AS endDate${deprecatedFieldsCte ? ',' : ''}
+        ${deprecatedFieldsCte}${deprecatedFieldsCte ? '' : ','}
+        ops AS (
+          SELECT
+            OperationHash as operationHash,
+            OperationName as operationName,
+            OperationType as operationType,
+            sum(TotalRequests) as requestCount,
+            sum(TotalErrors) as errorCount,
+            if(sum(TotalRequests) > 0, round(sum(TotalErrors) / sum(TotalRequests) * 100, 2), 0) as errorPercentage
+          FROM ${this.client.database}.operation_request_metrics_5_30
+          WHERE Timestamp >= startDate AND Timestamp <= endDate
+              AND OrganizationID = {organizationId:String}
+              AND FederatedGraphID = {federatedGraphId:String}
+            ${whereSql ? `AND ${whereSql}` : ''}
+            ${searchSql}
+            ${introspectionFilter}
+          GROUP BY OperationName, OperationHash, OperationType
+        )
+      SELECT
+        COUNT(*) as count
+      FROM ops
+      INNER JOIN operations_with_deprecated_fields AS dep
+        ON ops.operationHash = dep.operationHash
+        AND ops.operationName = dep.operationName
+      `;
+
+      const res: {
+        count: number;
+      }[] = await this.client.queryPromise(query, {
+        ...queryParams,
+        organizationId,
+        federatedGraphId: graphId,
+        startDate: dateRange.start,
+        endDate: dateRange.end,
+        ...(searchQueryPattern ? { searchQueryPattern } : {}),
+      });
+
+      return res[0].count;
+    } else {
+      const query = `
+    WITH
+      toDateTime({startDate:UInt32}) AS startDate,
+      toDateTime({endDate:UInt32}) AS endDate,
+      ops AS (
+        SELECT
+          OperationHash,
+          OperationName,
+          OperationType
+        FROM ${this.client.database}.operation_latency_metrics_5_30
+        WHERE Timestamp >= startDate AND Timestamp <= endDate
+          AND OrganizationID = {organizationId:String}
+          AND FederatedGraphID = {federatedGraphId:String}
+          ${whereSql ? `AND ${whereSql}` : ''}
+          ${searchSql}
+          ${introspectionFilter}
+        GROUP BY OperationHash, OperationName, OperationType
+      )
+    SELECT COUNT(*) as count
+    FROM ops
+    `;
+
+      const res: {
+        count: number;
+      }[] = await this.client.queryPromise(query, {
+        ...queryParams,
+        organizationId,
+        federatedGraphId: graphId,
+        startDate: dateRange.start,
+        endDate: dateRange.end,
+        ...(searchQueryPattern ? { searchQueryPattern } : {}),
+      });
+
+      return res[0].count;
+    }
   }
 
   public async getClients(props: GetMetricsViewProps) {

@@ -2905,6 +2905,7 @@ message GetOperationsRequest {
   optional string searchQuery = 11; // search by operation name or hash
   optional bool includeOperationsWithDeprecatedFieldsOnly = 12; // defaults to false
   optional SortDirection sortDirection = 13; // defaults to DESC
+  optional bool includeTotalCount = 14; // defaults to false
 }
 
 message GetOperationsResponse {
@@ -2928,6 +2929,7 @@ message GetOperationsResponse {
   }
   Response response = 1;
   repeated Operation operations = 2;
+  optional int32 totalCount = 3;
 }
 
 message GetClientsFromAnalyticsRequest {

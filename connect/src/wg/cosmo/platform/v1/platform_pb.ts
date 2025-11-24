@@ -22698,6 +22698,13 @@ export class GetOperationsRequest extends Message<GetOperationsRequest> {
    */
   sortDirection?: SortDirection;
 
+  /**
+   * defaults to false
+   *
+   * @generated from field: optional bool includeTotalCount = 14;
+   */
+  includeTotalCount?: boolean;
+
   constructor(data?: PartialMessage<GetOperationsRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -22719,6 +22726,7 @@ export class GetOperationsRequest extends Message<GetOperationsRequest> {
     { no: 11, name: "searchQuery", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 12, name: "includeOperationsWithDeprecatedFieldsOnly", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 13, name: "sortDirection", kind: "enum", T: proto3.getEnumType(SortDirection), opt: true },
+    { no: 14, name: "includeTotalCount", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOperationsRequest {
@@ -22752,6 +22760,11 @@ export class GetOperationsResponse extends Message<GetOperationsResponse> {
    */
   operations: GetOperationsResponse_Operation[] = [];
 
+  /**
+   * @generated from field: optional int32 totalCount = 3;
+   */
+  totalCount?: number;
+
   constructor(data?: PartialMessage<GetOperationsResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -22762,6 +22775,7 @@ export class GetOperationsResponse extends Message<GetOperationsResponse> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "operations", kind: "message", T: GetOperationsResponse_Operation, repeated: true },
+    { no: 3, name: "totalCount", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOperationsResponse {

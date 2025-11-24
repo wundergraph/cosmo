@@ -252,11 +252,26 @@ export function getOperations(
       computedOperations.push(new GetOperationsResponse_Operation(operationData));
     }
 
+    let totalCount: number | undefined;
+    if (req.includeTotalCount) {
+      totalCount = await metricsRepo.getOperationsCount({
+        range,
+        dateRange,
+        organizationId: authContext.organizationId,
+        graphId: graph.id,
+        filters,
+        searchQuery: req.searchQuery,
+        deprecatedFields,
+        includeOperationsWithDeprecatedFieldsOnly: req.includeOperationsWithDeprecatedFieldsOnly === true,
+      });
+    }
+
     return {
       response: {
         code: EnumStatusCode.OK,
       },
       operations: computedOperations,
+      totalCount: totalCount ? Number(totalCount) : undefined,
     };
   });
 }

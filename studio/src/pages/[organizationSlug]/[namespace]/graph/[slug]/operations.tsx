@@ -166,6 +166,7 @@ const OperationsLeftPanel = ({
   pageNumber,
   pageSize,
   noOfPages,
+  totalCount,
 }: {
   selectedOperation:
     | {
@@ -181,6 +182,7 @@ const OperationsLeftPanel = ({
   pageNumber: number;
   pageSize: number;
   noOfPages: number;
+  totalCount: number;
 }) => {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const {
@@ -242,27 +244,34 @@ const OperationsLeftPanel = ({
 
   // Full left panel content (used in both desktop and mobile sheet)
   const leftPanelContent = (
-    <div className="flex h-full w-full flex-col space-y-4 px-1 md:px-4 md:py-4">
-      <OperationsSearch
-        searchQuery={localSearchQuery}
-        onSearchQueryChange={onSearchQueryChange}
-        fetchBasedOn={fetchBasedOn}
-        onFetchBasedOnChange={(fetchBasedOn) =>
-          applySorting(fetchBasedOn, sortDirection)
-        }
-        sortDirection={sortDirection}
-        onSortDirectionChange={(direction) =>
-          applySorting(fetchBasedOn, direction)
-        }
-        includeOperationsWithDeprecatedFieldsOnly={
-          includeOperationsWithDeprecatedFieldsOnly
-        }
-        onIncludeOperationsWithDeprecatedFieldsOnlyChange={
-          applyDeprecatedFieldsFilter
-        }
-        className="w-full"
-      />
-
+    <div className="flex h-full w-full flex-col space-y-3 px-1 md:px-4 md:py-4">
+      <div className="space-y-2">
+        <OperationsSearch
+          searchQuery={localSearchQuery}
+          onSearchQueryChange={onSearchQueryChange}
+          fetchBasedOn={fetchBasedOn}
+          onFetchBasedOnChange={(fetchBasedOn) =>
+            applySorting(fetchBasedOn, sortDirection)
+          }
+          sortDirection={sortDirection}
+          onSortDirectionChange={(direction) =>
+            applySorting(fetchBasedOn, direction)
+          }
+          includeOperationsWithDeprecatedFieldsOnly={
+            includeOperationsWithDeprecatedFieldsOnly
+          }
+          onIncludeOperationsWithDeprecatedFieldsOnlyChange={
+            applyDeprecatedFieldsFilter
+          }
+          className="w-full"
+        />
+        {totalCount > 0 && (
+          <div className="flex justify-end text-xs italic text-muted-foreground">
+            Found {totalCount.toLocaleString()}{" "}
+            {totalCount === 1 ? "operation" : "operations"}
+          </div>
+        )}
+      </div>
       <div className="flex min-h-0 flex-1 md:block">
         <OperationsList
           operations={computedOperations}
@@ -597,12 +606,6 @@ const OperationsPage: NextPageWithLayout = () => {
     setLocalSearchQuery(urlSearchQuery);
   }, [urlSearchQuery]);
 
-  // Pagination state from URL
-  const pageNumber = useMemo(() => {
-    const page = parseInt(router.query.page as string, 10);
-    return isNaN(page) || page < 1 ? 1 : page;
-  }, [router.query.page]);
-
   // Update URL when debounced search query changes (only if different)
   // Reset to page 1 when search changes
   useEffect(() => {
@@ -611,14 +614,11 @@ const OperationsPage: NextPageWithLayout = () => {
     }
   }, [debouncedSearchQuery, urlSearchQuery, applyParams]);
 
-  const pageSize = useMemo(() => {
-    const size = parseInt(router.query.pageSize as string, 10);
-    return isNaN(size) || size < 1 ? 10 : size;
-  }, [router.query.pageSize]);
-
-  const offset = useMemo(() => {
-    return (pageNumber - 1) * pageSize;
-  }, [pageNumber, pageSize]);
+  const pageNumber = router.query.page
+    ? parseInt(router.query.page as string, 10)
+    : 1;
+  const pageSize = Number.parseInt((router.query.pageSize as string) || "10");
+  const offset = (pageNumber - 1) * pageSize;
 
   const {
     data: operationsData,
@@ -653,6 +653,7 @@ const OperationsPage: NextPageWithLayout = () => {
       includeOperationsWithDeprecatedFieldsOnly:
         includeOperationsWithDeprecatedFieldsOnly ? true : undefined,
       clientNames,
+      includeTotalCount: true,
     },
     {
       enabled: !!graphContext?.graph?.name,
@@ -667,21 +668,7 @@ const OperationsPage: NextPageWithLayout = () => {
   );
 
   // Calculate number of pages
-  // If we get fewer results than pageSize, we're on the last page
-  // Otherwise, assume there might be more pages (optimistic approach)
-  const noOfPages = useMemo(() => {
-    if (!operationsData?.operations) {
-      return 0;
-    }
-    const operationsCount = operationsData.operations.length;
-    if (operationsCount < pageSize) {
-      // We're on the last page
-      return pageNumber;
-    }
-    // We got a full page, assume there might be more
-    // Add 1 to current page to indicate there might be more pages
-    return pageNumber + 1;
-  }, [operationsData?.operations, pageSize, pageNumber]);
+  const noOfPages = Math.ceil((operationsData?.totalCount ?? 0) / pageSize);
 
   // Use URL params as single source of truth for selected operation
   const selectedOperation = useMemo(() => {
@@ -785,6 +772,7 @@ const OperationsPage: NextPageWithLayout = () => {
               pageNumber={pageNumber}
               pageSize={pageSize}
               noOfPages={noOfPages}
+              totalCount={operationsData?.totalCount ?? 0}
             />
           </Card>
         </div>
