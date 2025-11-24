@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.172.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.171.0...controlplane@0.172.0) (2025-11-24)
+
+### Features
+
+* only admins can invite users to an organization ([#2358](https://github.com/wundergraph/cosmo/issues/2358)) ([1f7078c](https://github.com/wundergraph/cosmo/commit/1f7078cec8a201bdac8994b8eb35b1df4853b9ae)) (@wilsonrivera)
+
 # [0.171.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.170.2...controlplane@0.171.0) (2025-11-22)
 
 ### Features
