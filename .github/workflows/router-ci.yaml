@@ -335,11 +335,11 @@ jobs:
 
       - name: Run Integration tests ${{ matrix.test_target }}
         working-directory: ./router-tests
-        run: make test test_retry_count=0 test_params="-run '^Test[^(Flaky)]' --timeout=5m -p 1 --parallel 10" test_target="${{ matrix.test_target }}"
+        run: make test-coverage test_retry_count=0 test_params="-run '^Test[^(Flaky)]' --timeout=5m -p 1 --parallel 10" test_target="${{ matrix.test_target }}"
 
       - name: Run Flaky Integration tests ${{ matrix.test_target }}
         working-directory: ./router-tests
-        run: make test test_retry_count=3 test_params="-run '^TestFlaky' --timeout=5m -p 1 --parallel 10" test_target="${{ matrix.test_target }}"
+        run: make test-coverage test_retry_count=3 test_params="-run '^TestFlaky' --timeout=5m -p 1 --parallel 10" test_target="${{ matrix.test_target }}"
 
       - name: Upload results to Codecov
         uses: codecov/codecov-action@v5
