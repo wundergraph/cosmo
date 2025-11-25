@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.267.0](https://github.com/wundergraph/cosmo/compare/router@0.266.0...router@0.267.0) (2025-11-24)
+
+### Features
+
+* add custom module implementing flight recorder ([#2334](https://github.com/wundergraph/cosmo/issues/2334)) ([0a4517a](https://github.com/wundergraph/cosmo/commit/0a4517a57615614deb4ef97967473d3fc22ec0ec)) (@endigma)
+
 # [0.266.0](https://github.com/wundergraph/cosmo/compare/router@0.265.2...router@0.266.0) (2025-11-23)
 
 ### Features
