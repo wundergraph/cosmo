@@ -39,7 +39,6 @@ import {
   ChecksFilterMenu,
   parseSelectedSubgraphs,
 } from "@/components/checks/checks-filter-menu";
-import { SelectedChecksFilters } from "@/components/checks/selected-checks-filters";
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import { useSessionStorage } from "@/hooks/use-session-storage";
 import { docsBaseURL } from "@/lib/constants";
