@@ -18,7 +18,7 @@ test: test-deps
 test-coverage: test-deps
 	gotestsum --rerun-fails="$(test_retry_count)" --packages="$(test_target)" -f $(FORMAT) -- \
 		-ldflags=-extldflags=-Wl,-ld_classic $(test_params) -race \
-		-coverprofile=coverage.out \
+		-coverprofile=$(coverage_file) \
 		-coverpkg=github.com/wundergraph/cosmo/router/... \
 		$(test_target)
 
@@ -49,8 +49,7 @@ clean-testcache:
 update-test-config:
 	./update-config-no-edg.sh
 
-.PHONY: test test-no-race lint test-stability clean-testcache update-test-config test-fresh \
-	test-coverage test-coverage-no-race coverage-report coverage-view coverage-summary clean-coverage
+.PHONY: test test-no-race lint test-stability clean-testcache update-test-config test-fresh test-coverage
 
 bump-deps:
 	./bump-deps.sh
