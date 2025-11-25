@@ -642,7 +642,6 @@ export class OrganizationWebhookService {
     if (sceConfig.includeComposedSdl) {
       fileContent.composition = input.composedGraphs.map((c) => ({
         id: c.id,
-        name: c.name,
         composedSchema: c.composedSchema,
         federatedClientSchema: c.federatedClientSchema,
         subgraphs: c.subgraphs.map((sg) => ({ id: sg.id, name: sg.name, sdl: sg.sdl })),
@@ -666,22 +665,28 @@ export class OrganizationWebhookService {
     }
 
     // Upload the generated file content
-    const blobKey = `/${input.organization.id}/subgraph_checks/${v4()}.json`;
-    const blobContent = JSON.stringify(fileContent);
-    await input.blobStorage.putObject({
-      key: blobKey,
-      contentType: 'application/json',
-      body: Buffer.from(blobContent, 'utf8'),
-    });
+    let url: string | undefined;
+    if (Object.keys(fileContent).length > 0) {
+      // Only upload the file if at least one option is enabled
+      const blobKey = `/${input.organization.id}/subgraph_checks/${v4()}.json`;
+      const blobContent = JSON.stringify(fileContent);
+      await input.blobStorage.putObject({
+        key: blobKey,
+        contentType: 'application/json',
+        body: Buffer.from(blobContent, 'utf8'),
+      });
 
-    const token = await signJwtHS256({
-      secret: input.admissionConfig.jwtSecret,
-      token: {
-        exp: nowInSeconds() + 5 * 60, // 5 minutes,
-        aud: audiences.cosmoCDNAdmission,
-        organization_id: input.organization.id,
-      },
-    });
+      const token = await signJwtHS256({
+        secret: input.admissionConfig.jwtSecret,
+        token: {
+          exp: nowInSeconds() + 5 * 60, // 5 minutes,
+          aud: audiences.cosmoCDNAdmission,
+          organization_id: input.organization.id,
+        },
+      });
+
+      url = `${input.admissionConfig.cdnBaseUrl}${blobKey}?token=${token}`;
+    }
 
     // Compose the webhook payload
     const payload: Record<string, unknown> = {
@@ -695,7 +700,7 @@ export class OrganizationWebhookService {
         id: graph.id,
         name: graph.name,
       })),
-      url: `${input.admissionConfig.cdnBaseUrl}${blobKey}?token=${token}`,
+      url,
     };
 
     if (input.subgraph) {
