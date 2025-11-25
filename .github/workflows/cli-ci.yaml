@@ -80,6 +80,11 @@ jobs:
         working-directory: cli
         run: bun test e2e --test-name-pattern node
 
+      - name: Upload results to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+
   build_bun_matrix:
     runs-on: ubuntu-latest
     timeout-minutes: 30
