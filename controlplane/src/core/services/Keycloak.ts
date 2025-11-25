@@ -92,6 +92,17 @@ export default class Keycloak {
     return createUserResp.id;
   }
 
+  public async findUserByEmail({ email, realm }: { email: string; realm?: string }) {
+    const foundUsers = await this.client.users.find({
+      max: 1,
+      email,
+      realm: realm || this.realm,
+      exact: true,
+    });
+
+    return foundUsers.length === 1 ? foundUsers[0] : undefined;
+  }
+
   public async updateKeycloakUser({
     realm,
     id,

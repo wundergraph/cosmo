@@ -10,6 +10,7 @@ import (
 
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/mood/subgraph/generated"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/mood/subgraph/model"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 )
 
@@ -19,10 +20,9 @@ func (r *mutationResolver) UpdateMood(ctx context.Context, employeeID int, mood 
 	myNatsTopic := r.GetPubSubName(fmt.Sprintf("employeeUpdated.%d", employeeID))
 	payload := fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, employeeID)
 	if r.NatsPubSubByProviderID["default"] != nil {
-		err := r.NatsPubSubByProviderID["default"].Publish(ctx, nats.PublishAndRequestEventConfiguration{
+		err := r.NatsPubSubByProviderID["default"].Publish(ctx, &nats.PublishAndRequestEventConfiguration{
 			Subject: myNatsTopic,
-			Data:    []byte(payload),
-		})
+		}, []datasource.StreamEvent{(&nats.MutableEvent{Data: []byte(payload)})})
 		if err != nil {
 			return nil, err
 		}
@@ -32,10 +32,9 @@ func (r *mutationResolver) UpdateMood(ctx context.Context, employeeID int, mood 
 
 	defaultTopic := r.GetPubSubName(fmt.Sprintf("employeeUpdatedMyNats.%d", employeeID))
 	if r.NatsPubSubByProviderID["my-nats"] != nil {
-		err := r.NatsPubSubByProviderID["my-nats"].Publish(ctx, nats.PublishAndRequestEventConfiguration{
+		err := r.NatsPubSubByProviderID["my-nats"].Publish(ctx, &nats.PublishAndRequestEventConfiguration{
 			Subject: defaultTopic,
-			Data:    []byte(payload),
-		})
+		}, []datasource.StreamEvent{(&nats.MutableEvent{Data: []byte(payload)})})
 		if err != nil {
 			return nil, err
 		}

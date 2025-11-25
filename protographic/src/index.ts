@@ -95,7 +95,46 @@ export { GraphQLToProtoTextVisitor } from './sdl-to-proto-visitor.js';
 export { ProtoLockManager } from './proto-lock.js';
 export { SDLValidationVisitor } from './sdl-validation-visitor.js';
 
-export type { GraphQLToProtoTextVisitorOptions } from './sdl-to-proto-visitor.js';
+// Export operation-to-proto functionality
+export { compileOperationsToProto } from './operation-to-proto.js';
+export type { OperationsToProtoOptions, CompileOperationsToProtoResult } from './operation-to-proto.js';
+
+// Export operation modules
+export {
+  mapGraphQLTypeToProto,
+  getProtoTypeName,
+  isGraphQLScalarType,
+  requiresWrapperType,
+  getRequiredImports,
+} from './operations/type-mapper.js';
+export type { ProtoTypeInfo, TypeMapperOptions } from './operations/type-mapper.js';
+
+export { createFieldNumberManager } from './operations/field-numbering.js';
+export type { FieldNumberManager } from './operations/field-numbering.js';
+
+export {
+  buildMessageFromSelectionSet,
+  buildFieldDefinition,
+  buildNestedMessage,
+} from './operations/message-builder.js';
+export type { MessageBuilderOptions } from './operations/message-builder.js';
+
+export { buildRequestMessage, buildInputObjectMessage, buildEnumType } from './operations/request-builder.js';
+export type { RequestBuilderOptions } from './operations/request-builder.js';
+
+export {
+  rootToProtoText,
+  serviceToProtoText,
+  messageToProtoText,
+  enumToProtoText,
+  formatField,
+} from './operations/proto-text-generator.js';
+export type { ProtoTextOptions } from './operations/proto-text-generator.js';
+
+export type { IdempotencyLevel, MethodWithIdempotency } from './types.js';
+
+export type { GraphQLToProtoTextVisitorOptions, ProtoOption } from './sdl-to-proto-visitor.js';
+export type { ProtoOptions } from './proto-options.js';
 export type { ProtoLock } from './proto-lock.js';
 export type { ValidationResult } from './sdl-validation-visitor.js';
 export {
@@ -109,3 +148,6 @@ export {
   EnumValueMapping,
   OperationType,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+
+// Export protobufjs for AST manipulation
+export { default as protobuf } from 'protobufjs';

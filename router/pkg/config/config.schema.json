@@ -2200,6 +2200,8 @@
               "format": "hostname-port"
             },
             "base_url": {
+              "deprecated": true,
+              "deprecationMessage": "The base_url is deprecated. This property was related to the SSE protocol that is not supported anymore.",
               "type": "string",
               "description": "The base URL of the MCP server. This is the URL advertised to the LLM clients when SSE is used as primary transport. By default, the base URL is relative to the URL that the router is running on. The URL is specified as a string with the format 'scheme://host:port'.",
               "format": "http-url"
@@ -2482,6 +2484,31 @@
                     "description": "If enabled, the Redis cluster client is used to connect to the server.",
                     "default": false
                   }
+                }
+              }
+            }
+          }
+        },
+        "handlers": {
+          "type": "object",
+          "description": "Configuration for Cosmo Streams / EDFS custom modules",
+          "additionalProperties": false,
+          "properties": {
+            "on_receive_events": {
+              "type": "object",
+              "description": "Configuration for the OnReceiveEvents hook that is called when events are received from a broker.",
+              "additionalProperties": false,
+              "properties": {
+                "max_concurrent_handlers": {
+                  "type": "integer",
+                  "description": "The maximum number of concurrent event receive handlers. This controls the concurrency of the OnReceiveEvents custom modules.",
+                  "minimum": 1,
+                  "default": 100
+                },
+                "handler_timeout": {
+                  "type": "string",
+                  "description": "The amount of time that OnReceiveEvents handlers can run in total for a single batch of events. Specify as a duration string (e.g., '5s', '1m', '500ms').",
+                  "default": "5s"
                 }
               }
             }
@@ -2787,6 +2814,11 @@
                   "default": false
                 }
               }
+            },
+            "ignore_introspection": {
+              "type": "boolean",
+              "default": false,
+              "description": "When set to true, complexity validation is ignored for all introspection queries."
             }
           }
         },

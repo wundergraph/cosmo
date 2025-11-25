@@ -641,6 +641,12 @@
           "ClusterEnabled": true
         }
       ]
+    },
+    "Handlers": {
+      "OnReceiveEvents": {
+        "MaxConcurrentHandlers": 100,
+        "HandlerTimeout": 5000000000
+      }
     }
   },
   "CacheWarmup": {
@@ -710,7 +716,8 @@
         "Enabled": true,
         "Limit": 4,
         "IgnorePersistedOperations": true
-      }
+      },
+      "IgnoreIntrospection": false
     },
     "DepthLimit": null,
     "ParserLimits": {

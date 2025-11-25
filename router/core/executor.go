@@ -35,6 +35,8 @@ type ExecutorConfigurationBuilder struct {
 
 	subscriptionClientOptions *SubscriptionClientOptions
 	instanceData              InstanceData
+
+	subscriptionHooks subscriptionHooks
 }
 
 type Executor struct {
@@ -215,7 +217,7 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 		b.logger,
 		routerEngineCfg.Execution.EnableNetPoll,
 		b.instanceData,
-	), b.logger)
+	), b.logger, b.subscriptionHooks)
 
 	// this generates the plan config using the data source factories from the config package
 	planConfig, providers, err := loader.Load(engineConfig, subgraphs, routerEngineCfg, pluginsEnabled)

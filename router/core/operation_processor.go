@@ -1171,21 +1171,23 @@ func (o *OperationKit) Validate(skipLoader bool, remapVariables map[string]strin
 
 // ValidateQueryComplexity validates that the query complexity is within the limits set in the configuration
 func (o *OperationKit) ValidateQueryComplexity() (ok bool, cacheEntry ComplexityCacheEntry, err error) {
-	if o.operationProcessor.complexityLimits == nil {
+	limits := o.operationProcessor.complexityLimits
+	if limits == nil {
 		return true, ComplexityCacheEntry{}, nil
 	}
 
 	if o.cache != nil && o.cache.complexityCache != nil {
 		if cachedComplexity, found := o.cache.complexityCache.Get(o.parsedOperation.InternalID); found {
-			return true, cachedComplexity, o.runComplexityComparisons(o.operationProcessor.complexityLimits, cachedComplexity, o.parsedOperation.IsPersistedOperation)
+			return true, cachedComplexity, o.runComplexityComparisons(limits, cachedComplexity, o.parsedOperation.IsPersistedOperation)
 		}
 	}
 
 	report := operationreport.Report{}
-	globalComplexityResult, rootFieldStats := operation_complexity.CalculateOperationComplexity(o.kit.doc, o.operationProcessor.executor.ClientSchema, &report)
+	estimator := operation_complexity.NewOperationComplexityEstimator(limits.IgnoreIntrospection)
+	globalComplexity, rootFieldStats := estimator.Do(o.kit.doc, o.operationProcessor.executor.ClientSchema, &report)
 	cacheResult := ComplexityCacheEntry{
-		Depth:       globalComplexityResult.Depth,
-		TotalFields: globalComplexityResult.NodeCount,
+		Depth:       globalComplexity.Depth,
+		TotalFields: globalComplexity.NodeCount,
 	}
 	for _, entry := range rootFieldStats {
 		if entry.Alias == "" {
@@ -1199,7 +1201,7 @@ func (o *OperationKit) ValidateQueryComplexity() (ok bool, cacheEntry Complexity
 		o.cache.complexityCache.Set(o.parsedOperation.InternalID, cacheResult, 1)
 	}
 
-	return false, cacheResult, o.runComplexityComparisons(o.operationProcessor.complexityLimits, cacheResult, o.parsedOperation.IsPersistedOperation)
+	return false, cacheResult, o.runComplexityComparisons(limits, cacheResult, o.parsedOperation.IsPersistedOperation)
 }
 
 func (o *OperationKit) runComplexityComparisons(complexityLimitConfig *config.ComplexityLimits, cachedComplexity ComplexityCacheEntry, isPersisted bool) error {

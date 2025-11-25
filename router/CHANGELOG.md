@@ -4,6 +4,40 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.267.0](https://github.com/wundergraph/cosmo/compare/router@0.266.0...router@0.267.0) (2025-11-24)
+
+### Features
+
+* add custom module implementing flight recorder ([#2334](https://github.com/wundergraph/cosmo/issues/2334)) ([0a4517a](https://github.com/wundergraph/cosmo/commit/0a4517a57615614deb4ef97967473d3fc22ec0ec)) (@endigma)
+
+# [0.266.0](https://github.com/wundergraph/cosmo/compare/router@0.265.2...router@0.266.0) (2025-11-23)
+
+### Features
+
+* **router:** implement Cosmo Streams v1 ([#2273](https://github.com/wundergraph/cosmo/issues/2273)) ([e4e5bfb](https://github.com/wundergraph/cosmo/commit/e4e5bfbdb6ae10098bf58c83b8e5119714f4ca29)) (@dkorittki)
+
+## [0.265.2](https://github.com/wundergraph/cosmo/compare/router@0.265.1...router@0.265.2) (2025-11-20)
+
+**Note:** Version bump only for package router
+
+## [0.265.1](https://github.com/wundergraph/cosmo/compare/router@0.265.0...router@0.265.1) (2025-11-19)
+
+### Bug Fixes
+
+* **mcp:** do not pass all headers to upstream ([#2345](https://github.com/wundergraph/cosmo/issues/2345)) ([d508fa1](https://github.com/wundergraph/cosmo/commit/d508fa17c046a5f239cb31752f2ae89a54a6d0c8)) (@StarpTech)
+
+# [0.265.0](https://github.com/wundergraph/cosmo/compare/router@0.264.1...router@0.265.0) (2025-11-19)
+
+### Features
+
+* expose timing of planning in the report ([#2312](https://github.com/wundergraph/cosmo/issues/2312)) ([d792fe5](https://github.com/wundergraph/cosmo/commit/d792fe5237615c43ced6eb3666f6cd56f84ad613)) (@alepane21)
+
+## [0.264.1](https://github.com/wundergraph/cosmo/compare/router@0.264.0...router@0.264.1) (2025-11-17)
+
+### Bug Fixes
+
+* omit introspection queries for complexity limits ([#2296](https://github.com/wundergraph/cosmo/issues/2296)) ([fc00319](https://github.com/wundergraph/cosmo/commit/fc0031984cb38ef50cfbb5685e985448efa54c63)) (@ysmolski)
+
 # [0.264.0](https://github.com/wundergraph/cosmo/compare/router@0.263.0...router@0.264.0) (2025-11-11)
 
 ### Bug Fixes

@@ -4,6 +4,20 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.139.0](https://github.com/wundergraph/cosmo/compare/studio@0.138.6...studio@0.139.0) (2025-11-22)
+
+### Features
+
+* improve SCIM implementation ([#2351](https://github.com/wundergraph/cosmo/issues/2351)) ([cafd1fc](https://github.com/wundergraph/cosmo/commit/cafd1fc7e1a6857a7abb4d1632b5f42e54f09cf2)) (@wilsonrivera)
+
+## [0.138.6](https://github.com/wundergraph/cosmo/compare/studio@0.138.5...studio@0.138.6) (2025-11-20)
+
+**Note:** Version bump only for package studio
+
+## [0.138.5](https://github.com/wundergraph/cosmo/compare/studio@0.138.4...studio@0.138.5) (2025-11-17)
+
+**Note:** Version bump only for package studio
+
 ## [0.138.4](https://github.com/wundergraph/cosmo/compare/studio@0.138.3...studio@0.138.4) (2025-11-13)
 
 **Note:** Version bump only for package studio

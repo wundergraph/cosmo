@@ -3,11 +3,17 @@ package redis
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"strings"
 	"testing"
 
+	"github.com/cespare/xxhash/v2"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/pubsubtest"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 func TestRedisEngineDataSourceFactory(t *testing.T) {
@@ -28,11 +34,13 @@ func TestRedisEngineDataSourceFactory(t *testing.T) {
 // TestEngineDataSourceFactoryWithMockAdapter tests the EngineDataSourceFactory with a mocked adapter
 func TestEngineDataSourceFactoryWithMockAdapter(t *testing.T) {
 	// Create mock adapter
-	mockAdapter := NewMockAdapter(t)
+	mockAdapter := datasource.NewMockProvider(t)
 
 	// Configure mock expectations for Publish
-	mockAdapter.On("Publish", mock.Anything, mock.MatchedBy(func(event PublishEventConfiguration) bool {
-		return event.ProviderID == "test-provider" && event.Channel == "test-channel"
+	mockAdapter.On("Publish", mock.Anything, mock.MatchedBy(func(event *PublishEventConfiguration) bool {
+		return event.ProviderID() == "test-provider" && event.Channel == "test-channel"
+	}), mock.MatchedBy(func(events []datasource.StreamEvent) bool {
+		return len(events) == 1 && strings.EqualFold(string(events[0].GetData()), `{"test":"data"}`)
 	})).Return(nil)
 
 	// Create the data source with mock adapter
@@ -61,7 +69,7 @@ func TestEngineDataSourceFactoryWithMockAdapter(t *testing.T) {
 // TestEngineDataSourceFactory_GetResolveDataSource_WrongType tests the EngineDataSourceFactory with a mocked adapter
 func TestEngineDataSourceFactory_GetResolveDataSource_WrongType(t *testing.T) {
 	// Create mock adapter
-	mockAdapter := NewMockAdapter(t)
+	mockAdapter := datasource.NewMockProvider(t)
 
 	// Create the data source with mock adapter
 	pubsub := &EngineDataSourceFactory{
@@ -173,4 +181,58 @@ func TestTransformEventConfig(t *testing.T) {
 		// Since the function sorts the subjects
 		require.Equal(t, []string{"transformed.original.subject1", "transformed.original.subject2"}, cfg.channels)
 	})
+}
+
+func TestRedisEngineDataSourceFactory_UniqueRequestID(t *testing.T) {
+	tests := []struct {
+		name          string
+		input         string
+		expectError   bool
+		expectedError error
+	}{
+		{
+			name:        "valid input",
+			input:       `{"channels":["channel1", "channel2"], "providerId":"test-provider"}`,
+			expectError: false,
+		},
+		{
+			name:          "missing channels",
+			input:         `{"providerId":"test-provider"}`,
+			expectError:   true,
+			expectedError: errors.New("Key path not found"),
+		},
+		{
+			name:          "missing providerId",
+			input:         `{"channels":["channel1", "channel2"]}`,
+			expectError:   true,
+			expectedError: errors.New("Key path not found"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			factory := &EngineDataSourceFactory{
+				RedisAdapter: datasource.NewMockProvider(t),
+			}
+			source, err := factory.ResolveDataSourceSubscription()
+			require.NoError(t, err)
+			ctx := &resolve.Context{}
+			input := []byte(tt.input)
+			xxh := xxhash.New()
+
+			err = source.UniqueRequestID(ctx, input, xxh)
+
+			if tt.expectError {
+				require.Error(t, err)
+				if tt.expectedError != nil {
+					// For jsonparser errors, just check if the error message contains the expected text
+					assert.Contains(t, err.Error(), tt.expectedError.Error())
+				}
+			} else {
+				require.NoError(t, err)
+				// Check that the hash has been updated
+				assert.NotEqual(t, 0, xxh.Sum64())
+			}
+		})
+	}
 }

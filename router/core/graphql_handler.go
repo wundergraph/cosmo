@@ -385,6 +385,19 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 		if isHttpResponseWriter {
 			httpWriter.WriteHeader(http.StatusInternalServerError)
 		}
+	case errorTypeStreamsHandlerError:
+		var errStreamHandlerError *StreamHandlerError
+		if !errors.As(err, &errStreamHandlerError) {
+			response.Errors[0].Message = "Internal server error"
+			if isHttpResponseWriter {
+				httpWriter.WriteHeader(http.StatusInternalServerError)
+			}
+		} else {
+			response.Errors[0].Message = errStreamHandlerError.Message
+			if isHttpResponseWriter {
+				httpWriter.WriteHeader(http.StatusOK)
+			}
+		}
 	case errorTypeInvalidWsSubprotocol:
 		response.Errors[0].Message = fmt.Sprintf("Invalid Subprotocol error: %s or configure the subprotocol to be used using `wgc subgraph update` command.", err.Error())
 		if isHttpResponseWriter {

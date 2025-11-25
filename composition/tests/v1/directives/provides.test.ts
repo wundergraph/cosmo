@@ -5,6 +5,8 @@ import {
   externalEntityExtensionKeyFieldWarning,
   fieldAlreadyProvidedErrorMessage,
   fieldAlreadyProvidedWarning,
+  ID_SCALAR,
+  incompatibleTypeWithProvidesErrorMessage,
   INTERFACE,
   invalidInlineFragmentTypeConditionErrorMessage,
   invalidInlineFragmentTypeErrorMessage,
@@ -18,6 +20,7 @@ import {
   Subgraph,
   subgraphValidationError,
   TypeName,
+  typeNameAlreadyProvidedErrorMessage,
   UNION,
 } from '../../../src';
 import {
@@ -438,40 +441,40 @@ describe('@provides directive tests', () => {
       const { errors, warnings } = normalizeSubgraphFailure(n, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(4);
       expect(errors[0]).toStrictEqual(
-        nonExternalConditionalFieldError(
-          `Query.entity`,
-          n.name,
-          `NestedObject.age`,
-          `object { nestedObject { age name } }`,
-          PROVIDES,
-        ),
+        nonExternalConditionalFieldError({
+          directiveCoords: `Query.entity`,
+          directiveName: PROVIDES,
+          fieldSet: `object { nestedObject { age name } }`,
+          subgraphName: n.name,
+          targetCoords: `NestedObject.age`,
+        }),
       );
       expect(errors[1]).toStrictEqual(
-        nonExternalConditionalFieldError(
-          `Query.entity`,
-          n.name,
-          `NestedObject.name`,
-          `object { nestedObject { age name } }`,
-          PROVIDES,
-        ),
+        nonExternalConditionalFieldError({
+          directiveCoords: `Query.entity`,
+          directiveName: PROVIDES,
+          fieldSet: `object { nestedObject { age name } }`,
+          subgraphName: n.name,
+          targetCoords: `NestedObject.name`,
+        }),
       );
       expect(errors[2]).toStrictEqual(
-        nonExternalConditionalFieldError(
-          `Query.entities`,
-          n.name,
-          `NestedObject.age`,
-          `object { nestedObject { age name } }`,
-          PROVIDES,
-        ),
+        nonExternalConditionalFieldError({
+          directiveCoords: `Query.entities`,
+          directiveName: PROVIDES,
+          fieldSet: `object { nestedObject { age name } }`,
+          targetCoords: `NestedObject.age`,
+          subgraphName: n.name,
+        }),
       );
       expect(errors[3]).toStrictEqual(
-        nonExternalConditionalFieldError(
-          `Query.entities`,
-          n.name,
-          `NestedObject.name`,
-          `object { nestedObject { age name } }`,
-          PROVIDES,
-        ),
+        nonExternalConditionalFieldError({
+          directiveCoords: `Query.entities`,
+          directiveName: PROVIDES,
+          fieldSet: `object { nestedObject { age name } }`,
+          subgraphName: n.name,
+          targetCoords: `NestedObject.name`,
+        }),
       );
       expect(warnings).toHaveLength(0);
     });
@@ -514,7 +517,13 @@ describe('@provides directive tests', () => {
       const { errors, warnings } = normalizeSubgraphFailure(p, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
-        nonExternalConditionalFieldError(`Query.entity`, p.name, `Entity.id`, `id`, PROVIDES),
+        nonExternalConditionalFieldError({
+          directiveCoords: `Query.entity`,
+          directiveName: PROVIDES,
+          fieldSet: `id`,
+          subgraphName: p.name,
+          targetCoords: `Entity.id`,
+        }),
       );
       expect(warnings).toHaveLength(0);
     });
@@ -776,6 +785,32 @@ describe('@provides directive tests', () => {
               typeName: 'Object',
             },
           ],
+        ]),
+      );
+    });
+
+    test('that an error is returned if @provides is defined on a leaf node', () => {
+      const { errors, warnings } = normalizeSubgraphFailure(nakaa, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(warnings).toHaveLength(0);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        invalidProvidesOrRequiresDirectivesError(PROVIDES, [
+          incompatibleTypeWithProvidesErrorMessage({
+            fieldCoords: 'Query.a',
+            responseType: ID_SCALAR,
+            subgraphName: nakaa.name,
+          }),
+        ]),
+      );
+    });
+
+    test('that __typename can be provided', () => {
+      const { errors, warnings } = normalizeSubgraphFailure(nalaa, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(warnings).toHaveLength(0);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        invalidProvidesOrRequiresDirectivesError(PROVIDES, [
+          ` On field "Query.a":\n -` + typeNameAlreadyProvidedErrorMessage('Object.__typename', nalaa.name),
         ]),
       );
     });
@@ -1987,6 +2022,31 @@ const aj: Subgraph = {
     type Object {
       id: ID! @external
       nestedObject: NestedObject!
+    }
+  `),
+};
+
+const nakaa: Subgraph = {
+  name: 'nakaa',
+  url: '',
+  definitions: parse(`
+    type Query {
+      a: ID @provides(fields: "b")
+      b: ID
+    }
+  `),
+};
+
+const nalaa: Subgraph = {
+  name: 'nalaa',
+  url: '',
+  definitions: parse(`
+    type Object {
+      a: ID
+    }
+    
+    type Query {
+      a: Object @provides(fields: "__typename")
     }
   `),
 };

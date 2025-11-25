@@ -450,6 +450,9 @@ type ComplexityLimits struct {
 	TotalFields      *ComplexityLimit `yaml:"total_fields"`
 	RootFields       *ComplexityLimit `yaml:"root_fields"`
 	RootFieldAliases *ComplexityLimit `yaml:"root_field_aliases"`
+
+	// When set to true, complexity validation is ignored for all introspection queries.
+	IgnoreIntrospection bool `yaml:"ignore_introspection" envDefault:"false" env:"SECURITY_COMPLEXITY_IGNORE_INTROSPECTION"`
 }
 
 type ComplexityLimit struct {
@@ -459,7 +462,7 @@ type ComplexityLimit struct {
 }
 
 func (c *ComplexityLimit) ApplyLimit(isPersistent bool) bool {
-	return c.Enabled && (!isPersistent || isPersistent && !c.IgnorePersistedOperations)
+	return c.Enabled && (!isPersistent || !c.IgnorePersistedOperations)
 }
 
 type OverrideRoutingURLConfiguration struct {
@@ -649,7 +652,17 @@ type EventProviders struct {
 }
 
 type EventsConfiguration struct {
-	Providers EventProviders `yaml:"providers,omitempty"`
+	Providers EventProviders              `yaml:"providers,omitempty"`
+	Handlers  StreamsHandlerConfiguration `yaml:"handlers,omitempty"`
+}
+
+type StreamsHandlerConfiguration struct {
+	OnReceiveEvents OnReceiveEventsConfiguration `yaml:"on_receive_events"`
+}
+
+type OnReceiveEventsConfiguration struct {
+	MaxConcurrentHandlers int           `yaml:"max_concurrent_handlers" envDefault:"100"`
+	HandlerTimeout        time.Duration `yaml:"handler_timeout" envDefault:"5s"`
 }
 
 type Cluster struct {

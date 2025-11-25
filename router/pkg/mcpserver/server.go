@@ -37,6 +37,29 @@ func requestHeadersFromRequest(ctx context.Context, r *http.Request) context.Con
 	return withRequestHeaders(ctx, headers)
 }
 
+var skippedHeaders = map[string]struct{}{
+	"Connection":               {},
+	"Keep-Alive":               {},
+	"Proxy-Authenticate":       {},
+	"Proxy-Authorization":      {},
+	"Te":                       {},
+	"Trailer":                  {},
+	"Transfer-Encoding":        {},
+	"Upgrade":                  {},
+	"Host":                     {},
+	"Content-Length":           {},
+	"Content-Type":             {},
+	"Accept":                   {},
+	"Accept-Encoding":          {},
+	"Accept-Charset":           {},
+	"Alt-Svc":                  {},
+	"Proxy-Connection":         {},
+	"Sec-Websocket-Extensions": {},
+	"Sec-Websocket-Key":        {},
+	"Sec-Websocket-Protocol":   {},
+	"Sec-Websocket-Version":    {},
+}
+
 // headersFromContext extracts the request headers from the context.
 func headersFromContext(ctx context.Context) (http.Header, error) {
 	headers, ok := ctx.Value(requestHeadersKey{}).(http.Header)
@@ -54,9 +77,6 @@ type Options struct {
 	OperationsDir string
 	// ListenAddr is the address where the server should listen to
 	ListenAddr string
-	// BaseURL of the MCP server. This is the URL advertised to the LLM clients.
-	// By default, the base URL is relative to the URL that the router is running on.
-	BaseURL string
 	// Enabled determines whether the MCP server should be started
 	Enabled bool
 	// Logger is the logger to be used
@@ -76,7 +96,6 @@ type Options struct {
 // GraphQLSchemaServer represents an MCP server that works with GraphQL schemas and operations
 type GraphQLSchemaServer struct {
 	server                    *server.MCPServer
-	baseURL                   string
 	graphName                 string
 	operationsDir             string
 	listenAddr                string
@@ -218,7 +237,6 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)
 		enableArbitraryOperations: options.EnableArbitraryOperations,
 		exposeSchema:              options.ExposeSchema,
 		stateless:                 options.Stateless,
-		baseURL:                   options.BaseURL,
 	}
 
 	return gs, nil
@@ -240,13 +258,6 @@ func WithGraphName(graphName string) func(*Options) {
 func WithOperationsDir(operationsDir string) func(*Options) {
 	return func(o *Options) {
 		o.OperationsDir = operationsDir
-	}
-}
-
-// WithBaseURL sets the base URL
-func WithBaseURL(baseURL string) func(*Options) {
-	return func(o *Options) {
-		o.BaseURL = baseURL
 	}
 }
 
@@ -686,6 +697,10 @@ func (s *GraphQLSchemaServer) executeGraphQLQuery(ctx context.Context, query str
 	} else {
 		// Copy all headers from the MCP request
 		for key, values := range headers {
+			// Skip headers that should not be forwarded
+			if _, ok := skippedHeaders[key]; ok {
+				continue
+			}
 			for _, value := range values {
 				req.Header.Add(key, value)
 			}

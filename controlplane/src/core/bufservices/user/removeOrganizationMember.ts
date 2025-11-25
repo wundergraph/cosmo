@@ -27,7 +27,7 @@ export function removeOrganizationMember(
     const auditLogRepo = new AuditLogRepository(opts.db);
     const userRepo = new UserRepository(logger, opts.db);
 
-    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdminOrDeveloper) {
+    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdmin) {
       throw new UnauthorizedError();
     }
 
