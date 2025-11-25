@@ -4,6 +4,26 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.172.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.171.0...controlplane@0.172.0) (2025-11-24)
+
+### Features
+
+* only admins can invite users to an organization ([#2358](https://github.com/wundergraph/cosmo/issues/2358)) ([1f7078c](https://github.com/wundergraph/cosmo/commit/1f7078cec8a201bdac8994b8eb35b1df4853b9ae)) (@wilsonrivera)
+
+# [0.171.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.170.2...controlplane@0.171.0) (2025-11-22)
+
+### Features
+
+* improve SCIM implementation ([#2351](https://github.com/wundergraph/cosmo/issues/2351)) ([cafd1fc](https://github.com/wundergraph/cosmo/commit/cafd1fc7e1a6857a7abb4d1632b5f42e54f09cf2)) (@wilsonrivera)
+
+## [0.170.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.170.1...controlplane@0.170.2) (2025-11-21)
+
+**Note:** Version bump only for package controlplane
+
+## [0.170.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.170.0...controlplane@0.170.1) (2025-11-21)
+
+**Note:** Version bump only for package controlplane
+
 # [0.170.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.169.7...controlplane@0.170.0) (2025-11-20)
 
 ### Features

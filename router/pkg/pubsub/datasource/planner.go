@@ -48,7 +48,7 @@ func (p *Planner[PB, P, E]) ConfigureFetch() resolve.FetchConfiguration {
 		return resolve.FetchConfiguration{}
 	}
 
-	pubSubDataSource, err := p.config.ProviderBuilder.BuildEngineDataSourceFactory(p.config.Event)
+	pubSubDataSource, err := p.config.ProviderBuilder.BuildEngineDataSourceFactory(p.config.Event, p.config.Providers)
 	if err != nil {
 		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to build data source: %w", err))
 		return resolve.FetchConfiguration{}
@@ -93,7 +93,7 @@ func (p *Planner[PB, P, E]) ConfigureSubscription() plan.SubscriptionConfigurati
 		return plan.SubscriptionConfiguration{}
 	}
 
-	pubSubDataSource, err := p.config.ProviderBuilder.BuildEngineDataSourceFactory(p.config.Event)
+	pubSubDataSource, err := p.config.ProviderBuilder.BuildEngineDataSourceFactory(p.config.Event, p.config.Providers)
 	if err != nil {
 		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to get resolve data source subscription: %w", err))
 		return plan.SubscriptionConfiguration{}
@@ -109,6 +109,7 @@ func (p *Planner[PB, P, E]) ConfigureSubscription() plan.SubscriptionConfigurati
 		p.visitor.Walker.StopWithInternalErr(fmt.Errorf("failed to get resolve data source subscription: %w", err))
 		return plan.SubscriptionConfiguration{}
 	}
+	dataSource.SetHooks(p.config.Hooks)
 
 	input, err := pubSubDataSource.ResolveDataSourceSubscriptionInput()
 	if err != nil {
