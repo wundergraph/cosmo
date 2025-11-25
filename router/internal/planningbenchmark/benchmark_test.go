@@ -36,11 +36,11 @@ func TestPlanning(t *testing.T) {
 	pl, err := pg.GetPlanner()
 	require.NoError(t, err)
 
-	opDoc, err := pl.ParseAndPrepareOperation(cfg.OperationPath)
+	opDoc, _, err := pl.ParseAndPrepareOperation(cfg.OperationPath)
 	require.NoError(t, err)
 
 	start := time.Now()
-	p, err := pl.PlanPreparedOperation(opDoc)
+	p, _, err := pl.PlanPreparedOperation(opDoc)
 	require.NoError(t, err)
 	t.Logf("Planning completed in %v", time.Since(start))
 
@@ -69,12 +69,12 @@ func BenchmarkPlanning(b *testing.B) {
 
 	for b.Loop() {
 		b.StopTimer()
-		opDoc, err := pl.ParseAndPrepareOperation(cfg.OperationPath)
+		opDoc, _, err := pl.ParseAndPrepareOperation(cfg.OperationPath)
 		require.NoError(b, err)
 		b.SetBytes(int64(len(opDoc.Input.RawBytes)))
 		b.StartTimer()
 
-		_, err = pl.PlanPreparedOperation(opDoc)
+		_, _, err = pl.PlanPreparedOperation(opDoc)
 		require.NoError(b, err)
 	}
 }

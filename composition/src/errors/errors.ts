@@ -8,8 +8,10 @@ import {
 import {
   IncompatibleMergedTypesErrorParams,
   IncompatibleParentTypeMergeErrorParams,
+  IncompatibleTypeWithProvidesErrorMessageParams,
   InvalidNamedTypeErrorParams,
   InvalidRootTypeFieldEventsDirectiveData,
+  NonExternalConditionalFieldErrorParams,
   OneOfRequiredFieldsErrorParams,
   SemanticNonNullLevelsIndexOutOfBoundsErrorParams,
   SemanticNonNullLevelsNonNullErrorParams,
@@ -25,6 +27,7 @@ import {
   INTERFACE,
   LEVELS,
   LITERAL_NEW_LINE,
+  LITERAL_PERIOD,
   NOT_UPPER,
   OR_UPPER,
   QUOTATION_JOIN,
@@ -32,6 +35,7 @@ import {
   SUBSCRIPTION_FILTER,
   SUBSCRIPTION_FILTER_CONDITION,
   SUBSCRIPTION_FILTER_VALUE,
+  TYPENAME,
   UNION,
   VALUES,
 } from '../utils/string-constants';
@@ -684,9 +688,13 @@ export function invalidConfigurationDataErrorMessage(typeName: string, fieldName
   );
 }
 
-export function incompatibleTypeWithProvidesErrorMessage(fieldCoords: string, responseType: string): string {
+export function incompatibleTypeWithProvidesErrorMessage({
+  fieldCoords,
+  responseType,
+  subgraphName,
+}: IncompatibleTypeWithProvidesErrorMessageParams): string {
   return (
-    ` A "@provides" directive is declared on field "${fieldCoords}".\n` +
+    ` A "@provides" directive is declared on field "${fieldCoords}" in subgraph "${subgraphName}".\n` +
     ` However, the response type "${responseType}" is not an Object nor Interface.`
   );
 }
@@ -1472,19 +1480,23 @@ export function externalInterfaceFieldsError(typeName: string, fieldNames: Array
   );
 }
 
-export function nonExternalConditionalFieldError(
-  directiveCoords: string,
-  subgraphName: string,
-  targetCoords: string,
-  fieldSet: string,
-  fieldSetDirectiveName: string,
-): Error {
+export function nonExternalConditionalFieldError({
+  directiveCoords,
+  fieldSet,
+  directiveName,
+  subgraphName,
+  targetCoords,
+}: NonExternalConditionalFieldErrorParams): Error {
+  const segments = targetCoords.split(LITERAL_PERIOD);
+  const isTypeName = segments[segments.length - 1] === TYPENAME;
   return new Error(
-    `The field "${directiveCoords}" in subgraph "${subgraphName}" defines a "@${fieldSetDirectiveName}"` +
+    `The field "${directiveCoords}" in subgraph "${subgraphName}" defines a "@${directiveName}"` +
       ` directive with the following field set:\n "${fieldSet}".` +
-      `\nHowever, neither the field "${targetCoords}" nor any of its field set ancestors are declared "@external".` +
+      (isTypeName
+        ? `\nHowever, none of the field set ancestors of "__typename" is declared "@external".`
+        : `\nHowever, neither the field "${targetCoords}" nor any of its field set ancestors are declared "@external".`) +
       `\nConsequently, "${targetCoords}" is already provided by subgraph "${subgraphName}" and should not form part of` +
-      ` a "@${fieldSetDirectiveName}" directive field set.`,
+      ` a "@${directiveName}" directive field set.`,
   );
 }
 
@@ -1583,6 +1595,13 @@ export function invalidDirectiveDefinitionError(directiveName: string, errorMess
       ':\n' +
       errorMessages.join(LITERAL_NEW_LINE) +
       '"',
+  );
+}
+
+export function typeNameAlreadyProvidedErrorMessage(fieldCoords: string, subgraphName: string): string {
+  return (
+    ` The field "${fieldCoords}" is unconditionally provided by subgraph "${subgraphName}" and should not form` +
+    ` part of any "@provides" field set.`
   );
 }
 

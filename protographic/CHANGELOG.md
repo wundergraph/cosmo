@@ -4,6 +4,30 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.12.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.12.0...@wundergraph/protographic@0.12.1) (2025-11-21)
+
+### Bug Fixes
+
+* **protographic:** move protobufjs to dependencies ([#2350](https://github.com/wundergraph/cosmo/issues/2350)) ([cb1126c](https://github.com/wundergraph/cosmo/commit/cb1126c7403eaea3bd3709650f285418bac7c6a3)) (@asoorm)
+
+# [0.12.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.11.0...@wundergraph/protographic@0.12.0) (2025-11-21)
+
+### Features
+
+* generate proto from operations and sdl ([#2302](https://github.com/wundergraph/cosmo/issues/2302)) ([4cb22f5](https://github.com/wundergraph/cosmo/commit/4cb22f517bfd8d4cf2f940ef0c8d8cf5d343f603)) (@asoorm)
+
+# [0.11.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.10.0...@wundergraph/protographic@0.11.0) (2025-11-19)
+
+### Features
+
+* support grpc plugins with ts and bun ([#2293](https://github.com/wundergraph/cosmo/issues/2293)) ([77e5996](https://github.com/wundergraph/cosmo/commit/77e5996412b0747f918a0a6145a2d738edd198f0)) (@SkArchon)
+
+# [0.10.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.9.8...@wundergraph/protographic@0.10.0) (2025-11-11)
+
+### Features
+
+* initial support for field resolvers in connect ([#2290](https://github.com/wundergraph/cosmo/issues/2290)) ([6f28c5d](https://github.com/wundergraph/cosmo/commit/6f28c5d203ef4fd95db83dfe22143e565df6d463)) (@Noroth)
+
 ## [0.9.8](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.9.7...@wundergraph/protographic@0.9.8) (2025-10-29)
 
 **Note:** Version bump only for package @wundergraph/protographic

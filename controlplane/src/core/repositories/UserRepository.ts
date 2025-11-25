@@ -175,13 +175,4 @@ export class UserRepository {
       throw e;
     }
   }
-
-  // only to update the active attribute
-  public async updateUser(input: { id: string; active: boolean }) {
-    await this.db
-      .update(users)
-      .set({ active: input.active, updatedAt: new Date() })
-      .where(eq(users.id, input.id))
-      .execute();
-  }
 }

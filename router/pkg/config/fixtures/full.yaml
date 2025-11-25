@@ -176,7 +176,8 @@ telemetry:
 
       schema_usage:
         enabled: true
-        include_operation_sha: false
+        include_operation_sha: true
+        sample_rate: 1.0  # Supports any rate: 1.0, 0.8, 0.5, 0.1, 0.01, etc.
 
 cache_control_policy:
   enabled: true
@@ -329,6 +330,10 @@ events:
         urls:
           - 'redis://localhost:6379/11'
         cluster_enabled: true
+  handlers:
+    on_receive_events:
+      max_concurrent_handlers: 100
+      handler_timeout: 5s
 
 engine:
   enable_single_flight: true

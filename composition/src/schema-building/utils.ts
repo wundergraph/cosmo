@@ -58,6 +58,7 @@ import {
   INPUT_FIELD,
   INPUT_NODE_KINDS,
   INT_SCALAR,
+  KEY,
   MUTATION,
   OUTPUT_NODE_KINDS,
   PERSISTED_CLIENT_DIRECTIVES,
@@ -80,11 +81,12 @@ import {
 import { InputNodeKind, InvalidRequiredInputValueData, OutputNodeKind } from '../utils/types';
 import { getDescriptionFromString } from '../v1/federation/utils';
 import { DirectiveName, FieldName, SubgraphName, TypeName } from '../types/types';
+import { DEFAULT_DEPRECATION_REASON } from 'graphql';
 
 export function newPersistedDirectivesData(): PersistedDirectivesData {
   return {
     deprecatedReason: '',
-    directivesByDirectiveName: new Map<DirectiveName, ConstDirectiveNode[]>(),
+    directivesByName: new Map<DirectiveName, Array<ConstDirectiveNode>>(),
     isDeprecated: false,
     tagDirectiveByName: new Map<string, ConstDirectiveNode>(),
   };
@@ -98,11 +100,11 @@ type IsNodeExternalOrShareableResult = {
 export function isNodeExternalOrShareable(
   node: ObjectTypeNode | FieldDefinitionNode,
   areAllFieldsShareable: boolean,
-  directivesByDirectiveName: Map<DirectiveName, ConstDirectiveNode[]>,
+  directivesByName: Map<DirectiveName, Array<ConstDirectiveNode>>,
 ): IsNodeExternalOrShareableResult {
   const result: IsNodeExternalOrShareableResult = {
-    isExternal: directivesByDirectiveName.has(EXTERNAL),
-    isShareable: areAllFieldsShareable || directivesByDirectiveName.has(SHAREABLE),
+    isExternal: directivesByName.has(EXTERNAL),
+    isShareable: areAllFieldsShareable || directivesByName.has(SHAREABLE),
   };
   if (!node.directives?.length) {
     return result;
@@ -222,7 +224,7 @@ type ChildDefinitionNode = EnumValueDefinitionNode | FieldDefinitionNode | Input
 function propagateFieldDataArguments(fieldData: FieldData) {
   for (const argumentData of fieldData.argumentDataByName.values()) {
     // First propagate the argument's directives
-    for (const directiveNodes of argumentData.directivesByDirectiveName.values()) {
+    for (const directiveNodes of argumentData.directivesByName.values()) {
       argumentData.node.directives.push(...directiveNodes);
     }
     fieldData.node.arguments.push(argumentData.node);
@@ -237,7 +239,32 @@ export function childMapToValueArray<T extends ChildData, U extends ChildDefinit
     if (isFieldData(childData)) {
       propagateFieldDataArguments(childData);
     }
-    for (const directiveNodes of childData.directivesByDirectiveName.values()) {
+    for (const [directiveName, directiveNodes] of childData.directivesByName) {
+      if (directiveName === DEPRECATED) {
+        // @deprecated is non-repeatable
+        const directiveNode = directiveNodes[0];
+        if (!directiveNode) {
+          continue;
+        }
+        if (directiveNode.arguments?.length) {
+          childData.node.directives.push(directiveNode);
+          continue;
+        }
+        childData.node.directives.push({
+          ...directiveNode,
+          arguments: [
+            {
+              kind: Kind.ARGUMENT,
+              value: {
+                kind: Kind.STRING,
+                value: DEFAULT_DEPRECATION_REASON,
+              },
+              name: stringToNameNode(REASON),
+            },
+          ],
+        });
+        continue;
+      }
       childData.node.directives.push(...directiveNodes);
     }
     valueArray.push(childData.node);
@@ -314,12 +341,10 @@ export function propagateAuthDirectives(parentData: ParentDefinitionData, authDa
     return;
   }
   if (authData.requiresAuthentication) {
-    parentData.persistedDirectivesData.directivesByDirectiveName.set(AUTHENTICATED, [
-      generateSimpleDirective(AUTHENTICATED),
-    ]);
+    parentData.persistedDirectivesData.directivesByName.set(AUTHENTICATED, [generateSimpleDirective(AUTHENTICATED)]);
   }
   if (authData.requiredScopes.length > 0) {
-    parentData.persistedDirectivesData.directivesByDirectiveName.set(REQUIRES_SCOPES, [
+    parentData.persistedDirectivesData.directivesByName.set(REQUIRES_SCOPES, [
       generateRequiresScopesDirective(authData.requiredScopes),
     ]);
   }
@@ -334,12 +359,10 @@ export function propagateFieldAuthDirectives(fieldData: FieldData, authData?: Au
     return;
   }
   if (fieldAuthData.originalData.requiresAuthentication) {
-    fieldData.persistedDirectivesData.directivesByDirectiveName.set(AUTHENTICATED, [
-      generateSimpleDirective(AUTHENTICATED),
-    ]);
+    fieldData.persistedDirectivesData.directivesByName.set(AUTHENTICATED, [generateSimpleDirective(AUTHENTICATED)]);
   }
   if (fieldAuthData.originalData.requiredScopes.length > 0) {
-    fieldData.persistedDirectivesData.directivesByDirectiveName.set(REQUIRES_SCOPES, [
+    fieldData.persistedDirectivesData.directivesByName.set(REQUIRES_SCOPES, [
       generateRequiresScopesDirective(fieldAuthData.originalData.requiredScopes),
     ]);
   }
@@ -363,14 +386,14 @@ export function generateDeprecatedDirective(reason: string): ConstDirectiveNode 
 }
 
 function getValidFlattenedPersistedDirectiveNodeArray(
-  directivesByDirectiveName: Map<DirectiveName, ConstDirectiveNode[]>,
-  persistedDirectiveDefinitionByDirectiveName: Map<DirectiveName, DirectiveDefinitionNode>,
+  directivesByName: Map<DirectiveName, Array<ConstDirectiveNode>>,
+  persistedDirectiveDefinitionByName: Map<DirectiveName, DirectiveDefinitionNode>,
   directiveCoords: string,
   errors: Error[],
 ): ConstDirectiveNode[] {
-  const persistedDirectiveNodes: ConstDirectiveNode[] = [];
-  for (const [directiveName, directiveNodes] of directivesByDirectiveName) {
-    const persistedDirectiveDefinition = persistedDirectiveDefinitionByDirectiveName.get(directiveName);
+  const persistedDirectiveNodes: Array<ConstDirectiveNode> = [];
+  for (const [directiveName, directiveNodes] of directivesByName) {
+    const persistedDirectiveDefinition = persistedDirectiveDefinitionByName.get(directiveName);
     if (!persistedDirectiveDefinition) {
       continue;
     }
@@ -389,7 +412,7 @@ function getValidFlattenedPersistedDirectiveNodeArray(
 
 function getRouterPersistedDirectiveNodes<T extends NodeData>(
   nodeData: T,
-  persistedDirectiveDefinitionByDirectiveName: Map<string, DirectiveDefinitionNode>,
+  persistedDirectiveDefinitionByName: Map<DirectiveName, DirectiveDefinitionNode>,
   errors: Error[],
 ): ConstDirectiveNode[] {
   const persistedDirectiveNodes = [...nodeData.persistedDirectivesData.tagDirectiveByName.values()];
@@ -398,8 +421,8 @@ function getRouterPersistedDirectiveNodes<T extends NodeData>(
   }
   persistedDirectiveNodes.push(
     ...getValidFlattenedPersistedDirectiveNodeArray(
-      nodeData.persistedDirectivesData.directivesByDirectiveName,
-      persistedDirectiveDefinitionByDirectiveName,
+      nodeData.persistedDirectivesData.directivesByName,
+      persistedDirectiveDefinitionByName,
       nodeData.name,
       errors,
     ),
@@ -408,11 +431,11 @@ function getRouterPersistedDirectiveNodes<T extends NodeData>(
 }
 
 export function getClientPersistedDirectiveNodes<T extends NodeData>(nodeData: T): ConstDirectiveNode[] {
-  const persistedDirectiveNodes: ConstDirectiveNode[] = [];
+  const persistedDirectiveNodes: Array<ConstDirectiveNode> = [];
   if (nodeData.persistedDirectivesData.isDeprecated) {
     persistedDirectiveNodes.push(generateDeprecatedDirective(nodeData.persistedDirectivesData.deprecatedReason));
   }
-  for (const [directiveName, directiveNodes] of nodeData.persistedDirectivesData.directivesByDirectiveName) {
+  for (const [directiveName, directiveNodes] of nodeData.persistedDirectivesData.directivesByName) {
     if (directiveName === SEMANTIC_NON_NULL && isFieldData(nodeData)) {
       persistedDirectiveNodes.push(
         generateSemanticNonNullDirective(getFirstEntry(nodeData.nullLevelsBySubgraphName) ?? new Set<number>([0])),
@@ -630,10 +653,7 @@ export function isTypeValidImplementation(
 }
 
 export function isNodeDataInaccessible(data: NodeData): boolean {
-  return (
-    data.persistedDirectivesData.directivesByDirectiveName.has(INACCESSIBLE) ||
-    data.directivesByDirectiveName.has(INACCESSIBLE)
-  );
+  return data.persistedDirectivesData.directivesByName.has(INACCESSIBLE) || data.directivesByName.has(INACCESSIBLE);
 }
 
 export function isLeafKind(kind: Kind): boolean {

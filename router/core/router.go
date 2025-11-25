@@ -253,6 +253,14 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.metricConfig = rmetric.DefaultConfig(Version)
 	}
 
+	if r.subscriptionHooks.onReceiveEvents.maxConcurrentHandlers == 0 {
+		r.subscriptionHooks.onReceiveEvents.maxConcurrentHandlers = 100
+	}
+
+	if r.subscriptionHooks.onReceiveEvents.timeout == 0 {
+		r.subscriptionHooks.onReceiveEvents.timeout = 5 * time.Second
+	}
+
 	if r.corsOptions == nil {
 		r.corsOptions = CorsDefaultOptions()
 	}
@@ -521,7 +529,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 				IgnorePersistedOperations: r.securityConfiguration.DepthLimit.IgnorePersistedOperations,
 			}
 		} else {
-			r.logger.Warn("Ignoring deprecated security configuration field 'depth_limit', in favor of the `security_complexity_limits.depth` configuration")
+			r.logger.Warn("Ignoring deprecated security configuration field 'depth_limit', in favor of the `security.complexity_limits.depth` configuration")
 		}
 	}
 
@@ -673,6 +681,18 @@ func (r *Router) initModules(ctx context.Context) error {
 			if len(modulePropagators) > 0 {
 				r.tracePropagators = append(r.tracePropagators, modulePropagators...)
 			}
+		}
+
+		if handler, ok := moduleInstance.(SubscriptionOnStartHandler); ok {
+			r.subscriptionHooks.onStart.handlers = append(r.subscriptionHooks.onStart.handlers, handler.SubscriptionOnStart)
+		}
+
+		if handler, ok := moduleInstance.(StreamPublishEventHandler); ok {
+			r.subscriptionHooks.onPublishEvents.handlers = append(r.subscriptionHooks.onPublishEvents.handlers, handler.OnPublishEvents)
+		}
+
+		if handler, ok := moduleInstance.(StreamReceiveEventHandler); ok {
+			r.subscriptionHooks.onReceiveEvents.handlers = append(r.subscriptionHooks.onReceiveEvents.handlers, handler.OnReceiveEvents)
 		}
 
 		r.modules = append(r.modules, moduleInstance)
@@ -889,7 +909,6 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			mcpserver.WithGraphName(r.mcp.GraphName),
 			mcpserver.WithOperationsDir(operationsDir),
 			mcpserver.WithListenAddr(r.mcp.Server.ListenAddr),
-			mcpserver.WithBaseURL(r.mcp.Server.BaseURL),
 			mcpserver.WithLogger(r.logger.With(logFields...)),
 			mcpserver.WithExcludeMutations(r.mcp.ExcludeMutations),
 			mcpserver.WithEnableArbitraryOperations(r.mcp.EnableArbitraryOperations),
@@ -2120,6 +2139,13 @@ func WithDemoMode(demoMode bool) Option {
 	}
 }
 
+func WithStreamsHandlerConfiguration(cfg config.StreamsHandlerConfiguration) Option {
+	return func(r *Router) {
+		r.subscriptionHooks.onReceiveEvents.maxConcurrentHandlers = cfg.OnReceiveEvents.MaxConcurrentHandlers
+		r.subscriptionHooks.onReceiveEvents.timeout = cfg.OnReceiveEvents.HandlerTimeout
+	}
+}
+
 type ProxyFunc func(req *http.Request) (*url.URL, error)
 
 func newHTTPTransport(opts *TransportRequestOptions, proxy ProxyFunc, traceDialer *TraceDialer, subgraph string) *http.Transport {
@@ -2312,6 +2338,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			PromSchemaFieldUsage: rmetric.PrometheusSchemaFieldUsage{
 				Enabled:             cfg.Metrics.Prometheus.SchemaFieldUsage.Enabled,
 				IncludeOperationSha: cfg.Metrics.Prometheus.SchemaFieldUsage.IncludeOperationSha,
+				SampleRate:          cfg.Metrics.Prometheus.SchemaFieldUsage.SampleRate,
 			},
 		},
 	}

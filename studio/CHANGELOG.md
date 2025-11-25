@@ -4,6 +4,48 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.139.0](https://github.com/wundergraph/cosmo/compare/studio@0.138.6...studio@0.139.0) (2025-11-22)
+
+### Features
+
+* improve SCIM implementation ([#2351](https://github.com/wundergraph/cosmo/issues/2351)) ([cafd1fc](https://github.com/wundergraph/cosmo/commit/cafd1fc7e1a6857a7abb4d1632b5f42e54f09cf2)) (@wilsonrivera)
+
+## [0.138.6](https://github.com/wundergraph/cosmo/compare/studio@0.138.5...studio@0.138.6) (2025-11-20)
+
+**Note:** Version bump only for package studio
+
+## [0.138.5](https://github.com/wundergraph/cosmo/compare/studio@0.138.4...studio@0.138.5) (2025-11-17)
+
+**Note:** Version bump only for package studio
+
+## [0.138.4](https://github.com/wundergraph/cosmo/compare/studio@0.138.3...studio@0.138.4) (2025-11-13)
+
+**Note:** Version bump only for package studio
+
+## [0.138.3](https://github.com/wundergraph/cosmo/compare/studio@0.138.2...studio@0.138.3) (2025-11-12)
+
+**Note:** Version bump only for package studio
+
+## [0.138.2](https://github.com/wundergraph/cosmo/compare/studio@0.138.1...studio@0.138.2) (2025-11-12)
+
+**Note:** Version bump only for package studio
+
+## [0.138.1](https://github.com/wundergraph/cosmo/compare/studio@0.138.0...studio@0.138.1) (2025-11-11)
+
+**Note:** Version bump only for package studio
+
+# [0.138.0](https://github.com/wundergraph/cosmo/compare/studio@0.137.0...studio@0.138.0) (2025-11-10)
+
+### Features
+
+* enable GTM script ([#2322](https://github.com/wundergraph/cosmo/issues/2322)) ([1bdc79c](https://github.com/wundergraph/cosmo/commit/1bdc79c1e9d13e3948ee47ba5ada3de1bc5d9d29)) (@wilsonrivera)
+
+# [0.137.0](https://github.com/wundergraph/cosmo/compare/studio@0.136.2...studio@0.137.0) (2025-11-10)
+
+### Features
+
+* preserve tracking cookies ([#2319](https://github.com/wundergraph/cosmo/issues/2319)) ([c054c29](https://github.com/wundergraph/cosmo/commit/c054c2968bda15ad7a08cdc4f8c3f4fa891658ae)) (@wilsonrivera)
+
 ## [0.136.2](https://github.com/wundergraph/cosmo/compare/studio@0.136.1...studio@0.136.2) (2025-10-29)
 
 **Note:** Version bump only for package studio
