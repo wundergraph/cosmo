@@ -81,6 +81,11 @@ export default (opts: BaseCommandOptions) => {
 
       // Start the main build process there
       spinner.start('Building plugin...');
+      spinner.start('Building plugin...');
+      spinner.start('Building plugin...');
+
+      spinner.start('Building plugin...');
+      spinner.start('Building plugin...');
 
       const goModulePath = validateAndGetGoModulePath(language, options.goModulePath);
 
