@@ -168,4 +168,8 @@ export type AuditLogFullAction =
   | 'proposal.closed'
   | 'proposal.enabled'
   | 'proposal.disabled'
-  | 'namespace_proposal_config.updated';
+  | 'namespace_proposal_config.updated'
+  | 'scim.organization_invitation_created'
+  | 'scim.update_organization_member'
+  | 'scim.activate_organization_member'
+  | 'scim.deactivate_organization_member';

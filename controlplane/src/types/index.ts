@@ -311,6 +311,7 @@ export interface OrganizationInvitationDTO {
   email: string;
   invitedBy?: string;
   groups: { groupId: string; kcGroupId: string | null }[];
+  lastSentAt?: Date;
 }
 
 export interface APIKeyDTO {

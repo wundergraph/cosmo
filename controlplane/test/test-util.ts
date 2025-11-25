@@ -404,6 +404,7 @@ export const SetupTest = async function ({
     baseAddress: addr,
     keycloakClient,
     authenticator,
+    mailerClient,
     realm,
     queues: {
       readmeQueue,

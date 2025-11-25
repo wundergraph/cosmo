@@ -1,9 +1,11 @@
-import KeycloakAdminClient from '@keycloak/keycloak-admin-client';
+import KeycloakAdminClient, { NetworkError } from '@keycloak/keycloak-admin-client';
 import { RequiredActionAlias } from '@keycloak/keycloak-admin-client/lib/defs/requiredActionProviderRepresentation.js';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { uid } from 'uid';
 import { FastifyBaseLogger } from 'fastify';
 import { MemberRole } from '../../db/models.js';
 import { organizationRoleEnum } from '../../db/schema.js';
+import { AuthenticationError } from '../errors/errors.js';
 
 export default class Keycloak {
   client: KeycloakAdminClient;
@@ -35,12 +37,19 @@ export default class Keycloak {
   }
 
   public async authenticateClient() {
-    await this.client.auth({
-      grantType: 'password',
-      username: this.adminUser,
-      password: this.adminPassword,
-      clientId: 'admin-cli',
-    });
+    try {
+      await this.client.auth({
+        grantType: 'password',
+        username: this.adminUser,
+        password: this.adminPassword,
+        clientId: 'admin-cli',
+      });
+    } catch (err: any) {
+      if (err instanceof NetworkError) {
+        throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, err.message);
+      }
+      throw err;
+    }
   }
 
   public async roleExists({ realm, roleName }: { realm?: string; roleName: string }): Promise<boolean> {
@@ -90,6 +99,17 @@ export default class Keycloak {
       id,
     });
     return createUserResp.id;
+  }
+
+  public async findUserByEmail({ email, realm }: { email: string; realm?: string }) {
+    const foundUsers = await this.client.users.find({
+      max: 1,
+      email,
+      realm: realm || this.realm,
+      exact: true,
+    });
+
+    return foundUsers.length === 1 ? foundUsers[0] : undefined;
   }
 
   public async updateKeycloakUser({

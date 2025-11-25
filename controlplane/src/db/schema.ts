@@ -1401,6 +1401,7 @@ export const organizationsMembers = pgTable(
       .references(() => organizations.id, {
         onDelete: 'cascade',
       }),
+    active: boolean('active').notNull().default(true),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => {
@@ -1606,6 +1607,7 @@ export const organizationInvitations = pgTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     invitedBy: uuid('invited_by').references(() => users.id, { onDelete: 'cascade' }),
     accepted: boolean('accepted').default(false),
+    lastSentAt: timestamp('last_sent_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => {

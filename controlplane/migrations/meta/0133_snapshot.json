@@ -1,5 +1,5 @@
 {
-  "id": "1f56dc17-3f0c-486c-bf6a-75b671ba6361",
+  "id": "781ded1a-9a7d-4d9e-b443-51651c9f154e",
   "prevId": "3904e4bd-f2e7-4364-a807-c3000b7d0f56",
   "version": "7",
   "dialect": "postgresql",
@@ -3143,13 +3143,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": false
-        },
-        "enable_subgraph_check_extensions": {
-          "name": "enable_subgraph_check_extensions",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
         }
       },
       "indexes": {},
@@ -3286,7 +3279,8 @@
         },
         "lint_rule": {
           "name": "lint_rule",
-          "type": "text",
+          "type": "lint_rules",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
@@ -3400,115 +3394,6 @@
       "uniqueConstraints": {
         "npc_namespace_id_idx": {
           "name": "npc_namespace_id_idx",
-          "nullsNotDistinct": false,
-          "columns": [
-            "namespace_id"
-          ]
-        }
-      },
-      "checkConstraints": {}
-    },
-    "public.namespace_subgraph_check_extensions_config": {
-      "name": "namespace_subgraph_check_extensions_config",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "namespace_id": {
-          "name": "namespace_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "endpoint": {
-          "name": "endpoint",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "secret_key": {
-          "name": "secret_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "include_composed_sdl": {
-          "name": "include_composed_sdl",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "include_linting_issues": {
-          "name": "include_linting_issues",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "include_pruning_issues": {
-          "name": "include_pruning_issues",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "include_schema_changes": {
-          "name": "include_schema_changes",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "include_affected_operations": {
-          "name": "include_affected_operations",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        }
-      },
-      "indexes": {
-        "nsce_namespace_id_idx": {
-          "name": "nsce_namespace_id_idx",
-          "columns": [
-            {
-              "expression": "namespace_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "namespace_subgraph_check_extensions_config_namespace_id_namespaces_id_fk": {
-          "name": "namespace_subgraph_check_extensions_config_namespace_id_namespaces_id_fk",
-          "tableFrom": "namespace_subgraph_check_extensions_config",
-          "tableTo": "namespaces",
-          "columnsFrom": [
-            "namespace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "namespace_subgraph_check_extensions_config_namespace_id_unique": {
-          "name": "namespace_subgraph_check_extensions_config_namespace_id_unique",
           "nullsNotDistinct": false,
           "columns": [
             "namespace_id"
@@ -4647,6 +4532,12 @@
           "notNull": false,
           "default": false
         },
+        "last_sent_at": {
+          "name": "last_sent_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -5046,6 +4937,13 @@
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
+        },
+        "active": {
+          "name": "active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
         },
         "created_at": {
           "name": "created_at",
@@ -6340,7 +6238,8 @@
         },
         "lint_rule_type": {
           "name": "lint_rule_type",
-          "type": "text",
+          "type": "lint_rules",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": false
         },
@@ -6885,18 +6784,6 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
-        },
-        "check_extension_delivery_id": {
-          "name": "check_extension_delivery_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "check_extension_error_message": {
-          "name": "check_extension_error_message",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         }
       },
       "indexes": {
@@ -6928,19 +6815,6 @@
             "id"
           ],
           "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "schema_checks_check_extension_delivery_id_webhook_deliveries_id_fk": {
-          "name": "schema_checks_check_extension_delivery_id_webhook_deliveries_id_fk",
-          "tableFrom": "schema_checks",
-          "tableTo": "webhook_deliveries",
-          "columnsFrom": [
-            "check_extension_delivery_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
           "onUpdate": "no action"
         }
       },
@@ -8530,6 +8404,30 @@
         "slack"
       ]
     },
+    "public.lint_rules": {
+      "name": "lint_rules",
+      "schema": "public",
+      "values": [
+        "FIELD_NAMES_SHOULD_BE_CAMEL_CASE",
+        "TYPE_NAMES_SHOULD_BE_PASCAL_CASE",
+        "SHOULD_NOT_HAVE_TYPE_PREFIX",
+        "SHOULD_NOT_HAVE_TYPE_SUFFIX",
+        "SHOULD_NOT_HAVE_INPUT_PREFIX",
+        "SHOULD_HAVE_INPUT_SUFFIX",
+        "SHOULD_NOT_HAVE_ENUM_PREFIX",
+        "SHOULD_NOT_HAVE_ENUM_SUFFIX",
+        "SHOULD_NOT_HAVE_INTERFACE_PREFIX",
+        "SHOULD_NOT_HAVE_INTERFACE_SUFFIX",
+        "ENUM_VALUES_SHOULD_BE_UPPER_CASE",
+        "ORDER_FIELDS",
+        "ORDER_ENUM_VALUES",
+        "ORDER_DEFINITIONS",
+        "ALL_TYPES_REQUIRE_DESCRIPTION",
+        "DISALLOW_CASE_INSENSITIVE_ENUM_VALUES",
+        "NO_TYPENAME_PREFIX_IN_TYPE_FIELDS",
+        "REQUIRE_DEPRECATION_REASON"
+      ]
+    },
     "public.lint_severity": {
       "name": "lint_severity",
       "schema": "public",
@@ -8729,8 +8627,7 @@
       "values": [
         "webhook",
         "slack",
-        "admission",
-        "check-extension"
+        "admission"
       ]
     },
     "public.websocket_subprotocol": {
