@@ -1,8 +1,8 @@
+import { randomUUID } from 'node:crypto';
 import { SignJWT } from 'jose';
 import { describe, test, expect } from 'vitest';
 import { Context, Hono } from 'hono';
 import { BlobStorage, BlobNotFoundError, cdn, BlobObject, signatureSha256Header } from '../src';
-import {randomUUID} from "node:crypto";
 
 const secretKey = 'hunter2';
 const secretAdmissionKey = 'hunter3';
@@ -615,9 +615,7 @@ describe('CDN handlers', () => {
 
     test('it returns the schema check extension file content', async () => {
       const operationContents = JSON.stringify({
-        subgraphs: [
-          { id: '123', name: 'test' },
-        ],
+        subgraphs: [{ id: '123', name: 'test' }],
         compositions: [],
       });
 
