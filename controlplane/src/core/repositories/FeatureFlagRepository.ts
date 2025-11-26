@@ -1,6 +1,6 @@
 import { Subgraph } from '@wundergraph/composition';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
-import { SQL, and, asc, count, eq, inArray, like, or, sql, arrayContains } from 'drizzle-orm';
+import { SQL, and, asc, count, eq, inArray, like, or, sql, arrayOverlaps } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { validate as isValidUuid } from 'uuid';
@@ -667,7 +667,7 @@ export class FeatureFlagRepository {
     for (const labels of groupedLabels) {
       // At least one common label
       conditions.push(
-        arrayContains(
+        arrayOverlaps(
           featureFlags.labels,
           labels.map((l) => joinLabel(l)),
         ),
