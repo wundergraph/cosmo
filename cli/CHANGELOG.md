@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.100.0](https://github.com/wundergraph/cosmo/compare/wgc@0.99.0...wgc@0.100.0) (2025-11-26)
+
+### Features
+
+* add yes option for router cli and fix ts demo plugin example ([#2367](https://github.com/wundergraph/cosmo/issues/2367)) ([64bdd46](https://github.com/wundergraph/cosmo/commit/64bdd468b831c020f256a783fe8f5e832676c2dd)) (@SkArchon)
+
 # [0.99.0](https://github.com/wundergraph/cosmo/compare/wgc@0.98.0...wgc@0.99.0) (2025-11-26)
 
 ### Features
