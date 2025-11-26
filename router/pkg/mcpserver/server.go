@@ -94,7 +94,7 @@ type Options struct {
 	// Stateless determines whether the MCP server should be stateless
 	Stateless bool
 	// CorsConfig is the CORS configuration for the MCP server
-	CorsConfig *cors.Config
+	CorsConfig cors.Config
 }
 
 // GraphQLSchemaServer represents an MCP server that works with GraphQL schemas and operations
@@ -115,7 +115,7 @@ type GraphQLSchemaServer struct {
 	operationsManager         *OperationsManager
 	schemaCompiler            *SchemaCompiler
 	registeredTools           []string
-	corsConfig                *cors.Config
+	corsConfig                cors.Config
 }
 
 type graphqlRequest struct {
@@ -308,7 +308,7 @@ func WithStateless(stateless bool) func(*Options) {
 	}
 }
 
-func WithCORSConfig(corsCfg *cors.Config) func(*Options) {
+func WithCORS(corsCfg cors.Config) func(*Options) {
 	return func(o *Options) {
 		o.CorsConfig = corsCfg
 	}
@@ -332,12 +332,12 @@ func (s *GraphQLSchemaServer) Serve() (*server.StreamableHTTPServer, error) {
 		server.WithHeartbeatInterval(10*time.Second),
 	)
 
-	corsMiddleware := WithCORS(s.corsConfig)
+	middleware := corsMiddleware(s.corsConfig)
 
 	mux := http.NewServeMux()
 
 	// No OAuth protection - original behavior
-	mux.Handle("/mcp", corsMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/mcp", middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		streamableHTTPServer.ServeHTTP(w, r)
 	})))
 
@@ -801,30 +801,24 @@ func (s *GraphQLSchemaServer) handleGetGraphQLSchema() func(ctx context.Context,
 	}
 }
 
-// WithCORS creates a reusable CORS middleware that can be used with any HTTP handler.
+// corsMiddleware creates a reusable CORS middleware that can be used with any HTTP handler.
 // It handles preflight OPTIONS requests and sets appropriate CORS headers.
 //
 // Example usage:
 //
-//	corsMiddleware := WithCORS("GET", "POST", "PUT", "DELETE")
-//	http.Handle("/api/", corsMiddleware(apiHandler))
+//	middleware := corsMiddleware("GET", "POST", "PUT", "DELETE")
+//	http.Handle("/api/", middleware(apiHandler))
 //
 // The middleware sets the following CORS headers:
 //   - Access-Control-Allow-Origin: *
 //   - Access-Control-Allow-Methods: specified methods + OPTIONS
 //   - Access-Control-Allow-Headers: Content-Type, Authorization
 //   - Access-Control-Max-Age: 86400 (24 hours)
-func WithCORS(corsConfig *cors.Config) func(http.Handler) http.Handler {
+func corsMiddleware(corsConfig cors.Config) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			if corsConfig == nil || !corsConfig.Enabled {
-				// If CORS is not enabled, just call the next handler
-				next.ServeHTTP(w, req)
-				return
-			}
-
 			// Set CORS headers for all requests
-			setCORSHeaders(w, *corsConfig)
+			setCORSHeaders(w, corsConfig)
 
 			// Handle preflight OPTIONS requests
 			if req.Method == http.MethodOptions {

@@ -914,7 +914,10 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			mcpserver.WithEnableArbitraryOperations(r.mcp.EnableArbitraryOperations),
 			mcpserver.WithExposeSchema(r.mcp.ExposeSchema),
 			mcpserver.WithStateless(r.mcp.Session.Stateless),
-			mcpserver.WithCORSConfig(r.corsOptions),
+		}
+
+		if r.corsOptions != nil {
+			mcpOpts = append(mcpOpts, mcpserver.WithCORS(*r.corsOptions))
 		}
 
 		// Determine the router GraphQL endpoint
