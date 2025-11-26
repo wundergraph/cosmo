@@ -16,6 +16,7 @@ import (
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
@@ -557,6 +558,56 @@ func TestMCP(t *testing.T) {
 						assert.Equal(t, "86400", resp.Header.Get("Access-Control-Max-Age"))
 					})
 				}
+			})
+		})
+
+		t.Run("Custom headers in router CORS are also used by the MCP server", func(t *testing.T) {
+			testenv.Run(t, &testenv.Config{
+				MCP: config.MCPConfiguration{
+					Enabled: true,
+				},
+				RouterOptions: []core.Option{
+					core.WithCors(&cors.Config{
+						AllowHeaders: []string{"Test", "X-Custom-Auth"},
+					}),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				// Get the MCP server address from the configuration
+				mcpAddr := xEnv.GetMCPServerAddr()
+
+				// Create a GET request
+				req, err := http.NewRequest("GET", mcpAddr, nil)
+				require.NoError(t, err)
+
+				// Add cross-origin header
+				req.Header.Set("Origin", "https://example.com")
+
+				// Make the request
+				resp, err := xEnv.RouterClient.Do(req)
+				require.NoError(t, err)
+				defer resp.Body.Close()
+
+				// Verify CORS headers are present in the response
+				assert.Equal(t, "*", resp.Header.Get("Access-Control-Allow-Origin"))
+
+				allowedMethods := resp.Header.Get("Access-Control-Allow-Methods")
+				assert.Contains(t, allowedMethods, "GET")
+				assert.Contains(t, allowedMethods, "POST")
+				assert.Contains(t, allowedMethods, "PUT")
+				assert.Contains(t, allowedMethods, "DELETE")
+				assert.Contains(t, allowedMethods, "OPTIONS")
+
+				allowedHeaders := resp.Header.Get("Access-Control-Allow-Headers")
+				assert.Contains(t, allowedHeaders, "Content-Type")
+				assert.Contains(t, allowedHeaders, "Accept")
+				assert.Contains(t, allowedHeaders, "Authorization")
+				assert.Contains(t, allowedHeaders, "Last-Event-ID")
+				assert.Contains(t, allowedHeaders, "Mcp-Protocol-Version")
+				assert.Contains(t, allowedHeaders, "Mcp-Session-Id")
+				assert.Contains(t, allowedHeaders, "Test")
+				assert.Contains(t, allowedHeaders, "X-Custom-Auth")
+
+				assert.Equal(t, "86400", resp.Header.Get("Access-Control-Max-Age"))
 			})
 		})
 	})
