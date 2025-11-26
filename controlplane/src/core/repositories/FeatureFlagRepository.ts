@@ -312,7 +312,8 @@ export class FeatureFlagRepository {
     }
 
     if (query) {
-      conditions.push(isValidUuid(query) ? eq(subgraphs.id, query) : like(schema.targets.name, `%${query}%`));
+      const escapedQuery = query.replace(/‘/g, "''");
+      conditions.push(isValidUuid(query) ? eq(subgraphs.id, query) : like(schema.targets.name, `%${escapedQuery}%`));
     }
 
     if (!this.applyRbacConditionsToQuery(rbac, conditions)) {

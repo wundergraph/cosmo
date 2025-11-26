@@ -698,8 +698,9 @@ export class SubgraphRepository {
     }
 
     if (opts.query) {
+      const escapedQuery = opts.query.replace(/‘/g, "''");
       conditions.push(
-        isValidUuid(opts.query) ? eq(schema.subgraphs.id, opts.query) : like(schema.targets.name, `%${opts.query}%`),
+        isValidUuid(opts.query) ? eq(schema.subgraphs.id, opts.query) : like(schema.targets.name, `%${escapedQuery}%`),
       );
     }
 
@@ -757,8 +758,9 @@ export class SubgraphRepository {
     }
 
     if (opts.query) {
+      const escapedQuery = opts.query.replace(/‘/g, "''");
       conditions.push(
-        isValidUuid(opts.query) ? eq(schema.subgraphs.id, opts.query) : like(schema.targets.name, `%${opts.query}%`),
+        isValidUuid(opts.query) ? eq(schema.subgraphs.id, opts.query) : like(schema.targets.name, `%${escapedQuery}%`),
       );
     }
 
