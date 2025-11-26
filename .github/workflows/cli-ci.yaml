@@ -133,7 +133,32 @@ jobs:
           fi
           
           echo "Using run id: $run_id"
-          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          # Get artifacts for that run
+               artifacts_json=$(curl -s \
+               -H "Authorization: Bearer $GITHUB_TOKEN" \
+               -H "Accept: application/vnd.github+json" \
+               "https://api.github.com/repos/$REPO/actions/runs/$run_id/artifacts")
+
+          # Find the artifact ID for the desired artifact name
+               artifact_id=$(echo "$artifacts_json" | jq -r --arg name "$ARTIFACT_NAME" '
+               .artifacts
+               | map(select(.name == $name and .expired == false))
+               | sort_by(.created_at)
+               | last
+               | .id
+               ')
+
+          if [ -z "$artifact_id" ] || [ "$artifact_id" = "null" ]; then
+            echo "No non-expired artifact named '$ARTIFACT_NAME' found for run $run_id" >&2
+           echo "Artifacts JSON for debugging:" >&2
+           echo "$artifacts_json" >&2
+           exit 1
+          fi
+               
+           echo "Using artifact id: $artifact_id"
+           
+           echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+           echo "artifact_id=$artifact_id" >> "$GITHUB_OUTPUT"
   
       - name: Download coverage artifact from previous run
         uses: actions/download-artifact@v4
