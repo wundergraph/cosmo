@@ -1,0 +1,35 @@
+name: 'Codecov Upload PR'
+description: 'Upload coverage artifacts during PR and send to Codecov'
+
+inputs:
+  artifact-name:
+    description: 'Name of the coverage artifact'
+    required: false
+    default: 'pr-build'
+  coverage-path:
+    description: 'Path to coverage files'
+    required: true
+  retention-days:
+    description: 'Days to retain the artifact'
+    required: false
+    default: '7'
+  codecov-token:
+    description: 'Codecov token for uploading'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Upload artifact for PR
+      uses: actions/upload-artifact@v4
+      with:
+        overwrite: true
+        name: ${{ inputs.artifact-name }}
+        path: ${{ inputs.coverage-path }}
+        retention-days: ${{ inputs.retention-days }}
+
+    - name: Upload results to Codecov
+      uses: codecov/codecov-action@v5
+      with:
+        token: ${{ inputs.codecov-token }}
+

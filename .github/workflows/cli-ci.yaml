@@ -54,10 +54,15 @@ jobs:
       - name: Get Coverage
         run: pnpm run --filter wgc coverage
 
-      - name: Upload results to Codecov
-        uses: codecov/codecov-action@v5
+      - name: Upload coverage to Codecov
+        uses: ./.github/actions/codecov-upload-pr
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+          artifact-name: pr-build
+          coverage-path: |
+            cli/coverage/clover.xml
+            cli/coverage/coverage-final.json
+          retention-days: 7
+          codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
   build_test_node_matrix:
     timeout-minutes: 10
@@ -115,3 +120,28 @@ jobs:
       - name: 'Some tests failed'
         if: ${{ contains(needs.*.result, 'failure') }}
         run: exit 1
+
+  post-merge:
+    if: >
+      github.event_name == 'pull_request' &&
+      github.event.action == 'closed' &&
+      github.event.pull_request.merged == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+
+      - name: Print merge commit SHA
+        run: |
+          echo "Merge commit SHA: ${{ github.event.pull_request.merge_commit_sha }}"
+
+      - name: Download computed artifact and upload to codecov with merge SHA
+        uses: ./.github/actions/codecov-merge-upload
+        with:
+          artifact-name: pr-build
+          coverage-path: cli/coverage
+          workflow-path: .github/workflows/cli-ci.yaml
+          override-commit: ${{ github.event.pull_request.merge_commit_sha }}
+          codecov-token: ${{ secrets.CODECOV_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
