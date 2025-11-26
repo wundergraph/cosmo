@@ -55,30 +55,48 @@ export function configureSubgraphCheckExtensions(
         throw new UnauthorizedError();
       }
 
+      if (req.enableSubgraphCheckExtensions || req.endpoint) {
+        let isEndpointValid = false;
+        if (req.endpoint) {
+          try {
+            const endpoint = new URL(req.endpoint);
+            isEndpointValid =
+              (endpoint.hostname === 'localhost' &&
+                (endpoint.protocol === 'http:' || endpoint.protocol === 'https:')) ||
+              (endpoint.hostname !== 'localhost' && endpoint.protocol === 'https:');
+          } catch {
+            // ignore
+          }
+        }
+
+        if (!isEndpointValid) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR_BAD_REQUEST,
+              details: 'The endpoint must be a valid absolute URL starting with https://',
+            },
+          };
+        }
+      }
+
       await namespaceRepo.updateConfiguration({
         id: namespace.id,
         enableSubgraphCheckExtensions: req.enableSubgraphCheckExtensions,
       });
 
       const checkExtensionsRepo = new SubgraphCheckExtensionsRepository(tx);
-      if (req.enableSubgraphCheckExtensions) {
-        // When the check extension is enabled, we want all data to be included, the user can disable what they don't
-        // need later on
-        const forceEnableIncludedData = !namespace.enableSubgraphCheckExtensions;
 
-        await checkExtensionsRepo.updateNamespaceConfig({
-          namespaceId: namespace.id,
-          endpoint: req.endpoint,
-          secretKey: req.secretKey,
-          includeComposedSdl: forceEnableIncludedData || req.includeComposedSdl,
-          includeLintingIssues: forceEnableIncludedData || req.includeLintingIssues,
-          includePruningIssues: forceEnableIncludedData || req.includePruningIssues,
-          includeSchemaChanges: forceEnableIncludedData || req.includeSchemaChanges,
-          includeAffectedOperations: forceEnableIncludedData || req.includeAffectedOperations,
-        });
-      } else {
-        await checkExtensionsRepo.deleteNamespaceConfig(namespace.id);
-      }
+      const forceEnableIncludedData = !namespace.enableSubgraphCheckExtensions;
+      await checkExtensionsRepo.updateNamespaceConfig({
+        namespaceId: namespace.id,
+        endpoint: req.endpoint,
+        secretKey: req.secretKey,
+        includeComposedSdl: forceEnableIncludedData || req.includeComposedSdl,
+        includeLintingIssues: forceEnableIncludedData || req.includeLintingIssues,
+        includePruningIssues: forceEnableIncludedData || req.includePruningIssues,
+        includeSchemaChanges: forceEnableIncludedData || req.includeSchemaChanges,
+        includeAffectedOperations: forceEnableIncludedData || req.includeAffectedOperations,
+      });
 
       return {
         response: {

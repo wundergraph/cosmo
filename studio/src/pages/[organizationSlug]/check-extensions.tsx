@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { NextPageWithLayout } from "@/lib/page";
 import { getDashboardLayout } from "@/components/layout/dashboard-layout";
 import { WorkspaceSelector } from "@/components/dashboard/workspace-selector";
@@ -30,6 +31,7 @@ const CheckExtensionsPage: NextPageWithLayout = () => {
   const checkUserAccess = useCheckUserAccess();
   const { namespace: { name: namespace } } = useWorkspace();
   const subgraphCheckExtensionsFeature = useFeature("subgraph-check-extensions");
+  const [enableSubgraphCheckExtensions, setEnableSubgraphCheckExtensions] = useState(false);
 
   const { mutate, isPending } = useMutation(configureSubgraphCheckExtensions);
   const { data, isLoading, isRefetching, refetch, error } = useQuery(
@@ -53,6 +55,11 @@ const CheckExtensionsPage: NextPageWithLayout = () => {
     },
   );
 
+  useEffect(
+    () => setEnableSubgraphCheckExtensions(data?.config.enableSubgraphCheckExtensions === true),
+    [data?.config.enableSubgraphCheckExtensions],
+  );
+
   const saveChanges = (
     config: Partial<SubgraphCheckExtensionsConfig>,
     onSuccessMessage: string,
@@ -60,27 +67,26 @@ const CheckExtensionsPage: NextPageWithLayout = () => {
     onConfigUpdated?: (newConfig: SubgraphCheckExtensionsConfig) => void
   ) => {
     mutate(
-      { namespace, ...config },
+      { namespace, ...config, enableSubgraphCheckExtensions },
       {
         onSuccess(d) {
           if (d.response?.code === EnumStatusCode.OK) {
             toast({ description: onSuccessMessage, duration: 3000 });
+            refetch().then(
+              (result) => {
+                if (result.data?.code === EnumStatusCode.OK) {
+                  onConfigUpdated?.(result.data.config)
+                }
+              },
+              () => {
+                if (data?.config) {
+                  onConfigUpdated?.(data.config);
+                }
+              },
+            );
           } else if (d.response?.details) {
             toast({ description: d.response.details, duration: 3000 });
           }
-
-          refetch().then(
-            (result) => {
-              if (result.data?.code === EnumStatusCode.OK) {
-                onConfigUpdated?.(result.data.config)
-              }
-            },
-            () => {
-              if (data?.config) {
-                onConfigUpdated?.(data.config);
-              }
-            },
-          );
         },
         onError() {
           toast({ description: onFailureMessage });
@@ -135,26 +141,20 @@ const CheckExtensionsPage: NextPageWithLayout = () => {
         </div>
 
         <Switch
-          checked={data.config.enableSubgraphCheckExtensions}
+          checked={enableSubgraphCheckExtensions}
           disabled={
             isPending ||
             isRefetching ||
             !subgraphCheckExtensionsFeature?.enabled ||
             !checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] })
           }
-          onCheckedChange={(checked) => saveChanges(
-            {
-              ...data.config,
-              enableSubgraphCheckExtensions: checked,
-            },
-            `Subgraph check extensions ${checked ? 'enabled' : 'disabled'} successfully.`,
-            `Could not ${checked ? 'enable' : 'disable'} subgraph check extensions. Please try again.`
-          )}
+          onCheckedChange={setEnableSubgraphCheckExtensions}
         />
       </div>
 
       <CheckExtensionsConfig
         config={data.config}
+        enableSubgraphCheckExtensions={enableSubgraphCheckExtensions}
         isSecretKeyAssigned={data.isSecretKeyAssigned}
         isLintingEnabledForNamespace={data.isLintingEnabledForNamespace}
         isGraphPruningEnabledForNamespace={data.isGraphPruningEnabledForNamespace}

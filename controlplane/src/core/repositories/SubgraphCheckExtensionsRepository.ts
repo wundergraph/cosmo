@@ -46,11 +46,4 @@ export class SubgraphCheckExtensionsRepository {
       })
       .execute();
   }
-
-  deleteNamespaceConfig(namespaceId: string) {
-    return this.db
-      .delete(schema.namespaceSubgraphCheckExtensionConfig)
-      .where(eq(schema.namespaceSubgraphCheckExtensionConfig.namespaceId, namespaceId))
-      .execute();
-  }
 }

@@ -1,6 +1,5 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
-import { ClickHouseClient } from '../src/core/clickhouse/index.js';
+import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import { TestUser, afterAllSetup, beforeAllSetup } from '../src/core/test-util.js';
 import { SetupTest } from './test-util.js';
 
@@ -14,12 +13,6 @@ vi.mock('../src/core/clickhouse/index.js', () => {
 });
 
 describe('Subgraph Check Extensions Tests', (ctx) => {
-  let chClient: ClickHouseClient;
-
-  beforeEach(() => {
-    chClient = new ClickHouseClient();
-  });
-
   afterEach(() => {
     vi.clearAllMocks();
   });
@@ -37,6 +30,7 @@ describe('Subgraph Check Extensions Tests', (ctx) => {
     const response = await client.configureSubgraphCheckExtensions({
       enableSubgraphCheckExtensions: true,
       namespace: 'default',
+      endpoint: 'http://localhost:4000/',
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
@@ -49,6 +43,7 @@ describe('Subgraph Check Extensions Tests', (ctx) => {
     const response = await client.configureSubgraphCheckExtensions({
       enableSubgraphCheckExtensions: true,
       namespace: 'default',
+      endpoint: 'http://localhost:4000/',
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.ERR_UPGRADE_PLAN);
@@ -69,6 +64,7 @@ describe('Subgraph Check Extensions Tests', (ctx) => {
     const response = await client.configureSubgraphCheckExtensions({
       enableSubgraphCheckExtensions: true,
       namespace: 'default',
+      endpoint: 'http://localhost:4000/',
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
@@ -82,6 +78,7 @@ describe('Subgraph Check Extensions Tests', (ctx) => {
     const response = await client.configureSubgraphCheckExtensions({
       enableSubgraphCheckExtensions: true,
       namespace: 'default',
+      endpoint: 'http://localhost:4000/',
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
@@ -92,7 +89,7 @@ describe('Subgraph Check Extensions Tests', (ctx) => {
 
     expect(getSubgraphCheckExtensionsConfig.response?.code).toBe(EnumStatusCode.OK);
     expect(getSubgraphCheckExtensionsConfig.isEnabledForNamespace).toBe(true);
-    expect(getSubgraphCheckExtensionsConfig.endpoint).toStrictEqual('');
+    expect(getSubgraphCheckExtensionsConfig.endpoint).toStrictEqual('http://localhost:4000/');
     expect(getSubgraphCheckExtensionsConfig.isSecretKeyAssigned).toStrictEqual(false);
     expect(getSubgraphCheckExtensionsConfig.includeComposedSdl).toStrictEqual(true);
 
@@ -127,6 +124,7 @@ describe('Subgraph Check Extensions Tests', (ctx) => {
     const response = await client.configureSubgraphCheckExtensions({
       enableSubgraphCheckExtensions: true,
       namespace: 'default',
+      endpoint: 'http://localhost:4000/',
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
@@ -137,7 +135,7 @@ describe('Subgraph Check Extensions Tests', (ctx) => {
 
     expect(getSubgraphCheckExtensionsConfig.response?.code).toBe(EnumStatusCode.OK);
     expect(getSubgraphCheckExtensionsConfig.isEnabledForNamespace).toBe(true);
-    expect(getSubgraphCheckExtensionsConfig.endpoint).toStrictEqual('');
+    expect(getSubgraphCheckExtensionsConfig.endpoint).toStrictEqual('http://localhost:4000/');
     expect(getSubgraphCheckExtensionsConfig.isSecretKeyAssigned).toStrictEqual(false);
     expect(getSubgraphCheckExtensionsConfig.includeComposedSdl).toStrictEqual(true);
 
@@ -145,7 +143,7 @@ describe('Subgraph Check Extensions Tests', (ctx) => {
 
     const configureGraphPruningConfigResponse = await client.configureSubgraphCheckExtensions({
       namespace: 'default',
-      endpoint: 'http://localhost:4000/',
+      endpoint: 'http://localhost:5000/',
       secretKey: '...',
       includeComposedSdl: false,
     });
@@ -154,6 +152,118 @@ describe('Subgraph Check Extensions Tests', (ctx) => {
     expect(configureGraphPruningConfigResponse.response?.details).toBe(
       'The user does not have the permissions to perform this operation',
     );
+
+    await server.close();
+  });
+
+  test.each(['http', 'https'])('that `%s://localhost` is allowed as the endpoint' , async (protocol) => {
+    const { client, server } = await SetupTest({ dbname, setupBilling: { plan: 'enterprise' } });
+    const response = await client.configureSubgraphCheckExtensions({
+      enableSubgraphCheckExtensions: true,
+      namespace: 'default',
+      endpoint: `${protocol}://localhost:4000/`,
+    });
+
+    expect(response.response?.code).toBe(EnumStatusCode.OK);
+
+    let getSubgraphCheckExtensionsConfig = await client.getSubgraphCheckExtensionsConfig({
+      namespace: 'default',
+    });
+
+    expect(getSubgraphCheckExtensionsConfig.response?.code).toBe(EnumStatusCode.OK);
+    expect(getSubgraphCheckExtensionsConfig.isEnabledForNamespace).toBe(true);
+    expect(getSubgraphCheckExtensionsConfig.endpoint).toStrictEqual(`${protocol}://localhost:4000/`);
+    expect(getSubgraphCheckExtensionsConfig.isSecretKeyAssigned).toStrictEqual(false);
+    expect(getSubgraphCheckExtensionsConfig.includeComposedSdl).toStrictEqual(true);
+
+    const configureGraphPruningConfigResponse = await client.configureSubgraphCheckExtensions({
+      namespace: 'default',
+      enableSubgraphCheckExtensions: true,
+      endpoint: `${protocol}://localhost:5000/`,
+      secretKey: '...',
+      includeComposedSdl: false,
+    });
+
+    expect(configureGraphPruningConfigResponse.response?.code).toBe(EnumStatusCode.OK);
+    getSubgraphCheckExtensionsConfig = await client.getSubgraphCheckExtensionsConfig({
+      namespace: 'default',
+    });
+
+    expect(getSubgraphCheckExtensionsConfig.response?.code).toBe(EnumStatusCode.OK);
+    expect(getSubgraphCheckExtensionsConfig.isEnabledForNamespace).toBe(true);
+    expect(getSubgraphCheckExtensionsConfig.endpoint).toStrictEqual(`${protocol}://localhost:5000/`);
+    expect(getSubgraphCheckExtensionsConfig.isSecretKeyAssigned).toStrictEqual(true);
+    expect(getSubgraphCheckExtensionsConfig.includeComposedSdl).toStrictEqual(false);
+
+    await server.close();
+  });
+
+  test('that an endpoint with invalid schema is not saved' , async () => {
+    const { client, server } = await SetupTest({ dbname, setupBilling: { plan: 'enterprise' } });
+    const response = await client.configureSubgraphCheckExtensions({
+      enableSubgraphCheckExtensions: true,
+      namespace: 'default',
+      endpoint: 'ws://localhost:4000/',
+    });
+
+    expect(response.response?.code).toBe(EnumStatusCode.ERR_BAD_REQUEST);
+    expect(response.response?.details).toBe('The endpoint must be a valid absolute URL starting with https://');
+
+    await server.close();
+  });
+
+  test('that https is required when not using localhost' , async () => {
+    const { client, server } = await SetupTest({ dbname, setupBilling: { plan: 'enterprise' } });
+    const response = await client.configureSubgraphCheckExtensions({
+      enableSubgraphCheckExtensions: true,
+      namespace: 'default',
+      endpoint: 'http://example.com/',
+    });
+
+    expect(response.response?.code).toBe(EnumStatusCode.ERR_BAD_REQUEST);
+    expect(response.response?.details).toBe('The endpoint must be a valid absolute URL starting with https://');
+
+    await server.close();
+  });
+
+  test('that an endpoint with https is updated successfully' , async (protocol) => {
+    const { client, server } = await SetupTest({ dbname, setupBilling: { plan: 'enterprise' } });
+    const response = await client.configureSubgraphCheckExtensions({
+      enableSubgraphCheckExtensions: true,
+      namespace: 'default',
+      endpoint: 'https://example.com/',
+    });
+
+    expect(response.response?.code).toBe(EnumStatusCode.OK);
+
+    let getSubgraphCheckExtensionsConfig = await client.getSubgraphCheckExtensionsConfig({
+      namespace: 'default',
+    });
+
+    expect(getSubgraphCheckExtensionsConfig.response?.code).toBe(EnumStatusCode.OK);
+    expect(getSubgraphCheckExtensionsConfig.isEnabledForNamespace).toBe(true);
+    expect(getSubgraphCheckExtensionsConfig.endpoint).toStrictEqual('https://example.com/');
+    expect(getSubgraphCheckExtensionsConfig.isSecretKeyAssigned).toStrictEqual(false);
+    expect(getSubgraphCheckExtensionsConfig.includeComposedSdl).toStrictEqual(true);
+
+    const configureGraphPruningConfigResponse = await client.configureSubgraphCheckExtensions({
+      namespace: 'default',
+      enableSubgraphCheckExtensions: true,
+      endpoint: 'https://example.com/handler',
+      secretKey: '...',
+      includeComposedSdl: false,
+    });
+
+    expect(configureGraphPruningConfigResponse.response?.code).toBe(EnumStatusCode.OK);
+    getSubgraphCheckExtensionsConfig = await client.getSubgraphCheckExtensionsConfig({
+      namespace: 'default',
+    });
+
+    expect(getSubgraphCheckExtensionsConfig.response?.code).toBe(EnumStatusCode.OK);
+    expect(getSubgraphCheckExtensionsConfig.isEnabledForNamespace).toBe(true);
+    expect(getSubgraphCheckExtensionsConfig.endpoint).toStrictEqual('https://example.com/handler');
+    expect(getSubgraphCheckExtensionsConfig.isSecretKeyAssigned).toStrictEqual(true);
+    expect(getSubgraphCheckExtensionsConfig.includeComposedSdl).toStrictEqual(false);
 
     await server.close();
   });

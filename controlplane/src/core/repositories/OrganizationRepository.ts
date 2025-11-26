@@ -1004,6 +1004,9 @@ export class OrganizationRepository {
         const blobStorageDirectory = `${organizationId}/${graph.id}`;
         blobPromises.push(blobStorage.removeDirectory({ key: blobStorageDirectory }));
       }
+
+      blobPromises.push(blobStorage.removeDirectory({ key: `${organizationId}/subgraph_checks` }));
+
       await Promise.allSettled(blobPromises);
 
       // Delete organization from db

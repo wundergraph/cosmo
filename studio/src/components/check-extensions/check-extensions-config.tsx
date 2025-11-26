@@ -37,7 +37,7 @@ const validationSchema = z.object({
 
       try {
         const url = new URL(val); // Ensure that the value is a valid absolute URL
-        if (url.hostname.toLowerCase() === 'localhost') {
+        if (url.hostname === 'localhost') {
           if (url.protocol !== 'http:' && url.protocol !== 'https:') {
             ctx.addIssue({
               code: z.ZodIssueCode.custom,
@@ -72,6 +72,7 @@ const validationSchema = z.object({
 
 interface CheckExtensionsConfigProps {
   config: SubgraphCheckExtensionsConfig;
+  enableSubgraphCheckExtensions: boolean;
   isSecretKeyAssigned: boolean;
   isLintingEnabledForNamespace: boolean;
   isGraphPruningEnabledForNamespace: boolean;
@@ -92,6 +93,7 @@ interface ToggleableOptionsType {
 
 export function CheckExtensionsConfig({
   config,
+  enableSubgraphCheckExtensions,
   isSecretKeyAssigned,
   isLintingEnabledForNamespace,
   isGraphPruningEnabledForNamespace,
@@ -100,7 +102,7 @@ export function CheckExtensionsConfig({
 }: CheckExtensionsConfigProps) {
   const { namespace } = useWorkspace();
   const organizationSlug = useCurrentOrganization()?.slug;
-  const isDisabled = isUpdatingConfig || !config.enableSubgraphCheckExtensions;
+  const isDisabled = isUpdatingConfig || !enableSubgraphCheckExtensions;
   const [showConfirmationDialog, setShowConfirmationDialog] = useState(false);
   const [forceShowSecretKeyInput, setForceShowSecretKeyInput] = useState<boolean | undefined>(undefined);
   const form = useZodForm({
@@ -194,7 +196,7 @@ export function CheckExtensionsConfig({
     },
   ], [isLintingEnabledForNamespace, isGraphPruningEnabledForNamespace, namespace.name, organizationSlug]);
 
-  const showSecretKeyInput = forceShowSecretKeyInput || !config.enableSubgraphCheckExtensions || !isSecretKeyAssigned;
+  const showSecretKeyInput = forceShowSecretKeyInput || !enableSubgraphCheckExtensions || !isSecretKeyAssigned;
   return (
     <>
       <AlertDialog open={showConfirmationDialog}>
@@ -230,7 +232,7 @@ export function CheckExtensionsConfig({
                 <div className="flex flex-col gap-y-2">
                   <CardTitle>Subgraph Check Extensions</CardTitle>
                   <CardDescription className="text-sm text-muted-foreground">
-                    {config.enableSubgraphCheckExtensions
+                    {enableSubgraphCheckExtensions
                       ? "Configure the subgraph check extensions of this namespace."
                       : "Enable subgraph check extensions to set the configuration."}
                   </CardDescription>
@@ -239,7 +241,7 @@ export function CheckExtensionsConfig({
                 <Button
                   type="submit"
                   isLoading={isUpdatingConfig}
-                  disabled={isDisabled || !form.formState.isValid}
+                  disabled={isUpdatingConfig || !form.formState.isValid}
                 >
                   Apply
                 </Button>
@@ -341,7 +343,7 @@ export function CheckExtensionsConfig({
                       <FormItem className="w-full flex justify-start items-start gap-3 rounded-md border p-4 space-y-0">
                         <FormControl>
                           <Checkbox
-                            checked={!item.isDisabled && (!config.enableSubgraphCheckExtensions || field.value === true)}
+                            checked={!item.isDisabled && (!enableSubgraphCheckExtensions || field.value === true)}
                             disabled={isDisabled || item.isDisabled}
                             className="w-5 h-5 flex-shrink-0"
                             onCheckedChange={(checked) => field.onChange(checked === true)}
