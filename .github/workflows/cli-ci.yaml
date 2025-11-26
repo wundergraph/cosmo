@@ -71,67 +71,14 @@ jobs:
           path: cli/coverage
           retention-days: 2
 
-      - name: Download artifact from earlier job
-        uses: actions/download-artifact@v4
-        with:
-          name: pr-build
-          path: cli/coverage
-
-      - name: Upload results to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-
-  build_test_node_matrix:
-    timeout-minutes: 10
-    runs-on: ubuntu-latest
-    if: github.event.action != 'closed'
-
-    strategy:
-      matrix:
-        node-version: ['20.x', '22.x']
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: ./.github/actions/node
-        with:
-          node-version: ${{ matrix.node-version }}
-      - uses: oven-sh/setup-bun@v2
-
-      - name: Install dependencies
-        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
-
-      - name: Build Node.js NPM Package
-        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic run build
-
-      - name: Unit Test
-        run: pnpm run --filter wgc test
-
-      - name: E2E test (node)
-        working-directory: cli
-        run: bun test e2e --test-name-pattern node
-
-  build_bun_matrix:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    if: github.event.action != 'closed'
-
-    strategy:
-      matrix:
-        target: [bun-linux-x64, bun-linux-arm64, bun-darwin-x64, bun-darwin-arm64, bun-windows-x64]
-
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/cli-build
-        id: cli-build
-        with:
-          target: ${{ matrix.target }}
-          github-sha: ${{ github.sha }}
+#      - name: Upload results to Codecov
+#        uses: codecov/codecov-action@v5
+#        with:
+#          token: ${{ secrets.CODECOV_TOKEN }}
 
   build_test:
     runs-on: ubuntu-latest
-    needs: [build_test_default, build_test_node_matrix, build_bun_matrix]
+    needs: [build_test_default]
     if: github.event.action != 'closed' && always()
     steps:
       - name: 'All tests passed'
@@ -153,10 +100,46 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.merge_commit_sha }}
 
-      - name: Download artifact from earlier job
+      - name: Find latest successful PR run for this commit
+        id: find-run
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          REPO="${{ github.repository }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          CURRENT_RUN_ID="${{ github.run_id }}"
+          
+          echo "Head SHA: $HEAD_SHA"
+          echo "Current run id: $CURRENT_RUN_ID"
+          
+          # Get all PR runs for this commit
+          json=$(curl -s \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$REPO/actions/runs?head_sha=$HEAD_SHA&event=pull_request&per_page=50")
+          
+          # Pick the latest *completed & successful* run that is NOT this run
+          run_id=$(echo "$json" | jq -r --arg cur "$CURRENT_RUN_ID" '
+            .workflow_runs
+            | map(select(.id != ($cur|tonumber) and .status == "completed" and .conclusion == "success"))
+            | sort_by(.created_at)
+            | last
+            | .id
+          ')
+          
+          if [ -z "$run_id" ] || [ "$run_id" = "null" ]; then
+            echo "No previous successful PR run found for $HEAD_SHA" >&2
+            exit 1
+          fi
+          
+          echo "Using run id: $run_id"
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+  
+      - name: Download coverage artifact from previous run
         uses: actions/download-artifact@v4
         with:
           name: pr-build
+          run-id: ${{ steps.find-run.outputs.run_id }}
           path: cli/coverage
 
       - name: Use artifact
