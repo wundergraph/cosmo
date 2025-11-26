@@ -1144,7 +1144,7 @@ func (h *WebSocketConnectionHandler) Initialize() (err error) {
 	h.logger.Debug("Websocket connection", zap.String("protocol", h.protocol.Subprotocol()))
 	h.initialPayload, err = h.protocol.Initialize()
 	if err != nil {
-		_ = h.requestError(fmt.Errorf("error initializing session"))
+		_ = h.requestError(fmt.Errorf("error initializing session: %w", err))
 		return err
 	}
 
