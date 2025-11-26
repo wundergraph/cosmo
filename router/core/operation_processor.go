@@ -846,7 +846,7 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 	//   variables: {"a": true, "other": "yyy"}
 	//
 	// was normalized to such a form:
-    //
+	//
 	//   query q(other: $other) {
 	//     a
 	//     b(b: $other)
@@ -1011,8 +1011,13 @@ func (o *OperationKit) NormalizeVariables() (cached bool, mapping []uploads.Uplo
 	return false, uploadsMapping, nil
 }
 
-func (o *OperationKit) remapVariablesCacheKey() uint64 {
+func (o *OperationKit) remapVariablesCacheKey(disabled bool) uint64 {
 	_, _ = o.kit.keyGen.WriteString(o.parsedOperation.NormalizedRepresentation)
+	if disabled {
+		_, _ = o.kit.keyGen.WriteString("t")
+	} else {
+		_, _ = o.kit.keyGen.WriteString("f")
+	}
 	sum := o.kit.keyGen.Sum64()
 	o.kit.keyGen.Reset()
 	return sum
@@ -1020,7 +1025,7 @@ func (o *OperationKit) remapVariablesCacheKey() uint64 {
 
 // RemapVariables updates and sorts variable names to have them in a predictable order.
 func (o *OperationKit) RemapVariables(disabled bool) (cached bool, err error) {
-	cacheKey := o.remapVariablesCacheKey()
+	cacheKey := o.remapVariablesCacheKey(disabled)
 	if o.cache != nil && o.cache.remapVariablesCache != nil {
 		entry, ok := o.cache.remapVariablesCache.Get(cacheKey)
 		if ok {
