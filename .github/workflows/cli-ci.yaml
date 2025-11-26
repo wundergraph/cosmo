@@ -108,6 +108,7 @@ jobs:
           REPO="${{ github.repository }}"
           HEAD_SHA="${{ github.event.pull_request.head.sha }}"
           CURRENT_RUN_ID="${{ github.run_id }}"
+          ARTIFACT_NAME="pr-build"  # change if you use a different name
           
           echo "Head SHA: $HEAD_SHA"
           echo "Current run id: $CURRENT_RUN_ID"
