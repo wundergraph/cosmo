@@ -1,0 +1,55 @@
+name: 'Codecov Download and Upload'
+description: 'Download coverage artifact from previous PR run and upload to Codecov'
+
+inputs:
+  artifact-name:
+    description: 'Name of the coverage artifact'
+    required: false
+    default: 'pr-build'
+  coverage-path:
+    description: 'Path to coverage files'
+    required: false
+    default: 'cli/coverage'
+  workflow-path:
+    description: 'Path to workflow file for artifact lookup'
+    required: false
+    default: '.github/workflows/cli-ci.yaml'
+  override-commit:
+    description: 'Commit SHA to override in Codecov'
+    required: true
+  codecov-token:
+    description: 'Codecov token for uploading'
+    required: true
+  github-token:
+    description: 'GitHub token for artifact operations'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Find latest successful PR run for this commit
+      id: find-run
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        REPO: ${{ github.repository }}
+        HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        CURRENT_RUN_ID: ${{ github.run_id }}
+        ARTIFACT_NAME: ${{ inputs.artifact-name }}
+        WORKFLOW_PATH: ${{ inputs.workflow-path }}
+      run: ./.github/scripts/find-codecov-artifact.sh
+
+    - name: Download coverage artifact from previous run
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.artifact-name }}
+        run-id: ${{ steps.find-run.outputs.run_id }}
+        github-token: ${{ inputs.github-token }}
+        path: ${{ inputs.coverage-path }}
+
+    - name: Upload results to Codecov
+      uses: codecov/codecov-action@v5
+      with:
+        token: ${{ inputs.codecov-token }}
+        override_commit: ${{ inputs.override-commit }}
+

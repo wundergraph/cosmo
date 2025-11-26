@@ -63,18 +63,13 @@ jobs:
       - name: Get Coverage
         run: pnpm run --filter wgc coverage
 
-      - name: Upload artifact for PR
-        uses: actions/upload-artifact@v4
+      - name: Upload coverage to Codecov
+        uses: ./.github/actions/codecov-upload-pr
         with:
-          overwrite: true
-          name: pr-build
-          path: cli/coverage
-          retention-days: 2
-
-#      - name: Upload results to Codecov
-#        uses: codecov/codecov-action@v5
-#        with:
-#          token: ${{ secrets.CODECOV_TOKEN }}
+          artifact-name: pr-build
+          coverage-path: cli/coverage
+          retention-days: 7
+          codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
   build_test:
     runs-on: ubuntu-latest
@@ -100,85 +95,12 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.merge_commit_sha }}
 
-      - name: Find latest successful PR run for this commit
-        id: find-run
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          REPO="${{ github.repository }}"
-          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
-          CURRENT_RUN_ID="${{ github.run_id }}"
-          ARTIFACT_NAME="pr-build"  # change if you use a different name
-          
-          echo "Head SHA: $HEAD_SHA"
-          echo "Current run id: $CURRENT_RUN_ID"
-          
-          # Get all PR runs for this commit
-          json=$(curl -s \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/$REPO/actions/runs?head_sha=$HEAD_SHA&event=pull_request&per_page=50")
-          
-          # Pick the latest *completed & successful* run that is NOT this run
-          run_id=$(echo "$json" | jq -r --arg cur "$CURRENT_RUN_ID" '
-            .workflow_runs
-            | map(select(
-              .id != ($cur|tonumber)
-              and .status == "completed"
-              and .conclusion == "success"
-              and .path == ".github/workflows/cli-ci.yaml"
-            ))
-            | sort_by(.created_at)
-            | last
-            | .id
-            ')
-          
-          if [ -z "$run_id" ] || [ "$run_id" = "null" ]; then
-            echo "No previous successful PR run found for $HEAD_SHA" >&2
-            exit 1
-          fi
-          
-          echo "Using run id: $run_id"
-          # Get artifacts for that run
-               artifacts_json=$(curl -s \
-               -H "Authorization: Bearer $GITHUB_TOKEN" \
-               -H "Accept: application/vnd.github+json" \
-               "https://api.github.com/repos/$REPO/actions/runs/$run_id/artifacts")
-
-          # Find the artifact ID for the desired artifact name
-               artifact_id=$(echo "$artifacts_json" | jq -r --arg name "$ARTIFACT_NAME" '
-               .artifacts
-               | map(select(.name == $name and .expired == false))
-               | sort_by(.created_at)
-               | last
-               | .id
-               ')
-
-          if [ -z "$artifact_id" ] || [ "$artifact_id" = "null" ]; then
-            echo "No non-expired artifact named '$ARTIFACT_NAME' found for run $run_id" >&2
-           echo "Artifacts JSON for debugging:" >&2
-           echo "$artifacts_json" >&2
-           exit 1
-          fi
-               
-           echo "Using artifact id: $artifact_id"
-           
-           echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
-           echo "artifact_id=$artifact_id" >> "$GITHUB_OUTPUT"
-  
-      - name: Download coverage artifact from previous run
-        uses: actions/download-artifact@v4
+      - name: Download and upload coverage to Codecov
+        uses: ./.github/actions/codecov-merge-upload
         with:
-          name: pr-build
-          run-id: ${{ steps.find-run.outputs.run_id }}
+          artifact-name: pr-build
+          coverage-path: cli/coverage
+          workflow-path: .github/workflows/cli-ci.yaml
+          override-commit: ${{ github.event.pull_request.merge_commit_sha }}
+          codecov-token: ${{ secrets.CODECOV_TOKEN }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          path: cli/coverage
-
-      - name: Use artifact
-        run: ls -R
-
-      - name: Upload results to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          override_commit: ${{ github.event.pull_request.merge_commit_sha }}
-          token: ${{ secrets.CODECOV_TOKEN }}
