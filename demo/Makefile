@@ -22,10 +22,10 @@ plugin-generate:
 	$(wgc_router) plugin build ./pkg/subgraphs/courses --generate-only
 
 plugin-build-ci-bun-binary:
-	$(wgc_router_ci) plugin build ./pkg/subgraphs/courses
+	$(wgc_router_ci) plugin build ./pkg/subgraphs/courses --yes
 
 plugin-build-ci-go-binary:
-	$(wgc_router_ci) plugin build ./pkg/subgraphs/projects
+	$(wgc_router_ci) plugin build ./pkg/subgraphs/projects --yes
 
 plugin-compose:
 	$(wgc_router) compose -i ./graph-with-plugin.yaml -o ./configWithPlugins.json

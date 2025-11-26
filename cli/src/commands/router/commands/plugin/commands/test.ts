@@ -24,12 +24,14 @@ export default (opts: BaseCommandOptions) => {
     'Force tools installation regardless of version check or confirmation',
     false,
   );
+  command.option('-y, --yes', 'Automatically answer yes to all prompts', false);
 
   command.action(async (directory, options) => {
     const startTime = performance.now();
     const pluginDir = resolve(directory);
     const spinner = Spinner({ text: 'Running tests...' });
     const pluginName = path.basename(pluginDir);
+    const autoConfirmPrompts: boolean = options.yes;
 
     const language = getLanguage(pluginDir);
     if (!language) {
@@ -42,7 +44,7 @@ export default (opts: BaseCommandOptions) => {
     try {
       // Check and install tools if needed
       if (!options.skipToolsInstallation) {
-        await checkAndInstallTools(options.forceToolsInstallation, language);
+        await checkAndInstallTools(options.forceToolsInstallation, language, autoConfirmPrompts);
       }
 
       spinner.start();

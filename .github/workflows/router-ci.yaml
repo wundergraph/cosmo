@@ -52,19 +52,10 @@ jobs:
       - uses: ./.github/actions/node
 
       - name: Install dependencies
-        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
-
-      - name: Generate code
-        run: pnpm buf generate --template buf.ts.gen.yaml
-
-      - name: Generate router templates
-        run: pnpm --filter ./cli compile-templates
-
-      - name: Check if git is not dirty after generating files
-        run: git diff --no-ext-diff --exit-code
-
-      - name: Build Node.js NPM Package
-        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic run build
+        run: |
+          pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
+          pnpm buf generate --template buf.ts.gen.yaml
+          pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic run build
 
       - name: Install Bun For Plugin Building
         uses: oven-sh/setup-bun@v2
@@ -152,19 +143,10 @@ jobs:
       - uses: ./.github/actions/node
 
       - name: Install dependencies
-        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
-
-      - name: Generate code
-        run: pnpm buf generate --template buf.ts.gen.yaml
-
-      - name: Generate router templates
-        run: pnpm --filter ./cli compile-templates
-
-      - name: Check if git is not dirty after generating files
-        run: git diff --no-ext-diff --exit-code
-
-      - name: Build Node.js NPM Package
-        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic run build
+        run: |
+          pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
+          pnpm buf generate --template buf.ts.gen.yaml
+          pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic run build
 
       - name: Install Bun For Plugin Building
         uses: oven-sh/setup-bun@v2
@@ -347,20 +329,11 @@ jobs:
 
       - uses: ./.github/actions/node
 
-      - name: CLI Install dependencies
-        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
-
-      - name: CLI Generate code
-        run: pnpm buf generate --template buf.ts.gen.yaml
-
-      - name: CLI Generate router templates
-        run: pnpm --filter ./cli compile-templates
-
-      - name: CLI Check if git is not dirty after generating files
-        run: git diff --no-ext-diff --exit-code
-
-      - name: CLI Build Node.js NPM Package
-        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic run build
+      - name: Install dependencies
+        run: |
+          pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
+          pnpm buf generate --template buf.ts.gen.yaml
+          pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic run build
 
       - name: Install Bun For Plugin Building
         uses: oven-sh/setup-bun@v2
