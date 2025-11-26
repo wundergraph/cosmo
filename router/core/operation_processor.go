@@ -803,7 +803,6 @@ type ComplexityCacheEntry struct {
 }
 
 func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error) {
-
 	skipIncludeVariableNames := o.skipIncludeVariableNames()
 	cacheKey := o.normalizationCacheKey(skipIncludeVariableNames)
 	if o.cache != nil && o.cache.normalizationCache != nil {
@@ -838,8 +837,23 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 		}
 	}
 
-	// Normalization removed skip/include variables from the operation and variables.
-	// Set variables to the normalized variables.
+	// Normalization removed skip/include variables from the operation and variables. For example,
+	//
+	//   query q($a: Boolean, o: $other) {
+	//     a @include(if: $a)
+	//     b(b: $other)
+	//   }
+	//   variables: {"a": true, "other": "yyy"}
+	//
+	// was normalized to such a form:
+    //
+	//   query q(other: $other) {
+	//     a
+	//     b(b: $other)
+	//   }
+	//   variables: {"other": "yyy"}
+	//
+	// We have to set variables to the normalized variables.
 	o.parsedOperation.Request.Variables = o.kit.doc.Input.Variables
 
 	// Print the operation with the original operation name
@@ -892,7 +906,10 @@ func (o *OperationKit) normalizeVariablesCacheKey() uint64 {
 	return sum
 }
 
-// NormalizeVariables returns a slice of upload mappings if there are any of them present in a query.
+// NormalizeVariables normalizes variables and returns a slice of upload mappings
+// if any of them were present in a query.
+// If normalized values were found in the cache, it skips normalization and returns the caching set to true.
+// If an error is returned, then caching is set to false.
 func (o *OperationKit) NormalizeVariables() (cached bool, mapping []uploads.UploadPathMapping, err error) {
 	cacheKey := o.normalizeVariablesCacheKey()
 	if o.cache != nil && o.cache.variablesNormalizationCache != nil {
@@ -1343,6 +1360,8 @@ var (
 	literalIF = []byte("if")
 )
 
+// skipIncludeVariableNames returns a slice of variable names that are used as arguments
+// in the skip/include conditionals.
 func (o *OperationKit) skipIncludeVariableNames() []string {
 	if len(o.kit.doc.Directives) == 0 {
 		return nil
