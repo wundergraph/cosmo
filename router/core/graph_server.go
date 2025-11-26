@@ -1341,26 +1341,26 @@ func (s *graphServer) buildGraphMux(
 		authorizerOptions.RejectOperationIfUnauthorized = s.authorization.RejectOperationIfUnauthorized
 	}
 
+	loaderHooks := NewEngineRequestHooks(
+		gm.metricStore,
+		subgraphAccessLogger,
+		s.tracerProvider,
+		tracingAttExpressions,
+		telemetryAttExpressions,
+		metricAttExpressions,
+		exprManager.VisitorManager.IsSubgraphResponseBodyUsedInExpressions(),
+	)
+
 	handlerOpts := HandlerOptions{
-		Executor:                               executor,
-		Log:                                    s.logger,
-		EnableExecutionPlanCacheResponseHeader: s.engineExecutionConfiguration.EnableExecutionPlanCacheResponseHeader,
-		EnablePersistedOperationCacheResponseHeader: s.engineExecutionConfiguration.Debug.EnablePersistedOperationsCacheResponseHeader,
-		EnableNormalizationCacheResponseHeader:      s.engineExecutionConfiguration.Debug.EnableNormalizationCacheResponseHeader,
-		EnableResponseHeaderPropagation:             s.headerRules != nil,
-		EngineStats:                                 s.engineStats,
-		TracerProvider:                              s.tracerProvider,
-		Authorizer:                                  NewCosmoAuthorizer(authorizerOptions),
-		SubgraphErrorPropagation:                    s.subgraphErrorPropagation,
-		EngineLoaderHooks: NewEngineRequestHooks(
-			gm.metricStore,
-			subgraphAccessLogger,
-			s.tracerProvider,
-			tracingAttExpressions,
-			telemetryAttExpressions,
-			metricAttExpressions,
-			exprManager.VisitorManager.IsSubgraphResponseBodyUsedInExpressions(),
-		),
+		Executor:                        executor,
+		Log:                             s.logger,
+		EnableCacheResponseHeaders:      s.engineExecutionConfiguration.Debug.EnableCacheResponseHeaders,
+		EnableResponseHeaderPropagation: s.headerRules != nil,
+		EngineStats:                     s.engineStats,
+		TracerProvider:                  s.tracerProvider,
+		Authorizer:                      NewCosmoAuthorizer(authorizerOptions),
+		SubgraphErrorPropagation:        s.subgraphErrorPropagation,
+		EngineLoaderHooks:               loaderHooks,
 	}
 
 	if s.redisClient != nil {

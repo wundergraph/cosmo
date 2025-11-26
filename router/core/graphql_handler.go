@@ -66,35 +66,34 @@ func (e *reportError) Report() *operationreport.Report {
 }
 
 type HandlerOptions struct {
-	Executor                                    *Executor
-	Log                                         *zap.Logger
-	EnableExecutionPlanCacheResponseHeader      bool
-	EnablePersistedOperationCacheResponseHeader bool
-	EnableNormalizationCacheResponseHeader      bool
-	EnableResponseHeaderPropagation             bool
-	EngineStats                                 statistics.EngineStatistics
-	TracerProvider                              trace.TracerProvider
-	Authorizer                                  *CosmoAuthorizer
-	RateLimiter                                 *CosmoRateLimiter
-	RateLimitConfig                             *config.RateLimitConfiguration
-	SubgraphErrorPropagation                    config.SubgraphErrorPropagationConfiguration
-	EngineLoaderHooks                           resolve.LoaderHooks
-	ApolloSubscriptionMultipartPrintBoundary    bool
+	Executor       *Executor
+	Log            *zap.Logger
+	EngineStats    statistics.EngineStatistics
+	TracerProvider trace.TracerProvider
+	Authorizer     *CosmoAuthorizer
+	RateLimiter    *CosmoRateLimiter
+
+	RateLimitConfig          *config.RateLimitConfiguration
+	SubgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
+	EngineLoaderHooks        resolve.LoaderHooks
+
+	EnableCacheResponseHeaders      bool
+	EnableResponseHeaderPropagation bool
+
+	ApolloSubscriptionMultipartPrintBoundary bool
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
+	tracer := opts.TracerProvider.Tracer(
+		"wundergraph/cosmo/router/graphql_handler",
+		trace.WithInstrumentationVersion("0.0.1"))
 	graphQLHandler := &GraphQLHandler{
-		log:                                    opts.Log,
-		executor:                               opts.Executor,
-		enableExecutionPlanCacheResponseHeader: opts.EnableExecutionPlanCacheResponseHeader,
-		enablePersistedOperationCacheResponseHeader: opts.EnablePersistedOperationCacheResponseHeader,
-		enableNormalizationCacheResponseHeader:      opts.EnableNormalizationCacheResponseHeader,
-		enableResponseHeaderPropagation:             opts.EnableResponseHeaderPropagation,
-		engineStats:                                 opts.EngineStats,
-		tracer: opts.TracerProvider.Tracer(
-			"wundergraph/cosmo/router/graphql_handler",
-			trace.WithInstrumentationVersion("0.0.1"),
-		),
+		log:                                      opts.Log,
+		executor:                                 opts.Executor,
+		enableCacheResponseHeaders:               opts.EnableCacheResponseHeaders,
+		enableResponseHeaderPropagation:          opts.EnableResponseHeaderPropagation,
+		engineStats:                              opts.EngineStats,
+		tracer:                                   tracer,
 		authorizer:                               opts.Authorizer,
 		rateLimiter:                              opts.RateLimiter,
 		rateLimitConfig:                          opts.RateLimitConfig,
@@ -127,10 +126,8 @@ type GraphQLHandler struct {
 	subgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
 	engineLoaderHooks        resolve.LoaderHooks
 
-	enableExecutionPlanCacheResponseHeader      bool
-	enablePersistedOperationCacheResponseHeader bool
-	enableNormalizationCacheResponseHeader      bool
-	enableResponseHeaderPropagation             bool
+	enableCacheResponseHeaders      bool
+	enableResponseHeaderPropagation bool
 
 	apolloSubscriptionMultipartPrintBoundary bool
 }
@@ -450,15 +447,11 @@ func (h *GraphQLHandler) setDebugCacheHeaders(w http.ResponseWriter, opCtx *oper
 		return "MISS"
 	}
 
-	if h.enableNormalizationCacheResponseHeader {
+	if h.enableCacheResponseHeaders {
 		w.Header().Set(NormalizationCacheHeader, s(opCtx.normalizationCacheHit))
 		w.Header().Set(VariablesNormalizationCacheHeader, s(opCtx.variablesNormalizationCacheHit))
 		w.Header().Set(VariablesRemappingCacheHeader, s(opCtx.variablesRemappingCacheHit))
-	}
-	if h.enablePersistedOperationCacheResponseHeader {
 		w.Header().Set(PersistedOperationCacheHeader, s(opCtx.persistedOperationCacheHit))
-	}
-	if h.enableExecutionPlanCacheResponseHeader {
 		w.Header().Set(ExecutionPlanCacheHeader, s(opCtx.planCacheHit))
 	}
 }
