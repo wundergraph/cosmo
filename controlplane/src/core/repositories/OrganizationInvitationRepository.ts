@@ -120,6 +120,7 @@ export class OrganizationInvitationRepository {
         userID: users.id,
         email: users.email,
         invitedBy: users1.email,
+        lastSentAt: schema.organizationInvitations.lastSentAt,
       })
       .from(organizationInvitations)
       .innerJoin(users, eq(users.id, organizationInvitations.userId))
@@ -143,6 +144,7 @@ export class OrganizationInvitationRepository {
       email: orgMember[0].email,
       invitedBy: orgMember[0].invitedBy || undefined,
       groups: await this.getPendingInvitationGroups(orgMember[0].invitationId),
+      lastSentAt: orgMember[0].lastSentAt || undefined,
     } as OrganizationInvitationDTO;
   }
 
@@ -189,7 +191,7 @@ export class OrganizationInvitationRepository {
         .returning()
         .execute();
 
-      if (inserted.length === 0) {
+      if (inserted.length === 0 || input.groups.length === 0) {
         return;
       }
 
@@ -252,6 +254,20 @@ export class OrganizationInvitationRepository {
         and(
           eq(organizationInvitations.organizationId, input.organizationId),
           eq(organizationInvitations.userId, input.userId),
+          eq(organizationInvitations.accepted, false),
+        ),
+      )
+      .execute();
+  }
+
+  public async updateLastSentToNow({ organizationId, userId }: { organizationId: string; userId: string }) {
+    await this.db
+      .update(organizationInvitations)
+      .set({ lastSentAt: new Date() })
+      .where(
+        and(
+          eq(organizationInvitations.organizationId, organizationId),
+          eq(organizationInvitations.userId, userId),
           eq(organizationInvitations.accepted, false),
         ),
       )
