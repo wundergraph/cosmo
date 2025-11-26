@@ -837,7 +837,7 @@ func corsMiddleware(corsConfig cors.Config) func(http.Handler) http.Handler {
 func setCORSHeaders(w http.ResponseWriter, config cors.Config) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, PUT, POST, DELETE, OPTIONS")
-	hdrs := stringsx.RemoveDuplicates(append(config.AllowHeaders, "Content-Type, Accept, Authorization, Last-Event-ID, Mcp-Protocol-Version, Mcp-Session-Id"))
+	hdrs := stringsx.RemoveDuplicates(append(config.AllowHeaders, "Content-Type", "Accept", "Authorization", "Last-Event-ID", "Mcp-Protocol-Version", "Mcp-Session-Id"))
 	w.Header().Set("Access-Control-Allow-Headers", strings.Join(hdrs, ", "))
 	maxAge := config.MaxAge
 	if maxAge <= 0 {
