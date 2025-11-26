@@ -1,5 +1,5 @@
 SHELL := bash
-wgc_router = pnpx tsx --env-file ../cli/.env ../cli/src/index.ts router
+wgc_router = pnpm dlx tsx --env-file ../cli/.env ../cli/src/index.ts router
 
 generate:
 	go generate ./...
@@ -21,14 +21,10 @@ plugin-generate:
 	$(wgc_router) plugin build ./pkg/subgraphs/courses --generate-only
 
 plugin-build-bun-binary:
-	cd pkg/subgraphs/courses/ && \
-	bun install && bun x tsc --noEmit && \
-	bun build src/plugin.ts --compile --outfile bin/$(shell go env GOOS)_$(shell go env GOARCH) && \
-	mkdir -p bin/grpc-health-check && \
-	cp -r node_modules/grpc-health-check/proto bin/grpc-health-check
+	$(wgc_router) plugin build ./pkg/subgraphs/courses
 
 plugin-build-go-binary:
-	cd pkg/subgraphs/projects/ && go build -o ./bin/$(shell go env GOOS)_$(shell go env GOARCH) ./src
+	$(wgc_router) plugin build ./pkg/subgraphs/projects
 
 plugin-compose:
 	$(wgc_router) compose -i ./graph-with-plugin.yaml -o ./configWithPlugins.json
