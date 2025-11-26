@@ -1,8 +1,9 @@
 import { Subgraph } from '@wundergraph/composition';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
-import { SQL, and, asc, count, eq, getTableName, inArray, like, or, sql } from 'drizzle-orm';
+import { SQL, and, asc, count, eq, inArray, like, or, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
+import { validate as isValidUuid } from 'uuid';
 import { parse } from 'graphql';
 import * as schema from '../../db/schema.js';
 import {
@@ -312,10 +313,7 @@ export class FeatureFlagRepository {
 
     if (query) {
       conditions.push(
-        or(
-          like(schema.targets.name, `%${query}%`),
-          sql.raw(`${getTableName(schema.subgraphs)}.${schema.subgraphs.id.name}::text like '%${query}%'`),
-        ),
+        isValidUuid(query) ? eq(subgraphs.id, query) : like(schema.targets.name, `%${query}%`),
       );
     }
 

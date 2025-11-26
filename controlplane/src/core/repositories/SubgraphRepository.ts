@@ -9,7 +9,8 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, normalizeURL, splitLabel } from '@wundergraph/cosmo-shared';
 import { addDays } from 'date-fns';
-import { and, asc, count, desc, eq, getTableName, gt, inArray, like, lt, notInArray, or, SQL, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, like, lt, notInArray, or, SQL, sql } from 'drizzle-orm';
+import { validate as isValidUuid } from 'uuid';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { GraphQLSchema } from 'graphql';
@@ -698,10 +699,7 @@ export class SubgraphRepository {
 
     if (opts.query) {
       conditions.push(
-        or(
-          like(schema.targets.name, `%${opts.query}%`),
-          sql.raw(`${getTableName(schema.subgraphs)}.${schema.subgraphs.id.name}::text like '%${opts.query}%'`),
-        ),
+        isValidUuid(opts.query) ? eq(schema.subgraphs.id, opts.query) : like(schema.targets.name, `%${opts.query}%`),
       );
     }
 
@@ -760,10 +758,7 @@ export class SubgraphRepository {
 
     if (opts.query) {
       conditions.push(
-        or(
-          like(schema.targets.name, `%${opts.query}%`),
-          sql.raw(`${getTableName(schema.subgraphs)}.${schema.subgraphs.id.name}::text like '%${opts.query}%'`),
-        ),
+        isValidUuid(opts.query) ? eq(schema.subgraphs.id, opts.query) : like(schema.targets.name, `%${opts.query}%`),
       );
     }
 
