@@ -122,11 +122,16 @@ jobs:
           # Pick the latest *completed & successful* run that is NOT this run
           run_id=$(echo "$json" | jq -r --arg cur "$CURRENT_RUN_ID" '
             .workflow_runs
-            | map(select(.id != ($cur|tonumber) and .status == "completed" and .conclusion == "success"))
+            | map(select(
+              .id != ($cur|tonumber)
+              and .status == "completed"
+              and .conclusion == "success"
+              and .path == ".github/workflows/cli-ci.yaml"
+            ))
             | sort_by(.created_at)
             | last
             | .id
-          ')
+            ')
           
           if [ -z "$run_id" ] || [ "$run_id" = "null" ]; then
             echo "No previous successful PR run found for $HEAD_SHA" >&2
