@@ -53,6 +53,9 @@ jobs:
 
       - uses: ./.github/actions/node
 
+      - name: Install dependencies
+        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
+
       - name: Install Bun For Plugin Building
         uses: oven-sh/setup-bun@v2
         with:
@@ -137,6 +140,9 @@ jobs:
         run: make setup-build-tools
 
       - uses: ./.github/actions/node
+
+      - name: Install dependencies
+        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
 
       - name: Install Bun For Plugin Building
         uses: oven-sh/setup-bun@v2
@@ -318,6 +324,9 @@ jobs:
         run: make setup-build-tools
 
       - uses: ./.github/actions/node
+
+      - name: Install dependencies
+        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
 
       - name: Install Bun For Plugin Building
         uses: oven-sh/setup-bun@v2
