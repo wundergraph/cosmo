@@ -1,6 +1,6 @@
 import { Subgraph } from '@wundergraph/composition';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
-import { SQL, and, asc, count, eq, inArray, like, or, sql } from 'drizzle-orm';
+import { SQL, and, asc, count, eq, inArray, like, or, sql, arrayContains } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { validate as isValidUuid } from 'uuid';
@@ -312,8 +312,7 @@ export class FeatureFlagRepository {
     }
 
     if (query) {
-      const escapedQuery = query.replace(/‘/g, "''");
-      conditions.push(isValidUuid(query) ? eq(subgraphs.id, query) : like(schema.targets.name, `%${escapedQuery}%`));
+      conditions.push(isValidUuid(query) ? eq(subgraphs.id, query) : like(schema.targets.name, `%${query}%`));
     }
 
     if (!this.applyRbacConditionsToQuery(rbac, conditions)) {
@@ -666,9 +665,13 @@ export class FeatureFlagRepository {
 
     const conditions: SQL<unknown>[] = [];
     for (const labels of groupedLabels) {
-      const labelsSQL = labels.map((l) => `"${joinLabel(l)}"`).join(', ');
       // At least one common label
-      conditions.push(sql.raw(`labels && '{${labelsSQL}}'`));
+      conditions.push(
+        arrayContains(
+          featureFlags.labels,
+          labels.map((l) => joinLabel(l)),
+        ),
+      );
     }
 
     // Only get feature flags that do not have any labels if the label matchers are empty.

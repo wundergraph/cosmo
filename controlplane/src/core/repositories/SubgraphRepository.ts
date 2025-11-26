@@ -9,7 +9,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel, normalizeURL, splitLabel } from '@wundergraph/cosmo-shared';
 import { addDays } from 'date-fns';
-import { and, asc, count, desc, eq, gt, inArray, like, lt, notInArray, or, SQL, sql } from 'drizzle-orm';
+import { and, arrayContains, asc, count, desc, eq, gt, inArray, like, lt, notInArray, or, SQL } from 'drizzle-orm';
 import { validate as isValidUuid } from 'uuid';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
@@ -698,9 +698,8 @@ export class SubgraphRepository {
     }
 
     if (opts.query) {
-      const escapedQuery = opts.query.replace(/‘/g, "''");
       conditions.push(
-        isValidUuid(opts.query) ? eq(schema.subgraphs.id, opts.query) : like(schema.targets.name, `%${escapedQuery}%`),
+        isValidUuid(opts.query) ? eq(schema.subgraphs.id, opts.query) : like(schema.targets.name, `%${opts.query}%`),
       );
     }
 
@@ -758,9 +757,8 @@ export class SubgraphRepository {
     }
 
     if (opts.query) {
-      const escapedQuery = opts.query.replace(/‘/g, "''");
       conditions.push(
-        isValidUuid(opts.query) ? eq(schema.subgraphs.id, opts.query) : like(schema.targets.name, `%${escapedQuery}%`),
+        isValidUuid(opts.query) ? eq(schema.subgraphs.id, opts.query) : like(schema.targets.name, `%${opts.query}%`),
       );
     }
 
@@ -1391,9 +1389,13 @@ export class SubgraphRepository {
 
     const conditions: SQL<unknown>[] = [];
     for (const labels of groupedLabels) {
-      const labelsSQL = labels.map((l) => `"${joinLabel(l)}"`).join(', ');
       // At least one common label
-      conditions.push(sql.raw(`labels && '{${labelsSQL}}'`));
+      conditions.push(
+        arrayContains(
+          targets.labels,
+          labels.map((l) => joinLabel(l)),
+        ),
+      );
     }
 
     // Only get subgraphs that do not have any labels if the label matchers are empty.
