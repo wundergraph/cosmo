@@ -8,8 +8,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/buger/jsonparser"
-	"github.com/cespare/xxhash/v2"
 	goccyjson "github.com/goccy/go-json"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
@@ -239,7 +237,7 @@ type PublishDataSource struct {
 func (s *PublishDataSource) Load(ctx context.Context, headers http.Header, input []byte) (data []byte, err error) {
 	var publishData publishData
 	if err := json.Unmarshal(input, &publishData); err != nil {
-		return nil,err
+		return nil, err
 	}
 
 	if err := s.pubSub.Publish(ctx, publishData.PublishEventConfiguration(), []datasource.StreamEvent{&Event{&publishData.Event}}); err != nil {

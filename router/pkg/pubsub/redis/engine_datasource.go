@@ -202,7 +202,7 @@ func (s *PublishDataSource) Load(ctx context.Context, headers http.Header, input
 		return nil, err
 	}
 
-	if err := s.pubSub.Publish(ctx, publishConfiguration); err != nil {
+	if err := s.pubSub.Publish(ctx, publishData.PublishEventConfiguration(), []datasource.StreamEvent{&Event{evt: &publishData.Event}}); err != nil {
 		// err will not be returned but only logged inside PubSubProvider.Publish to avoid a "unable to fetch from subgraph" error
 		return []byte(`{"success": false}`), nil
 	}

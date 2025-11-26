@@ -1,7 +1,6 @@
 package nats
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -9,8 +8,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/buger/jsonparser"
-	"github.com/cespare/xxhash/v2"
 	goccyjson "github.com/goccy/go-json"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
@@ -242,17 +239,17 @@ type NatsRequestDataSource struct {
 func (s *NatsRequestDataSource) Load(ctx context.Context, headers http.Header, input []byte) (data []byte, err error) {
 	var publishData publishData
 	if err := json.Unmarshal(input, &publishData); err != nil {
-		return nil,err
+		return nil, err
 	}
 
 	providerBase, ok := s.pubSub.(*datasource.PubSubProvider)
 	if !ok {
-		return nil,fmt.Errorf("adapter for provider %s is not of the right type", publishData.Provider)
+		return nil, fmt.Errorf("adapter for provider %s is not of the right type", publishData.Provider)
 	}
 
 	adapter, ok := providerBase.Adapter.(Adapter)
 	if !ok {
-		return nil,fmt.Errorf("adapter for provider %s is not of the right type", publishData.Provider)
+		return nil, fmt.Errorf("adapter for provider %s is not of the right type", publishData.Provider)
 	}
 
 	return adapter.Request(ctx, publishData.PublishEventConfiguration(), &Event{evt: &publishData.Event})
