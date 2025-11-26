@@ -35,6 +35,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: ./.github/actions/node
+
+      - name: Install Bun For Plugin Building 2
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.15
+
       - uses: ./.github/actions/go
         with:
           cache-dependency-path: |
@@ -45,8 +52,6 @@ jobs:
       - uses: ./.github/actions/go-mod-tidy
         with:
           working-directory: ./router
-
-      - uses: ./.github/actions/node
 
       - name: Install tools
         run: make setup-build-tools
