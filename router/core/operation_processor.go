@@ -145,11 +145,14 @@ type OperationProcessor struct {
 
 // parseKit is a helper struct to parse, normalize and validate operations
 type parseKit struct {
-	i                   int
-	numOperations       int
-	parser              *astparser.Parser
-	doc                 *ast.Document
-	keyGen              *xxhash.Digest
+	i             int
+	numOperations int
+	parser        *astparser.Parser
+	doc           *ast.Document
+
+	// keyGen is used to calculate caching keys. Always "Reset" it after "Sum64".
+	keyGen *xxhash.Digest
+
 	sha256Hash          hash.Hash
 	staticNormalizer    *astnormalization.OperationNormalizer
 	variablesNormalizer *astnormalization.VariablesNormalizer
@@ -811,7 +814,8 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 			o.parsedOperation.NormalizationCacheHit = true
 
 			// Remove skip/include variables because they come directly from the user.
-			// They were removed during normalization, and we do not cache variables.
+			// They were removed during normalization, but we did not cache variables,
+			// thus we have to do it every time.
 			for _, varName := range skipIncludeVariableNames {
 				o.parsedOperation.Request.Variables = jsonparser.Delete(o.parsedOperation.Request.Variables, varName)
 			}
@@ -834,7 +838,8 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 		}
 	}
 
-	// Normalization removed skip/include variables. Set variables to the normalized variables.
+	// Normalization removed skip/include variables from the operation and variables.
+	// Set variables to the normalized variables.
 	o.parsedOperation.Request.Variables = o.kit.doc.Input.Variables
 
 	// Print the operation with the original operation name
@@ -847,6 +852,8 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 	o.parsedOperation.NormalizedRepresentation = o.kit.normalizedOperation.String()
 
 	if o.cache != nil && o.cache.normalizationCache != nil {
+		// Do not cache variables because, because we allow different values of variables
+		// for the same normalized entry cache.
 		entry := NormalizationCacheEntry{
 			normalizedRepresentation: o.parsedOperation.NormalizedRepresentation,
 			operationType:            o.parsedOperation.Type,
