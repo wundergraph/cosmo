@@ -302,4 +302,98 @@ export class UsageRepository {
 
     return [];
   }
+
+  public async getDeprecatedFieldsUsedInOperation({
+    organizationId,
+    federatedGraphId,
+    operationHash,
+    operationName,
+    range,
+    dateRange,
+    deprecatedFields,
+  }: {
+    organizationId: string;
+    federatedGraphId: string;
+    operationHash: string;
+    operationName?: string;
+    range?: number;
+    dateRange?: DateRange;
+    deprecatedFields: { name: string; typeNames: string[] }[];
+  }): Promise<
+    {
+      deprecatedFieldName: string;
+      deprecatedFieldTypeNames: string[];
+    }[]
+  > {
+    if (deprecatedFields.length === 0) {
+      return [];
+    }
+
+    const {
+      dateRange: { end, start },
+    } = parseTimeFilters(dateRange, range);
+
+    // Build the deprecated fields array
+    // Each deprecated field is represented as a tuple: (name, typeNames_array)
+    // Escape single quotes
+    const deprecatedFieldsArray = deprecatedFields
+      .map((field) => {
+        const escapedName = field.name.replace(/'/g, "''");
+        const quotedTypeNames = field.typeNames.map((tn) => `'${tn.replace(/'/g, "''")}'`).join(', ');
+        return `('${escapedName}', [${quotedTypeNames}])`;
+      })
+      .join(', ');
+
+    const query = `
+      WITH 
+        toStartOfDay(toDateTime({startDate:String})) AS startDate,
+        toDateTime({endDate:String}) AS endDate,
+        deprecated_fields AS (
+          SELECT
+            field.1 as Name,
+            field.2 as TypeNames
+          FROM (
+            SELECT
+              arrayJoin([ ${deprecatedFieldsArray} ]) as field
+          )
+        )
+      SELECT DISTINCT
+        df.Name as deprecatedFieldName,
+        df.TypeNames as deprecatedFieldTypeNames
+      FROM ${this.client.database}.gql_metrics_schema_usage_lite_1d_90d
+      INNER JOIN deprecated_fields AS df
+        ON FieldName = df.Name
+      WHERE 
+        Timestamp >= startDate 
+        AND Timestamp <= endDate
+        AND OrganizationID = {organizationId:String}
+        AND FederatedGraphID = {federatedGraphId:String}
+        AND OperationHash = {operationHash:String}
+        AND hasAny(TypeNames, df.TypeNames) = 1
+        ${operationName === undefined ? '' : 'AND OperationName = {operationName:String}'}
+    `;
+
+    const params: Record<string, string | number | boolean> = {
+      startDate: start,
+      endDate: end,
+      organizationId,
+      federatedGraphId,
+      operationHash,
+    };
+
+    if (operationName !== undefined) {
+      params.operationName = operationName;
+    }
+
+    const res = await this.client.queryPromise(query, params);
+
+    if (Array.isArray(res)) {
+      return res.map((item) => ({
+        deprecatedFieldName: item.deprecatedFieldName,
+        deprecatedFieldTypeNames: Array.isArray(item.deprecatedFieldTypeNames) ? item.deprecatedFieldTypeNames : [],
+      }));
+    }
+
+    return [];
+  }
 }
