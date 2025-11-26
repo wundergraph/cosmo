@@ -241,8 +241,8 @@ export class SchemaCheckRepository {
       const storedChanges = `array_agg(distinct (${schema.operationChangeOverrides.changeType.name}, ${schema.operationChangeOverrides.path.name}))`;
 
       // Incoming changes are new breaking changes detected in the current check run
-      // Stored changes are a a list of changes that have been marked as safe (override) by the user
-      // Here except tells us the incoming changes that are not safe and an intersect tells us the incoming changes that are safe
+      // Stored changes are a list of changes that have been marked as safe (override) by the user
+      // Here except tells us the incoming changes that are not safe and an intersection tells us the incoming changes that are safe
       const res = await this.db
         .select({
           unsafeChanges: sql

@@ -320,7 +320,7 @@ export function CheckExtensionsConfig({
               <div className="py-2 text-sm space-y-1">
                 <p className="font-medium leading-none">Included fields</p>
                 <p className="text-muted-foreground">
-                  Specifies which data elements should be included in the generated file delivered via the webhook..{" "}
+                  Specifies which data elements should be included in the generated file delivered via the webhook.{" "}
                   <a
                     href={docsBaseURL + "/"}
                     target="_blank"

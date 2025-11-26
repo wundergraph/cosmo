@@ -86,7 +86,7 @@ describe('CDN handlers', () => {
       expect(res.status).toBe(404);
     });
 
-    test('it returns a 401 if the graph or organization ids does not match with the JWT payload', async () => {
+    test('it returns a 400 if the graph or organization ids does not match with the JWT payload', async () => {
       const res = await app.request(`/foo/bar/operations/clientName/operation.json`, {
         method: 'GET',
         headers: {
@@ -147,7 +147,7 @@ describe('CDN handlers', () => {
       expect(res.status).toBe(401);
     });
 
-    test('it returns a 401 if the graph or organization ids does not match with the JWT payload', async () => {
+    test('it returns a 400 if the graph or organization ids does not match with the JWT payload', async () => {
       const res = await app.request(`/foo/bar/operations/routerconfigs/latest.json`, {
         method: 'GET',
         headers: {
@@ -208,7 +208,7 @@ describe('CDN handlers', () => {
       expect(res.status).toBe(401);
     });
 
-    test('it returns a 401 if the graph or organization ids does not match with the JWT payload', async () => {
+    test('it returns a 400 if the graph or organization ids does not match with the JWT payload', async () => {
       const res = await app.request(`/foo/bar/operations/routerconfigs/draft.json`, {
         method: 'GET',
         headers: {
@@ -489,7 +489,7 @@ describe('CDN handlers', () => {
       expect(res.status).toBe(401);
     });
 
-    test('it returns a 401 if the graph or organization ids does not match with the JWT payload', async () => {
+    test('it returns a 400 if the graph or organization ids does not match with the JWT payload', async () => {
       const res = await app.request(`/foo/bar/operations/cache_warmup/operations.json`, {
         method: 'GET',
         headers: {
@@ -586,7 +586,7 @@ describe('CDN handlers', () => {
       expect(res.status).toBe(401);
     });
 
-    test('it returns a 401 if the organization id does not match with the JWT payload', async () => {
+    test('it returns a 400 if the organization id does not match with the JWT payload', async () => {
       const res = await app.request(`/foo/subgraph_checks/operations.json`, {
         method: 'GET',
         headers: {
