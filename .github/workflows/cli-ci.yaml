@@ -140,6 +140,7 @@ jobs:
         with:
           name: pr-build
           run-id: ${{ steps.find-run.outputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           path: cli/coverage
 
       - name: Use artifact
