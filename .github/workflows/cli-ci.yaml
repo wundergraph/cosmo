@@ -20,6 +20,13 @@ env:
   DO_NOT_TRACK: '1'
 
 jobs:
+  status-checker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print the status commit SHA
+        run: |
+          echo "Action Details: ${{ github.event.action }}"
+
   build_test_default:
     timeout-minutes: 10
     runs-on: ubuntu-latest
@@ -129,8 +136,7 @@ jobs:
         run: exit 1
 
   after-merge:
-    if: >
-      github.event.action == 'closed'
+    if: github.event.action == 'closed'
     runs-on: ubuntu-latest
     steps:
       - name: Print merge commit SHA
