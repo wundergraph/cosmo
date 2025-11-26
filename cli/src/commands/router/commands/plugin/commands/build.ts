@@ -34,7 +34,6 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option('--all-platforms', 'Build for all supported platforms', false);
 
-  // Tools installation specific
   command.option('--skip-tools-installation', 'Skip tool installation', false);
   command.option(
     '--force-tools-installation',
