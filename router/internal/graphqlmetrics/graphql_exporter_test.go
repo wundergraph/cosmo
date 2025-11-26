@@ -423,7 +423,7 @@ func TestExportFullQueue(t *testing.T) {
 
 	var dispatched int
 
-	for i := 0; i < totalItems; i++ {
+	for range totalItems {
 
 		usage := &graphqlmetricsv1.SchemaUsageInfo{
 			TypeFieldMetrics: []*graphqlmetricsv1.TypeFieldUsageInfo{
