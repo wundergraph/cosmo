@@ -267,7 +267,7 @@ const OperationsLeftPanel = ({
         />
         {totalCount > 0 && (
           <div className="flex justify-end text-xs italic text-muted-foreground">
-            Found {totalCount.toLocaleString()}{" "}
+            Found {totalCount.toLocaleString()} total{" "}
             {totalCount === 1 ? "operation" : "operations"}
           </div>
         )}

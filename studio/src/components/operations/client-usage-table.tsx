@@ -83,7 +83,8 @@ export const ClientUsageTable = ({
       <div className="mb-4">
         <h3 className="text-md font-semibold">Client Usage</h3>
         <p className="mt-1 text-xs text-muted-foreground">
-          Clients that have used this operation
+          Clients that have used this operation. Sorted by last used in
+          descending order.
         </p>
       </div>
       <TableWrapper>
