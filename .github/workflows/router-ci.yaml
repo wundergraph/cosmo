@@ -49,6 +49,14 @@ jobs:
       - name: Install tools
         run: make setup-build-tools
 
+      - uses: ./.github/actions/node
+
+      - name: Install Cli Node Dependencies
+        run: |
+          pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
+          pnpm buf generate --template buf.ts.gen.yaml
+          pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic run build
+
       - name: Install Bun For Plugin Building
         uses: oven-sh/setup-bun@v2
         with:
@@ -131,6 +139,14 @@ jobs:
 
       - name: Install tools
         run: make setup-build-tools
+
+      - uses: ./.github/actions/node
+
+      - name: Install Cli Node Dependencies
+        run: |
+          pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
+          pnpm buf generate --template buf.ts.gen.yaml
+          pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic run build
 
       - name: Install Bun For Plugin Building
         uses: oven-sh/setup-bun@v2
@@ -307,8 +323,17 @@ jobs:
         with:
           cache-dependency-path: |
             router-tests/go.sum
+
       - name: Install tools
         run: make setup-build-tools
+
+      - uses: ./.github/actions/node
+
+      - name: Install Cli Node Dependencies
+        run: |
+          pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
+          pnpm buf generate --template buf.ts.gen.yaml
+          pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic run build
 
       - name: Install Bun For Plugin Building
         uses: oven-sh/setup-bun@v2
