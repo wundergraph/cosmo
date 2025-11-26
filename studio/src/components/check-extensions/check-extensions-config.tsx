@@ -138,7 +138,7 @@ export function CheckExtensionsConfig({
       description:
         "Provides both the previous and newly composed Schema Definition Language (SDL) documents for the subgraph " +
         "being checked, along with the composed SDL for the federated graph.",
-      docsLink: "/studio/alerts-and-notifications/webhooks#verification"
+      docsLink: "/studio/subgraph-check-extensions#include-composed-sdl"
     },
     {
       key: "includeLintingIssues",
@@ -159,7 +159,7 @@ export function CheckExtensionsConfig({
             </>
           </>
         ),
-      docsLink: "/studio/alerts-and-notifications/webhooks#verification",
+      docsLink: "/studio/subgraph-check-extensions#include-lint-warnings-and-errors",
       isDisabled: !isLintingEnabledForNamespace,
     },
     {
@@ -179,20 +179,20 @@ export function CheckExtensionsConfig({
             {" "}for the namespace to be able to receive graph pruning warnings and errors.
           </>
         ),
-      docsLink: "/studio/alerts-and-notifications/webhooks#verification",
+      docsLink: "/studio/subgraph-check-extensions#include-graph-pruning-warnings-and-errors",
       isDisabled: !isGraphPruningEnabledForNamespace,
     },
     {
       key: "includeSchemaChanges",
       label: "Schema Changes",
       description: "Lists the changes detected in the subgraph schema, including additions, removals, and modifications.",
-      docsLink: "/studio/alerts-and-notifications/webhooks#verification",
+      docsLink: "/studio/subgraph-check-extensions#include-schema-changes",
     },
     {
       key: "includeAffectedOperations",
       label: "Affected Operations",
       description: "Lists the operations that may be impacted by changes to the subgraph schema.",
-      docsLink: "/studio/alerts-and-notifications/webhooks#verification",
+      docsLink: "/studio/subgraph-check-extensions#include-affected-operations",
     },
   ], [isLintingEnabledForNamespace, isGraphPruningEnabledForNamespace, namespace.name, organizationSlug]);
 
@@ -305,7 +305,7 @@ export function CheckExtensionsConfig({
                       This can be used to verify if the events are originating from Cosmo.{" "}
                       <a
                         rel="noreferrer"
-                        href={docsBaseURL + "/studio/alerts-and-notifications/webhooks#verification"}
+                        href={docsBaseURL + "/studio/subgraph-check-extensions#verification"}
                         target="_blank"
                         className="text-primary"
                       >
