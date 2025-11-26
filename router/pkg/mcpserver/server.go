@@ -16,6 +16,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/santhosh-tekuri/jsonschema/v6"
+	"github.com/wundergraph/cosmo/router/internal/stringsx"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
@@ -841,7 +842,12 @@ func WithCORS(corsConfig *cors.Config) func(http.Handler) http.Handler {
 // Only used for web browsers, not for API clients
 func setCORSHeaders(w http.ResponseWriter, config cors.Config) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", strings.Join(append(config.AllowMethods, "OPTIONS"), ", "))
-	w.Header().Set("Access-Control-Allow-Headers", strings.Join(append(config.AllowHeaders, "Last-Event-ID", "Mcp-Protocol-Version", "Mcp-Session-Id"), ", "))
-	w.Header().Set("Access-Control-Max-Age", fmt.Sprintf("%d", int(config.MaxAge.Seconds())))
+	w.Header().Set("Access-Control-Allow-Methods", "GET, PUT, POST, DELETE, OPTIONS")
+	hdrs := stringsx.RemoveDuplicates(append(config.AllowHeaders, "Content-Type, Accept, Authorization, Last-Event-ID, Mcp-Protocol-Version, Mcp-Session-Id"))
+	w.Header().Set("Access-Control-Allow-Headers", strings.Join(hdrs, ", "))
+	maxAge := config.MaxAge
+	if maxAge <= 0 {
+		maxAge = 24 * time.Hour
+	}
+	w.Header().Set("Access-Control-Max-Age", fmt.Sprintf("%d", int(maxAge.Seconds())))
 }
