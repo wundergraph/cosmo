@@ -354,7 +354,11 @@ export function validateAndGetGoModulePath(language: string, goModulePath: strin
 /**
  * Check if tools need installation and ask the user if needed
  */
-export async function checkAndInstallTools(force = false, language: string, autoConfirmPrompts: boolean): Promise<boolean> {
+export async function checkAndInstallTools(
+  force = false,
+  language: string,
+  autoConfirmPrompts: boolean,
+): Promise<boolean> {
   const [needsReinstall, shouldCleanup] = await shouldReinstallTools(force, language);
 
   if (!needsReinstall) {
@@ -375,18 +379,15 @@ export async function checkAndInstallTools(force = false, language: string, auto
       pc.white('The following tools are needed to build the router plugin:') +
       '\n\n' +
       toolsInfo +
-      '\n\n'
+      '\n\n',
   );
 
   // In case of auto-confirm, skip the prompt
   if (autoConfirmPrompts) {
-    console.log(
-        pc.white('These tools will now be automatically installed') +
-        '\n'
-    );
+    console.log(pc.white('These tools will now be automatically installed') + '\n');
   } else {
     console.log(
-        pc.white('You can install them automatically or manually install them yourself') +
+      pc.white('You can install them automatically or manually install them yourself') +
         '\n' +
         pc.white('by following the documentation at https://cosmo-docs.wundergraph.com') +
         '\n',
@@ -394,8 +395,8 @@ export async function checkAndInstallTools(force = false, language: string, auto
 
     // Ask user for confirmation to install tools
     const installMessage = existsSync(TOOLS_DIR)
-        ? 'Version changes detected. Install required toolchain?'
-        : 'Install required toolchain?';
+      ? 'Version changes detected. Install required toolchain?'
+      : 'Install required toolchain?';
 
     const response = await prompts({
       type: 'confirm',
