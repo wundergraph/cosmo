@@ -24,10 +24,15 @@ echo "Head SHA: $HEAD_SHA"
 echo "Current run id: $CURRENT_RUN_ID"
 
 # Get all PR runs for this commit (since its runs per Sha 500 should be enough for now)
-json=$(curl -s \
+json=$(curl -sf \
   -H "Authorization: Bearer $GITHUB_TOKEN" \
   -H "Accept: application/vnd.github+json" \
   "https://api.github.com/repos/$REPO/actions/runs?head_sha=$HEAD_SHA&event=pull_request&per_page=500")
+
+if [ $? -ne 0 ]; then
+  echo "Failed to fetch workflow runs" >&2
+  exit 1
+fi
 
 # Pick the latest *completed & successful* run that is NOT this run
 run_id=$(echo "$json" | jq -r --arg cur "$CURRENT_RUN_ID" --arg workflow "$WORKFLOW_PATH" '
@@ -42,6 +47,11 @@ run_id=$(echo "$json" | jq -r --arg cur "$CURRENT_RUN_ID" --arg workflow "$WORKF
   | last
   | .id
 ')
+
+if [ $? -ne 0 ]; then
+  echo "Failed to parse workflow runs JSON" >&2
+  exit 1
+fi
 
 if [ -z "$run_id" ] || [ "$run_id" = "null" ]; then
   echo "No previous successful PR run found for $HEAD_SHA" >&2
