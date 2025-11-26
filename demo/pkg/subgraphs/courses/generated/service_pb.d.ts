@@ -7,134 +7,6 @@
 import * as jspb from "google-protobuf";
 import * as google_protobuf_wrappers_pb from "google-protobuf/google/protobuf/wrappers_pb";
 
-export class LookupCourseByIdRequestKey extends jspb.Message { 
-    getId(): string;
-    setId(value: string): LookupCourseByIdRequestKey;
-
-    serializeBinary(): Uint8Array;
-    toObject(includeInstance?: boolean): LookupCourseByIdRequestKey.AsObject;
-    static toObject(includeInstance: boolean, msg: LookupCourseByIdRequestKey): LookupCourseByIdRequestKey.AsObject;
-    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
-    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-    static serializeBinaryToWriter(message: LookupCourseByIdRequestKey, writer: jspb.BinaryWriter): void;
-    static deserializeBinary(bytes: Uint8Array): LookupCourseByIdRequestKey;
-    static deserializeBinaryFromReader(message: LookupCourseByIdRequestKey, reader: jspb.BinaryReader): LookupCourseByIdRequestKey;
-}
-
-export namespace LookupCourseByIdRequestKey {
-    export type AsObject = {
-        id: string,
-    }
-}
-
-export class LookupCourseByIdRequest extends jspb.Message { 
-    clearKeysList(): void;
-    getKeysList(): Array<LookupCourseByIdRequestKey>;
-    setKeysList(value: Array<LookupCourseByIdRequestKey>): LookupCourseByIdRequest;
-    addKeys(value?: LookupCourseByIdRequestKey, index?: number): LookupCourseByIdRequestKey;
-
-    serializeBinary(): Uint8Array;
-    toObject(includeInstance?: boolean): LookupCourseByIdRequest.AsObject;
-    static toObject(includeInstance: boolean, msg: LookupCourseByIdRequest): LookupCourseByIdRequest.AsObject;
-    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
-    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-    static serializeBinaryToWriter(message: LookupCourseByIdRequest, writer: jspb.BinaryWriter): void;
-    static deserializeBinary(bytes: Uint8Array): LookupCourseByIdRequest;
-    static deserializeBinaryFromReader(message: LookupCourseByIdRequest, reader: jspb.BinaryReader): LookupCourseByIdRequest;
-}
-
-export namespace LookupCourseByIdRequest {
-    export type AsObject = {
-        keysList: Array<LookupCourseByIdRequestKey.AsObject>,
-    }
-}
-
-export class LookupCourseByIdResponse extends jspb.Message { 
-    clearResultList(): void;
-    getResultList(): Array<Course>;
-    setResultList(value: Array<Course>): LookupCourseByIdResponse;
-    addResult(value?: Course, index?: number): Course;
-
-    serializeBinary(): Uint8Array;
-    toObject(includeInstance?: boolean): LookupCourseByIdResponse.AsObject;
-    static toObject(includeInstance: boolean, msg: LookupCourseByIdResponse): LookupCourseByIdResponse.AsObject;
-    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
-    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-    static serializeBinaryToWriter(message: LookupCourseByIdResponse, writer: jspb.BinaryWriter): void;
-    static deserializeBinary(bytes: Uint8Array): LookupCourseByIdResponse;
-    static deserializeBinaryFromReader(message: LookupCourseByIdResponse, reader: jspb.BinaryReader): LookupCourseByIdResponse;
-}
-
-export namespace LookupCourseByIdResponse {
-    export type AsObject = {
-        resultList: Array<Course.AsObject>,
-    }
-}
-
-export class LookupLessonByIdRequestKey extends jspb.Message { 
-    getId(): string;
-    setId(value: string): LookupLessonByIdRequestKey;
-
-    serializeBinary(): Uint8Array;
-    toObject(includeInstance?: boolean): LookupLessonByIdRequestKey.AsObject;
-    static toObject(includeInstance: boolean, msg: LookupLessonByIdRequestKey): LookupLessonByIdRequestKey.AsObject;
-    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
-    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-    static serializeBinaryToWriter(message: LookupLessonByIdRequestKey, writer: jspb.BinaryWriter): void;
-    static deserializeBinary(bytes: Uint8Array): LookupLessonByIdRequestKey;
-    static deserializeBinaryFromReader(message: LookupLessonByIdRequestKey, reader: jspb.BinaryReader): LookupLessonByIdRequestKey;
-}
-
-export namespace LookupLessonByIdRequestKey {
-    export type AsObject = {
-        id: string,
-    }
-}
-
-export class LookupLessonByIdRequest extends jspb.Message { 
-    clearKeysList(): void;
-    getKeysList(): Array<LookupLessonByIdRequestKey>;
-    setKeysList(value: Array<LookupLessonByIdRequestKey>): LookupLessonByIdRequest;
-    addKeys(value?: LookupLessonByIdRequestKey, index?: number): LookupLessonByIdRequestKey;
-
-    serializeBinary(): Uint8Array;
-    toObject(includeInstance?: boolean): LookupLessonByIdRequest.AsObject;
-    static toObject(includeInstance: boolean, msg: LookupLessonByIdRequest): LookupLessonByIdRequest.AsObject;
-    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
-    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-    static serializeBinaryToWriter(message: LookupLessonByIdRequest, writer: jspb.BinaryWriter): void;
-    static deserializeBinary(bytes: Uint8Array): LookupLessonByIdRequest;
-    static deserializeBinaryFromReader(message: LookupLessonByIdRequest, reader: jspb.BinaryReader): LookupLessonByIdRequest;
-}
-
-export namespace LookupLessonByIdRequest {
-    export type AsObject = {
-        keysList: Array<LookupLessonByIdRequestKey.AsObject>,
-    }
-}
-
-export class LookupLessonByIdResponse extends jspb.Message { 
-    clearResultList(): void;
-    getResultList(): Array<Lesson>;
-    setResultList(value: Array<Lesson>): LookupLessonByIdResponse;
-    addResult(value?: Lesson, index?: number): Lesson;
-
-    serializeBinary(): Uint8Array;
-    toObject(includeInstance?: boolean): LookupLessonByIdResponse.AsObject;
-    static toObject(includeInstance: boolean, msg: LookupLessonByIdResponse): LookupLessonByIdResponse.AsObject;
-    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
-    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-    static serializeBinaryToWriter(message: LookupLessonByIdResponse, writer: jspb.BinaryWriter): void;
-    static deserializeBinary(bytes: Uint8Array): LookupLessonByIdResponse;
-    static deserializeBinaryFromReader(message: LookupLessonByIdResponse, reader: jspb.BinaryReader): LookupLessonByIdResponse;
-}
-
-export namespace LookupLessonByIdResponse {
-    export type AsObject = {
-        resultList: Array<Lesson.AsObject>,
-    }
-}
-
 export class LookupEmployeeByIdRequestKey extends jspb.Message { 
     getId(): string;
     setId(value: string): LookupEmployeeByIdRequestKey;
@@ -492,6 +364,31 @@ export namespace MutationAddLessonResponse {
     }
 }
 
+export class Employee extends jspb.Message { 
+    getId(): number;
+    setId(value: number): Employee;
+    clearTaughtCoursesList(): void;
+    getTaughtCoursesList(): Array<Course>;
+    setTaughtCoursesList(value: Array<Course>): Employee;
+    addTaughtCourses(value?: Course, index?: number): Course;
+
+    serializeBinary(): Uint8Array;
+    toObject(includeInstance?: boolean): Employee.AsObject;
+    static toObject(includeInstance: boolean, msg: Employee): Employee.AsObject;
+    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
+    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
+    static serializeBinaryToWriter(message: Employee, writer: jspb.BinaryWriter): void;
+    static deserializeBinary(bytes: Uint8Array): Employee;
+    static deserializeBinaryFromReader(message: Employee, reader: jspb.BinaryReader): Employee;
+}
+
+export namespace Employee {
+    export type AsObject = {
+        id: number,
+        taughtCoursesList: Array<Course.AsObject>,
+    }
+}
+
 export class Course extends jspb.Message { 
     getId(): string;
     setId(value: string): Course;
@@ -570,30 +467,5 @@ export namespace Lesson {
         description?: google_protobuf_wrappers_pb.StringValue.AsObject,
         order: number,
         course?: Course.AsObject,
-    }
-}
-
-export class Employee extends jspb.Message { 
-    getId(): number;
-    setId(value: number): Employee;
-    clearTaughtCoursesList(): void;
-    getTaughtCoursesList(): Array<Course>;
-    setTaughtCoursesList(value: Array<Course>): Employee;
-    addTaughtCourses(value?: Course, index?: number): Course;
-
-    serializeBinary(): Uint8Array;
-    toObject(includeInstance?: boolean): Employee.AsObject;
-    static toObject(includeInstance: boolean, msg: Employee): Employee.AsObject;
-    static extensions: {[key: number]: jspb.ExtensionFieldInfo<jspb.Message>};
-    static extensionsBinary: {[key: number]: jspb.ExtensionFieldBinaryInfo<jspb.Message>};
-    static serializeBinaryToWriter(message: Employee, writer: jspb.BinaryWriter): void;
-    static deserializeBinary(bytes: Uint8Array): Employee;
-    static deserializeBinaryFromReader(message: Employee, reader: jspb.BinaryReader): Employee;
-}
-
-export namespace Employee {
-    export type AsObject = {
-        id: number,
-        taughtCoursesList: Array<Course.AsObject>,
     }
 }

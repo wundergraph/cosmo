@@ -54,22 +54,6 @@
   ],
   "entityMappings": [
     {
-      "typeName": "Course",
-      "kind": "entity",
-      "key": "id",
-      "rpc": "LookupCourseById",
-      "request": "LookupCourseByIdRequest",
-      "response": "LookupCourseByIdResponse"
-    },
-    {
-      "typeName": "Lesson",
-      "kind": "entity",
-      "key": "id",
-      "rpc": "LookupLessonById",
-      "request": "LookupLessonByIdRequest",
-      "response": "LookupLessonByIdResponse"
-    },
-    {
       "typeName": "Employee",
       "kind": "entity",
       "key": "id",

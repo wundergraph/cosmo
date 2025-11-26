@@ -1,5 +1,7 @@
 import { hkdf, randomFill, randomUUID, subtle } from 'node:crypto';
-import { decodeJwt, EncryptJWT, jwtDecrypt, JWTPayload, jwtVerify, KeyLike, SignJWT } from 'jose';
+import { decodeJwt, EncryptJWT, jwtDecrypt, errors, JWTPayload, jwtVerify, KeyLike, SignJWT } from 'jose';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { AuthenticationError } from '../errors/errors.js';
 import { JWTDecodeParams, JWTEncodeParams } from '../../types/index.js';
 import { base64URLEncode } from '../util.js';
 
@@ -76,10 +78,21 @@ export async function decrypt<Payload = JWTPayload>(params: JWTDecodeParams): Pr
     throw new Error('No token provided');
   }
   const encryptionSecret = await getDerivedEncryptionKey(secret);
-  const { payload } = await jwtDecrypt(token, encryptionSecret, {
-    clockTolerance: 15,
-  });
-  return payload as Payload;
+  try {
+    const { payload } = await jwtDecrypt(token, encryptionSecret, {
+      clockTolerance: 15,
+    });
+    return payload as Payload;
+  } catch (err: any) {
+    if (
+      err instanceof errors.JWTExpired ||
+      err instanceof errors.JWTClaimValidationFailed ||
+      err instanceof errors.JWTInvalid
+    ) {
+      throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, err.message);
+    }
+    throw err;
+  }
 }
 
 /**

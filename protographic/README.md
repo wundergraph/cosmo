@@ -4,18 +4,21 @@ A tool for converting GraphQL Schema Definition Language (SDL) to Protocol Buffe
 
 ## Overview
 
-Protographic bridges GraphQL and Protocol Buffers (protobuf) ecosystems through two core functions:
+Protographic bridges GraphQL and Protocol Buffers (protobuf) ecosystems through three core functions:
 
 1. **GraphQL SDL to Protocol Buffer (Proto) Compiler**: Transforms GraphQL schemas into Proto3 format, allowing developers to write gRPC services using GraphQL SDL and integrate them seamlessly into the Cosmo Router as standard subgraphs. This is used at build-time.
 
-2. **GraphQL SDL to Mapping Compiler**: Creates mapping definitions that maintain the semantic relationships between GraphQL types while adapting them to Protocol Buffer's structural model. This is used by the Cosmo Router at runtime.
+2. **GraphQL Operations to Protocol Buffer Compiler** ⚠️ **ALPHA**: Converts GraphQL operations (queries, mutations, subscriptions) into Proto3 service definitions with corresponding request/response messages. This enables operation-first development where you define your API through GraphQL operations rather than schema types.
+
+3. **GraphQL SDL to Mapping Compiler**: Creates mapping definitions that maintain the semantic relationships between GraphQL types while adapting them to Protocol Buffer's structural model. This is used by the Cosmo Router at runtime.
 
 ## Key Features
 
 - Precise conversion of GraphQL types to Protocol Buffer messages
+- **Operations-to-Proto** (alpha): Generate proto services directly from GraphQL operations
 - Consistent naming conventions across GraphQL and Proto definitions
 - Streamlined mapping of GraphQL operations to RPC methods
-- Robust handling of complex GraphQL features (unions, interfaces, directives)
+- Handles GraphQL features including unions, interfaces, directives, and fragments
 - First-class support for Federation entity mapping
 - Deterministic field ordering with proto.lock.json for backward compatibility
 - Use of Protocol Buffer wrappers for nullable fields to distinguish between semantic nulls and zero values
@@ -113,6 +116,34 @@ The lock data records the order of:
 - Members of unions
 
 New fields are always added at the end, maintaining backward compatibility with existing proto messages.
+
+### Converting GraphQL Operations to Protocol Buffer ⚠️ ALPHA
+
+> **Note**: This feature is currently in alpha. The API may change in future releases.
+
+Protographic can generate proto services directly from GraphQL operations, enabling an operation-first development approach. For detailed documentation, see [OPERATIONS_TO_PROTO.md](OPERATIONS_TO_PROTO.md).
+
+Quick example:
+
+```typescript
+import { compileOperationsToProto } from '@wundergraph/protographic';
+
+const operation = `
+query GetUser($userId: ID!) {
+  user(id: $userId) {
+    id
+    name
+    email
+  }
+}
+`;
+
+const result = compileOperationsToProto(operation, schema, {
+  serviceName: 'UserService',
+  packageName: 'user.v1',
+  prefixOperationType: true
+});
+```
 
 ### Generating Mapping Definitions
 

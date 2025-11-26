@@ -3,9 +3,10 @@ package pubsub
 import (
 	"context"
 	"errors"
+	"testing"
+
 	"github.com/stretchr/testify/mock"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
-	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -61,13 +62,17 @@ func TestBuild_OK(t *testing.T) {
 	}
 
 	mockPubSubProvider.On("ID").Return("provider-1")
+	mockPubSubProvider.On("SetHooks", datasource.Hooks{
+		OnReceiveEvents: datasource.OnReceiveEventsHooks{Handlers: []datasource.OnReceiveEventsFn(nil)},
+		OnPublishEvents: datasource.OnPublishEventsHooks{Handlers: []datasource.OnPublishEventsFn(nil)},
+	})
 
 	mockBuilder.On("TypeID").Return("nats")
-	mockBuilder.On("BuildProvider", natsEventSources[0]).Return(mockPubSubProvider, nil)
+	mockBuilder.On("BuildProvider", natsEventSources[0], mock.Anything).Return(mockPubSubProvider, nil)
 
 	// ctx, kafkaBuilder, config.Providers.Kafka, kafkaDsConfsWithEvents
 	// Execute the function
-	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, rmetric.NewNoopStreamMetricStore())
+	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, rmetric.NewNoopStreamMetricStore(), datasource.Hooks{})
 
 	// Assertions
 	assert.NoError(t, err)
@@ -123,7 +128,7 @@ func TestBuild_ProviderError(t *testing.T) {
 	mockBuilder.On("BuildProvider", natsEventSources[0], mock.Anything).Return(nil, errors.New("provider error"))
 
 	// Execute the function
-	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, rmetric.NewNoopStreamMetricStore())
+	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, rmetric.NewNoopStreamMetricStore(), datasource.Hooks{})
 
 	// Assertions
 	assert.Error(t, err)
@@ -178,7 +183,7 @@ func TestBuild_ShouldGetAnErrorIfProviderIsNotDefined(t *testing.T) {
 	mockBuilder.On("TypeID").Return("nats")
 
 	// Execute the function
-	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, rmetric.NewNoopStreamMetricStore())
+	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, rmetric.NewNoopStreamMetricStore(), datasource.Hooks{})
 
 	// Assertions
 	assert.Error(t, err)
@@ -236,13 +241,17 @@ func TestBuild_ShouldNotInitializeProviderIfNotUsed(t *testing.T) {
 	}
 
 	mockPubSubUsedProvider.On("ID").Return("provider-2")
+	mockPubSubUsedProvider.On("SetHooks", datasource.Hooks{
+		OnReceiveEvents: datasource.OnReceiveEventsHooks{Handlers: []datasource.OnReceiveEventsFn(nil)},
+		OnPublishEvents: datasource.OnPublishEventsHooks{Handlers: []datasource.OnPublishEventsFn(nil)},
+	})
 
 	mockBuilder.On("TypeID").Return("nats")
 	mockBuilder.On("BuildProvider", natsEventSources[1], mock.Anything).
 		Return(mockPubSubUsedProvider, nil)
 
 	// Execute the function
-	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, rmetric.NewNoopStreamMetricStore())
+	providers, dataSources, err := build(ctx, mockBuilder, natsEventSources, dsConfs, rmetric.NewNoopStreamMetricStore(), datasource.Hooks{})
 
 	// Assertions
 	assert.NoError(t, err)
@@ -293,7 +302,7 @@ func TestBuildProvidersAndDataSources_Nats_OK(t *testing.T) {
 				{ID: "provider-1"},
 			},
 		},
-	}, nil, zap.NewNop(), dsConfs, "host", "addr")
+	}, nil, zap.NewNop(), dsConfs, "host", "addr", datasource.Hooks{})
 
 	// Assertions
 	assert.NoError(t, err)
@@ -346,7 +355,7 @@ func TestBuildProvidersAndDataSources_Kafka_OK(t *testing.T) {
 				{ID: "provider-1"},
 			},
 		},
-	}, nil, zap.NewNop(), dsConfs, "host", "addr")
+	}, nil, zap.NewNop(), dsConfs, "host", "addr", datasource.Hooks{})
 
 	// Assertions
 	assert.NoError(t, err)
@@ -399,7 +408,7 @@ func TestBuildProvidersAndDataSources_Redis_OK(t *testing.T) {
 				{ID: "provider-1"},
 			},
 		},
-	}, nil, zap.NewNop(), dsConfs, "host", "addr")
+	}, nil, zap.NewNop(), dsConfs, "host", "addr", datasource.Hooks{})
 
 	// Assertions
 	assert.NoError(t, err)
