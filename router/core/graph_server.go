@@ -586,7 +586,7 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 		}
 		s.variablesNormalizationCache, err = ristretto.NewCache[uint64, VariablesNormalizationCacheEntry](variablesNormalizationCacheConfig)
 		if err != nil {
-			return computeSha256, fmt.Errorf("failed to create normalization cache: %w", err)
+			return computeSha256, fmt.Errorf("failed to create variables normalization cache: %w", err)
 		}
 
 		remapVariablesCacheConfig := &ristretto.Config[uint64, RemapVariablesCacheEntry]{
@@ -598,7 +598,7 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 		}
 		s.remapVariablesCache, err = ristretto.NewCache[uint64, RemapVariablesCacheEntry](remapVariablesCacheConfig)
 		if err != nil {
-			return computeSha256, fmt.Errorf("failed to create normalization cache: %w", err)
+			return computeSha256, fmt.Errorf("failed to create remap variables cache: %w", err)
 		}
 	}
 
