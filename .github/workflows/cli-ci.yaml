@@ -69,7 +69,13 @@ jobs:
           overwrite: true
           name: pr-build
           path: cli/coverage
-          retention-days: 10
+          retention-days: 2
+
+      - name: Download artifact from earlier job
+        uses: actions/download-artifact@v4
+        with:
+          name: pr-build
+          path: cli/coverage
 
       - name: Upload results to Codecov
         uses: codecov/codecov-action@v5
