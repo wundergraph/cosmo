@@ -529,6 +529,12 @@ const (
 	// PlatformServiceGetClientsFromAnalyticsProcedure is the fully-qualified name of the
 	// PlatformService's GetClientsFromAnalytics RPC.
 	PlatformServiceGetClientsFromAnalyticsProcedure = "/wg.cosmo.platform.v1.PlatformService/GetClientsFromAnalytics"
+	// PlatformServiceGetOperationClientsProcedure is the fully-qualified name of the PlatformService's
+	// GetOperationClients RPC.
+	PlatformServiceGetOperationClientsProcedure = "/wg.cosmo.platform.v1.PlatformService/GetOperationClients"
+	// PlatformServiceGetOperationDeprecatedFieldsProcedure is the fully-qualified name of the
+	// PlatformService's GetOperationDeprecatedFields RPC.
+	PlatformServiceGetOperationDeprecatedFieldsProcedure = "/wg.cosmo.platform.v1.PlatformService/GetOperationDeprecatedFields"
 	// PlatformServiceValidateAndFetchPluginDataProcedure is the fully-qualified name of the
 	// PlatformService's ValidateAndFetchPluginData RPC.
 	PlatformServiceValidateAndFetchPluginDataProcedure = "/wg.cosmo.platform.v1.PlatformService/ValidateAndFetchPluginData"
@@ -711,6 +717,8 @@ var (
 	platformServiceGetProposalChecksMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("GetProposalChecks")
 	platformServiceGetOperationsMethodDescriptor                         = platformServiceServiceDescriptor.Methods().ByName("GetOperations")
 	platformServiceGetClientsFromAnalyticsMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("GetClientsFromAnalytics")
+	platformServiceGetOperationClientsMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("GetOperationClients")
+	platformServiceGetOperationDeprecatedFieldsMethodDescriptor          = platformServiceServiceDescriptor.Methods().ByName("GetOperationDeprecatedFields")
 	platformServiceValidateAndFetchPluginDataMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("ValidateAndFetchPluginData")
 	platformServiceLinkSubgraphMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("LinkSubgraph")
 	platformServiceUnlinkSubgraphMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("UnlinkSubgraph")
@@ -1031,6 +1039,10 @@ type PlatformServiceClient interface {
 	GetOperations(context.Context, *connect.Request[v1.GetOperationsRequest]) (*connect.Response[v1.GetOperationsResponse], error)
 	// GetClientsFromAnalytics returns all the clients of the federated graph from the analytics
 	GetClientsFromAnalytics(context.Context, *connect.Request[v1.GetClientsFromAnalyticsRequest]) (*connect.Response[v1.GetClientsFromAnalyticsResponse], error)
+	// GetOperationClients returns the clients that have used a specific operation
+	GetOperationClients(context.Context, *connect.Request[v1.GetOperationClientsRequest]) (*connect.Response[v1.GetOperationClientsResponse], error)
+	// GetOperationDeprecatedFields returns the deprecated fields used in a specific operation
+	GetOperationDeprecatedFields(context.Context, *connect.Request[v1.GetOperationDeprecatedFieldsRequest]) (*connect.Response[v1.GetOperationDeprecatedFieldsResponse], error)
 	// ValidateAndFetchPluginData validates the limit of plugins and returns the latest version and token
 	ValidateAndFetchPluginData(context.Context, *connect.Request[v1.ValidateAndFetchPluginDataRequest]) (*connect.Response[v1.ValidateAndFetchPluginDataResponse], error)
 	// LinkSubgraph links one subgraph to another
@@ -2048,6 +2060,18 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceGetClientsFromAnalyticsMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		getOperationClients: connect.NewClient[v1.GetOperationClientsRequest, v1.GetOperationClientsResponse](
+			httpClient,
+			baseURL+PlatformServiceGetOperationClientsProcedure,
+			connect.WithSchema(platformServiceGetOperationClientsMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		getOperationDeprecatedFields: connect.NewClient[v1.GetOperationDeprecatedFieldsRequest, v1.GetOperationDeprecatedFieldsResponse](
+			httpClient,
+			baseURL+PlatformServiceGetOperationDeprecatedFieldsProcedure,
+			connect.WithSchema(platformServiceGetOperationDeprecatedFieldsMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		validateAndFetchPluginData: connect.NewClient[v1.ValidateAndFetchPluginDataRequest, v1.ValidateAndFetchPluginDataResponse](
 			httpClient,
 			baseURL+PlatformServiceValidateAndFetchPluginDataProcedure,
@@ -2242,6 +2266,8 @@ type platformServiceClient struct {
 	getProposalChecks                     *connect.Client[v1.GetProposalChecksRequest, v1.GetProposalChecksResponse]
 	getOperations                         *connect.Client[v1.GetOperationsRequest, v1.GetOperationsResponse]
 	getClientsFromAnalytics               *connect.Client[v1.GetClientsFromAnalyticsRequest, v1.GetClientsFromAnalyticsResponse]
+	getOperationClients                   *connect.Client[v1.GetOperationClientsRequest, v1.GetOperationClientsResponse]
+	getOperationDeprecatedFields          *connect.Client[v1.GetOperationDeprecatedFieldsRequest, v1.GetOperationDeprecatedFieldsResponse]
 	validateAndFetchPluginData            *connect.Client[v1.ValidateAndFetchPluginDataRequest, v1.ValidateAndFetchPluginDataResponse]
 	linkSubgraph                          *connect.Client[v1.LinkSubgraphRequest, v1.LinkSubgraphResponse]
 	unlinkSubgraph                        *connect.Client[v1.UnlinkSubgraphRequest, v1.UnlinkSubgraphResponse]
@@ -3106,6 +3132,17 @@ func (c *platformServiceClient) GetClientsFromAnalytics(ctx context.Context, req
 	return c.getClientsFromAnalytics.CallUnary(ctx, req)
 }
 
+// GetOperationClients calls wg.cosmo.platform.v1.PlatformService.GetOperationClients.
+func (c *platformServiceClient) GetOperationClients(ctx context.Context, req *connect.Request[v1.GetOperationClientsRequest]) (*connect.Response[v1.GetOperationClientsResponse], error) {
+	return c.getOperationClients.CallUnary(ctx, req)
+}
+
+// GetOperationDeprecatedFields calls
+// wg.cosmo.platform.v1.PlatformService.GetOperationDeprecatedFields.
+func (c *platformServiceClient) GetOperationDeprecatedFields(ctx context.Context, req *connect.Request[v1.GetOperationDeprecatedFieldsRequest]) (*connect.Response[v1.GetOperationDeprecatedFieldsResponse], error) {
+	return c.getOperationDeprecatedFields.CallUnary(ctx, req)
+}
+
 // ValidateAndFetchPluginData calls wg.cosmo.platform.v1.PlatformService.ValidateAndFetchPluginData.
 func (c *platformServiceClient) ValidateAndFetchPluginData(ctx context.Context, req *connect.Request[v1.ValidateAndFetchPluginDataRequest]) (*connect.Response[v1.ValidateAndFetchPluginDataResponse], error) {
 	return c.validateAndFetchPluginData.CallUnary(ctx, req)
@@ -3440,6 +3477,10 @@ type PlatformServiceHandler interface {
 	GetOperations(context.Context, *connect.Request[v1.GetOperationsRequest]) (*connect.Response[v1.GetOperationsResponse], error)
 	// GetClientsFromAnalytics returns all the clients of the federated graph from the analytics
 	GetClientsFromAnalytics(context.Context, *connect.Request[v1.GetClientsFromAnalyticsRequest]) (*connect.Response[v1.GetClientsFromAnalyticsResponse], error)
+	// GetOperationClients returns the clients that have used a specific operation
+	GetOperationClients(context.Context, *connect.Request[v1.GetOperationClientsRequest]) (*connect.Response[v1.GetOperationClientsResponse], error)
+	// GetOperationDeprecatedFields returns the deprecated fields used in a specific operation
+	GetOperationDeprecatedFields(context.Context, *connect.Request[v1.GetOperationDeprecatedFieldsRequest]) (*connect.Response[v1.GetOperationDeprecatedFieldsResponse], error)
 	// ValidateAndFetchPluginData validates the limit of plugins and returns the latest version and token
 	ValidateAndFetchPluginData(context.Context, *connect.Request[v1.ValidateAndFetchPluginDataRequest]) (*connect.Response[v1.ValidateAndFetchPluginDataResponse], error)
 	// LinkSubgraph links one subgraph to another
@@ -4453,6 +4494,18 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceGetClientsFromAnalyticsMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceGetOperationClientsHandler := connect.NewUnaryHandler(
+		PlatformServiceGetOperationClientsProcedure,
+		svc.GetOperationClients,
+		connect.WithSchema(platformServiceGetOperationClientsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceGetOperationDeprecatedFieldsHandler := connect.NewUnaryHandler(
+		PlatformServiceGetOperationDeprecatedFieldsProcedure,
+		svc.GetOperationDeprecatedFields,
+		connect.WithSchema(platformServiceGetOperationDeprecatedFieldsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	platformServiceValidateAndFetchPluginDataHandler := connect.NewUnaryHandler(
 		PlatformServiceValidateAndFetchPluginDataProcedure,
 		svc.ValidateAndFetchPluginData,
@@ -4809,6 +4862,10 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceGetOperationsHandler.ServeHTTP(w, r)
 		case PlatformServiceGetClientsFromAnalyticsProcedure:
 			platformServiceGetClientsFromAnalyticsHandler.ServeHTTP(w, r)
+		case PlatformServiceGetOperationClientsProcedure:
+			platformServiceGetOperationClientsHandler.ServeHTTP(w, r)
+		case PlatformServiceGetOperationDeprecatedFieldsProcedure:
+			platformServiceGetOperationDeprecatedFieldsHandler.ServeHTTP(w, r)
 		case PlatformServiceValidateAndFetchPluginDataProcedure:
 			platformServiceValidateAndFetchPluginDataHandler.ServeHTTP(w, r)
 		case PlatformServiceLinkSubgraphProcedure:
@@ -5484,6 +5541,14 @@ func (UnimplementedPlatformServiceHandler) GetOperations(context.Context, *conne
 
 func (UnimplementedPlatformServiceHandler) GetClientsFromAnalytics(context.Context, *connect.Request[v1.GetClientsFromAnalyticsRequest]) (*connect.Response[v1.GetClientsFromAnalyticsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetClientsFromAnalytics is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetOperationClients(context.Context, *connect.Request[v1.GetOperationClientsRequest]) (*connect.Response[v1.GetOperationClientsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetOperationClients is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetOperationDeprecatedFields(context.Context, *connect.Request[v1.GetOperationDeprecatedFieldsRequest]) (*connect.Response[v1.GetOperationDeprecatedFieldsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetOperationDeprecatedFields is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) ValidateAndFetchPluginData(context.Context, *connect.Request[v1.ValidateAndFetchPluginDataRequest]) (*connect.Response[v1.ValidateAndFetchPluginDataResponse], error) {
