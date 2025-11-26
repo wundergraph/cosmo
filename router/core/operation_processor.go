@@ -810,8 +810,8 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 			o.parsedOperation.Type = entry.operationType
 			o.parsedOperation.NormalizationCacheHit = true
 
-			// remove skip include variables from variables
-			// as they were removed during normalization, but still present when we get operation from cache
+			// Remove skip/include variables because they come directly from the user.
+			// They were removed during normalization, and we do not cache variables.
 			for _, varName := range skipIncludeVariableNames {
 				o.parsedOperation.Request.Variables = jsonparser.Delete(o.parsedOperation.Request.Variables, varName)
 			}
@@ -834,7 +834,7 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 		}
 	}
 
-	// set variables to the normalized variables as skip inlude variables will be removed after normalization
+	// Normalization removed skip/include variables. Set variables to the normalized variables.
 	o.parsedOperation.Request.Variables = o.kit.doc.Input.Variables
 
 	// Print the operation with the original operation name
@@ -844,7 +844,6 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 		return false, errors.WithStack(fmt.Errorf("normalizeNonPersistedOperation (uncached) failed printing operation: %w", err))
 	}
 
-	// Set the normalized representation
 	o.parsedOperation.NormalizedRepresentation = o.kit.normalizedOperation.String()
 
 	if o.cache != nil && o.cache.normalizationCache != nil {

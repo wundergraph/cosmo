@@ -53,11 +53,12 @@ func TestVarsNormalizationRemappingCaches(t *testing.T) {
 				require.Equal(t, `{"data":{"employee":{"details":{"pets":[{"name":"Abby","__typename":"Dog","breed":"GOLDEN_RETRIEVER","class":"MAMMAL","gender":"FEMALE"},{"name":"Survivor","__typename":"Pony"}]}}}}`, res.Body)
 			}
 
-			f(cacheHit{false, false, false}, true)
-			f(cacheHit{true, true, true}, true)
-			f(cacheHit{true, true, true}, true)
-			f(cacheHit{false, false, false}, false)
-			f(cacheHit{true, true, true}, true)
+			f(cacheHit{normalization: false, variables: false, remapping: false}, true)
+			f(cacheHit{normalization: true, variables: true, remapping: true}, true)
+			f(cacheHit{normalization: true, variables: true, remapping: true}, true)
+			f(cacheHit{normalization: false, variables: false, remapping: false}, false)
+			f(cacheHit{normalization: true, variables: true, remapping: true}, true)
+			f(cacheHit{normalization: true, variables: true, remapping: true}, false)
 		})
 	})
 
@@ -68,19 +69,19 @@ func TestVarsNormalizationRemappingCaches(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employee(id: 1) { id details { forename } } }`,
 			})
-			assertCacheHeaders(t, res, cacheHit{false, false, false})
+			assertCacheHeaders(t, res, cacheHit{})
 
 			// Same query
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employee(id: 1) { id details { forename } } }`,
 			})
-			assertCacheHeaders(t, res, cacheHit{true, true, true})
+			assertCacheHeaders(t, res, cacheHit{normalization: true, variables: true, remapping: true})
 
 			// Different inline value
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employee(id: 2) { id details { forename } } }`,
 			})
-			assertCacheHeaders(t, res, cacheHit{false, false, true})
+			assertCacheHeaders(t, res, cacheHit{remapping: true})
 		})
 	})
 
@@ -92,7 +93,7 @@ func TestVarsNormalizationRemappingCaches(t *testing.T) {
 				Variables: []byte(`{"id": 1}`),
 			})
 			require.Equal(t, `{"data":{"employee":{"id":1}}}`, res.Body)
-			assertCacheHeaders(t, res, cacheHit{false, false, false})
+			assertCacheHeaders(t, res, cacheHit{})
 
 			// Different query with the same variable value.
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -100,7 +101,7 @@ func TestVarsNormalizationRemappingCaches(t *testing.T) {
 				Variables: []byte(`{"id": 1}`),
 			})
 			require.Equal(t, `{"data":{"employee":{"id":1,"details":{"forename":"Jens"}}}}`, res.Body)
-			assertCacheHeaders(t, res, cacheHit{false, false, false})
+			assertCacheHeaders(t, res, cacheHit{})
 		})
 	})
 
@@ -112,21 +113,21 @@ func TestVarsNormalizationRemappingCaches(t *testing.T) {
 				Query:     `query A($id: Int!) { employee(id: $id) { id } }`,
 				Variables: []byte(`{"id": 1}`),
 			})
-			assertCacheHeaders(t, res, cacheHit{false, false, false})
+			assertCacheHeaders(t, res, cacheHit{})
 
 			// Query B with different structure should miss
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query:     `query B($id: Int!) { employee(id: $id) { id details { forename } } }`,
 				Variables: []byte(`{"id": 1}`),
 			})
-			assertCacheHeaders(t, res, cacheHit{false, false, false})
+			assertCacheHeaders(t, res, cacheHit{})
 
 			// Query A again should hit its own cache
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query:     `query A($id: Int!) { employee(id: $id) { id } }`,
 				Variables: []byte(`{"id": 1}`),
 			})
-			assertCacheHeaders(t, res, cacheHit{true, true, true})
+			assertCacheHeaders(t, res, cacheHit{normalization: true, variables: true, remapping: true})
 		})
 	})
 
@@ -139,7 +140,7 @@ func TestVarsNormalizationRemappingCaches(t *testing.T) {
 				Variables: []byte(`{"arg": "single"}`),
 			})
 			require.Equal(t, `{"data":{"rootFieldWithListArg":["single"]}}`, res.Body)
-			assertCacheHeaders(t, res, cacheHit{false, false, false})
+			assertCacheHeaders(t, res, cacheHit{})
 
 			// Same structure should hit cache even with different value
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -150,7 +151,7 @@ func TestVarsNormalizationRemappingCaches(t *testing.T) {
 			// Normalization hits because the query structure is unchanged,
 			// variables misses because the value differs,
 			// and remapping hits because the structure remains the same.
-			assertCacheHeaders(t, res, cacheHit{true, false, true})
+			assertCacheHeaders(t, res, cacheHit{normalization: true, remapping: true})
 		})
 	})
 
