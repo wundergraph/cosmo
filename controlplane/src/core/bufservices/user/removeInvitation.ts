@@ -29,7 +29,7 @@ export function removeInvitation(
     const userRepo = new UserRepository(logger, opts.db);
     const auditLogRepo = new AuditLogRepository(opts.db);
 
-    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdminOrDeveloper) {
+    if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdmin) {
       throw new UnauthorizedError();
     }
 
