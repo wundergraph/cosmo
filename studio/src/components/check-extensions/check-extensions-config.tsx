@@ -322,7 +322,7 @@ export function CheckExtensionsConfig({
                 <p className="text-muted-foreground">
                   Specifies which data elements should be included in the generated file delivered via the webhook.{" "}
                   <a
-                    href={docsBaseURL + "/"}
+                    href={docsBaseURL + "/studio/subgraph-check-extensions#configuration"}
                     target="_blank"
                     rel="noreferrer"
                     className="text-primary ml-1"
