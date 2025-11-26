@@ -1,6 +1,6 @@
 {
   "name": "@wundergraph/playground",
-  "version": "0.9.5",
+  "version": "0.9.6",
   "description": "Cosmo Playground built on top of graphiql",
   "author": {
     "name": "WunderGraph Maintainers",
