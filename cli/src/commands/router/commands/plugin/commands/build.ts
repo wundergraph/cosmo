@@ -36,7 +36,7 @@ export default (opts: BaseCommandOptions) => {
   command.option('--skip-tools-installation', 'Skip tool installation', false);
   command.option(
     '--force-tools-installation',
-    'Force tools installation regardless of version check or confirmation',
+    'Force tools installation regardless of version check there or confirmation',
     false,
   );
   command.option('--go-module-path <path>', 'Go module path to use for the plugin');
