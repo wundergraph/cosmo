@@ -19,7 +19,7 @@ export function SubgraphCheckExtension({ enabled, deliveryId, errorMessage }: Su
   const router = useRouter();
   const user = useUser();
   const graphContext = useContext(GraphContext);
-  const [d, setD] = useState<string | undefined>(undefined);
+  const [selectedDeliveryId, setSelectedDeliveryId] = useState<string | undefined>(undefined);
 
   if (!deliveryId) {
     return (
@@ -59,7 +59,7 @@ export function SubgraphCheckExtension({ enabled, deliveryId, errorMessage }: Su
                 <Button
                   variant="link"
                   className="p-0 h-auto"
-                  onClick={() => setD(deliveryId)}
+                  onClick={() => setSelectedDeliveryId(deliveryId)}
                 >
                   View delivery details
                 </Button>
@@ -72,15 +72,15 @@ export function SubgraphCheckExtension({ enabled, deliveryId, errorMessage }: Su
           icon={<CheckCircleIcon className="text-success" />}
           title="Subgraph Check Extension Successful"
           description="The subgraph check extension completed successfully."
-          actions={deliveryId && (<Button onClick={() => setD(deliveryId)}>View delivery details</Button>)}
+          actions={deliveryId && (<Button onClick={() => setSelectedDeliveryId(deliveryId)}>View delivery details</Button>)}
         />
       )}
 
       <WebhookDeliveryDetails
-        deliveryId={d}
+        deliveryId={selectedDeliveryId}
         onOpenChange={(isOpen) => {
           if (!isOpen) {
-            setD(undefined);
+            setSelectedDeliveryId(undefined);
           }
         }}
         refreshDeliveries={() => {}}
