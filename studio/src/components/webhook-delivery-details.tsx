@@ -180,7 +180,7 @@ export function WebhookDeliveryDetails({ deliveryId, onOpenChange, refreshDelive
                 language="json"
               />
             </div>
-            {JSON.parse(details.responseBody || "{}") && (
+            {details.responseBody && (
               <>
                 <h3 className="mb-2 mt-6 text-base font-semibold tracking-tight">
                   Body

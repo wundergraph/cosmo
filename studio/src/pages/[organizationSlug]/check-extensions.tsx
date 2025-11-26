@@ -97,7 +97,7 @@ const CheckExtensionsPage: NextPageWithLayout = () => {
     return (
       <EmptyState
         icon={<ExclamationTriangleIcon className="h-12 w-12" />}
-        title="Could not retrieve the subgraph check extensions config of the namesapce"
+        title="Could not retrieve the subgraph check extensions config of the namespace"
         description={
           data?.details || error?.message || "Please try again"
         }
@@ -144,7 +144,7 @@ const CheckExtensionsPage: NextPageWithLayout = () => {
           }
           onCheckedChange={(checked) => saveChanges(
             {
-              ...data,
+              ...data.config,
               enableSubgraphCheckExtensions: checked,
             },
             `Subgraph check extensions ${checked ? 'enabled' : 'disabled'} successfully.`,

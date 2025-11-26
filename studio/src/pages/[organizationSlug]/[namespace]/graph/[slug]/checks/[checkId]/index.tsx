@@ -764,7 +764,7 @@ const CheckDetails = ({
                 <Badge
                   variant="outline"
                   className={cn("flex items-center space-x-1.5 py-2", {
-                    "text-muted-foreground": data.check?.graphPruningSkipped,
+                    "text-muted-foreground": !data.check?.checkExtensionDeliveryId,
                   })}
                 >
                   {!data.check?.checkExtensionDeliveryId ? (

@@ -38,10 +38,17 @@ const validationSchema = z.object({
       try {
         const url = new URL(val); // Ensure that the value is a valid absolute URL
         if (url.hostname.toLowerCase() === 'localhost') {
+          if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: 'Must be a valid absolute URL starting with http:// or https://',
+            });
+          }
+
           return;
         }
 
-        if (!val.toLowerCase().startsWith('https://')) {
+        if (url.protocol !== 'https:') {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             message: 'Must be a valid absolute URL starting with https://',

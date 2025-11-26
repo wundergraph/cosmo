@@ -70,8 +70,8 @@ export function SubgraphCheckExtension({ enabled, deliveryId, errorMessage }: Su
         ) : (
         <EmptyState
           icon={<CheckCircleIcon className="text-success" />}
-          title="Composition Check Successful"
-          description="There are no composition errors or warnings."
+          title="Subgraph Check Extension Successful"
+          description="The subgraph check extension completed successfully."
           actions={deliveryId && (<Button onClick={() => setD(deliveryId)}>View delivery details</Button>)}
         />
       )}
