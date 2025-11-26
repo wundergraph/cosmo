@@ -21,6 +21,7 @@ env:
 
 jobs:
   build_test_default:
+    if: github.event.action != 'closed'
     timeout-minutes: 10
     runs-on: ubuntu-latest
     steps:
@@ -66,6 +67,7 @@ jobs:
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
   build_test_node_matrix:
+    if: github.event.action != 'closed'
     timeout-minutes: 10
     runs-on: ubuntu-latest
 
@@ -95,6 +97,7 @@ jobs:
         run: bun test e2e --test-name-pattern node
 
   build_bun_matrix:
+    if: github.event.action != 'closed'
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -113,7 +116,7 @@ jobs:
   build_test:
     runs-on: ubuntu-latest
     needs: [build_test_default, build_test_node_matrix, build_bun_matrix]
-    if: always()
+    if: github.event.action != 'closed' && always()
     steps:
       - name: 'All tests passed'
         if: ${{ !(contains(needs.*.result, 'failure')) }}
