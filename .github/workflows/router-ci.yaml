@@ -51,7 +51,7 @@ jobs:
 
       - uses: ./.github/actions/node
 
-      - name: Install dependencies
+      - name: Install Cli Node Dependencies
         run: |
           pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
           pnpm buf generate --template buf.ts.gen.yaml
@@ -142,7 +142,7 @@ jobs:
 
       - uses: ./.github/actions/node
 
-      - name: Install dependencies
+      - name: Install Cli Node Dependencies
         run: |
           pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
           pnpm buf generate --template buf.ts.gen.yaml
@@ -329,7 +329,7 @@ jobs:
 
       - uses: ./.github/actions/node
 
-      - name: Install dependencies
+      - name: Install Cli Node Dependencies
         run: |
           pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
           pnpm buf generate --template buf.ts.gen.yaml
