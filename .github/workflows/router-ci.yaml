@@ -49,6 +49,9 @@ jobs:
       - name: Install tools
         run: make setup-build-tools
 
+      - name: Install pnpm
+        uses: ./.github/actions/node
+
       - name: Install Bun For Plugin Building
         uses: oven-sh/setup-bun@v2
         with:
