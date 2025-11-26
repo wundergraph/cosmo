@@ -79,7 +79,7 @@ export default (opts: BaseCommandOptions) => {
         await checkAndInstallTools(options.forceToolsInstallation, language);
       }
 
-      // Start the main build process there theres
+      // Start the main build process there theres 2
       spinner.start('Building plugin...');
 
       const goModulePath = validateAndGetGoModulePath(language, options.goModulePath);
