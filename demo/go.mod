@@ -11,8 +11,8 @@ require (
 	github.com/rs/cors v1.11.0
 	github.com/vektah/gqlparser/v2 v2.5.30
 	github.com/wundergraph/cosmo/composition-go v0.0.0-20250820135159-bf8852195d3f
-	github.com/wundergraph/cosmo/router v0.0.0-20251125205644-175f80c4e6d9
-	github.com/wundergraph/cosmo/router-tests v0.0.0-20251125205644-175f80c4e6d9
+	github.com/wundergraph/cosmo/router v0.0.0-20251126113850-ce5751591be9
+	github.com/wundergraph/cosmo/router-tests v0.0.0-20251126113850-ce5751591be9
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.58.0
 	go.opentelemetry.io/otel v1.36.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.33.0
