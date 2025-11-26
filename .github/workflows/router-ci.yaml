@@ -46,15 +46,15 @@ jobs:
         with:
           working-directory: ./router
 
-      - uses: ./.github/actions/node
-
       - name: Install tools
         run: make setup-build-tools
 
       - uses: ./.github/actions/node
 
-      - name: Install dependencies
-        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
+      - name: Install Cli Dependencies
+        run: |
+          pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
+          pnpm buf generate --template buf.ts.gen.yaml
 
       - name: Install Bun For Plugin Building
         uses: oven-sh/setup-bun@v2
@@ -141,8 +141,10 @@ jobs:
 
       - uses: ./.github/actions/node
 
-      - name: Install dependencies
-        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
+      - name: Install Cli Dependencies
+        run: |
+          pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
+          pnpm buf generate --template buf.ts.gen.yaml
 
       - name: Install Bun For Plugin Building
         uses: oven-sh/setup-bun@v2
@@ -325,8 +327,10 @@ jobs:
 
       - uses: ./.github/actions/node
 
-      - name: Install dependencies
-        run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
+      - name: Install Cli Dependencies
+        run: |
+          pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
+          pnpm buf generate --template buf.ts.gen.yaml
 
       - name: Install Bun For Plugin Building
         uses: oven-sh/setup-bun@v2
