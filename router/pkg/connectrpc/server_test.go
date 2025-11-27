@@ -17,7 +17,7 @@ func TestNewServer(t *testing.T) {
 		server, err := NewServer(ServerConfig{
 			ProtoDirs:        []string{"testdata"},
 			GraphQLEndpoint: "http://localhost:4000/graphql",
-			ListenAddr:      "localhost:50051",
+			ListenAddr:      "localhost:5026",
 			Logger:          zap.NewNop(),
 		})
 
@@ -44,7 +44,7 @@ func TestNewServer(t *testing.T) {
 		})
 
 		require.NoError(t, err)
-		assert.Equal(t, "0.0.0.0:50051", server.config.ListenAddr)
+		assert.Equal(t, "0.0.0.0:5026", server.config.ListenAddr)
 	})
 
 	t.Run("uses default timeout", func(t *testing.T) {
