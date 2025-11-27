@@ -8,6 +8,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   MagnifyingGlassIcon,
   XMarkIcon,
   BarsArrowDownIcon,
@@ -222,21 +227,30 @@ export const OperationsSearch = ({
 
         {/* Sort Controls */}
         <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleSortDirectionToggle}
-            className="h-6 w-6"
-            aria-label={`Sort ${
-              sortDirection === "desc" ? "ascending" : "descending"
-            }`}
-          >
-            {sortDirection === "desc" ? (
-              <BarsArrowDownIcon className="h-4 w-4" />
-            ) : (
-              <BarsArrowUpIcon className="h-4 w-4" />
-            )}
-          </Button>
+          <Tooltip delayDuration={100}>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleSortDirectionToggle}
+                className="h-6 w-6"
+                aria-label={`Sort ${
+                  sortDirection === "desc" ? "ascending" : "descending"
+                }`}
+              >
+                {sortDirection === "desc" ? (
+                  <BarsArrowDownIcon className="h-4 w-4" />
+                ) : (
+                  <BarsArrowUpIcon className="h-4 w-4" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>
+                Sort {sortDirection === "desc" ? "ascending" : "descending"}
+              </p>
+            </TooltipContent>
+          </Tooltip>
           <Select
             value={fetchBasedOn.toString()}
             onValueChange={(value) =>

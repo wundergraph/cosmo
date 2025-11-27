@@ -661,6 +661,8 @@ const OperationsPage: NextPageWithLayout = () => {
       placeholderData: keepPreviousData,
       // Ensure query refetches when filters change
       refetchOnMount: true,
+      // Disable refetch on window focus
+      refetchOnWindowFocus: false,
       // Prevent stale data accumulation
       staleTime: 0,
       gcTime: 0,
