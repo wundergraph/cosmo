@@ -1000,18 +1000,6 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		r.logger.Info("Discovered ConnectRPC services",
 			zap.Int("service_count", len(discoveredServices)))
 
-		// Build lists of proto and operations directories from discovered services
-		var protoDirs []string
-		var operationsDirs []string
-		for _, svc := range discoveredServices {
-			protoDirs = append(protoDirs, svc.ServiceDir)
-			operationsDirs = append(operationsDirs, svc.ServiceDir)
-			
-			r.logger.Debug("Configured service directories",
-				zap.String("service", svc.FullName),
-				zap.String("dir", svc.ServiceDir))
-		}
-
 		// Determine the router GraphQL endpoint
 		var routerGraphQLEndpoint string
 		if r.connectRPC.GraphQLEndpoint != "" {
@@ -1020,18 +1008,16 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			routerGraphQLEndpoint = path.Join(r.listenAddr, r.graphqlPath)
 		}
 
-		// Initialize the ConnectRPC server
+		// Initialize the ConnectRPC server with the services directory
 		serverConfig := connectrpc.ServerConfig{
-			ProtoDirs:       protoDirs,
-			OperationsDirs:  operationsDirs,
+			ServicesDir:     servicesDir,
 			ListenAddr:      r.connectRPC.Server.ListenAddr,
 			GraphQLEndpoint: routerGraphQLEndpoint,
 			Logger:          r.logger,
 		}
 
 		r.logger.Debug("Creating ConnectRPC server",
-			zap.Strings("proto_dirs", protoDirs),
-			zap.Strings("operations_dirs", operationsDirs),
+			zap.String("services_dir", servicesDir),
 			zap.String("graphql_endpoint", routerGraphQLEndpoint),
 			zap.String("listen_addr", r.connectRPC.Server.ListenAddr))
 

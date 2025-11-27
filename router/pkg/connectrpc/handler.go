@@ -131,17 +131,19 @@ func (h *RPCHandler) HandleRPC(ctx context.Context, serviceName, methodName stri
 	// This allows RPC methods like "QueryGetUser" to map to GraphQL operations named "GetUser"
 	operationName := stripOperationTypePrefix(methodName)
 
-	// Look up operation from registry using the stripped name
-	operation := h.operationRegistry.GetOperation(operationName)
+	// Look up operation from registry scoped to this service
+	// This ensures operations can only be called from their owning service
+	operation := h.operationRegistry.GetOperationForService(serviceName, operationName)
 	if operation == nil {
 		// If not found with stripped name, try the original method name
-		operation = h.operationRegistry.GetOperation(methodName)
+		operation = h.operationRegistry.GetOperationForService(serviceName, methodName)
 		if operation == nil {
-			return nil, fmt.Errorf("operation not found in registry: %s (also tried: %s)", methodName, operationName)
+			return nil, fmt.Errorf("operation not found for service %s: %s (also tried: %s)", serviceName, methodName, operationName)
 		}
 	}
 
 	h.logger.Debug("using predefined operation",
+		zap.String("service", serviceName),
 		zap.String("rpc_method", methodName),
 		zap.String("operation", operation.Name),
 		zap.String("type", operation.OperationType))
@@ -309,20 +311,17 @@ func (h *RPCHandler) executeGraphQL(ctx context.Context, query string, variables
 }
 
 // Reload reloads the handler's dependencies
+// NOTE: This method is deprecated and will be removed.
+// Operations should be reloaded per-service using LoadOperationsForService.
 func (h *RPCHandler) Reload(operationsDir string) error {
 	if h.operationRegistry == nil {
 		return fmt.Errorf("operation registry is nil")
 	}
 
-	// Reload operations from directory
-	if operationsDir != "" {
-		if err := h.operationRegistry.LoadFromDirectory(operationsDir, nil); err != nil {
-			return fmt.Errorf("failed to reload operations: %w", err)
-		}
-		h.logger.Info("reloaded operations",
-			zap.Int("count", h.operationRegistry.Count()))
-	}
-
+	// This method is no longer functional with service-scoped operations
+	// Operations must be loaded per service using LoadOperationsForService
+	h.logger.Warn("Reload() is deprecated - operations must be loaded per service")
+	
 	return nil
 }
 
@@ -342,25 +341,25 @@ func (h *RPCHandler) GetOperations() interface{} {
 	return h.operationRegistry.GetAllOperations()
 }
 
-// ValidateOperation checks if an operation is available
+// ValidateOperation checks if an operation is available for a specific service
 func (h *RPCHandler) ValidateOperation(serviceName, methodName string) error {
 	if h.operationRegistry == nil {
 		return fmt.Errorf("operation registry is not initialized")
 	}
-	if !h.operationRegistry.HasOperation(methodName) {
-		return fmt.Errorf("operation not found: %s", methodName)
+	if !h.operationRegistry.HasOperationForService(serviceName, methodName) {
+		return fmt.Errorf("operation not found for service %s: %s", serviceName, methodName)
 	}
 	return nil
 }
 
-// GetOperationInfo returns detailed information about a specific operation
+// GetOperationInfo returns detailed information about a specific operation for a service
 func (h *RPCHandler) GetOperationInfo(serviceName, methodName string) (interface{}, error) {
 	if h.operationRegistry == nil {
 		return nil, fmt.Errorf("operation registry is not initialized")
 	}
-	operation := h.operationRegistry.GetOperation(methodName)
+	operation := h.operationRegistry.GetOperationForService(serviceName, methodName)
 	if operation == nil {
-		return nil, fmt.Errorf("operation not found: %s", methodName)
+		return nil, fmt.Errorf("operation not found for service %s: %s", serviceName, methodName)
 	}
 	return operation, nil
 }
