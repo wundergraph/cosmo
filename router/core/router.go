@@ -973,70 +973,78 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		r.mcpServer = mcpss
 	}
 
-	r.logger.Info("ConnectRPC configuration check",
-		zap.Bool("enabled", r.connectRPC.Enabled),
-		zap.String("provider_id", r.connectRPC.Storage.ProviderID),
-		zap.String("listen_addr", r.connectRPC.Server.ListenAddr),
-		zap.String("graphql_endpoint", r.connectRPC.GraphQLEndpoint),
-		zap.String("operations_dir", r.connectRPC.OperationsDir),
-	)
-
 	if r.connectRPC.Enabled {
-		var protoDir string
+		if r.connectRPC.ServicesProviderID == "" {
+			return fmt.Errorf("connect_rpc is enabled but services_provider_id is not configured")
+		}
 
-		// If storage provider ID is set, resolve it to a directory path
-		if r.connectRPC.Storage.ProviderID != "" {
-			r.logger.Debug("Resolving storage provider for ConnectRPC protos",
-				zap.String("provider_id", r.connectRPC.Storage.ProviderID))
+		r.logger.Info("ConnectRPC configuration",
+			zap.Bool("enabled", r.connectRPC.Enabled),
+			zap.String("services_provider_id", r.connectRPC.ServicesProviderID),
+			zap.String("listen_addr", r.connectRPC.Server.ListenAddr),
+			zap.String("graphql_endpoint", r.connectRPC.GraphQLEndpoint))
 
-			// Find the provider in storage_providers
-			found := false
-
-			// Check for file_system providers
-			for _, provider := range r.storageProviders.FileSystem {
-				if provider.ID == r.connectRPC.Storage.ProviderID {
-					r.logger.Debug("Found file_system storage provider for ConnectRPC",
-						zap.String("id", provider.ID),
-						zap.String("path", provider.Path))
-
-					// Use the resolved file system path
-					protoDir = provider.Path
-					found = true
-					break
-				}
+		// Resolve the services provider to get the services directory
+		var servicesDir string
+		found := false
+		for _, provider := range r.storageProviders.FileSystem {
+			if provider.ID == r.connectRPC.ServicesProviderID {
+				servicesDir = provider.Path
+				found = true
+				r.logger.Debug("Resolved services provider",
+					zap.String("provider_id", provider.ID),
+					zap.String("path", provider.Path))
+				break
 			}
+		}
+		if !found {
+			return fmt.Errorf("services storage provider with id '%s' for connect_rpc not found", r.connectRPC.ServicesProviderID)
+		}
 
-			if !found {
-				return fmt.Errorf("storage provider with id '%s' for connect_rpc server not found", r.connectRPC.Storage.ProviderID)
-			}
+		// Discover services using convention-based approach
+		discoveredServices, err := connectrpc.DiscoverServices(connectrpc.ServiceDiscoveryConfig{
+			ServicesDir: servicesDir,
+			Logger:      r.logger,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to discover ConnectRPC services: %w", err)
+		}
+
+		r.logger.Info("Discovered ConnectRPC services",
+			zap.Int("service_count", len(discoveredServices)))
+
+		// Build lists of proto and operations directories from discovered services
+		var protoDirs []string
+		var operationsDirs []string
+		for _, svc := range discoveredServices {
+			protoDirs = append(protoDirs, svc.ServiceDir)
+			operationsDirs = append(operationsDirs, svc.ServiceDir)
+			
+			r.logger.Debug("Configured service directories",
+				zap.String("service", svc.FullName),
+				zap.String("dir", svc.ServiceDir))
 		}
 
 		// Determine the router GraphQL endpoint
 		var routerGraphQLEndpoint string
-
-		// Use the custom URL if provided
 		if r.connectRPC.GraphQLEndpoint != "" {
 			routerGraphQLEndpoint = r.connectRPC.GraphQLEndpoint
 		} else {
 			routerGraphQLEndpoint = path.Join(r.listenAddr, r.graphqlPath)
 		}
 
-		logFields := []zap.Field{
-			zap.String("storage_provider_id", r.connectRPC.Storage.ProviderID),
-			zap.String("proto_dir", protoDir),
-		}
-
 		// Initialize the ConnectRPC server
 		serverConfig := connectrpc.ServerConfig{
-			ProtoDir:        protoDir,
-			OperationsDir:   r.connectRPC.OperationsDir,
+			ProtoDirs:       protoDirs,
+			OperationsDirs:  operationsDirs,
 			ListenAddr:      r.connectRPC.Server.ListenAddr,
 			GraphQLEndpoint: routerGraphQLEndpoint,
-			Logger:          r.logger.With(logFields...),
+			Logger:          r.logger,
 		}
 
 		r.logger.Debug("Creating ConnectRPC server",
-			zap.String("proto_dir", protoDir),
+			zap.Strings("proto_dirs", protoDirs),
+			zap.Strings("operations_dirs", operationsDirs),
 			zap.String("graphql_endpoint", routerGraphQLEndpoint),
 			zap.String("listen_addr", r.connectRPC.Server.ListenAddr))
 
@@ -1055,7 +1063,8 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		}
 
 		r.logger.Info("ConnectRPC server started successfully",
-			zap.String("listen_addr", r.connectRPC.Server.ListenAddr))
+			zap.String("listen_addr", r.connectRPC.Server.ListenAddr),
+			zap.Int("services", len(discoveredServices)))
 
 		r.connectRPCServer = crpcServer
 	}

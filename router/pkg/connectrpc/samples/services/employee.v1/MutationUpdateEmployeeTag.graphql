@@ -1,0 +1,11 @@
+mutation MutationUpdateEmployeeTag($id: Int!, $tag: String!) {
+  updateEmployeeTag(id: $id, tag: $tag) {
+    id
+    tag
+    details {
+      forename
+      surname
+    }
+    updatedAt
+  }
+}

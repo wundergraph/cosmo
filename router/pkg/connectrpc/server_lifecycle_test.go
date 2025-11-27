@@ -47,7 +47,7 @@ func TestServerLifecycle_StartStopReload(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := NewServer(ServerConfig{
-			ProtoDir:        "testdata",
+			ProtoDirs:        []string{"testdata"},
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
@@ -84,7 +84,7 @@ func TestServerLifecycle_StartStopReload(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := NewServer(ServerConfig{
-			ProtoDir:        "testdata",
+			ProtoDirs:        []string{"testdata"},
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
@@ -108,7 +108,7 @@ func TestServerLifecycle_StartStopReload(t *testing.T) {
 
 	t.Run("stop without start returns error", func(t *testing.T) {
 		server, err := NewServer(ServerConfig{
-			ProtoDir:        "testdata",
+			ProtoDirs:        []string{"testdata"},
 			GraphQLEndpoint: "http://localhost:4000/graphql",
 			Logger:          zap.NewNop(),
 		})
@@ -128,7 +128,7 @@ func TestServerLifecycle_StartStopReload(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := NewServer(ServerConfig{
-			ProtoDir:        "testdata",
+			ProtoDirs:        []string{"testdata"},
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
@@ -174,7 +174,7 @@ func TestServerLifecycle_VanguardIntegration(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := NewServer(ServerConfig{
-			ProtoDir:        "testdata",
+			ProtoDirs:        []string{"testdata"},
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
@@ -205,7 +205,7 @@ func TestServerLifecycle_VanguardIntegration(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := NewServer(ServerConfig{
-			ProtoDir:        "testdata",
+			ProtoDirs:        []string{"testdata"},
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
@@ -235,7 +235,7 @@ func TestServerLifecycle_VanguardIntegration(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := NewServer(ServerConfig{
-			ProtoDir:        "testdata",
+			ProtoDirs:        []string{"testdata"},
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
@@ -276,7 +276,7 @@ func TestServerLifecycle_ErrorScenarios(t *testing.T) {
 
 	t.Run("start fails with invalid proto directory", func(t *testing.T) {
 		server, err := NewServer(ServerConfig{
-			ProtoDir:        "/nonexistent/path",
+			ProtoDirs:        []string{"/nonexistent/path"},
 			GraphQLEndpoint: "http://localhost:4000/graphql",
 			Logger:          zap.NewNop(),
 		})
@@ -295,7 +295,7 @@ func TestServerLifecycle_ErrorScenarios(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := NewServer(ServerConfig{
-			ProtoDir:        "testdata",
+			ProtoDirs:       []string{"testdata"},
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
@@ -305,8 +305,8 @@ func TestServerLifecycle_ErrorScenarios(t *testing.T) {
 		err = server.Start()
 		require.NoError(t, err)
 
-		// Change proto dir to invalid path
-		server.config.ProtoDir = "/nonexistent/path"
+		// Change proto dirs to invalid path
+		server.config.ProtoDirs = []string{"/nonexistent/path"}
 
 		err = server.Reload()
 		assert.Error(t, err)
@@ -325,7 +325,7 @@ func TestServerLifecycle_ErrorScenarios(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := NewServer(ServerConfig{
-			ProtoDir:        "testdata",
+			ProtoDirs:        []string{"testdata"},
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
@@ -351,8 +351,8 @@ func TestServerLifecycle_ErrorScenarios(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := NewServer(ServerConfig{
-			ProtoDir:        "testdata",
-			OperationsDir:   "/nonexistent/operations",
+			ProtoDirs:        []string{"testdata"},
+			OperationsDirs:   []string{"/nonexistent/operations"},
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
@@ -376,7 +376,7 @@ func TestServerLifecycle_ComponentInitialization(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := NewServer(ServerConfig{
-			ProtoDir:        "testdata",
+			ProtoDirs:        []string{"testdata"},
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
@@ -403,7 +403,7 @@ func TestServerLifecycle_ComponentInitialization(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := NewServer(ServerConfig{
-			ProtoDir:        "testdata",
+			ProtoDirs:        []string{"testdata"},
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:50052",
 			Logger:          zap.NewNop(),
@@ -437,7 +437,7 @@ func TestServerLifecycle_StateTransitions(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := NewServer(ServerConfig{
-			ProtoDir:        "testdata",
+			ProtoDirs:        []string{"testdata"},
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
@@ -473,7 +473,7 @@ func TestServerLifecycle_StateTransitions(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := NewServer(ServerConfig{
-			ProtoDir:        "testdata/employee_only",
+			ProtoDirs:        []string{"testdata/employee_only"},
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
@@ -515,7 +515,7 @@ func TestServerLifecycle_GracefulShutdown(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := NewServer(ServerConfig{
-			ProtoDir:        "testdata",
+			ProtoDirs:        []string{"testdata"},
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
@@ -545,7 +545,7 @@ func TestServerLifecycle_GracefulShutdown(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := NewServer(ServerConfig{
-			ProtoDir:        "testdata",
+			ProtoDirs:        []string{"testdata"},
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
