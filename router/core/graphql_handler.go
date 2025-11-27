@@ -34,9 +34,11 @@ var (
 )
 
 const (
-	ExecutionPlanCacheHeader      = "X-WG-Execution-Plan-Cache"
-	PersistedOperationCacheHeader = "X-WG-Persisted-Operation-Cache"
-	NormalizationCacheHeader      = "X-WG-Normalization-Cache"
+	ExecutionPlanCacheHeader          = "X-WG-Execution-Plan-Cache"
+	PersistedOperationCacheHeader     = "X-WG-Persisted-Operation-Cache"
+	NormalizationCacheHeader          = "X-WG-Normalization-Cache"
+	VariablesNormalizationCacheHeader = "X-WG-Variables-Normalization-Cache"
+	VariablesRemappingCacheHeader     = "X-WG-Variables-Remapping-Cache"
 )
 
 type ReportError interface {
@@ -64,35 +66,34 @@ func (e *reportError) Report() *operationreport.Report {
 }
 
 type HandlerOptions struct {
-	Executor                                    *Executor
-	Log                                         *zap.Logger
-	EnableExecutionPlanCacheResponseHeader      bool
-	EnablePersistedOperationCacheResponseHeader bool
-	EnableNormalizationCacheResponseHeader      bool
-	EnableResponseHeaderPropagation             bool
-	EngineStats                                 statistics.EngineStatistics
-	TracerProvider                              trace.TracerProvider
-	Authorizer                                  *CosmoAuthorizer
-	RateLimiter                                 *CosmoRateLimiter
-	RateLimitConfig                             *config.RateLimitConfiguration
-	SubgraphErrorPropagation                    config.SubgraphErrorPropagationConfiguration
-	EngineLoaderHooks                           resolve.LoaderHooks
-	ApolloSubscriptionMultipartPrintBoundary    bool
+	Executor       *Executor
+	Log            *zap.Logger
+	EngineStats    statistics.EngineStatistics
+	TracerProvider trace.TracerProvider
+	Authorizer     *CosmoAuthorizer
+	RateLimiter    *CosmoRateLimiter
+
+	RateLimitConfig          *config.RateLimitConfiguration
+	SubgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
+	EngineLoaderHooks        resolve.LoaderHooks
+
+	EnableCacheResponseHeaders      bool
+	EnableResponseHeaderPropagation bool
+
+	ApolloSubscriptionMultipartPrintBoundary bool
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
+	tracer := opts.TracerProvider.Tracer(
+		"wundergraph/cosmo/router/graphql_handler",
+		trace.WithInstrumentationVersion("0.0.1"))
 	graphQLHandler := &GraphQLHandler{
-		log:                                    opts.Log,
-		executor:                               opts.Executor,
-		enableExecutionPlanCacheResponseHeader: opts.EnableExecutionPlanCacheResponseHeader,
-		enablePersistedOperationCacheResponseHeader: opts.EnablePersistedOperationCacheResponseHeader,
-		enableNormalizationCacheResponseHeader:      opts.EnableNormalizationCacheResponseHeader,
-		enableResponseHeaderPropagation:             opts.EnableResponseHeaderPropagation,
-		engineStats:                                 opts.EngineStats,
-		tracer: opts.TracerProvider.Tracer(
-			"wundergraph/cosmo/router/graphql_handler",
-			trace.WithInstrumentationVersion("0.0.1"),
-		),
+		log:                                      opts.Log,
+		executor:                                 opts.Executor,
+		enableCacheResponseHeaders:               opts.EnableCacheResponseHeaders,
+		enableResponseHeaderPropagation:          opts.EnableResponseHeaderPropagation,
+		engineStats:                              opts.EngineStats,
+		tracer:                                   tracer,
 		authorizer:                               opts.Authorizer,
 		rateLimiter:                              opts.RateLimiter,
 		rateLimitConfig:                          opts.RateLimitConfig,
@@ -125,10 +126,8 @@ type GraphQLHandler struct {
 	subgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
 	engineLoaderHooks        resolve.LoaderHooks
 
-	enableExecutionPlanCacheResponseHeader      bool
-	enablePersistedOperationCacheResponseHeader bool
-	enableNormalizationCacheResponseHeader      bool
-	enableResponseHeaderPropagation             bool
+	enableCacheResponseHeaders      bool
+	enableResponseHeaderPropagation bool
 
 	apolloSubscriptionMultipartPrintBoundary bool
 }
@@ -441,21 +440,27 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 }
 
 func (h *GraphQLHandler) setDebugCacheHeaders(w http.ResponseWriter, opCtx *operationContext) {
-	if h.enableNormalizationCacheResponseHeader {
+	if h.enableCacheResponseHeaders {
 		if opCtx.normalizationCacheHit {
 			w.Header().Set(NormalizationCacheHeader, "HIT")
 		} else {
 			w.Header().Set(NormalizationCacheHeader, "MISS")
 		}
-	}
-	if h.enablePersistedOperationCacheResponseHeader {
+		if opCtx.variablesNormalizationCacheHit {
+			w.Header().Set(VariablesNormalizationCacheHeader, "HIT")
+		} else {
+			w.Header().Set(VariablesNormalizationCacheHeader, "MISS")
+		}
+		if opCtx.variablesRemappingCacheHit {
+			w.Header().Set(VariablesRemappingCacheHeader, "HIT")
+		} else {
+			w.Header().Set(VariablesRemappingCacheHeader, "MISS")
+		}
 		if opCtx.persistedOperationCacheHit {
 			w.Header().Set(PersistedOperationCacheHeader, "HIT")
 		} else {
 			w.Header().Set(PersistedOperationCacheHeader, "MISS")
 		}
-	}
-	if h.enableExecutionPlanCacheResponseHeader {
 		if opCtx.planCacheHit {
 			w.Header().Set(ExecutionPlanCacheHeader, "HIT")
 		} else {

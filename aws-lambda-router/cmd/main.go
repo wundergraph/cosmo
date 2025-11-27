@@ -4,6 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"os"
+	"time"
+
 	"github.com/akrylysov/algnhsa"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/wundergraph/cosmo/aws-lambda-router/internal"
@@ -12,9 +16,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"net/http"
-	"os"
-	"time"
 )
 
 const (
@@ -56,10 +57,9 @@ func main() {
 		internal.WithRouterOpts(core.WithDevelopmentMode(devMode)),
 		internal.WithRouterOpts(
 			core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
-				EnableSingleFlight:                     true,
-				EnableRequestTracing:                   devMode,
-				EnableExecutionPlanCacheResponseHeader: devMode,
-				MaxConcurrentResolvers:                 1024,
+				EnableSingleFlight:     true,
+				EnableRequestTracing:   devMode,
+				MaxConcurrentResolvers: 1024,
 			}),
 		),
 	)

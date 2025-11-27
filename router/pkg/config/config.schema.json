@@ -2752,13 +2752,9 @@
               "type": "boolean",
               "description": "Enable verbose debug logging for the Resolver."
             },
-            "enable_persisted_operations_cache_response_header": {
+            "enable_cache_response_headers": {
               "type": "boolean",
-              "description": "Enable the persisted operations cache response header. The persisted operations cache response header is used to cache the persisted operations in the client."
-            },
-            "enable_normalization_cache_response_header": {
-              "type": "boolean",
-              "description": "Enable the normalization cache response header. The normalization cache response header is used to cache the normalized operations in the client."
+              "description": "Enable hit/miss response headers for the normalization cache, the persisted operations cache, and the execution plan cache."
             },
             "always_include_query_plan": {
               "type": "boolean",
@@ -2781,10 +2777,6 @@
           "type": "boolean",
           "default": true,
           "description": "Enable the advanced request tracing. See https://cosmo-docs.wundergraph.com/router/advanced-request-tracing-art for more information."
-        },
-        "enable_execution_plan_cache_response_header": {
-          "type": "boolean",
-          "description": "Enable the execution plan cache response header. The execution plan cache response header is used to cache the execution plan in the client."
         },
         "max_concurrent_resolvers": {
           "type": "integer",

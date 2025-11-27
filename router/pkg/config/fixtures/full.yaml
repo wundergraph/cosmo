@@ -338,7 +338,6 @@ events:
 engine:
   enable_single_flight: true
   enable_request_tracing: true
-  enable_execution_plan_cache_response_header: false
   max_concurrent_resolvers: 32
   enable_net_poll: true
   enable_subgraph_fetch_operation_name: true
@@ -354,6 +353,7 @@ engine:
   debug:
     report_websocket_connections: false
     report_memory_usage: false
+    enable_cache_response_headers: false
 
 rate_limit:
   enabled: true
