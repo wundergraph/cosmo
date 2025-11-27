@@ -59,7 +59,7 @@ func NewServer(config ServerConfig) (*Server, error) {
 	}
 
 	if config.ListenAddr == "" {
-		config.ListenAddr = "0.0.0.0:50051"
+		config.ListenAddr = "0.0.0.0:5026"
 	}
 
 	if config.Logger == nil {
