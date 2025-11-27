@@ -15,7 +15,7 @@ import (
 func TestNewServer(t *testing.T) {
 	t.Run("creates server with valid config", func(t *testing.T) {
 		server, err := NewServer(ServerConfig{
-			ProtoDir:        "testdata",
+			ProtoDirs:        []string{"testdata"},
 			GraphQLEndpoint: "http://localhost:4000/graphql",
 			ListenAddr:      "localhost:50051",
 			Logger:          zap.NewNop(),
@@ -23,13 +23,13 @@ func TestNewServer(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.NotNil(t, server)
-		assert.Equal(t, "testdata", server.config.ProtoDir)
+		assert.Equal(t, []string{"testdata"}, server.config.ProtoDirs)
 		assert.Equal(t, "http://localhost:4000/graphql", server.config.GraphQLEndpoint)
 	})
 
 	t.Run("adds protocol to endpoint if missing", func(t *testing.T) {
 		server, err := NewServer(ServerConfig{
-			ProtoDir:        "testdata",
+			ProtoDirs:        []string{"testdata"},
 			GraphQLEndpoint: "localhost:4000/graphql",
 		})
 
@@ -39,7 +39,7 @@ func TestNewServer(t *testing.T) {
 
 	t.Run("uses default listen address", func(t *testing.T) {
 		server, err := NewServer(ServerConfig{
-			ProtoDir:        "testdata/employee_only",
+			ProtoDirs:        []string{"testdata/employee_only"},
 			GraphQLEndpoint: "http://localhost:4000/graphql",
 		})
 
@@ -49,7 +49,7 @@ func TestNewServer(t *testing.T) {
 
 	t.Run("uses default timeout", func(t *testing.T) {
 		server, err := NewServer(ServerConfig{
-			ProtoDir:        "testdata",
+			ProtoDirs:        []string{"testdata"},
 			GraphQLEndpoint: "http://localhost:4000/graphql",
 		})
 
@@ -63,12 +63,12 @@ func TestNewServer(t *testing.T) {
 		})
 
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "proto directory cannot be empty")
+		assert.Contains(t, err.Error(), "at least one proto directory must be provided")
 	})
 
 	t.Run("returns error when graphql endpoint is empty", func(t *testing.T) {
 		_, err := NewServer(ServerConfig{
-			ProtoDir: "testdata",
+			ProtoDirs: []string{"testdata"},
 		})
 
 		assert.Error(t, err)
@@ -77,7 +77,7 @@ func TestNewServer(t *testing.T) {
 
 	t.Run("uses nop logger when nil", func(t *testing.T) {
 		server, err := NewServer(ServerConfig{
-			ProtoDir:        "testdata",
+			ProtoDirs:        []string{"testdata"},
 			GraphQLEndpoint: "http://localhost:4000/graphql",
 			Logger:          nil,
 		})
@@ -98,7 +98,7 @@ func TestServer_Start(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := NewServer(ServerConfig{
-			ProtoDir:        "testdata",
+			ProtoDirs:        []string{"testdata"},
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0", // Use random port
 			Logger:          zap.NewNop(),
@@ -123,7 +123,7 @@ func TestServer_Start(t *testing.T) {
 
 	t.Run("returns error when proto directory is invalid", func(t *testing.T) {
 		server, err := NewServer(ServerConfig{
-			ProtoDir:        "/nonexistent/directory",
+			ProtoDirs:        []string{"/nonexistent/directory"},
 			GraphQLEndpoint: "http://localhost:4000/graphql",
 			Logger:          zap.NewNop(),
 		})
@@ -144,7 +144,7 @@ func TestServer_Stop(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := NewServer(ServerConfig{
-			ProtoDir:        "testdata",
+			ProtoDirs:        []string{"testdata"},
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
@@ -163,7 +163,7 @@ func TestServer_Stop(t *testing.T) {
 
 	t.Run("returns error when server not started", func(t *testing.T) {
 		server, err := NewServer(ServerConfig{
-			ProtoDir:        "testdata",
+			ProtoDirs:        []string{"testdata"},
 			GraphQLEndpoint: "http://localhost:4000/graphql",
 			Logger:          zap.NewNop(),
 		})
@@ -185,7 +185,7 @@ func TestServer_Reload(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := NewServer(ServerConfig{
-			ProtoDir:        "testdata",
+			ProtoDirs:        []string{"testdata"},
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
@@ -222,7 +222,7 @@ func TestServer_GetServiceCount(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := NewServer(ServerConfig{
-			ProtoDir:        "testdata/employee_only",
+			ProtoDirs:        []string{"testdata/employee_only"},
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
@@ -254,7 +254,7 @@ func TestServer_GetServiceNames(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := NewServer(ServerConfig{
-			ProtoDir:        "testdata/employee_only",
+			ProtoDirs:        []string{"testdata/employee_only"},
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
@@ -288,7 +288,7 @@ func TestServer_GetOperationCount(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := NewServer(ServerConfig{
-			ProtoDir:        "testdata",
+			ProtoDirs:        []string{"testdata"},
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
@@ -312,7 +312,7 @@ func TestServer_GetOperationCount(t *testing.T) {
 func TestServer_InitializeComponents(t *testing.T) {
 	t.Run("initializes components", func(t *testing.T) {
 		server, err := NewServer(ServerConfig{
-			ProtoDir:        "testdata",
+			ProtoDirs:        []string{"testdata"},
 			GraphQLEndpoint: "http://localhost:4000/graphql",
 			Logger:          zap.NewNop(),
 		})
@@ -320,7 +320,7 @@ func TestServer_InitializeComponents(t *testing.T) {
 
 		// Load protos first
 		server.protoLoader = NewProtoLoader(zap.NewNop())
-		err = server.protoLoader.LoadFromDirectory("testdata")
+		err = server.protoLoader.LoadFromDirectories([]string{"testdata"})
 		require.NoError(t, err)
 
 		err = server.initializeComponents()

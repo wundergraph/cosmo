@@ -20,10 +20,10 @@ import (
 
 // ServerConfig holds configuration for the ConnectRPC server
 type ServerConfig struct {
-	// ProtoDir is the directory containing proto files
-	ProtoDir string
-	// OperationsDir is the directory containing pre-defined GraphQL operations (required)
-	OperationsDir string
+	// ProtoDirs contains directories with proto files (one per service)
+	ProtoDirs []string
+	// OperationsDirs contains directories with GraphQL operations (one per service)
+	OperationsDirs []string
 	// ListenAddr is the address to listen on
 	ListenAddr string
 	// GraphQLEndpoint is the router's GraphQL endpoint
@@ -50,8 +50,8 @@ type Server struct {
 // NewServer creates a new ConnectRPC server
 func NewServer(config ServerConfig) (*Server, error) {
 	// Validate configuration
-	if config.ProtoDir == "" {
-		return nil, fmt.Errorf("proto directory cannot be empty")
+	if len(config.ProtoDirs) == 0 {
+		return nil, fmt.Errorf("at least one proto directory must be provided")
 	}
 
 	if config.GraphQLEndpoint == "" {
@@ -94,13 +94,13 @@ func NewServer(config ServerConfig) (*Server, error) {
 func (s *Server) Start() error {
 	s.logger.Info("starting ConnectRPC server",
 		zap.String("listen_addr", s.config.ListenAddr),
-		zap.String("proto_dir", s.config.ProtoDir),
-		zap.String("operations_dir", s.config.OperationsDir),
+		zap.Strings("proto_dirs", s.config.ProtoDirs),
+		zap.Strings("operations_dirs", s.config.OperationsDirs),
 		zap.String("graphql_endpoint", s.config.GraphQLEndpoint))
 
-	// Load proto files
+	// Load proto files from all directories
 	s.protoLoader = NewProtoLoader(s.logger)
-	if err := s.protoLoader.LoadFromDirectory(s.config.ProtoDir); err != nil {
+	if err := s.protoLoader.LoadFromDirectories(s.config.ProtoDirs); err != nil {
 		return fmt.Errorf("failed to load proto files: %w", err)
 	}
 
@@ -113,19 +113,19 @@ func (s *Server) Start() error {
 		return fmt.Errorf("failed to initialize components: %w", err)
 	}
 
-	// Load operations from directory if configured
-	if s.config.OperationsDir != "" {
-		s.logger.Info("Loading operations from directory",
-			zap.String("operations_dir", s.config.OperationsDir))
+	// Load operations from all directories if configured
+	if len(s.config.OperationsDirs) > 0 {
+		s.logger.Info("Loading operations from directories",
+			zap.Strings("operations_dirs", s.config.OperationsDirs))
 		
-		if err := s.operationRegistry.LoadFromDirectoryWithoutSchema(s.config.OperationsDir); err != nil {
+		if err := s.operationRegistry.LoadFromDirectoriesWithoutSchema(s.config.OperationsDirs); err != nil {
 			return fmt.Errorf("failed to load operations: %w", err)
 		}
 		
 		s.logger.Info("Operations loaded successfully",
 			zap.Int("count", s.operationRegistry.Count()))
 	} else {
-		s.logger.Warn("No operations directory configured, operation registry will be empty")
+		s.logger.Warn("No operations directories configured, operation registry will be empty")
 	}
 
 	// Create Vanguard service wrapper
@@ -212,9 +212,9 @@ func (s *Server) Stop(ctx context.Context) error {
 func (s *Server) Reload() error {
 	s.logger.Info("reloading ConnectRPC server")
 
-	// Reload proto files
+	// Reload proto files from all directories
 	s.protoLoader = NewProtoLoader(s.logger)
-	if err := s.protoLoader.LoadFromDirectory(s.config.ProtoDir); err != nil {
+	if err := s.protoLoader.LoadFromDirectories(s.config.ProtoDirs); err != nil {
 		return fmt.Errorf("failed to reload proto files: %w", err)
 	}
 
@@ -223,10 +223,12 @@ func (s *Server) Reload() error {
 		return fmt.Errorf("failed to reinitialize components: %w", err)
 	}
 
-	// Reload RPC handler operations if operations directory is configured
-	if s.config.OperationsDir != "" {
-		if err := s.rpcHandler.Reload(s.config.OperationsDir); err != nil {
-			return fmt.Errorf("failed to reload RPC handler: %w", err)
+	// Reload operations from all directories if configured
+	if len(s.config.OperationsDirs) > 0 {
+		// Clear and reload all operations
+		s.operationRegistry.Clear()
+		if err := s.operationRegistry.LoadFromDirectoriesWithoutSchema(s.config.OperationsDirs); err != nil {
+			return fmt.Errorf("failed to reload operations: %w", err)
 		}
 	}
 
@@ -275,11 +277,11 @@ func (s *Server) initializeComponents() error {
 	return nil
 }
 
-// LoadOperations loads GraphQL operations from the configured directory
+// LoadOperations loads GraphQL operations from the configured directories
 // This should be called after the server has access to the GraphQL schema
 func (s *Server) LoadOperations(schemaDoc interface{}) error {
-	if s.config.OperationsDir == "" {
-		s.logger.Debug("No operations directory configured, skipping operation loading")
+	if len(s.config.OperationsDirs) == 0 {
+		s.logger.Debug("No operations directories configured, skipping operation loading")
 		return nil
 	}
 
@@ -290,16 +292,15 @@ func (s *Server) LoadOperations(schemaDoc interface{}) error {
 		return fmt.Errorf("invalid schema document type: expected *ast.Document, got %T", schemaDoc)
 	}
 
-	s.logger.Info("loading operations from directory",
-		zap.String("operations_dir", s.config.OperationsDir))
+	s.logger.Info("loading operations from directories",
+		zap.Strings("operations_dirs", s.config.OperationsDirs))
 
-	if err := s.operationRegistry.LoadFromDirectory(s.config.OperationsDir, schema); err != nil {
+	if err := s.operationRegistry.LoadFromDirectories(s.config.OperationsDirs, schema); err != nil {
 		return fmt.Errorf("failed to load operations: %w", err)
 	}
 
 	s.logger.Info("operations loaded successfully",
-		zap.Int("count", s.operationRegistry.Count()),
-		zap.String("operations_dir", s.config.OperationsDir))
+		zap.Int("count", s.operationRegistry.Count()))
 
 	return nil
 }

@@ -100,6 +100,83 @@ func (pl *ProtoLoader) LoadFromDirectory(dir string) error {
 	return nil
 }
 
+// LoadFromDirectories loads all .proto files from multiple directories
+// and validates that proto package names are unique across all directories.
+// The proto package name acts as a namespace, so duplicate packages are not allowed.
+func (pl *ProtoLoader) LoadFromDirectories(dirs []string) error {
+	if len(dirs) == 0 {
+		return fmt.Errorf("no directories provided")
+	}
+
+	pl.logger.Info("loading proto files from multiple directories",
+		zap.Int("directory_count", len(dirs)))
+
+	// Track packages we've seen to enforce uniqueness
+	seenPackages := make(map[string]string) // package name -> directory
+
+	for _, dir := range dirs {
+		pl.logger.Debug("loading proto files from directory", zap.String("dir", dir))
+
+		// Find all .proto files in this directory
+		protoFiles, err := pl.findProtoFiles(dir)
+		if err != nil {
+			return fmt.Errorf("failed to find proto files in %s: %w", dir, err)
+		}
+
+		if len(protoFiles) == 0 {
+			pl.logger.Warn("no proto files found in directory", zap.String("dir", dir))
+			continue
+		}
+
+		pl.logger.Debug("found proto files",
+			zap.String("dir", dir),
+			zap.Int("count", len(protoFiles)))
+
+		// Load each proto file and track packages
+		for _, protoFile := range protoFiles {
+			// Get the current service count before loading
+			serviceCountBefore := len(pl.services)
+
+			if err := pl.loadProtoFile(protoFile); err != nil {
+				pl.logger.Error("failed to load proto file",
+					zap.String("file", protoFile),
+					zap.String("dir", dir),
+					zap.Error(err))
+				return fmt.Errorf("failed to load proto file %s from %s: %w", protoFile, dir, err)
+			}
+
+			// Check for new services and validate package uniqueness
+			for _, service := range pl.services {
+				// Only check services that were just added
+				if serviceCountBefore > 0 {
+					// Skip if we've already validated this service
+					continue
+				}
+
+				packageName := service.Package
+				if existingDir, exists := seenPackages[packageName]; exists && existingDir != dir {
+					return fmt.Errorf(
+						"duplicate proto package '%s' found in multiple directories: '%s' and '%s'. "+
+							"Proto package names must be unique across all services",
+						packageName, existingDir, dir)
+				}
+				seenPackages[packageName] = dir
+
+				pl.logger.Debug("registered proto package",
+					zap.String("package", packageName),
+					zap.String("dir", dir),
+					zap.String("service", service.FullName))
+			}
+		}
+	}
+
+	pl.logger.Info("successfully loaded proto files from all directories",
+		zap.Int("total_services", len(pl.services)),
+		zap.Int("unique_packages", len(seenPackages)))
+
+	return nil
+}
+
 // findProtoFiles recursively finds all .proto files in a directory
 func (pl *ProtoLoader) findProtoFiles(dir string) ([]string, error) {
 	var protoFiles []string

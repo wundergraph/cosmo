@@ -124,6 +124,155 @@ func (r *OperationRegistry) LoadFromDirectoryWithoutSchema(operationsDir string)
 	return nil
 }
 
+// LoadFromDirectoriesWithoutSchema loads GraphQL operations from multiple directories without schema validation.
+// Operations from all directories are merged into a single registry.
+// If duplicate operation names are found, the last one wins and a warning is logged.
+func (r *OperationRegistry) LoadFromDirectoriesWithoutSchema(operationsDirs []string) error {
+	if len(operationsDirs) == 0 {
+		return fmt.Errorf("no operations directories provided")
+	}
+
+	r.logger.Info("Loading operations from multiple directories without schema validation",
+		zap.Int("directory_count", len(operationsDirs)))
+
+	// Track operation names to detect duplicates
+	seenOperations := make(map[string]string) // operation name -> directory
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// Clear existing operations
+	r.operations = make(map[string]*schemaloader.Operation)
+
+	// Load operations from each directory
+	for _, dir := range operationsDirs {
+		r.logger.Debug("Loading operations from directory", zap.String("directory", dir))
+
+		operations, err := r.loadOperationsSimple(dir)
+		if err != nil {
+			return fmt.Errorf("failed to load operations from %s: %w", dir, err)
+		}
+
+		if len(operations) == 0 {
+			r.logger.Warn("No operations found in directory", zap.String("directory", dir))
+			continue
+		}
+
+		// Add operations to the registry
+		for i := range operations {
+			op := &operations[i]
+
+			// Check for duplicate operation names
+			if existingDir, exists := seenOperations[op.Name]; exists {
+				r.logger.Warn("Duplicate operation name found, last one wins",
+					zap.String("operation", op.Name),
+					zap.String("previous_dir", existingDir),
+					zap.String("current_dir", dir))
+			}
+
+			r.operations[op.Name] = op
+			seenOperations[op.Name] = dir
+
+			r.logger.Debug("Loaded operation",
+				zap.String("name", op.Name),
+				zap.String("type", op.OperationType),
+				zap.String("file", op.FilePath),
+				zap.String("directory", dir))
+		}
+	}
+
+	r.logger.Info("Loaded operations from all directories into registry",
+		zap.Int("total_count", len(r.operations)),
+		zap.Int("directory_count", len(operationsDirs)))
+
+	return nil
+}
+
+// LoadFromDirectories loads GraphQL operations from multiple directories with schema validation.
+// Operations from all directories are merged into a single registry.
+// If duplicate operation names are found, the last one wins and a warning is logged.
+func (r *OperationRegistry) LoadFromDirectories(operationsDirs []string, schemaDoc *ast.Document) error {
+	if len(operationsDirs) == 0 {
+		return fmt.Errorf("no operations directories provided")
+	}
+
+	if schemaDoc == nil {
+		return fmt.Errorf("schema document cannot be nil")
+	}
+
+	r.logger.Info("Loading operations from multiple directories with schema validation",
+		zap.Int("directory_count", len(operationsDirs)))
+
+	// Track operation names to detect duplicates
+	seenOperations := make(map[string]string) // operation name -> directory
+
+	// Load operations using the schema loader
+	loader := schemaloader.NewOperationLoader(r.logger, schemaDoc)
+	
+	var allOperations []schemaloader.Operation
+
+	// Load operations from each directory
+	for _, dir := range operationsDirs {
+		r.logger.Debug("Loading operations from directory", zap.String("directory", dir))
+
+		operations, err := loader.LoadOperationsFromDirectory(dir)
+		if err != nil {
+			return fmt.Errorf("failed to load operations from %s: %w", dir, err)
+		}
+
+		if len(operations) == 0 {
+			r.logger.Warn("No operations found in directory", zap.String("directory", dir))
+			continue
+		}
+
+		// Track directory for each operation
+		for i := range operations {
+			op := &operations[i]
+			
+			// Check for duplicate operation names
+			if existingDir, exists := seenOperations[op.Name]; exists {
+				r.logger.Warn("Duplicate operation name found, last one wins",
+					zap.String("operation", op.Name),
+					zap.String("previous_dir", existingDir),
+					zap.String("current_dir", dir))
+			}
+			seenOperations[op.Name] = dir
+		}
+
+		allOperations = append(allOperations, operations...)
+	}
+
+	// Build JSON schemas for all operations
+	builder := schemaloader.NewSchemaBuilder(schemaDoc)
+	err := builder.BuildSchemasForOperations(allOperations)
+	if err != nil {
+		return fmt.Errorf("failed to build schemas for operations: %w", err)
+	}
+
+	// Update the registry with loaded operations
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// Clear existing operations
+	r.operations = make(map[string]*schemaloader.Operation)
+
+	// Add new operations to the registry
+	for i := range allOperations {
+		op := &allOperations[i]
+		r.operations[op.Name] = op
+		r.logger.Debug("Loaded operation",
+			zap.String("name", op.Name),
+			zap.String("type", op.OperationType),
+			zap.String("file", op.FilePath))
+	}
+
+	r.logger.Info("Loaded operations from all directories into registry",
+		zap.Int("total_count", len(r.operations)),
+		zap.Int("directory_count", len(operationsDirs)))
+
+	return nil
+}
+
 // loadOperationsSimple loads operations from files without schema validation
 func (r *OperationRegistry) loadOperationsSimple(dirPath string) ([]schemaloader.Operation, error) {
 	var operations []schemaloader.Operation

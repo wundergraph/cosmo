@@ -2162,21 +2162,24 @@
             }
           }
         },
-        "storage": {
-          "type": "object",
-          "description": "Storage provider configuration for the ConnectRPC server. This specifies where proto files are loaded from.",
-          "additionalProperties": false,
-          "properties": {
-            "provider_id": {
-              "type": "string",
-              "description": "The ID of the storage provider to use for loading proto files. Only storage provider of type 'file_system' are supported. The provider must be configured in the storage_providers section."
+        "services": {
+          "type": "array",
+          "description": "Array of ConnectRPC services. Each service represents a proto file and its associated GraphQL operations.",
+          "items": {
+            "type": "object",
+            "description": "A ConnectRPC service configuration.",
+            "additionalProperties": false,
+            "properties": {
+              "proto_provider_id": {
+                "type": "string",
+                "description": "The ID of the storage provider to use for loading proto files for this service. Only storage provider of type 'file_system' are supported. The provider must be configured in the storage_providers section."
+              },
+              "operations_provider_id": {
+                "type": "string",
+                "description": "The ID of the storage provider to use for loading GraphQL operations for this service. Only storage provider of type 'file_system' are supported. The provider must be configured in the storage_providers section."
+              }
             }
-          },
-          "required": ["provider_id"]
-        },
-        "operations_dir": {
-          "type": "string",
-          "description": "Directory path containing predefined GraphQL operations (.graphql files) for ConnectRPC. These operations are loaded at startup and mapped to RPC methods defined in proto files. The path can be relative to the router working directory or absolute."
+          }
         },
         "graphql_endpoint": {
           "type": "string",
