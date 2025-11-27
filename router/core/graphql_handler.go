@@ -440,18 +440,31 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 }
 
 func (h *GraphQLHandler) setDebugCacheHeaders(w http.ResponseWriter, opCtx *operationContext) {
-	s := func(hit bool) string {
-		if hit {
-			return "HIT"
-		}
-		return "MISS"
-	}
-
 	if h.enableCacheResponseHeaders {
-		w.Header().Set(NormalizationCacheHeader, s(opCtx.normalizationCacheHit))
-		w.Header().Set(VariablesNormalizationCacheHeader, s(opCtx.variablesNormalizationCacheHit))
-		w.Header().Set(VariablesRemappingCacheHeader, s(opCtx.variablesRemappingCacheHit))
-		w.Header().Set(PersistedOperationCacheHeader, s(opCtx.persistedOperationCacheHit))
-		w.Header().Set(ExecutionPlanCacheHeader, s(opCtx.planCacheHit))
+		if opCtx.normalizationCacheHit {
+			w.Header().Set(NormalizationCacheHeader, "HIT")
+		} else {
+			w.Header().Set(NormalizationCacheHeader, "MISS")
+		}
+		if opCtx.variablesNormalizationCacheHit {
+			w.Header().Set(VariablesNormalizationCacheHeader, "HIT")
+		} else {
+			w.Header().Set(VariablesNormalizationCacheHeader, "MISS")
+		}
+		if opCtx.variablesRemappingCacheHit {
+			w.Header().Set(VariablesRemappingCacheHeader, "HIT")
+		} else {
+			w.Header().Set(VariablesRemappingCacheHeader, "MISS")
+		}
+		if opCtx.persistedOperationCacheHit {
+			w.Header().Set(PersistedOperationCacheHeader, "HIT")
+		} else {
+			w.Header().Set(PersistedOperationCacheHeader, "MISS")
+		}
+		if opCtx.planCacheHit {
+			w.Header().Set(ExecutionPlanCacheHeader, "HIT")
+		} else {
+			w.Header().Set(ExecutionPlanCacheHeader, "MISS")
+		}
 	}
 }

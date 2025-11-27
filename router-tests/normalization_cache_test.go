@@ -22,18 +22,18 @@ type cacheHit struct {
 // assertCacheHeaders checks all three normalization cache headers
 func assertCacheHeaders(t *testing.T, res *testenv.TestResponse, expected cacheHit) {
 	t.Helper()
-	s := func(hit bool) string {
+	bool2str := func(hit bool) string {
 		if hit {
 			return "HIT"
 		}
 		return "MISS"
 	}
 
-	require.Equal(t, s(expected.normalization), res.Response.Header.Get(core.NormalizationCacheHeader),
+	require.Equal(t, bool2str(expected.normalization), res.Response.Header.Get(core.NormalizationCacheHeader),
 		"Normalization cache hit mismatch")
-	require.Equal(t, s(expected.variables), res.Response.Header.Get(core.VariablesNormalizationCacheHeader),
+	require.Equal(t, bool2str(expected.variables), res.Response.Header.Get(core.VariablesNormalizationCacheHeader),
 		"Variables normalization cache hit mismatch")
-	require.Equal(t, s(expected.remapping), res.Response.Header.Get(core.VariablesRemappingCacheHeader),
+	require.Equal(t, bool2str(expected.remapping), res.Response.Header.Get(core.VariablesRemappingCacheHeader),
 		"Variables remapping cache hit mismatch")
 }
 
