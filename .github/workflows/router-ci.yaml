@@ -358,6 +358,14 @@ jobs:
           docker exec "$cid" redis-cli -u "redis://cosmo:test@redis-0:6379" ping
           docker exec "$cid" redis-cli -u "redis://cosmo:test@redis-0:6379" cluster nodes
 
+      - name: Compute artifact name
+        id: artifact_name
+        run: |
+          # Sanitize test target: remove './', replace spaces and special chars with underscores
+          target="${{ matrix.test_target }}"
+          sanitized=$(echo "$target" | sed 's|\.\/||g' | sed 's|[^a-zA-Z0-9]|_|g' | sed 's|_\+|_|g' | sed 's|^_||' | sed 's|_$||')
+          echo "sanitized=$sanitized" >> $GITHUB_OUTPUT
+
       - name: Run Integration tests ${{ matrix.test_target }}
         working-directory: ./router-tests
         run: make test-coverage test_retry_count=0 test_params="-run '^Test[^(Flaky)]' --timeout=5m -p 1 --parallel 10" test_target="${{ matrix.test_target }}"
@@ -365,7 +373,7 @@ jobs:
       - name: Upload integration results to Codecov
         uses: ./.github/actions/codecov-upload-pr
         with:
-          artifact-name: pr-build
+          artifact-name: pr-build-router-${{ steps.artifact_name.outputs.sanitized }}-nonFlaky
           coverage-path: router-tests/coverage.out
           retention-days: 7
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
@@ -377,7 +385,7 @@ jobs:
       - name: Upload flaky integration results to Codecov
         uses: ./.github/actions/codecov-upload-pr
         with:
-          artifact-name: pr-build
+          artifact-name: pr-build-router-${{ steps.artifact_name.outputs.sanitized }}-flaky
           coverage-path: router-tests/coverage.out
           retention-days: 7
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
