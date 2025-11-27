@@ -50,4 +50,5 @@ runs:
       with:
         token: ${{ inputs.codecov-token }}
         override_commit: ${{ inputs.override-commit }}
+        override_branch: main
 
