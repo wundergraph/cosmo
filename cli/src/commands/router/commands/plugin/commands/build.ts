@@ -114,7 +114,7 @@ export default (opts: BaseCommandOptions) => {
       const formattedTime =
         elapsedTimeMs > 1000 ? `${(elapsedTimeMs / 1000).toFixed(2)}s` : `${Math.round(elapsedTimeMs)}ms`;
 
-      renderResultTree(spinner, 'Plugin built successfully!', true, pluginName, {
+      renderResultTree(spinner, 'Plugin built successfully 2!', true, pluginName, {
         output: pluginDir,
         platforms: platforms.join(', '),
         env: `${os.platform()} ${os.arch()}`,
