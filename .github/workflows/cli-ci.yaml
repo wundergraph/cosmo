@@ -65,16 +65,6 @@ jobs:
           retention-days: 7
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
-      - name: Upload Coverage to Codecov
-        uses: ./.github/actions/codecov-upload-pr
-        with:
-          artifact-name: cli-two
-          coverage-path: |
-            cli/coverage/clover.xml
-            cli/coverage/coverage-final.json
-          retention-days: 7
-          codecov-token: ${{ secrets.CODECOV_TOKEN }}
-
   build_test_node_matrix:
     if: github.event.action != 'closed'
     timeout-minutes: 10
