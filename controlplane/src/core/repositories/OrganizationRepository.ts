@@ -247,10 +247,10 @@ export class OrganizationRepository {
         slug: organizations.slug,
       })
       .from(organizationsMembers)
-      .innerJoin(organizations, eq(organizations.id, input.organizationId))
+      .innerJoin(organizations, eq(organizations.id, organizationsMembers.organizationId))
       .innerJoin(users, eq(users.id, organizationsMembers.userId))
       .limit(1)
-      .where(and(eq(users.id, input.userId), eq(organizationsMembers.active, true)))
+      .where(and(eq(users.id, input.userId), eq(organizationsMembers.active, true), eq(organizations.id, input.organizationId)))
       .execute();
 
     return userOrganizations.length > 0;
