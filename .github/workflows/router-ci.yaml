@@ -373,7 +373,7 @@ jobs:
       - name: Upload integration results to Codecov
         uses: ./.github/actions/codecov-upload-pr
         with:
-          artifact-name: pr-build-router-${{ steps.artifact_name.outputs.sanitized }}-nonFlaky
+          artifact-name: router-${{ steps.artifact_name.outputs.sanitized }}-nonFlaky
           coverage-path: router-tests/coverage.out
           retention-days: 7
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
@@ -385,7 +385,7 @@ jobs:
       - name: Upload flaky integration results to Codecov
         uses: ./.github/actions/codecov-upload-pr
         with:
-          artifact-name: pr-build-router-${{ steps.artifact_name.outputs.sanitized }}-flaky
+          artifact-name: router-${{ steps.artifact_name.outputs.sanitized }}-flaky
           coverage-path: router-tests/coverage.out
           retention-days: 7
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
