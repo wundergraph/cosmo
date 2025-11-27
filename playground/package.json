@@ -1,6 +1,6 @@
 {
   "name": "@wundergraph/playground",
-  "version": "0.9.5",
+  "version": "0.9.6",
   "description": "Cosmo Playground built on top of graphiql",
   "author": {
     "name": "WunderGraph Maintainers",
@@ -87,7 +87,7 @@
     "tailwindcss": "^3.4.15",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.5.2",
-    "vite": "^5.4.19",
+    "vite": "^5.4.21",
     "vite-plugin-dts": "4.3.0",
     "vite-plugin-html": "^3.2.2",
     "vite-plugin-singlefile": "^2.2.0"
