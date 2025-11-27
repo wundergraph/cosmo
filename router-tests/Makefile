@@ -20,7 +20,7 @@ test-coverage: test-deps
 		-ldflags=-extldflags=-Wl,-ld_classic $(test_params) -race \
 		-coverprofile=$(coverage_file) \
 		-coverpkg=github.com/wundergraph/cosmo/router/... \
-		--covermode=atomic
+		-covermode=atomic
 		$(test_target)
 
 update-snapshot:
