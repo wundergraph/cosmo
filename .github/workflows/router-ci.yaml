@@ -1,6 +1,7 @@
 name: Router CI
 on:
   pull_request:
+    types: [opened, reopened, synchronize, closed]
     paths:
       - 'pnpm-lock.yaml'
       - 'composition-go/**/*'
@@ -29,7 +30,7 @@ env:
 jobs:
   # Runs for forks without access to repository secrets
   build_test_fork:
-    if: github.event.pull_request.head.repo.full_name != github.repository
+    if: github.event.action != 'closed' && github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -92,7 +93,7 @@ jobs:
 
   # Runs for forks to test docker image is building
   build_image_fork:
-    if: github.event.pull_request.head.repo.full_name != github.repository
+    if: github.event.action != 'closed' && github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -114,7 +115,7 @@ jobs:
   # Runs for people with write access to the repository
   # that have access to the secrets
   build_test:
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -182,6 +183,7 @@ jobs:
         run: make build
 
   integration_test:
+    if: github.event.action != 'closed'
     runs-on: ubuntu-latest-l
     timeout-minutes: 30
     strategy:
@@ -366,16 +368,17 @@ jobs:
         working-directory: ./router-tests
         run: make test-coverage test_retry_count=3 test_params="-run '^TestFlaky' --timeout=5m -p 1 --parallel 10" test_target="${{ matrix.test_target }}"
 
-      - name: Upload results to Codecov
-        uses: codecov/codecov-action@v5
+      - name: Upload coverage to Codecov
+        uses: ./.github/actions/codecov-upload-pr
         with:
-          verbose: true
-          files: |
+          artifact-name: pr-build
+          coverage-path: |
             router-tests/coverage.out
-          token: ${{ secrets.CODECOV_TOKEN }}
+          retention-days: 7
+          codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
   image_scan:
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -408,7 +411,7 @@ jobs:
   build_push_image:
     # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
     # For now, we will disable the push to the GitHub Container Registry for external contributors
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event.action != 'closed' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -427,3 +430,28 @@ jobs:
           token: ${{secrets.GITHUB_TOKEN}}
           image_name: router
           image_description: 'Cosmo Router'
+
+  post-merge:
+    if: >
+      github.event_name == 'pull_request' &&
+      github.event.action == 'closed' &&
+      github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+
+      - name: Print merge commit SHA
+        run: |
+          echo "Merge commit SHA: ${{ github.event.pull_request.merge_commit_sha }}"
+
+      - name: Download computed artifact and upload to codecov with merge SHA
+        uses: ./.github/actions/codecov-merge-upload
+        with:
+          artifact-name: pr-build
+          coverage-path: cli/coverage
+          workflow-path: .github/workflows/cli-ci.yaml
+          override-commit: ${{ github.event.pull_request.merge_commit_sha }}
+          codecov-token: ${{ secrets.CODECOV_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
