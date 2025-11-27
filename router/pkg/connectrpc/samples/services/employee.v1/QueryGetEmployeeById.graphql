@@ -1,0 +1,20 @@
+query QueryGetEmployeeById($id: Int!) {
+  employee(id: $id) {
+    id
+    tag
+    details {
+      forename
+      surname
+      location {
+        key {
+          name
+        }
+      }
+    }
+    role {
+      title
+      departments
+    }
+    updatedAt
+  }
+}

@@ -10,13 +10,11 @@ connect_rpc:
   enabled: true
   server:
     listen_addr: "localhost:5026"
-  storage:
-    provider_id: "fs-protos"
+  services_provider_id: "fs-services"
   graphql_endpoint: "http://localhost:3002/graphql"
-  operations_dir: "./../../openapi-demo/operations"
 
-# Storage provider for proto files
+# Storage providers for services directory
 storage_providers:
   file_system:
-    - id: "fs-protos"
-      path: "./../../openapi-demo/proto"
+    - id: "fs-services"
+      path: "./pkg/connectrpc/samples/services"

@@ -1014,15 +1014,10 @@ type MCPServer struct {
 }
 
 type ConnectRPCConfiguration struct {
-	Enabled         bool                   `yaml:"enabled" envDefault:"false" env:"CONNECT_RPC_ENABLED"`
-	Server          ConnectRPCServer       `yaml:"server,omitempty"`
-	Storage         ConnectRPCStorageConfig `yaml:"storage,omitempty"`
-	GraphQLEndpoint string                 `yaml:"graphql_endpoint,omitempty" env:"CONNECT_RPC_GRAPHQL_ENDPOINT"`
-	OperationsDir   string                 `yaml:"operations_dir,omitempty" env:"CONNECT_RPC_OPERATIONS_DIR"`
-}
-
-type ConnectRPCStorageConfig struct {
-	ProviderID string `yaml:"provider_id,omitempty" env:"CONNECT_RPC_STORAGE_PROVIDER_ID"`
+	Enabled            bool             `yaml:"enabled" envDefault:"false" env:"CONNECT_RPC_ENABLED"`
+	Server             ConnectRPCServer `yaml:"server,omitempty"`
+	ServicesProviderID string           `yaml:"services_provider_id,omitempty" env:"CONNECT_RPC_SERVICES_PROVIDER_ID"`
+	GraphQLEndpoint    string           `yaml:"graphql_endpoint,omitempty" env:"CONNECT_RPC_GRAPHQL_ENDPOINT"`
 }
 
 type ConnectRPCServer struct {
