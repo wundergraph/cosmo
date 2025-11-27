@@ -248,12 +248,16 @@ func TestVanguardService_ServiceHandler(t *testing.T) {
 		protoLoader := setupTestProtoLoaderFromDir(t, "testdata/employee_only")
 		opRegistry := NewOperationRegistry(zap.NewNop())
 		
-		// Manually add a test operation to the registry
-		opRegistry.AddOperation(&schemaloader.Operation{
+		// Manually add a test operation to the registry using service-scoped approach
+		serviceName := "employee.v1.EmployeeService"
+		if opRegistry.operations[serviceName] == nil {
+			opRegistry.operations[serviceName] = make(map[string]*schemaloader.Operation)
+		}
+		opRegistry.operations[serviceName]["QueryGetEmployeeById"] = &schemaloader.Operation{
 			Name:            "QueryGetEmployeeById",
 			OperationType:   "query",
 			OperationString: "query QueryGetEmployeeById($id: Int!) { employee(id: $id) { id name } }",
-		})
+		}
 		
 		handler, err := NewRPCHandler(HandlerConfig{
 			GraphQLEndpoint:   graphqlServer.URL,
@@ -458,13 +462,17 @@ func setupTestRPCHandler(t *testing.T, protoLoader *ProtoLoader) *RPCHandler {
 	// Create operation registry
 	opRegistry := NewOperationRegistry(zap.NewNop())
 	
-	// Manually add test operations to the registry
+	// Manually add test operations to the registry using service-scoped approach
 	// In a real scenario, these would be loaded from .graphql files
-	opRegistry.AddOperation(&schemaloader.Operation{
+	serviceName := "employee.v1.EmployeeService"
+	if opRegistry.operations[serviceName] == nil {
+		opRegistry.operations[serviceName] = make(map[string]*schemaloader.Operation)
+	}
+	opRegistry.operations[serviceName]["QueryGetEmployeeById"] = &schemaloader.Operation{
 		Name:            "QueryGetEmployeeById",
 		OperationType:   "query",
 		OperationString: "query QueryGetEmployeeById($id: Int!) { employee(id: $id) { id name } }",
-	})
+	}
 
 	// Create a mock HTTP client
 	httpClient := &http.Client{}

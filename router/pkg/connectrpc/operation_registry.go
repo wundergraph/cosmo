@@ -14,10 +14,11 @@ import (
 )
 
 // OperationRegistry manages pre-defined GraphQL operations for ConnectRPC.
-// It loads operations from a directory and provides lookup by operation name.
-// Operations are cached in memory for fast access during request handling.
+// Operations are scoped to their service (package.service) and cached in memory
+// for fast access during request handling.
 type OperationRegistry struct {
-	operations map[string]*schemaloader.Operation
+	// Service-scoped operations: serviceName (package.service) -> operationName -> Operation
+	operations map[string]map[string]*schemaloader.Operation
 	mu         sync.RWMutex
 	logger     *zap.Logger
 }
@@ -29,285 +30,50 @@ func NewOperationRegistry(logger *zap.Logger) *OperationRegistry {
 	}
 
 	return &OperationRegistry{
-		operations: make(map[string]*schemaloader.Operation),
+		operations: make(map[string]map[string]*schemaloader.Operation),
 		logger:     logger,
 	}
 }
 
-// LoadFromDirectory loads all GraphQL operations from the specified directory.
-// Operations are validated against the provided schema and cached in memory.
-// This method is thread-safe and can be called multiple times to reload operations.
-func (r *OperationRegistry) LoadFromDirectory(operationsDir string, schemaDoc *ast.Document) error {
-	if operationsDir == "" {
-		return fmt.Errorf("operations directory cannot be empty")
+// LoadOperationsForService loads GraphQL operations for a specific service from operation files.
+// Operations are scoped to the service's fully qualified name (package.service).
+// This method is thread-safe and can be called multiple times for different services.
+func (r *OperationRegistry) LoadOperationsForService(serviceName string, operationFiles []string) error {
+	if serviceName == "" {
+		return fmt.Errorf("service name cannot be empty")
 	}
 
-	if schemaDoc == nil {
-		return fmt.Errorf("schema document cannot be nil")
-	}
-
-	// Load operations using the schema loader
-	loader := schemaloader.NewOperationLoader(r.logger, schemaDoc)
-	operations, err := loader.LoadOperationsFromDirectory(operationsDir)
-	if err != nil {
-		return fmt.Errorf("failed to load operations from directory %s: %w", operationsDir, err)
-	}
-
-	// Build JSON schemas for operations
-	builder := schemaloader.NewSchemaBuilder(schemaDoc)
-	err = builder.BuildSchemasForOperations(operations)
-	if err != nil {
-		return fmt.Errorf("failed to build schemas for operations: %w", err)
-	}
-
-	// Update the registry with loaded operations
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	// Clear existing operations
-	r.operations = make(map[string]*schemaloader.Operation)
-
-	// Add new operations to the registry
-	for i := range operations {
-		op := &operations[i]
-		r.operations[op.Name] = op
-		r.logger.Debug("Loaded operation",
-			zap.String("name", op.Name),
-			zap.String("type", op.OperationType),
-			zap.String("file", op.FilePath))
-	}
-
-	r.logger.Info("Loaded operations into registry",
-		zap.Int("count", len(r.operations)),
-		zap.String("directory", operationsDir))
-
-	return nil
-}
-
-// LoadFromDirectoryWithoutSchema loads GraphQL operations from a directory without schema validation.
-// This is a simpler version that just reads the .graphql files and extracts operation names.
-// Operations are treated as templates that will be executed against the GraphQL endpoint.
-func (r *OperationRegistry) LoadFromDirectoryWithoutSchema(operationsDir string) error {
-	if operationsDir == "" {
-		return fmt.Errorf("operations directory cannot be empty")
-	}
-
-	r.logger.Info("Loading operations from directory without schema validation",
-		zap.String("directory", operationsDir))
-
-	operations, err := r.loadOperationsSimple(operationsDir)
-	if err != nil {
-		return fmt.Errorf("failed to load operations: %w", err)
-	}
-
-	// Update the registry with loaded operations
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	// Clear existing operations
-	r.operations = make(map[string]*schemaloader.Operation)
-
-	// Add new operations to the registry
-	for i := range operations {
-		op := &operations[i]
-		r.operations[op.Name] = op
-		r.logger.Debug("Loaded operation",
-			zap.String("name", op.Name),
-			zap.String("type", op.OperationType),
-			zap.String("file", op.FilePath))
-	}
-
-	r.logger.Info("Loaded operations into registry",
-		zap.Int("count", len(r.operations)),
-		zap.String("directory", operationsDir))
-
-	return nil
-}
-
-// LoadFromDirectoriesWithoutSchema loads GraphQL operations from multiple directories without schema validation.
-// Operations from all directories are merged into a single registry.
-// If duplicate operation names are found, the last one wins and a warning is logged.
-func (r *OperationRegistry) LoadFromDirectoriesWithoutSchema(operationsDirs []string) error {
-	if len(operationsDirs) == 0 {
-		return fmt.Errorf("no operations directories provided")
-	}
-
-	r.logger.Info("Loading operations from multiple directories without schema validation",
-		zap.Int("directory_count", len(operationsDirs)))
-
-	// Track operation names to detect duplicates
-	seenOperations := make(map[string]string) // operation name -> directory
+	r.logger.Info("loading operations for service",
+		zap.String("service", serviceName),
+		zap.Int("file_count", len(operationFiles)))
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	// Clear existing operations
-	r.operations = make(map[string]*schemaloader.Operation)
-
-	// Load operations from each directory
-	for _, dir := range operationsDirs {
-		r.logger.Debug("Loading operations from directory", zap.String("directory", dir))
-
-		operations, err := r.loadOperationsSimple(dir)
-		if err != nil {
-			return fmt.Errorf("failed to load operations from %s: %w", dir, err)
-		}
-
-		if len(operations) == 0 {
-			r.logger.Warn("No operations found in directory", zap.String("directory", dir))
-			continue
-		}
-
-		// Add operations to the registry
-		for i := range operations {
-			op := &operations[i]
-
-			// Check for duplicate operation names
-			if existingDir, exists := seenOperations[op.Name]; exists {
-				r.logger.Warn("Duplicate operation name found, last one wins",
-					zap.String("operation", op.Name),
-					zap.String("previous_dir", existingDir),
-					zap.String("current_dir", dir))
-			}
-
-			r.operations[op.Name] = op
-			seenOperations[op.Name] = dir
-
-			r.logger.Debug("Loaded operation",
-				zap.String("name", op.Name),
-				zap.String("type", op.OperationType),
-				zap.String("file", op.FilePath),
-				zap.String("directory", dir))
-		}
+	// Initialize service map if needed
+	if r.operations[serviceName] == nil {
+		r.operations[serviceName] = make(map[string]*schemaloader.Operation)
 	}
 
-	r.logger.Info("Loaded operations from all directories into registry",
-		zap.Int("total_count", len(r.operations)),
-		zap.Int("directory_count", len(operationsDirs)))
+	// Track operation names to detect duplicates within this service
+	seenOperations := make(map[string]string) // operation name -> file path
 
-	return nil
-}
-
-// LoadFromDirectories loads GraphQL operations from multiple directories with schema validation.
-// Operations from all directories are merged into a single registry.
-// If duplicate operation names are found, the last one wins and a warning is logged.
-func (r *OperationRegistry) LoadFromDirectories(operationsDirs []string, schemaDoc *ast.Document) error {
-	if len(operationsDirs) == 0 {
-		return fmt.Errorf("no operations directories provided")
-	}
-
-	if schemaDoc == nil {
-		return fmt.Errorf("schema document cannot be nil")
-	}
-
-	r.logger.Info("Loading operations from multiple directories with schema validation",
-		zap.Int("directory_count", len(operationsDirs)))
-
-	// Track operation names to detect duplicates
-	seenOperations := make(map[string]string) // operation name -> directory
-
-	// Load operations using the schema loader
-	loader := schemaloader.NewOperationLoader(r.logger, schemaDoc)
-	
-	var allOperations []schemaloader.Operation
-
-	// Load operations from each directory
-	for _, dir := range operationsDirs {
-		r.logger.Debug("Loading operations from directory", zap.String("directory", dir))
-
-		operations, err := loader.LoadOperationsFromDirectory(dir)
-		if err != nil {
-			return fmt.Errorf("failed to load operations from %s: %w", dir, err)
-		}
-
-		if len(operations) == 0 {
-			r.logger.Warn("No operations found in directory", zap.String("directory", dir))
-			continue
-		}
-
-		// Track directory for each operation
-		for i := range operations {
-			op := &operations[i]
-			
-			// Check for duplicate operation names
-			if existingDir, exists := seenOperations[op.Name]; exists {
-				r.logger.Warn("Duplicate operation name found, last one wins",
-					zap.String("operation", op.Name),
-					zap.String("previous_dir", existingDir),
-					zap.String("current_dir", dir))
-			}
-			seenOperations[op.Name] = dir
-		}
-
-		allOperations = append(allOperations, operations...)
-	}
-
-	// Build JSON schemas for all operations
-	builder := schemaloader.NewSchemaBuilder(schemaDoc)
-	err := builder.BuildSchemasForOperations(allOperations)
-	if err != nil {
-		return fmt.Errorf("failed to build schemas for operations: %w", err)
-	}
-
-	// Update the registry with loaded operations
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	// Clear existing operations
-	r.operations = make(map[string]*schemaloader.Operation)
-
-	// Add new operations to the registry
-	for i := range allOperations {
-		op := &allOperations[i]
-		r.operations[op.Name] = op
-		r.logger.Debug("Loaded operation",
-			zap.String("name", op.Name),
-			zap.String("type", op.OperationType),
-			zap.String("file", op.FilePath))
-	}
-
-	r.logger.Info("Loaded operations from all directories into registry",
-		zap.Int("total_count", len(r.operations)),
-		zap.Int("directory_count", len(operationsDirs)))
-
-	return nil
-}
-
-// loadOperationsSimple loads operations from files without schema validation
-func (r *OperationRegistry) loadOperationsSimple(dirPath string) ([]schemaloader.Operation, error) {
-	var operations []schemaloader.Operation
-	
-	entries, err := os.ReadDir(dirPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read directory %s: %w", dirPath, err)
-	}
-
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-
-		// Only process .graphql and .gql files
-		name := entry.Name()
-		if !strings.HasSuffix(name, ".graphql") && !strings.HasSuffix(name, ".gql") {
-			continue
-		}
-
-		filePath := filepath.Join(dirPath, name)
+	// Load each operation file
+	for _, filePath := range operationFiles {
 		content, err := os.ReadFile(filePath)
 		if err != nil {
-			r.logger.Warn("Failed to read operation file",
+			r.logger.Warn("failed to read operation file",
 				zap.String("file", filePath),
 				zap.Error(err))
 			continue
 		}
 
 		operationString := string(content)
-		
-		// Parse just to extract the operation name and type
+
+		// Parse to extract operation name and type
 		opDoc, report := astparser.ParseGraphqlDocumentString(operationString)
 		if report.HasErrors() {
-			r.logger.Warn("Failed to parse operation file",
+			r.logger.Warn("failed to parse operation file",
 				zap.String("file", filePath),
 				zap.String("error", report.Error()))
 			continue
@@ -316,7 +82,7 @@ func (r *OperationRegistry) loadOperationsSimple(dirPath string) ([]schemaloader
 		// Extract operation name and type
 		opName, opType, err := r.extractOperationInfo(&opDoc)
 		if err != nil {
-			r.logger.Warn("Failed to extract operation info",
+			r.logger.Warn("failed to extract operation info",
 				zap.String("file", filePath),
 				zap.Error(err))
 			continue
@@ -324,19 +90,41 @@ func (r *OperationRegistry) loadOperationsSimple(dirPath string) ([]schemaloader
 
 		// If no operation name, use filename without extension
 		if opName == "" {
-			opName = strings.TrimSuffix(name, filepath.Ext(name))
+			opName = strings.TrimSuffix(filepath.Base(filePath), filepath.Ext(filePath))
 		}
 
-		operations = append(operations, schemaloader.Operation{
+		// Check for duplicate operation names within this service
+		if existingFile, exists := seenOperations[opName]; exists {
+			r.logger.Warn("duplicate operation name within service, last one wins",
+				zap.String("service", serviceName),
+				zap.String("operation", opName),
+				zap.String("previous_file", existingFile),
+				zap.String("current_file", filePath))
+		}
+
+		operation := &schemaloader.Operation{
 			Name:            opName,
 			FilePath:        filePath,
 			Document:        opDoc,
 			OperationString: operationString,
 			OperationType:   opType,
-		})
+		}
+
+		r.operations[serviceName][opName] = operation
+		seenOperations[opName] = filePath
+
+		r.logger.Debug("loaded operation for service",
+			zap.String("service", serviceName),
+			zap.String("operation", opName),
+			zap.String("type", opType),
+			zap.String("file", filePath))
 	}
 
-	return operations, nil
+	r.logger.Info("loaded operations for service",
+		zap.String("service", serviceName),
+		zap.Int("operation_count", len(r.operations[serviceName])))
+
+	return nil
 }
 
 // extractOperationInfo extracts the name and type from an operation document
@@ -368,60 +156,113 @@ func (r *OperationRegistry) extractOperationInfo(doc *ast.Document) (string, str
 	return "", "", fmt.Errorf("no operation found in document")
 }
 
-// GetOperation retrieves an operation by name.
-// Returns nil if the operation is not found.
+// GetOperationForService retrieves an operation for a specific service.
+// Returns nil if the service or operation is not found.
 // This method is thread-safe.
-func (r *OperationRegistry) GetOperation(name string) *schemaloader.Operation {
+func (r *OperationRegistry) GetOperationForService(serviceName, operationName string) *schemaloader.Operation {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	return r.operations[name]
+	serviceOps, exists := r.operations[serviceName]
+	if !exists {
+		return nil
+	}
+
+	return serviceOps[operationName]
 }
 
-// HasOperation checks if an operation with the given name exists in the registry.
+// HasOperationForService checks if an operation exists for a specific service.
 // This method is thread-safe.
-func (r *OperationRegistry) HasOperation(name string) bool {
+func (r *OperationRegistry) HasOperationForService(serviceName, operationName string) bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	_, exists := r.operations[name]
+	serviceOps, exists := r.operations[serviceName]
+	if !exists {
+		return false
+	}
+
+	_, exists = serviceOps[operationName]
 	return exists
 }
 
-// GetAllOperations returns a slice of all operations in the registry.
+// GetAllOperationsForService returns all operations for a specific service.
 // The returned slice is a copy to prevent external modification.
+// Returns an empty slice if the service doesn't exist.
 // This method is thread-safe.
-func (r *OperationRegistry) GetAllOperations() []schemaloader.Operation {
+func (r *OperationRegistry) GetAllOperationsForService(serviceName string) []schemaloader.Operation {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	operations := make([]schemaloader.Operation, 0, len(r.operations))
-	for _, op := range r.operations {
+	serviceOps, exists := r.operations[serviceName]
+	if !exists {
+		return []schemaloader.Operation{}
+	}
+
+	operations := make([]schemaloader.Operation, 0, len(serviceOps))
+	for _, op := range serviceOps {
 		operations = append(operations, *op)
 	}
 
 	return operations
 }
 
-// Count returns the number of operations in the registry.
+// GetAllOperations returns all operations across all services.
+// The returned slice is a copy to prevent external modification.
+// This method is thread-safe.
+func (r *OperationRegistry) GetAllOperations() []schemaloader.Operation {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var operations []schemaloader.Operation
+	for _, serviceOps := range r.operations {
+		for _, op := range serviceOps {
+			operations = append(operations, *op)
+		}
+	}
+
+	return operations
+}
+
+// Count returns the total number of operations across all services.
 // This method is thread-safe.
 func (r *OperationRegistry) Count() int {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	return len(r.operations)
+	count := 0
+	for _, serviceOps := range r.operations {
+		count += len(serviceOps)
+	}
+	return count
 }
 
-// AddOperation adds a single operation to the registry.
-// This method is thread-safe and is used by Dynamic Mode to cache generated operations.
-func (r *OperationRegistry) AddOperation(op *schemaloader.Operation) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+// CountForService returns the number of operations for a specific service.
+// This method is thread-safe.
+func (r *OperationRegistry) CountForService(serviceName string) int {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 
-	r.operations[op.Name] = op
-	r.logger.Debug("Added operation to registry",
-		zap.String("name", op.Name),
-		zap.String("type", op.OperationType))
+	serviceOps, exists := r.operations[serviceName]
+	if !exists {
+		return 0
+	}
+
+	return len(serviceOps)
+}
+
+// GetServiceNames returns all service names that have operations registered.
+// This method is thread-safe.
+func (r *OperationRegistry) GetServiceNames() []string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	names := make([]string, 0, len(r.operations))
+	for serviceName := range r.operations {
+		names = append(names, serviceName)
+	}
+
+	return names
 }
 
 // Clear removes all operations from the registry.
@@ -430,6 +271,17 @@ func (r *OperationRegistry) Clear() {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	r.operations = make(map[string]*schemaloader.Operation)
-	r.logger.Debug("Cleared operation registry")
+	r.operations = make(map[string]map[string]*schemaloader.Operation)
+	r.logger.Debug("cleared operation registry")
+}
+
+// ClearService removes all operations for a specific service.
+// This method is thread-safe.
+func (r *OperationRegistry) ClearService(serviceName string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	delete(r.operations, serviceName)
+	r.logger.Debug("cleared operations for service",
+		zap.String("service", serviceName))
 }

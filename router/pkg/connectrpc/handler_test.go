@@ -122,7 +122,7 @@ func TestNewRPCHandler(t *testing.T) {
 func TestHandleRPC(t *testing.T) {
 	logger := zap.NewNop()
 
-	// Setup operation registry
+	// Setup operation registry with service-scoped operations
 	operationRegistry := NewOperationRegistry(logger)
 	operation := &schemaloader.Operation{
 		Name:            "QueryGetUser",
@@ -130,9 +130,12 @@ func TestHandleRPC(t *testing.T) {
 		OperationString: "query QueryGetUser($id: Int!) { getUser(id: $id) { id name } }",
 	}
 
-	// Manually add operation to registry for testing
-	operationRegistry.operations = map[string]*schemaloader.Operation{
-		"QueryGetUser": operation,
+	// Manually add operation to registry for testing (service-scoped)
+	serviceName := "user.v1.UserService"
+	operationRegistry.operations = map[string]map[string]*schemaloader.Operation{
+		serviceName: {
+			"QueryGetUser": operation,
+		},
 	}
 
 	t.Run("successfully handles RPC request", func(t *testing.T) {
@@ -152,7 +155,7 @@ func TestHandleRPC(t *testing.T) {
 			"X-Custom-Header": []string{"custom-value"},
 		})
 
-		responseJSON, err := handler.HandleRPC(ctx, "", "QueryGetUser", requestJSON)
+		responseJSON, err := handler.HandleRPC(ctx, serviceName, "QueryGetUser", requestJSON)
 
 		require.NoError(t, err)
 		assert.NotNil(t, responseJSON)
@@ -173,7 +176,7 @@ func TestHandleRPC(t *testing.T) {
 		requestJSON := []byte(`{"id":1}`)
 		ctx := context.Background()
 
-		_, err = handler.HandleRPC(ctx, "", "NonExistentOperation", requestJSON)
+		_, err = handler.HandleRPC(ctx, serviceName, "NonExistentOperation", requestJSON)
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "operation not found")
@@ -314,10 +317,15 @@ func TestGetOperationCount(t *testing.T) {
 
 	t.Run("returns count", func(t *testing.T) {
 		operationRegistry := NewOperationRegistry(logger)
-		operationRegistry.operations = map[string]*schemaloader.Operation{
-			"op1": {Name: "op1"},
-			"op2": {Name: "op2"},
-			"op3": {Name: "op3"},
+		// Service-scoped operations
+		operationRegistry.operations = map[string]map[string]*schemaloader.Operation{
+			"service1.v1.Service1": {
+				"op1": {Name: "op1"},
+				"op2": {Name: "op2"},
+			},
+			"service2.v1.Service2": {
+				"op3": {Name: "op3"},
+			},
 		}
 
 		handler, err := NewRPCHandler(HandlerConfig{
@@ -338,8 +346,11 @@ func TestValidateOperation(t *testing.T) {
 
 	t.Run("validates operation", func(t *testing.T) {
 		operationRegistry := NewOperationRegistry(logger)
-		operationRegistry.operations = map[string]*schemaloader.Operation{
-			"QueryGetUser": {Name: "QueryGetUser"},
+		serviceName := "user.v1.UserService"
+		operationRegistry.operations = map[string]map[string]*schemaloader.Operation{
+			serviceName: {
+				"QueryGetUser": {Name: "QueryGetUser"},
+			},
 		}
 
 		handler, err := NewRPCHandler(HandlerConfig{
@@ -350,10 +361,10 @@ func TestValidateOperation(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		err = handler.ValidateOperation("", "QueryGetUser")
+		err = handler.ValidateOperation(serviceName, "QueryGetUser")
 		assert.NoError(t, err)
 
-		err = handler.ValidateOperation("", "NonExistent")
+		err = handler.ValidateOperation(serviceName, "NonExistent")
 		assert.Error(t, err)
 	})
 }
