@@ -12,7 +12,6 @@ import (
 
 	"connectrpc.com/vanguard"
 	"github.com/hashicorp/go-retryablehttp"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"go.uber.org/zap"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -20,10 +19,9 @@ import (
 
 // ServerConfig holds configuration for the ConnectRPC server
 type ServerConfig struct {
-	// ProtoDirs contains directories with proto files (one per service)
-	ProtoDirs []string
-	// OperationsDirs contains directories with GraphQL operations (one per service)
-	OperationsDirs []string
+	// ServicesDir is the root directory containing all service subdirectories
+	// Each service directory should contain proto files and GraphQL operations
+	ServicesDir string
 	// ListenAddr is the address to listen on
 	ListenAddr string
 	// GraphQLEndpoint is the router's GraphQL endpoint
@@ -50,8 +48,8 @@ type Server struct {
 // NewServer creates a new ConnectRPC server
 func NewServer(config ServerConfig) (*Server, error) {
 	// Validate configuration
-	if len(config.ProtoDirs) == 0 {
-		return nil, fmt.Errorf("at least one proto directory must be provided")
+	if config.ServicesDir == "" {
+		return nil, fmt.Errorf("services directory must be provided")
 	}
 
 	if config.GraphQLEndpoint == "" {
@@ -94,39 +92,57 @@ func NewServer(config ServerConfig) (*Server, error) {
 func (s *Server) Start() error {
 	s.logger.Info("starting ConnectRPC server",
 		zap.String("listen_addr", s.config.ListenAddr),
-		zap.Strings("proto_dirs", s.config.ProtoDirs),
-		zap.Strings("operations_dirs", s.config.OperationsDirs),
+		zap.String("services_dir", s.config.ServicesDir),
 		zap.String("graphql_endpoint", s.config.GraphQLEndpoint))
 
-	// Load proto files from all directories
-	s.protoLoader = NewProtoLoader(s.logger)
-	if err := s.protoLoader.LoadFromDirectories(s.config.ProtoDirs); err != nil {
-		return fmt.Errorf("failed to load proto files: %w", err)
+	// Discover services from the services directory
+	discoveredServices, err := DiscoverServices(ServiceDiscoveryConfig{
+		ServicesDir: s.config.ServicesDir,
+		Logger:      s.logger,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to discover services: %w", err)
 	}
 
-	services := s.protoLoader.GetServices()
-	s.logger.Info("loaded proto services",
-		zap.Int("count", len(services)))
+	s.logger.Info("discovered services",
+		zap.Int("count", len(discoveredServices)))
 
-	// Initialize components based on mode
+	// Initialize components
 	if err := s.initializeComponents(); err != nil {
 		return fmt.Errorf("failed to initialize components: %w", err)
 	}
 
-	// Load operations from all directories if configured
-	if len(s.config.OperationsDirs) > 0 {
-		s.logger.Info("Loading operations from directories",
-			zap.Strings("operations_dirs", s.config.OperationsDirs))
-		
-		if err := s.operationRegistry.LoadFromDirectoriesWithoutSchema(s.config.OperationsDirs); err != nil {
-			return fmt.Errorf("failed to load operations: %w", err)
+	// Load proto files and operations for each discovered service
+	s.protoLoader = NewProtoLoader(s.logger)
+	for _, service := range discoveredServices {
+		s.logger.Info("loading service",
+			zap.String("service", service.FullName),
+			zap.String("dir", service.ServiceDir),
+			zap.Int("proto_files", len(service.ProtoFiles)),
+			zap.Int("operation_files", len(service.OperationFiles)))
+
+		// Load proto files for this service
+		if err := s.protoLoader.LoadFromDirectory(service.ServiceDir); err != nil {
+			return fmt.Errorf("failed to load proto files for service %s: %w", service.FullName, err)
 		}
-		
-		s.logger.Info("Operations loaded successfully",
-			zap.Int("count", s.operationRegistry.Count()))
-	} else {
-		s.logger.Warn("No operations directories configured, operation registry will be empty")
+
+		// Load operations for this service
+		if len(service.OperationFiles) > 0 {
+			if err := s.operationRegistry.LoadOperationsForService(service.FullName, service.OperationFiles); err != nil {
+				return fmt.Errorf("failed to load operations for service %s: %w", service.FullName, err)
+			}
+			s.logger.Info("loaded operations for service",
+				zap.String("service", service.FullName),
+				zap.Int("count", s.operationRegistry.CountForService(service.FullName)))
+		} else {
+			s.logger.Warn("no operations found for service",
+				zap.String("service", service.FullName))
+		}
 	}
+
+	protoServices := s.protoLoader.GetServices()
+	s.logger.Info("loaded all proto services",
+		zap.Int("count", len(protoServices)))
 
 	// Create Vanguard service wrapper
 	vanguardService, err := NewVanguardService(VanguardServiceConfig{
@@ -144,13 +160,6 @@ func (s *Server) Start() error {
 	s.logger.Info("creating vanguard transcoder",
 		zap.Int("service_count", len(vanguardServices)))
 	
-	// Log details about each service being passed to the transcoder
-	for i, svc := range vanguardServices {
-		s.logger.Info("vanguard service details",
-			zap.Int("index", i),
-			zap.String("type", fmt.Sprintf("%T", svc)))
-	}
-	
 	transcoder, err := vanguard.NewTranscoder(vanguardServices)
 	if err != nil {
 		return fmt.Errorf("failed to create vanguard transcoder: %w", err)
@@ -161,7 +170,6 @@ func (s *Server) Start() error {
 		zap.Int("registered_services", len(vanguardServices)))
 
 	// Create HTTP server with HTTP/2 support
-	// Use h2c (HTTP/2 Cleartext) to support HTTP/2 without TLS
 	handler := s.createHandler()
 	h2cHandler := h2c.NewHandler(handler, &http2.Server{})
 	
@@ -212,10 +220,13 @@ func (s *Server) Stop(ctx context.Context) error {
 func (s *Server) Reload() error {
 	s.logger.Info("reloading ConnectRPC server")
 
-	// Reload proto files from all directories
-	s.protoLoader = NewProtoLoader(s.logger)
-	if err := s.protoLoader.LoadFromDirectories(s.config.ProtoDirs); err != nil {
-		return fmt.Errorf("failed to reload proto files: %w", err)
+	// Discover services from the services directory
+	discoveredServices, err := DiscoverServices(ServiceDiscoveryConfig{
+		ServicesDir: s.config.ServicesDir,
+		Logger:      s.logger,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to discover services: %w", err)
 	}
 
 	// Reinitialize components
@@ -223,12 +234,21 @@ func (s *Server) Reload() error {
 		return fmt.Errorf("failed to reinitialize components: %w", err)
 	}
 
-	// Reload operations from all directories if configured
-	if len(s.config.OperationsDirs) > 0 {
-		// Clear and reload all operations
-		s.operationRegistry.Clear()
-		if err := s.operationRegistry.LoadFromDirectoriesWithoutSchema(s.config.OperationsDirs); err != nil {
-			return fmt.Errorf("failed to reload operations: %w", err)
+	// Clear and reload proto files and operations for each service
+	s.protoLoader = NewProtoLoader(s.logger)
+	s.operationRegistry.Clear()
+
+	for _, service := range discoveredServices {
+		// Load proto files for this service
+		if err := s.protoLoader.LoadFromDirectory(service.ServiceDir); err != nil {
+			return fmt.Errorf("failed to reload proto files for service %s: %w", service.FullName, err)
+		}
+
+		// Load operations for this service
+		if len(service.OperationFiles) > 0 {
+			if err := s.operationRegistry.LoadOperationsForService(service.FullName, service.OperationFiles); err != nil {
+				return fmt.Errorf("failed to reload operations for service %s: %w", service.FullName, err)
+			}
 		}
 	}
 
@@ -277,31 +297,11 @@ func (s *Server) initializeComponents() error {
 	return nil
 }
 
-// LoadOperations loads GraphQL operations from the configured directories
-// This should be called after the server has access to the GraphQL schema
+// LoadOperations is deprecated and no longer functional.
+// Operations are now automatically loaded during Start() via service discovery.
+// This method is kept for backward compatibility but does nothing.
 func (s *Server) LoadOperations(schemaDoc interface{}) error {
-	if len(s.config.OperationsDirs) == 0 {
-		s.logger.Debug("No operations directories configured, skipping operation loading")
-		return nil
-	}
-
-	// Type assert to the expected schema document type
-	// The schema document type comes from graphql-go-tools
-	schema, ok := schemaDoc.(*ast.Document)
-	if !ok {
-		return fmt.Errorf("invalid schema document type: expected *ast.Document, got %T", schemaDoc)
-	}
-
-	s.logger.Info("loading operations from directories",
-		zap.Strings("operations_dirs", s.config.OperationsDirs))
-
-	if err := s.operationRegistry.LoadFromDirectories(s.config.OperationsDirs, schema); err != nil {
-		return fmt.Errorf("failed to load operations: %w", err)
-	}
-
-	s.logger.Info("operations loaded successfully",
-		zap.Int("count", s.operationRegistry.Count()))
-
+	s.logger.Warn("LoadOperations is deprecated - operations are now loaded automatically during Start()")
 	return nil
 }
 

@@ -31,7 +31,7 @@ func TestConnectRPC_ServiceDiscovery(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := connectrpc.NewServer(connectrpc.ServerConfig{
-			ProtoDirs:        []string{"../router/pkg/connectrpc/testdata"},
+			ServicesDir:     "../router/pkg/connectrpc/testdata",
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
@@ -72,7 +72,7 @@ func TestConnectRPC_ServiceDiscovery(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := connectrpc.NewServer(connectrpc.ServerConfig{
-			ProtoDirs:        []string{"../router/pkg/connectrpc/testdata"},
+			ServicesDir:     "../router/pkg/connectrpc/testdata",
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
@@ -106,7 +106,7 @@ func TestConnectRPC_ProtocolSupport(t *testing.T) {
 		}))
 
 		server, err := connectrpc.NewServer(connectrpc.ServerConfig{
-			ProtoDirs:        []string{"../router/pkg/connectrpc/testdata"},
+			ServicesDir:     "../router/pkg/connectrpc/testdata",
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
@@ -179,7 +179,7 @@ func TestConnectRPC_HeaderForwarding(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := connectrpc.NewServer(connectrpc.ServerConfig{
-			ProtoDirs:        []string{"../router/pkg/connectrpc/testdata"},
+			ServicesDir:     "../router/pkg/connectrpc/testdata",
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
@@ -211,7 +211,7 @@ func TestConnectRPC_HeaderForwarding(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := connectrpc.NewServer(connectrpc.ServerConfig{
-			ProtoDirs:        []string{"../router/pkg/connectrpc/testdata"},
+			ServicesDir:     "../router/pkg/connectrpc/testdata",
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
@@ -241,7 +241,7 @@ func TestConnectRPC_HeaderForwarding(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := connectrpc.NewServer(connectrpc.ServerConfig{
-			ProtoDirs:        []string{"../router/pkg/connectrpc/testdata"},
+			ServicesDir:     "../router/pkg/connectrpc/testdata",
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
@@ -274,7 +274,7 @@ func TestConnectRPC_ErrorScenarios(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := connectrpc.NewServer(connectrpc.ServerConfig{
-			ProtoDirs:        []string{"../router/pkg/connectrpc/testdata"},
+			ServicesDir:     "../router/pkg/connectrpc/testdata",
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
@@ -294,7 +294,7 @@ func TestConnectRPC_ErrorScenarios(t *testing.T) {
 
 	t.Run("handles GraphQL server unavailable", func(t *testing.T) {
 		server, err := connectrpc.NewServer(connectrpc.ServerConfig{
-			ProtoDirs:        []string{"../router/pkg/connectrpc/testdata"},
+			ServicesDir:     "../router/pkg/connectrpc/testdata",
 			GraphQLEndpoint: "http://localhost:9999/graphql", // Non-existent server
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
@@ -321,7 +321,7 @@ func TestConnectRPC_ErrorScenarios(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := connectrpc.NewServer(connectrpc.ServerConfig{
-			ProtoDirs:        []string{"../router/pkg/connectrpc/testdata"},
+			ServicesDir:     "../router/pkg/connectrpc/testdata",
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
@@ -347,7 +347,7 @@ func TestConnectRPC_ErrorScenarios(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := connectrpc.NewServer(connectrpc.ServerConfig{
-			ProtoDirs:        []string{"../router/pkg/connectrpc/testdata"},
+			ServicesDir:     "../router/pkg/connectrpc/testdata",
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
@@ -375,7 +375,7 @@ func TestConnectRPC_ErrorScenarios(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := connectrpc.NewServer(connectrpc.ServerConfig{
-			ProtoDirs:        []string{"../router/pkg/connectrpc/testdata"},
+			ServicesDir:     "../router/pkg/connectrpc/testdata",
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
 			RequestTimeout:  50 * time.Millisecond, // Short timeout
@@ -414,7 +414,7 @@ func TestConnectRPC_DynamicMode(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := connectrpc.NewServer(connectrpc.ServerConfig{
-			ProtoDirs:        []string{"../router/pkg/connectrpc/testdata"},
+			ServicesDir:     "../router/pkg/connectrpc/testdata",
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
@@ -440,7 +440,7 @@ func TestConnectRPC_DynamicMode(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := connectrpc.NewServer(connectrpc.ServerConfig{
-			ProtoDirs:        []string{"../router/pkg/connectrpc/testdata"},
+			ServicesDir:     "../router/pkg/connectrpc/testdata",
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
@@ -466,7 +466,7 @@ func TestConnectRPC_DynamicMode(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := connectrpc.NewServer(connectrpc.ServerConfig{
-			ProtoDirs:        []string{"../router/pkg/connectrpc/testdata"},
+			ServicesDir:     "../router/pkg/connectrpc/testdata",
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
@@ -497,7 +497,7 @@ func TestConnectRPC_PredefinedMode(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := connectrpc.NewServer(connectrpc.ServerConfig{
-			ProtoDirs:        []string{"../router/pkg/connectrpc/testdata"},
+			ServicesDir:     "../router/pkg/connectrpc/testdata",
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
@@ -523,7 +523,7 @@ func TestConnectRPC_PredefinedMode(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := connectrpc.NewServer(connectrpc.ServerConfig{
-			ProtoDirs:        []string{"../router/pkg/connectrpc/testdata"},
+			ServicesDir:     "../router/pkg/connectrpc/testdata",
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
@@ -586,7 +586,7 @@ func TestConnectRPC_Performance(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := connectrpc.NewServer(connectrpc.ServerConfig{
-			ProtoDirs:        []string{"../router/pkg/connectrpc/testdata"},
+			ServicesDir:     "../router/pkg/connectrpc/testdata",
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
@@ -613,7 +613,7 @@ func TestConnectRPC_Performance(t *testing.T) {
 		defer graphqlServer.Close()
 
 		server, err := connectrpc.NewServer(connectrpc.ServerConfig{
-			ProtoDirs:        []string{"../router/pkg/connectrpc/testdata"},
+			ServicesDir:     "../router/pkg/connectrpc/testdata",
 			GraphQLEndpoint: graphqlServer.URL,
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),

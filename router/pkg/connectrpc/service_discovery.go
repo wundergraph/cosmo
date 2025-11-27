@@ -15,6 +15,8 @@ type DiscoveredService struct {
 	ServiceDir string
 	// ProtoFiles are the proto files found in this service directory
 	ProtoFiles []string
+	// OperationFiles are the GraphQL operation files found recursively in this service directory
+	OperationFiles []string
 	// Package is the proto package name extracted from proto files
 	Package string
 	// ServiceName is the service name extracted from proto files
@@ -97,9 +99,9 @@ func DiscoverServices(config ServiceDiscoveryConfig) ([]DiscoveredService, error
 		if err != nil {
 			return fmt.Errorf("failed to extract service info from %s: %w", path, err)
 		}
-
+	
 		fullName := fmt.Sprintf("%s.%s", packageName, serviceName)
-
+	
 		// Validate package.service uniqueness
 		if existingDir, exists := seenPackageService[fullName]; exists {
 			return fmt.Errorf(
@@ -108,21 +110,32 @@ func DiscoverServices(config ServiceDiscoveryConfig) ([]DiscoveredService, error
 				fullName, existingDir, path)
 		}
 		seenPackageService[fullName] = path
-
+	
+		// Find all operation files recursively in this service directory
+		operationFiles, err := findOperationFiles(path)
+		if err != nil {
+			config.Logger.Warn("failed to find operation files",
+				zap.String("dir", path),
+				zap.Error(err))
+			operationFiles = []string{} // Continue even if no operations found
+		}
+	
 		discoveredServices = append(discoveredServices, DiscoveredService{
-			ServiceDir:  path,
-			ProtoFiles:  protoFiles,
-			Package:     packageName,
-			ServiceName: serviceName,
-			FullName:    fullName,
+			ServiceDir:     path,
+			ProtoFiles:     protoFiles,
+			OperationFiles: operationFiles,
+			Package:        packageName,
+			ServiceName:    serviceName,
+			FullName:       fullName,
 		})
-
+	
 		config.Logger.Info("discovered service",
 			zap.String("full_name", fullName),
 			zap.String("package", packageName),
 			zap.String("service", serviceName),
 			zap.String("dir", path),
-			zap.Int("proto_files", len(protoFiles)))
+			zap.Int("proto_files", len(protoFiles)),
+			zap.Int("operation_files", len(operationFiles)))
 
 		// Don't descend into subdirectories of a service directory
 		// This prevents finding the same service multiple times

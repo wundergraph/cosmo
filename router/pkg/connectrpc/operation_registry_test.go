@@ -7,8 +7,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
 	"go.uber.org/zap"
 )
 
@@ -32,37 +30,10 @@ func TestNewOperationRegistry(t *testing.T) {
 	})
 }
 
-func TestLoadFromDirectory(t *testing.T) {
-	// Create a test schema
-	schemaStr := `
-schema {
-	query: Query
-	mutation: Mutation
-}
-
-type Query {
-	employee(id: ID!): Employee
-	employees: [Employee!]!
-}
-
-type Mutation {
-	updateEmployee(id: ID!, name: String!): Employee
-}
-
-type Employee {
-	id: ID!
-	name: String!
-	email: String!
-}
-`
-	schemaDoc, report := astparser.ParseGraphqlDocumentString(schemaStr)
-	require.False(t, report.HasErrors(), "Failed to parse schema")
-
-	err := asttransform.MergeDefinitionWithBaseSchema(&schemaDoc)
-	require.NoError(t, err, "Failed to normalize schema")
-
-	t.Run("loads operations from directory successfully", func(t *testing.T) {
+func TestLoadOperationsForService(t *testing.T) {
+	t.Run("loads operations for service successfully", func(t *testing.T) {
 		tempDir := t.TempDir()
+		serviceName := "employee.v1.EmployeeService"
 
 		// Create test operation files
 		testFiles := map[string]string{
@@ -87,115 +58,95 @@ type Employee {
 }`,
 		}
 
+		var operationFiles []string
 		for filename, content := range testFiles {
-			err := os.WriteFile(filepath.Join(tempDir, filename), []byte(content), 0644)
+			filePath := filepath.Join(tempDir, filename)
+			err := os.WriteFile(filePath, []byte(content), 0644)
 			require.NoError(t, err)
+			operationFiles = append(operationFiles, filePath)
 		}
 
 		registry := NewOperationRegistry(zap.NewNop())
-		err := registry.LoadFromDirectory(tempDir, &schemaDoc)
+		err := registry.LoadOperationsForService(serviceName, operationFiles)
 
 		require.NoError(t, err)
-		assert.Equal(t, 3, registry.Count())
+		assert.Equal(t, 3, registry.CountForService(serviceName))
 
-		// Verify operations are loaded
-		assert.True(t, registry.HasOperation("GetEmployee"))
-		assert.True(t, registry.HasOperation("ListEmployees"))
-		assert.True(t, registry.HasOperation("UpdateEmployee"))
+		// Verify operations are loaded for the service
+		assert.True(t, registry.HasOperationForService(serviceName, "GetEmployee"))
+		assert.True(t, registry.HasOperationForService(serviceName, "ListEmployees"))
+		assert.True(t, registry.HasOperationForService(serviceName, "UpdateEmployee"))
 	})
 
-	t.Run("returns error for empty directory path", func(t *testing.T) {
+	t.Run("returns error for empty service name", func(t *testing.T) {
 		registry := NewOperationRegistry(zap.NewNop())
-		err := registry.LoadFromDirectory("", &schemaDoc)
+		err := registry.LoadOperationsForService("", []string{})
 
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "operations directory cannot be empty")
+		assert.Contains(t, err.Error(), "service name cannot be empty")
 	})
 
-	t.Run("returns error for nil schema", func(t *testing.T) {
+	t.Run("handles empty operation files list", func(t *testing.T) {
+		registry := NewOperationRegistry(zap.NewNop())
+		serviceName := "test.v1.TestService"
+		
+		err := registry.LoadOperationsForService(serviceName, []string{})
+		
+		require.NoError(t, err)
+		assert.Equal(t, 0, registry.CountForService(serviceName))
+	})
+
+	t.Run("loads operations for multiple services independently", func(t *testing.T) {
 		tempDir := t.TempDir()
-		registry := NewOperationRegistry(zap.NewNop())
-		err := registry.LoadFromDirectory(tempDir, nil)
+		
+		// Service 1
+		service1 := "employee.v1.EmployeeService"
+		op1File := filepath.Join(tempDir, "GetEmployee.graphql")
+		err := os.WriteFile(op1File, []byte(`query GetEmployee { employee { id } }`), 0644)
+		require.NoError(t, err)
 
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "schema document cannot be nil")
-	})
-
-	t.Run("returns error for non-existent directory", func(t *testing.T) {
-		registry := NewOperationRegistry(zap.NewNop())
-		err := registry.LoadFromDirectory("/non/existent/path", &schemaDoc)
-
-		assert.Error(t, err)
-	})
-
-	t.Run("clears existing operations on reload", func(t *testing.T) {
-		tempDir := t.TempDir()
-
-		// Create initial operation
-		initialOp := `query Initial { employees { id } }`
-		err := os.WriteFile(filepath.Join(tempDir, "Initial.graphql"), []byte(initialOp), 0644)
+		// Service 2
+		service2 := "product.v1.ProductService"
+		op2File := filepath.Join(tempDir, "GetProduct.graphql")
+		err = os.WriteFile(op2File, []byte(`query GetProduct { product { id } }`), 0644)
 		require.NoError(t, err)
 
 		registry := NewOperationRegistry(zap.NewNop())
-		err = registry.LoadFromDirectory(tempDir, &schemaDoc)
+		
+		err = registry.LoadOperationsForService(service1, []string{op1File})
 		require.NoError(t, err)
-		assert.Equal(t, 1, registry.Count())
-		assert.True(t, registry.HasOperation("Initial"))
-
-		// Create new operation and reload
-		newOp := `query NewOp { employees { name } }`
-		err = os.WriteFile(filepath.Join(tempDir, "NewOp.graphql"), []byte(newOp), 0644)
+		
+		err = registry.LoadOperationsForService(service2, []string{op2File})
 		require.NoError(t, err)
 
-		err = registry.LoadFromDirectory(tempDir, &schemaDoc)
-		require.NoError(t, err)
-		assert.Equal(t, 2, registry.Count())
-		assert.True(t, registry.HasOperation("Initial"))
-		assert.True(t, registry.HasOperation("NewOp"))
-	})
-
-	t.Run("handles empty directory", func(t *testing.T) {
-		tempDir := t.TempDir()
-		registry := NewOperationRegistry(zap.NewNop())
-		err := registry.LoadFromDirectory(tempDir, &schemaDoc)
-
-		require.NoError(t, err)
-		assert.Equal(t, 0, registry.Count())
+		// Verify operations are scoped to their services
+		assert.True(t, registry.HasOperationForService(service1, "GetEmployee"))
+		assert.False(t, registry.HasOperationForService(service1, "GetProduct"))
+		
+		assert.True(t, registry.HasOperationForService(service2, "GetProduct"))
+		assert.False(t, registry.HasOperationForService(service2, "GetEmployee"))
 	})
 }
 
-func TestGetOperation(t *testing.T) {
-	schemaStr := `
-type Query {
-	employee(id: ID!): Employee
-}
-
-type Employee {
-	id: ID!
-	name: String!
-}
-`
-	schemaDoc, report := astparser.ParseGraphqlDocumentString(schemaStr)
-	require.False(t, report.HasErrors())
-	err := asttransform.MergeDefinitionWithBaseSchema(&schemaDoc)
-	require.NoError(t, err)
-
+func TestGetOperationForService(t *testing.T) {
 	t.Run("returns operation when found", func(t *testing.T) {
 		tempDir := t.TempDir()
+		serviceName := "employee.v1.EmployeeService"
 		opContent := `query GetEmployee($id: ID!) {
 	employee(id: $id) {
 		id
 		name
 	}
 }`
-		err := os.WriteFile(filepath.Join(tempDir, "GetEmployee.graphql"), []byte(opContent), 0644)
+		opFile := filepath.Join(tempDir, "GetEmployee.graphql")
+		err := os.WriteFile(opFile, []byte(opContent), 0644)
 		require.NoError(t, err)
 
 		registry := NewOperationRegistry(zap.NewNop())
-		err = registry.LoadFromDirectory(tempDir, &schemaDoc)
+		err = registry.LoadOperationsForService(serviceName, []string{opFile})
 		require.NoError(t, err)
 
-		op := registry.GetOperation("GetEmployee")
+		op := registry.GetOperationForService(serviceName, "GetEmployee")
 		assert.NotNil(t, op)
 		assert.Equal(t, "GetEmployee", op.Name)
 		assert.Equal(t, "query", op.OperationType)
@@ -204,78 +155,99 @@ type Employee {
 
 	t.Run("returns nil for non-existent operation", func(t *testing.T) {
 		registry := NewOperationRegistry(zap.NewNop())
-		op := registry.GetOperation("NonExistent")
+		serviceName := "test.v1.TestService"
+		op := registry.GetOperationForService(serviceName, "NonExistent")
 		assert.Nil(t, op)
 	})
 
-	t.Run("returns nil for empty registry", func(t *testing.T) {
+	t.Run("returns nil for non-existent service", func(t *testing.T) {
 		registry := NewOperationRegistry(zap.NewNop())
-		op := registry.GetOperation("AnyOperation")
+		op := registry.GetOperationForService("nonexistent.Service", "AnyOperation")
 		assert.Nil(t, op)
+	})
+
+	t.Run("operations are isolated between services", func(t *testing.T) {
+		tempDir := t.TempDir()
+		
+		service1 := "service1.v1.Service1"
+		service2 := "service2.v1.Service2"
+		
+		// Both services have an operation with the same name
+		opFile1 := filepath.Join(tempDir, "GetData1.graphql")
+		err := os.WriteFile(opFile1, []byte(`query GetData { data1 { id } }`), 0644)
+		require.NoError(t, err)
+		
+		opFile2 := filepath.Join(tempDir, "GetData2.graphql")
+		err = os.WriteFile(opFile2, []byte(`query GetData { data2 { id } }`), 0644)
+		require.NoError(t, err)
+
+		registry := NewOperationRegistry(zap.NewNop())
+		err = registry.LoadOperationsForService(service1, []string{opFile1})
+		require.NoError(t, err)
+		err = registry.LoadOperationsForService(service2, []string{opFile2})
+		require.NoError(t, err)
+
+		// Both services should have their own GetData operation
+		op1 := registry.GetOperationForService(service1, "GetData")
+		op2 := registry.GetOperationForService(service2, "GetData")
+		
+		assert.NotNil(t, op1)
+		assert.NotNil(t, op2)
+		assert.Contains(t, op1.OperationString, "data1")
+		assert.Contains(t, op2.OperationString, "data2")
 	})
 }
 
-func TestHasOperation(t *testing.T) {
-	schemaStr := `type Query { test: String }`
-	schemaDoc, report := astparser.ParseGraphqlDocumentString(schemaStr)
-	require.False(t, report.HasErrors())
-	err := asttransform.MergeDefinitionWithBaseSchema(&schemaDoc)
-	require.NoError(t, err)
-
+func TestHasOperationForService(t *testing.T) {
 	t.Run("returns true for existing operation", func(t *testing.T) {
 		tempDir := t.TempDir()
+		serviceName := "test.v1.TestService"
 		opContent := `query TestQuery { test }`
-		err := os.WriteFile(filepath.Join(tempDir, "Test.graphql"), []byte(opContent), 0644)
+		opFile := filepath.Join(tempDir, "Test.graphql")
+		err := os.WriteFile(opFile, []byte(opContent), 0644)
 		require.NoError(t, err)
 
 		registry := NewOperationRegistry(zap.NewNop())
-		err = registry.LoadFromDirectory(tempDir, &schemaDoc)
+		err = registry.LoadOperationsForService(serviceName, []string{opFile})
 		require.NoError(t, err)
 
-		assert.True(t, registry.HasOperation("TestQuery"))
+		assert.True(t, registry.HasOperationForService(serviceName, "TestQuery"))
 	})
 
 	t.Run("returns false for non-existent operation", func(t *testing.T) {
 		registry := NewOperationRegistry(zap.NewNop())
-		assert.False(t, registry.HasOperation("NonExistent"))
+		assert.False(t, registry.HasOperationForService("test.Service", "NonExistent"))
 	})
 
-	t.Run("returns false for empty registry", func(t *testing.T) {
+	t.Run("returns false for non-existent service", func(t *testing.T) {
 		registry := NewOperationRegistry(zap.NewNop())
-		assert.False(t, registry.HasOperation("AnyOperation"))
+		assert.False(t, registry.HasOperationForService("nonexistent.Service", "AnyOperation"))
 	})
 }
 
-func TestGetAllOperations(t *testing.T) {
-	schemaStr := `
-type Query {
-	field1: String
-	field2: String
-}
-`
-	schemaDoc, report := astparser.ParseGraphqlDocumentString(schemaStr)
-	require.False(t, report.HasErrors())
-	err := asttransform.MergeDefinitionWithBaseSchema(&schemaDoc)
-	require.NoError(t, err)
-
-	t.Run("returns all operations", func(t *testing.T) {
+func TestGetAllOperationsForService(t *testing.T) {
+	t.Run("returns all operations for service", func(t *testing.T) {
 		tempDir := t.TempDir()
+		serviceName := "test.v1.TestService"
 
 		testFiles := map[string]string{
 			"Op1.graphql": `query Op1 { field1 }`,
 			"Op2.graphql": `query Op2 { field2 }`,
 		}
 
+		var operationFiles []string
 		for filename, content := range testFiles {
-			err := os.WriteFile(filepath.Join(tempDir, filename), []byte(content), 0644)
+			filePath := filepath.Join(tempDir, filename)
+			err := os.WriteFile(filePath, []byte(content), 0644)
 			require.NoError(t, err)
+			operationFiles = append(operationFiles, filePath)
 		}
 
 		registry := NewOperationRegistry(zap.NewNop())
-		err = registry.LoadFromDirectory(tempDir, &schemaDoc)
+		err := registry.LoadOperationsForService(serviceName, operationFiles)
 		require.NoError(t, err)
 
-		operations := registry.GetAllOperations()
+		operations := registry.GetAllOperationsForService(serviceName)
 		assert.Len(t, operations, 2)
 
 		// Verify operation names
@@ -287,91 +259,118 @@ type Query {
 		assert.True(t, names["Op2"])
 	})
 
-	t.Run("returns empty slice for empty registry", func(t *testing.T) {
+	t.Run("returns empty slice for non-existent service", func(t *testing.T) {
 		registry := NewOperationRegistry(zap.NewNop())
-		operations := registry.GetAllOperations()
+		operations := registry.GetAllOperationsForService("nonexistent.Service")
 		assert.NotNil(t, operations)
 		assert.Len(t, operations, 0)
 	})
+}
 
-	t.Run("returns copy of operations", func(t *testing.T) {
+func TestCountForService(t *testing.T) {
+	t.Run("returns correct count for service", func(t *testing.T) {
 		tempDir := t.TempDir()
-		opContent := `query Test { field1 }`
-		err := os.WriteFile(filepath.Join(tempDir, "Test.graphql"), []byte(opContent), 0644)
-		require.NoError(t, err)
+		serviceName := "test.v1.TestService"
 
 		registry := NewOperationRegistry(zap.NewNop())
-		err = registry.LoadFromDirectory(tempDir, &schemaDoc)
+		assert.Equal(t, 0, registry.CountForService(serviceName))
+
+		// Add operations
+		op1File := filepath.Join(tempDir, "Op1.graphql")
+		err := os.WriteFile(op1File, []byte(`query Op1 { test }`), 0644)
 		require.NoError(t, err)
 
-		operations1 := registry.GetAllOperations()
-		operations2 := registry.GetAllOperations()
+		err = registry.LoadOperationsForService(serviceName, []string{op1File})
+		require.NoError(t, err)
+		assert.Equal(t, 1, registry.CountForService(serviceName))
+	})
 
-		// Verify they are different slices
-		assert.NotSame(t, &operations1, &operations2)
-		assert.Equal(t, len(operations1), len(operations2))
+	t.Run("returns zero for non-existent service", func(t *testing.T) {
+		registry := NewOperationRegistry(zap.NewNop())
+		assert.Equal(t, 0, registry.CountForService("nonexistent.Service"))
 	})
 }
 
 func TestCount(t *testing.T) {
-	schemaStr := `type Query { test: String }`
-	schemaDoc, report := astparser.ParseGraphqlDocumentString(schemaStr)
-	require.False(t, report.HasErrors())
-	err := asttransform.MergeDefinitionWithBaseSchema(&schemaDoc)
-	require.NoError(t, err)
-
-	t.Run("returns correct count", func(t *testing.T) {
+	t.Run("returns total count across all services", func(t *testing.T) {
 		tempDir := t.TempDir()
+		
+		service1 := "service1.v1.Service1"
+		service2 := "service2.v1.Service2"
 
 		registry := NewOperationRegistry(zap.NewNop())
 		assert.Equal(t, 0, registry.Count())
 
-		// Add one operation
-		op1 := `query Op1 { test }`
-		err := os.WriteFile(filepath.Join(tempDir, "Op1.graphql"), []byte(op1), 0644)
+		// Add operations to service1
+		op1File := filepath.Join(tempDir, "Op1.graphql")
+		err := os.WriteFile(op1File, []byte(`query Op1 { test }`), 0644)
 		require.NoError(t, err)
-
-		err = registry.LoadFromDirectory(tempDir, &schemaDoc)
+		err = registry.LoadOperationsForService(service1, []string{op1File})
 		require.NoError(t, err)
 		assert.Equal(t, 1, registry.Count())
 
-		// Add another operation
-		op2 := `query Op2 { test }`
-		err = os.WriteFile(filepath.Join(tempDir, "Op2.graphql"), []byte(op2), 0644)
+		// Add operations to service2
+		op2File := filepath.Join(tempDir, "Op2.graphql")
+		err = os.WriteFile(op2File, []byte(`query Op2 { test }`), 0644)
 		require.NoError(t, err)
-
-		err = registry.LoadFromDirectory(tempDir, &schemaDoc)
+		err = registry.LoadOperationsForService(service2, []string{op2File})
 		require.NoError(t, err)
 		assert.Equal(t, 2, registry.Count())
 	})
+}
 
-	t.Run("returns zero for empty registry", func(t *testing.T) {
+func TestGetServiceNames(t *testing.T) {
+	t.Run("returns all service names", func(t *testing.T) {
+		tempDir := t.TempDir()
+		
+		service1 := "employee.v1.EmployeeService"
+		service2 := "product.v1.ProductService"
+
+		op1File := filepath.Join(tempDir, "Op1.graphql")
+		err := os.WriteFile(op1File, []byte(`query Op1 { test }`), 0644)
+		require.NoError(t, err)
+
 		registry := NewOperationRegistry(zap.NewNop())
-		assert.Equal(t, 0, registry.Count())
+		err = registry.LoadOperationsForService(service1, []string{op1File})
+		require.NoError(t, err)
+		err = registry.LoadOperationsForService(service2, []string{op1File})
+		require.NoError(t, err)
+
+		names := registry.GetServiceNames()
+		assert.Len(t, names, 2)
+		assert.Contains(t, names, service1)
+		assert.Contains(t, names, service2)
+	})
+
+	t.Run("returns empty slice for empty registry", func(t *testing.T) {
+		registry := NewOperationRegistry(zap.NewNop())
+		names := registry.GetServiceNames()
+		assert.NotNil(t, names)
+		assert.Len(t, names, 0)
 	})
 }
 
 func TestClear(t *testing.T) {
-	schemaStr := `type Query { test: String }`
-	schemaDoc, report := astparser.ParseGraphqlDocumentString(schemaStr)
-	require.False(t, report.HasErrors())
-	err := asttransform.MergeDefinitionWithBaseSchema(&schemaDoc)
-	require.NoError(t, err)
-
-	t.Run("clears all operations", func(t *testing.T) {
+	t.Run("clears all operations from all services", func(t *testing.T) {
 		tempDir := t.TempDir()
-		opContent := `query Test { test }`
-		err := os.WriteFile(filepath.Join(tempDir, "Test.graphql"), []byte(opContent), 0644)
+		service1 := "service1.v1.Service1"
+		service2 := "service2.v1.Service2"
+		
+		opFile := filepath.Join(tempDir, "Test.graphql")
+		err := os.WriteFile(opFile, []byte(`query Test { test }`), 0644)
 		require.NoError(t, err)
 
 		registry := NewOperationRegistry(zap.NewNop())
-		err = registry.LoadFromDirectory(tempDir, &schemaDoc)
+		err = registry.LoadOperationsForService(service1, []string{opFile})
 		require.NoError(t, err)
-		assert.Equal(t, 1, registry.Count())
+		err = registry.LoadOperationsForService(service2, []string{opFile})
+		require.NoError(t, err)
+		assert.Equal(t, 2, registry.Count())
 
 		registry.Clear()
 		assert.Equal(t, 0, registry.Count())
-		assert.False(t, registry.HasOperation("Test"))
+		assert.False(t, registry.HasOperationForService(service1, "Test"))
+		assert.False(t, registry.HasOperationForService(service2, "Test"))
 	})
 
 	t.Run("can clear empty registry", func(t *testing.T) {
@@ -381,42 +380,44 @@ func TestClear(t *testing.T) {
 		registry.Clear()
 		assert.Equal(t, 0, registry.Count())
 	})
+}
 
-	t.Run("can reload after clear", func(t *testing.T) {
+func TestClearService(t *testing.T) {
+	t.Run("clears operations for specific service only", func(t *testing.T) {
 		tempDir := t.TempDir()
-		opContent := `query Test { test }`
-		err := os.WriteFile(filepath.Join(tempDir, "Test.graphql"), []byte(opContent), 0644)
+		service1 := "service1.v1.Service1"
+		service2 := "service2.v1.Service2"
+		
+		opFile := filepath.Join(tempDir, "Test.graphql")
+		err := os.WriteFile(opFile, []byte(`query Test { test }`), 0644)
 		require.NoError(t, err)
 
 		registry := NewOperationRegistry(zap.NewNop())
-		err = registry.LoadFromDirectory(tempDir, &schemaDoc)
+		err = registry.LoadOperationsForService(service1, []string{opFile})
 		require.NoError(t, err)
-		assert.Equal(t, 1, registry.Count())
-
-		registry.Clear()
-		assert.Equal(t, 0, registry.Count())
-
-		err = registry.LoadFromDirectory(tempDir, &schemaDoc)
+		err = registry.LoadOperationsForService(service2, []string{opFile})
 		require.NoError(t, err)
+		
+		assert.Equal(t, 2, registry.Count())
+
+		registry.ClearService(service1)
+		
 		assert.Equal(t, 1, registry.Count())
-		assert.True(t, registry.HasOperation("Test"))
+		assert.False(t, registry.HasOperationForService(service1, "Test"))
+		assert.True(t, registry.HasOperationForService(service2, "Test"))
 	})
 }
 
 func TestThreadSafety(t *testing.T) {
-	schemaStr := `type Query { test: String }`
-	schemaDoc, report := astparser.ParseGraphqlDocumentString(schemaStr)
-	require.False(t, report.HasErrors())
-	err := asttransform.MergeDefinitionWithBaseSchema(&schemaDoc)
-	require.NoError(t, err)
-
 	tempDir := t.TempDir()
+	serviceName := "test.v1.TestService"
 	opContent := `query Test { test }`
-	err = os.WriteFile(filepath.Join(tempDir, "Test.graphql"), []byte(opContent), 0644)
+	opFile := filepath.Join(tempDir, "Test.graphql")
+	err := os.WriteFile(opFile, []byte(opContent), 0644)
 	require.NoError(t, err)
 
 	registry := NewOperationRegistry(zap.NewNop())
-	err = registry.LoadFromDirectory(tempDir, &schemaDoc)
+	err = registry.LoadOperationsForService(serviceName, []string{opFile})
 	require.NoError(t, err)
 
 	t.Run("concurrent reads are safe", func(t *testing.T) {
@@ -426,10 +427,11 @@ func TestThreadSafety(t *testing.T) {
 		for i := 0; i < 10; i++ {
 			go func() {
 				for j := 0; j < 100; j++ {
-					_ = registry.GetOperation("Test")
-					_ = registry.HasOperation("Test")
-					_ = registry.GetAllOperations()
+					_ = registry.GetOperationForService(serviceName, "Test")
+					_ = registry.HasOperationForService(serviceName, "Test")
+					_ = registry.GetAllOperationsForService(serviceName)
 					_ = registry.Count()
+					_ = registry.CountForService(serviceName)
 				}
 				done <- true
 			}()
@@ -448,8 +450,8 @@ func TestThreadSafety(t *testing.T) {
 		for i := 0; i < 5; i++ {
 			go func() {
 				for j := 0; j < 50; j++ {
-					_ = registry.GetOperation("Test")
-					_ = registry.HasOperation("Test")
+					_ = registry.GetOperationForService(serviceName, "Test")
+					_ = registry.HasOperationForService(serviceName, "Test")
 				}
 				done <- true
 			}()
@@ -460,7 +462,7 @@ func TestThreadSafety(t *testing.T) {
 			go func() {
 				for j := 0; j < 50; j++ {
 					registry.Clear()
-					_ = registry.LoadFromDirectory(tempDir, &schemaDoc)
+					_ = registry.LoadOperationsForService(serviceName, []string{opFile})
 				}
 				done <- true
 			}()
@@ -470,5 +472,53 @@ func TestThreadSafety(t *testing.T) {
 		for i := 0; i < 10; i++ {
 			<-done
 		}
+	})
+}
+
+// Test service-scoped operations with same service names but different packages
+func TestServiceScopedOperations(t *testing.T) {
+	t.Run("same service name different packages work independently", func(t *testing.T) {
+		tempDir := t.TempDir()
+		
+		// Two services with same name but different packages
+		service1 := "company1.employee.v1.EmployeeService"
+		service2 := "company2.employee.v1.EmployeeService"
+		
+		// Create operations with same name for both services
+		op1File := filepath.Join(tempDir, "GetEmployee1.graphql")
+		err := os.WriteFile(op1File, []byte(`query GetEmployee { company1Employee { id name } }`), 0644)
+		require.NoError(t, err)
+		
+		op2File := filepath.Join(tempDir, "GetEmployee2.graphql")
+		err = os.WriteFile(op2File, []byte(`query GetEmployee { company2Employee { id name } }`), 0644)
+		require.NoError(t, err)
+
+		registry := NewOperationRegistry(zap.NewNop())
+		
+		// Load operations for both services
+		err = registry.LoadOperationsForService(service1, []string{op1File})
+		require.NoError(t, err)
+		err = registry.LoadOperationsForService(service2, []string{op2File})
+		require.NoError(t, err)
+
+		// Verify both services have their own GetEmployee operation
+		op1 := registry.GetOperationForService(service1, "GetEmployee")
+		op2 := registry.GetOperationForService(service2, "GetEmployee")
+		
+		assert.NotNil(t, op1)
+		assert.NotNil(t, op2)
+		
+		// Verify they have different content
+		assert.Contains(t, op1.OperationString, "company1Employee")
+		assert.Contains(t, op2.OperationString, "company2Employee")
+		
+		// Verify operations are isolated
+		assert.True(t, registry.HasOperationForService(service1, "GetEmployee"))
+		assert.True(t, registry.HasOperationForService(service2, "GetEmployee"))
+		
+		// Verify counts
+		assert.Equal(t, 1, registry.CountForService(service1))
+		assert.Equal(t, 1, registry.CountForService(service2))
+		assert.Equal(t, 2, registry.Count())
 	})
 }
