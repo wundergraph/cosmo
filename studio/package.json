@@ -1,6 +1,6 @@
 {
   "name": "studio",
-  "version": "0.140.0",
+  "version": "0.140.1",
   "private": true,
   "license": "Apache-2.0",
   "description": "WunderGraph Cosmo Studio",
@@ -92,7 +92,7 @@
     "lz-string": "^1.5.0",
     "monaco-editor": "^0.45.0",
     "monaco-graphql": "^1.4.0",
-    "next": "15.2.4",
+    "next": "15.4.7",
     "next-themes": "^0.2.1",
     "posthog-js": "^1.240.6",
     "pretty-bytes": "^6.1.1",
