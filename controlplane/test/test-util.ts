@@ -436,7 +436,6 @@ export const SetupKeycloak = async ({
       registrationEmailAsUsername: true,
     });
   } catch (e: any) {
-    console.error(e);
     if (e.response?.status !== 409) {
       e.message = `Failed to create keycloak realm: ${realmName}.` + e.message;
       throw e;
