@@ -1,7 +1,6 @@
 name: wgc CI
 on:
   pull_request:
-    types: [opened, reopened, synchronize, closed]
     paths:
       - 'pnpm-lock.yaml'
       - 'cli/**/*'
@@ -59,7 +58,17 @@ jobs:
       - name: Upload Coverage to Codecov
         uses: ./.github/actions/codecov-upload-pr
         with:
-          artifact-name: pr-build
+          artifact-name: cli-one
+          coverage-path: |
+            cli/coverage/clover.xml
+            cli/coverage/coverage-final.json
+          retention-days: 7
+          codecov-token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Upload Coverage to Codecov
+        uses: ./.github/actions/codecov-upload-pr
+        with:
+          artifact-name: cli-two
           coverage-path: |
             cli/coverage/clover.xml
             cli/coverage/coverage-final.json
@@ -116,7 +125,7 @@ jobs:
   build_test:
     runs-on: ubuntu-latest
     needs: [build_test_default, build_test_node_matrix, build_bun_matrix]
-    if: github.event.action != 'closed' && always()
+    if: always()
     steps:
       - name: 'All tests passed'
         if: ${{ !(contains(needs.*.result, 'failure')) }}
@@ -124,28 +133,3 @@ jobs:
       - name: 'Some tests failed'
         if: ${{ contains(needs.*.result, 'failure') }}
         run: exit 1
-
-  post-merge:
-    if: >
-      github.event_name == 'pull_request' &&
-      github.event.action == 'closed' &&
-      github.event.pull_request.merged == true
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.merge_commit_sha }}
-
-      - name: Print merge commit SHA
-        run: |
-          echo "Merge commit SHA: ${{ github.event.pull_request.merge_commit_sha }}"
-
-      - name: Download computed artifact and upload to codecov with merge SHA
-        uses: ./.github/actions/codecov-merge-upload
-        with:
-          artifact-name: pr-build
-          coverage-path: cli/coverage
-          workflow-path: .github/workflows/cli-ci.yaml
-          override-commit: ${{ github.event.pull_request.merge_commit_sha }}
-          codecov-token: ${{ secrets.CODECOV_TOKEN }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}

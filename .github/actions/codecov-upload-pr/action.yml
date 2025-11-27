@@ -32,4 +32,3 @@ runs:
       uses: codecov/codecov-action@v5
       with:
         token: ${{ inputs.codecov-token }}
-
