@@ -363,24 +363,24 @@ jobs:
         run: make test-coverage test_retry_count=0 test_params="-run '^Test[^(Flaky)]' --timeout=5m -p 1 --parallel 10" test_target="${{ matrix.test_target }}"
 
       - name: Upload integration results to Codecov
-        uses: codecov/codecov-action@v5
+        uses: ./.github/actions/codecov-upload-pr
         with:
-          verbose: true
-          files: |
-            router-tests/coverage.out
-          token: ${{ secrets.CODECOV_TOKEN }}
+          artifact-name: pr-build
+          coverage-path: router-tests/coverage.out
+          retention-days: 7
+          codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Run Flaky Integration tests ${{ matrix.test_target }}
         working-directory: ./router-tests
         run: make test-coverage test_retry_count=3 test_params="-run '^TestFlaky' --timeout=5m -p 1 --parallel 10" test_target="${{ matrix.test_target }}"
 
       - name: Upload flaky integration results to Codecov
-        uses: codecov/codecov-action@v5
+        uses: ./.github/actions/codecov-upload-pr
         with:
-          verbose: true
-          files: |
-            router-tests/coverage.out
-          token: ${{ secrets.CODECOV_TOKEN }}
+          artifact-name: pr-build
+          coverage-path: router-tests/coverage.out
+          retention-days: 7
+          codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
   image_scan:
     if: github.event.pull_request.head.repo.full_name == github.repository
