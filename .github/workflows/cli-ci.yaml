@@ -146,6 +146,6 @@ jobs:
           artifact-name: pr-build
           coverage-path: cli/coverage
           workflow-path: .github/workflows/cli-ci.yaml
-          override-commit: ${{ github.event.pull_request.merge_commit_sha }}
+          override-commit: 2be5a84f75694cc6e7a99960be2e8e45b2cd3999
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
