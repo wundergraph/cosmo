@@ -56,7 +56,7 @@ jobs:
       - name: Get Coverage
         run: pnpm run --filter wgc coverage
 
-      - name: Upload coverage to Codecov
+      - name: Upload Coverage to Codecov
         uses: ./.github/actions/codecov-upload-pr
         with:
           artifact-name: pr-build
