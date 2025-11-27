@@ -866,6 +866,7 @@ export class MetricsRepository {
           WHERE Timestamp >= startDate AND Timestamp <= endDate
             AND OrganizationID = {organizationId:String}
             AND FederatedGraphID = {federatedGraphId:String}
+            AND OperationHash IS NOT NULL AND OperationHash != ''
             ${whereSql ? `AND ${whereSql}` : ''}
             ${searchSql}
             ${introspectionFilter}
@@ -901,6 +902,7 @@ export class MetricsRepository {
           WHERE Timestamp >= startDate AND Timestamp <= endDate
             AND OrganizationID = {organizationId:String}
             AND FederatedGraphID = {federatedGraphId:String}
+            AND OperationHash IS NOT NULL AND OperationHash != ''
             ${whereSql ? `AND ${whereSql}` : ''}
             ${searchSql}
             ${introspectionFilter}
@@ -939,6 +941,7 @@ export class MetricsRepository {
           WHERE Timestamp >= startDate AND Timestamp <= endDate
               AND OrganizationID = {organizationId:String}
               AND FederatedGraphID = {federatedGraphId:String}
+              AND OperationHash IS NOT NULL AND OperationHash != ''
             ${whereSql ? `AND ${whereSql}` : ''}
             ${searchSql}
             ${introspectionFilter}
