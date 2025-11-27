@@ -12,11 +12,11 @@
 /connect/ @Aenimus @JivusAyrus @StarpTech @jensneuse @endigma
 /connect-go/ @Aenimus @JivusAyrus @StarpTech @jensneuse @endigma
 /controlplane/ @JivusAyrus @wilsonrivera @StarpTech @thisisnithin
-/graphqlmetrics/ @Noroth @StarpTech @miklosbarabas
-/helm/ @Noroth @StarpTech @miklosbarabas
-/infrastructure/ @Noroth @StarpTech @miklosbarabas
+/graphqlmetrics/ @Noroth @StarpTech
+/helm/ @Noroth @StarpTech
+/infrastructure/ @Noroth @StarpTech
 /keycloak/ @JivusAyrus @wilsonrivera @StarpTech @thisisnithin
-/otelcollector/ @Noroth @StarpTech @miklosbarabas
+/otelcollector/ @Noroth @StarpTech
 /playground/ @wundergraph/Router @thisisnithin @StarpTech
 /proto/ @JivusAyrus @wilsonrivera @StarpTech @endigma
 /protographic/ @Noroth @StarpTech @endigma
