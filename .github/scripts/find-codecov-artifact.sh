@@ -16,6 +16,10 @@
 # Outputs (to $GITHUB_OUTPUT):
 #   artifacts_json: JSON array of objects with run_id, artifact_id, and artifact_name
 #
+
+set -e
+set -o pipefail
+
 REPO="${REPO:?REPO environment variable is required}"
 CURRENT_RUN_ID="${CURRENT_RUN_ID:?CURRENT_RUN_ID environment variable is required}"
 ARTIFACT_NAME_PATTERN="${ARTIFACT_NAME_PATTERN:?ARTIFACT_NAME_PATTERN environment variable is required}"
@@ -115,6 +119,26 @@ fi
 
 # Convert comma-separated workflow paths to JSON array for jq
 workflow_paths_array=$(echo "$WORKFLOW_PATHS" | jq -Rc 'split(",")')
+jq_exit_status=$?
+
+if [ $jq_exit_status -ne 0 ]; then
+  echo "ERROR: Failed to parse WORKFLOW_PATHS into JSON array (exit code: $jq_exit_status)" >&2
+  echo "WORKFLOW_PATHS: $WORKFLOW_PATHS" >&2
+  exit 1
+fi
+
+if [ -z "$workflow_paths_array" ]; then
+  echo "ERROR: workflow_paths_array is empty after jq processing" >&2
+  echo "WORKFLOW_PATHS: $WORKFLOW_PATHS" >&2
+  exit 1
+fi
+
+# Validate the result is valid JSON
+if ! echo "$workflow_paths_array" | jq empty 2>/dev/null; then
+  echo "ERROR: workflow_paths_array is not valid JSON" >&2
+  echo "Output: $workflow_paths_array" >&2
+  exit 1
+fi
 
 echo "Finding runs for workflows: $workflow_paths_array"
 
@@ -131,6 +155,15 @@ run_ids=$(echo "$json" | jq -r --arg cur "$CURRENT_RUN_ID" --argjson workflows "
   | unique
   | .[]
 ')
+jq_exit_status=$?
+
+if [ $jq_exit_status -ne 0 ]; then
+  echo "ERROR: Failed to extract run IDs from workflow runs JSON (exit code: $jq_exit_status)" >&2
+  echo "Input JSON (truncated to 500 chars):" >&2
+  echo "$json" | head -c 500 >&2
+  echo "" >&2
+  exit 1
+fi
 
 if [ -z "$run_ids" ]; then
   echo "No previous successful PR runs found for $HEAD_SHA matching specified workflows" >&2
@@ -146,10 +179,25 @@ for run_id in $run_ids; do
   echo "Fetching artifacts for run id: $run_id"
 
   # Get artifacts for that run
-  artifacts_json=$(curl -s \
+  artifacts_json=$(curl -sf \
     -H "Authorization: Bearer $GITHUB_TOKEN" \
     -H "Accept: application/vnd.github+json" \
     "https://api.github.com/repos/$REPO/actions/runs/$run_id/artifacts")
+  curl_exit_status=$?
+
+  if [ $curl_exit_status -ne 0 ]; then
+    echo "ERROR: Failed to fetch artifacts for run $run_id (curl exit code: $curl_exit_status)" >&2
+    exit 1
+  fi
+
+  # Validate artifacts_json is valid JSON
+  if ! echo "$artifacts_json" | jq empty 2>/dev/null; then
+    echo "ERROR: Invalid JSON received from artifacts API for run $run_id" >&2
+    echo "Response (truncated to 500 chars):" >&2
+    echo "$artifacts_json" | head -c 500 >&2
+    echo "" >&2
+    exit 1
+  fi
 
   # Find all artifacts matching the pattern
   matching_artifacts=$(echo "$artifacts_json" | jq --arg pattern "$ARTIFACT_NAME_PATTERN" --arg run "$run_id" '
@@ -162,9 +210,33 @@ for run_id in $run_ids; do
         created_at: .created_at
       })
   ')
+  jq_exit_status=$?
+
+  if [ $jq_exit_status -ne 0 ]; then
+    echo "ERROR: Failed to extract matching artifacts for run $run_id (exit code: $jq_exit_status)" >&2
+    echo "Artifacts JSON (truncated to 500 chars):" >&2
+    echo "$artifacts_json" | head -c 500 >&2
+    echo "" >&2
+    exit 1
+  fi
+
+  # Validate matching_artifacts is valid JSON
+  if ! echo "$matching_artifacts" | jq empty 2>/dev/null; then
+    echo "ERROR: matching_artifacts is not valid JSON for run $run_id" >&2
+    echo "Output (truncated to 500 chars):" >&2
+    echo "$matching_artifacts" | head -c 500 >&2
+    echo "" >&2
+    exit 1
+  fi
 
   # Merge with collected artifacts
   all_artifacts=$(echo "$all_artifacts" | jq --argjson new "$matching_artifacts" '. + $new')
+  jq_exit_status=$?
+
+  if [ $jq_exit_status -ne 0 ]; then
+    echo "ERROR: Failed to merge artifacts for run $run_id (exit code: $jq_exit_status)" >&2
+    exit 1
+  fi
 done
 
 # Sort by created_at and ensure we have at least one artifact
@@ -181,6 +253,34 @@ echo "Found $artifact_count matching artifacts"
 # Output the JSON array
 echo "$all_artifacts" | jq -c 'sort_by(.created_at)'
 
-# Write to GitHub output as a single-line JSON string
+# Write to GitHub output as a single-line JSON string with validation
 artifacts_output=$(echo "$all_artifacts" | jq -c 'sort_by(.created_at)')
+jq_exit_status=$?
+
+# Validate jq succeeded
+if [ $jq_exit_status -ne 0 ]; then
+  echo "ERROR: jq failed to process artifacts JSON (exit code: $jq_exit_status)" >&2
+  echo "Input JSON (truncated to 500 chars):" >&2
+  echo "$all_artifacts" | head -c 500 >&2
+  echo "" >&2
+  exit 1
+fi
+
+# Ensure output is non-empty
+if [ -z "$artifacts_output" ]; then
+  echo "ERROR: jq produced empty output" >&2
+  echo "Input JSON: $all_artifacts" >&2
+  exit 1
+fi
+
+# Validate output is parseable JSON
+if ! echo "$artifacts_output" | jq empty 2>/dev/null; then
+  echo "ERROR: jq produced invalid JSON" >&2
+  echo "Output (truncated to 500 chars):" >&2
+  echo "$artifacts_output" | head -c 500 >&2
+  echo "" >&2
+  exit 1
+fi
+
+# All validations passed, write to GitHub output
 echo "artifacts_json=$artifacts_output" >> "$GITHUB_OUTPUT"
