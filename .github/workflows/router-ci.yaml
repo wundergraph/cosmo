@@ -450,7 +450,7 @@ jobs:
         uses: ./.github/actions/codecov-merge-upload
         with:
           artifact-name: pr-build
-          coverage-path: cli/coverage
+          coverage-path: router-tests
           workflow-path: .github/workflows/cli-ci.yaml
           override-commit: 2be5a84f75694cc6e7a99960be2e8e45b2cd3999
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
