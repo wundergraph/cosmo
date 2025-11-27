@@ -30,7 +30,8 @@ if [ -n "$MERGE_COMMIT_SHA" ]; then
   echo "Merge commit SHA provided: $MERGE_COMMIT_SHA"
   echo "Looking up PR for merge commit..."
 
-  # Search for PRs that were merged with this commit (with retry logic for timing issues)
+  # Search for PRs that were merged with this commit (with retry logic for timing issues as github might
+  # take some time to index the new PR-commit association)
   max_retries=5
   retry_count=0
   pr_json=""
@@ -82,6 +83,7 @@ if [ -n "$MERGE_COMMIT_SHA" ]; then
   ')
 
   # If no exact match, fall back to the first merged PR
+  # This is useful for keeping codecov updated in case of direct pushes
   if [ -z "$HEAD_SHA" ] || [ "$HEAD_SHA" = "null" ]; then
     echo "No exact merge commit match, trying first merged PR..."
     HEAD_SHA=$(echo "$pr_json" | jq -r '
