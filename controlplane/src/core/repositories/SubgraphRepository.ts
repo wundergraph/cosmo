@@ -53,7 +53,7 @@ import { RBACEvaluator } from '../services/RBACEvaluator.js';
 import {
   collectOperationUsageStats,
   InspectorOperationResult,
-  InspectorSchemaChange,
+  InspectorSchemaChangeGroup,
   SchemaUsageTrafficInspector,
 } from '../services/SchemaUsageTrafficInspector.js';
 import {
@@ -2003,7 +2003,7 @@ export class SubgraphRepository {
     const compositionErrors: PlainMessage<CompositionError>[] = [];
     const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
 
-    let inspectorChanges: InspectorSchemaChange[] = [];
+    let inspectorChanges: InspectorSchemaChangeGroup[] = [];
 
     // For operations checks we only consider breaking changes
     inspectorChanges = trafficInspector.schemaChangesToInspectorChanges(
@@ -2037,7 +2037,12 @@ export class SubgraphRepository {
           3. When user wants to skip the traffic check altogether
           That means any breaking change is really breaking
           */
-      if (composedGraph.errors.length > 0 || inspectorChanges.length === 0 || skipTrafficCheck || !subgraph) {
+      if (
+        composedGraph.errors.length > 0 ||
+        inspectorChanges.every((group) => group.changes.length === 0) ||
+        skipTrafficCheck ||
+        !subgraph
+      ) {
         continue;
       }
 

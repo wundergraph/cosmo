@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { buildSchema, GraphQLSchema } from 'graphql';
 import { getSchemaDiff } from '../composition/schemaCheck.js';
-import { InspectorSchemaChange, toInspectorChange } from './SchemaUsageTrafficInspector.js';
+import { InspectorSchemaChange, InspectorSchemaChangeGroup, toInspectorChange } from './SchemaUsageTrafficInspector.js';
 
 describe('Schema Change converter', (ctx) => {
   describe('Arguments', (ctx) => {
@@ -21,9 +21,7 @@ describe('Schema Change converter', (ctx) => {
 
       expect(changes).toEqual<InspectorSchemaChange[]>([
         {
-          isArgument: true,
-          path: ['a', 'b'],
-          schemaChangeId: '0',
+          path: ['a'],
           typeName: 'Query',
         },
       ]);
@@ -51,10 +49,152 @@ describe('Schema Change converter', (ctx) => {
 
       expect(changes).toEqual<InspectorSchemaChange[]>([
         {
-          isArgument: true,
-          path: ['details', 'all'],
-          schemaChangeId: '0',
+          path: ['details'],
           typeName: 'Rocket',
+        },
+      ]);
+    });
+
+    test('Remove a required argument', async () => {
+      const a = buildSchema(/* GraphQL */ `
+        type Query {
+          a(b: Boolean!): String
+        }
+      `);
+      const b = buildSchema(/* GraphQL */ `
+        type Query {
+          a: String
+        }
+      `);
+
+      const changes = await getBreakingChanges(a, b);
+
+      expect(changes).toEqual<InspectorSchemaChange[]>([
+        {
+          path: ['a'],
+          typeName: 'Query',
+        },
+      ]);
+    });
+
+    test('Remove an optional argument', async () => {
+      const a = buildSchema(/* GraphQL */ `
+        type Query {
+          a(b: Boolean): String
+        }
+      `);
+      const b = buildSchema(/* GraphQL */ `
+        type Query {
+          a: String
+        }
+      `);
+
+      const changes = await getBreakingChanges(a, b);
+
+      expect(changes).toEqual<InspectorSchemaChange[]>([
+        {
+          path: ['a', 'b'],
+          typeName: 'Query',
+          isArgument: true,
+          isNull: false,
+        },
+      ]);
+    });
+
+    test('Change argument type from optional same to required same', async () => {
+      const a = buildSchema(/* GraphQL */ `
+        type Query {
+          a(b: Boolean): String
+        }
+      `);
+      const b = buildSchema(/* GraphQL */ `
+        type Query {
+          a(b: Boolean!): String
+        }
+      `);
+
+      const changes = await getBreakingChanges(a, b);
+
+      expect(changes).toEqual<InspectorSchemaChange[]>([
+        {
+          path: ['a', 'b'],
+          typeName: 'Query',
+          fieldName: 'a',
+          isArgument: true,
+          isNull: true,
+        },
+      ]);
+    });
+
+    test('Change argument type from optional different to required different', async () => {
+      const a = buildSchema(/* GraphQL */ `
+        type Query {
+          a(b: Boolean): String
+        }
+      `);
+      const b = buildSchema(/* GraphQL */ `
+        type Query {
+          a(b: String!): String
+        }
+      `);
+
+      const changes = await getBreakingChanges(a, b);
+
+      expect(changes).toEqual<InspectorSchemaChange[]>([
+        {
+          path: ['a', 'b'],
+          typeName: 'Query',
+          fieldName: 'a',
+          isArgument: true,
+        },
+      ]);
+    });
+
+    test('Change argument type from required different to required different', async () => {
+      const a = buildSchema(/* GraphQL */ `
+        type Query {
+          a(b: Boolean!): String
+        }
+      `);
+      const b = buildSchema(/* GraphQL */ `
+        type Query {
+          a(b: String!): String
+        }
+      `);
+
+      const changes = await getBreakingChanges(a, b);
+
+      expect(changes).toEqual<InspectorSchemaChange[]>([
+        {
+          path: ['a', 'b'],
+          typeName: 'Query',
+          fieldName: 'a',
+          isArgument: true,
+        },
+      ]);
+    });
+
+    test('Change argument type from optional different to optional different', async () => {
+      const a = buildSchema(/* GraphQL */ `
+        type Query {
+          a(b: Boolean): String
+        }
+      `);
+      const b = buildSchema(/* GraphQL */ `
+        type Query {
+          a(b: String): String
+        }
+      `);
+
+      const changes = await getBreakingChanges(a, b);
+
+      expect(changes).toEqual<InspectorSchemaChange[]>([
+        {
+          path: ['a', 'b'],
+          typeName: 'Query',
+          fieldName: 'a',
+          isArgument: true,
+          isNull: false,
         },
       ]);
     });
@@ -78,15 +218,36 @@ describe('Schema Change converter', (ctx) => {
 
       expect(changes).toEqual<InspectorSchemaChange[]>([
         {
-          fieldName: 'b',
+          path: ['Foo'],
           isInput: true,
-          schemaChangeId: '0',
-          typeName: 'Foo',
         },
       ]);
     });
 
-    test('Change the type of an Input field', async () => {
+    test('Remove an Input field', async () => {
+      const a = buildSchema(/* GraphQL */ `
+        input Foo {
+          a: String!
+          b: String!
+        }
+      `);
+      const b = buildSchema(/* GraphQL */ `
+        input Foo {
+          a: String!
+        }
+      `);
+
+      const changes = await getBreakingChanges(a, b);
+
+      expect(changes).toEqual<InspectorSchemaChange[]>([
+        {
+          path: ['Foo'],
+          isInput: true,
+        },
+      ]);
+    });
+
+    test('Change input field type from required different to required different', async () => {
       const a = buildSchema(/* GraphQL */ `
         input Foo {
           a: String!
@@ -102,10 +263,83 @@ describe('Schema Change converter', (ctx) => {
 
       expect(changes).toEqual<InspectorSchemaChange[]>([
         {
+          path: ['Foo'],
+          isInput: true,
+        },
+      ]);
+    });
+
+    test('Change input field type from optional same to required same', async () => {
+      const a = buildSchema(/* GraphQL */ `
+        input Foo {
+          a: String
+        }
+      `);
+      const b = buildSchema(/* GraphQL */ `
+        input Foo {
+          a: String!
+        }
+      `);
+
+      const changes = await getBreakingChanges(a, b);
+
+      expect(changes).toEqual<InspectorSchemaChange[]>([
+        {
+          typeName: 'Foo',
           fieldName: 'a',
           isInput: true,
-          schemaChangeId: '0',
+          isNull: true,
+        },
+        {
+          path: ['Foo'],
+          isInput: true,
+          isNull: true,
+        },
+      ]);
+    });
+
+    test('Change input field type from optional different to required different', async () => {
+      const a = buildSchema(/* GraphQL */ `
+        input Foo {
+          a: String
+        }
+      `);
+      const b = buildSchema(/* GraphQL */ `
+        input Foo {
+          a: Int!
+        }
+      `);
+
+      const changes = await getBreakingChanges(a, b);
+
+      expect(changes).toEqual<InspectorSchemaChange[]>([
+        {
+          path: ['Foo'],
+          isInput: true,
+        },
+      ]);
+    });
+
+    test('Change input field type from optional different to optional different', async () => {
+      const a = buildSchema(/* GraphQL */ `
+        input Foo {
+          a: String
+        }
+      `);
+      const b = buildSchema(/* GraphQL */ `
+        input Foo {
+          a: Int
+        }
+      `);
+
+      const changes = await getBreakingChanges(a, b);
+
+      expect(changes).toEqual<InspectorSchemaChange[]>([
+        {
           typeName: 'Foo',
+          fieldName: 'a',
+          isInput: true,
+          isNull: false,
         },
       ]);
     });
@@ -131,12 +365,10 @@ describe('Schema Change converter', (ctx) => {
 
       expect(changes).toEqual<InspectorSchemaChange[]>([
         {
-          schemaChangeId: '0',
           typeName: 'Rocket',
         },
         {
           fieldName: 'a',
-          schemaChangeId: '1',
           typeName: 'Query',
         },
       ]);
@@ -171,7 +403,6 @@ describe('Schema Change converter', (ctx) => {
       expect(changes).toEqual<InspectorSchemaChange[]>([
         {
           namedType: 'enumA',
-          schemaChangeId: '0',
         },
       ]);
     });
@@ -199,7 +430,7 @@ describe('Schema Change converter', (ctx) => {
 
 async function getBreakingChanges(a: GraphQLSchema, b: GraphQLSchema): Promise<InspectorSchemaChange[]> {
   const changes = await getSchemaDiff(a, b);
-  return changes
+  const groups = changes
     .map((c, i) =>
       toInspectorChange(
         {
@@ -211,5 +442,12 @@ async function getBreakingChanges(a: GraphQLSchema, b: GraphQLSchema): Promise<I
         i.toString(),
       ),
     )
-    .filter((c) => c !== null) as InspectorSchemaChange[];
+    .filter((c) => c !== null) as InspectorSchemaChangeGroup[];
+
+  // Flatten groups
+  const result: InspectorSchemaChange[] = [];
+  for (const group of groups) {
+    result.push(...group.changes);
+  }
+  return result;
 }

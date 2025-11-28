@@ -3,14 +3,179 @@ import { ClickHouseClient } from '../clickhouse/index.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
 import { SchemaCheckChangeAction } from '../../db/models.js';
 
+export enum FieldTypeChangeCategory {
+  /**
+   * Optional same type -> Required same type
+   * Example: "Boolean" -> "Boolean!"
+   */
+  OPTIONAL_SAME_TO_REQUIRED_SAME = 'OPTIONAL_SAME_TO_REQUIRED_SAME',
+  /**
+   * Optional different type -> Required different type
+   * Example: "Boolean" -> "String!"
+   */
+  OPTIONAL_DIFFERENT_TO_REQUIRED_DIFFERENT = 'OPTIONAL_DIFFERENT_TO_REQUIRED_DIFFERENT',
+  /**
+   * Required different type -> Required different type
+   * Example: "Boolean!" -> "String!"
+   */
+  REQUIRED_DIFFERENT_TO_REQUIRED_DIFFERENT = 'REQUIRED_DIFFERENT_TO_REQUIRED_DIFFERENT',
+  /**
+   * Optional different type -> Optional different type
+   * Example: "Boolean" -> "String"
+   */
+  OPTIONAL_DIFFERENT_TO_OPTIONAL_DIFFERENT = 'OPTIONAL_DIFFERENT_TO_OPTIONAL_DIFFERENT',
+}
+
+/**
+ * Extract base types by removing:
+ * - Trailing "!" (required indicator)
+ * - Array brackets like "[Boolean!]" -> "Boolean!"
+ * - Inner "!" from arrays like "[Boolean!]" -> "Boolean"
+ */
+function extractBaseType(type: string): string {
+  let base = type.trim();
+
+  // Remove trailing "!"
+  if (base.endsWith('!')) {
+    base = base.slice(0, -1).trim();
+  }
+
+  // Handle array types like "[Boolean!]" or "[Boolean!]!"
+  // Remove outer brackets and inner "!"
+  if (base.startsWith('[') && base.endsWith(']')) {
+    base = base.slice(1, -1).trim();
+    // Remove inner "!" if present
+    if (base.endsWith('!')) {
+      base = base.slice(0, -1).trim();
+    }
+  }
+
+  return base;
+}
+
+/**
+ * Normalize type for structural comparison (remove required indicators but keep structure)
+ */
+function normalizeType(type: string): string {
+  let normalized = type.trim();
+  // Remove trailing "!" but keep array structure
+  if (normalized.endsWith('!')) {
+    normalized = normalized.slice(0, -1).trim();
+  }
+  return normalized;
+}
+
+/**
+ * Parses an argument removal message and determines if the argument was required.
+ *
+ * @param message - String in format: "Argument 'name: Type' was removed from field 'TypeName.fieldName'"
+ * @returns true if the argument was required (type ends with '!'), false if optional
+ *
+ * @example
+ * parseArgumentRemoval("Argument 'criteria: SearchInput!' was removed from field 'Query.findEmployees'")
+ * // Returns true (required)
+ *
+ * @example
+ * parseArgumentRemoval("Argument 'criteria: SearchInput' was removed from field 'Query.findEmployees'")
+ * // Returns false (optional)
+ */
+export function parseArgumentRemoval(message: string): boolean {
+  // Extract the argument type from the message
+  // Format: "Argument 'name: Type' was removed from field '...'"
+  const match = message.match(/Argument '([^:]+):\s*([^']+)' was removed/);
+
+  if (!match || match.length < 3) {
+    throw new Error(`Invalid argument removal message format: ${message}`);
+  }
+
+  const argumentType = match[2].trim();
+
+  // Check if the type ends with "!" to determine if it was required
+  return argumentType.endsWith('!');
+}
+
+/**
+ * Parses a type change message (for both input fields and arguments) and categorizes it into one of the FieldTypeChangeCategory cases.
+ * Supports two message formats:
+ * - "Input field 'TypeName.fieldName' changed type from 'FromType' to 'ToType'"
+ * - "Type for argument 'name' on field 'TypeName.fieldName' changed from 'FromType' to 'ToType'"
+ *
+ * @param message - String in either format above
+ * @returns The category of the type change
+ *
+ * @example
+ * parseTypeChange("Input field 'SearchInput.hasPets' changed type from 'Boolean!' to '[Boolean!]!'")
+ * // Returns FieldTypeChangeCategory.REQUIRED_DIFFERENT_TO_REQUIRED_DIFFERENT
+ *
+ * @example
+ * parseTypeChange("Type for argument 'criteria' on field 'Query.findEmployees' changed from 'SearchInput' to 'SearchInput!'")
+ * // Returns FieldTypeChangeCategory.OPTIONAL_SAME_TO_REQUIRED_SAME
+ */
+export function parseTypeChange(message: string): FieldTypeChangeCategory {
+  // Try both patterns: "changed type from" (input fields) and "changed from" (arguments)
+  const match =
+    message.match(/changed type from '([^']+)' to '([^']+)'/) || message.match(/changed from '([^']+)' to '([^']+)'/);
+
+  if (!match || match.length < 3) {
+    throw new Error(`Invalid type change message format: ${message}`);
+  }
+
+  const fromType = match[1];
+  const toType = match[2];
+
+  // Determine if types are required (end with "!")
+  const fromRequired = fromType.endsWith('!');
+  const toRequired = toType.endsWith('!');
+
+  const fromBaseType = extractBaseType(fromType);
+  const toBaseType = extractBaseType(toType);
+  const fromNormalized = normalizeType(fromType);
+  const toNormalized = normalizeType(toType);
+
+  // Check if base types are the same AND structure is the same
+  const sameBaseType = fromBaseType === toBaseType;
+  const sameStructure = fromNormalized === toNormalized;
+
+  // Types are considered "same" only if both base type and structure match
+  const sameType = sameBaseType && sameStructure;
+
+  // Categorize based on the 4 cases
+  if (sameType && !fromRequired && toRequired) {
+    // Case 1: Optional same type -> Required same type
+    // Example: "Boolean" -> "Boolean!"
+    return FieldTypeChangeCategory.OPTIONAL_SAME_TO_REQUIRED_SAME;
+  } else if (!sameType && !fromRequired && toRequired) {
+    // Case 2: Optional different type -> Required different type
+    // Example: "Boolean" -> "String!"
+    return FieldTypeChangeCategory.OPTIONAL_DIFFERENT_TO_REQUIRED_DIFFERENT;
+  } else if (!sameType && fromRequired && toRequired) {
+    // Case 3: Required different type -> Required different type
+    // Example: "Boolean!" -> "String!"
+    return FieldTypeChangeCategory.REQUIRED_DIFFERENT_TO_REQUIRED_DIFFERENT;
+  } else if (!sameType && !fromRequired && !toRequired) {
+    // Case 4: Optional different type -> Optional different type
+    // Example: "Boolean" -> "String"
+    return FieldTypeChangeCategory.OPTIONAL_DIFFERENT_TO_OPTIONAL_DIFFERENT;
+  } else {
+    // Edge case: same type, from required, to optional (shouldn't happen in breaking changes)
+    // Fallback to same type becoming required
+    return FieldTypeChangeCategory.OPTIONAL_SAME_TO_REQUIRED_SAME;
+  }
+}
+
 export interface InspectorSchemaChange {
-  schemaChangeId: string;
   typeName?: string;
   namedType?: string;
   fieldName?: string;
   path?: string[];
   isInput?: boolean;
   isArgument?: boolean;
+  isNull?: boolean;
+}
+
+export interface InspectorSchemaChangeGroup {
+  schemaChangeId: string;
+  changes: InspectorSchemaChange[];
 }
 
 export interface InspectorFilter {
@@ -36,40 +201,54 @@ export class SchemaUsageTrafficInspector {
   /**
    * Inspect the usage of a schema change in the last X days on real traffic and return the
    * affected operations. We will consider all available compositions.
+   * @param changes - Array of change groups, where each group contains changes that should be queried together with OR conditions
    */
   public async inspect(
-    changes: InspectorSchemaChange[],
+    changes: InspectorSchemaChangeGroup[],
     filter: InspectorFilter,
   ): Promise<Map<string, InspectorOperationResult[]>> {
     const results: Map<string, InspectorOperationResult[]> = new Map();
 
-    for (const change of changes) {
-      const where: string[] = [];
-      // Used for arguments usage check
-      if (change.path) {
-        where.push(
-          `startsWith(Path, [${change.path.map((seg) => `'${seg}'`).join(',')}]) AND length(Path) = ${
-            change.path.length
-          }`,
-        );
+    for (const changeGroup of changes) {
+      if (changeGroup.changes.length === 0) {
+        continue;
       }
-      if (change.namedType) {
-        where.push(`NamedType = '${change.namedType}'`);
-      }
-      if (change.typeName) {
-        where.push(`hasAny(TypeNames, ['${change.typeName}'])`);
-      }
-      // fieldName can be empty if a type was removed
-      if (change.fieldName) {
-        where.push(`FieldName = '${change.fieldName}'`);
-      }
-      if (change.isInput) {
-        where.push(`IsInput = true`);
-      } else if (change.isArgument) {
-        where.push(`IsArgument = true`);
-      }
-      where.push(`IsIndirectFieldUsage = false`);
 
+      // Build OR conditions for each change in the group
+      const orConditions: string[] = [];
+
+      for (const change of changeGroup.changes) {
+        const where: string[] = [];
+        // Used for arguments usage check
+        if (change.path) {
+          where.push(
+            `startsWith(Path, [${change.path.map((seg) => `'${seg}'`).join(',')}]) AND length(Path) = ${
+              change.path.length
+            }`,
+          );
+        }
+        if (change.namedType) {
+          where.push(`NamedType = '${change.namedType}'`);
+        }
+        if (change.typeName) {
+          where.push(`hasAny(TypeNames, ['${change.typeName}'])`);
+        }
+        // fieldName can be empty if a type was removed
+        if (change.fieldName) {
+          where.push(`FieldName = '${change.fieldName}'`);
+        }
+        if (change.isInput) {
+          where.push(`IsInput = true`);
+        } else if (change.isArgument) {
+          where.push(`IsArgument = true`);
+        }
+        where.push(`IsIndirectFieldUsage = false`);
+
+        // Combine all conditions for this change with AND, then wrap in parentheses for OR grouping
+        orConditions.push(`(${where.join(' AND ')})`);
+      }
+
+      // Build the query with OR conditions for all changes in the group
       const query = `
         SELECT OperationHash as operationHash,
                last_value(OperationType) as operationType,
@@ -83,7 +262,7 @@ export class SchemaUsageTrafficInspector {
           FederatedGraphID = '${filter.federatedGraphId}' AND
           hasAny(SubgraphIDs, ['${filter.subgraphId}']) AND
           OrganizationID = '${filter.organizationId}' AND
-          ${where.join(' AND ')}
+          (${orConditions.join(' OR ')})
         GROUP BY OperationHash
     `;
 
@@ -97,7 +276,7 @@ export class SchemaUsageTrafficInspector {
 
       if (Array.isArray(res)) {
         const ops = res.map((r) => ({
-          schemaChangeId: change.schemaChangeId,
+          schemaChangeId: changeGroup.schemaChangeId,
           hash: r.operationHash,
           name: r.operationName,
           type: r.operationType,
@@ -107,7 +286,7 @@ export class SchemaUsageTrafficInspector {
         }));
 
         if (ops.length > 0) {
-          results.set(change.schemaChangeId, [...(results.get(change.schemaChangeId) || []), ...ops]);
+          results.set(changeGroup.schemaChangeId, [...(results.get(changeGroup.schemaChangeId) || []), ...ops]);
         }
       }
     }
@@ -118,11 +297,12 @@ export class SchemaUsageTrafficInspector {
   /**
    * Convert schema changes to inspector changes. Will ignore a change if it is not inspectable.
    * Ultimately, will result in a breaking change because the change is not inspectable with the current implementation.
+   * Returns an array of change groups, where each group contains changes that should be queried together with OR conditions.
    */
   public schemaChangesToInspectorChanges(
     schemaChanges: SchemaDiff[],
     schemaCheckActions: SchemaCheckChangeAction[],
-  ): InspectorSchemaChange[] {
+  ): InspectorSchemaChangeGroup[] {
     const operations = schemaChanges
       .map((change) => {
         // find the schema check action that matches the change
@@ -135,7 +315,7 @@ export class SchemaUsageTrafficInspector {
         }
         return toInspectorChange(change, schemaCheckAction.id);
       })
-      .filter((change) => change !== null) as InspectorSchemaChange[];
+      .filter((change) => change !== null) as InspectorSchemaChangeGroup[];
 
     return operations;
   }
@@ -192,8 +372,9 @@ export function collectOperationUsageStats(inspectorResult: InspectorOperationRe
 /**
  * Convert a schema change to an inspector change. Throws an error if the change is not supported.
  * Only breaking changes should be passed to this function because we only care about breaking changes.
+ * Returns a group of changes that should be queried together in a single query with OR conditions.
  */
-export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): InspectorSchemaChange | null {
+export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): InspectorSchemaChangeGroup | null {
   const path = change.path.split('.');
 
   switch (change.changeType) {
@@ -275,7 +456,11 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
     case ChangeType.ObjectTypeInterfaceRemoved: {
       return {
         schemaChangeId: schemaCheckId,
-        typeName: path[0],
+        changes: [
+          {
+            typeName: path[0],
+          },
+        ],
       };
     }
     // 1. When a field is removed we know the exact type and field name e.g. 'Engineer.name'
@@ -284,8 +469,12 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
     case ChangeType.FieldTypeChanged: {
       return {
         schemaChangeId: schemaCheckId,
-        typeName: path[0],
-        fieldName: path[1],
+        changes: [
+          {
+            typeName: path[0],
+            fieldName: path[1],
+          },
+        ],
       };
     }
     // 1. When an enum value is added or removed, we only know the affected type. This is fine because any change to an enum value is breaking.
@@ -295,41 +484,214 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
     case ChangeType.EnumValueRemoved: {
       return {
         schemaChangeId: schemaCheckId,
-        namedType: path[0],
+        changes: [
+          {
+            namedType: path[0],
+          },
+        ],
       };
     }
     // 1. When the type of input field has changed, we know the exact type name and field name e.g. 'MyInput.name'
-    case ChangeType.InputFieldTypeChanged:
+    case ChangeType.InputFieldTypeChanged: {
+      const inputFieldTypeChangeCategory = parseTypeChange(change.message);
+      switch (inputFieldTypeChangeCategory) {
+        case FieldTypeChangeCategory.OPTIONAL_SAME_TO_REQUIRED_SAME: {
+          // Int -> Int!
+          return {
+            schemaChangeId: schemaCheckId,
+            changes: [
+              // if the input is used and the field is not passed,
+              // but now that it is required, its breaking
+              {
+                typeName: path[0],
+                fieldName: path[1],
+                isInput: true,
+                isNull: true,
+              },
+              // thic case will handle when the entire input is passed as null or not passed at all
+              {
+                path: [path[0]],
+                isInput: true,
+                isNull: true,
+              },
+            ],
+          };
+        }
+        case FieldTypeChangeCategory.OPTIONAL_DIFFERENT_TO_REQUIRED_DIFFERENT: {
+          // Int -> Float!
+          // in this case, all the ops which have this input type are breaking
+          return {
+            schemaChangeId: schemaCheckId,
+            changes: [
+              {
+                path: [path[0]],
+                isInput: true,
+              },
+            ],
+          };
+        }
+        case FieldTypeChangeCategory.REQUIRED_DIFFERENT_TO_REQUIRED_DIFFERENT: {
+          // Int! -> Float!
+          // in this case, all the ops which have this input type are breaking
+          return {
+            schemaChangeId: schemaCheckId,
+            changes: [
+              {
+                path: [path[0]],
+                isInput: true,
+              },
+            ],
+          };
+        }
+        case FieldTypeChangeCategory.OPTIONAL_DIFFERENT_TO_OPTIONAL_DIFFERENT: {
+          // Int -> Float
+          // in this case, any ops which use the input field and are not null are breaking
+          return {
+            schemaChangeId: schemaCheckId,
+            changes: [
+              {
+                typeName: path[0],
+                fieldName: path[1],
+                isInput: true,
+                isNull: false,
+              },
+            ],
+          };
+        }
+        default: {
+          throw new Error(`Unsupported input field type change category: ${FieldTypeChangeCategory}`);
+        }
+      }
+    }
     case ChangeType.InputFieldRemoved:
     case ChangeType.InputFieldAdded: {
+      // in these cases, all the ops which use this input type are breaking
       return {
         schemaChangeId: schemaCheckId,
-        // passing only the type name, as we want to return all the ops which use this input type.
-        typeName: path[0],
-        isInput: true,
+        changes: [
+          {
+            path: [path[0]],
+            isInput: true,
+          },
+        ],
       };
     }
     // 1. When an argument has changed, we know the exact path to the argument e.g. 'Query.engineer.id'
     // and the type name e.g. 'Query'
-    case ChangeType.FieldArgumentRemoved: {
-      return {
-        schemaChangeId: schemaCheckId,
-        path: path.slice(1), // The path to the updated argument e.g. 'engineer.name' of the type names
-        typeName: path[0], // Enclosing type e.g. 'Query' or 'Engineer' when the argument is on a field of type Engineer
-        isArgument: true,
-      };
+    case ChangeType.FieldArgumentTypeChanged: {
+      const argumentTypeChangeCategory = parseTypeChange(change.message);
+      switch (argumentTypeChangeCategory) {
+        case FieldTypeChangeCategory.OPTIONAL_SAME_TO_REQUIRED_SAME: {
+          // SearchInput -> SearchInput!
+          return {
+            schemaChangeId: schemaCheckId,
+            changes: [
+              // if the argument is used and not passed (null),
+              // but now that it is required, its breaking
+              {
+                path: path.slice(1), // The path to the updated argument e.g. 'engineer.name' of the type names
+                typeName: path[0],
+                fieldName: path[2],
+                isArgument: true,
+                isNull: true,
+              },
+            ],
+          };
+        }
+        case FieldTypeChangeCategory.OPTIONAL_DIFFERENT_TO_REQUIRED_DIFFERENT: {
+          // SearchInput -> String!
+          // in this case, all the ops which have this argument are breaking
+          return {
+            schemaChangeId: schemaCheckId,
+            changes: [
+              {
+                path: path.slice(1), // The path to the updated argument e.g. 'engineer.name' of the type names
+                typeName: path[0],
+                fieldName: path[2],
+                isArgument: true,
+              },
+            ],
+          };
+        }
+        case FieldTypeChangeCategory.REQUIRED_DIFFERENT_TO_REQUIRED_DIFFERENT: {
+          // SearchInput! -> String!
+          // in this case, all the ops which have this argument are breaking
+          return {
+            schemaChangeId: schemaCheckId,
+            changes: [
+              {
+                path: path.slice(1), // The path to the updated argument e.g. 'engineer.name' of the type names
+                typeName: path[0],
+                fieldName: path[2],
+                isArgument: true,
+              },
+            ],
+          };
+        }
+        case FieldTypeChangeCategory.OPTIONAL_DIFFERENT_TO_OPTIONAL_DIFFERENT: {
+          // SearchInput -> String
+          // in this case, any ops which use the argument and are not null are breaking
+          return {
+            schemaChangeId: schemaCheckId,
+            changes: [
+              {
+                path: path.slice(1), // The path to the updated argument e.g. 'engineer.name' of the type names
+                typeName: path[0],
+                fieldName: path[2],
+                isArgument: true,
+                isNull: false,
+              },
+            ],
+          };
+        }
+        default: {
+          throw new Error(`Unsupported argument type change category: ${argumentTypeChangeCategory}`);
+        }
+      }
     }
 
-    // Only when a required argument is added or type of an argument has changed to a required type
-    case ChangeType.FieldArgumentAdded:
-    case ChangeType.FieldArgumentTypeChanged: {
+    // Only when a required argument is added
+    case ChangeType.FieldArgumentAdded: {
+      // in this case, all the ops which have this argument are breaking
       return {
         schemaChangeId: schemaCheckId,
-        // The path should be just the query/mutation/subscription name
-        // e.g. if 'Query.employee.a', the path should be ['employee'] as its new field or it has changed the type of the argument, we check the usage of the operation.
-        path: path.slice(1, 2),
-        typeName: path[0], // Enclosing type e.g. 'Query' or 'Engineer' when the argument is on a field of type Engineer
+        changes: [
+          {
+            // e.g. if the path recieved is 'Query.employee.a', the path should be ['employee'] as its new field or it has changed the type of the argument, we check the usage of the operation.
+            path: path.slice(1, 2),
+            typeName: path[0],
+          },
+        ],
       };
+    }
+    case ChangeType.FieldArgumentRemoved: {
+      const isRequired = parseArgumentRemoval(change.message);
+      if (isRequired) {
+        // in this case, all the ops which use this argument are breaking
+        return {
+          schemaChangeId: schemaCheckId,
+          changes: [
+            {
+              // e.g. if the path recieved is 'Query.employee.a', the path should be ['employee'] as its new field or it has changed the type of the argument, we check the usage of the operation.
+              path: path.slice(1, 2),
+              typeName: path[0],
+            },
+          ],
+        };
+      } else {
+        // in this case, any ops which use the argument and are not null are breaking
+        return {
+          schemaChangeId: schemaCheckId,
+          changes: [
+            {
+              path: path.slice(1), // The path to the updated argument e.g. 'engineer.name' of the type names
+              typeName: path[0],
+              isArgument: true,
+              isNull: false,
+            },
+          ],
+        };
+      }
     }
   }
   // no return to enforce that all cases are handled
