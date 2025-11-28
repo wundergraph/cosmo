@@ -225,10 +225,11 @@ func TestExecuteGraphQL(t *testing.T) {
 		variables := json.RawMessage(`{"id":999}`)
 		ctx := context.Background()
 
-		responseJSON, err := handler.executeGraphQL(ctx, query, variables)
+		_, err = handler.executeGraphQL(ctx, query, variables)
 
-		require.NoError(t, err)
-		assert.Contains(t, string(responseJSON), "User not found")
+		// With new error handling, GraphQL errors with no data return Connect errors
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "User not found")
 	})
 
 	t.Run("returns error for HTTP errors", func(t *testing.T) {
@@ -249,7 +250,7 @@ func TestExecuteGraphQL(t *testing.T) {
 		_, err = handler.executeGraphQL(ctx, query, variables)
 
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "GraphQL request failed with status 500")
+		assert.Contains(t, err.Error(), "GraphQL request failed with HTTP 500")
 	})
 
 	t.Run("forwards headers from context", func(t *testing.T) {
