@@ -9,8 +9,48 @@ import (
 	"net/http"
 	"strings"
 
+	"connectrpc.com/connect"
 	"go.uber.org/zap"
 )
+
+// httpStatusToConnectCode maps HTTP status codes to Connect error codes
+// Based on Connect RPC specification and common HTTP status code semantics
+func httpStatusToConnectCode(statusCode int) connect.Code {
+	switch statusCode {
+	case http.StatusBadRequest: // 400
+		return connect.CodeInvalidArgument
+	case http.StatusUnauthorized: // 401
+		return connect.CodeUnauthenticated
+	case http.StatusForbidden: // 403
+		return connect.CodePermissionDenied
+	case http.StatusNotFound: // 404
+		return connect.CodeNotFound
+	case http.StatusConflict: // 409
+		return connect.CodeAborted
+	case http.StatusPreconditionFailed: // 412
+		return connect.CodeFailedPrecondition
+	case http.StatusRequestEntityTooLarge: // 413
+		return connect.CodeResourceExhausted
+	case http.StatusRequestedRangeNotSatisfiable: // 416
+		return connect.CodeOutOfRange
+	case http.StatusTooManyRequests: // 429
+		return connect.CodeResourceExhausted
+	case http.StatusRequestTimeout: // 408
+		return connect.CodeDeadlineExceeded
+	case http.StatusGatewayTimeout: // 504
+		return connect.CodeDeadlineExceeded
+	case http.StatusNotImplemented: // 501
+		return connect.CodeUnimplemented
+	case http.StatusServiceUnavailable: // 503
+		return connect.CodeUnavailable
+	case http.StatusInternalServerError: // 500
+		return connect.CodeInternal
+	default:
+		// For any other status code (including 2xx success codes),
+		// return CodeUnknown as a safe default
+		return connect.CodeUnknown
+	}
+}
 
 // requestHeadersKey is a custom context key for storing request headers
 type requestHeadersKey struct{}
@@ -59,9 +99,18 @@ type GraphQLRequest struct {
 	Variables json.RawMessage `json:"variables,omitempty"`
 }
 
+// GraphQLErrorLocation represents the location of an error in the GraphQL query
+type GraphQLErrorLocation struct {
+	Line   int `json:"line"`
+	Column int `json:"column"`
+}
+
 // GraphQLError represents an error returned in a GraphQL response
 type GraphQLError struct {
-	Message string `json:"message"`
+	Message    string                 `json:"message"`
+	Path       []interface{}          `json:"path,omitempty"`
+	Locations  []GraphQLErrorLocation `json:"locations,omitempty"`
+	Extensions map[string]interface{} `json:"extensions,omitempty"`
 }
 
 // GraphQLResponse represents a GraphQL response structure
@@ -276,38 +325,112 @@ func (h *RPCHandler) executeGraphQL(ctx context.Context, query string, variables
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	// Check for HTTP errors
+	// Check for HTTP errors (non-2xx status codes)
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("GraphQL request failed with status %d: %s", resp.StatusCode, string(responseBody))
+		// Map HTTP status to Connect error code
+		code := httpStatusToConnectCode(resp.StatusCode)
+		
+		// Create Connect error with metadata
+		connectErr := connect.NewError(code, fmt.Errorf("GraphQL request failed with HTTP %d", resp.StatusCode))
+		connectErr.Meta().Set("error-classification", "CRITICAL")
+		connectErr.Meta().Set("http-status", fmt.Sprintf("%d", resp.StatusCode))
+		connectErr.Meta().Set("http-response-body", string(responseBody))
+		
+		h.logger.Error("HTTP error from GraphQL endpoint",
+			zap.Int("status_code", resp.StatusCode),
+			zap.String("connect_code", code.String()),
+			zap.String("response_body", string(responseBody)))
+		
+		return nil, connectErr
 	}
 
-	// Parse the GraphQL response to unwrap the data field
+	// Parse the GraphQL response to check for errors
 	var graphqlResponse GraphQLResponse
 	if err := json.Unmarshal(responseBody, &graphqlResponse); err != nil {
-		// If we can't parse it, return the raw response
+		// If we can't parse it, return the raw response (backward compatibility)
 		h.logger.Warn("failed to parse GraphQL response", zap.Error(err))
 		return responseBody, nil
 	}
 
-	// Log GraphQL errors if present
+	// Check if we have GraphQL errors
 	if len(graphqlResponse.Errors) > 0 {
-		var errorMessages []string
-		for _, gqlErr := range graphqlResponse.Errors {
-			errorMessages = append(errorMessages, gqlErr.Message)
+		// Determine if this is CRITICAL or NON-CRITICAL based on data presence
+		hasData := len(graphqlResponse.Data) > 0 && string(graphqlResponse.Data) != "null" && string(graphqlResponse.Data) != "{}"
+		
+		if !hasData {
+			// CRITICAL: Errors with no data - complete failure
+			// This follows Relay's error classification pattern
+			
+			// Serialize GraphQL errors to JSON for metadata
+			errorsJSON, _ := json.Marshal(graphqlResponse.Errors)
+			
+			// Create Connect error with CRITICAL classification
+			// Use CodeUnknown for GraphQL errors (not CodeInternal which implies server bugs)
+			connectErr := connect.NewError(
+				connect.CodeUnknown,
+				fmt.Errorf("GraphQL operation failed: %s", graphqlResponse.Errors[0].Message),
+			)
+			connectErr.Meta().Set("error-classification", "CRITICAL")
+			connectErr.Meta().Set("graphql-errors", string(errorsJSON))
+			connectErr.Meta().Set("http-status", fmt.Sprintf("%d", resp.StatusCode))
+			
+			// Log all error messages
+			var errorMessages []string
+			for _, gqlErr := range graphqlResponse.Errors {
+				errorMessages = append(errorMessages, gqlErr.Message)
+			}
+			h.logger.Error("CRITICAL GraphQL errors - no data returned",
+				zap.Strings("error_messages", errorMessages),
+				zap.Int("error_count", len(graphqlResponse.Errors)))
+			
+			return nil, connectErr
+		} else {
+			// NON-CRITICAL: Errors with partial data - partial success
+			// This follows Relay's pattern for field-level errors
+			
+			// Serialize both errors and data for metadata
+			errorsJSON, _ := json.Marshal(graphqlResponse.Errors)
+			
+			// Compact the partial data JSON to remove whitespace
+			var compactData bytes.Buffer
+			if err := json.Compact(&compactData, graphqlResponse.Data); err == nil {
+				graphqlResponse.Data = compactData.Bytes()
+			}
+			
+			// Create Connect error with NON-CRITICAL classification
+			connectErr := connect.NewError(
+				connect.CodeUnknown, // Use Unknown for partial failures
+				fmt.Errorf("GraphQL partial success with errors"),
+			)
+			connectErr.Meta().Set("error-classification", "NON-CRITICAL")
+			connectErr.Meta().Set("graphql-errors", string(errorsJSON))
+			connectErr.Meta().Set("graphql-partial-data", string(graphqlResponse.Data))
+			connectErr.Meta().Set("http-status", fmt.Sprintf("%d", resp.StatusCode))
+			
+			// Log warning for partial success
+			var errorMessages []string
+			for _, gqlErr := range graphqlResponse.Errors {
+				errorMessages = append(errorMessages, gqlErr.Message)
+			}
+			h.logger.Warn("NON-CRITICAL GraphQL errors - partial data returned",
+				zap.Strings("error_messages", errorMessages),
+				zap.Int("error_count", len(graphqlResponse.Errors)),
+				zap.Bool("has_partial_data", true))
+			
+			return nil, connectErr
 		}
-		h.logger.Warn("GraphQL response contains errors",
-			zap.Strings("errors", errorMessages))
 	}
 
-	// Return only the data field if it's not null/empty
+	// Success case: Return only the data field
 	// The proto response message expects just the data payload: {...}
 	// Not the GraphQL wrapper: {"data": {...}, "errors": [...]}
 	if len(graphqlResponse.Data) > 0 && string(graphqlResponse.Data) != "null" {
 		return graphqlResponse.Data, nil
 	}
 
-	// If there's no data or data is null, return the full response (which might contain errors)
-	return responseBody, nil
+	// Edge case: No errors but also no data (empty response)
+	// Return empty object for backward compatibility
+	return []byte("{}"), nil
 }
 
 // Reload reloads the handler's dependencies
