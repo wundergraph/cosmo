@@ -319,7 +319,8 @@ func (pl *ProtoLoader) extractServiceDefinition(service *desc.ServiceDescriptor)
 	return serviceDef
 }
 
-// GetServices returns all loaded service definitions
+// GetServices returns all loaded service definitions.
+// The returned map should be treated as read-only to prevent accidental mutation.
 func (pl *ProtoLoader) GetServices() map[string]*ServiceDefinition {
 	return pl.services
 }

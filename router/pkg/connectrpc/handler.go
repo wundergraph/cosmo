@@ -93,6 +93,21 @@ var skippedHeaders = map[string]struct{}{
 	"Sec-Websocket-Version":    {},
 }
 
+// Metadata keys for Connect error metadata
+const (
+	MetaKeyHTTPStatus          = "http-status"
+	MetaKeyErrorClassification = "error-classification"
+	MetaKeyGraphQLErrors       = "graphql-errors"
+	MetaKeyGraphQLPartialData  = "graphql-partial-data"
+	MetaKeyHTTPResponseBody    = "http-response-body"
+)
+
+// Error classification values
+const (
+	ErrorClassificationCritical    = "CRITICAL"
+	ErrorClassificationNonCritical = "NON-CRITICAL"
+)
+
 // GraphQLRequest represents a GraphQL request structure
 type GraphQLRequest struct {
 	Query     string          `json:"query"`
@@ -273,6 +288,69 @@ func stripOperationTypePrefix(methodName string) string {
 	return methodName
 }
 
+// makeCriticalGraphQLError creates a Connect error for GraphQL errors with no data (complete failure).
+// This follows Relay's error classification pattern for critical errors.
+func (h *RPCHandler) makeCriticalGraphQLError(errors []GraphQLError, httpStatus int) error {
+	// Serialize GraphQL errors to JSON for metadata
+	errorsJSON, _ := json.Marshal(errors)
+	
+	// Create Connect error with CRITICAL classification
+	// Use CodeUnknown for GraphQL errors (not CodeInternal which implies server bugs)
+	connectErr := connect.NewError(
+		connect.CodeUnknown,
+		fmt.Errorf("GraphQL operation failed: %s", errors[0].Message),
+	)
+	connectErr.Meta().Set(MetaKeyErrorClassification, ErrorClassificationCritical)
+	connectErr.Meta().Set(MetaKeyGraphQLErrors, string(errorsJSON))
+	connectErr.Meta().Set(MetaKeyHTTPStatus, fmt.Sprintf("%d", httpStatus))
+	
+	// Log all error messages
+	var errorMessages []string
+	for _, gqlErr := range errors {
+		errorMessages = append(errorMessages, gqlErr.Message)
+	}
+	h.logger.Error("CRITICAL GraphQL errors - no data returned",
+		zap.Strings("error_messages", errorMessages),
+		zap.Int("error_count", len(errors)))
+	
+	return connectErr
+}
+
+// makePartialGraphQLError creates a Connect error for GraphQL errors with partial data (partial success).
+// This follows Relay's pattern for field-level errors where some data was successfully retrieved.
+func (h *RPCHandler) makePartialGraphQLError(errors []GraphQLError, data json.RawMessage, httpStatus int) error {
+	// Serialize errors to JSON for metadata
+	errorsJSON, _ := json.Marshal(errors)
+	
+	// Compact the partial data JSON to remove whitespace
+	var compactData bytes.Buffer
+	if err := json.Compact(&compactData, data); err == nil {
+		data = compactData.Bytes()
+	}
+	
+	// Create Connect error with NON-CRITICAL classification
+	connectErr := connect.NewError(
+		connect.CodeUnknown, // Use Unknown for partial failures
+		fmt.Errorf("GraphQL partial success with errors"),
+	)
+	connectErr.Meta().Set(MetaKeyErrorClassification, ErrorClassificationNonCritical)
+	connectErr.Meta().Set(MetaKeyGraphQLErrors, string(errorsJSON))
+	connectErr.Meta().Set(MetaKeyGraphQLPartialData, string(data))
+	connectErr.Meta().Set(MetaKeyHTTPStatus, fmt.Sprintf("%d", httpStatus))
+	
+	// Log warning for partial success
+	var errorMessages []string
+	for _, gqlErr := range errors {
+		errorMessages = append(errorMessages, gqlErr.Message)
+	}
+	h.logger.Warn("NON-CRITICAL GraphQL errors - partial data returned",
+		zap.Strings("error_messages", errorMessages),
+		zap.Int("error_count", len(errors)),
+		zap.Bool("has_partial_data", true))
+	
+	return connectErr
+}
+
 // executeGraphQL executes a GraphQL query against the router endpoint
 func (h *RPCHandler) executeGraphQL(ctx context.Context, query string, variables json.RawMessage) ([]byte, error) {
 	// Create the GraphQL request
@@ -332,9 +410,9 @@ func (h *RPCHandler) executeGraphQL(ctx context.Context, query string, variables
 		
 		// Create Connect error with metadata
 		connectErr := connect.NewError(code, fmt.Errorf("GraphQL request failed with HTTP %d", resp.StatusCode))
-		connectErr.Meta().Set("error-classification", "CRITICAL")
-		connectErr.Meta().Set("http-status", fmt.Sprintf("%d", resp.StatusCode))
-		connectErr.Meta().Set("http-response-body", string(responseBody))
+		connectErr.Meta().Set(MetaKeyErrorClassification, ErrorClassificationCritical)
+		connectErr.Meta().Set(MetaKeyHTTPStatus, fmt.Sprintf("%d", resp.StatusCode))
+		connectErr.Meta().Set(MetaKeyHTTPResponseBody, string(responseBody))
 		
 		h.logger.Error("HTTP error from GraphQL endpoint",
 			zap.Int("status_code", resp.StatusCode),
@@ -359,66 +437,11 @@ func (h *RPCHandler) executeGraphQL(ctx context.Context, query string, variables
 		
 		if !hasData {
 			// CRITICAL: Errors with no data - complete failure
-			// This follows Relay's error classification pattern
-			
-			// Serialize GraphQL errors to JSON for metadata
-			errorsJSON, _ := json.Marshal(graphqlResponse.Errors)
-			
-			// Create Connect error with CRITICAL classification
-			// Use CodeUnknown for GraphQL errors (not CodeInternal which implies server bugs)
-			connectErr := connect.NewError(
-				connect.CodeUnknown,
-				fmt.Errorf("GraphQL operation failed: %s", graphqlResponse.Errors[0].Message),
-			)
-			connectErr.Meta().Set("error-classification", "CRITICAL")
-			connectErr.Meta().Set("graphql-errors", string(errorsJSON))
-			connectErr.Meta().Set("http-status", fmt.Sprintf("%d", resp.StatusCode))
-			
-			// Log all error messages
-			var errorMessages []string
-			for _, gqlErr := range graphqlResponse.Errors {
-				errorMessages = append(errorMessages, gqlErr.Message)
-			}
-			h.logger.Error("CRITICAL GraphQL errors - no data returned",
-				zap.Strings("error_messages", errorMessages),
-				zap.Int("error_count", len(graphqlResponse.Errors)))
-			
-			return nil, connectErr
-		} else {
-			// NON-CRITICAL: Errors with partial data - partial success
-			// This follows Relay's pattern for field-level errors
-			
-			// Serialize both errors and data for metadata
-			errorsJSON, _ := json.Marshal(graphqlResponse.Errors)
-			
-			// Compact the partial data JSON to remove whitespace
-			var compactData bytes.Buffer
-			if err := json.Compact(&compactData, graphqlResponse.Data); err == nil {
-				graphqlResponse.Data = compactData.Bytes()
-			}
-			
-			// Create Connect error with NON-CRITICAL classification
-			connectErr := connect.NewError(
-				connect.CodeUnknown, // Use Unknown for partial failures
-				fmt.Errorf("GraphQL partial success with errors"),
-			)
-			connectErr.Meta().Set("error-classification", "NON-CRITICAL")
-			connectErr.Meta().Set("graphql-errors", string(errorsJSON))
-			connectErr.Meta().Set("graphql-partial-data", string(graphqlResponse.Data))
-			connectErr.Meta().Set("http-status", fmt.Sprintf("%d", resp.StatusCode))
-			
-			// Log warning for partial success
-			var errorMessages []string
-			for _, gqlErr := range graphqlResponse.Errors {
-				errorMessages = append(errorMessages, gqlErr.Message)
-			}
-			h.logger.Warn("NON-CRITICAL GraphQL errors - partial data returned",
-				zap.Strings("error_messages", errorMessages),
-				zap.Int("error_count", len(graphqlResponse.Errors)),
-				zap.Bool("has_partial_data", true))
-			
-			return nil, connectErr
+			return nil, h.makeCriticalGraphQLError(graphqlResponse.Errors, resp.StatusCode)
 		}
+		
+		// NON-CRITICAL: Errors with partial data - partial success
+		return nil, h.makePartialGraphQLError(graphqlResponse.Errors, graphqlResponse.Data, resp.StatusCode)
 	}
 
 	// Success case: Return only the data field
@@ -456,7 +479,8 @@ func (h *RPCHandler) GetOperationCount() int {
 	return h.operationRegistry.Count()
 }
 
-// GetOperations returns information about available operations
+// GetOperations returns information about available operations.
+// The returned data should be treated as read-only.
 func (h *RPCHandler) GetOperations() interface{} {
 	if h.operationRegistry == nil {
 		return nil

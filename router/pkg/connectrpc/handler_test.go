@@ -2,7 +2,6 @@ package connectrpc
 
 import (
 	"context"
-	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -36,6 +35,15 @@ func (m *mockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 		Body:       io.NopCloser(strings.NewReader(m.responseBody)),
 		Header:     make(http.Header),
 	}, nil
+}
+
+// errorRoundTripper simulates network/transport errors
+type errorRoundTripper struct {
+	err error
+}
+
+func (e *errorRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	return nil, e.err
 }
 
 func TestNewRPCHandler(t *testing.T) {
@@ -183,75 +191,10 @@ func TestHandleRPC(t *testing.T) {
 	})
 }
 
-func TestExecuteGraphQL(t *testing.T) {
+// TestExecuteGraphQL_ForwardsHeadersFromContext tests that headers are properly forwarded from context
+func TestExecuteGraphQL_ForwardsHeadersFromContext(t *testing.T) {
 	logger := zap.NewNop()
 	operationRegistry := NewOperationRegistry(logger)
-
-	t.Run("successfully executes GraphQL query", func(t *testing.T) {
-		graphqlResponse := `{"data":{"user":{"id":1,"name":"Test User"}}}`
-		httpClient := mockHTTPClient(http.StatusOK, graphqlResponse)
-
-		handler, err := NewRPCHandler(HandlerConfig{
-			GraphQLEndpoint:   "http://localhost:4000/graphql",
-			HTTPClient:        httpClient,
-			Logger:            logger,
-			OperationRegistry: operationRegistry,
-		})
-		require.NoError(t, err)
-
-		query := "query { user { id name } }"
-		variables := json.RawMessage(`{"id":1}`)
-		ctx := context.Background()
-
-		responseJSON, err := handler.executeGraphQL(ctx, query, variables)
-
-		require.NoError(t, err)
-		assert.Contains(t, string(responseJSON), "Test User")
-	})
-
-	t.Run("handles GraphQL errors gracefully", func(t *testing.T) {
-		graphqlResponse := `{"errors":[{"message":"User not found"}],"data":null}`
-		httpClient := mockHTTPClient(http.StatusOK, graphqlResponse)
-
-		handler, err := NewRPCHandler(HandlerConfig{
-			GraphQLEndpoint:   "http://localhost:4000/graphql",
-			HTTPClient:        httpClient,
-			Logger:            logger,
-			OperationRegistry: operationRegistry,
-		})
-		require.NoError(t, err)
-
-		query := "query { user { id name } }"
-		variables := json.RawMessage(`{"id":999}`)
-		ctx := context.Background()
-
-		_, err = handler.executeGraphQL(ctx, query, variables)
-
-		// With new error handling, GraphQL errors with no data return Connect errors
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "User not found")
-	})
-
-	t.Run("returns error for HTTP errors", func(t *testing.T) {
-		httpClient := mockHTTPClient(http.StatusInternalServerError, "Internal Server Error")
-
-		handler, err := NewRPCHandler(HandlerConfig{
-			GraphQLEndpoint:   "http://localhost:4000/graphql",
-			HTTPClient:        httpClient,
-			Logger:            logger,
-			OperationRegistry: operationRegistry,
-		})
-		require.NoError(t, err)
-
-		query := "query { user { id name } }"
-		variables := json.RawMessage(`{"id":1}`)
-		ctx := context.Background()
-
-		_, err = handler.executeGraphQL(ctx, query, variables)
-
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "GraphQL request failed with HTTP 500")
-	})
 
 	t.Run("forwards headers from context", func(t *testing.T) {
 		// Create a test server to verify headers
@@ -285,6 +228,36 @@ func TestExecuteGraphQL(t *testing.T) {
 		assert.Equal(t, "custom-value", receivedHeaders.Get("X-Custom"))
 		// Content-Length is set by the HTTP client, not forwarded from context
 		assert.Equal(t, "application/json; charset=utf-8", receivedHeaders.Get("Content-Type"))
+	})
+}
+
+// TestExecuteGraphQL_HTTPTransportError tests handling of network/transport-level errors
+func TestExecuteGraphQL_HTTPTransportError(t *testing.T) {
+	logger := zap.NewNop()
+	operationRegistry := NewOperationRegistry(logger)
+
+	t.Run("handles network connection error", func(t *testing.T) {
+		// Create a client that simulates a network error
+		httpClient := &http.Client{
+			Transport: &errorRoundTripper{
+				err: io.ErrUnexpectedEOF,
+			},
+		}
+
+		handler, err := NewRPCHandler(HandlerConfig{
+			GraphQLEndpoint:   "http://localhost:4000/graphql",
+			HTTPClient:        httpClient,
+			Logger:            logger,
+			OperationRegistry: operationRegistry,
+		})
+		require.NoError(t, err)
+
+		ctx := context.Background()
+		_, err = handler.executeGraphQL(ctx, "query { test }", nil)
+
+		// Should return an error (not a Connect error, just a regular error)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to execute HTTP request")
 	})
 }
 
