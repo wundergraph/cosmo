@@ -235,7 +235,6 @@ export class SchemaUsageTrafficInspector {
       }
       where.push(`IsIndirectFieldUsage = false`);
 
-      // Build the query
       const query = `
         SELECT OperationHash as operationHash,
                last_value(OperationType) as operationType,
