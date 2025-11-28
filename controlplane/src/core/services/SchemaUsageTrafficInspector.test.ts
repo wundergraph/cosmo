@@ -119,7 +119,7 @@ describe('Schema Change converter', (ctx) => {
         {
           path: ['a', 'b'],
           typeName: 'Query',
-          fieldName: 'a',
+          fieldName: 'b',
           isArgument: true,
           isNull: true,
         },
@@ -144,7 +144,7 @@ describe('Schema Change converter', (ctx) => {
         {
           path: ['a', 'b'],
           typeName: 'Query',
-          fieldName: 'a',
+          fieldName: 'b',
           isArgument: true,
         },
       ]);
@@ -168,7 +168,7 @@ describe('Schema Change converter', (ctx) => {
         {
           path: ['a', 'b'],
           typeName: 'Query',
-          fieldName: 'a',
+          fieldName: 'b',
           isArgument: true,
         },
       ]);
@@ -192,7 +192,7 @@ describe('Schema Change converter', (ctx) => {
         {
           path: ['a', 'b'],
           typeName: 'Query',
-          fieldName: 'a',
+          fieldName: 'b',
           isArgument: true,
           isNull: false,
         },

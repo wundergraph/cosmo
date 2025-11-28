@@ -8,22 +8,22 @@ export enum FieldTypeChangeCategory {
    * Optional same type -> Required same type
    * Example: "Boolean" -> "Boolean!"
    */
-  OPTIONAL_SAME_TO_REQUIRED_SAME = 'OPTIONAL_SAME_TO_REQUIRED_SAME',
+  OPTIONAL_TO_REQUIRED_SAME = 'OPTIONAL_TO_REQUIRED_SAME',
   /**
    * Optional different type -> Required different type
    * Example: "Boolean" -> "String!"
    */
-  OPTIONAL_DIFFERENT_TO_REQUIRED_DIFFERENT = 'OPTIONAL_DIFFERENT_TO_REQUIRED_DIFFERENT',
+  OPTIONAL_TO_REQUIRED_DIFFERENT = 'OPTIONAL_TO_REQUIRED_DIFFERENT',
   /**
    * Required different type -> Required different type
    * Example: "Boolean!" -> "String!"
    */
-  REQUIRED_DIFFERENT_TO_REQUIRED_DIFFERENT = 'REQUIRED_DIFFERENT_TO_REQUIRED_DIFFERENT',
+  REQUIRED_TO_REQUIRED_DIFFERENT = 'REQUIRED_TO_REQUIRED_DIFFERENT',
   /**
    * Optional different type -> Optional different type
    * Example: "Boolean" -> "String"
    */
-  OPTIONAL_DIFFERENT_TO_OPTIONAL_DIFFERENT = 'OPTIONAL_DIFFERENT_TO_OPTIONAL_DIFFERENT',
+  OPTIONAL_TO_OPTIONAL_DIFFERENT = 'OPTIONAL_TO_OPTIONAL_DIFFERENT',
 }
 
 /**
@@ -143,23 +143,23 @@ export function parseTypeChange(message: string): FieldTypeChangeCategory {
   if (sameType && !fromRequired && toRequired) {
     // Case 1: Optional same type -> Required same type
     // Example: "Boolean" -> "Boolean!"
-    return FieldTypeChangeCategory.OPTIONAL_SAME_TO_REQUIRED_SAME;
+    return FieldTypeChangeCategory.OPTIONAL_TO_REQUIRED_SAME;
   } else if (!sameType && !fromRequired && toRequired) {
     // Case 2: Optional different type -> Required different type
     // Example: "Boolean" -> "String!"
-    return FieldTypeChangeCategory.OPTIONAL_DIFFERENT_TO_REQUIRED_DIFFERENT;
+    return FieldTypeChangeCategory.OPTIONAL_TO_REQUIRED_DIFFERENT;
   } else if (!sameType && fromRequired && toRequired) {
     // Case 3: Required different type -> Required different type
     // Example: "Boolean!" -> "String!"
-    return FieldTypeChangeCategory.REQUIRED_DIFFERENT_TO_REQUIRED_DIFFERENT;
+    return FieldTypeChangeCategory.REQUIRED_TO_REQUIRED_DIFFERENT;
   } else if (!sameType && !fromRequired && !toRequired) {
     // Case 4: Optional different type -> Optional different type
     // Example: "Boolean" -> "String"
-    return FieldTypeChangeCategory.OPTIONAL_DIFFERENT_TO_OPTIONAL_DIFFERENT;
+    return FieldTypeChangeCategory.OPTIONAL_TO_OPTIONAL_DIFFERENT;
   } else {
     // Edge case: same type, from required, to optional (shouldn't happen in breaking changes)
     // Fallback to same type becoming required
-    return FieldTypeChangeCategory.OPTIONAL_SAME_TO_REQUIRED_SAME;
+    return FieldTypeChangeCategory.OPTIONAL_TO_REQUIRED_SAME;
   }
 }
 
@@ -241,6 +241,8 @@ export class SchemaUsageTrafficInspector {
           where.push(`IsInput = true`);
         } else if (change.isArgument) {
           where.push(`IsArgument = true`);
+        } else if (change.isNull !== undefined) {
+          where.push(`IsNull = ${change.isNull}`);
         }
         where.push(`IsIndirectFieldUsage = false`);
 
@@ -495,7 +497,7 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
     case ChangeType.InputFieldTypeChanged: {
       const inputFieldTypeChangeCategory = parseTypeChange(change.message);
       switch (inputFieldTypeChangeCategory) {
-        case FieldTypeChangeCategory.OPTIONAL_SAME_TO_REQUIRED_SAME: {
+        case FieldTypeChangeCategory.OPTIONAL_TO_REQUIRED_SAME: {
           // Int -> Int!
           return {
             schemaChangeId: schemaCheckId,
@@ -517,7 +519,7 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
             ],
           };
         }
-        case FieldTypeChangeCategory.OPTIONAL_DIFFERENT_TO_REQUIRED_DIFFERENT: {
+        case FieldTypeChangeCategory.OPTIONAL_TO_REQUIRED_DIFFERENT: {
           // Int -> Float!
           // in this case, all the ops which have this input type are breaking
           return {
@@ -530,7 +532,7 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
             ],
           };
         }
-        case FieldTypeChangeCategory.REQUIRED_DIFFERENT_TO_REQUIRED_DIFFERENT: {
+        case FieldTypeChangeCategory.REQUIRED_TO_REQUIRED_DIFFERENT: {
           // Int! -> Float!
           // in this case, all the ops which have this input type are breaking
           return {
@@ -543,7 +545,7 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
             ],
           };
         }
-        case FieldTypeChangeCategory.OPTIONAL_DIFFERENT_TO_OPTIONAL_DIFFERENT: {
+        case FieldTypeChangeCategory.OPTIONAL_TO_OPTIONAL_DIFFERENT: {
           // Int -> Float
           // in this case, any ops which use the input field and are not null are breaking
           return {
@@ -581,7 +583,7 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
     case ChangeType.FieldArgumentTypeChanged: {
       const argumentTypeChangeCategory = parseTypeChange(change.message);
       switch (argumentTypeChangeCategory) {
-        case FieldTypeChangeCategory.OPTIONAL_SAME_TO_REQUIRED_SAME: {
+        case FieldTypeChangeCategory.OPTIONAL_TO_REQUIRED_SAME: {
           // SearchInput -> SearchInput!
           return {
             schemaChangeId: schemaCheckId,
@@ -598,7 +600,7 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
             ],
           };
         }
-        case FieldTypeChangeCategory.OPTIONAL_DIFFERENT_TO_REQUIRED_DIFFERENT: {
+        case FieldTypeChangeCategory.OPTIONAL_TO_REQUIRED_DIFFERENT: {
           // SearchInput -> String!
           // in this case, all the ops which have this argument are breaking
           return {
@@ -613,7 +615,7 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
             ],
           };
         }
-        case FieldTypeChangeCategory.REQUIRED_DIFFERENT_TO_REQUIRED_DIFFERENT: {
+        case FieldTypeChangeCategory.REQUIRED_TO_REQUIRED_DIFFERENT: {
           // SearchInput! -> String!
           // in this case, all the ops which have this argument are breaking
           return {
@@ -628,7 +630,7 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
             ],
           };
         }
-        case FieldTypeChangeCategory.OPTIONAL_DIFFERENT_TO_OPTIONAL_DIFFERENT: {
+        case FieldTypeChangeCategory.OPTIONAL_TO_OPTIONAL_DIFFERENT: {
           // SearchInput -> String
           // in this case, any ops which use the argument and are not null are breaking
           return {
