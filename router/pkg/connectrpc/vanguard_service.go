@@ -1,16 +1,53 @@
 package connectrpc
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
 
+	"connectrpc.com/connect"
 	"connectrpc.com/vanguard"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/dynamicpb"
 )
+
+// connectCodeToHTTPStatus maps Connect error codes to HTTP status codes
+// This is the inverse of httpStatusToConnectCode in handler.go
+func connectCodeToHTTPStatus(code connect.Code) int {
+	switch code {
+	case connect.CodeInvalidArgument:
+		return http.StatusBadRequest // 400
+	case connect.CodeUnauthenticated:
+		return http.StatusUnauthorized // 401
+	case connect.CodePermissionDenied:
+		return http.StatusForbidden // 403
+	case connect.CodeNotFound:
+		return http.StatusNotFound // 404
+	case connect.CodeAborted:
+		return http.StatusConflict // 409
+	case connect.CodeFailedPrecondition:
+		return http.StatusPreconditionFailed // 412
+	case connect.CodeResourceExhausted:
+		return http.StatusTooManyRequests // 429
+	case connect.CodeOutOfRange:
+		return http.StatusRequestedRangeNotSatisfiable // 416
+	case connect.CodeDeadlineExceeded:
+		return http.StatusGatewayTimeout // 504
+	case connect.CodeUnimplemented:
+		return http.StatusNotImplemented // 501
+	case connect.CodeUnavailable:
+		return http.StatusServiceUnavailable // 503
+	case connect.CodeInternal:
+		return http.StatusInternalServerError // 500
+	default:
+		// For unknown codes or other errors, return 500
+		return http.StatusInternalServerError // 500
+	}
+}
 
 // VanguardServiceConfig holds configuration for creating a Vanguard service
 type VanguardServiceConfig struct {
@@ -119,12 +156,15 @@ func (vs *VanguardService) registerServices() error {
 }
 
 // createServiceHandler creates an HTTP handler for a specific proto service
+// This handler is wrapped by Vanguard, which handles protocol transcoding
 func (vs *VanguardService) createServiceHandler(serviceName string, serviceDef *ServiceDefinition) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Extract and validate method name from path
 		methodName := vs.extractMethodName(r.URL.Path, serviceName)
 		if methodName == "" {
-			http.Error(w, "invalid path format", http.StatusNotFound)
+			// Return Connect error for invalid path
+			connectErr := connect.NewError(connect.CodeNotFound, fmt.Errorf("invalid path format"))
+			vs.writeConnectError(w, connectErr, serviceName, methodName)
 			return
 		}
 		
@@ -138,7 +178,9 @@ func (vs *VanguardService) createServiceHandler(serviceName string, serviceDef *
 		}
 		
 		if !methodExists {
-			http.Error(w, fmt.Sprintf("method not found: %s", methodName), http.StatusNotFound)
+			// Return Connect error for method not found
+			connectErr := connect.NewError(connect.CodeNotFound, fmt.Errorf("method not found: %s", methodName))
+			vs.writeConnectError(w, connectErr, serviceName, methodName)
 			return
 		}
 
@@ -164,7 +206,8 @@ func (vs *VanguardService) createServiceHandler(serviceName string, serviceDef *
 			requestBody, err = io.ReadAll(r.Body)
 			if err != nil {
 				vs.logger.Error("failed to read request body", zap.Error(err))
-				http.Error(w, "failed to read request", http.StatusBadRequest)
+				connectErr := connect.NewError(connect.CodeInvalidArgument, fmt.Errorf("failed to read request"))
+				vs.writeConnectError(w, connectErr, serviceName, methodName)
 				return
 			}
 		}
@@ -175,21 +218,83 @@ func (vs *VanguardService) createServiceHandler(serviceName string, serviceDef *
 		// Handle the RPC request
 		responseBody, err := vs.handler.HandleRPC(ctx, serviceName, methodName, requestBody)
 		if err != nil {
-			vs.logger.Error("RPC handler error",
-				zap.String("service", serviceName),
-				zap.String("method", methodName),
-				zap.Error(err))
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			// Check if this is already a Connect error
+			var connectErr *connect.Error
+			if errors.As(err, &connectErr) {
+				vs.writeConnectError(w, connectErr, serviceName, methodName)
+			} else {
+				// Wrap non-Connect errors as Internal errors
+				connectErr := connect.NewError(connect.CodeInternal, err)
+				vs.writeConnectError(w, connectErr, serviceName, methodName)
+			}
 			return
 		}
 
-		// Write JSON response (will be transcoded to client's protocol)
+		// Write JSON response (will be transcoded to client's protocol by Vanguard)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		if _, err := w.Write(responseBody); err != nil {
 			vs.logger.Error("failed to write response", zap.Error(err))
 		}
 	})
+}
+
+// writeConnectError writes a Connect error response in JSON format
+// This ensures proper error formatting for the Connect protocol
+func (vs *VanguardService) writeConnectError(w http.ResponseWriter, connectErr *connect.Error, serviceName, methodName string) {
+	statusCode := connectCodeToHTTPStatus(connectErr.Code())
+	
+	vs.logger.Error("RPC handler error",
+		zap.String("service", serviceName),
+		zap.String("method", methodName),
+		zap.String("connect_code", connectErr.Code().String()),
+		zap.Int("http_status", statusCode),
+		zap.String("error", connectErr.Message()))
+	
+	// Format error as Connect JSON error response
+	// Connect protocol error format: {"code": "invalid_argument", "message": "error message"}
+	errorResponse := map[string]interface{}{
+		"code":    connectErr.Code().String(),
+		"message": connectErr.Message(),
+	}
+	
+	// Check if this error contains GraphQL errors in metadata
+	// If so, include them in a structured format for better error reporting
+	if graphqlErrorsJSON := connectErr.Meta().Values(MetaKeyGraphQLErrors); len(graphqlErrorsJSON) > 0 {
+		// Parse the GraphQL errors JSON from metadata
+		var graphqlErrors []GraphQLError
+		if err := json.Unmarshal([]byte(graphqlErrorsJSON[0]), &graphqlErrors); err == nil && len(graphqlErrors) > 0 {
+			// Include GraphQL errors in the response for better debugging
+			errorResponse["graphql_errors"] = graphqlErrors
+			
+			// If there are multiple GraphQL errors, update the message to indicate this
+			if len(graphqlErrors) > 1 {
+				errorResponse["message"] = fmt.Sprintf("%s (and %d more errors)", connectErr.Message(), len(graphqlErrors)-1)
+			}
+		}
+	}
+	
+	// Add other metadata if present (excluding graphql_errors which we handled above)
+	if len(connectErr.Meta()) > 0 {
+		details := make(map[string]string)
+		for key, values := range connectErr.Meta() {
+			// Skip graphql_errors as we've already handled it
+			if key == MetaKeyGraphQLErrors || len(values) == 0 {
+				continue
+			}
+			details[key] = values[0]
+		}
+		if len(details) > 0 {
+			errorResponse["details"] = details
+		}
+	}
+	
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	
+	if err := json.NewEncoder(w).Encode(errorResponse); err != nil {
+		vs.logger.Error("failed to write error response", zap.Error(err))
+	}
 }
 
 // extractMethodName extracts the method name from the request path

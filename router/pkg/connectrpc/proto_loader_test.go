@@ -19,7 +19,7 @@ func setupTestProtoLoaderFromDir(t *testing.T, dir string) *ProtoLoader {
 
 func TestLoadEmployeeProto(t *testing.T) {
 	t.Run("loads and parses employee.proto successfully", func(t *testing.T) {
-		loader := setupTestProtoLoaderFromDir(t, "testdata/employee_only")
+		loader := setupTestProtoLoaderFromDir(t, "samples/services/employee.v1")
 
 		// Verify the service was loaded
 		services := loader.GetServices()
@@ -40,13 +40,13 @@ func TestLoadEmployeeProto(t *testing.T) {
 		}
 
 		expectedMethods := []string{
-			"MutationUpdateEmployeeMood",
-			"QueryFindEmployeesByPets",
-			"QueryFindEmployeesByPetsInlineFragment",
-			"QueryFindEmployeesByPetsNamedFragment",
-			"QueryGetEmployeeById",
-			"QueryGetEmployees",
-			"QueryGetEmployeesWithMood",
+			"UpdateEmployeeMood",
+			"FindEmployeesByPets",
+			"FindEmployeesByPetsInlineFragment",
+			"FindEmployeesByPetsNamedFragment",
+			"GetEmployeeById",
+			"GetEmployees",
+			"GetEmployeesWithMood",
 		}
 
 		// Verify we have at least the expected methods (allows for future additions)
@@ -58,43 +58,43 @@ func TestLoadEmployeeProto(t *testing.T) {
 	})
 
 	t.Run("verifies query method details", func(t *testing.T) {
-		loader := setupTestProtoLoaderFromDir(t, "testdata/employee_only")
+		loader := setupTestProtoLoaderFromDir(t, "samples/services/employee.v1")
 
-		method, err := loader.GetMethod("employee.v1.EmployeeService", "QueryGetEmployeeById")
+		method, err := loader.GetMethod("employee.v1.EmployeeService", "GetEmployeeById")
 		require.NoError(t, err)
 
-		assert.Equal(t, "QueryGetEmployeeById", method.Name)
-		assert.Equal(t, "employee.v1.EmployeeService.QueryGetEmployeeById", method.FullName)
-		assert.Equal(t, "employee.v1.QueryGetEmployeeByIdRequest", method.InputType)
-		assert.Equal(t, "employee.v1.QueryGetEmployeeByIdResponse", method.OutputType)
+		assert.Equal(t, "GetEmployeeById", method.Name)
+		assert.Equal(t, "employee.v1.EmployeeService.GetEmployeeById", method.FullName)
+		assert.Equal(t, "employee.v1.GetEmployeeByIdRequest", method.InputType)
+		assert.Equal(t, "employee.v1.GetEmployeeByIdResponse", method.OutputType)
 		assert.False(t, method.IsClientStreaming)
 		assert.False(t, method.IsServerStreaming)
 	})
 
 	t.Run("verifies mutation method details", func(t *testing.T) {
-		loader := setupTestProtoLoaderFromDir(t, "testdata/employee_only")
+		loader := setupTestProtoLoaderFromDir(t, "samples/services/employee.v1")
 
-		method, err := loader.GetMethod("employee.v1.EmployeeService", "MutationUpdateEmployeeMood")
+		method, err := loader.GetMethod("employee.v1.EmployeeService", "UpdateEmployeeMood")
 		require.NoError(t, err)
 
-		assert.Equal(t, "MutationUpdateEmployeeMood", method.Name)
-		assert.Equal(t, "employee.v1.EmployeeService.MutationUpdateEmployeeMood", method.FullName)
-		assert.Equal(t, "employee.v1.MutationUpdateEmployeeMoodRequest", method.InputType)
-		assert.Equal(t, "employee.v1.MutationUpdateEmployeeMoodResponse", method.OutputType)
+		assert.Equal(t, "UpdateEmployeeMood", method.Name)
+		assert.Equal(t, "employee.v1.EmployeeService.UpdateEmployeeMood", method.FullName)
+		assert.Equal(t, "employee.v1.UpdateEmployeeMoodRequest", method.InputType)
+		assert.Equal(t, "employee.v1.UpdateEmployeeMoodResponse", method.OutputType)
 		assert.False(t, method.IsClientStreaming)
 		assert.False(t, method.IsServerStreaming)
 	})
 
 	t.Run("verifies all query methods are present", func(t *testing.T) {
-		loader := setupTestProtoLoaderFromDir(t, "testdata/employee_only")
+		loader := setupTestProtoLoaderFromDir(t, "samples/services/employee.v1")
 
 		queryMethods := []string{
-			"QueryFindEmployeesByPets",
-			"QueryFindEmployeesByPetsInlineFragment",
-			"QueryFindEmployeesByPetsNamedFragment",
-			"QueryGetEmployeeById",
-			"QueryGetEmployees",
-			"QueryGetEmployeesWithMood",
+			"FindEmployeesByPets",
+			"FindEmployeesByPetsInlineFragment",
+			"FindEmployeesByPetsNamedFragment",
+			"GetEmployeeById",
+			"GetEmployees",
+			"GetEmployeesWithMood",
 		}
 
 		for _, methodName := range queryMethods {

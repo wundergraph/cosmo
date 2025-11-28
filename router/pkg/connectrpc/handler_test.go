@@ -52,12 +52,14 @@ func TestNewRPCHandler(t *testing.T) {
 
 	t.Run("creates handler with valid config", func(t *testing.T) {
 		operationRegistry := NewOperationRegistry(logger)
+		protoLoader := NewProtoLoader(logger)
 
 		handler, err := NewRPCHandler(HandlerConfig{
 			GraphQLEndpoint:   "http://localhost:4000/graphql",
 			HTTPClient:        httpClient,
 			Logger:            logger,
 			OperationRegistry: operationRegistry,
+			ProtoLoader:       protoLoader,
 		})
 
 		require.NoError(t, err)
@@ -67,12 +69,14 @@ func TestNewRPCHandler(t *testing.T) {
 
 	t.Run("adds protocol to endpoint if missing", func(t *testing.T) {
 		operationRegistry := NewOperationRegistry(logger)
+		protoLoader := NewProtoLoader(logger)
 
 		handler, err := NewRPCHandler(HandlerConfig{
 			GraphQLEndpoint:   "localhost:4000/graphql",
 			HTTPClient:        httpClient,
 			Logger:            logger,
 			OperationRegistry: operationRegistry,
+			ProtoLoader:       protoLoader,
 		})
 
 		require.NoError(t, err)
@@ -115,11 +119,13 @@ func TestNewRPCHandler(t *testing.T) {
 
 	t.Run("uses nop logger when logger is nil", func(t *testing.T) {
 		operationRegistry := NewOperationRegistry(logger)
+		protoLoader := NewProtoLoader(logger)
 
 		handler, err := NewRPCHandler(HandlerConfig{
 			GraphQLEndpoint:   "http://localhost:4000/graphql",
 			HTTPClient:        httpClient,
 			OperationRegistry: operationRegistry,
+			ProtoLoader:       protoLoader,
 		})
 
 		require.NoError(t, err)
@@ -149,12 +155,14 @@ func TestHandleRPC(t *testing.T) {
 	t.Run("successfully handles RPC request", func(t *testing.T) {
 		graphqlResponse := `{"data":{"getUser":{"id":1,"name":"Jane Doe"}}}`
 		httpClient := mockHTTPClient(http.StatusOK, graphqlResponse)
+		protoLoader := NewProtoLoader(logger)
 
 		handler, err := NewRPCHandler(HandlerConfig{
 			GraphQLEndpoint:   "http://localhost:4000/graphql",
 			HTTPClient:        httpClient,
 			Logger:            logger,
 			OperationRegistry: operationRegistry,
+			ProtoLoader:       protoLoader,
 		})
 		require.NoError(t, err)
 
@@ -172,12 +180,14 @@ func TestHandleRPC(t *testing.T) {
 
 	t.Run("returns error for non-existent operation", func(t *testing.T) {
 		httpClient := mockHTTPClient(http.StatusOK, `{"data":{}}`)
+		protoLoader := NewProtoLoader(logger)
 
 		handler, err := NewRPCHandler(HandlerConfig{
 			GraphQLEndpoint:   "http://localhost:4000/graphql",
 			HTTPClient:        httpClient,
 			Logger:            logger,
 			OperationRegistry: operationRegistry,
+			ProtoLoader:       protoLoader,
 		})
 		require.NoError(t, err)
 
@@ -206,11 +216,13 @@ func TestExecuteGraphQL_ForwardsHeadersFromContext(t *testing.T) {
 		}))
 		defer testServer.Close()
 
+		protoLoader := NewProtoLoader(logger)
 		handler, err := NewRPCHandler(HandlerConfig{
 			GraphQLEndpoint:   testServer.URL,
 			HTTPClient:        &http.Client{},
 			Logger:            logger,
 			OperationRegistry: operationRegistry,
+			ProtoLoader:       protoLoader,
 		})
 		require.NoError(t, err)
 
@@ -244,11 +256,13 @@ func TestExecuteGraphQL_HTTPTransportError(t *testing.T) {
 			},
 		}
 
+		protoLoader := NewProtoLoader(logger)
 		handler, err := NewRPCHandler(HandlerConfig{
 			GraphQLEndpoint:   "http://localhost:4000/graphql",
 			HTTPClient:        httpClient,
 			Logger:            logger,
 			OperationRegistry: operationRegistry,
+			ProtoLoader:       protoLoader,
 		})
 		require.NoError(t, err)
 
@@ -268,11 +282,13 @@ func TestReload(t *testing.T) {
 		operationRegistry := NewOperationRegistry(logger)
 		httpClient := &http.Client{}
 
+		protoLoader := NewProtoLoader(logger)
 		handler, err := NewRPCHandler(HandlerConfig{
 			GraphQLEndpoint:   "http://localhost:4000/graphql",
 			HTTPClient:        httpClient,
 			Logger:            logger,
 			OperationRegistry: operationRegistry,
+			ProtoLoader:       protoLoader,
 		})
 		require.NoError(t, err)
 
@@ -302,11 +318,13 @@ func TestGetOperationCount(t *testing.T) {
 			},
 		}
 
+		protoLoader := NewProtoLoader(logger)
 		handler, err := NewRPCHandler(HandlerConfig{
 			GraphQLEndpoint:   "http://localhost:4000/graphql",
 			HTTPClient:        httpClient,
 			Logger:            logger,
 			OperationRegistry: operationRegistry,
+			ProtoLoader:       protoLoader,
 		})
 		require.NoError(t, err)
 
@@ -327,11 +345,13 @@ func TestValidateOperation(t *testing.T) {
 			},
 		}
 
+		protoLoader := NewProtoLoader(logger)
 		handler, err := NewRPCHandler(HandlerConfig{
 			GraphQLEndpoint:   "http://localhost:4000/graphql",
 			HTTPClient:        httpClient,
 			Logger:            logger,
 			OperationRegistry: operationRegistry,
+			ProtoLoader:       protoLoader,
 		})
 		require.NoError(t, err)
 
