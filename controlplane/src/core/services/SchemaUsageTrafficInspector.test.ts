@@ -19,6 +19,8 @@ describe('Schema Change converter', (ctx) => {
 
       const changes = await getBreakingChanges(a, b);
 
+      // the below conditions are for what would constitute a breaking change
+      // if the condition exists, it would be breaking
       expect(changes).toEqual<InspectorSchemaChange[]>([
         {
           path: ['a'],
@@ -101,7 +103,7 @@ describe('Schema Change converter', (ctx) => {
       ]);
     });
 
-    test('Change argument type from optional same to required same', async () => {
+    test('Change argument type from optional to required same', async () => {
       const a = buildSchema(/* GraphQL */ `
         type Query {
           a(b: Boolean): String
@@ -126,7 +128,7 @@ describe('Schema Change converter', (ctx) => {
       ]);
     });
 
-    test('Change argument type from optional different to required different', async () => {
+    test('Change argument type from optional to required different', async () => {
       const a = buildSchema(/* GraphQL */ `
         type Query {
           a(b: Boolean): String
@@ -150,7 +152,7 @@ describe('Schema Change converter', (ctx) => {
       ]);
     });
 
-    test('Change argument type from required different to required different', async () => {
+    test('Change argument type from required to required different', async () => {
       const a = buildSchema(/* GraphQL */ `
         type Query {
           a(b: Boolean!): String
@@ -174,7 +176,7 @@ describe('Schema Change converter', (ctx) => {
       ]);
     });
 
-    test('Change argument type from optional different to optional different', async () => {
+    test('Change argument type from optional to optional different', async () => {
       const a = buildSchema(/* GraphQL */ `
         type Query {
           a(b: Boolean): String
@@ -220,11 +222,12 @@ describe('Schema Change converter', (ctx) => {
         {
           path: ['Foo'],
           isInput: true,
+          isNull: false,
         },
       ]);
     });
 
-    test('Remove an Input field', async () => {
+    test('Remove an required input field', async () => {
       const a = buildSchema(/* GraphQL */ `
         input Foo {
           a: String!
@@ -243,11 +246,38 @@ describe('Schema Change converter', (ctx) => {
         {
           path: ['Foo'],
           isInput: true,
+          isNull: false,
         },
       ]);
     });
 
-    test('Change input field type from required different to required different', async () => {
+    test('Remove an optional input field', async () => {
+      const a = buildSchema(/* GraphQL */ `
+        input Foo {
+          a: String!
+          b: String
+        }
+      `);
+      const b = buildSchema(/* GraphQL */ `
+        input Foo {
+          a: String!
+        }
+      `);
+
+      const changes = await getBreakingChanges(a, b);
+
+      // As we dont know whether the field is optional or required, we use the same condition as required fields
+      // We will not miss any breaking ops but will have some ops which might not be breaking
+      expect(changes).toEqual<InspectorSchemaChange[]>([
+        {
+          path: ['Foo'],
+          isInput: true,
+          isNull: false,
+        },
+      ]);
+    });
+
+    test('Change input field type from required to required different', async () => {
       const a = buildSchema(/* GraphQL */ `
         input Foo {
           a: String!
@@ -265,11 +295,12 @@ describe('Schema Change converter', (ctx) => {
         {
           path: ['Foo'],
           isInput: true,
+          isNull: false,
         },
       ]);
     });
 
-    test('Change input field type from optional same to required same', async () => {
+    test('Change input field type from optional to required same', async () => {
       const a = buildSchema(/* GraphQL */ `
         input Foo {
           a: String
@@ -290,15 +321,10 @@ describe('Schema Change converter', (ctx) => {
           isInput: true,
           isNull: true,
         },
-        {
-          path: ['Foo'],
-          isInput: true,
-          isNull: true,
-        },
       ]);
     });
 
-    test('Change input field type from optional different to required different', async () => {
+    test('Change input field type from optional to required different', async () => {
       const a = buildSchema(/* GraphQL */ `
         input Foo {
           a: String
@@ -316,11 +342,12 @@ describe('Schema Change converter', (ctx) => {
         {
           path: ['Foo'],
           isInput: true,
+          isNull: false,
         },
       ]);
     });
 
-    test('Change input field type from optional different to optional different', async () => {
+    test('Change input field type from optional to optional different', async () => {
       const a = buildSchema(/* GraphQL */ `
         input Foo {
           a: String

@@ -510,12 +510,6 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
                 isInput: true,
                 isNull: true,
               },
-              // thic case will handle when the entire input is passed as null or not passed at all
-              {
-                path: [path[0]],
-                isInput: true,
-                isNull: true,
-              },
             ],
           };
         }
@@ -528,6 +522,7 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
               {
                 path: [path[0]],
                 isInput: true,
+                isNull: false,
               },
             ],
           };
@@ -541,6 +536,7 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
               {
                 path: [path[0]],
                 isInput: true,
+                isNull: false,
               },
             ],
           };
@@ -574,6 +570,7 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
           {
             path: [path[0]],
             isInput: true,
+            isNull: false,
           },
         ],
       };
