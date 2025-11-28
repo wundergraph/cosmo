@@ -1692,7 +1692,6 @@ func newGRPCStartupParams(traceConfig *rtrace.Config, ipAnonymization *IPAnonymi
 // to make the shutdown process more efficient.
 func (s *graphServer) wait(ctx context.Context) error {
 	b := backoff.New(500*time.Millisecond, time.Millisecond)
-	defer b.Reset()
 
 	timer := time.NewTimer(b.Duration())
 	defer timer.Stop()

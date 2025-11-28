@@ -242,7 +242,6 @@ func (e *Exporter[T]) prepareAndSendBatch(batch []T) {
 // exportBatchWithRetry attempts to export a batch with exponential backoff retry logic.
 func (e *Exporter[T]) exportBatchWithRetry(batch []T) {
 	b := backoff.New(e.settings.RetryOptions.MaxDuration, e.settings.RetryOptions.Interval)
-	defer b.Reset()
 
 	err := e.exportBatch(batch)
 	if err == nil {
