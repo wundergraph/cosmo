@@ -441,12 +441,27 @@ async function installTools(language: string, shouldCleanup: boolean) {
   const tmpDir = join(TOOLS_DIR, 'download');
   const scriptPath = join(tmpDir, 'install-proto-tools.sh');
 
+  let existingVersions: Record<string, string> = {};
+
   // Make installation idempotent - remove existing tools directory if it exists
-  if (shouldCleanup && existsSync(TOOLS_DIR)) {
-    try {
-      await rm(TOOLS_DIR, { recursive: true, force: true });
-    } catch (error) {
-      throw new Error(`Failed to remove existing tools: ${error}`);
+  if (existsSync(TOOLS_DIR)) {
+    if (shouldCleanup) {
+      try {
+        await rm(TOOLS_DIR, { recursive: true, force: true });
+      } catch (error) {
+        throw new Error(`Failed to remove existing tools: ${error}`);
+      }
+    } else {
+      try {
+        const storedVersionsStr = await readFile(TOOLS_VERSIONS_FILE, 'utf8');
+        existingVersions = JSON.parse(storedVersionsStr);
+      } catch (error) {
+        console.log(
+          pc.yellow(`Warning: Failed to read existing tool versions: ${error}, version file will be overridden`),
+        );
+        // Reset the existing versions just in case existing versions was modified while an error was thrown
+        existingVersions = {};
+      }
     }
   }
 
@@ -477,7 +492,7 @@ async function installTools(language: string, shouldCleanup: boolean) {
     };
 
     // Store exact versions that we install
-    const exactVersions: Record<string, string> = {};
+    const exactVersions: Record<string, string> = existingVersions;
 
     const toolVersions = LanguageSpecificTools[language];
 
