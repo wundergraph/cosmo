@@ -25,7 +25,7 @@ type ServiceDefinition struct {
 	Methods []MethodDefinition
 	// FileDescriptor is the proto file descriptor
 	FileDescriptor protoreflect.FileDescriptor
-	// ServiceDescriptor is the service descriptor for Vanguard
+	// ServiceDescriptor is the service descriptor
 	ServiceDescriptor protoreflect.ServiceDescriptor
 }
 
@@ -54,6 +54,8 @@ type ProtoLoader struct {
 	logger *zap.Logger
 	// services maps service full names to their definitions
 	services map[string]*ServiceDefinition
+	// files is a custom registry for file descriptors (avoids global registry)
+	files *protoregistry.Files
 }
 
 // NewProtoLoader creates a new proto loader
@@ -65,6 +67,7 @@ func NewProtoLoader(logger *zap.Logger) *ProtoLoader {
 	return &ProtoLoader{
 		logger:   logger,
 		services: make(map[string]*ServiceDefinition),
+		files:    &protoregistry.Files{},
 	}
 }
 
@@ -341,4 +344,10 @@ func (pl *ProtoLoader) GetMethod(serviceName, methodName string) (*MethodDefinit
 	}
 
 	return nil, fmt.Errorf("method not found: %s.%s", serviceName, methodName)
+}
+
+// GetFiles returns the custom Files registry containing all loaded file descriptors
+// This is used to create a custom type resolver
+func (pl *ProtoLoader) GetFiles() *protoregistry.Files {
+	return pl.files
 }

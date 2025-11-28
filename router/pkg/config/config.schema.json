@@ -2162,6 +2162,10 @@
             }
           }
         },
+        "services_provider_id": {
+          "type": "string",
+          "description": "The ID of the storage provider to use for loading proto files and GraphQL operations for all services. Only storage provider of type 'file_system' are supported. The provider must be configured in the storage_providers section."
+        },
         "services": {
           "type": "array",
           "description": "Array of ConnectRPC services. Each service represents a proto file and its associated GraphQL operations.",

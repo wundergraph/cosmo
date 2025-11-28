@@ -9,6 +9,7 @@ import (
 	"connectrpc.com/vanguard"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/types/dynamicpb"
 )
 
 // VanguardServiceConfig holds configuration for creating a Vanguard service
@@ -61,10 +62,15 @@ func (vs *VanguardService) registerServices() error {
 		return fmt.Errorf("no proto services found")
 	}
 
+	// Create a custom type resolver from our Files registry
+	// This avoids using the global registry
+	files := vs.protoLoader.GetFiles()
+	customTypes := dynamicpb.NewTypes(files)
+
 	vs.services = make([]*vanguard.Service, 0, len(protoServices))
 
 	for serviceName, serviceDef := range protoServices {
-		vs.logger.Info("registering service with vanguard",
+		vs.logger.Info("registering service",
 			zap.String("service_name", serviceName),
 			zap.String("full_name", serviceDef.FullName),
 			zap.Int("method_count", len(serviceDef.Methods)))
@@ -82,26 +88,27 @@ func (vs *VanguardService) registerServices() error {
 		// The handler will receive requests at paths like: /Method (without the service prefix)
 		serviceHandler := vs.createServiceHandler(serviceName, serviceDef)
 
-		// Now that we've registered the file descriptor in the global registry,
-		// we can use NewService instead of NewServiceWithSchema
-		// The service path should be the fully qualified service name with slashes
+		// Use NewServiceWithSchema with custom type resolver
+		// This avoids relying on the global registry
 		servicePath := "/" + serviceName + "/"
 		
-		vs.logger.Info("creating vanguard service",
+		vs.logger.Info("creating service with custom type resolver",
 			zap.String("service_path", servicePath))
 		
-		// Configure Vanguard to always transcode to Connect protocol with JSON codec
+		// Configure to always transcode to Connect protocol with JSON codec
 		// This ensures our handler always receives JSON, regardless of the incoming protocol
-		vanguardService := vanguard.NewService(
-			servicePath,
+		// Use NewServiceWithSchema to provide the schema directly with a custom type resolver
+		vanguardService := vanguard.NewServiceWithSchema(
+			serviceDef.ServiceDescriptor,
 			serviceHandler,
 			vanguard.WithTargetProtocols(vanguard.ProtocolConnect),
 			vanguard.WithTargetCodecs("json"),
+			vanguard.WithTypeResolver(customTypes),
 		)
 
 		vs.services = append(vs.services, vanguardService)
 
-		vs.logger.Info("registered Vanguard service successfully",
+		vs.logger.Info("registered service successfully with custom type resolver",
 			zap.String("service", serviceName),
 			zap.String("service_path", servicePath),
 			zap.String("target_protocol", "connect"),
@@ -160,7 +167,7 @@ func (vs *VanguardService) createServiceHandler(serviceName string, serviceDef *
 			vs.logger.Debug("extracted message from GET query parameter",
 				zap.String("message", string(requestBody)))
 		} else {
-			// Read request body (JSON from Vanguard transcoder for POST requests)
+			// Read request body (JSON for POST requests)
 			requestBody, err = io.ReadAll(r.Body)
 			if err != nil {
 				vs.logger.Error("failed to read request body", zap.Error(err))
@@ -183,7 +190,7 @@ func (vs *VanguardService) createServiceHandler(serviceName string, serviceDef *
 			return
 		}
 
-		// Write JSON response (Vanguard will transcode to client's protocol)
+		// Write JSON response (will be transcoded to client's protocol)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		if _, err := w.Write(responseBody); err != nil {
