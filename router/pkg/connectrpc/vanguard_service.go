@@ -121,21 +121,14 @@ func (vs *VanguardService) registerServices() error {
 // createServiceHandler creates an HTTP handler for a specific proto service
 func (vs *VanguardService) createServiceHandler(serviceName string, serviceDef *ServiceDefinition) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Extract method name from path: /employee.v1.EmployeeService/QueryGetEmployees
-		path := strings.TrimPrefix(r.URL.Path, "/")
-		parts := strings.Split(path, "/")
-		
-		var methodName string
-		if len(parts) == 2 {
-			methodName = parts[1]
-		} else if len(parts) == 1 {
-			methodName = parts[0]
-		} else {
+		// Extract and validate method name from path
+		methodName := vs.extractMethodName(r.URL.Path, serviceName)
+		if methodName == "" {
 			http.Error(w, "invalid path format", http.StatusNotFound)
 			return
 		}
 		
-		// Validate method exists
+		// Validate method exists in service
 		methodExists := false
 		for _, method := range serviceDef.Methods {
 			if method.Name == methodName {

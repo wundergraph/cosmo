@@ -313,7 +313,7 @@ func TestVanguardService_ServiceHandler(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	t.Run("handles invalid method path", func(t *testing.T) {
+	t.Run("returns 404 for unknown method name", func(t *testing.T) {
 		services := protoLoader.GetServices()
 		require.NotEmpty(t, services)
 		var serviceDef *ServiceDefinition
@@ -323,16 +323,18 @@ func TestVanguardService_ServiceHandler(t *testing.T) {
 		}
 		require.NotNil(t, serviceDef)
 
-		req := httptest.NewRequest("POST", "/invalid/path", nil)
+		// Valid service name but non-existent method
+		req := httptest.NewRequest("POST", "/employee.v1.EmployeeService/NonExistentMethod", nil)
 		w := httptest.NewRecorder()
 
 		serviceHandler := vs.createServiceHandler("employee.v1.EmployeeService", serviceDef)
 		serviceHandler.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusNotFound, w.Code)
+		assert.Contains(t, w.Body.String(), "method not found")
 	})
 
-	t.Run("handles wrong service name in path", func(t *testing.T) {
+	t.Run("returns 404 for wrong service name with valid method", func(t *testing.T) {
 		services := protoLoader.GetServices()
 		require.NotEmpty(t, services)
 		var serviceDef *ServiceDefinition
@@ -342,13 +344,36 @@ func TestVanguardService_ServiceHandler(t *testing.T) {
 		}
 		require.NotNil(t, serviceDef)
 
-		req := httptest.NewRequest("POST", "/wrong.Service/QueryGetUser", nil)
+		// Wrong service name but valid method name - should fail service validation
+		req := httptest.NewRequest("POST", "/wrong.Service/QueryGetEmployeeById", nil)
 		w := httptest.NewRecorder()
 
 		serviceHandler := vs.createServiceHandler("employee.v1.EmployeeService", serviceDef)
 		serviceHandler.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusNotFound, w.Code)
+		assert.Contains(t, w.Body.String(), "invalid path format")
+	})
+
+	t.Run("returns 404 for invalid path format with too many parts", func(t *testing.T) {
+		services := protoLoader.GetServices()
+		require.NotEmpty(t, services)
+		var serviceDef *ServiceDefinition
+		for _, svc := range services {
+			serviceDef = svc
+			break
+		}
+		require.NotNil(t, serviceDef)
+
+		// Path with too many segments
+		req := httptest.NewRequest("POST", "/employee.v1.EmployeeService/QueryGetEmployeeById/extra", nil)
+		w := httptest.NewRecorder()
+
+		serviceHandler := vs.createServiceHandler("employee.v1.EmployeeService", serviceDef)
+		serviceHandler.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusNotFound, w.Code)
+		assert.Contains(t, w.Body.String(), "invalid path format")
 	})
 
 	t.Run("handles request body read error", func(t *testing.T) {
@@ -445,16 +470,6 @@ func TestVanguardService_GetFileDescriptors(t *testing.T) {
 }
 
 // Helper functions
-
-func setupTestProtoLoaderFromDir(t *testing.T, dir string) *ProtoLoader {
-	t.Helper()
-
-	loader := NewProtoLoader(zap.NewNop())
-	err := loader.LoadFromDirectory(dir)
-	require.NoError(t, err)
-
-	return loader
-}
 
 func setupTestRPCHandler(t *testing.T, protoLoader *ProtoLoader) *RPCHandler {
 	t.Helper()
