@@ -3,6 +3,7 @@ package metric
 import (
 	"net/url"
 	"regexp"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -41,10 +42,14 @@ type PrometheusConfig struct {
 type PrometheusSchemaFieldUsage struct {
 	Enabled             bool
 	IncludeOperationSha bool
-	// SampleRate controls the percentage of requests to sample for schema field usage metrics (0.0 to 1.0).
-	// Uses probabilistic random sampling to ensure all operations get ~X% statistical coverage.
-	// Supports any rate: 1.0 (100%), 0.8 (80%), 0.5 (50%), 0.1 (10%), 0.01 (1%), etc.
-	SampleRate float64
+	Exporter            PrometheusSchemaFieldUsageExporter
+}
+
+type PrometheusSchemaFieldUsageExporter struct {
+	BatchSize     int
+	QueueSize     int
+	Interval      time.Duration
+	ExportTimeout time.Duration
 }
 
 type OpenTelemetryExporter struct {
