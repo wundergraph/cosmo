@@ -16,7 +16,6 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/santhosh-tekuri/jsonschema/v6"
-	"github.com/wundergraph/cosmo/router/internal/stringsx"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
@@ -310,6 +309,13 @@ func WithStateless(stateless bool) func(*Options) {
 
 func WithCORS(corsCfg cors.Config) func(*Options) {
 	return func(o *Options) {
+		// Force specific CORS settings for MCP server
+		corsCfg.AllowOrigins = []string{"*"}
+		corsCfg.AllowMethods = []string{"GET", "PUT", "POST", "DELETE", "OPTIONS"}
+		corsCfg.AllowHeaders = append(corsCfg.AllowHeaders, "Content-Type", "Accept", "Authorization", "Last-Event-ID", "Mcp-Protocol-Version", "Mcp-Session-Id")
+		if corsCfg.MaxAge <= 0 {
+			corsCfg.MaxAge = 24 * time.Hour
+		}
 		o.CorsConfig = corsCfg
 	}
 }
@@ -332,7 +338,7 @@ func (s *GraphQLSchemaServer) Serve() (*server.StreamableHTTPServer, error) {
 		server.WithHeartbeatInterval(10*time.Second),
 	)
 
-	middleware := corsMiddleware(s.corsConfig)
+	middleware := cors.New(s.corsConfig)
 
 	mux := http.NewServeMux()
 
@@ -799,49 +805,4 @@ func (s *GraphQLSchemaServer) handleGetGraphQLSchema() func(ctx context.Context,
 
 		return mcp.NewToolResultText(schemaStr), nil
 	}
-}
-
-// corsMiddleware creates a reusable CORS middleware that can be used with any HTTP handler.
-// It handles preflight OPTIONS requests and sets appropriate CORS headers.
-//
-// Example usage:
-//
-//	middleware := corsMiddleware("GET", "POST", "PUT", "DELETE")
-//	http.Handle("/api/", middleware(apiHandler))
-//
-// The middleware sets the following CORS headers:
-//   - Access-Control-Allow-Origin: *
-//   - Access-Control-Allow-Methods: specified methods + OPTIONS
-//   - Access-Control-Allow-Headers: Content-Type, Authorization
-//   - Access-Control-Max-Age: 86400 (24 hours)
-func corsMiddleware(corsConfig cors.Config) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			// Set CORS headers for all requests
-			setCORSHeaders(w, corsConfig)
-
-			// Handle preflight OPTIONS requests
-			if req.Method == http.MethodOptions {
-				w.WriteHeader(http.StatusNoContent)
-				return
-			}
-
-			// Call the next handler
-			next.ServeHTTP(w, req)
-		})
-	}
-}
-
-// setCORSHeaders sets common CORS headers
-// Only used for web browsers, not for API clients
-func setCORSHeaders(w http.ResponseWriter, config cors.Config) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, PUT, POST, DELETE, OPTIONS")
-	hdrs := stringsx.RemoveDuplicates(append(config.AllowHeaders, "Content-Type", "Accept", "Authorization", "Last-Event-ID", "Mcp-Protocol-Version", "Mcp-Session-Id"))
-	w.Header().Set("Access-Control-Allow-Headers", strings.Join(hdrs, ", "))
-	maxAge := config.MaxAge
-	if maxAge <= 0 {
-		maxAge = 24 * time.Hour
-	}
-	w.Header().Set("Access-Control-Max-Age", fmt.Sprintf("%d", int(maxAge.Seconds())))
 }

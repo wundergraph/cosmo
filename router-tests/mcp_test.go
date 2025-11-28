@@ -414,7 +414,7 @@ func TestMCP(t *testing.T) {
 				assert.Contains(t, allowedHeaders, "Content-Type")
 				assert.Contains(t, allowedHeaders, "Accept")
 				assert.Contains(t, allowedHeaders, "Authorization")
-				assert.Contains(t, allowedHeaders, "Last-Event-ID")
+				assert.Contains(t, allowedHeaders, "Last-Event-Id")
 				assert.Contains(t, allowedHeaders, "Mcp-Protocol-Version")
 				assert.Contains(t, allowedHeaders, "Mcp-Session-Id")
 
@@ -422,7 +422,7 @@ func TestMCP(t *testing.T) {
 			})
 		})
 
-		t.Run("Actual POST request includes CORS headers", func(t *testing.T) {
+		t.Run("Actual POST should include Access-Control-Allow-Origin headers", func(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				MCP: config.MCPConfiguration{
 					Enabled: true,
@@ -458,25 +458,16 @@ func TestMCP(t *testing.T) {
 				assert.Equal(t, "*", resp.Header.Get("Access-Control-Allow-Origin"))
 
 				allowedMethods := resp.Header.Get("Access-Control-Allow-Methods")
-				assert.Contains(t, allowedMethods, "GET")
-				assert.Contains(t, allowedMethods, "POST")
-				assert.Contains(t, allowedMethods, "PUT")
-				assert.Contains(t, allowedMethods, "DELETE")
-				assert.Contains(t, allowedMethods, "OPTIONS")
+				assert.Empty(t, allowedMethods)
 
 				allowedHeaders := resp.Header.Get("Access-Control-Allow-Headers")
-				assert.Contains(t, allowedHeaders, "Content-Type")
-				assert.Contains(t, allowedHeaders, "Accept")
-				assert.Contains(t, allowedHeaders, "Authorization")
-				assert.Contains(t, allowedHeaders, "Last-Event-ID")
-				assert.Contains(t, allowedHeaders, "Mcp-Protocol-Version")
-				assert.Contains(t, allowedHeaders, "Mcp-Session-Id")
+				assert.Empty(t, allowedHeaders)
 
-				assert.Equal(t, "86400", resp.Header.Get("Access-Control-Max-Age"))
+				assert.Empty(t, resp.Header.Get("Access-Control-Max-Age"))
 			})
 		})
 
-		t.Run("GET request includes CORS headers", func(t *testing.T) {
+		t.Run("GET request should include Access-Control-Allow-Origin headers", func(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				MCP: config.MCPConfiguration{
 					Enabled: true,
@@ -501,25 +492,16 @@ func TestMCP(t *testing.T) {
 				assert.Equal(t, "*", resp.Header.Get("Access-Control-Allow-Origin"))
 
 				allowedMethods := resp.Header.Get("Access-Control-Allow-Methods")
-				assert.Contains(t, allowedMethods, "GET")
-				assert.Contains(t, allowedMethods, "POST")
-				assert.Contains(t, allowedMethods, "PUT")
-				assert.Contains(t, allowedMethods, "DELETE")
-				assert.Contains(t, allowedMethods, "OPTIONS")
+				assert.Empty(t, allowedMethods)
 
 				allowedHeaders := resp.Header.Get("Access-Control-Allow-Headers")
-				assert.Contains(t, allowedHeaders, "Content-Type")
-				assert.Contains(t, allowedHeaders, "Accept")
-				assert.Contains(t, allowedHeaders, "Authorization")
-				assert.Contains(t, allowedHeaders, "Last-Event-ID")
-				assert.Contains(t, allowedHeaders, "Mcp-Protocol-Version")
-				assert.Contains(t, allowedHeaders, "Mcp-Session-Id")
+				assert.Empty(t, allowedHeaders)
 
-				assert.Equal(t, "86400", resp.Header.Get("Access-Control-Max-Age"))
+				assert.Empty(t, resp.Header.Get("Access-Control-Max-Age"))
 			})
 		})
 
-		t.Run("CORS headers work with different HTTP methods", func(t *testing.T) {
+		t.Run("Access-Control-Allow-Origin header should be set with different HTTP methods", func(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				MCP: config.MCPConfiguration{
 					Enabled: true,
@@ -548,14 +530,12 @@ func TestMCP(t *testing.T) {
 						assert.Equal(t, "*", resp.Header.Get("Access-Control-Allow-Origin"))
 
 						allowedMethods := resp.Header.Get("Access-Control-Allow-Methods")
-						assert.Contains(t, allowedMethods, method)
-						assert.Contains(t, allowedMethods, "OPTIONS")
+						assert.Empty(t, allowedMethods)
 
 						allowedHeaders := resp.Header.Get("Access-Control-Allow-Headers")
-						assert.Contains(t, allowedHeaders, "Content-Type")
-						assert.Contains(t, allowedHeaders, "Authorization")
+						assert.Empty(t, allowedHeaders)
 
-						assert.Equal(t, "86400", resp.Header.Get("Access-Control-Max-Age"))
+						assert.Empty(t, resp.Header.Get("Access-Control-Max-Age"))
 					})
 				}
 			})
@@ -576,7 +556,7 @@ func TestMCP(t *testing.T) {
 				mcpAddr := xEnv.GetMCPServerAddr()
 
 				// Create a GET request
-				req, err := http.NewRequest("GET", mcpAddr, nil)
+				req, err := http.NewRequest("OPTIONS", mcpAddr, nil)
 				require.NoError(t, err)
 
 				// Add cross-origin header
@@ -601,7 +581,7 @@ func TestMCP(t *testing.T) {
 				assert.Contains(t, allowedHeaders, "Content-Type")
 				assert.Contains(t, allowedHeaders, "Accept")
 				assert.Contains(t, allowedHeaders, "Authorization")
-				assert.Contains(t, allowedHeaders, "Last-Event-ID")
+				assert.Contains(t, allowedHeaders, "Last-Event-Id")
 				assert.Contains(t, allowedHeaders, "Mcp-Protocol-Version")
 				assert.Contains(t, allowedHeaders, "Mcp-Session-Id")
 				assert.Contains(t, allowedHeaders, "Test")
