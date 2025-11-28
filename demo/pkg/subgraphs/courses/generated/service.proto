@@ -5,12 +5,8 @@ import "google/protobuf/wrappers.proto";
 
 // Service definition for CoursesService
 service CoursesService {
-  // Lookup Course entity by id
-  rpc LookupCourseById(LookupCourseByIdRequest) returns (LookupCourseByIdResponse) {}
   // Lookup Employee entity by id
   rpc LookupEmployeeById(LookupEmployeeByIdRequest) returns (LookupEmployeeByIdResponse) {}
-  // Lookup Lesson entity by id
-  rpc LookupLessonById(LookupLessonByIdRequest) returns (LookupLessonByIdResponse) {}
   rpc MutationAddCourse(MutationAddCourseRequest) returns (MutationAddCourseResponse) {}
   rpc MutationAddLesson(MutationAddLessonRequest) returns (MutationAddLessonResponse) {}
   rpc QueryCourse(QueryCourseRequest) returns (QueryCourseResponse) {}
@@ -18,74 +14,6 @@ service CoursesService {
   rpc QueryKillCoursesService(QueryKillCoursesServiceRequest) returns (QueryKillCoursesServiceResponse) {}
   rpc QueryLessons(QueryLessonsRequest) returns (QueryLessonsResponse) {}
   rpc QueryThrowErrorCourses(QueryThrowErrorCoursesRequest) returns (QueryThrowErrorCoursesResponse) {}
-}
-
-// Key message for Course entity lookup
-message LookupCourseByIdRequestKey {
-  // Key field for Course entity lookup.
-  string id = 1;
-}
-
-// Request message for Course entity lookup.
-message LookupCourseByIdRequest {
-  /*
-   * List of keys to look up Course entities.
-   * Order matters - each key maps to one entity in LookupCourseByIdResponse.
-   */
-  repeated LookupCourseByIdRequestKey keys = 1;
-}
-
-// Response message for Course entity lookup.
-message LookupCourseByIdResponse {
-  /*
-   * List of Course entities in the same order as the keys in LookupCourseByIdRequest.
-   * Always return the same number of entities as keys. Use null for entities that cannot be found.
-   * 
-   * Example:
-   *   LookupUserByIdRequest:
-   *     keys:
-   *       - id: 1
-   *       - id: 2
-   *   LookupUserByIdResponse:
-   *     result:
-   *       - id: 1 # User with id 1 found
-   *       - null  # User with id 2 not found
-   */
-  repeated Course result = 1;
-}
-
-// Key message for Lesson entity lookup
-message LookupLessonByIdRequestKey {
-  // Key field for Lesson entity lookup.
-  string id = 1;
-}
-
-// Request message for Lesson entity lookup.
-message LookupLessonByIdRequest {
-  /*
-   * List of keys to look up Lesson entities.
-   * Order matters - each key maps to one entity in LookupLessonByIdResponse.
-   */
-  repeated LookupLessonByIdRequestKey keys = 1;
-}
-
-// Response message for Lesson entity lookup.
-message LookupLessonByIdResponse {
-  /*
-   * List of Lesson entities in the same order as the keys in LookupLessonByIdRequest.
-   * Always return the same number of entities as keys. Use null for entities that cannot be found.
-   * 
-   * Example:
-   *   LookupUserByIdRequest:
-   *     keys:
-   *       - id: 1
-   *       - id: 2
-   *   LookupUserByIdResponse:
-   *     result:
-   *       - id: 1 # User with id 1 found
-   *       - null  # User with id 2 not found
-   */
-  repeated Lesson result = 1;
 }
 
 // Key message for Employee entity lookup
@@ -179,6 +107,11 @@ message MutationAddLessonResponse {
   Lesson add_lesson = 1;
 }
 
+message Employee {
+  int32 id = 1;
+  repeated Course taught_courses = 2;
+}
+
 message Course {
   string id = 1;
   string title = 2;
@@ -194,9 +127,4 @@ message Lesson {
   google.protobuf.StringValue description = 4;
   int32 order = 5;
   Course course = 6;
-}
-
-message Employee {
-  int32 id = 1;
-  repeated Course taught_courses = 2;
 }

@@ -3,6 +3,10 @@ package core
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"os"
+	"strings"
+
 	"github.com/KimMachineGun/automemlimit/memlimit"
 	"github.com/dustin/go-humanize"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
@@ -13,9 +17,6 @@ import (
 	"go.uber.org/automaxprocs/maxprocs"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"net/http"
-	"os"
-	"strings"
 )
 
 // newRouter creates a new router instance.
@@ -271,6 +272,7 @@ func optionsFromResources(logger *zap.Logger, config *config.Config) []Option {
 		WithConnectRPC(config.ConnectRPC),
 		WithPlugins(config.Plugins),
 		WithDemoMode(config.DemoMode),
+		WithStreamsHandlerConfiguration(config.Events.Handlers),
 	}
 
 	return options

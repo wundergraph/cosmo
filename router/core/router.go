@@ -30,6 +30,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/circuit"
 	"github.com/wundergraph/cosmo/router/internal/debug"
 	"github.com/wundergraph/cosmo/router/internal/docker"
+	"github.com/wundergraph/cosmo/router/internal/exporter"
 	"github.com/wundergraph/cosmo/router/internal/graphiql"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
@@ -252,6 +253,14 @@ func NewRouter(opts ...Option) (*Router, error) {
 
 	if r.metricConfig == nil {
 		r.metricConfig = rmetric.DefaultConfig(Version)
+	}
+
+	if r.subscriptionHooks.onReceiveEvents.maxConcurrentHandlers == 0 {
+		r.subscriptionHooks.onReceiveEvents.maxConcurrentHandlers = 100
+	}
+
+	if r.subscriptionHooks.onReceiveEvents.timeout == 0 {
+		r.subscriptionHooks.onReceiveEvents.timeout = 5 * time.Second
 	}
 
 	if r.corsOptions == nil {
@@ -676,6 +685,18 @@ func (r *Router) initModules(ctx context.Context) error {
 			}
 		}
 
+		if handler, ok := moduleInstance.(SubscriptionOnStartHandler); ok {
+			r.subscriptionHooks.onStart.handlers = append(r.subscriptionHooks.onStart.handlers, handler.SubscriptionOnStart)
+		}
+
+		if handler, ok := moduleInstance.(StreamPublishEventHandler); ok {
+			r.subscriptionHooks.onPublishEvents.handlers = append(r.subscriptionHooks.onPublishEvents.handlers, handler.OnPublishEvents)
+		}
+
+		if handler, ok := moduleInstance.(StreamReceiveEventHandler); ok {
+			r.subscriptionHooks.onReceiveEvents.handlers = append(r.subscriptionHooks.onReceiveEvents.handlers, handler.OnReceiveEvents)
+		}
+
 		r.modules = append(r.modules, moduleInstance)
 
 		r.logger.Info("Module registered",
@@ -825,11 +846,11 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			r.graphqlMetricsConfig.CollectorEndpoint,
 			connect.WithSendGzip(),
 		)
-		ge, err := graphqlmetrics.NewExporter(
+		ge, err := graphqlmetrics.NewGraphQLMetricsExporter(
 			r.logger,
 			client,
 			r.graphApiToken,
-			graphqlmetrics.NewDefaultExporterSettings(),
+			exporter.NewDefaultExporterSettings(),
 		)
 		if err != nil {
 			return fmt.Errorf("failed to validate graphql metrics exporter: %w", err)
@@ -837,6 +858,18 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		r.gqlMetricsExporter = ge
 
 		r.logger.Info("GraphQL schema coverage metrics enabled")
+	}
+
+	// Create Prometheus metrics exporter for schema field usage
+	// Note: This is separate from the Prometheus meter provider which handles OTEL metrics
+	// This exporter is specifically for schema field usage tracking via the Prometheus sink
+	if r.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled {
+		// The metric store will be passed in later when building the graph mux
+		// because each mux has its own metric store
+		// We'll create the exporter when building the mux in buildGraphMux
+		r.logger.Info("Prometheus schema field usage metrics enabled",
+			zap.Bool("include_operation_sha", r.metricConfig.Prometheus.PromSchemaFieldUsage.IncludeOperationSha),
+		)
 	}
 
 	if r.Config.rateLimit != nil && r.Config.rateLimit.Enabled {
@@ -2221,6 +2254,13 @@ func WithDemoMode(demoMode bool) Option {
 	}
 }
 
+func WithStreamsHandlerConfiguration(cfg config.StreamsHandlerConfiguration) Option {
+	return func(r *Router) {
+		r.subscriptionHooks.onReceiveEvents.maxConcurrentHandlers = cfg.OnReceiveEvents.MaxConcurrentHandlers
+		r.subscriptionHooks.onReceiveEvents.timeout = cfg.OnReceiveEvents.HandlerTimeout
+	}
+}
+
 type ProxyFunc func(req *http.Request) (*url.URL, error)
 
 func newHTTPTransport(opts *TransportRequestOptions, proxy ProxyFunc, traceDialer *TraceDialer, subgraph string) *http.Transport {
@@ -2413,7 +2453,12 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			PromSchemaFieldUsage: rmetric.PrometheusSchemaFieldUsage{
 				Enabled:             cfg.Metrics.Prometheus.SchemaFieldUsage.Enabled,
 				IncludeOperationSha: cfg.Metrics.Prometheus.SchemaFieldUsage.IncludeOperationSha,
-				SampleRate:          cfg.Metrics.Prometheus.SchemaFieldUsage.SampleRate,
+				Exporter: rmetric.PrometheusSchemaFieldUsageExporter{
+					BatchSize:     cfg.Metrics.Prometheus.SchemaFieldUsage.Exporter.BatchSize,
+					QueueSize:     cfg.Metrics.Prometheus.SchemaFieldUsage.Exporter.QueueSize,
+					Interval:      cfg.Metrics.Prometheus.SchemaFieldUsage.Exporter.Interval,
+					ExportTimeout: cfg.Metrics.Prometheus.SchemaFieldUsage.Exporter.ExportTimeout,
+				},
 			},
 		},
 	}

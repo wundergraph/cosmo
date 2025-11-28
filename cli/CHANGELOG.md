@@ -4,6 +4,24 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.100.0](https://github.com/wundergraph/cosmo/compare/wgc@0.99.0...wgc@0.100.0) (2025-11-26)
+
+### Features
+
+* add yes option for router cli and fix ts demo plugin example ([#2367](https://github.com/wundergraph/cosmo/issues/2367)) ([64bdd46](https://github.com/wundergraph/cosmo/commit/64bdd468b831c020f256a783fe8f5e832676c2dd)) (@SkArchon)
+
+# [0.99.0](https://github.com/wundergraph/cosmo/compare/wgc@0.98.0...wgc@0.99.0) (2025-11-26)
+
+### Features
+
+* initial codecov changes ([#2360](https://github.com/wundergraph/cosmo/issues/2360)) ([175f80c](https://github.com/wundergraph/cosmo/commit/175f80c4e6d90de9a1378e0d515246c909f1db4a)) (@SkArchon)
+
+# [0.98.0](https://github.com/wundergraph/cosmo/compare/wgc@0.97.1...wgc@0.98.0) (2025-11-24)
+
+### Features
+
+* make dependency versions be fixed ([#2357](https://github.com/wundergraph/cosmo/issues/2357)) ([9962d7f](https://github.com/wundergraph/cosmo/commit/9962d7fa4f7a41ed1aed9fc191118d54c12e485f)) (@wilsonrivera)
+
 ## [0.97.1](https://github.com/wundergraph/cosmo/compare/wgc@0.97.0...wgc@0.97.1) (2025-11-21)
 
 **Note:** Version bump only for package wgc

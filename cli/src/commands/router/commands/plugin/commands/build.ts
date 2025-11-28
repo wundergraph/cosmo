@@ -33,12 +33,15 @@ export default (opts: BaseCommandOptions) => {
     [],
   );
   command.option('--all-platforms', 'Build for all supported platforms', false);
+
   command.option('--skip-tools-installation', 'Skip tool installation', false);
   command.option(
     '--force-tools-installation',
     'Force tools installation regardless of version check or confirmation',
     false,
   );
+  command.option('-y, --yes', 'Automatically answer yes to all prompts', false);
+
   command.option('--go-module-path <path>', 'Go module path to use for the plugin');
 
   command.action(async (directory, options) => {
@@ -46,6 +49,7 @@ export default (opts: BaseCommandOptions) => {
     const pluginDir = resolve(directory);
     const spinner = Spinner();
     const pluginName = path.basename(pluginDir);
+    const autoConfirmPrompts: boolean = options.yes;
 
     const language = getLanguage(pluginDir);
     if (!language) {
@@ -61,7 +65,7 @@ export default (opts: BaseCommandOptions) => {
     try {
       // Check and install tools if needed
       if (!options.skipToolsInstallation) {
-        await checkAndInstallTools(options.forceToolsInstallation, language);
+        await checkAndInstallTools(options.forceToolsInstallation, language, autoConfirmPrompts);
       }
 
       // Start the main build process

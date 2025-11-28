@@ -7,11 +7,11 @@ export const useApplyParams = () => {
     (newParams: Record<string, string | null>, unset?: string[]) => {
       const q = Object.fromEntries(
         Object.entries(router.query).filter(
-          ([key]) => !unset?.includes(key) && newParams[key] !== null
-        )
+          ([key]) => !unset?.includes(key) && newParams[key] !== null,
+        ),
       );
       const params = Object.fromEntries(
-        Object.entries(newParams).filter(([_, value]) => value !== null)
+        Object.entries(newParams).filter(([_, value]) => value !== null),
       );
       router.push({
         query: {
@@ -20,6 +20,6 @@ export const useApplyParams = () => {
         },
       });
     },
-    [router]
+    [router],
   );
 };

@@ -43,6 +43,12 @@ const pkceMaxAgeSec = 60 * 15; // 15 minutes
 const pkceCodeAlgorithm = 'S256';
 const scope = 'openid profile email';
 
+const axiosStatusValidator = function (status: number): boolean {
+  // All user-level (4xx) errors are handled below by returning `AuthenticationError`.
+  // For any server errors (5xx), we want to surface those separately.
+  return status < 500;
+};
+
 export default class AuthUtils {
   private webUrl: URL;
   private readonly webDomain: string;
@@ -131,6 +137,7 @@ export default class AuthUtils {
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
+      validateStatus: axiosStatusValidator,
     });
 
     if (res.status !== 200) {
@@ -156,6 +163,7 @@ export default class AuthUtils {
         client_id: this.opts.oauth.clientID,
         scope,
       }),
+      validateStatus: axiosStatusValidator,
     });
 
     if (res.status !== 200) {
@@ -273,6 +281,7 @@ export default class AuthUtils {
         code,
         redirect_uri: this.getRedirectUri({ redirectURL, sso: ssoSlug }),
       }),
+      validateStatus: axiosStatusValidator,
     });
 
     if (resp.status !== 200) {

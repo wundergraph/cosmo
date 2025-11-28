@@ -1,12 +1,17 @@
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { FastifyPluginCallback, FastifyRequest } from 'fastify';
+import { FastifyPluginCallback, FastifyReply, FastifyRequest } from 'fastify';
 import fp from 'fastify-plugin';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import * as schema from '../../db/schema.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { UserRepository } from '../repositories/UserRepository.js';
 import ApiKeyAuthenticator, { ApiKeyAuthContext } from '../services/ApiKeyAuthenticator.js';
 import Keycloak from '../services/Keycloak.js';
 import { ApiKeyRepository } from '../repositories/ApiKeyRepository.js';
+import Mailer from '../services/Mailer.js';
+import { AddAuditLogInput, AuditLogRepository } from '../repositories/AuditLogRepository.js';
+import { UserInviteService } from '../services/UserInviteService.js';
+import { isPublicError } from '../errors/errors.js';
 
 export type ScimControllerOptions = {
   db: PostgresJsDatabase<typeof schema>;
@@ -16,7 +21,63 @@ export type ScimControllerOptions = {
   authenticator: ApiKeyAuthenticator;
   keycloakClient: Keycloak;
   keycloakRealm: string;
+  mailer?: Mailer;
 };
+
+type ListUsersRequest = FastifyRequest<{
+  Querystring: {
+    filter?: string;
+    startIndex?: number;
+    count?: number;
+  };
+}>;
+
+type GetUserRequest = FastifyRequest<{
+  Params: { userID: string };
+}>;
+
+type CreateUserRequest = FastifyRequest<{
+  Body: {
+    schemas: string[];
+    userName: string;
+    name: { givenName: string; familyName: string };
+    emails: { primary: boolean; value: string }[];
+    password: string;
+    displayName: string;
+    groups: string[];
+    active: boolean;
+    locale: string;
+    externalId: string;
+  };
+}>;
+
+type UpdateUserRequest = FastifyRequest<{
+  Params: { userID: string };
+  Body: {
+    schemas: string[];
+    id: string;
+    userName: string;
+    name: { givenName?: string; familyName?: string };
+    emails: { primary: boolean; value: string }[];
+    password: string;
+    groups: string[];
+    active: boolean;
+  };
+}>;
+
+type PatchOperationType = 'add' | 'replace' | 'remove';
+
+type PatchOperation =
+  | { op: PatchOperationType; path: string; value: string }
+  | { op: PatchOperationType; value: Record<string, unknown> };
+
+type PatchUserRequest = FastifyRequest<{
+  Params: { userID: string };
+  Body: {
+    schemas: string[];
+    Operations: PatchOperation[];
+  };
+}>;
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -34,7 +95,7 @@ const ScimError = ({ detail, status }: { detail: string; status: number }) => {
 
 // https://developer.okta.com/docs/reference/scim/scim-20/
 const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fastify, opts, done) {
-  fastify.addContentTypeParser('application/scim+json', { parseAs: 'string' }, function (req, body, done) {
+  fastify.addContentTypeParser('application/scim+json', { parseAs: 'string' }, function (_, body, done) {
     try {
       const json = JSON.parse(body.toString());
       done(null, json);
@@ -93,11 +154,12 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
     }
   });
 
-  fastify.get('/', (req, res) => {
+  fastify.get('/', (_: FastifyRequest, res: FastifyReply) => {
     return res.code(200).send('SCIM');
   });
 
-  fastify.get<{ Querystring: { filter?: string; startIndex?: number; count?: number } }>('/Users', async (req, res) => {
+  // list existing users
+  fastify.get('/Users', async (req: ListUsersRequest, res: FastifyReply) => {
     const authContext = req.authContext;
 
     const filter = req.query?.filter;
@@ -197,11 +259,11 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
     });
   });
 
-  fastify.get('/Users/:userID', async (req: FastifyRequest<{ Params: { userID: string } }>, res) => {
+  // fetch user
+  fastify.get('/Users/:userID', async (req: GetUserRequest, res: FastifyReply) => {
     const authContext = req.authContext;
 
     const userID = req.params.userID;
-
     const user = await opts.organizationRepository.getOrganizationMember({
       organizationID: authContext.organizationId,
       userID,
@@ -237,7 +299,7 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
         givenName: keycloakUsers[0].firstName || '',
         familyName: keycloakUsers[0].lastName || '',
       },
-      active: keycloakUsers[0].enabled,
+      active: user.active,
       emails: [
         {
           primary: true,
@@ -252,166 +314,47 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
   });
 
   // create a user
-  fastify.post(
-    '/Users',
-    async (
-      req: FastifyRequest<{
-        Body: {
-          schemas: string[];
-          userName: string;
-          name: { givenName: string; familyName: string };
-          emails: { primary: boolean; value: string }[];
-          password: string;
-          displayName: string;
-          groups: string[];
-          active: boolean;
-          locale: string;
-          externalId: string;
-        };
-      }>,
-      res,
-    ) => {
-      const authContext = req.authContext;
+  fastify.post('/Users', async (req: CreateUserRequest, res: FastifyReply) => {
+    const authContext = req.authContext;
 
-      const { userName, name, emails, password, displayName, groups, active, locale, externalId } = req.body;
+    const { userName, name, emails, password, displayName, groups, active, locale, externalId } = req.body;
+    const email = emails.find((e) => e.primary)?.value || userName;
 
-      const email = emails.find((e) => e.primary)?.value || userName;
-
-      const org = await opts.organizationRepository.byId(authContext.organizationId);
-      if (!org) {
-        return res.code(404).send(
-          ScimError({
-            detail: 'Organization not found.',
-            status: 404,
-          }),
-        );
-      }
-
-      // Ensure that the organization has been linked to a Keycloak group
-      if (!org.kcGroupId) {
-        return res.code(500).send(
-          ScimError({
-            detail: `Organization group "${org.slug}" not found`,
-            status: 500,
-          }),
-        );
-      }
-
-      // Make sure that the group exists in Keycloak
-      const kcGroup = await opts.keycloakClient.client.groups.findOne({
-        realm: opts.keycloakRealm,
-        id: org.kcGroupId,
+    try {
+      const service = new UserInviteService({
+        db: opts.db,
+        logger: req.log,
+        keycloakRealm: opts.keycloakRealm,
+        keycloak: opts.keycloakClient,
+        mailer: opts.mailer,
       });
 
-      if (!kcGroup) {
-        return res.code(500).send(
-          ScimError({
-            detail: `Organization group "${org.slug}" not found`,
-            status: 500,
-          }),
-        );
-      }
-
-      // Check whether the organization member already exists
-      const orgMember = await opts.organizationRepository.getOrganizationMemberByEmail({
-        organizationID: authContext.organizationId,
-        userEmail: email,
-      });
-
-      if (orgMember) {
-        return res.code(409).send(
-          ScimError({
-            detail: 'User is already a part of the organization.',
-            status: 409,
-          }),
-        );
-      }
-
-      // fetching the org from keycloak
-      const user = await opts.userRepository.byEmail(email);
-      const keycloakUsers = await opts.keycloakClient.client.users.find({
-        realm: opts.keycloakRealm,
+      const userId = await service.inviteUser({
+        organizationId: authContext.organizationId,
+        inviterUserId: authContext.userId,
         email,
-        exact: true,
+        firstName: name.givenName,
+        lastName: name.familyName,
+        password,
       });
 
-      if (user) {
-        if (keycloakUsers.length === 0) {
-          // return 500 as the user should exist on keycloak if it exists in the db
-          return res.code(500).send(
-            ScimError({
-              detail: `User '${user.email}' not found on keycloak`,
-              status: 500,
-            }),
-          );
-        } else {
-          await opts.keycloakClient.client.users.addToGroup({
-            id: user.id,
-            realm: opts.keycloakRealm,
-            groupId: org.kcGroupId!,
-          });
-
-          await opts.organizationRepository.addOrganizationMember({
-            userID: user.id,
-            organizationID: authContext.organizationId,
-          });
-
-          return res.code(201).send({
-            schemas: ['urn:ietf:params:scim:schemas:core:2.0:User'],
-            id: user.id,
-            userName: email,
-            name,
-            emails,
-            displayName,
-            locale,
-            externalId,
-            active,
-            groups,
-            meta: {
-              resourceType: 'User',
-            },
-          });
-        }
-      }
-
-      let keycloakUserID = '';
-      try {
-        if (keycloakUsers.length === 0) {
-          keycloakUserID = await opts.keycloakClient.addKeycloakUser({
-            realm: opts.keycloakRealm,
-            firstName: name.givenName,
-            lastName: name.familyName,
-            email,
-            password,
-            isPasswordTemp: false,
-          });
-        } else {
-          keycloakUserID = keycloakUsers[0].id!;
-        }
-      } catch (err: any) {
-        return res.code(500).send(
-          ScimError({
-            detail: err.responseData.errorMessage || err.message,
-            status: 500,
-          }),
-        );
-      }
-
-      await opts.keycloakClient.client.users.addToGroup({
-        id: keycloakUserID,
-        realm: opts.keycloakRealm,
-        groupId: org.kcGroupId!,
-      });
-
-      await opts.userRepository.addUser({ id: keycloakUserID, email });
-      await opts.organizationRepository.addOrganizationMember({
-        userID: keycloakUserID,
-        organizationID: authContext.organizationId,
+      const auditLogRepo = new AuditLogRepository(opts.db);
+      await auditLogRepo.addAuditLog({
+        organizationId: authContext.organizationId,
+        organizationSlug: authContext.organizationSlug,
+        auditAction: 'scim.organization_invitation_created',
+        action: 'created',
+        actorId: authContext.userId,
+        auditableDisplayName: email,
+        auditableType: 'user',
+        actorDisplayName: authContext.userDisplayName,
+        apiKeyName: authContext.apiKeyName,
+        actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
       });
 
       return res.code(201).send({
         schemas: ['urn:ietf:params:scim:schemas:core:2.0:User'],
-        id: keycloakUserID,
+        id: userId,
         userName: email,
         name,
         emails,
@@ -424,134 +367,204 @@ const plugin: FastifyPluginCallback<ScimControllerOptions> = function Scim(fasti
           resourceType: 'User',
         },
       });
-    },
-  );
+    } catch (err: unknown) {
+      if (isPublicError(err)) {
+        return res.code(400).send(
+          ScimError({
+            detail: err.message,
+            status: err.code === EnumStatusCode.ERR_ALREADY_EXISTS ? 409 : 500,
+          }),
+        );
+      } else if (err instanceof Error) {
+        return res.code(500).send(
+          ScimError({
+            detail: err.message,
+            status: 500,
+          }),
+        );
+      }
+    }
+
+    return res.code(500).send(
+      ScimError({
+        detail: 'Oh no! Something went wrong while creating the user.',
+        status: 500,
+      }),
+    );
+  });
 
   // update a user
-  fastify.put(
-    '/Users/:userID',
-    async (
-      req: FastifyRequest<{
-        Params: { userID: string };
-        Body: {
-          schemas: string[];
-          id: string;
-          userName: string;
-          name: { givenName?: string; familyName?: string };
-          emails: { primary: boolean; value: string }[];
-          password: string;
-          groups: string[];
-          active: boolean;
-        };
-      }>,
-      res,
-    ) => {
-      const authContext = req.authContext;
+  fastify.put('/Users/:userID', async (req: UpdateUserRequest, res: FastifyReply) => {
+    const authContext = req.authContext;
 
-      const userID = req.params.userID;
-      const { name, emails, password, groups, active } = req.body;
+    const userID = req.params.userID;
+    const { name, emails, groups, active } = req.body;
 
-      const user = await opts.organizationRepository.getOrganizationMember({
-        organizationID: authContext.organizationId,
-        userID,
-      });
+    const user = await opts.organizationRepository.getOrganizationMember({
+      organizationID: authContext.organizationId,
+      userID,
+    });
 
-      if (!user) {
-        return res.code(404).send(
-          ScimError({
-            detail: 'User not found',
-            status: 404,
-          }),
-        );
-      }
+    if (!user) {
+      return res.code(404).send(
+        ScimError({
+          detail: 'User not found',
+          status: 404,
+        }),
+      );
+    }
 
-      const keycloakUsers = await opts.keycloakClient.client.users.find({
-        realm: opts.keycloakRealm,
-        email: user.email,
-      });
-      if (keycloakUsers.length === 0) {
-        return res.code(404).send(
-          ScimError({
-            detail: 'User not found',
-            status: 404,
-          }),
-        );
-      }
+    const keycloakUsers = await opts.keycloakClient.client.users.find({
+      realm: opts.keycloakRealm,
+      email: user.email,
+    });
+    if (keycloakUsers.length === 0) {
+      return res.code(404).send(
+        ScimError({
+          detail: 'User not found',
+          status: 404,
+        }),
+      );
+    }
 
-      await opts.keycloakClient.updateKeycloakUser({
-        id: userID,
-        enabled: active,
-        firstName: name.givenName,
-        lastName: name.familyName,
-        realm: opts.keycloakRealm,
-        groups,
-        password,
-      });
+    // Update user details in Keycloak
+    const auditLogRepo = new AuditLogRepository(opts.db);
+    await opts.keycloakClient.updateKeycloakUser({
+      id: userID,
+      firstName: name.givenName,
+      lastName: name.familyName,
+      realm: opts.keycloakRealm,
+      groups,
+    });
 
-      await opts.userRepository.updateUser({ id: userID, active });
+    await auditLogRepo.addAuditLog({
+      organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
+      auditAction: 'scim.update_organization_member',
+      action: 'updated',
+      actorId: authContext.userId,
+      auditableDisplayName: user.email,
+      auditableType: 'user',
+      actorDisplayName: authContext.userDisplayName,
+      apiKeyName: authContext.apiKeyName,
+      actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+    });
 
-      return res.code(200).send({
-        schemas: ['urn:ietf:params:scim:schemas:core:2.0:User'],
-        id: userID,
-        userName: user.email,
-        name,
-        emails,
+    // If the active status has changed, update the organization member's active status to reflect it
+    if (user.active !== active) {
+      await opts.organizationRepository.setOrganizationMemberActive({
+        id: user.orgMemberID,
+        organizationId: authContext.organizationId,
         active,
-        groups,
-        meta: {
-          resourceType: 'User',
-        },
       });
-    },
-  );
+
+      await auditLogRepo.addAuditLog({
+        organizationId: authContext.organizationId,
+        organizationSlug: authContext.organizationSlug,
+        auditAction: active ? 'scim.activate_organization_member' : 'scim.deactivate_organization_member',
+        action: 'updated',
+        actorId: authContext.userId,
+        auditableDisplayName: user.email,
+        auditableType: 'user',
+        actorDisplayName: authContext.userDisplayName,
+        apiKeyName: authContext.apiKeyName,
+        actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+      });
+    }
+
+    return res.code(200).send({
+      schemas: ['urn:ietf:params:scim:schemas:core:2.0:User'],
+      id: userID,
+      userName: user.email,
+      name,
+      emails,
+      active,
+      groups,
+      meta: {
+        resourceType: 'User',
+      },
+    });
+  });
 
   // remove the user from the org
-  fastify.patch(
-    '/Users/:userID',
-    async (
-      req: FastifyRequest<{
-        Params: { userID: string };
-        Body: { schemas: string[]; Operations: { op: string; value: { active: boolean } }[] };
-      }>,
-      res,
-    ) => {
-      const authContext = req.authContext;
+  fastify.patch('/Users/:userID', async (req: PatchUserRequest, res: FastifyReply) => {
+    const authContext = req.authContext;
 
-      const userID = req.params.userID;
+    const userID = req.params.userID;
+    const orgMember = await opts.organizationRepository.getOrganizationMember({
+      organizationID: authContext.organizationId,
+      userID,
+    });
+    if (!orgMember) {
+      return res.code(404).send(
+        ScimError({
+          detail: 'User not found',
+          status: 404,
+        }),
+      );
+    }
 
-      const orgMember = await opts.organizationRepository.getOrganizationMember({
-        organizationID: authContext.organizationId,
-        userID,
-      });
-      if (!orgMember) {
-        return res.code(404).send(
-          ScimError({
-            detail: 'User not found',
-            status: 404,
-          }),
-        );
+    const auditLogs: AddAuditLogInput[] = [];
+    const partialAudit: Omit<AddAuditLogInput, 'auditAction' | 'action'> = {
+      organizationId: authContext.organizationId,
+      organizationSlug: authContext.organizationSlug,
+      actorId: authContext.userId,
+      actorDisplayName: authContext.userDisplayName,
+      auditableDisplayName: orgMember.email,
+      auditableType: 'user',
+      apiKeyName: authContext.apiKeyName,
+      actorType: authContext.auth === 'api_key' ? 'api_key' : 'user',
+    };
+
+    const operations = req.body.Operations;
+    if (!operations || operations.length === 0) {
+      return res.code(204).send();
+    }
+
+    for (const operation of operations) {
+      if (operation.op?.toLowerCase() !== 'replace') {
+        // We only care about the `replace` operation
+        continue;
       }
 
-      const operations = req.body.Operations;
-
-      for (const operation of operations) {
-        const value = operation.value;
-        if ('active' in value) {
-          const active = value.active;
-
-          await opts.keycloakClient.updateKeycloakUser({
-            id: userID,
-            enabled: active,
-            realm: opts.keycloakRealm,
+      if ('path' in operation) {
+        if (operation.path.toLowerCase() === 'active') {
+          const active = operation.value?.toLowerCase() === 'true';
+          await opts.organizationRepository.setOrganizationMemberActive({
+            id: orgMember.orgMemberID,
+            organizationId: authContext.organizationId,
+            active,
           });
 
-          await opts.userRepository.updateUser({ id: userID, active });
+          auditLogs.push({
+            ...partialAudit,
+            auditAction: active ? 'scim.activate_organization_member' : 'scim.deactivate_organization_member',
+            action: 'updated',
+          });
         }
-      }
+      } else if ('active' in operation.value && typeof operation.value.active === 'boolean') {
+        const active = operation.value.active;
+        await opts.organizationRepository.setOrganizationMemberActive({
+          id: orgMember.orgMemberID,
+          organizationId: authContext.organizationId,
+          active,
+        });
 
-      return res.code(204).send();
-    },
-  );
+        auditLogs.push({
+          ...partialAudit,
+          auditAction: active ? 'scim.activate_organization_member' : 'scim.deactivate_organization_member',
+          action: 'updated',
+        });
+      }
+    }
+
+    if (auditLogs.length > 0) {
+      const auditLogRepo = new AuditLogRepository(opts.db);
+      await auditLogRepo.addAuditLog(...auditLogs);
+    }
+
+    return res.code(204).send();
+  });
 
   done();
 };

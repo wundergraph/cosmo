@@ -14,7 +14,6 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/nats-io/nats.go/jetstream"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.uber.org/zap"
 )
 
@@ -26,17 +25,13 @@ const (
 
 // Adapter defines the methods that a NATS adapter should implement
 type Adapter interface {
-	// Subscribe subscribes to the given events and sends updates to the updater
-	Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error
-	// Publish publishes the given event to the specified subject
-	Publish(ctx context.Context, event PublishAndRequestEventConfiguration) error
+	datasource.Adapter
 	// Request sends a request to the specified subject and writes the response to the given writer
-	Request(ctx context.Context, event PublishAndRequestEventConfiguration, w io.Writer) error
-	// Startup initializes the adapter
-	Startup(ctx context.Context) error
-	// Shutdown gracefully shuts down the adapter
-	Shutdown(ctx context.Context) error
+	Request(ctx context.Context, cfg datasource.PublishEventConfiguration, event datasource.StreamEvent, w io.Writer) error
 }
+
+// Ensure ProviderAdapter implements ProviderSubscriptionHooks
+var _ datasource.Adapter = (*ProviderAdapter)(nil)
 
 // ProviderAdapter implements the AdapterInterface for NATS pub/sub
 type ProviderAdapter struct {
@@ -82,11 +77,16 @@ func (p *ProviderAdapter) getDurableConsumerName(durableName string, subjects []
 	return fmt.Sprintf("%s-%x", durableName, subjHash.Sum64()), nil
 }
 
-func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEventConfiguration, updater resolve.SubscriptionUpdater) error {
+func (p *ProviderAdapter) Subscribe(ctx context.Context, cfg datasource.SubscriptionEventConfiguration, updater datasource.SubscriptionEventUpdater) error {
+	subConf, ok := cfg.(*SubscriptionEventConfiguration)
+	if !ok {
+		return datasource.NewError("subscription event not support by nats provider", nil)
+	}
+
 	log := p.logger.With(
-		zap.String("provider_id", event.ProviderID),
+		zap.String("provider_id", subConf.ProviderID()),
 		zap.String("method", "subscribe"),
-		zap.Strings("subjects", event.Subjects),
+		zap.Strings("subjects", subConf.Subjects),
 	)
 
 	if p.client == nil {
@@ -97,24 +97,24 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 		return datasource.NewError("nats jetstream not initialized", nil)
 	}
 
-	if event.StreamConfiguration != nil {
-		durableConsumerName, err := p.getDurableConsumerName(event.StreamConfiguration.Consumer, event.Subjects)
+	if subConf.StreamConfiguration != nil {
+		durableConsumerName, err := p.getDurableConsumerName(subConf.StreamConfiguration.Consumer, subConf.Subjects)
 		if err != nil {
 			return err
 		}
 		consumerConfig := jetstream.ConsumerConfig{
 			Durable:        durableConsumerName,
-			FilterSubjects: event.Subjects,
+			FilterSubjects: subConf.Subjects,
 		}
 		// Durable consumers are removed automatically only if the InactiveThreshold value is set
-		if event.StreamConfiguration.ConsumerInactiveThreshold > 0 {
-			consumerConfig.InactiveThreshold = time.Duration(event.StreamConfiguration.ConsumerInactiveThreshold) * time.Second
+		if subConf.StreamConfiguration.ConsumerInactiveThreshold > 0 {
+			consumerConfig.InactiveThreshold = time.Duration(subConf.StreamConfiguration.ConsumerInactiveThreshold) * time.Second
 		}
 
-		consumer, err := p.js.CreateOrUpdateConsumer(ctx, event.StreamConfiguration.StreamName, consumerConfig)
+		consumer, err := p.js.CreateOrUpdateConsumer(ctx, subConf.StreamConfiguration.StreamName, consumerConfig)
 		if err != nil {
 			log.Error("creating or updating consumer", zap.Error(err))
-			return datasource.NewError(fmt.Sprintf(`failed to create or update consumer for stream "%s"`, event.StreamConfiguration.StreamName), err)
+			return datasource.NewError(fmt.Sprintf(`failed to create or update consumer for stream "%s"`, subConf.StreamConfiguration.StreamName), err)
 		}
 
 		p.closeWg.Add(1)
@@ -143,12 +143,18 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 						log.Debug("subscription update", zap.String("message_subject", msg.Subject()), zap.ByteString("data", msg.Data()))
 
 						p.streamMetricStore.Consume(p.ctx, metric.StreamsEvent{
-							ProviderId:          event.ProviderID,
+							ProviderId:          subConf.ProviderID(),
 							StreamOperationName: natsReceive,
 							ProviderType:        metric.ProviderTypeNats,
 							DestinationName:     msg.Subject(),
 						})
-						updater.Update(msg.Data())
+
+						updater.Update([]datasource.StreamEvent{
+							&Event{evt: &MutableEvent{
+								Data:    msg.Data(),
+								Headers: map[string][]string(msg.Headers()),
+							}},
+						})
 
 						// Acknowledge the message after it has been processed
 						ackErr := msg.Ack()
@@ -166,8 +172,8 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 	}
 
 	msgChan := make(chan *nats.Msg)
-	subscriptions := make([]*nats.Subscription, len(event.Subjects))
-	for i, subject := range event.Subjects {
+	subscriptions := make([]*nats.Subscription, len(subConf.Subjects))
+	for i, subject := range subConf.Subjects {
 		subscription, err := p.client.ChanSubscribe(subject, msgChan)
 		if err != nil {
 			log.Error("subscribing to NATS subject", zap.Error(err), zap.String("subscription_subject", subject))
@@ -186,12 +192,17 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 			case msg := <-msgChan:
 				log.Debug("subscription update", zap.String("message_subject", msg.Subject), zap.ByteString("data", msg.Data))
 				p.streamMetricStore.Consume(p.ctx, metric.StreamsEvent{
-					ProviderId:          event.ProviderID,
+					ProviderId:          subConf.ProviderID(),
 					StreamOperationName: natsReceive,
 					ProviderType:        metric.ProviderTypeNats,
 					DestinationName:     msg.Subject,
 				})
-				updater.Update(msg.Data)
+				updater.Update([]datasource.StreamEvent{
+					&Event{evt: &MutableEvent{
+						Data:    msg.Data,
+						Headers: map[string][]string(msg.Header),
+					}},
+				})
 			case <-p.ctx.Done():
 				// When the application context is done, we stop the subscriptions
 				for _, subscription := range subscriptions {
@@ -219,73 +230,118 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, event SubscriptionEvent
 	return nil
 }
 
-func (p *ProviderAdapter) Publish(ctx context.Context, event PublishAndRequestEventConfiguration) error {
+func (p *ProviderAdapter) Publish(ctx context.Context, conf datasource.PublishEventConfiguration, events []datasource.StreamEvent) error {
+	pubConf, ok := conf.(*PublishAndRequestEventConfiguration)
+	if !ok {
+		return datasource.NewError("publish event not support by nats provider", nil)
+	}
+
 	log := p.logger.With(
-		zap.String("provider_id", event.ProviderID),
+		zap.String("provider_id", pubConf.ProviderID()),
 		zap.String("method", "publish"),
-		zap.String("subject", event.Subject),
+		zap.String("subject", pubConf.Subject),
 	)
 
 	if p.client == nil {
 		return datasource.NewError("nats client not initialized", nil)
 	}
 
-	log.Debug("publish", zap.ByteString("data", event.Data))
+	log.Debug("publish", zap.Int("event_count", len(events)))
 
-	err := p.client.Publish(event.Subject, event.Data)
-	if err != nil {
-		log.Error("publish error", zap.Error(err))
+	var errs []error
+
+	for _, streamEvent := range events {
+		natsEvent, err := castToMutableEvent(streamEvent)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+
+		err = p.client.Publish(pubConf.Subject, natsEvent.Data)
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	// Produce metrics for all failed and successfully published events
+	successCount := len(events) - len(errs)
+	for range successCount {
 		p.streamMetricStore.Produce(ctx, metric.StreamsEvent{
-			ProviderId:          event.ProviderID,
+			ProviderId:          pubConf.ProviderID(),
+			StreamOperationName: natsPublish,
+			ProviderType:        metric.ProviderTypeNats,
+			DestinationName:     pubConf.Subject,
+		})
+	}
+	for range len(errs) {
+		p.streamMetricStore.Produce(ctx, metric.StreamsEvent{
+			ProviderId:          pubConf.ProviderID(),
 			StreamOperationName: natsPublish,
 			ProviderType:        metric.ProviderTypeNats,
 			ErrorType:           "publish_error",
-			DestinationName:     event.Subject,
+			DestinationName:     pubConf.Subject,
 		})
-		return datasource.NewError(fmt.Sprintf("error publishing to NATS subject %s", event.Subject), err)
-	} else {
-		p.streamMetricStore.Produce(ctx, metric.StreamsEvent{
-			ProviderId:          event.ProviderID,
-			StreamOperationName: natsPublish,
-			ProviderType:        metric.ProviderTypeNats,
-			DestinationName:     event.Subject,
-		})
+	}
+
+	// Collect and return all errors if any occurred
+	if len(errs) > 0 {
+		combinedErr := errors.Join(errs...)
+		log.Error("publish errors", zap.Error(combinedErr), zap.Int("failed_count", len(errs)), zap.Int("total_count", len(events)))
+		return datasource.NewError(
+			fmt.Sprintf("error publishing %d/%d events to NATS subject %s", len(errs), len(events), pubConf.Subject), combinedErr,
+		)
 	}
 
 	return nil
 }
 
-func (p *ProviderAdapter) Request(ctx context.Context, event PublishAndRequestEventConfiguration, w io.Writer) error {
+func (p *ProviderAdapter) Request(ctx context.Context, cfg datasource.PublishEventConfiguration, event datasource.StreamEvent, w io.Writer) error {
+	reqConf, ok := cfg.(*PublishAndRequestEventConfiguration)
+	if !ok {
+		return datasource.NewError("publish event not support by nats provider", nil)
+	}
+
 	log := p.logger.With(
-		zap.String("provider_id", event.ProviderID),
+		zap.String("provider_id", cfg.ProviderID()),
 		zap.String("method", "request"),
-		zap.String("subject", event.Subject),
+		zap.String("subject", reqConf.Subject),
 	)
 
 	if p.client == nil {
 		return datasource.NewError("nats client not initialized", nil)
 	}
 
-	log.Debug("request", zap.ByteString("data", event.Data))
+	natsEvent, ok := event.Clone().(*MutableEvent)
+	if !ok {
+		return datasource.NewError("invalid event type for NATS adapter", nil)
+	}
 
-	msg, err := p.client.RequestWithContext(ctx, event.Subject, event.Data)
+	log.Debug("request", zap.ByteString("data", natsEvent.Data))
+
+	msg, err := p.client.RequestWithContext(ctx, reqConf.Subject, natsEvent.Data)
 	if err != nil {
-		log.Error("request error", zap.Error(err))
+		log.Error(
+			"request error",
+			zap.Error(err),
+			zap.String("provider_id", reqConf.ProviderID()),
+			zap.String("provider_type", string(reqConf.ProviderType())),
+			zap.String("field_name", reqConf.RootFieldName()),
+		)
 		p.streamMetricStore.Produce(ctx, metric.StreamsEvent{
-			ProviderId:          event.ProviderID,
+			ProviderId:          reqConf.ProviderID(),
 			StreamOperationName: natsRequest,
 			ProviderType:        metric.ProviderTypeNats,
 			ErrorType:           "request_error",
-			DestinationName:     event.Subject,
+			DestinationName:     reqConf.Subject,
 		})
-		return datasource.NewError(fmt.Sprintf("error requesting from NATS subject %s", event.Subject), err)
+		return datasource.NewError(fmt.Sprintf("error requesting from NATS subject %s", reqConf.Subject), err)
 	}
 
 	p.streamMetricStore.Produce(ctx, metric.StreamsEvent{
-		ProviderId:          event.ProviderID,
+		ProviderId:          reqConf.ProviderID(),
 		StreamOperationName: natsRequest,
 		ProviderType:        metric.ProviderTypeNats,
-		DestinationName:     event.Subject,
+		DestinationName:     reqConf.Subject,
 	})
 
 	// We don't collect metrics on err here as it's an error related to the writer
@@ -384,4 +440,15 @@ func NewAdapter(ctx context.Context, logger *zap.Logger, url string, opts []nats
 		flushTimeout:      10 * time.Second,
 		streamMetricStore: store,
 	}, nil
+}
+
+func castToMutableEvent(event datasource.StreamEvent) (*MutableEvent, error) {
+	switch evt := event.(type) {
+	case *Event:
+		return evt.evt, nil
+	case *MutableEvent:
+		return evt, nil
+	default:
+		return nil, errors.New("invalid event type for NATS adapter")
+	}
 }

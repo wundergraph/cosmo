@@ -20,16 +20,15 @@ type ProviderBuilder struct {
 	logger           *zap.Logger
 	hostName         string
 	routerListenAddr string
-	adapters         map[string]Adapter
 }
 
 func (p *ProviderBuilder) TypeID() string {
 	return providerTypeID
 }
 
-func (p *ProviderBuilder) BuildEngineDataSourceFactory(data *nodev1.NatsEventConfiguration) (datasource.EngineDataSourceFactory, error) {
+func (p *ProviderBuilder) BuildEngineDataSourceFactory(data *nodev1.NatsEventConfiguration, providers map[string]datasource.Provider) (datasource.EngineDataSourceFactory, error) {
 	providerId := data.GetEngineEventConfiguration().GetProviderId()
-	adapter, ok := p.adapters[providerId]
+	provider, ok := providers[providerId]
 	if !ok {
 		return nil, fmt.Errorf("failed to get adapter for provider %s with ID %s", p.TypeID(), providerId)
 	}
@@ -46,12 +45,13 @@ func (p *ProviderBuilder) BuildEngineDataSourceFactory(data *nodev1.NatsEventCon
 		return nil, fmt.Errorf("unsupported event type: %s", data.GetEngineEventConfiguration().GetType())
 	}
 	dataSourceFactory := &EngineDataSourceFactory{
-		NatsAdapter:             adapter,
+		NatsAdapter:             provider,
 		fieldName:               data.GetEngineEventConfiguration().GetFieldName(),
 		eventType:               eventType,
 		subjects:                data.GetSubjects(),
 		providerId:              providerId,
 		withStreamConfiguration: data.GetStreamConfiguration() != nil,
+		logger:                  p.logger,
 	}
 
 	if data.GetStreamConfiguration() != nil {
@@ -65,11 +65,10 @@ func (p *ProviderBuilder) BuildEngineDataSourceFactory(data *nodev1.NatsEventCon
 }
 
 func (p *ProviderBuilder) BuildProvider(provider config.NatsEventSource, providerOpts datasource.ProviderOpts) (datasource.Provider, error) {
-	adapter, pubSubProvider, err := buildProvider(p.ctx, provider, p.logger, p.hostName, p.routerListenAddr, providerOpts)
+	pubSubProvider, err := buildProvider(p.ctx, provider, p.logger, p.hostName, p.routerListenAddr, providerOpts)
 	if err != nil {
 		return nil, err
 	}
-	p.adapters[provider.ID] = adapter
 
 	return pubSubProvider, nil
 }
@@ -118,18 +117,24 @@ func buildNatsOptions(eventSource config.NatsEventSource, logger *zap.Logger) ([
 	return opts, nil
 }
 
-func buildProvider(ctx context.Context, provider config.NatsEventSource, logger *zap.Logger, hostName string, routerListenAddr string, providerOpts datasource.ProviderOpts) (Adapter, datasource.Provider, error) {
+func buildProvider(ctx context.Context, provider config.NatsEventSource, logger *zap.Logger, hostName string, routerListenAddr string, providerOpts datasource.ProviderOpts) (datasource.Provider, error) {
 	options, err := buildNatsOptions(provider, logger)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to build options for Nats provider with ID \"%s\": %w", provider.ID, err)
+		return nil, fmt.Errorf("failed to build options for Nats provider with ID \"%s\": %w", provider.ID, err)
 	}
+
 	adapter, err := NewAdapter(ctx, logger, provider.URL, options, hostName, routerListenAddr, providerOpts)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create adapter for Nats provider with ID \"%s\": %w", provider.ID, err)
+		return nil, fmt.Errorf("failed to create adapter for Nats provider with ID \"%s\": %w", provider.ID, err)
 	}
-	pubSubProvider := datasource.NewPubSubProvider(provider.ID, providerTypeID, adapter, logger)
 
-	return adapter, pubSubProvider, nil
+	eventBuilder := func(data []byte) datasource.MutableStreamEvent {
+		return &MutableEvent{Data: data}
+	}
+
+	pubSubProvider := datasource.NewPubSubProvider(provider.ID, providerTypeID, adapter, logger, eventBuilder)
+
+	return pubSubProvider, nil
 }
 
 func NewProviderBuilder(
@@ -143,6 +148,5 @@ func NewProviderBuilder(
 		logger:           logger,
 		hostName:         hostName,
 		routerListenAddr: routerListenAddr,
-		adapters:         make(map[string]Adapter),
 	}
 }

@@ -9,6 +9,14 @@ datasources:
     jsonData:
       httpMethod: POST
       manageAlerts: true
+  - name: Pyroscope
+    type: grafana-pyroscope-datasource
+    url: http://pyroscope:4040
+    readOnly: false
+    editable: false
+    jsonData:
+      httpMethod: POST
+      manageAlerts: true
   - name: ClickHouse
     type: grafana-clickhouse-datasource
     readOnly: false

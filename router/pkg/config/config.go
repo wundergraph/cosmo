@@ -113,9 +113,16 @@ type Prometheus struct {
 }
 
 type PrometheusSchemaFieldUsage struct {
-	Enabled             bool    `yaml:"enabled" envDefault:"false" env:"ENABLED"`
-	IncludeOperationSha bool    `yaml:"include_operation_sha" envDefault:"false" env:"INCLUDE_OPERATION_SHA"`
-	SampleRate          float64 `yaml:"sample_rate" envDefault:"1.0" env:"SAMPLE_RATE"`
+	Enabled             bool                               `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	IncludeOperationSha bool                               `yaml:"include_operation_sha" envDefault:"false" env:"INCLUDE_OPERATION_SHA"`
+	Exporter            PrometheusSchemaFieldUsageExporter `yaml:"exporter" envPrefix:"EXPORTER_"`
+}
+
+type PrometheusSchemaFieldUsageExporter struct {
+	BatchSize     int           `yaml:"batch_size" envDefault:"4096" env:"BATCH_SIZE"`
+	QueueSize     int           `yaml:"queue_size" envDefault:"12800" env:"QUEUE_SIZE"`
+	Interval      time.Duration `yaml:"interval" envDefault:"2s" env:"INTERVAL"`
+	ExportTimeout time.Duration `yaml:"export_timeout" envDefault:"10s" env:"EXPORT_TIMEOUT"`
 }
 
 type MetricsOTLPExporter struct {
@@ -644,7 +651,17 @@ type EventProviders struct {
 }
 
 type EventsConfiguration struct {
-	Providers EventProviders `yaml:"providers,omitempty"`
+	Providers EventProviders              `yaml:"providers,omitempty"`
+	Handlers  StreamsHandlerConfiguration `yaml:"handlers,omitempty"`
+}
+
+type StreamsHandlerConfiguration struct {
+	OnReceiveEvents OnReceiveEventsConfiguration `yaml:"on_receive_events"`
+}
+
+type OnReceiveEventsConfiguration struct {
+	MaxConcurrentHandlers int           `yaml:"max_concurrent_handlers" envDefault:"100"`
+	HandlerTimeout        time.Duration `yaml:"handler_timeout" envDefault:"5s"`
 }
 
 type Cluster struct {

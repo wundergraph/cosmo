@@ -9,9 +9,7 @@ import * as service_pb from "./service_pb";
 import * as google_protobuf_wrappers_pb from "google-protobuf/google/protobuf/wrappers_pb";
 
 interface ICoursesServiceService extends grpc.ServiceDefinition<grpc.UntypedServiceImplementation> {
-    lookupCourseById: ICoursesServiceService_ILookupCourseById;
     lookupEmployeeById: ICoursesServiceService_ILookupEmployeeById;
-    lookupLessonById: ICoursesServiceService_ILookupLessonById;
     mutationAddCourse: ICoursesServiceService_IMutationAddCourse;
     mutationAddLesson: ICoursesServiceService_IMutationAddLesson;
     queryCourse: ICoursesServiceService_IQueryCourse;
@@ -21,15 +19,6 @@ interface ICoursesServiceService extends grpc.ServiceDefinition<grpc.UntypedServ
     queryThrowErrorCourses: ICoursesServiceService_IQueryThrowErrorCourses;
 }
 
-interface ICoursesServiceService_ILookupCourseById extends grpc.MethodDefinition<service_pb.LookupCourseByIdRequest, service_pb.LookupCourseByIdResponse> {
-    path: "/service.CoursesService/LookupCourseById";
-    requestStream: false;
-    responseStream: false;
-    requestSerialize: grpc.serialize<service_pb.LookupCourseByIdRequest>;
-    requestDeserialize: grpc.deserialize<service_pb.LookupCourseByIdRequest>;
-    responseSerialize: grpc.serialize<service_pb.LookupCourseByIdResponse>;
-    responseDeserialize: grpc.deserialize<service_pb.LookupCourseByIdResponse>;
-}
 interface ICoursesServiceService_ILookupEmployeeById extends grpc.MethodDefinition<service_pb.LookupEmployeeByIdRequest, service_pb.LookupEmployeeByIdResponse> {
     path: "/service.CoursesService/LookupEmployeeById";
     requestStream: false;
@@ -38,15 +27,6 @@ interface ICoursesServiceService_ILookupEmployeeById extends grpc.MethodDefiniti
     requestDeserialize: grpc.deserialize<service_pb.LookupEmployeeByIdRequest>;
     responseSerialize: grpc.serialize<service_pb.LookupEmployeeByIdResponse>;
     responseDeserialize: grpc.deserialize<service_pb.LookupEmployeeByIdResponse>;
-}
-interface ICoursesServiceService_ILookupLessonById extends grpc.MethodDefinition<service_pb.LookupLessonByIdRequest, service_pb.LookupLessonByIdResponse> {
-    path: "/service.CoursesService/LookupLessonById";
-    requestStream: false;
-    responseStream: false;
-    requestSerialize: grpc.serialize<service_pb.LookupLessonByIdRequest>;
-    requestDeserialize: grpc.deserialize<service_pb.LookupLessonByIdRequest>;
-    responseSerialize: grpc.serialize<service_pb.LookupLessonByIdResponse>;
-    responseDeserialize: grpc.deserialize<service_pb.LookupLessonByIdResponse>;
 }
 interface ICoursesServiceService_IMutationAddCourse extends grpc.MethodDefinition<service_pb.MutationAddCourseRequest, service_pb.MutationAddCourseResponse> {
     path: "/service.CoursesService/MutationAddCourse";
@@ -115,9 +95,7 @@ interface ICoursesServiceService_IQueryThrowErrorCourses extends grpc.MethodDefi
 export const CoursesServiceService: ICoursesServiceService;
 
 export interface ICoursesServiceServer extends grpc.UntypedServiceImplementation {
-    lookupCourseById: grpc.handleUnaryCall<service_pb.LookupCourseByIdRequest, service_pb.LookupCourseByIdResponse>;
     lookupEmployeeById: grpc.handleUnaryCall<service_pb.LookupEmployeeByIdRequest, service_pb.LookupEmployeeByIdResponse>;
-    lookupLessonById: grpc.handleUnaryCall<service_pb.LookupLessonByIdRequest, service_pb.LookupLessonByIdResponse>;
     mutationAddCourse: grpc.handleUnaryCall<service_pb.MutationAddCourseRequest, service_pb.MutationAddCourseResponse>;
     mutationAddLesson: grpc.handleUnaryCall<service_pb.MutationAddLessonRequest, service_pb.MutationAddLessonResponse>;
     queryCourse: grpc.handleUnaryCall<service_pb.QueryCourseRequest, service_pb.QueryCourseResponse>;
@@ -128,15 +106,9 @@ export interface ICoursesServiceServer extends grpc.UntypedServiceImplementation
 }
 
 export interface ICoursesServiceClient {
-    lookupCourseById(request: service_pb.LookupCourseByIdRequest, callback: (error: grpc.ServiceError | null, response: service_pb.LookupCourseByIdResponse) => void): grpc.ClientUnaryCall;
-    lookupCourseById(request: service_pb.LookupCourseByIdRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: service_pb.LookupCourseByIdResponse) => void): grpc.ClientUnaryCall;
-    lookupCourseById(request: service_pb.LookupCourseByIdRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: service_pb.LookupCourseByIdResponse) => void): grpc.ClientUnaryCall;
     lookupEmployeeById(request: service_pb.LookupEmployeeByIdRequest, callback: (error: grpc.ServiceError | null, response: service_pb.LookupEmployeeByIdResponse) => void): grpc.ClientUnaryCall;
     lookupEmployeeById(request: service_pb.LookupEmployeeByIdRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: service_pb.LookupEmployeeByIdResponse) => void): grpc.ClientUnaryCall;
     lookupEmployeeById(request: service_pb.LookupEmployeeByIdRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: service_pb.LookupEmployeeByIdResponse) => void): grpc.ClientUnaryCall;
-    lookupLessonById(request: service_pb.LookupLessonByIdRequest, callback: (error: grpc.ServiceError | null, response: service_pb.LookupLessonByIdResponse) => void): grpc.ClientUnaryCall;
-    lookupLessonById(request: service_pb.LookupLessonByIdRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: service_pb.LookupLessonByIdResponse) => void): grpc.ClientUnaryCall;
-    lookupLessonById(request: service_pb.LookupLessonByIdRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: service_pb.LookupLessonByIdResponse) => void): grpc.ClientUnaryCall;
     mutationAddCourse(request: service_pb.MutationAddCourseRequest, callback: (error: grpc.ServiceError | null, response: service_pb.MutationAddCourseResponse) => void): grpc.ClientUnaryCall;
     mutationAddCourse(request: service_pb.MutationAddCourseRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: service_pb.MutationAddCourseResponse) => void): grpc.ClientUnaryCall;
     mutationAddCourse(request: service_pb.MutationAddCourseRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: service_pb.MutationAddCourseResponse) => void): grpc.ClientUnaryCall;
@@ -162,15 +134,9 @@ export interface ICoursesServiceClient {
 
 export class CoursesServiceClient extends grpc.Client implements ICoursesServiceClient {
     constructor(address: string, credentials: grpc.ChannelCredentials, options?: Partial<grpc.ClientOptions>);
-    public lookupCourseById(request: service_pb.LookupCourseByIdRequest, callback: (error: grpc.ServiceError | null, response: service_pb.LookupCourseByIdResponse) => void): grpc.ClientUnaryCall;
-    public lookupCourseById(request: service_pb.LookupCourseByIdRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: service_pb.LookupCourseByIdResponse) => void): grpc.ClientUnaryCall;
-    public lookupCourseById(request: service_pb.LookupCourseByIdRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: service_pb.LookupCourseByIdResponse) => void): grpc.ClientUnaryCall;
     public lookupEmployeeById(request: service_pb.LookupEmployeeByIdRequest, callback: (error: grpc.ServiceError | null, response: service_pb.LookupEmployeeByIdResponse) => void): grpc.ClientUnaryCall;
     public lookupEmployeeById(request: service_pb.LookupEmployeeByIdRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: service_pb.LookupEmployeeByIdResponse) => void): grpc.ClientUnaryCall;
     public lookupEmployeeById(request: service_pb.LookupEmployeeByIdRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: service_pb.LookupEmployeeByIdResponse) => void): grpc.ClientUnaryCall;
-    public lookupLessonById(request: service_pb.LookupLessonByIdRequest, callback: (error: grpc.ServiceError | null, response: service_pb.LookupLessonByIdResponse) => void): grpc.ClientUnaryCall;
-    public lookupLessonById(request: service_pb.LookupLessonByIdRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: service_pb.LookupLessonByIdResponse) => void): grpc.ClientUnaryCall;
-    public lookupLessonById(request: service_pb.LookupLessonByIdRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: service_pb.LookupLessonByIdResponse) => void): grpc.ClientUnaryCall;
     public mutationAddCourse(request: service_pb.MutationAddCourseRequest, callback: (error: grpc.ServiceError | null, response: service_pb.MutationAddCourseResponse) => void): grpc.ClientUnaryCall;
     public mutationAddCourse(request: service_pb.MutationAddCourseRequest, metadata: grpc.Metadata, callback: (error: grpc.ServiceError | null, response: service_pb.MutationAddCourseResponse) => void): grpc.ClientUnaryCall;
     public mutationAddCourse(request: service_pb.MutationAddCourseRequest, metadata: grpc.Metadata, options: Partial<grpc.CallOptions>, callback: (error: grpc.ServiceError | null, response: service_pb.MutationAddCourseResponse) => void): grpc.ClientUnaryCall;

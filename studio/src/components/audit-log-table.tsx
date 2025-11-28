@@ -77,7 +77,9 @@ export const AuditLogTable = ({ logs }: { logs?: AuditLog[] }) => {
               let preParagraph = null;
               let postParagraph = null;
 
-              if (auditAction === "organization_invitation.created" || action === "queued_deletion") {
+              if (auditAction === "organization_invitation.created" ||
+                auditAction === "scim.organization_invitation_created" ||
+                action === "queued_deletion") {
                 postParagraph = "for";
               } else if (auditAction === "member_role.updated") {
                 preParagraph = "role for";
@@ -102,7 +104,6 @@ export const AuditLogTable = ({ logs }: { logs?: AuditLog[] }) => {
               }
 
               let label = null;
-
               if (targetDisplayName) {
                 label = (
                   <>

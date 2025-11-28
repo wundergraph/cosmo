@@ -14,10 +14,6 @@ import {
   MutationAddCourseResponse,
   MutationAddLessonRequest,
   MutationAddLessonResponse,
-  LookupCourseByIdRequest,
-  LookupCourseByIdResponse,
-  LookupLessonByIdRequest,
-  LookupLessonByIdResponse,
   LookupEmployeeByIdRequest,
   LookupEmployeeByIdResponse,
   Course,
@@ -337,46 +333,6 @@ const pluginImplementation = {
     
     const response = new MutationAddLessonResponse();
     response.setAddLesson(lessonDataToLesson(newLesson));
-    callback(null, response);
-  },
-
-  // Federation: Lookup Course by ID
-  lookupCourseById: (
-    call: grpc.ServerUnaryCall<LookupCourseByIdRequest, LookupCourseByIdResponse>,
-    callback: grpc.sendUnaryData<LookupCourseByIdResponse>
-  ) => {
-    const response = new LookupCourseByIdResponse();
-    const results: Course[] = [];
-    
-    for (const key of call.request.getKeysList()) {
-      const id = key.getId();
-      const courseData = courses.get(id);
-      if (courseData) {
-        results.push(courseDataToCourse(courseData));
-      }
-    }
-    
-    response.setResultList(results);
-    callback(null, response);
-  },
-
-  // Federation: Lookup Lesson by ID
-  lookupLessonById: (
-    call: grpc.ServerUnaryCall<LookupLessonByIdRequest, LookupLessonByIdResponse>,
-    callback: grpc.sendUnaryData<LookupLessonByIdResponse>
-  ) => {
-    const response = new LookupLessonByIdResponse();
-    const results: Lesson[] = [];
-    
-    for (const key of call.request.getKeysList()) {
-      const id = key.getId();
-      const lessonData = lessons.get(id);
-      if (lessonData) {
-        results.push(lessonDataToLesson(lessonData));
-      }
-    }
-    
-    response.setResultList(results);
     callback(null, response);
   },
 

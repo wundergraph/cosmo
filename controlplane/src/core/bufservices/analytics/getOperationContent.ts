@@ -46,13 +46,24 @@ export function getOperationContent(
     const query = `
       SELECT OperationContent as operationContent
       FROM ${opts.chClient?.database}.gql_metrics_operations
-      WHERE OrganizationID = '${authContext.organizationId}' 
-      AND FederatedGraphID = '${graph.id}'
-      AND OperationHash = '${req.hash}'
+      WHERE OrganizationID = {organizationId:String} 
+      AND FederatedGraphID = {federatedGraphId:String}
+      AND OperationHash = {operationHash:String}
+      ${req.name === undefined ? '' : 'AND OperationName = {operationName:String}'}
       LIMIT 1 SETTINGS use_query_cache = true, query_cache_ttl = 2629800
     `;
 
-    const result = await opts.chClient.queryPromise(query);
+    const params: Record<string, string | number | boolean> = {
+      organizationId: authContext.organizationId,
+      federatedGraphId: graph.id,
+      operationHash: req.hash.replace(/'/g, "''"),
+    };
+
+    if (req.name !== undefined) {
+      params.operationName = req.name.replace(/'/g, "''");
+    }
+
+    const result = await opts.chClient.queryPromise(query, params);
 
     if (!Array.isArray(result) || result.length === 0) {
       return {
