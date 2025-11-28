@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/desc/protoparse"
@@ -12,6 +13,11 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
 )
+
+// globalRegistryMu protects concurrent access to protoregistry.GlobalFiles
+// This prevents race conditions when multiple ProtoLoader instances
+// (e.g., during reload) attempt to register the same file concurrently
+var globalRegistryMu sync.Mutex
 
 // ServiceDefinition represents a parsed protobuf service
 type ServiceDefinition struct {
@@ -135,11 +141,14 @@ func (pl *ProtoLoader) LoadFromDirectories(dirs []string) error {
 			zap.String("dir", dir),
 			zap.Int("count", len(protoFiles)))
 
+		// Track service names before loading to identify new ones
+		existingServices := make(map[string]bool)
+		for serviceName := range pl.services {
+			existingServices[serviceName] = true
+		}
+
 		// Load each proto file and track packages
 		for _, protoFile := range protoFiles {
-			// Get the current service count before loading
-			serviceCountBefore := len(pl.services)
-
 			if err := pl.loadProtoFile(protoFile); err != nil {
 				pl.logger.Error("failed to load proto file",
 					zap.String("file", protoFile),
@@ -148,14 +157,13 @@ func (pl *ProtoLoader) LoadFromDirectories(dirs []string) error {
 				return fmt.Errorf("failed to load proto file %s from %s: %w", protoFile, dir, err)
 			}
 
-			// Check for new services and validate package uniqueness
-			for _, service := range pl.services {
-				// Only check services that were just added
-				if serviceCountBefore > 0 {
-					// Skip if we've already validated this service
+			// Validate package uniqueness for newly added services
+			for serviceName, service := range pl.services {
+				// Only check services that were just added in this file
+				if existingServices[serviceName] {
 					continue
 				}
-
+				
 				packageName := service.Package
 				if existingDir, exists := seenPackages[packageName]; exists && existingDir != dir {
 					return fmt.Errorf(
@@ -239,6 +247,11 @@ func (pl *ProtoLoader) processFileDescriptor(fd *desc.FileDescriptor) error {
 	// This is required for Vanguard to find the service schema
 	protoFd := fd.UnwrapFile()
 	
+	// Protect the check-then-register pattern with a mutex to prevent race conditions
+	// when multiple ProtoLoader instances (e.g., during reload) run concurrently
+	globalRegistryMu.Lock()
+	defer globalRegistryMu.Unlock()
+	
 	// Check if the file is already registered to avoid panic
 	_, err := protoregistry.GlobalFiles.FindFileByPath(string(protoFd.Path()))
 	if err == nil {
@@ -250,17 +263,18 @@ func (pl *ProtoLoader) processFileDescriptor(fd *desc.FileDescriptor) error {
 		// This is required for Vanguard's transcoder to find the service schema
 		err := protoregistry.GlobalFiles.RegisterFile(protoFd)
 		if err != nil {
-			// Log but don't fail - the file might have been registered concurrently
-			pl.logger.Debug("file descriptor registration failed (may already be registered)",
+			// This should not happen now that we have mutex protection,
+			// but log it just in case
+			pl.logger.Warn("file descriptor registration failed",
 				zap.String("file", string(protoFd.Path())),
 				zap.Error(err))
-		} else {
-			pl.logger.Debug("file descriptor registered successfully",
-				zap.String("file", string(protoFd.Path())))
+			return fmt.Errorf("failed to register file descriptor: %w", err)
 		}
+		pl.logger.Debug("file descriptor registered successfully",
+			zap.String("file", string(protoFd.Path())))
 	}
 	
-	// Extract services
+	// Extract services (no mutex needed - this modifies only the ProtoLoader instance)
 	services := fd.GetServices()
 	for _, service := range services {
 		serviceDef := pl.extractServiceDefinition(service)
