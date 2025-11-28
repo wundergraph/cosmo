@@ -362,3 +362,269 @@ func TestValidateOperation(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+func TestConvertProtoJSONToGraphQLVariables(t *testing.T) {
+	logger := zap.NewNop()
+	httpClient := &http.Client{}
+	operationRegistry := NewOperationRegistry(logger)
+	protoLoader := NewProtoLoader(logger)
+
+	handler, err := NewRPCHandler(HandlerConfig{
+		GraphQLEndpoint:   "http://localhost:4000/graphql",
+		HTTPClient:        httpClient,
+		Logger:            logger,
+		OperationRegistry: operationRegistry,
+		ProtoLoader:       protoLoader,
+	})
+	require.NoError(t, err)
+
+	t.Run("converts top-level snake_case keys to camelCase", func(t *testing.T) {
+		protoJSON := []byte(`{"user_id": 123, "first_name": "John"}`)
+		result, err := handler.convertProtoJSONToGraphQLVariables(protoJSON)
+		
+		require.NoError(t, err)
+		assert.JSONEq(t, `{"userId": 123, "firstName": "John"}`, string(result))
+	})
+
+	t.Run("converts nested object keys recursively", func(t *testing.T) {
+		protoJSON := []byte(`{
+			"user_id": 123,
+			"user_profile": {
+				"first_name": "John",
+				"last_name": "Doe",
+				"contact_info": {
+					"email_address": "john@example.com",
+					"phone_number": "555-1234"
+				}
+			}
+		}`)
+		result, err := handler.convertProtoJSONToGraphQLVariables(protoJSON)
+		
+		require.NoError(t, err)
+		expected := `{
+			"userId": 123,
+			"userProfile": {
+				"firstName": "John",
+				"lastName": "Doe",
+				"contactInfo": {
+					"emailAddress": "john@example.com",
+					"phoneNumber": "555-1234"
+				}
+			}
+		}`
+		assert.JSONEq(t, expected, string(result))
+	})
+
+	t.Run("converts keys in arrays of objects", func(t *testing.T) {
+		protoJSON := []byte(`{
+			"user_list": [
+				{"user_id": 1, "first_name": "Alice"},
+				{"user_id": 2, "first_name": "Bob"}
+			]
+		}`)
+		result, err := handler.convertProtoJSONToGraphQLVariables(protoJSON)
+		
+		require.NoError(t, err)
+		expected := `{
+			"userList": [
+				{"userId": 1, "firstName": "Alice"},
+				{"userId": 2, "firstName": "Bob"}
+			]
+		}`
+		assert.JSONEq(t, expected, string(result))
+	})
+
+	t.Run("handles nested arrays with objects", func(t *testing.T) {
+		protoJSON := []byte(`{
+			"department_list": [
+				{
+					"department_name": "Engineering",
+					"employee_list": [
+						{"employee_id": 1, "full_name": "Alice"},
+						{"employee_id": 2, "full_name": "Bob"}
+					]
+				}
+			]
+		}`)
+		result, err := handler.convertProtoJSONToGraphQLVariables(protoJSON)
+		
+		require.NoError(t, err)
+		expected := `{
+			"departmentList": [
+				{
+					"departmentName": "Engineering",
+					"employeeList": [
+						{"employeeId": 1, "fullName": "Alice"},
+						{"employeeId": 2, "fullName": "Bob"}
+					]
+				}
+			]
+		}`
+		assert.JSONEq(t, expected, string(result))
+	})
+
+	t.Run("preserves primitive values in arrays", func(t *testing.T) {
+		protoJSON := []byte(`{
+			"tag_list": ["tag1", "tag2", "tag3"],
+			"id_list": [1, 2, 3],
+			"flag_list": [true, false, true]
+		}`)
+		result, err := handler.convertProtoJSONToGraphQLVariables(protoJSON)
+		
+		require.NoError(t, err)
+		expected := `{
+			"tagList": ["tag1", "tag2", "tag3"],
+			"idList": [1, 2, 3],
+			"flagList": [true, false, true]
+		}`
+		assert.JSONEq(t, expected, string(result))
+	})
+
+	t.Run("handles empty objects and arrays", func(t *testing.T) {
+		protoJSON := []byte(`{
+			"empty_object": {},
+			"empty_array": [],
+			"nested_empty": {
+				"inner_empty": {}
+			}
+		}`)
+		result, err := handler.convertProtoJSONToGraphQLVariables(protoJSON)
+		
+		require.NoError(t, err)
+		expected := `{
+			"emptyObject": {},
+			"emptyArray": [],
+			"nestedEmpty": {
+				"innerEmpty": {}
+			}
+		}`
+		assert.JSONEq(t, expected, string(result))
+	})
+
+	t.Run("handles null values", func(t *testing.T) {
+		protoJSON := []byte(`{
+			"user_id": 123,
+			"middle_name": null,
+			"optional_field": null
+		}`)
+		result, err := handler.convertProtoJSONToGraphQLVariables(protoJSON)
+		
+		require.NoError(t, err)
+		expected := `{
+			"userId": 123,
+			"middleName": null,
+			"optionalField": null
+		}`
+		assert.JSONEq(t, expected, string(result))
+	})
+
+	t.Run("handles empty JSON input", func(t *testing.T) {
+		protoJSON := []byte(``)
+		result, err := handler.convertProtoJSONToGraphQLVariables(protoJSON)
+		
+		require.NoError(t, err)
+		assert.JSONEq(t, `{}`, string(result))
+	})
+
+	t.Run("preserves keys without underscores", func(t *testing.T) {
+		protoJSON := []byte(`{
+			"id": 123,
+			"name": "John",
+			"nested": {
+				"value": "test"
+			}
+		}`)
+		result, err := handler.convertProtoJSONToGraphQLVariables(protoJSON)
+		
+		require.NoError(t, err)
+		expected := `{
+			"id": 123,
+			"name": "John",
+			"nested": {
+				"value": "test"
+			}
+		}`
+		assert.JSONEq(t, expected, string(result))
+	})
+}
+
+func TestConvertKeysRecursive(t *testing.T) {
+	t.Run("converts map keys", func(t *testing.T) {
+		input := map[string]interface{}{
+			"user_id":    123,
+			"first_name": "John",
+		}
+		result := convertKeysRecursive(input)
+		
+		expected := map[string]interface{}{
+			"userId":    123,
+			"firstName": "John",
+		}
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("converts nested maps", func(t *testing.T) {
+		input := map[string]interface{}{
+			"user_data": map[string]interface{}{
+				"first_name": "John",
+				"last_name":  "Doe",
+			},
+		}
+		result := convertKeysRecursive(input)
+		
+		expected := map[string]interface{}{
+			"userData": map[string]interface{}{
+				"firstName": "John",
+				"lastName":  "Doe",
+			},
+		}
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("converts arrays of maps", func(t *testing.T) {
+		input := []interface{}{
+			map[string]interface{}{"user_id": 1},
+			map[string]interface{}{"user_id": 2},
+		}
+		result := convertKeysRecursive(input)
+		
+		expected := []interface{}{
+			map[string]interface{}{"userId": 1},
+			map[string]interface{}{"userId": 2},
+		}
+		assert.Equal(t, expected, result)
+	})
+
+	t.Run("preserves primitive values", func(t *testing.T) {
+		assert.Equal(t, 123, convertKeysRecursive(123))
+		assert.Equal(t, "test", convertKeysRecursive("test"))
+		assert.Equal(t, true, convertKeysRecursive(true))
+		assert.Equal(t, nil, convertKeysRecursive(nil))
+	})
+}
+
+func TestSnakeToCamel(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{"single word", "user", "user"},
+		{"two words", "user_id", "userId"},
+		{"three words", "first_name_last", "firstNameLast"},
+		{"multiple underscores", "user__id", "userId"},
+		{"trailing underscore", "user_id_", "userId"},
+		{"leading underscore", "_user_id", "UserId"},
+		{"all caps", "USER_ID", "USERID"},
+		{"mixed case", "User_Id", "UserId"},
+		{"empty string", "", ""},
+		{"single underscore", "_", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := snakeToCamel(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}

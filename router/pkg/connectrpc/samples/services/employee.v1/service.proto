@@ -1,6 +1,8 @@
 syntax = "proto3";
 package employee.v1;
 
+option go_package = "github.com/wundergraph/cosmo/router/pkg/connectrpc/samples/services/employee/v1;employeev1";
+
 service EmployeeService {
   rpc FindEmployeesByPets(FindEmployeesByPetsRequest) returns (FindEmployeesByPetsResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;

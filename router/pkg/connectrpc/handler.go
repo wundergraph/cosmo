@@ -294,12 +294,8 @@ func (h *RPCHandler) convertProtoJSONToGraphQLVariables(protoJSON []byte) (json.
 		return nil, fmt.Errorf("failed to unmarshal proto JSON: %w", err)
 	}
 
-	// Convert keys from snake_case to camelCase
-	graphqlData := make(map[string]interface{})
-	for key, value := range protoData {
-		camelKey := snakeToCamel(key)
-		graphqlData[camelKey] = value
-	}
+	// Recursively convert all keys from snake_case to camelCase
+	graphqlData := convertKeysRecursive(protoData)
 
 	// Marshal back to JSON
 	graphqlJSON, err := json.Marshal(graphqlData)
@@ -308,6 +304,31 @@ func (h *RPCHandler) convertProtoJSONToGraphQLVariables(protoJSON []byte) (json.
 	}
 
 	return graphqlJSON, nil
+}
+
+// convertKeysRecursive recursively converts all map keys from snake_case to camelCase
+// It handles nested maps and arrays of maps
+func convertKeysRecursive(data interface{}) interface{} {
+	switch v := data.(type) {
+	case map[string]interface{}:
+		// Convert map keys recursively
+		result := make(map[string]interface{})
+		for key, value := range v {
+			camelKey := snakeToCamel(key)
+			result[camelKey] = convertKeysRecursive(value)
+		}
+		return result
+	case []interface{}:
+		// Convert array elements recursively
+		result := make([]interface{}, len(v))
+		for i, item := range v {
+			result[i] = convertKeysRecursive(item)
+		}
+		return result
+	default:
+		// Return primitive values as-is
+		return v
+	}
 }
 
 // snakeToCamel converts snake_case to camelCase
