@@ -40,7 +40,7 @@ import { getDiffBetweenGraphs, SchemaDiff } from '../composition/schemaCheck.js'
 import {
   collectOperationUsageStats,
   InspectorOperationResult,
-  InspectorSchemaChangeGroup,
+  InspectorSchemaChange,
   SchemaUsageTrafficInspector,
 } from '../services/SchemaUsageTrafficInspector.js';
 import {
@@ -902,7 +902,7 @@ export class SchemaCheckRepository {
         schemaCheckSubgraphId,
       });
 
-      let inspectorChanges: InspectorSchemaChangeGroup[] = [];
+      let inspectorChanges: InspectorSchemaChange[] = [];
       // For operations checks we only consider breaking changes
       inspectorChanges = trafficInspector.schemaChangesToInspectorChanges(
         schemaChanges.breakingChanges,
@@ -1040,10 +1040,7 @@ export class SchemaCheckRepository {
           That means any breaking change is really breaking
           */
       for (const [subgraphName, checkSubgraph] of checkSubgraphs.entries()) {
-        if (
-          composition.errors.length > 0 ||
-          checkSubgraph.inspectorChanges.every((group) => group.changes.length === 0)
-        ) {
+        if (composition.errors.length > 0 || checkSubgraph.inspectorChanges.length === 0) {
           continue;
         }
 

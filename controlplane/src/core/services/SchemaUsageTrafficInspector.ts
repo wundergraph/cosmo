@@ -164,6 +164,7 @@ export function parseTypeChange(message: string): FieldTypeChangeCategory {
 }
 
 export interface InspectorSchemaChange {
+  schemaChangeId: string;
   typeName?: string;
   namedType?: string;
   fieldName?: string;
@@ -171,11 +172,6 @@ export interface InspectorSchemaChange {
   isInput?: boolean;
   isArgument?: boolean;
   isNull?: boolean;
-}
-
-export interface InspectorSchemaChangeGroup {
-  schemaChangeId: string;
-  changes: InspectorSchemaChange[];
 }
 
 export interface InspectorFilter {
@@ -201,56 +197,45 @@ export class SchemaUsageTrafficInspector {
   /**
    * Inspect the usage of a schema change in the last X days on real traffic and return the
    * affected operations. We will consider all available compositions.
-   * @param changes - Array of change groups, where each group contains changes that should be queried together with OR conditions
+   * @param changes - Array of inspector changes
    */
   public async inspect(
-    changes: InspectorSchemaChangeGroup[],
+    changes: InspectorSchemaChange[],
     filter: InspectorFilter,
   ): Promise<Map<string, InspectorOperationResult[]>> {
     const results: Map<string, InspectorOperationResult[]> = new Map();
 
-    for (const changeGroup of changes) {
-      if (changeGroup.changes.length === 0) {
-        continue;
+    for (const change of changes) {
+      const where: string[] = [];
+
+      // Used for arguments usage check
+      if (change.path) {
+        where.push(
+          `startsWith(Path, [${change.path.map((seg) => `'${seg}'`).join(',')}]) AND length(Path) = ${
+            change.path.length
+          }`,
+        );
       }
-
-      // Build OR conditions for each change in the group
-      const orConditions: string[] = [];
-
-      for (const change of changeGroup.changes) {
-        const where: string[] = [];
-        // Used for arguments usage check
-        if (change.path) {
-          where.push(
-            `startsWith(Path, [${change.path.map((seg) => `'${seg}'`).join(',')}]) AND length(Path) = ${
-              change.path.length
-            }`,
-          );
-        }
-        if (change.namedType) {
-          where.push(`NamedType = '${change.namedType}'`);
-        }
-        if (change.typeName) {
-          where.push(`hasAny(TypeNames, ['${change.typeName}'])`);
-        }
-        // fieldName can be empty if a type was removed
-        if (change.fieldName) {
-          where.push(`FieldName = '${change.fieldName}'`);
-        }
-        if (change.isInput) {
-          where.push(`IsInput = true`);
-        } else if (change.isArgument) {
-          where.push(`IsArgument = true`);
-        } else if (change.isNull !== undefined) {
-          where.push(`IsNull = ${change.isNull}`);
-        }
-        where.push(`IsIndirectFieldUsage = false`);
-
-        // Combine all conditions for this change with AND, then wrap in parentheses for OR grouping
-        orConditions.push(`(${where.join(' AND ')})`);
+      if (change.namedType) {
+        where.push(`NamedType = '${change.namedType}'`);
       }
+      if (change.typeName) {
+        where.push(`hasAny(TypeNames, ['${change.typeName}'])`);
+      }
+      // fieldName can be empty if a type was removed
+      if (change.fieldName) {
+        where.push(`FieldName = '${change.fieldName}'`);
+      }
+      if (change.isInput) {
+        where.push(`IsInput = true`);
+      } else if (change.isArgument) {
+        where.push(`IsArgument = true`);
+      } else if (change.isNull !== undefined) {
+        where.push(`IsNull = ${change.isNull}`);
+      }
+      where.push(`IsIndirectFieldUsage = false`);
 
-      // Build the query with OR conditions for all changes in the group
+      // Build the query
       const query = `
         SELECT OperationHash as operationHash,
                last_value(OperationType) as operationType,
@@ -264,7 +249,7 @@ export class SchemaUsageTrafficInspector {
           FederatedGraphID = '${filter.federatedGraphId}' AND
           hasAny(SubgraphIDs, ['${filter.subgraphId}']) AND
           OrganizationID = '${filter.organizationId}' AND
-          (${orConditions.join(' OR ')})
+          (${where.join(' AND ')})
         GROUP BY OperationHash
     `;
 
@@ -278,7 +263,7 @@ export class SchemaUsageTrafficInspector {
 
       if (Array.isArray(res)) {
         const ops = res.map((r) => ({
-          schemaChangeId: changeGroup.schemaChangeId,
+          schemaChangeId: change.schemaChangeId,
           hash: r.operationHash,
           name: r.operationName,
           type: r.operationType,
@@ -288,7 +273,7 @@ export class SchemaUsageTrafficInspector {
         }));
 
         if (ops.length > 0) {
-          results.set(changeGroup.schemaChangeId, [...(results.get(changeGroup.schemaChangeId) || []), ...ops]);
+          results.set(change.schemaChangeId, [...(results.get(change.schemaChangeId) || []), ...ops]);
         }
       }
     }
@@ -299,12 +284,12 @@ export class SchemaUsageTrafficInspector {
   /**
    * Convert schema changes to inspector changes. Will ignore a change if it is not inspectable.
    * Ultimately, will result in a breaking change because the change is not inspectable with the current implementation.
-   * Returns an array of change groups, where each group contains changes that should be queried together with OR conditions.
+   * Returns an array of inspector changes.
    */
   public schemaChangesToInspectorChanges(
     schemaChanges: SchemaDiff[],
     schemaCheckActions: SchemaCheckChangeAction[],
-  ): InspectorSchemaChangeGroup[] {
+  ): InspectorSchemaChange[] {
     const operations = schemaChanges
       .map((change) => {
         // find the schema check action that matches the change
@@ -317,7 +302,7 @@ export class SchemaUsageTrafficInspector {
         }
         return toInspectorChange(change, schemaCheckAction.id);
       })
-      .filter((change) => change !== null) as InspectorSchemaChangeGroup[];
+      .filter((change) => change !== null) as InspectorSchemaChange[];
 
     return operations;
   }
@@ -374,9 +359,9 @@ export function collectOperationUsageStats(inspectorResult: InspectorOperationRe
 /**
  * Convert a schema change to an inspector change. Throws an error if the change is not supported.
  * Only breaking changes should be passed to this function because we only care about breaking changes.
- * Returns a group of changes that should be queried together in a single query with OR conditions.
+ * Returns an inspector change with the schemaChangeId included.
  */
-export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): InspectorSchemaChangeGroup | null {
+export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): InspectorSchemaChange | null {
   const path = change.path.split('.');
 
   switch (change.changeType) {
@@ -458,11 +443,7 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
     case ChangeType.ObjectTypeInterfaceRemoved: {
       return {
         schemaChangeId: schemaCheckId,
-        changes: [
-          {
-            typeName: path[0],
-          },
-        ],
+        typeName: path[0],
       };
     }
     // 1. When a field is removed we know the exact type and field name e.g. 'Engineer.name'
@@ -471,12 +452,8 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
     case ChangeType.FieldTypeChanged: {
       return {
         schemaChangeId: schemaCheckId,
-        changes: [
-          {
-            typeName: path[0],
-            fieldName: path[1],
-          },
-        ],
+        typeName: path[0],
+        fieldName: path[1],
       };
     }
     // 1. When an enum value is added or removed, we only know the affected type. This is fine because any change to an enum value is breaking.
@@ -486,11 +463,7 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
     case ChangeType.EnumValueRemoved: {
       return {
         schemaChangeId: schemaCheckId,
-        changes: [
-          {
-            namedType: path[0],
-          },
-        ],
+        namedType: path[0],
       };
     }
     // 1. When the type of input field has changed, we know the exact type name and field name e.g. 'MyInput.name'
@@ -501,16 +474,12 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
           // Int -> Int!
           return {
             schemaChangeId: schemaCheckId,
-            changes: [
-              // if the input is used and the field is not passed,
-              // but now that it is required, its breaking
-              {
-                typeName: path[0],
-                fieldName: path[1],
-                isInput: true,
-                isNull: true,
-              },
-            ],
+            // if the input is used and the field is not passed,
+            // but now that it is required, its breaking
+            typeName: path[0],
+            fieldName: path[1],
+            isInput: true,
+            isNull: true,
           };
         }
         case FieldTypeChangeCategory.OPTIONAL_TO_REQUIRED_DIFFERENT: {
@@ -518,13 +487,9 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
           // in this case, all the ops which have this input type are breaking
           return {
             schemaChangeId: schemaCheckId,
-            changes: [
-              {
-                path: [path[0]],
-                isInput: true,
-                isNull: false,
-              },
-            ],
+            path: [path[0]],
+            isInput: true,
+            isNull: false,
           };
         }
         case FieldTypeChangeCategory.REQUIRED_TO_REQUIRED_DIFFERENT: {
@@ -532,13 +497,9 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
           // in this case, all the ops which have this input type are breaking
           return {
             schemaChangeId: schemaCheckId,
-            changes: [
-              {
-                path: [path[0]],
-                isInput: true,
-                isNull: false,
-              },
-            ],
+            path: [path[0]],
+            isInput: true,
+            isNull: false,
           };
         }
         case FieldTypeChangeCategory.OPTIONAL_TO_OPTIONAL_DIFFERENT: {
@@ -546,14 +507,10 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
           // in this case, any ops which use the input field and are not null are breaking
           return {
             schemaChangeId: schemaCheckId,
-            changes: [
-              {
-                typeName: path[0],
-                fieldName: path[1],
-                isInput: true,
-                isNull: false,
-              },
-            ],
+            typeName: path[0],
+            fieldName: path[1],
+            isInput: true,
+            isNull: false,
           };
         }
         default: {
@@ -566,13 +523,9 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
       // in these cases, all the ops which use this input type are breaking
       return {
         schemaChangeId: schemaCheckId,
-        changes: [
-          {
-            path: [path[0]],
-            isInput: true,
-            isNull: false,
-          },
-        ],
+        path: [path[0]],
+        isInput: true,
+        isNull: false,
       };
     }
     // 1. When an argument has changed, we know the exact path to the argument e.g. 'Query.engineer.id'
@@ -584,17 +537,13 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
           // SearchInput -> SearchInput!
           return {
             schemaChangeId: schemaCheckId,
-            changes: [
-              // if the argument is used and not passed (null),
-              // but now that it is required, its breaking
-              {
-                path: path.slice(1), // The path to the updated argument e.g. 'engineer.name' of the type names
-                typeName: path[0],
-                fieldName: path[2],
-                isArgument: true,
-                isNull: true,
-              },
-            ],
+            // if the argument is used and not passed (null),
+            // but now that it is required, its breaking
+            path: path.slice(1), // The path to the updated argument e.g. 'engineer.name' of the type names
+            typeName: path[0],
+            fieldName: path[2],
+            isArgument: true,
+            isNull: true,
           };
         }
         case FieldTypeChangeCategory.OPTIONAL_TO_REQUIRED_DIFFERENT: {
@@ -602,14 +551,10 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
           // in this case, all the ops which have this argument are breaking
           return {
             schemaChangeId: schemaCheckId,
-            changes: [
-              {
-                path: path.slice(1), // The path to the updated argument e.g. 'engineer.name' of the type names
-                typeName: path[0],
-                fieldName: path[2],
-                isArgument: true,
-              },
-            ],
+            path: path.slice(1), // The path to the updated argument e.g. 'engineer.name' of the type names
+            typeName: path[0],
+            fieldName: path[2],
+            isArgument: true,
           };
         }
         case FieldTypeChangeCategory.REQUIRED_TO_REQUIRED_DIFFERENT: {
@@ -617,14 +562,10 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
           // in this case, all the ops which have this argument are breaking
           return {
             schemaChangeId: schemaCheckId,
-            changes: [
-              {
-                path: path.slice(1), // The path to the updated argument e.g. 'engineer.name' of the type names
-                typeName: path[0],
-                fieldName: path[2],
-                isArgument: true,
-              },
-            ],
+            path: path.slice(1), // The path to the updated argument e.g. 'engineer.name' of the type names
+            typeName: path[0],
+            fieldName: path[2],
+            isArgument: true,
           };
         }
         case FieldTypeChangeCategory.OPTIONAL_TO_OPTIONAL_DIFFERENT: {
@@ -632,15 +573,11 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
           // in this case, any ops which use the argument and are not null are breaking
           return {
             schemaChangeId: schemaCheckId,
-            changes: [
-              {
-                path: path.slice(1), // The path to the updated argument e.g. 'engineer.name' of the type names
-                typeName: path[0],
-                fieldName: path[2],
-                isArgument: true,
-                isNull: false,
-              },
-            ],
+            path: path.slice(1), // The path to the updated argument e.g. 'engineer.name' of the type names
+            typeName: path[0],
+            fieldName: path[2],
+            isArgument: true,
+            isNull: false,
           };
         }
         default: {
@@ -654,13 +591,9 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
       // in this case, all the ops which have this argument are breaking
       return {
         schemaChangeId: schemaCheckId,
-        changes: [
-          {
-            // e.g. if the path recieved is 'Query.employee.a', the path should be ['employee'] as its new field or it has changed the type of the argument, we check the usage of the operation.
-            path: path.slice(1, 2),
-            typeName: path[0],
-          },
-        ],
+        // e.g. if the path recieved is 'Query.employee.a', the path should be ['employee'] as its new field or it has changed the type of the argument, we check the usage of the operation.
+        path: path.slice(1, 2),
+        typeName: path[0],
       };
     }
     case ChangeType.FieldArgumentRemoved: {
@@ -669,26 +602,18 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
         // in this case, all the ops which use this argument are breaking
         return {
           schemaChangeId: schemaCheckId,
-          changes: [
-            {
-              // e.g. if the path recieved is 'Query.employee.a', the path should be ['employee'] as its new field or it has changed the type of the argument, we check the usage of the operation.
-              path: path.slice(1, 2),
-              typeName: path[0],
-            },
-          ],
+          // e.g. if the path recieved is 'Query.employee.a', the path should be ['employee'] as its new field or it has changed the type of the argument, we check the usage of the operation.
+          path: path.slice(1, 2),
+          typeName: path[0],
         };
       } else {
         // in this case, any ops which use the argument and are not null are breaking
         return {
           schemaChangeId: schemaCheckId,
-          changes: [
-            {
-              path: path.slice(1), // The path to the updated argument e.g. 'engineer.name' of the type names
-              typeName: path[0],
-              isArgument: true,
-              isNull: false,
-            },
-          ],
+          path: path.slice(1), // The path to the updated argument e.g. 'engineer.name' of the type names
+          typeName: path[0],
+          isArgument: true,
+          isNull: false,
         };
       }
     }

@@ -44,7 +44,7 @@ import * as schema from '../../db/schema.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { CacheWarmerRepository } from '../repositories/CacheWarmerRepository.js';
 import { NamespaceRepository } from '../repositories/NamespaceRepository.js';
-import { InspectorSchemaChangeGroup } from '../services/SchemaUsageTrafficInspector.js';
+import { InspectorSchemaChange } from '../services/SchemaUsageTrafficInspector.js';
 import { SchemaCheckChangeAction } from '../../db/models.js';
 import { composeFederatedGraphWithPotentialContracts, composeSubgraphs } from './composition.js';
 import { getDiffBetweenGraphs, GetDiffBetweenGraphsResult, GetDiffBetweenGraphsSuccess } from './schemaCheck.js';
@@ -262,7 +262,7 @@ export type CheckSubgraph = {
   checkSubgraphId: string;
   newSchemaSDL: string;
   newGraphQLSchema?: GraphQLSchema;
-  inspectorChanges: InspectorSchemaChangeGroup[];
+  inspectorChanges: InspectorSchemaChange[];
   schemaChanges: GetDiffBetweenGraphsSuccess;
   storedBreakingChanges: SchemaCheckChangeAction[];
   routerCompatibilityVersion: string;

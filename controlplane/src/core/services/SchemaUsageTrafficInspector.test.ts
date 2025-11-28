@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { buildSchema, GraphQLSchema } from 'graphql';
 import { getSchemaDiff } from '../composition/schemaCheck.js';
-import { InspectorSchemaChange, InspectorSchemaChangeGroup, toInspectorChange } from './SchemaUsageTrafficInspector.js';
+import { InspectorSchemaChange, toInspectorChange } from './SchemaUsageTrafficInspector.js';
 
 describe('Schema Change converter', (ctx) => {
   describe('Arguments', (ctx) => {
@@ -23,6 +23,7 @@ describe('Schema Change converter', (ctx) => {
       // if the condition exists, it would be breaking
       expect(changes).toEqual<InspectorSchemaChange[]>([
         {
+          schemaChangeId: '0',
           path: ['a'],
           typeName: 'Query',
         },
@@ -51,6 +52,7 @@ describe('Schema Change converter', (ctx) => {
 
       expect(changes).toEqual<InspectorSchemaChange[]>([
         {
+          schemaChangeId: '0',
           path: ['details'],
           typeName: 'Rocket',
         },
@@ -73,6 +75,7 @@ describe('Schema Change converter', (ctx) => {
 
       expect(changes).toEqual<InspectorSchemaChange[]>([
         {
+          schemaChangeId: '0',
           path: ['a'],
           typeName: 'Query',
         },
@@ -95,6 +98,7 @@ describe('Schema Change converter', (ctx) => {
 
       expect(changes).toEqual<InspectorSchemaChange[]>([
         {
+          schemaChangeId: '0',
           path: ['a', 'b'],
           typeName: 'Query',
           isArgument: true,
@@ -119,6 +123,7 @@ describe('Schema Change converter', (ctx) => {
 
       expect(changes).toEqual<InspectorSchemaChange[]>([
         {
+          schemaChangeId: '0',
           path: ['a', 'b'],
           typeName: 'Query',
           fieldName: 'b',
@@ -144,6 +149,7 @@ describe('Schema Change converter', (ctx) => {
 
       expect(changes).toEqual<InspectorSchemaChange[]>([
         {
+          schemaChangeId: '0',
           path: ['a', 'b'],
           typeName: 'Query',
           fieldName: 'b',
@@ -168,6 +174,7 @@ describe('Schema Change converter', (ctx) => {
 
       expect(changes).toEqual<InspectorSchemaChange[]>([
         {
+          schemaChangeId: '0',
           path: ['a', 'b'],
           typeName: 'Query',
           fieldName: 'b',
@@ -192,6 +199,7 @@ describe('Schema Change converter', (ctx) => {
 
       expect(changes).toEqual<InspectorSchemaChange[]>([
         {
+          schemaChangeId: '0',
           path: ['a', 'b'],
           typeName: 'Query',
           fieldName: 'b',
@@ -220,6 +228,7 @@ describe('Schema Change converter', (ctx) => {
 
       expect(changes).toEqual<InspectorSchemaChange[]>([
         {
+          schemaChangeId: '0',
           path: ['Foo'],
           isInput: true,
           isNull: false,
@@ -244,6 +253,7 @@ describe('Schema Change converter', (ctx) => {
 
       expect(changes).toEqual<InspectorSchemaChange[]>([
         {
+          schemaChangeId: '0',
           path: ['Foo'],
           isInput: true,
           isNull: false,
@@ -270,6 +280,7 @@ describe('Schema Change converter', (ctx) => {
       // We will not miss any breaking ops but will have some ops which might not be breaking
       expect(changes).toEqual<InspectorSchemaChange[]>([
         {
+          schemaChangeId: '0',
           path: ['Foo'],
           isInput: true,
           isNull: false,
@@ -293,6 +304,7 @@ describe('Schema Change converter', (ctx) => {
 
       expect(changes).toEqual<InspectorSchemaChange[]>([
         {
+          schemaChangeId: '0',
           path: ['Foo'],
           isInput: true,
           isNull: false,
@@ -316,6 +328,7 @@ describe('Schema Change converter', (ctx) => {
 
       expect(changes).toEqual<InspectorSchemaChange[]>([
         {
+          schemaChangeId: '0',
           typeName: 'Foo',
           fieldName: 'a',
           isInput: true,
@@ -340,6 +353,7 @@ describe('Schema Change converter', (ctx) => {
 
       expect(changes).toEqual<InspectorSchemaChange[]>([
         {
+          schemaChangeId: '0',
           path: ['Foo'],
           isInput: true,
           isNull: false,
@@ -363,6 +377,7 @@ describe('Schema Change converter', (ctx) => {
 
       expect(changes).toEqual<InspectorSchemaChange[]>([
         {
+          schemaChangeId: '0',
           typeName: 'Foo',
           fieldName: 'a',
           isInput: true,
@@ -392,9 +407,11 @@ describe('Schema Change converter', (ctx) => {
 
       expect(changes).toEqual<InspectorSchemaChange[]>([
         {
+          schemaChangeId: '0',
           typeName: 'Rocket',
         },
         {
+          schemaChangeId: '1',
           fieldName: 'a',
           typeName: 'Query',
         },
@@ -429,6 +446,7 @@ describe('Schema Change converter', (ctx) => {
 
       expect(changes).toEqual<InspectorSchemaChange[]>([
         {
+          schemaChangeId: '0',
           namedType: 'enumA',
         },
       ]);
@@ -469,12 +487,7 @@ async function getBreakingChanges(a: GraphQLSchema, b: GraphQLSchema): Promise<I
         i.toString(),
       ),
     )
-    .filter((c) => c !== null) as InspectorSchemaChangeGroup[];
+    .filter((c) => c !== null) as InspectorSchemaChange[];
 
-  // Flatten groups
-  const result: InspectorSchemaChange[] = [];
-  for (const group of groups) {
-    result.push(...group.changes);
-  }
-  return result;
+  return groups;
 }
