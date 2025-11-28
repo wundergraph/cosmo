@@ -16,7 +16,7 @@ import (
 
 func TestNewVanguardService(t *testing.T) {
 	t.Run("creates service successfully", func(t *testing.T) {
-		protoLoader := setupTestProtoLoaderFromDir(t, "testdata/employee_only")
+		protoLoader := setupTestProtoLoaderFromDir(t, "samples/services/employee.v1")
 		handler := setupTestRPCHandler(t, protoLoader)
 
 		vs, err := NewVanguardService(VanguardServiceConfig{
@@ -31,7 +31,7 @@ func TestNewVanguardService(t *testing.T) {
 	})
 
 	t.Run("fails with nil handler", func(t *testing.T) {
-		protoLoader := setupTestProtoLoaderFromDir(t, "testdata/employee_only")
+		protoLoader := setupTestProtoLoaderFromDir(t, "samples/services/employee.v1")
 
 		_, err := NewVanguardService(VanguardServiceConfig{
 			Handler:     nil,
@@ -57,7 +57,7 @@ func TestNewVanguardService(t *testing.T) {
 	})
 
 	t.Run("uses nop logger when nil", func(t *testing.T) {
-		protoLoader := setupTestProtoLoaderFromDir(t, "testdata/employee_only")
+		protoLoader := setupTestProtoLoaderFromDir(t, "samples/services/employee.v1")
 		handler := setupTestRPCHandler(t, protoLoader)
 
 		vs, err := NewVanguardService(VanguardServiceConfig{
@@ -89,7 +89,7 @@ func TestNewVanguardService(t *testing.T) {
 }
 
 func TestVanguardService_GetServices(t *testing.T) {
-	protoLoader := setupTestProtoLoaderFromDir(t, "testdata/employee_only")
+	protoLoader := setupTestProtoLoaderFromDir(t, "samples/services/employee.v1")
 	handler := setupTestRPCHandler(t, protoLoader)
 
 	vs, err := NewVanguardService(VanguardServiceConfig{
@@ -105,7 +105,7 @@ func TestVanguardService_GetServices(t *testing.T) {
 }
 
 func TestVanguardService_GetServiceNames(t *testing.T) {
-	protoLoader := setupTestProtoLoaderFromDir(t, "testdata/employee_only")
+	protoLoader := setupTestProtoLoaderFromDir(t, "samples/services/employee.v1")
 	handler := setupTestRPCHandler(t, protoLoader)
 
 	vs, err := NewVanguardService(VanguardServiceConfig{
@@ -121,7 +121,7 @@ func TestVanguardService_GetServiceNames(t *testing.T) {
 }
 
 func TestVanguardService_ValidateService(t *testing.T) {
-	protoLoader := setupTestProtoLoaderFromDir(t, "testdata/employee_only")
+	protoLoader := setupTestProtoLoaderFromDir(t, "samples/services/employee.v1")
 	handler := setupTestRPCHandler(t, protoLoader)
 
 	vs, err := NewVanguardService(VanguardServiceConfig{
@@ -144,7 +144,7 @@ func TestVanguardService_ValidateService(t *testing.T) {
 }
 
 func TestVanguardService_ValidateMethod(t *testing.T) {
-	protoLoader := setupTestProtoLoaderFromDir(t, "testdata/employee_only")
+	protoLoader := setupTestProtoLoaderFromDir(t, "samples/services/employee.v1")
 	handler := setupTestRPCHandler(t, protoLoader)
 
 	vs, err := NewVanguardService(VanguardServiceConfig{
@@ -155,7 +155,7 @@ func TestVanguardService_ValidateMethod(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("validates existing method", func(t *testing.T) {
-		err := vs.ValidateMethod("employee.v1.EmployeeService", "QueryGetEmployeeById")
+		err := vs.ValidateMethod("employee.v1.EmployeeService", "GetEmployeeById")
 		assert.NoError(t, err)
 	})
 
@@ -173,7 +173,7 @@ func TestVanguardService_ValidateMethod(t *testing.T) {
 }
 
 func TestVanguardService_GetMethodInfo(t *testing.T) {
-	protoLoader := setupTestProtoLoaderFromDir(t, "testdata/employee_only")
+	protoLoader := setupTestProtoLoaderFromDir(t, "samples/services/employee.v1")
 	handler := setupTestRPCHandler(t, protoLoader)
 
 	vs, err := NewVanguardService(VanguardServiceConfig{
@@ -184,10 +184,10 @@ func TestVanguardService_GetMethodInfo(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("gets method info successfully", func(t *testing.T) {
-		info, err := vs.GetMethodInfo("employee.v1.EmployeeService", "QueryGetEmployeeById")
+		info, err := vs.GetMethodInfo("employee.v1.EmployeeService", "GetEmployeeById")
 		require.NoError(t, err)
 		assert.NotNil(t, info)
-		assert.Equal(t, "QueryGetEmployeeById", info.Name)
+		assert.Equal(t, "GetEmployeeById", info.Name)
 	})
 
 	t.Run("fails for non-existent method", func(t *testing.T) {
@@ -198,7 +198,7 @@ func TestVanguardService_GetMethodInfo(t *testing.T) {
 }
 
 func TestVanguardService_GetServiceInfo(t *testing.T) {
-	protoLoader := setupTestProtoLoaderFromDir(t, "testdata/employee_only")
+	protoLoader := setupTestProtoLoaderFromDir(t, "samples/services/employee.v1")
 	handler := setupTestRPCHandler(t, protoLoader)
 
 	vs, err := NewVanguardService(VanguardServiceConfig{
@@ -214,7 +214,7 @@ func TestVanguardService_GetServiceInfo(t *testing.T) {
 		assert.NotNil(t, info)
 		assert.Equal(t, "employee.v1.EmployeeService", info.FullName)
 		assert.Equal(t, "EmployeeService", info.ServiceName)
-		assert.Contains(t, info.Methods, "QueryGetEmployeeById")
+		assert.Contains(t, info.Methods, "GetEmployeeById")
 	})
 
 	t.Run("fails for non-existent service", func(t *testing.T) {
@@ -225,7 +225,7 @@ func TestVanguardService_GetServiceInfo(t *testing.T) {
 }
 
 func TestVanguardService_ServiceHandler(t *testing.T) {
-	protoLoader := setupTestProtoLoaderFromDir(t, "testdata/employee_only")
+	protoLoader := setupTestProtoLoaderFromDir(t, "samples/services/employee.v1")
 	handler := setupTestRPCHandler(t, protoLoader)
 
 	vs, err := NewVanguardService(VanguardServiceConfig{
@@ -245,7 +245,7 @@ func TestVanguardService_ServiceHandler(t *testing.T) {
 		defer graphqlServer.Close()
 
 		// Create handler with mock server
-		protoLoader := setupTestProtoLoaderFromDir(t, "testdata/employee_only")
+		protoLoader := setupTestProtoLoaderFromDir(t, "samples/services/employee.v1")
 		opRegistry := NewOperationRegistry(zap.NewNop())
 		
 		// Manually add a test operation to the registry using service-scoped approach
@@ -253,10 +253,10 @@ func TestVanguardService_ServiceHandler(t *testing.T) {
 		if opRegistry.operations[serviceName] == nil {
 			opRegistry.operations[serviceName] = make(map[string]*schemaloader.Operation)
 		}
-		opRegistry.operations[serviceName]["QueryGetEmployeeById"] = &schemaloader.Operation{
-			Name:            "QueryGetEmployeeById",
+		opRegistry.operations[serviceName]["GetEmployeeById"] = &schemaloader.Operation{
+			Name:            "GetEmployeeById",
 			OperationType:   "query",
-			OperationString: "query QueryGetEmployeeById($id: Int!) { employee(id: $id) { id name } }",
+			OperationString: "query GetEmployeeById($id: Int!) { employee(id: $id) { id name } }",
 		}
 		
 		handler, err := NewRPCHandler(HandlerConfig{
@@ -264,6 +264,7 @@ func TestVanguardService_ServiceHandler(t *testing.T) {
 			HTTPClient:        &http.Client{},
 			Logger:            zap.NewNop(),
 			OperationRegistry: opRegistry,
+			ProtoLoader:       protoLoader,
 		})
 		require.NoError(t, err)
 
@@ -291,7 +292,7 @@ func TestVanguardService_ServiceHandler(t *testing.T) {
 		requestJSON, err := json.Marshal(requestBody)
 		require.NoError(t, err)
 
-		req := httptest.NewRequest("POST", "/employee.v1.EmployeeService/QueryGetEmployeeById", bytes.NewReader(requestJSON))
+		req := httptest.NewRequest("POST", "/employee.v1.EmployeeService/GetEmployeeById", bytes.NewReader(requestJSON))
 		req.Header.Set("Content-Type", "application/json")
 
 		// Create a response recorder
@@ -345,7 +346,7 @@ func TestVanguardService_ServiceHandler(t *testing.T) {
 		require.NotNil(t, serviceDef)
 
 		// Wrong service name but valid method name - should fail service validation
-		req := httptest.NewRequest("POST", "/wrong.Service/QueryGetEmployeeById", nil)
+		req := httptest.NewRequest("POST", "/wrong.Service/GetEmployeeById", nil)
 		w := httptest.NewRecorder()
 
 		serviceHandler := vs.createServiceHandler("employee.v1.EmployeeService", serviceDef)
@@ -366,7 +367,7 @@ func TestVanguardService_ServiceHandler(t *testing.T) {
 		require.NotNil(t, serviceDef)
 
 		// Path with too many segments
-		req := httptest.NewRequest("POST", "/employee.v1.EmployeeService/QueryGetEmployeeById/extra", nil)
+		req := httptest.NewRequest("POST", "/employee.v1.EmployeeService/GetEmployeeById/extra", nil)
 		w := httptest.NewRecorder()
 
 		serviceHandler := vs.createServiceHandler("employee.v1.EmployeeService", serviceDef)
@@ -387,7 +388,7 @@ func TestVanguardService_ServiceHandler(t *testing.T) {
 		require.NotNil(t, serviceDef)
 
 		// Create a request with a body that will error on read
-		req := httptest.NewRequest("POST", "/employee.v1.EmployeeService/QueryGetEmployeeById", &errorReader{})
+		req := httptest.NewRequest("POST", "/employee.v1.EmployeeService/GetEmployeeById", &errorReader{})
 		w := httptest.NewRecorder()
 
 		serviceHandler := vs.createServiceHandler("employee.v1.EmployeeService", serviceDef)
@@ -398,7 +399,7 @@ func TestVanguardService_ServiceHandler(t *testing.T) {
 }
 
 func TestVanguardService_ExtractMethodName(t *testing.T) {
-	protoLoader := setupTestProtoLoaderFromDir(t, "testdata/employee_only")
+	protoLoader := setupTestProtoLoaderFromDir(t, "samples/services/employee.v1")
 	handler := setupTestRPCHandler(t, protoLoader)
 
 	vs, err := NewVanguardService(VanguardServiceConfig{
@@ -416,15 +417,15 @@ func TestVanguardService_ExtractMethodName(t *testing.T) {
 	}{
 		{
 			name:        "valid path with leading slash",
-			path:        "/employee.v1.EmployeeService/QueryGetEmployeeById",
+			path:        "/employee.v1.EmployeeService/GetEmployeeById",
 			serviceName: "employee.v1.EmployeeService",
-			want:        "QueryGetEmployeeById",
+			want:        "GetEmployeeById",
 		},
 		{
 			name:        "valid path without leading slash",
-			path:        "employee.v1.EmployeeService/QueryGetEmployeeById",
+			path:        "employee.v1.EmployeeService/GetEmployeeById",
 			serviceName: "employee.v1.EmployeeService",
-			want:        "QueryGetEmployeeById",
+			want:        "GetEmployeeById",
 		},
 		{
 			name:        "invalid path - no method",
@@ -440,7 +441,7 @@ func TestVanguardService_ExtractMethodName(t *testing.T) {
 		},
 		{
 			name:        "invalid path - too many parts",
-			path:        "/employee.v1.EmployeeService/QueryGetEmployeeById/extra",
+			path:        "/employee.v1.EmployeeService/GetEmployeeById/extra",
 			serviceName: "employee.v1.EmployeeService",
 			want:        "",
 		},
@@ -455,7 +456,7 @@ func TestVanguardService_ExtractMethodName(t *testing.T) {
 }
 
 func TestVanguardService_GetFileDescriptors(t *testing.T) {
-	protoLoader := setupTestProtoLoaderFromDir(t, "testdata/employee_only")
+	protoLoader := setupTestProtoLoaderFromDir(t, "samples/services/employee.v1")
 	handler := setupTestRPCHandler(t, protoLoader)
 
 	vs, err := NewVanguardService(VanguardServiceConfig{
@@ -483,10 +484,10 @@ func setupTestRPCHandler(t *testing.T, protoLoader *ProtoLoader) *RPCHandler {
 	if opRegistry.operations[serviceName] == nil {
 		opRegistry.operations[serviceName] = make(map[string]*schemaloader.Operation)
 	}
-	opRegistry.operations[serviceName]["QueryGetEmployeeById"] = &schemaloader.Operation{
-		Name:            "QueryGetEmployeeById",
+	opRegistry.operations[serviceName]["GetEmployeeById"] = &schemaloader.Operation{
+		Name:            "GetEmployeeById",
 		OperationType:   "query",
-		OperationString: "query QueryGetEmployeeById($id: Int!) { employee(id: $id) { id name } }",
+		OperationString: "query GetEmployeeById($id: Int!) { employee(id: $id) { id name } }",
 	}
 
 	// Create a mock HTTP client
@@ -497,6 +498,7 @@ func setupTestRPCHandler(t *testing.T, protoLoader *ProtoLoader) *RPCHandler {
 		HTTPClient:        httpClient,
 		Logger:            zap.NewNop(),
 		OperationRegistry: opRegistry,
+		ProtoLoader:       protoLoader,
 	})
 	require.NoError(t, err)
 

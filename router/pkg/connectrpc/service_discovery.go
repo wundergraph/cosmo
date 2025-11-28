@@ -63,18 +63,13 @@ func DiscoverServices(config ServiceDiscoveryConfig) ([]DiscoveredService, error
 	var discoveredServices []DiscoveredService
 	seenPackageService := make(map[string]string) // "package.service" -> directory
 
-	// Walk the services directory to find all subdirectories with proto files
+	// Walk the services directory to find all directories (including root) with proto files
 	err := filepath.Walk(config.ServicesDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 
-		// Skip the root services directory itself
-		if path == config.ServicesDir {
-			return nil
-		}
-
-		// Only process directories
+		// Only process directories (including the root services directory)
 		if !info.IsDir() {
 			return nil
 		}

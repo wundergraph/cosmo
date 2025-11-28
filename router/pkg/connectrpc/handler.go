@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -140,6 +141,7 @@ type RPCHandler struct {
 	httpClient        *http.Client
 	logger            *zap.Logger
 	operationRegistry *OperationRegistry
+	validator         *MessageValidator
 }
 
 // HandlerConfig contains configuration for the RPC handler
@@ -148,6 +150,7 @@ type HandlerConfig struct {
 	HTTPClient        *http.Client
 	Logger            *zap.Logger
 	OperationRegistry *OperationRegistry
+	ProtoLoader       *ProtoLoader
 }
 
 // NewRPCHandler creates a new RPC handler
@@ -168,6 +171,10 @@ func NewRPCHandler(config HandlerConfig) (*RPCHandler, error) {
 		return nil, fmt.Errorf("operation registry is required")
 	}
 
+	if config.ProtoLoader == nil {
+		return nil, fmt.Errorf("proto loader is required")
+	}
+
 	// Ensure the endpoint has a protocol
 	if !strings.Contains(config.GraphQLEndpoint, "://") {
 		config.GraphQLEndpoint = "http://" + config.GraphQLEndpoint
@@ -178,6 +185,7 @@ func NewRPCHandler(config HandlerConfig) (*RPCHandler, error) {
 		httpClient:        config.HTTPClient,
 		logger:            config.Logger,
 		operationRegistry: config.OperationRegistry,
+		validator:         NewMessageValidator(config.ProtoLoader),
 	}, nil
 }
 
@@ -189,7 +197,42 @@ func NewRPCHandler(config HandlerConfig) (*RPCHandler, error) {
 func (h *RPCHandler) HandleRPC(ctx context.Context, serviceName, methodName string, requestJSON []byte) ([]byte, error) {
 	h.logger.Debug("handling RPC request",
 		zap.String("service", serviceName),
-		zap.String("method", methodName))
+		zap.String("method", methodName),
+		zap.String("request_json", string(requestJSON)))
+
+	// Validate the proto message structure before processing
+	if h.validator != nil {
+		h.logger.Debug("validating proto message",
+			zap.String("service", serviceName),
+			zap.String("method", methodName))
+		
+		if err := h.validator.ValidateMessage(serviceName, methodName, requestJSON); err != nil {
+			var validationErr *ValidationError
+			if errors.As(err, &validationErr) {
+				// Return a Connect InvalidArgument error for validation failures
+				connectErr := connect.NewError(
+					connect.CodeInvalidArgument,
+					fmt.Errorf("invalid request: %s", validationErr.Error()),
+				)
+				h.logger.Warn("proto validation failed",
+					zap.String("service", serviceName),
+					zap.String("method", methodName),
+					zap.String("error", validationErr.Error()))
+				return nil, connectErr
+			}
+			// For other errors, log and continue (don't block on validation errors)
+			h.logger.Warn("validation check failed, continuing",
+				zap.String("service", serviceName),
+				zap.String("method", methodName),
+				zap.Error(err))
+		} else {
+			h.logger.Debug("proto validation passed",
+				zap.String("service", serviceName),
+				zap.String("method", methodName))
+		}
+	} else {
+		h.logger.Warn("validator is nil, skipping validation")
+	}
 
 	// Strip Query/Mutation/Subscription prefix from method name if present
 	// This allows RPC methods like "QueryGetUser" to map to GraphQL operations named "GetUser"
@@ -202,6 +245,17 @@ func (h *RPCHandler) HandleRPC(ctx context.Context, serviceName, methodName stri
 		// If not found with stripped name, try the original method name
 		operation = h.operationRegistry.GetOperationForService(serviceName, methodName)
 		if operation == nil {
+			// Log all available operations for this service to help diagnose the issue
+			allOps := h.operationRegistry.GetAllOperationsForService(serviceName)
+			var availableOps []string
+			for _, op := range allOps {
+				availableOps = append(availableOps, op.Name)
+			}
+			h.logger.Error("operation not found",
+				zap.String("service", serviceName),
+				zap.String("requested_method", methodName),
+				zap.String("stripped_name", operationName),
+				zap.Strings("available_operations", availableOps))
 			return nil, fmt.Errorf("operation not found for service %s: %s (also tried: %s)", serviceName, methodName, operationName)
 		}
 	}

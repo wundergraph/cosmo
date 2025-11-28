@@ -13,6 +13,16 @@ import (
 	"go.uber.org/zap"
 )
 
+// setupTestProtoLoader creates a proto loader for tests
+// This is a minimal setup that doesn't require actual proto files
+func setupTestProtoLoader(t *testing.T) *ProtoLoader {
+	t.Helper()
+	loader := NewProtoLoader(zap.NewNop())
+	// For error tests, we don't need to load actual proto files
+	// The tests are focused on HTTP/GraphQL error handling
+	return loader
+}
+
 // TestHTTPStatusToConnectCode tests the mapping of HTTP status codes to Connect error codes
 func TestHTTPStatusToConnectCode(t *testing.T) {
 	tests := []struct {
@@ -102,6 +112,7 @@ func TestExecuteGraphQL_HTTPErrors(t *testing.T) {
 				HTTPClient:        httpClient,
 				Logger:            zap.NewNop(),
 				OperationRegistry: NewOperationRegistry(zap.NewNop()),
+				ProtoLoader:       setupTestProtoLoader(t),
 			})
 			require.NoError(t, err)
 
@@ -228,6 +239,7 @@ func TestExecuteGraphQL_CriticalErrors(t *testing.T) {
 				HTTPClient:        httpClient,
 				Logger:            zap.NewNop(),
 				OperationRegistry: NewOperationRegistry(zap.NewNop()),
+				ProtoLoader:       setupTestProtoLoader(t),
 			})
 			require.NoError(t, err)
 
@@ -359,6 +371,7 @@ func TestExecuteGraphQL_NonCriticalErrors_PartialData(t *testing.T) {
 				HTTPClient:        httpClient,
 				Logger:            zap.NewNop(),
 				OperationRegistry: NewOperationRegistry(zap.NewNop()),
+				ProtoLoader:       setupTestProtoLoader(t),
 			})
 			require.NoError(t, err)
 
@@ -449,6 +462,7 @@ func TestExecuteGraphQL_Success(t *testing.T) {
 				HTTPClient:        httpClient,
 				Logger:            zap.NewNop(),
 				OperationRegistry: NewOperationRegistry(zap.NewNop()),
+				ProtoLoader:       setupTestProtoLoader(t),
 			})
 			require.NoError(t, err)
 
@@ -482,14 +496,16 @@ func TestErrorMetadata_Structure(t *testing.T) {
 		}`
 
 		httpClient := mockHTTPClient(http.StatusOK, graphqlResponse)
-		handler, _ := NewRPCHandler(HandlerConfig{
+		handler, err := NewRPCHandler(HandlerConfig{
 			GraphQLEndpoint:   "http://localhost:4000/graphql",
 			HTTPClient:        httpClient,
 			Logger:            zap.NewNop(),
 			OperationRegistry: NewOperationRegistry(zap.NewNop()),
+			ProtoLoader:       setupTestProtoLoader(t),
 		})
+		require.NoError(t, err)
 
-		_, err := handler.executeGraphQL(context.Background(), "query { test }", json.RawMessage("{}"))
+		_, err = handler.executeGraphQL(context.Background(), "query { test }", json.RawMessage("{}"))
 
 		var connectErr *connect.Error
 		require.True(t, errors.As(err, &connectErr))
@@ -521,14 +537,16 @@ func TestErrorMetadata_Structure(t *testing.T) {
 		}`
 
 		httpClient := mockHTTPClient(http.StatusOK, graphqlResponse)
-		handler, _ := NewRPCHandler(HandlerConfig{
+		handler, err := NewRPCHandler(HandlerConfig{
 			GraphQLEndpoint:   "http://localhost:4000/graphql",
 			HTTPClient:        httpClient,
 			Logger:            zap.NewNop(),
 			OperationRegistry: NewOperationRegistry(zap.NewNop()),
+			ProtoLoader:       setupTestProtoLoader(t),
 		})
+		require.NoError(t, err)
 
-		_, err := handler.executeGraphQL(context.Background(), "query { test }", json.RawMessage("{}"))
+		_, err = handler.executeGraphQL(context.Background(), "query { test }", json.RawMessage("{}"))
 
 		var connectErr *connect.Error
 		require.True(t, errors.As(err, &connectErr))

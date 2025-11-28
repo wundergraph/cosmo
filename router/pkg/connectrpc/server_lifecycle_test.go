@@ -32,7 +32,7 @@ func getSharedProtoLoader(t *testing.T) *ProtoLoader {
 	t.Helper()
 	sharedProtoLoaderOnce.Do(func() {
 		sharedProtoLoader = NewProtoLoader(zap.NewNop())
-		sharedProtoLoaderErr = sharedProtoLoader.LoadFromDirectory("testdata")
+		sharedProtoLoaderErr = sharedProtoLoader.LoadFromDirectory("samples/services/employee.v1")
 	})
 	require.NoError(t, sharedProtoLoaderErr, "failed to load shared proto files")
 	return sharedProtoLoader
@@ -50,7 +50,7 @@ func newTestServer(t *testing.T, listenAddr string) (*Server, *httptest.Server) 
 	}))
 
 	server, err := NewServer(ServerConfig{
-		ServicesDir:     "testdata",
+		ServicesDir:     "samples/services",
 		GraphQLEndpoint: graphqlServer.URL,
 		ListenAddr:      listenAddr,
 		Logger:          zap.NewNop(),
@@ -112,7 +112,7 @@ func TestServerLifecycle_StartStopReload(t *testing.T) {
 
 	t.Run("stop without start returns error", func(t *testing.T) {
 		server, err := NewServer(ServerConfig{
-			ServicesDir:     "testdata",
+			ServicesDir:     "samples/services",
 			GraphQLEndpoint: "http://localhost:4000/graphql",
 			Logger:          zap.NewNop(),
 		})

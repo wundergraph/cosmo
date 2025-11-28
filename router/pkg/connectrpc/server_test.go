@@ -27,7 +27,7 @@ func TestNewServer(t *testing.T) {
 
 	t.Run("adds protocol to endpoint if missing", func(t *testing.T) {
 		server, err := NewServer(ServerConfig{
-			ServicesDir:     "testdata",
+			ServicesDir:     "samples/services",
 			GraphQLEndpoint: "localhost:4000/graphql",
 		})
 
@@ -37,7 +37,7 @@ func TestNewServer(t *testing.T) {
 
 	t.Run("uses default listen address", func(t *testing.T) {
 		server, err := NewServer(ServerConfig{
-			ServicesDir:     "testdata",
+			ServicesDir:     "samples/services",
 			GraphQLEndpoint: "http://localhost:4000/graphql",
 		})
 
@@ -47,7 +47,7 @@ func TestNewServer(t *testing.T) {
 
 	t.Run("uses default timeout", func(t *testing.T) {
 		server, err := NewServer(ServerConfig{
-			ServicesDir:     "testdata",
+			ServicesDir:     "samples/services",
 			GraphQLEndpoint: "http://localhost:4000/graphql",
 		})
 
@@ -66,7 +66,7 @@ func TestNewServer(t *testing.T) {
 
 	t.Run("returns error when graphql endpoint is empty", func(t *testing.T) {
 		_, err := NewServer(ServerConfig{
-			ServicesDir: "testdata",
+			ServicesDir: "samples/services",
 		})
 
 		assert.Error(t, err)
@@ -75,7 +75,7 @@ func TestNewServer(t *testing.T) {
 
 	t.Run("uses nop logger when nil", func(t *testing.T) {
 		server, err := NewServer(ServerConfig{
-			ServicesDir:     "testdata",
+			ServicesDir:     "samples/services",
 			GraphQLEndpoint: "http://localhost:4000/graphql",
 			Logger:          nil,
 		})
