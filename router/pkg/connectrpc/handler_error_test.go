@@ -503,7 +503,7 @@ func TestErrorMetadata_Structure(t *testing.T) {
 			OperationRegistry: NewOperationRegistry(zap.NewNop()),
 			ProtoLoader:       setupTestProtoLoader(t),
 		})
-		require.NoError(t, err)
+		require.NoError(t, err, "NewRPCHandler should not return an error")
 
 		_, err = handler.executeGraphQL(context.Background(), "query { test }", json.RawMessage("{}"))
 
@@ -544,7 +544,7 @@ func TestErrorMetadata_Structure(t *testing.T) {
 			OperationRegistry: NewOperationRegistry(zap.NewNop()),
 			ProtoLoader:       setupTestProtoLoader(t),
 		})
-		require.NoError(t, err)
+		require.NoError(t, err, "NewRPCHandler should not return an error")
 
 		_, err = handler.executeGraphQL(context.Background(), "query { test }", json.RawMessage("{}"))
 
