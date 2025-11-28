@@ -13,33 +13,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// assertJSONEqual compares two JSON strings for equality after normalizing them.
-// It pretty-prints both JSONs in the test log for easy debugging.
-func assertJSONEqual(t *testing.T, expected, actual string, msgAndArgs ...interface{}) bool {
-	t.Helper()
-	
-	// Parse both JSONs
-	var expectedObj, actualObj interface{}
-	if err := json.Unmarshal([]byte(expected), &expectedObj); err != nil {
-		t.Fatalf("Failed to parse expected JSON: %v\nJSON: %s", err, expected)
-		return false
-	}
-	if err := json.Unmarshal([]byte(actual), &actualObj); err != nil {
-		t.Fatalf("Failed to parse actual JSON: %v\nJSON: %s", err, actual)
-		return false
-	}
-	
-	// Pretty print for debugging
-	prettyExpected, _ := json.MarshalIndent(expectedObj, "", "  ")
-	prettyActual, _ := json.MarshalIndent(actualObj, "", "  ")
-	
-	t.Logf("Expected JSON:\n%s", string(prettyExpected))
-	t.Logf("Actual JSON:\n%s", string(prettyActual))
-	
-	// Compare the parsed objects
-	return assert.Equal(t, expectedObj, actualObj, msgAndArgs...)
-}
-
 // TestHTTPStatusToConnectCode tests the mapping of HTTP status codes to Connect error codes
 func TestHTTPStatusToConnectCode(t *testing.T) {
 	tests := []struct {
@@ -276,7 +249,7 @@ func TestExecuteGraphQL_CriticalErrors(t *testing.T) {
 
 			errorsJSON := connectErr.Meta().Get("graphql-errors")
 			require.NotEmpty(t, errorsJSON)
-			assertJSONEqual(t, tt.expectedErrors, errorsJSON, "GraphQL errors should match snapshot")
+			require.JSONEq(t, tt.expectedErrors, errorsJSON, "GraphQL errors should match snapshot")
 		})
 	}
 }
@@ -414,11 +387,11 @@ func TestExecuteGraphQL_NonCriticalErrors_PartialData(t *testing.T) {
 
 			partialData := connectErr.Meta().Get("graphql-partial-data")
 			require.NotEmpty(t, partialData)
-			assertJSONEqual(t, tt.expectedPartialData, partialData, "Partial data should match snapshot")
+			require.JSONEq(t, tt.expectedPartialData, partialData, "Partial data should match snapshot")
 
 			errorsJSON := connectErr.Meta().Get("graphql-errors")
 			require.NotEmpty(t, errorsJSON)
-			assertJSONEqual(t, tt.expectedErrors, errorsJSON, "GraphQL errors should match snapshot")
+			require.JSONEq(t, tt.expectedErrors, errorsJSON, "GraphQL errors should match snapshot")
 		})
 	}
 }
@@ -488,7 +461,7 @@ func TestExecuteGraphQL_Success(t *testing.T) {
 			require.NotNil(t, data)
 
 			// Check data content using helper for exact JSON equality
-			assertJSONEqual(t, tt.expectedData, string(data), "Partial data should match expected structure")
+			require.JSONEq(t, tt.expectedData, string(data), "Partial data should match expected structure")
 		})
 	}
 }
@@ -537,8 +510,8 @@ func TestErrorMetadata_Structure(t *testing.T) {
 		}
 ]`
 		
-		// Use helper function for JSON comparison with pretty-printing
-		assertJSONEqual(t, expectedErrorsJSON, errorsJSON, "GraphQL errors structure should match snapshot")
+		// Use testify's JSONEq for semantic JSON comparison
+		require.JSONEq(t, expectedErrorsJSON, errorsJSON, "GraphQL errors structure should match snapshot")
 	})
 
 	t.Run("NON-CRITICAL error metadata structure", func(t *testing.T) {
@@ -571,8 +544,8 @@ func TestErrorMetadata_Structure(t *testing.T) {
 		}
 }`
 		
-		// Use helper function for JSON comparison with pretty-printing
-		assertJSONEqual(t, expectedPartialData, partialData, "Partial data should match snapshot")
+		// Use testify's JSONEq for semantic JSON comparison
+		require.JSONEq(t, expectedPartialData, partialData, "Partial data should match snapshot")
 		
 		// Verify GraphQL errors using inline snapshot
 		errorsJSON := connectErr.Meta().Get("graphql-errors")
@@ -581,6 +554,6 @@ func TestErrorMetadata_Structure(t *testing.T) {
 		  "message": "Partial error"
 		}
 ]`
-		assertJSONEqual(t, expectedErrors, errorsJSON, "GraphQL errors should match snapshot")
+		require.JSONEq(t, expectedErrors, errorsJSON, "GraphQL errors should match snapshot")
 	})
 }
