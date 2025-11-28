@@ -1,0 +1,11 @@
+mutation UpdateEmployeeMood($employeeId: Int!, $mood: Mood!) {
+    updateMood(employeeID: $employeeId, mood: $mood) {
+        id
+        details {
+            forename
+            surname
+        }
+        currentMood
+        derivedMood
+    }
+}

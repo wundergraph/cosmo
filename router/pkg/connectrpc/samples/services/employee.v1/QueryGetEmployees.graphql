@@ -1,19 +1,10 @@
-query QueryGetEmployees {
+query GetEmployees {
   employees {
     id
-    tag
     details {
       forename
       surname
-      location {
-        key {
-          name
-        }
-      }
-    }
-    role {
-      title
-      departments
+      hasChildren
     }
   }
 }
