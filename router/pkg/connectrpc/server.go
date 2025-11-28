@@ -107,13 +107,15 @@ func (s *Server) Start() error {
 	s.logger.Info("discovered services",
 		zap.Int("count", len(discoveredServices)))
 
-	// Initialize components
+	// Create proto loader first (needed by handler)
+	s.protoLoader = NewProtoLoader(s.logger)
+
+	// Initialize components (requires protoLoader to be set)
 	if err := s.initializeComponents(); err != nil {
 		return fmt.Errorf("failed to initialize components: %w", err)
 	}
 
 	// Load proto files and operations for each discovered service
-	s.protoLoader = NewProtoLoader(s.logger)
 	for _, service := range discoveredServices {
 		s.logger.Info("loading service",
 			zap.String("service", service.FullName),
@@ -283,12 +285,14 @@ func (s *Server) initializeComponents() error {
 	s.operationRegistry = NewOperationRegistry(s.logger)
 
 	// Create RPC handler
+	// Note: ProtoLoader must be set before calling this during Start()
 	var err error
 	s.rpcHandler, err = NewRPCHandler(HandlerConfig{
 		GraphQLEndpoint:   s.config.GraphQLEndpoint,
 		HTTPClient:        s.httpClient,
 		Logger:            s.logger,
 		OperationRegistry: s.operationRegistry,
+		ProtoLoader:       s.protoLoader,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to create RPC handler: %w", err)
