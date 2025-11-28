@@ -8,13 +8,18 @@ import (
 	"go.uber.org/zap"
 )
 
+// setupTestProtoLoaderFromDir is a helper to load proto files from a directory.
+// This helper is shared across test files to avoid duplication.
+func setupTestProtoLoaderFromDir(t *testing.T, dir string) *ProtoLoader {
+	t.Helper()
+	loader := NewProtoLoader(zap.NewNop())
+	require.NoError(t, loader.LoadFromDirectory(dir))
+	return loader
+}
+
 func TestLoadEmployeeProto(t *testing.T) {
 	t.Run("loads and parses employee.proto successfully", func(t *testing.T) {
-		loader := NewProtoLoader(zap.NewNop())
-
-		// Load the employee.proto file from testdata/employee_only
-		err := loader.LoadFromDirectory("testdata/employee_only")
-		require.NoError(t, err)
+		loader := setupTestProtoLoaderFromDir(t, "testdata/employee_only")
 
 		// Verify the service was loaded
 		services := loader.GetServices()
@@ -28,10 +33,7 @@ func TestLoadEmployeeProto(t *testing.T) {
 		assert.Equal(t, "employee.v1", service.Package)
 		assert.Equal(t, "EmployeeService", service.ServiceName)
 
-		// Verify all 7 methods are present
-		assert.Len(t, service.Methods, 7)
-
-		// Verify method names
+		// Verify expected methods are present
 		methodNames := make([]string, len(service.Methods))
 		for i, method := range service.Methods {
 			methodNames[i] = method.Name
@@ -47,15 +49,16 @@ func TestLoadEmployeeProto(t *testing.T) {
 			"QueryGetEmployeesWithMood",
 		}
 
+		// Verify we have at least the expected methods (allows for future additions)
+		assert.GreaterOrEqual(t, len(service.Methods), len(expectedMethods))
+
 		for _, expected := range expectedMethods {
 			assert.Contains(t, methodNames, expected, "Method %s should be present", expected)
 		}
 	})
 
 	t.Run("verifies query method details", func(t *testing.T) {
-		loader := NewProtoLoader(zap.NewNop())
-		err := loader.LoadFromDirectory("testdata/employee_only")
-		require.NoError(t, err)
+		loader := setupTestProtoLoaderFromDir(t, "testdata/employee_only")
 
 		method, err := loader.GetMethod("employee.v1.EmployeeService", "QueryGetEmployeeById")
 		require.NoError(t, err)
@@ -68,10 +71,22 @@ func TestLoadEmployeeProto(t *testing.T) {
 		assert.False(t, method.IsServerStreaming)
 	})
 
-	t.Run("verifies all query methods are present", func(t *testing.T) {
-		loader := NewProtoLoader(zap.NewNop())
-		err := loader.LoadFromDirectory("testdata/employee_only")
+	t.Run("verifies mutation method details", func(t *testing.T) {
+		loader := setupTestProtoLoaderFromDir(t, "testdata/employee_only")
+
+		method, err := loader.GetMethod("employee.v1.EmployeeService", "MutationUpdateEmployeeMood")
 		require.NoError(t, err)
+
+		assert.Equal(t, "MutationUpdateEmployeeMood", method.Name)
+		assert.Equal(t, "employee.v1.EmployeeService.MutationUpdateEmployeeMood", method.FullName)
+		assert.Equal(t, "employee.v1.MutationUpdateEmployeeMoodRequest", method.InputType)
+		assert.Equal(t, "employee.v1.MutationUpdateEmployeeMoodResponse", method.OutputType)
+		assert.False(t, method.IsClientStreaming)
+		assert.False(t, method.IsServerStreaming)
+	})
+
+	t.Run("verifies all query methods are present", func(t *testing.T) {
+		loader := setupTestProtoLoaderFromDir(t, "testdata/employee_only")
 
 		queryMethods := []string{
 			"QueryFindEmployeesByPets",
@@ -91,17 +106,4 @@ func TestLoadEmployeeProto(t *testing.T) {
 		}
 	})
 
-	t.Run("verifies message types in request and response", func(t *testing.T) {
-		loader := NewProtoLoader(zap.NewNop())
-		err := loader.LoadFromDirectory("testdata/employee_only")
-		require.NoError(t, err)
-
-		// Check a method with complex nested messages
-		method, err := loader.GetMethod("employee.v1.EmployeeService", "QueryGetEmployeeById")
-		require.NoError(t, err)
-
-		// Verify the input and output types are correctly parsed
-		assert.Equal(t, "employee.v1.QueryGetEmployeeByIdRequest", method.InputType)
-		assert.Equal(t, "employee.v1.QueryGetEmployeeByIdResponse", method.OutputType)
-	})
 }

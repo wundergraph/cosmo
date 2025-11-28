@@ -64,8 +64,8 @@ func TestExecuteGraphQL_HTTPErrors(t *testing.T) {
 			expectedConnectCode:   connect.CodeUnauthenticated,
 			expectedErrorContains: "GraphQL request failed with HTTP 401",
 			checkMetadata: map[string]string{
-				"http-status":          "401",
-				"error-classification": "CRITICAL",
+				MetaKeyHTTPStatus:          "401",
+				MetaKeyErrorClassification: ErrorClassificationCritical,
 			},
 		},
 		{
@@ -75,8 +75,8 @@ func TestExecuteGraphQL_HTTPErrors(t *testing.T) {
 			expectedConnectCode:   connect.CodeInternal,
 			expectedErrorContains: "GraphQL request failed with HTTP 500",
 			checkMetadata: map[string]string{
-				"http-status":          "500",
-				"error-classification": "CRITICAL",
+				MetaKeyHTTPStatus:          "500",
+				MetaKeyErrorClassification: ErrorClassificationCritical,
 			},
 		},
 		{
@@ -86,8 +86,8 @@ func TestExecuteGraphQL_HTTPErrors(t *testing.T) {
 			expectedConnectCode:   connect.CodeUnavailable,
 			expectedErrorContains: "GraphQL request failed with HTTP 503",
 			checkMetadata: map[string]string{
-				"http-status":          "503",
-				"error-classification": "CRITICAL",
+				MetaKeyHTTPStatus:          "503",
+				MetaKeyErrorClassification: ErrorClassificationCritical,
 			},
 		},
 	}
@@ -209,7 +209,7 @@ func TestExecuteGraphQL_CriticalErrors(t *testing.T) {
 			expectedConnectCode:   connect.CodeUnknown,
 			expectedErrorContains: "GraphQL operation failed",
 			checkMetadata: map[string]string{
-				"error-classification": "CRITICAL",
+				MetaKeyErrorClassification: ErrorClassificationCritical,
 			},
 			expectedErrors: `[
 				{
@@ -247,7 +247,7 @@ func TestExecuteGraphQL_CriticalErrors(t *testing.T) {
 				assert.Equal(t, expectedValue, actualValue, "metadata key: %s", key)
 			}
 
-			errorsJSON := connectErr.Meta().Get("graphql-errors")
+			errorsJSON := connectErr.Meta().Get(MetaKeyGraphQLErrors)
 			require.NotEmpty(t, errorsJSON)
 			require.JSONEq(t, tt.expectedErrors, errorsJSON, "GraphQL errors should match snapshot")
 		})
@@ -286,7 +286,7 @@ func TestExecuteGraphQL_NonCriticalErrors_PartialData(t *testing.T) {
 			expectedConnectCode:   connect.CodeUnknown,
 			expectedErrorContains: "GraphQL partial success with errors",
 			checkMetadata: map[string]string{
-				"error-classification": "NON-CRITICAL",
+				MetaKeyErrorClassification: ErrorClassificationNonCritical,
 			},
 			expectedPartialData: `{
 				"user": {
@@ -385,11 +385,11 @@ func TestExecuteGraphQL_NonCriticalErrors_PartialData(t *testing.T) {
 				assert.Equal(t, expectedValue, actualValue, "metadata key: %s", key)
 			}
 
-			partialData := connectErr.Meta().Get("graphql-partial-data")
+			partialData := connectErr.Meta().Get(MetaKeyGraphQLPartialData)
 			require.NotEmpty(t, partialData)
 			require.JSONEq(t, tt.expectedPartialData, partialData, "Partial data should match snapshot")
 
-			errorsJSON := connectErr.Meta().Get("graphql-errors")
+			errorsJSON := connectErr.Meta().Get(MetaKeyGraphQLErrors)
 			require.NotEmpty(t, errorsJSON)
 			require.JSONEq(t, tt.expectedErrors, errorsJSON, "GraphQL errors should match snapshot")
 		})
@@ -495,10 +495,10 @@ func TestErrorMetadata_Structure(t *testing.T) {
 		require.True(t, errors.As(err, &connectErr))
 
 		// Verify metadata structure
-		assert.Equal(t, "CRITICAL", connectErr.Meta().Get("error-classification"))
+		assert.Equal(t, ErrorClassificationCritical, connectErr.Meta().Get(MetaKeyErrorClassification))
 
 		// Parse and verify GraphQL errors JSON using inline snapshot
-		errorsJSON := connectErr.Meta().Get("graphql-errors")
+		errorsJSON := connectErr.Meta().Get(MetaKeyGraphQLErrors)
 		
 		// Expected structure as inline snapshot (pretty-printed for readability)
 		expectedErrorsJSON := `[
@@ -534,10 +534,10 @@ func TestErrorMetadata_Structure(t *testing.T) {
 		require.True(t, errors.As(err, &connectErr))
 
 		// Verify metadata structure
-		assert.Equal(t, "NON-CRITICAL", connectErr.Meta().Get("error-classification"))
+		assert.Equal(t, ErrorClassificationNonCritical, connectErr.Meta().Get(MetaKeyErrorClassification))
 		
 		// Verify partial data using inline snapshot (pretty-printed for readability)
-		partialData := connectErr.Meta().Get("graphql-partial-data")
+		partialData := connectErr.Meta().Get(MetaKeyGraphQLPartialData)
 		expectedPartialData := `{
 		"user": {
 		  "id": "123"
@@ -548,7 +548,7 @@ func TestErrorMetadata_Structure(t *testing.T) {
 		require.JSONEq(t, expectedPartialData, partialData, "Partial data should match snapshot")
 		
 		// Verify GraphQL errors using inline snapshot
-		errorsJSON := connectErr.Meta().Get("graphql-errors")
+		errorsJSON := connectErr.Meta().Get(MetaKeyGraphQLErrors)
 		expectedErrors := `[
 		{
 		  "message": "Partial error"

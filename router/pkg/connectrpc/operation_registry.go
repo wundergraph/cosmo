@@ -16,6 +16,11 @@ import (
 // OperationRegistry manages pre-defined GraphQL operations for ConnectRPC.
 // Operations are scoped to their service (package.service) and cached in memory
 // for fast access during request handling.
+//
+// Thread-safety: This registry is designed to be safe for concurrent use with
+// multiple readers and occasional writers. Read operations (Get*, Has*, Count*)
+// can be called concurrently, and write operations (Load*, Clear*) use proper
+// locking to ensure consistency.
 type OperationRegistry struct {
 	// Service-scoped operations: serviceName (package.service) -> operationName -> Operation
 	operations map[string]map[string]*schemaloader.Operation
