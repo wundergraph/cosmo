@@ -93,7 +93,12 @@
         "SchemaFieldUsage": {
           "Enabled": true,
           "IncludeOperationSha": true,
-          "SampleRate": 1
+          "Exporter": {
+            "BatchSize": 4096,
+            "QueueSize": 12800,
+            "Interval": 2000000000,
+            "ExportTimeout": 10000000000
+          }
         }
       },
       "CardinalityLimit": 2000

@@ -55,7 +55,7 @@ type Config struct {
 	tracerProvider                  *sdktrace.TracerProvider
 	otlpMeterProvider               *sdkmetric.MeterProvider
 	promMeterProvider               *sdkmetric.MeterProvider
-	gqlMetricsExporter              *graphqlmetrics.Exporter
+	gqlMetricsExporter              *graphqlmetrics.GraphQLMetricsExporter
 	corsOptions                     *cors.Config
 	setConfigVersionHeader          bool
 	routerGracePeriod               time.Duration

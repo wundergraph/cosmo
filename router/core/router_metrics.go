@@ -1,12 +1,13 @@
 package core
 
 import (
+	"strings"
+
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
-	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 	"go.uber.org/zap"
 )
@@ -14,47 +15,40 @@ import (
 type RouterMetrics interface {
 	StartOperation(logger *zap.Logger, requestContentLength int64, sliceAttr []attribute.KeyValue, inFlightAddOption otelmetric.AddOption) *OperationMetrics
 	ExportSchemaUsageInfo(operationContext *operationContext, statusCode int, hasError bool, exportSynchronous bool)
-	GqlMetricsExporter() *graphqlmetrics.Exporter
+	ExportSchemaUsageInfoPrometheus(operationContext *operationContext, statusCode int, hasError bool, exportSynchronous bool)
+	GQLMetricsExporter() *graphqlmetrics.GraphQLMetricsExporter
+	PrometheusMetricsExporter() *graphqlmetrics.PrometheusMetricsExporter
 	MetricStore() metric.Store
 }
 
 // routerMetrics encapsulates all data and configuration that the router
 // uses to collect and its metrics
 type routerMetrics struct {
-	metrics             metric.Store
-	gqlMetricsExporter  *graphqlmetrics.Exporter
-	routerConfigVersion string
-	logger              *zap.Logger
-	exportEnabled       bool
-
-	promSchemaUsageEnabled      bool
-	promSchemaUsageIncludeOpSha bool
-	promSchemaUsageSampleRate   float64
+	metrics                   metric.Store
+	gqlMetricsExporter        *graphqlmetrics.GraphQLMetricsExporter
+	prometheusMetricsExporter *graphqlmetrics.PrometheusMetricsExporter
+	routerConfigVersion       string
+	logger                    *zap.Logger
+	exportEnabled             bool
 }
 
 type routerMetricsConfig struct {
-	metrics             metric.Store
-	gqlMetricsExporter  *graphqlmetrics.Exporter
-	routerConfigVersion string
-	logger              *zap.Logger
-	exportEnabled       bool
-
-	promSchemaUsageEnabled      bool
-	promSchemaUsageIncludeOpSha bool
-	promSchemaUsageSampleRate   float64
+	metrics                   metric.Store
+	gqlMetricsExporter        *graphqlmetrics.GraphQLMetricsExporter
+	prometheusMetricsExporter *graphqlmetrics.PrometheusMetricsExporter
+	routerConfigVersion       string
+	logger                    *zap.Logger
+	exportEnabled             bool
 }
 
 func NewRouterMetrics(cfg *routerMetricsConfig) RouterMetrics {
 	return &routerMetrics{
-		metrics:             cfg.metrics,
-		gqlMetricsExporter:  cfg.gqlMetricsExporter,
-		routerConfigVersion: cfg.routerConfigVersion,
-		logger:              cfg.logger,
-		exportEnabled:       cfg.exportEnabled,
-
-		promSchemaUsageEnabled:      cfg.promSchemaUsageEnabled,
-		promSchemaUsageIncludeOpSha: cfg.promSchemaUsageIncludeOpSha,
-		promSchemaUsageSampleRate:   cfg.promSchemaUsageSampleRate,
+		metrics:                   cfg.metrics,
+		gqlMetricsExporter:        cfg.gqlMetricsExporter,
+		prometheusMetricsExporter: cfg.prometheusMetricsExporter,
+		routerConfigVersion:       cfg.routerConfigVersion,
+		logger:                    cfg.logger,
+		exportEnabled:             cfg.exportEnabled,
 	}
 }
 
@@ -63,17 +57,14 @@ func NewRouterMetrics(cfg *routerMetricsConfig) RouterMetrics {
 // returns nil, but OperationMetrics is safe to call with a nil receiver.
 func (m *routerMetrics) StartOperation(logger *zap.Logger, requestContentLength int64, sliceAttr []attribute.KeyValue, inFlightAddOption otelmetric.AddOption) *OperationMetrics {
 	metrics := newOperationMetrics(OperationMetricsOptions{
-		RouterMetrics:        m,
-		Logger:               logger,
-		RequestContentLength: requestContentLength,
-		RouterConfigVersion:  m.routerConfigVersion,
-		TrackUsageInfo:       m.exportEnabled,
-		InFlightAddOption:    inFlightAddOption,
-		SliceAttributes:      sliceAttr,
-
-		PrometheusSchemaUsageEnabled:      m.promSchemaUsageEnabled,
-		PrometheusSchemaUsageIncludeOpSha: m.promSchemaUsageIncludeOpSha,
-		PrometheusSchemaUsageSampleRate:   m.promSchemaUsageSampleRate,
+		RouterMetrics:            m,
+		Logger:                   logger,
+		RequestContentLength:     requestContentLength,
+		RouterConfigVersion:      m.routerConfigVersion,
+		TrackUsageInfo:           m.exportEnabled,
+		PrometheusTrackUsageInfo: m.prometheusMetricsExporter != nil,
+		InFlightAddOption:        inFlightAddOption,
+		SliceAttributes:          sliceAttr,
 	})
 	return metrics
 }
@@ -82,12 +73,20 @@ func (m *routerMetrics) MetricStore() metric.Store {
 	return m.metrics
 }
 
-func (m *routerMetrics) GqlMetricsExporter() *graphqlmetrics.Exporter {
+func (m *routerMetrics) GQLMetricsExporter() *graphqlmetrics.GraphQLMetricsExporter {
 	return m.gqlMetricsExporter
+}
+
+func (m *routerMetrics) PrometheusMetricsExporter() *graphqlmetrics.PrometheusMetricsExporter {
+	return m.prometheusMetricsExporter
 }
 
 func (m *routerMetrics) ExportSchemaUsageInfo(operationContext *operationContext, statusCode int, hasError bool, exportSynchronous bool) {
 	if !m.exportEnabled {
+		return
+	}
+
+	if m.gqlMetricsExporter == nil {
 		return
 	}
 
@@ -112,7 +111,7 @@ func (m *routerMetrics) ExportSchemaUsageInfo(operationContext *operationContext
 	// which seems to be efficient in terms of memory usage and CPU
 	item := &graphqlmetricsv1.SchemaUsageInfo{
 		RequestDocument:  operationContext.content,
-		TypeFieldMetrics: operationContext.typeFieldUsageInfo.IntoGraphQLMetrics(),
+		TypeFieldMetrics: operationContext.GetTypeFieldUsageInfoMetrics(),
 		ArgumentMetrics:  operationContext.argumentUsageInfo,
 		InputMetrics:     operationContext.inputUsageInfo,
 		OperationInfo: &graphqlmetricsv1.OperationInfo{
@@ -120,7 +119,7 @@ func (m *routerMetrics) ExportSchemaUsageInfo(operationContext *operationContext
 			Hash: operationContext.HashString(),
 			// parsed operation names are re-used across requests
 			// for that reason, we need to copy the name, or it might get corrupted
-			Name: m.strCopy(operationContext.name),
+			Name: strings.Clone(operationContext.name),
 		},
 		SchemaInfo: &graphqlmetricsv1.SchemaInfo{
 			Version: m.routerConfigVersion,
@@ -138,8 +137,34 @@ func (m *routerMetrics) ExportSchemaUsageInfo(operationContext *operationContext
 	m.gqlMetricsExporter.RecordUsage(item, exportSynchronous)
 }
 
-func (m *routerMetrics) strCopy(s string) string {
-	b := make([]byte, len(s))
-	copy(b, s)
-	return unsafebytes.BytesToString(b)
+func (m *routerMetrics) ExportSchemaUsageInfoPrometheus(operationContext *operationContext, statusCode int, hasError bool, exportSynchronous bool) {
+	if m.prometheusMetricsExporter == nil {
+		return
+	}
+
+	var opType graphqlmetricsv1.OperationType
+	switch operationContext.opType {
+	case OperationTypeQuery:
+		opType = graphqlmetricsv1.OperationType_QUERY
+	case OperationTypeMutation:
+		opType = graphqlmetricsv1.OperationType_MUTATION
+	case OperationTypeSubscription:
+		opType = graphqlmetricsv1.OperationType_SUBSCRIPTION
+	}
+
+	item := &graphqlmetricsv1.SchemaUsageInfo{
+		TypeFieldMetrics: operationContext.GetTypeFieldUsageInfoMetrics(),
+		OperationInfo: &graphqlmetricsv1.OperationInfo{
+			Type: opType,
+			Hash: operationContext.sha256Hash,
+			// parsed operation names are re-used across requests
+			// for that reason, we need to copy the name, or it might get corrupted
+			Name: strings.Clone(operationContext.name),
+		},
+		SchemaInfo: &graphqlmetricsv1.SchemaInfo{
+			Version: m.routerConfigVersion,
+		},
+	}
+
+	m.prometheusMetricsExporter.RecordUsage(item, exportSynchronous)
 }
