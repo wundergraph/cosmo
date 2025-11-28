@@ -1,124 +1,203 @@
 package config
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestConnectRPCConfiguration_Defaults(t *testing.T) {
-	cfg := ConnectRPCConfiguration{}
-	
-	// Test default values
-	assert.False(t, cfg.Enabled, "ConnectRPC should be disabled by default")
-	assert.Empty(t, cfg.GraphQLEndpoint, "GraphQL endpoint should be empty by default")
-	assert.Empty(t, cfg.Storage.ProviderID, "Storage provider ID should be empty by default")
-	assert.Equal(t, "", cfg.Server.ListenAddr, "Listen address should use default")
-	assert.Empty(t, cfg.Server.BaseURL, "Base URL should be empty by default")
-	assert.Empty(t, cfg.OperationsDir, "Operations directory should be empty by default")
+// TestConnectRPCConfiguration_ZeroValueSemantics tests that the zero value
+// represents a safe, disabled state - a meaningful invariant to protect.
+func TestConnectRPCConfiguration_ZeroValueSemantics(t *testing.T) {
+	var cfg ConnectRPCConfiguration
+
+	// These are the semantic expectations that matter:
+	assert.False(t, cfg.Enabled, "ConnectRPC must be disabled by default for safety")
+	assert.Empty(t, cfg.GraphQLEndpoint, "no implicit upstream when disabled")
 }
 
-func TestConnectRPCConfiguration_WithValues(t *testing.T) {
-	cfg := ConnectRPCConfiguration{
-		Enabled: true,
-		Server: ConnectRPCServer{
-			ListenAddr: "localhost:5026",
-			BaseURL:    "http://localhost:5026",
-		},
-		Storage: ConnectRPCStorageConfig{
-			ProviderID: "fs-protos",
-		},
-		GraphQLEndpoint: "http://localhost:3002/graphql",
-		OperationsDir:   "./operations",
-	}
-	
-	assert.True(t, cfg.Enabled)
-	assert.Equal(t, "localhost:5026", cfg.Server.ListenAddr)
-	assert.Equal(t, "http://localhost:5026", cfg.Server.BaseURL)
-	assert.Equal(t, "fs-protos", cfg.Storage.ProviderID)
-	assert.Equal(t, "http://localhost:3002/graphql", cfg.GraphQLEndpoint)
-	assert.Equal(t, "./operations", cfg.OperationsDir)
-}
-
-func TestConnectRPCConfiguration_StorageProvider(t *testing.T) {
+// TestConnectRPCConfiguration_LoadFromYAML tests that config loading works correctly
+// with actual YAML parsing and environment variable expansion.
+func TestConnectRPCConfiguration_LoadFromYAML(t *testing.T) {
 	tests := []struct {
-		name       string
-		providerID string
-		wantErr    bool
+		name           string
+		yaml           string
+		envVars        map[string]string
+		wantEnabled    bool
+		wantListenAddr string
+		wantGraphQL    string
+		wantProviderID string
 	}{
 		{
-			name:       "filesystem provider",
-			providerID: "fs-protos",
-			wantErr:    false,
+			name: "minimal config with defaults",
+			yaml: `
+connect_rpc:
+  enabled: true
+  graphql_endpoint: "http://localhost:3002/graphql"
+`,
+			wantEnabled:    true,
+			wantListenAddr: "localhost:5026", // from envDefault tag
+			wantGraphQL:    "http://localhost:3002/graphql",
+			wantProviderID: "",
 		},
 		{
-			name:       "s3 provider",
-			providerID: "s3-protos",
-			wantErr:    false,
+			name: "full config with overrides",
+			yaml: `
+connect_rpc:
+  enabled: true
+  server:
+    listen_addr: "0.0.0.0:8080"
+    base_url: "http://example.com"
+  services_provider_id: "fs-protos"
+  graphql_endpoint: "http://localhost:4000/graphql"
+`,
+			wantEnabled:    true,
+			wantListenAddr: "0.0.0.0:8080",
+			wantGraphQL:    "http://localhost:4000/graphql",
+			wantProviderID: "fs-protos",
 		},
 		{
-			name:       "cdn provider",
-			providerID: "cdn-protos",
-			wantErr:    false,
+			name: "config with environment variables",
+			yaml: `
+connect_rpc:
+  enabled: true
+  graphql_endpoint: "${GRAPHQL_ENDPOINT}"
+  services_provider_id: "${PROVIDER_ID}"
+`,
+			envVars: map[string]string{
+				"GRAPHQL_ENDPOINT": "http://env-graphql:3002/graphql",
+				"PROVIDER_ID":      "env-provider",
+			},
+			wantEnabled:    true,
+			wantListenAddr: "localhost:5026",
+			wantGraphQL:    "http://env-graphql:3002/graphql",
+			wantProviderID: "env-provider",
 		},
 		{
-			name:       "redis provider",
-			providerID: "redis-protos",
-			wantErr:    false,
-		},
-		{
-			name:       "empty provider",
-			providerID: "",
-			wantErr:    false, // Empty is valid, will use default
+			name: "disabled config",
+			yaml: `
+connect_rpc:
+  enabled: false
+`,
+			wantEnabled:    false,
+			wantListenAddr: "localhost:5026",
+			wantGraphQL:    "",
+			wantProviderID: "",
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cfg := ConnectRPCConfiguration{
-				Storage: ConnectRPCStorageConfig{
-					ProviderID: tt.providerID,
-				},
+			// Set environment variables
+			for k, v := range tt.envVars {
+				t.Setenv(k, v)
 			}
-			
-			assert.Equal(t, tt.providerID, cfg.Storage.ProviderID)
+
+			// Create temporary config file
+			tmpDir := t.TempDir()
+			configPath := filepath.Join(tmpDir, "config.yaml")
+			err := os.WriteFile(configPath, []byte(tt.yaml), 0644)
+			require.NoError(t, err)
+
+			// Load config
+			result, err := LoadConfig([]string{configPath})
+			require.NoError(t, err)
+			require.NotNil(t, result)
+
+			cfg := result.Config.ConnectRPC
+
+			assert.Equal(t, tt.wantEnabled, cfg.Enabled)
+			assert.Equal(t, tt.wantListenAddr, cfg.Server.ListenAddr)
+			assert.Equal(t, tt.wantGraphQL, cfg.GraphQLEndpoint)
+			assert.Equal(t, tt.wantProviderID, cfg.ServicesProviderID)
 		})
 	}
 }
 
+// TestConnectRPCConfiguration_EnvDefaults tests that environment variable
+// defaults are applied correctly when no config file values are provided.
+func TestConnectRPCConfiguration_EnvDefaults(t *testing.T) {
+	yaml := `
+connect_rpc:
+  enabled: true
+  graphql_endpoint: "http://localhost:3002/graphql"
+`
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "config.yaml")
+	err := os.WriteFile(configPath, []byte(yaml), 0644)
+	require.NoError(t, err)
+
+	result, err := LoadConfig([]string{configPath})
+	require.NoError(t, err)
+
+	// Verify envDefault values are applied
+	assert.Equal(t, "localhost:5026", result.Config.ConnectRPC.Server.ListenAddr,
+		"should use envDefault from struct tag")
+}
+
+// TestConnectRPCConfiguration_Integration tests that ConnectRPC config
+// integrates properly with the main Config structure through actual loading.
 func TestConnectRPCConfiguration_Integration(t *testing.T) {
-	// Test that ConnectRPC config integrates properly with main Config
-	mainCfg := Config{
-		ConnectRPC: ConnectRPCConfiguration{
-			Enabled: true,
-			Server: ConnectRPCServer{
-				ListenAddr: "0.0.0.0:5026",
-			},
-			Storage: ConnectRPCStorageConfig{
-				ProviderID: "fs-protos",
-			},
-			GraphQLEndpoint: "http://localhost:3002/graphql",
-			OperationsDir:   "./operations",
-		},
-	}
-	
-	require.NotNil(t, mainCfg.ConnectRPC)
-	assert.True(t, mainCfg.ConnectRPC.Enabled)
-	assert.Equal(t, "0.0.0.0:5026", mainCfg.ConnectRPC.Server.ListenAddr)
-	assert.Equal(t, "fs-protos", mainCfg.ConnectRPC.Storage.ProviderID)
-	assert.Equal(t, "./operations", mainCfg.ConnectRPC.OperationsDir)
+	yaml := `
+version: "1"
+listen_addr: "localhost:3002"
+connect_rpc:
+  enabled: true
+  server:
+    listen_addr: "0.0.0.0:5026"
+  services_provider_id: "fs-protos"
+  graphql_endpoint: "http://localhost:3002/graphql"
+`
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "config.yaml")
+	err := os.WriteFile(configPath, []byte(yaml), 0644)
+	require.NoError(t, err)
+
+	result, err := LoadConfig([]string{configPath})
+	require.NoError(t, err)
+
+	// Verify ConnectRPC is properly nested in main config
+	assert.True(t, result.Config.ConnectRPC.Enabled)
+	assert.Equal(t, "0.0.0.0:5026", result.Config.ConnectRPC.Server.ListenAddr)
+	assert.Equal(t, "fs-protos", result.Config.ConnectRPC.ServicesProviderID)
+
+	// Verify main config is also loaded
+	assert.Equal(t, "localhost:3002", result.Config.ListenAddr)
 }
 
-func TestConnectRPCServer_Defaults(t *testing.T) {
-	server := ConnectRPCServer{}
-	
-	assert.Empty(t, server.ListenAddr, "Listen address should be empty by default")
-	assert.Empty(t, server.BaseURL, "Base URL should be empty by default")
-}
+// TestConnectRPCConfiguration_MultipleConfigMerge tests that ConnectRPC config
+// can be properly merged across multiple config files.
+func TestConnectRPCConfiguration_MultipleConfigMerge(t *testing.T) {
+	baseYaml := `
+connect_rpc:
+  enabled: true
+  graphql_endpoint: "http://localhost:3002/graphql"
+`
+	overrideYaml := `
+connect_rpc:
+  server:
+    listen_addr: "0.0.0.0:9090"
+  services_provider_id: "override-provider"
+`
 
-func TestConnectRPCStorageConfig_Defaults(t *testing.T) {
-	storage := ConnectRPCStorageConfig{}
-	
-	assert.Empty(t, storage.ProviderID, "Provider ID should be empty by default")
+	tmpDir := t.TempDir()
+	basePath := filepath.Join(tmpDir, "base.yaml")
+	overridePath := filepath.Join(tmpDir, "override.yaml")
+
+	err := os.WriteFile(basePath, []byte(baseYaml), 0644)
+	require.NoError(t, err)
+	err = os.WriteFile(overridePath, []byte(overrideYaml), 0644)
+	require.NoError(t, err)
+
+	result, err := LoadConfig([]string{basePath, overridePath})
+	require.NoError(t, err)
+
+	// Verify merged config
+	assert.True(t, result.Config.ConnectRPC.Enabled, "should keep base value")
+	assert.Equal(t, "http://localhost:3002/graphql", result.Config.ConnectRPC.GraphQLEndpoint, "should keep base value")
+	assert.Equal(t, "0.0.0.0:9090", result.Config.ConnectRPC.Server.ListenAddr, "should use override value")
+	assert.Equal(t, "override-provider", result.Config.ConnectRPC.ServicesProviderID, "should use override value")
 }
