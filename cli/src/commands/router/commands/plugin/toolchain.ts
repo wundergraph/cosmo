@@ -459,7 +459,7 @@ async function installTools(language: string, shouldCleanup: boolean) {
         console.log(
           pc.yellow(`Warning: Failed to read existing tool versions: ${error}, version file will be overridden`),
         );
-        // Reset the existing  versions just in case existing versions was modified while an error was thrown
+        // Reset the existing versions just in case existing versions was modified while an error was thrown
         existingVersions = {};
       }
     }
