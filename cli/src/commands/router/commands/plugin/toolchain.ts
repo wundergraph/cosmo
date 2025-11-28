@@ -456,7 +456,9 @@ async function installTools(language: string, shouldCleanup: boolean) {
         const storedVersionsStr = await readFile(TOOLS_VERSIONS_FILE, 'utf8');
         existingVersions = JSON.parse(storedVersionsStr);
       } catch (error) {
-        console.log(pc.yellow(`Warning: Failed to read existing tool versions: ${error}, version file will be overridden`));
+        console.log(
+          pc.yellow(`Warning: Failed to read existing tool versions: ${error}, version file will be overridden`),
+        );
         // Reset the existing  versions just in case existing versions was modified while an error was thrown
         existingVersions = {};
       }
