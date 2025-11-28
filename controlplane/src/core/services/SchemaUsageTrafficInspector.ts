@@ -249,7 +249,7 @@ export class SchemaUsageTrafficInspector {
           FederatedGraphID = '${filter.federatedGraphId}' AND
           hasAny(SubgraphIDs, ['${filter.subgraphId}']) AND
           OrganizationID = '${filter.organizationId}' AND
-          (${where.join(' AND ')})
+          ${where.join(' AND ')}
         GROUP BY OperationHash
     `;
 
