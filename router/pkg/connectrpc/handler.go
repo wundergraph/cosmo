@@ -120,7 +120,7 @@ func NewRPCHandler(config HandlerConfig) (*RPCHandler, error) {
 // HandleRPC processes an RPC request and returns a response
 // serviceName: fully qualified service name (e.g., "mypackage.MyService")
 // methodName: the RPC method name (e.g., "GetUser" or "QueryGetUser")
-// requestJSON: the JSON-encoded request body from Vanguard
+// requestJSON: the JSON-encoded request body
 // ctx: request context with headers
 func (h *RPCHandler) HandleRPC(ctx context.Context, serviceName, methodName string, requestJSON []byte) ([]byte, error) {
 	h.logger.Debug("handling RPC request",

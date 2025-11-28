@@ -144,29 +144,29 @@ func (s *Server) Start() error {
 	s.logger.Info("loaded all proto services",
 		zap.Int("count", len(protoServices)))
 
-	// Create Vanguard service wrapper
+	// Create service wrapper
 	vanguardService, err := NewVanguardService(VanguardServiceConfig{
 		Handler:     s.rpcHandler,
 		ProtoLoader: s.protoLoader,
 		Logger:      s.logger,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to create vanguard service: %w", err)
+		return fmt.Errorf("failed to create service wrapper: %w", err)
 	}
 	s.vanguardService = vanguardService
 
-	// Create Vanguard transcoder
+	// Create protocol transcoder
 	vanguardServices := vanguardService.GetServices()
-	s.logger.Info("creating vanguard transcoder",
+	s.logger.Info("creating protocol transcoder",
 		zap.Int("service_count", len(vanguardServices)))
 	
 	transcoder, err := vanguard.NewTranscoder(vanguardServices)
 	if err != nil {
-		return fmt.Errorf("failed to create vanguard transcoder: %w", err)
+		return fmt.Errorf("failed to create protocol transcoder: %w", err)
 	}
 	s.transcoder = transcoder
 	
-	s.logger.Info("vanguard transcoder created successfully",
+	s.logger.Info("protocol transcoder created successfully",
 		zap.Int("registered_services", len(vanguardServices)))
 
 	// Create HTTP server with HTTP/2 support
@@ -252,21 +252,21 @@ func (s *Server) Reload() error {
 		}
 	}
 
-	// Recreate Vanguard service
+	// Recreate service wrapper
 	vanguardService, err := NewVanguardService(VanguardServiceConfig{
 		Handler:     s.rpcHandler,
 		ProtoLoader: s.protoLoader,
 		Logger:      s.logger,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to recreate vanguard service: %w", err)
+		return fmt.Errorf("failed to recreate service wrapper: %w", err)
 	}
 	s.vanguardService = vanguardService
 
-	// Recreate transcoder
+	// Recreate protocol transcoder
 	transcoder, err := vanguard.NewTranscoder(vanguardService.GetServices())
 	if err != nil {
-		return fmt.Errorf("failed to recreate vanguard transcoder: %w", err)
+		return fmt.Errorf("failed to recreate protocol transcoder: %w", err)
 	}
 	s.transcoder = transcoder
 
