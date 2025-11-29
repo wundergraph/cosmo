@@ -82,15 +82,12 @@ func TestConnectRPC_ServerLifecycle_StartStopReload(t *testing.T) {
 func TestConnectRPC_ServerLifecycle_ErrorScenarios(t *testing.T) {
 	t.Parallel()
 
-	t.Run("start fails with invalid proto directory", func(t *testing.T) {
-		server, err := connectrpc.NewServer(connectrpc.ServerConfig{
+	t.Run("NewServer fails with invalid proto directory", func(t *testing.T) {
+		_, err := connectrpc.NewServer(connectrpc.ServerConfig{
 			ServicesDir:     "/nonexistent/path",
 			GraphQLEndpoint: "http://localhost:4000/graphql",
 			Logger:          zap.NewNop(),
 		})
-		require.NoError(t, err)
-
-		err = server.Start()
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to discover services")
 	})
@@ -147,19 +144,22 @@ func TestConnectRPC_Server_GetServiceInfo(t *testing.T) {
 	t.Run("returns consistent service count and names", func(t *testing.T) {
 		ts := NewTestConnectRPCServer(t, ConnectRPCServerOptions{})
 
-		// Before start
-		assert.Equal(t, 0, ts.GetServiceCount())
-		assert.Empty(t, ts.GetServiceNames())
+		// Services are loaded during NewServer, so they should be available immediately
+		count := ts.GetServiceCount()
+		names := ts.GetServiceNames()
+		
+		assert.GreaterOrEqual(t, count, 1, "should have at least one service after NewServer")
+		assert.Len(t, names, count, "service names length should match count")
+		assert.NotEmpty(t, names, "service names should not be empty")
 
 		err := ts.Start()
 		require.NoError(t, err)
 
-		// After start - verify count and names are consistent
-		count := ts.GetServiceCount()
-		names := ts.GetServiceNames()
+		// After start - verify count and names remain consistent
+		countAfterStart := ts.GetServiceCount()
+		namesAfterStart := ts.GetServiceNames()
 		
-		assert.GreaterOrEqual(t, count, 1, "should have at least one service")
-		assert.Len(t, names, count, "service names length should match count")
-		assert.NotEmpty(t, names, "service names should not be empty")
+		assert.Equal(t, count, countAfterStart, "service count should remain the same after Start")
+		assert.ElementsMatch(t, names, namesAfterStart, "service names should remain the same after Start")
 	})
 }

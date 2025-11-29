@@ -1011,14 +1011,14 @@ type MCPServer struct {
 
 type ConnectRPCConfiguration struct {
 	Enabled            bool             `yaml:"enabled" envDefault:"false" env:"CONNECT_RPC_ENABLED"`
-	Server             ConnectRPCServer `yaml:"server,omitempty"`
+	Server             ConnectRPCServer `yaml:"server,omitempty" envPrefix:"CONNECT_RPC_SERVER_"`
 	ServicesProviderID string           `yaml:"services_provider_id,omitempty" env:"CONNECT_RPC_SERVICES_PROVIDER_ID"`
 	GraphQLEndpoint    string           `yaml:"graphql_endpoint,omitempty" env:"CONNECT_RPC_GRAPHQL_ENDPOINT"`
 }
 
 type ConnectRPCServer struct {
-	ListenAddr string `yaml:"listen_addr" envDefault:"localhost:5026" env:"CONNECT_RPC_SERVER_LISTEN_ADDR"`
-	BaseURL    string `yaml:"base_url,omitempty" env:"CONNECT_RPC_SERVER_BASE_URL"`
+	ListenAddr string `yaml:"listen_addr" envDefault:"localhost:5026" env:"LISTEN_ADDR"`
+	BaseURL    string `yaml:"base_url,omitempty" env:"BASE_URL"`
 }
 
 type PluginsConfiguration struct {

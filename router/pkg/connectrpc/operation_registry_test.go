@@ -13,7 +13,7 @@ import (
 
 func TestNewOperationRegistry(t *testing.T) {
 	t.Parallel()
-	
+
 	t.Run("creates registry with logger", func(t *testing.T) {
 		t.Parallel()
 		logger := zap.NewNop()
@@ -94,16 +94,16 @@ func TestLoadOperationsForService(t *testing.T) {
 	t.Run("handles empty operation files list", func(t *testing.T) {
 		registry := NewOperationRegistry(zap.NewNop())
 		serviceName := "test.v1.TestService"
-		
+
 		err := registry.LoadOperationsForService(serviceName, []string{})
-		
+
 		require.NoError(t, err)
 		assert.Equal(t, 0, registry.CountForService(serviceName))
 	})
 
 	t.Run("loads operations for multiple services independently", func(t *testing.T) {
 		tempDir := t.TempDir()
-		
+
 		// Service 1
 		service1 := "employee.v1.EmployeeService"
 		op1File := filepath.Join(tempDir, "GetEmployee.graphql")
@@ -117,17 +117,17 @@ func TestLoadOperationsForService(t *testing.T) {
 		require.NoError(t, err)
 
 		registry := NewOperationRegistry(zap.NewNop())
-		
+
 		err = registry.LoadOperationsForService(service1, []string{op1File})
 		require.NoError(t, err)
-		
+
 		err = registry.LoadOperationsForService(service2, []string{op2File})
 		require.NoError(t, err)
 
 		// Verify operations are scoped to their services
 		assert.True(t, registry.HasOperationForService(service1, "GetEmployee"))
 		assert.False(t, registry.HasOperationForService(service1, "GetProduct"))
-		
+
 		assert.True(t, registry.HasOperationForService(service2, "GetProduct"))
 		assert.False(t, registry.HasOperationForService(service2, "GetEmployee"))
 	})
@@ -268,7 +268,7 @@ func TestCountForService(t *testing.T) {
 func TestCount(t *testing.T) {
 	t.Run("returns total count across all services", func(t *testing.T) {
 		tempDir := t.TempDir()
-		
+
 		service1 := "service1.v1.Service1"
 		service2 := "service2.v1.Service2"
 
@@ -296,7 +296,7 @@ func TestCount(t *testing.T) {
 func TestGetServiceNames(t *testing.T) {
 	t.Run("returns all service names", func(t *testing.T) {
 		tempDir := t.TempDir()
-		
+
 		service1 := "employee.v1.EmployeeService"
 		service2 := "product.v1.ProductService"
 
@@ -329,7 +329,7 @@ func TestClear(t *testing.T) {
 		tempDir := t.TempDir()
 		service1 := "service1.v1.Service1"
 		service2 := "service2.v1.Service2"
-		
+
 		opFile := filepath.Join(tempDir, "Test.graphql")
 		err := os.WriteFile(opFile, []byte(`query Test { test }`), 0644)
 		require.NoError(t, err)
@@ -361,7 +361,7 @@ func TestClearService(t *testing.T) {
 		tempDir := t.TempDir()
 		service1 := "service1.v1.Service1"
 		service2 := "service2.v1.Service2"
-		
+
 		opFile := filepath.Join(tempDir, "Test.graphql")
 		err := os.WriteFile(opFile, []byte(`query Test { test }`), 0644)
 		require.NoError(t, err)
@@ -371,11 +371,11 @@ func TestClearService(t *testing.T) {
 		require.NoError(t, err)
 		err = registry.LoadOperationsForService(service2, []string{opFile})
 		require.NoError(t, err)
-		
+
 		assert.Equal(t, 2, registry.Count())
 
 		registry.ClearService(service1)
-		
+
 		assert.Equal(t, 1, registry.Count())
 		assert.False(t, registry.HasOperationForService(service1, "Test"))
 		assert.True(t, registry.HasOperationForService(service2, "Test"))
@@ -401,18 +401,16 @@ func TestThreadSafety(t *testing.T) {
 		var wg sync.WaitGroup
 
 		// Start multiple goroutines reading concurrently
-		for i := 0; i < 10; i++ {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				for j := 0; j < 100; j++ {
+		for range 10 {
+			wg.Go(func() {
+				for range 100 {
 					_ = registry.GetOperationForService(serviceName, "Test")
 					_ = registry.HasOperationForService(serviceName, "Test")
 					_ = registry.GetAllOperationsForService(serviceName)
 					_ = registry.Count()
 					_ = registry.CountForService(serviceName)
 				}
-			}()
+			})
 		}
 
 		// Wait for all goroutines to complete
@@ -423,27 +421,23 @@ func TestThreadSafety(t *testing.T) {
 		var wg sync.WaitGroup
 
 		// Start readers
-		for i := 0; i < 5; i++ {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				for j := 0; j < 50; j++ {
+		for range 5 {
+			wg.Go(func() {
+				for range 50 {
 					_ = registry.GetOperationForService(serviceName, "Test")
 					_ = registry.HasOperationForService(serviceName, "Test")
 				}
-			}()
+			})
 		}
 
 		// Start clearers (writers)
-		for i := 0; i < 5; i++ {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				for j := 0; j < 50; j++ {
+		for range 5 {
+			wg.Go(func() {
+				for range 50 {
 					registry.Clear()
 					_ = registry.LoadOperationsForService(serviceName, []string{opFile})
 				}
-			}()
+			})
 		}
 
 		// Wait for all goroutines to complete
@@ -455,22 +449,22 @@ func TestThreadSafety(t *testing.T) {
 func TestServiceScopedOperations(t *testing.T) {
 	t.Run("same service name different packages work independently", func(t *testing.T) {
 		tempDir := t.TempDir()
-		
+
 		// Two services with same name but different packages
 		service1 := "company1.employee.v1.EmployeeService"
 		service2 := "company2.employee.v1.EmployeeService"
-		
+
 		// Create operations with same name for both services
 		op1File := filepath.Join(tempDir, "GetEmployee1.graphql")
 		err := os.WriteFile(op1File, []byte(`query GetEmployee { company1Employee { id name } }`), 0644)
 		require.NoError(t, err)
-		
+
 		op2File := filepath.Join(tempDir, "GetEmployee2.graphql")
 		err = os.WriteFile(op2File, []byte(`query GetEmployee { company2Employee { id name } }`), 0644)
 		require.NoError(t, err)
 
 		registry := NewOperationRegistry(zap.NewNop())
-		
+
 		// Load operations for both services
 		err = registry.LoadOperationsForService(service1, []string{op1File})
 		require.NoError(t, err)
@@ -480,18 +474,18 @@ func TestServiceScopedOperations(t *testing.T) {
 		// Verify both services have their own GetEmployee operation
 		op1 := registry.GetOperationForService(service1, "GetEmployee")
 		op2 := registry.GetOperationForService(service2, "GetEmployee")
-		
+
 		assert.NotNil(t, op1)
 		assert.NotNil(t, op2)
-		
+
 		// Verify they have different content
 		assert.Contains(t, op1.OperationString, "company1Employee")
 		assert.Contains(t, op2.OperationString, "company2Employee")
-		
+
 		// Verify operations are isolated
 		assert.True(t, registry.HasOperationForService(service1, "GetEmployee"))
 		assert.True(t, registry.HasOperationForService(service2, "GetEmployee"))
-		
+
 		// Verify counts
 		assert.Equal(t, 1, registry.CountForService(service1))
 		assert.Equal(t, 1, registry.CountForService(service2))
