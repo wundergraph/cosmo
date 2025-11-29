@@ -61,9 +61,6 @@ func NewMockGraphQLServer(handler http.HandlerFunc) *MockGraphQLServer {
 	
 	go m.server.Serve(listener)
 	
-	// Give the server a moment to start
-	time.Sleep(10 * time.Millisecond)
-	
 	return m
 }
 
