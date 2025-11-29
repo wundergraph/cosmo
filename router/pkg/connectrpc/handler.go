@@ -234,30 +234,22 @@ func (h *RPCHandler) HandleRPC(ctx context.Context, serviceName, methodName stri
 		h.logger.Warn("validator is nil, skipping validation")
 	}
 
-	// Strip Query/Mutation/Subscription prefix from method name if present
-	// This allows RPC methods like "QueryGetUser" to map to GraphQL operations named "GetUser"
-	operationName := stripOperationTypePrefix(methodName)
-
 	// Look up operation from registry scoped to this service
 	// This ensures operations can only be called from their owning service
-	operation := h.operationRegistry.GetOperationForService(serviceName, operationName)
+	// The method name must exactly match the operation name
+	operation := h.operationRegistry.GetOperationForService(serviceName, methodName)
 	if operation == nil {
-		// If not found with stripped name, try the original method name
-		operation = h.operationRegistry.GetOperationForService(serviceName, methodName)
-		if operation == nil {
-			// Log all available operations for this service to help diagnose the issue
-			allOps := h.operationRegistry.GetAllOperationsForService(serviceName)
-			var availableOps []string
-			for _, op := range allOps {
-				availableOps = append(availableOps, op.Name)
-			}
-			h.logger.Error("operation not found",
-				zap.String("service", serviceName),
-				zap.String("requested_method", methodName),
-				zap.String("stripped_name", operationName),
-				zap.Strings("available_operations", availableOps))
-			return nil, fmt.Errorf("operation not found for service %s: %s (also tried: %s)", serviceName, methodName, operationName)
+		// Log all available operations for this service to help diagnose the issue
+		allOps := h.operationRegistry.GetAllOperationsForService(serviceName)
+		var availableOps []string
+		for _, op := range allOps {
+			availableOps = append(availableOps, op.Name)
 		}
+		h.logger.Error("operation not found",
+			zap.String("service", serviceName),
+			zap.String("requested_method", methodName),
+			zap.Strings("available_operations", availableOps))
+		return nil, fmt.Errorf("operation not found for service %s: %s", serviceName, methodName)
 	}
 
 	h.logger.Debug("using predefined operation",
@@ -345,22 +337,6 @@ func snakeToCamel(s string) string {
 		}
 	}
 	return result
-}
-
-// stripOperationTypePrefix removes Query/Mutation/Subscription prefix from method name
-// This allows RPC methods like "QueryGetUser" to map to GraphQL operations named "GetUser"
-func stripOperationTypePrefix(methodName string) string {
-	prefixes := []string{"Query", "Mutation", "Subscription"}
-	for _, prefix := range prefixes {
-		if strings.HasPrefix(methodName, prefix) {
-			stripped := strings.TrimPrefix(methodName, prefix)
-			// Only strip if there's something left after the prefix
-			if len(stripped) > 0 {
-				return stripped
-			}
-		}
-	}
-	return methodName
 }
 
 // makeCriticalGraphQLError creates a Connect error for GraphQL errors with no data (complete failure).
