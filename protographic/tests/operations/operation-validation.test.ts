@@ -198,6 +198,168 @@ describe('Operation Validation', () => {
     });
   });
 
+  describe('Operation Name PascalCase Validation', () => {
+    test('should accept PascalCase operation names', () => {
+      const operation = `
+        query GetUser {
+          user {
+            id
+            name
+          }
+        }
+      `;
+
+      expect(() => {
+        compileOperationsToProto(operation, schema);
+      }).not.toThrow();
+    });
+
+    test('should accept PascalCase with numbers', () => {
+      const operation = `
+        query GetUser123 {
+          user {
+            id
+            name
+          }
+        }
+      `;
+
+      expect(() => {
+        compileOperationsToProto(operation, schema);
+      }).not.toThrow();
+    });
+
+    test('should reject camelCase operation names', () => {
+      const operation = `
+        query getUser {
+          user {
+            id
+            name
+          }
+        }
+      `;
+
+      expect(() => {
+        compileOperationsToProto(operation, schema);
+      }).toThrow(/Operation name "getUser" must be in PascalCase/);
+    });
+
+    test('should reject snake_case operation names', () => {
+      const operation = `
+        query get_user {
+          user {
+            id
+            name
+          }
+        }
+      `;
+
+      expect(() => {
+        compileOperationsToProto(operation, schema);
+      }).toThrow(/Operation name "get_user" must be in PascalCase/);
+    });
+
+    test('should reject all-UPPERCASE operation names', () => {
+      const operation = `
+        query GETUSER {
+          user {
+            id
+            name
+          }
+        }
+      `;
+
+      expect(() => {
+        compileOperationsToProto(operation, schema);
+      }).toThrow(/Operation name "GETUSER" must be in PascalCase/);
+    });
+
+    test('should reject operation names with only uppercase and numbers', () => {
+      const operation = `
+        query GET123USER {
+          user {
+            id
+            name
+          }
+        }
+      `;
+
+      expect(() => {
+        compileOperationsToProto(operation, schema);
+      }).toThrow(/Operation name "GET123USER" must be in PascalCase/);
+    });
+
+    test('should provide helpful error message for camelCase', () => {
+      const operation = `
+        query getUserById {
+          user {
+            id
+          }
+        }
+      `;
+
+      expect(() => {
+        compileOperationsToProto(operation, schema);
+      }).toThrow(/must be in PascalCase.*Examples: GetUser, CreatePost, OnMessageAdded/);
+    });
+
+    test('should validate mutation operation names', () => {
+      const mutationSchema = `
+        type Mutation {
+          createUser(name: String!): User
+        }
+        
+        type User {
+          id: ID!
+          name: String
+        }
+      `;
+
+      const operation = `
+        mutation createUser($name: String!) {
+          createUser(name: $name) {
+            id
+            name
+          }
+        }
+      `;
+
+      expect(() => {
+        compileOperationsToProto(operation, mutationSchema);
+      }).toThrow(/Operation name "createUser" must be in PascalCase/);
+    });
+
+    test('should validate subscription operation names', () => {
+      const subscriptionSchema = `
+        type Query {
+          ping: String
+        }
+        
+        type Subscription {
+          messageAdded: Message
+        }
+        
+        type Message {
+          id: ID!
+          content: String
+        }
+      `;
+
+      const operation = `
+        subscription onMessageAdded {
+          messageAdded {
+            id
+            content
+          }
+        }
+      `;
+
+      expect(() => {
+        compileOperationsToProto(operation, subscriptionSchema);
+      }).toThrow(/Operation name "onMessageAdded" must be in PascalCase/);
+    });
+  });
+
   describe('Root-Level Field Aliases', () => {
     test('should reject root-level field aliases', () => {
       const operation = `
