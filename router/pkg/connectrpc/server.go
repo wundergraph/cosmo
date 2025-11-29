@@ -37,6 +37,7 @@ type Server struct {
 	config            ServerConfig
 	logger            *zap.Logger
 	httpServer        *http.Server
+	listener          net.Listener
 	transcoder        *vanguard.Transcoder
 	protoLoader       *ProtoLoader
 	operationRegistry *OperationRegistry
@@ -185,13 +186,20 @@ func (s *Server) Start() error {
 
 	s.logger.Info("HTTP/2 (h2c) support enabled for gRPC compatibility")
 
+	// Create listener to get actual bound address
+	listener, err := net.Listen("tcp", s.config.ListenAddr)
+	if err != nil {
+		return fmt.Errorf("failed to create listener: %w", err)
+	}
+	s.listener = listener
+
 	// Start server in goroutine
 	go func() {
 		s.logger.Info("ConnectRPC server listening",
-			zap.String("addr", s.config.ListenAddr),
+			zap.String("addr", s.listener.Addr().String()),
 			zap.Bool("http2_enabled", true))
 
-		if err := s.httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := s.httpServer.Serve(s.listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			s.logger.Error("server error", zap.Error(err))
 		}
 	}()
@@ -386,4 +394,12 @@ func (s *Server) GetOperationCount() int {
 		return 0
 	}
 	return s.rpcHandler.GetOperationCount()
+}
+
+// Addr returns the server's actual listening address
+func (s *Server) Addr() net.Addr {
+	if s.listener == nil {
+		return nil
+	}
+	return s.listener.Addr()
 }
