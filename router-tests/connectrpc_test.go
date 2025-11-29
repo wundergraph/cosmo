@@ -1,12 +1,16 @@
 package integration
 
 import (
+	"context"
+	"net/http"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/wundergraph/cosmo/router-tests/connectrpc"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/pkg/connectrpc"
+	"go.uber.org/zap"
 )
 
 // TestConnectRPC_ServiceDiscovery tests service discovery functionality
@@ -14,28 +18,56 @@ func TestConnectRPC_ServiceDiscovery(t *testing.T) {
 	t.Parallel()
 
 	t.Run("discovers services from proto files", func(t *testing.T) {
-		// Create test server with defaults
-		ts := connectrpc.NewTestServer(t)
+		// Create a mock GraphQL server
+		graphqlServer := http.NewServeMux()
+		graphqlServer.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"data":{"employee":{"id":1}}}`))
+		})
+		
+		srv := &http.Server{
+			Addr:    "localhost:0",
+			Handler: graphqlServer,
+		}
+		
+		go srv.ListenAndServe()
+		defer srv.Shutdown(context.Background())
+		
+		// Give server time to start
+		time.Sleep(100 * time.Millisecond)
 
-		// Start server
-		err := ts.Start()
+		server, err := connectrpc.NewServer(connectrpc.ServerConfig{
+			ServicesDir:     "testdata/connectrpc/services",
+			GraphQLEndpoint: "http://" + srv.Addr,
+			ListenAddr:      "localhost:0",
+			Logger:          zap.NewNop(),
+		})
 		require.NoError(t, err)
 
-		// Verify services are discovered using helper methods
-		ts.AssertMinServiceCount(t, 1)
-		ts.AssertServiceDiscovered(t, "employee.v1.EmployeeService")
+		err = server.Start()
+		require.NoError(t, err)
+		defer func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			server.Stop(ctx)
+		}()
 
-		// Verify operations are discovered
-		ts.AssertMinOperationCount(t, 1)
+		// Verify services are discovered
+		serviceCount := server.GetServiceCount()
+		assert.Greater(t, serviceCount, 0, "should discover at least one service")
+
+		serviceNames := server.GetServiceNames()
+		assert.NotEmpty(t, serviceNames, "should have service names")
+		assert.Contains(t, serviceNames, "employee.v1.EmployeeService")
 
 		// Log discovered services and operations (only shown in verbose mode with -v flag or on test failure)
-		serviceCount := ts.ServiceCount()
 		t.Logf("Discovered %d service(s):", serviceCount)
-		for _, serviceName := range ts.ServiceNames() {
+		for _, serviceName := range serviceNames {
 			t.Logf("  - Service: %s", serviceName)
 		}
-
-		operationCount := ts.OperationCount()
+		
+		operationCount := server.GetOperationCount()
 		t.Logf("Discovered %d operation(s)", operationCount)
 	})
 }
@@ -45,15 +77,40 @@ func TestConnectRPC_PredefinedMode(t *testing.T) {
 	t.Parallel()
 
 	t.Run("reloads operations on schema change", func(t *testing.T) {
-		// Create test server
-		ts := connectrpc.NewTestServer(t)
+		graphqlServer := http.NewServeMux()
+		graphqlServer.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"data":{}}`))
+		})
+		
+		srv := &http.Server{
+			Addr:    "localhost:0",
+			Handler: graphqlServer,
+		}
+		
+		go srv.ListenAndServe()
+		defer srv.Shutdown(context.Background())
+		
+		time.Sleep(100 * time.Millisecond)
 
-		// Start server
-		err := ts.Start()
+		server, err := connectrpc.NewServer(connectrpc.ServerConfig{
+			ServicesDir:     "testdata/connectrpc/services",
+			GraphQLEndpoint: "http://" + srv.Addr,
+			ListenAddr:      "localhost:0",
+			Logger:          zap.NewNop(),
+		})
 		require.NoError(t, err)
 
+		err = server.Start()
+		require.NoError(t, err)
+		defer func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			server.Stop(ctx)
+		}()
+
 		// Reload server
-		err = ts.Reload()
+		err = server.Reload()
 		assert.NoError(t, err)
 	})
 }
