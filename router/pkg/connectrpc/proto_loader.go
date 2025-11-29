@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 
 	"github.com/jhump/protoreflect/desc"
 	"github.com/jhump/protoreflect/desc/protoparse"
@@ -13,11 +12,6 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
 )
-
-// globalRegistryMu protects concurrent access to protoregistry.GlobalFiles
-// This prevents race conditions when multiple ProtoLoader instances
-// (e.g., during reload) attempt to register the same file concurrently
-var globalRegistryMu sync.Mutex
 
 // ServiceDefinition represents a parsed protobuf service
 type ServiceDefinition struct {
