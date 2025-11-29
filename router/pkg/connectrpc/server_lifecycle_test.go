@@ -184,7 +184,7 @@ func TestServerLifecycle_VanguardIntegration(t *testing.T) {
 // TestServerLifecycle_ErrorScenarios tests various error scenarios
 func TestServerLifecycle_ErrorScenarios(t *testing.T) {
 	// Ensure protos are loaded once before running tests
-	_ = getSharedProtoLoader(t)
+	_ = GetSharedProtoLoader(t, "samples/services/employee.v1")
 
 	t.Run("start fails with invalid proto directory", func(t *testing.T) {
 		server, err := NewServer(ServerConfig{
