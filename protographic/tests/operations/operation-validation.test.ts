@@ -241,7 +241,7 @@ describe('Operation Validation', () => {
 
       expect(() => {
         compileOperationsToProto(operation, schema);
-      }).toThrow(/Operation name "getUser" must start with an uppercase letter/);
+      }).toThrow(/Operation name "getUser" must be in PascalCase/);
     });
 
     test('should reject snake_case operation names', () => {
@@ -256,10 +256,10 @@ describe('Operation Validation', () => {
 
       expect(() => {
         compileOperationsToProto(operation, schema);
-      }).toThrow(/Operation name "get_user" must start with an uppercase letter/);
+      }).toThrow(/Operation name "get_user" must be in PascalCase/);
     });
 
-    test('should accept all-UPPERCASE operation names', () => {
+    test('should reject all-UPPERCASE operation names', () => {
       const operation = `
         query GETUSER {
           user {
@@ -271,10 +271,10 @@ describe('Operation Validation', () => {
 
       expect(() => {
         compileOperationsToProto(operation, schema);
-      }).not.toThrow();
+      }).toThrow(/Operation name "GETUSER" must be in PascalCase/);
     });
 
-    test('should accept operation names with only uppercase and numbers', () => {
+    test('should reject operation names with only uppercase and numbers', () => {
       const operation = `
         query GET123USER {
           user {
@@ -286,7 +286,7 @@ describe('Operation Validation', () => {
 
       expect(() => {
         compileOperationsToProto(operation, schema);
-      }).not.toThrow();
+      }).toThrow(/Operation name "GET123USER" must be in PascalCase/);
     });
 
     test('should provide helpful error message for camelCase', () => {
@@ -300,7 +300,7 @@ describe('Operation Validation', () => {
 
       expect(() => {
         compileOperationsToProto(operation, schema);
-      }).toThrow(/must start with an uppercase letter.*Examples: GetUser, CreatePost, HRService, GETUSER/);
+      }).toThrow(/must be in PascalCase.*Examples: GetUser, CreatePost, OnMessageAdded/);
     });
 
     test('should validate mutation operation names', () => {
@@ -326,7 +326,7 @@ describe('Operation Validation', () => {
 
       expect(() => {
         compileOperationsToProto(operation, mutationSchema);
-      }).toThrow(/Operation name "createUser" must start with an uppercase letter/);
+      }).toThrow(/Operation name "createUser" must be in PascalCase/);
     });
 
     test('should validate subscription operation names', () => {
@@ -356,7 +356,7 @@ describe('Operation Validation', () => {
 
       expect(() => {
         compileOperationsToProto(operation, subscriptionSchema);
-      }).toThrow(/Operation name "onMessageAdded" must start with an uppercase letter/);
+      }).toThrow(/Operation name "onMessageAdded" must be in PascalCase/);
     });
   });
 
