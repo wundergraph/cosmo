@@ -34,6 +34,7 @@ export class NamespaceRepository {
       enableCacheWarmer: namespace.namespaceConfig?.enableCacheWarming ?? false,
       checksTimeframeInDays: namespace.namespaceConfig?.checksTimeframeInDays || undefined,
       enableProposals: namespace.namespaceConfig?.enableProposals ?? false,
+      enableSubgraphCheckExtensions: namespace.namespaceConfig?.enableSubgraphCheckExtensions ?? false,
     };
   }
 
@@ -59,6 +60,7 @@ export class NamespaceRepository {
       enableCacheWarmer: namespace.namespaceConfig?.enableCacheWarming ?? false,
       checksTimeframeInDays: namespace.namespaceConfig?.checksTimeframeInDays || undefined,
       enableProposals: namespace.namespaceConfig?.enableProposals ?? false,
+      enableSubgraphCheckExtensions: namespace.namespaceConfig?.enableSubgraphCheckExtensions ?? false,
     };
   }
 
@@ -166,6 +168,7 @@ export class NamespaceRepository {
     enableCacheWarming?: boolean;
     checksTimeframeInDays?: number;
     enableProposals?: boolean;
+    enableSubgraphCheckExtensions?: boolean;
   }) {
     const values = {
       namespaceId: data.id,
@@ -174,6 +177,7 @@ export class NamespaceRepository {
       enableCacheWarming: data.enableCacheWarming,
       checksTimeframeInDays: data.checksTimeframeInDays,
       enableProposals: data.enableProposals,
+      enableSubgraphCheckExtensions: data.enableSubgraphCheckExtensions,
     };
 
     await this.db.insert(schema.namespaceConfig).values(values).onConflictDoUpdate({

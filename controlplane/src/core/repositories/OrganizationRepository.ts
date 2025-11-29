@@ -1010,6 +1010,9 @@ export class OrganizationRepository {
         const blobStorageDirectory = `${organizationId}/${graph.id}`;
         blobPromises.push(blobStorage.removeDirectory({ key: blobStorageDirectory }));
       }
+
+      blobPromises.push(blobStorage.removeDirectory({ key: `${organizationId}/subgraph_checks` }));
+
       await Promise.allSettled(blobPromises);
 
       // Delete organization from db
@@ -1393,6 +1396,7 @@ export class OrganizationRepository {
       scim: false,
       'cache-warmer': false,
       proposals: false,
+      'subgraph-check-extensions': false,
     };
 
     for (const feature of features) {

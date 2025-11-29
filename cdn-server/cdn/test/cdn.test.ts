@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { SignJWT } from 'jose';
 import { describe, test, expect } from 'vitest';
 import { Context, Hono } from 'hono';
@@ -6,7 +7,7 @@ import { BlobStorage, BlobNotFoundError, cdn, BlobObject, signatureSha256Header 
 const secretKey = 'hunter2';
 const secretAdmissionKey = 'hunter3';
 
-const generateToken = async (organizationId: string, federatedGraphId: string, secret: string) => {
+const generateToken = async (organizationId: string, federatedGraphId: string | undefined, secret: string) => {
   const secretKey = new TextEncoder().encode(secret);
   return await new SignJWT({ organization_id: organizationId, federated_graph_id: federatedGraphId })
     .setProtectedHeader({ alg: 'HS256' })
@@ -85,7 +86,7 @@ describe('CDN handlers', () => {
       expect(res.status).toBe(404);
     });
 
-    test('it returns a 401 if the graph or organization ids does not match with the JWT payload', async () => {
+    test('it returns a 400 if the graph or organization ids does not match with the JWT payload', async () => {
       const res = await app.request(`/foo/bar/operations/clientName/operation.json`, {
         method: 'GET',
         headers: {
@@ -146,7 +147,7 @@ describe('CDN handlers', () => {
       expect(res.status).toBe(401);
     });
 
-    test('it returns a 401 if the graph or organization ids does not match with the JWT payload', async () => {
+    test('it returns a 400 if the graph or organization ids does not match with the JWT payload', async () => {
       const res = await app.request(`/foo/bar/operations/routerconfigs/latest.json`, {
         method: 'GET',
         headers: {
@@ -207,7 +208,7 @@ describe('CDN handlers', () => {
       expect(res.status).toBe(401);
     });
 
-    test('it returns a 401 if the graph or organization ids does not match with the JWT payload', async () => {
+    test('it returns a 400 if the graph or organization ids does not match with the JWT payload', async () => {
       const res = await app.request(`/foo/bar/operations/routerconfigs/draft.json`, {
         method: 'GET',
         headers: {
@@ -488,7 +489,7 @@ describe('CDN handlers', () => {
       expect(res.status).toBe(401);
     });
 
-    test('it returns a 401 if the graph or organization ids does not match with the JWT payload', async () => {
+    test('it returns a 400 if the graph or organization ids does not match with the JWT payload', async () => {
       const res = await app.request(`/foo/bar/operations/cache_warmup/operations.json`, {
         method: 'GET',
         headers: {
@@ -544,6 +545,96 @@ describe('CDN handlers', () => {
 
     test('it returns a 404 if the persisted operation does not exist', async () => {
       const res = await app.request(`${organizationId}/${federatedGraphId}/cache_warmup/does_not_exist.json`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      expect(res.status).toBe(404);
+    });
+  });
+
+  describe('schema check extensions handler', async () => {
+    const organizationId = 'organizationId';
+    const checkId = randomUUID();
+    const token = await generateToken(organizationId, undefined, secretKey);
+    const blobStorage = new InMemoryBlobStorage();
+    const requestPath = `${organizationId}/subgraph_checks/${checkId}.json`;
+
+    const app = new Hono();
+
+    cdn(app, {
+      authJwtSecret: secretKey,
+      authAdmissionJwtSecret: secretAdmissionKey,
+      blobStorage,
+    });
+
+    test('it returns a 401 if no Authorization header is provided', async () => {
+      const res = await app.request(requestPath, {
+        method: 'GET',
+      });
+      expect(res.status).toBe(401);
+    });
+
+    test('it returns a 401 if an invalid Authorization header is provided', async () => {
+      const res = await app.request(requestPath, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token.slice(0, -1)}}`,
+        },
+      });
+      expect(res.status).toBe(401);
+    });
+
+    test('it returns a 400 if the organization id does not match with the JWT payload', async () => {
+      const res = await app.request(`/foo/subgraph_checks/operations.json`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      expect(res.status).toBe(400);
+    });
+
+    test('it returns a 401 if the token has expired', async () => {
+      const token = await new SignJWT({
+        organization_id: organizationId,
+        federated_graph_id: undefined,
+        exp: Math.floor(Date.now() / 1000) - 60,
+      })
+        .setProtectedHeader({ alg: 'HS256' })
+        .sign(new TextEncoder().encode(secretKey));
+      const res = await app.request(`/foo/subgraph_checks/operations.json`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      expect(res.status).toBe(401);
+    });
+
+    test('it returns the schema check extension file content', async () => {
+      const operationContents = JSON.stringify({
+        subgraphs: [{ id: '123', name: 'test' }],
+        compositions: [],
+      });
+
+      blobStorage.objects.set(requestPath, {
+        buffer: Buffer.from(operationContents),
+      });
+
+      const res = await app.request(requestPath, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      expect(res.status).toBe(200);
+      expect(await res.text()).toBe(operationContents);
+    });
+
+    test('it returns a 404 if the schema check extension does not exist', async () => {
+      const res = await app.request(`${organizationId}/subgraph_checks/does_not_exist.json`, {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
