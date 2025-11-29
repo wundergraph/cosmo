@@ -481,6 +481,12 @@ const (
 	// PlatformServiceDeleteCacheWarmerOperationProcedure is the fully-qualified name of the
 	// PlatformService's DeleteCacheWarmerOperation RPC.
 	PlatformServiceDeleteCacheWarmerOperationProcedure = "/wg.cosmo.platform.v1.PlatformService/DeleteCacheWarmerOperation"
+	// PlatformServiceGetSubgraphCheckExtensionsConfigProcedure is the fully-qualified name of the
+	// PlatformService's GetSubgraphCheckExtensionsConfig RPC.
+	PlatformServiceGetSubgraphCheckExtensionsConfigProcedure = "/wg.cosmo.platform.v1.PlatformService/GetSubgraphCheckExtensionsConfig"
+	// PlatformServiceConfigureSubgraphCheckExtensionsProcedure is the fully-qualified name of the
+	// PlatformService's ConfigureSubgraphCheckExtensions RPC.
+	PlatformServiceConfigureSubgraphCheckExtensionsProcedure = "/wg.cosmo.platform.v1.PlatformService/ConfigureSubgraphCheckExtensions"
 	// PlatformServiceGetBillingPlansProcedure is the fully-qualified name of the PlatformService's
 	// GetBillingPlans RPC.
 	PlatformServiceGetBillingPlansProcedure = "/wg.cosmo.platform.v1.PlatformService/GetBillingPlans"
@@ -701,6 +707,8 @@ var (
 	platformServiceConfigureCacheWarmerMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("ConfigureCacheWarmer")
 	platformServiceGetCacheWarmerConfigMethodDescriptor                  = platformServiceServiceDescriptor.Methods().ByName("GetCacheWarmerConfig")
 	platformServiceDeleteCacheWarmerOperationMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("DeleteCacheWarmerOperation")
+	platformServiceGetSubgraphCheckExtensionsConfigMethodDescriptor      = platformServiceServiceDescriptor.Methods().ByName("GetSubgraphCheckExtensionsConfig")
+	platformServiceConfigureSubgraphCheckExtensionsMethodDescriptor      = platformServiceServiceDescriptor.Methods().ByName("ConfigureSubgraphCheckExtensions")
 	platformServiceGetBillingPlansMethodDescriptor                       = platformServiceServiceDescriptor.Methods().ByName("GetBillingPlans")
 	platformServiceCreateCheckoutSessionMethodDescriptor                 = platformServiceServiceDescriptor.Methods().ByName("CreateCheckoutSession")
 	platformServiceCreateBillingPortalSessionMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("CreateBillingPortalSession")
@@ -1004,6 +1012,8 @@ type PlatformServiceClient interface {
 	GetCacheWarmerConfig(context.Context, *connect.Request[v1.GetCacheWarmerConfigRequest]) (*connect.Response[v1.GetCacheWarmerConfigResponse], error)
 	// DeleteCacheWarmerOperation deletes a cache warmer operation.
 	DeleteCacheWarmerOperation(context.Context, *connect.Request[v1.DeleteCacheWarmerOperationRequest]) (*connect.Response[v1.DeleteCacheWarmerOperationResponse], error)
+	GetSubgraphCheckExtensionsConfig(context.Context, *connect.Request[v1.GetSubgraphCheckExtensionsConfigRequest]) (*connect.Response[v1.GetSubgraphCheckExtensionsConfigResponse], error)
+	ConfigureSubgraphCheckExtensions(context.Context, *connect.Request[v1.ConfigureSubgraphCheckExtensionsRequest]) (*connect.Response[v1.ConfigureSubgraphCheckExtensionsResponse], error)
 	// Billing
 	// -----------------------------------------------------------------------------------------------------------------------------
 	// Return the available billing plans
@@ -1964,6 +1974,18 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceDeleteCacheWarmerOperationMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		getSubgraphCheckExtensionsConfig: connect.NewClient[v1.GetSubgraphCheckExtensionsConfigRequest, v1.GetSubgraphCheckExtensionsConfigResponse](
+			httpClient,
+			baseURL+PlatformServiceGetSubgraphCheckExtensionsConfigProcedure,
+			connect.WithSchema(platformServiceGetSubgraphCheckExtensionsConfigMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		configureSubgraphCheckExtensions: connect.NewClient[v1.ConfigureSubgraphCheckExtensionsRequest, v1.ConfigureSubgraphCheckExtensionsResponse](
+			httpClient,
+			baseURL+PlatformServiceConfigureSubgraphCheckExtensionsProcedure,
+			connect.WithSchema(platformServiceConfigureSubgraphCheckExtensionsMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		getBillingPlans: connect.NewClient[v1.GetBillingPlansRequest, v1.GetBillingPlansResponse](
 			httpClient,
 			baseURL+PlatformServiceGetBillingPlansProcedure,
@@ -2250,6 +2272,8 @@ type platformServiceClient struct {
 	configureCacheWarmer                  *connect.Client[v1.ConfigureCacheWarmerRequest, v1.ConfigureCacheWarmerResponse]
 	getCacheWarmerConfig                  *connect.Client[v1.GetCacheWarmerConfigRequest, v1.GetCacheWarmerConfigResponse]
 	deleteCacheWarmerOperation            *connect.Client[v1.DeleteCacheWarmerOperationRequest, v1.DeleteCacheWarmerOperationResponse]
+	getSubgraphCheckExtensionsConfig      *connect.Client[v1.GetSubgraphCheckExtensionsConfigRequest, v1.GetSubgraphCheckExtensionsConfigResponse]
+	configureSubgraphCheckExtensions      *connect.Client[v1.ConfigureSubgraphCheckExtensionsRequest, v1.ConfigureSubgraphCheckExtensionsResponse]
 	getBillingPlans                       *connect.Client[v1.GetBillingPlansRequest, v1.GetBillingPlansResponse]
 	createCheckoutSession                 *connect.Client[v1.CreateCheckoutSessionRequest, v1.CreateCheckoutSessionResponse]
 	createBillingPortalSession            *connect.Client[v1.CreateBillingPortalSessionRequest, v1.CreateBillingPortalSessionResponse]
@@ -3047,6 +3071,18 @@ func (c *platformServiceClient) DeleteCacheWarmerOperation(ctx context.Context, 
 	return c.deleteCacheWarmerOperation.CallUnary(ctx, req)
 }
 
+// GetSubgraphCheckExtensionsConfig calls
+// wg.cosmo.platform.v1.PlatformService.GetSubgraphCheckExtensionsConfig.
+func (c *platformServiceClient) GetSubgraphCheckExtensionsConfig(ctx context.Context, req *connect.Request[v1.GetSubgraphCheckExtensionsConfigRequest]) (*connect.Response[v1.GetSubgraphCheckExtensionsConfigResponse], error) {
+	return c.getSubgraphCheckExtensionsConfig.CallUnary(ctx, req)
+}
+
+// ConfigureSubgraphCheckExtensions calls
+// wg.cosmo.platform.v1.PlatformService.ConfigureSubgraphCheckExtensions.
+func (c *platformServiceClient) ConfigureSubgraphCheckExtensions(ctx context.Context, req *connect.Request[v1.ConfigureSubgraphCheckExtensionsRequest]) (*connect.Response[v1.ConfigureSubgraphCheckExtensionsResponse], error) {
+	return c.configureSubgraphCheckExtensions.CallUnary(ctx, req)
+}
+
 // GetBillingPlans calls wg.cosmo.platform.v1.PlatformService.GetBillingPlans.
 func (c *platformServiceClient) GetBillingPlans(ctx context.Context, req *connect.Request[v1.GetBillingPlansRequest]) (*connect.Response[v1.GetBillingPlansResponse], error) {
 	return c.getBillingPlans.CallUnary(ctx, req)
@@ -3442,6 +3478,8 @@ type PlatformServiceHandler interface {
 	GetCacheWarmerConfig(context.Context, *connect.Request[v1.GetCacheWarmerConfigRequest]) (*connect.Response[v1.GetCacheWarmerConfigResponse], error)
 	// DeleteCacheWarmerOperation deletes a cache warmer operation.
 	DeleteCacheWarmerOperation(context.Context, *connect.Request[v1.DeleteCacheWarmerOperationRequest]) (*connect.Response[v1.DeleteCacheWarmerOperationResponse], error)
+	GetSubgraphCheckExtensionsConfig(context.Context, *connect.Request[v1.GetSubgraphCheckExtensionsConfigRequest]) (*connect.Response[v1.GetSubgraphCheckExtensionsConfigResponse], error)
+	ConfigureSubgraphCheckExtensions(context.Context, *connect.Request[v1.ConfigureSubgraphCheckExtensionsRequest]) (*connect.Response[v1.ConfigureSubgraphCheckExtensionsResponse], error)
 	// Billing
 	// -----------------------------------------------------------------------------------------------------------------------------
 	// Return the available billing plans
@@ -4398,6 +4436,18 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceDeleteCacheWarmerOperationMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceGetSubgraphCheckExtensionsConfigHandler := connect.NewUnaryHandler(
+		PlatformServiceGetSubgraphCheckExtensionsConfigProcedure,
+		svc.GetSubgraphCheckExtensionsConfig,
+		connect.WithSchema(platformServiceGetSubgraphCheckExtensionsConfigMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	platformServiceConfigureSubgraphCheckExtensionsHandler := connect.NewUnaryHandler(
+		PlatformServiceConfigureSubgraphCheckExtensionsProcedure,
+		svc.ConfigureSubgraphCheckExtensions,
+		connect.WithSchema(platformServiceConfigureSubgraphCheckExtensionsMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	platformServiceGetBillingPlansHandler := connect.NewUnaryHandler(
 		PlatformServiceGetBillingPlansProcedure,
 		svc.GetBillingPlans,
@@ -4830,6 +4880,10 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceGetCacheWarmerConfigHandler.ServeHTTP(w, r)
 		case PlatformServiceDeleteCacheWarmerOperationProcedure:
 			platformServiceDeleteCacheWarmerOperationHandler.ServeHTTP(w, r)
+		case PlatformServiceGetSubgraphCheckExtensionsConfigProcedure:
+			platformServiceGetSubgraphCheckExtensionsConfigHandler.ServeHTTP(w, r)
+		case PlatformServiceConfigureSubgraphCheckExtensionsProcedure:
+			platformServiceConfigureSubgraphCheckExtensionsHandler.ServeHTTP(w, r)
 		case PlatformServiceGetBillingPlansProcedure:
 			platformServiceGetBillingPlansHandler.ServeHTTP(w, r)
 		case PlatformServiceCreateCheckoutSessionProcedure:
@@ -5477,6 +5531,14 @@ func (UnimplementedPlatformServiceHandler) GetCacheWarmerConfig(context.Context,
 
 func (UnimplementedPlatformServiceHandler) DeleteCacheWarmerOperation(context.Context, *connect.Request[v1.DeleteCacheWarmerOperationRequest]) (*connect.Response[v1.DeleteCacheWarmerOperationResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.DeleteCacheWarmerOperation is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) GetSubgraphCheckExtensionsConfig(context.Context, *connect.Request[v1.GetSubgraphCheckExtensionsConfigRequest]) (*connect.Response[v1.GetSubgraphCheckExtensionsConfigResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetSubgraphCheckExtensionsConfig is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) ConfigureSubgraphCheckExtensions(context.Context, *connect.Request[v1.ConfigureSubgraphCheckExtensionsRequest]) (*connect.Response[v1.ConfigureSubgraphCheckExtensionsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.ConfigureSubgraphCheckExtensions is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) GetBillingPlans(context.Context, *connect.Request[v1.GetBillingPlansRequest]) (*connect.Response[v1.GetBillingPlansResponse], error) {

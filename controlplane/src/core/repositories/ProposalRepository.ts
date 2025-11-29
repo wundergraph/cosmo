@@ -3,7 +3,14 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { joinLabel, splitLabel } from '@wundergraph/cosmo-shared';
 import { ProposalState, ProposalOrigin } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
-import { GetChecksResponse, Label, LintSeverityLevel, ProposalDTO, ProposalSubgraphDTO } from '../../types/index.js';
+import {
+  GetChecksResponse,
+  Label,
+  LintSeverityLevel,
+  ProposalDTO,
+  ProposalSubgraphDTO,
+  SchemaCheckDTO,
+} from '../../types/index.js';
 import { getDiffBetweenGraphs } from '../composition/schemaCheck.js';
 import { isCheckSuccessful, normalizeLabels } from '../util.js';
 import { SchemaCheckRepository } from './SchemaCheckRepository.js';
@@ -637,6 +644,8 @@ export class ProposalRepository {
         compositionSkipped: schema.schemaChecks.compositionSkipped,
         breakingChangesSkipped: schema.schemaChecks.breakingChangesSkipped,
         errorMessage: schema.schemaChecks.errorMessage,
+        checkExtensionDeliveryId: schema.schemaChecks.checkExtensionDeliveryId,
+        checkExtensionErrorMessage: schema.schemaChecks.checkExtensionErrorMessage,
       })
       .from(schema.proposalChecks)
       .innerJoin(schema.schemaChecks, eq(schema.proposalChecks.schemaCheckId, schema.schemaChecks.id))
@@ -702,7 +711,9 @@ export class ProposalRepository {
           breakingChangesSkipped: c.breakingChangesSkipped ?? false,
           errorMessage: c.errorMessage || undefined,
           linkedChecks,
-        };
+          checkExtensionDeliveryId: c.checkExtensionDeliveryId || undefined,
+          checkExtensionErrorMessage: c.checkExtensionErrorMessage || undefined,
+        } satisfies SchemaCheckDTO;
       }),
     );
 
