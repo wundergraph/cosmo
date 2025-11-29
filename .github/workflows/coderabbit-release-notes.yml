@@ -1,0 +1,46 @@
+name: Generate CodeRabbit Release Notes
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  generate-notes:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          npm init -y
+          npm install @octokit/core
+
+      - name: Add release notes script
+        run: |
+          mkdir -p scripts
+          cat << 'EOF' > scripts/generate-coderabbit-release-notes.js
+          // placeholder; will be replaced by real script or removed
+          console.log("Script placeholder; replace with real file or commit it.");
+          EOF
+
+      - name: Generate CodeRabbit release notes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
+        run: |
+          node scripts/generate-coderabbit-release-notes.js
+
+      - name: Upload release notes as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coderabbit-release-notes
+          path: coderabbit-release-notes-*.md
