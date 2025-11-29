@@ -58,6 +58,7 @@ type ParsedOperation struct {
 	// "query", "mutation", "subscription"
 	Type           string
 	Variables      *fastjson.Object
+	VariablesHash  uint64
 	RemapVariables map[string]string
 	// NormalizedRepresentation is the normalized representation of the operation
 	// as a string. This is provided for modules to be able to access the
@@ -285,16 +286,10 @@ func (o *OperationKit) UnmarshalOperationFromURL(url *url.URL) error {
 // but extension and variables will be unmarshalled as JSON.RawMessage.
 // We always compact the variables and extensions to ensure that we produce easy to parse JSON for the engine
 func (o *OperationKit) UnmarshalOperationFromBody(data []byte) error {
-	buf := bytes.NewBuffer(make([]byte, len(data))[:0])
-	err := json.Compact(buf, data)
+	err := json.Unmarshal(data, &o.parsedOperation.Request)
 	if err != nil {
 		return err
 	}
-	err = json.Unmarshal(buf.Bytes(), &o.parsedOperation.Request)
-	if err != nil {
-		return err
-	}
-
 	return o.unmarshalOperation()
 }
 
@@ -379,6 +374,13 @@ func (o *OperationKit) unmarshalOperation() error {
 	}
 
 	return nil
+}
+
+func (o *OperationKit) computeVariablesHash() {
+	o.kit.keyGen.Reset()
+	_, _ = o.kit.keyGen.Write(o.kit.doc.Input.Variables)
+	o.parsedOperation.VariablesHash = o.kit.keyGen.Sum64()
+	o.kit.keyGen.Reset()
 }
 
 func (o *OperationKit) ComputeOperationSha256() error {
@@ -841,11 +843,13 @@ func (o *OperationKit) setAndParseOperationDoc() error {
 }
 
 func (o *OperationKit) NormalizeVariables() ([]uploads.UploadPathMapping, error) {
-	variablesBefore := make([]byte, len(o.kit.doc.Input.Variables))
-	copy(variablesBefore, o.kit.doc.Input.Variables)
+	o.kit.keyGen.Reset()
+	_, _ = o.kit.keyGen.Write(o.kit.doc.Input.Variables)
+	variablesHashBefore := o.kit.keyGen.Sum64()
 
-	operationRawBytesBefore := make([]byte, len(o.kit.doc.Input.RawBytes))
-	copy(operationRawBytesBefore, o.kit.doc.Input.RawBytes)
+	o.kit.keyGen.Reset()
+	_, _ = o.kit.keyGen.Write(o.kit.doc.Input.RawBytes)
+	operationsHashBefore := o.kit.keyGen.Sum64()
 
 	report := &operationreport.Report{}
 	uploadsMapping := o.kit.variablesNormalizer.NormalizeOperation(o.kit.doc, o.operationProcessor.executor.ClientSchema, report)
@@ -886,9 +890,19 @@ func (o *OperationKit) NormalizeVariables() ([]uploads.UploadPathMapping, error)
 	}
 
 	o.parsedOperation.ID = o.kit.keyGen.Sum64()
+	o.computeVariablesHash()
+
+	o.kit.keyGen.Reset()
+	_, _ = o.kit.keyGen.Write(o.kit.doc.Input.Variables)
+	variablesHashAfter := o.kit.keyGen.Sum64()
+
+	o.kit.keyGen.Reset()
+	_, _ = o.kit.keyGen.Write(o.kit.doc.Input.RawBytes)
+	operationsHashAfter := o.kit.keyGen.Sum64()
+	o.kit.keyGen.Reset()
 
 	// If the normalized form of the operation didn't change, we don't need to print it again
-	if bytes.Equal(o.kit.doc.Input.Variables, variablesBefore) && bytes.Equal(o.kit.doc.Input.RawBytes, operationRawBytesBefore) {
+	if variablesHashBefore == variablesHashAfter && operationsHashBefore == operationsHashAfter {
 		return uploadsMapping, nil
 	}
 
@@ -945,7 +959,6 @@ func (o *OperationKit) RemapVariables(disabled bool) error {
 
 	// Generate the operation ID
 	o.parsedOperation.InternalID = o.kit.keyGen.Sum64()
-	o.kit.keyGen.Reset()
 
 	o.kit.normalizedOperation.Reset()
 	err = o.kit.printer.Print(o.kit.doc, o.kit.normalizedOperation)

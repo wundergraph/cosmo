@@ -90,6 +90,7 @@ type (
 		proxy                ProxyFunc
 		disableUsageTracking bool
 		usage                UsageTracker
+		headerPropagation    *HeaderPropagation
 	}
 
 	UsageTracker interface {
@@ -308,19 +309,18 @@ func NewRouter(opts ...Option) (*Router, error) {
 	}
 
 	r.headerRules = AddCacheControlPolicyToRules(r.headerRules, r.cacheControlPolicy)
-	hr, err := NewHeaderPropagation(r.headerRules)
+	var err error
+	r.headerPropagation, err = NewHeaderPropagation(r.headerRules)
 	if err != nil {
 		return nil, err
 	}
-
-	if hr.HasRequestRules() {
-		r.preOriginHandlers = append(r.preOriginHandlers, hr.OnOriginRequest)
-	}
-	if hr.HasResponseRules() {
-		r.postOriginHandlers = append(r.postOriginHandlers, hr.OnOriginResponse)
+	// we only add post origin handler for header rules
+	// pre handlers (header propagation rules) are handled via the engine
+	if r.headerPropagation.HasResponseRules() {
+		r.postOriginHandlers = append(r.postOriginHandlers, r.headerPropagation.OnOriginResponse)
 	}
 
-	defaultHeaders := []string{
+	defaultCorsHeaders := []string{
 		// Common headers
 		"authorization",
 		"origin",
@@ -346,16 +346,16 @@ func NewRouter(opts ...Option) (*Router, error) {
 	}
 
 	if r.clientHeader.Name != "" {
-		defaultHeaders = append(defaultHeaders, r.clientHeader.Name)
+		defaultCorsHeaders = append(defaultCorsHeaders, r.clientHeader.Name)
 	}
 	if r.clientHeader.Version != "" {
-		defaultHeaders = append(defaultHeaders, r.clientHeader.Version)
+		defaultCorsHeaders = append(defaultCorsHeaders, r.clientHeader.Version)
 	}
 
 	defaultMethods := []string{
 		"HEAD", "GET", "POST",
 	}
-	r.corsOptions.AllowHeaders = stringsx.RemoveDuplicates(append(r.corsOptions.AllowHeaders, defaultHeaders...))
+	r.corsOptions.AllowHeaders = stringsx.RemoveDuplicates(append(r.corsOptions.AllowHeaders, defaultCorsHeaders...))
 	r.corsOptions.AllowMethods = stringsx.RemoveDuplicates(append(r.corsOptions.AllowMethods, defaultMethods...))
 
 	if r.tlsConfig != nil && r.tlsConfig.Enabled {
@@ -1924,9 +1924,9 @@ func DefaultTransportRequestOptions() *TransportRequestOptions {
 		KeepAliveIdleTimeout:   90 * time.Second,
 		DialTimeout:            30 * time.Second,
 
-		MaxConnsPerHost:     100,
-		MaxIdleConns:        1024,
-		MaxIdleConnsPerHost: 20,
+		MaxConnsPerHost:     0,
+		MaxIdleConns:        1024 * 10,
+		MaxIdleConnsPerHost: 2048,
 	}
 }
 

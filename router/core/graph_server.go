@@ -102,6 +102,7 @@ type (
 		traceDialer             *TraceDialer
 		connector               *grpcconnector.Connector
 		circuitBreakerManager   *circuit.Manager
+		headerPropagation       *HeaderPropagation
 	}
 )
 
@@ -163,7 +164,8 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 			HostName:      r.hostName,
 			ListenAddress: r.listenAddr,
 		},
-		storageProviders: &r.storageProviders,
+		storageProviders:  &r.storageProviders,
+		headerPropagation: r.headerPropagation,
 	}
 
 	baseOtelAttributes := []attribute.KeyValue{
@@ -1371,6 +1373,7 @@ func (s *graphServer) buildGraphMux(
 			metricAttExpressions,
 			exprManager.VisitorManager.IsSubgraphResponseBodyUsedInExpressions(),
 		),
+		HeaderPropagation: s.headerPropagation,
 	}
 
 	if s.redisClient != nil {
@@ -1421,36 +1424,40 @@ func (s *graphServer) buildGraphMux(
 	}
 
 	graphqlPreHandler := NewPreHandler(&PreHandlerOptions{
-		Logger:                      s.logger,
-		Executor:                    executor,
-		Metrics:                     metrics,
-		OperationProcessor:          operationProcessor,
-		Planner:                     operationPlanner,
-		AccessController:            s.accessController,
-		OperationBlocker:            operationBlocker,
-		RouterPublicKey:             s.publicKey,
-		EnableRequestTracing:        s.engineExecutionConfiguration.EnableRequestTracing,
-		DevelopmentMode:             s.developmentMode,
-		TracerProvider:              s.tracerProvider,
-		FlushTelemetryAfterResponse: s.awsLambda,
-		TraceExportVariables:        s.traceConfig.ExportGraphQLVariables.Enabled,
-		FileUploadEnabled:           s.fileUploadConfig.Enabled,
-		MaxUploadFiles:              s.fileUploadConfig.MaxFiles,
-		MaxUploadFileSize:           int(s.fileUploadConfig.MaxFileSizeBytes),
-		ComplexityLimits:            s.securityConfiguration.ComplexityLimits,
-		AlwaysIncludeQueryPlan:      s.engineExecutionConfiguration.Debug.AlwaysIncludeQueryPlan,
-		AlwaysSkipLoader:            s.engineExecutionConfiguration.Debug.AlwaysSkipLoader,
-		QueryPlansEnabled:           s.Config.queryPlansEnabled,
-		QueryPlansLoggingEnabled:    s.engineExecutionConfiguration.Debug.PrintQueryPlans,
-		TrackSchemaUsageInfo:        s.graphqlMetricsConfig.Enabled || s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled,
-		ClientHeader:                s.clientHeader,
-		ComputeOperationSha256:      computeSha256,
-		ApolloCompatibilityFlags:    &s.apolloCompatibilityFlags,
-		DisableVariablesRemapping:   s.engineExecutionConfiguration.DisableVariablesRemapping,
-		ExprManager:                 exprManager,
-		OmitBatchExtensions:         s.batchingConfig.OmitExtensions,
-
-		OperationContentAttributes: s.traceConfig.OperationContentAttributes,
+		Logger:                                 s.logger,
+		Executor:                               executor,
+		Metrics:                                metrics,
+		OperationProcessor:                     operationProcessor,
+		Planner:                                operationPlanner,
+		AccessController:                       s.accessController,
+		OperationBlocker:                       operationBlocker,
+		RouterPublicKey:                        s.publicKey,
+		EnableRequestTracing:                   s.engineExecutionConfiguration.EnableRequestTracing,
+		DevelopmentMode:                        s.developmentMode,
+		TracerProvider:                         s.tracerProvider,
+		FlushTelemetryAfterResponse:            s.awsLambda,
+		TraceExportVariables:                   s.traceConfig.ExportGraphQLVariables.Enabled,
+		FileUploadEnabled:                      s.fileUploadConfig.Enabled,
+		MaxUploadFiles:                         s.fileUploadConfig.MaxFiles,
+		MaxUploadFileSize:                      int(s.fileUploadConfig.MaxFileSizeBytes),
+		ComplexityLimits:                       s.securityConfiguration.ComplexityLimits,
+		AlwaysIncludeQueryPlan:                 s.engineExecutionConfiguration.Debug.AlwaysIncludeQueryPlan,
+		AlwaysSkipLoader:                       s.engineExecutionConfiguration.Debug.AlwaysSkipLoader,
+		QueryPlansEnabled:                      s.Config.queryPlansEnabled,
+		QueryPlansLoggingEnabled:               s.engineExecutionConfiguration.Debug.PrintQueryPlans,
+		TrackSchemaUsageInfo:                   s.graphqlMetricsConfig.Enabled || s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled,
+		ClientHeader:                           s.clientHeader,
+		ComputeOperationSha256:                 computeSha256,
+		ApolloCompatibilityFlags:               &s.apolloCompatibilityFlags,
+		DisableVariablesRemapping:              s.engineExecutionConfiguration.DisableVariablesRemapping,
+		ExprManager:                            exprManager,
+		OmitBatchExtensions:                    s.batchingConfig.OmitExtensions,
+		EnableRequestDeduplication:             s.engineExecutionConfiguration.EnableSingleFlight,
+		ForceEnableRequestDeduplication:        s.engineExecutionConfiguration.ForceEnableSingleFlight,
+		EnableInboundRequestDeduplication:      s.engineExecutionConfiguration.EnableInboundRequestDeduplication,
+		ForceEnableInboundRequestDeduplication: s.engineExecutionConfiguration.ForceEnableInboundRequestDeduplication,
+		HasPreOriginHandlers:                   len(s.preOriginHandlers) != 0,
+		OperationContentAttributes:             s.traceConfig.OperationContentAttributes,
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
