@@ -94,9 +94,9 @@ func DiscoverServices(config ServiceDiscoveryConfig) ([]DiscoveredService, error
 		if err != nil {
 			return fmt.Errorf("failed to extract service info from %s: %w", path, err)
 		}
-	
+
 		fullName := fmt.Sprintf("%s.%s", packageName, serviceName)
-	
+
 		// Validate package.service uniqueness
 		if existingDir, exists := seenPackageService[fullName]; exists {
 			return fmt.Errorf(
@@ -105,7 +105,7 @@ func DiscoverServices(config ServiceDiscoveryConfig) ([]DiscoveredService, error
 				fullName, existingDir, path)
 		}
 		seenPackageService[fullName] = path
-	
+
 		// Find all operation files recursively in this service directory
 		operationFiles, err := findOperationFiles(path)
 		if err != nil {
@@ -114,7 +114,7 @@ func DiscoverServices(config ServiceDiscoveryConfig) ([]DiscoveredService, error
 				zap.Error(err))
 			operationFiles = []string{} // Continue even if no operations found
 		}
-	
+
 		discoveredServices = append(discoveredServices, DiscoveredService{
 			ServiceDir:     path,
 			ProtoFiles:     protoFiles,
@@ -123,7 +123,7 @@ func DiscoverServices(config ServiceDiscoveryConfig) ([]DiscoveredService, error
 			ServiceName:    serviceName,
 			FullName:       fullName,
 		})
-	
+
 		config.Logger.Info("discovered service",
 			zap.String("full_name", fullName),
 			zap.String("package", packageName),
@@ -218,12 +218,12 @@ func extractServiceInfo(protoFiles []string, logger *zap.Logger) (string, string
 
 // extractPackageFromProto extracts the package name from proto file content
 func extractPackageFromProto(content string) string {
-	lines := strings.Split(content, "\n")
-	for _, line := range lines {
+	lines := strings.SplitSeq(content, "\n")
+	for line := range lines {
 		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "package ") {
+		if after, ok := strings.CutPrefix(line, "package "); ok {
 			// Extract package name: "package foo.bar;" -> "foo.bar"
-			pkg := strings.TrimPrefix(line, "package ")
+			pkg := after
 			pkg = strings.TrimSuffix(pkg, ";")
 			pkg = strings.TrimSpace(pkg)
 			return pkg
@@ -234,8 +234,8 @@ func extractPackageFromProto(content string) string {
 
 // extractServiceNameFromProto extracts the first service name from proto file content
 func extractServiceNameFromProto(content string) string {
-	lines := strings.Split(content, "\n")
-	for _, line := range lines {
+	lines := strings.SplitSeq(content, "\n")
+	for line := range lines {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "service ") {
 			// Extract service name: "service MyService {" -> "MyService"

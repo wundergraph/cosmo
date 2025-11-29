@@ -33,20 +33,19 @@ func TestConnectRPCConfiguration_LoadFromYAML(t *testing.T) {
 	}{
 		{
 			name: "minimal config with defaults",
-			yaml: `
-connect_rpc:
+			yaml: `connect_rpc:
   enabled: true
+  services_provider_id: "fs-services"
   graphql_endpoint: "http://localhost:3002/graphql"
 `,
 			wantEnabled:    true,
 			wantListenAddr: "localhost:5026", // from envDefault tag
 			wantGraphQL:    "http://localhost:3002/graphql",
-			wantProviderID: "",
+			wantProviderID: "fs-services",
 		},
 		{
 			name: "full config with overrides",
-			yaml: `
-connect_rpc:
+			yaml: `connect_rpc:
   enabled: true
   server:
     listen_addr: "0.0.0.0:8080"
@@ -61,11 +60,10 @@ connect_rpc:
 		},
 		{
 			name: "config with environment variables",
-			yaml: `
-connect_rpc:
+			yaml: `connect_rpc:
   enabled: true
-  graphql_endpoint: "${GRAPHQL_ENDPOINT}"
   services_provider_id: "${PROVIDER_ID}"
+  graphql_endpoint: "${GRAPHQL_ENDPOINT}"
 `,
 			envVars: map[string]string{
 				"GRAPHQL_ENDPOINT": "http://env-graphql:3002/graphql",
@@ -78,8 +76,7 @@ connect_rpc:
 		},
 		{
 			name: "disabled config",
-			yaml: `
-connect_rpc:
+			yaml: `connect_rpc:
   enabled: false
 `,
 			wantEnabled:    false,
@@ -123,6 +120,7 @@ func TestConnectRPCConfiguration_EnvDefaults(t *testing.T) {
 	yaml := `
 connect_rpc:
   enabled: true
+  services_provider_id: "fs-services"
   graphql_endpoint: "http://localhost:3002/graphql"
 `
 	tmpDir := t.TempDir()
@@ -174,6 +172,7 @@ func TestConnectRPCConfiguration_MultipleConfigMerge(t *testing.T) {
 	baseYaml := `
 connect_rpc:
   enabled: true
+  services_provider_id: "base-provider"
   graphql_endpoint: "http://localhost:3002/graphql"
 `
 	overrideYaml := `

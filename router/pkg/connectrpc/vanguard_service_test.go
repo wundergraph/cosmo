@@ -10,8 +10,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
 	"go.uber.org/zap"
+
+	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
 )
 
 func TestNewVanguardService(t *testing.T) {
@@ -247,7 +248,7 @@ func TestVanguardService_ServiceHandler(t *testing.T) {
 		// Create handler with mock server
 		protoLoader := GetSharedProtoLoader(t, "samples/services/employee.v1")
 		opRegistry := NewOperationRegistry(zap.NewNop())
-		
+
 		// Manually add a test operation to the registry using service-scoped approach
 		serviceName := "employee.v1.EmployeeService"
 		if opRegistry.operations[serviceName] == nil {
@@ -258,7 +259,7 @@ func TestVanguardService_ServiceHandler(t *testing.T) {
 			OperationType:   "query",
 			OperationString: "query GetEmployeeById($id: Int!) { employee(id: $id) { id name } }",
 		}
-		
+
 		handler, err := NewRPCHandler(HandlerConfig{
 			GraphQLEndpoint:   graphqlServer.URL,
 			HTTPClient:        &http.Client{},
@@ -286,7 +287,7 @@ func TestVanguardService_ServiceHandler(t *testing.T) {
 		require.NoError(t, err)
 
 		// Create a test request
-		requestBody := map[string]interface{}{
+		requestBody := map[string]any{
 			"id": 1,
 		}
 		requestJSON, err := json.Marshal(requestBody)
@@ -309,7 +310,7 @@ func TestVanguardService_ServiceHandler(t *testing.T) {
 		assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
 
 		// Verify response body is valid JSON
-		var response map[string]interface{}
+		var response map[string]any
 		err = json.Unmarshal(w.Body.Bytes(), &response)
 		assert.NoError(t, err)
 	})

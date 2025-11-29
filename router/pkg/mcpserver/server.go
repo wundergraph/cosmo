@@ -17,6 +17,7 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
+	"github.com/wundergraph/cosmo/router/pkg/httputil"
 	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
@@ -38,28 +39,6 @@ func requestHeadersFromRequest(ctx context.Context, r *http.Request) context.Con
 	return withRequestHeaders(ctx, headers)
 }
 
-var skippedHeaders = map[string]struct{}{
-	"Connection":               {},
-	"Keep-Alive":               {},
-	"Proxy-Authenticate":       {},
-	"Proxy-Authorization":      {},
-	"Te":                       {},
-	"Trailer":                  {},
-	"Transfer-Encoding":        {},
-	"Upgrade":                  {},
-	"Host":                     {},
-	"Content-Length":           {},
-	"Content-Type":             {},
-	"Accept":                   {},
-	"Accept-Encoding":          {},
-	"Accept-Charset":           {},
-	"Alt-Svc":                  {},
-	"Proxy-Connection":         {},
-	"Sec-Websocket-Extensions": {},
-	"Sec-Websocket-Key":        {},
-	"Sec-Websocket-Protocol":   {},
-	"Sec-Websocket-Version":    {},
-}
 
 // headersFromContext extracts the request headers from the context.
 func headersFromContext(ctx context.Context) (http.Header, error) {
@@ -716,7 +695,7 @@ func (s *GraphQLSchemaServer) executeGraphQLQuery(ctx context.Context, query str
 		// Copy all headers from the MCP request
 		for key, values := range headers {
 			// Skip headers that should not be forwarded
-			if _, ok := skippedHeaders[key]; ok {
+			if _, ok := httputil.SkippedHeaders[key]; ok {
 				continue
 			}
 			for _, value := range values {

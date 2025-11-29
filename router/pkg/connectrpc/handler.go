@@ -12,6 +12,8 @@ import (
 
 	"connectrpc.com/connect"
 	"go.uber.org/zap"
+
+	"github.com/wundergraph/cosmo/router/pkg/httputil"
 )
 
 // httpStatusToConnectCode maps HTTP status codes to Connect error codes
@@ -53,6 +55,10 @@ func httpStatusToConnectCode(statusCode int) connect.Code {
 	}
 }
 
+var (
+	ErrInternalServer = errors.New("internal server error")
+)
+
 // requestHeadersKey is a custom context key for storing request headers
 type requestHeadersKey struct{}
 
@@ -70,30 +76,6 @@ func headersFromContext(ctx context.Context) (http.Header, error) {
 	return headers, nil
 }
 
-// skippedHeaders are headers that should not be forwarded to the GraphQL endpoint
-var skippedHeaders = map[string]struct{}{
-	"Connection":               {},
-	"Keep-Alive":               {},
-	"Proxy-Authenticate":       {},
-	"Proxy-Authorization":      {},
-	"Te":                       {},
-	"Trailer":                  {},
-	"Transfer-Encoding":        {},
-	"Upgrade":                  {},
-	"Host":                     {},
-	"Content-Length":           {},
-	"Content-Type":             {},
-	"Accept":                   {},
-	"Accept-Encoding":          {},
-	"Accept-Charset":           {},
-	"Alt-Svc":                  {},
-	"Proxy-Connection":         {},
-	"Sec-Websocket-Extensions": {},
-	"Sec-Websocket-Key":        {},
-	"Sec-Websocket-Protocol":   {},
-	"Sec-Websocket-Version":    {},
-}
-
 // Metadata keys for Connect error metadata
 const (
 	MetaKeyHTTPStatus          = "http-status"
@@ -105,8 +87,8 @@ const (
 
 // Error classification values
 const (
-	ErrorClassificationCritical    = "CRITICAL"
-	ErrorClassificationNonCritical = "NON-CRITICAL"
+	ErrorClassificationCritical = "CRITICAL"
+	ErrorClassificationPartial  = "PARTIAL"
 )
 
 // GraphQLRequest represents a GraphQL request structure
@@ -124,9 +106,9 @@ type GraphQLErrorLocation struct {
 // GraphQLError represents an error returned in a GraphQL response
 type GraphQLError struct {
 	Message    string                 `json:"message"`
-	Path       []interface{}          `json:"path,omitempty"`
+	Path       []any                  `json:"path,omitempty"`
 	Locations  []GraphQLErrorLocation `json:"locations,omitempty"`
-	Extensions map[string]interface{} `json:"extensions,omitempty"`
+	Extensions map[string]any         `json:"extensions,omitempty"`
 }
 
 // GraphQLResponse represents a GraphQL response structure
@@ -164,7 +146,7 @@ func NewRPCHandler(config HandlerConfig) (*RPCHandler, error) {
 	}
 
 	if config.Logger == nil {
-		config.Logger = zap.NewNop()
+		return nil, fmt.Errorf("logger is required")
 	}
 
 	if config.OperationRegistry == nil {
@@ -189,6 +171,45 @@ func NewRPCHandler(config HandlerConfig) (*RPCHandler, error) {
 	}, nil
 }
 
+func (h *RPCHandler) validateRequest(serviceName, methodName string, requestJSON []byte) error {
+	if h.validator == nil {
+		h.logger.Warn("validator is nil, skipping validation")
+		return nil
+	}
+
+	h.logger.Debug("validating proto message",
+		zap.String("service", serviceName),
+		zap.String("method", methodName))
+
+	err := h.validator.ValidateMessage(serviceName, methodName, requestJSON)
+	if err == nil {
+		h.logger.Debug("proto validation passed",
+			zap.String("service", serviceName),
+			zap.String("method", methodName),
+		)
+		return nil
+	}
+
+	var validationErr *ValidationError
+	if errors.As(err, &validationErr) {
+		h.logger.Warn("proto validation failed",
+			zap.String("service", serviceName),
+			zap.String("method", methodName),
+			zap.String("error", validationErr.Error()))
+		return connect.NewError(
+			connect.CodeInvalidArgument,
+			fmt.Errorf("invalid request: %s", validationErr.Error()),
+		)
+	}
+
+	// For other errors, log and continue (don't block on validation errors)
+	h.logger.Warn("validation check failed, continuing",
+		zap.String("service", serviceName),
+		zap.String("method", methodName),
+		zap.Error(err))
+	return nil
+}
+
 // HandleRPC processes an RPC request and returns a response
 // serviceName: fully qualified service name (e.g., "mypackage.MyService")
 // methodName: the RPC method name (e.g., "GetUser" or "QueryGetUser")
@@ -201,37 +222,8 @@ func (h *RPCHandler) HandleRPC(ctx context.Context, serviceName, methodName stri
 		zap.String("request_json", string(requestJSON)))
 
 	// Validate the proto message structure before processing
-	if h.validator != nil {
-		h.logger.Debug("validating proto message",
-			zap.String("service", serviceName),
-			zap.String("method", methodName))
-		
-		if err := h.validator.ValidateMessage(serviceName, methodName, requestJSON); err != nil {
-			var validationErr *ValidationError
-			if errors.As(err, &validationErr) {
-				// Return a Connect InvalidArgument error for validation failures
-				connectErr := connect.NewError(
-					connect.CodeInvalidArgument,
-					fmt.Errorf("invalid request: %s", validationErr.Error()),
-				)
-				h.logger.Warn("proto validation failed",
-					zap.String("service", serviceName),
-					zap.String("method", methodName),
-					zap.String("error", validationErr.Error()))
-				return nil, connectErr
-			}
-			// For other errors, log and continue (don't block on validation errors)
-			h.logger.Warn("validation check failed, continuing",
-				zap.String("service", serviceName),
-				zap.String("method", methodName),
-				zap.Error(err))
-		} else {
-			h.logger.Debug("proto validation passed",
-				zap.String("service", serviceName),
-				zap.String("method", methodName))
-		}
-	} else {
-		h.logger.Warn("validator is nil, skipping validation")
+	if err := h.validateRequest(serviceName, methodName, requestJSON); err != nil {
+		return nil, err
 	}
 
 	// Look up operation from registry scoped to this service
@@ -252,7 +244,7 @@ func (h *RPCHandler) HandleRPC(ctx context.Context, serviceName, methodName stri
 		return nil, fmt.Errorf("operation not found for service %s: %s", serviceName, methodName)
 	}
 
-	h.logger.Debug("using predefined operation",
+	h.logger.Debug("resolved operation",
 		zap.String("service", serviceName),
 		zap.String("rpc_method", methodName),
 		zap.String("operation", operation.Name),
@@ -281,7 +273,7 @@ func (h *RPCHandler) convertProtoJSONToGraphQLVariables(protoJSON []byte) (json.
 	}
 
 	// Parse the proto JSON
-	var protoData map[string]interface{}
+	var protoData map[string]any
 	if err := json.Unmarshal(protoJSON, &protoData); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal proto JSON: %w", err)
 	}
@@ -300,19 +292,19 @@ func (h *RPCHandler) convertProtoJSONToGraphQLVariables(protoJSON []byte) (json.
 
 // convertKeysRecursive recursively converts all map keys from snake_case to camelCase
 // It handles nested maps and arrays of maps
-func convertKeysRecursive(data interface{}) interface{} {
+func convertKeysRecursive(data any) any {
 	switch v := data.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		// Convert map keys recursively
-		result := make(map[string]interface{})
+		result := make(map[string]any)
 		for key, value := range v {
 			camelKey := snakeToCamel(key)
 			result[camelKey] = convertKeysRecursive(value)
 		}
 		return result
-	case []interface{}:
+	case []any:
 		// Convert array elements recursively
-		result := make([]interface{}, len(v))
+		result := make([]any, len(v))
 		for i, item := range v {
 			result[i] = convertKeysRecursive(item)
 		}
@@ -325,18 +317,35 @@ func convertKeysRecursive(data interface{}) interface{} {
 
 // snakeToCamel converts snake_case to camelCase
 func snakeToCamel(s string) string {
-	parts := strings.Split(s, "_")
-	if len(parts) == 1 {
+	if s == "" {
 		return s
 	}
 
-	result := parts[0]
-	for i := 1; i < len(parts); i++ {
-		if len(parts[i]) > 0 {
-			result += strings.ToUpper(parts[i][:1]) + parts[i][1:]
+	var builder strings.Builder
+	builder.Grow(len(s)) // Pre-allocate capacity
+
+	capitalizeNext := false
+	for i := 0; i < len(s); i++ {
+		ch := s[i]
+		if ch == '_' {
+			capitalizeNext = true
+			continue
+		}
+
+		if capitalizeNext {
+			// Only convert to uppercase if it's a lowercase letter
+			if ch >= 'a' && ch <= 'z' {
+				builder.WriteByte(ch - ('a' - 'A')) // Convert to uppercase
+			} else {
+				builder.WriteByte(ch) // Already uppercase or not a letter
+			}
+			capitalizeNext = false
+		} else {
+			builder.WriteByte(ch)
 		}
 	}
-	return result
+
+	return builder.String()
 }
 
 // makeCriticalGraphQLError creates a Connect error for GraphQL errors with no data (complete failure).
@@ -344,9 +353,9 @@ func snakeToCamel(s string) string {
 func (h *RPCHandler) makeCriticalGraphQLError(errors []GraphQLError, httpStatus int) error {
 	// Serialize GraphQL errors to JSON for metadata
 	errorsJSON, _ := json.Marshal(errors)
-	
+
 	// Create Connect error with CRITICAL classification
-	// Use CodeUnknown for GraphQL errors (not CodeInternal which implies server bugs)
+	// Use CodeUnknown for GraphQL errors (not CodeInternal which implies server defects)
 	connectErr := connect.NewError(
 		connect.CodeUnknown,
 		fmt.Errorf("GraphQL operation failed: %s", errors[0].Message),
@@ -354,7 +363,7 @@ func (h *RPCHandler) makeCriticalGraphQLError(errors []GraphQLError, httpStatus 
 	connectErr.Meta().Set(MetaKeyErrorClassification, ErrorClassificationCritical)
 	connectErr.Meta().Set(MetaKeyGraphQLErrors, string(errorsJSON))
 	connectErr.Meta().Set(MetaKeyHTTPStatus, fmt.Sprintf("%d", httpStatus))
-	
+
 	// Log all error messages
 	var errorMessages []string
 	for _, gqlErr := range errors {
@@ -363,7 +372,7 @@ func (h *RPCHandler) makeCriticalGraphQLError(errors []GraphQLError, httpStatus 
 	h.logger.Error("CRITICAL GraphQL errors - no data returned",
 		zap.Strings("error_messages", errorMessages),
 		zap.Int("error_count", len(errors)))
-	
+
 	return connectErr
 }
 
@@ -372,33 +381,33 @@ func (h *RPCHandler) makeCriticalGraphQLError(errors []GraphQLError, httpStatus 
 func (h *RPCHandler) makePartialGraphQLError(errors []GraphQLError, data json.RawMessage, httpStatus int) error {
 	// Serialize errors to JSON for metadata
 	errorsJSON, _ := json.Marshal(errors)
-	
+
 	// Compact the partial data JSON to remove whitespace
 	var compactData bytes.Buffer
 	if err := json.Compact(&compactData, data); err == nil {
 		data = compactData.Bytes()
 	}
-	
-	// Create Connect error with NON-CRITICAL classification
+
+	// Create Connect error with PARTIAL classification
 	connectErr := connect.NewError(
 		connect.CodeUnknown, // Use Unknown for partial failures
 		fmt.Errorf("GraphQL partial success with errors"),
 	)
-	connectErr.Meta().Set(MetaKeyErrorClassification, ErrorClassificationNonCritical)
+	connectErr.Meta().Set(MetaKeyErrorClassification, ErrorClassificationPartial)
 	connectErr.Meta().Set(MetaKeyGraphQLErrors, string(errorsJSON))
 	connectErr.Meta().Set(MetaKeyGraphQLPartialData, string(data))
 	connectErr.Meta().Set(MetaKeyHTTPStatus, fmt.Sprintf("%d", httpStatus))
-	
-	// Log warning for partial success
+
+	// Log info for partial success (this is a valid GraphQL pattern)
 	var errorMessages []string
 	for _, gqlErr := range errors {
 		errorMessages = append(errorMessages, gqlErr.Message)
 	}
-	h.logger.Warn("NON-CRITICAL GraphQL errors - partial data returned",
+	h.logger.Info("PARTIAL GraphQL response - data returned with field errors",
 		zap.Strings("error_messages", errorMessages),
 		zap.Int("error_count", len(errors)),
 		zap.Bool("has_partial_data", true))
-	
+
 	return connectErr
 }
 
@@ -410,13 +419,13 @@ func (h *RPCHandler) executeGraphQL(ctx context.Context, query string, variables
 		Variables: variables,
 	}
 
-	requestBody, err := json.Marshal(graphqlRequest)
-	if err != nil {
+	var requestBody bytes.Buffer
+	if err := json.NewEncoder(&requestBody).Encode(graphqlRequest); err != nil {
 		return nil, fmt.Errorf("failed to marshal GraphQL request: %w", err)
 	}
 
 	// Create HTTP request
-	req, err := http.NewRequestWithContext(ctx, "POST", h.graphqlEndpoint, bytes.NewReader(requestBody))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, h.graphqlEndpoint, &requestBody)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP request: %w", err)
 	}
@@ -428,7 +437,7 @@ func (h *RPCHandler) executeGraphQL(ctx context.Context, query string, variables
 	} else {
 		// Copy headers, skipping those that shouldn't be forwarded
 		for key, values := range headers {
-			if _, skip := skippedHeaders[key]; skip {
+			if _, skip := httputil.SkippedHeaders[key]; skip {
 				continue
 			}
 			for _, value := range values {
@@ -458,18 +467,18 @@ func (h *RPCHandler) executeGraphQL(ctx context.Context, query string, variables
 	if resp.StatusCode != http.StatusOK {
 		// Map HTTP status to Connect error code
 		code := httpStatusToConnectCode(resp.StatusCode)
-		
+
 		// Create Connect error with metadata
 		connectErr := connect.NewError(code, fmt.Errorf("GraphQL request failed with HTTP %d", resp.StatusCode))
 		connectErr.Meta().Set(MetaKeyErrorClassification, ErrorClassificationCritical)
 		connectErr.Meta().Set(MetaKeyHTTPStatus, fmt.Sprintf("%d", resp.StatusCode))
 		connectErr.Meta().Set(MetaKeyHTTPResponseBody, string(responseBody))
-		
+
 		h.logger.Error("HTTP error from GraphQL endpoint",
 			zap.Int("status_code", resp.StatusCode),
 			zap.String("connect_code", code.String()),
 			zap.String("response_body", string(responseBody)))
-		
+
 		return nil, connectErr
 	}
 
@@ -477,21 +486,23 @@ func (h *RPCHandler) executeGraphQL(ctx context.Context, query string, variables
 	var graphqlResponse GraphQLResponse
 	if err := json.Unmarshal(responseBody, &graphqlResponse); err != nil {
 		// If we can't parse it, return the raw response (backward compatibility)
-		h.logger.Warn("failed to parse GraphQL response", zap.Error(err))
-		return responseBody, nil
+		h.logger.Error("failed to parse GraphQL response",
+			zap.Error(err),
+			zap.String("response_body", string(responseBody)))
+		return nil, connect.NewError(connect.CodeInternal, ErrInternalServer)
 	}
 
 	// Check if we have GraphQL errors
 	if len(graphqlResponse.Errors) > 0 {
-		// Determine if this is CRITICAL or NON-CRITICAL based on data presence
+		// Determine if this is CRITICAL or PARTIAL based on data presence
 		hasData := len(graphqlResponse.Data) > 0 && string(graphqlResponse.Data) != "null" && string(graphqlResponse.Data) != "{}"
-		
+
 		if !hasData {
 			// CRITICAL: Errors with no data - complete failure
 			return nil, h.makeCriticalGraphQLError(graphqlResponse.Errors, resp.StatusCode)
 		}
-		
-		// NON-CRITICAL: Errors with partial data - partial success
+
+		// PARTIAL: Errors with partial data - partial success
 		return nil, h.makePartialGraphQLError(graphqlResponse.Errors, graphqlResponse.Data, resp.StatusCode)
 	}
 
@@ -503,23 +514,9 @@ func (h *RPCHandler) executeGraphQL(ctx context.Context, query string, variables
 	}
 
 	// Edge case: No errors but also no data (empty response)
-	// Return empty object for backward compatibility
+	// Return empty object to ensure valid JSON for proto unmarshaling
+	// The caller (vanguard_service.go) expects non-nil JSON bytes
 	return []byte("{}"), nil
-}
-
-// Reload reloads the handler's dependencies
-// NOTE: This method is deprecated and will be removed.
-// Operations should be reloaded per-service using LoadOperationsForService.
-func (h *RPCHandler) Reload(operationsDir string) error {
-	if h.operationRegistry == nil {
-		return fmt.Errorf("operation registry is nil")
-	}
-
-	// This method is no longer functional with service-scoped operations
-	// Operations must be loaded per service using LoadOperationsForService
-	h.logger.Warn("Reload() is deprecated - operations must be loaded per service")
-	
-	return nil
 }
 
 // GetOperationCount returns the number of operations available
@@ -532,15 +529,15 @@ func (h *RPCHandler) GetOperationCount() int {
 
 // GetOperations returns information about available operations.
 // The returned data should be treated as read-only.
-func (h *RPCHandler) GetOperations() interface{} {
+func (h *RPCHandler) GetOperations() any {
 	if h.operationRegistry == nil {
 		return nil
 	}
 	return h.operationRegistry.GetAllOperations()
 }
 
-// ValidateOperation checks if an operation is available for a specific service
-func (h *RPCHandler) ValidateOperation(serviceName, methodName string) error {
+// VerifyOperationExists checks if an operation is available for a specific service
+func (h *RPCHandler) VerifyOperationExists(serviceName, methodName string) error {
 	if h.operationRegistry == nil {
 		return fmt.Errorf("operation registry is not initialized")
 	}
@@ -551,7 +548,7 @@ func (h *RPCHandler) ValidateOperation(serviceName, methodName string) error {
 }
 
 // GetOperationInfo returns detailed information about a specific operation for a service
-func (h *RPCHandler) GetOperationInfo(serviceName, methodName string) (interface{}, error) {
+func (h *RPCHandler) GetOperationInfo(serviceName, methodName string) (any, error) {
 	if h.operationRegistry == nil {
 		return nil, fmt.Errorf("operation registry is not initialized")
 	}

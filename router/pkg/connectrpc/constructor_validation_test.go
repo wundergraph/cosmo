@@ -9,8 +9,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// TestConstructorValidation consolidates all constructor validation tests
-// from handler_test.go, server_test.go, and vanguard_service_test.go
+// TestConstructorValidation verifies that constructors reject invalid configurations
 func TestConstructorValidation(t *testing.T) {
 	t.Parallel()
 
@@ -19,13 +18,13 @@ func TestConstructorValidation(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		constructor func() (interface{}, error)
+		constructor func() (any, error)
 		wantErr     string
 	}{
 		// RPCHandler validation
 		{
 			name: "RPCHandler: empty graphql endpoint",
-			constructor: func() (interface{}, error) {
+			constructor: func() (any, error) {
 				return NewRPCHandler(HandlerConfig{
 					HTTPClient:        httpClient,
 					Logger:            logger,
@@ -37,7 +36,7 @@ func TestConstructorValidation(t *testing.T) {
 		},
 		{
 			name: "RPCHandler: nil http client",
-			constructor: func() (interface{}, error) {
+			constructor: func() (any, error) {
 				return NewRPCHandler(HandlerConfig{
 					GraphQLEndpoint:   "http://localhost:4000/graphql",
 					Logger:            logger,
@@ -48,8 +47,21 @@ func TestConstructorValidation(t *testing.T) {
 			wantErr: "http client cannot be nil",
 		},
 		{
+			name: "RPCHandler: nil logger",
+			constructor: func() (any, error) {
+				return NewRPCHandler(HandlerConfig{
+					GraphQLEndpoint:   "http://localhost:4000/graphql",
+					HTTPClient:        httpClient,
+					Logger:            nil,
+					OperationRegistry: NewOperationRegistry(logger),
+					ProtoLoader:       NewProtoLoader(logger),
+				})
+			},
+			wantErr: "logger is required",
+		},
+		{
 			name: "RPCHandler: missing operation registry",
-			constructor: func() (interface{}, error) {
+			constructor: func() (any, error) {
 				return NewRPCHandler(HandlerConfig{
 					GraphQLEndpoint: "http://localhost:4000/graphql",
 					HTTPClient:      httpClient,
@@ -61,7 +73,7 @@ func TestConstructorValidation(t *testing.T) {
 		},
 		{
 			name: "RPCHandler: missing proto loader",
-			constructor: func() (interface{}, error) {
+			constructor: func() (any, error) {
 				return NewRPCHandler(HandlerConfig{
 					GraphQLEndpoint:   "http://localhost:4000/graphql",
 					HTTPClient:        httpClient,
@@ -75,18 +87,31 @@ func TestConstructorValidation(t *testing.T) {
 		// Server validation
 		{
 			name: "Server: empty services directory",
-			constructor: func() (interface{}, error) {
+			constructor: func() (any, error) {
 				return NewServer(ServerConfig{
 					GraphQLEndpoint: "http://localhost:4000/graphql",
+					Logger:          logger,
 				})
 			},
 			wantErr: "services directory must be provided",
 		},
 		{
+			name: "Server: nil logger",
+			constructor: func() (any, error) {
+				return NewServer(ServerConfig{
+					ServicesDir:     "samples/services",
+					GraphQLEndpoint: "http://localhost:4000/graphql",
+					Logger:          nil,
+				})
+			},
+			wantErr: "logger is required",
+		},
+		{
 			name: "Server: empty graphql endpoint",
-			constructor: func() (interface{}, error) {
+			constructor: func() (any, error) {
 				return NewServer(ServerConfig{
 					ServicesDir: "samples/services",
+					Logger:      logger,
 				})
 			},
 			wantErr: "graphql endpoint cannot be empty",
@@ -95,9 +120,12 @@ func TestConstructorValidation(t *testing.T) {
 		// VanguardService validation
 		{
 			name: "VanguardService: nil handler",
-			constructor: func() (interface{}, error) {
+			constructor: func() (any, error) {
 				protoLoader := NewProtoLoader(logger)
-				_ = protoLoader.LoadFromDirectory("samples/services/employee.v1")
+				err := protoLoader.LoadFromDirectory("samples/services/employee.v1")
+				if err != nil {
+					return nil, err
+				}
 				return NewVanguardService(VanguardServiceConfig{
 					Handler:     nil,
 					ProtoLoader: protoLoader,
@@ -108,7 +136,7 @@ func TestConstructorValidation(t *testing.T) {
 		},
 		{
 			name: "VanguardService: nil proto loader",
-			constructor: func() (interface{}, error) {
+			constructor: func() (any, error) {
 				return NewVanguardService(VanguardServiceConfig{
 					Handler:     &RPCHandler{},
 					ProtoLoader: nil,
@@ -119,7 +147,7 @@ func TestConstructorValidation(t *testing.T) {
 		},
 		{
 			name: "VanguardService: no proto services",
-			constructor: func() (interface{}, error) {
+			constructor: func() (any, error) {
 				protoLoader := NewProtoLoader(logger)
 				return NewVanguardService(VanguardServiceConfig{
 					Handler:     &RPCHandler{},
@@ -149,6 +177,7 @@ func TestConstructorDefaults(t *testing.T) {
 		handler, err := NewRPCHandler(HandlerConfig{
 			GraphQLEndpoint:   "localhost:4000/graphql",
 			HTTPClient:        &http.Client{},
+			Logger:            zap.NewNop(),
 			OperationRegistry: NewOperationRegistry(zap.NewNop()),
 			ProtoLoader:       NewProtoLoader(zap.NewNop()),
 		})
@@ -161,6 +190,7 @@ func TestConstructorDefaults(t *testing.T) {
 		server, err := NewServer(ServerConfig{
 			ServicesDir:     "samples/services",
 			GraphQLEndpoint: "localhost:4000/graphql",
+			Logger:          zap.NewNop(),
 		})
 
 		require.NoError(t, err)
@@ -171,6 +201,7 @@ func TestConstructorDefaults(t *testing.T) {
 		server, err := NewServer(ServerConfig{
 			ServicesDir:     "samples/services",
 			GraphQLEndpoint: "http://localhost:4000/graphql",
+			Logger:          zap.NewNop(),
 		})
 
 		require.NoError(t, err)

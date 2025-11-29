@@ -9,8 +9,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
 	"go.uber.org/zap"
+
+	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
 )
 
 // errorRoundTripper simulates network/transport errors
@@ -26,7 +27,7 @@ func TestNewRPCHandler(t *testing.T) {
 	logger := zap.NewNop()
 	httpClient := &http.Client{}
 
-	t.Run("creates handler with valid config", func(t *testing.T) {
+	t.Run("should create handler with valid config", func(t *testing.T) {
 		operationRegistry := NewOperationRegistry(logger)
 		protoLoader := NewProtoLoader(logger)
 
@@ -43,7 +44,7 @@ func TestNewRPCHandler(t *testing.T) {
 		assert.Equal(t, "http://localhost:4000/graphql", handler.graphqlEndpoint)
 	})
 
-	t.Run("adds protocol to endpoint if missing", func(t *testing.T) {
+	t.Run("should add protocol to endpoint if missing", func(t *testing.T) {
 		operationRegistry := NewOperationRegistry(logger)
 		protoLoader := NewProtoLoader(logger)
 
@@ -59,7 +60,7 @@ func TestNewRPCHandler(t *testing.T) {
 		assert.Equal(t, "http://localhost:4000/graphql", handler.graphqlEndpoint)
 	})
 
-	t.Run("returns error when graphql endpoint is empty", func(t *testing.T) {
+	t.Run("should return error when graphql endpoint is empty", func(t *testing.T) {
 		handler, err := NewRPCHandler(HandlerConfig{
 			HTTPClient: httpClient,
 			Logger:     logger,
@@ -67,10 +68,10 @@ func TestNewRPCHandler(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Nil(t, handler)
-		assert.Contains(t, err.Error(), "graphql endpoint cannot be empty")
+		assert.ErrorContains(t, err, "graphql endpoint cannot be empty")
 	})
 
-	t.Run("returns error when http client is nil", func(t *testing.T) {
+	t.Run("should return error when http client is nil", func(t *testing.T) {
 		handler, err := NewRPCHandler(HandlerConfig{
 			GraphQLEndpoint: "http://localhost:4000/graphql",
 			Logger:          logger,
@@ -78,10 +79,10 @@ func TestNewRPCHandler(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Nil(t, handler)
-		assert.Contains(t, err.Error(), "http client cannot be nil")
+		assert.ErrorContains(t, err, "http client cannot be nil")
 	})
 
-	t.Run("returns error when operation registry is missing", func(t *testing.T) {
+	t.Run("should return error when operation registry is missing", func(t *testing.T) {
 		handler, err := NewRPCHandler(HandlerConfig{
 			GraphQLEndpoint: "http://localhost:4000/graphql",
 			HTTPClient:      httpClient,
@@ -90,10 +91,10 @@ func TestNewRPCHandler(t *testing.T) {
 
 		assert.Error(t, err)
 		assert.Nil(t, handler)
-		assert.Contains(t, err.Error(), "operation registry is required")
+		assert.ErrorContains(t, err, "operation registry is required")
 	})
 
-	t.Run("uses nop logger when logger is nil", func(t *testing.T) {
+	t.Run("should return error when logger is nil", func(t *testing.T) {
 		operationRegistry := NewOperationRegistry(logger)
 		protoLoader := NewProtoLoader(logger)
 
@@ -102,10 +103,12 @@ func TestNewRPCHandler(t *testing.T) {
 			HTTPClient:        httpClient,
 			OperationRegistry: operationRegistry,
 			ProtoLoader:       protoLoader,
+			Logger:            nil,
 		})
 
-		require.NoError(t, err)
-		assert.NotNil(t, handler.logger)
+		assert.Error(t, err)
+		assert.Nil(t, handler)
+		assert.ErrorContains(t, err, "logger is required")
 	})
 }
 
@@ -128,7 +131,7 @@ func TestHandleRPC(t *testing.T) {
 		},
 	}
 
-	t.Run("successfully handles RPC request", func(t *testing.T) {
+	t.Run("should successfully handle RPC request", func(t *testing.T) {
 		graphqlResponse := `{"data":{"getUser":{"id":1,"name":"Jane Doe"}}}`
 		httpClient := MockHTTPClient(http.StatusOK, graphqlResponse)
 		protoLoader := NewProtoLoader(logger)
@@ -154,7 +157,7 @@ func TestHandleRPC(t *testing.T) {
 		assert.Contains(t, string(responseJSON), "Jane Doe")
 	})
 
-	t.Run("returns error for non-existent operation", func(t *testing.T) {
+	t.Run("should return error for non-existent operation", func(t *testing.T) {
 		httpClient := MockHTTPClient(http.StatusOK, `{"data":{}}`)
 		protoLoader := NewProtoLoader(logger)
 
@@ -173,107 +176,78 @@ func TestHandleRPC(t *testing.T) {
 		_, err = handler.HandleRPC(ctx, serviceName, "NonExistentOperation", requestJSON)
 
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "operation not found")
+		assert.ErrorContains(t, err, "operation not found")
 	})
 }
 
-// TestExecuteGraphQL_ForwardsHeadersFromContext tests that headers are properly forwarded from context
-func TestExecuteGraphQL_ForwardsHeadersFromContext(t *testing.T) {
+func TestExecuteGraphQL(t *testing.T) {
 	logger := zap.NewNop()
 	operationRegistry := NewOperationRegistry(logger)
 
-	t.Run("forwards headers from context", func(t *testing.T) {
-		// Create a test server to verify headers
-		var receivedHeaders http.Header
-		testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			receivedHeaders = r.Header
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"data":{}}`))
-		}))
-		defer testServer.Close()
+	t.Run("forwarding headers from context", func(t *testing.T) {
+		t.Run("should forward listed headers", func(t *testing.T) {
+			// Create a test server to verify headers
+			var receivedHeaders http.Header
+			testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				receivedHeaders = r.Header
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(`{"data":{}}`))
+			}))
+			defer testServer.Close()
 
-		protoLoader := NewProtoLoader(logger)
-		handler, err := NewRPCHandler(HandlerConfig{
-			GraphQLEndpoint:   testServer.URL,
-			HTTPClient:        &http.Client{},
-			Logger:            logger,
-			OperationRegistry: operationRegistry,
-			ProtoLoader:       protoLoader,
+			protoLoader := NewProtoLoader(logger)
+			handler, err := NewRPCHandler(HandlerConfig{
+				GraphQLEndpoint:   testServer.URL,
+				HTTPClient:        &http.Client{},
+				Logger:            logger,
+				OperationRegistry: operationRegistry,
+				ProtoLoader:       protoLoader,
+			})
+			require.NoError(t, err)
+
+			ctx := withRequestHeaders(context.Background(), http.Header{
+				"Authorization":  []string{"Bearer token123"},
+				"X-Custom":       []string{"custom-value"},
+				"Content-Length": []string{"100"}, // Should be skipped
+			})
+
+			query := "query { user { id } }"
+			_, err = handler.executeGraphQL(ctx, query, nil)
+
+			require.NoError(t, err)
+			assert.Equal(t, "Bearer token123", receivedHeaders.Get("Authorization"))
+			assert.Equal(t, "custom-value", receivedHeaders.Get("X-Custom"))
+			// Content-Length is set by the HTTP client, not forwarded from context
+			assert.Equal(t, "application/json; charset=utf-8", receivedHeaders.Get("Content-Type"))
 		})
-		require.NoError(t, err)
-
-		ctx := withRequestHeaders(context.Background(), http.Header{
-			"Authorization":  []string{"Bearer token123"},
-			"X-Custom":       []string{"custom-value"},
-			"Content-Length": []string{"100"}, // Should be skipped
-		})
-
-		query := "query { user { id } }"
-		_, err = handler.executeGraphQL(ctx, query, nil)
-
-		require.NoError(t, err)
-		assert.Equal(t, "Bearer token123", receivedHeaders.Get("Authorization"))
-		assert.Equal(t, "custom-value", receivedHeaders.Get("X-Custom"))
-		// Content-Length is set by the HTTP client, not forwarded from context
-		assert.Equal(t, "application/json; charset=utf-8", receivedHeaders.Get("Content-Type"))
 	})
-}
 
-// TestExecuteGraphQL_HTTPTransportError tests handling of network/transport-level errors
-func TestExecuteGraphQL_HTTPTransportError(t *testing.T) {
-	logger := zap.NewNop()
-	operationRegistry := NewOperationRegistry(logger)
+	t.Run("handling HTTP transport errors", func(t *testing.T) {
+		t.Run("should handle network connection error", func(t *testing.T) {
+			// Create a client that simulates a network error
+			httpClient := &http.Client{
+				Transport: &errorRoundTripper{
+					err: io.ErrUnexpectedEOF,
+				},
+			}
 
-	t.Run("handles network connection error", func(t *testing.T) {
-		// Create a client that simulates a network error
-		httpClient := &http.Client{
-			Transport: &errorRoundTripper{
-				err: io.ErrUnexpectedEOF,
-			},
-		}
+			protoLoader := NewProtoLoader(logger)
+			handler, err := NewRPCHandler(HandlerConfig{
+				GraphQLEndpoint:   "http://localhost:4000/graphql",
+				HTTPClient:        httpClient,
+				Logger:            logger,
+				OperationRegistry: operationRegistry,
+				ProtoLoader:       protoLoader,
+			})
+			require.NoError(t, err)
 
-		protoLoader := NewProtoLoader(logger)
-		handler, err := NewRPCHandler(HandlerConfig{
-			GraphQLEndpoint:   "http://localhost:4000/graphql",
-			HTTPClient:        httpClient,
-			Logger:            logger,
-			OperationRegistry: operationRegistry,
-			ProtoLoader:       protoLoader,
+			ctx := context.Background()
+			_, err = handler.executeGraphQL(ctx, "query { test }", nil)
+
+			// Should return an error (not a Connect error, just a regular error)
+			require.Error(t, err)
+			assert.ErrorContains(t, err, "failed to execute HTTP request")
 		})
-		require.NoError(t, err)
-
-		ctx := context.Background()
-		_, err = handler.executeGraphQL(ctx, "query { test }", nil)
-
-		// Should return an error (not a Connect error, just a regular error)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to execute HTTP request")
-	})
-}
-
-func TestReload(t *testing.T) {
-	logger := zap.NewNop()
-
-	t.Run("reloads operations", func(t *testing.T) {
-		operationRegistry := NewOperationRegistry(logger)
-		httpClient := &http.Client{}
-
-		protoLoader := NewProtoLoader(logger)
-		handler, err := NewRPCHandler(HandlerConfig{
-			GraphQLEndpoint:   "http://localhost:4000/graphql",
-			HTTPClient:        httpClient,
-			Logger:            logger,
-			OperationRegistry: operationRegistry,
-			ProtoLoader:       protoLoader,
-		})
-		require.NoError(t, err)
-
-		// Initial count should be 0
-		assert.Equal(t, 0, handler.GetOperationCount())
-
-		// Reload should not error even with empty directory
-		err = handler.Reload("")
-		assert.NoError(t, err)
 	})
 }
 
@@ -281,7 +255,7 @@ func TestGetOperationCount(t *testing.T) {
 	logger := zap.NewNop()
 	httpClient := &http.Client{}
 
-	t.Run("returns count", func(t *testing.T) {
+	t.Run("should return operation count", func(t *testing.T) {
 		operationRegistry := NewOperationRegistry(logger)
 		// Service-scoped operations
 		operationRegistry.operations = map[string]map[string]*schemaloader.Operation{
@@ -308,11 +282,11 @@ func TestGetOperationCount(t *testing.T) {
 	})
 }
 
-func TestValidateOperation(t *testing.T) {
+func TestVerifyOperationExists(t *testing.T) {
 	logger := zap.NewNop()
 	httpClient := &http.Client{}
 
-	t.Run("validates operation", func(t *testing.T) {
+	t.Run("should verify operation exists", func(t *testing.T) {
 		operationRegistry := NewOperationRegistry(logger)
 		serviceName := "user.v1.UserService"
 		operationRegistry.operations = map[string]map[string]*schemaloader.Operation{
@@ -331,10 +305,10 @@ func TestValidateOperation(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		err = handler.ValidateOperation(serviceName, "QueryGetUser")
+		err = handler.VerifyOperationExists(serviceName, "QueryGetUser")
 		assert.NoError(t, err)
 
-		err = handler.ValidateOperation(serviceName, "NonExistent")
+		err = handler.VerifyOperationExists(serviceName, "NonExistent")
 		assert.Error(t, err)
 	})
 }
@@ -354,15 +328,15 @@ func TestConvertProtoJSONToGraphQLVariables(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	t.Run("converts top-level snake_case keys to camelCase", func(t *testing.T) {
+	t.Run("should convert top-level snake_case keys to camelCase", func(t *testing.T) {
 		protoJSON := []byte(`{"user_id": 123, "first_name": "John"}`)
 		result, err := handler.convertProtoJSONToGraphQLVariables(protoJSON)
-		
+
 		require.NoError(t, err)
 		assert.JSONEq(t, `{"userId": 123, "firstName": "John"}`, string(result))
 	})
 
-	t.Run("converts nested object keys recursively", func(t *testing.T) {
+	t.Run("should convert nested object keys recursively", func(t *testing.T) {
 		protoJSON := []byte(`{
 			"user_id": 123,
 			"user_profile": {
@@ -375,7 +349,7 @@ func TestConvertProtoJSONToGraphQLVariables(t *testing.T) {
 			}
 		}`)
 		result, err := handler.convertProtoJSONToGraphQLVariables(protoJSON)
-		
+
 		require.NoError(t, err)
 		expected := `{
 			"userId": 123,
@@ -391,7 +365,7 @@ func TestConvertProtoJSONToGraphQLVariables(t *testing.T) {
 		assert.JSONEq(t, expected, string(result))
 	})
 
-	t.Run("converts keys in arrays of objects", func(t *testing.T) {
+	t.Run("should convert keys in arrays of objects", func(t *testing.T) {
 		protoJSON := []byte(`{
 			"user_list": [
 				{"user_id": 1, "first_name": "Alice"},
@@ -399,7 +373,7 @@ func TestConvertProtoJSONToGraphQLVariables(t *testing.T) {
 			]
 		}`)
 		result, err := handler.convertProtoJSONToGraphQLVariables(protoJSON)
-		
+
 		require.NoError(t, err)
 		expected := `{
 			"userList": [
@@ -410,7 +384,7 @@ func TestConvertProtoJSONToGraphQLVariables(t *testing.T) {
 		assert.JSONEq(t, expected, string(result))
 	})
 
-	t.Run("handles nested arrays with objects", func(t *testing.T) {
+	t.Run("should handle nested arrays with objects", func(t *testing.T) {
 		protoJSON := []byte(`{
 			"department_list": [
 				{
@@ -423,7 +397,7 @@ func TestConvertProtoJSONToGraphQLVariables(t *testing.T) {
 			]
 		}`)
 		result, err := handler.convertProtoJSONToGraphQLVariables(protoJSON)
-		
+
 		require.NoError(t, err)
 		expected := `{
 			"departmentList": [
@@ -439,14 +413,14 @@ func TestConvertProtoJSONToGraphQLVariables(t *testing.T) {
 		assert.JSONEq(t, expected, string(result))
 	})
 
-	t.Run("preserves primitive values in arrays", func(t *testing.T) {
+	t.Run("should preserve primitive values in arrays", func(t *testing.T) {
 		protoJSON := []byte(`{
 			"tag_list": ["tag1", "tag2", "tag3"],
 			"id_list": [1, 2, 3],
 			"flag_list": [true, false, true]
 		}`)
 		result, err := handler.convertProtoJSONToGraphQLVariables(protoJSON)
-		
+
 		require.NoError(t, err)
 		expected := `{
 			"tagList": ["tag1", "tag2", "tag3"],
@@ -456,7 +430,7 @@ func TestConvertProtoJSONToGraphQLVariables(t *testing.T) {
 		assert.JSONEq(t, expected, string(result))
 	})
 
-	t.Run("handles empty objects and arrays", func(t *testing.T) {
+	t.Run("should handle empty objects and arrays", func(t *testing.T) {
 		protoJSON := []byte(`{
 			"empty_object": {},
 			"empty_array": [],
@@ -465,7 +439,7 @@ func TestConvertProtoJSONToGraphQLVariables(t *testing.T) {
 			}
 		}`)
 		result, err := handler.convertProtoJSONToGraphQLVariables(protoJSON)
-		
+
 		require.NoError(t, err)
 		expected := `{
 			"emptyObject": {},
@@ -477,14 +451,14 @@ func TestConvertProtoJSONToGraphQLVariables(t *testing.T) {
 		assert.JSONEq(t, expected, string(result))
 	})
 
-	t.Run("handles null values", func(t *testing.T) {
+	t.Run("should handle null values", func(t *testing.T) {
 		protoJSON := []byte(`{
 			"user_id": 123,
 			"middle_name": null,
 			"optional_field": null
 		}`)
 		result, err := handler.convertProtoJSONToGraphQLVariables(protoJSON)
-		
+
 		require.NoError(t, err)
 		expected := `{
 			"userId": 123,
@@ -494,15 +468,15 @@ func TestConvertProtoJSONToGraphQLVariables(t *testing.T) {
 		assert.JSONEq(t, expected, string(result))
 	})
 
-	t.Run("handles empty JSON input", func(t *testing.T) {
+	t.Run("should handle empty JSON input", func(t *testing.T) {
 		protoJSON := []byte(``)
 		result, err := handler.convertProtoJSONToGraphQLVariables(protoJSON)
-		
+
 		require.NoError(t, err)
 		assert.JSONEq(t, `{}`, string(result))
 	})
 
-	t.Run("preserves keys without underscores", func(t *testing.T) {
+	t.Run("should preserve keys without underscores", func(t *testing.T) {
 		protoJSON := []byte(`{
 			"id": 123,
 			"name": "John",
@@ -511,7 +485,7 @@ func TestConvertProtoJSONToGraphQLVariables(t *testing.T) {
 			}
 		}`)
 		result, err := handler.convertProtoJSONToGraphQLVariables(protoJSON)
-		
+
 		require.NoError(t, err)
 		expected := `{
 			"id": 123,
@@ -525,31 +499,31 @@ func TestConvertProtoJSONToGraphQLVariables(t *testing.T) {
 }
 
 func TestConvertKeysRecursive(t *testing.T) {
-	t.Run("converts map keys", func(t *testing.T) {
-		input := map[string]interface{}{
+	t.Run("should convert map keys", func(t *testing.T) {
+		input := map[string]any{
 			"user_id":    123,
 			"first_name": "John",
 		}
 		result := convertKeysRecursive(input)
-		
-		expected := map[string]interface{}{
+
+		expected := map[string]any{
 			"userId":    123,
 			"firstName": "John",
 		}
 		assert.Equal(t, expected, result)
 	})
 
-	t.Run("converts nested maps", func(t *testing.T) {
-		input := map[string]interface{}{
-			"user_data": map[string]interface{}{
+	t.Run("should convert nested maps", func(t *testing.T) {
+		input := map[string]any{
+			"user_data": map[string]any{
 				"first_name": "John",
 				"last_name":  "Doe",
 			},
 		}
 		result := convertKeysRecursive(input)
-		
-		expected := map[string]interface{}{
-			"userData": map[string]interface{}{
+
+		expected := map[string]any{
+			"userData": map[string]any{
 				"firstName": "John",
 				"lastName":  "Doe",
 			},
@@ -557,21 +531,21 @@ func TestConvertKeysRecursive(t *testing.T) {
 		assert.Equal(t, expected, result)
 	})
 
-	t.Run("converts arrays of maps", func(t *testing.T) {
-		input := []interface{}{
-			map[string]interface{}{"user_id": 1},
-			map[string]interface{}{"user_id": 2},
+	t.Run("should convert arrays of maps", func(t *testing.T) {
+		input := []any{
+			map[string]any{"user_id": 1},
+			map[string]any{"user_id": 2},
 		}
 		result := convertKeysRecursive(input)
-		
-		expected := []interface{}{
-			map[string]interface{}{"userId": 1},
-			map[string]interface{}{"userId": 2},
+
+		expected := []any{
+			map[string]any{"userId": 1},
+			map[string]any{"userId": 2},
 		}
 		assert.Equal(t, expected, result)
 	})
 
-	t.Run("preserves primitive values", func(t *testing.T) {
+	t.Run("should preserve primitive values", func(t *testing.T) {
 		assert.Equal(t, 123, convertKeysRecursive(123))
 		assert.Equal(t, "test", convertKeysRecursive("test"))
 		assert.Equal(t, true, convertKeysRecursive(true))

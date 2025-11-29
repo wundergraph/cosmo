@@ -9,8 +9,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
 	"go.uber.org/zap"
+
+	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
 )
 
 // Shared proto loader to avoid registration conflicts across tests
@@ -23,18 +24,18 @@ var (
 // This ensures proto files are loaded exactly once per directory to avoid registration conflicts.
 func GetSharedProtoLoader(t *testing.T, dir string) *ProtoLoader {
 	t.Helper()
-	
+
 	sharedProtoLoaderMutex.Lock()
 	defer sharedProtoLoaderMutex.Unlock()
-	
+
 	if loader, exists := sharedProtoLoaders[dir]; exists {
 		return loader
 	}
-	
+
 	loader := NewProtoLoader(zap.NewNop())
 	err := loader.LoadFromDirectory(dir)
 	require.NoError(t, err, "failed to load proto files from %s", dir)
-	
+
 	sharedProtoLoaders[dir] = loader
 	return loader
 }
@@ -50,13 +51,13 @@ func NewMockGraphQLServer(responseBody string) *MockGraphQLServer {
 	server := &MockGraphQLServer{
 		ResponseBody: responseBody,
 	}
-	
+
 	server.Server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(server.ResponseBody))
 	}))
-	
+
 	return server
 }
 
@@ -86,10 +87,10 @@ func (m *mockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 // NewTestRPCHandler creates a test RPC handler with sensible defaults
 func NewTestRPCHandler(t *testing.T, protoLoader *ProtoLoader) *RPCHandler {
 	t.Helper()
-	
+
 	// Create operation registry
 	opRegistry := NewOperationRegistry(zap.NewNop())
-	
+
 	// Manually add test operations to the registry using service-scoped approach
 	serviceName := "employee.v1.EmployeeService"
 	if opRegistry.operations[serviceName] == nil {
@@ -100,7 +101,7 @@ func NewTestRPCHandler(t *testing.T, protoLoader *ProtoLoader) *RPCHandler {
 		OperationType:   "query",
 		OperationString: "query GetEmployeeById($id: Int!) { employee(id: $id) { id name } }",
 	}
-	
+
 	handler, err := NewRPCHandler(HandlerConfig{
 		GraphQLEndpoint:   "http://localhost:4000/graphql",
 		HTTPClient:        &http.Client{},
@@ -109,6 +110,6 @@ func NewTestRPCHandler(t *testing.T, protoLoader *ProtoLoader) *RPCHandler {
 		ProtoLoader:       protoLoader,
 	})
 	require.NoError(t, err)
-	
+
 	return handler
 }

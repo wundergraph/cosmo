@@ -46,7 +46,7 @@ type Server struct {
 	httpClient        *http.Client
 }
 
-// NewServer creates a new ConnectRPC server
+// NewServer creates a new ConnectRPC server and loads all services
 func NewServer(config ServerConfig) (*Server, error) {
 	// Validate configuration
 	if config.ServicesDir == "" {
@@ -62,7 +62,7 @@ func NewServer(config ServerConfig) (*Server, error) {
 	}
 
 	if config.Logger == nil {
-		config.Logger = zap.NewNop()
+		return nil, fmt.Errorf("logger is required")
 	}
 
 	if config.RequestTimeout == 0 {
@@ -86,96 +86,101 @@ func NewServer(config ServerConfig) (*Server, error) {
 		httpClient: httpClient,
 	}
 
-	return server, nil
-}
-
-// Start initializes and starts the ConnectRPC server
-func (s *Server) Start() error {
-	s.logger.Info("starting ConnectRPC server",
-		zap.String("listen_addr", s.config.ListenAddr),
-		zap.String("services_dir", s.config.ServicesDir),
-		zap.String("graphql_endpoint", s.config.GraphQLEndpoint))
-
 	// Discover services from the services directory
 	discoveredServices, err := DiscoverServices(ServiceDiscoveryConfig{
-		ServicesDir: s.config.ServicesDir,
-		Logger:      s.logger,
+		ServicesDir: config.ServicesDir,
+		Logger:      config.Logger,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to discover services: %w", err)
+		return nil, fmt.Errorf("failed to discover services: %w", err)
 	}
 
-	s.logger.Info("discovered services",
+	server.logger.Info("discovered services",
 		zap.Int("count", len(discoveredServices)))
 
 	// Create proto loader first (needed by handler)
-	s.protoLoader = NewProtoLoader(s.logger)
+	server.protoLoader = NewProtoLoader(server.logger)
 
 	// Initialize components (requires protoLoader to be set)
-	if err := s.initializeComponents(); err != nil {
-		return fmt.Errorf("failed to initialize components: %w", err)
+	if err := server.initializeComponents(); err != nil {
+		return nil, fmt.Errorf("failed to initialize components: %w", err)
 	}
 
 	// Load proto files and operations for each discovered service
 	for _, service := range discoveredServices {
-		s.logger.Info("loading service",
+		server.logger.Info("loading service",
 			zap.String("service", service.FullName),
 			zap.String("dir", service.ServiceDir),
 			zap.Int("proto_files", len(service.ProtoFiles)),
 			zap.Int("operation_files", len(service.OperationFiles)))
 
 		// Load proto files for this service
-		if err := s.protoLoader.LoadFromDirectory(service.ServiceDir); err != nil {
-			return fmt.Errorf("failed to load proto files for service %s: %w", service.FullName, err)
+		if err := server.protoLoader.LoadFromDirectory(service.ServiceDir); err != nil {
+			return nil, fmt.Errorf("failed to load proto files for service %s: %w", service.FullName, err)
 		}
 
 		// Load operations for this service
 		if len(service.OperationFiles) > 0 {
-			if err := s.operationRegistry.LoadOperationsForService(service.FullName, service.OperationFiles); err != nil {
-				return fmt.Errorf("failed to load operations for service %s: %w", service.FullName, err)
+			if err := server.operationRegistry.LoadOperationsForService(service.FullName, service.OperationFiles); err != nil {
+				return nil, fmt.Errorf("failed to load operations for service %s: %w", service.FullName, err)
 			}
-			s.logger.Info("loaded operations for service",
+			server.logger.Info("loaded operations for service",
 				zap.String("service", service.FullName),
-				zap.Int("count", s.operationRegistry.CountForService(service.FullName)))
+				zap.Int("count", server.operationRegistry.CountForService(service.FullName)))
 		} else {
-			s.logger.Warn("no operations found for service",
+			server.logger.Warn("no operations found for service",
 				zap.String("service", service.FullName))
 		}
 	}
 
-	protoServices := s.protoLoader.GetServices()
-	s.logger.Info("loaded all proto services",
+	protoServices := server.protoLoader.GetServices()
+	server.logger.Info("loaded all proto services",
 		zap.Int("count", len(protoServices)))
 
 	// Create service wrapper
 	vanguardService, err := NewVanguardService(VanguardServiceConfig{
-		Handler:     s.rpcHandler,
-		ProtoLoader: s.protoLoader,
-		Logger:      s.logger,
+		Handler:     server.rpcHandler,
+		ProtoLoader: server.protoLoader,
+		Logger:      server.logger,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to create service wrapper: %w", err)
+		return nil, fmt.Errorf("failed to create service wrapper: %w", err)
 	}
-	s.vanguardService = vanguardService
+	server.vanguardService = vanguardService
 
 	// Create protocol transcoder
 	vanguardServices := vanguardService.GetServices()
-	s.logger.Info("creating protocol transcoder",
+	server.logger.Info("creating protocol transcoder",
 		zap.Int("service_count", len(vanguardServices)))
-	
+
 	transcoder, err := vanguard.NewTranscoder(vanguardServices)
 	if err != nil {
-		return fmt.Errorf("failed to create protocol transcoder: %w", err)
+		return nil, fmt.Errorf("failed to create protocol transcoder: %w", err)
 	}
-	s.transcoder = transcoder
-	
-	s.logger.Info("protocol transcoder created successfully",
+	server.transcoder = transcoder
+
+	server.logger.Info("protocol transcoder created successfully",
 		zap.Int("registered_services", len(vanguardServices)))
+
+	return server, nil
+}
+
+// Start starts the HTTP server (services must already be loaded via NewServer)
+func (s *Server) Start() error {
+	s.logger.Info("starting ConnectRPC server",
+		zap.String("listen_addr", s.config.ListenAddr),
+		zap.String("services_dir", s.config.ServicesDir),
+		zap.String("graphql_endpoint", s.config.GraphQLEndpoint))
+
+	// Verify that services have been loaded
+	if s.transcoder == nil {
+		return fmt.Errorf("server not properly initialized - services not loaded")
+	}
 
 	// Create HTTP server with HTTP/2 support
 	handler := s.createHandler()
 	h2cHandler := h2c.NewHandler(handler, &http2.Server{})
-	
+
 	s.httpServer = &http.Server{
 		Addr:         s.config.ListenAddr,
 		Handler:      h2cHandler,
@@ -239,14 +244,19 @@ func (s *Server) Reload() error {
 		return fmt.Errorf("failed to discover services: %w", err)
 	}
 
-	// Reinitialize components
+	// Create a fresh proto loader and clear operation registry before initializing components
+	// This ensures initializeComponents() (and the RPCHandler it constructs) receives the fresh ProtoLoader
+	s.protoLoader = NewProtoLoader(s.logger)
+	if s.operationRegistry != nil {
+		s.operationRegistry.Clear()
+	}
+
+	// Reinitialize components with the fresh proto loader
 	if err := s.initializeComponents(); err != nil {
 		return fmt.Errorf("failed to reinitialize components: %w", err)
 	}
 
-	// Clear and reload proto files and operations for each service
-	s.protoLoader = NewProtoLoader(s.logger)
-	s.operationRegistry.Clear()
+	// Reload proto files and operations for each service
 
 	for _, service := range discoveredServices {
 		// Load proto files for this service
@@ -280,8 +290,9 @@ func (s *Server) Reload() error {
 	}
 	s.transcoder = transcoder
 
-	// Update HTTP server handler
-	s.httpServer.Handler = s.createHandler()
+	// Update HTTP server handler with h2c wrapper for gRPC compatibility
+	handler := s.createHandler()
+	s.httpServer.Handler = h2c.NewHandler(handler, &http2.Server{})
 
 	s.logger.Info("ConnectRPC server reloaded successfully")
 	return nil
@@ -293,7 +304,7 @@ func (s *Server) initializeComponents() error {
 	s.operationRegistry = NewOperationRegistry(s.logger)
 
 	// Create RPC handler
-	// Note: ProtoLoader must be set before calling this during Start()
+	// Note: ProtoLoader must be set before calling this during NewServer()
 	var err error
 	s.rpcHandler, err = NewRPCHandler(HandlerConfig{
 		GraphQLEndpoint:   s.config.GraphQLEndpoint,
@@ -309,14 +320,6 @@ func (s *Server) initializeComponents() error {
 	return nil
 }
 
-// LoadOperations is deprecated and no longer functional.
-// Operations are now automatically loaded during Start() via service discovery.
-// This method is kept for backward compatibility but does nothing.
-func (s *Server) LoadOperations(schemaDoc interface{}) error {
-	s.logger.Warn("LoadOperations is deprecated - operations are now loaded automatically during Start()")
-	return nil
-}
-
 // createHandler creates the HTTP handler
 func (s *Server) createHandler() http.Handler {
 	mux := http.NewServeMux()
@@ -325,11 +328,11 @@ func (s *Server) createHandler() http.Handler {
 	wrappedTranscoder := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Create a response writer that captures the status code and implements required interfaces
 		rw := &responseWriter{ResponseWriter: w, statusCode: 200}
-		
+
 		// The transcoder handles protocol translation and routing
 		s.transcoder.ServeHTTP(rw, r)
 	})
-	
+
 	// Mount transcoder at root
 	mux.Handle("/", wrappedTranscoder)
 
@@ -351,7 +354,6 @@ func (s *Server) GetServiceNames() []string {
 	}
 	return s.vanguardService.GetServiceNames()
 }
-
 
 // responseWriter wraps http.ResponseWriter to capture status code
 // and implements required interfaces for gRPC streaming

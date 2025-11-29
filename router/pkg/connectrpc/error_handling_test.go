@@ -25,42 +25,6 @@ type errorTestCase struct {
 	expectedPartialData   string // JSON string for partial data
 }
 
-// TestHTTPStatusToConnectCode tests the mapping of HTTP status codes to Connect error codes
-func TestHTTPStatusToConnectCode(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name         string
-		httpStatus   int
-		expectedCode connect.Code
-	}{
-		// 4xx Client Errors
-		{"400 Bad Request", http.StatusBadRequest, connect.CodeInvalidArgument},
-		{"401 Unauthorized", http.StatusUnauthorized, connect.CodeUnauthenticated},
-		{"403 Forbidden", http.StatusForbidden, connect.CodePermissionDenied},
-		{"404 Not Found", http.StatusNotFound, connect.CodeNotFound},
-		{"408 Request Timeout", http.StatusRequestTimeout, connect.CodeDeadlineExceeded},
-		{"429 Too Many Requests", http.StatusTooManyRequests, connect.CodeResourceExhausted},
-
-		// 5xx Server Errors
-		{"500 Internal Server Error", http.StatusInternalServerError, connect.CodeInternal},
-		{"501 Not Implemented", http.StatusNotImplemented, connect.CodeUnimplemented},
-		{"503 Service Unavailable", http.StatusServiceUnavailable, connect.CodeUnavailable},
-		{"504 Gateway Timeout", http.StatusGatewayTimeout, connect.CodeDeadlineExceeded},
-
-		// Unknown/Other
-		{"418 I'm a teapot", 418, connect.CodeUnknown},
-		{"599 Custom Error", 599, connect.CodeUnknown},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			code := httpStatusToConnectCode(tt.httpStatus)
-			assert.Equal(t, tt.expectedCode, code)
-		})
-	}
-}
-
 // TestErrorHandling consolidates all error handling tests with shared setup
 func TestErrorHandling(t *testing.T) {
 	t.Parallel()
@@ -184,7 +148,7 @@ func TestErrorHandling(t *testing.T) {
 			expectedConnectCode:   connect.CodeUnknown,
 			expectedErrorContains: "GraphQL partial success with errors",
 			expectedMetadata: map[string]string{
-				MetaKeyErrorClassification: ErrorClassificationNonCritical,
+				MetaKeyErrorClassification: ErrorClassificationPartial,
 			},
 			expectedPartialData: `{
 				"user": {
@@ -226,7 +190,7 @@ func TestErrorHandling(t *testing.T) {
 			expectedConnectCode:   connect.CodeUnknown,
 			expectedErrorContains: "GraphQL partial success with errors",
 			expectedMetadata: map[string]string{
-				MetaKeyErrorClassification: ErrorClassificationNonCritical,
+				MetaKeyErrorClassification: ErrorClassificationPartial,
 			},
 			expectedPartialData: `{
 				"posts": [

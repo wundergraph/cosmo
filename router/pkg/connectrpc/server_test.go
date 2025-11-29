@@ -12,7 +12,7 @@ import (
 func TestNewServer(t *testing.T) {
 	t.Run("creates server with valid config", func(t *testing.T) {
 		server, err := NewServer(ServerConfig{
-			ServicesDir:     "testdata",
+			ServicesDir:     "samples/services",
 			GraphQLEndpoint: "http://localhost:4000/graphql",
 			ListenAddr:      "localhost:5026",
 			Logger:          zap.NewNop(),
@@ -20,7 +20,7 @@ func TestNewServer(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.NotNil(t, server)
-		assert.Equal(t, "testdata", server.config.ServicesDir)
+		assert.Equal(t, "samples/services", server.config.ServicesDir)
 		assert.Equal(t, "http://localhost:4000/graphql", server.config.GraphQLEndpoint)
 	})
 
@@ -28,6 +28,7 @@ func TestNewServer(t *testing.T) {
 		server, err := NewServer(ServerConfig{
 			ServicesDir:     "samples/services",
 			GraphQLEndpoint: "localhost:4000/graphql",
+			Logger:          zap.NewNop(),
 		})
 
 		require.NoError(t, err)
@@ -38,6 +39,7 @@ func TestNewServer(t *testing.T) {
 		server, err := NewServer(ServerConfig{
 			ServicesDir:     "samples/services",
 			GraphQLEndpoint: "http://localhost:4000/graphql",
+			Logger:          zap.NewNop(),
 		})
 
 		require.NoError(t, err)
@@ -48,6 +50,7 @@ func TestNewServer(t *testing.T) {
 		server, err := NewServer(ServerConfig{
 			ServicesDir:     "samples/services",
 			GraphQLEndpoint: "http://localhost:4000/graphql",
+			Logger:          zap.NewNop(),
 		})
 
 		require.NoError(t, err)
@@ -57,6 +60,7 @@ func TestNewServer(t *testing.T) {
 	t.Run("returns error when services dir is empty", func(t *testing.T) {
 		_, err := NewServer(ServerConfig{
 			GraphQLEndpoint: "http://localhost:4000/graphql",
+			Logger:          zap.NewNop(),
 		})
 
 		assert.Error(t, err)
@@ -66,20 +70,21 @@ func TestNewServer(t *testing.T) {
 	t.Run("returns error when graphql endpoint is empty", func(t *testing.T) {
 		_, err := NewServer(ServerConfig{
 			ServicesDir: "samples/services",
+			Logger:      zap.NewNop(),
 		})
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "graphql endpoint cannot be empty")
 	})
 
-	t.Run("uses nop logger when nil", func(t *testing.T) {
-		server, err := NewServer(ServerConfig{
+	t.Run("returns error when logger is nil", func(t *testing.T) {
+		_, err := NewServer(ServerConfig{
 			ServicesDir:     "samples/services",
 			GraphQLEndpoint: "http://localhost:4000/graphql",
 			Logger:          nil,
 		})
 
-		require.NoError(t, err)
-		assert.NotNil(t, server.logger)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "logger is required")
 	})
 }

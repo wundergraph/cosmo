@@ -7,10 +7,12 @@ import (
 	"strings"
 	"sync"
 
+	"go.uber.org/zap"
+
 	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
+
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
-	"go.uber.org/zap"
 )
 
 // OperationRegistry manages pre-defined GraphQL operations for ConnectRPC.
@@ -137,7 +139,7 @@ func (r *OperationRegistry) extractOperationInfo(doc *ast.Document) (string, str
 	for _, ref := range doc.RootNodes {
 		if ref.Kind == ast.NodeKindOperationDefinition {
 			opDef := doc.OperationDefinitions[ref.Ref]
-			
+
 			opType := ""
 			switch opDef.OperationType {
 			case ast.OperationTypeQuery:
@@ -154,7 +156,7 @@ func (r *OperationRegistry) extractOperationInfo(doc *ast.Document) (string, str
 			if opDef.Name.Length() > 0 {
 				opName = string(doc.Input.ByteSlice(opDef.Name))
 			}
-			
+
 			return opName, opType, nil
 		}
 	}
