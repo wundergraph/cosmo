@@ -275,19 +275,7 @@ func (vs *VanguardService) writeConnectError(w http.ResponseWriter, connectErr *
 	}
 	
 	// Add other metadata if present (excluding graphql_errors which we handled above)
-	if len(connectErr.Meta()) > 0 {
-		details := make(map[string]string)
-		for key, values := range connectErr.Meta() {
-			// Skip graphql_errors as we've already handled it
-			if key == MetaKeyGraphQLErrors || len(values) == 0 {
-				continue
-			}
-			details[key] = values[0]
-		}
-		if len(details) > 0 {
-			errorResponse["details"] = details
-		}
-	}
+	// Note: We don't add a "details" field here because Vanguard handles that internally
 	
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
