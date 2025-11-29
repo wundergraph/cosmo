@@ -5,8 +5,8 @@ import (
 	"crypto/tls"
 	"net"
 	"net/http"
+	"sync/atomic"
 	"testing"
-	"time"
 
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/assert"
@@ -138,8 +138,9 @@ func TestConnectRPC_ClientErrorHandling(t *testing.T) {
 		assert.Contains(t, connectErr.Message(), "Employee not found")
 	})
 
-	t.Run("GraphQL error with partial data returns NON-CRITICAL", func(t *testing.T) {
+	t.Run("GraphQL error with partial data returns error", func(t *testing.T) {
 		// Custom handler for partial data with errors
+		// Per GraphQL spec, errors at top level indicate a failure even with partial data
 		handler := func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
@@ -152,9 +153,9 @@ func TestConnectRPC_ClientErrorHandling(t *testing.T) {
 							"forename": "John",
 							"surname": "Doe"
 						}
-					},
-					"errors": [{"message": "Could not fetch pets"}]
-				}
+					}
+				},
+				"errors": [{"message": "Could not fetch pets"}]
 			}`))
 		}
 		
@@ -165,7 +166,6 @@ func TestConnectRPC_ClientErrorHandling(t *testing.T) {
 		err := ts.Start()
 		require.NoError(t, err)
 
-		time.Sleep(100 * time.Millisecond)
 		client := employeev1connect.NewEmployeeServiceClient(
 			http.DefaultClient,
 			"http://"+ts.Addr().String(),
@@ -175,12 +175,14 @@ func TestConnectRPC_ClientErrorHandling(t *testing.T) {
 			EmployeeId: 1,
 		})
 
-		resp, err := client.GetEmployeeById(context.Background(), req)
-		// Should succeed with partial data
-		require.NoError(t, err)
-		require.NotNil(t, resp.Msg.Employee)
-		assert.Equal(t, int32(1), resp.Msg.Employee.Id)
-		assert.Equal(t, "John", resp.Msg.Employee.Details.Forename)
+		_, err = client.GetEmployeeById(context.Background(), req)
+		// Per GraphQL spec, errors at top level should result in an error
+		require.Error(t, err)
+		
+		var connectErr *connect.Error
+		require.ErrorAs(t, err, &connectErr)
+		assert.Equal(t, connect.CodeUnknown, connectErr.Code())
+		assert.Contains(t, connectErr.Message(), "GraphQL partial success with errors")
 	})
 
 	t.Run("HTTP 404 maps to CodeNotFound", func(t *testing.T) {
@@ -238,9 +240,9 @@ func TestConnectRPC_ClientErrorHandling(t *testing.T) {
 func TestConnectRPC_ClientConcurrency(t *testing.T) {
 	t.Parallel()
 
-	var requestCount int
+	var requestCount int64
 	handler := func(w http.ResponseWriter, r *http.Request) {
-		requestCount++
+		atomic.AddInt64(&requestCount, 1)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{
@@ -289,5 +291,5 @@ func TestConnectRPC_ClientConcurrency(t *testing.T) {
 		assert.NoError(t, err)
 	}
 
-	assert.Equal(t, numRequests, requestCount, "should have made all requests")
+	assert.Equal(t, int64(numRequests), atomic.LoadInt64(&requestCount), "should have made all requests")
 }
