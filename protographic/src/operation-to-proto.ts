@@ -264,7 +264,19 @@ class OperationsToProtoVisitor {
       return;
     }
 
-    // 2. Validate no root-level field aliases (breaks reversibility)
+    // 2. Validate operation name is PascalCase
+    // This ensures exact matching between GraphQL operation names and RPC method names
+    // PascalCase: starts with uppercase, contains at least one lowercase letter
+    if (!/^[A-Z](?=.*[a-z])[a-zA-Z0-9]*$/.test(operationName)) {
+      throw new Error(
+        `Operation name "${operationName}" must be in PascalCase ` +
+          `(start with uppercase letter, followed by mixed-case letters/numbers). ` +
+          `Examples: GetUser, CreatePost, OnMessageAdded. ` +
+          `This ensures the RPC method name exactly matches the GraphQL operation name.`,
+      );
+    }
+
+    // 3. Validate no root-level field aliases (breaks reversibility)
     if (node.selectionSet) {
       for (const selection of node.selectionSet.selections) {
         if (selection.kind === 'Field' && selection.alias) {
@@ -277,8 +289,9 @@ class OperationsToProtoVisitor {
       }
     }
 
-    // 3. Create method name from operation name, optionally prefixed with operation type
-    let methodName = upperFirst(camelCase(operationName));
+    // 4. Create method name from operation name
+    // Use operation name as-is to ensure exact matching (no transformation)
+    let methodName = operationName;
 
     // Add operation type prefix if requested
     if (this.prefixOperationType) {
