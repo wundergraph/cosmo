@@ -929,6 +929,10 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			mcpserver.WithStateless(r.mcp.Session.Stateless),
 		}
 
+		if r.corsOptions != nil {
+			mcpOpts = append(mcpOpts, mcpserver.WithCORS(*r.corsOptions))
+		}
+
 		// Determine the router GraphQL endpoint
 		var routerGraphQLEndpoint string
 
