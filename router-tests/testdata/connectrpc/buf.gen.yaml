@@ -5,11 +5,11 @@ managed:
     - file_option: go_package_prefix
       value: github.com/wundergraph/cosmo/router-tests/testdata/connectrpc/client
 plugins:
-  - remote: buf.build/protocolbuffers/go
+  - local: protoc-gen-go
     out: client
     opt:
       - paths=source_relative
-  - remote: buf.build/connectrpc/go
+  - local: protoc-gen-connect-go
     out: client
     opt:
       - paths=source_relative

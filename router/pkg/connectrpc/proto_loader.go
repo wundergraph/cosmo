@@ -157,7 +157,7 @@ func (pl *ProtoLoader) LoadFromDirectories(dirs []string) error {
 				if existingServices[serviceName] {
 					continue
 				}
-				
+
 				packageName := service.Package
 				if existingDir, exists := seenPackages[packageName]; exists && existingDir != dir {
 					return fmt.Errorf(
@@ -215,7 +215,7 @@ func (pl *ProtoLoader) loadProtoFile(path string) error {
 
 	// Create a parser with the directory as import path
 	parser := protoparse.Parser{
-		ImportPaths:      []string{dir},
+		ImportPaths:           []string{dir},
 		IncludeSourceCodeInfo: true,
 	}
 
@@ -240,34 +240,35 @@ func (pl *ProtoLoader) processFileDescriptor(fd *desc.FileDescriptor) error {
 	// Convert to protoreflect.FileDescriptor and register it in our LOCAL registry
 	// This avoids conflicts with the global registry used by generated client code
 	protoFd := fd.UnwrapFile()
-	
+
 	// Check if the file is already registered in our local registry
 	_, err := pl.files.FindFileByPath(string(protoFd.Path()))
 	if err == nil {
-		// File is already registered in local registry, skip registration
+		// File is already registered - this is expected when proto files share dependencies
 		pl.logger.Debug("file descriptor already registered in local registry, skipping",
 			zap.String("file", string(protoFd.Path())))
-	} else {
-		// Register the file descriptor in our LOCAL registry (not global)
-		// This allows Vanguard to find the service schema without polluting the global registry
-		err := pl.files.RegisterFile(protoFd)
-		if err != nil {
-			pl.logger.Warn("file descriptor registration failed in local registry",
-				zap.String("file", string(protoFd.Path())),
-				zap.Error(err))
-			return fmt.Errorf("failed to register file descriptor in local registry: %w", err)
-		}
-		pl.logger.Debug("file descriptor registered successfully in local registry",
-			zap.String("file", string(protoFd.Path())))
+		return nil
 	}
-	
+
+	// Register the file descriptor in our LOCAL registry (not global)
+	// This allows Vanguard to find the service schema without polluting the global registry
+	if err := pl.files.RegisterFile(protoFd); err != nil {
+		pl.logger.Error("file descriptor registration failed in local registry",
+			zap.String("file", string(protoFd.Path())),
+			zap.Error(err))
+		return fmt.Errorf("failed to register file descriptor in local registry: %w", err)
+	}
+
+	pl.logger.Debug("file descriptor registered successfully in local registry",
+		zap.String("file", string(protoFd.Path())))
+
 	// Extract services (no mutex needed - this modifies only the ProtoLoader instance)
 	services := fd.GetServices()
 	for _, service := range services {
 		serviceDef := pl.extractServiceDefinition(service)
-		
+
 		pl.services[serviceDef.FullName] = serviceDef
-		
+
 		pl.logger.Debug("extracted service",
 			zap.String("service", serviceDef.FullName),
 			zap.Int("methods", len(serviceDef.Methods)))
@@ -280,7 +281,7 @@ func (pl *ProtoLoader) processFileDescriptor(fd *desc.FileDescriptor) error {
 func (pl *ProtoLoader) extractServiceDefinition(service *desc.ServiceDescriptor) *ServiceDefinition {
 	// Convert desc.FileDescriptor to protoreflect.FileDescriptor
 	fd := service.GetFile().UnwrapFile()
-	
+
 	// Get the service descriptor from the file descriptor
 	services := fd.Services()
 	var serviceDesc protoreflect.ServiceDescriptor

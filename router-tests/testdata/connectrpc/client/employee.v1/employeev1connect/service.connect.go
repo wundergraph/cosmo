@@ -56,6 +56,18 @@ const (
 	EmployeeServiceUpdateEmployeeMoodProcedure = "/employee.v1.EmployeeService/UpdateEmployeeMood"
 )
 
+// These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
+var (
+	employeeServiceServiceDescriptor                                 = employee_v1.File_employee_v1_service_proto.Services().ByName("EmployeeService")
+	employeeServiceFindEmployeesByPetsMethodDescriptor               = employeeServiceServiceDescriptor.Methods().ByName("FindEmployeesByPets")
+	employeeServiceFindEmployeesByPetsInlineFragmentMethodDescriptor = employeeServiceServiceDescriptor.Methods().ByName("FindEmployeesByPetsInlineFragment")
+	employeeServiceFindEmployeesByPetsNamedFragmentMethodDescriptor  = employeeServiceServiceDescriptor.Methods().ByName("FindEmployeesByPetsNamedFragment")
+	employeeServiceGetEmployeeByIdMethodDescriptor                   = employeeServiceServiceDescriptor.Methods().ByName("GetEmployeeById")
+	employeeServiceGetEmployeesMethodDescriptor                      = employeeServiceServiceDescriptor.Methods().ByName("GetEmployees")
+	employeeServiceGetEmployeesWithMoodMethodDescriptor              = employeeServiceServiceDescriptor.Methods().ByName("GetEmployeesWithMood")
+	employeeServiceUpdateEmployeeMoodMethodDescriptor                = employeeServiceServiceDescriptor.Methods().ByName("UpdateEmployeeMood")
+)
+
 // EmployeeServiceClient is a client for the employee.v1.EmployeeService service.
 type EmployeeServiceClient interface {
 	FindEmployeesByPets(context.Context, *connect.Request[employee_v1.FindEmployeesByPetsRequest]) (*connect.Response[employee_v1.FindEmployeesByPetsResponse], error)
@@ -76,54 +88,53 @@ type EmployeeServiceClient interface {
 // http://api.acme.com or https://acme.com/grpc).
 func NewEmployeeServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) EmployeeServiceClient {
 	baseURL = strings.TrimRight(baseURL, "/")
-	employeeServiceMethods := employee_v1.File_employee_v1_service_proto.Services().ByName("EmployeeService").Methods()
 	return &employeeServiceClient{
 		findEmployeesByPets: connect.NewClient[employee_v1.FindEmployeesByPetsRequest, employee_v1.FindEmployeesByPetsResponse](
 			httpClient,
 			baseURL+EmployeeServiceFindEmployeesByPetsProcedure,
-			connect.WithSchema(employeeServiceMethods.ByName("FindEmployeesByPets")),
+			connect.WithSchema(employeeServiceFindEmployeesByPetsMethodDescriptor),
 			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 			connect.WithClientOptions(opts...),
 		),
 		findEmployeesByPetsInlineFragment: connect.NewClient[employee_v1.FindEmployeesByPetsInlineFragmentRequest, employee_v1.FindEmployeesByPetsInlineFragmentResponse](
 			httpClient,
 			baseURL+EmployeeServiceFindEmployeesByPetsInlineFragmentProcedure,
-			connect.WithSchema(employeeServiceMethods.ByName("FindEmployeesByPetsInlineFragment")),
+			connect.WithSchema(employeeServiceFindEmployeesByPetsInlineFragmentMethodDescriptor),
 			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 			connect.WithClientOptions(opts...),
 		),
 		findEmployeesByPetsNamedFragment: connect.NewClient[employee_v1.FindEmployeesByPetsNamedFragmentRequest, employee_v1.FindEmployeesByPetsNamedFragmentResponse](
 			httpClient,
 			baseURL+EmployeeServiceFindEmployeesByPetsNamedFragmentProcedure,
-			connect.WithSchema(employeeServiceMethods.ByName("FindEmployeesByPetsNamedFragment")),
+			connect.WithSchema(employeeServiceFindEmployeesByPetsNamedFragmentMethodDescriptor),
 			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 			connect.WithClientOptions(opts...),
 		),
 		getEmployeeById: connect.NewClient[employee_v1.GetEmployeeByIdRequest, employee_v1.GetEmployeeByIdResponse](
 			httpClient,
 			baseURL+EmployeeServiceGetEmployeeByIdProcedure,
-			connect.WithSchema(employeeServiceMethods.ByName("GetEmployeeById")),
+			connect.WithSchema(employeeServiceGetEmployeeByIdMethodDescriptor),
 			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 			connect.WithClientOptions(opts...),
 		),
 		getEmployees: connect.NewClient[employee_v1.GetEmployeesRequest, employee_v1.GetEmployeesResponse](
 			httpClient,
 			baseURL+EmployeeServiceGetEmployeesProcedure,
-			connect.WithSchema(employeeServiceMethods.ByName("GetEmployees")),
+			connect.WithSchema(employeeServiceGetEmployeesMethodDescriptor),
 			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 			connect.WithClientOptions(opts...),
 		),
 		getEmployeesWithMood: connect.NewClient[employee_v1.GetEmployeesWithMoodRequest, employee_v1.GetEmployeesWithMoodResponse](
 			httpClient,
 			baseURL+EmployeeServiceGetEmployeesWithMoodProcedure,
-			connect.WithSchema(employeeServiceMethods.ByName("GetEmployeesWithMood")),
+			connect.WithSchema(employeeServiceGetEmployeesWithMoodMethodDescriptor),
 			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 			connect.WithClientOptions(opts...),
 		),
 		updateEmployeeMood: connect.NewClient[employee_v1.UpdateEmployeeMoodRequest, employee_v1.UpdateEmployeeMoodResponse](
 			httpClient,
 			baseURL+EmployeeServiceUpdateEmployeeMoodProcedure,
-			connect.WithSchema(employeeServiceMethods.ByName("UpdateEmployeeMood")),
+			connect.WithSchema(employeeServiceUpdateEmployeeMoodMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -194,53 +205,52 @@ type EmployeeServiceHandler interface {
 // By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
 // and JSON codecs. They also support gzip compression.
 func NewEmployeeServiceHandler(svc EmployeeServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	employeeServiceMethods := employee_v1.File_employee_v1_service_proto.Services().ByName("EmployeeService").Methods()
 	employeeServiceFindEmployeesByPetsHandler := connect.NewUnaryHandler(
 		EmployeeServiceFindEmployeesByPetsProcedure,
 		svc.FindEmployeesByPets,
-		connect.WithSchema(employeeServiceMethods.ByName("FindEmployeesByPets")),
+		connect.WithSchema(employeeServiceFindEmployeesByPetsMethodDescriptor),
 		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 		connect.WithHandlerOptions(opts...),
 	)
 	employeeServiceFindEmployeesByPetsInlineFragmentHandler := connect.NewUnaryHandler(
 		EmployeeServiceFindEmployeesByPetsInlineFragmentProcedure,
 		svc.FindEmployeesByPetsInlineFragment,
-		connect.WithSchema(employeeServiceMethods.ByName("FindEmployeesByPetsInlineFragment")),
+		connect.WithSchema(employeeServiceFindEmployeesByPetsInlineFragmentMethodDescriptor),
 		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 		connect.WithHandlerOptions(opts...),
 	)
 	employeeServiceFindEmployeesByPetsNamedFragmentHandler := connect.NewUnaryHandler(
 		EmployeeServiceFindEmployeesByPetsNamedFragmentProcedure,
 		svc.FindEmployeesByPetsNamedFragment,
-		connect.WithSchema(employeeServiceMethods.ByName("FindEmployeesByPetsNamedFragment")),
+		connect.WithSchema(employeeServiceFindEmployeesByPetsNamedFragmentMethodDescriptor),
 		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 		connect.WithHandlerOptions(opts...),
 	)
 	employeeServiceGetEmployeeByIdHandler := connect.NewUnaryHandler(
 		EmployeeServiceGetEmployeeByIdProcedure,
 		svc.GetEmployeeById,
-		connect.WithSchema(employeeServiceMethods.ByName("GetEmployeeById")),
+		connect.WithSchema(employeeServiceGetEmployeeByIdMethodDescriptor),
 		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 		connect.WithHandlerOptions(opts...),
 	)
 	employeeServiceGetEmployeesHandler := connect.NewUnaryHandler(
 		EmployeeServiceGetEmployeesProcedure,
 		svc.GetEmployees,
-		connect.WithSchema(employeeServiceMethods.ByName("GetEmployees")),
+		connect.WithSchema(employeeServiceGetEmployeesMethodDescriptor),
 		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 		connect.WithHandlerOptions(opts...),
 	)
 	employeeServiceGetEmployeesWithMoodHandler := connect.NewUnaryHandler(
 		EmployeeServiceGetEmployeesWithMoodProcedure,
 		svc.GetEmployeesWithMood,
-		connect.WithSchema(employeeServiceMethods.ByName("GetEmployeesWithMood")),
+		connect.WithSchema(employeeServiceGetEmployeesWithMoodMethodDescriptor),
 		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 		connect.WithHandlerOptions(opts...),
 	)
 	employeeServiceUpdateEmployeeMoodHandler := connect.NewUnaryHandler(
 		EmployeeServiceUpdateEmployeeMoodProcedure,
 		svc.UpdateEmployeeMood,
-		connect.WithSchema(employeeServiceMethods.ByName("UpdateEmployeeMood")),
+		connect.WithSchema(employeeServiceUpdateEmployeeMoodMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	return "/employee.v1.EmployeeService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

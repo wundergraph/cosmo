@@ -111,7 +111,7 @@ func (vs *VanguardService) registerServices() error {
 			zap.String("service_name", serviceName),
 			zap.String("full_name", serviceDef.FullName),
 			zap.Int("method_count", len(serviceDef.Methods)))
-		
+
 		// Log all methods for this service
 		for _, method := range serviceDef.Methods {
 			vs.logger.Info("service method",
@@ -120,7 +120,7 @@ func (vs *VanguardService) registerServices() error {
 				zap.String("input_type", method.InputType),
 				zap.String("output_type", method.OutputType))
 		}
-		
+
 		// Create an HTTP handler for this service
 		// The handler will receive requests at paths like: /Method (without the service prefix)
 		serviceHandler := vs.createServiceHandler(serviceName, serviceDef)
@@ -128,10 +128,10 @@ func (vs *VanguardService) registerServices() error {
 		// Use NewServiceWithSchema with custom type resolver
 		// This avoids relying on the global registry
 		servicePath := "/" + serviceName + "/"
-		
+
 		vs.logger.Info("creating service with custom type resolver",
 			zap.String("service_path", servicePath))
-		
+
 		// Configure to always transcode to Connect protocol with JSON codec
 		// This ensures our handler always receives JSON, regardless of the incoming protocol
 		// Use NewServiceWithSchema to provide the schema directly with a custom type resolver
@@ -167,7 +167,7 @@ func (vs *VanguardService) createServiceHandler(serviceName string, serviceDef *
 			vs.writeConnectError(w, connectErr, serviceName, methodName)
 			return
 		}
-		
+
 		// Validate method exists in service
 		methodExists := false
 		for _, method := range serviceDef.Methods {
@@ -176,7 +176,7 @@ func (vs *VanguardService) createServiceHandler(serviceName string, serviceDef *
 				break
 			}
 		}
-		
+
 		if !methodExists {
 			// Return Connect error for method not found
 			connectErr := connect.NewError(connect.CodeNotFound, fmt.Errorf("method not found: %s", methodName))
@@ -188,7 +188,7 @@ func (vs *VanguardService) createServiceHandler(serviceName string, serviceDef *
 		// For POST requests, read from body
 		var requestBody []byte
 		var err error
-		
+
 		if r.Method == "GET" {
 			// Extract the 'message' query parameter (Connect protocol for GET requests)
 			messageParam := r.URL.Query().Get("message")
@@ -243,21 +243,21 @@ func (vs *VanguardService) createServiceHandler(serviceName string, serviceDef *
 // This ensures proper error formatting for the Connect protocol
 func (vs *VanguardService) writeConnectError(w http.ResponseWriter, connectErr *connect.Error, serviceName, methodName string) {
 	statusCode := connectCodeToHTTPStatus(connectErr.Code())
-	
+
 	vs.logger.Error("RPC handler error",
 		zap.String("service", serviceName),
 		zap.String("method", methodName),
 		zap.String("connect_code", connectErr.Code().String()),
 		zap.Int("http_status", statusCode),
 		zap.String("error", connectErr.Message()))
-	
+
 	// Format error as Connect JSON error response
 	// Connect protocol error format: {"code": "invalid_argument", "message": "error message"}
-	errorResponse := map[string]interface{}{
+	errorResponse := map[string]any{
 		"code":    connectErr.Code().String(),
 		"message": connectErr.Message(),
 	}
-	
+
 	// Check if this error contains GraphQL errors in metadata
 	// If so, include them in a structured format for better error reporting
 	if graphqlErrorsJSON := connectErr.Meta().Values(MetaKeyGraphQLErrors); len(graphqlErrorsJSON) > 0 {
@@ -266,20 +266,20 @@ func (vs *VanguardService) writeConnectError(w http.ResponseWriter, connectErr *
 		if err := json.Unmarshal([]byte(graphqlErrorsJSON[0]), &graphqlErrors); err == nil && len(graphqlErrors) > 0 {
 			// Include GraphQL errors in the response for better debugging
 			errorResponse["graphql_errors"] = graphqlErrors
-			
+
 			// If there are multiple GraphQL errors, update the message to indicate this
 			if len(graphqlErrors) > 1 {
 				errorResponse["message"] = fmt.Sprintf("%s (and %d more errors)", connectErr.Message(), len(graphqlErrors)-1)
 			}
 		}
 	}
-	
+
 	// Add other metadata if present (excluding graphql_errors which we handled above)
 	// Note: We don't add a "details" field here because Vanguard handles that internally
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
-	
+
 	if err := json.NewEncoder(w).Encode(errorResponse); err != nil {
 		vs.logger.Error("failed to write error response", zap.Error(err))
 	}

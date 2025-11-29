@@ -906,8 +906,6 @@ func (r *Router) bootstrap(ctx context.Context) error {
 				zap.String("provider_id", r.mcp.Storage.ProviderID))
 
 			// Find the provider in storage_providers
-			found := false
-
 			// Check for file_system providers
 			for _, provider := range r.storageProviders.FileSystem {
 				if provider.ID == r.mcp.Storage.ProviderID {
@@ -917,12 +915,11 @@ func (r *Router) bootstrap(ctx context.Context) error {
 
 					// Use the resolved file system path
 					operationsDir = provider.Path
-					found = true
 					break
 				}
 			}
 
-			if !found {
+			if operationsDir == "" {
 				return fmt.Errorf("storage provider with id '%s' for mcp server not found", r.mcp.Storage.ProviderID)
 			}
 		}
@@ -974,10 +971,6 @@ func (r *Router) bootstrap(ctx context.Context) error {
 	}
 
 	if r.connectRPC.Enabled {
-		if r.connectRPC.ServicesProviderID == "" {
-			return fmt.Errorf("connect_rpc is enabled but services_provider_id is not configured")
-		}
-
 		r.logger.Info("ConnectRPC configuration",
 			zap.Bool("enabled", r.connectRPC.Enabled),
 			zap.String("services_provider_id", r.connectRPC.ServicesProviderID),
@@ -986,18 +979,16 @@ func (r *Router) bootstrap(ctx context.Context) error {
 
 		// Resolve the services provider to get the services directory
 		var servicesDir string
-		found := false
 		for _, provider := range r.storageProviders.FileSystem {
 			if provider.ID == r.connectRPC.ServicesProviderID {
 				servicesDir = provider.Path
-				found = true
 				r.logger.Debug("Resolved services provider",
 					zap.String("provider_id", provider.ID),
 					zap.String("path", provider.Path))
 				break
 			}
 		}
-		if !found {
+		if servicesDir == "" {
 			return fmt.Errorf("services storage provider with id '%s' for connect_rpc not found", r.connectRPC.ServicesProviderID)
 		}
 
@@ -1029,7 +1020,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			Logger:          r.logger,
 		}
 
-		r.logger.Debug("Creating ConnectRPC server",
+		r.logger.Info("Creating ConnectRPC server",
 			zap.String("services_dir", servicesDir),
 			zap.String("graphql_endpoint", routerGraphQLEndpoint),
 			zap.String("listen_addr", r.connectRPC.Server.ListenAddr))
@@ -1555,102 +1546,70 @@ func (r *Router) Shutdown(ctx context.Context) error {
 	var wg sync.WaitGroup
 
 	if r.prometheusServer != nil {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			if subErr := r.prometheusServer.Close(); subErr != nil {
 				err.Append(fmt.Errorf("failed to shutdown prometheus server: %w", subErr))
 			}
-		}()
+		})
 	}
 
 	if r.mcpServer != nil {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			if subErr := r.mcpServer.Stop(ctx); subErr != nil {
 				err.Append(fmt.Errorf("failed to shutdown mcp server: %w", subErr))
 			}
-		}()
+		})
 	}
 
 	if r.connectRPCServer != nil {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			// Type assert to access Stop method
-			if server, ok := r.connectRPCServer.(interface{ Stop(context.Context) error }); ok {
-				if subErr := server.Stop(ctx); subErr != nil {
-					err.Append(fmt.Errorf("failed to shutdown connect_rpc server: %w", subErr))
-				}
+		wg.Go(func() {
+			if subErr := r.connectRPCServer.Stop(ctx); subErr != nil {
+				err.Append(fmt.Errorf("failed to shutdown connect_rpc server: %w", subErr))
 			}
-		}()
+		})
 	}
 
 	if r.tracerProvider != nil {
-		wg.Add(1)
-
-		go func() {
-			defer wg.Done()
-
+		wg.Go(func() {
 			if subErr := r.tracerProvider.Shutdown(ctx); subErr != nil {
 				err.Append(fmt.Errorf("failed to shutdown tracer: %w", subErr))
 			}
-		}()
+		})
 	}
 
 	if r.gqlMetricsExporter != nil {
-		wg.Add(1)
-
-		go func() {
-			defer wg.Done()
-
+		wg.Go(func() {
 			if subErr := r.gqlMetricsExporter.Shutdown(ctx); subErr != nil {
 				err.Append(fmt.Errorf("failed to shutdown graphql metrics exporter: %w", subErr))
 			}
-		}()
+		})
 	}
 
 	if r.promMeterProvider != nil {
-		wg.Add(1)
-
-		go func() {
-			defer wg.Done()
-
+		wg.Go(func() {
 			if subErr := r.promMeterProvider.Shutdown(ctx); subErr != nil {
 				err.Append(fmt.Errorf("failed to shutdown prometheus meter provider: %w", subErr))
 			}
-		}()
+		})
 	}
 
 	if r.otlpMeterProvider != nil {
-		wg.Add(1)
-
-		go func() {
-			defer wg.Done()
-
+		wg.Go(func() {
 			if subErr := r.otlpMeterProvider.Shutdown(ctx); subErr != nil {
 				err.Append(fmt.Errorf("failed to shutdown OTLP meter provider: %w", subErr))
 			}
-		}()
+		})
 	}
 
 	if r.redisClient != nil {
-		wg.Add(1)
-
-		go func() {
-			defer wg.Done()
-
+		wg.Go(func() {
 			if closeErr := r.redisClient.Close(); closeErr != nil {
 				err.Append(fmt.Errorf("failed to close redis client: %w", closeErr))
 			}
-		}()
+		})
 	}
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-
+	wg.Go(func() {
 		for _, module := range r.modules {
 			if cleaner, ok := module.(Cleaner); ok {
 				if subErr := cleaner.Cleanup(); subErr != nil {
@@ -1658,7 +1617,7 @@ func (r *Router) Shutdown(ctx context.Context) error {
 				}
 			}
 		}
-	}()
+	})
 
 	// Shutdown the CDN operation client and free up resources
 	if r.persistedOperationClient != nil {

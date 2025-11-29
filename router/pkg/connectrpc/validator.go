@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/jhump/protoreflect/desc"
+	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/descriptorpb"
 )
 
@@ -43,24 +44,28 @@ func (v *MessageValidator) ValidateMessage(serviceName, methodName string, messa
 	}
 
 	// Parse the JSON message
-	var data map[string]interface{}
+	var data map[string]any
 	if err := json.Unmarshal(messageJSON, &data); err != nil {
 		return &ValidationError{
 			Message: fmt.Sprintf("invalid JSON: %s", err.Error()),
 		}
 	}
 
-	// DEBUG: Log what we're validating
-	fmt.Printf("DEBUG: Validating message for %s.%s\n", serviceName, methodName)
-	fmt.Printf("DEBUG: Input message type: %s\n", method.InputMessageDescriptor.GetFullyQualifiedName())
-	fmt.Printf("DEBUG: JSON data keys: %v\n", getKeys(data))
-	fmt.Printf("DEBUG: Proto fields: %v\n", getFieldNames(method.InputMessageDescriptor))
+	// Log validation details at debug level
+	if v.protoLoader.logger != nil {
+		v.protoLoader.logger.Debug("validating message",
+			zap.String("service", serviceName),
+			zap.String("method", methodName),
+			zap.String("input_message_type", method.InputMessageDescriptor.GetFullyQualifiedName()),
+			zap.Strings("json_data_keys", getKeys(data)),
+			zap.Strings("proto_fields", getFieldNames(method.InputMessageDescriptor)))
+	}
 
 	// Validate against the input message descriptor
 	return v.validateMessageFields(method.InputMessageDescriptor, data, "")
 }
 
-func getKeys(data map[string]interface{}) []string {
+func getKeys(data map[string]any) []string {
 	keys := make([]string, 0, len(data))
 	for k := range data {
 		keys = append(keys, k)
@@ -78,7 +83,7 @@ func getFieldNames(msgDesc *desc.MessageDescriptor) []string {
 }
 
 // validateMessageFields recursively validates message fields
-func (v *MessageValidator) validateMessageFields(msgDesc *desc.MessageDescriptor, data map[string]interface{}, fieldPath string) error {
+func (v *MessageValidator) validateMessageFields(msgDesc *desc.MessageDescriptor, data map[string]any, fieldPath string) error {
 	fields := msgDesc.GetFields()
 
 	// Check each field in the message
@@ -115,7 +120,7 @@ func (v *MessageValidator) validateMessageFields(msgDesc *desc.MessageDescriptor
 }
 
 // validateFieldValue validates a single field value against its descriptor
-func (v *MessageValidator) validateFieldValue(field *desc.FieldDescriptor, value interface{}, fieldPath string) error {
+func (v *MessageValidator) validateFieldValue(field *desc.FieldDescriptor, value any, fieldPath string) error {
 	// Handle null values
 	if value == nil {
 		// Null is only valid for optional fields
@@ -130,7 +135,7 @@ func (v *MessageValidator) validateFieldValue(field *desc.FieldDescriptor, value
 
 	// Handle repeated fields (arrays)
 	if field.IsRepeated() {
-		arr, ok := value.([]interface{})
+		arr, ok := value.([]any)
 		if !ok {
 			return &ValidationError{
 				Field:   fieldPath,
@@ -153,10 +158,10 @@ func (v *MessageValidator) validateFieldValue(field *desc.FieldDescriptor, value
 }
 
 // validateScalarOrMessageValue validates either a scalar or message value
-func (v *MessageValidator) validateScalarOrMessageValue(field *desc.FieldDescriptor, value interface{}, fieldPath string) error {
+func (v *MessageValidator) validateScalarOrMessageValue(field *desc.FieldDescriptor, value any, fieldPath string) error {
 	// Handle message types (nested messages)
 	if field.GetType() == descriptorpb.FieldDescriptorProto_TYPE_MESSAGE {
-		nestedData, ok := value.(map[string]interface{})
+		nestedData, ok := value.(map[string]any)
 		if !ok {
 			return &ValidationError{
 				Field:   fieldPath,
@@ -171,7 +176,7 @@ func (v *MessageValidator) validateScalarOrMessageValue(field *desc.FieldDescrip
 }
 
 // validateScalarValue validates a scalar field value
-func (v *MessageValidator) validateScalarValue(field *desc.FieldDescriptor, value interface{}, fieldPath string) error {
+func (v *MessageValidator) validateScalarValue(field *desc.FieldDescriptor, value any, fieldPath string) error {
 	fieldType := field.GetType()
 	typeName := strings.ToLower(field.GetType().String())
 
