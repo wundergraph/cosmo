@@ -268,10 +268,12 @@ class OperationsToProtoVisitor {
     // This ensures exact matching between GraphQL operation names and RPC method names
     // PascalCase: starts with uppercase, contains at least one lowercase letter
     if (!/^[A-Z](?=.*[a-z])[a-zA-Z0-9]*$/.test(operationName)) {
+      const suggestedName = upperFirst(camelCase(operationName));
       throw new Error(
         `Operation name "${operationName}" must be in PascalCase ` +
           `(start with uppercase letter, followed by mixed-case letters/numbers). ` +
           `Examples: GetUser, CreatePost, OnMessageAdded. ` +
+          `Suggested name: "${suggestedName}". ` +
           `This ensures the RPC method name exactly matches the GraphQL operation name.`,
       );
     }
