@@ -7,6 +7,7 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import pino from 'pino';
 import { v4 } from 'uuid';
 import z from 'zod';
+import { LintSeverity, VCSContext } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import * as schema from '../../db/schema.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
@@ -21,7 +22,6 @@ import {
   SchemaLintIssues,
   SubgraphDTO,
 } from '../../types/index.js';
-import { LintSeverity, VCSContext } from '../../../../connect/src/wg/cosmo/platform/v1/platform_pb.js';
 import { ComposedFederatedGraph } from '../composition/composer.js';
 import { GetDiffBetweenGraphsSuccess } from '../composition/schemaCheck.js';
 import { SubgraphCheckExtensionsRepository } from '../repositories/SubgraphCheckExtensionsRepository.js';
