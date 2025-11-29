@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,29 +12,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
 	"go.uber.org/zap"
 )
-
-// mockHTTPClient creates a mock HTTP client that returns predefined responses
-func mockHTTPClient(statusCode int, responseBody string) *http.Client {
-	return &http.Client{
-		Transport: &mockRoundTripper{
-			statusCode:   statusCode,
-			responseBody: responseBody,
-		},
-	}
-}
-
-type mockRoundTripper struct {
-	statusCode   int
-	responseBody string
-}
-
-func (m *mockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	return &http.Response{
-		StatusCode: m.statusCode,
-		Body:       io.NopCloser(strings.NewReader(m.responseBody)),
-		Header:     make(http.Header),
-	}, nil
-}
 
 // errorRoundTripper simulates network/transport errors
 type errorRoundTripper struct {
@@ -154,7 +130,7 @@ func TestHandleRPC(t *testing.T) {
 
 	t.Run("successfully handles RPC request", func(t *testing.T) {
 		graphqlResponse := `{"data":{"getUser":{"id":1,"name":"Jane Doe"}}}`
-		httpClient := mockHTTPClient(http.StatusOK, graphqlResponse)
+		httpClient := MockHTTPClient(http.StatusOK, graphqlResponse)
 		protoLoader := NewProtoLoader(logger)
 
 		handler, err := NewRPCHandler(HandlerConfig{
@@ -179,7 +155,7 @@ func TestHandleRPC(t *testing.T) {
 	})
 
 	t.Run("returns error for non-existent operation", func(t *testing.T) {
-		httpClient := mockHTTPClient(http.StatusOK, `{"data":{}}`)
+		httpClient := MockHTTPClient(http.StatusOK, `{"data":{}}`)
 		protoLoader := NewProtoLoader(logger)
 
 		handler, err := NewRPCHandler(HandlerConfig{
