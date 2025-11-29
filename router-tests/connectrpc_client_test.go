@@ -1,7 +1,11 @@
 package integration
 
 import (
+	"bytes"
 	"context"
+	"crypto/tls"
+	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"testing"
@@ -14,6 +18,7 @@ import (
 	"github.com/wundergraph/cosmo/router-tests/testdata/connectrpc/client/employee.v1/employeev1connect"
 	"github.com/wundergraph/cosmo/router/pkg/connectrpc"
 	"go.uber.org/zap"
+	"golang.org/x/net/http2"
 )
 
 // TestConnectRPC_ClientProtocols tests all three RPC protocols (Connect, gRPC, gRPC-Web)
@@ -43,9 +48,13 @@ func TestConnectRPC_ClientProtocols(t *testing.T) {
 	defer graphqlServer.Close()
 
 	// Start ConnectRPC server
+	graphqlEndpoint := graphqlServer.URL + "/graphql"
+	fmt.Printf("[Test] Mock GraphQL Server URL: %s\n", graphqlServer.URL)
+	fmt.Printf("[Test] GraphQL Endpoint configured: %s\n", graphqlEndpoint)
+	
 	server, err := connectrpc.NewServer(connectrpc.ServerConfig{
 		ServicesDir:     "testdata/connectrpc/services",
-		GraphQLEndpoint: graphqlServer.URL,
+		GraphQLEndpoint: graphqlEndpoint,
 		ListenAddr:      "localhost:0",
 		Logger:          zap.NewNop(),
 	})
@@ -86,8 +95,21 @@ func TestConnectRPC_ClientProtocols(t *testing.T) {
 	})
 
 	t.Run("gRPC protocol", func(t *testing.T) {
+		// Create HTTP client with h2c support for gRPC over HTTP/1.1
+		// This mimics what grpcurl does with -plaintext flag
+		h2cClient := &http.Client{
+			Transport: &http2.Transport{
+				// Allow HTTP/2 without TLS (h2c)
+				AllowHTTP: true,
+				// Use a custom dialer that doesn't require TLS
+				DialTLS: func(network, addr string, cfg *tls.Config) (net.Conn, error) {
+					return net.Dial(network, addr)
+				},
+			},
+		}
+
 		client := employeev1connect.NewEmployeeServiceClient(
-			http.DefaultClient,
+			h2cClient,
 			baseURL,
 			connect.WithGRPC(),
 		)
@@ -129,20 +151,18 @@ func TestConnectRPC_ClientErrorHandling(t *testing.T) {
 	t.Parallel()
 
 	t.Run("GraphQL error with no data returns CRITICAL", func(t *testing.T) {
-		graphqlServer := &mockGraphQLServer{
-			handler: func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{
-					"errors": [{"message": "Employee not found"}]
-				}`))
-			},
-		}
+		graphqlServer := newMockGraphQLServer(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{
+				"errors": [{"message": "Employee not found"}]
+			}`))
+		})
 		defer graphqlServer.Close()
 
 		server, err := connectrpc.NewServer(connectrpc.ServerConfig{
 			ServicesDir:     "testdata/connectrpc/services",
-			GraphQLEndpoint: graphqlServer.URL,
+			GraphQLEndpoint: graphqlServer.URL + "/graphql",
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
 		})
@@ -170,30 +190,29 @@ func TestConnectRPC_ClientErrorHandling(t *testing.T) {
 
 		var connectErr *connect.Error
 		require.ErrorAs(t, err, &connectErr)
-		assert.Equal(t, connect.CodeInternal, connectErr.Code())
+		// GraphQL errors use CodeUnknown (not CodeInternal which implies server bugs)
+		assert.Equal(t, connect.CodeUnknown, connectErr.Code())
 		assert.Contains(t, connectErr.Message(), "Employee not found")
 	})
 
 	t.Run("GraphQL error with partial data returns NON-CRITICAL", func(t *testing.T) {
-		graphqlServer := &mockGraphQLServer{
-			handler: func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{
-					"data": {
-						"employee": {
-							"id": 1,
-							"tag": "employee-1",
-							"details": {
-								"forename": "John",
-								"surname": "Doe"
-							}
+		graphqlServer := newMockGraphQLServer(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{
+				"data": {
+					"employee": {
+						"id": 1,
+						"tag": "employee-1",
+						"details": {
+							"forename": "John",
+							"surname": "Doe"
 						}
 					},
 					"errors": [{"message": "Could not fetch pets"}]
-				}`))
-			},
-		}
+				}
+			}`))
+		})
 		defer graphqlServer.Close()
 
 		server, err := connectrpc.NewServer(connectrpc.ServerConfig{
@@ -279,7 +298,7 @@ func TestConnectRPC_ClientErrorHandling(t *testing.T) {
 
 		server, err := connectrpc.NewServer(connectrpc.ServerConfig{
 			ServicesDir:     "testdata/connectrpc/services",
-			GraphQLEndpoint: graphqlServer.URL,
+			GraphQLEndpoint: graphqlServer.URL + "/graphql",
 			ListenAddr:      "localhost:0",
 			Logger:          zap.NewNop(),
 		})
@@ -337,7 +356,7 @@ func TestConnectRPC_ClientConcurrency(t *testing.T) {
 
 	server, err := connectrpc.NewServer(connectrpc.ServerConfig{
 		ServicesDir:     "testdata/connectrpc/services",
-		GraphQLEndpoint: graphqlServer.URL,
+		GraphQLEndpoint: graphqlServer.URL + "/graphql",
 		ListenAddr:      "localhost:0",
 		Logger:          zap.NewNop(),
 	})
@@ -393,9 +412,20 @@ func newMockGraphQLServer(handler http.HandlerFunc) *mockGraphQLServer {
 	
 	mux := http.NewServeMux()
 	mux.HandleFunc("/graphql", func(w http.ResponseWriter, r *http.Request) {
+		// Log the incoming request for debugging
+		body, _ := io.ReadAll(r.Body)
+		r.Body.Close()
+		r.Body = io.NopCloser(bytes.NewBuffer(body))
+		
+		fmt.Printf("[MockGraphQL] Request: %s %s\n", r.Method, r.URL.Path)
+		fmt.Printf("[MockGraphQL] Headers: %v\n", r.Header)
+		fmt.Printf("[MockGraphQL] Body: %s\n", string(body))
+		
 		if m.handler != nil {
 			m.handler(w, r)
 		}
+		
+		fmt.Printf("[MockGraphQL] Response sent\n\n")
 	})
 	
 	m.server = &http.Server{
