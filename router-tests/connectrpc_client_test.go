@@ -1,11 +1,8 @@
 package integration
 
 import (
-	"bytes"
 	"context"
 	"crypto/tls"
-	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"testing"
@@ -16,8 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 	employeev1 "github.com/wundergraph/cosmo/router-tests/testdata/connectrpc/client/employee.v1"
 	"github.com/wundergraph/cosmo/router-tests/testdata/connectrpc/client/employee.v1/employeev1connect"
-	"github.com/wundergraph/cosmo/router/pkg/connectrpc"
-	"go.uber.org/zap"
 	"golang.org/x/net/http2"
 )
 
@@ -26,49 +21,15 @@ import (
 func TestConnectRPC_ClientProtocols(t *testing.T) {
 	t.Parallel()
 
-	// Create mock GraphQL server
-	graphqlServer := newMockGraphQLServer(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{
-			"data": {
-				"employee": {
-					"id": 1,
-					"tag": "employee-1",
-					"details": {
-						"forename": "John",
-						"surname": "Doe",
-						"pets": [{"name": "Fluffy"}],
-						"location": {"key": {"name": "San Francisco"}}
-					}
-				}
-			}
-		}`))
+	// Use shared helper for employee GraphQL handler
+	ts := NewTestConnectRPCServer(t, ConnectRPCServerOptions{
+		GraphQLHandler: EmployeeGraphQLHandler(),
 	})
-	defer graphqlServer.Close()
-
-	// Start ConnectRPC server
-	graphqlEndpoint := graphqlServer.URL + "/graphql"
-	fmt.Printf("[Test] Mock GraphQL Server URL: %s\n", graphqlServer.URL)
-	fmt.Printf("[Test] GraphQL Endpoint configured: %s\n", graphqlEndpoint)
 	
-	server, err := connectrpc.NewServer(connectrpc.ServerConfig{
-		ServicesDir:     "testdata/connectrpc/services",
-		GraphQLEndpoint: graphqlEndpoint,
-		ListenAddr:      "localhost:0",
-		Logger:          zap.NewNop(),
-	})
+	err := ts.Start()
 	require.NoError(t, err)
 
-	err = server.Start()
-	require.NoError(t, err)
-	defer func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		server.Stop(ctx)
-	}()
-
-	baseURL := "http://" + server.Addr().String()
+	baseURL := "http://" + ts.Addr().String()
 
 	t.Run("Connect protocol", func(t *testing.T) {
 		client := employeev1connect.NewEmployeeServiceClient(
@@ -151,34 +112,16 @@ func TestConnectRPC_ClientErrorHandling(t *testing.T) {
 	t.Parallel()
 
 	t.Run("GraphQL error with no data returns CRITICAL", func(t *testing.T) {
-		graphqlServer := newMockGraphQLServer(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{
-				"errors": [{"message": "Employee not found"}]
-			}`))
+		ts := NewTestConnectRPCServer(t, ConnectRPCServerOptions{
+			GraphQLHandler: ErrorGraphQLHandler("Employee not found"),
 		})
-		defer graphqlServer.Close()
-
-		server, err := connectrpc.NewServer(connectrpc.ServerConfig{
-			ServicesDir:     "testdata/connectrpc/services",
-			GraphQLEndpoint: graphqlServer.URL + "/graphql",
-			ListenAddr:      "localhost:0",
-			Logger:          zap.NewNop(),
-		})
+		
+		err := ts.Start()
 		require.NoError(t, err)
-
-		err = server.Start()
-		require.NoError(t, err)
-		defer func() {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-			server.Stop(ctx)
-		}()
 
 		client := employeev1connect.NewEmployeeServiceClient(
 			http.DefaultClient,
-			"http://"+server.Addr().String(),
+			"http://"+ts.Addr().String(),
 		)
 
 		req := connect.NewRequest(&employeev1.GetEmployeeByIdRequest{
@@ -196,7 +139,8 @@ func TestConnectRPC_ClientErrorHandling(t *testing.T) {
 	})
 
 	t.Run("GraphQL error with partial data returns NON-CRITICAL", func(t *testing.T) {
-		graphqlServer := newMockGraphQLServer(func(w http.ResponseWriter, r *http.Request) {
+		// Custom handler for partial data with errors
+		handler := func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`{
@@ -212,29 +156,19 @@ func TestConnectRPC_ClientErrorHandling(t *testing.T) {
 					"errors": [{"message": "Could not fetch pets"}]
 				}
 			}`))
+		}
+		
+		ts := NewTestConnectRPCServer(t, ConnectRPCServerOptions{
+			GraphQLHandler: handler,
 		})
-		defer graphqlServer.Close()
-
-		server, err := connectrpc.NewServer(connectrpc.ServerConfig{
-			ServicesDir:     "testdata/connectrpc/services",
-			GraphQLEndpoint: graphqlServer.URL + "/graphql",
-			ListenAddr:      "localhost:0",
-			Logger:          zap.NewNop(),
-		})
+		
+		err := ts.Start()
 		require.NoError(t, err)
-
-		err = server.Start()
-		require.NoError(t, err)
-		defer func() {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-			server.Stop(ctx)
-		}()
 
 		time.Sleep(100 * time.Millisecond)
 		client := employeev1connect.NewEmployeeServiceClient(
 			http.DefaultClient,
-			"http://"+server.Addr().String(),
+			"http://"+ts.Addr().String(),
 		)
 
 		req := connect.NewRequest(&employeev1.GetEmployeeByIdRequest{
@@ -250,31 +184,16 @@ func TestConnectRPC_ClientErrorHandling(t *testing.T) {
 	})
 
 	t.Run("HTTP 404 maps to CodeNotFound", func(t *testing.T) {
-		graphqlServer := newMockGraphQLServer(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte("Not Found"))
+		ts := NewTestConnectRPCServer(t, ConnectRPCServerOptions{
+			GraphQLHandler: HTTPErrorHandler(http.StatusNotFound, "Not Found"),
 		})
-		defer graphqlServer.Close()
-
-		server, err := connectrpc.NewServer(connectrpc.ServerConfig{
-			ServicesDir:     "testdata/connectrpc/services",
-			GraphQLEndpoint: graphqlServer.URL + "/graphql",
-			ListenAddr:      "localhost:0",
-			Logger:          zap.NewNop(),
-		})
+		
+		err := ts.Start()
 		require.NoError(t, err)
-
-		err = server.Start()
-		require.NoError(t, err)
-		defer func() {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-			server.Stop(ctx)
-		}()
 
 		client := employeev1connect.NewEmployeeServiceClient(
 			http.DefaultClient,
-			"http://"+server.Addr().String(),
+			"http://"+ts.Addr().String(),
 		)
 
 		req := connect.NewRequest(&employeev1.GetEmployeeByIdRequest{
@@ -290,31 +209,16 @@ func TestConnectRPC_ClientErrorHandling(t *testing.T) {
 	})
 
 	t.Run("HTTP 500 maps to CodeInternal", func(t *testing.T) {
-		graphqlServer := newMockGraphQLServer(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("Internal Server Error"))
+		ts := NewTestConnectRPCServer(t, ConnectRPCServerOptions{
+			GraphQLHandler: HTTPErrorHandler(http.StatusInternalServerError, "Internal Server Error"),
 		})
-		defer graphqlServer.Close()
-
-		server, err := connectrpc.NewServer(connectrpc.ServerConfig{
-			ServicesDir:     "testdata/connectrpc/services",
-			GraphQLEndpoint: graphqlServer.URL + "/graphql",
-			ListenAddr:      "localhost:0",
-			Logger:          zap.NewNop(),
-		})
+		
+		err := ts.Start()
 		require.NoError(t, err)
-
-		err = server.Start()
-		require.NoError(t, err)
-		defer func() {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-			server.Stop(ctx)
-		}()
 
 		client := employeev1connect.NewEmployeeServiceClient(
 			http.DefaultClient,
-			"http://"+server.Addr().String(),
+			"http://"+ts.Addr().String(),
 		)
 
 		req := connect.NewRequest(&employeev1.GetEmployeeByIdRequest{
@@ -335,7 +239,7 @@ func TestConnectRPC_ClientConcurrency(t *testing.T) {
 	t.Parallel()
 
 	var requestCount int
-	graphqlServer := newMockGraphQLServer(func(w http.ResponseWriter, r *http.Request) {
+	handler := func(w http.ResponseWriter, r *http.Request) {
 		requestCount++
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -351,28 +255,18 @@ func TestConnectRPC_ClientConcurrency(t *testing.T) {
 				}
 			}
 		}`))
+	}
+	
+	ts := NewTestConnectRPCServer(t, ConnectRPCServerOptions{
+		GraphQLHandler: handler,
 	})
-	defer graphqlServer.Close()
-
-	server, err := connectrpc.NewServer(connectrpc.ServerConfig{
-		ServicesDir:     "testdata/connectrpc/services",
-		GraphQLEndpoint: graphqlServer.URL + "/graphql",
-		ListenAddr:      "localhost:0",
-		Logger:          zap.NewNop(),
-	})
+	
+	err := ts.Start()
 	require.NoError(t, err)
-
-	err = server.Start()
-	require.NoError(t, err)
-	defer func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		server.Stop(ctx)
-	}()
 
 	client := employeev1connect.NewEmployeeServiceClient(
 		http.DefaultClient,
-		"http://"+server.Addr().String(),
+		"http://"+ts.Addr().String(),
 	)
 
 	// Make 10 concurrent requests
@@ -396,62 +290,4 @@ func TestConnectRPC_ClientConcurrency(t *testing.T) {
 	}
 
 	assert.Equal(t, numRequests, requestCount, "should have made all requests")
-}
-
-// mockGraphQLServer is a simple mock HTTP server for testing
-type mockGraphQLServer struct {
-	server  *http.Server
-	handler http.HandlerFunc
-	URL     string
-}
-
-func newMockGraphQLServer(handler http.HandlerFunc) *mockGraphQLServer {
-	m := &mockGraphQLServer{
-		handler: handler,
-	}
-	
-	mux := http.NewServeMux()
-	mux.HandleFunc("/graphql", func(w http.ResponseWriter, r *http.Request) {
-		// Log the incoming request for debugging
-		body, _ := io.ReadAll(r.Body)
-		r.Body.Close()
-		r.Body = io.NopCloser(bytes.NewBuffer(body))
-		
-		fmt.Printf("[MockGraphQL] Request: %s %s\n", r.Method, r.URL.Path)
-		fmt.Printf("[MockGraphQL] Headers: %v\n", r.Header)
-		fmt.Printf("[MockGraphQL] Body: %s\n", string(body))
-		
-		if m.handler != nil {
-			m.handler(w, r)
-		}
-		
-		fmt.Printf("[MockGraphQL] Response sent\n\n")
-	})
-	
-	m.server = &http.Server{
-		Handler: mux,
-		Addr:    "127.0.0.1:0",
-	}
-	
-	listener, err := net.Listen("tcp", m.server.Addr)
-	if err != nil {
-		panic(err)
-	}
-	
-	m.URL = "http://" + listener.Addr().String()
-	
-	go m.server.Serve(listener)
-	
-	// Give the server a moment to start
-	time.Sleep(10 * time.Millisecond)
-	
-	return m
-}
-
-func (m *mockGraphQLServer) Close() {
-	if m.server != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		m.server.Shutdown(ctx)
-	}
 }
