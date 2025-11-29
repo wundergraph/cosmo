@@ -9,6 +9,7 @@ import { GraphPruningIssuesTable } from "@/components/checks/graph-pruning-issue
 import { LintIssuesTable } from "@/components/checks/lint-issues-table";
 import { CheckOperations } from "@/components/checks/operations";
 import { ProposalMatchesTable } from "@/components/checks/proposal-matches-table";
+import { SubgraphCheckExtension } from "@/components/checks/subgraph-check-extension";
 import { EmptyState } from "@/components/empty-state";
 import { InfoTooltip } from "@/components/info-tooltip";
 import {
@@ -105,6 +106,7 @@ import { PiBracketsCurlyBold, PiCubeFocus } from "react-icons/pi";
 import { SiLintcode } from "react-icons/si";
 import { useWorkspace } from "@/hooks/use-workspace";
 import { useCurrentOrganization } from "@/hooks/use-current-organization";
+import { MdOutlineExtension } from "react-icons/md";
 
 const ForceSuccess: React.FC<{ onSubmit: () => void }> = (props) => {
   return (
@@ -404,6 +406,7 @@ const CheckDetails = ({
   const router = useRouter();
   const { toast } = useToast();
   const proposalsFeature = useFeature("proposals");
+  const subgraphCheckExtensionsFeature = useFeature("subgraph-check-extensions");
   const organizationSlug = useCurrentOrganization()?.slug;
   const { namespace: { name: namespace } } = useWorkspace();
   const slug = router.query.slug as string;
@@ -475,6 +478,7 @@ const CheckDetails = ({
     data.check.proposalMatch === "error",
     isLinkedTrafficCheckFailed,
     isLinkedPruningCheckFailed,
+    data.check.checkExtensionErrorMessage,
   );
 
   const currentAffectedGraph = data.affectedGraphs.find(
@@ -486,6 +490,8 @@ const CheckDetails = ({
 
   const reason = data.check.errorMessage
     ? data.check.errorMessage
+    : !!data.check.checkExtensionErrorMessage
+    ? "Subgraph check extension failed"
     : data.check.proposalMatch === "error"
     ? "Proposal match check failed"
     : !data.check.isComposable
@@ -748,6 +754,34 @@ const CheckDetails = ({
                       <span className="flex-1 truncate">Proposal Match</span>
                       <InfoTooltip>
                         Indicates if the proposed schema matches a proposal.
+                      </InfoTooltip>
+                    </>
+                  )}
+                </Badge>
+              )}
+
+              {subgraphCheckExtensionsFeature?.enabled && (
+                <Badge
+                  variant="outline"
+                  className={cn("flex items-center space-x-1.5 py-2", {
+                    "text-muted-foreground": !data.check?.checkExtensionDeliveryId,
+                  })}
+                >
+                  {!data.check?.checkExtensionDeliveryId ? (
+                    <>
+                      <NoSymbolIcon className="h-4 w-4" />
+                      <span className="flex-1 truncate">Extension</span>
+                      <InfoTooltip>
+                        Indicates whether the subgraph check extension completed successfully.
+                        Enable subgraph check extensions to see the results.
+                      </InfoTooltip>
+                    </>
+                  ) : (
+                    <>
+                      {getCheckIcon(!data.check.checkExtensionErrorMessage)}
+                      <span className="flex-1 truncate">Extension</span>
+                      <InfoTooltip>
+                        Indicates whether the subgraph check extension completed successfully.
                       </InfoTooltip>
                     </>
                   )}
@@ -1052,6 +1086,23 @@ const CheckDetails = ({
                     <Link href={{ query: { ...router.query, tab: "schema" } }}>
                       <ReaderIcon />
                       Proposed Schema
+                    </Link>
+                  </TabsTrigger>
+                )}
+
+                {subgraphCheckExtensionsFeature?.enabled && (
+                  <TabsTrigger
+                    value="checkExtension"
+                    className="flex items-center gap-x-2"
+                    asChild
+                  >
+                    <Link
+                      href={{
+                        query: { ...router.query, tab: "checkExtension" },
+                      }}
+                    >
+                      <MdOutlineExtension className="flex-shrink-0" />
+                      Extension
                     </Link>
                   </TabsTrigger>
                 )}
@@ -1624,6 +1675,19 @@ const CheckDetails = ({
                     caption={`${data.proposalMatches.length} matches found`}
                     isProposalsEnabled={data.isProposalsEnabled}
                     proposalMatch={data.check.proposalMatch}
+                  />
+                </TabsContent>
+              )}
+
+              {subgraphCheckExtensionsFeature?.enabled && (
+                <TabsContent
+                  value="checkExtension"
+                  className="w-full space-y-4 px-4 lg:px-6"
+                >
+                  <SubgraphCheckExtension
+                    enabled={subgraphCheckExtensionsFeature?.enabled ?? false}
+                    deliveryId={data.check?.checkExtensionDeliveryId}
+                    errorMessage={data.check?.checkExtensionErrorMessage}
                   />
                 </TabsContent>
               )}
