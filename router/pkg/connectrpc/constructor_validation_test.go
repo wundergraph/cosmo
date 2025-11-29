@@ -97,7 +97,10 @@ func TestConstructorValidation(t *testing.T) {
 			name: "VanguardService: nil handler",
 			constructor: func() (interface{}, error) {
 				protoLoader := NewProtoLoader(logger)
-				_ = protoLoader.LoadFromDirectory("samples/services/employee.v1")
+				err := protoLoader.LoadFromDirectory("samples/services/employee.v1")
+				if err != nil {
+					return nil, err
+				}
 				return NewVanguardService(VanguardServiceConfig{
 					Handler:     nil,
 					ProtoLoader: protoLoader,

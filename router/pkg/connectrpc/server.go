@@ -239,14 +239,19 @@ func (s *Server) Reload() error {
 		return fmt.Errorf("failed to discover services: %w", err)
 	}
 
-	// Reinitialize components
+	// Create fresh proto loader and clear operation registry BEFORE initializing components
+	// This ensures initializeComponents() (and the RPCHandler it constructs) receives the fresh ProtoLoader
+	s.protoLoader = NewProtoLoader(s.logger)
+	if s.operationRegistry != nil {
+		s.operationRegistry.Clear()
+	}
+
+	// Reinitialize components with the fresh proto loader
 	if err := s.initializeComponents(); err != nil {
 		return fmt.Errorf("failed to reinitialize components: %w", err)
 	}
 
-	// Clear and reload proto files and operations for each service
-	s.protoLoader = NewProtoLoader(s.logger)
-	s.operationRegistry.Clear()
+	// Reload proto files and operations for each service
 
 	for _, service := range discoveredServices {
 		// Load proto files for this service

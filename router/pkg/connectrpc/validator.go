@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/jhump/protoreflect/desc"
+	"go.uber.org/zap"
 	"google.golang.org/protobuf/types/descriptorpb"
 )
 
@@ -50,11 +51,15 @@ func (v *MessageValidator) ValidateMessage(serviceName, methodName string, messa
 		}
 	}
 
-	// DEBUG: Log what we're validating
-	fmt.Printf("DEBUG: Validating message for %s.%s\n", serviceName, methodName)
-	fmt.Printf("DEBUG: Input message type: %s\n", method.InputMessageDescriptor.GetFullyQualifiedName())
-	fmt.Printf("DEBUG: JSON data keys: %v\n", getKeys(data))
-	fmt.Printf("DEBUG: Proto fields: %v\n", getFieldNames(method.InputMessageDescriptor))
+	// Log validation details at debug level
+	if v.protoLoader.logger != nil {
+		v.protoLoader.logger.Debug("validating message",
+			zap.String("service", serviceName),
+			zap.String("method", methodName),
+			zap.String("input_message_type", method.InputMessageDescriptor.GetFullyQualifiedName()),
+			zap.Strings("json_data_keys", getKeys(data)),
+			zap.Strings("proto_fields", getFieldNames(method.InputMessageDescriptor)))
+	}
 
 	// Validate against the input message descriptor
 	return v.validateMessageFields(method.InputMessageDescriptor, data, "")
