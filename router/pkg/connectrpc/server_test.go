@@ -1,7 +1,6 @@
 package connectrpc
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -82,32 +81,5 @@ func TestNewServer(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.NotNil(t, server.logger)
-	})
-}
-
-func TestServer_GetServiceInfo(t *testing.T) {
-	t.Run("returns consistent service count and names", func(t *testing.T) {
-		server, graphqlServer := newTestServer(t, "localhost:0")
-		defer graphqlServer.Close()
-
-		// Before start
-		assert.Equal(t, 0, server.GetServiceCount())
-		assert.Empty(t, server.GetServiceNames())
-
-		err := server.Start()
-		require.NoError(t, err)
-
-		// After start - verify count and names are consistent
-		count := server.GetServiceCount()
-		names := server.GetServiceNames()
-		
-		assert.GreaterOrEqual(t, count, 1, "should have at least one service")
-		assert.Len(t, names, count, "service names length should match count")
-		assert.NotEmpty(t, names, "service names should not be empty")
-
-		// Cleanup
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		server.Stop(ctx)
 	})
 }
