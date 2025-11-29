@@ -16,8 +16,8 @@ import (
 
 func TestNewVanguardService(t *testing.T) {
 	t.Run("creates service successfully", func(t *testing.T) {
-		protoLoader := setupTestProtoLoaderFromDir(t, "samples/services/employee.v1")
-		handler := setupTestRPCHandler(t, protoLoader)
+		protoLoader := GetSharedProtoLoader(t, "samples/services/employee.v1")
+		handler := NewTestRPCHandler(t, protoLoader)
 
 		vs, err := NewVanguardService(VanguardServiceConfig{
 			Handler:     handler,
@@ -31,7 +31,7 @@ func TestNewVanguardService(t *testing.T) {
 	})
 
 	t.Run("fails with nil handler", func(t *testing.T) {
-		protoLoader := setupTestProtoLoaderFromDir(t, "samples/services/employee.v1")
+		protoLoader := GetSharedProtoLoader(t, "samples/services/employee.v1")
 
 		_, err := NewVanguardService(VanguardServiceConfig{
 			Handler:     nil,
@@ -57,8 +57,8 @@ func TestNewVanguardService(t *testing.T) {
 	})
 
 	t.Run("uses nop logger when nil", func(t *testing.T) {
-		protoLoader := setupTestProtoLoaderFromDir(t, "samples/services/employee.v1")
-		handler := setupTestRPCHandler(t, protoLoader)
+		protoLoader := GetSharedProtoLoader(t, "samples/services/employee.v1")
+		handler := NewTestRPCHandler(t, protoLoader)
 
 		vs, err := NewVanguardService(VanguardServiceConfig{
 			Handler:     handler,
@@ -89,8 +89,8 @@ func TestNewVanguardService(t *testing.T) {
 }
 
 func TestVanguardService_GetServices(t *testing.T) {
-	protoLoader := setupTestProtoLoaderFromDir(t, "samples/services/employee.v1")
-	handler := setupTestRPCHandler(t, protoLoader)
+	protoLoader := GetSharedProtoLoader(t, "samples/services/employee.v1")
+	handler := NewTestRPCHandler(t, protoLoader)
 
 	vs, err := NewVanguardService(VanguardServiceConfig{
 		Handler:     handler,
@@ -105,8 +105,8 @@ func TestVanguardService_GetServices(t *testing.T) {
 }
 
 func TestVanguardService_GetServiceNames(t *testing.T) {
-	protoLoader := setupTestProtoLoaderFromDir(t, "samples/services/employee.v1")
-	handler := setupTestRPCHandler(t, protoLoader)
+	protoLoader := GetSharedProtoLoader(t, "samples/services/employee.v1")
+	handler := NewTestRPCHandler(t, protoLoader)
 
 	vs, err := NewVanguardService(VanguardServiceConfig{
 		Handler:     handler,
@@ -121,8 +121,8 @@ func TestVanguardService_GetServiceNames(t *testing.T) {
 }
 
 func TestVanguardService_ValidateService(t *testing.T) {
-	protoLoader := setupTestProtoLoaderFromDir(t, "samples/services/employee.v1")
-	handler := setupTestRPCHandler(t, protoLoader)
+	protoLoader := GetSharedProtoLoader(t, "samples/services/employee.v1")
+	handler := NewTestRPCHandler(t, protoLoader)
 
 	vs, err := NewVanguardService(VanguardServiceConfig{
 		Handler:     handler,
@@ -144,8 +144,8 @@ func TestVanguardService_ValidateService(t *testing.T) {
 }
 
 func TestVanguardService_ValidateMethod(t *testing.T) {
-	protoLoader := setupTestProtoLoaderFromDir(t, "samples/services/employee.v1")
-	handler := setupTestRPCHandler(t, protoLoader)
+	protoLoader := GetSharedProtoLoader(t, "samples/services/employee.v1")
+	handler := NewTestRPCHandler(t, protoLoader)
 
 	vs, err := NewVanguardService(VanguardServiceConfig{
 		Handler:     handler,
@@ -173,8 +173,8 @@ func TestVanguardService_ValidateMethod(t *testing.T) {
 }
 
 func TestVanguardService_GetMethodInfo(t *testing.T) {
-	protoLoader := setupTestProtoLoaderFromDir(t, "samples/services/employee.v1")
-	handler := setupTestRPCHandler(t, protoLoader)
+	protoLoader := GetSharedProtoLoader(t, "samples/services/employee.v1")
+	handler := NewTestRPCHandler(t, protoLoader)
 
 	vs, err := NewVanguardService(VanguardServiceConfig{
 		Handler:     handler,
@@ -198,8 +198,8 @@ func TestVanguardService_GetMethodInfo(t *testing.T) {
 }
 
 func TestVanguardService_GetServiceInfo(t *testing.T) {
-	protoLoader := setupTestProtoLoaderFromDir(t, "samples/services/employee.v1")
-	handler := setupTestRPCHandler(t, protoLoader)
+	protoLoader := GetSharedProtoLoader(t, "samples/services/employee.v1")
+	handler := NewTestRPCHandler(t, protoLoader)
 
 	vs, err := NewVanguardService(VanguardServiceConfig{
 		Handler:     handler,
@@ -225,8 +225,8 @@ func TestVanguardService_GetServiceInfo(t *testing.T) {
 }
 
 func TestVanguardService_ServiceHandler(t *testing.T) {
-	protoLoader := setupTestProtoLoaderFromDir(t, "samples/services/employee.v1")
-	handler := setupTestRPCHandler(t, protoLoader)
+	protoLoader := GetSharedProtoLoader(t, "samples/services/employee.v1")
+	handler := NewTestRPCHandler(t, protoLoader)
 
 	vs, err := NewVanguardService(VanguardServiceConfig{
 		Handler:     handler,
@@ -245,7 +245,7 @@ func TestVanguardService_ServiceHandler(t *testing.T) {
 		defer graphqlServer.Close()
 
 		// Create handler with mock server
-		protoLoader := setupTestProtoLoaderFromDir(t, "samples/services/employee.v1")
+		protoLoader := GetSharedProtoLoader(t, "samples/services/employee.v1")
 		opRegistry := NewOperationRegistry(zap.NewNop())
 		
 		// Manually add a test operation to the registry using service-scoped approach
@@ -399,8 +399,8 @@ func TestVanguardService_ServiceHandler(t *testing.T) {
 }
 
 func TestVanguardService_ExtractMethodName(t *testing.T) {
-	protoLoader := setupTestProtoLoaderFromDir(t, "samples/services/employee.v1")
-	handler := setupTestRPCHandler(t, protoLoader)
+	protoLoader := GetSharedProtoLoader(t, "samples/services/employee.v1")
+	handler := NewTestRPCHandler(t, protoLoader)
 
 	vs, err := NewVanguardService(VanguardServiceConfig{
 		Handler:     handler,
@@ -456,8 +456,8 @@ func TestVanguardService_ExtractMethodName(t *testing.T) {
 }
 
 func TestVanguardService_GetFileDescriptors(t *testing.T) {
-	protoLoader := setupTestProtoLoaderFromDir(t, "samples/services/employee.v1")
-	handler := setupTestRPCHandler(t, protoLoader)
+	protoLoader := GetSharedProtoLoader(t, "samples/services/employee.v1")
+	handler := NewTestRPCHandler(t, protoLoader)
 
 	vs, err := NewVanguardService(VanguardServiceConfig{
 		Handler:     handler,
@@ -468,41 +468,6 @@ func TestVanguardService_GetFileDescriptors(t *testing.T) {
 
 	descriptors := vs.GetFileDescriptors()
 	assert.NotEmpty(t, descriptors)
-}
-
-// Helper functions
-
-func setupTestRPCHandler(t *testing.T, protoLoader *ProtoLoader) *RPCHandler {
-	t.Helper()
-
-	// Create operation registry
-	opRegistry := NewOperationRegistry(zap.NewNop())
-	
-	// Manually add test operations to the registry using service-scoped approach
-	// In a real scenario, these would be loaded from .graphql files
-	serviceName := "employee.v1.EmployeeService"
-	if opRegistry.operations[serviceName] == nil {
-		opRegistry.operations[serviceName] = make(map[string]*schemaloader.Operation)
-	}
-	opRegistry.operations[serviceName]["GetEmployeeById"] = &schemaloader.Operation{
-		Name:            "GetEmployeeById",
-		OperationType:   "query",
-		OperationString: "query GetEmployeeById($id: Int!) { employee(id: $id) { id name } }",
-	}
-
-	// Create a mock HTTP client
-	httpClient := &http.Client{}
-
-	handler, err := NewRPCHandler(HandlerConfig{
-		GraphQLEndpoint:   "http://localhost:4000/graphql",
-		HTTPClient:        httpClient,
-		Logger:            zap.NewNop(),
-		OperationRegistry: opRegistry,
-		ProtoLoader:       protoLoader,
-	})
-	require.NoError(t, err)
-
-	return handler
 }
 
 // errorReader is a reader that always returns an error
