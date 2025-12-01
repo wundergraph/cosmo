@@ -28,6 +28,7 @@ import (
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/circuit"
+	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/internal/debug"
 	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/exporter"
@@ -927,6 +928,72 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			mcpserver.WithEnableArbitraryOperations(r.mcp.EnableArbitraryOperations),
 			mcpserver.WithExposeSchema(r.mcp.ExposeSchema),
 			mcpserver.WithStateless(r.mcp.Session.Stateless),
+		}
+
+		// Configure MCP authorization if enabled
+		if r.mcp.Authorization.Enabled {
+			// Convert router JWKS config to authentication JWKS config
+			jwksConfigs := make([]authentication.JWKSConfig, 0, len(r.mcp.Authorization.JWKS))
+			for _, jwks := range r.mcp.Authorization.JWKS {
+				jwksConfigs = append(jwksConfigs, authentication.JWKSConfig{
+					URL:             jwks.URL,
+					RefreshInterval: jwks.RefreshInterval,
+					AllowedAlgorithms: jwks.Algorithms,
+					Secret:          jwks.Secret,
+					Algorithm:       jwks.Algorithm,
+					KeyId:           jwks.KeyId,
+					Audiences:       jwks.Audiences,
+					RefreshUnknownKID: authentication.RefreshUnknownKIDConfig{
+						Enabled:  jwks.RefreshUnknownKID.Enabled,
+						Interval: jwks.RefreshUnknownKID.Interval,
+						Burst:    jwks.RefreshUnknownKID.Burst,
+						MaxWait:  jwks.RefreshUnknownKID.MaxWait,
+					},
+				})
+			}
+
+			// Create token decoder from JWKS configuration
+			tokenDecoder, err := authentication.NewJwksTokenDecoder(ctx, r.logger, jwksConfigs)
+			if err != nil {
+				return fmt.Errorf("failed to create MCP token decoder: %w", err)
+			}
+
+			// Create authenticator using the token decoder
+			authenticator, err := authentication.NewHttpHeaderAuthenticator(authentication.HttpHeaderAuthenticatorOptions{
+				Name:         "mcp-jwt",
+				TokenDecoder: tokenDecoder,
+				HeaderSourcePrefixes: map[string][]string{
+					"Authorization": {"Bearer"},
+				},
+			})
+			if err != nil {
+				return fmt.Errorf("failed to create MCP authenticator: %w", err)
+			}
+
+			// Create token validator
+			tokenValidator := mcpserver.NewTokenValidator(
+				[]authentication.Authenticator{authenticator},
+				r.logger,
+				true,
+			)
+
+			// Add authorization options to MCP server
+			mcpOpts = append(mcpOpts,
+				mcpserver.WithTokenValidator(tokenValidator),
+				mcpserver.WithAuthConfig(&r.mcp.Authorization),
+				mcpserver.WithMetadataConfig(&r.mcp.Authorization.Metadata),
+			)
+
+			// Set base URL for metadata endpoint if configured
+			if r.mcp.Server.BaseURL != "" {
+				mcpOpts = append(mcpOpts, mcpserver.WithBaseURL(r.mcp.Server.BaseURL))
+			}
+
+			r.logger.Info("MCP authorization enabled",
+				zap.Int("jwks_count", len(jwksConfigs)),
+				zap.String("scopes_mode", r.mcp.Authorization.Scopes.Mode),
+				zap.Bool("metadata_enabled", r.mcp.Authorization.Metadata.Enabled),
+			)
 		}
 
 		// Determine the router GraphQL endpoint
