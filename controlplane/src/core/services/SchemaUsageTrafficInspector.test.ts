@@ -236,7 +236,7 @@ describe('Schema Change converter', (ctx) => {
       ]);
     });
 
-    test('Remove an required input field', async () => {
+    test('Remove a required input field', async () => {
       const a = buildSchema(/* GraphQL */ `
         input Foo {
           a: String!

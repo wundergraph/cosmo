@@ -32,7 +32,6 @@ GROUP BY
     FederatedGraphID,
     RouterConfigVersion,
     OrganizationID,
-    OperationType,
     ClientName,
     ClientVersion,
     Path,

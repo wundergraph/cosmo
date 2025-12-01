@@ -513,7 +513,7 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
           };
         }
         default: {
-          throw new Error(`Unsupported input field type change category: ${FieldTypeChangeCategory}`);
+          throw new Error(`Unsupported input field type change category: ${inputFieldTypeChangeCategory}`);
         }
       }
     }
