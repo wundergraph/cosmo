@@ -30,6 +30,12 @@
 // IsNull flag to indicate null propagation. When an input is null, the chain stops there—nested
 // fields are not traversed since the parent is null.
 //
+// For list-typed fields:
+//   - Null list values (e.g., tags: null where tags: [String]) are tracked with IsNull=true
+//   - Empty lists (e.g., tags: []) do not produce element entries (nothing to iterate)
+//   - Null elements within lists (e.g., tags: ["a", null, "b"]) are NOT individually tracked
+//     (the field-level usage already indicates the list type is being used)
+//
 // # Design Components
 //
 // The package uses dependency injection and separation of concerns:
@@ -76,6 +82,9 @@ func GetTypeFieldUsageInfo(operationPlan plan.Plan) []*TypeFieldUsageInfo {
 
 // GetArgumentUsageInfo extracts argument usage by correlating AST arguments with execution plan
 // field paths. Includes null tracking for both inline and variable-based argument values.
+//
+// The variables parameter can be nil, which is treated as "no variables provided". When nil,
+// null detection for variable-based arguments will default to false (cannot determine nullness).
 func GetArgumentUsageInfo(operation, definition *ast.Document, variables *astjson.Value, operationPlan plan.Plan, remapVariables map[string]string) ([]*graphqlmetrics.ArgumentUsageInfo, error) {
 	subgraphMapper := newSubgraphMapper(operationPlan, operation, definition)
 	nullDetector := newNullValueDetector(operation, variables, remapVariables)
@@ -108,6 +117,9 @@ func GetArgumentUsageInfo(operation, definition *ast.Document, variables *astjso
 // GetInputUsageInfo extracts input usage by traversing variable values. Tracks both explicit
 // nulls ({"field": null}) and implicit nulls (missing fields) for breaking change detection.
 // Also tracks input usage for implicitly null input type arguments (arguments not provided).
+//
+// The variables parameter can be nil, which is treated as "no variables provided". When nil,
+// input object types are still tracked with IsNull=true for breaking change detection.
 func GetInputUsageInfo(operation, definition *ast.Document, variables *astjson.Value, operationPlan plan.Plan, remapVariables map[string]string) ([]*graphqlmetrics.InputUsageInfo, error) {
 	subgraphMapper := newSubgraphMapper(operationPlan, operation, definition)
 	traverser := newInputTraverser(definition, subgraphMapper)
@@ -759,6 +771,8 @@ func (t *inputTraverser) createUsageInfo(fieldName, typeName, parentTypeName str
 func (t *inputTraverser) traverseInputObject(jsonValue *astjson.Value, fieldName, typeName, parentTypeName string, defNode ast.Node, usageInfo *graphqlmetrics.InputUsageInfo) {
 	switch jsonValue.Type() {
 	case astjson.TypeArray:
+		// Note: arrays at this level mean list of input objects (e.g., [InputType])
+		// If we reach here, the array itself is not null, so iterate normally
 		for _, arrayValue := range jsonValue.GetArray() {
 			t.traverse(arrayValue, fieldName, typeName, parentTypeName, false)
 		}
@@ -805,6 +819,14 @@ func (t *inputTraverser) processField(fieldName string, value *astjson.Value, pa
 	fieldIsNull := value.Type() == astjson.TypeNull
 
 	if t.definition.TypeIsList(fieldDef.Type) {
+		// If the list field itself is null, record a single null usage and stop.
+		// This is critical for breaking change detection (e.g., [String] -> [String]!).
+		if fieldIsNull {
+			t.traverse(value, fieldName, fieldTypeName, parentTypeName, true)
+			return
+		}
+
+		// List is not null - iterate through elements
 		for _, arrayValue := range value.GetArray() {
 			t.traverse(arrayValue, fieldName, fieldTypeName, parentTypeName, false)
 		}
@@ -894,6 +916,7 @@ func (t *inputTraverser) infoEquals(a, b *graphqlmetrics.InputUsageInfo) bool {
 
 // processVariableDefinition processes a variable definition and initiates input traversal.
 // Tracks input usage even when the variable is not provided in the variables JSON (empty variables).
+// Handles nil variables gracefully by treating them as "no variables provided".
 func processVariableDefinition(traverser *inputTraverser, operation, definition *ast.Document, variables *astjson.Value, nullDetector *nullValueDetector, subgraphMapper *subgraphMapper, ref int) {
 	varDef := operation.VariableDefinitions[ref]
 	varTypeRef := varDef.Type
@@ -905,10 +928,14 @@ func processVariableDefinition(traverser *inputTraverser, operation, definition 
 	// Map back to original name for JSON lookup
 	originalVarName := nullDetector.getOriginalVariableName(normalizedVarName)
 
-	// Look up the variable value
-	jsonField := variables.Get(originalVarName)
+	// Look up the variable value (treat nil variables as "no variables provided")
+	var jsonField *astjson.Value
+	if variables != nil {
+		jsonField = variables.Get(originalVarName)
+	}
+
 	if jsonField == nil {
-		// Variable is not provided in variables JSON - still track input type usage if it's an input object type
+		// Variable is not provided in variables JSON (or variables is nil) - still track input type usage if it's an input object type
 		// This is important for breaking change detection
 		defNode, ok := definition.NodeByNameStr(varTypeName)
 		if ok && defNode.Kind == ast.NodeKindInputObjectTypeDefinition {

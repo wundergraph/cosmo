@@ -2788,6 +2788,318 @@ func TestSharedVariableAcrossSubgraphs(t *testing.T) {
 	assert.Len(t, actualInput.SubgraphIDs, 3, "Should have exactly 3 subgraph IDs (no duplicates)")
 }
 
+// TestNullListHandling verifies that null list values are properly tracked with IsNull flag.
+// This is critical for breaking change detection when a nullable list type becomes non-nullable.
+func TestNullListHandling(t *testing.T) {
+	schema := `
+		schema {
+			query: Query
+		}
+		
+		type Query {
+			search(filter: SearchFilter!): [Result!]!
+		}
+		
+		type Result {
+			id: ID!
+		}
+		
+		input SearchFilter {
+			tags: [String]
+			categories: [String]
+			scores: [Int]
+		}
+	`
+
+	tests := []struct {
+		name          string
+		variables     string
+		expectedUsage []graphqlmetricsv1.InputUsageInfo
+		description   string
+	}{
+		{
+			name: "null list - tags is explicitly null",
+			variables: `{
+				"filter": {
+					"tags": null,
+					"categories": ["cat1", "cat2"]
+				}
+			}`,
+			expectedUsage: []graphqlmetricsv1.InputUsageInfo{
+				{
+					NamedType:   "String",
+					TypeName:    "SearchFilter",
+					Path:        []string{"SearchFilter", "tags"},
+					SubgraphIDs: []string{"search-subgraph"},
+					IsNull:      true, // Null list should be marked as null
+				},
+				{
+					NamedType:   "String",
+					TypeName:    "SearchFilter",
+					Path:        []string{"SearchFilter", "categories"},
+					SubgraphIDs: []string{"search-subgraph"},
+					IsNull:      false,
+				},
+				{
+					NamedType:   "Int",
+					TypeName:    "SearchFilter",
+					Path:        []string{"SearchFilter", "scores"},
+					SubgraphIDs: []string{"search-subgraph"},
+					IsNull:      true, // Implicit null (missing)
+				},
+				{
+					NamedType:   "SearchFilter",
+					Path:        []string{"SearchFilter"},
+					SubgraphIDs: []string{"search-subgraph"},
+					IsNull:      false,
+				},
+			},
+			description: "Explicit null list value should be tracked with IsNull=true, not skipped",
+		},
+		{
+			name: "empty list - not null",
+			variables: `{
+				"filter": {
+					"tags": [],
+					"categories": ["cat1"]
+				}
+			}`,
+			expectedUsage: []graphqlmetricsv1.InputUsageInfo{
+				{
+					NamedType:   "String",
+					TypeName:    "SearchFilter",
+					Path:        []string{"SearchFilter", "categories"},
+					SubgraphIDs: []string{"search-subgraph"},
+					IsNull:      false,
+				},
+				{
+					NamedType:   "Int",
+					TypeName:    "SearchFilter",
+					Path:        []string{"SearchFilter", "scores"},
+					SubgraphIDs: []string{"search-subgraph"},
+					IsNull:      true, // Implicit null (missing)
+				},
+				{
+					NamedType:   "SearchFilter",
+					Path:        []string{"SearchFilter"},
+					SubgraphIDs: []string{"search-subgraph"},
+					IsNull:      false,
+				},
+			},
+			description: "Empty list should not produce any element entries (nothing to iterate), only implicit null for missing fields",
+		},
+		{
+			name: "all lists null",
+			variables: `{
+				"filter": {
+					"tags": null,
+					"categories": null,
+					"scores": null
+				}
+			}`,
+			expectedUsage: []graphqlmetricsv1.InputUsageInfo{
+				{
+					NamedType:   "String",
+					TypeName:    "SearchFilter",
+					Path:        []string{"SearchFilter", "tags"},
+					SubgraphIDs: []string{"search-subgraph"},
+					IsNull:      true,
+				},
+				{
+					NamedType:   "String",
+					TypeName:    "SearchFilter",
+					Path:        []string{"SearchFilter", "categories"},
+					SubgraphIDs: []string{"search-subgraph"},
+					IsNull:      true,
+				},
+				{
+					NamedType:   "Int",
+					TypeName:    "SearchFilter",
+					Path:        []string{"SearchFilter", "scores"},
+					SubgraphIDs: []string{"search-subgraph"},
+					IsNull:      true,
+				},
+				{
+					NamedType:   "SearchFilter",
+					Path:        []string{"SearchFilter"},
+					SubgraphIDs: []string{"search-subgraph"},
+					IsNull:      false,
+				},
+			},
+			description: "All null lists should be tracked with IsNull=true",
+		},
+	}
+
+	operation := `
+		query SearchQuery($filter: SearchFilter!) {
+			search(filter: $filter) {
+				id
+			}
+		}
+	`
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			def, rep := astparser.ParseGraphqlDocumentString(schema)
+			require.False(t, rep.HasErrors())
+			op, rep := astparser.ParseGraphqlDocumentString(operation)
+			require.False(t, rep.HasErrors())
+			err := asttransform.MergeDefinitionWithBaseSchema(&def)
+			require.NoError(t, err)
+
+			report := &operationreport.Report{}
+			norm := astnormalization.NewNormalizer(true, true)
+			norm.NormalizeOperation(&op, &def, report)
+			require.False(t, report.HasErrors())
+
+			valid := astvalidation.DefaultOperationValidator()
+			valid.Validate(&op, &def, report)
+			require.False(t, report.HasErrors())
+
+			dsCfg, err := plan.NewDataSourceConfiguration(
+				"search-subgraph",
+				&FakeFactory[any]{upstreamSchema: &def},
+				&plan.DataSourceMetadata{
+					RootNodes: []plan.TypeField{
+						{TypeName: "Query", FieldNames: []string{"search"}},
+					},
+					ChildNodes: []plan.TypeField{
+						{TypeName: "Result", FieldNames: []string{"id"}},
+					},
+				},
+				nil,
+			)
+			require.NoError(t, err)
+
+			planner, err := plan.NewPlanner(plan.Configuration{
+				DisableResolveFieldPositions: true,
+				DataSources:                  []plan.DataSource{dsCfg},
+			})
+			require.NoError(t, err)
+
+			generatedPlan := planner.Plan(&op, &def, "SearchQuery", report)
+			require.False(t, report.HasErrors())
+
+			vars, err := astjson.Parse(tt.variables)
+			require.NoError(t, err)
+
+			inputUsageInfo, err := GetInputUsageInfo(&op, &def, vars, generatedPlan, nil)
+			require.NoError(t, err)
+
+			assert.Len(t, inputUsageInfo, len(tt.expectedUsage), tt.description)
+			for i := range tt.expectedUsage {
+				assert.JSONEq(t, prettyJSON(t, &tt.expectedUsage[i]), prettyJSON(t, inputUsageInfo[i]),
+					"inputUsageInfo[%d] - %s", i, tt.description)
+			}
+		})
+	}
+}
+
+// TestNilVariablesHandling verifies that nil variables are handled gracefully without panicking.
+// This is a defensive test to ensure the API doesn't crash when callers pass nil for variables.
+func TestNilVariablesHandling(t *testing.T) {
+	schema := `
+		schema {
+			query: Query
+		}
+		
+		type Query {
+			findEmployees(criteria: SearchInput): [Employee!]!
+		}
+		
+		type Employee {
+			id: ID!
+		}
+		
+		input SearchInput {
+			department: String
+			minAge: Int
+		}
+	`
+
+	operation := `
+		query FindEmployees($criteria: SearchInput) {
+			findEmployees(criteria: $criteria) {
+				id
+			}
+		}
+	`
+
+	def, rep := astparser.ParseGraphqlDocumentString(schema)
+	require.False(t, rep.HasErrors())
+	op, rep := astparser.ParseGraphqlDocumentString(operation)
+	require.False(t, rep.HasErrors())
+	err := asttransform.MergeDefinitionWithBaseSchema(&def)
+	require.NoError(t, err)
+
+	report := &operationreport.Report{}
+	norm := astnormalization.NewNormalizer(true, true)
+	norm.NormalizeOperation(&op, &def, report)
+	require.False(t, report.HasErrors())
+
+	valid := astvalidation.DefaultOperationValidator()
+	valid.Validate(&op, &def, report)
+	require.False(t, report.HasErrors())
+
+	dsCfg, err := plan.NewDataSourceConfiguration(
+		"employees-subgraph",
+		&FakeFactory[any]{upstreamSchema: &def},
+		&plan.DataSourceMetadata{
+			RootNodes: []plan.TypeField{
+				{TypeName: "Query", FieldNames: []string{"findEmployees"}},
+			},
+			ChildNodes: []plan.TypeField{
+				{TypeName: "Employee", FieldNames: []string{"id"}},
+			},
+		},
+		nil,
+	)
+	require.NoError(t, err)
+
+	planner, err := plan.NewPlanner(plan.Configuration{
+		DisableResolveFieldPositions: true,
+		DataSources:                  []plan.DataSource{dsCfg},
+	})
+	require.NoError(t, err)
+
+	generatedPlan := planner.Plan(&op, &def, "FindEmployees", report)
+	require.False(t, report.HasErrors())
+
+	// Test with nil variables - should not panic
+	t.Run("nil variables for GetInputUsageInfo", func(t *testing.T) {
+		inputUsageInfo, err := GetInputUsageInfo(&op, &def, nil, generatedPlan, nil)
+		require.NoError(t, err)
+
+		// Should track SearchInput as implicitly null since variable not provided
+		var searchInputUsage *graphqlmetricsv1.InputUsageInfo
+		for _, input := range inputUsageInfo {
+			if input.NamedType == "SearchInput" && len(input.Path) == 1 {
+				searchInputUsage = input
+				break
+			}
+		}
+
+		require.NotNil(t, searchInputUsage, "Should track SearchInput even with nil variables")
+		assert.Equal(t, "SearchInput", searchInputUsage.NamedType)
+		assert.True(t, searchInputUsage.IsNull, "SearchInput should be null when variables is nil")
+		assert.Equal(t, []string{"employees-subgraph"}, searchInputUsage.SubgraphIDs)
+	})
+
+	t.Run("nil variables for GetArgumentUsageInfo", func(t *testing.T) {
+		// Should not panic
+		argumentUsageInfo, err := GetArgumentUsageInfo(&op, &def, nil, generatedPlan, nil)
+		require.NoError(t, err)
+
+		// Should track the criteria argument
+		require.Len(t, argumentUsageInfo, 1)
+		assert.Equal(t, "SearchInput", argumentUsageInfo[0].NamedType)
+		assert.Equal(t, []string{"findEmployees", "criteria"}, argumentUsageInfo[0].Path)
+		// With nil variables, we can't determine if the variable value is null
+		// so IsNull will be false (default behavior when variable can't be resolved)
+		assert.False(t, argumentUsageInfo[0].IsNull)
+	})
+}
+
 func prettyJSON(t *testing.T, v interface{}) string {
 	b, err := json.MarshalIndent(v, "", "  ")
 	require.NoError(t, err)
