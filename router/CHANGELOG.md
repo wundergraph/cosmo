@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.269.0](https://github.com/wundergraph/cosmo/compare/router@0.268.0...router@0.269.0) (2025-12-01)
+
+### Features
+
+* use cors configuration also on mcp server ([#2363](https://github.com/wundergraph/cosmo/issues/2363)) ([4ccbfb8](https://github.com/wundergraph/cosmo/commit/4ccbfb8a9d409b98821e947d32b4b13d6effeaf5)) (@alepane21)
+
 # [0.268.0](https://github.com/wundergraph/cosmo/compare/router@0.267.3...router@0.268.0) (2025-11-29)
 
 ### Features
