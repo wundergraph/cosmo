@@ -16,6 +16,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/santhosh-tekuri/jsonschema/v6"
+	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
@@ -91,6 +92,8 @@ type Options struct {
 	ExposeSchema bool
 	// Stateless determines whether the MCP server should be stateless
 	Stateless bool
+	// CorsConfig is the CORS configuration for the MCP server
+	CorsConfig cors.Config
 }
 
 // GraphQLSchemaServer represents an MCP server that works with GraphQL schemas and operations
@@ -111,6 +114,7 @@ type GraphQLSchemaServer struct {
 	operationsManager         *OperationsManager
 	schemaCompiler            *SchemaCompiler
 	registeredTools           []string
+	corsConfig                cors.Config
 }
 
 type graphqlRequest struct {
@@ -237,6 +241,7 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)
 		enableArbitraryOperations: options.EnableArbitraryOperations,
 		exposeSchema:              options.ExposeSchema,
 		stateless:                 options.Stateless,
+		corsConfig:                options.CorsConfig,
 	}
 
 	return gs, nil
@@ -302,6 +307,19 @@ func WithStateless(stateless bool) func(*Options) {
 	}
 }
 
+func WithCORS(corsCfg cors.Config) func(*Options) {
+	return func(o *Options) {
+		// Force specific CORS settings for MCP server
+		corsCfg.AllowOrigins = []string{"*"}
+		corsCfg.AllowMethods = []string{"GET", "PUT", "POST", "DELETE", "OPTIONS"}
+		corsCfg.AllowHeaders = append(corsCfg.AllowHeaders, "Content-Type", "Accept", "Authorization", "Last-Event-ID", "Mcp-Protocol-Version", "Mcp-Session-Id")
+		if corsCfg.MaxAge <= 0 {
+			corsCfg.MaxAge = 24 * time.Hour
+		}
+		o.CorsConfig = corsCfg
+	}
+}
+
 // Serve starts the server with the configured options and returns a streamable HTTP server.
 func (s *GraphQLSchemaServer) Serve() (*server.StreamableHTTPServer, error) {
 	// Create custom HTTP server
@@ -320,12 +338,12 @@ func (s *GraphQLSchemaServer) Serve() (*server.StreamableHTTPServer, error) {
 		server.WithHeartbeatInterval(10*time.Second),
 	)
 
-	corsMiddleware := WithCORS("GET", "POST", "PUT", "DELETE")
+	middleware := cors.New(s.corsConfig)
 
 	mux := http.NewServeMux()
 
 	// No OAuth protection - original behavior
-	mux.Handle("/mcp", corsMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/mcp", middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		streamableHTTPServer.ServeHTTP(w, r)
 	})))
 
@@ -787,44 +805,4 @@ func (s *GraphQLSchemaServer) handleGetGraphQLSchema() func(ctx context.Context,
 
 		return mcp.NewToolResultText(schemaStr), nil
 	}
-}
-
-// WithCORS creates a reusable CORS middleware that can be used with any HTTP handler.
-// It handles preflight OPTIONS requests and sets appropriate CORS headers.
-//
-// Example usage:
-//
-//	corsMiddleware := WithCORS("GET", "POST", "PUT", "DELETE")
-//	http.Handle("/api/", corsMiddleware(apiHandler))
-//
-// The middleware sets the following CORS headers:
-//   - Access-Control-Allow-Origin: *
-//   - Access-Control-Allow-Methods: specified methods + OPTIONS
-//   - Access-Control-Allow-Headers: Content-Type, Authorization
-//   - Access-Control-Max-Age: 86400 (24 hours)
-func WithCORS(allowedMethods ...string) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			// Set CORS headers for all requests
-			setCORSHeaders(w, allowedMethods)
-
-			// Handle preflight OPTIONS requests
-			if req.Method == http.MethodOptions {
-				w.WriteHeader(http.StatusNoContent)
-				return
-			}
-
-			// Call the next handler
-			next.ServeHTTP(w, req)
-		})
-	}
-}
-
-// setCORSHeaders sets common CORS headers
-// Only used for web browsers, not for API clients
-func setCORSHeaders(w http.ResponseWriter, allowedMethods []string) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", strings.Join(append(allowedMethods, "OPTIONS"), ", "))
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Accept, Authorization, Last-Event-ID, Mcp-Protocol-Version, Mcp-Session-Id")
-	w.Header().Set("Access-Control-Max-Age", "86400") // 24 hours
 }
