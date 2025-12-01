@@ -25,6 +25,7 @@ import {
   isValidGraphName,
   isValidLabels,
 } from '../../util.js';
+import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 
 export function checkSubgraphSchema(
   opts: RouterOptions,
@@ -110,6 +111,13 @@ export function checkSubgraphSchema(
         compositionWarnings: [],
       };
     }
+
+    const webhookService = new OrganizationWebhookService(
+      opts.db,
+      authContext.organizationId,
+      opts.logger,
+      opts.billingDefaultPlanId,
+    );
 
     let linkedSubgraph:
       | {
@@ -258,7 +266,12 @@ export function checkSubgraphSchema(
       lintErrors,
       graphPruneWarnings,
       graphPruneErrors,
+      isCheckExtensionSkipped,
+      checkExtensionErrorMessage,
     } = await subgraphRepo.performSchemaCheck({
+      actorId: authContext.userId,
+      blobStorage: opts.blobStorage,
+      admissionConfig: { cdnBaseUrl: opts.cdnBaseUrl, jwtSecret: opts.jwtSecret },
       organizationSlug: authContext.organizationSlug,
       namespace,
       subgraphName,
@@ -274,6 +287,7 @@ export function checkSubgraphSchema(
       chClient: opts.chClient,
       newGraphQLSchema,
       disableResolvabilityValidation: req.disableResolvabilityValidation,
+      webhookService,
     });
 
     if (response && response.code !== EnumStatusCode.OK) {
@@ -370,6 +384,9 @@ export function checkSubgraphSchema(
       }
 
       const targetCheckResult = await subgraphRepo.performSchemaCheck({
+        actorId: authContext.userId,
+        blobStorage: opts.blobStorage,
+        admissionConfig: { cdnBaseUrl: opts.cdnBaseUrl, jwtSecret: opts.admissionWebhookJWTSecret },
         organizationSlug: authContext.organizationSlug,
         namespace: targetNamespace,
         subgraphName: targetSubgraph.name,
@@ -383,6 +400,7 @@ export function checkSubgraphSchema(
         chClient: opts.chClient,
         newGraphQLSchema: targetNewGraphQLSchema,
         disableResolvabilityValidation: req.disableResolvabilityValidation,
+        webhookService,
       });
 
       await schemaCheckRepo.addLinkedSchemaCheck({
@@ -457,6 +475,8 @@ export function checkSubgraphSchema(
       proposalMatchMessage,
       isLinkedTrafficCheckFailed,
       isLinkedPruningCheckFailed,
+      isCheckExtensionSkipped,
+      checkExtensionErrorMessage,
     };
   });
 }

@@ -10,6 +10,7 @@ export const DEFAULT_SESSION_MAX_AGE_SEC = 14 * 24 * 60 * 60; // 14 days
 
 // The cookie name used to store the user session.
 export const userSessionCookieName = 'cosmo_user_session';
+
 // The cookie name used to store the PKCE code verifier.
 export const pkceCodeVerifierCookieName = 'cosmo_pkce_code_verifier';
 // The cookie name used to store theligin idp hint
