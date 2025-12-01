@@ -359,7 +359,11 @@ jobs:
 
       - name: Run Integration tests ${{ matrix.test_target }}
         working-directory: ./router-tests
-        run: make test-coverage test_retry_count=0 --timeout=5m -p 1 --parallel 10" test_target="${{ matrix.test_target }}"
+        run: |
+          make test-coverage \
+          test_retry_count=0 \
+          test_target=./... \
+          test_params="--timeout=15m -p 1 --parallel 10"
 
       - name: Compute artifact name for codecov upload
         id: artifact_name
