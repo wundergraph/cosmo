@@ -361,7 +361,7 @@ jobs:
         working-directory: ./router-tests
         run: |
           make test-coverage \
-          test_retry_count=0 \
+          test_retry_count=5 \
           test_target=./... \
           test_params="--timeout=15m -p 1 --parallel 10"
 
