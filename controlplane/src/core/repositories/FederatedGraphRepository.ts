@@ -10,6 +10,8 @@ import {
 import { joinLabel, normalizeURL } from '@wundergraph/cosmo-shared';
 import {
   and,
+  arrayContains,
+  arrayOverlaps,
   asc,
   desc,
   eq,
@@ -745,10 +747,9 @@ export class FederatedGraphRepository {
                         not(
                           // We created a GIN index on the label_matcher column, so we can look up
                           // very quickly if the label matcher matches the given subgraph labels.
-                          sql.raw(
-                            `${targetLabelMatchers.labelMatcher.name} && ARRAY[${uniqueLabels.map(
-                              (ul) => "'" + joinLabel(ul) + "'",
-                            )}]`,
+                          arrayOverlaps(
+                            targetLabelMatchers.labelMatcher,
+                            uniqueLabels.map((ul) => joinLabel(ul)),
                           ),
                         ),
                       ),

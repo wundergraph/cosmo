@@ -7,7 +7,7 @@ import {
   WebhookDelivery,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { addDays } from 'date-fns';
-import { SQL, and, asc, count, desc, eq, gt, inArray, like, lt, not, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gt, inArray, like, lt, not, SQL, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { NewOrganizationFeature } from '../../db/models.js';
@@ -18,9 +18,9 @@ import {
   organizationBilling,
   organizationFeatures,
   organizationIntegrations,
-  organizationWebhooks,
   organizations,
   organizationsMembers,
+  organizationWebhooks,
   slackIntegrationConfigs,
   slackSchemaUpdateEventConfigs,
   users,
@@ -29,8 +29,8 @@ import {
   Feature,
   FeatureIds,
   OrganizationDTO,
-  OrganizationMemberDTO,
   OrganizationGroupDTO,
+  OrganizationMemberDTO,
   WebhooksConfigDTO,
 } from '../../types/index.js';
 import Keycloak from '../services/Keycloak.js';
@@ -247,10 +247,16 @@ export class OrganizationRepository {
         slug: organizations.slug,
       })
       .from(organizationsMembers)
-      .innerJoin(organizations, eq(organizations.id, input.organizationId))
+      .innerJoin(organizations, eq(organizations.id, organizationsMembers.organizationId))
       .innerJoin(users, eq(users.id, organizationsMembers.userId))
+      .where(
+        and(
+          eq(organizationsMembers.organizationId, input.organizationId),
+          eq(organizationsMembers.userId, input.userId),
+          eq(organizationsMembers.active, true),
+        ),
+      )
       .limit(1)
-      .where(and(eq(users.id, input.userId), eq(organizationsMembers.active, true)))
       .execute();
 
     return userOrganizations.length > 0;
@@ -1004,6 +1010,9 @@ export class OrganizationRepository {
         const blobStorageDirectory = `${organizationId}/${graph.id}`;
         blobPromises.push(blobStorage.removeDirectory({ key: blobStorageDirectory }));
       }
+
+      blobPromises.push(blobStorage.removeDirectory({ key: `${organizationId}/subgraph_checks` }));
+
       await Promise.allSettled(blobPromises);
 
       // Delete organization from db
@@ -1387,6 +1396,7 @@ export class OrganizationRepository {
       scim: false,
       'cache-warmer': false,
       proposals: false,
+      'subgraph-check-extensions': false,
     };
 
     for (const feature of features) {
