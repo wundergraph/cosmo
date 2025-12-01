@@ -222,15 +222,19 @@ export class SchemaUsageTrafficInspector {
       if (change.typeName) {
         where.push(`hasAny(TypeNames, ['${change.typeName}'])`);
       }
+
       // fieldName can be empty if a type was removed
       if (change.fieldName) {
         where.push(`FieldName = '${change.fieldName}'`);
       }
+
       if (change.isInput) {
         where.push(`IsInput = true`);
       } else if (change.isArgument) {
         where.push(`IsArgument = true`);
-      } else if (change.isNull !== undefined) {
+      }
+
+      if (change.isNull !== undefined) {
         where.push(`IsNull = ${change.isNull}`);
       }
       where.push(`IsIndirectFieldUsage = false`);
