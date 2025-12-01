@@ -1,13 +1,6 @@
 import { LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { JWTPayload } from 'jose';
-import {
-  DBSubgraphType,
-  GraphPruningRuleEnum,
-  LintRuleEnum,
-  OrganizationRole,
-  ProposalMatch,
-  ProposalOrigin,
-} from '../db/models.js';
+import { DBSubgraphType, GraphPruningRuleEnum, OrganizationRole, ProposalMatch, ProposalOrigin } from '../db/models.js';
 import { RBACEvaluator } from '../core/services/RBACEvaluator.js';
 
 export type FeatureIds =
@@ -31,7 +24,8 @@ export type FeatureIds =
   | 'field-pruning-grace-period'
   | 'cache-warmer'
   | 'proposals'
-  | 'plugins';
+  | 'plugins'
+  | 'subgraph-check-extensions';
 
 export type Features = {
   [key in FeatureIds]: Feature;
@@ -224,6 +218,8 @@ export interface SchemaCheckDTO {
   breakingChangesSkipped: boolean;
   errorMessage?: string;
   linkedChecks: LinkedCheckDTO[];
+  checkExtensionDeliveryId: string | undefined;
+  checkExtensionErrorMessage: string | undefined;
 }
 
 export interface SchemaCheckSummaryDTO extends SchemaCheckDTO {
@@ -315,6 +311,7 @@ export interface OrganizationInvitationDTO {
   email: string;
   invitedBy?: string;
   groups: { groupId: string; kcGroupId: string | null }[];
+  lastSentAt?: Date;
 }
 
 export interface APIKeyDTO {
@@ -646,10 +643,8 @@ export interface MailerParams {
   smtpPassword: string;
 }
 
-type LintRuleType = Record<LintRuleEnum, LintRuleEnum>;
-
 // when the rules are changed, it has to be changed in the constants.ts file in the studio to maintain consistency.
-export const LintRules: LintRuleType = {
+export const LintRules = {
   FIELD_NAMES_SHOULD_BE_CAMEL_CASE: 'FIELD_NAMES_SHOULD_BE_CAMEL_CASE',
   TYPE_NAMES_SHOULD_BE_PASCAL_CASE: 'TYPE_NAMES_SHOULD_BE_PASCAL_CASE',
   SHOULD_NOT_HAVE_TYPE_PREFIX: 'SHOULD_NOT_HAVE_TYPE_PREFIX',
@@ -668,7 +663,9 @@ export const LintRules: LintRuleType = {
   DISALLOW_CASE_INSENSITIVE_ENUM_VALUES: 'DISALLOW_CASE_INSENSITIVE_ENUM_VALUES',
   NO_TYPENAME_PREFIX_IN_TYPE_FIELDS: 'NO_TYPENAME_PREFIX_IN_TYPE_FIELDS',
   REQUIRE_DEPRECATION_REASON: 'REQUIRE_DEPRECATION_REASON',
-};
+} as const;
+
+export type LintRule = keyof typeof LintRules;
 
 export type Severity = 1 | 2;
 export type LintSeverityLevel = 'warn' | 'error';
@@ -681,7 +678,7 @@ export interface RulesConfig {
 }
 
 export interface LintIssueResult {
-  lintRuleType: LintRuleEnum | undefined;
+  lintRuleType: LintRule | undefined;
   severity: LintSeverity;
   message: string;
   issueLocation: {
@@ -694,7 +691,7 @@ export interface LintIssueResult {
 
 export interface SchemaLintDTO {
   severity: LintSeverityLevel;
-  ruleName: LintRuleEnum;
+  ruleName: LintRule;
 }
 
 export interface SchemaLintIssues {
@@ -769,6 +766,7 @@ export interface NamespaceDTO {
   enableCacheWarmer: boolean;
   checksTimeframeInDays?: number;
   enableProposals: boolean;
+  enableSubgraphCheckExtensions: boolean;
 }
 
 export interface ProposalDTO {

@@ -34,6 +34,9 @@ jobs:
       - name: Generate code
         run: pnpm buf generate --template buf.ts.gen.yaml
 
+      - name: Generate router templates
+        run: pnpm --filter ./cli compile-templates
+
       - name: Check if git is not dirty after generating files
         run: git diff --no-ext-diff --exit-code
 
@@ -47,6 +50,14 @@ jobs:
       - name: E2E test
         working-directory: cli
         run: bun test e2e
+
+      - name: Get Coverage
+        run: pnpm run --filter wgc coverage
+
+      - name: Upload results to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   build_test_node_matrix:
     timeout-minutes: 10

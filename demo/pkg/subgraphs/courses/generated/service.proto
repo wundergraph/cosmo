@@ -1,0 +1,130 @@
+syntax = "proto3";
+package service;
+
+import "google/protobuf/wrappers.proto";
+
+// Service definition for CoursesService
+service CoursesService {
+  // Lookup Employee entity by id
+  rpc LookupEmployeeById(LookupEmployeeByIdRequest) returns (LookupEmployeeByIdResponse) {}
+  rpc MutationAddCourse(MutationAddCourseRequest) returns (MutationAddCourseResponse) {}
+  rpc MutationAddLesson(MutationAddLessonRequest) returns (MutationAddLessonResponse) {}
+  rpc QueryCourse(QueryCourseRequest) returns (QueryCourseResponse) {}
+  rpc QueryCourses(QueryCoursesRequest) returns (QueryCoursesResponse) {}
+  rpc QueryKillCoursesService(QueryKillCoursesServiceRequest) returns (QueryKillCoursesServiceResponse) {}
+  rpc QueryLessons(QueryLessonsRequest) returns (QueryLessonsResponse) {}
+  rpc QueryThrowErrorCourses(QueryThrowErrorCoursesRequest) returns (QueryThrowErrorCoursesResponse) {}
+}
+
+// Key message for Employee entity lookup
+message LookupEmployeeByIdRequestKey {
+  // Key field for Employee entity lookup.
+  string id = 1;
+}
+
+// Request message for Employee entity lookup.
+message LookupEmployeeByIdRequest {
+  /*
+   * List of keys to look up Employee entities.
+   * Order matters - each key maps to one entity in LookupEmployeeByIdResponse.
+   */
+  repeated LookupEmployeeByIdRequestKey keys = 1;
+}
+
+// Response message for Employee entity lookup.
+message LookupEmployeeByIdResponse {
+  /*
+   * List of Employee entities in the same order as the keys in LookupEmployeeByIdRequest.
+   * Always return the same number of entities as keys. Use null for entities that cannot be found.
+   * 
+   * Example:
+   *   LookupUserByIdRequest:
+   *     keys:
+   *       - id: 1
+   *       - id: 2
+   *   LookupUserByIdResponse:
+   *     result:
+   *       - id: 1 # User with id 1 found
+   *       - null  # User with id 2 not found
+   */
+  repeated Employee result = 1;
+}
+
+// Request message for courses operation.
+message QueryCoursesRequest {
+}
+// Response message for courses operation.
+message QueryCoursesResponse {
+  repeated Course courses = 1;
+}
+// Request message for course operation.
+message QueryCourseRequest {
+  string id = 1;
+}
+// Response message for course operation.
+message QueryCourseResponse {
+  Course course = 1;
+}
+// Request message for lessons operation.
+message QueryLessonsRequest {
+  string course_id = 1;
+}
+// Response message for lessons operation.
+message QueryLessonsResponse {
+  repeated Lesson lessons = 1;
+}
+// Request message for killCoursesService operation.
+message QueryKillCoursesServiceRequest {
+}
+// Response message for killCoursesService operation.
+message QueryKillCoursesServiceResponse {
+  bool kill_courses_service = 1;
+}
+// Request message for throwErrorCourses operation.
+message QueryThrowErrorCoursesRequest {
+}
+// Response message for throwErrorCourses operation.
+message QueryThrowErrorCoursesResponse {
+  bool throw_error_courses = 1;
+}
+// Request message for addCourse operation.
+message MutationAddCourseRequest {
+  string title = 1;
+  int32 instructor_id = 2;
+}
+// Response message for addCourse operation.
+message MutationAddCourseResponse {
+  Course add_course = 1;
+}
+// Request message for addLesson operation.
+message MutationAddLessonRequest {
+  string course_id = 1;
+  string title = 2;
+  int32 order = 3;
+}
+// Response message for addLesson operation.
+message MutationAddLessonResponse {
+  Lesson add_lesson = 1;
+}
+
+message Employee {
+  int32 id = 1;
+  repeated Course taught_courses = 2;
+}
+
+message Course {
+  string id = 1;
+  string title = 2;
+  google.protobuf.StringValue description = 3;
+  Employee instructor = 4;
+  repeated Lesson lessons = 5;
+}
+
+message Lesson {
+  string id = 1;
+  string course_id = 2;
+  string title = 3;
+  google.protobuf.StringValue description = 4;
+  int32 order = 5;
+  Course course = 6;
+}

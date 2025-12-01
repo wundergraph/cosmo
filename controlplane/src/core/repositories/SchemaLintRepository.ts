@@ -1,10 +1,9 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { LintConfig, LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import * as schema from '../../db/schema.js';
 import { namespaceLintCheckConfig, schemaCheckLintAction, schemaCheckSubgraphs } from '../../db/schema.js';
-import { SchemaLintDTO, LintSeverityLevel, LintIssueResult, SchemaLintIssues } from '../../types/index.js';
-import { LintRuleEnum } from '../../db/models.js';
+import { SchemaLintDTO, LintSeverityLevel, LintIssueResult, LintRule, SchemaLintIssues } from '../../types/index.js';
 import SchemaLinter from '../services/SchemaLinter.js';
 
 export class SchemaLintRepository {
@@ -22,7 +21,7 @@ export class SchemaLintRepository {
 
     return orgLintConfigs.map((l) => {
       return {
-        ruleName: l.lintRule as LintRuleEnum,
+        ruleName: l.lintRule as LintRule,
         severity: l.severityLevel as LintSeverityLevel,
       } as SchemaLintDTO;
     });
@@ -42,7 +41,7 @@ export class SchemaLintRepository {
         lintConfigs.map((l) => {
           return {
             namespaceId,
-            lintRule: l.ruleName as LintRuleEnum,
+            lintRule: l.ruleName as LintRule,
             severityLevel:
               l.severityLevel === LintSeverity.error ? ('error' as LintSeverityLevel) : ('warn' as LintSeverityLevel),
           };
@@ -74,6 +73,24 @@ export class SchemaLintRepository {
         }),
       );
     }
+  }
+
+  public deleteExistingSchemaCheckLintIssues({
+    schemaCheckId,
+    schemaCheckSubgraphId,
+  }: {
+    schemaCheckId: string;
+    schemaCheckSubgraphId: string;
+  }) {
+    return this.db
+      .delete(schemaCheckLintAction)
+      .where(
+        and(
+          eq(schemaCheckLintAction.schemaCheckId, schemaCheckId),
+          eq(schemaCheckLintAction.schemaCheckSubgraphId, schemaCheckSubgraphId),
+        ),
+      )
+      .execute();
   }
 
   public async getSchemaCheckLintIsssues({ schemaCheckId }: { schemaCheckId: string }): Promise<LintIssueResult[]> {

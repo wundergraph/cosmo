@@ -164,12 +164,16 @@ import { enableProposalsForNamespace } from './proposal/enableProposalsForNamesp
 import { getNamespaceProposalConfig } from './proposal/getNamespaceProposalConfig.js';
 import { configureNamespaceProposalConfig } from './proposal/configureNamespaceProposalConfig.js';
 import { getOperations } from './analytics/getOperations.js';
+import { getOperationClients } from './analytics/getOperationClients.js';
+import { getOperationDeprecatedFields } from './analytics/getOperationDeprecatedFields.js';
 import { getClientsFromAnalytics } from './federated-graph/getClientsFromAnalytics.js';
 import { validateAndFetchPluginData } from './plugin/validateAndFetchPluginData.js';
 import { linkSubgraph } from './subgraph/linkSubgraph.js';
 import { unlinkSubgraph } from './subgraph/unlinkSubgraph.js';
 import { getWorkspace } from './workspace/getWorkspace.js';
 import { verifyAPIKeyGraphAccess } from './api-key/verifyAPIKeyGraphAccess.js';
+import { getSubgraphCheckExtensionsConfig } from './check-extensions/getSubgraphCheckExtensionsConfig.js';
+import { configureSubgraphCheckExtensions } from './check-extensions/configureSubgraphCheckExtensions.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -778,6 +782,16 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return getCacheWarmerConfig(opts, req, ctx);
     },
 
+    // subgraph check extensions
+
+    getSubgraphCheckExtensionsConfig: (req, ctx) => {
+      return getSubgraphCheckExtensionsConfig(opts, req, ctx);
+    },
+
+    configureSubgraphCheckExtensions: (req, ctx) => {
+      return configureSubgraphCheckExtensions(opts, req, ctx);
+    },
+
     // apis used by the terraform provider
 
     getSubgraphById: (req, ctx) => {
@@ -842,6 +856,14 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     getClientsFromAnalytics: (req, ctx) => {
       return getClientsFromAnalytics(opts, req, ctx);
+    },
+
+    getOperationClients: (req, ctx) => {
+      return getOperationClients(opts, req, ctx);
+    },
+
+    getOperationDeprecatedFields: (req, ctx) => {
+      return getOperationDeprecatedFields(opts, req, ctx);
     },
 
     validateAndFetchPluginData: (req, ctx) => {

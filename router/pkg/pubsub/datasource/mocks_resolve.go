@@ -5,6 +5,8 @@
 package datasource
 
 import (
+	"context"
+
 	mock "github.com/stretchr/testify/mock"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
@@ -76,6 +78,52 @@ func (_c *MockSubscriptionUpdater_Close_Call) RunAndReturn(run func(kind resolve
 	return _c
 }
 
+// CloseSubscription provides a mock function for the type MockSubscriptionUpdater
+func (_mock *MockSubscriptionUpdater) CloseSubscription(kind resolve.SubscriptionCloseKind, id resolve.SubscriptionIdentifier) {
+	_mock.Called(kind, id)
+	return
+}
+
+// MockSubscriptionUpdater_CloseSubscription_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CloseSubscription'
+type MockSubscriptionUpdater_CloseSubscription_Call struct {
+	*mock.Call
+}
+
+// CloseSubscription is a helper method to define mock.On call
+//   - kind resolve.SubscriptionCloseKind
+//   - id resolve.SubscriptionIdentifier
+func (_e *MockSubscriptionUpdater_Expecter) CloseSubscription(kind interface{}, id interface{}) *MockSubscriptionUpdater_CloseSubscription_Call {
+	return &MockSubscriptionUpdater_CloseSubscription_Call{Call: _e.mock.On("CloseSubscription", kind, id)}
+}
+
+func (_c *MockSubscriptionUpdater_CloseSubscription_Call) Run(run func(kind resolve.SubscriptionCloseKind, id resolve.SubscriptionIdentifier)) *MockSubscriptionUpdater_CloseSubscription_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 resolve.SubscriptionCloseKind
+		if args[0] != nil {
+			arg0 = args[0].(resolve.SubscriptionCloseKind)
+		}
+		var arg1 resolve.SubscriptionIdentifier
+		if args[1] != nil {
+			arg1 = args[1].(resolve.SubscriptionIdentifier)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockSubscriptionUpdater_CloseSubscription_Call) Return() *MockSubscriptionUpdater_CloseSubscription_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockSubscriptionUpdater_CloseSubscription_Call) RunAndReturn(run func(kind resolve.SubscriptionCloseKind, id resolve.SubscriptionIdentifier)) *MockSubscriptionUpdater_CloseSubscription_Call {
+	_c.Run(run)
+	return _c
+}
+
 // Complete provides a mock function for the type MockSubscriptionUpdater
 func (_mock *MockSubscriptionUpdater) Complete() {
 	_mock.Called()
@@ -106,6 +154,52 @@ func (_c *MockSubscriptionUpdater_Complete_Call) Return() *MockSubscriptionUpdat
 
 func (_c *MockSubscriptionUpdater_Complete_Call) RunAndReturn(run func()) *MockSubscriptionUpdater_Complete_Call {
 	_c.Run(run)
+	return _c
+}
+
+// Subscriptions provides a mock function for the type MockSubscriptionUpdater
+func (_mock *MockSubscriptionUpdater) Subscriptions() map[context.Context]resolve.SubscriptionIdentifier {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Subscriptions")
+	}
+
+	var r0 map[context.Context]resolve.SubscriptionIdentifier
+	if returnFunc, ok := ret.Get(0).(func() map[context.Context]resolve.SubscriptionIdentifier); ok {
+		r0 = returnFunc()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[context.Context]resolve.SubscriptionIdentifier)
+		}
+	}
+	return r0
+}
+
+// MockSubscriptionUpdater_Subscriptions_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Subscriptions'
+type MockSubscriptionUpdater_Subscriptions_Call struct {
+	*mock.Call
+}
+
+// Subscriptions is a helper method to define mock.On call
+func (_e *MockSubscriptionUpdater_Expecter) Subscriptions() *MockSubscriptionUpdater_Subscriptions_Call {
+	return &MockSubscriptionUpdater_Subscriptions_Call{Call: _e.mock.On("Subscriptions")}
+}
+
+func (_c *MockSubscriptionUpdater_Subscriptions_Call) Run(run func()) *MockSubscriptionUpdater_Subscriptions_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockSubscriptionUpdater_Subscriptions_Call) Return(contextToSubscriptionIdentifier map[context.Context]resolve.SubscriptionIdentifier) *MockSubscriptionUpdater_Subscriptions_Call {
+	_c.Call.Return(contextToSubscriptionIdentifier)
+	return _c
+}
+
+func (_c *MockSubscriptionUpdater_Subscriptions_Call) RunAndReturn(run func() map[context.Context]resolve.SubscriptionIdentifier) *MockSubscriptionUpdater_Subscriptions_Call {
+	_c.Call.Return(run)
 	return _c
 }
 
@@ -145,6 +239,52 @@ func (_c *MockSubscriptionUpdater_Update_Call) Return() *MockSubscriptionUpdater
 }
 
 func (_c *MockSubscriptionUpdater_Update_Call) RunAndReturn(run func(data []byte)) *MockSubscriptionUpdater_Update_Call {
+	_c.Run(run)
+	return _c
+}
+
+// UpdateSubscription provides a mock function for the type MockSubscriptionUpdater
+func (_mock *MockSubscriptionUpdater) UpdateSubscription(id resolve.SubscriptionIdentifier, data []byte) {
+	_mock.Called(id, data)
+	return
+}
+
+// MockSubscriptionUpdater_UpdateSubscription_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpdateSubscription'
+type MockSubscriptionUpdater_UpdateSubscription_Call struct {
+	*mock.Call
+}
+
+// UpdateSubscription is a helper method to define mock.On call
+//   - id resolve.SubscriptionIdentifier
+//   - data []byte
+func (_e *MockSubscriptionUpdater_Expecter) UpdateSubscription(id interface{}, data interface{}) *MockSubscriptionUpdater_UpdateSubscription_Call {
+	return &MockSubscriptionUpdater_UpdateSubscription_Call{Call: _e.mock.On("UpdateSubscription", id, data)}
+}
+
+func (_c *MockSubscriptionUpdater_UpdateSubscription_Call) Run(run func(id resolve.SubscriptionIdentifier, data []byte)) *MockSubscriptionUpdater_UpdateSubscription_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 resolve.SubscriptionIdentifier
+		if args[0] != nil {
+			arg0 = args[0].(resolve.SubscriptionIdentifier)
+		}
+		var arg1 []byte
+		if args[1] != nil {
+			arg1 = args[1].([]byte)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *MockSubscriptionUpdater_UpdateSubscription_Call) Return() *MockSubscriptionUpdater_UpdateSubscription_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *MockSubscriptionUpdater_UpdateSubscription_Call) RunAndReturn(run func(id resolve.SubscriptionIdentifier, data []byte)) *MockSubscriptionUpdater_UpdateSubscription_Call {
 	_c.Run(run)
 	return _c
 }
