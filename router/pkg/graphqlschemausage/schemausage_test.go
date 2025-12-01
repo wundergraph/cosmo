@@ -2868,6 +2868,13 @@ func TestNullListHandling(t *testing.T) {
 				{
 					NamedType:   "String",
 					TypeName:    "SearchFilter",
+					Path:        []string{"SearchFilter", "tags"},
+					SubgraphIDs: []string{"search-subgraph"},
+					IsNull:      false, // Empty list is not null, field is still used
+				},
+				{
+					NamedType:   "String",
+					TypeName:    "SearchFilter",
 					Path:        []string{"SearchFilter", "categories"},
 					SubgraphIDs: []string{"search-subgraph"},
 					IsNull:      false,
@@ -2886,7 +2893,7 @@ func TestNullListHandling(t *testing.T) {
 					IsNull:      false,
 				},
 			},
-			description: "Empty list should not produce any element entries (nothing to iterate), only implicit null for missing fields",
+			description: "Empty list should track field usage with IsNull=false (field is used, just no elements)",
 		},
 		{
 			name: "all lists null",
