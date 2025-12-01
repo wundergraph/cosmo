@@ -189,9 +189,8 @@ jobs:
       matrix:
         test_target:
           [
-            './. ./fuzzquery ./lifecycle ./modules',
-            './telemetry',
-            './events',
+            './. ./fuzzquery ./lifecycle ./modules ./telemetry ./events',
+
           ]
     services:
       nats:
@@ -360,7 +359,7 @@ jobs:
 
       - name: Run Integration tests ${{ matrix.test_target }}
         working-directory: ./router-tests
-        run: make test-coverage test_retry_count=0 test_params="-run '^Test[^(Flaky)]' --timeout=5m -p 1 --parallel 10" test_target="${{ matrix.test_target }}"
+        run: make test-coverage test_retry_count=0 --timeout=5m -p 1 --parallel 10" test_target="${{ matrix.test_target }}"
 
       - name: Compute artifact name for codecov upload
         id: artifact_name
@@ -374,18 +373,6 @@ jobs:
         uses: ./.github/actions/codecov-upload-pr
         with:
           artifact-name: router-${{ steps.artifact_name.outputs.sanitized }}-nonFlaky
-          coverage-path: router-tests/coverage.out
-          retention-days: 7
-          codecov-token: ${{ secrets.CODECOV_TOKEN }}
-
-      - name: Run Flaky Integration tests ${{ matrix.test_target }}
-        working-directory: ./router-tests
-        run: make test-coverage test_retry_count=3 test_params="-run '^TestFlaky' --timeout=5m -p 1 --parallel 10" test_target="${{ matrix.test_target }}"
-
-      - name: Upload flaky integration results to Codecov
-        uses: ./.github/actions/codecov-upload-pr
-        with:
-          artifact-name: router-${{ steps.artifact_name.outputs.sanitized }}-flaky
           coverage-path: router-tests/coverage.out
           retention-days: 7
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
