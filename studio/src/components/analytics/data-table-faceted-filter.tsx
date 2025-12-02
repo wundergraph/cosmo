@@ -289,10 +289,10 @@ export function DataTableFilterCommands<TData, TValue>({
             </Button>
           </div>
           <Separator />
-          {selectedValues.size > 0 && (
+          {selectedOptions && selectedOptions.length > 0 && (
             <>
               <div className="mt-2 flex flex-col px-2">
-                {selectedOptions!.map((val) => {
+                {selectedOptions.map((val) => {
                   const selected = JSON.parse(
                     val,
                   ) as AnalyticsFilter["options"][number];
@@ -309,7 +309,7 @@ export function DataTableFilterCommands<TData, TValue>({
                         className="flex-shrink-0 text-muted-foreground"
                         onClick={() => {
                           // Build new filter array by removing the item
-                          const filterValues = selectedOptions!.filter(
+                          const filterValues = selectedOptions.filter(
                             (opt) => opt !== val,
                           );
 
