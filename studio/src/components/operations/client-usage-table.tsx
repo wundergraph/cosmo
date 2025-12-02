@@ -135,7 +135,7 @@ export const ClientUsageTable = ({
                     </TableCell>
                     <TableCell className="w-[25%]">
                       <Badge variant="outline" className="text-xs">
-                        {client.version}
+                        {client.version || '-'}
                       </Badge>
                     </TableCell>
                     <TableCell className="w-[15%] text-center">
