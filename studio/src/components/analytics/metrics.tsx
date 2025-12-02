@@ -368,8 +368,6 @@ export const useMetricsFilters = (filters: AnalyticsViewResultFilter[]) => {
 
   const isUrlLimitReached = currentUrlLength >= MAX_URL_LENGTH;
 
-  // Create disabled filters list when URL limit is reached
-  // Allow removal of existing filters but prevent adding new ones
   // Use a ref to track the latest selectedFilters to avoid stale closures
   const selectedFiltersRef = useRef(selectedFilters);
   selectedFiltersRef.current = selectedFilters;
