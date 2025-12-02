@@ -482,6 +482,7 @@ type OperationContext interface {
 	Hash() uint64
 	// Content is the content of the operation
 	Content() string
+	FieldArguments() map[string]map[string]any
 	// Variables is the variables of the operation
 	Variables() *astjson.Value
 	// ClientInfo returns information about the client that initiated this operation
@@ -524,10 +525,11 @@ type operationContext struct {
 	// RawContent is the raw content of the operation
 	rawContent string
 	// Content is the normalized content of the operation
-	content    string
-	variables  *astjson.Value
-	files      []*httpclient.FileUpload
-	clientInfo *ClientInfo
+	content        string
+	fieldArguments map[string]map[string]any
+	variables      *astjson.Value
+	files          []*httpclient.FileUpload
+	clientInfo     *ClientInfo
 	// preparedPlan is the prepared plan of the operation
 	preparedPlan     *planWithMetaData
 	traceOptions     resolve.TraceOptions
@@ -556,6 +558,10 @@ type operationContext struct {
 
 func (o *operationContext) Variables() *astjson.Value {
 	return o.variables
+}
+
+func (o *operationContext) FieldArguments() map[string]map[string]any {
+	return o.fieldArguments
 }
 
 func (o *operationContext) Files() []*httpclient.FileUpload {
