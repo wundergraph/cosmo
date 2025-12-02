@@ -186,9 +186,9 @@ export function DataTableFilterCommands<TData, TValue>({
   options,
   customOptions,
 }: DataTableFacetedFilter<TData, TValue>) {
-  // Memoized Set for efficient O(1) lookups and display operations
-  // Use selectedValues for read-only checks (size, has, display)
-  // Use selectedOptions for building new filter arrays (source of truth)
+  // Memoized Set for efficient operations and automatic deduplication
+  // - Use selectedValues (Set) for: display checks (size, has), iteration (Array.from)
+  // - Use selectedOptions (Array) for: building new filter arrays to pass to onSelect
   const selectedValues = useMemo(
     () => new Set(selectedOptions ?? []),
     [selectedOptions],
@@ -271,6 +271,12 @@ export function DataTableFilterCommands<TData, TValue>({
                   operator: 0,
                 });
 
+                // Check if already exists using Set for O(1) lookup
+                if (selectedValues.has(newValue)) {
+                  setInput(""); // Clear input for duplicate
+                  return; // Already exists, don't add duplicate
+                }
+
                 // Build new filter array from selectedOptions (source of truth)
                 const filterValues = [...(selectedOptions ?? []), newValue];
 
@@ -289,10 +295,10 @@ export function DataTableFilterCommands<TData, TValue>({
             </Button>
           </div>
           <Separator />
-          {selectedOptions && selectedOptions.length > 0 && (
+          {selectedValues.size > 0 && (
             <>
               <div className="mt-2 flex flex-col px-2">
-                {selectedOptions.map((val) => {
+                {Array.from(selectedValues).map((val) => {
                   const selected = JSON.parse(
                     val,
                   ) as AnalyticsFilter["options"][number];
@@ -308,8 +314,8 @@ export function DataTableFilterCommands<TData, TValue>({
                         variant="ghost"
                         className="flex-shrink-0 text-muted-foreground"
                         onClick={() => {
-                          // Build new filter array by removing the item
-                          const filterValues = selectedOptions.filter(
+                          // Build new filter array by removing the item from selectedOptions
+                          const filterValues = (selectedOptions ?? []).filter(
                             (opt) => opt !== val,
                           );
 
