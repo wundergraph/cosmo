@@ -3002,6 +3002,831 @@ func TestNullListHandling(t *testing.T) {
 	}
 }
 
+// TestNestedFieldArguments verifies that arguments on nested fields (not just root Query fields)
+// are tracked correctly with proper type names, paths, and subgraph IDs.
+// This is critical for tracking schema usage on fields like User.friends(limit: Int) or
+// Product.reviews(filter: ReviewFilter).
+func TestNestedFieldArguments(t *testing.T) {
+	schema := `
+		schema {
+			query: Query
+		}
+		
+		type Query {
+			user(id: ID!): User
+			product(id: ID!): Product
+		}
+		
+		type User {
+			id: ID!
+			name: String!
+			friends(limit: Int, offset: Int, filter: FriendFilter): [User!]!
+			posts(status: PostStatus, category: String): [Post!]!
+		}
+		
+		type Post {
+			id: ID!
+			title: String!
+			comments(first: Int!, after: String, includeReplies: Boolean): [Comment!]!
+		}
+		
+		type Comment {
+			id: ID!
+			text: String!
+			replies(maxDepth: Int): [Comment!]!
+		}
+		
+		type Product {
+			id: ID!
+			name: String!
+			reviews(filter: ReviewFilter!): [Review!]!
+		}
+		
+		type Review {
+			id: ID!
+			rating: Int!
+			author: User
+		}
+		
+		input FriendFilter {
+			minAge: Int
+			maxAge: Int
+		}
+		
+		input ReviewFilter {
+			minRating: Int
+			verified: Boolean
+		}
+		
+		enum PostStatus {
+			DRAFT
+			PUBLISHED
+			ARCHIVED
+		}
+	`
+
+	t.Run("nested arguments at multiple levels", func(t *testing.T) {
+		operation := `
+			query GetUserContent($userId: ID!, $postStatus: PostStatus, $commentLimit: Int!, $includeReplies: Boolean) {
+				user(id: $userId) {
+					id
+					name
+					friends(limit: 10, offset: 0) {
+						id
+						name
+					}
+					posts(status: $postStatus, category: "tech") {
+						id
+						title
+						comments(first: $commentLimit, includeReplies: $includeReplies) {
+							id
+							text
+							replies(maxDepth: 3) {
+								id
+								text
+							}
+						}
+					}
+				}
+			}
+		`
+
+		variables := `{
+			"userId": "123",
+			"postStatus": "PUBLISHED",
+			"commentLimit": 20,
+			"includeReplies": true
+		}`
+
+		def, rep := astparser.ParseGraphqlDocumentString(schema)
+		require.False(t, rep.HasErrors())
+		op, rep := astparser.ParseGraphqlDocumentString(operation)
+		require.False(t, rep.HasErrors())
+		err := asttransform.MergeDefinitionWithBaseSchema(&def)
+		require.NoError(t, err)
+
+		report := &operationreport.Report{}
+		norm := astnormalization.NewNormalizer(true, true)
+		norm.NormalizeOperation(&op, &def, report)
+		require.False(t, report.HasErrors())
+
+		valid := astvalidation.DefaultOperationValidator()
+		valid.Validate(&op, &def, report)
+		require.False(t, report.HasErrors())
+
+		dsCfg, err := plan.NewDataSourceConfiguration[any](
+			"main-subgraph",
+			&FakeFactory[any]{upstreamSchema: &def},
+			&plan.DataSourceMetadata{
+				RootNodes: []plan.TypeField{
+					{TypeName: "Query", FieldNames: []string{"user", "product"}},
+				},
+				ChildNodes: []plan.TypeField{
+					{TypeName: "User", FieldNames: []string{"id", "name", "friends", "posts"}},
+					{TypeName: "Post", FieldNames: []string{"id", "title", "comments"}},
+					{TypeName: "Comment", FieldNames: []string{"id", "text", "replies"}},
+				},
+			},
+			nil,
+		)
+		require.NoError(t, err)
+
+		planner, err := plan.NewPlanner(plan.Configuration{
+			DisableResolveFieldPositions: true,
+			DataSources:                  []plan.DataSource{dsCfg},
+		})
+		require.NoError(t, err)
+
+		generatedPlan := planner.Plan(&op, &def, "GetUserContent", report)
+		require.False(t, report.HasErrors())
+
+		vars, err := astjson.Parse(variables)
+		require.NoError(t, err)
+
+		argumentUsageInfo, err := GetArgumentUsageInfo(&op, &def, vars, generatedPlan, nil)
+		require.NoError(t, err)
+
+		// Build a map for easier assertion
+		argumentMap := make(map[string]*graphqlmetricsv1.ArgumentUsageInfo)
+		for _, arg := range argumentUsageInfo {
+			key := strings.Join(arg.Path, ".")
+			argumentMap[key] = arg
+		}
+
+		// Verify root level argument (Query.user.id)
+		require.Contains(t, argumentMap, "user.id", "Should track root level argument")
+		assert.Equal(t, "Query", argumentMap["user.id"].TypeName)
+		assert.Equal(t, "ID", argumentMap["user.id"].NamedType)
+		assert.False(t, argumentMap["user.id"].IsNull)
+
+		// Verify nested level 1 argument (User.friends.limit)
+		require.Contains(t, argumentMap, "friends.limit", "Should track nested field argument")
+		assert.Equal(t, "User", argumentMap["friends.limit"].TypeName)
+		assert.Equal(t, "Int", argumentMap["friends.limit"].NamedType)
+		assert.False(t, argumentMap["friends.limit"].IsNull)
+
+		// Verify nested level 1 argument (User.friends.offset)
+		require.Contains(t, argumentMap, "friends.offset", "Should track nested field argument")
+		assert.Equal(t, "User", argumentMap["friends.offset"].TypeName)
+		assert.Equal(t, "Int", argumentMap["friends.offset"].NamedType)
+		assert.False(t, argumentMap["friends.offset"].IsNull)
+
+		// Verify nested level 1 implicit null argument (User.friends.filter)
+		require.Contains(t, argumentMap, "friends.filter", "Should track implicit null nested field argument")
+		assert.Equal(t, "User", argumentMap["friends.filter"].TypeName)
+		assert.Equal(t, "FriendFilter", argumentMap["friends.filter"].NamedType)
+		assert.True(t, argumentMap["friends.filter"].IsNull, "filter was not provided, should be implicitly null")
+
+		// Verify nested level 1 argument (User.posts.status)
+		require.Contains(t, argumentMap, "posts.status", "Should track nested field argument with variable")
+		assert.Equal(t, "User", argumentMap["posts.status"].TypeName)
+		assert.Equal(t, "PostStatus", argumentMap["posts.status"].NamedType)
+		assert.False(t, argumentMap["posts.status"].IsNull)
+
+		// Verify nested level 1 argument (User.posts.category)
+		require.Contains(t, argumentMap, "posts.category", "Should track nested field argument with inline value")
+		assert.Equal(t, "User", argumentMap["posts.category"].TypeName)
+		assert.Equal(t, "String", argumentMap["posts.category"].NamedType)
+		assert.False(t, argumentMap["posts.category"].IsNull)
+
+		// Verify nested level 2 argument (Post.comments.first)
+		require.Contains(t, argumentMap, "comments.first", "Should track doubly nested field argument")
+		assert.Equal(t, "Post", argumentMap["comments.first"].TypeName)
+		assert.Equal(t, "Int", argumentMap["comments.first"].NamedType)
+		assert.False(t, argumentMap["comments.first"].IsNull)
+
+		// Verify nested level 2 argument (Post.comments.includeReplies)
+		require.Contains(t, argumentMap, "comments.includeReplies", "Should track doubly nested field argument")
+		assert.Equal(t, "Post", argumentMap["comments.includeReplies"].TypeName)
+		assert.Equal(t, "Boolean", argumentMap["comments.includeReplies"].NamedType)
+		assert.False(t, argumentMap["comments.includeReplies"].IsNull)
+
+		// Verify nested level 2 implicit null argument (Post.comments.after)
+		require.Contains(t, argumentMap, "comments.after", "Should track implicit null doubly nested argument")
+		assert.Equal(t, "Post", argumentMap["comments.after"].TypeName)
+		assert.Equal(t, "String", argumentMap["comments.after"].NamedType)
+		assert.True(t, argumentMap["comments.after"].IsNull, "after was not provided, should be implicitly null")
+
+		// Verify nested level 3 argument (Comment.replies.maxDepth)
+		require.Contains(t, argumentMap, "replies.maxDepth", "Should track triply nested field argument")
+		assert.Equal(t, "Comment", argumentMap["replies.maxDepth"].TypeName)
+		assert.Equal(t, "Int", argumentMap["replies.maxDepth"].NamedType)
+		assert.False(t, argumentMap["replies.maxDepth"].IsNull)
+
+		// Verify all arguments have correct subgraph IDs
+		for key, arg := range argumentMap {
+			assert.Equal(t, []string{"main-subgraph"}, arg.SubgraphIDs, "Argument %s should have main-subgraph", key)
+		}
+	})
+
+	t.Run("nested arguments with input object types", func(t *testing.T) {
+		operation := `
+			query GetUserFriends($userId: ID!, $friendFilter: FriendFilter) {
+				user(id: $userId) {
+					id
+					friends(filter: $friendFilter, limit: 5) {
+						id
+						name
+					}
+				}
+			}
+		`
+
+		variables := `{
+			"userId": "123",
+			"friendFilter": {
+				"minAge": 18,
+				"maxAge": 65
+			}
+		}`
+
+		def, rep := astparser.ParseGraphqlDocumentString(schema)
+		require.False(t, rep.HasErrors())
+		op, rep := astparser.ParseGraphqlDocumentString(operation)
+		require.False(t, rep.HasErrors())
+		err := asttransform.MergeDefinitionWithBaseSchema(&def)
+		require.NoError(t, err)
+
+		report := &operationreport.Report{}
+		norm := astnormalization.NewNormalizer(true, true)
+		norm.NormalizeOperation(&op, &def, report)
+		require.False(t, report.HasErrors())
+
+		valid := astvalidation.DefaultOperationValidator()
+		valid.Validate(&op, &def, report)
+		require.False(t, report.HasErrors())
+
+		dsCfg, err := plan.NewDataSourceConfiguration[any](
+			"main-subgraph",
+			&FakeFactory[any]{upstreamSchema: &def},
+			&plan.DataSourceMetadata{
+				RootNodes: []plan.TypeField{
+					{TypeName: "Query", FieldNames: []string{"user"}},
+				},
+				ChildNodes: []plan.TypeField{
+					{TypeName: "User", FieldNames: []string{"id", "name", "friends"}},
+				},
+			},
+			nil,
+		)
+		require.NoError(t, err)
+
+		planner, err := plan.NewPlanner(plan.Configuration{
+			DisableResolveFieldPositions: true,
+			DataSources:                  []plan.DataSource{dsCfg},
+		})
+		require.NoError(t, err)
+
+		generatedPlan := planner.Plan(&op, &def, "GetUserFriends", report)
+		require.False(t, report.HasErrors())
+
+		vars, err := astjson.Parse(variables)
+		require.NoError(t, err)
+
+		argumentUsageInfo, err := GetArgumentUsageInfo(&op, &def, vars, generatedPlan, nil)
+		require.NoError(t, err)
+		inputUsageInfo, err := GetInputUsageInfo(&op, &def, vars, generatedPlan, nil)
+		require.NoError(t, err)
+
+		// Build maps for easier assertion
+		argumentMap := make(map[string]*graphqlmetricsv1.ArgumentUsageInfo)
+		for _, arg := range argumentUsageInfo {
+			key := strings.Join(arg.Path, ".")
+			argumentMap[key] = arg
+		}
+
+		inputMap := make(map[string]*graphqlmetricsv1.InputUsageInfo)
+		for _, input := range inputUsageInfo {
+			key := strings.Join(input.Path, ".")
+			inputMap[key] = input
+		}
+
+		// Verify nested argument with input object type
+		require.Contains(t, argumentMap, "friends.filter", "Should track nested argument with input type")
+		filterArg := argumentMap["friends.filter"]
+		assert.Equal(t, "User", filterArg.TypeName)
+		assert.Equal(t, "FriendFilter", filterArg.NamedType)
+		assert.False(t, filterArg.IsNull)
+
+		// Verify nested argument with scalar type
+		require.Contains(t, argumentMap, "friends.limit", "Should track nested argument with scalar type")
+		limitArg := argumentMap["friends.limit"]
+		assert.Equal(t, "User", limitArg.TypeName)
+		assert.Equal(t, "Int", limitArg.NamedType)
+		assert.False(t, limitArg.IsNull)
+
+		// Verify implicit null for missing offset argument
+		require.Contains(t, argumentMap, "friends.offset", "Should track implicit null for nested argument")
+		offsetArg := argumentMap["friends.offset"]
+		assert.Equal(t, "User", offsetArg.TypeName)
+		assert.Equal(t, "Int", offsetArg.NamedType)
+		assert.True(t, offsetArg.IsNull, "offset was not provided, should be implicitly null")
+
+		// Verify input usage for the filter input object
+		require.Contains(t, inputMap, "FriendFilter", "Should track FriendFilter input type")
+		assert.Equal(t, "FriendFilter", inputMap["FriendFilter"].NamedType)
+		assert.False(t, inputMap["FriendFilter"].IsNull)
+
+		// Verify input fields
+		require.Contains(t, inputMap, "FriendFilter.minAge", "Should track FriendFilter.minAge field")
+		assert.Equal(t, "Int", inputMap["FriendFilter.minAge"].NamedType)
+		assert.Equal(t, "FriendFilter", inputMap["FriendFilter.minAge"].TypeName)
+		assert.False(t, inputMap["FriendFilter.minAge"].IsNull)
+
+		require.Contains(t, inputMap, "FriendFilter.maxAge", "Should track FriendFilter.maxAge field")
+		assert.Equal(t, "Int", inputMap["FriendFilter.maxAge"].NamedType)
+		assert.Equal(t, "FriendFilter", inputMap["FriendFilter.maxAge"].TypeName)
+		assert.False(t, inputMap["FriendFilter.maxAge"].IsNull)
+	})
+
+	t.Run("nested arguments with null input object", func(t *testing.T) {
+		operation := `
+			query GetUserFriends($userId: ID!, $friendFilter: FriendFilter) {
+				user(id: $userId) {
+					id
+					friends(filter: $friendFilter) {
+						id
+						name
+					}
+				}
+			}
+		`
+
+		variables := `{
+			"userId": "123",
+			"friendFilter": null
+		}`
+
+		def, rep := astparser.ParseGraphqlDocumentString(schema)
+		require.False(t, rep.HasErrors())
+		op, rep := astparser.ParseGraphqlDocumentString(operation)
+		require.False(t, rep.HasErrors())
+		err := asttransform.MergeDefinitionWithBaseSchema(&def)
+		require.NoError(t, err)
+
+		report := &operationreport.Report{}
+		norm := astnormalization.NewNormalizer(true, true)
+		norm.NormalizeOperation(&op, &def, report)
+		require.False(t, report.HasErrors())
+
+		valid := astvalidation.DefaultOperationValidator()
+		valid.Validate(&op, &def, report)
+		require.False(t, report.HasErrors())
+
+		dsCfg, err := plan.NewDataSourceConfiguration[any](
+			"main-subgraph",
+			&FakeFactory[any]{upstreamSchema: &def},
+			&plan.DataSourceMetadata{
+				RootNodes: []plan.TypeField{
+					{TypeName: "Query", FieldNames: []string{"user"}},
+				},
+				ChildNodes: []plan.TypeField{
+					{TypeName: "User", FieldNames: []string{"id", "name", "friends"}},
+				},
+			},
+			nil,
+		)
+		require.NoError(t, err)
+
+		planner, err := plan.NewPlanner(plan.Configuration{
+			DisableResolveFieldPositions: true,
+			DataSources:                  []plan.DataSource{dsCfg},
+		})
+		require.NoError(t, err)
+
+		generatedPlan := planner.Plan(&op, &def, "GetUserFriends", report)
+		require.False(t, report.HasErrors())
+
+		vars, err := astjson.Parse(variables)
+		require.NoError(t, err)
+
+		argumentUsageInfo, err := GetArgumentUsageInfo(&op, &def, vars, generatedPlan, nil)
+		require.NoError(t, err)
+		inputUsageInfo, err := GetInputUsageInfo(&op, &def, vars, generatedPlan, nil)
+		require.NoError(t, err)
+
+		// Build map for argument assertion
+		argumentMap := make(map[string]*graphqlmetricsv1.ArgumentUsageInfo)
+		for _, arg := range argumentUsageInfo {
+			key := strings.Join(arg.Path, ".")
+			argumentMap[key] = arg
+		}
+
+		// Verify nested argument with null input object
+		require.Contains(t, argumentMap, "friends.filter", "Should track nested argument even when null")
+		filterArg := argumentMap["friends.filter"]
+		assert.Equal(t, "User", filterArg.TypeName)
+		assert.Equal(t, "FriendFilter", filterArg.NamedType)
+		assert.True(t, filterArg.IsNull, "filter variable is explicitly null")
+
+		// Verify input usage tracks the null FriendFilter
+		var friendFilterUsage *graphqlmetricsv1.InputUsageInfo
+		for _, input := range inputUsageInfo {
+			if input.NamedType == "FriendFilter" && len(input.Path) == 1 {
+				friendFilterUsage = input
+				break
+			}
+		}
+		require.NotNil(t, friendFilterUsage, "Should track FriendFilter input type even when null")
+		assert.Equal(t, "FriendFilter", friendFilterUsage.NamedType)
+		assert.True(t, friendFilterUsage.IsNull, "FriendFilter should be tracked as null")
+	})
+
+	t.Run("nested arguments across multiple subgraphs", func(t *testing.T) {
+		// Enhanced schema with more types that span multiple subgraphs
+		multiSubgraphSchema := `
+			schema {
+				query: Query
+			}
+			
+			type Query {
+				user(id: ID!): User
+				product(id: ID!): Product
+				order(id: ID!): Order
+			}
+			
+			type User {
+				id: ID!
+				name: String!
+				friends(limit: Int, filter: UserFilter): [User!]!
+				orders(status: OrderStatus, limit: Int): [Order!]!
+			}
+			
+			type Product {
+				id: ID!
+				name: String!
+				reviews(filter: ReviewFilter!, limit: Int): [Review!]!
+			}
+			
+			type Review {
+				id: ID!
+				rating: Int!
+				author: User
+				comments(first: Int, sortBy: String): [ReviewComment!]!
+			}
+			
+			type ReviewComment {
+				id: ID!
+				text: String!
+			}
+			
+			type Order {
+				id: ID!
+				status: OrderStatus!
+				items(category: String): [OrderItem!]!
+				customer: User
+			}
+			
+			type OrderItem {
+				id: ID!
+				product: Product
+				quantity: Int!
+			}
+			
+			input UserFilter {
+				minAge: Int
+				verified: Boolean
+			}
+			
+			input ReviewFilter {
+				minRating: Int
+				verified: Boolean
+			}
+			
+			enum OrderStatus {
+				PENDING
+				SHIPPED
+				DELIVERED
+			}
+		`
+
+		operation := `
+			query GetUserDataAcrossSubgraphs($userId: ID!, $userFilter: UserFilter, $reviewFilter: ReviewFilter!, $orderStatus: OrderStatus) {
+				user(id: $userId) {
+					id
+					name
+					friends(limit: 10, filter: $userFilter) {
+						id
+						name
+					}
+					orders(status: $orderStatus, limit: 5) {
+						id
+						status
+						items(category: "electronics") {
+							id
+							quantity
+							product {
+								id
+								name
+								reviews(filter: $reviewFilter, limit: 3) {
+									id
+									rating
+									comments(first: 5, sortBy: "date") {
+										id
+										text
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		`
+
+		variables := `{
+			"userId": "user-123",
+			"userFilter": {
+				"minAge": 18,
+				"verified": true
+			},
+			"reviewFilter": {
+				"minRating": 4,
+				"verified": true
+			},
+			"orderStatus": "SHIPPED"
+		}`
+
+		def, rep := astparser.ParseGraphqlDocumentString(multiSubgraphSchema)
+		require.False(t, rep.HasErrors())
+		op, rep := astparser.ParseGraphqlDocumentString(operation)
+		require.False(t, rep.HasErrors())
+		err := asttransform.MergeDefinitionWithBaseSchema(&def)
+		require.NoError(t, err)
+
+		report := &operationreport.Report{}
+		norm := astnormalization.NewNormalizer(true, true)
+		norm.NormalizeOperation(&op, &def, report)
+		require.False(t, report.HasErrors())
+
+		valid := astvalidation.DefaultOperationValidator()
+		valid.Validate(&op, &def, report)
+		require.False(t, report.HasErrors())
+
+		// Create THREE subgraphs - users, products, and orders come from different sources
+		usersSubgraph, err := plan.NewDataSourceConfiguration[any](
+			"users-subgraph",
+			&FakeFactory[any]{upstreamSchema: &def},
+			&plan.DataSourceMetadata{
+				RootNodes: []plan.TypeField{
+					{TypeName: "Query", FieldNames: []string{"user"}},
+				},
+				ChildNodes: []plan.TypeField{
+					{TypeName: "User", FieldNames: []string{"id", "name", "friends", "orders"}},
+				},
+			},
+			nil,
+		)
+		require.NoError(t, err)
+
+		productsSubgraph, err := plan.NewDataSourceConfiguration[any](
+			"products-subgraph",
+			&FakeFactory[any]{upstreamSchema: &def},
+			&plan.DataSourceMetadata{
+				RootNodes: []plan.TypeField{
+					{TypeName: "Query", FieldNames: []string{"product"}},
+					{TypeName: "Product", FieldNames: []string{"id", "name", "reviews"}},
+				},
+				ChildNodes: []plan.TypeField{
+					{TypeName: "Product", FieldNames: []string{"id", "name", "reviews"}},
+					{TypeName: "Review", FieldNames: []string{"id", "rating", "author", "comments"}},
+					{TypeName: "ReviewComment", FieldNames: []string{"id", "text"}},
+				},
+			},
+			nil,
+		)
+		require.NoError(t, err)
+
+		ordersSubgraph, err := plan.NewDataSourceConfiguration[any](
+			"orders-subgraph",
+			&FakeFactory[any]{upstreamSchema: &def},
+			&plan.DataSourceMetadata{
+				RootNodes: []plan.TypeField{
+					{TypeName: "Query", FieldNames: []string{"order"}},
+					{TypeName: "Order", FieldNames: []string{"id", "status", "items", "customer"}},
+				},
+				ChildNodes: []plan.TypeField{
+					{TypeName: "Order", FieldNames: []string{"id", "status", "items", "customer"}},
+					{TypeName: "OrderItem", FieldNames: []string{"id", "product", "quantity"}},
+				},
+			},
+			nil,
+		)
+		require.NoError(t, err)
+
+		planner, err := plan.NewPlanner(plan.Configuration{
+			DisableResolveFieldPositions: true,
+			DataSources:                  []plan.DataSource{usersSubgraph, productsSubgraph, ordersSubgraph},
+		})
+		require.NoError(t, err)
+
+		generatedPlan := planner.Plan(&op, &def, "GetUserDataAcrossSubgraphs", report)
+		require.False(t, report.HasErrors())
+
+		vars, err := astjson.Parse(variables)
+		require.NoError(t, err)
+
+		argumentUsageInfo, err := GetArgumentUsageInfo(&op, &def, vars, generatedPlan, nil)
+		require.NoError(t, err)
+		inputUsageInfo, err := GetInputUsageInfo(&op, &def, vars, generatedPlan, nil)
+		require.NoError(t, err)
+
+		// Build map for argument assertion
+		argumentMap := make(map[string]*graphqlmetricsv1.ArgumentUsageInfo)
+		for _, arg := range argumentUsageInfo {
+			key := strings.Join(arg.Path, ".")
+			argumentMap[key] = arg
+		}
+
+		// Build map for input assertion
+		inputMap := make(map[string]*graphqlmetricsv1.InputUsageInfo)
+		for _, input := range inputUsageInfo {
+			key := strings.Join(input.Path, ".")
+			inputMap[key] = input
+		}
+
+		// ========================================
+		// Verify USERS SUBGRAPH arguments
+		// ========================================
+
+		// Root level: Query.user(id:) -> users-subgraph
+		require.Contains(t, argumentMap, "user.id", "Should track Query.user(id:)")
+		assert.Equal(t, "Query", argumentMap["user.id"].TypeName)
+		assert.Equal(t, "ID", argumentMap["user.id"].NamedType)
+		assert.Equal(t, []string{"users-subgraph"}, argumentMap["user.id"].SubgraphIDs,
+			"Query.user argument should be attributed to users-subgraph")
+		assert.False(t, argumentMap["user.id"].IsNull)
+
+		// Nested level 1: User.friends(limit:) -> users-subgraph
+		require.Contains(t, argumentMap, "friends.limit", "Should track User.friends(limit:)")
+		assert.Equal(t, "User", argumentMap["friends.limit"].TypeName)
+		assert.Equal(t, "Int", argumentMap["friends.limit"].NamedType)
+		assert.Equal(t, []string{"users-subgraph"}, argumentMap["friends.limit"].SubgraphIDs,
+			"User.friends.limit argument should be attributed to users-subgraph")
+		assert.False(t, argumentMap["friends.limit"].IsNull)
+
+		// Nested level 1: User.friends(filter:) -> users-subgraph (input object type)
+		require.Contains(t, argumentMap, "friends.filter", "Should track User.friends(filter:)")
+		assert.Equal(t, "User", argumentMap["friends.filter"].TypeName)
+		assert.Equal(t, "UserFilter", argumentMap["friends.filter"].NamedType)
+		assert.Equal(t, []string{"users-subgraph"}, argumentMap["friends.filter"].SubgraphIDs,
+			"User.friends.filter argument should be attributed to users-subgraph")
+		assert.False(t, argumentMap["friends.filter"].IsNull)
+
+		// Nested level 1: User.orders(status:) -> users-subgraph
+		require.Contains(t, argumentMap, "orders.status", "Should track User.orders(status:)")
+		assert.Equal(t, "User", argumentMap["orders.status"].TypeName)
+		assert.Equal(t, "OrderStatus", argumentMap["orders.status"].NamedType)
+		assert.Equal(t, []string{"users-subgraph"}, argumentMap["orders.status"].SubgraphIDs,
+			"User.orders.status argument should be attributed to users-subgraph")
+		assert.False(t, argumentMap["orders.status"].IsNull)
+
+		// Nested level 1: User.orders(limit:) -> users-subgraph
+		require.Contains(t, argumentMap, "orders.limit", "Should track User.orders(limit:)")
+		assert.Equal(t, "User", argumentMap["orders.limit"].TypeName)
+		assert.Equal(t, "Int", argumentMap["orders.limit"].NamedType)
+		assert.Equal(t, []string{"users-subgraph"}, argumentMap["orders.limit"].SubgraphIDs,
+			"User.orders.limit argument should be attributed to users-subgraph")
+		assert.False(t, argumentMap["orders.limit"].IsNull)
+
+		// ========================================
+		// Verify ORDERS SUBGRAPH arguments
+		// ========================================
+
+		// Nested level 2: Order.items(category:) -> orders-subgraph
+		require.Contains(t, argumentMap, "items.category", "Should track Order.items(category:)")
+		assert.Equal(t, "Order", argumentMap["items.category"].TypeName)
+		assert.Equal(t, "String", argumentMap["items.category"].NamedType)
+		assert.Equal(t, []string{"orders-subgraph"}, argumentMap["items.category"].SubgraphIDs,
+			"Order.items.category argument should be attributed to orders-subgraph")
+		assert.False(t, argumentMap["items.category"].IsNull)
+
+		// ========================================
+		// Verify PRODUCTS SUBGRAPH arguments
+		// ========================================
+
+		// Nested level 4: Product.reviews(filter:) -> products-subgraph
+		require.Contains(t, argumentMap, "reviews.filter", "Should track Product.reviews(filter:)")
+		assert.Equal(t, "Product", argumentMap["reviews.filter"].TypeName)
+		assert.Equal(t, "ReviewFilter", argumentMap["reviews.filter"].NamedType)
+		assert.Equal(t, []string{"products-subgraph"}, argumentMap["reviews.filter"].SubgraphIDs,
+			"Product.reviews.filter argument should be attributed to products-subgraph")
+		assert.False(t, argumentMap["reviews.filter"].IsNull)
+
+		// Nested level 4: Product.reviews(limit:) -> products-subgraph
+		require.Contains(t, argumentMap, "reviews.limit", "Should track Product.reviews(limit:)")
+		assert.Equal(t, "Product", argumentMap["reviews.limit"].TypeName)
+		assert.Equal(t, "Int", argumentMap["reviews.limit"].NamedType)
+		assert.Equal(t, []string{"products-subgraph"}, argumentMap["reviews.limit"].SubgraphIDs,
+			"Product.reviews.limit argument should be attributed to products-subgraph")
+		assert.False(t, argumentMap["reviews.limit"].IsNull)
+
+		// Nested level 5: Review.comments(first:) -> products-subgraph
+		require.Contains(t, argumentMap, "comments.first", "Should track Review.comments(first:)")
+		assert.Equal(t, "Review", argumentMap["comments.first"].TypeName)
+		assert.Equal(t, "Int", argumentMap["comments.first"].NamedType)
+		assert.Equal(t, []string{"products-subgraph"}, argumentMap["comments.first"].SubgraphIDs,
+			"Review.comments.first argument should be attributed to products-subgraph")
+		assert.False(t, argumentMap["comments.first"].IsNull)
+
+		// Nested level 5: Review.comments(sortBy:) -> products-subgraph
+		require.Contains(t, argumentMap, "comments.sortBy", "Should track Review.comments(sortBy:)")
+		assert.Equal(t, "Review", argumentMap["comments.sortBy"].TypeName)
+		assert.Equal(t, "String", argumentMap["comments.sortBy"].NamedType)
+		assert.Equal(t, []string{"products-subgraph"}, argumentMap["comments.sortBy"].SubgraphIDs,
+			"Review.comments.sortBy argument should be attributed to products-subgraph")
+		assert.False(t, argumentMap["comments.sortBy"].IsNull)
+
+		// ========================================
+		// Verify INPUT TYPE subgraph attribution
+		// ========================================
+
+		// UserFilter should be attributed to users-subgraph (used by User.friends)
+		require.Contains(t, inputMap, "UserFilter", "Should track UserFilter input type")
+		assert.Equal(t, "UserFilter", inputMap["UserFilter"].NamedType)
+		assert.Equal(t, []string{"users-subgraph"}, inputMap["UserFilter"].SubgraphIDs,
+			"UserFilter should be attributed to users-subgraph")
+		assert.False(t, inputMap["UserFilter"].IsNull)
+
+		// UserFilter.minAge field
+		require.Contains(t, inputMap, "UserFilter.minAge", "Should track UserFilter.minAge field")
+		assert.Equal(t, "Int", inputMap["UserFilter.minAge"].NamedType)
+		assert.Equal(t, "UserFilter", inputMap["UserFilter.minAge"].TypeName)
+		assert.Equal(t, []string{"users-subgraph"}, inputMap["UserFilter.minAge"].SubgraphIDs,
+			"UserFilter.minAge should be attributed to users-subgraph")
+
+		// UserFilter.verified field
+		require.Contains(t, inputMap, "UserFilter.verified", "Should track UserFilter.verified field")
+		assert.Equal(t, "Boolean", inputMap["UserFilter.verified"].NamedType)
+		assert.Equal(t, "UserFilter", inputMap["UserFilter.verified"].TypeName)
+		assert.Equal(t, []string{"users-subgraph"}, inputMap["UserFilter.verified"].SubgraphIDs,
+			"UserFilter.verified should be attributed to users-subgraph")
+
+		// ReviewFilter should be attributed to products-subgraph (used by Product.reviews)
+		require.Contains(t, inputMap, "ReviewFilter", "Should track ReviewFilter input type")
+		assert.Equal(t, "ReviewFilter", inputMap["ReviewFilter"].NamedType)
+		assert.Equal(t, []string{"products-subgraph"}, inputMap["ReviewFilter"].SubgraphIDs,
+			"ReviewFilter should be attributed to products-subgraph")
+		assert.False(t, inputMap["ReviewFilter"].IsNull)
+
+		// ReviewFilter.minRating field
+		require.Contains(t, inputMap, "ReviewFilter.minRating", "Should track ReviewFilter.minRating field")
+		assert.Equal(t, "Int", inputMap["ReviewFilter.minRating"].NamedType)
+		assert.Equal(t, "ReviewFilter", inputMap["ReviewFilter.minRating"].TypeName)
+		assert.Equal(t, []string{"products-subgraph"}, inputMap["ReviewFilter.minRating"].SubgraphIDs,
+			"ReviewFilter.minRating should be attributed to products-subgraph")
+
+		// ReviewFilter.verified field
+		require.Contains(t, inputMap, "ReviewFilter.verified", "Should track ReviewFilter.verified field")
+		assert.Equal(t, "Boolean", inputMap["ReviewFilter.verified"].NamedType)
+		assert.Equal(t, "ReviewFilter", inputMap["ReviewFilter.verified"].TypeName)
+		assert.Equal(t, []string{"products-subgraph"}, inputMap["ReviewFilter.verified"].SubgraphIDs,
+			"ReviewFilter.verified should be attributed to products-subgraph")
+
+		// ========================================
+		// Verify ENUM usage subgraph attribution
+		// ========================================
+
+		// OrderStatus enum used by User.orders should be attributed to users-subgraph
+		var orderStatusUsage *graphqlmetricsv1.InputUsageInfo
+		for _, input := range inputUsageInfo {
+			if input.NamedType == "OrderStatus" && len(input.EnumValues) > 0 {
+				orderStatusUsage = input
+				break
+			}
+		}
+		require.NotNil(t, orderStatusUsage, "Should track OrderStatus enum usage")
+		assert.Equal(t, []string{"users-subgraph"}, orderStatusUsage.SubgraphIDs,
+			"OrderStatus enum should be attributed to users-subgraph (used by User.orders)")
+		assert.Contains(t, orderStatusUsage.EnumValues, "SHIPPED")
+
+		// ========================================
+		// Verify NO CROSS-CONTAMINATION
+		// ========================================
+
+		// Ensure users-subgraph arguments don't have products-subgraph or orders-subgraph
+		for key, arg := range argumentMap {
+			if arg.TypeName == "User" {
+				assert.NotContains(t, arg.SubgraphIDs, "products-subgraph",
+					"User field argument %s should not have products-subgraph", key)
+				assert.NotContains(t, arg.SubgraphIDs, "orders-subgraph",
+					"User field argument %s should not have orders-subgraph", key)
+			}
+			if arg.TypeName == "Product" || arg.TypeName == "Review" {
+				assert.NotContains(t, arg.SubgraphIDs, "users-subgraph",
+					"Product/Review field argument %s should not have users-subgraph", key)
+				assert.NotContains(t, arg.SubgraphIDs, "orders-subgraph",
+					"Product/Review field argument %s should not have orders-subgraph", key)
+			}
+			if arg.TypeName == "Order" || arg.TypeName == "OrderItem" {
+				assert.NotContains(t, arg.SubgraphIDs, "users-subgraph",
+					"Order/OrderItem field argument %s should not have users-subgraph", key)
+				assert.NotContains(t, arg.SubgraphIDs, "products-subgraph",
+					"Order/OrderItem field argument %s should not have products-subgraph", key)
+			}
+		}
+	})
+}
+
 // TestNilVariablesHandling verifies that nil variables are handled gracefully without panicking.
 // This is a defensive test to ensure the API doesn't crash when callers pass nil for variables.
 func TestNilVariablesHandling(t *testing.T) {
