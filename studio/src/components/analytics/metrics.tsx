@@ -67,6 +67,42 @@ import { useWorkspace } from "@/hooks/use-workspace";
 import { useCurrentOrganization } from "@/hooks/use-current-organization";
 
 export const MAX_URL_LENGTH = 10000;
+export const MAX_FILTER_SIZE = 10 * 1024; // 10KB in bytes
+
+/**
+ * Calculates the byte size of a string (UTF-8 encoded)
+ */
+export const calculateByteSize = (str: string): number => {
+  return new Blob([str]).size;
+};
+
+/**
+ * Checks if filter state exceeds URL length or size limits.
+ * Returns an object with exceeded flag and reason message.
+ */
+export const checkFilterLimits = (
+  router: ReturnType<typeof useRouter>,
+  filterState: string,
+): { exceeded: boolean; reason?: string } => {
+  const urlLength = calculateUrlLength(router, { filterState });
+  const filterSize = calculateByteSize(filterState);
+
+  if (urlLength > MAX_URL_LENGTH) {
+    return {
+      exceeded: true,
+      reason: `URL would exceed maximum length of ${MAX_URL_LENGTH.toLocaleString()} characters`,
+    };
+  }
+
+  if (filterSize > MAX_FILTER_SIZE) {
+    return {
+      exceeded: true,
+      reason: `Filter state would exceed maximum size of ${(MAX_FILTER_SIZE / 1024).toFixed(0)}KB`,
+    };
+  }
+
+  return { exceeded: false };
+};
 
 /**
  * Calculates the length of the URL that would be generated from the given query parameters.
@@ -135,8 +171,8 @@ export const calculateUrlLength = (
 };
 
 /**
- * Checks if adding a new filter value would exceed the URL length limit.
- * Returns true if the limit would be exceeded, false otherwise.
+ * Checks if adding a new filter value would exceed the URL length or size limits.
+ * Returns true if either limit would be exceeded, false otherwise.
  */
 export const wouldExceedUrlLimit = (
   router: ReturnType<typeof useRouter>,
@@ -173,11 +209,9 @@ export const wouldExceedUrlLimit = (
     stringifiedFilters = "[]";
   }
 
-  const urlLength = calculateUrlLength(router, {
-    filterState: stringifiedFilters,
-  });
-
-  return urlLength > MAX_URL_LENGTH;
+  // Use shared validation function
+  const { exceeded } = checkFilterLimits(router, stringifiedFilters);
+  return exceeded;
 };
 
 export const getInfoTip = (range?: number) => {
@@ -215,15 +249,19 @@ const useSelectedFilters = () => {
     }
   }, [router.query.filterState]);
 
-  // Validate URL length when filters are loaded from URL (e.g., manual manipulation)
+  // Validate URL length and filter size when filters are loaded from URL (e.g., manual manipulation)
   useEffect(() => {
     if (!router.isReady || !router.query.filterState) return;
 
-    const currentUrlLength = calculateUrlLength(router, {});
-    if (currentUrlLength > MAX_URL_LENGTH) {
+    const { exceeded, reason } = checkFilterLimits(
+      router,
+      router.query.filterState as string,
+    );
+
+    if (exceeded) {
       toast({
         title: "Filter limit reached",
-        description: `Maximum URL length of ${MAX_URL_LENGTH.toLocaleString()} characters reached. So the filters have been reset.`,
+        description: `${reason}. Filters have been reset.`,
       });
 
       // Reset to clean URL by removing filterState entirely

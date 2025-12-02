@@ -77,7 +77,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useToast } from "@/components/ui/use-toast";
-import { calculateUrlLength, MAX_URL_LENGTH } from "./metrics";
+import {
+  calculateUrlLength,
+  checkFilterLimits,
+  MAX_URL_LENGTH,
+} from "./metrics";
 
 export function AnalyticsDataTable<T>({
   tableRef,
@@ -170,11 +174,15 @@ export function AnalyticsDataTable<T>({
   useEffect(() => {
     if (!router.isReady || !router.query.filterState) return;
 
-    const currentUrlLength = calculateUrlLength(router, {});
-    if (currentUrlLength > MAX_URL_LENGTH) {
+    const { exceeded, reason } = checkFilterLimits(
+      router,
+      router.query.filterState as string,
+    );
+
+    if (exceeded) {
       toast({
         title: "Filter limit reached",
-        description: `Maximum URL length of ${MAX_URL_LENGTH.toLocaleString()} characters reached. Please remove some filters before adding new ones.`,
+        description: `${reason}. Filters have been reset.`,
       });
 
       // Reset to clean URL by removing filterState entirely
@@ -238,16 +246,17 @@ export function AnalyticsDataTable<T>({
           stringifiedFilters = "[]";
         }
 
-        // Check URL length before applying the filter (only if adding/modifying, not removing)
+        // Check URL length and filter size before applying (only if adding/modifying, not removing)
         if (!isRemoving) {
-          const urlLength = calculateUrlLength(router, {
-            filterState: stringifiedFilters,
-          });
+          const { exceeded, reason } = checkFilterLimits(
+            router,
+            stringifiedFilters,
+          );
 
-          if (urlLength > MAX_URL_LENGTH) {
+          if (exceeded) {
             toast({
               title: "Filter limit reached",
-              description: `Maximum URL length of ${MAX_URL_LENGTH.toLocaleString()} characters reached. Please remove some filters before adding new ones.`,
+              description: `${reason}. Please remove some filters before adding new ones.`,
             });
             return; // Early return prevents filter from being applied
           }
@@ -356,14 +365,15 @@ export function AnalyticsDataTable<T>({
             stringifiedFilters = "[]";
           }
 
-          const urlLength = calculateUrlLength(router, {
-            filterState: stringifiedFilters,
-          });
+          const { exceeded, reason } = checkFilterLimits(
+            router,
+            stringifiedFilters,
+          );
 
-          if (urlLength > MAX_URL_LENGTH) {
+          if (exceeded) {
             toast({
               title: "Filter limit reached",
-              description: `Maximum URL length of ${MAX_URL_LENGTH.toLocaleString()} characters reached. Please remove some filters before adding new ones.`,
+              description: `${reason}. Please remove some filters before adding new ones.`,
             });
             return false; // Validation failed - prevents onSelect from being called
           }
