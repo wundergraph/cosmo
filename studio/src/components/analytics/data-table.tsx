@@ -47,6 +47,7 @@ import { formatISO, subHours } from "date-fns";
 import { useRouter } from "next/router";
 import {
   ReactNode,
+  useEffect,
   useImperativeHandle,
   useMemo,
   useState,
@@ -162,6 +163,32 @@ export function AnalyticsDataTable<T>({
 
   const applyNewParams = useApplyParams();
   const { toast } = useToast();
+
+  // Safety net: Validate URL on initial load (e.g., user pastes malicious URL in browser)
+  // While onColumnFiltersChange (below) catches most cases via useSyncTableWithQuery,
+  // this catches the edge case where page loads with bad URL before table is fully initialized
+  useEffect(() => {
+    if (!router.isReady || !router.query.filterState) return;
+
+    const currentUrlLength = calculateUrlLength(router, {});
+    if (currentUrlLength > MAX_URL_LENGTH) {
+      toast({
+        title: "Filter limit reached",
+        description: `Maximum URL length of ${MAX_URL_LENGTH.toLocaleString()} characters reached. Please remove some filters before adding new ones.`,
+      });
+
+      // Reset to clean URL by removing filterState entirely
+      const { filterState, ...cleanQuery } = router.query;
+      router.replace(
+        {
+          query: cleanQuery,
+        },
+        undefined,
+        { shallow: true },
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.isReady, router.query.filterState]);
 
   const table = useReactTable({
     data,

@@ -417,15 +417,11 @@ export function DataTableFilterCommands<TData, TValue>({
                       key={option.value}
                       onSelect={() => {
                         // Build new filter array from selectedOptions (source of truth)
-                        const newSelectedValues = new Set(
-                          selectedOptions ?? [],
-                        );
-                        if (isSelected) {
-                          newSelectedValues.delete(option.value);
-                        } else {
-                          newSelectedValues.add(option.value);
-                        }
-                        const filterValues = Array.from(newSelectedValues);
+                        const filterValues = isSelected
+                          ? (selectedOptions ?? []).filter(
+                              (v) => v !== option.value,
+                            )
+                          : [...(selectedOptions ?? []), option.value];
 
                         // Validate BEFORE calling onSelect to prevent optimistic UI updates
                         if (

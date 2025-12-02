@@ -226,10 +226,11 @@ const useSelectedFilters = () => {
         description: `Maximum URL length of ${MAX_URL_LENGTH.toLocaleString()} characters reached. So the filters have been reset.`,
       });
 
-      // Reset to clean URL
+      // Reset to clean URL by removing filterState entirely
+      const { filterState, ...cleanQuery } = router.query;
       router.replace(
         {
-          query: { ...router.query, filterState: undefined },
+          query: cleanQuery,
         },
         undefined,
         { shallow: true },
@@ -365,7 +366,7 @@ export const useMetricsFilters = (filters: AnalyticsViewResultFilter[]) => {
         onSelect: filter.onSelect, // Use original onSelect without wrapping
       };
     });
-    
+
     // Only filtersList should trigger recalculation
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtersList]);
