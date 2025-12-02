@@ -1,7 +1,7 @@
 syntax = "proto3";
 package service;
 
-option go_package = "github.com/wundergraph/cosmo/plugin";
+option go_package = "github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects";
 
 import "google/protobuf/wrappers.proto";
 

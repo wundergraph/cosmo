@@ -4,7 +4,7 @@
 // - protoc             v5.29.3
 // source: generated/service.proto
 
-package plugin
+package projects
 
 import (
 	context "context"
