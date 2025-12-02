@@ -3,6 +3,7 @@ import { useQuery } from "@connectrpc/connect-query";
 import {
   ChartBarIcon,
   ClipboardIcon,
+  CommandLineIcon,
   ExclamationTriangleIcon,
   ServerStackIcon,
 } from "@heroicons/react/24/outline";
@@ -58,7 +59,9 @@ export const GraphContext = createContext<GraphContextProps | undefined>(
 
 export const GraphLayout = ({ children }: LayoutProps) => {
   const router = useRouter();
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const organizationSlug = useCurrentOrganization()?.slug;
   const slug = router.query.slug as string;
 
@@ -125,6 +128,12 @@ export const GraphLayout = ({ children }: LayoutProps) => {
         href: basePath + "/analytics",
         matchExact: false,
         icon: <ChartBarIcon className="h-4 w-4" />,
+      },
+      {
+        title: "Operations",
+        href: basePath + "/operations",
+        matchExact: false,
+        icon: <CommandLineIcon className="h-4 w-4" />,
       },
       {
         title: "Routers",
@@ -232,6 +241,7 @@ export interface TitleLayoutProps {
   noPadding?: boolean;
   children?: React.ReactNode;
   scrollRef?: React.RefObject<HTMLDivElement>;
+  className?: string;
 }
 
 export const GraphPageLayout = ({
@@ -242,6 +252,7 @@ export const GraphPageLayout = ({
   noPadding,
   children,
   scrollRef,
+  className,
 }: TitleLayoutProps) => {
   const breadcrumb = (
     <>
@@ -262,12 +273,13 @@ export const GraphPageLayout = ({
         <div
           className={cn(
             "flex w-full flex-col justify-between gap-y-4 px-4 md:w-auto lg:flex-row lg:items-center lg:px-6 xl:px-8",
+            className,
           )}
         >
           <WorkspaceSelector truncateNamespace={false}>
             {breadcrumb}
           </WorkspaceSelector>
-          {items}
+          <div className="justify-end">{items}</div>
         </div>
         {toolbar}
       </div>

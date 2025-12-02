@@ -5,28 +5,6 @@ var grpc = require('@grpc/grpc-js');
 var service_pb = require('./service_pb.js');
 var google_protobuf_wrappers_pb = require('google-protobuf/google/protobuf/wrappers_pb.js');
 
-function serialize_service_LookupCourseByIdRequest(arg) {
-  if (!(arg instanceof service_pb.LookupCourseByIdRequest)) {
-    throw new Error('Expected argument of type service.LookupCourseByIdRequest');
-  }
-  return Buffer.from(arg.serializeBinary());
-}
-
-function deserialize_service_LookupCourseByIdRequest(buffer_arg) {
-  return service_pb.LookupCourseByIdRequest.deserializeBinary(new Uint8Array(buffer_arg));
-}
-
-function serialize_service_LookupCourseByIdResponse(arg) {
-  if (!(arg instanceof service_pb.LookupCourseByIdResponse)) {
-    throw new Error('Expected argument of type service.LookupCourseByIdResponse');
-  }
-  return Buffer.from(arg.serializeBinary());
-}
-
-function deserialize_service_LookupCourseByIdResponse(buffer_arg) {
-  return service_pb.LookupCourseByIdResponse.deserializeBinary(new Uint8Array(buffer_arg));
-}
-
 function serialize_service_LookupEmployeeByIdRequest(arg) {
   if (!(arg instanceof service_pb.LookupEmployeeByIdRequest)) {
     throw new Error('Expected argument of type service.LookupEmployeeByIdRequest');
@@ -47,28 +25,6 @@ function serialize_service_LookupEmployeeByIdResponse(arg) {
 
 function deserialize_service_LookupEmployeeByIdResponse(buffer_arg) {
   return service_pb.LookupEmployeeByIdResponse.deserializeBinary(new Uint8Array(buffer_arg));
-}
-
-function serialize_service_LookupLessonByIdRequest(arg) {
-  if (!(arg instanceof service_pb.LookupLessonByIdRequest)) {
-    throw new Error('Expected argument of type service.LookupLessonByIdRequest');
-  }
-  return Buffer.from(arg.serializeBinary());
-}
-
-function deserialize_service_LookupLessonByIdRequest(buffer_arg) {
-  return service_pb.LookupLessonByIdRequest.deserializeBinary(new Uint8Array(buffer_arg));
-}
-
-function serialize_service_LookupLessonByIdResponse(arg) {
-  if (!(arg instanceof service_pb.LookupLessonByIdResponse)) {
-    throw new Error('Expected argument of type service.LookupLessonByIdResponse');
-  }
-  return Buffer.from(arg.serializeBinary());
-}
-
-function deserialize_service_LookupLessonByIdResponse(buffer_arg) {
-  return service_pb.LookupLessonByIdResponse.deserializeBinary(new Uint8Array(buffer_arg));
 }
 
 function serialize_service_MutationAddCourseRequest(arg) {
@@ -228,18 +184,6 @@ function deserialize_service_QueryThrowErrorCoursesResponse(buffer_arg) {
 
 // Service definition for CoursesService
 var CoursesServiceService = exports.CoursesServiceService = {
-  // Lookup Course entity by id
-lookupCourseById: {
-    path: '/service.CoursesService/LookupCourseById',
-    requestStream: false,
-    responseStream: false,
-    requestType: service_pb.LookupCourseByIdRequest,
-    responseType: service_pb.LookupCourseByIdResponse,
-    requestSerialize: serialize_service_LookupCourseByIdRequest,
-    requestDeserialize: deserialize_service_LookupCourseByIdRequest,
-    responseSerialize: serialize_service_LookupCourseByIdResponse,
-    responseDeserialize: deserialize_service_LookupCourseByIdResponse,
-  },
   // Lookup Employee entity by id
 lookupEmployeeById: {
     path: '/service.CoursesService/LookupEmployeeById',
@@ -251,18 +195,6 @@ lookupEmployeeById: {
     requestDeserialize: deserialize_service_LookupEmployeeByIdRequest,
     responseSerialize: serialize_service_LookupEmployeeByIdResponse,
     responseDeserialize: deserialize_service_LookupEmployeeByIdResponse,
-  },
-  // Lookup Lesson entity by id
-lookupLessonById: {
-    path: '/service.CoursesService/LookupLessonById',
-    requestStream: false,
-    responseStream: false,
-    requestType: service_pb.LookupLessonByIdRequest,
-    responseType: service_pb.LookupLessonByIdResponse,
-    requestSerialize: serialize_service_LookupLessonByIdRequest,
-    requestDeserialize: deserialize_service_LookupLessonByIdRequest,
-    responseSerialize: serialize_service_LookupLessonByIdResponse,
-    responseDeserialize: deserialize_service_LookupLessonByIdResponse,
   },
   mutationAddCourse: {
     path: '/service.CoursesService/MutationAddCourse',

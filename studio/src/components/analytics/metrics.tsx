@@ -269,8 +269,6 @@ export const useMetricsFilters = (filters: AnalyticsViewResultFilter[]) => {
       ...filter,
       id: filter.columnName,
       onSelect: (value) => {
-        const isRemoving = !value || value.length === 0;
-
         // Create a deep copy to avoid mutating the original
         const newSelected = selectedFilters.map((f) => ({
           ...f,
@@ -278,9 +276,11 @@ export const useMetricsFilters = (filters: AnalyticsViewResultFilter[]) => {
         }));
         const index = newSelected.findIndex((f) => f.id === filter.columnName);
 
-        if (isRemoving) {
-          newSelected.splice(index, 1);
-        } else if (newSelected[index]) {
+        if (!value || value.length === 0) {
+          if (index !== -1) {
+            newSelected.splice(index, 1);
+          }
+        } else if (index !== -1 && newSelected[index]) {
           newSelected[index].value = value;
         } else {
           newSelected.push({
@@ -560,7 +560,12 @@ interface SparklineProps {
 }
 
 const Sparkline: React.FC<SparklineProps> = (props) => {
-  const { timeRange = 24, valueFormatter, syncId } = props;
+  const {
+    timeRange = 24,
+    valueFormatter,
+    syncId,
+    className,
+  } = props;
   const id = useId();
 
   const { data, ticks, domain, timeFormatter } = useChartData(
@@ -571,7 +576,7 @@ const Sparkline: React.FC<SparklineProps> = (props) => {
   const strokeColor = "hsl(var(--chart-primary))";
 
   return (
-    <div className={cn("-mx-6 h-20", props.className)}>
+    <div className={cn("-mx-6 h-20", className)}>
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart
           data={data}
@@ -646,9 +651,11 @@ export const RequestMetricsCard = (props: {
   data?: MetricsDashboardMetric;
   isSubgraphAnalytics?: boolean;
   syncId?: string;
+  showTopList?: boolean;
+  chartClassName?: string;
 }) => {
   const timeRange = useTimeRange();
-  const { data, syncId } = props;
+  const { data, syncId, showTopList = true, chartClassName } = props;
 
   const top = data?.top ?? [];
 
@@ -697,15 +704,18 @@ export const RequestMetricsCard = (props: {
           valueFormatter={formatter}
           timeRange={timeRange}
           syncId={syncId}
+          className={chartClassName}
         />
       </CardContent>
-      <TopList
-        title="Highest RPM"
-        items={top}
-        formatter={formatter}
-        queryParams={{ group: "OperationName" }}
-        isSubgraphAnalytics={props.isSubgraphAnalytics}
-      />
+      {showTopList && (
+        <TopList
+          title="Highest RPM"
+          items={top}
+          formatter={formatter}
+          queryParams={{ group: "OperationName" }}
+          isSubgraphAnalytics={props.isSubgraphAnalytics}
+        />
+      )}
     </Card>
   );
 };
@@ -714,9 +724,11 @@ export const LatencyMetricsCard = (props: {
   data?: MetricsDashboardMetric;
   isSubgraphAnalytics?: boolean;
   syncId?: string;
+  showTopList?: boolean;
+  chartClassName?: string;
 }) => {
   const timeRange = useTimeRange();
-  const { data, syncId } = props;
+  const { data, syncId, showTopList = true, chartClassName } = props;
 
   const top = data?.top ?? [];
 
@@ -752,15 +764,18 @@ export const LatencyMetricsCard = (props: {
           valueFormatter={formatter}
           timeRange={timeRange}
           syncId={syncId}
+          className={chartClassName}
         />
       </CardContent>
-      <TopList
-        title="Highest latency"
-        items={top}
-        formatter={formatter}
-        queryParams={{ group: "OperationName", sort: "p95", sortDir: "desc" }}
-        isSubgraphAnalytics={props.isSubgraphAnalytics}
-      />
+      {showTopList && (
+        <TopList
+          title="Highest latency"
+          items={top}
+          formatter={formatter}
+          queryParams={{ group: "OperationName", sort: "p95", sortDir: "desc" }}
+          isSubgraphAnalytics={props.isSubgraphAnalytics}
+        />
+      )}
     </Card>
   );
 };
@@ -769,9 +784,11 @@ export const ErrorMetricsCard = (props: {
   data?: MetricsDashboardMetric;
   isSubgraphAnalytics?: boolean;
   syncId?: string;
+  showTopList?: boolean;
+  chartClassName?: string;
 }) => {
   const timeRange = useTimeRange();
-  const { data, syncId } = props;
+  const { data, syncId, showTopList = true, chartClassName } = props;
 
   const top = data?.top ?? [];
 
@@ -804,25 +821,28 @@ export const ErrorMetricsCard = (props: {
           valueFormatter={formatter}
           timeRange={timeRange}
           syncId={syncId}
+          className={chartClassName}
         />
       </CardContent>
-      <TopList
-        title="Highest error percentage"
-        items={top}
-        formatter={formatter}
-        queryParams={{
-          group: "OperationName",
-          sort: "errors",
-          sortDir: "desc",
-        }}
-        isSubgraphAnalytics={props.isSubgraphAnalytics}
-      />
+      {showTopList && (
+        <TopList
+          title="Highest error percentage"
+          items={top}
+          formatter={formatter}
+          queryParams={{
+            group: "OperationName",
+            sort: "errors",
+            sortDir: "desc",
+          }}
+          isSubgraphAnalytics={props.isSubgraphAnalytics}
+        />
+      )}
     </Card>
   );
 };
 
 const ErrorPercentChart: React.FC<SparklineProps> = (props) => {
-  const { timeRange = 24, valueFormatter, syncId } = props;
+  const { timeRange = 24, valueFormatter, syncId, className } = props;
   const id = useId();
   const { data, ticks, domain, timeFormatter } = useChartData(
     timeRange,
@@ -830,7 +850,7 @@ const ErrorPercentChart: React.FC<SparklineProps> = (props) => {
   );
 
   return (
-    <div className={cn("-mx-6 h-20", props.className)}>
+    <div className={cn("-mx-6 h-20", className)}>
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart
           data={data}

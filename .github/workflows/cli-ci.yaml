@@ -51,6 +51,14 @@ jobs:
         working-directory: cli
         run: bun test e2e
 
+      - name: Get Coverage
+        run: pnpm run --filter wgc coverage
+
+      - name: Upload results to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+
   build_test_node_matrix:
     timeout-minutes: 10
     runs-on: ubuntu-latest

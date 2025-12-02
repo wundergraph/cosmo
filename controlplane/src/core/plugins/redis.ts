@@ -69,7 +69,7 @@ export const createRedisConnections = async (opts: RedisPluginOptions) => {
 
   const redisWorker = new IORedis.Redis({
     ...connectionConfig,
-    maxRetriesPerRequest: 0, // required for bullmq worker
+    maxRetriesPerRequest: null, // required for bullmq worker
     connectionName: 'controlplane-worker',
     lazyConnect: true,
   });
