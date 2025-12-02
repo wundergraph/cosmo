@@ -346,7 +346,9 @@ export function AnalyticsDataTable<T>({
         onSelect: filter.onSelect, // Use original onSelect without wrapping
       };
     });
-  }, [filtersList, selectedFilters, toast, router]);
+    // Only filtersList and selectedFilters should trigger recalculation
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtersList, selectedFilters]);
 
   useSyncTableWithQuery({
     table,

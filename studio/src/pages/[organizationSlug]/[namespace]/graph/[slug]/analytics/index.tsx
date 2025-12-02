@@ -114,6 +114,11 @@ const OverviewToolbar = ({
           />
 
           <MetricsFilters filters={filters ?? []} />
+          <AnalyticsSelectedFilters
+            filters={filtersList}
+            selectedFilters={selectedFilters}
+            onReset={() => resetFilters()}
+          />
           {isUrlLimitReached && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -127,11 +132,6 @@ const OverviewToolbar = ({
               </TooltipContent>
             </Tooltip>
           )}
-          <AnalyticsSelectedFilters
-            filters={filtersList}
-            selectedFilters={selectedFilters}
-            onReset={() => resetFilters()}
-          />
         </div>
 
         <Spacer />

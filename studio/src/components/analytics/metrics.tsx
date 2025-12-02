@@ -47,6 +47,7 @@ import { useRouter } from "next/router";
 import React, {
   useCallback,
   useContext,
+  useEffect,
   useId,
   useMemo,
   useState,
@@ -204,6 +205,7 @@ const useTimeRange = () => {
 
 const useSelectedFilters = () => {
   const router = useRouter();
+  const { toast } = useToast();
 
   const selectedFilters = useMemo(() => {
     try {
@@ -212,6 +214,30 @@ const useSelectedFilters = () => {
       return [];
     }
   }, [router.query.filterState]);
+
+  // Validate URL length when filters are loaded from URL (e.g., manual manipulation)
+  useEffect(() => {
+    if (!router.isReady || !router.query.filterState) return;
+
+    const currentUrlLength = calculateUrlLength(router, {});
+    if (currentUrlLength > MAX_URL_LENGTH) {
+      toast({
+        title: "Filter limit reached",
+        description: `Maximum URL length of ${MAX_URL_LENGTH.toLocaleString()} characters reached. So the filters have been reset.`,
+      });
+
+      // Reset to clean URL
+      router.replace(
+        {
+          query: { ...router.query, filterState: undefined },
+        },
+        undefined,
+        { shallow: true },
+      );
+    }
+    // Only depend on the specific values we check, not the whole router/toast objects
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.isReady, router.query.filterState]);
 
   return selectedFilters as { id: string; value: string[] }[];
 };
@@ -222,35 +248,9 @@ export const useMetricsFilters = (filters: AnalyticsViewResultFilter[]) => {
 
   const applyNewParams = useCallback(
     (newParams: Record<string, string | null>, unset?: string[]) => {
-      // Calculate what the URL would be after applying new params
       const mergedParams = Object.fromEntries(
         Object.entries(router.query).filter(([key]) => !unset?.includes(key)),
       );
-      // Convert to Record<string, string | null> format, handling arrays and undefined
-      const finalParams: Record<string, string | null> = {};
-      for (const [key, value] of Object.entries({
-        ...mergedParams,
-        ...newParams,
-      })) {
-        if (value === null || value === undefined) {
-          finalParams[key] = null;
-        } else if (Array.isArray(value)) {
-          // For arrays, use the first value (Next.js will handle multiple values)
-          finalParams[key] = value[0] ?? null;
-        } else {
-          finalParams[key] = value;
-        }
-      }
-
-      const urlLength = calculateUrlLength(router, finalParams);
-
-      if (urlLength > MAX_URL_LENGTH) {
-        toast({
-          title: "Filter limit reached",
-          description: `Maximum URL length of ${MAX_URL_LENGTH.toLocaleString()} characters reached. Please remove some filters before adding new ones.`,
-        });
-        return;
-      }
 
       router.push({
         query: {
@@ -259,7 +259,7 @@ export const useMetricsFilters = (filters: AnalyticsViewResultFilter[]) => {
         },
       });
     },
-    [router, toast],
+    [router],
   );
 
   const selectedFilters = useSelectedFilters();
@@ -365,7 +365,10 @@ export const useMetricsFilters = (filters: AnalyticsViewResultFilter[]) => {
         onSelect: filter.onSelect, // Use original onSelect without wrapping
       };
     });
-  }, [filtersList, toast, router]);
+    
+    // Only filtersList should trigger recalculation
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtersList]);
 
   return {
     filtersList: filtersListWithValidation,
@@ -560,12 +563,7 @@ interface SparklineProps {
 }
 
 const Sparkline: React.FC<SparklineProps> = (props) => {
-  const {
-    timeRange = 24,
-    valueFormatter,
-    syncId,
-    className,
-  } = props;
+  const { timeRange = 24, valueFormatter, syncId, className } = props;
   const id = useId();
 
   const { data, ticks, domain, timeFormatter } = useChartData(
