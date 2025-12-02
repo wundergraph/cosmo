@@ -11,6 +11,7 @@ export interface AnalyticsFilter {
   title: string;
   selectedOptions?: string[];
   onSelect?: (value?: string[]) => void;
+  validateSelection?: (value: string[]) => boolean; // Returns true if valid, false if invalid
   options: Array<{
     label: string;
     value: string;
@@ -20,17 +21,14 @@ export interface AnalyticsFilter {
 
 export interface AnalyticsFiltersProps {
   filters: AnalyticsFilter[];
-  disabled?: boolean;
 }
 
 export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = (props) => {
-  const { filters = [], disabled } = props;
+  const { filters = [] } = props;
 
   return (
     <>
-      {filters.length > 0 && (
-        <DataTablePrimaryFilterMenu filters={filters} disabled={disabled} />
-      )}
+      {filters.length > 0 && <DataTablePrimaryFilterMenu filters={filters} />}
     </>
   );
 };

@@ -45,7 +45,13 @@ import {
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { formatISO, subHours } from "date-fns";
 import { useRouter } from "next/router";
-import { ReactNode, useImperativeHandle, useMemo, useState } from "react";
+import {
+  ReactNode,
+  useImperativeHandle,
+  useMemo,
+  useState,
+  useCallback,
+} from "react";
 import useDeepCompareEffect from "use-deep-compare-effect";
 import {
   DatePickerWithRange,
@@ -69,6 +75,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useToast } from "@/components/ui/use-toast";
+import { calculateUrlLength, MAX_URL_LENGTH } from "./metrics";
 
 export function AnalyticsDataTable<T>({
   tableRef,
@@ -153,6 +161,7 @@ export function AnalyticsDataTable<T>({
   };
 
   const applyNewParams = useApplyParams();
+  const { toast } = useToast();
 
   const table = useReactTable({
     data,
@@ -180,12 +189,43 @@ export function AnalyticsDataTable<T>({
     onColumnFiltersChange: (t) => {
       if (typeof t === "function") {
         const newVal = functionalUpdate(t, state.columnFilters);
+
+        // Check if we're removing filters (allow) vs adding (check limit)
+        // Count total filter values before and after
+        const oldTotalValues = state.columnFilters.reduce((sum, f) => {
+          const val = f.value as string[] | undefined;
+          return sum + (val?.length ?? 0);
+        }, 0);
+        const newTotalValues = newVal.reduce((sum, f) => {
+          const val = f.value as string[] | undefined;
+          return sum + (val?.length ?? 0);
+        }, 0);
+        const isRemoving =
+          newTotalValues < oldTotalValues ||
+          newVal.length < state.columnFilters.length;
+
         let stringifiedFilters;
         try {
           stringifiedFilters = JSON.stringify(newVal);
         } catch {
           stringifiedFilters = "[]";
         }
+
+        // Check URL length before applying the filter (only if adding/modifying, not removing)
+        if (!isRemoving) {
+          const urlLength = calculateUrlLength(router, {
+            filterState: stringifiedFilters,
+          });
+
+          if (urlLength > MAX_URL_LENGTH) {
+            toast({
+              title: "Filter limit reached",
+              description: `Maximum URL length of ${MAX_URL_LENGTH.toLocaleString()} characters reached. Please remove some filters before adding new ones.`,
+            });
+            return; // Early return prevents filter from being applied
+          }
+        }
+
         applyNewParams({
           filterState: stringifiedFilters,
         });
@@ -254,8 +294,59 @@ export function AnalyticsDataTable<T>({
     setRefreshInterval(val);
   };
 
+  // Check if current URL is at or near the limit
+  const currentUrlLength = useMemo(() => {
+    return calculateUrlLength(router, {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.query, router.asPath]);
+
+  const isUrlLimitReached = currentUrlLength >= MAX_URL_LENGTH;
+
   const filtersList = getDataTableFilters(table, filters);
   const selectedFilters = table.getState().columnFilters;
+
+  // ALWAYS add validation to check if new filter would exceed URL limit
+  const filtersListWithValidation = useMemo(() => {
+    return filtersList.map((filter) => {
+      return {
+        ...filter,
+        // ALWAYS validate selection to check if NEW addition would exceed the limit
+        validateSelection: (value: string[]) => {
+          // Build the new filter state to check URL length
+          const newSelectedFilters = [...selectedFilters];
+          const index = newSelectedFilters.findIndex((f) => f.id === filter.id);
+
+          if (index >= 0) {
+            newSelectedFilters[index] = { id: filter.id, value: value };
+          } else {
+            newSelectedFilters.push({ id: filter.id, value: value });
+          }
+
+          let stringifiedFilters;
+          try {
+            stringifiedFilters = JSON.stringify(newSelectedFilters);
+          } catch {
+            stringifiedFilters = "[]";
+          }
+
+          const urlLength = calculateUrlLength(router, {
+            filterState: stringifiedFilters,
+          });
+
+          if (urlLength > MAX_URL_LENGTH) {
+            toast({
+              title: "Filter limit reached",
+              description: `Maximum URL length of ${MAX_URL_LENGTH.toLocaleString()} characters reached. Please remove some filters before adding new ones.`,
+            });
+            return false; // Validation failed - prevents onSelect from being called
+          }
+
+          return true; // Validation passed - allows onSelect to be called
+        },
+        onSelect: filter.onSelect, // Use original onSelect without wrapping
+      };
+    });
+  }, [filtersList, selectedFilters, toast, router]);
 
   useSyncTableWithQuery({
     table,
@@ -336,7 +427,21 @@ export function AnalyticsDataTable<T>({
             onChange={onDateRangeChange}
             calendarDaysLimit={tracingRetention}
           />
-          <AnalyticsFilters filters={filtersList} />
+          <AnalyticsFilters filters={filtersListWithValidation} />
+          {isUrlLimitReached && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center">
+                  <ExclamationTriangleIcon className="h-5 w-5 text-destructive" />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                Maximum URL length of {MAX_URL_LENGTH.toLocaleString()}{" "}
+                characters reached. Please remove some filters before adding new
+                ones.
+              </TooltipContent>
+            </Tooltip>
+          )}
         </div>
         <div className="flex flex-row flex-wrap items-start gap-2">
           <DataTableGroupMenu
@@ -403,7 +508,7 @@ export function AnalyticsDataTable<T>({
       </div>
       <div className="flex flex-row flex-wrap items-start gap-y-2 py-2">
         <AnalyticsSelectedFilters
-          filters={filtersList}
+          filters={filtersListWithValidation}
           selectedFilters={selectedFilters}
           onReset={() => table.resetColumnFilters()}
         />

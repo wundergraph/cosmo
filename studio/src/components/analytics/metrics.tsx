@@ -50,6 +50,7 @@ import React, {
   useId,
   useMemo,
   useState,
+  useRef,
 } from "react";
 import {
   Area,
@@ -64,53 +65,118 @@ import {
 import { useWorkspace } from "@/hooks/use-workspace";
 import { useCurrentOrganization } from "@/hooks/use-current-organization";
 
-const MAX_URL_LENGTH = 10000;
+export const MAX_URL_LENGTH = 10000;
 
 /**
  * Calculates the length of the URL that would be generated from the given query parameters.
  * This simulates what the URL would look like after applying the new parameters.
+ *
+ * Note: We calculate the full URL including origin because browsers have limits on total URL length.
  */
-const calculateUrlLength = (router: ReturnType<typeof useRouter>, newParams: Record<string, string | null>): number => {
-  // Step 1: Merge existing query params with new params
-  // Keep existing params that aren't being replaced, or that are being set to null
-  const existingParams = Object.fromEntries(
-    Object.entries(router.query).filter(
-      ([key]) => !newParams.hasOwnProperty(key) || newParams[key] !== null,
-    ),
-  );
+export const calculateUrlLength = (
+  router: ReturnType<typeof useRouter>,
+  newParams: Record<string, string | string[] | null | undefined>,
+): number => {
+  // Merge existing query params with new params
+  // Remove params that are being set to null, keep others, and add/update new params
+  const mergedQuery: Record<string, string | string[]> = {};
 
-  // Step 2: Add new params (excluding null values)
-  const updatedParams = Object.fromEntries(
-    Object.entries(newParams).filter(([_, value]) => value !== null),
-  );
-
-  // Step 3: Combine all params (new params override existing ones)
-  const allQueryParams = { ...existingParams, ...updatedParams };
-
-  // Step 4: Build the query string from the combined params
-  const queryStringParts = Object.entries(allQueryParams)
-    .map(([key, value]) => {
-      if (value === null || value === undefined) {
-        return null;
+  // First, copy existing params that aren't being replaced or removed
+  for (const [key, value] of Object.entries(router.query)) {
+    if (!newParams.hasOwnProperty(key)) {
+      // Keep existing param if not in newParams
+      if (value !== undefined && value !== null) {
+        mergedQuery[key] = value as string | string[];
       }
-      const encodedKey = encodeURIComponent(key);
-      const encodedValue = encodeURIComponent(String(value));
-      return `${encodedKey}=${encodedValue}`;
-    })
-    .filter((part): part is string => part !== null);
+    } else if (newParams[key] !== null) {
+      // Keep existing param if newParams[key] is not null (will be overridden below)
+      if (value !== undefined && value !== null) {
+        mergedQuery[key] = value as string | string[];
+      }
+    }
+    // If newParams[key] is null, we skip it (removes the param)
+  }
 
-  const queryString = queryStringParts.join("&");
+  // Then, add/update with new params (excluding null values)
+  for (const [key, value] of Object.entries(newParams)) {
+    if (value !== null && value !== undefined) {
+      mergedQuery[key] = value;
+    }
+  }
 
-  // Step 5: Get the pathname (without existing query string)
+  // Build the query string - Next.js formats arrays as multiple key=value pairs
+  const queryParts: string[] = [];
+  for (const [key, value] of Object.entries(mergedQuery)) {
+    const encodedKey = encodeURIComponent(key);
+    if (Array.isArray(value)) {
+      // Arrays become multiple query params with same key
+      for (const v of value) {
+        queryParts.push(`${encodedKey}=${encodeURIComponent(String(v))}`);
+      }
+    } else {
+      queryParts.push(`${encodedKey}=${encodeURIComponent(String(value))}`);
+    }
+  }
+
+  const queryString = queryParts.join("&");
+
+  // Get the pathname (without existing query string)
   const pathname = router.asPath.split("?")[0];
 
-  // Step 6: Construct the full URL (origin + pathname + query string)
+  // Construct the full URL (origin + pathname + query string)
+  // Browsers limit the full URL length, so we include origin
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const fullUrl = queryString
     ? `${origin}${pathname}?${queryString}`
     : `${origin}${pathname}`;
 
   return fullUrl.length;
+};
+
+/**
+ * Checks if adding a new filter value would exceed the URL length limit.
+ * Returns true if the limit would be exceeded, false otherwise.
+ */
+export const wouldExceedUrlLimit = (
+  router: ReturnType<typeof useRouter>,
+  currentFilters: { id: string; value: string[] }[],
+  filterId: string,
+  newValue: string[],
+): boolean => {
+  if (!newValue || newValue.length === 0) {
+    // Removing filters - always allow
+    return false;
+  }
+
+  // Create a deep copy to avoid mutating the original
+  const newSelected = currentFilters.map((f) => ({
+    ...f,
+    value: [...f.value],
+  }));
+  const index = newSelected.findIndex((f) => f.id === filterId);
+
+  // Update or add the filter
+  if (index >= 0) {
+    newSelected[index].value = newValue;
+  } else {
+    newSelected.push({
+      id: filterId,
+      value: newValue,
+    });
+  }
+
+  let stringifiedFilters;
+  try {
+    stringifiedFilters = JSON.stringify(newSelected);
+  } catch {
+    stringifiedFilters = "[]";
+  }
+
+  const urlLength = calculateUrlLength(router, {
+    filterState: stringifiedFilters,
+  });
+
+  return urlLength > MAX_URL_LENGTH;
 };
 
 export const getInfoTip = (range?: number) => {
@@ -156,17 +222,44 @@ export const useMetricsFilters = (filters: AnalyticsViewResultFilter[]) => {
 
   const applyNewParams = useCallback(
     (newParams: Record<string, string | null>, unset?: string[]) => {
-      const q = Object.fromEntries(
+      // Calculate what the URL would be after applying new params
+      const mergedParams = Object.fromEntries(
         Object.entries(router.query).filter(([key]) => !unset?.includes(key)),
       );
+      // Convert to Record<string, string | null> format, handling arrays and undefined
+      const finalParams: Record<string, string | null> = {};
+      for (const [key, value] of Object.entries({
+        ...mergedParams,
+        ...newParams,
+      })) {
+        if (value === null || value === undefined) {
+          finalParams[key] = null;
+        } else if (Array.isArray(value)) {
+          // For arrays, use the first value (Next.js will handle multiple values)
+          finalParams[key] = value[0] ?? null;
+        } else {
+          finalParams[key] = value;
+        }
+      }
+
+      const urlLength = calculateUrlLength(router, finalParams);
+
+      if (urlLength > MAX_URL_LENGTH) {
+        toast({
+          title: "Filter limit reached",
+          description: `Maximum URL length of ${MAX_URL_LENGTH.toLocaleString()} characters reached. Please remove some filters before adding new ones.`,
+        });
+        return;
+      }
+
       router.push({
         query: {
-          ...q,
+          ...mergedParams,
           ...newParams,
         },
       });
     },
-    [router],
+    [router, toast],
   );
 
   const selectedFilters = useSelectedFilters();
@@ -176,11 +269,16 @@ export const useMetricsFilters = (filters: AnalyticsViewResultFilter[]) => {
       ...filter,
       id: filter.columnName,
       onSelect: (value) => {
-        const newSelected = [...selectedFilters];
+        const isRemoving = !value || value.length === 0;
 
+        // Create a deep copy to avoid mutating the original
+        const newSelected = selectedFilters.map((f) => ({
+          ...f,
+          value: [...f.value],
+        }));
         const index = newSelected.findIndex((f) => f.id === filter.columnName);
 
-        if (!value || value.length === 0) {
+        if (isRemoving) {
           newSelected.splice(index, 1);
         } else if (newSelected[index]) {
           newSelected[index].value = value;
@@ -196,20 +294,6 @@ export const useMetricsFilters = (filters: AnalyticsViewResultFilter[]) => {
           stringifiedFilters = JSON.stringify(newSelected);
         } catch {
           stringifiedFilters = "[]";
-        }
-
-        // Check URL length before applying the filter
-        const urlLength = calculateUrlLength(router, {
-          filterState: stringifiedFilters,
-        });
-
-        if (urlLength > MAX_URL_LENGTH) {
-          toast({
-            title: "Filter limit reached",
-            description: `Maximum URL length of ${MAX_URL_LENGTH.toLocaleString()} characters reached. Please remove some filters before adding new ones.`,
-            variant: "destructive",
-          });
-          return;
         }
 
         applyNewParams({
@@ -237,14 +321,54 @@ export const useMetricsFilters = (filters: AnalyticsViewResultFilter[]) => {
   };
 
   // Check if current URL is at or near the limit
+  // We need to recalculate when router.query changes
   const currentUrlLength = useMemo(() => {
     return calculateUrlLength(router, {});
-  }, [router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.query, router.asPath]);
 
   const isUrlLimitReached = currentUrlLength >= MAX_URL_LENGTH;
 
+  // Create disabled filters list when URL limit is reached
+  // Allow removal of existing filters but prevent adding new ones
+  // Use a ref to track the latest selectedFilters to avoid stale closures
+  const selectedFiltersRef = useRef(selectedFilters);
+  selectedFiltersRef.current = selectedFilters;
+
+  const filtersListWithValidation = useMemo(() => {
+    return filtersList.map((filter) => {
+      return {
+        ...filter,
+        // ALWAYS validate selection to check if NEW addition would exceed the limit
+        validateSelection: (value: string[]) => {
+          // Use ref to get latest selectedFilters to avoid stale closure
+          const currentSelectedFilters = selectedFiltersRef.current;
+
+          // Check if adding/modifying this filter would exceed the limit
+          if (
+            wouldExceedUrlLimit(
+              router,
+              currentSelectedFilters,
+              filter.id,
+              value,
+            )
+          ) {
+            toast({
+              title: "Filter limit reached",
+              description: `Maximum URL length of ${MAX_URL_LENGTH.toLocaleString()} characters reached. Please remove some filters before adding new ones.`,
+            });
+            return false; // Validation failed - prevents onSelect from being called
+          }
+
+          return true; // Validation passed - allows onSelect to be called
+        },
+        onSelect: filter.onSelect, // Use original onSelect without wrapping
+      };
+    });
+  }, [filtersList, toast, router]);
+
   return {
-    filtersList,
+    filtersList: filtersListWithValidation,
     selectedFilters,
     resetFilters,
     isUrlLimitReached,
@@ -253,29 +377,14 @@ export const useMetricsFilters = (filters: AnalyticsViewResultFilter[]) => {
 
 interface MetricsFiltersProps {
   filters: AnalyticsViewResultFilter[];
-  disabled?: boolean;
 }
 
 export const MetricsFilters: React.FC<MetricsFiltersProps> = (props) => {
-  const { filters, disabled } = props;
+  const { filters } = props;
 
-  const { filtersList, isUrlLimitReached } = useMetricsFilters(filters);
+  const { filtersList } = useMetricsFilters(filters);
 
-  // Disable filters if explicitly disabled or URL limit is reached
-  const isDisabled = disabled || isUrlLimitReached;
-
-  const disabledFiltersList = filtersList.map((filter) => ({
-    ...filter,
-    onSelect: isDisabled
-      ? () => {
-          // No-op when disabled - prevents filter changes even if UI is somehow interacted with
-        }
-      : filter.onSelect,
-  }));
-
-  return (
-    <AnalyticsFilters filters={disabledFiltersList} disabled={isDisabled} />
-  );
+  return <AnalyticsFilters filters={filtersList} />;
 };
 
 const getDeltaType = (

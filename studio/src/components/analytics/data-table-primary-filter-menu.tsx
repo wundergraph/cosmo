@@ -22,17 +22,15 @@ import { AnalyticsFilter } from "./filters";
 
 export function DataTablePrimaryFilterMenu<T>({
   filters,
-  disabled,
 }: {
   filters: AnalyticsFilter[];
-  disabled?: boolean;
 }) {
   const { isMobile } = useWindowSize();
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" disabled={disabled}>
+        <Button variant="outline">
           Filter <ChevronDownIcon className="ml-2" />
         </Button>
       </DropdownMenuTrigger>
