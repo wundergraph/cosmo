@@ -1,7 +1,7 @@
 syntax = "proto3";
 package service;
 
-option go_package = "github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects";
+option go_package = "github.com/wundergraph/cosmo/plugin";
 
 import "google/protobuf/wrappers.proto";
 
@@ -42,8 +42,10 @@ service ProjectsService {
   rpc ResolveMilestoneDaysUntilDue(ResolveMilestoneDaysUntilDueRequest) returns (ResolveMilestoneDaysUntilDueResponse) {}
   rpc ResolveMilestoneIsAtRisk(ResolveMilestoneIsAtRiskRequest) returns (ResolveMilestoneIsAtRiskResponse) {}
   rpc ResolveProjectCompletionRate(ResolveProjectCompletionRateRequest) returns (ResolveProjectCompletionRateResponse) {}
+  rpc ResolveProjectCriticalDeadline(ResolveProjectCriticalDeadlineRequest) returns (ResolveProjectCriticalDeadlineResponse) {}
   rpc ResolveProjectEstimatedDaysRemaining(ResolveProjectEstimatedDaysRemainingRequest) returns (ResolveProjectEstimatedDaysRemainingResponse) {}
   rpc ResolveProjectFilteredTasks(ResolveProjectFilteredTasksRequest) returns (ResolveProjectFilteredTasksResponse) {}
+  rpc ResolveProjectTopPriorityItem(ResolveProjectTopPriorityItemRequest) returns (ResolveProjectTopPriorityItemResponse) {}
   rpc ResolveTaskIsBlocked(ResolveTaskIsBlockedRequest) returns (ResolveTaskIsBlockedResponse) {}
   rpc ResolveTaskTotalEffort(ResolveTaskTotalEffortRequest) returns (ResolveTaskTotalEffortResponse) {}
 }
@@ -540,6 +542,55 @@ message ResolveProjectEstimatedDaysRemainingResponse {
   repeated ResolveProjectEstimatedDaysRemainingResult result = 1;
 }
 
+message ResolveProjectCriticalDeadlineArgs {
+  google.protobuf.Int32Value within_days = 1;
+}
+
+message ResolveProjectCriticalDeadlineContext {
+  string id = 1;
+  ProjectStatus status = 2;
+  repeated Milestone milestones = 3;
+}
+
+message ResolveProjectCriticalDeadlineRequest {
+  // context provides the resolver context for the field criticalDeadline of type Project.
+  repeated ResolveProjectCriticalDeadlineContext context = 1;
+  // field_args provides the arguments for the resolver field criticalDeadline of type Project.
+  ResolveProjectCriticalDeadlineArgs field_args = 2;
+}
+
+message ResolveProjectCriticalDeadlineResult {
+  Timestamped critical_deadline = 1;
+}
+
+message ResolveProjectCriticalDeadlineResponse {
+  repeated ResolveProjectCriticalDeadlineResult result = 1;
+}
+
+message ResolveProjectTopPriorityItemArgs {
+  google.protobuf.StringValue category = 1;
+}
+
+message ResolveProjectTopPriorityItemContext {
+  string id = 1;
+  ProjectStatus status = 2;
+}
+
+message ResolveProjectTopPriorityItemRequest {
+  // context provides the resolver context for the field topPriorityItem of type Project.
+  repeated ResolveProjectTopPriorityItemContext context = 1;
+  // field_args provides the arguments for the resolver field topPriorityItem of type Project.
+  ResolveProjectTopPriorityItemArgs field_args = 2;
+}
+
+message ResolveProjectTopPriorityItemResult {
+  ProjectSearchResult top_priority_item = 1;
+}
+
+message ResolveProjectTopPriorityItemResponse {
+  repeated ResolveProjectTopPriorityItemResult result = 1;
+}
+
 message ResolveMilestoneIsAtRiskArgs {
   google.protobuf.DoubleValue threshold = 1;
 }
@@ -687,7 +738,7 @@ message ResolveEmployeeAverageTaskCompletionDaysResponse {
 }
 
 message Project {
-  reserved 20 to 22;
+  reserved 20 to 24;
   string id = 1;
   string name = 2;
   google.protobuf.StringValue description = 3;

@@ -4,7 +4,7 @@
 // - protoc             v5.29.3
 // source: generated/service.proto
 
-package projects
+package plugin
 
 import (
 	context "context"
@@ -49,8 +49,10 @@ const (
 	ProjectsService_ResolveMilestoneDaysUntilDue_FullMethodName             = "/service.ProjectsService/ResolveMilestoneDaysUntilDue"
 	ProjectsService_ResolveMilestoneIsAtRisk_FullMethodName                 = "/service.ProjectsService/ResolveMilestoneIsAtRisk"
 	ProjectsService_ResolveProjectCompletionRate_FullMethodName             = "/service.ProjectsService/ResolveProjectCompletionRate"
+	ProjectsService_ResolveProjectCriticalDeadline_FullMethodName           = "/service.ProjectsService/ResolveProjectCriticalDeadline"
 	ProjectsService_ResolveProjectEstimatedDaysRemaining_FullMethodName     = "/service.ProjectsService/ResolveProjectEstimatedDaysRemaining"
 	ProjectsService_ResolveProjectFilteredTasks_FullMethodName              = "/service.ProjectsService/ResolveProjectFilteredTasks"
+	ProjectsService_ResolveProjectTopPriorityItem_FullMethodName            = "/service.ProjectsService/ResolveProjectTopPriorityItem"
 	ProjectsService_ResolveTaskIsBlocked_FullMethodName                     = "/service.ProjectsService/ResolveTaskIsBlocked"
 	ProjectsService_ResolveTaskTotalEffort_FullMethodName                   = "/service.ProjectsService/ResolveTaskTotalEffort"
 )
@@ -96,8 +98,10 @@ type ProjectsServiceClient interface {
 	ResolveMilestoneDaysUntilDue(ctx context.Context, in *ResolveMilestoneDaysUntilDueRequest, opts ...grpc.CallOption) (*ResolveMilestoneDaysUntilDueResponse, error)
 	ResolveMilestoneIsAtRisk(ctx context.Context, in *ResolveMilestoneIsAtRiskRequest, opts ...grpc.CallOption) (*ResolveMilestoneIsAtRiskResponse, error)
 	ResolveProjectCompletionRate(ctx context.Context, in *ResolveProjectCompletionRateRequest, opts ...grpc.CallOption) (*ResolveProjectCompletionRateResponse, error)
+	ResolveProjectCriticalDeadline(ctx context.Context, in *ResolveProjectCriticalDeadlineRequest, opts ...grpc.CallOption) (*ResolveProjectCriticalDeadlineResponse, error)
 	ResolveProjectEstimatedDaysRemaining(ctx context.Context, in *ResolveProjectEstimatedDaysRemainingRequest, opts ...grpc.CallOption) (*ResolveProjectEstimatedDaysRemainingResponse, error)
 	ResolveProjectFilteredTasks(ctx context.Context, in *ResolveProjectFilteredTasksRequest, opts ...grpc.CallOption) (*ResolveProjectFilteredTasksResponse, error)
+	ResolveProjectTopPriorityItem(ctx context.Context, in *ResolveProjectTopPriorityItemRequest, opts ...grpc.CallOption) (*ResolveProjectTopPriorityItemResponse, error)
 	ResolveTaskIsBlocked(ctx context.Context, in *ResolveTaskIsBlockedRequest, opts ...grpc.CallOption) (*ResolveTaskIsBlockedResponse, error)
 	ResolveTaskTotalEffort(ctx context.Context, in *ResolveTaskTotalEffortRequest, opts ...grpc.CallOption) (*ResolveTaskTotalEffortResponse, error)
 }
@@ -410,6 +414,16 @@ func (c *projectsServiceClient) ResolveProjectCompletionRate(ctx context.Context
 	return out, nil
 }
 
+func (c *projectsServiceClient) ResolveProjectCriticalDeadline(ctx context.Context, in *ResolveProjectCriticalDeadlineRequest, opts ...grpc.CallOption) (*ResolveProjectCriticalDeadlineResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResolveProjectCriticalDeadlineResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_ResolveProjectCriticalDeadline_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *projectsServiceClient) ResolveProjectEstimatedDaysRemaining(ctx context.Context, in *ResolveProjectEstimatedDaysRemainingRequest, opts ...grpc.CallOption) (*ResolveProjectEstimatedDaysRemainingResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ResolveProjectEstimatedDaysRemainingResponse)
@@ -424,6 +438,16 @@ func (c *projectsServiceClient) ResolveProjectFilteredTasks(ctx context.Context,
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ResolveProjectFilteredTasksResponse)
 	err := c.cc.Invoke(ctx, ProjectsService_ResolveProjectFilteredTasks_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) ResolveProjectTopPriorityItem(ctx context.Context, in *ResolveProjectTopPriorityItemRequest, opts ...grpc.CallOption) (*ResolveProjectTopPriorityItemResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResolveProjectTopPriorityItemResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_ResolveProjectTopPriorityItem_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -491,8 +515,10 @@ type ProjectsServiceServer interface {
 	ResolveMilestoneDaysUntilDue(context.Context, *ResolveMilestoneDaysUntilDueRequest) (*ResolveMilestoneDaysUntilDueResponse, error)
 	ResolveMilestoneIsAtRisk(context.Context, *ResolveMilestoneIsAtRiskRequest) (*ResolveMilestoneIsAtRiskResponse, error)
 	ResolveProjectCompletionRate(context.Context, *ResolveProjectCompletionRateRequest) (*ResolveProjectCompletionRateResponse, error)
+	ResolveProjectCriticalDeadline(context.Context, *ResolveProjectCriticalDeadlineRequest) (*ResolveProjectCriticalDeadlineResponse, error)
 	ResolveProjectEstimatedDaysRemaining(context.Context, *ResolveProjectEstimatedDaysRemainingRequest) (*ResolveProjectEstimatedDaysRemainingResponse, error)
 	ResolveProjectFilteredTasks(context.Context, *ResolveProjectFilteredTasksRequest) (*ResolveProjectFilteredTasksResponse, error)
+	ResolveProjectTopPriorityItem(context.Context, *ResolveProjectTopPriorityItemRequest) (*ResolveProjectTopPriorityItemResponse, error)
 	ResolveTaskIsBlocked(context.Context, *ResolveTaskIsBlockedRequest) (*ResolveTaskIsBlockedResponse, error)
 	ResolveTaskTotalEffort(context.Context, *ResolveTaskTotalEffortRequest) (*ResolveTaskTotalEffortResponse, error)
 	mustEmbedUnimplementedProjectsServiceServer()
@@ -595,11 +621,17 @@ func (UnimplementedProjectsServiceServer) ResolveMilestoneIsAtRisk(context.Conte
 func (UnimplementedProjectsServiceServer) ResolveProjectCompletionRate(context.Context, *ResolveProjectCompletionRateRequest) (*ResolveProjectCompletionRateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ResolveProjectCompletionRate not implemented")
 }
+func (UnimplementedProjectsServiceServer) ResolveProjectCriticalDeadline(context.Context, *ResolveProjectCriticalDeadlineRequest) (*ResolveProjectCriticalDeadlineResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResolveProjectCriticalDeadline not implemented")
+}
 func (UnimplementedProjectsServiceServer) ResolveProjectEstimatedDaysRemaining(context.Context, *ResolveProjectEstimatedDaysRemainingRequest) (*ResolveProjectEstimatedDaysRemainingResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ResolveProjectEstimatedDaysRemaining not implemented")
 }
 func (UnimplementedProjectsServiceServer) ResolveProjectFilteredTasks(context.Context, *ResolveProjectFilteredTasksRequest) (*ResolveProjectFilteredTasksResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ResolveProjectFilteredTasks not implemented")
+}
+func (UnimplementedProjectsServiceServer) ResolveProjectTopPriorityItem(context.Context, *ResolveProjectTopPriorityItemRequest) (*ResolveProjectTopPriorityItemResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResolveProjectTopPriorityItem not implemented")
 }
 func (UnimplementedProjectsServiceServer) ResolveTaskIsBlocked(context.Context, *ResolveTaskIsBlockedRequest) (*ResolveTaskIsBlockedResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ResolveTaskIsBlocked not implemented")
@@ -1168,6 +1200,24 @@ func _ProjectsService_ResolveProjectCompletionRate_Handler(srv interface{}, ctx 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ProjectsService_ResolveProjectCriticalDeadline_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResolveProjectCriticalDeadlineRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).ResolveProjectCriticalDeadline(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_ResolveProjectCriticalDeadline_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).ResolveProjectCriticalDeadline(ctx, req.(*ResolveProjectCriticalDeadlineRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ProjectsService_ResolveProjectEstimatedDaysRemaining_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ResolveProjectEstimatedDaysRemainingRequest)
 	if err := dec(in); err != nil {
@@ -1200,6 +1250,24 @@ func _ProjectsService_ResolveProjectFilteredTasks_Handler(srv interface{}, ctx c
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ProjectsServiceServer).ResolveProjectFilteredTasks(ctx, req.(*ResolveProjectFilteredTasksRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_ResolveProjectTopPriorityItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResolveProjectTopPriorityItemRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).ResolveProjectTopPriorityItem(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_ResolveProjectTopPriorityItem_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).ResolveProjectTopPriorityItem(ctx, req.(*ResolveProjectTopPriorityItemRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1368,12 +1436,20 @@ var ProjectsService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ProjectsService_ResolveProjectCompletionRate_Handler,
 		},
 		{
+			MethodName: "ResolveProjectCriticalDeadline",
+			Handler:    _ProjectsService_ResolveProjectCriticalDeadline_Handler,
+		},
+		{
 			MethodName: "ResolveProjectEstimatedDaysRemaining",
 			Handler:    _ProjectsService_ResolveProjectEstimatedDaysRemaining_Handler,
 		},
 		{
 			MethodName: "ResolveProjectFilteredTasks",
 			Handler:    _ProjectsService_ResolveProjectFilteredTasks_Handler,
+		},
+		{
+			MethodName: "ResolveProjectTopPriorityItem",
+			Handler:    _ProjectsService_ResolveProjectTopPriorityItem_Handler,
 		},
 		{
 			MethodName: "ResolveTaskIsBlocked",
