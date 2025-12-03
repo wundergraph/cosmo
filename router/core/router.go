@@ -511,7 +511,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 	}
 
 	if r.engineExecutionConfiguration.EnableExecutionPlanCacheResponseHeader {
-		r.logger.Warn("The engine execution configuration field 'enable_execution_plan_cache_response_header' is deprecated, and will be removed. Use 'debug.enable_cache_response_headers' instead.")
+		r.logger.Warn("The engine execution configuration field 'enable_execution_plan_cache_response_header' is deprecated, and will be removed. Use 'enable_cache_response_headers' instead.")
 		r.engineExecutionConfiguration.Debug.EnableCacheResponseHeaders = true
 	}
 	if r.engineExecutionConfiguration.Debug.EnablePersistedOperationsCacheResponseHeader {

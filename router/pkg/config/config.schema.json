@@ -2822,7 +2822,7 @@
           "type": "boolean",
           "description": "Enable the execution plan cache response header. The execution plan cache response header is used to cache the execution plan in the client.",
           "deprecated": true,
-          "deprecationMessage": "Deprecated. Use debug.enable_cache_response_headers instead."
+          "deprecationMessage": "Deprecated. Use enable_cache_response_headers instead."
         },
         "max_concurrent_resolvers": {
           "type": "integer",
