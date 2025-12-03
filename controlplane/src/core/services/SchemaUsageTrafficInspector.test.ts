@@ -483,6 +483,7 @@ async function getBreakingChanges(a: GraphQLSchema, b: GraphQLSchema): Promise<I
           message: c.message,
           changeType: c.changeType,
           isBreaking: c.isBreaking,
+          meta: c.meta,
         },
         i.toString(),
       ),

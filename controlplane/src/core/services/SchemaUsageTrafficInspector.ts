@@ -1,7 +1,14 @@
-import { ChangeType } from '@graphql-inspector/core';
+import {
+  ChangeType,
+  FieldArgumentRemovedChange,
+  FieldArgumentTypeChangedChange,
+  InputFieldTypeChangedChange,
+} from '@graphql-inspector/core';
+import type { NamedTypeNode, NonNullTypeNode, TypeNode } from 'graphql';
+import { parseType, print } from 'graphql';
+import { SchemaCheckChangeAction } from '../../db/models.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
-import { SchemaCheckChangeAction } from '../../db/models.js';
 
 export enum FieldTypeChangeCategory {
   /**
@@ -27,116 +34,84 @@ export enum FieldTypeChangeCategory {
 }
 
 /**
- * Extract base types by removing:
- * - Trailing "!" (required indicator)
- * - Array brackets like "[Boolean!]" -> "Boolean!"
- * - Inner "!" from arrays like "[Boolean!]" -> "Boolean"
+ * Get the named type from a TypeNode AST
  */
-function extractBaseType(type: string): string {
-  let base = type.trim();
-
-  // Remove trailing "!"
-  if (base.endsWith('!')) {
-    base = base.slice(0, -1).trim();
+function getNamedType(typeNode: TypeNode): NamedTypeNode {
+  if (typeNode.kind === 'NamedType') {
+    return typeNode;
   }
-
-  // Handle array types like "[Boolean!]" or "[Boolean!]!"
-  // Remove outer brackets and inner "!"
-  if (base.startsWith('[') && base.endsWith(']')) {
-    base = base.slice(1, -1).trim();
-    // Remove inner "!" if present
-    if (base.endsWith('!')) {
-      base = base.slice(0, -1).trim();
-    }
+  if (typeNode.kind === 'NonNullType' || typeNode.kind === 'ListType') {
+    return getNamedType(typeNode.type);
   }
-
-  return base;
+  throw new Error('Unexpected type node');
 }
 
 /**
- * Normalize type for structural comparison (remove required indicators but keep structure)
- */
-function normalizeType(type: string): string {
-  let normalized = type.trim();
-  // Remove trailing "!" but keep array structure
-  if (normalized.endsWith('!')) {
-    normalized = normalized.slice(0, -1).trim();
-  }
-  return normalized;
-}
-
-/**
- * Parses an argument removal message and determines if the argument was required.
+ * Determines the type change category from meta information using GraphQL's type parsing utilities.
+ * Works for both InputFieldTypeChanged and FieldArgumentTypeChanged.
  *
- * @param message - String in format: "Argument 'name: Type' was removed from field 'TypeName.fieldName'"
- * @returns true if the argument was required (type ends with '!'), false if optional
- *
- * @example
- * parseArgumentRemoval("Argument 'criteria: SearchInput!' was removed from field 'Query.findEmployees'")
- * // Returns true (required)
- *
- * @example
- * parseArgumentRemoval("Argument 'criteria: SearchInput' was removed from field 'Query.findEmployees'")
- * // Returns false (optional)
- */
-export function parseArgumentRemoval(message: string): boolean {
-  // Extract the argument type from the message
-  // Format: "Argument 'name: Type' was removed from field '...'"
-  const match = message.match(/Argument '([^:]+):\s*([^']+)' was removed/);
-
-  if (!match || match.length < 3) {
-    throw new Error(`Invalid argument removal message format: ${message}`);
-  }
-
-  const argumentType = match[2].trim();
-
-  // Check if the type ends with "!" to determine if it was required
-  return argumentType.endsWith('!');
-}
-
-/**
- * Parses a type change message (for both input fields and arguments) and categorizes it into one of the FieldTypeChangeCategory cases.
- * Supports two message formats:
- * - "Input field 'TypeName.fieldName' changed type from 'FromType' to 'ToType'"
- * - "Type for argument 'name' on field 'TypeName.fieldName' changed from 'FromType' to 'ToType'"
- *
- * @param message - String in either format above
+ * @param oldType - The old type from meta (e.g., oldInputFieldType or oldArgumentType)
+ * @param newType - The new type from meta (e.g., newInputFieldType or newArgumentType)
  * @returns The category of the type change
  *
  * @example
- * parseTypeChange("Input field 'SearchInput.hasPets' changed type from 'Boolean!' to '[Boolean!]!'")
- * // Returns FieldTypeChangeCategory.REQUIRED_DIFFERENT_TO_REQUIRED_DIFFERENT
+ * getTypeChangeCategory("Boolean!", "[Boolean!]!")
+ * // Returns FieldTypeChangeCategory.REQUIRED_TO_REQUIRED_DIFFERENT
  *
  * @example
- * parseTypeChange("Type for argument 'criteria' on field 'Query.findEmployees' changed from 'SearchInput' to 'SearchInput!'")
- * // Returns FieldTypeChangeCategory.OPTIONAL_SAME_TO_REQUIRED_SAME
+ * getTypeChangeCategory("SearchInput", "SearchInput!")
+ * // Returns FieldTypeChangeCategory.OPTIONAL_TO_REQUIRED_SAME
  */
-export function parseTypeChange(message: string): FieldTypeChangeCategory {
-  // Try both patterns: "changed type from" (input fields) and "changed from" (arguments)
-  const match =
-    message.match(/changed type from '([^']+)' to '([^']+)'/) || message.match(/changed from '([^']+)' to '([^']+)'/);
+export function getTypeChangeCategory(oldType: string, newType: string): FieldTypeChangeCategory {
+  // Parse type strings into AST using GraphQL's parseType
+  // Example 1: "Boolean!" -> NonNullType { type: NamedType { name: "Boolean" } }
+  // Example 2: "[Boolean!]!" -> NonNullType { type: ListType { type: NonNullType { type: NamedType { name: "Boolean" } } } }
+  // Example 3: "SearchInput" -> NamedType { name: "SearchInput" }
+  const oldTypeNode = parseType(oldType);
+  const newTypeNode = parseType(newType);
 
-  if (!match || match.length < 3) {
-    throw new Error(`Invalid type change message format: ${message}`);
-  }
+  // Check if types are required (NonNull) by checking the outermost wrapper
+  // Example 1: "Boolean!" -> fromRequired = true
+  // Example 2: "[Boolean]" -> fromRequired = false
+  // Example 3: "SearchInput" -> fromRequired = false
+  const fromRequired = oldTypeNode.kind === 'NonNullType';
+  const toRequired = newTypeNode.kind === 'NonNullType';
 
-  const fromType = match[1];
-  const toType = match[2];
+  // Get the named types (unwraps all wrappers like NonNull and List)
+  // Example 1: "[Boolean!]!" -> NamedType { name: "Boolean" }
+  // Example 2: "SearchInput" -> NamedType { name: "SearchInput" }
+  // Example 3: "[String]" -> NamedType { name: "String" }
+  const oldNamedType = getNamedType(oldTypeNode);
+  const newNamedType = getNamedType(newTypeNode);
 
-  // Determine if types are required (end with "!")
-  const fromRequired = fromType.endsWith('!');
-  const toRequired = toType.endsWith('!');
+  // Get base type names from the named type nodes
+  // Example 1: "[Boolean!]!" -> "Boolean"
+  // Example 2: "SearchInput" -> "SearchInput"
+  // Example 3: "[String]" -> "String"
+  const oldTypeName = oldNamedType.name.value;
+  const newTypeName = newNamedType.name.value;
 
-  const fromBaseType = extractBaseType(fromType);
-  const toBaseType = extractBaseType(toType);
-  const fromNormalized = normalizeType(fromType);
-  const toNormalized = normalizeType(toType);
+  // Get normalized structure (without NonNull on the outermost layer)
+  // This preserves inner structure like [Type] vs Type
+  // Example 1: "Boolean!" -> normalized: "Boolean"
+  // Example 2: "[Boolean!]!" -> normalized: "[Boolean!]"
+  // Example 3: "[Boolean]" -> normalized: "[Boolean]"
+  // Example 4: "SearchInput" -> normalized: "SearchInput"
+  const oldNormalized = print(fromRequired ? (oldTypeNode as NonNullTypeNode).type : oldTypeNode);
+  const newNormalized = print(toRequired ? (newTypeNode as NonNullTypeNode).type : newTypeNode);
 
   // Check if base types are the same AND structure is the same
-  const sameBaseType = fromBaseType === toBaseType;
-  const sameStructure = fromNormalized === toNormalized;
+  // Example 1: "Boolean" vs "Boolean!" -> sameBaseType: true, sameStructure: true
+  // Example 2: "Boolean" vs "[Boolean]" -> sameBaseType: true, sameStructure: false
+  // Example 3: "Boolean" vs "String" -> sameBaseType: false, sameStructure: false
+  // Example 4: "[Boolean!]" vs "[Boolean!]!" -> sameBaseType: true, sameStructure: true
+  const sameBaseType = oldTypeName === newTypeName;
+  const sameStructure = oldNormalized === newNormalized;
 
   // Types are considered "same" only if both base type and structure match
+  // Example 1: "Boolean" -> "Boolean!" -> sameType: true (same base + same structure)
+  // Example 2: "Boolean" -> "[Boolean]" -> sameType: false (same base but different structure)
+  // Example 3: "Boolean" -> "String" -> sameType: false (different base)
   const sameType = sameBaseType && sameStructure;
 
   // Categorize based on the 4 cases
@@ -471,7 +446,9 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
     }
     // 1. When the type of input field has changed, we know the exact type name and field name e.g. 'MyInput.name'
     case ChangeType.InputFieldTypeChanged: {
-      const inputFieldTypeChangeCategory = parseTypeChange(change.message);
+      // Use structured meta instead of parsing message
+      const meta = change.meta as InputFieldTypeChangedChange['meta'];
+      const inputFieldTypeChangeCategory = getTypeChangeCategory(meta.oldInputFieldType, meta.newInputFieldType);
       switch (inputFieldTypeChangeCategory) {
         case FieldTypeChangeCategory.OPTIONAL_TO_REQUIRED_SAME: {
           // Int -> Int!
@@ -534,7 +511,9 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
     // 1. When an argument has changed, we know the exact path to the argument e.g. 'Query.engineer.id'
     // and the type name e.g. 'Query'
     case ChangeType.FieldArgumentTypeChanged: {
-      const argumentTypeChangeCategory = parseTypeChange(change.message);
+      // Use structured meta instead of parsing message
+      const meta = change.meta as FieldArgumentTypeChangedChange['meta'];
+      const argumentTypeChangeCategory = getTypeChangeCategory(meta.oldArgumentType, meta.newArgumentType);
       switch (argumentTypeChangeCategory) {
         case FieldTypeChangeCategory.OPTIONAL_TO_REQUIRED_SAME: {
           // SearchInput -> SearchInput!
@@ -600,7 +579,9 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
       };
     }
     case ChangeType.FieldArgumentRemoved: {
-      const isRequired = parseArgumentRemoval(change.message);
+      // Use structured meta instead of parsing message
+      const meta = change.meta as FieldArgumentRemovedChange['meta'];
+      const isRequired = meta.removedFieldType.endsWith('!');
       if (isRequired) {
         // in this case, all the ops which use this argument are breaking
         return {
