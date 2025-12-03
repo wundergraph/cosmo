@@ -40,7 +40,7 @@
   ],
   "license": "Apache-2.0",
   "dependencies": {
-    "@bufbuild/protobuf": "1.9.0",
+    "@bufbuild/protobuf": "^1.9.0",
     "@connectrpc/connect": "1.4.0",
     "@connectrpc/connect-node": "1.4.0",
     "@graphql-tools/utils": "10.2.2",
@@ -82,7 +82,7 @@
     "tar": "7.4.3",
     "trieve-ts-sdk": "0.0.80",
     "undici": "6.21.2",
-    "zod": "3.24.2"
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "@types/bun": "1.2.3",
