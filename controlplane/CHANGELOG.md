@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.178.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.177.0...controlplane@0.178.0) (2025-12-03)
+
+### Features
+
+* add deprecation reason to deprecated fields table in op view ([#2386](https://github.com/wundergraph/cosmo/issues/2386)) ([00cad53](https://github.com/wundergraph/cosmo/commit/00cad53cb3d2a600fe15d3cc632e262f5b791ab9)) (@JivusAyrus)
+
 # [0.177.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.176.1...controlplane@0.177.0) (2025-12-03)
 
 ### Features
