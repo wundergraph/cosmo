@@ -23,7 +23,7 @@
     }
   },
   "dependencies": {
-    "@bufbuild/protobuf": "^1.9.0",
+    "@bufbuild/protobuf": "1.9.0",
     "@connectrpc/connect-query": "^1.4.1"
   },
   "devDependencies": {

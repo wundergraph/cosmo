@@ -92,7 +92,7 @@
     "tiny-lru": "^11.2.11",
     "uid": "^2.0.2",
     "uuid": "^10.0.0",
-    "zod": "^3.22.4",
+    "zod": "^3.24.2",
     "zod-to-json-schema": "^3.22.4"
   },
   "devDependencies": {
