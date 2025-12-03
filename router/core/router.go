@@ -315,7 +315,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 	}
 	// we only add post origin handler for header rules
 	// pre handlers (header propagation rules) are handled via the engine
-	if r.headerPropagation.HasResponseRules() {
+	if r.headerPropagation != nil && r.headerPropagation.HasResponseRules() {
 		r.postOriginHandlers = append(r.postOriginHandlers, r.headerPropagation.OnOriginResponse)
 	}
 
