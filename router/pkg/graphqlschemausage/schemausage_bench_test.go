@@ -111,7 +111,7 @@ func BenchmarkGetTypeFieldUsageInfo(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		result := GetTypeFieldUsageInfo(generatedPlan)
 		_ = result // Prevent compiler optimization
 	}
@@ -124,7 +124,7 @@ func BenchmarkGetArgumentUsageInfo(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		result, err := GetArgumentUsageInfo(operation, definition, variables, generatedPlan, nil)
 		if err != nil {
 			b.Fatal(err)
@@ -140,7 +140,7 @@ func BenchmarkGetInputUsageInfo(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		result, err := GetInputUsageInfo(operation, definition, variables, generatedPlan, nil)
 		if err != nil {
 			b.Fatal(err)
@@ -157,7 +157,7 @@ func BenchmarkIntoGraphQLMetrics(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		result := typeFieldMetrics.IntoGraphQLMetrics()
 		_ = result // Prevent compiler optimization
 	}
@@ -171,7 +171,7 @@ func BenchmarkSchemaUsageEndToEnd(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		// Extract type field usage
 		typeFieldUsage := GetTypeFieldUsageInfo(generatedPlan)
 
@@ -311,7 +311,7 @@ func BenchmarkSchemaUsageWithManyFields(b *testing.B) {
 			b.ResetTimer()
 			b.ReportAllocs()
 
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				// Extract type field usage
 				typeFieldUsage := GetTypeFieldUsageInfo(generatedPlan)
 
