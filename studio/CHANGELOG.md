@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.145.0](https://github.com/wundergraph/cosmo/compare/studio@0.144.0...studio@0.145.0) (2025-12-03)
+
+### Features
+
+* sanitize readme content to prevent XSS ([#2390](https://github.com/wundergraph/cosmo/issues/2390)) ([20cd6cb](https://github.com/wundergraph/cosmo/commit/20cd6cba05f7eae6db75f6160c6844e42f349712)) (@wilsonrivera)
+* update `next` ([#2391](https://github.com/wundergraph/cosmo/issues/2391)) ([5683e0f](https://github.com/wundergraph/cosmo/commit/5683e0f33927cba7d93bc6a1bf9b7bda822081a7)) (@wilsonrivera)
+
 # [0.144.0](https://github.com/wundergraph/cosmo/compare/studio@0.143.0...studio@0.144.0) (2025-12-03)
 
 ### Features
