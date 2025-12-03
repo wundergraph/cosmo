@@ -75,6 +75,7 @@
     "fastify-raw-body": "^4.3.0",
     "graphql": "^16.9.0",
     "ioredis": "^5.4.1",
+    "isomorphic-dompurify": "^2.33.0",
     "jose": "^5.2.4",
     "lodash": "^4.17.21",
     "nodemailer": "^7.0.7",
