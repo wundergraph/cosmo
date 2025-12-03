@@ -3017,6 +3017,7 @@ message GetOperationDeprecatedFieldsResponse {
     string fieldName = 1;
     string typeName = 2;
     string path = 3;
+    string deprecationReason = 4;
   }
   Response response = 1;
   repeated DeprecatedField deprecatedFields = 2;

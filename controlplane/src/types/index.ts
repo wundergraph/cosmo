@@ -746,6 +746,7 @@ export interface Field {
     endColumn?: number;
   };
   isDeprecated: boolean;
+  deprecationReason?: string;
 }
 export interface S3StorageOptions {
   url: string;

@@ -116,6 +116,10 @@ export function getOperationDeprecatedFields(
           deprecatedFields.find(
             (f) => f.name === field.deprecatedFieldName && f.typeName === field.deprecatedFieldTypeNames[0],
           )?.path || '',
+        deprecationReason:
+          deprecatedFields.find(
+            (f) => f.name === field.deprecatedFieldName && f.typeName === field.deprecatedFieldTypeNames[0],
+          )?.deprecationReason || '',
       })),
     };
   });
