@@ -34,7 +34,7 @@ export function getProposedSchemaOfCheckedSubgraph(
         proposedSchema: '',
       };
     }
-    
+
     const proposedSchema = await schemaCheckRepo.getProposedSchemaOfCheckedSubgraph({
       checkId: req.checkId,
       checkedSubgraphId: req.checkedSubgraphId,
