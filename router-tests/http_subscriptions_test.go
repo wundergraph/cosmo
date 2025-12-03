@@ -236,23 +236,34 @@ func TestHeartbeats(t *testing.T) {
 			require.Equal(t, http.StatusOK, resp.StatusCode)
 
 			reader := bufio.NewReader(resp.Body)
-			var actualLines []string
-			for {
-				line, _, err := reader.ReadLine()
-				if err != nil {
-					break
+			lines := make(chan string, 50)
+
+			go func() {
+				defer close(lines)
+				for {
+					line, _, err := reader.ReadLine()
+					if err != nil {
+						return
+					}
+					lines <- string(line)
 				}
-				actualLines = append(actualLines, string(line))
-			}
+			}()
 
-			expectedLines := []string{
-				"event: next",
-				`data: {"errors":[{"message":"Subscription Upgrade request failed for Subgraph 'employees'.","extensions":{"statusCode":403}}],"data":null}`,
-				"",
-				"",
-			}
+			testenv.AwaitChannelWithT(t, 5*time.Second, lines, func(t *testing.T, line string) {
+				assert.Equal(t, "event: next", line)
+			})
 
-			assert.Equal(t, expectedLines, actualLines)
+			testenv.AwaitChannelWithT(t, 5*time.Second, lines, func(t *testing.T, line string) {
+				assert.Equal(t, `data: {"errors":[{"message":"Subscription Upgrade request failed for Subgraph 'employees'.","extensions":{"statusCode":403}}],"data":null}`, line)
+			})
+
+			testenv.AwaitChannelWithT(t, 5*time.Second, lines, func(t *testing.T, line string) {
+				assert.Equal(t, "", line)
+			})
+
+			testenv.AwaitChannelWithT(t, 5*time.Second, lines, func(t *testing.T, line string) {
+				assert.Equal(t, "", line)
+			})
 		})
 	})
 }
