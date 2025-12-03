@@ -14,7 +14,6 @@ import {
   SubgraphRequestRateResult,
   TimeFilters,
 } from '../../../types/index.js';
-import { padMissingDatesForCurrentWeek } from './util.js';
 
 export class AnalyticsDashboardViewRepository {
   constructor(private client: ClickHouseClient) {}
@@ -32,8 +31,8 @@ export class AnalyticsDashboardViewRepository {
         sum(TotalErrors) as erroredRequests
       FROM ${this.client.database}.operation_request_metrics_5_30
       WHERE Timestamp >= toDate(now()) - interval 6 day
-        AND FederatedGraphID = '${federatedGraphId}'
-        AND OrganizationID = '${organizationId}'
+        AND FederatedGraphID = {federatedGraphId:String}
+        AND OrganizationID = {organizationId:String}
       GROUP BY timestamp
       ORDER BY
         timestamp WITH FILL
@@ -42,7 +41,12 @@ export class AnalyticsDashboardViewRepository {
     )
     `;
 
-    const seriesRes = await this.client.queryPromise(query);
+    const params = {
+      federatedGraphId,
+      organizationId,
+    };
+
+    const seriesRes = await this.client.queryPromise(query, params);
 
     if (Array.isArray(seriesRes)) {
       return seriesRes.map((p) => ({
@@ -68,30 +72,38 @@ export class AnalyticsDashboardViewRepository {
 
     const query = `
      WITH
-        toStartOfInterval(toDateTime('${filter.dateRange.start}'), INTERVAL ${filter.granule} MINUTE) AS startDate,
-        toDateTime('${filter.dateRange.end}') AS endDate
+        toStartOfInterval(toDateTime({start:UInt32}), INTERVAL {granule:UInt32} MINUTE) AS startDate,
+        toDateTime({end:UInt32}) AS endDate
     SELECT toString(toUnixTimestamp(timestamp, 'UTC') * 1000) as timestamp, totalRequests, erroredRequests
       FROM (
       SELECT
-          toStartOfInterval(Timestamp, INTERVAL ${filter.granule} MINUTE) AS timestamp,
+          toStartOfInterval(Timestamp, INTERVAL {granule:UInt32} MINUTE) AS timestamp,
         sum(TotalRequests) as totalRequests,
         sum(TotalErrors) as erroredRequests
       FROM ${this.client.database}.operation_request_metrics_5_30
       WHERE timestamp >= startDate AND timestamp <= endDate
-        AND FederatedGraphID = '${federatedGraphId}'
-        AND OrganizationID = '${organizationId}'
+        AND FederatedGraphID = {federatedGraphId:String}
+        AND OrganizationID = {organizationId:String}
       GROUP BY timestamp
       ORDER BY
         timestamp WITH FILL
       FROM
-        toStartOfInterval(toDateTime('${filter.dateRange.start}'), INTERVAL ${filter.granule} MINUTE)
+        toStartOfInterval(toDateTime({start:UInt32}), INTERVAL {granule:UInt32} MINUTE)
         TO
-          toDateTime('${filter.dateRange.end}')
-        STEP INTERVAL ${filter.granule} MINUTE
+          toDateTime({end:UInt32})
+        STEP INTERVAL {granule:UInt32} MINUTE
       )
     `;
 
-    const seriesRes = await this.client.queryPromise(query);
+    const params = {
+      start: filter.dateRange.start,
+      end: filter.dateRange.end,
+      granule: filter.granule,
+      federatedGraphId,
+      organizationId,
+    };
+
+    const seriesRes = await this.client.queryPromise(query, params);
 
     if (Array.isArray(seriesRes)) {
       return seriesRes.map((p) => ({
@@ -115,14 +127,21 @@ export class AnalyticsDashboardViewRepository {
       OperationName as operationName,
       sum(TotalRequests) as totalRequests
     FROM ${this.client.database}.operation_request_metrics_5_30
-    WHERE Timestamp >= toDateTime('${dateRange.start}') 
-      AND Timestamp <= toDateTime('${dateRange.end}')
-      AND OrganizationID = '${organizationId}'
-      AND FederatedGraphID = '${federatedGraphId}'
+    WHERE Timestamp >= toDateTime({start:UInt32}) 
+      AND Timestamp <= toDateTime({end:UInt32})
+      AND OrganizationID = {organizationId:String}
+      AND FederatedGraphID = {federatedGraphId:String}
     GROUP BY OperationName, OperationHash ORDER BY totalRequests DESC LIMIT 10
     `;
 
-    const res = await this.client.queryPromise(query);
+    const params = {
+      start: dateRange.start,
+      end: dateRange.end,
+      organizationId,
+      federatedGraphId,
+    };
+
+    const res = await this.client.queryPromise(query, params);
 
     if (Array.isArray(res)) {
       return res.map((r) => ({
@@ -146,18 +165,26 @@ export class AnalyticsDashboardViewRepository {
     const query = `
       SELECT
         FederatedGraphID as federatedGraphID,
-        round(sum(TotalRequests) / ${multiplier}, 3) AS requestRate,
-        round(sum(TotalErrors) / ${multiplier}, 3) AS errorRate
+        round(sum(TotalRequests) / {multiplier:Float64}, 3) AS requestRate,
+        round(sum(TotalErrors) / {multiplier:Float64}, 3) AS errorRate
       FROM ${this.client.database}.operation_request_metrics_5_30
-      WHERE Timestamp >= toDateTime('${dateRange.start}')
-      AND Timestamp <= toDateTime('${dateRange.end}')
-      AND FederatedGraphID = '${federatedGraphId}'
-      AND OrganizationID = '${organizationId}'
+      WHERE Timestamp >= toDateTime({start:UInt32})
+      AND Timestamp <= toDateTime({end:UInt32})
+      AND FederatedGraphID = {federatedGraphId:String}
+      AND OrganizationID = {organizationId:String}
       GROUP BY FederatedGraphID
       LIMIT 1
     `;
 
-    const res = await this.client.queryPromise(query);
+    const params = {
+      start: dateRange.start,
+      end: dateRange.end,
+      multiplier,
+      federatedGraphId,
+      organizationId,
+    };
+
+    const res = await this.client.queryPromise(query, params);
     if (Array.isArray(res)) {
       return res.map((r) => ({
         federatedGraphID: r.federatedGraphID,
@@ -197,21 +224,32 @@ export class AnalyticsDashboardViewRepository {
     // to minutes
     const multiplier = rangeInHours * 60;
 
+    // Properly escape subgraph IDs for SQL
+    const escapedSubgraphIds = subgraphs.map((s) => `'${s.id.replace(/'/g, "''")}'`).join(',');
+
     const query = `
       SELECT
         SubgraphID as subgraphID,
-        round(sum(TotalRequests) / ${multiplier}, 3) AS requestRate,
-        round(sum(TotalErrors) / ${multiplier}, 3) AS errorRate
+        round(sum(TotalRequests) / {multiplier:Float64}, 3) AS requestRate,
+        round(sum(TotalErrors) / {multiplier:Float64}, 3) AS errorRate
       FROM ${this.client.database}.subgraph_request_metrics_5_30
-      WHERE Timestamp >= toDateTime('${dateRange.start}')
-        AND Timestamp <= toDateTime('${dateRange.end}')
-        AND FederatedGraphID = '${federatedGraphId}'
-        AND OrganizationID = '${organizationId}'
-      AND SubgraphID IN (${subgraphs.map((s) => `'${s.id}'`).join(',')})
+      WHERE Timestamp >= toDateTime({start:UInt32})
+        AND Timestamp <= toDateTime({end:UInt32})
+        AND FederatedGraphID = {federatedGraphId:String}
+        AND OrganizationID = {organizationId:String}
+      AND SubgraphID IN (${escapedSubgraphIds})
       GROUP BY SubgraphID
     `;
 
-    const res = await this.client.queryPromise(query);
+    const params = {
+      start: dateRange.start,
+      end: dateRange.end,
+      multiplier,
+      federatedGraphId,
+      organizationId,
+    };
+
+    const res = await this.client.queryPromise(query, params);
     if (Array.isArray(res)) {
       return res.map((r) => ({
         subgraphID: r.subgraphID,
@@ -229,6 +267,9 @@ export class AnalyticsDashboardViewRepository {
     dateRange: DateRange<number>,
     subgraphs: SubgraphDTO[],
   ): Promise<SubgraphLatencyResult[]> {
+    // Properly escape subgraph IDs for SQL
+    const escapedSubgraphIds = subgraphs.map((s) => `'${s.id.replace(/'/g, "''")}'`).join(',');
+
     const query = `
     SELECT SubgraphID as subgraphID, Latency as latency from (
       SELECT SubgraphID,
@@ -245,17 +286,24 @@ export class AnalyticsDashboardViewRepository {
           -- Histogram aggregations
           sumForEachMerge(BucketCounts)                    as BucketCounts
           from ${this.client.database}.subgraph_latency_metrics_5_30
-        WHERE Timestamp >= toDateTime('${dateRange.start}')
-          AND Timestamp <= toDateTime('${dateRange.end}')
-          AND FederatedGraphID = '${federatedGraphId}'
-          AND OrganizationID = '${organizationId}'
-          AND SubgraphID IN (${subgraphs.map((s) => `'${s.id}'`).join(',')})
+        WHERE Timestamp >= toDateTime({start:UInt32})
+          AND Timestamp <= toDateTime({end:UInt32})
+          AND FederatedGraphID = {federatedGraphId:String}
+          AND OrganizationID = {organizationId:String}
+          AND SubgraphID IN (${escapedSubgraphIds})
         group by SubgraphID
         order by SubgraphID
     )
     `;
 
-    const res = await this.client.queryPromise(query);
+    const params = {
+      start: dateRange.start,
+      end: dateRange.end,
+      federatedGraphId,
+      organizationId,
+    };
+
+    const res = await this.client.queryPromise(query, params);
 
     if (Array.isArray(res)) {
       return res.map((r) => ({
