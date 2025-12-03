@@ -252,7 +252,7 @@ func NegotiateSubscriptionParams(r *http.Request, preferJson bool) SubscriptionP
 	// Eventually a solution will be in the stdlib: see https://github.com/golang/go/issues/19307, at which point we should
 	// remove this
 	var (
-		useMultipart = false
+		useMultipart bool
 		useSse       = q.Has(WgSseParam)
 		bestType     = ""
 		bestQ        = -1.0 // Default to lowest possible q-value

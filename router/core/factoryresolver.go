@@ -60,7 +60,6 @@ type DefaultFactoryResolver struct {
 	log    *zap.Logger
 
 	engineCtx          context.Context
-	enableSingleFlight bool
 	streamingClient    *http.Client
 	subscriptionClient graphql_datasource.GraphQLSubscriptionClient
 

@@ -871,11 +871,11 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		)
 	}
 
-	if r.Config.rateLimit != nil && r.Config.rateLimit.Enabled {
+	if r.rateLimit != nil && r.rateLimit.Enabled {
 		var err error
 		r.redisClient, err = rd.NewRedisCloser(&rd.RedisCloserOptions{
-			URLs:           r.Config.rateLimit.Storage.URLs,
-			ClusterEnabled: r.Config.rateLimit.Storage.ClusterEnabled,
+			URLs:           r.rateLimit.Storage.URLs,
+			ClusterEnabled: r.rateLimit.Storage.ClusterEnabled,
 			Logger:         r.logger,
 		})
 		if err != nil {
@@ -1339,8 +1339,8 @@ func (r *Router) Start(ctx context.Context) error {
 		r.logger.Info("Rate limiting enabled",
 			zap.Int("rate", r.rateLimit.SimpleStrategy.Rate),
 			zap.Int("burst", r.rateLimit.SimpleStrategy.Burst),
-			zap.Duration("duration", r.Config.rateLimit.SimpleStrategy.Period),
-			zap.Bool("rejectExceeding", r.Config.rateLimit.SimpleStrategy.RejectExceedingRequests),
+			zap.Duration("duration", r.rateLimit.SimpleStrategy.Period),
+			zap.Bool("rejectExceeding", r.rateLimit.SimpleStrategy.RejectExceedingRequests),
 		)
 	}
 
@@ -1409,7 +1409,7 @@ func (r *Router) configureUsageTracking(ctx context.Context) (err error) {
 }
 
 func (r *Router) trackRouterConfigUsage() {
-	r.usage.TrackRouterConfigUsage(r.Config.Usage())
+	r.usage.TrackRouterConfigUsage(r.Usage())
 }
 
 type concSafeErrorJoiner struct {
@@ -1860,13 +1860,13 @@ func WithAccessController(controller *AccessController) Option {
 
 func WithAuthorizationConfig(cfg *config.AuthorizationConfiguration) Option {
 	return func(r *Router) {
-		r.Config.authorization = cfg
+		r.authorization = cfg
 	}
 }
 
 func WithRateLimitConfig(cfg *config.RateLimitConfiguration) Option {
 	return func(r *Router) {
-		r.Config.rateLimit = cfg
+		r.rateLimit = cfg
 	}
 }
 
@@ -1928,9 +1928,9 @@ func DefaultTransportRequestOptions() *TransportRequestOptions {
 		KeepAliveIdleTimeout:   90 * time.Second,
 		DialTimeout:            30 * time.Second,
 
-		MaxConnsPerHost:     0,
-		MaxIdleConns:        1024 * 10,
-		MaxIdleConnsPerHost: 2048,
+		MaxConnsPerHost:     1024,
+		MaxIdleConnsPerHost: 64,
+		MaxIdleConns:        64 * 10,
 	}
 }
 
@@ -2041,13 +2041,13 @@ func WithAnonymization(ipConfig *IPAnonymizationConfig) Option {
 
 func WithWebSocketConfiguration(cfg *config.WebSocketConfiguration) Option {
 	return func(r *Router) {
-		r.Config.webSocketConfiguration = cfg
+		r.webSocketConfiguration = cfg
 	}
 }
 
 func WithSubgraphErrorPropagation(cfg config.SubgraphErrorPropagationConfiguration) Option {
 	return func(r *Router) {
-		r.Config.subgraphErrorPropagation = cfg
+		r.subgraphErrorPropagation = cfg
 	}
 }
 

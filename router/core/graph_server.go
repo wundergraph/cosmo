@@ -131,7 +131,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		return nil, fmt.Errorf(`the compatibility version "%s" is not compatible with this router version`, routerConfig.CompatibilityVersion)
 	}
 
-	isConnStoreEnabled := r.Config.metricConfig.OpenTelemetry.ConnectionStats || r.Config.metricConfig.Prometheus.ConnectionStats
+	isConnStoreEnabled := r.metricConfig.OpenTelemetry.ConnectionStats || r.metricConfig.Prometheus.ConnectionStats
 	var traceDialer *TraceDialer
 	if isConnStoreEnabled {
 		traceDialer = NewTraceDialer()
@@ -1264,10 +1264,10 @@ func (s *graphServer) buildGraphMux(
 		QueryDepthCache:                     gm.complexityCalculationCache,
 		OperationHashCache:                  gm.operationHashCache,
 		ParseKitPoolSize:                    s.engineExecutionConfiguration.ParseKitPoolSize,
-		IntrospectionEnabled:                s.Config.introspection,
+		IntrospectionEnabled:                s.introspection,
 		ParserTokenizerLimits: astparser.TokenizerLimits{
-			MaxDepth:  s.Config.securityConfiguration.ParserLimits.ApproximateDepthLimit,
-			MaxFields: s.Config.securityConfiguration.ParserLimits.TotalFieldsLimit,
+			MaxDepth:  s.securityConfiguration.ParserLimits.ApproximateDepthLimit,
+			MaxFields: s.securityConfiguration.ParserLimits.TotalFieldsLimit,
 		},
 		OperationNameLengthLimit:                         s.securityConfiguration.OperationNameLengthLimit,
 		ApolloCompatibilityFlags:                         s.apolloCompatibilityFlags,
@@ -1284,7 +1284,7 @@ func (s *graphServer) buildGraphMux(
 		}
 	}
 
-	if s.Config.cacheWarmup != nil && s.Config.cacheWarmup.Enabled {
+	if s.cacheWarmup != nil && s.cacheWarmup.Enabled {
 
 		if s.graphApiToken == "" {
 			return nil, fmt.Errorf("graph token is required for cache warmup in order to communicate with the CDN")
@@ -1302,9 +1302,9 @@ func (s *graphServer) buildGraphMux(
 		warmupConfig := &CacheWarmupConfig{
 			Log:            s.logger,
 			Processor:      processor,
-			Workers:        s.Config.cacheWarmup.Workers,
-			ItemsPerSecond: s.Config.cacheWarmup.ItemsPerSecond,
-			Timeout:        s.Config.cacheWarmup.Timeout,
+			Workers:        s.cacheWarmup.Workers,
+			ItemsPerSecond: s.cacheWarmup.ItemsPerSecond,
+			Timeout:        s.cacheWarmup.Timeout,
 		}
 
 		warmupConfig.AfterOperation = func(item *CacheWarmupOperationPlanResult) {
@@ -1325,12 +1325,12 @@ func (s *graphServer) buildGraphMux(
 			)
 		}
 
-		if s.Config.cacheWarmup.Source.Filesystem != nil {
+		if s.cacheWarmup.Source.Filesystem != nil {
 			warmupConfig.Source = NewFileSystemSource(&FileSystemSourceConfig{
-				RootPath: s.Config.cacheWarmup.Source.Filesystem.Path,
+				RootPath: s.cacheWarmup.Source.Filesystem.Path,
 			})
 		} else {
-			cdnSource, err := NewCDNSource(s.Config.cdnConfig.URL, s.graphApiToken, s.logger)
+			cdnSource, err := NewCDNSource(s.cdnConfig.URL, s.graphApiToken, s.logger)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create cdn source: %w", err)
 			}
@@ -1349,7 +1349,7 @@ func (s *graphServer) buildGraphMux(
 		RejectOperationIfUnauthorized: false,
 	}
 
-	if s.Config.authorization != nil {
+	if s.authorization != nil {
 		authorizerOptions.RejectOperationIfUnauthorized = s.authorization.RejectOperationIfUnauthorized
 	}
 
@@ -1443,7 +1443,7 @@ func (s *graphServer) buildGraphMux(
 		ComplexityLimits:                       s.securityConfiguration.ComplexityLimits,
 		AlwaysIncludeQueryPlan:                 s.engineExecutionConfiguration.Debug.AlwaysIncludeQueryPlan,
 		AlwaysSkipLoader:                       s.engineExecutionConfiguration.Debug.AlwaysSkipLoader,
-		QueryPlansEnabled:                      s.Config.queryPlansEnabled,
+		QueryPlansEnabled:                      s.queryPlansEnabled,
 		QueryPlansLoggingEnabled:               s.engineExecutionConfiguration.Debug.PrintQueryPlans,
 		TrackSchemaUsageInfo:                   s.graphqlMetricsConfig.Enabled || s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled,
 		ClientHeader:                           s.clientHeader,
