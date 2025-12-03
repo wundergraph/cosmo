@@ -633,14 +633,9 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		cdnServer = SetupCDNServer(t, freeport.GetOne(t))
 	}
 
-	requiredPorts := 2
-	ports := freeport.GetN(t, requiredPorts)
-
 	if cfg.PrometheusRegistry != nil {
-		cfg.PrometheusPort = ports[0]
+		cfg.PrometheusPort = freeport.GetOne(t)
 	}
-
-	listenerAddr := fmt.Sprintf("localhost:%d", ports[1])
 
 	client := &http.Client{}
 
@@ -657,6 +652,7 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		cfg.MCP.Server.ListenAddr = fmt.Sprintf("localhost:%d", freeport.GetOne(t))
 	}
 
+	listenerAddr := fmt.Sprintf("localhost:%d", freeport.GetOne(t))
 	baseURL := fmt.Sprintf("http://%s", listenerAddr)
 
 	rs, err := core.NewRouterSupervisor(&core.RouterSupervisorOpts{
@@ -904,10 +900,6 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		Countries:    atomic.NewInt64(0),
 	}
 
-	requiredPorts := 2
-
-	ports := freeport.GetN(t, requiredPorts)
-
 	getPubSubName := GetPubSubNameFn(pubSubPrefix)
 
 	ctx, cancel := context.WithCancelCause(context.Background())
@@ -1064,10 +1056,8 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	if cfg.PrometheusRegistry != nil {
-		cfg.PrometheusPort = ports[0]
+		cfg.PrometheusPort = freeport.GetOne(t)
 	}
-
-	listenerAddr := fmt.Sprintf("localhost:%d", ports[1])
 
 	client := &http.Client{}
 
@@ -1084,6 +1074,7 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		cfg.MCP.Server.ListenAddr = fmt.Sprintf("localhost:%d", freeport.GetOne(t))
 	}
 
+	listenerAddr := fmt.Sprintf("localhost:%d", freeport.GetOne(t))
 	rr, err := configureRouter(listenerAddr, cfg, &routerConfig, cdnServer, natsSetup)
 	if err != nil {
 		cancel(err)
@@ -1668,8 +1659,7 @@ func makeHttpTestServerWithPort(t testing.TB, handler http.Handler, port int) *h
 
 func makeSafeHttpTestServer(t testing.TB, handler http.Handler) *httptest.Server {
 	s := httptest.NewUnstartedServer(handler)
-	port := freeport.GetOne(t)
-	l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+	l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", freeport.GetOne(t)))
 	if err != nil {
 		t.Fatalf("could not listen on port: %s", err.Error())
 	}
@@ -1683,10 +1673,7 @@ func makeSafeHttpTestServer(t testing.TB, handler http.Handler) *httptest.Server
 func makeSafeGRPCServer(t testing.TB, sd *grpc.ServiceDesc, service any) (*grpc.Server, string) {
 	t.Helper()
 
-	port := freeport.GetOne(t)
-
-	endpoint := fmt.Sprintf("localhost:%d", port)
-
+	endpoint := fmt.Sprintf("localhost:%d", freeport.GetOne(t))
 	lis, err := net.Listen("tcp", endpoint)
 	require.NoError(t, err)
 

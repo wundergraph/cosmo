@@ -118,8 +118,7 @@ func runRouterBin(t *testing.T, ctx context.Context, opts RunRouterBinConfigOpti
 		return nil, err
 	}
 
-	port := freeport.GetOne(t)
-	listenerAddr := fmt.Sprintf("localhost:%d", port)
+	listenerAddr := fmt.Sprintf("localhost:%d", freeport.GetOne(t))
 	token, err := generateJwtToken()
 	if err != nil {
 		return nil, err

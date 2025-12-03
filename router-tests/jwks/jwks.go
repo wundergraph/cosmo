@@ -168,8 +168,7 @@ func NewServerWithCrypto(t *testing.T, providers ...Crypto) (*Server, error) {
 	mux.HandleFunc(oidcHTTPPath, s.oidcJSON)
 
 	httpServer := httptest.NewUnstartedServer(mux)
-	port := freeport.GetOne(t)
-	l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+	l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", freeport.GetOne(t)))
 	if err != nil {
 		t.Fatalf("could not listen on port: %s", err.Error())
 	}
