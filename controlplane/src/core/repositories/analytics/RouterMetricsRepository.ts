@@ -42,19 +42,25 @@ export class RouterMetricsRepository {
                from cosmo.router_metrics_30
                where
                  Timestamp >= now() - interval 45 second AND
-                 FederatedGraphID = '${input.federatedGraphId}' AND
-                 OrganizationID = '${input.organizationId}' AND
-                 ServiceInstanceID = '${input.serviceInstanceId}' AND
+                 FederatedGraphID = {federatedGraphId:String} AND
+                 OrganizationID = {organizationId:String} AND
+                 ServiceInstanceID = {serviceInstanceId:String} AND
                  MetricName in ('server.uptime', 'process.runtime.go.mem.heap_alloc', 'process.cpu.usage')
                order by Timestamp desc
                )
         group by MetricName
     `;
 
+    const params = {
+      federatedGraphId: input.federatedGraphId,
+      organizationId: input.organizationId,
+      serviceInstanceId: input.serviceInstanceId,
+    };
+
     const res = await this.client.queryPromise<{
       metricValue: number[];
       metricName: string;
-    }>(query);
+    }>(query, params);
 
     let memoryUsageMb = 0;
     let memoryChangePercent = 0;
@@ -159,14 +165,19 @@ export class RouterMetricsRepository {
                 ProcessID
          from cosmo.router_uptime_30
          where Timestamp >= now() - interval 45 second AND
-           FederatedGraphID = '${input.federatedGraphId}' AND
-           OrganizationID = '${input.organizationId}'
+           FederatedGraphID = {federatedGraphId:String} AND
+           OrganizationID = {organizationId:String}
          order by Timestamp desc
       )
       group by ServiceInstanceID
     `;
 
-    const res = await this.client.queryPromise(query);
+    const params = {
+      federatedGraphId: input.federatedGraphId,
+      organizationId: input.organizationId,
+    };
+
+    const res = await this.client.queryPromise(query, params);
 
     if (Array.isArray(res)) {
       return res.map((p) => ({
