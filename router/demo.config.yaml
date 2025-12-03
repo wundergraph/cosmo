@@ -5,10 +5,6 @@
 
 version: "1"
 
-graphql_metrics:
-  enabled: true
-  collector_endpoint: http://localhost:4005
-
 events:
   providers:
     nats:
