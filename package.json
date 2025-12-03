@@ -68,7 +68,7 @@
     "graphql": "16.9.0",
     "cross-spawn": "7.0.6",
     "next": "15.4.7",
-    "zod": "3.25.76",
+    "zod": "3.24.2",
     "debug": "4.4.3",
     "supports-color": "10.2.2",
     "wrap-ansi": "9.0.2",
