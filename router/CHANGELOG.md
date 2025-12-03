@@ -4,6 +4,28 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.269.0](https://github.com/wundergraph/cosmo/compare/router@0.268.0...router@0.269.0) (2025-12-01)
+
+### Features
+
+* use cors configuration also on mcp server ([#2363](https://github.com/wundergraph/cosmo/issues/2363)) ([4ccbfb8](https://github.com/wundergraph/cosmo/commit/4ccbfb8a9d409b98821e947d32b4b13d6effeaf5)) (@alepane21)
+
+# [0.268.0](https://github.com/wundergraph/cosmo/compare/router@0.267.3...router@0.268.0) (2025-11-29)
+
+### Features
+
+* prometheus sink for gqlmetrics, ensure all operation are tracked efficiently ([#2332](https://github.com/wundergraph/cosmo/issues/2332)) ([de63823](https://github.com/wundergraph/cosmo/commit/de63823c6fc77d9092f9e13148925a9ceaef3b3e)) (@StarpTech)
+
+## [0.267.3](https://github.com/wundergraph/cosmo/compare/router@0.267.2...router@0.267.3) (2025-11-26)
+
+### Bug Fixes
+
+* vulnerabilities by updating packages ([#2339](https://github.com/wundergraph/cosmo/issues/2339)) ([ef16299](https://github.com/wundergraph/cosmo/commit/ef16299f147ac4d01c0ca5db3c2dcc8f4f399b7b)) (@JivusAyrus)
+
+## [0.267.2](https://github.com/wundergraph/cosmo/compare/router@0.267.1...router@0.267.2) (2025-11-26)
+
+**Note:** Version bump only for package router
+
 ## [0.267.1](https://github.com/wundergraph/cosmo/compare/router@0.267.0...router@0.267.1) (2025-11-25)
 
 **Note:** Version bump only for package router

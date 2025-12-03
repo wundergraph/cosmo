@@ -28,12 +28,14 @@ export default (opts: BaseCommandOptions) => {
     false,
   );
   command.option('--go-module-path <path>', 'Go module path to use for the plugin');
+  command.option('-y, --yes', 'Automatically answer yes to all prompts', false);
 
   command.action(async (directory, options) => {
     const startTime = performance.now();
     const pluginDir = resolve(directory);
     const spinner = Spinner();
     const pluginName = path.basename(pluginDir);
+    const autoConfirmPrompts: boolean = options.yes;
 
     const language = getLanguage(pluginDir);
     if (!language) {
@@ -48,7 +50,7 @@ export default (opts: BaseCommandOptions) => {
     try {
       // Check and install tools if needed
       if (!options.skipToolsInstallation) {
-        await checkAndInstallTools(options.forceToolsInstallation, language);
+        await checkAndInstallTools(options.forceToolsInstallation, language, autoConfirmPrompts);
       }
 
       // Start the generation process

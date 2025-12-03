@@ -1,16 +1,53 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import { EventMeta, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
-import axios, { AxiosError, AxiosInstance } from 'axios';
+import axios, { AxiosError, AxiosInstance, AxiosResponse } from 'axios';
 import axiosRetry, { exponentialDelay } from 'axios-retry';
 import { eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import pino from 'pino';
+import { v4 } from 'uuid';
+import z from 'zod';
+import { LintSeverity, VCSContext } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import * as schema from '../../db/schema.js';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
-import { ProposalState, WebhookDeliveryInfo } from '../../db/models.js';
+import { WebhookDeliveryInfo } from '../../db/models.js';
 import { webhookAxiosRetryCond } from '../util.js';
+import {
+  FederatedGraphDTO,
+  Label,
+  LintIssueResult,
+  NamespaceDTO,
+  SchemaGraphPruningIssues,
+  SchemaLintIssues,
+  SubgraphDTO,
+} from '../../types/index.js';
+import { ComposedFederatedGraph } from '../composition/composer.js';
+import { GetDiffBetweenGraphsSuccess } from '../composition/schemaCheck.js';
+import { SubgraphCheckExtensionsRepository } from '../repositories/SubgraphCheckExtensionsRepository.js';
+import { BlobStorage } from '../blobstorage/index.js';
+import { audiences, nowInSeconds, signJwtHS256 } from '../crypto/jwt.js';
+import { InspectorOperationResult } from '../services/SchemaUsageTrafficInspector.js';
 import { makeWebhookRequest } from './utils.js';
+
+const subgraphCheckExtensionSchema = z.object({
+  errors: z.array(z.string()).optional(),
+  lintIssues: z
+    .array(
+      z.object({
+        lintRuleType: z.string().trim(),
+        severity: z.nativeEnum(LintSeverity),
+        message: z.string().trim(),
+        issueLocation: z.object({
+          line: z.number().int().positive(),
+          column: z.number().int().positive(),
+          endLine: z.number().int().positive().optional(),
+          endColumn: z.number().int().positive().optional(),
+        }),
+      }),
+    )
+    .optional(),
+});
 
 export interface FederatedGraphSchemaUpdate {
   eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED;
@@ -69,6 +106,8 @@ export interface ProposalStateUpdated {
 
 type OrganizationEventData = FederatedGraphSchemaUpdate | MonographSchemaUpdate | ProposalStateUpdated;
 
+export type SubgraphCheckExtensionResponse = z.infer<typeof subgraphCheckExtensionSchema>;
+
 type Config = {
   url?: string;
   key?: string;
@@ -93,6 +132,7 @@ export class OrganizationWebhookService {
 
     this.httpClient = axios.create({
       timeout: 30_000,
+      maxContentLength: 5 * 1024 * 1024, // ~5mb
     });
   }
 
@@ -411,9 +451,6 @@ export class OrganizationWebhookService {
     const logger = this.logger.child({ eventName });
 
     for (const config of configs) {
-      const startTime = performance.now();
-      let retryCount = 0;
-
       if (!this.shouldProcess(eventData, config)) {
         continue;
       }
@@ -433,62 +470,98 @@ export class OrganizationWebhookService {
         };
       }
 
-      const deliveryInfo: WebhookDeliveryInfo = {
-        organizationId: this.organizationId,
-        type: config.type,
-        endpoint: config.url,
-        eventName,
-        payload: JSON.stringify(data),
-        createdById: actorId,
-        requestHeaders: {},
-      };
-
-      axiosRetry(this.httpClient, {
-        retries: 6,
-        retryDelay: (retryCount, error) => {
-          return exponentialDelay(retryCount, error, 1000);
+      await this.#sendWebhookRequest(
+        config.url,
+        config.key,
+        data,
+        {
+          organizationId: this.organizationId,
+          type: config.type,
+          endpoint: config.url,
+          eventName,
+          payload: JSON.stringify(data),
+          createdById: actorId,
+          requestHeaders: {},
         },
-        shouldResetTimeout: true,
-        retryCondition: webhookAxiosRetryCond,
-        onRetry: (count) => {
-          retryCount = count;
-        },
-      });
-
-      this.httpClient.interceptors.request.use((request) => {
-        deliveryInfo.requestHeaders = request.headers;
-        return request;
-      });
-
-      // @TODO Use a queue to send the events
-      try {
-        const res = await makeWebhookRequest(this.httpClient, data, config.url, config.key);
-        deliveryInfo.responseStatusCode = res.status;
-        deliveryInfo.responseHeaders = res.headers;
-        deliveryInfo.responseBody = JSON.stringify(res.data);
-      } catch (error: any) {
-        if (error instanceof AxiosError) {
-          logger.debug(
-            { statusCode: error.response?.status, message: error.message },
-            'Could not send organization webhook event',
-          );
-          deliveryInfo.responseHeaders = error.response?.headers;
-          deliveryInfo.responseStatusCode = error.response?.status;
-          deliveryInfo.responseErrorCode = error.code;
-          deliveryInfo.responseBody = JSON.stringify(error.response?.data);
-          deliveryInfo.errorMessage = error.message;
-        } else {
-          logger.debug(error, 'Could not send organization webhook event');
-          deliveryInfo.errorMessage = error.message || 'Failed due to unknown reasons';
-        }
-      }
-
-      const endTime = performance.now();
-      deliveryInfo.duration = endTime - startTime;
-      deliveryInfo.retryCount = retryCount;
-
-      await this.db.insert(schema.webhookDeliveries).values(deliveryInfo);
+        logger,
+      );
     }
+  }
+
+  async #sendWebhookRequest<TResponse = any>(
+    endpoint: string,
+    secretKey: string | undefined,
+    data: unknown,
+    deliveryInfo: WebhookDeliveryInfo,
+    logger: pino.Logger,
+  ): Promise<AxiosResponse<TResponse> | undefined> {
+    let retryCount = 0;
+    const startTime = performance.now();
+
+    axiosRetry(this.httpClient, {
+      retries: 6,
+      retryDelay: (retryCount, error) => {
+        return exponentialDelay(retryCount, error, 1000);
+      },
+      shouldResetTimeout: true,
+      retryCondition: webhookAxiosRetryCond,
+      onRetry: (count) => {
+        retryCount = count;
+      },
+    });
+
+    this.httpClient.interceptors.request.use((request) => {
+      deliveryInfo.requestHeaders = request.headers;
+      return request;
+    });
+
+    // @TODO Use a queue to send the events
+    // @NOTE: Once we have a queue, we might need to move the subgraph check extension out of the queue as we
+    // need the response to overwrite lint issues and any other data that we need updated from the check extension
+    let res: AxiosResponse | undefined;
+    try {
+      res = await makeWebhookRequest<any, TResponse>(this.httpClient, data, endpoint, secretKey);
+      deliveryInfo.responseStatusCode = res.status;
+      deliveryInfo.responseHeaders = res.headers;
+      deliveryInfo.responseBody = JSON.stringify(res.data);
+    } catch (error: any) {
+      if (error instanceof AxiosError) {
+        logger.debug(
+          { statusCode: error.response?.status, message: error.message },
+          'Could not send organization webhook event',
+        );
+        deliveryInfo.responseHeaders = error.response?.headers;
+        deliveryInfo.responseStatusCode = error.response?.status;
+        deliveryInfo.responseErrorCode = error.code;
+        deliveryInfo.responseBody = JSON.stringify(error.response?.data);
+        deliveryInfo.errorMessage = error.message;
+
+        if (
+          error.response?.data &&
+          typeof error.response?.data === 'object' &&
+          'errorMessage' in error.response.data &&
+          typeof error.response.data.errorMessage === 'string'
+        ) {
+          // Overwrite the error message with the response error message
+          deliveryInfo.errorMessage = error.response.data.errorMessage;
+        }
+      } else {
+        logger.debug(error, 'Could not send organization webhook event');
+        deliveryInfo.errorMessage = error.message || 'Failed due to unknown reasons';
+      }
+    }
+
+    deliveryInfo.duration = performance.now() - startTime;
+    deliveryInfo.retryCount = retryCount;
+
+    const insertedDeliveryInfo = await this.db
+      .insert(schema.webhookDeliveries)
+      .values(deliveryInfo)
+      .returning()
+      .execute();
+    deliveryInfo.id = insertedDeliveryInfo[0].id;
+
+    return res;
   }
 
   async send(eventData: OrganizationEventData, actorId: string) {
@@ -500,5 +573,207 @@ export class OrganizationWebhookService {
       logger.child({ message: e.message });
       logger.error(`Could not send webhook event`);
     }
+  }
+
+  async sendSubgraphCheckExtension(input: {
+    actorId: string;
+    schemaCheckID: string;
+    labels?: Label[];
+    blobStorage: BlobStorage;
+    admissionConfig: { jwtSecret: string; cdnBaseUrl: string };
+    organization: { id: string; slug: string };
+    namespace: NamespaceDTO;
+    vcsContext: VCSContext | undefined;
+    subgraph: SubgraphDTO | undefined;
+    newSchemaSDL: string;
+    isDeleted: boolean;
+    affectedGraphs: FederatedGraphDTO[];
+    composedGraphs: ComposedFederatedGraph[];
+    schemaChanges: GetDiffBetweenGraphsSuccess;
+    lintIssues: SchemaLintIssues;
+    pruneIssues: SchemaGraphPruningIssues;
+    inspectedOperations: InspectorOperationResult[];
+  }): Promise<
+    | {
+        deliveryInfo: WebhookDeliveryInfo;
+        additionalLintIssues: LintIssueResult[];
+      }
+    | undefined
+  > {
+    if (!input.namespace.enableSubgraphCheckExtensions) {
+      // The subgraph check extensions are not enabled for the namespace, we don't need to execute the webhook
+      return undefined;
+    }
+
+    // Even when the subgraph check extensions are enabled for the namespace, make sure that the organization have
+    // access to this feature
+    const orgRepo = new OrganizationRepository(this.logger, this.db);
+    const sceFeature = await orgRepo.getFeature({
+      organizationId: this.organizationId,
+      featureId: 'subgraph-check-extensions',
+    });
+
+    if (!sceFeature?.enabled) {
+      // The organization doesn't have access to this feature, we don't need to execute the webhook
+      return undefined;
+    }
+
+    // Retrieve the subgraph check extension configuration
+    const sceRepo = new SubgraphCheckExtensionsRepository(this.db);
+    const sceConfig = await sceRepo.getNamespaceConfig(input.namespace.id);
+    if (!sceConfig.endpoint) {
+      // The endpoint is not configured
+      return undefined;
+    }
+
+    // Compose the contents of the file that we'll provide to the webhook
+    const fileContent: Record<string, unknown> = {};
+    if (input.subgraph) {
+      fileContent.subgraphs = [
+        {
+          id: input.subgraph.id,
+          name: input.subgraph.name,
+          newComposedSdl: sceConfig.includeLintingIssues ? input.newSchemaSDL : undefined,
+          oldComposedSdl: sceConfig.includeLintingIssues ? input.subgraph.schemaSDL : undefined,
+        },
+      ];
+    }
+
+    if (sceConfig.includeComposedSdl) {
+      fileContent.composition = input.composedGraphs.map((c) => ({
+        id: c.id,
+        composedSchema: c.composedSchema,
+        federatedClientSchema: c.federatedClientSchema,
+        subgraphs: c.subgraphs.map((sg) => ({ id: sg.id, name: sg.name, sdl: sg.sdl })),
+      }));
+    }
+
+    if (sceConfig.includeLintingIssues) {
+      fileContent.lintIssues = [...input.lintIssues.warnings, ...input.lintIssues.errors];
+    }
+
+    if (sceConfig.includePruningIssues) {
+      fileContent.pruningIssues = [...input.pruneIssues.warnings, ...input.pruneIssues.errors];
+    }
+
+    if (sceConfig.includeSchemaChanges) {
+      fileContent.schemaChanges = input.schemaChanges.changes;
+    }
+
+    if (sceConfig.includeAffectedOperations) {
+      fileContent.affectedOperations = input.inspectedOperations;
+    }
+
+    // Upload the generated file content
+    let url: string | undefined;
+    if (Object.keys(fileContent).length > 0) {
+      // Only upload the file if at least one option is enabled
+      const blobKey = `/${input.organization.id}/subgraph_checks/${v4()}.json`;
+      const blobContent = JSON.stringify(fileContent);
+      await input.blobStorage.putObject({
+        key: blobKey,
+        contentType: 'application/json',
+        body: Buffer.from(blobContent, 'utf8'),
+      });
+
+      const token = await signJwtHS256({
+        secret: input.admissionConfig.jwtSecret,
+        token: {
+          exp: nowInSeconds() + 5 * 60, // 5 minutes,
+          aud: audiences.cosmoCDNAdmission,
+          organization_id: input.organization.id,
+        },
+      });
+
+      url = `${input.admissionConfig.cdnBaseUrl}${blobKey}?token=${token}`;
+    }
+
+    // Compose the webhook payload
+    const payload: Record<string, unknown> = {
+      actorId: input.actorId,
+      checkId: input.schemaCheckID,
+      labels: input.subgraph ? undefined : input.labels,
+      organization: input.organization,
+      namespace: { id: input.namespace.id, name: input.namespace.name },
+      vcsContext: input.vcsContext,
+      affectedGraphs: input.affectedGraphs.map((graph) => ({
+        id: graph.id,
+        name: graph.name,
+      })),
+      url,
+    };
+
+    if (input.subgraph) {
+      payload.subgraphs = [
+        {
+          id: input.subgraph.id,
+          name: input.subgraph.name,
+          isDeleted: input.isDeleted,
+        },
+      ];
+    }
+
+    // Deliver the webhook
+    const deliveryInfo: WebhookDeliveryInfo = {
+      organizationId: this.organizationId,
+      type: 'check-extension',
+      endpoint: sceConfig.endpoint,
+      eventName: 'SUBGRAPH_CHECK_EXTENSION',
+      payload: JSON.stringify(payload),
+      createdById: input.actorId,
+      requestHeaders: {},
+    };
+
+    const response = await this.#sendWebhookRequest<SubgraphCheckExtensionResponse>(
+      sceConfig.endpoint,
+      sceConfig.secretKey,
+      payload,
+      deliveryInfo,
+      this.logger,
+    );
+
+    if (!response?.data) {
+      return { deliveryInfo, additionalLintIssues: [] };
+    }
+
+    // Validate the response and maybe overwrite the error message based on it
+    let overwriteErrorMessage = false;
+    let additionalLintIssues: LintIssueResult[] = [];
+
+    if (response?.status !== 200 && response?.status !== 204) {
+      // We expect the response status to be either 200 (OK) or 204 (No Content)
+      overwriteErrorMessage = true;
+      deliveryInfo.errorMessage = `Check extension returned status code '${response?.status}'. Allowed values are 200 and 204.`;
+    } else if (response?.data) {
+      // Validate that the response data matches our expected schema
+      const parsedResponse = subgraphCheckExtensionSchema.safeParse(response.data);
+      if (parsedResponse.success) {
+        // The response data is valid, overwrite values if needed
+        if (Array.isArray(parsedResponse.data.errors) && parsedResponse.data.errors.length > 0) {
+          overwriteErrorMessage = true;
+          deliveryInfo.errorMessage = parsedResponse.data.errors.filter(Boolean).join('\n');
+        }
+
+        if (Array.isArray(parsedResponse.data.lintIssues)) {
+          additionalLintIssues = parsedResponse.data.lintIssues as LintIssueResult[];
+        }
+      } else {
+        overwriteErrorMessage = true;
+        deliveryInfo.errorMessage = `Check extension returned an invalid response: ${parsedResponse.error.message}.`;
+      }
+    }
+
+    if (overwriteErrorMessage) {
+      // The error message was overwritten by the response, either the response provided an error message
+      // or the data validation failed
+      await this.db
+        .update(schema.webhookDeliveries)
+        .set({ errorMessage: deliveryInfo.errorMessage })
+        .where(eq(schema.webhookDeliveries.id, deliveryInfo.id!))
+        .execute();
+    }
+
+    // We are done!
+    return { deliveryInfo, additionalLintIssues };
   }
 }

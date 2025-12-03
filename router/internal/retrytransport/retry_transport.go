@@ -110,7 +110,6 @@ func (rt *RetryHTTPTransport) RoundTrip(req *http.Request) (*http.Response, erro
 	}
 
 	b := backoff.New(rt.RetryOptions.MaxDuration, rt.RetryOptions.Interval)
-	defer b.Reset()
 
 	requestLogger := rt.getRequestLogger(req)
 

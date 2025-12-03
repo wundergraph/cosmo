@@ -11,6 +11,7 @@ const isCheckSuccessful = (
   hasProposalMatchError: boolean,
   isLinkedTrafficCheckFailed?: boolean,
   isLinkedPruningCheckFailed?: boolean,
+  checkExtensionError?: string,
 ) => {
   // if a subgraph is linked to another subgraph, then the status of the check depends on the traffic and pruning check of the linked subgraph
   if (isLinkedTrafficCheckFailed || isLinkedPruningCheckFailed) {
@@ -25,7 +26,8 @@ const isCheckSuccessful = (
       (isBreaking && !hasClientTraffic && !clientTrafficCheckSkipped)) &&
     !hasLintErrors &&
     !hasGraphPruningErrors &&
-    !hasProposalMatchError
+    !hasProposalMatchError &&
+    !checkExtensionError
   );
 };
 
