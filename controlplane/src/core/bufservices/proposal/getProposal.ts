@@ -43,7 +43,7 @@ export function getProposal(
       return {
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
-          details: `Federated graph ${proposal.proposal.federatedGraphId} not found`,
+          details: `Federated graph of the proposal not found`,
         },
         currentSubgraphs: [],
       };

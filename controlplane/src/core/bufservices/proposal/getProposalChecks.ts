@@ -9,6 +9,7 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
+import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 
 export function getProposalChecks(
   opts: RouterOptions,
@@ -23,6 +24,7 @@ export function getProposalChecks(
 
     const proposalRepo = new ProposalRepository(opts.db);
     const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
+    const federatedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
 
     // Check if the proposal exists
     const proposal = await proposalRepo.ById(req.proposalId);
@@ -31,6 +33,18 @@ export function getProposalChecks(
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
           details: `Proposal with ID ${req.proposalId} not found`,
+        },
+        checks: [],
+        totalChecksCount: 0,
+      };
+    }
+
+    const federatedGraph = await federatedGraphRepo.byId(proposal.proposal.federatedGraphId);
+    if (!federatedGraph) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: `Federated graph of the proposal not found`,
         },
         checks: [],
         totalChecksCount: 0,

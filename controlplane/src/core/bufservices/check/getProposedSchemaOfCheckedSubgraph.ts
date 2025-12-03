@@ -8,6 +8,7 @@ import {
 import { SchemaCheckRepository } from '../../repositories/SchemaCheckRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 
 export function getProposedSchemaOfCheckedSubgraph(
   opts: RouterOptions,
@@ -21,9 +22,23 @@ export function getProposedSchemaOfCheckedSubgraph(
     logger = enrichLogger(ctx, logger, authContext);
 
     const schemaCheckRepo = new SchemaCheckRepository(opts.db);
+    const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
+
+    const subgraph = await subgraphRepo.byId(req.subgraphId);
+    if (!subgraph) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: `Subgraph not found`,
+        },
+        proposedSchema: '',
+      };
+    }
+    
     const proposedSchema = await schemaCheckRepo.getProposedSchemaOfCheckedSubgraph({
       checkId: req.checkId,
       checkedSubgraphId: req.checkedSubgraphId,
+      subgraphId: req.subgraphId,
     });
 
     if (!proposedSchema || !proposedSchema.proposedSubgraphSchemaSDL) {
