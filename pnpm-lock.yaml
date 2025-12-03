@@ -172,14 +172,14 @@ importers:
   cli:
     dependencies:
       '@bufbuild/protobuf':
-        specifier: ^1.9.0
-        version: 1.10.0
+        specifier: 1.9.0
+        version: 1.9.0
       '@connectrpc/connect':
         specifier: 1.4.0
-        version: 1.4.0(@bufbuild/protobuf@1.10.0)
+        version: 1.4.0(@bufbuild/protobuf@1.9.0)
       '@connectrpc/connect-node':
         specifier: 1.4.0
-        version: 1.4.0(@bufbuild/protobuf@1.10.0)(@connectrpc/connect@1.4.0(@bufbuild/protobuf@1.10.0))
+        version: 1.4.0(@bufbuild/protobuf@1.9.0)(@connectrpc/connect@1.4.0(@bufbuild/protobuf@1.9.0))
       '@graphql-tools/utils':
         specifier: 10.2.2
         version: 10.2.2(graphql@16.9.0)
@@ -436,7 +436,7 @@ importers:
   connect:
     dependencies:
       '@bufbuild/protobuf':
-        specifier: ^1.9.0
+        specifier: 1.9.0
         version: 1.9.0
       '@connectrpc/connect-query':
         specifier: ^1.4.1
@@ -17046,12 +17046,6 @@ snapshots:
       '@connectrpc/connect-node': 1.4.0(@bufbuild/protobuf@1.9.0)(@connectrpc/connect@1.4.0(@bufbuild/protobuf@1.9.0))
       fastify: 4.28.1
 
-  '@connectrpc/connect-node@1.4.0(@bufbuild/protobuf@1.10.0)(@connectrpc/connect@1.4.0(@bufbuild/protobuf@1.10.0))':
-    dependencies:
-      '@bufbuild/protobuf': 1.10.0
-      '@connectrpc/connect': 1.4.0(@bufbuild/protobuf@1.10.0)
-      undici: 5.28.4
-
   '@connectrpc/connect-node@1.4.0(@bufbuild/protobuf@1.9.0)(@connectrpc/connect@1.4.0(@bufbuild/protobuf@1.9.0))':
     dependencies:
       '@bufbuild/protobuf': 1.9.0
@@ -17091,7 +17085,7 @@ snapshots:
 
   '@connectrpc/protoc-gen-connect-es@1.4.0(@bufbuild/protoc-gen-es@1.10.0(@bufbuild/protobuf@1.10.0))(@connectrpc/connect@1.4.0(@bufbuild/protobuf@1.10.0))':
     dependencies:
-      '@bufbuild/protobuf': 1.10.0
+      '@bufbuild/protobuf': 1.9.0
       '@bufbuild/protoplugin': 1.9.0
     optionalDependencies:
       '@bufbuild/protoc-gen-es': 1.10.0(@bufbuild/protobuf@1.10.0)
@@ -17101,7 +17095,7 @@ snapshots:
 
   '@connectrpc/protoc-gen-connect-es@1.4.0(@bufbuild/protoc-gen-es@1.9.0(@bufbuild/protobuf@1.9.0))(@connectrpc/connect@1.4.0(@bufbuild/protobuf@1.9.0))':
     dependencies:
-      '@bufbuild/protobuf': 1.10.0
+      '@bufbuild/protobuf': 1.9.0
       '@bufbuild/protoplugin': 1.9.0
     optionalDependencies:
       '@bufbuild/protoc-gen-es': 1.9.0(@bufbuild/protobuf@1.9.0)
@@ -17111,7 +17105,7 @@ snapshots:
 
   '@connectrpc/protoc-gen-connect-query@1.4.1(@bufbuild/protoc-gen-es@1.10.0(@bufbuild/protobuf@1.10.0))':
     dependencies:
-      '@bufbuild/protobuf': 1.10.0
+      '@bufbuild/protobuf': 1.9.0
       '@bufbuild/protoplugin': 1.9.0
     optionalDependencies:
       '@bufbuild/protoc-gen-es': 1.10.0(@bufbuild/protobuf@1.10.0)
