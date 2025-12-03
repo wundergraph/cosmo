@@ -2,10 +2,12 @@ package testenv
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"testing"
 	"time"
 
+	"github.com/hashicorp/consul/sdk/freeport"
 	"github.com/stretchr/testify/require"
 )
 
@@ -41,7 +43,7 @@ func (l *WaitingListener) Port() int {
 func NewWaitingListener(t *testing.T, waitTime time.Duration) (wl *WaitingListener) {
 	ctx, cancel := context.WithCancel(context.Background())
 	var lc net.ListenConfig
-	listener, err := lc.Listen(ctx, "tcp", "127.0.0.1:0")
+	listener, err := lc.Listen(ctx, "tcp", fmt.Sprintf("127.0.0.1:%d", freeport.GetOne(t)))
 	require.NoError(t, err)
 
 	wl = &WaitingListener{

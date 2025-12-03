@@ -478,10 +478,6 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		Countries:    atomic.NewInt64(0),
 	}
 
-	requiredPorts := 2
-
-	ports := freeport.GetN(t, requiredPorts)
-
 	getPubSubName := GetPubSubNameFn(pubSubPrefix)
 
 	ctx, cancel := context.WithCancelCause(context.Background())
@@ -636,6 +632,9 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	if cfg.CdnSever == nil {
 		cdnServer = SetupCDNServer(t, freeport.GetOne(t))
 	}
+
+	requiredPorts := 2
+	ports := freeport.GetN(t, requiredPorts)
 
 	if cfg.PrometheusRegistry != nil {
 		cfg.PrometheusPort = ports[0]
