@@ -46,7 +46,9 @@ func sanitizePathWithinDestDir(destDir, path string) (string, error) {
 
 // UnpackImageToDir unpacks a v1.Image to destDir.
 func UnpackImageToDir(img v1.Image, destDir string) error {
-	_ = os.MkdirAll(destDir, 0700)
+	if err := os.MkdirAll(destDir, 0700); err != nil {
+		return fmt.Errorf("failed to create destDir %s: %w", destDir, err)
+	}
 
 	reader := mutate.Extract(img)
 	defer func() {
@@ -84,11 +86,16 @@ func UnpackImageToDir(img v1.Image, destDir string) error {
 			}
 
 			if _, err := io.Copy(f, tr); err != nil {
-				_ = f.Close()
+				closeErr := f.Close()
+				if closeErr != nil {
+					return fmt.Errorf("write file %s: %w (also failed to close file: %w)", target, err, closeErr)
+				}
 				return fmt.Errorf("write file %s: %w", target, err)
 			}
 
-			_ = f.Close()
+			if err := f.Close(); err != nil {
+				return fmt.Errorf("closing file %s: %w", target, err)
+			}
 		case tar.TypeSymlink:
 			// Validate symlink target
 			symlinkTarget, err := sanitizePathWithinDestDir(destDir, hdr.Linkname)
