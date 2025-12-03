@@ -509,6 +509,19 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.logger.Warn("The security configuration field 'block_persisted_operations' is enabled alongside the persisted operations safelist. Take care to ensure this is intentional. Misconfiguration will result in safelisted queries being blocked.")
 	}
 
+	if r.engineExecutionConfiguration.EnableExecutionPlanCacheResponseHeader {
+		r.logger.Warn("The engine execution configuration field 'enable_execution_plan_cache_response_header' is deprecated, and will be removed. Use 'debug.enable_cache_response_headers' instead.")
+		r.engineExecutionConfiguration.Debug.EnableCacheResponseHeaders = true
+	}
+	if r.engineExecutionConfiguration.Debug.EnablePersistedOperationsCacheResponseHeader {
+		r.logger.Warn("The engine execution configuration field 'enable_persisted_operations_cache_response_header' is deprecated, and will be removed. Use 'enable_cache_response_headers' instead.")
+		r.engineExecutionConfiguration.Debug.EnableCacheResponseHeaders = true
+	}
+	if r.engineExecutionConfiguration.Debug.EnableNormalizationCacheResponseHeader {
+		r.logger.Warn("The engine execution configuration field 'enable_normalization_cache_response_header' is deprecated, and will be removed. Use 'enable_cache_response_headers' instead.")
+		r.engineExecutionConfiguration.Debug.EnableCacheResponseHeaders = true
+	}
+
 	if r.securityConfiguration.DepthLimit != nil {
 		r.logger.Warn("The security configuration field 'depth_limit' is deprecated, and will be removed. Use 'security.complexity_limits.depth' instead.")
 
