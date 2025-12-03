@@ -545,9 +545,10 @@ type operationContext struct {
 	variablesNormalizationCacheHit bool
 	variablesRemappingCacheHit     bool
 
-	typeFieldUsageInfo graphqlschemausage.TypeFieldMetrics
-	argumentUsageInfo  []*graphqlmetrics.ArgumentUsageInfo
-	inputUsageInfo     []*graphqlmetrics.InputUsageInfo
+	typeFieldUsageInfo        graphqlschemausage.TypeFieldMetrics
+	typeFieldUsageInfoMetrics []*graphqlmetrics.TypeFieldUsageInfo // Cached conversion result
+	argumentUsageInfo         []*graphqlmetrics.ArgumentUsageInfo
+	inputUsageInfo            []*graphqlmetrics.InputUsageInfo
 
 	parsingTime       time.Duration
 	validationTime    time.Duration
@@ -597,6 +598,15 @@ func (o *operationContext) ClientInfo() ClientInfo {
 
 func (o *operationContext) Sha256Hash() string {
 	return o.sha256Hash
+}
+
+// GetTypeFieldUsageInfoMetrics returns the cached conversion of typeFieldUsageInfo.
+// This avoids repeated allocations when multiple exporters need the same data.
+func (o *operationContext) GetTypeFieldUsageInfoMetrics() []*graphqlmetrics.TypeFieldUsageInfo {
+	if o.typeFieldUsageInfoMetrics == nil && o.typeFieldUsageInfo != nil {
+		o.typeFieldUsageInfoMetrics = o.typeFieldUsageInfo.IntoGraphQLMetrics()
+	}
+	return o.typeFieldUsageInfoMetrics
 }
 
 type QueryPlanStats struct {

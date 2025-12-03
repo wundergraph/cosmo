@@ -30,6 +30,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/circuit"
 	"github.com/wundergraph/cosmo/router/internal/debug"
 	"github.com/wundergraph/cosmo/router/internal/docker"
+	"github.com/wundergraph/cosmo/router/internal/exporter"
 	"github.com/wundergraph/cosmo/router/internal/graphiql"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
@@ -857,11 +858,11 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			r.graphqlMetricsConfig.CollectorEndpoint,
 			connect.WithSendGzip(),
 		)
-		ge, err := graphqlmetrics.NewExporter(
+		ge, err := graphqlmetrics.NewGraphQLMetricsExporter(
 			r.logger,
 			client,
 			r.graphApiToken,
-			graphqlmetrics.NewDefaultExporterSettings(),
+			exporter.NewDefaultExporterSettings(),
 		)
 		if err != nil {
 			return fmt.Errorf("failed to validate graphql metrics exporter: %w", err)
@@ -869,6 +870,18 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		r.gqlMetricsExporter = ge
 
 		r.logger.Info("GraphQL schema coverage metrics enabled")
+	}
+
+	// Create Prometheus metrics exporter for schema field usage
+	// Note: This is separate from the Prometheus meter provider which handles OTEL metrics
+	// This exporter is specifically for schema field usage tracking via the Prometheus sink
+	if r.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled {
+		// The metric store will be passed in later when building the graph mux
+		// because each mux has its own metric store
+		// We'll create the exporter when building the mux in buildGraphMux
+		r.logger.Info("Prometheus schema field usage metrics enabled",
+			zap.Bool("include_operation_sha", r.metricConfig.Prometheus.PromSchemaFieldUsage.IncludeOperationSha),
+		)
 	}
 
 	if r.Config.rateLimit != nil && r.Config.rateLimit.Enabled {
@@ -927,6 +940,10 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			mcpserver.WithEnableArbitraryOperations(r.mcp.EnableArbitraryOperations),
 			mcpserver.WithExposeSchema(r.mcp.ExposeSchema),
 			mcpserver.WithStateless(r.mcp.Session.Stateless),
+		}
+
+		if r.corsOptions != nil {
+			mcpOpts = append(mcpOpts, mcpserver.WithCORS(*r.corsOptions))
 		}
 
 		// Determine the router GraphQL endpoint
@@ -2351,7 +2368,12 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			PromSchemaFieldUsage: rmetric.PrometheusSchemaFieldUsage{
 				Enabled:             cfg.Metrics.Prometheus.SchemaFieldUsage.Enabled,
 				IncludeOperationSha: cfg.Metrics.Prometheus.SchemaFieldUsage.IncludeOperationSha,
-				SampleRate:          cfg.Metrics.Prometheus.SchemaFieldUsage.SampleRate,
+				Exporter: rmetric.PrometheusSchemaFieldUsageExporter{
+					BatchSize:     cfg.Metrics.Prometheus.SchemaFieldUsage.Exporter.BatchSize,
+					QueueSize:     cfg.Metrics.Prometheus.SchemaFieldUsage.Exporter.QueueSize,
+					Interval:      cfg.Metrics.Prometheus.SchemaFieldUsage.Exporter.Interval,
+					ExportTimeout: cfg.Metrics.Prometheus.SchemaFieldUsage.Exporter.ExportTimeout,
+				},
 			},
 		},
 	}

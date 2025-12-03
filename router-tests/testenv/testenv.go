@@ -279,7 +279,14 @@ type MetricOptions struct {
 type PrometheusSchemaFieldUsage struct {
 	Enabled             bool
 	IncludeOperationSha bool
-	SampleRate          float64
+	Exporter            *PrometheusSchemaFieldUsageExporter
+}
+
+type PrometheusSchemaFieldUsageExporter struct {
+	BatchSize     int
+	QueueSize     int
+	Interval      time.Duration
+	ExportTimeout time.Duration
 }
 
 type Config struct {
@@ -1497,6 +1504,33 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	var prometheusConfig rmetric.PrometheusConfig
 
 	if testConfig.PrometheusRegistry != nil {
+		promSchemaUsage := rmetric.PrometheusSchemaFieldUsage{
+			Enabled:             testConfig.MetricOptions.PrometheusSchemaFieldUsage.Enabled,
+			IncludeOperationSha: testConfig.MetricOptions.PrometheusSchemaFieldUsage.IncludeOperationSha,
+		}
+
+		// Provide defaults for exporter settings if enabled
+		// Use shorter intervals for tests to avoid waiting too long
+		if promSchemaUsage.Enabled {
+			if testConfig.MetricOptions.PrometheusSchemaFieldUsage.Exporter != nil {
+				// Use user-provided exporter settings
+				promSchemaUsage.Exporter = rmetric.PrometheusSchemaFieldUsageExporter{
+					BatchSize:     testConfig.MetricOptions.PrometheusSchemaFieldUsage.Exporter.BatchSize,
+					QueueSize:     testConfig.MetricOptions.PrometheusSchemaFieldUsage.Exporter.QueueSize,
+					Interval:      testConfig.MetricOptions.PrometheusSchemaFieldUsage.Exporter.Interval,
+					ExportTimeout: testConfig.MetricOptions.PrometheusSchemaFieldUsage.Exporter.ExportTimeout,
+				}
+			} else {
+				// Use test-friendly defaults
+				promSchemaUsage.Exporter = rmetric.PrometheusSchemaFieldUsageExporter{
+					BatchSize:     100,                    // Smaller batch size for tests
+					QueueSize:     1000,                   // Smaller queue for tests
+					Interval:      100 * time.Millisecond, // Fast flush for tests
+					ExportTimeout: 5 * time.Second,
+				}
+			}
+		}
+
 		prometheusConfig = rmetric.PrometheusConfig{
 			Enabled:         true,
 			ListenAddr:      fmt.Sprintf("localhost:%d", testConfig.PrometheusPort),
@@ -1507,16 +1541,12 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			EngineStats: rmetric.EngineStatsConfig{
 				Subscription: testConfig.MetricOptions.PrometheusEngineStatsOptions.EnableSubscription,
 			},
-			CircuitBreaker:      testConfig.MetricOptions.EnablePrometheusCircuitBreakerMetrics,
-			ExcludeMetrics:      testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetrics,
-			ExcludeMetricLabels: testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetricLabels,
-			Streams:             testConfig.MetricOptions.EnablePrometheusStreamMetrics,
-			ExcludeScopeInfo:    testConfig.MetricOptions.MetricExclusions.ExcludeScopeInfo,
-			PromSchemaFieldUsage: rmetric.PrometheusSchemaFieldUsage{
-				Enabled:             testConfig.MetricOptions.PrometheusSchemaFieldUsage.Enabled,
-				IncludeOperationSha: testConfig.MetricOptions.PrometheusSchemaFieldUsage.IncludeOperationSha,
-				SampleRate:          testConfig.MetricOptions.PrometheusSchemaFieldUsage.SampleRate,
-			},
+			CircuitBreaker:       testConfig.MetricOptions.EnablePrometheusCircuitBreakerMetrics,
+			ExcludeMetrics:       testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetrics,
+			ExcludeMetricLabels:  testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetricLabels,
+			Streams:              testConfig.MetricOptions.EnablePrometheusStreamMetrics,
+			ExcludeScopeInfo:     testConfig.MetricOptions.MetricExclusions.ExcludeScopeInfo,
+			PromSchemaFieldUsage: promSchemaUsage,
 		}
 	}
 

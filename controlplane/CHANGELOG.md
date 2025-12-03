@@ -4,6 +4,24 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.176.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.176.0...controlplane@0.176.1) (2025-11-29)
+
+### Bug Fixes
+
+* import from wrong package ([#2382](https://github.com/wundergraph/cosmo/issues/2382)) ([2501fba](https://github.com/wundergraph/cosmo/commit/2501fba7951ac5b60f0e7bbe6a69e391f45532a3)) (@wilsonrivera)
+
+# [0.176.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.175.1...controlplane@0.176.0) (2025-11-29)
+
+### Features
+
+* subgraph check extensions ([#2281](https://github.com/wundergraph/cosmo/issues/2281)) ([c190b5a](https://github.com/wundergraph/cosmo/commit/c190b5ad19f9fd8f7a67317a29fe845d475dbf10)) (@wilsonrivera)
+
+## [0.175.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.175.0...controlplane@0.175.1) (2025-11-27)
+
+### Bug Fixes
+
+* improve user test suite ([#2376](https://github.com/wundergraph/cosmo/issues/2376)) ([464442b](https://github.com/wundergraph/cosmo/commit/464442bad9f184d7de3b2665bacc75d092ca9967)) (@StarpTech)
+
 # [0.175.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.174.0...controlplane@0.175.0) (2025-11-27)
 
 ### Features

@@ -1246,12 +1246,39 @@
                       "default": false,
                       "description": "Include the operation SHA256 in the metric labels, this can be an expensive operation. The default value is false."
                     },
-                    "sample_rate": {
-                      "type": "number",
-                      "default": 1.0,
-                      "minimum": 0.0,
-                      "maximum": 1.0,
-                      "description": "Sample rate for schema field usage metrics (0.0 to 1.0). Uses probabilistic random sampling, ensuring all operations get ~X% statistical coverage with uniform distribution. Only recommended for large scale deployments. Default is 1.0 (100% sampling)."
+                    "exporter": {
+                      "type": "object",
+                      "description": "Configuration for the schema usage exporter",
+                      "properties": {
+                        "batch_size": {
+                          "type": "integer",
+                          "default": 4096,
+                          "minimum": 1,
+                          "description": "The maximum number of schema usage items to be applied in a single batch. The default value is 4096."
+                        },
+                        "queue_size": {
+                          "type": "integer",
+                          "default": 12800,
+                          "minimum": 1,
+                          "description": "The maximum number of schema usage items allowed in queue at a given time. The default value is 12800."
+                        },
+                        "interval": {
+                          "type": "string",
+                          "default": "2s",
+                          "duration": {
+                            "minimum": "100ms"
+                          },
+                          "description": "The interval at which the schema usage queue is flushed. The period is specified as a string with a number and a unit, e.g. 10s, 1m. The supported units are 's', 'm', 'h'."
+                        },
+                        "export_timeout": {
+                          "type": "string",
+                          "default": "10s",
+                          "duration": {
+                            "minimum": "1s"
+                          },
+                          "description": "The timeout for the schema usage export. The period is specified as a string with a number and a unit, e.g. 10s, 1m. The supported units are 's', 'm', 'h'."
+                        }
+                      }
                     }
                   }
                 }
