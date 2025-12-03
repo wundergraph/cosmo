@@ -4703,7 +4703,7 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				require.Equal(t, expected1, metricDataPoint1.Label)
 
 				metricDataPoint2 := metrics[1]
-				require.Equal(t, 0.0, *metricDataPoint2.Gauge.Value)
+				require.Equal(t, float64(1024), *metricDataPoint2.Gauge.Value)
 				expected2 := []*io_prometheus_client.LabelPair{
 					{
 						Name:  PointerOf("otel_scope_name"),

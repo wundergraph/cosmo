@@ -88,7 +88,7 @@ func UnpackImageToDir(img v1.Image, destDir string) error {
 			if _, err := io.Copy(f, tr); err != nil {
 				closeErr := f.Close()
 				if closeErr != nil {
-					return fmt.Errorf("write file %s: %w (also failed to close file: %w)", target, err, closeErr)
+					return fmt.Errorf("write file %s: %w (also failed to close file: %v)", target, err, closeErr)
 				}
 				return fmt.Errorf("write file %s: %w", target, err)
 			}
