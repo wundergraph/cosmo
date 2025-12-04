@@ -23611,6 +23611,11 @@ export class GetOperationDeprecatedFieldsResponse_DeprecatedField extends Messag
    */
   path = "";
 
+  /**
+   * @generated from field: string deprecationReason = 4;
+   */
+  deprecationReason = "";
+
   constructor(data?: PartialMessage<GetOperationDeprecatedFieldsResponse_DeprecatedField>) {
     super();
     proto3.util.initPartial(data, this);
@@ -23622,6 +23627,7 @@ export class GetOperationDeprecatedFieldsResponse_DeprecatedField extends Messag
     { no: 1, name: "fieldName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "typeName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "path", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "deprecationReason", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetOperationDeprecatedFieldsResponse_DeprecatedField {

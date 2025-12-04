@@ -30,10 +30,8 @@ import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
-import Markdown from "react-markdown";
-import rehypeRaw from "rehype-raw";
-import remarkGfm from "remark-gfm";
 import { useWorkspace } from "@/hooks/use-workspace";
+import { SafeMarkdown } from "@/components/safe-markdown";
 
 export const Empty = ({ subgraphName }: { subgraphName: string }) => {
   const { namespace: { name: namespace } } = useWorkspace();
@@ -286,12 +284,7 @@ const SubgraphOverviewPage = () => {
           {subgraph.readme ? (
             <div className="flex h-full w-full px-6 py-4">
               <div className="scrollbar-custom prose-pre:scrollbar-custom prose mx-auto h-full w-full max-w-none overflow-auto overflow-y-auto dark:prose-invert prose-code:bg-secondary prose-pre:!bg-secondary/50">
-                <Markdown
-                  remarkPlugins={[remarkGfm]}
-                  rehypePlugins={[rehypeRaw]}
-                >
-                  {subgraph.readme}
-                </Markdown>
+                <SafeMarkdown content={subgraph?.readme} />
               </div>
             </div>
           ) : (
