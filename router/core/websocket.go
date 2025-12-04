@@ -903,18 +903,21 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 		opContext.normalizationTime = time.Since(startNormalization)
 		return nil, nil, err
 	}
-
 	opContext.normalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
 
-	if _, err := operationKit.NormalizeVariables(); err != nil {
+	cached, _, err := operationKit.NormalizeVariables()
+	if err != nil {
 		opContext.normalizationTime = time.Since(startNormalization)
 		return nil, nil, err
 	}
+	opContext.variablesNormalizationCacheHit = cached
 
-	if err := operationKit.RemapVariables(h.disableVariablesRemapping); err != nil {
+	cached, err = operationKit.RemapVariables(h.disableVariablesRemapping)
+	if err != nil {
 		opContext.normalizationTime = time.Since(startNormalization)
 		return nil, nil, err
 	}
+	opContext.variablesRemappingCacheHit = cached
 
 	opContext.hash = operationKit.parsedOperation.ID
 	opContext.internalHash = operationKit.parsedOperation.InternalID

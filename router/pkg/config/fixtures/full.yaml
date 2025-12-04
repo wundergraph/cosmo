@@ -354,6 +354,7 @@ engine:
   debug:
     report_websocket_connections: false
     report_memory_usage: false
+    enable_cache_response_headers: false
 
 rate_limit:
   enabled: true

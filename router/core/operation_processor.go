@@ -47,27 +47,33 @@ var (
 
 type ParsedOperation struct {
 	// ID represents a unique-ish ID for the operation calculated by hashing
-	// its normalized representation
+	// its normalized representation.
 	ID uint64
+
 	// InternalID is the internal ID of the operation calculated by hashing
-	// its normalized representation with the original operation name and normalized variables
+	// its normalized representation with the original operation name and normalized variables.
 	InternalID uint64
-	// Sha256Hash is the sha256 hash of the original operation query sent by the client
+
+	// Sha256Hash is the sha256 hash of the original operation query sent by the client.
 	Sha256Hash string
-	// Type is a string representing the operation type. One of
-	// "query", "mutation", "subscription"
+
+	// Type is a string representing the operation type. One of "query", "mutation", "subscription".
 	Type           string
 	Variables      *fastjson.Object
 	RemapVariables map[string]string
-	// NormalizedRepresentation is the normalized representation of the operation
-	// as a string. This is provided for modules to be able to access the
-	// operation. Only available after the operation has been normalized.
-	NormalizedRepresentation   string
+
+	// NormalizedRepresentation is the normalized representation of the operation as a string.
+	// This is provided for modules to be able to access the operation.
+	// Only available after the operation has been normalized.
+	NormalizedRepresentation string
+
 	Request                    GraphQLRequest
 	GraphQLRequestExtensions   GraphQLRequestExtensions
 	IsPersistedOperation       bool
 	PersistedOperationCacheHit bool
-	// NormalizationCacheHit is set to true if the request is a non-persisted operation and the normalized operation was loaded from cache
+
+	// NormalizationCacheHit is set to true if the request is a non-persisted operation,
+	// and the normalized operation was loaded from cache.
 	NormalizationCacheHit bool
 }
 
@@ -107,6 +113,8 @@ type OperationProcessorOptions struct {
 	PersistedOpsNormalizationCache                   *ristretto.Cache[uint64, NormalizationCacheEntry]
 	NormalizationCache                               *ristretto.Cache[uint64, NormalizationCacheEntry]
 	QueryDepthCache                                  *ristretto.Cache[uint64, ComplexityCacheEntry]
+	VariablesNormalizationCache                      *ristretto.Cache[uint64, VariablesNormalizationCacheEntry]
+	RemapVariablesCache                              *ristretto.Cache[uint64, RemapVariablesCacheEntry]
 	ValidationCache                                  *ristretto.Cache[uint64, bool]
 	OperationHashCache                               *ristretto.Cache[uint64, string]
 	ParseKitPoolSize                                 int
@@ -137,11 +145,14 @@ type OperationProcessor struct {
 
 // parseKit is a helper struct to parse, normalize and validate operations
 type parseKit struct {
-	i                   int
-	numOperations       int
-	parser              *astparser.Parser
-	doc                 *ast.Document
-	keyGen              *xxhash.Digest
+	i             int
+	numOperations int
+	parser        *astparser.Parser
+	doc           *ast.Document
+
+	// keyGen is used to calculate caching keys. Always "Reset" it after "Sum64".
+	keyGen *xxhash.Digest
+
 	sha256Hash          hash.Hash
 	staticNormalizer    *astnormalization.OperationNormalizer
 	variablesNormalizer *astnormalization.VariablesNormalizer
@@ -160,6 +171,8 @@ type OperationCache struct {
 
 	persistedOperationNormalizationCache *ristretto.Cache[uint64, NormalizationCacheEntry]
 	normalizationCache                   *ristretto.Cache[uint64, NormalizationCacheEntry]
+	variablesNormalizationCache          *ristretto.Cache[uint64, VariablesNormalizationCacheEntry]
+	remapVariablesCache                  *ristretto.Cache[uint64, RemapVariablesCacheEntry]
 	complexityCache                      *ristretto.Cache[uint64, ComplexityCacheEntry]
 	validationCache                      *ristretto.Cache[uint64, bool]
 	operationHashCache                   *ristretto.Cache[uint64, string]
@@ -749,10 +762,37 @@ func (o *OperationKit) normalizePersistedOperation(clientName string, isApq bool
 }
 
 type NormalizationCacheEntry struct {
-	operationID              uint64
 	normalizedRepresentation string
 	operationType            string
 	operationDefinitionRef   int
+}
+
+type VariablesNormalizationCacheEntry struct {
+	// See ParsedOperation for the explanation of the fields below.
+	normalizedRepresentation string
+	id                       uint64
+
+	// variables store JSON of the normalized variables.
+	variables json.RawMessage
+
+	// The uploadsMapping slice tracks file upload variables and how their paths change during
+	// GraphQL operation normalization. This is specifically for handling the GraphQL multipart
+	// request spec for file uploads.
+	uploadsMapping []uploads.UploadPathMapping
+
+	// reparse indicates whether the operation document needs to be reparsed from
+	// its string representation when retrieved from the cache.
+	reparse bool
+}
+
+type RemapVariablesCacheEntry struct {
+	// internalID is used as the cache key for validation, complexity and planner caches.
+	internalID uint64
+
+	normalizedRepresentation string
+
+	// result of remapping
+	remapVariables map[string]string
 }
 
 type ComplexityCacheEntry struct {
@@ -763,7 +803,6 @@ type ComplexityCacheEntry struct {
 }
 
 func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error) {
-
 	skipIncludeVariableNames := o.skipIncludeVariableNames()
 	cacheKey := o.normalizationCacheKey(skipIncludeVariableNames)
 	if o.cache != nil && o.cache.normalizationCache != nil {
@@ -772,6 +811,14 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 			o.parsedOperation.NormalizedRepresentation = entry.normalizedRepresentation
 			o.parsedOperation.Type = entry.operationType
 			o.parsedOperation.NormalizationCacheHit = true
+
+			// Remove skip/include variables because they come directly from the user.
+			// They were removed during normalization, but we did not cache variables,
+			// thus we have to do it every time.
+			for _, varName := range skipIncludeVariableNames {
+				o.parsedOperation.Request.Variables = jsonparser.Delete(o.parsedOperation.Request.Variables, varName)
+			}
+
 			err = o.setAndParseOperationDoc()
 			if err != nil {
 				return false, err
@@ -790,14 +837,24 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 		}
 	}
 
-	// reset with the original variables
+	// Normalization removed skip/include variables from the operation and variables. For example,
+	//
+	//   query q($a: Boolean, o: $other) {
+	//     a @include(if: $a)
+	//     b(b: $other)
+	//   }
+	//   variables: {"a": true, "other": "yyy"}
+	//
+	// was normalized to such a form:
+	//
+	//   query q(other: $other) {
+	//     a
+	//     b(b: $other)
+	//   }
+	//   variables: {"other": "yyy"}
+	//
+	// We have to set variables to the normalized variables.
 	o.parsedOperation.Request.Variables = o.kit.doc.Input.Variables
-
-	// Hash the normalized operation with the static operation name & original variables to avoid different IDs for the same operation
-	err = o.kit.printer.Print(o.kit.doc, o.kit.keyGen)
-	if err != nil {
-		return false, errors.WithStack(fmt.Errorf("normalizeNonPersistedOperation (uncached) failed generating operation hash: %w", err))
-	}
 
 	// Print the operation with the original operation name
 	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = o.originalOperationNameRef
@@ -806,12 +863,12 @@ func (o *OperationKit) normalizeNonPersistedOperation() (cached bool, err error)
 		return false, errors.WithStack(fmt.Errorf("normalizeNonPersistedOperation (uncached) failed printing operation: %w", err))
 	}
 
-	// Set the normalized representation
 	o.parsedOperation.NormalizedRepresentation = o.kit.normalizedOperation.String()
 
 	if o.cache != nil && o.cache.normalizationCache != nil {
+		// Do not cache variables because, because we allow different values of variables
+		// for the same normalized entry cache.
 		entry := NormalizationCacheEntry{
-			operationID:              o.parsedOperation.InternalID,
 			normalizedRepresentation: o.parsedOperation.NormalizedRepresentation,
 			operationType:            o.parsedOperation.Type,
 		}
@@ -840,7 +897,37 @@ func (o *OperationKit) setAndParseOperationDoc() error {
 	return nil
 }
 
-func (o *OperationKit) NormalizeVariables() ([]uploads.UploadPathMapping, error) {
+func (o *OperationKit) normalizeVariablesCacheKey() uint64 {
+	_, _ = o.kit.keyGen.Write(o.kit.doc.Input.Variables)
+	_, _ = o.kit.keyGen.WriteString(o.parsedOperation.NormalizedRepresentation)
+
+	sum := o.kit.keyGen.Sum64()
+	o.kit.keyGen.Reset()
+	return sum
+}
+
+// NormalizeVariables normalizes variables and returns a slice of upload mappings
+// if any of them were present in a query.
+// If normalized values were found in the cache, it skips normalization and returns the caching set to true.
+// If an error is returned, then caching is set to false.
+func (o *OperationKit) NormalizeVariables() (cached bool, mapping []uploads.UploadPathMapping, err error) {
+	cacheKey := o.normalizeVariablesCacheKey()
+	if o.cache != nil && o.cache.variablesNormalizationCache != nil {
+		entry, ok := o.cache.variablesNormalizationCache.Get(cacheKey)
+		if ok {
+			o.parsedOperation.NormalizedRepresentation = entry.normalizedRepresentation
+			o.parsedOperation.ID = entry.id
+			o.parsedOperation.Request.Variables = entry.variables
+
+			if entry.reparse {
+				if err = o.setAndParseOperationDoc(); err != nil {
+					return false, nil, err
+				}
+			}
+			return true, entry.uploadsMapping, nil
+		}
+	}
+
 	variablesBefore := make([]byte, len(o.kit.doc.Input.Variables))
 	copy(variablesBefore, o.kit.doc.Input.Variables)
 
@@ -850,9 +937,7 @@ func (o *OperationKit) NormalizeVariables() ([]uploads.UploadPathMapping, error)
 	report := &operationreport.Report{}
 	uploadsMapping := o.kit.variablesNormalizer.NormalizeOperation(o.kit.doc, o.operationProcessor.executor.ClientSchema, report)
 	if report.HasErrors() {
-		return nil, &reportError{
-			report: report,
-		}
+		return false, nil, &reportError{report: report}
 	}
 
 	// Assuming the user sends a multi-operation document
@@ -872,40 +957,90 @@ func (o *OperationKit) NormalizeVariables() ([]uploads.UploadPathMapping, error)
 	staticNameRef := o.kit.doc.Input.AppendInputBytes([]byte(""))
 	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = staticNameRef
 
-	err := o.kit.printer.Print(o.kit.doc, o.kit.normalizedOperation)
+	err = o.kit.printer.Print(o.kit.doc, o.kit.normalizedOperation)
 	if err != nil {
-		return nil, err
+		return false, nil, err
 	}
 	// Reset the doc with the original name
 	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = nameRef
 
-	o.kit.keyGen.Reset()
 	_, err = o.kit.keyGen.Write(o.kit.normalizedOperation.Bytes())
 	if err != nil {
-		return nil, err
+		return false, nil, err
 	}
-
 	o.parsedOperation.ID = o.kit.keyGen.Sum64()
+	o.kit.keyGen.Reset()
 
 	// If the normalized form of the operation didn't change, we don't need to print it again
 	if bytes.Equal(o.kit.doc.Input.Variables, variablesBefore) && bytes.Equal(o.kit.doc.Input.RawBytes, operationRawBytesBefore) {
-		return uploadsMapping, nil
+		if o.cache != nil && o.cache.variablesNormalizationCache != nil {
+			entry := VariablesNormalizationCacheEntry{
+				uploadsMapping:           uploadsMapping,
+				id:                       o.parsedOperation.ID,
+				normalizedRepresentation: o.parsedOperation.NormalizedRepresentation,
+				variables:                o.parsedOperation.Request.Variables,
+				reparse:                  false,
+			}
+			o.cache.variablesNormalizationCache.Set(cacheKey, entry, 1)
+		}
+
+		return false, uploadsMapping, nil
 	}
 
 	o.kit.normalizedOperation.Reset()
 
 	err = o.kit.printer.Print(o.kit.doc, o.kit.normalizedOperation)
 	if err != nil {
-		return nil, err
+		return false, nil, err
 	}
 
 	o.parsedOperation.NormalizedRepresentation = o.kit.normalizedOperation.String()
 	o.parsedOperation.Request.Variables = o.kit.doc.Input.Variables
 
-	return uploadsMapping, nil
+	if o.cache != nil && o.cache.variablesNormalizationCache != nil {
+		entry := VariablesNormalizationCacheEntry{
+			uploadsMapping:           uploadsMapping,
+			id:                       o.parsedOperation.ID,
+			normalizedRepresentation: o.parsedOperation.NormalizedRepresentation,
+			variables:                o.parsedOperation.Request.Variables,
+			reparse:                  true,
+		}
+		o.cache.variablesNormalizationCache.Set(cacheKey, entry, 1)
+	}
+
+	return false, uploadsMapping, nil
 }
 
-func (o *OperationKit) RemapVariables(disabled bool) error {
+func (o *OperationKit) remapVariablesCacheKey(disabled bool) uint64 {
+	_, _ = o.kit.keyGen.WriteString(o.parsedOperation.NormalizedRepresentation)
+	if disabled {
+		_, _ = o.kit.keyGen.WriteString("t")
+	} else {
+		_, _ = o.kit.keyGen.WriteString("f")
+	}
+	sum := o.kit.keyGen.Sum64()
+	o.kit.keyGen.Reset()
+	return sum
+}
+
+// RemapVariables updates and sorts variable names to have them in a predictable order.
+func (o *OperationKit) RemapVariables(disabled bool) (cached bool, err error) {
+	cacheKey := o.remapVariablesCacheKey(disabled)
+	if o.cache != nil && o.cache.remapVariablesCache != nil {
+		entry, ok := o.cache.remapVariablesCache.Get(cacheKey)
+		if ok {
+			o.parsedOperation.NormalizedRepresentation = entry.normalizedRepresentation
+			o.parsedOperation.InternalID = entry.internalID
+			o.parsedOperation.RemapVariables = entry.remapVariables
+
+			if err := o.setAndParseOperationDoc(); err != nil {
+				return false, err
+			}
+
+			return true, nil
+		}
+	}
+
 	report := &operationreport.Report{}
 
 	// even if the variables are disabled, we still need to execute rest of the method,
@@ -913,9 +1048,7 @@ func (o *OperationKit) RemapVariables(disabled bool) error {
 	if !disabled {
 		variablesMap := o.kit.variablesRemapper.NormalizeOperation(o.kit.doc, o.operationProcessor.executor.ClientSchema, report)
 		if report.HasErrors() {
-			return &reportError{
-				report: report,
-			}
+			return false, &reportError{report: report}
 		}
 		o.parsedOperation.RemapVariables = variablesMap
 	}
@@ -930,19 +1063,17 @@ func (o *OperationKit) RemapVariables(disabled bool) error {
 	staticNameRef := o.kit.doc.Input.AppendInputBytes([]byte(""))
 	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = staticNameRef
 
-	err := o.kit.printer.Print(o.kit.doc, o.kit.normalizedOperation)
+	err = o.kit.printer.Print(o.kit.doc, o.kit.normalizedOperation)
 	if err != nil {
-		return errors.WithStack(fmt.Errorf("RemapVariables failed generating operation hash: %w", err))
+		return false, errors.WithStack(fmt.Errorf("RemapVariables failed generating operation hash: %w", err))
 	}
 	// Reset the doc with the original name
 	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = nameRef
 
-	o.kit.keyGen.Reset()
 	_, err = o.kit.keyGen.Write(o.kit.normalizedOperation.Bytes())
 	if err != nil {
-		return err
+		return false, err
 	}
-
 	// Generate the operation ID
 	o.parsedOperation.InternalID = o.kit.keyGen.Sum64()
 	o.kit.keyGen.Reset()
@@ -950,12 +1081,21 @@ func (o *OperationKit) RemapVariables(disabled bool) error {
 	o.kit.normalizedOperation.Reset()
 	err = o.kit.printer.Print(o.kit.doc, o.kit.normalizedOperation)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	o.parsedOperation.NormalizedRepresentation = o.kit.normalizedOperation.String()
 
-	return nil
+	if o.cache != nil && o.cache.remapVariablesCache != nil {
+		entry := RemapVariablesCacheEntry{
+			internalID:               o.parsedOperation.InternalID,
+			normalizedRepresentation: o.parsedOperation.NormalizedRepresentation,
+			remapVariables:           o.parsedOperation.RemapVariables,
+		}
+		o.cache.remapVariablesCache.Set(cacheKey, entry, 1)
+	}
+
+	return false, nil
 }
 
 func (o *OperationKit) loadPersistedOperationFromCache(clientName string) (ok bool, includeOpName bool, err error) {
@@ -995,7 +1135,6 @@ func (o *OperationKit) handleFoundPersistedOperationEntry(entry NormalizationCac
 	// as we skip parse for the cached persisted operations
 	o.parsedOperation.IsPersistedOperation = true
 	o.parsedOperation.NormalizationCacheHit = true
-	o.parsedOperation.InternalID = entry.operationID
 	o.parsedOperation.NormalizedRepresentation = entry.normalizedRepresentation
 	o.parsedOperation.Type = entry.operationType
 	//  We will always only have a single operation definition in the document
@@ -1042,7 +1181,6 @@ func (o *OperationKit) persistedOperationCacheKeyHasTtl(clientName string, inclu
 func (o *OperationKit) savePersistedOperationToCache(clientName string, isApq bool, skipIncludeVariableNames []string) {
 	cacheKey := o.generatePersistedOperationCacheKey(clientName, skipIncludeVariableNames, o.kit.numOperations > 1)
 	entry := NormalizationCacheEntry{
-		operationID:              o.parsedOperation.InternalID,
 		normalizedRepresentation: o.parsedOperation.NormalizedRepresentation,
 		operationType:            o.parsedOperation.Type,
 		operationDefinitionRef:   o.operationDefinitionRef,
@@ -1227,6 +1365,8 @@ var (
 	literalIF = []byte("if")
 )
 
+// skipIncludeVariableNames returns a slice of variable names that are used as arguments
+// in the skip/include conditionals.
 func (o *OperationKit) skipIncludeVariableNames() []string {
 	if len(o.kit.doc.Directives) == 0 {
 		return nil
@@ -1319,12 +1459,15 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		processor.parseKitSemaphore <- i
 		processor.parseKits[i] = createParseKit(i, processor.parseKitOptions)
 	}
-	if opts.NormalizationCache != nil || opts.ValidationCache != nil || opts.QueryDepthCache != nil || opts.OperationHashCache != nil || opts.EnablePersistedOperationsCache {
+	if opts.NormalizationCache != nil || opts.ValidationCache != nil || opts.QueryDepthCache != nil || opts.OperationHashCache != nil || opts.EnablePersistedOperationsCache ||
+		opts.VariablesNormalizationCache != nil || opts.RemapVariablesCache != nil {
 		processor.operationCache = &OperationCache{
-			normalizationCache: opts.NormalizationCache,
-			validationCache:    opts.ValidationCache,
-			complexityCache:    opts.QueryDepthCache,
-			operationHashCache: opts.OperationHashCache,
+			normalizationCache:          opts.NormalizationCache,
+			validationCache:             opts.ValidationCache,
+			complexityCache:             opts.QueryDepthCache,
+			operationHashCache:          opts.OperationHashCache,
+			variablesNormalizationCache: opts.VariablesNormalizationCache,
+			remapVariablesCache:         opts.RemapVariablesCache,
 		}
 	}
 	if opts.EnablePersistedOperationsCache {
