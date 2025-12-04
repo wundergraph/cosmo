@@ -3,14 +3,15 @@ package integration
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/consul/sdk/freeport"
-	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
-	"github.com/wundergraph/cosmo/router/pkg/routerconfig/cdn"
 	"testing"
 	"time"
 
+	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
+	"github.com/wundergraph/cosmo/router/pkg/routerconfig/cdn"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router-tests/freeport"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"

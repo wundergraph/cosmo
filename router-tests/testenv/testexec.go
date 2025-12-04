@@ -14,9 +14,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/consul/sdk/freeport"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/atomic"
+
+	"github.com/wundergraph/cosmo/router-tests/freeport"
 )
 
 const routerDir = "../router"

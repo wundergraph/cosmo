@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/consul/sdk/freeport"
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router-tests/freeport"
 )
 
 type WaitingListener struct {

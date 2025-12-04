@@ -36,7 +36,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
-	"github.com/hashicorp/consul/sdk/freeport"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/nats-io/nats.go"
@@ -57,6 +56,7 @@ import (
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs"
 	projects "github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/generated"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/src/service"
+	"github.com/wundergraph/cosmo/router-tests/freeport"
 	"github.com/wundergraph/cosmo/router/core"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -98,7 +98,7 @@ var (
 )
 
 func init() {
-	freeport.SetLogLevel(freeport.ERROR)
+	freeport.SetLogLevel(freeport.DEBUG)
 }
 
 // Run runs the test and fails the test if an error occurs

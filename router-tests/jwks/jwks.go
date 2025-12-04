@@ -13,7 +13,8 @@ import (
 
 	"github.com/MicahParks/jwkset"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/hashicorp/consul/sdk/freeport"
+
+	"github.com/wundergraph/cosmo/router-tests/freeport"
 )
 
 const (
