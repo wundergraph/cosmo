@@ -481,11 +481,6 @@ type subgraphMapper struct {
 	variableToSubgraphs map[string][]string
 }
 
-// getFieldSubgraphs returns subgraph IDs for a field path
-func (s *subgraphMapper) getFieldSubgraphs(pathKey string) []string {
-	return s.fieldToSubgraphs[pathKey]
-}
-
 // getVariableSubgraphs returns subgraph IDs for a variable
 func (s *subgraphMapper) getVariableSubgraphs(varName string) []string {
 	return s.variableToSubgraphs[varName]
