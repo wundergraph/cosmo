@@ -64,6 +64,7 @@ export default class SchemaGraphPruner {
             endColumn: field.astNode?.loc?.endToken.column,
           },
           isDeprecated: !!field.deprecationReason,
+          deprecationReason: field.deprecationReason || undefined,
         });
       }
     }

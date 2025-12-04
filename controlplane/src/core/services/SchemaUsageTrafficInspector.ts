@@ -45,23 +45,36 @@ export class SchemaUsageTrafficInspector {
 
     for (const change of changes) {
       const where: string[] = [];
+      const params: Record<string, string | number | boolean> = {
+        daysToConsider: filter.daysToConsider,
+        federatedGraphId: filter.federatedGraphId,
+        subgraphId: filter.subgraphId,
+        organizationId: filter.organizationId,
+      };
+
       // Used for arguments usage check
       if (change.path) {
-        where.push(
-          `startsWith(Path, [${change.path.map((seg) => `'${seg}'`).join(',')}]) AND length(Path) = ${
-            change.path.length
-          }`,
-        );
+        // Escape single quotes in path segments and build the array
+        const escapedPath = change.path
+          .map((seg) => {
+            const escaped = seg.replace(/'/g, "''");
+            return `'${escaped}'`;
+          })
+          .join(',');
+        where.push(`startsWith(Path, [${escapedPath}]) AND length(Path) = ${change.path.length}`);
       }
       if (change.namedType) {
-        where.push(`NamedType = '${change.namedType}'`);
+        params.namedType = change.namedType;
+        where.push(`NamedType = {namedType:String}`);
       }
       if (change.typeName) {
-        where.push(`hasAny(TypeNames, ['${change.typeName}'])`);
+        params.typeName = change.typeName;
+        where.push(`hasAny(TypeNames, [{typeName:String}])`);
       }
       // fieldName can be empty if a type was removed
       if (change.fieldName) {
-        where.push(`FieldName = '${change.fieldName}'`);
+        params.fieldName = change.fieldName;
+        where.push(`FieldName = {fieldName:String}`);
       }
       if (change.isInput) {
         where.push(`IsInput = true`);
@@ -79,10 +92,10 @@ export class SchemaUsageTrafficInspector {
         FROM ${this.client.database}.gql_metrics_schema_usage_lite_1d_90d
         WHERE
           -- Filter first on date and customer to reduce the amount of data
-          Timestamp >= toStartOfDay(now()) - interval ${filter.daysToConsider} day AND
-          FederatedGraphID = '${filter.federatedGraphId}' AND
-          hasAny(SubgraphIDs, ['${filter.subgraphId}']) AND
-          OrganizationID = '${filter.organizationId}' AND
+          Timestamp >= toStartOfDay(now()) - interval {daysToConsider:UInt32} day AND
+          FederatedGraphID = {federatedGraphId:String} AND
+          hasAny(SubgraphIDs, [{subgraphId:String}]) AND
+          OrganizationID = {organizationId:String} AND
           ${where.join(' AND ')}
         GROUP BY OperationHash
     `;
@@ -93,7 +106,7 @@ export class SchemaUsageTrafficInspector {
         operationType: string;
         lastSeen: number;
         firstSeen: number;
-      }[] = await this.client.queryPromise(query);
+      }[] = await this.client.queryPromise(query, params);
 
       if (Array.isArray(res)) {
         const ops = res.map((r) => ({

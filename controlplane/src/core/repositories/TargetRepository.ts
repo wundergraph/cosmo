@@ -2,6 +2,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import { targets } from '../../db/schema.js';
+import { sanitizeReadme } from '../util.js';
 import { NamespaceRepository } from './NamespaceRepository.js';
 
 export class TargetRepository {
@@ -41,7 +42,7 @@ export class TargetRepository {
     await this.db
       .update(targets)
       // if its a empty string, we want to set it to null
-      .set({ readme: input.readme || null })
+      .set({ readme: sanitizeReadme(input.readme) })
       .where(and(eq(targets.id, input.id), eq(targets.organizationId, this.organizationId)))
       .execute();
   }

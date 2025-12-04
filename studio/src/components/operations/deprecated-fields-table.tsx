@@ -22,6 +22,7 @@ interface DeprecatedField {
   fieldName: string;
   typeName: string;
   path: string;
+  deprecationReason: string;
 }
 
 interface DeprecatedFieldsTableProps {
@@ -64,6 +65,7 @@ export const DeprecatedFieldsTable = ({
       fieldName: field.fieldName || "",
       typeName: field.typeName || "",
       path: field.path || "",
+      deprecationReason: field.deprecationReason || "-",
     })) || [];
   const hasDeprecatedFields = deprecatedFields.length > 0;
 
@@ -96,7 +98,8 @@ export const DeprecatedFieldsTable = ({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[80%]">Field Path</TableHead>
+              <TableHead className="w-[30%]">Field Path</TableHead>
+              <TableHead className="w-[50%]">Deprecation Reason</TableHead>
               <TableHead className="w-[20%] text-center">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -106,17 +109,22 @@ export const DeprecatedFieldsTable = ({
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={2} className="h-24 text-center">
+                  <TableCell colSpan={3} className="h-24 text-center">
                     <Loader />
                   </TableCell>
                 </TableRow>
               ) : hasDeprecatedFields ? (
                 deprecatedFields.map((field, index) => (
                   <TableRow key={`${field.path}-${index}`}>
-                    <TableCell className="w-[80%]">
+                    <TableCell className="w-[30%]">
                       <code className="rounded bg-muted px-2 py-1 font-mono text-sm">
                         {field.path}
                       </code>
+                    </TableCell>
+                    <TableCell className="w-[50%]">
+                      <span className="text-sm text-muted-foreground">
+                        {field.deprecationReason || "-"}
+                      </span>
                     </TableCell>
                     <TableCell className="w-[20%] text-right">
                       <Button
@@ -132,7 +140,7 @@ export const DeprecatedFieldsTable = ({
               ) : (
                 <TableRow>
                   <TableCell
-                    colSpan={2}
+                    colSpan={3}
                     className="text-center text-muted-foreground"
                   >
                     No deprecated fields found
@@ -146,7 +154,7 @@ export const DeprecatedFieldsTable = ({
           <Table className="w-full border-t">
             <TableFooter>
               <TableRow className="border-b-0 bg-background hover:bg-background">
-                <TableCell colSpan={2}>
+                <TableCell colSpan={3}>
                   <div className="flex items-center justify-center space-x-1 text-xs text-muted-foreground">
                     <span>
                       Found {deprecatedFields.length}{" "}

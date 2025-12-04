@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.127.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.126.0...@wundergraph/cosmo-connect@0.127.0) (2025-12-03)
+
+### Features
+
+* add deprecation reason to deprecated fields table in op view ([#2386](https://github.com/wundergraph/cosmo/issues/2386)) ([00cad53](https://github.com/wundergraph/cosmo/commit/00cad53cb3d2a600fe15d3cc632e262f5b791ab9)) (@JivusAyrus)
+
+# [0.126.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.125.0...@wundergraph/cosmo-connect@0.126.0) (2025-12-03)
+
+### Features
+
+* update `zod` ([#2384](https://github.com/wundergraph/cosmo/issues/2384)) ([53a2c0c](https://github.com/wundergraph/cosmo/commit/53a2c0ca0f3f933fc9d11fbad4ac066e93d01ff9)) (@wilsonrivera)
+
 # [0.125.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.124.0...@wundergraph/cosmo-connect@0.125.0) (2025-11-29)
 
 ### Features
