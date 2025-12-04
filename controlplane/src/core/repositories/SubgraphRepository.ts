@@ -64,6 +64,7 @@ import {
   hasLabelsChanged,
   newCompositionOptions,
   normalizeLabels,
+  sanitizeReadme,
 } from '../util.js';
 import { OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 import { ContractRepository } from './ContractRepository.js';
@@ -144,7 +145,7 @@ export class SubgraphRepository {
           type: 'subgraph',
           organizationId: this.organizationId,
           labels: uniqueLabels.map((ul) => joinLabel(ul)),
-          readme: data.readme,
+          readme: sanitizeReadme(data.readme),
         })
         .returning()
         .execute();
@@ -1505,7 +1506,7 @@ export class SubgraphRepository {
   public updateReadme({ targetId, readme }: { targetId: string; readme: string }) {
     return this.db
       .update(targets)
-      .set({ readme })
+      .set({ readme: sanitizeReadme(readme) })
       .where(and(eq(targets.id, targetId), eq(schema.targets.organizationId, this.organizationId)));
   }
 
@@ -1836,7 +1837,7 @@ export class SubgraphRepository {
     webhookService: OrganizationWebhookService;
   }): Promise<PlainMessage<CheckSubgraphSchemaResponse> & { hasClientTraffic: boolean }> {
     const schemaCheckRepo = new SchemaCheckRepository(this.db);
-    const proposalRepo = new ProposalRepository(this.db);
+    const proposalRepo = new ProposalRepository(this.db, this.organizationId);
     const fedGraphRepo = new FederatedGraphRepository(this.logger, this.db, this.organizationId);
     const subgraphRepo = new SubgraphRepository(this.logger, this.db, this.organizationId);
     const schemaLintRepo = new SchemaLintRepository(this.db);

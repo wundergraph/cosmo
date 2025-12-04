@@ -12,6 +12,7 @@ import { formatISO, subHours } from 'date-fns';
 import { FastifyBaseLogger } from 'fastify';
 import { parse, visit } from 'graphql';
 import { uid } from 'uid/secure';
+import DOMPurify from 'isomorphic-dompurify';
 import {
   ContractTagOptions,
   FederationResult,
@@ -682,4 +683,13 @@ export function fromProposalOriginEnum(value: ProposalOriginEnum): ProposalOrigi
       return ProposalOrigin.INTERNAL;
     }
   }
+}
+
+export function sanitizeReadme(value: string | undefined | null): string | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const trimmedValue = value.trim();
+  return trimmedValue.length === 0 ? null : DOMPurify.sanitize(trimmedValue);
 }

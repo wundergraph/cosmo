@@ -571,14 +571,17 @@ export class SchemaCheckRepository {
   public getProposedSchemaOfCheckedSubgraph({
     checkId,
     checkedSubgraphId,
+    subgraphId,
   }: {
     checkId: string;
     checkedSubgraphId: string;
+    subgraphId: string;
   }) {
     return this.db.query.schemaCheckSubgraphs.findFirst({
       where: and(
         eq(schema.schemaCheckSubgraphs.schemaCheckId, checkId),
         eq(schema.schemaCheckSubgraphs.id, checkedSubgraphId),
+        eq(schema.schemaCheckSubgraphs.subgraphId, subgraphId),
       ),
       columns: {
         proposedSubgraphSchemaSDL: true,

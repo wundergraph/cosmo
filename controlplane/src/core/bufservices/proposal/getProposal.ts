@@ -25,7 +25,7 @@ export function getProposal(
 
     const federatedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
-    const proposalRepo = new ProposalRepository(opts.db);
+    const proposalRepo = new ProposalRepository(opts.db, authContext.organizationId);
 
     const proposal = await proposalRepo.ById(req.proposalId);
     if (!proposal) {
@@ -43,13 +43,13 @@ export function getProposal(
       return {
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
-          details: `Federated graph ${proposal.proposal.federatedGraphId} not found`,
+          details: `Federated graph of the proposal not found`,
         },
         currentSubgraphs: [],
       };
     }
 
-    const latestCheck = await proposalRepo.getLatestCheckForProposal(proposal.proposal.id, authContext.organizationId);
+    const latestCheck = await proposalRepo.getLatestCheckForProposal(proposal.proposal.id);
 
     const currentSubgraphs = [];
     for (const subgraph of proposal.proposalSubgraphs) {
