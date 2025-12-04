@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { GroupMapper } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { afterAllSetup, beforeAllSetup, genID, TestUser } from '../src/core/test-util.js';
-import { OrganizationGroupRepository } from "../src/core/repositories/OrganizationGroupRepository.js";
+import { OrganizationGroupRepository } from '../src/core/repositories/OrganizationGroupRepository.js';
 import { createOrganizationGroup, SetupTest } from './test-util.js';
 
 let dbname = '';

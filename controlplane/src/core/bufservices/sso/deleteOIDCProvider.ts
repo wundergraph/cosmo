@@ -31,16 +31,6 @@ export function deleteOIDCProvider(
       throw new UnauthorizedError();
     }
 
-    const oidc = await orgRepo.getFeature({ organizationId: authContext.organizationId, featureId: 'oidc' });
-    if (!oidc?.enabled) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR_UPGRADE_PLAN,
-          details: `OIDC feature is not enabled for this organization.`,
-        },
-      };
-    }
-
     await opts.keycloakClient.authenticateClient();
 
     const organization = await orgRepo.byId(authContext.organizationId);
