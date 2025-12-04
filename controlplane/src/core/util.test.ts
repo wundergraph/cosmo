@@ -4,8 +4,8 @@ import {
   hasLabelsChanged,
   isValidLabels,
   isValidNamespaceName,
-  isValidOrganizationSlug,
 } from './util.js';
+import { organizationSlugSchema } from "./constants.js";
 
 describe('Util', (ctx) => {
   test('Should validate label', () => {
@@ -216,10 +216,14 @@ describe('Util', (ctx) => {
       { slug: '-acme', expected: false },
       { slug: 'ac_24', expected: false },
       { slug: '1a$c', expected: false },
+      { slug: '   ', expected: false },
+      { slug: 'a', expected: false },
+      { slug: 'a'.repeat(50), expected: false },
     ];
 
     for (const entry of slugs) {
-      expect(isValidOrganizationSlug(entry.slug)).equal(entry.expected);
+      const parsed = organizationSlugSchema.safeParse(entry.slug);
+      expect(parsed.success).equal(entry.expected);
     }
   });
 
