@@ -168,6 +168,7 @@ const ProposedSchemas = ({
     {
       checkId,
       checkedSubgraphId: activeSubgraph?.id,
+      subgraphId: activeSubgraph?.subgraphId,
     },
     {
       enabled: !!activeSubgraph && !!activeSubgraphName,

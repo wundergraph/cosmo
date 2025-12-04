@@ -1837,7 +1837,7 @@ export class SubgraphRepository {
     webhookService: OrganizationWebhookService;
   }): Promise<PlainMessage<CheckSubgraphSchemaResponse> & { hasClientTraffic: boolean }> {
     const schemaCheckRepo = new SchemaCheckRepository(this.db);
-    const proposalRepo = new ProposalRepository(this.db);
+    const proposalRepo = new ProposalRepository(this.db, this.organizationId);
     const fedGraphRepo = new FederatedGraphRepository(this.logger, this.db, this.organizationId);
     const subgraphRepo = new SubgraphRepository(this.logger, this.db, this.organizationId);
     const schemaLintRepo = new SchemaLintRepository(this.db);
