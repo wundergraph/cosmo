@@ -11,6 +11,7 @@ export interface AnalyticsFilter {
   title: string;
   selectedOptions?: string[];
   onSelect?: (value?: string[]) => void;
+  validateSelection?: (value: string[]) => boolean; // Returns true if valid, false if invalid
   options: Array<{
     label: string;
     value: string;

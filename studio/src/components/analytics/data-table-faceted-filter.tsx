@@ -19,7 +19,7 @@ import { PlusCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
 import { CheckIcon, PlusCircledIcon } from "@radix-ui/react-icons";
 import { Column } from "@tanstack/react-table";
 import { CustomOptions } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { ComponentType, useEffect, useState } from "react";
+import { ComponentType, useEffect, useMemo, useState } from "react";
 import { MdTextRotationNone } from "react-icons/md";
 import { Input } from "../ui/input";
 import { Slider } from "../ui/slider";
@@ -37,6 +37,7 @@ interface DataTableFacetedFilter<TData, TValue> {
   column?: Column<TData, TValue>;
   id: string;
   onSelect?: (value?: any) => void;
+  validateSelection?: (value: string[]) => boolean; // Returns true if valid, false if invalid
   selectedOptions?: string[];
   title?: string;
   options: Option[];
@@ -177,32 +178,21 @@ const regularFilter = (value: string, search: string) => {
   return 0;
 };
 
-const areAllFilteredOptionsSelected = ({
-  selectedValues,
-  filteredOptions,
-  options,
-}: {
-  selectedValues: Set<string>;
-  filteredOptions: Option[];
-  options: Option[];
-}) => {
-  if (
-    filteredOptions.length === options.length &&
-    selectedValues.size === filteredOptions.length
-  ) {
-    return true;
-  }
-  return filteredOptions.every((option) => selectedValues.has(option.value));
-};
-
 export function DataTableFilterCommands<TData, TValue>({
   onSelect,
+  validateSelection,
   selectedOptions,
   title,
   options,
   customOptions,
 }: DataTableFacetedFilter<TData, TValue>) {
-  const selectedValues = new Set(selectedOptions);
+  // Memoized Set for efficient operations and automatic deduplication
+  // - Use selectedValues (Set) for: display checks (size, has), iteration (Array.from)
+  // - Use selectedOptions (Array) for: building new filter arrays to pass to onSelect
+  const selectedValues = useMemo(
+    () => new Set(selectedOptions ?? []),
+    [selectedOptions],
+  );
   const [input, setInput] = useState("");
   const [range, setRange] = useState<{ start: number; end: number }>({
     start: 0,
@@ -210,8 +200,6 @@ export function DataTableFilterCommands<TData, TValue>({
   });
   let content: React.ReactNode;
 
-  // the options are filtered based on the search input
-  const [filteredOptions, setFilteredOptions] = useState(options);
   const [shouldPrefixSearch, setShouldPrefixSearch] = useState(false);
   const [searchValue, setSearchValue] = useState<string | undefined>(undefined);
 
@@ -239,26 +227,23 @@ export function DataTableFilterCommands<TData, TValue>({
   }: {
     rangeValue: { start: number; end: number };
   }) => {
-    selectedValues.clear();
     setRange({
       start: rangeValue.start,
       end: rangeValue.end,
     });
-    selectedValues.add(
+    // Create new filter values without mutating selectedValues
+    const filterValues = [
       JSON.stringify({
         label: (rangeValue.start * 10 ** 9).toString(),
         value: (rangeValue.start * 10 ** 9).toString(),
         operator: 4,
       }),
-    );
-    selectedValues.add(
       JSON.stringify({
         label: (rangeValue.end * 10 ** 9).toString(),
         value: (rangeValue.end * 10 ** 9).toString(),
         operator: 5,
       }),
-    );
-    const filterValues = Array.from(selectedValues);
+    ];
     onSelect?.(filterValues);
   };
 
@@ -280,14 +265,28 @@ export function DataTableFilterCommands<TData, TValue>({
               className="flex-shrink-0"
               disabled={!input}
               onClick={() => {
-                selectedValues.add(
-                  JSON.stringify({
-                    label: input,
-                    value: input,
-                    operator: 0,
-                  }),
-                );
-                const filterValues = Array.from(selectedValues);
+                const newValue = JSON.stringify({
+                  label: input,
+                  value: input,
+                  operator: 0,
+                });
+
+                // Check if already exists using Set for O(1) lookup
+                if (selectedValues.has(newValue)) {
+                  setInput(""); // Clear input for duplicate
+                  return; // Already exists, don't add duplicate
+                }
+
+                // Build new filter array from selectedOptions (source of truth)
+                const filterValues = [...(selectedOptions ?? []), newValue];
+
+                // Validate BEFORE calling onSelect
+                if (validateSelection && !validateSelection(filterValues)) {
+                  // Don't clear input - let user see what they tried to add
+                  // The parent will show a toast with the error message
+                  return; // Validation failed
+                }
+
                 onSelect?.(filterValues);
                 setInput("");
               }}
@@ -315,8 +314,12 @@ export function DataTableFilterCommands<TData, TValue>({
                         variant="ghost"
                         className="flex-shrink-0 text-muted-foreground"
                         onClick={() => {
-                          selectedValues.delete(JSON.stringify(selected));
-                          const filterValues = Array.from(selectedValues);
+                          // Build new filter array by removing the item from selectedOptions
+                          const filterValues = (selectedOptions ?? []).filter(
+                            (opt) => opt !== val,
+                          );
+
+                          // Removal doesn't need validation (always allowed)
                           onSelect?.(
                             filterValues.length ? filterValues : undefined,
                           );
@@ -375,19 +378,6 @@ export function DataTableFilterCommands<TData, TValue>({
       break;
   }
 
-  useEffect(() => {
-    if (!searchValue) {
-      setFilteredOptions(options);
-      return;
-    }
-    const filtered = options.filter((option) =>
-      shouldPrefixSearch
-        ? option.label.toLowerCase().startsWith(searchValue.toLowerCase())
-        : option.label.toLowerCase().includes(searchValue.toLowerCase()),
-    );
-    setFilteredOptions(filtered);
-  }, [options, searchValue, shouldPrefixSearch]);
-
   return (
     <Command
       className="w-72"
@@ -432,12 +422,23 @@ export function DataTableFilterCommands<TData, TValue>({
                     <CommandItem
                       key={option.value}
                       onSelect={() => {
-                        if (isSelected) {
-                          selectedValues.delete(option.value);
-                        } else {
-                          selectedValues.add(option.value);
+                        // Build new filter array from selectedOptions (source of truth)
+                        const filterValues = isSelected
+                          ? (selectedOptions ?? []).filter(
+                              (v) => v !== option.value,
+                            )
+                          : [...(selectedOptions ?? []), option.value];
+
+                        // Validate BEFORE calling onSelect to prevent optimistic UI updates
+                        if (
+                          filterValues.length > 0 &&
+                          validateSelection &&
+                          !validateSelection(filterValues)
+                        ) {
+                          // Validation failed - don't call onSelect, UI stays unchanged
+                          return;
                         }
-                        const filterValues = Array.from(selectedValues);
+
                         onSelect?.(
                           filterValues.length ? filterValues : undefined,
                         );
@@ -468,40 +469,10 @@ export function DataTableFilterCommands<TData, TValue>({
             )}
           </CommandList>
           <>
-            <Separator orientation="horizontal" />
-            <div className="flex justify-center gap-x-2 pt-1">
-              <Button
-                variant="ghost"
-                className="w-full justify-center text-center"
-                onClick={() => {
-                  const filterValues = Array.from(selectedValues);
-                  onSelect?.(
-                    filterValues.length
-                      ? [
-                          ...filterValues,
-                          ...filteredOptions.map((option) => option.value),
-                        ]
-                      : filteredOptions.map((option) => option.value),
-                  );
-                }}
-                disabled={areAllFilteredOptionsSelected({
-                  selectedValues,
-                  filteredOptions,
-                  options,
-                })}
-              >
-                {areAllFilteredOptionsSelected({
-                  selectedValues,
-                  filteredOptions,
-                  options,
-                })
-                  ? "Selected All"
-                  : "Select All"}
-              </Button>
-
-              {selectedValues.size > 0 && (
-                <>
-                  <Separator orientation="vertical" className="h-8" />
+            {selectedValues.size > 0 && (
+              <>
+                <Separator orientation="horizontal" />
+                <div className="flex justify-center gap-x-2 pt-1">
                   <Button
                     variant="ghost"
                     className="w-full justify-center text-center"
@@ -511,9 +482,9 @@ export function DataTableFilterCommands<TData, TValue>({
                   >
                     Clear Selection
                   </Button>
-                </>
-              )}
-            </div>
+                </div>
+              </>
+            )}
           </>
         </>
       )}
@@ -525,6 +496,7 @@ export function DataTableFilterCommands<TData, TValue>({
 export function DataTableFacetedFilter<TData, TValue>({
   id,
   onSelect,
+  validateSelection,
   selectedOptions,
   title,
   options,
@@ -577,6 +549,7 @@ export function DataTableFacetedFilter<TData, TValue>({
         <DataTableFilterCommands
           id={id}
           onSelect={onSelect}
+          validateSelection={validateSelection}
           selectedOptions={selectedOptions}
           title={title}
           options={options}

@@ -19,6 +19,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useToast } from "@/components/ui/use-toast";
 import useWindowSize from "@/hooks/use-window-size";
 import {
   formatDurationMetric,
@@ -46,9 +47,11 @@ import { useRouter } from "next/router";
 import React, {
   useCallback,
   useContext,
+  useEffect,
   useId,
   useMemo,
   useState,
+  useRef,
 } from "react";
 import {
   Area,
@@ -62,6 +65,154 @@ import {
 } from "recharts";
 import { useWorkspace } from "@/hooks/use-workspace";
 import { useCurrentOrganization } from "@/hooks/use-current-organization";
+
+export const MAX_URL_LENGTH = 10000;
+export const MAX_FILTER_SIZE = 10 * 1024; // 10KB in bytes
+
+/**
+ * Calculates the byte size of a string (UTF-8 encoded)
+ */
+export const calculateByteSize = (str: string): number => {
+  return new Blob([str]).size;
+};
+
+/**
+ * Checks if filter state exceeds URL length or size limits.
+ * Returns an object with exceeded flag and reason message.
+ */
+export const checkFilterLimits = (
+  router: ReturnType<typeof useRouter>,
+  filterState: string,
+): { exceeded: boolean; reason?: string } => {
+  const urlLength = calculateUrlLength(router, { filterState });
+  const filterSize = calculateByteSize(filterState);
+
+  if (urlLength > MAX_URL_LENGTH) {
+    return {
+      exceeded: true,
+      reason: `URL would exceed maximum length of ${MAX_URL_LENGTH.toLocaleString()} characters`,
+    };
+  }
+
+  if (filterSize > MAX_FILTER_SIZE) {
+    return {
+      exceeded: true,
+      reason: `Filter state would exceed maximum size of ${(MAX_FILTER_SIZE / 1024).toFixed(0)}KB`,
+    };
+  }
+
+  return { exceeded: false };
+};
+
+/**
+ * Calculates the length of the URL that would be generated from the given query parameters.
+ * This simulates what the URL would look like after applying the new parameters.
+ *
+ * Note: We calculate the full URL including origin because browsers have limits on total URL length.
+ */
+export const calculateUrlLength = (
+  router: ReturnType<typeof useRouter>,
+  newParams: Record<string, string | string[] | null | undefined>,
+): number => {
+  // Merge existing query params with new params
+  // Remove params that are being set to null, keep others, and add/update new params
+  const mergedQuery: Record<string, string | string[]> = {};
+
+  // First, copy existing params that aren't being replaced or removed
+  for (const [key, value] of Object.entries(router.query)) {
+    if (!newParams.hasOwnProperty(key)) {
+      // Keep existing param if not in newParams
+      if (value !== undefined && value !== null) {
+        mergedQuery[key] = value as string | string[];
+      }
+    } else if (newParams[key] !== null) {
+      // Keep existing param if newParams[key] is not null (will be overridden below)
+      if (value !== undefined && value !== null) {
+        mergedQuery[key] = value as string | string[];
+      }
+    }
+    // If newParams[key] is null, we skip it (removes the param)
+  }
+
+  // Then, add/update with new params (excluding null values)
+  for (const [key, value] of Object.entries(newParams)) {
+    if (value !== null && value !== undefined) {
+      mergedQuery[key] = value;
+    }
+  }
+
+  // Build the query string - Next.js formats arrays as multiple key=value pairs
+  const queryParts: string[] = [];
+  for (const [key, value] of Object.entries(mergedQuery)) {
+    const encodedKey = encodeURIComponent(key);
+    if (Array.isArray(value)) {
+      // Arrays become multiple query params with same key
+      for (const v of value) {
+        queryParts.push(`${encodedKey}=${encodeURIComponent(String(v))}`);
+      }
+    } else {
+      queryParts.push(`${encodedKey}=${encodeURIComponent(String(value))}`);
+    }
+  }
+
+  const queryString = queryParts.join("&");
+
+  // Get the pathname (without existing query string)
+  const pathname = router.asPath.split("?")[0];
+
+  // Construct the full URL (origin + pathname + query string)
+  // Browsers limit the full URL length, so we include origin
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const fullUrl = queryString
+    ? `${origin}${pathname}?${queryString}`
+    : `${origin}${pathname}`;
+
+  return fullUrl.length;
+};
+
+/**
+ * Checks if adding a new filter value would exceed the URL length or size limits.
+ * Returns true if either limit would be exceeded, false otherwise.
+ */
+export const wouldExceedUrlLimit = (
+  router: ReturnType<typeof useRouter>,
+  currentFilters: { id: string; value: string[] }[],
+  filterId: string,
+  newValue: string[],
+): boolean => {
+  if (!newValue || newValue.length === 0) {
+    // Removing filters - always allow
+    return false;
+  }
+
+  // Create a deep copy to avoid mutating the original
+  const newSelected = currentFilters.map((f) => ({
+    ...f,
+    value: [...f.value],
+  }));
+  const index = newSelected.findIndex((f) => f.id === filterId);
+
+  // Update or add the filter
+  if (index >= 0) {
+    newSelected[index].value = newValue;
+  } else {
+    newSelected.push({
+      id: filterId,
+      value: newValue,
+    });
+  }
+
+  let stringifiedFilters;
+  try {
+    stringifiedFilters = JSON.stringify(newSelected);
+  } catch {
+    stringifiedFilters = "[]";
+  }
+
+  // Use shared validation function
+  const { exceeded } = checkFilterLimits(router, stringifiedFilters);
+  return exceeded;
+};
 
 export const getInfoTip = (range?: number) => {
   switch (range) {
@@ -88,6 +239,7 @@ const useTimeRange = () => {
 
 const useSelectedFilters = () => {
   const router = useRouter();
+  const { toast } = useToast();
 
   const selectedFilters = useMemo(() => {
     try {
@@ -97,20 +249,51 @@ const useSelectedFilters = () => {
     }
   }, [router.query.filterState]);
 
+  // Validate URL length and filter size when filters are loaded from URL (e.g., manual manipulation)
+  useEffect(() => {
+    if (!router.isReady || !router.query.filterState) return;
+
+    const { exceeded, reason } = checkFilterLimits(
+      router,
+      router.query.filterState as string,
+    );
+
+    if (exceeded) {
+      toast({
+        title: "Filter limit reached",
+        description: `${reason}. Filters have been reset.`,
+      });
+
+      // Reset to clean URL by removing filterState entirely
+      const { filterState, ...cleanQuery } = router.query;
+      router.replace(
+        {
+          query: cleanQuery,
+        },
+        undefined,
+        { shallow: true },
+      );
+    }
+    // Only depend on the specific values we check, not the whole router/toast objects
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.isReady, router.query.filterState]);
+
   return selectedFilters as { id: string; value: string[] }[];
 };
 
 export const useMetricsFilters = (filters: AnalyticsViewResultFilter[]) => {
   const router = useRouter();
+  const { toast } = useToast();
 
   const applyNewParams = useCallback(
     (newParams: Record<string, string | null>, unset?: string[]) => {
-      const q = Object.fromEntries(
+      const mergedParams = Object.fromEntries(
         Object.entries(router.query).filter(([key]) => !unset?.includes(key)),
       );
+
       router.push({
         query: {
-          ...q,
+          ...mergedParams,
           ...newParams,
         },
       });
@@ -125,8 +308,11 @@ export const useMetricsFilters = (filters: AnalyticsViewResultFilter[]) => {
       ...filter,
       id: filter.columnName,
       onSelect: (value) => {
-        const newSelected = [...selectedFilters];
-
+        // Create a deep copy to avoid mutating the original
+        const newSelected = selectedFilters.map((f) => ({
+          ...f,
+          value: [...f.value],
+        }));
         const index = newSelected.findIndex((f) => f.id === filter.columnName);
 
         if (!value || value.length === 0) {
@@ -148,6 +334,7 @@ export const useMetricsFilters = (filters: AnalyticsViewResultFilter[]) => {
         } catch {
           stringifiedFilters = "[]";
         }
+
         applyNewParams({
           filterState: stringifiedFilters,
         });
@@ -172,10 +359,59 @@ export const useMetricsFilters = (filters: AnalyticsViewResultFilter[]) => {
     });
   };
 
+  // Check if current URL is at or near the limit
+  // We need to recalculate when router.query changes
+  const currentUrlLength = useMemo(() => {
+    return calculateUrlLength(router, {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.query, router.asPath]);
+
+  const isUrlLimitReached = currentUrlLength >= MAX_URL_LENGTH;
+
+  // Use a ref to track the latest selectedFilters to avoid stale closures
+  const selectedFiltersRef = useRef(selectedFilters);
+  selectedFiltersRef.current = selectedFilters;
+
+  const filtersListWithValidation = useMemo(() => {
+    return filtersList.map((filter) => {
+      return {
+        ...filter,
+        // ALWAYS validate selection to check if NEW addition would exceed the limit
+        validateSelection: (value: string[]) => {
+          // Use ref to get latest selectedFilters to avoid stale closure
+          const currentSelectedFilters = selectedFiltersRef.current;
+
+          // Check if adding/modifying this filter would exceed the limit
+          if (
+            wouldExceedUrlLimit(
+              router,
+              currentSelectedFilters,
+              filter.id,
+              value,
+            )
+          ) {
+            toast({
+              title: "Filter limit reached",
+              description: `Maximum URL length of ${MAX_URL_LENGTH.toLocaleString()} characters reached. Please remove some filters before adding new ones.`,
+            });
+            return false; // Validation failed - prevents onSelect from being called
+          }
+
+          return true; // Validation passed - allows onSelect to be called
+        },
+        onSelect: filter.onSelect, // Use original onSelect without wrapping
+      };
+    });
+
+    // Only filtersList should trigger recalculation
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtersList]);
+
   return {
-    filtersList,
+    filtersList: filtersListWithValidation,
     selectedFilters,
     resetFilters,
+    isUrlLimitReached,
   };
 };
 
@@ -364,12 +600,7 @@ interface SparklineProps {
 }
 
 const Sparkline: React.FC<SparklineProps> = (props) => {
-  const {
-    timeRange = 24,
-    valueFormatter,
-    syncId,
-    className,
-  } = props;
+  const { timeRange = 24, valueFormatter, syncId, className } = props;
   const id = useId();
 
   const { data, ticks, domain, timeFormatter } = useChartData(
