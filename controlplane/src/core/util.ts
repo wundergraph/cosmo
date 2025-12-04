@@ -693,3 +693,21 @@ export function sanitizeReadme(value: string | undefined | null): string | null 
   const trimmedValue = value.trim();
   return trimmedValue.length === 0 ? null : DOMPurify.sanitize(trimmedValue);
 }
+
+export function isValidLocalhostOrSecureEndpoint(value: string) {
+  if (!value) {
+    return false;
+  }
+
+  let isValid = false;
+  try {
+    const endpoint = new URL(value);
+    isValid =
+      (endpoint.hostname === 'localhost' && (endpoint.protocol === 'http:' || endpoint.protocol === 'https:')) ||
+      (endpoint.hostname !== 'localhost' && endpoint.protocol === 'https:');
+  } catch {
+    // ignore
+  }
+
+  return isValid;
+}
