@@ -372,8 +372,11 @@ type EngineDebugConfiguration struct {
 	ReportWebSocketConnections                   bool `envDefault:"false" env:"ENGINE_DEBUG_REPORT_WEBSOCKET_CONNECTIONS" yaml:"report_websocket_connections"`
 	ReportMemoryUsage                            bool `envDefault:"false" env:"ENGINE_DEBUG_REPORT_MEMORY_USAGE" yaml:"report_memory_usage"`
 	EnableResolverDebugging                      bool `envDefault:"false" env:"ENGINE_DEBUG_ENABLE_RESOLVER_DEBUGGING" yaml:"enable_resolver_debugging"`
+	// EnablePersistedOperationsCacheResponseHeader is deprecated, use EnableCacheResponseHeaders instead.
 	EnablePersistedOperationsCacheResponseHeader bool `envDefault:"false" env:"ENGINE_DEBUG_ENABLE_PERSISTED_OPERATIONS_CACHE_RESPONSE_HEADER" yaml:"enable_persisted_operations_cache_response_header"`
+	// EnableNormalizationCacheResponseHeader is deprecated, use EnableCacheResponseHeaders instead.
 	EnableNormalizationCacheResponseHeader       bool `envDefault:"false" env:"ENGINE_DEBUG_ENABLE_NORMALIZATION_CACHE_RESPONSE_HEADER" yaml:"enable_normalization_cache_response_header"`
+	EnableCacheResponseHeaders                   bool `envDefault:"false" env:"ENGINE_DEBUG_ENABLE_CACHE_RESPONSE_HEADERS" yaml:"enable_cache_response_headers"`
 	AlwaysIncludeQueryPlan                       bool `envDefault:"false" env:"ENGINE_DEBUG_ALWAYS_INCLUDE_QUERY_PLAN" yaml:"always_include_query_plan"`
 	AlwaysSkipLoader                             bool `envDefault:"false" env:"ENGINE_DEBUG_ALWAYS_SKIP_LOADER" yaml:"always_skip_loader"`
 }
@@ -390,7 +393,8 @@ type EngineExecutionConfiguration struct {
 	// ForceEnableInboundRequestDeduplication forces enable inbound request deduplication, even when PreOriginHandlers are configured
 	ForceEnableInboundRequestDeduplication           bool          `envDefault:"false" env:"ENGINE_FORCE_ENABLE_INBOUND_REQUEST_DEDUPLICATION" yaml:"force_enable_inbound_request_deduplication"`
 	EnableRequestTracing                             bool          `envDefault:"true" env:"ENGINE_ENABLE_REQUEST_TRACING" yaml:"enable_request_tracing"`
-	EnableExecutionPlanCacheResponseHeader           bool          `envDefault:"false" env:"ENGINE_ENABLE_EXECUTION_PLAN_CACHE_RESPONSE_HEADER" yaml:"enable_execution_plan_cache_response_header"`
+	// EnableExecutionPlanCacheResponseHeader is deprecated, use EngineDebugConfiguration.EnableCacheResponseHeaders instead.
+	EnableExecutionPlanCacheResponseHeader          bool          `envDefault:"false" env:"ENGINE_ENABLE_EXECUTION_PLAN_CACHE_RESPONSE_HEADER" yaml:"enable_execution_plan_cache_response_header"`
 	MaxConcurrentResolvers                           int           `envDefault:"1024" env:"ENGINE_MAX_CONCURRENT_RESOLVERS" yaml:"max_concurrent_resolvers,omitempty"`
 	EnableNetPoll                                    bool          `envDefault:"true" env:"ENGINE_ENABLE_NET_POLL" yaml:"enable_net_poll"`
 	WebSocketClientPollTimeout                       time.Duration `envDefault:"1s" env:"ENGINE_WEBSOCKET_CLIENT_POLL_TIMEOUT" yaml:"websocket_client_poll_timeout,omitempty"`

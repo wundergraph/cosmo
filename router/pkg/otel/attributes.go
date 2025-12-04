@@ -37,6 +37,8 @@ const (
 	WgAcquireResolverWaitTimeMs        = attribute.Key("wg.engine.resolver.wait_time_ms")
 	WgResolverDeduplicatedRequest      = attribute.Key("wg.engine.resolver.deduplicated_request")
 	WgNormalizationCacheHit            = attribute.Key("wg.engine.normalization_cache_hit")
+	WgVariablesNormalizationCacheHit   = attribute.Key("wg.engine.variables_normalization_cache_hit")
+	WgVariablesRemappingCacheHit       = attribute.Key("wg.engine.variables_remapping_cache_hit")
 	WgValidationCacheHit               = attribute.Key("wg.engine.validation_cache_hit")
 	WgVariablesValidationSkipped       = attribute.Key("wg.engine.variables_validation_skipped")
 	WgQueryDepth                       = attribute.Key("wg.operation.complexity.query_depth")

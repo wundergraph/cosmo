@@ -581,6 +581,38 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("type", "hits"),
+							)...),
+							Value: 1,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("type", "misses"),
+							)...),
+							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "remap_variables"),
+								attribute.String("type", "hits"),
+							)...),
+							Value: 1,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "remap_variables"),
+								attribute.String("type", "misses"),
+							)...),
+							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
 								attribute.String("cache_type", "validation"),
 								attribute.String("type", "hits"),
 							)...),
@@ -665,6 +697,52 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
 								attribute.String("cache_type", "query_normalization"),
+								attribute.String("operation", "updated"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("operation", "updated"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "remap_variables"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "remap_variables"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "remap_variables"),
 								attribute.String("operation", "updated"),
 							)...),
 							Value: 0,
@@ -760,6 +838,36 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 						},
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: baseCost * 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "remap_variables"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: baseCost * 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "remap_variables"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
 								attribute.String("cache_type", "validation"),
 								attribute.String("operation", "added"),
 							)...),
@@ -809,6 +917,20 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
 								attribute.String("cache_type", "query_normalization"),
+							)...),
+							Value: 1024,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+							)...),
+							Value: 1024,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "remap_variables"),
 							)...),
 							Value: 1024,
 						},
@@ -959,6 +1081,38 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("type", "hits"),
+							)...),
+							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("type", "misses"),
+							)...),
+							Value: 4,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "remap_variables"),
+								attribute.String("type", "hits"),
+							)...),
+							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "remap_variables"),
+								attribute.String("type", "misses"),
+							)...),
+							Value: 4,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
 								attribute.String("cache_type", "validation"),
 								attribute.String("type", "hits"),
 							)...),
@@ -1043,6 +1197,52 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
 								attribute.String("cache_type", "query_normalization"),
+								attribute.String("operation", "updated"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 4,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("operation", "updated"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "remap_variables"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 4,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "remap_variables"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "remap_variables"),
 								attribute.String("operation", "updated"),
 							)...),
 							Value: 0,
@@ -1138,6 +1338,36 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 						},
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: baseCost * 4,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "remap_variables"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: baseCost * 4,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "remap_variables"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
 								attribute.String("cache_type", "validation"),
 								attribute.String("operation", "added"),
 							)...),
@@ -1187,6 +1417,20 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
 								attribute.String("cache_type", "query_normalization"),
+							)...),
+							Value: 1024,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+							)...),
+							Value: 1024,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "remap_variables"),
 							)...),
 							Value: 1024,
 						},
@@ -1301,6 +1545,38 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("type", "hits"),
+							)...),
+							Value: 1,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("type", "misses"),
+							)...),
+							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "remap_variables"),
+								attribute.String("type", "hits"),
+							)...),
+							Value: 1,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "remap_variables"),
+								attribute.String("type", "misses"),
+							)...),
+							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
 								attribute.String("cache_type", "validation"),
 								attribute.String("type", "hits"),
 							)...),
@@ -1385,6 +1661,52 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
 								attribute.String("cache_type", "query_normalization"),
+								attribute.String("operation", "updated"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("operation", "updated"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "remap_variables"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "remap_variables"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "remap_variables"),
 								attribute.String("operation", "updated"),
 							)...),
 							Value: 0,
@@ -1480,6 +1802,36 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 						},
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: baseCost * 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "remap_variables"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: baseCost * 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "remap_variables"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
 								attribute.String("cache_type", "validation"),
 								attribute.String("operation", "added"),
 							)...),
@@ -1529,6 +1881,20 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
 								attribute.String("cache_type", "query_normalization"),
+							)...),
+							Value: 1024,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+							)...),
+							Value: 1024,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "remap_variables"),
 							)...),
 							Value: 1024,
 						},
@@ -1645,6 +2011,38 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("type", "hits"),
+							)...),
+							Value: 1,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("type", "misses"),
+							)...),
+							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "remap_variables"),
+								attribute.String("type", "hits"),
+							)...),
+							Value: 1,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "remap_variables"),
+								attribute.String("type", "misses"),
+							)...),
+							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
 								attribute.String("cache_type", "validation"),
 								attribute.String("type", "hits"),
 							)...),
@@ -1729,6 +2127,52 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
 								attribute.String("cache_type", "query_normalization"),
+								attribute.String("operation", "updated"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("operation", "updated"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "remap_variables"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "remap_variables"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "remap_variables"),
 								attribute.String("operation", "updated"),
 							)...),
 							Value: 0,
@@ -1824,6 +2268,36 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 						},
 						{
 							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: baseCost * 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
+								attribute.String("cache_type", "remap_variables"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: baseCost * 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "remap_variables"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(baseAttributes,
 								attribute.String("cache_type", "validation"),
 								attribute.String("operation", "added"),
 							)...),
@@ -1873,6 +2347,20 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 							Attributes: attribute.NewSet(append(
 								baseAttributes,
 								attribute.String("cache_type", "query_normalization"),
+							)...),
+							Value: 1024,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+							)...),
+							Value: 1024,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								baseAttributes,
+								attribute.String("cache_type", "remap_variables"),
 							)...),
 							Value: 1024,
 						},
@@ -2018,6 +2506,38 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								mainAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("type", "hits"),
+							)...),
+							Value: 1,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								mainAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("type", "misses"),
+							)...),
+							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								mainAttributes,
+								attribute.String("cache_type", "remap_variables"),
+								attribute.String("type", "hits"),
+							)...),
+							Value: 1,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								mainAttributes,
+								attribute.String("cache_type", "remap_variables"),
+								attribute.String("type", "misses"),
+							)...),
+							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								mainAttributes,
 								attribute.String("cache_type", "persisted_query_normalization"),
 								attribute.String("type", "hits"),
 							)...),
@@ -2076,6 +2596,38 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 							Attributes: attribute.NewSet(append(
 								featureFlagAttributes,
 								attribute.String("cache_type", "query_normalization"),
+								attribute.String("type", "misses"),
+							)...),
+							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								featureFlagAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("type", "hits"),
+							)...),
+							Value: 1,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								featureFlagAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("type", "misses"),
+							)...),
+							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								featureFlagAttributes,
+								attribute.String("cache_type", "remap_variables"),
+								attribute.String("type", "hits"),
+							)...),
+							Value: 1,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								featureFlagAttributes,
+								attribute.String("cache_type", "remap_variables"),
 								attribute.String("type", "misses"),
 							)...),
 							Value: 2,
@@ -2169,6 +2721,54 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 							Attributes: attribute.NewSet(append(
 								mainAttributes,
 								attribute.String("cache_type", "query_normalization"),
+								attribute.String("operation", "updated"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								mainAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								mainAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								mainAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("operation", "updated"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								mainAttributes,
+								attribute.String("cache_type", "remap_variables"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								mainAttributes,
+								attribute.String("cache_type", "remap_variables"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								mainAttributes,
+								attribute.String("cache_type", "remap_variables"),
 								attribute.String("operation", "updated"),
 							)...),
 							Value: 0,
@@ -2274,6 +2874,54 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								featureFlagAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								featureFlagAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								featureFlagAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("operation", "updated"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								featureFlagAttributes,
+								attribute.String("cache_type", "remap_variables"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								featureFlagAttributes,
+								attribute.String("cache_type", "remap_variables"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								featureFlagAttributes,
+								attribute.String("cache_type", "remap_variables"),
+								attribute.String("operation", "updated"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								featureFlagAttributes,
 								attribute.String("cache_type", "persisted_query_normalization"),
 								attribute.String("operation", "added"),
 							)...),
@@ -2367,6 +3015,38 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								mainAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: baseCost * 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								mainAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								mainAttributes,
+								attribute.String("cache_type", "remap_variables"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: baseCost * 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								mainAttributes,
+								attribute.String("cache_type", "remap_variables"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								mainAttributes,
 								attribute.String("cache_type", "persisted_query_normalization"),
 								attribute.String("operation", "added"),
 							)...),
@@ -2432,6 +3112,38 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								featureFlagAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: baseCost * 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								featureFlagAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								featureFlagAttributes,
+								attribute.String("cache_type", "remap_variables"),
+								attribute.String("operation", "added"),
+							)...),
+							Value: baseCost * 2,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								featureFlagAttributes,
+								attribute.String("cache_type", "remap_variables"),
+								attribute.String("operation", "evicted"),
+							)...),
+							Value: 0,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								featureFlagAttributes,
 								attribute.String("cache_type", "persisted_query_normalization"),
 								attribute.String("operation", "added"),
 							)...),
@@ -2489,6 +3201,20 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(append(
 								mainAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+							)...),
+							Value: 1024,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								mainAttributes,
+								attribute.String("cache_type", "remap_variables"),
+							)...),
+							Value: 1024,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								mainAttributes,
 								attribute.String("cache_type", "persisted_query_normalization"),
 							)...),
 							Value: 1024,
@@ -2512,6 +3238,20 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 							Attributes: attribute.NewSet(append(
 								featureFlagAttributes,
 								attribute.String("cache_type", "query_normalization"),
+							)...),
+							Value: 1024,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								featureFlagAttributes,
+								attribute.String("cache_type", "variables_normalization"),
+							)...),
+							Value: 1024,
+						},
+						{
+							Attributes: attribute.NewSet(append(
+								featureFlagAttributes,
+								attribute.String("cache_type", "remap_variables"),
 							)...),
 							Value: 1024,
 						},
@@ -3015,7 +3755,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			// Span attributes
 
-			require.Len(t, sn[2].Attributes(), 11)
+			require.Len(t, sn[2].Attributes(), 13)
 
 			require.Contains(t, sn[2].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[2].Attributes(), otel.WgRouterClusterName.String(""))
@@ -3738,7 +4478,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			// Span attributes
 
-			require.Len(t, sn[2].Attributes(), 11)
+			require.Len(t, sn[2].Attributes(), 13)
 
 			require.Contains(t, sn[2].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[2].Attributes(), otel.WgRouterClusterName.String(""))
@@ -4193,7 +4933,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			// Span attributes
 
-			require.Len(t, sn[2].Attributes(), 11)
+			require.Len(t, sn[2].Attributes(), 13)
 
 			require.Contains(t, sn[2].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[2].Attributes(), otel.WgRouterClusterName.String(""))
@@ -6355,7 +7095,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, sn[1].Attributes(), otel.WgFeatureFlag.String("myff"))
 
 			require.Equal(t, "Operation - Normalize", sn[2].Name())
-			require.Len(t, sn[2].Attributes(), 12)
+			require.Len(t, sn[2].Attributes(), 14)
 			require.Contains(t, sn[2].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()))
 			require.Contains(t, sn[2].Attributes(), otel.WgFeatureFlag.String("myff"))
 
@@ -8812,7 +9552,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 				require.Equal(t, "Operation - Normalize", sn[2].Name())
 				require.Len(t, sn[2].Resource().Attributes(), 9)
-				require.Len(t, sn[2].Attributes(), 11)
+				require.Len(t, sn[2].Attributes(), 13)
 
 				require.Equal(t, "Operation - Validate", sn[3].Name())
 				require.Len(t, sn[3].Resource().Attributes(), 9)
@@ -10965,6 +11705,34 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 								{
 									Attributes: attribute.NewSet(append(
 										mainAttributes,
+										attribute.String("cache_type", "variables_normalization"),
+										attribute.String("type", "hits"),
+									)...),
+								},
+								{
+									Attributes: attribute.NewSet(append(
+										mainAttributes,
+										attribute.String("cache_type", "variables_normalization"),
+										attribute.String("type", "misses"),
+									)...),
+								},
+								{
+									Attributes: attribute.NewSet(append(
+										mainAttributes,
+										attribute.String("cache_type", "remap_variables"),
+										attribute.String("type", "hits"),
+									)...),
+								},
+								{
+									Attributes: attribute.NewSet(append(
+										mainAttributes,
+										attribute.String("cache_type", "remap_variables"),
+										attribute.String("type", "misses"),
+									)...),
+								},
+								{
+									Attributes: attribute.NewSet(append(
+										mainAttributes,
 										attribute.String("cache_type", "persisted_query_normalization"),
 										attribute.String("type", "hits"),
 									)...),
@@ -11016,6 +11784,34 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 									Attributes: attribute.NewSet(append(
 										featureFlagAttributes,
 										attribute.String("cache_type", "query_normalization"),
+										attribute.String("type", "misses"),
+									)...),
+								},
+								{
+									Attributes: attribute.NewSet(append(
+										featureFlagAttributes,
+										attribute.String("cache_type", "variables_normalization"),
+										attribute.String("type", "hits"),
+									)...),
+								},
+								{
+									Attributes: attribute.NewSet(append(
+										featureFlagAttributes,
+										attribute.String("cache_type", "variables_normalization"),
+										attribute.String("type", "misses"),
+									)...),
+								},
+								{
+									Attributes: attribute.NewSet(append(
+										featureFlagAttributes,
+										attribute.String("cache_type", "remap_variables"),
+										attribute.String("type", "hits"),
+									)...),
+								},
+								{
+									Attributes: attribute.NewSet(append(
+										featureFlagAttributes,
+										attribute.String("cache_type", "remap_variables"),
 										attribute.String("type", "misses"),
 									)...),
 								},
