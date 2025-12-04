@@ -3222,7 +3222,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			// Span attributes
 
-			require.Len(t, sn[7].Attributes(), 11)
+			require.Len(t, sn[7].Attributes(), 12)
 			require.Contains(t, sn[7].Attributes(), otel.WgClientName.String("unknown"))
 			require.Contains(t, sn[7].Attributes(), otel.WgClientVersion.String("missing"))
 			require.Contains(t, sn[7].Attributes(), otel.WgOperationName.String(""))
@@ -3235,6 +3235,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, sn[7].Attributes(), otel.WgFederatedGraphID.String("graph"))
 			require.Contains(t, sn[7].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
 			require.Contains(t, sn[7].Attributes(), otel.WgAcquireResolverWaitTimeMs.Int64(0))
+			require.Contains(t, sn[7].Attributes(), otel.WgResolverDeduplicatedRequest.Bool(false))
 
 			// Root Server middleware
 			require.Equal(t, "query unnamed", sn[8].Name())
@@ -3944,7 +3945,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			// Span attributes
 
-			require.Len(t, sn[7].Attributes(), 11)
+			require.Len(t, sn[7].Attributes(), 12)
 			require.Contains(t, sn[7].Attributes(), otel.WgClientName.String("unknown"))
 			require.Contains(t, sn[7].Attributes(), otel.WgClientVersion.String("missing"))
 			require.Contains(t, sn[7].Attributes(), otel.WgOperationName.String(""))
@@ -4399,7 +4400,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			// Span attributes
 
-			require.Len(t, sn[7].Attributes(), 11)
+			require.Len(t, sn[7].Attributes(), 12)
 			require.Contains(t, sn[7].Attributes(), otel.WgClientName.String("unknown"))
 			require.Contains(t, sn[7].Attributes(), otel.WgClientVersion.String("missing"))
 			require.Contains(t, sn[7].Attributes(), otel.WgOperationName.String(""))
@@ -6380,7 +6381,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, sn[6].Attributes(), otel.WgFeatureFlag.String("myff"))
 
 			require.Equal(t, "Operation - Execute", sn[7].Name())
-			require.Len(t, sn[7].Attributes(), 12)
+			require.Len(t, sn[7].Attributes(), 13)
 			require.Contains(t, sn[7].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()))
 			require.Contains(t, sn[7].Attributes(), otel.WgFeatureFlag.String("myff"))
 
@@ -8833,7 +8834,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				// GraphQL handler
 				require.Equal(t, "Operation - Execute", sn[7].Name())
 				require.Len(t, sn[7].Resource().Attributes(), 9)
-				require.Len(t, sn[7].Attributes(), 11)
+				require.Len(t, sn[7].Attributes(), 12)
 
 				// Root Server middleware
 				require.Equal(t, "query unnamed", sn[8].Name())

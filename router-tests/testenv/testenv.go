@@ -427,6 +427,14 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 			return nil, err
 		}
 
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+
+		err = client.Ping(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not connect to kafka: %w", err)
+		}
+
 		kafkaClient = client
 		kafkaAdminClient = kadm.NewClient(kafkaClient)
 	}
@@ -852,6 +860,14 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		)
 		if err != nil {
 			return nil, err
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+
+		err = client.Ping(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not connect to kafka: %w", err)
 		}
 
 		kafkaClient = client
