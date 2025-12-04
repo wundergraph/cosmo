@@ -747,6 +747,7 @@
       "EnableResolverDebugging": false,
       "EnablePersistedOperationsCacheResponseHeader": false,
       "EnableNormalizationCacheResponseHeader": false,
+      "EnableCacheResponseHeaders": false,
       "AlwaysIncludeQueryPlan": false,
       "AlwaysSkipLoader": false
     },
