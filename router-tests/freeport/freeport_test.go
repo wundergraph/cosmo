@@ -11,7 +11,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/hashicorp/consul/sdk/testutil/retry"
+	"github.com/wundergraph/cosmo/router-tests/freeport/retry"
 )
 
 func TestTakeReturn(t *testing.T) {
