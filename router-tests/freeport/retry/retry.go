@@ -121,10 +121,6 @@ func (r *R) Stop(err error) {
 	r.done = true
 }
 
-func (r *R) failCurrentAttempt() {
-	r.getCurrentAttempt().failed = true
-}
-
 func (r *R) log(s string) {
 	a := r.getCurrentAttempt()
 	a.output = append(a.output, decorate(s))
