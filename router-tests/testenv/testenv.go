@@ -652,8 +652,7 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		cfg.MCP.Server.ListenAddr = fmt.Sprintf("localhost:%d", freeport.GetOne(t))
 	}
 
-	routerPort := freeport.GetOne(t)
-	listenerAddr := fmt.Sprintf("localhost:%d", routerPort)
+	listenerAddr := fmt.Sprintf("localhost:%d", freeport.GetOne(t))
 	baseURL := fmt.Sprintf("http://%s", listenerAddr)
 
 	rs, err := core.NewRouterSupervisor(&core.RouterSupervisorOpts{
@@ -664,7 +663,6 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		RouterFactory: func(ctx context.Context, res *core.RouterResources) (*core.Router, error) {
 			rr, err := configureRouter(listenerAddr, cfg, &routerConfig, cdnServer, natsSetup)
 			if err != nil {
-				freeport.Return([]int{cfg.PrometheusPort, routerPort})
 				cancel(err)
 				return nil, err
 			}
@@ -1076,11 +1074,9 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		cfg.MCP.Server.ListenAddr = fmt.Sprintf("localhost:%d", freeport.GetOne(t))
 	}
 
-	routerPort := freeport.GetOne(t)
-	listenerAddr := fmt.Sprintf("localhost:%d", routerPort)
+	listenerAddr := fmt.Sprintf("localhost:%d", freeport.GetOne(t))
 	rr, err := configureRouter(listenerAddr, cfg, &routerConfig, cdnServer, natsSetup)
 	if err != nil {
-		freeport.Return([]int{cfg.PrometheusPort, routerPort})
 		cancel(err)
 		return nil, err
 	}
@@ -1121,7 +1117,6 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	if err := rr.Start(ctx); err != nil {
-		freeport.Return([]int{cfg.PrometheusPort, routerPort})
 		cancel(err)
 		return nil, err
 	}
