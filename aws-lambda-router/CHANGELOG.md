@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.39.1](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.39.0...aws-lambda-router@0.39.1) (2025-12-04)
+
+### Bug Fixes
+
+* cache vars and remapping normalization ([#2318](https://github.com/wundergraph/cosmo/issues/2318)) ([d0e45f6](https://github.com/wundergraph/cosmo/commit/d0e45f65fb9bef61925dd434b9fda37d999fa5fd)) (@devsergiy)
+
 # [0.39.0](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.38.4...aws-lambda-router@0.39.0) (2025-09-06)
 
 ### Features

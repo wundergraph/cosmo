@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.145.1](https://github.com/wundergraph/cosmo/compare/studio@0.145.0...studio@0.145.1) (2025-12-04)
+
+### Bug Fixes
+
+* limit the url of analytics pages to a max of 10k characters or 10kb ([#2383](https://github.com/wundergraph/cosmo/issues/2383)) ([44916c7](https://github.com/wundergraph/cosmo/commit/44916c79ce5d17064e50ccdccb938af276a068e0)) (@JivusAyrus)
+* validate organization ownership for fetched proposals and proposal details ([#2389](https://github.com/wundergraph/cosmo/issues/2389)) ([395a5f5](https://github.com/wundergraph/cosmo/commit/395a5f5236a828c6e2038690e4df597f35f106fc)) (@JivusAyrus)
+
 # [0.145.0](https://github.com/wundergraph/cosmo/compare/studio@0.144.0...studio@0.145.0) (2025-12-03)
 
 ### Features
