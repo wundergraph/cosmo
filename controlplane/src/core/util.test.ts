@@ -1,11 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import {
-  extractOperationNames,
-  hasLabelsChanged,
-  isValidLabels,
-  isValidNamespaceName,
-} from './util.js';
-import { organizationSlugSchema } from "./constants.js";
+import { extractOperationNames, hasLabelsChanged, isValidLabels, isValidNamespaceName } from './util.js';
+import { organizationSlugSchema } from './constants.js';
 
 describe('Util', (ctx) => {
   test('Should validate label', () => {

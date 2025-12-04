@@ -14,7 +14,7 @@ import type { RouterOptions } from '../../routes.js';
 import { BillingService } from '../../services/BillingService.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
-import { organizationSchema } from "../../constants.js";
+import { organizationSchema } from '../../constants.js';
 
 export function createOrganization(
   opts: RouterOptions,

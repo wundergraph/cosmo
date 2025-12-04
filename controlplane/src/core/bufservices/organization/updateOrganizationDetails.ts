@@ -10,7 +10,7 @@ import { OrganizationRepository } from '../../repositories/OrganizationRepositor
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
-import { organizationSchema } from "../../constants.js";
+import { organizationSchema } from '../../constants.js';
 
 export function updateOrganizationDetails(
   opts: RouterOptions,
@@ -58,7 +58,6 @@ export function updateOrganizationDetails(
     if (!orgMember.rbac.isOrganizationAdmin) {
       throw new UnauthorizedError();
     }
-
 
     const validatedReq = organizationSchema.safeParse({ name: req.organizationName, slug: req.organizationSlug });
     if (!validatedReq.success) {
