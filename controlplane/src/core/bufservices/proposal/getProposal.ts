@@ -25,7 +25,7 @@ export function getProposal(
 
     const federatedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
-    const proposalRepo = new ProposalRepository(opts.db);
+    const proposalRepo = new ProposalRepository(opts.db, authContext.organizationId);
 
     const proposal = await proposalRepo.ById(req.proposalId);
     if (!proposal) {
@@ -49,7 +49,7 @@ export function getProposal(
       };
     }
 
-    const latestCheck = await proposalRepo.getLatestCheckForProposal(proposal.proposal.id, authContext.organizationId);
+    const latestCheck = await proposalRepo.getLatestCheckForProposal(proposal.proposal.id);
 
     const currentSubgraphs = [];
     for (const subgraph of proposal.proposalSubgraphs) {
