@@ -25,7 +25,7 @@ export function getNamespaceProposalConfig(
     logger = enrichLogger(ctx, logger, authContext);
     const organizationRepo = new OrganizationRepository(logger, opts.db);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
-    const proposalRepo = new ProposalRepository(opts.db);
+    const proposalRepo = new ProposalRepository(opts.db, authContext.organizationId);
 
     const proposalsFeature = await organizationRepo.getFeature({
       organizationId: authContext.organizationId,

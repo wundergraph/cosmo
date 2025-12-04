@@ -2736,6 +2736,7 @@ message SetGraphRouterCompatibilityVersionResponse {
 message GetProposedSchemaOfCheckedSubgraphRequest {
   string checkId = 1;
   string checkedSubgraphId = 2;
+  string subgraphId = 3;
 }
 
 message GetProposedSchemaOfCheckedSubgraphResponse {
