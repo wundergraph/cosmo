@@ -51,7 +51,7 @@ type FactoryResolver interface {
 }
 
 type ApiTransportFactory interface {
-	RoundTripper(enableSingleFlight bool, transport http.RoundTripper) http.RoundTripper
+	RoundTripper(transport http.RoundTripper) http.RoundTripper
 	DefaultHTTPProxyURL() *url.URL
 }
 
@@ -60,7 +60,6 @@ type DefaultFactoryResolver struct {
 	log    *zap.Logger
 
 	engineCtx          context.Context
-	enableSingleFlight bool
 	streamingClient    *http.Client
 	subscriptionClient graphql_datasource.GraphQLSubscriptionClient
 
@@ -80,7 +79,6 @@ func NewDefaultFactoryResolver(
 	subgraphTransports map[string]http.RoundTripper,
 	connector *grpcconnector.Connector,
 	log *zap.Logger,
-	enableSingleFlight bool,
 	enableNetPoll bool,
 	instanceData InstanceData,
 ) *DefaultFactoryResolver {
@@ -88,11 +86,11 @@ func NewDefaultFactoryResolver(
 
 	defaultHTTPClient := &http.Client{
 		Timeout:   transportOptions.SubgraphTransportOptions.RequestTimeout,
-		Transport: transportFactory.RoundTripper(enableSingleFlight, baseTransport),
+		Transport: transportFactory.RoundTripper(baseTransport),
 	}
 
 	streamingClient := &http.Client{
-		Transport: transportFactory.RoundTripper(enableSingleFlight, baseTransport),
+		Transport: transportFactory.RoundTripper(baseTransport),
 	}
 
 	subgraphHTTPClients := map[string]*http.Client{}
@@ -105,7 +103,7 @@ func NewDefaultFactoryResolver(
 
 		// make a new http client
 		subgraphClient := &http.Client{
-			Transport: transportFactory.RoundTripper(enableSingleFlight, subgraphTransport),
+			Transport: transportFactory.RoundTripper(subgraphTransport),
 			Timeout:   subgraphOpts.RequestTimeout,
 		}
 
@@ -155,7 +153,6 @@ func NewDefaultFactoryResolver(
 		log:                log,
 		factoryLogger:      factoryLogger,
 		engineCtx:          ctx,
-		enableSingleFlight: enableSingleFlight,
 		streamingClient:    streamingClient,
 		subscriptionClient: subscriptionClient,
 

@@ -1,15 +1,16 @@
 package graphqlschemausage
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
+	"net/http"
 	"testing"
 
 	"github.com/jensneuse/abstractlogger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/astjson"
+	"github.com/wundergraph/go-arena"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
@@ -206,7 +207,7 @@ func TestGetSchemaUsageInfo(t *testing.T) {
 	inputVariables, err := astjson.ParseBytes(op.Input.Variables)
 	assert.NoError(t, err)
 
-	merged, _, err := astjson.MergeValues(vars, inputVariables)
+	merged, _, err := astjson.MergeValues(arena.NewMonotonicArena(), vars, inputVariables)
 	assert.NoError(t, err)
 
 	fieldUsageInfo := GetTypeFieldUsageInfo(generatedPlan)
@@ -596,10 +597,10 @@ type FakeDataSource struct {
 	source *StatefulSource
 }
 
-func (f *FakeDataSource) Load(ctx context.Context, input []byte, out *bytes.Buffer) (err error) {
-	return
+func (f *FakeDataSource) Load(ctx context.Context, headers http.Header, input []byte) (data []byte, err error) {
+	return nil, nil
 }
 
-func (f *FakeDataSource) LoadWithFiles(ctx context.Context, input []byte, files []*httpclient.FileUpload, out *bytes.Buffer) (err error) {
-	return
+func (f *FakeDataSource) LoadWithFiles(ctx context.Context, headers http.Header, input []byte, files []*httpclient.FileUpload) (data []byte, err error) {
+	return nil, nil
 }

@@ -427,6 +427,14 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 			return nil, err
 		}
 
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+
+		err = client.Ping(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not connect to kafka: %w", err)
+		}
+
 		kafkaClient = client
 		kafkaAdminClient = kadm.NewClient(kafkaClient)
 	}
@@ -852,6 +860,14 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		)
 		if err != nil {
 			return nil, err
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+
+		err = client.Ping(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not connect to kafka: %w", err)
 		}
 
 		kafkaClient = client
@@ -1310,6 +1326,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	engineExecutionConfig := config.EngineExecutionConfiguration{
 		EnableNetPoll:                          true,
 		EnableSingleFlight:                     true,
+		EnableInboundRequestDeduplication:      false,
 		EnableRequestTracing:                   true,
 		EnableExecutionPlanCacheResponseHeader: true,
 		EnableNormalizationCache:               true,
@@ -1874,6 +1891,10 @@ func (e *Environment) Shutdown() {
 		// Do not call s.Close() here, as it will get stuck on connections left open!
 		lErr := s.Listener.Close()
 		if lErr != nil {
+			if errors.Is(lErr, net.ErrClosed) {
+				// skip, server was already closed, e.g. through manual (intentional) intervention
+				continue
+			}
 			e.t.Logf("could not close server listener: %s", lErr)
 		}
 	}

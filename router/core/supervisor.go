@@ -135,18 +135,18 @@ var (
 // Start starts the router supervisor.
 func (rs *RouterSupervisor) Start() error {
 	if err := rs.loadConfig(); err != nil {
-		return fmt.Errorf("%w: failed to load config: %w", ErrStartupFailed, err)
+		return fmt.Errorf("%w: failed to load config: %v", ErrStartupFailed, err)
 	}
 
 	for {
 		rs.logger.Debug("Creating Router")
 		if err := rs.createRouter(); err != nil {
-			return fmt.Errorf("%w: failed to create router: %w", ErrStartupFailed, err)
+			return fmt.Errorf("%w: failed to create router: %v", ErrStartupFailed, err)
 		}
 
 		rs.logger.Debug("Starting Router")
 		if err := rs.startRouter(); err != nil {
-			return fmt.Errorf("%w: failed to start router: %w", ErrStartupFailed, err)
+			return fmt.Errorf("%w: failed to start router: %v", ErrStartupFailed, err)
 		}
 
 		rs.logger.Info("Router started")

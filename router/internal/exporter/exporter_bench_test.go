@@ -46,7 +46,9 @@ func BenchmarkExporterBatchBufferAllocation(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	defer exporter.Shutdown(context.Background())
+	defer func() {
+		_ = exporter.Shutdown(context.Background())
+	}()
 
 	b.ReportAllocs()
 
@@ -104,7 +106,7 @@ func BenchmarkExporterHighThroughput(b *testing.B) {
 	// Shutdown to flush remaining items
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	exporter.Shutdown(ctx)
+	_ = exporter.Shutdown(ctx)
 }
 
 // BenchmarkExporterBatchCycle measures a complete batch collection and flush cycle
@@ -129,7 +131,9 @@ func BenchmarkExporterBatchCycle(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	defer exporter.Shutdown(context.Background())
+	defer func() {
+		_ = exporter.Shutdown(context.Background())
+	}()
 
 	item := &graphqlmetrics.SchemaUsageInfo{
 		OperationInfo: &graphqlmetrics.OperationInfo{
@@ -173,7 +177,9 @@ func BenchmarkExporterBufferGrowth(b *testing.B) {
 	if err != nil {
 		b.Fatal(err)
 	}
-	defer exporter.Shutdown(context.Background())
+	defer func() {
+		_ = exporter.Shutdown(context.Background())
+	}()
 
 	b.ReportAllocs()
 
@@ -234,5 +240,5 @@ func BenchmarkExporterParallelRecords(b *testing.B) {
 	// Shutdown to flush remaining items
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	exporter.Shutdown(ctx)
+	_ = exporter.Shutdown(ctx)
 }
