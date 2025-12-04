@@ -370,7 +370,6 @@ func Take(n int) (ports []int, err error) {
 
 		ports = append(ports, port)
 	}
-	fmt.Println("ports", ports)
 
 	return ports, nil
 }
@@ -475,7 +474,7 @@ func GetN(t TestingT, n int) []int {
 	t.Helper()
 	ports, err := Take(n)
 	if err != nil {
-		t.Fatalf("failed to take %v ports: %w", n, err)
+		t.Fatalf("failed to take %v ports: %v", n, err)
 	}
 	logf(DEBUG, "Test %q took ports %v", t.Name(), ports)
 	mu.Lock()
@@ -497,12 +496,3 @@ func GetOne(t TestingT) int {
 	t.Helper()
 	return GetN(t, 1)[0]
 }
-
-// Deprecated: Please use Take/Return calls instead.
-func Get(n int) (ports []int) { return MustTake(n) }
-
-// Deprecated: Please use Take/Return calls instead.
-func GetT(t TestingT, n int) (ports []int) { return MustTake(n) }
-
-// Deprecated: Please use Take/Return calls instead.
-func Free(n int) (ports []int, err error) { return MustTake(n), nil }
