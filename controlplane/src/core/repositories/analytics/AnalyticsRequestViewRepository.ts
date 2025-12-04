@@ -501,7 +501,9 @@ export class AnalyticsRequestViewRepository {
     }
 
     if (client.length === 1) {
-      whereSql += `AND (${client.map((c) => `ClientName = '${c}'`).join(' OR ')})`;
+      // Add the client name as a parameter
+      queryParams.clientNameFilter = client[0];
+      whereSql += `AND ClientName = {clientNameFilter:String}`;
     }
 
     const query = `
@@ -715,7 +717,9 @@ export class AnalyticsRequestViewRepository {
 
     // Important: This is the only place where we scope the data to a particular organization and graph.
     // We can only filter for data that is part of the JWT token otherwise a user could send us whatever they want.
-    const scopedSql = ` AND FederatedGraphID = '${federatedGraphId}' AND OrganizationID = '${organizationId}'`;
+    coercedQueryParams.scopedFederatedGraphId = federatedGraphId;
+    coercedQueryParams.scopedOrganizationId = organizationId;
+    const scopedSql = ` AND FederatedGraphID = {scopedFederatedGraphId:String} AND OrganizationID = {scopedOrganizationId:String}`;
 
     whereSql += scopedSql;
 
