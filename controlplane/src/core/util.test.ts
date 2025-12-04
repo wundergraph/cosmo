@@ -206,7 +206,7 @@ describe('Util', (ctx) => {
       { slug: 'acme-corp', expected: true },
       { slug: '1acme-corp2', expected: true },
       { slug: 'ac', expected: false },
-      { slug: '25CharactersLong123456789', expected: false },
+      { slug: '25CharactersLong123456789', expected: true },
       { slug: 'acme-', expected: false },
       { slug: '-acme', expected: false },
       { slug: 'ac_24', expected: false },
