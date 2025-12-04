@@ -11,11 +11,15 @@ export class MonthlyRequestViewRepository {
         SELECT
           sum(RequestCount) as totalRequests
         FROM ${this.client.database}.gql_metrics_router_requests
-        WHERE OrganizationID = '${organizationId}'
+        WHERE OrganizationID = {organizationId:String}
           AND toDate(Timestamp) >= startDate AND toDate(Timestamp) <= endDate
     `;
 
-    const res = await this.client.queryPromise(query);
+    const params = {
+      organizationId,
+    };
+
+    const res = await this.client.queryPromise(query, params);
 
     if (Array.isArray(res)) {
       return res[0].totalRequests;

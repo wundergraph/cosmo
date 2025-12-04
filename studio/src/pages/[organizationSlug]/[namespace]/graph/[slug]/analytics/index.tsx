@@ -25,6 +25,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/loader";
 import { Spacer } from "@/components/ui/spacer";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useFeatureLimit } from "@/hooks/use-feature-limit";
 import { NextPageWithLayout } from "@/lib/page";
 import { createConnectQueryKey, useQuery } from "@connectrpc/connect-query";
@@ -40,9 +45,7 @@ import {
   getGraphMetrics,
   getMetricsErrorRate,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import {
-  AnalyticsViewResultFilter
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { AnalyticsViewResultFilter } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { formatISO } from "date-fns";
 import { useContext } from "react";
 
@@ -64,9 +67,8 @@ const OverviewToolbar = ({
 
   const isFetching = useIsFetching();
 
-  const { filtersList, selectedFilters, resetFilters } = useMetricsFilters(
-    filters ?? [],
-  );
+  const { filtersList, selectedFilters, resetFilters, isUrlLimitReached } =
+    useMetricsFilters(filters ?? []);
 
   const applyParams = useApplyParams();
 
@@ -103,7 +105,7 @@ const OverviewToolbar = ({
   return (
     <div className="flex flex-col gap-2 space-y-2">
       <div className="flex gap-2">
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <DatePickerWithRange
             range={range}
             dateRange={dateRange}
@@ -117,6 +119,19 @@ const OverviewToolbar = ({
             selectedFilters={selectedFilters}
             onReset={() => resetFilters()}
           />
+          {isUrlLimitReached && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center">
+                  <ExclamationTriangleIcon className="h-5 w-5 text-destructive" />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                Maximum URL length of 10,000 characters reached. Please remove
+                some filters before adding new ones.
+              </TooltipContent>
+            </Tooltip>
+          )}
         </div>
 
         <Spacer />
@@ -207,7 +222,10 @@ const AnalyticsPage: NextPageWithLayout = () => {
       </div>
 
       <ErrorRateOverTimeCard syncId={syncId} />
-      <LatencyDistributionCard series={data?.latency?.series ?? []} syncId={syncId} />
+      <LatencyDistributionCard
+        series={data?.latency?.series ?? []}
+        syncId={syncId}
+      />
     </div>
   );
 };
