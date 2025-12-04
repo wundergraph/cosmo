@@ -259,7 +259,11 @@ func TestAllowSettingLogLevel(t *testing.T) {
 				_ = r.Close()
 			})
 
+			origStderr := os.Stderr
 			os.Stderr = w
+			t.Cleanup(func() {
+				os.Stderr = origStderr
+			})
 			SetLogLevel(tc.level)
 			if logLevel != tc.expected {
 				t.Fatalf("expected log level to be %v but got %v", tc.level, logLevel)
@@ -329,7 +333,11 @@ func TestLogLevelMessages(t *testing.T) {
 				_ = r.Close()
 			})
 
+			origStderr := os.Stderr
 			os.Stderr = w
+			t.Cleanup(func() {
+				os.Stderr = origStderr
+			})
 			SetLogLevel(tc.level)
 
 			logf(tc.inputLogLevel, "This is a test log message")
