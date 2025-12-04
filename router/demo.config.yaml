@@ -19,4 +19,4 @@ events:
     redis:
       - id: my-redis
         urls:
-        - "redis://localhost:6379/2"
+          - "redis://localhost:6379/2"
