@@ -6,6 +6,7 @@ import (
 
 	"golang.org/x/sync/singleflight"
 
+	"github.com/wundergraph/astjson"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
@@ -90,6 +91,105 @@ func (p *OperationPlanner) preparePlan(ctx *operationContext) (*planWithMetaData
 	}
 
 	return out, nil
+}
+
+// mapFieldArguments returns all field arguments inside doc as a map.
+//
+// The key of the map is a dot-notated path, where each element refers
+// to a field. The inner map holds the argument names as keys.
+// map["rootfield1.subfield1"]["arg1"]
+// map["rootfield1.subfield1"]["arg2"]
+// map["rootfield1.subfield2"]["arg1"]
+// map["rootfield1.subfield2"]["arg2"]
+//
+// The value of the inner map is the literal value of the argument.
+// Variables will be resolved in case they have been used for arguments.
+func mapFieldArguments(doc *ast.Document, vars *astjson.Value, remapVariables map[string]string) map[string]map[string]any {
+	// TODO: Currently we only map root field arguments. I.e.
+	// map["rootfield1"]["arg1"]
+	// map["rootfield2"]["arg1"]
+	// Needs to extended to support subfields, like
+	// map["rootfield1.subfield1"]["arg1"]
+	selectionSet := doc.OperationDefinitions[0].SelectionSet
+	fields := doc.SelectionSetFieldSelections(selectionSet)
+
+	args := make(map[string]map[string]any, len(fields))
+
+	for _, field := range fields {
+		fieldRef := doc.Selections[field].Ref
+		fieldName := doc.FieldNameString(fieldRef)
+		fieldArgs := doc.FieldArguments(fieldRef)
+
+		for _, fieldArg := range fieldArgs {
+			m := make(map[string]any, len(fieldArgs))
+			args[fieldName] = m
+
+			argName := doc.ArgumentNameString(fieldArg)
+			val := doc.Arguments[fieldArg].Value
+			args[fieldName][argName] = getArgValue(doc, val, vars, remapVariables)
+		}
+	}
+
+	return args
+}
+
+// getArgValue returns the actual value of val.
+// It resolves variables in case these have been used for arguments,
+// else it will use values from doc.
+func getArgValue(doc *ast.Document, val ast.Value, variables *astjson.Value, remapVariables map[string]string) any {
+	if val.Kind != ast.ValueKindVariable {
+		// TODO delete this comment.
+		// I observed we never actually hit this code path because the operation parser
+		// automically creates variables and maps them to arguments, even if no initial variables are provided.
+		// We should probably still have this in place just in case.
+		// Maybe there is a better way than to to use ValueToJSON but I haven't found one yet.
+		actualValue, err := doc.ValueToJSON(val)
+		if err != nil {
+			// TODO error handling
+			return nil
+		}
+		// TODO: Type cast to what this actually is, it returns only []byte atm
+		return actualValue
+	}
+
+	varName := doc.VariableValueNameString(val.Ref)
+	originalVarName := varName
+	if remapVariables != nil {
+		if original, ok := remapVariables[varName]; ok {
+			originalVarName = original
+		}
+	}
+
+	varValue := variables.Get(originalVarName)
+	switch varValue.Type() {
+	case astjson.TypeNumber:
+		return varValue.GetInt()
+	case astjson.TypeString:
+		return string(varValue.GetStringBytes())
+	case astjson.TypeObject:
+		// TODO maybe create map out of varValue to give hook developers a better experience.
+		// The problem is this would be a nested operation because objects can contain all kinds
+		// of children elements, such as numbers, strings, other objects, etc.
+		// Right now we only return the astjson type directly and leave it to the hook developer
+		// to work with that.
+		return varValue.GetObject()
+	case astjson.TypeArray:
+		// TODO maybe create slice out of varValue to give hook developers a better experience.
+		// The problem is this would be a nested operation because arrays can contain all kinds
+		// of children elements, such as numbers, strings, other objects, etc.
+		// Right now we only return the astjson type directly and leave it to the hook developer
+		// to work with that.
+		return varValue.GetArray()
+	case astjson.TypeFalse:
+		// TODO hypothetically written, needs testing
+		return false
+	case astjson.TypeTrue:
+		// TODO hypothetically written, needs testing
+		return true
+	default:
+		// TODO test for type = null
+		return nil
+	}
 }
 
 type PlanOptions struct {
