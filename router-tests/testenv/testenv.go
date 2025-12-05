@@ -1657,12 +1657,12 @@ func makeHttpTestServerWithPort(t testing.TB, handler http.Handler, port int) *h
 
 func makeSafeHttpTestServer(t testing.TB, handler http.Handler) *httptest.Server {
 	s := httptest.NewUnstartedServer(handler)
-	l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", freeport.GetOne(t)))
-	if err != nil {
-		t.Fatalf("could not listen on port: %s", err.Error())
-	}
-	_ = s.Listener.Close()
-	s.Listener = l
+	// l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", freeport.GetOne(t)))
+	// if err != nil {
+	// 	t.Fatalf("could not listen on port: %s", err.Error())
+	// }
+	// _ = s.Listener.Close()
+	// s.Listener = l
 	s.Start()
 
 	return s
@@ -1671,9 +1671,9 @@ func makeSafeHttpTestServer(t testing.TB, handler http.Handler) *httptest.Server
 func makeSafeGRPCServer(t testing.TB, sd *grpc.ServiceDesc, service any) (*grpc.Server, string) {
 	t.Helper()
 
-	endpoint := fmt.Sprintf("localhost:%d", freeport.GetOne(t))
-	lis, err := net.Listen("tcp", endpoint)
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
+	endpoint := lis.Addr().String()
 
 	require.NotNil(t, service)
 
