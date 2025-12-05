@@ -3,7 +3,7 @@ import {
   isValidLabelMatchers,
   mergeUrls,
   normalizeLabelMatchers,
-  isGoogleCloudStorageUrl, sanitizeReadme,
+  isGoogleCloudStorageUrl, sanitizeReadme, isValidLocalhostOrSecureEndpoint,
 } from '../src/core/util.js';
 
 describe('Utils', () => {
@@ -70,5 +70,24 @@ command  2&gt;/dev/nul
 <svg><title>]]&gt;</title></svg>
 <svg><title>]]&gt;</title></svg>`);
     });
+  });
+
+  describe('isValidLocalhostOrSecureEndpoint', () => {
+    test('that false is returned when given an invalid URL', () => {
+      expect(isValidLocalhostOrSecureEndpoint('<invalid value>')).toBe(false);
+    });
+
+    test('that false is returned when given an endpoint without http or https protocols', () => {
+      expect(isValidLocalhostOrSecureEndpoint('wss://localhost/')).toBe(false);
+    });
+
+    test('that true is returned when the endpoint is localhost', () => {
+      expect(isValidLocalhostOrSecureEndpoint('http://localhost/')).toBe(true);
+      expect(isValidLocalhostOrSecureEndpoint('http://localhost:4000/')).toBe(true);
+    });
+
+    test('that a non-localhost endpoint with the protocol http return false', () => {
+      expect(isValidLocalhostOrSecureEndpoint('http://example.com')).toBe(false);
+    })
   });
 });

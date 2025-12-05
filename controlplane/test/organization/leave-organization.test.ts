@@ -3,7 +3,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { SetupTest } from '../test-util.js';
 import { afterAllSetup, beforeAllSetup } from '../../src/core/test-util.js';
 import { OrganizationRepository } from '../../src/core/repositories/OrganizationRepository.js';
-import { OrganizationGroupRepository } from "../../src/core/repositories/OrganizationGroupRepository.js";
+import { OrganizationGroupRepository } from '../../src/core/repositories/OrganizationGroupRepository.js';
 
 describe('Leave organization', () => {
   let dbname = '';

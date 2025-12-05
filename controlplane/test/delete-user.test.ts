@@ -322,9 +322,12 @@ describe.sequential('Delete user tests', (ctx) => {
   });
 
   test('SSO configuration is deleted on keycloak', async (testContext) => {
-    const { client, server, users, keycloakClient, authenticator, realm } = await SetupTest({ dbname });
+    const { client, server, users, keycloakClient, authenticator, realm } = await SetupTest({ dbname, enabledFeatures: ['oidc'] });
     const mainUserContext = users[TestUser.adminAliceCompanyA];
     const tempUserContext = await createTempUser(server.db, keycloakClient, realm, mainUserContext.organizationSlug);
+
+    const orgRepo = new OrganizationRepository(server.log, server.db);
+    await orgRepo.updateFeature({ organizationId: tempUserContext.organizationId, id: 'oidc', enabled: true });
 
     authenticator.changeUserWithSuppliedContext(tempUserContext);
 

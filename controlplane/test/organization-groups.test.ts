@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { GroupMapper } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { afterAllSetup, beforeAllSetup, genID, TestUser } from '../src/core/test-util.js';
-import { OrganizationGroupRepository } from "../src/core/repositories/OrganizationGroupRepository.js";
+import { OrganizationGroupRepository } from '../src/core/repositories/OrganizationGroupRepository.js';
 import { createOrganizationGroup, SetupTest } from './test-util.js';
 
 let dbname = '';
@@ -227,7 +227,7 @@ describe('Organization Group tests', () => {
   });
 
   test('Should be possible to delete a group when an OIDC have been linked to the organization', async () => {
-    const { client, server } = await SetupTest({ dbname, enabledFeatures: ['rbac'], enableMultiUsers: true });
+    const { client, server } = await SetupTest({ dbname, enabledFeatures: ['rbac', 'oidc'], enableMultiUsers: true });
 
     // Create a new group
     const createGroupResponse = await client.createOrganizationGroup({
@@ -259,7 +259,7 @@ describe('Organization Group tests', () => {
   });
 
   test('Should not be able to delete a group that has been linked to an OIDC mapper', async () => {
-    const { client, server } = await SetupTest({ dbname, enabledFeatures: ['rbac'], enableMultiUsers: true });
+    const { client, server } = await SetupTest({ dbname, enabledFeatures: ['rbac', 'oidc'], enableMultiUsers: true });
 
     // Create a new group
     const createGroupResponse = await client.createOrganizationGroup({
@@ -297,7 +297,7 @@ describe('Organization Group tests', () => {
   });
 
   test('Should be able to update mapper when OIDC is connected', async () => {
-    const { client, server } = await SetupTest({ dbname, enabledFeatures: ['rbac'], enableMultiUsers: true });
+    const { client, server } = await SetupTest({ dbname, enabledFeatures: ['rbac', 'oidc'], enableMultiUsers: true });
 
     const orgGroups = await client.getOrganizationGroups({});
     const adminGroup = orgGroups.groups.find((g) => g.name === 'admin')!;

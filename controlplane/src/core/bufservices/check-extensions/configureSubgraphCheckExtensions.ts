@@ -6,7 +6,7 @@ import {
   ConfigureSubgraphCheckExtensionsResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { enrichLogger, getLogger, handleError, isValidLocalhostOrSecureEndpoint } from '../../util.js';
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
@@ -55,28 +55,13 @@ export function configureSubgraphCheckExtensions(
         throw new UnauthorizedError();
       }
 
-      if (req.enableSubgraphCheckExtensions || req.endpoint) {
-        let isEndpointValid = false;
-        if (req.endpoint) {
-          try {
-            const endpoint = new URL(req.endpoint);
-            isEndpointValid =
-              (endpoint.hostname === 'localhost' &&
-                (endpoint.protocol === 'http:' || endpoint.protocol === 'https:')) ||
-              (endpoint.hostname !== 'localhost' && endpoint.protocol === 'https:');
-          } catch {
-            // ignore
-          }
-        }
-
-        if (!isEndpointValid) {
-          return {
-            response: {
-              code: EnumStatusCode.ERR_BAD_REQUEST,
-              details: 'The endpoint must be a valid absolute URL starting with https://',
-            },
-          };
-        }
+      if ((req.enableSubgraphCheckExtensions || req.endpoint) && !isValidLocalhostOrSecureEndpoint(req.endpoint)) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR_BAD_REQUEST,
+            details: 'The endpoint must be a valid absolute URL starting with https://',
+          },
+        };
       }
 
       await namespaceRepo.updateConfiguration({
