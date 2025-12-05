@@ -57,7 +57,7 @@ const lightweightCspHeader = `
   object-src 'none';
   base-uri 'self';
   font-src 'self' data:${
-    isPreview || isProduction ? 'https://vercel.live https://assets.vercel.com' : ''
+    isPreview || isProduction ? ' https://vercel.live https://assets.vercel.com' : ''
   };
   frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://www.googletagmanager.com${
     isPreview || isProduction ? ' https://vercel.live/ https://vercel.com' : ''
