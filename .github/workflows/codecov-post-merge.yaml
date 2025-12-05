@@ -1,0 +1,41 @@
+name: Codecov Post-Merge
+on:
+  push:
+    branches:
+      - main
+
+env:
+  CI: true
+  DO_NOT_TRACK: '1'
+
+jobs:
+  upload-codecov:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Find PR commit for artifacts
+        id: find-pr-commit
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          CURRENT_SHA: ${{ github.sha }}
+        run: ./.github/scripts/find-pr-commit.sh
+
+      - name: Print commit information
+        if: steps.find-pr-commit.outputs.skip != 'true'
+        run: |
+          echo "Current commit (for codecov): ${{ github.sha }}"
+          echo "PR commit (for artifacts): ${{ steps.find-pr-commit.outputs.merge_commit_sha }}"
+
+      - name: Download computed artifact and upload to codecov with merge SHA
+        if: steps.find-pr-commit.outputs.skip != 'true'
+        uses: ./.github/actions/codecov-merge-upload
+        with:
+          coverage-path: coverage
+          workflow-paths: .github/workflows/cli-ci.yaml,.github/workflows/router-ci.yaml
+          override-commit: ${{ github.sha }}
+          merge-commit-sha: ${{ steps.find-pr-commit.outputs.merge_commit_sha }}
+          codecov-token: ${{ secrets.CODECOV_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
