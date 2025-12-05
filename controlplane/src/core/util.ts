@@ -37,7 +37,6 @@ import { composeFederatedContract, composeFederatedGraphWithPotentialContracts }
 import { SubgraphsToCompose } from './repositories/FeatureFlagRepository.js';
 
 const labelRegex = /^[\dA-Za-z](?:[\w.-]{0,61}[\dA-Za-z])?$/;
-const organizationSlugRegex = /^[\da-z]+(?:-[\da-z]+)*$/;
 const namespaceRegex = /^[\da-z]+(?:[_-][\da-z]+)*$/;
 const schemaTagRegex = /^(?![/-])[\d/A-Za-z-]+(?<![/-])$/;
 const graphNameRegex = /^[\dA-Za-z]+(?:[./@_-][\dA-Za-z]+)*$/;
@@ -310,34 +309,6 @@ export const isValidGraphName = (name: string): boolean => {
     return false;
   }
   return graphNameRegex.test(name);
-};
-
-export const isValidOrganizationSlug = (slug: string): boolean => {
-  // these reserved slugs are the root paths of the studio,
-  // so the org slug should not be the same as one of our root paths
-  const reservedSlugs = ['login', 'signup', 'create', 'account'];
-
-  if (slug.length < 3 || slug.length > 24) {
-    return false;
-  }
-
-  if (!organizationSlugRegex.test(slug)) {
-    return false;
-  }
-
-  if (reservedSlugs.includes(slug)) {
-    return false;
-  }
-
-  return true;
-};
-
-export const isValidOrganizationName = (name: string): boolean => {
-  if (name.length === 0 || name.length > 24) {
-    return false;
-  }
-
-  return true;
 };
 
 export const isValidPluginVersion = (version: string): boolean => {
