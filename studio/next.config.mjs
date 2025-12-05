@@ -82,9 +82,6 @@ const lightweightCspHeader = `
          ].join(' ')
        : ''
    };
-    connect-src 'self'${
-      isPreview || isProduction ? ' https://cosmo-cp.wundergraph.com https://vercel.live wss://ws-us3.pusher.com' : ''
-    };
     manifest-src 'self';
     media-src 'self';
     worker-src 'self'${isSentryFeatureReplayEnabled ? ' blob:' : ''};
@@ -101,7 +98,7 @@ const lightweightCspHeader = `
 //   connect-src 'self' ${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL} ${
 //     process.env.NEXT_PUBLIC_COSMO_CP_URL
 //   } https://*.wundergraph.com wss://*.wundergraph.com https://plausible.io https://api.stripe.com https://maps.googleapis.com ${
-//     isPreview
+//     isPreview || isProduction
 //       ? "https://vercel.live https://vercel.com *.pusher.com *.pusherapp.com"
 //       : ""
 //   };
