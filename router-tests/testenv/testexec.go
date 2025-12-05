@@ -124,7 +124,7 @@ func runRouterBin(t *testing.T, ctx context.Context, opts RunRouterBinConfigOpti
 	if err != nil {
 		return nil, err
 	}
-	testCdn := SetupCDNServer(t, freeport.GetOne(t))
+	testCdn, _ := SetupCDNServer(t)
 	var envs []string
 
 	envVars := map[string]string{

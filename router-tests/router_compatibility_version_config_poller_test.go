@@ -11,7 +11,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/wundergraph/cosmo/router-tests/freeport"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
@@ -22,8 +21,7 @@ func TestRouterCompatibilityVersionConfigPoller(t *testing.T) {
 
 	t.Run("test that a v1 router compatibility version config is requested from the correct cdn path", func(t *testing.T) {
 		t.Parallel()
-		cdnPort := freeport.GetOne(t)
-		cdnServer := testenv.SetupCDNServer(t, cdnPort)
+		cdnServer, cdnPort := testenv.SetupCDNServer(t)
 		token, err := testenv.GenerateVersionedJwtToken()
 		require.NoError(t, err)
 		client, err := cdn.NewClient(fmt.Sprintf("http://127.0.0.1:%d", cdnPort), token, &cdn.Options{
@@ -55,8 +53,7 @@ func TestRouterCompatibilityVersionConfigPoller(t *testing.T) {
 
 	t.Run("test that a v2 router compatibility version config is requested from the correct cdn path", func(t *testing.T) {
 		t.Parallel()
-		cdnPort := freeport.GetOne(t)
-		cdnServer := testenv.SetupCDNServer(t, cdnPort)
+		cdnServer, cdnPort := testenv.SetupCDNServer(t)
 		token, err := testenv.GenerateVersionedJwtToken()
 		require.NoError(t, err)
 		client, err := cdn.NewClient(fmt.Sprintf("http://127.0.0.1:%d", cdnPort), token, &cdn.Options{

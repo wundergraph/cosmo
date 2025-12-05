@@ -278,17 +278,6 @@ func alloc() (int, net.Listener) {
 	panic("freeport: cannot allocate port block")
 }
 
-// MustTake is the same as Take except it panics on error.
-//
-// Deprecated: Use GetN or GetOne instead.
-func MustTake(n int) (ports []int) {
-	ports, err := Take(n)
-	if err != nil {
-		panic(err)
-	}
-	return ports
-}
-
 type LogLevel uint8
 
 const (

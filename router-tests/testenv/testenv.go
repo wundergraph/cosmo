@@ -630,7 +630,7 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	cdnServer := cfg.CdnSever
 	if cfg.CdnSever == nil {
-		cdnServer = SetupCDNServer(t, freeport.GetOne(t))
+		cdnServer, _ = SetupCDNServer(t)
 	}
 
 	if cfg.PrometheusRegistry != nil {
@@ -1052,7 +1052,7 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 
 	cdnServer := cfg.CdnSever
 	if cfg.CdnSever == nil {
-		cdnServer = SetupCDNServer(t, freeport.GetOne(t))
+		cdnServer, _ = SetupCDNServer(t)
 	}
 
 	if cfg.PrometheusRegistry != nil {
@@ -1642,35 +1642,19 @@ func testVersionedTokenClaims() jwt.MapClaims {
 	}
 }
 
-func makeHttpTestServerWithPort(t testing.TB, handler http.Handler, port int) *httptest.Server {
-	s := httptest.NewUnstartedServer(handler)
-	l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
-	if err != nil {
-		t.Fatalf("could not listen on port: %s", err.Error())
-	}
-	_ = s.Listener.Close()
-	s.Listener = l
-	s.Start()
-
-	return s
-}
-
 func makeSafeHttpTestServer(t testing.TB, handler http.Handler) *httptest.Server {
+	// NewUnstartedServer will bind ephemeral port and start listening anyway,
+	// we don't use freeport here.
 	s := httptest.NewUnstartedServer(handler)
-	// l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", freeport.GetOne(t)))
-	// if err != nil {
-	// 	t.Fatalf("could not listen on port: %s", err.Error())
-	// }
-	// _ = s.Listener.Close()
-	// s.Listener = l
 	s.Start()
-
 	return s
 }
 
 func makeSafeGRPCServer(t testing.TB, sd *grpc.ServiceDesc, service any) (*grpc.Server, string) {
 	t.Helper()
 
+	// We could use freeport here, but it is easy to use ephemeral port and get the endpoint
+	// easily.
 	lis, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 	endpoint := lis.Addr().String()
@@ -1688,13 +1672,13 @@ func makeSafeGRPCServer(t testing.TB, sd *grpc.ServiceDesc, service any) (*grpc.
 	return s, endpoint
 }
 
-func SetupCDNServer(t testing.TB, port int) *httptest.Server {
+func SetupCDNServer(t testing.TB) (cdnServer *httptest.Server, port int) {
 	_, filePath, _, ok := runtime.Caller(0)
 	require.True(t, ok)
 	baseCdnFile := filepath.Join(path.Dir(filePath), "testdata", "cdn")
 	cdnFileServer := http.FileServer(http.Dir(baseCdnFile))
 	var cdnRequestLog []string
-	cdnServer := makeHttpTestServerWithPort(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {
 			requestLog, err := json.Marshal(cdnRequestLog)
 			require.NoError(t, err)
@@ -1715,9 +1699,11 @@ func SetupCDNServer(t testing.TB, port int) *httptest.Server {
 		_, _, err := jwtParser.ParseUnverified(token, parsedClaims)
 		require.NoError(t, err)
 		cdnFileServer.ServeHTTP(w, r)
-	}), port)
-
-	return cdnServer
+	})
+	cdnServer = httptest.NewUnstartedServer(handler)
+	cdnServer.Start()
+	port = cdnServer.Listener.Addr().(*net.TCPAddr).Port
+	return
 }
 
 func gqlURL(srv *httptest.Server) string {
