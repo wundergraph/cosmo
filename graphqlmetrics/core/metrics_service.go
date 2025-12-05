@@ -338,10 +338,11 @@ func (s *MetricsService) appendUsageMetrics(
 			strconv.FormatInt(int64(schemaUsage.RequestInfo.StatusCode), 10),
 			schemaUsage.RequestInfo.Error,
 			fieldUsage.SubgraphIDs,
-			false,
-			false,
+			false, // IsArgument
+			false, // IsInput
 			schemaUsage.Attributes,
 			fieldUsage.IndirectInterfaceField,
+			false, // IsNull - not applicable for field metrics
 		)
 		if err != nil {
 			return fmt.Errorf("failed to append field metric to batch: %w", err)
@@ -349,6 +350,13 @@ func (s *MetricsService) appendUsageMetrics(
 	}
 
 	for _, argumentUsage := range schemaUsage.ArgumentMetrics {
+
+		// Sort stable for fields where the order doesn't matter
+		// This reduce cardinality and improves compression
+
+		sort.SliceStable(argumentUsage.SubgraphIDs, func(i, j int) bool {
+			return argumentUsage.SubgraphIDs[i] < argumentUsage.SubgraphIDs[j]
+		})
 
 		err := metricBatch.Append(
 			insertTime,
@@ -366,11 +374,12 @@ func (s *MetricsService) appendUsageMetrics(
 			schemaUsage.ClientInfo.Version,
 			strconv.FormatInt(int64(schemaUsage.RequestInfo.StatusCode), 10),
 			schemaUsage.RequestInfo.Error,
-			[]string{},
-			true,
-			false,
+			argumentUsage.SubgraphIDs,
+			true,  // IsArgument
+			false, // IsInput
 			schemaUsage.Attributes,
-			false,
+			false, // IsIndirectFieldUsage
+			argumentUsage.IsNull,
 		)
 		if err != nil {
 			return fmt.Errorf("failed to append argument metric to batch: %w", err)
@@ -378,6 +387,13 @@ func (s *MetricsService) appendUsageMetrics(
 	}
 
 	for _, inputUsage := range schemaUsage.InputMetrics {
+
+		// Sort stable for fields where the order doesn't matter
+		// This reduce cardinality and improves compression
+
+		sort.SliceStable(inputUsage.SubgraphIDs, func(i, j int) bool {
+			return inputUsage.SubgraphIDs[i] < inputUsage.SubgraphIDs[j]
+		})
 
 		err := metricBatch.Append(
 			insertTime,
@@ -395,11 +411,12 @@ func (s *MetricsService) appendUsageMetrics(
 			schemaUsage.ClientInfo.Version,
 			strconv.FormatInt(int64(schemaUsage.RequestInfo.StatusCode), 10),
 			schemaUsage.RequestInfo.Error,
-			[]string{},
+			inputUsage.SubgraphIDs,
 			false,
 			true,
 			schemaUsage.Attributes,
 			false,
+			inputUsage.IsNull,
 		)
 		if err != nil {
 			return fmt.Errorf("failed to append input metric to batch: %w", err)

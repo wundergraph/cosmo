@@ -107,7 +107,7 @@ describe('Deactivate Organization', (ctx) => {
     const mainUserContext = users[TestUser.adminAliceCompanyA];
 
     const orgName = genID();
-    await client.createOrganization({
+    const x = await client.createOrganization({
       name: orgName,
       slug: orgName,
     });
