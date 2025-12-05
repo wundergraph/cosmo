@@ -82,8 +82,8 @@ const lightweightCspHeader = `
          ].join(' ')
        : ''
    };
-    connect-src: 'self'${
-      isPreview || isProduction ? ' https://vercel.live wss://ws-us3.pusher.com' : ''
+    connect-src 'self'${
+      isPreview || isProduction ? ' https://cosmo-cp.wundergraph.com https://vercel.live wss://ws-us3.pusher.com' : ''
     };
     manifest-src 'self';
     media-src 'self';
