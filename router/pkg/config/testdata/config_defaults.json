@@ -139,6 +139,15 @@
     "ExposeSchema": false,
     "RouterURL": ""
   },
+  "ConnectRPC": {
+    "Enabled": false,
+    "Server": {
+      "ListenAddr": "localhost:5026",
+      "BaseURL": ""
+    },
+    "ServicesProviderID": "",
+    "GraphQLEndpoint": ""
+  },
   "DemoMode": false,
   "Modules": null,
   "Headers": {
