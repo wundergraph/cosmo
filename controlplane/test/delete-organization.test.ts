@@ -128,6 +128,7 @@ describe('Delete Organization', (ctx) => {
   test('Should delete OIDC when deleting org', async (testContext) => {
     const { client, server, keycloakClient, realm, users, authenticator, queues, blobStorage } = await SetupTest({
       dbname,
+      enabledFeatures: ['oidc'],
     });
     const mainUserContext = users[TestUser.adminAliceCompanyA];
 
@@ -140,6 +141,8 @@ describe('Delete Organization', (ctx) => {
     const orgRepo = new OrganizationRepository(server.log, server.db);
     const org = await orgRepo.bySlug(orgName);
     expect(org).toBeDefined();
+
+    await orgRepo.updateFeature({ organizationId: org!.id, id: 'oidc', enabled: true });
 
     authenticator.changeUserWithSuppliedContext({
       ...mainUserContext,
