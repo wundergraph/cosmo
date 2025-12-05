@@ -16,6 +16,7 @@ import (
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
@@ -413,7 +414,7 @@ func TestMCP(t *testing.T) {
 				assert.Contains(t, allowedHeaders, "Content-Type")
 				assert.Contains(t, allowedHeaders, "Accept")
 				assert.Contains(t, allowedHeaders, "Authorization")
-				assert.Contains(t, allowedHeaders, "Last-Event-ID")
+				assert.Contains(t, allowedHeaders, "Last-Event-Id")
 				assert.Contains(t, allowedHeaders, "Mcp-Protocol-Version")
 				assert.Contains(t, allowedHeaders, "Mcp-Session-Id")
 
@@ -421,7 +422,7 @@ func TestMCP(t *testing.T) {
 			})
 		})
 
-		t.Run("Actual POST request includes CORS headers", func(t *testing.T) {
+		t.Run("Actual POST should include Access-Control-Allow-Origin headers", func(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				MCP: config.MCPConfiguration{
 					Enabled: true,
@@ -457,25 +458,16 @@ func TestMCP(t *testing.T) {
 				assert.Equal(t, "*", resp.Header.Get("Access-Control-Allow-Origin"))
 
 				allowedMethods := resp.Header.Get("Access-Control-Allow-Methods")
-				assert.Contains(t, allowedMethods, "GET")
-				assert.Contains(t, allowedMethods, "POST")
-				assert.Contains(t, allowedMethods, "PUT")
-				assert.Contains(t, allowedMethods, "DELETE")
-				assert.Contains(t, allowedMethods, "OPTIONS")
+				assert.Empty(t, allowedMethods)
 
 				allowedHeaders := resp.Header.Get("Access-Control-Allow-Headers")
-				assert.Contains(t, allowedHeaders, "Content-Type")
-				assert.Contains(t, allowedHeaders, "Accept")
-				assert.Contains(t, allowedHeaders, "Authorization")
-				assert.Contains(t, allowedHeaders, "Last-Event-ID")
-				assert.Contains(t, allowedHeaders, "Mcp-Protocol-Version")
-				assert.Contains(t, allowedHeaders, "Mcp-Session-Id")
+				assert.Empty(t, allowedHeaders)
 
-				assert.Equal(t, "86400", resp.Header.Get("Access-Control-Max-Age"))
+				assert.Empty(t, resp.Header.Get("Access-Control-Max-Age"))
 			})
 		})
 
-		t.Run("GET request includes CORS headers", func(t *testing.T) {
+		t.Run("GET request should include Access-Control-Allow-Origin headers", func(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				MCP: config.MCPConfiguration{
 					Enabled: true,
@@ -500,25 +492,16 @@ func TestMCP(t *testing.T) {
 				assert.Equal(t, "*", resp.Header.Get("Access-Control-Allow-Origin"))
 
 				allowedMethods := resp.Header.Get("Access-Control-Allow-Methods")
-				assert.Contains(t, allowedMethods, "GET")
-				assert.Contains(t, allowedMethods, "POST")
-				assert.Contains(t, allowedMethods, "PUT")
-				assert.Contains(t, allowedMethods, "DELETE")
-				assert.Contains(t, allowedMethods, "OPTIONS")
+				assert.Empty(t, allowedMethods)
 
 				allowedHeaders := resp.Header.Get("Access-Control-Allow-Headers")
-				assert.Contains(t, allowedHeaders, "Content-Type")
-				assert.Contains(t, allowedHeaders, "Accept")
-				assert.Contains(t, allowedHeaders, "Authorization")
-				assert.Contains(t, allowedHeaders, "Last-Event-ID")
-				assert.Contains(t, allowedHeaders, "Mcp-Protocol-Version")
-				assert.Contains(t, allowedHeaders, "Mcp-Session-Id")
+				assert.Empty(t, allowedHeaders)
 
-				assert.Equal(t, "86400", resp.Header.Get("Access-Control-Max-Age"))
+				assert.Empty(t, resp.Header.Get("Access-Control-Max-Age"))
 			})
 		})
 
-		t.Run("CORS headers work with different HTTP methods", func(t *testing.T) {
+		t.Run("Access-Control-Allow-Origin header should be set with different HTTP methods", func(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				MCP: config.MCPConfiguration{
 					Enabled: true,
@@ -547,16 +530,64 @@ func TestMCP(t *testing.T) {
 						assert.Equal(t, "*", resp.Header.Get("Access-Control-Allow-Origin"))
 
 						allowedMethods := resp.Header.Get("Access-Control-Allow-Methods")
-						assert.Contains(t, allowedMethods, method)
-						assert.Contains(t, allowedMethods, "OPTIONS")
+						assert.Empty(t, allowedMethods)
 
 						allowedHeaders := resp.Header.Get("Access-Control-Allow-Headers")
-						assert.Contains(t, allowedHeaders, "Content-Type")
-						assert.Contains(t, allowedHeaders, "Authorization")
+						assert.Empty(t, allowedHeaders)
 
-						assert.Equal(t, "86400", resp.Header.Get("Access-Control-Max-Age"))
+						assert.Empty(t, resp.Header.Get("Access-Control-Max-Age"))
 					})
 				}
+			})
+		})
+
+		t.Run("Custom headers in router CORS are also used by the MCP server", func(t *testing.T) {
+			testenv.Run(t, &testenv.Config{
+				MCP: config.MCPConfiguration{
+					Enabled: true,
+				},
+				RouterOptions: []core.Option{
+					core.WithCors(&cors.Config{
+						AllowHeaders: []string{"Test", "X-Custom-Auth"},
+					}),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				// Get the MCP server address from the configuration
+				mcpAddr := xEnv.GetMCPServerAddr()
+
+				// Create a GET request
+				req, err := http.NewRequest("OPTIONS", mcpAddr, nil)
+				require.NoError(t, err)
+
+				// Add cross-origin header
+				req.Header.Set("Origin", "https://example.com")
+
+				// Make the request
+				resp, err := xEnv.RouterClient.Do(req)
+				require.NoError(t, err)
+				defer resp.Body.Close()
+
+				// Verify CORS headers are present in the response
+				assert.Equal(t, "*", resp.Header.Get("Access-Control-Allow-Origin"))
+
+				allowedMethods := resp.Header.Get("Access-Control-Allow-Methods")
+				assert.Contains(t, allowedMethods, "GET")
+				assert.Contains(t, allowedMethods, "POST")
+				assert.Contains(t, allowedMethods, "PUT")
+				assert.Contains(t, allowedMethods, "DELETE")
+				assert.Contains(t, allowedMethods, "OPTIONS")
+
+				allowedHeaders := resp.Header.Get("Access-Control-Allow-Headers")
+				assert.Contains(t, allowedHeaders, "Content-Type")
+				assert.Contains(t, allowedHeaders, "Accept")
+				assert.Contains(t, allowedHeaders, "Authorization")
+				assert.Contains(t, allowedHeaders, "Last-Event-Id")
+				assert.Contains(t, allowedHeaders, "Mcp-Protocol-Version")
+				assert.Contains(t, allowedHeaders, "Mcp-Session-Id")
+				assert.Contains(t, allowedHeaders, "Test")
+				assert.Contains(t, allowedHeaders, "X-Custom-Auth")
+
+				assert.Equal(t, "86400", resp.Header.Get("Access-Control-Max-Age"))
 			})
 		})
 	})
@@ -872,6 +903,113 @@ input UserInput {
 				// This test proves that ALL headers sent by MCP clients are forwarded
 				// through the complete chain. The router's header rules determine what
 				// ultimately reaches the subgraphs.
+			})
+		})
+
+		t.Run("Hop-by-hop and filtered headers are not forwarded", func(t *testing.T) {
+			var capturedSubgraphRequest *http.Request
+			var subgraphMutex sync.Mutex
+
+			testenv.Run(t, &testenv.Config{
+				MCP: config.MCPConfiguration{
+					Enabled: true,
+					Session: config.MCPSessionConfig{
+						Stateless: true,
+					},
+				},
+				RouterOptions: []core.Option{
+					// Forward all headers
+					core.WithHeaderRules(config.HeaderRules{
+						All: &config.GlobalHeaderRule{
+							Request: []*config.RequestHeaderRule{
+								{
+									Operation: config.HeaderRuleOperationPropagate,
+									Matching:  ".*",
+								},
+							},
+						},
+					}),
+				},
+				Subgraphs: testenv.SubgraphsConfig{
+					GlobalMiddleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							subgraphMutex.Lock()
+							capturedSubgraphRequest = r.Clone(r.Context())
+							subgraphMutex.Unlock()
+							handler.ServeHTTP(w, r)
+						})
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				mcpAddr := xEnv.GetMCPServerAddr()
+
+				mcpRequest := map[string]interface{}{
+					"jsonrpc": "2.0",
+					"id":      1,
+					"method":  "tools/call",
+					"params": map[string]interface{}{
+						"name": "execute_operation_my_employees",
+						"arguments": map[string]interface{}{
+							"criteria": map[string]interface{}{},
+						},
+					},
+				}
+
+				requestBody, err := json.Marshal(mcpRequest)
+				require.NoError(t, err)
+
+				req, err := http.NewRequest("POST", mcpAddr, strings.NewReader(string(requestBody)))
+				require.NoError(t, err)
+
+				// Set headers that should be filtered
+				req.Header.Set("Proxy-Authenticate", "Basic")
+				req.Header.Set("Proxy-Authorization", "Basic YWxhZGRpbjpvcGVuc2VzYW1l")
+				req.Header.Set("Content-Type", "application/json; foo=bar") // Custom param that should be stripped
+				req.Header.Set("Accept", "application/json")
+				req.Header.Set("Accept-Encoding", "br") // Request brotli (which go client doesn't support by default)
+				req.Header.Set("Alt-Svc", "h2=\":443\"; ma=2592000")
+				req.Header.Set("Proxy-Connection", "keep-alive")
+
+				// Set a header that SHOULD be forwarded for control
+				req.Header.Set("X-Allowed-Header", "allowed")
+
+				resp, err := xEnv.RouterClient.Do(req)
+				require.NoError(t, err)
+				defer resp.Body.Close()
+
+				if resp.StatusCode != http.StatusOK {
+					t.Logf("Response Status: %d", resp.StatusCode)
+				}
+				require.Equal(t, http.StatusOK, resp.StatusCode)
+
+				subgraphMutex.Lock()
+				defer subgraphMutex.Unlock()
+
+				require.NotNil(t, capturedSubgraphRequest)
+
+				// Check control header
+				assert.Equal(t, "allowed", capturedSubgraphRequest.Header.Get("X-Allowed-Header"))
+
+				// Check filtered headers
+				assert.NotEqual(t, "Basic", capturedSubgraphRequest.Header.Get("Proxy-Authenticate"))
+				assert.NotEqual(t, "Basic YWxhZGRpbjpvcGVuc2VzYW1l", capturedSubgraphRequest.Header.Get("Proxy-Authorization"))
+
+				// Content-Type should be set by MCP server to application/json (and stripped of custom params)
+				ct := capturedSubgraphRequest.Header.Get("Content-Type")
+				assert.True(t, strings.HasPrefix(ct, "application/json"), "Content-Type should start with application/json")
+				assert.False(t, strings.Contains(ct, "foo=bar"), "Content-Type should not contain forwarded parameters")
+
+				// Accept should be set by MCP server
+				assert.Equal(t, "application/json", capturedSubgraphRequest.Header.Get("Accept"))
+
+				// Accept-Encoding should be set by the Go HTTP client (gzip), not what we sent (br)
+				ae := capturedSubgraphRequest.Header.Get("Accept-Encoding")
+				assert.Contains(t, ae, "gzip", "Accept-Encoding should contain gzip (set by Go client)")
+				assert.NotContains(t, ae, "br", "Accept-Encoding should not contain br (filtered from request)")
+
+				// Other headers should be missing
+				assert.Empty(t, capturedSubgraphRequest.Header.Get("Alt-Svc"))
+				assert.Empty(t, capturedSubgraphRequest.Header.Get("Proxy-Connection"))
 			})
 		})
 	})

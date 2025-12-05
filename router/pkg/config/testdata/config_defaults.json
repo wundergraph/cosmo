@@ -63,7 +63,12 @@
         "SchemaFieldUsage": {
           "Enabled": false,
           "IncludeOperationSha": false,
-          "SampleRate": 1
+          "Exporter": {
+            "BatchSize": 4096,
+            "QueueSize": 12800,
+            "Interval": 2000000000,
+            "ExportTimeout": 10000000000
+          }
         }
       },
       "CardinalityLimit": 2000
@@ -295,6 +300,12 @@
       "Nats": null,
       "Kafka": null,
       "Redis": null
+    },
+    "Handlers": {
+      "OnReceiveEvents": {
+        "MaxConcurrentHandlers": 100,
+        "HandlerTimeout": 5000000000
+      }
     }
   },
   "CacheWarmup": {
@@ -356,6 +367,7 @@
       "EnableResolverDebugging": false,
       "EnablePersistedOperationsCacheResponseHeader": false,
       "EnableNormalizationCacheResponseHeader": false,
+      "EnableCacheResponseHeaders": false,
       "AlwaysIncludeQueryPlan": false,
       "AlwaysSkipLoader": false
     },

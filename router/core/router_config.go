@@ -17,6 +17,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/health"
 	"github.com/wundergraph/cosmo/router/pkg/mcpserver"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"go.opentelemetry.io/otel/propagation"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
@@ -24,6 +25,26 @@ import (
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 )
+
+type subscriptionHooks struct {
+	onStart         onStartHooks
+	onPublishEvents onPublishEventsHooks
+	onReceiveEvents onReceiveEventsHooks
+}
+
+type onStartHooks struct {
+	handlers []func(ctx SubscriptionOnStartHandlerContext) error
+}
+
+type onPublishEventsHooks struct {
+	handlers []func(ctx StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error)
+}
+
+type onReceiveEventsHooks struct {
+	handlers              []func(ctx StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error)
+	maxConcurrentHandlers int
+	timeout               time.Duration
+}
 
 type Config struct {
 	clusterName                     string
@@ -34,7 +55,7 @@ type Config struct {
 	tracerProvider                  *sdktrace.TracerProvider
 	otlpMeterProvider               *sdkmetric.MeterProvider
 	promMeterProvider               *sdkmetric.MeterProvider
-	gqlMetricsExporter              *graphqlmetrics.Exporter
+	gqlMetricsExporter              *graphqlmetrics.GraphQLMetricsExporter
 	corsOptions                     *cors.Config
 	setConfigVersionHeader          bool
 	routerGracePeriod               time.Duration
@@ -119,6 +140,7 @@ type Config struct {
 	mcp                           config.MCPConfiguration
 	plugins                       config.PluginsConfiguration
 	tracingAttributes             []config.CustomAttribute
+	subscriptionHooks             subscriptionHooks
 }
 
 // Usage returns an anonymized version of the config for usage tracking

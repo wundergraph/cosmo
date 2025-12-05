@@ -460,6 +460,7 @@ export default async function build(opts: BuildConfig) {
 
   await fastify.register(ScimController, {
     organizationRepository,
+    mailer: mailerClient,
     userRepository: userRepo,
     apiKeyRepository,
     authenticator: apiKeyAuth,

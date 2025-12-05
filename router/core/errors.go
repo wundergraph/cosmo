@@ -35,6 +35,7 @@ const (
 	errorTypeInvalidWsSubprotocol
 	errorTypeEDFSInvalidMessage
 	errorTypeMergeResult
+	errorTypeStreamsHandlerError
 )
 
 type (
@@ -76,6 +77,10 @@ func getErrorType(err error) errorType {
 	var edfsErr *datasource.Error
 	if errors.As(err, &edfsErr) {
 		return errorTypeEDFS
+	}
+	var streamsHandlerErr *StreamHandlerError
+	if errors.As(err, &streamsHandlerErr) {
+		return errorTypeStreamsHandlerError
 	}
 	var invalidWsSubprotocolErr graphql_datasource.InvalidWsSubprotocolError
 	if errors.As(err, &invalidWsSubprotocolErr) {

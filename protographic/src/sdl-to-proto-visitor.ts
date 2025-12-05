@@ -45,6 +45,8 @@ import {
 import { camelCase } from 'lodash-es';
 import { ProtoLock, ProtoLockManager } from './proto-lock.js';
 import { CONNECT_FIELD_RESOLVER, CONTEXT, FIELD_ARGS, RESULT } from './string-constants.js';
+import { unwrapNonNullType, isNestedListType, calculateNestingLevel } from './operations/list-type-utils.js';
+import { buildProtoOptions, type ProtoOptions } from './proto-options.js';
 
 /**
  * Maps GraphQL scalar types to Protocol Buffer types
@@ -86,13 +88,22 @@ interface CollectionResult {
 /**
  * Options for GraphQLToProtoTextVisitor
  */
-export interface GraphQLToProtoTextVisitorOptions {
+export interface GraphQLToProtoTextVisitorOptions extends ProtoOptions {
   serviceName?: string;
   packageName?: string;
-  goPackage?: string;
   lockData?: ProtoLock;
   /** Whether to include descriptions/comments from GraphQL schema */
   includeComments?: boolean;
+  /** Custom options printed as proto options */
+  protoOptions?: ProtoOption[];
+}
+
+/**
+ * Format based on https://protobuf.dev/reference/protobuf/proto3-spec/#option
+ */
+export interface ProtoOption {
+  name: string;
+  constant: string;
 }
 
 /**
@@ -197,13 +208,7 @@ export class GraphQLToProtoTextVisitor {
    * @param options - Configuration options for the visitor
    */
   constructor(schema: GraphQLSchema, options: GraphQLToProtoTextVisitorOptions = {}) {
-    const {
-      serviceName = 'DefaultService',
-      packageName = 'service.v1',
-      goPackage,
-      lockData,
-      includeComments = true,
-    } = options;
+    const { serviceName = 'DefaultService', packageName = 'service.v1', lockData, includeComments = true } = options;
 
     this.schema = schema;
     this.serviceName = serviceName;
@@ -216,12 +221,32 @@ export class GraphQLToProtoTextVisitor {
       this.initializeFieldNumbersMap(lockData);
     }
 
-    // Initialize options
-    if (goPackage && goPackage !== '') {
-      // Generate default go_package if not provided
-      const defaultGoPackage = `cosmo/pkg/proto/${packageName};${packageName.replace('.', '')}`;
-      const goPackageOption = goPackage || defaultGoPackage;
-      this.options.push(`option go_package = "${goPackageOption}";`);
+    // Process language-specific proto options using buildProtoOptions
+    const protoOptionsFromLanguageProps = buildProtoOptions(
+      {
+        goPackage: options.goPackage,
+        javaPackage: options.javaPackage,
+        javaOuterClassname: options.javaOuterClassname,
+        javaMultipleFiles: options.javaMultipleFiles,
+        csharpNamespace: options.csharpNamespace,
+        rubyPackage: options.rubyPackage,
+        phpNamespace: options.phpNamespace,
+        phpMetadataNamespace: options.phpMetadataNamespace,
+        objcClassPrefix: options.objcClassPrefix,
+        swiftPrefix: options.swiftPrefix,
+      },
+      packageName,
+    );
+
+    // Add language-specific options
+    if (protoOptionsFromLanguageProps.length > 0) {
+      this.options.push(...protoOptionsFromLanguageProps);
+    }
+
+    // Process custom protoOptions array (for backward compatibility)
+    if (options.protoOptions && options.protoOptions.length > 0) {
+      const processedOptions = options.protoOptions.map((opt) => `option ${opt.name} = ${opt.constant};`);
+      this.options.push(...processedOptions);
     }
   }
 
@@ -412,15 +437,6 @@ export class GraphQLToProtoTextVisitor {
   private addImport(importPath: string): void {
     if (!this.imports.includes(importPath)) {
       this.imports.push(importPath);
-    }
-  }
-
-  /**
-   * Add an option statement to the proto file
-   */
-  private addOption(optionStatement: string): void {
-    if (!this.options.includes(optionStatement)) {
-      this.options.push(optionStatement);
     }
   }
 
@@ -1971,22 +1987,22 @@ Example:
    * @returns ProtoType object containing the type name and whether it should be repeated
    */
   private handleListType(graphqlType: GraphQLList<GraphQLType> | GraphQLNonNull<GraphQLList<GraphQLType>>): ProtoType {
-    const listType = this.unwrapNonNullType(graphqlType);
+    const listType = unwrapNonNullType(graphqlType);
     const isNullableList = !isNonNullType(graphqlType);
-    const isNestedList = this.isNestedListType(listType);
+    const isNested = isNestedListType(listType);
 
     // Simple non-nullable lists can use repeated fields directly
-    if (!isNullableList && !isNestedList) {
+    if (!isNullableList && !isNested) {
       return { ...this.getProtoTypeFromGraphQL(getNamedType(listType), true), isRepeated: true };
     }
 
     // Nullable or nested lists need wrapper messages
     const baseType = getNamedType(listType);
-    const nestingLevel = this.calculateNestingLevel(listType);
+    const nestingLevel = calculateNestingLevel(listType);
 
     // For nested lists, always use full nesting level to preserve inner list nullability
     // For single-level nullable lists, use nesting level 1
-    const wrapperNestingLevel = isNestedList ? nestingLevel : 1;
+    const wrapperNestingLevel = isNested ? nestingLevel : 1;
 
     // Generate all required wrapper messages
     let wrapperName = '';
@@ -1996,44 +2012,6 @@ Example:
 
     // For nested lists, never use repeated at field level to preserve nullability
     return { typeName: wrapperName, isRepeated: false };
-  }
-
-  /**
-   * Unwraps a GraphQL type from a GraphQLNonNull type
-   */
-  private unwrapNonNullType<T extends GraphQLType>(graphqlType: T | GraphQLNonNull<T>): T {
-    return isNonNullType(graphqlType) ? (graphqlType.ofType as T) : graphqlType;
-  }
-
-  /**
-   * Checks if a GraphQL list type contains nested lists
-   * Type guard that narrows the input type when nested lists are detected
-   */
-  private isNestedListType(
-    listType: GraphQLList<GraphQLType>,
-  ): listType is GraphQLList<GraphQLList<GraphQLType> | GraphQLNonNull<GraphQLList<GraphQLType>>> {
-    return isListType(listType.ofType) || (isNonNullType(listType.ofType) && isListType(listType.ofType.ofType));
-  }
-
-  /**
-   * Calculates the nesting level of a GraphQL list type
-   */
-  private calculateNestingLevel(listType: GraphQLList<GraphQLType>): number {
-    let level = 1;
-    let currentType: GraphQLType = listType.ofType;
-
-    while (true) {
-      if (isNonNullType(currentType)) {
-        currentType = currentType.ofType;
-      } else if (isListType(currentType)) {
-        currentType = currentType.ofType;
-        level++;
-      } else {
-        break;
-      }
-    }
-
-    return level;
   }
 
   /**

@@ -1,7 +1,142 @@
-import { ChangeType } from '@graphql-inspector/core';
+import {
+  ChangeType,
+  FieldArgumentRemovedChange,
+  FieldArgumentTypeChangedChange,
+  InputFieldTypeChangedChange,
+} from '@graphql-inspector/core';
+import type { NamedTypeNode, NonNullTypeNode, TypeNode } from 'graphql';
+import { parseType, print } from 'graphql';
+import { SchemaCheckChangeAction } from '../../db/models.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
-import { SchemaCheckChangeAction } from '../../db/models.js';
+
+export enum FieldTypeChangeCategory {
+  /**
+   * Optional same type -> Required same type
+   * Example: "Boolean" -> "Boolean!"
+   */
+  OPTIONAL_TO_REQUIRED_SAME = 'OPTIONAL_TO_REQUIRED_SAME',
+  /**
+   * Optional different type -> Required different type
+   * Example: "Boolean" -> "String!"
+   */
+  OPTIONAL_TO_REQUIRED_DIFFERENT = 'OPTIONAL_TO_REQUIRED_DIFFERENT',
+  /**
+   * Required different type -> Required different type
+   * Example: "Boolean!" -> "String!"
+   */
+  REQUIRED_TO_REQUIRED_DIFFERENT = 'REQUIRED_TO_REQUIRED_DIFFERENT',
+  /**
+   * Optional different type -> Optional different type
+   * Example: "Boolean" -> "String"
+   */
+  OPTIONAL_TO_OPTIONAL_DIFFERENT = 'OPTIONAL_TO_OPTIONAL_DIFFERENT',
+}
+
+/**
+ * Get the named type from a TypeNode AST
+ */
+function getNamedType(typeNode: TypeNode): NamedTypeNode {
+  if (typeNode.kind === 'NamedType') {
+    return typeNode;
+  }
+  if (typeNode.kind === 'NonNullType' || typeNode.kind === 'ListType') {
+    return getNamedType(typeNode.type);
+  }
+  throw new Error('Unexpected type node');
+}
+
+/**
+ * Determines the type change category from meta information using GraphQL's type parsing utilities.
+ * Works for both InputFieldTypeChanged and FieldArgumentTypeChanged.
+ *
+ * @param oldType - The old type from meta (e.g., oldInputFieldType or oldArgumentType)
+ * @param newType - The new type from meta (e.g., newInputFieldType or newArgumentType)
+ * @returns The category of the type change
+ *
+ * @example
+ * getTypeChangeCategory("Boolean!", "[Boolean!]!")
+ * // Returns FieldTypeChangeCategory.REQUIRED_TO_REQUIRED_DIFFERENT
+ *
+ * @example
+ * getTypeChangeCategory("SearchInput", "SearchInput!")
+ * // Returns FieldTypeChangeCategory.OPTIONAL_TO_REQUIRED_SAME
+ */
+export function getTypeChangeCategory(oldType: string, newType: string): FieldTypeChangeCategory {
+  // Parse type strings into AST using GraphQL's parseType
+  // Example 1: "Boolean!" -> NonNullType { type: NamedType { name: "Boolean" } }
+  // Example 2: "[Boolean!]!" -> NonNullType { type: ListType { type: NonNullType { type: NamedType { name: "Boolean" } } } }
+  // Example 3: "SearchInput" -> NamedType { name: "SearchInput" }
+  const oldTypeNode = parseType(oldType);
+  const newTypeNode = parseType(newType);
+
+  // Check if types are required (NonNull) by checking the outermost wrapper
+  // Example 1: "Boolean!" -> fromRequired = true
+  // Example 2: "[Boolean]" -> fromRequired = false
+  // Example 3: "SearchInput" -> fromRequired = false
+  const fromRequired = oldTypeNode.kind === 'NonNullType';
+  const toRequired = newTypeNode.kind === 'NonNullType';
+
+  // Get the named types (unwraps all wrappers like NonNull and List)
+  // Example 1: "[Boolean!]!" -> NamedType { name: "Boolean" }
+  // Example 2: "SearchInput" -> NamedType { name: "SearchInput" }
+  // Example 3: "[String]" -> NamedType { name: "String" }
+  const oldNamedType = getNamedType(oldTypeNode);
+  const newNamedType = getNamedType(newTypeNode);
+
+  // Get base type names from the named type nodes
+  // Example 1: "[Boolean!]!" -> "Boolean"
+  // Example 2: "SearchInput" -> "SearchInput"
+  // Example 3: "[String]" -> "String"
+  const oldTypeName = oldNamedType.name.value;
+  const newTypeName = newNamedType.name.value;
+
+  // Get normalized structure (without NonNull on the outermost layer)
+  // This preserves inner structure like [Type] vs Type
+  // Example 1: "Boolean!" -> normalized: "Boolean"
+  // Example 2: "[Boolean!]!" -> normalized: "[Boolean!]"
+  // Example 3: "[Boolean]" -> normalized: "[Boolean]"
+  // Example 4: "SearchInput" -> normalized: "SearchInput"
+  const oldNormalized = print(fromRequired ? (oldTypeNode as NonNullTypeNode).type : oldTypeNode);
+  const newNormalized = print(toRequired ? (newTypeNode as NonNullTypeNode).type : newTypeNode);
+
+  // Check if base types are the same AND structure is the same
+  // Example 1: "Boolean" vs "Boolean!" -> sameBaseType: true, sameStructure: true
+  // Example 2: "Boolean" vs "[Boolean]" -> sameBaseType: true, sameStructure: false
+  // Example 3: "Boolean" vs "String" -> sameBaseType: false, sameStructure: false
+  // Example 4: "[Boolean!]" vs "[Boolean!]!" -> sameBaseType: true, sameStructure: true
+  const sameBaseType = oldTypeName === newTypeName;
+  const sameStructure = oldNormalized === newNormalized;
+
+  // Types are considered "same" only if both base type and structure match
+  // Example 1: "Boolean" -> "Boolean!" -> sameType: true (same base + same structure)
+  // Example 2: "Boolean" -> "[Boolean]" -> sameType: false (same base but different structure)
+  // Example 3: "Boolean" -> "String" -> sameType: false (different base)
+  const sameType = sameBaseType && sameStructure;
+
+  // Categorize based on the 4 cases
+  if (sameType && !fromRequired && toRequired) {
+    // Case 1: Optional same type -> Required same type
+    // Example: "Boolean" -> "Boolean!"
+    return FieldTypeChangeCategory.OPTIONAL_TO_REQUIRED_SAME;
+  } else if (!sameType && !fromRequired && toRequired) {
+    // Case 2: Optional different type -> Required different type
+    // Example: "Boolean" -> "String!"
+    return FieldTypeChangeCategory.OPTIONAL_TO_REQUIRED_DIFFERENT;
+  } else if (!sameType && fromRequired && toRequired) {
+    // Case 3: Required different type -> Required different type
+    // Example: "Boolean!" -> "String!"
+    return FieldTypeChangeCategory.REQUIRED_TO_REQUIRED_DIFFERENT;
+  } else if (!sameType && !fromRequired && !toRequired) {
+    // Case 4: Optional different type -> Optional different type
+    // Example: "Boolean" -> "String"
+    return FieldTypeChangeCategory.OPTIONAL_TO_OPTIONAL_DIFFERENT;
+  } else {
+    // Edge case: same type, from required, to optional (shouldn't happen in breaking changes)
+    // Fallback to same type becoming required
+    return FieldTypeChangeCategory.OPTIONAL_TO_REQUIRED_SAME;
+  }
+}
 
 export interface InspectorSchemaChange {
   schemaChangeId: string;
@@ -11,6 +146,7 @@ export interface InspectorSchemaChange {
   path?: string[];
   isInput?: boolean;
   isArgument?: boolean;
+  isNull?: boolean;
 }
 
 export interface InspectorFilter {
@@ -36,6 +172,7 @@ export class SchemaUsageTrafficInspector {
   /**
    * Inspect the usage of a schema change in the last X days on real traffic and return the
    * affected operations. We will consider all available compositions.
+   * @param changes - Array of inspector changes
    */
   public async inspect(
     changes: InspectorSchemaChange[],
@@ -45,28 +182,47 @@ export class SchemaUsageTrafficInspector {
 
     for (const change of changes) {
       const where: string[] = [];
+      const params: Record<string, string | number | boolean> = {
+        daysToConsider: filter.daysToConsider,
+        federatedGraphId: filter.federatedGraphId,
+        subgraphId: filter.subgraphId,
+        organizationId: filter.organizationId,
+      };
+
       // Used for arguments usage check
       if (change.path) {
-        where.push(
-          `startsWith(Path, [${change.path.map((seg) => `'${seg}'`).join(',')}]) AND length(Path) = ${
-            change.path.length
-          }`,
-        );
+        // Escape single quotes in path segments and build the array
+        const escapedPath = change.path
+          .map((seg) => {
+            const escaped = seg.replace(/'/g, "''");
+            return `'${escaped}'`;
+          })
+          .join(',');
+        where.push(`startsWith(Path, [${escapedPath}]) AND length(Path) = ${change.path.length}`);
       }
       if (change.namedType) {
-        where.push(`NamedType = '${change.namedType}'`);
+        params.namedType = change.namedType;
+        where.push(`NamedType = {namedType:String}`);
       }
       if (change.typeName) {
-        where.push(`hasAny(TypeNames, ['${change.typeName}'])`);
+        params.typeName = change.typeName;
+        where.push(`hasAny(TypeNames, [{typeName:String}])`);
       }
+
       // fieldName can be empty if a type was removed
       if (change.fieldName) {
-        where.push(`FieldName = '${change.fieldName}'`);
+        params.fieldName = change.fieldName;
+        where.push(`FieldName = {fieldName:String}`);
       }
+
       if (change.isInput) {
         where.push(`IsInput = true`);
       } else if (change.isArgument) {
         where.push(`IsArgument = true`);
+      }
+
+      if (change.isNull !== undefined) {
+        where.push(`IsNull = ${change.isNull}`);
       }
       where.push(`IsIndirectFieldUsage = false`);
 
@@ -79,10 +235,10 @@ export class SchemaUsageTrafficInspector {
         FROM ${this.client.database}.gql_metrics_schema_usage_lite_1d_90d
         WHERE
           -- Filter first on date and customer to reduce the amount of data
-          Timestamp >= toStartOfDay(now()) - interval ${filter.daysToConsider} day AND
-          FederatedGraphID = '${filter.federatedGraphId}' AND
-          hasAny(SubgraphIDs, ['${filter.subgraphId}']) AND
-          OrganizationID = '${filter.organizationId}' AND
+          Timestamp >= toStartOfDay(now()) - interval {daysToConsider:UInt32} day AND
+          FederatedGraphID = {federatedGraphId:String} AND
+          hasAny(SubgraphIDs, [{subgraphId:String}]) AND
+          OrganizationID = {organizationId:String} AND
           ${where.join(' AND ')}
         GROUP BY OperationHash
     `;
@@ -93,7 +249,7 @@ export class SchemaUsageTrafficInspector {
         operationType: string;
         lastSeen: number;
         firstSeen: number;
-      }[] = await this.client.queryPromise(query);
+      }[] = await this.client.queryPromise(query, params);
 
       if (Array.isArray(res)) {
         const ops = res.map((r) => ({
@@ -118,6 +274,7 @@ export class SchemaUsageTrafficInspector {
   /**
    * Convert schema changes to inspector changes. Will ignore a change if it is not inspectable.
    * Ultimately, will result in a breaking change because the change is not inspectable with the current implementation.
+   * Returns an array of inspector changes.
    */
   public schemaChangesToInspectorChanges(
     schemaChanges: SchemaDiff[],
@@ -192,6 +349,7 @@ export function collectOperationUsageStats(inspectorResult: InspectorOperationRe
 /**
  * Convert a schema change to an inspector change. Throws an error if the change is not supported.
  * Only breaking changes should be passed to this function because we only care about breaking changes.
+ * Returns an inspector change with the schemaChangeId included.
  */
 export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): InspectorSchemaChange | null {
   const path = change.path.split('.');
@@ -299,27 +457,161 @@ export function toInspectorChange(change: SchemaDiff, schemaCheckId: string): In
       };
     }
     // 1. When the type of input field has changed, we know the exact type name and field name e.g. 'MyInput.name'
-    case ChangeType.InputFieldTypeChanged:
+    case ChangeType.InputFieldTypeChanged: {
+      // Use structured meta instead of parsing message
+      const meta = change.meta as InputFieldTypeChangedChange['meta'];
+      const inputFieldTypeChangeCategory = getTypeChangeCategory(meta.oldInputFieldType, meta.newInputFieldType);
+      switch (inputFieldTypeChangeCategory) {
+        case FieldTypeChangeCategory.OPTIONAL_TO_REQUIRED_SAME: {
+          // Int -> Int!
+          return {
+            schemaChangeId: schemaCheckId,
+            // if the input is used and the field is not passed,
+            // but now that it is required, its breaking
+            typeName: path[0],
+            fieldName: path[1],
+            isInput: true,
+            isNull: true,
+          };
+        }
+        case FieldTypeChangeCategory.OPTIONAL_TO_REQUIRED_DIFFERENT: {
+          // Int -> Float!
+          // in this case, all the ops which have this input type are breaking
+          return {
+            schemaChangeId: schemaCheckId,
+            path: [path[0]],
+            isInput: true,
+            isNull: false,
+          };
+        }
+        case FieldTypeChangeCategory.REQUIRED_TO_REQUIRED_DIFFERENT: {
+          // Int! -> Float!
+          // in this case, all the ops which have this input type are breaking
+          return {
+            schemaChangeId: schemaCheckId,
+            path: [path[0]],
+            isInput: true,
+            isNull: false,
+          };
+        }
+        case FieldTypeChangeCategory.OPTIONAL_TO_OPTIONAL_DIFFERENT: {
+          // Int -> Float
+          // in this case, any ops which use the input field and are not null are breaking
+          return {
+            schemaChangeId: schemaCheckId,
+            typeName: path[0],
+            fieldName: path[1],
+            isInput: true,
+            isNull: false,
+          };
+        }
+        default: {
+          throw new Error(`Unsupported input field type change category: ${inputFieldTypeChangeCategory}`);
+        }
+      }
+    }
     case ChangeType.InputFieldRemoved:
     case ChangeType.InputFieldAdded: {
+      // in these cases, all the ops which use this input type are breaking
       return {
         schemaChangeId: schemaCheckId,
-        fieldName: path[1],
-        typeName: path[0],
+        path: [path[0]],
         isInput: true,
+        isNull: false,
       };
     }
     // 1. When an argument has changed, we know the exact path to the argument e.g. 'Query.engineer.id'
     // and the type name e.g. 'Query'
-    case ChangeType.FieldArgumentRemoved:
-    case ChangeType.FieldArgumentAdded: // Only when a required argument is added
     case ChangeType.FieldArgumentTypeChanged: {
+      // Use structured meta instead of parsing message
+      const meta = change.meta as FieldArgumentTypeChangedChange['meta'];
+      const argumentTypeChangeCategory = getTypeChangeCategory(meta.oldArgumentType, meta.newArgumentType);
+      switch (argumentTypeChangeCategory) {
+        case FieldTypeChangeCategory.OPTIONAL_TO_REQUIRED_SAME: {
+          // SearchInput -> SearchInput!
+          return {
+            schemaChangeId: schemaCheckId,
+            // if the argument is used and not passed (null),
+            // but now that it is required, its breaking
+            path: path.slice(1), // The path to the updated argument e.g. 'engineer.name' of the type names
+            typeName: path[0],
+            fieldName: path[2],
+            isArgument: true,
+            isNull: true,
+          };
+        }
+        case FieldTypeChangeCategory.OPTIONAL_TO_REQUIRED_DIFFERENT: {
+          // SearchInput -> String!
+          // in this case, all the ops which have this argument are breaking
+          return {
+            schemaChangeId: schemaCheckId,
+            path: path.slice(1), // The path to the updated argument e.g. 'engineer.name' of the type names
+            typeName: path[0],
+            fieldName: path[2],
+            isArgument: true,
+          };
+        }
+        case FieldTypeChangeCategory.REQUIRED_TO_REQUIRED_DIFFERENT: {
+          // SearchInput! -> String!
+          // in this case, all the ops which have this argument are breaking
+          return {
+            schemaChangeId: schemaCheckId,
+            path: path.slice(1), // The path to the updated argument e.g. 'engineer.name' of the type names
+            typeName: path[0],
+            fieldName: path[2],
+            isArgument: true,
+          };
+        }
+        case FieldTypeChangeCategory.OPTIONAL_TO_OPTIONAL_DIFFERENT: {
+          // SearchInput -> String
+          // in this case, any ops which use the argument and are not null are breaking
+          return {
+            schemaChangeId: schemaCheckId,
+            path: path.slice(1), // The path to the updated argument e.g. 'engineer.name' of the type names
+            typeName: path[0],
+            fieldName: path[2],
+            isArgument: true,
+            isNull: false,
+          };
+        }
+        default: {
+          throw new Error(`Unsupported argument type change category: ${argumentTypeChangeCategory}`);
+        }
+      }
+    }
+
+    // Only when a required argument is added
+    case ChangeType.FieldArgumentAdded: {
+      // in this case, all the ops which have this argument are breaking
       return {
         schemaChangeId: schemaCheckId,
-        path: path.slice(1), // The path to the updated argument e.g. 'engineer.name' of the type names
-        typeName: path[0], // Enclosing type e.g. 'Query' or 'Engineer' when the argument is on a field of type Engineer
-        isArgument: true,
+        // e.g. if the path recieved is 'Query.employee.a', the path should be ['employee'] as its new field or it has changed the type of the argument, we check the usage of the operation.
+        path: path.slice(1, 2),
+        typeName: path[0],
       };
+    }
+    case ChangeType.FieldArgumentRemoved: {
+      // Use structured meta instead of parsing message
+      const meta = change.meta as FieldArgumentRemovedChange['meta'];
+      const isRequired = meta.removedFieldType.endsWith('!');
+      if (isRequired) {
+        // in this case, all the ops which use this argument are breaking
+        return {
+          schemaChangeId: schemaCheckId,
+          // e.g. if the path recieved is 'Query.employee.a', the path should be ['employee'] as its new field or it has changed the type of the argument, we check the usage of the operation.
+          path: path.slice(1, 2),
+          typeName: path[0],
+        };
+      } else {
+        // in this case, any ops which use the argument and are not null are breaking
+        return {
+          schemaChangeId: schemaCheckId,
+          path: path.slice(1), // The path to the updated argument e.g. 'engineer.name' of the type names
+          typeName: path[0],
+          isArgument: true,
+          isNull: false,
+        };
+      }
     }
   }
   // no return to enforce that all cases are handled

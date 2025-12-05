@@ -330,6 +330,10 @@ events:
         urls:
           - 'redis://localhost:6379/11'
         cluster_enabled: true
+  handlers:
+    on_receive_events:
+      max_concurrent_handlers: 100
+      handler_timeout: 5s
 
 engine:
   enable_single_flight: true
@@ -350,6 +354,7 @@ engine:
   debug:
     report_websocket_connections: false
     report_memory_usage: false
+    enable_cache_response_headers: false
 
 rate_limit:
   enabled: true

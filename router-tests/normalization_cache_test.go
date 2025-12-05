@@ -1,13 +1,161 @@
 package integration
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
+
+// cacheHit represents the expected cache hit/miss status for all three normalization stages.
+// True value means the cache was hit.
+type cacheHit struct {
+	normalization bool
+	variables     bool
+	remapping     bool
+}
+
+// assertCacheHeaders checks all three normalization cache headers
+func assertCacheHeaders(t *testing.T, res *testenv.TestResponse, expected cacheHit) {
+	t.Helper()
+	bool2str := func(hit bool) string {
+		if hit {
+			return "HIT"
+		}
+		return "MISS"
+	}
+
+	require.Equal(t, bool2str(expected.normalization), res.Response.Header.Get(core.NormalizationCacheHeader),
+		"Normalization cache hit mismatch")
+	require.Equal(t, bool2str(expected.variables), res.Response.Header.Get(core.VariablesNormalizationCacheHeader),
+		"Variables normalization cache hit mismatch")
+	require.Equal(t, bool2str(expected.remapping), res.Response.Header.Get(core.VariablesRemappingCacheHeader),
+		"Variables remapping cache hit mismatch")
+}
+
+func TestVarsNormalizationRemappingCaches(t *testing.T) {
+	t.Parallel()
+
+	t.Run("Basic normalization cache with skip/include", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			f := func(expected cacheHit, skipMouse bool) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					OperationName: []byte(`"Employee"`),
+					Query:         `query Employee( $id: Int! = 4 $withAligators: Boolean! $withCats: Boolean! $skipDogs:Boolean! $skipMouses:Boolean! ) { employee(id: $id) { details { pets { name __typename ...AlligatorFields @include(if: $withAligators) ...CatFields @include(if: $withCats) ...DogFields @skip(if: $skipDogs) ...MouseFields @skip(if: $skipMouses) ...PonyFields @include(if: false) } } } } fragment AlligatorFields on Alligator { __typename class dangerous gender name } fragment CatFields on Cat { __typename class gender name type } fragment DogFields on Dog { __typename breed class gender name } fragment MouseFields on Mouse { __typename class gender name } fragment PonyFields on Pony { __typename class gender name }`,
+					Variables:     []byte(fmt.Sprintf(`{"withAligators": true,"withCats": true,"skipDogs": false,"skipMouses": %t}`, skipMouse)),
+				})
+				assertCacheHeaders(t, res, expected)
+				require.Equal(t, `{"data":{"employee":{"details":{"pets":[{"name":"Abby","__typename":"Dog","breed":"GOLDEN_RETRIEVER","class":"MAMMAL","gender":"FEMALE"},{"name":"Survivor","__typename":"Pony"}]}}}}`, res.Body)
+			}
+
+			f(cacheHit{normalization: false, variables: false, remapping: false}, true)
+			f(cacheHit{normalization: true, variables: true, remapping: true}, true)
+			f(cacheHit{normalization: true, variables: true, remapping: true}, true)
+			f(cacheHit{normalization: false, variables: false, remapping: false}, false)
+			f(cacheHit{normalization: true, variables: true, remapping: true}, true)
+			f(cacheHit{normalization: true, variables: true, remapping: true}, false)
+		})
+	})
+
+	t.Run("Variables normalization cache - inline value extraction", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Inline value gets extracted to variable
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employee(id: 1) { id details { forename } } }`,
+			})
+			assertCacheHeaders(t, res, cacheHit{})
+
+			// Same query
+			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employee(id: 1) { id details { forename } } }`,
+			})
+			assertCacheHeaders(t, res, cacheHit{normalization: true, variables: true, remapping: true})
+
+			// Different inline value
+			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employee(id: 2) { id details { forename } } }`,
+			})
+			assertCacheHeaders(t, res, cacheHit{remapping: true})
+		})
+	})
+
+	t.Run("Variables normalization cache - query changes, but variables stay the same", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:     `query MyQuery($id: Int!) { employee(id: $id) { id  } }`,
+				Variables: []byte(`{"id": 1}`),
+			})
+			require.Equal(t, `{"data":{"employee":{"id":1}}}`, res.Body)
+			assertCacheHeaders(t, res, cacheHit{})
+
+			// Different query with the same variable value.
+			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:     `query MyQuery($id: Int!) { employee(id: $id) { id details { forename }} }`,
+				Variables: []byte(`{"id": 1}`),
+			})
+			require.Equal(t, `{"data":{"employee":{"id":1,"details":{"forename":"Jens"}}}}`, res.Body)
+			assertCacheHeaders(t, res, cacheHit{})
+		})
+	})
+
+	t.Run("Cache key isolation - different operations don't collide", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Query A
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:     `query A($id: Int!) { employee(id: $id) { id } }`,
+				Variables: []byte(`{"id": 1}`),
+			})
+			assertCacheHeaders(t, res, cacheHit{})
+
+			// Query B with different structure should miss
+			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:     `query B($id: Int!) { employee(id: $id) { id details { forename } } }`,
+				Variables: []byte(`{"id": 1}`),
+			})
+			assertCacheHeaders(t, res, cacheHit{})
+
+			// Query A again should hit its own cache
+			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:     `query A($id: Int!) { employee(id: $id) { id } }`,
+				Variables: []byte(`{"id": 1}`),
+			})
+			assertCacheHeaders(t, res, cacheHit{normalization: true, variables: true, remapping: true})
+		})
+	})
+
+	t.Run("List coercion with variables normalization cache", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Test that list coercion works correctly with caching
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:     `query MyQuery($arg: [String!]!) { rootFieldWithListArg(arg: $arg) }`,
+				Variables: []byte(`{"arg": "single"}`),
+			})
+			require.Equal(t, `{"data":{"rootFieldWithListArg":["single"]}}`, res.Body)
+			assertCacheHeaders(t, res, cacheHit{})
+
+			// Same structure should hit cache even with different value
+			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:     `query MyQuery($arg: [String!]!) { rootFieldWithListArg(arg: $arg) }`,
+				Variables: []byte(`{"arg": "different"}`),
+			})
+			require.Equal(t, `{"data":{"rootFieldWithListArg":["different"]}}`, res.Body)
+			// Normalization hits because the query structure is unchanged,
+			// variables misses because the value differs,
+			// and remapping hits because the structure remains the same.
+			assertCacheHeaders(t, res, cacheHit{normalization: true, remapping: true})
+		})
+	})
+
+}
 
 func TestNormalizationCache(t *testing.T) {
 	t.Parallel()

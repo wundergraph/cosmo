@@ -2,7 +2,6 @@ import {
   billingPlans,
   billingSubscriptions,
   federatedGraphs,
-  lintRulesEnum,
   memberRoleEnum,
   organizationRoleEnum,
   organizationFeatures,
@@ -31,7 +30,6 @@ export type NewBillingSubscription = typeof billingSubscriptions.$inferInsert;
 export type NewBillingPlan = typeof billingPlans.$inferInsert;
 export type MemberRole = (typeof memberRoleEnum.enumValues)[number];
 export type OrganizationRole = (typeof organizationRoleEnum.enumValues)[number];
-export type LintRuleEnum = (typeof lintRulesEnum.enumValues)[number];
 export type GraphPruningRuleEnum = (typeof graphPruningRulesEnum.enumValues)[number];
 export type WebsocketSubprotocol = (typeof websocketSubprotocolEnum.enumValues)[number];
 export type CacheWarmupOperation = typeof cacheWarmerOperations.$inferInsert;
@@ -170,4 +168,8 @@ export type AuditLogFullAction =
   | 'proposal.closed'
   | 'proposal.enabled'
   | 'proposal.disabled'
-  | 'namespace_proposal_config.updated';
+  | 'namespace_proposal_config.updated'
+  | 'scim.organization_invitation_created'
+  | 'scim.update_organization_member'
+  | 'scim.activate_organization_member'
+  | 'scim.deactivate_organization_member';
