@@ -109,6 +109,8 @@ type Project implements Node & Timestamped @key(fields: "id") {
   filteredTasks(status: TaskStatus, priority: TaskPriority, limit: Int): [Task!]! @connect__fieldResolver(context: "id")
   completionRate(includeSubtasks: Boolean): Float! @connect__fieldResolver(context: "id startDate endDate status")
   estimatedDaysRemaining(fromDate: String): Int @connect__fieldResolver(context: "id endDate status")
+  criticalDeadline(withinDays: Int): Timestamped @connect__fieldResolver(context: "id status milestones")
+  topPriorityItem(category: String): ProjectSearchResult @connect__fieldResolver(context: "id status")
 }
 
 # New types - simplified with ID references only

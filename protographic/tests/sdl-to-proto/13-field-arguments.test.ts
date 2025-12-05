@@ -102,6 +102,199 @@ describe('SDL to Proto Field Arguments', () => {
       }"
     `);
   });
+
+  it('should correctly generate a context message with a list type', () => {
+    const sdl = `
+      type User {
+          id: ID!
+          name: String!
+          posts: [Post!]!
+          lastestPosts(withinDays: Int!): [Post!]! @connect__fieldResolver(context: "id name posts")
+      }
+
+      type Post {
+          id: ID!
+          title: String!
+      }
+
+      type Query {
+          user(id: ID!): User
+      }
+    `;
+
+    const { proto: protoText } = compileGraphQLToProto(sdl);
+
+    expectValidProto(protoText);
+
+    expect(protoText).toMatchInlineSnapshot(`
+      "syntax = "proto3";
+      package service.v1;
+
+      // Service definition for DefaultService
+      service DefaultService {
+        rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
+        rpc ResolveUserLastestPosts(ResolveUserLastestPostsRequest) returns (ResolveUserLastestPostsResponse) {}
+      }
+
+      // Request message for user operation.
+      message QueryUserRequest {
+        string id = 1;
+      }
+      // Response message for user operation.
+      message QueryUserResponse {
+        User user = 1;
+      }
+      message ResolveUserLastestPostsArgs {
+        int32 within_days = 1;
+      }
+
+      message ResolveUserLastestPostsContext {
+        string id = 1;
+        string name = 2;
+        repeated Post posts = 3;
+      }
+
+      message ResolveUserLastestPostsRequest {
+        // context provides the resolver context for the field lastestPosts of type User.
+        repeated ResolveUserLastestPostsContext context = 1;
+        // field_args provides the arguments for the resolver field lastestPosts of type User.
+        ResolveUserLastestPostsArgs field_args = 2;
+      }
+
+      message ResolveUserLastestPostsResult {
+        repeated Post lastest_posts = 1;
+      }
+
+      message ResolveUserLastestPostsResponse {
+        repeated ResolveUserLastestPostsResult result = 1;
+      }
+
+      message User {
+        string id = 1;
+        string name = 2;
+        repeated Post posts = 3;
+      }
+
+      message Post {
+        string id = 1;
+        string title = 2;
+      }"
+    `);
+  });
+
+  it('should correctly generate a context message with a nullable list type and nested list type', () => {
+    const sdl = `
+      type User {
+          id: ID!
+          name: String!
+          posts: [Post!]
+          categories: [[Category!]!]!
+          lastestPosts(withinDays: Int!): [Post!]! @connect__fieldResolver(context: "id name posts categories")
+      }
+
+      type Category {
+        id: ID!
+        name: String!
+      }
+
+      type Post {
+          id: ID!
+          title: String!
+      }
+
+      type Query {
+          user(id: ID!): User
+      }
+    `;
+
+    const { proto: protoText } = compileGraphQLToProto(sdl);
+
+    expectValidProto(protoText);
+
+    expect(protoText).toMatchInlineSnapshot(`
+      "syntax = "proto3";
+      package service.v1;
+
+      // Service definition for DefaultService
+      service DefaultService {
+        rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
+        rpc ResolveUserLastestPosts(ResolveUserLastestPostsRequest) returns (ResolveUserLastestPostsResponse) {}
+      }
+
+      // Wrapper message for a list of Category.
+      message ListOfCategory {
+        message List {
+          repeated Category items = 1;
+        }
+        List list = 1;
+      }
+      // Wrapper message for a list of Category.
+      message ListOfListOfCategory {
+        message List {
+          repeated ListOfCategory items = 1;
+        }
+        List list = 1;
+      }
+      // Wrapper message for a list of Post.
+      message ListOfPost {
+        message List {
+          repeated Post items = 1;
+        }
+        List list = 1;
+      }
+      // Request message for user operation.
+      message QueryUserRequest {
+        string id = 1;
+      }
+      // Response message for user operation.
+      message QueryUserResponse {
+        User user = 1;
+      }
+      message ResolveUserLastestPostsArgs {
+        int32 within_days = 1;
+      }
+
+      message ResolveUserLastestPostsContext {
+        string id = 1;
+        string name = 2;
+        ListOfPost posts = 3;
+        ListOfListOfCategory categories = 4;
+      }
+
+      message ResolveUserLastestPostsRequest {
+        // context provides the resolver context for the field lastestPosts of type User.
+        repeated ResolveUserLastestPostsContext context = 1;
+        // field_args provides the arguments for the resolver field lastestPosts of type User.
+        ResolveUserLastestPostsArgs field_args = 2;
+      }
+
+      message ResolveUserLastestPostsResult {
+        repeated Post lastest_posts = 1;
+      }
+
+      message ResolveUserLastestPostsResponse {
+        repeated ResolveUserLastestPostsResult result = 1;
+      }
+
+      message User {
+        string id = 1;
+        string name = 2;
+        ListOfPost posts = 3;
+        ListOfListOfCategory categories = 4;
+      }
+
+      message Category {
+        string id = 1;
+        string name = 2;
+      }
+
+      message Post {
+        string id = 1;
+        string title = 2;
+      }"
+    `);
+  });
+
   it('should correctly include lists as response types', () => {
     const sdl = `
     type User {
