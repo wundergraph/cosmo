@@ -8,8 +8,9 @@ import {
 import { uid } from 'uid';
 import type { RouterOptions } from '../../routes.js';
 import OidcProvider from '../../services/OidcProvider.js';
-import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { enrichLogger, getLogger, handleError, isValidLocalhostOrSecureEndpoint } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 
 export function createOIDCProvider(
   opts: RouterOptions,
@@ -25,6 +26,32 @@ export function createOIDCProvider(
     const oidcProvider = new OidcProvider();
     if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdmin) {
       throw new UnauthorizedError();
+    }
+
+    const orgRepo = new OrganizationRepository(logger, opts.db);
+    const oidc = await orgRepo.getFeature({ organizationId: authContext.organizationId, featureId: 'oidc' });
+    if (!oidc?.enabled) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_UPGRADE_PLAN,
+          details: `OIDC feature is not enabled for this organization.`,
+        },
+        signInURL: '',
+        signOutURL: '',
+        loginURL: '',
+      };
+    }
+
+    if (!isValidLocalhostOrSecureEndpoint(req.discoveryEndpoint)) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_BAD_REQUEST,
+          details: 'The discovery endpoint must be a valid absolute URL starting with https://',
+        },
+        signInURL: '',
+        signOutURL: '',
+        loginURL: '',
+      };
     }
 
     await opts.keycloakClient.authenticateClient();
