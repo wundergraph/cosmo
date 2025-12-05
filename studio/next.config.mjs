@@ -60,11 +60,11 @@ const lightweightCspHeader = `
     isPreview || isProduction ? ' https://vercel.live https://assets.vercel.com' : ''
   };
   frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://www.googletagmanager.com${
-    isPreview || isProduction ? ' https://vercel.live/ https://vercel.com' : ''
+    isPreview || isProduction ? ' https://vercel.live https://vercel.com' : ''
   };
   img-src 'self'${
     isPreview || isProduction
-      ? ' https://vercel.live/ https://vercel.com *.pusher.com/ data: blob:'
+      ? ' https://vercel.live/ https://vercel.com *.pusher.com data: blob:'
       : ''
   } *.ads.linkedin.com *.google.com;
    script-src 'report-sample' 'self' 'unsafe-inline' ${
