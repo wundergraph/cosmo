@@ -10,7 +10,7 @@ import { App } from 'octokit';
 import { Worker } from 'bullmq';
 import routes from './routes.js';
 import fastifyHealth from './plugins/health.js';
-import fastifyMetrics, { MetricsPluginOptions } from './plugins/metrics.js';
+import fastifyMetrics from './plugins/metrics.js';
 import fastifyDatabase from './plugins/database.js';
 import fastifyClickHouse from './plugins/clickhouse.js';
 import fastifyRedis from './plugins/redis.js';
@@ -36,23 +36,18 @@ import { Authorization } from './services/Authorization.js';
 import { BillingRepository } from './repositories/BillingRepository.js';
 import { BillingService } from './services/BillingService.js';
 import { UserRepository } from './repositories/UserRepository.js';
-import { AIGraphReadmeQueue, createAIGraphReadmeWorker } from './workers/AIGraphReadmeWorker.js';
+import { AIGraphReadmeQueue, AIGraphReadmeWorker } from './workers/AIGraphReadme.js';
 import { fastifyLoggerId, createS3ClientConfig, extractS3BucketName, isGoogleCloudStorageUrl } from './util.js';
+
 import { ApiKeyRepository } from './repositories/ApiKeyRepository.js';
-import { createDeleteOrganizationWorker, DeleteOrganizationQueue } from './workers/DeleteOrganizationWorker.js';
+import { DeleteOrganizationWorker, DeleteOrganizationQueue } from './workers/DeleteOrganization.js';
 import {
-  createDeleteOrganizationAuditLogsWorker,
+  DeleteOrganizationAuditLogsWorker,
   DeleteOrganizationAuditLogsQueue,
-} from './workers/DeleteOrganizationAuditLogsWorker.js';
-import {
-  createDeactivateOrganizationWorker,
-  DeactivateOrganizationQueue,
-} from './workers/DeactivateOrganizationWorker.js';
-import { createDeleteUserWorker, DeleteUserQueue } from './workers/DeleteUserQueue.js';
-import {
-  createReactivateOrganizationWorker,
-  ReactivateOrganizationQueue,
-} from './workers/ReactivateOrganizationWorker.js';
+} from './workers/DeleteOrganizationAuditLogs.js';
+import { DeactivateOrganizationWorker, DeactivateOrganizationQueue } from './workers/DeactivateOrganization.js';
+import { DeleteUserWorker, DeleteUserQueue } from './workers/DeleteUser.js';
+import { ReactivateOrganizationWorker, ReactivateOrganizationQueue } from './workers/ReactivateOrganization.js';
 
 export interface BuildConfig {
   logger: LoggerOptions;
@@ -326,73 +321,68 @@ export default async function build(opts: BuildConfig) {
   const readmeQueue = new AIGraphReadmeQueue(logger, fastify.redisForQueue);
 
   if (opts.openaiAPIKey) {
-    bullWorkers.push(
-      createAIGraphReadmeWorker({
-        redisConnection: fastify.redisForWorker,
-        db: fastify.db,
-        logger,
-        openAiApiKey: opts.openaiAPIKey,
-      }),
-    );
+    const readmeWorker = new AIGraphReadmeWorker({
+      redisConnection: fastify.redisForWorker,
+      db: fastify.db,
+      logger,
+      openAiApiKey: opts.openaiAPIKey,
+    });
+
+    bullWorkers.push(readmeWorker.create());
   }
 
   const deleteOrganizationAuditLogsQueue = new DeleteOrganizationAuditLogsQueue(logger, fastify.redisForQueue);
-  bullWorkers.push(
-    createDeleteOrganizationAuditLogsWorker({
-      redisConnection: fastify.redisForWorker,
-      db: fastify.db,
-      logger,
-    }),
-  );
+  const deleteOrganizationAuditLogsWorker = new DeleteOrganizationAuditLogsWorker({
+    redisConnection: fastify.redisForWorker,
+    db: fastify.db,
+    logger,
+  });
+  bullWorkers.push(deleteOrganizationAuditLogsWorker.create());
 
   const deleteOrganizationQueue = new DeleteOrganizationQueue(logger, fastify.redisForQueue);
-  bullWorkers.push(
-    createDeleteOrganizationWorker({
-      redisConnection: fastify.redisForWorker,
-      db: fastify.db,
-      logger,
-      keycloakClient,
-      keycloakRealm: opts.keycloak.realm,
-      blobStorage,
-      deleteOrganizationAuditLogsQueue,
-    }),
-  );
+  const deleteOrganizationWorker = new DeleteOrganizationWorker({
+    redisConnection: fastify.redisForWorker,
+    db: fastify.db,
+    logger,
+    keycloakClient,
+    keycloakRealm: opts.keycloak.realm,
+    blobStorage,
+    deleteOrganizationAuditLogsQueue,
+  });
+  bullWorkers.push(deleteOrganizationWorker.create());
 
   const deactivateOrganizationQueue = new DeactivateOrganizationQueue(logger, fastify.redisForQueue);
-  bullWorkers.push(
-    createDeactivateOrganizationWorker({
-      redisConnection: fastify.redisForWorker,
-      db: fastify.db,
-      logger,
-      keycloakClient,
-      keycloakRealm: opts.keycloak.realm,
-      deleteOrganizationQueue,
-    }),
-  );
+  const deactivateOrganizationWorker = new DeactivateOrganizationWorker({
+    redisConnection: fastify.redisForWorker,
+    db: fastify.db,
+    logger,
+    keycloakClient,
+    keycloakRealm: opts.keycloak.realm,
+    deleteOrganizationQueue,
+  });
+  bullWorkers.push(deactivateOrganizationWorker.create());
 
   const reactivateOrganizationQueue = new ReactivateOrganizationQueue(logger, fastify.redisForQueue);
-  bullWorkers.push(
-    createReactivateOrganizationWorker({
-      redisConnection: fastify.redisForWorker,
-      db: fastify.db,
-      logger,
-      deleteOrganizationQueue,
-    }),
-  );
+  const reactivateOrganizationWorker = new ReactivateOrganizationWorker({
+    redisConnection: fastify.redisForWorker,
+    db: fastify.db,
+    logger,
+    deleteOrganizationQueue,
+  });
+  bullWorkers.push(reactivateOrganizationWorker.create());
 
   const deleteUserQueue = new DeleteUserQueue(logger, fastify.redisForQueue);
-  bullWorkers.push(
-    createDeleteUserWorker({
-      redisConnection: fastify.redisForWorker,
-      db: fastify.db,
-      logger,
-      keycloakClient,
-      keycloakRealm: opts.keycloak.realm,
-      blobStorage,
-      platformWebhooks,
-      deleteOrganizationAuditLogsQueue,
-    }),
-  );
+  const deleteUserWorker = new DeleteUserWorker({
+    redisConnection: fastify.redisForWorker,
+    db: fastify.db,
+    logger,
+    keycloakClient,
+    keycloakRealm: opts.keycloak.realm,
+    blobStorage,
+    platformWebhooks,
+    deleteOrganizationAuditLogsQueue,
+  });
+  bullWorkers.push(deleteUserWorker.create());
 
   // required to verify webhook payloads
   await fastify.register(import('fastify-raw-body'), {
