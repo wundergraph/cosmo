@@ -8,7 +8,7 @@ import {
   genUniqueLabel
 } from '../../src/core/test-util.js';
 import { createFederatedGraph, createThenPublishSubgraph, DEFAULT_NAMESPACE, SetupTest } from '../test-util.js';
-import { joinLabel } from "../../../shared/src/index.js";
+import { joinLabel } from '../../../shared/src/index.js';
 
 let dbname = '';
 
