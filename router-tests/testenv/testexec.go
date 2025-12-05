@@ -14,9 +14,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/consul/sdk/freeport"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/atomic"
+
+	"github.com/wundergraph/cosmo/router-tests/freeport"
 )
 
 const routerDir = "../router"
@@ -118,13 +119,12 @@ func runRouterBin(t *testing.T, ctx context.Context, opts RunRouterBinConfigOpti
 		return nil, err
 	}
 
-	port := freeport.GetOne(t)
-	listenerAddr := fmt.Sprintf("localhost:%d", port)
+	listenerAddr := fmt.Sprintf("localhost:%d", freeport.GetOne(t))
 	token, err := generateJwtToken()
 	if err != nil {
 		return nil, err
 	}
-	testCdn := SetupCDNServer(t, freeport.GetOne(t))
+	testCdn, _ := SetupCDNServer(t)
 	var envs []string
 
 	envVars := map[string]string{

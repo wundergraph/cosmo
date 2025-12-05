@@ -11,8 +11,10 @@ import (
 
 func TestRouterSupervisor(t *testing.T) {
 	defer goleak.VerifyNone(t,
-		goleak.IgnoreTopFunction("github.com/hashicorp/consul/sdk/freeport.checkFreedPorts"), // Freeport, spawned by init
-		goleak.IgnoreAnyFunction("net/http.(*conn).serve"),                                   // HTTPTest server I can't close if I want to keep the problematic goroutine open for the test
+		// Freeport, spawned by init
+		goleak.IgnoreTopFunction("github.com/wundergraph/cosmo/router-tests/freeport.checkFreedPorts"),
+		// HTTPTest server I can't close if I want to keep the problematic goroutine open for the test
+		goleak.IgnoreAnyFunction("net/http.(*conn).serve"),
 	)
 
 	xEnv, err := testenv.CreateTestSupervisorEnv(t, &testenv.Config{})
