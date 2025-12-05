@@ -131,7 +131,7 @@ export class OrganizationRepository {
       .from(organizations)
       .leftJoin(organizationBilling, eq(organizations.id, organizationBilling.organizationId))
       .leftJoin(billingSubscriptions, eq(organizations.id, billingSubscriptions.organizationId))
-      .where(eq(organizations.slug, slug))
+      .where(eq(sql`lower(${organizations.slug})`, slug.toLowerCase()))
       .limit(1)
       .execute();
 

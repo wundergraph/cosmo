@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.271.1](https://github.com/wundergraph/cosmo/compare/router@0.271.0...router@0.271.1) (2025-12-04)
+
+### Bug Fixes
+
+* operation checks for input and argument usages ([#2380](https://github.com/wundergraph/cosmo/issues/2380)) ([c43ed88](https://github.com/wundergraph/cosmo/commit/c43ed8813ef6b29563a77926fc7908566ccf7eb9)) (@JivusAyrus)
+
+# [0.271.0](https://github.com/wundergraph/cosmo/compare/router@0.270.0...router@0.271.0) (2025-12-04)
+
+### Bug Fixes
+
+* cache vars and remapping normalization ([#2318](https://github.com/wundergraph/cosmo/issues/2318)) ([d0e45f6](https://github.com/wundergraph/cosmo/commit/d0e45f65fb9bef61925dd434b9fda37d999fa5fd)) (@devsergiy)
+
+### Features
+
+* restore `patchedDependencies` ([#2393](https://github.com/wundergraph/cosmo/issues/2393)) ([90e1bd1](https://github.com/wundergraph/cosmo/commit/90e1bd19fd8f5533ef1d2fe6b99a3c50ca48b5d8)) (@wilsonrivera)
+
 # [0.270.0](https://github.com/wundergraph/cosmo/compare/router@0.269.0...router@0.270.0) (2025-12-03)
 
 ### Features
