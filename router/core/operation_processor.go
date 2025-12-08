@@ -390,7 +390,6 @@ func (o *OperationKit) unmarshalOperation() error {
 }
 
 func (o *OperationKit) computeVariablesHash() {
-	o.kit.keyGen.Reset()
 	_, _ = o.kit.keyGen.Write(o.kit.doc.Input.Variables)
 	o.parsedOperation.VariablesHash = o.kit.keyGen.Sum64()
 	o.kit.keyGen.Reset()
@@ -930,13 +929,13 @@ func (o *OperationKit) NormalizeVariables() (cached bool, mapping []uploads.Uplo
 		}
 	}
 
-	o.kit.keyGen.Reset()
 	_, _ = o.kit.keyGen.Write(o.kit.doc.Input.Variables)
-	variablesHashBefore := o.kit.keyGen.Sum64()
-
+	variablesBefore := o.kit.keyGen.Sum64()
 	o.kit.keyGen.Reset()
+
 	_, _ = o.kit.keyGen.Write(o.kit.doc.Input.RawBytes)
-	operationsHashBefore := o.kit.keyGen.Sum64()
+	operationRawBytesBefore := o.kit.keyGen.Sum64()
+	o.kit.keyGen.Reset()
 
 	report := &operationreport.Report{}
 	uploadsMapping := o.kit.variablesNormalizer.NormalizeOperation(o.kit.doc, o.operationProcessor.executor.ClientSchema, report)
@@ -974,9 +973,14 @@ func (o *OperationKit) NormalizeVariables() (cached bool, mapping []uploads.Uplo
 	}
 	o.parsedOperation.ID = o.kit.keyGen.Sum64()
 	o.kit.keyGen.Reset()
+	o.computeVariablesHash()
+
+	_, _ = o.kit.keyGen.Write(o.kit.doc.Input.RawBytes)
+	operationRawBytesAfter := o.kit.keyGen.Sum64()
+	o.kit.keyGen.Reset()
 
 	// If the normalized form of the operation didn't change, we don't need to print it again
-	if bytes.Equal(o.kit.doc.Input.Variables, variablesBefore) && bytes.Equal(o.kit.doc.Input.RawBytes, operationRawBytesBefore) {
+	if o.parsedOperation.VariablesHash == variablesBefore && operationRawBytesAfter == operationRawBytesBefore {
 		if o.cache != nil && o.cache.variablesNormalizationCache != nil {
 			entry := VariablesNormalizationCacheEntry{
 				uploadsMapping:           uploadsMapping,
@@ -1080,6 +1084,7 @@ func (o *OperationKit) RemapVariables(disabled bool) (cached bool, err error) {
 	}
 	// Generate the operation ID
 	o.parsedOperation.InternalID = o.kit.keyGen.Sum64()
+	o.kit.keyGen.Reset()
 
 	o.kit.normalizedOperation.Reset()
 	err = o.kit.printer.Print(o.kit.doc, o.kit.normalizedOperation)

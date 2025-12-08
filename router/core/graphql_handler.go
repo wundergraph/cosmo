@@ -80,7 +80,7 @@ type HandlerOptions struct {
 	EnableResponseHeaderPropagation bool
 
 	ApolloSubscriptionMultipartPrintBoundary bool
-	HeaderPropagation                           *HeaderPropagation
+	HeaderPropagation                        *HeaderPropagation
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/astjson"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -790,10 +791,18 @@ func TestSingleFlight(t *testing.T) {
 					defer done.Done()
 					<-trigger
 					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-						Query:     `query($id: Int!) { employee(id: $id) { id tag } }`,
+						Query:     `query($id: Int!) { employee(id: $id) { id tag details { forename } } }`,
 						Variables: []byte(fmt.Sprintf(`{"id": %d}`, index)),
 					})
-					require.Contains(t, res.Body, `"employee"`)
+					v, err := astjson.Parse(res.Body)
+					require.NoError(t, err)
+					emp := v.Get("data", "employee")
+					if emp.Type() == astjson.TypeObject {
+						forename := string(emp.GetStringBytes("details", "forename"))
+						require.NotEmpty(t, forename)
+						id := emp.GetInt("id")
+						require.Equal(t, int(index), id)
+					}
 				}(i)
 			}
 			ready.Wait()
