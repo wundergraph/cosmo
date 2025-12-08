@@ -10033,6 +10033,11 @@ func TestFlakyTelemetry(t *testing.T) {
 				for i := 0; i < len(sn); i++ {
 					if slices.Contains([]string{"HTTP - Read Body", "Authenticate"}, sn[i].Name()) {
 						assert.NotContains(t, sn[i].Attributes(), attribute.String(claimKeyWithAuth, claimValWithAuth))
+						// Verify Authenticate span has correct span kind
+						if sn[i].Name() == "Authenticate" {
+							assert.Equal(t, trace.SpanKindClient, sn[i].SpanKind(),
+								"Authenticate span should have SpanKindClient because it makes an outgoing HTTP request")
+						}
 					} else {
 						assert.Contains(t, sn[i].Attributes(), attribute.String(claimKeyWithAuth, claimValWithAuth))
 					}

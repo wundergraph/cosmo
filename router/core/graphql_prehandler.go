@@ -351,7 +351,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 
 		if h.accessController != nil {
 			_, authenticateSpan := h.tracer.Start(r.Context(), "Authenticate",
-				trace.WithSpanKind(trace.SpanKindServer),
+				trace.WithSpanKind(trace.SpanKindClient),
 				trace.WithAttributes(requestContext.telemetry.traceAttrs...),
 			)
 

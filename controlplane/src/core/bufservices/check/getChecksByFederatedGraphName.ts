@@ -13,7 +13,6 @@ import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, validateDateRanges } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
-import { federatedGraphs } from '../../../db/schema.js';
 
 export function getChecksByFederatedGraphName(
   opts: RouterOptions,
