@@ -4,11 +4,12 @@ package profile
 
 import (
 	"errors"
-	"go.uber.org/zap"
 	"net/http"
 	"net/http/pprof"
 	"os"
 	runtimePprof "runtime/pprof"
+
+	"go.uber.org/zap"
 )
 
 type Profiler interface {
@@ -87,7 +88,9 @@ func (p *profiler) Finish() {
 			p.logger.Error("Could not create memory profile", zap.Error(err))
 			return
 		}
-		defer f.Close()
+		defer func() {
+			_ = f.Close()
+		}()
 
 		if err := runtimePprof.WriteHeapProfile(f); err != nil {
 			p.logger.Error("Could not write memory profile", zap.Error(err))

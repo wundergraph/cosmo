@@ -340,9 +340,9 @@
       "TLSHandshakeTimeout": 0,
       "KeepAliveIdleTimeout": 0,
       "KeepAliveProbeInterval": 30000000000,
-      "MaxConnsPerHost": 100,
-      "MaxIdleConns": 1024,
-      "MaxIdleConnsPerHost": 20
+      "MaxConnsPerHost": 0,
+      "MaxIdleConns": 10240,
+      "MaxIdleConnsPerHost": 2048
     },
     "Router": {
       "MaxRequestBodyBytes": 5000000,
@@ -752,6 +752,9 @@
       "AlwaysSkipLoader": false
     },
     "EnableSingleFlight": true,
+    "ForceEnableSingleFlight": false,
+    "EnableInboundRequestDeduplication": true,
+    "ForceEnableInboundRequestDeduplication": false,
     "EnableRequestTracing": true,
     "EnableExecutionPlanCacheResponseHeader": false,
     "MaxConcurrentResolvers": 32,
