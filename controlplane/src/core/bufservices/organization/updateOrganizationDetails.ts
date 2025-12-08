@@ -8,8 +8,9 @@ import {
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError, isValidOrganizationName, isValidOrganizationSlug } from '../../util.js';
+import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { organizationSchema } from '../../constants.js';
 
 export function updateOrganizationDetails(
   opts: RouterOptions,
@@ -58,33 +59,25 @@ export function updateOrganizationDetails(
       throw new UnauthorizedError();
     }
 
-    if (!isValidOrganizationSlug(req.organizationSlug)) {
+    const validatedReq = organizationSchema.safeParse({ name: req.organizationName, slug: req.organizationSlug });
+    if (!validatedReq.success) {
+      const { fieldErrors } = validatedReq.error.flatten();
       return {
         response: {
-          code: EnumStatusCode.ERR,
-          details:
-            'Invalid slug. It must be of 3-24 characters in length, start and end with an alphanumeric character and may contain hyphens in between.',
+          code: EnumStatusCode.ERR_BAD_REQUEST,
+          details: fieldErrors.name?.[0] || fieldErrors.slug?.[0] || 'Invalid request',
         },
       };
     }
 
-    if (!isValidOrganizationName(req.organizationName)) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: 'Invalid name. It must be of 1-24 characters in length.',
-        },
-      };
-    }
-
-    if (org.slug !== req.organizationSlug) {
+    if (org.slug !== validatedReq.data.slug) {
       // checking if the provided orgSlug is available
-      const newOrg = await orgRepo.bySlug(req.organizationSlug);
+      const newOrg = await orgRepo.bySlug(validatedReq.data.slug);
       if (newOrg) {
         return {
           response: {
             code: EnumStatusCode.ERR_ALREADY_EXISTS,
-            details: `Organization with slug ${req.organizationSlug} already exists.`,
+            details: `Organization with slug ${validatedReq.data.slug} already exists.`,
           },
         };
       }
@@ -99,7 +92,7 @@ export function updateOrganizationDetails(
           id: org.kcGroupId,
           realm: opts.keycloakRealm,
         },
-        { name: req.organizationSlug },
+        { name: validatedReq.data.slug },
       );
 
       // Rename all the organization roles
@@ -113,7 +106,7 @@ export function updateOrganizationDetails(
         await opts.keycloakClient.client.roles.updateById(
           { realm: opts.keycloakRealm, id: kcRole.id! },
           {
-            name: kcRole.name!.replace(`${org.slug}:`, `${req.organizationSlug}:`),
+            name: kcRole.name!.replace(`${org.slug}:`, `${validatedReq.data.slug}:`),
           },
         );
       }
@@ -121,8 +114,8 @@ export function updateOrganizationDetails(
 
     await orgRepo.updateOrganization({
       id: authContext.organizationId,
-      name: req.organizationName,
-      slug: req.organizationSlug,
+      name: validatedReq.data.name,
+      slug: validatedReq.data.slug,
     });
 
     await auditLogRepo.addAuditLog({
