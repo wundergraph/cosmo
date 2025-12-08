@@ -375,6 +375,66 @@ func TestRouterPluginRequests(t *testing.T) {
 			query:    `query { employee(id: 1) { details { forename surname } taughtCourses { id title description } } }`,
 			expected: `{"data":{"employee":{"details":{"forename":"Jens","surname":"Neuse"},"taughtCourses":[{"id":"1","title":"Introduction to TypeScript","description":"Learn the basics of TypeScript"},{"id":"2","title":"Advanced GraphQL","description":"Master GraphQL federation"}]}}}`,
 		},
+		{
+			name:     "query top priority item",
+			query:    `query { project(id:1) { topPriorityItem(category: "milestone") { __typename ... on Milestone { name reviewers { id details{ forename surname } } } } } }`,
+			expected: `{"data":{"project":{"topPriorityItem":{"__typename":"Milestone","name":"Application Migration","reviewers":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}}]}}}}`,
+		},
+		{
+			name:     "query top priority item for task category",
+			query:    `query { project(id:2) { topPriorityItem(category: "task") { __typename ... on Task { name priority assigneeId } } } }`,
+			expected: `{"data":{"project":{"topPriorityItem":{"__typename":"Task","name":"API Gateway Configuration","priority":"HIGH","assigneeId":8}}}}`,
+		},
+		{
+			name:     "query top priority item for project with only completed tasks",
+			query:    `query { project(id:6) { topPriorityItem { __typename ... on Milestone { name status } } } }`,
+			expected: `{"data":{"project":{"topPriorityItem":null}}}`,
+		},
+		{
+			name:     "query critical deadline with large window to ensure deterministic results",
+			query:    `query { project(id:1) { criticalDeadline(withinDays: 10000) { __typename ... on Milestone { name endDate status } ... on Project { name endDate } } } }`,
+			expected: `{"data":{"project":{"criticalDeadline":{"__typename":"Milestone","name":"Application Migration","endDate":"2025-08-20","status":"PENDING"}}}}`,
+		},
+		{
+			name:     "query critical deadline for project 2",
+			query:    `query { project(id:2) { criticalDeadline(withinDays: 10000) { __typename ... on Milestone { id name status } } } }`,
+			expected: `{"data":{"project":{"criticalDeadline":{"__typename":"Milestone","id":"6","name":"Service Deployment","status":"PENDING"}}}}`,
+		},
+		{
+			name:     "query critical deadline returns project if no milestones",
+			query:    `query { project(id:3) { criticalDeadline(withinDays: 10000) { __typename ... on Project { id name status endDate } } } }`,
+			expected: `{"data":{"project":{"criticalDeadline":{"__typename":"Project","id":"3","name":"AI-Powered Analytics","status":"ACTIVE","endDate":"2025-08-20"}}}}`,
+		},
+		{
+			name:     "query both field resolvers together",
+			query:    `query { project(id:1) { id name topPriorityItem(category: "task") { __typename } completionRate(includeSubtasks: false) } }`,
+			expected: `{"data":{"project":{"id":"1","name":"Cloud Migration Overhaul","topPriorityItem":{"__typename":"Task"},"completionRate":50}}}`,
+		},
+		{
+			name:     "query multiple projects with field resolvers",
+			query:    `query { projects { id topPriorityItem(category: "task") { __typename } } }`,
+			expected: `{"data":{"projects":[{"id":"1","topPriorityItem":{"__typename":"Task"}},{"id":"2","topPriorityItem":{"__typename":"Task"}},{"id":"3","topPriorityItem":{"__typename":"Task"}},{"id":"4","topPriorityItem":{"__typename":"Task"}},{"id":"5","topPriorityItem":{"__typename":"Task"}},{"id":"6","topPriorityItem":null},{"id":"7","topPriorityItem":{"__typename":"Task"}}]}}`,
+		},
+		{
+			name:     "query critical deadline with nested inline fragments on interface",
+			query:    `query { project(id:7) { criticalDeadline(withinDays: 10000) { __typename ... on Timestamped { startDate endDate ... on Milestone { name projectId } ... on Project { description } } } } }`,
+			expected: `{"data":{"project":{"criticalDeadline":{"__typename":"Milestone","startDate":"2023-07-01","endDate":"2024-12-31","name":"Data Ingestion Pipeline","projectId":"7"}}}}`,
+		},
+		{
+			name:     "query top priority item with union inline fragments",
+			query:    `query { project(id:1) { topPriorityItem(category: "") { __typename ... on Project { name projectStatus: status } ... on Milestone { name milstoneStatus: status } ... on Task { name priority taskStatus: status } } } }`,
+			expected: `{"data":{"project":{"topPriorityItem":{"__typename":"Task","name":"Database Migration","priority":"HIGH","taskStatus":"TODO"}}}}`,
+		},
+		{
+			name:     "query field resolvers with aliases",
+			query:    `query { project(id:2) { urgent: topPriorityItem(category: "task") { __typename } nextDeadline: criticalDeadline(withinDays: 10000) { __typename } } }`,
+			expected: `{"data":{"project":{"urgent":{"__typename":"Task"},"nextDeadline":{"__typename":"Milestone"}}}}`,
+		},
+		{
+			name:     "query top priority item without category",
+			query:    `query { project(id:1) { topPriorityItem { __typename ... on Task { name priority status } } } }`,
+			expected: `{"data":{"project":{"topPriorityItem":{"__typename":"Task","name":"Database Migration","priority":"HIGH","status":"TODO"}}}}`,
+		},
 	}
 	testenv.Run(t, &testenv.Config{
 		RouterConfigJSONTemplate: testenv.ConfigWithPluginsJSONTemplate,

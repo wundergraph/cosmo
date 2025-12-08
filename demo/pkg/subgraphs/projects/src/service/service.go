@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"math"
 	"strconv"
 	"strings"
 	"sync"
@@ -36,6 +37,177 @@ type ProjectsService struct {
 	service.UnimplementedProjectsServiceServer
 	lock   sync.RWMutex
 	NextID int
+}
+
+// ResolveProjectCriticalDeadline implements projects.ProjectsServiceServer.
+func (p *ProjectsService) ResolveProjectCriticalDeadline(_ context.Context, req *service.ResolveProjectCriticalDeadlineRequest) (*service.ResolveProjectCriticalDeadlineResponse, error) {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	response := &service.ResolveProjectCriticalDeadlineResponse{
+		Result: make([]*service.ResolveProjectCriticalDeadlineResult, 0, len(req.Context)),
+	}
+
+	// Default to 30 days if not specified
+	withinDays := 30
+	if req.FieldArgs != nil && req.FieldArgs.WithinDays != nil {
+		withinDays = int(req.FieldArgs.WithinDays.Value)
+	}
+
+	for _, context := range req.Context {
+		var criticalDeadline *service.Timestamped
+
+		// Get milestones for this project
+		milestones := data.GetMilestonesByProjectID(context.Id)
+
+		// Find the nearest upcoming deadline that's within the specified days
+		var nearestMilestone *service.Milestone
+		var nearestDays int = withinDays + 1 // Start with value beyond threshold
+
+		now := time.Now()
+		for _, milestone := range milestones {
+			// Only consider incomplete milestones with an end date
+			if milestone.Status == service.MilestoneStatus_MILESTONE_STATUS_COMPLETED {
+				continue
+			}
+
+			if milestone.EndDate != nil {
+				endDate, err := time.Parse("2006-01-02", milestone.EndDate.Value)
+				if err == nil {
+					daysUntil := int(math.Abs(endDate.Sub(now).Hours() / 24))
+					// Check if it's within our window and closer than what we've found
+					if daysUntil >= 0 && daysUntil <= withinDays && daysUntil < nearestDays {
+						nearestDays = daysUntil
+						nearestMilestone = milestone
+					}
+				}
+			}
+		}
+
+		// If we found a critical milestone, return it
+		if nearestMilestone != nil {
+			criticalDeadline = &service.Timestamped{
+				Instance: &service.Timestamped_Milestone{
+					Milestone: data.PopulateMilestoneRelationships(nearestMilestone),
+				},
+			}
+		} else {
+			// Check if the project itself has a critical deadline
+			if context.Status != service.ProjectStatus_PROJECT_STATUS_COMPLETED {
+				project := data.GetProjectByID(context.Id)
+				if project != nil && project.EndDate != nil {
+					endDate, err := time.Parse("2006-01-02", project.EndDate.Value)
+					if err == nil {
+						daysUntil := int(math.Abs(endDate.Sub(now).Hours() / 24))
+						if daysUntil >= 0 && daysUntil <= withinDays {
+							criticalDeadline = &service.Timestamped{
+								Instance: &service.Timestamped_Project{
+									Project: p.populateProjectRelationships(project),
+								},
+							}
+						}
+					}
+				}
+			}
+		}
+
+		response.Result = append(response.Result, &service.ResolveProjectCriticalDeadlineResult{
+			CriticalDeadline: criticalDeadline,
+		})
+	}
+
+	return response, nil
+}
+
+// ResolveProjectTopPriorityItem implements projects.ProjectsServiceServer.
+func (p *ProjectsService) ResolveProjectTopPriorityItem(ctx context.Context, req *service.ResolveProjectTopPriorityItemRequest) (*service.ResolveProjectTopPriorityItemResponse, error) {
+	logger := hclog.FromContext(ctx)
+
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	response := &service.ResolveProjectTopPriorityItemResponse{
+		Result: make([]*service.ResolveProjectTopPriorityItemResult, 0, len(req.Context)),
+	}
+
+	for _, context := range req.Context {
+		logger.Info("Processing context", "project_id", context.Id, "status", context.Status)
+		var topPriorityItem *service.ProjectSearchResult
+
+		// Filter by category if provided
+		category := ""
+		if req.FieldArgs != nil && req.FieldArgs.Category != nil {
+			category = strings.ToLower(req.FieldArgs.Category.Value)
+		}
+
+		// Check for highest priority task if category allows
+		if category == "" || category == "task" {
+			// Get tasks for this project
+			tasks := data.GetTasksByProjectID(context.Id)
+
+			// Find the highest priority incomplete task
+			var topTask *service.Task
+			highestPriority := service.TaskPriority_TASK_PRIORITY_UNSPECIFIED
+
+			for _, task := range tasks {
+				// Skip completed tasks
+				if task.Status == service.TaskStatus_TASK_STATUS_COMPLETED {
+					continue
+				}
+
+				// Compare priorities (higher enum value = higher priority)
+				if topTask == nil || task.Priority > highestPriority {
+					highestPriority = task.Priority
+					topTask = task
+				}
+			}
+
+			if topTask != nil {
+				topPriorityItem = &service.ProjectSearchResult{
+					Value: &service.ProjectSearchResult_Task{
+						Task: data.PopulateTaskRelationships(topTask),
+					},
+				}
+			}
+		}
+
+		// If no task found and category allows, check for at-risk milestones
+		if topPriorityItem == nil && (category == "" || category == "milestone") {
+			milestones := data.GetMilestonesByProjectID(context.Id)
+			for _, milestone := range milestones {
+				if milestone.Status == service.MilestoneStatus_MILESTONE_STATUS_DELAYED ||
+					milestone.Status == service.MilestoneStatus_MILESTONE_STATUS_PENDING {
+					topPriorityItem = &service.ProjectSearchResult{
+						Value: &service.ProjectSearchResult_Milestone{
+							Milestone: data.PopulateMilestoneRelationships(milestone),
+						},
+					}
+					break
+				}
+			}
+		}
+
+		// If still nothing found and category allows, return the project itself if it needs attention
+		if topPriorityItem == nil && (category == "" || category == "project") {
+			if context.Status == service.ProjectStatus_PROJECT_STATUS_ON_HOLD ||
+				context.Status == service.ProjectStatus_PROJECT_STATUS_PLANNING {
+				project := data.GetProjectByID(context.Id)
+				if project != nil {
+					topPriorityItem = &service.ProjectSearchResult{
+						Value: &service.ProjectSearchResult_Project{
+							Project: p.populateProjectRelationships(project),
+						},
+					}
+				}
+			}
+		}
+
+		response.Result = append(response.Result, &service.ResolveProjectTopPriorityItemResult{
+			TopPriorityItem: topPriorityItem,
+		})
+	}
+
+	return response, nil
 }
 
 // ResolveEmployeeAverageTaskCompletionDays implements projects.ProjectsServiceServer.
@@ -1037,7 +1209,7 @@ func (p *ProjectsService) QueryProject(ctx context.Context, req *service.QueryPr
 		}
 	}
 
-	return nil, status.Errorf(codes.NotFound, "project not found")
+	return nil, nil
 }
 
 // QueryProjectStatuses implements projects.ProjectsServiceServer.

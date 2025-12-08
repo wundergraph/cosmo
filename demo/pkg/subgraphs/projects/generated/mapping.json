@@ -605,6 +605,26 @@
               "mapped": "from_date"
             }
           ]
+        },
+        {
+          "original": "criticalDeadline",
+          "mapped": "critical_deadline",
+          "argumentMappings": [
+            {
+              "original": "withinDays",
+              "mapped": "within_days"
+            }
+          ]
+        },
+        {
+          "original": "topPriorityItem",
+          "mapped": "top_priority_item",
+          "argumentMappings": [
+            {
+              "original": "category",
+              "mapped": "category"
+            }
+          ]
         }
       ]
     },
@@ -1107,6 +1127,44 @@
       "rpc": "ResolveProjectEstimatedDaysRemaining",
       "request": "ResolveProjectEstimatedDaysRemainingRequest",
       "response": "ResolveProjectEstimatedDaysRemainingResponse"
+    },
+    {
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
+        "type": "Project",
+        "fieldMapping": {
+          "original": "criticalDeadline",
+          "mapped": "critical_deadline",
+          "argumentMappings": [
+            {
+              "original": "withinDays",
+              "mapped": "within_days"
+            }
+          ]
+        }
+      },
+      "rpc": "ResolveProjectCriticalDeadline",
+      "request": "ResolveProjectCriticalDeadlineRequest",
+      "response": "ResolveProjectCriticalDeadlineResponse"
+    },
+    {
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
+        "type": "Project",
+        "fieldMapping": {
+          "original": "topPriorityItem",
+          "mapped": "top_priority_item",
+          "argumentMappings": [
+            {
+              "original": "category",
+              "mapped": "category"
+            }
+          ]
+        }
+      },
+      "rpc": "ResolveProjectTopPriorityItem",
+      "request": "ResolveProjectTopPriorityItemRequest",
+      "response": "ResolveProjectTopPriorityItemResponse"
     },
     {
       "type": "LOOKUP_TYPE_RESOLVE",
