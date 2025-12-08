@@ -1702,10 +1702,9 @@ func SetupCDNServer(t testing.TB) (cdnServer *httptest.Server, port int) {
 		require.NoError(t, err)
 		cdnFileServer.ServeHTTP(w, r)
 	})
-	cdnServer = httptest.NewUnstartedServer(handler)
-	cdnServer.Start()
+	cdnServer = httptest.NewServer(handler)
 	port = cdnServer.Listener.Addr().(*net.TCPAddr).Port
-	return
+	return cdnServer, port
 }
 
 func gqlURL(srv *httptest.Server) string {
