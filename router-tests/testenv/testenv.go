@@ -1667,8 +1667,9 @@ func makeSafeGRPCServer(t testing.TB, sd *grpc.ServiceDesc, service any) (*grpc.
 	s.RegisterService(sd, service)
 
 	go func() {
-		err := s.Serve(lis)
-		require.NoError(t, err)
+		if err := s.Serve(lis); err != nil && !errors.Is(err, grpc.ErrServerStopped) {
+			t.Errorf("gRPC test server Serve error: %v", err)
+		}
 	}()
 
 	return s, endpoint
