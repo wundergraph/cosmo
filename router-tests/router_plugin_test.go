@@ -430,12 +430,11 @@ func TestRouterPluginRequests(t *testing.T) {
 			query:    `query { project(id:2) { urgent: topPriorityItem(category: "task") { __typename } nextDeadline: criticalDeadline(withinDays: 10000) { __typename } } }`,
 			expected: `{"data":{"project":{"urgent":{"__typename":"Task"},"nextDeadline":{"__typename":"Milestone"}}}}`,
 		},
-		// TODO: Allow providing empty arguments for field resolvers.
-		// {
-		// 	name:     "query top priority item without category",
-		// 	query:    `query { project(id:1) { topPriorityItem { __typename ... on Task { name priority status } } } }`,
-		// 	expected: `{"data":{"project":{"topPriorityItem":{"__typename":"Task","name":"Database Migration","priority":"HIGH","status":"TODO"}}}}`,
-		// },
+		{
+			name:     "query top priority item without category",
+			query:    `query { project(id:1) { topPriorityItem { __typename ... on Task { name priority status } } } }`,
+			expected: `{"data":{"project":{"topPriorityItem":{"__typename":"Task","name":"Database Migration","priority":"HIGH","status":"TODO"}}}}`,
+		},
 	}
 	testenv.Run(t, &testenv.Config{
 		RouterConfigJSONTemplate: testenv.ConfigWithPluginsJSONTemplate,
