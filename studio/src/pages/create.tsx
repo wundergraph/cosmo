@@ -83,12 +83,14 @@ const OrganizationForm = () => {
   const schema = z.object({
     name: z
       .string()
+      .trim()
       .min(3, {
         message: "Organization name must be a minimum of 3 characters",
       })
       .max(32, { message: "Organization name must be maximum 32 characters" }),
     slug: z
       .string()
+      .trim()
       .toLowerCase()
       .regex(
         new RegExp("^[a-z0-9]+(?:-[a-z0-9]+)*$"),
@@ -97,9 +99,9 @@ const OrganizationForm = () => {
       .min(3, {
         message: "Organization slug must be a minimum of 3 characters",
       })
-      .max(24, { message: "Organization slug must be maximum 24 characters" })
+      .max(32, { message: "Organization slug must be maximum 32 characters" })
       .refine(
-        (value) => !["login", "signup", "create"].includes(value),
+        (value) => !["login", "signup", "create", "account"].includes(value),
         "This slug is a reserved keyword",
       ),
     plan,

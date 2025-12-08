@@ -19,7 +19,6 @@ export const CreateClient = (opts: ClientOptions): Client => {
   const transport = createConnectTransport({
     // Requests will be made to <baseUrl>/<package>.<service>/method
     baseUrl: opts.baseUrl,
-
     // You have to tell the Node.js http API which HTTP version to use.
     httpVersion: '1.1',
     nodeOptions: {
