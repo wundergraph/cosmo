@@ -51,36 +51,40 @@ if (isSentryEnabled) {
 // Important: 'unsafe-eval' is only used in development mode, when script is injected by Next.js
 
 const lightweightCspHeader = `
-  style-src 'report-sample' 'self' 'unsafe-inline' data:;
+  style-src 'report-sample' 'self' 'unsafe-inline' data: ${
+    isPreview || isProduction ? 'https://vercel.live' : ''
+  };
   object-src 'none';
   base-uri 'self';
-  font-src 'self' data:;
-  frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://www.googletagmanager.com ${
-    isPreview ? "https://vercel.live/ https://vercel.com" : ""
+  font-src 'self' data:${
+    isPreview || isProduction ? ' https://vercel.live https://assets.vercel.com' : ''
+  };
+  frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://www.googletagmanager.com${
+    isPreview || isProduction ? ' https://vercel.live https://vercel.com' : ''
   };
   img-src 'self'${
-    isPreview
-      ? " https://vercel.live/ https://vercel.com *.pusher.com/ data: blob:"
-      : ""
+    isPreview || isProduction
+      ? ' https://vercel.live/ https://vercel.com *.pusher.com data: blob:'
+      : ''
   } *.ads.linkedin.com *.google.com;
    script-src 'report-sample' 'self' 'unsafe-inline' ${
-     allowUnsafeEval ? "'unsafe-eval'" : ""
+     allowUnsafeEval ? "'unsafe-eval'" : ''
    } https://*.wundergraph.com https://js.stripe.com https://maps.googleapis.com https://plausible.io https://wundergraph.com https://static.reo.dev${
-     isPreview ? " https://vercel.live https://vercel.com" : ""
+     isPreview || isProduction ? ' https://vercel.live https://vercel.com' : ''
    } ${
      isProduction
        ? [
-           "https://www.googletagmanager.com",
-           "https://snap.licdn.com",
-           "https://cmp.osano.com",
-           "https://googleads.g.doubleclick.net",
-           "https://*.clarity.ms",
-         ].join(" ")
-       : ""
+           'https://www.googletagmanager.com',
+           'https://snap.licdn.com',
+           'https://cmp.osano.com',
+           'https://googleads.g.doubleclick.net',
+           'https://*.clarity.ms',
+         ].join(' ')
+       : ''
    };
-  manifest-src 'self';
-  media-src 'self';
-  worker-src 'self' ${isSentryFeatureReplayEnabled ? "blob:" : ""};
+    manifest-src 'self';
+    media-src 'self';
+    worker-src 'self'${isSentryFeatureReplayEnabled ? ' blob:' : ''};
 `;
 
 /**
@@ -94,7 +98,7 @@ const lightweightCspHeader = `
 //   connect-src 'self' ${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL} ${
 //     process.env.NEXT_PUBLIC_COSMO_CP_URL
 //   } https://*.wundergraph.com wss://*.wundergraph.com https://plausible.io https://api.stripe.com https://maps.googleapis.com ${
-//     isPreview
+//     isPreview || isProduction
 //       ? "https://vercel.live https://vercel.com *.pusher.com *.pusherapp.com"
 //       : ""
 //   };

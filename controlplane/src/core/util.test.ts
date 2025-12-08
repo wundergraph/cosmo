@@ -1,11 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import {
-  extractOperationNames,
-  hasLabelsChanged,
-  isValidLabels,
-  isValidNamespaceName,
-  isValidOrganizationSlug,
-} from './util.js';
+import { extractOperationNames, hasLabelsChanged, isValidLabels, isValidNamespaceName } from './util.js';
+import { organizationSlugSchema } from './constants.js';
 
 describe('Util', (ctx) => {
   test('Should validate label', () => {
@@ -211,15 +206,19 @@ describe('Util', (ctx) => {
       { slug: 'acme-corp', expected: true },
       { slug: '1acme-corp2', expected: true },
       { slug: 'ac', expected: false },
-      { slug: '25CharactersLong123456789', expected: false },
+      { slug: '25CharactersLong123456789', expected: true },
       { slug: 'acme-', expected: false },
       { slug: '-acme', expected: false },
       { slug: 'ac_24', expected: false },
       { slug: '1a$c', expected: false },
+      { slug: '   ', expected: false },
+      { slug: 'a', expected: false },
+      { slug: 'a'.repeat(50), expected: false },
     ];
 
     for (const entry of slugs) {
-      expect(isValidOrganizationSlug(entry.slug)).equal(entry.expected);
+      const parsed = organizationSlugSchema.safeParse(entry.slug);
+      expect(parsed.success).equal(entry.expected);
     }
   });
 

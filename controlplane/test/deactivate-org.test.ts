@@ -22,6 +22,7 @@ describe('Deactivate Organization', (ctx) => {
   test('Should deactivate org and delete after scheduled', async (testContext) => {
     const { client, server, keycloakClient, realm, queues, users, authenticator, blobStorage } = await SetupTest({
       dbname,
+      enabledFeatures: ['oidc'],
     });
     const mainUserContext = users[TestUser.adminAliceCompanyA];
 
@@ -34,6 +35,8 @@ describe('Deactivate Organization', (ctx) => {
     const orgRepo = new OrganizationRepository(server.log, server.db);
     const org = await orgRepo.bySlug(orgName);
     expect(org).toBeDefined();
+
+    await orgRepo.updateFeature({ organizationId: org!.id, id: 'oidc', enabled: true });
 
     authenticator.changeUserWithSuppliedContext({
       ...mainUserContext,
@@ -99,11 +102,12 @@ describe('Deactivate Organization', (ctx) => {
   test('Should reactivate org and remove the scheduled deletion', async (testContext) => {
     const { client, server, keycloakClient, realm, queues, users, authenticator, blobStorage } = await SetupTest({
       dbname,
+      enabledFeatures: ['oidc'],
     });
     const mainUserContext = users[TestUser.adminAliceCompanyA];
 
     const orgName = genID();
-    await client.createOrganization({
+    const x = await client.createOrganization({
       name: orgName,
       slug: orgName,
     });
