@@ -98,7 +98,7 @@ var (
 )
 
 func init() {
-	freeport.SetLogLevel(freeport.DEBUG)
+	freeport.SetLogLevel(freeport.ERROR)
 }
 
 // Run runs the test and fails the test if an error occurs
