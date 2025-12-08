@@ -1643,8 +1643,10 @@ func testVersionedTokenClaims() jwt.MapClaims {
 }
 
 func makeSafeHttpTestServer(t testing.TB, handler http.Handler) *httptest.Server {
-	// NewUnstartedServer will bind ephemeral port and start listening anyway,
-	// we don't use freeport here.
+	// NewUnstartedServer binds an ephemeral port.
+	// We want to avoid using freeport because it creates too much strain on the network stack:
+	// freeport checks if port is available by listening on it and then closing the listener.
+	// On Linux trying to listen on the just-closed port could lead to the "unable to bind" error.
 	s := httptest.NewUnstartedServer(handler)
 	s.Start()
 	return s
