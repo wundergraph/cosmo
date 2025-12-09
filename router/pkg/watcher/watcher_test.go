@@ -1004,22 +1004,14 @@ func (f *fakeFS) Remove(name string) error {
 	return nil
 }
 
+// Mkdir is just a wrapper around os.Mkdir for completeness.
 func (f *fakeFS) Mkdir(name string, perm os.FileMode) error {
-	err := os.Mkdir(name, perm)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return os.Mkdir(name, perm)
 }
 
+// Symlink is just a wrapper around os.Symlink for completeness.
 func (f *fakeFS) Symlink(oldname, newname string) error {
-	err := os.Symlink(oldname, newname)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return os.Symlink(oldname, newname)
 }
 
 func (f *fakeFS) ensureFileInfo(name string) {
