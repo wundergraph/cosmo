@@ -12,7 +12,7 @@ RUN curl -LJO https://github.com/open-telemetry/opentelemetry-collector/releases
 
 COPY ./otelcol-builder.yaml ./otelcol-builder.yaml
 
-RUN ./ocb --config otelcol-builder.yaml \
+RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} ./ocb --config otelcol-builder.yaml \
     && chmod +x /app/otelcol-dev/otelcol \
     && /app/otelcol-dev/otelcol --version
 
