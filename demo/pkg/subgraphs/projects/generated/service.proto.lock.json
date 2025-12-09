@@ -354,7 +354,9 @@
         "priorityMatrix": 19,
         "filteredTasks": 20,
         "completionRate": 21,
-        "estimatedDaysRemaining": 22
+        "estimatedDaysRemaining": 22,
+        "criticalDeadline": 23,
+        "topPriorityItem": 24
       }
     },
     "Milestone": {
