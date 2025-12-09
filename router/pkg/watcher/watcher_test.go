@@ -109,7 +109,7 @@ func TestWatch(t *testing.T) {
 			require.NoError(t, os.WriteFile(tempFile, []byte("a"), 0o600))
 
 			spy := test.NewCallSpy()
-
+			fakeFileInfo := newFakeFileInfo()
 			tickerChan := make(chan time.Time)
 			watchFunc, err := watcher.New(watcher.Options{
 				Interval:   watchInterval,
@@ -117,6 +117,9 @@ func TestWatch(t *testing.T) {
 				Paths:      []string{tempFile},
 				Callback:   spy.Call,
 				TickSource: tickerChan,
+				FileInfoProvider: func(path string) (os.FileInfo, error) {
+					return fakeFileInfo, nil
+				},
 			})
 			require.NoError(t, err)
 
@@ -130,11 +133,11 @@ func TestWatch(t *testing.T) {
 
 			tempFile2 := filepath.Join(dir, "config2.json")
 
-			require.NoError(t, os.WriteFile(tempFile2, []byte("b"), 0o600))
+			require.NoError(t, fakeFileInfo.WriteFile(tempFile2, []byte("b"), 0o600))
 			sendSyncTick(tickerChan)
 
 			// Move new file ontop of the old file
-			require.NoError(t, os.Rename(tempFile2, tempFile))
+			require.NoError(t, fakeFileInfo.Rename(tempFile2, tempFile))
 			sendSyncTick(tickerChan)
 			spy.AssertCalled(t, 0)
 
@@ -166,12 +169,16 @@ func TestWatch(t *testing.T) {
 			spy := test.NewCallSpy()
 
 			tickerChan := make(chan time.Time)
+			fakeFileInfo := newFakeFileInfo()
 			watchFunc, err := watcher.New(watcher.Options{
 				Interval:   watchInterval,
 				Logger:     zap.NewNop(),
 				Paths:      []string{tempFileA1, tempFileB1, tempFileC1},
 				Callback:   spy.Call,
 				TickSource: tickerChan,
+				FileInfoProvider: func(path string) (os.FileInfo, error) {
+					return fakeFileInfo, nil
+				},
 			})
 			require.NoError(t, err)
 
@@ -185,17 +192,17 @@ func TestWatch(t *testing.T) {
 			tempFileA2 := filepath.Join(dir, "config_a_2.json")
 			tempFileB2 := filepath.Join(dir, "config_b_2.json")
 
-			require.NoError(t, os.WriteFile(tempFileA2, []byte("ab1"), 0o600))
-			require.NoError(t, os.WriteFile(tempFileB2, []byte("ab2"), 0o600))
+			require.NoError(t, fakeFileInfo.WriteFile(tempFileA2, []byte("ab1"), 0o600))
+			require.NoError(t, fakeFileInfo.WriteFile(tempFileB2, []byte("ab2"), 0o600))
 
 			sendSyncTick(tickerChan)
 
-			require.NoError(t, os.Rename(tempFileA2, tempFileA1))
+			require.NoError(t, fakeFileInfo.Rename(tempFileA2, tempFileA1))
 			sendSyncTick(tickerChan)
 			sendSyncTick(tickerChan)
 			spy.AssertCalled(t, 1)
 
-			require.NoError(t, os.Rename(tempFileB2, tempFileB1))
+			require.NoError(t, fakeFileInfo.Rename(tempFileB2, tempFileB1))
 			sendSyncTick(tickerChan)
 			sendSyncTick(tickerChan)
 			spy.AssertCalled(t, 2)
@@ -215,7 +222,7 @@ func TestWatch(t *testing.T) {
 			require.NoError(t, os.WriteFile(tempFile, []byte("a"), 0o600))
 
 			spy := test.NewCallSpy()
-
+			fakeFileInfo := newFakeFileInfo()
 			tickerChan := make(chan time.Time)
 			watchFunc, err := watcher.New(watcher.Options{
 				Interval:   watchInterval,
@@ -223,6 +230,9 @@ func TestWatch(t *testing.T) {
 				Paths:      []string{tempFile},
 				Callback:   spy.Call,
 				TickSource: tickerChan,
+				FileInfoProvider: func(path string) (os.FileInfo, error) {
+					return fakeFileInfo, nil
+				},
 			})
 			require.NoError(t, err)
 
@@ -234,7 +244,7 @@ func TestWatch(t *testing.T) {
 			sendSyncTick(tickerChan)
 			sendSyncTick(tickerChan)
 
-			require.NoError(t, os.WriteFile(tempFile, []byte("b"), 0o600))
+			require.NoError(t, fakeFileInfo.WriteFile(tempFile, []byte("b"), 0o600))
 
 			sendSyncTick(tickerChan)
 			sendSyncTick(tickerChan)
@@ -262,12 +272,16 @@ func TestWatch(t *testing.T) {
 			spy := test.NewCallSpy()
 
 			tickerChan := make(chan time.Time)
+			fakeFileInfo := newFakeFileInfo()
 			watchFunc, err := watcher.New(watcher.Options{
 				Interval:   watchInterval,
 				Logger:     zap.NewNop(),
 				Paths:      []string{tempFile1, tempFile2, tempFile3},
 				Callback:   spy.Call,
 				TickSource: tickerChan,
+				FileInfoProvider: func(path string) (os.FileInfo, error) {
+					return fakeFileInfo, nil
+				},
 			})
 			require.NoError(t, err)
 
@@ -278,12 +292,12 @@ func TestWatch(t *testing.T) {
 			sendSyncTick(tickerChan)
 			sendSyncTick(tickerChan)
 
-			require.NoError(t, os.WriteFile(tempFile1, []byte("b1"), 0o600))
+			require.NoError(t, fakeFileInfo.WriteFile(tempFile1, []byte("b1"), 0o600))
 			sendSyncTick(tickerChan)
 			sendSyncTick(tickerChan)
 			spy.AssertCalled(t, 1)
 
-			require.NoError(t, os.WriteFile(tempFile3, []byte("b2"), 0o600))
+			require.NoError(t, fakeFileInfo.WriteFile(tempFile3, []byte("b2"), 0o600))
 			sendSyncTick(tickerChan)
 			sendSyncTick(tickerChan)
 			spy.AssertCalled(t, 2)
@@ -304,6 +318,7 @@ func TestWatch(t *testing.T) {
 
 			spy := test.NewCallSpy()
 
+			fakeFileInfo := newFakeFileInfo()
 			tickerChan := make(chan time.Time)
 			watchFunc, err := watcher.New(watcher.Options{
 				Interval:   watchInterval,
@@ -311,6 +326,9 @@ func TestWatch(t *testing.T) {
 				Paths:      []string{tempFile},
 				Callback:   spy.Call,
 				TickSource: tickerChan,
+				FileInfoProvider: func(path string) (os.FileInfo, error) {
+					return fakeFileInfo, nil
+				},
 			})
 			require.NoError(t, err)
 
@@ -323,13 +341,13 @@ func TestWatch(t *testing.T) {
 			sendSyncTick(tickerChan)
 
 			// Delete the file, wait a cycle and then recreate it
-			require.NoError(t, os.Remove(tempFile))
+			require.NoError(t, fakeFileInfo.Remove(tempFile))
 
 			// Two cycles will trigger the callback if applicable=
 			sendSyncTick(tickerChan)
 			sendSyncTick(tickerChan)
 
-			require.NoError(t, os.WriteFile(tempFile, []byte("b"), 0o600))
+			require.NoError(t, fakeFileInfo.WriteFile(tempFile, []byte("b"), 0o600))
 
 			sendSyncTick(tickerChan)
 			sendSyncTick(tickerChan)
@@ -357,12 +375,16 @@ func TestWatch(t *testing.T) {
 			spy := test.NewCallSpy()
 
 			tickerChan := make(chan time.Time)
+			fakeFileInfo := newFakeFileInfo()
 			watchFunc, err := watcher.New(watcher.Options{
 				Interval:   watchInterval,
 				Logger:     zap.NewNop(),
 				Paths:      []string{tempFile1, tempFile2, tempFile3},
 				Callback:   spy.Call,
 				TickSource: tickerChan,
+				FileInfoProvider: func(path string) (os.FileInfo, error) {
+					return fakeFileInfo, nil
+				},
 			})
 			require.NoError(t, err)
 
@@ -372,22 +394,22 @@ func TestWatch(t *testing.T) {
 
 			sendSyncTick(tickerChan)
 
-			require.NoError(t, os.Remove(tempFile1))
+			require.NoError(t, fakeFileInfo.Remove(tempFile1))
 			sendSyncTick(tickerChan)
 			sendSyncTick(tickerChan)
 			// File is removed so we should not have a change
 			spy.AssertCalled(t, 0)
 
-			require.NoError(t, os.WriteFile(tempFile1, []byte("b"), 0o600))
+			require.NoError(t, fakeFileInfo.WriteFile(tempFile1, []byte("b"), 0o600))
 			sendSyncTick(tickerChan)
 			spy.AssertCalled(t, 0)
 			sendSyncTick(tickerChan)
 			spy.AssertCalled(t, 1)
 
-			require.NoError(t, os.Remove(tempFile3))
+			require.NoError(t, fakeFileInfo.Remove(tempFile3))
 			sendSyncTick(tickerChan)
 
-			require.NoError(t, os.WriteFile(tempFile3, []byte("b"), 0o600))
+			require.NoError(t, fakeFileInfo.WriteFile(tempFile3, []byte("b"), 0o600))
 			sendSyncTick(tickerChan)
 			sendSyncTick(tickerChan)
 			spy.AssertCalled(t, 2)
@@ -408,7 +430,7 @@ func TestWatch(t *testing.T) {
 			require.NoError(t, os.WriteFile(tempFile, []byte("a"), 0o600))
 
 			spy := test.NewCallSpy()
-
+			fakeFileInfo := newFakeFileInfo()
 			tickerChan := make(chan time.Time)
 			watchFunc, err := watcher.New(watcher.Options{
 				Interval:   watchInterval,
@@ -416,6 +438,9 @@ func TestWatch(t *testing.T) {
 				Paths:      []string{tempFile},
 				Callback:   spy.Call,
 				TickSource: tickerChan,
+				FileInfoProvider: func(path string) (os.FileInfo, error) {
+					return fakeFileInfo, nil
+				},
 			})
 			require.NoError(t, err)
 
@@ -426,10 +451,10 @@ func TestWatch(t *testing.T) {
 			sendSyncTick(tickerChan)
 
 			// Move the file away, wait a cycle and then move it back
-			require.NoError(t, os.Rename(tempFile, tempFile2))
+			require.NoError(t, fakeFileInfo.Rename(tempFile, tempFile2))
 			sendSyncTick(tickerChan)
 
-			require.NoError(t, os.Rename(tempFile2, tempFile))
+			require.NoError(t, fakeFileInfo.Rename(tempFile2, tempFile))
 
 			// Two ticks are needed to run the callback
 			sendSyncTick(tickerChan)
@@ -460,7 +485,7 @@ func TestWatch(t *testing.T) {
 			require.NoError(t, os.WriteFile(tempFileC1, []byte("a"), 0o600))
 
 			spy := test.NewCallSpy()
-
+			fakeFileInfo := newFakeFileInfo()
 			tickerChan := make(chan time.Time)
 			watchFunc, err := watcher.New(watcher.Options{
 				Interval:   watchInterval,
@@ -468,6 +493,9 @@ func TestWatch(t *testing.T) {
 				Paths:      []string{tempFileA1, tempFileB1, tempFileC1},
 				Callback:   spy.Call,
 				TickSource: tickerChan,
+				FileInfoProvider: func(path string) (os.FileInfo, error) {
+					return fakeFileInfo, nil
+				},
 			})
 			require.NoError(t, err)
 
@@ -478,12 +506,12 @@ func TestWatch(t *testing.T) {
 			sendSyncTick(tickerChan)
 
 			// Single tick, means no callback run
-			require.NoError(t, os.Rename(tempFileA1, tempFileA2))
+			require.NoError(t, fakeFileInfo.Rename(tempFileA1, tempFileA2))
 			sendSyncTick(tickerChan)
 			spy.AssertCalled(t, 0)
 
 			// Since there were more changes after the first tick, no callback run
-			require.NoError(t, os.Rename(tempFileA2, tempFileA1))
+			require.NoError(t, fakeFileInfo.Rename(tempFileA2, tempFileA1))
 			sendSyncTick(tickerChan)
 			spy.AssertCalled(t, 0)
 
@@ -491,11 +519,11 @@ func TestWatch(t *testing.T) {
 			sendSyncTick(tickerChan)
 			spy.AssertCalled(t, 1)
 
-			require.NoError(t, os.Rename(tempFileB1, tempFileB2))
+			require.NoError(t, fakeFileInfo.Rename(tempFileB1, tempFileB2))
 			sendSyncTick(tickerChan)
 			spy.AssertCalled(t, 1)
 
-			require.NoError(t, os.Rename(tempFileB2, tempFileB1))
+			require.NoError(t, fakeFileInfo.Rename(tempFileB2, tempFileB1))
 			sendSyncTick(tickerChan)
 			spy.AssertCalled(t, 1)
 
@@ -544,13 +572,16 @@ func TestWatch(t *testing.T) {
 			spy := test.NewCallSpy()
 
 			tickerChan := make(chan time.Time)
-
+			fakeFileInfo := newFakeFileInfo()
 			watchFunc, err := watcher.New(watcher.Options{
 				Interval:   watchInterval,
 				Logger:     zap.NewNop(),
 				Paths:      []string{watchedFile},
 				Callback:   spy.Call,
 				TickSource: tickerChan,
+				FileInfoProvider: func(path string) (os.FileInfo, error) {
+					return fakeFileInfo, nil
+				},
 			})
 			require.NoError(t, err)
 
@@ -562,7 +593,7 @@ func TestWatch(t *testing.T) {
 			sendSyncTick(tickerChan)
 			sendSyncTick(tickerChan)
 
-			require.NoError(t, os.WriteFile(realFile, []byte("b"), 0o600))
+			require.NoError(t, fakeFileInfo.WriteFile(realFile, []byte("b"), 0o600))
 
 			// Change detection tick
 			sendSyncTick(tickerChan)
@@ -608,12 +639,16 @@ func TestWatch(t *testing.T) {
 			spy := test.NewCallSpy()
 
 			tickerChan := make(chan time.Time)
+			fakeFileInfo := newFakeFileInfo()
 			watchFunc, err := watcher.New(watcher.Options{
 				Interval:   watchInterval,
 				Logger:     zap.NewNop(),
 				Paths:      []string{watchedFile1, watchedFile2, watchedFile3},
 				Callback:   spy.Call,
 				TickSource: tickerChan,
+				FileInfoProvider: func(path string) (os.FileInfo, error) {
+					return fakeFileInfo, nil
+				},
 			})
 			require.NoError(t, err)
 
@@ -623,7 +658,7 @@ func TestWatch(t *testing.T) {
 
 			sendSyncTick(tickerChan)
 
-			require.NoError(t, os.WriteFile(realFile1, []byte("b"), 0o600))
+			require.NoError(t, fakeFileInfo.WriteFile(realFile1, []byte("b"), 0o600))
 
 			// Changes detection tick
 			sendSyncTick(tickerChan)
@@ -635,7 +670,7 @@ func TestWatch(t *testing.T) {
 
 			spy.AssertCalled(t, 1)
 
-			require.NoError(t, os.WriteFile(realFile3, []byte("b"), 0o600))
+			require.NoError(t, fakeFileInfo.WriteFile(realFile3, []byte("b"), 0o600))
 
 			// Send two ticks, one to detect changes, and one to execute callback
 			sendSyncTick(tickerChan)
@@ -666,13 +701,16 @@ func TestWatch(t *testing.T) {
 			spy := test.NewCallSpy()
 
 			tickerChan := make(chan time.Time)
-
+			fakeFileInfo := newFakeFileInfo()
 			watchFunc, err := watcher.New(watcher.Options{
 				Interval:   customWatchInterval,
 				Logger:     zap.NewNop(),
 				Paths:      []string{tempFile1, tempFile2, tempFile3},
 				Callback:   spy.Call,
 				TickSource: tickerChan,
+				FileInfoProvider: func(path string) (os.FileInfo, error) {
+					return fakeFileInfo, nil
+				},
 			})
 			require.NoError(t, err)
 
@@ -682,8 +720,8 @@ func TestWatch(t *testing.T) {
 
 			sendSyncTick(tickerChan)
 
-			require.NoError(t, os.WriteFile(tempFile1, []byte("b1"), 0o600))
-			require.NoError(t, os.WriteFile(tempFile3, []byte("b2"), 0o600))
+			require.NoError(t, fakeFileInfo.WriteFile(tempFile1, []byte("b1"), 0o600))
+			require.NoError(t, fakeFileInfo.WriteFile(tempFile3, []byte("b2"), 0o600))
 
 			// Send two ticks as we need two ticks to trigger the callback
 			sendSyncTick(tickerChan)
@@ -708,6 +746,7 @@ func TestWatch(t *testing.T) {
 			spy := test.NewCallSpy()
 
 			tickerChan := make(chan time.Time)
+			fakeFileInfo := newFakeFileInfo()
 
 			watchFunc, err := watcher.New(watcher.Options{
 				Interval:   watchInterval,
@@ -715,6 +754,9 @@ func TestWatch(t *testing.T) {
 				Paths:      []string{tempFile1},
 				Callback:   spy.Call,
 				TickSource: tickerChan,
+				FileInfoProvider: func(path string) (os.FileInfo, error) {
+					return fakeFileInfo, nil
+				},
 			})
 			require.NoError(t, err)
 
@@ -722,26 +764,26 @@ func TestWatch(t *testing.T) {
 				_ = watchFunc(ctx)
 			}()
 
-			tickerChan <- time.Now()
+			sendSyncTick(tickerChan)
 
 			t.Log("Modifying file at tick 1")
-			require.NoError(t, os.WriteFile(tempFile1, []byte("b1"), 0o600))
+			require.NoError(t, fakeFileInfo.WriteFile(tempFile1, []byte("b1"), 0o600))
 			sendSyncTick(tickerChan)
 
 			t.Log("Modifying file at tick 2")
-			require.NoError(t, os.WriteFile(tempFile1, []byte("b2"), 0o600))
+			require.NoError(t, fakeFileInfo.WriteFile(tempFile1, []byte("b2"), 0o600))
 			sendSyncTick(tickerChan)
 
 			t.Log("Modifying file at tick 3")
-			require.NoError(t, os.WriteFile(tempFile1, []byte("b2"), 0o600))
+			require.NoError(t, fakeFileInfo.WriteFile(tempFile1, []byte("b2"), 0o600))
 			sendSyncTick(tickerChan)
 
 			t.Log("Modifying file at tick 4")
-			require.NoError(t, os.WriteFile(tempFile1, []byte("b1"), 0o600))
+			require.NoError(t, fakeFileInfo.WriteFile(tempFile1, []byte("b1"), 0o600))
 			sendSyncTick(tickerChan)
 
 			t.Log("Modifying file at tick 5")
-			require.NoError(t, os.WriteFile(tempFile1, []byte("b1"), 0o600))
+			require.NoError(t, fakeFileInfo.WriteFile(tempFile1, []byte("b1"), 0o600))
 			sendSyncTick(tickerChan)
 
 			// No Modifications should have happened because we still haven't
@@ -774,12 +816,16 @@ func TestWatch(t *testing.T) {
 			spy := test.NewCallSpy()
 
 			ticker := make(chan time.Time)
+			fakeFileInfo := newFakeFileInfo()
 			watchFunc, err := watcher.New(watcher.Options{
 				Interval:   watchInterval,
 				Logger:     zap.NewNop(),
 				Paths:      []string{tempFile1, tempFile2, tempFile3},
 				Callback:   spy.Call,
 				TickSource: ticker,
+				FileInfoProvider: func(path string) (os.FileInfo, error) {
+					return fakeFileInfo, nil
+				},
 			})
 			require.NoError(t, err)
 
@@ -790,11 +836,11 @@ func TestWatch(t *testing.T) {
 			sendSyncTick(ticker)
 
 			t.Log("Modifying file 1 at tick 1")
-			require.NoError(t, os.WriteFile(tempFile1, []byte("b1"), 0o600))
+			require.NoError(t, fakeFileInfo.WriteFile(tempFile1, []byte("b1"), 0o600))
 			sendSyncTick(ticker)
 
 			t.Log("Modifying file 2 at tick 2")
-			require.NoError(t, os.WriteFile(tempFile3, []byte("b2"), 0o600))
+			require.NoError(t, fakeFileInfo.WriteFile(tempFile3, []byte("b2"), 0o600))
 			sendSyncTick(ticker)
 			spy.AssertCalled(t, 0)
 
@@ -845,4 +891,75 @@ func sendSyncTick(channel chan time.Time) {
 	channel <- time.Now()
 	time.Sleep(10 * time.Millisecond)
 	synctest.Wait()
+}
+
+// newFakeFileInfo is a helper function for tests that creates a new fake file info object
+// newFakeFileInfo creates a fakeFileInfo with modTime initialized to time.Now().
+// In synctest, time.Now() returns the fake time controlled by the test.
+func newFakeFileInfo() *fakeFileInfo {
+	return &fakeFileInfo{
+		modTime: time.Now(),
+	}
+}
+
+// fakeFileInfo wraps os.FileInfo to manually track file modification times in tests.
+//
+// Why we need this when using synctest:
+//
+// When you use synctest, time doesn't advance on its own - you control it. But here's the problem:
+// when you call os.WriteFile() or os.Rename(), the filesystem sets the file's mtime to the *real*
+// system time, not the fake time that synctest controls. This creates a mismatch.
+//
+// Even worse, many filesystems (like ext4 on Linux) don't support nanosecond precision for mtimes.
+// They might only do seconds or milliseconds. So if you write/rename files quickly in succession,
+// they can end up with identical timestamps from the filesystem's perspective.
+//
+// The watcher detects changes by calling os.Stat() and checking if stat.ModTime().After(prevModTime).
+// If timestamps don't advance (filesystem resolution issue) or don't match the test's time control
+// (synctest mismatch), this comparison breaks and the watcher won't detect changes properly.
+//
+// This wrapper fixes it by intercepting file operations and manually bumping modTime using time.Now()
+// (which respects synctest's fake time). Then we return our tracked modTime instead of whatever
+// the filesystem reports.
+type fakeFileInfo struct {
+	os.FileInfo
+	modTime time.Time
+}
+
+// WriteFile writes data to the file and bumps the modification time.
+func (f *fakeFileInfo) WriteFile(name string, data []byte, perm os.FileMode) error {
+	err := os.WriteFile(name, data, perm)
+	if err != nil {
+		return err
+	}
+
+	f.modTime = time.Now()
+	return nil
+}
+
+// Rename moves the file and bumps the modification time.
+func (f *fakeFileInfo) Rename(oldpath, newpath string) error {
+	err := os.Rename(oldpath, newpath)
+	if err != nil {
+		return err
+	}
+
+	f.modTime = time.Now()
+	return nil
+}
+
+// Remove deletes the file and clears the modification time.
+func (f *fakeFileInfo) Remove(name string) error {
+	err := os.Remove(name)
+	if err != nil {
+		return err
+	}
+
+	f.modTime = time.Time{}
+	return nil
+}
+
+// ModTime returns our manually tracked modification time instead of the filesystem's.
+func (f *fakeFileInfo) ModTime() time.Time {
+	return f.modTime
 }
