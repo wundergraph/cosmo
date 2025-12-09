@@ -39,6 +39,7 @@ runs:
       run: ./.github/scripts/find-codecov-artifact.sh
 
     - name: Download coverage artifacts
+      if: steps.find-artifacts.outputs.has_artifacts == 'true'
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
@@ -48,6 +49,7 @@ runs:
       run: ./.github/scripts/download-codecov-artifacts.sh
 
     - name: Upload results to Codecov
+      if: steps.find-artifacts.outputs.has_artifacts == 'true'
       uses: codecov/codecov-action@v5
       with:
         token: ${{ inputs.codecov-token }}

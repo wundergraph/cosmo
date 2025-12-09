@@ -168,8 +168,10 @@ if [ $jq_exit_status -ne 0 ]; then
 fi
 
 if [ -z "$run_ids" ]; then
-  echo "No previous successful PR runs found for $HEAD_SHA matching specified workflows" >&2
-  exit 1
+  echo "No previous successful PR runs found for $HEAD_SHA matching specified workflows"
+  echo "artifacts_json=[]" >> "$GITHUB_OUTPUT"
+  echo "has_artifacts=false" >> "$GITHUB_OUTPUT"
+  exit 0
 fi
 
 echo "Found run IDs: $run_ids"
@@ -245,9 +247,10 @@ done
 artifact_count=$(echo "$all_artifacts" | jq 'length' 2>/dev/null || echo "0")
 
 if [ -z "$artifact_count" ] || [ "$artifact_count" -eq 0 ]; then
-  echo "No non-expired artifacts matching pattern '$ARTIFACT_NAME_PATTERN' found" >&2
-  echo "All artifacts JSON: $all_artifacts" >&2
-  exit 1
+  echo "No non-expired artifacts matching pattern '$ARTIFACT_NAME_PATTERN' found"
+  echo "artifacts_json=[]" >> "$GITHUB_OUTPUT"
+  echo "has_artifacts=false" >> "$GITHUB_OUTPUT"
+  exit 0
 fi
 
 echo "Found $artifact_count matching artifacts"
@@ -286,3 +289,4 @@ fi
 
 # All validations passed, write to GitHub output
 echo "artifacts_json=$artifacts_output" >> "$GITHUB_OUTPUT"
+echo "has_artifacts=true" >> "$GITHUB_OUTPUT"
