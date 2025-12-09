@@ -907,10 +907,9 @@ func sendSyncTick(channel chan time.Time) {
 	synctest.Wait()
 }
 
-// newFakeFileInfo is a helper function for tests that creates a new fake file info object
-// newFakeFileInfo creates a fakeFileInfo with modTime initialized to time.Now().
+// newTimeSyncFileInfo creates a timeSyncFileInfo with modTime initialized to time.Now().
 // In synctest, time.Now() returns the fake time controlled by the test.
-func newFakeFileInfo() *timeSyncFileInfo {
+func newTimeSyncFileInfo() *timeSyncFileInfo {
 	return &timeSyncFileInfo{
 		modTime: time.Now(),
 	}
@@ -1016,7 +1015,7 @@ func (f *timeSyncFS) Symlink(oldname, newname string) error {
 
 func (f *timeSyncFS) ensureFileInfo(name string) {
 	if _, ok := f.fileInfos[name]; !ok {
-		f.fileInfos[name] = newFakeFileInfo()
+		f.fileInfos[name] = newTimeSyncFileInfo()
 	}
 }
 
