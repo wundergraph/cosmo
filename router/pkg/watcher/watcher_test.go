@@ -104,12 +104,13 @@ func TestWatch(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
+			fakeFS := newFakeFS()
+
 			dir := t.TempDir()
 			tempFile := filepath.Join(dir, "config.json")
-			require.NoError(t, os.WriteFile(tempFile, []byte("a"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFile, []byte("a"), 0o600))
 
 			spy := test.NewCallSpy()
-			fakeFileInfo := newFakeFileInfo()
 			tickerChan := make(chan time.Time)
 			watchFunc, err := watcher.New(watcher.Options{
 				Interval:   watchInterval,
@@ -118,7 +119,7 @@ func TestWatch(t *testing.T) {
 				Callback:   spy.Call,
 				TickSource: tickerChan,
 				FileInfoProvider: func(path string) (os.FileInfo, error) {
-					return fakeFileInfo, nil
+					return fakeFS.GetFileInfo(path)
 				},
 			})
 			require.NoError(t, err)
@@ -133,11 +134,11 @@ func TestWatch(t *testing.T) {
 
 			tempFile2 := filepath.Join(dir, "config2.json")
 
-			require.NoError(t, fakeFileInfo.WriteFile(tempFile2, []byte("b"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFile2, []byte("b"), 0o600))
 			sendSyncTick(tickerChan)
 
 			// Move new file ontop of the old file
-			require.NoError(t, fakeFileInfo.Rename(tempFile2, tempFile))
+			require.NoError(t, fakeFS.Rename(tempFile2, tempFile))
 			sendSyncTick(tickerChan)
 			spy.AssertCalled(t, 0)
 
@@ -156,20 +157,21 @@ func TestWatch(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
+			fakeFS := newFakeFS()
+
 			dir := t.TempDir()
 			tempFileA1 := filepath.Join(dir, "config_a_1.json")
-			require.NoError(t, os.WriteFile(tempFileA1, []byte("a"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFileA1, []byte("a"), 0o600))
 
 			tempFileB1 := filepath.Join(dir, "config_b_1.json")
-			require.NoError(t, os.WriteFile(tempFileB1, []byte("ee"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFileB1, []byte("ee"), 0o600))
 
 			tempFileC1 := filepath.Join(dir, "config_c_1.json")
-			require.NoError(t, os.WriteFile(tempFileC1, []byte("ee"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFileC1, []byte("ee"), 0o600))
 
 			spy := test.NewCallSpy()
 
 			tickerChan := make(chan time.Time)
-			fakeFileInfo := newFakeFileInfo()
 			watchFunc, err := watcher.New(watcher.Options{
 				Interval:   watchInterval,
 				Logger:     zap.NewNop(),
@@ -177,7 +179,7 @@ func TestWatch(t *testing.T) {
 				Callback:   spy.Call,
 				TickSource: tickerChan,
 				FileInfoProvider: func(path string) (os.FileInfo, error) {
-					return fakeFileInfo, nil
+					return fakeFS.GetFileInfo(path)
 				},
 			})
 			require.NoError(t, err)
@@ -192,17 +194,17 @@ func TestWatch(t *testing.T) {
 			tempFileA2 := filepath.Join(dir, "config_a_2.json")
 			tempFileB2 := filepath.Join(dir, "config_b_2.json")
 
-			require.NoError(t, fakeFileInfo.WriteFile(tempFileA2, []byte("ab1"), 0o600))
-			require.NoError(t, fakeFileInfo.WriteFile(tempFileB2, []byte("ab2"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFileA2, []byte("ab1"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFileB2, []byte("ab2"), 0o600))
 
 			sendSyncTick(tickerChan)
 
-			require.NoError(t, fakeFileInfo.Rename(tempFileA2, tempFileA1))
+			require.NoError(t, fakeFS.Rename(tempFileA2, tempFileA1))
 			sendSyncTick(tickerChan)
 			sendSyncTick(tickerChan)
 			spy.AssertCalled(t, 1)
 
-			require.NoError(t, fakeFileInfo.Rename(tempFileB2, tempFileB1))
+			require.NoError(t, fakeFS.Rename(tempFileB2, tempFileB1))
 			sendSyncTick(tickerChan)
 			sendSyncTick(tickerChan)
 			spy.AssertCalled(t, 2)
@@ -216,13 +218,14 @@ func TestWatch(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
+			fakeFS := newFakeFS()
+
 			dir := t.TempDir()
 			tempFile := filepath.Join(dir, "config.json")
 
-			require.NoError(t, os.WriteFile(tempFile, []byte("a"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFile, []byte("a"), 0o600))
 
 			spy := test.NewCallSpy()
-			fakeFileInfo := newFakeFileInfo()
 			tickerChan := make(chan time.Time)
 			watchFunc, err := watcher.New(watcher.Options{
 				Interval:   watchInterval,
@@ -231,7 +234,7 @@ func TestWatch(t *testing.T) {
 				Callback:   spy.Call,
 				TickSource: tickerChan,
 				FileInfoProvider: func(path string) (os.FileInfo, error) {
-					return fakeFileInfo, nil
+					return fakeFS.GetFileInfo(path)
 				},
 			})
 			require.NoError(t, err)
@@ -244,7 +247,7 @@ func TestWatch(t *testing.T) {
 			sendSyncTick(tickerChan)
 			sendSyncTick(tickerChan)
 
-			require.NoError(t, fakeFileInfo.WriteFile(tempFile, []byte("b"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFile, []byte("b"), 0o600))
 
 			sendSyncTick(tickerChan)
 			sendSyncTick(tickerChan)
@@ -260,19 +263,20 @@ func TestWatch(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
+			fakeFS := newFakeFS()
+
 			dir := t.TempDir()
 			tempFile1 := filepath.Join(dir, "config_1.json")
 			tempFile2 := filepath.Join(dir, "config_2.json")
 			tempFile3 := filepath.Join(dir, "config_3.json")
 
-			require.NoError(t, os.WriteFile(tempFile1, []byte("a1"), 0o600))
-			require.NoError(t, os.WriteFile(tempFile2, []byte("a2"), 0o600))
-			require.NoError(t, os.WriteFile(tempFile3, []byte("a3"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFile1, []byte("a1"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFile2, []byte("a2"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFile3, []byte("a3"), 0o600))
 
 			spy := test.NewCallSpy()
 
 			tickerChan := make(chan time.Time)
-			fakeFileInfo := newFakeFileInfo()
 			watchFunc, err := watcher.New(watcher.Options{
 				Interval:   watchInterval,
 				Logger:     zap.NewNop(),
@@ -280,7 +284,7 @@ func TestWatch(t *testing.T) {
 				Callback:   spy.Call,
 				TickSource: tickerChan,
 				FileInfoProvider: func(path string) (os.FileInfo, error) {
-					return fakeFileInfo, nil
+					return fakeFS.GetFileInfo(path)
 				},
 			})
 			require.NoError(t, err)
@@ -292,12 +296,12 @@ func TestWatch(t *testing.T) {
 			sendSyncTick(tickerChan)
 			sendSyncTick(tickerChan)
 
-			require.NoError(t, fakeFileInfo.WriteFile(tempFile1, []byte("b1"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFile1, []byte("b1"), 0o600))
 			sendSyncTick(tickerChan)
 			sendSyncTick(tickerChan)
 			spy.AssertCalled(t, 1)
 
-			require.NoError(t, fakeFileInfo.WriteFile(tempFile3, []byte("b2"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFile3, []byte("b2"), 0o600))
 			sendSyncTick(tickerChan)
 			sendSyncTick(tickerChan)
 			spy.AssertCalled(t, 2)
@@ -311,14 +315,15 @@ func TestWatch(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
+			fakeFS := newFakeFS()
+
 			dir := t.TempDir()
 			tempFile := filepath.Join(dir, "config.json")
 
-			require.NoError(t, os.WriteFile(tempFile, []byte("a"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFile, []byte("a"), 0o600))
 
 			spy := test.NewCallSpy()
 
-			fakeFileInfo := newFakeFileInfo()
 			tickerChan := make(chan time.Time)
 			watchFunc, err := watcher.New(watcher.Options{
 				Interval:   watchInterval,
@@ -327,7 +332,7 @@ func TestWatch(t *testing.T) {
 				Callback:   spy.Call,
 				TickSource: tickerChan,
 				FileInfoProvider: func(path string) (os.FileInfo, error) {
-					return fakeFileInfo, nil
+					return fakeFS.GetFileInfo(path)
 				},
 			})
 			require.NoError(t, err)
@@ -341,13 +346,13 @@ func TestWatch(t *testing.T) {
 			sendSyncTick(tickerChan)
 
 			// Delete the file, wait a cycle and then recreate it
-			require.NoError(t, fakeFileInfo.Remove(tempFile))
+			require.NoError(t, fakeFS.Remove(tempFile))
 
-			// Two cycles will trigger the callback if applicable=
+			// Two cycles will trigger the callback if applicable
 			sendSyncTick(tickerChan)
 			sendSyncTick(tickerChan)
 
-			require.NoError(t, fakeFileInfo.WriteFile(tempFile, []byte("b"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFile, []byte("b"), 0o600))
 
 			sendSyncTick(tickerChan)
 			sendSyncTick(tickerChan)
@@ -363,19 +368,20 @@ func TestWatch(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
+			fakeFS := newFakeFS()
+
 			dir := t.TempDir()
 			tempFile1 := filepath.Join(dir, "config_1.json")
 			tempFile2 := filepath.Join(dir, "config_2.json")
 			tempFile3 := filepath.Join(dir, "config_3.json")
 
-			require.NoError(t, os.WriteFile(tempFile1, []byte("a"), 0o600))
-			require.NoError(t, os.WriteFile(tempFile2, []byte("a"), 0o600))
-			require.NoError(t, os.WriteFile(tempFile3, []byte("a"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFile1, []byte("a"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFile2, []byte("a"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFile3, []byte("a"), 0o600))
 
 			spy := test.NewCallSpy()
 
 			tickerChan := make(chan time.Time)
-			fakeFileInfo := newFakeFileInfo()
 			watchFunc, err := watcher.New(watcher.Options{
 				Interval:   watchInterval,
 				Logger:     zap.NewNop(),
@@ -383,7 +389,7 @@ func TestWatch(t *testing.T) {
 				Callback:   spy.Call,
 				TickSource: tickerChan,
 				FileInfoProvider: func(path string) (os.FileInfo, error) {
-					return fakeFileInfo, nil
+					return fakeFS.GetFileInfo(path)
 				},
 			})
 			require.NoError(t, err)
@@ -394,22 +400,22 @@ func TestWatch(t *testing.T) {
 
 			sendSyncTick(tickerChan)
 
-			require.NoError(t, fakeFileInfo.Remove(tempFile1))
+			require.NoError(t, fakeFS.Remove(tempFile1))
 			sendSyncTick(tickerChan)
 			sendSyncTick(tickerChan)
 			// File is removed so we should not have a change
 			spy.AssertCalled(t, 0)
 
-			require.NoError(t, fakeFileInfo.WriteFile(tempFile1, []byte("b"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFile1, []byte("b"), 0o600))
 			sendSyncTick(tickerChan)
 			spy.AssertCalled(t, 0)
 			sendSyncTick(tickerChan)
 			spy.AssertCalled(t, 1)
 
-			require.NoError(t, fakeFileInfo.Remove(tempFile3))
+			require.NoError(t, fakeFS.Remove(tempFile3))
 			sendSyncTick(tickerChan)
 
-			require.NoError(t, fakeFileInfo.WriteFile(tempFile3, []byte("b"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFile3, []byte("b"), 0o600))
 			sendSyncTick(tickerChan)
 			sendSyncTick(tickerChan)
 			spy.AssertCalled(t, 2)
@@ -423,14 +429,15 @@ func TestWatch(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
+			fakeFS := newFakeFS()
+
 			dir := t.TempDir()
 			tempFile := filepath.Join(dir, "config.json")
 			tempFile2 := filepath.Join(dir, "config2.json")
 
-			require.NoError(t, os.WriteFile(tempFile, []byte("a"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFile, []byte("a"), 0o600))
 
 			spy := test.NewCallSpy()
-			fakeFileInfo := newFakeFileInfo()
 			tickerChan := make(chan time.Time)
 			watchFunc, err := watcher.New(watcher.Options{
 				Interval:   watchInterval,
@@ -439,7 +446,7 @@ func TestWatch(t *testing.T) {
 				Callback:   spy.Call,
 				TickSource: tickerChan,
 				FileInfoProvider: func(path string) (os.FileInfo, error) {
-					return fakeFileInfo, nil
+					return fakeFS.GetFileInfo(path)
 				},
 			})
 			require.NoError(t, err)
@@ -451,10 +458,10 @@ func TestWatch(t *testing.T) {
 			sendSyncTick(tickerChan)
 
 			// Move the file away, wait a cycle and then move it back
-			require.NoError(t, fakeFileInfo.Rename(tempFile, tempFile2))
+			require.NoError(t, fakeFS.Rename(tempFile, tempFile2))
 			sendSyncTick(tickerChan)
 
-			require.NoError(t, fakeFileInfo.Rename(tempFile2, tempFile))
+			require.NoError(t, fakeFS.Rename(tempFile2, tempFile))
 
 			// Two ticks are needed to run the callback
 			sendSyncTick(tickerChan)
@@ -471,6 +478,8 @@ func TestWatch(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
+			fakeFS := newFakeFS()
+
 			dir := t.TempDir()
 			tempFileA1 := filepath.Join(dir, "config_a_1.json")
 			tempFileA2 := filepath.Join(dir, "config_a_2.json")
@@ -480,12 +489,11 @@ func TestWatch(t *testing.T) {
 
 			tempFileC1 := filepath.Join(dir, "config_c_1.json")
 
-			require.NoError(t, os.WriteFile(tempFileA1, []byte("a"), 0o600))
-			require.NoError(t, os.WriteFile(tempFileB1, []byte("a"), 0o600))
-			require.NoError(t, os.WriteFile(tempFileC1, []byte("a"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFileA1, []byte("a"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFileB1, []byte("a"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFileC1, []byte("a"), 0o600))
 
 			spy := test.NewCallSpy()
-			fakeFileInfo := newFakeFileInfo()
 			tickerChan := make(chan time.Time)
 			watchFunc, err := watcher.New(watcher.Options{
 				Interval:   watchInterval,
@@ -494,7 +502,7 @@ func TestWatch(t *testing.T) {
 				Callback:   spy.Call,
 				TickSource: tickerChan,
 				FileInfoProvider: func(path string) (os.FileInfo, error) {
-					return fakeFileInfo, nil
+					return fakeFS.GetFileInfo(path)
 				},
 			})
 			require.NoError(t, err)
@@ -506,12 +514,12 @@ func TestWatch(t *testing.T) {
 			sendSyncTick(tickerChan)
 
 			// Single tick, means no callback run
-			require.NoError(t, fakeFileInfo.Rename(tempFileA1, tempFileA2))
+			require.NoError(t, fakeFS.Rename(tempFileA1, tempFileA2))
 			sendSyncTick(tickerChan)
 			spy.AssertCalled(t, 0)
 
 			// Since there were more changes after the first tick, no callback run
-			require.NoError(t, fakeFileInfo.Rename(tempFileA2, tempFileA1))
+			require.NoError(t, fakeFS.Rename(tempFileA2, tempFileA1))
 			sendSyncTick(tickerChan)
 			spy.AssertCalled(t, 0)
 
@@ -519,11 +527,11 @@ func TestWatch(t *testing.T) {
 			sendSyncTick(tickerChan)
 			spy.AssertCalled(t, 1)
 
-			require.NoError(t, fakeFileInfo.Rename(tempFileB1, tempFileB2))
+			require.NoError(t, fakeFS.Rename(tempFileB1, tempFileB2))
 			sendSyncTick(tickerChan)
 			spy.AssertCalled(t, 1)
 
-			require.NoError(t, fakeFileInfo.Rename(tempFileB2, tempFileB1))
+			require.NoError(t, fakeFS.Rename(tempFileB2, tempFileB1))
 			sendSyncTick(tickerChan)
 			spy.AssertCalled(t, 1)
 
@@ -540,6 +548,8 @@ func TestWatch(t *testing.T) {
 		synctest.Test(t, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
+
+			fakeFS := newFakeFS()
 
 			dir := t.TempDir()
 
@@ -563,16 +573,16 @@ func TestWatch(t *testing.T) {
 			realFolder := filepath.Join(dir, "real_folder")
 			realFile := filepath.Join(realFolder, "config.json")
 
-			require.NoError(t, os.Mkdir(realFolder, 0o700))
-			require.NoError(t, os.WriteFile(realFile, []byte("a"), 0o600))
+			require.NoError(t, fakeFS.Mkdir(realFolder, 0o700))
+			require.NoError(t, fakeFS.WriteFile(realFile, []byte("a"), 0o600))
 
-			require.NoError(t, os.Symlink(realFolder, linkedFolder))
-			require.NoError(t, os.Symlink(linkedFile, watchedFile))
+			require.NoError(t, fakeFS.Symlink(realFolder, linkedFolder))
+			require.NoError(t, fakeFS.Symlink(linkedFile, watchedFile))
 
 			spy := test.NewCallSpy()
 
 			tickerChan := make(chan time.Time)
-			fakeFileInfo := newFakeFileInfo()
+
 			watchFunc, err := watcher.New(watcher.Options{
 				Interval:   watchInterval,
 				Logger:     zap.NewNop(),
@@ -580,7 +590,7 @@ func TestWatch(t *testing.T) {
 				Callback:   spy.Call,
 				TickSource: tickerChan,
 				FileInfoProvider: func(path string) (os.FileInfo, error) {
-					return fakeFileInfo, nil
+					return fakeFS.GetFileInfo(path)
 				},
 			})
 			require.NoError(t, err)
@@ -593,7 +603,7 @@ func TestWatch(t *testing.T) {
 			sendSyncTick(tickerChan)
 			sendSyncTick(tickerChan)
 
-			require.NoError(t, fakeFileInfo.WriteFile(realFile, []byte("b"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(realFile, []byte("b"), 0o600))
 
 			// Change detection tick
 			sendSyncTick(tickerChan)
@@ -615,6 +625,8 @@ func TestWatch(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
+			fakeFS := newFakeFS()
+
 			createLinkedFile := func(t *testing.T, dir string, prefix string) (string, string) {
 				watchedFile := filepath.Join(dir, prefix+"_config.json")
 
@@ -624,11 +636,11 @@ func TestWatch(t *testing.T) {
 				realFolder := filepath.Join(dir, prefix+"real_folder")
 				realFile := filepath.Join(realFolder, prefix+"config.json")
 
-				require.NoError(t, os.Mkdir(realFolder, 0o700))
-				require.NoError(t, os.WriteFile(realFile, []byte("a"), 0o600))
+				require.NoError(t, fakeFS.Mkdir(realFolder, 0o700))
+				require.NoError(t, fakeFS.WriteFile(realFile, []byte("a"), 0o600))
 
-				require.NoError(t, os.Symlink(realFolder, linkedFolder))
-				require.NoError(t, os.Symlink(linkedFile, watchedFile))
+				require.NoError(t, fakeFS.Symlink(realFolder, linkedFolder))
+				require.NoError(t, fakeFS.Symlink(linkedFile, watchedFile))
 				return watchedFile, realFile
 			}
 
@@ -639,7 +651,6 @@ func TestWatch(t *testing.T) {
 			spy := test.NewCallSpy()
 
 			tickerChan := make(chan time.Time)
-			fakeFileInfo := newFakeFileInfo()
 			watchFunc, err := watcher.New(watcher.Options{
 				Interval:   watchInterval,
 				Logger:     zap.NewNop(),
@@ -647,7 +658,7 @@ func TestWatch(t *testing.T) {
 				Callback:   spy.Call,
 				TickSource: tickerChan,
 				FileInfoProvider: func(path string) (os.FileInfo, error) {
-					return fakeFileInfo, nil
+					return fakeFS.GetFileInfo(path)
 				},
 			})
 			require.NoError(t, err)
@@ -658,7 +669,7 @@ func TestWatch(t *testing.T) {
 
 			sendSyncTick(tickerChan)
 
-			require.NoError(t, fakeFileInfo.WriteFile(realFile1, []byte("b"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(realFile1, []byte("b"), 0o600))
 
 			// Changes detection tick
 			sendSyncTick(tickerChan)
@@ -670,7 +681,7 @@ func TestWatch(t *testing.T) {
 
 			spy.AssertCalled(t, 1)
 
-			require.NoError(t, fakeFileInfo.WriteFile(realFile3, []byte("b"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(realFile3, []byte("b"), 0o600))
 
 			// Send two ticks, one to detect changes, and one to execute callback
 			sendSyncTick(tickerChan)
@@ -689,19 +700,20 @@ func TestWatch(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
+			fakeFS := newFakeFS()
+
 			dir := t.TempDir()
 			tempFile1 := filepath.Join(dir, "config_1.json")
 			tempFile2 := filepath.Join(dir, "config_2.json")
 			tempFile3 := filepath.Join(dir, "config_3.json")
 
-			require.NoError(t, os.WriteFile(tempFile1, []byte("a1"), 0o600))
-			require.NoError(t, os.WriteFile(tempFile2, []byte("a2"), 0o600))
-			require.NoError(t, os.WriteFile(tempFile3, []byte("a3"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFile1, []byte("a1"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFile2, []byte("a2"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFile3, []byte("a3"), 0o600))
 
 			spy := test.NewCallSpy()
 
 			tickerChan := make(chan time.Time)
-			fakeFileInfo := newFakeFileInfo()
 			watchFunc, err := watcher.New(watcher.Options{
 				Interval:   customWatchInterval,
 				Logger:     zap.NewNop(),
@@ -709,7 +721,7 @@ func TestWatch(t *testing.T) {
 				Callback:   spy.Call,
 				TickSource: tickerChan,
 				FileInfoProvider: func(path string) (os.FileInfo, error) {
-					return fakeFileInfo, nil
+					return fakeFS.GetFileInfo(path)
 				},
 			})
 			require.NoError(t, err)
@@ -720,8 +732,8 @@ func TestWatch(t *testing.T) {
 
 			sendSyncTick(tickerChan)
 
-			require.NoError(t, fakeFileInfo.WriteFile(tempFile1, []byte("b1"), 0o600))
-			require.NoError(t, fakeFileInfo.WriteFile(tempFile3, []byte("b2"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFile1, []byte("b1"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFile3, []byte("b2"), 0o600))
 
 			// Send two ticks as we need two ticks to trigger the callback
 			sendSyncTick(tickerChan)
@@ -738,15 +750,16 @@ func TestWatch(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
+			fakeFS := newFakeFS()
+
 			dir := t.TempDir()
 			tempFile1 := filepath.Join(dir, "config_1.json")
 
-			require.NoError(t, os.WriteFile(tempFile1, []byte("a1"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFile1, []byte("a1"), 0o600))
 
 			spy := test.NewCallSpy()
 
 			tickerChan := make(chan time.Time)
-			fakeFileInfo := newFakeFileInfo()
 
 			watchFunc, err := watcher.New(watcher.Options{
 				Interval:   watchInterval,
@@ -755,7 +768,7 @@ func TestWatch(t *testing.T) {
 				Callback:   spy.Call,
 				TickSource: tickerChan,
 				FileInfoProvider: func(path string) (os.FileInfo, error) {
-					return fakeFileInfo, nil
+					return fakeFS.GetFileInfo(path)
 				},
 			})
 			require.NoError(t, err)
@@ -767,23 +780,23 @@ func TestWatch(t *testing.T) {
 			sendSyncTick(tickerChan)
 
 			t.Log("Modifying file at tick 1")
-			require.NoError(t, fakeFileInfo.WriteFile(tempFile1, []byte("b1"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFile1, []byte("b1"), 0o600))
 			sendSyncTick(tickerChan)
 
 			t.Log("Modifying file at tick 2")
-			require.NoError(t, fakeFileInfo.WriteFile(tempFile1, []byte("b2"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFile1, []byte("b2"), 0o600))
 			sendSyncTick(tickerChan)
 
 			t.Log("Modifying file at tick 3")
-			require.NoError(t, fakeFileInfo.WriteFile(tempFile1, []byte("b2"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFile1, []byte("b2"), 0o600))
 			sendSyncTick(tickerChan)
 
 			t.Log("Modifying file at tick 4")
-			require.NoError(t, fakeFileInfo.WriteFile(tempFile1, []byte("b1"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFile1, []byte("b1"), 0o600))
 			sendSyncTick(tickerChan)
 
 			t.Log("Modifying file at tick 5")
-			require.NoError(t, fakeFileInfo.WriteFile(tempFile1, []byte("b1"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFile1, []byte("b1"), 0o600))
 			sendSyncTick(tickerChan)
 
 			// No Modifications should have happened because we still haven't
@@ -804,19 +817,20 @@ func TestWatch(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
+			fakeFS := newFakeFS()
+
 			dir := t.TempDir()
 			tempFile1 := filepath.Join(dir, "config_1.json")
 			tempFile2 := filepath.Join(dir, "config_2.json")
 			tempFile3 := filepath.Join(dir, "config_3.json")
 
-			require.NoError(t, os.WriteFile(tempFile1, []byte("a1"), 0o600))
-			require.NoError(t, os.WriteFile(tempFile2, []byte("a2"), 0o600))
-			require.NoError(t, os.WriteFile(tempFile3, []byte("a3"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFile1, []byte("a1"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFile2, []byte("a2"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFile3, []byte("a3"), 0o600))
 
 			spy := test.NewCallSpy()
 
 			ticker := make(chan time.Time)
-			fakeFileInfo := newFakeFileInfo()
 			watchFunc, err := watcher.New(watcher.Options{
 				Interval:   watchInterval,
 				Logger:     zap.NewNop(),
@@ -824,7 +838,7 @@ func TestWatch(t *testing.T) {
 				Callback:   spy.Call,
 				TickSource: ticker,
 				FileInfoProvider: func(path string) (os.FileInfo, error) {
-					return fakeFileInfo, nil
+					return fakeFS.GetFileInfo(path)
 				},
 			})
 			require.NoError(t, err)
@@ -836,11 +850,11 @@ func TestWatch(t *testing.T) {
 			sendSyncTick(ticker)
 
 			t.Log("Modifying file 1 at tick 1")
-			require.NoError(t, fakeFileInfo.WriteFile(tempFile1, []byte("b1"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFile1, []byte("b1"), 0o600))
 			sendSyncTick(ticker)
 
 			t.Log("Modifying file 2 at tick 2")
-			require.NoError(t, fakeFileInfo.WriteFile(tempFile3, []byte("b2"), 0o600))
+			require.NoError(t, fakeFS.WriteFile(tempFile3, []byte("b2"), 0o600))
 			sendSyncTick(ticker)
 			spy.AssertCalled(t, 0)
 
@@ -926,40 +940,107 @@ type fakeFileInfo struct {
 	modTime time.Time
 }
 
+type fakeFS struct {
+	fileInfos map[string]*fakeFileInfo
+}
+
+func newFakeFS() *fakeFS {
+	return &fakeFS{
+		fileInfos: make(map[string]*fakeFileInfo),
+	}
+}
+
+func (f *fakeFS) GetFileInfo(name string) (*fakeFileInfo, error) {
+	name = f.evaluateSymlinks(name)
+
+	if fi, ok := f.fileInfos[name]; ok {
+		return fi, nil
+	}
+
+	return nil, os.ErrNotExist
+}
+
 // WriteFile writes data to the file and bumps the modification time.
-func (f *fakeFileInfo) WriteFile(name string, data []byte, perm os.FileMode) error {
+func (f *fakeFS) WriteFile(name string, data []byte, perm os.FileMode) error {
 	err := os.WriteFile(name, data, perm)
 	if err != nil {
 		return err
 	}
 
-	f.modTime = time.Now()
+	name = f.evaluateSymlinks(name)
+	f.ensureFileInfo(name)
+
+	f.fileInfos[name].modTime = time.Now()
 	return nil
 }
 
 // Rename moves the file and bumps the modification time.
-func (f *fakeFileInfo) Rename(oldpath, newpath string) error {
+func (f *fakeFS) Rename(oldpath, newpath string) error {
+	oldpath = f.evaluateSymlinks(oldpath)
+
 	err := os.Rename(oldpath, newpath)
 	if err != nil {
 		return err
 	}
 
-	f.modTime = time.Now()
+	newpath = f.evaluateSymlinks(newpath)
+	f.ensureFileInfo(newpath)
+
+	f.fileInfos[newpath].modTime = time.Now()
+	delete(f.fileInfos, oldpath)
 	return nil
 }
 
 // Remove deletes the file and clears the modification time.
-func (f *fakeFileInfo) Remove(name string) error {
+func (f *fakeFS) Remove(name string) error {
+	name = f.evaluateSymlinks(name)
+
 	err := os.Remove(name)
 	if err != nil {
 		return err
 	}
 
-	f.modTime = time.Time{}
+	delete(f.fileInfos, name)
 	return nil
+}
+
+func (f *fakeFS) Mkdir(name string, perm os.FileMode) error {
+	err := os.Mkdir(name, perm)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (f *fakeFS) Symlink(oldname, newname string) error {
+	err := os.Symlink(oldname, newname)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (f *fakeFS) ensureFileInfo(name string) {
+	if _, ok := f.fileInfos[name]; !ok {
+		f.fileInfos[name] = newFakeFileInfo()
+	}
+}
+
+// evaluateSymlinks is a simplified version of filepath.EvalSymlinks that only follows symlinks.
+func (f *fakeFS) evaluateSymlinks(name string) string {
+	symlink, err := filepath.EvalSymlinks(name)
+	if err != nil {
+		return name
+	}
+	return symlink
 }
 
 // ModTime returns our manually tracked modification time instead of the filesystem's.
 func (f *fakeFileInfo) ModTime() time.Time {
+	if f == nil {
+		return time.Time{}
+	}
 	return f.modTime
 }
