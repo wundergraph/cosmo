@@ -35,6 +35,19 @@ spec:
       secretName: {{ .secretName }}
     {{- end }}
   {{- end }}
+  {{- if .Values.ingress.defaultBackend }}
+  {{- if semverCompare ">=1.19-0" .Capabilities.KubeVersion.GitVersion }}
+  defaultBackend:
+    service:
+      name: {{ .Values.ingress.defaultBackend.name }}
+      port:
+        number: {{ .Values.ingress.defaultBackend.port }}
+  {{- else }}
+  backend:
+    serviceName: {{ .Values.ingress.defaultBackend.name }}
+    servicePort: {{ .Values.ingress.defaultBackend.port }}
+  {{- end }}
+  {{- end }}
   rules:
     {{- if .Values.global.controlplane.enabled }}
     - host: {{ (urlParse .Values.global.controlplane.webUrl).host | quote }}
