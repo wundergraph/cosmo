@@ -16,14 +16,13 @@ RUN ./ocb --config otelcol-builder.yaml \
     && chmod +x /app/otelcol-dev/otelcol \
     && /app/otelcol-dev/otelcol --version
 
-FROM --platform=${TARGETPLATFORM} golang:1.25
+FROM golang:1.25
 
 COPY ./otel-config.yaml /etc/otel-config.yaml
 COPY --from=builder /app/otelcol-dev/otelcol /otelcol
 
 # smoke test
 RUN /otelcol --version
-
 
 ENTRYPOINT ["/otelcol"]
 CMD ["--config", "/etc/otel-config.yaml"]
