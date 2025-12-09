@@ -3,6 +3,7 @@ package watcher
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"time"
 
@@ -76,6 +77,11 @@ func New(options Options) (func(ctx context.Context) error, error) {
 						zap.Time("prev_mod_time", prevModTimes[path]),
 						zap.Time("current_mod_time", stat.ModTime()),
 					)
+
+					fmt.Println("Mod time", stat.ModTime().Format(time.RFC3339))
+					fmt.Println("prev mod time", prevModTimes[path].Format(time.RFC3339))
+					fmt.Println("diff", stat.ModTime().Sub(prevModTimes[path]))
+
 					if stat.ModTime().After(prevModTimes[path]) {
 						prevModTimes[path] = stat.ModTime()
 						changesDetected = true
