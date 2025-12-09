@@ -1060,6 +1060,8 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 		if err != nil {
 			h.logger.Warn("Resolving GraphQL subscription", zap.Error(err))
 			h.graphqlHandler.WriteError(resolveCtx, err, p.Response.Response, rw)
+			_ = rw.Flush()
+			rw.Complete()
 			return
 		}
 	}
