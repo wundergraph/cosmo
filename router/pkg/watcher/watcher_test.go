@@ -104,7 +104,7 @@ func TestWatch(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			fakeFS := newFakeFS()
+			fakeFS := newTimeSyncFS()
 
 			dir := t.TempDir()
 			tempFile := filepath.Join(dir, "config.json")
@@ -157,7 +157,7 @@ func TestWatch(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			fakeFS := newFakeFS()
+			fakeFS := newTimeSyncFS()
 
 			dir := t.TempDir()
 			tempFileA1 := filepath.Join(dir, "config_a_1.json")
@@ -218,7 +218,7 @@ func TestWatch(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			fakeFS := newFakeFS()
+			fakeFS := newTimeSyncFS()
 
 			dir := t.TempDir()
 			tempFile := filepath.Join(dir, "config.json")
@@ -263,7 +263,7 @@ func TestWatch(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			fakeFS := newFakeFS()
+			fakeFS := newTimeSyncFS()
 
 			dir := t.TempDir()
 			tempFile1 := filepath.Join(dir, "config_1.json")
@@ -315,7 +315,7 @@ func TestWatch(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			fakeFS := newFakeFS()
+			fakeFS := newTimeSyncFS()
 
 			dir := t.TempDir()
 			tempFile := filepath.Join(dir, "config.json")
@@ -368,7 +368,7 @@ func TestWatch(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			fakeFS := newFakeFS()
+			fakeFS := newTimeSyncFS()
 
 			dir := t.TempDir()
 			tempFile1 := filepath.Join(dir, "config_1.json")
@@ -429,7 +429,7 @@ func TestWatch(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			fakeFS := newFakeFS()
+			fakeFS := newTimeSyncFS()
 
 			dir := t.TempDir()
 			tempFile := filepath.Join(dir, "config.json")
@@ -478,7 +478,7 @@ func TestWatch(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			fakeFS := newFakeFS()
+			fakeFS := newTimeSyncFS()
 
 			dir := t.TempDir()
 			tempFileA1 := filepath.Join(dir, "config_a_1.json")
@@ -549,7 +549,7 @@ func TestWatch(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			fakeFS := newFakeFS()
+			fakeFS := newTimeSyncFS()
 
 			dir := t.TempDir()
 
@@ -625,7 +625,7 @@ func TestWatch(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			fakeFS := newFakeFS()
+			fakeFS := newTimeSyncFS()
 
 			createLinkedFile := func(t *testing.T, dir string, prefix string) (string, string) {
 				watchedFile := filepath.Join(dir, prefix+"_config.json")
@@ -700,7 +700,7 @@ func TestWatch(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			fakeFS := newFakeFS()
+			fakeFS := newTimeSyncFS()
 
 			dir := t.TempDir()
 			tempFile1 := filepath.Join(dir, "config_1.json")
@@ -750,7 +750,7 @@ func TestWatch(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			fakeFS := newFakeFS()
+			fakeFS := newTimeSyncFS()
 
 			dir := t.TempDir()
 			tempFile1 := filepath.Join(dir, "config_1.json")
@@ -817,7 +817,7 @@ func TestWatch(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			fakeFS := newFakeFS()
+			fakeFS := newTimeSyncFS()
 
 			dir := t.TempDir()
 			tempFile1 := filepath.Join(dir, "config_1.json")
@@ -910,13 +910,13 @@ func sendSyncTick(channel chan time.Time) {
 // newFakeFileInfo is a helper function for tests that creates a new fake file info object
 // newFakeFileInfo creates a fakeFileInfo with modTime initialized to time.Now().
 // In synctest, time.Now() returns the fake time controlled by the test.
-func newFakeFileInfo() *fakeFileInfo {
-	return &fakeFileInfo{
+func newFakeFileInfo() *timeSyncFileInfo {
+	return &timeSyncFileInfo{
 		modTime: time.Now(),
 	}
 }
 
-// fakeFileInfo wraps os.FileInfo to manually track file modification times in tests.
+// timeSyncFileInfo wraps os.FileInfo to manually track file modification times in tests.
 //
 // Why we need this when using synctest:
 //
@@ -935,22 +935,22 @@ func newFakeFileInfo() *fakeFileInfo {
 // This wrapper fixes it by intercepting file operations and manually bumping modTime using time.Now()
 // (which respects synctest's fake time). Then we return our tracked modTime instead of whatever
 // the filesystem reports.
-type fakeFileInfo struct {
+type timeSyncFileInfo struct {
 	os.FileInfo
 	modTime time.Time
 }
 
-type fakeFS struct {
-	fileInfos map[string]*fakeFileInfo
+type timeSyncFS struct {
+	fileInfos map[string]*timeSyncFileInfo
 }
 
-func newFakeFS() *fakeFS {
-	return &fakeFS{
-		fileInfos: make(map[string]*fakeFileInfo),
+func newTimeSyncFS() *timeSyncFS {
+	return &timeSyncFS{
+		fileInfos: make(map[string]*timeSyncFileInfo),
 	}
 }
 
-func (f *fakeFS) GetFileInfo(name string) (*fakeFileInfo, error) {
+func (f *timeSyncFS) GetFileInfo(name string) (*timeSyncFileInfo, error) {
 	name = f.evaluateSymlinks(name)
 
 	if fi, ok := f.fileInfos[name]; ok {
@@ -961,7 +961,7 @@ func (f *fakeFS) GetFileInfo(name string) (*fakeFileInfo, error) {
 }
 
 // WriteFile writes data to the file and bumps the modification time.
-func (f *fakeFS) WriteFile(name string, data []byte, perm os.FileMode) error {
+func (f *timeSyncFS) WriteFile(name string, data []byte, perm os.FileMode) error {
 	err := os.WriteFile(name, data, perm)
 	if err != nil {
 		return err
@@ -975,7 +975,7 @@ func (f *fakeFS) WriteFile(name string, data []byte, perm os.FileMode) error {
 }
 
 // Rename moves the file and bumps the modification time.
-func (f *fakeFS) Rename(oldpath, newpath string) error {
+func (f *timeSyncFS) Rename(oldpath, newpath string) error {
 	oldpath = f.evaluateSymlinks(oldpath)
 
 	err := os.Rename(oldpath, newpath)
@@ -992,7 +992,7 @@ func (f *fakeFS) Rename(oldpath, newpath string) error {
 }
 
 // Remove deletes the file and clears the modification time.
-func (f *fakeFS) Remove(name string) error {
+func (f *timeSyncFS) Remove(name string) error {
 	name = f.evaluateSymlinks(name)
 
 	err := os.Remove(name)
@@ -1005,23 +1005,23 @@ func (f *fakeFS) Remove(name string) error {
 }
 
 // Mkdir is just a wrapper around os.Mkdir for completeness.
-func (f *fakeFS) Mkdir(name string, perm os.FileMode) error {
+func (f *timeSyncFS) Mkdir(name string, perm os.FileMode) error {
 	return os.Mkdir(name, perm)
 }
 
 // Symlink is just a wrapper around os.Symlink for completeness.
-func (f *fakeFS) Symlink(oldname, newname string) error {
+func (f *timeSyncFS) Symlink(oldname, newname string) error {
 	return os.Symlink(oldname, newname)
 }
 
-func (f *fakeFS) ensureFileInfo(name string) {
+func (f *timeSyncFS) ensureFileInfo(name string) {
 	if _, ok := f.fileInfos[name]; !ok {
 		f.fileInfos[name] = newFakeFileInfo()
 	}
 }
 
 // evaluateSymlinks is a simplified version of filepath.EvalSymlinks that only follows symlinks.
-func (f *fakeFS) evaluateSymlinks(name string) string {
+func (f *timeSyncFS) evaluateSymlinks(name string) string {
 	symlink, err := filepath.EvalSymlinks(name)
 	if err != nil {
 		return name
@@ -1030,7 +1030,7 @@ func (f *fakeFS) evaluateSymlinks(name string) string {
 }
 
 // ModTime returns our manually tracked modification time instead of the filesystem's.
-func (f *fakeFileInfo) ModTime() time.Time {
+func (f *timeSyncFileInfo) ModTime() time.Time {
 	if f == nil {
 		return time.Time{}
 	}
