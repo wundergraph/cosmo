@@ -1020,9 +1020,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 		reqContext.expressionContext = *origCtx.expressionContext.Clone()
 	}
 
-	initCtx := withRequestContext(h.ctx, reqContext)
-
-	resolveCtx := resolve.NewContext(initCtx)
+	resolveCtx := resolve.NewContext(withRequestContext(h.ctx, reqContext))
 	resolveCtx.Variables = operationCtx.Variables()
 	resolveCtx.Request = resolve.Request{
 		Header: registration.clientRequest.Header,
