@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,7 +12,6 @@ import (
 
 	"github.com/MicahParks/jwkset"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/hashicorp/consul/sdk/freeport"
 )
 
 const (
@@ -168,13 +166,6 @@ func NewServerWithCrypto(t *testing.T, providers ...Crypto) (*Server, error) {
 	mux.HandleFunc(oidcHTTPPath, s.oidcJSON)
 
 	httpServer := httptest.NewUnstartedServer(mux)
-	port := freeport.GetOne(t)
-	l, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
-	if err != nil {
-		t.Fatalf("could not listen on port: %s", err.Error())
-	}
-	_ = httpServer.Listener.Close()
-	httpServer.Listener = l
 	httpServer.Start()
 
 	s.httpServer = httpServer

@@ -4,6 +4,36 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.102.3](https://github.com/wundergraph/cosmo/compare/wgc@0.102.2...wgc@0.102.3) (2025-12-04)
+
+### Bug Fixes
+
+* operation checks for input and argument usages ([#2380](https://github.com/wundergraph/cosmo/issues/2380)) ([c43ed88](https://github.com/wundergraph/cosmo/commit/c43ed8813ef6b29563a77926fc7908566ccf7eb9)) (@JivusAyrus)
+
+## [0.102.2](https://github.com/wundergraph/cosmo/compare/wgc@0.102.1...wgc@0.102.2) (2025-12-04)
+
+**Note:** Version bump only for package wgc
+
+## [0.102.1](https://github.com/wundergraph/cosmo/compare/wgc@0.102.0...wgc@0.102.1) (2025-12-03)
+
+**Note:** Version bump only for package wgc
+
+# [0.102.0](https://github.com/wundergraph/cosmo/compare/wgc@0.101.0...wgc@0.102.0) (2025-12-03)
+
+### Features
+
+* update `zod` ([#2384](https://github.com/wundergraph/cosmo/issues/2384)) ([53a2c0c](https://github.com/wundergraph/cosmo/commit/53a2c0ca0f3f933fc9d11fbad4ac066e93d01ff9)) (@wilsonrivera)
+
+# [0.101.0](https://github.com/wundergraph/cosmo/compare/wgc@0.100.0...wgc@0.101.0) (2025-11-29)
+
+### Bug Fixes
+
+* prevent overriding of json versions ([#2378](https://github.com/wundergraph/cosmo/issues/2378)) ([5451293](https://github.com/wundergraph/cosmo/commit/54512934fbecd57e1b2f8ccf5b6853ff03debd98)) (@SkArchon)
+
+### Features
+
+* subgraph check extensions ([#2281](https://github.com/wundergraph/cosmo/issues/2281)) ([c190b5a](https://github.com/wundergraph/cosmo/commit/c190b5ad19f9fd8f7a67317a29fe845d475dbf10)) (@wilsonrivera)
+
 # [0.100.0](https://github.com/wundergraph/cosmo/compare/wgc@0.99.0...wgc@0.100.0) (2025-11-26)
 
 ### Features

@@ -75,22 +75,30 @@ export class MetricsRepository {
 
     // get request rate in last [range]h
     const queryRate = (start: number, end: number) => {
+      const params = {
+        ...queryParams,
+        startDate: start,
+        endDate: end,
+        organizationId,
+        federatedGraphId: graphId,
+        multiplier,
+      };
       return this.client.queryPromise<{ value: number | null }>(
         `
-        SELECT round(sum(total) / ${multiplier}, 4) AS value FROM (
+        SELECT round(sum(total) / {multiplier:UInt32}, 4) AS value FROM (
         SELECT
-          toDateTime('${start}') AS startDate,
-          toDateTime('${end}') AS endDate,
+          toDateTime({startDate:UInt32}) AS startDate,
+          toDateTime({endDate:UInt32}) AS endDate,
           sum(TotalRequests) AS total
         FROM ${this.client.database}.operation_request_metrics_5_30
         WHERE Timestamp >= startDate AND Timestamp <= endDate
-          AND OrganizationID = '${organizationId}'
-          AND FederatedGraphID = '${graphId}'
+          AND OrganizationID = {organizationId:String}
+          AND FederatedGraphID = {federatedGraphId:String}
           ${whereSql ? `AND ${whereSql}` : ''}
         GROUP BY Timestamp 
       )
     `,
-        queryParams,
+        params,
       );
     };
 
@@ -98,12 +106,20 @@ export class MetricsRepository {
     const prevRequestRate = queryRate(prevDateRange.start, prevDateRange.end);
 
     // get top 5 operations in last [range] hours
+    const top5Params = {
+      ...queryParams,
+      startDate: dateRange.start,
+      endDate: dateRange.end,
+      organizationId,
+      federatedGraphId: graphId,
+      multiplier,
+    };
     const top5 = this.client.queryPromise<{ hash: string; name: string; value: string; isPersisted: boolean }>(
       `
       WITH
-        toDateTime('${dateRange.start}') AS startDate,
-        toDateTime('${dateRange.end}') AS endDate
-      SELECT hash, name, isPersisted, round(sum(total) / ${multiplier}, 4) AS value FROM (
+        toDateTime({startDate:UInt32}) AS startDate,
+        toDateTime({endDate:UInt32}) AS endDate
+      SELECT hash, name, isPersisted, round(sum(total) / {multiplier:UInt32}, 4) AS value FROM (
         SELECT
           Timestamp as timestamp,
           OperationHash as hash,
@@ -112,38 +128,46 @@ export class MetricsRepository {
           sum(TotalRequests) as total
         FROM ${this.client.database}.operation_request_metrics_5_30
         WHERE Timestamp >= startDate AND Timestamp <= endDate
-          AND OrganizationID = '${organizationId}'
-          AND FederatedGraphID = '${graphId}'
+          AND OrganizationID = {organizationId:String}
+          AND FederatedGraphID = {federatedGraphId:String}
           ${whereSql ? `AND ${whereSql}` : ''}
         GROUP BY Timestamp, OperationName, OperationHash, OperationPersistedID
       ) GROUP BY name, hash, isPersisted ORDER BY value DESC LIMIT 5
     `,
-      queryParams,
+      top5Params,
     );
 
     // get time series of last [range] hours
     const querySeries = (start: number, end: number) => {
+      const params = {
+        ...queryParams,
+        startDate: start,
+        endDate: end,
+        organizationId,
+        federatedGraphId: graphId,
+        granule,
+      };
       return this.client.queryPromise<LatencySeries>(
         `
       WITH
-        toStartOfInterval(toDateTime('${start}'), INTERVAL ${granule} MINUTE) AS startDate,
-        toDateTime('${end}') AS endDate
+        toStartOfInterval(toDateTime({startDate:UInt32}), INTERVAL {granule:UInt32} MINUTE) AS startDate,
+        toDateTime({endDate:UInt32}) AS endDate
       SELECT
-          toStartOfInterval(Timestamp, INTERVAL ${granule} MINUTE) AS timestamp,
-          round(sum(TotalRequests) / ${granule}, 4) AS value
+          toStartOfInterval(Timestamp, INTERVAL {granule:UInt32} MINUTE) AS timestamp,
+          round(sum(TotalRequests) / {granule:UInt32}, 4) AS value
       FROM ${this.client.database}.operation_request_metrics_5_30
       WHERE timestamp >= startDate AND timestamp <= endDate
-        AND OrganizationID = '${organizationId}'
-        AND FederatedGraphID = '${graphId}'
+        AND OrganizationID = {organizationId:String}
+        AND FederatedGraphID = {federatedGraphId:String}
         ${whereSql ? `AND ${whereSql}` : ''}
       GROUP BY timestamp
       ORDER BY timestamp ASC WITH FILL FROM 
-        toStartOfInterval(toDateTime('${start}'), INTERVAL ${granule} MINUTE)
+        toStartOfInterval(toDateTime({startDate:UInt32}), INTERVAL {granule:UInt32} MINUTE)
       TO
-        toDateTime('${end}')
-      STEP INTERVAL ${granule} minute
+        toDateTime({endDate:UInt32})
+      STEP INTERVAL {granule:UInt32} minute
     `,
-        queryParams,
+        params,
       );
     };
 
@@ -189,13 +213,21 @@ export class MetricsRepository {
     flipDateRangeValuesIfNeeded(dateRange);
 
     const queryLatency = (quantile: string, start: number, end: number) => {
+      const params = {
+        ...queryParams,
+        startDate: start,
+        endDate: end,
+        organizationId,
+        federatedGraphId: graphId,
+        quantile: Number.parseFloat(quantile),
+      };
       return this.client.queryPromise<{ value: number }>(
         `
         WITH
-          toDateTime('${start}') AS startDate,
-          toDateTime('${end}') AS endDate
+          toDateTime({startDate:UInt32}) AS startDate,
+          toDateTime({endDate:UInt32}) AS endDate
         SELECT
-          func_rank(${quantile}, BucketCounts) as rank,
+          func_rank({quantile:Float64}, BucketCounts) as rank,
           func_rank_bucket_lower_index(rank, BucketCounts) as b,
           func_histogram_v2(
               rank,
@@ -208,11 +240,11 @@ export class MetricsRepository {
           sumForEachMerge(BucketCounts) as BucketCounts
         FROM ${this.client.database}.operation_latency_metrics_5_30
         WHERE Timestamp >= startDate AND Timestamp <= endDate
-          AND OrganizationID = '${organizationId}'
-          AND FederatedGraphID = '${graphId}'
+          AND OrganizationID = {organizationId:String}
+          AND FederatedGraphID = {federatedGraphId:String}
           ${whereSql ? `AND ${whereSql}` : ''}
     `,
-        queryParams,
+        params,
       );
     };
 
@@ -221,16 +253,24 @@ export class MetricsRepository {
 
     // get top 5 operations in last [range] hours
     const queryTop5 = (quantile: string, start: number, end: number) => {
+      const params = {
+        ...queryParams,
+        startDate: start,
+        endDate: end,
+        organizationId,
+        federatedGraphId: graphId,
+        quantile: Number.parseFloat(quantile),
+      };
       return this.client.queryPromise<{ hash: string; name: string; value: string; isPersisted: boolean }>(
         `
         WITH
-          toDateTime('${start}') AS startDate,
-          toDateTime('${end}') AS endDate
+          toDateTime({startDate:UInt32}) AS startDate,
+          toDateTime({endDate:UInt32}) AS endDate
         SELECT
           OperationHash as hash,
           OperationName as name,
           IF(empty(OperationPersistedID), false, true) as isPersisted,
-          func_rank(${quantile}, BucketCounts) as rank,
+          func_rank({quantile:Float64}, BucketCounts) as rank,
           func_rank_bucket_lower_index(rank, BucketCounts) as b,
           round(func_histogram_v2(
               rank,
@@ -243,12 +283,12 @@ export class MetricsRepository {
           sumForEachMerge(BucketCounts) as BucketCounts
         FROM ${this.client.database}.operation_latency_metrics_5_30
         WHERE Timestamp >= startDate AND Timestamp <= endDate
-          AND OrganizationID = '${organizationId}'
-          AND FederatedGraphID = '${graphId}'
+          AND OrganizationID = {organizationId:String}
+          AND FederatedGraphID = {federatedGraphId:String}
           ${whereSql ? `AND ${whereSql}` : ''}
         GROUP BY OperationName, OperationHash, OperationPersistedID ORDER BY value DESC LIMIT 5
     `,
-        queryParams,
+        params,
       );
     };
 
@@ -256,15 +296,24 @@ export class MetricsRepository {
 
     // get time series of last [range] hours
     const querySeries = (quantile: string, start: number, end: number) => {
+      const params = {
+        ...queryParams,
+        startDate: start,
+        endDate: end,
+        organizationId,
+        federatedGraphId: graphId,
+        granule,
+        quantile: Number.parseFloat(quantile),
+      };
       return this.client.queryPromise<LatencySeries>(
         `
         WITH
-          toStartOfInterval(toDateTime('${start}'), INTERVAL ${granule} MINUTE) AS startDate,
-          toDateTime('${end}') AS endDate
+          toStartOfInterval(toDateTime({startDate:UInt32}), INTERVAL {granule:UInt32} MINUTE) AS startDate,
+          toDateTime({endDate:UInt32}) AS endDate
         SELECT
-            toStartOfInterval(Timestamp, INTERVAL ${granule} MINUTE) AS timestamp,
+            toStartOfInterval(Timestamp, INTERVAL {granule:UInt32} MINUTE) AS timestamp,
             -- Default
-            func_rank(${quantile}, BucketCounts) as rank,
+            func_rank({quantile:Float64}, BucketCounts) as rank,
             func_rank_bucket_lower_index(rank, BucketCounts) as b,
             func_histogram_v2(
                 rank,
@@ -290,7 +339,7 @@ export class MetricsRepository {
                 BucketCounts,
                 anyLast(ExplicitBounds)
             ) as p90,
-            -- P90
+            -- P99
             func_rank(0.99, BucketCounts) as rank99,
             func_rank_bucket_lower_index(rank99, BucketCounts) as b99,
             func_histogram_v2(
@@ -304,17 +353,17 @@ export class MetricsRepository {
             sumForEachMerge(BucketCounts) as BucketCounts
         FROM ${this.client.database}.operation_latency_metrics_5_30
         WHERE timestamp >= startDate AND timestamp <= endDate
-          AND OrganizationID = '${organizationId}'
-          AND FederatedGraphID = '${graphId}'
+          AND OrganizationID = {organizationId:String}
+          AND FederatedGraphID = {federatedGraphId:String}
           ${whereSql ? `AND ${whereSql}` : ''}
         GROUP BY timestamp, ExplicitBounds
         ORDER BY timestamp ASC WITH FILL FROM
-          toStartOfInterval(toDateTime('${start}'), INTERVAL ${granule} MINUTE)
+          toStartOfInterval(toDateTime({startDate:UInt32}), INTERVAL {granule:UInt32} MINUTE)
         TO
-          toDateTime('${end}')
-        STEP INTERVAL ${granule} minute
+          toDateTime({endDate:UInt32})
+        STEP INTERVAL {granule:UInt32} minute
       `,
-        queryParams,
+        params,
       );
     };
 
@@ -361,11 +410,18 @@ export class MetricsRepository {
 
     // get request rate in last [range]h
     const queryPercentage = (start: number, end: number) => {
+      const params = {
+        ...queryParams,
+        startDate: start,
+        endDate: end,
+        organizationId,
+        federatedGraphId: graphId,
+      };
       return this.client.queryPromise<{ errorPercentage: number }>(
         `
       WITH
-        toDateTime('${start}') AS startDate,
-        toDateTime('${end}') AS endDate
+        toDateTime({startDate:UInt32}) AS startDate,
+        toDateTime({endDate:UInt32}) AS endDate
       SELECT
         sum(totalErrors) AS errors,
         sum(totalRequests) AS requests,
@@ -376,13 +432,13 @@ export class MetricsRepository {
             sum(TotalErrors) as totalErrors
           FROM ${this.client.database}.operation_request_metrics_5_30
           WHERE Timestamp >= startDate AND Timestamp <= endDate
-          AND OrganizationID = '${organizationId}'
-            AND FederatedGraphID = '${graphId}'
+          AND OrganizationID = {organizationId:String}
+            AND FederatedGraphID = {federatedGraphId:String}
             ${whereSql ? `AND ${whereSql}` : ''}
           GROUP BY Timestamp, OperationName 
         )
     `,
-        queryParams,
+        params,
       );
     };
 
@@ -390,11 +446,18 @@ export class MetricsRepository {
     const prevValue = queryPercentage(prevDateRange.start, prevDateRange.end);
 
     // get top 5 operations in last [range] hours
+    const top5Params = {
+      ...queryParams,
+      startDate: dateRange.start,
+      endDate: dateRange.end,
+      organizationId,
+      federatedGraphId: graphId,
+    };
     const top5 = this.client.queryPromise<{ hash: string; name: string; value: string; isPersisted: boolean }>(
       `
       WITH
-        toDateTime('${dateRange.start}') AS startDate,
-        toDateTime('${dateRange.end}') AS endDate
+        toDateTime({startDate:UInt32}) AS startDate,
+        toDateTime({endDate:UInt32}) AS endDate
       SELECT
         hash,
         name,
@@ -411,40 +474,48 @@ export class MetricsRepository {
           IF(empty(OperationPersistedID), false, true) as isPersisted
         FROM ${this.client.database}.operation_request_metrics_5_30
         WHERE Timestamp >= startDate AND Timestamp <= endDate
-          AND OrganizationID = '${organizationId}'
-          AND FederatedGraphID = '${graphId}'
+          AND OrganizationID = {organizationId:String}
+          AND FederatedGraphID = {federatedGraphId:String}
           ${whereSql ? `AND ${whereSql}` : ''}
         GROUP BY Timestamp, OperationName, OperationHash, OperationPersistedID
       ) GROUP BY name, hash, isPersisted ORDER BY value DESC LIMIT 5
     `,
-      queryParams,
+      top5Params,
     );
 
     // get time series of last [range] hours
     const getSeries = (start: number, end: number) => {
+      const params = {
+        ...queryParams,
+        startDate: start,
+        endDate: end,
+        organizationId,
+        federatedGraphId: graphId,
+        granule,
+      };
       return this.client.queryPromise<LatencySeries>(
         `
       WITH
-        toStartOfInterval(toDateTime('${start}'), INTERVAL ${granule} MINUTE) AS startDate,
-        toDateTime('${end}') AS endDate
+        toStartOfInterval(toDateTime({startDate:UInt32}), INTERVAL {granule:UInt32} MINUTE) AS startDate,
+        toDateTime({endDate:UInt32}) AS endDate
       SELECT
-          toStartOfInterval(Timestamp, INTERVAL ${granule} MINUTE) AS timestamp,
+          toStartOfInterval(Timestamp, INTERVAL {granule:UInt32} MINUTE) AS timestamp,
           sum(TotalErrors) AS errors,
           sum(TotalRequests) AS requests,
           if(errors > 0, round(errors / requests * 100, 2), 0) AS value
       FROM ${this.client.database}.operation_request_metrics_5_30
       WHERE timestamp >= startDate AND timestamp <= endDate
-        AND OrganizationID = '${organizationId}'
-        AND FederatedGraphID = '${graphId}'
+        AND OrganizationID = {organizationId:String}
+        AND FederatedGraphID = {federatedGraphId:String}
         ${whereSql ? `AND ${whereSql}` : ''}
       GROUP BY timestamp
       ORDER BY timestamp ASC WITH FILL FROM 
-        toStartOfInterval(toDateTime('${start}'), INTERVAL ${granule} MINUTE)
+        toStartOfInterval(toDateTime({startDate:UInt32}), INTERVAL {granule:UInt32} MINUTE)
       TO
-        toDateTime('${end}')
-      STEP INTERVAL ${granule} minute
+        toDateTime({endDate:UInt32})
+      STEP INTERVAL {granule:UInt32} minute
     `,
-        queryParams,
+        params,
       );
     };
 
@@ -487,29 +558,38 @@ export class MetricsRepository {
   }: GetMetricsProps) {
     flipDateRangeValuesIfNeeded(dateRange);
 
+    const params = {
+      ...queryParams,
+      startDate: dateRange.start,
+      endDate: dateRange.end,
+      organizationId,
+      federatedGraphId: graphId,
+      granule,
+    };
+
     // get requests in last [range] hours in series of [step]
     const series = await this.client.queryPromise<{ timestamp: string; requestRate: string; errorRate: string }>(
       `
       WITH
-        toStartOfInterval(toDateTime('${dateRange.start}'), INTERVAL ${granule} MINUTE) AS startDate,
-        toDateTime('${dateRange.end}') AS endDate
+        toStartOfInterval(toDateTime({startDate:UInt32}), INTERVAL {granule:UInt32} MINUTE) AS startDate,
+        toDateTime({endDate:UInt32}) AS endDate
       SELECT
-          toStartOfInterval(Timestamp, INTERVAL ${granule} MINUTE) AS timestamp,
-          round(sum(TotalRequests) / ${granule}, 4) AS requestRate,
-          round(sum(TotalErrors) / ${granule}, 4) AS errorRate
+          toStartOfInterval(Timestamp, INTERVAL {granule:UInt32} MINUTE) AS timestamp,
+          round(sum(TotalRequests) / {granule:UInt32}, 4) AS requestRate,
+          round(sum(TotalErrors) / {granule:UInt32}, 4) AS errorRate
       FROM ${this.client.database}.operation_request_metrics_5_30
       WHERE timestamp >= startDate AND timestamp <= endDate
-        AND OrganizationID = '${organizationId}'
-        AND FederatedGraphID = '${graphId}'
+        AND OrganizationID = {organizationId:String}
+        AND FederatedGraphID = {federatedGraphId:String}
         ${whereSql ? `AND ${whereSql}` : ''}
       GROUP BY timestamp
       ORDER BY timestamp ASC WITH FILL FROM
-        toStartOfInterval(toDateTime('${dateRange.start}'), INTERVAL ${granule} MINUTE)
+        toStartOfInterval(toDateTime({startDate:UInt32}), INTERVAL {granule:UInt32} MINUTE)
       TO
-        toDateTime('${dateRange.end}')
-      STEP INTERVAL ${granule} MINUTE
+        toDateTime({endDate:UInt32})
+      STEP INTERVAL {granule:UInt32} MINUTE
     `,
-      queryParams,
+      params,
     );
 
     return {
@@ -642,20 +722,27 @@ export class MetricsRepository {
 
     const query = `
       WITH
-        toDateTime('${dateRange.start}') AS startDate,
-        toDateTime('${dateRange.end}') AS endDate
+        toDateTime({startDate:UInt32}) AS startDate,
+        toDateTime({endDate:UInt32}) AS endDate
       SELECT
         OperationName as operationName,
         ClientName as clientName,
         ClientVersion as clientVersion
       FROM ${this.client.database}.operation_request_metrics_5_30
       WHERE Timestamp >= startDate AND Timestamp <= endDate
-        AND OrganizationID = '${organizationId}'
-        AND FederatedGraphID = '${graphId}'
+        AND OrganizationID = {organizationId:String}
+        AND FederatedGraphID = {federatedGraphId:String}
       GROUP BY OperationName, ClientName, ClientVersion
     `;
 
-    const res = await this.client.queryPromise(query);
+    const params = {
+      startDate: dateRange.start,
+      endDate: dateRange.end,
+      organizationId,
+      federatedGraphId: graphId,
+    };
+
+    const res = await this.client.queryPromise(query, params);
 
     const addFilterOption = (filter: string, option: string) => {
       if (!filters[filter].options) {
@@ -866,6 +953,7 @@ export class MetricsRepository {
           WHERE Timestamp >= startDate AND Timestamp <= endDate
             AND OrganizationID = {organizationId:String}
             AND FederatedGraphID = {federatedGraphId:String}
+            AND OperationHash IS NOT NULL AND OperationHash != ''
             ${whereSql ? `AND ${whereSql}` : ''}
             ${searchSql}
             ${introspectionFilter}
@@ -901,6 +989,7 @@ export class MetricsRepository {
           WHERE Timestamp >= startDate AND Timestamp <= endDate
             AND OrganizationID = {organizationId:String}
             AND FederatedGraphID = {federatedGraphId:String}
+            AND OperationHash IS NOT NULL AND OperationHash != ''
             ${whereSql ? `AND ${whereSql}` : ''}
             ${searchSql}
             ${introspectionFilter}
@@ -939,6 +1028,7 @@ export class MetricsRepository {
           WHERE Timestamp >= startDate AND Timestamp <= endDate
               AND OrganizationID = {organizationId:String}
               AND FederatedGraphID = {federatedGraphId:String}
+              AND OperationHash IS NOT NULL AND OperationHash != ''
             ${whereSql ? `AND ${whereSql}` : ''}
             ${searchSql}
             ${introspectionFilter}
@@ -1053,6 +1143,7 @@ export class MetricsRepository {
           WHERE Timestamp >= startDate AND Timestamp <= endDate
               AND OrganizationID = {organizationId:String}
               AND FederatedGraphID = {federatedGraphId:String}
+              AND OperationHash IS NOT NULL AND OperationHash != ''
             ${whereSql ? `AND ${whereSql}` : ''}
             ${searchSql}
             ${introspectionFilter}
@@ -1092,6 +1183,7 @@ export class MetricsRepository {
         WHERE Timestamp >= startDate AND Timestamp <= endDate
           AND OrganizationID = {organizationId:String}
           AND FederatedGraphID = {federatedGraphId:String}
+          AND OperationHash IS NOT NULL AND OperationHash != ''
           ${whereSql ? `AND ${whereSql}` : ''}
           ${searchSql}
           ${introspectionFilter}
@@ -1121,21 +1213,28 @@ export class MetricsRepository {
 
     const query = `
     WITH
-      toDateTime('${dateRange.start}') AS startDate,
-      toDateTime('${dateRange.end}') AS endDate
+      toDateTime({startDate:UInt32}) AS startDate,
+      toDateTime({endDate:UInt32}) AS endDate
     SELECT
       ClientName as name
     FROM ${this.client.database}.operation_latency_metrics_5_30
     PREWHERE Timestamp >= startDate AND Timestamp <= endDate
-      AND OrganizationID = '${organizationId}'
-      AND FederatedGraphID = '${graphId}'
+      AND OrganizationID = {organizationId:String}
+      AND FederatedGraphID = {federatedGraphId:String}
     GROUP BY ClientName
     ORDER BY max(Timestamp) DESC
     LIMIT 100`;
 
+    const params = {
+      startDate: dateRange.start,
+      endDate: dateRange.end,
+      organizationId,
+      federatedGraphId: graphId,
+    };
+
     const res: {
       name: string;
-    }[] = await this.client.queryPromise(query);
+    }[] = await this.client.queryPromise(query, params);
 
     if (Array.isArray(res)) {
       return res.filter((r) => r.name !== '');

@@ -35,7 +35,9 @@ import (
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/circuit"
+	"github.com/wundergraph/cosmo/router/internal/exporter"
 	"github.com/wundergraph/cosmo/router/internal/expr"
+	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
 	rjwt "github.com/wundergraph/cosmo/router/internal/jwt"
 	rmiddleware "github.com/wundergraph/cosmo/router/internal/middleware"
 	"github.com/wundergraph/cosmo/router/internal/recoveryhandler"
@@ -506,18 +508,23 @@ func (s *graphServer) setupEngineStatistics(baseAttributes []attribute.KeyValue)
 }
 
 type graphMux struct {
-	mux                        *chi.Mux
-	planCache                  *ristretto.Cache[uint64, *planWithMetaData]
-	persistedOperationCache    *ristretto.Cache[uint64, NormalizationCacheEntry]
-	normalizationCache         *ristretto.Cache[uint64, NormalizationCacheEntry]
-	complexityCalculationCache *ristretto.Cache[uint64, ComplexityCacheEntry]
-	validationCache            *ristretto.Cache[uint64, bool]
-	operationHashCache         *ristretto.Cache[uint64, string]
-	accessLogsFileLogger       *logging.BufferedLogger
-	metricStore                rmetric.Store
-	prometheusCacheMetrics     *rmetric.CacheMetrics
-	otelCacheMetrics           *rmetric.CacheMetrics
-	streamMetricStore          rmetric.StreamMetricStore
+	mux *chi.Mux
+
+	planCache                   *ristretto.Cache[uint64, *planWithMetaData]
+	persistedOperationCache     *ristretto.Cache[uint64, NormalizationCacheEntry]
+	normalizationCache          *ristretto.Cache[uint64, NormalizationCacheEntry]
+	complexityCalculationCache  *ristretto.Cache[uint64, ComplexityCacheEntry]
+	variablesNormalizationCache *ristretto.Cache[uint64, VariablesNormalizationCacheEntry]
+	remapVariablesCache         *ristretto.Cache[uint64, RemapVariablesCacheEntry]
+	validationCache             *ristretto.Cache[uint64, bool]
+	operationHashCache          *ristretto.Cache[uint64, string]
+
+	accessLogsFileLogger   *logging.BufferedLogger
+	metricStore            rmetric.Store
+	prometheusCacheMetrics *rmetric.CacheMetrics
+	otelCacheMetrics       *rmetric.CacheMetrics
+	streamMetricStore      rmetric.StreamMetricStore
+	prometheusMetricsExporter  *graphqlmetrics.PrometheusMetricsExporter
 }
 
 // buildOperationCaches creates the caches for the graph mux.
@@ -571,6 +578,30 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 		s.normalizationCache, err = ristretto.NewCache[uint64, NormalizationCacheEntry](normalizationCacheConfig)
 		if err != nil {
 			return computeSha256, fmt.Errorf("failed to create normalization cache: %w", err)
+		}
+
+		variablesNormalizationCacheConfig := &ristretto.Config[uint64, VariablesNormalizationCacheEntry]{
+			Metrics:            srv.metricConfig.OpenTelemetry.GraphqlCache || srv.metricConfig.Prometheus.GraphqlCache,
+			MaxCost:            srv.engineExecutionConfiguration.NormalizationCacheSize,
+			NumCounters:        srv.engineExecutionConfiguration.NormalizationCacheSize * 10,
+			IgnoreInternalCost: true,
+			BufferItems:        64,
+		}
+		s.variablesNormalizationCache, err = ristretto.NewCache[uint64, VariablesNormalizationCacheEntry](variablesNormalizationCacheConfig)
+		if err != nil {
+			return computeSha256, fmt.Errorf("failed to create variables normalization cache: %w", err)
+		}
+
+		remapVariablesCacheConfig := &ristretto.Config[uint64, RemapVariablesCacheEntry]{
+			Metrics:            srv.metricConfig.OpenTelemetry.GraphqlCache || srv.metricConfig.Prometheus.GraphqlCache,
+			MaxCost:            srv.engineExecutionConfiguration.NormalizationCacheSize,
+			NumCounters:        srv.engineExecutionConfiguration.NormalizationCacheSize * 10,
+			IgnoreInternalCost: true,
+			BufferItems:        64,
+		}
+		s.remapVariablesCache, err = ristretto.NewCache[uint64, RemapVariablesCacheEntry](remapVariablesCacheConfig)
+		if err != nil {
+			return computeSha256, fmt.Errorf("failed to create remap variables cache: %w", err)
 		}
 	}
 
@@ -681,6 +712,14 @@ func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []
 		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("query_normalization", srv.engineExecutionConfiguration.NormalizationCacheSize, s.normalizationCache.Metrics))
 	}
 
+	if s.variablesNormalizationCache != nil {
+		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("variables_normalization", srv.engineExecutionConfiguration.NormalizationCacheSize, s.variablesNormalizationCache.Metrics))
+	}
+
+	if s.remapVariablesCache != nil {
+		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("remap_variables", srv.engineExecutionConfiguration.NormalizationCacheSize, s.remapVariablesCache.Metrics))
+	}
+
 	if s.persistedOperationCache != nil {
 		metricInfos = append(metricInfos, rmetric.NewCacheMetricInfo("persisted_query_normalization", 1024, s.persistedOperationCache.Metrics))
 	}
@@ -709,31 +748,16 @@ func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []
 }
 
 func (s *graphMux) Shutdown(ctx context.Context) error {
+	s.planCache.Close()
+	s.persistedOperationCache.Close()
+	s.normalizationCache.Close()
+	s.variablesNormalizationCache.Close()
+	s.remapVariablesCache.Close()
+	s.complexityCalculationCache.Close()
+	s.validationCache.Close()
+	s.operationHashCache.Close()
+
 	var err error
-
-	if s.planCache != nil {
-		s.planCache.Close()
-	}
-
-	if s.persistedOperationCache != nil {
-		s.persistedOperationCache.Close()
-	}
-
-	if s.normalizationCache != nil {
-		s.normalizationCache.Close()
-	}
-
-	if s.complexityCalculationCache != nil {
-		s.complexityCalculationCache.Close()
-	}
-
-	if s.validationCache != nil {
-		s.validationCache.Close()
-	}
-
-	if s.operationHashCache != nil {
-		s.operationHashCache.Close()
-	}
 
 	if s.accessLogsFileLogger != nil {
 		if aErr := s.accessLogsFileLogger.Close(); aErr != nil {
@@ -761,6 +785,12 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 
 	if s.streamMetricStore != nil {
 		if aErr := s.streamMetricStore.Shutdown(ctx); aErr != nil {
+			err = errors.Join(err, aErr)
+		}
+	}
+
+	if s.prometheusMetricsExporter != nil {
+		if aErr := s.prometheusMetricsExporter.Shutdown(ctx); aErr != nil {
 			err = errors.Join(err, aErr)
 		}
 	}
@@ -912,16 +942,40 @@ func (s *graphServer) buildGraphMux(
 		return nil, err
 	}
 
-	metrics := NewRouterMetrics(&routerMetricsConfig{
-		metrics:             gm.metricStore,
-		gqlMetricsExporter:  s.gqlMetricsExporter,
-		exportEnabled:       s.graphqlMetricsConfig.Enabled,
-		routerConfigVersion: opts.RouterConfigVersion,
-		logger:              s.logger,
+	// Create Prometheus metrics exporter for schema field usage if enabled
+	if s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled {
+		cfg := s.metricConfig.Prometheus.PromSchemaFieldUsage
+		settings := &exporter.ExporterSettings{
+			BatchSize:     cfg.Exporter.BatchSize,
+			QueueSize:     cfg.Exporter.QueueSize,
+			Interval:      cfg.Exporter.Interval,
+			ExportTimeout: cfg.Exporter.ExportTimeout,
+			RetryOptions: exporter.RetryOptions{
+				Enabled:     false, // Retry is disabled for Prometheus metrics
+				MaxRetry:    1,     // Provide valid defaults even when disabled
+				MaxDuration: time.Second * 1,
+				Interval:    time.Millisecond * 100,
+			},
+		}
+		promExporter, err := graphqlmetrics.NewPrometheusMetricsExporter(
+			s.logger,
+			gm.metricStore,
+			cfg.IncludeOperationSha,
+			settings,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create prometheus metrics exporter: %w", err)
+		}
+		gm.prometheusMetricsExporter = promExporter
+	}
 
-		promSchemaUsageEnabled:      s.metricConfig.Prometheus.PromSchemaFieldUsage.Enabled,
-		promSchemaUsageIncludeOpSha: s.metricConfig.Prometheus.PromSchemaFieldUsage.IncludeOperationSha,
-		promSchemaUsageSampleRate:   s.metricConfig.Prometheus.PromSchemaFieldUsage.SampleRate,
+	metrics := NewRouterMetrics(&routerMetricsConfig{
+		metrics:                   gm.metricStore,
+		gqlMetricsExporter:        s.gqlMetricsExporter,
+		prometheusMetricsExporter: gm.prometheusMetricsExporter,
+		exportEnabled:             s.graphqlMetricsConfig.Enabled,
+		routerConfigVersion:       opts.RouterConfigVersion,
+		logger:                    s.logger,
 	})
 
 	baseLogFields := []zapcore.Field{
@@ -1225,6 +1279,8 @@ func (s *graphServer) buildGraphMux(
 		EnablePersistedOperationsCache:      s.engineExecutionConfiguration.EnablePersistedOperationsCache,
 		PersistedOpsNormalizationCache:      gm.persistedOperationCache,
 		NormalizationCache:                  gm.normalizationCache,
+		VariablesNormalizationCache:         gm.variablesNormalizationCache,
+		RemapVariablesCache:                 gm.remapVariablesCache,
 		ValidationCache:                     gm.validationCache,
 		QueryDepthCache:                     gm.complexityCalculationCache,
 		OperationHashCache:                  gm.operationHashCache,
@@ -1318,26 +1374,26 @@ func (s *graphServer) buildGraphMux(
 		authorizerOptions.RejectOperationIfUnauthorized = s.authorization.RejectOperationIfUnauthorized
 	}
 
+	loaderHooks := NewEngineRequestHooks(
+		gm.metricStore,
+		subgraphAccessLogger,
+		s.tracerProvider,
+		tracingAttExpressions,
+		telemetryAttExpressions,
+		metricAttExpressions,
+		exprManager.VisitorManager.IsSubgraphResponseBodyUsedInExpressions(),
+	)
+
 	handlerOpts := HandlerOptions{
-		Executor:                               executor,
-		Log:                                    s.logger,
-		EnableExecutionPlanCacheResponseHeader: s.engineExecutionConfiguration.EnableExecutionPlanCacheResponseHeader,
-		EnablePersistedOperationCacheResponseHeader: s.engineExecutionConfiguration.Debug.EnablePersistedOperationsCacheResponseHeader,
-		EnableNormalizationCacheResponseHeader:      s.engineExecutionConfiguration.Debug.EnableNormalizationCacheResponseHeader,
-		EnableResponseHeaderPropagation:             s.headerRules != nil,
-		EngineStats:                                 s.engineStats,
-		TracerProvider:                              s.tracerProvider,
-		Authorizer:                                  NewCosmoAuthorizer(authorizerOptions),
-		SubgraphErrorPropagation:                    s.subgraphErrorPropagation,
-		EngineLoaderHooks: NewEngineRequestHooks(
-			gm.metricStore,
-			subgraphAccessLogger,
-			s.tracerProvider,
-			tracingAttExpressions,
-			telemetryAttExpressions,
-			metricAttExpressions,
-			exprManager.VisitorManager.IsSubgraphResponseBodyUsedInExpressions(),
-		),
+		Executor:                        executor,
+		Log:                             s.logger,
+		EnableCacheResponseHeaders:      s.engineExecutionConfiguration.Debug.EnableCacheResponseHeaders,
+		EnableResponseHeaderPropagation: s.headerRules != nil,
+		EngineStats:                     s.engineStats,
+		TracerProvider:                  s.tracerProvider,
+		Authorizer:                      NewCosmoAuthorizer(authorizerOptions),
+		SubgraphErrorPropagation:        s.subgraphErrorPropagation,
+		EngineLoaderHooks:               loaderHooks,
 	}
 
 	if s.redisClient != nil {
@@ -1659,7 +1715,6 @@ func newGRPCStartupParams(traceConfig *rtrace.Config, ipAnonymization *IPAnonymi
 // to make the shutdown process more efficient.
 func (s *graphServer) wait(ctx context.Context) error {
 	b := backoff.New(500*time.Millisecond, time.Millisecond)
-	defer b.Reset()
 
 	timer := time.NewTimer(b.Duration())
 	defer timer.Stop()

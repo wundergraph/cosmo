@@ -146,13 +146,14 @@ const OperationItem = ({
       case "errors":
         return operation.errorRate && operation.errorRate > 0
           ? `${operation.errorRate.toFixed(2)}%`
-          : null;
+          : "-";
       default:
         return null;
     }
   };
 
   const selectedMetric = getSelectedMetric();
+  const isLatencyAtCap = sortField === "latency" && operation.latency >= 10000;
 
   return (
     <div
@@ -211,8 +212,21 @@ const OperationItem = ({
           )}
         </div>
         {selectedMetric && (
-          <div className="flex-shrink-0 whitespace-nowrap text-xs font-medium text-muted-foreground">
-            {selectedMetric}
+          <div className="flex flex-shrink-0 items-center gap-1 whitespace-nowrap text-xs font-medium text-muted-foreground">
+            <span>{selectedMetric}</span>
+            {isLatencyAtCap && (
+              <Tooltip delayDuration={100}>
+                <TooltipTrigger asChild>
+                  <span className="cursor-help">*</span>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>
+                    This operation may have taken longer than 10s. The displayed
+                    10s represents the maximum latency bucket (10s+).
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            )}
           </div>
         )}
       </div>
@@ -229,6 +243,38 @@ export const OperationsList = ({
   className,
   sortField = "requests",
 }: OperationsListProps) => {
+  // Optimistic local state for immediate UI feedback
+  const [optimisticSelection, setOptimisticSelection] = useState<{
+    hash: string;
+    name: string;
+  } | null>(null);
+
+  // Use ref to track previous selectedOperation values to compare
+  const prevHashRef = useRef<string | undefined>(undefined);
+  const prevNameRef = useRef<string | undefined>(undefined);
+
+  // Only update if values actually changed to prevent unnecessary re-renders
+  useEffect(() => {
+    const currentHash = selectedOperation?.hash;
+    const currentName = selectedOperation?.name;
+
+    // Check if values actually changed
+    const hasChanged =
+      prevHashRef.current !== currentHash ||
+      prevNameRef.current !== currentName;
+
+    if (hasChanged) {
+      if (selectedOperation) {
+        setOptimisticSelection(selectedOperation);
+      } else {
+        // Clear optimistic selection when prop is cleared
+        setOptimisticSelection(null);
+      }
+      prevHashRef.current = currentHash;
+      prevNameRef.current = currentName;
+    }
+  }, [selectedOperation]);
+
   if (isLoading) {
     return (
       <div className={cn("flex h-64 items-center justify-center", className)}>
@@ -265,21 +311,30 @@ export const OperationsList = ({
           // In that case, only match operations with empty name
           // If selectedOperationName has a value, match operations with that exact name
           const operationName = operation.name || "";
+
+          // Use optimistic selection for immediate feedback, fallback to prop
+          const currentSelection = optimisticSelection || selectedOperation;
           const isSelected =
-            selectedOperation?.hash === operation.hash &&
-            (selectedOperation?.name === null ||
-            selectedOperation?.name === undefined
+            currentSelection?.hash === operation.hash &&
+            (currentSelection?.name === null ||
+            currentSelection?.name === undefined
               ? true // No name filter set, match by hash only
-              : selectedOperation?.name === operationName); // Name filter exists, match exact name
+              : currentSelection?.name === operationName); // Name filter exists, match exact name
 
           return (
             <OperationItem
               key={`${operation.hash}-${operation.name || ""}`}
               operation={operation}
               isSelected={isSelected}
-              onClick={() =>
-                onOperationSelect(operation.hash, operation.name || "")
-              }
+              onClick={() => {
+                // Update optimistic state immediately for instant UI feedback
+                setOptimisticSelection({
+                  hash: operation.hash,
+                  name: operationName,
+                });
+                // Then update URL (which will eventually sync back via prop)
+                onOperationSelect(operation.hash, operationName);
+              }}
               searchQuery={searchQuery}
               sortField={sortField}
             />

@@ -9,6 +9,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -16,12 +17,12 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/router";
-import { Separator } from "../ui/separator";
 
 interface DeprecatedField {
   fieldName: string;
   typeName: string;
   path: string;
+  deprecationReason: string;
 }
 
 interface DeprecatedFieldsTableProps {
@@ -64,6 +65,7 @@ export const DeprecatedFieldsTable = ({
       fieldName: field.fieldName || "",
       typeName: field.typeName || "",
       path: field.path || "",
+      deprecationReason: field.deprecationReason || "-",
     })) || [];
   const hasDeprecatedFields = deprecatedFields.length > 0;
 
@@ -96,48 +98,76 @@ export const DeprecatedFieldsTable = ({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Field Path</TableHead>
-              <TableHead className="w-[150px]">Actions</TableHead>
+              <TableHead className="w-[30%]">Field Path</TableHead>
+              <TableHead className="w-[50%]">Deprecation Reason</TableHead>
+              <TableHead className="w-[20%] text-center">Actions</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
-            {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={2} className="h-24 text-center">
-                  <Loader />
-                </TableCell>
-              </TableRow>
-            ) : hasDeprecatedFields ? (
-              deprecatedFields.map((field, index) => (
-                <TableRow key={`${field.path}-${index}`}>
-                  <TableCell>
-                    <code className="rounded bg-muted px-2 py-1 font-mono text-sm">
-                      {field.path}
-                    </code>
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleShowUsage(field)}
-                    >
-                      Show Usage
-                    </Button>
+        </Table>
+        <div className="scrollbar-custom max-h-[232px] flex-1 overflow-y-auto">
+          <Table>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={3} className="h-24 text-center">
+                    <Loader />
                   </TableCell>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={2}
-                  className="text-center text-muted-foreground"
-                >
-                  No deprecated fields found
+              ) : hasDeprecatedFields ? (
+                deprecatedFields.map((field, index) => (
+                  <TableRow key={`${field.path}-${index}`}>
+                    <TableCell className="w-[30%]">
+                      <code className="rounded bg-muted px-2 py-1 font-mono text-sm">
+                        {field.path}
+                      </code>
+                    </TableCell>
+                    <TableCell className="w-[50%]">
+                      <span className="text-sm text-muted-foreground">
+                        {field.deprecationReason || "-"}
+                      </span>
+                    </TableCell>
+                    <TableCell className="w-[20%] text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleShowUsage(field)}
+                      >
+                        Show Usage
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell
+                    colSpan={3}
+                    className="text-center text-muted-foreground"
+                  >
+                    No deprecated fields found
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+        {!isLoading && hasDeprecatedFields && (
+          <Table className="w-full border-t">
+            <TableFooter>
+              <TableRow className="border-b-0 bg-background hover:bg-background">
+                <TableCell colSpan={3}>
+                  <div className="flex items-center justify-center space-x-1 text-xs text-muted-foreground">
+                    <span>
+                      Found {deprecatedFields.length}{" "}
+                      {deprecatedFields.length === 1
+                        ? "deprecated field"
+                        : "deprecated fields"}
+                    </span>
+                  </div>
                 </TableCell>
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
+            </TableFooter>
+          </Table>
+        )}
       </TableWrapper>
     </div>
   );

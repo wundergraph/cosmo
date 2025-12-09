@@ -282,6 +282,8 @@ message CheckSubgraphSchemaResponse {
   optional bool isLinkedTrafficCheckFailed = 15;
   // If true, it means the graph pruning check failed for the linked check
   optional bool isLinkedPruningCheckFailed = 16;
+  optional bool isCheckExtensionSkipped = 17;
+  optional string checkExtensionErrorMessage = 18;
 }
 
 message FixSubgraphSchemaResponse {
@@ -548,6 +550,8 @@ message SchemaCheck {
   bool breaking_changes_skipped = 20;
   optional string errorMessage = 21;
   repeated LinkedCheck linkedChecks = 22;
+  optional string check_extension_delivery_id = 23;
+  optional string check_extension_error_message = 24;
 }
 
 message GetChecksByFederatedGraphNameResponse {
@@ -2661,6 +2665,40 @@ message GetCacheWarmerConfigResponse {
   int32 maxOperationsCount = 3;
 }
 
+message GetSubgraphCheckExtensionsConfigRequest {
+  string namespace = 1;
+}
+
+message GetSubgraphCheckExtensionsConfigResponse {
+  Response response = 1;
+  bool isEnabledForNamespace = 2;
+  bool isLintingEnabledForNamespace = 3;
+  bool isGraphPruningEnabledForNamespace = 4;
+  string endpoint = 5;
+  bool isSecretKeyAssigned = 6;
+  bool includeComposedSdl = 7;
+  bool includeLintingIssues = 8;
+  bool includePruningIssues = 9;
+  bool includeSchemaChanges = 10;
+  bool includeAffectedOperations = 11;
+}
+
+message ConfigureSubgraphCheckExtensionsRequest {
+   string namespace = 1;
+   bool enableSubgraphCheckExtensions = 2;
+   string endpoint = 3;
+   optional string secretKey = 4;
+   bool includeComposedSdl = 5;
+   bool includeLintingIssues = 6;
+   bool includePruningIssues = 7;
+   bool includeSchemaChanges = 8;
+   bool includeAffectedOperations = 9;
+}
+
+message ConfigureSubgraphCheckExtensionsResponse {
+  Response response = 1;
+ }
+
 message DeleteCacheWarmerOperationRequest {
   string id = 1;
   string federatedGraphName = 2;
@@ -2698,6 +2736,7 @@ message SetGraphRouterCompatibilityVersionResponse {
 message GetProposedSchemaOfCheckedSubgraphRequest {
   string checkId = 1;
   string checkedSubgraphId = 2;
+  string subgraphId = 3;
 }
 
 message GetProposedSchemaOfCheckedSubgraphResponse {
@@ -2979,6 +3018,7 @@ message GetOperationDeprecatedFieldsResponse {
     string fieldName = 1;
     string typeName = 2;
     string path = 3;
+    string deprecationReason = 4;
   }
   Response response = 1;
   repeated DeprecatedField deprecatedFields = 2;
@@ -3353,6 +3393,9 @@ service PlatformService {
   rpc GetCacheWarmerConfig(GetCacheWarmerConfigRequest) returns (GetCacheWarmerConfigResponse) {}
   // DeleteCacheWarmerOperation deletes a cache warmer operation.
   rpc DeleteCacheWarmerOperation(DeleteCacheWarmerOperationRequest) returns (DeleteCacheWarmerOperationResponse) {}
+
+  rpc GetSubgraphCheckExtensionsConfig(GetSubgraphCheckExtensionsConfigRequest) returns (GetSubgraphCheckExtensionsConfigResponse) {}
+  rpc ConfigureSubgraphCheckExtensions(ConfigureSubgraphCheckExtensionsRequest) returns (ConfigureSubgraphCheckExtensionsResponse) {}
 
   //
   // Billing

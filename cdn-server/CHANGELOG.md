@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.16.0](https://github.com/wundergraph/cosmo/compare/cdn@0.15.0...cdn@0.16.0) (2025-11-29)
+
+### Features
+
+* subgraph check extensions ([#2281](https://github.com/wundergraph/cosmo/issues/2281)) ([c190b5a](https://github.com/wundergraph/cosmo/commit/c190b5ad19f9fd8f7a67317a29fe845d475dbf10)) (@wilsonrivera)
+
 # [0.15.0](https://github.com/wundergraph/cosmo/compare/cdn@0.14.5...cdn@0.15.0) (2025-11-19)
 
 ### Features
