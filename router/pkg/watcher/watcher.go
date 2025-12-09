@@ -15,6 +15,11 @@ type Options struct {
 	Paths      []string
 	Callback   func()
 	TickSource <-chan time.Time
+
+	// FileInfoProvider is a function that returns the file info for a given path
+	// This is used for testing purposes
+	// If not provided, the default os.Stat function is used
+	FileInfoProvider func(path string) (os.FileInfo, error)
 }
 
 func New(options Options) (func(ctx context.Context) error, error) {
@@ -34,6 +39,10 @@ func New(options Options) (func(ctx context.Context) error, error) {
 		return nil, errors.New("callback must be provided")
 	}
 
+	if options.FileInfoProvider == nil {
+		options.FileInfoProvider = os.Stat
+	}
+
 	ll := options.Logger.With(zap.String("component", "file_watcher"), zap.Strings("path", options.Paths))
 
 	return func(ctx context.Context) error {
@@ -47,7 +56,7 @@ func New(options Options) (func(ctx context.Context) error, error) {
 		prevModTimes := make(map[string]time.Time)
 
 		for _, path := range options.Paths {
-			stat, err := os.Stat(path)
+			stat, err := options.FileInfoProvider(path)
 			if err != nil {
 				ll.Debug("Target file cannot be statted", zap.Error(err))
 			} else {
@@ -64,7 +73,7 @@ func New(options Options) (func(ctx context.Context) error, error) {
 				changesDetected := false
 
 				for _, path := range options.Paths {
-					stat, err := os.Stat(path)
+					stat, err := options.FileInfoProvider(path)
 					if err != nil {
 						ll.Debug("Target file cannot be statted", zap.String("path", path), zap.Error(err))
 						// Reset the mod time so we catch any new file at the target path
@@ -76,6 +85,7 @@ func New(options Options) (func(ctx context.Context) error, error) {
 						zap.Time("prev_mod_time", prevModTimes[path]),
 						zap.Time("current_mod_time", stat.ModTime()),
 					)
+
 					if stat.ModTime().After(prevModTimes[path]) {
 						prevModTimes[path] = stat.ModTime()
 						changesDetected = true
