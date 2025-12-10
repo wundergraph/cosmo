@@ -57,7 +57,11 @@ export default class WebSessionAuthenticator {
           .limit(1)
           .execute();
 
-        if (existingSessions.length !== 1 || AuthUtils.isSessionExpired(existingSessions[0])) {
+        if (
+          existingSessions.length !== 1 ||
+          existingSessions[0].userId.toLowerCase() !== decryptedJwt.iss?.toLowerCase() ||
+          AuthUtils.isSessionExpired(existingSessions[0])
+        ) {
           throw new Error('Invalid or expired session');
         }
 
