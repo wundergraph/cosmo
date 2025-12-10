@@ -66,6 +66,14 @@ jobs:
         working-directory: ./graphqlmetrics
         run: make build
 
+      - name: Upload integration results to Codecov
+        uses: ./.github/actions/codecov-upload-pr
+        with:
+          artifact-name: graphqlmetrics-tests-coverage
+          coverage-path: graphqlmetrics/coverage.out
+          retention-days: 7
+          codecov-token: ${{ secrets.CODECOV_TOKEN }}
+
   build_push_image:
     # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
     # For now, we will disable the push to the GitHub Container Registry for external contributors

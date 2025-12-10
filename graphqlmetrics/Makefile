@@ -1,8 +1,13 @@
+coverage_file := coverage.out
+
 dev:
 	go run cmd/main.go
 
 test:
 	go test -race ./...
+
+test-coverage:
+	go test -race -coverprofile=$(coverage_file) -coverpkg=github.com/wundergraph/cosmo/graphqlmetrics/... ./...
 
 new-migration:
 	dbmate -d "./migrations" new $(name)

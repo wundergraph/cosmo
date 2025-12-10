@@ -53,7 +53,17 @@ jobs:
         run: pnpm run --filter studio lint
 
       - name: Test
-        run: pnpm run --filter studio test
+        run: pnpm run --filter studio test:coverage
+
+      - name: Upload integration results to Codecov
+        uses: ./.github/actions/codecov-upload-pr
+        with:
+          artifact-name: studio-tests-coverage
+          coverage-path: |
+            studio/coverage/clover.xml
+            studio/coverage/coverage-final.json
+          retention-days: 7
+          codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
   build_push_image:
     # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry

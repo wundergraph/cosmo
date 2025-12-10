@@ -1,3 +1,5 @@
+coverage_file := coverage.out
+
 ifeq ($(CI),true)
  FORMAT := github-actions
 else
@@ -15,6 +17,9 @@ update-snapshot:
 
 test:
 	gotestsum -f $(FORMAT) -- -race ./...
+
+test-coverage:
+	gotestsum -f $(FORMAT) -- -race -coverprofile=$(coverage_file) -coverpkg=github.com/wundergraph/cosmo/router/... ./...
 
 test-fresh: clean-testcache test
 
