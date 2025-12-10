@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.13.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.12.6...@wundergraph/protographic@0.13.0) (2025-12-10)
+
+### Features
+
+* add composite type support for field resolvers ([#2368](https://github.com/wundergraph/cosmo/issues/2368)) ([24c0648](https://github.com/wundergraph/cosmo/commit/24c064853f11f0c157c5e1a8bfa289d4f73d4c50)) (@Noroth)
+
 ## [0.12.6](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.12.5...@wundergraph/protographic@0.12.6) (2025-12-04)
 
 **Note:** Version bump only for package @wundergraph/protographic

@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.146.0](https://github.com/wundergraph/cosmo/compare/studio@0.145.1...studio@0.146.0) (2025-12-10)
+
+### Features
+
+* enable `Vercel's` toolbar on production ([#2396](https://github.com/wundergraph/cosmo/issues/2396)) ([68badab](https://github.com/wundergraph/cosmo/commit/68badab590db6091220dfa59d59d9207db85b96c)) (@wilsonrivera)
+* improve organization creation and update validation ([#2394](https://github.com/wundergraph/cosmo/issues/2394)) ([f8b2e59](https://github.com/wundergraph/cosmo/commit/f8b2e59392160f40b098cd215ce4a371b1dd5fb3)) (@wilsonrivera)
+
 ## [0.145.1](https://github.com/wundergraph/cosmo/compare/studio@0.145.0...studio@0.145.1) (2025-12-04)
 
 ### Bug Fixes
