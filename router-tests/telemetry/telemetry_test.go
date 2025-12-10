@@ -11353,6 +11353,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				})
 
 				sn := exporter.GetSpans().Snapshots()
+
 				subgraphsThatShouldHaveError := []string{"products", "availability"}
 
 				for _, span := range sn {
