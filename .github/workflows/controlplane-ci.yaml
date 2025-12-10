@@ -81,14 +81,14 @@ jobs:
         run: nohup .github/scripts/setup-keycloak.sh &
 
       - name: Test
-        run: pnpm run --filter controlplane test-coverage
+        run: pnpm run --filter controlplane test:coverage
         env:
           DB_URL: "postgresql://postgres:changeme@localhost:5432/controlplane"
 
       - name: Upload Coverage to Codecov
         uses: ./.github/actions/codecov-upload-pr
         with:
-          artifact-name: cli-one
+          artifact-name: controlplane-tests-coverage
           coverage-path: |
             controlplane/coverage/clover.xml
             controlplane/coverage/coverage-final.json

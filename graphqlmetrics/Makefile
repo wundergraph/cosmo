@@ -23,4 +23,4 @@ VERSION?=dev
 build:
 	CGO_ENABLED=0 go build -trimpath -ldflags "-extldflags -static -X github.com/wundergraph/cosmo/graphqlmetrics/core.Version=$(VERSION)" -a -o graphqlmetrics cmd/main.go
 
-.PHONY: dev test new-migration migrate build
+.PHONY: dev test test-coverage new-migration migrate build

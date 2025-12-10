@@ -51,4 +51,4 @@ build-custom:
 generate-mocks:
 	mockery
 
-.PHONY: dev test build lint bump-engine update-snapshot
+.PHONY: dev test test-coverage build lint bump-engine update-snapshot

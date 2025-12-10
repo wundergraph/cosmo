@@ -34,7 +34,7 @@ jobs:
         uses: ./.github/actions/codecov-merge-upload
         with:
           coverage-path: coverage
-          workflow-paths: .github/workflows/cli-ci.yaml,.github/workflows/router-ci.yaml
+          workflow-paths: .github/workflows/cli-ci.yaml,.github/workflows/router-ci.yaml,.github/workflows/composition-ci.yaml,.github/workflows/controlplane-ci.yaml,.github/workflows/graphqlmetrics-ci.yaml,.github/workflows/protographic.yaml,.github/workflows/router-ci.yaml,.github/workflows/studio-ci.yaml
           override-commit: ${{ github.sha }}
           merge-commit-sha: ${{ steps.find-pr-commit.outputs.merge_commit_sha }}
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
