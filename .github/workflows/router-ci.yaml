@@ -49,6 +49,14 @@ jobs:
       - name: Install tools
         run: make setup-build-tools
 
+      - uses: ./.github/actions/node
+
+      - name: Install Cli Node Dependencies
+        run: |
+          pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
+          pnpm buf generate --template buf.ts.gen.yaml
+          pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic run build
+
       - name: Install Bun For Plugin Building
         uses: oven-sh/setup-bun@v2
         with:
@@ -131,6 +139,14 @@ jobs:
 
       - name: Install tools
         run: make setup-build-tools
+
+      - uses: ./.github/actions/node
+
+      - name: Install Cli Node Dependencies
+        run: |
+          pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
+          pnpm buf generate --template buf.ts.gen.yaml
+          pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic run build
 
       - name: Install Bun For Plugin Building
         uses: oven-sh/setup-bun@v2
@@ -307,8 +323,17 @@ jobs:
         with:
           cache-dependency-path: |
             router-tests/go.sum
+
       - name: Install tools
         run: make setup-build-tools
+
+      - uses: ./.github/actions/node
+
+      - name: Install Cli Node Dependencies
+        run: |
+          pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic install --frozen-lockfile
+          pnpm buf generate --template buf.ts.gen.yaml
+          pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic run build
 
       - name: Install Bun For Plugin Building
         uses: oven-sh/setup-bun@v2
@@ -332,12 +357,38 @@ jobs:
           docker exec "$cid" redis-cli -p 6379 ping
           docker exec "$cid" redis-cli -u "redis://cosmo:test@redis-0:6379" ping
           docker exec "$cid" redis-cli -u "redis://cosmo:test@redis-0:6379" cluster nodes
+
       - name: Run Integration tests ${{ matrix.test_target }}
         working-directory: ./router-tests
-        run: make test test_retry_count=0 test_params="-run '^Test[^(Flaky)]' --timeout=5m -p 1 --parallel 10" test_target="${{ matrix.test_target }}"
+        run: make test-coverage test_retry_count=0 test_params="-run '^Test[^(Flaky)]' --timeout=5m -p 1 --parallel 10" test_target="${{ matrix.test_target }}"
+
+      - name: Compute artifact name for codecov upload
+        id: artifact_name
+        run: |
+          # Sanitize test target: remove './', replace spaces and special chars with underscores
+          target="${{ matrix.test_target }}"
+          sanitized=$(echo "$target" | sed 's|\.\/||g' | sed 's|[^a-zA-Z0-9]|_|g' | sed 's|_\+|_|g' | sed 's|^_||' | sed 's|_$||')
+          echo "sanitized=$sanitized" >> $GITHUB_OUTPUT
+
+      - name: Upload integration results to Codecov
+        uses: ./.github/actions/codecov-upload-pr
+        with:
+          artifact-name: router-${{ steps.artifact_name.outputs.sanitized }}-nonFlaky
+          coverage-path: router-tests/coverage.out
+          retention-days: 7
+          codecov-token: ${{ secrets.CODECOV_TOKEN }}
+
       - name: Run Flaky Integration tests ${{ matrix.test_target }}
         working-directory: ./router-tests
-        run: make test test_retry_count=3 test_params="-run '^TestFlaky' --timeout=5m -p 1 --parallel 10" test_target="${{ matrix.test_target }}"
+        run: make test-coverage test_retry_count=3 test_params="-run '^TestFlaky' --timeout=5m -p 1 --parallel 10" test_target="${{ matrix.test_target }}"
+
+      - name: Upload flaky integration results to Codecov
+        uses: ./.github/actions/codecov-upload-pr
+        with:
+          artifact-name: router-${{ steps.artifact_name.outputs.sanitized }}-flaky
+          coverage-path: router-tests/coverage.out
+          retention-days: 7
+          codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
   image_scan:
     if: github.event.pull_request.head.repo.full_name == github.repository

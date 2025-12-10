@@ -15,9 +15,6 @@ import {
   MutationAddCourseResponse,
   MutationAddLessonRequest,
   MutationAddLessonResponse,
-  LookupCourseByIdRequest,
-  LookupCourseByIdRequestKey,
-  LookupCourseByIdResponse,
   LookupEmployeeByIdRequest,
   LookupEmployeeByIdRequestKey,
   LookupEmployeeByIdResponse,
@@ -182,29 +179,6 @@ describe('Courses Plugin', () => {
   });
 
   describe('Lookups', () => {
-    it('should lookup courses by ID', async () => {
-      const request = new LookupCourseByIdRequest();
-      const key1 = new LookupCourseByIdRequestKey();
-      key1.setId('1');
-      const key2 = new LookupCourseByIdRequestKey();
-      key2.setId('2');
-      request.setKeysList([key1, key2]);
-      
-      const call = createMockCall(request);
-      const { callback, promise } = createMockCallback<LookupCourseByIdResponse>();
-
-      plugin.lookupCourseById(call, callback);
-
-      const response = await promise;
-      const courses = response.getResultList();
-      
-      expect(courses.length).toBe(2);
-      expect(courses[0].getId()).toBe('1');
-      expect(courses[0].getTitle()).toBe('Introduction to TypeScript');
-      expect(courses[1].getId()).toBe('2');
-      expect(courses[1].getTitle()).toBe('Advanced GraphQL');
-    });
-
     it('should lookup employees by ID and return taught courses', async () => {
       const request = new LookupEmployeeByIdRequest();
       const key1 = new LookupEmployeeByIdRequestKey();

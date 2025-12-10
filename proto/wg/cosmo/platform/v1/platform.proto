@@ -282,6 +282,8 @@ message CheckSubgraphSchemaResponse {
   optional bool isLinkedTrafficCheckFailed = 15;
   // If true, it means the graph pruning check failed for the linked check
   optional bool isLinkedPruningCheckFailed = 16;
+  optional bool isCheckExtensionSkipped = 17;
+  optional string checkExtensionErrorMessage = 18;
 }
 
 message FixSubgraphSchemaResponse {
@@ -548,6 +550,8 @@ message SchemaCheck {
   bool breaking_changes_skipped = 20;
   optional string errorMessage = 21;
   repeated LinkedCheck linkedChecks = 22;
+  optional string check_extension_delivery_id = 23;
+  optional string check_extension_error_message = 24;
 }
 
 message GetChecksByFederatedGraphNameResponse {
@@ -637,6 +641,7 @@ message GetOperationContentRequest {
   string hash = 1;
   string federated_graph_name = 2;
   string namespace = 3;
+  optional string name = 4;
 }
 
 message GetOperationContentResponse {
@@ -818,6 +823,7 @@ message AnalyticsViewColumn {
 enum CustomOptions {
   Text = 0;
   Range = 1;
+  Boolean = 2;
 }
 
 message AnalyticsViewResultFilter {
@@ -2659,6 +2665,40 @@ message GetCacheWarmerConfigResponse {
   int32 maxOperationsCount = 3;
 }
 
+message GetSubgraphCheckExtensionsConfigRequest {
+  string namespace = 1;
+}
+
+message GetSubgraphCheckExtensionsConfigResponse {
+  Response response = 1;
+  bool isEnabledForNamespace = 2;
+  bool isLintingEnabledForNamespace = 3;
+  bool isGraphPruningEnabledForNamespace = 4;
+  string endpoint = 5;
+  bool isSecretKeyAssigned = 6;
+  bool includeComposedSdl = 7;
+  bool includeLintingIssues = 8;
+  bool includePruningIssues = 9;
+  bool includeSchemaChanges = 10;
+  bool includeAffectedOperations = 11;
+}
+
+message ConfigureSubgraphCheckExtensionsRequest {
+   string namespace = 1;
+   bool enableSubgraphCheckExtensions = 2;
+   string endpoint = 3;
+   optional string secretKey = 4;
+   bool includeComposedSdl = 5;
+   bool includeLintingIssues = 6;
+   bool includePruningIssues = 7;
+   bool includeSchemaChanges = 8;
+   bool includeAffectedOperations = 9;
+}
+
+message ConfigureSubgraphCheckExtensionsResponse {
+  Response response = 1;
+ }
+
 message DeleteCacheWarmerOperationRequest {
   string id = 1;
   string federatedGraphName = 2;
@@ -2696,6 +2736,7 @@ message SetGraphRouterCompatibilityVersionResponse {
 message GetProposedSchemaOfCheckedSubgraphRequest {
   string checkId = 1;
   string checkedSubgraphId = 2;
+  string subgraphId = 3;
 }
 
 message GetProposedSchemaOfCheckedSubgraphResponse {
@@ -2878,11 +2919,32 @@ message GetNamespaceProposalConfigResponse {
   LintSeverity publishSeverityLevel = 4;
 }
 
+enum OperationsFetchBasedOn {
+  REQUESTS = 0;
+  LATENCY = 1;
+  ERRORS = 2;
+}
+
+enum SortDirection {
+  ASC = 0;
+  DESC = 1;
+}
+
 message GetOperationsRequest {
   string federatedGraphName = 1;
   string namespace = 2;
-  optional string clientName = 3;
+  repeated string clientNames = 3; // filter by client names
   optional int32 limit = 4;
+  optional int32 offset = 5; // pagination offset
+  optional bool includeHasDeprecatedFields = 6;
+  optional OperationsFetchBasedOn fetchBasedOn = 7; // determines which metric to fetch and sort by
+  optional bool includeContent = 8; // defaults to false
+  optional int32 range = 9; // range in hours
+  optional DateRange dateRange = 10;
+  optional string searchQuery = 11; // search by operation name or hash
+  optional bool includeOperationsWithDeprecatedFieldsOnly = 12; // defaults to false
+  optional SortDirection sortDirection = 13; // defaults to DESC
+  optional bool includeTotalCount = 14; // defaults to false
 }
 
 message GetOperationsResponse {
@@ -2895,13 +2957,18 @@ message GetOperationsResponse {
   message Operation {
     string hash = 1;
     string name = 2;
-    string content = 3;
-    float latency = 4;
-    OperationType type = 5;
+    optional string content = 3;
+    OperationType type = 4;
+    optional bool hasDeprecatedFields = 5;
+    oneof metric {
+      float latency = 6;
+      int64 requestCount = 7;
+      float errorPercentage = 8;
+    }
   }
-
   Response response = 1;
   repeated Operation operations = 2;
+  optional int32 totalCount = 3;
 }
 
 message GetClientsFromAnalyticsRequest {
@@ -2915,6 +2982,46 @@ message GetClientsFromAnalyticsResponse {
   }
   Response response = 1;
   repeated Client clients = 2;
+}
+
+message GetOperationClientsRequest {
+  string federatedGraphName = 1;
+  string namespace = 2;
+  string operationHash = 3;
+  string operationName = 4;
+  optional int32 range = 5; // range in hours
+  optional DateRange dateRange = 6;
+}
+
+message GetOperationClientsResponse {
+  message Client {
+    string name = 1;
+    string version = 2;
+    int64 requestCount = 3;
+    string lastUsed = 4; // ISO 8601 timestamp
+  }
+  Response response = 1;
+  repeated Client clients = 2;
+}
+
+message GetOperationDeprecatedFieldsRequest {
+  string federatedGraphName = 1;
+  string namespace = 2;
+  string operationHash = 3;
+  optional string operationName = 4;
+  optional int32 range = 5; // range in hours
+  optional DateRange dateRange = 6;
+}
+
+message GetOperationDeprecatedFieldsResponse {
+  message DeprecatedField {
+    string fieldName = 1;
+    string typeName = 2;
+    string path = 3;
+    string deprecationReason = 4;
+  }
+  Response response = 1;
+  repeated DeprecatedField deprecatedFields = 2;
 }
 
 message ValidateAndFetchPluginDataRequest {
@@ -3287,6 +3394,9 @@ service PlatformService {
   // DeleteCacheWarmerOperation deletes a cache warmer operation.
   rpc DeleteCacheWarmerOperation(DeleteCacheWarmerOperationRequest) returns (DeleteCacheWarmerOperationResponse) {}
 
+  rpc GetSubgraphCheckExtensionsConfig(GetSubgraphCheckExtensionsConfigRequest) returns (GetSubgraphCheckExtensionsConfigResponse) {}
+  rpc ConfigureSubgraphCheckExtensions(ConfigureSubgraphCheckExtensionsRequest) returns (ConfigureSubgraphCheckExtensionsResponse) {}
+
   //
   // Billing
   //-----------------------------------------------------------------------------------------------------------------------------
@@ -3326,6 +3436,10 @@ service PlatformService {
   rpc GetOperations(GetOperationsRequest) returns (GetOperationsResponse) {}
   // GetClientsFromAnalytics returns all the clients of the federated graph from the analytics
   rpc GetClientsFromAnalytics(GetClientsFromAnalyticsRequest) returns (GetClientsFromAnalyticsResponse) {}
+  // GetOperationClients returns the clients that have used a specific operation
+  rpc GetOperationClients(GetOperationClientsRequest) returns (GetOperationClientsResponse) {}
+  // GetOperationDeprecatedFields returns the deprecated fields used in a specific operation
+  rpc GetOperationDeprecatedFields(GetOperationDeprecatedFieldsRequest) returns (GetOperationDeprecatedFieldsResponse) {}
 
   // ValidateAndFetchPluginData validates the limit of plugins and returns the latest version and token
   rpc ValidateAndFetchPluginData(ValidateAndFetchPluginDataRequest) returns (ValidateAndFetchPluginDataResponse) {}

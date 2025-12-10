@@ -4,6 +4,54 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.271.1](https://github.com/wundergraph/cosmo/compare/router@0.271.0...router@0.271.1) (2025-12-04)
+
+### Bug Fixes
+
+* operation checks for input and argument usages ([#2380](https://github.com/wundergraph/cosmo/issues/2380)) ([c43ed88](https://github.com/wundergraph/cosmo/commit/c43ed8813ef6b29563a77926fc7908566ccf7eb9)) (@JivusAyrus)
+
+# [0.271.0](https://github.com/wundergraph/cosmo/compare/router@0.270.0...router@0.271.0) (2025-12-04)
+
+### Bug Fixes
+
+* cache vars and remapping normalization ([#2318](https://github.com/wundergraph/cosmo/issues/2318)) ([d0e45f6](https://github.com/wundergraph/cosmo/commit/d0e45f65fb9bef61925dd434b9fda37d999fa5fd)) (@devsergiy)
+
+### Features
+
+* restore `patchedDependencies` ([#2393](https://github.com/wundergraph/cosmo/issues/2393)) ([90e1bd1](https://github.com/wundergraph/cosmo/commit/90e1bd19fd8f5533ef1d2fe6b99a3c50ca48b5d8)) (@wilsonrivera)
+
+# [0.270.0](https://github.com/wundergraph/cosmo/compare/router@0.269.0...router@0.270.0) (2025-12-03)
+
+### Features
+
+* update `zod` ([#2384](https://github.com/wundergraph/cosmo/issues/2384)) ([53a2c0c](https://github.com/wundergraph/cosmo/commit/53a2c0ca0f3f933fc9d11fbad4ac066e93d01ff9)) (@wilsonrivera)
+
+# [0.269.0](https://github.com/wundergraph/cosmo/compare/router@0.268.0...router@0.269.0) (2025-12-01)
+
+### Features
+
+* use cors configuration also on mcp server ([#2363](https://github.com/wundergraph/cosmo/issues/2363)) ([4ccbfb8](https://github.com/wundergraph/cosmo/commit/4ccbfb8a9d409b98821e947d32b4b13d6effeaf5)) (@alepane21)
+
+# [0.268.0](https://github.com/wundergraph/cosmo/compare/router@0.267.3...router@0.268.0) (2025-11-29)
+
+### Features
+
+* prometheus sink for gqlmetrics, ensure all operation are tracked efficiently ([#2332](https://github.com/wundergraph/cosmo/issues/2332)) ([de63823](https://github.com/wundergraph/cosmo/commit/de63823c6fc77d9092f9e13148925a9ceaef3b3e)) (@StarpTech)
+
+## [0.267.3](https://github.com/wundergraph/cosmo/compare/router@0.267.2...router@0.267.3) (2025-11-26)
+
+### Bug Fixes
+
+* vulnerabilities by updating packages ([#2339](https://github.com/wundergraph/cosmo/issues/2339)) ([ef16299](https://github.com/wundergraph/cosmo/commit/ef16299f147ac4d01c0ca5db3c2dcc8f4f399b7b)) (@JivusAyrus)
+
+## [0.267.2](https://github.com/wundergraph/cosmo/compare/router@0.267.1...router@0.267.2) (2025-11-26)
+
+**Note:** Version bump only for package router
+
+## [0.267.1](https://github.com/wundergraph/cosmo/compare/router@0.267.0...router@0.267.1) (2025-11-25)
+
+**Note:** Version bump only for package router
+
 # [0.267.0](https://github.com/wundergraph/cosmo/compare/router@0.266.0...router@0.267.0) (2025-11-24)
 
 ### Features

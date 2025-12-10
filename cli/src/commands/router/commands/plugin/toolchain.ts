@@ -354,22 +354,22 @@ export function validateAndGetGoModulePath(language: string, goModulePath: strin
 /**
  * Check if tools need installation and ask the user if needed
  */
-export async function checkAndInstallTools(force = false, language: string): Promise<boolean> {
+export async function checkAndInstallTools(
+  force = false,
+  language: string,
+  autoConfirmPrompts: boolean,
+): Promise<boolean> {
   const [needsReinstall, shouldCleanup] = await shouldReinstallTools(force, language);
 
   if (!needsReinstall) {
     return true;
   }
 
-  // Ask user for confirmation to install tools
-  const installMessage = existsSync(TOOLS_DIR)
-    ? 'Version changes detected. Install required toolchain?'
-    : 'Install required toolchain?';
-
   const toolVersionsForLanguage = LanguageSpecificTools[language];
 
   // Create a more informative message with simple formatting
   const toolsInfo = Object.entries(toolVersionsForLanguage)
+    .filter(([tool]) => shouldCleanup || !Object.keys(COMMON_TOOL_VERSIONS).includes(tool))
     .map(([tool, { range: version }]) => `  ${pc.cyan('•')} ${pc.bold(tool)}: ${version}`)
     .join('\n');
 
@@ -379,22 +379,35 @@ export async function checkAndInstallTools(force = false, language: string): Pro
       pc.white('The following tools are needed to build the router plugin:') +
       '\n\n' +
       toolsInfo +
-      '\n\n' +
-      pc.white('You can install them automatically or manually install them yourself') +
-      '\n' +
-      pc.white('by following the documentation at https://cosmo-docs.wundergraph.com') +
-      '\n',
+      '\n\n',
   );
 
-  const response = await prompts({
-    type: 'confirm',
-    name: 'installTools',
-    message: installMessage,
-  });
+  // In case of auto-confirm, skip the prompt
+  if (autoConfirmPrompts) {
+    console.log(pc.white('These tools will now be automatically installed') + '\n');
+  } else {
+    console.log(
+      pc.white('You can install them automatically or manually install them yourself') +
+        '\n' +
+        pc.white('by following the documentation at https://cosmo-docs.wundergraph.com') +
+        '\n',
+    );
 
-  if (!response.installTools) {
-    console.log(pc.yellow('Tools installation skipped. Build may fail.'));
-    return false;
+    // Ask user for confirmation to install tools
+    const installMessage = existsSync(TOOLS_DIR)
+      ? 'Version changes detected. Install required toolchain?'
+      : 'Install required toolchain?';
+
+    const response = await prompts({
+      type: 'confirm',
+      name: 'installTools',
+      message: installMessage,
+    });
+
+    if (!response.installTools) {
+      console.log(pc.yellow('Tools installation skipped. Build may fail.'));
+      return false;
+    }
   }
 
   try {
@@ -428,12 +441,27 @@ async function installTools(language: string, shouldCleanup: boolean) {
   const tmpDir = join(TOOLS_DIR, 'download');
   const scriptPath = join(tmpDir, 'install-proto-tools.sh');
 
+  let existingVersions: Record<string, string> = {};
+
   // Make installation idempotent - remove existing tools directory if it exists
-  if (shouldCleanup && existsSync(TOOLS_DIR)) {
-    try {
-      await rm(TOOLS_DIR, { recursive: true, force: true });
-    } catch (error) {
-      throw new Error(`Failed to remove existing tools: ${error}`);
+  if (existsSync(TOOLS_DIR)) {
+    if (shouldCleanup) {
+      try {
+        await rm(TOOLS_DIR, { recursive: true, force: true });
+      } catch (error) {
+        throw new Error(`Failed to remove existing tools: ${error}`);
+      }
+    } else {
+      try {
+        const storedVersionsStr = await readFile(TOOLS_VERSIONS_FILE, 'utf8');
+        existingVersions = JSON.parse(storedVersionsStr);
+      } catch (error) {
+        console.log(
+          pc.yellow(`Warning: Failed to read existing tool versions: ${error}, version file will be overridden`),
+        );
+        // Reset the existing versions just in case existing versions was modified while an error was thrown
+        existingVersions = {};
+      }
     }
   }
 
@@ -464,7 +492,7 @@ async function installTools(language: string, shouldCleanup: boolean) {
     };
 
     // Store exact versions that we install
-    const exactVersions: Record<string, string> = {};
+    const exactVersions: Record<string, string> = existingVersions;
 
     const toolVersions = LanguageSpecificTools[language];
 

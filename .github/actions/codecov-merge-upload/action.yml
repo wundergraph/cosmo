@@ -1,0 +1,58 @@
+name: 'Codecov Download and Upload'
+description: 'Download coverage artifacts from previous PR runs and upload to Codecov'
+
+inputs:
+  coverage-path:
+    description: 'Path to coverage files'
+    required: true
+  workflow-paths:
+    description: 'Comma-separated list of workflow paths for artifact lookup (e.g., ".github/workflows/router-ci.yaml,.github/workflows/cli-ci.yaml")'
+    required: true
+  override-commit:
+    description: 'Commit SHA to override in Codecov'
+    required: true
+  merge-commit-sha:
+    description: 'Merge commit SHA to look up the PR and find head SHA'
+    required: false
+    default: ''
+  codecov-token:
+    description: 'Codecov token for uploading'
+    required: true
+  github-token:
+    description: 'GitHub token for artifact operations'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Find latest successful PR runs for this commit
+      id: find-artifacts
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        REPO: ${{ github.repository }}
+        HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        MERGE_COMMIT_SHA: ${{ inputs.merge-commit-sha }}
+        CURRENT_RUN_ID: ${{ github.run_id }}
+        ARTIFACT_NAME_PATTERN: codecov
+        WORKFLOW_PATHS: ${{ inputs.workflow-paths }}
+      run: ./.github/scripts/find-codecov-artifact.sh
+
+    - name: Download coverage artifacts
+      if: steps.find-artifacts.outputs.has_artifacts == 'true'
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        REPO: ${{ github.repository }}
+        ARTIFACTS_JSON: ${{ steps.find-artifacts.outputs.artifacts_json }}
+        COVERAGE_PATH: ${{ inputs.coverage-path }}
+      run: ./.github/scripts/download-codecov-artifacts.sh
+
+    - name: Upload results to Codecov
+      if: steps.find-artifacts.outputs.has_artifacts == 'true'
+      uses: codecov/codecov-action@v5
+      with:
+        token: ${{ inputs.codecov-token }}
+        override_commit: ${{ inputs.override-commit }}
+        override_branch: main
+        directory: ${{ inputs.coverage-path }}

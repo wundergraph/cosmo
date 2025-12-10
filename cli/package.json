@@ -1,6 +1,6 @@
 {
   "name": "wgc",
-  "version": "0.98.0",
+  "version": "0.102.3",
   "description": "The official CLI tool to manage the GraphQL Federation Platform Cosmo",
   "type": "module",
   "main": "dist/src/index.js",
@@ -26,7 +26,7 @@
     "build:bun": "bun build --compile --production --outfile wgc src/index.ts",
     "wgc": "tsx --env-file .env src/index.ts",
     "test": "pnpm lint && vitest run test/",
-    "coverage": "vitest run --coverage",
+    "coverage": "vitest run test/ --coverage",
     "lint": "eslint --cache --ext .ts,.mjs,.cjs . && prettier -c src",
     "lint:fix": "eslint --cache --fix --ext .ts,.mjs,.cjs . && prettier --write -c src",
     "e2e": "bun test e2e/"
@@ -82,7 +82,7 @@
     "tar": "7.4.3",
     "trieve-ts-sdk": "0.0.80",
     "undici": "6.21.2",
-    "zod": "3.24.2"
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "@types/bun": "1.2.3",
@@ -98,6 +98,7 @@
     "@types/prompts": "2.4.9",
     "@types/semver": "7.7.0",
     "@types/tar": "6.1.13",
+    "@vitest/coverage-v8": "3.2.4",
     "del-cli": "5.0.0",
     "eslint": "8.57.1",
     "eslint-config-unjs": "0.2.1",

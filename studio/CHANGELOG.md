@@ -4,6 +4,56 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.145.1](https://github.com/wundergraph/cosmo/compare/studio@0.145.0...studio@0.145.1) (2025-12-04)
+
+### Bug Fixes
+
+* limit the url of analytics pages to a max of 10k characters or 10kb ([#2383](https://github.com/wundergraph/cosmo/issues/2383)) ([44916c7](https://github.com/wundergraph/cosmo/commit/44916c79ce5d17064e50ccdccb938af276a068e0)) (@JivusAyrus)
+* validate organization ownership for fetched proposals and proposal details ([#2389](https://github.com/wundergraph/cosmo/issues/2389)) ([395a5f5](https://github.com/wundergraph/cosmo/commit/395a5f5236a828c6e2038690e4df597f35f106fc)) (@JivusAyrus)
+
+# [0.145.0](https://github.com/wundergraph/cosmo/compare/studio@0.144.0...studio@0.145.0) (2025-12-03)
+
+### Features
+
+* sanitize readme content to prevent XSS ([#2390](https://github.com/wundergraph/cosmo/issues/2390)) ([20cd6cb](https://github.com/wundergraph/cosmo/commit/20cd6cba05f7eae6db75f6160c6844e42f349712)) (@wilsonrivera)
+* update `next` ([#2391](https://github.com/wundergraph/cosmo/issues/2391)) ([5683e0f](https://github.com/wundergraph/cosmo/commit/5683e0f33927cba7d93bc6a1bf9b7bda822081a7)) (@wilsonrivera)
+
+# [0.144.0](https://github.com/wundergraph/cosmo/compare/studio@0.143.0...studio@0.144.0) (2025-12-03)
+
+### Features
+
+* add deprecation reason to deprecated fields table in op view ([#2386](https://github.com/wundergraph/cosmo/issues/2386)) ([00cad53](https://github.com/wundergraph/cosmo/commit/00cad53cb3d2a600fe15d3cc632e262f5b791ab9)) (@JivusAyrus)
+
+# [0.143.0](https://github.com/wundergraph/cosmo/compare/studio@0.142.0...studio@0.143.0) (2025-12-03)
+
+### Features
+
+* update `zod` ([#2384](https://github.com/wundergraph/cosmo/issues/2384)) ([53a2c0c](https://github.com/wundergraph/cosmo/commit/53a2c0ca0f3f933fc9d11fbad4ac066e93d01ff9)) (@wilsonrivera)
+
+# [0.142.0](https://github.com/wundergraph/cosmo/compare/studio@0.141.0...studio@0.142.0) (2025-11-29)
+
+### Features
+
+* subgraph check extensions ([#2281](https://github.com/wundergraph/cosmo/issues/2281)) ([c190b5a](https://github.com/wundergraph/cosmo/commit/c190b5ad19f9fd8f7a67317a29fe845d475dbf10)) (@wilsonrivera)
+
+# [0.141.0](https://github.com/wundergraph/cosmo/compare/studio@0.140.1...studio@0.141.0) (2025-11-27)
+
+### Features
+
+* operation page improvements ([#2373](https://github.com/wundergraph/cosmo/issues/2373)) ([0db1319](https://github.com/wundergraph/cosmo/commit/0db1319ce7e820b9f67abef0ed121dd10bcef357)) (@JivusAyrus)
+
+## [0.140.1](https://github.com/wundergraph/cosmo/compare/studio@0.140.0...studio@0.140.1) (2025-11-26)
+
+### Bug Fixes
+
+* vulnerabilities by updating packages ([#2339](https://github.com/wundergraph/cosmo/issues/2339)) ([ef16299](https://github.com/wundergraph/cosmo/commit/ef16299f147ac4d01c0ca5db3c2dcc8f4f399b7b)) (@JivusAyrus)
+
+# [0.140.0](https://github.com/wundergraph/cosmo/compare/studio@0.139.0...studio@0.140.0) (2025-11-26)
+
+### Features
+
+* operations overview ([#2331](https://github.com/wundergraph/cosmo/issues/2331)) ([c38d4ae](https://github.com/wundergraph/cosmo/commit/c38d4ae20c6e2d84e3a645d47f12776448f1ffd3)) (@JivusAyrus)
+
 # [0.139.0](https://github.com/wundergraph/cosmo/compare/studio@0.138.6...studio@0.139.0) (2025-11-22)
 
 ### Features

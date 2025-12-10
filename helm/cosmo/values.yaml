@@ -111,6 +111,9 @@ ingress:
   #  - secretName: chart-example-tls
   #    hosts:
   #      - chart-example.local
+  # defaultBackend:
+  #   name: chart-example-service
+  #   port: 1234
 
 # Cosmo CDN. For more options, please refer to the README.md
 cdn:

@@ -15,28 +15,36 @@ export class UsageRepository {
   private async getUsageRequestSeries(
     whereSql: string,
     timeFilters: TimeFilters,
+    params: Record<string, string | number | boolean>,
   ): Promise<PlainMessage<RequestSeriesItem>[]> {
     const { dateRange, granule } = timeFilters;
     flipDateRangeValuesIfNeeded(dateRange);
 
     const query = `
       WITH 
-        toStartOfInterval(toDateTime('${dateRange.start}'), INTERVAL ${granule} MINUTE) AS startDate,
-        toDateTime('${dateRange.end}') AS endDate
+        toStartOfInterval(toDateTime({startDate:UInt32}), INTERVAL {granule:UInt32} MINUTE) AS startDate,
+        toDateTime({endDate:UInt32}) AS endDate
       SELECT
-          toStartOfInterval(Timestamp, INTERVAL ${granule} MINUTE) AS timestamp,
+          toStartOfInterval(Timestamp, INTERVAL {granule:UInt32} MINUTE) AS timestamp,
           SUM(TotalUsages) AS totalRequests,
           SUM(TotalErrors) AS erroredRequests
       FROM ${this.client.database}.gql_metrics_schema_usage_5m_90d
       WHERE Timestamp >= startDate AND Timestamp <= endDate AND ${whereSql}
       GROUP BY timestamp
       ORDER BY timestamp WITH FILL 
-      FROM toStartOfInterval(toDateTime('${dateRange.start}'), INTERVAL ${granule} MINUTE)
-      TO toDateTime('${dateRange.end}')
-      STEP INTERVAL ${granule} minute
+      FROM toStartOfInterval(toDateTime({startDate:UInt32}), INTERVAL {granule:UInt32} MINUTE)
+      TO toDateTime({endDate:UInt32})
+      STEP INTERVAL {granule:UInt32} minute
     `;
 
-    const res = await this.client.queryPromise(query);
+    const queryParams = {
+      ...params,
+      startDate: dateRange.start,
+      endDate: dateRange.end,
+      granule,
+    };
+
+    const res = await this.client.queryPromise(query, queryParams);
 
     if (Array.isArray(res)) {
       return res.map((p) => ({
@@ -52,6 +60,7 @@ export class UsageRepository {
   private async getClientsWithOperations(
     whereSql: string,
     timeFilters: TimeFilters,
+    params: Record<string, string | number | boolean>,
   ): Promise<PlainMessage<ClientWithOperations>[]> {
     const {
       dateRange: { start, end },
@@ -59,8 +68,8 @@ export class UsageRepository {
 
     const query = `
       WITH
-        toDateTime('${start}') AS startDate,
-        toDateTime('${end}') AS endDate
+        toDateTime({startDate:UInt32}) AS startDate,
+        toDateTime({endDate:UInt32}) AS endDate
       SELECT
         ClientName AS clientName,
         ClientVersion AS clientVersion,
@@ -81,7 +90,13 @@ export class UsageRepository {
       ORDER BY ClientName, ClientVersion
     `;
 
-    const res = await this.client.queryPromise(query);
+    const queryParams = {
+      ...params,
+      startDate: start,
+      endDate: end,
+    };
+
+    const res = await this.client.queryPromise(query, queryParams);
 
     if (Array.isArray(res)) {
       return res.map((item) => ({
@@ -98,15 +113,19 @@ export class UsageRepository {
     return [];
   }
 
-  private async getMeta(whereSql: string, timeFilters: TimeFilters): Promise<PlainMessage<FieldUsageMeta> | undefined> {
+  private async getMeta(
+    whereSql: string,
+    timeFilters: TimeFilters,
+    params: Record<string, string | number | boolean>,
+  ): Promise<PlainMessage<FieldUsageMeta> | undefined> {
     const {
       dateRange: { start, end },
     } = timeFilters;
 
     const query = `
     WITH
-      toDateTime('${start}') AS startDate,
-      toDateTime('${end}') AS endDate
+      toDateTime({startDate:String}) AS startDate,
+      toDateTime({endDate:String}) AS endDate
     SELECT
       arrayReduce('groupUniqArray', arrayFlatten(groupArray(SubgraphIDs))) as subgraphIds,
       toString(toUnixTimestamp(min(Timestamp))) as firstSeenTimestamp,
@@ -115,7 +134,13 @@ export class UsageRepository {
     WHERE Timestamp >= startDate AND Timestamp <= endDate AND ${whereSql}
     `;
 
-    const res = await this.client.queryPromise(query);
+    const queryParams = {
+      ...params,
+      startDate: start,
+      endDate: end,
+    };
+
+    const res = await this.client.queryPromise(query, queryParams);
 
     if (Array.isArray(res) && res[0]) {
       return res[0];
@@ -133,22 +158,31 @@ export class UsageRepository {
   }) {
     const timeFilters = parseTimeFilters(input.dateRange, input.range);
 
-    let whereSql = `FederatedGraphID = '${input.federatedGraphId}' AND OrganizationID = '${input.organizationId}'`;
+    const params: Record<string, string | number | boolean> = {
+      federatedGraphId: input.federatedGraphId,
+      organizationId: input.organizationId,
+    };
+
+    let whereSql = `FederatedGraphID = {federatedGraphId:String} AND OrganizationID = {organizationId:String}`;
+
     if (input.typename) {
-      whereSql += ` AND hasAny(TypeNames, ['${input.typename}'])`;
+      params.typename = input.typename;
+      whereSql += ` AND hasAny(TypeNames, [{typename:String}])`;
     }
     if (input.field) {
-      whereSql += ` AND FieldName = '${input.field}'`;
+      params.field = input.field;
+      whereSql += ` AND FieldName = {field:String}`;
     }
     if (input.namedType) {
-      whereSql += ` AND NamedType = '${input.namedType}'`;
+      params.namedType = input.namedType;
+      whereSql += ` AND NamedType = {namedType:String}`;
     }
     whereSql += ` AND IsIndirectFieldUsage = false`;
 
     const [requestSeries, clients, meta] = await Promise.all([
-      this.getUsageRequestSeries(whereSql, timeFilters),
-      this.getClientsWithOperations(whereSql, timeFilters),
-      this.getMeta(whereSql, timeFilters),
+      this.getUsageRequestSeries(whereSql, timeFilters, params),
+      this.getClientsWithOperations(whereSql, timeFilters, params),
+      this.getMeta(whereSql, timeFilters, params),
     ]);
 
     return {
@@ -169,7 +203,14 @@ export class UsageRepository {
     rangeInHours: number;
     fields: Field[];
   }): Promise<{ name: string; typeName: string }[]> {
-    const arrayJoinFields = fields.map((field) => `('${field.name}', '${field.typeName}')`).join(', ');
+    // Escape single quotes in field names and type names
+    const arrayJoinFields = fields
+      .map((field) => {
+        const escapedName = field.name.replace(/'/g, "''");
+        const escapedTypeName = field.typeName.replace(/'/g, "''");
+        return `('${escapedName}', '${escapedTypeName}')`;
+      })
+      .join(', ');
     const {
       dateRange: { end, start },
     } = parseTimeFilters(undefined, rangeInHours);
@@ -182,8 +223,8 @@ export class UsageRepository {
 
     const query = `
       WITH 
-        toStartOfDay(toDateTime('${start}')) AS startDate,
-        toDateTime('${end}') AS endDate,
+        toStartOfDay(toDateTime({startDate:UInt32})) AS startDate,
+        toDateTime({endDate:UInt32}) AS endDate,
         all_fields AS (
           SELECT
               field.1 as Name,
@@ -203,8 +244,8 @@ export class UsageRepository {
                 ARRAY JOIN TypeNames AS TypeName
             where
                 Timestamp >= startDate AND Timestamp <= endDate
-                AND OrganizationID = '${organizationId}'
-                AND FederatedGraphID = '${federatedGraphId}'
+                AND OrganizationID = {organizationId:String}
+                AND FederatedGraphID = {federatedGraphId:String}
             GROUP BY
                 FieldName, TypeName
         )
@@ -220,7 +261,14 @@ export class UsageRepository {
           AND used_fields.TypeName = ''
     `;
 
-    const res = await this.client.queryPromise(query);
+    const params = {
+      startDate: start,
+      endDate: end,
+      organizationId,
+      federatedGraphId,
+    };
+
+    const res = await this.client.queryPromise(query, params);
 
     if (Array.isArray(res)) {
       return res.map((item) => ({
@@ -243,7 +291,14 @@ export class UsageRepository {
     range: number;
     fields: Field[];
   }): Promise<{ name: string; typeName: string }[]> {
-    const arrayJoinFields = fields.map((field) => `('${field.name}', '${field.typeName}')`).join(', ');
+    // Escape single quotes in field names and type names
+    const arrayJoinFields = fields
+      .map((field) => {
+        const escapedName = field.name.replace(/'/g, "''");
+        const escapedTypeName = field.typeName.replace(/'/g, "''");
+        return `('${escapedName}', '${escapedTypeName}')`;
+      })
+      .join(', ');
     const {
       dateRange: { end, start },
     } = parseTimeFilters(undefined, range);
@@ -256,8 +311,8 @@ export class UsageRepository {
     // In the used_fields query, we use ARRAY JOIN to expand the TypeNames array into separate rows.
     const query = `
       WITH 
-        toStartOfDay(toDateTime('${start}')) AS startDate,
-        toDateTime('${end}') AS endDate,
+        toStartOfDay(toDateTime({startDate:UInt32})) AS startDate,
+        toDateTime({endDate:UInt32}) AS endDate,
         all_fields AS (
           SELECT
               field.1 as Name,
@@ -277,8 +332,8 @@ export class UsageRepository {
                 ARRAY JOIN TypeNames AS TypeName
             where
                 Timestamp >= startDate AND Timestamp <= endDate
-                AND OrganizationID = '${organizationId}'
-                AND FederatedGraphID = '${federatedGraphId}'
+                AND OrganizationID = {organizationId:String}
+                AND FederatedGraphID = {federatedGraphId:String}
             GROUP BY
                 FieldName, TypeName
         )
@@ -291,12 +346,113 @@ export class UsageRepository {
           AND all_fields.TypeName = used_fields.TypeName
     `;
 
-    const res = await this.client.queryPromise(query);
+    const params = {
+      startDate: start,
+      endDate: end,
+      organizationId,
+      federatedGraphId,
+    };
+
+    const res = await this.client.queryPromise(query, params);
 
     if (Array.isArray(res)) {
       return res.map((item) => ({
         name: item.name,
         typeName: item.typeName,
+      }));
+    }
+
+    return [];
+  }
+
+  public async getDeprecatedFieldsUsedInOperation({
+    organizationId,
+    federatedGraphId,
+    operationHash,
+    operationName,
+    range,
+    dateRange,
+    deprecatedFields,
+  }: {
+    organizationId: string;
+    federatedGraphId: string;
+    operationHash: string;
+    operationName?: string;
+    range?: number;
+    dateRange?: DateRange;
+    deprecatedFields: { name: string; typeNames: string[] }[];
+  }): Promise<
+    {
+      deprecatedFieldName: string;
+      deprecatedFieldTypeNames: string[];
+    }[]
+  > {
+    if (deprecatedFields.length === 0) {
+      return [];
+    }
+
+    const {
+      dateRange: { end, start },
+    } = parseTimeFilters(dateRange, range);
+
+    // Build the deprecated fields array
+    // Each deprecated field is represented as a tuple: (name, typeNames_array)
+    // Escape single quotes
+    const deprecatedFieldsArray = deprecatedFields
+      .map((field) => {
+        const escapedName = field.name.replace(/'/g, "''");
+        const quotedTypeNames = field.typeNames.map((tn) => `'${tn.replace(/'/g, "''")}'`).join(', ');
+        return `('${escapedName}', [${quotedTypeNames}])`;
+      })
+      .join(', ');
+
+    const query = `
+      WITH 
+        toStartOfDay(toDateTime({startDate:UInt32})) AS startDate,
+        toDateTime({endDate:UInt32}) AS endDate,
+        deprecated_fields AS (
+          SELECT
+            field.1 as Name,
+            field.2 as TypeNames
+          FROM (
+            SELECT
+              arrayJoin([ ${deprecatedFieldsArray} ]) as field
+          )
+        )
+      SELECT DISTINCT
+        df.Name as deprecatedFieldName,
+        df.TypeNames as deprecatedFieldTypeNames
+      FROM ${this.client.database}.gql_metrics_schema_usage_lite_1d_90d
+      INNER JOIN deprecated_fields AS df
+        ON FieldName = df.Name
+      WHERE 
+        Timestamp >= startDate 
+        AND Timestamp <= endDate
+        AND OrganizationID = {organizationId:String}
+        AND FederatedGraphID = {federatedGraphId:String}
+        AND OperationHash = {operationHash:String}
+        AND hasAny(TypeNames, df.TypeNames) = 1
+        ${operationName === undefined ? '' : 'AND OperationName = {operationName:String}'}
+    `;
+
+    const params: Record<string, string | number | boolean> = {
+      startDate: start,
+      endDate: end,
+      organizationId,
+      federatedGraphId,
+      operationHash,
+    };
+
+    if (operationName !== undefined) {
+      params.operationName = operationName;
+    }
+
+    const res = await this.client.queryPromise(query, params);
+
+    if (Array.isArray(res)) {
+      return res.map((item) => ({
+        deprecatedFieldName: item.deprecatedFieldName,
+        deprecatedFieldTypeNames: Array.isArray(item.deprecatedFieldTypeNames) ? item.deprecatedFieldTypeNames : [],
       }));
     }
 

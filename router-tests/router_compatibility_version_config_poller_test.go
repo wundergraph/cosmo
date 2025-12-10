@@ -3,11 +3,11 @@ package integration
 import (
 	"context"
 	"fmt"
-	"github.com/hashicorp/consul/sdk/freeport"
-	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
-	"github.com/wundergraph/cosmo/router/pkg/routerconfig/cdn"
 	"testing"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
+	"github.com/wundergraph/cosmo/router/pkg/routerconfig/cdn"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -21,8 +21,7 @@ func TestRouterCompatibilityVersionConfigPoller(t *testing.T) {
 
 	t.Run("test that a v1 router compatibility version config is requested from the correct cdn path", func(t *testing.T) {
 		t.Parallel()
-		cdnPort := freeport.GetOne(t)
-		cdnServer := testenv.SetupCDNServer(t, cdnPort)
+		cdnServer, cdnPort := testenv.SetupCDNServer(t)
 		token, err := testenv.GenerateVersionedJwtToken()
 		require.NoError(t, err)
 		client, err := cdn.NewClient(fmt.Sprintf("http://127.0.0.1:%d", cdnPort), token, &cdn.Options{
@@ -54,8 +53,7 @@ func TestRouterCompatibilityVersionConfigPoller(t *testing.T) {
 
 	t.Run("test that a v2 router compatibility version config is requested from the correct cdn path", func(t *testing.T) {
 		t.Parallel()
-		cdnPort := freeport.GetOne(t)
-		cdnServer := testenv.SetupCDNServer(t, cdnPort)
+		cdnServer, cdnPort := testenv.SetupCDNServer(t)
 		token, err := testenv.GenerateVersionedJwtToken()
 		require.NoError(t, err)
 		client, err := cdn.NewClient(fmt.Sprintf("http://127.0.0.1:%d", cdnPort), token, &cdn.Options{

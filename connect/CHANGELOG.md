@@ -4,6 +4,36 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.127.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.127.0...@wundergraph/cosmo-connect@0.127.1) (2025-12-04)
+
+### Bug Fixes
+
+* validate organization ownership for fetched proposals and proposal details ([#2389](https://github.com/wundergraph/cosmo/issues/2389)) ([395a5f5](https://github.com/wundergraph/cosmo/commit/395a5f5236a828c6e2038690e4df597f35f106fc)) (@JivusAyrus)
+
+# [0.127.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.126.0...@wundergraph/cosmo-connect@0.127.0) (2025-12-03)
+
+### Features
+
+* add deprecation reason to deprecated fields table in op view ([#2386](https://github.com/wundergraph/cosmo/issues/2386)) ([00cad53](https://github.com/wundergraph/cosmo/commit/00cad53cb3d2a600fe15d3cc632e262f5b791ab9)) (@JivusAyrus)
+
+# [0.126.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.125.0...@wundergraph/cosmo-connect@0.126.0) (2025-12-03)
+
+### Features
+
+* update `zod` ([#2384](https://github.com/wundergraph/cosmo/issues/2384)) ([53a2c0c](https://github.com/wundergraph/cosmo/commit/53a2c0ca0f3f933fc9d11fbad4ac066e93d01ff9)) (@wilsonrivera)
+
+# [0.125.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.124.0...@wundergraph/cosmo-connect@0.125.0) (2025-11-29)
+
+### Features
+
+* subgraph check extensions ([#2281](https://github.com/wundergraph/cosmo/issues/2281)) ([c190b5a](https://github.com/wundergraph/cosmo/commit/c190b5ad19f9fd8f7a67317a29fe845d475dbf10)) (@wilsonrivera)
+
+# [0.124.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.123.0...@wundergraph/cosmo-connect@0.124.0) (2025-11-26)
+
+### Features
+
+* operations overview ([#2331](https://github.com/wundergraph/cosmo/issues/2331)) ([c38d4ae](https://github.com/wundergraph/cosmo/commit/c38d4ae20c6e2d84e3a645d47f12776448f1ffd3)) (@JivusAyrus)
+
 # [0.123.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.122.0...@wundergraph/cosmo-connect@0.123.0) (2025-11-11)
 
 ### Features
