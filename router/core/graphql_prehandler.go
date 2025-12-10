@@ -910,6 +910,7 @@ func (h *PreHandler) handleOperation(w http.ResponseWriter, req *http.Request, v
 	requestContext.operation.variables, err = variablesParser.ParseBytes(operationKit.parsedOperation.Request.Variables)
 	requestContext.operation.fieldArguments = mapFieldArguments(
 		operationKit.kit.doc,
+		h.executor.ClientSchema,
 		requestContext.operation.variables,
 		operationKit.parsedOperation.RemapVariables,
 	)

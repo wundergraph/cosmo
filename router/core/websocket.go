@@ -926,7 +926,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 	if err != nil {
 		return nil, nil, err
 	}
-	opContext.fieldArguments = mapFieldArguments(operationKit.kit.doc, opContext.variables, opContext.remapVariables)
+	opContext.fieldArguments = mapFieldArguments(operationKit.kit.doc, h.operationProcessor.executor.ClientSchema, opContext.variables, opContext.remapVariables)
 
 	startValidation := time.Now()
 
