@@ -11254,6 +11254,139 @@ func TestFlakyTelemetry(t *testing.T) {
 		})
 	})
 
+	t.Run("verify errors being attached to unrelated span subgraphs", func(t *testing.T) {
+		simulateConnectionFailureOnClose := func(w http.ResponseWriter) {
+			hj, ok := w.(http.Hijacker)
+			if !ok {
+				// If the hijacker is not available, we switch to panic
+				// to simulate a failure
+				panic("service failure")
+			}
+			conn, _, err := hj.Hijack()
+			if err != nil {
+				// Hijacking failed, switch to panic
+				// to simulate a failure
+				panic(err)
+			}
+			_ = conn.Close()
+		}
+
+		t.Run("with one subgraph giving an error", func(t *testing.T) {
+			t.Parallel()
+
+			exporter := tracetest.NewInMemoryExporter(t)
+			testenv.Run(t, &testenv.Config{
+				TraceExporter: exporter,
+				Subgraphs: testenv.SubgraphsConfig{
+					Products: testenv.SubgraphConfig{
+						Middleware: func(_ http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+								simulateConnectionFailureOnClose(w)
+							})
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { employees { id isAvailable products derivedMood } }`,
+				})
+
+				sn := exporter.GetSpans().Snapshots()
+
+				subgraphThatShouldHaveError := "products"
+
+				for _, span := range sn {
+					if slices.Contains([]string{"Engine - Fetch"}, span.Name()) {
+						attributes := span.Attributes()
+						events := span.Events()
+
+						hasErrorEvent := false
+						subgraphName := ""
+
+						if len(events) > 0 {
+							require.Len(t, events, 1)
+							require.Equal(t, "exception", events[0].Name)
+							hasErrorEvent = true
+						}
+
+						for _, attributeEntry := range attributes {
+							if attributeEntry.Key == otel.WgSubgraphName {
+								subgraphName = attributeEntry.Value.AsString()
+							}
+						}
+
+						if subgraphName == subgraphThatShouldHaveError {
+							require.True(t, hasErrorEvent)
+						} else {
+							require.False(t, hasErrorEvent)
+						}
+					}
+				}
+			})
+		})
+
+		t.Run("with multiple subgraphs giving an error", func(t *testing.T) {
+			t.Parallel()
+
+			exporter := tracetest.NewInMemoryExporter(t)
+			testenv.Run(t, &testenv.Config{
+				TraceExporter: exporter,
+				Subgraphs: testenv.SubgraphsConfig{
+					Products: testenv.SubgraphConfig{
+						Middleware: func(_ http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+								simulateConnectionFailureOnClose(w)
+							})
+						},
+					},
+					Availability: testenv.SubgraphConfig{
+						Middleware: func(_ http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+								simulateConnectionFailureOnClose(w)
+							})
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { employees { id isAvailable derivedMood products } }`,
+				})
+
+				sn := exporter.GetSpans().Snapshots()
+
+				subgraphsThatShouldHaveError := []string{"products", "availability"}
+
+				for _, span := range sn {
+					if slices.Contains([]string{"Engine - Fetch"}, span.Name()) {
+						attributes := span.Attributes()
+						events := span.Events()
+
+						hasErrorEvent := false
+						subgraphName := ""
+
+						if len(events) > 0 {
+							require.Len(t, events, 1)
+							require.Equal(t, "exception", events[0].Name)
+							hasErrorEvent = true
+						}
+
+						for _, attributeEntry := range attributes {
+							if attributeEntry.Key == otel.WgSubgraphName {
+								subgraphName = attributeEntry.Value.AsString()
+							}
+						}
+
+						if slices.Contains(subgraphsThatShouldHaveError, subgraphName) {
+							require.True(t, hasErrorEvent)
+						} else {
+							require.False(t, hasErrorEvent)
+						}
+					}
+				}
+			})
+		})
+	})
+
 }
 
 func TestExcludeAttributesWithCustomExporter(t *testing.T) {
