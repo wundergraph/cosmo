@@ -4,7 +4,7 @@ on:
     paths:
       - 'pnpm-lock.yaml'
       - "protographic/**/*"
-      - ".github/workflows/protographic-ci.yaml"
+      - ".github/workflows/protographic.yaml"
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}

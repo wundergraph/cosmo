@@ -60,7 +60,7 @@ jobs:
 
       - name: Test
         working-directory: ./graphqlmetrics
-        run: make test
+        run: make test-coverage
 
       - name: Build
         working-directory: ./graphqlmetrics
