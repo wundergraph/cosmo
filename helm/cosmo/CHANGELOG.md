@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.15.0...helm-cosmo@0.16.0) (2025-12-10)
+
+
+### Features
+
+* support default backend in cosmo ingress ([#2398](https://github.com/wundergraph/cosmo/issues/2398)) ([d2d00cd](https://github.com/wundergraph/cosmo/commit/d2d00cd3477ddb8f4f6a312de5ebaad8582fdf53))
+
 ## [0.15.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.14.0...helm-cosmo@0.15.0) (2025-09-10)
 
 
