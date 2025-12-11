@@ -57,7 +57,7 @@ jobs:
           coverage-path: |
             composition/coverage/clover.xml
             composition/coverage/coverage-final.json
-          retention-days: 7
+          retention-days: 14
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Run linter on composition-go
@@ -80,5 +80,5 @@ jobs:
           coverage-path: |
             composition-go/coverage_normal.out
             composition-go/coverage_v8.out
-          retention-days: 7
+          retention-days: 14
           codecov-token: ${{ secrets.CODECOV_TOKEN }}

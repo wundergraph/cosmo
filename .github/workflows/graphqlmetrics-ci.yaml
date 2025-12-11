@@ -71,7 +71,7 @@ jobs:
         with:
           artifact-name: graphqlmetrics-tests-coverage
           coverage-path: graphqlmetrics/coverage.out
-          retention-days: 7
+          retention-days: 14
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
   build_push_image:

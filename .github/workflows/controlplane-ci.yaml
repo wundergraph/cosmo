@@ -92,7 +92,7 @@ jobs:
           coverage-path: |
             controlplane/coverage/clover.xml
             controlplane/coverage/coverage-final.json
-          retention-days: 7
+          retention-days: 14
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
   build_push_image:

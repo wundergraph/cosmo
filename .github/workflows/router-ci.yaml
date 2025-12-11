@@ -186,7 +186,7 @@ jobs:
         with:
           artifact-name: router-tests-coverage
           coverage-path: router/coverage.out
-          retention-days: 7
+          retention-days: 14
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
   integration_test:
@@ -383,7 +383,7 @@ jobs:
         with:
           artifact-name: router-${{ steps.artifact_name.outputs.sanitized }}-nonFlaky
           coverage-path: router-tests/coverage.out
-          retention-days: 7
+          retention-days: 14
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Run Flaky Integration tests ${{ matrix.test_target }}
@@ -395,7 +395,7 @@ jobs:
         with:
           artifact-name: router-${{ steps.artifact_name.outputs.sanitized }}-flaky
           coverage-path: router-tests/coverage.out
-          retention-days: 7
+          retention-days: 14
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
   image_scan:

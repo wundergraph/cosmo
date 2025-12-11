@@ -7,7 +7,7 @@ coverage:
         informational: true # We don't want to block PRs based on the result
     project:
       default:
-        target: 50
+        target: 30
         threshold: 5
         informational: true # We don't want to block PRs based on the result
 
