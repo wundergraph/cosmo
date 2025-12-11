@@ -913,12 +913,13 @@ func (h *PreHandler) handleOperation(w http.ResponseWriter, req *http.Request, v
 	requestContext.operation.variables, err = variablesParser.ParseBytes(operationKit.parsedOperation.Request.Variables)
 
 	if h.mapFieldArguments {
-		requestContext.operation.fieldArguments = mapFieldArguments(
-			operationKit.kit.doc,
-			h.executor.ClientSchema,
-			requestContext.operation.variables,
-			requestContext.operation.remapVariables,
-		)
+		requestContext.operation.fieldArguments = mapFieldArguments(mapFieldArgumentsOpts{
+			operation:      operationKit.kit.doc,
+			definition:     h.executor.ClientSchema,
+			vars:           requestContext.operation.variables,
+			remapVariables: requestContext.operation.remapVariables,
+			logger:         h.log,
+		})
 	}
 
 	if err != nil {
