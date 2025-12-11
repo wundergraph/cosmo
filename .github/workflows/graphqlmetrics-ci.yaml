@@ -60,11 +60,19 @@ jobs:
 
       - name: Test
         working-directory: ./graphqlmetrics
-        run: make test
+        run: make test-coverage
 
       - name: Build
         working-directory: ./graphqlmetrics
         run: make build
+
+      - name: Upload integration results to Codecov
+        uses: ./.github/actions/codecov-upload-pr
+        with:
+          artifact-name: graphqlmetrics-tests-coverage
+          coverage-path: graphqlmetrics/coverage.out
+          retention-days: 14
+          codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
   build_push_image:
     # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
