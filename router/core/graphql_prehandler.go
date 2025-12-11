@@ -67,6 +67,7 @@ type PreHandlerOptions struct {
 	ComputeOperationSha256      bool
 	ApolloCompatibilityFlags    *config.ApolloCompatibilityFlags
 	DisableVariablesRemapping   bool
+	MapFieldArguments           bool
 	ExprManager                 *expr.Manager
 	OmitBatchExtensions         bool
 
@@ -102,6 +103,7 @@ type PreHandler struct {
 	apolloCompatibilityFlags    *config.ApolloCompatibilityFlags
 	variableParsePool           astjson.ParserPool
 	disableVariablesRemapping   bool
+	mapFieldArguments           bool
 	exprManager                 *expr.Manager
 	omitBatchExtensions         bool
 
@@ -160,6 +162,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		computeOperationSha256:    opts.ComputeOperationSha256,
 		apolloCompatibilityFlags:  opts.ApolloCompatibilityFlags,
 		disableVariablesRemapping: opts.DisableVariablesRemapping,
+		mapFieldArguments:         opts.MapFieldArguments,
 		exprManager:               opts.ExprManager,
 		omitBatchExtensions:       opts.OmitBatchExtensions,
 
@@ -908,12 +911,16 @@ func (h *PreHandler) handleOperation(w http.ResponseWriter, req *http.Request, v
 	requestContext.operation.rawContent = operationKit.parsedOperation.Request.Query
 	requestContext.operation.content = operationKit.parsedOperation.NormalizedRepresentation
 	requestContext.operation.variables, err = variablesParser.ParseBytes(operationKit.parsedOperation.Request.Variables)
-	requestContext.operation.fieldArguments = mapFieldArguments(
-		operationKit.kit.doc,
-		h.executor.ClientSchema,
-		requestContext.operation.variables,
-		operationKit.parsedOperation.RemapVariables,
-	)
+
+	if h.mapFieldArguments {
+		requestContext.operation.fieldArguments = mapFieldArguments(
+			operationKit.kit.doc,
+			h.executor.ClientSchema,
+			requestContext.operation.variables,
+			requestContext.operation.remapVariables,
+		)
+	}
+
 	if err != nil {
 		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
 		if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
