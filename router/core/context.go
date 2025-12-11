@@ -482,9 +482,9 @@ type OperationContext interface {
 	Hash() uint64
 	// Content is the content of the operation
 	Content() string
-	// Arguments allow access to a GraphQL operation's field arguments.
+	// Arguments allow access to GraphQL operation field arguments.
 	Arguments() *Arguments
-	// Variables allow access to GraphQL operation variables used by clients.
+	// Variables allow access to GraphQL operation variables.
 	Variables() *astjson.Value
 	// ClientInfo returns information about the client that initiated this operation
 	ClientInfo() ClientInfo
