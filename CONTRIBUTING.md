@@ -170,7 +170,7 @@ We manage multiple compose files:
 We use Codecov for code coverage. Code coverage is used for both PRs and also our default branch main.
 
 #### Workaround for uploading to main
-Codecov relies on commit hashes to map code to Codecov reports, however unfortunately we use "Squash Merge", which means that the HEAD of any merged PR is never present on main post merge, leading to no code coverage uploaded for main (which is used as a base for comparisons).
+Codecov relies on commit hashes to map code to Codecov reports, however unfortunately we use "Squash Merge", which means that the HEAD of any merged PR is never present on main post-merge, leading to no code coverage uploaded for main (which is used as a base for comparisons).
 
 In order to circumvent this we do the following steps:
 * Upload Codecov reports from PR runs to GitHub as artifacts for the PR's HEAD commit
@@ -182,7 +182,7 @@ In order to circumvent this we do the following steps:
 When you add a new project (i.e. a subfolder in the cosmo repository root), if you wish to add code coverage for it you can follow these steps:
 
 * Add a flag in the codecov.yaml for your project with the folder name, this is important so coverage does not get overwritten (for example if a router pr gets merged, cli coverage won't be set to empty for that commit)
-```
+```yaml
 flags:
   router:
     paths:
@@ -190,10 +190,10 @@ flags:
     carryforward: true
 ```
 * You should be running tests in ci for your project via a GH Workflow, You need to add the GH Workflow name to `codecov-post-merge.yaml`, the line you are looking for will look something like this
-```
+```yaml
 workflow-paths: .github/workflows/cli-ci.yaml,.github/workflows/router-ci.yaml,
 ```
-Ensure you add the full relative path from the cosmo repository root and it is comma separated, e.g.: for graphqlmetrics `,.github/workflows/graphqlmetrics-ci.yaml`
+Ensure you add the full relative path from the cosmo repository root and it is comma-separated, e.g.: for graphqlmetrics `,.github/workflows/graphqlmetrics-ci.yaml`
 
 **Clean up a compose stack before starting another one!**
 
