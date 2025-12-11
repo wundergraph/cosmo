@@ -482,8 +482,8 @@ type OperationContext interface {
 	Hash() uint64
 	// Content is the content of the operation
 	Content() string
-	// FieldArguments allow access to a GraphQL operation's field arguments.
-	FieldArguments() *FieldArguments
+	// Arguments allow access to a GraphQL operation's field arguments.
+	Arguments() *Arguments
 	// Variables allow access to GraphQL operation variables used by clients.
 	Variables() *astjson.Value
 	// ClientInfo returns information about the client that initiated this operation
@@ -525,7 +525,7 @@ type operationContext struct {
 	rawContent string
 	// Content is the normalized content of the operation
 	content        string
-	fieldArguments FieldArguments
+	fieldArguments Arguments
 	variables      *astjson.Value
 	files          []*httpclient.FileUpload
 	clientInfo     *ClientInfo
@@ -559,7 +559,7 @@ func (o *operationContext) Variables() *astjson.Value {
 	return o.variables
 }
 
-func (o *operationContext) FieldArguments() *FieldArguments {
+func (o *operationContext) Arguments() *Arguments {
 	return &o.fieldArguments
 }
 

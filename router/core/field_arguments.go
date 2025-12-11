@@ -2,15 +2,20 @@ package core
 
 import "github.com/wundergraph/astjson"
 
-// FieldArguments allow access to GraphQL field arguments used by clients.
-type FieldArguments struct {
+// Arguments allow access to GraphQL field arguments used by clients.
+type Arguments struct {
 	data map[string]map[string]*astjson.Value
 }
 
 // Get will return the value of argument a from field f.
 //
-// The field needs to be a dot notated path to the position of the field.
-// For example if you want to access arg1 on field2 on the operation
+// To access the an argument of a root level field, you need to pass the
+// name of the field as the first argument to Get and the name of the argument
+// as the second argument, e.g. Get("rootfield_name", "argument_name") .
+//
+// The field needs to be a dot notated path to the position of the field,
+// if it is nested.
+// For example you can access arg1 on field2 on the operation
 //
 //	subscription {
 //		mySub(arg1: "val1", arg2: "val2") {
@@ -19,8 +24,9 @@ type FieldArguments struct {
 //		}
 //
 // You need to call Get("mySub.field2", "arg1") .
+//
 // If f or a cannot be found nil is returned.
-func (fa *FieldArguments) Get(f string, a string) *astjson.Value {
+func (fa *Arguments) Get(f string, a string) *astjson.Value {
 	args, found := fa.data[f]
 	if !found {
 		return nil

@@ -111,7 +111,7 @@ type mapFieldArgumentsOpts struct {
 	logger         *zap.Logger
 }
 
-func mapFieldArguments(opts mapFieldArgumentsOpts) FieldArguments {
+func mapFieldArguments(opts mapFieldArgumentsOpts) Arguments {
 	walker := astvisitor.NewWalker(48)
 
 	visitor := &fieldArgumentsVisitor{
@@ -127,7 +127,7 @@ func mapFieldArguments(opts mapFieldArgumentsOpts) FieldArguments {
 	report := &operationreport.Report{}
 	walker.Walk(opts.operation, opts.definition, report)
 
-	res := FieldArguments{
+	res := Arguments{
 		data: visitor.fieldArguments,
 	}
 
