@@ -6,7 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alicebob/miniredis/v2"
 	"github.com/go-redis/redis_rate/v10"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router/internal/expr"
@@ -243,6 +245,40 @@ func TestRateLimiterOverrides(t *testing.T) {
 		assert.Equal(t, "cosmo_rate_limit:id_my_client", fake.lastKey)
 		assert.Equal(t, expected, fake.lastLimit)
 	})
+}
+
+func TestRateLimiterOverrideEndToEnd(t *testing.T) {
+	mr := miniredis.RunT(t)
+	client := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	t.Cleanup(func() {
+		_ = client.Close()
+	})
+
+	rl, err := NewCosmoRateLimiter(&CosmoRateLimiterOptions{
+		RedisClient:         client,
+		KeySuffixExpression: "request.auth.claims.client_id",
+		ExprManager:         expr.CreateNewExprManager(),
+		Overrides: map[string]RateLimitOverride{
+			"cosmo_rate_limit:id_my_client": {Rate: 1, Burst: 1, Period: time.Second},
+		},
+	})
+	require.NoError(t, err)
+
+	ctx := expressionResolveContext(t, nil, map[string]any{"client_id": "id_my_client"})
+	ctx.RateLimitOptions.RateLimitKey = "cosmo_rate_limit"
+	ctx.RateLimitOptions.Rate = 5
+	ctx.RateLimitOptions.Burst = 5
+	ctx.RateLimitOptions.Period = time.Second
+
+	info := &resolve.FetchInfo{RootFields: []resolve.GraphCoordinate{{TypeName: "Query", FieldName: "product"}}}
+
+	result, err := rl.RateLimitPreFetch(ctx, info, nil)
+	require.NoError(t, err)
+	assert.Nil(t, result)
+
+	result, err = rl.RateLimitPreFetch(ctx, info, nil)
+	require.NoError(t, err)
+	assert.NotNil(t, result)
 }
 
 type fakeLimiter struct {
