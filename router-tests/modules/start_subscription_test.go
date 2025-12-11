@@ -711,4 +711,76 @@ func TestStartSubscriptionHook(t *testing.T) {
 			assert.Equal(t, int32(1), customModule.HookCallCount.Load())
 		})
 	})
+
+	t.Run("Test StartSubscription hook can access field arguments", func(t *testing.T) {
+		t.Parallel()
+
+		// This test verifies that the subscription start hook can access GraphQL field arguments
+		// via ctx.Operation().Arguments().
+
+		var capturedEmployeeID int
+
+		customModule := &start_subscription.StartSubscriptionModule{
+			HookCallCount: &atomic.Int32{},
+			Callback: func(ctx core.SubscriptionOnStartHandlerContext) error {
+				args := ctx.Operation().Arguments()
+				if args != nil {
+					employeeIDArg := args.Get("employeeUpdatedMyKafka", "employeeID")
+					if employeeIDArg != nil {
+						capturedEmployeeID = employeeIDArg.GetInt()
+					}
+				}
+				return nil
+			},
+		}
+
+		cfg := config.Config{
+			Graph: config.Graph{},
+			Modules: map[string]interface{}{
+				"startSubscriptionModule": customModule,
+			},
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
+			RouterOptions: []core.Option{
+				core.WithModulesConfig(cfg.Modules),
+				core.WithCustomModules(&start_subscription.StartSubscriptionModule{}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			var subscriptionOne struct {
+				employeeUpdatedMyKafka struct {
+					ID float64 `graphql:"id"`
+				} `graphql:"employeeUpdatedMyKafka(employeeID: $employeeID)"`
+			}
+
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
+			client := graphql.NewSubscriptionClient(surl)
+
+			vars := map[string]interface{}{
+				"employeeID": 7,
+			}
+			subscriptionOneID, err := client.Subscribe(&subscriptionOne, vars, func(dataValue []byte, errValue error) error {
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEmpty(t, subscriptionOneID)
+
+			clientRunCh := make(chan error)
+			go func() {
+				clientRunCh <- client.Run()
+			}()
+
+			xEnv.WaitForSubscriptionCount(1, time.Second*10)
+
+			require.NoError(t, client.Close())
+			testenv.AwaitChannelWithT(t, time.Second*10, clientRunCh, func(t *testing.T, err error) {
+				require.NoError(t, err)
+			}, "unable to close client before timeout")
+
+			assert.Equal(t, int32(1), customModule.HookCallCount.Load())
+			assert.Equal(t, 7, capturedEmployeeID, "expected to capture employeeID argument value")
+		})
+	})
 }

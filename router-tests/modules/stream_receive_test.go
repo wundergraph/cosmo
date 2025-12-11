@@ -963,4 +963,91 @@ func TestReceiveHook(t *testing.T) {
 			assert.Equal(t, int32(3), customModule.HookCallCount.Load())
 		})
 	})
+
+	t.Run("Test Receive hook can access field arguments", func(t *testing.T) {
+		t.Parallel()
+
+		// This test verifies that the receive hook can access GraphQL field arguments
+		// via ctx.Operation().Arguments().
+
+		var capturedEmployeeID int
+
+		customModule := stream_receive.StreamReceiveModule{
+			HookCallCount: &atomic.Int32{},
+			Callback: func(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
+				args := ctx.Operation().Arguments()
+				if args != nil {
+					employeeIDArg := args.Get("employeeUpdatedMyKafka", "employeeID")
+					if employeeIDArg != nil {
+						capturedEmployeeID = employeeIDArg.GetInt()
+					}
+				}
+				return events, nil
+			},
+		}
+
+		cfg := config.Config{
+			Graph: config.Graph{},
+			Modules: map[string]interface{}{
+				"streamReceiveModule": customModule,
+			},
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
+			RouterOptions: []core.Option{
+				core.WithModulesConfig(cfg.Modules),
+				core.WithCustomModules(&stream_receive.StreamReceiveModule{}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			topics := []string{"employeeUpdated"}
+			events.KafkaEnsureTopicExists(t, xEnv, time.Second, topics...)
+
+			var subscriptionOne struct {
+				employeeUpdatedMyKafka struct {
+					ID float64 `graphql:"id"`
+				} `graphql:"employeeUpdatedMyKafka(employeeID: 3)"`
+			}
+
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
+			client := graphql.NewSubscriptionClient(surl)
+
+			type kafkaSubscriptionArgs struct {
+				dataValue []byte
+				errValue  error
+			}
+			subscriptionArgsCh := make(chan kafkaSubscriptionArgs)
+			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
+				subscriptionArgsCh <- kafkaSubscriptionArgs{
+					dataValue: dataValue,
+					errValue:  errValue,
+				}
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEmpty(t, subscriptionOneID)
+
+			clientRunCh := make(chan error)
+			go func() {
+				clientRunCh <- client.Run()
+			}()
+
+			xEnv.WaitForSubscriptionCount(1, Timeout)
+
+			events.ProduceKafkaMessage(t, xEnv, Timeout, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+
+			testenv.AwaitChannelWithT(t, Timeout, subscriptionArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
+				require.NoError(t, args.errValue)
+			})
+
+			require.NoError(t, client.Close())
+			testenv.AwaitChannelWithT(t, Timeout, clientRunCh, func(t *testing.T, err error) {
+				require.NoError(t, err)
+			}, "unable to close client before timeout")
+
+			assert.Equal(t, int32(1), customModule.HookCallCount.Load())
+			assert.Equal(t, 3, capturedEmployeeID, "expected to capture employeeID argument value")
+		})
+	})
 }
