@@ -30,6 +30,7 @@ export function WorkspaceProvider({ children }: React.PropsWithChildren) {
   const [storedNamespace, setStoredNamespace] = useLocalStorage("wg-namespace", DEFAULT_NAMESPACE_NAME);
   const [namespace, setNamespace] = useState(namespaceParam || storedNamespace || DEFAULT_NAMESPACE_NAME);
   const [namespaces, setNamespaces] = useState([DEFAULT_NAMESPACE_NAME]);
+  console.log({ namespaceParam, storedNamespace, namespace, namespaces });
 
   // Correct namespace
   useEffect(() => {
@@ -37,8 +38,9 @@ export function WorkspaceProvider({ children }: React.PropsWithChildren) {
       return;
     }
 
+    const actualNamespace = (router.query.namespace as string) || namespace;
     const currentNamespaces = data.namespaces.map((wns) => wns.name);
-    if (!currentNamespaces.some((ns) => ns.toLowerCase() === namespace.toLowerCase())) {
+    if (!currentNamespaces.some((ns) => ns.toLowerCase() === actualNamespace.toLowerCase())) {
       // The authenticated user doesn't have access to the namespace, pick between the `default` or the
       // first available namespace if the user doesn't have access to the `default` namespace
       const ns = currentNamespaces.find((n) => n === DEFAULT_NAMESPACE_NAME) || currentNamespaces[0];
@@ -50,12 +52,21 @@ export function WorkspaceProvider({ children }: React.PropsWithChildren) {
           namespace: ns,
         });
       }
-    } else if (!namespaceParam) {
-      applyParams({ namespace });
+    } else if (actualNamespace.toLowerCase() !== namespace.toLowerCase()) {
+      setNamespace(actualNamespace);
+      setStoredNamespace(actualNamespace);
     }
 
     setNamespaces(currentNamespaces);
-  }, [applyParams, data?.response?.code, data?.namespaces, namespace, namespaceParam, setStoredNamespace]);
+  }, [
+    applyParams,
+    data?.response?.code,
+    data?.namespaces,
+    router.query.namespace,
+    namespace,
+    namespaceParam,
+    setStoredNamespace,
+  ]);
 
   // Memoize context components
   const currentNamespace= useMemo(
