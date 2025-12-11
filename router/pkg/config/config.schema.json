@@ -1969,6 +1969,27 @@
               "type": "boolean",
               "default": false,
               "description": "Hide the rate limit stats from the response extension. If the value is true, the rate limit stats are not included in the response extension."
+            },
+            "overrides": {
+              "type": "object",
+              "description": "Override the default rate limit for specific keys. The key is the full Redis key (prefix:suffix), and the value is the rate limit configuration for that key.",
+              "additionalProperties": {
+                "type": "object",
+                "required": ["rate", "burst", "period"],
+                "properties": {
+                  "rate": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "burst": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "period": {
+                    "type": "string"
+                  }
+                }
+              }
             }
           },
           "required": ["rate", "burst", "period"]
