@@ -30,7 +30,6 @@ export function WorkspaceProvider({ children }: React.PropsWithChildren) {
   const [storedNamespace, setStoredNamespace] = useLocalStorage("wg-namespace", DEFAULT_NAMESPACE_NAME);
   const [namespace, setNamespace] = useState(namespaceParam || storedNamespace || DEFAULT_NAMESPACE_NAME);
   const [namespaces, setNamespaces] = useState([DEFAULT_NAMESPACE_NAME]);
-  console.log({ namespaceParam, storedNamespace, namespace, namespaces });
 
   // Correct namespace
   useEffect(() => {
