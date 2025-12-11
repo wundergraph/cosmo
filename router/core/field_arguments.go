@@ -27,11 +27,14 @@ type Arguments struct {
 //
 // If f or a cannot be found nil is returned.
 func (fa *Arguments) Get(f string, a string) *astjson.Value {
+	if fa == nil {
+		return nil
+	}
+
 	args, found := fa.data[f]
 	if !found {
 		return nil
 	}
 
-	v, _ := args[a]
-	return v
+	return args[a]
 }
