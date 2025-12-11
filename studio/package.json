@@ -1,6 +1,6 @@
 {
   "name": "studio",
-  "version": "0.145.1",
+  "version": "0.146.0",
   "private": true,
   "license": "Apache-2.0",
   "description": "WunderGraph Cosmo Studio",
@@ -16,6 +16,7 @@
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run --reporter=default --reporter=hanging-process",
+    "test:coverage": "vitest run --reporter=default --reporter=hanging-process --coverage",
     "lint:fix": "next lint --fix",
     "preinstall": "npx only-allow pnpm",
     "postinstall": "pnpm run copy-monaco",
@@ -133,6 +134,7 @@
     "@types/prismjs": "^1.26.3",
     "@types/react": "18.3.3",
     "@types/react-dom": "18.3.0",
+    "@vitest/coverage-v8": "3.2.4",
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "10.4.14",
     "cross-env": "^7.0.3",
