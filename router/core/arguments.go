@@ -12,12 +12,14 @@ type Arguments struct {
 
 // Get will return the value of argument a from field f.
 //
-// To access the an argument of a root level field, you need to pass the
-// name of the field as the first argument to Get and the name of the argument
+// To access an argument of a root level field, you need to pass the
+// response key of the field as the first argument to Get and the name of the argument
 // as the second argument, e.g. Get("rootfield_name", "argument_name") .
 //
-// The field needs to be a dot notated path to the position of the field,
-// if it is nested.
+// The response key is the alias if present, otherwise the field name.
+// For aliased fields like "myAlias: user(id: 1)", use the alias "myAlias" in the path.
+//
+// The field path uses dot notation for nested fields.
 // For example you can access arg1 on field2 on the operation
 //
 //	subscription {
@@ -28,7 +30,16 @@ type Arguments struct {
 //
 // You need to call Get("mySub.field2", "arg1") .
 //
-// If f or a cannot be found nil is returned.
+// For aliased fields:
+//
+//	query {
+//		a: user(id: "1") { name }
+//		b: user(id: "2") { name }
+//	}
+//
+// You need to call Get("a", "id") or Get("b", "id") respectively.
+//
+// If fa is nil, or f or a cannot be found, nil is returned.
 func (fa *Arguments) Get(f string, a string) *astjson.Value {
 	if fa == nil {
 		return nil

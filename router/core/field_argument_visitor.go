@@ -63,12 +63,24 @@ func (v *fieldArgumentsVisitor) dotPathFromAncestors() string {
 
 	for _, anc := range v.walker.Ancestors {
 		if anc.Kind == ast.NodeKindField {
-			fieldName := v.operation.FieldNameString(anc.Ref)
-			pathParts = append(pathParts, fieldName)
+			// Use the response key (alias if present, otherwise field name)
+			// to handle aliased fields and repeated selections correctly
+			responseKey := v.fieldResponseKey(anc.Ref)
+			pathParts = append(pathParts, responseKey)
 		}
 	}
 
 	return strings.Join(pathParts, ".")
+}
+
+// fieldResponseKey returns the response key for a field (alias if present, otherwise field name).
+// This ensures unique paths for aliased fields like: a: user(id: 1) and b: user(id: 2)
+func (v *fieldArgumentsVisitor) fieldResponseKey(fieldRef int) string {
+	alias := v.operation.FieldAliasString(fieldRef)
+	if alias != "" {
+		return alias
+	}
+	return v.operation.FieldNameString(fieldRef)
 }
 
 // resolveArgValue returns the value of val as astjson.Value.
@@ -127,7 +139,7 @@ func mapFieldArguments(opts mapFieldArgumentsOpts) Arguments {
 	walker := astvisitor.NewWalker(48)
 
 	logger := opts.logger
-	if logger != nil {
+	if logger == nil {
 		logger = zap.NewNop()
 	}
 

@@ -253,6 +253,45 @@ func TestMapFieldArguments(t *testing.T) {
 				assert.True(t, activeVal.GetBool())
 			},
 		},
+		{
+			name: "aliased fields have unique paths",
+			schema: `
+				type Query {
+					user(id: ID!): User
+				}
+				type User {
+					id: ID!
+					name: String!
+				}
+			`,
+			operation: `
+				query GetUsers($id1: ID!, $id2: ID!) {
+					a: user(id: $id1) {
+						id
+						name
+					}
+					b: user(id: $id2) {
+						id
+						name
+					}
+				}
+			`,
+			variables: `{"id1": "user-1", "id2": "user-2"}`,
+			assertions: func(t *testing.T, result Arguments) {
+				// Access arguments using the alias, not the field name
+				aIdArg := result.Get("a", "id")
+				require.NotNil(t, aIdArg, "expected 'id' argument on aliased field 'a'")
+				assert.Equal(t, "user-1", string(aIdArg.GetStringBytes()))
+
+				bIdArg := result.Get("b", "id")
+				require.NotNil(t, bIdArg, "expected 'id' argument on aliased field 'b'")
+				assert.Equal(t, "user-2", string(bIdArg.GetStringBytes()))
+
+				// Using the field name should not find the arguments
+				userIdArg := result.Get("user", "id")
+				assert.Nil(t, userIdArg, "expected nil when using field name instead of alias")
+			},
+		},
 	}
 
 	for _, tc := range testCases {
