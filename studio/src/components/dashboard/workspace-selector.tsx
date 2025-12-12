@@ -20,8 +20,8 @@ export function WorkspaceSelector({ children, truncateNamespace = true }: Worksp
 
   const [activeGraph, activeSubgraph] = useMemo(
     () => {
-      const routeSegment = router.pathname.split("/")[3]?.toLowerCase();
-      const currentSlug = router.query.slug as string;
+      const routeSegment = router.asPath.split("/")[3]?.toLowerCase();
+      const currentSlug = (router.query.slug as string)?.toLowerCase();
       return [
         routeSegment === "graph"
           ? namespace.graphs.find((graph) => graph.name.toLowerCase() === currentSlug)
@@ -33,13 +33,13 @@ export function WorkspaceSelector({ children, truncateNamespace = true }: Worksp
           : undefined,
       ];
     },
-    [namespace, router.pathname, router.query.slug, subgraphContext?.subgraph?.id],
+    [namespace, router.asPath, router.query.slug, subgraphContext?.subgraph?.id],
   );
 
   const isViewingGraphOrSubgraph = !!activeGraph || !!activeSubgraph;
   return (
     <div className={cn(
-      "flex justify-start items-center",
+      "flex justify-start items-center h-9 text-sm",
       isViewingGraphOrSubgraph && "gap-x-2",
     )}>
       <NamespaceSelector

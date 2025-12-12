@@ -122,20 +122,18 @@ export function WorkspaceCommandWrapper({
                   No namespace, graph or subgraph matches your criteria.
                 </div>
               ) : filteredGraphs.map((wns, index) => (
-                <>
-                    <GraphCommandGroup
-                      key={`namespace-${index}`}
-                      isFiltering={isFiltering}
-                      namespace={wns}
-                      namespaceIndex={index}
-                      activeGraphId={activeGraph?.id}
-                      activeSubgraphId={activeSubgraph?.id}
-                      setNamespace={(ns) => {
-                        setNamespace(ns, false);
-                        close();
-                      }}
-                    />
-                </>
+                  <GraphCommandGroup
+                    key={`namespace-${index}`}
+                    isFiltering={isFiltering}
+                    namespace={wns}
+                    namespaceIndex={index}
+                    activeGraphId={activeGraph?.id}
+                    activeSubgraphId={activeSubgraph?.id}
+                    setNamespace={(ns) => {
+                      setNamespace(ns, false);
+                      close();
+                    }}
+                  />
               ))}
             </>
           ) : children}

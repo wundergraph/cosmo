@@ -34,6 +34,7 @@ import { UserGroupIcon } from "@heroicons/react/24/outline";
 import { useCheckUserAccess } from "@/hooks/use-check-user-access";
 import { useUser } from "@/hooks/use-user";
 import { useStarBannerDisabled } from "@/hooks/use-star-banner-disabled";
+import { useWorkspace } from "@/hooks/use-workspace";
 
 export const StarBanner = ({
   isDisabled,
@@ -115,6 +116,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
   const organizationSlug = router.query.organizationSlug as string;
   const checkUserAccess = useCheckUserAccess();
   const [isStarBannerDisabled, setDisableStarBanner] = useStarBannerDisabled();
+  const { namespace } = useWorkspace();
 
   const isAdmin = checkUserAccess({ rolesToBe: ["organization-admin" ]});
   const isAdminOrDeveloper = checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] });
@@ -134,21 +136,22 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
 
   const links = useMemo(() => {
     const basePath = `/${user?.currentOrganization.slug || organizationSlug}`;
+    const nsQueryString = `?namespace=${encodeURIComponent(namespace.name)}`;
 
     const navigation: Partial<NavLink>[] = [
       {
         title: "Graphs",
-        href: basePath + "/graphs",
+        href: basePath + `/graphs${nsQueryString}`,
         icon: <PiGraphLight className="size-4" />,
       },
       {
         title: "Subgraphs",
-        href: basePath + "/subgraphs",
+        href: basePath + `/subgraphs${nsQueryString}`,
         icon: <Component2Icon className="size-4" />,
       },
       {
         title: "Feature Flags",
-        href: basePath + "/feature-flags",
+        href: basePath + `/feature-flags${nsQueryString}`,
         icon: <MdOutlineFeaturedPlayList className="size-4" />,
         matchExact: false,
         separator: !isAdminOrDeveloper,
@@ -159,17 +162,17 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
       navigation.push(
         {
           title: "Policies",
-          href: basePath + "/policies",
+          href: basePath + `/policies${nsQueryString}`,
           icon: <MdOutlinePolicy className="size-4" />,
         },
         {
           title: "Check Extensions",
-          href: basePath + "/check-extensions",
+          href: basePath + `/check-extensions${nsQueryString}`,
           icon: <MdOutlineExtension className="size-4" />,
         },
         {
           title: "Cache Warmer",
-          href: basePath + "/cache-warmer",
+          href: basePath + `/cache-warmer${nsQueryString}`,
           icon: <FaGripfire className="size-4" />,
           separator: true,
         },
@@ -279,8 +282,10 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
     organizationSlug,
     plans.data?.plans?.length,
     user?.currentOrganization.slug,
+    namespace,
     isAdmin,
     isAdminOrDeveloper,
+    isApiKeyManager,
     user?.invitations,
   ]);
 
