@@ -524,11 +524,14 @@ type operationContext struct {
 	// RawContent is the raw content of the operation
 	rawContent string
 	// Content is the normalized content of the operation
-	content        string
+	content string
+	// fieldArguments are the arguments of the operation.
+	// These are not mapped by default, only when certain custom modules require them.
 	fieldArguments Arguments
-	variables      *astjson.Value
-	files          []*httpclient.FileUpload
-	clientInfo     *ClientInfo
+	// variables are the variables of the operation
+	variables  *astjson.Value
+	files      []*httpclient.FileUpload
+	clientInfo *ClientInfo
 	// preparedPlan is the prepared plan of the operation
 	preparedPlan     *planWithMetaData
 	traceOptions     resolve.TraceOptions

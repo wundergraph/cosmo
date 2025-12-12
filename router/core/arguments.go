@@ -7,6 +7,7 @@ type Arguments struct {
 	// First key is the path to the field in dot notation
 	// i.e. root_field.subfield1.subfield2.
 	// Second argument is the name of the argument of that field.
+	// This map can be nil if no arguments are mapped.
 	data map[string]map[string]*astjson.Value
 }
 
@@ -41,7 +42,7 @@ type Arguments struct {
 //
 // If fa is nil, or f or a cannot be found, nil is returned.
 func (fa *Arguments) Get(f string, a string) *astjson.Value {
-	if fa == nil {
+	if fa == nil || fa.data == nil {
 		return nil
 	}
 

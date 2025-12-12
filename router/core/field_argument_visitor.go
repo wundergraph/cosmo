@@ -156,6 +156,11 @@ func mapFieldArguments(opts mapFieldArgumentsOpts) Arguments {
 
 	report := &operationreport.Report{}
 	walker.Walk(opts.operation, opts.definition, report)
+	if report.HasErrors() {
+		logger.Warn("failed to map field arguments, no arguments will be available",
+			zap.Error(errors.New(report.Error())))
+		return Arguments{}
+	}
 
 	res := Arguments{
 		data: visitor.fieldArguments,
