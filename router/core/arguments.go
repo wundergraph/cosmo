@@ -4,6 +4,9 @@ import "github.com/wundergraph/astjson"
 
 // Arguments allow access to GraphQL field arguments used by clients.
 type Arguments struct {
+	// First key is the path to the field in dot notation
+	// i.e. root_field.subfield1.subfield2.
+	// Second argument is the name of the argument of that field.
 	data map[string]map[string]*astjson.Value
 }
 

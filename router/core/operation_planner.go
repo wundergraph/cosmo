@@ -92,46 +92,6 @@ func (p *OperationPlanner) preparePlan(ctx *operationContext) (*planWithMetaData
 	return out, nil
 }
 
-// // mapFieldArguments returns all field arguments inside doc as a map.
-// //
-// // The key of the map is a dot-notated path, where each element refers
-// // to a field. The inner map holds the argument names as keys.
-// // map["rootfield1.subfield1"]["arg1"]
-// // map["rootfield1.subfield1"]["arg2"]
-// // map["rootfield1.subfield2"]["arg1"]
-// // map["rootfield1.subfield2"]["arg2"]
-// //
-// // The value of the inner map is the literal value of the argument.
-// // Variables will be resolved in case they have been used for arguments.
-// func mapFieldArguments(doc *ast.Document, vars *astjson.Value, remapVariables map[string]string) map[string]map[string]any {
-// 	// TODO: Currently we only map root field arguments. I.e.
-// 	// map["rootfield1"]["arg1"]
-// 	// map["rootfield2"]["arg1"]
-// 	// Needs to extended to support subfields, like
-// 	// map["rootfield1.subfield1"]["arg1"]
-// 	selectionSet := doc.OperationDefinitions[0].SelectionSet
-// 	fields := doc.SelectionSetFieldSelections(selectionSet)
-
-// 	args := make(map[string]map[string]any, len(fields))
-
-// 	for _, field := range fields {
-// 		fieldRef := doc.Selections[field].Ref
-// 		fieldName := doc.FieldNameString(fieldRef)
-// 		fieldArgs := doc.FieldArguments(fieldRef)
-
-// 		for _, fieldArg := range fieldArgs {
-// 			m := make(map[string]any, len(fieldArgs))
-// 			args[fieldName] = m
-
-// 			argName := doc.ArgumentNameString(fieldArg)
-// 			val := doc.Arguments[fieldArg].Value
-// 			args[fieldName][argName] = getArgValue(doc, val, vars, remapVariables)
-// 		}
-// 	}
-
-// 	return args
-// }
-
 type PlanOptions struct {
 	ClientInfo           *ClientInfo
 	TraceOptions         resolve.TraceOptions
