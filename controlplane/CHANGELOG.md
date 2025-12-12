@@ -4,6 +4,55 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.180.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.179.2...controlplane@0.180.0) (2025-12-10)
+
+### Features
+
+* enforce feature check for `OIDC` ([#2392](https://github.com/wundergraph/cosmo/issues/2392)) ([2a1ffc5](https://github.com/wundergraph/cosmo/commit/2a1ffc583a4fe121ccf869d6b324c1be8cca1d2d)) (@wilsonrivera)
+* improve organization creation and update validation ([#2394](https://github.com/wundergraph/cosmo/issues/2394)) ([f8b2e59](https://github.com/wundergraph/cosmo/commit/f8b2e59392160f40b098cd215ce4a371b1dd5fb3)) (@wilsonrivera)
+
+## [0.179.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.179.1...controlplane@0.179.2) (2025-12-04)
+
+### Bug Fixes
+
+* operation checks for input and argument usages ([#2380](https://github.com/wundergraph/cosmo/issues/2380)) ([c43ed88](https://github.com/wundergraph/cosmo/commit/c43ed8813ef6b29563a77926fc7908566ccf7eb9)) (@JivusAyrus)
+
+## [0.179.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.179.0...controlplane@0.179.1) (2025-12-04)
+
+### Bug Fixes
+
+* validate organization ownership for fetched proposals and proposal details ([#2389](https://github.com/wundergraph/cosmo/issues/2389)) ([395a5f5](https://github.com/wundergraph/cosmo/commit/395a5f5236a828c6e2038690e4df597f35f106fc)) (@JivusAyrus)
+
+# [0.179.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.178.0...controlplane@0.179.0) (2025-12-03)
+
+### Features
+
+* sanitize readme content to prevent XSS ([#2390](https://github.com/wundergraph/cosmo/issues/2390)) ([20cd6cb](https://github.com/wundergraph/cosmo/commit/20cd6cba05f7eae6db75f6160c6844e42f349712)) (@wilsonrivera)
+
+# [0.178.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.177.0...controlplane@0.178.0) (2025-12-03)
+
+### Features
+
+* add deprecation reason to deprecated fields table in op view ([#2386](https://github.com/wundergraph/cosmo/issues/2386)) ([00cad53](https://github.com/wundergraph/cosmo/commit/00cad53cb3d2a600fe15d3cc632e262f5b791ab9)) (@JivusAyrus)
+
+# [0.177.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.176.1...controlplane@0.177.0) (2025-12-03)
+
+### Features
+
+* update `zod` ([#2384](https://github.com/wundergraph/cosmo/issues/2384)) ([53a2c0c](https://github.com/wundergraph/cosmo/commit/53a2c0ca0f3f933fc9d11fbad4ac066e93d01ff9)) (@wilsonrivera)
+
+## [0.176.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.176.0...controlplane@0.176.1) (2025-11-29)
+
+### Bug Fixes
+
+* import from wrong package ([#2382](https://github.com/wundergraph/cosmo/issues/2382)) ([2501fba](https://github.com/wundergraph/cosmo/commit/2501fba7951ac5b60f0e7bbe6a69e391f45532a3)) (@wilsonrivera)
+
+# [0.176.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.175.1...controlplane@0.176.0) (2025-11-29)
+
+### Features
+
+* subgraph check extensions ([#2281](https://github.com/wundergraph/cosmo/issues/2281)) ([c190b5a](https://github.com/wundergraph/cosmo/commit/c190b5ad19f9fd8f7a67317a29fe845d475dbf10)) (@wilsonrivera)
+
 ## [0.175.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.175.0...controlplane@0.175.1) (2025-11-27)
 
 ### Bug Fixes

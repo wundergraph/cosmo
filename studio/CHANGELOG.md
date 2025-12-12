@@ -4,6 +4,45 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.146.0](https://github.com/wundergraph/cosmo/compare/studio@0.145.1...studio@0.146.0) (2025-12-10)
+
+### Features
+
+* enable `Vercel's` toolbar on production ([#2396](https://github.com/wundergraph/cosmo/issues/2396)) ([68badab](https://github.com/wundergraph/cosmo/commit/68badab590db6091220dfa59d59d9207db85b96c)) (@wilsonrivera)
+* improve organization creation and update validation ([#2394](https://github.com/wundergraph/cosmo/issues/2394)) ([f8b2e59](https://github.com/wundergraph/cosmo/commit/f8b2e59392160f40b098cd215ce4a371b1dd5fb3)) (@wilsonrivera)
+
+## [0.145.1](https://github.com/wundergraph/cosmo/compare/studio@0.145.0...studio@0.145.1) (2025-12-04)
+
+### Bug Fixes
+
+* limit the url of analytics pages to a max of 10k characters or 10kb ([#2383](https://github.com/wundergraph/cosmo/issues/2383)) ([44916c7](https://github.com/wundergraph/cosmo/commit/44916c79ce5d17064e50ccdccb938af276a068e0)) (@JivusAyrus)
+* validate organization ownership for fetched proposals and proposal details ([#2389](https://github.com/wundergraph/cosmo/issues/2389)) ([395a5f5](https://github.com/wundergraph/cosmo/commit/395a5f5236a828c6e2038690e4df597f35f106fc)) (@JivusAyrus)
+
+# [0.145.0](https://github.com/wundergraph/cosmo/compare/studio@0.144.0...studio@0.145.0) (2025-12-03)
+
+### Features
+
+* sanitize readme content to prevent XSS ([#2390](https://github.com/wundergraph/cosmo/issues/2390)) ([20cd6cb](https://github.com/wundergraph/cosmo/commit/20cd6cba05f7eae6db75f6160c6844e42f349712)) (@wilsonrivera)
+* update `next` ([#2391](https://github.com/wundergraph/cosmo/issues/2391)) ([5683e0f](https://github.com/wundergraph/cosmo/commit/5683e0f33927cba7d93bc6a1bf9b7bda822081a7)) (@wilsonrivera)
+
+# [0.144.0](https://github.com/wundergraph/cosmo/compare/studio@0.143.0...studio@0.144.0) (2025-12-03)
+
+### Features
+
+* add deprecation reason to deprecated fields table in op view ([#2386](https://github.com/wundergraph/cosmo/issues/2386)) ([00cad53](https://github.com/wundergraph/cosmo/commit/00cad53cb3d2a600fe15d3cc632e262f5b791ab9)) (@JivusAyrus)
+
+# [0.143.0](https://github.com/wundergraph/cosmo/compare/studio@0.142.0...studio@0.143.0) (2025-12-03)
+
+### Features
+
+* update `zod` ([#2384](https://github.com/wundergraph/cosmo/issues/2384)) ([53a2c0c](https://github.com/wundergraph/cosmo/commit/53a2c0ca0f3f933fc9d11fbad4ac066e93d01ff9)) (@wilsonrivera)
+
+# [0.142.0](https://github.com/wundergraph/cosmo/compare/studio@0.141.0...studio@0.142.0) (2025-11-29)
+
+### Features
+
+* subgraph check extensions ([#2281](https://github.com/wundergraph/cosmo/issues/2281)) ([c190b5a](https://github.com/wundergraph/cosmo/commit/c190b5ad19f9fd8f7a67317a29fe845d475dbf10)) (@wilsonrivera)
+
 # [0.141.0](https://github.com/wundergraph/cosmo/compare/studio@0.140.1...studio@0.141.0) (2025-11-27)
 
 ### Features

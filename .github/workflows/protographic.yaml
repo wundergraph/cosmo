@@ -4,7 +4,7 @@ on:
     paths:
       - 'pnpm-lock.yaml'
       - "protographic/**/*"
-      - ".github/workflows/protographic-ci.yaml"
+      - ".github/workflows/protographic.yaml"
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}
@@ -36,7 +36,17 @@ jobs:
         run: pnpm run --filter ./connect --filter ./protographic build
 
       - name: Test
-        run: pnpm run --filter ./protographic test
+        run: pnpm run --filter ./protographic test:coverage
 
       - name: Lint
         run: pnpm run --filter ./protographic lint
+
+      - name: Upload integration results to Codecov
+        uses: ./.github/actions/codecov-upload-pr
+        with:
+          artifact-name: protographic-tests-coverage
+          coverage-path: |
+            protographic/coverage/clover.xml
+            protographic/coverage/coverage-final.json
+          retention-days: 14
+          codecov-token: ${{ secrets.CODECOV_TOKEN }}

@@ -45,10 +45,20 @@ jobs:
         run: pnpm run --filter ./composition --filter ./connect --filter ./shared build
 
       - name: Test
-        run: pnpm run --filter composition test
+        run: pnpm run --filter composition test:coverage
 
       - name: Lint
         run: pnpm run --filter composition lint
+
+      - name: Upload integration results to Codecov
+        uses: ./.github/actions/codecov-upload-pr
+        with:
+          artifact-name: composition-tests-coverage
+          coverage-path: |
+            composition/coverage/clover.xml
+            composition/coverage/coverage-final.json
+          retention-days: 14
+          codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Run linter on composition-go
         uses: ./.github/actions/go-linter
@@ -56,9 +66,19 @@ jobs:
           working-directory: ./composition-go
 
       - name: Test Go library
-        run: go test
+        run: go test -coverprofile=coverage_normal.out -coverpkg=github.com/wundergraph/cosmo/composition-go/...
         working-directory: composition-go
 
       - name: Test Go library with V8
-        run: go test -tags wg_composition_v8
+        run: go test -tags wg_composition_v8 -coverprofile=coverage_v8.out -coverpkg=github.com/wundergraph/cosmo/composition-go/...
         working-directory: composition-go
+
+      - name: Upload integration results to Codecov
+        uses: ./.github/actions/codecov-upload-pr
+        with:
+          artifact-name: composition-go-tests-coverage
+          coverage-path: |
+            composition-go/coverage_normal.out
+            composition-go/coverage_v8.out
+          retention-days: 14
+          codecov-token: ${{ secrets.CODECOV_TOKEN }}

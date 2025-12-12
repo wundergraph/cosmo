@@ -153,18 +153,28 @@ describe('BreakingChanges', () => {
           changeType: SchemaChangeType.TYPE_ADDED,
           path: 'openfed__FieldSet',
           isBreaking: false,
+          meta: {
+            addedTypeName: 'openfed__FieldSet',
+          },
         },
         {
           message: "Directive 'key' was added to object 'User'",
           changeType: SchemaChangeType.DIRECTIVE_USAGE_OBJECT_ADDED,
           path: 'User.key',
           isBreaking: false,
+          meta: {
+            addedDirectiveName: 'key',
+            objectName: 'User',
+          },
         },
         {
           message: "Directive 'key' was added",
           changeType: SchemaChangeType.DIRECTIVE_ADDED,
           path: '@key',
           isBreaking: false,
+          meta: {
+            addedDirectiveName: 'key',
+          },
         },
       ]);
     }

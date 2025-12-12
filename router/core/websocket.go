@@ -910,18 +910,21 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 		opContext.normalizationTime = time.Since(startNormalization)
 		return nil, nil, err
 	}
-
 	opContext.normalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
 
-	if _, err := operationKit.NormalizeVariables(); err != nil {
+	cached, _, err := operationKit.NormalizeVariables()
+	if err != nil {
 		opContext.normalizationTime = time.Since(startNormalization)
 		return nil, nil, err
 	}
+	opContext.variablesNormalizationCacheHit = cached
 
-	if err := operationKit.RemapVariables(h.disableVariablesRemapping); err != nil {
+	cached, err = operationKit.RemapVariables(h.disableVariablesRemapping)
+	if err != nil {
 		opContext.normalizationTime = time.Since(startNormalization)
 		return nil, nil, err
 	}
+	opContext.variablesRemappingCacheHit = cached
 
 	opContext.hash = operationKit.parsedOperation.ID
 	opContext.internalHash = operationKit.parsedOperation.InternalID
@@ -1021,20 +1024,6 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 			return
 		}
 	}
-	resolveCtx := &resolve.Context{
-		Variables: operationCtx.Variables(),
-		Request: resolve.Request{
-			Header: registration.clientRequest.Header,
-			ID:     h.initRequestID,
-		},
-		RenameTypeNames: h.graphqlHandler.executor.RenameTypeNames,
-		RemapVariables:  operationCtx.remapVariables,
-		TracingOptions:  operationCtx.traceOptions,
-		Extensions:      operationCtx.extensions,
-	}
-	if h.forwardInitialPayload && operationCtx.initialPayload != nil {
-		resolveCtx.InitialPayload = operationCtx.initialPayload
-	}
 
 	reqContext := buildRequestContext(requestContextOptions{
 		operationContext:    operationCtx,
@@ -1047,7 +1036,22 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 	if origCtx := getRequestContext(h.request.Context()); origCtx != nil {
 		reqContext.expressionContext = *origCtx.expressionContext.Clone()
 	}
-	resolveCtx = resolveCtx.WithContext(withRequestContext(h.ctx, reqContext))
+
+	resolveCtx := resolve.NewContext(withRequestContext(h.ctx, reqContext))
+	resolveCtx.Variables = operationCtx.Variables()
+	resolveCtx.Request = resolve.Request{
+		Header: registration.clientRequest.Header,
+		ID:     h.initRequestID,
+	}
+	resolveCtx.RenameTypeNames = h.graphqlHandler.executor.RenameTypeNames
+	resolveCtx.RemapVariables = operationCtx.remapVariables
+	resolveCtx.TracingOptions = operationCtx.traceOptions
+	resolveCtx.Extensions = operationCtx.extensions
+
+	if h.forwardInitialPayload && operationCtx.initialPayload != nil {
+		resolveCtx.InitialPayload = operationCtx.initialPayload
+	}
+
 	if h.graphqlHandler.authorizer != nil {
 		resolveCtx = WithAuthorizationExtension(resolveCtx)
 		resolveCtx.SetAuthorizer(h.graphqlHandler.authorizer)

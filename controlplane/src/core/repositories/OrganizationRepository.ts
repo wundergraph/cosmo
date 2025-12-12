@@ -131,7 +131,7 @@ export class OrganizationRepository {
       .from(organizations)
       .leftJoin(organizationBilling, eq(organizations.id, organizationBilling.organizationId))
       .leftJoin(billingSubscriptions, eq(organizations.id, billingSubscriptions.organizationId))
-      .where(eq(organizations.slug, slug))
+      .where(eq(sql`lower(${organizations.slug})`, slug.toLowerCase()))
       .limit(1)
       .execute();
 
@@ -1010,6 +1010,9 @@ export class OrganizationRepository {
         const blobStorageDirectory = `${organizationId}/${graph.id}`;
         blobPromises.push(blobStorage.removeDirectory({ key: blobStorageDirectory }));
       }
+
+      blobPromises.push(blobStorage.removeDirectory({ key: `${organizationId}/subgraph_checks` }));
+
       await Promise.allSettled(blobPromises);
 
       // Delete organization from db
@@ -1393,6 +1396,7 @@ export class OrganizationRepository {
       scim: false,
       'cache-warmer': false,
       proposals: false,
+      'subgraph-check-extensions': false,
     };
 
     for (const feature of features) {
