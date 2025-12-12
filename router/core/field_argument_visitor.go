@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/wundergraph/astjson"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvisitor"
@@ -27,6 +28,10 @@ func (v *fieldArgumentsVisitor) EnterDocument(operation, definition *ast.Documen
 }
 
 func (v *fieldArgumentsVisitor) EnterArgument(ref int) {
+	if len(v.walker.Ancestors) == 0 {
+		return
+	}
+
 	// skip if we don't deal with field arguments (e.g. directive arguments)
 	anc := v.walker.Ancestors[len(v.walker.Ancestors)-1]
 	if anc.Kind != ast.NodeKindField {
@@ -95,6 +100,10 @@ func (v *fieldArgumentsVisitor) getArgValueFromDoc(val ast.Value) (*astjson.Valu
 }
 
 func (v *fieldArgumentsVisitor) getArgValueFromVars(val ast.Value) (*astjson.Value, error) {
+	if v.variables == nil {
+		return nil, errors.New("value kind is of type 'variable' but no variables are set")
+	}
+
 	varName := v.operation.VariableValueNameString(val.Ref)
 	originalVarName := varName
 	if v.remapVariables != nil {
@@ -117,12 +126,17 @@ type mapFieldArgumentsOpts struct {
 func mapFieldArguments(opts mapFieldArgumentsOpts) Arguments {
 	walker := astvisitor.NewWalker(48)
 
+	logger := opts.logger
+	if logger != nil {
+		logger = zap.NewNop()
+	}
+
 	visitor := &fieldArgumentsVisitor{
 		walker:         &walker,
 		variables:      opts.vars,
 		remapVariables: opts.remapVariables,
 		fieldArguments: make(map[string]map[string]*astjson.Value),
-		logger:         opts.logger,
+		logger:         logger,
 	}
 
 	walker.RegisterEnterDocumentVisitor(visitor)

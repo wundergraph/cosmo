@@ -911,6 +911,15 @@ func (h *PreHandler) handleOperation(w http.ResponseWriter, req *http.Request, v
 	requestContext.operation.content = operationKit.parsedOperation.NormalizedRepresentation
 	requestContext.operation.variables, err = variablesParser.ParseBytes(operationKit.parsedOperation.Request.Variables)
 
+	if err != nil {
+		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
+		if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
+			httpOperation.traceTimings.EndNormalize()
+		}
+		engineNormalizeSpan.End()
+		return err
+	}
+
 	if h.mapFieldArguments {
 		requestContext.operation.fieldArguments = mapFieldArguments(mapFieldArgumentsOpts{
 			operation:      operationKit.kit.doc,
@@ -921,14 +930,6 @@ func (h *PreHandler) handleOperation(w http.ResponseWriter, req *http.Request, v
 		})
 	}
 
-	if err != nil {
-		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
-		if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
-			httpOperation.traceTimings.EndNormalize()
-		}
-		engineNormalizeSpan.End()
-		return err
-	}
 	requestContext.operation.normalizationTime = time.Since(startNormalization)
 	requestContext.expressionContext.Request.Operation.NormalizationTime = requestContext.operation.normalizationTime
 	setTelemetryAttributes(normalizeCtx, requestContext, expr.BucketNormalizationTime)
