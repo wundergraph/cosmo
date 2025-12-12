@@ -4,6 +4,7 @@ import axios from 'axios';
 import { eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { addSeconds } from 'date-fns';
 import { PKCECodeChallenge, UserInfoEndpointResponse, UserSession } from '../types/index.js';
 import * as schema from '../db/schema.js';
 import { sessions } from '../db/schema.js';
@@ -38,7 +39,7 @@ export type AuthUtilsOptions = {
   };
 };
 
-const tokenExpirationWindowSkew = 60 * 5;
+const tokenExpirationWindowSkew = 60 * 5; // 5 minutes
 const pkceMaxAgeSec = 60 * 15; // 15 minutes
 const pkceCodeAlgorithm = 'S256';
 const scope = 'openid profile email';
@@ -298,6 +299,18 @@ export default class AuthUtils {
     };
   }
 
+  public static isSessionExpired(session: { createdAt: Date; updatedAt: Date | null; expiresAt: Date }): boolean {
+    const now = new Date();
+    if (session.expiresAt <= now) {
+      // Session reached end-of-life
+      return true;
+    }
+
+    const sessionLastUpdatedOrCreation = session.updatedAt ?? session.createdAt;
+    const sessionExpiresAt = addSeconds(sessionLastUpdatedOrCreation, DEFAULT_SESSION_MAX_AGE_SEC);
+    return sessionExpiresAt <= now;
+  }
+
   /**
    * renewSession renews the user session if the access token is expired.
    * If the refresh token is expired, an error is thrown.
@@ -327,30 +340,27 @@ export default class AuthUtils {
         throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Refresh token expired');
       }
 
-      // The session expiration is relative to the creation time
-      const baseMs = userSession.createdAt.getTime();
-      const expiresAtMs = baseMs + DEFAULT_SESSION_MAX_AGE_SEC * 1000;
-      const sessionExpiresDate = new Date(expiresAtMs);
-      const remainingSeconds = Math.max(0, Math.floor((expiresAtMs - Date.now()) / 1000));
-
-      if (remainingSeconds <= 0) {
+      // The session expiration is relative
+      if (AuthUtils.isSessionExpired(userSession)) {
         // Absolute session lifetime has elapsed; do not renew.
         throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Session expired');
       }
 
       // Refresh the access token with the refresh token
       // The method will throw an error if the request fails
+      const now = new Date();
       const { accessToken, refreshToken, idToken } = await this.refreshToken(userSession.refreshToken);
 
       // Update active session
+      const expiresAt = addSeconds(now, DEFAULT_SESSION_MAX_AGE_SEC);
       const updatedSessions = await this.db
         .update(sessions)
         .set({
           accessToken,
           refreshToken,
-          expiresAt: sessionExpiresDate,
+          expiresAt,
           idToken,
-          updatedAt: new Date(),
+          updatedAt: now,
         })
         .where(eq(sessions.id, sessionId))
         .returning()
@@ -363,7 +373,7 @@ export default class AuthUtils {
       const newUserSession = updatedSessions[0];
 
       const jwt = await encrypt<UserSession>({
-        maxAgeInSeconds: remainingSeconds,
+        maxAgeInSeconds: DEFAULT_SESSION_MAX_AGE_SEC,
         token: {
           iss: userSession.userId,
           sessionId: newUserSession.id,
@@ -372,7 +382,7 @@ export default class AuthUtils {
       });
 
       // Update the session cookie
-      this.createSessionCookie(res, jwt, sessionExpiresDate);
+      this.createSessionCookie(res, jwt, expiresAt);
 
       return newUserSession;
     }
