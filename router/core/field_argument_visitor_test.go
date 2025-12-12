@@ -6,10 +6,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/astjson"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
 )
 
 func TestMapFieldArguments(t *testing.T) {
@@ -287,4 +291,69 @@ func TestMapFieldArguments(t *testing.T) {
 			tc.assertions(t, result)
 		})
 	}
+}
+
+func TestMapFieldArguments_InvalidValueLogsWarning(t *testing.T) {
+	// This test verifies that when resolveArgValue fails (e.g., due to an invalid AST value),
+	// a warning is logged and the argument is skipped (not added to the result).
+
+	schema := `
+		type Query {
+			user(id: ID!): User
+		}
+		type User {
+			id: ID!
+		}
+	`
+
+	operation := `
+		query {
+			user(id: "123") {
+				id
+			}
+		}
+	`
+
+	// Parse schema
+	schemaDef, report := astparser.ParseGraphqlDocumentString(schema)
+	require.False(t, report.HasErrors(), "failed to parse schema")
+	err := asttransform.MergeDefinitionWithBaseSchema(&schemaDef)
+	require.NoError(t, err)
+
+	// Parse operation WITHOUT normalization to keep the inline literal
+	op, report := astparser.ParseGraphqlDocumentString(operation)
+	require.False(t, report.HasErrors(), "failed to parse operation")
+
+	// Corrupt the AST: set an invalid value kind that will cause ValueToJSON to fail
+	// Find the argument and set its value to an invalid kind
+	for i := range op.Arguments {
+		// Set to an invalid/unhandled value kind
+		op.Arguments[i].Value.Kind = ast.ValueKind(255) // Invalid kind
+	}
+
+	// Set up observed logger to capture warnings
+	observedCore, observedLogs := observer.New(zapcore.WarnLevel)
+	logger := zap.New(observedCore)
+
+	// Parse empty variables
+	vars, err := astjson.ParseBytes([]byte(`{}`))
+	require.NoError(t, err)
+
+	// Call mapFieldArguments - should log a warning due to invalid value
+	result := mapFieldArguments(mapFieldArgumentsOpts{
+		operation:  &op,
+		definition: &schemaDef,
+		vars:       vars,
+		logger:     logger,
+	})
+
+	// Verify warning was logged
+	logs := observedLogs.All()
+	require.Len(t, logs, 1, "expected exactly one warning log")
+	assert.Equal(t, "failed to resolve argument value", logs[0].Message)
+	assert.Equal(t, zapcore.WarnLevel, logs[0].Level)
+
+	// Verify the argument was skipped (not added to result)
+	idArg := result.Get("user", "id")
+	assert.Nil(t, idArg, "expected argument to be skipped due to error")
 }

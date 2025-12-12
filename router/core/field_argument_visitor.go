@@ -18,6 +18,7 @@ type fieldArgumentsVisitor struct {
 	variables      *astjson.Value
 	remapVariables map[string]string
 	fieldArguments map[string]map[string]*astjson.Value
+	logger         *zap.Logger
 }
 
 func (v *fieldArgumentsVisitor) EnterDocument(operation, definition *ast.Document) {
@@ -43,7 +44,9 @@ func (v *fieldArgumentsVisitor) EnterArgument(ref int) {
 
 	resolvedArgVal, err := v.resolveArgValue(argVal)
 	if err != nil {
-		// TODO: Log error somehow
+		v.logger.
+			With(zap.String("fieldPath", fieldPath), zap.String("argName", argName)).
+			Warn("failed to resolve argument value", zap.Error(err))
 		return
 	}
 
@@ -119,6 +122,7 @@ func mapFieldArguments(opts mapFieldArgumentsOpts) Arguments {
 		variables:      opts.vars,
 		remapVariables: opts.remapVariables,
 		fieldArguments: make(map[string]map[string]*astjson.Value),
+		logger:         opts.logger,
 	}
 
 	walker.RegisterEnterDocumentVisitor(visitor)
