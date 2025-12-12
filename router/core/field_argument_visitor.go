@@ -87,7 +87,7 @@ func (v *fieldArgumentsVisitor) fieldResponseKey(fieldRef int) string {
 func (v *fieldArgumentsVisitor) resolveArgValue(val ast.Value) (*astjson.Value, error) {
 	if val.Kind != ast.ValueKindVariable {
 		// Normally we never hit this code path because val.Kind should always be ast.ValueKindVariable.
-		// The operation parser automically creates variables and maps them to arguments,
+		// The operation parser automatically creates variables and maps them to arguments,
 		// even if no initial variables are provided.
 		// We should still be able to deal with arguments directly,
 		// if for some reason they are not mapped to variables.
