@@ -12,18 +12,17 @@ RUN curl -LJO https://github.com/open-telemetry/opentelemetry-collector/releases
 
 COPY ./otelcol-builder.yaml ./otelcol-builder.yaml
 
-RUN ./ocb --config otelcol-builder.yaml \
+RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} ./ocb --config otelcol-builder.yaml \
     && chmod +x /app/otelcol-dev/otelcol \
     && /app/otelcol-dev/otelcol --version
 
-FROM --platform=${BUILDPLATFORM} golang:1.25
+FROM --platform=${TARGETPLATFORM} golang:1.25
 
 COPY ./otel-config.yaml /etc/otel-config.yaml
 COPY --from=builder /app/otelcol-dev/otelcol /otelcol
 
 # smoke test
 RUN /otelcol --version
-
 
 ENTRYPOINT ["/otelcol"]
 CMD ["--config", "/etc/otel-config.yaml"]
