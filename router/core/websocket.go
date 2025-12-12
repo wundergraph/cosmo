@@ -1037,7 +1037,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 		resolveCtx.InitialPayload = operationCtx.initialPayload
 	}
 
-	if origCtx := getRequestContext(h.request.Context()); origCtx != nil {
+	if origCtx := getRequestContext(h.request.Context()); origCtx != nil && h.graphqlHandler.headerPropagation != nil {
 		reqContext.expressionContext = *origCtx.expressionContext.Clone()
 		resolveCtx.SubgraphHeadersBuilder = SubgraphHeadersBuilder(
 			origCtx,
