@@ -357,3 +357,58 @@ func TestMapFieldArguments_InvalidValueLogsWarning(t *testing.T) {
 	idArg := result.Get("user", "id")
 	assert.Nil(t, idArg, "expected argument to be skipped due to error")
 }
+
+func TestMapFieldArguments_InlineLiteralWithoutNormalization(t *testing.T) {
+	// This test verifies that inline literal arguments are correctly extracted
+	// via getArgValueFromDoc when normalization is skipped.
+	// Normally, normalization converts inline literals to variables, but this test
+	// exercises the code path for non-variable argument values.
+
+	schema := `
+		type Query {
+			user(id: ID!, active: Boolean!): User
+		}
+		type User {
+			id: ID!
+		}
+	`
+
+	operation := `
+		query {
+			user(id: "inline-123", active: true) {
+				id
+			}
+		}
+	`
+
+	// Parse schema
+	schemaDef, report := astparser.ParseGraphqlDocumentString(schema)
+	require.False(t, report.HasErrors(), "failed to parse schema")
+	err := asttransform.MergeDefinitionWithBaseSchema(&schemaDef)
+	require.NoError(t, err)
+
+	// Parse operation WITHOUT normalization to keep inline literals as non-variable values
+	op, report := astparser.ParseGraphqlDocumentString(operation)
+	require.False(t, report.HasErrors(), "failed to parse operation")
+
+	// Parse empty variables (inline values are in the AST, not in variables)
+	vars, err := astjson.ParseBytes([]byte(`{}`))
+	require.NoError(t, err)
+
+	// Call mapFieldArguments - should extract values via getArgValueFromDoc
+	result := mapFieldArguments(mapFieldArgumentsOpts{
+		operation:  &op,
+		definition: &schemaDef,
+		vars:       vars,
+	})
+
+	// Verify the string argument was correctly extracted
+	idArg := result.Get("user", "id")
+	require.NotNil(t, idArg, "expected 'id' argument to be accessible")
+	assert.Equal(t, "inline-123", string(idArg.GetStringBytes()))
+
+	// Verify the boolean argument was correctly extracted
+	activeArg := result.Get("user", "active")
+	require.NotNil(t, activeArg, "expected 'active' argument to be accessible")
+	assert.True(t, activeArg.GetBool())
+}
