@@ -1986,7 +1986,10 @@
                     "minimum": 1
                   },
                   "period": {
-                    "type": "string"
+                    "type": "string",
+                    "duration": {
+                      "minimum": "1s"
+                    }
                   }
                 }
               }
