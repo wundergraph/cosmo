@@ -61,7 +61,7 @@ jobs:
           coverage-path: |
             cli/coverage/clover.xml
             cli/coverage/coverage-final.json
-          retention-days: 7
+          retention-days: 14
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
   build_test_node_matrix:
