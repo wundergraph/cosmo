@@ -233,6 +233,11 @@ func (s *Server) Stop(ctx context.Context) error {
 
 // Reload reloads the server configuration and operations
 func (s *Server) Reload() error {
+	// Check if server has been started
+	if s.httpServer == nil {
+		return fmt.Errorf("server not started; call Start before Reload")
+	}
+
 	s.logger.Info("reloading ConnectRPC server")
 
 	// Discover services from the services directory
