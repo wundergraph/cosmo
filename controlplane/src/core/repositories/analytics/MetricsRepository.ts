@@ -85,7 +85,7 @@ export class MetricsRepository {
       };
       return this.client.queryPromise<{ value: number | null }>(
         `
-        SELECT round(sum(total) / {multiplier:UInt32}, 4) AS value FROM (
+        SELECT round(sum(total) / {multiplier:Float64}, 4) AS value FROM (
         SELECT
           toDateTime({startDate:UInt32}) AS startDate,
           toDateTime({endDate:UInt32}) AS endDate,
@@ -119,7 +119,7 @@ export class MetricsRepository {
       WITH
         toDateTime({startDate:UInt32}) AS startDate,
         toDateTime({endDate:UInt32}) AS endDate
-      SELECT hash, name, isPersisted, round(sum(total) / {multiplier:UInt32}, 4) AS value FROM (
+      SELECT hash, name, isPersisted, round(sum(total) / {multiplier:Float64}, 4) AS value FROM (
         SELECT
           Timestamp as timestamp,
           OperationHash as hash,
