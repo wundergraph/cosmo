@@ -14,25 +14,25 @@ coverage:
 flags:
   router:
     paths:
-      - router
+      - router/
     carryforward: true
   cli:
     paths:
-      - cli
+      - cli/
     carryforward: true
   studio:
     paths:
-      - studio
+      - studio/
     carryforward: true
   graphqlmetrics:
     paths:
-      - graphqlmetrics
+      - graphqlmetrics/
     carryforward: true
   controlplane:
     paths:
-      - controlplane
+      - controlplane/
     carryforward: true
   composition:
     paths:
-      - composition
+      - composition/
     carryforward: true
