@@ -495,7 +495,8 @@ func (h *RPCHandler) executeGraphQL(ctx context.Context, query string, variables
 	// Check if we have GraphQL errors
 	if len(graphqlResponse.Errors) > 0 {
 		// Determine if this is CRITICAL or PARTIAL based on data presence
-		hasData := len(graphqlResponse.Data) > 0 && string(graphqlResponse.Data) != "null" && string(graphqlResponse.Data) != "{}"
+		// An empty object {} is valid data in GraphQL (e.g., when all fields are nullable and null)
+		hasData := len(graphqlResponse.Data) > 0 && string(graphqlResponse.Data) != "null"
 
 		if !hasData {
 			// CRITICAL: Errors with no data - complete failure
