@@ -49,19 +49,22 @@ export function NamespaceSelector({ isViewingGraphOrSubgraph, truncateNamespace 
   return (
     <div className="flex items-center justify-start">
       {isViewingGraphOrSubgraph && (
-        <Link
-          href={{
-            pathname,
-            query: { organizationSlug, namespace: namespace.name },
-          }}
-          className={cn(
-            "bg-primary/15 hover:bg-primary/30 text-primary transition-colors duration-150 pl-3 pr-2 py-1.5 rounded-l-lg text-sm flex-shrink-0",
-            truncateNamespace && "max-w-[180px] lg:max-w-xs truncate"
-          )}
-          onClick={() => setNamespace(namespace.name, false)}
-        >
-          {namespace.name}
-        </Link>
+        <>
+          <Link
+            href={{
+              pathname,
+              query: { organizationSlug, namespace: namespace.name },
+            }}
+            className={cn(
+              "bg-primary/15 hover:bg-primary/30 text-primary transition-colors duration-150 pl-3 pr-2 py-1.5 rounded-l-lg text-sm flex-shrink-0",
+              truncateNamespace && "max-w-[180px] lg:max-w-xs truncate"
+            )}
+            onClick={() => setNamespace(namespace.name, false)}
+          >
+            {namespace.name}
+          </Link>
+          <div className="w-[1px] h-8 bg-primary/30" />
+        </>
       )}
       <Popover
         modal
@@ -81,7 +84,7 @@ export function NamespaceSelector({ isViewingGraphOrSubgraph, truncateNamespace 
               "bg-primary/15 hover:bg-primary/30 text-primary transition-colors duration-150 text-sm flex-shrink-0 border-none outline-none",
               isViewingGraphOrSubgraph
                 ? "rounded-r-lg pl-2 pr-3 py-2"
-                : "flex justify-start items-center gap-4 rounded-lg px-3 py-1.5"
+                : "flex justify-start items-center gap-4 rounded-lg px-3 py-1.5",
             )}
           >
             {!isViewingGraphOrSubgraph && (

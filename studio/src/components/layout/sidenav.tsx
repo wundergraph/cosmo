@@ -88,8 +88,8 @@ const MobileNav = () => {
 const Organizations = () => {
   const user = useContext(UserContext);
   const router = useRouter();
-  const currentPage = router.asPath.split("/")[2];
-  const isOrganizationRoot = router.asPath.split("/").length === 3;
+  const pathSegments = router.pathname.substring(1).split('/');
+  const isOrganizationRoot = pathSegments.length === 2;
 
   if (!user?.currentOrganization) return null;
 
@@ -112,18 +112,23 @@ const Organizations = () => {
               (org) => org.slug === orgSlug,
             );
             if (currentOrg) {
-              router.replace(
-                isOrganizationRoot && currentPage !== "invitations"
-                  ? `/${currentOrg.slug}/${currentPage}`
-                  : `/${currentOrg.slug}`,
-              );
+              router.replace({
+                pathname: isOrganizationRoot &&
+                  pathSegments[0]?.toLowerCase() !== "account" &&
+                  pathSegments[1]?.toLowerCase() !== "invitations"
+                  ? `/[organizationSlug]/${pathSegments[1]}`
+                  : `/[organizationSlug]`,
+                query: {
+                  organizationSlug: currentOrg.slug,
+                },
+              });
             }
           }}
         >
           {user?.organizations?.map(({ name, slug }) => {
             return (
-              <DropdownMenuRadioItem className="pl-2" key={slug} value={slug}>
-                {name}
+              <DropdownMenuRadioItem className="pl-2 gap-x-2" key={slug} value={slug}>
+                <span className="w-full">{name}</span>
               </DropdownMenuRadioItem>
             );
           })}
@@ -199,7 +204,7 @@ export const SideNav = (props: SideNavLayoutProps) => {
               const isCurrent =
                 item.href &&
                 isActive(
-                  encodeURI(item.href),
+                  encodeURI(item.href.split("?")[0]),
                   router.asPath.split("?")[0],
                   item.matchExact,
                 );
