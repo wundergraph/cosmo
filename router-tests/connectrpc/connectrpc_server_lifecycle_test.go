@@ -2,6 +2,7 @@ package integration
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -50,7 +51,7 @@ func TestConnectRPC_ServerLifecycle_StartStopReload(t *testing.T) {
 		assert.Contains(t, err.Error(), "server is not started")
 	})
 
-	t.Run("concurrent start attempts succeed", func(t *testing.T) {
+	t.Run("concurrent start attempts: exactly one succeeds, others fail with port conflict", func(t *testing.T) {
 		ts := NewTestConnectRPCServer(t, ConnectRPCServerOptions{})
 
 		var wg sync.WaitGroup
@@ -67,14 +68,20 @@ func TestConnectRPC_ServerLifecycle_StartStopReload(t *testing.T) {
 
 		wg.Wait()
 
-		// At least one should succeed
+		// Count successes and port conflict failures
 		successCount := 0
+		portConflictCount := 0
 		for _, err := range errors {
 			if err == nil {
 				successCount++
+			} else if strings.Contains(err.Error(), "address already in use") {
+				portConflictCount++
 			}
 		}
-		assert.GreaterOrEqual(t, successCount, 1, "at least one start should succeed")
+
+		// Exactly one should succeed, the other two should fail with port conflicts
+		assert.Equal(t, 1, successCount, "exactly one start should succeed")
+		assert.Equal(t, 2, portConflictCount, "two starts should fail with port conflict")
 	})
 }
 
