@@ -3,6 +3,7 @@ package connectrpc
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/jhump/protoreflect/desc"
@@ -251,7 +252,13 @@ func (v *MessageValidator) validateScalarValue(field *desc.FieldDescriptor, valu
 				}
 			}
 		case string:
-			// String representation is valid for int64
+			// String representation is valid for int64, but must be parseable
+			if _, err := strconv.ParseInt(v, 10, 64); err != nil {
+				return &ValidationError{
+					Field:   fieldPath,
+					Message: fmt.Sprintf("Int64 cannot represent non-integer value: %v", value),
+				}
+			}
 		default:
 			return &ValidationError{
 				Field:   fieldPath,
@@ -286,7 +293,13 @@ func (v *MessageValidator) validateScalarValue(field *desc.FieldDescriptor, valu
 				}
 			}
 		case string:
-			// String representation is valid for uint64
+			// String representation is valid for uint64, but must be parseable
+			if _, err := strconv.ParseUint(v, 10, 64); err != nil {
+				return &ValidationError{
+					Field:   fieldPath,
+					Message: fmt.Sprintf("UInt64 cannot represent non-numeric value: %v", value),
+				}
+			}
 		default:
 			return &ValidationError{
 				Field:   fieldPath,
