@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.148.0](https://github.com/wundergraph/cosmo/compare/studio@0.147.0...studio@0.148.0) (2025-12-15)
+
+### Features
+
+* upgrade NextJS ([#2410](https://github.com/wundergraph/cosmo/issues/2410)) ([84c1ba4](https://github.com/wundergraph/cosmo/commit/84c1ba4694e8a90e04278ee58d5520282567d8ae)) (@wilsonrivera)
+
 # [0.147.0](https://github.com/wundergraph/cosmo/compare/studio@0.146.0...studio@0.147.0) (2025-12-15)
 
 ### Features
