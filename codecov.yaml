@@ -38,7 +38,7 @@ flags:
     carryforward: true
 
 comment:
-  layout: "diff, flags, files”
+  layout: "diff, flags, files"
   behavior: default
   require_changes: false
   require_base: no
