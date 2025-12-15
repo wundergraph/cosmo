@@ -71,6 +71,20 @@ func MockHTTPClient(statusCode int, responseBody string) *http.Client {
 	}
 }
 
+// registerOperationForTesting registers a single operation for a service in the registry.
+// This is a test-only helper that provides controlled access to the registry's internal state.
+func registerOperationForTesting(registry *OperationRegistry, serviceName, operationName string, op *schemaloader.Operation) {
+	registry.mu.Lock()
+	defer registry.mu.Unlock()
+
+	// Initialize service map if needed
+	if registry.operations[serviceName] == nil {
+		registry.operations[serviceName] = make(map[string]*schemaloader.Operation)
+	}
+
+	registry.operations[serviceName][operationName] = op
+}
+
 type mockRoundTripper struct {
 	statusCode   int
 	responseBody string
@@ -93,14 +107,11 @@ func NewTestRPCHandler(t *testing.T, protoLoader *ProtoLoader) *RPCHandler {
 
 	// Manually add test operations to the registry using service-scoped approach
 	serviceName := "employee.v1.EmployeeService"
-	if opRegistry.operations[serviceName] == nil {
-		opRegistry.operations[serviceName] = make(map[string]*schemaloader.Operation)
-	}
-	opRegistry.operations[serviceName]["GetEmployeeById"] = &schemaloader.Operation{
+	registerOperationForTesting(opRegistry, serviceName, "GetEmployeeById", &schemaloader.Operation{
 		Name:            "GetEmployeeById",
 		OperationType:   "query",
 		OperationString: "query GetEmployeeById($id: Int!) { employee(id: $id) { id name } }",
-	}
+	})
 
 	handler, err := NewRPCHandler(HandlerConfig{
 		GraphQLEndpoint:   "http://localhost:4000/graphql",
