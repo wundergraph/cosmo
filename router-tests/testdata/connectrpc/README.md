@@ -13,10 +13,10 @@ To add a new service for testing:
 
 ### Example Structure
 
-```
+```text
 services/
 └── myservice.v1/
-    ├── service.proto                    # Proto service definition
+    ├── service.proto                   # Proto service definition
     ├── QueryGetItem.graphql            # GraphQL query operation
     └── MutationCreateItem.graphql      # GraphQL mutation operation
 ```
