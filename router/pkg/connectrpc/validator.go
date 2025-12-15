@@ -133,6 +133,29 @@ func (v *MessageValidator) validateFieldValue(field *desc.FieldDescriptor, value
 		return nil
 	}
 
+	// Handle map fields
+	if field.IsMap() {
+		mapData, ok := value.(map[string]any)
+		if !ok {
+			return &ValidationError{
+				Field:   fieldPath,
+				Message: fmt.Sprintf("expected object for map field, got %T", value),
+			}
+		}
+
+		// Get the map value field descriptor (index 1 is the value field in the map entry message)
+		mapValueField := field.GetMessageType().GetFields()[1]
+
+		// Validate each value in the map
+		for key, val := range mapData {
+			keyPath := fmt.Sprintf("%s[%s]", fieldPath, key)
+			if err := v.validateScalarOrMessageValue(mapValueField, val, keyPath); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
 	// Handle repeated fields (arrays)
 	if field.IsRepeated() {
 		arr, ok := value.([]any)
