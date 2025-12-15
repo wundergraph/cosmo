@@ -36,3 +36,11 @@ flags:
     paths:
       - composition/
     carryforward: true
+
+comment:
+  layout: "diff, flags, files”
+  behavior: default
+  require_changes: false
+  require_base: no # [yes :: must have a base report to post]
+  require_head: yes # [yes :: must have a head report to post]
+  show_carryforward_flags: false
