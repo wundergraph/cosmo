@@ -87,14 +87,20 @@ func (pl *ProtoLoader) LoadFromDirectory(dir string) error {
 
 	pl.logger.Info("found proto files", zap.Int("count", len(protoFiles)))
 
-	// Load each proto file
+	// Compute relative paths for all proto files
+	relativeFiles := make([]string, 0, len(protoFiles))
 	for _, protoFile := range protoFiles {
-		if err := pl.loadProtoFile(protoFile); err != nil {
-			pl.logger.Error("failed to load proto file",
-				zap.String("file", protoFile),
-				zap.Error(err))
-			return fmt.Errorf("failed to load proto file %s: %w", protoFile, err)
+		relPath, err := filepath.Rel(dir, protoFile)
+		if err != nil {
+			return fmt.Errorf("failed to compute relative path for %s: %w", protoFile, err)
 		}
+		relativeFiles = append(relativeFiles, relPath)
+	}
+
+	// Parse all files in a single batch with the root directory as import path
+	// This allows imports to resolve correctly across the entire tree
+	if err := pl.parseProtoFiles(dir, relativeFiles); err != nil {
+		return fmt.Errorf("failed to parse proto files: %w", err)
 	}
 
 	pl.logger.Info("successfully loaded proto files",
@@ -141,37 +147,45 @@ func (pl *ProtoLoader) LoadFromDirectories(dirs []string) error {
 			existingServices[serviceName] = true
 		}
 
-		// Load each proto file and track packages
+		// Compute relative paths for all proto files in this directory
+		relativeFiles := make([]string, 0, len(protoFiles))
 		for _, protoFile := range protoFiles {
-			if err := pl.loadProtoFile(protoFile); err != nil {
-				pl.logger.Error("failed to load proto file",
-					zap.String("file", protoFile),
-					zap.String("dir", dir),
-					zap.Error(err))
-				return fmt.Errorf("failed to load proto file %s from %s: %w", protoFile, dir, err)
+			relPath, err := filepath.Rel(dir, protoFile)
+			if err != nil {
+				return fmt.Errorf("failed to compute relative path for %s: %w", protoFile, err)
+			}
+			relativeFiles = append(relativeFiles, relPath)
+		}
+
+		// Parse all files from this directory in a single batch
+		// Use the directory as the import path so imports resolve correctly
+		if err := pl.parseProtoFiles(dir, relativeFiles); err != nil {
+			pl.logger.Error("failed to parse proto files",
+				zap.String("dir", dir),
+				zap.Error(err))
+			return fmt.Errorf("failed to parse proto files from %s: %w", dir, err)
+		}
+
+		// Validate package uniqueness for newly added services
+		for serviceName, service := range pl.services {
+			// Only check services that were just added in this batch
+			if existingServices[serviceName] {
+				continue
 			}
 
-			// Validate package uniqueness for newly added services
-			for serviceName, service := range pl.services {
-				// Only check services that were just added in this file
-				if existingServices[serviceName] {
-					continue
-				}
-
-				packageName := service.Package
-				if existingDir, exists := seenPackages[packageName]; exists && existingDir != dir {
-					return fmt.Errorf(
-						"duplicate proto package '%s' found in multiple directories: '%s' and '%s'. "+
-							"Proto package names must be unique across all services",
-						packageName, existingDir, dir)
-				}
-				seenPackages[packageName] = dir
-
-				pl.logger.Debug("registered proto package",
-					zap.String("package", packageName),
-					zap.String("dir", dir),
-					zap.String("service", service.FullName))
+			packageName := service.Package
+			if existingDir, exists := seenPackages[packageName]; exists && existingDir != dir {
+				return fmt.Errorf(
+					"duplicate proto package '%s' found in multiple directories: '%s' and '%s'. "+
+						"Proto package names must be unique across all services",
+					packageName, existingDir, dir)
 			}
+			seenPackages[packageName] = dir
+
+			pl.logger.Debug("registered proto package",
+				zap.String("package", packageName),
+				zap.String("dir", dir),
+				zap.String("service", service.FullName))
 		}
 	}
 
@@ -205,24 +219,24 @@ func (pl *ProtoLoader) findProtoFiles(dir string) ([]string, error) {
 	return protoFiles, nil
 }
 
-// loadProtoFile loads and parses a single proto file using protoparse
-func (pl *ProtoLoader) loadProtoFile(path string) error {
-	pl.logger.Debug("loading proto file", zap.String("path", path))
+// parseProtoFiles parses multiple proto files in a single batch using the root directory
+// as the import path. This allows imports to resolve correctly across the entire tree.
+func (pl *ProtoLoader) parseProtoFiles(rootDir string, relativeFilenames []string) error {
+	pl.logger.Debug("parsing proto files in batch",
+		zap.String("root_dir", rootDir),
+		zap.Int("file_count", len(relativeFilenames)))
 
-	// Get the directory containing the proto file for import resolution
-	dir := filepath.Dir(path)
-	filename := filepath.Base(path)
-
-	// Create a parser with the directory as import path
+	// Create a parser with the root directory as import path
+	// This allows imports to resolve across the entire directory tree
 	parser := protoparse.Parser{
-		ImportPaths:           []string{dir},
+		ImportPaths:           []string{rootDir},
 		IncludeSourceCodeInfo: true,
 	}
 
-	// Parse the proto file
-	fds, err := parser.ParseFiles(filename)
+	// Parse all files in a single batch
+	fds, err := parser.ParseFiles(relativeFilenames...)
 	if err != nil {
-		return fmt.Errorf("failed to parse proto file: %w", err)
+		return fmt.Errorf("failed to parse proto files: %w", err)
 	}
 
 	// Process each file descriptor
