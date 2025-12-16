@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.182.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.181.0...controlplane@0.182.0) (2025-12-16)
+
+### Features
+
+* validate session cookie ([#2406](https://github.com/wundergraph/cosmo/issues/2406)) ([13ec2dd](https://github.com/wundergraph/cosmo/commit/13ec2dd5240e52c7774d251db5fd79e23905f6c2)) (@wilsonrivera)
+
 # [0.181.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.180.0...controlplane@0.181.0) (2025-12-15)
 
 ### Bug Fixes
