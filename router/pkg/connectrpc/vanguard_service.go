@@ -223,8 +223,14 @@ func (vs *VanguardService) createServiceHandler(serviceName string, serviceDef *
 			if errors.As(err, &connectErr) {
 				vs.writeConnectError(w, connectErr, serviceName, methodName)
 			} else {
-				// Wrap non-Connect errors as Internal errors
-				connectErr := connect.NewError(connect.CodeInternal, err)
+				// Log the original error with full details for diagnostics
+				vs.logger.Error("internal error during RPC handling",
+					zap.String("service", serviceName),
+					zap.String("method", methodName),
+					zap.Error(err))
+				
+				// Return a sanitized error to the client to avoid leaking internal details
+				connectErr := connect.NewError(connect.CodeInternal, fmt.Errorf("internal server error"))
 				vs.writeConnectError(w, connectErr, serviceName, methodName)
 			}
 			return
