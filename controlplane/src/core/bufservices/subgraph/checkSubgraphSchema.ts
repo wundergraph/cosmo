@@ -28,6 +28,9 @@ import {
 } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 
+const defaultRowLimit = 50_000;
+const maxRowLimit = 100_000;
+
 export function checkSubgraphSchema(
   opts: RouterOptions,
   req: CheckSubgraphSchemaRequest,
@@ -252,7 +255,7 @@ export function checkSubgraphSchema(
     let limit = changeRetention?.limit ?? 7;
     limit = clamp(namespace?.checksTimeframeInDays ?? limit, 1, limit);
 
-    const returnLimit = clamp(req?.limit ?? 1, 1, 100_000);
+    const returnLimit = clamp(req.limit ?? defaultRowLimit, 1, maxRowLimit);
 
     const checkResult = await subgraphRepo.performSchemaCheck({
       actorId: authContext.userId,
