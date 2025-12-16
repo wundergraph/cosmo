@@ -86,6 +86,8 @@ func NewServer(config ServerConfig) (*Server, error) {
 		httpClient: httpClient,
 	}
 
+	startTime := time.Now()
+
 	// Discover services from the services directory
 	discoveredServices, err := DiscoverServices(ServiceDiscoveryConfig{
 		ServicesDir: config.ServicesDir,
@@ -94,9 +96,6 @@ func NewServer(config ServerConfig) (*Server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to discover services: %w", err)
 	}
-
-	server.logger.Info("discovered services",
-		zap.Int("count", len(discoveredServices)))
 
 	// Create proto loader first (needed by handler)
 	server.protoLoader = NewProtoLoader(server.logger)
@@ -107,13 +106,10 @@ func NewServer(config ServerConfig) (*Server, error) {
 	}
 
 	// Load proto files and operations for each discovered service
+	totalOperations := 0
+	packageServiceMap := make(map[string][]string) // package -> list of services
+	
 	for _, service := range discoveredServices {
-		server.logger.Info("loading service",
-			zap.String("service", service.FullName),
-			zap.String("dir", service.ServiceDir),
-			zap.Int("proto_files", len(service.ProtoFiles)),
-			zap.Int("operation_files", len(service.OperationFiles)))
-
 		// Load proto files for this service
 		if err := server.protoLoader.LoadFromDirectory(service.ServiceDir); err != nil {
 			return nil, fmt.Errorf("failed to load proto files for service %s: %w", service.FullName, err)
@@ -124,18 +120,15 @@ func NewServer(config ServerConfig) (*Server, error) {
 			if err := server.operationRegistry.LoadOperationsForService(service.FullName, service.OperationFiles); err != nil {
 				return nil, fmt.Errorf("failed to load operations for service %s: %w", service.FullName, err)
 			}
-			server.logger.Info("loaded operations for service",
-				zap.String("service", service.FullName),
-				zap.Int("count", server.operationRegistry.CountForService(service.FullName)))
+			totalOperations += server.operationRegistry.CountForService(service.FullName)
 		} else {
 			server.logger.Warn("no operations found for service",
 				zap.String("service", service.FullName))
 		}
+		
+		// Track packages and services
+		packageServiceMap[service.Package] = append(packageServiceMap[service.Package], service.ServiceName)
 	}
-
-	protoServices := server.protoLoader.GetServices()
-	server.logger.Info("loaded all proto services",
-		zap.Int("count", len(protoServices)))
 
 	// Create service wrapper
 	vanguardService, err := NewVanguardService(VanguardServiceConfig{
@@ -150,17 +143,18 @@ func NewServer(config ServerConfig) (*Server, error) {
 
 	// Create protocol transcoder
 	vanguardServices := vanguardService.GetServices()
-	server.logger.Info("creating protocol transcoder",
-		zap.Int("service_count", len(vanguardServices)))
-
 	transcoder, err := vanguard.NewTranscoder(vanguardServices)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create protocol transcoder: %w", err)
 	}
 	server.transcoder = transcoder
 
-	server.logger.Info("protocol transcoder created successfully",
-		zap.Int("registered_services", len(vanguardServices)))
+	// Log consolidated initialization summary
+	server.logger.Info("services loaded",
+		zap.Int("packages", len(packageServiceMap)),
+		zap.Int("services", len(discoveredServices)),
+		zap.Int("operations", totalOperations),
+		zap.Duration("duration", time.Since(startTime)))
 
 	return server, nil
 }
@@ -189,7 +183,7 @@ func (s *Server) Start() error {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	s.logger.Info("HTTP/2 (h2c) support enabled for gRPC compatibility")
+	s.logger.Info("HTTP/2 (h2c) support enabled")
 
 	// Create listener to get actual bound address
 	listener, err := net.Listen("tcp", s.config.ListenAddr)
@@ -200,9 +194,8 @@ func (s *Server) Start() error {
 
 	// Start server in goroutine
 	go func() {
-		s.logger.Info("ConnectRPC server listening",
-			zap.String("addr", s.listener.Addr().String()),
-			zap.Bool("http2_enabled", true))
+		s.logger.Info("ConnectRPC server ready",
+			zap.String("addr", s.listener.Addr().String()))
 
 		if err := s.httpServer.Serve(s.listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			s.logger.Error("server error", zap.Error(err))
