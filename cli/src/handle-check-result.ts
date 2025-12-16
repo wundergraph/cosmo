@@ -259,7 +259,7 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse, rowLimit: n
           resp.counts.compositionWarnings > rowLimit;
 
         if (hasExceeded) {
-          moreEntriesAvailableMessage = `\n\nSome results were truncated due to exceeding the limit of ${rowLimit} rows.`
+          moreEntriesAvailableMessage = `\n\nSome results were truncated due to exceeding the limit of ${rowLimit} rows.`;
           // If the studio link is present
           if (studioCheckDestination !== '') {
             moreEntriesAvailableMessage += ` They can be viewed in the studio dashboard.`;
