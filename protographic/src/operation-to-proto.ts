@@ -278,7 +278,7 @@ class OperationsToProtoVisitor {
       );
     }
 
-    // 3. Validate no root-level field aliases (breaks reversibility)
+    // 3. Validate no root-level field aliases (breaks proto schema consistency)
     if (node.selectionSet) {
       for (const selection of node.selectionSet.selections) {
         if (selection.kind === 'Field' && selection.alias) {
