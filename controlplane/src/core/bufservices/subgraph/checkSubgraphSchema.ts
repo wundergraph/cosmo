@@ -28,7 +28,7 @@ import {
 } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 
-const defaultRowLimit = 50_000;
+const defaultRowLimit = 70_000;
 const maxRowLimit = 100_000;
 
 export function checkSubgraphSchema(
