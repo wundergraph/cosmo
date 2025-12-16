@@ -41,7 +41,7 @@ jobs:
       - name: Lint
         run: pnpm run --filter ./protographic lint
 
-      - name: Upload integration results to Codecov
+      - name: Upload test results to Codecov
         uses: ./.github/actions/codecov-upload-pr
         with:
           artifact-name: protographic-tests-coverage
