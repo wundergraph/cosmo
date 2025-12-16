@@ -178,8 +178,8 @@ describe('Operation Validation', () => {
     });
   });
 
-  describe('Reversibility Considerations', () => {
-    test('should allow single operation for proto-to-graphql reversibility', () => {
+  describe('Proto Schema Consistency', () => {
+    test('should allow single operation for deterministic proto schema generation', () => {
       const operation = `
         query GetUser {
           user {

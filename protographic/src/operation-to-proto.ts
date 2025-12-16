@@ -104,7 +104,7 @@ export function compileOperationsToProto(
     const operationNames = namedOperations.map((op) => (op as OperationDefinitionNode).name!.value).join(', ');
     throw new Error(
       `Multiple operations found in document: ${operationNames}. ` +
-        'Only a single named operation per document is supported for proto reversibility. ' +
+        'Only a single named operation per document is supported for deterministic proto schema generation. ' +
         'Please compile each operation separately.',
     );
   }
@@ -278,13 +278,14 @@ class OperationsToProtoVisitor {
       );
     }
 
-    // 3. Validate no root-level field aliases (breaks reversibility)
+    // 3. Validate no root-level field aliases (breaks proto schema consistency)
     if (node.selectionSet) {
       for (const selection of node.selectionSet.selections) {
         if (selection.kind === 'Field' && selection.alias) {
           throw new Error(
             `Root-level field alias "${selection.alias.value}: ${selection.name.value}" is not supported. ` +
-              'Field aliases at the root level break proto-to-GraphQL reversibility. ' +
+              'Field aliases at the root level break proto schema generation consistency. ' +
+              'Each GraphQL field must map to exactly one proto field name. ' +
               'Please remove the alias or use it only on nested fields.',
           );
         }
