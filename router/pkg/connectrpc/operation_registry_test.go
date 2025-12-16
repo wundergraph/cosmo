@@ -402,7 +402,9 @@ func TestThreadSafety(t *testing.T) {
 
 		// Start multiple goroutines reading concurrently
 		for range 10 {
-			wg.Go(func() {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
 				for range 100 {
 					_ = registry.GetOperationForService(serviceName, "Test")
 					_ = registry.HasOperationForService(serviceName, "Test")
@@ -410,7 +412,7 @@ func TestThreadSafety(t *testing.T) {
 					_ = registry.Count()
 					_ = registry.CountForService(serviceName)
 				}
-			})
+			}()
 		}
 
 		// Wait for all goroutines to complete
@@ -422,22 +424,26 @@ func TestThreadSafety(t *testing.T) {
 
 		// Start readers
 		for range 5 {
-			wg.Go(func() {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
 				for range 50 {
 					_ = registry.GetOperationForService(serviceName, "Test")
 					_ = registry.HasOperationForService(serviceName, "Test")
 				}
-			})
+			}()
 		}
 
 		// Start clearers (writers)
 		for range 5 {
-			wg.Go(func() {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
 				for range 50 {
 					registry.Clear()
 					_ = registry.LoadOperationsForService(serviceName, []string{opFile})
 				}
-			})
+			}()
 		}
 
 		// Wait for all goroutines to complete
