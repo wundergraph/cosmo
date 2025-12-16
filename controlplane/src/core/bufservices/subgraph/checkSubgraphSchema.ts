@@ -24,41 +24,9 @@ import {
   handleError,
   isValidGraphName,
   isValidLabels,
+  limitCombinedArrays,
 } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
-
-/**
- * Distributes a limit across multiple arrays that are logically grouped.
- * Arrays are processed in order, with earlier arrays having priority.
- * 
- * Example: limitCombinedArrays([errors, warnings], 50)
- * - If errors has 70 items and warnings has 10 items: returns [50 errors, 0 warnings]
- * - If errors has 30 items and warnings has 30 items: returns [30 errors, 20 warnings]
- * - If errors has 10 items and warnings has 70 items: returns [10 errors, 40 warnings]
- * 
- * @param arrays The arrays to limit (order determines priority)
- * @param limit The combined maximum number of items across all arrays
- * @returns The limited arrays in the same order as input
- */
-function limitCombinedArrays<T>(arrays: T[][], limit: number): T[][] {
-  if (arrays.length === 0) { return []; }
-  
-  const result: T[][] = [];
-  let remaining = limit;
-  
-  // Process arrays in order, taking as much as possible from each
-  for (const arr of arrays) {
-    if (remaining === 0) {
-      result.push([]);
-    } else {
-      const itemsToTake = Math.min(arr.length, remaining);
-      result.push(arr.slice(0, itemsToTake));
-      remaining -= itemsToTake;
-    }
-  }
-  
-  return result;
-}
 
 export function checkSubgraphSchema(
   opts: RouterOptions,
@@ -286,24 +254,7 @@ export function checkSubgraphSchema(
 
     const returnLimit = clamp(req?.limit ?? 1, 1, 100_000);
 
-    let {
-      response,
-      checkId: schemaCheckID,
-      breakingChanges,
-      nonBreakingChanges,
-      compositionErrors,
-      compositionWarnings,
-      operationUsageStats,
-      proposalMatchMessage,
-      hasClientTraffic,
-      checkedFederatedGraphs,
-      lintWarnings,
-      lintErrors,
-      graphPruneWarnings,
-      graphPruneErrors,
-      isCheckExtensionSkipped,
-      checkExtensionErrorMessage,
-    } = await subgraphRepo.performSchemaCheck({
+    const checkResult = await subgraphRepo.performSchemaCheck({
       actorId: authContext.userId,
       blobStorage: opts.blobStorage,
       admissionConfig: { cdnBaseUrl: opts.cdnBaseUrl, jwtSecret: opts.jwtSecret },
@@ -325,28 +276,47 @@ export function checkSubgraphSchema(
       webhookService,
     });
 
-    // Apply limits to logically grouped arrays
-    // Breaking and non-breaking changes are displayed together, so they share a limit
-    [breakingChanges, nonBreakingChanges] = limitCombinedArrays(
-      [breakingChanges, nonBreakingChanges],
-      returnLimit
+    // Extract variables from checkResult
+    const {
+      response,
+      checkId: schemaCheckID,
+      operationUsageStats,
+      proposalMatchMessage,
+      hasClientTraffic,
+      checkedFederatedGraphs,
+      isCheckExtensionSkipped,
+      checkExtensionErrorMessage,
+    } = checkResult;
+
+    const compositionErrors = checkResult.compositionErrors.slice(0, returnLimit);
+    const compositionWarnings = checkResult.compositionWarnings.slice(0, returnLimit);
+
+    const [breakingChanges, nonBreakingChanges] = limitCombinedArrays(
+      [checkResult.breakingChanges, checkResult.nonBreakingChanges],
+      returnLimit,
     );
 
-    // Composition errors and warnings are displayed separately, so they get individual limits
-    compositionErrors = compositionErrors.slice(0, returnLimit);
-    compositionWarnings = compositionWarnings.slice(0, returnLimit);
-
-    // Lint errors and warnings are displayed together, so they share a limit
-    [lintErrors, lintWarnings] = limitCombinedArrays(
-      [lintErrors, lintWarnings],
-      returnLimit
+    const [lintErrors, lintWarnings] = limitCombinedArrays(
+      [checkResult.lintErrors, checkResult.lintWarnings],
+      returnLimit,
     );
 
-    // Graph prune errors and warnings are displayed together, so they share a limit
-    [graphPruneErrors, graphPruneWarnings] = limitCombinedArrays(
-      [graphPruneErrors, graphPruneWarnings],
-      returnLimit
+    const [graphPruneErrors, graphPruneWarnings] = limitCombinedArrays(
+      [checkResult.graphPruneErrors, checkResult.graphPruneWarnings],
+      returnLimit,
     );
+
+    // Create counts object with total counts from the original checkResult
+    const counts = {
+      lintWarnings: checkResult.lintWarnings.length,
+      lintErrors: checkResult.lintErrors.length,
+      breakingChanges: checkResult.breakingChanges.length,
+      nonBreakingChanges: checkResult.nonBreakingChanges.length,
+      compositionErrors: checkResult.compositionErrors.length,
+      compositionWarnings: checkResult.compositionWarnings.length,
+      graphPruneErrors: checkResult.graphPruneErrors.length,
+      graphPruneWarnings: checkResult.graphPruneWarnings.length,
+    };
 
     if (response && response.code !== EnumStatusCode.OK) {
       return {
@@ -367,6 +337,7 @@ export function checkSubgraphSchema(
         clientTrafficCheckSkipped: req.skipTrafficCheck,
         compositionWarnings,
         proposalMatchMessage,
+        counts,
       };
     }
 
@@ -396,6 +367,7 @@ export function checkSubgraphSchema(
           proposalMatchMessage,
           isLinkedTrafficCheckFailed: false,
           isLinkedPruningCheckFailed: false,
+          counts,
         };
       }
 
@@ -426,6 +398,7 @@ export function checkSubgraphSchema(
           proposalMatchMessage,
           isLinkedTrafficCheckFailed: false,
           isLinkedPruningCheckFailed: false,
+          counts,
         };
       }
 
@@ -487,6 +460,7 @@ export function checkSubgraphSchema(
           proposalMatchMessage,
           isLinkedTrafficCheckFailed: false,
           isLinkedPruningCheckFailed: false,
+          counts,
         };
       }
 
@@ -535,6 +509,7 @@ export function checkSubgraphSchema(
       isLinkedPruningCheckFailed,
       isCheckExtensionSkipped,
       checkExtensionErrorMessage,
+      counts,
     };
   });
 }

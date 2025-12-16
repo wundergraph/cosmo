@@ -249,6 +249,24 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse, rowLimit: n
         finalStatement += `\n${logSymbols.error} Subgraph extension check failed with message: ${resp.checkExtensionErrorMessage}`;
       }
 
+      let moreEntriesAvailableMessage = '';
+      if (resp.counts) {
+        const hasExceeded =
+          resp.counts.lintWarnings + resp.counts.lintErrors > rowLimit ||
+          resp.counts.breakingChanges + resp.counts.nonBreakingChanges > rowLimit ||
+          resp.counts.graphPruneErrors + resp.counts.graphPruneWarnings > rowLimit ||
+          resp.counts.compositionErrors > rowLimit ||
+          resp.counts.compositionWarnings > rowLimit;
+
+        if (hasExceeded) {
+          moreEntriesAvailableMessage = `\n\nSome results were truncated due to exceeding the limit of ${rowLimit} rows.`
+          // If the studio link is present
+          if (studioCheckDestination != '') {
+            moreEntriesAvailableMessage += ` They can be viewed in the studio dashboard.`;
+          }
+        }
+      }
+
       if (success) {
         console.log(
           '\n' +
@@ -256,6 +274,7 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse, rowLimit: n
             pc.green(` Schema check passed. ${finalStatement}`) +
             '\n\n' +
             studioCheckDestination +
+            moreEntriesAvailableMessage +
             '\n',
         );
       } else {
@@ -263,7 +282,7 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse, rowLimit: n
           '\n' +
             logSymbols.error +
             pc.red(
-              ` Schema check failed. ${finalStatement}\nSee https://cosmo-docs.wundergraph.com/studio/schema-checks for more information on resolving operation check errors.\n${studioCheckDestination}\n`,
+              ` Schema check failed. ${finalStatement}\nSee https://cosmo-docs.wundergraph.com/studio/schema-checks for more information on resolving operation check errors.\n${studioCheckDestination}${moreEntriesAvailableMessage}\n`,
             ) +
             '\n',
         );

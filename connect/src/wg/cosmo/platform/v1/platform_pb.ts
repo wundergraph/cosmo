@@ -2331,6 +2331,11 @@ export class CheckSubgraphSchemaResponse extends Message<CheckSubgraphSchemaResp
    */
   checkExtensionErrorMessage?: string;
 
+  /**
+   * @generated from field: optional wg.cosmo.platform.v1.SchemaCheckCounts counts = 19;
+   */
+  counts?: SchemaCheckCounts;
+
   constructor(data?: PartialMessage<CheckSubgraphSchemaResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2357,6 +2362,7 @@ export class CheckSubgraphSchemaResponse extends Message<CheckSubgraphSchemaResp
     { no: 16, name: "isLinkedPruningCheckFailed", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 17, name: "isCheckExtensionSkipped", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 18, name: "checkExtensionErrorMessage", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 19, name: "counts", kind: "message", T: SchemaCheckCounts, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckSubgraphSchemaResponse {
@@ -2373,6 +2379,85 @@ export class CheckSubgraphSchemaResponse extends Message<CheckSubgraphSchemaResp
 
   static equals(a: CheckSubgraphSchemaResponse | PlainMessage<CheckSubgraphSchemaResponse> | undefined, b: CheckSubgraphSchemaResponse | PlainMessage<CheckSubgraphSchemaResponse> | undefined): boolean {
     return proto3.util.equals(CheckSubgraphSchemaResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.SchemaCheckCounts
+ */
+export class SchemaCheckCounts extends Message<SchemaCheckCounts> {
+  /**
+   * @generated from field: int32 lintWarnings = 1;
+   */
+  lintWarnings = 0;
+
+  /**
+   * @generated from field: int32 lintErrors = 2;
+   */
+  lintErrors = 0;
+
+  /**
+   * @generated from field: int32 breakingChanges = 3;
+   */
+  breakingChanges = 0;
+
+  /**
+   * @generated from field: int32 nonBreakingChanges = 4;
+   */
+  nonBreakingChanges = 0;
+
+  /**
+   * @generated from field: int32 compositionErrors = 5;
+   */
+  compositionErrors = 0;
+
+  /**
+   * @generated from field: int32 compositionWarnings = 6;
+   */
+  compositionWarnings = 0;
+
+  /**
+   * @generated from field: int32 graphPruneErrors = 7;
+   */
+  graphPruneErrors = 0;
+
+  /**
+   * @generated from field: int32 graphPruneWarnings = 8;
+   */
+  graphPruneWarnings = 0;
+
+  constructor(data?: PartialMessage<SchemaCheckCounts>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.SchemaCheckCounts";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "lintWarnings", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 2, name: "lintErrors", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 3, name: "breakingChanges", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 4, name: "nonBreakingChanges", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 5, name: "compositionErrors", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 6, name: "compositionWarnings", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 7, name: "graphPruneErrors", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 8, name: "graphPruneWarnings", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SchemaCheckCounts {
+    return new SchemaCheckCounts().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SchemaCheckCounts {
+    return new SchemaCheckCounts().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SchemaCheckCounts {
+    return new SchemaCheckCounts().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SchemaCheckCounts | PlainMessage<SchemaCheckCounts> | undefined, b: SchemaCheckCounts | PlainMessage<SchemaCheckCounts> | undefined): boolean {
+    return proto3.util.equals(SchemaCheckCounts, a, b);
   }
 }
 
