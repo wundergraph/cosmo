@@ -22,15 +22,32 @@ type headerCapturingWriter struct {
 	statusCode      int
 	moduleReference *ContextErrorModule
 	hasError        bool
+	headerWritten   bool
 }
 
-func (w *headerCapturingWriter) Write(b []byte) (int, error) {
+func (w *headerCapturingWriter) checkAndSetError() {
 	if !w.hasError {
 		if err := w.ctx.Error(); err != nil {
 			w.moduleReference.ErrorValue = err
 			w.hasError = true
 			w.Header().Set("X-Has-Error", "true")
 		}
+	}
+}
+
+func (w *headerCapturingWriter) WriteHeader(statusCode int) {
+	if !w.headerWritten {
+		w.statusCode = statusCode
+		w.checkAndSetError()
+		w.headerWritten = true
+		w.ResponseWriter.WriteHeader(statusCode)
+	}
+}
+
+func (w *headerCapturingWriter) Write(b []byte) (int, error) {
+	if !w.headerWritten {
+		w.checkAndSetError()
+		w.headerWritten = true
 	}
 
 	return w.ResponseWriter.Write(b)
@@ -43,7 +60,7 @@ func (w *headerCapturingWriter) Flush() {
 	}
 }
 
-func (m *ContextErrorModule) Middleware(ctx core.RequestContext, next http.Handler) {
+func (m *ContextErrorModule) RouterOnRequest(ctx core.RequestContext, next http.Handler) {
 	// Wrap the response writer to intercept writes
 	wrappedWriter := &headerCapturingWriter{
 		ResponseWriter:  ctx.ResponseWriter(),
@@ -53,6 +70,8 @@ func (m *ContextErrorModule) Middleware(ctx core.RequestContext, next http.Handl
 	}
 
 	// Call the next handler with the wrapped writer
+	// This wrapped writer will be passed through to all subsequent handlers,
+	// including the pre-handler where authentication happens
 	next.ServeHTTP(wrappedWriter, ctx.Request())
 }
 
@@ -70,5 +89,5 @@ func (m *ContextErrorModule) Module() core.ModuleInfo {
 
 // Interface guard
 var (
-	_ core.RouterMiddlewareHandler = (*ContextErrorModule)(nil)
+	_ core.RouterOnRequestHandler = (*ContextErrorModule)(nil)
 )

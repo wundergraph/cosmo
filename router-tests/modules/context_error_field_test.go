@@ -1,10 +1,13 @@
 package module_test
 
 import (
+	"io"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	integration "github.com/wundergraph/cosmo/router-tests"
 	contexterror "github.com/wundergraph/cosmo/router-tests/modules/context-error"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
@@ -13,6 +16,48 @@ import (
 
 func TestContextErrorModule(t *testing.T) {
 	t.Parallel()
+
+	t.Run("error is captured in context when authentication fails", func(t *testing.T) {
+		t.Parallel()
+
+		authenticators, _ := integration.ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:           authenticators,
+			AuthenticationRequired:   true,
+			SkipIntrospectionQueries: false,
+			IntrospectionSkipSecret:  "",
+		})
+		require.NoError(t, err)
+
+		cfg := config.Config{
+			Modules: map[string]interface{}{
+				"contextErrorModule": contexterror.ContextErrorModule{},
+			},
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(accessController),
+				core.WithModulesConfig(cfg.Modules),
+				core.WithCustomModules(&contexterror.ContextErrorModule{}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Operations with an invalid token should fail
+			header := http.Header{
+				"Authorization": []string{"Bearer invalid"},
+			}
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(`{"query":"{ employees { id } }"}`))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+			data, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Contains(t, string(data), "unauthorized")
+
+			// Verify the X-Has-Error header is set when authentication fails
+			require.Equal(t, "true", res.Header.Get("X-Has-Error"))
+		})
+	})
 
 	t.Run("error is captured in context when subgraph fails", func(t *testing.T) {
 		t.Parallel()
