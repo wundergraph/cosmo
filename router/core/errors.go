@@ -125,7 +125,6 @@ func trackFinalResponseError(ctx context.Context, err error) {
 	requestContext.SetError(err)
 	requestContext.graphQLErrorServices = getAggregatedSubgraphServiceNames(requestContext.error)
 	requestContext.graphQLErrorCodes = getAggregatedSubgraphErrorCodes(requestContext.error)
-
 	rtrace.AttachErrToSpan(span, err)
 }
 

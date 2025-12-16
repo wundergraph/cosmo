@@ -189,6 +189,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if errs := resolveCtx.SubgraphErrors(); errs != nil {
+			trackFinalResponseError(resolveCtx.Context(), errs)
 			w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
 		}
 

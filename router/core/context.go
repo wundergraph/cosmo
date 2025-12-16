@@ -139,6 +139,8 @@ type RequestContext interface {
 	// SetForceSha256Compute forces the computation of the Sha256Hash of the operation
 	// This is useful if the Sha256Hash is needed in custom modules but not used anywhere else
 	SetForceSha256Compute()
+
+	Error() error
 }
 
 var metricAttrsPool = sync.Pool{
@@ -471,6 +473,10 @@ func (c *requestContext) SetAuthenticationScopes(scopes []string) {
 
 func (c *requestContext) SetForceSha256Compute() {
 	c.forceSha256Compute = true
+}
+
+func (c *requestContext) Error() error {
+	return c.error
 }
 
 type OperationContext interface {
