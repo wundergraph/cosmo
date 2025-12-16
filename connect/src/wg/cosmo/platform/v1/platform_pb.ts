@@ -1099,6 +1099,11 @@ export class CheckSubgraphSchemaRequest extends Message<CheckSubgraphSchemaReque
    */
   disableResolvabilityValidation?: boolean;
 
+  /**
+   * @generated from field: optional int32 limit = 10;
+   */
+  limit?: number;
+
   constructor(data?: PartialMessage<CheckSubgraphSchemaRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1116,6 +1121,7 @@ export class CheckSubgraphSchemaRequest extends Message<CheckSubgraphSchemaReque
     { no: 7, name: "vcsContext", kind: "message", T: VCSContext, opt: true },
     { no: 8, name: "labels", kind: "message", T: Label, repeated: true },
     { no: 9, name: "disable_resolvability_validation", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 10, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckSubgraphSchemaRequest {

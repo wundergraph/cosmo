@@ -27,6 +27,39 @@ import {
 } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 
+/**
+ * Distributes a limit across multiple arrays that are logically grouped.
+ * Arrays are processed in order, with earlier arrays having priority.
+ * 
+ * Example: limitCombinedArrays([errors, warnings], 50)
+ * - If errors has 70 items and warnings has 10 items: returns [50 errors, 0 warnings]
+ * - If errors has 30 items and warnings has 30 items: returns [30 errors, 20 warnings]
+ * - If errors has 10 items and warnings has 70 items: returns [10 errors, 40 warnings]
+ * 
+ * @param arrays The arrays to limit (order determines priority)
+ * @param limit The combined maximum number of items across all arrays
+ * @returns The limited arrays in the same order as input
+ */
+function limitCombinedArrays<T>(arrays: T[][], limit: number): T[][] {
+  if (arrays.length === 0) { return []; }
+  
+  const result: T[][] = [];
+  let remaining = limit;
+  
+  // Process arrays in order, taking as much as possible from each
+  for (const arr of arrays) {
+    if (remaining === 0) {
+      result.push([]);
+    } else {
+      const itemsToTake = Math.min(arr.length, remaining);
+      result.push(arr.slice(0, itemsToTake));
+      remaining -= itemsToTake;
+    }
+  }
+  
+  return result;
+}
+
 export function checkSubgraphSchema(
   opts: RouterOptions,
   req: CheckSubgraphSchemaRequest,
@@ -251,7 +284,9 @@ export function checkSubgraphSchema(
     let limit = changeRetention?.limit ?? 7;
     limit = clamp(namespace?.checksTimeframeInDays ?? limit, 1, limit);
 
-    const {
+    const returnLimit = clamp(req?.limit ?? 1, 1, 100_000);
+
+    let {
       response,
       checkId: schemaCheckID,
       breakingChanges,
@@ -289,6 +324,29 @@ export function checkSubgraphSchema(
       disableResolvabilityValidation: req.disableResolvabilityValidation,
       webhookService,
     });
+
+    // Apply limits to logically grouped arrays
+    // Breaking and non-breaking changes are displayed together, so they share a limit
+    [breakingChanges, nonBreakingChanges] = limitCombinedArrays(
+      [breakingChanges, nonBreakingChanges],
+      returnLimit
+    );
+
+    // Composition errors and warnings are displayed separately, so they get individual limits
+    compositionErrors = compositionErrors.slice(0, returnLimit);
+    compositionWarnings = compositionWarnings.slice(0, returnLimit);
+
+    // Lint errors and warnings are displayed together, so they share a limit
+    [lintErrors, lintWarnings] = limitCombinedArrays(
+      [lintErrors, lintWarnings],
+      returnLimit
+    );
+
+    // Graph prune errors and warnings are displayed together, so they share a limit
+    [graphPruneErrors, graphPruneWarnings] = limitCombinedArrays(
+      [graphPruneErrors, graphPruneWarnings],
+      returnLimit
+    );
 
     if (response && response.code !== EnumStatusCode.OK) {
       return {

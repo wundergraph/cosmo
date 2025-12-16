@@ -6,7 +6,7 @@ import logSymbols from 'log-symbols';
 import pc from 'picocolors';
 import { config } from './core/config.js';
 
-export const handleCheckResult = (resp: CheckSubgraphSchemaResponse) => {
+export const handleCheckResult = (resp: CheckSubgraphSchemaResponse, rowLimit: number) => {
   const changesTable = new Table({
     head: [pc.bold(pc.white('CHANGE')), pc.bold(pc.white('TYPE')), pc.bold(pc.white('DESCRIPTION'))],
     wordWrap: true,

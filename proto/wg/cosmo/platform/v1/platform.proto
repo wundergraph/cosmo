@@ -103,6 +103,7 @@ message CheckSubgraphSchemaRequest {
   optional VCSContext vcsContext = 7;
   repeated Label labels = 8;
   optional bool disable_resolvability_validation = 9;
+  optional int32 limit = 10;
 }
 
 message FixSubgraphSchemaRequest {
