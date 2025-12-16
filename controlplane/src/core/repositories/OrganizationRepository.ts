@@ -943,6 +943,7 @@ export class OrganizationRepository {
     organizationId: string;
     queuedBy?: string;
     deleteOrganizationQueue: DeleteOrganizationQueue;
+    deleteDelayInDays?: number;
   }) {
     return this.db.transaction(async (tx) => {
       const now = new Date();
@@ -954,7 +955,7 @@ export class OrganizationRepository {
         })
         .where(eq(schema.organizations.id, input.organizationId));
 
-      const deleteAt = addDays(now, delayForManualOrgDeletionInDays);
+      const deleteAt = addDays(now, input.deleteDelayInDays || delayForManualOrgDeletionInDays);
       const delay = Number(deleteAt) - Number(now);
 
       return await input.deleteOrganizationQueue.addJob(

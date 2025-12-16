@@ -10,7 +10,7 @@ import { App } from 'octokit';
 import { Worker } from 'bullmq';
 import routes from './routes.js';
 import fastifyHealth from './plugins/health.js';
-import fastifyMetrics, { MetricsPluginOptions } from './plugins/metrics.js';
+import fastifyMetrics from './plugins/metrics.js';
 import fastifyDatabase from './plugins/database.js';
 import fastifyClickHouse from './plugins/clickhouse.js';
 import fastifyRedis from './plugins/redis.js';
@@ -53,6 +53,10 @@ import {
   createReactivateOrganizationWorker,
   ReactivateOrganizationQueue,
 } from './workers/ReactivateOrganizationWorker.js';
+import {
+  createNotifyOrganizationDeletionQueuedWorker,
+  NotifyOrganizationDeletionQueuedQueue,
+} from './workers/NotifyOrganizationDeletionQueuedWorker.js';
 
 export interface BuildConfig {
   logger: LoggerOptions;
@@ -394,6 +398,19 @@ export default async function build(opts: BuildConfig) {
     }),
   );
 
+  const notifyOrganizationDeletionQueuedQueue = new NotifyOrganizationDeletionQueuedQueue(
+    logger,
+    fastify.redisForQueue,
+  );
+  bullWorkers.push(
+    createNotifyOrganizationDeletionQueuedWorker({
+      redisConnection: fastify.redisForWorker,
+      db: fastify.db,
+      logger,
+      mailer: mailerClient,
+    }),
+  );
+
   // required to verify webhook payloads
   await fastify.register(import('fastify-raw-body'), {
     field: 'rawBody',
@@ -499,6 +516,7 @@ export default async function build(opts: BuildConfig) {
         deactivateOrganizationQueue,
         reactivateOrganizationQueue,
         deleteUserQueue,
+        notifyOrganizationDeletionQueuedQueue,
       },
       stripeSecretKey: opts.stripe?.secret,
       admissionWebhookJWTSecret: opts.admissionWebhook.secret,
