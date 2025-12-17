@@ -190,7 +190,7 @@ func TestSingleFlight(t *testing.T) {
 			done.Add(int(numOfOperations))
 			trigger := make(chan struct{})
 			for i := int64(0); i < numOfOperations; i++ {
-				go func() {
+				go func(i int64) {
 					ready.Done()
 					defer done.Done()
 					<-trigger
@@ -201,7 +201,7 @@ func TestSingleFlight(t *testing.T) {
 						},
 					})
 					require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
-				}()
+				}(i)
 			}
 			ready.Wait()
 			close(trigger)
