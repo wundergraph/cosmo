@@ -175,9 +175,9 @@
       "TLSHandshakeTimeout": 10000000000,
       "KeepAliveIdleTimeout": 90000000000,
       "KeepAliveProbeInterval": 30000000000,
-      "MaxConnsPerHost": 0,
-      "MaxIdleConns": 10240,
-      "MaxIdleConnsPerHost": 2048
+      "MaxConnsPerHost": 100,
+      "MaxIdleConns": 1024,
+      "MaxIdleConnsPerHost": 20
     },
     "Router": {
       "MaxRequestBodyBytes": 5000000,
