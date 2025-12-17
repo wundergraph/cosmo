@@ -179,7 +179,6 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		resp, err := h.executor.Resolver.ResolveGraphQLResponse(resolveCtx, p.Response, nil, &respBuf)
 		reqCtx.dataSourceNames = getSubgraphNames(p.Response.DataSources)
-
 		if err != nil {
 			trackFinalResponseError(resolveCtx.Context(), err)
 			h.WriteError(resolveCtx, err, p.Response, w)
