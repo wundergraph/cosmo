@@ -108,7 +108,7 @@ func NewServer(config ServerConfig) (*Server, error) {
 	// Load proto files and operations for each discovered service
 	totalOperations := 0
 	packageServiceMap := make(map[string][]string) // package -> list of services
-	
+
 	for _, service := range discoveredServices {
 		// Load proto files for this service
 		if err := server.protoLoader.LoadFromDirectory(service.ServiceDir); err != nil {
@@ -125,7 +125,7 @@ func NewServer(config ServerConfig) (*Server, error) {
 			server.logger.Warn("no operations found for service",
 				zap.String("service", service.FullName))
 		}
-		
+
 		// Track packages and services
 		packageServiceMap[service.Package] = append(packageServiceMap[service.Package], service.ServiceName)
 	}
