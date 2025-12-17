@@ -92,13 +92,10 @@ func getResponseHeaderPropagation(ctx context.Context) *responseHeaderPropagatio
 
 func HeaderPropagationWriter(w http.ResponseWriter, resolveCtx *resolve.Context, setContentLength bool) io.Writer {
 	propagation := getResponseHeaderPropagation(resolveCtx.Context())
-	if propagation == nil {
-		return w
-	}
 	return &headerPropagationWriter{
 		writer:            w,
 		headerPropagation: propagation,
-		propagateHeaders:  true,
+		propagateHeaders:  propagation != nil,
 		setContentLength:  setContentLength,
 		resolveCtx:        resolveCtx,
 	}
