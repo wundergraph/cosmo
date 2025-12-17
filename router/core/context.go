@@ -140,6 +140,7 @@ type RequestContext interface {
 	// This is useful if the Sha256Hash is needed in custom modules but not used anywhere else
 	SetForceSha256Compute()
 
+	// Error returns the error associated with the request, if any
 	Error() error
 }
 
@@ -475,6 +476,7 @@ func (c *requestContext) SetForceSha256Compute() {
 	c.forceSha256Compute = true
 }
 
+// Error returns the error associated with the request, if any
 func (c *requestContext) Error() error {
 	return c.error
 }

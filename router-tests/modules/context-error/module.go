@@ -6,10 +6,6 @@ import (
 	"github.com/wundergraph/cosmo/router/core"
 )
 
-func init() {
-	core.RegisterModule(&ContextErrorModule{})
-}
-
 const myModuleID = "contextErrorModule"
 
 type ContextErrorModule struct {
