@@ -4,6 +4,29 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.182.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.181.0...controlplane@0.182.0) (2025-12-16)
+
+### Features
+
+* validate session cookie ([#2406](https://github.com/wundergraph/cosmo/issues/2406)) ([13ec2dd](https://github.com/wundergraph/cosmo/commit/13ec2dd5240e52c7774d251db5fd79e23905f6c2)) (@wilsonrivera)
+
+# [0.181.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.180.0...controlplane@0.181.0) (2025-12-15)
+
+### Bug Fixes
+
+* getGraphMetrics by using Float64 for multipliers in clickhouse queries ([#2411](https://github.com/wundergraph/cosmo/issues/2411)) ([e5d9750](https://github.com/wundergraph/cosmo/commit/e5d9750356564e0914116f2f732f7885ae386c2d)) (@JivusAyrus)
+
+### Features
+
+* add coverage for other services with tests ([#2405](https://github.com/wundergraph/cosmo/issues/2405)) ([a53bb35](https://github.com/wundergraph/cosmo/commit/a53bb351336dc400b8b28b235a28725704a83919)) (@SkArchon)
+
+# [0.180.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.179.2...controlplane@0.180.0) (2025-12-10)
+
+### Features
+
+* enforce feature check for `OIDC` ([#2392](https://github.com/wundergraph/cosmo/issues/2392)) ([2a1ffc5](https://github.com/wundergraph/cosmo/commit/2a1ffc583a4fe121ccf869d6b324c1be8cca1d2d)) (@wilsonrivera)
+* improve organization creation and update validation ([#2394](https://github.com/wundergraph/cosmo/issues/2394)) ([f8b2e59](https://github.com/wundergraph/cosmo/commit/f8b2e59392160f40b098cd215ce4a371b1dd5fb3)) (@wilsonrivera)
+
 ## [0.179.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.179.1...controlplane@0.179.2) (2025-12-04)
 
 ### Bug Fixes

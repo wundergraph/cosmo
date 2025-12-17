@@ -54,10 +54,15 @@ jobs:
       - name: Get Coverage
         run: pnpm run --filter wgc coverage
 
-      - name: Upload results to Codecov
-        uses: codecov/codecov-action@v5
+      - name: Upload Coverage to Codecov
+        uses: ./.github/actions/codecov-upload-pr
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+          artifact-name: cli-one
+          coverage-path: |
+            cli/coverage/clover.xml
+            cli/coverage/coverage-final.json
+          retention-days: 14
+          codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
   build_test_node_matrix:
     timeout-minutes: 10

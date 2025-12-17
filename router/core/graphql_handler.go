@@ -143,26 +143,27 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	)
 	defer graphqlExecutionSpan.End()
 
-	resolveCtx := &resolve.Context{
-		Variables:      reqCtx.operation.variables,
-		RemapVariables: reqCtx.operation.remapVariables,
-		VariablesHash:  reqCtx.operation.variablesHash,
-		Files:          reqCtx.operation.files,
-		Request: resolve.Request{
-			Header: r.Header,
-			ID:     reqCtx.operation.internalHash,
-		},
-		RenameTypeNames:  h.executor.RenameTypeNames,
-		TracingOptions:   reqCtx.operation.traceOptions,
-		InitialPayload:   reqCtx.operation.initialPayload,
-		Extensions:       reqCtx.operation.extensions,
-		ExecutionOptions: reqCtx.operation.executionOptions,
+	resolveCtx := resolve.NewContext(executionContext)
+	resolveCtx.Variables = reqCtx.operation.variables
+	resolveCtx.RemapVariables = reqCtx.operation.remapVariables
+	resolveCtx.VariablesHash = reqCtx.operation.variablesHash
+	resolveCtx.Files = reqCtx.operation.files
+	resolveCtx.Request = resolve.Request{
+		Header: r.Header,
+		ID:     reqCtx.operation.internalHash,
 	}
+	resolveCtx.RenameTypeNames = h.executor.RenameTypeNames
+	resolveCtx.TracingOptions = reqCtx.operation.traceOptions
+	resolveCtx.InitialPayload = reqCtx.operation.initialPayload
+	resolveCtx.Extensions = reqCtx.operation.extensions
+	resolveCtx.ExecutionOptions = reqCtx.operation.executionOptions
 
-	resolveCtx.SubgraphHeadersBuilder = SubgraphHeadersBuilder(
-		reqCtx,
-		h.headerPropagation,
-		reqCtx.operation.preparedPlan.preparedPlan)
+	if h.headerPropagation != nil {
+		resolveCtx.SubgraphHeadersBuilder = SubgraphHeadersBuilder(
+			reqCtx,
+			h.headerPropagation,
+			reqCtx.operation.preparedPlan.preparedPlan)
+	}
 
 	resolveCtx = resolveCtx.WithContext(executionContext)
 	if h.authorizer != nil {

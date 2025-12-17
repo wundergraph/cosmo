@@ -4,6 +4,23 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.273.0](https://github.com/wundergraph/cosmo/compare/router@0.272.0...router@0.273.0) (2025-12-15)
+
+### Features
+
+* add coverage for other services with tests ([#2405](https://github.com/wundergraph/cosmo/issues/2405)) ([a53bb35](https://github.com/wundergraph/cosmo/commit/a53bb351336dc400b8b28b235a28725704a83919)) (@SkArchon)
+
+# [0.272.0](https://github.com/wundergraph/cosmo/compare/router@0.271.1...router@0.272.0) (2025-12-10)
+
+### Bug Fixes
+
+* **router:** use proper OTEL span kind for Authenticate middleware step ([#2247](https://github.com/wundergraph/cosmo/issues/2247)) ([d23f439](https://github.com/wundergraph/cosmo/commit/d23f439e2aefcc8c58ae80fdaa8cd726c6a28d4f)) (@Blacksmoke16)
+* verify that errors are propagated on engine hooks for correct subgraphs ([#2399](https://github.com/wundergraph/cosmo/issues/2399)) ([a5ca15d](https://github.com/wundergraph/cosmo/commit/a5ca15d482a229805009f9c80c476a600fe35fd1)) (@SkArchon)
+
+### Features
+
+* add composite type support for field resolvers ([#2368](https://github.com/wundergraph/cosmo/issues/2368)) ([24c0648](https://github.com/wundergraph/cosmo/commit/24c064853f11f0c157c5e1a8bfa289d4f73d4c50)) (@Noroth)
+
 ## [0.271.1](https://github.com/wundergraph/cosmo/compare/router@0.271.0...router@0.271.1) (2025-12-04)
 
 ### Bug Fixes

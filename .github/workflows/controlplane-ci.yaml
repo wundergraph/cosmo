@@ -20,7 +20,7 @@ env:
 
 jobs:
   build_test:
-    timeout-minutes: 10
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     services:
       redis:
@@ -81,9 +81,19 @@ jobs:
         run: nohup .github/scripts/setup-keycloak.sh &
 
       - name: Test
-        run: pnpm run --filter controlplane test
+        run: pnpm run --filter controlplane test:coverage
         env:
           DB_URL: "postgresql://postgres:changeme@localhost:5432/controlplane"
+
+      - name: Upload Coverage to Codecov
+        uses: ./.github/actions/codecov-upload-pr
+        with:
+          artifact-name: controlplane-tests-coverage
+          coverage-path: |
+            controlplane/coverage/clover.xml
+            controlplane/coverage/coverage-final.json
+          retention-days: 14
+          codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
   build_push_image:
     # This is a limitation of GitHub. Only organization members can push to GitHub Container Registry
@@ -103,3 +113,4 @@ jobs:
           token: ${{secrets.GITHUB_TOKEN}}
           image_name: controlplane
           image_description: "Cosmo Controlplane"
+
