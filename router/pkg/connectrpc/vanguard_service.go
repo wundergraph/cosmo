@@ -106,15 +106,29 @@ func (vs *VanguardService) registerServices() error {
 
 	vs.services = make([]*vanguard.Service, 0, len(protoServices))
 
+	// Collect aggregate statistics
+	totalMethods := 0
+	uniquePackages := make(map[string]bool)
+	for _, serviceDef := range protoServices {
+		totalMethods += len(serviceDef.Methods)
+		uniquePackages[serviceDef.Package] = true
+	}
+
+	// Log aggregate summary at Info level
+	vs.logger.Info("registering services",
+		zap.Int("package_count", len(uniquePackages)),
+		zap.Int("service_count", len(protoServices)),
+		zap.Int("total_methods", totalMethods))
+
 	for serviceName, serviceDef := range protoServices {
-		vs.logger.Info("registering service",
+		vs.logger.Debug("registering service",
 			zap.String("service_name", serviceName),
 			zap.String("full_name", serviceDef.FullName),
 			zap.Int("method_count", len(serviceDef.Methods)))
 
-		// Log all methods for this service
+		// Log all methods for this service at Debug level
 		for _, method := range serviceDef.Methods {
-			vs.logger.Info("service method",
+			vs.logger.Debug("service method",
 				zap.String("service", serviceName),
 				zap.String("method", method.Name),
 				zap.String("input_type", method.InputType),
@@ -129,7 +143,7 @@ func (vs *VanguardService) registerServices() error {
 		// This avoids relying on the global registry
 		servicePath := "/" + serviceName + "/"
 
-		vs.logger.Info("creating service with custom type resolver",
+		vs.logger.Debug("creating service with custom type resolver",
 			zap.String("service_path", servicePath))
 
 		// Configure to always transcode to Connect protocol with JSON codec
@@ -145,7 +159,7 @@ func (vs *VanguardService) registerServices() error {
 
 		vs.services = append(vs.services, vanguardService)
 
-		vs.logger.Info("registered service successfully with custom type resolver",
+		vs.logger.Debug("registered service successfully with custom type resolver",
 			zap.String("service", serviceName),
 			zap.String("service_path", servicePath),
 			zap.String("target_protocol", "connect"),
@@ -228,7 +242,7 @@ func (vs *VanguardService) createServiceHandler(serviceName string, serviceDef *
 					zap.String("service", serviceName),
 					zap.String("method", methodName),
 					zap.Error(err))
-				
+
 				// Return a sanitized error to the client to avoid leaking internal details
 				connectErr := connect.NewError(connect.CodeInternal, fmt.Errorf("internal server error"))
 				vs.writeConnectError(w, connectErr, serviceName, methodName)
