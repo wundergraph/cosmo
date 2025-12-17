@@ -175,8 +175,6 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			resolveCtx = WithResponseHeaderPropagation(resolveCtx)
 		}
 
-		defer propagateSubgraphErrors(resolveCtx)
-
 		respBuf := bytes.Buffer{}
 
 		resp, err := h.executor.Resolver.ResolveGraphQLResponse(resolveCtx, p.Response, nil, &respBuf)
@@ -189,10 +187,8 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if errs := resolveCtx.SubgraphErrors(); errs != nil {
+			trackFinalResponseError(resolveCtx.Context(), errs)
 			w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
-			// This is recorded in the defer above, but this is used to make sure the error is accessible to
-			// any response writer wrappers set in custom modules that need it when WriteTo is called
-			reqCtx.SetError(errs)
 		}
 
 		// Write contents of buf to the header propagation writer
