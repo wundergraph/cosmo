@@ -165,7 +165,6 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			reqCtx.operation.preparedPlan.preparedPlan)
 	}
 
-	resolveCtx = resolveCtx.WithContext(executionContext)
 	if h.authorizer != nil {
 		resolveCtx = WithAuthorizationExtension(resolveCtx)
 		resolveCtx.SetAuthorizer(h.authorizer)

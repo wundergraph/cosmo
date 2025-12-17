@@ -1038,15 +1038,16 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 		resolveCtx.InitialPayload = operationCtx.initialPayload
 	}
 
-	if origCtx := getRequestContext(h.request.Context()); origCtx != nil && h.graphqlHandler.headerPropagation != nil {
+	if origCtx := getRequestContext(h.request.Context()); origCtx != nil {
 		reqContext.expressionContext = *origCtx.expressionContext.Clone()
-		resolveCtx.SubgraphHeadersBuilder = SubgraphHeadersBuilder(
-			origCtx,
-			h.graphqlHandler.headerPropagation,
-			operationCtx.preparedPlan.preparedPlan,
-		)
+		if h.graphqlHandler.headerPropagation != nil {
+			resolveCtx.SubgraphHeadersBuilder = SubgraphHeadersBuilder(
+				origCtx,
+				h.graphqlHandler.headerPropagation,
+				operationCtx.preparedPlan.preparedPlan,
+			)
+		}
 	}
-	resolveCtx = resolveCtx.WithContext(withRequestContext(h.ctx, reqContext))
 	if h.graphqlHandler.authorizer != nil {
 		resolveCtx = WithAuthorizationExtension(resolveCtx)
 		resolveCtx.SetAuthorizer(h.graphqlHandler.authorizer)
