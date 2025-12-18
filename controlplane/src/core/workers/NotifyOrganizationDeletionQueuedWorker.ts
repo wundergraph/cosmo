@@ -85,6 +85,10 @@ class NotifyOrganizationDeletionQueuedWorker implements IWorker {
 
       const organizationMembers = await orgRepo.getMembers({ organizationID: org.id });
       const orgAdmins = organizationMembers.filter((m) => m.rbac.isOrganizationAdmin);
+      if (orgAdmins.length === 0) {
+        this.input.logger.warn({ organizationId: org.id }, 'No admins found for organization, skipping notification');
+        return;
+      }
 
       const intl = Intl.DateTimeFormat(undefined, {
         dateStyle: 'medium',

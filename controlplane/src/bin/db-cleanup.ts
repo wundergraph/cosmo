@@ -130,10 +130,7 @@ async function queueOrganizationsForDeletion({
         isNull(schema.organizations.queuedForDeletionAt),
         eq(schema.organizations.isDeactivated, false),
         lt(schema.organizations.createdAt, inactivityThreshold),
-        or(
-          isNull(schema.organizationBilling.plan),
-          eq(schema.organizationBilling.plan, 'developer'),
-        ),
+        or(isNull(schema.organizationBilling.plan), eq(schema.organizationBilling.plan, 'developer')),
       ),
     )
     .groupBy(schema.organizations.id, schema.organizationBilling.plan)
@@ -209,8 +206,8 @@ async function processChunkOfOrganizations({
     // Queue the organization deletion notification job
     await notifyOrganizationDeletionQueuedQueue.addJob({
       organizationId: org.id,
-      queuedAt: queuedAt.getTime(),
-      deletesAt: deletesAt.getTime(),
+      queuedAt: Number(queuedAt),
+      deletesAt: Number(deletesAt),
     });
   }
 }
