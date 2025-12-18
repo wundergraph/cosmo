@@ -125,7 +125,7 @@ export const createNotifyOrganizationDeletionQueuedWorker = (input: {
     },
   );
   worker.on('stalled', (job) => {
-    log.warn({ joinId: job }, `Job stalled`);
+    log.warn({ jobId: job }, `Job stalled`);
   });
   worker.on('error', (err) => {
     log.error(err, 'Worker error');

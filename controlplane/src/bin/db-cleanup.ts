@@ -4,7 +4,7 @@ import process from 'node:process';
 import { subDays, startOfMonth, addDays } from 'date-fns';
 import postgres from 'postgres';
 import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { and, count, eq, gte, isNull, lt, sql } from 'drizzle-orm';
+import { and, count, eq, gte, isNull, lt, or, sql } from 'drizzle-orm';
 import { pino } from 'pino';
 import { buildDatabaseConnectionConfig } from '../core/plugins/database.js';
 import * as schema from '../db/schema.js';
@@ -114,19 +114,29 @@ async function queueOrganizationsForDeletion({
   const now = new Date();
   const inactivityThreshold = startOfMonth(subDays(now, MIN_INACTIVITY_DAYS));
 
-  console.log(`Retrieving organizations with a single member...`);
+  console.log(`Retrieving organizations...`);
   const organizations = await db
     .select({
       id: schema.organizations.id,
       slug: schema.organizations.slug,
       userId: schema.organizations.createdBy,
+      plan: schema.organizationBilling.plan,
     })
     .from(schema.organizations)
     .innerJoin(schema.organizationsMembers, eq(schema.organizationsMembers.organizationId, schema.organizations.id))
+    .leftJoin(schema.organizationBilling, eq(schema.organizationBilling.organizationId, schema.organizations.id))
     .where(
-      and(isNull(schema.organizations.queuedForDeletionAt), lt(schema.organizations.createdAt, inactivityThreshold)),
+      and(
+        isNull(schema.organizations.queuedForDeletionAt),
+        eq(schema.organizations.isDeactivated, false),
+        lt(schema.organizations.createdAt, inactivityThreshold),
+        or(
+          isNull(schema.organizationBilling.plan),
+          eq(schema.organizationBilling.plan, 'developer'),
+        ),
+      ),
     )
-    .groupBy(schema.organizations.id)
+    .groupBy(schema.organizations.id, schema.organizationBilling.plan)
     .having(sql`COUNT(${schema.organizationsMembers.id}) = 1`)
     .execute();
 
