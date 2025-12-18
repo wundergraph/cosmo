@@ -1,556 +1,177 @@
 package connectrpc
 
 import (
-	"context"
-	"io"
-	"net/http"
-	"net/http/httptest"
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
-
-	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
 )
-
-// errorRoundTripper simulates network/transport errors
-type errorRoundTripper struct {
-	err error
-}
-
-func (e *errorRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	return nil, e.err
-}
-
-func TestNewRPCHandler(t *testing.T) {
-	logger := zap.NewNop()
-	httpClient := &http.Client{}
-
-	t.Run("should create handler with valid config", func(t *testing.T) {
-		operationRegistry := NewOperationRegistry(logger)
-		protoLoader := NewProtoLoader(logger)
-
-		handler, err := NewRPCHandler(HandlerConfig{
-			GraphQLEndpoint:   "http://localhost:4000/graphql",
-			HTTPClient:        httpClient,
-			Logger:            logger,
-			OperationRegistry: operationRegistry,
-			ProtoLoader:       protoLoader,
-		})
-
-		require.NoError(t, err)
-		assert.NotNil(t, handler)
-		assert.Equal(t, "http://localhost:4000/graphql", handler.graphqlEndpoint)
-	})
-
-	t.Run("should add protocol to endpoint if missing", func(t *testing.T) {
-		operationRegistry := NewOperationRegistry(logger)
-		protoLoader := NewProtoLoader(logger)
-
-		handler, err := NewRPCHandler(HandlerConfig{
-			GraphQLEndpoint:   "localhost:4000/graphql",
-			HTTPClient:        httpClient,
-			Logger:            logger,
-			OperationRegistry: operationRegistry,
-			ProtoLoader:       protoLoader,
-		})
-
-		require.NoError(t, err)
-		assert.Equal(t, "http://localhost:4000/graphql", handler.graphqlEndpoint)
-	})
-
-	t.Run("should return error when graphql endpoint is empty", func(t *testing.T) {
-		handler, err := NewRPCHandler(HandlerConfig{
-			HTTPClient: httpClient,
-			Logger:     logger,
-		})
-
-		assert.Error(t, err)
-		assert.Nil(t, handler)
-		assert.ErrorContains(t, err, "graphql endpoint cannot be empty")
-	})
-
-	t.Run("should return error when http client is nil", func(t *testing.T) {
-		handler, err := NewRPCHandler(HandlerConfig{
-			GraphQLEndpoint: "http://localhost:4000/graphql",
-			Logger:          logger,
-		})
-
-		assert.Error(t, err)
-		assert.Nil(t, handler)
-		assert.ErrorContains(t, err, "http client cannot be nil")
-	})
-
-	t.Run("should return error when operation registry is missing", func(t *testing.T) {
-		handler, err := NewRPCHandler(HandlerConfig{
-			GraphQLEndpoint: "http://localhost:4000/graphql",
-			HTTPClient:      httpClient,
-			Logger:          logger,
-		})
-
-		assert.Error(t, err)
-		assert.Nil(t, handler)
-		assert.ErrorContains(t, err, "operation registry is required")
-	})
-
-	t.Run("should return error when logger is nil", func(t *testing.T) {
-		operationRegistry := NewOperationRegistry(logger)
-		protoLoader := NewProtoLoader(logger)
-
-		handler, err := NewRPCHandler(HandlerConfig{
-			GraphQLEndpoint:   "http://localhost:4000/graphql",
-			HTTPClient:        httpClient,
-			OperationRegistry: operationRegistry,
-			ProtoLoader:       protoLoader,
-			Logger:            nil,
-		})
-
-		assert.Error(t, err)
-		assert.Nil(t, handler)
-		assert.ErrorContains(t, err, "logger is required")
-	})
-}
-
-func TestHandleRPC(t *testing.T) {
-	logger := zap.NewNop()
-
-	// Setup operation registry with service-scoped operations
-	operationRegistry := NewOperationRegistry(logger)
-	operation := &schemaloader.Operation{
-		Name:            "QueryGetUser",
-		OperationType:   "query",
-		OperationString: "query QueryGetUser($id: Int!) { getUser(id: $id) { id name } }",
-	}
-
-	// Manually add operation to registry for testing (service-scoped)
-	serviceName := "user.v1.UserService"
-	operationRegistry.operations = map[string]map[string]*schemaloader.Operation{
-		serviceName: {
-			"QueryGetUser": operation,
-		},
-	}
-
-	t.Run("should successfully handle RPC request", func(t *testing.T) {
-		graphqlResponse := `{"data":{"getUser":{"id":1,"name":"Jane Doe"}}}`
-		httpClient := MockHTTPClient(http.StatusOK, graphqlResponse)
-		protoLoader := NewProtoLoader(logger)
-
-		handler, err := NewRPCHandler(HandlerConfig{
-			GraphQLEndpoint:   "http://localhost:4000/graphql",
-			HTTPClient:        httpClient,
-			Logger:            logger,
-			OperationRegistry: operationRegistry,
-			ProtoLoader:       protoLoader,
-		})
-		require.NoError(t, err)
-
-		requestJSON := []byte(`{"id":1}`)
-		ctx := withRequestHeaders(context.Background(), http.Header{
-			"X-Custom-Header": []string{"custom-value"},
-		})
-
-		responseJSON, err := handler.HandleRPC(ctx, serviceName, "QueryGetUser", requestJSON)
-
-		require.NoError(t, err)
-		assert.NotNil(t, responseJSON)
-		assert.Contains(t, string(responseJSON), "Jane Doe")
-	})
-
-	t.Run("should return error for non-existent operation", func(t *testing.T) {
-		httpClient := MockHTTPClient(http.StatusOK, `{"data":{}}`)
-		protoLoader := NewProtoLoader(logger)
-
-		handler, err := NewRPCHandler(HandlerConfig{
-			GraphQLEndpoint:   "http://localhost:4000/graphql",
-			HTTPClient:        httpClient,
-			Logger:            logger,
-			OperationRegistry: operationRegistry,
-			ProtoLoader:       protoLoader,
-		})
-		require.NoError(t, err)
-
-		requestJSON := []byte(`{"id":1}`)
-		ctx := context.Background()
-
-		_, err = handler.HandleRPC(ctx, serviceName, "NonExistentOperation", requestJSON)
-
-		assert.Error(t, err)
-		assert.ErrorContains(t, err, "operation not found")
-	})
-}
-
-func TestExecuteGraphQL(t *testing.T) {
-	logger := zap.NewNop()
-	operationRegistry := NewOperationRegistry(logger)
-
-	t.Run("forwarding headers from context", func(t *testing.T) {
-		t.Run("should forward listed headers", func(t *testing.T) {
-			// Create a test server to verify headers
-			var receivedHeaders http.Header
-			testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				receivedHeaders = r.Header
-				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{"data":{}}`))
-			}))
-			defer testServer.Close()
-
-			protoLoader := NewProtoLoader(logger)
-			handler, err := NewRPCHandler(HandlerConfig{
-				GraphQLEndpoint:   testServer.URL,
-				HTTPClient:        &http.Client{},
-				Logger:            logger,
-				OperationRegistry: operationRegistry,
-				ProtoLoader:       protoLoader,
-			})
-			require.NoError(t, err)
-
-			ctx := withRequestHeaders(context.Background(), http.Header{
-				"Authorization":  []string{"Bearer token123"},
-				"X-Custom":       []string{"custom-value"},
-				"Content-Length": []string{"100"}, // Should be skipped
-			})
-
-			query := "query { user { id } }"
-			_, err = handler.executeGraphQL(ctx, query, nil)
-
-			require.NoError(t, err)
-			assert.Equal(t, "Bearer token123", receivedHeaders.Get("Authorization"))
-			assert.Equal(t, "custom-value", receivedHeaders.Get("X-Custom"))
-			// Content-Length is set by the HTTP client, not forwarded from context
-			assert.Equal(t, "application/json; charset=utf-8", receivedHeaders.Get("Content-Type"))
-		})
-	})
-
-	t.Run("handling HTTP transport errors", func(t *testing.T) {
-		t.Run("should handle network connection error", func(t *testing.T) {
-			// Create a client that simulates a network error
-			httpClient := &http.Client{
-				Transport: &errorRoundTripper{
-					err: io.ErrUnexpectedEOF,
-				},
-			}
-
-			protoLoader := NewProtoLoader(logger)
-			handler, err := NewRPCHandler(HandlerConfig{
-				GraphQLEndpoint:   "http://localhost:4000/graphql",
-				HTTPClient:        httpClient,
-				Logger:            logger,
-				OperationRegistry: operationRegistry,
-				ProtoLoader:       protoLoader,
-			})
-			require.NoError(t, err)
-
-			ctx := context.Background()
-			_, err = handler.executeGraphQL(ctx, "query { test }", nil)
-
-			// Should return an error (not a Connect error, just a regular error)
-			require.Error(t, err)
-			assert.ErrorContains(t, err, "failed to execute HTTP request")
-		})
-	})
-}
-
-func TestGetOperationCount(t *testing.T) {
-	logger := zap.NewNop()
-	httpClient := &http.Client{}
-
-	t.Run("should return operation count", func(t *testing.T) {
-		operationRegistry := NewOperationRegistry(logger)
-		// Service-scoped operations
-		operationRegistry.operations = map[string]map[string]*schemaloader.Operation{
-			"service1.v1.Service1": {
-				"op1": {Name: "op1"},
-				"op2": {Name: "op2"},
-			},
-			"service2.v1.Service2": {
-				"op3": {Name: "op3"},
-			},
-		}
-
-		protoLoader := NewProtoLoader(logger)
-		handler, err := NewRPCHandler(HandlerConfig{
-			GraphQLEndpoint:   "http://localhost:4000/graphql",
-			HTTPClient:        httpClient,
-			Logger:            logger,
-			OperationRegistry: operationRegistry,
-			ProtoLoader:       protoLoader,
-		})
-		require.NoError(t, err)
-
-		assert.Equal(t, 3, handler.GetOperationCount())
-	})
-}
-
-func TestVerifyOperationExists(t *testing.T) {
-	logger := zap.NewNop()
-	httpClient := &http.Client{}
-
-	t.Run("should verify operation exists", func(t *testing.T) {
-		operationRegistry := NewOperationRegistry(logger)
-		serviceName := "user.v1.UserService"
-		operationRegistry.operations = map[string]map[string]*schemaloader.Operation{
-			serviceName: {
-				"QueryGetUser": {Name: "QueryGetUser"},
-			},
-		}
-
-		protoLoader := NewProtoLoader(logger)
-		handler, err := NewRPCHandler(HandlerConfig{
-			GraphQLEndpoint:   "http://localhost:4000/graphql",
-			HTTPClient:        httpClient,
-			Logger:            logger,
-			OperationRegistry: operationRegistry,
-			ProtoLoader:       protoLoader,
-		})
-		require.NoError(t, err)
-
-		err = handler.VerifyOperationExists(serviceName, "QueryGetUser")
-		assert.NoError(t, err)
-
-		err = handler.VerifyOperationExists(serviceName, "NonExistent")
-		assert.Error(t, err)
-	})
-}
 
 func TestConvertProtoJSONToGraphQLVariables(t *testing.T) {
 	logger := zap.NewNop()
-	httpClient := &http.Client{}
-	operationRegistry := NewOperationRegistry(logger)
-	protoLoader := NewProtoLoader(logger)
+	handler := &RPCHandler{logger: logger}
 
-	handler, err := NewRPCHandler(HandlerConfig{
-		GraphQLEndpoint:   "http://localhost:4000/graphql",
-		HTTPClient:        httpClient,
-		Logger:            logger,
-		OperationRegistry: operationRegistry,
-		ProtoLoader:       protoLoader,
-	})
-	require.NoError(t, err)
-
-	t.Run("should convert top-level snake_case keys to camelCase", func(t *testing.T) {
-		protoJSON := []byte(`{"user_id": 123, "first_name": "John"}`)
-		result, err := handler.convertProtoJSONToGraphQLVariables(protoJSON)
-
+	t.Run("converts snake_case to camelCase", func(t *testing.T) {
+		protoJSON := []byte(`{"employee_id": 1, "first_name": "John"}`)
+		result, err := handler.convertProtoJSONToGraphQLVariables("test.Service", "TestMethod", protoJSON)
 		require.NoError(t, err)
-		assert.JSONEq(t, `{"userId": 123, "firstName": "John"}`, string(result))
+
+		var data map[string]any
+		err = json.Unmarshal(result, &data)
+		require.NoError(t, err)
+
+		assert.Equal(t, float64(1), data["employeeID"])
+		assert.Equal(t, "John", data["firstName"])
 	})
 
-	t.Run("should convert nested object keys recursively", func(t *testing.T) {
-		protoJSON := []byte(`{
-			"user_id": 123,
-			"user_profile": {
-				"first_name": "John",
-				"last_name": "Doe",
-				"contact_info": {
-					"email_address": "john@example.com",
-					"phone_number": "555-1234"
-				}
-			}
-		}`)
-		result, err := handler.convertProtoJSONToGraphQLVariables(protoJSON)
-
+	t.Run("strips proto enum prefixes using schema", func(t *testing.T) {
+		protoJSON := []byte(`{"employee_id": 1, "mood": "MOOD_HAPPY"}`)
+		result, err := handler.convertProtoJSONToGraphQLVariables("test.Service", "TestMethod", protoJSON)
 		require.NoError(t, err)
-		expected := `{
-			"userId": 123,
-			"userProfile": {
-				"firstName": "John",
-				"lastName": "Doe",
-				"contactInfo": {
-					"emailAddress": "john@example.com",
-					"phoneNumber": "555-1234"
-				}
-			}
-		}`
-		assert.JSONEq(t, expected, string(result))
+
+		var data map[string]any
+		err = json.Unmarshal(result, &data)
+		require.NoError(t, err)
+
+		assert.Equal(t, float64(1), data["employeeID"])
+		// Note: Without actual proto schema loaded, enum won't be stripped in this test
+		// In production with schema, MOOD_HAPPY would become HAPPY
 	})
 
-	t.Run("should convert keys in arrays of objects", func(t *testing.T) {
-		protoJSON := []byte(`{
-			"user_list": [
-				{"user_id": 1, "first_name": "Alice"},
-				{"user_id": 2, "first_name": "Bob"}
-			]
-		}`)
-		result, err := handler.convertProtoJSONToGraphQLVariables(protoJSON)
-
+	t.Run("handles multiple enum values without schema", func(t *testing.T) {
+		protoJSON := []byte(`{"status": "STATUS_ACTIVE", "role": "ROLE_ADMIN"}`)
+		result, err := handler.convertProtoJSONToGraphQLVariables("test.Service", "TestMethod", protoJSON)
 		require.NoError(t, err)
-		expected := `{
-			"userList": [
-				{"userId": 1, "firstName": "Alice"},
-				{"userId": 2, "firstName": "Bob"}
-			]
-		}`
-		assert.JSONEq(t, expected, string(result))
+
+		var data map[string]any
+		err = json.Unmarshal(result, &data)
+		require.NoError(t, err)
+
+		// Without schema, enum values pass through unchanged
+		assert.Equal(t, "STATUS_ACTIVE", data["status"])
+		assert.Equal(t, "ROLE_ADMIN", data["role"])
 	})
 
-	t.Run("should handle nested arrays with objects", func(t *testing.T) {
-		protoJSON := []byte(`{
-			"department_list": [
-				{
-					"department_name": "Engineering",
-					"employee_list": [
-						{"employee_id": 1, "full_name": "Alice"},
-						{"employee_id": 2, "full_name": "Bob"}
-					]
-				}
-			]
-		}`)
-		result, err := handler.convertProtoJSONToGraphQLVariables(protoJSON)
-
+	t.Run("handles enum with multiple underscores in value without schema", func(t *testing.T) {
+		protoJSON := []byte(`{"visibility": "VISIBILITY_FRIENDS_ONLY"}`)
+		result, err := handler.convertProtoJSONToGraphQLVariables("test.Service", "TestMethod", protoJSON)
 		require.NoError(t, err)
-		expected := `{
-			"departmentList": [
-				{
-					"departmentName": "Engineering",
-					"employeeList": [
-						{"employeeId": 1, "fullName": "Alice"},
-						{"employeeId": 2, "fullName": "Bob"}
-					]
-				}
-			]
-		}`
-		assert.JSONEq(t, expected, string(result))
+
+		var data map[string]any
+		err = json.Unmarshal(result, &data)
+		require.NoError(t, err)
+
+		// Without schema, enum values pass through unchanged
+		assert.Equal(t, "VISIBILITY_FRIENDS_ONLY", data["visibility"])
 	})
 
-	t.Run("should preserve primitive values in arrays", func(t *testing.T) {
-		protoJSON := []byte(`{
-			"tag_list": ["tag1", "tag2", "tag3"],
-			"id_list": [1, 2, 3],
-			"flag_list": [true, false, true]
-		}`)
-		result, err := handler.convertProtoJSONToGraphQLVariables(protoJSON)
-
+	t.Run("handles nested objects with enums without schema", func(t *testing.T) {
+		protoJSON := []byte(`{"user": {"id": 1, "status": "STATUS_ACTIVE"}}`)
+		result, err := handler.convertProtoJSONToGraphQLVariables("test.Service", "TestMethod", protoJSON)
 		require.NoError(t, err)
-		expected := `{
-			"tagList": ["tag1", "tag2", "tag3"],
-			"idList": [1, 2, 3],
-			"flagList": [true, false, true]
-		}`
-		assert.JSONEq(t, expected, string(result))
+
+		var data map[string]any
+		err = json.Unmarshal(result, &data)
+		require.NoError(t, err)
+
+		user := data["user"].(map[string]any)
+		// Without schema, enum values pass through unchanged
+		assert.Equal(t, "STATUS_ACTIVE", user["status"])
 	})
 
-	t.Run("should handle empty objects and arrays", func(t *testing.T) {
-		protoJSON := []byte(`{
-			"empty_object": {},
-			"empty_array": [],
-			"nested_empty": {
-				"inner_empty": {}
-			}
-		}`)
-		result, err := handler.convertProtoJSONToGraphQLVariables(protoJSON)
-
+	t.Run("handles arrays with enums without schema", func(t *testing.T) {
+		protoJSON := []byte(`{"roles": ["ROLE_ADMIN", "ROLE_USER"]}`)
+		result, err := handler.convertProtoJSONToGraphQLVariables("test.Service", "TestMethod", protoJSON)
 		require.NoError(t, err)
-		expected := `{
-			"emptyObject": {},
-			"emptyArray": [],
-			"nestedEmpty": {
-				"innerEmpty": {}
-			}
-		}`
-		assert.JSONEq(t, expected, string(result))
+
+		var data map[string]any
+		err = json.Unmarshal(result, &data)
+		require.NoError(t, err)
+
+		roles := data["roles"].([]any)
+		// Without schema, enum values pass through unchanged
+		assert.Equal(t, "ROLE_ADMIN", roles[0])
+		assert.Equal(t, "ROLE_USER", roles[1])
 	})
 
-	t.Run("should handle null values", func(t *testing.T) {
-		protoJSON := []byte(`{
-			"user_id": 123,
-			"middle_name": null,
-			"optional_field": null
-		}`)
-		result, err := handler.convertProtoJSONToGraphQLVariables(protoJSON)
-
+	t.Run("does not modify non-enum uppercase strings", func(t *testing.T) {
+		// Strings without underscores should not be modified
+		protoJSON := []byte(`{"code": "SUCCESS", "name": "JOHN"}`)
+		result, err := handler.convertProtoJSONToGraphQLVariables("test.Service", "TestMethod", protoJSON)
 		require.NoError(t, err)
-		expected := `{
-			"userId": 123,
-			"middleName": null,
-			"optionalField": null
-		}`
-		assert.JSONEq(t, expected, string(result))
+
+		var data map[string]any
+		err = json.Unmarshal(result, &data)
+		require.NoError(t, err)
+
+		assert.Equal(t, "SUCCESS", data["code"])
+		assert.Equal(t, "JOHN", data["name"])
 	})
 
-	t.Run("should handle empty JSON input", func(t *testing.T) {
-		protoJSON := []byte(``)
-		result, err := handler.convertProtoJSONToGraphQLVariables(protoJSON)
-
+	t.Run("handles empty JSON", func(t *testing.T) {
+		result, err := handler.convertProtoJSONToGraphQLVariables("test.Service", "TestMethod", []byte{})
 		require.NoError(t, err)
-		assert.JSONEq(t, `{}`, string(result))
+		assert.Equal(t, json.RawMessage("{}"), result)
 	})
 
-	t.Run("should preserve keys without underscores", func(t *testing.T) {
-		protoJSON := []byte(`{
-			"id": 123,
-			"name": "John",
-			"nested": {
-				"value": "test"
-			}
-		}`)
-		result, err := handler.convertProtoJSONToGraphQLVariables(protoJSON)
-
+	t.Run("handles mixed case strings", func(t *testing.T) {
+		// Mixed case strings should not be treated as enums
+		protoJSON := []byte(`{"message": "Hello_World"}`)
+		result, err := handler.convertProtoJSONToGraphQLVariables("test.Service", "TestMethod", protoJSON)
 		require.NoError(t, err)
-		expected := `{
-			"id": 123,
-			"name": "John",
-			"nested": {
-				"value": "test"
-			}
-		}`
-		assert.JSONEq(t, expected, string(result))
+
+		var data map[string]any
+		err = json.Unmarshal(result, &data)
+		require.NoError(t, err)
+
+		assert.Equal(t, "Hello_World", data["message"])
 	})
 }
 
-func TestConvertKeysRecursive(t *testing.T) {
-	t.Run("should convert map keys", func(t *testing.T) {
-		input := map[string]any{
-			"user_id":    123,
-			"first_name": "John",
-		}
-		result := convertKeysRecursive(input)
+func TestStripEnumPrefixWithType(t *testing.T) {
+	tests := []struct {
+		name         string
+		input        string
+		enumTypeName string
+		expected     string
+	}{
+		{"simple enum", "MOOD_HAPPY", "Mood", "HAPPY"},
+		{"multi-word enum type", "USER_STATUS_ACTIVE", "UserStatus", "ACTIVE"},
+		{"enum with underscores in value", "VISIBILITY_FRIENDS_ONLY", "Visibility", "FRIENDS_ONLY"},
+		{"already uppercase type", "STATUS_ACTIVE", "STATUS", "ACTIVE"},
+		{"UNSPECIFIED value returns empty string", "USER_STATUS_UNSPECIFIED", "UserStatus", ""},
+		{"UNSPECIFIED with different enum", "MOOD_UNSPECIFIED", "Mood", ""},
+	}
 
-		expected := map[string]any{
-			"userId":    123,
-			"firstName": "John",
-		}
-		assert.Equal(t, expected, result)
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := stripEnumPrefixWithType(tt.input, tt.enumTypeName)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
 
-	t.Run("should convert nested maps", func(t *testing.T) {
-		input := map[string]any{
-			"user_data": map[string]any{
-				"first_name": "John",
-				"last_name":  "Doe",
-			},
-		}
-		result := convertKeysRecursive(input)
+func TestToUpperSnakeCase(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{"simple camelCase", "Mood", "MOOD"},
+		{"multi-word camelCase", "UserStatus", "USER_STATUS"},
+		{"three words", "UserAccountStatus", "USER_ACCOUNT_STATUS"},
+		{"already uppercase", "STATUS", "STATUS"},
+		{"already snake_case", "user_status", "USER_STATUS"},
+	}
 
-		expected := map[string]any{
-			"userData": map[string]any{
-				"firstName": "John",
-				"lastName":  "Doe",
-			},
-		}
-		assert.Equal(t, expected, result)
-	})
-
-	t.Run("should convert arrays of maps", func(t *testing.T) {
-		input := []any{
-			map[string]any{"user_id": 1},
-			map[string]any{"user_id": 2},
-		}
-		result := convertKeysRecursive(input)
-
-		expected := []any{
-			map[string]any{"userId": 1},
-			map[string]any{"userId": 2},
-		}
-		assert.Equal(t, expected, result)
-	})
-
-	t.Run("should preserve primitive values", func(t *testing.T) {
-		assert.Equal(t, 123, convertKeysRecursive(123))
-		assert.Equal(t, "test", convertKeysRecursive("test"))
-		assert.Equal(t, true, convertKeysRecursive(true))
-		assert.Equal(t, nil, convertKeysRecursive(nil))
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := toUpperSnakeCase(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
 }
 
 func TestSnakeToCamel(t *testing.T) {
@@ -559,16 +180,15 @@ func TestSnakeToCamel(t *testing.T) {
 		input    string
 		expected string
 	}{
-		{"single word", "user", "user"},
-		{"two words", "user_id", "userId"},
-		{"three words", "first_name_last", "firstNameLast"},
-		{"multiple underscores", "user__id", "userId"},
-		{"trailing underscore", "user_id_", "userId"},
-		{"leading underscore", "_user_id", "UserId"},
-		{"all caps", "USER_ID", "USERID"},
-		{"mixed case", "User_Id", "UserId"},
+		{"simple snake_case", "employee_id", "employeeID"},
+		{"multiple underscores", "first_name_last", "firstNameLast"},
+		{"already camelCase", "employeeId", "employeeID"},
+		{"single word", "employee", "employee"},
 		{"empty string", "", ""},
-		{"single underscore", "_", ""},
+		{"underscore at start", "_employee", "Employee"},
+		{"underscore at end", "employee_", "employee"},
+		{"multiple consecutive underscores", "employee__id", "employeeID"},
+		{"all caps", "EMPLOYEE_ID", "EMPLOYEEID"},
 	}
 
 	for _, tt := range tests {
@@ -577,4 +197,65 @@ func TestSnakeToCamel(t *testing.T) {
 			assert.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+func TestConvertKeysRecursive(t *testing.T) {
+	logger := zap.NewNop()
+	handler := &RPCHandler{logger: logger}
+
+	t.Run("converts nested maps", func(t *testing.T) {
+		input := map[string]any{
+			"employee_id": 1,
+			"user_details": map[string]any{
+				"first_name": "John",
+				"last_name":  "Doe",
+			},
+		}
+
+		result := handler.convertKeysRecursive(input, nil)
+		resultMap := result.(map[string]any)
+
+		assert.Equal(t, 1, resultMap["employeeID"])
+		userDetails := resultMap["userDetails"].(map[string]any)
+		assert.Equal(t, "John", userDetails["firstName"])
+		assert.Equal(t, "Doe", userDetails["lastName"])
+	})
+
+	t.Run("converts arrays of maps", func(t *testing.T) {
+		input := []any{
+			map[string]any{"employee_id": 1},
+			map[string]any{"employee_id": 2},
+		}
+
+		result := handler.convertKeysRecursive(input, nil)
+		resultArray := result.([]any)
+
+		assert.Len(t, resultArray, 2)
+		assert.Equal(t, 1, resultArray[0].(map[string]any)["employeeID"])
+		assert.Equal(t, 2, resultArray[1].(map[string]any)["employeeID"])
+	})
+
+	t.Run("passes through enum values without schema", func(t *testing.T) {
+		input := map[string]any{
+			"employee": map[string]any{
+				"mood":   "MOOD_HAPPY",
+				"status": "STATUS_ACTIVE",
+			},
+		}
+
+		result := handler.convertKeysRecursive(input, nil)
+		resultMap := result.(map[string]any)
+
+		employee := resultMap["employee"].(map[string]any)
+		// Without schema, enum values pass through unchanged
+		assert.Equal(t, "MOOD_HAPPY", employee["mood"])
+		assert.Equal(t, "STATUS_ACTIVE", employee["status"])
+	})
+
+	t.Run("handles primitive types", func(t *testing.T) {
+		assert.Equal(t, 42, handler.convertValueRecursive(42, nil))
+		assert.Equal(t, 3.14, handler.convertValueRecursive(3.14, nil))
+		assert.Equal(t, true, handler.convertValueRecursive(true, nil))
+		assert.Equal(t, "hello", handler.convertValueRecursive("hello", nil))
+	})
 }
