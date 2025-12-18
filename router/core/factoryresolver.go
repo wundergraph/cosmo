@@ -164,6 +164,17 @@ func (d *DefaultFactoryResolver) ResolveGraphqlFactory(subgraphName string) (pla
 	// learn more:
 	// https://goperf.dev/02-networking/efficient-net-use/?h=http.client#dont-share-httpclient-across-multiple-hosts
 
+	if d.transportFactory == nil || d.baseTransport == nil {
+		// dummy implementation for plan generator that doesn't make requests
+		subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(
+			http.DefaultClient,
+			http.DefaultClient,
+			d.engineCtx,
+			d.subscriptionClientOptions...,
+		)
+		return graphql_datasource.NewFactory(d.engineCtx, http.DefaultClient, subscriptionClient)
+	}
+
 	defaultHTTPClient := &http.Client{
 		Timeout:   d.defaultSubgraphRequestTimeout,
 		Transport: d.transportFactory.RoundTripper(d.baseTransport),
