@@ -47,7 +47,7 @@ try {
 
   // Initialize the Redis connection
   const { redisQueue, redisWorker } = await createRedisConnections({
-    host: redis.host!,
+    host: redis.host,
     port: Number(redis.port),
     password: redis.password,
     tls: redis.tls,
