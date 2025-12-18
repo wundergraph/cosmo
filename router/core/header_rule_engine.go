@@ -102,15 +102,17 @@ func HeaderPropagationWriter(w http.ResponseWriter, resolveCtx *resolve.Context,
 }
 
 type headerPropagationWriter struct {
-	setContentLength  bool
-	propagateHeaders  bool
-	writer            http.ResponseWriter
-	headerPropagation *responseHeaderPropagation
-	resolveCtx        *resolve.Context
+	setContentLength     bool
+	propagateHeaders     bool
+	writer               http.ResponseWriter
+	headerPropagation    *responseHeaderPropagation
+	resolveCtx           *resolve.Context
+	didSetSubgraphErrors bool
 }
 
 func (h *headerPropagationWriter) Write(p []byte) (n int, err error) {
 	if h.setContentLength {
+		// setContentLength assumes this Write is called exactly once with the entire body
 		h.writer.Header().Set("Content-Length", strconv.Itoa(len(p)))
 		h.setContentLength = false
 	}
@@ -121,10 +123,12 @@ func (h *headerPropagationWriter) Write(p []byte) (n int, err error) {
 				wh.Add(k, el)
 			}
 		}
-		if h.resolveCtx.SubgraphErrors() != nil {
-			wh.Set("Cache-Control", "no-store, no-cache, must-revalidate")
-		}
 		h.propagateHeaders = false
+	}
+	if errs := h.resolveCtx.SubgraphErrors(); errs != nil && !h.didSetSubgraphErrors {
+		h.writer.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
+		h.didSetSubgraphErrors = true
+		trackFinalResponseError(h.resolveCtx.Context(), errs)
 	}
 	return h.writer.Write(p)
 }
