@@ -50,7 +50,7 @@ func (r *OperationRegistry) LoadOperationsForService(serviceName string, operati
 		return fmt.Errorf("service name cannot be empty")
 	}
 
-	r.logger.Info("loading operations for service",
+	r.logger.Debug("loading operations for service",
 		zap.String("service", serviceName),
 		zap.Int("file_count", len(operationFiles)))
 

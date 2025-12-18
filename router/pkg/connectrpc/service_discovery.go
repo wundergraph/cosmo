@@ -52,7 +52,7 @@ func DiscoverServices(config ServiceDiscoveryConfig) ([]DiscoveredService, error
 		config.Logger = zap.NewNop()
 	}
 
-	config.Logger.Info("discovering services",
+	config.Logger.Debug("discovering services",
 		zap.String("services_dir", config.ServicesDir))
 
 	// Check if services directory exists

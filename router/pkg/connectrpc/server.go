@@ -149,8 +149,9 @@ func NewServer(config ServerConfig) (*Server, error) {
 	}
 	server.transcoder = transcoder
 
-	// Log consolidated initialization summary
-	server.logger.Info("services loaded",
+	// Log consolidated initialization summary at DEBUG level
+	// The main INFO log will be in router.go
+	server.logger.Debug("ConnectRPC services loaded",
 		zap.Int("packages", len(packageServiceMap)),
 		zap.Int("services", len(discoveredServices)),
 		zap.Int("operations", totalOperations),
@@ -161,7 +162,7 @@ func NewServer(config ServerConfig) (*Server, error) {
 
 // Start starts the HTTP server (services must already be loaded via NewServer)
 func (s *Server) Start() error {
-	s.logger.Info("starting ConnectRPC server",
+	s.logger.Debug("starting ConnectRPC server",
 		zap.String("listen_addr", s.config.ListenAddr),
 		zap.String("services_dir", s.config.ServicesDir),
 		zap.String("graphql_endpoint", s.config.GraphQLEndpoint))
@@ -183,7 +184,7 @@ func (s *Server) Start() error {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	s.logger.Info("HTTP/2 (h2c) support enabled")
+	s.logger.Debug("HTTP/2 (h2c) support enabled")
 
 	// Create listener to get actual bound address
 	listener, err := net.Listen("tcp", s.config.ListenAddr)
