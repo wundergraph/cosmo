@@ -77,7 +77,7 @@ func NewProtoLoader(logger *zap.Logger) *ProtoLoader {
 
 // LoadFromDirectory loads all .proto files from a directory
 func (pl *ProtoLoader) LoadFromDirectory(dir string) error {
-	pl.logger.Info("loading proto files from directory", zap.String("dir", dir))
+	pl.logger.Debug("loading proto files from directory", zap.String("dir", dir))
 
 	// Find all .proto files
 	protoFiles, err := pl.findProtoFiles(dir)
@@ -89,7 +89,7 @@ func (pl *ProtoLoader) LoadFromDirectory(dir string) error {
 		return fmt.Errorf("no proto files found in directory: %s", dir)
 	}
 
-	pl.logger.Info("found proto files", zap.Int("count", len(protoFiles)))
+	pl.logger.Debug("found proto files", zap.Int("count", len(protoFiles)))
 
 	// Compute relative paths for all proto files
 	relativeFiles := make([]string, 0, len(protoFiles))
@@ -107,7 +107,7 @@ func (pl *ProtoLoader) LoadFromDirectory(dir string) error {
 		return fmt.Errorf("failed to parse proto files: %w", err)
 	}
 
-	pl.logger.Info("successfully loaded proto files",
+	pl.logger.Debug("successfully loaded proto files",
 		zap.Int("services", len(pl.services)))
 
 	return nil
