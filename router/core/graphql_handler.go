@@ -175,13 +175,10 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			resolveCtx = WithResponseHeaderPropagation(resolveCtx)
 		}
 
-		defer propagateSubgraphErrors(resolveCtx)
-
 		respBuf := bytes.Buffer{}
 
 		resp, err := h.executor.Resolver.ResolveGraphQLResponse(resolveCtx, p.Response, nil, &respBuf)
 		reqCtx.dataSourceNames = getSubgraphNames(p.Response.DataSources)
-
 		if err != nil {
 			trackFinalResponseError(resolveCtx.Context(), err)
 			h.WriteError(resolveCtx, err, p.Response, w)
@@ -189,6 +186,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if errs := resolveCtx.SubgraphErrors(); errs != nil {
+			trackFinalResponseError(resolveCtx.Context(), errs)
 			w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
 		}
 
