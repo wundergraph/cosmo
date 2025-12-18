@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
+	"github.com/jhump/protoreflect/desc"
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/cosmo/router/pkg/httputil"
@@ -251,7 +252,8 @@ func (h *RPCHandler) HandleRPC(ctx context.Context, serviceName, methodName stri
 		zap.String("type", operation.OperationType))
 
 	// Convert proto JSON (snake_case) to GraphQL variables (camelCase)
-	variables, err := h.convertProtoJSONToGraphQLVariables(requestJSON)
+	// Pass service and method info for schema-aware enum detection
+	variables, err := h.convertProtoJSONToGraphQLVariables(serviceName, methodName, requestJSON)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert proto JSON to GraphQL variables: %w", err)
 	}
@@ -265,23 +267,30 @@ func (h *RPCHandler) HandleRPC(ctx context.Context, serviceName, methodName stri
 	return responseJSON, nil
 }
 
-// convertProtoJSONToGraphQLVariables converts proto JSON (snake_case) to GraphQL variables (camelCase)
-func (h *RPCHandler) convertProtoJSONToGraphQLVariables(protoJSON []byte) (json.RawMessage, error) {
-	// Handle empty JSON - return empty object
+// convertProtoJSONToGraphQLVariables converts proto JSON to GraphQL variables:
+// - Converts field names from snake_case to camelCase
+// - Strips proto enum prefixes (MOOD_HAPPY -> HAPPY) using schema-aware detection
+func (h *RPCHandler) convertProtoJSONToGraphQLVariables(serviceName, methodName string, protoJSON []byte) (json.RawMessage, error) {
 	if len(protoJSON) == 0 {
 		return json.RawMessage("{}"), nil
 	}
 
-	// Parse the proto JSON
 	var protoData map[string]any
 	if err := json.Unmarshal(protoJSON, &protoData); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal proto JSON: %w", err)
 	}
 
-	// Recursively convert all keys from snake_case to camelCase
-	graphqlData := convertKeysRecursive(protoData)
+	// Get proto message descriptor for schema-aware enum detection
+	var messageDesc *desc.MessageDescriptor
+	if h.validator != nil && h.validator.protoLoader != nil {
+		method, err := h.validator.protoLoader.GetMethod(serviceName, methodName)
+		if err == nil && method.InputMessageDescriptor != nil {
+			messageDesc = method.InputMessageDescriptor
+		}
+	}
 
-	// Marshal back to JSON
+	graphqlData := h.convertKeysRecursive(protoData, messageDesc)
+
 	graphqlJSON, err := json.Marshal(graphqlData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal GraphQL variables: %w", err)
@@ -290,39 +299,128 @@ func (h *RPCHandler) convertProtoJSONToGraphQLVariables(protoJSON []byte) (json.
 	return graphqlJSON, nil
 }
 
-// convertKeysRecursive recursively converts all map keys from snake_case to camelCase
-// It handles nested maps and arrays of maps
-func convertKeysRecursive(data any) any {
+// convertKeysRecursive converts map keys from snake_case to camelCase
+// and strips proto enum prefixes using schema information when available
+// Omits fields with empty string values (e.g., from _UNSPECIFIED enum values)
+func (h *RPCHandler) convertKeysRecursive(data any, messageDesc *desc.MessageDescriptor) any {
 	switch v := data.(type) {
 	case map[string]any:
-		// Convert map keys recursively
 		result := make(map[string]any)
 		for key, value := range v {
 			camelKey := snakeToCamel(key)
-			result[camelKey] = convertKeysRecursive(value)
+			
+			var fieldDesc *desc.FieldDescriptor
+			if messageDesc != nil {
+				fieldDesc = messageDesc.FindFieldByName(key)
+			}
+			
+			convertedValue := h.convertValueRecursive(value, fieldDesc)
+			
+			// Omit fields with empty string values (e.g., from _UNSPECIFIED enum values)
+			// This ensures _UNSPECIFIED enums don't get sent to GraphQL
+			if strVal, ok := convertedValue.(string); ok && strVal == "" {
+				continue
+			}
+			
+			result[camelKey] = convertedValue
 		}
 		return result
 	case []any:
-		// Convert array elements recursively
 		result := make([]any, len(v))
 		for i, item := range v {
-			result[i] = convertKeysRecursive(item)
+			result[i] = h.convertKeysRecursive(item, messageDesc)
 		}
 		return result
 	default:
-		// Return primitive values as-is
+		return h.convertValueRecursive(v, nil)
+	}
+}
+
+// convertValueRecursive processes a value using field descriptor for schema-aware enum detection
+func (h *RPCHandler) convertValueRecursive(value any, fieldDesc *desc.FieldDescriptor) any {
+	switch v := value.(type) {
+	case map[string]any:
+		var nestedDesc *desc.MessageDescriptor
+		if fieldDesc != nil && fieldDesc.GetMessageType() != nil {
+			nestedDesc = fieldDesc.GetMessageType()
+		}
+		return h.convertKeysRecursive(v, nestedDesc)
+		
+	case []any:
+		result := make([]any, len(v))
+		for i, item := range v {
+			result[i] = h.convertValueRecursive(item, fieldDesc)
+		}
+		return result
+		
+	case string:
+		// Schema-aware: check if field is an enum type
+		if fieldDesc != nil && fieldDesc.GetEnumType() != nil {
+			enumTypeName := fieldDesc.GetEnumType().GetName()
+			return stripEnumPrefixWithType(v, enumTypeName)
+		}
+		
+		return v
+		
+	default:
 		return v
 	}
 }
 
-// snakeToCamel converts snake_case to camelCase
+// stripEnumPrefixWithType removes the enum type prefix using the known enum type name from schema
+// Example: stripEnumPrefixWithType("USER_STATUS_ACTIVE", "UserStatus") -> "ACTIVE"
+// Special case: _UNSPECIFIED values are treated as empty string (will be omitted or null in GraphQL)
+func stripEnumPrefixWithType(protoEnumValue, enumTypeName string) string {
+	// Convert enum type name to UPPER_SNAKE_CASE (matching protographic's logic)
+	prefix := toUpperSnakeCase(enumTypeName) + "_"
+	
+	if strings.HasPrefix(protoEnumValue, prefix) {
+		stripped := strings.TrimPrefix(protoEnumValue, prefix)
+		
+		// Handle _UNSPECIFIED values: these are proto-only (value 0) and don't exist in GraphQL
+		// Return empty string so they can be omitted or treated as null
+		if stripped == "UNSPECIFIED" {
+			return ""
+		}
+		
+		return stripped
+	}
+	
+	// If prefix doesn't match, return as-is (shouldn't happen with valid proto)
+	return protoEnumValue
+}
+
+// toUpperSnakeCase converts a string to UPPER_SNAKE_CASE
+// Example: "UserStatus" -> "USER_STATUS"
+func toUpperSnakeCase(s string) string {
+	// If already contains underscores or is all uppercase, just uppercase it
+	if strings.Contains(s, "_") || s == strings.ToUpper(s) {
+		return strings.ToUpper(s)
+	}
+	
+	var result strings.Builder
+	for i, r := range s {
+		// Add underscore before uppercase letters (except first character)
+		if i > 0 && r >= 'A' && r <= 'Z' {
+			// Check if previous character was lowercase
+			prev := rune(s[i-1])
+			if prev >= 'a' && prev <= 'z' {
+				result.WriteByte('_')
+			}
+		}
+		result.WriteRune(r)
+	}
+	return strings.ToUpper(result.String())
+}
+
+// snakeToCamel converts snake_case to camelCase with special ID handling
 func snakeToCamel(s string) string {
 	if s == "" {
 		return s
 	}
 
 	var builder strings.Builder
-	builder.Grow(len(s)) // Pre-allocate capacity
+	builder.Grow(len(s))
 
 	capitalizeNext := false
 	for i := 0; i < len(s); i++ {
@@ -333,11 +431,10 @@ func snakeToCamel(s string) string {
 		}
 
 		if capitalizeNext {
-			// Only convert to uppercase if it's a lowercase letter
 			if ch >= 'a' && ch <= 'z' {
-				builder.WriteByte(ch - ('a' - 'A')) // Convert to uppercase
+				builder.WriteByte(ch - ('a' - 'A'))
 			} else {
-				builder.WriteByte(ch) // Already uppercase or not a letter
+				builder.WriteByte(ch)
 			}
 			capitalizeNext = false
 		} else {
@@ -345,7 +442,14 @@ func snakeToCamel(s string) string {
 		}
 	}
 
-	return builder.String()
+	result := builder.String()
+	
+	// Special handling for ID suffix: employeeId -> employeeID
+	if strings.HasSuffix(result, "Id") && len(result) > 2 {
+		result = result[:len(result)-2] + "ID"
+	}
+	
+	return result
 }
 
 // makeCriticalGraphQLError creates a Connect error for GraphQL errors with no data (complete failure).
