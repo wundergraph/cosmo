@@ -141,6 +141,9 @@ type RequestContext interface {
 	// SetForceSha256Compute forces the computation of the Sha256Hash of the operation
 	// This is useful if the Sha256Hash is needed in custom modules but not used anywhere else
 	SetForceSha256Compute()
+
+	// Error returns the error associated with the request, if any
+	Error() error
 }
 
 type HeaderWithHash struct {
@@ -545,6 +548,11 @@ func (c *requestContext) SetAuthenticationScopes(scopes []string) {
 
 func (c *requestContext) SetForceSha256Compute() {
 	c.forceSha256Compute = true
+}
+
+// Error returns the error associated with the request, if any
+func (c *requestContext) Error() error {
+	return c.error
 }
 
 type OperationContext interface {
