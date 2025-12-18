@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.273.2](https://github.com/wundergraph/cosmo/compare/router@0.273.1...router@0.273.2) (2025-12-18)
+
+### Bug Fixes
+
+* use the correct cgroup policy to work on most of the systems ([#2421](https://github.com/wundergraph/cosmo/issues/2421)) ([e647984](https://github.com/wundergraph/cosmo/commit/e6479844cc2c72a501b9925496d0905fb0ad16d5)) (@alepane21)
+
 ## [0.273.1](https://github.com/wundergraph/cosmo/compare/router@0.273.0...router@0.273.1) (2025-12-18)
 
 ### Bug Fixes
