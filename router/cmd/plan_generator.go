@@ -104,8 +104,7 @@ func PlanGenerator(args []string) {
 		// More details: https://tip.golang.org/doc/gc-guide#Memory_limit
 		mLimit, err := memlimit.SetGoMemLimitWithOpts(
 			memlimit.WithRatio(0.9),
-			// FromCgroupHybrid retrieves the memory limit from the cgroup v2 and v1 controller sequentially
-			memlimit.WithProvider(memlimit.FromCgroupHybrid),
+			memlimit.WithProvider(memlimit.FromCgroup),
 		)
 		if err == nil {
 			logger.Info("GOMEMLIMIT set automatically", zap.String("size", humanize.Bytes(uint64(mLimit))))
