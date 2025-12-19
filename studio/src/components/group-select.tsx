@@ -13,7 +13,7 @@ export function GroupSelect({ id, value, disabled = false, groups, onValueChange
   groups?: OrganizationGroup[];
   onValueChange(group: OrganizationGroup): void;
 }) {
-  const isAdmin = false;// useIsAdmin();
+  const isAdmin = useIsAdmin();
   const { data, isPending, error, refetch } = useQuery(getOrganizationGroups, {}, { enabled: groups === undefined });
   if (isPending) {
     return (
