@@ -234,7 +234,7 @@ describe('API Keys', (ctx) => {
       ...users[TestUser.adminAliceCompanyA],
     });
 
-    // Create the API key with the `viewer` group
+    // Create the API key with the `admin` group
     const apiKeyName = uid();
     const createApiKeyResponse = await client.createAPIKey({
       name: apiKeyName,
