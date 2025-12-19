@@ -76,7 +76,7 @@ export function createAPIKey(
       return {
         response: {
           code: EnumStatusCode.ERR,
-          details: "You don't have the required permissions to assign this group",
+          details: `You don't have access to create an API key with the group "${orgGroup.name}"`,
         },
         apiKey: '',
       };

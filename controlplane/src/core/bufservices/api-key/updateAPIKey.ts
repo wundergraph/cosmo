@@ -62,7 +62,7 @@ export function updateAPIKey(
       return {
         response: {
           code: EnumStatusCode.ERR,
-          details: "You don't have the required permissions to assign this group",
+          details: `You don't have access to update the API key group to "${orgGroup.name}"`,
         },
         apiKey: '',
       };

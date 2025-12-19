@@ -182,7 +182,7 @@ describe('API Keys', (ctx) => {
     });
 
     expect(createApiKeyResponse.response?.code).toBe(EnumStatusCode.ERR);
-    expect(createApiKeyResponse.response?.details).toBe("You don't have the required permissions to assign this group");
+    expect(createApiKeyResponse.response?.details).toBe(`You don't have access to create an API key with the group "admin"`);
 
     await server.close();
   });
@@ -218,7 +218,42 @@ describe('API Keys', (ctx) => {
     });
 
     expect(updateApiKeyResponse.response?.code).toBe(EnumStatusCode.ERR);
-    expect(updateApiKeyResponse.response?.details).toBe("You don't have the required permissions to assign this group");
+    expect(updateApiKeyResponse.response?.details).toBe(`You don't have access to update the API key group to "admin"`);
+
+    await server.close();
+  });
+
+  test('that an "organization-apikey-manager" cannot delete an API key with admin role', async () => {
+    const { client, server, users, authenticator } = await SetupTest({ dbname, enableMultiUsers: true });
+
+    const orgGroupsResponse = await client.getOrganizationGroups({});
+    expect(orgGroupsResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const adminGroup = orgGroupsResponse.groups.find((g) => g.name === 'admin')!;
+    authenticator.changeUserWithSuppliedContext({
+      ...users[TestUser.adminAliceCompanyA],
+    });
+
+    // Create the API key with the `viewer` group
+    const apiKeyName = uid();
+    const createApiKeyResponse = await client.createAPIKey({
+      name: apiKeyName,
+      expires: ExpiresAt.NEVER,
+      groupId: adminGroup.groupId,
+    });
+
+    expect(createApiKeyResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Try to delete the API key
+    authenticator.changeUserWithSuppliedContext({
+      ...users[TestUser.adminAliceCompanyA],
+      rbac: createTestRBACEvaluator(createTestGroup({ role: 'organization-apikey-manager' })),
+    });
+
+    const deleteApiKeyResponse = await client.deleteAPIKey({ name: apiKeyName });
+
+    expect(deleteApiKeyResponse.response?.code).toBe(EnumStatusCode.ERR);
+    expect(deleteApiKeyResponse.response?.details).toBe(`You don't have access to remove the API key "${apiKeyName}"`);
 
     await server.close();
   });
