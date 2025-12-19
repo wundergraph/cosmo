@@ -1492,4 +1492,149 @@ func TestErrorPropagation(t *testing.T) {
 			require.Equal(t, expected, resp.Body)
 		})
 	})
+
+}
+
+func TestErrorLocations(t *testing.T) {
+	t.Parallel()
+
+	t.Run("Handle invalid locations", func(t *testing.T) {
+		t.Parallel()
+
+		tests := []struct {
+			name                        string
+			subgraphErrorsInput         string
+			expectedWrappedResponse     string
+			expectedPassthroughResponse string
+		}{
+			{
+				name:                        "all locations invalid - removes locations field",
+				subgraphErrorsInput:         `[{"message":"Unauthorized","locations":[{"line":-1,"column":1}],"extensions":{"code":"UNAUTHORIZED"}}]`,
+				expectedWrappedResponse:     `[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}]`,
+				expectedPassthroughResponse: `[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED","statusCode":200}}]`,
+			},
+			{
+				name:                        "locations is not array type - removes locations field",
+				subgraphErrorsInput:         `[{"message":"Unauthorized","locations":"testing","extensions":{"code":"UNAUTHORIZED"}}]`,
+				expectedWrappedResponse:     `[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}]`,
+				expectedPassthroughResponse: `[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED","statusCode":200}}]`,
+			},
+			{
+				name:                        "mixed valid and invalid locations - keeps only valid",
+				subgraphErrorsInput:         `[{"message":"Unauthorized","locations":[{"line":1,"column":5},{"line":0,"column":10},{"line":3,"column":-2},{"line":4,"column":15}],"extensions":{"code":"UNAUTHORIZED"}}]`,
+				expectedWrappedResponse:     `[{"message":"Unauthorized","locations":[{"line":1,"column":5},{"line":4,"column":15}],"extensions":{"code":"UNAUTHORIZED"}}]`,
+				expectedPassthroughResponse: `[{"message":"Unauthorized","locations":[{"line":1,"column":5},{"line":4,"column":15}],"extensions":{"code":"UNAUTHORIZED","statusCode":200}}]`,
+			},
+			{
+				name:                        "location with missing required field - removes that location",
+				subgraphErrorsInput:         `[{"message":"Unauthorized","locations":[{"line":1,"column":5},{"column":10}],"extensions":{"code":"UNAUTHORIZED"}}]`,
+				expectedWrappedResponse:     `[{"message":"Unauthorized","locations":[{"line":1,"column":5}],"extensions":{"code":"UNAUTHORIZED"}}]`,
+				expectedPassthroughResponse: `[{"message":"Unauthorized","locations":[{"line":1,"column":5}],"extensions":{"code":"UNAUTHORIZED","statusCode":200}}]`,
+			},
+			{
+				name:                        "all locations missing fields - removes locations field",
+				subgraphErrorsInput:         `[{"message":"Unauthorized","locations":[{"line":1},{"column":5}],"extensions":{"code":"UNAUTHORIZED"}}]`,
+				expectedWrappedResponse:     `[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}]`,
+				expectedPassthroughResponse: `[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED","statusCode":200}}]`,
+			},
+			{
+				name:                        "location with invalid type - removes that location",
+				subgraphErrorsInput:         `[{"message":"Unauthorized","locations":[{"line":1,"column":5},{"line":"invalid","column":10}],"extensions":{"code":"UNAUTHORIZED"}}]`,
+				expectedWrappedResponse:     `[{"message":"Unauthorized","locations":[{"line":1,"column":5}],"extensions":{"code":"UNAUTHORIZED"}}]`,
+				expectedPassthroughResponse: `[{"message":"Unauthorized","locations":[{"line":1,"column":5}],"extensions":{"code":"UNAUTHORIZED","statusCode":200}}]`,
+			},
+			{
+				name:                        "all locations with invalid types - removes locations field",
+				subgraphErrorsInput:         `[{"message":"Unauthorized","locations":[{"line":"invalid","column":5},{"line":2,"column":"invalid"}],"extensions":{"code":"UNAUTHORIZED"}}]`,
+				expectedWrappedResponse:     `[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}]`,
+				expectedPassthroughResponse: `[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED","statusCode":200}}]`,
+			},
+			{
+				name:                        "locations is not an array - removes locations field",
+				subgraphErrorsInput:         `[{"message":"Unauthorized","locations":"invalid","extensions":{"code":"UNAUTHORIZED"}}]`,
+				expectedWrappedResponse:     `[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}]`,
+				expectedPassthroughResponse: `[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED","statusCode":200}}]`,
+			},
+			{
+				name:                        "multiple errors with different location scenarios",
+				subgraphErrorsInput:         `[{"message":"Error 1","locations":[{"line":1,"column":5}],"extensions":{"code":"ERR1"}},{"message":"Error 2","locations":[{"line":0,"column":0}],"extensions":{"code":"ERR2"}},{"message":"Error 3","locations":[{"line":3,"column":10},{"line":-1,"column":5}],"extensions":{"code":"ERR3"}}]`,
+				expectedWrappedResponse:     `[{"message":"Error 1","locations":[{"line":1,"column":5}],"extensions":{"code":"ERR1"}},{"message":"Error 2","extensions":{"code":"ERR2"}},{"message":"Error 3","locations":[{"line":3,"column":10}],"extensions":{"code":"ERR3"}}]`,
+				expectedPassthroughResponse: `[{"message":"Error 1","locations":[{"line":1,"column":5}],"extensions":{"code":"ERR1","statusCode":200}},{"message":"Error 2","extensions":{"code":"ERR2","statusCode":200}},{"message":"Error 3","locations":[{"line":3,"column":10}],"extensions":{"code":"ERR3","statusCode":200}}]`,
+			},
+			{
+				name:                        "valid locations - unchanged",
+				subgraphErrorsInput:         `[{"message":"Unauthorized","locations":[{"line":1,"column":5},{"line":2,"column":10}],"extensions":{"code":"UNAUTHORIZED"}}]`,
+				expectedWrappedResponse:     `[{"message":"Unauthorized","locations":[{"line":1,"column":5},{"line":2,"column":10}],"extensions":{"code":"UNAUTHORIZED"}}]`,
+				expectedPassthroughResponse: `[{"message":"Unauthorized","locations":[{"line":1,"column":5},{"line":2,"column":10}],"extensions":{"code":"UNAUTHORIZED","statusCode":200}}]`,
+			},
+			{
+				name:                        "no locations field - unchanged",
+				subgraphErrorsInput:         `[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}]`,
+				expectedWrappedResponse:     `[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}]`,
+				expectedPassthroughResponse: `[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED","statusCode":200}}]`,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				t.Parallel()
+
+				t.Run("wrapped mode", func(t *testing.T) {
+					t.Parallel()
+					testenv.Run(t, &testenv.Config{
+						ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+							cfg.Enabled = true
+							cfg.Mode = config.SubgraphErrorPropagationModeWrapped
+						},
+						Subgraphs: testenv.SubgraphsConfig{
+							Employees: testenv.SubgraphConfig{
+								Middleware: func(handler http.Handler) http.Handler {
+									return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+										w.WriteHeader(http.StatusOK)
+										subgraphResponse := `{"errors":` + tt.subgraphErrorsInput + `}`
+										_, _ = w.Write([]byte(subgraphResponse))
+									})
+								},
+							},
+						},
+					}, func(t *testing.T, xEnv *testenv.Environment) {
+						res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+							Query: `{ employees { id details { forename surname } notes } }`,
+						})
+
+						expectedBody := `{"errors":[{"message":"Failed to fetch from Subgraph 'employees'.","extensions":{"errors":` + tt.expectedWrappedResponse + `,"statusCode":200}}],"data":{"employees":null}}`
+						require.JSONEq(t, expectedBody, res.Body)
+					})
+				})
+
+				t.Run("passthrough mode", func(t *testing.T) {
+					t.Parallel()
+					testenv.Run(t, &testenv.Config{
+						ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+							cfg.Enabled = true
+							cfg.Mode = config.SubgraphErrorPropagationModePassthrough
+						},
+						Subgraphs: testenv.SubgraphsConfig{
+							Employees: testenv.SubgraphConfig{
+								Middleware: func(handler http.Handler) http.Handler {
+									return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+										w.WriteHeader(http.StatusOK)
+										subgraphResponse := `{"errors":` + tt.subgraphErrorsInput + `}`
+										_, _ = w.Write([]byte(subgraphResponse))
+									})
+								},
+							},
+						},
+					}, func(t *testing.T, xEnv *testenv.Environment) {
+						res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+							Query: `{ employees { id details { forename surname } notes } }`,
+						})
+
+						expectedBody := `{"errors":` + tt.expectedPassthroughResponse + `,"data":{"employees":null}}`
+						require.JSONEq(t, expectedBody, res.Body)
+					})
+				})
+			})
+		}
+	})
 }
