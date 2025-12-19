@@ -135,7 +135,10 @@ async function getKeycloakUsers(): Promise<UserRepresentation[]> {
   return users;
 }
 
-async function getExistingDatabaseUsers(db: PostgresJsDatabase<typeof schema>, emails: string[]): Promise<DbUserRepresentation[]> {
+async function getExistingDatabaseUsers(
+  db: PostgresJsDatabase<typeof schema>,
+  emails: string[],
+): Promise<DbUserRepresentation[]> {
   const start = performance.now();
   const users = await db
     .select({
