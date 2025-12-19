@@ -106,7 +106,9 @@ func (m *FlightRecorder) RecordTrace(operationName string) {
 		m.Logger.Error("failed to create trace file", zap.Error(err))
 		return
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	_, err = m.fl.WriteTo(file)
 	if err != nil {

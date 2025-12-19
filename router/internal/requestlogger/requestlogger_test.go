@@ -4,14 +4,15 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/wundergraph/cosmo/router/internal/test"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"net/http"
-	"net/http/httptest"
-	"testing"
 )
 
 func TestRequestLogger(t *testing.T) {
@@ -33,7 +34,7 @@ func TestRequestLogger(t *testing.T) {
 	rec := httptest.NewRecorder()
 	recovery.ServeHTTP(rec, test.NewRequest(http.MethodGet, "/subdir/asdf"))
 
-	writer.Flush()
+	_ = writer.Flush()
 
 	assert.Equal(t, http.StatusOK, rec.Code)
 

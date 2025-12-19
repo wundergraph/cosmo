@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"encoding/binary"
 	"errors"
 	"net/http"
 	"net/url"
@@ -11,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cespare/xxhash/v2"
 	rcontext "github.com/wundergraph/cosmo/router/internal/context"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -144,6 +146,11 @@ type RequestContext interface {
 	Error() error
 }
 
+type HeaderWithHash struct {
+	Header http.Header
+	Hash   uint64
+}
+
 var metricAttrsPool = sync.Pool{
 	New: func() any {
 		v := make([]attribute.KeyValue, 0, 20)
@@ -273,6 +280,73 @@ type requestContext struct {
 	customFieldValueRenderer resolve.FieldValueRenderer
 	// forceSha256Compute indicates whether the Sha256Hash of the operation should definitely be computed
 	forceSha256Compute bool
+}
+
+type headerBuilder struct {
+	headers map[string]*HeaderWithHash
+	allHash uint64
+}
+
+func (c *headerBuilder) HashAll() (out uint64) {
+	return c.allHash
+}
+
+func (c *headerBuilder) HeadersForSubgraph(subgraphName string) (http.Header, uint64) {
+	if header, ok := c.headers[subgraphName]; ok {
+		return header.Header.Clone(), header.Hash
+	}
+	return nil, 0
+}
+
+func SubgraphHeadersBuilder(ctx *requestContext, headerPropagation *HeaderPropagation, executionPlan plan.Plan) resolve.SubgraphHeadersBuilder {
+
+	keyGen := xxhash.New()
+
+	switch p := executionPlan.(type) {
+	case *plan.SynchronousResponsePlan:
+		headers := make(map[string]*HeaderWithHash, len(p.Response.DataSources))
+		for i := range p.Response.DataSources {
+			h, hh := headerPropagation.BuildRequestHeaderForSubgraph(p.Response.DataSources[i].Name, ctx)
+			headers[p.Response.DataSources[i].Name] = &HeaderWithHash{
+				Header: h,
+				Hash:   hh,
+			}
+			var b [8]byte
+			binary.LittleEndian.PutUint64(b[:], hh)
+			_, _ = keyGen.Write(b[:])
+		}
+		return &headerBuilder{
+			headers: headers,
+			allHash: keyGen.Sum64(),
+		}
+	case *plan.SubscriptionResponsePlan:
+		headers := make(map[string]*HeaderWithHash, len(p.Response.Response.DataSources)+1)
+		for i := range p.Response.Response.DataSources {
+			h, hh := headerPropagation.BuildRequestHeaderForSubgraph(p.Response.Response.DataSources[i].Name, ctx)
+			headers[p.Response.Response.DataSources[i].Name] = &HeaderWithHash{
+				Header: h,
+				Hash:   hh,
+			}
+			var b [8]byte
+			binary.LittleEndian.PutUint64(b[:], hh)
+			_, _ = keyGen.Write(b[:])
+		}
+		h, hh := headerPropagation.BuildRequestHeaderForSubgraph(p.Response.Trigger.SourceName, ctx)
+		headers[p.Response.Trigger.SourceName] = &HeaderWithHash{
+			Header: h,
+			Hash:   hh,
+		}
+		var b [8]byte
+		binary.LittleEndian.PutUint64(b[:], hh)
+		_, _ = keyGen.Write(b[:])
+		return &headerBuilder{
+			headers: headers,
+			allHash: keyGen.Sum64(),
+		}
+	}
+	return &headerBuilder{
+		headers: make(map[string]*HeaderWithHash),
+	}
 }
 
 func (c *requestContext) SetCustomFieldValueRenderer(renderer resolve.FieldValueRenderer) {
@@ -532,10 +606,11 @@ type operationContext struct {
 	// RawContent is the raw content of the operation
 	rawContent string
 	// Content is the normalized content of the operation
-	content    string
-	variables  *astjson.Value
-	files      []*httpclient.FileUpload
-	clientInfo *ClientInfo
+	content       string
+	variables     *astjson.Value
+	variablesHash uint64
+	files         []*httpclient.FileUpload
+	clientInfo    *ClientInfo
 	// preparedPlan is the prepared plan of the operation
 	preparedPlan     *planWithMetaData
 	traceOptions     resolve.TraceOptions

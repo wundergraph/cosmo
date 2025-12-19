@@ -90,7 +90,9 @@ func (c Client) persistedOperation(ctx context.Context, clientName, sha256Hash s
 	if err != nil {
 		return nil, err
 	}
-	defer reader.Close()
+	defer func() {
+		_ = reader.Close()
+	}()
 
 	body, err := io.ReadAll(reader)
 	if err != nil {

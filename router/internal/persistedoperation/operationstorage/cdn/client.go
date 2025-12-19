@@ -78,7 +78,9 @@ func (cdn *client) persistedOperation(ctx context.Context, clientName string, sh
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	span.SetAttributes(semconv.HTTPStatusCode(resp.StatusCode))
 
@@ -107,7 +109,9 @@ func (cdn *client) persistedOperation(ctx context.Context, clientName string, sh
 		if err != nil {
 			return nil, errors.New("could not create gzip reader. " + err.Error())
 		}
-		defer r.Close()
+		defer func() {
+			_ = r.Close()
+		}()
 		reader = r
 	}
 

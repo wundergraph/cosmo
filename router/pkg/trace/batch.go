@@ -1,13 +1,14 @@
 package trace
 
 import (
+	"net/http"
+	"strconv"
+
 	"github.com/cespare/xxhash/v2"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
-	"net/http"
-	"strconv"
 )
 
 func AddBatchTracing(
@@ -21,7 +22,7 @@ func AddBatchTracing(
 ) {
 	rootSpan := trace.SpanFromContext(r.Context())
 
-	digest.Write(bodyBytes)
+	_, _ = digest.Write(bodyBytes)
 	operationHashBatch := strconv.FormatUint(digest.Sum64(), 10)
 
 	// We need to reset the digest so we can reuse it

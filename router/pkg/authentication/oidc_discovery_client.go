@@ -44,7 +44,9 @@ func (c *oidcDiscoveryClient) RoundTrip(req *http.Request) (*http.Response, erro
 		return nil, err
 	}
 
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	oidcConfig := new(oidcConfiguration)
 	if err := json.NewDecoder(resp.Body).Decode(oidcConfig); err != nil {
