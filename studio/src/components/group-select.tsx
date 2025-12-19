@@ -4,6 +4,7 @@ import { useQuery } from "@connectrpc/connect-query";
 import { getOrganizationGroups } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { Button } from "@/components/ui/button";
+import { useIsAdmin } from "@/hooks/use-is-admin";
 
 export function GroupSelect({ id, value, disabled = false, groups, onValueChange }: {
   id?: string;
@@ -12,6 +13,7 @@ export function GroupSelect({ id, value, disabled = false, groups, onValueChange
   groups?: OrganizationGroup[];
   onValueChange(group: OrganizationGroup): void;
 }) {
+  const isAdmin = false;// useIsAdmin();
   const { data, isPending, error, refetch } = useQuery(getOrganizationGroups, {}, { enabled: groups === undefined });
   if (isPending) {
     return (
@@ -60,6 +62,7 @@ export function GroupSelect({ id, value, disabled = false, groups, onValueChange
           <SelectItem
             key={`group-${group.groupId}`}
             value={group.groupId}
+            disabled={!isAdmin && group.rules.some((rule) => rule.role === 'organization-admin')}
           >
             {group.name}
           </SelectItem>

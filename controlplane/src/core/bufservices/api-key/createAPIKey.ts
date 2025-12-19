@@ -9,6 +9,7 @@ import { ApiKeyGenerator } from '../../services/ApiGenerator.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { RBACEvaluator } from '../../services/RBACEvaluator.js';
 
 export function createAPIKey(
   opts: RouterOptions,
@@ -70,8 +71,18 @@ export function createAPIKey(
       };
     }
 
-    const generatedAPIKey = ApiKeyGenerator.generate();
+    const rbac = new RBACEvaluator([orgGroup]);
+    if (rbac.isOrganizationAdmin && !authContext.rbac.isOrganizationAdmin) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: "You don't have the required permissions to assign this group",
+        },
+        apiKey: '',
+      };
+    }
 
+    const generatedAPIKey = ApiKeyGenerator.generate();
     await apiKeyRepo.addAPIKey({
       name: keyName,
       organizationID: authContext.organizationId,
