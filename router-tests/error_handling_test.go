@@ -1592,7 +1592,8 @@ func TestErrorLocations(t *testing.T) {
 									return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 										w.WriteHeader(http.StatusOK)
 										subgraphResponse := `{"errors":` + tt.subgraphErrorsInput + `}`
-										_, _ = w.Write([]byte(subgraphResponse))
+										_, err := w.Write([]byte(subgraphResponse))
+										require.NoError(t, err)
 									})
 								},
 							},
@@ -1620,7 +1621,8 @@ func TestErrorLocations(t *testing.T) {
 									return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 										w.WriteHeader(http.StatusOK)
 										subgraphResponse := `{"errors":` + tt.subgraphErrorsInput + `}`
-										_, _ = w.Write([]byte(subgraphResponse))
+										_, err := w.Write([]byte(subgraphResponse))
+										require.NoError(t, err)
 									})
 								},
 							},
