@@ -48,16 +48,6 @@ const findUsersPaged = keycloakClient.client.users.makeRequest<UserQuery, UserRe
 try {
   const start = performance.now();
 
-  // Create the database connection. TLS is optional.
-  const connectionConfig = await buildDatabaseConnectionConfig({
-    tls:
-      databaseTlsCa || databaseTlsCert || databaseTlsKey
-        ? { ca: databaseTlsCa, cert: databaseTlsCert, key: databaseTlsKey }
-        : undefined,
-  });
-
-  const queryConnection = postgres(databaseConnectionUrl, { ...connectionConfig });
-
   // Ensure Keycloak is up and running
   console.log('Retrieving users from Keycloak...');
   await keycloakClient.authenticateClient();
@@ -72,6 +62,16 @@ try {
     process.exit(0);
   }
 
+  // Create the database connection. TLS is optional.
+  const connectionConfig = await buildDatabaseConnectionConfig({
+    tls:
+      databaseTlsCa || databaseTlsCert || databaseTlsKey
+        ? { ca: databaseTlsCa, cert: databaseTlsCert, key: databaseTlsKey }
+        : undefined,
+  });
+
+  const queryConnection = postgres(databaseConnectionUrl, { ...connectionConfig });
+
   // Retrieve the existing users from the database
   console.log('Retrieving users from database...');
 
@@ -80,6 +80,7 @@ try {
     db,
     keycloakUsers.map((user) => user.email),
   );
+
   await queryConnection.end({
     timeout: 1,
   });
