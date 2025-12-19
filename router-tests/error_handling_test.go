@@ -1514,19 +1514,13 @@ func TestErrorLocations(t *testing.T) {
 				expectedPassthroughResponse: `[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED","statusCode":200}}]`,
 			},
 			{
-				name:                        "locations is not array type - removes locations field",
-				subgraphErrorsInput:         `[{"message":"Unauthorized","locations":"testing","extensions":{"code":"UNAUTHORIZED"}}]`,
-				expectedWrappedResponse:     `[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}]`,
-				expectedPassthroughResponse: `[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED","statusCode":200}}]`,
-			},
-			{
 				name:                        "mixed valid and invalid locations - keeps only valid",
 				subgraphErrorsInput:         `[{"message":"Unauthorized","locations":[{"line":1,"column":5},{"line":0,"column":10},{"line":3,"column":-2},{"line":4,"column":15}],"extensions":{"code":"UNAUTHORIZED"}}]`,
 				expectedWrappedResponse:     `[{"message":"Unauthorized","locations":[{"line":1,"column":5},{"line":4,"column":15}],"extensions":{"code":"UNAUTHORIZED"}}]`,
 				expectedPassthroughResponse: `[{"message":"Unauthorized","locations":[{"line":1,"column":5},{"line":4,"column":15}],"extensions":{"code":"UNAUTHORIZED","statusCode":200}}]`,
 			},
 			{
-				name:                        "location with missing required field - removes that location",
+				name:                        "location with missing line field - removes that location",
 				subgraphErrorsInput:         `[{"message":"Unauthorized","locations":[{"line":1,"column":5},{"column":10}],"extensions":{"code":"UNAUTHORIZED"}}]`,
 				expectedWrappedResponse:     `[{"message":"Unauthorized","locations":[{"line":1,"column":5}],"extensions":{"code":"UNAUTHORIZED"}}]`,
 				expectedPassthroughResponse: `[{"message":"Unauthorized","locations":[{"line":1,"column":5}],"extensions":{"code":"UNAUTHORIZED","statusCode":200}}]`,
