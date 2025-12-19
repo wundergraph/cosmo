@@ -1579,6 +1579,7 @@ func TestErrorLocations(t *testing.T) {
 						ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
 							cfg.Enabled = true
 							cfg.Mode = config.SubgraphErrorPropagationModeWrapped
+							cfg.OmitLocations = false
 						},
 						Subgraphs: testenv.SubgraphsConfig{
 							Employees: testenv.SubgraphConfig{
@@ -1586,8 +1587,9 @@ func TestErrorLocations(t *testing.T) {
 									return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 										w.WriteHeader(http.StatusOK)
 										subgraphResponse := `{"errors":` + tt.subgraphErrorsInput + `}`
-										_, err := w.Write([]byte(subgraphResponse))
-										require.NoError(t, err)
+										if _, err := w.Write([]byte(subgraphResponse)); err != nil {
+											http.Error(w, err.Error(), http.StatusInternalServerError)
+										}
 									})
 								},
 							},
@@ -1608,6 +1610,7 @@ func TestErrorLocations(t *testing.T) {
 						ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
 							cfg.Enabled = true
 							cfg.Mode = config.SubgraphErrorPropagationModePassthrough
+							cfg.OmitLocations = false
 						},
 						Subgraphs: testenv.SubgraphsConfig{
 							Employees: testenv.SubgraphConfig{
@@ -1615,8 +1618,9 @@ func TestErrorLocations(t *testing.T) {
 									return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 										w.WriteHeader(http.StatusOK)
 										subgraphResponse := `{"errors":` + tt.subgraphErrorsInput + `}`
-										_, err := w.Write([]byte(subgraphResponse))
-										require.NoError(t, err)
+										if _, err := w.Write([]byte(subgraphResponse)); err != nil {
+											http.Error(w, err.Error(), http.StatusInternalServerError)
+										}
 									})
 								},
 							},
