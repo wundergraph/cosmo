@@ -105,7 +105,7 @@ async function getKeycloakUsers(): Promise<UserRepresentation[]> {
   let startIndex = 0;
   const users: UserRepresentation[] = [];
   while (true) {
-    console.log(`\tFetching range ${(startIndex + 1)}-${startIndex + NUMBER_OF_USERS_PER_PAGE}`)
+    console.log(`\tFetching range ${startIndex + 1}-${startIndex + NUMBER_OF_USERS_PER_PAGE}`);
     const chunkOfUsers = await findUsersPaged({
       first: startIndex,
       max: NUMBER_OF_USERS_PER_PAGE,
