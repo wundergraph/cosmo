@@ -54,6 +54,8 @@ export function getAuditLogs(
       };
     }
 
+    req.limit = req.limit || 50;
+
     // check that the limit is less than the max option provided in the ui
     if (req.limit > 50) {
       return {

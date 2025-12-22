@@ -19,13 +19,34 @@ export function getAPIKeys(
 
     const apiKeyRepo = new ApiKeyRepository(opts.db);
 
-    const apiKeys = await apiKeyRepo.getAPIKeys({ organizationID: authContext.organizationId });
+    req.limit = req.limit || 50;
+    if (req.limit > 50) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: 'Invalid limit',
+        },
+        apiKeys: [],
+        count: 0,
+      };
+    }
+
+    const apiKeys = await apiKeyRepo.getAPIKeys({
+      organizationID: authContext.organizationId,
+      limit: req.limit,
+      offset: req.offset,
+    });
+
+    const count = await apiKeyRepo.getAPIKeysCount({
+      organizationID: authContext.organizationId,
+    });
 
     return {
       response: {
         code: EnumStatusCode.OK,
       },
       apiKeys,
+      count,
     };
   });
 }

@@ -8172,6 +8172,16 @@ export class APIKey_Group extends Message<APIKey_Group> {
  * @generated from message wg.cosmo.platform.v1.GetAPIKeysRequest
  */
 export class GetAPIKeysRequest extends Message<GetAPIKeysRequest> {
+  /**
+   * @generated from field: int32 limit = 1;
+   */
+  limit = 0;
+
+  /**
+   * @generated from field: int32 offset = 2;
+   */
+  offset = 0;
+
   constructor(data?: PartialMessage<GetAPIKeysRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -8180,6 +8190,8 @@ export class GetAPIKeysRequest extends Message<GetAPIKeysRequest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.platform.v1.GetAPIKeysRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 2, name: "offset", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetAPIKeysRequest {
@@ -8213,6 +8225,11 @@ export class GetAPIKeysResponse extends Message<GetAPIKeysResponse> {
    */
   apiKeys: APIKey[] = [];
 
+  /**
+   * @generated from field: int32 count = 3;
+   */
+  count = 0;
+
   constructor(data?: PartialMessage<GetAPIKeysResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -8223,6 +8240,7 @@ export class GetAPIKeysResponse extends Message<GetAPIKeysResponse> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "apiKeys", kind: "message", T: APIKey, repeated: true },
+    { no: 3, name: "count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetAPIKeysResponse {

@@ -73,6 +73,8 @@ export function getCheckOperations(
       };
     }
 
+    req.limit = req.limit || 200;
+
     // check that the limit is less than the max option provided in the ui
     if (req.limit > 200) {
       return {

@@ -1,5 +1,5 @@
 import { ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, count, eq } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../../db/schema.js';
 import { apiKeyPermissions, apiKeyResources, apiKeys, users } from '../../db/schema.js';
@@ -108,8 +108,8 @@ export class ApiKeyRepository {
     } as APIKeyDTO;
   }
 
-  public async getAPIKeys(input: { organizationID: string }): Promise<APIKeyDTO[]> {
-    const keys = await this.db
+  public async getAPIKeys(input: { organizationID: string; limit: number; offset: number }): Promise<APIKeyDTO[]> {
+    const query = this.db
       .select({
         id: apiKeys.id,
         name: apiKeys.name,
@@ -125,8 +125,17 @@ export class ApiKeyRepository {
       .innerJoin(users, eq(users.id, apiKeys.userId))
       .leftJoin(schema.organizationGroups, eq(schema.organizationGroups.id, apiKeys.groupId))
       .where(eq(apiKeys.organizationId, input.organizationID))
-      .orderBy(asc(apiKeys.createdAt))
-      .execute();
+      .orderBy(asc(apiKeys.createdAt));
+
+    if (input.limit) {
+      query.limit(input.limit);
+    }
+
+    if (input.offset) {
+      query.offset(input.offset);
+    }
+
+    const keys = await query.execute();
 
     return keys.map(
       ({ groupId, groupName, ...key }) =>
@@ -141,6 +150,18 @@ export class ApiKeyRepository {
           creatorUserID: key.creatorUserID,
         }) as APIKeyDTO,
     );
+  }
+
+  public async getAPIKeysCount(input: { organizationID: string }): Promise<number> {
+    const result = await this.db
+      .select({
+        count: count(),
+      })
+      .from(apiKeys)
+      .where(eq(apiKeys.organizationId, input.organizationID))
+      .execute();
+
+    return result[0]?.count ?? 0;
   }
 
   public updateAPIKeyGroup(input: { apiKeyId: string; groupId: string }) {
