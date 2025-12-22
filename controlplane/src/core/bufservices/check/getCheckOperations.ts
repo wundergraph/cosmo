@@ -10,7 +10,7 @@ import { OperationsRepository } from '../../repositories/OperationsRepository.js
 import { SchemaCheckRepository } from '../../repositories/SchemaCheckRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { clamp, enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
 export function getCheckOperations(
@@ -73,24 +73,8 @@ export function getCheckOperations(
       };
     }
 
-    req.limit = req.limit || 200;
-
-    // check that the limit is less than the max option provided in the ui
-    if (req.limit > 200) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: 'Invalid limit',
-        },
-        operations: [],
-        trafficCheckDays: 0,
-        createdAt: '',
-        clientTrafficCheckSkipped: false,
-        totalOperationsCount: 0,
-        doAllOperationsHaveIgnoreAllOverride: false,
-        doAllOperationsHaveAllTheirChangesMarkedSafe: false,
-      };
-    }
+    // deafult to 10 if no limit is provided
+    req.limit = clamp(req.limit || 10, 1, 200);
 
     const affectedOperations = await schemaCheckRepo.getAffectedOperationsByCheckId({
       checkId: req.checkId,

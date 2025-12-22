@@ -9,7 +9,7 @@ import {
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, fromProposalOriginEnum, getLogger, handleError, validateDateRanges } from '../../util.js';
+import { clamp, enrichLogger, fromProposalOriginEnum, getLogger, handleError, validateDateRanges } from '../../util.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
@@ -95,19 +95,8 @@ export function getProposalsByFederatedGraph(
       };
     }
 
-    req.limit = req.limit || 50;
-
-    // check that the limit is less than the max option provided in the ui
-    if (req.limit > 50) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: 'Invalid limit',
-        },
-        proposals: [],
-        isProposalsEnabled: namespace.enableProposals,
-      };
-    }
+    // deafult to 10 if no limit is provided
+    req.limit = clamp(req.limit || 10, 1, 50);
 
     const { proposals } = await proposalRepo.ByFederatedGraphId({
       federatedGraphId: federatedGraph.id,

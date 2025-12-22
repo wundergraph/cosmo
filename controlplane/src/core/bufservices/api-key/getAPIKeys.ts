@@ -4,7 +4,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { GetAPIKeysRequest, GetAPIKeysResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { ApiKeyRepository } from '../../repositories/ApiKeyRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { clamp, enrichLogger, getLogger, handleError } from '../../util.js';
 
 export function getAPIKeys(
   opts: RouterOptions,
@@ -19,17 +19,8 @@ export function getAPIKeys(
 
     const apiKeyRepo = new ApiKeyRepository(opts.db);
 
-    req.limit = req.limit || 50;
-    if (req.limit > 50) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: 'Invalid limit',
-        },
-        apiKeys: [],
-        count: 0,
-      };
-    }
+    // deafult to 10 if no limit is provided
+    req.limit = clamp(req.limit || 10, 1, 50);
 
     const apiKeys = await apiKeyRepo.getAPIKeys({
       organizationID: authContext.organizationId,
