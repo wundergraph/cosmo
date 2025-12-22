@@ -14,7 +14,7 @@ import { getConfig } from './get-config.js';
 // is invited to an organization, they are added to the database.
 
 // Number of users to retrieve from Keycloak per page
-const NUMBER_OF_USERS_PER_PAGE = 100;
+const NUMBER_OF_USERS_PER_PAGE = 500;
 // Any user created after this date will be ignored
 const CREATED_NOT_AFTER = startOfMonth(subDays(new Date(), 60));
 
@@ -105,6 +105,7 @@ async function getKeycloakUsers(): Promise<UserRepresentation[]> {
   let startIndex = 0;
   const users: UserRepresentation[] = [];
   while (true) {
+    console.log(`\tFetching range ${(startIndex + 1)}-${startIndex + NUMBER_OF_USERS_PER_PAGE}`)
     const chunkOfUsers = await findUsersPaged({
       first: startIndex,
       max: NUMBER_OF_USERS_PER_PAGE,
@@ -165,10 +166,10 @@ async function removeRelevantKeycloakUsers(keycloakUsers: UserRepresentation[], 
     }
 
     try {
-      await keycloakClient.client.users.del({
-        id: user.id,
-        realm,
-      });
+      // await keycloakClient.client.users.del({
+      //   id: user.id,
+      //   realm,
+      // });
 
       numberOfRemovedUsers++;
       console.log(`\t- User "${user.email}" removed from Keycloak successfully`);
@@ -195,6 +196,7 @@ interface UserRepresentation {
   email: string;
   emailVerified?: boolean;
   requiredActions?: RequiredAction[];
+  attributes?: Record<string, unknown>;
 }
 
 interface DbUserRepresentation {
