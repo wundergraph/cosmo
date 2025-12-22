@@ -1,4 +1,4 @@
-import { createContext } from 'react';
+import { createContext, ReactNode } from 'react';
 
 type TabState = {
   id: string;
@@ -33,6 +33,113 @@ export const PlaygroundContext = createContext<PlaygroundContextType>({
   view: 'response',
   setView: () => {},
 });
+
+/**
+ * Playground extension system types
+ */
+
+// Context passed to extension render functions and hooks
+export type PlaygroundExtensionContext = {
+  query?: string;
+  setQuery: (query: string) => void;
+  headers?: string;
+  setHeaders: (headers: string) => void;
+  response?: string;
+  view: PlaygroundView;
+  setView: (view: PlaygroundView) => void;
+  status?: number;
+  statusText?: string;
+  schema?: any;
+};
+
+// Lifecycle hooks for extensions
+export type PlaygroundExtensionHooks = {
+  /**
+   * Called when the query changes
+   */
+  onQueryChange?: (query: string | undefined, context: PlaygroundExtensionContext) => void;
+
+  /**
+   * Called when the headers change
+   */
+  onHeadersChange?: (headers: string | undefined, context: PlaygroundExtensionContext) => void;
+
+  /**
+   * Called when a response is received
+   */
+  onResponseReceived?: (response: string, context: PlaygroundExtensionContext) => void;
+
+  /**
+   * Called when the extension mounts
+   */
+  onMount?: (context: PlaygroundExtensionContext) => void;
+
+  /**
+   * Called when the extension unmounts
+   */
+  onUnmount?: () => void;
+
+  /**
+   * Called when the view changes
+   */
+  onViewChange?: (view: PlaygroundView, context: PlaygroundExtensionContext) => void;
+
+  /**
+   * Called when the schema changes
+   */
+  onSchemaChange?: (schema: any, context: PlaygroundExtensionContext) => void;
+};
+
+// Toolbar button extension
+export type ToolbarButtonExtension = {
+  type: 'toolbar-button';
+  id: string;
+  position?: 'left' | 'right'; // Position in toolbar (default: 'right')
+  render: (context: PlaygroundExtensionContext) => ReactNode;
+  hooks?: PlaygroundExtensionHooks;
+};
+
+// Header extension (adds content above the playground)
+export type HeaderExtension = {
+  type: 'header';
+  id: string;
+  render: (context: PlaygroundExtensionContext) => ReactNode;
+  hooks?: PlaygroundExtensionHooks;
+};
+
+// Footer extension (adds content below the playground)
+export type FooterExtension = {
+  type: 'footer';
+  id: string;
+  render: (context: PlaygroundExtensionContext) => ReactNode;
+  hooks?: PlaygroundExtensionHooks;
+};
+
+// Panel extension (adds a new tab in the editor tools)
+export type PanelExtension = {
+  type: 'panel';
+  id: string;
+  title: string;
+  render: (context: PlaygroundExtensionContext) => ReactNode;
+  hooks?: PlaygroundExtensionHooks;
+};
+
+// Response view extension (adds a new view option for responses)
+export type ResponseViewExtension = {
+  type: 'response-view';
+  id: string;
+  label: string;
+  icon?: ReactNode;
+  render: (context: PlaygroundExtensionContext) => ReactNode;
+  hooks?: PlaygroundExtensionHooks;
+};
+
+export type PlaygroundExtension =
+  | ToolbarButtonExtension
+  | HeaderExtension
+  | FooterExtension
+  | PanelExtension
+  | ResponseViewExtension;
 
 export type PlaygroundScript = {
   id: string;

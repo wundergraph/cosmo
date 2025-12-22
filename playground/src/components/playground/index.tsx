@@ -23,7 +23,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { LuLayoutDashboard } from 'react-icons/lu';
 import { sentenceCase } from 'change-case';
 import { PlanView } from './plan-view';
-import { PlaygroundContext, QueryPlan, TabsState, PlaygroundView } from './types';
+import {
+  PlaygroundContext,
+  QueryPlan,
+  TabsState,
+  PlaygroundView,
+  PlaygroundExtension,
+  PlaygroundExtensionContext,
+  ToolbarButtonExtension,
+  HeaderExtension,
+  FooterExtension,
+  PanelExtension,
+  ResponseViewExtension,
+} from './types';
 import { useDebounce } from 'use-debounce';
 import { useLocalStorage } from '@/lib/use-local-storage';
 import {
@@ -350,14 +362,43 @@ const ToggleClientValidation = () => {
   );
 };
 
-const PlaygroundPortal = () => {
+const ExtensionToolbarButtons = ({
+  extensions,
+  context,
+}: {
+  extensions: ToolbarButtonExtension[];
+  context: PlaygroundExtensionContext;
+}) => {
+  if (!extensions || extensions.length === 0) return null;
+
+  return (
+    <>
+      {extensions.map((ext) => (
+        <div key={ext.id} className="graphiql-toolbar-extension">
+          {ext.render(context)}
+        </div>
+      ))}
+    </>
+  );
+};
+
+const PlaygroundPortal = ({
+  extensions,
+  context,
+}: {
+  extensions?: PlaygroundExtension[];
+  context: PlaygroundExtensionContext;
+}) => {
   const responseToolbar = document.getElementById('response-toolbar');
   const artDiv = document.getElementById('art-visualization');
   const plannerDiv = document.getElementById('planner-visualization');
   const toggleClientValidation = document.getElementById('toggle-client-validation');
+  const extensionsToolbar = document.getElementById('extensions-toolbar');
   const logo = document.getElementById('graphiql-wg-logo');
   const scriptsSection = document.getElementById('scripts-section');
   const preFlightScriptSection = document.getElementById('pre-flight-script-section');
+  const headerSection = document.getElementById('playground-header-extensions');
+  const footerSection = document.getElementById('playground-footer-extensions');
 
   if (
     !responseToolbar ||
@@ -371,14 +412,43 @@ const PlaygroundPortal = () => {
     return null;
   }
 
+  // Filter extensions by type
+  const toolbarExtensions =
+    (extensions?.filter((ext) => ext.type === 'toolbar-button') as ToolbarButtonExtension[]) || [];
+  const headerExtensions = (extensions?.filter((ext) => ext.type === 'header') as HeaderExtension[]) || [];
+  const footerExtensions = (extensions?.filter((ext) => ext.type === 'footer') as FooterExtension[]) || [];
+
   return (
     <>
       {createPortal(<ResponseToolbar />, responseToolbar)}
       {createPortal(<PlanView />, plannerDiv)}
       {createPortal(<TraceView />, artDiv)}
       {createPortal(<ToggleClientValidation />, toggleClientValidation)}
+      {extensionsToolbar &&
+        toolbarExtensions.length > 0 &&
+        createPortal(<ExtensionToolbarButtons extensions={toolbarExtensions} context={context} />, extensionsToolbar)}
       {createPortal(<CustomScripts />, scriptsSection)}
       {createPortal(<PreFlightScript />, preFlightScriptSection)}
+      {headerSection &&
+        headerExtensions.length > 0 &&
+        createPortal(
+          <div className="playground-header-extensions">
+            {headerExtensions.map((ext) => (
+              <div key={ext.id}>{ext.render(context)}</div>
+            ))}
+          </div>,
+          headerSection,
+        )}
+      {footerSection &&
+        footerExtensions.length > 0 &&
+        createPortal(
+          <div className="playground-footer-extensions">
+            {footerExtensions.map((ext) => (
+              <div key={ext.id}>{ext.render(context)}</div>
+            ))}
+          </div>,
+          footerSection,
+        )}
       {createPortal(
         <a href="https://wundergraph.com">
           <svg
@@ -426,7 +496,7 @@ export const Playground = (input: {
   hideLogo?: boolean;
   theme?: 'light' | 'dark' | undefined;
   scripts?: GraphiQLScripts;
-  fetch?: typeof fetch;
+  extensions?: PlaygroundExtension[];
 }) => {
   const url =
     input.routingUrl ||
@@ -474,6 +544,26 @@ export const Playground = (input: {
   const [planError, setPlanError] = useState<string>('');
 
   const [clientValidationEnabled, setClientValidationEnabled] = useState(true);
+
+  const [status, setStatus] = useState<number>();
+  const [statusText, setStatusText] = useState<string>();
+
+  // Build extension context
+  const extensionContext: PlaygroundExtensionContext = useMemo(
+    () => ({
+      query,
+      setQuery,
+      headers,
+      setHeaders,
+      response,
+      view,
+      setView,
+      status,
+      statusText,
+      schema,
+    }),
+    [query, setQuery, headers, setHeaders, response, view, setView, status, statusText, schema],
+  );
 
   useEffect(() => {
     const responseToolbar = document.getElementById('response-toolbar');
@@ -580,14 +670,42 @@ export const Playground = (input: {
       const toggleClientValidation = document.createElement('div');
       toggleClientValidation.id = 'toggle-client-validation';
       toolbar.append(toggleClientValidation);
+
+      // Add extensions toolbar container
+      if (input.extensions && input.extensions.length > 0) {
+        const extensionsToolbar = document.createElement('div');
+        extensionsToolbar.id = 'extensions-toolbar';
+        extensionsToolbar.className = 'flex items-center gap-x-1';
+        toolbar.append(extensionsToolbar);
+      }
+    }
+
+    // Add header and footer extension containers
+    const container = document.getElementsByClassName('graphiql-container')[0] as any as HTMLDivElement;
+    if (container && input.extensions && input.extensions.length > 0) {
+      const hasHeader = input.extensions.some((ext) => ext.type === 'header');
+      const hasFooter = input.extensions.some((ext) => ext.type === 'footer');
+
+      if (hasHeader && !document.getElementById('playground-header-extensions')) {
+        const headerSection = document.createElement('div');
+        headerSection.id = 'playground-header-extensions';
+        headerSection.className = 'playground-header-section';
+        container.prepend(headerSection);
+      }
+
+      if (hasFooter && !document.getElementById('playground-footer-extensions')) {
+        const footerSection = document.createElement('div');
+        footerSection.id = 'playground-footer-extensions';
+        footerSection.className = 'playground-footer-section';
+        container.append(footerSection);
+      }
     }
 
     setIsMounted(true);
   });
 
   const getSchema = async () => {
-    const fetchFunc = input.fetch ? input.fetch : fetch;
-    const res = await fetchFunc(url, {
+    const res = await fetch(url, {
       body: JSON.stringify({
         operationName: 'IntrospectionQuery',
         query: getIntrospectionQuery({
@@ -603,9 +721,6 @@ export const Playground = (input: {
   useEffect(() => {
     getSchema();
   }, [headers]);
-
-  const [status, setStatus] = useState<number>();
-  const [statusText, setStatusText] = useState<string>();
 
   const fetcher = useMemo(() => {
     const onFetch = (response: any, status?: number, statusText?: string) => {
@@ -682,6 +797,83 @@ export const Playground = (input: {
     tabs: [],
   });
 
+  // Invoke extension lifecycle hooks
+  useEffect(() => {
+    if (!input.extensions) return;
+
+    const mountCleanupFns: (() => void)[] = [];
+
+    // Call onMount hooks
+    input.extensions.forEach((ext) => {
+      if (ext.hooks?.onMount) {
+        ext.hooks.onMount(extensionContext);
+      }
+      if (ext.hooks?.onUnmount) {
+        mountCleanupFns.push(ext.hooks.onUnmount);
+      }
+    });
+
+    // Cleanup on unmount
+    return () => {
+      mountCleanupFns.forEach((cleanup) => cleanup());
+    };
+  }, [input.extensions]);
+
+  // Call onQueryChange hooks
+  useEffect(() => {
+    if (!input.extensions) return;
+
+    input.extensions.forEach((ext) => {
+      if (ext.hooks?.onQueryChange) {
+        ext.hooks.onQueryChange(query, extensionContext);
+      }
+    });
+  }, [query, input.extensions]);
+
+  // Call onHeadersChange hooks
+  useEffect(() => {
+    if (!input.extensions) return;
+
+    input.extensions.forEach((ext) => {
+      if (ext.hooks?.onHeadersChange) {
+        ext.hooks.onHeadersChange(headers, extensionContext);
+      }
+    });
+  }, [headers, input.extensions]);
+
+  // Call onResponseReceived hooks
+  useEffect(() => {
+    if (!response || !input.extensions) return;
+
+    input.extensions.forEach((ext) => {
+      if (ext.hooks?.onResponseReceived) {
+        ext.hooks.onResponseReceived(response, extensionContext);
+      }
+    });
+  }, [response, input.extensions]);
+
+  // Call onViewChange hooks
+  useEffect(() => {
+    if (!input.extensions) return;
+
+    input.extensions.forEach((ext) => {
+      if (ext.hooks?.onViewChange) {
+        ext.hooks.onViewChange(view, extensionContext);
+      }
+    });
+  }, [view, input.extensions]);
+
+  // Call onSchemaChange hooks
+  useEffect(() => {
+    if (!schema || !input.extensions) return;
+
+    input.extensions.forEach((ext) => {
+      if (ext.hooks?.onSchemaChange) {
+        ext.hooks.onSchemaChange(schema, extensionContext);
+      }
+    });
+  }, [schema, input.extensions]);
+
   return (
     <TooltipProvider>
       <PlaygroundContext.Provider
@@ -724,7 +916,7 @@ export const Playground = (input: {
             ]}
             forcedTheme={input.theme}
           />
-          {isMounted && <PlaygroundPortal />}
+          {isMounted && <PlaygroundPortal extensions={input.extensions} context={extensionContext} />}
         </TraceContext.Provider>
       </PlaygroundContext.Provider>
     </TooltipProvider>
