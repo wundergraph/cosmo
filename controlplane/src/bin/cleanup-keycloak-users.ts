@@ -166,10 +166,10 @@ async function removeRelevantKeycloakUsers(keycloakUsers: UserRepresentation[], 
     }
 
     try {
-      // await keycloakClient.client.users.del({
-      //   id: user.id,
-      //   realm,
-      // });
+      await keycloakClient.client.users.del({
+        id: user.id,
+        realm,
+      });
 
       numberOfRemovedUsers++;
       console.log(`\t- User "${user.email}" removed from Keycloak successfully`);
