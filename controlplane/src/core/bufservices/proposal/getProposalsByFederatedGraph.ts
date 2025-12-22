@@ -97,6 +97,7 @@ export function getProposalsByFederatedGraph(
 
     // default to 10 if no limit is provided
     req.limit = clamp(req.limit || 10, 1, 50);
+    req.offset = clamp(req.offset || 0, 0, 500_000);
 
     const { proposals } = await proposalRepo.ByFederatedGraphId({
       federatedGraphId: federatedGraph.id,

@@ -75,6 +75,7 @@ export function getCheckOperations(
 
     // default to 10 if no limit is provided
     req.limit = clamp(req.limit || 10, 1, 200);
+    req.offset = clamp(req.offset || 0, 0, 500_000);
 
     const affectedOperations = await schemaCheckRepo.getAffectedOperationsByCheckId({
       checkId: req.checkId,

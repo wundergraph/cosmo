@@ -21,6 +21,8 @@ export function getAPIKeys(
 
     // default to 10 if no limit is provided
     req.limit = clamp(req.limit || 10, 1, 50);
+    // the max no of api keys is 200
+    req.offset = clamp(req.offset || 0, 0, 1000);
 
     const apiKeys = await apiKeyRepo.getAPIKeys({
       organizationID: authContext.organizationId,
