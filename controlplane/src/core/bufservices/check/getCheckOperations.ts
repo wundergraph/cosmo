@@ -73,7 +73,7 @@ export function getCheckOperations(
       };
     }
 
-    // deafult to 10 if no limit is provided
+    // default to 10 if no limit is provided
     req.limit = clamp(req.limit || 10, 1, 200);
 
     const affectedOperations = await schemaCheckRepo.getAffectedOperationsByCheckId({

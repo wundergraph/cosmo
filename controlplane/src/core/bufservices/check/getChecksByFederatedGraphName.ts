@@ -70,7 +70,7 @@ export function getChecksByFederatedGraphName(
       };
     }
 
-    // deafult to 10 if no limit is provided
+    // default to 10 if no limit is provided
     req.limit = clamp(req.limit || 10, 1, 50);
 
     const includeSubgraphs = req.filters?.subgraphs?.filter((id) => isValidUuid(id)) ?? [];

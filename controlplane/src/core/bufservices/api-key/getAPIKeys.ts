@@ -19,7 +19,7 @@ export function getAPIKeys(
 
     const apiKeyRepo = new ApiKeyRepository(opts.db);
 
-    // deafult to 10 if no limit is provided
+    // default to 10 if no limit is provided
     req.limit = clamp(req.limit || 10, 1, 50);
 
     const apiKeys = await apiKeyRepo.getAPIKeys({
