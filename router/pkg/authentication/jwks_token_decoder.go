@@ -45,6 +45,7 @@ type JWKSConfig struct {
 	URL               string
 	RefreshInterval   time.Duration
 	AllowedAlgorithms []string
+	AllowedUse        []string
 
 	Secret    string
 	Algorithm string
@@ -73,6 +74,7 @@ type keyFuncEntry struct {
 	jwks              keyfunc.Keyfunc
 	aud               audienceSet
 	allowedAlgorithms []string
+	allowedUse        []string
 }
 
 func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKSConfig) (TokenDecoder, error) {
@@ -122,7 +124,7 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 				jwksetHTTPClientOptions.RateLimitWaitMax = c.RefreshUnknownKID.MaxWait
 			}
 
-			jwks, err := createKeyFunc(ctx, jwksetHTTPClientOptions)
+			jwks, err := createKeyFunc(ctx, jwksetHTTPClientOptions, getUseWhitelist(c.AllowedUse))
 			if err != nil {
 				return nil, err
 			}
@@ -130,6 +132,7 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 				jwks:              jwks,
 				aud:               audiencesMap[key],
 				allowedAlgorithms: c.AllowedAlgorithms,
+				allowedUse:        c.AllowedUse,
 			})
 
 		} else if c.Secret != "" {
@@ -176,13 +179,14 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 				PrioritizeHTTP: false,
 			}
 
-			jwks, err := createKeyFunc(ctx, jwksetHTTPClientOptions)
+			jwks, err := createKeyFunc(ctx, jwksetHTTPClientOptions, getUseWhitelist(c.AllowedUse))
 			if err != nil {
 				return nil, err
 			}
 			entries = append(entries, keyFuncEntry{
-				jwks: jwks,
-				aud:  audiencesMap[key],
+				jwks:       jwks,
+				aud:        audiencesMap[key],
+				allowedUse: c.AllowedUse,
 			})
 		}
 	}
@@ -248,7 +252,19 @@ func getAudienceSet(audiences []string) audienceSet {
 	return audSet
 }
 
-func createKeyFunc(ctx context.Context, options jwkset.HTTPClientOptions) (keyfunc.Keyfunc, error) {
+func getUseWhitelist(allowedUse []string) []jwkset.USE {
+	if allowedUse == nil {
+		return []jwkset.USE{jwkset.UseSig}
+	}
+
+	useWhitelist := make([]jwkset.USE, len(allowedUse))
+	for i, u := range allowedUse {
+		useWhitelist[i] = jwkset.USE(u)
+	}
+	return useWhitelist
+}
+
+func createKeyFunc(ctx context.Context, options jwkset.HTTPClientOptions, useWhitelist []jwkset.USE) (keyfunc.Keyfunc, error) {
 	combined, err := jwkset.NewHTTPClient(options)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create HTTP client storage for JWK provider: %w", err)
@@ -257,7 +273,7 @@ func createKeyFunc(ctx context.Context, options jwkset.HTTPClientOptions) (keyfu
 	keyfuncOptions := keyfunc.Options{
 		Ctx:          ctx,
 		Storage:      combined,
-		UseWhitelist: []jwkset.USE{jwkset.UseSig},
+		UseWhitelist: useWhitelist,
 	}
 
 	jwks, err := keyfunc.New(keyfuncOptions)
