@@ -545,7 +545,7 @@ func (h *RPCHandler) executeGraphQL(ctx context.Context, query string, variables
 		h.logger.Error("HTTP error from GraphQL endpoint",
 			zap.Int("status_code", resp.StatusCode),
 			zap.String("connect_code", code.String()),
-			zap.String("response_body", string(responseBody)))
+			zap.Int("response_body_length", len(responseBody)))
 
 		return nil, connectErr
 	}
@@ -556,7 +556,7 @@ func (h *RPCHandler) executeGraphQL(ctx context.Context, query string, variables
 		// If we can't parse it, return the raw response (backward compatibility)
 		h.logger.Error("failed to parse GraphQL response",
 			zap.Error(err),
-			zap.String("response_body", string(responseBody)))
+			zap.Int("response_body_length", len(responseBody)))
 		return nil, connect.NewError(connect.CodeInternal, ErrInternalServer)
 	}
 
