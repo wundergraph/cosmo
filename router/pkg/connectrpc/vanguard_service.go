@@ -15,40 +15,6 @@ import (
 	"google.golang.org/protobuf/types/dynamicpb"
 )
 
-// connectCodeToHTTPStatus maps Connect error codes to HTTP status codes
-// This is the inverse of httpStatusToConnectCode in handler.go
-func connectCodeToHTTPStatus(code connect.Code) int {
-	switch code {
-	case connect.CodeInvalidArgument:
-		return http.StatusBadRequest // 400
-	case connect.CodeUnauthenticated:
-		return http.StatusUnauthorized // 401
-	case connect.CodePermissionDenied:
-		return http.StatusForbidden // 403
-	case connect.CodeNotFound:
-		return http.StatusNotFound // 404
-	case connect.CodeAborted:
-		return http.StatusConflict // 409
-	case connect.CodeFailedPrecondition:
-		return http.StatusPreconditionFailed // 412
-	case connect.CodeResourceExhausted:
-		return http.StatusTooManyRequests // 429
-	case connect.CodeOutOfRange:
-		return http.StatusRequestedRangeNotSatisfiable // 416
-	case connect.CodeDeadlineExceeded:
-		return http.StatusGatewayTimeout // 504
-	case connect.CodeUnimplemented:
-		return http.StatusNotImplemented // 501
-	case connect.CodeUnavailable:
-		return http.StatusServiceUnavailable // 503
-	case connect.CodeInternal:
-		return http.StatusInternalServerError // 500
-	default:
-		// For unknown codes or other errors, return 500
-		return http.StatusInternalServerError // 500
-	}
-}
-
 // VanguardServiceConfig holds configuration for creating a Vanguard service
 type VanguardServiceConfig struct {
 	Handler     *RPCHandler
@@ -262,7 +228,7 @@ func (vs *VanguardService) createServiceHandler(serviceName string, serviceDef *
 // writeConnectError writes a Connect error response in JSON format
 // This ensures proper error formatting for the Connect protocol
 func (vs *VanguardService) writeConnectError(w http.ResponseWriter, connectErr *connect.Error, serviceName, methodName string) {
-	statusCode := connectCodeToHTTPStatus(connectErr.Code())
+	statusCode := ConnectCodeToHTTPStatus(connectErr.Code())
 
 	vs.logger.Error("RPC handler error",
 		zap.String("service", serviceName),

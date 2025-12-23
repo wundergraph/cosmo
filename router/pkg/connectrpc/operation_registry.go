@@ -154,7 +154,7 @@ func (r *OperationRegistry) extractOperationInfo(doc *ast.Document) (string, str
 
 			opName := ""
 			if opDef.Name.Length() > 0 {
-				opName = string(doc.Input.ByteSlice(opDef.Name))
+				opName = doc.Input.ByteSliceString(opDef.Name)
 			}
 
 			return opName, opType, nil
