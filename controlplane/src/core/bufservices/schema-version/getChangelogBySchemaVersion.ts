@@ -24,10 +24,6 @@ export function getChangelogBySchemaVersion(
     const fedRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
     const graphCompositionRepo = new GraphCompositionRepository(logger, opts.db);
 
-    const changelogs = await fedRepo.fetchChangelogByVersion({
-      schemaVersionId: req.schemaVersionId,
-    });
-
     const composition = await graphCompositionRepo.getGraphCompositionBySchemaVersion({
       schemaVersionId: req.schemaVersionId,
       organizationId: authContext.organizationId,
@@ -41,6 +37,10 @@ export function getChangelogBySchemaVersion(
         },
       };
     }
+
+    const changelogs = await fedRepo.fetchChangelogByVersion({
+      schemaVersionId: req.schemaVersionId,
+    });
 
     return {
       response: {

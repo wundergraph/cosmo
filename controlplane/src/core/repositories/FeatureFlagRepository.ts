@@ -1014,9 +1014,11 @@ export class FeatureFlagRepository {
   public async getFeatureFlagCompositionsByBaseSchemaVersion({
     baseSchemaVersionId,
     namespaceId,
+    organizationId,
   }: {
     baseSchemaVersionId: string;
     namespaceId: string;
+    organizationId: string;
   }) {
     const featureFlagCompositions: FeatureFlagCompositionDTO[] = [];
     const compositions = await this.db
@@ -1041,7 +1043,12 @@ export class FeatureFlagRepository {
         eq(federatedGraphsToFeatureFlagSchemaVersions.composedSchemaVersionId, schemaVersion.id),
       )
       .leftJoin(users, eq(users.id, graphCompositions.createdById))
-      .where(eq(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId, baseSchemaVersionId))
+      .where(
+        and(
+          eq(federatedGraphsToFeatureFlagSchemaVersions.baseCompositionSchemaVersionId, baseSchemaVersionId),
+          eq(schemaVersion.organizationId, organizationId),
+        ),
+      )
       .execute();
 
     for (const composition of compositions) {

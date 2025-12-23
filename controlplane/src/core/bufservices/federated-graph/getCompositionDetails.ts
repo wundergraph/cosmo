@@ -81,6 +81,7 @@ export function getCompositionDetails(
     const featureFlagCompositions = await featureFlagRepo.getFeatureFlagCompositionsByBaseSchemaVersion({
       baseSchemaVersionId: composition.schemaVersionId,
       namespaceId: namespace.id,
+      organizationId: authContext.organizationId,
     });
 
     return {

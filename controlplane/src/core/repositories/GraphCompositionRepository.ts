@@ -214,7 +214,7 @@ export class GraphCompositionRepository {
       .from(graphCompositions)
       .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
       .leftJoin(users, eq(graphCompositions.createdById, users.id))
-      .where(eq(graphCompositions.id, input.compositionId))
+      .where(and(eq(graphCompositions.id, input.compositionId), eq(schemaVersion.organizationId, input.organizationId)))
       .orderBy(desc(schemaVersion.createdAt))
       .execute();
 
@@ -269,7 +269,12 @@ export class GraphCompositionRepository {
       .from(graphCompositions)
       .innerJoin(schemaVersion, eq(schemaVersion.id, graphCompositions.schemaVersionId))
       .leftJoin(users, eq(graphCompositions.createdById, users.id))
-      .where(eq(graphCompositions.schemaVersionId, input.schemaVersionId))
+      .where(
+        and(
+          eq(graphCompositions.schemaVersionId, input.schemaVersionId),
+          eq(schemaVersion.organizationId, input.organizationId),
+        ),
+      )
       .orderBy(desc(schemaVersion.createdAt))
       .execute();
 
