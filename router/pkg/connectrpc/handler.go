@@ -230,7 +230,7 @@ func (h *RPCHandler) HandleRPC(ctx context.Context, serviceName, methodName stri
 
 // convertProtoJSONToGraphQLVariables converts proto JSON to GraphQL variables:
 // - Converts field names from snake_case to camelCase
-// - Strips proto enum prefixes (MOOD_HAPPY -> HAPPY) using schema-aware detection
+// - Strips proto enum prefixes (MOOD_HAPPY -> HAPPY)
 func (h *RPCHandler) convertProtoJSONToGraphQLVariables(serviceName, methodName string, protoJSON []byte) (json.RawMessage, error) {
 	if len(protoJSON) == 0 {
 		return json.RawMessage("{}"), nil
@@ -241,7 +241,7 @@ func (h *RPCHandler) convertProtoJSONToGraphQLVariables(serviceName, methodName 
 		return nil, fmt.Errorf("failed to unmarshal proto JSON: %w", err)
 	}
 
-	// Get proto message descriptor for schema-aware enum detection
+	// Get proto message descriptor for to detect enums
 	var messageDesc protoreflect.MessageDescriptor
 	if h.validator != nil && h.validator.protoLoader != nil {
 		method, err := h.validator.protoLoader.GetMethod(serviceName, methodName)
@@ -250,7 +250,10 @@ func (h *RPCHandler) convertProtoJSONToGraphQLVariables(serviceName, methodName 
 		}
 	}
 
-	graphqlData := h.convertKeysRecursive(protoData, messageDesc)
+	// Create a set to track fields that came from _UNSPECIFIED enums
+	unspecifiedFields := make(map[string]bool)
+
+	graphqlData := h.convertKeysRecursiveWithTracking(protoData, messageDesc, "", unspecifiedFields)
 
 	graphqlJSON, err := json.Marshal(graphqlData)
 	if err != nil {
@@ -260,27 +263,31 @@ func (h *RPCHandler) convertProtoJSONToGraphQLVariables(serviceName, methodName 
 	return graphqlJSON, nil
 }
 
-// convertKeysRecursive converts map keys from snake_case to camelCase
-// and strips proto enum prefixes using schema information when available
-// Omits fields with empty string values (e.g., from _UNSPECIFIED enum values)
-func (h *RPCHandler) convertKeysRecursive(data any, messageDesc protoreflect.MessageDescriptor) any {
+// convertKeysRecursiveWithTracking converts map keys from snake_case to camelCase
+// and strips proto enum prefixes using schema information when available.
+// Tracks fields that came from _UNSPECIFIED enums and omits only those when empty.
+func (h *RPCHandler) convertKeysRecursiveWithTracking(data any, messageDesc protoreflect.MessageDescriptor, pathPrefix string, unspecifiedFields map[string]bool) any {
 	switch v := data.(type) {
 	case map[string]any:
 		result := make(map[string]any)
 		for key, value := range v {
 			camelKey := snakeToCamel(key)
+			fieldPath := pathPrefix + camelKey
 
 			var fieldDesc protoreflect.FieldDescriptor
 			if messageDesc != nil {
 				fieldDesc = getFieldByName(messageDesc, key)
 			}
 
-			convertedValue := h.convertValueRecursive(value, fieldDesc)
+			convertedValue := h.convertValueRecursiveWithTracking(value, fieldDesc, fieldPath, unspecifiedFields)
 
-			// Omit fields with empty string values (e.g., from _UNSPECIFIED enum values)
-			// This ensures _UNSPECIFIED enums don't get sent to GraphQL
+			// Only omit empty strings that came from _UNSPECIFIED enum conversions
 			if strVal, ok := convertedValue.(string); ok && strVal == "" {
-				continue
+				if unspecifiedFields[fieldPath] {
+					// This empty string came from an _UNSPECIFIED enum, omit it
+					continue
+				}
+				// Otherwise, it's a legitimate empty string, keep it
 			}
 
 			result[camelKey] = convertedValue
@@ -289,28 +296,31 @@ func (h *RPCHandler) convertKeysRecursive(data any, messageDesc protoreflect.Mes
 	case []any:
 		result := make([]any, len(v))
 		for i, item := range v {
-			result[i] = h.convertKeysRecursive(item, messageDesc)
+			itemPath := fmt.Sprintf("%s[%d].", pathPrefix, i)
+			result[i] = h.convertKeysRecursiveWithTracking(item, messageDesc, itemPath, unspecifiedFields)
 		}
 		return result
 	default:
-		return h.convertValueRecursive(v, nil)
+		return h.convertValueRecursiveWithTracking(v, nil, pathPrefix, unspecifiedFields)
 	}
 }
 
-// convertValueRecursive processes a value using field descriptor for schema-aware enum detection
-func (h *RPCHandler) convertValueRecursive(value any, fieldDesc protoreflect.FieldDescriptor) any {
+// convertValueRecursiveWithTracking processes a value using field descriptor for schema-aware enum detection
+// and marks fields that came from _UNSPECIFIED enums
+func (h *RPCHandler) convertValueRecursiveWithTracking(value any, fieldDesc protoreflect.FieldDescriptor, fieldPath string, unspecifiedFields map[string]bool) any {
 	switch v := value.(type) {
 	case map[string]any:
 		var nestedDesc protoreflect.MessageDescriptor
 		if fieldDesc != nil {
 			nestedDesc = getMessageType(fieldDesc)
 		}
-		return h.convertKeysRecursive(v, nestedDesc)
+		return h.convertKeysRecursiveWithTracking(v, nestedDesc, fieldPath+".", unspecifiedFields)
 
 	case []any:
 		result := make([]any, len(v))
 		for i, item := range v {
-			result[i] = h.convertValueRecursive(item, fieldDesc)
+			itemPath := fmt.Sprintf("%s[%d]", fieldPath, i)
+			result[i] = h.convertValueRecursiveWithTracking(item, fieldDesc, itemPath, unspecifiedFields)
 		}
 		return result
 
@@ -320,7 +330,16 @@ func (h *RPCHandler) convertValueRecursive(value any, fieldDesc protoreflect.Fie
 			enumDesc := getEnumType(fieldDesc)
 			if enumDesc != nil {
 				enumTypeName := string(enumDesc.Name())
-				return stripEnumPrefixWithType(v, enumTypeName)
+				stripped := stripEnumPrefixWithType(v, enumTypeName)
+
+				// Mark this field if it was an _UNSPECIFIED enum
+				if stripped == "" && v != "" {
+					// The original value was non-empty but became empty after stripping
+					// This means it was an _UNSPECIFIED enum
+					unspecifiedFields[fieldPath] = true
+				}
+
+				return stripped
 			}
 		}
 
