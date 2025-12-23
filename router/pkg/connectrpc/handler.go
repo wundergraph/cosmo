@@ -269,20 +269,20 @@ func (h *RPCHandler) convertKeysRecursive(data any, messageDesc protoreflect.Mes
 		result := make(map[string]any)
 		for key, value := range v {
 			camelKey := snakeToCamel(key)
-			
+
 			var fieldDesc protoreflect.FieldDescriptor
 			if messageDesc != nil {
 				fieldDesc = getFieldByName(messageDesc, key)
 			}
-			
+
 			convertedValue := h.convertValueRecursive(value, fieldDesc)
-			
+
 			// Omit fields with empty string values (e.g., from _UNSPECIFIED enum values)
 			// This ensures _UNSPECIFIED enums don't get sent to GraphQL
 			if strVal, ok := convertedValue.(string); ok && strVal == "" {
 				continue
 			}
-			
+
 			result[camelKey] = convertedValue
 		}
 		return result
@@ -306,14 +306,14 @@ func (h *RPCHandler) convertValueRecursive(value any, fieldDesc protoreflect.Fie
 			nestedDesc = getMessageType(fieldDesc)
 		}
 		return h.convertKeysRecursive(v, nestedDesc)
-		
+
 	case []any:
 		result := make([]any, len(v))
 		for i, item := range v {
 			result[i] = h.convertValueRecursive(item, fieldDesc)
 		}
 		return result
-		
+
 	case string:
 		// Schema-aware: check if field is an enum type
 		if fieldDesc != nil {
@@ -323,9 +323,9 @@ func (h *RPCHandler) convertValueRecursive(value any, fieldDesc protoreflect.Fie
 				return stripEnumPrefixWithType(v, enumTypeName)
 			}
 		}
-		
+
 		return v
-		
+
 	default:
 		return v
 	}
@@ -337,19 +337,19 @@ func (h *RPCHandler) convertValueRecursive(value any, fieldDesc protoreflect.Fie
 func stripEnumPrefixWithType(protoEnumValue, enumTypeName string) string {
 	// Convert enum type name to UPPER_SNAKE_CASE (matching protographic's logic)
 	prefix := toUpperSnakeCase(enumTypeName) + "_"
-	
-	if strings.HasPrefix(protoEnumValue, prefix) {
-		stripped := strings.TrimPrefix(protoEnumValue, prefix)
-		
+
+	if after, ok := strings.CutPrefix(protoEnumValue, prefix); ok {
+		stripped := after
+
 		// Handle _UNSPECIFIED values: these are proto-only (value 0) and don't exist in GraphQL
 		// Return empty string so they can be omitted or treated as null
 		if stripped == "UNSPECIFIED" {
 			return ""
 		}
-		
+
 		return stripped
 	}
-	
+
 	// If prefix doesn't match, return as-is (shouldn't happen with valid proto)
 	return protoEnumValue
 }
@@ -361,7 +361,7 @@ func toUpperSnakeCase(s string) string {
 	if strings.Contains(s, "_") || s == strings.ToUpper(s) {
 		return strings.ToUpper(s)
 	}
-	
+
 	var result strings.Builder
 	for i, r := range s {
 		// Add underscore before uppercase letters (except first character)
@@ -407,12 +407,12 @@ func snakeToCamel(s string) string {
 	}
 
 	result := builder.String()
-	
+
 	// Special handling for ID suffix: employeeId -> employeeID
 	if strings.HasSuffix(result, "Id") && len(result) > 2 {
 		result = result[:len(result)-2] + "ID"
 	}
-	
+
 	return result
 }
 
