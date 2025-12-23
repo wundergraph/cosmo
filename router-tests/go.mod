@@ -3,7 +3,7 @@ module github.com/wundergraph/cosmo/router-tests
 go 1.25
 
 require (
-	connectrpc.com/connect v1.16.2
+	connectrpc.com/connect v1.19.1
 	github.com/MicahParks/jwkset v0.11.0
 	github.com/buger/jsonparser v1.1.1
 	github.com/cloudflare/backoff v0.0.0-20240920015135-e46b80a3a7d0
@@ -100,7 +100,6 @@ require (
 	github.com/invopop/jsonschema v0.13.0 // indirect
 	github.com/jensneuse/abstractlogger v0.0.4 // indirect
 	github.com/jensneuse/byte-template v0.0.0-20231025215717-69252eb3ed56 // indirect
-	github.com/jhump/protoreflect v1.17.0 // indirect
 	github.com/kingledion/go-tools v0.6.0 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.8 // indirect
