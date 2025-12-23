@@ -278,11 +278,11 @@ func TestConvertKeysRecursiveWithTracking(t *testing.T) {
 
 		unspecifiedFields := make(map[string]bool)
 		result := handler.convertKeysRecursiveWithTracking(input, nil, "", unspecifiedFields)
-		
+
 		// Marshal result to JSON for comparison
 		resultJSON, err := json.Marshal(result)
 		require.NoError(t, err)
-		
+
 		assert.JSONEq(t, `{
 			"employeeID": 1,
 			"userDetails": {
@@ -300,11 +300,11 @@ func TestConvertKeysRecursiveWithTracking(t *testing.T) {
 
 		unspecifiedFields := make(map[string]bool)
 		result := handler.convertKeysRecursiveWithTracking(input, nil, "", unspecifiedFields)
-		
+
 		// Marshal result to JSON for comparison
 		resultJSON, err := json.Marshal(result)
 		require.NoError(t, err)
-		
+
 		assert.JSONEq(t, `[
 			{"employeeID": 1},
 			{"employeeID": 2}
@@ -321,11 +321,11 @@ func TestConvertKeysRecursiveWithTracking(t *testing.T) {
 
 		unspecifiedFields := make(map[string]bool)
 		result := handler.convertKeysRecursiveWithTracking(input, nil, "", unspecifiedFields)
-		
+
 		// Marshal result to JSON for comparison
 		resultJSON, err := json.Marshal(result)
 		require.NoError(t, err)
-		
+
 		// Without schema, enum values pass through unchanged
 		assert.JSONEq(t, `{
 			"employee": {

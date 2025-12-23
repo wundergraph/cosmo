@@ -555,16 +555,19 @@ func (h *RPCHandler) executeGraphQL(ctx context.Context, query string, variables
 		// Map HTTP status to Connect error code
 		code := HTTPStatusToConnectCode(resp.StatusCode)
 
-		// Create Connect error with metadata
-		connectErr := connect.NewError(code, fmt.Errorf("GraphQL request failed with HTTP %d", resp.StatusCode))
-		connectErr.Meta().Set(MetaKeyErrorClassification, ErrorClassificationCritical)
-		connectErr.Meta().Set(MetaKeyHTTPStatus, fmt.Sprintf("%d", resp.StatusCode))
-		connectErr.Meta().Set(MetaKeyHTTPResponseBody, string(responseBody))
-
+		// Log full response body server-side only
 		h.logger.Error("HTTP error from GraphQL endpoint",
 			zap.Int("status_code", resp.StatusCode),
 			zap.String("connect_code", code.String()),
-			zap.Int("response_body_length", len(responseBody)))
+			zap.Int("response_body_length", len(responseBody)),
+			zap.String("response_body", string(responseBody)))
+
+		// Create Connect error with metadata
+		// Note: We do NOT include the response body in client-facing metadata to prevent
+		// leaking sensitive information (internal URLs, stack traces, auth tokens, etc.)
+		connectErr := connect.NewError(code, fmt.Errorf("GraphQL request failed with HTTP %d", resp.StatusCode))
+		connectErr.Meta().Set(MetaKeyErrorClassification, ErrorClassificationCritical)
+		connectErr.Meta().Set(MetaKeyHTTPStatus, fmt.Sprintf("%d", resp.StatusCode))
 
 		return nil, connectErr
 	}

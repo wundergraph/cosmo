@@ -338,3 +338,39 @@ func TestSuccessfulGraphQLResponses(t *testing.T) {
 		})
 	}
 }
+
+// TestResponseBodyNotInMetadata tests that response bodies are NOT included in client-facing metadata
+func TestResponseBodyNotInMetadata(t *testing.T) {
+	t.Parallel()
+
+	// Setup mock HTTP client with a response body
+	httpClient := MockHTTPClient(http.StatusInternalServerError, "Internal Server Error")
+
+	handler, err := NewRPCHandler(HandlerConfig{
+		GraphQLEndpoint:   "http://localhost:4000/graphql",
+		HTTPClient:        httpClient,
+		Logger:            zap.NewNop(),
+		OperationRegistry: NewOperationRegistry(zap.NewNop()),
+		ProtoLoader:       NewProtoLoader(zap.NewNop()),
+	})
+	require.NoError(t, err)
+
+	// Execute
+	ctx := context.Background()
+	_, err = handler.executeGraphQL(ctx, "query { test }", json.RawMessage("{}"))
+
+	// Assert error
+	require.Error(t, err)
+
+	// Check it's a Connect error
+	var connectErr *connect.Error
+	require.True(t, errors.As(err, &connectErr))
+
+	// Verify response body is NOT in metadata (security requirement)
+	responseBodyMeta := connectErr.Meta().Get(MetaKeyHTTPResponseBody)
+	assert.Empty(t, responseBodyMeta, "Response body should NOT be included in client-facing metadata to prevent information leakage")
+
+	// Verify other metadata is still present
+	assert.NotEmpty(t, connectErr.Meta().Get(MetaKeyHTTPStatus), "HTTP status should be present")
+	assert.NotEmpty(t, connectErr.Meta().Get(MetaKeyErrorClassification), "Error classification should be present")
+}
