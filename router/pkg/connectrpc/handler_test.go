@@ -121,13 +121,11 @@ func TestConvertProtoJSONToGraphQLVariables(t *testing.T) {
 		result, err := handler.convertProtoJSONToGraphQLVariables("test.Service", "TestMethod", protoJSON)
 		require.NoError(t, err)
 
-		var data map[string]any
-		err = json.Unmarshal(result, &data)
-		require.NoError(t, err)
-
 		// Without schema, enum values pass through unchanged
-		assert.Equal(t, "STATUS_ACTIVE", data["status"])
-		assert.Equal(t, "ROLE_ADMIN", data["role"])
+		assert.JSONEq(t, `{
+			"status": "STATUS_ACTIVE",
+			"role": "ROLE_ADMIN"
+		}`, string(result))
 	})
 
 	t.Run("handles enum with multiple underscores in value without schema", func(t *testing.T) {
@@ -135,12 +133,10 @@ func TestConvertProtoJSONToGraphQLVariables(t *testing.T) {
 		result, err := handler.convertProtoJSONToGraphQLVariables("test.Service", "TestMethod", protoJSON)
 		require.NoError(t, err)
 
-		var data map[string]any
-		err = json.Unmarshal(result, &data)
-		require.NoError(t, err)
-
 		// Without schema, enum values pass through unchanged
-		assert.Equal(t, "VISIBILITY_FRIENDS_ONLY", data["visibility"])
+		assert.JSONEq(t, `{
+			"visibility": "VISIBILITY_FRIENDS_ONLY"
+		}`, string(result))
 	})
 
 	t.Run("handles nested objects with enums without schema", func(t *testing.T) {
@@ -148,13 +144,13 @@ func TestConvertProtoJSONToGraphQLVariables(t *testing.T) {
 		result, err := handler.convertProtoJSONToGraphQLVariables("test.Service", "TestMethod", protoJSON)
 		require.NoError(t, err)
 
-		var data map[string]any
-		err = json.Unmarshal(result, &data)
-		require.NoError(t, err)
-
-		user := data["user"].(map[string]any)
 		// Without schema, enum values pass through unchanged
-		assert.Equal(t, "STATUS_ACTIVE", user["status"])
+		assert.JSONEq(t, `{
+			"user": {
+				"id": 1,
+				"status": "STATUS_ACTIVE"
+			}
+		}`, string(result))
 	})
 
 	t.Run("handles arrays with enums without schema", func(t *testing.T) {
@@ -162,47 +158,39 @@ func TestConvertProtoJSONToGraphQLVariables(t *testing.T) {
 		result, err := handler.convertProtoJSONToGraphQLVariables("test.Service", "TestMethod", protoJSON)
 		require.NoError(t, err)
 
-		var data map[string]any
-		err = json.Unmarshal(result, &data)
-		require.NoError(t, err)
-
-		roles := data["roles"].([]any)
 		// Without schema, enum values pass through unchanged
-		assert.Equal(t, "ROLE_ADMIN", roles[0])
-		assert.Equal(t, "ROLE_USER", roles[1])
+		assert.JSONEq(t, `{
+			"roles": ["ROLE_ADMIN", "ROLE_USER"]
+		}`, string(result))
 	})
 
 	t.Run("does not modify non-enum uppercase strings", func(t *testing.T) {
-		// Strings without underscores should not be modified
 		protoJSON := []byte(`{"code": "SUCCESS", "name": "JOHN"}`)
 		result, err := handler.convertProtoJSONToGraphQLVariables("test.Service", "TestMethod", protoJSON)
 		require.NoError(t, err)
 
-		var data map[string]any
-		err = json.Unmarshal(result, &data)
-		require.NoError(t, err)
-
-		assert.Equal(t, "SUCCESS", data["code"])
-		assert.Equal(t, "JOHN", data["name"])
+		// Strings without underscores should not be modified
+		assert.JSONEq(t, `{
+			"code": "SUCCESS",
+			"name": "JOHN"
+		}`, string(result))
 	})
 
 	t.Run("handles empty JSON", func(t *testing.T) {
 		result, err := handler.convertProtoJSONToGraphQLVariables("test.Service", "TestMethod", []byte{})
 		require.NoError(t, err)
-		assert.Equal(t, json.RawMessage("{}"), result)
+		assert.JSONEq(t, `{}`, string(result))
 	})
 
 	t.Run("handles mixed case strings", func(t *testing.T) {
-		// Mixed case strings should not be treated as enums
 		protoJSON := []byte(`{"message": "Hello_World"}`)
 		result, err := handler.convertProtoJSONToGraphQLVariables("test.Service", "TestMethod", protoJSON)
 		require.NoError(t, err)
 
-		var data map[string]any
-		err = json.Unmarshal(result, &data)
-		require.NoError(t, err)
-
-		assert.Equal(t, "Hello_World", data["message"])
+		// Mixed case strings should not be treated as enums
+		assert.JSONEq(t, `{
+			"message": "Hello_World"
+		}`, string(result))
 	})
 }
 
@@ -290,12 +278,18 @@ func TestConvertKeysRecursiveWithTracking(t *testing.T) {
 
 		unspecifiedFields := make(map[string]bool)
 		result := handler.convertKeysRecursiveWithTracking(input, nil, "", unspecifiedFields)
-		resultMap := result.(map[string]any)
-
-		assert.Equal(t, 1, resultMap["employeeID"])
-		userDetails := resultMap["userDetails"].(map[string]any)
-		assert.Equal(t, "John", userDetails["firstName"])
-		assert.Equal(t, "Doe", userDetails["lastName"])
+		
+		// Marshal result to JSON for comparison
+		resultJSON, err := json.Marshal(result)
+		require.NoError(t, err)
+		
+		assert.JSONEq(t, `{
+			"employeeID": 1,
+			"userDetails": {
+				"firstName": "John",
+				"lastName": "Doe"
+			}
+		}`, string(resultJSON))
 	})
 
 	t.Run("converts arrays of maps", func(t *testing.T) {
@@ -306,11 +300,15 @@ func TestConvertKeysRecursiveWithTracking(t *testing.T) {
 
 		unspecifiedFields := make(map[string]bool)
 		result := handler.convertKeysRecursiveWithTracking(input, nil, "", unspecifiedFields)
-		resultArray := result.([]any)
-
-		assert.Len(t, resultArray, 2)
-		assert.Equal(t, 1, resultArray[0].(map[string]any)["employeeID"])
-		assert.Equal(t, 2, resultArray[1].(map[string]any)["employeeID"])
+		
+		// Marshal result to JSON for comparison
+		resultJSON, err := json.Marshal(result)
+		require.NoError(t, err)
+		
+		assert.JSONEq(t, `[
+			{"employeeID": 1},
+			{"employeeID": 2}
+		]`, string(resultJSON))
 	})
 
 	t.Run("passes through enum values without schema", func(t *testing.T) {
@@ -323,12 +321,18 @@ func TestConvertKeysRecursiveWithTracking(t *testing.T) {
 
 		unspecifiedFields := make(map[string]bool)
 		result := handler.convertKeysRecursiveWithTracking(input, nil, "", unspecifiedFields)
-		resultMap := result.(map[string]any)
-
-		employee := resultMap["employee"].(map[string]any)
+		
+		// Marshal result to JSON for comparison
+		resultJSON, err := json.Marshal(result)
+		require.NoError(t, err)
+		
 		// Without schema, enum values pass through unchanged
-		assert.Equal(t, "MOOD_HAPPY", employee["mood"])
-		assert.Equal(t, "STATUS_ACTIVE", employee["status"])
+		assert.JSONEq(t, `{
+			"employee": {
+				"mood": "MOOD_HAPPY",
+				"status": "STATUS_ACTIVE"
+			}
+		}`, string(resultJSON))
 	})
 
 	t.Run("handles primitive types", func(t *testing.T) {
