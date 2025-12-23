@@ -1,16 +1,19 @@
 package connectrpc
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/jhump/protoreflect/desc"
-	"github.com/jhump/protoreflect/desc/protoparse"
+	"github.com/bufbuild/protocompile"
+	"github.com/bufbuild/protocompile/linker"
+	"github.com/bufbuild/protocompile/reporter"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
+	"google.golang.org/protobuf/types/descriptorpb"
 )
 
 // ServiceDefinition represents a parsed protobuf service
@@ -40,9 +43,9 @@ type MethodDefinition struct {
 	// OutputType is the fully qualified output message type
 	OutputType string
 	// InputMessageDescriptor is the descriptor for the input message
-	InputMessageDescriptor *desc.MessageDescriptor
+	InputMessageDescriptor protoreflect.MessageDescriptor
 	// OutputMessageDescriptor is the descriptor for the output message
-	OutputMessageDescriptor *desc.MessageDescriptor
+	OutputMessageDescriptor protoreflect.MessageDescriptor
 	// IsClientStreaming indicates if this is a client streaming RPC
 	IsClientStreaming bool
 	// IsServerStreaming indicates if this is a server streaming RPC
@@ -57,8 +60,8 @@ type ProtoLoader struct {
 	// files is a custom registry for file descriptors (avoids global registry)
 	files *protoregistry.Files
 	// processedFiles tracks which file descriptors we've already processed for service extraction
-	// Key is the file descriptor pointer to ensure uniqueness across different directories
-	processedFiles map[*desc.FileDescriptor]bool
+	// Key is the file path to ensure uniqueness across different directories
+	processedFiles map[string]bool
 }
 
 // NewProtoLoader creates a new proto loader
@@ -71,7 +74,7 @@ func NewProtoLoader(logger *zap.Logger) *ProtoLoader {
 		logger:         logger,
 		services:       make(map[string]*ServiceDefinition),
 		files:          &protoregistry.Files{},
-		processedFiles: make(map[*desc.FileDescriptor]bool),
+		processedFiles: make(map[string]bool),
 	}
 }
 
@@ -230,22 +233,43 @@ func (pl *ProtoLoader) parseProtoFiles(rootDir string, relativeFilenames []strin
 		zap.String("root_dir", rootDir),
 		zap.Int("file_count", len(relativeFilenames)))
 
-	// Create a parser with the root directory as import path
-	// This allows imports to resolve across the entire directory tree
-	parser := protoparse.Parser{
-		ImportPaths:           []string{rootDir},
-		IncludeSourceCodeInfo: true,
+	// Create a compiler with the root directory as import path
+	compiler := protocompile.Compiler{
+		Resolver: &protocompile.SourceResolver{
+			ImportPaths: []string{rootDir},
+		},
+		// Use a custom reporter to capture errors and warnings
+		Reporter: reporter.NewReporter(
+			func(err reporter.ErrorWithPos) error {
+				pl.logger.Error("proto compilation error",
+					zap.String("file", err.GetPosition().Filename),
+					zap.Int("line", err.GetPosition().Line),
+					zap.Int("col", err.GetPosition().Col),
+					zap.String("error", err.Unwrap().Error()))
+				return err
+			},
+			func(err reporter.ErrorWithPos) {
+				pl.logger.Warn("proto compilation warning",
+					zap.String("file", err.GetPosition().Filename),
+					zap.Int("line", err.GetPosition().Line),
+					zap.Int("col", err.GetPosition().Col),
+					zap.String("warning", err.Unwrap().Error()))
+			},
+		),
+		// Include source code info for better error messages
+		SourceInfoMode: protocompile.SourceInfoStandard,
 	}
 
-	// Parse all files in a single batch
-	fds, err := parser.ParseFiles(relativeFilenames...)
+	// Compile all files in a single batch
+	ctx := context.Background()
+	results, err := compiler.Compile(ctx, relativeFilenames...)
 	if err != nil {
-		return fmt.Errorf("failed to parse proto files: %w", err)
+		return fmt.Errorf("failed to compile proto files: %w", err)
 	}
 
 	// Process each file descriptor
-	for _, fd := range fds {
-		if err := pl.processFileDescriptor(fd); err != nil {
+	for _, result := range results {
+		if err := pl.processFileDescriptor(result); err != nil {
 			return fmt.Errorf("failed to process file descriptor: %w", err)
 		}
 	}
@@ -254,53 +278,45 @@ func (pl *ProtoLoader) parseProtoFiles(rootDir string, relativeFilenames []strin
 }
 
 // processFileDescriptor extracts service definitions from a file descriptor
-func (pl *ProtoLoader) processFileDescriptor(fd *desc.FileDescriptor) error {
-	// Check if we've already processed this exact file descriptor for service extraction
-	// This prevents duplicate service extraction while allowing the same relative path
-	// to exist in different directories (e.g., service.proto in dir1/ and dir2/)
-	if pl.processedFiles[fd] {
+func (pl *ProtoLoader) processFileDescriptor(result linker.File) error {
+	// linker.File implements protoreflect.FileDescriptor interface
+	fd := protoreflect.FileDescriptor(result)
+	filePath := fd.Path()
+
+	// Check if we've already processed this file for service extraction
+	if pl.processedFiles[string(filePath)] {
 		pl.logger.Debug("file descriptor already processed for service extraction, skipping",
-			zap.String("file", fd.GetName()))
+			zap.String("file", string(filePath)))
 		return nil
 	}
 
-	// Mark this file descriptor as processed
-	pl.processedFiles[fd] = true
-
-	// Convert to protoreflect.FileDescriptor and register it in our LOCAL registry
-	// This avoids conflicts with the global registry used by generated client code
-	protoFd := fd.UnwrapFile()
+	// Mark this file as processed
+	pl.processedFiles[string(filePath)] = true
 
 	// Try to register the file descriptor in our local registry
-	// Note: Files with the same relative path from different directories will have
-	// the same Path() value, so only the first one can be registered. This is fine
-	// because each proto file generated by protographic is self-contained and doesn't
-	// import other files, so we only need one registration per unique path.
-	_, err := pl.files.FindFileByPath(string(protoFd.Path()))
+	_, err := pl.files.FindFileByPath(string(filePath))
 	if err == nil {
-		// File path already registered - this happens when files in different directories
-		// have the same relative path (e.g., both contain service.proto)
+		// File path already registered
 		pl.logger.Debug("file path already registered in local registry, skipping registration",
-			zap.String("file", string(protoFd.Path())))
+			zap.String("file", string(filePath)))
 	} else {
 		// Register the file descriptor in our LOCAL registry (not global)
-		// This allows Vanguard to find the service schema without polluting the global registry
-		if err := pl.files.RegisterFile(protoFd); err != nil {
+		if err := pl.files.RegisterFile(fd); err != nil {
 			pl.logger.Error("file descriptor registration failed in local registry",
-				zap.String("file", string(protoFd.Path())),
+				zap.String("file", string(filePath)),
 				zap.Error(err))
 			return fmt.Errorf("failed to register file descriptor in local registry: %w", err)
 		}
 
 		pl.logger.Debug("file descriptor registered successfully in local registry",
-			zap.String("file", string(protoFd.Path())))
+			zap.String("file", string(filePath)))
 	}
 
 	// Extract services from this file descriptor
-	// Each proto file generated by protographic is self-contained with its own service definition
-	services := fd.GetServices()
-	for _, service := range services {
-		serviceDef := pl.extractServiceDefinition(service)
+	services := fd.Services()
+	for i := 0; i < services.Len(); i++ {
+		service := services.Get(i)
+		serviceDef := pl.extractServiceDefinition(fd, service)
 
 		pl.services[serviceDef.FullName] = serviceDef
 
@@ -313,42 +329,29 @@ func (pl *ProtoLoader) processFileDescriptor(fd *desc.FileDescriptor) error {
 }
 
 // extractServiceDefinition extracts a service definition from a service descriptor
-func (pl *ProtoLoader) extractServiceDefinition(service *desc.ServiceDescriptor) *ServiceDefinition {
-	// Convert desc.FileDescriptor to protoreflect.FileDescriptor
-	fd := service.GetFile().UnwrapFile()
-
-	// Get the service descriptor from the file descriptor
-	services := fd.Services()
-	var serviceDesc protoreflect.ServiceDescriptor
-	for i := 0; i < services.Len(); i++ {
-		sd := services.Get(i)
-		if string(sd.FullName()) == service.GetFullyQualifiedName() {
-			serviceDesc = sd
-			break
-		}
-	}
-
+func (pl *ProtoLoader) extractServiceDefinition(fd protoreflect.FileDescriptor, service protoreflect.ServiceDescriptor) *ServiceDefinition {
 	serviceDef := &ServiceDefinition{
-		FullName:          service.GetFullyQualifiedName(),
-		Package:           service.GetFile().GetPackage(),
-		ServiceName:       service.GetName(),
+		FullName:          string(service.FullName()),
+		Package:           string(fd.Package()),
+		ServiceName:       string(service.Name()),
 		FileDescriptor:    fd,
-		ServiceDescriptor: serviceDesc,
+		ServiceDescriptor: service,
 		Methods:           make([]MethodDefinition, 0),
 	}
 
 	// Extract methods
-	methods := service.GetMethods()
-	for _, method := range methods {
+	methods := service.Methods()
+	for i := 0; i < methods.Len(); i++ {
+		method := methods.Get(i)
 		methodDef := MethodDefinition{
-			Name:                    method.GetName(),
-			FullName:                method.GetFullyQualifiedName(),
-			InputType:               method.GetInputType().GetFullyQualifiedName(),
-			OutputType:              method.GetOutputType().GetFullyQualifiedName(),
-			InputMessageDescriptor:  method.GetInputType(),
-			OutputMessageDescriptor: method.GetOutputType(),
-			IsClientStreaming:       method.IsClientStreaming(),
-			IsServerStreaming:       method.IsServerStreaming(),
+			Name:                    string(method.Name()),
+			FullName:                string(method.FullName()),
+			InputType:               string(method.Input().FullName()),
+			OutputType:              string(method.Output().FullName()),
+			InputMessageDescriptor:  method.Input(),
+			OutputMessageDescriptor: method.Output(),
+			IsClientStreaming:       method.IsStreamingClient(),
+			IsServerStreaming:       method.IsStreamingServer(),
 		}
 		serviceDef.Methods = append(serviceDef.Methods, methodDef)
 	}
@@ -388,4 +391,94 @@ func (pl *ProtoLoader) GetMethod(serviceName, methodName string) (*MethodDefinit
 // This is used to create a custom type resolver
 func (pl *ProtoLoader) GetFiles() *protoregistry.Files {
 	return pl.files
+}
+
+// Helper functions to work with protoreflect descriptors
+
+// getFieldByName finds a field in a message descriptor by name
+func getFieldByName(msg protoreflect.MessageDescriptor, name string) protoreflect.FieldDescriptor {
+	fields := msg.Fields()
+	for i := 0; i < fields.Len(); i++ {
+		field := fields.Get(i)
+		if string(field.Name()) == name {
+			return field
+		}
+	}
+	return nil
+}
+
+// getEnumType returns the enum descriptor for a field, or nil if not an enum
+func getEnumType(field protoreflect.FieldDescriptor) protoreflect.EnumDescriptor {
+	if field.Kind() == protoreflect.EnumKind {
+		return field.Enum()
+	}
+	return nil
+}
+
+// getMessageType returns the message descriptor for a field, or nil if not a message
+func getMessageType(field protoreflect.FieldDescriptor) protoreflect.MessageDescriptor {
+	if field.Kind() == protoreflect.MessageKind {
+		return field.Message()
+	}
+	return nil
+}
+
+// isRequired checks if a field is required (proto2 only)
+func isRequired(field protoreflect.FieldDescriptor) bool {
+	return field.Cardinality() == protoreflect.Required
+}
+
+// isRepeated checks if a field is repeated
+func isRepeated(field protoreflect.FieldDescriptor) bool {
+	return field.Cardinality() == protoreflect.Repeated && !field.IsMap()
+}
+
+// isMap checks if a field is a map
+func isMap(field protoreflect.FieldDescriptor) bool {
+	return field.IsMap()
+}
+
+// getFieldType returns the protobuf type of a field
+func getFieldType(field protoreflect.FieldDescriptor) descriptorpb.FieldDescriptorProto_Type {
+	kind := field.Kind()
+	switch kind {
+	case protoreflect.BoolKind:
+		return descriptorpb.FieldDescriptorProto_TYPE_BOOL
+	case protoreflect.EnumKind:
+		return descriptorpb.FieldDescriptorProto_TYPE_ENUM
+	case protoreflect.Int32Kind:
+		return descriptorpb.FieldDescriptorProto_TYPE_INT32
+	case protoreflect.Sint32Kind:
+		return descriptorpb.FieldDescriptorProto_TYPE_SINT32
+	case protoreflect.Uint32Kind:
+		return descriptorpb.FieldDescriptorProto_TYPE_UINT32
+	case protoreflect.Int64Kind:
+		return descriptorpb.FieldDescriptorProto_TYPE_INT64
+	case protoreflect.Sint64Kind:
+		return descriptorpb.FieldDescriptorProto_TYPE_SINT64
+	case protoreflect.Uint64Kind:
+		return descriptorpb.FieldDescriptorProto_TYPE_UINT64
+	case protoreflect.Sfixed32Kind:
+		return descriptorpb.FieldDescriptorProto_TYPE_SFIXED32
+	case protoreflect.Fixed32Kind:
+		return descriptorpb.FieldDescriptorProto_TYPE_FIXED32
+	case protoreflect.FloatKind:
+		return descriptorpb.FieldDescriptorProto_TYPE_FLOAT
+	case protoreflect.Sfixed64Kind:
+		return descriptorpb.FieldDescriptorProto_TYPE_SFIXED64
+	case protoreflect.Fixed64Kind:
+		return descriptorpb.FieldDescriptorProto_TYPE_FIXED64
+	case protoreflect.DoubleKind:
+		return descriptorpb.FieldDescriptorProto_TYPE_DOUBLE
+	case protoreflect.StringKind:
+		return descriptorpb.FieldDescriptorProto_TYPE_STRING
+	case protoreflect.BytesKind:
+		return descriptorpb.FieldDescriptorProto_TYPE_BYTES
+	case protoreflect.MessageKind:
+		return descriptorpb.FieldDescriptorProto_TYPE_MESSAGE
+	case protoreflect.GroupKind:
+		return descriptorpb.FieldDescriptorProto_TYPE_GROUP
+	default:
+		return descriptorpb.FieldDescriptorProto_TYPE_STRING
+	}
 }

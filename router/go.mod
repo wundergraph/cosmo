@@ -62,6 +62,7 @@ require (
 	github.com/MicahParks/jwkset v0.11.0
 	github.com/MicahParks/keyfunc/v3 v3.6.2
 	github.com/alicebob/miniredis/v2 v2.34.0
+	github.com/bufbuild/protocompile v0.14.1
 	github.com/caarlos0/env/v11 v11.3.1
 	github.com/cep21/circuit/v4 v4.0.0
 	github.com/dgraph-io/ristretto/v2 v2.1.0
@@ -73,7 +74,6 @@ require (
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-plugin v1.6.3
 	github.com/iancoleman/strcase v0.3.0
-	github.com/jhump/protoreflect v1.17.0
 	github.com/klauspost/compress v1.18.0
 	github.com/mark3labs/mcp-go v0.36.0
 	github.com/minio/minio-go/v7 v7.0.74
@@ -95,7 +95,6 @@ require (
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/benbjohnson/clock v1.3.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/bufbuild/protocompile v0.14.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cilium/ebpf v0.9.1 // indirect
 	github.com/containerd/cgroups/v3 v3.0.2 // indirect
@@ -125,6 +124,7 @@ require (
 	github.com/hashicorp/yamux v0.1.1 // indirect
 	github.com/invopop/jsonschema v0.13.0 // indirect
 	github.com/jensneuse/byte-template v0.0.0-20231025215717-69252eb3ed56 // indirect
+	github.com/jhump/protoreflect v1.17.0 // indirect
 	github.com/kingledion/go-tools v0.6.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.8 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
