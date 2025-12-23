@@ -17,45 +17,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/httputil"
 )
 
-// httpStatusToConnectCode maps HTTP status codes to Connect error codes
-// Based on Connect RPC specification and common HTTP status code semantics
-func httpStatusToConnectCode(statusCode int) connect.Code {
-	switch statusCode {
-	case http.StatusBadRequest: // 400
-		return connect.CodeInvalidArgument
-	case http.StatusUnauthorized: // 401
-		return connect.CodeUnauthenticated
-	case http.StatusForbidden: // 403
-		return connect.CodePermissionDenied
-	case http.StatusNotFound: // 404
-		return connect.CodeNotFound
-	case http.StatusConflict: // 409
-		return connect.CodeAborted
-	case http.StatusPreconditionFailed: // 412
-		return connect.CodeFailedPrecondition
-	case http.StatusRequestEntityTooLarge: // 413
-		return connect.CodeResourceExhausted
-	case http.StatusRequestedRangeNotSatisfiable: // 416
-		return connect.CodeOutOfRange
-	case http.StatusTooManyRequests: // 429
-		return connect.CodeResourceExhausted
-	case http.StatusRequestTimeout: // 408
-		return connect.CodeDeadlineExceeded
-	case http.StatusGatewayTimeout: // 504
-		return connect.CodeDeadlineExceeded
-	case http.StatusNotImplemented: // 501
-		return connect.CodeUnimplemented
-	case http.StatusServiceUnavailable: // 503
-		return connect.CodeUnavailable
-	case http.StatusInternalServerError: // 500
-		return connect.CodeInternal
-	default:
-		// For any other status code (including 2xx success codes),
-		// return CodeUnknown as a safe default
-		return connect.CodeUnknown
-	}
-}
-
 var (
 	ErrInternalServer = errors.New("internal server error")
 )
@@ -573,7 +534,7 @@ func (h *RPCHandler) executeGraphQL(ctx context.Context, query string, variables
 	// Check for HTTP errors (non-2xx status codes)
 	if resp.StatusCode != http.StatusOK {
 		// Map HTTP status to Connect error code
-		code := httpStatusToConnectCode(resp.StatusCode)
+		code := HTTPStatusToConnectCode(resp.StatusCode)
 
 		// Create Connect error with metadata
 		connectErr := connect.NewError(code, fmt.Errorf("GraphQL request failed with HTTP %d", resp.StatusCode))
