@@ -1190,7 +1190,14 @@ export class FederatedGraphRepository {
         createdAt: schemaVersionChangeAction.createdAt,
       })
       .from(schemaVersionChangeAction)
-      .where(eq(schemaVersionChangeAction.schemaVersionId, schemaVersionId));
+      .innerJoin(schemaVersion, eq(schemaVersionChangeAction.schemaVersionId, schemaVersion.id))
+      .where(
+        and(
+          eq(schemaVersionChangeAction.schemaVersionId, schemaVersionId),
+          eq(schemaVersion.organizationId, this.organizationId),
+        ),
+      )
+      .execute();
 
     if (changelogs.length === 0) {
       return [];
