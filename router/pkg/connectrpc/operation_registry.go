@@ -250,12 +250,7 @@ func (r *OperationRegistry) CountForService(serviceName string) int {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	serviceOps, exists := r.operations[serviceName]
-	if !exists {
-		return 0
-	}
-
-	return len(serviceOps)
+	return len(r.operations[serviceName])
 }
 
 // GetServiceNames returns all service names that have operations registered.
