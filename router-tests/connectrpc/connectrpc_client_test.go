@@ -25,6 +25,7 @@ func TestConnectRPC_ClientProtocols(t *testing.T) {
 	ts := NewTestConnectRPCServer(t, ConnectRPCServerOptions{
 		GraphQLHandler: EmployeeGraphQLHandler(),
 	})
+	defer ts.Close()
 	
 	err := ts.Start()
 	require.NoError(t, err)
