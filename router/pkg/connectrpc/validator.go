@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jhump/protoreflect/desc"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/descriptorpb"
 )
 
@@ -57,9 +57,9 @@ func (v *MessageValidator) ValidateMessage(serviceName, methodName string, messa
 		v.protoLoader.logger.Debug("validating message",
 			zap.String("service", serviceName),
 			zap.String("method", methodName),
-			zap.String("input_message_type", method.InputMessageDescriptor.GetFullyQualifiedName()),
+			zap.String("input_message_type", string(method.InputMessageDescriptor.FullName())),
 			zap.Strings("json_data_keys", getKeys(data)),
-			zap.Strings("proto_fields", getFieldNames(method.InputMessageDescriptor)))
+			zap.Strings("proto_fields", getFieldNamesFromDescriptor(method.InputMessageDescriptor)))
 	}
 
 	// Validate against the input message descriptor
@@ -74,22 +74,24 @@ func getKeys(data map[string]any) []string {
 	return keys
 }
 
-func getFieldNames(msgDesc *desc.MessageDescriptor) []string {
-	fields := msgDesc.GetFields()
-	names := make([]string, len(fields))
-	for i, field := range fields {
-		names[i] = field.GetName()
+func getFieldNamesFromDescriptor(msgDesc protoreflect.MessageDescriptor) []string {
+	fields := msgDesc.Fields()
+	names := make([]string, fields.Len())
+	for i := 0; i < fields.Len(); i++ {
+		field := fields.Get(i)
+		names[i] = string(field.Name())
 	}
 	return names
 }
 
 // validateMessageFields recursively validates message fields
-func (v *MessageValidator) validateMessageFields(msgDesc *desc.MessageDescriptor, data map[string]any, fieldPath string) error {
-	fields := msgDesc.GetFields()
+func (v *MessageValidator) validateMessageFields(msgDesc protoreflect.MessageDescriptor, data map[string]any, fieldPath string) error {
+	fields := msgDesc.Fields()
 
 	// Check each field in the message
-	for _, field := range fields {
-		fieldName := field.GetName()
+	for i := 0; i < fields.Len(); i++ {
+		field := fields.Get(i)
+		fieldName := string(field.Name())
 		fullPath := fieldPath
 		if fullPath != "" {
 			fullPath += "."
@@ -99,7 +101,7 @@ func (v *MessageValidator) validateMessageFields(msgDesc *desc.MessageDescriptor
 		value, exists := data[fieldName]
 
 		// Check required fields (proto2 only, proto3 doesn't have required)
-		if field.IsRequired() && !exists {
+		if isRequired(field) && !exists {
 			return &ValidationError{
 				Field:   fullPath,
 				Message: "required field is missing",
@@ -121,11 +123,11 @@ func (v *MessageValidator) validateMessageFields(msgDesc *desc.MessageDescriptor
 }
 
 // validateFieldValue validates a single field value against its descriptor
-func (v *MessageValidator) validateFieldValue(field *desc.FieldDescriptor, value any, fieldPath string) error {
+func (v *MessageValidator) validateFieldValue(field protoreflect.FieldDescriptor, value any, fieldPath string) error {
 	// Handle null values
 	if value == nil {
 		// Null is only valid for optional fields
-		if field.IsRequired() {
+		if isRequired(field) {
 			return &ValidationError{
 				Field:   fieldPath,
 				Message: "required field cannot be null",
@@ -135,7 +137,7 @@ func (v *MessageValidator) validateFieldValue(field *desc.FieldDescriptor, value
 	}
 
 	// Handle map fields
-	if field.IsMap() {
+	if isMap(field) {
 		mapData, ok := value.(map[string]any)
 		if !ok {
 			return &ValidationError{
@@ -145,7 +147,7 @@ func (v *MessageValidator) validateFieldValue(field *desc.FieldDescriptor, value
 		}
 
 		// Get the map value field descriptor (index 1 is the value field in the map entry message)
-		mapValueField := field.GetMessageType().GetFields()[1]
+		mapValueField := field.Message().Fields().Get(1)
 
 		// Validate each value in the map
 		for key, val := range mapData {
@@ -158,7 +160,7 @@ func (v *MessageValidator) validateFieldValue(field *desc.FieldDescriptor, value
 	}
 
 	// Handle repeated fields (arrays)
-	if field.IsRepeated() {
+	if isRepeated(field) {
 		arr, ok := value.([]any)
 		if !ok {
 			return &ValidationError{
@@ -182,9 +184,9 @@ func (v *MessageValidator) validateFieldValue(field *desc.FieldDescriptor, value
 }
 
 // validateScalarOrMessageValue validates either a scalar or message value
-func (v *MessageValidator) validateScalarOrMessageValue(field *desc.FieldDescriptor, value any, fieldPath string) error {
+func (v *MessageValidator) validateScalarOrMessageValue(field protoreflect.FieldDescriptor, value any, fieldPath string) error {
 	// Handle message types (nested messages)
-	if field.GetType() == descriptorpb.FieldDescriptorProto_TYPE_MESSAGE {
+	if field.Kind() == protoreflect.MessageKind {
 		nestedData, ok := value.(map[string]any)
 		if !ok {
 			return &ValidationError{
@@ -192,7 +194,7 @@ func (v *MessageValidator) validateScalarOrMessageValue(field *desc.FieldDescrip
 				Message: fmt.Sprintf("expected object, got %T", value),
 			}
 		}
-		return v.validateMessageFields(field.GetMessageType(), nestedData, fieldPath)
+		return v.validateMessageFields(field.Message(), nestedData, fieldPath)
 	}
 
 	// Handle scalar types
@@ -200,9 +202,9 @@ func (v *MessageValidator) validateScalarOrMessageValue(field *desc.FieldDescrip
 }
 
 // validateScalarValue validates a scalar field value
-func (v *MessageValidator) validateScalarValue(field *desc.FieldDescriptor, value any, fieldPath string) error {
-	fieldType := field.GetType()
-	typeName := strings.ToLower(field.GetType().String())
+func (v *MessageValidator) validateScalarValue(field protoreflect.FieldDescriptor, value any, fieldPath string) error {
+	fieldType := getFieldType(field)
+	typeName := strings.ToLower(fieldType.String())
 
 	switch fieldType {
 	case descriptorpb.FieldDescriptorProto_TYPE_DOUBLE,

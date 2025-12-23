@@ -11,8 +11,8 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
-	"github.com/jhump/protoreflect/desc"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/reflect/protoreflect"
 
 	"github.com/wundergraph/cosmo/router/pkg/httputil"
 )
@@ -281,7 +281,7 @@ func (h *RPCHandler) convertProtoJSONToGraphQLVariables(serviceName, methodName 
 	}
 
 	// Get proto message descriptor for schema-aware enum detection
-	var messageDesc *desc.MessageDescriptor
+	var messageDesc protoreflect.MessageDescriptor
 	if h.validator != nil && h.validator.protoLoader != nil {
 		method, err := h.validator.protoLoader.GetMethod(serviceName, methodName)
 		if err == nil && method.InputMessageDescriptor != nil {
@@ -302,16 +302,16 @@ func (h *RPCHandler) convertProtoJSONToGraphQLVariables(serviceName, methodName 
 // convertKeysRecursive converts map keys from snake_case to camelCase
 // and strips proto enum prefixes using schema information when available
 // Omits fields with empty string values (e.g., from _UNSPECIFIED enum values)
-func (h *RPCHandler) convertKeysRecursive(data any, messageDesc *desc.MessageDescriptor) any {
+func (h *RPCHandler) convertKeysRecursive(data any, messageDesc protoreflect.MessageDescriptor) any {
 	switch v := data.(type) {
 	case map[string]any:
 		result := make(map[string]any)
 		for key, value := range v {
 			camelKey := snakeToCamel(key)
 			
-			var fieldDesc *desc.FieldDescriptor
+			var fieldDesc protoreflect.FieldDescriptor
 			if messageDesc != nil {
-				fieldDesc = messageDesc.FindFieldByName(key)
+				fieldDesc = getFieldByName(messageDesc, key)
 			}
 			
 			convertedValue := h.convertValueRecursive(value, fieldDesc)
@@ -337,12 +337,12 @@ func (h *RPCHandler) convertKeysRecursive(data any, messageDesc *desc.MessageDes
 }
 
 // convertValueRecursive processes a value using field descriptor for schema-aware enum detection
-func (h *RPCHandler) convertValueRecursive(value any, fieldDesc *desc.FieldDescriptor) any {
+func (h *RPCHandler) convertValueRecursive(value any, fieldDesc protoreflect.FieldDescriptor) any {
 	switch v := value.(type) {
 	case map[string]any:
-		var nestedDesc *desc.MessageDescriptor
-		if fieldDesc != nil && fieldDesc.GetMessageType() != nil {
-			nestedDesc = fieldDesc.GetMessageType()
+		var nestedDesc protoreflect.MessageDescriptor
+		if fieldDesc != nil {
+			nestedDesc = getMessageType(fieldDesc)
 		}
 		return h.convertKeysRecursive(v, nestedDesc)
 		
@@ -355,9 +355,12 @@ func (h *RPCHandler) convertValueRecursive(value any, fieldDesc *desc.FieldDescr
 		
 	case string:
 		// Schema-aware: check if field is an enum type
-		if fieldDesc != nil && fieldDesc.GetEnumType() != nil {
-			enumTypeName := fieldDesc.GetEnumType().GetName()
-			return stripEnumPrefixWithType(v, enumTypeName)
+		if fieldDesc != nil {
+			enumDesc := getEnumType(fieldDesc)
+			if enumDesc != nil {
+				enumTypeName := string(enumDesc.Name())
+				return stripEnumPrefixWithType(v, enumTypeName)
+			}
 		}
 		
 		return v
