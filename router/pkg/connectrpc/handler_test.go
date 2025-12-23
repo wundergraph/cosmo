@@ -2,12 +2,32 @@ package connectrpc
 
 import (
 	"encoding/json"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
+
+// setupHandlerWithSchema creates a handler with loaded proto schema for testing
+func setupHandlerWithSchema(t *testing.T) *RPCHandler {
+	logger := zap.NewNop()
+
+	// Load proto schema from testdata
+	protoLoader := NewProtoLoader(logger)
+	testdataDir := filepath.Join("testdata")
+	err := protoLoader.LoadFromDirectory(testdataDir)
+	require.NoError(t, err, "failed to load test proto files")
+
+	// Create validator with loaded schema
+	validator := NewMessageValidator(protoLoader)
+
+	return &RPCHandler{
+		logger:    logger,
+		validator: validator,
+	}
+}
 
 func TestConvertProtoJSONToGraphQLVariables(t *testing.T) {
 	logger := zap.NewNop()
@@ -18,26 +38,82 @@ func TestConvertProtoJSONToGraphQLVariables(t *testing.T) {
 		result, err := handler.convertProtoJSONToGraphQLVariables("test.Service", "TestMethod", protoJSON)
 		require.NoError(t, err)
 
-		var data map[string]any
-		err = json.Unmarshal(result, &data)
-		require.NoError(t, err)
-
-		assert.Equal(t, float64(1), data["employeeID"])
-		assert.Equal(t, "John", data["firstName"])
+		assert.JSONEq(t, `{
+			"employeeID": 1,
+			"firstName": "John"
+		}`, string(result))
 	})
 
-	t.Run("strips proto enum prefixes using schema", func(t *testing.T) {
-		protoJSON := []byte(`{"employee_id": 1, "mood": "MOOD_HAPPY"}`)
-		result, err := handler.convertProtoJSONToGraphQLVariables("test.Service", "TestMethod", protoJSON)
+	t.Run("strips proto enum prefixes with loaded schema", func(t *testing.T) {
+		handler := setupHandlerWithSchema(t)
+
+		protoJSON := []byte(`{"employee_id": "123", "mood": "MOOD_HAPPY"}`)
+		result, err := handler.convertProtoJSONToGraphQLVariables("test.EmployeeService", "GetEmployee", protoJSON)
 		require.NoError(t, err)
 
+		// With schema loaded, MOOD_HAPPY should become HAPPY
+		assert.JSONEq(t, `{
+			"employeeID": "123",
+			"mood": "HAPPY"
+		}`, string(result))
+	})
+
+	t.Run("omits _UNSPECIFIED enum values", func(t *testing.T) {
+		handler := setupHandlerWithSchema(t)
+
+		protoJSON := []byte(`{"name": "John", "mood": "MOOD_UNSPECIFIED", "status": "STATUS_ACTIVE"}`)
+		result, err := handler.convertProtoJSONToGraphQLVariables("test.EmployeeService", "GetEmployee", protoJSON)
+		require.NoError(t, err)
+
+		// MOOD_UNSPECIFIED should be omitted, but name and status should be present
+		assert.JSONEq(t, `{
+			"name": "John",
+			"status": "ACTIVE"
+		}`, string(result))
+
+		// Verify mood field is not present
 		var data map[string]any
 		err = json.Unmarshal(result, &data)
 		require.NoError(t, err)
+		_, hasMood := data["mood"]
+		assert.False(t, hasMood, "UNSPECIFIED enum should be omitted")
+	})
 
-		assert.Equal(t, float64(1), data["employeeID"])
-		// Note: Without actual proto schema loaded, enum won't be stripped in this test
-		// In production with schema, MOOD_HAPPY would become HAPPY
+	t.Run("preserves legitimate empty string fields", func(t *testing.T) {
+		handler := setupHandlerWithSchema(t)
+
+		// Empty string in a non-enum field should be preserved
+		protoJSON := []byte(`{"name": "", "mood": "MOOD_HAPPY"}`)
+		result, err := handler.convertProtoJSONToGraphQLVariables("test.EmployeeService", "GetEmployee", protoJSON)
+		require.NoError(t, err)
+
+		// Empty string should be preserved (not omitted like UNSPECIFIED enums)
+		assert.JSONEq(t, `{
+			"name": "",
+			"mood": "HAPPY"
+		}`, string(result))
+	})
+
+	t.Run("handles multiple _UNSPECIFIED enums", func(t *testing.T) {
+		handler := setupHandlerWithSchema(t)
+
+		protoJSON := []byte(`{"name": "John", "mood": "MOOD_UNSPECIFIED", "status": "STATUS_UNSPECIFIED"}`)
+		result, err := handler.convertProtoJSONToGraphQLVariables("test.EmployeeService", "GetEmployee", protoJSON)
+		require.NoError(t, err)
+
+		// Both UNSPECIFIED enums should be omitted, only name should remain
+		assert.JSONEq(t, `{
+			"name": "John"
+		}`, string(result))
+
+		// Verify both enum fields are not present
+		var data map[string]any
+		err = json.Unmarshal(result, &data)
+		require.NoError(t, err)
+		_, hasMood := data["mood"]
+		assert.False(t, hasMood, "MOOD_UNSPECIFIED should be omitted")
+		_, hasStatus := data["status"]
+		assert.False(t, hasStatus, "STATUS_UNSPECIFIED should be omitted")
 	})
 
 	t.Run("handles multiple enum values without schema", func(t *testing.T) {
@@ -199,7 +275,7 @@ func TestSnakeToCamel(t *testing.T) {
 	}
 }
 
-func TestConvertKeysRecursive(t *testing.T) {
+func TestConvertKeysRecursiveWithTracking(t *testing.T) {
 	logger := zap.NewNop()
 	handler := &RPCHandler{logger: logger}
 
@@ -212,7 +288,8 @@ func TestConvertKeysRecursive(t *testing.T) {
 			},
 		}
 
-		result := handler.convertKeysRecursive(input, nil)
+		unspecifiedFields := make(map[string]bool)
+		result := handler.convertKeysRecursiveWithTracking(input, nil, "", unspecifiedFields)
 		resultMap := result.(map[string]any)
 
 		assert.Equal(t, 1, resultMap["employeeID"])
@@ -227,7 +304,8 @@ func TestConvertKeysRecursive(t *testing.T) {
 			map[string]any{"employee_id": 2},
 		}
 
-		result := handler.convertKeysRecursive(input, nil)
+		unspecifiedFields := make(map[string]bool)
+		result := handler.convertKeysRecursiveWithTracking(input, nil, "", unspecifiedFields)
 		resultArray := result.([]any)
 
 		assert.Len(t, resultArray, 2)
@@ -243,7 +321,8 @@ func TestConvertKeysRecursive(t *testing.T) {
 			},
 		}
 
-		result := handler.convertKeysRecursive(input, nil)
+		unspecifiedFields := make(map[string]bool)
+		result := handler.convertKeysRecursiveWithTracking(input, nil, "", unspecifiedFields)
 		resultMap := result.(map[string]any)
 
 		employee := resultMap["employee"].(map[string]any)
@@ -253,9 +332,10 @@ func TestConvertKeysRecursive(t *testing.T) {
 	})
 
 	t.Run("handles primitive types", func(t *testing.T) {
-		assert.Equal(t, 42, handler.convertValueRecursive(42, nil))
-		assert.Equal(t, 3.14, handler.convertValueRecursive(3.14, nil))
-		assert.Equal(t, true, handler.convertValueRecursive(true, nil))
-		assert.Equal(t, "hello", handler.convertValueRecursive("hello", nil))
+		unspecifiedFields := make(map[string]bool)
+		assert.Equal(t, 42, handler.convertValueRecursiveWithTracking(42, nil, "", unspecifiedFields))
+		assert.Equal(t, 3.14, handler.convertValueRecursiveWithTracking(3.14, nil, "", unspecifiedFields))
+		assert.Equal(t, true, handler.convertValueRecursiveWithTracking(true, nil, "", unspecifiedFields))
+		assert.Equal(t, "hello", handler.convertValueRecursiveWithTracking("hello", nil, "", unspecifiedFields))
 	})
 }
