@@ -1759,7 +1759,7 @@
                   "allowed_use": {
                     "type": "array",
                     "description": "The allowed value of the use parameter for the JWKs. If not specified, only keys with use set to 'sig' will be used. If your server provides no use, you can add an empty value to allow those keys.",
-                    "default": "sig",
+                    "default": ["sig"],
                     "items": {
                       "type": "string",
                       "enum": [
